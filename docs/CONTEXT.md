@@ -1,0 +1,135 @@
+# CONTEXT.md — Contexto técnico de prestadora-original Salud
+
+> Versión de trabajo para generación de código. Condensa `prestadora-original_CONTEXT_md_v2.md` y
+> `prestadora-original_PROMPT_MAESTRO_v1.md`, quitando el contenido que no afecta decisiones de código
+> (mercado, competidores, marketing). Para el análisis de negocio completo, ver los
+> documentos originales en la raíz del proyecto — no hace falta releerlos para programar.
+
+## Modelo de negocio (lo mínimo que el código necesita saber)
+
+- Clientes solicitan un servicio → prestadora-original asigna un Asistente Integral (empresa directa,
+  fase actual) → evoluciona a match (cliente elige directamente) y B2B (obras
+  sociales / prepagas, y coordinación de prestadoras terceras).
+- Precio de referencia de lanzamiento: **nunca hardcodear** — se carga desde configuración
+  (Módulo 8 del Panel Admin), no desde una constante en el código. Mientras no haya
+  benchmark validado, la interfaz pública muestra "A consultar".
+- Zona de cobertura inicial: CABA y GBA (norte, oeste, sur) y La Plata y alrededores —
+  también configurable, no hardcodear la lista de zonas en componentes.
+- **Principio de negocio (acordado en sesión, 2026-07-07): el modelo está pensado para
+  operar con muy poca gente administrando.** Por lo tanto, toda tarea operativa que se
+  pueda automatizar con IA sin comprometer el riesgo legal (ver `CLAUDE.md`) es deseable,
+  no un extra opcional. Esto pesa a favor de priorizar antes de lo previsto algunos de los
+  niveles de IA que `BUILD_ORDER.md` marca hoy como "Diferida" — a revisar caso por caso
+  cuando se llegue a esa etapa, no se re-prioriza automáticamente sin evaluar cada nivel.
+
+## Roles de usuario
+
+| Rol | Dónde opera | Ve |
+|---|---|---|
+| Superadmin | Panel de administración (login propio, capa separada de Admin) | Todo lo de Admin, más acceso técnico: cambios profundos de configuración, alta/baja de cosas que no es prudente que un Admin sin ese nivel opere, interacción con IA para diagnóstico/corrección de errores |
+| Admin | Panel de administración | Todo el negocio (sin el acceso técnico de Superadmin) |
+| Coordinador | Panel de administración | Su zona asignada |
+| Asistente | PWA de Asistentes | Sus propias guardias, su perfil, su certificado |
+| Cliente | PWA de Clientes | Sus pacientes, reportes y alertas de sus pacientes |
+
+Acordado en sesión (2026-07-07): Superadmin es un quinto rol real, con login propio,
+distinto de Admin — no un simple flag sobre el mismo usuario. Antes no estaba en ningún
+PRD original; se agrega por decisión explícita de negocio (necesidad de que alguien con
+más permiso técnico pueda operar sin exponer ese poder a un Admin de negocio "neófito").
+
+Ningún rol de Asistente/Cliente debe tener acceso, ni siquiera de solo lectura, a
+`escalas_legales`, `ceses`, `ausencias` ni a datos laborales internos de otros Asistentes.
+
+## Stack por etapa
+
+```
+Etapa 1 — Sitio web público
+  Frontend:  React 18 + Vite + React Router DOM 6
+  Estilos:   CSS custom con variables de marca (no Tailwind, no CSS-in-JS)
+  Backend:   Node.js + Express (solo formularios)
+  DB:        MySQL en Railway (datos de formularios — no Supabase todavía)
+  Email:     Nodemailer + Gmail SMTP App Password
+  PWA:       Vite PWA Plugin (manifest + service worker básico)
+  Deploy:    Vercel (frontend) + Railway (backend + MySQL)
+
+Etapa 2 — Panel de administración
+  Frontend:  React 18 + Vite (ruta protegida o proyecto separado)
+  Auth:      Supabase Auth (email + password, sin magic link)
+  DB:        Supabase (PostgreSQL + RLS) — migración desde MySQL en esta etapa
+  Nota: el sitio público sigue en Express/MySQL; el panel ya usa Supabase directamente.
+
+Etapas 3 y 4 — PWA Asistentes / PWA Clientes
+  Framework: React 18 + Vite + Vite PWA Plugin
+  Auth:      Supabase Auth (magic link o email/password)
+  DB:        Supabase (PostgreSQL + RLS + Realtime)
+  Storage:   Supabase Storage (fotos de reportes, documentos)
+  GPS:       navigator.geolocation API (nativo del browser)
+  Cámara:    MediaDevices API (nativo del browser)
+  IA Nivel 1 (reporte inteligente) y Nivel 2 (alertas): Anthropic API — Claude Sonnet
+  Push:      Web Push API + Service Worker (Android) / Apple Push (iOS 16.4+)
+  PDF:       jsPDF o react-pdf (Planilla 3 IOMA y Resumen Mensual)
+
+Etapa 5 — Planillas IOMA
+  Generación de PDF desde datos ya existentes en `reportes` y `guardias` — no requiere
+  stack nuevo.
+```
+
+## i18n — el objeto `T`
+
+Todo texto visible vive en un objeto centralizado `T` con tres idiomas simultáneos.
+Nunca un string literal en un componente. Estructura mínima:
+
+```js
+// src/i18n/translations.js
+export const T = {
+  'es-AR': { hero_title: 'Cuida tus afectos', /* ... */ },
+  'en':    { hero_title: 'Care for your loved ones', /* ... */ },
+  'pt-BR': { hero_title: 'Cuide de quem você ama', /* ... */ },
+};
+```
+
+Nota de marca: el manual de identidad registra "Cuidamos tus afectos" en el logo, mientras
+que la documentación de contexto usa "Cuida tus afectos". No está resuelto — usar
+"Cuida tus afectos" como valor por defecto en el código hasta que Alberto/Inversor confirmen
+cuál es el definitivo, pero mantenerlo como una sola clave de `T` (`hero_title`) para que el
+cambio, cuando llegue, sea de un solo lugar.
+
+## Identidad visual
+
+Ver `DESIGN_SYSTEM.md` para la paleta de colores, tipografía y convenciones de CSS.
+La identidad completa es **provisional** — no invertir tiempo puliendo detalles de logo o
+color de divisiones que no están activas (Junior, Pets, Bienestar, Hogar, Legal). Solo
+prestadora-original Salud tiene logo y paleta relevantes hoy.
+
+## Modelo de datos
+
+Ver `DATA_MODEL.md` para el schema completo consolidado de todas las etapas.
+
+## IA — prompts de sistema
+
+Ver `AI_PROMPTS.md` para los prompts exactos de Nivel 1 (reporte inteligente) y Nivel 2
+(alertas por patrones), y los contratos JSON que ambos devuelven.
+
+## Seguridad
+
+Ver `SECURITY.md` para autenticación, RLS y manejo de datos sensibles.
+
+## Riesgo legal que condiciona el producto
+
+Ver `CLAUDE.md` (raíz de `Workspace/`) — sección "El riesgo legal que condiciona el diseño". No se repite acá.
+
+## Gap identificado, no resuelto por ningún PRD original: cobro a los clientes
+
+Ningún documento original especificó **cómo prestadora-original cobra a los clientes** (medio de pago,
+facturación, retención de fondos). El "Modelo UPE" cubre la facturación a IOMA (obra
+social) vía Planillas 3, pero no el cobro directo a clientes particulares. Antes de
+construir cualquier flujo de cobro, esto necesita una decisión de negocio explícita
+(Mercado Pago, transferencia, ambos) — no asumir nada del documento no vinculante
+"Prompt de Money Suite.md" sin validarlo con el equipo de negocio primero. Ver nota en
+`SECURITY.md` y `BUILD_ORDER.md`.
+
+## Changelog de este documento
+
+- v1 (2026-07-07): primera versión, generada para poblar `Workspace/docs/` a partir de
+  la lectura completa de la documentación del proyecto y separando lo vinculante de lo
+  que no lo es.

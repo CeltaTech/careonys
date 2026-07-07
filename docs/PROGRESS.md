@@ -8,8 +8,8 @@
 
 | Etapa | Descripción | Estado |
 |---|---|---|
-| 0 | Setup: repo, estructura, variables de entorno | 🟡 En progreso |
-| 1 | Sitio web público (páginas + formularios + backend) | 🔴 No iniciado |
+| 0 | Setup: repo, estructura, variables de entorno | 🟢 Completo |
+| 1 | Sitio web público (páginas + formularios + backend) | 🟡 En progreso |
 | 2 | Panel de administración | 🔴 No iniciado |
 | 2B | Gestión de Personal (vínculo/cese/riesgo/cobertura) | 🔴 No iniciado |
 | 3 | PWA Asistentes (login, guardias, GPS, reporte + IA) | 🔴 No iniciado |
@@ -21,9 +21,14 @@ Convención: 🔴 No iniciado · 🟡 En progreso · 🟢 Completo y en producci
 
 ## Última tarea completada
 
-Etapa 0 (setup) en progreso: repo git inicializado en `Workspace/`, estructura de carpetas
-creada (`sitio-web/`, `backend/`), dependencias base instaladas, variables CSS y skeleton de
-i18n creados. Ver detalle en "Archivos creados/modificados por sesión".
+Etapa 1 en progreso: las 8 páginas del sitio público (`PRD_01_Sitio_Web.md`) construidas y
+enrutadas, componentes globales (Header/Footer/WhatsAppButton/LanguageSelector), i18n
+completo es-AR/en/pt-BR vía contexto React, formularios de Solicitá tu Servicio y Trabajá
+con Nosotros con los 4 estados y anti-doble-envío, backend Express con las dos rutas POST
+contra MySQL + email al coordinador. Build, lint y arranque de dev server/backend
+verificados sin errores. Pendiente: contenido real de imágenes/fotografía propia, dominio,
+variables de entorno reales, y despliegue (Vercel/Railway) — queda en el checklist de
+lanzamiento de `PRD_01_Sitio_Web.md`.
 
 ## Decisiones tomadas durante el desarrollo
 
@@ -41,6 +46,7 @@ ningún PRD original._
 | 2026-07-07 | Limitación técnica declarada: las herramientas de investigación de esta sesión no pueden evaluar Instagram con el mismo nivel de detalle que un sitio web (contenido JS-renderizado, sin acceso a grilla/calidad visual real) — el análisis de esos perfiles es superficial (cadencia, tipo de contenido), no un juicio de calidad visual completo | Transparencia sobre el alcance real del análisis, para que no se tome como definitivo sin revisión manual |
 | 2026-07-07 | Un agente en segundo plano relevó ~15 competidores adicionales desde el ángulo de prestaciones/funcionalidades (no estético) mientras se trabajaba en Etapa 0; se guardó como `docs/COMPETIDORES_PRESTACIONES.md`. Hallazgo relevante: **CUIDARnos** (cooperativa impulsada por UTEP/Grobocopatel, lanzamiento 2026) es el primer competidor que reivindica públicamente GPS/geolocalización, aunque en fase piloto (~450 cuidadoras, AMBA) — matiza (sin invalidar) el claim de posicionamiento de prestadora-original de "nadie tiene GPS". También se detectó que `Cuidando en Casa` opera un Centro de Día físico en La Plata, coincidiendo directamente con la zona objetivo de prestadora-original | Pedido del usuario de investigar prestaciones de competidores como fuente de conocimiento para generación futura de contenidos |
 | 2026-07-07 | Se inició Etapa 0 (setup): `git init` en `Workspace/`, `.gitignore` y `README.md` raíz, `sitio-web/` scaffolded con Vite + React (fijado a React 18 por ser el stack decidido en `CONTEXT.md`, no React 19 que es el default actual de create-vite), `vite-plugin-pwa@^1.3.0` (única versión compatible con Vite 8), variables CSS/i18n creados en `sitio-web/src/`, `backend/` scaffolded con Express (Node 22) y `nodemailer` fijado a `^9.0.3` por vulnerabilidades de severidad alta en la rama 6.x | Siguiente paso natural tras completar la documentación, ejecutado de forma autónoma por pedido explícito del usuario ("continúa solo sin detenerte a pedir permisos") |
+| 2026-07-07 | Construida Etapa 1 completa (primera pasada): 8 páginas de `PRD_01_Sitio_Web.md`, i18n vía `LocaleContext` (React Context + localStorage, no prop-drilling), config centralizada de datos de contacto/precios (`config/siteConfig.js`, placeholders `[DEFINIR]` hasta que el negocio confirme), `vite-plugin-pwa` configurado en `vite.config.js` con manifest real, fuentes Playfair Display + DM Sans cargadas en `index.html`. Diseño aplicó las recomendaciones del benchmark estético de `DESIGN_SYSTEM.md`: bloques de sección con `--fondo-alt` y hero con fondo azul oscuro degradado (no fondo blanco corrido como todos los competidores relevados) | Ejecución del PRD_01, con las recomendaciones de diferenciación visual ya documentadas aplicadas desde el primer commit, no como retrofit posterior |
 
 ## Problemas conocidos / deuda técnica
 
@@ -56,5 +62,6 @@ _Una entrada por sesión de trabajo, más reciente primero._
 
 | Fecha | Sesión | Archivos |
 |---|---|---|
+| 2026-07-07 | Etapa 1: sitio web público completo (primera pasada) | `sitio-web/src/pages/*` (8 páginas), `sitio-web/src/components/*` (Header, Footer, WhatsAppButton, LanguageSelector, ui/{Button,FormField,Alert}), `sitio-web/src/i18n/LocaleContext.jsx`, `sitio-web/src/config/siteConfig.js`, `sitio-web/src/hooks/useFormSubmit.js`, `sitio-web/vite.config.js` (PWA), `sitio-web/index.html` (fuentes + meta), `sitio-web/src/styles/{global,components}.css` (reescritos), `backend/src/routes/{solicitudServicio,postulacionAsistente}.js`, `backend/src/db/{connection,schema}.sql`, `backend/src/utils/email.js`, `backend/src/server.js` (rutas conectadas) |
 | 2026-07-07 | Etapa 0: setup inicial de repo y estructura | `CLAUDE.md` (movido a raíz), `.gitignore`, `README.md`, `docs/COMPETIDORES_PRESTACIONES.md`, `sitio-web/` (scaffold Vite+React+Router, `src/styles/{variables,global,components}.css`, `src/i18n/translations.js`, `.env.example`), `backend/` (scaffold Express, `src/server.js`, `.env.example`, `.gitignore`) |
 | 2026-07-07 | Generación de documentación técnica en `Workspace/docs/` (sin código todavía) | `CLAUDE.md`, `CONTEXT.md`, `DESIGN_SYSTEM.md`, `DATA_MODEL.md`, `AI_PROMPTS.md`, `SECURITY.md`, `PRD_01_Sitio_Web.md`, `PRD_02_Panel_Admin.md`, `PRD_02B_Gestion_Personal.md`, `PRD_03_Reclutamiento.md`, `PRD_04_05_App_Servicio.md`, `BUILD_ORDER.md`, `PROGRESS.md` |

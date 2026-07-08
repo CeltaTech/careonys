@@ -10,7 +10,7 @@
 |---|---|---|
 | 0 | Setup: repo, estructura, variables de entorno | 🟢 Completo |
 | 1 | Sitio web público (páginas + formularios + backend) | 🟡 En progreso |
-| 2 | Panel de administración | 🟡 En progreso |
+| 2 | Panel de administración (Módulos 1-5) | 🟡 En progreso — Módulos 6-8 pendientes |
 | 2B | Gestión de Personal (vínculo/cese/riesgo/cobertura) | 🟢 Completo — código listo y SQL aplicado/verificado contra Supabase real |
 | 3 | PWA Asistentes (login, guardias, GPS, reporte + IA) | 🔴 No iniciado |
 | 4 | PWA Clientes (login, reportes, alertas) | 🔴 No iniciado |
@@ -163,13 +163,40 @@ nuevas, columna `cliente_id` agregada); `npm run build` y `npx vitest run` de `p
 errores (18/18 tests); `/api/panel/cuentas/cliente` monta correctamente en el backend real
 corriendo (responde 401 sin token, no 404).
 
-Pendiente explícitamente fuera de este corte: la pantalla propia de Módulo 5 (lista de
-clientes activas con contacto/pacientes/guardias/historial — spec completa en
-`PRD_02_Panel_Admin.md`) — lo construido hasta acá es solo el mecanismo de conversión
-solicitud→cliente, no el módulo de gestión en sí. El lado Asistente del mismo mecanismo
-("convertir aspirante en Asistente") también queda deliberadamente afuera: requiere primero
-una UI para el pipeline de Filtro prestadora-original (`aspirantes`/`verificaciones_asistente`), que no
-existe todavía.
+El lado Asistente del mismo mecanismo ("convertir aspirante en Asistente") queda
+deliberadamente afuera: requiere primero una UI para el pipeline de Filtro prestadora-original
+(`aspirantes`/`verificaciones_asistente`), que no existe todavía.
+
+## Actualización — Módulo 5 completo (pantalla de Clientes y Pacientes)
+
+Construida la pantalla propia de Módulo 5 (`PRD_02_Panel_Admin.md`: "Lista de clientes
+activas; por cliente: contacto, pacientes, guardias activas, historial de reportes, alertas
+activas"):
+
+- `panel/src/pages/Clientes.jsx`: lista con buscador (nombre/email/teléfono), columnas
+  contacto + cantidad de Pacientes + fecha de alta, 4 estados (regla 3).
+- `panel/src/pages/clientes/ClienteDetalle.jsx`: contacto, tabla de Pacientes (nombre, fecha
+  de nacimiento, nivel de complejidad, domicilio), y tres secciones (guardias activas,
+  historial de reportes, alertas activas) que muestran explícitamente "no disponible
+  todavía" en vez de una lista vacía falsa — esos datos dependen de la PWA de Asistentes
+  (Etapa 3), que no existe.
+- Ambas pantallas hacen `select` embebido `clientes → solicitudes → pacientes` vía
+  Supabase/PostgREST. **Nota técnica no obvia**: `clientes.solicitud_id → solicitudes(id)` y
+  `solicitudes.cliente_id → clientes(id)` son dos FK cruzadas entre las mismas dos tablas —
+  PostgREST no puede resolver el embed sin ambigüedad (`PGRST201`, confirmado en vivo contra
+  Supabase real) a menos que se indique explícitamente qué relación usar:
+  `solicitudes!clientes_solicitud_id_fkey(...)`. Si se agrega otro embed entre estas dos
+  tablas en el futuro, usar siempre el hint de FK, nunca el nombre de tabla a secas.
+- `panel/src/App.jsx` (rutas `/clientes` y `/clientes/:id`), `panel/src/components/layout/Layout.jsx`
+  (link de nav), `panel/src/i18n/translations.js` (bloque `clientes` + `nav.clientes` en
+  es-AR/en/pt-BR).
+
+Verificado: `npm run build` y `npx vitest run` sin errores (18/18); confirmado en vivo contra
+Supabase real que el hint de FK evita el error de ambigüedad y que sin sesión autenticada
+RLS bloquea la lectura (`[]`).
+
+Con esto, Módulo 5 queda completo salvo por los datos que dependen de Etapa 3 (guardias/
+reportes/alertas), documentados como pendientes explícitos, no como bugs.
 
 ## Actualización — `schema_etapa2b.sql` aplicado contra Supabase real
 
@@ -243,6 +270,7 @@ _Una entrada por sesión de trabajo, más reciente primero._
 
 | Fecha | Sesión | Archivos |
 |---|---|---|
+| 2026-07-08 | Módulo 5 completo: pantalla de Clientes y Pacientes | `panel/src/pages/Clientes.jsx` (nuevo); `panel/src/pages/clientes/ClienteDetalle.jsx` (nuevo); `panel/src/App.jsx` (rutas `/clientes` y `/clientes/:id`); `panel/src/components/layout/Layout.jsx` (link de nav); `panel/src/i18n/translations.js` (bloque `clientes` + `nav.clientes` en es-AR/en/pt-BR) |
 | 2026-07-08 | Mecanismo de creación de cuentas (compartido) + inicio Módulo 5 (Clientes) | `backend/src/db/schema_etapa2c.sql` (nuevo, aplicado y verificado); `backend/src/utils/cuentasPanel.js` (nuevo); `backend/src/routes/panelCuentas.js` (nuevo); `backend/src/server.js` (ruta montada); `panel/src/pages/SolicitudDetalle.jsx` (botón "Convertir en Cliente"); `panel/src/i18n/translations.js` (4 claves nuevas en es-AR/en/pt-BR) |
 | 2026-07-08 | Módulo 4 del Panel (Plantel de Asistentes) + `PRD_02B_Gestion_Personal.md` completo | `backend/src/db/schema_etapa2b.sql` (nuevo, no aplicado aún); `panel/src/lib/{calcularCese,escalasLegales,scoreRiesgo}.js` (nuevos) + `panel/src/lib/__tests__/{calcularCese,scoreRiesgo}.test.js` (nuevos); `panel/src/hooks/useEscalasLegales.js` (nuevo); `panel/src/pages/Asistentes.jsx` (nuevo); `panel/src/pages/asistentes/{AsistenteDetalle,PerfilTab,VinculoCeseTab,SimuladorVinculoTab,ScoreRiesgoTab,AusenciasCoberturaTab}.jsx` (nuevos); `panel/src/App.jsx` (rutas `/asistentes` y `/asistentes/:id`); `panel/src/components/layout/Layout.jsx` (link de nav); `panel/src/index.css` (clases nuevas del Módulo 4, solo variables existentes); `panel/src/i18n/translations.js` (claves `nav.asistentes` + bloque `asistentes` completo en es-AR/en/pt-BR); `panel/package.json` (agregado `vitest`) |
 | 2026-07-08 | Etapa 2: primer corte del Panel de Administración (Módulos 1-3) | `panel/` (app nueva completa: `package.json`, `index.html`, `src/{App,main,index.css}`, `src/styles/variables.css`, `src/components/ui/{Button,FormField,Alert}.jsx`, `src/lib/supabaseClient.js`, `src/i18n/{translations,LocaleContext}.jsx`, `src/context/AuthContext.jsx`, `src/hooks/useSupabaseTable.js`, `src/components/layout/{Layout,ProtectedRoute,EstadoLista}.jsx`, `src/pages/{Login,Dashboard,Postulaciones,PostulacionDetalle,Solicitudes,SolicitudDetalle}.jsx`, `.env.example`, `.gitignore`); `backend/src/db/schema_etapa2.sql` (nuevo), `backend/src/middleware/requiereRolPanel.js` (nuevo), `backend/src/routes/panelNotificaciones.js` (nuevo), `backend/src/utils/email.js` (agregado `enviarEmail`), `backend/src/server.js` (rutas del panel montadas) |

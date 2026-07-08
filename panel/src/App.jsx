@@ -9,6 +9,8 @@ import { Postulaciones } from './pages/Postulaciones';
 import { Solicitudes } from './pages/Solicitudes';
 import { Asistentes } from './pages/Asistentes';
 import { AsistenteDetalle } from './pages/asistentes/AsistenteDetalle';
+import { Clientes } from './pages/Clientes';
+import { ClienteDetalle } from './pages/clientes/ClienteDetalle';
 
 function App() {
   return (
@@ -30,6 +32,8 @@ function App() {
               <Route path="solicitudes" element={<Solicitudes />} />
               <Route path="asistentes" element={<Asistentes />} />
               <Route path="asistentes/:id" element={<AsistenteDetalle />} />
+              <Route path="clientes" element={<Clientes />} />
+              <Route path="clientes/:id" element={<ClienteDetalle />} />
             </Route>
           </Routes>
         </BrowserRouter>

@@ -89,15 +89,18 @@ Etapa 2 — Panel de administración
   código y con `backend/src/db/schema_etapa2b.sql` ya aplicado y verificado (RLS activa y
   probada) contra la base Supabase real — ver `docs/PROGRESS.md`.
 
-  Módulo 5 (Clientes y Pacientes) en progreso: se resolvió un gap arquitectónico compartido
+  Módulo 5 (Clientes y Pacientes) completo: se resolvió un gap arquitectónico compartido
   con Asistentes (ninguna de las dos tablas puede poblarse sin una cuenta real de Supabase
   Auth previa) construyendo un mecanismo de creación de cuentas reutilizable
   (`backend/src/utils/cuentasPanel.js`, `POST /api/panel/cuentas/cliente`), sin envío de
   invitación por email todavía (las PWA de Etapa 3/4 no existen). `schema_etapa2c.sql`
-  (tablas `clientes`/`pacientes`) ya aplicado y verificado contra Supabase real. Falta
-  todavía la pantalla propia de gestión del Módulo 5 y el lado Asistente del mismo mecanismo
-  (depende de una UI de Filtro prestadora-original que no existe). Módulos 6-8 quedan para sesiones
-  siguientes — ver `docs/PROGRESS.md`.
+  (tablas `clientes`/`pacientes`) ya aplicado y verificado contra Supabase real. La pantalla
+  propia (`panel/src/pages/Clientes.jsx` + `clientes/ClienteDetalle.jsx`) muestra contacto y
+  Pacientes; guardias activas/historial de reportes/alertas activas quedan marcadas como "no
+  disponible todavía" porque dependen de datos que solo genera la PWA de Asistentes (Etapa
+  3, no construida). El lado Asistente del mecanismo de cuentas (depende de una UI de Filtro
+  prestadora-original que no existe) sigue afuera. Módulos 6-8 quedan para sesiones siguientes — ver
+  `docs/PROGRESS.md`.
 
 Etapas 3 y 4 — PWA Asistentes / PWA Clientes
   Framework: React 18 + Vite + Vite PWA Plugin

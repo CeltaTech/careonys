@@ -58,7 +58,7 @@ público/de marketing, todavía no confirmado. Dentro del Panel (uso interno, Co
 Admin) la pantalla que avanza al Postulante por las etapas de verificación se llama
 "Proceso de Incorporación de Asistentes" — no usar "Filtro prestadora-original" ahí.
 
-## Las 10 reglas no negociables
+## Las 11 reglas no negociables
 
 1. **Nunca hardcodear**: texto visible (usar objeto `T` de i18n), precios, honorarios,
    valores legales (cargas sociales, topes, % de indemnización — siempre desde
@@ -82,6 +82,17 @@ Admin) la pantalla que avanza al Postulante por las etapas de verificación se l
 10. **Nunca calcular indemnizaciones o montos legales con números escritos en el código** —
     siempre consultar `escalas_legales` vigente a la fecha del hecho (no la fecha actual),
     según el motor descripto en `docs/PRD_02B_Gestion_Personal.md`.
+11. **Todo lo que se construye (sitio público, Panel, futuras PWA) debe funcionar en
+    cualquier sistema operativo y cualquier navegador** (Windows/macOS/Linux/Android/iOS ×
+    Chrome/Firefox/Safari/Edge). No asumir un solo navegador o plataforma al elegir una
+    solución técnica. Caso concreto ya resuelto (2026-07-08): el traductor automático de
+    Chrome retraducía el Panel de vuelta al español apenas cambiabas de idioma con el
+    selector propio — se agregó `<meta name="google" content="notranslate">` +
+    `translate="no"` en `panel/index.html` para que ningún navegador basado en Chromium
+    fuerce su propia traducción sobre el i18n del sistema. Aplicar el mismo criterio
+    (no depender de que un navegador/SO específico se comporte "bien") a cualquier feature
+    nueva — geolocalización, notificaciones push, cámara/GPS de la futura PWA de Asistentes,
+    etc.
 
 ## Protocolo de sesión
 

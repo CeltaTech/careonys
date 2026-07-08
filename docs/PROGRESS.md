@@ -125,6 +125,39 @@ ningún PRD original._
 | 2026-07-08 | Primer corte de Etapa 2 acotado a Módulos 1-3 (Dashboard, Postulaciones, Solicitudes) — son los únicos con datos reales ya fluyendo desde Etapa 1. Módulo 4 + `PRD_02B_Gestion_Personal.md` (vínculo/cese/riesgo legal) quedan fuera deliberadamente, para una sesión propia dada la sensibilidad legal del motor de cálculo de indemnizaciones | Evitar construir sobre tablas (`asistentes`, `guardias`, `clientes`, `pacientes`) que todavía no existen, y separar el motor legal (regla 10 de `CLAUDE.md`, mayor riesgo) del resto del panel |
 | 2026-07-08 | Se corrigió una policy RLS recursiva (`admin_ve_todos_los_usuarios` en la tabla `usuarios`, subconsultaba la misma tabla dentro de un `EXISTS`) tanto en la base real de Supabase como en `backend/src/db/schema_etapa2.sql`. Se dejó documentado en el propio SQL como comentario para que no se reintroduzca | Postgres reevalúa RLS dentro del `EXISTS`, causando `infinite recursion detected in policy for relation "usuarios"` — descubierto durante la verificación end-to-end con el usuario Admin real recién creado |
 
+## Próximos pasos sugeridos (por qué se detuvo acá esta sesión)
+
+Con Módulo 4 + `PRD_02B_Gestion_Personal.md` en código, evalué seguir de largo con los
+Módulos 5-8 del panel (`PRD_02_Panel_Admin.md`) durante la misma sesión nocturna, pero decidí
+no hacerlo sin confirmación, por una razón de secuencia de `BUILD_ORDER.md` (regla no
+negociable: "no empezar una etapa de código sin que la anterior esté funcionando en
+producción"):
+
+- **Módulo 5 (Clientes y Pacientes)**: la tabla `clientes` en `DATA_MODEL.md` tiene
+  `id UUID REFERENCES usuarios(id)` — es decir, un cliente solo puede existir si ya tiene
+  una cuenta de Supabase Auth. Crear ese login de cliente es explícitamente alcance de
+  Etapa 4 (PWA Clientes), que todavía no arrancó. Construir Módulo 5 ahora implicaría
+  decidir por mi cuenta cómo crear cuentas de cliente antes de tiempo, o modelar una tabla
+  distinta a la documentada — una decisión de arquitectura que prefiero no tomar sin el
+  usuario.
+- **Módulos 6 (Guardias) y 7 (Reportes y Alertas)**: dependen de datos que todavía no
+  existen (`guardias`, `reportes`, `alertas` se generan desde la PWA de Asistentes, Etapa 3,
+  que aún no se construyó). Cualquier UI acá sería una cáscara vacía sin datos reales que
+  mostrar.
+- **Módulo 8 (Configuración)**: no tiene tabla definida en `DATA_MODEL.md` (a diferencia de
+  Módulo 4, que sí tenía spec completa en `PRD_02B_Gestion_Personal.md`). Money involucrado
+  (precios por modalidad, regla 1 de `CLAUDE.md` — nunca hardcodear precios) amerita que el
+  usuario confirme el esquema antes de escribir SQL nuevo sin PRD de respaldo.
+
+Por eso el trabajo autónomo de esta sesión se acotó a Módulo 4 + Etapa 2B (que sí tenían PRD
+completo y no dependían de etapas futuras), en vez de avanzar sobre módulos que requieren
+decisiones de producto/arquitectura no tomadas todavía. Al despertar, el usuario debería:
+1. Aplicar `schema_etapa2b.sql` contra Supabase real (contraseña de la base o SQL Editor
+   manual) y confirmar RLS.
+2. Decidir si Etapa 4 (login de clientes) se adelanta para poder construir Módulo 5, o si
+   Módulo 5 espera su turno natural en `BUILD_ORDER.md`.
+3. Confirmar el esquema de precios/configuración de Módulo 8 antes de que se construya.
+
 ## Problemas conocidos / deuda técnica
 
 _Registrar acá bugs conocidos o deuda técnica para la próxima sesión._

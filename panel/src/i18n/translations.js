@@ -82,6 +82,10 @@ export const T = {
       nombre_paciente: 'Nombre del paciente',
       dias_horario: 'Días y horario',
       descripcion: 'Descripción',
+      convertir_en_cliente: 'Convertir en Cliente',
+      convertir_en_cliente_explicacion: 'Crea la cuenta real del Cliente y su Paciente en el sistema. No se envía ninguna invitación por email todavía.',
+      confirmar_convertir_cliente: '¿Confirmás convertir esta solicitud en un Cliente con cuenta propia? Esta acción crea una cuenta real y no se puede deshacer desde acá.',
+      ya_convertida_cliente: 'Esta solicitud ya tiene un Cliente asociada.',
     },
     asistentes: {
       titulo: 'Plantel de Asistentes',
@@ -269,6 +273,10 @@ export const T = {
       nombre_paciente: 'Patient name',
       dias_horario: 'Days and schedule',
       descripcion: 'Description',
+      convertir_en_cliente: 'Convert to Family',
+      convertir_en_cliente_explicacion: 'Creates the real Family account and its Patient in the system. No invitation email is sent yet.',
+      confirmar_convertir_cliente: 'Confirm converting this request into a Family with its own account? This creates a real account and cannot be undone from here.',
+      ya_convertida_cliente: 'This request already has a Family associated.',
     },
     asistentes: {
       titulo: 'Caregiver Roster',
@@ -456,6 +464,10 @@ export const T = {
       nombre_paciente: 'Nome do paciente',
       dias_horario: 'Dias e horário',
       descripcion: 'Descrição',
+      convertir_en_cliente: 'Converter em Família',
+      convertir_en_cliente_explicacion: 'Cria a conta real da Família e do Paciente no sistema. Ainda não é enviado nenhum convite por email.',
+      confirmar_convertir_cliente: 'Confirma converter esta solicitação em uma Família com conta própria? Esta ação cria uma conta real e não pode ser desfeita por aqui.',
+      ya_convertida_cliente: 'Esta solicitação já tem uma Família associada.',
     },
     asistentes: {
       titulo: 'Equipe de Assistentes',

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
 import { FormField } from '../components/ui/FormField';
@@ -8,6 +9,7 @@ import { Alert } from '../components/ui/Alert';
 export function Login() {
   const { t } = useLocale();
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -23,7 +25,10 @@ export function Login() {
     if (errorLogin) {
       setError(t.auth.error_credenciales);
       setEnviando(false);
+      return;
     }
+
+    navigate('/', { replace: true });
   }
 
   return (

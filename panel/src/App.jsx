@@ -13,6 +13,7 @@ import { Clientes } from './pages/Clientes';
 import { ClienteDetalle } from './pages/clientes/ClienteDetalle';
 import { ListaPrecios } from './pages/ListaPrecios';
 import { UsuariosPanel } from './pages/UsuariosPanel';
+import { Configuracion } from './pages/Configuracion';
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
               <Route path="clientes/:id" element={<ClienteDetalle />} />
               <Route path="lista-precios" element={<ListaPrecios />} />
               <Route path="usuarios-panel" element={<UsuariosPanel />} />
+              <Route path="configuracion" element={<Configuracion />} />
             </Route>
           </Routes>
         </BrowserRouter>

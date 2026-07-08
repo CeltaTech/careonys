@@ -25,8 +25,8 @@ export function Dashboard() {
   const { t } = useLocale();
   const postulaciones = useSupabaseTable('postulaciones');
   const solicitudes = useSupabaseTable('solicitudes');
-  const asistentes = useSupabaseTable('asistentes');
-  const clientes = useSupabaseTable('clientes');
+  const asistentes = useSupabaseTable('asistentes', { orderBy: 'created_at' });
+  const clientes = useSupabaseTable('clientes', { orderBy: 'created_at' });
 
   const estados = [postulaciones.estado, solicitudes.estado, asistentes.estado, clientes.estado];
   const estadoGeneral = estados.includes('error')

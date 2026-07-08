@@ -5,3 +5,6 @@ dist/
 *.log
 .DS_Store
 Thumbs.db
+
+# Credenciales y datos sensibles — nunca commitear (regla 9 de CLAUDE.md)
+No hacer commit/

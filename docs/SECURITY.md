@@ -30,6 +30,32 @@ error.
 Esto es una recomendación de configuración para cuando se dé de alta el proyecto de
 Supabase — no requiere código propio.
 
+## Portabilidad de datos — no depender de un solo proveedor (decisión 2026-07-07)
+
+Supabase es la base de datos elegida para todo el roadmap (ver `CONTEXT.md`), pero el
+proyecto **no debe construirse de forma que dejarlo sea riesgoso o traumático**. Reglas
+para mantener esa salida siempre abierta:
+
+- **Toda la lógica de negocio vive en el backend Node/Express propio**, nunca en Supabase
+  Edge Functions ni en triggers/funciones de Postgres con lógica de negocio compleja. Si
+  cambia el proveedor de base de datos, el backend cambia una connection string, no su
+  código.
+- **RLS se escribe en SQL estándar de Postgres**, sin depender de helpers propietarios de
+  Supabase más allá de `auth.uid()` (que tiene equivalente directo en cualquier Postgres
+  con su propio esquema de usuarios).
+- **Backup propio, independiente del backup nativo de Supabase**: un `pg_dump` periódico
+  de la base (automatizable con un cron simple en el propio backend o una GitHub Action)
+  guardado fuera de Supabase (ej. un bucket separado o descarga local cifrada). Esto
+  protege contra el peor caso (cuenta bloqueada, error de facturación, borrado accidental
+  del proyecto) sin depender de que el proveedor mismo resuelva su propia falla.
+- Storage: si se sube a Supabase Storage, evitar features no estándar que no tengan
+  equivalente en cualquier storage S3-compatible.
+
+Ninguna de estas reglas frena el desarrollo actual — son restricciones de diseño, no
+trabajo extra significativo. El backup propio es la única tarea pendiente concreta, a
+implementar antes de que haya datos reales de pacientes/Asistentes/clientes en producción
+(no es urgente mientras solo haya datos de prueba).
+
 ## RBAC — roles del sistema
 
 Los 5 roles reales del proyecto (nota histórica: Money Suite usaba genéricos

@@ -341,11 +341,11 @@ Cuando un `aspirante` completa las 5 etapas del Filtro prestadora-original, se p
 (no se mezclan las dos tablas — un aspirante rechazado no debe ensuciar la tabla operativa
 de Asistentes activos).
 
-## Etapa 1 (MySQL en Railway — antes de la migración a Supabase)
+## Etapa 1 (Supabase/Postgres desde el día uno — sin paso intermedio por MySQL)
 
 ```sql
 CREATE TABLE solicitudes (
-  id INT AUTO_INCREMENT PRIMARY KEY,
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   nombre VARCHAR(100) NOT NULL,
   telefono VARCHAR(30) NOT NULL,
   email VARCHAR(100) NOT NULL,
@@ -356,11 +356,11 @@ CREATE TABLE solicitudes (
   dias_horario VARCHAR(200) NOT NULL,
   descripcion TEXT,
   canal VARCHAR(50) DEFAULT 'web',
-  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  creado_en TIMESTAMPTZ DEFAULT now()
 );
 
 CREATE TABLE postulaciones (
-  id INT AUTO_INCREMENT PRIMARY KEY,
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   nombre VARCHAR(100) NOT NULL,
   telefono VARCHAR(30) NOT NULL,
   email VARCHAR(100) NOT NULL,
@@ -373,13 +373,16 @@ CREATE TABLE postulaciones (
   mensaje TEXT,
   estado VARCHAR(30) DEFAULT 'pendiente',
   canal VARCHAR(50) DEFAULT 'web',
-  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  creado_en TIMESTAMPTZ DEFAULT now()
 );
 ```
 
-En la migración a Supabase (Etapa 2), `postulaciones` (MySQL) se convierte en el flujo de
-entrada de `aspirantes` (Supabase) — no son la misma tabla, es un traspaso de datos con
-transformación.
+RLS activada desde la creación de ambas tablas (regla 8 de `CLAUDE.md`); el backend Express
+escribe con la Service Role Key (bypassea RLS por ser server-only), sin policies públicas de
+lectura/escritura. En Etapa 2, `postulaciones` sigue siendo la tabla de entrada cruda del
+formulario público; cuando un Coordinador la aprueba, se transforma en un registro de
+`aspirantes` — son tablas distintas con un paso de transformación, pero ya no hay migración
+de motor de base de datos de por medio.
 
 ## Diagrama de relaciones (resumen)
 

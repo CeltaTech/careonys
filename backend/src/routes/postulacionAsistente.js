@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { pool } from '../db/connection.js';
+import { supabase } from '../db/connection.js';
 import { enviarEmailCoordinador } from '../utils/email.js';
 
 export const postulacionAsistenteRouter = Router();
@@ -14,12 +14,18 @@ postulacionAsistenteRouter.post('/', async (req, res) => {
     return res.status(400).json({ error: 'campos_obligatorios_faltantes' });
   }
 
-  await pool.execute(
-    `INSERT INTO postulaciones
-      (nombre, telefono, email, especialidades, zonas, disponibilidad, anios_experiencia, situacion_fiscal, como_conocio, mensaje)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [nombre, telefono, email, especialidades, zonas, disponibilidad, anios_experiencia ?? null, situacion_fiscal, como_conocio ?? null, mensaje ?? null],
-  );
+  const { error } = await supabase.from('postulaciones').insert({
+    nombre, telefono, email, especialidades, zonas, disponibilidad,
+    anios_experiencia: anios_experiencia ?? null,
+    situacion_fiscal,
+    como_conocio: como_conocio ?? null,
+    mensaje: mensaje ?? null,
+  });
+
+  if (error) {
+    console.error('Error insertando postulación:', error.message);
+    return res.status(500).json({ error: 'error_guardando_postulacion' });
+  }
 
   try {
     await enviarEmailCoordinador({

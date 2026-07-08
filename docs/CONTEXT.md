@@ -47,16 +47,18 @@ Etapa 1 — Sitio web público
   Frontend:  React 18 + Vite + React Router DOM 6
   Estilos:   CSS custom con variables de marca (no Tailwind, no CSS-in-JS)
   Backend:   Node.js + Express (solo formularios)
-  DB:        MySQL en Railway (datos de formularios — no Supabase todavía)
+  DB:        Supabase (PostgreSQL + RLS) — mismo proyecto que usará el panel en Etapa 2,
+             el backend escribe con la Service Role Key (bypassea RLS por diseño, es server-only)
   Email:     Nodemailer + Gmail SMTP App Password
   PWA:       Vite PWA Plugin (manifest + service worker básico)
-  Deploy:    Vercel (frontend) + Railway (backend + MySQL)
+  Deploy:    Vercel (frontend) + Railway (backend Express)
 
 Etapa 2 — Panel de administración
   Frontend:  React 18 + Vite (ruta protegida o proyecto separado)
   Auth:      Supabase Auth (email + password, sin magic link)
-  DB:        Supabase (PostgreSQL + RLS) — migración desde MySQL en esta etapa
-  Nota: el sitio público sigue en Express/MySQL; el panel ya usa Supabase directamente.
+  DB:        Supabase (PostgreSQL + RLS) — mismo proyecto ya creado en Etapa 1, sin migración
+  Nota: el sitio público sigue en Express como capa de validación/envío de email, pero
+  ambos (sitio y panel) leen/escriben la misma base Supabase.
 
 Etapas 3 y 4 — PWA Asistentes / PWA Clientes
   Framework: React 18 + Vite + Vite PWA Plugin

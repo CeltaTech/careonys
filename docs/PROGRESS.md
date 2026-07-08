@@ -33,9 +33,12 @@ middleware. **Deploy real confirmado (2026-07-08)**: backend en Railway
 (`prestadora-original-backend-production.up.railway.app`) online y respondiendo `/health`; frontend
 Next.js desplegado a producción en Vercel (`sitio-web-drab.vercel.app`) con
 `NEXT_PUBLIC_API_URL` real cargada; verificado end-to-end con un POST real de prueba contra
-`/api/solicitud-servicio` (201 OK, fila de prueba borrada de Supabase después). Pendiente:
-contenido real de imágenes/fotografía propia y dominio propio (`prestadora-originalsalud.com.ar`,
-placeholder) — queda en el checklist de lanzamiento de `PRD_01_Sitio_Web.md`.
+`/api/solicitud-servicio` (201 OK, fila de prueba borrada de Supabase después). Se agregó
+también un service worker offline hecho a mano (`public/sw.js` + `public/offline.html`,
+registrado solo en producción) que cierra la deuda técnica de cacheo offline que había
+quedado pendiente de la migración. Pendiente: contenido real de imágenes/fotografía propia y
+dominio propio (`prestadora-originalsalud.com.ar`, placeholder) — queda en el checklist de lanzamiento de
+`PRD_01_Sitio_Web.md`.
 
 ## Decisiones tomadas durante el desarrollo
 
@@ -60,14 +63,13 @@ ningún PRD original._
 | 2026-07-07 | Se documentó en `SECURITY.md` un principio de arquitectura: portabilidad de datos fuera de Supabase sin fricción si algún día hiciera falta migrar — lógica de negocio siempre en el backend Node propio (nunca en Supabase Edge Functions/triggers complejos), RLS en SQL estándar de Postgres, y backup propio (`pg_dump` periódico) independiente del backup nativo de Supabase, pendiente de implementar antes de tener datos reales de pacientes/Asistentes/clientes en producción | El usuario pidió explícitamente estar cubierto ante la contingencia de tener que dejar Supabase en el futuro, sin que eso ponga en riesgo la seguridad de los datos ni implique una migración traumática |
 | 2026-07-08 | **Migración completa del frontend de Etapa 1 de Vite+React Router a Next.js 15 (App Router)**, con usuarios cero (momento más barato para el cambio). Se reemplazó `LocaleContext` (React Context + localStorage) por rutas con prefijo de idioma reales (`app/[locale]/...`, `middleware.js` redirige `/` → `/es-AR`), cada página exporta `generateMetadata` con title/description/OpenGraph propios y `generateStaticParams` genera las 3 variantes de idioma como HTML estático en build. Los formularios (`SolicitaServicio`, `TrabajaConNosotros`) y el selector de idioma/menú del header pasaron a client components (`'use client'`), el resto (Footer, WhatsAppButton, páginas) quedó como server components. Se agregó `app/manifest.js` (reemplaza `vite-plugin-pwa`, sin service worker offline todavía). Se actualizó `CONTEXT.md`. El backend Express/Supabase no se tocó. Etapas 3-4 (PWA Asistentes/Clientes) siguen en Vite | Mandato explícito y de negocio del usuario: "el seo es fundamental, si no nos ven no nos contactan, si no nos contactan no facturamos, si no facturamos todo esto no sirve para nada" — Vite nunca indexaba nada más que español porque el idioma se resolvía 100% client-side. Usuario también pidió, como criterio general para decisiones de arquitectura futuras, priorizar la opción más versátil a largo plazo por sobre la que "por ahora alcanza" |
 | 2026-07-08 | Deploy real de Etapa 1 confirmado end-to-end: backend en Railway online (`/health` OK), frontend Next.js desplegado a producción en Vercel con `NEXT_PUBLIC_API_URL` real, y un POST de prueba contra `/api/solicitud-servicio` confirmó que el formulario público llega a Supabase a través de Railway (CORS abierto, sin fricción). Fila de prueba borrada después | Cierre del pendiente que había quedado abierto desde la sesión anterior cuando se priorizó la migración a Next.js sobre la verificación del deploy |
+| 2026-07-08 | Service worker offline agregado a mano al sitio público (`public/sw.js` + `public/offline.html`, registrado desde un client component `ServiceWorkerRegister.jsx` en `app/[locale]/layout.jsx`, solo activo en producción): cachea assets estáticos (`_next/static`, íconos, favicon) y muestra `offline.html` con estilo de marca cuando falla la navegación sin red. Se optó por escribirlo directo en vez de una librería (`next-pwa`) para evitar depender de un paquete sin soporte confirmado para Next 15 App Router | Cierre de la deuda técnica registrada en la migración a Next.js; se priorizó una solución simple y sin dependencias nuevas dado que el sitio público no depende de esto para funcionar |
 
 ## Problemas conocidos / deuda técnica
 
 _Registrar acá bugs conocidos o deuda técnica para la próxima sesión._
 
-| Descripción | Prioridad | Estado |
-|---|---|---|
-| El sitio público (Next.js) tiene `app/manifest.js` (instalabilidad) pero no service worker de cacheo offline — `vite-plugin-pwa` lo daba gratis, el equivalente en Next.js (`next-pwa` o similar) no se configuró todavía | Baja — el sitio público no necesita funcionar offline, a diferencia de las PWA de Asistentes/Clientes | 🔴 No iniciado |
+_Sin pendientes abiertos por el momento._
 
 ## Archivos creados/modificados por sesión
 

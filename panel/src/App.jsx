@@ -11,6 +11,7 @@ import { Asistentes } from './pages/Asistentes';
 import { AsistenteDetalle } from './pages/asistentes/AsistenteDetalle';
 import { Clientes } from './pages/Clientes';
 import { ClienteDetalle } from './pages/clientes/ClienteDetalle';
+import { ListaPrecios } from './pages/ListaPrecios';
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
               <Route path="asistentes/:id" element={<AsistenteDetalle />} />
               <Route path="clientes" element={<Clientes />} />
               <Route path="clientes/:id" element={<ClienteDetalle />} />
+              <Route path="lista-precios" element={<ListaPrecios />} />
             </Route>
           </Routes>
         </BrowserRouter>

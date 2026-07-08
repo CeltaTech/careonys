@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLocale } from '../../i18n/LocaleContext';
 import { supabase } from '../../lib/supabaseClient';
+import { Button } from '../../components/ui/Button';
+import { PrestacionesPaciente } from './PrestacionesPaciente';
 
 export function ClienteDetalle() {
   const { t } = useLocale();
@@ -10,6 +12,7 @@ export function ClienteDetalle() {
   const [cliente, setCliente] = useState(null);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
+  const [pacienteSeleccionado, setPacienteSeleccionado] = useState(null);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -69,6 +72,7 @@ export function ClienteDetalle() {
               <th>{t.clientes.fecha_nacimiento}</th>
               <th>{t.clientes.nivel_complejidad}</th>
               <th>{t.clientes.domicilio}</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -78,6 +82,11 @@ export function ClienteDetalle() {
                 <td>{p.fecha_nacimiento || '—'}</td>
                 <td>{p.nivel_complejidad || '—'}</td>
                 <td>{p.domicilio || '—'}</td>
+                <td>
+                  <Button variant="secondary" onClick={() => setPacienteSeleccionado(p)}>
+                    {t.prestaciones.titulo}
+                  </Button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -94,6 +103,10 @@ export function ClienteDetalle() {
 
       <h2>{t.clientes.alertas_activas}</h2>
       <p className="estado-vacio">{t.clientes.modulo_no_disponible}</p>
+
+      {pacienteSeleccionado && (
+        <PrestacionesPaciente paciente={pacienteSeleccionado} onClose={() => setPacienteSeleccionado(null)} />
+      )}
     </div>
   );
 }

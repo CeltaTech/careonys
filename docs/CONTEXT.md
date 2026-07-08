@@ -99,8 +99,22 @@ Etapa 2 — Panel de administración
   Pacientes; guardias activas/historial de reportes/alertas activas quedan marcadas como "no
   disponible todavía" porque dependen de datos que solo genera la PWA de Asistentes (Etapa
   3, no construida). El lado Asistente del mecanismo de cuentas (depende de una UI de Filtro
-  prestadora-original que no existe) sigue afuera. Módulos 6-8 quedan para sesiones siguientes — ver
+  prestadora-original que no existe) sigue afuera. Módulos 6-7 quedan para sesiones siguientes — ver
   `docs/PROGRESS.md`.
+
+  Módulo 8 (Precios/Prestaciones), primer corte: `schema_etapa2d.sql` (tablas
+  `lista_precios`, `prestaciones`, `paquetes_prestaciones`, `paquete_prestacion_items`) ya
+  aplicado y verificado contra Supabase real. Regla de negocio central (confirmada con el
+  usuario): ningún medio público habla de precios — la lista de precios es solo referencia
+  interna, y cada Paciente tiene su propia Prestación con precio final ajustado a su caso.
+  La Prestación guarda una foto del precio de lista al momento de armarse (no una
+  referencia viva); si el precio de lista cambia después, un trigger marca las Prestaciones
+  vigentes como "a revisar" para que el Coordinador decida — nunca se ajustan solas. Varias
+  Prestaciones de un mismo Paciente pueden agruparse en un paquete con precio propio.
+  Pantallas: `panel/src/pages/ListaPrecios.jsx` (Admin edita, Coordinador solo ve) y
+  `panel/src/pages/clientes/PrestacionesPaciente.jsx` (modal desde la ficha de Cliente).
+  Explícitamente marcado como esquema provisional, a evolucionar con el uso real — la
+  política de cuánto trasladar de un aumento de precio a cada cliente queda diferida.
 
 Etapas 3 y 4 — PWA Asistentes / PWA Clientes
   Framework: React 18 + Vite + Vite PWA Plugin

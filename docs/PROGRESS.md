@@ -10,7 +10,7 @@
 |---|---|---|
 | 0 | Setup: repo, estructura, variables de entorno | 🟢 Completo |
 | 1 | Sitio web público (páginas + formularios + backend) | 🟡 En progreso |
-| 2 | Panel de administración (Módulos 1-5) | 🟡 En progreso — Módulos 6-8 pendientes |
+| 2 | Panel de administración (Módulos 1-5 + primer corte de precios/Prestaciones) | 🟡 En progreso — Módulos 6-7 pendientes, Módulo 8 con primer esquema (evoluciona con el uso) |
 | 2B | Gestión de Personal (vínculo/cese/riesgo/cobertura) | 🟢 Completo — código listo y SQL aplicado/verificado contra Supabase real |
 | 3 | PWA Asistentes (login, guardias, GPS, reporte + IA) | 🔴 No iniciado |
 | 4 | PWA Clientes (login, reportes, alertas) | 🔴 No iniciado |
@@ -198,6 +198,91 @@ RLS bloquea la lectura (`[]`).
 Con esto, Módulo 5 queda completo salvo por los datos que dependen de Etapa 3 (guardias/
 reportes/alertas), documentados como pendientes explícitos, no como bugs.
 
+## Actualización — Primer esquema de Precios y Prestaciones particulares por Paciente
+
+Construido, aplicado y verificado contra Supabase real un primer esquema de trabajo para
+Precios/Prestaciones (parte de lo que `BUILD_ORDER.md` llama Módulo 8), explícitamente
+marcado como provisional: el usuario lo aprobó con "armemos un primer esquema de trabajo
+así y veamos como lo hacemos evolucionar en la medida que lo usemos", no como diseño
+cerrado.
+
+Reglas de negocio confirmadas con el usuario que moldean este esquema:
+
+- Ningún medio público (sitio, app, etc.) habla nunca de precios — eso queda privativo de
+  la respuesta de contacto directa. La lista de precios es de uso interno, orientativa.
+- Cada Cliente/Paciente tiene una Prestación particular propia (días, horario, cantidad de
+  guardias, feriados, viajes, internación, etc.), con su propio precio final ajustado —
+  no todos los clientes tienen las mismas necesidades ni las mismas posibilidades
+  económicas.
+- La lista de precios y la Prestación particular están vinculadas: el operador arma la
+  Prestación viendo el precio de lista y le aplica una bonificación ahí mismo (no son
+  datos independientes).
+- Si la lista general cambia, **no se ajusta solo** el precio ya pactado con un Cliente —
+  se marca la Prestación como "a revisar" para que el Coordinador a cargo de esa cuenta
+  decida (la política de cuánto trasladar y cómo queda deliberadamente afuera de este
+  corte, a definir en una sesión futura).
+- Varias Prestaciones simultáneas de un mismo Paciente deben poder manejarse como un solo
+  paquete económico (un precio propio, no la suma de las partes), además de operarse en
+  forma conjunta.
+
+Se investigaron (research de mercado, agencias de cuidado domiciliario y de personal de
+enfermería comparables) los patrones de "precio de lista con bonificación negociada",
+"paquete de prestaciones con precio propio" y "aviso al responsable de cuenta ante cambio
+de precio, nunca ajuste automático" antes de diseñar el esquema, porque el usuario mismo
+señaló que se estaba inventando el modelo sobre la marcha y pidió una referencia real.
+
+**Esquema (`backend/src/db/schema_etapa2d.sql`, aplicado y verificado contra Supabase real):**
+
+- `lista_precios`: referencia interna (tipo de servicio, modalidad, precio, vigencia,
+  activo). Lectura Admin+Coordinador, edición solo Admin (políticas separadas por
+  operación, primera vez que se usa este patrón en el proyecto en vez de un `FOR ALL`
+  único).
+- `prestaciones`: una por Paciente, con `configuracion` en JSONB (mismo patrón que
+  `asistentes.disponibilidad`) para días/horario/cantidad de guardias/feriados/viajes/
+  internación sin tener que migrar la tabla cada vez que aparece un caso nuevo.
+  Guarda una **foto** del precio de lista al momento de armarla
+  (`precio_lista_snapshot`) — no una referencia viva — más el tipo/valor de bonificación y
+  el `precio_final` ya calculado. `requiere_revision` (booleano) es el aviso al
+  Coordinador.
+- `paquetes_prestaciones` + `paquete_prestacion_items`: agrupa Prestaciones del mismo
+  Paciente bajo un precio propio, independiente de sumar las partes.
+- Trigger `trigger_precio_lista_actualizado` (función `marcar_prestaciones_a_revisar()`,
+  `SECURITY DEFINER`): al cambiar `lista_precios.precio`, marca `requiere_revision = true`
+  en toda Prestación vigente que lo use — nunca toca `precio_final`.
+
+Verificado con conexión directa (`pg`, scripts de un solo uso descartados después de
+correrlos, sin hardcodear la contraseña — leída en runtime de
+`No hacer commit/claves y contraseñas.txt`): las 4 tablas nuevas tienen
+`relrowsecurity = true` con las policies esperadas, y el trigger fue probado de punta a
+punta dentro de una transacción con `ROLLBACK` (sin dejar rastro en la base real) —
+confirmó que `requiere_revision` pasa a `true` y `precio_final` no se toca cuando cambia el
+precio de lista.
+
+**UI construida:**
+
+- `panel/src/pages/ListaPrecios.jsx` + `ListaPrecioDetalle.jsx`: pantalla de Lista de
+  Precios. Admin puede crear/editar filas (con aviso explícito de que cambiar un precio no
+  toca Prestaciones ya pactadas, solo las marca); Coordinador solo puede ver.
+- `panel/src/pages/clientes/PrestacionesPaciente.jsx`: modal accesible desde la ficha de
+  Cliente (`ClienteDetalle.jsx`, botón nuevo por Paciente) que arma una Prestación nueva
+  (elige servicio de la Lista de Precios, carga configuración y bonificación, muestra el
+  precio final calculado en vivo), lista las Prestaciones vigentes con su estado ("a
+  revisar" / "al día", con botón para que el Coordinador marque como revisado), y permite
+  agrupar dos o más Prestaciones seleccionadas en un paquete con precio propio.
+- `panel/src/App.jsx` (ruta `/lista-precios`), `panel/src/components/layout/Layout.jsx`
+  (link de nav), `panel/src/i18n/translations.js` (bloques `lista_precios` y `prestaciones`
+  + claves `nav.lista_precios`/`comun.editar` en es-AR/en/pt-BR).
+
+Verificado: `npm run build` y `npx vitest run` de `panel/` sin errores (18/18 tests,
+ninguno nuevo agregado todavía para este módulo — la lógica de cálculo de precio final es
+simple y se prueba visualmente, no amerita todavía un archivo de test propio).
+
+Queda explícitamente afuera de este corte (deuda conocida, no bug): la política de cuánto
+de un aumento de precio de lista trasladar a cada Cliente (el usuario la difirió a una
+sesión futura, "ya veremos en su momento la política de formación de precios"); una
+pantalla dedicada para gestionar `paquetes_prestaciones` existentes (hoy solo se listan,
+no se editan/eliminan desde la UI); tests automatizados de `PrestacionesPaciente.jsx`.
+
 ## Actualización — `schema_etapa2b.sql` aplicado contra Supabase real
 
 Con la contraseña de la base (provista por el usuario, ver
@@ -270,6 +355,7 @@ _Una entrada por sesión de trabajo, más reciente primero._
 
 | Fecha | Sesión | Archivos |
 |---|---|---|
+| 2026-07-08 | Primer esquema de Precios y Prestaciones particulares por Paciente | `backend/src/db/schema_etapa2d.sql` (nuevo, aplicado y verificado); `panel/src/pages/ListaPrecios.jsx` + `ListaPrecioDetalle.jsx` (nuevos); `panel/src/pages/clientes/PrestacionesPaciente.jsx` (nuevo); `panel/src/pages/clientes/ClienteDetalle.jsx` (botón "Prestaciones" por Paciente); `panel/src/App.jsx` (ruta `/lista-precios`); `panel/src/components/layout/Layout.jsx` (link de nav); `panel/src/i18n/translations.js` (bloques `lista_precios` y `prestaciones` + `nav.lista_precios`/`comun.editar` en es-AR/en/pt-BR) |
 | 2026-07-08 | Módulo 5 completo: pantalla de Clientes y Pacientes | `panel/src/pages/Clientes.jsx` (nuevo); `panel/src/pages/clientes/ClienteDetalle.jsx` (nuevo); `panel/src/App.jsx` (rutas `/clientes` y `/clientes/:id`); `panel/src/components/layout/Layout.jsx` (link de nav); `panel/src/i18n/translations.js` (bloque `clientes` + `nav.clientes` en es-AR/en/pt-BR) |
 | 2026-07-08 | Mecanismo de creación de cuentas (compartido) + inicio Módulo 5 (Clientes) | `backend/src/db/schema_etapa2c.sql` (nuevo, aplicado y verificado); `backend/src/utils/cuentasPanel.js` (nuevo); `backend/src/routes/panelCuentas.js` (nuevo); `backend/src/server.js` (ruta montada); `panel/src/pages/SolicitudDetalle.jsx` (botón "Convertir en Cliente"); `panel/src/i18n/translations.js` (4 claves nuevas en es-AR/en/pt-BR) |
 | 2026-07-08 | Módulo 4 del Panel (Plantel de Asistentes) + `PRD_02B_Gestion_Personal.md` completo | `backend/src/db/schema_etapa2b.sql` (nuevo, no aplicado aún); `panel/src/lib/{calcularCese,escalasLegales,scoreRiesgo}.js` (nuevos) + `panel/src/lib/__tests__/{calcularCese,scoreRiesgo}.test.js` (nuevos); `panel/src/hooks/useEscalasLegales.js` (nuevo); `panel/src/pages/Asistentes.jsx` (nuevo); `panel/src/pages/asistentes/{AsistenteDetalle,PerfilTab,VinculoCeseTab,SimuladorVinculoTab,ScoreRiesgoTab,AusenciasCoberturaTab}.jsx` (nuevos); `panel/src/App.jsx` (rutas `/asistentes` y `/asistentes/:id`); `panel/src/components/layout/Layout.jsx` (link de nav); `panel/src/index.css` (clases nuevas del Módulo 4, solo variables existentes); `panel/src/i18n/translations.js` (claves `nav.asistentes` + bloque `asistentes` completo en es-AR/en/pt-BR); `panel/package.json` (agregado `vitest`) |

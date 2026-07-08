@@ -44,14 +44,27 @@ Ningún rol de Asistente/Cliente debe tener acceso, ni siquiera de solo lectura,
 
 ```
 Etapa 1 — Sitio web público
-  Frontend:  React 18 + Vite + React Router DOM 6
+  Frontend:  Next.js 15 (App Router) + React 18 — SSR/SSG, no Vite (decisión 2026-07-08,
+             ver nota abajo)
+  Rutas:     /es-AR, /en, /pt-BR (locale-prefixed, vía app/[locale]/) — cada idioma tiene
+             URL propia indexable, en vez del Context+localStorage anterior
   Estilos:   CSS custom con variables de marca (no Tailwind, no CSS-in-JS)
-  Backend:   Node.js + Express (solo formularios)
+  Backend:   Node.js + Express (solo formularios) — sin cambios
   DB:        Supabase (PostgreSQL + RLS) — mismo proyecto que usará el panel en Etapa 2,
              el backend escribe con la Service Role Key (bypassea RLS por diseño, es server-only)
   Email:     Nodemailer + Gmail SMTP App Password
-  PWA:       Vite PWA Plugin (manifest + service worker básico)
+  PWA:       app/manifest.js (Next.js metadata API) — manifest básico; service worker
+             offline completo queda pendiente (no bloquea, ver PROGRESS.md)
   Deploy:    Vercel (frontend) + Railway (backend Express)
+
+  Nota (2026-07-08): el frontend de Etapa 1 migró de Vite+React Router a Next.js App
+  Router. Motivo explícito del usuario: "el seo es fundamental, si no nos ven no nos
+  contactan, si no nos contactan no facturamos". Vite servía todo el contenido client-side
+  bajo una sola URL, con el idioma resuelto en el navegador (Context + localStorage) — Google
+  solo indexaba español y nunca veía contenido pre-renderizado. Next.js da SSR/SSG real y
+  URLs propias por idioma. Esta migración es solo de Etapa 1; las PWA de Asistentes/Clientes
+  (Etapas 3-4) siguen en Vite, que sigue siendo la mejor herramienta ahí (sin necesidad de
+  SSR detrás de auth, plugin de PWA maduro).
 
 Etapa 2 — Panel de administración
   Frontend:  React 18 + Vite (ruta protegida o proyecto separado)

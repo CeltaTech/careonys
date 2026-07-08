@@ -418,6 +418,21 @@ acepta requests del panel sin cambios (`cors()` sin restricción de origen en
 (`curl` sobre la URL real). Con esto, Etapa 3 (PWA Asistentes) queda desbloqueada según
 la regla de secuencia de `BUILD_ORDER.md`.
 
+**Bugs post-deploy encontrados y arreglados el mismo día (2026-07-08):**
+- `panel/src/pages/Login.jsx` nunca navegaba a `/` tras un login exitoso (`ProtectedRoute`
+  solo redirige *hacia* `/login`, nada te sacaba de ahí) — el botón quedaba en "Ingresando"
+  para siempre. Fix: `navigate('/', { replace: true })` tras un login sin error.
+- `panel/src/pages/Dashboard.jsx` llamaba `useSupabaseTable('asistentes')` y
+  `useSupabaseTable('clientes')` sin `orderBy`, y el default del hook es `creado_en` — pero
+  ambas tablas usan `created_at` (igual que ya manejaba `Asistentes.jsx`). Rompía el
+  Dashboard con "la columna no existe". Fix: pasar `{ orderBy: 'created_at' }` en ambos.
+- El backend en Railway **no se redespliega solo con `git push`** — quedó corriendo una
+  build vieja sin la ruta `/api/panel/usuarios` (nueva de esta sesión) hasta que se corrió
+  `railway up` manualmente desde `backend/`. **Recordar**: después de cualquier cambio en
+  `backend/`, además del commit/push hace falta `cd backend && railway up --detach` para
+  que llegue a producción — a diferencia del panel (Vercel), que si se redespliega con
+  cada `vercel --prod` manual pero al menos usa el código ya pusheado.
+
 ## Problemas conocidos / deuda técnica
 
 _Registrar acá bugs conocidos o deuda técnica para la próxima sesión._

@@ -20,6 +20,7 @@ export function Layout() {
           <NavLink to="/asistentes">{t.nav.asistentes}</NavLink>
           <NavLink to="/clientes">{t.nav.clientes}</NavLink>
           <NavLink to="/lista-precios">{t.nav.lista_precios}</NavLink>
+          {usuario?.rol === 'admin' && <NavLink to="/usuarios-panel">{t.nav.usuarios_panel}</NavLink>}
         </nav>
       </aside>
       <div className="panel-main">

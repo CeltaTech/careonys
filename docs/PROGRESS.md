@@ -10,12 +10,12 @@
 |---|---|---|
 | 0 | Setup: repo, estructura, variables de entorno | 🟢 Completo |
 | 1 | Sitio web público (páginas + formularios + backend) | 🟡 En progreso |
-| 2 | Panel de administración (Módulos 1-5 + primer corte de precios/Prestaciones) | 🟡 En progreso — Módulos 6-7 pendientes, Módulo 8 con primer esquema (evoluciona con el uso) |
+| 2 | Panel de administración (Módulos 1-5 + primer corte de precios/Prestaciones + gestión de usuarios del Panel + Proceso de Incorporación + Certificado prestadora-original) | 🟡 En progreso — código completo pendiente de deploy a producción; Módulos 6-7 pendientes; Módulo 8 (config general) con primer esquema (evoluciona con el uso); `schema_etapa2e.sql`/`schema_etapa2f.sql` **no aplicados todavía contra Supabase real** |
 | 2B | Gestión de Personal (vínculo/cese/riesgo/cobertura) | 🟢 Completo — código listo y SQL aplicado/verificado contra Supabase real |
-| 3 | PWA Asistentes (login, guardias, GPS, reporte + IA) | 🔴 No iniciado |
+| 3 | PWA Asistentes (login, guardias, GPS, reporte + IA) | 🔴 No iniciado — bloqueado hasta que Etapa 2 esté desplegada (regla de secuencia de `BUILD_ORDER.md`) |
 | 4 | PWA Clientes (login, reportes, alertas) | 🔴 No iniciado |
 | 5 | Planillas IOMA (PDF) | 🔴 No iniciado |
-| 6 | Perfil público del Asistente con QR | 🔴 No iniciado |
+| 6 | Perfil público del Asistente con QR | 🔴 No iniciado — el QR del Certificado prestadora-original (Módulo 4 del Panel) ya apunta a la URL futura de esta etapa |
 
 Convención: 🔴 No iniciado · 🟡 En progreso · 🟢 Completo y en producción.
 
@@ -336,6 +336,76 @@ de la base (ver sección de arriba), así que el único punto pendiente real es:
    Módulo 5 espera su turno natural en `BUILD_ORDER.md`.
 2. Confirmar el esquema de precios/configuración de Módulo 8 antes de que se construya.
 
+## Actualización — Afinado final de Etapa 2 antes del deploy (gestión de usuarios, dashboard, Proceso de Incorporación, Certificado prestadora-original)
+
+El usuario pidió terminar de afinar todo lo posible del Panel antes de desplegarlo a
+producción, y priorizó 4 gaps detectados contra `PRD_02_Panel_Admin.md` — "todas ellas y en
+el orden más conveniente":
+
+**1. Gestión de usuarios del Panel** (antes solo existía una cuenta Admin creada a mano):
+
+- `backend/src/routes/panelUsuarios.js` (nuevo): CRUD-lite de cuentas admin/coordinador
+  (GET lista, POST crea, PATCH edita, DELETE da de baja), admin-only, reusa
+  `crearCuentaConPerfil`/`borrarCuenta` de `cuentasPanel.js` (mismo mecanismo ya construido
+  para Clientes). `crearCuentaConPerfil` ahora acepta `zonas` opcional.
+- `panel/src/pages/UsuariosPanel.jsx` (nuevo): lista + alta de Coordinador + edición/baja,
+  ruta `/usuarios-panel` visible solo para Admin en el nav.
+
+**2. Métricas del Dashboard completas**: se agregaron "Asistentes disponibles" (`asistentes`
+con `estado = 'activo'`) y "Clientes activas" (`clientes` sin `deleted_at`) a
+`panel/src/pages/Dashboard.jsx`, que antes solo mostraba postulaciones/solicitudes.
+
+**3. Proceso de Incorporación de Asistentes** (las 5 etapas de `verificaciones_asistente`,
+tabla que ya existía en `schema_etapa2b.sql` sin ninguna UI):
+
+- **Nota de terminología importante**: el usuario rechazó explícitamente el nombre "Filtro
+  prestadora-original" para esta pantalla interna del Panel ("un nombre de mierda") — se renombró a
+  **"Proceso de Incorporación de Asistentes"** solo para uso interno; "El Filtro prestadora-original"
+  queda reservado para un eventual uso público/marketing, todavía no confirmado. Ver nota
+  en `CLAUDE.md` (glosario) fechada 2026-07-08. **No reintroducir "Filtro prestadora-original" en el
+  código/UI del Panel.**
+- `backend/src/db/schema_etapa2e.sql` (nuevo, **no aplicado todavía**): agrega
+  `postulaciones.asistente_id`.
+- `backend/src/routes/panelCuentas.js`: nuevo `POST /api/panel/cuentas/asistente`
+  (admin-only, mismo patrón de rollback que `/cliente`) — convierte una postulación
+  aprobada en cuenta real de Asistente (`estado: 'inactivo'` hasta completar el proceso) +
+  crea las 5 filas de `verificaciones_asistente` (la etapa "postulacion" arranca aprobada,
+  ya se cumplió).
+- `panel/src/pages/PostulacionDetalle.jsx`: botón "Iniciar Proceso de Incorporación"
+  (solo Admin, solo si `estado === 'aprobado'` y sin `asistente_id` todavía), navega al
+  perfil del Asistente recién creado.
+- `panel/src/pages/asistentes/VerificacionTab.jsx` (nuevo) + tab nueva en
+  `AsistenteDetalle.jsx` (visible para Admin y Coordinador, a diferencia de Vínculo/Cese/
+  Simulador/Score que son admin-only): permite avanzar cada una de las 5 etapas
+  (pendiente/aprobada/rechazada) con notas.
+
+**4. Certificado prestadora-original con QR** (Módulo 4, "botón generar/ver Certificado QR"):
+
+- Se investigó el PRD (`PRD_03_Reclutamiento.md`, `PRD_04_05_App_Servicio.md`,
+  `DATA_MODEL.md`) antes de construir: el certificado reusa `asistentes.qr_token` (ya
+  existía en el schema, no se creó un segundo mecanismo), y el QR apunta a una página
+  pública (`prestadora-originalsalud.com.ar/asistente/[qr_token]`) que es explícitamente Etapa 6 —
+  todavía no existe (otra PWA/sitio).
+- **Decisión de alcance confirmada con el usuario**: construir solo el lado Panel ahora
+  (emitir/ver el certificado + generar el QR), no adelantar la página pública de Etapa 6.
+- `backend/src/db/schema_etapa2f.sql` (nuevo, **no aplicado todavía**): tabla `certificados`
+  tal cual está documentada en `DATA_MODEL.md` (`fecha_emision`, `fecha_vencimiento`,
+  `activo`), RLS Admin+Coordinador.
+- `panel/src/pages/asistentes/CertificadoTab.jsx` (nuevo) + tab nueva en
+  `AsistenteDetalle.jsx` (visible para Admin y Coordinador): botón "Emitir Certificado"
+  (solo si el Asistente ya está en estado Activo), genera el QR con la librería `qrcode`
+  (nueva dependencia de `panel/package.json`) apuntando a
+  `VITE_SITE_URL/asistente/{qr_token}` (nueva env var, con fallback al dominio placeholder
+  ya usado en `sitio-web/src/config/siteConfig.js`), botón para descargarlo como PNG.
+
+**Verificado**: `npm run build` de `panel/` sin errores tras cada uno de los 4 bloques;
+`npx vitest run` 18/18 sin regresiones; `node --check` sobre los 4 archivos backend
+tocados/creados (`panelCuentas.js`, `panelUsuarios.js`, `server.js`, `cuentasPanel.js`);
+paridad de claves i18n verificada programáticamente entre es-AR/en/pt-BR (0 mismatches).
+**No verificado en este segmento** (sin acceso a la base real desde este entorno): que
+`schema_etapa2e.sql` y `schema_etapa2f.sql` corran limpio contra Supabase — falta
+ejecutarlos ahí antes del deploy a producción.
+
 ## Problemas conocidos / deuda técnica
 
 _Registrar acá bugs conocidos o deuda técnica para la próxima sesión._
@@ -345,9 +415,14 @@ _Registrar acá bugs conocidos o deuda técnica para la próxima sesión._
   para poder testear `calcularCese`/`calcularScoreRiesgo`, no valores legales reales.
   **No usar en producción sin revisión de un abogado laboralista.**
 - Del PRD_02B quedan deliberadamente afuera de este corte (no bloquean el resto): el
-  generador de documentación (PDF de liquidación de cese, función 7 de 9 del PRD) y una
-  pantalla dedicada para `verificaciones_asistente`/Filtro prestadora-original (la tabla y RLS ya están
-  creadas en el SQL, falta UI).
+  generador de documentación (PDF de liquidación de cese, función 7 de 9 del PRD).
+- `backend/src/db/schema_etapa2e.sql` y `schema_etapa2f.sql` (Proceso de Incorporación +
+  Certificado prestadora-original) están escritos y verificados por sintaxis, pero **no se aplicaron
+  todavía contra el Supabase real** — hace falta correrlos ahí antes de desplegar el Panel
+  a producción, igual que se hizo con los esquemas anteriores.
+- El diseño visual/formato del certificado (PDF descargable con membrete, etc.) no está
+  definido en ningún PRD — el corte actual solo genera el QR como imagen PNG descargable,
+  sin un layout de certificado imprimible. Queda para cuando haya spec de diseño.
 
 ## Archivos creados/modificados por sesión
 
@@ -355,6 +430,7 @@ _Una entrada por sesión de trabajo, más reciente primero._
 
 | Fecha | Sesión | Archivos |
 |---|---|---|
+| 2026-07-08 | Afinado final de Etapa 2: usuarios del Panel, métricas de Dashboard, Proceso de Incorporación, Certificado prestadora-original | `CLAUDE.md` (glosario actualizado); `backend/src/db/{schema_etapa2e,schema_etapa2f}.sql` (nuevos, no aplicados aún); `backend/src/routes/panelUsuarios.js` (nuevo); `backend/src/routes/panelCuentas.js` (endpoint `/asistente`); `backend/src/utils/cuentasPanel.js` (`zonas` opcional); `backend/src/server.js` (ruta montada); `panel/src/pages/UsuariosPanel.jsx` (nuevo); `panel/src/pages/Dashboard.jsx` (2 métricas nuevas); `panel/src/pages/PostulacionDetalle.jsx` (botón iniciar incorporación); `panel/src/pages/asistentes/{VerificacionTab,CertificadoTab}.jsx` (nuevos); `panel/src/pages/asistentes/AsistenteDetalle.jsx` (2 tabs nuevas); `panel/src/App.jsx` (ruta `/usuarios-panel`); `panel/src/components/layout/Layout.jsx` (link de nav); `panel/src/index.css` (clase `.panel-card-verificacion`); `panel/src/i18n/translations.js` (claves nuevas en es-AR/en/pt-BR); `panel/package.json` (agregado `qrcode`); `panel/.env`/`.env.example` (`VITE_SITE_URL`) |
 | 2026-07-08 | Primer esquema de Precios y Prestaciones particulares por Paciente | `backend/src/db/schema_etapa2d.sql` (nuevo, aplicado y verificado); `panel/src/pages/ListaPrecios.jsx` + `ListaPrecioDetalle.jsx` (nuevos); `panel/src/pages/clientes/PrestacionesPaciente.jsx` (nuevo); `panel/src/pages/clientes/ClienteDetalle.jsx` (botón "Prestaciones" por Paciente); `panel/src/App.jsx` (ruta `/lista-precios`); `panel/src/components/layout/Layout.jsx` (link de nav); `panel/src/i18n/translations.js` (bloques `lista_precios` y `prestaciones` + `nav.lista_precios`/`comun.editar` en es-AR/en/pt-BR) |
 | 2026-07-08 | Módulo 5 completo: pantalla de Clientes y Pacientes | `panel/src/pages/Clientes.jsx` (nuevo); `panel/src/pages/clientes/ClienteDetalle.jsx` (nuevo); `panel/src/App.jsx` (rutas `/clientes` y `/clientes/:id`); `panel/src/components/layout/Layout.jsx` (link de nav); `panel/src/i18n/translations.js` (bloque `clientes` + `nav.clientes` en es-AR/en/pt-BR) |
 | 2026-07-08 | Mecanismo de creación de cuentas (compartido) + inicio Módulo 5 (Clientes) | `backend/src/db/schema_etapa2c.sql` (nuevo, aplicado y verificado); `backend/src/utils/cuentasPanel.js` (nuevo); `backend/src/routes/panelCuentas.js` (nuevo); `backend/src/server.js` (ruta montada); `panel/src/pages/SolicitudDetalle.jsx` (botón "Convertir en Cliente"); `panel/src/i18n/translations.js` (4 claves nuevas en es-AR/en/pt-BR) |

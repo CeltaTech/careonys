@@ -42,7 +42,8 @@ reproponer sin resolver primero el riesgo legal de fondo.
 | Cliente | cliente, usuario |
 | Paciente | adulto mayor (salvo contexto clínico específico) |
 | Guardia | turno, jornada, servicio |
-| El Filtro prestadora-original | proceso de selección, verificación |
+| El Filtro prestadora-original (uso público/marketing, no confirmado si se retoma) | proceso de selección, verificación |
+| Proceso de Incorporación de Asistentes (uso interno, Panel) | Filtro prestadora-original dentro del Panel, "pipeline" |
 | Certificado prestadora-original | certificado genérico, diploma |
 | Reporte diario | informe, planilla, parte |
 | Coordinador | supervisor, jefe, encargado |
@@ -51,6 +52,11 @@ reproponer sin resolver primero el riesgo legal de fondo.
 | Superadmin | rol técnico, login propio, distinto de Admin — no confundir ni fusionar con Admin en código ni en UI |
 
 Esto aplica a nombres de variables, tablas, componentes y claves de i18n, no solo a texto visible.
+
+**Nota (decisión 2026-07-08):** "El Filtro prestadora-original" queda reservado para un eventual uso
+público/de marketing, todavía no confirmado. Dentro del Panel (uso interno, Coordinador/
+Admin) la pantalla que avanza al Postulante por las etapas de verificación se llama
+"Proceso de Incorporación de Asistentes" — no usar "Filtro prestadora-original" ahí.
 
 ## Las 10 reglas no negociables
 

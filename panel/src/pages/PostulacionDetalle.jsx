@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
+import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
@@ -10,10 +12,38 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
   const { t } = useLocale();
+  const { usuario } = useAuth();
+  const navigate = useNavigate();
   const [nuevoEstado, setNuevoEstado] = useState(postulacion.estado);
   const [nota, setNota] = useState(postulacion.nota_interna || '');
   const [guardando, setGuardando] = useState(false);
+  const [iniciandoVerificacion, setIniciandoVerificacion] = useState(false);
   const [error, setError] = useState(null);
+
+  async function handleIniciarVerificacion() {
+    const confirmado = window.confirm(t.postulaciones.confirmar_iniciar_verificacion);
+    if (!confirmado) return;
+
+    setIniciandoVerificacion(true);
+    setError(null);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const respuesta = await fetch(`${API_URL}/api/panel/cuentas/asistente`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${data.session?.access_token}`,
+        },
+        body: JSON.stringify({ postulacionId: postulacion.id }),
+      });
+      const resultado = await respuesta.json();
+      if (!respuesta.ok) throw new Error(resultado.error);
+      navigate(`/asistentes/${resultado.asistenteId}`);
+    } catch (err) {
+      setError(err.message);
+      setIniciandoVerificacion(false);
+    }
+  }
 
   async function handleGuardar() {
     if (nuevoEstado !== postulacion.estado) {
@@ -103,6 +133,19 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
           value={nota}
           onChange={(e) => setNota(e.target.value)}
         />
+
+        {usuario?.rol === 'admin' && postulacion.estado === 'aprobado' && (
+          postulacion.asistente_id ? (
+            <p className="panel-explicacion">{t.postulaciones.ya_iniciada_verificacion}</p>
+          ) : (
+            <div>
+              <p className="panel-explicacion">{t.postulaciones.iniciar_verificacion_explicacion}</p>
+              <Button variant="secondary" onClick={handleIniciarVerificacion} disabled={iniciandoVerificacion}>
+                {iniciandoVerificacion ? t.comun.guardando : t.postulaciones.iniciar_verificacion}
+              </Button>
+            </div>
+          )
+        )}
 
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>

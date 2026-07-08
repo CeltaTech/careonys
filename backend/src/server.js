@@ -5,6 +5,7 @@ import { solicitudServicioRouter } from './routes/solicitudServicio.js';
 import { postulacionAsistenteRouter } from './routes/postulacionAsistente.js';
 import { panelNotificacionesRouter } from './routes/panelNotificaciones.js';
 import { panelCuentasRouter } from './routes/panelCuentas.js';
+import { panelUsuariosRouter } from './routes/panelUsuarios.js';
 
 const app = express();
 app.use(cors());
@@ -18,6 +19,7 @@ app.use('/api/solicitud-servicio', solicitudServicioRouter);
 app.use('/api/postulacion-asistente', postulacionAsistenteRouter);
 app.use('/api/panel/notificar', panelNotificacionesRouter);
 app.use('/api/panel/cuentas', panelCuentasRouter);
+app.use('/api/panel/usuarios', panelUsuariosRouter);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

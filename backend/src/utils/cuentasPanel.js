@@ -7,7 +7,7 @@ import { supabase } from '../db/connection.js';
 // `admin.createUser` nunca dispara emails por sí solo; el envío de invitación queda para
 // cuando la PWA correspondiente esté en producción (usar `admin.inviteUserByEmail` en ese
 // momento).
-export async function crearCuentaConPerfil({ email, nombre, telefono, rol }) {
+export async function crearCuentaConPerfil({ email, nombre, telefono, rol, zonas }) {
   const passwordTemporal = crypto.randomBytes(24).toString('base64url');
 
   const { data: authData, error: errorAuth } = await supabase.auth.admin.createUser({
@@ -24,7 +24,7 @@ export async function crearCuentaConPerfil({ email, nombre, telefono, rol }) {
 
   const { error: errorPerfil } = await supabase
     .from('usuarios')
-    .insert({ id: userId, rol, nombre, telefono });
+    .insert({ id: userId, rol, nombre, telefono, zonas });
 
   if (errorPerfil) {
     await supabase.auth.admin.deleteUser(userId);

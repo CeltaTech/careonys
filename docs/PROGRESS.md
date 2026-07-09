@@ -957,6 +957,50 @@ requiere kickoff explícito del usuario para arrancar (es un cambio arquitectón
 entidad `prestadoras`, RLS por tenant, roles nuevos, facturación dual PLM/prestadora-original, i18n y
 multi-moneda).
 
+## Actualización — Inventario + plan de migración multi-tenant (`docs/PLAN_MULTITENANT_PLM.md`)
+
+El usuario pidió avanzar con el kickoff real del `Prompt_Claude_Code_PLM_Multitenant.md`.
+Se hizo el trabajo que ese prompt pide como primer paso (puntos 1-4 de su sección "Lo que
+sí te pedimos ahora") — **inventario y plan, sin escribir ni una línea de código de
+producto**. Documento nuevo: `docs/PLAN_MULTITENANT_PLM.md`.
+
+Contenido del documento (resumen — el detalle completo está ahí, no se repite acá):
+
+1. **Inventario completo** (hecho con un agente de exploración dedicado) de todas las
+   tablas sin columna de organización, el patrón RLS actual y por qué es extensible casi
+   1:1 al patrón de tenant, el caso mono-tenant más literal (`configuracion_empresa.id
+   CHECK (id = 1)`), el riesgo de seguridad mayor (rutas del backend con Service Role Key,
+   que bypassean RLS y hoy no filtran por organización), la relación ortogonal entre
+   `zonas` y `prestadora` (no colapsar), el modelo de roles actual y dónde encajaría
+   `admin_prestadora`, y los hardcodeos de "prestadora-original como única organización posible"
+   distinguiendo los estructurales (`configuracion_empresa`, `email.js`,
+   `generarDocumentoCese.js`, `calcularCese.js`) de los que son solo texto de marca
+   (logo del panel, templates de notificación, i18n).
+2. **Plan de migración de datos propuesto**, 8 pasos incrementales y no destructivos (crear
+   `prestadoras` → agregar `prestadora_id` nullable a cada tabla → backfill con el id de
+   prestadora-original → `NOT NULL` → reescribir RLS → filtrar el backend → migrar
+   `configuracion_empresa` → parametrizar hardcodeos estructurales), priorizando primero el
+   aislamiento de los datos más sensibles (`pacientes`, `ceses`, `ausencias`).
+3. **Diseño de tablas** con nivel de diagrama: `prestadoras`, `configuracion_prestadora`
+   (reemplazo de la singleton), `compliance_prestadora` (append-only, para trazabilidad
+   legal inmutable), roles nuevos (`admin_prestadora`, `superadmin` redefinido como el rol
+   cross-tenant de PLM, `financiador` solo contemplado), y `planes_facturacion`/`facturas`
+   (con `moneda` explícita, `tipo_cambio_referencia` solo para trazabilidad, numeración
+   separada por `empresa_emisora` PLM/prestadora-original).
+4. **Puntos marcados explícitamente para discutir antes de escribir código** — el más
+   importante: el rol `admin` de hoy ("ve todo prestadora-original") pasaría semánticamente a llamarse
+   `admin_prestadora`, y `superadmin` pasaría a ser el rol cross-tenant real de PLM — esto
+   es un cambio de dato sobre usuarios reales en producción, no solo una decisión de
+   nomenclatura, y no se debe ejecutar sin aprobación explícita. También se marca que el
+   punto 4 del prompt de negocio (facturación "implementada ya") depende de una decisión de
+   negocio no técnica (qué esquema de precio y periodicidad se usa realmente con prestadora-original)
+   que todavía no existe.
+
+**Estado real del producto: sin cambios, otra vez.** Es intencional — el propio prompt de
+negocio pide ver el inventario y el plan antes de tocar producción. Próximo paso: que el
+usuario apruebe (o corrija) las decisiones de la sección 4 de `PLAN_MULTITENANT_PLM.md`
+antes de generar la primera migración SQL real.
+
 ## Problemas conocidos / deuda técnica
 
 _Registrar acá bugs conocidos o deuda técnica para la próxima sesión._

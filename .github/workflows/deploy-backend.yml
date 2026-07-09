@@ -1,0 +1,29 @@
+name: Deploy backend a Railway
+
+# Railway no auto-despliega con git push (su integración nativa por GitHub App requiere una
+# autorización OAuth manual desde el dashboard que no se puede scriptear — ver docs/PROGRESS.md,
+# sección "Intento de automatizar el deploy de Railway"). Este workflow reemplaza ese mecanismo
+# nativo por uno propio: usa un Project Token de Railway (creado una sola vez desde el
+# dashboard, guardado como secret RAILWAY_TOKEN) para correr `railway up` en cada push a main
+# que toque backend/.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy
+        working-directory: backend
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway up --service prestadora-original-backend --environment production --ci

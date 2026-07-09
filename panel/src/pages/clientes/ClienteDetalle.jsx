@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLocale } from '../../i18n/LocaleContext';
+import { linkWhatsapp } from '../../lib/telefono';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { PrestacionesPaciente } from './PrestacionesPaciente';
@@ -24,8 +25,8 @@ export function ClienteDetalle() {
       .single();
 
     if (errorConsulta) {
-      setError(errorConsulta.message);
-      setEstado('error');
+      setError(errorConsulta.code === 'PGRST116' ? null : errorConsulta.message);
+      setEstado(errorConsulta.code === 'PGRST116' ? 'no_encontrado' : 'error');
       return;
     }
 
@@ -38,6 +39,7 @@ export function ClienteDetalle() {
   }, [recargar]);
 
   if (estado === 'cargando') return <p className="estado-cargando">{t.comun.cargando}</p>;
+  if (estado === 'no_encontrado') return <p className="estado-vacio">{t.comun.no_encontrado}</p>;
   if (estado === 'error') return <p className="estado-vacio">{error || t.comun.error_generico}</p>;
 
   return (
@@ -50,7 +52,7 @@ export function ClienteDetalle() {
         <dt>{t.clientes.col_telefono}</dt>
         <dd>
           {cliente.solicitudes?.telefono ? (
-            <a href={`tel:${cliente.solicitudes.telefono}`}>{cliente.solicitudes.telefono}</a>
+            <a href={linkWhatsapp(cliente.solicitudes.telefono)} target="_blank" rel="noreferrer">{cliente.solicitudes.telefono}</a>
           ) : (
             '—'
           )}

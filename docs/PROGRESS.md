@@ -583,6 +583,43 @@ pasada de auditoría no encontró nada más para corregir:
 18/18 (tras el fix del fixture); paridad de claves i18n entre es-AR/en/pt-BR revisada a
 mano en cada bloque tocado.
 
+## Actualización — Intento de automatizar el deploy de Railway (resultado: se descartó, sigue siendo manual)
+
+Se intentó (2026-07-09) automatizar el deploy del backend conectando el servicio
+`prestadora-original-backend` al repo de GitHub (`BetoSP/prestadora-original`, rama `main`) vía la API GraphQL de
+Railway, con la idea de que un `git push` disparara el build solo, sin correr `railway up` a
+mano. Resultado real, tras probarlo a fondo:
+
+- Conectar el `source.repo` vía API (`service source connect` del CLI) **no instala ningún
+  webhook ni GitHub App** en el repo — se confirmó con `gh api repos/BetoSP/prestadora-original/hooks`
+  devolviendo `[]`. Ese paso requiere una autorización OAuth desde el dashboard de Railway
+  (un humano aprobando el acceso en GitHub), que no se puede scriptear por API/CLI. Por eso
+  el push a `main` de este mismo día nunca disparó un deploy.
+- Además, setear `rootDirectory: "backend"` en el servicio (necesario si algún día se logra
+  el trigger por GitHub, porque ese flujo clona el repo completo) **rompe los deploys
+  manuales por CLI** (`railway up` desde `backend/`): el CLI ya sube solo el contenido de
+  `backend/` como raíz, así que Railway termina buscando `backend/backend/` adentro y el build
+  falla en el paso de "scheduling" sin logs útiles. Pasó con 3 intentos seguidos.
+- Al intentar correr `railway up` desde la raíz del repo en vez de `backend/` (para evitar el
+  problema anterior), el CLI, al no tener esa carpeta vinculada a ningún proyecto local, creó
+  un **proyecto nuevo huérfano** en la cuenta de Railway en vez de usar `prestadora-original-backend`. Se
+  detectó y se borró (`projectDelete` vía API) antes de que quedara ocupando recursos.
+- Se revirtió `rootDirectory` a vacío (`""` — pasar `null` en la mutación no lo limpia,
+  GraphQL lo interpreta como "no cambiar", hace falta string vacío) y `watchPatterns` a `[]`,
+  volviendo el servicio al estado funcional anterior. El commit pendiente del punto anterior
+  (tabla `aspirantes`, notificaciones de vencimiento, docs de marca) **se deployó igual, a
+  mano, con `railway up --detach` desde `backend/`** — deploy confirmado `SUCCESS`, backend
+  corriendo el código nuevo sin errores en el arranque.
+
+**Conclusión para sesiones futuras:** el deploy de `backend/` sigue siendo manual
+(`cd backend && railway up --detach` después de cada push). Automatizarlo de verdad requiere
+que el usuario instale la GitHub App de Railway desde el dashboard (Project Settings →
+Source → conectar GitHub), un paso que no se puede hacer por API. Si se hace ese paso a mano
+en el futuro, ahí sí conviene volver a setear `rootDirectory: "backend"` — pero recordar que
+mientras esté seteado, cualquier deploy manual por CLI debe correrse desde la raíz del repo
+(`Workspace/`) con `--service prestadora-original-backend` estando esa carpeta ya vinculada al proyecto
+correcto, nunca desde `backend/` directamente, para no repetir el error de este intento.
+
 ## Actualización — Auditoría exhaustiva de todo el código (backend + panel + sitio-web) y cierre de los 2 hallazgos arquitectónicos pendientes
 
 Continuación literal, archivo por archivo, de la auditoría de arriba (a pedido explícito del

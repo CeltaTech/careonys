@@ -10,7 +10,7 @@
 |---|---|---|
 | 0 | Setup: repo, estructura, variables de entorno | 🟢 Completo |
 | 1 | Sitio web público (páginas + formularios + backend) | 🟡 En progreso |
-| 2 | Panel de administración (Módulos 1-5 + primer corte de precios/Prestaciones + gestión de usuarios del Panel + Proceso de Incorporación + Certificado prestadora-original + rol Superadmin real) | 🟢 Desplegado a producción (2026-07-08): https://prestadora-original-panel.vercel.app — Módulos 6-7 pendientes; Módulo 8 (config general) todavía sin construir más allá de precios/Prestaciones |
+| 2 | Panel de administración (Módulos 1-5 + primer corte de precios/Prestaciones + gestión de usuarios del Panel + Proceso de Incorporación + Certificado prestadora-original + rol Superadmin real + Módulo 8 Configuración) | 🟢 Desplegado a producción (2026-07-08): https://prestadora-original-panel.vercel.app — Módulos 6-7 pendientes (dependen de la PWA de Asistentes, Etapa 3) |
 | 2B | Gestión de Personal (vínculo/cese/riesgo/cobertura) | 🟢 Completo — código listo y SQL aplicado/verificado contra Supabase real |
 | 3 | PWA Asistentes (login, guardias, GPS, reporte + IA) | 🔴 No iniciado — desbloqueada: Etapa 2 ya está desplegada (regla de secuencia de `BUILD_ORDER.md`) |
 | 4 | PWA Clientes (login, reportes, alertas) | 🔴 No iniciado |
@@ -433,6 +433,52 @@ la regla de secuencia de `BUILD_ORDER.md`.
   que llegue a producción — a diferencia del panel (Vercel), que si se redespliega con
   cada `vercel --prod` manual pero al menos usa el código ya pusheado.
 
+## Actualización — Módulo 8 completo (Configuración) + wiring del sitio público
+
+Cierre del tercer y último ítem de la auditoría de Etapas 1-2 (i18n hardcodeado y rol
+Superadmin ya cerrados en la actualización anterior). El PRD no tenía tabla definida para
+este módulo (a diferencia del Módulo 4) — se diseñó un esquema nuevo, deliberadamente simple:
+
+- `backend/src/db/schema_etapa2h.sql` (nuevo, **aplicado y verificado contra Supabase
+  real**): `configuracion_empresa` (fila única, `id SMALLINT CHECK (id = 1)`, datos de
+  contacto/dominio/zona), `zonas_cobertura` (código/nombre/categoría/activa/orden, con
+  policy pública de solo-lectura `activa = true` además de la de gestión Admin/Superadmin —
+  reemplaza la lista fija que vivía en `siteConfig.js`), `configuracion_notificaciones`
+  (`emails TEXT[]` + `activo` por evento, dos eventos seed: nueva solicitud y nueva
+  postulación).
+- **Decisión de diseño no trivial**: se descartó explícitamente un esquema de
+  `roles_destino` (resolver destinatarios de notificación por rol) porque la tabla
+  `usuarios` no tiene columna de email (solo `auth.users` la tiene) — hubiera exigido N+1
+  llamadas a `supabase.auth.admin.getUserById`. En su lugar, cada evento tiene un array
+  plano de emails editable desde el Panel, con fallback a `SMTP_USER` si está vacío.
+- `backend/src/routes/panelConfiguracion.js` (nuevo): CRUD de las 3 tablas, admin-only.
+- `backend/src/routes/configuracionPublica.js` (nuevo): endpoint público sin autenticación
+  (`GET /api/configuracion-publica`) que expone solo datos públicos de la empresa + zonas
+  activas — nunca nada de `escalas_legales`/datos laborales internos (regla 7/8).
+- `backend/src/utils/email.js`: `enviarEmailCoordinador` ahora resuelve destinatarios desde
+  `configuracion_notificaciones` por evento en vez de mandar siempre a `SMTP_USER` fijo.
+  `postulacionAsistente.js`/`solicitudServicio.js` pasan el `evento` correspondiente.
+- `panel/src/pages/Configuracion.jsx` (nuevo): 3 tabs (Empresa, Zonas de cobertura,
+  Notificaciones), ruta `/configuracion` visible solo para Admin/Superadmin.
+- **Sitio público conectado al dato real** (antes hardcodeado en `siteConfig.js`, regla 1):
+  `sitio-web/src/lib/configuracionPublica.js` (nuevo) hace `fetch` server-side con
+  `revalidate: 300` al endpoint público, con fallback a los valores estáticos de
+  `siteConfig.js` si el backend no responde (build sin red, caída puntual) — nunca rompe el
+  build ni deja una página vacía. Conectado en `layout.jsx` (WhatsApp flotante),
+  `contacto/page.jsx` (teléfono/WhatsApp/email/zona) y `trabaja-con-nosotros/page.jsx` (las
+  zonas de cobertura del formulario de postulación, antes una lista fija). Los códigos de
+  zona que no tengan traducción en `t.trabaja.zonas` (por ejemplo una zona nueva que un
+  Admin agregue desde el Panel sin actualizar el i18n) muestran el código crudo en vez de
+  romper — degradación aceptada conscientemente, no un bug.
+
+**Verificado**: `npm run build` de `panel/` sin errores; `npm run build` de `sitio-web/`
+sin errores con `NEXT_PUBLIC_API_URL` real (las 25 páginas estáticas se generaron trayendo
+datos reales del backend/Supabase en build time). Migración aplicada contra Supabase real
+(conexión directa con `pg`, script descartado después de correrlo). Los 3 servicios
+redesplegados: backend (Railway, `/health` y `/api/configuracion-publica` verificados con
+`curl` tras el deploy), panel y sitio-web (Vercel `--prod` + re-alias a los subdominios de
+siempre).
+
 ## Problemas conocidos / deuda técnica
 
 _Registrar acá bugs conocidos o deuda técnica para la próxima sesión._
@@ -453,6 +499,7 @@ _Una entrada por sesión de trabajo, más reciente primero._
 
 | Fecha | Sesión | Archivos |
 |---|---|---|
+| 2026-07-08 | Módulo 8 completo (Configuración: empresa, zonas de cobertura, notificaciones) + sitio público conectado al dato real | `backend/src/db/schema_etapa2h.sql` (nuevo, aplicado y verificado contra Supabase real); `backend/src/routes/{panelConfiguracion,configuracionPublica}.js` (nuevos); `backend/src/utils/email.js` (destinatarios por evento); `backend/src/routes/{postulacionAsistente,solicitudServicio}.js` (pasan `evento`); `backend/src/server.js` (2 rutas montadas); `panel/src/pages/Configuracion.jsx` (nuevo); `panel/src/App.jsx` (ruta `/configuracion`); `panel/src/components/layout/Layout.jsx` (link de nav); `panel/src/i18n/translations.js` (bloque `configuracion` + `nav.configuracion` + `comun.borrar` en es-AR/en/pt-BR); `sitio-web/src/lib/configuracionPublica.js` (nuevo); `sitio-web/src/app/[locale]/layout.jsx`, `sitio-web/src/app/[locale]/contacto/page.jsx`, `sitio-web/src/app/[locale]/trabaja-con-nosotros/{page,TrabajaConNosotrosForm}.jsx`, `sitio-web/src/components/WhatsAppButton.jsx` (consumen el endpoint público en vez de `siteConfig.js`) |
 | 2026-07-08 | Auditoría completa de Etapas 1 y 2 contra sus PRD (a pedido explícito del dueño del proyecto antes de arrancar Etapa 3) y cierre de las 3 brechas encontradas: (1) textos hardcodeados en el formulario de postulación de Asistentes, (2) rol Superadmin implementado de punta a punta (antes solo documentado), (3) creación de 4 cuentas de prueba con un rol cada una (Superadmin, Admin, Cliente="Alberto", Asistente="Beto"), todas con la misma contraseña. También se sacó "El Filtro prestadora-original" del sitio público (nav, home, página `/el-filtro`) y se simplificó la copy de zona de cobertura del hero a "AMBA" | `sitio-web/src/config/siteConfig.js`, `sitio-web/src/i18n/translations.js`, `sitio-web/src/app/[locale]/trabaja-con-nosotros/TrabajaConNosotrosForm.jsx` (fix i18n); `backend/src/db/schema_etapa2g.sql` (nuevo, aplicado contra Supabase real — agrega `superadmin` al CHECK de `usuarios.rol` y a todas las policies RLS que exigían `admin`); `backend/src/middleware/requiereRolPanel.js`, `backend/src/routes/panelUsuarios.js` (Superadmin gestiona cuentas de Admin/Superadmin, Admin sigue limitado a Coordinador); `panel/src/lib/roles.js` (nuevo, helper `esAdminOSuperior`); `panel/src/components/layout/{Layout,ProtectedRoute}.jsx`, `panel/src/pages/{ListaPrecios,PostulacionDetalle,SolicitudDetalle,UsuariosPanel,asistentes/AsistenteDetalle,asistentes/PerfilTab}.jsx`, `panel/src/i18n/translations.js` (claves `rol_superadmin`, `nuevo_usuario`, `campo_rol` en es-AR/en/pt-BR) |
 | 2026-07-08 | Aplicar SQL contra Supabase real y deploy del Panel a producción | `backend/src/db/{schema_etapa2e,schema_etapa2f}.sql` (aplicados y verificados contra Supabase real); `panel/vercel.json` (nuevo, rewrite SPA); `panel/.gitignore` (excluye `.vercel`) |
 | 2026-07-08 | Afinado final de Etapa 2: usuarios del Panel, métricas de Dashboard, Proceso de Incorporación, Certificado prestadora-original | `CLAUDE.md` (glosario actualizado); `backend/src/db/{schema_etapa2e,schema_etapa2f}.sql` (nuevos, no aplicados aún); `backend/src/routes/panelUsuarios.js` (nuevo); `backend/src/routes/panelCuentas.js` (endpoint `/asistente`); `backend/src/utils/cuentasPanel.js` (`zonas` opcional); `backend/src/server.js` (ruta montada); `panel/src/pages/UsuariosPanel.jsx` (nuevo); `panel/src/pages/Dashboard.jsx` (2 métricas nuevas); `panel/src/pages/PostulacionDetalle.jsx` (botón iniciar incorporación); `panel/src/pages/asistentes/{VerificacionTab,CertificadoTab}.jsx` (nuevos); `panel/src/pages/asistentes/AsistenteDetalle.jsx` (2 tabs nuevas); `panel/src/App.jsx` (ruta `/usuarios-panel`); `panel/src/components/layout/Layout.jsx` (link de nav); `panel/src/index.css` (clase `.panel-card-verificacion`); `panel/src/i18n/translations.js` (claves nuevas en es-AR/en/pt-BR); `panel/package.json` (agregado `qrcode`); `panel/.env`/`.env.example` (`VITE_SITE_URL`) |

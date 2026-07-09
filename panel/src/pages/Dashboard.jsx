@@ -1,4 +1,6 @@
 import { useLocale } from '../i18n/LocaleContext';
+import { useAuth } from '../context/AuthContext';
+import { esAdminOSuperior } from '../lib/roles';
 import { useSupabaseTable } from '../hooks/useSupabaseTable';
 import { EstadoLista } from '../components/layout/EstadoLista';
 
@@ -23,9 +25,12 @@ function esEstaSemana(fechaIso) {
 
 export function Dashboard() {
   const { t } = useLocale();
+  const { usuario } = useAuth();
+  const esAdmin = esAdminOSuperior(usuario?.rol);
   const postulaciones = useSupabaseTable('postulaciones');
   const solicitudes = useSupabaseTable('solicitudes');
-  const asistentes = useSupabaseTable('asistentes', { orderBy: 'created_at' });
+  // Coordinador consulta la vista sin vínculo laboral/score de riesgo — ver schema_etapa2i.sql.
+  const asistentes = useSupabaseTable(esAdmin ? 'asistentes' : 'asistentes_coordinador', { orderBy: 'created_at' });
   const clientes = useSupabaseTable('clientes', { orderBy: 'created_at' });
 
   const estados = [postulaciones.estado, solicitudes.estado, asistentes.estado, clientes.estado];

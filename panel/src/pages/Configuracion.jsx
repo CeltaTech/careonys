@@ -172,11 +172,11 @@ function TabZonas() {
 
   return (
     <div>
-      {error && <Alert variant="error">{error}</Alert>}
+      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
       <div className="panel-filtros">
         <Button onClick={() => setCreandoNueva(true)}>{t.configuracion.zonas_nueva}</Button>
       </div>
-      <EstadoLista estado={estado} error={null} vacio={estado === 'listo' && zonas.length === 0} recargar={recargar}>
+      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && zonas.length === 0} recargar={recargar}>
         <table className="panel-tabla">
           <thead>
             <tr>

@@ -786,6 +786,84 @@ estilo. Hallazgos y cierres (2026-07-09):
 **Verificado**: `npm run build` de `panel/` y `sitio-web/` sin errores; `npx vitest run`
 18/18 en `panel/`; `schema_etapa2n.sql` corrió sin error contra la base real.
 
+## Actualización — Diagnóstico exhaustivo de todo el sistema (backend + panel + sitio-web) y cierre de hallazgos
+
+A pedido explícito del usuario ("vuelve a correr un diagnóstico exhaustivo por todo el
+sistema"), se lanzaron tres auditorías en paralelo (backend, panel, sitio-web) cubriendo
+todo el código, no solo el último commit. Hallazgos y cierres (2026-07-09):
+
+**Backend:**
+
+- **Crítico — cuentas nuevas del Panel inutilizables**: `crearCuentaConPerfil()` generaba
+  una `passwordTemporal` con `crypto.randomBytes` pero la descartaba — nunca se devolvía ni
+  se comunicaba por ningún canal, así que una cuenta de Coordinador/Admin/Superadmin recién
+  creada no tenía forma de loguearse. Corregido: `cuentasPanel.js` ahora devuelve
+  `{ userId, passwordTemporal }`; `panelUsuarios.js`/`panelCuentas.js` actualizados; el
+  Panel (`UsuariosPanel.jsx`) ya no cierra el modal de alta automáticamente — muestra la
+  contraseña provisoria en pantalla con un botón "Cerrar" explícito para que el Admin la
+  copie antes de cerrar.
+- **Crítico — `borrarCuenta()` ignoraba errores de borrado**: si fallaba el `delete` en
+  `usuarios` o en Supabase Auth (ej. bloqueado por una FK), la función no lo propagaba, así
+  que `DELETE /api/panel/usuarios/:id` respondía `{ ok: true }` aunque la cuenta siguiera
+  existiendo. Corregido: ambos errores ahora se lanzan.
+- **Medio — email a Postulantes siempre en español**: `panelNotificaciones.js` no tenía
+  forma de saber en qué idioma el Postulante completó el formulario público, así que el
+  email de cambio de estado le llegaba en español aunque hubiera postulado en inglés o
+  portugués. Se agregó la columna `postulaciones.idioma` (`schema_etapa2o.sql`, nuevo,
+  aplicado contra Supabase real), el formulario público (`TrabajaConNosotrosForm.jsx`) ahora
+  envía el locale activo, `postulacionAsistente.js` lo valida y guarda, y
+  `panelNotificaciones.js` tiene los 3 mensajes de estado traducidos (es-AR/en/pt-BR) y
+  elige según `postulaciones.idioma` (con fallback a es-AR).
+
+**Panel:**
+
+- **Crítico — fuga de datos laborales sensibles a Coordinador**: `Dashboard.jsx` consultaba
+  siempre la tabla cruda `asistentes` (nunca la vista `asistentes_coordinador`) para la
+  métrica de "Asistentes disponibles", exponiendo `sueldo_basico`, `valor_hora`,
+  `tipo_vinculo`, `causal_baja` y el score de riesgo a Coordinador por la red — el mismo tipo
+  de fuga ya cerrado en `Asistentes.jsx`/`AsistenteDetalle.jsx`, pero nunca replicado acá.
+  Corregido: branchea por rol igual que el resto del Panel.
+- **Medio — `VinculoCeseTab.jsx` ocultaba errores de carga del historial de ceses**: la
+  consulta a `ceses` descartaba `{ error }`, y el `estado` pasado a `EstadoLista` era un
+  ternario sin sentido (`ceses.length ? 'listo' : 'listo'`) que siempre mostraba "listo"
+  incluso ante un fallo real de red. Corregido con el patrón estándar de 4 estados.
+- Verificación de 7 hallazgos "plausibles" del primer barrido — 5 confirmados y corregidos,
+  2 descartados tras inspección:
+  - `Clientes.jsx` no filtraba `deleted_at` (bajas seguían apareciendo en la lista activa) — corregido.
+  - Botón "Reintentar" sin efecto en `SimuladorVinculoTab.jsx` (`useEscalasLegales()` no
+    exponía `error`/`recargar` al `EstadoLista`) — corregido.
+  - Doble alerta de error en `Configuracion.jsx` (`TabZonas`) — corregido.
+  - `PrestacionesPaciente.jsx` y `AusenciasCoberturaTab.jsx` con mutaciones sin manejo de
+    error — corregidos ambos.
+  - `VerificacionTab.jsx` sin `disabled` en los campos durante el guardado — corregido.
+  - `ScoreRiesgoTab.jsx`: descartado — el botón de guardado ya deshabilita correctamente y
+    sigue el mismo patrón ya validado en `VinculoCeseTab.jsx` para la carga de fondo de
+    `useEscalasLegales`.
+
+**Sitio-web:**
+
+- **Medio — faltaba `hreflang`/canonical en 6 de 7 páginas**: solo la home tenía
+  `alternates` en su metadata; el resto heredaba el de la home (apuntando siempre a `/`).
+  Se agregó el helper `alternatesPara(locale, ruta)` en `lib/i18n.js` y se aplicó en las 6
+  páginas restantes (`contacto`, `privacidad`, `servicios`, `solicita-servicio`, `terminos`,
+  `trabaja-con-nosotros`).
+- **Menor — sin `sitemap.xml` ni `robots.txt`**: se agregaron `src/app/sitemap.js` y
+  `src/app/robots.js` (Next.js 15 file conventions), cubriendo las 3 locales y todas las
+  rutas públicas.
+- **Menor — `aria-label="Menú"` hardcodeado** en `Header.jsx` sin importar el idioma activo.
+  Se agregó la clave `nav.menu` (es-AR/en/pt-BR) y se usa `t.nav.menu`.
+
+**Nota de seguridad operativa**: durante la migración de `schema_etapa2o.sql` se expuso por
+error la connection string completa de Supabase (con contraseña) en la salida de un
+comando de diagnóstico. El usuario decidió explícitamente no rotarla ahora ("no existe
+riesgo durante la etapa de desarrollo") y posponer la rotación de **todas** las credenciales
+de desarrollo para el momento previo al lanzamiento público — ver nota en memoria de sesión,
+no repetir la pregunta en sesiones futuras salvo que cambie el contexto (repo público,
+lanzamiento cercano, etc.).
+
+**Verificado**: `npm run build` + `npx vitest run` (18/18) en `panel/`; `npm run build` en
+`sitio-web/`; `schema_etapa2o.sql` corrió sin error contra la base real.
+
 ## Problemas conocidos / deuda técnica
 
 _Registrar acá bugs conocidos o deuda técnica para la próxima sesión._

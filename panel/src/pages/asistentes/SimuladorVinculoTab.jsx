@@ -45,7 +45,7 @@ function proyectarCosto(asistenteBase, tipoVinculo, escalasResueltas, hoy) {
 
 export function SimuladorVinculoTab({ asistente }) {
   const { t } = useLocale();
-  const { filas: escalasCrudas, estado } = useEscalasLegales();
+  const { filas: escalasCrudas, estado, error, recargar } = useEscalasLegales();
   const hoy = new Date().toISOString().slice(0, 10);
 
   const proyecciones = useMemo(() => {
@@ -62,7 +62,7 @@ export function SimuladorVinculoTab({ asistente }) {
       <h2>{t.asistentes.simulador.titulo}</h2>
       <Alert variant="info">{t.asistentes.simulador.explicacion}</Alert>
 
-      <EstadoLista estado={estado} vacio={false}>
+      <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         {proyecciones && (
           <table className="panel-tabla">
             <thead>

@@ -68,12 +68,17 @@ export function AusenciasCoberturaTab({ asistente }) {
     const sustitutoId = coberturaForm[ausenciaId]?.asistente_sustituto_id;
     if (!sustitutoId) return;
     setGuardando(true);
-    await supabase.from('guardias_cobertura').insert({
+    setError(null);
+    const { error: errorInsert } = await supabase.from('guardias_cobertura').insert({
       ausencia_id: ausenciaId,
       asistente_sustituto_id: sustitutoId,
       costo_adicional: coberturaForm[ausenciaId]?.costo_adicional || null,
     });
     setGuardando(false);
+    if (errorInsert) {
+      setError(t.comun.error_generico);
+      return;
+    }
     setCoberturaForm((prev) => ({ ...prev, [ausenciaId]: {} }));
   }
 

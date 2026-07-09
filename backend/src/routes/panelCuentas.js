@@ -35,12 +35,12 @@ panelCuentasRouter.post('/cliente', requiereRolPanel, requiereAdmin, async (req,
 
   let clienteId;
   try {
-    clienteId = await crearCuentaConPerfil({
+    ({ userId: clienteId } = await crearCuentaConPerfil({
       email: solicitud.email,
       nombre: solicitud.nombre,
       telefono: solicitud.telefono,
       rol: 'cliente',
-    });
+    }));
 
     const { error: errorCliente } = await supabase
       .from('clientes')
@@ -108,13 +108,13 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, requiereAdmin, async (re
 
   let asistenteId;
   try {
-    asistenteId = await crearCuentaConPerfil({
+    ({ userId: asistenteId } = await crearCuentaConPerfil({
       email: postulacion.email,
       nombre: postulacion.nombre,
       telefono: postulacion.telefono,
       rol: 'asistente',
       zonas: postulacion.zonas.split(',').map((z) => z.trim()).filter(Boolean),
-    });
+    }));
 
     const { error: errorAsistente } = await supabase.from('asistentes').insert({
       id: asistenteId,

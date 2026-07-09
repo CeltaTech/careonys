@@ -80,6 +80,7 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
             email: postulacion.email,
             nombre: postulacion.nombre,
             nuevoEstado,
+            idioma: postulacion.idioma,
           }),
         });
       } catch {

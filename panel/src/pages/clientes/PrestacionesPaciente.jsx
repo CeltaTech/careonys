@@ -42,6 +42,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   const [guardandoPaquete, setGuardandoPaquete] = useState(false);
   const [errorPaquete, setErrorPaquete] = useState(null);
   const [marcandoRevisado, setMarcandoRevisado] = useState(null);
+  const [errorRevision, setErrorRevision] = useState(null);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -140,8 +141,13 @@ export function PrestacionesPaciente({ paciente, onClose }) {
 
   async function handleMarcarRevisado(prestacionId) {
     setMarcandoRevisado(prestacionId);
-    await supabase.from('prestaciones').update({ requiere_revision: false }).eq('id', prestacionId);
+    setErrorRevision(null);
+    const { error: errorUpdate } = await supabase.from('prestaciones').update({ requiere_revision: false }).eq('id', prestacionId);
     setMarcandoRevisado(null);
+    if (errorUpdate) {
+      setErrorRevision(t.comun.error_generico);
+      return;
+    }
     recargar();
   }
 
@@ -220,6 +226,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
             )}
 
             <h3>{t.prestaciones.vigentes_titulo}</h3>
+            {errorRevision && <Alert variant="error">{errorRevision}</Alert>}
             {prestaciones.length === 0 ? (
               <p className="estado-vacio">{t.prestaciones.sin_prestaciones}</p>
             ) : (

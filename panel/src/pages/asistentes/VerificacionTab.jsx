@@ -80,6 +80,7 @@ export function VerificacionTab({ asistente }) {
                 type="select"
                 value={fila.estado}
                 onChange={(e) => actualizarEtapa(fila, { estado: e.target.value })}
+                disabled={guardandoEtapa === etapa}
               >
                 {ESTADOS.map((estadoOpcion) => (
                   <option key={estadoOpcion} value={estadoOpcion}>{t.asistentes.verificacion[`estado_${estadoOpcion}`]}</option>
@@ -92,6 +93,7 @@ export function VerificacionTab({ asistente }) {
                 value={fila.notas || ''}
                 onChange={(e) => setVerificaciones((prev) => prev.map((v) => (v.id === fila.id ? { ...v, notas: e.target.value } : v)))}
                 onBlur={() => actualizarEtapa(fila, { notas: fila.notas || '' })}
+                disabled={guardandoEtapa === etapa}
               />
               {fila.completado_en && (
                 <p className="panel-explicacion">

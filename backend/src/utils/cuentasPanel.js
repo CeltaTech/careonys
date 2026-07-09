@@ -2,11 +2,13 @@ import crypto from 'crypto';
 import { supabase } from '../db/connection.js';
 
 // Mecanismo compartido: crea una cuenta real de Supabase Auth + su fila en `usuarios`,
-// sin enviar ningún email todavía (Etapa 3/4 — PWA Asistentes/Clientes — no existen aún,
-// así que no tiene sentido invitar a alguien a loguearse en una app que no existe).
-// `admin.createUser` nunca dispara emails por sí solo; el envío de invitación queda para
-// cuando la PWA correspondiente esté en producción (usar `admin.inviteUserByEmail` en ese
-// momento).
+// sin enviar ningún email todavía. Para Cliente/Asistente (panelCuentas.js) esto es correcto
+// tal cual: la PWA correspondiente (Etapa 3/4) no existe aún, así que no tiene sentido invitar
+// a alguien a loguearse en una app que no existe — el envío de invitación queda para cuando
+// esa PWA esté en producción (usar `admin.inviteUserByEmail` en ese momento). Para
+// Coordinador/Admin/Superadmin (panelUsuarios.js) el Panel SÍ existe hoy, así que
+// `passwordTemporal` se devuelve al caller para que quien lo crea pueda comunicarlo — no hay
+// otro canal de invitación implementado todavía.
 export async function crearCuentaConPerfil({ email, nombre, telefono, rol, zonas }) {
   const passwordTemporal = crypto.randomBytes(24).toString('base64url');
 
@@ -31,10 +33,13 @@ export async function crearCuentaConPerfil({ email, nombre, telefono, rol, zonas
     throw new Error(errorPerfil.message);
   }
 
-  return userId;
+  return { userId, passwordTemporal };
 }
 
 export async function borrarCuenta(userId) {
-  await supabase.from('usuarios').delete().eq('id', userId);
-  await supabase.auth.admin.deleteUser(userId);
+  const { error: errorPerfil } = await supabase.from('usuarios').delete().eq('id', userId);
+  if (errorPerfil) throw new Error(errorPerfil.message);
+
+  const { error: errorAuth } = await supabase.auth.admin.deleteUser(userId);
+  if (errorAuth) throw new Error(errorAuth.message);
 }

@@ -18,6 +18,7 @@ export function Clientes() {
     const { data, error: errorConsulta } = await supabase
       .from('clientes')
       .select('id, created_at, solicitudes!clientes_solicitud_id_fkey(nombre, telefono, email, localidad), pacientes(id)')
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (errorConsulta) {

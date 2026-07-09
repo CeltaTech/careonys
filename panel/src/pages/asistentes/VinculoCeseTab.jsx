@@ -25,6 +25,8 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
   const { t } = useLocale();
   const { filas: escalasCrudas, estado: estadoEscalas } = useEscalasLegales();
   const [ceses, setCeses] = useState([]);
+  const [estadoCeses, setEstadoCeses] = useState('cargando');
+  const [errorCeses, setErrorCeses] = useState(null);
   const [fechaCese, setFechaCese] = useState(new Date().toISOString().slice(0, 10));
   const [causal, setCausal] = useState('despido_sin_causa');
   const [resultado, setResultado] = useState(null);
@@ -32,9 +34,24 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
+  function cargarCeses() {
+    setEstadoCeses('cargando');
+    setErrorCeses(null);
     supabase.from('ceses').select('*').eq('asistente_id', asistente.id).order('created_at', { ascending: false })
-      .then(({ data }) => setCeses(data ?? []));
+      .then(({ data, error: errorConsulta }) => {
+        if (errorConsulta) {
+          setErrorCeses(errorConsulta.message);
+          setEstadoCeses('error');
+          return;
+        }
+        setCeses(data ?? []);
+        setEstadoCeses('listo');
+      });
+  }
+
+  useEffect(() => {
+    cargarCeses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [asistente.id]);
 
   function calcular() {
@@ -94,7 +111,7 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
   return (
     <div>
       <h2>{t.asistentes.tabs.historial_ceses}</h2>
-      <EstadoLista estado={ceses.length ? 'listo' : 'listo'} vacio={ceses.length === 0}>
+      <EstadoLista estado={estadoCeses} error={errorCeses} vacio={estadoCeses === 'listo' && ceses.length === 0} recargar={cargarCeses}>
         <table className="panel-tabla">
           <thead>
             <tr>

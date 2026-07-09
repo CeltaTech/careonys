@@ -44,8 +44,8 @@ panelUsuariosRouter.post('/', requiereRolPanel, requiereAdminOSuperior, async (r
   }
 
   try {
-    const userId = await crearCuentaConPerfil({ email, nombre, telefono, rol: rolNuevo, zonas });
-    res.json({ ok: true, id: userId });
+    const { userId, passwordTemporal } = await crearCuentaConPerfil({ email, nombre, telefono, rol: rolNuevo, zonas });
+    res.json({ ok: true, id: userId, passwordTemporal });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

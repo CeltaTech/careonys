@@ -98,7 +98,6 @@ export function UsuariosPanel() {
           esSuperadmin={esSuperadmin}
           onClose={() => setCreandoNuevo(false)}
           onCreado={() => {
-            setCreandoNuevo(false);
             recargar();
           }}
         />
@@ -127,12 +126,13 @@ function NuevoUsuarioPanel({ esSuperadmin, onClose, onCreado }) {
   const [rol, setRol] = useState('coordinador');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
+  const [creado, setCreado] = useState(null);
 
   async function handleGuardar() {
     setGuardando(true);
     setError(null);
     try {
-      await llamarApi('', {
+      const resultado = await llamarApi('', {
         method: 'POST',
         body: JSON.stringify({
           email,
@@ -142,12 +142,33 @@ function NuevoUsuarioPanel({ esSuperadmin, onClose, onCreado }) {
           zonas: zonas.split(',').map((z) => z.trim()).filter(Boolean),
         }),
       });
+      setCreado({ email, passwordTemporal: resultado.passwordTemporal });
       onCreado();
     } catch (err) {
       setError(err.message);
     } finally {
       setGuardando(false);
     }
+  }
+
+  if (creado) {
+    return (
+      <div className="panel-modal-fondo" onClick={onClose}>
+        <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
+          <h2>{t.usuarios_panel.cuenta_creada_titulo}</h2>
+          <p className="panel-explicacion">{t.usuarios_panel.cuenta_creada_explicacion}</p>
+          <dl className="panel-detalle-lista">
+            <dt>{t.usuarios_panel.col_email}</dt>
+            <dd>{creado.email}</dd>
+            <dt>{t.usuarios_panel.password_temporal}</dt>
+            <dd><code>{creado.passwordTemporal}</code></dd>
+          </dl>
+          <div className="panel-modal-acciones">
+            <Button onClick={onClose}>{t.comun.cerrar}</Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

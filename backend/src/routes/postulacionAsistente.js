@@ -4,10 +4,12 @@ import { enviarEmailCoordinador } from '../utils/email.js';
 
 export const postulacionAsistenteRouter = Router();
 
+const IDIOMAS_SOPORTADOS = ['es-AR', 'en', 'pt-BR'];
+
 postulacionAsistenteRouter.post('/', async (req, res) => {
   const {
     nombre, dni, telefono, email, especialidades, zonas, disponibilidad,
-    anios_experiencia, situacion_fiscal, como_conocio, mensaje,
+    anios_experiencia, situacion_fiscal, como_conocio, mensaje, idioma,
   } = req.body;
 
   if (!nombre || !dni || !telefono || !email || !especialidades || !zonas || !disponibilidad || !situacion_fiscal) {
@@ -24,6 +26,7 @@ postulacionAsistenteRouter.post('/', async (req, res) => {
     situacion_fiscal,
     como_conocio: como_conocio ?? null,
     mensaje: mensaje ?? null,
+    idioma: IDIOMAS_SOPORTADOS.includes(idioma) ? idioma : 'es-AR',
   });
 
   if (error) {

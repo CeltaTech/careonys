@@ -61,8 +61,7 @@ reproponer sin resolver primero el riesgo legal de fondo.
 | Cliente | cliente, usuario |
 | Paciente | adulto mayor (salvo contexto clínico específico) |
 | Guardia | turno, jornada, servicio |
-| El Filtro prestadora-original (uso interno únicamente — nunca en el sitio público, salvo que el usuario lo apruebe explícitamente como marketing) | mencionarlo en el sitio público bajo cualquier nombre |
-| Proceso de Incorporación de Asistentes (uso interno, Panel) | Filtro prestadora-original dentro del Panel, "pipeline" |
+| Proceso de Incorporación de Asistentes (uso interno — Panel y cualquier mención interna general del concepto; nunca en el sitio público, salvo que el usuario lo apruebe explícitamente como marketing) | "Filtro prestadora-original" (término retirado 2026-07-10, ver nota abajo — no usar ni siquiera internamente), "pipeline", mencionarlo en el sitio público bajo cualquier nombre |
 | Certificado prestadora-original | certificado genérico, diploma |
 | Reporte diario | informe, planilla, parte |
 | Coordinador | supervisor, jefe, encargado |
@@ -71,18 +70,36 @@ reproponer sin resolver primero el riesgo legal de fondo.
 | Superadmin | rol técnico, login propio, distinto de Admin — no confundir ni fusionar con Admin en código ni en UI |
 | PLM Systems | dueña/licenciante del software — usar solo para titularidad/copyright del software, nunca como marca del negocio de cuidado domiciliario |
 | Prestadora | empresa licenciataria del software (prestadora-original es la primera) — en el modelo de datos futuro, "organización"/tenant. No confundir con "Cliente" ni con "Asistente" |
+| Admin_prestadora (rol técnico, `usuarios.rol`) | rol de gestión acotado a la propia prestadora, cero visibilidad de otras — es el rol `admin` renombrado en el marco multi-tenant (`docs/PLAN_MULTITENANT_PLM.md` 4.1). Rename de dato + reescritura de las ~28 policies RLS que dependían del valor, ejecutados juntos en el Bloque 2 de `docs/Prompt_Claude_Code_Kickoff_Implementacion.md` (`backend/src/db/schema_multitenant_02.sql`, aplicado 2026-07-09/10) — el valor `admin` ya no existe en el dato ni en el código de autorización, no queda ningún caso de transición pendiente |
+| Desarrollador (en la documentación, para referirse a quien dirige el desarrollo y aprueba las decisiones que Claude Code le eleva) | "Alberto"/"Inversor" como estand-in genérico de esa persona — no es un rol del sistema (ver `Admin`/`Superadmin` en `docs/SECURITY.md`), ni tiene relación con la fila "Inversor" de esta misma tabla (que sí es un hecho societario real, ver `docs/prestadora-original_Fundacional_v3.pdf`) |
+| Cumplimiento normativo (documental, por prestadora) | compliance — término de negocio nuevo detectado sin aprobación previa en `docs/PLAN_MULTITENANT_PLM.md` (barrido 2026-07-10) y corregido; entidad futura `cumplimiento_normativo_prestadora`, todavía sin implementar en código |
+| Ausente sin relevo previo | cualquier término en inglés o genérico para este caso — un Asistente que no se presenta a una guardia cuando no había ningún Asistente de prestadora-original cubriendo antes que él (ej. primera guardia del día para un Paciente). Distinto de un "ausente" con relevo: acá no hay nadie "saliente" atrapado esperando, el Paciente puede quedar completamente solo — es el escenario de mayor riesgo del protocolo de continuidad de guardia. En el esquema técnico, `incidentes_relevo.guardia_saliente_id` queda `NULL` en este caso (`backend/src/db/schema_modulo6_guardias.sql`) |
 
 Esto aplica a nombres de variables, tablas, componentes y claves de i18n, no solo a texto visible.
 
-**Nota (corregida 2026-07-08):** "El Filtro prestadora-original" y, en general, el concepto de
-proceso de selección/verificación de Asistentes son de **uso interno únicamente**. No se
-menciona en el sitio público — ni con ese nombre ni con un nombre genérico inventado
+**Verificación activa, no solo lista de referencia:** el glosario se filtró más de una vez
+(términos en inglés colados sin que nadie lo chequeara). A partir de ahora:
+- Antes de usar cualquier término de negocio nuevo en texto visible (UI, `docs/`,
+  comentarios de código, mensajes de commit), confirmarlo contra este glosario. Si no está,
+  no inventarlo ni usarlo todavía — proponer el término en español al Desarrollador para que
+  lo apruebe, y recién ahí agregarlo como entrada nueva.
+- Al cerrar cualquier tarea que haya tocado texto visible, sumar un chequeo puntual: ¿algún
+  término nuevo usado hoy no está en el glosario? Si es así, la tarea no está terminada hasta
+  resolverlo.
+
+**Nota (corregida 2026-07-08, término retirado del todo 2026-07-10):** el concepto de
+proceso de selección/verificación de Asistentes es de **uso interno únicamente**. No se
+menciona en el sitio público — ni con nombre propio ni con un nombre genérico inventado
 ("proceso de selección de personal", "verificación", etc.) — salvo que el usuario decida
-explícitamente en el futuro usarlo como herramienta de marketing. Dentro del Panel (uso
-interno, Coordinador/Admin) la pantalla que avanza al Postulante por las etapas de
-verificación se llama "Proceso de Incorporación de Asistentes" — no usar "Filtro prestadora-original" ahí.
-Corrección aplicada el mismo día: se sacó del sitio público (`sitio-web`) el nav link, la
-sección de la home y la página dedicada `/el-filtro` que mencionaban "El Filtro prestadora-original".
+explícitamente en el futuro usarlo como herramienta de marketing. El nombre correcto, en
+cualquier contexto interno (Panel, documentación, comentarios de código, commits) es
+**"Proceso de Incorporación de Asistentes"** — el nombre anterior ("El Filtro prestadora-original") se
+retiró por completo el 2026-07-10 por decisión explícita del Desarrollador: no correspondía
+usarlo ni siquiera internamente, no solo en el Panel. Se reemplazó en todos los documentos
+del proyecto (ver `docs/PROGRESS.md`); si aparece en algún lugar nuevo, es un término
+obsoleto que hay que corregir, no reintroducir. Corrección de sitio público aplicada el
+2026-07-08: se sacó del sitio público (`sitio-web`) el nav link, la sección de la home y la
+página dedicada `/el-filtro`.
 
 ## Las 11 reglas no negociables
 

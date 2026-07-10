@@ -34,10 +34,11 @@ backend/
 ## Páginas
 
 ### 1. Home (`/`)
-- **Hero**: imagen de fondo, overlay oscuro, `T.hero_title` ("Cuida tus afectos" —
-  ver nota de inconsistencia de slogan en `CONTEXT.md`), `T.hero_subtitle`, CTA primario →
-  `/solicita-servicio`, CTA secundario → `/trabaja-con-nosotros`.
-- **Propuesta de valor** (3 iconos): Filtro 5 etapas / Reporte diario / QR verificable.
+- **Hero**: imagen de fondo, overlay oscuro, `T.hero_title` ("Cuida tus afectos" — forma
+  imperativa correcta para esta pieza, ver regla de slogan en `CONTEXT.md`), `T.hero_subtitle`,
+  CTA primario → `/solicita-servicio`, CTA secundario → `/trabaja-con-nosotros`.
+- **Propuesta de valor** (3 iconos): Asistentes verificados / Reporte diario / Certificado
+  QR verificable — sin nombrar el proceso interno de verificación (ver nota más abajo).
 - **Cómo funciona** (3 pasos): Consultás → Coordinamos → Empezamos.
 - **Preview de servicios** (3 cards) → botón "Ver todos" → `/servicios`.
 - **CTA final** sobre fondo `--azul-oscuro`.
@@ -49,11 +50,15 @@ Alquiler de equipamiento). Tabla de modalidades/precios: **todas las celdas de p
 muestran "A consultar"** hasta que haya un benchmark de precio validado — los precios se
 cargan desde config, nunca hardcodeados (regla 1 de `CLAUDE.md`).
 
-### 3. El Filtro prestadora-original (`/el-filtro`)
-Hero: "Solo el 10% supera el Filtro prestadora-original". Timeline vertical de 5 etapas (postulación,
-verificación de identidad, antecedentes penales, entrevista, capacitación — mismos nombres
-que `etapa_filtro` en `DATA_MODEL.md`, no inventar nombres distintos). Caja de Certificado
-QR. CTA → `/solicita-servicio`.
+### 3. Página `/el-filtro` — eliminada (corrección 2026-07-08)
+Esta sección describía originalmente una página pública dedicada a "El Filtro prestadora-original"
+("Solo el 10% supera el Filtro prestadora-original", timeline de las 5 etapas). Se sacó del sitio
+público el 2026-07-08: el proceso interno de verificación de Asistentes (uso interno,
+llamado "Proceso de Incorporación de Asistentes" dentro del Panel) **nunca se menciona en el
+sitio público, ni con ese nombre ni con un nombre genérico inventado** — ver `CLAUDE.md`.
+La página, el nav link y la sección de la Home que la mencionaban fueron eliminados del
+código. Lo único que puede comunicarse públicamente es el hecho de estar "Verificado por
+prestadora-original" (ej. en el Certificado QR del Asistente), sin nombrar el proceso.
 
 ### 4. Solicitá tu servicio (`/solicita-servicio`)
 Formulario → tabla de campos:
@@ -94,8 +99,9 @@ está en proceso de revisión legal."
 
 ## Componentes globales
 
-- **Header**: logo (placeholder), nav (Inicio/Servicios/El Filtro/Trabajá con
-  Nosotros/Contacto), selector de idioma ES/EN/PT, hamburguesa en mobile, sticky.
+- **Header**: logo (placeholder), nav (Inicio/Servicios/Trabajá con
+  Nosotros/Contacto — sin link a "El Filtro", removido 2026-07-08), selector de idioma
+  ES/EN/PT, hamburguesa en mobile, sticky.
 - **Footer**: logo pequeño, links, copyright, habilitación GCBA (pendiente de trámite).
 - **Botón WhatsApp flotante**: icono verde, z-index alto, abre `wa.me/[NÚMERO]` con
   mensaje predefinido — una línea en `App.jsx`.
@@ -111,9 +117,8 @@ Ver `DATA_MODEL.md`, sección "Etapa 1 (MySQL en Railway)" — tablas `solicitud
 |---|---|---|
 | `/` | prestadora-original Salud — Cuidado domiciliario verificado en CABA y GBA | Asistentes Integrales certificados. Reporte diario para el cliente. Precios públicos. Cuida tus afectos. |
 | `/servicios` | Servicios de cuidado domiciliario — prestadora-original Salud | Asistente Integral, enfermería, internación domiciliaria, kinesiología y más. CABA y GBA. |
-| `/el-filtro` | El Filtro prestadora-original — Solo el 10% es aprobado | Verificación de identidad, antecedentes penales, entrevista y capacitación. |
 | `/solicita-servicio` | Solicitá tu servicio — prestadora-original Salud | Completá el formulario y te respondemos en menos de 2 horas. |
-| `/trabaja-con-nosotros` | Trabajá con prestadora-original — Cuidadores y profesionales de la salud | Trabajo registrado, honorarios acordados, certificación propia. |
+| `/trabaja-con-nosotros` | Trabajá con prestadora-original — Asistentes Integrales y profesionales de la salud | Trabajo registrado, honorarios acordados, certificación propia. |
 
 ## Checklist de lanzamiento
 

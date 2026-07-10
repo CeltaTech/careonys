@@ -1,5 +1,5 @@
--- Etapa 2 — Proceso de Incorporación de Asistentes (uso interno del Panel; ver nota de
--- CLAUDE.md 2026-07-08 sobre por qué esta pantalla no se llama "Filtro prestadora-original").
+-- Etapa 2 — Proceso de Incorporación de Asistentes (uso interno del Panel, ver glosario
+-- de CLAUDE.md).
 -- Conecta la postulación cruda (tabla "postulaciones", Etapa 1) con la cuenta real de
 -- Asistente que se crea al iniciar la verificación (tablas "asistentes" y
 -- "verificaciones_asistente", Etapa 2B).

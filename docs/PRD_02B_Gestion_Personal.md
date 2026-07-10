@@ -2,8 +2,9 @@
 
 > Fuente: `prestadora-original_PRD_Gestion_Personal_v1.md` (documento completo, 431 líneas).
 > Este PRD **extiende el Módulo 4 (Plantel de Asistentes) de `PRD_02_Panel_Admin.md`,
-> no es un módulo separado** — vive en la misma navegación, mismo rol de acceso (Admin;
-> Coordinador solo lectura de su zona, sin acceso a montos — ver `SECURITY.md`).
+> no es un módulo separado** — vive en la misma navegación, mismo rol de acceso
+> (Admin_prestadora; Coordinador solo lectura de su zona, sin acceso a montos — ver
+> `SECURITY.md`).
 
 ## Por qué existe este módulo
 
@@ -103,8 +104,9 @@ fórmula para estos tres casos.
 Pantalla separada (no ejecuta ningún cese real) que compara, para un Asistente hipotético o
 existente, el costo mensual total bajo monotributo vs. bajo dependencia — usa el mismo motor
 `calcularCese` para proyectar el costo de un eventual cese sin causa a distintas antigüedades
-(3, 6, 12, 24 meses), mostrando ambos escenarios lado a lado. Objetivo: darle a Admin una
-herramienta de decisión antes de blanquear un vínculo, no una obligación legal automatizada.
+(3, 6, 12, 24 meses), mostrando ambos escenarios lado a lado. Objetivo: darle a
+Admin_prestadora una herramienta de decisión antes de blanquear un vínculo, no una
+obligación legal automatizada.
 
 ## Score de riesgo de reclasificación
 

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { supabase } from '../db/connection.js';
+import { prestadora-original_PRESTADORA_ID } from '../db/tenantTemporal.js';
 import { enviarEmailCoordinador } from '../utils/email.js';
 
 export const solicitudServicioRouter = Router();
@@ -19,6 +20,7 @@ solicitudServicioRouter.post('/', async (req, res) => {
     nombre_paciente: nombre_paciente ?? null,
     localidad, tipo_servicio, modalidad, dias_horario,
     descripcion: descripcion ?? null,
+    prestadora_id: prestadora-original_PRESTADORA_ID,
   });
 
   if (error) {

@@ -4,7 +4,7 @@
 --
 -- Este archivo crea, en orden de dependencia: aspirantes (PRD_03, pre-Asistentes),
 -- asistentes (base + extensión dual-track de PRD_02B), verificaciones_asistente
--- (Filtro prestadora-original), y las 4 tablas propias de Gestión de Personal (escalas_legales,
+-- (Proceso de Incorporación de Asistentes), y las 4 tablas propias de Gestión de Personal (escalas_legales,
 -- ausencias, guardias_cobertura, ceses). asistentes no existía todavía — Módulo 4 es
 -- el primer módulo que la necesita.
 
@@ -97,7 +97,7 @@ CREATE POLICY "panel_edita_asistentes" ON asistentes
 -- para Coordinador se deja para cuando el dato de zona esté modelado (ver deuda técnica).
 
 -- ============================================================================
--- VERIFICACIONES_ASISTENTE (El Filtro prestadora-original — 5 etapas)
+-- VERIFICACIONES_ASISTENTE (Proceso de Incorporación de Asistentes — 5 etapas)
 -- ============================================================================
 CREATE TYPE etapa_filtro AS ENUM (
   'postulacion', 'verificacion_identidad', 'antecedentes_penales', 'entrevista', 'capacitacion'

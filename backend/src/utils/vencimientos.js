@@ -1,4 +1,5 @@
 import { supabase } from '../db/connection.js';
+import { prestadora-original_PRESTADORA_ID } from '../db/tenantTemporal.js';
 import { enviarEmailCoordinador } from './email.js';
 
 const DIAS_ANTICIPACION = 30;
@@ -24,6 +25,7 @@ export async function revisarVencimientos() {
       .from('asistentes')
       .select(`nombre, ${columna}`)
       .eq('estado', 'activo')
+      .eq('prestadora_id', prestadora-original_PRESTADORA_ID)
       .not(columna, 'is', null)
       .lte(columna, limiteISO);
 

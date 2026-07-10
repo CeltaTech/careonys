@@ -16,7 +16,8 @@
 | 6 | Perfil público del Asistente con QR verificable | Asistentes certificados | 1 semana | `PRD_04_05_App_Servicio.md` |
 | Diferida | App nativa (Capacitor o React Native) | 50+ clientes activas, negocio validado | 1-5 semanas | — |
 | Diferida | IA Niveles 3-5 (matching, asistente virtual, análisis predictivo) | Datos históricos suficientes | Variable | — |
-| Diferida | Multi-tenancy real (entidad `prestadoras`, aislamiento por organización, roles y facturación PLM/prestadora-original) | Negocio de PLM Systems formalizado + al menos un cliente licenciatario más allá de prestadora-original; empieza por el inventario/plan que pide el documento, no por código | Variable | `docs/Prompt_Claude_Code_PLM_Multitenant.md` |
+| En progreso | Multi-tenancy real (entidad `prestadoras`, aislamiento por organización, roles y facturación PLM/prestadora-original) | Plan y diseño aprobados (`docs/PLAN_MULTITENANT_PLM.md`); Bloques 1-3 aplicados y verificados contra Supabase real (2026-07-09/10: aislamiento de datos, RLS centralizada `current_tenant()`/`es_superadmin()`, rol `admin`→`admin_prestadora`, filtrado de tenant en backend); solo falta Bloque 4 (`configuracion_prestadora`) | Variable | `docs/PLAN_MULTITENANT_PLM.md` |
+| En progreso | Módulo 6 — Guardias (series, GPS check-in/out, incidentes de relevo, escalada) | Módulo 4/5 del Panel funcionando | Variable | schema aplicado (`backend/src/db/schema_modulo6_guardias.sql`); sin rutas backend ni UI de Panel todavía — sin PRD dedicado, ver `docs/PROGRESS.md` |
 
 El reclutamiento (`PRD_03_Reclutamiento.md`) no es una etapa de código separada — sus
 pantallas y formularios se reparten entre Etapa 1 (formulario público de postulación) y

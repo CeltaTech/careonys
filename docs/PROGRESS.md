@@ -225,7 +225,7 @@ Reglas de negocio confirmadas con el usuario que moldean este esquema:
   paquete económico (un precio propio, no la suma de las partes), además de operarse en
   forma conjunta.
 
-Se investigaron (research de mercado, agencias de cuidado domiciliario y de personal de
+Se investigaron (investigación de mercado, agencias de cuidado domiciliario y de personal de
 enfermería comparables) los patrones de "precio de lista con bonificación negociada",
 "paquete de prestaciones con precio propio" y "aviso al responsable de cuenta ante cambio
 de precio, nunca ajuste automático" antes de diseñar el esquema, porque el usuario mismo
@@ -953,7 +953,7 @@ organización, prestadora-original) en producción — esto fue puramente un tra
 documentación. El propio `Prompt_Claude_Code_PLM_Multitenant.md` pide, como primer paso
 real de esa migración, un inventario de qué partes del código asumen hoy "una sola
 organización" y una propuesta de plan de migración — eso no se hizo en esta sesión y
-requiere kickoff explícito del usuario para arrancar (es un cambio arquitectónico grande:
+requiere autorización explícita del Desarrollador para arrancar (es un cambio arquitectónico grande:
 entidad `prestadoras`, RLS por tenant, roles nuevos, facturación dual PLM/prestadora-original, i18n y
 multi-moneda).
 
@@ -982,7 +982,7 @@ Contenido del documento (resumen — el detalle completo está ahí, no se repit
    `configuracion_empresa` → parametrizar hardcodeos estructurales), priorizando primero el
    aislamiento de los datos más sensibles (`pacientes`, `ceses`, `ausencias`).
 3. **Diseño de tablas** con nivel de diagrama: `prestadoras`, `configuracion_prestadora`
-   (reemplazo de la singleton), `compliance_prestadora` (append-only, para trazabilidad
+   (reemplazo de la singleton), `cumplimiento_normativo_prestadora` (append-only, para trazabilidad
    legal inmutable), roles nuevos (`admin_prestadora`, `superadmin` redefinido como el rol
    cross-tenant de PLM, `financiador` solo contemplado), y `planes_facturacion`/`facturas`
    (con `moneda` explícita, `tipo_cambio_referencia` solo para trazabilidad, numeración
@@ -1001,9 +1001,185 @@ negocio pide ver el inventario y el plan antes de tocar producción. Próximo pa
 usuario apruebe (o corrija) las decisiones de la sección 4 de `PLAN_MULTITENANT_PLM.md`
 antes de generar la primera migración SQL real.
 
+## Actualización — Bloque 3 del plan multi-tenant: filtrado de tenant en rutas backend con Service Role Key — CERRADO (7 de 15 columnas)
+
+Auditoría adversarial previa de Bloques 1 y 2 (detalle completo en
+`docs/PLAN_MULTITENANT_PLM.md`, sección "Auditoría adversarial de Bloques 1 y 2"): dos
+hallazgos corregidos y verificados contra Supabase real — policy pública de
+`zonas_cobertura` sin ningún filtro (`DROP POLICY`, no se le agregó `current_tenant()`
+porque un visitante anónimo no tiene `auth.uid()`), y un literal `rol = 'admin'` huérfano
+en `panelConfiguracion.js` que bloqueaba a los `admin_prestadora` reales (no era fuga, era
+bloqueo de acceso legítimo).
+
+Bloque 3 en sí — se agregó filtrado por `prestadora_id` (bypasseando RLS, porque estas
+rutas usan la Service Role Key) en: `panelUsuarios.js` (GET/PATCH/DELETE — el hallazgo más
+crítico, listaba/editaba/borraba usuarios de **todas** las prestadoras sin filtro alguno,
+confirmado explotable con un tenant fabricado real), `panelConfiguracion.js` (endpoints de
+`/zonas`), `panelCuentas.js` + `utils/cuentasPanel.js` (altas de cuenta cliente/asistente),
+`utils/vencimientos.js` (cron de vencimientos), y `configuracionPublica.js` (zonas
+públicas). Las dos rutas públicas sin login (`solicitudServicio.js`,
+`postulacionAsistente.js`) resuelven el tenant con un UUID hardcodeado en
+`backend/src/db/tenantTemporal.js` (`prestadora-original_PRESTADORA_ID`) — a propósito, sin mecanismo
+de resolución por dominio, hasta que exista una segunda prestadora con presencia pública
+propia. Todo verificado con pruebas reales contra Supabase (tenant fabricado + cuenta Auth
+real + limpieza completa). Script de verificación reutilizable guardado en
+`backend/scripts/verificacion/bloque3_verificacion.mjs` (lee secretos de variables de
+entorno, no hardcodeados, porque queda commiteado al repo).
+
+Cierre del `DEFAULT` temporal en `prestadora_id` (parche del Bloque 2): se aplicó
+`DROP DEFAULT` y se verificó con insert real que vuelve a fallar por `NOT NULL` en 7 de las
+15 columnas (`usuarios`, `asistentes`, `clientes`, `pacientes`, `zonas_cobertura`,
+`solicitudes`, `postulaciones`) — las que ya tienen su ruta de alta corregida. Las otras 8
+(`ausencias`, `guardias_cobertura`, `ceses`, `lista_precios`, `prestaciones`,
+`paquetes_prestaciones`, `paquete_prestacion_items`, `certificados`) se insertan solo desde
+el panel con la anon key y ningún componente setea `prestadora_id` hoy — quedan con el
+`DEFAULT` a propósito. Detalle completo y el ítem de trabajo con nombre
+("Panel — tenant en inserts directos", con su alcance de 3 pasos) en
+`docs/PLAN_MULTITENANT_PLM.md` sección 4.1 — debe ejecutarse antes de que arranque el
+Bloque 4 (branding).
+
+**Corrección posterior, misma sesión**: antes de dar el Bloque 3 por cerrado del todo, se
+confirmó archivo:línea el estado de las 6 operaciones de lectura/edición/borrado por id que
+se habían subido a prioridad máxima. Se encontró un hueco real que el resumen anterior no
+había cubierto explícitamente: `backend/src/utils/cuentasPanel.js` `borrarCuenta()` borraba
+por `id` sin verificación de tenant propia — segura hoy solo porque los 3 llamadores actuales
+son disciplinados, no porque la función lo garantizara. Corregido (ahora exige y valida
+`{ prestadoraId, esSuperadmin }`) y verificado con un tenant fabricado real. Se agregaron
+además 3 chequeos de aislamiento cross-tenant permanentes a
+`backend/scripts/verificacion/bloque3_verificacion.mjs` (antes solo cubría lecturas simples),
+así el script vuelve a ser un chequeo reusable real y no solo lo que se probó una vez a mano.
+
+## Actualización — Módulo 6 (Guardias): schema + RLS multi-tenant, migración aplicada y verificada contra Supabase real
+
+Diseño consolidado con el usuario incluyendo dos correcciones encontradas en la revisión
+final: (1) `incidentes_relevo.guardia_saliente_id` es **nullable** (no `NOT NULL` como en el
+primer borrador) para representar "ausente sin handoff" (primera guardia del día, ningún
+Asistente de prestadora-original presente antes) — el caso de mayor riesgo, no uno menor; (2) la policy
+RLS de Coordinador sobre `incidentes_relevo` (y, encadenada, sobre
+`excepciones_familiar_relevo`) usa `OR` entre dos `EXISTS` independientes (zona de la
+guardia entrante, u opcionalmente zona de la saliente cuando no es NULL) — nunca una
+condición que dependa de que ambas columnas resuelvan, porque eso ocultaría en silencio
+justo el incidente más grave. `resuelto_por_id` confirmado como FK compuesta nullable
+estándar (`MATCH SIMPLE` de Postgres, sin trigger) + `CHECK` de coherencia con
+`resuelto_por_tipo`. `plantilla_mensaje NOT NULL` vs. `minutos_demora`/`orden_prioridad`
+nullable es asimetría intencional (un nivel sin timing simplemente no dispara; un nivel sin
+mensaje fallaría en silencio).
+
+8 tablas nuevas (`series_guardias`, `guardias`, `domicilios_temporales_paciente`,
+`personal_emergencia`, `incidentes_relevo`, `configuracion_escalada_relevo`,
+`excepciones_familiar_relevo`, `guardias_tracking_gps`) + 2 `UNIQUE(id, prestadora_id)`
+aditivas en `asistentes`/`pacientes` (prerrequisito de las FK compuestas). Todas las FK entre
+tablas de distinto tenant son compuestas (`(fk_id, prestadora_id)` contra
+`(id, prestadora_id)` del padre) — cruce entre prestadoras estructuralmente imposible, no
+solo disciplinado. `guardias_tracking_gps` queda con el schema creado pero **bloqueada
+explícitamente para uso con datos reales** hasta definir política de retención (Ley 25.326).
+
+**Mecanismo de aplicación, corregido en esta sesión y ahora fijado como estándar**: nada de
+pegar SQL a mano en el SQL Editor de Supabase. Se usa la Supabase CLI real (`supabase db
+query --linked -f <archivo>`), autenticada con un `SUPABASE_ACCESS_TOKEN` temporal generado
+por el Desarrollador para esta tarea puntual — confirmado antes de tocar nada que
+`supabase projects list` mostrara el proyecto correcto (`abcpmzfnnhpuiupmrsdi` → "prestadora-original
+Salud") y que el `link` quedara acotado a `backend/`, sin tocar ninguna otra cuenta/proyecto
+del Desarrollador. **Token de un solo uso — el Desarrollador debe revocarlo desde Dashboard →
+Access Tokens apenas se confirme el cierre de esta tarea; no debe quedar vigente
+indefinidamente.**
+
+**Regla nueva, permanente, a partir de esta sesión**: el proyecto está en el plan Free de
+Supabase (sin point-in-time recovery). Antes de aplicar cualquier migración con cambios de
+schema no triviales, correr primero un backup manual real con la misma CLI ya autorizada
+(`supabase db dump --linked -f backups/<nombre>_<fecha>.sql` para schema, y
+`--data-only` aparte para datos), confirmar que el archivo no está vacío, y solo después
+aplicar la migración. `backend/backups/` ya está en `.gitignore` — nunca commitear estos
+dumps (contienen datos reales de usuarios); local es un lugar de paso, no el destino final
+— git/GitHub queda descartado como destino permanente de backup, no en evaluación (ver
+`docs/SECURITY.md`, backup propio en bucket de almacenamiento de objetos, tarea todavía
+pendiente de implementar). Nota técnica encontrada al hacerlo: un dump `--data-only` de este
+proyecto genera un warning de FK circular entre `solicitudes` y `clientes` — no impide el
+dump, pero una restauración de ese archivo específico probablemente necesite
+`--disable-triggers` o dropear constraints temporalmente; un dump completo (schema+data,
+sin `--data-only`) no tiene ese problema.
+
+**Verificación contra Supabase real, completa**: existencia de las 8 tablas
+(`information_schema.tables`), RLS habilitada en las 8 (`pg_class.relrowsecurity`), las 17
+constraints (`UNIQUE`/FK compuestas) esperadas presentes por nombre, las 15 políticas RLS
+esperadas presentes por nombre (`pg_policies`), y —la pieza más nueva y con más riesgo de un
+error de lógica sutil que un `CREATE TABLE` exitoso no delata— prueba con datos reales
+fabricados (Auth users + filas, todo limpiado después) de que un Coordinador de la zona del
+Asistente **entrante** ve un `incidentes_relevo` con `guardia_saliente_id NULL`, y que un
+Coordinador de otra zona no lo ve. Ambos casos OK.
+
+Pendiente, no arrancado en esta sesión: rutas backend (CRUD) para las 8 tablas, UI del Panel
+para Módulo 6, definición de negocio de `configuracion_escalada_relevo` (tiempos/orden de
+escalada completos) y decisión de proveedor de WhatsApp Business API (o diferir mensajería) |
+`backend/src/db/schema_modulo6_guardias.sql` (nuevo, aplicado y verificado contra Supabase
+real); `backend/.gitignore` (agregado `backups/`); `backend/backups/` (2 dumps de respaldo
+pre-migración, no versionados)
+
+## Actualización — barrido documental completo contra la realidad del código (2026-07-10)
+
+A pedido explícito del Desarrollador ("revisá en profundidad cada uno de los documentos del
+proyecto y actualizalos a la realidad de los cambios realizados"), se auditó cada documento
+de `docs/` (vía 3 agentes de exploración en paralelo, sin permiso de edición, solo
+diagnóstico) contra el estado real del código y se aplicaron las correcciones encontradas:
+
+- **`CONTEXT.md`**: la sección de cambio societario ya no dice "nada de esto está
+  implementado" — documenta Bloques 1-3 de multi-tenancy aplicados y verificados, con solo
+  el Bloque 4 pendiente. Tabla de roles y sección "roles futuros" corregidas (`Admin` →
+  `Admin_prestadora`, ya no es un rol futuro). Estado de Módulo 6 actualizado (schema hecho,
+  sin rutas/UI). Agregado changelog v3.
+- **`BUILD_ORDER.md`**: fila de multi-tenancy actualizada (Bloques 1-3 hechos, Bloque 4
+  pendiente); agregada una fila nueva para Módulo 6 (sin PRD dedicado todavía — ver pregunta
+  abierta abajo).
+- **`DATA_MODEL.md`**: agregada la tabla `prestadoras` y la convención de FK compuesta
+  tenant-segura (introducida con Módulo 6); documentada la deuda técnica real del `DEFAULT`
+  temporal en `prestadora_id` de 14 tablas (confirmado por archivo: no existe ningún
+  `schema_multitenant_03.sql` ni `DROP DEFAULT` en el repo, sigue activo); reemplazada la
+  sección de `guardias` por un resumen de las 8 tablas reales de Módulo 6, con referencia al
+  schema real para el DDL completo; corregido el diagrama de relaciones (`admin` →
+  `admin_prestadora`, agregadas las tablas de Módulo 6 y Módulo 8).
+- **`SECURITY.md`**: tabla RBAC corregida (`admin` → `admin_prestadora`); agregada sección
+  de `current_tenant()`/`es_superadmin()`; los ejemplos de policies ahora muestran el filtro
+  de tenant; agregado como ejemplo oficial el patrón OR-de-dos-EXISTS de `incidentes_relevo`
+  para el caso `guardia_saliente_id NULL`; agregada nota de decisión pendiente sobre
+  retención de `guardias_tracking_gps` bajo Ley 25.326.
+- **`PRD_01_Sitio_Web.md`**: eliminada la página pública `/el-filtro` del documento (ya se
+  había eliminado del código el 2026-07-08) — nav, sección de Home y fila SEO corregidas;
+  "Cuidadores" → "Asistentes Integrales" en meta description.
+- **`PRD_02_Panel_Admin.md`**: `Admin` → `Admin_prestadora` en toda la tabla de roles y
+  notificaciones; sección Módulo 6 reescrita contra el schema real (antes describía un
+  diseño genérico desactualizado, ahora documenta las 8 tablas reales y qué falta construir).
+- **`PRD_02B_Gestion_Personal.md`** y **`PRD_03_Reclutamiento.md`**: `Admin` →
+  `Admin_prestadora` en todas las menciones de rol.
+- **`PRD_04_05_App_Servicio.md`**: corregida una violación real de la regla de "Filtro
+  prestadora-original nunca en el sitio público" — el Perfil Público del Asistente (con QR, sin login)
+  mostraba "las 5 etapas del Filtro prestadora-original con fecha de aprobación de cada una"; ahora solo
+  muestra el hecho consolidado "Verificado por prestadora-original el [fecha]", sin nombrar el proceso.
+- **`COMPETIDORES_PRESTACIONES.md`**: "adultos mayores" → "pacientes" en la única fila que
+  describe a prestadora-original mismo (el resto del documento cita cómo se autodenominan competidores
+  externos, no se tocó).
+- **Sin hallazgos**: `DESIGN_SYSTEM.md`, `AI_PROMPTS.md` — vocabulario ya alineado al
+  glosario, sin menciones obsoletas de roles ni de Filtro prestadora-original.
+
+**Dos preguntas se elevaron al Desarrollador, resueltas así:**
+1. **PRD_06_Guardias.md dedicado**: no se crea todavía. Se sigue documentando el módulo en
+   `PROGRESS.md`/`PLAN_MULTITENANT_PLM.md`/`PRD_02_Panel_Admin.md` hasta que arranque la
+   implementación de rutas/UI — evita mantener un PRD que puede cambiar antes de tocarlo.
+2. **"Filtro prestadora-original" vs "Proceso de Incorporación de Asistentes" en `PRD_03_Reclutamiento.md`**:
+   aprobado reescribir. Se renombraron los dos títulos de sección que describen directamente
+   lo que alimenta pantallas de Panel ("El Filtro prestadora-original — 6 etapas de incorporación" →
+   "Proceso de Incorporación de Asistentes — 6 etapas", con nota de nomenclatura explícita; y
+   "Etapa 5 del Filtro" → "Etapa 5 del Proceso de Incorporación de Asistentes"). "Filtro
+   prestadora-original" queda reservado para el concepto general/interno, no para el nombre de estas
+   pantallas.
+
 ## Problemas conocidos / deuda técnica
 
 _Registrar acá bugs conocidos o deuda técnica para la próxima sesión._
+
+- **"Panel — tenant en inserts directos"** (ver `docs/PLAN_MULTITENANT_PLM.md` sección
+  4.1) — pendiente, programado antes del Bloque 4. `AuthContext.jsx` no expone el
+  `prestadora_id` del usuario de panel logueado; 5 componentes insertan directo sin ese
+  valor, dependiendo del `DEFAULT` de schema en 8 tablas.
 
 - **Zona de `solicitudes`/`clientes`/`pacientes`/`prestaciones` no filtrada por Coordinador**
   (ver `docs/SECURITY.md`, sección RLS) — no hay columna de zona real en estas tablas
@@ -1047,6 +1223,12 @@ _Una entrada por sesión de trabajo, más reciente primero._
 
 | Fecha | Sesión | Archivos |
 |---|---|---|
+| 2026-07-10 | **Retiro total de "Filtro prestadora-original"**: el Desarrollador instruyó reemplazar el término en todos lados, aclarando que ni siquiera corresponde su uso interno (endurece la regla anterior del 2026-07-08, que sí permitía uso interno). Glosario de `CLAUDE.md` consolidado a una sola fila ("Proceso de Incorporación de Asistentes", sin excepción interna) con nota de retiro fechada. Barrido de todo el repo (grep `Filtro prestadora-original\|El Filtro`): corregidos `SECURITY.md` (2 menciones), `DATA_MODEL.md` (3 menciones), `PLAN_MULTITENANT_PLM.md` (1 mención, ya no se deja como "bajo impacto, sin acción"), y comentarios de código en `backend/src/routes/panelCuentas.js`, `backend/src/db/schema_etapa2e.sql`, `backend/src/db/schema_etapa2b.sql` (2 menciones). El identificador SQL `etapa_filtro` (enum ya aplicado en Supabase) no se renombra — es un nombre técnico abreviado, no el término de negocio, y renombrarlo requeriría una migración fuera de alcance de este barrido documental. Entradas históricas de este mismo archivo (fechadas 2026-07-07/08/09) que citan "Filtro prestadora-original" como parte de un registro de una decisión pasada quedan sin tocar — documentan fielmente lo que era cierto en ese momento, no un uso vigente del término. `docs/prestadora-original_Manual_Identidad_v1.html` queda pendiente de una decisión explícita del Desarrollador (contiene una guía de terminología que todavía marca "El Filtro prestadora-original" como uso interno correcto, y el archivo estaba marcado "correcto así, no tocar" en `CONTEXT.md`) | `CLAUDE.md`, `docs/SECURITY.md`, `docs/DATA_MODEL.md`, `docs/PLAN_MULTITENANT_PLM.md`, `backend/src/routes/panelCuentas.js`, `backend/src/db/schema_etapa2e.sql`, `backend/src/db/schema_etapa2b.sql`, `docs/PROGRESS.md` (esta entrada) |
+| 2026-07-10 | **Feedback consolidado sobre el Bloque 2, resuelto — Bloque 3 sigue sin arrancar hasta confirmación del usuario.** Tres partes: (1) colisión de nombres: `schema_etapa3a.sql`/`schema_etapa3b.sql` reusaban la numeración de "Etapa 3" (`docs/BUILD_ORDER.md`, PWA Asistentes) para una migración cross-cutting no relacionada — renombrados a `schema_multitenant_01.sql`/`schema_multitenant_02.sql`, actualizadas todas las referencias internas y en `CLAUDE.md`/`docs/PLAN_MULTITENANT_PLM.md`/`docs/PROGRESS.md`; barrido confirmado (`grep -r "etapa3a\|etapa3b"` y `grep -r "etapa3"`) — las únicas menciones restantes de "Etapa 3" en el repo son legítimas (la etapa real del build order). (2) Sección 5 del plan ajustada con los tres puntos pedidos: 5.5 (remitente/firma de emails) marcado con prioridad más alta que 5.1/5.3 (color/logo) — es riesgo de fuga de marca/reputación entre tenants (un email ya enviado con la firma equivocada no se puede retirar), no solo cosmético; 5.1 (paleta) documentado con la pre-limpieza obligatoria antes de dinamizar (decidir si `panel/`/`sitio-web/` comparten una sola fuente de variables o siguen sincronizados a mano, y barrer los hex sueltos de `panel/src/index.css`); 5.2 (tipografía) documentado como más complejo que color — necesita mecanismo de carga dinámica de fuentes (hoy `<link>` de Google Fonts fijo en `layout.jsx`), no es "una variable más". (3) Tres brechas de verificación del Bloque 2 resueltas: **no existe suite de tests automatizada en `backend/`** (confirmado vía `package.json` — sin framework, sin script `test`; verificación de rutas del Bloque 3 tendrá que apoyarse en scripts de verificación manual contra Supabase real, mismo mecanismo ya usado para verificar Bloques 1-2, hasta que se decida invertir en una suite real); **prueba de comportamiento de RLS** ejecutada contra Supabase real (no solo estructural): login como `admin_prestadora` vía anon key (`@supabase/supabase-js`, cuenta de prueba `prestadora-original.salud@gmail.com`), comparado contra conteo de superusuario en `pacientes`/`ceses`/`ausencias`/`clientes`/`asistentes`/`certificados`/`lista_precios` — todas en 0 filas reales hoy (no hay datos operativos cargados todavía), match exacto; dado que 0=0 es evidencia débil, se insertó una fila de prueba temporal en `pacientes` vía superusuario, se confirmó que el usuario autenticado la ve vía RLS, y se borró de inmediato — prueba positiva del mecanismo `current_tenant()`/`es_superadmin()` compartido por las 28 policies reescritas (no se pudo repetir el mismo insert directo en `ceses`/`ausencias` sin crear también un Asistente real con cuenta de Auth, por la FK `asistentes.id → usuarios.id` — mecanismo idéntico ya validado con `pacientes`, riesgo/beneficio no ameritaba fabricar un usuario Auth de prueba); **criterio de cierre exacto del `DEFAULT` temporal** corregido en la sección 4.1 del plan: el Bloque 3 no cierra sin (a) eliminar el `DEFAULT` de las 15 columnas y (b) confirmar con un insert real sin `prestadora_id` explícito que vuelve a fallar — ya no una nota general de "temporal". Bloque 3 pre-autorizado por el usuario pero explícitamente no arrancado ("No lo arranques todavía") | `backend/src/db/schema_multitenant_01.sql`, `schema_multitenant_02.sql` (renombrados); `CLAUDE.md`, `docs/PLAN_MULTITENANT_PLM.md` (secciones 4.1 y 5, referencias de nombre), `docs/PROGRESS.md` (referencias de nombre + esta entrada) |
+| 2026-07-09/10 | **Multi-tenant, Bloque 2 completo — RLS centralizada + rename de rol ejecutado.** Autorizado por el usuario en paralelo al inventario de branding (mensaje: "Seguí con el Bloque 2 tal como está autorizado"). Relevamiento previo (agente en background) de las ~60 comparaciones `rol = 'admin'` en `schema_etapa2*.sql`, tomando solo la versión vigente de cada policy tras rastrear cada `DROP`/`CREATE` posterior: dieron 28 policies vigentes sobre 20 tablas con RLS activa (más 6 policies de zona ya existentes para Coordinador, que necesitaban la condición de tenant sumada, no reemplazada). Ejecutado y verificado contra Supabase real en `backend/src/db/schema_multitenant_02.sql`: (1) funciones `current_tenant()`/`es_superadmin()` creadas (diseño 3.6 del plan); (2) CHECK de `usuarios.rol` reescrito en dos pasos (ensanchado a aceptar `admin` y `admin_prestadora` a la vez, corrida la `UPDATE`, angostado al final a solo `admin_prestadora` — un solo `ALTER` directo falla porque `ADD CONSTRAINT` valida las filas ya existentes contra el CHECK nuevo antes de que la `UPDATE` corra); (3) las 28 policies reescritas con `es_superadmin()`/`current_tenant()`, agregando filtro de tenant donde ya existe `prestadora_id` (Bloque 1) y dejándolo afuera en `configuracion_empresa`/`configuracion_notificaciones` (sin la columna todavía, Bloque 4) y `escalas_legales` (global por diseño, 3.7). Código de aplicación cortado por completo (ya no acepta `'admin'` en paralelo a `admin_prestadora`): `panel/src/lib/roles.js`, `backend/src/middleware/requiereRolPanel.js`, `backend/src/routes/panelUsuarios.js`, `backend/src/routes/panelCuentas.js`, `panel/src/components/layout/ProtectedRoute.jsx`; se encontró y corrigió además un `<option value="admin">` vivo en `panel/src/pages/UsuariosPanel.jsx` (formulario de alta de usuario del panel) que se hubiera roto en la primera alta de un nuevo Admin tras el rename. **Bug real encontrado al escribir este Bloque** (no es parte del diseño de RLS): el `NOT NULL` que el Bloque 1 puso en `prestadora_id` en 15 tablas rompía cualquier alta nueva (cuenta, cliente, paciente, ausencia, guardia, certificado, cese, precio, prestación, zona, solicitud, postulación) porque ningún insert de hoy —backend con Service Role Key ni panel con anon key— setea esa columna; no se detectó en el cierre del Bloque 1 porque esa verificación solo miró filas ya existentes (backfill), no altas nuevas. Corregido con `DEFAULT` al UUID de prestadora-original en las 15 columnas, mismo mecanismo que el backfill del Bloque 1, a nivel de schema — explícitamente temporal, el Bloque 3 (filtrado real de tenant en rutas del backend, sin diseñar ni aprobar todavía) lo reemplaza. Verificado contra Supabase real: CHECK final correcto, 2 filas en `admin_prestadora` y 0 en `admin`, 0 policies con literal `'admin'`, 15 defaults aplicados, 18/18 tests de `panel/` OK, sintaxis de los 3 archivos de `backend/` tocados OK. Bloques 3 (backend Service Role Key) y 4 (`configuracion_prestadora` + hardcodeos) siguen sin arrancar | `docs/PLAN_MULTITENANT_PLM.md` (4.1, nota de Bloque 2 completo); `CLAUDE.md` (glosario, entrada `admin_prestadora` sin matiz de transición); `backend/src/db/schema_multitenant_02.sql` (nuevo, aplicado y verificado contra Supabase real); `panel/src/lib/roles.js`, `backend/src/middleware/requiereRolPanel.js`, `backend/src/routes/panelUsuarios.js`, `backend/src/routes/panelCuentas.js`, `panel/src/components/layout/ProtectedRoute.jsx`, `panel/src/pages/UsuariosPanel.jsx` |
+| 2026-07-09 | **Corrección de `identificacion_fiscal` + inventario de hardcodeos de apariencia/marca por-prestadora.** El usuario detectó que el seed de `prestadoras` (fila de prestadora-original, cargada en el Bloque 1) tenía `identificacion_fiscal = '[DEFINIR]'` — un placeholder de relleno hardcodeado, exactamente el patrón que la regla 1 de `CLAUDE.md` prohíbe (no hay CUIT real documentado en el repo, y un placeholder de texto es tan inventado como un CUIT falso). Corregido: columna vuelta nullable (`ALTER COLUMN identificacion_fiscal DROP NOT NULL`), valor puesto en `NULL`, aplicado y verificado contra Supabase real; `schema_multitenant_01.sql` actualizado como fuente de verdad. Documentado en sección 4.6 del plan, junto con dos puntos evaluados pero NO implementados (a pedido explícito): una restricción/trigger que bloquee `estado='certificada'` sin `identificacion_fiscal` cargado (queda propuesta, no implementada — aplicarla hoy rompería el seed de prestadora-original, que ya está `certificada` con el campo en NULL), y la falta de una pantalla real donde un `admin_prestadora` cargue este dato (dependencia anotada como caso de uso central de `configuracion_prestadora`, Bloque 4). El usuario amplió esto a una regla general: ningún dato/apariencia/configuración (paleta de colores, tipografía, logo, textos de marca, remitente de emails, plantillas de documentos, dominio/contacto) puede quedar hardcodeado — todo debe ser editable por prestadora desde panel/CMS, salvo lógica con peso legal/de seguridad (`calcularCese`, score de riesgo, RLS, causales de cese, motor de alertas), que sigue siendo código versionado aunque consuma valores configurables (mismo patrón ya usado en `escalas_legales`). Se armó (solo inventario, sin diseñar tablas ni implementar nada) la sección 5 nueva de `docs/PLAN_MULTITENANT_PLM.md`, con 8 categorías y cita archivo:línea, cruzando contra la sección 1.5 ya existente para promover ítems de "pendiente" a "con regla definida" (logo, ~20 menciones de "prestadora-original" en `translations.js`, firma de emails). Queda un caso ambiguo señalado sin decidir: términos de negocio mixtos con nombre de marca ("Certificado prestadora-original", "Exclusividad de facturación a prestadora-original") — ¿se parametrizan o se genericán del todo? Decisión pendiente del usuario. Bloque 2 (RLS + rename de rol) autorizado a continuar en paralelo, no bloqueado por este inventario | `docs/PLAN_MULTITENANT_PLM.md` (sección 4.6 nueva, sección 5 nueva); `backend/src/db/schema_multitenant_01.sql` (columna nullable + seed corregido, aplicado y verificado contra Supabase real) |
+| 2026-07-09 | **Multi-tenant, Bloque 1 completo — aislamiento de datos aditivo (pasos 1-4) + rename de rol repensado.** Kickoff de implementación (`docs/Prompt_Claude_Code_Kickoff_Implementacion.md`) recibido y ejecutado. Antes de tocar código: sección 4.1 del plan marcada RESUELTA (opción a) con fecha de hoy. Ejecutado y verificado contra Supabase real: (1) tabla `prestadoras` creada (tipo `estado_prestadora`, RLS solo-superadmin) + fila de prestadora-original Salud (`estado='certificada'`, `pais='AR'`, `identificacion_fiscal='[DEFINIR]'` — no hay CUIT real documentado en el repo, placeholder explícito, falta cargar el dato real); (2)-(4) `prestadora_id UUID REFERENCES prestadoras(id)` agregado nullable → backfileado a prestadora-original → vuelto `NOT NULL` en 15 tablas (`usuarios`, `asistentes`, `ausencias`, `guardias_cobertura`, `ceses`, `clientes`, `pacientes`, `lista_precios`, `prestaciones`, `paquetes_prestaciones`, `paquete_prestacion_items`, `certificados`, `zonas_cobertura`, `solicitudes`, `postulaciones`), 0 filas en NULL verificado tabla por tabla antes de cada `SET NOT NULL`. Excluidas de este paso (decisión explícita del usuario): `verificaciones_asistente`/`escalas_legales` (ya previstas en el plan), `configuracion_empresa`/`configuracion_notificaciones` (se reemplazan enteras por `configuracion_prestadora` en el Bloque 4, agregarles la columna ahora era trabajo descartable). Se verificó además que `aspirantes` (mencionada como posible hueco del inventario) no existe en Supabase real — se había eliminado como código muerto en `schema_etapa2k.sql` — así que la sección 1.1 del plan no tenía un hueco real, la omitió a propósito. **Rename de rol (paso 5) — hallazgo y decisión del usuario**: se detectó que ~60 policies RLS en `schema_etapa2.sql`–`schema_etapa2i.sql` comparan literalmente `rol = 'admin'` o `rol IN ('admin', ...)` — correr el `UPDATE usuarios SET rol='admin_prestadora'` sin reescribirlas a la vez deja a todo Admin sin acceso de inmediato. El usuario decidió (para no tocar esas policies dos veces) mover el rename de **dato** + reescritura de policies al Bloque 2, junto con `current_tenant()`/`es_superadmin()`. Lo que sí se aplicó hoy del paso 5: glosario de `CLAUDE.md` con la entrada `admin_prestadora`, y el código de autorización (`panel/src/lib/roles.js`, `backend/src/middleware/requiereRolPanel.js`, `backend/src/routes/panelUsuarios.js`) ya acepta `admin_prestadora` en paralelo a `admin` sin romper nada existente (verificado: 18/18 tests de `panel/` OK, sintaxis de los 2 archivos de `backend/` OK). `usuarios.rol` sigue sin ninguna fila con el valor nuevo. Bloques 2 (RLS), 3 (backend Service Role Key) y 4 (`configuracion_prestadora` + hardcodeos) siguen sin arrancar — requieren aprobación explícita aparte | `docs/PLAN_MULTITENANT_PLM.md` (4.1 resuelta + nota de momento de ejecución del rename); `docs/BUILD_ORDER.md` (fila Multi-tenancy real: Diferida → En progreso); `backend/src/db/schema_multitenant_01.sql` (nuevo, aplicado y verificado contra Supabase real); `CLAUDE.md` (glosario, entrada `admin_prestadora`); `panel/src/lib/roles.js`, `backend/src/middleware/requiereRolPanel.js`, `backend/src/routes/panelUsuarios.js` (aceptan `admin_prestadora` en paralelo a `admin`) |
+| 2026-07-09 | Dos correcciones de documentación (no tocan código de producto): (1) resuelta la nota de "inconsistencia sin resolver" del slogan — no era una decisión pendiente, es una regla semántica según voz de marca (`prestadora-original_Fundacional_v3.pdf` 5.2): "Cuida tus afectos" (imperativo) para piezas que interpelan al visitante (`hero_title`, meta description de `/`), "Cuidamos tus afectos" (institucional, primera plural) para piezas donde prestadora-original habla de sí misma (logo, futuro tagline de footer); se revisó cada ocurrencia en el repo y las 4 encontradas (`translations.js:hero_title`, meta description de `/` en `PRD_01_Sitio_Web.md`, logo y muestra tipográfica de `prestadora-original_Manual_Identidad_v1.html`) ya coincidían con la forma que les corresponde por contexto — no requirió cambio de código, solo se corrigió el marco conceptual del comentario en `CONTEXT.md`; se deja propuesto (no implementado, no hay caso de uso institucional en código todavía) separar `T.hero_title` de un futuro `T.brand_tagline` si se agrega tagline institucional; (2) reemplazado el placeholder "Alberto/Inversor" (quien aprueba/dirige el trabajo de Claude Code) por "Desarrollador", con entrada nueva en el glosario de `CLAUDE.md`. Se relevó todo el repo: la única ocurrencia real de ese placeholder era la misma nota del slogan en `CONTEXT.md` (ya corregida en el punto 1); se dejaron **explícitamente sin tocar** por no ser ese placeholder: `CLAUDE.md:70` (fila "Inversor" del glosario — hecho societario real, socio potencial sin nombre confirmado, `prestadora-original_Fundacional_v3.pdf`), `docs/PRD_03_Reclutamiento.md` (ya usa "Admin"/"Inversor" como rol de negocio desde una corrección anterior, no es este placeholder), `docs/PROGRESS.md:1053` (cuenta de prueba histórica `Cliente="Alberto"`, registro de hecho pasado, no un estand-in). Ningún caso ambiguo | `docs/CONTEXT.md` (nota de slogan reescrita como regla, sección i18n; nota de societario sin cambios), `docs/PRD_01_Sitio_Web.md` (referencia a la nota del slogan actualizada), `CLAUDE.md` (fila nueva de glosario "Desarrollador") |
 | 2026-07-09 | Auditoría exhaustiva de TODO el código (backend + panel + sitio-web, archivo por archivo) y cierre de los 8 hallazgos encontrados (RLS por columna en `asistentes`, label hardcodeado, botón sin disabled, glosario en panel y sitio-web, service worker roto, CSS muerto, tabla `aspirantes` muerta, notificaciones de vencimiento faltantes), con las 3 migraciones nuevas aplicadas y verificadas contra Supabase real, + nota sobre `prestadora-original_PRD_Reclutamiento_v1.pdf` (input para una futura Etapa 3, no implementado ahora) | `backend/src/db/schema_etapa2j.sql` (nuevo, aplicado — trigger RLS columnas laborales), `schema_etapa2k.sql` (nuevo, aplicado — DROP TABLE aspirantes + redefinición de vista `asistentes_coordinador`), `schema_etapa2l.sql` (nuevo, aplicado — seed 3 eventos de vencimiento); `backend/src/utils/vencimientos.js` (nuevo); `backend/src/server.js` (revisión diaria de vencimientos); `panel/src/pages/UsuariosPanel.jsx`, `panel/src/pages/Configuracion.jsx`, `panel/src/i18n/translations.js` (glosario en + labels de vencimiento en es-AR/en/pt-BR); `sitio-web/src/middleware.js`, `sitio-web/src/i18n/translations.js` (glosario en/pt-BR), `sitio-web/src/styles/components.css` (CSS muerto); `docs/DATA_MODEL.md`, `docs/SECURITY.md` (flujo real sin `aspirantes`); `docs/PROGRESS.md` (esta entrada) |
 | 2026-07-08 | Cierre iterativo de hallazgos médios/menores de la auditoría de Etapa 2 (RLS por zona, códigos estables de postulación, rutas admin-only, estados faltantes, botones sin disabled, wa.me, tab de Ausencias para Coordinador, fix de índice posicional en formulario público, fix de fixture de test, i18n huérfano) | `backend/src/db/schema_etapa2i.sql` (nuevo, aplicado y verificado contra Supabase real — vista `asistentes_coordinador` + RLS de zona en 6 tablas); `backend/src/db/schema_etapa2d.sql` (comentario, glosario); `panel/src/lib/{telefono,postulacionCodigos,roles}.js`, `panel/src/index.css`, `panel/index.html`, `panel/src/i18n/translations.js`, `panel/src/pages/{Postulaciones,PostulacionDetalle,SolicitudDetalle,Solicitudes}.jsx`, `panel/src/pages/clientes/{ClienteDetalle,PrestacionesPaciente}.jsx`, `panel/src/pages/asistentes/{AsistenteDetalle,SimuladorVinculoTab,AusenciasCoberturaTab}.jsx`, `panel/src/pages/Configuracion.jsx`, `panel/src/components/layout/ProtectedRoute.jsx`, `panel/src/App.jsx`, `panel/src/lib/__tests__/calcularCese.test.js` (fixture); `sitio-web/src/i18n/translations.js` (campo `codigo` en `servicios.items`), `sitio-web/src/app/[locale]/trabaja-con-nosotros/TrabajaConNosotrosForm.jsx` (códigos estables), `sitio-web/src/app/[locale]/solicita-servicio/SolicitaServicioForm.jsx` (fix índice posicional); `docs/SECURITY.md` (estado real de RLS de zona); `docs/PROGRESS.md` (esta entrada) |
 | 2026-07-08 | Módulo 8 completo (Configuración: empresa, zonas de cobertura, notificaciones) + sitio público conectado al dato real | `backend/src/db/schema_etapa2h.sql` (nuevo, aplicado y verificado contra Supabase real); `backend/src/routes/{panelConfiguracion,configuracionPublica}.js` (nuevos); `backend/src/utils/email.js` (destinatarios por evento); `backend/src/routes/{postulacionAsistente,solicitudServicio}.js` (pasan `evento`); `backend/src/server.js` (2 rutas montadas); `panel/src/pages/Configuracion.jsx` (nuevo); `panel/src/App.jsx` (ruta `/configuracion`); `panel/src/components/layout/Layout.jsx` (link de nav); `panel/src/i18n/translations.js` (bloque `configuracion` + `nav.configuracion` + `comun.borrar` en es-AR/en/pt-BR); `sitio-web/src/lib/configuracionPublica.js` (nuevo); `sitio-web/src/app/[locale]/layout.jsx`, `sitio-web/src/app/[locale]/contacto/page.jsx`, `sitio-web/src/app/[locale]/trabaja-con-nosotros/{page,TrabajaConNosotrosForm}.jsx`, `sitio-web/src/components/WhatsAppButton.jsx` (consumen el endpoint público en vez de `siteConfig.js`) |

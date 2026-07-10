@@ -26,19 +26,72 @@
   salvo los casos donde el PRD original ya definió el CHECK explícitamente (se respeta tal
   cual para no reabrir decisiones ya tomadas).
 
+## Tabla: prestadoras (multi-tenant, Bloque 1 — aplicada y verificada contra Supabase real)
+
+```sql
+CREATE TABLE prestadoras (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nombre TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+  -- columnas de configuración/branding por prestadora: pendientes, ver Bloque 4 abajo
+);
+```
+
+Cada prestadora licenciataria del software (prestadora-original es la primera, id
+`874f54d7-4383-4d54-8b9f-f51d02f0dd11`) es un tenant aislado. Ver
+`docs/PLAN_MULTITENANT_PLM.md` para el diseño completo y `backend/src/db/schema_multitenant_01.sql`/`schema_multitenant_02.sql` para el DDL real aplicado.
+
+**Convención de FK tenant-segura (introducida con Módulo 6, aplicar a toda tabla nueva
+referenciada desde otra tabla con `prestadora_id`):** en vez de una FK simple al `id` de la
+tabla padre, se usa una FK compuesta contra `(id, prestadora_id)`, habilitada por un
+`UNIQUE(id, prestadora_id)` en la tabla padre:
+
+```sql
+-- en la tabla padre
+UNIQUE (id, prestadora_id)
+
+-- en la tabla hija
+prestadora_id UUID NOT NULL REFERENCES prestadoras(id),
+FOREIGN KEY (padre_id, prestadora_id) REFERENCES padre (id, prestadora_id)
+```
+
+Esto hace imposible, a nivel de constraint de base, que una fila referencie una fila de otro
+tenant — no depende solo de que la RLS esté bien escrita. Las tablas de los Bloques 1-3 (creadas
+antes de esta convención) tienen `prestadora_id` como columna simple, sin FK compuesta a sus
+tablas relacionadas; no se retrofitea salvo que se decida explícitamente.
+
+**Deuda técnica pendiente (confirmado por archivo, 2026-07-10 — ningún `DROP DEFAULT` ni
+`schema_multitenant_03.sql` existen en el repo):** `schema_multitenant_02.sql` agregó un
+`DEFAULT '874f54d7-...'` (prestadora_id de prestadora-original) en `prestadora_id` de 14 tablas
+(`usuarios`, `asistentes`, `ausencias`, `guardias_cobertura`, `ceses`, `clientes`,
+`pacientes`, `lista_precios`, `prestaciones`, `paquetes_prestaciones`,
+`paquete_prestacion_items`, `certificados`, `zonas_cobertura`, `solicitudes`,
+`postulaciones`) como parche temporal, mientras el Bloque 3 completaba el filtrado real de
+tenant en las rutas backend. Ese `DEFAULT` **sigue presente hoy** — no se ha quitado con
+ningún `ALTER COLUMN ... DROP DEFAULT`. Quitarlo (para que cada insert deba declarar
+explícitamente su `prestadora_id`, sin caer en prestadora-original por omisión) es trabajo pendiente, no
+bloqueante mientras prestadora-original sea la única prestadora activa.
+
 ## Tabla: usuarios
 
-Extiende `auth.users` de Supabase.
+Extiende `auth.users` de Supabase. `prestadora_id` es `NOT NULL` desde el Bloque 1
+(`schema_multitenant_01.sql`) — ver deuda del `DEFAULT` arriba.
 
 ```sql
 CREATE TABLE usuarios (
   id UUID REFERENCES auth.users PRIMARY KEY,
-  rol TEXT CHECK (rol IN ('admin','coordinador','asistente','cliente')),
+  rol TEXT CHECK (rol IN ('superadmin','admin_prestadora','coordinador','asistente','cliente')),
+  prestadora_id UUID NOT NULL REFERENCES prestadoras(id),
   nombre TEXT,
   telefono TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
+
+Nota (2026-07-10): el rol `admin` original fue renombrado a `admin_prestadora` en dato y
+código durante el Bloque 2 — no queda ningún registro ni ruta con el valor `admin` anterior
+(ver `CLAUDE.md` glosario). `superadmin` no tiene un `prestadora_id` que lo limite (ve todas
+las prestadoras vía `es_superadmin()`, ver `SECURITY.md`).
 
 ## Tabla: asistentes
 
@@ -51,7 +104,7 @@ CREATE TABLE asistentes (
   disponibilidad JSONB,
   estado TEXT DEFAULT 'pendiente',
   qr_token TEXT UNIQUE DEFAULT gen_random_uuid()::TEXT,
-  prestadora_id UUID REFERENCES prestadoras(id),  -- nullable, soporte futuro modelo B2B
+  prestadora_id UUID NOT NULL REFERENCES prestadoras(id),  -- Bloque 1, aplicado y verificado
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   deleted_at TIMESTAMPTZ
@@ -75,16 +128,16 @@ ALTER TABLE asistentes ADD COLUMN score_riesgo_reclasificacion INTEGER DEFAULT 0
 
 Nota: `etapas_verificacion` como columna JSONB **no se usa** en este schema — se reemplaza
 por la tabla normalizada `verificaciones_asistente` de abajo, que permite filtrar y auditar
-cada etapa del Filtro prestadora-original individualmente (patrón adoptado de Money Suite, tabla
-`verification_records`, adaptado a la terminología y a las 5 etapas oficiales del Filtro
-prestadora-original en vez de sus 8 etapas genéricas).
+cada etapa del Proceso de Incorporación de Asistentes individualmente (patrón adoptado de
+Money Suite, tabla `verification_records`, adaptado a la terminología y a las 5 etapas
+oficiales de prestadora-original en vez de sus 8 etapas genéricas).
 
-`prestadora_id` es la recomendación de `prestadora-original_Modelo_B2B_v1.md`: agregar el campo ahora
-(costo bajo) para evitar una migración cara cuando el modelo B2B se active. La tabla
-`prestadoras` no se crea todavía — es un placeholder de FK para el futuro, dejar comentado
-o crear la tabla vacía solo cuando el modelo B2B pase de exploración a ejecución.
+**Actualizado 2026-07-10:** lo que esta nota describía como plan futuro ya está implementado
+— la tabla `prestadoras` existe y `prestadora_id` es `NOT NULL` en `asistentes` y en las
+otras 14 tablas listadas en la sección "Tabla: prestadoras" de arriba, aplicado y verificado
+contra Supabase real (Bloque 1 de `docs/PLAN_MULTITENANT_PLM.md`).
 
-## Tabla: verificaciones_asistente (El Filtro prestadora-original — 5 etapas)
+## Tabla: verificaciones_asistente (Proceso de Incorporación de Asistentes — 5 etapas)
 
 ```sql
 CREATE TYPE etapa_filtro AS ENUM (
@@ -168,7 +221,38 @@ CREATE TABLE pacientes (
 );
 ```
 
-## Tabla: guardias
+## Tabla: guardias y Módulo 6 (Guardias) — reemplazado por el schema real, 2026-07-10
+
+**Esta sección quedó obsoleta como diseño-solo.** El DDL real, aplicado y verificado contra
+Supabase (`backend/src/db/schema_modulo6_guardias.sql`), reemplaza la tabla `guardias` de
+abajo por un diseño de 8 tablas — ver ese archivo para el DDL completo (columnas, tipos,
+constraints, los 15 policies de RLS). Resumen de las tablas:
+
+- **`series_guardias`** — patrón recurrente de una guardia (ej. "todos los martes 8-14hs"),
+  del cual `guardias` genera instancias concretas.
+- **`guardias`** — instancia concreta de una guardia; conserva `asistente_id`, `paciente_id`,
+  `checkin/checkout` con GPS igual que el diseño original de abajo, más `serie_id` y
+  `prestadora_id` (FK compuesta tenant-segura contra `pacientes`/`asistentes`).
+- **`domicilios_temporales_paciente`** — domicilio distinto al habitual del Paciente para una
+  guardia puntual (ej. internación en casa de un familiar).
+- **`personal_emergencia`** — contacto de emergencia asociado a una guardia/Paciente.
+- **`incidentes_relevo`** — registra un Asistente ausente a una guardia. `guardia_saliente_id`
+  es **nullable**: el caso `NULL` es "Ausente sin relevo previo" (ver glosario en
+  `CLAUDE.md`), el escenario de mayor riesgo porque el Paciente puede quedar sin nadie. RLS
+  con el patrón OR-de-dos-EXISTS (uno para el caso con relevo previo, otro para el caso NULL)
+  documentado como ejemplo oficial en `SECURITY.md`.
+- **`configuracion_escalada_relevo`** — reglas de a quién y en qué orden escalar un incidente
+  de relevo sin cobertura.
+- **`excepciones_familiar_relevo`** — casos donde el Cliente autoriza una excepción al
+  protocolo estándar de relevo.
+- **`guardias_tracking_gps`** — histórico de posiciones GPS durante una guardia activa (no solo
+  el punto de checkin/checkout), ver nota Ley 25.326 en `SECURITY.md`.
+
+**Estado 2026-07-10: solo el schema de datos existe.** No hay rutas backend (`CRUD`) ni
+pantallas de Panel para ninguna de estas 8 tablas todavía — ver `docs/PROGRESS.md`.
+
+Diseño original (pre-Módulo 6, mantenido acá solo como referencia histórica de las columnas
+base que sí sobrevivieron a `guardias`):
 
 ```sql
 CREATE TABLE guardias (
@@ -326,7 +410,7 @@ realmente implementado siempre fue directo, sin paso intermedio:
 - Al aprobarla, `POST /api/panel/cuentas/asistente` (`backend/src/routes/panelCuentas.js`)
   crea el registro en `asistentes` directamente a partir de la `postulacion_id`, sin crear
   ningún registro intermedio.
-- Las 5 etapas del Proceso de Incorporación de Asistentes (Filtro prestadora-original) se registran en
+- Las 5 etapas del Proceso de Incorporación de Asistentes se registran en
   `verificaciones_asistente`, contra `asistente_id` — no contra un aspirante.
 
 La tabla `aspirantes` (y la columna `asistentes.aspirante_id` que la referenciaba) se
@@ -382,16 +466,26 @@ base de datos de por medio.
 ## Diagrama de relaciones (resumen)
 
 ```
-usuarios (admin, coordinador)
+prestadoras (tenant — prestadora-original es la primera)
+  └── prestadora_id NOT NULL en: usuarios, asistentes, ausencias, guardias_cobertura, ceses,
+      clientes, pacientes, lista_precios, prestaciones, paquetes_prestaciones,
+      paquete_prestacion_items, certificados, zonas_cobertura, solicitudes, postulaciones
+      (DEFAULT temporal a prestadora-original todavía activo en estas 14 — ver deuda técnica arriba)
+
+usuarios (superadmin, admin_prestadora, coordinador)
   ├── asistentes ── verificaciones_asistente, validaciones_faciales, certificados
-  │                  └── prestadora_id (nullable, futuro B2B)
   ├── clientes ── pacientes
-  ├── guardias ── (asistente_id, paciente_id, coordinador_id)
+  ├── guardias (Módulo 6, ver sección propia arriba) ── series_guardias,
+  │       domicilios_temporales_paciente, personal_emergencia, incidentes_relevo,
+  │       configuracion_escalada_relevo, excepciones_familiar_relevo, guardias_tracking_gps
   │       ├── reportes (1:1 con guardia)
   │       └── (paciente_id) → alertas (N reportes → 1 análisis IA)
   ├── ausencias ── guardias_cobertura
   ├── ceses
-  └── escalas_legales (independiente, versionado por fecha)
+  ├── escalas_legales (independiente, versionado por fecha)
+  └── lista_precios ── prestaciones ── paquetes_prestaciones ── paquete_prestacion_items
+      (Módulo 8, ver `docs/CONTEXT.md`; zonas_cobertura independiente, sin RLS de zona
+      derivada todavía — ver `SECURITY.md`)
 
 postulaciones (Etapa 1, independiente) → asistentes (directo, sin tabla intermedia — ver
   sección "Reclutamiento (PRD_03)" arriba)

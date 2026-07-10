@@ -8,7 +8,7 @@ export const panelCuentasRouter = Router();
 // Crear una cuenta real (Auth + perfil) es una acción sensible y difícil de revertir —
 // se restringe a Admin/Superadmin, a diferencia del resto del panel que también admite Coordinador.
 function requiereAdmin(req, res, next) {
-  if (!['admin', 'superadmin'].includes(req.usuarioPanel?.rol)) {
+  if (!['admin_prestadora', 'superadmin'].includes(req.usuarioPanel?.rol)) {
     return res.status(403).json({ error: 'Solo Admin puede crear cuentas' });
   }
   next();
@@ -20,11 +20,11 @@ panelCuentasRouter.post('/cliente', requiereRolPanel, requiereAdmin, async (req,
     return res.status(400).json({ error: 'Falta solicitudId' });
   }
 
-  const { data: solicitud, error: errorSolicitud } = await supabase
-    .from('solicitudes')
-    .select('*')
-    .eq('id', solicitudId)
-    .single();
+  let querySolicitud = supabase.from('solicitudes').select('*').eq('id', solicitudId);
+  if (req.usuarioPanel.rol !== 'superadmin') {
+    querySolicitud = querySolicitud.eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  }
+  const { data: solicitud, error: errorSolicitud } = await querySolicitud.single();
 
   if (errorSolicitud || !solicitud) {
     return res.status(404).json({ error: 'Solicitud no encontrada' });
@@ -33,6 +33,8 @@ panelCuentasRouter.post('/cliente', requiereRolPanel, requiereAdmin, async (req,
     return res.status(409).json({ error: 'Esta solicitud ya tiene un Cliente asociada' });
   }
 
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+
   let clienteId;
   try {
     ({ userId: clienteId } = await crearCuentaConPerfil({
@@ -40,11 +42,12 @@ panelCuentasRouter.post('/cliente', requiereRolPanel, requiereAdmin, async (req,
       nombre: solicitud.nombre,
       telefono: solicitud.telefono,
       rol: 'cliente',
+      prestadoraId,
     }));
 
     const { error: errorCliente } = await supabase
       .from('clientes')
-      .insert({ id: clienteId, solicitud_id: solicitudId });
+      .insert({ id: clienteId, solicitud_id: solicitudId, prestadora_id: prestadoraId });
     if (errorCliente) throw new Error(errorCliente.message);
 
     const { data: paciente, error: errorPaciente } = await supabase
@@ -53,11 +56,15 @@ panelCuentasRouter.post('/cliente', requiereRolPanel, requiereAdmin, async (req,
         cliente_id: clienteId,
         nombre: solicitud.nombre_paciente || solicitud.nombre,
         domicilio: solicitud.localidad,
+        prestadora_id: prestadoraId,
       })
       .select()
       .single();
     if (errorPaciente) throw new Error(errorPaciente.message);
 
+    // SEGURIDAD: depende de que el SELECT de arriba (línea ~23) ya haya validado que
+    // `solicitudId` pertenece al tenant del solicitante — no llamar este UPDATE con un
+    // id que no haya pasado por ese filtro.
     const { error: errorUpdate } = await supabase
       .from('solicitudes')
       .update({ cliente_id: clienteId })
@@ -69,7 +76,7 @@ panelCuentasRouter.post('/cliente', requiereRolPanel, requiereAdmin, async (req,
     if (clienteId) {
       await supabase.from('pacientes').delete().eq('cliente_id', clienteId);
       await supabase.from('clientes').delete().eq('id', clienteId);
-      await borrarCuenta(clienteId);
+      await borrarCuenta(clienteId, { prestadoraId });
     }
     res.status(500).json({ error: error.message });
   }
@@ -83,9 +90,9 @@ const ETAPAS_INCORPORACION = [
   'capacitacion',
 ];
 
-// Inicia el Proceso de Incorporación de Asistentes (uso interno del Panel — nunca llamar
-// "Filtro prestadora-original" acá, ver nota de CLAUDE.md 2026-07-08): crea la cuenta real de Asistente
-// a partir de una postulación aprobada, y registra las 5 etapas de verificacion_asistente.
+// Inicia el Proceso de Incorporación de Asistentes (uso interno del Panel, ver glosario
+// de CLAUDE.md): crea la cuenta real de Asistente a partir de una postulación aprobada,
+// y registra las 5 etapas de verificacion_asistente.
 // La primera etapa ("postulacion") queda aprobada de entrada porque ya se cumplió.
 panelCuentasRouter.post('/asistente', requiereRolPanel, requiereAdmin, async (req, res) => {
   const { postulacionId } = req.body;
@@ -93,11 +100,11 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, requiereAdmin, async (re
     return res.status(400).json({ error: 'Falta postulacionId' });
   }
 
-  const { data: postulacion, error: errorPostulacion } = await supabase
-    .from('postulaciones')
-    .select('*')
-    .eq('id', postulacionId)
-    .single();
+  let queryPostulacion = supabase.from('postulaciones').select('*').eq('id', postulacionId);
+  if (req.usuarioPanel.rol !== 'superadmin') {
+    queryPostulacion = queryPostulacion.eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  }
+  const { data: postulacion, error: errorPostulacion } = await queryPostulacion.single();
 
   if (errorPostulacion || !postulacion) {
     return res.status(404).json({ error: 'Postulación no encontrada' });
@@ -105,6 +112,8 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, requiereAdmin, async (re
   if (postulacion.asistente_id) {
     return res.status(409).json({ error: 'Esta postulación ya tiene un Asistente asociado' });
   }
+
+  const prestadoraId = req.usuarioPanel.prestadoraId;
 
   let asistenteId;
   try {
@@ -114,6 +123,7 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, requiereAdmin, async (re
       telefono: postulacion.telefono,
       rol: 'asistente',
       zonas: postulacion.zonas.split(',').map((z) => z.trim()).filter(Boolean),
+      prestadoraId,
     }));
 
     const { error: errorAsistente } = await supabase.from('asistentes').insert({
@@ -125,6 +135,7 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, requiereAdmin, async (re
       especialidades: postulacion.especialidades.split(',').map((e) => e.trim()).filter(Boolean),
       zonas: postulacion.zonas.split(',').map((z) => z.trim()).filter(Boolean),
       estado: 'inactivo',
+      prestadora_id: prestadoraId,
     });
     if (errorAsistente) throw new Error(errorAsistente.message);
 
@@ -138,6 +149,9 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, requiereAdmin, async (re
     const { error: errorVerificaciones } = await supabase.from('verificaciones_asistente').insert(filasVerificacion);
     if (errorVerificaciones) throw new Error(errorVerificaciones.message);
 
+    // SEGURIDAD: depende de que el SELECT de arriba (línea ~100) ya haya validado que
+    // `postulacionId` pertenece al tenant del solicitante — no llamar este UPDATE con un
+    // id que no haya pasado por ese filtro.
     const { error: errorUpdate } = await supabase
       .from('postulaciones')
       .update({ asistente_id: asistenteId })
@@ -149,7 +163,7 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, requiereAdmin, async (re
     if (asistenteId) {
       await supabase.from('verificaciones_asistente').delete().eq('asistente_id', asistenteId);
       await supabase.from('asistentes').delete().eq('id', asistenteId);
-      await borrarCuenta(asistenteId);
+      await borrarCuenta(asistenteId, { prestadoraId });
     }
     res.status(500).json({ error: error.message });
   }

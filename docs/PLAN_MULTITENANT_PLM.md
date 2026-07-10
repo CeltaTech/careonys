@@ -126,9 +126,9 @@ así, no requieren cambio funcional hoy, sí cuando se implemente branding por t
 menciones de "prestadora-original"/"prestadora-original Salud" en textos de certificado/equipo/facturación),
 `backend/src/routes/panelNotificaciones.js` (firma de emails en 3 idiomas).
 
-### 1.6 Módulo de compliance documental — **no existe ninguna huella en el repo hoy**
+### 1.6 Módulo de cumplimiento normativo documental — **no existe ninguna huella en el repo hoy**
 
-Búsqueda explícita (`compliance`, `constancia de pago`, `seguro de riesgos del trabajo`,
+Búsqueda explícita (`cumplimiento normativo`, `constancia de pago`, `seguro de riesgos del trabajo`,
 `ART`, "verificación documental") en `docs/`, `backend/`, `panel/`, `sitio-web/`: **no hay
 ninguna referencia a este módulo en ningún schema, PRD, ni comentario del código** — ni
 siquiera como placeholder. No es un olvido de este inventario, es una ausencia confirmada:
@@ -151,7 +151,7 @@ fechas. Esto es un caso completamente distinto y no debe confundirse con el mód
 - No dispara nada más que un email — no hay estado de "vencido" ni bloqueo de ningún flujo
   cuando vence.
 
-**Conclusión**: el módulo de compliance por prestadora es una pieza **completamente nueva a
+**Conclusión**: el módulo de cumplimiento normativo por prestadora es una pieza **completamente nueva a
 diseñar desde cero**, no una tabla existente a extender. Se relaciona con dos entidades ya
 relevadas: la futura `prestadoras` (dueña del checklist) y, indirectamente, `asistentes`
 (cuyo propio patrón de vencimientos individual — sección de arriba — es un precedente de
@@ -182,7 +182,7 @@ Relación con lo ya relevado en `lista_precios`/`prestaciones`/`paquetes_prestac
 - No hace falta modificar estas tablas para resolver el punto 4 del prompt — son
   independientes. Lo que hace falta es **crear tablas nuevas** para la relación
   PLM/prestadora-original↔Prestadora, que no tiene ningún antecedente parcial en el esquema actual (a
-  diferencia de compliance, acá ni siquiera hay una pieza parcial como los campos de
+  diferencia del cumplimiento normativo, acá ni siquiera hay una pieza parcial como los campos de
   vencimiento de 1.6).
 
 A nivel de inventario (sin diseño completo todavía, eso está en la sección 3.5), lo mínimo
@@ -268,7 +268,7 @@ Este orden prioriza primero el aislamiento de los datos más sensibles (paso 2-6
 
 ---
 
-## 3. Diseño de la entidad `prestadoras`, compliance documental y roles
+## 3. Diseño de la entidad `prestadoras`, cumplimiento normativo documental y roles
 
 ### 3.1 Tabla `prestadoras`
 
@@ -304,23 +304,23 @@ con `prestadora_id UNIQUE REFERENCES prestadoras(id)` — una fila por tenant, s
 (id=1)`. Los campos hoy en `configuracion_empresa`/`configuracion_notificaciones` se
 mudan ahí tal cual, solo cambia la clave de particionado.
 
-### 3.3 Compliance documental por prestadora
+### 3.3 Cumplimiento normativo documental por prestadora
 
 Registro **append-only** (nunca se actualiza una fila existente, se inserta una nueva por
 cada verificación — para que quede fecha cierta e inmutable, tal como pide el punto 2 del
 prompt de negocio):
 
 ```sql
-CREATE TYPE tipo_compliance AS ENUM (
+CREATE TYPE tipo_cumplimiento_normativo AS ENUM (
   'identificacion_trabajador', 'constancia_pago', 'seguro_riesgos_trabajo'
 );
-CREATE TYPE estado_compliance AS ENUM ('pendiente', 'verificado', 'vencido', 'rechazado');
+CREATE TYPE estado_cumplimiento_normativo AS ENUM ('pendiente', 'verificado', 'vencido', 'rechazado');
 
-CREATE TABLE compliance_prestadora (
+CREATE TABLE cumplimiento_normativo_prestadora (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   prestadora_id UUID NOT NULL REFERENCES prestadoras(id),
-  tipo tipo_compliance NOT NULL,
-  estado estado_compliance NOT NULL DEFAULT 'pendiente',
+  tipo tipo_cumplimiento_normativo NOT NULL,
+  estado estado_cumplimiento_normativo NOT NULL DEFAULT 'pendiente',
   documento_url TEXT,
   vigencia_desde DATE,
   vigencia_hasta DATE,           -- dispara alerta de vencimiento antes de esta fecha
@@ -330,10 +330,10 @@ CREATE TABLE compliance_prestadora (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_compliance_prestadora ON compliance_prestadora (prestadora_id, tipo, vigencia_hasta);
+CREATE INDEX idx_cumplimiento_normativo_prestadora ON cumplimiento_normativo_prestadora (prestadora_id, tipo, vigencia_hasta);
 ```
 
-El "estado de compliance vigente" de una prestadora para un tipo de documento se calcula
+El "estado de cumplimiento normativo vigente" de una prestadora para un tipo de documento se calcula
 como la fila más reciente de ese `tipo` con `vigencia_hasta` no vencida — nunca se
 sobreescribe una fila vieja (protege la trazabilidad legal que sostiene el modelo de
 negocio, según el propio prompt).
@@ -429,7 +429,7 @@ tema legal/contable, no técnico).
 son 3 tablas con 2-3 policies cada una solo en ese archivo, y el patrón se repite en todos
 los `schema_etapa2*.sql` restantes. Agregar `prestadora_id` multiplicaría esa subquery (una
 condición más) en cada una de esas ~25 policies existentes, y en cada policy nueva de las
-tablas de la sección 3 (`compliance_prestadora`, `planes_facturacion`, `facturas`,
+tablas de la sección 3 (`cumplimiento_normativo_prestadora`, `planes_facturacion`, `facturas`,
 `configuracion_prestadora`).
 
 **Decisión: centralizar en una función SQL `current_tenant()`**, en vez de seguir
@@ -544,11 +544,11 @@ entonces el `DEFAULT 'ARS'` deja el comportamiento actual exactamente igual para
 
 ## 4. Puntos donde el diseño actual complica esto — para discutir antes de escribir código
 
-### 4.1 Cambio de semántica del rol `admin` existente (decisión grande, no técnica)
+### 4.1 Cambio de semántica del rol `admin` existente — **RESUELTA (opción a), 2026-07-09**
 
 Hoy `admin` = "ve todo el negocio de prestadora-original". En el diseño multi-tenant, ese mismo alcance
 ("ve todo dentro de su organización") pasa a llamarse `admin_prestadora`, y `admin` a secas
-dejaría de tener sentido como nombre (¿admin de qué?). Dos caminos:
+dejaría de tener sentido como nombre (¿admin de qué?). Dos caminos evaluados:
 
 - **(a)** Renombrar el rol existente `admin` → `admin_prestadora` en una migración de datos
   (`UPDATE usuarios SET rol = 'admin_prestadora' WHERE rol = 'admin'`), y reservar
@@ -556,10 +556,180 @@ dejaría de tener sentido como nombre (¿admin de qué?). Dos caminos:
 - **(b)** Mantener `admin` como está (implícitamente escopeado a la prestadora vía RLS) y
   agregar `admin_prestadora` como alias/sinónimo solo para nomenclatura de negocio.
 
-Recomendación: (a) es más limpio a largo plazo pero es un cambio de dato en producción
-sobre usuarios reales — **no ejecutar sin que el usuario lo apruebe explícitamente**, y
-coordinar con el glosario obligatorio de `CLAUDE.md` (que hoy no menciona `admin_prestadora`
-en absoluto).
+**Decisión (2026-07-09, kickoff de implementación `docs/Prompt_Claude_Code_Kickoff_Implementacion.md`):
+opción (a).** Motivo: alinea con práctica estándar de la industria en RBAC multi-tenant — un
+rol sin contexto de tenant en el nombre (`admin` a secas) es, según múltiples guías de
+arquitectura de autorización (WorkOS, Auth0, AWS Prescriptive Guidance), el patrón que más
+frecuentemente deriva en bugs de seguridad por chequeos que asumen roles globales. Además,
+hacerlo ahora — con un solo tenant real y pocos usuarios — es muchísimo más barato que
+hacerlo con varias prestadoras ya operando.
+
+**Momento de ejecución (ajustado 2026-07-09, durante el Bloque 1): la decisión no cambia,
+mueve de bloque.** Al ejecutar el Bloque 1 se detectó que ~60 policies RLS en
+`schema_etapa2.sql`–`schema_etapa2i.sql` comparan literalmente `rol = 'admin'` o
+`rol IN ('admin', ...)`. Correr el `UPDATE usuarios SET rol = 'admin_prestadora'` sin
+reescribir esas policies a la vez deja a todo Admin sin acceso de inmediato — ninguna policy
+reconoce el valor nuevo. Reescribir las 60 policies solo para el rename (mecánico, sin
+`current_tenant()`/`es_superadmin()` todavía) significaría tocarlas dos veces: una ahora y
+otra en el Bloque 2 para meterles la lógica de tenant real. Se decidió (con el usuario, mismo
+día) hacer el corte completo —rename de dato + reescritura de policies con
+`current_tenant()`/`es_superadmin()`— junto, en el Bloque 2. Lo ya aplicado en el Bloque 1: el
+glosario de `CLAUDE.md` tiene la entrada `admin_prestadora`, y el código de autorización
+(`panel/src/lib/roles.js`, `backend/src/middleware/requiereRolPanel.js`,
+`backend/src/routes/panelUsuarios.js`, puntos exactos de 3.4) ya acepta `admin_prestadora`
+como valor válido en paralelo a `admin` — pero la columna `usuarios.rol` sigue sin ninguna
+fila con ese valor hasta el Bloque 2.
+
+**Bloque 2 completo (2026-07-09/10)** — `backend/src/db/schema_multitenant_02.sql`, aplicado y
+verificado contra Supabase real: creadas `current_tenant()`/`es_superadmin()`; CHECK de
+`usuarios.rol` reescrito en dos pasos (ensanchado a aceptar ambos valores, corrida la
+`UPDATE`, angostado al final solo a `admin_prestadora`); las 28 policies vigentes que
+comparaban `rol = 'admin'` (relevadas contra las 20 tablas con RLS activa hoy, tomando la
+versión vigente de cada una tras rastrear todos los `DROP`/`CREATE` posteriores)
+reescritas con `es_superadmin()`/`current_tenant()`, agregando el filtro de tenant a las
+tablas que ya tienen `prestadora_id` (Bloque 1) y dejando sin ese filtro —solo con el rol
+renombrado— a las que todavía no lo tienen (`configuracion_empresa`,
+`configuracion_notificaciones`, y `escalas_legales` por diseño 3.7). Código de aplicación
+también cortado por completo (ya no acepta `'admin'` en paralelo): `panel/src/lib/roles.js`,
+`backend/src/middleware/requiereRolPanel.js`, `backend/src/routes/panelUsuarios.js`,
+`backend/src/routes/panelCuentas.js`, `panel/src/components/layout/ProtectedRoute.jsx`,
+`panel/src/pages/UsuariosPanel.jsx` (este último tenía un `<option value="admin">` vivo en
+el formulario de alta de usuarios del panel — se hubiera roto en el primer alta de un nuevo
+Admin tras esta migración si no se corregía).
+
+**Bug real encontrado y corregido al escribir este Bloque, no parte del diseño de RLS**: el
+`NOT NULL` que el Bloque 1 agregó a `prestadora_id` en 15 tablas rompía cualquier alta nueva
+(cuenta, cliente, paciente, ausencia, guardia, certificado, cese, precio, prestación, zona,
+solicitud, postulación) porque ningún insert de hoy —ni backend con Service Role Key ni
+panel con anon key— setea esa columna. Se verificó contra Supabase real, no se detectó en el
+cierre del Bloque 1 porque esa verificación solo chequeó filas existentes (backfill), no
+inserts nuevos hacia adelante. Parche aplicado en el mismo `schema_multitenant_02.sql`: `DEFAULT`
+al UUID de prestadora-original en las 15 columnas — mismo mecanismo que ya usó el backfill del Bloque 1,
+a nivel de schema, no hardcodeado en código de aplicación.
+
+**Criterio de cierre exacto del Bloque 3 para este `DEFAULT` (precisado por el usuario,
+2026-07-10 — no basta con "documentarlo como temporal" en general)**: el Bloque 3 no se da
+por cerrado hasta que se cumplan, en este orden, **ambas** condiciones:
+
+1. Se **elimina** el `DEFAULT` de las 15 columnas (`ALTER TABLE ... ALTER COLUMN
+   prestadora_id DROP DEFAULT`), una vez que cada ruta de alta del backend (Service Role
+   Key) y del panel resuelve y setea explícitamente el `prestadora_id` real de quien hace
+   el alta en cada request.
+2. Se **prueba con un insert real** — sin pasar `prestadora_id` explícito — contra
+   Supabase real, y se confirma que ese insert **vuelve a fallar** (viola el `NOT NULL`
+   sin el `DEFAULT` que lo enmascaraba). Si el insert sin `prestadora_id` explícito
+   todavía tiene éxito después de "cerrar" el Bloque 3, el parche temporal sigue vigente
+   en los hechos aunque el código ya intente setear el valor, y el bloque no está cerrado.
+
+No alcanza con que el código nuevo *intente* setear `prestadora_id` mientras el `DEFAULT`
+de schema siga presente — ese `DEFAULT` seguiría enmascarando cualquier ruta que se
+hubiera olvidado. El cierre depende de la ausencia del `DEFAULT` verificada con el insert
+que falla, no de una revisión de código por sí sola.
+
+**Cierre parcial ejecutado (decisión explícita del usuario, 2026-07-10) — 7 de 15
+columnas, no las 15**: al llegar el momento de aplicar el `DROP DEFAULT`, se confirmó por
+grep que 8 de las 15 tablas (`ausencias`, `guardias_cobertura`, `ceses`, `lista_precios`,
+`prestaciones`, `paquetes_prestaciones`, `paquete_prestacion_items`, `certificados`) se
+insertan **solo** desde `panel/src` con la anon key, y ningún componente del panel setea
+`prestadora_id` hoy — dependen enteramente del `DEFAULT` para no violar el `NOT NULL`.
+Aplicar el `DROP DEFAULT` a las 15 de una hubiera roto el alta real de esas 8 tablas en
+producción. Se optó por un cierre parcial en dos tiempos en lugar de forzar un arreglo
+apurado de los 5 componentes de panel involucrados en la misma sesión:
+
+- **Cerradas ahora (`DROP DEFAULT` aplicado y verificado con insert real que vuelve a
+  fallar por `NOT NULL`)**: `usuarios`, `asistentes`, `clientes`, `pacientes`,
+  `zonas_cobertura`, `solicitudes`, `postulaciones` — las 7 cuyas rutas de alta (backend
+  con Service Role Key, más las dos rutas públicas con el UUID hardcodeado de
+  `tenantTemporal.js`) ya fueron corregidas en este Bloque 3.
+- **Quedan con el `DEFAULT` vigente, a propósito, sin fecha de cierre indefinida**:
+  `ausencias`, `guardias_cobertura`, `ceses`, `lista_precios`, `prestaciones`,
+  `paquetes_prestaciones`, `paquete_prestacion_items`, `certificados`. Razón real, no solo
+  cautelar: `panel/src/context/AuthContext.jsx` no expone hoy el `prestadora_id` del
+  usuario del panel logueado — no hay de dónde sacar el valor en los 5 componentes que
+  insertan directo en estas tablas. Riesgo real solo se activa el día que exista una
+  segunda prestadora usando el panel (hoy hay una sola, prestadora-original, así que el `DEFAULT`
+  apunta al único valor válido posible).
+
+**Trabajo pendiente con nombre propio: "Panel — tenant en inserts directos"** — debe
+ejecutarse **antes de que arranque el Bloque 4** (branding), no queda indefinido. Alcance
+en 3 pasos:
+1. Extender `panel/src/context/AuthContext.jsx` para exponer el `prestadora_id` del
+   usuario de panel logueado (hoy solo expone `id`/`rol`).
+2. Setearlo explícitamente en los 5 puntos de insert directo identificados:
+   `AusenciasCoberturaTab.jsx`, `VinculoCeseTab.jsx`, `ListaPrecioDetalle.jsx`,
+   `PrestacionesPaciente.jsx`, `CertificadoTab.jsx`.
+3. Recién entonces, `DROP DEFAULT` en las 8 columnas restantes, con el mismo criterio de
+   cierre de arriba (insert real sin `prestadora_id` explícito debe volver a fallar).
+
+Antes de arrancar este ítem, avisar al usuario para el mismo tratamiento de inventario
+completo antes de secuenciar que se usó en todo el Bloque 3 (no asumir dónde están los 5
+puntos de insert sin re-confirmar contra el código real al momento de empezar).
+
+**Segunda vuelta de confirmación explícita, Bloque 3 (2026-07-10)** — el usuario pidió, antes
+de dar el bloque por cerrado, confirmación archivo:línea (no la asunción de "ya que se tocó
+el archivo, seguro se cubrió todo") de 6 operaciones de lectura/edición/borrado por id que se
+habían marcado como prioridad máxima (mismo nivel que `panelUsuarios.js`, por ser
+explotables hoy con una sesión real, no solo dormidas). Resultado:
+- `panelCuentas.js` SELECT de `solicitudes` (línea ~23) y de `postulaciones` (línea ~100):
+  confirmado con filtro de tenant explícito.
+- Los UPDATE por id de `solicitudes`/`postulaciones` inmediatamente después (mismas rutas):
+  confirmado seguro por construcción — reusan el mismo id ya validado contra tenant por el
+  SELECT anterior en el mismo request, no llevan filtro propio pero no los necesitan.
+- `backend/src/utils/cuentasPanel.js:39` (`borrarCuenta`) — **hueco real encontrado**: la
+  función borraba por `id` sin ninguna verificación de tenant propia. Segura hoy solo por
+  disciplina de los 3 llamadores existentes (2 en `panelCuentas.js` borran un id recién
+  creado en el mismo request; 1 en `panelUsuarios.js` ya validaba tenant en el SELECT previo
+  a llamarla) — mismo patrón de hueco dormiente en función compartida que tenía
+  `panelUsuarios.js` antes de este bloque. **Corregido**: `borrarCuenta` ahora exige
+  `{ prestadoraId, esSuperadmin }` y verifica el `prestadora_id` del target antes de borrar;
+  los 3 llamadores actualizados. Verificado con tenant fabricado real: `DELETE` cross-tenant
+  ahora responde `400` y el usuario fabricado no se borra.
+- Chequeos de aislamiento cross-tenant (DELETE de usuarios, alta de cliente/asistente contra
+  solicitud/postulación de otra prestadora) agregados de forma permanente y automatizada a
+  `backend/scripts/verificacion/bloque3_verificacion.mjs` — fabrica una segunda prestadora +
+  fila real de usuario/solicitud/postulación, prueba los 3 puntos, limpia todo. Corrido y
+  confirmado: los 6 chequeos (3 de lectura simple + 3 de aislamiento cross-tenant) pasan.
+
+**Auditoría adversarial de Bloques 1 y 2 (2026-07-10)** — antes de autorizar el Bloque 3 se
+revisaron, con pruebas de comportamiento real contra Supabase (no solo lectura de código),
+las 35 policies vigentes en `public`, clasificadas por patrón (comparación directa de
+`prestadora_id`, join vía `asistentes` para `verificaciones_asistente`, sin filtro por
+diseño para `escalas_legales`/`configuracion_empresa`/`configuracion_notificaciones`,
+auto-fila para `usuarios`/`clientes`). Se probó con insert real, login real y limpieza
+completa tanto el patrón directo (`pacientes`) como el patrón join (`verificaciones_asistente`,
+fabricando un Asistente con cuenta Auth real). No se encontró ningún UUID de prestadora-original
+hardcodeado fuera de lo ya documentado (backfill + `DEFAULT`), ni ninguna policy vigente con
+literal `rol = 'admin'` huérfano.
+
+Dos hallazgos, ya corregidos y verificados en producción real:
+
+1. **`zonas_cobertura.publico_lee_zonas_activas`** — policy de lectura pública preexistente
+   (de `schema_etapa2h.sql`, previa al Bloque 1) sin ningún filtro de tenant ni de rol
+   (`USING (activa = true)`, sin `auth.uid()`). Quedó fuera del barrido del Bloque 2 porque
+   nunca comparó `rol = 'admin'`. No tenía explotación real hoy (ni `sitio-web` ni `panel`
+   consultan esta tabla con la anon key — ambos pasan por el backend), pero en cuanto exista
+   una segunda prestadora, cualquier código futuro que consultara `zonas_cobertura` con la
+   anon key vería zonas de todas las prestadoras. **Corregido**: `DROP POLICY
+   "publico_lee_zonas_activas" ON zonas_cobertura` (no se le agregó `current_tenant()`
+   porque un visitante anónimo no tiene `auth.uid()` — eso hubiera roto la lectura pública
+   en vez de acotarla). Verificado contra Supabase real: lectura anónima ahora devuelve 0
+   filas; el endpoint público (`configuracionPublica.js`, vía Service Role Key) sigue
+   devolviendo las 7 zonas activas sin cambios.
+2. **`backend/src/routes/panelConfiguracion.js:10`** — la función local
+   `requiereAdminOSuperior` seguía comparando `rol` contra el literal `'admin'` (no
+   `'admin_prestadora'`), el único punto de la capa de aplicación con este defecto
+   (`requiereRolPanel.js`, `panelCuentas.js` y `panelUsuarios.js` ya usaban el valor
+   correcto). Efecto real: no era fuga de tenant sino bloqueo de acceso legítimo — cualquier
+   `admin_prestadora` real recibía 403 al intentar editar Configuración (precios, zonas,
+   notificaciones). **Corregido** y verificado con login real + request HTTP real contra el
+   backend: `GET /api/panel/configuracion/empresa` pasa de comportamiento roto a `200`.
+
+**Ítem concreto para el Bloque 3 (no genérico — ya localizado)**:
+`backend/src/routes/configuracionPublica.js:12` consulta `zonas_cobertura` con Service Role
+Key sin filtrar por `prestadora_id` (junto con la consulta a `configuracion_empresa` en la
+misma ruta, línea 11, mismo problema). Es una instancia real y confirmada del riesgo que el
+Bloque 3 existe para resolver — agregar a la lista de rutas a corregir en ese bloque con esta
+referencia exacta de archivo:línea.
 
 ### 4.2 `escalas_legales` compartida vs. por jurisdicción (y moneda — mismo cambio)
 
@@ -588,15 +758,243 @@ Ver 1.6 — una persona no puede hoy pertenecer a dos prestadoras con el mismo e
 no bloqueante para el primer cliente adicional a prestadora-original; revisar si en algún momento hay un
 caso de negocio real que lo necesite.
 
+### 4.6 `identificacion_fiscal` en `NULL` — falta la pantalla que lo carga, y falta la regla que lo exige
+
+Corrección aplicada 2026-07-09: el seed de prestadora-original en `prestadoras` (Bloque 1) tenía
+`identificacion_fiscal = '[DEFINIR]'`, un placeholder de texto hardcodeado — mismo problema
+de fondo que la regla 1 de `CLAUDE.md` prohíbe para precios/zonas, aplicado sin querer acá.
+Se corrigió: la columna pasó a nullable (`ALTER COLUMN ... DROP NOT NULL`) y el valor a `NULL`
+real, aplicado y verificado contra Supabase. Dos puntos abiertos quedan de esto:
+
+- **Propuesta, no implementada todavía**: que una prestadora no pueda pasar a
+  `estado = 'certificada'` sin `identificacion_fiscal` cargado (constraint o trigger en la
+  transición de estado, no en la creación de la fila — una prestadora `prospecto` o
+  `en_certificacion` legítimamente no tiene el dato todavía). prestadora-original ya está sembrada como
+  `certificada` con el campo en `NULL`, así que si se implementa esta restricción ahora mismo
+  haría falta cargar el CUIT real de prestadora-original primero, o la migración fallaría.
+- **Dependencia real que esto expone**: hoy no existe ninguna pantalla donde un
+  `admin_prestadora` cargue o edite los datos de su propia fila en `prestadoras`
+  (`identificacion_fiscal` incluido). Nadie lo completa a mano mientras tanto — el campo sigue
+  en `NULL` hasta que exista esa pantalla. Anotado como caso de uso central de
+  `configuracion_prestadora` (Bloque 4, diseño 3.2) — no es un panel nuevo aparte, es la misma
+  pantalla de configuración por-tenant que ya estaba planeada para branding/notificaciones.
+
 ### 4.5 Orden de trabajo sugerido (no vinculante, para discutir)
 
-1. Aprobar sección 3.1-3.4 (entidad `prestadoras`, compliance, roles) y la decisión 4.1.
+1. Aprobar sección 3.1-3.4 (entidad `prestadoras`, cumplimiento normativo, roles) y la decisión 4.1.
 2. Ejecutar pasos 1-6 de la sección 2 (aislamiento de datos) — es lo que habilita tener un
    segundo cliente real sin arriesgar los datos de prestadora-original.
 3. Recién después, con un caso de negocio concreto en mano, abordar 3.5 (facturación) según
    4.3.
 4. Branding por tenant (logo, textos parametrizados) y multi-moneda en la UI pública, en
    paralelo o después de 3, según cuándo haya un segundo cliente real esperando eso.
+
+---
+
+## 5. Inventario — apariencia, marca y configuración que deben pasar a ser por-prestadora
+
+Pedido del usuario (2026-07-09), ampliando la regla 1 de `CLAUDE.md` (nunca hardcodear
+precios/zonas/textos) a su conclusión lógica ahora que el sistema es multi-tenant:
+**ningún dato, configuración ni elemento de apariencia —paleta de colores, tipografía,
+logo, textos de marca, remitente de emails, plantillas de documentos, dominio/contacto—
+se hardcodea en código.** Todo debe poder cargarse/editarse desde un panel o CMS interno,
+por prestadora. Este inventario es solo relevamiento — **no diseña tablas ni implementa
+nada todavía** (eso se decide en el Bloque 4 o un bloque propio, según el volumen).
+
+**Criterio de exclusión, no negociable** (mismo patrón ya usado en `escalas_legales`):
+esto aplica a *valores* de apariencia/configuración, no a *lógica* con peso legal o de
+seguridad. `calcularCese`, el cálculo del score de riesgo, las policies RLS, la lógica de
+autorización, las 13 causales de cese y el motor de alertas de IA usan valores
+configurables, pero la fórmula/lógica en sí sigue siendo código versionado y testeado, no
+un campo editable desde panel.
+
+Los ítems ya señalados en la sección 1.5 ("Hardcodeos que son solo texto de marca") se
+marcan acá como **[1.5 → confirmado]** — no se releva de nuevo, solo se promueven de
+"pendiente" a "con regla definida" (van a panel/CMS, sin excepción).
+
+### 5.1 Paleta de colores — **estructural, con pre-limpieza obligatoria antes de dinamizar**
+
+- `panel/src/styles/variables.css:1-13` — bloque `:root` completo (`--azul-oscuro`,
+  `--azul-medio`, `--verde-exito`, `--naranja-alerta`, `--rojo-peligro`, `--fondo-alt`,
+  `--texto-principal`, `--texto-secundario`).
+- `sitio-web/src/styles/variables.css:1-25` — la misma paleta base, duplicada de forma
+  independiente, más variables propias (`--blanco`, `--borde`, `--overlay-*`,
+  `--sombra-*`, `--verde-exito-fondo`, `--rojo-peligro-fondo`). Ya hoy son **dos fuentes
+  de verdad separadas** para los mismos colores — un problema previo a multi-tenant.
+- Valores hex sueltos fuera de variable (deuda menor, no bloqueante): `panel/src/index.css`
+  líneas 89, 91, 124, 144, 174, 201, 217, 255, 306, 346, 353, 359; `sitio-web/src/styles/components.css:24`.
+- **Regla**: va a panel/CMS. Cada prestadora define su propia paleta; prestadora-original queda como
+  el primer registro con los valores actuales.
+- **Pre-limpieza obligatoria (ajuste del usuario, 2026-07-10) — dinamizar `variables.css`
+  no alcanza sin esto antes**: theming por prestadora sobre el estado actual del código
+  quedaría incompleto si no se resuelven primero dos cosas, en este orden:
+  1. **Decisión de fuente única**: ¿`panel/` y `sitio-web/` pasan a compartir un solo
+     origen de variables de color (paquete/archivo común importado por ambos), o se
+     acepta mantenerlos como dos archivos sincronizados a mano? Mientras sigan siendo
+     "dos fuentes de verdad separadas" (como ya señala el punto de arriba), dinamizar
+     una y no la otra deja el theming a medio hacer — una prestadora vería su paleta en
+     el panel pero no en el sitio público, o viceversa.
+  2. **Barrido de los valores hex sueltos** ya listados arriba (12 líneas en
+     `panel/src/index.css` + 1 en `sitio-web/src/styles/components.css`): mientras sigan
+     fuera de variable, cualquier mecanismo de tema por prestadora los deja intactos con
+     los colores de prestadora-original hardcodeados, sin importar qué tan bien se dinamice
+     `variables.css`. Este barrido tiene que ejecutarse antes de dar por completo el
+     ítem 5.1, no en paralelo ni después.
+
+### 5.2 Tipografía — **estructural, de mayor complejidad que color (no es "una variable más")**
+
+- `panel/src/styles/variables.css:11-12` y `sitio-web/src/styles/variables.css:23-24` —
+  `--font-display: 'Playfair Display', serif` / `--font-body: 'DM Sans', sans-serif`.
+- `sitio-web/src/app/[locale]/layout.jsx:53-58` — `<link>` a Google Fonts hardcodeado a
+  esas dos clientes.
+- `sitio-web/public/offline.html:18,23` — duplica las mismas declaraciones de
+  `font-family` en una tercera copia (página offline standalone).
+- **Regla**: va a panel/CMS, al menos como selección parametrizada (no necesariamente
+  "cualquier fuente libre", pero sí un valor por prestadora, no fijo en CSS).
+- **Distinción de complejidad (ajuste del usuario, 2026-07-10)**: a diferencia del color
+  (5.1), que es sustituir el valor de una variable CSS ya centralizada, tipografía
+  requiere además un **mecanismo de carga dinámica de fuentes** que hoy no existe — el
+  `<link>` a Google Fonts en `sitio-web/src/app/[locale]/layout.jsx:53-58` está fijo en
+  tiempo de build a "Playfair Display"/"DM Sans", no parametrizado por request ni por
+  tenant. Cambiar la variable CSS sin resolver cómo se sirve/carga la fuente elegida por
+  cada prestadora (`<link>` dinámico según tenant resuelto en el layout, self-hosting de
+  fuentes, o un subconjunto acotado de clientes precargadas) deja el valor editable en
+  panel sin efecto real en la página. Tratar esto como una pieza de trabajo separada y
+  más compleja que 5.1, no agruparla bajo el mismo esfuerzo que "dinamizar una variable
+  de color".
+
+### 5.3 Logo — **[1.5 → confirmado, mixto con estructural nuevo]**
+
+- No existe archivo de logo-imagen — se renderiza como texto: `panel/src/components/layout/Layout.jsx:14`
+  (`<div className="panel-logo">prestadora-original Salud</div>`), `sitio-web/src/components/Header.jsx:24-25`,
+  `sitio-web/src/components/Footer.jsx:10`. Este es el ítem que 1.5 ya señalaba para
+  `Layout.jsx` — confirmado, se promueve a regla definida.
+- `sitio-web/src/styles/components.css:23-25` — clase `.logo` (estilos, no contenido).
+- `panel/public/favicon.svg`, `sitio-web/public/favicon.svg` — íconos por app, sin
+  selección por tenant.
+- **Regla**: va a panel/CMS — nombre de marca visible y, si se define subir imagen de
+  logo real, el asset también por prestadora.
+
+### 5.4 Textos de marca fijos fuera de i18n — **[1.5 → confirmado] + hallazgos nuevos, uno mixto**
+
+- `panel/src/i18n/translations.js` — más ocurrencias de las relevadas en 1.5: líneas
+  22, 37, 188, 214, 268, 271, 321 (es), espejadas en en/pt en 409, 424, 575, 601, 655,
+  658, 708 y 796, 811, 962, 988, 1042, 1045, 1095. **[1.5 → confirmado]** para el bloque
+  general, pero con una distinción que 1.5 no hacía: algunas de estas líneas son puro
+  nombre de marca ("prestadora-original Salud" en un título), y otras son **términos de negocio**
+  como "Certificado prestadora-original" o "Exclusividad de facturación a prestadora-original" — estos últimos
+  podrían necesitar renombrarse a un término genérico (p. ej. "Certificado de la
+  plataforma") en vez de simplemente parametrizar el nombre de marca. **Caso ambiguo —
+  no decido esto solo, queda señalado para que el usuario resuelva** si esos términos de
+  negocio se parametrizan (sustituyendo "prestadora-original" por el nombre de la prestadora) o se
+  genérican del todo.
+- `sitio-web/src/i18n/translations.js:17, 79, 149, 211, 281, 343, 354` — mensajes de
+  WhatsApp y subtítulos con "prestadora-original" fijo.
+- `panel/src/lib/calcularCese.js:215` — mismo texto ya señalado en 1.5 (advertencia de
+  negocio), acá específicamente la línea del string.
+- `sitio-web/src/app/[locale]/layout.jsx:27,37` — `generateMetadata` hardcodea `title` y
+  `openGraph.title` a "prestadora-original Salud", **pese a ya llamar a `getConfiguracionPublica()`
+  en la línea 48 sin usarlo para el título** — estructural, y la corrección es casi
+  gratis porque el dato dinámico ya se está pidiendo.
+- 6 páginas repiten el mismo patrón de título fijo: `trabaja-con-nosotros/page.jsx:8`,
+  `terminos/page.jsx:6`, `privacidad/page.jsx:6`, `servicios/page.jsx:6`,
+  `solicita-servicio/page.jsx:6-7`, `contacto/page.jsx:7`.
+- `sitio-web/src/app/manifest.js:3-4` — `name`/`short_name` del manifest (ver también 5.8).
+- Menciones de "Filtro prestadora-original" en comentarios de código (`backend/src/routes/panelCuentas.js:87`,
+  `schema_etapa2b.sql:7,100`, `schema_etapa2e.sql:2`) — **corregidas 2026-07-10**: el término
+  se retiró por completo (ni siquiera de uso interno, ver glosario de `CLAUDE.md`), los
+  comentarios ya no lo mencionan.
+- **Regla**: el nombre de marca va a panel/CMS sin excepción. Los términos de negocio
+  mixtos ("Certificado prestadora-original" y similares) quedan pendientes de decisión del usuario
+  (parametrizar vs. genericar).
+
+### 5.5 Remitente/firma de emails — **[1.5 → confirmado] — PRIORIDAD ALTA, mayor que 5.1/5.3 (color/logo)**
+
+**Ajuste del usuario, 2026-07-10**: este ítem no es cosmético como el resto de la sección
+5 — es un **riesgo de fuga de marca/reputación entre tenants**, no solo una cuestión de
+apariencia. Hoy el remitente SMTP es único y global (`process.env.SMTP_USER`): significa
+que, apenas exista una segunda prestadora licenciataria operando, **todos los emails de
+todas las prestadoras salen desde la casilla de correo propia de prestadora-original** — un email de
+la Prestadora B llega a su Cliente con el remitente/firma de prestadora-original, exponiendo a una
+prestadora competidora bajo la marca de otra. Un logo o color por defecto equivocado es un
+problema estético corregible en la UI; un email mal firmado ya salió, no se puede retirar.
+Por eso este ítem queda con prioridad más alta que 5.1 (paleta) y 5.3 (logo) dentro del
+Bloque 4 — debe resolverse antes o junto con la primera prestadora adicional real, no
+puede quedar relegado al final de "branding por tenant" solo porque aparece después en
+este documento.
+
+- `backend/src/utils/email.js:4-13,35,44` — transporter SMTP único, `from: process.env.SMTP_USER`.
+- `backend/src/routes/panelNotificaciones.js:11,15,16,19,23,24,27,31,32` — asuntos y
+  firmas en 3 idiomas. Ya señalado en 1.5 — confirmado, se promueve a regla definida.
+- **Regla**: va a panel/CMS — remitente y firma por prestadora.
+
+### 5.6 Plantillas de documentos generados — **[1.5 → confirmado, con alcance mayor al ya relevado]**
+
+- `panel/src/lib/generarDocumentoCese.js` genera **5 tipos de documento**, no solo cese,
+  todos comparten el mismo patrón de marca fija:
+  - `:11-14` `DISCLAIMER_LEGAL` menciona "sistema prestadora-original".
+  - `:22-32` (`encabezado()`) — línea 25 `doc.text('prestadora-original SALUD', MARGEN, 20)`, función
+    compartida por las 5 generadoras: `generarLiquidacionFinal` (:72),
+    `generarTelegramaCese` (:105), `generarNotificacionFinPeriodoPrueba` (:124),
+    `generarCertificadoTrabajo` (:142), `generarConstanciaAusencia` (:179).
+  - `:146-150` — texto de cuerpo menciona "vinculado/a con prestadora-original Salud".
+- El caso general (documento de cese) ya estaba en 1.5 — confirmado, y se amplía: es
+  `encabezado()` como función compartida la que hay que parametrizar con el nombre de la
+  prestadora, no solo el texto del cese puntual.
+- **Regla**: va a panel/CMS — razón social/nombre en encabezado, parametrizado por
+  prestadora al momento de generar cada PDF.
+
+### 5.7 Dominio/URL/contacto — **[1.5 → confirmado] + hallazgo estructural fuerte nuevo**
+
+- `sitio-web/src/config/siteConfig.js:4-11` — teléfono, WhatsApp, email, dominio, zona de
+  cobertura, precio público. Ya señalado en 1.5 — confirmado. Líneas 17,19-23,25,27 son
+  configuración de negocio (especialidades, zonas, disponibilidad, situación fiscal), no
+  texto de marca — quedan para el mismo tratamiento que precios/zonas (regla 1 de
+  `CLAUDE.md`, ya vigente, no es un caso nuevo).
+- `sitio-web/src/lib/configuracionPublica.js:1-37` — `getConfiguracionPublica()` ya tiene
+  mecanismo de fetch-con-fallback (línea 9, 35), pero **no está parametrizado por
+  tenant** (no hay id/slug de prestadora en la URL del fetch) — esta es la pieza que más
+  se acerca a lo que hace falta, solo le falta el parámetro de tenant.
+- `backend/src/routes/configuracionPublica.js:9-20` y `backend/src/routes/panelConfiguracion.js:20,28-30`
+  — ambos leen/escriben `configuracion_empresa` con `.eq('id', 1)` — mismo hallazgo
+  estructural que 1.1/1.5, ya conocido.
+- `backend/src/db/schema_etapa2h.sql:12-25` — el propio `CHECK (id = 1)`, el hallazgo
+  mono-tenant más literal del repo (ya documentado en 1.1).
+- **Cruce importante con el Bloque 1 ya aplicado**: `schema_multitenant_01.sql:30-59` creó
+  `prestadoras` (la entidad multi-fila) pero **nada del resto del código está conectado
+  a ella todavía** — ni `configuracion_empresa`, ni `siteConfig.js`, ni los emails, ni
+  los PDFs. `prestadoras` es la fuente de verdad candidata para resolver 5.1-5.8 en el
+  Bloque 4, pero hoy es una tabla aislada.
+- `sitio-web/src/app/robots.js:1,4` y `sitemap.js:1,7` — ambos arman la URL canónica
+  desde `siteConfig`, sin concepto de dominio/subdominio por tenant.
+- **Regla**: va a panel/CMS — contacto, dominio y config pública por prestadora.
+
+### 5.8 Favicon/PWA/manifest — **estructural, hallazgo nuevo**
+
+- `sitio-web/src/app/manifest.js:1-12` — `name`, `short_name`, `description` (esta última
+  fija "AMBA" como zona de cobertura), `theme_color: '#1F4E79'` (duplica a mano la
+  variable CSS de 5.1), `background_color`, un solo ícono `/favicon.svg`. La función no
+  recibe ningún parámetro.
+- Los dos `favicon.svg` — solo imagen de marca, sin mecanismo de selección por tenant.
+- No hay `manifest.json` estático (Next.js usa el `manifest.js` dinámico); `panel/` no
+  tiene manifest (es SPA, no PWA).
+- **Regla**: va a panel/CMS — nombre, descripción, color de tema e ícono del manifest,
+  por prestadora.
+
+### 5.9 Resumen — qué queda pendiente de decisión antes de tocar tablas
+
+1. **Caso ambiguo sin resolver** (5.4): términos de negocio mixtos con nombre de marca
+   ("Certificado prestadora-original", "Exclusividad de facturación a prestadora-original") — ¿se parametrizan
+   (sustituir "prestadora-original" por el nombre de la prestadora) o se genericán del todo? Decisión
+   del usuario, no tomada acá.
+2. **Diseño de tabla(s)** para 5.1-5.8 — no se diseñó todavía. Candidato natural:
+   extender `configuracion_prestadora` (Bloque 4, diseño 3.2) para que cubra también
+   paleta/tipografía/logo/manifest, en vez de crear una tabla nueva — a confirmar cuando
+   se aborde ese bloque.
+3. **Volumen**: dado que toca 5 áreas de código distintas (CSS, i18n, PDF, email, Next.js
+   metadata/manifest) con mecanismos de consumo distintos entre sí, evaluar en el
+   Bloque 4 si conviene ejecutarlo como un sub-bloque propio en vez de una tarea más
+   dentro de "branding por tenant".
 
 ---
 
@@ -618,7 +1016,7 @@ idealmente punto por punto de la sección 4, antes de generar la primera migraci
 | Cómo se puebla `prestadora_id` en los datos existentes de prestadora-original sin intervención manual fila por fila | Sección 2, paso 3 (`UPDATE` masivo con el id de la prestadora prestadora-original, un solo script) |
 | Orden de reescritura de policies RLS existentes | Sección 2, paso 5 |
 | Diseño de la entidad `prestadoras` | Sección 3.1 |
-| Diseño del módulo de compliance documental (checklist, vencimientos, registro inmutable de verificación) | Sección 3.3 |
+| Diseño del módulo de cumplimiento normativo documental (checklist, vencimientos, registro inmutable de verificación) | Sección 3.3 |
 | Diseño de facturación dual (plan de facturación por prestadora + comprobantes con emisor PLM/prestadora-original y numeración propia) | Sección 3.5 |
 | Esquema de roles nuevo (`administrador de prestadora`, `financiador` contemplado sin implementar) | Sección 3.4 |
 | Columna de moneda en los 7 campos monetarios relevados | Sección 3.8 (los 6 restantes) + Sección 3.5 (facturación nueva) + Sección 3.7 (`escalas_legales`) |

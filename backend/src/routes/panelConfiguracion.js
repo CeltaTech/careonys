@@ -7,7 +7,7 @@ export const panelConfiguracionRouter = Router();
 // Módulo 8 (Configuración) es a nivel de toda la empresa — Coordinador no entra acá,
 // solo Admin/Superadmin (misma restricción que precios y escalas legales).
 function requiereAdminOSuperior(req, res, next) {
-  if (!['admin', 'superadmin'].includes(req.usuarioPanel?.rol)) {
+  if (!['admin_prestadora', 'superadmin'].includes(req.usuarioPanel?.rol)) {
     return res.status(403).json({ error: 'Solo Admin o Superadmin puede editar la configuración' });
   }
   next();
@@ -34,7 +34,11 @@ panelConfiguracionRouter.patch('/empresa', async (req, res) => {
 
 // --- Zonas de cobertura ---
 panelConfiguracionRouter.get('/zonas', async (req, res) => {
-  const { data, error } = await supabase.from('zonas_cobertura').select('*').order('orden');
+  let query = supabase.from('zonas_cobertura').select('*').order('orden');
+  if (req.usuarioPanel.rol !== 'superadmin') {
+    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  }
+  const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ zonas: data });
 });
@@ -44,23 +48,33 @@ panelConfiguracionRouter.post('/zonas', async (req, res) => {
   if (!codigo || !nombre || !categoria) {
     return res.status(400).json({ error: 'Faltan código, nombre o categoría' });
   }
-  const { error } = await supabase.from('zonas_cobertura').insert({ codigo, nombre, categoria, orden: orden ?? 0 });
+  const { error } = await supabase
+    .from('zonas_cobertura')
+    .insert({ codigo, nombre, categoria, orden: orden ?? 0, prestadora_id: req.usuarioPanel.prestadoraId });
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
 });
 
 panelConfiguracionRouter.patch('/zonas/:id', async (req, res) => {
   const { nombre, categoria, activa, orden } = req.body;
-  const { error } = await supabase
+  let query = supabase
     .from('zonas_cobertura')
     .update({ nombre, categoria, activa, orden })
     .eq('id', req.params.id);
+  if (req.usuarioPanel.rol !== 'superadmin') {
+    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  }
+  const { error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
 });
 
 panelConfiguracionRouter.delete('/zonas/:id', async (req, res) => {
-  const { error } = await supabase.from('zonas_cobertura').delete().eq('id', req.params.id);
+  let query = supabase.from('zonas_cobertura').delete().eq('id', req.params.id);
+  if (req.usuarioPanel.rol !== 'superadmin') {
+    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  }
+  const { error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
 });

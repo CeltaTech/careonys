@@ -45,9 +45,13 @@ para mantener esa salida siempre abierta:
   con su propio esquema de usuarios).
 - **Backup propio, independiente del backup nativo de Supabase**: un `pg_dump` periódico
   de la base (automatizable con un cron simple en el propio backend o una GitHub Action)
-  guardado fuera de Supabase (ej. un bucket separado o descarga local cifrada). Esto
-  protege contra el peor caso (cuenta bloqueada, error de facturación, borrado accidental
-  del proyecto) sin depender de que el proveedor mismo resuelva su propia falla.
+  guardado fuera de Supabase, en almacenamiento de objetos (bucket — Google Cloud Storage,
+  AWS S3, Backblaze B2 o similar). Esto protege contra el peor caso (cuenta bloqueada, error
+  de facturación, borrado accidental del proyecto) sin depender de que el proveedor mismo
+  resuelva su propia falla. **Git/GitHub queda descartado como destino, no en evaluación**
+  (decisión 2026-07-10): guarda historial permanente que no se puede purgar sin reescribir
+  todo el repo, es una segunda copia de datos sensibles sin ninguna protección de RLS/tenant,
+  y tiene límite de tamaño de archivo (100MB) que un dump de base va a superar con el tiempo.
 - Storage: si se sube a Supabase Storage, evitar features no estándar que no tengan
   equivalente en cualquier storage S3-compatible.
 
@@ -65,25 +69,55 @@ de prestadora-original, con alcance distinto, no el que traía Money Suite):
 
 | Rol | Alcance |
 |---|---|
-| `superadmin` | Todo lo de `admin`, más acceso técnico: configuración profunda del sistema, alta/baja de elementos sensibles, uso de herramientas de IA para diagnóstico/corrección de errores. Login propio, separado del de `admin` |
-| `admin` | Todo el negocio (sin el acceso técnico de `superadmin`) |
-| `coordinador` | Su zona asignada (clientes, pacientes, guardias, Asistentes de esa zona) |
+| `superadmin` | Todo lo de `admin_prestadora`, en todas las prestadoras: configuración profunda del sistema, alta/baja de elementos sensibles, uso de herramientas de IA para diagnóstico/corrección de errores. Login propio, separado del de `admin_prestadora` |
+| `admin_prestadora` | Todo el negocio de su propia prestadora (sin el acceso técnico de `superadmin`, cero visibilidad de otras prestadoras) |
+| `coordinador` | Su zona asignada (clientes, pacientes, guardias, Asistentes de esa zona), dentro de su propia prestadora |
 | `asistente` | Sus propias guardias, su perfil, su certificado |
 | `cliente` | Sus pacientes, reportes y alertas de sus pacientes |
 
-`superadmin` es el único rol, además de `admin`, con acceso de escritura a configuración
-de sistema (planes/módulos activables, si se construye esa idea de `PRD_02_Panel_Admin.md`
-Módulo 8) y a cualquier herramienta de diagnóstico asistido por IA que se construya sobre
-logs/errores de la aplicación — no exponer esas herramientas a `admin` ni a `coordinador`.
+**Nota (2026-07-10):** el rol se llamaba `admin` hasta el Bloque 2 de
+`docs/PLAN_MULTITENANT_PLM.md` — se renombró a `admin_prestadora` en dato y código (sin
+transición pendiente, no queda ningún registro ni ruta con el valor `admin`) al pasar a
+multi-tenant real, para reflejar que su alcance quedó acotado a una sola prestadora. Ver
+glosario de `CLAUDE.md`.
+
+`superadmin` es el único rol, además de `admin_prestadora`, con acceso de escritura a
+configuración de sistema (planes/módulos activables, si se construye esa idea de
+`PRD_02_Panel_Admin.md` Módulo 8) y a cualquier herramienta de diagnóstico asistido por IA
+que se construya sobre logs/errores de la aplicación — no exponer esas herramientas a
+`admin_prestadora` ni a `coordinador`.
+
+## Multi-tenancy — `current_tenant()` y `es_superadmin()` (Bloque 2, aplicado y verificado)
+
+Toda policy de RLS escrita desde el Bloque 2 en adelante usa estas dos funciones SQL en vez
+de repetir el `EXISTS (SELECT ... FROM usuarios WHERE id = auth.uid() ...)` a mano:
+
+```sql
+CREATE FUNCTION current_tenant() RETURNS UUID
+  LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT prestadora_id FROM usuarios WHERE id = auth.uid();
+$$;
+
+CREATE FUNCTION es_superadmin() RETURNS BOOLEAN
+  LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT rol = 'superadmin' FROM usuarios WHERE id = auth.uid();
+$$;
+```
+
+Toda tabla con `prestadora_id` debe filtrar por `prestadora_id = current_tenant() OR
+es_superadmin()` en sus policies — nunca solo por rol, sin el filtro de tenant, salvo que la
+tabla sea intencionalmente global (ej. `escalas_legales`, que no tiene `prestadora_id`).
 
 ## RLS — políticas obligatorias
 
-Cada tabla nueva necesita RLS antes de mergear el PR que la crea. Ejemplos oficiales:
+Cada tabla nueva necesita RLS antes de mergear el PR que la crea. Ejemplos oficiales
+(actualizados 2026-07-10 al patrón multi-tenant — toda policy nueva debe filtrar por
+`current_tenant()`, no solo por rol):
 
 ```sql
--- Asistentes solo ven sus propias guardias
+-- Asistentes solo ven sus propias guardias (dentro de su tenant)
 CREATE POLICY "asistente_ve_sus_guardias" ON guardias
-  FOR SELECT USING (asistente_id = auth.uid());
+  FOR SELECT USING (asistente_id = auth.uid() AND prestadora_id = current_tenant());
 
 -- Clientes solo ven los reportes de sus pacientes
 CREATE POLICY "cliente_ve_sus_reportes" ON reportes
@@ -95,10 +129,43 @@ CREATE POLICY "cliente_ve_sus_reportes" ON reportes
     )
   );
 
--- Admins y coordinadores ven todo en su ámbito
-CREATE POLICY "admin_ve_todo" ON guardias
+-- Admin_prestadora y coordinadores ven todo en su ámbito, acotado a su propia prestadora
+CREATE POLICY "admin_prestadora_ve_todo" ON guardias
   FOR ALL USING (
-    EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND rol IN ('admin','coordinador'))
+    prestadora_id = current_tenant()
+    AND EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND rol IN ('admin_prestadora','coordinador'))
+    OR es_superadmin()
+  );
+```
+
+**Patrón OR-de-dos-EXISTS para FK nullable (ejemplo oficial, `incidentes_relevo`, Módulo 6):**
+cuando una tabla tiene una FK opcional que cambia de qué fila derivar el tenant/zona según
+esté NULL o no (acá, `guardia_saliente_id` NULL = "Ausente sin relevo previo", ver glosario
+de `CLAUDE.md`), la policy resuelve ambos casos con dos `EXISTS` unidos por `OR`, en vez de
+intentar una sola condición que cubra los dos:
+
+```sql
+CREATE POLICY "coordinador_ve_incidentes_de_su_zona" ON incidentes_relevo
+  FOR SELECT USING (
+    prestadora_id = current_tenant() AND (
+      -- Caso con relevo previo: derivar la zona desde la guardia saliente
+      EXISTS (
+        SELECT 1 FROM guardias g
+        JOIN asistentes a ON a.id = g.asistente_id
+        WHERE g.id = incidentes_relevo.guardia_saliente_id
+          AND a.zonas && (SELECT zonas FROM usuarios WHERE id = auth.uid())
+      )
+      OR
+      -- Caso "ausente sin relevo previo" (guardia_saliente_id IS NULL): derivar la zona
+      -- desde la guardia entrante en su lugar
+      EXISTS (
+        SELECT 1 FROM guardias g
+        JOIN asistentes a ON a.id = g.asistente_id
+        WHERE g.id = incidentes_relevo.guardia_entrante_id
+          AND incidentes_relevo.guardia_saliente_id IS NULL
+          AND a.zonas && (SELECT zonas FROM usuarios WHERE id = auth.uid())
+      )
+    )
   );
 ```
 
@@ -122,6 +189,20 @@ tablas, igual que Admin, hasta que exista una decisión de producto sobre cómo 
 zona de un Cliente/Solicitud (agregar un `select` de zona al formulario público, inferir
 por `localidad`, u otra opción). No adivinar esa semántica sin confirmarla primero.
 
+**Módulo 6 (Guardias), estado 2026-07-10:** las 8 tablas de
+`backend/src/db/schema_modulo6_guardias.sql` tienen RLS multi-tenant aplicada y verificada
+contra Supabase real (15 policies, incluyendo el patrón OR-de-dos-EXISTS de
+`incidentes_relevo` documentado arriba, verificado con datos reales para el caso
+`guardia_saliente_id IS NULL`). Sigue sin existir ninguna ruta backend ni pantalla de Panel
+que consuma estas tablas.
+
+**Pendiente de decisión, no bloquea desarrollo:** `guardias_tracking_gps` guarda histórico de
+posiciones GPS del Asistente durante una guardia activa — esto es un dato personal sensible
+bajo Ley 25.326 (geolocalización de una persona física). Falta definir política de retención
+(cuánto tiempo se conserva el histórico) y si se necesita un aviso/consentimiento explícito
+al Asistente más allá del que ya cubre el vínculo contractual — no se ha tomado ninguna
+decisión de producto sobre esto todavía.
+
 ## Datos sensibles — qué nunca se loguea ni va en URL/GET
 
 - Sueldos, honorarios, montos de `ceses`.
@@ -139,7 +220,7 @@ en logs de aplicación accesibles a todo el equipo.
   salud y datos personales de pacientes, Asistentes y clientes.
 - No aplica GDPR salvo expansión internacional futura (no está en el roadmap actual).
 
-## Verificación de antecedentes penales (etapa 3 del Filtro prestadora-original)
+## Verificación de antecedentes penales (etapa 3 del Proceso de Incorporación de Asistentes)
 
 Hoy es un proceso manual/semi-manual (consulta al Registro Nacional de Reincidencia,
 renovación anual) — no hay integración de API elegida. Si se automatiza, evaluar
@@ -149,8 +230,8 @@ negocio y de presupuesto, no bloquea el desarrollo de las etapas 1-2.
 
 ## Decisiones de seguridad pendientes (no bloquean desarrollo, hay que saberlas)
 
-- Proveedor de reconocimiento facial para la etapa de verificación de identidad del Filtro
-  prestadora-original: no elegido.
+- Proveedor de reconocimiento facial para la etapa de verificación de identidad del Proceso
+  de Incorporación de Asistentes: no elegido.
 - Si se automatiza la consulta de antecedentes penales: proveedor no elegido.
 - Modelo de pagos (ver `CONTEXT.md` y `DATA_MODEL.md`): no hay decisión de negocio, por lo
   tanto tampoco hay decisión de seguridad de datos de pago (tokenización, PCI DSS scope).

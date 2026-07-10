@@ -15,14 +15,14 @@ export async function requiereRolPanel(req, res, next) {
 
   const { data: perfil, error: errorPerfil } = await supabase
     .from('usuarios')
-    .select('rol')
+    .select('rol, prestadora_id')
     .eq('id', userData.user.id)
     .single();
 
-  if (errorPerfil || !perfil || !['admin', 'coordinador', 'superadmin'].includes(perfil.rol)) {
+  if (errorPerfil || !perfil || !['admin_prestadora', 'coordinador', 'superadmin'].includes(perfil.rol)) {
     return res.status(403).json({ error: 'Rol sin permiso' });
   }
 
-  req.usuarioPanel = { id: userData.user.id, rol: perfil.rol };
+  req.usuarioPanel = { id: userData.user.id, rol: perfil.rol, prestadoraId: perfil.prestadora_id };
   next();
 }

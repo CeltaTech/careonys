@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { supabase } from '../db/connection.js';
+import { prestadora-original_PRESTADORA_ID } from '../db/tenantTemporal.js';
 import { enviarEmailCoordinador } from '../utils/email.js';
 
 export const postulacionAsistenteRouter = Router();
@@ -27,6 +28,7 @@ postulacionAsistenteRouter.post('/', async (req, res) => {
     como_conocio: como_conocio ?? null,
     mensaje: mensaje ?? null,
     idioma: IDIOMAS_SOPORTADOS.includes(idioma) ? idioma : 'es-AR',
+    prestadora_id: prestadora-original_PRESTADORA_ID,
   });
 
   if (error) {

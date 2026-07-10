@@ -1,7 +1,8 @@
 # PRD_02 — Panel de Administración
 
 > Fuente: `prestadora-original_DOCUMENTO_UNICO_v1.md` Parte N. Etapa 2 del build order. Herramienta
-> interna — solo Admin y Coordinador acceden. SPA separada del sitio público, deployada
+> interna — solo Admin_prestadora y Coordinador acceden (Superadmin también, con acceso
+> técnico adicional — ver `SECURITY.md`). SPA separada del sitio público, deployada
 > en el mismo Vercel. Acceso: `admin.prestadora-originalsalud.com.ar` (o `/admin`).
 
 ## Stack
@@ -14,7 +15,7 @@ Express/MySQL, el panel ya usa Supabase directamente.
 
 | Rol | Ve | Hace |
 |---|---|---|
-| Admin | Todo | Todo |
+| Admin_prestadora | Todo el negocio de su propia prestadora | Todo, dentro de su prestadora |
 | Coordinador | Sus asignaciones, sus zonas | Gestionar guardias y Asistentes de su zona |
 
 ## Módulos
@@ -55,11 +56,36 @@ Lista de clientes activas; por cliente: contacto, pacientes, guardias activas, h
 de reportes, alertas activas.
 
 ### Módulo 6 — Guardias
-Vista calendario + lista (fecha, Asistente, paciente, modalidad, estado). Estado en
-tiempo real: última ubicación GPS si la guardia está activa, tiempo transcurrido desde
-check-in, alerta automática si check-in sin check-out después de X horas. Cada estado
-(programada/activa/completada/cancelada) usa color automático — ver "Estados visuales de
-guardias" en `DESIGN_SYSTEM.md` — para escaneo visual rápido en la vista calendario.
+
+**Estado 2026-07-10: solo el schema de datos está construido** (`backend/src/db/schema_modulo6_guardias.sql`,
+8 tablas, RLS multi-tenant verificada contra Supabase real — ver `DATA_MODEL.md` y
+`SECURITY.md`). No hay rutas backend ni pantallas de Panel todavía. El diseño real de datos
+va más allá de lo que describía la versión anterior de esta sección (vista calendario +
+GPS simple) — falta diseñar la UI de Panel contra las siguientes piezas ya modeladas:
+
+- **Series de guardias** (`series_guardias`): una guardia recurrente (ej. "todos los martes
+  8-14hs") de la que se generan instancias concretas en `guardias` — la UI necesita un flujo
+  de creación de serie, no solo de guardia suelta.
+- **Vista calendario + lista** (diseño original, sigue vigente): fecha, Asistente, paciente,
+  modalidad, estado; última ubicación GPS si la guardia está activa (ahora respaldada por
+  histórico en `guardias_tracking_gps`, no solo el punto de check-in/check-out); alerta
+  automática si check-in sin check-out después de X horas. Cada estado
+  (programada/activa/completada/cancelada) usa color automático — ver "Estados visuales de
+  guardias" en `DESIGN_SYSTEM.md`.
+- **Domicilio temporal del Paciente** (`domicilios_temporales_paciente`): la UI de una
+  guardia puntual debe permitir cargar un domicilio distinto al habitual (ej. internación en
+  casa de un familiar).
+- **Personal de emergencia** (`personal_emergencia`): contacto de emergencia asociado a una
+  guardia/Paciente, visible desde la ficha de guardia.
+- **Incidentes de relevo** (`incidentes_relevo`): pantalla para registrar un Asistente
+  ausente a una guardia, incluyendo el caso "Ausente sin relevo previo" (ver glosario de
+  `CLAUDE.md`) — el de mayor prioridad visual, ya que el Paciente puede quedar sin nadie.
+  Necesita su propio flujo de escalada (`configuracion_escalada_relevo`) y de excepción
+  autorizada por el Cliente (`excepciones_familiar_relevo`).
+
+No diseñar ni construir la UI de este módulo sin releer el schema real primero — la versión
+anterior de esta sección quedó desactualizada frente a lo que ya se implementó a nivel de
+datos.
 
 ### Módulo 7 — Reportes y Alertas (IA Nivel 2)
 Lista de alertas activas (ROJA/AMARILLA) por paciente. Clic → ver reportes que generaron
@@ -91,18 +117,18 @@ componente. Evaluar solo si surge ese escenario de negocio, no diseñar para él
 
 | Evento | Notifica a |
 |---|---|
-| Nueva solicitud de servicio | Admin + Coordinador de turno |
-| Nueva postulación de Asistente | Admin |
-| Asistente no hizo check-in en horario | Coordinador + Admin |
-| Guardia activa sin check-out +2hs del horario pactado | Coordinador + Admin |
+| Nueva solicitud de servicio | Admin_prestadora + Coordinador de turno |
+| Nueva postulación de Asistente | Admin_prestadora |
+| Asistente no hizo check-in en horario | Coordinador + Admin_prestadora |
+| Guardia activa sin check-out +2hs del horario pactado | Coordinador + Admin_prestadora |
 | Alerta IA Nivel 2 ROJA | Coordinador + Cliente |
 | Alerta IA Nivel 2 AMARILLA | Coordinador |
-| Seguro del Asistente vence en 30 días | Admin |
-| Monotributo del Asistente no activo | Admin |
+| Seguro del Asistente vence en 30 días | Admin_prestadora |
+| Monotributo del Asistente no activo | Admin_prestadora |
 
 ## Datos y RLS
 
 Ver `DATA_MODEL.md` para las tablas que este panel lee/escribe y `SECURITY.md` para las
-políticas RLS exactas. Ningún dato de `escalas_legales`/`ceses` es visible fuera de Admin
-(y Coordinador solo si el PRD de Gestión de Personal lo habilita explícitamente para su
-zona — por defecto, no).
+políticas RLS exactas. Ningún dato de `escalas_legales`/`ceses` es visible fuera de
+Admin_prestadora (y Coordinador solo si el PRD de Gestión de Personal lo habilita
+explícitamente para su zona — por defecto, no).

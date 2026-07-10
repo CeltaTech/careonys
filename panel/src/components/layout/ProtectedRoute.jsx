@@ -11,7 +11,7 @@ export function ProtectedRoute({ children, soloAdmin = false }) {
     return <div className="pantalla-cargando">{t.comun.cargando}</div>;
   }
 
-  if (!session || !usuario || !['admin', 'coordinador', 'superadmin'].includes(usuario.rol)) {
+  if (!session || !usuario || !['admin_prestadora', 'coordinador', 'superadmin'].includes(usuario.rol)) {
     return <Navigate to="/login" replace />;
   }
 

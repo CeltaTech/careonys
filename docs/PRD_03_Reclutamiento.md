@@ -3,8 +3,8 @@
 > Fuente: `docs/prestadora-original_PRD_Reclutamiento_v1.pdf` (v1.0, Mayo 2026). Condensado para
 > ejecución directa, con las siguientes correcciones respecto del original: (1) el original
 > menciona un nombre propio ("Alberto Sánchez") como responsable de entrevistas —
-> reemplazado por "Inversor" o "Admin", igual que en el resto de `Workspace/docs/`, ver nota
-> del glosario en `CLAUDE.md`; (2) se documenta explícitamente una discrepancia de stack, ver
+> reemplazado por "Inversor" o "Admin_prestadora", igual que en el resto de
+> `Workspace/docs/`, ver nota del glosario en `CLAUDE.md`; (2) se documenta explícitamente una discrepancia de stack, ver
 > sección "Nota de stack" abajo, en vez de elegir en silencio; (3) el original usa
 > "Cuidadora"/"Cuidadoras" en varios lugares (tabla de usuarios del sistema, catálogo de
 > especialidades) — reemplazado por "Asistente"/"Asistente Integral" en todo el documento,
@@ -32,14 +32,20 @@ etapas de verificación, panel), no la decisión de infraestructura. Twilio (SMS
 en ningún otro PRD oficial — no implementar verificación por SMS hasta que haya una decisión
 de negocio explícita al respecto.
 
-## El Filtro prestadora-original — 6 etapas de incorporación
+## Proceso de Incorporación de Asistentes — 6 etapas
+
+**Nota de nomenclatura (2026-07-10):** esta tabla es la que directamente alimenta las
+pantallas de Panel (Módulo 2/4 de `PRD_02_Panel_Admin.md`, tabla `verificaciones_asistente`)
+— dentro del Panel, uso interno, se llama "Proceso de Incorporación de Asistentes", nunca
+"Filtro prestadora-original" (ver glosario de `CLAUDE.md`). "Filtro prestadora-original" queda reservado para el
+concepto general/interno, no para el nombre de esta pantalla.
 
 | Etapa | Descripción | Responsable | SLA |
 |---|---|---|---|
 | 0 — Postulación | Formulario público, estado inicial `pendiente` | Sistema | Inmediato |
 | 1 — Verificación de identidad | Foto DNI + foto de perfil, comparación por IA | Sistema + Coordinador | < 24hs |
 | 2 — Antecedentes penales | Consulta Registro Nacional de Reincidencia, renovación anual | Coordinador | 1-2 días |
-| 3 — Entrevista estructurada | Videollamada 30 min, evalúa competencia técnica/emocional/valores | Admin | 1 día |
+| 3 — Entrevista estructurada | Videollamada 30 min, evalúa competencia técnica/emocional/valores | Admin_prestadora | 1 día |
 | 4 — Referencias laborales | Mínimo 2 referencias verificadas por teléfono | Coordinador | 1-2 días |
 | 5 — Capacitación y certificación | 8hs online, aprobación mínima 80%, emite Certificado prestadora-original con QR | Sistema + aspirante | 1-2 días |
 
@@ -57,7 +63,7 @@ le da al aspirante una noción clara de cuánto falta, igual que un onboarding p
 |---|---|---|
 | Aspirante | Postulante sin verificar | Formulario público + estado de su postulación |
 | Asistente | Verificada e incorporada al plantel | App + panel propio |
-| Admin | Dueño/Inversor del proyecto | Panel de administración completo |
+| Admin_prestadora | Gestión de negocio de la prestadora (rol técnico — distinto del Inversor como persona, ver glosario de `CLAUDE.md`) | Panel de administración completo |
 | Cliente | Contrata el servicio | Portal de seguimiento |
 | Coordinador | Rol operativo | Gestión de su zona |
 
@@ -115,7 +121,7 @@ entrevista (Etapa 3).
 
 Regla de negocio (bloqueante para asignación, no solo informativa): ser monotributista es
 obligatorio para recibir guardias. Si el aspirante no está inscripto, el sistema **bloquea
-la asignación** hasta que Admin confirme el alta de monotributo — este es el mismo campo
+la asignación** hasta que Admin_prestadora confirme el alta de monotributo — este es el mismo campo
 `tipo_vinculo`/monotributo de `asistentes` en `DATA_MODEL.md`, no una tabla nueva.
 
 ### Sección C — Formación y certificaciones
@@ -171,7 +177,7 @@ Mapa geolocalizado del plantel activo agrupado por municipio — al llegar una s
 cliente, filtra automáticamente las Asistentes disponibles más cercanas (mismo componente
 de mapa que `PRD_02_Panel_Admin.md` Módulo 2/3, no duplicar implementación).
 
-## Programa de capacitación (Etapa 5 del Filtro)
+## Programa de capacitación (Etapa 5 del Proceso de Incorporación de Asistentes)
 
 8 horas online en 4 bloques (2hs c/u): 1) La persona mayor, 2) Cuidados esenciales, 3)
 Seguridad y prevención, 4) El rol prestadora-original (incluye uso de la app: check-in/out, reporte

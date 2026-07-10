@@ -125,7 +125,7 @@ No se encontró sitio ni nota de prensa vigente. Parece discontinuado, renombrad
 
 | Nombre | Modelo | Servicios | Precio público | Features tecnológicas | Zona | Notas |
 |---|---|---|---|---|---|---|
-| **prestadora-original Salud** (referencia) | Híbrido: match de Asistentes Integrales verificados + curaduría | Cuidado adultos mayores, acompañamiento integral | No | Verificación de antecedentes + QR + reporte diario con IA (posicionamiento declarado) | CABA/GBA/La Plata | Pre-lanzamiento |
+| **prestadora-original Salud** (referencia) | Híbrido: match de Asistentes Integrales verificados + curaduría | Cuidado de pacientes, acompañamiento integral | No | Verificación de antecedentes + QR + reporte diario con IA (posicionamiento declarado) | CABA/GBA/La Plata | Pre-lanzamiento |
 | EnCasa | Empresa propia, B2B (70 convenios) | Enfermería, internación, cuidadores, rehabilitación | No | Ninguna explícita | Nacional (7 sedes) | 35 años, +70.000 asistidos |
 | Cuidarlos | Match/app | Cuidadores y acompañantes | No | Verificación antecedentes, app móvil, chat/videollamada, tablero de monitoreo en tiempo real | Nacional | "Base más grande de cuidadores de Argentina" |
 | Medincare/SeniorCare | Empresa propia, B2B | Cuidadores, enfermería, paliativos, cicatrización | No | Genérica, sin detalle | +120 localidades | +30 convenios, +5.400 pacientes |

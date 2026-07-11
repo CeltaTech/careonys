@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
+import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
@@ -7,6 +8,7 @@ import { Alert } from '../components/ui/Alert';
 
 export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada }) {
   const { t } = useLocale();
+  const { usuario } = useAuth();
   const esNuevo = !precio;
   const [tipoServicio, setTipoServicio] = useState(precio?.tipo_servicio || '');
   const [modalidad, setModalidad] = useState(precio?.modalidad || '');
@@ -34,7 +36,7 @@ export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada
     };
 
     const { error: errorGuardado } = esNuevo
-      ? await supabase.from('lista_precios').insert(datos)
+      ? await supabase.from('lista_precios').insert({ ...datos, prestadora_id: usuario.prestadora_id })
       : await supabase.from('lista_precios').update(datos).eq('id', precio.id);
 
     if (errorGuardado) {

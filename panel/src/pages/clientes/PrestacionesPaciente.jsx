@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
+import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
@@ -15,6 +16,7 @@ function calcularPrecioFinal(precioLista, tipoDescuento, valorDescuento) {
 
 export function PrestacionesPaciente({ paciente, onClose }) {
   const { t } = useLocale();
+  const { usuario } = useAuth();
   const [listaPrecios, setListaPrecios] = useState([]);
   const [prestaciones, setPrestaciones] = useState([]);
   const [paquetes, setPaquetes] = useState([]);
@@ -108,6 +110,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     setErrorForm(null);
 
     const { error: errorInsert } = await supabase.from('prestaciones').insert({
+      prestadora_id: usuario.prestadora_id,
       paciente_id: paciente.id,
       tipo_servicio: `${precioSeleccionado.tipo_servicio} — ${precioSeleccionado.modalidad}`,
       configuracion: {
@@ -167,6 +170,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     const { data: paqueteCreado, error: errorPaquete_ } = await supabase
       .from('paquetes_prestaciones')
       .insert({
+        prestadora_id: usuario.prestadora_id,
         paciente_id: paciente.id,
         nombre: nombrePaquete,
         precio_paquete: Number(precioPaquete),
@@ -182,6 +186,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     }
 
     const items = seleccionadasParaPaquete.map((prestacionId) => ({
+      prestadora_id: usuario.prestadora_id,
       paquete_id: paqueteCreado.id,
       prestacion_id: prestacionId,
     }));

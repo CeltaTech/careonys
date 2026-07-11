@@ -176,3 +176,66 @@ azul/verde/naranja/rojo, marco legal argentino específico). No usar su contenid
 Algunos de sus patrones **técnicos** (convenciones de schema, estructura de seguridad,
 taxonomía de eventos) sí se adoptaron donde no entraban en conflicto — están señalados
 explícitamente en `docs/DATA_MODEL.md` y `docs/SECURITY.md` con la nota "(patrón adoptado de Money Suite)".
+## REGLA 12 — Control estricto (no negociable, agregada 2026-07-10 por exigencia explícita del Desarrollador)
+
+Estas cuatro reglas se aplican siempre, sin excepción, y van antes que cualquier otra
+consideración de ritmo o autonomía del resto de este documento.
+
+### 12.1 — Confirmación previa por característica, nunca por resumen
+
+Cuando el Desarrollador pide algo con más de una característica (un panel, un flujo, un
+módulo), antes de escribir una sola línea de código se entrega una lista — no un párrafo —
+con una línea por cada característica mencionada en el pedido original, marcada:
+
+- ✅ **Incluida tal cual se pidió**
+- ⚠️ **Incluida con un cambio** — y cuál, y por qué, esperando aprobación antes de seguir
+- ❌ **Excluida** — y el motivo exacto, esperando aprobación antes de seguir
+
+Ninguna característica puede desaparecer adentro de una descripción general ("armé un panel
+simple y funcional"). Si no está en la lista con su marca, no se avanza.
+
+### 12.2 — Confirmación posterior, mismo formato, contra el pedido original
+
+Al terminar, antes de decir "listo", se repite la misma lista — no una demo narrada, no un
+"anda todo bien" — comparando explícitamente contra lo que se prometió en 12.1. Si algo
+cambió en el camino, se marca y se explica, no se entrega en silencio.
+
+### 12.3 — Toda afirmación sobre documentación cita archivo y línea
+
+Nunca "según lo que dice el proyecto..." o "ya estaba resuelto en tal documento" sin decir
+dónde exactamente. Siempre `archivo.md:línea` o `archivo.sql:línea`, verificable por el
+Desarrollador en segundos sin tener que leer código ni entender el contexto — abre el
+archivo, busca la línea, está o no está.
+
+### 12.4 — Ningún pendiente se menciona una sola vez — lista maestra obligatoria
+
+Todo lo que quede abierto (una tarea del usuario, una decisión pendiente, un secreto sin
+cargar, una credencial sin rotar) se agrega a `docs/PENDIENTES.md` con nombre propio, fecha
+de creación, y condición de cierre explícita — nunca queda solo mencionado en una entrada de
+`PROGRESS.md` y de ahí en más a la buena de la memoria de la próxima sesión.
+
+**Antes de que cualquier sesión declare una tarea cerrada**, se revisa `docs/PENDIENTES.md`
+completo, línea por línea contra la lista — no de memoria. Si un ítem sigue abierto, se
+reporta su estado actual (avanzó, sigue igual, se resolvió) en el mismo cierre de sesión, no
+se lo deja pasar en silencio.
+
+Motivo de esta regla, para que quede escrito: el `RAILWAY_TOKEN` pendiente de carga y la
+credencial de Supabase expuesta sin rotar se mencionaron una sola vez cada una, en sesiones
+distintas, y ninguna sesión posterior las volvió a chequear — no porque alguien decidiera que
+no importaban, sino porque no había ningún mecanismo que obligara a que siguieran
+apareciendo. Esta regla existe para que eso no se repita con ningún pendiente futuro.
+
+### 12.5 — Nunca afirmar cobertura o certeza que no se verificó
+
+"Leí todo", "cubrí lo más importante", "está resuelto", "no hay ningún caso más" — ninguna de
+estas frases se puede decir sin haber hecho el chequeo real que la respalda en el momento en
+que se dice, no antes. Si se leyó una parte de un archivo, se dice exactamente qué parte
+(líneas, secciones) y que el resto queda sin revisar — nunca una frase que suene completa
+sobre una revisión parcial. Si no se sabe algo, la respuesta es "no lo verifiqué" o "no tengo
+esa información", no una respuesta con forma seria construida para sonar completa.
+
+Este punto aplica igual a Claude Code y a cualquier otro modelo que trabaje en este proyecto,
+incluido el que redacta este mismo documento cuando actúa como asesor del Desarrollador fuera
+del repositorio. Sonar seguro no es lo mismo que estar en lo cierto, y frente a la duda, la
+frase corta y honesta ("no lo sé", "no lo revisé") siempre gana sobre la frase larga y
+completa que no se puede sostener si se la pone a prueba.

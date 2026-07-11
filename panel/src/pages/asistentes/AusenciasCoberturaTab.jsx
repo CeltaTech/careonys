@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
+import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
@@ -11,6 +12,7 @@ const TIPOS = ['enfermedad_inculpable', 'accidente_inculpable', 'otra_licencia',
 
 export function AusenciasCoberturaTab({ asistente }) {
   const { t } = useLocale();
+  const { usuario } = useAuth();
   const [ausencias, setAusencias] = useState([]);
   const [otrosAsistentes, setOtrosAsistentes] = useState([]);
   const [estado, setEstado] = useState('cargando');
@@ -42,6 +44,7 @@ export function AusenciasCoberturaTab({ asistente }) {
     setGuardando(true);
     setError(null);
     const { error: errorInsert } = await supabase.from('ausencias').insert({
+      prestadora_id: usuario.prestadora_id,
       asistente_id: asistente.id,
       tipo: nueva.tipo,
       fecha_inicio: nueva.fecha_inicio,
@@ -70,6 +73,7 @@ export function AusenciasCoberturaTab({ asistente }) {
     setGuardando(true);
     setError(null);
     const { error: errorInsert } = await supabase.from('guardias_cobertura').insert({
+      prestadora_id: usuario.prestadora_id,
       ausencia_id: ausenciaId,
       asistente_sustituto_id: sustitutoId,
       costo_adicional: coberturaForm[ausenciaId]?.costo_adicional || null,

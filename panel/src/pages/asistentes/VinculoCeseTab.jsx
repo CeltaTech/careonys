@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
+import { useAuth } from '../../context/AuthContext';
 import { useEscalasLegales } from '../../hooks/useEscalasLegales';
 import { resolverEscalasVigentes } from '../../lib/escalasLegales';
 import { calcularCese } from '../../lib/calcularCese';
@@ -23,6 +24,7 @@ const CAUSALES = [
 
 export function VinculoCeseTab({ asistente, onActualizado }) {
   const { t } = useLocale();
+  const { usuario } = useAuth();
   const { filas: escalasCrudas, estado: estadoEscalas } = useEscalasLegales();
   const [ceses, setCeses] = useState([]);
   const [estadoCeses, setEstadoCeses] = useState('cargando');
@@ -70,6 +72,7 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
     setError(null);
 
     const { error: errorCese } = await supabase.from('ceses').insert({
+      prestadora_id: usuario.prestadora_id,
       asistente_id: asistente.id,
       fecha_cese: fechaCese,
       causal,

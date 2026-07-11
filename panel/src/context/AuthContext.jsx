@@ -25,7 +25,7 @@ export function AuthProvider({ children }) {
     async function cargarUsuario(userId) {
       const { data } = await supabase
         .from('usuarios')
-        .select('id, rol, nombre, zonas')
+        .select('id, rol, nombre, zonas, prestadora_id')
         .eq('id', userId)
         .single();
       if (!activo) return;

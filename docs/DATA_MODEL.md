@@ -60,17 +60,24 @@ tenant — no depende solo de que la RLS esté bien escrita. Las tablas de los B
 antes de esta convención) tienen `prestadora_id` como columna simple, sin FK compuesta a sus
 tablas relacionadas; no se retrofitea salvo que se decida explícitamente.
 
-**Deuda técnica pendiente (confirmado por archivo, 2026-07-10 — ningún `DROP DEFAULT` ni
-`schema_multitenant_03.sql` existen en el repo):** `schema_multitenant_02.sql` agregó un
-`DEFAULT '874f54d7-...'` (prestadora_id de prestadora-original) en `prestadora_id` de 14 tablas
-(`usuarios`, `asistentes`, `ausencias`, `guardias_cobertura`, `ceses`, `clientes`,
-`pacientes`, `lista_precios`, `prestaciones`, `paquetes_prestaciones`,
-`paquete_prestacion_items`, `certificados`, `zonas_cobertura`, `solicitudes`,
-`postulaciones`) como parche temporal, mientras el Bloque 3 completaba el filtrado real de
-tenant en las rutas backend. Ese `DEFAULT` **sigue presente hoy** — no se ha quitado con
-ningún `ALTER COLUMN ... DROP DEFAULT`. Quitarlo (para que cada insert deba declarar
-explícitamente su `prestadora_id`, sin caer en prestadora-original por omisión) es trabajo pendiente, no
-bloqueante mientras prestadora-original sea la única prestadora activa.
+**Deuda técnica — cerrada 2026-07-11 (ver `docs/PENDIENTES.md` ítem #3):**
+`schema_multitenant_02.sql` había agregado un `DEFAULT '874f54d7-...'` (prestadora_id de
+prestadora-original) en `prestadora_id` de las 15 tablas de los Bloques 1-3 (`usuarios`, `asistentes`,
+`ausencias`, `guardias_cobertura`, `ceses`, `clientes`, `pacientes`, `lista_precios`,
+`prestaciones`, `paquetes_prestaciones`, `paquete_prestacion_items`, `certificados`,
+`zonas_cobertura`, `solicitudes`, `postulaciones`) como parche temporal, mientras el Bloque 3
+completaba el filtrado real de tenant. 7 de esas 15 (`usuarios`, `asistentes`, `clientes`,
+`pacientes`, `zonas_cobertura`, `solicitudes`, `postulaciones`) se cerraron el 2026-07-10
+directo contra Supabase (sin migración versionada en el repo — deuda de trazabilidad, no de
+funcionalidad). Las 8 restantes (`ausencias`, `guardias_cobertura`, `ceses`,
+`lista_precios`, `prestaciones`, `paquetes_prestaciones`, `paquete_prestacion_items`,
+`certificados`) se cerraron el 2026-07-11 con `backend/src/db/schema_multitenant_03.sql`,
+aplicado contra Supabase real vía MCP y verificado con un insert real sin `prestadora_id`
+contra `certificados` que falló como se esperaba (`ERROR 23502: null value in column
+"prestadora_id" ... violates not-null constraint`). Las 15 tablas ya no tienen `DEFAULT`:
+todo insert nuevo debe declarar `prestadora_id` explícito. `guardias`/`series_guardias`
+(Módulo 6) nunca tuvieron este `DEFAULT` — nacieron `NOT NULL` sin default desde
+`schema_modulo6_guardias.sql`.
 
 ## Tabla: usuarios
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
+import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
@@ -10,6 +11,7 @@ const DIAS_GENERACION_SIN_VIGENCIA_HASTA = 90;
 
 export function NuevaGuardiaModal({ onClose, onCreada }) {
   const { t } = useLocale();
+  const { usuario } = useAuth();
   const [esSerie, setEsSerie] = useState(false);
   const [asistentes, setAsistentes] = useState([]);
   const [pacientes, setPacientes] = useState([]);
@@ -70,6 +72,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
 
     if (!esSerie) {
       const { error: errorInsert } = await supabase.from('guardias').insert({
+        prestadora_id: usuario.prestadora_id,
         asistente_id: asistenteId,
         paciente_id: pacienteId,
         fecha,
@@ -89,6 +92,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
     const { data: serie, error: errorSerie } = await supabase
       .from('series_guardias')
       .insert({
+        prestadora_id: usuario.prestadora_id,
         asistente_id: asistenteId,
         paciente_id: pacienteId,
         dias_semana: diasSemana,
@@ -109,6 +113,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
 
     const fechas = generarFechasSerie(vigenteDesde, vigenteHasta, diasSemana);
     const filasGuardias = fechas.map((f) => ({
+      prestadora_id: usuario.prestadora_id,
       serie_id: serie.id,
       asistente_id: asistenteId,
       paciente_id: pacienteId,

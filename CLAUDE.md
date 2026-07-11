@@ -239,3 +239,17 @@ incluido el que redacta este mismo documento cuando actúa como asesor del Desar
 del repositorio. Sonar seguro no es lo mismo que estar en lo cierto, y frente a la duda, la
 frase corta y honesta ("no lo sé", "no lo revisé") siempre gana sobre la frase larga y
 completa que no se puede sostener si se la pone a prueba.
+
+### 12.6 — Cruzar activamente contra lo ya decidido, no solo haberlo leído
+
+Haber leído un documento no significa haberlo aplicado. Antes de presentar cualquier análisis,
+diseño o recomendación nueva, enumerar explícitamente qué decisiones o hechos ya documentados
+en `CLAUDE.md`/`PROGRESS.md`/los PRD son relevantes para lo que se está por decir, y confirmar
+si la conclusión nueva es consistente con ellos — o señalar el conflicto si no lo es. No
+alcanza con haber leído el documento una vez al empezar la sesión; hay que volver a él
+activamente cada vez que el tema analizado lo toque, aunque ya se haya leído hace un rato.
+Motivo: en esta misma conversación, un análisis de competencia trató el modelo match de
+prestadora-original como una fase futura y separada del modelo directo, cuando `CLAUDE.md` ya decía
+explícitamente que los dos conviven en paralelo — el dato estaba leído, fresco, y no se cruzó
+contra el análisis nuevo hasta que el Desarrollador lo señaló. No fue un dato perdido; fue un
+dato ignorado en el momento de usarlo.

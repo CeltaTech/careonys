@@ -18,12 +18,17 @@ export function GuardiaAcciones({ guardia, onClose, onActualizada }) {
     setError(null);
     setProcesando(true);
     const { error: errorUpdate } = await supabase.from('guardias').update(cambios).eq('id', guardia.id);
-    setProcesando(false);
     if (errorUpdate) {
+      setProcesando(false);
       setError(errorUpdate.message);
       return;
     }
-    onActualizada();
+    // Se espera a que termine la recarga del listado antes de cerrar el modal,
+    // para que la card ya muestre el estado nuevo en el momento en que
+    // desaparece el detalle — sin esto quedaba una ventana donde el listado
+    // todavía tenía los datos viejos hasta el próximo recargar manual.
+    await onActualizada();
+    setProcesando(false);
     onClose();
   }
 

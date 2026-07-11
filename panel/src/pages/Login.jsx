@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
@@ -8,12 +8,23 @@ import { Alert } from '../components/ui/Alert';
 
 export function Login() {
   const { t } = useLocale();
-  const { login } = useAuth();
+  const { login, session, usuario } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
+
+  // AuthContext actualiza session/usuario de forma asíncrona (listener
+  // onAuthStateChange), no en el mismo tick en que login() resuelve — navegar
+  // a "/" inmediatamente después de login() usaba el estado viejo (todavía sin
+  // sesión) y ProtectedRoute rebotaba de vuelta acá. Se redirige recién cuando
+  // el estado de auth ya está resuelto de verdad.
+  useEffect(() => {
+    if (session && usuario) {
+      navigate('/', { replace: true });
+    }
+  }, [session, usuario, navigate]);
 
   async function handleSubmit(evento) {
     evento.preventDefault();
@@ -25,10 +36,7 @@ export function Login() {
     if (errorLogin) {
       setError(t.auth.error_credenciales);
       setEnviando(false);
-      return;
     }
-
-    navigate('/', { replace: true });
   }
 
   return (

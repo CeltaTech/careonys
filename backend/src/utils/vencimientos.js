@@ -42,6 +42,7 @@ export async function revisarVencimientos() {
     try {
       await enviarEmailCoordinador({
         evento,
+        prestadoraId: prestadora-original_PRESTADORA_ID,
         asunto: `Vencimientos próximos de ${etiqueta} — ${asistentes.length} Asistente(s)`,
         texto: `Los siguientes Asistentes tienen ${etiqueta} vencido o por vencer dentro de ${DIAS_ANTICIPACION} días:\n\n${lista}`,
       });

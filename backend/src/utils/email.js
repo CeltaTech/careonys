@@ -13,22 +13,31 @@ const transporter = nodemailer.createTransport({
 });
 
 // Destinatarios configurables desde el Panel (Módulo 8 > Notificaciones) en vez de
-// hardcodeados. Si el evento no tiene emails cargados (o está desactivado), cae al inbox
-// operativo por defecto para no perder el aviso.
-async function destinatariosEvento(evento) {
+// hardcodeados. configuracion_notificaciones es por prestadora desde 2026-07-13
+// (backend/src/db/schema_whatsapp_ia_01.sql sección 0) — antes era una fila global por
+// evento, compartida sin darse cuenta por todas las prestadoras licenciatarias.
+// Si el evento no tiene emails cargados (o está desactivado), cae al inbox operativo por
+// defecto para no perder el aviso.
+async function configuracionEvento(evento, prestadoraId) {
   const { data } = await supabase
     .from('configuracion_notificaciones')
-    .select('emails, activo')
+    .select('emails, activo, whatsapp_activo')
     .eq('evento', evento)
+    .eq('prestadora_id', prestadoraId)
     .single();
 
+  return data;
+}
+
+async function destinatariosEvento(evento, prestadoraId) {
+  const data = await configuracionEvento(evento, prestadoraId);
   if (data && data.activo === false) return [];
   if (data?.emails?.length) return data.emails;
   return [process.env.SMTP_USER];
 }
 
-export async function enviarEmailCoordinador({ evento, asunto, texto }) {
-  const destinatarios = await destinatariosEvento(evento);
+export async function enviarEmailCoordinador({ evento, prestadoraId, asunto, texto }) {
+  const destinatarios = await destinatariosEvento(evento, prestadoraId);
   if (destinatarios.length === 0) return;
 
   await transporter.sendMail({
@@ -38,6 +47,8 @@ export async function enviarEmailCoordinador({ evento, asunto, texto }) {
     text: texto,
   });
 }
+
+export { configuracionEvento };
 
 export async function enviarEmail({ to, asunto, texto }) {
   await transporter.sendMail({

@@ -23,7 +23,7 @@ async function llamarApi(path, opciones = {}) {
   return resultado;
 }
 
-const TABS = ['empresa', 'zonas', 'servicios', 'notificaciones'];
+const TABS = ['empresa', 'zonas', 'servicios', 'notificaciones', 'whatsapp'];
 const ROLES_RELEVO = ['suplente', 'franquero', 'emergencia', 'familiar'];
 const TIPOS_PERSONAL_EMERGENCIA = ['franquero', 'emergencia'];
 
@@ -53,6 +53,7 @@ export function Configuracion() {
         {tab === 'zonas' && <TabZonas />}
         {tab === 'servicios' && <TabServicios />}
         {tab === 'notificaciones' && <TabNotificaciones />}
+        {tab === 'whatsapp' && <TabWhatsapp />}
       </div>
     </div>
   );
@@ -624,7 +625,7 @@ function TabNotificaciones() {
     try {
       await llamarApi(`/notificaciones/${fila.evento}`, {
         method: 'PATCH',
-        body: JSON.stringify({ emails: fila.emails, activo: fila.activo }),
+        body: JSON.stringify({ emails: fila.emails, activo: fila.activo, whatsapp_activo: fila.whatsapp_activo }),
       });
     } catch (err) {
       setError(err.message);
@@ -641,6 +642,7 @@ function TabNotificaciones() {
             <th>{t.configuracion.notificaciones_col_evento}</th>
             <th>{t.configuracion.notificaciones_col_emails}</th>
             <th>{t.configuracion.notificaciones_col_activo}</th>
+            <th>{t.configuracion.notificaciones_col_whatsapp_activo}</th>
             <th></th>
           </tr>
         </thead>
@@ -660,6 +662,9 @@ function TabNotificaciones() {
                 <input type="checkbox" checked={fila.activo} onChange={(e) => set(fila.evento, 'activo', e.target.checked)} />
               </td>
               <td>
+                <input type="checkbox" checked={fila.whatsapp_activo || false} onChange={(e) => set(fila.evento, 'whatsapp_activo', e.target.checked)} />
+              </td>
+              <td>
                 <button onClick={() => guardar(fila)} disabled={guardandoEvento === fila.evento}>
                   {guardandoEvento === fila.evento ? t.comun.guardando : t.comun.guardar}
                 </button>
@@ -669,5 +674,367 @@ function TabNotificaciones() {
         </tbody>
       </table>
     </EstadoLista>
+  );
+}
+
+const CATEGORIAS_PLANTILLA = ['utility', 'marketing', 'authentication'];
+
+function TabWhatsapp() {
+  return (
+    <div>
+      <TabWhatsappCredenciales />
+      <TabWhatsappPlantillas />
+      <TabWhatsappEscaladaCoordinador />
+    </div>
+  );
+}
+
+function TabWhatsappCredenciales() {
+  const { t } = useLocale();
+  const [form, setForm] = useState(null);
+  const [token, setToken] = useState('');
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [guardando, setGuardando] = useState(false);
+  const [guardado, setGuardado] = useState(false);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const { whatsapp } = await llamarApi('/whatsapp');
+      setForm(whatsapp);
+      setEstado('listo');
+    } catch (err) {
+      setError(err.message);
+      setEstado('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  function set(campo, valor) {
+    setForm((f) => ({ ...f, [campo]: valor }));
+    setGuardado(false);
+  }
+
+  async function guardar() {
+    setGuardando(true);
+    setError(null);
+    try {
+      await llamarApi('/whatsapp', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          activo: form.activo,
+          numero_telefono: form.numero_telefono,
+          waba_id: form.waba_id,
+          phone_number_id: form.phone_number_id,
+          token: token || undefined,
+        }),
+      });
+      setToken('');
+      setGuardado(true);
+      recargar();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <div>
+      <h2>{t.configuracion.whatsapp_credenciales_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.whatsapp_credenciales_explicacion}</p>
+      <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
+        {form && (
+          <div>
+            {error && <Alert variant="error">{error}</Alert>}
+            {guardado && <Alert variant="info">{t.comun.guardar} ✓</Alert>}
+            <FormField
+              label={t.configuracion.whatsapp_activo}
+              name="activo"
+              type="checkbox"
+              checked={form.activo || false}
+              onChange={(e) => set('activo', e.target.checked)}
+            />
+            <FormField label={t.configuracion.whatsapp_numero} name="numero_telefono" value={form.numero_telefono || ''} onChange={(e) => set('numero_telefono', e.target.value)} />
+            <FormField label={t.configuracion.whatsapp_waba_id} name="waba_id" value={form.waba_id || ''} onChange={(e) => set('waba_id', e.target.value)} />
+            <FormField label={t.configuracion.whatsapp_phone_number_id} name="phone_number_id" value={form.phone_number_id || ''} onChange={(e) => set('phone_number_id', e.target.value)} />
+            <FormField
+              label={form.token_cargado ? t.configuracion.whatsapp_token_reemplazar : t.configuracion.whatsapp_token_cargar}
+              name="token"
+              type="password"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+            />
+            <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+          </div>
+        )}
+      </EstadoLista>
+    </div>
+  );
+}
+
+function TabWhatsappPlantillas() {
+  const { t } = useLocale();
+  const [plantillas, setPlantillas] = useState([]);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [creandoNueva, setCreandoNueva] = useState(false);
+  const [actualizandoId, setActualizandoId] = useState(null);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const { plantillas: filas } = await llamarApi('/whatsapp/plantillas');
+      setPlantillas(filas);
+      setEstado('listo');
+    } catch (err) {
+      setError(err.message);
+      setEstado('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  async function marcarEnviadaMeta(fila) {
+    setActualizandoId(fila.id);
+    try {
+      await llamarApi(`/whatsapp/plantillas/${fila.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ estado: 'enviada_meta' }),
+      });
+      recargar();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setActualizandoId(null);
+    }
+  }
+
+  async function borrar(fila) {
+    if (!window.confirm(t.configuracion.whatsapp_plantillas_confirmar_borrar)) return;
+    setActualizandoId(fila.id);
+    try {
+      await llamarApi(`/whatsapp/plantillas/${fila.id}`, { method: 'DELETE' });
+      recargar();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setActualizandoId(null);
+    }
+  }
+
+  return (
+    <div>
+      <h2>{t.configuracion.whatsapp_plantillas_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.whatsapp_plantillas_explicacion}</p>
+      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
+      <div className="panel-filtros">
+        <Button onClick={() => setCreandoNueva(true)}>{t.configuracion.whatsapp_plantillas_nueva}</Button>
+      </div>
+      <EstadoLista
+        estado={estado}
+        error={error}
+        vacio={estado === 'listo' && plantillas.length === 0}
+        recargar={recargar}
+        mensajeVacio={t.configuracion.whatsapp_plantillas_vacio}
+      >
+        <table className="panel-tabla">
+          <thead>
+            <tr>
+              <th>{t.configuracion.whatsapp_plantillas_col_nombre}</th>
+              <th>{t.configuracion.whatsapp_plantillas_col_categoria}</th>
+              <th>{t.configuracion.whatsapp_plantillas_col_estado}</th>
+              <th>{t.configuracion.whatsapp_plantillas_col_cuerpo}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {plantillas.map((p) => (
+              <tr key={p.id}>
+                <td>{p.nombre_interno}</td>
+                <td>{p.categoria}</td>
+                <td>{t.configuracion[`whatsapp_plantillas_estado_${p.estado}`]}</td>
+                <td>{p.cuerpo_texto}</td>
+                <td>
+                  {p.estado === 'borrador' && (
+                    <button onClick={() => marcarEnviadaMeta(p)} disabled={actualizandoId === p.id}>
+                      {t.configuracion.whatsapp_plantillas_enviar_meta}
+                    </button>
+                  )}
+                  <button onClick={() => borrar(p)} disabled={actualizandoId === p.id}>{t.comun.borrar}</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </EstadoLista>
+
+      {creandoNueva && (
+        <NuevaPlantillaWhatsapp onClose={() => setCreandoNueva(false)} onCreada={() => { setCreandoNueva(false); recargar(); }} />
+      )}
+    </div>
+  );
+}
+
+function NuevaPlantillaWhatsapp({ onClose, onCreada }) {
+  const { t } = useLocale();
+  const [nombreInterno, setNombreInterno] = useState('');
+  const [categoria, setCategoria] = useState('utility');
+  const [cuerpoTexto, setCuerpoTexto] = useState('');
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function handleGuardar() {
+    setGuardando(true);
+    setError(null);
+    try {
+      await llamarApi('/whatsapp/plantillas', {
+        method: 'POST',
+        body: JSON.stringify({ nombre_interno: nombreInterno, categoria, cuerpo_texto: cuerpoTexto }),
+      });
+      onCreada();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <div className="panel-modal-fondo" onClick={onClose}>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
+        <h2>{t.configuracion.whatsapp_plantillas_nueva}</h2>
+        {error && <Alert variant="error">{error}</Alert>}
+        <FormField label={t.configuracion.whatsapp_plantillas_col_nombre} name="nombre_interno" value={nombreInterno} onChange={(e) => setNombreInterno(e.target.value)} required />
+        <FormField label={t.configuracion.whatsapp_plantillas_col_categoria} name="categoria" type="select" value={categoria} onChange={(e) => setCategoria(e.target.value)}>
+          {CATEGORIAS_PLANTILLA.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </FormField>
+        <FormField label={t.configuracion.whatsapp_plantillas_col_cuerpo} name="cuerpo_texto" type="textarea" value={cuerpoTexto} onChange={(e) => setCuerpoTexto(e.target.value)} required />
+        <div className="panel-modal-acciones">
+          <Button variant="secondary" onClick={onClose} disabled={guardando}>{t.comun.cancelar}</Button>
+          <Button onClick={handleGuardar} disabled={guardando || !nombreInterno || !cuerpoTexto}>
+            {guardando ? t.comun.guardando : t.comun.guardar}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TabWhatsappEscaladaCoordinador() {
+  const { t } = useLocale();
+  const [form, setForm] = useState(null);
+  const [coordinadores, setCoordinadores] = useState([]);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [guardando, setGuardando] = useState(false);
+  const [guardado, setGuardado] = useState(false);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const [{ escalada }, { data: usuariosData, error: errorUsuarios }] = await Promise.all([
+        llamarApi('/escalada-coordinador'),
+        supabase.from('usuarios').select('id, nombre').eq('rol', 'coordinador').order('nombre'),
+      ]);
+      if (errorUsuarios) throw errorUsuarios;
+      setForm(escalada);
+      setCoordinadores(usuariosData ?? []);
+      setEstado('listo');
+    } catch (err) {
+      setError(err.message);
+      setEstado('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  function set(campo, valor) {
+    setForm((f) => ({ ...f, [campo]: valor }));
+    setGuardado(false);
+  }
+
+  async function guardar() {
+    setGuardando(true);
+    setError(null);
+    try {
+      await llamarApi('/escalada-coordinador', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          coordinador_backup_id: form.coordinador_backup_id || null,
+          minutos_antes_backup: Number(form.minutos_antes_backup),
+          umbrales_premura: form.umbrales_premura,
+          fase_automatica_activa: form.fase_automatica_activa,
+          minutos_antes_fase_automatica: Number(form.minutos_antes_fase_automatica),
+        }),
+      });
+      setGuardado(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <div>
+      <h2>{t.configuracion.whatsapp_escalada_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.whatsapp_escalada_explicacion}</p>
+      <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
+        {form && (
+          <div>
+            {error && <Alert variant="error">{error}</Alert>}
+            {guardado && <Alert variant="info">{t.comun.guardar} ✓</Alert>}
+            <FormField
+              label={t.configuracion.whatsapp_escalada_backup}
+              name="coordinador_backup_id"
+              type="select"
+              value={form.coordinador_backup_id || ''}
+              onChange={(e) => set('coordinador_backup_id', e.target.value)}
+            >
+              <option value="">{t.configuracion.escalada_prioridad_vacio}</option>
+              {coordinadores.map((c) => (
+                <option key={c.id} value={c.id}>{c.nombre}</option>
+              ))}
+            </FormField>
+            <FormField
+              label={t.configuracion.whatsapp_escalada_minutos_backup}
+              name="minutos_antes_backup"
+              type="number"
+              value={form.minutos_antes_backup ?? ''}
+              onChange={(e) => set('minutos_antes_backup', e.target.value)}
+            />
+            <FormField
+              label={t.configuracion.whatsapp_escalada_fase_automatica}
+              name="fase_automatica_activa"
+              type="checkbox"
+              checked={form.fase_automatica_activa || false}
+              onChange={(e) => set('fase_automatica_activa', e.target.checked)}
+            />
+            <FormField
+              label={t.configuracion.whatsapp_escalada_minutos_fase_automatica}
+              name="minutos_antes_fase_automatica"
+              type="number"
+              value={form.minutos_antes_fase_automatica ?? ''}
+              onChange={(e) => set('minutos_antes_fase_automatica', e.target.value)}
+            />
+            <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+          </div>
+        )}
+      </EstadoLista>
+    </div>
   );
 }

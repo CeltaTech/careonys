@@ -175,18 +175,160 @@ panelConfiguracionRouter.delete('/personal-emergencia/:id', async (req, res) => 
 });
 
 // --- Configuración de notificaciones ---
+// configuracion_notificaciones pasó a ser por prestadora el 2026-07-13
+// (backend/src/db/schema_whatsapp_ia_01.sql sección 0) — antes era una fila global por
+// evento, compartida sin darse cuenta por todas las prestadoras licenciatarias.
 panelConfiguracionRouter.get('/notificaciones', async (req, res) => {
-  const { data, error } = await supabase.from('configuracion_notificaciones').select('*').order('evento');
+  let query = supabase.from('configuracion_notificaciones').select('*').order('evento');
+  if (req.usuarioPanel.rol !== 'superadmin') {
+    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  }
+  const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json({ notificaciones: data });
 });
 
 panelConfiguracionRouter.patch('/notificaciones/:evento', async (req, res) => {
-  const { emails, activo } = req.body;
-  const { error } = await supabase
+  const { emails, activo, whatsapp_activo } = req.body;
+  let query = supabase
     .from('configuracion_notificaciones')
-    .update({ emails, activo })
+    .update({ emails, activo, whatsapp_activo })
     .eq('evento', req.params.evento);
+  if (req.usuarioPanel.rol !== 'superadmin') {
+    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  }
+  const { error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// --- WhatsApp: credenciales de Meta Cloud API (Supabase Vault, ver
+//     backend/src/db/schema_whatsapp_ia_01.sql secciones 1-2 — el token nunca vuelve a
+//     mostrarse en el Panel una vez guardado) ---
+panelConfiguracionRouter.get('/whatsapp', async (req, res) => {
+  const prestadoraId = req.usuarioPanel.rol === 'superadmin' && req.query.prestadora_id
+    ? req.query.prestadora_id
+    : req.usuarioPanel.prestadoraId;
+  const { data, error } = await supabase
+    .from('configuracion_whatsapp_prestadora')
+    .select('prestadora_id, activo, numero_telefono, waba_id, phone_number_id, verificado_at, updated_at')
+    .eq('prestadora_id', prestadoraId)
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ whatsapp: { ...data, token_cargado: Boolean(data) } });
+});
+
+panelConfiguracionRouter.patch('/whatsapp', async (req, res) => {
+  const { activo, numero_telefono, waba_id, phone_number_id, token } = req.body;
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+
+  const { error } = await supabase
+    .from('configuracion_whatsapp_prestadora')
+    .upsert({
+      prestadora_id: prestadoraId,
+      activo,
+      numero_telefono,
+      waba_id,
+      phone_number_id,
+      updated_at: new Date().toISOString(),
+    });
+  if (error) return res.status(500).json({ error: error.message });
+
+  if (token) {
+    const { error: errorToken } = await supabase.rpc('guardar_token_whatsapp', {
+      p_prestadora_id: prestadoraId,
+      p_token: token,
+    });
+    if (errorToken) return res.status(500).json({ error: errorToken.message });
+  }
+
+  res.json({ ok: true });
+});
+
+// --- WhatsApp: plantillas de mensaje (requieren aprobación de Meta antes de poder
+//     usarse para un mensaje que la prestadora inicia) ---
+panelConfiguracionRouter.get('/whatsapp/plantillas', async (req, res) => {
+  let query = supabase.from('plantillas_whatsapp').select('*').order('created_at', { ascending: false });
+  if (req.usuarioPanel.rol !== 'superadmin') {
+    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  }
+  const { data, error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ plantillas: data });
+});
+
+panelConfiguracionRouter.post('/whatsapp/plantillas', async (req, res) => {
+  const { nombre_interno, categoria, idioma, cuerpo_texto } = req.body;
+  if (!nombre_interno || !categoria || !cuerpo_texto) {
+    return res.status(400).json({ error: 'Faltan nombre_interno, categoria o cuerpo_texto' });
+  }
+  const { error } = await supabase.from('plantillas_whatsapp').insert({
+    nombre_interno,
+    categoria,
+    idioma: idioma || 'es-AR',
+    cuerpo_texto,
+    prestadora_id: req.usuarioPanel.prestadoraId,
+    created_by: req.usuarioPanel.id,
+  });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+panelConfiguracionRouter.patch('/whatsapp/plantillas/:id', async (req, res) => {
+  const { cuerpo_texto, estado, meta_template_id, motivo_rechazo } = req.body;
+  let query = supabase
+    .from('plantillas_whatsapp')
+    .update({ cuerpo_texto, estado, meta_template_id, motivo_rechazo, updated_at: new Date().toISOString() })
+    .eq('id', req.params.id);
+  if (req.usuarioPanel.rol !== 'superadmin') {
+    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  }
+  const { error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+panelConfiguracionRouter.delete('/whatsapp/plantillas/:id', async (req, res) => {
+  let query = supabase.from('plantillas_whatsapp').delete().eq('id', req.params.id);
+  if (req.usuarioPanel.rol !== 'superadmin') {
+    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  }
+  const { error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// --- Escalada a Coordinador: respaldo + intervalos de insistencia según premura
+//     (punto 5 de docs/PRD_06_WhatsApp_IA.md) ---
+panelConfiguracionRouter.get('/escalada-coordinador', async (req, res) => {
+  const prestadoraId = req.usuarioPanel.rol === 'superadmin' && req.query.prestadora_id
+    ? req.query.prestadora_id
+    : req.usuarioPanel.prestadoraId;
+  const { data, error } = await supabase
+    .from('configuracion_escalada_coordinador')
+    .select('*')
+    .eq('prestadora_id', prestadoraId)
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ escalada: data });
+});
+
+panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
+  const {
+    coordinador_backup_id, minutos_antes_backup, umbrales_premura,
+    fase_automatica_activa, minutos_antes_fase_automatica,
+  } = req.body;
+  const { error } = await supabase
+    .from('configuracion_escalada_coordinador')
+    .upsert({
+      prestadora_id: req.usuarioPanel.prestadoraId,
+      coordinador_backup_id,
+      minutos_antes_backup,
+      umbrales_premura,
+      fase_automatica_activa,
+      minutos_antes_fase_automatica,
+      updated_at: new Date().toISOString(),
+    });
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
 });

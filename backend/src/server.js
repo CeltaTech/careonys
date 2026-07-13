@@ -10,6 +10,8 @@ import { panelConfiguracionRouter } from './routes/panelConfiguracion.js';
 import { configuracionPublicaRouter } from './routes/configuracionPublica.js';
 import { revisarVencimientos } from './utils/vencimientos.js';
 import { revisarAusenciasAutomaticas } from './utils/ausenciaAutomatica.js';
+import { revisarNotificacionesCoordinador } from './utils/revisarNotificacionesCoordinador.js';
+import { whatsappWebhookRouter } from './routes/whatsappWebhook.js';
 
 const app = express();
 app.use(cors());
@@ -26,6 +28,7 @@ app.use('/api/panel/cuentas', panelCuentasRouter);
 app.use('/api/panel/usuarios', panelUsuariosRouter);
 app.use('/api/panel/configuracion', panelConfiguracionRouter);
 app.use('/api/configuracion-publica', configuracionPublicaRouter);
+app.use('/api/whatsapp-webhook', whatsappWebhookRouter);
 
 const UN_DIA_MS = 24 * 60 * 60 * 1000;
 revisarVencimientos().catch((err) => console.error('Error en revisión inicial de vencimientos:', err.message));
@@ -39,6 +42,13 @@ const CINCO_MINUTOS_MS = 5 * 60 * 1000;
 revisarAusenciasAutomaticas().catch((err) => console.error('Error en revisión inicial de ausencias automáticas:', err.message));
 setInterval(() => {
   revisarAusenciasAutomaticas().catch((err) => console.error('Error en revisión de ausencias automáticas:', err.message));
+}, CINCO_MINUTOS_MS);
+
+// Insistencia de Coordinador (punto 5, docs/PRD_06_WhatsApp_IA.md) — corre con la misma
+// cadencia que revisarAusenciasAutomaticas porque también se mide en minutos, no en días.
+revisarNotificacionesCoordinador().catch((err) => console.error('Error en revisión inicial de notificaciones al Coordinador:', err.message));
+setInterval(() => {
+  revisarNotificacionesCoordinador().catch((err) => console.error('Error en revisión de notificaciones al Coordinador:', err.message));
 }, CINCO_MINUTOS_MS);
 
 const PORT = process.env.PORT || 4000;

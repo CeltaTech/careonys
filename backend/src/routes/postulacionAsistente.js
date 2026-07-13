@@ -39,6 +39,7 @@ postulacionAsistenteRouter.post('/', async (req, res) => {
   try {
     await enviarEmailCoordinador({
       evento: 'nueva_postulacion_asistente',
+      prestadoraId: prestadora-original_PRESTADORA_ID,
       asunto: `Nueva postulación de Asistente — ${nombre}`,
       texto: `Nombre: ${nombre}\nDNI: ${dni}\nTeléfono: ${telefono}\nEmail: ${email}\nEspecialidades: ${especialidades}\nZonas: ${zonas}\nDisponibilidad: ${disponibilidad}\nSituación fiscal: ${situacion_fiscal}`,
     });

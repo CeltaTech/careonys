@@ -254,3 +254,24 @@ prestadora-original como una fase futura y separada del modelo directo, cuando `
 explícitamente que los dos conviven en paralelo — el dato estaba leído, fresco, y no se cruzó
 contra el análisis nuevo hasta que el Desarrollador lo señaló. No fue un dato perdido; fue un
 dato ignorado en el momento de usarlo.
+
+## REGLA 13 — Despliegue y aplicación de schema (no negociable, agregada 2026-07-13 tras repetirse un bug ya documentado)
+
+### 13.1 — Vercel no tiene auto-deploy: correr `vercel --prod` es parte de terminar la tarea, no un paso opcional
+
+Si la sesión modificó código de `panel/` (o `sitio-web/`, mismo mecanismo), la tarea **no**
+está terminada solo con el commit/push a GitHub — hay que correr `vercel --prod` desde el
+directorio correspondiente antes de reportar el cambio como desplegado o probarlo en
+producción. Este gap ya estaba documentado en `docs/PROGRESS.md:433-434` y aun así causó una
+sesión entera de debugging el 2026-07-13 (pendientes #17/#21 de `docs/PENDIENTES.md`) porque
+estar escrito en un doc de referencia no bastó — tiene que ser un paso obligatorio del
+protocolo de cierre de cualquier tarea que toque `panel/` o `sitio-web/`, no una nota que hay
+que acordarse de ir a leer.
+
+### 13.2 — Todo `.sql` que crea tablas nuevas contra Supabase termina con `NOTIFY pgrst, 'reload schema';`
+
+Cuando se aplica un schema nuevo directamente contra Supabase (no vía su UI de migraciones),
+el último paso del mismo procedimiento — no uno separado, ni "si hace falta" — es correr
+`NOTIFY pgrst, 'reload schema';` en el SQL Editor. Sin este paso, PostgREST puede devolver 404
+en tablas que sí existen, como pasó el 2026-07-13 con `alertas_tempranas_guardia`/
+`configuracion_ausencia_automatica` (pendiente #21 de `docs/PENDIENTES.md`).

@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { supabase } from '../../lib/supabaseClient';
 import { obtenerUbicacion } from '../../lib/ubicacion';
+import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 
 export function GuardiaAcciones({ guardia, onClose, onActualizada }) {
   const { t } = useLocale();
+  const { usuario } = useAuth();
   const [medioTransporte, setMedioTransporte] = useState('');
   const [cancelacionOrigen, setCancelacionOrigen] = useState('');
   const [cancelacionAlcance, setCancelacionAlcance] = useState('');
@@ -52,9 +54,47 @@ export function GuardiaAcciones({ guardia, onClose, onActualizada }) {
     actualizar({ estado: 'cancelada', cancelacion_origen: cancelacionOrigen, cancelacion_alcance: cancelacionAlcance });
   }
 
-  function handleMarcarAusente() {
+  async function handleMarcarAusente() {
     if (!window.confirm(t.guardias.detalle.confirmar_ausente)) return;
-    actualizar({ estado: 'ausente' });
+    setError(null);
+    setProcesando(true);
+
+    const { error: errorUpdate } = await supabase.from('guardias').update({ estado: 'ausente' }).eq('id', guardia.id);
+    if (errorUpdate) {
+      setProcesando(false);
+      setError(errorUpdate.message);
+      return;
+    }
+
+    // Busca si había un Asistente de prestadora-original cubriendo justo antes, el mismo día, para
+    // este Paciente — si no hay ninguna, es el caso "Ausente sin relevo previo" del
+    // glosario de CLAUDE.md (ej. primera guardia del día) y guardia_saliente_id queda NULL.
+    const { data: candidatas } = await supabase
+      .from('guardias')
+      .select('id, hora_fin')
+      .eq('paciente_id', guardia.paciente_id)
+      .eq('fecha', guardia.fecha)
+      .neq('estado', 'cancelada')
+      .neq('id', guardia.id)
+      .lte('hora_fin', guardia.hora_inicio)
+      .order('hora_fin', { ascending: false })
+      .limit(1);
+
+    const { error: errorIncidente } = await supabase.from('incidentes_relevo').insert({
+      prestadora_id: usuario.prestadora_id,
+      guardia_saliente_id: candidatas?.[0]?.id ?? null,
+      guardia_entrante_id: guardia.id,
+      nivel_actual: 1,
+    });
+    if (errorIncidente) {
+      setProcesando(false);
+      setError(errorIncidente.message);
+      return;
+    }
+
+    await onActualizada();
+    setProcesando(false);
+    onClose();
   }
 
   const puedeRegistrarSalida = guardia.estado === 'programada' && !guardia.salida_checkin_at;

@@ -10,7 +10,7 @@
 |---|---|---|
 | 0 | Setup: repo, estructura, variables de entorno | 🟢 Completo |
 | 1 | Sitio web público (páginas + formularios + backend) | 🟡 En progreso |
-| 2 | Panel de administración (Módulos 1-5 + primer corte de precios/Prestaciones + gestión de usuarios del Panel + Proceso de Incorporación + Certificado prestadora-original + rol Superadmin real + Módulo 8 Configuración) | 🟢 Desplegado a producción (2026-07-08): https://prestadora-original-panel.vercel.app — Módulo 6 Parte 1 (Guardias core) construida 2026-07-10, desplegada y probada en navegador real 2026-07-11 (ver pendiente #6 en `PENDIENTES.md`); Módulo 6 Partes 2-3 y Módulo 7 pendientes |
+| 2 | Panel de administración (Módulos 1-5 + primer corte de precios/Prestaciones + gestión de usuarios del Panel + Proceso de Incorporación + Certificado prestadora-original + rol Superadmin real + Módulo 8 Configuración) | 🟢 Desplegado a producción (2026-07-08): https://prestadora-original-panel.vercel.app — Módulo 6 Parte 1 (Guardias core) construida 2026-07-10, desplegada y probada en navegador real 2026-07-11 (ver pendiente #6 en `PENDIENTES.md`); Módulo 6 Parte 2 (Continuidad de guardia) construida y probada en navegador real (ver fila 2026-07-12 de la tabla en `docs/PROGRESS.md`, sección "Archivos creados/modificados por sesión"), **todavía no commiteada ni desplegada a Vercel**; Módulo 6 Parte 3 y Módulo 7 pendientes |
 | 2B | Gestión de Personal (vínculo/cese/riesgo/cobertura) | 🟢 Completo — código listo y SQL aplicado/verificado contra Supabase real |
 | 3 | PWA Asistentes (login, guardias, GPS, reporte + IA) | 🔴 No iniciado — desbloqueada: Etapa 2 ya está desplegada (regla de secuencia de `BUILD_ORDER.md`) |
 | 4 | PWA Clientes (login, reportes, alertas) | 🔴 No iniciado |
@@ -1249,6 +1249,77 @@ válido, contenido real de `pg_dump` (63 `CREATE TABLE`) e idéntico byte a byte
 Postgres de prueba disponible en esta sesión; queda anotado en el detalle del pendiente #4
 como el único nivel de verificación no cubierto, en vez de darlo por hecho sin más.
 
+## Actualización — Pestaña "Servicios" en Módulo 8 (Configuración): CRUD de escalada de relevo por prestadora (2026-07-11)
+
+Cierra el pendiente #8, con una corrección de enfoque importante en el camino: la redacción
+original pedía que el Desarrollador definiera valores fijos de escalada (niveles, tiempos,
+mensajes). El Desarrollador corrigió esto explícitamente — son valores que cada prestadora
+licenciataria debe parametrizar según su propia metodología de trabajo, consistente con el
+diseño ya existente de la tabla `configuracion_escalada_relevo` (por-`prestadora_id` desde
+que se escribió el schema, `backend/src/db/schema_modulo6_guardias.sql:318-327`). El pedido
+también se amplió: no es una pantalla aislada, es una pestaña nueva ("Servicios") dentro del
+Módulo 8 (Configuración) ya existente, donde a futuro vivirán otras políticas parametrizables
+por prestadora todavía sin identificar (pendiente #16, nuevo, deliberadamente pospuesto — el
+Desarrollador no podía enumerarlas de memoria, hace falta una revisión activa del código).
+
+Construido: backend (`backend/src/routes/panelConfiguracion.js:82-127`, 4 rutas CRUD sobre
+`configuracion_escalada_relevo`, mismo patrón de filtrado manual por `prestadora_id` que las
+rutas de `/zonas` ya existentes) + frontend (`panel/src/pages/Configuracion.jsx`, pestaña
+nueva con componentes `TabServicios`/`NuevoNivelEscalada`, tabla de niveles con 4 selects de
+prioridad usando los roles canónicos del glosario de `CLAUDE.md` — Suplente, Franquero,
+Personal de emergencia, Familiar — unidos con "→") + i18n (`panel/src/i18n/translations.js`,
+~16 claves nuevas en `es-AR`/`en`/`pt-BR`).
+
+Probado en navegador real (Playwright MCP) contra el Panel corriendo local (`localhost:5173`)
+y el backend local (`localhost:4000`), logueado como Admin real (`prestadora-original.salud@gmail.com`):
+estado vacío correcto, alta de un nivel de prueba (nivel 1, 15 min, Suplente→Franquero,
+mensaje de prueba) reflejada de inmediato en la tabla, borrado con el diálogo de confirmación
+nativo del navegador (Regla 4) aceptado y vuelta al estado vacío sin dato residual. `npm run
+lint` y `npm run build` sin errores nuevos (solo warnings preexistentes).
+
+Hallazgo no bloqueante durante la prueba, no relacionado con el código de este pendiente: un
+proceso `node` huérfano de una sesión anterior (iniciado 8/7, PID 20616) tenía tomado el
+puerto 4000 con el backend en una versión vieja del código, sin las rutas nuevas — causaba
+`Unexpected token '<'` en la pestaña porque el fetch a `/escalada-relevo` recibía el 404 HTML
+de Express en vez de JSON. Se mató el proceso y se confirmó que era solo un resto de sesión
+sin cerrar, no un bug del feature.
+
+No se hizo commit/push de este cambio — pendiente de que el Desarrollador lo pida
+explícitamente, según la regla estándar del proyecto.
+
+## Actualización — Documento de diseño WhatsApp + agente de IA (en discusión) + inventario de dependencia de proveedor único (2026-07-11)
+
+Dos piezas de trabajo autónomo mientras el Desarrollador estaba ausente, ninguna toca código
+de producción:
+
+**`docs/PRD_06_WhatsApp_IA.md` (nuevo).** Documento de diseño para el pendiente #9, marcado
+explícitamente **"EN DISCUSIÓN — NO IMPLEMENTAR TODAVÍA"** en su primera línea, a pedido
+directo del Desarrollador. Registra lo ya decidido en la conversación (integración directa
+con Meta Cloud API, no un BSP; credenciales y número de WhatsApp por prestadora, nunca
+compartidos — por motivo operativo y porque PLM Systems no debe tener responsabilidad legal
+sobre esas conversaciones; extiende la pestaña "Notificaciones" del Módulo 8 en vez de crear
+una sección nueva; agente de IA asistiendo en redacción de plantillas, trámite de aprobación
+ante Meta, y respuestas entrantes, siempre resguardando la decisión final del licenciatario)
+y cuatro puntos marcados explícitamente sin resolver (restricción de plantillas pre-aprobadas
+de Meta, límite de autonomía del agente, almacenamiento de credenciales por prestadora,
+catálogo inicial de eventos). `docs/PENDIENTES.md` (pendiente #9) y `docs/BUILD_ORDER.md`
+(fila de Módulo 6) actualizados con la referencia cruzada.
+
+**Pendiente #15 — inventario de dependencia de proveedor único, investigación completada.**
+Revisado el código real (no de memoria): 117 policies RLS (`grep -c "CREATE POLICY"
+backend/src/db/*.sql`), uso de Supabase Auth (`supabase.auth.admin.createUser` en varios
+archivos) y Storage (`certificado_url`, `docs/DATA_MODEL.md:367`), ausencia de `railway.json`
+en el repo (config vive en dashboard + nixpacks), y el middleware de Next.js de
+`sitio-web/src/middleware.js` (solo redirección de idioma, sin `next/image` ni Edge Functions
+propias de Vercel). Conclusión: Supabase es el único con lock-in técnico real (Auth + Storage
+son APIs propias, no solo Postgres — la base en sí migra sin problema por ser RLS estándar);
+Railway, Vercel y Gmail SMTP migran con esfuerzo bajo si hiciera falta. Recomendación
+entregada: solo vale la pena invertir en un plan de migración documentado para Supabase
+Auth/Storage, no en un respaldo activo para el resto. Detalle completo en `docs/PENDIENTES.md`
+fila #15, estado cambiado a "🟡 Investigación completa, pendiente de decisión del
+Desarrollador" — no se cierra unilateralmente, falta que el Desarrollador decida qué vale la
+pena implementar.
+
 ## Problemas conocidos / deuda técnica
 
 _Registrar acá bugs conocidos o deuda técnica para la próxima sesión._
@@ -1300,6 +1371,7 @@ _Una entrada por sesión de trabajo, más reciente primero._
 
 | Fecha | Sesión | Archivos |
 |---|---|---|
+| 2026-07-12 | **Módulo 6 Parte 2 — Continuidad de guardia construida y probada en navegador real (trabajo autónomo nocturno, autorización explícita "avanza solo, yo me voy a dormir").** Alcance: (1) CRUD de `personal_emergencia` en Configuración → pestaña Servicios, mismo patrón backend-route que el resto de Configuración (`backend/src/routes/panelConfiguracion.js:127-172`, rutas `GET/POST/PATCH/DELETE`); (2) "Marcar ausente" (`panel/src/pages/guardias/GuardiaAcciones.jsx:57-94`) ahora, además del cambio de estado ya existente, busca si había un Asistente cubriendo justo antes para el mismo Paciente/fecha (`GuardiaAcciones.jsx:72-81`, heurística `hora_fin <= hora_inicio` excluyendo canceladas) y crea un `incidentes_relevo` (`GuardiaAcciones.jsx:83-88`) con `guardia_saliente_id` NULL cuando no hay relevo previo — el caso "Ausente sin relevo previo" del glosario de `CLAUDE.md`; (3) pantalla nueva `panel/src/pages/Continuidad.jsx` (ruta `/continuidad`, RLS directa vía Supabase, mismo patrón de queries separadas + mapas de lookup que `Guardias.jsx`): lista incidentes sin resolver, muestra badge de "sin relevo previo", nivel de escalada actual con su `configuracion_escalada_relevo` (orden de prioridad y plantilla de mensaje), botón "Avanzar nivel" (`Continuidad.jsx:86-100`), y resolución vía modal `ResolverIncidente` (`Continuidad.jsx:164-249`) con dos caminos: Asistente real (`resuelto_por_id` seteado) o excepción por Familiar (`excepciones_familiar_relevo` + `resuelto_por_id` NULL, respetando el CHECK `incidentes_relevo_resuelto_por_check`). i18n: namespace `continuidad` completo (18 claves) + `nav.continuidad` en es-AR/en/pt-BR (`panel/src/i18n/translations.js`, bloques tras el namespace `guardias` en cada locale). Se corrigieron además, al notar que databan de antes de que esta Parte 2 existiera, dos strings ya vigentes que afirmaban que el protocolo de continuidad "no está construido todavía" (`guardias.detalle.confirmar_ausente` y `guardias.detalle.checkout_bloqueado_explicacion`, las 3 locales) — ya no aplica, corregido sin que se pidiera explícitamente (Regla 1/12.5: no dejar un string de UI con una afirmación que dejó de ser cierta). `npm run lint`/`npm run build` del panel sin errores nuevos (solo advertencia pre-existente de tamaño de chunk). Probado en navegador real (Playwright, Panel local `localhost:5173` + backend local `localhost:4000`, no el desplegado en Vercel): se sembraron datos de prueba reales (1 Cliente, 1 Paciente, 2 Asistentes, 3 guardias, 2 niveles de `configuracion_escalada_relevo`) vía scripts temporales en `backend/scripts/` (creados, usados y **eliminados** al terminar, nunca commiteados) para cubrir ambos escenarios ("con relevo previo" y "sin relevo previo"), la escalada de nivel, y ambos caminos de resolución (Asistente real y excepción por Familiar) — verificado tanto visualmente en la UI como con consulta directa a Supabase después de cada paso, incluida una verificación final de 0 filas de prueba restantes. `window.confirm()` de "Marcar ausente" y "Resolver incidente" verificados como bloqueantes (Regla 4). **No commiteado ni desplegado a Vercel todavía** — pendiente de que el Desarrollador lo revise y apruebe el push, siguiendo la regla de no commitear sin pedido explícito | `backend/src/routes/panelConfiguracion.js` (rutas `personal_emergencia`); `panel/src/pages/guardias/GuardiaAcciones.jsx` (creación de incidente + fix de strings stale); `panel/src/pages/Continuidad.jsx` (nuevo); `panel/src/App.jsx` (ruta `/continuidad`); `panel/src/components/layout/Layout.jsx` (link de nav); `panel/src/i18n/translations.js` (namespace `continuidad` + `nav.continuidad` en es-AR/en/pt-BR, fix de `confirmar_ausente`/`checkout_bloqueado_explicacion`); `docs/PROGRESS.md` (esta entrada); `docs/PENDIENTES.md` (revisión de la tabla completa, sin cambios de estado nuevos) |
 | 2026-07-11 | **Pendientes #11 y #12 cerrados — login sin auto-redirect y card de guardia sin refresco tras check-out, ambos hallazgos del pendiente #6.** A pedido explícito del Desarrollador ("resuelve 11 y 12 entonces"). #11: causa raíz confirmada en `panel/src/context/AuthContext.jsx:39-46` — `login()` en `Login.jsx` resolvía su promesa antes de que el listener `onAuthStateChange` actualizara `session`/`usuario`, y `ProtectedRoute.jsx:14` rebotaba a `/login` con el estado todavía viejo. Corregido con un `useEffect` en `panel/src/pages/Login.jsx:18-27` que redirige recién cuando `session` y `usuario` del contexto ya están resueltos. #12: causa raíz en `panel/src/pages/guardias/GuardiaAcciones.jsx:26-27` (sin cambios desde el commit original `336d886`) — `onActualizada()` (recarga del listado) se llamaba sin esperar, seguido de inmediato por `onClose()`, dejando una ventana de datos viejos. Corregido esperando `await onActualizada()` antes de cerrar el modal (`GuardiaAcciones.jsx:17-30`). Build (`npm run build`) verificado sin errores; ambos fixes desplegados a producción (`vercel deploy --prod`, deployment `dpl_Ea16LgTENL5A6Veeo3wZEJ7oU4mo`) y probados en el navegador real contra `https://prestadora-original-panel.vercel.app` con Playwright: login redirige solo tras el submit; una guardia de prueba creada ad-hoc (Asistente/Paciente/guardia vía service role) pasó de "Programada" a "Activa" a "Completada" en el listado sin ningún reload manual. Datos de prueba borrados al terminar, verificado con consulta posterior (0 filas restantes en las 4 tablas). Ver `docs/PENDIENTES.md` filas #11 y #12 (ambas 🟢 Resuelto) | `panel/src/pages/Login.jsx`; `panel/src/pages/guardias/GuardiaAcciones.jsx`; `docs/PENDIENTES.md` (ítems #11, #12); `docs/PROGRESS.md` (esta entrada) |
 | 2026-07-11 | **Pendiente #6 cerrado — prueba en navegador real (Playwright) del flujo completo de Guardias Parte 1, contra el Panel ya desplegado en Vercel.** A pedido explícito del Desarrollador, el alcance se amplió más allá de "probar" sin más: (1) desplegar primero el código de Módulo 6 a Vercel (ya lo estaba, sin cambios de código pendientes de subir); (2) usar las credenciales de `No hacer commit/claves y contraseñas.txt` para loguear como Admin real; (3) crear los Asistentes/Pacientes/guardias necesarios para simular una situación real con 30 Pacientes simultáneos, cubriendo todos los eventos de dificultad imaginables; (4) borrar todo al terminar. Se escribieron dos scripts temporales (`backend/scripts/seed_test_guardias.js` y `cleanup_test_guardias.js`, ambos ya eliminados del repo): el seed creó 6 Asistentes con cuentas Auth reales (`supabase.auth.admin.createUser`), 30 Pacientes y 38 guardias distribuidas en 10 escenarios (completada, programada, activa, cancelada ×2 variantes, ausente con relevo, "Ausente sin relevo previo" — caso de mayor riesgo del glosario de `CLAUDE.md`, `checkout_bloqueado` sin y con excepción). Dos bugs de PostgREST encontrados y corregidos durante la escritura del seed (no del producto): (a) bulk-insert con filas de distinta forma rellena con `NULL` real las columnas ausentes en vez de aplicar el `DEFAULT` de la columna, violando el `NOT NULL` de `checkout_bloqueado` — se corrigió completando explícitamente las 8 columnas opcionales en cada fila; (b) el CHECK `incidentes_relevo_resuelto_por_check` exige `resuelto_por_id` no nulo cuando `resuelto_por_tipo='suplente'` — el primer intento lo dejaba en `null` por un cálculo que siempre evaluaba a eso; corregido resolviendo un Asistente real distinto del titular ausente. Probado en el navegador real contra `https://prestadora-original-panel.vercel.app` con MCP de Playwright: login, agenda agrupada por día, alta de guardia suelta y de serie recurrente (checkboxes de día de semana — verificado que generó correctamente las fechas Lunes/Jueves entre `vigente_desde`/`vigente_hasta`), ciclo checkpoint de salida → check-in → check-out, **bloqueo real en la UI de `checkout_bloqueado` sin excepción** (no se renderiza botón de check-out, solo el mensaje de protocolo — confirma en la UI lo que el pendiente #5 ya había cerrado a nivel de constraint SQL), cancelación (con diálogo de confirmación nativo, Regla 4) y "Marcar ausente" (ídem, con mensaje explícito de que el protocolo de continuidad, Parte 2, no está construido). Todo el dato de prueba se borró al terminar y se verificó con una consulta posterior: 0 asistentes/pacientes/guardias de prueba restantes. Dos hallazgos menores no bloqueantes quedaron registrados como pendientes nuevos (`docs/PENDIENTES.md` #11 y #12): el login no redirige solo tras el submit (hay que navegar manual, aunque la sesión sí quede autenticada), y el detalle/card de una guardia no se refresca visualmente tras un check-out exitoso hasta recargar la página (el dato en la base sí es correcto). Ver `docs/PENDIENTES.md` fila #6 (🟢 Resuelto) | `docs/PENDIENTES.md` (ítems #6, #11, #12 nuevos); `docs/PROGRESS.md` (esta entrada). Sin cambios de código de producto — los dos scripts de prueba se crearon y se eliminaron en la misma sesión |
 | 2026-07-11 | **Pendiente #5 cerrado — `checkout_bloqueado` ahora impuesto a nivel de base, no solo de UI.** Continuación de la sesión que abrió el pendiente #3 (mismo MCP de Supabase ya conectado). El archivo `backend/src/db/schema_modulo6_guardias_02.sql:17-24` (escrito el 2026-07-10, sin cambios) se aplicó vía `mcp__supabase__apply_migration` (`{"success":true}`): agrega el CHECK `guardias_checkout_bloqueado_requiere_excepcion` sobre `guardias`, que exige que cualquier fila con `checkout_at` seteado y `checkout_bloqueado=true` tenga también los tres campos de excepción (`checkout_excepcion_motivo`, `checkout_excepcion_autorizado_por`, `checkout_excepcion_at`) no nulos. Verificación con insert real: el primer intento simple falló pero por un motivo no relacionado (`asistentes`/`pacientes` estaban vacías, así que `asistente_id`/`paciente_id` NOT NULL fallaban antes de llegar al CHECK) — no probaba nada. Se rehizo dentro de una transacción explícita (`BEGIN...COMMIT`) que crea un Asistente y un Paciente de prueba con FKs válidas (`asistentes.id` tiene FK a `usuarios.id`, se usó un usuario real existente) y luego intenta el insert violatorio en `guardias`; resultado: `ERROR 23514: new row for relation "guardias" violates check constraint "guardias_checkout_bloqueado_requiere_excepcion"`, como debía. Al fallar dentro de la misma transacción, todo abortó — confirmado después que `asistentes`, `pacientes` y `guardias` siguen en 0 filas reales, sin datos de prueba residuales. Esto cierra la brecha de seguridad diagnosticada el 2026-07-10 (el bloqueo antes solo vivía en el `if` de render de `GuardiaAcciones.jsx`, bypasseable con una llamada directa a Supabase vía anon key). **No cierra** el resto del criterio de cierre de la Parte 1 de Módulo 6 — sigue pendiente el pendiente #6 (prueba manual en navegador del flujo completo de Guardias, vía MCP de Playwright, no de Supabase). Ver `docs/PENDIENTES.md` fila #5 (🟢 Resuelto) | `backend/src/db/schema_modulo6_guardias_02.sql` (aplicado y verificado contra Supabase real vía MCP); `docs/PENDIENTES.md` (ítem #5), `docs/PROGRESS.md` (esta entrada) |

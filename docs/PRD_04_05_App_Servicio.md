@@ -72,6 +72,38 @@ Botón "Check-out" habilitado recién después de las horas mínimas de la modal
 Foto, datos personales, especialidades y zonas, estado de monotributo y seguro (con fecha de
 vencimiento), Certificado prestadora-original (ver QR, compartir), historial de evaluaciones recibidas.
 
+## Alertas tempranas de ausencia (diseño, no implementado — ver pendiente #20 de `docs/PENDIENTES.md`)
+
+Requerimiento definido por el Desarrollador el 2026-07-12, corrigiendo el diseño original de
+Módulo 6 (Continuidad de guardia), que trataba "marcar ausente" como una acción manual de un
+Coordinador. Dos reglas de fondo, todavía sin implementar:
+
+1. **Detección automática de ausencia** — la ausencia se marca sola cuando no se registra el
+   check-in dentro de un margen de tiempo esperado después del inicio de la guardia. El botón
+   manual ("marcar ausente") queda como excepción/override para casos que el sistema no
+   detectó solo, no como el mecanismo principal.
+2. **Cadena de alertas tempranas, previa a que la ausencia se concrete** — para gestionar un
+   relevo con tiempo y minimizar el impacto en el Paciente, en vez de reaccionar recién cuando
+   la ausencia ya es un hecho. Arquitectura pensada como **fuentes de alerta enchufables**, no
+   una lista cerrada de casos — el Desarrollador fue explícito en que deben poder incorporarse
+   fuentes nuevas en el futuro sin rediseñar el mecanismo. Dos fuentes ya identificadas:
+   - **GPS de salida del domicilio**: cada Asistente tiene un medio de transporte habitual (a
+     pie, colectivo, auto, etc.) hacia cada Paciente; con eso se calcula un tiempo de viaje
+     estimado (vía API de mapas) y una "hora de salida esperada" (hora de inicio de guardia
+     menos tiempo de viaje). Si pasado un margen configurable por prestadora el GPS del
+     Asistente muestra que sigue en su domicilio, se dispara la alerta.
+   - **Aviso telefónico previo**: el Asistente llama avisando que, por algún motivo, no va a
+     concurrir — con un checklist de motivos (para estadísticas), no texto libre.
+
+   Ante cualquier alerta temprana (de cualquier fuente), se dispara una escalada automatizada
+   configurable por prestadora (mensajes automáticos, llamada telefónica, etc.) — el mismo
+   concepto de niveles de escalada que ya existe para incidentes de relevo
+   (`configuracion_escalada_relevo`), pero debe poder arrancar **antes** del incidente de
+   ausencia, no solo después de que ya se concretó. Intervención humana minimizada al máximo,
+   no eliminada: el Coordinador siempre recibe la notificación de la anomalía y puede
+   intervenir en la resolución. Buena oportunidad de uso de IA — cruzar con
+   `docs/BACKLOG_OPORTUNIDADES.md` si corresponde.
+
 ### Notificaciones
 Nueva guardia asignada, mensajes del coordinador, recordatorios.
 

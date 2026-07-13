@@ -21,6 +21,7 @@ export function Layout() {
           <NavLink to="/asistentes">{t.nav.asistentes}</NavLink>
           <NavLink to="/clientes">{t.nav.clientes}</NavLink>
           <NavLink to="/guardias">{t.nav.guardias}</NavLink>
+          <NavLink to="/continuidad">{t.nav.continuidad}</NavLink>
           <NavLink to="/lista-precios">{t.nav.lista_precios}</NavLink>
           {esAdminOSuperior(usuario?.rol) && <NavLink to="/usuarios-panel">{t.nav.usuarios_panel}</NavLink>}
           {esAdminOSuperior(usuario?.rol) && <NavLink to="/configuracion">{t.nav.configuracion}</NavLink>}

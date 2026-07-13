@@ -79,6 +79,101 @@ panelConfiguracionRouter.delete('/zonas/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
+// --- Servicios: escalada de relevo (protocolo de continuidad de guardia) ---
+panelConfiguracionRouter.get('/escalada-relevo', async (req, res) => {
+  let query = supabase.from('configuracion_escalada_relevo').select('*').order('nivel');
+  if (req.usuarioPanel.rol !== 'superadmin') {
+    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  }
+  const { data, error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ niveles: data });
+});
+
+panelConfiguracionRouter.post('/escalada-relevo', async (req, res) => {
+  const { nivel, minutos_demora, orden_prioridad, plantilla_mensaje } = req.body;
+  if (!nivel || !plantilla_mensaje) {
+    return res.status(400).json({ error: 'Faltan nivel o plantilla de mensaje' });
+  }
+  const { error } = await supabase
+    .from('configuracion_escalada_relevo')
+    .insert({ nivel, minutos_demora, orden_prioridad, plantilla_mensaje, prestadora_id: req.usuarioPanel.prestadoraId });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+panelConfiguracionRouter.patch('/escalada-relevo/:id', async (req, res) => {
+  const { nivel, minutos_demora, orden_prioridad, plantilla_mensaje } = req.body;
+  let query = supabase
+    .from('configuracion_escalada_relevo')
+    .update({ nivel, minutos_demora, orden_prioridad, plantilla_mensaje })
+    .eq('id', req.params.id);
+  if (req.usuarioPanel.rol !== 'superadmin') {
+    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  }
+  const { error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+panelConfiguracionRouter.delete('/escalada-relevo/:id', async (req, res) => {
+  let query = supabase.from('configuracion_escalada_relevo').delete().eq('id', req.params.id);
+  if (req.usuarioPanel.rol !== 'superadmin') {
+    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  }
+  const { error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// --- Servicios: personal de emergencia (roster de suplentes/franqueros/emergencia
+//     disponibles para el protocolo de continuidad de guardia, Parte 2 de Módulo 6) ---
+panelConfiguracionRouter.get('/personal-emergencia', async (req, res) => {
+  let query = supabase
+    .from('personal_emergencia')
+    .select('id, asistente_id, tipo, activo, created_at, asistentes(nombre)')
+    .order('created_at', { ascending: false });
+  if (req.usuarioPanel.rol !== 'superadmin') {
+    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  }
+  const { data, error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ personal: data });
+});
+
+panelConfiguracionRouter.post('/personal-emergencia', async (req, res) => {
+  const { asistente_id, tipo } = req.body;
+  if (!asistente_id || !tipo) {
+    return res.status(400).json({ error: 'Faltan asistente_id o tipo' });
+  }
+  const { error } = await supabase
+    .from('personal_emergencia')
+    .insert({ asistente_id, tipo, prestadora_id: req.usuarioPanel.prestadoraId });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+panelConfiguracionRouter.patch('/personal-emergencia/:id', async (req, res) => {
+  const { activo } = req.body;
+  let query = supabase.from('personal_emergencia').update({ activo }).eq('id', req.params.id);
+  if (req.usuarioPanel.rol !== 'superadmin') {
+    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  }
+  const { error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+panelConfiguracionRouter.delete('/personal-emergencia/:id', async (req, res) => {
+  let query = supabase.from('personal_emergencia').delete().eq('id', req.params.id);
+  if (req.usuarioPanel.rol !== 'superadmin') {
+    query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  }
+  const { error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
 // --- Configuración de notificaciones ---
 panelConfiguracionRouter.get('/notificaciones', async (req, res) => {
   const { data, error } = await supabase.from('configuracion_notificaciones').select('*').order('evento');

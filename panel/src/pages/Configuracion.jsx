@@ -23,7 +23,9 @@ async function llamarApi(path, opciones = {}) {
   return resultado;
 }
 
-const TABS = ['empresa', 'zonas', 'notificaciones'];
+const TABS = ['empresa', 'zonas', 'servicios', 'notificaciones'];
+const ROLES_RELEVO = ['suplente', 'franquero', 'emergencia', 'familiar'];
+const TIPOS_PERSONAL_EMERGENCIA = ['franquero', 'emergencia'];
 
 export function Configuracion() {
   const { t } = useLocale();
@@ -49,6 +51,7 @@ export function Configuracion() {
       <div className="panel-tab-contenido">
         {tab === 'empresa' && <TabEmpresa />}
         {tab === 'zonas' && <TabZonas />}
+        {tab === 'servicios' && <TabServicios />}
         {tab === 'notificaciones' && <TabNotificaciones />}
       </div>
     </div>
@@ -248,6 +251,337 @@ function NuevaZona({ onClose, onCreada }) {
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>{t.comun.cancelar}</Button>
           <Button onClick={handleGuardar} disabled={guardando || !codigo || !nombre}>
+            {guardando ? t.comun.guardando : t.comun.guardar}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TabServicios() {
+  const { t } = useLocale();
+  const [niveles, setNiveles] = useState([]);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [creandoNuevo, setCreandoNuevo] = useState(false);
+  const [actualizandoId, setActualizandoId] = useState(null);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const { niveles: filas } = await llamarApi('/escalada-relevo');
+      setNiveles(filas);
+      setEstado('listo');
+    } catch (err) {
+      setError(err.message);
+      setEstado('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  async function borrar(fila) {
+    if (!window.confirm(t.configuracion.escalada_confirmar_borrar)) return;
+    setActualizandoId(fila.id);
+    try {
+      await llamarApi(`/escalada-relevo/${fila.id}`, { method: 'DELETE' });
+      recargar();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setActualizandoId(null);
+    }
+  }
+
+  return (
+    <div>
+      <h2>{t.configuracion.servicios_escalada_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.servicios_escalada_explicacion}</p>
+      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
+      <div className="panel-filtros">
+        <Button onClick={() => setCreandoNuevo(true)}>{t.configuracion.escalada_nuevo_nivel}</Button>
+      </div>
+      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && niveles.length === 0} recargar={recargar} mensajeVacio={t.configuracion.escalada_vacio}>
+        <table className="panel-tabla">
+          <thead>
+            <tr>
+              <th>{t.configuracion.escalada_col_nivel}</th>
+              <th>{t.configuracion.escalada_col_minutos}</th>
+              <th>{t.configuracion.escalada_col_orden}</th>
+              <th>{t.configuracion.escalada_col_mensaje}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {niveles.map((n) => (
+              <tr key={n.id}>
+                <td>{n.nivel}</td>
+                <td>{n.minutos_demora ?? '—'}</td>
+                <td>{(n.orden_prioridad || []).map((r) => t.configuracion[`escalada_rol_${r}`]).join(' → ') || '—'}</td>
+                <td>{n.plantilla_mensaje}</td>
+                <td>
+                  <button onClick={() => borrar(n)} disabled={actualizandoId === n.id}>{t.comun.borrar}</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </EstadoLista>
+
+      {creandoNuevo && (
+        <NuevoNivelEscalada onClose={() => setCreandoNuevo(false)} onCreado={() => { setCreandoNuevo(false); recargar(); }} />
+      )}
+
+      <TabServiciosPersonalEmergencia />
+    </div>
+  );
+}
+
+function TabServiciosPersonalEmergencia() {
+  const { t } = useLocale();
+  const [personal, setPersonal] = useState([]);
+  const [asistentes, setAsistentes] = useState([]);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [creandoNuevo, setCreandoNuevo] = useState(false);
+  const [actualizandoId, setActualizandoId] = useState(null);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const [{ personal: filas }, { data: asistentesData, error: errorAsistentes }] = await Promise.all([
+        llamarApi('/personal-emergencia'),
+        supabase.from('asistentes').select('id, nombre').order('nombre'),
+      ]);
+      if (errorAsistentes) throw errorAsistentes;
+      setPersonal(filas);
+      setAsistentes(asistentesData ?? []);
+      setEstado('listo');
+    } catch (err) {
+      setError(err.message);
+      setEstado('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  async function toggleActivo(fila) {
+    setActualizandoId(fila.id);
+    try {
+      await llamarApi(`/personal-emergencia/${fila.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ activo: !fila.activo }),
+      });
+      recargar();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setActualizandoId(null);
+    }
+  }
+
+  async function borrar(fila) {
+    if (!window.confirm(t.configuracion.personal_emergencia_confirmar_borrar)) return;
+    setActualizandoId(fila.id);
+    try {
+      await llamarApi(`/personal-emergencia/${fila.id}`, { method: 'DELETE' });
+      recargar();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setActualizandoId(null);
+    }
+  }
+
+  return (
+    <div>
+      <h2>{t.configuracion.personal_emergencia_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.personal_emergencia_explicacion}</p>
+      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
+      <div className="panel-filtros">
+        <Button onClick={() => setCreandoNuevo(true)}>{t.configuracion.personal_emergencia_nuevo}</Button>
+      </div>
+      <EstadoLista
+        estado={estado}
+        error={error}
+        vacio={estado === 'listo' && personal.length === 0}
+        recargar={recargar}
+        mensajeVacio={t.configuracion.personal_emergencia_vacio}
+      >
+        <table className="panel-tabla">
+          <thead>
+            <tr>
+              <th>{t.configuracion.personal_emergencia_col_asistente}</th>
+              <th>{t.configuracion.personal_emergencia_col_tipo}</th>
+              <th>{t.configuracion.personal_emergencia_col_activo}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {personal.map((fila) => (
+              <tr key={fila.id}>
+                <td>{fila.asistentes?.nombre || '—'}</td>
+                <td>{t.configuracion[`personal_emergencia_tipo_${fila.tipo}`]}</td>
+                <td>
+                  <input type="checkbox" checked={fila.activo} onChange={() => toggleActivo(fila)} disabled={actualizandoId === fila.id} />
+                </td>
+                <td>
+                  <button onClick={() => borrar(fila)} disabled={actualizandoId === fila.id}>{t.comun.borrar}</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </EstadoLista>
+
+      {creandoNuevo && (
+        <NuevoPersonalEmergencia
+          asistentes={asistentes}
+          onClose={() => setCreandoNuevo(false)}
+          onCreado={() => { setCreandoNuevo(false); recargar(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function NuevoPersonalEmergencia({ asistentes, onClose, onCreado }) {
+  const { t } = useLocale();
+  const [asistenteId, setAsistenteId] = useState('');
+  const [tipo, setTipo] = useState('franquero');
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function handleGuardar() {
+    setGuardando(true);
+    setError(null);
+    try {
+      await llamarApi('/personal-emergencia', {
+        method: 'POST',
+        body: JSON.stringify({ asistente_id: asistenteId, tipo }),
+      });
+      onCreado();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <div className="panel-modal-fondo" onClick={onClose}>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
+        <h2>{t.configuracion.personal_emergencia_nuevo}</h2>
+        {error && <Alert variant="error">{error}</Alert>}
+        <FormField
+          label={t.configuracion.personal_emergencia_col_asistente}
+          name="asistente_id"
+          type="select"
+          value={asistenteId}
+          onChange={(e) => setAsistenteId(e.target.value)}
+          required
+        >
+          <option value="">{t.configuracion.escalada_prioridad_vacio}</option>
+          {asistentes.map((a) => (
+            <option key={a.id} value={a.id}>{a.nombre}</option>
+          ))}
+        </FormField>
+        <FormField
+          label={t.configuracion.personal_emergencia_col_tipo}
+          name="tipo"
+          type="select"
+          value={tipo}
+          onChange={(e) => setTipo(e.target.value)}
+        >
+          {TIPOS_PERSONAL_EMERGENCIA.map((tipoOpcion) => (
+            <option key={tipoOpcion} value={tipoOpcion}>{t.configuracion[`personal_emergencia_tipo_${tipoOpcion}`]}</option>
+          ))}
+        </FormField>
+        <div className="panel-modal-acciones">
+          <Button variant="secondary" onClick={onClose} disabled={guardando}>{t.comun.cancelar}</Button>
+          <Button onClick={handleGuardar} disabled={guardando || !asistenteId}>
+            {guardando ? t.comun.guardando : t.comun.guardar}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NuevoNivelEscalada({ onClose, onCreado }) {
+  const { t } = useLocale();
+  const [nivel, setNivel] = useState('');
+  const [minutosDemora, setMinutosDemora] = useState('');
+  const [ordenPrioridad, setOrdenPrioridad] = useState(['', '', '', '']);
+  const [plantillaMensaje, setPlantillaMensaje] = useState('');
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState(null);
+
+  function setPrioridad(indice, valor) {
+    setOrdenPrioridad((actual) => actual.map((v, i) => (i === indice ? valor : v)));
+  }
+
+  async function handleGuardar() {
+    setGuardando(true);
+    setError(null);
+    try {
+      await llamarApi('/escalada-relevo', {
+        method: 'POST',
+        body: JSON.stringify({
+          nivel: Number(nivel),
+          minutos_demora: minutosDemora === '' ? null : Number(minutosDemora),
+          orden_prioridad: ordenPrioridad.filter(Boolean),
+          plantilla_mensaje: plantillaMensaje,
+        }),
+      });
+      onCreado();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <div className="panel-modal-fondo" onClick={onClose}>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
+        <h2>{t.configuracion.escalada_nuevo_nivel}</h2>
+        {error && <Alert variant="error">{error}</Alert>}
+        <FormField label={t.configuracion.escalada_col_nivel} name="nivel" type="number" value={nivel} onChange={(e) => setNivel(e.target.value)} required />
+        <FormField label={t.configuracion.escalada_minutos_label} name="minutos_demora" type="number" value={minutosDemora} onChange={(e) => setMinutosDemora(e.target.value)} />
+        {ordenPrioridad.map((valor, indice) => (
+          <FormField
+            key={indice}
+            label={`${t.configuracion.escalada_prioridad_label} ${indice + 1}`}
+            name={`prioridad_${indice}`}
+            type="select"
+            value={valor}
+            onChange={(e) => setPrioridad(indice, e.target.value)}
+          >
+            <option value="">{t.configuracion.escalada_prioridad_vacio}</option>
+            {ROLES_RELEVO.map((rol) => (
+              <option key={rol} value={rol}>{t.configuracion[`escalada_rol_${rol}`]}</option>
+            ))}
+          </FormField>
+        ))}
+        <FormField
+          label={t.configuracion.escalada_col_mensaje}
+          name="plantilla_mensaje"
+          type="textarea"
+          value={plantillaMensaje}
+          onChange={(e) => setPlantillaMensaje(e.target.value)}
+          required
+        />
+        <div className="panel-modal-acciones">
+          <Button variant="secondary" onClick={onClose} disabled={guardando}>{t.comun.cancelar}</Button>
+          <Button onClick={handleGuardar} disabled={guardando || !nivel || !plantillaMensaje}>
             {guardando ? t.comun.guardando : t.comun.guardar}
           </Button>
         </div>

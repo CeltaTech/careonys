@@ -933,8 +933,66 @@ marcan acá como **[1.5 → confirmado]** — no se releva de nuevo, solo se pro
   se retiró por completo (ni siquiera de uso interno, ver glosario de `CLAUDE.md`), los
   comentarios ya no lo mencionan.
 - **Regla**: el nombre de marca va a panel/CMS sin excepción. Los términos de negocio
-  mixtos ("Certificado prestadora-original" y similares) quedan pendientes de decisión del usuario
-  (parametrizar vs. genericar).
+  mixtos ("Certificado prestadora-original" y similares) — **resuelto, ver 5.4bis** — no es un simple
+  parametrizar/genericar, requiere un diseño de 4 capas.
+
+### 5.4bis Certificado prestadora-original — diseño de 4 capas (**resuelto con el usuario, 2026-07-12**)
+
+El caso "Certificado prestadora-original" no se resuelve sustituyendo el nombre de marca por el de
+cada prestadora, ni tampoco genericándolo del todo — el usuario definió un diseño de 4
+capas independientes entre sí, en este orden de precedencia:
+
+**Capa 0 — Interruptor general por prestadora: ¿usa el sistema de certificaciones o no?**
+Cada prestadora licenciataria puede activar o desactivar por completo la etapa de
+capacitación+certificación de su propio Proceso de Incorporación de Asistentes
+(`PRD_03_Reclutamiento.md:50`, etapa 5 de 5). Si la desactiva, las otras 4 etapas del
+proceso (antecedentes, entrevista, referencias — seguridad/riesgo legal, no negociables)
+siguen aplicando igual; solo la etapa de certificación queda apagada para esa prestadora.
+Sigue el mismo patrón ya anotado como idea de arquitectura futura en `docs/PROGRESS.md:107`
+("módulos activables por configuración", Módulo 8) — este es su primer caso de uso
+concreto.
+
+**Capa 1 — Si la activa, ¿certifica ella misma o designa un tercero?** La prestadora puede
+correr su propio Proceso de Incorporación con capacitación propia (como hace prestadora-original hoy),
+o designar una entidad externa como "ente calificador" en su nombre (ejemplo dado por el
+usuario, inventado a modo ilustrativo: un "Centro Argentino de Asistencia de Personas").
+En ambos casos la prestadora sigue siendo quien decide certificar — solo cambia quién
+ejecuta el proceso.
+
+**Capa 2 — Independiente de la Capa 0: un Asistente puede traer certificaciones de otro
+origen.** Existan o no en el sistema de certificación propio de la prestadora actual, un
+Asistente puede tener certificados de:
+  (a) otra prestadora licenciataria del mismo sistema PLM (el Asistente ya certificado por
+      prestadora-original se postula después a otra licenciataria que no certifica);
+  (b) una entidad totalmente externa al sistema, sin verificación propia del software (un
+      curso de enfermería, por ejemplo — dato declarado/adjunto, no emitido con QR propio).
+La prestadora actual decide si reconoce/incorpora esos certificados externos a la ficha del
+Asistente dentro de su propio sistema, o no.
+
+**Capa 3 — Visibilidad pública, por certificado.** Independientemente de su origen (propio,
+delegado en un tercero, o de otro origen vía Capa 2), la prestadora decide para cada
+certificado si se muestra en la ficha pública del Asistente (Etapa 6, `docs/PROGRESS.md:18`
+— "Perfil público del Asistente con QR", todavía no construida) o si queda solo como dato
+interno.
+
+**Implicancia de modelo de datos (no implementada todavía, solo señalada)**: la tabla
+`certificados` (`docs/DATA_MODEL.md:325-332`, hoy `id, asistente_id, fecha_emision,
+fecha_vencimiento, activo, created_at`) necesita como mínimo un campo de **entidad
+emisora** (quién certificó: la propia prestadora, un tercero designado, u otra entidad —
+ligado a la Capa 1/2) y un campo de **visibilidad pública** (ligado a la Capa 3). La Capa 2
+caso (a) además requiere que el pool de Asistentes (o al menos su historial de
+certificaciones) pueda referenciarse entre licenciatarias — mismo punto ya abierto en el
+pendiente #13 de `docs/PENDIENTES.md` sobre infraestructura común directo/match.
+Diseño de columnas/tabla concreto: pendiente de abordarse junto con el Bloque 4
+(`configuracion_prestadora`), no diseñado todavía.
+
+**"Exclusividad de facturación a prestadora-original" queda fuera de este diseño de 4 capas** — es un
+concepto distinto (la parte comercial con la que el Asistente factura su monotributo en
+exclusividad, no un ente que califica su aptitud) y pertenece al módulo de
+facturación/pagos, todavía no discutido. Sigue como parametrización simple (sustituir
+"prestadora-original" por el nombre de la prestadora), sin la ambigüedad de certificación. Una idea
+relacionada (facturación a un tercero intermediario) quedó anotada aparte, sin resolver,
+en el pendiente #19 de `docs/PENDIENTES.md` — no se mezcla con este diseño.
 
 ### 5.5 Remitente/firma de emails — **[1.5 → confirmado] — PRIORIDAD ALTA, mayor que 5.1/5.3 (color/logo)**
 
@@ -1011,10 +1069,14 @@ este documento.
 
 ### 5.9 Resumen — qué queda pendiente de decisión antes de tocar tablas
 
-1. **Caso ambiguo sin resolver** (5.4): términos de negocio mixtos con nombre de marca
-   ("Certificado prestadora-original", "Exclusividad de facturación a prestadora-original") — ¿se parametrizan
-   (sustituir "prestadora-original" por el nombre de la prestadora) o se genericán del todo? Decisión
-   del usuario, no tomada acá.
+1. **"Certificado prestadora-original" — resuelto (ver 5.4bis, 2026-07-12)**: diseño de 4 capas
+   (interruptor de certificación por prestadora, ente calificador propio o delegado a un
+   tercero, reconocimiento de certificados de otro origen, visibilidad pública por
+   certificado). Falta el diseño concreto de columnas/tabla, a abordar junto con el
+   Bloque 4. "Exclusividad de facturación a prestadora-original" queda aparte, como parametrización
+   simple — pertenece al módulo de facturación/pagos (todavía no discutido), no a este
+   diseño de certificación. Idea relacionada de tercero de facturación anotada aparte en
+   el pendiente #19 de `docs/PENDIENTES.md`.
 2. **Diseño de tabla(s)** para 5.1-5.8 — no se diseñó todavía. Candidato natural:
    extender `configuracion_prestadora` (Bloque 4, diseño 3.2) para que cubra también
    paleta/tipografía/logo/manifest, en vez de crear una tabla nueva — a confirmar cuando

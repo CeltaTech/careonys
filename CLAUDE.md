@@ -7,9 +7,10 @@
 ## Qué es esto
 
 prestadora-original Salud: plataforma de cuidado domiciliario de adultos mayores (CABA/GBA, Argentina).
-Conecta clientes con Asistentes Integrales verificados. Modelo que empieza como empresa
-directa y evoluciona hacia match + B2B. Es la única división en desarrollo (de 6
-planificadas en prestadora-original Group).
+Conecta clientes con Asistentes Integrales verificados. Modelo que combina, **DESDE EL
+MINUTO 1**, empresa directa Y match + B2B — no son etapas secuenciales, conviven en
+paralelo desde el lanzamiento. Es la única división en desarrollo (de 6 planificadas en
+prestadora-original Group).
 
 **Cambio de estructura societaria (2026-07-09):** el software deja de ser propiedad de
 prestadora-original Salud. Pasa a haber dos empresas: **PLM Systems** es la dueña del software y lo

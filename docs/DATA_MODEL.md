@@ -386,7 +386,10 @@ CREATE TABLE ausencias (
   )),
   fecha_inicio DATE NOT NULL,
   fecha_fin DATE,                 -- null mientras sigue en curso
-  certificado_url TEXT,           -- Supabase Storage
+  certificado_url TEXT,           -- ruta en bucket privado Supabase Storage
+                                   -- "certificados-medicos" (implementado 2026-07-13,
+                                   -- backend/src/routes/panelAusencias.js + mirror a R2,
+                                   -- ver docs/PLAN_CONTINUIDAD_PROVEEDORES.md punto 1)
   dias_computados NUMERIC(5,1),   -- consume el cupo anual de licencia paga
   guardias_afectadas UUID[],      -- referencias a guardias
   observaciones TEXT,

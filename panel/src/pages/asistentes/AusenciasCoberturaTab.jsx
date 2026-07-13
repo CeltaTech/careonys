@@ -9,6 +9,21 @@ import { EstadoLista } from '../../components/layout/EstadoLista';
 import { generarConstanciaAusencia, descargarPDF } from '../../lib/generarDocumentoCese';
 
 const TIPOS = ['enfermedad_inculpable', 'accidente_inculpable', 'otra_licencia', 'ausencia_no_justificada'];
+const API_URL = import.meta.env.VITE_API_URL;
+
+async function llamarApiAusencias(path, opciones = {}) {
+  const { data } = await supabase.auth.getSession();
+  const respuesta = await fetch(`${API_URL}/api/panel/ausencias${path}`, {
+    ...opciones,
+    headers: {
+      Authorization: `Bearer ${data.session?.access_token}`,
+      ...opciones.headers,
+    },
+  });
+  const resultado = await respuesta.json();
+  if (!respuesta.ok) throw new Error(resultado.error);
+  return resultado;
+}
 
 export function AusenciasCoberturaTab({ asistente }) {
   const { t } = useLocale();
@@ -20,6 +35,8 @@ export function AusenciasCoberturaTab({ asistente }) {
   const [guardando, setGuardando] = useState(false);
   const [nueva, setNueva] = useState({ tipo: 'enfermedad_inculpable', fecha_inicio: '', fecha_fin: '', observaciones: '' });
   const [coberturaForm, setCoberturaForm] = useState({});
+  const [subiendoCertificado, setSubiendoCertificado] = useState(null);
+  const [errorCertificado, setErrorCertificado] = useState(null);
 
   async function recargar() {
     setEstado('cargando');
@@ -67,6 +84,31 @@ export function AusenciasCoberturaTab({ asistente }) {
     descargarPDF(doc, `constancia-ausencia-${asistente.nombre}-${ausencia.fecha_inicio}.pdf`);
   }
 
+  async function subirCertificado(ausenciaId, archivo) {
+    if (!archivo) return;
+    setSubiendoCertificado(ausenciaId);
+    setErrorCertificado(null);
+    try {
+      const formData = new FormData();
+      formData.append('archivo', archivo);
+      await llamarApiAusencias(`/${ausenciaId}/certificado`, { method: 'POST', body: formData });
+      await recargar();
+    } catch {
+      setErrorCertificado(t.asistentes.ausencias.certificado_invalido);
+    } finally {
+      setSubiendoCertificado(null);
+    }
+  }
+
+  async function verCertificado(ausenciaId) {
+    try {
+      const { url } = await llamarApiAusencias(`/${ausenciaId}/certificado-url`);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      setErrorCertificado(err.message);
+    }
+  }
+
   async function asignarCobertura(ausenciaId) {
     const sustitutoId = coberturaForm[ausenciaId]?.asistente_sustituto_id;
     if (!sustitutoId) return;
@@ -90,6 +132,7 @@ export function AusenciasCoberturaTab({ asistente }) {
     <div>
       <h2>{t.asistentes.ausencias.titulo}</h2>
       {error && <Alert variant="error">{error}</Alert>}
+      {errorCertificado && <Alert variant="error">{errorCertificado}</Alert>}
 
       <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && ausencias.length === 0} recargar={recargar}>
         {ausencias.map((a) => (
@@ -103,6 +146,29 @@ export function AusenciasCoberturaTab({ asistente }) {
             <Button variant="secondary" onClick={() => descargarConstancia(a)}>
               {t.asistentes.ausencias.descargar_constancia}
             </Button>
+
+            <div className="panel-certificado-medico">
+              <p><strong>{t.asistentes.ausencias.certificado_medico}</strong></p>
+              {a.certificado_url ? (
+                <>
+                  <p>{t.asistentes.ausencias.certificado_cargado}</p>
+                  <Button variant="secondary" onClick={() => verCertificado(a.id)}>
+                    {t.asistentes.ausencias.ver_certificado}
+                  </Button>
+                </>
+              ) : (
+                <p>{t.asistentes.ausencias.sin_certificado}</p>
+              )}
+              <label>
+                <input
+                  type="file"
+                  accept="application/pdf,image/jpeg,image/png"
+                  disabled={subiendoCertificado === a.id}
+                  onChange={(e) => subirCertificado(a.id, e.target.files?.[0])}
+                />
+              </label>
+              {subiendoCertificado === a.id && <p>{t.asistentes.ausencias.subiendo_certificado}</p>}
+            </div>
 
             <FormField
               label={t.asistentes.ausencias.asignar_sustituto}

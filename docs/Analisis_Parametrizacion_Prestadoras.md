@@ -11,6 +11,12 @@
 > hace prestadora-original" y no deja margen para que otra prestadora lo haga distinto. Ninguna de estas
 > situaciones se resolvió todavía — se necesita que el Desarrollador decida, una por una, si
 > conviene dejarla configurable, y con qué criterio.
+>
+> **Documento vivo, no una lista cerrada** (aclarado 2026-07-13): el pendiente #18 que este
+> documento traduce a lenguaje de negocio es permanente — cada sesión futura que encuentre
+> una situación nueva de este tipo (o una oportunidad nueva de Inteligencia Artificial
+> relacionada) la suma acá con su propio número y fecha, no espera a una próxima revisión
+> puntual. Estos 8 puntos son la primera tanda, no la lista final.
 
 ## 1. Con cuánta anticipación se avisa que un Asistente tiene un vencimiento
 

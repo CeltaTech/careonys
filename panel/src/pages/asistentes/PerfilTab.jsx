@@ -144,6 +144,7 @@ export function PerfilTab({ asistente, onActualizado }) {
 // backend/src/db/schema_documentos_asistente.sql).
 function DocumentosVencimiento({ asistenteId }) {
   const { t } = useLocale();
+  const { usuario } = useAuth();
   const [tipos, setTipos] = useState([]);
   const [valores, setValores] = useState({});
   const [documentoIds, setDocumentoIds] = useState({});
@@ -186,7 +187,7 @@ function DocumentosVencimiento({ asistenteId }) {
     const { error: errorGuardar } = await supabase
       .from('documentos_asistente')
       .upsert(
-        { id: documentoIds[tipoId], asistente_id: asistenteId, tipo_documento_id: tipoId, fecha_vencimiento: fecha },
+        { id: documentoIds[tipoId], asistente_id: asistenteId, tipo_documento_id: tipoId, fecha_vencimiento: fecha, prestadora_id: usuario?.prestadora_id },
         { onConflict: 'asistente_id,tipo_documento_id' },
       );
     setGuardandoTipoId(null);

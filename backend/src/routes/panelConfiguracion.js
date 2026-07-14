@@ -349,6 +349,36 @@ panelConfiguracionRouter.patch('/documentos-tipo/plazo-aviso', async (req, res) 
   res.json({ ok: true });
 });
 
+// --- Horizonte de generación de guardias de series abiertas (pendiente #18 punto 2,
+//     docs/PENDIENTES.md) — cron backend/src/utils/generacionSeriesGuardia.js. Mismo patrón
+//     que /documentos-tipo/plazo-aviso: valor en "prestadoras", expuesto acá para reusar el
+//     scoping por prestadora ya resuelto en este router. ---
+panelConfiguracionRouter.get('/guardias/horizonte-generacion', async (req, res) => {
+  const prestadoraId = req.usuarioPanel.rol === 'superadmin' && req.query.prestadora_id
+    ? req.query.prestadora_id
+    : req.usuarioPanel.prestadoraId;
+  const { data, error } = await supabase
+    .from('prestadoras')
+    .select('dias_generacion_series_guardia')
+    .eq('id', prestadoraId)
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ dias_generacion_series_guardia: data.dias_generacion_series_guardia });
+});
+
+panelConfiguracionRouter.patch('/guardias/horizonte-generacion', async (req, res) => {
+  const { dias } = req.body;
+  if (!Number.isInteger(dias) || dias <= 0) {
+    return res.status(400).json({ error: 'dias debe ser un entero positivo' });
+  }
+  const { error } = await supabase
+    .from('prestadoras')
+    .update({ dias_generacion_series_guardia: dias })
+    .eq('id', req.usuarioPanel.prestadoraId);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
 panelConfiguracionRouter.patch('/documentos-tipo/:id', async (req, res) => {
   const { nombre, requiere_vencimiento, activo } = req.body;
   let query = supabase

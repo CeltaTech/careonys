@@ -46,11 +46,17 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   const [marcandoRevisado, setMarcandoRevisado] = useState(null);
   const [errorRevision, setErrorRevision] = useState(null);
 
+  const [motivoCierre, setMotivoCierre] = useState('');
+  const [motivoDetalleCierre, setMotivoDetalleCierre] = useState('');
+  const [cerrandoServicio, setCerrandoServicio] = useState(false);
+  const [errorCierre, setErrorCierre] = useState(null);
+  const [servicioCerrado, setServicioCerrado] = useState(false);
+
   const recargar = useCallback(async () => {
     setEstado('cargando');
     setError(null);
 
-    const [listaResp, prestacionesResp, paquetesResp] = await Promise.all([
+    const [listaResp, prestacionesResp, paquetesResp, cierresResp] = await Promise.all([
       supabase.from('lista_precios').select('*').eq('activo', true).order('tipo_servicio'),
       supabase.from('prestaciones').select('*').eq('paciente_id', paciente.id).order('created_at', { ascending: false }),
       supabase
@@ -58,10 +64,11 @@ export function PrestacionesPaciente({ paciente, onClose }) {
         .select('*, paquete_prestacion_items(prestacion_id)')
         .eq('paciente_id', paciente.id)
         .order('created_at', { ascending: false }),
+      supabase.from('cierres_servicio_paciente').select('id').eq('paciente_id', paciente.id).limit(1),
     ]);
 
-    if (listaResp.error || prestacionesResp.error || paquetesResp.error) {
-      setError((listaResp.error || prestacionesResp.error || paquetesResp.error).message);
+    if (listaResp.error || prestacionesResp.error || paquetesResp.error || cierresResp.error) {
+      setError((listaResp.error || prestacionesResp.error || paquetesResp.error || cierresResp.error).message);
       setEstado('error');
       return;
     }
@@ -69,6 +76,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     setListaPrecios(listaResp.data ?? []);
     setPrestaciones(prestacionesResp.data ?? []);
     setPaquetes(paquetesResp.data ?? []);
+    setServicioCerrado((cierresResp.data ?? []).length > 0);
     setEstado('listo');
   }, [paciente.id]);
 
@@ -151,6 +159,53 @@ export function PrestacionesPaciente({ paciente, onClose }) {
       setErrorRevision(t.comun.error_generico);
       return;
     }
+    recargar();
+  }
+
+  async function handleCerrarServicio() {
+    if (!window.confirm(t.prestaciones.confirmar_cierre_servicio)) return;
+
+    setCerrandoServicio(true);
+    setErrorCierre(null);
+
+    const { error: errorInsert } = await supabase.from('cierres_servicio_paciente').insert({
+      prestadora_id: usuario.prestadora_id,
+      paciente_id: paciente.id,
+      motivo: motivoCierre,
+      motivo_detalle: motivoCierre === 'otro' ? motivoDetalleCierre : null,
+      cerrado_por: usuario.id,
+    });
+    if (errorInsert) {
+      setCerrandoServicio(false);
+      setErrorCierre(errorInsert.message);
+      return;
+    }
+
+    const ahora = new Date().toISOString();
+    const resultados = await Promise.all([
+      supabase.from('prestaciones').update({ estado: 'de_baja' }).eq('paciente_id', paciente.id).eq('estado', 'vigente'),
+      supabase.from('paquetes_prestaciones').update({ estado: 'de_baja' }).eq('paciente_id', paciente.id).eq('estado', 'vigente'),
+      supabase
+        .from('series_guardias')
+        .update({ estado: 'cancelada', cancelacion_origen: 'prestadora', cancelado_at: ahora })
+        .eq('paciente_id', paciente.id)
+        .eq('estado', 'activa'),
+      supabase
+        .from('guardias')
+        .update({ estado: 'cancelada', cancelacion_origen: 'prestadora', cancelacion_alcance: 'total' })
+        .eq('paciente_id', paciente.id)
+        .eq('estado', 'programada'),
+    ]);
+
+    const errorCascada = resultados.find((r) => r.error)?.error;
+    setCerrandoServicio(false);
+    if (errorCascada) {
+      setErrorCierre(errorCascada.message);
+      return;
+    }
+
+    setMotivoCierre('');
+    setMotivoDetalleCierre('');
     recargar();
   }
 
@@ -401,6 +456,48 @@ export function PrestacionesPaciente({ paciente, onClose }) {
               </div>
             )}
           </>
+        )}
+
+        {estado === 'listo' && ['admin_prestadora', 'coordinador'].includes(usuario.rol) && (
+          <div className="panel-resultado-calculo">
+            <h3>{t.prestaciones.cierre_servicio_titulo}</h3>
+            {servicioCerrado ? (
+              <Alert variant="info">{t.prestaciones.servicio_ya_cerrado}</Alert>
+            ) : (
+              <>
+                <p className="panel-explicacion">{t.prestaciones.cierre_servicio_explicacion}</p>
+                {errorCierre && <Alert variant="error">{errorCierre}</Alert>}
+                <FormField
+                  label={t.prestaciones.cierre_servicio_motivo}
+                  name="motivo_cierre"
+                  type="select"
+                  value={motivoCierre}
+                  onChange={(e) => setMotivoCierre(e.target.value)}
+                >
+                  <option value="">{t.guardias.nueva_guardia.elegir}</option>
+                  <option value="fin_demanda">{t.prestaciones.cierre_servicio_motivo_fin_demanda}</option>
+                  <option value="fallecimiento">{t.prestaciones.cierre_servicio_motivo_fallecimiento}</option>
+                  <option value="otro">{t.prestaciones.cierre_servicio_motivo_otro}</option>
+                </FormField>
+                {motivoCierre === 'otro' && (
+                  <FormField
+                    label={t.prestaciones.cierre_servicio_motivo_detalle}
+                    name="motivo_detalle_cierre"
+                    type="textarea"
+                    value={motivoDetalleCierre}
+                    onChange={(e) => setMotivoDetalleCierre(e.target.value)}
+                  />
+                )}
+                <Button
+                  variant="secondary"
+                  onClick={handleCerrarServicio}
+                  disabled={cerrandoServicio || !motivoCierre || (motivoCierre === 'otro' && !motivoDetalleCierre)}
+                >
+                  {cerrandoServicio ? t.prestaciones.cerrando_servicio : t.prestaciones.cierre_servicio_titulo}
+                </Button>
+              </>
+            )}
+          </div>
         )}
 
         <div className="panel-modal-acciones">

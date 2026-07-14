@@ -1,5 +1,5 @@
 -- Migración multi-tenant (PLM Systems) — paso 01, Bloque 1 del kickoff de implementación
--- (docs/Prompt_Claude_Code_Kickoff_Implementacion.md), pasos 1-4 de la sección 2 de
+-- (docs/Reserva Historica/Prompt_Claude_Code_Kickoff_Implementacion.md), pasos 1-4 de la sección 2 de
 -- docs/PLAN_MULTITENANT_PLM.md: crear la entidad `prestadoras`, agregar `prestadora_id`
 -- (nullable → backfill → NOT NULL) a las tablas de negocio existentes.
 --

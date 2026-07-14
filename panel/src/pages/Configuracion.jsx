@@ -269,12 +269,20 @@ function TabServicios() {
   const [creandoNuevo, setCreandoNuevo] = useState(false);
   const [actualizandoId, setActualizandoId] = useState(null);
 
+  const [diasGeneracion, setDiasGeneracion] = useState('');
+  const [guardandoHorizonte, setGuardandoHorizonte] = useState(false);
+  const [horizonteGuardado, setHorizonteGuardado] = useState(false);
+
   const recargar = useCallback(async () => {
     setEstado('cargando');
     setError(null);
     try {
-      const { niveles: filas } = await llamarApi('/escalada-relevo');
+      const [{ niveles: filas }, { dias_generacion_series_guardia }] = await Promise.all([
+        llamarApi('/escalada-relevo'),
+        llamarApi('/guardias/horizonte-generacion'),
+      ]);
       setNiveles(filas);
+      setDiasGeneracion(String(dias_generacion_series_guardia));
       setEstado('listo');
     } catch (err) {
       setError(err.message);
@@ -285,6 +293,23 @@ function TabServicios() {
   useEffect(() => {
     recargar();
   }, [recargar]);
+
+  async function guardarHorizonte() {
+    setGuardandoHorizonte(true);
+    setError(null);
+    setHorizonteGuardado(false);
+    try {
+      await llamarApi('/guardias/horizonte-generacion', {
+        method: 'PATCH',
+        body: JSON.stringify({ dias: Number(diasGeneracion) }),
+      });
+      setHorizonteGuardado(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGuardandoHorizonte(false);
+    }
+  }
 
   async function borrar(fila) {
     if (!window.confirm(t.configuracion.escalada_confirmar_borrar)) return;
@@ -301,9 +326,23 @@ function TabServicios() {
 
   return (
     <div>
+      <h2>{t.configuracion.servicios_horizonte_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.servicios_horizonte_explicacion}</p>
+      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
+      {horizonteGuardado && <Alert variant="info">{t.comun.guardar} ✓</Alert>}
+      <FormField
+        label={t.configuracion.servicios_horizonte_dias}
+        name="dias_generacion"
+        type="number"
+        value={diasGeneracion}
+        onChange={(e) => { setDiasGeneracion(e.target.value); setHorizonteGuardado(false); }}
+      />
+      <Button onClick={guardarHorizonte} disabled={guardandoHorizonte || !diasGeneracion}>
+        {guardandoHorizonte ? t.comun.guardando : t.comun.guardar}
+      </Button>
+
       <h2>{t.configuracion.servicios_escalada_titulo}</h2>
       <p className="panel-explicacion">{t.configuracion.servicios_escalada_explicacion}</p>
-      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
       <div className="panel-filtros">
         <Button onClick={() => setCreandoNuevo(true)}>{t.configuracion.escalada_nuevo_nivel}</Button>
       </div>

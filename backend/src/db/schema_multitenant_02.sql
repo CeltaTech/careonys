@@ -1,5 +1,5 @@
 -- Migración multi-tenant (PLM Systems) — paso 02, Bloque 2 del kickoff de implementación
--- (docs/Prompt_Claude_Code_Kickoff_Implementacion.md), paso 5 de la sección 2 de
+-- (docs/Reserva Historica/Prompt_Claude_Code_Kickoff_Implementacion.md), paso 5 de la sección 2 de
 -- docs/PLAN_MULTITENANT_PLM.md, ejecutado junto con el diseño 3.6 (current_tenant()/
 -- es_superadmin()) por decisión del usuario (2026-07-09): reescribir el rename de rol
 -- admin → admin_prestadora Y las ~28 policies RLS que dependen de ese valor en un solo

@@ -7,7 +7,7 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 
 const DIAS_SEMANA = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
-const DIAS_GENERACION_SIN_VIGENCIA_HASTA = 90;
+const DIAS_GENERACION_SIN_VIGENCIA_HASTA_DEFAULT = 90;
 
 export function NuevaGuardiaModal({ onClose, onCreada }) {
   const { t } = useLocale();
@@ -15,6 +15,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
   const [esSerie, setEsSerie] = useState(false);
   const [asistentes, setAsistentes] = useState([]);
   const [pacientes, setPacientes] = useState([]);
+  const [diasGeneracion, setDiasGeneracion] = useState(DIAS_GENERACION_SIN_VIGENCIA_HASTA_DEFAULT);
   const [asistenteId, setAsistenteId] = useState('');
   const [pacienteId, setPacienteId] = useState('');
   const [modalidad, setModalidad] = useState('');
@@ -29,15 +30,19 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
 
   useEffect(() => {
     async function cargarListas() {
-      const [{ data: asistentesData }, { data: pacientesData }] = await Promise.all([
+      const [{ data: asistentesData }, { data: pacientesData }, { data: prestadoraData }] = await Promise.all([
         supabase.from('asistentes').select('id, nombre').eq('estado', 'activo').order('nombre'),
         supabase.from('pacientes').select('id, nombre').is('deleted_at', null).order('nombre'),
+        supabase.from('prestadoras').select('dias_generacion_series_guardia').eq('id', usuario.prestadora_id).single(),
       ]);
       setAsistentes(asistentesData ?? []);
       setPacientes(pacientesData ?? []);
+      if (prestadoraData?.dias_generacion_series_guardia) {
+        setDiasGeneracion(prestadoraData.dias_generacion_series_guardia);
+      }
     }
     cargarListas();
-  }, []);
+  }, [usuario.prestadora_id]);
 
   function toggleDia(dia) {
     setDiasSemana((prev) => (prev.includes(dia) ? prev.filter((d) => d !== dia) : [...prev, dia]));
@@ -49,7 +54,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
     const fechaInicio = new Date(`${desde}T00:00:00`);
     const fechaFin = hasta
       ? new Date(`${hasta}T00:00:00`)
-      : new Date(fechaInicio.getTime() + DIAS_GENERACION_SIN_VIGENCIA_HASTA * 24 * 60 * 60 * 1000);
+      : new Date(fechaInicio.getTime() + diasGeneracion * 24 * 60 * 60 * 1000);
     const fechas = [];
     for (let f = fechaInicio; f <= fechaFin; f = new Date(f.getTime() + 24 * 60 * 60 * 1000)) {
       if (indicesElegidos.includes(f.getDay())) {

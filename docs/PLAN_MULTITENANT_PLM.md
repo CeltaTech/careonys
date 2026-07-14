@@ -661,7 +661,7 @@ dejaría de tener sentido como nombre (¿admin de qué?). Dos caminos evaluados:
 - **(b)** Mantener `admin` como está (implícitamente escopeado a la prestadora vía RLS) y
   agregar `admin_prestadora` como alias/sinónimo solo para nomenclatura de negocio.
 
-**Decisión (2026-07-09, kickoff de implementación `docs/Prompt_Claude_Code_Kickoff_Implementacion.md`):
+**Decisión (2026-07-09, kickoff de implementación `docs/Reserva Historica/Prompt_Claude_Code_Kickoff_Implementacion.md`):
 opción (a).** Motivo: alinea con práctica estándar de la industria en RBAC multi-tenant — un
 rol sin contexto de tenant en el nombre (`admin` a secas) es, según múltiples guías de
 arquitectura de autorización (WorkOS, Auth0, AWS Prescriptive Guidance), el patrón que más

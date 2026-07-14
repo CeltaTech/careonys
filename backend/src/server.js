@@ -12,6 +12,7 @@ import { configuracionPublicaRouter } from './routes/configuracionPublica.js';
 import { revisarVencimientos } from './utils/vencimientos.js';
 import { revisarAusenciasAutomaticas } from './utils/ausenciaAutomatica.js';
 import { revisarNotificacionesCoordinador } from './utils/revisarNotificacionesCoordinador.js';
+import { extenderSeriesGuardiaAbiertas } from './utils/generacionSeriesGuardia.js';
 import { whatsappWebhookRouter } from './routes/whatsappWebhook.js';
 
 const app = express();
@@ -52,6 +53,13 @@ revisarNotificacionesCoordinador().catch((err) => console.error('Error en revisi
 setInterval(() => {
   revisarNotificacionesCoordinador().catch((err) => console.error('Error en revisión de notificaciones al Coordinador:', err.message));
 }, CINCO_MINUTOS_MS);
+
+// Renovación automática del horizonte de guardias de series abiertas (pendiente #18 punto 2,
+// docs/PENDIENTES.md) — se mide en días, misma cadencia que revisarVencimientos.
+extenderSeriesGuardiaAbiertas().catch((err) => console.error('Error en extensión inicial de series de guardia:', err.message));
+setInterval(() => {
+  extenderSeriesGuardiaAbiertas().catch((err) => console.error('Error en extensión de series de guardia:', err.message));
+}, UN_DIA_MS);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

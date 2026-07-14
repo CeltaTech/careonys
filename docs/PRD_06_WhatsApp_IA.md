@@ -1,12 +1,14 @@
 # PRD_06 — WhatsApp Business (Meta) + agente de IA asistiendo
 
-> ⚠️ **ESTADO (actualizado 2026-07-13): puntos A-E ya decididos, falta kickoff explícito de
-> implementación.** Este documento registró el diseño acordado el 2026-07-11 con varios
-> puntos centrales abiertos; el 2026-07-13 el Desarrollador cerró los cinco puntos
-> pendientes (A-E, ver sección de abajo). **Esto no es todavía luz verde para escribir
-> código** — sigue haciendo falta que el Desarrollador dé el kickoff explícito de esta etapa
-> (mismo patrón que el resto del proyecto: una decisión de diseño aprobada no equivale a una
-> orden de implementar). Ver pendiente #9 de `docs/PENDIENTES.md`, que remite acá.
+> ✅ **ESTADO (actualizado 2026-07-14): implementado, desplegado y probado.** Este documento
+> registró el diseño acordado el 2026-07-11 con varios puntos centrales abiertos; el
+> 2026-07-13 el Desarrollador cerró los cinco puntos pendientes (A-E, ver sección de abajo) y
+> dio el kickoff de implementación el mismo día. El código (backend + Panel) se construyó,
+> se aplicó y verificó contra Supabase real, se desplegó (Railway + `vercel --prod`) y se
+> probó en navegador real contra `https://prestadora-original-panel.vercel.app`. Ver pendiente #9 de
+> `docs/PENDIENTES.md` (🟢 Resuelto 2026-07-13), que tiene el detalle completo de la
+> implementación y de lo explícitamente diferido (envío real a Asistentes y endurecimiento
+> del webhook para producción, a probar con una prestadora real con cuenta Meta activa).
 
 ## Por qué existe este documento
 

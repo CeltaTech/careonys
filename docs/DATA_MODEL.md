@@ -37,8 +37,10 @@ CREATE TABLE prestadoras (
 );
 ```
 
-Cada prestadora licenciataria del software (prestadora-original es la primera, id
-`874f54d7-4383-4d54-8b9f-f51d02f0dd11`) es un tenant aislado. Ver
+Cada prestadora licenciataria del software es un tenant aislado. La única fila real hoy es
+datos de prueba/desarrollo con id `874f54d7-4383-4d54-8b9f-f51d02f0dd11` (caso de uso prestadora-original,
+sin contrato firmado — no tiene estatus de "primera prestadora" ni ningún otro privilegio de
+diseño). Ver
 `docs/PLAN_MULTITENANT_PLM.md` para el diseño completo y `backend/src/db/schema_multitenant_01.sql`/`schema_multitenant_02.sql` para el DDL real aplicado.
 
 **Convención de FK tenant-segura (introducida con Módulo 6, aplicar a toda tabla nueva
@@ -128,7 +130,20 @@ ALTER TABLE asistentes ADD COLUMN valor_hora NUMERIC(12,2);      -- si monotribu
 ALTER TABLE asistentes ADD COLUMN sueldo_basico NUMERIC(12,2);   -- si dependencia
 ALTER TABLE asistentes ADD COLUMN horas_semanales NUMERIC(5,2);
 ALTER TABLE asistentes ADD COLUMN score_riesgo_reclasificacion INTEGER DEFAULT 0; -- 0-100
+
+-- Pendiente #13 (docs/PENDIENTES.md), resuelto 2026-07-13 — canal(es) por el que el
+-- Asistente está disponible: 'directo' (la prestadora lo asigna) y/o 'match' (la
+-- Cliente lo elige). Ambos por default; si un canal no está habilitado, se completa el
+-- motivo correspondiente (NULL mientras el canal esté activo en `canales`).
+ALTER TABLE asistentes ADD COLUMN canales TEXT[] NOT NULL DEFAULT ARRAY['directo','match'];
+ALTER TABLE asistentes ADD COLUMN motivo_exclusion_directo TEXT;
+ALTER TABLE asistentes ADD COLUMN motivo_exclusion_match TEXT;
+ALTER TABLE asistentes ADD CONSTRAINT asistentes_canales_valido
+  CHECK (canales <@ ARRAY['directo','match']::TEXT[] AND array_length(canales, 1) > 0);
 ```
+
+Ver `backend/src/db/schema_asistentes_canales.sql` (schema completo, pendiente de aplicar
+contra Supabase real — agregado a `docs/PENDIENTES.md`).
 
 ## Tablas: tipos_documento_asistente / documentos_asistente (pendiente #18 punto 1, aplicado
 ## y verificado contra Supabase real 2026-07-14)
@@ -486,6 +501,42 @@ CREATE TABLE ceses (
 `fecha_alta` y `tipo_vinculo` para el cálculo de antigüedad se leen de la tabla `asistentes`
 (ver más arriba), no se duplican en `ceses`.
 
+## Tabla: calificaciones_asistente (pendiente #13(b), diseñado 2026-07-13)
+
+Calificación que el Cliente deja sobre el Asistente tras una guardia — informativa para el
+match, no dispara ninguna acción automática del sistema sobre el Asistente. La única
+injerencia de la prestadora es decidir si una calificación puntual se muestra en la ficha
+pública del Asistente (`visible_publica`) o no — nunca editar/borrar el contenido de la
+calificación en sí (estrellas/comentario son del Cliente, no de la prestadora).
+
+```sql
+CREATE TABLE calificaciones_asistente (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  asistente_id UUID NOT NULL REFERENCES asistentes(id),
+  paciente_id UUID NOT NULL REFERENCES pacientes(id),
+  cliente_id UUID NOT NULL REFERENCES usuarios(id),
+  guardia_id UUID NOT NULL REFERENCES guardias(id),
+  prestadora_id UUID NOT NULL REFERENCES prestadoras(id),
+  estrellas INTEGER NOT NULL CHECK (estrellas BETWEEN 1 AND 5),
+  comentario TEXT,
+  visible_publica BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+Ver `backend/src/db/schema_calificaciones_asistente.sql` (RLS completa + `NOTIFY pgrst,
+'reload schema'`, pendiente de aplicar contra Supabase real). No confundir con
+`vínculo`/`cese` (arriba) — son conceptos independientes: vínculo/cese es "¿sigue siendo
+parte del plantel certificado de la prestadora?", esta tabla es "¿qué opinaron los Clientes
+de su trabajo?", y una calificación mala nunca afecta al primero de forma automática.
+
+**Nota de alcance jurisdiccional (ver pendiente #30):** el razonamiento de riesgo legal
+detrás de "nunca acción automática" se apoya en el marco de riesgo legal de `CLAUDE.md`
+(art. 23 LCT, caso Cabify — derecho argentino). Señalado como pendiente de fondo: ese marco
+está escrito como regla universal del producto y no necesariamente aplica igual a una
+prestadora radicada en otro país — no resuelto todavía, no bloquea esta tabla mientras la
+única prestadora real sea prestadora-original/Argentina.
+
 ## Reclutamiento (PRD_03) — de `postulaciones` a `asistentes`
 
 **Corrección (2026-07-09):** este documento describía originalmente un paso intermedio por
@@ -554,7 +605,7 @@ base de datos de por medio.
 ## Diagrama de relaciones (resumen)
 
 ```
-prestadoras (tenant — prestadora-original es la primera)
+prestadoras (tenant — hoy solo datos de prueba, caso de uso prestadora-original, sin contrato firmado)
   └── prestadora_id NOT NULL en: usuarios, asistentes, ausencias, guardias_cobertura, ceses,
       clientes, pacientes, lista_precios, prestaciones, paquetes_prestaciones,
       paquete_prestacion_items, certificados, zonas_cobertura, solicitudes, postulaciones

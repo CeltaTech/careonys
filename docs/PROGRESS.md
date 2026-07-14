@@ -1320,6 +1320,49 @@ fila #15, estado cambiado a "🟡 Investigación completa, pendiente de decisió
 Desarrollador" — no se cierra unilateralmente, falta que el Desarrollador decida qué vale la
 pena implementar.
 
+## Actualización — Cierre de pendiente #18(1)/#31 (documentos de Asistente configurables) + auditoría de alcance + registro de pendiente #30 (2026-07-14)
+
+Sesión de continuación, sin MCP de Supabase ni de navegador conectados — trabajo de
+verificación, auditoría y documentación, sin escribir código nuevo.
+
+**Pendiente #18 candidato (1) / #31 — cerrado por completo.** El código (catálogo
+configurable `tipos_documento_asistente`/`documentos_asistente` + plazo de aviso editable
+`prestadoras.dias_aviso_vencimiento_documentos`, diseño aprobado en sesión previa) se había
+escrito y commiteado en `aa944ac` en una sesión anterior con MCP de Supabase conectado, que
+además: aplicó y verificó el SQL contra Supabase real, desplegó (Railway + `vercel --prod`),
+probó en el Panel real, y encontró/corrigió un bug real (403 por falta de `prestadora_id` en
+el `upsert` de `PerfilTab.jsx`, commit `e9e357d`). Esta sesión terminó de cerrar el registro:
+aisló y commiteó la fila final de `docs/PENDIENTES.md` #31 (commit `872be09`, separada de las
+filas #28/#29/#30 que no correspondían a esta tarea), y corrigió una regresión de exactitud
+en `docs/DATA_MODEL.md` (el texto de esa tabla había vuelto a decir "pendiente de aplicar"
+por un efecto colateral de la técnica de aislado de commits de la sesión anterior — corregido
+de vuelta a "aplicado y verificado").
+
+**Auditoría de alcance, a pedido explícito del Desarrollador.** Se revisó si la sesión
+anterior se había excedido del encargo ("aplicar y verificar el SQL"). Conclusión: no —
+commitear/desplegar/probar en navegador y corregir el bug encontrado son parte del protocolo
+ya escrito en `CLAUDE.md` (Reglas 9 y 13.1), no una extensión de alcance. Lo que sí se marcó
+como una extralimitación real fue de esta misma sesión: editar `docs/DATA_MODEL.md` sin
+preguntar primero (corregido en el momento, pero señalado como desvío de la Regla 12.1).
+
+**Pendiente #30 — nuevo, registrado y commiteado (commit `3bda7a0`).** `CLAUDE.md`,
+`docs/SECURITY.md` y `docs/PLAN_MULTITENANT_PLM.md` tenían, sin commitear, el rediseño de
+roles `superadmin` (pasa a ser puramente técnico, acotado a una prestadora de prueba/sandbox)
+y `admin_plataforma` (rol nuevo, alcance administrativo de negocio de toda la plataforma, con
+el "modo dentro de una prestadora" — banner, timeout 5/60 min, auditoría, MFA), acordado con
+el Desarrollador el 2026-07-13. El diseño está cerrado; **la implementación en código no
+empezó** (mecanismo de `current_tenant()` dinámico por sesión, `ROLES_PANEL`,
+`requiereRolPanel.js`, `rolesGestionables()`, reescritura de policies RLS que hoy usan
+`es_superadmin()` como bypass total) — no arrancar esa implementación sin kickoff explícito
+del Desarrollador, mismo criterio que rige el resto del multi-tenant.
+
+**Queda sin commitear al cierre de esta sesión** (deliberadamente, fuera del alcance de esta
+tarea puntual):
+- `backend/src/db/schema_asistentes_canales.sql` y `schema_calificaciones_asistente.sql` —
+  ya aplicados y verificados contra Supabase real (pendiente #13, 🟢 Resuelto), pero nunca
+  commiteados al repo. No requieren ninguna decisión — es limpieza de git pura, se puede
+  commitear en cualquier momento.
+
 ## Problemas conocidos / deuda técnica
 
 _Registrar acá bugs conocidos o deuda técnica para la próxima sesión._

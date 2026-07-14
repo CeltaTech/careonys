@@ -19,10 +19,29 @@ export async function requiereRolPanel(req, res, next) {
     .eq('id', userData.user.id)
     .single();
 
-  if (errorPerfil || !perfil || !['admin_prestadora', 'coordinador', 'superadmin'].includes(perfil.rol)) {
+  if (errorPerfil || !perfil || !['admin_prestadora', 'coordinador', 'superadmin', 'admin_plataforma'].includes(perfil.rol)) {
     return res.status(403).json({ error: 'Rol sin permiso' });
   }
 
-  req.usuarioPanel = { id: userData.user.id, rol: perfil.rol, prestadoraId: perfil.prestadora_id };
+  let prestadoraId = perfil.prestadora_id;
+
+  // admin_plataforma no tiene prestadora_id propia (docs/PLAN_MULTITENANT_PLM.md 3.4.1):
+  // la resuelve acá, una vez, a partir de su sesión de tenant activa — así el resto de
+  // las rutas reutiliza el mismo req.usuarioPanel.prestadoraId que ya usa admin_prestadora,
+  // sin ningún branch específico de admin_plataforma en cada endpoint.
+  if (perfil.rol === 'admin_plataforma') {
+    const { data: sesion } = await supabase
+      .from('sesiones_tenant_admin_plataforma')
+      .select('prestadora_id, expira_at')
+      .eq('admin_id', userData.user.id)
+      .is('salida_at', null)
+      .order('entrada_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    prestadoraId = sesion && new Date(sesion.expira_at) > new Date() ? sesion.prestadora_id : null;
+  }
+
+  req.usuarioPanel = { id: userData.user.id, rol: perfil.rol, prestadoraId };
   next();
 }

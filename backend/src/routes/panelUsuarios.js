@@ -9,17 +9,26 @@ export const panelUsuariosRouter = Router();
 // Coordinadores. Superadmin además gestiona cuentas de Admin y de otros Superadmin (acceso
 // técnico del Módulo 8) — ver CLAUDE.md glosario y docs/CONTEXT.md.
 function requiereAdminOSuperior(req, res, next) {
-  if (!['admin_prestadora', 'superadmin'].includes(req.usuarioPanel?.rol)) {
+  if (!['admin_prestadora', 'superadmin', 'admin_plataforma'].includes(req.usuarioPanel?.rol)) {
     return res.status(403).json({ error: 'Solo Admin o Superadmin puede gestionar usuarios del panel' });
+  }
+  // admin_plataforma sin sesión de tenant activa no tiene ninguna prestadora sobre la que
+  // operar (docs/PLAN_MULTITENANT_PLM.md 3.4.1) — sin este corte explícito, prestadoraId
+  // llega `null` a las queries de abajo y `.eq('prestadora_id', null)` rompe contra Postgres
+  // en vez de devolver "sin permiso"/lista vacía.
+  if (req.usuarioPanel.rol === 'admin_plataforma' && !req.usuarioPanel.prestadoraId) {
+    return res.status(400).json({ error: 'Entrá a una prestadora antes de gestionar sus usuarios' });
   }
   next();
 }
 
-// Roles que el solicitante tiene permitido crear/editar/borrar.
+// Roles que el solicitante tiene permitido crear/editar/borrar. admin_plataforma gestiona
+// cuentas de la prestadora en la que está adentro (docs/PLAN_MULTITENANT_PLM.md 3.4) — mismo
+// alcance que admin_prestadora, nunca cuentas de superadmin/admin_plataforma.
 function rolesGestionables(rolSolicitante) {
-  return rolSolicitante === 'superadmin'
-    ? ['admin_prestadora', 'coordinador', 'superadmin']
-    : ['coordinador'];
+  if (rolSolicitante === 'superadmin') return ['admin_prestadora', 'coordinador', 'superadmin'];
+  if (rolSolicitante === 'admin_plataforma') return ['admin_prestadora', 'coordinador'];
+  return ['coordinador'];
 }
 
 panelUsuariosRouter.get('/', requiereRolPanel, requiereAdminOSuperior, async (req, res) => {
@@ -49,7 +58,7 @@ panelUsuariosRouter.post('/', requiereRolPanel, requiereAdminOSuperior, async (r
   }
 
   const rolPermitidos = rolesGestionables(req.usuarioPanel.rol);
-  const rolNuevo = req.usuarioPanel.rol === 'superadmin' ? (rol || 'coordinador') : 'coordinador';
+  const rolNuevo = ['superadmin', 'admin_plataforma'].includes(req.usuarioPanel.rol) ? (rol || 'coordinador') : 'coordinador';
   if (!rolPermitidos.includes(rolNuevo)) {
     return res.status(403).json({ error: 'No tenés permiso para crear cuentas con ese rol' });
   }

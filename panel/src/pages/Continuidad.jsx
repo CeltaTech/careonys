@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
+import { useConfirmarDestructivo } from '../context/TenantSessionContext';
 import { supabase } from '../lib/supabaseClient';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
@@ -12,6 +13,7 @@ const TIPOS_RESOLUCION = ['suplente', 'franquero', 'emergencia', 'familiar'];
 export function Continuidad() {
   const { t } = useLocale();
   const { usuario } = useAuth();
+  const confirmarDestructivo = useConfirmarDestructivo();
   const [incidentes, setIncidentes] = useState([]);
   const [alertas, setAlertas] = useState([]);
   const [notificacionesCierre, setNotificacionesCierre] = useState([]);
@@ -114,7 +116,7 @@ export function Continuidad() {
   }, []);
 
   async function resolverAlerta(alerta) {
-    if (!window.confirm(t.continuidad.confirmar_resolver_alerta)) return;
+    if (!confirmarDestructivo(t.continuidad.confirmar_resolver_alerta)) return;
     setActualizandoId(alerta.id);
     try {
       const { error: errorUpdate } = await supabase
@@ -285,6 +287,7 @@ export function Continuidad() {
 
 function ResolverIncidente({ incidente, asistentes, usuario, onClose, onResuelto }) {
   const { t } = useLocale();
+  const confirmarDestructivo = useConfirmarDestructivo();
   const [tipo, setTipo] = useState('suplente');
   const [asistenteId, setAsistenteId] = useState('');
   const [familiarNombre, setFamiliarNombre] = useState('');
@@ -295,7 +298,7 @@ function ResolverIncidente({ incidente, asistentes, usuario, onClose, onResuelto
   const esFamiliar = tipo === 'familiar';
 
   async function handleResolver() {
-    if (!window.confirm(t.continuidad.confirmar_resolver)) return;
+    if (!confirmarDestructivo(t.continuidad.confirmar_resolver)) return;
     setGuardando(true);
     setError(null);
     try {

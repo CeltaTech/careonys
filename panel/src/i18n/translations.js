@@ -612,6 +612,7 @@ export const T = {
       sesion_advertencia: 'La sesión está por vencer — vence a las {hora}.',
       seguir_trabajando: 'Seguir trabajando',
       renovando: 'Renovando…',
+      confirmar_advertencia_tenant: 'Estás dentro de {prestadora}, no en tu propia prestadora.\n\n',
     },
   },
   en: {
@@ -1227,6 +1228,7 @@ export const T = {
       sesion_advertencia: 'The session is about to expire — it expires at {hora}.',
       seguir_trabajando: 'Keep working',
       renovando: 'Renewing…',
+      confirmar_advertencia_tenant: "You're inside {prestadora}, not your own provider.\n\n",
     },
   },
   'pt-BR': {
@@ -1842,6 +1844,7 @@ export const T = {
       sesion_advertencia: 'A sessão está prestes a expirar — expira às {hora}.',
       seguir_trabajando: 'Continuar trabalhando',
       renovando: 'Renovando…',
+      confirmar_advertencia_tenant: 'Você está dentro de {prestadora}, não na sua própria prestadora.\n\n',
     },
   },
 };

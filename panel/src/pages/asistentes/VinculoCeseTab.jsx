@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
 import { useEmpresa } from '../../context/EmpresaContext';
+import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
 import { useEscalasLegales } from '../../hooks/useEscalasLegales';
 import { resolverEscalasVigentes } from '../../lib/escalasLegales';
 import { calcularCese } from '../../lib/calcularCese';
@@ -27,6 +28,7 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
   const { t } = useLocale();
   const { usuario } = useAuth();
   const { empresa } = useEmpresa();
+  const confirmarDestructivo = useConfirmarDestructivo();
   const { filas: escalasCrudas, estado: estadoEscalas } = useEscalasLegales();
   const [ceses, setCeses] = useState([]);
   const [estadoCeses, setEstadoCeses] = useState('cargando');
@@ -67,7 +69,7 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
 
   async function confirmarCese() {
     if (resultado.requiereRevisionAbogado && !revisadoAbogado) return;
-    const confirmado = window.confirm(t.asistentes.cese.confirmar);
+    const confirmado = confirmarDestructivo(t.asistentes.cese.confirmar);
     if (!confirmado) return;
 
     setGuardando(true);

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
+import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
@@ -17,6 +18,7 @@ function calcularPrecioFinal(precioLista, tipoDescuento, valorDescuento) {
 export function PrestacionesPaciente({ paciente, onClose }) {
   const { t } = useLocale();
   const { usuario } = useAuth();
+  const confirmarDestructivo = useConfirmarDestructivo();
   const [listaPrecios, setListaPrecios] = useState([]);
   const [prestaciones, setPrestaciones] = useState([]);
   const [paquetes, setPaquetes] = useState([]);
@@ -163,7 +165,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   }
 
   async function handleCerrarServicio() {
-    if (!window.confirm(t.prestaciones.confirmar_cierre_servicio)) return;
+    if (!confirmarDestructivo(t.prestaciones.confirmar_cierre_servicio)) return;
 
     setCerrandoServicio(true);
     setErrorCierre(null);

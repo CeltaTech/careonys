@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useAuth } from './AuthContext';
+import { useLocale } from '../i18n/LocaleContext';
 import { supabase } from '../lib/supabaseClient';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -97,4 +98,22 @@ export function useTenantSession() {
   const ctx = useContext(TenantSessionContext);
   if (!ctx) throw new Error('useTenantSession debe usarse dentro de TenantSessionProvider');
   return ctx;
+}
+
+// Ítem F del pendiente #30: refuerza en el momento de cada confirmación destructiva
+// (Regla 4) que admin_plataforma está actuando dentro de una prestadora ajena — el banner
+// persistente (item D) ya lo indica todo el tiempo, esto es el aviso puntual al ejecutar.
+export function useConfirmarDestructivo() {
+  const { t } = useLocale();
+  const { sesion } = useTenantSession();
+
+  return useCallback(
+    (mensaje) => {
+      const advertencia = sesion
+        ? t.prestadoras.confirmar_advertencia_tenant.replace('{prestadora}', sesion.prestadoras?.nombre_fantasia ?? '')
+        : '';
+      return window.confirm(`${advertencia}${mensaje}`);
+    },
+    [sesion, t]
+  );
 }

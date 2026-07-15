@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
+import { useConfirmarDestructivo } from '../context/TenantSessionContext';
 import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
@@ -9,6 +10,7 @@ import { Alert } from '../components/ui/Alert';
 export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada }) {
   const { t } = useLocale();
   const { usuario } = useAuth();
+  const confirmarDestructivo = useConfirmarDestructivo();
   const esNuevo = !precio;
   const [tipoServicio, setTipoServicio] = useState(precio?.tipo_servicio || '');
   const [modalidad, setModalidad] = useState(precio?.modalidad || '');
@@ -20,7 +22,7 @@ export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada
 
   async function handleGuardar() {
     if (!esNuevo && Number(valorPrecio) !== Number(precio.precio)) {
-      const confirmado = window.confirm(t.lista_precios.confirmar_cambio_precio);
+      const confirmado = confirmarDestructivo(t.lista_precios.confirmar_cambio_precio);
       if (!confirmado) return;
     }
 

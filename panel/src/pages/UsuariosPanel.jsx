@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
+import { useConfirmarDestructivo } from '../context/TenantSessionContext';
 import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
@@ -231,6 +232,7 @@ function NuevoUsuarioPanel({ esSuperadmin, onClose, onCreado }) {
 
 function EditarUsuarioPanel({ usuario, onClose, onActualizado }) {
   const { t } = useLocale();
+  const confirmarDestructivo = useConfirmarDestructivo();
   const [nombre, setNombre] = useState(usuario.nombre);
   const [telefono, setTelefono] = useState(usuario.telefono || '');
   const [zonas, setZonas] = useState((usuario.zonas || []).join(', '));
@@ -258,7 +260,7 @@ function EditarUsuarioPanel({ usuario, onClose, onActualizado }) {
   }
 
   async function handleDarDeBaja() {
-    const confirmado = window.confirm(t.usuarios_panel.confirmar_baja);
+    const confirmado = confirmarDestructivo(t.usuarios_panel.confirmar_baja);
     if (!confirmado) return;
 
     setBorrando(true);

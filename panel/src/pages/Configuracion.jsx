@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
+import { useConfirmarDestructivo } from '../context/TenantSessionContext';
 import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
@@ -124,6 +125,7 @@ function TabEmpresa() {
 
 function TabZonas() {
   const { t } = useLocale();
+  const confirmarDestructivo = useConfirmarDestructivo();
   const [zonas, setZonas] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -163,7 +165,7 @@ function TabZonas() {
   }
 
   async function borrar(zona) {
-    if (!window.confirm(t.configuracion.zonas_confirmar_borrar)) return;
+    if (!confirmarDestructivo(t.configuracion.zonas_confirmar_borrar)) return;
     setActualizandoZona(zona.id);
     try {
       await llamarApi(`/zonas/${zona.id}`, { method: 'DELETE' });
@@ -263,6 +265,7 @@ function NuevaZona({ onClose, onCreada }) {
 
 function TabServicios() {
   const { t } = useLocale();
+  const confirmarDestructivo = useConfirmarDestructivo();
   const [niveles, setNiveles] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -312,7 +315,7 @@ function TabServicios() {
   }
 
   async function borrar(fila) {
-    if (!window.confirm(t.configuracion.escalada_confirmar_borrar)) return;
+    if (!confirmarDestructivo(t.configuracion.escalada_confirmar_borrar)) return;
     setActualizandoId(fila.id);
     try {
       await llamarApi(`/escalada-relevo/${fila.id}`, { method: 'DELETE' });
@@ -384,6 +387,7 @@ function TabServicios() {
 
 function TabServiciosPersonalEmergencia() {
   const { t } = useLocale();
+  const confirmarDestructivo = useConfirmarDestructivo();
   const [personal, setPersonal] = useState([]);
   const [asistentes, setAsistentes] = useState([]);
   const [estado, setEstado] = useState('cargando');
@@ -429,7 +433,7 @@ function TabServiciosPersonalEmergencia() {
   }
 
   async function borrar(fila) {
-    if (!window.confirm(t.configuracion.personal_emergencia_confirmar_borrar)) return;
+    if (!confirmarDestructivo(t.configuracion.personal_emergencia_confirmar_borrar)) return;
     setActualizandoId(fila.id);
     try {
       await llamarApi(`/personal-emergencia/${fila.id}`, { method: 'DELETE' });
@@ -980,6 +984,7 @@ function TabWhatsappCredenciales() {
 
 function TabWhatsappPlantillas() {
   const { t } = useLocale();
+  const confirmarDestructivo = useConfirmarDestructivo();
   const [plantillas, setPlantillas] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -1019,7 +1024,7 @@ function TabWhatsappPlantillas() {
   }
 
   async function borrar(fila) {
-    if (!window.confirm(t.configuracion.whatsapp_plantillas_confirmar_borrar)) return;
+    if (!confirmarDestructivo(t.configuracion.whatsapp_plantillas_confirmar_borrar)) return;
     setActualizandoId(fila.id);
     try {
       await llamarApi(`/whatsapp/plantillas/${fila.id}`, { method: 'DELETE' });

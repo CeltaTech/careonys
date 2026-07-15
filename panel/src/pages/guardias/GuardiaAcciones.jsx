@@ -3,6 +3,7 @@ import { useLocale } from '../../i18n/LocaleContext';
 import { supabase } from '../../lib/supabaseClient';
 import { obtenerUbicacion } from '../../lib/ubicacion';
 import { useAuth } from '../../context/AuthContext';
+import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
@@ -10,6 +11,7 @@ import { Alert } from '../../components/ui/Alert';
 export function GuardiaAcciones({ guardia, onClose, onActualizada }) {
   const { t } = useLocale();
   const { usuario } = useAuth();
+  const confirmarDestructivo = useConfirmarDestructivo();
   const [medioTransporte, setMedioTransporte] = useState('');
   const [cancelacionOrigen, setCancelacionOrigen] = useState('');
   const [cancelacionAlcance, setCancelacionAlcance] = useState('');
@@ -51,12 +53,12 @@ export function GuardiaAcciones({ guardia, onClose, onActualizada }) {
   }
 
   function handleCancelar() {
-    if (!window.confirm(t.guardias.detalle.confirmar_cancelar)) return;
+    if (!confirmarDestructivo(t.guardias.detalle.confirmar_cancelar)) return;
     actualizar({ estado: 'cancelada', cancelacion_origen: cancelacionOrigen, cancelacion_alcance: cancelacionAlcance });
   }
 
   async function handleMarcarAusente() {
-    if (!window.confirm(t.guardias.detalle.confirmar_ausente)) return;
+    if (!confirmarDestructivo(t.guardias.detalle.confirmar_ausente)) return;
     setError(null);
     setProcesando(true);
 
@@ -99,7 +101,7 @@ export function GuardiaAcciones({ guardia, onClose, onActualizada }) {
   }
 
   async function handleRegistrarAvisoPrevio() {
-    if (!window.confirm(t.guardias.detalle.confirmar_aviso_previo)) return;
+    if (!confirmarDestructivo(t.guardias.detalle.confirmar_aviso_previo)) return;
     setError(null);
     setProcesando(true);
 

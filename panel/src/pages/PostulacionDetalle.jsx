@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
+import { useConfirmarDestructivo } from '../context/TenantSessionContext';
 import { esAdminOSuperior } from '../lib/roles';
 import { traducirCodigos } from '../lib/postulacionCodigos';
 import { supabase } from '../lib/supabaseClient';
@@ -15,6 +16,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
   const { t } = useLocale();
   const { usuario } = useAuth();
+  const confirmarDestructivo = useConfirmarDestructivo();
   const navigate = useNavigate();
   const [nuevoEstado, setNuevoEstado] = useState(postulacion.estado);
   const [nota, setNota] = useState(postulacion.nota_interna || '');
@@ -23,7 +25,7 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
   const [error, setError] = useState(null);
 
   async function handleIniciarVerificacion() {
-    const confirmado = window.confirm(t.postulaciones.confirmar_iniciar_verificacion);
+    const confirmado = confirmarDestructivo(t.postulaciones.confirmar_iniciar_verificacion);
     if (!confirmado) return;
 
     setIniciandoVerificacion(true);
@@ -49,7 +51,7 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
 
   async function handleGuardar() {
     if (nuevoEstado !== postulacion.estado) {
-      const confirmado = window.confirm(t.postulaciones.confirmar_cambio_estado);
+      const confirmado = confirmarDestructivo(t.postulaciones.confirmar_cambio_estado);
       if (!confirmado) return;
     }
 

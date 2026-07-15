@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
+import { useConfirmarDestructivo } from '../context/TenantSessionContext';
 import { esAdminOSuperior } from '../lib/roles';
 import { linkWhatsapp } from '../lib/telefono';
 import { supabase } from '../lib/supabaseClient';
@@ -14,6 +15,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
   const { t } = useLocale();
   const { usuario } = useAuth();
+  const confirmarDestructivo = useConfirmarDestructivo();
   const [nuevoEstado, setNuevoEstado] = useState(solicitud.estado || 'nueva');
   const [nota, setNota] = useState(solicitud.nota_interna || '');
   const [guardando, setGuardando] = useState(false);
@@ -22,7 +24,7 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
   const [errorConversion, setErrorConversion] = useState(null);
 
   async function handleConvertirEnCliente() {
-    const confirmado = window.confirm(t.solicitudes.confirmar_convertir_cliente);
+    const confirmado = confirmarDestructivo(t.solicitudes.confirmar_convertir_cliente);
     if (!confirmado) return;
 
     setConvirtiendo(true);
@@ -52,7 +54,7 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
 
   async function handleGuardar() {
     if (nuevoEstado !== (solicitud.estado || 'nueva') && nuevoEstado === 'cancelada') {
-      const confirmado = window.confirm(t.solicitudes.confirmar_cambio_estado);
+      const confirmado = confirmarDestructivo(t.solicitudes.confirmar_cambio_estado);
       if (!confirmado) return;
     }
 

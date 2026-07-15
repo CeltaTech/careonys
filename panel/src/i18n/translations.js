@@ -34,6 +34,7 @@ export const T = {
       usuarios_panel: 'Usuarios del Panel',
       prestadoras: 'Prestadoras',
       configuracion: 'Configuración',
+      auditoria: 'Auditoría',
       cerrar_sesion: 'Cerrar sesión',
     },
     auth: {
@@ -614,6 +615,20 @@ export const T = {
       renovando: 'Renovando…',
       confirmar_advertencia_tenant: 'Estás dentro de {prestadora}, no en tu propia prestadora.\n\n',
     },
+    auditoria: {
+      titulo: 'Auditoría',
+      explicacion: 'Registro de todo login y toda acción de admin_plataforma dentro de una prestadora — login, salida, renovación de sesión y cada mutación de datos.',
+      col_fecha: 'Fecha y hora',
+      col_admin: 'Quién',
+      col_prestadora: 'Prestadora',
+      col_evento: 'Evento',
+      evento_login: 'Entró a la prestadora',
+      evento_logout_manual: 'Salió de la prestadora',
+      evento_logout_tope: 'Sesión cerrada automáticamente — tope de 60 min',
+      evento_logout_inactividad: 'Sesión cerrada automáticamente — 5 min de inactividad',
+      evento_renovacion: 'Renovó la sesión',
+      evento_mutacion: 'Cambio de datos',
+    },
   },
   en: {
     comun: {
@@ -650,6 +665,7 @@ export const T = {
       usuarios_panel: 'Panel Users',
       prestadoras: 'Providers',
       configuracion: 'Settings',
+      auditoria: 'Audit log',
       cerrar_sesion: 'Log out',
     },
     auth: {
@@ -1230,6 +1246,20 @@ export const T = {
       renovando: 'Renewing…',
       confirmar_advertencia_tenant: "You're inside {prestadora}, not your own provider.\n\n",
     },
+    auditoria: {
+      titulo: 'Audit log',
+      explicacion: 'Record of every login and every admin_plataforma action inside a provider — login, logout, session renewal, and every data change.',
+      col_fecha: 'Date and time',
+      col_admin: 'Who',
+      col_prestadora: 'Provider',
+      col_evento: 'Event',
+      evento_login: 'Entered the provider',
+      evento_logout_manual: 'Left the provider',
+      evento_logout_tope: 'Session closed automatically — 60 min cap',
+      evento_logout_inactividad: 'Session closed automatically — 5 min inactivity',
+      evento_renovacion: 'Renewed the session',
+      evento_mutacion: 'Data change',
+    },
   },
   'pt-BR': {
     comun: {
@@ -1266,6 +1296,7 @@ export const T = {
       usuarios_panel: 'Usuários do Painel',
       prestadoras: 'Prestadoras',
       configuracion: 'Configuração',
+      auditoria: 'Auditoria',
       cerrar_sesion: 'Sair',
     },
     auth: {
@@ -1845,6 +1876,20 @@ export const T = {
       seguir_trabajando: 'Continuar trabalhando',
       renovando: 'Renovando…',
       confirmar_advertencia_tenant: 'Você está dentro de {prestadora}, não na sua própria prestadora.\n\n',
+    },
+    auditoria: {
+      titulo: 'Auditoria',
+      explicacion: 'Registro de todo login e toda ação de admin_plataforma dentro de uma prestadora — login, saída, renovação de sessão e cada mudança de dados.',
+      col_fecha: 'Data e hora',
+      col_admin: 'Quem',
+      col_prestadora: 'Prestadora',
+      col_evento: 'Evento',
+      evento_login: 'Entrou na prestadora',
+      evento_logout_manual: 'Saiu da prestadora',
+      evento_logout_tope: 'Sessão encerrada automaticamente — limite de 60 min',
+      evento_logout_inactividad: 'Sessão encerrada automaticamente — 5 min de inatividade',
+      evento_renovacion: 'Renovou a sessão',
+      evento_mutacion: 'Mudança de dados',
     },
   },
 };

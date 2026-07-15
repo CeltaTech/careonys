@@ -19,6 +19,7 @@ import { ListaPrecios } from './pages/ListaPrecios';
 import { UsuariosPanel } from './pages/UsuariosPanel';
 import { Prestadoras } from './pages/Prestadoras';
 import { Configuracion } from './pages/Configuracion';
+import { Auditoria } from './pages/Auditoria';
 
 function App() {
   return (
@@ -50,6 +51,7 @@ function App() {
                   <Route path="usuarios-panel" element={<ProtectedRoute soloAdmin><UsuariosPanel /></ProtectedRoute>} />
                   <Route path="prestadoras" element={<ProtectedRoute roles={['admin_plataforma', 'superadmin']}><Prestadoras /></ProtectedRoute>} />
                   <Route path="configuracion" element={<ProtectedRoute soloAdmin><Configuracion /></ProtectedRoute>} />
+                  <Route path="auditoria" element={<ProtectedRoute roles={['admin_prestadora', 'superadmin']}><Auditoria /></ProtectedRoute>} />
                 </Route>
               </Routes>
             </BrowserRouter>

@@ -5,6 +5,23 @@ import { supabase } from '../db/connection.js';
 // distinto del tope absoluto de 60 min (que sí tiene aviso a los 50, ver panelSesionTenant.js).
 const INACTIVIDAD_LIMITE_MS = 5 * 60 * 1000;
 
+// Ítem G del pendiente #30: las mutaciones que pasan por rutas Express usan la service
+// role key (backend/src/db/connection.js) — sin JWT de usuario, así que los triggers de
+// auditoria_admin_plataforma (schema_admin_plataforma_03_auditoria.sql) no las ven, porque
+// auth.uid() da NULL dentro de un trigger disparado por una escritura con service role.
+// Se audita acá, a nivel de request, en vez de a nivel de tabla/fila.
+const METODOS_MUTACION = ['POST', 'PUT', 'PATCH', 'DELETE'];
+
+async function registrarAuditoriaMutacionExpress({ adminId, prestadoraId, metodo, ruta }) {
+  const { error } = await supabase.from('auditoria_admin_plataforma').insert({
+    admin_id: adminId,
+    prestadora_id: prestadoraId,
+    tipo_evento: 'mutacion',
+    detalle: { metodo, ruta },
+  });
+  if (error) console.error('Error registrando auditoría admin_plataforma (Express):', error.message);
+}
+
 export async function requiereRolPanel(req, res, next) {
   const authHeader = req.headers.authorization || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
@@ -69,5 +86,22 @@ export async function requiereRolPanel(req, res, next) {
   }
 
   req.usuarioPanel = { id: userData.user.id, rol: perfil.rol, prestadoraId };
+
+  // La ruta de sesión de tenant (entrar/salir/renovar) ya audita login/logout/renovación
+  // explícitamente (panelSesionTenant.js) — no duplicar acá como "mutacion" genérica.
+  const esRutaPropiaDeSesion = req.baseUrl === '/api/panel/sesion-tenant';
+  if (perfil.rol === 'admin_plataforma' && prestadoraId && METODOS_MUTACION.includes(req.method) && !esRutaPropiaDeSesion) {
+    res.on('finish', () => {
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        registrarAuditoriaMutacionExpress({
+          adminId: userData.user.id,
+          prestadoraId,
+          metodo: req.method,
+          ruta: req.originalUrl,
+        });
+      }
+    });
+  }
+
   next();
 }

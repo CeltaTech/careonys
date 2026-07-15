@@ -4,12 +4,13 @@ import { supabase } from '../db/connection.js';
 
 // "Modo dentro de una prestadora" — pendiente #30, docs/PLAN_MULTITENANT_PLM.md 3.4.1.
 // Exclusivo de admin_plataforma: entra a una prestadora licenciataria por vez, nunca
-// varias a la vez. El resto del acceso (banner, timeout de 5/60 min, advertencia en
-// operaciones destructivas, log de auditoría) es trabajo de fases posteriores del mismo
-// pendiente — esta ruta solo abre/cierra la sesión de tenant en sí.
+// varias a la vez. El corte por 5 min de inactividad vive en requiereRolPanel.js (se
+// aplica en cada request, no solo acá). Lo que falta (advertencia en operaciones
+// destructivas, log de auditoría) es trabajo de los ítems F/G del mismo pendiente.
 export const panelSesionTenantRouter = Router();
 
-const SESION_DURACION_MS = 60 * 60 * 1000; // tope absoluto de 60 min (item D define el resto)
+const SESION_DURACION_MS = 60 * 60 * 1000; // tope absoluto de 60 min, extendido por /renovar
+const INACTIVIDAD_LIMITE_MS = 5 * 60 * 1000; // debe coincidir con requiereRolPanel.js
 
 function requiereAdminPlataforma(req, res, next) {
   if (req.usuarioPanel?.rol !== 'admin_plataforma') {
@@ -18,21 +19,57 @@ function requiereAdminPlataforma(req, res, next) {
   next();
 }
 
-panelSesionTenantRouter.get('/', requiereRolPanel, requiereAdminPlataforma, async (req, res) => {
+// Este endpoint es el que el frontend hace polling cada 30s (TenantSessionContext) — por eso
+// es el que efectivamente cierra (salida_at) una sesión vencida por tope absoluto o por
+// inactividad, así el banner desaparece solo sin que el usuario tenga que hacer nada.
+async function buscarSesionVigenteYCerrarSiVencio(adminId) {
   const { data: sesion, error } = await supabase
     .from('sesiones_tenant_admin_plataforma')
-    .select('prestadora_id, entrada_at, expira_at, prestadoras(nombre_fantasia)')
-    .eq('admin_id', req.usuarioPanel.id)
+    .select('id, prestadora_id, entrada_at, expira_at, ultima_actividad_at, prestadoras(nombre_fantasia)')
+    .eq('admin_id', adminId)
     .is('salida_at', null)
     .order('entrada_at', { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (error) return res.status(500).json({ error: error.message });
-  if (!sesion || new Date(sesion.expira_at) <= new Date()) {
-    return res.json({ sesion: null });
+  if (error) throw error;
+  if (!sesion) return null;
+
+  const ahora = new Date();
+  const vencioPorTope = new Date(sesion.expira_at) <= ahora;
+  const vencioPorInactividad = ahora.getTime() - new Date(sesion.ultima_actividad_at).getTime() > INACTIVIDAD_LIMITE_MS;
+
+  if (vencioPorTope || vencioPorInactividad) {
+    await supabase.from('sesiones_tenant_admin_plataforma').update({ salida_at: ahora.toISOString() }).eq('id', sesion.id);
+    return null;
   }
-  res.json({ sesion });
+  return sesion;
+}
+
+panelSesionTenantRouter.get('/', requiereRolPanel, requiereAdminPlataforma, async (req, res) => {
+  try {
+    const sesion = await buscarSesionVigenteYCerrarSiVencio(req.usuarioPanel.id);
+    res.json({ sesion });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+panelSesionTenantRouter.post('/actividad', requiereRolPanel, requiereAdminPlataforma, async (req, res) => {
+  try {
+    const sesion = await buscarSesionVigenteYCerrarSiVencio(req.usuarioPanel.id);
+    if (!sesion) return res.json({ ok: true, sesion: null });
+
+    const { error } = await supabase
+      .from('sesiones_tenant_admin_plataforma')
+      .update({ ultima_actividad_at: new Date().toISOString() })
+      .eq('id', sesion.id);
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ ok: true, sesion });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 panelSesionTenantRouter.post('/', requiereRolPanel, requiereAdminPlataforma, async (req, res) => {
@@ -72,6 +109,29 @@ panelSesionTenantRouter.post('/', requiereRolPanel, requiereAdminPlataforma, asy
 
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true, sesion });
+});
+
+panelSesionTenantRouter.post('/renovar', requiereRolPanel, requiereAdminPlataforma, async (req, res) => {
+  try {
+    const sesion = await buscarSesionVigenteYCerrarSiVencio(req.usuarioPanel.id);
+    if (!sesion) {
+      return res.status(409).json({ error: 'No hay sesión de prestadora activa para renovar' });
+    }
+
+    const ahora = new Date();
+    const { error } = await supabase
+      .from('sesiones_tenant_admin_plataforma')
+      .update({
+        ultima_actividad_at: ahora.toISOString(),
+        expira_at: new Date(ahora.getTime() + SESION_DURACION_MS).toISOString(),
+      })
+      .eq('id', sesion.id);
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 panelSesionTenantRouter.post('/salir', requiereRolPanel, requiereAdminPlataforma, async (req, res) => {

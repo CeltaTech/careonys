@@ -7,12 +7,19 @@ import { useTenantSession } from '../../context/TenantSessionContext';
 import { esAdminOSuperior } from '../../lib/roles';
 import { LOCALES } from '../../i18n/translations';
 
+const AVISO_MINUTOS_RESTANTES = 10; // aviso "a los 50 minutos" de una sesión de 60
+
 function BannerSesionTenant() {
   const { t } = useLocale();
-  const { sesion, salir } = useTenantSession();
+  const { sesion, salir, renovar } = useTenantSession();
   const [saliendo, setSaliendo] = useState(false);
+  const [renovando, setRenovando] = useState(false);
 
   if (!sesion) return null;
+
+  const minutosRestantes = (new Date(sesion.expira_at).getTime() - Date.now()) / 60000;
+  const porVencer = minutosRestantes <= AVISO_MINUTOS_RESTANTES;
+  const horaExpiracion = new Date(sesion.expira_at).toLocaleTimeString();
 
   async function handleSalir() {
     setSaliendo(true);
@@ -23,16 +30,38 @@ function BannerSesionTenant() {
     }
   }
 
+  async function handleRenovar() {
+    setRenovando(true);
+    try {
+      await renovar();
+    } finally {
+      setRenovando(false);
+    }
+  }
+
   return (
-    <div className="banner-sesion-tenant">
+    <div className={porVencer ? 'banner-sesion-tenant banner-sesion-tenant-advertencia' : 'banner-sesion-tenant'}>
       <span>
-        <strong>{t.prestadoras.sesion_activa_titulo}:</strong> {sesion.prestadoras?.nombre_fantasia}
-        {' — '}
-        {t.prestadoras.sesion_activa_expira.replace('{hora}', new Date(sesion.expira_at).toLocaleTimeString())}
+        <strong>{porVencer ? t.prestadoras.sesion_advertencia.replace('{hora}', horaExpiracion) : t.prestadoras.sesion_activa_titulo}</strong>
+        {!porVencer && (
+          <>
+            {': '}
+            {sesion.prestadoras?.nombre_fantasia}
+            {' — '}
+            {t.prestadoras.sesion_activa_expira.replace('{hora}', horaExpiracion)}
+          </>
+        )}
       </span>
-      <button className="banner-sesion-tenant-salir" onClick={handleSalir} disabled={saliendo}>
-        {saliendo ? t.prestadoras.saliendo : t.prestadoras.salir}
-      </button>
+      <span className="banner-sesion-tenant-acciones">
+        {porVencer && (
+          <button className="banner-sesion-tenant-salir" onClick={handleRenovar} disabled={renovando}>
+            {renovando ? t.prestadoras.renovando : t.prestadoras.seguir_trabajando}
+          </button>
+        )}
+        <button className="banner-sesion-tenant-salir" onClick={handleSalir} disabled={saliendo}>
+          {saliendo ? t.prestadoras.saliendo : t.prestadoras.salir}
+        </button>
+      </span>
     </div>
   );
 }

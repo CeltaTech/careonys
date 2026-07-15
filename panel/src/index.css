@@ -223,6 +223,12 @@ h2 {
   z-index: 5;
 }
 
+.banner-sesion-tenant-acciones {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 .banner-sesion-tenant-salir {
   background: #FFFFFF;
   border: none;
@@ -237,6 +243,14 @@ h2 {
 .banner-sesion-tenant-salir:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.banner-sesion-tenant-advertencia {
+  background: var(--rojo-peligro);
+}
+
+.banner-sesion-tenant-advertencia .banner-sesion-tenant-salir {
+  color: var(--rojo-peligro);
 }
 
 .panel-header {

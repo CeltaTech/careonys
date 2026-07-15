@@ -609,6 +609,9 @@ export const T = {
       sesion_activa_titulo: 'Estás dentro de esta prestadora',
       sesion_activa_expira: 'La sesión vence a las {hora} si no se renueva.',
       sesion_bloqueada: 'Ya hay una sesión activa en otra prestadora. Salí primero para entrar a esta.',
+      sesion_advertencia: 'La sesión está por vencer — vence a las {hora}.',
+      seguir_trabajando: 'Seguir trabajando',
+      renovando: 'Renovando…',
     },
   },
   en: {
@@ -1221,6 +1224,9 @@ export const T = {
       sesion_activa_titulo: "You're inside this provider",
       sesion_activa_expira: 'The session expires at {hora} unless renewed.',
       sesion_bloqueada: 'There is already an active session in another provider. Leave it first to enter this one.',
+      sesion_advertencia: 'The session is about to expire — it expires at {hora}.',
+      seguir_trabajando: 'Keep working',
+      renovando: 'Renewing…',
     },
   },
   'pt-BR': {
@@ -1833,6 +1839,9 @@ export const T = {
       sesion_activa_titulo: 'Você está dentro desta prestadora',
       sesion_activa_expira: 'A sessão expira às {hora} se não for renovada.',
       sesion_bloqueada: 'Já existe uma sessão ativa em outra prestadora. Saia primeiro para entrar nesta.',
+      sesion_advertencia: 'A sessão está prestes a expirar — expira às {hora}.',
+      seguir_trabajando: 'Continuar trabalhando',
+      renovando: 'Renovando…',
     },
   },
 };

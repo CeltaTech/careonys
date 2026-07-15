@@ -1,5 +1,10 @@
 import { supabase } from '../db/connection.js';
 
+// Ítem D del pendiente #30 (docs/PLAN_MULTITENANT_PLM.md 3.4.1): tope de 5 min de
+// inactividad dentro del "modo prestadora" — se corta en silencio, sin aviso previo,
+// distinto del tope absoluto de 60 min (que sí tiene aviso a los 50, ver panelSesionTenant.js).
+const INACTIVIDAD_LIMITE_MS = 5 * 60 * 1000;
+
 export async function requiereRolPanel(req, res, next) {
   const authHeader = req.headers.authorization || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
@@ -32,14 +37,35 @@ export async function requiereRolPanel(req, res, next) {
   if (perfil.rol === 'admin_plataforma') {
     const { data: sesion } = await supabase
       .from('sesiones_tenant_admin_plataforma')
-      .select('prestadora_id, expira_at')
+      .select('id, prestadora_id, expira_at, ultima_actividad_at')
       .eq('admin_id', userData.user.id)
       .is('salida_at', null)
       .order('entrada_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    prestadoraId = sesion && new Date(sesion.expira_at) > new Date() ? sesion.prestadora_id : null;
+    const ahora = new Date();
+    const vigente = Boolean(
+      sesion &&
+        new Date(sesion.expira_at) > ahora &&
+        ahora.getTime() - new Date(sesion.ultima_actividad_at).getTime() <= INACTIVIDAD_LIMITE_MS
+    );
+
+    // El cierre real de la sesión vencida (salida_at) lo hace GET /sesion-tenant, que el
+    // frontend hace polling cada 30s — acá alcanza con no exponer prestadoraId si no está
+    // vigente, más info directa a Supabase con RLS queda igual bloqueada por current_tenant().
+    // El polling de estado (GET /sesion-tenant) y el heartbeat de actividad (POST /actividad)
+    // no bumpean acá — /actividad ya lo hace explícitamente, y contar el polling como
+    // actividad real anularía el propio timeout de inactividad.
+    const esRutaPropiaDeSesion = req.baseUrl === '/api/panel/sesion-tenant';
+    if (sesion && vigente && !esRutaPropiaDeSesion) {
+      await supabase
+        .from('sesiones_tenant_admin_plataforma')
+        .update({ ultima_actividad_at: ahora.toISOString() })
+        .eq('id', sesion.id);
+    }
+
+    prestadoraId = vigente ? sesion.prestadora_id : null;
   }
 
   req.usuarioPanel = { id: userData.user.id, rol: perfil.rol, prestadoraId };

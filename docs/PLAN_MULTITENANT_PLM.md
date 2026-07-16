@@ -515,6 +515,95 @@ métricas propias a instrumentar, o (b) si alcanza con estimar tramos fijos por 
 esperado (chica/mediana/grande) sin medición real — evaluado con el Desarrollador el
 2026-07-11, sin resolver todavía. Ver también `docs/PENDIENTES.md`.
 
+**Propuesta de diseño (2026-07-15, avance del pendiente #14 — sigue sin ser una decisión
+cerrada, falta que el Desarrollador apruebe el enfoque y defina los números):**
+
+Comparado contra el mercado de software B2B vertical (home care scheduling — AlayaCare,
+WellSky/ClearCare, CareSmartz360), el patrón dominante no es "costo-plus" (precio = costo de
+infra + margen fijo): ata el precio a algo que la prestadora no valora ni ve, y no escala con
+el valor real que recibe. El patrón estándar es **precio por métrica de negocio del cliente**
+(en este caso, # de Asistentes activos), con el costo de infraestructura funcionando como
+**piso de margen interno** (control de que ningún tier quede por debajo del costo real), no
+como la fórmula de precio en sí.
+
+*(a) Esquema de precio — sin agregar un 4to valor a `esquema_facturacion`.* En vez de un
+`'por_uso_infraestructura'` nuevo, el modelo propuesto es un **fee base (`'fee_fijo'`) + tier
+por # de Asistentes activos (`'por_personal'`)**, usando dos filas concurrentes de
+`planes_facturacion` por prestadora (una por cada esquema, cada una con su propio
+`vigencia_desde`/`vigencia_hasta`) en vez de inventar un cuarto esquema — evita tocar el enum
+y reusa el diseño ya aprobado en este mismo documento. Los cortes de tramos y los montos de
+cada tier quedan sin definir — decisión de negocio del Desarrollador, no técnica.
+
+*(b) Prorrateo de costos fijos compartidos* (Supabase/Railway/Vercel/dominio/número base de
+WhatsApp — no escalan con el uso de una prestadora puntual): prorratearlos **proporcional a
+la misma métrica que ya define el tier de precio** (% de Asistentes activos de esa prestadora
+sobre el total de la plataforma), no partes iguales entre prestadoras — mantiene coherencia
+entre "cuánto se le cobra" y "cuánto cuesta atenderla", y no castiga a las prestadoras chicas.
+Requiere una tabla nueva de costos fijos (`costos_fijos_compartidos`: proveedor, concepto,
+monto, moneda, vigencia) — sin crear todavía, es diseño.
+
+*(c) Costos variables por prestadora — medidos directo, no prorrateados.* Se dividen en dos
+grupos, según lo que ya existe en el schema:
+  - **WhatsApp/IA**: `mensajes_whatsapp` (`backend/src/db/schema_whatsapp_ia_01.sql:291-302`)
+    ya tiene `prestadora_id` y `generado_por_ia` (booleano), pero **no mide consumo real** —
+    ni tokens de la llamada a Claude (`backend/src/utils/iaWhatsapp.js`) ni el costo de la
+    conversación de WhatsApp Business (Meta cobra por conversación iniciada). Instrumentación
+    que faltaría agregar (columnas aditivas, sin romper nada existente): `tokens_entrada`,
+    `tokens_salida`, `costo_estimado_usd` en `mensajes_whatsapp`. Verificado leyendo el
+    schema y `iaWhatsapp.js` el 2026-07-15 — hoy el costo de IA no se puede calcular por
+    prestadora con los datos que ya se guardan, hay que empezar a registrarlo desde que se
+    prenda el uso real con una prestadora (el propio `iaWhatsapp.js:45` documenta que el test
+    con `ANTHROPIC_API_KEY` real queda para el test final con prestadora real).
+  - **Storage** (documentos, certificados, fotos): sin instrumentar todavía, no verificado si
+    los buckets de Supabase Storage ya separan por `prestadora_id` de forma consultable —
+    pendiente de revisar cuando se aborde esto en serio, no asumido acá.
+
+*(d) Piso de margen (chequeo interno, no fórmula visible al cliente):*
+```
+costo total de una prestadora en el período =
+    (costos fijos compartidos del período × su % de Asistentes activos sobre el total)
+  + (costo de IA + costo de WhatsApp + costo de storage, medidos directo para esa prestadora)
+
+alerta si: costo total > monto contratado en planes_facturacion para esa prestadora
+```
+Se corre periódicamente, no en cada factura — sirve para detectar si una prestadora de
+consumo alto (IA/WhatsApp) se acerca o cruza el piso, y decidir ahí si corresponde subirla de
+tier o facturarle un variable aparte por ese rubro específico. Ninguna tabla de este punto
+(d) ni de (b)/(c) fue creada contra Supabase — es diseño para reducir trabajo cuando se aborde
+el módulo de facturación en serio (según 4.3, después de tener un caso de negocio concreto),
+no una migración aplicada.
+
+**Decisiones del Desarrollador (2026-07-15):**
+1. ✅ **Enfoque (b)/(c)/(d) aprobado** — fee base + tier por Asistentes activos, costos fijos
+   prorrateados por esa métrica, costos variables de IA/WhatsApp medidos directo, piso de
+   margen como chequeo interno.
+2. ✅ **Valores de referencia iniciales (2026-07-15): los packs de licencia varían entre
+   USD 27 y USD 137 + impuestos.** Esto es específicamente el precio que **PLM le cobra a la
+   prestadora** por la licencia — no confundir con el precio que la prestadora le cobra a sus
+   Clientes (`lista_precios`/`paquetes_prestaciones`, decisión libre de cada prestadora, sin
+   relación con esto). Reglas explícitas sobre estos montos, dadas por el Desarrollador:
+   - **Nunca hardcodeados en código** — viven exclusivamente en `planes_facturacion` (y en la
+     tabla de tramos que se diseñe a partir de este rango), mismo criterio que Regla 1 de
+     `CLAUDE.md` aplicado a precios de licencia igual que a cualquier otro precio del sistema.
+   - **Ajuste manual, no una fórmula automática** — el monto se puede corregir por dólar,
+     inflación, salarios, u otra variable que surja, pero el ajuste lo hace una persona a mano,
+     al menos hasta tener más expertise de mercado real (no indexación automática todavía).
+   - USD 27 es el piso (tramo "chica"), USD 137 el techo del rango estándar (antes de pasar a
+     cotización a medida en el tramo "enterprise" de la tabla de 3.5-(propuesta), sección
+     anterior) — **la asignación exacta de cada tramo intermedio (mediana/grande) dentro de
+     ese rango todavía no está definida**, es el siguiente paso cuando se implemente esto en
+     serio, no bloqueante para dejarlo documentado como referencia hoy.
+3. ✅ **El consumo de IA se factura dentro del tier** — no es una línea aparte visible para la
+   prestadora. Consecuencia técnica: no hace falta que `mensajes_whatsapp` exponga el costo de
+   IA en ninguna pantalla del Panel de la prestadora — las columnas `tokens_entrada`/
+   `tokens_salida`/`costo_estimado_usd` de (c) siguen siendo necesarias, pero solo para uso
+   interno de PLM (el chequeo de piso de margen de (d)), nunca para facturación desglosada al
+   cliente.
+4. ✅ **Moneda: la elige la prestadora**, con dos opciones sugeridas en la UI — la moneda del
+   país donde opera, o dólares (USD). No se le impone una — coherente con `planes_facturacion.
+   moneda` (ya diseñada como campo libre, no ARS fijo) y con el punto 5 del prompt de
+   arquitectura original (nunca asumir una sola moneda).
+
 **Decisión (2026-07-11): toda cuenta/infraestructura nueva se abre a nombre de prestadora-original,
 no de PLM Systems, hasta que se ejecute la migración multi-tenant.** Surgió al decidir a
 nombre de quién crear las cuentas nuevas de Cloudflare R2 y Backblaze B2 (pendiente #4 de

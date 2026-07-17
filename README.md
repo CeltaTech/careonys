@@ -1,4 +1,4 @@
-# prestadora-original Salud — Workspace
+# Workspace
 
 > Leer `CLAUDE.md` antes de tocar cualquier código. Protocolo de sesión completo ahí.
 

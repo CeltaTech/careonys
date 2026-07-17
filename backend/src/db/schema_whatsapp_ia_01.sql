@@ -320,7 +320,7 @@ CREATE POLICY "coordinador_gestiona_mensajes_whatsapp" ON mensajes_whatsapp
   );
 
 -- ============================================================================
--- 7. Seeds de configuración por defecto para prestadora-original (única prestadora real hoy), mismo
+-- 7. Seeds de configuración por defecto para la Prestadora Demo (única prestadora real hoy), mismo
 --    patrón que configuracion_ausencia_automatica en schema_modulo6_guardias_03.sql —
 --    corren acá, después de que las tablas de las secciones 1 y 4 ya existen.
 -- ============================================================================

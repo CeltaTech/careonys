@@ -5,10 +5,10 @@
 > "para leer sin abrir el editor" del pendiente #18 de `docs/PENDIENTES.md` (que sí tiene
 > el detalle técnico línea por línea, para cuando haga falta ubicar cada caso en el código).
 >
-> Contexto: el sistema pasó de pensarse para una sola empresa (prestadora-original) a licenciarse como
+> Contexto: el sistema pasó de pensarse para una sola prestadora (la Prestadora Demo) a licenciarse como
 > producto a distintas prestadoras de cuidado domiciliario, cada una con su propia forma de
 > trabajar. Esta revisión encontró 8 situaciones donde el sistema hoy asume "se hace como lo
-> hace prestadora-original" y no deja margen para que otra prestadora lo haga distinto. Ninguna de estas
+> hace la Prestadora Demo" y no deja margen para que otra prestadora lo haga distinto. Ninguna de estas
 > situaciones se resolvió todavía — se necesita que el Desarrollador decida, una por una, si
 > conviene dejarla configurable, y con qué criterio.
 >
@@ -24,7 +24,7 @@
 seguro, etc.). El sistema avisa cuando falta un mes para que algo venza — ese plazo de "un
 mes" es el mismo para cualquier prestadora que use el sistema, no algo que cada una pueda
 ajustar según cuánto tarda ella en resolver un trámite. Además, hoy ese aviso solo corre
-para prestadora-original — otra prestadora licenciataria ni siquiera lo recibiría en su forma actual.
+para la Prestadora Demo — otra prestadora licenciataria ni siquiera lo recibiría en su forma actual.
 
 **¿Ayuda la IA acá?** No es un problema de Inteligencia Artificial — es simplemente un
 número que hoy está fijo y debería poder configurarse por prestadora. Donde sí podría sumar
@@ -65,7 +65,7 @@ su decisión final.
 **La situación:** cuando se carga un Asistente o se filtra el plantel, las zonas
 disponibles (CABA, zona norte/oeste/sur del conurbano, La Plata) y ciertas etiquetas de
 especialidad están fijas en el sistema, pensadas específicamente para la zona donde opera
-prestadora-original hoy. Una prestadora licenciataria de otra provincia o de otro país no tendría forma
+La Prestadora Demo hoy. Una prestadora licenciataria de otra provincia o de otro país no tendría forma
 de cargar su propia geografía o su propio detalle de especialidades en esa parte del Panel.
 
 **¿Ayuda la IA acá?** No directamente. Es un catálogo que debería poder cargar/editar cada
@@ -118,8 +118,8 @@ prestadora.
 
 **La situación:** hoy, cualquier aviso o notificación por email que manda el sistema
 (alertas al Coordinador, avisos de vencimiento, etc.) sale siempre desde la misma cuenta de
-correo de prestadora-original, sin importar para qué prestadora se generó. Esto puede confundir a una
-prestadora que no es prestadora-original (recibe/envía correos con una firma que no es la suya), y un
+correo de la Prestadora Demo, sin importar para qué prestadora se generó. Esto puede confundir a una
+prestadora que no es la Prestadora Demo (recibe/envía correos con una firma que no es la suya), y un
 correo que ya salió con la firma equivocada no se puede retirar después de enviado.
 
 **¿Ayuda la IA acá?** No. Es un tema de configuración (que cada prestadora pueda tener su

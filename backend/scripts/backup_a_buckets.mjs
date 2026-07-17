@@ -53,7 +53,7 @@ async function subirA(cliente, bucket, nombreArchivo, rutaLocal) {
 
 async function main() {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const nombreArchivo = `prestadora-original_backup_${timestamp}.sql.gz`;
+  const nombreArchivo = `careonys_backup_${timestamp}.sql.gz`;
   const rutaTemporal = `/tmp/${nombreArchivo}`;
 
   console.log('Generando dump de la base de datos...');

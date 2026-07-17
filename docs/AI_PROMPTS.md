@@ -1,6 +1,6 @@
 # AI_PROMPTS.md — Prompts de sistema para Claude Sonnet (Anthropic API)
 
-> Fuente: `prestadora-original_DOCUMENTO_UNICO_v1.md` Parte O (PRD App de Servicio). Estos son los
+> Fuente: documento único original de especificación (histórico) Parte O (PRD App de Servicio). Estos son los
 > prompts exactos a usar — no reformular ni "mejorar" sin actualizar este archivo primero,
 > porque el contrato JSON de salida está acoplado a los campos de `reportes` y `alertas`
 > en `DATA_MODEL.md`.

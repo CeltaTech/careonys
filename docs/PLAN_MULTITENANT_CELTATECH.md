@@ -1,13 +1,13 @@
-# PLAN_MULTITENANT_PLM.md — Inventario + plan de migración a multi-tenant (PLM Systems)
+# PLAN_MULTITENANT_CELTATECH.md — Inventario + plan de migración a multi-tenant (CeltaTech)
 
 > Responde a los 4 puntos de "Lo que sí te pedimos ahora" en
-> `docs/Prompt_Claude_Code_PLM_Multitenant.md`. Es un documento de **plan**, no de
+> `docs/Prompt_Claude_Code_CeltaTech_Multitenant.md`. Es un documento de **plan**, no de
 > implementación — ningún código de producto se tocó para escribir esto. No arrancar la
 > implementación de ninguna sección sin aprobación explícita del usuario, punto por punto
 > (hay varias decisiones de diseño con implicancias grandes marcadas explícitamente en la
 > sección 4).
 
-## 1. Inventario — qué asume hoy "una sola organización" (prestadora-original)
+## 1. Inventario — qué asume hoy "una sola organización" (la Prestadora Demo)
 
 Relevamiento completo del repo (`backend/`, `panel/`, `sitio-web/`, `docs/DATA_MODEL.md`,
 `docs/SECURITY.md`). Resumen ejecutivo:
@@ -72,14 +72,14 @@ caso. Diseño propuesto en 3.7.
 prestadora_id UUID REFERENCES prestadoras(id),  -- nullable, soporte futuro modelo B2B
 ```
 
-con la nota: *"`prestadora_id` es la recomendación de `prestadora-original_Modelo_B2B_v1.md`... La tabla
+con la nota: *"`prestadora_id` es la recomendación del documento original de modelo B2B... La tabla
 `prestadoras` no se crea todavía — es un placeholder de FK para el futuro"*. Es decir, el
 proyecto ya había anticipado parcialmente esto (probablemente pensado para el caso más
 acotado "un Asistente que pertenece a una prestadora tercera dentro del negocio B2B de
-prestadora-original", no para el multi-tenancy completo de PLM). **Esta columna documentada nunca se
+la prestadora original", no para el multi-tenancy completo de CeltaTech). **Esta columna documentada nunca se
 aplicó contra Supabase real** — no existe en ningún `schema_etapa2*.sql` real. El diseño de
 la sección 3 de este documento la reutiliza pero le cambia el sentido: no es "un Asistente
-de una prestadora tercera dentro de prestadora-original", es "a qué prestadora licenciataria pertenece
+de una prestadora tercera dentro de la prestadora original", es "a qué prestadora licenciataria pertenece
 este registro completo".
 
 ### 1.3 Zonas vs. prestadora — no colapsar
@@ -101,10 +101,10 @@ habría que tocar: `backend/src/middleware/requiereRolPanel.js`,
 
 **Decisión de diseño que esto obliga a tomar (ver sección 4.1)**: ¿el rol `admin` de hoy
 pasa a estar acotado a su propia prestadora, y `superadmin` pasa a ser el único rol
-verdaderamente cross-tenant (el de PLM Systems)? Esto es un cambio de semántica del rol
+verdaderamente cross-tenant (el de CeltaTech)? Esto es un cambio de semántica del rol
 `admin` existente, no solo un rol nuevo — hay que decidirlo antes de tocar código.
 
-### 1.5 Hardcodeos de "prestadora-original como única organización posible" (estructurales, no solo marca)
+### 1.5 Hardcodeos de "la prestadora original como única organización posible" (estructurales, no solo marca)
 
 - `configuracion_empresa.id CHECK (id = 1)` (`schema_etapa2h.sql`) y sus dos consumidores
   (`backend/src/routes/configuracionPublica.js`, `backend/src/routes/panelConfiguracion.js`)
@@ -115,15 +115,15 @@ verdaderamente cross-tenant (el de PLM Systems)? Esto es un cambio de semántica
   no por prestadora.
 - `sitio-web/src/config/siteConfig.js` — objeto de módulo único (teléfono, email, dominio,
   zona de cobertura), asume una sola marca para todo el sitio público.
-- `panel/src/lib/generarDocumentoCese.js` — el documento legal de cese hardcodea "prestadora-original
-  Salud" como la razón social empleadora en el template.
+- `panel/src/lib/generarDocumentoCese.js` — el documento legal de cese hardcodea "Prestadora
+  Demo" como la razón social empleadora en el template.
 - `panel/src/lib/calcularCese.js` — texto de advertencia que asume que la única alternativa
-  a "vínculo directo con cliente" es "prestadora-original".
+  a "vínculo directo con cliente" es "la prestadora original".
 
-**Hardcodeos que son solo texto de marca (prestadora-original seguirá siendo un tenant real llamado
-así, no requieren cambio funcional hoy, sí cuando se implemente branding por tenant)**:
+**Hardcodeos que son solo texto de marca (la prestadora original seguirá siendo un tenant real,
+no requieren cambio funcional hoy, sí cuando se implemente branding por tenant)**:
 `panel/src/components/layout/Layout.jsx` (logo), `panel/src/i18n/translations.js` (~20
-menciones de "prestadora-original"/"prestadora-original Salud" en textos de certificado/equipo/facturación),
+menciones de "Prestadora Demo" en textos de certificado/equipo/facturación),
 `backend/src/routes/panelNotificaciones.js` (firma de emails en 3 idiomas).
 
 ### 1.6 Módulo de cumplimiento normativo documental — **no existe ninguna huella en el repo hoy**
@@ -143,7 +143,7 @@ una vez por día avisa por email a Coordinadores sobre vencimientos próximos de
 fechas. Esto es un caso completamente distinto y no debe confundirse con el módulo pedido:
 
 - Es **por Asistente individual**, no por prestadora — no hay ningún concepto de "empresa
-  licenciataria" ahí, solo el vínculo laboral de un trabajador con prestadora-original.
+  licenciataria" ahí, solo el vínculo laboral de un trabajador con la prestadora original.
 - Es **solo una fecha de vencimiento**, sin registro histórico de verificación — no guarda
   quién verificó el documento, cuándo, ni el documento en sí (no hay `documento_url` ni
   `verificado_por`). No cumple el requisito de "registro con fecha cierta e inmutable de
@@ -159,29 +159,29 @@ diseño útil pero insuficiente, ya que resuelve un problema distinto: cumplimie
 trabajador, no de la prestadora que lo emplea). El diseño de tabla propuesto para esto está
 en la sección 3.3 más abajo.
 
-### 1.7 Facturación dual (PLM↔prestadora, prestadora-original↔prestadora) — no existe ningún concepto de "emisor" hoy
+### 1.7 Facturación dual (CeltaTech↔prestadora, prestadora original↔prestadora) — no existe ningún concepto de "emisor" hoy
 
 Búsqueda explícita de `factura`, `emisor`, `billing`, `licencia` contra todo el repo: la
 única aparición de "licencia" en código real es `licencia GCBA` (habilitación sanitaria del
-negocio de prestadora-original, no tiene nada que ver con licenciamiento de software) y menciones en
+negocio de la prestadora original, no tiene nada que ver con licenciamiento de software) y menciones en
 i18n de "Certificado" — **no existe ninguna tabla, columna ni concepto de "quién emite la
 factura" en ningún lado**. El sistema asume, igual que con `configuracion_empresa`, que solo
-hay una parte que cobra (implícitamente prestadora-original) — el mismo patrón mono-tenant de la sección
+hay una parte que cobra (implícitamente la prestadora original) — el mismo patrón mono-tenant de la sección
 1.5, aplicado a facturación.
 
 Relación con lo ya relevado en `lista_precios`/`prestaciones`/`paquetes_prestaciones`
 (`backend/src/db/schema_etapa2d.sql`, ver 1.1):
 
-- Estas tres tablas resuelven **cuánto le cobra prestadora-original a un Cliente** por la prestación de
+- Estas tres tablas resuelven **cuánto le cobra la prestadora original a un Cliente** por la prestación de
   cuidado (precio de lista → precio final con descuento, snapshot al momento de armarse). Es
   un concepto de negocio **totalmente distinto** al que pide el prompt: facturación B2B de
-  PLM/prestadora-original hacia una **prestadora**, no de prestadora-original hacia un Cliente. No hay ningún
+  CeltaTech/Prestadora hacia una **prestadora**, no de la prestadora original hacia un Cliente. No hay ningún
   cruce de datos entre ambos hoy, y no debería haberlo — son dos facturaciones con
   contrapartes distintas (Cliente vs. Prestadora).
 - Ninguna de las tres tablas tiene columna de moneda ni de emisor (ver 1.8).
 - No hace falta modificar estas tablas para resolver el punto 4 del prompt — son
   independientes. Lo que hace falta es **crear tablas nuevas** para la relación
-  PLM/prestadora-original↔Prestadora, que no tiene ningún antecedente parcial en el esquema actual (a
+  CeltaTech/Prestadora↔Prestadora, que no tiene ningún antecedente parcial en el esquema actual (a
   diferencia del cumplimiento normativo, acá ni siquiera hay una pieza parcial como los campos de
   vencimiento de 1.6).
 
@@ -192,7 +192,7 @@ que hace falta:
   caso activo, por personal certificado, fee fijo) y con qué monto/moneda — hoy no existe
   ningún lugar donde esto se pudiera guardar, ni siquiera de forma genérica.
 - Una tabla de **comprobantes/facturas** con un campo explícito de **empresa emisora**
-  (`PLM` | `prestadora-original`) y numeración propia por emisor — hoy no hay ningún concepto de emisor
+  (`CeltaTech` | `Prestadora`) y numeración propia por emisor — hoy no hay ningún concepto de emisor
   en absoluto, todo el sistema asume una sola parte que cobra.
 
 ### 1.8 Multi-moneda — confirmado: todos los montos asumen ARS implícito, sin columna de moneda
@@ -227,19 +227,19 @@ queda señalado.
 
 ---
 
-## 2. Plan de migración de datos propuesto (sin perder datos de prestadora-original, sin romper producción)
+## 2. Plan de migración de datos propuesto (sin perder datos de la prestadora original, sin romper producción)
 
 Migración **incremental y no destructiva**, en el mismo estilo de `schema_etapa2*.sql` ya
 usado en el proyecto (una migración por paso, aplicada y verificada contra Supabase real
 antes de la siguiente). Orden propuesto:
 
 1. **Crear la tabla `prestadoras`** (diseño completo en sección 3) e insertar una única fila
-   para prestadora-original Salud (la prestadora "cero", ya operando). Nada más cambia en este paso —
+   para Prestadora Demo (la prestadora "cero", ya operando). Nada más cambia en este paso —
    es aditivo puro, cero riesgo de romper producción.
 2. **Agregar `prestadora_id UUID REFERENCES prestadoras(id)` nullable** a cada tabla listada
    en 1.1 (excepto `verificaciones_asistente`, que hereda vía `asistente_id`, y
    `escalas_legales`, que queda global). Todavía nullable — sigue sin romper nada.
-3. **Backfill**: un `UPDATE tabla SET prestadora_id = '<id-prestadora-original>' WHERE prestadora_id IS
+3. **Backfill**: un `UPDATE tabla SET prestadora_id = '<id-prestadora-demo>' WHERE prestadora_id IS
    NULL` por cada tabla — un solo script, una sola vez, con las credenciales del archivo de
    claves (nunca en chat), igual que se hizo con `schema_etapa2o.sql`.
 4. **Volver la columna `NOT NULL`** una vez confirmado el backfill completo (chequeo simple:
@@ -293,7 +293,7 @@ CREATE TABLE prestadoras (
 ```
 
 Fila inicial (migración, paso 1 de la sección 2): una prestadora con
-`razon_social`/`nombre_fantasia` = "prestadora-original Salud", `estado = 'certificada'`,
+`razon_social`/`nombre_fantasia` = "Prestadora Demo", `estado = 'certificada'`,
 `pais = 'AR'`.
 
 ### 3.2 Reemplazo de `configuracion_empresa`
@@ -355,10 +355,10 @@ conflacionaba `superadmin` = "PLM cross-tenant sin límites" — ver nota de ree
   con herramientas propias del rol técnico, no impersonando un tenant vía UI. No es
   cross-tenant: no ve datos de ninguna prestadora real, ni siquiera en modo lectura.
 - **`admin_plataforma`** (rol nuevo, reemplaza lo que este documento llamaba antes
-  "`superadmin` = PLM Systems"): administrativo de negocio real — control comercial/
+  "`superadmin` = CeltaTech"): administrativo de negocio real — control comercial/
   administrativo de toda la plataforma (todas las prestadoras licenciatarias). Nombre
   elegido deliberadamente **desacoplado de la razón social de la empresa dueña del software**
-  (no `admin_plm`, no ligado a "PLM Systems") para que un cambio societario futuro no deje
+  (no `admin_plm`, no ligado a "CeltaTech") para que un cambio societario futuro no deje
   resabios de nombre en código/RLS/policies — coherente con la convención ya usada en el
   proyecto de decir "la plataforma", nunca el nombre propio de la empresa licenciante (ver
   `CLAUDE.md`, glosario, fila `Prestadora`). Puede entrar a una prestadora real **una a la
@@ -369,7 +369,7 @@ conflacionaba `superadmin` = "PLM cross-tenant sin límites" — ver nota de ree
   negocio.
 
 **Nota de reemplazo:** la versión anterior de este documento (hasta 2026-07-13) describía
-`superadmin` como "el rol de PLM Systems... cross-tenant real, ve todas las prestadoras".
+`superadmin` como "el rol de CeltaTech... cross-tenant real, ve todas las prestadoras".
 Se descarta ese diseño: conflacionaba en un solo rol el acceso técnico (infra/código) con el
 acceso administrativo de negocio (comercial, todas las prestadoras), lo cual no tenía
 justificación técnica real para el primero y no tenía ningún límite de sesión/alcance para
@@ -467,7 +467,7 @@ sin acotar", que es exactamente lo que hay que dejar de asumir. Por eso la recom
 
 ```sql
 CREATE TYPE esquema_facturacion AS ENUM ('por_caso', 'por_personal', 'fee_fijo');
-CREATE TYPE empresa_emisora AS ENUM ('PLM', 'prestadora-original');
+CREATE TYPE empresa_emisora AS ENUM ('CeltaTech', 'Prestadora');
 
 CREATE TABLE planes_facturacion (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -483,7 +483,7 @@ CREATE TABLE planes_facturacion (
 CREATE TABLE facturas (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   prestadora_id UUID NOT NULL REFERENCES prestadoras(id),
-  empresa_emisora empresa_emisora NOT NULL,  -- separa numeración/comprobantes PLM vs prestadora-original
+  empresa_emisora empresa_emisora NOT NULL,  -- separa numeración/comprobantes CeltaTech vs Prestadora
   numero_comprobante TEXT NOT NULL,          -- secuencia propia por empresa_emisora
   periodo_desde DATE NOT NULL,
   periodo_hasta DATE NOT NULL,
@@ -505,7 +505,7 @@ tema legal/contable, no técnico).
 
 **Nota pendiente (2026-07-11, sin diseñar):** el Desarrollador propuso que el costo real de
 infraestructura compartida (Supabase/Vercel/Railway/backup — un solo proyecto/deploy/bucket
-para todas las prestadoras, ver `docs/Prompt_Claude_Code_PLM_Multitenant.md:66`) se mida por
+para todas las prestadoras, ver `docs/Prompt_Claude_Code_CeltaTech_Multitenant.md:66`) se mida por
 licencia y se refleje en el precio de cada una, en vez de fijar el mismo fee para todas
 independientemente de su volumen de uso. Hoy `esquema_facturacion` solo contempla
 `'por_caso' | 'por_personal' | 'fee_fijo'` — ninguno de los tres mide uso de infraestructura
@@ -604,21 +604,21 @@ no una migración aplicada.
    moneda` (ya diseñada como campo libre, no ARS fijo) y con el punto 5 del prompt de
    arquitectura original (nunca asumir una sola moneda).
 
-**Decisión (2026-07-11): toda cuenta/infraestructura nueva se abre a nombre de prestadora-original,
-no de PLM Systems, hasta que se ejecute la migración multi-tenant.** Surgió al decidir a
+**Decisión (2026-07-11): toda cuenta/infraestructura nueva se abre a nombre de la prestadora original,
+no de CeltaTech, hasta que se ejecute la migración multi-tenant.** Surgió al decidir a
 nombre de quién crear las cuentas nuevas de Cloudflare R2 y Backblaze B2 (pendiente #4 de
 `docs/PENDIENTES.md`). Fundamento: hoy toda la infraestructura existente (Supabase,
 Railway, Vercel — ver `No hacer commit/claves y contraseñas.txt`) ya está a nombre de
-prestadora-original; abrir cuentas nuevas a nombre de PLM Systems mientras el resto sigue en prestadora-original
+la prestadora original; abrir cuentas nuevas a nombre de CeltaTech mientras el resto sigue a nombre de la prestadora original
 crearía una migración parcial no planificada — infraestructura repartida entre dos
-titulares sin que exista todavía el inventario/plan que `docs/Prompt_Claude_Code_PLM_Multitenant.md`
+titulares sin que exista todavía el inventario/plan que `docs/Prompt_Claude_Code_CeltaTech_Multitenant.md`
 exige como paso previo a tocar cualquier cosa de la migración real (ver también la sección
-"Sobre `docs/Prompt_Claude_Code_PLM_Multitenant.md`" de `CLAUDE.md`). Manteniendo un solo
-titular hasta ese momento, el día de la migración es "mover N cuentas de prestadora-original a PLM
-Systems" de forma pareja, en vez de tener que reconciliar cuentas sueltas que quedaron
+"Sobre `docs/Prompt_Claude_Code_CeltaTech_Multitenant.md`" de `CLAUDE.md`). Manteniendo un solo
+titular hasta ese momento, el día de la migración es "mover N cuentas de la prestadora original a
+CeltaTech" de forma pareja, en vez de tener que reconciliar cuentas sueltas que quedaron
 repartidas. Esta decisión aplica a **toda** cuenta/credencial nueva que se cree de acá en
 adelante, no solo a R2/B2 — se revierte únicamente cuando arranque formalmente la
-migración a PLM Systems como titular de la infraestructura.
+migración a CeltaTech como titular de la infraestructura.
 
 ### 3.6 RLS: centralizar el chequeo de tenant en una función, no repetir la subquery
 
@@ -736,7 +736,7 @@ ALTER TABLE guardias_cobertura
 Igual que en 3.7, este `ALTER TABLE` es aditivo puro y **no** forma parte del plan de 8 pasos
 de la sección 2 (que resuelve `prestadora_id`, no moneda) — se ejecuta en el mismo momento en
 que se materialice el primer caso real de un tenant que no factura en ARS, no antes. Hasta
-entonces el `DEFAULT 'ARS'` deja el comportamiento actual exactamente igual para prestadora-original.
+entonces el `DEFAULT 'ARS'` deja el comportamiento actual exactamente igual para la prestadora original.
 
 ---
 
@@ -744,17 +744,17 @@ entonces el `DEFAULT 'ARS'` deja el comportamiento actual exactamente igual para
 
 ### 4.1 Cambio de semántica del rol `admin` existente — **RESUELTA (opción a), 2026-07-09**
 
-Hoy `admin` = "ve todo el negocio de prestadora-original". En el diseño multi-tenant, ese mismo alcance
+Hoy `admin` = "ve todo el negocio de la prestadora original". En el diseño multi-tenant, ese mismo alcance
 ("ve todo dentro de su organización") pasa a llamarse `admin_prestadora`, y `admin` a secas
 dejaría de tener sentido como nombre (¿admin de qué?). Dos caminos evaluados:
 
 - **(a)** Renombrar el rol existente `admin` → `admin_prestadora` en una migración de datos
   (`UPDATE usuarios SET rol = 'admin_prestadora' WHERE rol = 'admin'`), y reservar
-  `superadmin` para PLM Systems cross-tenant.
+  `superadmin` para CeltaTech cross-tenant.
 - **(b)** Mantener `admin` como está (implícitamente escopeado a la prestadora vía RLS) y
   agregar `admin_prestadora` como alias/sinónimo solo para nomenclatura de negocio.
 
-**Decisión (2026-07-09, kickoff de implementación `docs/Reserva Historica/Prompt_Claude_Code_Kickoff_Implementacion.md`):
+**Decisión (2026-07-09, kickoff de implementación `docs/Documentos Obsoletos/Prompt_Claude_Code_Kickoff_Implementacion.md`):
 opción (a).** Motivo: alinea con práctica estándar de la industria en RBAC multi-tenant — un
 rol sin contexto de tenant en el nombre (`admin` a secas) es, según múltiples guías de
 arquitectura de autorización (WorkOS, Auth0, AWS Prescriptive Guidance), el patrón que más
@@ -802,7 +802,7 @@ solicitud, postulación) porque ningún insert de hoy —ni backend con Service 
 panel con anon key— setea esa columna. Se verificó contra Supabase real, no se detectó en el
 cierre del Bloque 1 porque esa verificación solo chequeó filas existentes (backfill), no
 inserts nuevos hacia adelante. Parche aplicado en el mismo `schema_multitenant_02.sql`: `DEFAULT`
-al UUID de prestadora-original en las 15 columnas — mismo mecanismo que ya usó el backfill del Bloque 1,
+al UUID de la prestadora original en las 15 columnas — mismo mecanismo que ya usó el backfill del Bloque 1,
 a nivel de schema, no hardcodeado en código de aplicación.
 
 **Criterio de cierre exacto del Bloque 3 para este `DEFAULT` (precisado por el usuario,
@@ -845,7 +845,7 @@ apurado de los 5 componentes de panel involucrados en la misma sesión:
   cautelar: `panel/src/context/AuthContext.jsx` no expone hoy el `prestadora_id` del
   usuario del panel logueado — no hay de dónde sacar el valor en los 5 componentes que
   insertan directo en estas tablas. Riesgo real solo se activa el día que exista una
-  segunda prestadora usando el panel (hoy hay una sola, prestadora-original, así que el `DEFAULT`
+  segunda prestadora usando el panel (hoy hay una sola, la prestadora original, así que el `DEFAULT`
   apunta al único valor válido posible).
 
 **Trabajo pendiente con nombre propio: "Panel — tenant en inserts directos"** — debe
@@ -895,7 +895,7 @@ las 35 policies vigentes en `public`, clasificadas por patrón (comparación dir
 diseño para `escalas_legales`/`configuracion_empresa`/`configuracion_notificaciones`,
 auto-fila para `usuarios`/`clientes`). Se probó con insert real, login real y limpieza
 completa tanto el patrón directo (`pacientes`) como el patrón join (`verificaciones_asistente`,
-fabricando un Asistente con cuenta Auth real). No se encontró ningún UUID de prestadora-original
+fabricando un Asistente con cuenta Auth real). No se encontró ningún UUID de la prestadora original
 hardcodeado fuera de lo ya documentado (backfill + `DEFAULT`), ni ninguna policy vigente con
 literal `rol = 'admin'` huérfano.
 
@@ -945,7 +945,7 @@ El prompt de negocio pide explícitamente el módulo de facturación **implement
 diseñado. Esto es un cambio de alcance grande (nuevas tablas, lógica de generación periódica
 de comprobantes, dos numeraciones fiscales separadas con implicancias contables/AFIP reales
 para dos razones sociales distintas). Antes de implementarlo hace falta una decisión de
-negocio no técnica: **¿qué esquema de precio se va a usar con prestadora-original en concreto, y con qué
+negocio no técnica: **¿qué esquema de precio se va a usar con la prestadora original en concreto, y con qué
 periodicidad se emite?** — sin eso, el módulo se construiría sin poder validarlo contra un
 caso real. Recomendación: aprobar primero el diseño de tablas de la sección 3.5, definir ese
 dato de negocio, y recién ahí implementar la generación de comprobantes.
@@ -953,12 +953,12 @@ dato de negocio, y recién ahí implementar la generación de comprobantes.
 ### 4.4 Vínculo 1:1 `auth.users` ↔ `usuarios`
 
 Ver 1.6 — una persona no puede hoy pertenecer a dos prestadoras con el mismo email. Señalado,
-no bloqueante para el primer cliente adicional a prestadora-original; revisar si en algún momento hay un
+no bloqueante para el primer cliente adicional a la prestadora original; revisar si en algún momento hay un
 caso de negocio real que lo necesite.
 
 ### 4.6 `identificacion_fiscal` en `NULL` — falta la pantalla que lo carga, y falta la regla que lo exige
 
-Corrección aplicada 2026-07-09: el seed de prestadora-original en `prestadoras` (Bloque 1) tenía
+Corrección aplicada 2026-07-09: el seed de la prestadora original en `prestadoras` (Bloque 1) tenía
 `identificacion_fiscal = '[DEFINIR]'`, un placeholder de texto hardcodeado — mismo problema
 de fondo que la regla 1 de `CLAUDE.md` prohíbe para precios/zonas, aplicado sin querer acá.
 Se corrigió: la columna pasó a nullable (`ALTER COLUMN ... DROP NOT NULL`) y el valor a `NULL`
@@ -967,9 +967,9 @@ real, aplicado y verificado contra Supabase. Dos puntos abiertos quedan de esto:
 - **Propuesta, no implementada todavía**: que una prestadora no pueda pasar a
   `estado = 'certificada'` sin `identificacion_fiscal` cargado (constraint o trigger en la
   transición de estado, no en la creación de la fila — una prestadora `prospecto` o
-  `en_certificacion` legítimamente no tiene el dato todavía). prestadora-original ya está sembrada como
+  `en_certificacion` legítimamente no tiene el dato todavía). La prestadora original ya está sembrada como
   `certificada` con el campo en `NULL`, así que si se implementa esta restricción ahora mismo
-  haría falta cargar el CUIT real de prestadora-original primero, o la migración fallaría.
+  haría falta cargar el CUIT real de la prestadora original primero, o la migración fallaría.
 - **Dependencia real que esto expone**: hoy no existe ninguna pantalla donde un
   `admin_prestadora` cargue o edite los datos de su propia fila en `prestadoras`
   (`identificacion_fiscal` incluido). Nadie lo completa a mano mientras tanto — el campo sigue
@@ -981,7 +981,7 @@ real, aplicado y verificado contra Supabase. Dos puntos abiertos quedan de esto:
 
 1. Aprobar sección 3.1-3.4 (entidad `prestadoras`, cumplimiento normativo, roles) y la decisión 4.1.
 2. Ejecutar pasos 1-6 de la sección 2 (aislamiento de datos) — es lo que habilita tener un
-   segundo cliente real sin arriesgar los datos de prestadora-original.
+   segundo cliente real sin arriesgar los datos de la prestadora original.
 3. Recién después, con un caso de negocio concreto en mano, abordar 3.5 (facturación) según
    4.3.
 4. Branding por tenant (logo, textos parametrizados) y multi-moneda en la UI pública, en
@@ -1021,7 +1021,7 @@ marcan acá como **[1.5 → confirmado]** — no se releva de nuevo, solo se pro
   de verdad separadas** para los mismos colores — un problema previo a multi-tenant.
 - Valores hex sueltos fuera de variable (deuda menor, no bloqueante): `panel/src/index.css`
   líneas 89, 91, 124, 144, 174, 201, 217, 255, 306, 346, 353, 359; `sitio-web/src/styles/components.css:24`.
-- **Regla**: va a panel/CMS. Cada prestadora define su propia paleta; prestadora-original queda como
+- **Regla**: va a panel/CMS. Cada prestadora define su propia paleta; la prestadora original queda como
   el primer registro con los valores actuales.
 - **Pre-limpieza obligatoria (ajuste del usuario, 2026-07-10) — dinamizar `variables.css`
   no alcanza sin esto antes**: theming por prestadora sobre el estado actual del código
@@ -1035,7 +1035,7 @@ marcan acá como **[1.5 → confirmado]** — no se releva de nuevo, solo se pro
   2. **Barrido de los valores hex sueltos** ya listados arriba (12 líneas en
      `panel/src/index.css` + 1 en `sitio-web/src/styles/components.css`): mientras sigan
      fuera de variable, cualquier mecanismo de tema por prestadora los deja intactos con
-     los colores de prestadora-original hardcodeados, sin importar qué tan bien se dinamice
+     los colores de la prestadora original hardcodeados, sin importar qué tan bien se dinamice
      `variables.css`. Este barrido tiene que ejecutarse antes de dar por completo el
      ítem 5.1, no en paralelo ni después.
 
@@ -1064,7 +1064,7 @@ marcan acá como **[1.5 → confirmado]** — no se releva de nuevo, solo se pro
 ### 5.3 Logo — **[1.5 → confirmado, mixto con estructural nuevo]**
 
 - No existe archivo de logo-imagen — se renderiza como texto: `panel/src/components/layout/Layout.jsx:14`
-  (`<div className="panel-logo">prestadora-original Salud</div>`), `sitio-web/src/components/Header.jsx:24-25`,
+  (`<div className="panel-logo">Prestadora Demo</div>`), `sitio-web/src/components/Header.jsx:24-25`,
   `sitio-web/src/components/Footer.jsx:10`. Este es el ítem que 1.5 ya señalaba para
   `Layout.jsx` — confirmado, se promueve a regla definida.
 - `sitio-web/src/styles/components.css:23-25` — clase `.logo` (estilos, no contenido).
@@ -1079,35 +1079,36 @@ marcan acá como **[1.5 → confirmado]** — no se releva de nuevo, solo se pro
   22, 37, 188, 214, 268, 271, 321 (es), espejadas en en/pt en 409, 424, 575, 601, 655,
   658, 708 y 796, 811, 962, 988, 1042, 1045, 1095. **[1.5 → confirmado]** para el bloque
   general, pero con una distinción que 1.5 no hacía: algunas de estas líneas son puro
-  nombre de marca ("prestadora-original Salud" en un título), y otras son **términos de negocio**
-  como "Certificado prestadora-original" o "Exclusividad de facturación a prestadora-original" — estos últimos
+  nombre de marca ("Prestadora Demo" en un título), y otras son **términos de negocio**
+  como "Certificado de la prestadora original" o "Exclusividad de facturación a la prestadora original" — estos últimos
   podrían necesitar renombrarse a un término genérico (p. ej. "Certificado de la
   plataforma") en vez de simplemente parametrizar el nombre de marca. **Caso ambiguo,
   resuelto — ver 5.4bis**: el Desarrollador definió el diseño de 4 capas y, el 2026-07-13,
-  el nombre definitivo del certificado: **"Certificado de Aptitud"** (reemplaza
-  "Certificado prestadora-original" en todo el proyecto). "Exclusividad de facturación a prestadora-original" sigue
+  el nombre definitivo del certificado: **"Certificado de Aptitud"** (reemplaza el nombre
+  anterior en todo el proyecto). "Exclusividad de facturación a la prestadora original" sigue
   como tema aparte, ver pendiente #19 de `docs/PENDIENTES.md`.
 - `sitio-web/src/i18n/translations.js:17, 79, 149, 211, 281, 343, 354` — mensajes de
-  WhatsApp y subtítulos con "prestadora-original" fijo.
+  WhatsApp y subtítulos con el nombre de la prestadora original fijo.
 - `panel/src/lib/calcularCese.js:215` — mismo texto ya señalado en 1.5 (advertencia de
   negocio), acá específicamente la línea del string.
 - `sitio-web/src/app/[locale]/layout.jsx:27,37` — `generateMetadata` hardcodea `title` y
-  `openGraph.title` a "prestadora-original Salud", **pese a ya llamar a `getConfiguracionPublica()`
+  `openGraph.title` a "Prestadora Demo", **pese a ya llamar a `getConfiguracionPublica()`
   en la línea 48 sin usarlo para el título** — estructural, y la corrección es casi
   gratis porque el dato dinámico ya se está pidiendo.
 - 6 páginas repiten el mismo patrón de título fijo: `trabaja-con-nosotros/page.jsx:8`,
   `terminos/page.jsx:6`, `privacidad/page.jsx:6`, `servicios/page.jsx:6`,
   `solicita-servicio/page.jsx:6-7`, `contacto/page.jsx:7`.
 - `sitio-web/src/app/manifest.js:3-4` — `name`/`short_name` del manifest (ver también 5.8).
-- Menciones de "Filtro prestadora-original" en comentarios de código (`backend/src/routes/panelCuentas.js:87`,
+- Menciones del nombre anterior retirado del proceso de verificación en comentarios de código
+  (`backend/src/routes/panelCuentas.js:87`,
   `schema_etapa2b.sql:7,100`, `schema_etapa2e.sql:2`) — **corregidas 2026-07-10**: el término
   se retiró por completo (ni siquiera de uso interno, ver glosario de `CLAUDE.md`), los
   comentarios ya no lo mencionan.
 - **Regla**: el nombre de marca va a panel/CMS sin excepción. Los términos de negocio
-  mixtos ("Certificado prestadora-original" y similares) — **resuelto, ver 5.4bis** — no es un simple
+  mixtos (el nombre anterior del certificado y similares) — **resuelto, ver 5.4bis** — no es un simple
   parametrizar/genericar, requiere un diseño de 4 capas.
 
-### 5.4bis Certificado de Aptitud (antes "Certificado prestadora-original") — diseño de 4 capas (**resuelto con el usuario, 2026-07-12; nombre definitivo confirmado 2026-07-13**)
+### 5.4bis Certificado de Aptitud (antes con el nombre de la prestadora original en el término) — diseño de 4 capas (**resuelto con el usuario, 2026-07-12; nombre definitivo confirmado 2026-07-13**)
 
 El caso "Certificado de Aptitud" no se resuelve sustituyendo el nombre de marca por el de
 cada prestadora, ni tampoco genericándolo del todo — el usuario definió un diseño de 4
@@ -1124,7 +1125,7 @@ Sigue el mismo patrón ya anotado como idea de arquitectura futura en `docs/PROG
 concreto.
 
 **Capa 1 — Si la activa, ¿certifica ella misma o designa un tercero?** La prestadora puede
-correr su propio Proceso de Incorporación con capacitación propia (como hace prestadora-original hoy),
+correr su propio Proceso de Incorporación con capacitación propia (como hace la prestadora original hoy),
 o designar una entidad externa como "ente calificador" en su nombre (ejemplo dado por el
 usuario, inventado a modo ilustrativo: un "Centro Argentino de Asistencia de Personas").
 En ambos casos la prestadora sigue siendo quien decide certificar — solo cambia quién
@@ -1133,8 +1134,8 @@ ejecuta el proceso.
 **Capa 2 — Independiente de la Capa 0: un Asistente puede traer certificaciones de otro
 origen.** Existan o no en el sistema de certificación propio de la prestadora actual, un
 Asistente puede tener certificados de:
-  (a) otra prestadora licenciataria del mismo sistema PLM (el Asistente ya certificado por
-      prestadora-original se postula después a otra licenciataria que no certifica);
+  (a) otra prestadora licenciataria del mismo sistema CeltaTech (el Asistente ya certificado por
+      la prestadora original se postula después a otra licenciataria que no certifica);
   (b) una entidad totalmente externa al sistema, sin verificación propia del software (un
       curso de enfermería, por ejemplo — dato declarado/adjunto, no emitido con QR propio).
 La prestadora actual decide si reconoce/incorpora esos certificados externos a la ficha del
@@ -1157,11 +1158,11 @@ pendiente #13 de `docs/PENDIENTES.md` sobre infraestructura común directo/match
 Diseño de columnas/tabla concreto: pendiente de abordarse junto con el Bloque 4
 (`configuracion_prestadora`), no diseñado todavía.
 
-**"Exclusividad de facturación a prestadora-original" queda fuera de este diseño de 4 capas** — es un
+**"Exclusividad de facturación a la prestadora original" queda fuera de este diseño de 4 capas** — es un
 concepto distinto (la parte comercial con la que el Asistente factura su monotributo en
 exclusividad, no un ente que califica su aptitud) y pertenece al módulo de
 facturación/pagos, todavía no discutido. Sigue como parametrización simple (sustituir
-"prestadora-original" por el nombre de la prestadora), sin la ambigüedad de certificación. Una idea
+el nombre de la prestadora original por el nombre de cada prestadora), sin la ambigüedad de certificación. Una idea
 relacionada (facturación a un tercero intermediario) quedó anotada aparte, sin resolver,
 en el pendiente #19 de `docs/PENDIENTES.md` — no se mezcla con este diseño.
 
@@ -1171,8 +1172,8 @@ en el pendiente #19 de `docs/PENDIENTES.md` — no se mezcla con este diseño.
 5 — es un **riesgo de fuga de marca/reputación entre tenants**, no solo una cuestión de
 apariencia. Hoy el remitente SMTP es único y global (`process.env.SMTP_USER`): significa
 que, apenas exista una segunda prestadora licenciataria operando, **todos los emails de
-todas las prestadoras salen desde la casilla de correo propia de prestadora-original** — un email de
-la Prestadora B llega a su Cliente con el remitente/firma de prestadora-original, exponiendo a una
+todas las prestadoras salen desde la casilla de correo propia de la prestadora original** — un email de
+la Prestadora B llega a su Cliente con el remitente/firma de la prestadora original, exponiendo a una
 prestadora competidora bajo la marca de otra. Un logo o color por defecto equivocado es un
 problema estético corregible en la UI; un email mal firmado ya salió, no se puede retirar.
 Por eso este ítem queda con prioridad más alta que 5.1 (paleta) y 5.3 (logo) dentro del
@@ -1189,12 +1190,12 @@ este documento.
 
 - `panel/src/lib/generarDocumentoCese.js` genera **5 tipos de documento**, no solo cese,
   todos comparten el mismo patrón de marca fija:
-  - `:11-14` `DISCLAIMER_LEGAL` menciona "sistema prestadora-original".
-  - `:22-32` (`encabezado()`) — línea 25 `doc.text('prestadora-original SALUD', MARGEN, 20)`, función
+  - `:11-14` `DISCLAIMER_LEGAL` menciona el nombre de la prestadora original.
+  - `:22-32` (`encabezado()`) — línea 25 `doc.text('PRESTADORA DEMO', MARGEN, 20)`, función
     compartida por las 5 generadoras: `generarLiquidacionFinal` (:72),
     `generarTelegramaCese` (:105), `generarNotificacionFinPeriodoPrueba` (:124),
     `generarCertificadoTrabajo` (:142), `generarConstanciaAusencia` (:179).
-  - `:146-150` — texto de cuerpo menciona "vinculado/a con prestadora-original Salud".
+  - `:146-150` — texto de cuerpo menciona "vinculado/a con Prestadora Demo".
 - El caso general (documento de cese) ya estaba en 1.5 — confirmado, y se amplía: es
   `encabezado()` como función compartida la que hay que parametrizar con el nombre de la
   prestadora, no solo el texto del cese puntual.
@@ -1240,11 +1241,11 @@ este documento.
 
 ### 5.9 Resumen — qué queda pendiente de decisión antes de tocar tablas
 
-1. **"Certificado de Aptitud" (antes "Certificado prestadora-original") — resuelto (ver 5.4bis, 2026-07-12; nombre confirmado 2026-07-13)**: diseño de 4 capas
+1. **"Certificado de Aptitud" (antes con el nombre de la prestadora original en el término) — resuelto (ver 5.4bis, 2026-07-12; nombre confirmado 2026-07-13)**: diseño de 4 capas
    (interruptor de certificación por prestadora, ente calificador propio o delegado a un
    tercero, reconocimiento de certificados de otro origen, visibilidad pública por
    certificado). Falta el diseño concreto de columnas/tabla, a abordar junto con el
-   Bloque 4. "Exclusividad de facturación a prestadora-original" queda aparte, como parametrización
+   Bloque 4. "Exclusividad de facturación a la prestadora original" queda aparte, como parametrización
    simple — pertenece al módulo de facturación/pagos (todavía no discutido), no a este
    diseño de certificación. Idea relacionada de tercero de facturación anotada aparte en
    el pendiente #19 de `docs/PENDIENTES.md`.
@@ -1262,7 +1263,7 @@ este documento.
 ## Estado de este documento
 
 Es un **plan propuesto**, no una decisión tomada ni código implementado. El sistema sigue
-siendo mono-tenant (prestadora-original) en producción. Ningún paso de la sección 2 ni tabla de la
+siendo mono-tenant (la prestadora original) en producción. Ningún paso de la sección 2 ni tabla de la
 sección 3 se creó todavía contra Supabase real. Requiere aprobación explícita del usuario,
 idealmente punto por punto de la sección 4, antes de generar la primera migración SQL real.
 
@@ -1274,11 +1275,11 @@ idealmente punto por punto de la sección 4, antes de generar la primera migraci
 |---|---|
 | Orden de migración priorizado por exigencia regulatoria | Resumen ejecutivo de la Sección 1 + Sección 2 (párrafo de cierre y pasos 2-6) |
 | Resolución de `configuracion_empresa` (`CHECK (id = 1)`) sin downtime | Sección 3.2 (diseño de `configuracion_prestadora`) + Sección 2, paso 7 |
-| Cómo se puebla `prestadora_id` en los datos existentes de prestadora-original sin intervención manual fila por fila | Sección 2, paso 3 (`UPDATE` masivo con el id de la prestadora prestadora-original, un solo script) |
+| Cómo se puebla `prestadora_id` en los datos existentes de la prestadora original sin intervención manual fila por fila | Sección 2, paso 3 (`UPDATE` masivo con el id de la prestadora original, un solo script) |
 | Orden de reescritura de policies RLS existentes | Sección 2, paso 5 |
 | Diseño de la entidad `prestadoras` | Sección 3.1 |
 | Diseño del módulo de cumplimiento normativo documental (checklist, vencimientos, registro inmutable de verificación) | Sección 3.3 |
-| Diseño de facturación dual (plan de facturación por prestadora + comprobantes con emisor PLM/prestadora-original y numeración propia) | Sección 3.5 |
+| Diseño de facturación dual (plan de facturación por prestadora + comprobantes con emisor CeltaTech/Prestadora y numeración propia) | Sección 3.5 |
 | Esquema de roles nuevo (`administrador de prestadora`, `financiador` contemplado sin implementar) | Sección 3.4 |
 | Columna de moneda en los 7 campos monetarios relevados | Sección 3.8 (los 6 restantes) + Sección 3.5 (facturación nueva) + Sección 3.7 (`escalas_legales`) |
 | `escalas_legales` — jurisdicción + moneda | Sección 3.7 |

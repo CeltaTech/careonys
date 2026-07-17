@@ -1,4 +1,4 @@
-# Prompt para Claude Code — Preparar el software para el modelo PLM Systems / prestadora-original
+# Prompt para Claude Code — Preparar el software para el modelo CeltaTech / prestadora licenciataria
 
 > Copiá y pegá este prompt completo como mensaje inicial en Claude Code, dentro del repositorio del software de gestión (Panel Admin / App Servicio). Ajustá las rutas y nombres de archivo del bloque "Contexto del repo" antes de enviarlo.
 
@@ -6,14 +6,14 @@
 
 ## Contexto de negocio (leer antes de tocar código)
 
-Hasta ahora, el software que estamos construyendo (Panel Admin + App de Servicio) fue diseñado como una herramienta interna de una sola empresa: prestadora-original, que provee cuidadores a domicilio ("Asistentes") y gestiona todo — verificación de personal, reportes diarios, alertas, check-in/check-out por GPS, certificado con QR — para su propio plantel y sus propias clientes clientas.
+Hasta ahora, el software que estamos construyendo (Panel Admin + App de Servicio) fue diseñado como una herramienta interna de una sola prestadora, que provee cuidadores a domicilio ("Asistentes") y gestiona todo — verificación de personal, reportes diarios, alertas, check-in/check-out por GPS, certificado con QR — para su propio plantel y sus propias clientes clientas.
 
 Esto está cambiando. Vamos a separar el negocio en dos empresas:
 
-1. **PLM Systems** (nueva empresa, aún en formación): va a ser la dueña del software y va a licenciarlo como producto — no solo a prestadora-original, sino potencialmente a **cualquier empresa prestadora de cuidado domiciliario**, dentro y fuera de la Argentina. prestadora-original es su primer cliente, pero el software tiene que dejar de estar diseñado "para prestadora-original" y pasar a estar diseñado "para cualquier prestadora que lo licencie".
-2. **prestadora-original** sigue con su negocio de cuidado domiciliario (modelo directo a clientes y match), y además vende un servicio de auditoría/certificación B2B a otras prestadoras — apoyado en la tecnología que le licencia a PLM, pagando como cualquier otro cliente.
+1. **CeltaTech** (nueva empresa, aún en formación): va a ser la dueña del software y va a licenciarlo como producto — no solo a esa prestadora original, sino potencialmente a **cualquier empresa prestadora de cuidado domiciliario**, dentro y fuera de la Argentina. Esa prestadora es su primer cliente, pero el software tiene que dejar de estar diseñado "para una sola prestadora" y pasar a estar diseñado "para cualquier prestadora que lo licencie".
+2. **La prestadora original** sigue con su negocio de cuidado domiciliario (modelo directo a clientes y match), y además vende un servicio de auditoría/certificación B2B a otras prestadoras — apoyado en la tecnología que le licencia CeltaTech, pagando como cualquier otro cliente.
 
-**La consecuencia técnica central**: el sistema tiene que pasar de ser mono-tenant (una sola organización, la de prestadora-original) a **multi-tenant real**, donde cada prestadora que licencia el software es un cliente aislado, con su propio personal, sus propios pacientes, y sin visibilidad de los datos de ningún otro cliente — incluida la propia prestadora-original, que a estos efectos es "un cliente más" del sistema.
+**La consecuencia técnica central**: el sistema tiene que pasar de ser mono-tenant (una sola organización) a **multi-tenant real**, donde cada prestadora que licencia el software es un cliente aislado, con su propio personal, sus propios pacientes, y sin visibilidad de los datos de ningún otro cliente — incluida la prestadora original, que a estos efectos es "un cliente más" del sistema.
 
 No estamos pidiendo que implementes todo esto de una — primero necesitamos que relevés el estado actual del código y nos propongas un plan. Léelo todo antes de escribir nada.
 
@@ -25,23 +25,23 @@ No estamos pidiendo que implementes todo esto de una — primero necesitamos que
 
 Cada **prestadora licenciataria** (llamalas "organización" o "tenant" en el modelo de datos, el nombre de negocio es "prestadora") necesita:
 
-- Su propio espacio de datos: personal certificado, pacientes, reportes, alertas, historial de auditoría — completamente aislado del de cualquier otra prestadora, incluida prestadora-original.
+- Su propio espacio de datos: personal certificado, pacientes, reportes, alertas, historial de auditoría — completamente aislado del de cualquier otra prestadora, incluida la prestadora original.
 - Aislamiento a **nivel de query / row-level security**, no solo de UI. Si en algún momento hay una auditoría regulatoria sobre cómo se manejan datos de salud de afiliados de una obra social, "el frontend no muestra lo que no debería" no es una respuesta aceptable.
-- Un plan de branding por tenant: el certificado con QR y la app que ve el cliente del paciente deberían poder mostrar la marca de la prestadora licenciataria, no necesariamente la de prestadora-original ni la de PLM — esto es parte de lo que se vende (la prestadora quiere que su marca sea la que ve el cliente final, no la del proveedor de tecnología).
+- Un plan de branding por tenant: el certificado con QR y la app que ve el cliente del paciente deberían poder mostrar la marca de la prestadora licenciataria, no necesariamente la de la prestadora original ni la de CeltaTech — esto es parte de lo que se vende (la prestadora quiere que su marca sea la que ve el cliente final, no la del proveedor de tecnología).
 
 ### 2. Modelo de datos — entidad `prestadoras` (u `organizaciones`), no un campo suelto
 
 No alcanza con agregar un campo `prestadora_id` nullable a la tabla de personal. Necesitamos como mínimo:
 
 - Una entidad propia `prestadoras` con: razón social, identificación fiscal, estado (prospecto / en proceso de certificación / certificada / suspendida / dada de baja), zona geográfica de operación, plan de licencia contratado, fecha de alta.
-- Cada persona de "personal de cuidado" (hoy "Asistente") tiene que poder pertenecer a exactamente una prestadora, con una restricción de integridad que impida que un registro tenga a la vez datos de "personal propio, contratado directamente" (los que hoy tiene prestadora-original) y datos de "personal de una prestadora tercera licenciataria" — son dos regímenes distintos y no se pueden mezclar en el mismo registro. Que el esquema lo prohíba, no solo la lógica de negocio.
+- Cada persona de "personal de cuidado" (hoy "Asistente") tiene que poder pertenecer a exactamente una prestadora, con una restricción de integridad que impida que un registro tenga a la vez datos de "personal propio, contratado directamente" (los que hoy tiene la prestadora original) y datos de "personal de una prestadora tercera licenciataria" — son dos regímenes distintos y no se pueden mezclar en el mismo registro. Que el esquema lo prohíba, no solo la lógica de negocio.
 - Un módulo de **compliance documental por prestadora**: checklist versionado de qué documentación laboral se le pidió y verificó a cada prestadora y cuándo (identificación de cada trabajador, constancias de pago, seguro de riesgos del trabajo vigente), con alertas automáticas de vencimiento, y un registro con fecha cierta e inmutable de cada verificación. Esto no es opcional ni cosmético: es lo que sostiene legalmente el modelo de negocio completo (protege a quien licencia el software de responsabilidad por incumplimientos laborales de terceros), así que necesita ser confiable y auditable, no un campo de texto libre.
 
 ### 3. Roles y permisos nuevos
 
-Además de los roles que ya existen (administrador de prestadora-original, Asistente, cliente/paciente), necesitamos:
+Además de los roles que ya existen (administrador de la prestadora original, Asistente, cliente/paciente), necesitamos:
 
-- **Administrador de prestadora**: acceso de solo lectura/gestión limitada a los datos de su propia prestadora — su propio personal, sus propios pacientes/casos, sus propios reportes y alertas. Cero visibilidad de otras prestadoras o del plantel propio de prestadora-original.
+- **Administrador de prestadora**: acceso de solo lectura/gestión limitada a los datos de su propia prestadora — su propio personal, sus propios pacientes/casos, sus propios reportes y alertas. Cero visibilidad de otras prestadoras o del plantel propio de la prestadora original.
 - Dejar **contemplado en el diseño de roles** (no implementar todavía) un futuro rol de "financiador" (obra social/prepaga) con acceso agregado y de solo lectura a métricas de cumplimiento, sin acceso a historia clínica detallada — para no tener que rediseñar permisos desde cero cuando se pida.
 
 ### 4. Facturación / licenciamiento — implementación completa, no solo el modelo de datos
@@ -52,7 +52,7 @@ Esto se corrige respecto a una versión anterior de este prompt: **sí necesitam
 - Por persona de personal certificada activa.
 - Fee fijo mensual por prestadora (licencia plana).
 
-Tiene que generar, distinguir y emitir por separado **dos facturaciones que corren sobre la misma plataforma pero son de dos empresas distintas**: lo que le factura **PLM a la prestadora por la licencia del software**, y lo que **prestadora-original le factura a la prestadora por su servicio de auditoría/certificación** (cuando prestadora-original sea quien presta ese servicio a esa prestadora en particular). Esto incluye numeración y comprobantes separados por empresa emisora, no una sola factura combinada.
+Tiene que generar, distinguir y emitir por separado **dos facturaciones que corren sobre la misma plataforma pero son de dos empresas distintas**: lo que le factura **CeltaTech a la prestadora por la licencia del software**, y lo que **la prestadora original le factura a la prestadora por su servicio de auditoría/certificación** (cuando la prestadora original sea quien presta ese servicio a esa prestadora en particular). Esto incluye numeración y comprobantes separados por empresa emisora, no una sola factura combinada.
 
 ### 5. Soporte multi-idioma y multi-moneda — implementar ahora
 
@@ -71,14 +71,14 @@ Como el software se va a licenciar potencialmente a prestadoras de otras provinc
 
 - No hace falta portal para financiadores (obras sociales) — es una fase futura. Sí dejá **contemplado en el diseño de roles** (ver punto 3) un futuro rol de "financiador", para no tener que rediseñar permisos desde cero cuando se pida, pero no lo implementes.
 - No hace falta implementar la residencia de datos por región (punto 6) — solo dejarla señalada en el plan.
-- No toques nada del modelo directo a clientes ni del match — este cambio es aditivo, no debería romper lo que ya funciona para prestadora-original como empresa de cuidado.
+- No toques nada del modelo directo a clientes ni del match — este cambio es aditivo, no debería romper lo que ya funciona para la prestadora original como empresa de cuidado.
 
 ---
 
 ## Lo que sí te pedimos ahora
 
-1. Explorá el repo actual (modelo de datos, backend, frontend del panel admin y de la app de servicio) y hacé un inventario de qué partes hoy asumen "una sola organización" (prestadora-original) de forma implícita — hardcodeos, falta de scoping por tenant en queries, falta de un concepto de organización en el modelo de autenticación, etc.
-2. Proponé un plan de migración de datos concreto — cómo pasamos del esquema actual a uno con la entidad `prestadoras` y el aislamiento descripto, sin perder los datos existentes de prestadora-original ni romper producción.
+1. Explorá el repo actual (modelo de datos, backend, frontend del panel admin y de la app de servicio) y hacé un inventario de qué partes hoy asumen "una sola organización" de forma implícita — hardcodeos, falta de scoping por tenant en queries, falta de un concepto de organización en el modelo de autenticación, etc.
+2. Proponé un plan de migración de datos concreto — cómo pasamos del esquema actual a uno con la entidad `prestadoras` y el aislamiento descripto, sin perder los datos existentes de la prestadora original ni romper producción.
 3. Proponé el diseño de la entidad `prestadoras`, el modelo de compliance documental, y el esquema de roles nuevo — con el nivel de detalle de un diagrama de tablas/modelos, no solo prosa.
 4. Marcá explícitamente cualquier punto donde el diseño actual haga esto más difícil de lo necesario, para que lo discutamos antes de que empieces a escribir código de producción.
 

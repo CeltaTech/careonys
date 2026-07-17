@@ -1,6 +1,6 @@
--- Migración multi-tenant (PLM Systems) — paso 01, Bloque 1 del kickoff de implementación
--- (docs/Reserva Historica/Prompt_Claude_Code_Kickoff_Implementacion.md), pasos 1-4 de la sección 2 de
--- docs/PLAN_MULTITENANT_PLM.md: crear la entidad `prestadoras`, agregar `prestadora_id`
+-- Migración multi-tenant (CeltaTech) — paso 01, Bloque 1 del kickoff de implementación
+-- (docs/Documentos Obsoletos/Prompt_Claude_Code_Kickoff_Implementacion.md), pasos 1-4 de la sección 2 de
+-- docs/PLAN_MULTITENANT_CELTATECH.md: crear la entidad `prestadoras`, agregar `prestadora_id`
 -- (nullable → backfill → NOT NULL) a las tablas de negocio existentes.
 --
 -- Excluidas de este archivo (ver decisión del usuario, 2026-07-09):
@@ -55,7 +55,7 @@ CREATE POLICY "superadmin_gestiona_prestadoras" ON prestadoras
 -- texto como '[DEFINIR]' hubiera sido igual de inventado que un CUIT falso). Se carga cuando
 -- exista una pantalla real para hacerlo (ver 4.6 del plan).
 INSERT INTO prestadoras (id, razon_social, nombre_fantasia, identificacion_fiscal, pais, estado, fecha_alta)
-VALUES ('874f54d7-4383-4d54-8b9f-f51d02f0dd11', 'prestadora-original Salud', 'prestadora-original Salud', NULL, 'AR', 'certificada', CURRENT_DATE)
+VALUES ('874f54d7-4383-4d54-8b9f-f51d02f0dd11', 'Prestadora Demo', 'Prestadora Demo', NULL, 'AR', 'certificada', CURRENT_DATE)
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================

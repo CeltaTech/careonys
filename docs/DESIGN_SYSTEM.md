@@ -2,7 +2,7 @@
 
 ## Benchmark estético de competidores (2026-07-07)
 
-> La documentación de negocio (`prestadora-original_Anexo_Tecnico_v4`, `prestadora-original_Auditoria_Estrategica_v1`)
+> La documentación de negocio original (histórica: anexo técnico, auditoría estratégica)
 > ya analiza a los competidores por **prestaciones** (verificación, GPS, precios, IA). Esta
 > sección cubre el ángulo que faltaba: cómo se ven, porque acá sí afecta decisiones de código
 > (`DESIGN_SYSTEM.md` es el único lugar de `Workspace/docs/` donde el análisis de mercado es
@@ -40,7 +40,7 @@ lindo-tener: en un mercado donde nadie se diferencia estéticamente, verse disti
 gratis en términos de percepción de superioridad, incluso antes de comparar funcionalidad.
 
 **Competidores nuevos detectados en esta búsqueda, no presentes en el corpus de negocio
-original (`prestadora-original_Anexo_Tecnico_v4`) — dejar constancia para que se evalúe si suman al
+original (anexo técnico histórico) — dejar constancia para que se evalúe si suman al
 análisis de negocio, esto acá solo cubre el ángulo visual:** Cuidarnos (UTEP/Movimiento
 Evita), Cuidando en Casa, Ver Salud, Casamed Salud, Cuidar Buenos Aires, Situ Care, Home
 Care BA, Amparando Salud (con la salvedad de arriba), Continuum, Cuidarte Argentina, InDom,
@@ -65,7 +65,7 @@ nada de Etapa 1, definir explícitamente**: grilla de Instagram con sistema de p
 responsable de este canal — no está definido en ningún PRD actual y requiere una decisión
 de negocio, no solo de diseño.
 
-### Qué ya tiene prestadora-original a favor (no perder al implementar)
+### Qué ya tiene la Prestadora Demo a favor (no perder al implementar)
 
 - **Playfair Display para títulos** ya rompe con la sans-serif genérica de los cuatro
   competidores relevados — es el diferenciador más barato de mantener y el más fácil de
@@ -97,7 +97,7 @@ de negocio, no solo de diseño.
   lo hacen sin un sistema visual reconocible — ahí también hay espacio para diferenciarse.
 
 
-> Fuente: `docs/Exclusivo prestadora-original/prestadora-original_Manual_Identidad_v1.html` + `prestadora-original_PROMPT_MAESTRO_v1.md` Parte B.
+> Fuente: manual de identidad original (histórico, archivo interno restringido) + prompt maestro original Parte B.
 > Advertencia que hay que respetar: el manual se declara "Provisional — identidad
 > definitiva pendiente de definición". Construir el sistema de estilos de forma
 > centralizada (variables CSS, nunca hardcodeado por componente) para que un reemplazo
@@ -121,7 +121,7 @@ de negocio, no solo de diseño.
 Regla: ningún componente define un color fuera de estas variables. Si hace falta un tono
 nuevo, se agrega acá primero, con justificación.
 
-## Colores de división (solo referencia — NO usar en prestadora-original Salud)
+## Colores de división (solo referencia — NO usar en la Prestadora Demo)
 
 ```css
 --salud: #2E75B6;      /* única división activa hoy — coincide con --azul-medio */
@@ -147,8 +147,9 @@ nuevo, se agrega acá primero, con justificación.
 
 ## Logos disponibles
 
-Solo **prestadora-original Salud** tiene el logo necesario para el desarrollo actual (1 variante con
-texto). Los logos de prestadora-original Group y de otras divisiones no se usan en esta etapa.
+Solo **la Prestadora Demo** tiene el logo necesario para el desarrollo actual (1 variante con
+texto). Los logos de "divisiones" de ese negocio real de origen (Junior, Pets, Bienestar,
+Hogar, Legal, Group) no se usan en esta etapa — quedan solo como referencia de paleta arriba.
 
 ## Estructura de archivos de estilos recomendada
 

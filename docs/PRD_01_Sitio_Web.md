@@ -1,6 +1,6 @@
 # PRD_01 — Sitio Web Público
 
-> Fuente: `prestadora-original_DOCUMENTO_UNICO_v1.md` Parte M. Condensado para ejecución directa.
+> Fuente: documento único original de especificación (histórico) Parte M. Condensado para ejecución directa.
 > Etapa 1 del build order. Ver stack en `CONTEXT.md`.
 
 ## Objetivo
@@ -8,7 +8,7 @@
 Puerta de entrada al negocio. Dos públicos: clientes que buscan el servicio + Asistentes
 que quieren trabajar. Mobile-first.
 
-URL objetivo: prestadora-originalsalud.com.ar (dominio a confirmar).
+URL objetivo: [dominio a confirmar].
 
 ## Estructura de archivos
 
@@ -51,14 +51,14 @@ muestran "A consultar"** hasta que haya un benchmark de precio validado — los 
 cargan desde config, nunca hardcodeados (regla 1 de `CLAUDE.md`).
 
 ### 3. Página `/el-filtro` — eliminada (corrección 2026-07-08)
-Esta sección describía originalmente una página pública dedicada a "El Filtro prestadora-original"
-("Solo el 10% supera el Filtro prestadora-original", timeline de las 5 etapas). Se sacó del sitio
+Esta sección describía originalmente una página pública dedicada al nombre anterior, ya
+retirado, del proceso de verificación ("Solo el 10% lo supera", timeline de las 5 etapas). Se sacó del sitio
 público el 2026-07-08: el proceso interno de verificación de Asistentes (uso interno,
 llamado "Proceso de Incorporación de Asistentes" dentro del Panel) **nunca se menciona en el
 sitio público, ni con ese nombre ni con un nombre genérico inventado** — ver `CLAUDE.md`.
 La página, el nav link y la sección de la Home que la mencionaban fueron eliminados del
 código. Lo único que puede comunicarse públicamente es el hecho de estar "Verificado por
-prestadora-original" (ej. en el Certificado QR del Asistente), sin nombrar el proceso.
+[nombre de la prestadora]" (ej. en el Certificado QR del Asistente), sin nombrar el proceso.
 
 ### 4. Solicitá tu servicio (`/solicita-servicio`)
 Formulario → tabla de campos:
@@ -115,10 +115,10 @@ Ver `DATA_MODEL.md`, sección "Etapa 1 (MySQL en Railway)" — tablas `solicitud
 
 | Página | Title | Description |
 |---|---|---|
-| `/` | prestadora-original Salud — Cuidado domiciliario verificado en CABA y GBA | Asistentes Integrales certificados. Reporte diario para el cliente. Precios públicos. Cuida tus afectos. |
-| `/servicios` | Servicios de cuidado domiciliario — prestadora-original Salud | Asistente Integral, enfermería, internación domiciliaria, kinesiología y más. CABA y GBA. |
-| `/solicita-servicio` | Solicitá tu servicio — prestadora-original Salud | Completá el formulario y te respondemos en menos de 2 horas. |
-| `/trabaja-con-nosotros` | Trabajá con prestadora-original — Asistentes Integrales y profesionales de la salud | Trabajo registrado, honorarios acordados, certificación propia. |
+| `/` | [Nombre de la prestadora] — Cuidado domiciliario verificado en su zona de cobertura | Asistentes Integrales certificados. Reporte diario para el cliente. Precios públicos. Cuida tus afectos. |
+| `/servicios` | Servicios de cuidado domiciliario — [Nombre de la prestadora] | Asistente Integral, enfermería, internación domiciliaria, kinesiología y más, en su zona de cobertura. |
+| `/solicita-servicio` | Solicitá tu servicio — [Nombre de la prestadora] | Completá el formulario y te respondemos en menos de 2 horas. |
+| `/trabaja-con-nosotros` | Trabajá con [Nombre de la prestadora] — Asistentes Integrales y profesionales de la salud | Trabajo registrado, honorarios acordados, certificación propia. |
 
 ## Checklist de lanzamiento
 

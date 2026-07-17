@@ -4,7 +4,7 @@ import { T, DEFAULT_LOCALE, LOCALES } from './translations';
 const LocaleContext = createContext(null);
 
 function localeInicial() {
-  const guardado = localStorage.getItem('prestadora-original-panel-locale');
+  const guardado = localStorage.getItem('plm-panel-locale');
   return LOCALES.includes(guardado) ? guardado : DEFAULT_LOCALE;
 }
 
@@ -13,7 +13,7 @@ export function LocaleProvider({ children }) {
 
   function setLocale(nuevoLocale) {
     if (!LOCALES.includes(nuevoLocale)) return;
-    localStorage.setItem('prestadora-original-panel-locale', nuevoLocale);
+    localStorage.setItem('plm-panel-locale', nuevoLocale);
     setLocaleState(nuevoLocale);
   }
 

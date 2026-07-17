@@ -1,9 +1,9 @@
 # PRD_02 — Panel de Administración
 
-> Fuente: `prestadora-original_DOCUMENTO_UNICO_v1.md` Parte N. Etapa 2 del build order. Herramienta
+> Fuente: documento único original de especificación (histórico) Parte N. Etapa 2 del build order. Herramienta
 > interna — solo Admin_prestadora y Coordinador acceden (Superadmin también, con acceso
 > técnico adicional — ver `SECURITY.md`). SPA separada del sitio público, deployada
-> en el mismo Vercel. Acceso: `admin.prestadora-originalsalud.com.ar` (o `/admin`).
+> en el mismo Vercel. Acceso: `admin.[dominio de la prestadora]` (o `/admin`).
 
 ## Stack
 

@@ -11,7 +11,7 @@
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS configuracion_empresa (
   id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
-  nombre TEXT NOT NULL DEFAULT 'prestadora-original Salud',
+  nombre TEXT NOT NULL DEFAULT 'Prestadora Demo',
   telefono TEXT,
   whatsapp_numero TEXT,
   email TEXT,
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS configuracion_empresa (
 );
 
 INSERT INTO configuracion_empresa (id, nombre, telefono, whatsapp_numero, email, dominio, zona_cobertura_texto)
-VALUES (1, 'prestadora-original Salud', '+54 9 11 3787 4193', '+54 9 11 3787 4193', 'prestadora-original.salud@gmail.com', 'prestadora-originalsalud.com.ar', 'AMBA')
+VALUES (1, 'Prestadora Demo', '+54 9 11 3787 4193', '+54 9 11 3787 4193', 'demo@example.com', 'prestadora-demo.example.com', 'AMBA')
 ON CONFLICT (id) DO NOTHING;
 
 ALTER TABLE configuracion_empresa ENABLE ROW LEVEL SECURITY;

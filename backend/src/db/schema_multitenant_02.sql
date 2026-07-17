@@ -1,6 +1,6 @@
--- Migración multi-tenant (PLM Systems) — paso 02, Bloque 2 del kickoff de implementación
--- (docs/Reserva Historica/Prompt_Claude_Code_Kickoff_Implementacion.md), paso 5 de la sección 2 de
--- docs/PLAN_MULTITENANT_PLM.md, ejecutado junto con el diseño 3.6 (current_tenant()/
+-- Migración multi-tenant (CeltaTech) — paso 02, Bloque 2 del kickoff de implementación
+-- (docs/Documentos Obsoletos/Prompt_Claude_Code_Kickoff_Implementacion.md), paso 5 de la sección 2 de
+-- docs/PLAN_MULTITENANT_CELTATECH.md, ejecutado junto con el diseño 3.6 (current_tenant()/
 -- es_superadmin()) por decisión del usuario (2026-07-09): reescribir el rename de rol
 -- admin → admin_prestadora Y las ~28 policies RLS que dependen de ese valor en un solo
 -- paso, en vez de tocarlas dos veces.
@@ -371,7 +371,7 @@ CREATE POLICY "superadmin_gestiona_prestadoras" ON prestadoras
 --    Sin este DEFAULT, cualquier alta nueva (cuenta, cliente, paciente, ausencia,
 --    guardia, certificado, cese, precio, prestación, zona, solicitud, postulación)
 --    falla por violar el NOT NULL. Mismo mecanismo que ya usó el backfill del
---    Bloque 1 (UUID literal de prestadora-original) — no es una regla de negocio hardcodeada en
+--    Bloque 1 (UUID literal de la Prestadora Demo) — no es una regla de negocio hardcodeada en
 --    código de aplicación (regla 1 de CLAUDE.md), es un default a nivel de schema,
 --    igual de explícito que el `CHECK (id = 1)` de `configuracion_empresa`.
 --    TEMPORAL: el Bloque 3 (filtrado real de tenant en rutas del backend con

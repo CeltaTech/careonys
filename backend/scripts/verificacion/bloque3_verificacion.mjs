@@ -7,7 +7,7 @@
 //   1. Lectura simple (GET) comparada contra ground truth vía Service Role Key.
 //   2. Aislamiento cross-tenant activo: fabrica una segunda prestadora + fila real de
 //      usuario/solicitud/postulación, e intenta operar sobre ellas desde la sesión del
-//      admin de la prestadora real (prestadora-original) — debe fallar en los 3 puntos que en algún
+//      admin de la prestadora real — debe fallar en los 3 puntos que en algún
 //      momento no tuvieron verificación de tenant propia: DELETE de usuarios
 //      (`cuentasPanel.js` `borrarCuenta`), y las altas de cuenta cliente/asistente que
 //      resuelven `solicitudId`/`postulacionId` (`panelCuentas.js`).
@@ -67,7 +67,7 @@ async function checkLecturaSimple(admin, headers, prestadoraId) {
 
 async function checkAislamientoCrossTenant(admin, headers) {
   // Fabrica una segunda prestadora real + un usuario, una solicitud y una postulación reales
-  // que pertenecen a ella — para poder intentar operar sobre ellas desde la sesión de prestadora-original.
+  // que pertenecen a ella — para poder intentar operar sobre ellas desde la sesión de la prestadora real.
   const { data: prestadora, error: errP } = await admin.from('prestadoras').insert({
     razon_social: 'TEST BLOQUE3 SA',
     nombre_fantasia: 'Test Bloque 3',

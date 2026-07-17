@@ -1,7 +1,7 @@
-# CONTEXT.md — Contexto técnico de prestadora-original Salud
+# CONTEXT.md — Contexto técnico de Careonys
 
-> Versión de trabajo para generación de código. Condensa `prestadora-original_CONTEXT_md_v2.md` y
-> `prestadora-original_PROMPT_MAESTRO_v1.md`, quitando el contenido que no afecta decisiones de código
+> Versión de trabajo para generación de código. Condensa los documentos originales de contexto
+> y prompt maestro (históricos), quitando el contenido que no afecta decisiones de código
 > (mercado, competidores, marketing). Para el análisis de negocio completo, ver los
 > documentos originales en la raíz del proyecto — no hace falta releerlos para programar.
 
@@ -21,14 +21,14 @@
   no un extra opcional. Esto pesa a favor de priorizar antes de lo previsto algunos de los
   niveles de IA que `BUILD_ORDER.md` marca hoy como "Diferida" — a revisar caso por caso
   cuando se llegue a esa etapa, no se re-prioriza automáticamente sin evaluar cada nivel.
-- **Cambio societario (2026-07-09): el software pasa a ser propiedad de PLM Systems**, que
-  lo licencia como SaaS a cualquier prestadora de cuidado domiciliario (prestadora-original es la
-  primera). prestadora-original sigue con su negocio de cuidado domiciliario y suma un servicio B2B de
-  auditoría/certificación a otras prestadoras. El plan técnico completo (entidad
-  `prestadoras`, aislamiento multi-tenant, roles nuevos, facturación dual PLM/prestadora-original,
+- **Cambio societario (2026-07-09): el software pasa a ser propiedad de CeltaTech**, que
+  lo licencia como SaaS a cualquier prestadora de cuidado domiciliario. Cada prestadora
+  licenciataria sigue con su propio negocio de cuidado domiciliario, y puede sumar un
+  servicio B2B de auditoría/certificación a otras prestadoras. El plan técnico completo (entidad
+  `prestadoras`, aislamiento multi-tenant, roles nuevos, facturación dual CeltaTech/prestadora,
   i18n y multi-moneda desde el arranque, residencia de datos a futuro) está definido en
-  `docs/Prompt_Claude_Code_PLM_Multitenant.md` (dirección de arquitectura original) y su
-  ejecución viva se sigue en `docs/PLAN_MULTITENANT_PLM.md` — ver también `CLAUDE.md`.
+  `docs/Prompt_Claude_Code_CeltaTech_Multitenant.md` (dirección de arquitectura original) y su
+  ejecución viva se sigue en `docs/PLAN_MULTITENANT_CELTATECH.md` — ver también `CLAUDE.md`.
   **Estado real (actualizado 2026-07-10): ya NO es mono-tenant.** Los Bloques 1
   (aislamiento aditivo de datos: tabla `prestadoras` + `prestadora_id NOT NULL` en 15
   tablas), 2 (RLS centralizada vía `current_tenant()`/`es_superadmin()`, ~28 policies
@@ -59,7 +59,7 @@ Ningún rol de Asistente/Cliente debe tener acceso, ni siquiera de solo lectura,
 
 **Actualizado 2026-07-10:** el rol antes descripto acá como "Administrador de prestadora"
 (futuro) ya está implementado — es el mismo rol de la tabla de arriba, renombrado de
-`admin` a `admin_prestadora` (Bloque 2 de `docs/PLAN_MULTITENANT_PLM.md`), con acceso
+`admin` a `admin_prestadora` (Bloque 2 de `docs/PLAN_MULTITENANT_CELTATECH.md`), con acceso
 acotado a los datos de su propia prestadora y cero visibilidad de otras, verificado contra
 Supabase real. Lo único que sigue siendo futuro, no implementado, es un rol de solo lectura
 agregada para financiadores (obras sociales/prepagas) — no diseñar código para ese rol sin
@@ -179,16 +179,15 @@ export const T = {
 ```
 
 **Regla de slogan (resuelta 2026-07-09): no hay una forma "definitiva" — conviven dos, según
-contexto de uso**, siguiendo la regla de voz de marca ya definida en
-`docs/Exclusivo prestadora-original/prestadora-original_Fundacional_v3.pdf` sección 5.2 ("Voz: primera persona del plural: 'En prestadora-original
-verificamos...', 'Nuestros Asistentes...'"):
+contexto de uso**, siguiendo la guía de voz de marca (histórica, archivo interno restringido):
+voz institucional en primera persona del plural ("Verificamos...", "Nuestros Asistentes..."):
 
 - **"Cuida tus afectos"** (imperativo, segunda persona) — el sitio le habla directamente a
   quien lo visita: `hero_title` de la Home, titulares publicitarios, meta descriptions
   SEO/clic. Es la forma correcta en `T.hero_title` (`sitio-web/src/i18n/translations.js`) y
   en la meta description de `/` (`docs/PRD_01_Sitio_Web.md`).
-- **"Cuidamos tus afectos"** (primera persona del plural, voz institucional) — prestadora-original habla
-  de sí misma: el logo/isotipo (`docs/Exclusivo prestadora-original/prestadora-original_Manual_Identidad_v1.html`, correcto así, no tocar),
+- **"Cuidamos tus afectos"** (primera persona del plural, voz institucional) — la prestadora habla
+  de sí misma: el logo/isotipo (manual de identidad, archivo interno restringido, correcto así, no tocar),
   taglines de footer, la ficha de identidad de marca. Hoy el footer del sitio
   (`sitio-web/src/components/Footer.jsx`) no tiene ningún tagline — si se agrega uno a
   futuro, esta es la forma que le corresponde.
@@ -203,7 +202,7 @@ marca, evaluar entonces una clave separada (por ejemplo `brand_tagline`) en vez 
 Ver `DESIGN_SYSTEM.md` para la paleta de colores, tipografía y convenciones de CSS.
 La identidad completa es **provisional** — no invertir tiempo puliendo detalles de logo o
 color de divisiones que no están activas (Junior, Pets, Bienestar, Hogar, Legal). Solo
-prestadora-original Salud tiene logo y paleta relevantes hoy.
+la Prestadora Demo tiene logo y paleta relevantes hoy.
 
 ## Modelo de datos
 
@@ -224,7 +223,7 @@ Ver `CLAUDE.md` (raíz de `Workspace/`) — sección "El riesgo legal que condic
 
 ## Gap identificado, no resuelto por ningún PRD original: cobro a los clientes
 
-Ningún documento original especificó **cómo prestadora-original cobra a los clientes** (medio de pago,
+Ningún documento original especificó **cómo la prestadora cobra a los clientes** (medio de pago,
 facturación, retención de fondos). El "Modelo UPE" cubre la facturación a IOMA (obra
 social) vía Planillas 3, pero no el cobro directo a clientes particulares. Antes de
 construir cualquier flujo de cobro, esto necesita una decisión de negocio explícita
@@ -237,8 +236,8 @@ construir cualquier flujo de cobro, esto necesita una decisión de negocio expl�
 - v1 (2026-07-07): primera versión, generada para poblar `Workspace/docs/` a partir de
   la lectura completa de la documentación del proyecto y separando lo vinculante de lo
   que no lo es.
-- v2 (2026-07-09): se documenta el cambio societario PLM Systems / prestadora-original y la dirección
-  de multi-tenancy futura (ver `docs/Prompt_Claude_Code_PLM_Multitenant.md`), sin
+- v2 (2026-07-09): se documenta el cambio societario CeltaTech / prestadora licenciataria y la dirección
+  de multi-tenancy futura (ver `docs/Prompt_Claude_Code_CeltaTech_Multitenant.md`), sin
   implementar nada todavía.
 - v3 (2026-07-10): barrido completo contra la realidad del código — Bloques 1-3 de
   multi-tenancy ya aplicados y verificados (rol `admin` renombrado a `admin_prestadora` en

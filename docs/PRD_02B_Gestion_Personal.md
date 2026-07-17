@@ -1,6 +1,6 @@
 # PRD_02B — Gestión de Personal (Vínculo, Cese, Riesgo, Cobertura)
 
-> Fuente: `prestadora-original_PRD_Gestion_Personal_v1.md` (documento completo, 431 líneas).
+> Fuente: documento original de Gestión de Personal (histórico, 431 líneas).
 > Este PRD **extiende el Módulo 4 (Plantel de Asistentes) de `PRD_02_Panel_Admin.md`,
 > no es un módulo separado** — vive en la misma navegación, mismo rol de acceso
 > (Admin_prestadora; Coordinador solo lectura de su zona, sin acceso a montos — ver
@@ -8,7 +8,7 @@
 
 ## Por qué existe este módulo
 
-prestadora-original convive con dos formas de vínculo con sus Asistentes: monotributo (mayoría hoy) y
+Cada Prestadora convive con dos formas de vínculo con sus Asistentes: monotributo (mayoría hoy) y
 relación de dependencia (Casas Particulares, Ley 26.844 / CCT 743/16). El riesgo legal real
 no es teórico: el precedente Cabify-CABA (recalificación de "colaboradores autónomos" como
 empleados en relación de dependencia) es la referencia de riesgo. Este módulo existe para que

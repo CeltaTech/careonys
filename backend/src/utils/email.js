@@ -47,6 +47,7 @@ async function destinatariosEvento(evento, prestadoraId) {
 }
 
 export async function enviarEmailCoordinador({ evento, prestadoraId, asunto, texto }) {
+  if (!process.env.SMTP_USER) return;
   const destinatarios = await destinatariosEvento(evento, prestadoraId);
   if (destinatarios.length === 0) return;
 
@@ -65,6 +66,7 @@ export async function enviarEmailCoordinador({ evento, prestadoraId, asunto, tex
 export { configuracionEvento };
 
 export async function enviarEmail({ to, asunto, texto }) {
+  if (!process.env.SMTP_USER) return;
   await transporter.sendMail({
     from: process.env.SMTP_USER,
     to,

@@ -1,8 +1,8 @@
 # DATA_MODEL.md — Schema consolidado (Supabase / PostgreSQL)
 
-> Junta las tablas definidas por separado en `prestadora-original_DOCUMENTO_UNICO_v1.md` (Parte L —
-> Arquitectura Web, Parte O — App de Servicio), `prestadora-original_PRD_Gestion_Personal_v1.md` y
-> `prestadora-original_PRD_Reclutamiento_v1_extracted.txt`, en un solo DDL de referencia. Es el mapa
+> Junta las tablas definidas por separado en los documentos originales (históricos): documento
+> único de especificación (Parte L — Arquitectura Web, Parte O — App de Servicio), PRD de
+> Gestión de Personal y PRD de Reclutamiento, en un solo DDL de referencia. Es el mapa
 > completo — al construir cada etapa, crear solo las tablas que esa etapa necesita
 > (ver `BUILD_ORDER.md`), no todas de una vez.
 >
@@ -38,10 +38,10 @@ CREATE TABLE prestadoras (
 ```
 
 Cada prestadora licenciataria del software es un tenant aislado. La única fila real hoy es
-datos de prueba/desarrollo con id `874f54d7-4383-4d54-8b9f-f51d02f0dd11` (caso de uso prestadora-original,
-sin contrato firmado — no tiene estatus de "primera prestadora" ni ningún otro privilegio de
-diseño). Ver
-`docs/PLAN_MULTITENANT_PLM.md` para el diseño completo y `backend/src/db/schema_multitenant_01.sql`/`schema_multitenant_02.sql` para el DDL real aplicado.
+datos de prueba/desarrollo con id `874f54d7-4383-4d54-8b9f-f51d02f0dd11` (nombre `Prestadora
+Demo`, caso de uso de desarrollo, sin contrato firmado — no tiene estatus de "primera
+prestadora" ni ningún otro privilegio de diseño). Ver
+`docs/PLAN_MULTITENANT_CELTATECH.md` para el diseño completo y `backend/src/db/schema_multitenant_01.sql`/`schema_multitenant_02.sql` para el DDL real aplicado.
 
 **Convención de FK tenant-segura (introducida con Módulo 6, aplicar a toda tabla nueva
 referenciada desde otra tabla con `prestadora_id`):** en vez de una FK simple al `id` de la
@@ -64,7 +64,7 @@ tablas relacionadas; no se retrofitea salvo que se decida explícitamente.
 
 **Deuda técnica — cerrada 2026-07-11 (ver `docs/PENDIENTES.md` ítem #3):**
 `schema_multitenant_02.sql` había agregado un `DEFAULT '874f54d7-...'` (prestadora_id de
-prestadora-original) en `prestadora_id` de las 15 tablas de los Bloques 1-3 (`usuarios`, `asistentes`,
+la Prestadora Demo) en `prestadora_id` de las 15 tablas de los Bloques 1-3 (`usuarios`, `asistentes`,
 `ausencias`, `guardias_cobertura`, `ceses`, `clientes`, `pacientes`, `lista_precios`,
 `prestaciones`, `paquetes_prestaciones`, `paquete_prestacion_items`, `certificados`,
 `zonas_cobertura`, `solicitudes`, `postulaciones`) como parche temporal, mientras el Bloque 3
@@ -213,7 +213,7 @@ oficiales del sistema en vez de sus 8 etapas genéricas).
 **Actualizado 2026-07-10:** lo que esta nota describía como plan futuro ya está implementado
 — la tabla `prestadoras` existe y `prestadora_id` es `NOT NULL` en `asistentes` y en las
 otras 14 tablas listadas en la sección "Tabla: prestadoras" de arriba, aplicado y verificado
-contra Supabase real (Bloque 1 de `docs/PLAN_MULTITENANT_PLM.md`).
+contra Supabase real (Bloque 1 de `docs/PLAN_MULTITENANT_CELTATECH.md`).
 
 ## Tabla: verificaciones_asistente (Proceso de Incorporación de Asistentes — 5 etapas)
 
@@ -535,7 +535,7 @@ detrás de "nunca acción automática" se apoya en el marco de riesgo legal de `
 (art. 23 LCT, caso Cabify — derecho argentino). Señalado como pendiente de fondo: ese marco
 está escrito como regla universal del producto y no necesariamente aplica igual a una
 prestadora radicada en otro país — no resuelto todavía, no bloquea esta tabla mientras la
-única prestadora real sea prestadora-original/Argentina.
+única prestadora real sea la Prestadora Demo/Argentina.
 
 ## Reclutamiento (PRD_03) — de `postulaciones` a `asistentes`
 
@@ -555,8 +555,8 @@ realmente implementado siempre fue directo, sin paso intermedio:
 La tabla `aspirantes` (y la columna `asistentes.aspirante_id` que la referenciaba) se
 eliminaron en `schema_etapa2k.sql` por ser código muerto: quedaba vacía, con RLS que nadie
 ejercitaba, y desalineaba la documentación del flujo real. Si en el futuro se necesita un
-estado explícito "en evaluación, todavía no es Asistente" (por ejemplo al adoptar
-`docs/Exclusivo prestadora-original/prestadora-original_PRD_Reclutamiento_v1.pdf` en una futura Etapa 3), evaluar recrearla en ese
+estado explícito "en evaluación, todavía no es Asistente" (por ejemplo al adoptar el flujo
+completo del PRD de Reclutamiento original en una futura Etapa 3), evaluar recrearla en ese
 momento con el flujo real que se vaya a implementar, no reintroducir esta versión sin uso.
 
 ## Etapa 1 (Supabase/Postgres desde el día uno — sin paso intermedio por MySQL)
@@ -605,11 +605,11 @@ base de datos de por medio.
 ## Diagrama de relaciones (resumen)
 
 ```
-prestadoras (tenant — hoy solo datos de prueba, caso de uso prestadora-original, sin contrato firmado)
+prestadoras (tenant — hoy solo datos de prueba, Prestadora Demo, sin contrato firmado)
   └── prestadora_id NOT NULL en: usuarios, asistentes, ausencias, guardias_cobertura, ceses,
       clientes, pacientes, lista_precios, prestaciones, paquetes_prestaciones,
       paquete_prestacion_items, certificados, zonas_cobertura, solicitudes, postulaciones
-      (DEFAULT temporal a prestadora-original todavía activo en estas 14 — ver deuda técnica arriba)
+      (DEFAULT temporal a la Prestadora Demo todavía activo en estas 14 — ver deuda técnica arriba)
 
 usuarios (superadmin, admin_prestadora, coordinador)
   ├── asistentes ── verificaciones_asistente, validaciones_faciales, certificados

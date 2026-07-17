@@ -1,6 +1,6 @@
 # PRD_04_05 — PWA de Servicio (Asistentes y Clientes)
 
-> Fuente: `prestadora-original_DOCUMENTO_UNICO_v1.md` Parte O. Etapas 3 (PWA Asistentes) y 4 (PWA
+> Fuente: documento único original de especificación (histórico) Parte O. Etapas 3 (PWA Asistentes) y 4 (PWA
 > Clientes) del build order. Se construye **después** de que el sitio (Etapa 1) y el panel
 > de admin (Etapa 2) estén en producción con clientes reales — no antes.
 
@@ -141,15 +141,16 @@ anteriores con esta cliente. Botón de contacto (WhatsApp o chat interno).
 
 ### Perfil Público del Asistente (con QR — Etapa 6)
 
-URL: `prestadora-originalsalud.com.ar/asistente/[qr_token]`, accesible sin login. Muestra: primer nombre
-+ inicial del apellido (nunca nombre completo), foto, especialidades, "Verificado por
-prestadora-original el [fecha]", estado del certificado (Activo/Vencido). **Corrección (2026-07-10):**
-esta página es pública y sin login — el proceso interno de verificación (uso interno,
-llamado "Proceso de Incorporación de Asistentes" dentro del Panel, nunca "Filtro prestadora-original" ni
-ningún nombre equivalente fuera de él) **no se nombra acá**, ni las etapas individuales; solo
-se muestra el hecho consolidado de estar verificado y la fecha, igual que ya hace con
-"Verificado por prestadora-original el [fecha]" — ver regla de `CLAUDE.md`. **Nunca muestra** DNI,
-teléfono, email ni dirección — dato sensible, ver `SECURITY.md`.
+URL: `[dominio-de-la-prestadora]/asistente/[qr_token]`, accesible sin login. Muestra: primer
+nombre + inicial del apellido (nunca nombre completo), foto, especialidades, "Verificado por
+[nombre de la Prestadora] el [fecha]", estado del certificado (Activo/Vencido). **Corrección
+(2026-07-10):** esta página es pública y sin login — el proceso interno de verificación (uso
+interno, llamado "Proceso de Incorporación de Asistentes" dentro del Panel, nunca con el
+nombre que tuvo antes de retirarse — ver `CLAUDE.md` §4 — ni ningún nombre equivalente fuera
+de él) **no se nombra acá**, ni las etapas individuales; solo se muestra el hecho consolidado
+de estar verificado y la fecha, igual que ya hace con "Verificado por [nombre de la
+Prestadora] el [fecha]" — ver regla de `CLAUDE.md`. **Nunca muestra** DNI, teléfono, email ni
+dirección — dato sensible, ver `SECURITY.md`.
 
 ### Alertas
 Lista de alertas del paciente (activas + historial resuelto), descripción generada por IA,

@@ -16,7 +16,7 @@ archivo subía y existía en los dos buckets.
 
 **Procedimiento ejecutado:**
 
-1. Se bajó el backup más reciente (`prestadora-original_backup_2026-07-13T09-23-51-351Z.sql.gz`,
+1. Se bajó el backup más reciente (`careonys_backup_2026-07-13T09-23-51-351Z.sql.gz`,
    generado ese mismo día a las 09:23 UTC) directamente del bucket R2 de producción.
 2. Se levantó un contenedor Postgres 16 efímero con Docker (`postgres:16-alpine`), sin
    ninguna relación con la infraestructura real — solo para esta prueba.

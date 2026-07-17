@@ -1,6 +1,6 @@
 // Prueba puntual del ítem B del pendiente #30 (2026-07-14) — verifica que es_superadmin() ya
 // no da bypass total: una cuenta superadmin debe ver filas de la sandbox pero NO filas de una
-// prestadora real (prestadora-original), leyendo con su propia sesión (RLS real, no Service Role Key).
+// prestadora real (Prestadora Demo), leyendo con su propia sesión (RLS real, no Service Role Key).
 // Borra todo lo que crea al terminar — la sandbox (prestadoras) y la cuenta superadmin real no
 // se tocan.
 import { createClient } from '@supabase/supabase-js';
@@ -16,11 +16,11 @@ const anonKey = panelEnv.match(/VITE_SUPABASE_ANON_KEY=(.+)/)[1].trim();
 const anon = createClient(process.env.SUPABASE_URL, anonKey);
 
 const SANDBOX_ID = '5d727437-a5ff-432f-b9f6-10015e61ffef';
-const prestadora-original_ID = '874f54d7-4383-4d54-8b9f-f51d02f0dd11';
+const PRESTADORA_DEMO_ID = '874f54d7-4383-4d54-8b9f-f51d02f0dd11';
 const EMAIL = 'alas.para.escribir.2026+superadmin.test.itemb@gmail.com';
 const PASSWORD = 'PruebaSuperadminItemB2026!';
 
-let authUserId, asistenteSandboxId, asistenteprestadora-originalId, usuarioAsistenteSandboxId, usuarioAsistenteprestadora-originalId;
+let authUserId, asistenteSandboxId, asistentePrestadoraId, usuarioAsistenteSandboxId, usuarioAsistentePrestadoraId;
 
 async function main() {
   const { data: auth, error: errorAuth } = await admin.auth.admin.createUser({
@@ -41,22 +41,22 @@ async function main() {
     email: 'alas.para.escribir.2026+asistente.test.itemb.sandbox@gmail.com', password: PASSWORD, email_confirm: true,
   });
   if (errAuthSandbox) throw errAuthSandbox;
-  const { data: authprestadora-original, error: errAuthprestadora-original } = await admin.auth.admin.createUser({
-    email: 'alas.para.escribir.2026+asistente.test.itemb.prestadora-original@gmail.com', password: PASSWORD, email_confirm: true,
+  const { data: authPrestadora, error: errAuthPrestadora } = await admin.auth.admin.createUser({
+    email: 'alas.para.escribir.2026+asistente.test.itemb.prestadora@gmail.com', password: PASSWORD, email_confirm: true,
   });
-  if (errAuthprestadora-original) throw errAuthprestadora-original;
+  if (errAuthPrestadora) throw errAuthPrestadora;
   usuarioAsistenteSandboxId = authSandbox.user.id;
-  usuarioAsistenteprestadora-originalId = authprestadora-original.user.id;
+  usuarioAsistentePrestadoraId = authPrestadora.user.id;
   const { error: errUSandbox } = await admin.from('usuarios').insert({
     id: usuarioAsistenteSandboxId, rol: 'asistente', nombre: 'PRUEBA temporal — usuario asistente sandbox',
     prestadora_id: SANDBOX_ID,
   });
   if (errUSandbox) throw errUSandbox;
-  const { error: errUprestadora-original } = await admin.from('usuarios').insert({
-    id: usuarioAsistenteprestadora-originalId, rol: 'asistente', nombre: 'PRUEBA temporal — usuario asistente prestadora-original',
-    prestadora_id: prestadora-original_ID,
+  const { error: errUPrestadora } = await admin.from('usuarios').insert({
+    id: usuarioAsistentePrestadoraId, rol: 'asistente', nombre: 'PRUEBA temporal — usuario asistente prestadora real',
+    prestadora_id: PRESTADORA_DEMO_ID,
   });
-  if (errUprestadora-original) throw errUprestadora-original;
+  if (errUPrestadora) throw errUPrestadora;
 
   const { data: aSandbox, error: errASandbox } = await admin.from('asistentes').insert({
     id: usuarioAsistenteSandboxId, nombre: 'PRUEBA temporal — Asistente sandbox', estado: 'activo', tipo_vinculo: 'monotributo',
@@ -65,12 +65,12 @@ async function main() {
   if (errASandbox) throw errASandbox;
   asistenteSandboxId = aSandbox.id;
 
-  const { data: aprestadora-original, error: errAprestadora-original } = await admin.from('asistentes').insert({
-    id: usuarioAsistenteprestadora-originalId, nombre: 'PRUEBA temporal — Asistente prestadora-original real', estado: 'activo', tipo_vinculo: 'monotributo',
-    fecha_alta: '2026-07-14', prestadora_id: prestadora-original_ID, canales: ['directo'],
+  const { data: aPrestadora, error: errAPrestadora } = await admin.from('asistentes').insert({
+    id: usuarioAsistentePrestadoraId, nombre: 'PRUEBA temporal — Asistente prestadora real', estado: 'activo', tipo_vinculo: 'monotributo',
+    fecha_alta: '2026-07-14', prestadora_id: PRESTADORA_DEMO_ID, canales: ['directo'],
   }).select('id').single();
-  if (errAprestadora-original) throw errAprestadora-original;
-  asistenteprestadora-originalId = aprestadora-original.id;
+  if (errAPrestadora) throw errAPrestadora;
+  asistentePrestadoraId = aPrestadora.id;
 
   const { data: sesion, error: errorLogin } = await anon.auth.signInWithPassword({ email: EMAIL, password: PASSWORD });
   if (errorLogin) throw errorLogin;
@@ -81,29 +81,29 @@ async function main() {
 
   const { data: veSandbox, error: errVeSandbox } = await clienteSuperadmin
     .from('asistentes').select('id, nombre').eq('id', asistenteSandboxId).maybeSingle();
-  const { data: veprestadora-original, error: errVeprestadora-original } = await clienteSuperadmin
-    .from('asistentes').select('id, nombre').eq('id', asistenteprestadora-originalId).maybeSingle();
+  const { data: vePrestadora, error: errVePrestadora } = await clienteSuperadmin
+    .from('asistentes').select('id, nombre').eq('id', asistentePrestadoraId).maybeSingle();
 
   console.log('--- Resultado ---');
   console.log('Ve asistente de la sandbox (esperado: SÍ lo ve):', veSandbox ? 'OK ve' : 'NO ve', errVeSandbox?.message || '');
-  console.log('Ve asistente de prestadora-original real (esperado: NO lo ve):', veprestadora-original ? 'MAL — lo ve' : 'OK no lo ve', errVeprestadora-original?.message || '');
+  console.log('Ve asistente de prestadora real (esperado: NO lo ve):', vePrestadora ? 'MAL — lo ve' : 'OK no lo ve', errVePrestadora?.message || '');
 
   if (!veSandbox) throw new Error('FALLO: superadmin no ve la sandbox, algo se rompió en el acotamiento');
-  if (veprestadora-original) throw new Error('FALLO DE SEGURIDAD: superadmin todavía ve datos de una prestadora real');
+  if (vePrestadora) throw new Error('FALLO DE SEGURIDAD: superadmin todavía ve datos de una prestadora real');
 
   console.log('Item B verificado correctamente: superadmin acotado a la sandbox.');
 }
 
 async function limpiar() {
   if (asistenteSandboxId) await admin.from('asistentes').delete().eq('id', asistenteSandboxId);
-  if (asistenteprestadora-originalId) await admin.from('asistentes').delete().eq('id', asistenteprestadora-originalId);
+  if (asistentePrestadoraId) await admin.from('asistentes').delete().eq('id', asistentePrestadoraId);
   if (usuarioAsistenteSandboxId) {
     await admin.from('usuarios').delete().eq('id', usuarioAsistenteSandboxId);
     await admin.auth.admin.deleteUser(usuarioAsistenteSandboxId);
   }
-  if (usuarioAsistenteprestadora-originalId) {
-    await admin.from('usuarios').delete().eq('id', usuarioAsistenteprestadora-originalId);
-    await admin.auth.admin.deleteUser(usuarioAsistenteprestadora-originalId);
+  if (usuarioAsistentePrestadoraId) {
+    await admin.from('usuarios').delete().eq('id', usuarioAsistentePrestadoraId);
+    await admin.auth.admin.deleteUser(usuarioAsistentePrestadoraId);
   }
   if (authUserId) {
     await admin.from('usuarios').delete().eq('id', authUserId);

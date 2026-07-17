@@ -1262,10 +1262,15 @@ este documento.
 
 ## Estado de este documento
 
-Es un **plan propuesto**, no una decisión tomada ni código implementado. El sistema sigue
-siendo mono-tenant (la prestadora original) en producción. Ningún paso de la sección 2 ni tabla de la
-sección 3 se creó todavía contra Supabase real. Requiere aprobación explícita del usuario,
-idealmente punto por punto de la sección 4, antes de generar la primera migración SQL real.
+**Actualizado 2026-07-17 — ejecutado, no un plan propuesto.** Los 4 Bloques de la sección 2
+están aplicados y verificados contra Supabase real: Bloque 1 (columnas `prestadora_id`),
+Bloque 2 (`current_tenant()`/`es_superadmin()` centralizados, `docs/PROGRESS.md:1454`),
+Bloque 3 (backend con Service Role Key scopeado por tenant, `docs/PENDIENTES.md` #3) y
+Bloque 4 (`configuracion_prestadora`, `docs/PENDIENTES.md` #25). El sistema es multi-tenant
+real en producción, no mono-tenant. Encima de esos 4 Bloques se ejecutó además el rediseño de
+roles `superadmin`/`admin_plataforma` de la sección 3.4 (`docs/PENDIENTES.md` #30, ítems A-I,
+cerrado 2026-07-15). La sección 5 (branding por tenant) sigue como diseño sin ejecutar —
+ver `docs/PENDIENTES.md` para el estado puntual de cada ítem restante.
 
 ---
 

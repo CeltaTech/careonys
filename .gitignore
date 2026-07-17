@@ -9,3 +9,7 @@ Thumbs.db
 
 # Credenciales y datos sensibles — nunca commitear (regla 9 de CLAUDE.md)
 No hacer commit/
+
+# Carpetas restringidas (agujero negro, ver CLAUDE.md §9) — nunca versionar
+docs/Documentos Obsoletos/
+docs/Exclusivo Sendler/

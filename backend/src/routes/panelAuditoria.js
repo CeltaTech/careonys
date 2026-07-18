@@ -12,7 +12,7 @@ export const panelAuditoriaRouter = Router();
 panelAuditoriaRouter.get('/', requiereRolPanel, async (req, res) => {
   const { rol, prestadoraId } = req.usuarioPanel;
 
-  if (rol !== 'superadmin' && rol !== 'admin_prestadora') {
+  if (!['superadmin', 'admin_prestadora', 'admin_plataforma'].includes(rol)) {
     return res.status(403).json({ error: 'Sin permiso para ver el log de auditoría' });
   }
 
@@ -24,7 +24,11 @@ panelAuditoriaRouter.get('/', requiereRolPanel, async (req, res) => {
 
   // admin_prestadora (dueño de la prestadora auditada) solo ve lo que pasó dentro de la
   // suya — mismo criterio que la policy RLS "admin_prestadora_lee_auditoria_de_su_prestadora".
-  if (rol === 'admin_prestadora') {
+  // admin_plataforma solo ve lo de la prestadora en la que está "adentro" ahora mismo
+  // (prestadoraId viene de su sesión de tenant activa, ver requiereRolPanel.js) — sin
+  // sesión activa no hay prestadoraId y por lo tanto no ve nada, coherente con que fuera
+  // del modo "dentro de una prestadora" no tiene ningún acceso cross-tenant.
+  if (rol === 'admin_prestadora' || rol === 'admin_plataforma') {
     if (!prestadoraId) return res.status(403).json({ error: 'Sin prestadora asociada' });
     consulta = consulta.eq('prestadora_id', prestadoraId);
   }

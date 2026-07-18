@@ -88,8 +88,9 @@ export function Layout() {
           <NavLink to="/lista-precios">{t.nav.lista_precios}</NavLink>
           {esAdminOSuperior(usuario?.rol) && <NavLink to="/usuarios-panel">{t.nav.usuarios_panel}</NavLink>}
           {['admin_plataforma', 'superadmin'].includes(usuario?.rol) && <NavLink to="/prestadoras">{t.nav.prestadoras}</NavLink>}
+          {usuario?.rol === 'admin_plataforma' && <NavLink to="/admin-plataforma">{t.nav.admin_plataforma}</NavLink>}
           {esAdminOSuperior(usuario?.rol) && <NavLink to="/configuracion">{t.nav.configuracion}</NavLink>}
-          {['admin_prestadora', 'superadmin'].includes(usuario?.rol) && <NavLink to="/auditoria">{t.nav.auditoria}</NavLink>}
+          {['admin_prestadora', 'superadmin', 'admin_plataforma'].includes(usuario?.rol) && <NavLink to="/auditoria">{t.nav.auditoria}</NavLink>}
         </nav>
       </aside>
       <div className="panel-main">

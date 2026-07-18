@@ -16,6 +16,7 @@ import { AsistenteDetalle } from './pages/asistentes/AsistenteDetalle';
 import { Clientes } from './pages/Clientes';
 import { ClienteDetalle } from './pages/clientes/ClienteDetalle';
 import { Guardias } from './pages/Guardias';
+import { Evv } from './pages/Evv';
 import { Continuidad } from './pages/Continuidad';
 import { ListaPrecios } from './pages/ListaPrecios';
 import { UsuariosPanel } from './pages/UsuariosPanel';
@@ -51,6 +52,7 @@ function App() {
                     <Route path="clientes" element={<Clientes />} />
                     <Route path="clientes/:id" element={<ClienteDetalle />} />
                     <Route path="guardias" element={<Guardias />} />
+                    <Route path="verificacion-visitas" element={<Evv />} />
                     <Route path="continuidad" element={<Continuidad />} />
                     <Route path="lista-precios" element={<ListaPrecios />} />
                     <Route path="usuarios-panel" element={<ProtectedRoute soloAdmin><UsuariosPanel /></ProtectedRoute>} />

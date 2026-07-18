@@ -54,7 +54,7 @@ function App() {
                     <Route path="clientes" element={<Clientes />} />
                     <Route path="clientes/:id" element={<ClienteDetalle />} />
                     <Route path="guardias" element={<Guardias />} />
-                    <Route path="verificacion-visitas" element={<Evv />} />
+                    <Route path="verificacion-guardias" element={<Evv />} />
                     <Route path="facturacion" element={<Facturacion />} />
                     <Route path="compliance" element={<Compliance />} />
                     <Route path="continuidad" element={<Continuidad />} />

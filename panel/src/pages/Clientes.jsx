@@ -1,16 +1,23 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
+import { useAuth } from '../context/AuthContext';
+import { esAdminOSuperior } from '../lib/roles';
 import { supabase } from '../lib/supabaseClient';
 import { EstadoLista } from '../components/layout/EstadoLista';
+import { Button } from '../components/ui/Button';
+import { NuevaClienteModal } from './clientes/NuevaClienteModal';
 
 export function Clientes() {
   const { t } = useLocale();
   const navigate = useNavigate();
+  const { usuario } = useAuth();
+  const esAdmin = esAdminOSuperior(usuario?.rol);
   const [filas, setFilas] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [busqueda, setBusqueda] = useState('');
+  const [mostrarNueva, setMostrarNueva] = useState(false);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -58,7 +65,18 @@ export function Clientes() {
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
+        {esAdmin && <Button onClick={() => setMostrarNueva(true)}>{t.clientes.nueva.titulo}</Button>}
       </div>
+
+      {mostrarNueva && (
+        <NuevaClienteModal
+          onClose={() => setMostrarNueva(false)}
+          onCreada={() => {
+            setMostrarNueva(false);
+            recargar();
+          }}
+        />
+      )}
 
       <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && filasFiltradas.length === 0} recargar={recargar}>
         <table className="panel-tabla">

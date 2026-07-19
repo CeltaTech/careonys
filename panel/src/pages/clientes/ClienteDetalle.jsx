@@ -4,7 +4,11 @@ import { useLocale } from '../../i18n/LocaleContext';
 import { linkWhatsapp } from '../../lib/telefono';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
+import { FormField } from '../../components/ui/FormField';
+import { Alert } from '../../components/ui/Alert';
 import { PrestacionesPaciente } from './PrestacionesPaciente';
+import { EditarPacienteModal } from './EditarPacienteModal';
+import { NuevoPacienteModal } from './NuevoPacienteModal';
 
 export function ClienteDetalle() {
   const { t } = useLocale();
@@ -14,13 +18,19 @@ export function ClienteDetalle() {
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [pacienteSeleccionado, setPacienteSeleccionado] = useState(null);
+  const [pacienteAEditar, setPacienteAEditar] = useState(null);
+  const [mostrarNuevoPaciente, setMostrarNuevoPaciente] = useState(false);
+  const [formContacto, setFormContacto] = useState(null);
+  const [guardandoContacto, setGuardandoContacto] = useState(false);
+  const [errorContacto, setErrorContacto] = useState(null);
+  const [contactoGuardado, setContactoGuardado] = useState(false);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
     setError(null);
     const { data, error: errorConsulta } = await supabase
       .from('clientes')
-      .select('id, plan, created_at, solicitudes!clientes_solicitud_id_fkey(nombre, telefono, email, localidad), pacientes(*)')
+      .select('id, plan, solicitud_id, created_at, solicitudes!clientes_solicitud_id_fkey(nombre, telefono, email, localidad), pacientes(*)')
       .eq('id', id)
       .single();
 
@@ -31,12 +41,43 @@ export function ClienteDetalle() {
     }
 
     setCliente(data);
+    setFormContacto({
+      nombre: data.solicitudes?.nombre || '',
+      telefono: data.solicitudes?.telefono || '',
+      email: data.solicitudes?.email || '',
+      localidad: data.solicitudes?.localidad || '',
+      plan: data.plan || '',
+    });
     setEstado('listo');
   }, [id]);
 
   useEffect(() => {
     recargar();
   }, [recargar]);
+
+  function setCampoContacto(campo, valor) {
+    setFormContacto((f) => ({ ...f, [campo]: valor }));
+    setContactoGuardado(false);
+  }
+
+  async function guardarContacto() {
+    setGuardandoContacto(true);
+    setErrorContacto(null);
+    const { nombre, telefono, email, localidad, plan } = formContacto;
+    const [{ error: errorSolicitud }, { error: errorCliente }] = await Promise.all([
+      cliente.solicitud_id
+        ? supabase.from('solicitudes').update({ nombre, telefono, email, localidad }).eq('id', cliente.solicitud_id)
+        : Promise.resolve({ error: null }),
+      supabase.from('clientes').update({ plan }).eq('id', cliente.id),
+    ]);
+    setGuardandoContacto(false);
+    if (errorSolicitud || errorCliente) {
+      setErrorContacto(t.comun.error_generico);
+      return;
+    }
+    setContactoGuardado(true);
+    recargar();
+  }
 
   if (estado === 'cargando') return <p className="estado-cargando">{t.comun.cargando}</p>;
   if (estado === 'no_encontrado') return <p className="estado-vacio">{t.comun.no_encontrado}</p>;
@@ -48,22 +89,29 @@ export function ClienteDetalle() {
       <h1>{cliente.solicitudes?.nombre || '—'}</h1>
 
       <h2>{t.clientes.contacto}</h2>
-      <dl className="panel-detalle-lista">
-        <dt>{t.clientes.col_telefono}</dt>
-        <dd>
-          {cliente.solicitudes?.telefono ? (
-            <a href={linkWhatsapp(cliente.solicitudes.telefono)} target="_blank" rel="noreferrer">{cliente.solicitudes.telefono}</a>
-          ) : (
-            '—'
+      {errorContacto && <Alert variant="error">{errorContacto}</Alert>}
+      {contactoGuardado && <Alert variant="info">{t.comun.guardar} ✓</Alert>}
+      {formContacto && (
+        <>
+          <FormField label={t.clientes.col_nombre} name="nombre_contacto" value={formContacto.nombre} onChange={(e) => setCampoContacto('nombre', e.target.value)} />
+          <FormField label={t.clientes.col_telefono} name="telefono_contacto" value={formContacto.telefono} onChange={(e) => setCampoContacto('telefono', e.target.value)} />
+          {formContacto.telefono && (
+            <p className="panel-explicacion">
+              <a href={linkWhatsapp(formContacto.telefono)} target="_blank" rel="noreferrer">{t.clientes.abrir_whatsapp}</a>
+            </p>
           )}
-        </dd>
-        <dt>{t.clientes.col_email}</dt>
-        <dd>{cliente.solicitudes?.email || '—'}</dd>
-        <dt>{t.clientes.col_localidad}</dt>
-        <dd>{cliente.solicitudes?.localidad || '—'}</dd>
-        <dt>{t.clientes.col_fecha_alta}</dt>
-        <dd>{new Date(cliente.created_at).toLocaleDateString()}</dd>
-      </dl>
+          <FormField label={t.clientes.col_email} name="email_contacto" type="email" value={formContacto.email} onChange={(e) => setCampoContacto('email', e.target.value)} />
+          <FormField label={t.clientes.col_localidad} name="localidad_contacto" value={formContacto.localidad} onChange={(e) => setCampoContacto('localidad', e.target.value)} />
+          <FormField label={t.clientes.plan} name="plan_contacto" value={formContacto.plan} onChange={(e) => setCampoContacto('plan', e.target.value)} />
+          <dl className="panel-detalle-lista">
+            <dt>{t.clientes.col_fecha_alta}</dt>
+            <dd>{new Date(cliente.created_at).toLocaleDateString()}</dd>
+          </dl>
+          <Button onClick={guardarContacto} disabled={guardandoContacto}>
+            {guardandoContacto ? t.comun.guardando : t.comun.guardar}
+          </Button>
+        </>
+      )}
 
       <h2>{t.clientes.pacientes}</h2>
       {cliente.pacientes?.length ? (
@@ -85,6 +133,9 @@ export function ClienteDetalle() {
                 <td>{p.nivel_complejidad || '—'}</td>
                 <td>{p.domicilio || '—'}</td>
                 <td>
+                  <Button variant="secondary" onClick={() => setPacienteAEditar(p)}>
+                    {t.comun.editar}
+                  </Button>{' '}
                   <Button variant="secondary" onClick={() => setPacienteSeleccionado(p)}>
                     {t.prestaciones.titulo}
                   </Button>
@@ -96,6 +147,9 @@ export function ClienteDetalle() {
       ) : (
         <p className="estado-vacio">{t.clientes.sin_pacientes}</p>
       )}
+      <Button variant="secondary" onClick={() => setMostrarNuevoPaciente(true)}>
+        {t.clientes.agregar_paciente}
+      </Button>
 
       <h2>{t.clientes.guardias_activas}</h2>
       <p className="estado-vacio">{t.clientes.modulo_no_disponible}</p>
@@ -108,6 +162,28 @@ export function ClienteDetalle() {
 
       {pacienteSeleccionado && (
         <PrestacionesPaciente paciente={pacienteSeleccionado} onClose={() => setPacienteSeleccionado(null)} />
+      )}
+
+      {pacienteAEditar && (
+        <EditarPacienteModal
+          paciente={pacienteAEditar}
+          onClose={() => setPacienteAEditar(null)}
+          onGuardado={() => {
+            setPacienteAEditar(null);
+            recargar();
+          }}
+        />
+      )}
+
+      {mostrarNuevoPaciente && (
+        <NuevoPacienteModal
+          clienteId={cliente.id}
+          onClose={() => setMostrarNuevoPaciente(false)}
+          onCreado={() => {
+            setMostrarNuevoPaciente(false);
+            recargar();
+          }}
+        />
       )}
     </div>
   );

@@ -16,6 +16,10 @@ export function PerfilTab({ asistente, onActualizado }) {
   const { empresa } = useEmpresa();
   const esAdmin = esAdminOSuperior(usuario?.rol);
   const [form, setForm] = useState({
+    nombre: asistente.nombre || '',
+    dni: asistente.dni || '',
+    telefono: asistente.telefono || '',
+    email: asistente.email || '',
     especialidades: (asistente.especialidades || []).join(', '),
     zonas: (asistente.zonas || []).join(', '),
     estado: asistente.estado,
@@ -38,6 +42,10 @@ export function PerfilTab({ asistente, onActualizado }) {
     setGuardando(true);
     setError(null);
     const payload = {
+      nombre: form.nombre.trim(),
+      dni: form.dni.trim() || null,
+      telefono: form.telefono.trim() || null,
+      email: form.email.trim() || null,
       especialidades: form.especialidades.split(',').map((s) => s.trim()).filter(Boolean),
       zonas: form.zonas.split(',').map((s) => s.trim()).filter(Boolean),
       estado: form.estado,
@@ -72,13 +80,12 @@ export function PerfilTab({ asistente, onActualizado }) {
       {error && <Alert variant="error">{error}</Alert>}
       {guardado && <Alert variant="info">{t.comun.guardar} ✓</Alert>}
 
+      <FormField label={t.asistentes.col_nombre} name="nombre" value={form.nombre} onChange={(e) => set('nombre', e.target.value)} />
+      <FormField label={t.asistentes.dni} name="dni" value={form.dni} onChange={(e) => set('dni', e.target.value)} />
+      <FormField label={t.asistentes.telefono} name="telefono" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} />
+      <FormField label={t.asistentes.email} name="email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
+
       <dl className="panel-detalle-lista">
-        <dt>{t.asistentes.dni}</dt>
-        <dd>{asistente.dni || '—'}</dd>
-        <dt>{t.asistentes.telefono}</dt>
-        <dd>{asistente.telefono || '—'}</dd>
-        <dt>{t.asistentes.email}</dt>
-        <dd>{asistente.email || '—'}</dd>
         <dt>{t.asistentes.fecha_alta}</dt>
         <dd>{new Date(asistente.fecha_alta).toLocaleDateString()}</dd>
       </dl>

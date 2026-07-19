@@ -82,6 +82,87 @@ panelCuentasRouter.post('/cliente', requiereRolPanel, requiereAdmin, async (req,
   }
 });
 
+// Alta manual de Cliente+Paciente (sin Solicitud previa) — cubre el caso de una
+// Prestadora que llega a Careonys con una cartera de clientes ya en atención.
+// Se crea igual una fila de `solicitudes` (canal 'alta_manual') para que el contacto
+// del Cliente siga viviendo en un único lugar (evita reproducir el bug de contacto
+// en blanco que tenían los Clientes sembradas sin solicitud vinculada).
+panelCuentasRouter.post('/cliente-directa', requiereRolPanel, requiereAdmin, async (req, res) => {
+  const { nombreContacto, telefono, email, localidad, nombrePaciente, domicilioPaciente } = req.body;
+  if (!nombreContacto || !email || !nombrePaciente) {
+    return res.status(400).json({ error: 'Faltan datos obligatorios (nombreContacto, email, nombrePaciente)' });
+  }
+
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+
+  let clienteId;
+  let solicitudId;
+  try {
+    const { data: solicitud, error: errorSolicitud } = await supabase
+      .from('solicitudes')
+      .insert({
+        prestadora_id: prestadoraId,
+        nombre: nombreContacto,
+        telefono: telefono || '',
+        email,
+        nombre_paciente: nombrePaciente,
+        localidad: localidad || '',
+        canal: 'alta_manual',
+        estado: 'asignada',
+        tipo_servicio: 'Cuidado domiciliario',
+        modalidad: 'presencial',
+        dias_horario: 'A definir',
+      })
+      .select()
+      .single();
+    if (errorSolicitud) throw new Error(errorSolicitud.message);
+    solicitudId = solicitud.id;
+
+    ({ userId: clienteId } = await crearCuentaConPerfil({
+      email,
+      nombre: nombreContacto,
+      telefono,
+      rol: 'cliente',
+      prestadoraId,
+    }));
+
+    const { error: errorCliente } = await supabase
+      .from('clientes')
+      .insert({ id: clienteId, solicitud_id: solicitudId, prestadora_id: prestadoraId });
+    if (errorCliente) throw new Error(errorCliente.message);
+
+    const { data: paciente, error: errorPaciente } = await supabase
+      .from('pacientes')
+      .insert({
+        cliente_id: clienteId,
+        nombre: nombrePaciente,
+        domicilio: domicilioPaciente || localidad || null,
+        prestadora_id: prestadoraId,
+      })
+      .select()
+      .single();
+    if (errorPaciente) throw new Error(errorPaciente.message);
+
+    const { error: errorUpdate } = await supabase
+      .from('solicitudes')
+      .update({ cliente_id: clienteId })
+      .eq('id', solicitudId);
+    if (errorUpdate) throw new Error(errorUpdate.message);
+
+    res.json({ ok: true, clienteId, pacienteId: paciente.id });
+  } catch (error) {
+    if (clienteId) {
+      await supabase.from('pacientes').delete().eq('cliente_id', clienteId);
+      await supabase.from('clientes').delete().eq('id', clienteId);
+      await borrarCuenta(clienteId, { prestadoraId });
+    }
+    if (solicitudId) {
+      await supabase.from('solicitudes').delete().eq('id', solicitudId);
+    }
+    res.status(500).json({ error: error.message });
+  }
+});
+
 const ETAPAS_INCORPORACION = [
   'postulacion',
   'verificacion_identidad',
@@ -162,6 +243,60 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, requiereAdmin, async (re
   } catch (error) {
     if (asistenteId) {
       await supabase.from('verificaciones_asistente').delete().eq('asistente_id', asistenteId);
+      await supabase.from('asistentes').delete().eq('id', asistenteId);
+      await borrarCuenta(asistenteId, { prestadoraId });
+    }
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Alta manual de Asistente (sin Postulación previa) — cubre el caso de una Prestadora
+// que llega a Careonys con un equipo que ya venía trabajando desde antes. Entra activo
+// por defecto y, a diferencia de /asistente, no genera filas en `verificaciones_asistente`
+// (equivalente al default 'omitir' del pendiente #18 — política de verificación por
+// prestadora; la Fase 2 de este trabajo suma la configuración para cambiar este comportamiento).
+panelCuentasRouter.post('/asistente-directo', requiereRolPanel, requiereAdmin, async (req, res) => {
+  const { nombre, telefono, email, dni, especialidades, zonas, estado, tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales } = req.body;
+  if (!nombre || !email) {
+    return res.status(400).json({ error: 'Faltan datos obligatorios (nombre, email)' });
+  }
+
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+  const zonasArray = Array.isArray(zonas) ? zonas : [];
+  const especialidadesArray = Array.isArray(especialidades) ? especialidades : [];
+
+  let asistenteId;
+  try {
+    ({ userId: asistenteId } = await crearCuentaConPerfil({
+      email,
+      nombre,
+      telefono,
+      rol: 'asistente',
+      zonas: zonasArray,
+      prestadoraId,
+    }));
+
+    const { error: errorAsistente } = await supabase.from('asistentes').insert({
+      id: asistenteId,
+      nombre,
+      dni: dni || null,
+      telefono: telefono || null,
+      email,
+      especialidades: especialidadesArray,
+      zonas: zonasArray,
+      estado: estado || 'activo',
+      tipo_vinculo: tipo_vinculo || 'monotributo',
+      categoria_cct: categoria_cct || null,
+      valor_hora: valor_hora || null,
+      sueldo_basico: sueldo_basico || null,
+      horas_semanales: horas_semanales || null,
+      prestadora_id: prestadoraId,
+    });
+    if (errorAsistente) throw new Error(errorAsistente.message);
+
+    res.json({ ok: true, asistenteId });
+  } catch (error) {
+    if (asistenteId) {
       await supabase.from('asistentes').delete().eq('id', asistenteId);
       await borrarCuenta(asistenteId, { prestadoraId });
     }

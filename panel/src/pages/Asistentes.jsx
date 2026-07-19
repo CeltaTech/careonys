@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { esAdminOSuperior } from '../lib/roles';
 import { useSupabaseTable } from '../hooks/useSupabaseTable';
 import { EstadoLista } from '../components/layout/EstadoLista';
+import { Button } from '../components/ui/Button';
+import { NuevoAsistenteModal } from './asistentes/NuevoAsistenteModal';
 
 const ESTADOS = ['activo', 'inactivo', 'cesado'];
 
@@ -17,6 +19,7 @@ export function Asistentes() {
   const { filas, estado, error, recargar } = useSupabaseTable(esAdmin ? 'asistentes' : 'asistentes_coordinador', { orderBy: 'created_at' });
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
+  const [mostrarNuevo, setMostrarNuevo] = useState(false);
 
   const filasFiltradas = useMemo(() => {
     return filas.filter((a) => {
@@ -48,7 +51,18 @@ export function Asistentes() {
             </option>
           ))}
         </select>
+        {esAdmin && <Button onClick={() => setMostrarNuevo(true)}>{t.asistentes.nuevo.titulo}</Button>}
       </div>
+
+      {mostrarNuevo && (
+        <NuevoAsistenteModal
+          onClose={() => setMostrarNuevo(false)}
+          onCreado={() => {
+            setMostrarNuevo(false);
+            recargar();
+          }}
+        />
+      )}
 
       <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && filasFiltradas.length === 0} recargar={recargar}>
         <table className="panel-tabla">

@@ -1,5 +1,12 @@
 # DESIGN_SYSTEM.md — Identidad visual para código
 
+> **Vigente desde 2026-07-18.** La identidad anterior (Playfair Display + paleta azul
+> `#1F4E79` en hex) fue reemplazada por decisión explícita del Desarrollador tras considerar
+> el Panel "totalmente horrible e inoperativo" — ver el detalle del cambio, motivo y qué se
+> preservó sin tocar en `docs/claude_history.md` (entrada 2026-07-18). Las referencias a
+> Playfair Display en la sección de benchmark de abajo son históricas: documentan por qué se
+> eligió esa fuente en 2026-07-07, no la identidad vigente hoy.
+
 ## Benchmark estético de competidores (2026-07-07)
 
 > La documentación de negocio original (histórica: anexo técnico, auditoría estratégica)
@@ -107,19 +114,24 @@ de negocio, no solo de diseño.
 
 ```css
 :root {
-  --azul-oscuro: #1F4E79;      /* color principal de marca */
-  --azul-medio: #2E75B6;        /* acentos y secundario */
-  --verde-exito: #28A745;       /* confirmaciones, éxito */
-  --naranja-alerta: #FD7E14;    /* alertas moderadas (nivel amarilla) */
-  --rojo-peligro: #DC3545;      /* errores, emergencias (nivel roja) */
-  --fondo-alt: #F0F4F8;         /* fondos de sección */
-  --texto-principal: #1A1A2E;   /* cuerpo de texto */
-  --texto-secundario: #666666;  /* labels, subtítulos */
+  --azul-oscuro: oklch(0.22 0.02 250);      /* sidebar oscuro y acentos fuertes */
+  --azul-medio: oklch(0.65 0.13 250);       /* acentos, links activos, secundario */
+  --verde-exito: oklch(0.55 0.13 165);      /* confirmaciones, éxito */
+  --naranja-alerta: oklch(0.62 0.13 70);    /* alertas moderadas (nivel amarilla) */
+  --rojo-peligro: oklch(0.58 0.15 25);      /* errores, emergencias (nivel roja) */
+  --rojo-peligro-bg: oklch(0.92 0.05 25);   /* fondo de alertas/errores */
+  --fondo-alt: oklch(0.98 0.004 250);       /* fondos de sección */
+  --texto-principal: oklch(0.2 0.01 250);   /* cuerpo de texto */
+  --texto-secundario: oklch(0.5 0.01 250);  /* labels, subtítulos */
+  --borde-card: oklch(0.9 0.005 250);       /* borde 1px de tarjetas/inputs */
 }
 ```
 
 Regla: ningún componente define un color fuera de estas variables. Si hace falta un tono
-nuevo, se agrega acá primero, con justificación.
+nuevo, se agrega acá primero, con justificación. Las tarjetas (`.metrica-card`,
+`.panel-kpi-card`, etc.) usan `border: 1px solid var(--borde-card)`, no `border-left`
+grueso de acento — ese patrón de acento lateral queda reservado a los indicadores de
+estado semántico (guardias, alertas), ver abajo.
 
 ## Colores de división (solo referencia — NO usar en la Prestadora Demo)
 
@@ -135,15 +147,34 @@ nuevo, se agrega acá primero, con justificación.
 
 ## Tipografía
 
-- **Display** (títulos, encabezados principales): Playfair Display — weights 400, 700, 900
-- **Body** (interfaz, párrafos, formularios, navegación): DM Sans — weights 300, 400, 500, 600
+- **Display** (títulos, encabezados principales): Public Sans — weights 400 a 800
+- **Body** (interfaz, párrafos, formularios, navegación): Public Sans — weights 400 a 800
 
 ```css
 :root {
-  --font-display: 'Playfair Display', serif;
-  --font-body: 'DM Sans', sans-serif;
+  --font-display: 'Public Sans', sans-serif;
+  --font-body: 'Public Sans', sans-serif;
 }
 ```
+
+Cargada vía `<link>` de Google Fonts en `panel/index.html` (pesos 400;500;600;700;800).
+
+## Layout general del Panel (vigente desde 2026-07-18)
+
+- **Sidebar**: 232px de ancho, fondo `--azul-oscuro`. El link de navegación activo se marca
+  con un punto (`::before`, personas autorizadas de 6px, color `--azul-medio`) a la izquierda del texto,
+  no con un fondo resaltado.
+- **Tarjetas**: fondo blanco, `border: 1px solid var(--borde-card)`, `border-radius: 12px` —
+  nunca `border-left` grueso de acento (ver nota en la sección de paleta).
+- **Guardias**: grilla semanal (asistentes en filas, días en columnas) con reasignación por
+  drag-and-drop nativo (HTML5 `draggable`/`dragstart`/`dragover`/`drop`), no lista agrupada
+  por día. Cada guardia es un chip que reutiliza las clases de estado ya existentes
+  (`.guardia-programada`, etc.). No existe columna "sin asignar": `guardias.asistente_id` es
+  `NOT NULL` en el schema, ese estado no tiene equivalente real.
+- **Comunicación**: además del hilo por Asistente (dentro de su ficha), existe una bandeja
+  global en `/comunicacion` con lista de Asistentes ordenada por último mensaje a la
+  izquierda y el hilo activo a la derecha. Ambas vistas comparten el mismo componente
+  (`HiloComunicacion`), no hay lógica de chat duplicada.
 
 ## Logos disponibles
 

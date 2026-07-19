@@ -16,6 +16,7 @@ import { AsistenteDetalle } from './pages/asistentes/AsistenteDetalle';
 import { Clientes } from './pages/Clientes';
 import { ClienteDetalle } from './pages/clientes/ClienteDetalle';
 import { Guardias } from './pages/Guardias';
+import { Comunicacion } from './pages/Comunicacion';
 import { Evv } from './pages/Evv';
 import { Facturacion } from './pages/Facturacion';
 import { Documentacion } from './pages/Documentacion';
@@ -54,6 +55,7 @@ function App() {
                     <Route path="clientes" element={<Clientes />} />
                     <Route path="clientes/:id" element={<ClienteDetalle />} />
                     <Route path="guardias" element={<Guardias />} />
+                    <Route path="comunicacion" element={<Comunicacion />} />
                     <Route path="verificacion-guardias" element={<Evv />} />
                     <Route path="facturacion" element={<Facturacion />} />
                     <Route path="documentacion" element={<Documentacion />} />

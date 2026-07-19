@@ -34,6 +34,7 @@ export const T = {
       asistentes: 'Plantel de Asistentes',
       clientes: 'Clientes',
       guardias: 'Guardias',
+      comunicacion: 'Comunicación',
       verificacion_guardias: 'Verificación de Guardias',
       facturacion: 'Facturación a Clientes',
       documentacion: 'Documentación',
@@ -434,6 +435,12 @@ export const T = {
       alertas_activas: 'Alertas activas',
       modulo_no_disponible: 'Todavía no disponible — depende de la PWA de Asistentes (Etapa 3), que aún no está construida.',
     },
+    comunicacion: {
+      titulo: 'Comunicación',
+      sin_asistentes: 'No hay Asistentes para mostrar.',
+      sin_mensaje_previo: 'Sin mensajes todavía',
+      seleccionar_asistente: 'Elegí un Asistente para ver la conversación.',
+    },
     guardias: {
       titulo: 'Guardias',
       nueva: 'Nueva guardia',
@@ -780,6 +787,7 @@ export const T = {
       asistentes: 'Integral Assistants',
       clientes: 'Families',
       guardias: 'Shifts',
+      comunicacion: 'Communication',
       verificacion_guardias: 'Shift verification',
       facturacion: 'Family billing',
       documentacion: 'Documentation',
@@ -1180,6 +1188,12 @@ export const T = {
       alertas_activas: 'Active alerts',
       modulo_no_disponible: 'Not available yet — depends on the Integral Assistant PWA (Stage 3), which has not been built yet.',
     },
+    comunicacion: {
+      titulo: 'Communication',
+      sin_asistentes: 'No Assistants to show.',
+      sin_mensaje_previo: 'No messages yet',
+      seleccionar_asistente: 'Select an Assistant to view the conversation.',
+    },
     guardias: {
       titulo: 'Shifts',
       nueva: 'New shift',
@@ -1526,6 +1540,7 @@ export const T = {
       asistentes: 'Equipe de Assistentes',
       clientes: 'Famílias',
       guardias: 'Plantões',
+      comunicacion: 'Comunicação',
       verificacion_guardias: 'Verificação de Plantões',
       facturacion: 'Faturamento às Famílias',
       documentacion: 'Documentação',
@@ -1925,6 +1940,12 @@ export const T = {
       historial_reportes: 'Histórico de relatórios',
       alertas_activas: 'Alertas ativos',
       modulo_no_disponible: 'Ainda não disponível — depende do PWA de Assistentes (Etapa 3), que ainda não foi construído.',
+    },
+    comunicacion: {
+      titulo: 'Comunicação',
+      sin_asistentes: 'Nenhum Assistente para mostrar.',
+      sin_mensaje_previo: 'Ainda sem mensagens',
+      seleccionar_asistente: 'Selecione um Assistente para ver a conversa.',
     },
     guardias: {
       titulo: 'Plantões',

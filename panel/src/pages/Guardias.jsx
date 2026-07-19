@@ -5,6 +5,7 @@ import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
 import { NuevaGuardiaModal } from './guardias/NuevaGuardiaModal';
 import { GuardiaAcciones } from './guardias/GuardiaAcciones';
+import { GuardiasGrid } from './guardias/GuardiasGrid';
 
 const ESTADOS = ['programada', 'activa', 'completada', 'cancelada', 'ausente'];
 const HORAS_ALERTA_CHECKIN_SIN_CHECKOUT = 2;
@@ -80,15 +81,6 @@ export function Guardias() {
     });
   }, [filas, filtroEstado, busqueda]);
 
-  const filasPorDia = useMemo(() => {
-    const grupos = {};
-    for (const g of filasFiltradas) {
-      if (!grupos[g.fecha]) grupos[g.fecha] = [];
-      grupos[g.fecha].push(g);
-    }
-    return Object.entries(grupos);
-  }, [filasFiltradas]);
-
   function tieneAlertaCheckinSinCheckout(g) {
     if (g.estado !== 'activa' || !g.checkin_at || g.checkout_at) return false;
     const finProgramado = new Date(`${g.fecha}T${g.hora_fin}`);
@@ -98,6 +90,18 @@ export function Guardias() {
 
   function cerrarYRecargar() {
     setMostrarNueva(false);
+    recargar();
+  }
+
+  async function handleReasignar(guardiaId, asistenteId, fecha) {
+    const { error: errorUpdate } = await supabase
+      .from('guardias')
+      .update({ asistente_id: asistenteId, fecha })
+      .eq('id', guardiaId);
+    if (errorUpdate) {
+      setError(errorUpdate.message);
+      return;
+    }
     recargar();
   }
 
@@ -130,27 +134,14 @@ export function Guardias() {
         recargar={recargar}
         mensajeVacio={t.guardias.sin_guardias_rango}
       >
-        {filasPorDia.map(([fecha, guardiasDelDia]) => (
-          <div key={fecha}>
-            <h3 className="panel-guardia-dia-titulo">{new Date(`${fecha}T00:00:00`).toLocaleDateString()}</h3>
-            {guardiasDelDia.map((g) => (
-              <div
-                key={g.id}
-                className={`panel-guardia-card guardia-${g.estado}`}
-                onClick={() => setGuardiaSeleccionada(g)}
-              >
-                <div>
-                  <strong>{g.hora_inicio} – {g.hora_fin}</strong> · {g.asistente_nombre} → {g.paciente_nombre}
-                  <div>{g.modalidad}</div>
-                  {tieneAlertaCheckinSinCheckout(g) && (
-                    <div className="panel-guardia-alerta">{t.guardias.alerta_checkin_sin_checkout}</div>
-                  )}
-                </div>
-                <span>{t.guardias[`estado_${g.estado}`]}</span>
-              </div>
-            ))}
-          </div>
-        ))}
+        <GuardiasGrid
+          filas={filasFiltradas}
+          desde={desde}
+          hasta={hasta}
+          tieneAlerta={tieneAlertaCheckinSinCheckout}
+          onSeleccionar={setGuardiaSeleccionada}
+          onReasignar={handleReasignar}
+        />
       </EstadoLista>
 
       {mostrarNueva && <NuevaGuardiaModal onClose={() => setMostrarNueva(false)} onCreada={cerrarYRecargar} />}

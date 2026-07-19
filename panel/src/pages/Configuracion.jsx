@@ -25,7 +25,7 @@ async function llamarApi(path, opciones = {}) {
   return resultado;
 }
 
-const TABS = ['empresa', 'zonas', 'servicios', 'documentos', 'notificaciones', 'whatsapp'];
+const TABS = ['empresa', 'zonas', 'servicios', 'documentos', 'notificaciones', 'whatsapp', 'permisos'];
 const ROLES_RELEVO = ['suplente', 'franquero', 'emergencia', 'familiar'];
 const TIPOS_PERSONAL_EMERGENCIA = ['franquero', 'emergencia'];
 
@@ -62,8 +62,173 @@ export function Configuracion() {
         {tab === 'documentos' && <TabDocumentos />}
         {tab === 'notificaciones' && <TabNotificaciones />}
         {tab === 'whatsapp' && <TabWhatsapp />}
+        {tab === 'permisos' && <TabPermisos />}
         {tab === 'seguridad' && usuario?.rol === 'superadmin' && <TabSeguridad />}
       </div>
+    </div>
+  );
+}
+
+function TabPermisos() {
+  const { t } = useLocale();
+  const [permisos, setPermisos] = useState([]);
+  const [coordinadores, setCoordinadores] = useState([]);
+  const [politica, setPolitica] = useState('omitir');
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [guardandoAccion, setGuardandoAccion] = useState(null);
+  const [guardandoPolitica, setGuardandoPolitica] = useState(false);
+  const [politicaGuardada, setPoliticaGuardada] = useState(false);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const [{ permisos: filas, coordinadores: coords }, { politica_verificacion_alta_manual }] = await Promise.all([
+        llamarApi('/permisos'),
+        llamarApi('/politica-verificacion'),
+      ]);
+      setPermisos(filas);
+      setCoordinadores(coords);
+      setPolitica(politica_verificacion_alta_manual);
+      setEstado('listo');
+    } catch (err) {
+      setError(err.message);
+      setEstado('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  function actualizarLocal(accion, cambios) {
+    setPermisos((filas) => filas.map((f) => (f.accion === accion ? { ...f, ...cambios } : f)));
+  }
+
+  function excepcionDe(fila, coordId) {
+    if ((fila.excepciones_permitir || []).includes(coordId)) return 'permitir';
+    if ((fila.excepciones_denegar || []).includes(coordId)) return 'denegar';
+    return 'general';
+  }
+
+  function setExcepcion(accion, coordId, valor) {
+    setPermisos((filas) => filas.map((f) => {
+      if (f.accion !== accion) return f;
+      const permitir = (f.excepciones_permitir || []).filter((id) => id !== coordId);
+      const denegar = (f.excepciones_denegar || []).filter((id) => id !== coordId);
+      if (valor === 'permitir') permitir.push(coordId);
+      if (valor === 'denegar') denegar.push(coordId);
+      return { ...f, excepciones_permitir: permitir, excepciones_denegar: denegar };
+    }));
+  }
+
+  async function guardar(fila) {
+    setGuardandoAccion(fila.accion);
+    setError(null);
+    try {
+      await llamarApi(`/permisos/${fila.accion}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          alcance: fila.alcance,
+          excepciones_permitir: fila.excepciones_permitir,
+          excepciones_denegar: fila.excepciones_denegar,
+        }),
+      });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGuardandoAccion(null);
+    }
+  }
+
+  async function guardarPolitica() {
+    setGuardandoPolitica(true);
+    setError(null);
+    setPoliticaGuardada(false);
+    try {
+      await llamarApi('/politica-verificacion', { method: 'PATCH', body: JSON.stringify({ politica }) });
+      setPoliticaGuardada(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGuardandoPolitica(false);
+    }
+  }
+
+  return (
+    <div>
+      <h2>{t.configuracion.permisos_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.permisos_explicacion}</p>
+      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
+      <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
+        <table className="panel-tabla">
+          <thead>
+            <tr>
+              <th>{t.configuracion.permisos_col_accion}</th>
+              <th>{t.configuracion.permisos_col_alcance}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {permisos.map((fila) => (
+              <tr key={fila.accion}>
+                <td>{t.configuracion[`permisos_accion_${fila.accion}`]}</td>
+                <td>
+                  <select
+                    value={fila.alcance}
+                    onChange={(e) => actualizarLocal(fila.accion, { alcance: e.target.value })}
+                  >
+                    <option value="solo_admin">{t.configuracion.permisos_alcance_solo_admin}</option>
+                    <option value="admin_y_coordinador">{t.configuracion.permisos_alcance_admin_y_coordinador}</option>
+                  </select>
+                  {coordinadores.length > 0 && (
+                    <div className="panel-permisos-excepciones">
+                      <span>{t.configuracion.permisos_excepciones_titulo}</span>
+                      {coordinadores.map((c) => (
+                        <label key={c.id} className="panel-permisos-excepcion-fila">
+                          {c.nombre}
+                          <select
+                            value={excepcionDe(fila, c.id)}
+                            onChange={(e) => setExcepcion(fila.accion, c.id, e.target.value)}
+                          >
+                            <option value="general">{t.configuracion.permisos_excepcion_general}</option>
+                            <option value="permitir">{t.configuracion.permisos_excepcion_permitir}</option>
+                            <option value="denegar">{t.configuracion.permisos_excepcion_denegar}</option>
+                          </select>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </td>
+                <td>
+                  <button onClick={() => guardar(fila)} disabled={guardandoAccion === fila.accion}>
+                    {guardandoAccion === fila.accion ? t.comun.guardando : t.comun.guardar}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </EstadoLista>
+
+      <h2>{t.configuracion.permisos_verificacion_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.permisos_verificacion_explicacion}</p>
+      {politicaGuardada && <Alert variant="info">{t.comun.guardar} ✓</Alert>}
+      <FormField
+        label={t.configuracion.permisos_verificacion_label}
+        name="politica_verificacion"
+        type="select"
+        value={politica}
+        onChange={(e) => { setPolitica(e.target.value); setPoliticaGuardada(false); }}
+      >
+        <option value="omitir">{t.configuracion.permisos_verificacion_omitir}</option>
+        <option value="pendiente">{t.configuracion.permisos_verificacion_pendiente}</option>
+        <option value="aprobado">{t.configuracion.permisos_verificacion_aprobado}</option>
+      </FormField>
+      <Button onClick={guardarPolitica} disabled={guardandoPolitica}>
+        {guardandoPolitica ? t.comun.guardando : t.comun.guardar}
+      </Button>
     </div>
   );
 }

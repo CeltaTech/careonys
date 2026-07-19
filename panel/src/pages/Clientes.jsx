@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
+import { usePermisos } from '../context/PermisosContext';
 import { esAdminOSuperior } from '../lib/roles';
 import { supabase } from '../lib/supabaseClient';
 import { EstadoLista } from '../components/layout/EstadoLista';
@@ -13,6 +14,8 @@ export function Clientes() {
   const navigate = useNavigate();
   const { usuario } = useAuth();
   const esAdmin = esAdminOSuperior(usuario?.rol);
+  const { puede } = usePermisos();
+  const puedeAltaManual = esAdmin || puede('alta_manual_cliente');
   const [filas, setFilas] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -65,7 +68,7 @@ export function Clientes() {
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
-        {esAdmin && <Button onClick={() => setMostrarNueva(true)}>{t.clientes.nueva.titulo}</Button>}
+        {puedeAltaManual && <Button onClick={() => setMostrarNueva(true)}>{t.clientes.nueva.titulo}</Button>}
       </div>
 
       {mostrarNueva && (

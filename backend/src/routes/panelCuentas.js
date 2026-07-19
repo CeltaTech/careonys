@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
 import { crearCuentaConPerfil, borrarCuenta } from '../utils/cuentasPanel.js';
+import { tienePermiso, ACCIONES_PERMISOS } from '../utils/permisos.js';
 
 export const panelCuentasRouter = Router();
 
@@ -13,6 +14,42 @@ function requiereAdmin(req, res, next) {
   }
   next();
 }
+
+// Alta desde Postulación/Solicitud (rutas /cliente y /asistente, más abajo) se queda
+// admin-only sin cambios — el motor de permisos de la Fase 2 (docs/PENDIENTES.md, plan
+// aprobado) solo cubre el alta manual (/cliente-directa y /asistente-directo), que es lo
+// que el plan pidió hacer configurable para Coordinador.
+function requierePermiso(accion) {
+  return async (req, res, next) => {
+    const permitido = await tienePermiso({
+      accion,
+      rol: req.usuarioPanel?.rol,
+      usuarioId: req.usuarioPanel?.id,
+      prestadoraId: req.usuarioPanel?.prestadoraId,
+    });
+    if (!permitido) {
+      return res.status(403).json({ error: 'Tu Prestadora no te habilitó para esta acción' });
+    }
+    next();
+  };
+}
+
+// Usado por el frontend (botones "Nuevo Asistente"/"Nueva Cliente", campos de edición de
+// Fase 1) para saber qué mostrar sin duplicar la lógica de permisos en el cliente — la
+// única fuente de verdad sigue siendo este chequeo del lado del servidor.
+panelCuentasRouter.get('/permisos-efectivos', requiereRolPanel, async (req, res) => {
+  const resultados = await Promise.all(
+    ACCIONES_PERMISOS.map((accion) =>
+      tienePermiso({
+        accion,
+        rol: req.usuarioPanel.rol,
+        usuarioId: req.usuarioPanel.id,
+        prestadoraId: req.usuarioPanel.prestadoraId,
+      })
+    )
+  );
+  res.json({ permisos: Object.fromEntries(ACCIONES_PERMISOS.map((accion, i) => [accion, resultados[i]])) });
+});
 
 panelCuentasRouter.post('/cliente', requiereRolPanel, requiereAdmin, async (req, res) => {
   const { solicitudId } = req.body;
@@ -87,7 +124,7 @@ panelCuentasRouter.post('/cliente', requiereRolPanel, requiereAdmin, async (req,
 // Se crea igual una fila de `solicitudes` (canal 'alta_manual') para que el contacto
 // del Cliente siga viviendo en un único lugar (evita reproducir el bug de contacto
 // en blanco que tenían los Clientes sembradas sin solicitud vinculada).
-panelCuentasRouter.post('/cliente-directa', requiereRolPanel, requiereAdmin, async (req, res) => {
+panelCuentasRouter.post('/cliente-directa', requiereRolPanel, requierePermiso('alta_manual_cliente'), async (req, res) => {
   const { nombreContacto, telefono, email, localidad, nombrePaciente, domicilioPaciente } = req.body;
   if (!nombreContacto || !email || !nombrePaciente) {
     return res.status(400).json({ error: 'Faltan datos obligatorios (nombreContacto, email, nombrePaciente)' });
@@ -255,7 +292,7 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, requiereAdmin, async (re
 // por defecto y, a diferencia de /asistente, no genera filas en `verificaciones_asistente`
 // (equivalente al default 'omitir' del pendiente #18 — política de verificación por
 // prestadora; la Fase 2 de este trabajo suma la configuración para cambiar este comportamiento).
-panelCuentasRouter.post('/asistente-directo', requiereRolPanel, requiereAdmin, async (req, res) => {
+panelCuentasRouter.post('/asistente-directo', requiereRolPanel, requierePermiso('alta_manual_asistente'), async (req, res) => {
   const { nombre, telefono, email, dni, especialidades, zonas, estado, tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales } = req.body;
   if (!nombre || !email) {
     return res.status(400).json({ error: 'Faltan datos obligatorios (nombre, email)' });
@@ -293,6 +330,29 @@ panelCuentasRouter.post('/asistente-directo', requiereRolPanel, requiereAdmin, a
       prestadora_id: prestadoraId,
     });
     if (errorAsistente) throw new Error(errorAsistente.message);
+
+    // Política de verificación configurable (Fase 2, ver Configuración > Permisos):
+    // 'omitir' (default) no genera ninguna fila, igual que el comportamiento original de
+    // esta ruta antes de la Fase 2.
+    const { data: prestadora, error: errorPrestadora } = await supabase
+      .from('prestadoras')
+      .select('politica_verificacion_alta_manual')
+      .eq('id', prestadoraId)
+      .single();
+    if (errorPrestadora) throw new Error(errorPrestadora.message);
+
+    const politica = prestadora.politica_verificacion_alta_manual;
+    if (politica === 'pendiente' || politica === 'aprobado') {
+      const filasVerificacion = ETAPAS_INCORPORACION.map((etapa) => ({
+        asistente_id: asistenteId,
+        etapa,
+        estado: politica === 'aprobado' ? 'aprobada' : 'pendiente',
+        revisado_por: politica === 'aprobado' ? req.usuarioPanel.id : null,
+        completado_en: politica === 'aprobado' ? new Date().toISOString() : null,
+      }));
+      const { error: errorVerificaciones } = await supabase.from('verificaciones_asistente').insert(filasVerificacion);
+      if (errorVerificaciones) throw new Error(errorVerificaciones.message);
+    }
 
     res.json({ ok: true, asistenteId });
   } catch (error) {

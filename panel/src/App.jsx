@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { LocaleProvider } from './i18n/LocaleContext';
 import { AuthProvider } from './context/AuthContext';
 import { EmpresaProvider } from './context/EmpresaContext';
+import { PermisosProvider } from './context/PermisosContext';
 import { TenantSessionProvider } from './context/TenantSessionContext';
 import { AdvertenciaLegalProvider } from './context/AdvertenciaLegalContext';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
@@ -33,6 +34,7 @@ function App() {
     <LocaleProvider>
       <EmpresaProvider>
         <AuthProvider>
+          <PermisosProvider>
           <TenantSessionProvider>
             <AdvertenciaLegalProvider>
               <BrowserRouter>
@@ -71,6 +73,7 @@ function App() {
               </BrowserRouter>
             </AdvertenciaLegalProvider>
           </TenantSessionProvider>
+          </PermisosProvider>
         </AuthProvider>
       </EmpresaProvider>
     </LocaleProvider>

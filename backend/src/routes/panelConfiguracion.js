@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
+import { ACCIONES_PERMISOS } from '../utils/permisos.js';
 
 export const panelConfiguracionRouter = Router();
 
@@ -398,6 +399,80 @@ panelConfiguracionRouter.patch('/documentos-tipo/:id', async (req, res) => {
     query = query.eq('prestadora_id', req.usuarioPanel.prestadoraId);
   }
   const { error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// --- Motor de permisos configurable por Prestadora (Fase 2 del plan de carga de datos +
+//     permisos + importación masiva) — quién, además de un Admin, puede dar de alta a mano
+//     o editar datos de Asistentes/Clientes/Pacientes. Ver backend/src/utils/permisos.js y
+//     backend/src/db/schema_permisos_prestadora_01.sql. ---
+const ACCIONES_DEFAULT_SOLO_ADMIN = new Set(['alta_manual_asistente', 'alta_manual_cliente']);
+
+panelConfiguracionRouter.get('/permisos', async (req, res) => {
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+  const [{ data: filas, error: errorFilas }, { data: coordinadores, error: errorCoordinadores }] = await Promise.all([
+    supabase.from('permisos_prestadora').select('*').eq('prestadora_id', prestadoraId),
+    supabase.from('usuarios').select('id, nombre').eq('prestadora_id', prestadoraId).eq('rol', 'coordinador').order('nombre'),
+  ]);
+  if (errorFilas) return res.status(500).json({ error: errorFilas.message });
+  if (errorCoordinadores) return res.status(500).json({ error: errorCoordinadores.message });
+
+  const porAccion = Object.fromEntries((filas || []).map((f) => [f.accion, f]));
+  const permisos = ACCIONES_PERMISOS.map((accion) => porAccion[accion] || {
+    accion,
+    alcance: ACCIONES_DEFAULT_SOLO_ADMIN.has(accion) ? 'solo_admin' : 'admin_y_coordinador',
+    excepciones_permitir: [],
+    excepciones_denegar: [],
+  });
+
+  res.json({ permisos, coordinadores });
+});
+
+panelConfiguracionRouter.patch('/permisos/:accion', async (req, res) => {
+  const { accion } = req.params;
+  if (!ACCIONES_PERMISOS.includes(accion)) {
+    return res.status(400).json({ error: 'Acción desconocida' });
+  }
+  const { alcance, excepciones_permitir, excepciones_denegar } = req.body;
+  if (!['solo_admin', 'admin_y_coordinador'].includes(alcance)) {
+    return res.status(400).json({ error: 'Alcance inválido' });
+  }
+  const { error } = await supabase.from('permisos_prestadora').upsert(
+    {
+      prestadora_id: req.usuarioPanel.prestadoraId,
+      accion,
+      alcance,
+      excepciones_permitir: excepciones_permitir || [],
+      excepciones_denegar: excepciones_denegar || [],
+      actualizado_por: req.usuarioPanel.id,
+      actualizado_en: new Date().toISOString(),
+    },
+    { onConflict: 'prestadora_id,accion' }
+  );
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+panelConfiguracionRouter.get('/politica-verificacion', async (req, res) => {
+  const { data, error } = await supabase
+    .from('prestadoras')
+    .select('politica_verificacion_alta_manual')
+    .eq('id', req.usuarioPanel.prestadoraId)
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ politica_verificacion_alta_manual: data.politica_verificacion_alta_manual });
+});
+
+panelConfiguracionRouter.patch('/politica-verificacion', async (req, res) => {
+  const { politica } = req.body;
+  if (!['omitir', 'pendiente', 'aprobado'].includes(politica)) {
+    return res.status(400).json({ error: 'Política inválida' });
+  }
+  const { error } = await supabase
+    .from('prestadoras')
+    .update({ politica_verificacion_alta_manual: politica })
+    .eq('id', req.usuarioPanel.prestadoraId);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
 });

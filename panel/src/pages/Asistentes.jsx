@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
+import { usePermisos } from '../context/PermisosContext';
 import { esAdminOSuperior } from '../lib/roles';
 import { useSupabaseTable } from '../hooks/useSupabaseTable';
 import { EstadoLista } from '../components/layout/EstadoLista';
@@ -15,6 +16,8 @@ export function Asistentes() {
   const navigate = useNavigate();
   const { usuario } = useAuth();
   const esAdmin = esAdminOSuperior(usuario?.rol);
+  const { puede } = usePermisos();
+  const puedeAltaManual = esAdmin || puede('alta_manual_asistente');
   // Coordinador consulta la vista sin vínculo laboral/score de riesgo — ver schema_etapa2i.sql.
   const { filas, estado, error, recargar } = useSupabaseTable(esAdmin ? 'asistentes' : 'asistentes_coordinador', { orderBy: 'created_at' });
   const [busqueda, setBusqueda] = useState('');
@@ -51,7 +54,7 @@ export function Asistentes() {
             </option>
           ))}
         </select>
-        {esAdmin && <Button onClick={() => setMostrarNuevo(true)}>{t.asistentes.nuevo.titulo}</Button>}
+        {puedeAltaManual && <Button onClick={() => setMostrarNuevo(true)}>{t.asistentes.nuevo.titulo}</Button>}
       </div>
 
       {mostrarNuevo && (

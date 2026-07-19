@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useLocale } from '../../i18n/LocaleContext';
+import { useAuth } from '../../context/AuthContext';
+import { usePermisos } from '../../context/PermisosContext';
+import { esAdminOSuperior } from '../../lib/roles';
 import { linkWhatsapp } from '../../lib/telefono';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
@@ -14,6 +17,11 @@ export function ClienteDetalle() {
   const { t } = useLocale();
   const { id } = useParams();
   const navigate = useNavigate();
+  const { usuario } = useAuth();
+  const { puede } = usePermisos();
+  const esAdmin = esAdminOSuperior(usuario?.rol);
+  const puedeEditarCliente = esAdmin || puede('editar_datos_cliente');
+  const puedeEditarPaciente = esAdmin || puede('editar_datos_paciente');
   const [cliente, setCliente] = useState(null);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -93,21 +101,21 @@ export function ClienteDetalle() {
       {contactoGuardado && <Alert variant="info">{t.comun.guardar} ✓</Alert>}
       {formContacto && (
         <>
-          <FormField label={t.clientes.col_nombre} name="nombre_contacto" value={formContacto.nombre} onChange={(e) => setCampoContacto('nombre', e.target.value)} />
-          <FormField label={t.clientes.col_telefono} name="telefono_contacto" value={formContacto.telefono} onChange={(e) => setCampoContacto('telefono', e.target.value)} />
+          <FormField label={t.clientes.col_nombre} name="nombre_contacto" value={formContacto.nombre} onChange={(e) => setCampoContacto('nombre', e.target.value)} disabled={!puedeEditarCliente} />
+          <FormField label={t.clientes.col_telefono} name="telefono_contacto" value={formContacto.telefono} onChange={(e) => setCampoContacto('telefono', e.target.value)} disabled={!puedeEditarCliente} />
           {formContacto.telefono && (
             <p className="panel-explicacion">
               <a href={linkWhatsapp(formContacto.telefono)} target="_blank" rel="noreferrer">{t.clientes.abrir_whatsapp}</a>
             </p>
           )}
-          <FormField label={t.clientes.col_email} name="email_contacto" type="email" value={formContacto.email} onChange={(e) => setCampoContacto('email', e.target.value)} />
-          <FormField label={t.clientes.col_localidad} name="localidad_contacto" value={formContacto.localidad} onChange={(e) => setCampoContacto('localidad', e.target.value)} />
-          <FormField label={t.clientes.plan} name="plan_contacto" value={formContacto.plan} onChange={(e) => setCampoContacto('plan', e.target.value)} />
+          <FormField label={t.clientes.col_email} name="email_contacto" type="email" value={formContacto.email} onChange={(e) => setCampoContacto('email', e.target.value)} disabled={!puedeEditarCliente} />
+          <FormField label={t.clientes.col_localidad} name="localidad_contacto" value={formContacto.localidad} onChange={(e) => setCampoContacto('localidad', e.target.value)} disabled={!puedeEditarCliente} />
+          <FormField label={t.clientes.plan} name="plan_contacto" value={formContacto.plan} onChange={(e) => setCampoContacto('plan', e.target.value)} disabled={!puedeEditarCliente} />
           <dl className="panel-detalle-lista">
             <dt>{t.clientes.col_fecha_alta}</dt>
             <dd>{new Date(cliente.created_at).toLocaleDateString()}</dd>
           </dl>
-          <Button onClick={guardarContacto} disabled={guardandoContacto}>
+          <Button onClick={guardarContacto} disabled={guardandoContacto || !puedeEditarCliente}>
             {guardandoContacto ? t.comun.guardando : t.comun.guardar}
           </Button>
         </>
@@ -133,9 +141,13 @@ export function ClienteDetalle() {
                 <td>{p.nivel_complejidad || '—'}</td>
                 <td>{p.domicilio || '—'}</td>
                 <td>
-                  <Button variant="secondary" onClick={() => setPacienteAEditar(p)}>
-                    {t.comun.editar}
-                  </Button>{' '}
+                  {puedeEditarPaciente && (
+                    <>
+                      <Button variant="secondary" onClick={() => setPacienteAEditar(p)}>
+                        {t.comun.editar}
+                      </Button>{' '}
+                    </>
+                  )}
                   <Button variant="secondary" onClick={() => setPacienteSeleccionado(p)}>
                     {t.prestaciones.titulo}
                   </Button>
@@ -147,9 +159,11 @@ export function ClienteDetalle() {
       ) : (
         <p className="estado-vacio">{t.clientes.sin_pacientes}</p>
       )}
-      <Button variant="secondary" onClick={() => setMostrarNuevoPaciente(true)}>
-        {t.clientes.agregar_paciente}
-      </Button>
+      {puedeEditarPaciente && (
+        <Button variant="secondary" onClick={() => setMostrarNuevoPaciente(true)}>
+          {t.clientes.agregar_paciente}
+        </Button>
+      )}
 
       <h2>{t.clientes.guardias_activas}</h2>
       <p className="estado-vacio">{t.clientes.modulo_no_disponible}</p>

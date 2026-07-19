@@ -392,6 +392,24 @@ h2 {
   cursor: pointer;
 }
 
+.panel-permisos-excepciones {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--fondo-alt);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--texto-secundario);
+}
+
+.panel-permisos-excepcion-fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
 .badge {
   display: inline-block;
   padding: 0.25rem 0.7rem;

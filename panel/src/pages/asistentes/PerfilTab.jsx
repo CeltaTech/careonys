@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
+import { usePermisos } from '../../context/PermisosContext';
 import { useEmpresa } from '../../context/EmpresaContext';
 import { esAdminOSuperior } from '../../lib/roles';
 import { supabase } from '../../lib/supabaseClient';
@@ -15,6 +16,8 @@ export function PerfilTab({ asistente, onActualizado }) {
   const { usuario } = useAuth();
   const { empresa } = useEmpresa();
   const esAdmin = esAdminOSuperior(usuario?.rol);
+  const { puede } = usePermisos();
+  const puedeEditarIdentidad = esAdmin || puede('editar_identidad_asistente');
   const [form, setForm] = useState({
     nombre: asistente.nombre || '',
     dni: asistente.dni || '',
@@ -80,18 +83,18 @@ export function PerfilTab({ asistente, onActualizado }) {
       {error && <Alert variant="error">{error}</Alert>}
       {guardado && <Alert variant="info">{t.comun.guardar} ✓</Alert>}
 
-      <FormField label={t.asistentes.col_nombre} name="nombre" value={form.nombre} onChange={(e) => set('nombre', e.target.value)} />
-      <FormField label={t.asistentes.dni} name="dni" value={form.dni} onChange={(e) => set('dni', e.target.value)} />
-      <FormField label={t.asistentes.telefono} name="telefono" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} />
-      <FormField label={t.asistentes.email} name="email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
+      <FormField label={t.asistentes.col_nombre} name="nombre" value={form.nombre} onChange={(e) => set('nombre', e.target.value)} disabled={!puedeEditarIdentidad} />
+      <FormField label={t.asistentes.dni} name="dni" value={form.dni} onChange={(e) => set('dni', e.target.value)} disabled={!puedeEditarIdentidad} />
+      <FormField label={t.asistentes.telefono} name="telefono" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} disabled={!puedeEditarIdentidad} />
+      <FormField label={t.asistentes.email} name="email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} disabled={!puedeEditarIdentidad} />
 
       <dl className="panel-detalle-lista">
         <dt>{t.asistentes.fecha_alta}</dt>
         <dd>{new Date(asistente.fecha_alta).toLocaleDateString()}</dd>
       </dl>
 
-      <FormField label={t.asistentes.col_especialidades} name="especialidades" value={form.especialidades} onChange={(e) => set('especialidades', e.target.value)} />
-      <FormField label={t.asistentes.col_zonas} name="zonas" value={form.zonas} onChange={(e) => set('zonas', e.target.value)} />
+      <FormField label={t.asistentes.col_especialidades} name="especialidades" value={form.especialidades} onChange={(e) => set('especialidades', e.target.value)} disabled={!puedeEditarIdentidad} />
+      <FormField label={t.asistentes.col_zonas} name="zonas" value={form.zonas} onChange={(e) => set('zonas', e.target.value)} disabled={!puedeEditarIdentidad} />
 
       {asistente.estado === 'cesado' ? (
         <>
@@ -101,7 +104,7 @@ export function PerfilTab({ asistente, onActualizado }) {
           <Alert variant="info">{t.asistentes.cese.ya_cesado}</Alert>
         </>
       ) : (
-        <FormField label={t.asistentes.col_estado} name="estado" type="select" value={form.estado} onChange={(e) => set('estado', e.target.value)}>
+        <FormField label={t.asistentes.col_estado} name="estado" type="select" value={form.estado} onChange={(e) => set('estado', e.target.value)} disabled={!puedeEditarIdentidad}>
           <option value="activo">{t.asistentes.estado_activo}</option>
           <option value="inactivo">{t.asistentes.estado_inactivo}</option>
         </FormField>
@@ -127,7 +130,7 @@ export function PerfilTab({ asistente, onActualizado }) {
         </>
       )}
 
-      <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+      <Button onClick={guardar} disabled={guardando || !puedeEditarIdentidad}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
 
       {esAdmin && (
         <>

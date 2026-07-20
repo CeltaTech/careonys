@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
-import { crearCuentaConPerfil, borrarCuenta } from '../utils/cuentasPanel.js';
+import { crearCuentaConPerfil, borrarCuenta, crearAsistenteDirecto, crearClienteDirecta } from '../utils/cuentasPanel.js';
 import { tienePermiso, ACCIONES_PERMISOS } from '../utils/permisos.js';
 
 export const panelCuentasRouter = Router();
@@ -126,77 +126,14 @@ panelCuentasRouter.post('/cliente', requiereRolPanel, requiereAdmin, async (req,
 // en blanco que tenían los Clientes sembradas sin solicitud vinculada).
 panelCuentasRouter.post('/cliente-directa', requiereRolPanel, requierePermiso('alta_manual_cliente'), async (req, res) => {
   const { nombreContacto, telefono, email, localidad, nombrePaciente, domicilioPaciente } = req.body;
-  if (!nombreContacto || !email || !nombrePaciente) {
-    return res.status(400).json({ error: 'Faltan datos obligatorios (nombreContacto, email, nombrePaciente)' });
-  }
-
-  const prestadoraId = req.usuarioPanel.prestadoraId;
-
-  let clienteId;
-  let solicitudId;
   try {
-    const { data: solicitud, error: errorSolicitud } = await supabase
-      .from('solicitudes')
-      .insert({
-        prestadora_id: prestadoraId,
-        nombre: nombreContacto,
-        telefono: telefono || '',
-        email,
-        nombre_paciente: nombrePaciente,
-        localidad: localidad || '',
-        canal: 'alta_manual',
-        estado: 'asignada',
-        tipo_servicio: 'Cuidado domiciliario',
-        modalidad: 'presencial',
-        dias_horario: 'A definir',
-      })
-      .select()
-      .single();
-    if (errorSolicitud) throw new Error(errorSolicitud.message);
-    solicitudId = solicitud.id;
-
-    ({ userId: clienteId } = await crearCuentaConPerfil({
-      email,
-      nombre: nombreContacto,
-      telefono,
-      rol: 'cliente',
-      prestadoraId,
-    }));
-
-    const { error: errorCliente } = await supabase
-      .from('clientes')
-      .insert({ id: clienteId, solicitud_id: solicitudId, prestadora_id: prestadoraId });
-    if (errorCliente) throw new Error(errorCliente.message);
-
-    const { data: paciente, error: errorPaciente } = await supabase
-      .from('pacientes')
-      .insert({
-        cliente_id: clienteId,
-        nombre: nombrePaciente,
-        domicilio: domicilioPaciente || localidad || null,
-        prestadora_id: prestadoraId,
-      })
-      .select()
-      .single();
-    if (errorPaciente) throw new Error(errorPaciente.message);
-
-    const { error: errorUpdate } = await supabase
-      .from('solicitudes')
-      .update({ cliente_id: clienteId })
-      .eq('id', solicitudId);
-    if (errorUpdate) throw new Error(errorUpdate.message);
-
-    res.json({ ok: true, clienteId, pacienteId: paciente.id });
+    const { clienteId, pacienteId } = await crearClienteDirecta({
+      nombreContacto, telefono, email, localidad, nombrePaciente, domicilioPaciente,
+      prestadoraId: req.usuarioPanel.prestadoraId,
+    });
+    res.json({ ok: true, clienteId, pacienteId });
   } catch (error) {
-    if (clienteId) {
-      await supabase.from('pacientes').delete().eq('cliente_id', clienteId);
-      await supabase.from('clientes').delete().eq('id', clienteId);
-      await borrarCuenta(clienteId, { prestadoraId });
-    }
-    if (solicitudId) {
-      await supabase.from('solicitudes').delete().eq('id', solicitudId);
-    }
-    res.status(500).json({ error: error.message });
+    res.status(error.message.startsWith('Faltan datos') ? 400 : 500).json({ error: error.message });
   }
 });
 
@@ -294,72 +231,15 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, requiereAdmin, async (re
 // prestadora; la Fase 2 de este trabajo suma la configuración para cambiar este comportamiento).
 panelCuentasRouter.post('/asistente-directo', requiereRolPanel, requierePermiso('alta_manual_asistente'), async (req, res) => {
   const { nombre, telefono, email, dni, especialidades, zonas, estado, tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales } = req.body;
-  if (!nombre || !email) {
-    return res.status(400).json({ error: 'Faltan datos obligatorios (nombre, email)' });
-  }
-
-  const prestadoraId = req.usuarioPanel.prestadoraId;
-  const zonasArray = Array.isArray(zonas) ? zonas : [];
-  const especialidadesArray = Array.isArray(especialidades) ? especialidades : [];
-
-  let asistenteId;
   try {
-    ({ userId: asistenteId } = await crearCuentaConPerfil({
-      email,
-      nombre,
-      telefono,
-      rol: 'asistente',
-      zonas: zonasArray,
-      prestadoraId,
-    }));
-
-    const { error: errorAsistente } = await supabase.from('asistentes').insert({
-      id: asistenteId,
-      nombre,
-      dni: dni || null,
-      telefono: telefono || null,
-      email,
-      especialidades: especialidadesArray,
-      zonas: zonasArray,
-      estado: estado || 'activo',
-      tipo_vinculo: tipo_vinculo || 'monotributo',
-      categoria_cct: categoria_cct || null,
-      valor_hora: valor_hora || null,
-      sueldo_basico: sueldo_basico || null,
-      horas_semanales: horas_semanales || null,
-      prestadora_id: prestadoraId,
+    const { asistenteId } = await crearAsistenteDirecto({
+      nombre, telefono, email, dni, especialidades, zonas, estado,
+      tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales,
+      prestadoraId: req.usuarioPanel.prestadoraId,
+      usuarioPanelId: req.usuarioPanel.id,
     });
-    if (errorAsistente) throw new Error(errorAsistente.message);
-
-    // Política de verificación configurable (Fase 2, ver Configuración > Permisos):
-    // 'omitir' (default) no genera ninguna fila, igual que el comportamiento original de
-    // esta ruta antes de la Fase 2.
-    const { data: prestadora, error: errorPrestadora } = await supabase
-      .from('prestadoras')
-      .select('politica_verificacion_alta_manual')
-      .eq('id', prestadoraId)
-      .single();
-    if (errorPrestadora) throw new Error(errorPrestadora.message);
-
-    const politica = prestadora.politica_verificacion_alta_manual;
-    if (politica === 'pendiente' || politica === 'aprobado') {
-      const filasVerificacion = ETAPAS_INCORPORACION.map((etapa) => ({
-        asistente_id: asistenteId,
-        etapa,
-        estado: politica === 'aprobado' ? 'aprobada' : 'pendiente',
-        revisado_por: politica === 'aprobado' ? req.usuarioPanel.id : null,
-        completado_en: politica === 'aprobado' ? new Date().toISOString() : null,
-      }));
-      const { error: errorVerificaciones } = await supabase.from('verificaciones_asistente').insert(filasVerificacion);
-      if (errorVerificaciones) throw new Error(errorVerificaciones.message);
-    }
-
     res.json({ ok: true, asistenteId });
   } catch (error) {
-    if (asistenteId) {
-      await supabase.from('asistentes').delete().eq('id', asistenteId);
-      await borrarCuenta(asistenteId, { prestadoraId });
-    }
-    res.status(500).json({ error: error.message });
+    res.status(error.message.startsWith('Faltan datos') ? 400 : 500).json({ error: error.message });
   }
 });

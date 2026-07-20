@@ -1,0 +1,291 @@
+import { Router } from 'express';
+import multer from 'multer';
+import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
+import { supabase } from '../db/connection.js';
+import { estructurarReporteIA, distanciaMetros } from '../utils/reporteIA.js';
+
+export const appAsistentesRouter = Router();
+
+const TIPOS_FOTO_PERMITIDOS = ['image/jpeg', 'image/png'];
+const TAMANO_MAXIMO_FOTO = 8 * 1024 * 1024; // 8 MB
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: TAMANO_MAXIMO_FOTO },
+  fileFilter(req, file, cb) {
+    cb(null, TIPOS_FOTO_PERMITIDOS.includes(file.mimetype));
+  },
+});
+
+function manejarErrorMulter(err, req, res, next) {
+  if (err) {
+    return res.status(400).json({ error: 'Foto no permitida (solo JPG o PNG, hasta 8 MB)' });
+  }
+  next();
+}
+
+async function guardiaDelAsistente(guardiaId, usuarioAsistente) {
+  const { data } = await supabase
+    .from('guardias')
+    .select('id, prestadora_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, modalidad, estado, checkin_at, checkout_at')
+    .eq('id', guardiaId)
+    .eq('asistente_id', usuarioAsistente.id)
+    .eq('prestadora_id', usuarioAsistente.prestadoraId)
+    .maybeSingle();
+  return data;
+}
+
+// ============================================================================
+// Mi Perfil
+// ============================================================================
+
+appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
+  const { data: perfil, error } = await supabase
+    .from('asistentes')
+    .select('id, nombre, telefono, email, foto_url, especialidades, zonas, estado, tipo_vinculo, qr_token')
+    .eq('id', req.usuarioAsistente.id)
+    .single();
+  if (error || !perfil) {
+    return res.status(404).json({ error: 'Perfil no encontrado' });
+  }
+
+  const { data: certificado } = await supabase
+    .from('certificados')
+    .select('activo, fecha_emision, fecha_vencimiento')
+    .eq('asistente_id', req.usuarioAsistente.id)
+    .order('fecha_emision', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  res.json({ perfil, certificado: certificado || null });
+});
+
+// ============================================================================
+// Mis Guardias
+// ============================================================================
+
+appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
+  const { data, error } = await supabase
+    .from('guardias')
+    .select('id, paciente_id, fecha, hora_inicio, hora_fin, modalidad, estado, checkin_at, checkout_at, checkout_bloqueado, pacientes(nombre, domicilio, lat, lng)')
+    .eq('asistente_id', req.usuarioAsistente.id)
+    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
+    .order('fecha', { ascending: false })
+    .order('hora_inicio', { ascending: false })
+    .limit(100);
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+  res.json({ guardias: data });
+});
+
+appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) => {
+  const { data, error } = await supabase
+    .from('guardias')
+    .select('id, paciente_id, fecha, hora_inicio, hora_fin, modalidad, estado, checkin_at, checkout_at, checkout_bloqueado, pacientes(nombre, domicilio, lat, lng, patologias, medicacion_habitual)')
+    .eq('id', req.params.id)
+    .eq('asistente_id', req.usuarioAsistente.id)
+    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
+    .maybeSingle();
+
+  if (error || !data) {
+    return res.status(404).json({ error: 'Guardia no encontrada' });
+  }
+  res.json({ guardia: data });
+});
+
+// ============================================================================
+// Check-in — nunca bloquea por distancia (PRD_04_05_App_Servicio.md, flujo de Check-in
+// punto 4): fuera de rango se avisa y se deja confirmar igual, con nota al coordinador.
+// ============================================================================
+
+appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, async (req, res) => {
+  const { lat, lng } = req.body;
+  if (typeof lat !== 'number' || typeof lng !== 'number') {
+    return res.status(400).json({ error: 'Faltan coordenadas GPS' });
+  }
+
+  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  if (!guardia) {
+    return res.status(404).json({ error: 'Guardia no encontrada' });
+  }
+  if (guardia.checkin_at) {
+    return res.status(400).json({ error: 'Esta guardia ya tiene check-in registrado' });
+  }
+
+  const { data: paciente } = await supabase
+    .from('pacientes')
+    .select('lat, lng')
+    .eq('id', guardia.paciente_id)
+    .maybeSingle();
+
+  const { data: config } = await supabase
+    .from('configuracion_ausencia_automatica')
+    .select('metros_tolerancia_checkin')
+    .eq('prestadora_id', guardia.prestadora_id)
+    .maybeSingle();
+  const tolerancia = config?.metros_tolerancia_checkin ?? 150;
+
+  let dentroDeRango = true;
+  let distancia = null;
+  if (paciente?.lat != null && paciente?.lng != null) {
+    distancia = Math.round(distanciaMetros(lat, lng, paciente.lat, paciente.lng));
+    dentroDeRango = distancia <= tolerancia;
+  }
+
+  const { error } = await supabase
+    .from('guardias')
+    .update({ checkin_at: new Date().toISOString(), checkin_lat: lat, checkin_lng: lng, estado: 'activa' })
+    .eq('id', guardia.id);
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
+  if (!dentroDeRango && req.usuarioAsistente.prestadoraId) {
+    // Nota automática al coordinador (PRD_04_05_App_Servicio.md) — se registra en
+    // mensajes_asistente, el mismo canal que ya usa el Panel para comunicación con Asistentes,
+    // en vez de crear una tabla nueva de notas para un solo caso.
+    await supabase.from('mensajes_asistente').insert({
+      asistente_id: guardia.asistente_id,
+      prestadora_id: guardia.prestadora_id,
+      usuario_id: guardia.asistente_id,
+      mensaje: `Aviso automático del sistema: check-in fuera de rango (${distancia} m del domicilio del Paciente) en la guardia del ${guardia.fecha}.`,
+    }).then(({ error: errorNota }) => {
+      if (errorNota) console.error('Error registrando nota de check-in fuera de rango:', errorNota.message);
+    });
+  }
+
+  res.json({ ok: true, dentroDeRango, distanciaMetros: distancia });
+});
+
+// ============================================================================
+// Reporte Diario — estructurar (IA Nivel 1, no persiste todavía)
+// ============================================================================
+
+appAsistentesRouter.post('/guardias/:id/reporte/estructurar', requiereRolAsistente, async (req, res) => {
+  const { textoLibre } = req.body;
+  if (!textoLibre || typeof textoLibre !== 'string') {
+    return res.status(400).json({ error: 'Falta el texto del reporte' });
+  }
+
+  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  if (!guardia) {
+    return res.status(404).json({ error: 'Guardia no encontrada' });
+  }
+
+  try {
+    const estructurado = await estructurarReporteIA(textoLibre);
+    res.json({ estructurado });
+  } catch (error) {
+    res.status(500).json({ error: 'No se pudo estructurar el reporte con IA — completá los campos a mano' });
+  }
+});
+
+// Foto opcional del reporte, subida antes de confirmar.
+appAsistentesRouter.post(
+  '/guardias/:id/reporte/foto',
+  requiereRolAsistente,
+  upload.single('foto'),
+  manejarErrorMulter,
+  async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Falta la foto' });
+    }
+    const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+    if (!guardia) {
+      return res.status(404).json({ error: 'Guardia no encontrada' });
+    }
+
+    const extension = req.file.mimetype === 'image/png' ? 'png' : 'jpg';
+    const ruta = `${guardia.prestadora_id}/${guardia.id}/${Date.now()}.${extension}`;
+
+    const { error } = await supabase.storage
+      .from('reportes-fotos')
+      .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json({ fotoUrl: ruta });
+  }
+);
+
+// Confirmar y enviar: persiste el reporte (ya revisado por el Asistente), hace el check-out
+// y pasa la guardia a 'completada' — un solo paso atómico del lado de UX (PRD_04_05
+// _App_Servicio.md, Flujo de Reporte Diario punto 4).
+appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente, async (req, res) => {
+  const { textoLibre, alimentacion, medicacion, signosVitales, estadoAnimo, incidentes, observaciones, fotoUrl, lat, lng } = req.body;
+  if (typeof lat !== 'number' || typeof lng !== 'number') {
+    return res.status(400).json({ error: 'Faltan coordenadas GPS de check-out' });
+  }
+
+  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  if (!guardia) {
+    return res.status(404).json({ error: 'Guardia no encontrada' });
+  }
+  if (!guardia.checkin_at) {
+    return res.status(400).json({ error: 'No se puede hacer check-out sin check-in previo' });
+  }
+  if (guardia.checkout_at) {
+    return res.status(400).json({ error: 'Esta guardia ya tiene check-out registrado' });
+  }
+
+  const { data: reporte, error: errorReporte } = await supabase
+    .from('reportes')
+    .insert({
+      prestadora_id: guardia.prestadora_id,
+      guardia_id: guardia.id,
+      texto_libre: textoLibre || null,
+      alimentacion: alimentacion || null,
+      medicacion: medicacion || [],
+      signos_vitales: signosVitales || null,
+      estado_animo: estadoAnimo || null,
+      incidentes: incidentes || null,
+      observaciones: observaciones || null,
+      foto_url: fotoUrl || null,
+      ia_procesado: true,
+      confirmado_asistente: true,
+    })
+    .select('id')
+    .single();
+  if (errorReporte) {
+    return res.status(500).json({ error: errorReporte.message });
+  }
+
+  const { error: errorGuardia } = await supabase
+    .from('guardias')
+    .update({ checkout_at: new Date().toISOString(), checkout_lat: lat, checkout_lng: lng, estado: 'completada' })
+    .eq('id', guardia.id);
+  if (errorGuardia) {
+    return res.status(500).json({ error: errorGuardia.message });
+  }
+
+  res.json({ ok: true, reporteId: reporte.id });
+});
+
+// Reportes anteriores del mismo Paciente (botón "Ver reportes anteriores" en Guardia Activa).
+appAsistentesRouter.get('/pacientes/:id/reportes', requiereRolAsistente, async (req, res) => {
+  const { data: guardiaPropia } = await supabase
+    .from('guardias')
+    .select('id')
+    .eq('paciente_id', req.params.id)
+    .eq('asistente_id', req.usuarioAsistente.id)
+    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
+    .limit(1)
+    .maybeSingle();
+  if (!guardiaPropia) {
+    return res.status(403).json({ error: 'No tenés guardias asignadas a este Paciente' });
+  }
+
+  const { data, error } = await supabase
+    .from('reportes')
+    .select('id, texto_libre, alimentacion, medicacion, signos_vitales, estado_animo, incidentes, observaciones, foto_url, created_at, guardias!inner(paciente_id, fecha)')
+    .eq('guardias.paciente_id', req.params.id)
+    .order('created_at', { ascending: false })
+    .limit(30);
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+  res.json({ reportes: data });
+});

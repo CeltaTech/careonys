@@ -1,0 +1,49 @@
+import { useEffect, useState } from 'react';
+import { api } from '../lib/api';
+import { useLocale } from '../i18n/LocaleContext';
+
+export default function MiPerfil() {
+  const { t } = useLocale();
+  const [perfil, setPerfil] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let activo = true;
+    api
+      .perfil()
+      .then(({ perfil: data }) => {
+        if (activo) setPerfil(data);
+      })
+      .catch(() => {
+        if (activo) setError(t.comun.error_generico);
+      });
+    return () => {
+      activo = false;
+    };
+  }, []);
+
+  if (error) return <div className="alert alert-error">{error}</div>;
+  if (!perfil) return <div className="estado-cargando">{t.comun.cargando}</div>;
+
+  return (
+    <div>
+      <h1>{t.perfil.titulo}</h1>
+      <div className="panel-detalle-lista" style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '0.5rem 1.5rem' }}>
+        <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.nombre}</div>
+        <div>{perfil.nombre}</div>
+        <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.email}</div>
+        <div>{perfil.email}</div>
+        <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.telefono}</div>
+        <div>{perfil.telefono || '—'}</div>
+        <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.especialidades}</div>
+        <div>{(perfil.especialidades || []).join(', ') || '—'}</div>
+        <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.zonas}</div>
+        <div>{(perfil.zonas || []).join(', ') || '—'}</div>
+        <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.estado}</div>
+        <div>
+          <span className={`badge badge-${perfil.estado}`}>{perfil.estado}</span>
+        </div>
+      </div>
+    </div>
+  );
+}

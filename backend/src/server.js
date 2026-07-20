@@ -20,6 +20,7 @@ import { revisarAusenciasAutomaticas } from './utils/ausenciaAutomatica.js';
 import { revisarNotificacionesCoordinador } from './utils/revisarNotificacionesCoordinador.js';
 import { extenderSeriesGuardiaAbiertas } from './utils/generacionSeriesGuardia.js';
 import { whatsappWebhookRouter } from './routes/whatsappWebhook.js';
+import { appAsistentesRouter } from './routes/appAsistentes.js';
 
 const app = express();
 app.use(cors());
@@ -44,6 +45,7 @@ app.use('/api/panel/importacion', panelImportacionRouter);
 app.use('/api/panel/configuracion-plataforma', panelConfiguracionPlataformaRouter);
 app.use('/api/configuracion-publica', configuracionPublicaRouter);
 app.use('/api/whatsapp-webhook', whatsappWebhookRouter);
+app.use('/api/app-asistentes', appAsistentesRouter);
 
 const UN_DIA_MS = 24 * 60 * 60 * 1000;
 revisarVencimientos().catch((err) => console.error('Error en revisión inicial de vencimientos:', err.message));

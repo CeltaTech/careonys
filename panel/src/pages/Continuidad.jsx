@@ -326,6 +326,18 @@ function ResolverIncidente({ incidente, asistentes, usuario, onClose, onResuelto
         .eq('id', incidente.id);
       if (errorIncidente) throw errorIncidente;
 
+      // Resolver el incidente acá no basta: si se asignó un Asistente real (no un familiar
+      // cubriendo informalmente), la guardia entrante tiene que quedar reflejada como cubierta
+      // — si no, la grilla de Guardias y cualquier otro lugar que lea guardias.estado sigue
+      // mostrándola como "sin cobertura" aunque el incidente ya esté resuelto acá.
+      if (!esFamiliar && incidente.guardia_entrante_id) {
+        const { error: errorGuardia } = await supabase
+          .from('guardias')
+          .update({ asistente_id: asistenteId, estado: 'programada' })
+          .eq('id', incidente.guardia_entrante_id);
+        if (errorGuardia) throw errorGuardia;
+      }
+
       onResuelto();
     } catch (err) {
       setError(err.message);

@@ -13,7 +13,7 @@
 | 2 | Panel de administración (Módulos 1-5 + primer corte de precios/Prestaciones + gestión de usuarios del Panel + Proceso de Incorporación + Certificado de Aptitud + rol Superadmin real + Módulo 8 Configuración) | 🟢 Desplegado a producción (2026-07-08): https://careonys-panel.vercel.app — Módulo 6 Parte 1 (Guardias core) construida 2026-07-10, desplegada y probada en navegador real 2026-07-11 (ver pendiente #6 en `PENDIENTES.md`); Módulo 6 Parte 2 (Continuidad de guardia) construida y probada en navegador real (ver fila 2026-07-12 de la tabla en `docs/PROGRESS.md`, sección "Archivos creados/modificados por sesión"), **todavía no commiteada ni desplegada a Vercel**; Módulo 6 Parte 3 y Módulo 7 pendientes |
 | 2B | Gestión de Personal (vínculo/cese/riesgo/cobertura) | 🟢 Completo — código listo y SQL aplicado/verificado contra Supabase real |
 | 3 | PWA Asistentes (login, guardias, GPS, reporte + IA) | 🟡 En progreso — primer corte construido, verificado en navegador real y **desplegado a producción** (`https://pwa-asistentes.vercel.app`, backend real de Railway); push notifications, alertas tempranas de ausencia y WebAuthn quedaron fuera de este primer corte a pedido del Desarrollador |
-| 4 | PWA Clientes (login, reportes, alertas) | 🟡 En progreso — backend (rutas `appClientes.js`, IA Nivel 2 `alertasIA.js`/cron, RLS, ubicación en vivo, push) y las 7 pantallas del frontend construidas y verificadas de punta a punta en navegador real (Playwright) contra Supabase real; falta commit/push, deploy a Railway/Vercel |
+| 4 | PWA Clientes (login, reportes, alertas) | 🟢 Desplegado a producción (2026-07-21): `https://pwa-clientes.vercel.app`, backend real de Railway (`https://careonys-backend-production-e7ee.up.railway.app`) — verificado en navegador real contra producción tras el deploy, no solo en local |
 | 5 | Planillas IOMA (PDF) | 🔴 No iniciado |
 | 6 | Perfil público del Asistente con QR | 🔴 No iniciado — el QR del Certificado de Aptitud (Módulo 4 del Panel) ya apunta a la URL futura de esta etapa |
 
@@ -34,9 +34,16 @@ permiso del navegador. Un bug real encontrado y corregido durante esta verificac
 fila 2026-07-21 de "Archivos creados/modificados por sesión" más abajo para el detalle
 completo (bug de renderizado JSONB en `ReporteDetalle.jsx`, endpoint nuevo
 `GET /pacientes/:id/asistente`).
-Próximo paso: commit + push de todo el cambio de Etapa 4, deploy explícito (Railway ya
-auto-despliega el backend; falta crear el proyecto Vercel de `pwa-clientes`, no existe
-todavía), y recién después continuar con Etapa 5 (Planillas IOMA).
+Commit `2a30852` + push a `main` hecho. Backend redesplegado en Railway (auto-deploy,
+`https://careonys-backend-production-e7ee.up.railway.app`, confirmado con `npx railway status`
+en vez de asumir una URL vieja — ver pendiente #66). Proyecto Vercel nuevo `pwa-clientes`
+creado y desplegado a producción (`https://pwa-clientes.vercel.app`, con `vercel.json` de
+rewrite SPA agregado desde el vamos para no repetir el bug del pendiente #68). Verificado en
+navegador real contra la URL de producción real (no local): login con la cuenta de prueba de
+Cliente, redirect automático a PacienteDetalle, datos reales de Supabase renderizados
+correctamente, 0 errores de consola. Con esto, Etapa 4 queda completa y en producción.
+Próximo paso: continuar con Etapa 5 (Planillas IOMA), según la instrucción permanente del
+Desarrollador de completar todas las etapas del roadmap.
 
 Etapa 2 (Módulos 1-3) sigue como quedó documentado abajo: primer corte del Panel de Administración (`PRD_02_Panel_Admin.md`), scope
 acotado a lo que ya tiene datos reales de Etapa 1 — Módulo 1 (Dashboard), Módulo 2

@@ -21,7 +21,7 @@ GPS:        navigator.geolocation API (browser nativo)
 Cámara:     MediaDevices API (browser nativo)
 IA Nivel 1 y 2: Anthropic API — Claude Sonnet (ver AI_PROMPTS.md)
 Push:       Web Push API + Service Worker (Android) / Apple Push (iOS 16.4+)
-PDF:        jsPDF o react-pdf (Planillas IOMA, Etapa 5)
+Informe Obra Social: sin librería de PDF — informe virtual dentro del Panel, impresión vía window.print() + @media print (Etapa 5, ver docs/claude_history.md 2026-07-21)
 ```
 
 Limitación conocida: notificaciones push en Safari/iOS son limitadas incluso desde iOS 16.4.
@@ -161,15 +161,29 @@ reportes que la originaron (con links), botón "Contactar coordinador".
 Ver `AI_PROMPTS.md` para el prompt de sistema exacto y las reglas de persistencia/
 notificación — no repetir acá para que no diverjan las dos fuentes.
 
-## Planillas IOMA (Etapa 5, sin stack nuevo)
+## Informe para Obra Social (Etapa 5 — rediseñada, ver `docs/claude_history.md` 2026-07-21)
 
-**Planilla 3 — Asistencia diaria** (PDF por guardia): nombre del afiliado, N° de afiliado
-IOMA, mes de prestación, nombre del Asistente, campo de firma del Asistente, campo de firma
-del afiliado/familiar (manual o firma digital si se implementa más adelante).
+Se construye exclusivamente en el Panel de Administración (no en esta PWA, el Cliente no
+participa del proceso ni accede al informe). Reemplaza el diseño original de "Planillas
+IOMA" en PDF por un informe virtual dentro del Panel, con impresión vía `window.print()` +
+`@media print` — sin librería de PDF y sin asumir una única obra social: cada Paciente
+registra su propia `obra_social` (texto libre) y `numero_afiliado`
+(`backend/src/db/schema_informes_obra_social.sql`).
 
-**Resumen Mensual** (PDF, cierre de mes): consolidado de guardias del mes, totales por
-modalidad (S4/S6/S8/S10/S12 sin retiro, F4/F6/F8/F10/F12 con retiro — confirmar codificación
-exacta de modalidades con `PRD_02_Panel_Admin.md` antes de implementar), firma del Asistente.
+**Planilla de asistencia**: nombre del Paciente, obra social y número de afiliado, mes de
+prestación, nombre del Asistente por guardia, campo de firma del Asistente, campo de firma
+del afiliado/familiar (manual — firma digital queda para una etapa futura, no implementada).
+
+**Resumen mensual**: consolidado de guardias del período, totales agrupados por el valor
+real de `guardias.modalidad` que la Prestadora haya usado — sin catálogo cerrado de códigos
+(S4/F6/etc.), decisión explícita para no hardcodear una convención de una obra social en
+particular (CLAUDE.md §2/§7).
+
+El informe solo puede guardarse/imprimirse después de que un usuario de la Prestadora con el
+permiso `validar_informe_obra_social` (motor de `permisos_prestadora`) lo valide. Al validar,
+queda congelado como snapshot inmutable en `informes_obra_social.contenido` (JSONB) — nunca
+se edita después; solo se anula (con motivo y auditoría) y se genera uno nuevo. Ver
+`backend/src/routes/panelInformesObraSocial.js` y `panel/src/pages/InformesObraSocial.jsx`.
 
 ## Datos y RLS
 

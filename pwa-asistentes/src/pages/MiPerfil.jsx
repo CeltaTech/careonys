@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { activarPush, desactivarPush, pushSoportado, suscripcionActual } from '../lib/push';
+import { traducirValor } from '../i18n/valores';
 
 export default function MiPerfil() {
   const { t } = useLocale();
@@ -77,7 +78,7 @@ export default function MiPerfil() {
         <div>{(perfil.zonas || []).join(', ') || '—'}</div>
         <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.estado}</div>
         <div>
-          <span className={`badge badge-${perfil.estado}`}>{perfil.estado}</span>
+          <span className={`badge badge-${perfil.estado}`}>{traducirValor(t.perfil, `estado_${perfil.estado}`)}</span>
         </div>
       </div>
 

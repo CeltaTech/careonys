@@ -12,7 +12,7 @@
 | 2B | Gestión de Personal (vínculo, cese, riesgo, cobertura) | Panel de admin funcionando, Módulo 4 del panel construido | Integrada a Etapa 2 | `PRD_02B_Gestion_Personal.md` |
 | 3 | PWA Asistentes (login, guardias, GPS check-in/out, reporte diario + IA Nivel 1) | Panel de admin funcionando | 2-3 semanas | `PRD_04_05_App_Servicio.md` |
 | 4 | PWA Clientes (login, pacientes, reportes, alertas IA Nivel 2) | PWA Asistentes funcionando | 1-2 semanas | `PRD_04_05_App_Servicio.md` |
-| 5 | Planillas IOMA (Planilla 3 + Resumen Mensual en PDF) | Reportes funcionando | 1 semana | `PRD_04_05_App_Servicio.md` |
+| 5 | Informe para Obra Social (informe virtual con validación y snapshot inmutable, sin PDF — ver `docs/claude_history.md` 2026-07-21) | Reportes funcionando | 1 semana | `PRD_04_05_App_Servicio.md` |
 | 6 | Perfil público del Asistente con QR verificable | Asistentes certificados | 1 semana | `PRD_04_05_App_Servicio.md` |
 | Diferida | App nativa (Capacitor o React Native) | 50+ clientes activas, negocio validado | 1-5 semanas | — |
 | Diferida | IA Niveles 3-5 (matching, asistente virtual, análisis predictivo) | Datos históricos suficientes | Variable | — |

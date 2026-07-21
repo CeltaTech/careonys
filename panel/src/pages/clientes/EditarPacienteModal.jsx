@@ -17,7 +17,8 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
   const [domicilio, setDomicilio] = useState(paciente.domicilio || '');
   const [nivelComplejidad, setNivelComplejidad] = useState(paciente.nivel_complejidad || '');
   const [patologias, setPatologias] = useState((paciente.patologias || []).join(', '));
-  const [iomaAfiliado, setIomaAfiliado] = useState(paciente.ioma_afiliado || '');
+  const [obraSocial, setObraSocial] = useState(paciente.obra_social || '');
+  const [numeroAfiliado, setNumeroAfiliado] = useState(paciente.numero_afiliado || '');
   const [medicacion, setMedicacion] = useState(medicacionAFilas(paciente.medicacion_habitual));
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
@@ -47,7 +48,8 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
         domicilio: domicilio || null,
         nivel_complejidad: nivelComplejidad || null,
         patologias: patologias.split(',').map((p) => p.trim()).filter(Boolean),
-        ioma_afiliado: iomaAfiliado || null,
+        obra_social: obraSocial || null,
+        numero_afiliado: numeroAfiliado || null,
         medicacion_habitual: medicacionLimpia.length ? medicacionLimpia : null,
       })
       .eq('id', paciente.id);
@@ -77,7 +79,8 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
             <option value="III">III</option>
           </FormField>
           <FormField label={t.clientes.editar_paciente.patologias} name="patologias" value={patologias} onChange={(e) => setPatologias(e.target.value)} />
-          <FormField label={t.clientes.editar_paciente.ioma_afiliado} name="ioma_afiliado" value={iomaAfiliado} onChange={(e) => setIomaAfiliado(e.target.value)} />
+          <FormField label={t.clientes.editar_paciente.obra_social} name="obra_social" value={obraSocial} onChange={(e) => setObraSocial(e.target.value)} />
+          <FormField label={t.clientes.editar_paciente.numero_afiliado} name="numero_afiliado" value={numeroAfiliado} onChange={(e) => setNumeroAfiliado(e.target.value)} />
 
           <label>{t.clientes.editar_paciente.medicacion_habitual}</label>
           {medicacion.map((fila, i) => (

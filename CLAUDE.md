@@ -80,6 +80,8 @@ Esta tabla se mantiene siempre en su versión **vigente** — sin notas de fecha
 | Vínculo / Cese | contrato de trabajo, despido (salvo causal literal de despido) |
 | Proceso de Incorporación de Asistentes | selección, filtro, pipeline, reclutamiento |
 | Certificado de Aptitud | certificado genérico, diploma, certificado propio de una Prestadora |
+| Obra Social | IOMA (salvo que sea literalmente la obra social configurada por esa Cliente/Paciente), obra social genérica no configurable |
+| Número de afiliado | ioma_afiliado, afiliado IOMA |
 | Ausente sin relevo previo | cualquier término en inglés o genérico para el caso de un Asistente que no se presenta a una Guardia cuando no había ningún otro Asistente cubriendo antes de él (ej. primera guardia del día para un Paciente) — distinto de un ausente con relevo, donde sí hay alguien saliente esperando |
 | Documentación (vencimientos documentales de Asistentes, por Prestadora) | compliance, cumplimiento normativo |
 | Desarrollador (quien dirige el desarrollo y aprueba las decisiones elevadas) | nombre propio de esa persona como estand-in genérico; no es un rol del sistema (ver §5) |

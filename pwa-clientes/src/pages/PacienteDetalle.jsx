@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { supabase } from '../lib/supabaseClient';
 import { useLocale } from '../i18n/LocaleContext';
+import { traducirValor } from '../i18n/valores';
 
 function segundosDesde(fecha) {
   return Math.max(0, Math.floor((Date.now() - new Date(fecha).getTime()) / 1000));
@@ -85,7 +86,7 @@ export default function PacienteDetalle() {
           <h2>{t.paciente.alertas_activas_titulo}</h2>
           {alertasActivas.map((a) => (
             <div key={a.id} className={`alert alerta-${a.nivel}`}>
-              <span className={`badge badge-${a.nivel}`}>{t.alertas[`nivel_${a.nivel}`] || a.nivel}</span> {a.descripcion}
+              <span className={`badge badge-${a.nivel}`}>{traducirValor(t.alertas, `nivel_${a.nivel}`)}</span> {a.descripcion}
             </div>
           ))}
         </div>

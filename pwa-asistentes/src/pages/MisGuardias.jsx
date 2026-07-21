@@ -2,14 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
-
-const ETIQUETAS_ESTADO = {
-  programada: 'estado_programada',
-  activa: 'estado_activa',
-  completada: 'estado_completada',
-  cancelada: 'estado_cancelada',
-  ausente: 'estado_ausente',
-};
+import { traducirValor } from '../i18n/valores';
 
 export default function MisGuardias() {
   const { t } = useLocale();
@@ -44,7 +37,7 @@ export default function MisGuardias() {
           <div className="guardia-card-detalle">
             {g.fecha} · {g.hora_inicio?.slice(0, 5)} - {g.hora_fin?.slice(0, 5)}
           </div>
-          <span className="badge">{t.guardias[ETIQUETAS_ESTADO[g.estado]] || g.estado}</span>
+          <span className="badge">{traducirValor(t.guardias, `estado_${g.estado}`)}</span>
         </Link>
       ))}
     </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
+import { traducirValor } from '../i18n/valores';
 
 export default function Alertas() {
   const { id } = useParams();
@@ -37,7 +38,7 @@ export default function Alertas() {
       {alertas.map((a) => (
         <div key={a.id} className={`alert alerta-${a.nivel}`}>
           <div>
-            <span className={`badge badge-${a.nivel}`}>{t.alertas[`nivel_${a.nivel}`] || a.nivel}</span>{' '}
+            <span className={`badge badge-${a.nivel}`}>{traducirValor(t.alertas, `nivel_${a.nivel}`)}</span>{' '}
             <span className="badge">{a.resuelta_at ? t.alertas.resuelta : t.alertas.activa}</span>
           </div>
           <p style={{ margin: '0.5rem 0' }}>{a.descripcion}</p>

@@ -28,6 +28,7 @@ import { Prestadoras } from './pages/Prestadoras';
 import { AdminPlataforma } from './pages/AdminPlataforma';
 import { Configuracion } from './pages/Configuracion';
 import { Importacion } from './pages/Importacion';
+import { InformesObraSocial } from './pages/InformesObraSocial';
 import { Auditoria } from './pages/Auditoria';
 
 function App() {
@@ -65,6 +66,7 @@ function App() {
                     <Route path="continuidad" element={<Continuidad />} />
                     <Route path="lista-precios" element={<ListaPrecios />} />
                     <Route path="importacion" element={<Importacion />} />
+                    <Route path="informes-obra-social" element={<InformesObraSocial />} />
                     <Route path="usuarios-panel" element={<ProtectedRoute soloAdmin><UsuariosPanel /></ProtectedRoute>} />
                     <Route path="prestadoras" element={<ProtectedRoute roles={['admin_plataforma', 'superadmin']}><Prestadoras /></ProtectedRoute>} />
                     <Route path="admin-plataforma" element={<ProtectedRoute roles={['admin_plataforma']}><AdminPlataforma /></ProtectedRoute>} />

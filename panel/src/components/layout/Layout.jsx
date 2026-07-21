@@ -95,6 +95,7 @@ export function Layout() {
           {(esAdminOSuperior(usuario?.rol) || puede('importar_datos_masivos')) && (
             <NavLink to="/importacion">{t.nav.importacion}</NavLink>
           )}
+          <NavLink to="/informes-obra-social">{t.nav.informes_obra_social}</NavLink>
           {esAdminOSuperior(usuario?.rol) && <NavLink to="/usuarios-panel">{t.nav.usuarios_panel}</NavLink>}
           {['admin_plataforma', 'superadmin'].includes(usuario?.rol) && <NavLink to="/prestadoras">{t.nav.prestadoras}</NavLink>}
           {usuario?.rol === 'admin_plataforma' && <NavLink to="/admin-plataforma">{t.nav.admin_plataforma}</NavLink>}

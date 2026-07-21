@@ -17,6 +17,17 @@ import {
 
 const CAUSALES_CON_TELEGRAMA = new Set(['despido_con_justa_causa', 'despido_sin_causa', 'abandono_de_trabajo']);
 
+function humanizarClave(clave) {
+  return clave.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()).trim();
+}
+
+function formatearValorCalculo(valor, t) {
+  if (typeof valor === 'boolean') return valor ? t.comun.si : t.comun.no;
+  if (typeof valor === 'number') return valor.toLocaleString('es-AR');
+  if (valor === null || valor === undefined || valor === '') return '—';
+  return String(valor);
+}
+
 const CAUSALES = [
   'renuncia', 'mutuo_acuerdo', 'despido_con_justa_causa', 'despido_sin_causa',
   'abandono_de_trabajo', 'muerte_del_trabajador', 'muerte_del_empleador',
@@ -174,7 +185,14 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
 
               <details>
                 <summary>{t.asistentes.cese.ver_detalle_calculo}</summary>
-                <pre className="panel-detalle-calculo-json">{JSON.stringify(resultado.detalleCalculo, null, 2)}</pre>
+                <dl className="panel-detalle-lista">
+                  {Object.entries(resultado.detalleCalculo).map(([clave, valor]) => (
+                    <div key={clave} style={{ display: 'contents' }}>
+                      <dt>{humanizarClave(clave)}</dt>
+                      <dd>{formatearValorCalculo(valor, t)}</dd>
+                    </div>
+                  ))}
+                </dl>
               </details>
 
               {resultado.advertencias.map((a, i) => (

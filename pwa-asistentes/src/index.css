@@ -281,3 +281,57 @@ h2 {
   display: block;
   margin-bottom: 0.3rem;
 }
+
+.signo-vital-fila input {
+  border-radius: 8px;
+  border: 2px solid transparent;
+}
+
+.signo-vital-normal input {
+  border-color: var(--verde-exito);
+}
+
+.signo-vital-alerta input {
+  border-color: var(--rojo-peligro);
+  background: var(--rojo-peligro-bg);
+}
+
+.signo-vital-aviso {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--rojo-peligro);
+  font-weight: 600;
+  margin-top: 0.2rem;
+}
+
+.escala-animo {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.escala-animo-opcion {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 60px;
+  min-height: 60px;
+  padding: 0.4rem;
+  border-radius: 12px;
+  border: 2px solid var(--fondo-alt);
+  background: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.escala-animo-opcion.seleccionada {
+  border-color: var(--azul-medio);
+  background: var(--fondo-alt);
+}
+
+.escala-animo-etiqueta {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--texto-secundario);
+}

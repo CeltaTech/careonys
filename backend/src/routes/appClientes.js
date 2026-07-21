@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requiereRolCliente } from '../middleware/requiereRolCliente.js';
 import { supabase } from '../db/connection.js';
+import { resolverVitalesHabilitados } from '../utils/vitalesReferencia.js';
 
 export const appClientesRouter = Router();
 
@@ -129,7 +130,10 @@ appClientesRouter.get('/pacientes/:id/reportes', requiereRolCliente, async (req,
   if (error) {
     return res.status(500).json({ error: error.message });
   }
-  res.json({ reportes: data });
+
+  const vitales = await resolverVitalesHabilitados(paciente.id, paciente.prestadora_id);
+
+  res.json({ reportes: data, rangosVitales: vitales.rangos });
 });
 
 // ============================================================================

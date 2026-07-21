@@ -5,6 +5,7 @@ import { supabase } from '../db/connection.js';
 import { estructurarReporteIA, distanciaMetros } from '../utils/reporteIA.js';
 import { enviarPushCliente } from '../utils/push.js';
 import { analizarPaciente } from '../utils/revisarAlertasIA.js';
+import { resolverVitalesHabilitados } from '../utils/vitalesReferencia.js';
 
 export const appAsistentesRouter = Router();
 
@@ -94,7 +95,10 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
   if (error || !data) {
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }
-  res.json({ guardia: data });
+
+  const vitales = await resolverVitalesHabilitados(data.paciente_id, req.usuarioAsistente.prestadoraId);
+
+  res.json({ guardia: data, vitalesHabilitados: vitales.habilitados, rangosVitales: vitales.rangos });
 });
 
 // ============================================================================

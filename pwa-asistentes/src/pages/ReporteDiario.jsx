@@ -1,9 +1,36 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 
 const ESTADOS_ANIMO = ['muy_bien', 'bien', 'regular', 'mal', 'muy_mal'];
+const CARAS_ANIMO = { muy_bien: '😄', bien: '🙂', regular: '😐', mal: '🙁', muy_mal: '😣' };
+
+const SIGNOS = ['presion_sistolica', 'presion_diastolica', 'temperatura', 'saturacion', 'glucemia'];
+
+function parseNumero(texto) {
+  if (texto === null || texto === undefined) return '';
+  const match = String(texto).match(/-?\d+([.,]\d+)?/);
+  return match ? match[0].replace(',', '.') : '';
+}
+
+function signosIniciales(signosIA) {
+  const presionMatch = String(signosIA?.presion || '').match(/(\d+)\D+(\d+)/);
+  return {
+    presion_sistolica: presionMatch ? presionMatch[1] : '',
+    presion_diastolica: presionMatch ? presionMatch[2] : '',
+    temperatura: parseNumero(signosIA?.temperatura),
+    saturacion: parseNumero(signosIA?.saturacion),
+    glucemia: parseNumero(signosIA?.glucemia),
+  };
+}
+
+function colorSigno(valor, rango) {
+  if (!rango || valor === '' || valor === null || valor === undefined) return null;
+  const numero = Number(valor);
+  if (Number.isNaN(numero)) return null;
+  return numero >= rango.min && numero <= rango.max ? 'normal' : 'alerta';
+}
 
 function obtenerUbicacion() {
   return new Promise((resolve, reject) => {
@@ -32,13 +59,30 @@ export default function ReporteDiario() {
   const [confirmando, setConfirmando] = useState(false);
   const [error, setError] = useState('');
   const [guardadoOk, setGuardadoOk] = useState(false);
+  const [vitalesHabilitados, setVitalesHabilitados] = useState(false);
+  const [rangosVitales, setRangosVitales] = useState({});
+
+  useEffect(() => {
+    let activo = true;
+    api
+      .guardia(id)
+      .then(({ vitalesHabilitados: habilitados, rangosVitales: rangos }) => {
+        if (!activo) return;
+        setVitalesHabilitados(!!habilitados);
+        setRangosVitales(rangos || {});
+      })
+      .catch(() => {});
+    return () => {
+      activo = false;
+    };
+  }, [id]);
 
   async function alEstructurar() {
     setError('');
     setEstructurando(true);
     try {
       const { estructurado: data } = await api.estructurarReporte(id, textoLibre);
-      setEstructurado(data);
+      setEstructurado({ ...data, signos_vitales: signosIniciales(data.signos_vitales) });
     } catch (e) {
       setError(t.comun.error_generico);
     } finally {
@@ -79,7 +123,7 @@ export default function ReporteDiario() {
         textoLibre,
         alimentacion: estructurado.alimentacion,
         medicacion: estructurado.medicacion,
-        signosVitales: estructurado.signos_vitales,
+        signosVitales: vitalesHabilitados ? estructurado.signos_vitales : null,
         estadoAnimo: estructurado.estado_animo,
         incidentes: estructurado.incidentes,
         observaciones: estructurado.observaciones,
@@ -137,32 +181,49 @@ export default function ReporteDiario() {
             />
           </div>
 
-          <div className="reporte-preview-campo">
-            <label>{t.reporte.campo_signos_vitales}</label>
-            {['presion', 'temperatura', 'saturacion', 'glucemia'].map((clave) => (
-              <input
-                key={clave}
-                value={estructurado.signos_vitales?.[clave] || ''}
-                onChange={(e) => actualizarSignos(clave, e.target.value)}
-                placeholder={clave}
-                style={{ marginBottom: '0.4rem', width: '100%' }}
-              />
-            ))}
-          </div>
+          {vitalesHabilitados && (
+            <div className="reporte-preview-campo">
+              <label>{t.reporte.campo_signos_vitales}</label>
+              {SIGNOS.map((signo) => {
+                const rango = rangosVitales[signo];
+                const color = colorSigno(estructurado.signos_vitales?.[signo], rango);
+                return (
+                  <div key={signo} className={`signo-vital-fila${color ? ` signo-vital-${color}` : ''}`} style={{ marginBottom: '0.4rem' }}>
+                    <label htmlFor={`signo-${signo}`}>
+                      {t.reporte[`signo_${signo}`]} {rango ? `(${rango.unidad})` : ''}
+                    </label>
+                    <input
+                      id={`signo-${signo}`}
+                      type="number"
+                      step="0.1"
+                      value={estructurado.signos_vitales?.[signo] || ''}
+                      onChange={(e) => actualizarSignos(signo, e.target.value)}
+                      style={{ width: '100%' }}
+                    />
+                    {color === 'alerta' && <span className="signo-vital-aviso">{t.reporte.signo_fuera_de_rango}</span>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           <div className="reporte-preview-campo">
             <label>{t.reporte.campo_estado_animo}</label>
-            <select
-              value={estructurado.estado_animo || ''}
-              onChange={(e) => actualizarCampo('estado_animo', e.target.value || null)}
-            >
-              <option value="">—</option>
+            <div className="escala-animo">
               {ESTADOS_ANIMO.map((estado) => (
-                <option key={estado} value={estado}>
-                  {estado}
-                </option>
+                <button
+                  key={estado}
+                  type="button"
+                  className={`escala-animo-opcion${estructurado.estado_animo === estado ? ' seleccionada' : ''}`}
+                  onClick={() => actualizarCampo('estado_animo', estado)}
+                  aria-pressed={estructurado.estado_animo === estado}
+                  title={t.reporte[`animo_${estado}`]}
+                >
+                  <span aria-hidden="true">{CARAS_ANIMO[estado]}</span>
+                  <span className="escala-animo-etiqueta">{t.reporte[`animo_${estado}`]}</span>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
 
           <div className="reporte-preview-campo">

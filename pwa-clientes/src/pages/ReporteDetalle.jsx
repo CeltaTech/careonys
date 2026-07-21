@@ -3,24 +3,36 @@ import { useParams, Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 
-const CAMPOS_TEXTO = ['estado_animo', 'incidentes', 'observaciones'];
+const CAMPOS_TEXTO = ['incidentes', 'observaciones'];
 
-const CLAVES_SIGNOS_VITALES = ['presion', 'temperatura', 'saturacion', 'glucemia'];
+const CLAVES_SIGNOS_VITALES_LEGADO = ['presion', 'temperatura', 'saturacion', 'glucemia'];
+const CLAVES_SIGNOS_VITALES = ['presion_sistolica', 'presion_diastolica', 'temperatura', 'saturacion', 'glucemia'];
+
+const CARAS_ANIMO = { muy_bien: '😄', bien: '🙂', regular: '😐', mal: '🙁', muy_mal: '😣' };
+
+function colorSigno(valor, rango) {
+  if (!rango || valor === null || valor === undefined || valor === '') return null;
+  const numero = Number(valor);
+  if (Number.isNaN(numero)) return null;
+  return numero >= rango.min && numero <= rango.max ? 'normal' : 'alerta';
+}
 
 export default function ReporteDetalle() {
   const { id, reporteId } = useParams();
   const { t } = useLocale();
   const [reporte, setReporte] = useState(null);
+  const [rangosVitales, setRangosVitales] = useState({});
   const [error, setError] = useState('');
 
   useEffect(() => {
     let activo = true;
     api
       .reportesDelPaciente(id)
-      .then(({ reportes }) => {
+      .then(({ reportes, rangosVitales: rangos }) => {
         if (!activo) return;
         const encontrado = reportes.find((r) => r.id === reporteId);
         setReporte(encontrado || false);
+        setRangosVitales(rangos || {});
       })
       .catch(() => {
         if (activo) setError(t.comun.error_generico);
@@ -65,11 +77,34 @@ export default function ReporteDetalle() {
       <div className="reporte-preview-campo">
         <label>{t.reporte_detalle.campo_signos_vitales}</label>
         {reporte.signos_vitales && CLAVES_SIGNOS_VITALES.some((clave) => reporte.signos_vitales[clave]) ? (
-          CLAVES_SIGNOS_VITALES.filter((clave) => reporte.signos_vitales[clave]).map((clave) => (
+          CLAVES_SIGNOS_VITALES.filter((clave) => reporte.signos_vitales[clave]).map((clave) => {
+            const color = colorSigno(reporte.signos_vitales[clave], rangosVitales[clave]);
+            return (
+              <div key={clave} className={color ? `signo-vital-${color}` : ''}>
+                {t.reporte_detalle[`signo_${clave}`]}: {reporte.signos_vitales[clave]}
+                {rangosVitales[clave] ? ` ${rangosVitales[clave].unidad}` : ''}
+                {color === 'alerta' && <span className="signo-vital-aviso"> — {t.reporte_detalle.signo_fuera_de_rango}</span>}
+              </div>
+            );
+          })
+        ) : reporte.signos_vitales && CLAVES_SIGNOS_VITALES_LEGADO.some((clave) => reporte.signos_vitales[clave]) ? (
+          CLAVES_SIGNOS_VITALES_LEGADO.filter((clave) => reporte.signos_vitales[clave]).map((clave) => (
             <div key={clave}>
               {t.reporte_detalle[`signo_${clave}`]}: {reporte.signos_vitales[clave]}
             </div>
           ))
+        ) : (
+          <div>{t.reporte_detalle.sin_datos}</div>
+        )}
+      </div>
+
+      <div className="reporte-preview-campo">
+        <label>{t.reporte_detalle.campo_estado_animo}</label>
+        {reporte.estado_animo && CARAS_ANIMO[reporte.estado_animo] ? (
+          <div className="escala-animo-lectura">
+            <span aria-hidden="true">{CARAS_ANIMO[reporte.estado_animo]}</span>
+            <span>{t.reporte_detalle[`animo_${reporte.estado_animo}`]}</span>
+          </div>
         ) : (
           <div>{t.reporte_detalle.sin_datos}</div>
         )}

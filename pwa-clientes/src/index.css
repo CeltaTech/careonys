@@ -282,6 +282,32 @@ h2 {
   margin-bottom: 0.3rem;
 }
 
+.signo-vital-normal {
+  color: var(--verde-exito);
+}
+
+.signo-vital-alerta {
+  color: var(--rojo-peligro);
+  font-weight: 600;
+}
+
+.signo-vital-aviso {
+  font-size: 0.85em;
+}
+
+.escala-animo-lectura {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.3rem;
+}
+
+.escala-animo-lectura span:last-child {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--texto-secundario);
+}
+
 /* ---------- Alertas (IA Nivel 2) ---------- */
 
 .alerta-roja    { border-left: 4px solid var(--rojo-peligro); }

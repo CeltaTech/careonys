@@ -25,7 +25,8 @@ async function llamarApi(path, opciones = {}) {
   return resultado;
 }
 
-const TABS = ['empresa', 'zonas', 'servicios', 'documentos', 'notificaciones', 'whatsapp', 'permisos'];
+const TABS = ['empresa', 'zonas', 'servicios', 'documentos', 'vitales', 'notificaciones', 'whatsapp', 'permisos'];
+const SIGNOS_VITALES = ['presion_sistolica', 'presion_diastolica', 'temperatura', 'saturacion', 'glucemia'];
 const ROLES_RELEVO = ['suplente', 'franquero', 'emergencia', 'familiar'];
 const TIPOS_PERSONAL_EMERGENCIA = ['franquero', 'emergencia'];
 
@@ -60,6 +61,7 @@ export function Configuracion() {
         {tab === 'zonas' && <TabZonas />}
         {tab === 'servicios' && <TabServicios />}
         {tab === 'documentos' && <TabDocumentos />}
+        {tab === 'vitales' && <TabVitales />}
         {tab === 'notificaciones' && <TabNotificaciones />}
         {tab === 'whatsapp' && <TabWhatsapp />}
         {tab === 'permisos' && <TabPermisos />}
@@ -1063,6 +1065,100 @@ function NuevoTipoDocumento({ onClose, onCreado }) {
           </Button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function TabVitales() {
+  const { t } = useLocale();
+  const { usuario } = useAuth();
+  const [rangos, setRangos] = useState([]);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [guardandoSigno, setGuardandoSigno] = useState(null);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    const { data, error: errorConsulta } = await supabase
+      .from('rangos_referencia_vitales')
+      .select('*')
+      .eq('prestadora_id', usuario.prestadora_id)
+      .is('paciente_id', null)
+      .order('signo');
+    if (errorConsulta) {
+      setError(errorConsulta.message);
+      setEstado('error');
+      return;
+    }
+    setRangos(data ?? []);
+    setEstado('listo');
+  }, [usuario.prestadora_id]);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  function set(signo, campo, valor) {
+    setRangos((filas) => filas.map((f) => (f.signo === signo ? { ...f, [campo]: valor } : f)));
+  }
+
+  async function guardar(fila) {
+    setGuardandoSigno(fila.signo);
+    setError(null);
+    const { error: errorUpdate } = await supabase
+      .from('rangos_referencia_vitales')
+      .update({
+        valor_min: Number(fila.valor_min),
+        valor_max: Number(fila.valor_max),
+        unidad: fila.unidad,
+        fuente: fila.fuente,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', fila.id);
+    setGuardandoSigno(null);
+    if (errorUpdate) {
+      setError(errorUpdate.message);
+      return;
+    }
+    recargar();
+  }
+
+  return (
+    <div>
+      <h2>{t.configuracion.vitales_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.vitales_explicacion}</p>
+      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
+      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && rangos.length === 0} recargar={recargar}>
+        <table className="panel-tabla">
+          <thead>
+            <tr>
+              <th>{t.configuracion.vitales_col_signo}</th>
+              <th>{t.configuracion.vitales_col_min}</th>
+              <th>{t.configuracion.vitales_col_max}</th>
+              <th>{t.configuracion.vitales_col_unidad}</th>
+              <th>{t.configuracion.vitales_col_fuente}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {rangos.map((fila) => (
+              <tr key={fila.signo}>
+                <td>{t.configuracion[`vitales_signo_${fila.signo}`]}</td>
+                <td><input type="number" step="0.1" value={fila.valor_min} onChange={(e) => set(fila.signo, 'valor_min', e.target.value)} /></td>
+                <td><input type="number" step="0.1" value={fila.valor_max} onChange={(e) => set(fila.signo, 'valor_max', e.target.value)} /></td>
+                <td><input type="text" value={fila.unidad} onChange={(e) => set(fila.signo, 'unidad', e.target.value)} /></td>
+                <td><input type="text" value={fila.fuente} onChange={(e) => set(fila.signo, 'fuente', e.target.value)} /></td>
+                <td>
+                  <button onClick={() => guardar(fila)} disabled={guardandoSigno === fila.signo}>
+                    {guardandoSigno === fila.signo ? t.comun.guardando : t.comun.guardar}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </EstadoLista>
     </div>
   );
 }

@@ -53,12 +53,25 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   const [cerrandoServicio, setCerrandoServicio] = useState(false);
   const [errorCierre, setErrorCierre] = useState(null);
   const [servicioCerrado, setServicioCerrado] = useState(false);
+  const [asistentesAviso, setAsistentesAviso] = useState([]);
+  const [marcandoAvisoId, setMarcandoAvisoId] = useState(null);
+
+  const [hospitalizacionActiva, setHospitalizacionActiva] = useState(null);
+  const [mostrandoFormHosp, setMostrandoFormHosp] = useState(false);
+  const [institucionHosp, setInstitucionHosp] = useState('');
+  const [motivoHosp, setMotivoHosp] = useState('');
+  const [fechaInicioHosp, setFechaInicioHosp] = useState(() => new Date().toISOString().slice(0, 10));
+  const [guardandoHosp, setGuardandoHosp] = useState(false);
+  const [cerrandoHosp, setCerrandoHosp] = useState(false);
+  const [errorHosp, setErrorHosp] = useState(null);
+  const [alertasContingencia, setAlertasContingencia] = useState([]);
+  const [resolviendoAlertaId, setResolviendoAlertaId] = useState(null);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
     setError(null);
 
-    const [listaResp, prestacionesResp, paquetesResp, cierresResp] = await Promise.all([
+    const [listaResp, prestacionesResp, paquetesResp, cierreResp, hospResp, alertasResp] = await Promise.all([
       supabase.from('lista_precios').select('*').eq('activo', true).order('tipo_servicio'),
       supabase.from('prestaciones').select('*').eq('paciente_id', paciente.id).order('created_at', { ascending: false }),
       supabase
@@ -66,11 +79,17 @@ export function PrestacionesPaciente({ paciente, onClose }) {
         .select('*, paquete_prestacion_items(prestacion_id)')
         .eq('paciente_id', paciente.id)
         .order('created_at', { ascending: false }),
-      supabase.from('cierres_servicio_paciente').select('id').eq('paciente_id', paciente.id).limit(1),
+      supabase.from('cierres_servicio_paciente').select('id').eq('paciente_id', paciente.id).limit(1).maybeSingle(),
+      supabase.from('hospitalizaciones_paciente').select('*').eq('paciente_id', paciente.id).is('fecha_fin', null).maybeSingle(),
+      supabase
+        .from('alertas_contingencia_hospitalizacion')
+        .select('*, pacientes:pacientes!alertas_contingencia_hosp_hospitalizado_tenant_fk(nombre)')
+        .eq('paciente_conviviente_id', paciente.id)
+        .is('resuelto_at', null),
     ]);
 
-    if (listaResp.error || prestacionesResp.error || paquetesResp.error || cierresResp.error) {
-      setError((listaResp.error || prestacionesResp.error || paquetesResp.error || cierresResp.error).message);
+    if (listaResp.error || prestacionesResp.error || paquetesResp.error || cierreResp.error || hospResp.error || alertasResp.error) {
+      setError((listaResp.error || prestacionesResp.error || paquetesResp.error || cierreResp.error || hospResp.error || alertasResp.error).message);
       setEstado('error');
       return;
     }
@@ -78,7 +97,20 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     setListaPrecios(listaResp.data ?? []);
     setPrestaciones(prestacionesResp.data ?? []);
     setPaquetes(paquetesResp.data ?? []);
-    setServicioCerrado((cierresResp.data ?? []).length > 0);
+    setServicioCerrado(!!cierreResp.data);
+    setHospitalizacionActiva(hospResp.data ?? null);
+    setAlertasContingencia(alertasResp.data ?? []);
+
+    if (cierreResp.data) {
+      const { data: asistentesAvisoData, error: errorAvisos } = await supabase
+        .from('cierre_servicio_asistentes')
+        .select('*, asistentes(nombre)')
+        .eq('cierre_id', cierreResp.data.id);
+      if (!errorAvisos) setAsistentesAviso(asistentesAvisoData ?? []);
+    } else {
+      setAsistentesAviso([]);
+    }
+
     setEstado('listo');
   }, [paciente.id]);
 
@@ -214,6 +246,11 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     }
 
     const ahora = new Date().toISOString();
+    const asistentesAInsertar = [...asistentesInvolucrados.keys()].map((asistenteId) => ({
+      prestadora_id: usuario.prestadora_id,
+      cierre_id: cierreInsertado.id,
+      asistente_id: asistenteId,
+    }));
     const resultados = await Promise.all([
       supabase.from('prestaciones').update({ estado: 'de_baja' }).eq('paciente_id', paciente.id).eq('estado', 'vigente'),
       supabase.from('paquetes_prestaciones').update({ estado: 'de_baja' }).eq('paciente_id', paciente.id).eq('estado', 'vigente'),
@@ -227,6 +264,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
         .update({ estado: 'cancelada', cancelacion_origen: 'prestadora', cancelacion_alcance: 'total' })
         .eq('paciente_id', paciente.id)
         .eq('estado', 'programada'),
+      ...(asistentesAInsertar.length > 0 ? [supabase.from('cierre_servicio_asistentes').insert(asistentesAInsertar)] : []),
     ]);
 
     const errorCascada = resultados.find((r) => r.error)?.error;
@@ -258,6 +296,127 @@ export function PrestacionesPaciente({ paciente, onClose }) {
 
     setMotivoCierre('');
     setMotivoDetalleCierre('');
+    recargar();
+  }
+
+  async function handleMarcarAvisadoVerbalmente(id) {
+    setMarcandoAvisoId(id);
+    await supabase
+      .from('cierre_servicio_asistentes')
+      .update({ avisado_verbalmente_at: new Date().toISOString(), avisado_verbalmente_por: usuario.id })
+      .eq('id', id);
+    setMarcandoAvisoId(null);
+    recargar();
+  }
+
+  async function handleRegistrarHospitalizacion() {
+    setGuardandoHosp(true);
+    setErrorHosp(null);
+
+    const { data: hospInsertada, error: errorInsert } = await supabase
+      .from('hospitalizaciones_paciente')
+      .insert({
+        prestadora_id: usuario.prestadora_id,
+        paciente_id: paciente.id,
+        institucion: institucionHosp,
+        motivo: motivoHosp || null,
+        fecha_inicio: fechaInicioHosp,
+        registrado_por: usuario.id,
+      })
+      .select()
+      .single();
+
+    if (errorInsert) {
+      setErrorHosp(errorInsert.message);
+      setGuardandoHosp(false);
+      return;
+    }
+
+    await Promise.all([
+      supabase
+        .from('guardias')
+        .update({ estado: 'pausada' })
+        .eq('paciente_id', paciente.id)
+        .eq('estado', 'programada')
+        .gte('fecha', fechaInicioHosp),
+      supabase.from('series_guardias').update({ estado: 'pausada' }).eq('paciente_id', paciente.id).eq('estado', 'activa'),
+    ]);
+
+    // Contingencia: otros Pacientes de la misma Cliente (conviven bajo el mismo grupo familiar,
+    // no necesariamente el mismo domicilio) que no tengan a su vez una hospitalización activa.
+    const { data: otrosPacientes } = await supabase
+      .from('pacientes')
+      .select('id')
+      .eq('cliente_id', paciente.cliente_id)
+      .neq('id', paciente.id);
+
+    if (otrosPacientes?.length > 0) {
+      const { data: hospActivasOtros } = await supabase
+        .from('hospitalizaciones_paciente')
+        .select('paciente_id')
+        .in('paciente_id', otrosPacientes.map((p) => p.id))
+        .is('fecha_fin', null);
+      const idsConHospitalizacionActiva = new Set((hospActivasOtros ?? []).map((h) => h.paciente_id));
+      const convivientes = otrosPacientes.filter((p) => !idsConHospitalizacionActiva.has(p.id));
+      if (convivientes.length > 0) {
+        await supabase.from('alertas_contingencia_hospitalizacion').insert(
+          convivientes.map((p) => ({
+            prestadora_id: usuario.prestadora_id,
+            hospitalizacion_id: hospInsertada.id,
+            paciente_hospitalizado_id: paciente.id,
+            paciente_conviviente_id: p.id,
+          }))
+        );
+      }
+    }
+
+    setGuardandoHosp(false);
+    setMostrandoFormHosp(false);
+    setInstitucionHosp('');
+    setMotivoHosp('');
+    setFechaInicioHosp(new Date().toISOString().slice(0, 10));
+    recargar();
+  }
+
+  async function handleCerrarHospitalizacion() {
+    if (!confirmarDestructivo(t.prestaciones.confirmar_cierre_hospitalizacion)) return;
+
+    setCerrandoHosp(true);
+    setErrorHosp(null);
+
+    const hoy = new Date().toISOString().slice(0, 10);
+    const { error: errorUpdate } = await supabase
+      .from('hospitalizaciones_paciente')
+      .update({ fecha_fin: hoy })
+      .eq('id', hospitalizacionActiva.id);
+
+    if (errorUpdate) {
+      setErrorHosp(errorUpdate.message);
+      setCerrandoHosp(false);
+      return;
+    }
+
+    await Promise.all([
+      supabase.from('guardias').update({ estado: 'programada' }).eq('paciente_id', paciente.id).eq('estado', 'pausada'),
+      supabase.from('series_guardias').update({ estado: 'activa' }).eq('paciente_id', paciente.id).eq('estado', 'pausada'),
+      supabase
+        .from('alertas_contingencia_hospitalizacion')
+        .update({ resuelto_at: new Date().toISOString() })
+        .eq('hospitalizacion_id', hospitalizacionActiva.id)
+        .is('resuelto_at', null),
+    ]);
+
+    setCerrandoHosp(false);
+    recargar();
+  }
+
+  async function handleResolverAlertaContingencia(alertaId) {
+    setResolviendoAlertaId(alertaId);
+    await supabase
+      .from('alertas_contingencia_hospitalizacion')
+      .update({ resuelto_at: new Date().toISOString() })
+      .eq('id', alertaId);
+    setResolviendoAlertaId(null);
     recargar();
   }
 
@@ -512,9 +671,123 @@ export function PrestacionesPaciente({ paciente, onClose }) {
 
         {estado === 'listo' && ['admin_prestadora', 'coordinador'].includes(usuario.rol) && (
           <div className="panel-resultado-calculo">
+            <h3>{t.prestaciones.hospitalizacion_titulo}</h3>
+            <p className="panel-explicacion">{t.prestaciones.hospitalizacion_explicacion}</p>
+            {errorHosp && <Alert variant="error">{errorHosp}</Alert>}
+
+            {alertasContingencia.map((alerta) => (
+              <Alert key={alerta.id} variant="info">
+                {t.prestaciones.hospitalizacion_contingencia_alerta.replace('{paciente}', alerta.pacientes?.nombre ?? '—')}{' '}
+                <Button
+                  variant="secondary"
+                  onClick={() => handleResolverAlertaContingencia(alerta.id)}
+                  disabled={resolviendoAlertaId === alerta.id}
+                >
+                  {t.prestaciones.hospitalizacion_contingencia_marcar_resuelta}
+                </Button>
+              </Alert>
+            ))}
+
+            {hospitalizacionActiva ? (
+              <>
+                <p className="panel-explicacion">
+                  {t.prestaciones.hospitalizacion_activa_desde
+                    .replace('{institucion}', hospitalizacionActiva.institucion)
+                    .replace('{fecha}', hospitalizacionActiva.fecha_inicio)}
+                </p>
+                <Button variant="secondary" onClick={handleCerrarHospitalizacion} disabled={cerrandoHosp}>
+                  {cerrandoHosp ? t.prestaciones.hospitalizacion_cerrando : t.prestaciones.hospitalizacion_cerrar}
+                </Button>
+              </>
+            ) : mostrandoFormHosp ? (
+              <>
+                <FormField
+                  label={t.prestaciones.hospitalizacion_institucion}
+                  name="institucion_hosp"
+                  value={institucionHosp}
+                  onChange={(e) => setInstitucionHosp(e.target.value)}
+                  required
+                />
+                <FormField
+                  label={t.prestaciones.hospitalizacion_motivo}
+                  name="motivo_hosp"
+                  value={motivoHosp}
+                  onChange={(e) => setMotivoHosp(e.target.value)}
+                />
+                <FormField
+                  label={t.prestaciones.hospitalizacion_fecha_inicio}
+                  name="fecha_inicio_hosp"
+                  type="date"
+                  value={fechaInicioHosp}
+                  onChange={(e) => setFechaInicioHosp(e.target.value)}
+                  required
+                />
+                <div className="panel-modal-acciones">
+                  <Button variant="secondary" onClick={() => setMostrandoFormHosp(false)} disabled={guardandoHosp}>
+                    {t.comun.cancelar}
+                  </Button>
+                  <Button onClick={handleRegistrarHospitalizacion} disabled={guardandoHosp || !institucionHosp || !fechaInicioHosp}>
+                    {guardandoHosp ? t.prestaciones.hospitalizacion_registrando : t.prestaciones.hospitalizacion_registrar}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <Button variant="secondary" onClick={() => setMostrandoFormHosp(true)}>
+                {t.prestaciones.hospitalizacion_registrar}
+              </Button>
+            )}
+          </div>
+        )}
+
+        {estado === 'listo' && ['admin_prestadora', 'coordinador'].includes(usuario.rol) && (
+          <div className="panel-resultado-calculo">
             <h3>{t.prestaciones.cierre_servicio_titulo}</h3>
             {servicioCerrado ? (
-              <Alert variant="info">{t.prestaciones.servicio_ya_cerrado}</Alert>
+              <>
+                <Alert variant="info">{t.prestaciones.servicio_ya_cerrado}</Alert>
+                {asistentesAviso.length > 0 && (
+                  <>
+                    <h3>{t.prestaciones.aviso_asistente_titulo}</h3>
+                    <p className="panel-explicacion">{t.prestaciones.aviso_asistente_explicacion}</p>
+                    <table className="panel-tabla">
+                      <thead>
+                        <tr>
+                          <th>{t.prestaciones.aviso_asistente_col_asistente}</th>
+                          <th>{t.prestaciones.aviso_asistente_col_estado}</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {asistentesAviso.map((fila) => (
+                          <tr key={fila.id}>
+                            <td>{fila.asistentes?.nombre || '—'}</td>
+                            <td>
+                              {fila.avisado_verbalmente_at ? (
+                                <span className="badge badge-aprobado">{t.prestaciones.aviso_asistente_avisado_verbalmente}</span>
+                              ) : fila.aviso_automatico_enviado_at ? (
+                                <span className="badge badge-rechazado">{t.prestaciones.aviso_asistente_aviso_automatico_enviado}</span>
+                              ) : (
+                                <span className="badge badge-rechazado">{t.prestaciones.aviso_asistente_pendiente}</span>
+                              )}
+                            </td>
+                            <td>
+                              {!fila.avisado_verbalmente_at && (
+                                <Button
+                                  variant="secondary"
+                                  onClick={() => handleMarcarAvisadoVerbalmente(fila.id)}
+                                  disabled={marcandoAvisoId === fila.id}
+                                >
+                                  {t.prestaciones.aviso_asistente_marcar_avisado}
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </>
+                )}
+              </>
             ) : (
               <>
                 <p className="panel-explicacion">{t.prestaciones.cierre_servicio_explicacion}</p>

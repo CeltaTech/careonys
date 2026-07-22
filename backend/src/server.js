@@ -26,6 +26,7 @@ import { whatsappWebhookRouter } from './routes/whatsappWebhook.js';
 import { appAsistentesRouter } from './routes/appAsistentes.js';
 import { appClientesRouter } from './routes/appClientes.js';
 import { revisarAlertasIA } from './utils/revisarAlertasIA.js';
+import { revisarAvisosAutomaticosCese } from './utils/avisoAutomaticoCese.js';
 
 const app = express();
 app.use(cors());
@@ -97,6 +98,13 @@ revisarAlertasIA().catch((err) => console.error('Error en revisión inicial de a
 setInterval(() => {
   revisarAlertasIA().catch((err) => console.error('Error en revisión de alertas IA Nivel 2:', err.message));
 }, UN_DIA_MS);
+
+// Aviso automático de cese de servicio al Asistente (Fase 6) — el plazo se mide en horas,
+// misma cadencia que revisarAusenciasAutomaticas.
+revisarAvisosAutomaticosCese().catch((err) => console.error('Error en revisión inicial de avisos automáticos de cese:', err.message));
+setInterval(() => {
+  revisarAvisosAutomaticosCese().catch((err) => console.error('Error en revisión de avisos automáticos de cese:', err.message));
+}, CINCO_MINUTOS_MS);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

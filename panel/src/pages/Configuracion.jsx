@@ -1207,45 +1207,123 @@ function TabNotificaciones() {
   }
 
   return (
-    <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && notificaciones.length === 0} recargar={recargar}>
-      <table className="panel-tabla">
-        <thead>
-          <tr>
-            <th>{t.configuracion.notificaciones_col_evento}</th>
-            <th>{t.configuracion.notificaciones_col_emails}</th>
-            <th>{t.configuracion.notificaciones_col_activo}</th>
-            <th>{t.configuracion.notificaciones_col_whatsapp_activo}</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {notificaciones.map((fila) => (
-            <tr key={fila.evento}>
-              <td>{t.configuracion[`notificaciones_evento_${fila.evento}`] || fila.descripcion}</td>
-              <td>
-                <input
-                  type="text"
-                  placeholder={t.configuracion.notificaciones_emails_placeholder}
-                  value={(fila.emails || []).join(', ')}
-                  onChange={(e) => set(fila.evento, 'emails', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
-                />
-              </td>
-              <td>
-                <input type="checkbox" checked={fila.activo} onChange={(e) => set(fila.evento, 'activo', e.target.checked)} />
-              </td>
-              <td>
-                <input type="checkbox" checked={fila.whatsapp_activo || false} onChange={(e) => set(fila.evento, 'whatsapp_activo', e.target.checked)} />
-              </td>
-              <td>
-                <button onClick={() => guardar(fila)} disabled={guardandoEvento === fila.evento}>
-                  {guardandoEvento === fila.evento ? t.comun.guardando : t.comun.guardar}
-                </button>
-              </td>
+    <>
+      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && notificaciones.length === 0} recargar={recargar}>
+        <table className="panel-tabla">
+          <thead>
+            <tr>
+              <th>{t.configuracion.notificaciones_col_evento}</th>
+              <th>{t.configuracion.notificaciones_col_emails}</th>
+              <th>{t.configuracion.notificaciones_col_activo}</th>
+              <th>{t.configuracion.notificaciones_col_whatsapp_activo}</th>
+              <th></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </EstadoLista>
+          </thead>
+          <tbody>
+            {notificaciones.map((fila) => (
+              <tr key={fila.evento}>
+                <td>{t.configuracion[`notificaciones_evento_${fila.evento}`] || fila.descripcion}</td>
+                <td>
+                  <input
+                    type="text"
+                    placeholder={t.configuracion.notificaciones_emails_placeholder}
+                    value={(fila.emails || []).join(', ')}
+                    onChange={(e) => set(fila.evento, 'emails', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
+                  />
+                </td>
+                <td>
+                  <input type="checkbox" checked={fila.activo} onChange={(e) => set(fila.evento, 'activo', e.target.checked)} />
+                </td>
+                <td>
+                  <input type="checkbox" checked={fila.whatsapp_activo || false} onChange={(e) => set(fila.evento, 'whatsapp_activo', e.target.checked)} />
+                </td>
+                <td>
+                  <button onClick={() => guardar(fila)} disabled={guardandoEvento === fila.evento}>
+                    {guardandoEvento === fila.evento ? t.comun.guardando : t.comun.guardar}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </EstadoLista>
+      <TabAvisoCese />
+    </>
+  );
+}
+
+function TabAvisoCese() {
+  const { t } = useLocale();
+  const { usuario } = useAuth();
+  const [config, setConfig] = useState(null);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [guardando, setGuardando] = useState(false);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    const { data, error: errorConsulta } = await supabase
+      .from('configuracion_aviso_cese_asistente')
+      .select('*')
+      .eq('prestadora_id', usuario.prestadora_id)
+      .maybeSingle();
+    if (errorConsulta) {
+      setError(errorConsulta.message);
+      setEstado('error');
+      return;
+    }
+    setConfig(data ?? { activo: true, horas_plazo_aviso_verbal: 24 });
+    setEstado('listo');
+  }, [usuario.prestadora_id]);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  async function guardar() {
+    setGuardando(true);
+    setError(null);
+    const { error: errorUpsert } = await supabase.from('configuracion_aviso_cese_asistente').upsert({
+      prestadora_id: usuario.prestadora_id,
+      activo: config.activo,
+      horas_plazo_aviso_verbal: Number(config.horas_plazo_aviso_verbal),
+    });
+    setGuardando(false);
+    if (errorUpsert) {
+      setError(errorUpsert.message);
+      return;
+    }
+    recargar();
+  }
+
+  return (
+    <div>
+      <h2>{t.configuracion.aviso_cese_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.aviso_cese_explicacion}</p>
+      <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
+        {config && (
+          <div>
+            {error && <Alert variant="error">{error}</Alert>}
+            <FormField
+              label={t.configuracion.aviso_cese_activo}
+              name="aviso_cese_activo"
+              type="checkbox"
+              checked={config.activo}
+              onChange={(e) => setConfig((c) => ({ ...c, activo: e.target.checked }))}
+            />
+            <FormField
+              label={t.configuracion.aviso_cese_horas_plazo}
+              name="aviso_cese_horas_plazo"
+              type="number"
+              value={config.horas_plazo_aviso_verbal}
+              onChange={(e) => setConfig((c) => ({ ...c, horas_plazo_aviso_verbal: e.target.value }))}
+            />
+            <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+          </div>
+        )}
+      </EstadoLista>
+    </div>
   );
 }
 

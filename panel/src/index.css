@@ -676,6 +676,23 @@ h2 {
   font-size: 0.78rem;
 }
 
+.panel-form-fila {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.6rem 0;
+}
+
+.panel-plan-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 0.9rem;
+  background: var(--fondo-alt);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
 /* ---------- Modal de detalle ---------- */
 
 .panel-modal-fondo {

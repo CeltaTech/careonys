@@ -29,6 +29,12 @@ async function planVigenteDe(prestadoraId) {
   return data?.planes ?? null;
 }
 
+async function modulosDePlan(planId) {
+  const { data, error } = await supabase.from('plan_modulos').select('modulo_key').eq('plan_id', planId);
+  if (error) throw new Error(error.message);
+  return new Set((data ?? []).map((f) => f.modulo_key));
+}
+
 // ============================================================================
 // Resumen (KPIs)
 // ============================================================================
@@ -69,7 +75,13 @@ panelAdminPlataformaRouter.get('/resumen', async (req, res) => {
 });
 
 // ============================================================================
-// Licenciatarias (lista con su plan vigente)
+// Licenciatarias (lista con su plan vigente, estado de pago, riesgo y uso —
+// Fase 6 del plan de rediseño de frontend, "Fase 7" en
+// C:\Users\Usuario\.claude\plans\distributed-scribbling-wirth.md: estado de pago
+// (vigente/vencido, derivado de facturas_licencia, sin "en reintento" porque no hay
+// pasarela real), riesgo (mismo criterio que estado de pago por ahora) y uso real
+// (conteos de Asistentes/Pacientes/usuarios del Panel, sin tope de plan — decisión del
+// Desarrollador 2026-07-22)
 // ============================================================================
 panelAdminPlataformaRouter.get('/tenants', async (req, res) => {
   const { data: prestadoras, error } = await supabase
@@ -83,15 +95,174 @@ panelAdminPlataformaRouter.get('/tenants', async (req, res) => {
     .select('prestadora_id, planes(id, nombre, precio, moneda)')
     .is('vigente_hasta', null);
   if (errorPlanes) return res.status(500).json({ error: errorPlanes.message });
-
   const planPorPrestadora = new Map(planesVigentes.map((f) => [f.prestadora_id, f.planes]));
+
+  const hoy = new Date().toISOString().slice(0, 10);
+  const { data: facturasVencidas, error: errorFacturas } = await supabase
+    .from('facturas_licencia')
+    .select('prestadora_id')
+    .neq('estado', 'pagada')
+    .lt('fecha_vencimiento', hoy);
+  if (errorFacturas) return res.status(500).json({ error: errorFacturas.message });
+  const prestadorasConVencida = new Set(facturasVencidas.map((f) => f.prestadora_id));
+
+  const [
+    { data: asistentes, error: errorAsistentes },
+    { data: pacientes, error: errorPacientes },
+    { data: usuariosPanel, error: errorUsuarios },
+  ] = await Promise.all([
+    supabase.from('asistentes').select('prestadora_id'),
+    supabase.from('pacientes').select('prestadora_id'),
+    supabase.from('usuarios').select('prestadora_id').in('rol', ['admin_prestadora', 'coordinador']),
+  ]);
+  if (errorAsistentes) return res.status(500).json({ error: errorAsistentes.message });
+  if (errorPacientes) return res.status(500).json({ error: errorPacientes.message });
+  if (errorUsuarios) return res.status(500).json({ error: errorUsuarios.message });
+
+  const contarPor = (filas) => {
+    const mapa = new Map();
+    for (const fila of filas) {
+      mapa.set(fila.prestadora_id, (mapa.get(fila.prestadora_id) ?? 0) + 1);
+    }
+    return mapa;
+  };
+  const asistentesPorPrestadora = contarPor(asistentes);
+  const pacientesPorPrestadora = contarPor(pacientes);
+  const usuariosPorPrestadora = contarPor(usuariosPanel);
 
   res.json({
     tenants: prestadoras.map((p) => ({
       ...p,
       plan: planPorPrestadora.get(p.id) ?? null,
+      estadoPago: prestadorasConVencida.has(p.id) ? 'vencido' : 'vigente',
+      riesgo: prestadorasConVencida.has(p.id),
+      uso: {
+        asistentes: asistentesPorPrestadora.get(p.id) ?? 0,
+        pacientes: pacientesPorPrestadora.get(p.id) ?? 0,
+        usuariosPanel: usuariosPorPrestadora.get(p.id) ?? 0,
+      },
     })),
   });
+});
+
+// ============================================================================
+// Preview de cambio de plan: qué funciones se ganan/pierden si se aplica un plan
+// distinto al vigente hoy — nunca se aplica un cambio de plan a ciegas (Fase 7).
+// ============================================================================
+panelAdminPlataformaRouter.get('/tenants/:id/plan-preview/:planId', async (req, res) => {
+  const { id, planId } = req.params;
+
+  const { data: activos, error: errorActivos } = await supabase
+    .from('prestadora_modulos')
+    .select('modulo_key, origen, activo')
+    .eq('prestadora_id', id);
+  if (errorActivos) return res.status(500).json({ error: errorActivos.message });
+
+  const activosKeys = new Set(activos.filter((m) => m.activo).map((m) => m.modulo_key));
+  const planActualKeys = new Set(
+    activos.filter((m) => m.activo && m.origen === 'plan').map((m) => m.modulo_key)
+  );
+
+  let nuevoPlanKeys;
+  try {
+    nuevoPlanKeys = await modulosDePlan(planId);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+
+  const { data: catalogo, error: errorCatalogo } = await supabase
+    .from('catalogo_modulos')
+    .select('key, nombre');
+  if (errorCatalogo) return res.status(500).json({ error: errorCatalogo.message });
+  const nombrePorKey = new Map(catalogo.map((m) => [m.key, m.nombre]));
+
+  const ganadas = [...nuevoPlanKeys]
+    .filter((k) => !activosKeys.has(k))
+    .map((k) => nombrePorKey.get(k) ?? k);
+  const perdidas = [...planActualKeys]
+    .filter((k) => !nuevoPlanKeys.has(k))
+    .map((k) => nombrePorKey.get(k) ?? k);
+
+  res.json({ ganadas, perdidas });
+});
+
+// Aplica el cambio de plan: cierra el prestadora_planes vigente, abre uno nuevo, y
+// sincroniza prestadora_modulos (las funciones "del plan" que ya no vienen incluidas
+// se desactivan; las nuevas se activan). Los módulos marcados como "función adicional"
+// (origen='addon') no se tocan — siguen dependiendo de la Prestadora, no del plan.
+panelAdminPlataformaRouter.patch('/tenants/:id/plan', async (req, res) => {
+  const { id } = req.params;
+  const { planId } = req.body;
+  if (!planId) return res.status(400).json({ error: 'Falta el campo "planId"' });
+
+  const { data: plan, error: errorPlan } = await supabase
+    .from('planes')
+    .select('id')
+    .eq('id', planId)
+    .is('vigente_hasta', null)
+    .maybeSingle();
+  if (errorPlan) return res.status(500).json({ error: errorPlan.message });
+  if (!plan) return res.status(404).json({ error: 'Plan no encontrado o no vigente' });
+
+  const hoy = new Date().toISOString().slice(0, 10);
+
+  const { error: errorCierre } = await supabase
+    .from('prestadora_planes')
+    .update({ vigente_hasta: hoy })
+    .eq('prestadora_id', id)
+    .is('vigente_hasta', null);
+  if (errorCierre) return res.status(500).json({ error: errorCierre.message });
+
+  const { error: errorAlta } = await supabase
+    .from('prestadora_planes')
+    .insert({ prestadora_id: id, plan_id: planId, vigente_desde: hoy });
+  if (errorAlta) return res.status(500).json({ error: errorAlta.message });
+
+  let nuevoPlanKeys;
+  try {
+    nuevoPlanKeys = await modulosDePlan(planId);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+
+  const { data: activos, error: errorActivos } = await supabase
+    .from('prestadora_modulos')
+    .select('modulo_key, origen, activo')
+    .eq('prestadora_id', id);
+  if (errorActivos) return res.status(500).json({ error: errorActivos.message });
+
+  const planActualKeys = new Set(
+    activos.filter((m) => m.activo && m.origen === 'plan').map((m) => m.modulo_key)
+  );
+  const ahoraIso = new Date().toISOString();
+
+  const filas = [
+    ...[...nuevoPlanKeys].map((key) => ({
+      prestadora_id: id,
+      modulo_key: key,
+      origen: 'plan',
+      activo: true,
+      updated_at: ahoraIso,
+    })),
+    ...[...planActualKeys]
+      .filter((key) => !nuevoPlanKeys.has(key))
+      .map((key) => ({
+        prestadora_id: id,
+        modulo_key: key,
+        origen: 'plan',
+        activo: false,
+        updated_at: ahoraIso,
+      })),
+  ];
+
+  if (filas.length) {
+    const { error: errorUpsert } = await supabase
+      .from('prestadora_modulos')
+      .upsert(filas, { onConflict: 'prestadora_id,modulo_key' });
+    if (errorUpsert) return res.status(500).json({ error: errorUpsert.message });
+  }
+
+  res.json({ ok: true });
 });
 
 // ============================================================================

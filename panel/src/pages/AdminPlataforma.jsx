@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 import { EstadoLista } from '../components/layout/EstadoLista';
+import { useConfirmarDestructivo } from '../context/TenantSessionContext';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -139,6 +140,7 @@ function TabLicenciatarias() {
               <th>{t.adminPlataforma.col_pais}</th>
               <th>{t.adminPlataforma.col_estado}</th>
               <th>{t.adminPlataforma.col_plan}</th>
+              <th>{t.adminPlataforma.col_estado_pago}</th>
               <th></th>
             </tr>
           </thead>
@@ -152,6 +154,11 @@ function TabLicenciatarias() {
                 </td>
                 <td>{tenant.plan?.nombre ?? t.adminPlataforma.sin_plan}</td>
                 <td>
+                  <span className={`badge badge-${tenant.estadoPago}`}>
+                    {t.adminPlataforma[`estado_pago_${tenant.estadoPago}`]}
+                  </span>
+                </td>
+                <td>
                   <Button variant="secondary" onClick={() => setTenantAbierto(tenant)}>
                     {t.adminPlataforma.ver_modulos}
                   </Button>
@@ -163,18 +170,30 @@ function TabLicenciatarias() {
       </EstadoLista>
 
       {tenantAbierto && (
-        <ModulosTenantModal tenant={tenantAbierto} onClose={() => setTenantAbierto(null)} />
+        <TenantDetalleModal
+          tenant={tenantAbierto}
+          onClose={() => setTenantAbierto(null)}
+          onCambiado={recargar}
+        />
       )}
     </>
   );
 }
 
-function ModulosTenantModal({ tenant, onClose }) {
+function TenantDetalleModal({ tenant, onClose, onCambiado }) {
   const { t } = useLocale();
+  const confirmarDestructivo = useConfirmarDestructivo();
   const [modulos, setModulos] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [cambiando, setCambiando] = useState(null);
+
+  const [planes, setPlanes] = useState([]);
+  const [planSeleccionado, setPlanSeleccionado] = useState('');
+  const [preview, setPreview] = useState(null);
+  const [cargandoPreview, setCargandoPreview] = useState(false);
+  const [aplicandoPlan, setAplicandoPlan] = useState(false);
+  const [errorPlan, setErrorPlan] = useState(null);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -193,6 +212,12 @@ function ModulosTenantModal({ tenant, onClose }) {
     recargar();
   }, [recargar]);
 
+  useEffect(() => {
+    llamarApi('/planes')
+      .then(({ planes: filas }) => setPlanes(filas))
+      .catch(() => setPlanes([]));
+  }, []);
+
   async function handleToggle(modulo) {
     setCambiando(modulo.key);
     setError(null);
@@ -209,10 +234,65 @@ function ModulosTenantModal({ tenant, onClose }) {
     }
   }
 
+  async function handleVerCambios() {
+    if (!planSeleccionado) return;
+    setCargandoPreview(true);
+    setErrorPlan(null);
+    setPreview(null);
+    try {
+      const resultado = await llamarApi(`/tenants/${tenant.id}/plan-preview/${planSeleccionado}`);
+      setPreview(resultado);
+    } catch (err) {
+      setErrorPlan(err.message);
+    } finally {
+      setCargandoPreview(false);
+    }
+  }
+
+  async function handleConfirmarPlan() {
+    if (!confirmarDestructivo(t.adminPlataforma.cambiar_plan_confirmar)) return;
+    setAplicandoPlan(true);
+    setErrorPlan(null);
+    try {
+      await llamarApi(`/tenants/${tenant.id}/plan`, {
+        method: 'PATCH',
+        body: JSON.stringify({ planId: planSeleccionado }),
+      });
+      setPreview(null);
+      setPlanSeleccionado('');
+      await recargar();
+      await onCambiado();
+    } catch (err) {
+      setErrorPlan(err.message);
+    } finally {
+      setAplicandoPlan(false);
+    }
+  }
+
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
       <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t.adminPlataforma.modulos_titulo.replace('{prestadora}', tenant.nombre_fantasia)}</h2>
+        <h2>{t.adminPlataforma.detalle_titulo.replace('{prestadora}', tenant.nombre_fantasia)}</h2>
+
+        {tenant.riesgo && <Alert variant="error">{t.adminPlataforma.riesgo_alerta}</Alert>}
+
+        <h3>{t.adminPlataforma.uso_titulo}</h3>
+        <div className="panel-kpis">
+          <div className="panel-kpi-card">
+            <div className="panel-kpi-valor">{tenant.uso.asistentes}</div>
+            <div className="panel-kpi-etiqueta">{t.adminPlataforma.uso_asistentes}</div>
+          </div>
+          <div className="panel-kpi-card">
+            <div className="panel-kpi-valor">{tenant.uso.pacientes}</div>
+            <div className="panel-kpi-etiqueta">{t.adminPlataforma.uso_pacientes}</div>
+          </div>
+          <div className="panel-kpi-card">
+            <div className="panel-kpi-valor">{tenant.uso.usuariosPanel}</div>
+            <div className="panel-kpi-etiqueta">{t.adminPlataforma.uso_usuarios_panel}</div>
+          </div>
+        </div>
+
+        <h3>{t.adminPlataforma.modulos_seccion_titulo}</h3>
         <p className="panel-explicacion">{t.adminPlataforma.modulos_explicacion}</p>
 
         {error && <Alert variant="error">{error}</Alert>}
@@ -240,6 +320,59 @@ function ModulosTenantModal({ tenant, onClose }) {
             ))}
           </div>
         </EstadoLista>
+
+        <h3>{t.adminPlataforma.cambiar_plan_titulo}</h3>
+        <p className="panel-explicacion">{t.adminPlataforma.cambiar_plan_explicacion}</p>
+
+        {errorPlan && <Alert variant="error">{errorPlan}</Alert>}
+
+        <div className="panel-form-fila">
+          <select
+            value={planSeleccionado}
+            onChange={(e) => {
+              setPlanSeleccionado(e.target.value);
+              setPreview(null);
+            }}
+          >
+            <option value="">{t.adminPlataforma.cambiar_plan_seleccionar}</option>
+            {planes.map((plan) => (
+              <option key={plan.id} value={plan.id}>
+                {plan.nombre}
+              </option>
+            ))}
+          </select>
+          <Button
+            variant="secondary"
+            onClick={handleVerCambios}
+            disabled={!planSeleccionado || cargandoPreview}
+          >
+            {t.adminPlataforma.cambiar_plan_ver_cambios}
+          </Button>
+        </div>
+
+        {preview && (
+          <div className="panel-plan-preview">
+            {preview.ganadas.length === 0 && preview.perdidas.length === 0 ? (
+              <p>{t.adminPlataforma.cambiar_plan_sin_cambios}</p>
+            ) : (
+              <>
+                {preview.ganadas.length > 0 && (
+                  <p>
+                    <strong>{t.adminPlataforma.cambiar_plan_ganadas}:</strong> {preview.ganadas.join(', ')}
+                  </p>
+                )}
+                {preview.perdidas.length > 0 && (
+                  <p>
+                    <strong>{t.adminPlataforma.cambiar_plan_perdidas}:</strong> {preview.perdidas.join(', ')}
+                  </p>
+                )}
+              </>
+            )}
+            <Button variant="primary" onClick={handleConfirmarPlan} disabled={aplicandoPlan}>
+              {t.adminPlataforma.cambiar_plan_confirmar}
+            </Button>
+          </div>
+        )}
 
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose}>

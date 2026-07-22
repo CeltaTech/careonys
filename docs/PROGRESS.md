@@ -26,8 +26,8 @@ AA) completa** (contraste de la paleta oklch, targets táctiles ≥44×44px, alt
 teclado/botón al arrastre en Guardias, alt-text de íconos). Ver fila 2026-07-22 de
 "Archivos creados/modificados por sesión" más abajo para el detalle completo. Verificado en
 navegador real con Playwright contra Sandbox (Prestadora Demo), `npm run build` de las 3
-apps limpio. Pendiente: commit + push y deploy explícito a Vercel del `panel` (y confirmar
-si `pwa-asistentes`/`pwa-clientes` también requieren redeploy, dado que sus `index.css`
+apps limpio. Commit `eafe015` pusheado a `main`; deploy explícito a Vercel confirmado para
+las 3 apps (`panel`, `pwa-asistentes`, `pwa-clientes` — sus `index.css`/`variables.css`
 también se tocaron en esta fase).
 
 **2026-07-21 (posterior al cierre de Etapa 4 abajo), tres tandas de trabajo no reflejadas

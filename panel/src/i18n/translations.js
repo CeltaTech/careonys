@@ -308,6 +308,8 @@ export const T = {
       solicitudes_pendientes: 'Solicitudes pendientes',
       asistentes_disponibles: 'Asistentes disponibles',
       clientes_activas: 'Clientes activas',
+      ausentes_sin_relevo: 'Ausentes sin relevo previo',
+      documentacion_por_vencer: 'Documentación por vencer',
     },
     postulaciones: {
       titulo: 'Postulaciones de Asistentes',
@@ -1233,6 +1235,8 @@ export const T = {
       solicitudes_pendientes: 'Pending requests',
       asistentes_disponibles: 'Available Integral Assistants',
       clientes_activas: 'Active families',
+      ausentes_sin_relevo: 'Absences without prior relief',
+      documentacion_por_vencer: 'Documentation about to expire',
     },
     postulaciones: {
       titulo: 'Integral Assistant Applications',
@@ -2158,6 +2162,8 @@ export const T = {
       solicitudes_pendientes: 'Solicitações pendentes',
       asistentes_disponibles: 'Assistentes disponíveis',
       clientes_activas: 'Famílias ativas',
+      ausentes_sin_relevo: 'Ausências sem revezamento prévio',
+      documentacion_por_vencer: 'Documentação a vencer',
     },
     postulaciones: {
       titulo: 'Candidaturas de Assistentes',

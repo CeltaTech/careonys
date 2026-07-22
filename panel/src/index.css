@@ -321,6 +321,16 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  text-decoration: none;
+}
+
+.metrica-card-alerta {
+  border-color: var(--naranja-alerta);
+  border-width: 2px;
+}
+
+.metrica-card-alerta .metrica-valor {
+  color: var(--naranja-alerta);
 }
 
 .metrica-valor {

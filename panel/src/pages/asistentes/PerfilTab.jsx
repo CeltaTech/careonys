@@ -81,7 +81,7 @@ export function PerfilTab({ asistente, onActualizado }) {
   return (
     <div>
       {error && <Alert variant="error">{error}</Alert>}
-      {guardado && <Alert variant="info">{t.comun.guardar} ✓</Alert>}
+      {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
 
       <FormField label={t.asistentes.col_nombre} name="nombre" value={form.nombre} onChange={(e) => set('nombre', e.target.value)} disabled={!puedeEditarIdentidad} />
       <FormField label={t.asistentes.dni} name="dni" value={form.dni} onChange={(e) => set('dni', e.target.value)} disabled={!puedeEditarIdentidad} />

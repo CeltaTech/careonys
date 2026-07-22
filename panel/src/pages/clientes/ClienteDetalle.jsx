@@ -95,12 +95,12 @@ export function ClienteDetalle() {
 
   return (
     <div>
-      <button className="link-volver" onClick={() => navigate('/clientes')}>← {t.clientes.volver_a_clientes}</button>
+      <button className="link-volver" onClick={() => navigate('/clientes')}><span aria-hidden="true">←</span> {t.clientes.volver_a_clientes}</button>
       <h1>{cliente.solicitudes?.nombre || '—'}</h1>
 
       <h2>{t.clientes.contacto}</h2>
       {errorContacto && <Alert variant="error">{errorContacto}</Alert>}
-      {contactoGuardado && <Alert variant="info">{t.comun.guardar} ✓</Alert>}
+      {contactoGuardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
       {formContacto && (
         <>
           <FormField label={t.clientes.col_nombre} name="nombre_contacto" value={formContacto.nombre} onChange={(e) => setCampoContacto('nombre', e.target.value)} disabled={!puedeEditarCliente} />

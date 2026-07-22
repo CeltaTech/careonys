@@ -4,6 +4,13 @@
   --verde-exito: oklch(0.55 0.13 165);
   --naranja-alerta: oklch(0.62 0.13 70);
   --rojo-peligro: oklch(0.58 0.15 25);
+
+  /* Variantes "-texto": mismo tono y saturación, más oscuras para llegar a 4.5:1 sobre fondo
+     blanco (WCAG AA). Usar únicamente cuando el color pinta texto — bordes, fondos de
+     alerta y acentos grandes siguen usando la variable base de arriba. */
+  --azul-medio-texto: oklch(0.567 0.13 250);
+  --verde-exito-texto: oklch(0.548 0.13 165);
+  --naranja-alerta-texto: oklch(0.575 0.13 70);
   --rojo-peligro-bg: oklch(0.92 0.05 25);
   --fondo-alt: oklch(0.98 0.004 250);
   --texto-principal: oklch(0.2 0.01 250);

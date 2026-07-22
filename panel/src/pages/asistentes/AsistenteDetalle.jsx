@@ -59,7 +59,7 @@ export function AsistenteDetalle() {
 
   return (
     <div>
-      <button className="link-volver" onClick={() => navigate('/asistentes')}>← {t.asistentes.volver_al_plantel}</button>
+      <button className="link-volver" onClick={() => navigate('/asistentes')}><span aria-hidden="true">←</span> {t.asistentes.volver_al_plantel}</button>
       <h1>{asistente.nombre}</h1>
 
       <div className="panel-tabs">

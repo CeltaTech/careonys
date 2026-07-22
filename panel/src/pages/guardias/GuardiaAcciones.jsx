@@ -8,7 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 
-export function GuardiaAcciones({ guardia, onClose, onActualizada }) {
+export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose, onActualizada }) {
   const { t } = useLocale();
   const { usuario } = useAuth();
   const confirmarDestructivo = useConfirmarDestructivo();
@@ -16,8 +16,23 @@ export function GuardiaAcciones({ guardia, onClose, onActualizada }) {
   const [cancelacionOrigen, setCancelacionOrigen] = useState('');
   const [cancelacionAlcance, setCancelacionAlcance] = useState('');
   const [avisoPrevioMotivo, setAvisoPrevioMotivo] = useState('');
+  const [nuevoAsistenteId, setNuevoAsistenteId] = useState('');
+  const [nuevaFecha, setNuevaFecha] = useState(guardia.fecha);
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState(null);
+
+  // Alternativa por teclado/botón a la reasignación por arrastre de GuardiasGrid.jsx
+  // (WCAG 2.5.7 — el drag-and-drop nunca puede ser la única forma de reasignar).
+  async function handleReasignarDesdeModal() {
+    setError(null);
+    setProcesando(true);
+    try {
+      await onReasignar(guardia.id, nuevoAsistenteId, nuevaFecha);
+    } finally {
+      setProcesando(false);
+    }
+    onClose();
+  }
 
   async function actualizar(cambios) {
     setError(null);
@@ -128,6 +143,7 @@ export function GuardiaAcciones({ guardia, onClose, onActualizada }) {
   const muestraCheckout = guardia.estado === 'activa' && !guardia.checkout_at;
   const puedeCancelar = guardia.estado === 'programada' || guardia.estado === 'activa';
   const puedeMarcarAusente = guardia.estado === 'programada';
+  const puedeReasignar = guardia.estado === 'programada' || guardia.estado === 'ausente';
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
@@ -254,6 +270,38 @@ export function GuardiaAcciones({ guardia, onClose, onActualizada }) {
           <div className="panel-resultado-calculo">
             <Button variant="secondary" onClick={handleMarcarAusente} disabled={procesando}>
               {t.guardias.detalle.marcar_ausente}
+            </Button>
+          </div>
+        )}
+
+        {puedeReasignar && (
+          <div className="panel-resultado-calculo">
+            <h3>{t.guardias.detalle.reasignar_titulo}</h3>
+            <FormField
+              label={t.guardias.detalle.reasignar_asistente}
+              name="reasignar_asistente"
+              type="select"
+              value={nuevoAsistenteId}
+              onChange={(e) => setNuevoAsistenteId(e.target.value)}
+            >
+              <option value="">{t.guardias.nueva_guardia.elegir}</option>
+              {asistentes.map((a) => (
+                <option key={a.id} value={a.id}>{a.nombre}</option>
+              ))}
+            </FormField>
+            <FormField
+              label={t.guardias.detalle.reasignar_fecha}
+              name="reasignar_fecha"
+              type="date"
+              value={nuevaFecha}
+              onChange={(e) => setNuevaFecha(e.target.value)}
+            />
+            <Button
+              variant="secondary"
+              onClick={handleReasignarDesdeModal}
+              disabled={procesando || !nuevoAsistenteId || !nuevaFecha}
+            >
+              {t.guardias.detalle.reasignar_confirmar}
             </Button>
           </div>
         )}

@@ -77,6 +77,15 @@ export function GuardiasGrid({ filas, desde, hasta, tieneAlerta, onSeleccionar, 
                     draggable
                     onDragStart={(e) => e.dataTransfer.setData('guardiaId', g.id)}
                     onClick={() => onSeleccionar(g)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onSeleccionar(g);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={t.guardias.abrir_detalle_para.replace('{asistente}', g.asistente_nombre).replace('{fecha}', g.fecha)}
                     className={`panel-guardia-chip guardia-${g.estado}`}
                   >
                     <strong>{g.hora_inicio}–{g.hora_fin}</strong>

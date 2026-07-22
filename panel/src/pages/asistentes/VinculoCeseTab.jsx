@@ -146,7 +146,13 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
                 <td>{new Date(c.fecha_cese).toLocaleDateString()}</td>
                 <td>{t.asistentes.causales[c.causal]}</td>
                 <td>{c.monto_total !== null ? `$${Number(c.monto_total).toLocaleString('es-AR')}` : '—'}</td>
-                <td>{c.revisado_por_abogado ? '✓' : <span className="badge badge-en_revision">{t.comun.no}</span>}</td>
+                <td>
+                  {c.revisado_por_abogado ? (
+                    <span className="badge badge-completada">{t.comun.si}</span>
+                  ) : (
+                    <span className="badge badge-en_revision">{t.comun.no}</span>
+                  )}
+                </td>
                 <td>
                   <Button variant="secondary" onClick={() => descargarLiquidacion(c)}>{t.asistentes.cese.descargar_liquidacion}</Button>
                   {(CAUSALES_CON_TELEGRAMA.has(c.causal) || c.causal === 'periodo_de_prueba') && (

@@ -216,7 +216,7 @@ function TabPermisos() {
 
       <h2>{t.configuracion.permisos_verificacion_titulo}</h2>
       <p className="panel-explicacion">{t.configuracion.permisos_verificacion_explicacion}</p>
-      {politicaGuardada && <Alert variant="info">{t.comun.guardar} ✓</Alert>}
+      {politicaGuardada && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
       <FormField
         label={t.configuracion.permisos_verificacion_label}
         name="politica_verificacion"
@@ -383,7 +383,7 @@ function TabEmpresa() {
       {form && (
         <div>
           {error && <Alert variant="error">{error}</Alert>}
-          {guardado && <Alert variant="info">{t.comun.guardar} ✓</Alert>}
+          {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
           <FormField label={t.configuracion.empresa_nombre} name="nombre" value={form.nombre || ''} onChange={(e) => set('nombre', e.target.value)} />
           <FormField label={t.configuracion.empresa_telefono} name="telefono" value={form.telefono || ''} onChange={(e) => set('telefono', e.target.value)} />
           <FormField label={t.configuracion.empresa_whatsapp} name="whatsapp_numero" value={form.whatsapp_numero || ''} onChange={(e) => set('whatsapp_numero', e.target.value)} />
@@ -606,7 +606,7 @@ function TabServicios() {
       <h2>{t.configuracion.servicios_horizonte_titulo}</h2>
       <p className="panel-explicacion">{t.configuracion.servicios_horizonte_explicacion}</p>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
-      {horizonteGuardado && <Alert variant="info">{t.comun.guardar} ✓</Alert>}
+      {horizonteGuardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
       <FormField
         label={t.configuracion.servicios_horizonte_dias}
         name="dias_generacion"
@@ -975,7 +975,7 @@ function TabDocumentos() {
       <h2>{t.configuracion.documentos_plazo_titulo}</h2>
       <p className="panel-explicacion">{t.configuracion.documentos_plazo_explicacion}</p>
       {error && <Alert variant="error">{error}</Alert>}
-      {plazoGuardado && <Alert variant="info">{t.comun.guardar} ✓</Alert>}
+      {plazoGuardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
       <FormField
         label={t.configuracion.documentos_plazo_dias}
         name="dias_aviso"
@@ -1324,7 +1324,7 @@ function TabWhatsappCredenciales() {
         {form && (
           <div>
             {error && <Alert variant="error">{error}</Alert>}
-            {guardado && <Alert variant="info">{t.comun.guardar} ✓</Alert>}
+            {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
             <FormField
               label={t.configuracion.whatsapp_activo}
               name="activo"
@@ -1570,7 +1570,7 @@ function TabWhatsappEscaladaCoordinador() {
         {form && (
           <div>
             {error && <Alert variant="error">{error}</Alert>}
-            {guardado && <Alert variant="info">{t.comun.guardar} ✓</Alert>}
+            {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
             <FormField
               label={t.configuracion.whatsapp_escalada_backup}
               name="coordinador_backup_id"

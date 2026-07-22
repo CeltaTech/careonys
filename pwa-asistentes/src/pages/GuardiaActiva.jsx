@@ -95,7 +95,7 @@ export default function GuardiaActiva() {
   return (
     <div>
       <Link to="/guardias" className="btn btn-secondary" style={{ marginBottom: '1rem', fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
-        ← {t.comun.volver}
+        <span aria-hidden="true">←</span> {t.comun.volver}
       </Link>
       <h1>{t.guardia_activa.paciente}: {paciente?.nombre}</h1>
       <p className="guardia-card-detalle">

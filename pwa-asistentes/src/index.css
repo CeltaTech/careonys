@@ -27,7 +27,11 @@ h2 {
 }
 
 .btn {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
   padding: 0.75rem 1.5rem;
   border-radius: 999px;
   font-weight: 600;
@@ -55,7 +59,7 @@ h2 {
 .btn-secondary {
   background: transparent;
   border-color: var(--azul-medio);
-  color: var(--azul-medio) !important;
+  color: var(--azul-medio-texto) !important;
 }
 
 .btn-exito {
@@ -206,6 +210,11 @@ h2 {
 
 .app-nav-inferior a {
   flex: 1;
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   padding: 0.75rem 0.25rem;
   color: var(--texto-secundario);
@@ -215,7 +224,7 @@ h2 {
 }
 
 .app-nav-inferior a.active {
-  color: var(--azul-medio);
+  color: var(--azul-medio-texto);
 }
 
 .estado-cargando,

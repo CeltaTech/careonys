@@ -29,7 +29,11 @@ h2 {
 /* ---------- Botones (mismo patrón que sitio-web) ---------- */
 
 .btn {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
   padding: 0.65rem 1.5rem;
   border-radius: 999px;
   font-weight: 600;
@@ -57,7 +61,7 @@ h2 {
 .btn-secondary {
   background: transparent;
   border-color: var(--azul-medio);
-  color: var(--azul-medio) !important;
+  color: var(--azul-medio-texto) !important;
 }
 
 /* ---------- Formularios ---------- */
@@ -249,7 +253,7 @@ h2 {
 .banner-sesion-tenant-salir {
   background: #FFFFFF;
   border: none;
-  color: var(--naranja-alerta);
+  color: var(--naranja-alerta-texto);
   border-radius: 999px;
   padding: 0.4rem 1rem;
   font-weight: 700;
@@ -330,7 +334,7 @@ h2 {
 }
 
 .metrica-card-alerta .metrica-valor {
-  color: var(--naranja-alerta);
+  color: var(--naranja-alerta-texto);
 }
 
 .metrica-valor {
@@ -396,7 +400,7 @@ h2 {
 .panel-tabla button {
   background: transparent;
   border: 1px solid var(--azul-medio);
-  color: var(--azul-medio);
+  color: var(--azul-medio-texto);
   border-radius: 999px;
   padding: 0.35rem 0.9rem;
   cursor: pointer;
@@ -731,7 +735,7 @@ h2 {
 .link-volver {
   background: none;
   border: none;
-  color: var(--azul-medio);
+  color: var(--azul-medio-texto);
   cursor: pointer;
   padding: 0;
   margin-bottom: 0.75rem;
@@ -885,6 +889,11 @@ h2 {
 
 .panel-guardia-chip:active {
   cursor: grabbing;
+}
+
+.panel-guardia-chip:focus-visible {
+  outline: 2px solid var(--azul-medio);
+  outline-offset: 2px;
 }
 
 /* ---------- Informe para Obra Social ---------- */

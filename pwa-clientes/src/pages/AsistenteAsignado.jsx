@@ -51,7 +51,7 @@ export default function AsistenteAsignado() {
   return (
     <div>
       <Link to={`/pacientes/${id}`} className="btn btn-secondary" style={{ marginBottom: '1rem', fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
-        ← {t.comun.volver}
+        <span aria-hidden="true">←</span> {t.comun.volver}
       </Link>
       <h1>{asistente.nombre}</h1>
       {asistente.foto_url && <img src={asistente.foto_url} alt={asistente.nombre} style={{ width: '100%', maxWidth: 200, borderRadius: '12px', marginBottom: '1rem' }} />}

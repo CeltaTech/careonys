@@ -32,7 +32,7 @@ export default function Alertas() {
   return (
     <div>
       <Link to={`/pacientes/${id}`} className="btn btn-secondary" style={{ marginBottom: '1rem', fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
-        ← {t.comun.volver}
+        <span aria-hidden="true">←</span> {t.comun.volver}
       </Link>
       <h1>{t.alertas.titulo}</h1>
       {alertas.map((a) => (

@@ -79,7 +79,7 @@ export default function EscanearAsistente() {
   return (
     <div>
       <Link to={`/pacientes/${id}/asistente`} className="btn btn-secondary" style={{ marginBottom: '1rem', fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
-        ← {t.comun.volver}
+        <span aria-hidden="true">←</span> {t.comun.volver}
       </Link>
       <h1>{t.escaneo.titulo}</h1>
 

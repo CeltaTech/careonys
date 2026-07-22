@@ -31,6 +31,7 @@ export function Guardias() {
   const [busqueda, setBusqueda] = useState('');
   const [mostrarNueva, setMostrarNueva] = useState(false);
   const [guardiaSeleccionada, setGuardiaSeleccionada] = useState(null);
+  const [asistentes, setAsistentes] = useState([]);
 
   const recargar = useCallback(async () => {
     setEstadoCarga('cargando');
@@ -54,6 +55,7 @@ export function Guardias() {
       return;
     }
 
+    setAsistentes(asistentesData ?? []);
     const asistentesPorId = Object.fromEntries((asistentesData ?? []).map((a) => [a.id, a.nombre]));
     const pacientesPorId = Object.fromEntries((pacientesData ?? []).map((p) => [p.id, p.nombre]));
 
@@ -169,6 +171,8 @@ export function Guardias() {
       {guardiaSeleccionada && (
         <GuardiaAcciones
           guardia={guardiaSeleccionada}
+          asistentes={asistentes}
+          onReasignar={handleReasignar}
           onClose={() => setGuardiaSeleccionada(null)}
           onActualizada={recargar}
         />

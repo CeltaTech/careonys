@@ -124,6 +124,16 @@ de negocio, no solo de diseño.
   --texto-principal: oklch(0.2 0.01 250);   /* cuerpo de texto */
   --texto-secundario: oklch(0.5 0.01 250);  /* labels, subtítulos */
   --borde-card: oklch(0.9 0.005 250);       /* borde 1px de tarjetas/inputs */
+
+  /* Variantes "-texto": mismo tono/saturación de su color base, más oscuras para llegar a
+     4.5:1 de contraste sobre fondo blanco (WCAG 2.1 AA, auditado con oklch->sRGB real, no
+     estimado). Usar SOLO cuando el color pinta texto; bordes, fondos de alerta y acentos
+     grandes (≥24px o UI no textual) siguen usando la variable base de arriba, que ya
+     cumple el mínimo de 3:1 para esos casos. rojo-peligro no tiene variante -texto: su
+     tono base ya da 4.61:1 sobre blanco. */
+  --azul-medio-texto: oklch(0.567 0.13 250);
+  --verde-exito-texto: oklch(0.548 0.13 165);
+  --naranja-alerta-texto: oklch(0.575 0.13 70);
 }
 ```
 

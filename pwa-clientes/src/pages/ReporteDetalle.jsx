@@ -49,7 +49,7 @@ export default function ReporteDetalle() {
   return (
     <div>
       <Link to={`/pacientes/${id}/reportes`} className="btn btn-secondary" style={{ marginBottom: '1rem', fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
-        ← {t.comun.volver}
+        <span aria-hidden="true">←</span> {t.comun.volver}
       </Link>
       <h1>{t.reporte_detalle.titulo}</h1>
       <p className="guardia-card-detalle">

@@ -145,7 +145,7 @@ export default function ReporteDiario() {
   return (
     <div>
       <Link to={`/guardias/${id}`} className="btn btn-secondary" style={{ marginBottom: '1rem', fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
-        ← {t.comun.volver}
+        <span aria-hidden="true">←</span> {t.comun.volver}
       </Link>
       <h1>{t.reporte.titulo}</h1>
       {error && <div className="alert alert-error">{error}</div>}

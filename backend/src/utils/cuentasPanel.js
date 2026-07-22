@@ -139,6 +139,55 @@ export async function crearAsistenteDirecto({
   }
 }
 
+// Invita a una persona a las personas autorizadas de un Cliente ya existente (Fase 5): crea su
+// cuenta con `crearCuentaConPerfil` igual que cualquier otro rol de login propio, y en vez
+// de una fila en `clientes` (eso es solo para el titular) crea la fila en `miembros_cliente`
+// que la vincula. Rol fijo `solo_lectura` — es el único que existe hoy (ver
+// schema_personas autorizadas_cuidado.sql).
+export async function invitarMiembroPersonasAutorizadas({ email, nombre, telefono, clienteId, prestadoraId, invitadoPor }) {
+  if (!nombre || !email || !clienteId) {
+    throw new Error('Faltan datos obligatorios (nombre, email, clienteId)');
+  }
+
+  let miembroId;
+  try {
+    ({ userId: miembroId } = await crearCuentaConPerfil({
+      email, nombre, telefono, rol: 'cliente', prestadoraId,
+    }));
+
+    const { error: errorMiembro } = await supabase
+      .from('miembros_cliente')
+      .insert({ usuario_id: miembroId, cliente_id: clienteId, email, rol: 'solo_lectura', creado_por: invitadoPor });
+    if (errorMiembro) throw new Error(errorMiembro.message);
+
+    return { miembroId };
+  } catch (error) {
+    if (miembroId) {
+      await supabase.from('miembros_cliente').delete().eq('usuario_id', miembroId);
+      await borrarCuenta(miembroId, { prestadoraId });
+    }
+    throw error;
+  }
+}
+
+// Revoca el acceso de un miembro invitado de las personas autorizadas — borra su fila en
+// `miembros_cliente` (RLS/`ON DELETE CASCADE` no alcanza porque el borrado real es la
+// cuenta completa, no la fila) y su cuenta, reutilizando `borrarCuenta` para no duplicar la
+// validación de tenant que ya hace esa función.
+export async function revocarMiembroPersonasAutorizadas(usuarioId, { prestadoraId, clienteId }) {
+  const { data: miembro, error: errorMiembro } = await supabase
+    .from('miembros_cliente')
+    .select('cliente_id')
+    .eq('usuario_id', usuarioId)
+    .single();
+  if (errorMiembro || !miembro || miembro.cliente_id !== clienteId) {
+    throw new Error('Esta persona no pertenece a las personas autorizadas de esta Cliente');
+  }
+
+  await supabase.from('miembros_cliente').delete().eq('usuario_id', usuarioId);
+  await borrarCuenta(usuarioId, { prestadoraId });
+}
+
 // Lógica de alta manual de Cliente+Paciente, extraída de panelCuentas.js (ruta
 // /cliente-directa) por el mismo motivo que crearAsistenteDirecto de arriba.
 export async function crearClienteDirecta({

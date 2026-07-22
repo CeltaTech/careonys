@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
 import { usePermisos } from '../../context/PermisosContext';
+import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
 import { esAdminOSuperior } from '../../lib/roles';
 import { linkWhatsapp } from '../../lib/telefono';
 import { supabase } from '../../lib/supabaseClient';
@@ -13,6 +14,9 @@ import { PrestacionesPaciente } from './PrestacionesPaciente';
 import { EditarPacienteModal } from './EditarPacienteModal';
 import { NuevoPacienteModal } from './NuevoPacienteModal';
 import { MonitoreoVitalesPaciente } from './MonitoreoVitalesPaciente';
+import { InvitarPersonasAutorizadasModal } from './InvitarPersonasAutorizadasModal';
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 export function ClienteDetalle() {
   const { t } = useLocale();
@@ -20,6 +24,7 @@ export function ClienteDetalle() {
   const navigate = useNavigate();
   const { usuario } = useAuth();
   const { puede } = usePermisos();
+  const confirmarDestructivo = useConfirmarDestructivo();
   const esAdmin = esAdminOSuperior(usuario?.rol);
   const puedeEditarCliente = esAdmin || puede('editar_datos_cliente');
   const puedeEditarPaciente = esAdmin || puede('editar_datos_paciente');
@@ -34,6 +39,11 @@ export function ClienteDetalle() {
   const [guardandoContacto, setGuardandoContacto] = useState(false);
   const [errorContacto, setErrorContacto] = useState(null);
   const [contactoGuardado, setContactoGuardado] = useState(false);
+  const [personas autorizadas, setPersonasAutorizadas] = useState(null);
+  const [estadoPersonasAutorizadas, setEstadoPersonasAutorizadas] = useState('cargando');
+  const [errorPersonasAutorizadas, setErrorPersonasAutorizadas] = useState(null);
+  const [mostrarInvitarPersonasAutorizadas, setMostrarInvitarPersonasAutorizadas] = useState(false);
+  const [quitandoUsuarioId, setQuitandoUsuarioId] = useState(null);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -61,9 +71,53 @@ export function ClienteDetalle() {
     setEstado('listo');
   }, [id]);
 
+  const recargarPersonasAutorizadas = useCallback(async () => {
+    setEstadoPersonasAutorizadas('cargando');
+    setErrorPersonasAutorizadas(null);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const respuesta = await fetch(`${API_URL}/api/panel/cuentas/cliente/${id}/personas autorizadas`, {
+        headers: { Authorization: `Bearer ${data.session?.access_token}` },
+      });
+      const resultado = await respuesta.json();
+      if (!respuesta.ok) {
+        throw new Error(resultado.error);
+      }
+      setPersonasAutorizadas(resultado.miembros);
+      setEstadoPersonasAutorizadas(resultado.miembros.length ? 'listo' : 'vacio');
+    } catch {
+      setErrorPersonasAutorizadas(t.comun.error_generico);
+      setEstadoPersonasAutorizadas('error');
+    }
+  }, [id, t]);
+
   useEffect(() => {
     recargar();
-  }, [recargar]);
+    recargarPersonasAutorizadas();
+  }, [recargar, recargarPersonasAutorizadas]);
+
+  async function quitarMiembroPersonasAutorizadas(usuarioId) {
+    if (!confirmarDestructivo(t.clientes.personas autorizadas.quitar_confirmacion)) {
+      return;
+    }
+    setQuitandoUsuarioId(usuarioId);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const respuesta = await fetch(`${API_URL}/api/panel/cuentas/cliente/${id}/personas autorizadas/${usuarioId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${data.session?.access_token}` },
+      });
+      const resultado = await respuesta.json();
+      if (!respuesta.ok) {
+        throw new Error(resultado.error || t.clientes.personas autorizadas.quitar_error);
+      }
+      recargarPersonasAutorizadas();
+    } catch (err) {
+      setErrorPersonasAutorizadas(err.message);
+    } finally {
+      setQuitandoUsuarioId(null);
+    }
+  }
 
   function setCampoContacto(campo, valor) {
     setFormContacto((f) => ({ ...f, [campo]: valor }));
@@ -170,6 +224,50 @@ export function ClienteDetalle() {
         </Button>
       )}
 
+      <h2>{t.clientes.personas autorizadas.titulo}</h2>
+      <p className="panel-explicacion">{t.clientes.personas autorizadas.descripcion}</p>
+      {estadoPersonasAutorizadas === 'cargando' && <p className="estado-cargando">{t.comun.cargando}</p>}
+      {estadoPersonasAutorizadas === 'error' && <p className="estado-vacio">{errorPersonasAutorizadas || t.comun.error_generico}</p>}
+      {estadoPersonasAutorizadas === 'vacio' && <p className="estado-vacio">{t.clientes.personas autorizadas.sin_miembros}</p>}
+      {estadoPersonasAutorizadas === 'listo' && (
+        <table className="panel-tabla">
+          <thead>
+            <tr>
+              <th>{t.clientes.personas autorizadas.col_nombre}</th>
+              <th>{t.clientes.personas autorizadas.col_email}</th>
+              <th>{t.clientes.personas autorizadas.col_rol}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {personas autorizadas.map((m) => (
+              <tr key={m.usuario_id}>
+                <td>{m.usuarios?.nombre || '—'}</td>
+                <td>{m.email || '—'}</td>
+                <td>{t.clientes.personas autorizadas.rol_solo_lectura}</td>
+                <td>
+                  {puedeEditarCliente && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => quitarMiembroPersonasAutorizadas(m.usuario_id)}
+                      disabled={quitandoUsuarioId === m.usuario_id}
+                    >
+                      {t.clientes.personas autorizadas.quitar}
+                    </Button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {errorPersonasAutorizadas && estadoPersonasAutorizadas === 'listo' && <Alert variant="error">{errorPersonasAutorizadas}</Alert>}
+      {puedeEditarCliente && (
+        <Button variant="secondary" onClick={() => setMostrarInvitarPersonasAutorizadas(true)}>
+          {t.clientes.personas autorizadas.agregar}
+        </Button>
+      )}
+
       <h2>{t.clientes.guardias_activas}</h2>
       <p className="estado-vacio">{t.clientes.modulo_no_disponible}</p>
 
@@ -205,6 +303,17 @@ export function ClienteDetalle() {
           onCreado={() => {
             setMostrarNuevoPaciente(false);
             recargar();
+          }}
+        />
+      )}
+
+      {mostrarInvitarPersonasAutorizadas && (
+        <InvitarPersonasAutorizadasModal
+          clienteId={cliente.id}
+          onClose={() => setMostrarInvitarPersonasAutorizadas(false)}
+          onInvitado={() => {
+            setMostrarInvitarPersonasAutorizadas(false);
+            recargarPersonasAutorizadas();
           }}
         />
       )}

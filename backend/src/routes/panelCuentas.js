@@ -1,7 +1,14 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
-import { crearCuentaConPerfil, borrarCuenta, crearAsistenteDirecto, crearClienteDirecta } from '../utils/cuentasPanel.js';
+import {
+  crearCuentaConPerfil,
+  borrarCuenta,
+  crearAsistenteDirecto,
+  crearClienteDirecta,
+  invitarMiembroPersonasAutorizadas,
+  revocarMiembroPersonasAutorizadas,
+} from '../utils/cuentasPanel.js';
 import { tienePermiso, ACCIONES_PERMISOS } from '../utils/permisos.js';
 
 export const panelCuentasRouter = Router();
@@ -241,5 +248,81 @@ panelCuentasRouter.post('/asistente-directo', requiereRolPanel, requierePermiso(
     res.json({ ok: true, asistenteId });
   } catch (error) {
     res.status(error.message.startsWith('Faltan datos') ? 400 : 500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// Personas autorizadas (Fase 5) — reutiliza el permiso 'editar_datos_cliente' ya existente:
+// gestionar quién más tiene acceso al Cliente es parte de administrar sus datos, no una
+// acción nueva (ver docs/claude_history.md).
+// ============================================================================
+
+panelCuentasRouter.get('/cliente/:clienteId/personas autorizadas', requiereRolPanel, requierePermiso('editar_datos_cliente'), async (req, res) => {
+  let queryCliente = supabase.from('clientes').select('id').eq('id', req.params.clienteId);
+  if (req.usuarioPanel.rol !== 'superadmin') {
+    queryCliente = queryCliente.eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  }
+  const { data: cliente } = await queryCliente.maybeSingle();
+  if (!cliente) {
+    return res.status(404).json({ error: 'Cliente no encontrada' });
+  }
+
+  const { data: miembros, error } = await supabase
+    .from('miembros_cliente')
+    .select('usuario_id, email, rol, created_at, usuarios!miembros_cliente_usuario_id_fkey(nombre)')
+    .eq('cliente_id', req.params.clienteId)
+    .order('created_at', { ascending: true });
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
+  res.json({ miembros: miembros || [] });
+});
+
+panelCuentasRouter.post('/cliente/:clienteId/personas autorizadas', requiereRolPanel, requierePermiso('editar_datos_cliente'), async (req, res) => {
+  const { nombre, email, telefono } = req.body || {};
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+
+  let queryCliente = supabase.from('clientes').select('id').eq('id', req.params.clienteId);
+  if (req.usuarioPanel.rol !== 'superadmin') {
+    queryCliente = queryCliente.eq('prestadora_id', prestadoraId);
+  }
+  const { data: cliente } = await queryCliente.maybeSingle();
+  if (!cliente) {
+    return res.status(404).json({ error: 'Cliente no encontrada' });
+  }
+
+  try {
+    const { miembroId } = await invitarMiembroPersonasAutorizadas({
+      email,
+      nombre,
+      telefono,
+      clienteId: req.params.clienteId,
+      prestadoraId,
+      invitadoPor: req.usuarioPanel.id,
+    });
+    res.json({ ok: true, usuarioId: miembroId });
+  } catch (error) {
+    res.status(error.message.startsWith('Faltan datos') ? 400 : 500).json({ error: error.message });
+  }
+});
+
+panelCuentasRouter.delete('/cliente/:clienteId/personas autorizadas/:usuarioId', requiereRolPanel, requierePermiso('editar_datos_cliente'), async (req, res) => {
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+
+  let queryCliente = supabase.from('clientes').select('id').eq('id', req.params.clienteId);
+  if (req.usuarioPanel.rol !== 'superadmin') {
+    queryCliente = queryCliente.eq('prestadora_id', prestadoraId);
+  }
+  const { data: cliente } = await queryCliente.maybeSingle();
+  if (!cliente) {
+    return res.status(404).json({ error: 'Cliente no encontrada' });
+  }
+
+  try {
+    await revocarMiembroPersonasAutorizadas(req.params.usuarioId, { prestadoraId, clienteId: req.params.clienteId });
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
   }
 });

@@ -9,6 +9,7 @@ import Reportes from './pages/Reportes';
 import ReporteDetalle from './pages/ReporteDetalle';
 import Alertas from './pages/Alertas';
 import AsistenteAsignado from './pages/AsistenteAsignado';
+import EscanearAsistente from './pages/EscanearAsistente';
 import MiPerfil from './pages/MiPerfil';
 
 function RutaPrivada({ children }) {
@@ -42,6 +43,7 @@ function Rutas() {
         <Route path="pacientes/:id/reportes/:reporteId" element={<ReporteDetalle />} />
         <Route path="pacientes/:id/alertas" element={<Alertas />} />
         <Route path="pacientes/:id/asistente" element={<AsistenteAsignado />} />
+        <Route path="pacientes/:id/escanear-asistente" element={<EscanearAsistente />} />
         <Route path="perfil" element={<MiPerfil />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

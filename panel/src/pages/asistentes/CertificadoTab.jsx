@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
-import { useEmpresa } from '../../context/EmpresaContext';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
@@ -11,8 +10,6 @@ import { EstadoLista } from '../../components/layout/EstadoLista';
 export function CertificadoTab({ asistente }) {
   const { t } = useLocale();
   const { usuario } = useAuth();
-  const { empresa } = useEmpresa();
-  const siteUrl = import.meta.env.VITE_SITE_URL || (empresa?.dominio ? `https://${empresa.dominio}` : '');
   const [certificado, setCertificado] = useState(null);
   const [qrDataUrl, setQrDataUrl] = useState(null);
   const [estado, setEstado] = useState('cargando');
@@ -35,12 +32,11 @@ export function CertificadoTab({ asistente }) {
       return;
     }
     setCertificado(data);
-    if (data && siteUrl) {
-      const url = `${siteUrl}/asistente/${asistente.qr_token}`;
-      setQrDataUrl(await QRCode.toDataURL(url, { width: 280, margin: 1 }));
+    if (data && asistente.qr_token) {
+      setQrDataUrl(await QRCode.toDataURL(asistente.qr_token, { width: 280, margin: 1 }));
     }
     setEstado('listo');
-  }, [asistente.id, asistente.qr_token, siteUrl]);
+  }, [asistente.id, asistente.qr_token]);
 
   useEffect(() => {
     recargar();

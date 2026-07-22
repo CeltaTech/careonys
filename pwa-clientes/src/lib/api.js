@@ -31,6 +31,7 @@ export const api = {
   reportesDelPaciente: (id) => pedido(`/pacientes/${id}/reportes`),
   alertasDelPaciente: (id) => pedido(`/pacientes/${id}/alertas`),
   asistenteDelPaciente: (id) => pedido(`/pacientes/${id}/asistente`),
+  verificarAsistente: (pacienteId, qrToken) => pedido(`/pacientes/${pacienteId}/verificar-asistente/${encodeURIComponent(qrToken)}`),
   calificar: (guardiaId, datos) => pedido(`/guardias/${guardiaId}/calificar`, { method: 'POST', body: JSON.stringify(datos) }),
   suscribirPush: (suscripcion) => pedido('/push/suscribir', { method: 'POST', body: JSON.stringify(suscripcion) }),
   desuscribirPush: (endpoint) => pedido('/push/suscribir', { method: 'DELETE', body: JSON.stringify({ endpoint }) }),

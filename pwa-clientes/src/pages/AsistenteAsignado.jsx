@@ -62,6 +62,10 @@ export default function AsistenteAsignado() {
         {certificado ? t.asistente.certificado_vigente : t.asistente.certificado_vencido}
       </p>
 
+      <Link to={`/pacientes/${id}/escanear-asistente`} className="btn btn-primary btn-full" style={{ marginTop: '1rem' }}>
+        {t.asistente.escanear_boton}
+      </Link>
+
       <h2 style={{ marginTop: '1.5rem' }}>{t.asistente.evaluaciones_titulo}</h2>
       {evaluaciones.length === 0 ? (
         <div className="estado-vacio">{t.asistente.sin_evaluaciones}</div>

@@ -464,7 +464,7 @@ export const T = {
         fecha_emision: 'Fecha de emisión',
         fecha_vencimiento: 'Fecha de vencimiento',
         descargar_qr: 'Descargar QR',
-        nota_pagina_publica: 'La página pública que este QR va a mostrar todavía no existe — se construye en otra etapa del proyecto.',
+        nota_pagina_publica: 'Este QR se lee desde la app del Cliente (opción "Escanear Asistente"), no desde una página pública. Confirma si el Asistente es el asignado a la guardia de hoy.',
       },
       cese: {
         fecha: 'Fecha del cese',
@@ -1389,7 +1389,7 @@ export const T = {
         fecha_emision: 'Issue date',
         fecha_vencimiento: 'Expiry date',
         descargar_qr: 'Download QR',
-        nota_pagina_publica: 'The public page this QR will show does not exist yet — it will be built in a later project stage.',
+        nota_pagina_publica: 'This QR is read from the Family app ("Scan Caregiver" option), not from a public page. It confirms whether the Caregiver is the one assigned to today\'s shift.',
       },
       cese: {
         fecha: 'Termination date',
@@ -2314,7 +2314,7 @@ export const T = {
         fecha_emision: 'Data de emissão',
         fecha_vencimiento: 'Data de vencimento',
         descargar_qr: 'Baixar QR',
-        nota_pagina_publica: 'A página pública que este QR vai mostrar ainda não existe — será construída em outra etapa do projeto.',
+        nota_pagina_publica: 'Este QR é lido pelo app da Família (opção "Escanear Cuidador"), não por uma página pública. Confirma se o Cuidador é o designado para o plantão de hoje.',
       },
       cese: {
         fecha: 'Data do desligamento',

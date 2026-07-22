@@ -215,6 +215,76 @@ appClientesRouter.get('/pacientes/:id/asistente', requiereRolCliente, async (req
 });
 
 // ============================================================================
+// Escanear Asistente: verifica que el qr_token escaneado corresponda al Asistente
+// asignado a la guardia de HOY de ese Paciente (Etapa 6, rediseñada 2026-07-22,
+// ver docs/claude_history.md).
+// ============================================================================
+
+appClientesRouter.get('/pacientes/:id/verificar-asistente/:qrToken', requiereRolCliente, async (req, res) => {
+  const paciente = await pacienteDeLaCliente(req.params.id, req.usuarioCliente);
+  if (!paciente) {
+    return res.status(404).json({ error: 'Paciente no encontrado' });
+  }
+
+  const { data: asistenteEscaneado } = await supabase
+    .from('asistentes')
+    .select('id, nombre, foto_url, especialidades')
+    .eq('qr_token', req.params.qrToken)
+    .eq('prestadora_id', paciente.prestadora_id)
+    .maybeSingle();
+
+  if (!asistenteEscaneado) {
+    return res.status(404).json({ error: 'qr_no_reconocido' });
+  }
+
+  const hoyISO = new Date().toISOString().slice(0, 10);
+
+  const { data: guardiaHoy } = await supabase
+    .from('guardias')
+    .select('id, estado, hora_inicio, hora_fin, asistente_id')
+    .eq('paciente_id', paciente.id)
+    .eq('fecha', hoyISO)
+    .not('asistente_id', 'is', null)
+    .order('hora_inicio', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (!guardiaHoy) {
+    return res.json({
+      coincide: false,
+      motivo: 'sin_guardia_hoy',
+      asistenteEscaneado,
+      guardia: null,
+      certificado: null,
+    });
+  }
+
+  const coincide = guardiaHoy.asistente_id === asistenteEscaneado.id;
+
+  const { data: certificado } = await supabase
+    .from('certificados')
+    .select('activo, fecha_vencimiento')
+    .eq('asistente_id', asistenteEscaneado.id)
+    .eq('activo', true)
+    .order('fecha_vencimiento', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  res.json({
+    coincide,
+    motivo: coincide ? 'asignado' : 'no_asignado',
+    asistenteEscaneado,
+    guardia: {
+      id: guardiaHoy.id,
+      estado: guardiaHoy.estado,
+      horaInicio: guardiaHoy.hora_inicio,
+      horaFin: guardiaHoy.hora_fin,
+    },
+    certificado: certificado || null,
+  });
+});
+
+// ============================================================================
 // Calificación del Asistente al cierre de una guardia (tabla calificaciones_asistente,
 // ya existente desde el pendiente #13(b)).
 // ============================================================================

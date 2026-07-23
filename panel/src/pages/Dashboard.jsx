@@ -2,9 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
+import { useTenantSession } from '../context/TenantSessionContext';
 import { esAdminOSuperior } from '../lib/roles';
 import { useSupabaseTable } from '../hooks/useSupabaseTable';
 import { EstadoLista } from '../components/layout/EstadoLista';
+import { Button } from '../components/ui/Button';
+import { Alert } from '../components/ui/Alert';
 import { supabase } from '../lib/supabaseClient';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -20,6 +23,19 @@ async function obtenerDiasAvisoDocumentos() {
   const resultado = await respuesta.json();
   if (!respuesta.ok) throw new Error(resultado.error);
   return resultado.dias_aviso_vencimiento_documentos;
+}
+
+// Reutiliza el mismo endpoint que ya usa UsuariosPanel.jsx (backend/src/routes/panelUsuarios.js)
+// en vez de crear una ruta nueva solo para contar — es la única fuente de verdad de "quién es
+// parte del equipo de esta Prestadora" (Regla 12).
+async function obtenerUsuariosEquipo() {
+  const { data } = await supabase.auth.getSession();
+  const respuesta = await fetch(`${API_URL}/api/panel/usuarios`, {
+    headers: { Authorization: `Bearer ${data.session?.access_token}` },
+  });
+  const resultado = await respuesta.json();
+  if (!respuesta.ok) throw new Error(resultado.error);
+  return resultado.usuarios;
 }
 
 function esHoy(fechaIso) {
@@ -44,7 +60,14 @@ function esEstaSemana(fechaIso) {
 export function Dashboard() {
   const { t } = useLocale();
   const { usuario } = useAuth();
+  const { sesion } = useTenantSession();
   const esAdmin = esAdminOSuperior(usuario?.rol);
+  // Admin_plataforma sin sesión de tenant activa no está "dentro" de ninguna Prestadora — no
+  // hay contexto de configuración inicial que mostrar (ver requiereAdminOSuperior en
+  // panelUsuarios.js, mismo criterio). Admin_prestadora/superadmin siempre tienen su propia
+  // Prestadora (Sandbox en el caso de superadmin).
+  const mostrarOnboarding = esAdmin && (usuario?.rol !== 'admin_plataforma' || sesion !== null);
+  const onboardingInformativo = usuario?.rol === 'admin_plataforma';
   const postulaciones = useSupabaseTable('postulaciones');
   const solicitudes = useSupabaseTable('solicitudes');
   // Coordinador consulta la vista sin vínculo laboral/score de riesgo — ver schema_etapa2i.sql.
@@ -107,6 +130,28 @@ export function Dashboard() {
     cargarAlertas();
   }, [cargarAlertas]);
 
+  const [equipoEstado, setEquipoEstado] = useState('cargando');
+  const [equipoTieneCoordinador, setEquipoTieneCoordinador] = useState(false);
+  const [errorEquipo, setErrorEquipo] = useState(null);
+
+  const cargarEquipo = useCallback(async () => {
+    if (!mostrarOnboarding) return;
+    setEquipoEstado('cargando');
+    setErrorEquipo(null);
+    try {
+      const usuariosEquipo = await obtenerUsuariosEquipo();
+      setEquipoTieneCoordinador(usuariosEquipo.some((u) => u.rol === 'coordinador'));
+      setEquipoEstado('listo');
+    } catch (err) {
+      setErrorEquipo(err.message);
+      setEquipoEstado('error');
+    }
+  }, [mostrarOnboarding]);
+
+  useEffect(() => {
+    cargarEquipo();
+  }, [cargarEquipo]);
+
   const estados = [postulaciones.estado, solicitudes.estado, asistentes.estado, clientes.estado];
   const estadoGeneral = estados.includes('error')
     ? 'error'
@@ -123,6 +168,19 @@ export function Dashboard() {
   return (
     <div>
       <h1>{t.dashboard.titulo}</h1>
+
+      {mostrarOnboarding && (
+        <OnboardingChecklist
+          informativo={onboardingInformativo}
+          pasoAsistenteHecho={asistentes.filas.length > 0}
+          pasoClienteHecho={clientes.filas.length > 0}
+          equipoEstado={equipoEstado}
+          errorEquipo={errorEquipo}
+          pasoEquipoHecho={equipoTieneCoordinador}
+          recargarEquipo={cargarEquipo}
+        />
+      )}
+
       <EstadoLista
         estado={estadoGeneral}
         error={postulaciones.error || solicitudes.error || asistentes.error || clientes.error}
@@ -175,6 +233,103 @@ export function Dashboard() {
           </Link>
         </div>
       </EstadoLista>
+    </div>
+  );
+}
+
+// Checklist de configuración inicial (Fase 8 del rediseño de frontend). Se deriva en vivo de
+// datos que ya se cargan en otro lugar (Asistentes/Clientes del propio Dashboard, usuarios del
+// equipo vía el mismo endpoint que UsuariosPanel.jsx) — nunca de una tabla de "hitos" nueva,
+// para no duplicar la fuente de verdad de "¿esta Prestadora ya cargó su primer X?" (Regla 12).
+// Se oculta sola cuando los 3 pasos están completos, no tiene botón de "descartar" manual.
+function OnboardingChecklist({
+  informativo,
+  pasoAsistenteHecho,
+  pasoClienteHecho,
+  equipoEstado,
+  errorEquipo,
+  pasoEquipoHecho,
+  recargarEquipo,
+}) {
+  const { t } = useLocale();
+
+  if (equipoEstado === 'cargando') {
+    return <p className="estado-cargando">{t.comun.cargando}</p>;
+  }
+
+  if (equipoEstado === 'error') {
+    return (
+      <Alert variant="error">
+        {errorEquipo || t.comun.error_generico}{' '}
+        <Button variant="secondary" onClick={recargarEquipo}>
+          {t.comun.reintentar}
+        </Button>
+      </Alert>
+    );
+  }
+
+  const pasos = [
+    {
+      key: 'asistente',
+      hecho: pasoAsistenteHecho,
+      ruta: '/asistentes',
+      titulo: t.onboarding.paso_asistente_titulo,
+      explicacion: t.onboarding.paso_asistente_explicacion,
+      cta: t.onboarding.paso_asistente_cta,
+    },
+    {
+      key: 'cliente',
+      hecho: pasoClienteHecho,
+      ruta: '/clientes',
+      titulo: t.onboarding.paso_cliente_titulo,
+      explicacion: t.onboarding.paso_cliente_explicacion,
+      cta: t.onboarding.paso_cliente_cta,
+    },
+    {
+      key: 'equipo',
+      hecho: pasoEquipoHecho,
+      ruta: '/usuarios-panel',
+      titulo: t.onboarding.paso_equipo_titulo,
+      explicacion: t.onboarding.paso_equipo_explicacion,
+      cta: t.onboarding.paso_equipo_cta,
+    },
+  ];
+
+  const completados = pasos.filter((p) => p.hecho).length;
+  if (completados === pasos.length) return null;
+
+  const porcentaje = Math.round((completados / pasos.length) * 100);
+
+  return (
+    <div className="onboarding-checklist">
+      <div className="onboarding-checklist-header">
+        <h2>{informativo ? t.onboarding.titulo_informativo : t.onboarding.titulo}</h2>
+        <span className="onboarding-checklist-fraccion">
+          {t.onboarding.completados.replace('{n}', completados).replace('{total}', pasos.length)}
+        </span>
+      </div>
+      <div className="onboarding-checklist-barra">
+        <div className="onboarding-checklist-barra-relleno" style={{ width: `${porcentaje}%` }} />
+      </div>
+      <ul className="onboarding-checklist-pasos">
+        {pasos.map((paso) => (
+          <li key={paso.key} className={`onboarding-paso${paso.hecho ? ' onboarding-paso-hecho' : ''}`}>
+            <div className="onboarding-paso-info">
+              <span className="onboarding-paso-titulo">{paso.titulo}</span>
+              <span className="onboarding-paso-explicacion">{paso.explicacion}</span>
+            </div>
+            {paso.hecho ? (
+              <span className="badge badge-aprobado">{t.onboarding.paso_completado}</span>
+            ) : (
+              !informativo && (
+                <Link to={paso.ruta} className="btn btn-secondary">
+                  {paso.cta}
+                </Link>
+              )
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

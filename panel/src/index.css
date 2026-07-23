@@ -309,6 +309,87 @@ h2 {
   text-align: center;
 }
 
+/* ---------- Checklist de configuración inicial (onboarding) ---------- */
+
+.onboarding-checklist {
+  background: #FFFFFF;
+  border: 1px solid var(--borde-card);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.onboarding-checklist-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.onboarding-checklist-header h2 {
+  margin: 0;
+}
+
+.onboarding-checklist-fraccion {
+  color: var(--texto-secundario);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.onboarding-checklist-barra {
+  background: var(--fondo-alt);
+  border-radius: 999px;
+  height: 8px;
+  margin: 0.75rem 0 1.1rem;
+  overflow: hidden;
+}
+
+.onboarding-checklist-barra-relleno {
+  background: var(--azul-medio);
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.onboarding-checklist-pasos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.onboarding-paso {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0.9rem;
+  background: var(--fondo-alt);
+  border-radius: 8px;
+}
+
+.onboarding-paso-hecho {
+  opacity: 0.7;
+}
+
+.onboarding-paso-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.onboarding-paso-titulo {
+  font-weight: 600;
+  color: var(--texto-principal);
+}
+
+.onboarding-paso-explicacion {
+  color: var(--texto-secundario);
+  font-size: 0.85rem;
+}
+
 /* ---------- Métricas del dashboard ---------- */
 
 .dashboard-metricas {
@@ -374,6 +455,17 @@ h2 {
   padding: 2rem;
   text-align: center;
   color: var(--texto-secundario);
+}
+
+.estado-vacio-bloque {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.estado-vacio-bloque .estado-vacio {
+  padding-bottom: 0;
 }
 
 .panel-tabla {

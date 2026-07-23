@@ -81,7 +81,18 @@ export function Clientes() {
         />
       )}
 
-      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && filasFiltradas.length === 0} recargar={recargar}>
+      <EstadoLista
+        estado={estado}
+        error={error}
+        vacio={estado === 'listo' && filasFiltradas.length === 0}
+        recargar={recargar}
+        mensajeVacio={filas.length === 0 ? t.clientes.vacio_texto : undefined}
+        accionVacio={
+          filas.length === 0 && puedeAltaManual ? (
+            <Button onClick={() => setMostrarNueva(true)}>{t.clientes.nueva.titulo}</Button>
+          ) : undefined
+        }
+      >
         <table className="panel-tabla">
           <thead>
             <tr>

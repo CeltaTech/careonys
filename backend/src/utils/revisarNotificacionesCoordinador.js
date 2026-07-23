@@ -1,5 +1,7 @@
 import { supabase } from '../db/connection.js';
-import { notificarCoordinador } from './whatsapp.js';
+import { notificarCoordinador, enviarWhatsApp } from './whatsapp.js';
+import { enviarPushCliente } from './push.js';
+import { configuracionEvento } from './email.js';
 
 // Punto 5 de docs/PRD_06_WhatsApp_IA.md: insistencia al Coordinador según premura, con
 // coordinador de respaldo si no hay reacción, parametrizado por prestadora
@@ -110,12 +112,16 @@ async function revisarIncidentes(config, ahora) {
     const intervalo = intervaloParaPremura(umbrales, minutosPremura);
 
     if (necesitaNotificar({ ultimaNotificacionAt: incidente.ultima_notificacion_at, intervaloMinutos: intervalo, ahora })) {
+      const texto = `Guardia ${incidente.guardia_entrante_id}, nivel de escalada actual: ${incidente.nivel_actual}. Sin resolver hace ${Math.round(minutosPremura)} minutos.`;
+
       await notificarCoordinador({
         evento: 'incidente_relevo_sin_resolver',
         prestadoraId,
         asunto: 'Incidente de continuidad de guardia sin resolver',
-        texto: `Guardia ${incidente.guardia_entrante_id}, nivel de escalada actual: ${incidente.nivel_actual}. Sin resolver hace ${Math.round(minutosPremura)} minutos.`,
+        texto,
       });
+
+      await notificarClienteSiCorresponde({ prestadoraId, guardiaEntranteId: incidente.guardia_entrante_id, texto });
 
       await supabase
         .from('incidentes_relevo')
@@ -145,6 +151,51 @@ async function revisarIncidentes(config, ahora) {
         texto: `Guardia ${incidente.guardia_entrante_id} superó el umbral de fase automática (${minutosAntesFaseAutomatica} minutos) sin resolverse. El envío automático a Asistentes todavía no está activo — requiere acción manual.`,
       });
       await supabase.from('incidentes_relevo').update({ fase_automatica_notificada_at: ahora.toISOString() }).eq('id', incidente.id);
+    }
+  }
+}
+
+// Fase 11: "Ausente sin relevo previo" es la alerta crítica que el Desarrollador señaló
+// explícitamente — a diferencia del respaldo de avisos de rutina (revisarRecordatoriosPush.js),
+// acá va push + WhatsApp a la vez, nunca uno de respaldo del otro. Apagado por defecto: cada
+// Prestadora decide si su política es avisarle al Cliente o no (algunas prefieren no
+// alarmarla si el incidente se resuelve internamente sin que llegue a necesitar su
+// intervención) — CLAUDE.md §2, "configuración sobre programación".
+async function notificarClienteSiCorresponde({ prestadoraId, guardiaEntranteId, texto }) {
+  const config = await configuracionEvento('incidente_relevo_sin_resolver', prestadoraId);
+  if (!config?.notificar_cliente) return;
+
+  const { data: guardia } = await supabase
+    .from('guardias')
+    .select('paciente_id')
+    .eq('id', guardiaEntranteId)
+    .single();
+  if (!guardia?.paciente_id) return;
+
+  const { data: paciente } = await supabase
+    .from('pacientes')
+    .select('cliente_id')
+    .eq('id', guardia.paciente_id)
+    .single();
+  if (!paciente?.cliente_id) return;
+
+  const { data: usuario } = await supabase
+    .from('usuarios')
+    .select('telefono')
+    .eq('id', paciente.cliente_id)
+    .single();
+
+  await enviarPushCliente(paciente.cliente_id, {
+    titulo: 'Continuidad de guardia',
+    cuerpo: texto,
+    url: '/',
+  });
+
+  if (usuario?.telefono) {
+    try {
+      await enviarWhatsApp({ prestadoraId, telefono: usuario.telefono, texto });
+    } catch (err) {
+      console.error(`Error enviando WhatsApp a Cliente (incidente_relevo_sin_resolver, guardia ${guardiaEntranteId}):`, err.message);
     }
   }
 }

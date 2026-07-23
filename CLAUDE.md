@@ -193,6 +193,8 @@ No se salta directo al paso 3 aunque el cambio ya esté decidido de palabra — 
 
 **Principio de certeza:** nunca afirmar "está revisado/resuelto/no hay problemas" sin haber hecho la comprobación en el momento. Si no se verificó, decirlo así, no disimularlo con una respuesta que suene completa.
 
+**Estado real por encima del documentado:** los archivos `.sql` de `backend/src/db/` y las entradas de `docs/PROGRESS.md`/`docs/PENDIENTES.md` son historial de intención, no la fuente de verdad — pueden estar aplicados a medias, superados por un archivo posterior, o simplemente no reflejar lo que hay hoy en producción. Ninguna afirmación de "esto ya está hecho/migrado/resuelto" se escribe en esos documentos, ni se le comunica al Desarrollador como cerrada, sin haber consultado el estado real en ese mismo momento: la base de datos en vivo (`mcp__supabase__execute_sql`, `list_tables`, etc.) para todo lo de esquema/datos, o el código efectivamente desplegado para todo lo demás. Inferir el estado a partir de un `.sql` o de una entrada de doc anterior no alcanza.
+
 **Revisión cruzada:** antes de una propuesta nueva, señalar explícitamente qué decisiones ya documentadas (arquitectura multi-tenant, SaaS, seguridad, glosario, reglas de negocio) son relevantes y si la conclusión nueva es consistente con ellas o entra en conflicto. Incluye revisar `docs/claude_history.md` cuando el tema ya haya sido debatido antes (ver §10).
 
 **Cierre de sesión:** código y documentación actualizados, pendientes registrados, commit + push si hubo cambios de código, compatibilidad con las reglas no negociables verificada — no asumida.

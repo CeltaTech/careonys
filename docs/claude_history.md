@@ -2,6 +2,13 @@
 
 > Registra por qué cambió una regla vigente de `CLAUDE.md`. La regla vigente en sí vive solo en `CLAUDE.md` (§10) — este archivo guarda el "antes" y el motivo, no vuelve a describir el estado actual en detalle.
 
+## §12 agregado: "Estado real por encima del documentado" (2026-07-23)
+
+- **Antes:** `CLAUDE.md` §12 tenía "Principio de certeza" (no afirmar algo sin haberlo comprobado en el momento), pero no decía explícitamente contra qué fuente comprobar cuando la pregunta es "¿esto ya está hecho/migrado?".
+- **Ahora:** se agregó el principio "Estado real por encima del documentado" — los `.sql` de `backend/src/db/` y las entradas de `PROGRESS.md`/`PENDIENTES.md` son historial de intención, no fuente de verdad; toda afirmación de algo ya resuelto se verifica en el momento contra la base de datos en vivo (vía MCP de Supabase) o el código efectivamente desplegado, nunca infiriéndolo de un `.sql` o de una entrada de doc anterior.
+- **Motivo:** durante la Fase 11 (WhatsApp reforzado), dos subagentes de exploración reportaron —basándose solo en archivos `.sql`— que la tabla `configuracion_notificaciones` todavía era global (sin `prestadora_id`) y que el código de notificación al Coordinador no consultaba esa tabla. Ambas cosas eran falsas: la migración ya estaba aplicada en producción desde el 2026-07-13 (`schema_whatsapp_ia_01.sql`) y la consulta sí existía, un nivel de indirección más abajo (`notificarCoordinador()` → `configuracionEvento()`). Esto llevó a plantearle al Desarrollador una pregunta de migración innecesaria basada en una premisa falsa, detectada y corregida recién al consultar la base real con `mcp__supabase__execute_sql`. No era la primera vez en el proyecto que pasaba (`PROGRESS.md` también tuvo una fila de estado de Etapa 6 desactualizada pese a que el pendiente ya estaba resuelto).
+- **No reintroducir:** dar por buena una afirmación de "esto ya está migrado/resuelto/implementado" solo porque aparece en un archivo `.sql` o en una entrada de doc, sin haber consultado el estado real en esa misma sesión.
+
 ## Regla 12 agregada: "Ningún patrón de lógica repetido sin punto único de verdad" (2026-07-22)
 
 - **Antes:** `CLAUDE.md` §7 tenía 11 reglas no negociables de desarrollo; no existía ninguna regla general sobre duplicación de lógica de negocio entre distintos puntos del código.

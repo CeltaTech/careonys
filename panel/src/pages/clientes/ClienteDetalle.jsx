@@ -44,6 +44,8 @@ export function ClienteDetalle() {
   const [errorPersonasAutorizadas, setErrorPersonasAutorizadas] = useState(null);
   const [mostrarInvitarPersonasAutorizadas, setMostrarInvitarPersonasAutorizadas] = useState(false);
   const [quitandoUsuarioId, setQuitandoUsuarioId] = useState(null);
+  const [reenviandoUsuarioId, setReenviandoUsuarioId] = useState(null);
+  const [mensajeReenvio, setMensajeReenvio] = useState(null);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -119,6 +121,27 @@ export function ClienteDetalle() {
     }
   }
 
+  async function reenviarInvitacion(usuarioId) {
+    setReenviandoUsuarioId(usuarioId);
+    setMensajeReenvio(null);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const respuesta = await fetch(`${API_URL}/api/panel/cuentas/${usuarioId}/reenviar-activacion`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${data.session?.access_token}` },
+      });
+      const resultado = await respuesta.json();
+      if (!respuesta.ok) {
+        throw new Error(resultado.error);
+      }
+      setMensajeReenvio({ tipo: 'info', texto: t.comun.invitacion_reenviada });
+    } catch {
+      setMensajeReenvio({ tipo: 'error', texto: t.comun.reenviar_invitacion_error });
+    } finally {
+      setReenviandoUsuarioId(null);
+    }
+  }
+
   function setCampoContacto(campo, valor) {
     setFormContacto((f) => ({ ...f, [campo]: valor }));
     setContactoGuardado(false);
@@ -155,6 +178,7 @@ export function ClienteDetalle() {
       <h2>{t.clientes.contacto}</h2>
       {errorContacto && <Alert variant="error">{errorContacto}</Alert>}
       {contactoGuardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
+      {mensajeReenvio && <Alert variant={mensajeReenvio.tipo}>{mensajeReenvio.texto}</Alert>}
       {formContacto && (
         <>
           <FormField label={t.clientes.col_nombre} name="nombre_contacto" value={formContacto.nombre} onChange={(e) => setCampoContacto('nombre', e.target.value)} disabled={!puedeEditarCliente} />
@@ -173,7 +197,12 @@ export function ClienteDetalle() {
           </dl>
           <Button onClick={guardarContacto} disabled={guardandoContacto || !puedeEditarCliente}>
             {guardandoContacto ? t.comun.guardando : t.comun.guardar}
-          </Button>
+          </Button>{' '}
+          {puedeEditarCliente && (
+            <Button variant="secondary" onClick={() => reenviarInvitacion(cliente.id)} disabled={reenviandoUsuarioId === cliente.id}>
+              {reenviandoUsuarioId === cliente.id ? t.comun.reenviando_invitacion : t.comun.reenviar_invitacion}
+            </Button>
+          )}
         </>
       )}
 
@@ -247,13 +276,22 @@ export function ClienteDetalle() {
                 <td>{t.clientes.personas autorizadas.rol_solo_lectura}</td>
                 <td>
                   {puedeEditarCliente && (
-                    <Button
-                      variant="secondary"
-                      onClick={() => quitarMiembroPersonasAutorizadas(m.usuario_id)}
-                      disabled={quitandoUsuarioId === m.usuario_id}
-                    >
-                      {t.clientes.personas autorizadas.quitar}
-                    </Button>
+                    <>
+                      <Button
+                        variant="secondary"
+                        onClick={() => reenviarInvitacion(m.usuario_id)}
+                        disabled={reenviandoUsuarioId === m.usuario_id}
+                      >
+                        {reenviandoUsuarioId === m.usuario_id ? t.comun.reenviando_invitacion : t.comun.reenviar_invitacion}
+                      </Button>{' '}
+                      <Button
+                        variant="secondary"
+                        onClick={() => quitarMiembroPersonasAutorizadas(m.usuario_id)}
+                        disabled={quitandoUsuarioId === m.usuario_id}
+                      >
+                        {t.clientes.personas autorizadas.quitar}
+                      </Button>
+                    </>
                   )}
                 </td>
               </tr>

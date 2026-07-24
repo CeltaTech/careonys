@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { registrarUsoIA } from './registrarUsoIA.js';
 
 // IA Nivel 2 (Alertas por patrones) — prompt exacto de docs/AI_PROMPTS.md:47-71, no
 // reformular acá sin actualizar ese archivo primero (el contrato JSON está acoplado a las
@@ -40,7 +41,7 @@ function obtenerCliente() {
 // paciente). Sin ANTHROPIC_API_KEY configurada, devuelve null — mejor no generar alerta que
 // generar una sin base real (a diferencia de reporteIA.js, acá no hay un "modo sin IA"
 // razonable: no hay reglas fijas capaces de reemplazar el análisis de patrones).
-export async function analizarAlertaIA({ patologias, medicacionHabitual }, reportes) {
+export async function analizarAlertaIA({ patologias, medicacionHabitual }, reportes, prestadoraId) {
   const anthropic = obtenerCliente();
   if (!anthropic) return null;
 
@@ -55,6 +56,8 @@ export async function analizarAlertaIA({ patologias, medicacionHabitual }, repor
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: mensaje }],
   });
+
+  registrarUsoIA({ prestadoraId, modulo: 'alertas', modelo: MODELO, respuestaAnthropic: respuesta });
 
   const texto = respuesta.content?.[0]?.type === 'text' ? respuesta.content[0].text : '';
 

@@ -369,3 +369,96 @@ panelAdminPlataformaRouter.get('/facturas', async (req, res) => {
   if (error) return res.status(500).json({ error: error.message });
   res.json({ facturas: data });
 });
+
+// ============================================================================
+// Uso de IA por Prestadora (pendiente #84, docs/PENDIENTES.md) — costo real en dólares,
+// calculado en backend/src/utils/registrarUsoIA.js a partir de tokens reales y el precio
+// oficial vigente a la fecha de cada llamada. Nunca visible para la propia Prestadora
+// (CLAUDE.md §2) — solo se resume acá, en Admin_plataforma.
+// ============================================================================
+panelAdminPlataformaRouter.get('/uso-ia', async (req, res) => {
+  const { data: usos, error } = await supabase
+    .from('uso_ia')
+    .select('prestadora_id, modulo, costo_usd, creado_at, prestadoras(nombre_fantasia)')
+    .order('creado_at', { ascending: false })
+    .limit(5000);
+  if (error) return res.status(500).json({ error: error.message });
+
+  const resumenPorPrestadora = new Map();
+  for (const fila of usos) {
+    const clave = fila.prestadora_id;
+    const actual = resumenPorPrestadora.get(clave) ?? {
+      prestadoraId: clave,
+      nombre: fila.prestadoras?.nombre_fantasia ?? clave,
+      costoTotalUsd: 0,
+      llamadas: 0,
+    };
+    actual.costoTotalUsd += Number(fila.costo_usd);
+    actual.llamadas += 1;
+    resumenPorPrestadora.set(clave, actual);
+  }
+
+  res.json({ resumen: [...resumenPorPrestadora.values()].sort((a, b) => b.costoTotalUsd - a.costoTotalUsd) });
+});
+
+// ============================================================================
+// Cambios de precio de IA detectados por la rutina mensual (verificarPreciosIA.js) —
+// quedan pendientes de confirmación explícita, nunca se aplican solos (CLAUDE.md §6).
+// ============================================================================
+panelAdminPlataformaRouter.get('/cambios-precio-ia', async (req, res) => {
+  const { data, error } = await supabase
+    .from('cambios_precio_ia_pendientes')
+    .select('*')
+    .eq('estado', 'pendiente')
+    .order('detectado_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ cambios: data });
+});
+
+panelAdminPlataformaRouter.post('/cambios-precio-ia/:id/confirmar', async (req, res) => {
+  const { id } = req.params;
+
+  const { data: cambio, error: errorCambio } = await supabase
+    .from('cambios_precio_ia_pendientes')
+    .select('*')
+    .eq('id', id)
+    .eq('estado', 'pendiente')
+    .maybeSingle();
+  if (errorCambio) return res.status(500).json({ error: errorCambio.message });
+  if (!cambio) return res.status(404).json({ error: 'Cambio no encontrado o ya resuelto' });
+
+  const hoy = new Date().toISOString().slice(0, 10);
+
+  // upsert (no insert): si ya existe una fila para este proveedor/modelo con vigencia hoy
+  // (ej. la semilla inicial, o dos cambios confirmados el mismo día), se corrige esa fila
+  // en vez de chocar con la UNIQUE (proveedor, modelo, vigente_desde) de schema_uso_ia_01.sql.
+  const { error: errorInsert } = await supabase.from('precios_ia_modelo').upsert({
+    proveedor: cambio.proveedor,
+    modelo: cambio.modelo,
+    precio_entrada_usd_por_millon: cambio.precio_entrada_detectado,
+    precio_salida_usd_por_millon: cambio.precio_salida_detectado,
+    vigente_desde: hoy,
+    verificado_at: new Date().toISOString(),
+    fuente: cambio.fuente_url,
+  }, { onConflict: 'proveedor,modelo,vigente_desde' });
+  if (errorInsert) return res.status(500).json({ error: errorInsert.message });
+
+  const { error: errorUpdate } = await supabase
+    .from('cambios_precio_ia_pendientes')
+    .update({ estado: 'confirmado', resuelto_at: new Date().toISOString(), resuelto_por: req.usuarioPanel.id })
+    .eq('id', id);
+  if (errorUpdate) return res.status(500).json({ error: errorUpdate.message });
+
+  res.json({ ok: true });
+});
+
+panelAdminPlataformaRouter.post('/cambios-precio-ia/:id/descartar', async (req, res) => {
+  const { id } = req.params;
+  const { error } = await supabase
+    .from('cambios_precio_ia_pendientes')
+    .update({ estado: 'descartado', resuelto_at: new Date().toISOString(), resuelto_por: req.usuarioPanel.id })
+    .eq('id', id)
+    .eq('estado', 'pendiente');
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});

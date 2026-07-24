@@ -28,6 +28,7 @@ import { appAsistentesRouter } from './routes/appAsistentes.js';
 import { appClientesRouter } from './routes/appClientes.js';
 import { revisarAlertasIA } from './utils/revisarAlertasIA.js';
 import { revisarAvisosAutomaticosCese } from './utils/avisoAutomaticoCese.js';
+import { verificarPreciosIA } from './utils/verificarPreciosIA.js';
 
 const app = express();
 app.use(cors());
@@ -107,6 +108,14 @@ revisarAvisosAutomaticosCese().catch((err) => console.error('Error en revisión 
 setInterval(() => {
   revisarAvisosAutomaticosCese().catch((err) => console.error('Error en revisión de avisos automáticos de cese:', err.message));
 }, CINCO_MINUTOS_MS);
+
+// Verificación mensual de precios de IA (pendiente #84, docs/PENDIENTES.md) — la función
+// misma revisa internamente si hoy es el día del mes que corresponde, por eso el chequeo
+// corre con la misma cadencia diaria que revisarVencimientos.
+verificarPreciosIA().catch((err) => console.error('Error en verificación inicial de precios de IA:', err.message));
+setInterval(() => {
+  verificarPreciosIA().catch((err) => console.error('Error en verificación de precios de IA:', err.message));
+}, UN_DIA_MS);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

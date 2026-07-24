@@ -81,7 +81,7 @@ async function procesarEventoEntrante(payload) {
     .order('created_at', { ascending: true })
     .limit(20);
 
-  const respuestaIA = await generarRespuestaIA({ mensajeEntrante: texto, historial: historialCrudo ?? [] });
+  const respuestaIA = await generarRespuestaIA({ mensajeEntrante: texto, historial: historialCrudo ?? [], prestadoraId });
 
   const { data: mensajeSaliente } = await supabase
     .from('mensajes_whatsapp')

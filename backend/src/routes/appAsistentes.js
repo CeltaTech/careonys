@@ -195,7 +195,7 @@ appAsistentesRouter.post('/guardias/:id/reporte/estructurar', requiereRolAsisten
   }
 
   try {
-    const estructurado = await estructurarReporteIA(textoLibre);
+    const estructurado = await estructurarReporteIA(textoLibre, req.usuarioAsistente.prestadoraId);
     res.json({ estructurado });
   } catch (error) {
     res.status(500).json({ error: 'No se pudo estructurar el reporte con IA — completá los campos a mano' });

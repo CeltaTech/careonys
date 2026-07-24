@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { registrarUsoIA } from './registrarUsoIA.js';
 
 // Primera integración real del SDK de Claude en este backend (docs/CONTEXT.md ya lo
 // documentaba como motor de IA por defecto del proyecto). Se usa acá para el punto 6 de
@@ -35,7 +36,7 @@ function obtenerCliente() {
 }
 
 // historial: array de { direccion: 'entrante'|'saliente', texto } en orden cronológico.
-export async function generarRespuestaIA({ mensajeEntrante, historial = [] }) {
+export async function generarRespuestaIA({ mensajeEntrante, historial = [], prestadoraId }) {
   const anthropic = obtenerCliente();
   if (!anthropic) {
     return {
@@ -60,6 +61,8 @@ export async function generarRespuestaIA({ mensajeEntrante, historial = [] }) {
     system: SYSTEM_PROMPT,
     messages: mensajes,
   });
+
+  registrarUsoIA({ prestadoraId, modulo: 'whatsapp', modelo: MODELO, respuestaAnthropic: respuesta });
 
   const texto = respuesta.content?.[0]?.type === 'text' ? respuesta.content[0].text : '';
 

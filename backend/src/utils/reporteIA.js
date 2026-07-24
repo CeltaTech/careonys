@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { registrarUsoIA } from './registrarUsoIA.js';
 
 // IA Nivel 1 (Reporte inteligente) — prompt exacto de docs/AI_PROMPTS.md, no reformular acá
 // sin actualizar ese archivo primero (el contrato JSON está acoplado a las columnas de
@@ -38,7 +39,7 @@ const ESTRUCTURA_VACIA = {
 
 // Nunca loguea texto_libre ni el JSON de salida (regla 7 CLAUDE.md — dato de salud del
 // paciente) — ni siquiera en el catch de error de parseo.
-export async function estructurarReporteIA(textoLibre) {
+export async function estructurarReporteIA(textoLibre, prestadoraId) {
   const anthropic = obtenerCliente();
   if (!anthropic) {
     return { ...ESTRUCTURA_VACIA, observaciones: textoLibre || null, _sinIA: true };
@@ -50,6 +51,8 @@ export async function estructurarReporteIA(textoLibre) {
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: textoLibre }],
   });
+
+  registrarUsoIA({ prestadoraId, modulo: 'reporte', modelo: MODELO, respuestaAnthropic: respuesta });
 
   const texto = respuesta.content?.[0]?.type === 'text' ? respuesta.content[0].text : '';
 

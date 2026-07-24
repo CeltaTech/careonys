@@ -21,6 +21,43 @@ Convención: 🔴 No iniciado · 🟡 En progreso · 🟢 Completo y en producci
 
 ## Última tarea completada
 
+**2026-07-24: Pendiente #84 — aplicación y verificación end-to-end de "Registrar consumo
+real de IA por Prestadora para poder facturarlo".** El schema (`schema_uso_ia_01.sql`,
+escrito en una sesión anterior) se aplicó por primera vez contra Supabase real vía
+`mcp__supabase__apply_migration` y se verificó con `SELECT` directo: tablas `precios_ia_modelo`
+(semilla real de Anthropic Sonnet 5, 2.00/10.00 USD por millón de tokens desde 2026-07-24,
+3.00/15.00 desde 2026-09-01), `uso_ia`, `cambios_precio_ia_pendientes`, función
+`es_admin_plataforma()`. Se verificó `registrarUsoIA.js` con una inserción real de prueba
+(1000 tokens de entrada / 500 de salida → `costo_usd = 0.007000`, coincide con el cálculo
+manual). Se encontraron y corrigieron 2 bugs solo detectables en verificación end-to-end
+real, no por lectura de código: **(1)** en `AdminPlataforma.jsx`, las secciones nuevas
+`UsoIASeccion`/`CambiosPrecioIASeccion` estaban anidadas como hijas de `<EstadoLista>` de
+`facturas` (una lista sin relación) — `EstadoLista` descarta `children` por completo cuando
+esa lista está vacía, así que las secciones nunca se mostraban; se movieron como hermanas,
+fuera del wrapper. **(2)** en `panelAdminPlataforma.js`, la ruta
+`POST /cambios-precio-ia/:id/confirmar` usaba `.insert()` contra `precios_ia_modelo`, que
+choca con la restricción `UNIQUE(proveedor, modelo, vigente_desde)` cuando ya existe una fila
+con la fecha de hoy (caso real: la fila semilla) — se cambió a `.upsert(...,
+{onConflict:'proveedor,modelo,vigente_desde'})`. Verificado en navegador real con Playwright
+contra una cuenta de prueba `admin_plataforma` (creada con `crearCuentaConPerfil()` y borrada
+al terminar con `borrarCuenta()`, cero residuos): las dos secciones renderizan correctamente
+en sus 4 estados, el flujo completo de Confirmar cambio de precio funciona sin errores de
+consola, y el dato de precio se corrige en `precios_ia_modelo` sin duplicar filas. Precios de
+prueba ficticios (2.50/12.00) usados para ejercitar el flujo de confirmación fueron revertidos
+a los reales de Anthropic (2.00/10.00) al terminar, y la tabla `cambios_precio_ia_pendientes`
+quedó vacía — verificado por `SELECT`. **Corrección de numeración de pendiente**: se detectó
+que el código (comentarios en `verificarPreciosIA.js`, `registrarUsoIA.js`,
+`panelAdminPlataforma.js`, `schema_uso_ia_01.sql`, `AdminPlataforma.jsx`) y `PENDIENTES.md`
+línea 21 (nota del pendiente #65) referenciaban "pendiente #79" para esta funcionalidad, pero
+el #79 real ya está usado por una feature distinta y ya cerrada (Fase 7, panel
+Admin_plataforma: estado de pago/uso/riesgo). Se creó el pendiente #84 en `PENDIENTES.md` con
+lo efectivamente verificado, y se corrigieron las 7 referencias erróneas a "#79" a "#84" en
+el código y en la nota del #65. **Sin commit/push/deploy todavía** — pendiente de aprobación
+explícita del Desarrollador. Queda abierto confirmar que los 4 puntos reales de llamada a la
+IA (`reporteIA.js`, `importacionIA.js`, `iaWhatsapp.js`, `alertasIA.js` — ya invocan
+`registrarUsoIA()` según el código, pero no se disparó ninguna llamada real de IA en esta
+sesión para confirmarlo end-to-end) generan filas correctas con costo real en producción.
+
 **2026-07-24: Fase 12 del rediseño de frontend — vuelta de Guardias (`Guardias.jsx`).**
 Completa la parte de la Fase 12 que había quedado afuera del primer corte (Dashboard +
 Asistentes + Clientes, pendiente #83), a pedido explícito del Desarrollador de seguir en

@@ -70,6 +70,7 @@ export async function analizarPaciente(pacienteId, prestadoraId) {
         observaciones: r.observaciones,
         fecha: r.created_at,
       })),
+      prestadoraId,
     );
   } catch (err) {
     console.error(`Error analizando IA Nivel 2 para paciente ${pacienteId}:`, err.message);

@@ -1,5 +1,6 @@
 import XLSX from 'xlsx';
 import Anthropic from '@anthropic-ai/sdk';
+import { registrarUsoIA } from './registrarUsoIA.js';
 
 // Fase 3 del plan "Terminar la Etapa 2 (Panel)" (importación masiva de datos con IA).
 // Sigue el mismo patrón que backend/src/utils/iaWhatsapp.js: cliente de Anthropic con
@@ -60,7 +61,7 @@ function obtenerCliente() {
   return cliente;
 }
 
-export async function proponerMapeoIA({ tipo, headers, filasMuestra }) {
+export async function proponerMapeoIA({ tipo, headers, filasMuestra, prestadoraId }) {
   const camposDisponibles = CAMPOS_IMPORTACION[tipo];
   const anthropic = obtenerCliente();
   if (!anthropic) {
@@ -81,6 +82,8 @@ Primeras filas de muestra (JSON): ${JSON.stringify(filasMuestra.slice(0, 5))}`;
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: mensaje }],
   });
+
+  registrarUsoIA({ prestadoraId, modulo: 'importacion', modelo: MODELO, respuestaAnthropic: respuesta });
 
   const texto = respuesta.content?.[0]?.type === 'text' ? respuesta.content[0].text : '';
 

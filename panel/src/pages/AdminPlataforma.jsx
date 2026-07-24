@@ -455,35 +455,198 @@ function TabFacturacion() {
   }, [recargar]);
 
   return (
-    <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && facturas.length === 0} recargar={recargar}>
-      <table className="panel-tabla">
-        <thead>
-          <tr>
-            <th>{t.adminPlataforma.col_factura_prestadora}</th>
-            <th>{t.adminPlataforma.col_factura_concepto}</th>
-            <th>{t.adminPlataforma.col_factura_monto}</th>
-            <th>{t.adminPlataforma.col_factura_estado}</th>
-            <th>{t.adminPlataforma.col_factura_emision}</th>
-            <th>{t.adminPlataforma.col_factura_vencimiento}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {facturas.map((factura) => (
-            <tr key={factura.id}>
-              <td>{factura.prestadoras?.nombre_fantasia}</td>
-              <td>{factura.concepto}</td>
-              <td>{factura.moneda} {Number(factura.monto).toLocaleString('es-AR')}</td>
-              <td>
-                <span className={`badge badge-${factura.estado}`}>
-                  {t.adminPlataforma[`factura_estado_${factura.estado}`]}
-                </span>
-              </td>
-              <td>{factura.fecha_emision}</td>
-              <td>{factura.fecha_vencimiento ?? '—'}</td>
+    <>
+      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && facturas.length === 0} recargar={recargar}>
+        <table className="panel-tabla">
+          <thead>
+            <tr>
+              <th>{t.adminPlataforma.col_factura_prestadora}</th>
+              <th>{t.adminPlataforma.col_factura_concepto}</th>
+              <th>{t.adminPlataforma.col_factura_monto}</th>
+              <th>{t.adminPlataforma.col_factura_estado}</th>
+              <th>{t.adminPlataforma.col_factura_emision}</th>
+              <th>{t.adminPlataforma.col_factura_vencimiento}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </EstadoLista>
+          </thead>
+          <tbody>
+            {facturas.map((factura) => (
+              <tr key={factura.id}>
+                <td>{factura.prestadoras?.nombre_fantasia}</td>
+                <td>{factura.concepto}</td>
+                <td>{factura.moneda} {Number(factura.monto).toLocaleString('es-AR')}</td>
+                <td>
+                  <span className={`badge badge-${factura.estado}`}>
+                    {t.adminPlataforma[`factura_estado_${factura.estado}`]}
+                  </span>
+                </td>
+                <td>{factura.fecha_emision}</td>
+                <td>{factura.fecha_vencimiento ?? '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </EstadoLista>
+
+      <CambiosPrecioIASeccion />
+      <UsoIASeccion />
+    </>
+  );
+}
+
+// Pendiente #84 (docs/PENDIENTES.md): cambios de precio de IA detectados por la rutina
+// mensual (verificarPreciosIA.js) — nunca se aplican solos, quedan acá esperando
+// confirmación explícita (CLAUDE.md §6).
+function CambiosPrecioIASeccion() {
+  const { t } = useLocale();
+  const confirmarDestructivo = useConfirmarDestructivo();
+  const [cambios, setCambios] = useState([]);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [resolviendo, setResolviendo] = useState(null);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const { cambios: filas } = await llamarApi('/cambios-precio-ia');
+      setCambios(filas);
+      setEstado('listo');
+    } catch (err) {
+      setError(err.message);
+      setEstado('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  async function handleConfirmar(cambio) {
+    if (!confirmarDestructivo(t.adminPlataforma.uso_ia_precio_confirmar)) return;
+    setResolviendo(cambio.id);
+    try {
+      await llamarApi(`/cambios-precio-ia/${cambio.id}/confirmar`, { method: 'POST' });
+      await recargar();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setResolviendo(null);
+    }
+  }
+
+  async function handleDescartar(cambio) {
+    setResolviendo(cambio.id);
+    try {
+      await llamarApi(`/cambios-precio-ia/${cambio.id}/descartar`, { method: 'POST' });
+      await recargar();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setResolviendo(null);
+    }
+  }
+
+  if (estado === 'listo' && cambios.length === 0) return null;
+
+  return (
+    <div className="dashboard-seccion">
+      <div className="dashboard-seccion-header">
+        <h2 className="dashboard-seccion-titulo">{t.adminPlataforma.uso_ia_precios_pendientes_titulo}</h2>
+        <p className="dashboard-seccion-subtitulo">{t.adminPlataforma.uso_ia_precios_pendientes_subtitulo}</p>
+      </div>
+      <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
+        {error && <Alert variant="error">{error}</Alert>}
+        <table className="panel-tabla">
+          <thead>
+            <tr>
+              <th>{t.adminPlataforma.col_precio_ia_proveedor}</th>
+              <th>{t.adminPlataforma.col_precio_ia_modelo}</th>
+              <th>{t.adminPlataforma.col_precio_ia_actual}</th>
+              <th>{t.adminPlataforma.col_precio_ia_detectado}</th>
+              <th>{t.adminPlataforma.col_precio_ia_acciones}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {cambios.map((cambio) => (
+              <tr key={cambio.id}>
+                <td>{cambio.proveedor}</td>
+                <td>{cambio.modelo}</td>
+                <td>${cambio.precio_entrada_actual} / ${cambio.precio_salida_actual}</td>
+                <td>${cambio.precio_entrada_detectado} / ${cambio.precio_salida_detectado}</td>
+                <td>
+                  <Button onClick={() => handleConfirmar(cambio)} disabled={resolviendo === cambio.id}>
+                    {t.adminPlataforma.uso_ia_precio_confirmar_boton}
+                  </Button>{' '}
+                  <Button variant="secondary" onClick={() => handleDescartar(cambio)} disabled={resolviendo === cambio.id}>
+                    {t.adminPlataforma.uso_ia_precio_descartar_boton}
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </EstadoLista>
+    </div>
+  );
+}
+
+// Pendiente #84: resumen de costo real de IA por Prestadora — nunca visible en el panel
+// de la propia Prestadora (CLAUDE.md §2), solo acá.
+function UsoIASeccion() {
+  const { t } = useLocale();
+  const [resumen, setResumen] = useState([]);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const { resumen: filas } = await llamarApi('/uso-ia');
+      setResumen(filas);
+      setEstado('listo');
+    } catch (err) {
+      setError(err.message);
+      setEstado('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  return (
+    <div className="dashboard-seccion">
+      <div className="dashboard-seccion-header">
+        <h2 className="dashboard-seccion-titulo">{t.adminPlataforma.uso_ia_titulo}</h2>
+        <p className="dashboard-seccion-subtitulo">{t.adminPlataforma.uso_ia_subtitulo}</p>
+      </div>
+      <EstadoLista
+        estado={estado}
+        error={error}
+        vacio={estado === 'listo' && resumen.length === 0}
+        recargar={recargar}
+        mensajeVacio={t.adminPlataforma.uso_ia_vacio}
+      >
+        <table className="panel-tabla">
+          <thead>
+            <tr>
+              <th>{t.adminPlataforma.col_uso_ia_prestadora}</th>
+              <th>{t.adminPlataforma.col_uso_ia_llamadas}</th>
+              <th>{t.adminPlataforma.col_uso_ia_costo}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {resumen.map((fila) => (
+              <tr key={fila.prestadoraId}>
+                <td>{fila.nombre}</td>
+                <td>{fila.llamadas}</td>
+                <td>USD {fila.costoTotalUsd.toFixed(4)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </EstadoLista>
+    </div>
   );
 }

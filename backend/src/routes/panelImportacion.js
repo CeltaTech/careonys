@@ -68,7 +68,7 @@ panelImportacionRouter.post(
 
     try {
       const { headers, filas } = parsearArchivo(req.file.buffer, req.file.originalname);
-      const { mapeo, advertencias } = await proponerMapeoIA({ tipo, headers, filasMuestra: filas });
+      const { mapeo, advertencias } = await proponerMapeoIA({ tipo, headers, filasMuestra: filas, prestadoraId: req.usuarioPanel?.prestadoraId });
       res.json({
         headers,
         filas,

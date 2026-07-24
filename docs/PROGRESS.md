@@ -21,6 +21,21 @@ Convención: 🔴 No iniciado · 🟡 En progreso · 🟢 Completo y en producci
 
 ## Última tarea completada
 
+**2026-07-24: Pendiente #63 — `metros_tolerancia_checkin` con pantalla propia en el Panel.**
+Nueva sección "Ausencia automática por falta de check-in GPS" en la pestaña Servicios de
+`Configuracion.jsx`, con los 3 campos de `configuracion_ausencia_automatica` (activo,
+minutos y metros de tolerancia), endpoints `GET/PATCH /api/panel/configuracion/ausencia-automatica`
+en `panelConfiguracion.js` (mismo patrón de scoping por prestadora que el resto del router).
+Se detectó que la columna `metros_tolerancia_checkin` ya existía en Supabase real (usada en
+`appAsistentes.js` desde 2026-07-20) pero no estaba documentada en ningún `.sql` del repo —
+se agregó `schema_modulo6_guardias_04_metros_tolerancia.sql` (`ADD COLUMN IF NOT EXISTS` +
+`NOTIFY pgrst, 'reload schema';`) para que el repo refleje el estado real, sin tocar el dato
+ya cargado en producción. Textos nuevos en `es-AR`/`en`/`pt-BR`. **Verificado en navegador
+real** contra la Prestadora Demo (cuenta de prueba `admin_prestadora`): carga de los 3
+valores reales, cambio de metros a 200, guardado sin error de consola, recarga completa de
+la página confirma persistencia real en base, valor devuelto a 150 (original) al terminar.
+Todavía sin commit/push/deploy — pendiente de confirmación del Desarrollador.
+
 **2026-07-24: Pendientes #65, #69/#64 y #79.** (1) Confirmada la falta real de
 `ANTHROPIC_API_KEY` en Railway (producción) — no era solo una presunción, `railway
 variables` no la tenía; el Desarrollador creó una API Key nueva en console.anthropic.com y

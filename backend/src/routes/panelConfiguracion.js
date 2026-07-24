@@ -389,6 +389,46 @@ panelConfiguracionRouter.patch('/guardias/horizonte-generacion', async (req, res
   res.json({ ok: true });
 });
 
+// --- Ausencia automática por falta de check-in GPS (Etapa 3, pendiente #63): antes solo
+//     editable por SQL directo contra Supabase, violando "Configuración sobre programación"
+//     (CLAUDE.md §2). Ver backend/src/routes/appAsistentes.js (uso de metros_tolerancia_checkin
+//     al validar el check-in) y backend/src/utils/ausenciaAutomatica.js (uso de
+//     minutos_tolerancia_checkin y activo). ---
+panelConfiguracionRouter.get('/ausencia-automatica', async (req, res) => {
+  const prestadoraId = req.usuarioPanel.rol === 'superadmin' && req.query.prestadora_id
+    ? req.query.prestadora_id
+    : req.usuarioPanel.prestadoraId;
+  const { data, error } = await supabase
+    .from('configuracion_ausencia_automatica')
+    .select('activo, minutos_tolerancia_checkin, metros_tolerancia_checkin')
+    .eq('prestadora_id', prestadoraId)
+    .maybeSingle();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({
+    configuracion: data || { activo: true, minutos_tolerancia_checkin: 15, metros_tolerancia_checkin: 150 },
+  });
+});
+
+panelConfiguracionRouter.patch('/ausencia-automatica', async (req, res) => {
+  const { activo, minutos_tolerancia_checkin, metros_tolerancia_checkin } = req.body;
+  if (!Number.isInteger(minutos_tolerancia_checkin) || minutos_tolerancia_checkin <= 0) {
+    return res.status(400).json({ error: 'minutos_tolerancia_checkin debe ser un entero positivo' });
+  }
+  if (!Number.isInteger(metros_tolerancia_checkin) || metros_tolerancia_checkin <= 0) {
+    return res.status(400).json({ error: 'metros_tolerancia_checkin debe ser un entero positivo' });
+  }
+  const { error } = await supabase
+    .from('configuracion_ausencia_automatica')
+    .upsert({
+      prestadora_id: req.usuarioPanel.prestadoraId,
+      activo: Boolean(activo),
+      minutos_tolerancia_checkin,
+      metros_tolerancia_checkin,
+    });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
 panelConfiguracionRouter.patch('/documentos-tipo/:id', async (req, res) => {
   const { nombre, requiere_vencimiento, activo } = req.body;
   let query = supabase

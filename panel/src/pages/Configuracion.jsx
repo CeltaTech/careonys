@@ -550,16 +550,26 @@ function TabServicios() {
   const [guardandoHorizonte, setGuardandoHorizonte] = useState(false);
   const [horizonteGuardado, setHorizonteGuardado] = useState(false);
 
+  const [ausenciaActiva, setAusenciaActiva] = useState(true);
+  const [minutosTolerancia, setMinutosTolerancia] = useState('');
+  const [metrosTolerancia, setMetrosTolerancia] = useState('');
+  const [guardandoAusencia, setGuardandoAusencia] = useState(false);
+  const [ausenciaGuardada, setAusenciaGuardada] = useState(false);
+
   const recargar = useCallback(async () => {
     setEstado('cargando');
     setError(null);
     try {
-      const [{ niveles: filas }, { dias_generacion_series_guardia }] = await Promise.all([
+      const [{ niveles: filas }, { dias_generacion_series_guardia }, { configuracion }] = await Promise.all([
         llamarApi('/escalada-relevo'),
         llamarApi('/guardias/horizonte-generacion'),
+        llamarApi('/ausencia-automatica'),
       ]);
       setNiveles(filas);
       setDiasGeneracion(String(dias_generacion_series_guardia));
+      setAusenciaActiva(configuracion.activo);
+      setMinutosTolerancia(String(configuracion.minutos_tolerancia_checkin));
+      setMetrosTolerancia(String(configuracion.metros_tolerancia_checkin));
       setEstado('listo');
     } catch (err) {
       setError(err.message);
@@ -585,6 +595,27 @@ function TabServicios() {
       setError(err.message);
     } finally {
       setGuardandoHorizonte(false);
+    }
+  }
+
+  async function guardarAusencia() {
+    setGuardandoAusencia(true);
+    setError(null);
+    setAusenciaGuardada(false);
+    try {
+      await llamarApi('/ausencia-automatica', {
+        method: 'PATCH',
+        body: JSON.stringify({
+          activo: ausenciaActiva,
+          minutos_tolerancia_checkin: Number(minutosTolerancia),
+          metros_tolerancia_checkin: Number(metrosTolerancia),
+        }),
+      });
+      setAusenciaGuardada(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGuardandoAusencia(false);
     }
   }
 
@@ -616,6 +647,28 @@ function TabServicios() {
       />
       <Button onClick={guardarHorizonte} disabled={guardandoHorizonte || !diasGeneracion}>
         {guardandoHorizonte ? t.comun.guardando : t.comun.guardar}
+      </Button>
+
+      <h2>{t.configuracion.servicios_ausencia_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.servicios_ausencia_explicacion}</p>
+      {ausenciaGuardada && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
+      <FormField label={t.configuracion.servicios_ausencia_activa} name="ausencia_activa" type="checkbox" checked={ausenciaActiva} onChange={(e) => { setAusenciaActiva(e.target.checked); setAusenciaGuardada(false); }} />
+      <FormField
+        label={t.configuracion.servicios_ausencia_minutos}
+        name="minutos_tolerancia_checkin"
+        type="number"
+        value={minutosTolerancia}
+        onChange={(e) => { setMinutosTolerancia(e.target.value); setAusenciaGuardada(false); }}
+      />
+      <FormField
+        label={t.configuracion.servicios_ausencia_metros}
+        name="metros_tolerancia_checkin"
+        type="number"
+        value={metrosTolerancia}
+        onChange={(e) => { setMetrosTolerancia(e.target.value); setAusenciaGuardada(false); }}
+      />
+      <Button onClick={guardarAusencia} disabled={guardandoAusencia || !minutosTolerancia || !metrosTolerancia}>
+        {guardandoAusencia ? t.comun.guardando : t.comun.guardar}
       </Button>
 
       <h2>{t.configuracion.servicios_escalada_titulo}</h2>

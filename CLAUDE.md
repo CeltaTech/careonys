@@ -68,7 +68,8 @@ Esta tabla se mantiene siempre en su versión **vigente** — sin notas de fecha
 |---|---|
 | CeltaTech | nombres anteriores de la empresa; "software de CeltaTech" al referirse al producto |
 | Careonys | — |
-| Prestadora (sinónimo aceptado: "licenciataria", cuando el contexto es específicamente la relación de licenciamiento SaaS con CeltaTech) | empresa cliente, organización comercial, empresa usuaria (fuera del sentido técnico del sistema) |
+| Prestadora (sinónimo aceptado: "licenciataria", cuando el contexto es específicamente la relación de licenciamiento SaaS con CeltaTech). Es el caso específico de un cliente de CeltaTech que contrata Careonys — no todo cliente de CeltaTech es una Prestadora (podría contratar otro producto de CeltaTech sin dedicarse al cuidado de personas; ver `ARQUITECTURA_NIVELES.md` en la raíz de CeltaTech) | empresa cliente, organización comercial, empresa usuaria (fuera del sentido técnico del sistema) |
+| Cliente (a secas, únicamente cuando se habla desde la perspectiva de CeltaTech/Nivel 1 sobre cualquier empresa que le contrata un producto, sea o no Careonys) | usar dentro del contexto de Careonys para referirse al Cliente o a la Prestadora — dentro de Careonys esos dos roles siempre llevan su propio nombre, nunca "cliente" genérico |
 | Organización | entidad técnica multi-tenant — no confundir con "Prestadora" en texto de negocio |
 | Sandbox | empresa cliente, Prestadora real, organización comercial |
 | Asistente (cuidador/a, enfermero/a, etc.) | empleado/a, trabajador/a |

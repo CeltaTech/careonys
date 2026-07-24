@@ -310,6 +310,10 @@ export const T = {
     },
     dashboard: {
       titulo: 'Dashboard',
+      seccion_actividad_titulo: 'Actividad de esta semana',
+      seccion_actividad_subtitulo: 'Postulaciones, solicitudes y equipo activo hasta hoy.',
+      seccion_alertas_titulo: 'Alertas y continuidad',
+      seccion_alertas_subtitulo: 'Situaciones que pueden necesitar tu atención.',
       postulaciones_hoy: 'Postulaciones hoy',
       postulaciones_semana: 'Postulaciones esta semana',
       solicitudes_pendientes: 'Solicitudes pendientes',
@@ -1325,6 +1329,10 @@ export const T = {
     },
     dashboard: {
       titulo: 'Dashboard',
+      seccion_actividad_titulo: 'This week\'s activity',
+      seccion_actividad_subtitulo: 'Applications, requests, and active team so far.',
+      seccion_alertas_titulo: 'Alerts and continuity',
+      seccion_alertas_subtitulo: 'Situations that may need your attention.',
       postulaciones_hoy: 'Applications today',
       postulaciones_semana: 'Applications this week',
       solicitudes_pendientes: 'Pending requests',
@@ -2340,6 +2348,10 @@ export const T = {
     },
     dashboard: {
       titulo: 'Painel',
+      seccion_actividad_titulo: 'Atividade desta semana',
+      seccion_actividad_subtitulo: 'Candidaturas, solicitações e equipe ativa até agora.',
+      seccion_alertas_titulo: 'Alertas e continuidade',
+      seccion_alertas_subtitulo: 'Situações que podem precisar da sua atenção.',
       postulaciones_hoy: 'Candidaturas hoje',
       postulaciones_semana: 'Candidaturas esta semana',
       solicitudes_pendientes: 'Solicitações pendentes',

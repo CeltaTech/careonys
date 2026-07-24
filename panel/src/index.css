@@ -430,6 +430,86 @@ h2 {
   font-size: 0.9rem;
 }
 
+/* ---------- Secciones del dashboard ---------- */
+
+.dashboard-seccion {
+  margin-top: 2rem;
+}
+
+.dashboard-seccion-header {
+  margin-bottom: 0.75rem;
+}
+
+.dashboard-seccion-titulo {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  color: var(--azul-oscuro);
+  margin: 0;
+}
+
+.dashboard-seccion-subtitulo {
+  color: var(--texto-secundario);
+  font-size: 0.88rem;
+  margin: 0.15rem 0 0;
+}
+
+/* ---------- Tarjetas de listado (Asistentes, Clientes) ---------- */
+
+.lista-tarjetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.lista-tarjeta {
+  background: #FFFFFF;
+  border: 1px solid var(--borde-card);
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.lista-tarjeta-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.lista-tarjeta-titulo {
+  font-weight: 600;
+  color: var(--azul-oscuro);
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.lista-tarjeta-subtitulo {
+  color: var(--texto-secundario);
+  font-size: 0.85rem;
+  margin: 0.15rem 0 0;
+}
+
+.lista-tarjeta-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--texto-secundario);
+}
+
+.lista-tarjeta-meta strong {
+  color: var(--texto-principal);
+  font-weight: 500;
+}
+
+.lista-tarjeta-acciones {
+  margin-top: 0.25rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
 /* ---------- Filtros y tablas ---------- */
 
 .panel-filtros {

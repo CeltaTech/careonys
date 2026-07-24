@@ -79,38 +79,29 @@ export function Asistentes() {
           ) : undefined
         }
       >
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.asistentes.col_nombre}</th>
-              <th>{t.asistentes.col_especialidades}</th>
-              <th>{t.asistentes.col_zonas}</th>
-              {esAdmin && <th>{t.asistentes.col_vinculo}</th>}
-              <th>{t.asistentes.col_estado}</th>
-              {esAdmin && <th>{t.asistentes.col_score_riesgo}</th>}
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filasFiltradas.map((a) => (
-              <tr key={a.id}>
-                <td>{a.nombre}</td>
-                <td>{(a.especialidades || []).join(', ')}</td>
-                <td>{(a.zonas || []).join(', ')}</td>
-                {esAdmin && <td>{t.asistentes[`vinculo_${a.tipo_vinculo}`]}</td>}
-                <td>
-                  <span className={`badge badge-${a.estado === 'activo' ? 'aprobado' : a.estado === 'cesado' ? 'rechazado' : ''}`}>
-                    {t.asistentes[`estado_${a.estado}`]}
-                  </span>
-                </td>
-                {esAdmin && <td>{a.score_riesgo_reclasificacion}</td>}
-                <td>
-                  <button onClick={() => navigate(`/asistentes/${a.id}`)}>{t.comun.ver_detalle}</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="lista-tarjetas">
+          {filasFiltradas.map((a) => (
+            <div className="lista-tarjeta" key={a.id}>
+              <div className="lista-tarjeta-header">
+                <div>
+                  <p className="lista-tarjeta-titulo">{a.nombre}</p>
+                  <p className="lista-tarjeta-subtitulo">{(a.especialidades || []).join(', ') || '—'}</p>
+                </div>
+                <span className={`badge badge-${a.estado === 'activo' ? 'aprobado' : a.estado === 'cesado' ? 'rechazado' : ''}`}>
+                  {t.asistentes[`estado_${a.estado}`]}
+                </span>
+              </div>
+              <div className="lista-tarjeta-meta">
+                <span><strong>{t.asistentes.col_zonas}:</strong> {(a.zonas || []).join(', ') || '—'}</span>
+                {esAdmin && <span><strong>{t.asistentes.col_vinculo}:</strong> {t.asistentes[`vinculo_${a.tipo_vinculo}`]}</span>}
+                {esAdmin && <span><strong>{t.asistentes.col_score_riesgo}:</strong> {a.score_riesgo_reclasificacion}</span>}
+              </div>
+              <div className="lista-tarjeta-acciones">
+                <Button variant="secondary" onClick={() => navigate(`/asistentes/${a.id}`)}>{t.comun.ver_detalle}</Button>
+              </div>
+            </div>
+          ))}
+        </div>
       </EstadoLista>
     </div>
   );

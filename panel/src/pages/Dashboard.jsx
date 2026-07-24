@@ -181,58 +181,70 @@ export function Dashboard() {
         />
       )}
 
-      <EstadoLista
-        estado={estadoGeneral}
-        error={postulaciones.error || solicitudes.error || asistentes.error || clientes.error}
-        vacio={false}
-        recargar={() => {
-          postulaciones.recargar();
-          solicitudes.recargar();
-          asistentes.recargar();
-          clientes.recargar();
-        }}
-      >
-        <div className="dashboard-metricas">
-          <div className="metrica-card">
-            <span className="metrica-valor">{postulacionesHoy}</span>
-            <span className="metrica-label">{t.dashboard.postulaciones_hoy}</span>
-          </div>
-          <div className="metrica-card">
-            <span className="metrica-valor">{postulacionesSemana}</span>
-            <span className="metrica-label">{t.dashboard.postulaciones_semana}</span>
-          </div>
-          <div className="metrica-card">
-            <span className="metrica-valor">{solicitudesPendientes}</span>
-            <span className="metrica-label">{t.dashboard.solicitudes_pendientes}</span>
-          </div>
-          <div className="metrica-card">
-            <span className="metrica-valor">{asistentesDisponibles}</span>
-            <span className="metrica-label">{t.dashboard.asistentes_disponibles}</span>
-          </div>
-          <div className="metrica-card">
-            <span className="metrica-valor">{clientesActivas}</span>
-            <span className="metrica-label">{t.dashboard.clientes_activas}</span>
-          </div>
+      <div className="dashboard-seccion">
+        <div className="dashboard-seccion-header">
+          <h2 className="dashboard-seccion-titulo">{t.dashboard.seccion_actividad_titulo}</h2>
+          <p className="dashboard-seccion-subtitulo">{t.dashboard.seccion_actividad_subtitulo}</p>
         </div>
-      </EstadoLista>
+        <EstadoLista
+          estado={estadoGeneral}
+          error={postulaciones.error || solicitudes.error || asistentes.error || clientes.error}
+          vacio={false}
+          recargar={() => {
+            postulaciones.recargar();
+            solicitudes.recargar();
+            asistentes.recargar();
+            clientes.recargar();
+          }}
+        >
+          <div className="dashboard-metricas">
+            <div className="metrica-card">
+              <span className="metrica-valor">{postulacionesHoy}</span>
+              <span className="metrica-label">{t.dashboard.postulaciones_hoy}</span>
+            </div>
+            <div className="metrica-card">
+              <span className="metrica-valor">{postulacionesSemana}</span>
+              <span className="metrica-label">{t.dashboard.postulaciones_semana}</span>
+            </div>
+            <div className="metrica-card">
+              <span className="metrica-valor">{solicitudesPendientes}</span>
+              <span className="metrica-label">{t.dashboard.solicitudes_pendientes}</span>
+            </div>
+            <div className="metrica-card">
+              <span className="metrica-valor">{asistentesDisponibles}</span>
+              <span className="metrica-label">{t.dashboard.asistentes_disponibles}</span>
+            </div>
+            <div className="metrica-card">
+              <span className="metrica-valor">{clientesActivas}</span>
+              <span className="metrica-label">{t.dashboard.clientes_activas}</span>
+            </div>
+          </div>
+        </EstadoLista>
+      </div>
 
-      <EstadoLista
-        estado={errorAlertas ? 'error' : ausentesSinRelevo === null ? 'cargando' : 'listo'}
-        error={errorAlertas}
-        vacio={false}
-        recargar={cargarAlertas}
-      >
-        <div className="dashboard-metricas">
-          <Link to="/continuidad" className={`metrica-card${ausentesSinRelevo > 0 ? ' metrica-card-alerta' : ''}`}>
-            <span className="metrica-valor">{ausentesSinRelevo}</span>
-            <span className="metrica-label">{t.dashboard.ausentes_sin_relevo}</span>
-          </Link>
-          <Link to="/asistentes" className={`metrica-card${documentosPorVencer > 0 ? ' metrica-card-alerta' : ''}`}>
-            <span className="metrica-valor">{documentosPorVencer}</span>
-            <span className="metrica-label">{t.dashboard.documentacion_por_vencer}</span>
-          </Link>
+      <div className="dashboard-seccion">
+        <div className="dashboard-seccion-header">
+          <h2 className="dashboard-seccion-titulo">{t.dashboard.seccion_alertas_titulo}</h2>
+          <p className="dashboard-seccion-subtitulo">{t.dashboard.seccion_alertas_subtitulo}</p>
         </div>
-      </EstadoLista>
+        <EstadoLista
+          estado={errorAlertas ? 'error' : ausentesSinRelevo === null ? 'cargando' : 'listo'}
+          error={errorAlertas}
+          vacio={false}
+          recargar={cargarAlertas}
+        >
+          <div className="dashboard-metricas">
+            <Link to="/continuidad" className={`metrica-card${ausentesSinRelevo > 0 ? ' metrica-card-alerta' : ''}`}>
+              <span className="metrica-valor">{ausentesSinRelevo}</span>
+              <span className="metrica-label">{t.dashboard.ausentes_sin_relevo}</span>
+            </Link>
+            <Link to="/asistentes" className={`metrica-card${documentosPorVencer > 0 ? ' metrica-card-alerta' : ''}`}>
+              <span className="metrica-valor">{documentosPorVencer}</span>
+              <span className="metrica-label">{t.dashboard.documentacion_por_vencer}</span>
+            </Link>
+          </div>
+        </EstadoLista>
+      </div>
     </div>
   );
 }

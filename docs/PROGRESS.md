@@ -21,6 +21,31 @@ Convención: 🔴 No iniciado · 🟡 En progreso · 🟢 Completo y en producci
 
 ## Última tarea completada
 
+**2026-07-24: Fase 12 del rediseño de frontend — vuelta de Guardias (`Guardias.jsx`).**
+Completa la parte de la Fase 12 que había quedado afuera del primer corte (Dashboard +
+Asistentes + Clientes, pendiente #83), a pedido explícito del Desarrollador de seguir en
+ese orden ("en ese orden"). A diferencia del primer corte, acá el Desarrollador delegó el
+detalle de la solución ("hace lo que te parezca bien y despues me fijo") en vez de aprobar
+un plan puntual antes de programar. Se agrupó la barra de filtros en una tarjeta
+(`.panel-filtros-tarjeta`, nueva en `index.css`), se agregó un encabezado de sección
+título+subtítulo sobre la grilla reutilizando el patrón `.dashboard-seccion` ya existente
+en `Dashboard.jsx` (título "Grilla de guardias" / subtítulo que explica el drag-and-drop y
+la alternativa de abrir el detalle), y se envolvió la grilla en una tarjeta
+(`.panel-guardias-grid-tarjeta`). Textos nuevos (`grilla_titulo`/`grilla_subtitulo`) en
+`t.guardias.*` de `translations.js`, en los 3 locales (es-AR/en/pt-BR). **Deliberadamente
+sin tocar `GuardiasGrid.jsx` ni `GuardiaAcciones.jsx`**: la grilla es una matriz con
+drag-and-drop, no una tabla, y ya tiene su alternativa por teclado verificada en la Fase 4
+(WCAG 2.5.7) — envolver solo el contenedor evita arriesgar esa accesibilidad ya probada.
+`npm run build`/`npm run lint` (oxlint) del Panel limpios. **Verificado en navegador real**
+(Playwright) contra la Prestadora Demo: con el rango de fechas por defecto la grilla estaba
+vacía (los datos reales de esta cuenta de prueba solo existen 2026-07-13/2026-07-22,
+confirmado por SQL directo, `select count(*), min(fecha), max(fecha) from guardias where
+prestadora_id = '4e84b0e7-1729-4d07-9e70-56fdbd54cd89'` → 151 filas), y con ese rango la
+grilla mostró los datos reales dentro de la tarjeta nueva; se hizo click en una guardia y
+el modal "Detalle de guardia" se abrió correctamente encima del layout nuevo, sin errores
+de consola. **Todavía sin commit/push/deploy** — pendiente de confirmación del
+Desarrollador (ver pendiente #83 en `docs/PENDIENTES.md`).
+
 **2026-07-24: Pendiente #63 — `metros_tolerancia_checkin` con pantalla propia en el Panel.**
 Nueva sección "Ausencia automática por falta de check-in GPS" en la pestaña Servicios de
 `Configuracion.jsx`, con los 3 campos de `configuracion_ausencia_automatica` (activo,

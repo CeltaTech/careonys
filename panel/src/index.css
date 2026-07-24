@@ -1028,6 +1028,33 @@ h2 {
   font-size: 0.85rem;
 }
 
+.panel-filtros-tarjeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  background: #FFFFFF;
+  border: 1px solid var(--borde-card);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.panel-filtros-tarjeta input,
+.panel-filtros-tarjeta select {
+  font-family: var(--font-body);
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--borde-card);
+  border-radius: 8px;
+}
+
+.panel-guardias-grid-tarjeta {
+  background: #FFFFFF;
+  border: 1px solid var(--borde-card);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
 .panel-guardias-grid-wrap {
   overflow-x: auto;
 }

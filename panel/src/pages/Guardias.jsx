@@ -131,7 +131,7 @@ export function Guardias() {
     <div>
       <h1>{t.guardias.titulo}</h1>
 
-      <div className="panel-filtros">
+      <div className="panel-filtros-tarjeta">
         <FormFieldFecha label={t.guardias.filtro_desde} value={desde} onChange={setDesde} />
         <FormFieldFecha label={t.guardias.filtro_hasta} value={hasta} onChange={setHasta} />
         <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
@@ -149,22 +149,30 @@ export function Guardias() {
         <Button onClick={() => setMostrarNueva(true)}>{t.guardias.nueva}</Button>
       </div>
 
-      <EstadoLista
-        estado={estadoCarga}
-        error={error}
-        vacio={estadoCarga === 'listo' && filasFiltradas.length === 0}
-        recargar={recargar}
-        mensajeVacio={t.guardias.sin_guardias_rango}
-      >
-        <GuardiasGrid
-          filas={filasFiltradas}
-          desde={desde}
-          hasta={hasta}
-          tieneAlerta={tieneAlertaCheckinSinCheckout}
-          onSeleccionar={setGuardiaSeleccionada}
-          onReasignar={handleReasignar}
-        />
-      </EstadoLista>
+      <div className="dashboard-seccion">
+        <div className="dashboard-seccion-header">
+          <h2 className="dashboard-seccion-titulo">{t.guardias.grilla_titulo}</h2>
+          <p className="dashboard-seccion-subtitulo">{t.guardias.grilla_subtitulo}</p>
+        </div>
+        <EstadoLista
+          estado={estadoCarga}
+          error={error}
+          vacio={estadoCarga === 'listo' && filasFiltradas.length === 0}
+          recargar={recargar}
+          mensajeVacio={t.guardias.sin_guardias_rango}
+        >
+          <div className="panel-guardias-grid-tarjeta">
+            <GuardiasGrid
+              filas={filasFiltradas}
+              desde={desde}
+              hasta={hasta}
+              tieneAlerta={tieneAlertaCheckinSinCheckout}
+              onSeleccionar={setGuardiaSeleccionada}
+              onReasignar={handleReasignar}
+            />
+          </div>
+        </EstadoLista>
+      </div>
 
       {mostrarNueva && <NuevaGuardiaModal onClose={() => setMostrarNueva(false)} onCreada={cerrarYRecargar} />}
 

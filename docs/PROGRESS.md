@@ -21,12 +21,12 @@ Convención: 🔴 No iniciado · 🟡 En progreso · 🟢 Completo y en producci
 
 ## Última tarea completada
 
-**2026-07-23: Pendiente #75 — flujo de "primera contraseña" (activación de cuenta por
-email) para Cliente/Asistente/Personas autorizadas, construido y verificado en navegador
-real contra Prestadora Demo, pendiente de commit/push/deploy.** Mecanismo elegido por el
-Desarrollador: token propio (no `admin.inviteUserByEmail` de Supabase) + email por el SMTP
-ya existente (`backend/src/utils/email.js`). Nuevo: tabla `tokens_activacion_cuenta` (RLS
-sin policies — solo accesible con la service role key del backend), `backend/src/utils/
+**2026-07-24: Pendiente #75 — flujo de "primera contraseña" (activación de cuenta por
+email) para Cliente/Asistente/Personas autorizadas, construido, desplegado a producción y
+verificado.** Mecanismo elegido por el Desarrollador: token propio (no
+`admin.inviteUserByEmail` de Supabase) + email por el SMTP ya existente
+(`backend/src/utils/email.js`). Nuevo: tabla `tokens_activacion_cuenta` (RLS sin policies —
+solo accesible con la service role key del backend), `backend/src/utils/
 activacionCuenta.js` (genera token de 7 días + email multi-idioma), endpoint público
 `POST /api/activar-cuenta` (`backend/src/routes/activarCuenta.js`), integrado en
 `crearCuentaConPerfil` (`backend/src/utils/cuentasPanel.js`) para las 3 rutas que crean
@@ -41,13 +41,26 @@ código real de `crearCuentaConPerfil`, luego eliminada de Supabase Auth + `usua
 nueva → pantalla de éxito con link a `/login`; token reutilizado, token inexistente y sin
 token en la URL → los 3 casos muestran correctamente el mensaje de link inválido/vencido.
 0 errores de consola nuevos. `npm run build`/`npm run lint` limpios en las 3 apps. **No se
-pudo verificar el envío real de email por SMTP en este entorno** (sandbox de desarrollo sin
+pudo verificar el envío real de email por SMTP en el entorno de desarrollo** (sandbox sin
 salida de red hacia Gmail SMTP, `ECONNREFUSED`) — el token se inserta en la base *antes* del
 envío del email dentro de `invitarActivacionCuenta`, así que ese fallo no impidió probar la
-pantalla de activación, pero la entrega real del email queda sin confirmar hasta producción.
-Falta: sumar `PWA_CLIENTES_URL`/`PWA_ASISTENTES_URL` a las variables de entorno de Railway
-(backend de producción, hoy solo están en el `.env` local) antes del deploy, y commit + push
-+ deploy explícito — pendiente de permiso del Desarrollador.
+pantalla de activación en local; la entrega real del email en producción queda sin
+confirmar todavía. Commiteado (`218f0d9`, backend+panel+ambas PWAs+docs) y pusheado a
+`origin/main`. Variables `PWA_CLIENTES_URL`/`PWA_ASISTENTES_URL` sumadas a Railway
+(backend de producción) vía `railway variables --set`. Desplegado a Vercel: `panel`
+(`dpl_GkThZXiCY79rGixSxdSoC651WbDn`), `pwa-clientes` (`dpl_Hpm7aoQ29AqJo1LJeF7cgsoqFsVW`),
+`pwa-asistentes` (`dpl_9HnKdYD1HrM4CbQUy86fFX35Anjh`), los 3 con `readyState: READY`.
+`GET /health` y `POST /api/activar-cuenta` del backend de Railway confirmados en vivo tras
+el redeploy (el CLI de Railway mostró `Deploy failed` en el estado del último deployment
+pese a que el servicio respondía correctamente — inconsistencia del CLI, no del servicio,
+confirmada llamando los endpoints reales). **Hallazgo real durante la verificación en
+producción, no hipotético**: `pwa-asistentes` nunca tuvo `vercel.json` con el rewrite SPA
+a `index.html` que sí tenía `pwa-clientes` desde antes — cualquier navegación directa a una
+ruta (ej. `/login`, y el link de activación `/activar-cuenta` que llega por email) devolvía
+404 en producción en vez de cargar la app. No es un bug introducido por esta tarea, pero sí
+un blocker real para que esta función funcionara en Asistentes. Corregido agregando
+`pwa-asistentes/vercel.json` (commit `2d3418f`), pusheado y redesplegado — confirmado con
+`curl` real que `/activar-cuenta` y `/login` devuelven 200 en producción tras el fix.
 
 **2026-07-23: Verificación retroactiva de las Fases 1 y 2 del plan de rediseño de frontend
 (`C:\Users\Usuario\.claude\plans\distributed-scribbling-wirth.md`) — ya estaban completas,

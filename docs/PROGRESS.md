@@ -21,6 +21,39 @@ Convención: 🔴 No iniciado · 🟡 En progreso · 🟢 Completo y en producci
 
 ## Última tarea completada
 
+**2026-07-24 (madrugada): Avance autónomo nocturno autorizado explícitamente por el
+Desarrollador** ("me voy a dormir, fijate si algo de esto no depende de decisiones mías y
+resolvelo"). Se revisó `docs/PENDIENTES.md` completo, línea por línea (no de memoria, ver
+regla de `CLAUDE.md` §12), evaluando cada pendiente abierto (#2, #14, #18, #19, #37, #40,
+#44, #45/#46, #49, #50, #51, #53-59, #76, #77 y el ítem final del #84) contra un único
+criterio: ¿depende de una decisión del Desarrollador (modelo de negocio, alcance legal,
+prioridad, aprobación de arquitectura §11) o es puramente técnico? Los que sí dependen de
+una decisión (mayoría — rotación de credenciales #2, migración de email #44, mecanismo de
+recuperación de MFA #37, sitio público nuevo #49, módulo de facturación #14/#56, todo el
+backlog post-MVP #53-59/#76/#77) se dejaron intactos, sin tocar código. Resueltos los que
+no dependían de ninguna decisión pendiente:
+- **Pendiente #84** (registro de uso de IA): disparada una llamada real de punta a punta
+  contra producción (`POST /api/panel/importacion/analizar`, que solo propone un mapeo de
+  columnas, no crea ningún dato) con la cuenta de prueba `admin_prestadora` — confirmado
+  por SQL directo contra Supabase que se insertó una fila real en `uso_ia`
+  (`modulo='importacion'`, 499/182 tokens, `costo_usd=0.002818`). Cierra el único punto que
+  había quedado sin verificar del #84 — pendiente cerrado 🟢.
+- **Pendiente #46** (deploy de Railway fallando en un commit puntual): confirmado que fue
+  un problema pasajero de infraestructura de Railway, como se sospechaba — la racha de
+  deploys posteriores (`gh run list`) está en `SUCCESS` continuo desde 2026-07-22, sin
+  necesidad de ninguna acción manual ni de escalar a soporte. Cerrado 🟢.
+- **Pendiente #40 / #45** (alias `careonys-panel.vercel.app`): se detectó que el alias viejo
+  `sendler-panel.vercel.app` — que ya se había eliminado una vez en el pendiente #45 — había
+  vuelto a aparecer y a responder 200, contradiciendo ese cierre. Eliminado de nuevo
+  (`vercel alias rm`), verificado con `curl` que ahora da 404 y que `careonys-panel.vercel.app`
+  sigue sirviendo 200. Causa de la reaparición no determinada — queda anotado en #40 para
+  revisar si vuelve a pasar.
+
+Ningún dato ficticio quedó creado en producción (el token de sesión de la cuenta de prueba
+usado para las pruebas de esta madrugada se generó y se descartó en archivos temporales
+borrados al terminar, nunca commiteado). `docs/PENDIENTES.md` actualizado con el detalle de
+cada cierre.
+
 **2026-07-24: Pendiente #84 — aplicación y verificación end-to-end de "Registrar consumo
 real de IA por Prestadora para poder facturarlo".** El schema (`schema_uso_ia_01.sql`,
 escrito en una sesión anterior) se aplicó por primera vez contra Supabase real vía

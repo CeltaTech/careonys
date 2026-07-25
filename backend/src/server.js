@@ -26,6 +26,8 @@ import { revisarRecordatoriosPush } from './utils/revisarRecordatoriosPush.js';
 import { whatsappWebhookRouter } from './routes/whatsappWebhook.js';
 import { appAsistentesRouter } from './routes/appAsistentes.js';
 import { appClientesRouter } from './routes/appClientes.js';
+import { panelMatchRouter } from './routes/panelMatch.js';
+import { webhooksPasarelasRouter } from './routes/webhooksPasarelas.js';
 import { revisarAlertasIA } from './utils/revisarAlertasIA.js';
 import { revisarAvisosAutomaticosCese } from './utils/avisoAutomaticoCese.js';
 import { verificarPreciosIA } from './utils/verificarPreciosIA.js';
@@ -58,6 +60,8 @@ app.use('/api/activar-cuenta', activarCuentaRouter);
 app.use('/api/whatsapp-webhook', whatsappWebhookRouter);
 app.use('/api/app-asistentes', appAsistentesRouter);
 app.use('/api/app-clientes', appClientesRouter);
+app.use('/api/panel/match', panelMatchRouter);
+app.use('/api/webhooks/pasarelas', webhooksPasarelasRouter);
 
 const UN_DIA_MS = 24 * 60 * 60 * 1000;
 revisarVencimientos().catch((err) => console.error('Error en revisión inicial de vencimientos:', err.message));

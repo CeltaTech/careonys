@@ -104,6 +104,14 @@ export function Layout() {
               <NavLink to="/informes-obra-social">{t.nav.informes_obra_social}</NavLink>
             </>
           )}
+          {tieneModalidad('match') && (
+            <>
+              <span className="panel-nav-grupo">{t.nav.grupo_match}</span>
+              <NavLink to="/match/clientes">{t.nav.match_clientes}</NavLink>
+              <NavLink to="/match/calificaciones">{t.nav.match_calificaciones}</NavLink>
+              <NavLink to="/match/auditoria-legal">{t.nav.match_auditoria_legal}</NavLink>
+            </>
+          )}
           <NavLink to="/comunicacion">{t.nav.comunicacion}</NavLink>
           {(esAdminOSuperior(usuario?.rol) || puede('importar_datos_masivos')) && (
             <NavLink to="/importacion">{t.nav.importacion}</NavLink>

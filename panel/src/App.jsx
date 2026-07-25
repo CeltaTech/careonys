@@ -31,6 +31,9 @@ import { Configuracion } from './pages/Configuracion';
 import { Importacion } from './pages/Importacion';
 import { InformesObraSocial } from './pages/InformesObraSocial';
 import { Auditoria } from './pages/Auditoria';
+import { MatchClientes } from './pages/match/Clientes';
+import { MatchCalificaciones } from './pages/match/Calificaciones';
+import { MatchAuditoriaLegal } from './pages/match/AuditoriaLegal';
 
 function App() {
   return (
@@ -74,6 +77,30 @@ function App() {
                     <Route path="admin-plataforma" element={<ProtectedRoute roles={['admin_plataforma']}><AdminPlataforma /></ProtectedRoute>} />
                     <Route path="configuracion" element={<ProtectedRoute soloAdmin><Configuracion /></ProtectedRoute>} />
                     <Route path="auditoria" element={<ProtectedRoute roles={['admin_prestadora', 'superadmin', 'admin_plataforma']}><Auditoria /></ProtectedRoute>} />
+                    <Route
+                      path="match/clientes"
+                      element={
+                        <ProtectedRoute roles={['admin_prestadora', 'coordinador', 'superadmin', 'admin_plataforma']}>
+                          <MatchClientes />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="match/calificaciones"
+                      element={
+                        <ProtectedRoute roles={['admin_prestadora', 'coordinador', 'superadmin', 'admin_plataforma']}>
+                          <MatchCalificaciones />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="match/auditoria-legal"
+                      element={
+                        <ProtectedRoute roles={['admin_prestadora', 'coordinador', 'superadmin', 'admin_plataforma']}>
+                          <MatchAuditoriaLegal />
+                        </ProtectedRoute>
+                      }
+                    />
                   </Route>
                 </Routes>
               </BrowserRouter>

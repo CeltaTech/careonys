@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requiereRolCliente } from '../middleware/requiereRolCliente.js';
 import { supabase } from '../db/connection.js';
 import { resolverVitalesHabilitados } from '../utils/vitalesReferencia.js';
+import { generarTokenQrCobro } from '../utils/qrCobroEfectivo.js';
 
 export const appClientesRouter = Router();
 
@@ -381,4 +382,68 @@ appClientesRouter.delete('/push/suscribir', requiereRolCliente, async (req, res)
   }
 
   res.json({ ok: true });
+});
+
+// ============================================================================
+// Suscripción match + cobro en efectivo por QR (pendiente #85). El QR es la
+// alternativa a la carga manual del cobrador: el Cliente lo genera desde su propio
+// dispositivo, de un solo uso y con vencimiento corto (10 min) — el canje ocurre siempre en
+// el Panel vía service_role, nunca como UPDATE directo desde acá.
+// ============================================================================
+
+appClientesRouter.get('/suscripcion/:pacienteId', requiereRolCliente, async (req, res) => {
+  const { data, error } = await supabase
+    .from('suscripciones_match')
+    .select('id, estado, monto_mensual, trial_fin, proximo_cobro, cancelada_en')
+    .eq('cliente_id', req.usuarioCliente.clienteId)
+    .eq('paciente_id', req.params.pacienteId)
+    .maybeSingle();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ suscripcion: data });
+});
+
+appClientesRouter.post('/qr-cobro', requiereRolCliente, async (req, res) => {
+  const { suscripcion_id: suscripcionId } = req.body || {};
+  if (!suscripcionId) {
+    return res.status(400).json({ error: 'Falta suscripcion_id' });
+  }
+
+  const { data: suscripcion } = await supabase
+    .from('suscripciones_match')
+    .select('id, cliente_id, monto_mensual, proximo_cobro')
+    .eq('id', suscripcionId)
+    .eq('cliente_id', req.usuarioCliente.clienteId)
+    .maybeSingle();
+  if (!suscripcion) {
+    return res.status(404).json({ error: 'Suscripción no encontrada' });
+  }
+
+  const { token, expiraEn } = generarTokenQrCobro();
+  const { data, error } = await supabase
+    .from('qr_cobro_efectivo')
+    .insert({
+      suscripcion_id: suscripcion.id,
+      cliente_id: req.usuarioCliente.clienteId,
+      periodo: suscripcion.proximo_cobro || new Date().toISOString().slice(0, 10),
+      monto: suscripcion.monto_mensual,
+      token,
+      expira_en: expiraEn.toISOString(),
+    })
+    .select('id, token, expira_en, usado_en')
+    .single();
+  if (error) return res.status(500).json({ error: error.message });
+
+  res.json({ qr: data });
+});
+
+appClientesRouter.get('/qr-cobro/:id', requiereRolCliente, async (req, res) => {
+  const { data, error } = await supabase
+    .from('qr_cobro_efectivo')
+    .select('id, expira_en, usado_en, cobro_id')
+    .eq('id', req.params.id)
+    .eq('cliente_id', req.usuarioCliente.clienteId)
+    .maybeSingle();
+  if (error) return res.status(500).json({ error: error.message });
+  if (!data) return res.status(404).json({ error: 'QR no encontrado' });
+  res.json({ qr: data });
 });

@@ -99,7 +99,7 @@ export function ClienteDetalle() {
   }, [recargar, recargarPersonasAutorizadas]);
 
   async function quitarMiembroPersonasAutorizadas(usuarioId) {
-    if (!confirmarDestructivo(t.clientes.personas autorizadas.quitar_confirmacion)) {
+    if (!(await confirmarDestructivo(t.clientes.personas autorizadas.quitar_confirmacion))) {
       return;
     }
     setQuitandoUsuarioId(usuarioId);

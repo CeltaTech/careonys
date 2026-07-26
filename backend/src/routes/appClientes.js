@@ -3,13 +3,17 @@ import { requiereRolCliente } from '../middleware/requiereRolCliente.js';
 import { supabase } from '../db/connection.js';
 import { resolverVitalesHabilitados } from '../utils/vitalesReferencia.js';
 import { generarTokenQrCobro } from '../utils/qrCobroEfectivo.js';
+import { medicacionVigenteDelPaciente } from '../utils/medicacionIndicaciones.js';
 
 export const appClientesRouter = Router();
 
+// pacientes.medicacion_habitual queda deprecado (pendiente #62, docs/PENDIENTES.md): la
+// medicación vigente se deriva de indicaciones_medicacion (estado='aceptada'), nunca de
+// este JSONB suelto.
 async function pacienteDeLaCliente(pacienteId, usuarioCliente) {
   const { data } = await supabase
     .from('pacientes')
-    .select('id, nombre, domicilio, lat, lng, patologias, medicacion_habitual, nivel_complejidad, cliente_id, prestadora_id')
+    .select('id, nombre, domicilio, lat, lng, patologias, nivel_complejidad, cliente_id, prestadora_id')
     .eq('id', pacienteId)
     .eq('cliente_id', usuarioCliente.clienteId)
     .eq('prestadora_id', usuarioCliente.prestadoraId)
@@ -110,8 +114,10 @@ appClientesRouter.get('/pacientes/:id', requiereRolCliente, async (req, res) => 
     .is('resuelta_at', null)
     .order('created_at', { ascending: false });
 
+  const medicacionVigente = await medicacionVigenteDelPaciente(paciente.id);
+
   res.json({
-    paciente,
+    paciente: { ...paciente, medicacionVigente },
     guardiaActiva: guardiaActiva || null,
     guardiaProxima,
     alertasActivas: alertasActivas || [],

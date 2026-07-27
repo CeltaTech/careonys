@@ -17,7 +17,7 @@ export const T = {
       cerrar_sesion: 'Cerrar sesión',
     },
     auth: {
-      titulo: 'Careonys — Clientes',
+      titulo: '{{producto}} — Clientes',
       subtitulo: 'Ingresá con tu cuenta para seguir el servicio de tu Paciente',
       email: 'Email',
       password: 'Contraseña',
@@ -210,7 +210,7 @@ export const T = {
       cerrar_sesion: 'Log out',
     },
     auth: {
-      titulo: 'Careonys — Families',
+      titulo: '{{producto}} — Families',
       subtitulo: 'Sign in to follow your Patient\'s care',
       email: 'Email',
       password: 'Password',
@@ -403,7 +403,7 @@ export const T = {
       cerrar_sesion: 'Sair',
     },
     auth: {
-      titulo: 'Careonys — Famílias',
+      titulo: '{{producto}} — Famílias',
       subtitulo: 'Entre com sua conta para acompanhar o cuidado do seu Paciente',
       email: 'Email',
       password: 'Senha',

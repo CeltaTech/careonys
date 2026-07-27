@@ -2,6 +2,14 @@
 
 > Registra por qué cambió una regla vigente de `CLAUDE.md`. La regla vigente en sí vive solo en `CLAUDE.md` (§10) — este archivo guarda el "antes" y el motivo, no vuelve a describir el estado actual en detalle.
 
+## Glosario: la empresa pasa a llamarse CeltaTech (2026-07-27)
+
+- **Antes:** la empresa se llamaba **CeltaTech**, y así figuraba en el glosario de §4, en §1, en §5 y en los comentarios y textos visibles de todo el repositorio.
+- **Ahora:** se llama **CeltaTech**, con dominio `celtatech.com` registrado en Cloudflare. La entrada del glosario ("usar siempre el nombre de la empresa / nunca nombres anteriores") no cambió de forma: cambió cuál es el nombre vigente. **"CeltaTech" pasó a ser un nombre anterior y por lo tanto está prohibido.**
+- **Motivo:** decisión del Desarrollador, sin más. Se ejecutó el mismo día, a propósito: el software sigue sin estar en manos de nadie (§2 de `PLAN_SEPARACION_CELTATECH.md`), así que el renombre no tocó datos vivos, PWA instaladas ni emails ya enviados.
+- **Qué alcanzó en Careonys:** solo comentarios, referencias a documentos y textos visibles del Panel (*"Panel de CeltaTech"* → *"Panel de CeltaTech"*, en `es-AR`, `en` y `pt-BR`). Se verificó **antes** de reemplazar que el nombre de la empresa no apareciera en ninguna tabla, rol, columna ni dominio de correo — por eso el cambio pudo ser textual sin riesgo. Dos documentos cambiaron de nombre: `PLAN_MULTITENANT_CELTATECH.md` y `Prompt_Claude_Code_CeltaTech_Multitenant.md`.
+- **No reintroducir:** "CeltaTech" en cualquier forma. Y ojo con la lección de la entrada de abajo (Regla 1 ampliada): un renombre por buscar-y-reemplazar es seguro **solo** después de comprobar que el nombre no vive en ningún identificador persistido. Acá se comprobó; la próxima vez hay que volver a comprobarlo, no asumirlo. El nombre del **producto** sigue siendo caso aparte y sale de `identidadProducto.js`.
+
 ## Regla 1, límite agregado: la marca del producto no es la de la Prestadora (2026-07-27)
 
 - **Antes:** la ampliación de la Regla 1 hecha ese mismo día decía que el nombre y la marca salen de `identidadProducto.js`, sin decir **dónde** corresponde mostrarlos. Leída sola, esa redacción autorizaba a poner la marca del producto en cualquier pantalla, incluidas las que ve un Cliente.

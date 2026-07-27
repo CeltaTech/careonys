@@ -4,6 +4,14 @@
 > Este archivo refleja el estado real del código, no el estado deseado — si algo no está
 > hecho, dice 🔴 No iniciado, aunque haya PRD escrito para eso.
 
+> **2026-07-27 — La empresa pasó a llamarse CeltaTech** (antes CeltaTech), por decisión del
+> Desarrollador. El renombre se aplicó en todo el repositorio: comentarios, referencias a
+> documentos y textos visibles del Panel en los tres idiomas. **No cambió ninguna tabla, rol,
+> columna ni dominio de correo** — se verificó antes de tocar nada que el nombre de la empresa no
+> apareciera en ningún identificador de Careonys. Dos documentos cambiaron de nombre:
+> `PLAN_MULTITENANT_CELTATECH.md` y `Prompt_Claude_Code_CeltaTech_Multitenant.md`. El detalle
+> completo está en `../../celtatech/docs/PROGRESS.md`.
+
 ## Estado por etapa
 
 | Etapa | Descripción | Estado |

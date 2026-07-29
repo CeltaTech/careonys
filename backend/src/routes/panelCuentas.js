@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
+import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { supabase } from '../db/connection.js';
 import {
   crearCuentaConPerfil,
@@ -77,16 +78,14 @@ panelCuentasRouter.get('/modalidades-activas', requiereRolPanel, async (req, res
   res.json({ modalidades: (data || []).map((f) => f.modalidad) });
 });
 
-panelCuentasRouter.post('/cliente', requiereRolPanel, requiereAdmin, async (req, res) => {
+panelCuentasRouter.post('/cliente', requiereRolPanel, exigirOrganizacionActiva, requiereAdmin, async (req, res) => {
   const { solicitudId } = req.body;
   if (!solicitudId) {
     return res.status(400).json({ error: 'Falta solicitudId' });
   }
 
   let querySolicitud = supabase.from('solicitudes').select('*').eq('id', solicitudId);
-  if (req.usuarioPanel.rol !== 'superadmin') {
-    querySolicitud = querySolicitud.eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  }
+  querySolicitud = acotarAPrestadora(querySolicitud, req.usuarioPanel);
   const { data: solicitud, error: errorSolicitud } = await querySolicitud.single();
 
   if (errorSolicitud || !solicitud) {
@@ -151,7 +150,7 @@ panelCuentasRouter.post('/cliente', requiereRolPanel, requiereAdmin, async (req,
 // Se crea igual una fila de `solicitudes` (canal 'alta_manual') para que el contacto
 // del Cliente siga viviendo en un único lugar (evita reproducir el bug de contacto
 // en blanco que tenían los Clientes sembradas sin solicitud vinculada).
-panelCuentasRouter.post('/cliente-directa', requiereRolPanel, requierePermiso('alta_manual_cliente'), async (req, res) => {
+panelCuentasRouter.post('/cliente-directa', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('alta_manual_cliente'), async (req, res) => {
   const { nombreContacto, telefono, email, localidad, nombrePaciente, domicilioPaciente } = req.body;
   try {
     const { clienteId, pacienteId } = await crearClienteDirecta({
@@ -171,16 +170,14 @@ panelCuentasRouter.post('/cliente-directa', requiereRolPanel, requierePermiso('a
 // de incorporación en etapas_incorporacion_asistente, ya no hay 5 etapas fijas para todas).
 // La primera etapa (menor "orden") queda aprobada de entrada porque ya se cumplió: es la
 // postulación misma, que ya pasó.
-panelCuentasRouter.post('/asistente', requiereRolPanel, requiereAdmin, async (req, res) => {
+panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva, requiereAdmin, async (req, res) => {
   const { postulacionId } = req.body;
   if (!postulacionId) {
     return res.status(400).json({ error: 'Falta postulacionId' });
   }
 
   let queryPostulacion = supabase.from('postulaciones').select('*').eq('id', postulacionId);
-  if (req.usuarioPanel.rol !== 'superadmin') {
-    queryPostulacion = queryPostulacion.eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  }
+  queryPostulacion = acotarAPrestadora(queryPostulacion, req.usuarioPanel);
   const { data: postulacion, error: errorPostulacion } = await queryPostulacion.single();
 
   if (errorPostulacion || !postulacion) {
@@ -263,7 +260,7 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, requiereAdmin, async (re
 // por defecto y, a diferencia de /asistente, no genera filas en `verificaciones_asistente`
 // (equivalente al default 'omitir' del pendiente #18 — política de verificación por
 // prestadora; la Fase 2 de este trabajo suma la configuración para cambiar este comportamiento).
-panelCuentasRouter.post('/asistente-directo', requiereRolPanel, requierePermiso('alta_manual_asistente'), async (req, res) => {
+panelCuentasRouter.post('/asistente-directo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('alta_manual_asistente'), async (req, res) => {
   const { nombre, telefono, email, dni, especialidades, zonas, estado, tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales } = req.body;
   try {
     const { asistenteId } = await crearAsistenteDirecto({
@@ -284,11 +281,9 @@ panelCuentasRouter.post('/asistente-directo', requiereRolPanel, requierePermiso(
 // acción nueva (ver docs/claude_history.md).
 // ============================================================================
 
-panelCuentasRouter.get('/cliente/:clienteId/personas autorizadas', requiereRolPanel, requierePermiso('editar_datos_cliente'), async (req, res) => {
+panelCuentasRouter.get('/cliente/:clienteId/personas autorizadas', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
   let queryCliente = supabase.from('clientes').select('id').eq('id', req.params.clienteId);
-  if (req.usuarioPanel.rol !== 'superadmin') {
-    queryCliente = queryCliente.eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  }
+  queryCliente = acotarAPrestadora(queryCliente, req.usuarioPanel);
   const { data: cliente } = await queryCliente.maybeSingle();
   if (!cliente) {
     return res.status(404).json({ error: 'Cliente no encontrada' });
@@ -306,14 +301,12 @@ panelCuentasRouter.get('/cliente/:clienteId/personas autorizadas', requiereRolPa
   res.json({ miembros: miembros || [] });
 });
 
-panelCuentasRouter.post('/cliente/:clienteId/personas autorizadas', requiereRolPanel, requierePermiso('editar_datos_cliente'), async (req, res) => {
+panelCuentasRouter.post('/cliente/:clienteId/personas autorizadas', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
   const { nombre, email, telefono } = req.body || {};
   const prestadoraId = req.usuarioPanel.prestadoraId;
 
   let queryCliente = supabase.from('clientes').select('id').eq('id', req.params.clienteId);
-  if (req.usuarioPanel.rol !== 'superadmin') {
-    queryCliente = queryCliente.eq('prestadora_id', prestadoraId);
-  }
+  queryCliente = acotarAPrestadora(queryCliente, req.usuarioPanel);
   const { data: cliente } = await queryCliente.maybeSingle();
   if (!cliente) {
     return res.status(404).json({ error: 'Cliente no encontrada' });
@@ -338,9 +331,7 @@ panelCuentasRouter.delete('/cliente/:clienteId/personas autorizadas/:usuarioId',
   const prestadoraId = req.usuarioPanel.prestadoraId;
 
   let queryCliente = supabase.from('clientes').select('id').eq('id', req.params.clienteId);
-  if (req.usuarioPanel.rol !== 'superadmin') {
-    queryCliente = queryCliente.eq('prestadora_id', prestadoraId);
-  }
+  queryCliente = acotarAPrestadora(queryCliente, req.usuarioPanel);
   const { data: cliente } = await queryCliente.maybeSingle();
   if (!cliente) {
     return res.status(404).json({ error: 'Cliente no encontrada' });
@@ -358,13 +349,11 @@ panelCuentasRouter.delete('/cliente/:clienteId/personas autorizadas/:usuarioId',
 // simplemente extraviado. Solo para Cliente/Asistente/Personas autorizadas (mismo alcance que el envío
 // automático de crearCuentaConPerfil); Coordinador/Admin/Superadmin siguen con el flujo
 // manual de panelUsuarios.js y no tienen esta ruta disponible.
-panelCuentasRouter.post('/:usuarioId/reenviar-activacion', requiereRolPanel, requiereAdmin, async (req, res) => {
+panelCuentasRouter.post('/:usuarioId/reenviar-activacion', requiereRolPanel, exigirOrganizacionActiva, requiereAdmin, async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
 
   let queryUsuario = supabase.from('usuarios').select('id, rol, prestadora_id').eq('id', req.params.usuarioId);
-  if (req.usuarioPanel.rol !== 'superadmin') {
-    queryUsuario = queryUsuario.eq('prestadora_id', prestadoraId);
-  }
+  queryUsuario = acotarAPrestadora(queryUsuario, req.usuarioPanel);
   const { data: usuario } = await queryUsuario.maybeSingle();
 
   if (!usuario) {

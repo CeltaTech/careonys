@@ -27,7 +27,8 @@
 //
 // `codigo` es la única excepción: NO se cambia nunca. Es la clave técnica con la
 // que CeltaTech identifica al producto y con la que se arman las claves de
-// entitlements (`careonys.pacientes.activos_max`). Renombrar la marca no toca un
+// entitlements (`careonys.pacientes.activos_max`) — por eso siguen diciendo
+// `careonys` aunque la marca ya sea Careonys. Renombrar la marca no toca un
 // solo dato guardado. Ver PLAN_SEPARACION_CELTATECH.md, Etapa 0.5.
 //
 // A partir de la Etapa 3 la fuente de verdad de estos valores pasa a ser CeltaTech y
@@ -41,7 +42,7 @@
 // Acá viven tres marcas distintas y no se mezclan nunca:
 //
 //   CeltaTech      — la empresa. No la ve nadie dentro del producto.
-//   Careonys     — el producto. La ve quien trabaja EN la Prestadora
+//   Careonys    — el producto. La ve quien trabaja EN la Prestadora
 //                 (Admin_prestadora, Coordinador) y sabe qué software usa.
 //   Prestadora  — la empresa que presta el cuidado. Es la única marca que
 //                 tiene sentido para un Cliente o un Asistente.
@@ -77,6 +78,9 @@
 
 export const IDENTIDAD = {
   // Clave técnica inmutable. Nunca se renombra ni se traduce (ver cabecera).
+  // Sigue diciendo 'careonys' a propósito, aunque la marca hoy sea Careonys: es
+  // justamente lo que este campo promete. Cambiarlo invalidaría todas las claves
+  // de entitlements ya guardadas (`careonys.pacientes.activos_max`).
   codigo: 'careonys',
 
   // Nombre comercial completo. Resuelve el marcador {{producto}}.
@@ -93,10 +97,12 @@ export const IDENTIDAD = {
   descriptorPago: 'CAREONYS',
 
   // Dominio propio, sin protocolo ni barra final. Resuelve {{dominio}}.
-  // Vacío hoy: no hay dominio registrado (confirmado por el Desarrollador el
-  // 2026-07-27). Las URLs de las apps siguen viniendo de variables de entorno
-  // (PWA_ASISTENTES_URL, PWA_CLIENTES_URL) — este campo es para texto visible.
-  dominio: '',
+  // Registrado por el Desarrollador el 2026-07-28 y delegado a Cloudflare
+  // (`anna`/`otto.ns.cloudflare.com`). Todavía no tiene ningún registro cargado,
+  // así que hoy no responde: este campo es para texto visible, no para armar
+  // URLs. Las URLs de las apps siguen viniendo de variables de entorno
+  // (PWA_ASISTENTES_URL, PWA_CLIENTES_URL) hasta que se hagan apuntar acá.
+  dominio: 'careonys.com',
 
   // Remitente que se muestra en los emails salientes. Vacío = se usa el que ya
   // trae el transporte SMTP (backend/src/utils/email.js). Es solo el nombre
@@ -107,10 +113,11 @@ export const IDENTIDAD = {
   // Casilla de contacto de la marca. Hoy la usa el "subject" VAPID de las
   // notificaciones push (backend/src/utils/push.js): la dirección a la que el
   // servicio de push del navegador escribe si hay un problema con los envíos.
-  // ATENCIÓN: el dominio careonys.app NO está registrado — esta casilla no
-  // existe todavía y no recibe nada. Queda acá, tal como estaba, para no
-  // cambiar el comportamiento actual; se corrige cuando haya dominio.
-  emailSoporte: 'soporte@careonys.app',
+  // ATENCIÓN: careonys.com sí está registrado, pero todavía no tiene correo
+  // configurado — esta casilla no recibe nada por ahora. Es igual mejor que lo
+  // que había antes (soporte@careonys.app, sobre un dominio que ni siquiera
+  // estaba registrado). Queda pendiente darle de alta el correo de verdad.
+  emailSoporte: 'soporte@careonys.com',
 
   // Colores del manifiesto de las PWA y del sistema de diseño.
   colorPrimario: '#1a2744',

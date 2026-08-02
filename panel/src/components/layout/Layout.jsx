@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
 import { useEmpresa } from '../../context/EmpresaContext';
@@ -75,6 +75,81 @@ export function Layout() {
   const { puede } = usePermisos();
   const { tieneModalidad } = useModalidades();
 
+  const esAdmin = esAdminOSuperior(usuario?.rol);
+  const esSuperadmin = usuario?.rol === 'superadmin';
+  const directa = tieneModalidad('directa');
+  const match = tieneModalidad('match');
+  // Las pantallas del plantel valen igual con las dos modalidades: en las dos hay
+  // Asistentes que se incorporan, tienen documentación y cubren guardias.
+  const hayPlantel = directa || match;
+
+  /* El menú, como lista de datos y no como JSX suelto.
+     Antes eran 22 enlaces ordenados por cómo se fue construyendo el sistema, con
+     tres grupos armados por modalidad contratada. Ahora son seis grupos ordenados
+     por lo que una persona viene a hacer, y el candado de cada enlace (`ver`) está
+     escrito una sola vez, al lado del enlace, en vez de repetido alrededor de
+     bloques enteros de JSX.
+
+     El grupo "Match" desapareció a propósito: el match es un canal de
+     venta, no un lugar del sistema. Sus tres pantallas se fueron a donde
+     corresponde por tema, cada una conservando su candado. */
+  const grupos = [
+    {
+      titulo: t.nav.grupo_guardias,
+      enlaces: [
+        { a: '/guardias', texto: t.nav.guardias, ver: directa },
+        { a: '/continuidad', texto: t.nav.continuidad, ver: hayPlantel },
+        { a: '/verificacion-guardias', texto: t.nav.verificacion_guardias, ver: hayPlantel },
+      ],
+    },
+    {
+      titulo: t.nav.grupo_personas,
+      enlaces: [
+        { a: '/asistentes', texto: t.nav.asistentes, ver: hayPlantel },
+        { a: '/documentacion', texto: t.nav.documentacion, ver: hayPlantel },
+        { a: '/clientes', texto: t.nav.clientes, ver: directa },
+        { a: '/match/clientes', texto: t.nav.match_clientes, ver: match },
+        { a: '/postulaciones', texto: t.nav.postulaciones, ver: hayPlantel },
+        { a: '/solicitudes', texto: t.nav.solicitudes, ver: hayPlantel },
+        { a: '/match/calificaciones', texto: t.nav.match_calificaciones, ver: match },
+      ],
+    },
+    {
+      titulo: t.nav.grupo_cuidado,
+      enlaces: [
+        { a: '/reportes', texto: t.nav.reportes, ver: directa },
+        { a: '/alertas', texto: t.nav.alertas, ver: directa },
+        { a: '/medicacion', texto: t.nav.medicacion, ver: directa },
+      ],
+    },
+    {
+      titulo: t.nav.grupo_conversaciones,
+      enlaces: [
+        { a: '/comunicacion', texto: t.nav.comunicacion, ver: true },
+      ],
+    },
+    {
+      titulo: t.nav.grupo_dinero,
+      enlaces: [
+        { a: '/facturacion', texto: t.nav.facturacion, ver: directa },
+        { a: '/lista-precios', texto: t.nav.lista_precios, ver: directa },
+        { a: '/informes-obra-social', texto: t.nav.informes_obra_social, ver: directa },
+      ],
+    },
+    {
+      titulo: t.nav.grupo_ajustes,
+      enlaces: [
+        { a: '/configuracion', texto: t.nav.configuracion, ver: esAdmin },
+        { a: '/usuarios-panel', texto: t.nav.usuarios_panel, ver: esAdmin },
+        { a: '/auditoria', texto: t.nav.auditoria, ver: ['admin_prestadora', 'superadmin'].includes(usuario?.rol) },
+        { a: '/match/auditoria-legal', texto: t.nav.match_auditoria_legal, ver: match },
+        { a: '/importacion', texto: t.nav.importacion, ver: esAdmin || puede('importar_datos_masivos') },
+        { a: '/prestadoras', texto: t.nav.prestadoras, ver: esSuperadmin },
+        { a: '/costos-ia', texto: t.nav.costos_ia, ver: esSuperadmin },
+      ],
+    },
+  ];
+
   return (
     <div className="panel-layout">
       <aside className="panel-sidebar">
@@ -86,47 +161,20 @@ export function Layout() {
             {t.nav.estado_actual}
           </NavLink>
           <NavLink to="/resumen-del-mes">{t.nav.resumen_del_mes}</NavLink>
-          {(tieneModalidad('directa') || tieneModalidad('match')) && (
-            <>
-              <span className="panel-nav-grupo">{t.nav.grupo_plantel_asistentes}</span>
-              <NavLink to="/postulaciones">{t.nav.postulaciones}</NavLink>
-              <NavLink to="/solicitudes">{t.nav.solicitudes}</NavLink>
-              <NavLink to="/asistentes">{t.nav.asistentes}</NavLink>
-              <NavLink to="/documentacion">{t.nav.documentacion}</NavLink>
-              <NavLink to="/continuidad">{t.nav.continuidad}</NavLink>
-              <NavLink to="/verificacion-guardias">{t.nav.verificacion_guardias}</NavLink>
-            </>
-          )}
-          {tieneModalidad('directa') && (
-            <>
-              <span className="panel-nav-grupo">{t.nav.grupo_prestacion_directa}</span>
-              <NavLink to="/clientes">{t.nav.clientes}</NavLink>
-              <NavLink to="/medicacion">{t.nav.medicacion}</NavLink>
-              <NavLink to="/guardias">{t.nav.guardias}</NavLink>
-              <NavLink to="/reportes">{t.nav.reportes}</NavLink>
-              <NavLink to="/alertas">{t.nav.alertas}</NavLink>
-              <NavLink to="/facturacion">{t.nav.facturacion}</NavLink>
-              <NavLink to="/lista-precios">{t.nav.lista_precios}</NavLink>
-              <NavLink to="/informes-obra-social">{t.nav.informes_obra_social}</NavLink>
-            </>
-          )}
-          {tieneModalidad('match') && (
-            <>
-              <span className="panel-nav-grupo">{t.nav.grupo_match}</span>
-              <NavLink to="/match/clientes">{t.nav.match_clientes}</NavLink>
-              <NavLink to="/match/calificaciones">{t.nav.match_calificaciones}</NavLink>
-              <NavLink to="/match/auditoria-legal">{t.nav.match_auditoria_legal}</NavLink>
-            </>
-          )}
-          <NavLink to="/comunicacion">{t.nav.comunicacion}</NavLink>
-          {(esAdminOSuperior(usuario?.rol) || puede('importar_datos_masivos')) && (
-            <NavLink to="/importacion">{t.nav.importacion}</NavLink>
-          )}
-          {esAdminOSuperior(usuario?.rol) && <NavLink to="/usuarios-panel">{t.nav.usuarios_panel}</NavLink>}
-          {['superadmin'].includes(usuario?.rol) && <NavLink to="/prestadoras">{t.nav.prestadoras}</NavLink>}
-          {usuario?.rol === 'superadmin' && <NavLink to="/costos-ia">{t.nav.costos_ia}</NavLink>}
-          {esAdminOSuperior(usuario?.rol) && <NavLink to="/configuracion">{t.nav.configuracion}</NavLink>}
-          {['admin_prestadora', 'superadmin'].includes(usuario?.rol) && <NavLink to="/auditoria">{t.nav.auditoria}</NavLink>}
+          {/* Un grupo que se quedó sin ningún enlace visible no muestra su título: nadie
+              tiene que leer un encabezado que no lleva a ninguna parte. */}
+          {grupos.map((grupo) => {
+            const visibles = grupo.enlaces.filter((enlace) => enlace.ver);
+            if (visibles.length === 0) return null;
+            return (
+              <Fragment key={grupo.titulo}>
+                <span className="panel-nav-grupo">{grupo.titulo}</span>
+                {visibles.map((enlace) => (
+                  <NavLink key={enlace.a} to={enlace.a}>{enlace.texto}</NavLink>
+                ))}
+              </Fragment>
+            );
+          })}
         </nav>
       </aside>
       <div className="panel-main">

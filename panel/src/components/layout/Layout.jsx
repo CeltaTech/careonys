@@ -105,15 +105,16 @@ export function Layout() {
      "Clientes"; las Postulaciones las manda quien quiere trabajar, así que son
      de "Plantel".
 
-     Falta un enlace en "Clientes": el Servicio, que es lo que la Prestadora le
-     vende al Cliente y de lo que cuelgan las Guardias. La pantalla todavía no
-     existe (pendiente #116); va acá cuando se construya. */
+     El Servicio va en "Clientes" y no en "Cobertura" porque es lo que la
+     Prestadora vende, no la forma de cubrirlo: de él cuelgan las prestaciones y
+     de algunas de ellas las Guardias (`docs/QUE_ES_UN_SERVICIO.md`). */
   const grupos = [
     {
       titulo: t.nav.grupo_clientes,
       enlaces: [
         { a: '/clientes', texto: t.nav.clientes, ver: directa },
         { a: '/match/clientes', texto: t.nav.match_clientes, ver: match },
+        { a: '/servicios', texto: t.nav.servicios, ver: true },
         { a: '/solicitudes', texto: t.nav.solicitudes, ver: hayPlantel },
       ],
     },

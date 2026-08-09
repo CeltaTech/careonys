@@ -15,6 +15,7 @@ import { EditarPacienteModal } from './EditarPacienteModal';
 import { NuevoPacienteModal } from './NuevoPacienteModal';
 import { MonitoreoVitalesPaciente } from './MonitoreoVitalesPaciente';
 import { InvitarPersonasAutorizadasModal } from './InvitarPersonasAutorizadasModal';
+import { mensajeDeError } from '../../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -57,7 +58,7 @@ export function ClienteDetalle() {
       .single();
 
     if (errorConsulta) {
-      setError(errorConsulta.code === 'PGRST116' ? null : errorConsulta.message);
+      setError(errorConsulta.code === 'PGRST116' ? null : mensajeDeError(errorConsulta, t));
       setEstado(errorConsulta.code === 'PGRST116' ? 'no_encontrado' : 'error');
       return;
     }
@@ -71,7 +72,7 @@ export function ClienteDetalle() {
       plan: data.plan || '',
     });
     setEstado('listo');
-  }, [id]);
+  }, [id, t]);
 
   const recargarPersonasAutorizadas = useCallback(async () => {
     setEstadoPersonasAutorizadas('cargando');
@@ -115,7 +116,7 @@ export function ClienteDetalle() {
       }
       recargarPersonasAutorizadas();
     } catch (err) {
-      setErrorPersonasAutorizadas(err.message);
+      setErrorPersonasAutorizadas(mensajeDeError(err, t));
     } finally {
       setQuitandoUsuarioId(null);
     }

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolCliente } from '../middleware/requiereRolCliente.js';
 import { supabase } from '../db/connection.js';
+import { exigeVisible } from '../utils/visibilidadPrestadora.js';
 
 // Cierra pendiente #62 (docs/PENDIENTES.md): el Cliente solicita la indicación de
 // medicación desde su propia PWA (consentimiento implícito por venir de su sesión
@@ -40,7 +41,9 @@ async function pacienteDeLaCliente(pacienteId, usuarioCliente) {
   return data;
 }
 
-appClientesMedicacionRouter.get('/:pacienteId', requiereRolCliente, async (req, res) => {
+// Ver la medicación y pedir una son dos decisiones distintas de la Prestadora: hay quien
+// muestra la lista pero no deja que el Cliente cargue nada.
+appClientesMedicacionRouter.get('/:pacienteId', requiereRolCliente, exigeVisible('cliente_medicacion_del_paciente'), async (req, res) => {
   const paciente = await pacienteDeLaCliente(req.params.pacienteId, req.usuarioCliente);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
@@ -59,6 +62,7 @@ appClientesMedicacionRouter.get('/:pacienteId', requiereRolCliente, async (req, 
 appClientesMedicacionRouter.post(
   '/:pacienteId',
   requiereRolCliente,
+  exigeVisible('cliente_pide_medicacion'),
   upload.single('prescripcion'),
   manejarErrorMulter,
   async (req, res) => {

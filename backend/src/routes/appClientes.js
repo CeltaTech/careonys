@@ -464,7 +464,7 @@ appClientesRouter.post('/guardias/:guardiaId/calificar', requiereRolCliente, exi
   // puede calificar guardias — es la única acción de escritura real hoy expuesta a la
   // Cliente en la PWA (ver docs/claude_history.md, Fase 5).
   if (req.usuarioCliente.rolPersonasAutorizadas === 'solo_lectura') {
-    return res.status(403).json({ error: 'Tu acceso es de solo lectura' });
+    return res.status(403).json({ error: 'Este acceso es de solo lectura' });
   }
 
   const { estrellas, comentario } = req.body || {};

@@ -69,7 +69,7 @@ appClientesMedicacionRouter.post(
     // Mismo criterio que calificar una guardia (appClientes.js): un miembro invitado de solo
     // lectura no puede generar una solicitud que compromete la administración de medicación.
     if (req.usuarioCliente.rolPersonasAutorizadas === 'solo_lectura') {
-      return res.status(403).json({ error: 'Tu acceso es de solo lectura' });
+      return res.status(403).json({ error: 'Este acceso es de solo lectura' });
     }
 
     const paciente = await pacienteDeLaCliente(req.params.pacienteId, req.usuarioCliente);

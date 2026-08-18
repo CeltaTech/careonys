@@ -3,7 +3,6 @@ import { requiereRolCliente } from '../middleware/requiereRolCliente.js';
 import { supabase } from '../db/connection.js';
 import { resolverVitalesHabilitados } from '../utils/vitalesReferencia.js';
 import { generarTokenQrCobro } from '../utils/qrCobroEfectivo.js';
-import { medicacionVigenteDelPaciente } from '../utils/medicacionIndicaciones.js';
 import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
 import { visibilidadDelPedido, exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
@@ -57,12 +56,6 @@ appClientesRouter.get('/perfil', requiereRolCliente, async (req, res) => {
     return res.status(404).json({ error: 'Perfil no encontrado' });
   }
 
-  const { data: cliente } = await supabase
-    .from('clientes')
-    .select('plan')
-    .eq('id', req.usuarioCliente.clienteId)
-    .maybeSingle();
-
   // La marca va acá y no en una dirección aparte porque el encabezado la
   // necesita ni bien la persona entra, que es exactamente cuando la aplicación
   // ya pide el perfil. Dos pedidos para dibujar una misma pantalla es un
@@ -75,10 +68,24 @@ appClientesRouter.get('/perfil', requiereRolCliente, async (req, res) => {
   // consulta del motor, que directamente no manda lo apagado.
   const visibilidad = await visibilidadDelPedido(req);
 
+  // El plan contratado es una condición comercial, no un dato del cuidado: va con el resto de
+  // lo que la Prestadora decide mostrar sobre el dinero. Hay Prestadoras que cobran por fuera
+  // de la aplicación y no quieren que el plan aparezca en el teléfono del Cliente. Apagado
+  // el interruptor, ni siquiera se le pregunta a la base cuál es.
+  let plan = null;
+  if (visibilidad.cliente_pagos_y_suscripcion) {
+    const { data: cliente } = await supabase
+      .from('clientes')
+      .select('plan')
+      .eq('id', req.usuarioCliente.clienteId)
+      .maybeSingle();
+    plan = cliente?.plan ?? null;
+  }
+
   res.json({
     perfil: {
       ...usuario,
-      plan: cliente?.plan ?? null,
+      plan,
       rolPersonasAutorizadas: req.usuarioCliente.rolPersonasAutorizadas,
     },
     marca,
@@ -154,9 +161,9 @@ appClientesRouter.get('/pacientes/:id', requiereRolCliente, async (req, res) => 
     guardiaProxima = data || null;
   }
 
-  // Las alertas de la revisión automática y la medicación vigente solo se consultan si esta
-  // Prestadora las muestra. Apagadas, la revisión sigue corriendo y el Coordinador se sigue
-  // enterando igual — lo que cambia es que no viajan al teléfono del Cliente.
+  // Las alertas de la revisión automática solo se consultan si esta Prestadora las muestra.
+  // Apagadas, la revisión sigue corriendo y el Coordinador se sigue enterando igual — lo que
+  // cambia es que no viajan al teléfono del Cliente.
   let alertasActivas = [];
   if (visibilidad.cliente_alertas_de_la_revision) {
     const { data } = await supabase
@@ -168,12 +175,11 @@ appClientesRouter.get('/pacientes/:id', requiereRolCliente, async (req, res) => 
     alertasActivas = data || [];
   }
 
-  const medicacionVigente = visibilidad.cliente_medicacion_del_paciente
-    ? await medicacionVigenteDelPaciente(paciente.id)
-    : [];
-
+  // Acá viajaba también la medicación vigente del Paciente. No la mostraba ninguna pantalla de
+  // el Cliente: la lista de indicaciones tiene su propia dirección, con su propio candado. Era
+  // dato de salud saliendo al teléfono para que nadie lo leyera.
   res.json({
-    paciente: { ...paciente, medicacionVigente },
+    paciente,
     guardiaActiva: guardiaActiva || null,
     guardiaProxima,
     alertasActivas,
@@ -183,6 +189,26 @@ appClientesRouter.get('/pacientes/:id', requiereRolCliente, async (req, res) => 
 // ============================================================================
 // Reportes del Paciente
 // ============================================================================
+
+// Qué columnas de un reporte viajan al teléfono. Una sola definición para la lista y para el
+// reporte suelto: si se escribiera dos veces, con el tiempo una de las dos mandaría de más.
+//
+// `texto_libre` no se pide: es el relato crudo que dictó el Asistente antes de ordenarlo en
+// campos, ninguna pantalla del Cliente lo mostró nunca, y era el dato más delicado del
+// reporte viajando al teléfono sin que nadie lo leyera.
+//
+// `medicacion` es lo que se le dio en ese turno, y va bajo el mismo interruptor que la lista de
+// indicaciones: si la Prestadora decidió que la medicación no se muestra, no alcanza con
+// esconder la lista y dejarla escrita adentro de cada reporte.
+function columnasDelReporte(visibilidad) {
+  return columnasSegunVisibilidad([
+    'id', 'alimentacion',
+    ['medicacion', 'cliente_medicacion_del_paciente'],
+    ['signos_vitales', 'cliente_signos_vitales'],
+    'estado_animo', 'incidentes', 'observaciones', 'foto_url', 'created_at',
+    'guardias!inner(fecha, asistente_id, asistentes(nombre))',
+  ], visibilidad);
+}
 
 appClientesRouter.get('/pacientes/:id/reportes', requiereRolCliente, async (req, res) => {
   const visibilidad = await visibilidadDelPedido(req);
@@ -195,16 +221,7 @@ appClientesRouter.get('/pacientes/:id/reportes', requiereRolCliente, async (req,
   // turnos que cubrieron a esta persona, y eso traía también los reportes de los otros
   // Pacientes del mismo turno: el Cliente veía en la historia de su padre lo que se escribió
   // sobre el vecino de cuarto.
-  //
-  // `texto_libre` ya no se pide: es el relato crudo que dictó el Asistente antes de ordenarlo
-  // en campos, ninguna pantalla del Cliente lo mostró nunca, y era el dato más delicado del
-  // reporte viajando al teléfono sin que nadie lo leyera.
-  const columnas = columnasSegunVisibilidad([
-    'id', 'alimentacion', 'medicacion',
-    ['signos_vitales', 'cliente_signos_vitales'],
-    'estado_animo', 'incidentes', 'observaciones', 'foto_url', 'created_at',
-    'guardias!inner(fecha, asistente_id, asistentes(nombre))',
-  ], visibilidad);
+  const columnas = columnasDelReporte(visibilidad);
 
   const { data, error } = await supabase
     .from('reportes')
@@ -226,6 +243,38 @@ appClientesRouter.get('/pacientes/:id/reportes', requiereRolCliente, async (req,
   res.json({ reportes: data, rangosVitales: vitales.rangos });
 });
 
+// Un reporte suelto. Existe porque la pantalla que muestra un reporte pedía la lista entera —
+// hasta 60 reportes con todo adentro— para quedarse con uno solo: 59 días de información de
+// salud de esa persona viajando al teléfono para descartarse en el acto.
+appClientesRouter.get('/pacientes/:id/reportes/:reporteId', requiereRolCliente, async (req, res) => {
+  const visibilidad = await visibilidadDelPedido(req);
+  const paciente = await pacienteDeLaCliente(req.params.id, req.usuarioCliente, visibilidad);
+  if (!paciente) {
+    return res.status(404).json({ error: 'Paciente no encontrado' });
+  }
+
+  // El filtro por Paciente no sobra aunque el reporte se pida por su id: sin él, quien conozca
+  // el id de un reporte de otro Paciente lo leería pidiéndolo por esta dirección.
+  const { data, error } = await supabase
+    .from('reportes')
+    .select(columnasDelReporte(visibilidad))
+    .eq('id', req.params.reporteId)
+    .eq('paciente_id', paciente.id)
+    .maybeSingle();
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+  if (!data) {
+    return res.status(404).json({ error: 'Reporte no encontrado' });
+  }
+
+  const vitales = visibilidad.cliente_signos_vitales
+    ? await resolverVitalesHabilitados(paciente.id, paciente.prestadora_id)
+    : { rangos: null };
+
+  res.json({ reporte: data, rangosVitales: vitales.rangos });
+});
+
 // ============================================================================
 // Alertas del Paciente (activas + historial resuelto — ver AI_PROMPTS.md IA Nivel 2)
 // ============================================================================
@@ -236,9 +285,12 @@ appClientesRouter.get('/pacientes/:id/alertas', requiereRolCliente, exigeVisible
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
 
+  // `campos_preocupantes` no se manda: es la lista de qué campo del reporte disparó la alerta,
+  // la usa el Panel para que el Coordinador sepa dónde mirar, y ninguna pantalla del Cliente
+  // la muestra. Es detalle clínico saliendo al teléfono sin que nadie lo lea.
   const { data, error } = await supabase
     .from('alertas')
-    .select('id, nivel, descripcion, campos_preocupantes, reportes_relacionados, resuelta_at, created_at')
+    .select('id, nivel, descripcion, reportes_relacionados, resuelta_at, created_at')
     .eq('paciente_id', paciente.id)
     .order('created_at', { ascending: false })
     .limit(60);

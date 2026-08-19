@@ -201,14 +201,22 @@ en la UI del dashboard, qué falta considerar) — es el próximo paso de diseñ
 código, ahora que las 4 preguntas de match (§2-7) y la separación de niveles ya están
 resueltas y no van a hacer cambiar la respuesta.
 
-## 9. Pendiente antes de escribir código
+## 9. Qué falta antes de escribir código
 
-- Aplicar contra Supabase real el agregado de `asistentes.canales` (`docs/PENDIENTES.md`
-  #13, sigue pendiente).
-- Diseñar el modelo de datos de suscripción de Cliente (tabla de suscripciones, estado,
-  próxima fecha de cobro, historial de cobros) — no existe todavía.
-- Redactar la sección de advertencias de match en `docs/legal/argentina.md` con
-  texto revisado por un abogado laboralista antes de una Prestadora real en esa modalidad
-  (mismo criterio que ya aplica el documento para prestación directa).
-- Rediseño del dashboard de Admin_prestadora en "grupos fundamentales" por modalidad — este
-  documento alimenta ese rediseño, todavía no iniciado.
+> Revisado contra la base y el código el 2026-08-19. De los cuatro puntos que este apartado
+> listaba, tres ya estaban construidos y solo seguían escritos acá.
+
+- **La columna `asistentes.canales` existe pero no la lee nadie.** Está creada en la base,
+  con su regla (`directo`, `match`, al menos uno) y su valor de arranque, y ninguna
+  pantalla ni ruta del motor la consulta: hoy nada impide ofrecerle una guardia de
+  match a un Asistente que solo trabaja en prestación directa. Tiene fila propia,
+  la `#154`, en `docs/PENDIENTES.md`.
+- **Rediseño del dashboard de Admin_prestadora** en "grupos fundamentales" por modalidad —
+  este documento alimenta ese rediseño, todavía no iniciado.
+
+Ya no está pendiente lo demás que este apartado daba por hacer: la columna `canales` está
+aplicada contra la base real; la suscripción del Cliente tiene su modelo de datos
+construido (`suscripciones_match`, con estado, período de prueba y próxima fecha de
+cobro, y `cobros_match` con el historial de cobros); y las advertencias de match
+están escritas en `docs/legal/argentina.md`, que lleva su propia nota de revisión pendiente
+por un abogado laboralista — no hace falta repetirla acá.

@@ -4,7 +4,7 @@
 // importa un adaptador puntual por su nombre de proveedor.
 //
 // Interfaz común que todo adaptador implementa:
-//   crearSuscripcion({ prestadoraId, credencial, suscripcionId, monto, clienteId })
+//   crearSuscripcion({ prestadoraId, credencial, suscripcionId, monto, moneda, clienteId })
 //     -> { estadoConexion: 'pendiente'|'exitoso', referenciaExterna, urlAccion? }
 //   cancelarSuscripcion({ credencial, referenciaExterna })
 //     -> { ok: true }

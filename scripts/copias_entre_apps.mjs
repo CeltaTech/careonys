@@ -67,7 +67,17 @@ export const GRUPOS = [
   {
     que: 'las cuentas de fecha y hora de una guardia',
     original: 'panel/src/lib/horarios.js',
-    copias: ['pwa-clientes/src/lib/horarios.js'],
+    copias: ['pwa-clientes/src/lib/horarios.js', 'pwa-asistentes/src/lib/horarios.js'],
+  },
+  {
+    que: 'cuándo una guardia quedó sin cerrar',
+    original: 'panel/src/lib/guardiaSinCerrar.js',
+    copias: ['pwa-asistentes/src/lib/guardiaSinCerrar.js'],
+  },
+  {
+    que: 'qué se admite como cobro de un Cliente',
+    original: 'panel/src/lib/cobrosDeCliente.js',
+    copias: ['backend/src/utils/cobrosDeCliente.js'],
   },
 ];
 

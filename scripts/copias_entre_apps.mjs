@@ -79,6 +79,11 @@ export const GRUPOS = [
     original: 'panel/src/lib/cobrosDeCliente.js',
     copias: ['backend/src/utils/cobrosDeCliente.js'],
   },
+  {
+    que: 'cómo se avisa que el Paciente está en un domicilio temporal',
+    original: 'pwa-asistentes/src/components/DomicilioTemporal.jsx',
+    copias: ['pwa-clientes/src/components/DomicilioTemporal.jsx'],
+  },
 ];
 
 // Todas las rutas de todos los grupos, original incluido. La usan los chequeos

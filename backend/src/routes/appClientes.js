@@ -8,6 +8,7 @@ import { visibilidadDelPedido, exigeVisible } from '../utils/visibilidadPrestado
 import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
 import { tipoDelAsistente, tipoConSusTareas } from '../utils/tareasDelTipo.js';
 import { esFechaISO, semanaQueContiene } from '../utils/fechas.js';
+import { pacientesConDomicilioDeHoy } from '../utils/domicilioDelDia.js';
 
 export const appClientesRouter = Router();
 
@@ -38,7 +39,13 @@ async function pacienteDeLaCliente(pacienteId, usuarioCliente, visibilidad) {
     .eq('cliente_id', usuarioCliente.clienteId)
     .eq('prestadora_id', usuarioCliente.prestadoraId)
     .maybeSingle();
-  return data;
+  if (!data) return data;
+
+  // La dirección que se muestra es la de hoy, no la de la ficha, y la decide la base. Va acá
+  // adentro y no en cada pantalla para que ninguna se olvide: todas las pantallas del Cliente
+  // que muestran un Paciente pasan por esta función.
+  const [conDomicilio] = await pacientesConDomicilioDeHoy([data]);
+  return conDomicilio;
 }
 
 // ============================================================================
@@ -110,7 +117,11 @@ appClientesRouter.get('/pacientes', requiereRolCliente, async (req, res) => {
   if (error) {
     return res.status(500).json({ error: error.message });
   }
-  res.json({ pacientes: data });
+  // Si al Paciente lo están atendiendo estos días en otro lado, el Cliente ve esa dirección y no
+  // la de la ficha — es la misma respuesta que ve el Asistente en su teléfono, escrita una sola
+  // vez en la base (regla 12). Sin esto, el Cliente y quien la cuida leerían direcciones
+  // distintas para la misma persona el mismo día.
+  res.json({ pacientes: await pacientesConDomicilioDeHoy(data) });
 });
 
 // ============================================================================

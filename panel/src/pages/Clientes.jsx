@@ -68,6 +68,7 @@ export function Clientes() {
         <input
           type="text"
           placeholder={t.clientes.buscar}
+          aria-label={t.clientes.buscar}
           value={f.busqueda}
           onChange={(e) => set('busqueda', e.target.value)}
         />

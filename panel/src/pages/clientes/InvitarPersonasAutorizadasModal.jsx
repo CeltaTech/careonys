@@ -5,10 +5,12 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
+import { useModalAccesible } from '../../hooks/useModalAccesible';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 export function InvitarPersonasAutorizadasModal({ clienteId, onClose, onInvitado }) {
+  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
@@ -44,8 +46,8 @@ export function InvitarPersonasAutorizadasModal({ clienteId, onClose, onInvitado
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>{t.clientes.personas autorizadas.invitar_titulo}</h2>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{t.clientes.personas autorizadas.invitar_titulo}</h2>
 
         {error && <Alert variant="error">{error}</Alert>}
 

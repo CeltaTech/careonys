@@ -326,7 +326,7 @@ panelCuentasRouter.post('/cliente/:clienteId/personas autorizadas', requiereRolP
   }
 });
 
-panelCuentasRouter.delete('/cliente/:clienteId/personas autorizadas/:usuarioId', requiereRolPanel, requierePermiso('editar_datos_cliente'), async (req, res) => {
+panelCuentasRouter.delete('/cliente/:clienteId/personas autorizadas/:usuarioId', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
 
   let queryCliente = supabase.from('clientes').select('id').eq('id', req.params.clienteId);

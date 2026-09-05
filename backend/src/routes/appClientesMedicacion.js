@@ -3,6 +3,7 @@ import multer from 'multer';
 import { requiereRolCliente } from '../middleware/requiereRolCliente.js';
 import { supabase } from '../db/connection.js';
 import { exigeVisible } from '../utils/visibilidadPrestadora.js';
+import { extensionDeArchivo } from '../utils/archivosSubidos.js';
 
 // Cierra pendiente #62 (docs/PENDIENTES.md): el Cliente solicita la indicación de
 // medicación desde su propia PWA (consentimiento implícito por venir de su sesión
@@ -84,7 +85,7 @@ appClientesMedicacionRouter.post(
 
     let prescripcionArchivoUrl = null;
     if (req.file) {
-      const extension = req.file.mimetype === 'application/pdf' ? 'pdf' : req.file.mimetype === 'image/png' ? 'png' : 'jpg';
+      const extension = extensionDeArchivo(req.file.mimetype);
       const ruta = `${paciente.prestadora_id}/${paciente.id}/prescripcion-${Date.now()}.${extension}`;
       const { error: errorUpload } = await supabase.storage
         .from(BUCKET)

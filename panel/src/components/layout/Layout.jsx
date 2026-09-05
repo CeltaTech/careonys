@@ -113,7 +113,10 @@ export function Layout() {
       titulo: t.nav.grupo_clientes,
       enlaces: [
         { a: '/clientes', texto: t.nav.clientes, ver: directa },
-        { a: '/match/clientes', texto: t.nav.match_clientes, ver: match },
+        // Esta pantalla es la plata del Match —suscripciones, importes, cobros en
+        // efectivo y canje del QR—, así que lleva el mismo candado que las de dinero de la
+        // modalidad directa y no lo ve el Coordinador (Desarrollador, 2026-09-04).
+        { a: '/match/clientes', texto: t.nav.match_clientes, ver: match && esAdmin },
         { a: '/servicios', texto: t.nav.servicios, ver: true },
         { a: '/solicitudes', texto: t.nav.solicitudes, ver: hayPlantel },
       ],
@@ -162,7 +165,7 @@ export function Layout() {
       enlaces: [
         { a: '/configuracion', texto: t.nav.configuracion, ver: esAdmin },
         { a: '/usuarios-panel', texto: t.nav.usuarios_panel, ver: esAdmin },
-        { a: '/auditoria', texto: t.nav.auditoria, ver: ['admin_prestadora', 'superadmin'].includes(usuario?.rol) },
+        { a: '/auditoria', texto: t.nav.auditoria, ver: esAdmin },
         { a: '/match/auditoria-legal', texto: t.nav.match_auditoria_legal, ver: match },
         { a: '/importacion', texto: t.nav.importacion, ver: esAdmin || puede('importar_datos_masivos') },
         { a: '/prestadoras', texto: t.nav.prestadoras, ver: esSuperadmin },

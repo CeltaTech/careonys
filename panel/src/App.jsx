@@ -8,6 +8,7 @@ import { ModalidadesProvider } from './context/ModalidadesContext';
 import { TenantSessionProvider } from './context/TenantSessionContext';
 import { AdvertenciaLegalProvider } from './context/AdvertenciaLegalContext';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
+import { ROLES_ADMINISTRACION, ROLES_PANEL } from './lib/roles';
 import { Layout } from './components/layout/Layout';
 import { Login } from './pages/Login';
 import { Mfa } from './pages/Mfa';
@@ -133,11 +134,15 @@ function App() {
                       <Route path="aplicaciones" element={<ConfiguracionAplicaciones />} />
                       <Route path="accesos" element={<ConfiguracionAccesos />} />
                     </Route>
-                    <Route path="auditoria" element={<ProtectedRoute roles={['admin_prestadora', 'superadmin']}><Auditoria /></ProtectedRoute>} />
+                    <Route path="auditoria" element={<ProtectedRoute roles={ROLES_ADMINISTRACION}><Auditoria /></ProtectedRoute>} />
                     <Route
                       path="match/clientes"
                       element={
-                        <ProtectedRoute roles={['admin_prestadora', 'coordinador', 'superadmin']}>
+                        /* La pantalla de Clientes del Match es la de la plata: importes de
+                           suscripción, historial de cobros, carga de efectivo en mano y canje del
+                           QR. Va con el mismo candado que Configuración y Auditoría, no con el de
+                           las pantallas operativas (Desarrollador, 2026-09-04). */
+                        <ProtectedRoute roles={ROLES_ADMINISTRACION}>
                           <MatchClientes />
                         </ProtectedRoute>
                       }
@@ -145,7 +150,7 @@ function App() {
                     <Route
                       path="match/calificaciones"
                       element={
-                        <ProtectedRoute roles={['admin_prestadora', 'coordinador', 'superadmin']}>
+                        <ProtectedRoute roles={ROLES_PANEL}>
                           <MatchCalificaciones />
                         </ProtectedRoute>
                       }
@@ -153,7 +158,7 @@ function App() {
                     <Route
                       path="match/auditoria-legal"
                       element={
-                        <ProtectedRoute roles={['admin_prestadora', 'coordinador', 'superadmin']}>
+                        <ProtectedRoute roles={ROLES_PANEL}>
                           <MatchAuditoriaLegal />
                         </ProtectedRoute>
                       }

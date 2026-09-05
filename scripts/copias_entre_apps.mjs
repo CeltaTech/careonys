@@ -75,6 +75,11 @@ export const GRUPOS = [
     copias: ['pwa-asistentes/src/lib/guardiaSinCerrar.js'],
   },
   {
+    que: 'quién de los roles del Panel es la administración de la Prestadora',
+    original: 'panel/src/lib/roles.js',
+    copias: ['backend/src/utils/roles.js'],
+  },
+  {
     que: 'qué se admite como cobro de un Cliente',
     original: 'panel/src/lib/cobrosDeCliente.js',
     copias: ['backend/src/utils/cobrosDeCliente.js'],

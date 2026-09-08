@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { supabase } from '../db/connection.js';
@@ -18,8 +19,37 @@ import { coordenadasDeDomicilio } from '../geocodificacion/index.js';
 import { reenviarActivacionCuenta } from '../utils/activacionCuenta.js';
 import { requierePermiso, permisosEfectivos } from '../utils/permisos.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
+import { extensionDeArchivo } from '../utils/archivosSubidos.js';
+import {
+  personas autorizadasConSusAccesos,
+  crearInstruccion,
+  instruccionPendiente,
+  ultimaInstruccionCerrada,
+  cerrarConPapelFirmado,
+} from '../utils/instruccionesPersonasAutorizadas.js';
 
 export const panelCuentasRouter = Router();
+
+// La hoja firmada de las personas autorizadas. Mismo trato que el resto de los archivos del producto:
+// depósito privado, tope de tamaño comprobado acá y no sólo en el depósito, y sólo los tres tipos
+// que sirven para una hoja firmada.
+const DEPOSITO_INSTRUCCIONES = 'instrucciones-acceso-personas autorizadas';
+const TIPOS_DE_PAPEL_FIRMADO = ['application/pdf', 'image/jpeg', 'image/png'];
+
+const subirPapelFirmado = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter(req, file, cb) {
+    cb(null, TIPOS_DE_PAPEL_FIRMADO.includes(file.mimetype));
+  },
+});
+
+function manejarErrorDeArchivo(err, req, res, next) {
+  if (err) {
+    return res.status(400).json({ error: 'Archivo no permitido (solo PDF, JPG o PNG, hasta 10 MB)' });
+  }
+  next();
+}
 
 // Crear una cuenta real (Auth + perfil) es una acción sensible y difícil de revertir —
 // se restringe a Admin/Superadmin, a diferencia del resto del panel que también admite Coordinador.
@@ -271,29 +301,133 @@ panelCuentasRouter.post('/asistente-directo', requiereRolPanel, exigirOrganizaci
 });
 
 // ============================================================================
-// Personas autorizadas (Fase 5) — reutiliza el permiso 'editar_datos_cliente' ya existente:
-// gestionar quién más tiene acceso al Cliente es parte de administrar sus datos, no una
-// acción nueva (ver docs/claude_history.md).
+// Personas autorizadas
+//
+// Quién entra a las personas autorizadas y quién sale sigue siendo del permiso 'editar_datos_cliente': es
+// parte de administrar los datos de esa Cliente, como siempre.
+//
+// Qué ve cada uno es otra cosa, y tiene permiso propio —'configurar_accesos_del_personas_autorizadas'—
+// porque no es un dato que se corrige: es una instrucción que el titular dio y firmó, y cada
+// Prestadora decide quién de los suyos la puede cargar. De fábrica, sólo el Admin.
 // ============================================================================
 
 panelCuentasRouter.get('/cliente/:clienteId/personas autorizadas', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
-  let queryCliente = supabase.from('clientes').select('id').eq('id', req.params.clienteId);
+  let queryCliente = supabase.from('clientes').select('id, prestadora_id').eq('id', req.params.clienteId);
   queryCliente = acotarAPrestadora(queryCliente, req.usuarioPanel);
   const { data: cliente } = await queryCliente.maybeSingle();
   if (!cliente) {
     return res.status(404).json({ error: 'Cliente no encontrada' });
   }
 
-  const { data: miembros, error } = await supabase
-    .from('miembros_cliente')
-    .select('usuario_id, email, rol, created_at, usuarios!miembros_cliente_usuario_id_fkey(nombre)')
-    .eq('cliente_id', req.params.clienteId)
-    .order('created_at', { ascending: true });
+  try {
+    const [miembros, pendiente, ultima] = await Promise.all([
+      personas autorizadasConSusAccesos({ clienteId: cliente.id, prestadoraId: cliente.prestadora_id }),
+      instruccionPendiente(cliente.id),
+      ultimaInstruccionCerrada(cliente.id),
+    ]);
+    // `pendiente` es un estado normal, no un error: los accesos ya rigen y lo que falta es la
+    // firma. La pantalla lo muestra para que nadie se olvide de cerrarlo. Y cuando no hay ninguna
+    // pendiente, muestra la última que sí se firmó, que es lo que rige hoy.
+    res.json({ miembros, instruccionPendiente: pendiente, ultimaInstruccion: ultima });
+  } catch (error) {
+    responderError(res, error);
+  }
+});
+
+// Carga la instrucción que el titular pidió. Los accesos rigen desde acá; la firma viene después,
+// por la aplicación o en papel.
+panelCuentasRouter.post('/cliente/:clienteId/personas autorizadas/instruccion', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('configurar_accesos_del_personas_autorizadas'), async (req, res) => {
+  let queryCliente = supabase.from('clientes').select('id, prestadora_id').eq('id', req.params.clienteId);
+  queryCliente = acotarAPrestadora(queryCliente, req.usuarioPanel);
+  const { data: cliente } = await queryCliente.maybeSingle();
+  if (!cliente) {
+    return res.status(404).json({ error: 'Cliente no encontrada' });
+  }
+
+  try {
+    const instruccion = await crearInstruccion({
+      clienteId: cliente.id,
+      prestadoraId: cliente.prestadora_id,
+      cargadaPor: req.usuarioPanel.id,
+      accesosPedidos: req.body?.accesos,
+    });
+    res.json({ ok: true, instruccion });
+  } catch (error) {
+    responderError(res, error);
+  }
+});
+
+// El camino de siempre: el titular firmó la hoja en papel y la Prestadora la guarda. El archivo
+// va a un depósito privado y la ruta empieza por la Prestadora, que es lo que exige su política.
+panelCuentasRouter.post(
+  '/cliente/:clienteId/personas autorizadas/instruccion/:instruccionId/papel',
+  requiereRolPanel,
+  exigirOrganizacionActiva,
+  requierePermiso('configurar_accesos_del_personas_autorizadas'),
+  subirPapelFirmado.single('archivo'),
+  manejarErrorDeArchivo,
+  async (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Archivo faltante o de tipo no permitido (solo PDF, JPG o PNG, hasta 10 MB)' });
+    }
+
+    let queryCliente = supabase.from('clientes').select('id, prestadora_id').eq('id', req.params.clienteId);
+    queryCliente = acotarAPrestadora(queryCliente, req.usuarioPanel);
+    const { data: cliente } = await queryCliente.maybeSingle();
+    if (!cliente) {
+      return res.status(404).json({ error: 'Cliente no encontrada' });
+    }
+
+    const ruta = `${cliente.prestadora_id}/${cliente.id}/${req.params.instruccionId}.${extensionDeArchivo(req.file.mimetype)}`;
+    const { error: errorSubida } = await supabase.storage
+      .from(DEPOSITO_INSTRUCCIONES)
+      .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
+    if (errorSubida) {
+      return res.status(500).json({ error: errorSubida.message });
+    }
+
+    try {
+      await cerrarConPapelFirmado({
+        instruccionId: req.params.instruccionId,
+        prestadoraId: cliente.prestadora_id,
+        archivoUrl: ruta,
+      });
+      res.json({ ok: true });
+    } catch (error) {
+      responderError(res, error);
+    }
+  },
+);
+
+// La hoja firmada, para volver a verla desde el Panel. Nunca dirección pública: se firma por un
+// minuto, igual que el resto de los archivos del producto.
+panelCuentasRouter.get('/cliente/:clienteId/personas autorizadas/instruccion/:instruccionId/papel', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
+  let queryCliente = supabase.from('clientes').select('id, prestadora_id').eq('id', req.params.clienteId);
+  queryCliente = acotarAPrestadora(queryCliente, req.usuarioPanel);
+  const { data: cliente } = await queryCliente.maybeSingle();
+  if (!cliente) {
+    return res.status(404).json({ error: 'Cliente no encontrada' });
+  }
+
+  const { data: instruccion } = await supabase
+    .from('instrucciones_acceso_personas_autorizadas')
+    .select('archivo_firmado_url')
+    .eq('id', req.params.instruccionId)
+    .eq('cliente_id', cliente.id)
+    .maybeSingle();
+
+  if (!instruccion?.archivo_firmado_url) {
+    return res.status(404).json({ error: 'No hay hoja firmada guardada' });
+  }
+
+  const { data, error } = await supabase.storage
+    .from(DEPOSITO_INSTRUCCIONES)
+    .createSignedUrl(instruccion.archivo_firmado_url, 60);
   if (error) {
     return res.status(500).json({ error: error.message });
   }
 
-  res.json({ miembros: miembros || [] });
+  res.json({ url: data.signedUrl });
 });
 
 panelCuentasRouter.post('/cliente/:clienteId/personas autorizadas', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {

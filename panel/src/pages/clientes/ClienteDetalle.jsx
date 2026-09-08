@@ -16,9 +16,37 @@ import { NuevoPacienteModal } from './NuevoPacienteModal';
 import { MonitoreoVitalesPaciente } from './MonitoreoVitalesPaciente';
 import { DomiciliosTemporalesPaciente } from './DomiciliosTemporalesPaciente';
 import { InvitarPersonasAutorizadasModal } from './InvitarPersonasAutorizadasModal';
+import {
+  AccesosDePersonasAutorizadasModal,
+  DocumentoDeLaInstruccion,
+  RegistrarPapelFirmadoModal,
+} from './AccesosDePersonasAutorizadasModal';
 import { mensajeDeError } from '../../lib/errores';
+import { llamarApiPanel } from '../../lib/apiPanel';
+import { con } from '../../lib/textos';
 
 const API_URL = import.meta.env.VITE_API_URL;
+
+/* Qué ve, en una línea, cada persona de las personas autorizadas.
+   ==========================================================================
+
+   La tabla no tiene lugar para once casillas por renglón, y tampoco hace falta: lo que la
+   Prestadora necesita de un vistazo es si esa persona ve todo, no ve nada, o ve una parte. El
+   detalle está a un clic, en la ventana de accesos.
+
+   Se cuenta sobre lo que manda el motor y no sobre una lista escrita acá, así que una casilla
+   nueva del catálogo cambia sola el «7 de 11» sin tocar esta pantalla. */
+function resumenDeAccesos(accesos, t) {
+  const total = accesos?.length ?? 0;
+  // Todavía no llegó el detalle: mejor un guion que un «0 de 0», que se leería como «no ve
+  // nada» justo cuando lo que pasa es que no se sabe.
+  if (!total) return '—';
+
+  const permitidos = accesos.filter((acceso) => acceso.permitido).length;
+  if (permitidos === total) return t.clientes.personas autorizadas.accesos_todo;
+  if (permitidos === 0) return t.clientes.personas autorizadas.accesos_ninguno;
+  return con(t.clientes.personas autorizadas.accesos_parcial, { n: permitidos, total });
+}
 
 export function ClienteDetalle() {
   const { t } = useLocale();
@@ -45,7 +73,14 @@ export function ClienteDetalle() {
   const [personas autorizadas, setPersonasAutorizadas] = useState(null);
   const [estadoPersonasAutorizadas, setEstadoPersonasAutorizadas] = useState('cargando');
   const [errorPersonasAutorizadas, setErrorPersonasAutorizadas] = useState(null);
+  const [instruccionPendiente, setInstruccionPendiente] = useState(null);
+  const [ultimaInstruccion, setUltimaInstruccion] = useState(null);
   const [mostrarInvitarPersonasAutorizadas, setMostrarInvitarPersonasAutorizadas] = useState(false);
+  // Guarda a quién se estaba mirando al abrir la ventana de accesos, para que esa persona
+  // quede a la vista. `null` es la ventana cerrada.
+  const [accesosDe, setAccesosDe] = useState(null);
+  const [documentoAVer, setDocumentoAVer] = useState(null);
+  const [papelAConfirmar, setPapelAConfirmar] = useState(null);
   const [quitandoUsuarioId, setQuitandoUsuarioId] = useState(null);
   const [reenviandoUsuarioId, setReenviandoUsuarioId] = useState(null);
   const [mensajeReenvio, setMensajeReenvio] = useState(null);
@@ -80,18 +115,17 @@ export function ClienteDetalle() {
     setEstadoPersonasAutorizadas('cargando');
     setErrorPersonasAutorizadas(null);
     try {
-      const { data } = await supabase.auth.getSession();
-      const respuesta = await fetch(`${API_URL}/api/panel/cuentas/cliente/${id}/personas autorizadas`, {
-        headers: { Authorization: `Bearer ${data.session?.access_token}` },
-      });
-      const resultado = await respuesta.json();
-      if (!respuesta.ok) {
-        throw new Error(resultado.error);
-      }
-      setPersonasAutorizadas(resultado.miembros);
-      setEstadoPersonasAutorizadas(resultado.miembros.length ? 'listo' : 'vacio');
-    } catch {
-      setErrorPersonasAutorizadas(t.comun.error_generico);
+      // Por el único camino del Panel hacia el motor: es el que hace viajar el número de la
+      // respuesta adentro del error, y sin ese número todo falla igual —una sesión vencida se
+      // vería como «ocurrió un error»—.
+      const resultado = await llamarApiPanel(`/cuentas/cliente/${id}/personas autorizadas`);
+      const miembros = resultado.miembros ?? [];
+      setPersonasAutorizadas(miembros);
+      setInstruccionPendiente(resultado.instruccionPendiente ?? null);
+      setUltimaInstruccion(resultado.ultimaInstruccion ?? null);
+      setEstadoPersonasAutorizadas(miembros.length ? 'listo' : 'vacio');
+    } catch (err) {
+      setErrorPersonasAutorizadas(mensajeDeError(err, t));
       setEstadoPersonasAutorizadas('error');
     }
   }, [id, t]);
@@ -261,6 +295,38 @@ export function ClienteDetalle() {
 
       <h2>{t.clientes.personas autorizadas.titulo}</h2>
       <p className="panel-explicacion">{t.clientes.personas autorizadas.descripcion}</p>
+
+      {/* La instrucción cargada y todavía sin firmar es lo primero que hay que ver: mientras
+          no esté firmada, lo que hay es un pedido anotado, no una autorización. Los dos
+          caminos de cierre están acá al lado —imprimir el papel, o registrar que ya volvió
+          firmado—, porque son lo único que queda por hacer. */}
+      {instruccionPendiente && (
+        <Alert variant="warning">
+          {con(t.clientes.personas autorizadas.instruccion_pendiente, {
+            fecha: new Date(instruccionPendiente.created_at).toLocaleDateString(),
+          })}{' '}
+          <Button variant="secondary" onClick={() => setDocumentoAVer(instruccionPendiente)}>
+            {t.clientes.personas autorizadas.ver_documento}
+          </Button>{' '}
+          {puedeEditarCliente && (
+            <Button variant="secondary" onClick={() => setPapelAConfirmar(instruccionPendiente)}>
+              {t.clientes.personas autorizadas.registrar_papel}
+            </Button>
+          )}
+        </Alert>
+      )}
+      {!instruccionPendiente && ultimaInstruccion && (
+        <p className="panel-explicacion">
+          {con(t.clientes.personas autorizadas.ultima_instruccion, {
+            fecha: new Date(ultimaInstruccion.cerrada_en || ultimaInstruccion.created_at).toLocaleDateString(),
+            como: t.clientes.personas autorizadas[`cerrada_${ultimaInstruccion.cerrada_como}`] || '',
+          })}
+        </p>
+      )}
+      {!instruccionPendiente && !ultimaInstruccion && estadoPersonasAutorizadas === 'listo' && (
+        <p className="panel-explicacion">{t.clientes.personas autorizadas.sin_instruccion}</p>
+      )}
+
       {estadoPersonasAutorizadas === 'cargando' && <p className="estado-cargando">{t.comun.cargando}</p>}
       {estadoPersonasAutorizadas === 'error' && <p className="estado-vacio">{errorPersonasAutorizadas || t.comun.error_generico}</p>}
       {estadoPersonasAutorizadas === 'vacio' && <p className="estado-vacio">{t.clientes.personas autorizadas.sin_miembros}</p>}
@@ -270,30 +336,40 @@ export function ClienteDetalle() {
             <tr>
               <th>{t.clientes.personas autorizadas.col_nombre}</th>
               <th>{t.clientes.personas autorizadas.col_email}</th>
-              <th>{t.clientes.personas autorizadas.col_rol}</th>
+              <th>{t.clientes.personas autorizadas.col_que_ve}</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {personas autorizadas.map((m) => (
-              <tr key={m.usuario_id}>
-                <td>{m.usuarios?.nombre || '—'}</td>
+              <tr key={m.usuarioId}>
+                <td>{m.nombre || '—'}</td>
                 <td>{m.email || '—'}</td>
-                <td>{t.clientes.personas autorizadas.rol_solo_lectura}</td>
+                <td>{resumenDeAccesos(m.accesos, t)}</td>
                 <td>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setAccesosDe(m.usuarioId)}
+                    aria-label={con(t.comun.campo_de_fila, {
+                      campo: t.clientes.personas autorizadas.accesos_boton,
+                      nombre: m.nombre || m.email || '',
+                    })}
+                  >
+                    {t.clientes.personas autorizadas.accesos_boton}
+                  </Button>{' '}
                   {puedeEditarCliente && (
                     <>
                       <Button
                         variant="secondary"
-                        onClick={() => reenviarInvitacion(m.usuario_id)}
-                        disabled={reenviandoUsuarioId === m.usuario_id}
+                        onClick={() => reenviarInvitacion(m.usuarioId)}
+                        disabled={reenviandoUsuarioId === m.usuarioId}
                       >
-                        {reenviandoUsuarioId === m.usuario_id ? t.comun.reenviando_invitacion : t.comun.reenviar_invitacion}
+                        {reenviandoUsuarioId === m.usuarioId ? t.comun.reenviando_invitacion : t.comun.reenviar_invitacion}
                       </Button>{' '}
                       <Button
                         variant="secondary"
-                        onClick={() => quitarMiembroPersonasAutorizadas(m.usuario_id)}
-                        disabled={quitandoUsuarioId === m.usuario_id}
+                        onClick={() => quitarMiembroPersonasAutorizadas(m.usuarioId)}
+                        disabled={quitandoUsuarioId === m.usuarioId}
                       >
                         {t.clientes.personas autorizadas.quitar}
                       </Button>
@@ -365,6 +441,40 @@ export function ClienteDetalle() {
           onClose={() => setMostrarInvitarPersonasAutorizadas(false)}
           onInvitado={() => {
             setMostrarInvitarPersonasAutorizadas(false);
+            recargarPersonasAutorizadas();
+          }}
+        />
+      )}
+
+      {accesosDe && (
+        <AccesosDePersonasAutorizadasModal
+          clienteId={cliente.id}
+          miembros={personas autorizadas}
+          puedeEditar={puedeEditarCliente}
+          usuarioIdInicial={accesosDe}
+          onClose={() => setAccesosDe(null)}
+          onGuardado={() => {
+            setAccesosDe(null);
+            recargarPersonasAutorizadas();
+          }}
+        />
+      )}
+
+      {documentoAVer && (
+        <DocumentoDeLaInstruccion
+          texto={documentoAVer.documento_texto}
+          fecha={documentoAVer.created_at}
+          onCerrar={() => setDocumentoAVer(null)}
+        />
+      )}
+
+      {papelAConfirmar && (
+        <RegistrarPapelFirmadoModal
+          clienteId={cliente.id}
+          instruccionId={papelAConfirmar.id}
+          onClose={() => setPapelAConfirmar(null)}
+          onRegistrado={() => {
+            setPapelAConfirmar(null);
             recargarPersonasAutorizadas();
           }}
         />

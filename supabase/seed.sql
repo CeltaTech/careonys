@@ -105,7 +105,8 @@ INSERT INTO public.zonas_cobertura (prestadora_id, codigo, nombre, categoria, or
 
 
 -- ----------------------------------------------------------------------------
--- 2. Las diez cuentas: tres del Panel, cuatro Asistentes y tres Clientes
+-- 2. Las once cuentas: tres del Panel, cuatro Asistentes, tres Clientes y una
+--    persona de las personas autorizadas
 --
 --    Una cuenta vive en dos lugares. En `auth.users` está el correo y la
 --    contraseña, que es lo que mira el sistema de ingreso; en `public.usuarios`
@@ -142,7 +143,11 @@ WITH personas (id, email, nombre, rol, telefono, zonas) AS (
     -- Las tres Clientes
     ('40000000-0000-4000-8000-000000000001',       'cliente.gomez@sandbox.local',      'Cliente Gómez',               'cliente',                '+54 11 4002-0001',  NULL),
     ('40000000-0000-4000-8000-000000000002',       'cliente.lopez@sandbox.local',      'Cliente López',               'cliente',                '+54 11 4002-0002',  NULL),
-    ('40000000-0000-4000-8000-000000000003',       'cliente.morales@sandbox.local',    'Cliente Morales',             'cliente',                '+54 11 4002-0003',  NULL)
+    ('40000000-0000-4000-8000-000000000003',       'cliente.morales@sandbox.local',    'Cliente Morales',             'cliente',                '+54 11 4002-0003',  NULL),
+    -- Una persona anotada en las personas autorizadas del Cliente Gómez, que no es la titular. Está para
+    -- poder probar de verdad los accesos de las personas autorizadas: sin ella, las tres cuentas de Cliente son
+    -- titulares y ven todo, con lo cual una instrucción que niegue algo no se puede comprobar.
+    ('40000000-0000-4000-8000-000000000011',       'marcela.gomez@sandbox.local',      'Marcela Gómez',               'cliente',                '+54 11 4002-0011',  NULL)
 ),
 cuentas_de_ingreso AS (
   INSERT INTO auth.users (
@@ -308,12 +313,38 @@ UPDATE public.clientes f
   FROM public.solicitudes s
  WHERE s.cliente_id = f.id;
 
--- Quien inició sesión por el Cliente también figura como miembro del grupo
--- familiar. Es lo que mira la aplicación del Cliente para saber qué puede ver.
-INSERT INTO public.miembros_cliente (usuario_id, cliente_id, email, rol) VALUES
-  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', 'cliente.gomez@sandbox.local',   'solo_lectura'),
-  ('40000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002', 'cliente.lopez@sandbox.local',   'solo_lectura'),
-  ('40000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000003', 'cliente.morales@sandbox.local', 'solo_lectura');
+-- Quién está anotado en las personas autorizadas de cada Cliente. El titular figura acá también, con su fila
+-- apuntando a sí mismo: es lo que deja resolver de una sola consulta a qué Cliente pertenece
+-- alguien que inició sesión, sea el titular o no.
+--
+-- Estar anotado dice quién entra, no qué ve. Qué ve cada persona sale de
+-- `permisos_personas_autorizadas`, más abajo, y para el titular no sale de ningún lado: ve todo
+-- siempre, y eso no se configura.
+INSERT INTO public.miembros_cliente (usuario_id, cliente_id, email) VALUES
+  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', 'cliente.gomez@sandbox.local'),
+  ('40000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002', 'cliente.lopez@sandbox.local'),
+  ('40000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000003', 'cliente.morales@sandbox.local'),
+  ('40000000-0000-4000-8000-000000000011', '40000000-0000-4000-8000-000000000001', 'marcela.gomez@sandbox.local');
+
+-- Lo que la titular del Cliente Gómez pidió por escrito para Marcela: que acompañe el cuidado
+-- y no vea el dinero ni el recorrido del Asistente en el mapa. Es el caso más común de la vida
+-- real —quien acompaña no siempre es quien paga— y deja el Sandbox con algo que comprobar.
+--
+-- Las once claves se escriben todas, incluso las que quedan en el valor de fábrica: la función
+-- de la base niega cuando no encuentra fila, así que una clave ausente sería un acceso negado
+-- que nadie negó.
+INSERT INTO public.permisos_personas_autorizadas (cliente_id, usuario_id, clave, permitido) VALUES
+  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_reportes',              true),
+  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_ficha_del_paciente',    true),
+  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_medicacion',            true),
+  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_guardias',              true),
+  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_ubicacion_en_vivo',     false),
+  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_alertas',               true),
+  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_internaciones',         true),
+  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_dinero',                false),
+  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_verifica_con_codigo',   true),
+  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_califica_al_asistente', false),
+  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_pide_medicacion',       false);
 
 INSERT INTO public.pacientes (
   id, prestadora_id, cliente_id, nombre, fecha_nacimiento, patologias,

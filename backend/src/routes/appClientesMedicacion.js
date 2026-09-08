@@ -3,6 +3,7 @@ import multer from 'multer';
 import { requiereRolCliente } from '../middleware/requiereRolCliente.js';
 import { supabase } from '../db/connection.js';
 import { exigeVisible } from '../utils/visibilidadPrestadora.js';
+import { exigeDePersonasAutorizadas } from '../utils/accesosDePersonasAutorizadas.js';
 import { extensionDeArchivo } from '../utils/archivosSubidos.js';
 
 // Cierra pendiente #62 (docs/PENDIENTES.md): el Cliente solicita la indicación de
@@ -43,8 +44,10 @@ async function pacienteDeLaCliente(pacienteId, usuarioCliente) {
 }
 
 // Ver la medicación y pedir una son dos decisiones distintas de la Prestadora: hay quien
-// muestra la lista pero no deja que el Cliente cargue nada.
-appClientesMedicacionRouter.get('/:pacienteId', requiereRolCliente, exigeVisible('cliente_medicacion_del_paciente'), async (req, res) => {
+// muestra la lista pero no deja que el Cliente cargue nada. Y adentro de cada una hay una segunda
+// decisión, la del titular sobre cada persona de su personas autorizadas. Van en este orden: primero si la
+// función existe en esta aplicación, después si a esta persona se la dieron.
+appClientesMedicacionRouter.get('/:pacienteId', requiereRolCliente, exigeVisible('cliente_medicacion_del_paciente'), exigeDePersonasAutorizadas('persona_autorizada_medicacion'), async (req, res) => {
   const paciente = await pacienteDeLaCliente(req.params.pacienteId, req.usuarioCliente);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
@@ -64,15 +67,14 @@ appClientesMedicacionRouter.post(
   '/:pacienteId',
   requiereRolCliente,
   exigeVisible('cliente_pide_medicacion'),
+  // Mismo criterio que calificar una guardia (appClientes.js): cargar una indicación de
+  // medicación viene negada de fábrica para las personas autorizadas, y sólo la habilita una instrucción
+  // firmada por el titular. El corte va antes de recibir el archivo: no tiene sentido subir una
+  // prescripción para después contestar que no.
+  exigeDePersonasAutorizadas('persona_autorizada_pide_medicacion'),
   upload.single('prescripcion'),
   manejarErrorMulter,
   async (req, res) => {
-    // Mismo criterio que calificar una guardia (appClientes.js): un miembro invitado de solo
-    // lectura no puede generar una solicitud que compromete la administración de medicación.
-    if (req.usuarioCliente.rolPersonasAutorizadas === 'solo_lectura') {
-      return res.status(403).json({ error: 'Este acceso es de solo lectura' });
-    }
-
     const paciente = await pacienteDeLaCliente(req.params.pacienteId, req.usuarioCliente);
     if (!paciente) {
       return res.status(404).json({ error: 'Paciente no encontrado' });

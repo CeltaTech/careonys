@@ -35,27 +35,29 @@ export async function requiereRolCliente(req, res, next) {
     .maybeSingle();
 
   let clienteId = titular?.id ?? null;
-  let rolPersonasAutorizadas = titular ? 'titular' : null;
 
   if (!clienteId) {
     const { data: miembro } = await supabase
       .from('miembros_cliente')
-      .select('cliente_id, rol')
+      .select('cliente_id')
       .eq('usuario_id', userData.user.id)
       .maybeSingle();
 
     clienteId = miembro?.cliente_id ?? null;
-    rolPersonasAutorizadas = miembro?.rol ?? null;
   }
 
   if (!clienteId) {
     return res.status(403).json({ error: 'Rol sin permiso' });
   }
 
+  // Acá se deja solamente si es el titular o no, que es un hecho —tiene fila propia en
+  // `clientes`— y no una decisión. Qué ve cada persona de las personas autorizadas ya no es un rol con nombre:
+  // son once accesos que el titular pidió por escrito, y los resuelve `accesosDelPedido` en las
+  // rutas que los necesitan, para no consultarlos en los pedidos que no los miran.
   req.usuarioCliente = {
     id: userData.user.id,
     clienteId,
-    rolPersonasAutorizadas,
+    esTitular: Boolean(titular),
     prestadoraId: perfil.prestadora_id,
   };
   next();

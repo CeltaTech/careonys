@@ -655,10 +655,15 @@ appClientesRouter.post('/push/suscribir', requiereRolCliente, async (req, res) =
     return res.status(400).json({ error: 'Suscripción push incompleta' });
   }
 
+  // La suscripción se guarda a nombre del Cliente, no de quien la registró. Los avisos se
+  // mandan con `enviarPushCliente(cliente.id)`, así que una fila guardada con el identificador
+  // propio de la persona no la encuentra nadie: para el titular daba igual —su identificador y
+  // el de su Cliente son el mismo—, pero quien está en las personas autorizadas y no es el titular se
+  // suscribía y no recibía nunca ningún aviso.
   const { error } = await guardarSuscripcionPush({
     prestadoraId: req.usuarioCliente.prestadoraId,
     rol: 'cliente',
-    usuarioId: req.usuarioCliente.id,
+    usuarioId: req.usuarioCliente.clienteId,
     endpoint,
     keys,
     userAgent: req.headers['user-agent'],
@@ -680,7 +685,7 @@ appClientesRouter.delete('/push/suscribir', requiereRolCliente, async (req, res)
     .from('push_subscriptions')
     .delete()
     .eq('endpoint', endpoint)
-    .eq('cliente_id', req.usuarioCliente.id);
+    .eq('cliente_id', req.usuarioCliente.clienteId);
   if (error) {
     return res.status(500).json({ error: error.message });
   }

@@ -12,6 +12,7 @@ import { pacientesConDomicilioDeHoy } from '../utils/domicilioDelDia.js';
 import { guardarSuscripcionPush } from '../utils/suscripcionesPush.js';
 import { accesosDelPedido, exigeDePersonasAutorizadas, soloElTitular, visibilidadDeLaPersona } from '../utils/accesosDePersonasAutorizadas.js';
 import { instruccionPendiente, pedirCodigo, confirmarConCodigo } from '../utils/instruccionesPersonasAutorizadas.js';
+import { codigoParaMostrar } from '../utils/comprobacionDePresencia.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
 export const appClientesRouter = Router();
@@ -828,4 +829,31 @@ appClientesRouter.get('/qr-cobro/:id', requiereRolCliente, exigeVisible('cliente
   if (error) return res.status(500).json({ error: error.message });
   if (!data) return res.status(404).json({ error: 'QR no encontrado' });
   res.json({ qr: data });
+});
+
+// ============================================================================
+// El pase de guardia (pendiente #113) — el código que el Cliente muestra en pantalla
+//
+// Cuando llega el Asistente, quien está en la casa abre esto y le muestra el código. Se renueva
+// solo cada pocos segundos —los que configuró la Prestadora—, así que una foto de la pantalla no
+// sirve un minuto después. Es lo que reemplaza al cartel impreso, que era un secreto permanente
+// pegado en la puerta.
+//
+// Lo muestra cualquiera de las personas autorizadas, sin acceso especial: no revela ningún dato del
+// Paciente ni de la Prestadora, y su único efecto es dejar entrar a quien ya tenía la guardia
+// asignada. El código vale para las personas autorizadas entero —sujeto_tipo 'cliente'—, así que da lo mismo
+// cuál de sus miembros esté en la casa ese día.
+// ============================================================================
+
+appClientesRouter.get('/codigo-de-presencia', requiereRolCliente, async (req, res) => {
+  try {
+    const { codigo, segundos, expiraEn } = await codigoParaMostrar({
+      prestadoraId: req.usuarioCliente.prestadoraId,
+      sujetoTipo: 'cliente',
+      sujetoId: req.usuarioCliente.clienteId,
+    });
+    res.json({ codigo, segundos, expiraEn });
+  } catch (e) {
+    responderError(res, e);
+  }
 });

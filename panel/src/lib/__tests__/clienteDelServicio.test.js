@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { TIPO_CLIENTE, clienteDelServicio } from '../clienteDelServicio';
+import { TIPO_CLIENTE, clienteDelServicio, contactosDeClientes } from '../clienteDelServicio';
 
 const CLIENTE = '40000000-0000-4000-8000-000000000001';
+const OTRA_CLIENTE = '40000000-0000-4000-8000-000000000002';
 
 const CONTACTO = {
   nombre: 'Cliente Gómez',
@@ -15,12 +16,13 @@ const SERVICIO_DE_UNA_CLIENTE = {
   id: 's1',
   tipo_contratante: TIPO_CLIENTE,
   contratante_id: CLIENTE,
-  clientes: { id: CLIENTE, solicitudes: CONTACTO },
 };
+
+const CONTACTOS = new Map([[CLIENTE, CONTACTO]]);
 
 describe('clienteDelServicio', () => {
   it('cuando el Cliente es un Cliente, devuelve su contacto y el camino a su ficha', () => {
-    expect(clienteDelServicio(SERVICIO_DE_UNA_CLIENTE)).toEqual({
+    expect(clienteDelServicio(SERVICIO_DE_UNA_CLIENTE, CONTACTOS)).toEqual({
       tipo: TIPO_CLIENTE,
       id: CLIENTE,
       contacto: CONTACTO,
@@ -32,8 +34,8 @@ describe('clienteDelServicio', () => {
   // que no es un Cliente, la pantalla no puede mandar a nadie a la ficha de un Cliente que no
   // existe. Sin `ruta`, el botón no se dibuja.
   it('cuando el Cliente no es un Cliente, no ofrece ninguna ficha', () => {
-    const otro = { ...SERVICIO_DE_UNA_CLIENTE, tipo_contratante: 'obra_social', clientes: null };
-    expect(clienteDelServicio(otro)).toEqual({
+    const otro = { ...SERVICIO_DE_UNA_CLIENTE, tipo_contratante: 'obra_social' };
+    expect(clienteDelServicio(otro, CONTACTOS)).toEqual({
       tipo: 'obra_social',
       id: CLIENTE,
       contacto: null,
@@ -43,16 +45,92 @@ describe('clienteDelServicio', () => {
 
   it('no ofrece ficha si el identificador del Cliente falta', () => {
     const sinCliente = { ...SERVICIO_DE_UNA_CLIENTE, contratante_id: null };
-    expect(clienteDelServicio(sinCliente).ruta).toBeNull();
+    expect(clienteDelServicio(sinCliente, CONTACTOS).ruta).toBeNull();
   });
 
   it('aguanta que todavía no haya llegado el Servicio, que es el estado «cargando»', () => {
-    expect(clienteDelServicio(null)).toEqual({ tipo: null, id: null, contacto: null, ruta: null });
+    expect(clienteDelServicio(null, CONTACTOS)).toEqual({ tipo: null, id: null, contacto: null, ruta: null });
   });
 
-  it('aguanta que el Servicio venga sin la solicitud anidada', () => {
-    const sinSolicitud = { ...SERVICIO_DE_UNA_CLIENTE, clientes: { id: CLIENTE } };
-    expect(clienteDelServicio(sinSolicitud).contacto).toBeNull();
-    expect(clienteDelServicio(sinSolicitud).ruta).toBe(`/clientes/${CLIENTE}`);
+  it('aguanta que los contactos todavía no hayan llegado', () => {
+    expect(clienteDelServicio(SERVICIO_DE_UNA_CLIENTE, new Map()).contacto).toBeNull();
+    expect(clienteDelServicio(SERVICIO_DE_UNA_CLIENTE, undefined).contacto).toBeNull();
+    expect(clienteDelServicio(SERVICIO_DE_UNA_CLIENTE, new Map()).ruta).toBe(`/clientes/${CLIENTE}`);
+  });
+});
+
+// Arma un doble de la base que devuelve lo que se le diga y deja ver con qué se lo llamó.
+function baseFalsa(respuesta) {
+  const enIn = vi.fn().mockResolvedValue(respuesta);
+  const enSelect = vi.fn(() => ({ in: enIn }));
+  const enFrom = vi.fn(() => ({ select: enSelect }));
+  return { supabase: { from: enFrom }, enFrom, enSelect, enIn };
+}
+
+describe('contactosDeClientes', () => {
+  it('trae una sola vez cada Cliente, aunque tenga varios Servicios', async () => {
+    const { supabase, enIn } = baseFalsa({
+      data: [{ id: CLIENTE, solicitudes: CONTACTO }],
+      error: null,
+    });
+
+    const { contactos, error } = await contactosDeClientes(supabase, [
+      SERVICIO_DE_UNA_CLIENTE,
+      { ...SERVICIO_DE_UNA_CLIENTE, id: 's2' },
+    ]);
+
+    expect(enIn).toHaveBeenCalledWith('id', [CLIENTE]);
+    expect(error).toBeNull();
+    expect(contactos.get(CLIENTE)).toEqual(CONTACTO);
+  });
+
+  // Si no hay ninguna Cliente que buscar, no se consulta: una pantalla de Servicios de Clientes
+  // que no son Clientes no tiene por qué pagar una consulta que va a volver vacía.
+  it('no consulta nada cuando ningún Cliente es un Cliente', async () => {
+    const { supabase, enFrom } = baseFalsa({ data: [], error: null });
+
+    const { contactos } = await contactosDeClientes(supabase, [
+      { ...SERVICIO_DE_UNA_CLIENTE, tipo_contratante: 'obra_social' },
+    ]);
+
+    expect(enFrom).not.toHaveBeenCalled();
+    expect(contactos.size).toBe(0);
+  });
+
+  it('aguanta que todavía no haya llegado ningún Servicio', async () => {
+    const { supabase, enFrom } = baseFalsa({ data: [], error: null });
+    const { contactos } = await contactosDeClientes(supabase, null);
+    expect(enFrom).not.toHaveBeenCalled();
+    expect(contactos.size).toBe(0);
+  });
+
+  // Un Cliente que entró sin solicitud no tiene de dónde sacar el contacto, y eso no puede
+  // dejar un renglón indefinido adentro del mapa: la pantalla muestra un guion.
+  it('deja afuera al Cliente que no tiene solicitud', async () => {
+    const { supabase } = baseFalsa({
+      data: [
+        { id: CLIENTE, solicitudes: CONTACTO },
+        { id: OTRA_CLIENTE, solicitudes: null },
+      ],
+      error: null,
+    });
+
+    const { contactos } = await contactosDeClientes(supabase, [
+      SERVICIO_DE_UNA_CLIENTE,
+      { ...SERVICIO_DE_UNA_CLIENTE, id: 's2', contratante_id: OTRA_CLIENTE },
+    ]);
+
+    expect(contactos.size).toBe(1);
+    expect(contactos.has(OTRA_CLIENTE)).toBe(false);
+  });
+
+  it('devuelve la falla de la base en vez de tragársela', async () => {
+    const falla = { message: 'se cayó' };
+    const { supabase } = baseFalsa({ data: null, error: falla });
+
+    const { contactos, error } = await contactosDeClientes(supabase, [SERVICIO_DE_UNA_CLIENTE]);
+
+    expect(error).toBe(falla);
+    expect(contactos.size).toBe(0);
   });
 });

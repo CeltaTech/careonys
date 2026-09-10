@@ -196,7 +196,7 @@ appClientesRouter.get('/pacientes', requiereRolCliente, async (req, res) => {
     .eq('prestadora_id', req.usuarioCliente.prestadoraId)
     .order('nombre');
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
   // Si al Paciente lo están atendiendo estos días en otro lado, el Cliente ve esa dirección y no
   // la de la ficha — es la misma respuesta que ve el Asistente en su teléfono, escrita una sola
@@ -356,7 +356,7 @@ appClientesRouter.get('/pacientes/:id/guardias', requiereRolCliente, exigeDePers
     .lte('guardias.fecha', semana.hasta);
 
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
 
   // Qué viaja al teléfono: lo que la pantalla dibuja y nada más. El identificador del Asistente
@@ -443,7 +443,7 @@ appClientesRouter.get('/pacientes/:id/reportes', requiereRolCliente, exigeDePers
     .order('created_at', { ascending: false })
     .limit(60);
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
 
   // Los rangos normales solo tienen sentido junto a los valores: sin signos vitales en
@@ -475,7 +475,7 @@ appClientesRouter.get('/pacientes/:id/reportes/:reporteId', requiereRolCliente, 
     .eq('paciente_id', paciente.id)
     .maybeSingle();
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
   if (!data) {
     return res.status(404).json({ error: 'Reporte no encontrado' });
@@ -508,7 +508,7 @@ appClientesRouter.get('/pacientes/:id/alertas', requiereRolCliente, exigeVisible
     .order('created_at', { ascending: false })
     .limit(60);
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
   res.json({ alertas: data });
 });
@@ -736,7 +736,7 @@ appClientesRouter.post('/guardias/:guardiaId/calificar', requiereRolCliente, exi
     comentario: comentario || null,
   });
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
 
   res.json({ ok: true });
@@ -767,7 +767,7 @@ appClientesRouter.post('/push/suscribir', requiereRolCliente, async (req, res) =
     userAgent: req.headers['user-agent'],
   });
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
 
   res.json({ ok: true });
@@ -785,7 +785,7 @@ appClientesRouter.delete('/push/suscribir', requiereRolCliente, async (req, res)
     .eq('endpoint', endpoint)
     .eq('cliente_id', req.usuarioCliente.clienteId);
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return responderError(res, error);
   }
 
   res.json({ ok: true });
@@ -805,7 +805,7 @@ appClientesRouter.get('/suscripcion/:pacienteId', requiereRolCliente, exigeVisib
     .eq('cliente_id', req.usuarioCliente.clienteId)
     .eq('paciente_id', req.params.pacienteId)
     .maybeSingle();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ suscripcion: data });
 });
 
@@ -838,7 +838,7 @@ appClientesRouter.post('/qr-cobro', requiereRolCliente, exigeVisible('cliente_pa
     })
     .select('id, token, expira_en, usado_en')
     .single();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
 
   res.json({ qr: data });
 });
@@ -850,7 +850,7 @@ appClientesRouter.get('/qr-cobro/:id', requiereRolCliente, exigeVisible('cliente
     .eq('id', req.params.id)
     .eq('cliente_id', req.usuarioCliente.clienteId)
     .maybeSingle();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!data) return res.status(404).json({ error: 'QR no encontrado' });
   res.json({ qr: data });
 });

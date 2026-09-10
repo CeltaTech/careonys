@@ -12,6 +12,7 @@ import { exigirAdministracion, exigirAdminDePrestadora } from '../middleware/exi
 import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { exigirModalidad } from '../middleware/exigirModalidad.js';
 import { advertenciaVigente, advertenciasVigentes, registrarAviso } from '../utils/advertenciaLegal.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 export const panelMatchRouter = Router();
 
@@ -64,7 +65,7 @@ panelMatchRouter.get('/pasarela', soloAdministracion, async (req, res) => {
     .from('prestadora_pasarela_pago')
     .select('proveedor, estado_conexion, conectada_en, updated_at')
     .eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
 
   // Qué secretos tiene guardados cada proveedor. Nunca el texto —eso no sale de la caja
   // fuerte ni para el Admin que lo cargó—, solamente si está o no está: sin el secreto de
@@ -74,7 +75,7 @@ panelMatchRouter.get('/pasarela', soloAdministracion, async (req, res) => {
     .from('credenciales_pasarela_pago')
     .select('proveedor, secreto_firma_secret_id')
     .eq('prestadora_id', req.usuarioPanel.prestadoraId);
-  if (errorSecretos) return res.status(500).json({ error: errorSecretos.message });
+  if (errorSecretos) return responderError(res, errorSecretos);
 
   const activados = new Map(data.map((fila) => [fila.proveedor, fila]));
   const conSecretoDeFirma = new Set(
@@ -115,7 +116,7 @@ panelMatchRouter.put('/pasarela/:proveedor/secreto-firma', soloAdministracion, s
     p_proveedor: proveedor,
     p_secreto: secretoFirma.trim(),
   });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
 
   res.json({ ok: true });
 });
@@ -134,7 +135,7 @@ panelMatchRouter.patch('/pasarela/:proveedor', soloAdministracion, soloAdminDePr
       .delete()
       .eq('prestadora_id', req.usuarioPanel.prestadoraId)
       .eq('proveedor', proveedor);
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return responderError(res, error);
     return res.json({ ok: true });
   }
 
@@ -145,7 +146,7 @@ panelMatchRouter.patch('/pasarela/:proveedor', soloAdministracion, soloAdminDePr
       p_proveedor: proveedor,
       p_credencial: credencial,
     });
-    if (errorCredencial) return res.status(500).json({ error: errorCredencial.message });
+    if (errorCredencial) return responderError(res, errorCredencial);
   }
 
   // El secreto de firma viaja en la misma llamada que la credencial cuando el proveedor firma
@@ -158,7 +159,7 @@ panelMatchRouter.patch('/pasarela/:proveedor', soloAdministracion, soloAdminDePr
       p_proveedor: proveedor,
       p_secreto: secretoFirma.trim(),
     });
-    if (errorSecreto) return res.status(500).json({ error: errorSecreto.message });
+    if (errorSecreto) return responderError(res, errorSecreto);
   }
 
   const { error } = await supabase.from('prestadora_pasarela_pago').upsert(
@@ -172,7 +173,7 @@ panelMatchRouter.patch('/pasarela/:proveedor', soloAdministracion, soloAdminDePr
     },
     { onConflict: 'prestadora_id,proveedor' }
   );
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
 
   res.json({ ok: true });
 });
@@ -191,7 +192,7 @@ panelMatchRouter.get('/suscripciones', soloAdministracion, async (req, res) => {
     .select('id, cliente_id, paciente_id, asistente_id, estado, monto_mensual, trial_fin, proximo_cobro, cancelada_en, created_at')
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .order('created_at', { ascending: false });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
 
   const clienteIds = [...new Set(data.map((s) => s.cliente_id).filter(Boolean))];
   const pacienteIds = [...new Set(data.map((s) => s.paciente_id).filter(Boolean))];
@@ -224,7 +225,7 @@ panelMatchRouter.get('/suscripciones/:id/cobros', soloAdministracion, async (req
     .eq('suscripcion_id', req.params.id)
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .order('periodo', { ascending: false });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   res.json({ cobros: data });
 });
 
@@ -257,7 +258,7 @@ panelMatchRouter.post('/cobros/efectivo-manual', soloAdministracion, async (req,
     fecha_cobro: fechaCobro,
     registrado_por: req.usuarioPanel.id,
   });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
 
   res.json({ ok: true });
 });
@@ -309,13 +310,13 @@ panelMatchRouter.post('/qr-cobro/canjear', soloAdministracion, async (req, res) 
     })
     .select('id')
     .single();
-  if (errorCobro) return res.status(500).json({ error: errorCobro.message });
+  if (errorCobro) return responderError(res, errorCobro);
 
   const { error: errorQr } = await supabase
     .from('qr_cobro_efectivo')
     .update({ usado_en: new Date().toISOString(), usado_por: req.usuarioPanel.id, cobro_id: cobro.id })
     .eq('id', qr.id);
-  if (errorQr) return res.status(500).json({ error: errorQr.message });
+  if (errorQr) return responderError(res, errorQr);
 
   res.json({ ok: true, monto: qr.monto });
 });
@@ -332,7 +333,7 @@ panelMatchRouter.get('/calificaciones', async (req, res) => {
     .select('id, asistente_id, paciente_id, cliente_id, estrellas, comentario, visible_publica, descargo_asistente, descargo_en, created_at')
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .order('created_at', { ascending: false });
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
 
   const asistenteIds = [...new Set(data.map((c) => c.asistente_id).filter(Boolean))];
   const { data: asistentes } = asistenteIds.length
@@ -358,7 +359,7 @@ panelMatchRouter.patch('/calificaciones/:id/visibilidad', async (req, res) => {
     .eq('id', req.params.id)
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .select('id');
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return responderError(res, error);
   if (!modificada?.length) {
     // No existe, o es de otra Prestadora. Se contesta lo mismo en los dos casos.
     return res.status(404).json({ error: 'No se encontró esa calificación' });
@@ -390,12 +391,15 @@ async function catalogoDeFuncionesDeRiesgo() {
     .order('orden', { ascending: true });
 }
 
-/* El detalle crudo de la base nombra tablas, columnas y restricciones, así que queda en el
-   registro del servidor y no viaja al navegador (CLAUDE.md §6). La pantalla no lo necesita:
-   traduce por el código de respuesta (panel/src/lib/errores.js). */
+/* Lo único que agrega este ayudante es en qué consulta falló, porque una misma ruta hace
+   varias y saber la ruta no alcanza para saber cuál. Qué sale hacia afuera no lo decide acá:
+   lo decide `responderError`, que es el punto único —afuera va el código, el detalle crudo de
+   la base se queda en el registro del servidor (CLAUDE.md §6)—. Antes contestaba una frase
+   escrita a mano en castellano, que además nunca llegaba a verse: la pantalla trata cualquier
+   500 como falla del sistema sin leer el mensaje (`panel/src/lib/errores.js`). */
 function fallaDelSistema(res, donde, error) {
-  console.error(`Match, ${donde}:`, error.message);
-  return res.status(500).json({ error: 'No se pudo completar la operación' });
+  console.error(`Match, ${donde}:`, error?.message ?? error);
+  return responderError(res, error);
 }
 
 // ----------------------------------------------------------------------------

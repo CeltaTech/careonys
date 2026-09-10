@@ -525,7 +525,13 @@ export async function revocarMiembroPersonasAutorizadas(usuarioId, { prestadoraI
     .eq('usuario_id', usuarioId)
     .single();
   if (errorMiembro || !miembro || miembro.cliente_id !== clienteId) {
-    throw new Error('Esta persona no pertenece a las personas autorizadas de esta Cliente');
+    // Con motivo, y no con la frase suelta que estaba antes: la frase viajaba en el cuerpo de
+    // la respuesta y era texto visible escrito a mano, en un solo idioma. El motivo es un
+    // código, y la frase vive en las traducciones, en los tres.
+    throw new ErrorConMotivo(
+      'persona_fuera_del_personas_autorizadas',
+      `usuario ${usuarioId} no figura en las personas autorizadas del cliente ${clienteId}`,
+    );
   }
 
   await supabase.from('permisos_personas_autorizadas').delete().eq('usuario_id', usuarioId);

@@ -17,6 +17,11 @@ import { MonitoreoVitalesPaciente } from './MonitoreoVitalesPaciente';
 import { DomiciliosTemporalesPaciente } from './DomiciliosTemporalesPaciente';
 import { InvitarPersonasAutorizadasModal } from './InvitarPersonasAutorizadasModal';
 import {
+  AlertasDeLaCliente,
+  GuardiasActivasDeLaCliente,
+  ReportesDeLaCliente,
+} from './GuardiasReportesYAlertas';
+import {
   AccesosDePersonasAutorizadasModal,
   DocumentoDeLaInstruccion,
   RegistrarPapelFirmadoModal,
@@ -388,14 +393,17 @@ export function ClienteDetalle() {
         </Button>
       )}
 
+      {/* Las tres secciones traen sus propios datos y manejan sus propios cuatro estados; viven
+          en `GuardiasReportesYAlertas.jsx` y hacen las mismas preguntas que las pantallas de
+          Guardias, Reportes y Alertas, acotadas a los Pacientes de esta Cliente. */}
       <h2>{t.clientes.guardias_activas}</h2>
-      <p className="estado-vacio">{t.clientes.modulo_no_disponible}</p>
+      <GuardiasActivasDeLaCliente pacientes={cliente.pacientes} />
 
       <h2>{t.clientes.historial_reportes}</h2>
-      <p className="estado-vacio">{t.clientes.modulo_no_disponible}</p>
+      <ReportesDeLaCliente pacientes={cliente.pacientes} />
 
       <h2>{t.clientes.alertas_activas}</h2>
-      <p className="estado-vacio">{t.clientes.modulo_no_disponible}</p>
+      <AlertasDeLaCliente pacientes={cliente.pacientes} />
 
       {pacienteSeleccionado && (
         <PrestacionesPaciente paciente={pacienteSeleccionado} onClose={() => setPacienteSeleccionado(null)} />

@@ -10,6 +10,7 @@ import { AdvertenciaLegalProvider } from './context/AdvertenciaLegalContext';
 import { PedidosDeCodigoProvider } from './context/PedidosDeCodigoContext';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { ROLES_ADMINISTRACION, ROLES_PANEL } from './lib/roles';
+import { MODALIDAD } from './lib/modalidades';
 import { Layout } from './components/layout/Layout';
 import { Login } from './pages/Login';
 import { Mfa } from './pages/Mfa';
@@ -148,6 +149,12 @@ function App() {
                       <Route path="accesos" element={<ConfiguracionAccesos />} />
                     </Route>
                     <Route path="auditoria" element={<ProtectedRoute roles={ROLES_ADMINISTRACION}><Auditoria /></ProtectedRoute>} />
+                    {/* Las tres pantallas del Match llevan dos candados y no uno: el rol,
+                        que dice quién de la Prestadora entra, y la modalidad, que dice si esa
+                        Prestadora tiene Match. Hasta ahora sólo tenían el primero, así que
+                        una Prestadora de prestación directa entraba escribiendo la dirección a
+                        mano. El de acá es para no mostrar lo que no corresponde; el que niega de
+                        verdad es el del motor (backend/src/middleware/exigirModalidad.js). */}
                     <Route
                       path="match/clientes"
                       element={
@@ -155,7 +162,7 @@ function App() {
                            suscripción, historial de cobros, carga de efectivo en mano y canje del
                            QR. Va con el mismo candado que Configuración y Auditoría, no con el de
                            las pantallas operativas (Desarrollador, 2026-09-04). */
-                        <ProtectedRoute roles={ROLES_ADMINISTRACION}>
+                        <ProtectedRoute roles={ROLES_ADMINISTRACION} modalidad={MODALIDAD.MATCH}>
                           <MatchClientes />
                         </ProtectedRoute>
                       }
@@ -163,7 +170,7 @@ function App() {
                     <Route
                       path="match/calificaciones"
                       element={
-                        <ProtectedRoute roles={ROLES_PANEL}>
+                        <ProtectedRoute roles={ROLES_PANEL} modalidad={MODALIDAD.MATCH}>
                           <MatchCalificaciones />
                         </ProtectedRoute>
                       }
@@ -171,7 +178,7 @@ function App() {
                     <Route
                       path="match/auditoria-legal"
                       element={
-                        <ProtectedRoute roles={ROLES_PANEL}>
+                        <ProtectedRoute roles={ROLES_PANEL} modalidad={MODALIDAD.MATCH}>
                           <MatchAuditoriaLegal />
                         </ProtectedRoute>
                       }

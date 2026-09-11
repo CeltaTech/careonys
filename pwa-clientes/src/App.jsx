@@ -15,7 +15,7 @@ import ReporteDetalle from './pages/ReporteDetalle';
 import Alertas from './pages/Alertas';
 import AsistenteAsignado from './pages/AsistenteAsignado';
 import EscanearAsistente from './pages/EscanearAsistente';
-import SuscripcionMatch from './pages/SuscripcionMatch';
+import AccesoMatch from './pages/AccesoMatch';
 import Medicacion from './pages/Medicacion';
 import MiPerfil from './pages/MiPerfil';
 import FirmarInstruccion from './pages/FirmarInstruccion';
@@ -117,10 +117,10 @@ function Rutas() {
           }
         />
         <Route
-          path="pacientes/:id/suscripcion"
+          path="pacientes/:id/acceso"
           element={
-            <PantallaPermitida pantalla="suscripcion">
-              <SuscripcionMatch />
+            <PantallaPermitida pantalla="acceso">
+              <AccesoMatch />
             </PantallaPermitida>
           }
         />

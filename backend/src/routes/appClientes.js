@@ -792,47 +792,47 @@ appClientesRouter.delete('/push/suscribir', requiereRolCliente, async (req, res)
 });
 
 // ============================================================================
-// Suscripción match + cobro en efectivo por QR. El QR es la
+// El acceso al Match + cobro en efectivo por QR. El QR es la
 // alternativa a la carga manual del cobrador: el Cliente lo genera desde su propio
 // dispositivo, de un solo uso y con vencimiento corto (10 min) — el canje ocurre siempre en
 // el Panel vía service_role, nunca como UPDATE directo desde acá.
 // ============================================================================
 
-appClientesRouter.get('/suscripcion/:pacienteId', requiereRolCliente, exigeVisible('cliente_pagos_y_suscripcion'), exigeDePersonasAutorizadas('persona_autorizada_dinero'), async (req, res) => {
+appClientesRouter.get('/acceso/:pacienteId', requiereRolCliente, exigeVisible('cliente_pagos_y_suscripcion'), exigeDePersonasAutorizadas('persona_autorizada_dinero'), async (req, res) => {
   const { data, error } = await supabase
-    .from('suscripciones_match')
-    .select('id, estado, monto_mensual, trial_fin, proximo_cobro, cancelada_en')
+    .from('accesos_match')
+    .select('id, estado, importe, gratis_hasta, proximo_cobro, cancelada_en')
     .eq('cliente_id', req.usuarioCliente.clienteId)
     .eq('paciente_id', req.params.pacienteId)
     .maybeSingle();
   if (error) return responderError(res, error);
-  res.json({ suscripcion: data });
+  res.json({ acceso: data });
 });
 
 appClientesRouter.post('/qr-cobro', requiereRolCliente, exigeVisible('cliente_pagos_y_suscripcion'), exigeDePersonasAutorizadas('persona_autorizada_dinero'), async (req, res) => {
-  const { suscripcion_id: suscripcionId } = req.body || {};
-  if (!suscripcionId) {
-    return res.status(400).json({ error: 'Falta suscripcion_id' });
+  const { acceso_id: accesoId } = req.body || {};
+  if (!accesoId) {
+    return res.status(400).json({ error: 'Falta acceso_id' });
   }
 
-  const { data: suscripcion } = await supabase
-    .from('suscripciones_match')
-    .select('id, cliente_id, monto_mensual, proximo_cobro')
-    .eq('id', suscripcionId)
+  const { data: acceso } = await supabase
+    .from('accesos_match')
+    .select('id, cliente_id, importe, proximo_cobro')
+    .eq('id', accesoId)
     .eq('cliente_id', req.usuarioCliente.clienteId)
     .maybeSingle();
-  if (!suscripcion) {
-    return res.status(404).json({ error: 'Suscripción no encontrada' });
+  if (!acceso) {
+    return res.status(404).json({ error: 'Acceso no encontrado' });
   }
 
   const { token, expiraEn } = generarTokenQrCobro();
   const { data, error } = await supabase
     .from('qr_cobro_efectivo')
     .insert({
-      suscripcion_id: suscripcion.id,
+      acceso_id: acceso.id,
       cliente_id: req.usuarioCliente.clienteId,
-      periodo: suscripcion.proximo_cobro || new Date().toISOString().slice(0, 10),
-      monto: suscripcion.monto_mensual,
+      periodo: acceso.proximo_cobro || new Date().toISOString().slice(0, 10),
+      monto: acceso.importe,
       token,
       expira_en: expiraEn.toISOString(),
     })

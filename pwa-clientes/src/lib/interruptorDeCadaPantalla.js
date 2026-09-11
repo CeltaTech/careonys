@@ -12,7 +12,7 @@
 export const INTERRUPTOR_DE_LA_PANTALLA = {
   alertas: 'cliente_alertas_de_la_revision',
   escanearAsistente: 'cliente_verifica_con_codigo',
-  suscripcion: 'cliente_pagos_y_suscripcion',
+  acceso: 'cliente_pagos_y_suscripcion',
   medicacion: 'cliente_medicacion_del_paciente',
 };
 
@@ -36,7 +36,7 @@ export const INTERRUPTOR_DE_LA_PANTALLA = {
 export const ACCESO_DEL_PERSONAS_AUTORIZADAS_DE_LA_PANTALLA = {
   alertas: 'persona_autorizada_alertas',
   escanearAsistente: 'persona_autorizada_verifica_con_codigo',
-  suscripcion: 'persona_autorizada_dinero',
+  acceso: 'persona_autorizada_dinero',
   medicacion: 'persona_autorizada_medicacion',
   reportes: 'persona_autorizada_reportes',
   guardias: 'persona_autorizada_guardias',

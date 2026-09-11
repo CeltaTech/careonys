@@ -118,9 +118,8 @@ Visible solo si la Prestadora tiene esta modalidad activa. Todo lo que ya está 
 `docs/PRD_07_Modalidad_Match.md` necesita una pantalla en algún lado — hoy ninguna
 existe en el menú actual, es la parte que más código nuevo va a requerir:
 
-- Clientes match — estado de suscripción (trial/activa/vencida/cancelada, fecha
-  próximo cobro — `docs/PRD_07_Modalidad_Match.md:45-69`), no existe tabla todavía
-  (`docs/PRD_07_Modalidad_Match.md:204-205`, pendiente antes de escribir código)
+- Clientes match — padrón y estado del cobro que cada Cliente le paga a la Prestadora
+  (`docs/PRD_07_Modalidad_Match.md`, §3)
 - Calificaciones y descargos — vista de `calificaciones_asistente` con el derecho de
   descargo del Asistente (`docs/PRD_07_Modalidad_Match.md:115-117`, mitigante "no
   opcional")
@@ -185,10 +184,10 @@ antes de programar:
    — no contempla un tercer valor `'cooperativa'`. Si cooperativa también comparte el mismo
    plantel de Asistentes (Grupo 1), ese `CHECK` constraint necesita revisión el día que se
    diseñe cooperativa en profundidad, no alcanza con agregarla a la UI del menú.
-5. **Resuelto (2026-07-24)**: pantalla propia en el Grupo 3 para la Facturación de
-   match (suscripción mensual al Cliente), separada de "Facturación, pagos y
-   cobranzas" de prestación directa (que factura servicios de cuidado) — son dos naturalezas
-   de cobro distintas y no comparten pantalla.
+5. **Resuelto (2026-07-24)**: pantalla propia en el Grupo 3 para el cobro mensual que el Cliente
+   de match le paga a la Prestadora, separada de "Facturación, pagos y cobranzas" de
+   prestación directa (que factura servicios de cuidado) — son dos naturalezas de cobro distintas
+   y no comparten pantalla.
 6. **Resuelto (2026-07-24)**: Informes de obra social y Lista de precios son exclusivos de
    prestación directa — confirman ubicación en el Grupo 2. En match el Cliente
    contrata directo al Asistente, sin derivación de obra social ni lista de precios de la
@@ -206,8 +205,8 @@ antes de programar:
 
 - No se diseñó el modelo de datos de "modalidad activa" (tabla nueva vs. reuso de
   `prestadora_modulos`) — es la pregunta 1 de §3, todavía abierta.
-- No se diseñaron las pantallas nuevas de match (suscripción, calificaciones,
-  auditoría de advertencias) más allá de nombrarlas como necesarias en el Grupo 3.
+- No se diseñaron las pantallas nuevas de match (cobro, calificaciones, auditoría de
+  advertencias) más allá de nombrarlas como necesarias en el Grupo 3.
 - No se tocó ningún archivo de `panel/src`, `backend/src` ni ninguna migración de Supabase.
 - No se definió el nombre comercial de "Clientes" en contexto de match (pregunta 3 de
   §3) — se mantiene "Cliente" por ser el término ya aprobado del glosario, salvo que el

@@ -37,6 +37,7 @@ import { revisarLlegadasDemoradas } from './utils/revisarLlegadasDemoradas.js';
 import { armarCobrosDelPeriodo } from './utils/cobrosMatch.js';
 import { cortarLosAccesosDadosDeBaja } from './utils/corteDelAcceso.js';
 import { avisarElPrimerCobroQueViene } from './utils/avisoPrevioAlCobro.js';
+import { suspenderLosQueAgotaronLaGracia } from './utils/periodoDeGracia.js';
 import { whatsappWebhookRouter } from './routes/whatsappWebhook.js';
 import { appAsistentesRouter } from './routes/appAsistentes.js';
 import { appClientesRouter } from './routes/appClientes.js';
@@ -239,6 +240,15 @@ setInterval(() => {
 avisarElPrimerCobroQueViene().catch((err) => console.error('Error en el aviso previo inicial del Match:', err.message));
 setInterval(() => {
   avisarElPrimerCobroQueViene().catch((err) => console.error('Error avisando del primer cobro del Match:', err.message));
+}, UN_DIA_MS);
+
+// La suspensión de los accesos a los que se les terminó el período de gracia sin que el cobro
+// entrara. Es la otra mitad del resguardo del §3.2: un cobro que falla no suspende en el acto, abre
+// una gracia, y este trabajo es el que la cierra cuando llega la fecha. Se cuenta en días, así que
+// corre con la misma cadencia diaria que los tres de arriba.
+suspenderLosQueAgotaronLaGracia().catch((err) => console.error('Error en la suspensión inicial de accesos del Match:', err.message));
+setInterval(() => {
+  suspenderLosQueAgotaronLaGracia().catch((err) => console.error('Error suspendiendo accesos del Match:', err.message));
 }, UN_DIA_MS);
 
 // Middleware de error único (pendiente #91) — punto único de verdad para toda excepción no

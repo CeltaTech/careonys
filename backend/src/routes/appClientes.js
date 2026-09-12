@@ -890,6 +890,81 @@ appClientesRouter.get('/qr-cobro/:id', requiereRolCliente, exigeVisible('cliente
 });
 
 // ============================================================================
+// Las facturas del Cliente — la ventanilla
+//
+// LA CUENTA YA ESTABA HECHA Y NO SE VOLVIÓ A HACER ACÁ. Lo facturado menos lo cobrado lo resuelve
+// la vista `saldos_cliente`, que es el único lugar donde vive esa resta, y el estado de hoy lo
+// calcula la base con la fecha de vencimiento. Repetir la resta del lado del motor daría dos
+// respuestas posibles para la misma pregunta, y una de las dos la veríal Cliente.
+//
+// LO QUE SE MUESTRA ES EL DESGLOSE, no un total suelto. Un importe sin decir de qué es no se
+// puede comprobar ni discutir: cada renglón dice a qué Paciente y a qué Servicio corresponde.
+//
+// LOS COBROS ANULADOS VAN TAMBIÉN, marcados. Anular no es borrar: un pago que se anotó y después
+// se dio de baja, desaparecido de la pantalla, es indistinguible de uno que nunca existió, y
+// quien pagó tiene derecho a ver ese movimiento. El motivo de la anulación no viaja: es una nota
+// interna de la Prestadora.
+//
+// ENTRA POR LAS DOS PUERTAS QUE YA EXISTEN: el interruptor de la Prestadora
+// —`cliente_pagos_y_suscripcion`— y el acceso que el titular reparte —`persona_autorizada_dinero`—. Ningún
+// permiso nuevo: quien ya podía ver la cuota del Match es quien puede ver esto.
+// ============================================================================
+
+/** El saldo de una factura de esta Cliente, o null. Nunca se busca una factura sin decir de quién es. */
+async function saldoDeLaCliente(req, facturaId) {
+  const { data, error } = await supabase
+    .from('saldos_cliente')
+    .select(
+      'factura_id, periodo, moneda, monto_total, cobrado, saldo, estado, fecha_emision, fecha_vencimiento'
+    )
+    .eq('factura_id', facturaId)
+    .eq('cliente_id', req.usuarioCliente.clienteId)
+    .eq('prestadora_id', req.usuarioCliente.prestadoraId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ?? null;
+}
+
+appClientesRouter.get('/facturas', requiereRolCliente, exigeVisible('cliente_pagos_y_suscripcion'), exigeDePersonasAutorizadas('persona_autorizada_dinero'), async (req, res) => {
+  const { data, error } = await supabase
+    .from('saldos_cliente')
+    .select('factura_id, periodo, moneda, monto_total, cobrado, saldo, estado, fecha_emision, fecha_vencimiento')
+    .eq('cliente_id', req.usuarioCliente.clienteId)
+    .eq('prestadora_id', req.usuarioCliente.prestadoraId)
+    .order('periodo', { ascending: false });
+  if (error) return responderError(res, error);
+  res.json({ facturas: data || [] });
+});
+
+appClientesRouter.get('/facturas/:facturaId', requiereRolCliente, exigeVisible('cliente_pagos_y_suscripcion'), exigeDePersonasAutorizadas('persona_autorizada_dinero'), async (req, res) => {
+  let factura;
+  try {
+    factura = await saldoDeLaCliente(req, req.params.facturaId);
+  } catch (e) {
+    return responderError(res, e);
+  }
+  if (!factura) return res.status(404).json({ error: 'Factura no encontrada' });
+
+  const { data: renglones, error: errorRenglones } = await supabase
+    .from('facturas_cliente_items')
+    .select('id, descripcion, monto, moneda, paciente_id, servicio_id')
+    .eq('factura_id', factura.factura_id)
+    .eq('prestadora_id', req.usuarioCliente.prestadoraId)
+    .order('created_at', { ascending: true });
+  if (errorRenglones) return responderError(res, errorRenglones);
+
+  const { data: cobros, error: errorCobros } = await supabase
+    .from('cobros_cliente')
+    .select('id, monto, moneda, fecha_cobro, medio, estado')
+    .eq('factura_id', factura.factura_id)
+    .eq('prestadora_id', req.usuarioCliente.prestadoraId)
+    .order('fecha_cobro', { ascending: false });
+  if (errorCobros) return responderError(res, errorCobros);
+
+  res.json({ factura, renglones: renglones || [], cobros: cobros || [] });
+});
+
+// ============================================================================
 // El pase de guardia — el código que el Cliente muestra en pantalla
 //
 // Cuando llega el Asistente, quien está en la casa abre esto y le muestra el código. Se renueva

@@ -16,6 +16,8 @@ import Alertas from './pages/Alertas';
 import AsistenteAsignado from './pages/AsistenteAsignado';
 import EscanearAsistente from './pages/EscanearAsistente';
 import AccesoMatch from './pages/AccesoMatch';
+import Facturas from './pages/Facturas';
+import FacturaDetalle from './pages/FacturaDetalle';
 import Medicacion from './pages/Medicacion';
 import MiPerfil from './pages/MiPerfil';
 import FirmarInstruccion from './pages/FirmarInstruccion';
@@ -136,6 +138,26 @@ function Rutas() {
             un Paciente porque el código es de las personas autorizadas entero, y no lleva guardián
             porque cualquiera de las personas autorizadas puede ser quien esté en la casa cuando toquen el
             timbre. El motor pide lo mismo: tener sesión de Cliente y nada más. */}
+        {/* Las facturas no cuelgan de un Paciente: se le factura a las personas autorizadas entero, y
+            una misma factura puede tener renglones de más de una persona cuidada. El detalle va
+            detrás del mismo par de decisiones que la lista, o quien no tiene el dinero no ve la
+            lista pero abre una factura escribiendo la dirección. */}
+        <Route
+          path="facturas"
+          element={
+            <PantallaPermitida pantalla="facturas">
+              <Facturas />
+            </PantallaPermitida>
+          }
+        />
+        <Route
+          path="facturas/:facturaId"
+          element={
+            <PantallaPermitida pantalla="facturas">
+              <FacturaDetalle />
+            </PantallaPermitida>
+          }
+        />
         <Route path="codigo" element={<CodigoParaElAsistente />} />
         <Route path="perfil" element={<MiPerfil />} />
         {/* No lleva guardián: quién tiene una instrucción para firmar lo contesta el motor, y

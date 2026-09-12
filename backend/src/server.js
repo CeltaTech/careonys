@@ -36,6 +36,7 @@ import { revisarGuardiasSinCubrir } from './utils/revisarGuardiasSinCubrir.js';
 import { revisarLlegadasDemoradas } from './utils/revisarLlegadasDemoradas.js';
 import { armarCobrosDelPeriodo } from './utils/cobrosMatch.js';
 import { cortarLosAccesosDadosDeBaja } from './utils/corteDelAcceso.js';
+import { avisarElPrimerCobroQueViene } from './utils/avisoPrevioAlCobro.js';
 import { whatsappWebhookRouter } from './routes/whatsappWebhook.js';
 import { appAsistentesRouter } from './routes/appAsistentes.js';
 import { appClientesRouter } from './routes/appClientes.js';
@@ -230,6 +231,14 @@ setInterval(() => {
 cortarLosAccesosDadosDeBaja().catch((err) => console.error('Error en el corte inicial de accesos del Match:', err.message));
 setInterval(() => {
   cortarLosAccesosDadosDeBaja().catch((err) => console.error('Error cortando accesos del Match:', err.message));
+}, UN_DIA_MS);
+
+// El aviso previo al primer cobro, cuando está por terminar el período gratuito. Es el resguardo
+// del §3.2 del PRD del Match: nunca un cobro silencioso. Se cuenta en días, así que corre con
+// la misma cadencia diaria que los dos de arriba.
+avisarElPrimerCobroQueViene().catch((err) => console.error('Error en el aviso previo inicial del Match:', err.message));
+setInterval(() => {
+  avisarElPrimerCobroQueViene().catch((err) => console.error('Error avisando del primer cobro del Match:', err.message));
 }, UN_DIA_MS);
 
 // Middleware de error único (pendiente #91) — punto único de verdad para toda excepción no

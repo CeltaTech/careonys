@@ -13,9 +13,10 @@ import { guardarSuscripcionPush } from '../utils/suscripcionesPush.js';
 import { accesosDelPedido, exigeDePersonasAutorizadas, soloElTitular, visibilidadDeLaPersona } from '../utils/accesosDePersonasAutorizadas.js';
 import { instruccionPendiente, pedirCodigo, confirmarConCodigo } from '../utils/instruccionesPersonasAutorizadas.js';
 import { codigoParaMostrar } from '../utils/comprobacionDePresencia.js';
-import { responderError } from '../utils/errorConMotivo.js';
+import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
 import { llegadaEstimadaDeGuardia } from '../utils/estimarLlegadaDeGuardia.js';
+import { darDeBajaElAcceso } from '../utils/bajaDelAcceso.js';
 
 export const appClientesRouter = Router();
 
@@ -801,12 +802,45 @@ appClientesRouter.delete('/push/suscribir', requiereRolCliente, async (req, res)
 appClientesRouter.get('/acceso/:pacienteId', requiereRolCliente, exigeVisible('cliente_pagos_y_suscripcion'), exigeDePersonasAutorizadas('persona_autorizada_dinero'), async (req, res) => {
   const { data, error } = await supabase
     .from('accesos_match')
-    .select('id, estado, importe, gratis_hasta, proximo_cobro, cancelada_en')
+    .select(
+      'id, estado, importe, gratis_hasta, proximo_cobro, cancelada_en, vigente_hasta, ' +
+        'formas_de_cobro_match(renueva_sola)'
+    )
     .eq('cliente_id', req.usuarioCliente.clienteId)
     .eq('paciente_id', req.params.pacienteId)
     .maybeSingle();
   if (error) return responderError(res, error);
-  res.json({ acceso: data });
+  // La pantalla necesita saber si hay renovación que apagar para decidir si ofrece la baja, y no
+  // tiene por qué recibir la forma de cobro entera para eso.
+  const acceso = data
+    ? {
+        ...sinLaFormaDeCobro(data),
+        renueva_sola: Boolean(data.formas_de_cobro_match?.renueva_sola),
+      }
+    : data;
+  res.json({ acceso });
+});
+
+function sinLaFormaDeCobro({ formas_de_cobro_match: _forma, ...resto }) {
+  return resto;
+}
+
+// La baja en un clic del §3.2 del `docs/PRD_07_Modalidad_Match.md`: la hace quien paga, sin
+// pedírselo a nadie. Qué apaga y qué conserva lo decide `utils/bajaDelAcceso.js`, que es el único
+// lugar por donde un acceso se da de baja; acá sólo se comprueba quién llama.
+appClientesRouter.post('/acceso/:accesoId/baja', requiereRolCliente, exigeVisible('cliente_pagos_y_suscripcion'), exigeDePersonasAutorizadas('persona_autorizada_dinero'), async (req, res) => {
+  const resultado = await darDeBajaElAcceso({
+    accesoId: req.params.accesoId,
+    clienteId: req.usuarioCliente.clienteId,
+  });
+
+  if (!resultado.ok) {
+    // El motivo es un código y la frase vive en las traducciones; qué número de respuesta le
+    // toca a cada uno lo decide `utils/errorConMotivo.js`, que es el único lugar que lo sabe.
+    return responderError(res, new ErrorConMotivo(resultado.motivo, resultado.detalle));
+  }
+
+  res.json({ baja: resultado.baja, ya_estaba: Boolean(resultado.yaEstaba) });
 });
 
 appClientesRouter.post('/qr-cobro', requiereRolCliente, exigeVisible('cliente_pagos_y_suscripcion'), exigeDePersonasAutorizadas('persona_autorizada_dinero'), async (req, res) => {

@@ -192,7 +192,6 @@ export function Layout() {
         { a: '/match/auditoria-legal', texto: t.nav.match_auditoria_legal, ver: match },
         { a: '/importacion', texto: t.nav.importacion, ver: esAdmin || puede('importar_datos_masivos') },
         { a: '/prestadoras', texto: t.nav.prestadoras, ver: esSuperadmin },
-        { a: '/costos-ia', texto: t.nav.costos_ia, ver: esSuperadmin },
       ],
     },
   ];

@@ -277,7 +277,7 @@ panelConfiguracionRouter.delete('/personal-emergencia/:id', async (req, res) => 
 panelConfiguracionRouter.get('/notificaciones', async (req, res) => {
   let query = supabase
     .from('configuracion_notificaciones')
-    .select('evento, descripcion, emails, activo, whatsapp_activo, notificar_cliente');
+    .select('evento, descripcion, emails, activo, whatsapp_activo, notificar_cliente, plantilla_whatsapp_id');
   query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query;
   if (error) return responderError(res, error);
@@ -291,7 +291,23 @@ panelConfiguracionRouter.patch('/notificaciones/:evento', async (req, res) => {
   const aviso = avisoDelCatalogo(req.params.evento);
   if (!aviso) return res.status(400).json({ error: 'Aviso desconocido' });
 
-  const { emails, activo, whatsapp_activo, notificar_cliente } = req.body;
+  const { emails, activo, whatsapp_activo, notificar_cliente, plantilla_whatsapp_id } = req.body;
+
+  // La plantilla se guarda sólo si es de esta Prestadora. El identificador viene del navegador, y
+  // el motor entra a la base con la llave de servicio: sin esta comprobación, una Prestadora podría
+  // mandar sus avisos con la plantilla de otra.
+  let plantillaId = null;
+  if (aviso.admite_whatsapp && plantilla_whatsapp_id) {
+    const { data: plantilla } = await supabase
+      .from('plantillas_whatsapp')
+      .select('id')
+      .eq('id', plantilla_whatsapp_id)
+      .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+      .maybeSingle();
+    if (!plantilla) return res.status(400).json({ error: 'Plantilla desconocida' });
+    plantillaId = plantilla.id;
+  }
+
   const { error } = await supabase.from('configuracion_notificaciones').upsert(
     {
       prestadora_id: req.usuarioPanel.prestadoraId,
@@ -303,6 +319,7 @@ panelConfiguracionRouter.patch('/notificaciones/:evento', async (req, res) => {
       // encendido: dejarlo prendido haría creer que el aviso sale por ahí, y no sale.
       whatsapp_activo: aviso.admite_whatsapp ? Boolean(whatsapp_activo) : false,
       notificar_cliente: aviso.admite_cliente ? Boolean(notificar_cliente) : false,
+      plantilla_whatsapp_id: plantillaId,
     },
     { onConflict: 'evento,prestadora_id' }
   );

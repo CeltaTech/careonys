@@ -128,6 +128,10 @@ export function Layout() {
         { a: '/match/clientes', texto: t.nav.match_clientes, ver: match && esAdmin },
         { a: '/servicios', texto: t.nav.servicios, ver: true },
         { a: '/solicitudes', texto: t.nav.solicitudes, ver: hayPlantel },
+        // La biblioteca para los Clientes la lee cualquiera del Panel: escribirla es un permiso,
+        // pero un borrador tiene que poder revisarlo quien no lo escribió. Y no depende de la
+        // modalidad: quien cuida en su casa lo hace en las dos.
+        { a: '/contenidos', texto: t.nav.contenidos, ver: true },
       ],
     },
     {

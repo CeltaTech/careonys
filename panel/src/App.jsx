@@ -50,6 +50,7 @@ import { Medicacion } from './pages/Medicacion';
 import { Importacion } from './pages/Importacion';
 import { InformesObraSocial } from './pages/InformesObraSocial';
 import { Auditoria } from './pages/Auditoria';
+import { ContenidoParaClientes } from './pages/contenidos/ContenidoParaClientes';
 import { MatchClientes } from './pages/match/Clientes';
 import { FormasDeCobro } from './pages/match/FormasDeCobro';
 import { MatchCalificaciones } from './pages/match/Calificaciones';
@@ -106,6 +107,12 @@ function App() {
                     <Route path="clientes" element={<Clientes />} />
                     <Route path="clientes/:id" element={<ClienteDetalle />} />
                     <Route path="servicios" element={<Servicios />} />
+                    {/* La biblioteca que la Prestadora escribe para quien cuida en su casa. Sin
+                        candado de modalidad: un Cliente de prestación directa cuida en su casa
+                        igual que una de match. Verla la ve cualquiera del Panel —un
+                        borrador hay que poder revisarlo—; escribirla es un permiso, y quien lo
+                        niega de verdad es el motor. */}
+                    <Route path="contenidos" element={<ContenidoParaClientes />} />
                     <Route path="servicios/:id" element={<ServicioDetalle />} />
                     <Route path="medicacion" element={<Medicacion />} />
                     <Route path="guardias" element={<Guardias />} />

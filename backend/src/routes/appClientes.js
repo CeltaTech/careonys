@@ -38,6 +38,7 @@ import {
   mensajesDeLaConversacion,
   videollamadaEnCurso,
 } from '../utils/conversacionMatch.js';
+import { abrirElContactoDeUnAsistente, comoEstaElContacto } from '../utils/contactoDelAsistente.js';
 import { MODALIDAD } from '../utils/modalidades.js';
 import { diaISO } from '../utils/reglaVencimientos.js';
 
@@ -874,7 +875,9 @@ appClientesRouter.get('/acceso/:pacienteId', requiereRolCliente, exigeVisible('c
   const { data, error } = await supabase
     .from('accesos_match')
     .select(
-      'id, estado, importe, gratis_hasta, proximo_cobro, cancelada_en, vigente_hasta, ' +
+      // La moneda viaja con el importe y no se deduce: un importe suelto se lee en la moneda de
+      // quien mira, y la Prestadora puede estar en otro país.
+      'id, estado, importe, moneda, gratis_hasta, proximo_cobro, cancelada_en, vigente_hasta, ' +
         'formas_de_cobro_match(renueva_sola)'
     )
     .eq('cliente_id', req.usuarioCliente.clienteId)
@@ -1284,6 +1287,84 @@ appClientesRouter.get('/match/asistentes/:id', requiereRolCliente, async (req, r
     responderError(res, e);
   }
 });
+
+// ============================================================================
+// VER CÓMO LLEGAR A UN ASISTENTE: LA ACTIVACIÓN AL INTENTAR VER EL CONTACTO
+//
+// QUÉ RESUELVE. El dato de contacto es lo que el Match vende, y hasta acá no se le abría a
+// ninguna Cliente por ningún camino: el descuento del saldo estaba escrito en la base y en
+// `utils/contactosMatch.js`, y no lo llamaba nadie. Estas dos direcciones son el botón que
+// faltaba, y todo lo que deciden vive en `utils/contactoDelAsistente.js`.
+//
+// DOS DIRECCIONES Y NO UNA, A PROPÓSITO. La primera dice qué va a pasar y no toca nada; la
+// segunda cobra. Así abrir un contacto no puede ser nunca el efecto colateral de haber mirado
+// una pantalla: hace falta un pedido aparte, que ninguna aplicación manda sin que alguien toque
+// el botón y confirme.
+//
+// LA PLATA NO LA MIRA CUALQUIERA DEL PERSONAS_AUTORIZADAS. Activar un cobro es plata, así que el botón lleva
+// los mismos dos candados que el acceso —lo que la Prestadora muestra
+// (`cliente_pagos_y_suscripcion`) y lo que el titular repartió (`persona_autorizada_dinero`)—. Preguntar
+// cómo está el contacto no los lleva: quien no mira la plata puede ver el dato ya abierto, y no
+// se entera de cuánto sale ni de cuánto saldo queda.
+// ============================================================================
+
+/** El Asistente de la vidriera al que se le quiere ver el contacto. Fuera del pool no hay perfil
+ *  ni contacto, aunque alguien pruebe el identificador. */
+async function asistenteDeLaVidriera(req) {
+  const { data } = await poolDeLaPrestadora(req.usuarioCliente.prestadoraId)
+    .eq('id', req.params.id)
+    .maybeSingle();
+  if (!data) throw new ErrorConMotivo('no_encontrado');
+  return data;
+}
+
+appClientesRouter.get('/match/asistentes/:id/contacto', requiereRolCliente, async (req, res) => {
+  try {
+    await exigeVidriera(req);
+    const asistente = await asistenteDeLaVidriera(req);
+
+    const visibilidad = await visibilidadDelPedido(req);
+    const accesos = await accesosDelPedido(req);
+    const miraElDinero = Boolean(visibilidad.cliente_pagos_y_suscripcion && accesos.persona_autorizada_dinero);
+
+    const estado = await comoEstaElContacto({
+      prestadoraId: req.usuarioCliente.prestadoraId,
+      clienteId: req.usuarioCliente.clienteId,
+      asistenteId: asistente.id,
+      mira_el_dinero: miraElDinero,
+    });
+    res.json(estado);
+  } catch (e) {
+    responderError(res, e);
+  }
+});
+
+appClientesRouter.post(
+  '/match/asistentes/:id/contacto',
+  requiereRolCliente,
+  exigeVisible('cliente_pagos_y_suscripcion'),
+  exigeDePersonasAutorizadas('persona_autorizada_dinero'),
+  async (req, res) => {
+    try {
+      await exigeVidriera(req);
+      const asistente = await asistenteDeLaVidriera(req);
+
+      const abierto = await abrirElContactoDeUnAsistente({
+        prestadoraId: req.usuarioCliente.prestadoraId,
+        clienteId: req.usuarioCliente.clienteId,
+        asistenteId: asistente.id,
+      });
+      // El motivo por el que no se pudo no es una falla del sistema: es algo que el Cliente tiene
+      // que poder leer y resolver —contratar, renovar, comprar otro paquete—, y la frase sale de
+      // sus traducciones.
+      if (!abierto.ok) throw new ErrorConMotivo(abierto.motivo);
+
+      res.json({ abierto: true, contacto: abierto.contacto, saldo_contactos: abierto.saldo_contactos });
+    } catch (e) {
+      responderError(res, e);
+    }
+  }
+);
 
 // ============================================================================
 // EL CHAT CON UN ASISTENTE DE LA VIDRIERA

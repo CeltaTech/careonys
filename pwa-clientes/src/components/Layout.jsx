@@ -1,12 +1,13 @@
 import { Outlet, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
-import { useMarca } from '../context/PerfilContext';
+import { useMarca, useOfreceMatch } from '../context/PerfilContext';
 
 export default function Layout() {
   const { logout } = useAuth();
   const { t } = useLocale();
   const marca = useMarca();
+  const ofreceMatch = useOfreceMatch();
 
   return (
     <div className="app-layout">
@@ -38,6 +39,14 @@ export default function Layout() {
         <NavLink to="/pacientes" className={({ isActive }) => (isActive ? 'active' : '')}>
           {t.nav.pacientes}
         </NavLink>
+        {/* Buscar Asistentes sólo aparece donde la Prestadora ofrece esa modalidad de trabajo.
+            En una que trabaja únicamente en prestación directa no hay a quién buscar: la gente
+            la asigna ella. */}
+        {ofreceMatch && (
+          <NavLink to="/buscar" className={({ isActive }) => (isActive ? 'active' : '')}>
+            {t.nav.buscar}
+          </NavLink>
+        )}
         {/* El código para el Asistente que llega va en el menú de abajo y no adentro de un
             Paciente: se busca con el timbre sonando y tiene que estar a un toque desde donde
             sea. Además es de las personas autorizadas entero, así que colgarlo de un Paciente diría

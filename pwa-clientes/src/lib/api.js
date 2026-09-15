@@ -66,4 +66,17 @@ export const api = {
   // detalle agrega de qué es cada renglón y qué pagos entraron contra esa factura.
   facturas: () => pedido('/facturas'),
   factura: (facturaId) => pedido(`/facturas/${facturaId}`),
+  // La vidriera del Match. Los filtros van vacíos cuando no se eligió ninguno, y las
+  // opciones para elegir vuelven en la misma respuesta: las arma el motor con quien está
+  // realmente en la vidriera, así que una zona sin nadie no se ofrece.
+  asistentesDelMatch: ({ zona, tipo } = {}) => {
+    const filtros = new URLSearchParams();
+    if (zona) filtros.set('zona', zona);
+    if (tipo) filtros.set('tipo', tipo);
+    const cola = filtros.toString();
+    return pedido(`/match/asistentes${cola ? `?${cola}` : ''}`);
+  },
+  // El perfil público de una persona de la vidriera. De acá no sale ningún dato de contacto:
+  // llegar a la persona es lo que el Match vende y tiene su propio circuito.
+  asistenteDelMatch: (id) => pedido(`/match/asistentes/${id}`),
 };

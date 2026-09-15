@@ -5,6 +5,8 @@ import { textoDeLaInstruccion, huellaDelDocumento, IDIOMA_DEL_DOCUMENTO } from '
 import { enviarWhatsApp } from './whatsapp.js';
 import { enviarEmail } from './email.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
+import { aviso } from '../i18n/avisos.js';
+import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import {
   codigoCoincide,
   codigoNuevoParaGuardar,
@@ -217,7 +219,12 @@ export async function pedirCodigo({ instruccionId, clienteId }) {
     .maybeSingle();
 
   const remite = prestadora?.nombre_fantasia ?? '';
-  const cuerpo = `Su código para confirmar la instrucción sobre los accesos de su personas autorizadas es ${codigo}. Vence en ${VIGENCIA_DEL_CODIGO_MINUTOS} minutos. Si no lo pidió usted, no lo use y avise a ${remite}.`;
+  const textos = aviso('codigo_instruccion_personas_autorizadas', await idiomaDeLaPrestadora(instruccion.prestadora_id), {
+    codigo,
+    minutos: VIGENCIA_DEL_CODIGO_MINUTOS,
+    remite,
+  });
+  const cuerpo = textos.texto;
 
   if (titular?.telefono) {
     try {
@@ -236,7 +243,7 @@ export async function pedirCodigo({ instruccionId, clienteId }) {
 
   await enviarEmail({
     to: cuenta.user.email,
-    asunto: `Código para confirmar los accesos de su personas autorizadas — ${remite}`,
+    asunto: textos.asunto,
     texto: cuerpo,
     prestadoraId: instruccion.prestadora_id,
   });

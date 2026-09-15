@@ -27,6 +27,17 @@ import {
   promedioDeCalificaciones,
 } from '../utils/perfilPublicoDeAsistente.js';
 import { funcionDeRiesgoEncendida, ofreceMatch } from '../utils/matchDeLaPrestadora.js';
+import {
+  LADO,
+  abrirVideollamada,
+  contactoAbierto,
+  conversacionDeLaPareja,
+  direccionDeVideollamada,
+  escribirMensaje,
+  marcarLeido,
+  mensajesDeLaConversacion,
+  videollamadaEnCurso,
+} from '../utils/conversacionMatch.js';
 import { MODALIDAD } from '../utils/modalidades.js';
 import { diaISO } from '../utils/reglaVencimientos.js';
 
@@ -1269,6 +1280,182 @@ appClientesRouter.get('/match/asistentes/:id', requiereRolCliente, async (req, r
       }),
       opiniones,
     });
+  } catch (e) {
+    responderError(res, e);
+  }
+});
+
+// ============================================================================
+// EL CHAT CON UN ASISTENTE DE LA VIDRIERA
+//
+// QUÉ RESUELVE. El Cliente ya podía mirar un perfil y no tenía forma de hablarle a la persona.
+// Estas rutas son el hilo, y el de la aplicación del Asistente es el mismo: las dos puntas
+// entran por `utils/conversacionMatch.js`, que es donde vive el tapado.
+//
+// EL CHAT NO SE COBRA. Lo dice el documento del producto: la búsqueda, los perfiles, el chat y
+// la videollamada son libres (`docs/PRD_07_Modalidad_Match.md:69`). Lo que se vende es
+// llegar a la persona por afuera, y por eso el dato de contacto viaja tapado mientras el
+// contacto de esa pareja no esté abierto. Acá no se decide qué es un dato de contacto: se
+// pregunta una sola cosa —si está abierto— y tapa `contactoTapado.js`.
+//
+// LA PUERTA SIGUE SIENDO LA MODALIDAD. Igual que la vidriera: donde la Prestadora no ofrece
+// match no hay a quién escribirle, y el motor lo contesta con todas las letras.
+// ============================================================================
+
+/** El hilo que se pide, comprobando que sea de esta Cliente y de esta Prestadora. El que no
+ *  existe y el ajeno contestan lo mismo: desde afuera se tienen que ver iguales. */
+async function conversacionDeLaCliente(req) {
+  const { data } = await supabase
+    .from('conversaciones_match')
+    .select('id, prestadora_id, cliente_id, asistente_id, ultimo_mensaje_at, sala_videollamada, sala_abierta_at')
+    .eq('id', req.params.id)
+    .eq('prestadora_id', req.usuarioCliente.prestadoraId)
+    .eq('cliente_id', req.usuarioCliente.clienteId)
+    .maybeSingle();
+
+  if (!data) throw new ErrorConMotivo('no_encontrado');
+  return data;
+}
+
+appClientesRouter.get('/match/conversaciones', requiereRolCliente, async (req, res) => {
+  try {
+    await exigeVidriera(req);
+    const { data, error } = await supabase
+      .from('conversaciones_match')
+      .select('id, asistente_id, ultimo_mensaje_at, asistentes(id, nombre, foto_url)')
+      .eq('prestadora_id', req.usuarioCliente.prestadoraId)
+      .eq('cliente_id', req.usuarioCliente.clienteId)
+      .order('ultimo_mensaje_at', { ascending: false, nullsFirst: false });
+    if (error) return responderError(res, error);
+
+    const hilos = data || [];
+    // Cuántos mensajes sin leer tiene cada hilo, en una sola consulta para toda la lista. Sólo
+    // cuentan los del otro lado: lo propio ya lo leyó quien lo escribió.
+    const { data: sinLeer } = hilos.length
+      ? await supabase
+          .from('mensajes_match')
+          .select('conversacion_id')
+          .in('conversacion_id', hilos.map((c) => c.id))
+          .eq('lado', 'asistente')
+          .is('leido_at', null)
+      : { data: [] };
+
+    const cuenta = new Map();
+    for (const m of sinLeer || []) cuenta.set(m.conversacion_id, (cuenta.get(m.conversacion_id) || 0) + 1);
+
+    res.json({
+      conversaciones: hilos.map((c) => ({
+        id: c.id,
+        asistente: {
+          id: c.asistente_id,
+          nombre: c.asistentes?.nombre || '',
+          foto_url: c.asistentes?.foto_url || null,
+        },
+        ultimo_mensaje_at: c.ultimo_mensaje_at,
+        sin_leer: cuenta.get(c.id) || 0,
+      })),
+    });
+  } catch (e) {
+    responderError(res, e);
+  }
+});
+
+/** Abrir el hilo con alguien de la vidriera. Se busca adentro del pool y no en la tabla entera:
+ *  a quien no está en la vidriera no se le escribe, aunque se pruebe su identificador. */
+appClientesRouter.post('/match/asistentes/:id/conversacion', requiereRolCliente, async (req, res) => {
+  try {
+    await exigeVidriera(req);
+    const { data: asistente } = await poolDeLaPrestadora(req.usuarioCliente.prestadoraId)
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (!asistente) throw new ErrorConMotivo('no_encontrado');
+
+    const conversacion = await conversacionDeLaPareja({
+      prestadoraId: req.usuarioCliente.prestadoraId,
+      clienteId: req.usuarioCliente.clienteId,
+      asistenteId: asistente.id,
+      crear: true,
+    });
+    res.json({ conversacion_id: conversacion.id });
+  } catch (e) {
+    responderError(res, e);
+  }
+});
+
+appClientesRouter.get('/match/conversaciones/:id', requiereRolCliente, async (req, res) => {
+  try {
+    await exigeVidriera(req);
+    const conversacion = await conversacionDeLaCliente(req);
+
+    const abierto = await contactoAbierto({
+      clienteId: conversacion.cliente_id,
+      asistenteId: conversacion.asistente_id,
+    });
+
+    const [mensajes, { data: asistente }, enCurso, base] = await Promise.all([
+      mensajesDeLaConversacion({ conversacion, abierto }),
+      supabase.from('asistentes').select('id, nombre, foto_url').eq('id', conversacion.asistente_id).maybeSingle(),
+      videollamadaEnCurso(conversacion),
+      direccionDeVideollamada(conversacion.prestadora_id),
+    ]);
+
+    await marcarLeido({ conversacion, lado: LADO.CLIENTE });
+
+    res.json({
+      conversacion: {
+        id: conversacion.id,
+        asistente: { id: conversacion.asistente_id, nombre: asistente?.nombre || '', foto_url: asistente?.foto_url || null },
+      },
+      mensajes,
+      // Viaja para que la pantalla pueda decir por qué hay marcas en el texto, y para que deje
+      // de decirlo cuando ya no las hay.
+      contacto_abierto: abierto,
+      videollamada_disponible: Boolean(base),
+      videollamada: enCurso,
+    });
+  } catch (e) {
+    responderError(res, e);
+  }
+});
+
+appClientesRouter.post('/match/conversaciones/:id/mensajes', requiereRolCliente, async (req, res) => {
+  try {
+    await exigeVidriera(req);
+    const conversacion = await conversacionDeLaCliente(req);
+
+    const cuerpo = String(req.body?.cuerpo ?? '').trim();
+    if (!cuerpo) throw new ErrorConMotivo('faltan_datos');
+
+    await escribirMensaje({
+      conversacion,
+      lado: LADO.CLIENTE,
+      autorUsuarioId: req.usuarioCliente.id,
+      cuerpo,
+    });
+
+    // Se devuelve el mensaje como lo va a ver quien lo escribió: tapado si corresponde. Verlo
+    // entero del lado de quien lo mandó y tapado del otro haría creer que llegó completo.
+    const abierto = await contactoAbierto({
+      clienteId: conversacion.cliente_id,
+      asistenteId: conversacion.asistente_id,
+    });
+    res.json({ mensajes: await mensajesDeLaConversacion({ conversacion, abierto }) });
+  } catch (e) {
+    responderError(res, e);
+  }
+});
+
+appClientesRouter.post('/match/conversaciones/:id/videollamada', requiereRolCliente, async (req, res) => {
+  try {
+    await exigeVidriera(req);
+    const conversacion = await conversacionDeLaCliente(req);
+    const sala = await abrirVideollamada({
+      conversacion,
+      lado: LADO.CLIENTE,
+      autorUsuarioId: req.usuarioCliente.id,
+    });
+    if (!sala) throw new ErrorConMotivo('videollamada_no_configurada');
+    res.json(sala);
   } catch (e) {
     responderError(res, e);
   }

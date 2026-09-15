@@ -25,7 +25,19 @@ import {
   pedirCodigoALaPrestadora,
   registrarComprobacion,
 } from '../utils/comprobacionDePresencia.js';
-import { responderError } from '../utils/errorConMotivo.js';
+import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
+import { ofreceMatch } from '../utils/matchDeLaPrestadora.js';
+import { MODALIDAD } from '../utils/modalidades.js';
+import {
+  LADO,
+  abrirVideollamada,
+  contactoAbierto,
+  direccionDeVideollamada,
+  escribirMensaje,
+  marcarLeido,
+  mensajesDeLaConversacion,
+  videollamadaEnCurso,
+} from '../utils/conversacionMatch.js';
 import { puedeRegistrarUbicacion } from '../utils/consentimientoUbicacion.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
 import { MOTIVOS_DEMORA } from '../utils/motivosDemora.js';
@@ -194,7 +206,7 @@ async function pacientesSinReporte(guardia) {
 appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
   const { data: perfil, error } = await supabase
     .from('asistentes')
-    .select('id, nombre, telefono, email, foto_url, tipo_asistente_id, zonas, estado, tipo_vinculo, qr_token, disponible_para_ofertas, disponibilidad_cambiada_en, tipos_asistente(id, clave, nombre, prestadora_id)')
+    .select('id, nombre, telefono, email, foto_url, tipo_asistente_id, zonas, estado, tipo_vinculo, qr_token, canales, disponible_para_ofertas, disponibilidad_cambiada_en, tipos_asistente(id, clave, nombre, prestadora_id)')
     .eq('id', req.usuarioAsistente.id)
     .single();
   if (error || !perfil) {
@@ -222,7 +234,17 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
   // apagado; que el dato apagado no salga de la base lo resuelve cada consulta por su cuenta.
   const visibilidad = await visibilidadDelPedido(req);
 
-  res.json({ perfil, certificado: certificado || null, marca, visibilidad });
+  // Si esta persona trabaja en match, su aplicación tiene una pantalla más: los hilos con
+  // los Clientes que le escribieron. Son dos condiciones y las dos tienen que dar que sí —que la
+  // Prestadora ofrezca esa modalidad, y que esta persona trabaje en ella—, porque un Asistente
+  // de prestación directa adentro de una Prestadora que además hace match no recibe
+  // mensajes de nadie. Viaja con el perfil por el mismo motivo que la marca: la aplicación lo
+  // necesita antes de dibujar el menú.
+  const match =
+    (perfil.canales || []).includes(MODALIDAD.MATCH) &&
+    (await ofreceMatch(req.usuarioAsistente.prestadoraId));
+
+  res.json({ perfil, certificado: certificado || null, marca, visibilidad, match });
 });
 
 // El interruptor de disponibilidad, y lo mueve el Asistente.
@@ -1202,4 +1224,162 @@ appAsistentesRouter.patch('/calificaciones/:id/descargo', requiereRolAsistente, 
   }
 
   res.json({ ok: true });
+});
+
+// ============================================================================
+// EL CHAT CON UNA CLIENTE DE LA VIDRIERA
+//
+// LA OTRA PUNTA DEL MISMO HILO. Lo que el Cliente ve en su aplicación y lo que el Asistente ve
+// en la suya es la misma conversación, y las dos entran por `utils/conversacionMatch.js`.
+// Ahí vive el tapado del dato de contacto, una vez y para los dos lados: tapando nada más lo que
+// escribe el Asistente, el Cliente pondría su propio número y la llamada saldría igual.
+//
+// EL HILO LO ABRE LA CLIENTE. Acá no hay ninguna ruta que cree una conversación: el Asistente
+// contesta las que le llegaron. Es la vidriera la que va en un solo sentido —el Cliente elige—,
+// y una ruta para escribirle primero sería una puerta para escribirle a cualquiera.
+// ============================================================================
+
+/** El hilo que se pide, comprobando que sea suyo y de esta Prestadora. El que no existe y el
+ *  ajeno contestan lo mismo. */
+async function conversacionDelAsistente(req) {
+  const { data } = await supabase
+    .from('conversaciones_match')
+    .select('id, prestadora_id, cliente_id, asistente_id, ultimo_mensaje_at, sala_videollamada, sala_abierta_at')
+    .eq('id', req.params.id)
+    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
+    .eq('asistente_id', req.usuarioAsistente.id)
+    .maybeSingle();
+
+  if (!data) throw new ErrorConMotivo('no_encontrado');
+  return data;
+}
+
+/** Corta el paso donde la Prestadora no ofrece la modalidad. */
+async function exigeMatch(req) {
+  if (!(await ofreceMatch(req.usuarioAsistente.prestadoraId))) {
+    throw new ErrorConMotivo('match_no_habilitado');
+  }
+}
+
+/** Cómo se llama el Cliente del otro lado. El nombre vive en `usuarios`, porque `clientes`
+ *  guarda la cuenta y no la persona. */
+async function nombreDeLaCliente(clienteId) {
+  const { data } = await supabase.from('usuarios').select('nombre').eq('id', clienteId).maybeSingle();
+  return data?.nombre || '';
+}
+
+appAsistentesRouter.get('/match/conversaciones', requiereRolAsistente, async (req, res) => {
+  try {
+    await exigeMatch(req);
+    const { data, error } = await supabase
+      .from('conversaciones_match')
+      .select('id, cliente_id, ultimo_mensaje_at')
+      .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
+      .eq('asistente_id', req.usuarioAsistente.id)
+      .order('ultimo_mensaje_at', { ascending: false, nullsFirst: false });
+    if (error) return responderError(res, error);
+
+    const hilos = data || [];
+    // Los nombres y los mensajes sin leer, en una consulta cada cosa para toda la lista.
+    const [{ data: personas }, { data: sinLeer }] = await Promise.all([
+      hilos.length
+        ? supabase.from('usuarios').select('id, nombre').in('id', hilos.map((c) => c.cliente_id))
+        : Promise.resolve({ data: [] }),
+      hilos.length
+        ? supabase
+            .from('mensajes_match')
+            .select('conversacion_id')
+            .in('conversacion_id', hilos.map((c) => c.id))
+            .eq('lado', 'cliente')
+            .is('leido_at', null)
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const nombres = new Map((personas || []).map((p) => [p.id, p.nombre || '']));
+    const cuenta = new Map();
+    for (const m of sinLeer || []) cuenta.set(m.conversacion_id, (cuenta.get(m.conversacion_id) || 0) + 1);
+
+    res.json({
+      conversaciones: hilos.map((c) => ({
+        id: c.id,
+        cliente: { nombre: nombres.get(c.cliente_id) || '' },
+        ultimo_mensaje_at: c.ultimo_mensaje_at,
+        sin_leer: cuenta.get(c.id) || 0,
+      })),
+    });
+  } catch (e) {
+    responderError(res, e);
+  }
+});
+
+appAsistentesRouter.get('/match/conversaciones/:id', requiereRolAsistente, async (req, res) => {
+  try {
+    await exigeMatch(req);
+    const conversacion = await conversacionDelAsistente(req);
+
+    const abierto = await contactoAbierto({
+      clienteId: conversacion.cliente_id,
+      asistenteId: conversacion.asistente_id,
+    });
+
+    const [mensajes, nombre, enCurso, base] = await Promise.all([
+      mensajesDeLaConversacion({ conversacion, abierto }),
+      nombreDeLaCliente(conversacion.cliente_id),
+      videollamadaEnCurso(conversacion),
+      direccionDeVideollamada(conversacion.prestadora_id),
+    ]);
+
+    await marcarLeido({ conversacion, lado: LADO.ASISTENTE });
+
+    res.json({
+      conversacion: { id: conversacion.id, cliente: { nombre } },
+      mensajes,
+      contacto_abierto: abierto,
+      videollamada_disponible: Boolean(base),
+      videollamada: enCurso,
+    });
+  } catch (e) {
+    responderError(res, e);
+  }
+});
+
+appAsistentesRouter.post('/match/conversaciones/:id/mensajes', requiereRolAsistente, async (req, res) => {
+  try {
+    await exigeMatch(req);
+    const conversacion = await conversacionDelAsistente(req);
+
+    const cuerpo = String(req.body?.cuerpo ?? '').trim();
+    if (!cuerpo) throw new ErrorConMotivo('faltan_datos');
+
+    await escribirMensaje({
+      conversacion,
+      lado: LADO.ASISTENTE,
+      autorUsuarioId: req.usuarioAsistente.id,
+      cuerpo,
+    });
+
+    const abierto = await contactoAbierto({
+      clienteId: conversacion.cliente_id,
+      asistenteId: conversacion.asistente_id,
+    });
+    res.json({ mensajes: await mensajesDeLaConversacion({ conversacion, abierto }) });
+  } catch (e) {
+    responderError(res, e);
+  }
+});
+
+appAsistentesRouter.post('/match/conversaciones/:id/videollamada', requiereRolAsistente, async (req, res) => {
+  try {
+    await exigeMatch(req);
+    const conversacion = await conversacionDelAsistente(req);
+    const sala = await abrirVideollamada({
+      conversacion,
+      lado: LADO.ASISTENTE,
+      autorUsuarioId: req.usuarioAsistente.id,
+    });
+    if (!sala) throw new ErrorConMotivo('videollamada_no_configurada');
+    res.json(sala);
+  } catch (e) {
+    responderError(res, e);
+  }
 });

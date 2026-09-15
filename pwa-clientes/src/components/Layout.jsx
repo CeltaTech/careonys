@@ -47,6 +47,13 @@ export default function Layout() {
             {t.nav.buscar}
           </NavLink>
         )}
+        {/* El chat con la gente de la vidriera cuelga de lo mismo que la vidriera: donde la
+            Prestadora no ofrece esa modalidad no hay con quién hablar. */}
+        {ofreceMatch && (
+          <NavLink to="/mensajes" className={({ isActive }) => (isActive ? 'active' : '')}>
+            {t.nav.mensajes}
+          </NavLink>
+        )}
         {/* El código para el Asistente que llega va en el menú de abajo y no adentro de un
             Paciente: se busca con el timbre sonando y tiene que estar a un toque desde donde
             sea. Además es de las personas autorizadas entero, así que colgarlo de un Paciente diría

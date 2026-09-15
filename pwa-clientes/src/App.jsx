@@ -24,6 +24,8 @@ import FirmarInstruccion from './pages/FirmarInstruccion';
 import CodigoParaElAsistente from './pages/CodigoParaElAsistente';
 import BuscarAsistentes from './pages/BuscarAsistentes';
 import PerfilPublicoAsistente from './pages/PerfilPublicoAsistente';
+import Mensajes from './pages/Mensajes';
+import Conversacion from './pages/Conversacion';
 
 function RutaPrivada({ children }) {
   const { session, cargando } = useAuth();
@@ -184,6 +186,24 @@ function Rutas() {
           element={
             <SoloConMatch>
               <PerfilPublicoAsistente />
+            </SoloConMatch>
+          }
+        />
+        {/* El chat con la gente de la vidriera. Cuelga de la misma modalidad que la vidriera:
+            donde la Prestadora no ofrece Match no hay con quién hablar. */}
+        <Route
+          path="mensajes"
+          element={
+            <SoloConMatch>
+              <Mensajes />
+            </SoloConMatch>
+          }
+        />
+        <Route
+          path="mensajes/:id"
+          element={
+            <SoloConMatch>
+              <Conversacion />
             </SoloConMatch>
           }
         />

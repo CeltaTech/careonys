@@ -79,4 +79,18 @@ export const api = {
   // El perfil público de una persona de la vidriera. De acá no sale ningún dato de contacto:
   // llegar a la persona es lo que el Match vende y tiene su propio circuito.
   asistenteDelMatch: (id) => pedido(`/match/asistentes/${id}`),
+  // EL CHAT CON UN ASISTENTE DE LA VIDRIERA. El chat no se cobra: lo que se cobra es el dato de
+  // contacto, y por eso sale tapado de acá hasta que esa pareja lo abra. Quien tapa es el motor,
+  // una sola vez para las dos puntas.
+  conversacionesDelMatch: () => pedido('/match/conversaciones'),
+  conversacionDelMatch: (id) => pedido(`/match/conversaciones/${id}`),
+  // La conversación la abre siempre el Cliente, desde el perfil público de la persona. Si ya
+  // existía, devuelve la misma: no hay dos hilos para la misma pareja.
+  abrirConversacionConAsistente: (asistenteId) =>
+    pedido(`/match/asistentes/${asistenteId}/conversacion`, { method: 'POST' }),
+  escribirEnConversacion: (id, cuerpo) =>
+    pedido(`/match/conversaciones/${id}/mensajes`, { method: 'POST', body: JSON.stringify({ cuerpo }) }),
+  // La videollamada de esta Prestadora. Donde no configuró ninguna, el motor contesta que no hay
+  // y la pantalla no ofrece el botón.
+  abrirVideollamada: (id) => pedido(`/match/conversaciones/${id}/videollamada`, { method: 'POST' }),
 };

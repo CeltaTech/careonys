@@ -284,7 +284,7 @@ appClientesRouter.get('/pacientes/:id', requiereRolCliente, async (req, res) => 
       .from('guardias')
       // salida_checkin_at es lo que permite decirle al Cliente "en camino": el Asistente
       // ya salió de su casa pero todavía no llegó al domicilio.
-      .select('id, fecha, hora_inicio, hora_fin, estado, salida_checkin_at, asistente_id, asistentes(nombre, foto_url)')
+      .select('id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, estado, salida_checkin_at, asistente_id, asistentes(nombre, foto_url)')
       .eq('paciente_id', paciente.id)
       .eq('estado', 'programada')
       .gte('fecha', new Date().toISOString().slice(0, 10))
@@ -384,7 +384,7 @@ appClientesRouter.get('/pacientes/:id/guardias', requiereRolCliente, exigeDePers
     .from('guardia_pacientes')
     .select(`
       guardias!inner(
-        id, fecha, hora_inicio, hora_fin, estado, cancelacion_origen,
+        id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, estado, cancelacion_origen,
         checkin_at, checkout_at, prestadora_id,
         asistentes(nombre)
       )

@@ -29,7 +29,13 @@ import {
 } from './AccesosDePersonasAutorizadasModal';
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
 import { llamarApiPanel } from '../../lib/apiPanel';
-import { PLAZO_MAXIMO_EN_DIAS, plazoQueSePuedeGuardar } from '../../lib/facturacionDeClientes';
+import {
+  FINANCIADORES,
+  FINANCIADORES_POSIBLES,
+  PLAZO_MAXIMO_EN_DIAS,
+  plazoQueSePuedeGuardar,
+} from '../../lib/facturacionDeClientes';
+import { traducirValor } from '../../i18n/valores';
 import { con } from '../../lib/textos';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -98,7 +104,7 @@ export function ClienteDetalle() {
     setError(null);
     const { data, error: errorConsulta } = await supabase
       .from('clientes')
-      .select('id, plan, dias_hasta_el_vencimiento, solicitud_id, created_at, solicitudes!clientes_solicitud_id_fkey(nombre, telefono, email, localidad), pacientes(*)')
+      .select('id, plan, dias_hasta_el_vencimiento, financiador_tipo, financiador_nombre, solicitud_id, created_at, solicitudes!clientes_solicitud_id_fkey(nombre, telefono, email, localidad), pacientes(*)')
       .eq('id', id)
       .single();
 
@@ -119,6 +125,8 @@ export function ClienteDetalle() {
         data.dias_hasta_el_vencimiento === null || data.dias_hasta_el_vencimiento === undefined
           ? ''
           : String(data.dias_hasta_el_vencimiento),
+      financiador_tipo: data.financiador_tipo || '',
+      financiador_nombre: data.financiador_nombre || '',
     });
     setEstado('listo');
   }, [id, t]);
@@ -195,7 +203,12 @@ export function ClienteDetalle() {
   async function guardarContacto() {
     setGuardandoContacto(true);
     setErrorContacto(null);
-    const { nombre, telefono, email, localidad, plan, dias_hasta_el_vencimiento: dias } = formContacto;
+    const {
+      nombre, telefono, email, localidad, plan,
+      dias_hasta_el_vencimiento: dias,
+      financiador_tipo: financiadorTipo,
+      financiador_nombre: financiadorNombre,
+    } = formContacto;
     // Vacío es «no se acordó nada distinto», y entonces rige el plazo de la Prestadora. No es
     // cero, que sería «paga el mismo día»: por eso se guarda vacío y no un número.
     const plazo = plazoQueSePuedeGuardar(dias === '' ? '' : Number(dias));
@@ -208,7 +221,18 @@ export function ClienteDetalle() {
       cliente.solicitud_id
         ? supabase.from('solicitudes').update({ nombre, telefono, email, localidad }).eq('id', cliente.solicitud_id)
         : Promise.resolve({ error: null }),
-      supabase.from('clientes').update({ plan, dias_hasta_el_vencimiento: plazo.valor }).eq('id', cliente.id),
+      // El financiador vacío se guarda vacío y no como «cliente»: los dos quieren decir lo mismo,
+      // y guardar uno de los dos sería inventar una decisión que nadie tomó. El nombre sólo tiene
+      // sentido cuando paga otro, así que con el Cliente se limpia.
+      supabase.from('clientes').update({
+        plan,
+        dias_hasta_el_vencimiento: plazo.valor,
+        financiador_tipo: financiadorTipo || null,
+        financiador_nombre:
+          financiadorTipo && financiadorTipo !== FINANCIADORES.CLIENTE
+            ? (financiadorNombre || '').trim() || null
+            : null,
+      }).eq('id', cliente.id),
     ]);
     setGuardandoContacto(false);
     if (errorSolicitud || errorCliente) {
@@ -257,6 +281,33 @@ export function ClienteDetalle() {
             onChange={(e) => setCampoContacto('dias_hasta_el_vencimiento', e.target.value)}
             disabled={!puedeEditarCliente}
           />
+          {/* A quién se le reclama lo que se le factura a esta Cliente. Vacío es el Cliente, que
+              es lo corriente. Cada factura se lleva este dato copiado el día que se genera, así
+              que cambiarlo acá no toca ninguna factura ya emitida. */}
+          <FormField
+            label={t.clientes.financiador}
+            name="financiador_tipo"
+            type="select"
+            value={formContacto.financiador_tipo}
+            ayuda={t.clientes.financiador_ayuda}
+            onChange={(e) => setCampoContacto('financiador_tipo', e.target.value)}
+            disabled={!puedeEditarCliente}
+          >
+            <option value="">{t.clientes.financiador_cliente}</option>
+            {FINANCIADORES_POSIBLES.filter((f) => f !== FINANCIADORES.CLIENTE).map((f) => (
+              <option key={f} value={f}>{traducirValor(t.clientes, `financiador_${f}`)}</option>
+            ))}
+          </FormField>
+          {formContacto.financiador_tipo !== '' && formContacto.financiador_tipo !== FINANCIADORES.CLIENTE && (
+            <FormField
+              label={t.clientes.financiador_nombre}
+              name="financiador_nombre"
+              value={formContacto.financiador_nombre}
+              ayuda={t.clientes.financiador_nombre_ayuda}
+              onChange={(e) => setCampoContacto('financiador_nombre', e.target.value)}
+              disabled={!puedeEditarCliente}
+            />
+          )}
           <dl className="panel-detalle-lista">
             <dt>{t.clientes.col_fecha_alta}</dt>
             <dd>{new Date(cliente.created_at).toLocaleDateString()}</dd>

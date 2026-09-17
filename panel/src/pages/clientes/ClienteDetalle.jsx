@@ -29,6 +29,7 @@ import {
 } from './AccesosDePersonasAutorizadasModal';
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
 import { llamarApiPanel } from '../../lib/apiPanel';
+import { PLAZO_MAXIMO_EN_DIAS, plazoQueSePuedeGuardar } from '../../lib/facturacionDeClientes';
 import { con } from '../../lib/textos';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -97,7 +98,7 @@ export function ClienteDetalle() {
     setError(null);
     const { data, error: errorConsulta } = await supabase
       .from('clientes')
-      .select('id, plan, solicitud_id, created_at, solicitudes!clientes_solicitud_id_fkey(nombre, telefono, email, localidad), pacientes(*)')
+      .select('id, plan, dias_hasta_el_vencimiento, solicitud_id, created_at, solicitudes!clientes_solicitud_id_fkey(nombre, telefono, email, localidad), pacientes(*)')
       .eq('id', id)
       .single();
 
@@ -114,6 +115,10 @@ export function ClienteDetalle() {
       email: data.solicitudes?.email || '',
       localidad: data.solicitudes?.localidad || '',
       plan: data.plan || '',
+      dias_hasta_el_vencimiento:
+        data.dias_hasta_el_vencimiento === null || data.dias_hasta_el_vencimiento === undefined
+          ? ''
+          : String(data.dias_hasta_el_vencimiento),
     });
     setEstado('listo');
   }, [id, t]);
@@ -190,12 +195,20 @@ export function ClienteDetalle() {
   async function guardarContacto() {
     setGuardandoContacto(true);
     setErrorContacto(null);
-    const { nombre, telefono, email, localidad, plan } = formContacto;
+    const { nombre, telefono, email, localidad, plan, dias_hasta_el_vencimiento: dias } = formContacto;
+    // Vacío es «no se acordó nada distinto», y entonces rige el plazo de la Prestadora. No es
+    // cero, que sería «paga el mismo día»: por eso se guarda vacío y no un número.
+    const plazo = plazoQueSePuedeGuardar(dias === '' ? '' : Number(dias));
+    if (!plazo.ok) {
+      setGuardandoContacto(false);
+      setErrorContacto(t.clientes.plazo_fuera_de_borde);
+      return;
+    }
     const [{ error: errorSolicitud }, { error: errorCliente }] = await Promise.all([
       cliente.solicitud_id
         ? supabase.from('solicitudes').update({ nombre, telefono, email, localidad }).eq('id', cliente.solicitud_id)
         : Promise.resolve({ error: null }),
-      supabase.from('clientes').update({ plan }).eq('id', cliente.id),
+      supabase.from('clientes').update({ plan, dias_hasta_el_vencimiento: plazo.valor }).eq('id', cliente.id),
     ]);
     setGuardandoContacto(false);
     if (errorSolicitud || errorCliente) {
@@ -231,6 +244,19 @@ export function ClienteDetalle() {
           <FormField label={t.clientes.col_email} name="email_contacto" type="email" value={formContacto.email} onChange={(e) => setCampoContacto('email', e.target.value)} disabled={!puedeEditarCliente} />
           <FormField label={t.clientes.col_localidad} name="localidad_contacto" value={formContacto.localidad} onChange={(e) => setCampoContacto('localidad', e.target.value)} disabled={!puedeEditarCliente} />
           <FormField label={t.clientes.plan} name="plan_contacto" value={formContacto.plan} onChange={(e) => setCampoContacto('plan', e.target.value)} disabled={!puedeEditarCliente} />
+          {/* Lo acordado con esta Cliente pisa el plazo general de la Prestadora. Vacío quiere
+              decir que no se acordó nada distinto, no que pague el mismo día. */}
+          <FormField
+            label={t.clientes.plazo_de_pago}
+            name="dias_hasta_el_vencimiento"
+            type="number"
+            min="0"
+            max={PLAZO_MAXIMO_EN_DIAS}
+            value={formContacto.dias_hasta_el_vencimiento}
+            ayuda={t.clientes.plazo_de_pago_ayuda}
+            onChange={(e) => setCampoContacto('dias_hasta_el_vencimiento', e.target.value)}
+            disabled={!puedeEditarCliente}
+          />
           <dl className="panel-detalle-lista">
             <dt>{t.clientes.col_fecha_alta}</dt>
             <dd>{new Date(cliente.created_at).toLocaleDateString()}</dd>

@@ -90,6 +90,11 @@ export const GRUPOS = [
     copias: ['backend/src/utils/frecuenciaDePago.js'],
   },
   {
+    que: 'a qué plazo paga cada Cliente, y qué se corrige de una factura ya emitida',
+    original: 'panel/src/lib/facturacionDeClientes.js',
+    copias: ['backend/src/utils/facturacionDeClientes.js'],
+  },
+  {
     que: 'cuánto se le paga a un Asistente por un mes',
     original: 'panel/src/lib/calcularLiquidacion.js',
     copias: ['backend/src/utils/calcularLiquidacion.js'],

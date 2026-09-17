@@ -223,11 +223,23 @@ Planillas 3, pero no el cobro directo a clientes particulares. Se construyó des
 caminos están hechos.
 
 **En prestación directa**, la factura de las personas autorizadas vive en `facturas_cliente`, la maneja
-`backend/src/routes/panelCobros.js`, se emite y se sigue desde `panel/src/pages/Facturacion.jsx`, y
+`backend/src/routes/panelCobros.js`, se sigue desde `panel/src/pages/Facturacion.jsx`, y
 el Cliente la ve en su aplicación (`facturas()` / `factura(id)` en `pwa-clientes/src/lib/api.js`).
 Una factura no cuelga de ningún Paciente: se le factura a las personas autorizadas entero, y un mismo comprobante
 puede llevar renglones de más de una persona cuidada. Qué se cobra y cada cuánto lo decide la
 Prestadora; el producto no fija precio ni período.
+
+**El comprobante no lo emite Careonys**, lo emite el software de facturación de la Prestadora, con
+su cuenta y los impuestos de su país. De ahí vuelven tres datos que se anotan tal como llegaron —
+cómo se llama el comprobante, qué número tiene y cuánto quedó adeudando el Cliente—, y ese monto es
+el que se reclama; mientras no haya nada anotado se muestra lo que se mandó a facturar. Una factura
+emitida no se toca: la corrección es otro comprobante, que se anota en
+`correcciones_factura_cliente` con su sentido y su monto. Sin software conectado el sistema
+funciona igual, anotando esos datos a mano. La cuenta de la resta vive en un solo lugar, la vista
+`saldos_cliente`, y las comprobaciones que hacen la pantalla y el motor salen del mismo archivo,
+`lib/facturacionDeClientes.js`. El plazo de pago acordado es lo que fija el vencimiento: hay uno
+general de la Prestadora y uno por Cliente, que gana sobre el general; vacío quiere decir que no se
+acordó nada y cero, que paga el mismo día.
 
 **En la modalidad Match** (`docs/PRD_07_Modalidad_Match.md`), el Cliente le paga a la Prestadora por una pasarela,
 y **cada Prestadora arma su propia forma de cobrar** con las piezas que el producto le da

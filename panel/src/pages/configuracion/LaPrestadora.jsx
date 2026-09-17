@@ -14,6 +14,7 @@ import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { FacturacionClientesTab } from './FacturacionClientesTab';
+import { TabLugares } from './LosLugares';
 
 /* Quién es la Prestadora y cómo trabaja: su nombre y sus datos, las modalidades
    que tiene contratadas, las zonas donde presta, a qué plazo le pagan los Clientes
@@ -29,6 +30,7 @@ export function ConfiguracionPrestadora() {
       <TabModalidades />
       <h2>{t.configuracion.tab_zonas}</h2>
       <TabZonas />
+      <TabLugares />
       <FacturacionClientesTab />
       {tieneModalidad('match') && <TabPasarela />}
     </>

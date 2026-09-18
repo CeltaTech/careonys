@@ -18,6 +18,7 @@ import { DomiciliosTemporalesPaciente } from './DomiciliosTemporalesPaciente';
 import { EquipoDelPaciente } from './EquipoDelPaciente';
 import { InvitarPersonasAutorizadasModal } from './InvitarPersonasAutorizadasModal';
 import { SelectorDeLegajo } from '../../components/padron/SelectorDeLegajo';
+import { EstadoDelPagador } from './EstadoDelPagador';
 import {
   AlertasDeLaCliente,
   GuardiasActivasDeLaCliente,
@@ -72,6 +73,9 @@ export function ClienteDetalle() {
   const esAdmin = esAdminOSuperior(usuario?.rol);
   const puedeEditarCliente = esAdmin || puede('editar_datos_cliente');
   const puedeEditarPaciente = esAdmin || puede('editar_datos_paciente');
+  // Leer no es escribir: el estado del Pagador lo ve quien edita el Cliente, porque saber si firmó
+  // hace falta para trabajar. Hacerlo firmar pide su propio permiso, que nace reservado al Admin.
+  const puedeRegistrarConsentimiento = esAdmin || puede('registrar_consentimiento_pagador');
   const [cliente, setCliente] = useState(null);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -311,6 +315,17 @@ export function ClienteDetalle() {
               prestadoraId={cliente.prestadora_id}
               deshabilitado={!puedeEditarCliente}
             />
+          )}
+          {/* Elegir el Legajo no convierte a nadie en Pagador: lo convierte haber firmado la
+              obligación de pagar. Acá abajo se ve si esa firma está y qué papeles faltan, en el
+              mismo momento en que se lo elige. Avisa, no bloquea.
+
+              Aparece junto al selector y no siempre: cuando paga el Cliente no hay Legajo del
+              Pagador apuntado, así que no habría a quién atarle una firma. */}
+          {puedeEditarCliente
+            && formContacto.financiador_tipo !== ''
+            && formContacto.financiador_tipo !== FINANCIADORES.CLIENTE && (
+            <EstadoDelPagador clienteId={cliente.id} puedeRegistrar={puedeRegistrarConsentimiento} />
           )}
           <dl className="panel-detalle-lista">
             <dt>{t.clientes.col_fecha_alta}</dt>

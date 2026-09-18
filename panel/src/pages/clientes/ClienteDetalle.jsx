@@ -227,16 +227,17 @@ export function ClienteDetalle() {
         ? supabase.from('solicitudes').update({ nombre, telefono, email, localidad }).eq('id', cliente.solicitud_id)
         : Promise.resolve({ error: null }),
       // El financiador vacío se guarda vacío y no como «cliente»: los dos quieren decir lo mismo,
-      // y guardar uno de los dos sería inventar una decisión que nadie tomó. El Legajo del Pagador
-      // sólo tiene sentido cuando paga otro, así que con el Cliente se limpia.
+      // y guardar uno de los dos sería inventar una decisión que nadie tomó.
+      //
+      // El Legajo del Pagador se guarda siempre, pague quien pague. Cuando paga el Cliente, el
+      // Pagador es alguien del Cliente, y hay que saber cuál: alguien firma la obligación de
+      // pagar y esa persona tiene nombre. Borrarlo por pagar el Cliente dejaba a esa contratación
+      // sin nadie a quien hacerle firmar nada.
       supabase.from('clientes').update({
         plan,
         dias_hasta_el_vencimiento: plazo.valor,
         financiador_tipo: financiadorTipo || null,
-        pagador_legajo_id:
-          financiadorTipo && financiadorTipo !== FINANCIADORES.CLIENTE
-            ? pagadorLegajoId || null
-            : null,
+        pagador_legajo_id: pagadorLegajoId || null,
       }).eq('id', cliente.id),
     ]);
     setGuardandoContacto(false);
@@ -304,27 +305,26 @@ export function ClienteDetalle() {
             ))}
           </FormField>
           {/* Quién paga se elige del Padrón y no se teclea: un nombre escrito a mano crea un ente
-              nuevo que no existe, y la misma obra social terminaría escrita de cien maneras. */}
-          {formContacto.financiador_tipo !== '' && formContacto.financiador_tipo !== FINANCIADORES.CLIENTE && (
-            <SelectorDeLegajo
-              name="pagador_legajo_id"
-              label={t.clientes.pagador_legajo}
-              ayuda={t.clientes.pagador_legajo_ayuda}
-              valor={formContacto.pagador_legajo_id}
-              alElegir={(legajoId) => setCampoContacto('pagador_legajo_id', legajoId)}
-              prestadoraId={cliente.prestadora_id}
-              deshabilitado={!puedeEditarCliente}
-            />
-          )}
+              nuevo que no existe, y la misma obra social terminaría escrita de cien maneras.
+
+              Se elige siempre, también cuando paga el Cliente: ahí el Pagador es alguien de la
+              Cliente, y cuál es no se adivina. */}
+          <SelectorDeLegajo
+            name="pagador_legajo_id"
+            label={t.clientes.pagador_legajo}
+            ayuda={t.clientes.pagador_legajo_ayuda}
+            valor={formContacto.pagador_legajo_id}
+            alElegir={(legajoId) => setCampoContacto('pagador_legajo_id', legajoId)}
+            prestadoraId={cliente.prestadora_id}
+            deshabilitado={!puedeEditarCliente}
+          />
           {/* Elegir el Legajo no convierte a nadie en Pagador: lo convierte haber firmado la
               obligación de pagar. Acá abajo se ve si esa firma está y qué papeles faltan, en el
               mismo momento en que se lo elige. Avisa, no bloquea.
 
-              Aparece junto al selector y no siempre: cuando paga el Cliente no hay Legajo del
-              Pagador apuntado, así que no habría a quién atarle una firma. */}
-          {puedeEditarCliente
-            && formContacto.financiador_tipo !== ''
-            && formContacto.financiador_tipo !== FINANCIADORES.CLIENTE && (
+              Aparece junto al selector y siempre, pague quien pague: el Pagador firma en todos los
+              casos, y quien arma la contratación tiene que ver acá mismo si esa firma está. */}
+          {puedeEditarCliente && (
             <EstadoDelPagador clienteId={cliente.id} puedeRegistrar={puedeRegistrarConsentimiento} />
           )}
           <dl className="panel-detalle-lista">

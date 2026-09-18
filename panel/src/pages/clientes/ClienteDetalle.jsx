@@ -283,7 +283,6 @@ export function ClienteDetalle() {
             min="0"
             max={PLAZO_MAXIMO_EN_DIAS}
             value={formContacto.dias_hasta_el_vencimiento}
-            ayuda={t.clientes.plazo_de_pago_ayuda}
             onChange={(e) => setCampoContacto('dias_hasta_el_vencimiento', e.target.value)}
             disabled={!puedeEditarCliente}
           />
@@ -295,7 +294,6 @@ export function ClienteDetalle() {
             name="financiador_tipo"
             type="select"
             value={formContacto.financiador_tipo}
-            ayuda={t.clientes.financiador_ayuda}
             onChange={(e) => setCampoContacto('financiador_tipo', e.target.value)}
             disabled={!puedeEditarCliente}
           >
@@ -312,10 +310,8 @@ export function ClienteDetalle() {
           <SelectorDeLegajo
             name="pagador_legajo_id"
             label={t.clientes.pagador_legajo}
-            ayuda={t.clientes.pagador_legajo_ayuda}
             valor={formContacto.pagador_legajo_id}
             alElegir={(legajoId) => setCampoContacto('pagador_legajo_id', legajoId)}
-            prestadoraId={cliente.prestadora_id}
             deshabilitado={!puedeEditarCliente}
           />
           {/* Elegir el Legajo no convierte a nadie en Pagador: lo convierte haber firmado la

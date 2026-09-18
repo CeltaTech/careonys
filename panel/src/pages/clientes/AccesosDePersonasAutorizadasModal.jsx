@@ -152,15 +152,6 @@ export function AccesosDePersonasAutorizadasModal({ clienteId, miembros, puedeEd
                 name={`${miembro.usuarioId}-${acceso.clave}`}
                 type="checkbox"
                 label={acceso.descripcion}
-                ayuda={
-                  acceso.topado ? (
-                    <>
-                      {acceso.ayuda} <strong>{t.clientes.personas autorizadas.accesos_topado}</strong>
-                    </>
-                  ) : (
-                    acceso.ayuda
-                  )
-                }
                 checked={elegido[miembro.usuarioId]?.[acceso.clave] ?? false}
                 disabled={acceso.topado || !puedeEditar || guardando}
                 onChange={(e) => cambiar(miembro.usuarioId, acceso.clave, e.target.checked)}
@@ -272,7 +263,6 @@ export function RegistrarPapelFirmadoModal({ clienteId, instruccionId, onClose, 
           name="papel_firmado"
           type="file"
           accept="application/pdf,image/jpeg,image/png"
-          ayuda={t.clientes.personas autorizadas.papel_archivo_ayuda}
           onChange={(e) => setArchivo(e.target.files?.[0] || null)}
         />
 

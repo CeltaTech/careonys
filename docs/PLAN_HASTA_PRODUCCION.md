@@ -286,11 +286,17 @@ antes de la clave: la dice la dirección. El remitente del correo ya seguía la 
 
 **44.** Que la conversación quede guardada adentro del producto, según lo que se conteste sobre el botón de contacto de «Asistente Asignado», más arriba en esta misma lista. Hasta que el Panel no tenga un hilo de dos puntas, lo que se hablan la Familia y el Asistente en prestación directa se va a WhatsApp y no queda adentro de ningún lado. El chat interno ya está construido entero —hilos, mensajes, tapado del contacto, pantallas en las dos aplicaciones, aviso al celular y videollamada—, pero **sólo funciona donde la Prestadora pone Asistentes disponibles para que la Familia elija**: exige una Familia y un Asistente que se hayan encontrado ahí. En prestación directa no hay hilo, y hacia la Prestadora tampoco: el único canal con el Panel va en un solo sentido, del Panel al Asistente, y no hay dónde guardar lo que contesta.
 
-**45.** Que la dirección propia de cada Prestadora resuelva de verdad en la web. El alta ya le
-asigna la suya sola, la base ya la hace única y la publicación ya sabe dejar puesto el nombre
-comodín, pero para eso le falta un dato que sólo se puede sacar del panel de Cloudflare: **la zona
-del dominio del producto, guardada en el repositorio como `CLOUDFLARE_ZONE_ID`**. Sin ese dato la
-publicación avisa y sigue, y `cuidardelsur.careonys.com` no resuelve a ningún lado.
+**45. Usted** — Que la dirección propia de cada Prestadora resuelva de verdad en la web. Falta una
+sola cosa, y es una credencial. El alta ya le asigna la dirección sola, la base ya la hace única, y
+el nombre comodín `*.careonys.com` ya quedó creado en el DNS: eso lo hace la publicación y está
+funcionando. Lo que falta es el segundo paso, que es distinto y va de a uno: **que el sitio del
+Panel conteste en esa dirección exacta**. El comodín no sirve para esto —Cloudflare no lo acepta
+como dirección propia de un sitio y lo rechaza por inválido—, así que la dirección se agrega el día
+que se da de alta la Prestadora, que es cuando se sabe cuál es. Para hacerlo solo, el motor
+necesita una credencial de Cloudflare con permiso sobre los sitios publicados, y la única que hoy
+tiene es la del reenvío de correo, que no lo alcanza. **Crear esa credencial y guardarla es una
+decisión suya.** Mientras no exista, la dirección resuelve pero Cloudflare contesta que ahí no
+atiende nadie.
 
 ---
 

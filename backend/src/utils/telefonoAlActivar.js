@@ -2,6 +2,7 @@ import { supabase } from '../db/connection.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 import { correoDe } from './correoDeUnaPersona.js';
 import { exigirLaClaveActual } from './claveActual.js';
+import { exigirQueElCelularSeaDeUnaSolaPersona } from './celularDeUnaSolaPersona.js';
 import {
   mandarCodigoAlTelefono,
   comprobarCodigoDelTelefono,
@@ -44,6 +45,26 @@ async function cuentaDe(usuarioId) {
 }
 
 /**
+ * Si ese celular ya está en otra cuenta de la misma Prestadora.
+ *
+ * Es la misma comprobación que hace el Panel, dicha como pregunta en vez de como error: acá el error
+ * no sirve, porque la cuenta ya está activa.
+ */
+async function esUnCelularDeOtraPersona({ telefono, cuenta }) {
+  try {
+    await exigirQueElCelularSeaDeUnaSolaPersona({
+      telefono,
+      prestadoraId: cuenta.prestadora_id,
+      usuarioId: cuenta.id,
+    });
+    return false;
+  } catch (e) {
+    if (e instanceof ErrorConMotivo && e.motivo === 'celular_de_otra_persona') return true;
+    throw e;
+  }
+}
+
+/**
  * Le manda el código al número que acaba de escribir quien activó la cuenta.
  *
  * EL NÚMERO SE GUARDA SIN VERIFICAR, y recién el código lo vuelve una llave. Es el mismo estado en
@@ -61,6 +82,15 @@ export async function ofrecerElCodigoAlActivar({ usuarioId, telefono }) {
 
   const cuenta = await cuentaDe(usuarioId);
   if (!cuenta?.prestadora_id) return { codigoEnviado: false };
+
+  // UN CELULAR ES DE UNA SOLA PERSONA, y acá eso no puede viajar como error. La cuenta ya quedó
+  // activa antes de llegar a esta línea: contestar con un error haría creer que no se activó nada, y
+  // la persona no volvería a entrar. Entonces el número no se guarda, no sale ningún código, y la
+  // respuesta dice por qué —«lo que ya hizo no se pierde en silencio»—. La línea fija de una casa no
+  // cae nunca acá. El aviso es un motivo pelado: no lleva el número adentro.
+  if (await esUnCelularDeOtraPersona({ telefono: escrito, cuenta })) {
+    return { codigoEnviado: false, motivo: 'celular_de_otra_persona' };
+  }
 
   const numero = normalizarTelefono(escrito);
 

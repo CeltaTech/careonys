@@ -36,7 +36,12 @@ export function escalonDelRol(rol) {
   return ESCALON[rol] ?? ESCALON_DESCONOCIDO;
 }
 
+// UN ROL QUE NO SE ENTIENDE NO HABILITA A NADIE, Y NO LO HABILITA NADIE. Son dos cosas y un solo
+// número no alcanza para las dos: el escalón desconocido es el más alto, con lo cual ya nadie está
+// por encima de él —nadie lo habilita—, pero él quedaría por encima de todos. Por eso el otro lado
+// de la regla se escribe acá y no en el número.
 export function puedeHabilitar(rolDeQuien, rolDelDestinatario) {
+  if (!(rolDeQuien in ESCALON) || !(rolDelDestinatario in ESCALON)) return false;
   return escalonDelRol(rolDeQuien) > escalonDelRol(rolDelDestinatario);
 }
 
@@ -143,6 +148,74 @@ export async function confirmarTelefonoDeLaCuenta({ quien, usuarioId }) {
   if (error) throw new Error(error.message);
 
   return cuenta;
+}
+
+const TOPE_DE_LOS_PENDIENTES = 50;
+
+/**
+ * Los números que están a la espera de que alguien los habilite.
+ *
+ * QUÉ ES ESTAR A LA ESPERA: la cuenta cargó un número, todavía no lo habilitó nadie, y por eso ese
+ * número no sirve para recuperar la clave. Entrar con el correo y la clave no depende de esto: lo
+ * único que el número no habilitado no puede hacer es recuperarla.
+ *
+ * QUE ESE NÚMERO ESTÉ VERIFICADO NO LO SACA DE LA LISTA. Verificar prueba que el número funciona y
+ * que quien lo cargó lo tiene a mano; lo que falta es que alguien reconozca a esa persona, y eso es
+ * justamente lo que esta lista pide. Filtrar por la verificación dejaba afuera a quien cargó su
+ * número y lo verificó antes de que nadie lo llamara, que es el caso corriente.
+ *
+ * NO HAY ESPERA POR TIEMPO. Nada de esta lista se habilita solo ni se vence solo: sale de la lista
+ * cuando una persona lo habilita, y no antes.
+ *
+ * LA LISTA SALE FILTRADA POR QUIÉN PUEDE HABILITAR A QUIÉN, con la misma regla que usan las dos
+ * acciones de más arriba. Quien coordina no se ve a sí mismo ni ve a otro que coordine: a la
+ * coordinación la habilita la administración de la Prestadora. Es el motor el que lo niega, no la
+ * pantalla.
+ *
+ * NO DEVUELVE NINGÚN NÚMERO DE TELÉFONO, igual que la búsqueda: lo que hace falta para llamar a esa
+ * persona y verificar que el cambio es real es su nombre y su correo.
+ */
+export async function telefonosEsperandoHabilitacion(quien) {
+  // Falla cerrado: sin sesión entendible no hay nada que mostrar.
+  if (!quien?.id || !quien?.prestadoraId || !quien?.rol) return [];
+
+  const { data, error } = await supabase
+    .from('usuarios')
+    .select('id, nombre, email, rol, telefono, telefono_verificado_en')
+    .eq('prestadora_id', quien.prestadoraId)
+    .not('telefono', 'is', null)
+    .order('nombre', { ascending: true })
+    .limit(TOPE_DE_LOS_PENDIENTES);
+  if (error) throw new Error(error.message);
+
+  const alcanzables = (data ?? [])
+    .filter((cuenta) => cuenta.id !== quien.id)
+    .filter((cuenta) => puedeHabilitar(quien.rol, cuenta.rol))
+    .filter((cuenta) => Boolean(cuenta.telefono));
+  if (alcanzables.length === 0) return [];
+
+  // Las que ya habilitó alguien salen de la lista. Se pregunta una sola vez por todas, y se compara
+  // contra la huella del número que la cuenta tiene hoy: habilitar un número viejo no habilita el
+  // que vino después.
+  const { data: confirmados, error: errorConfirmados } = await supabase
+    .from('telefonos_confirmados_por_la_prestadora')
+    .select('usuario_id, telefono_huella')
+    .eq('prestadora_id', quien.prestadoraId)
+    .in('usuario_id', alcanzables.map((cuenta) => cuenta.id));
+  if (errorConfirmados) throw new Error(errorConfirmados.message);
+
+  const yaHabilitados = new Set(
+    (confirmados ?? []).map((fila) => `${fila.usuario_id}:${fila.telefono_huella}`),
+  );
+
+  return alcanzables
+    .filter((cuenta) => !yaHabilitados.has(`${cuenta.id}:${huellaDelTelefono(cuenta.telefono)}`))
+    .map((cuenta) => ({
+      id: cuenta.id,
+      nombre: cuenta.nombre,
+      email: cuenta.email,
+      rol: cuenta.rol,
+    }));
 }
 
 /** ¿Este número ya lo confirmó la Prestadora para esta cuenta? */

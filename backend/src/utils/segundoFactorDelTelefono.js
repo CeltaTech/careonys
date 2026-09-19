@@ -5,59 +5,34 @@ import { telefonoConfirmadoPorLaPrestadora } from './habilitarCambioDeClave.js';
 //
 // Tener el número verificado no alcanza por sí solo, y el caso que lo muestra es el de siempre:
 // alguien se queda con la cuenta abierta un rato, cambia el número por el suyo, lo verifica con el
-// código que le llega a él, y desde ese momento la recuperación de la clave le pertenece. La espera
-// es lo que le da tiempo al dueño a enterarse por el aviso de correo, que sale en el mismo momento
-// en que el número cambia.
+// código que le llega a él, y desde ese momento la recuperación de la clave le pertenece. Verificar
+// prueba que el número funciona y que quien lo cargó lo tiene a mano; no prueba que sea de esa
+// persona.
 //
-// CUÁNTO SE ESPERA ES UNA DECISIÓN QUE TODAVÍA NO ESTÁ TOMADA, así que no se inventa acá: se lee del
-// entorno. El valor de fábrica es cero, o sea sin espera, que es exactamente lo que el producto hace
-// hoy: a nadie se le saca nada mientras la decisión no llegue. Puesto el número de horas, la espera
-// empieza a regir sola, sin tocar una línea.
+// LO ÚNICO QUE CONVIERTE UN NÚMERO EN LLAVE ES QUE ALGUIEN LO HABILITE. Una persona de la
+// Prestadora llama, reconoce a quien atiende del otro lado y recién ahí confirma que ese número es
+// de esa persona. Mientras tanto, el número está cargado y no sirve para recuperar la clave.
 //
-// Y LA SALIDA YA ESTÁ CONSTRUIDA: si quien atiende el llamado confirma que ese número es de esa
-// persona, no se espera nada. Es el paso 17 resolviendo el caso de quien cambió de número y no puede
-// esperar a que le crean.
-
-const HORAS_POR_OMISION = 0;
-
-/** Cuántas horas espera un número recién verificado antes de servir de llave. */
-export function horasDeEsperaDelTelefonoNuevo() {
-  const texto = String(process.env.HORAS_DE_ESPERA_DEL_TELEFONO_NUEVO ?? '').trim();
-  if (!texto) return HORAS_POR_OMISION;
-
-  const numero = Number(texto);
-  if (!Number.isInteger(numero) || numero < 0) {
-    console.warn('segundoFactorDelTelefono: HORAS_DE_ESPERA_DEL_TELEFONO_NUEVO no es un entero de cero para arriba; se usa el valor de fábrica');
-    return HORAS_POR_OMISION;
-  }
-  return numero;
-}
-
-/**
- * ¿Ya pasó la espera desde que ese número se verificó?
- *
- * Sin fecha de verificación, no. Una fecha ausente o ilegible no puede dar por cumplida una espera
- * (`celtatech/CLAUDE.md` §5: todo control de acceso falla cerrado).
- */
-export function pasoLaEspera(verificadoEn, ahora = Date.now()) {
-  if (!verificadoEn) return false;
-  const momento = new Date(verificadoEn).getTime();
-  if (!Number.isFinite(momento)) return false;
-  return ahora - momento >= horasDeEsperaDelTelefonoNuevo() * 60 * 60 * 1000;
-}
+// NO HAY ESPERA POR TIEMPO, Y NO LA HUBO NUNCA DE VERDAD: la que había valía cero horas mientras
+// nadie fijara otra cosa, así que cualquier número verificado quedaba habilitado solo. Una espera
+// que se cumple sola es una habilitación automática con otro nombre, y acá la habilitación la hace
+// una persona. Tampoco hay vencimiento: un número habilitado sigue habilitado hasta que se cambie,
+// y el que se cambia vuelve a empezar, porque lo confirmado es el número y no la cuenta.
+//
+// A NADIE SE LE SACA NADA. Entrar sigue siendo con el correo y la clave, y recuperar la clave por
+// correo sigue andando igual. Lo único que el número sin habilitar no hace es pedir un segundo
+// código.
 
 /**
  * ¿A esta cuenta se le puede pedir el código del teléfono?
  *
  * Son cuatro condiciones y todas tienen que darse: que haya número, que esté verificado, que la
- * Prestadora tenga por dónde mandarlo, y que el número ya no esté en espera —o que la Prestadora lo
- * haya confirmado, que es el atajo—.
+ * Prestadora tenga por dónde mandarlo, y que alguien lo haya habilitado.
  *
  * `cuenta` necesita `id`, `prestadora_id`, `telefono` y `telefono_verificado_en`.
  */
 export async function elTelefonoSirveDeSegundoFactor(cuenta) {
   if (!cuenta?.telefono || !cuenta?.telefono_verificado_en) return false;
   if (!(await hayViaDeTelefono(cuenta.prestadora_id))) return false;
-  if (pasoLaEspera(cuenta.telefono_verificado_en)) return true;
   return telefonoConfirmadoPorLaPrestadora({ usuarioId: cuenta.id, telefono: cuenta.telefono });
 }

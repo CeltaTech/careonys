@@ -4,6 +4,8 @@ import { topeDePedidos } from '../middleware/topeDePedidos.js';
 import { supabase } from '../db/connection.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { exigirLaClaveActual } from '../utils/claveActual.js';
+import { exigirQueElCelularSeaDeUnaSolaPersona } from '../utils/celularDeUnaSolaPersona.js';
+import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
 import {
   mandarCodigoAlTelefono,
   comprobarCodigoDelTelefono,
@@ -143,6 +145,8 @@ panelCuentaSeguraRouter.post(
       });
       yaQuedoRegistrado(res);
 
+      empujar(cuenta.prestadora_id, ASUNTOS.TELEFONOS_ESPERANDO_HABILITACION);
+
       res.json({ ok: true });
     } catch (err) {
       responderError(res, err);
@@ -171,6 +175,16 @@ panelCuentaSeguraRouter.post(
 
       await exigirLaClaveActual({ email: cuenta.email, clave: claveActual });
 
+      // Un celular es de una sola persona; una línea fija se comparte. La base lo impide con un
+      // índice único y esto es la segunda red, para contestar con una frase entendible en vez de un
+      // choque de base. Se comprueba antes de escribir y antes de mandar ningún código, y el aviso
+      // no lleva el número adentro.
+      await exigirQueElCelularSeaDeUnaSolaPersona({
+        telefono,
+        prestadoraId: cuenta.prestadora_id,
+        usuarioId: cuenta.id,
+      });
+
       const numero = normalizarTelefono(telefono);
       // `telefono_verificado_en` se pone en nulo acá **y** lo pone en nulo un disparador de la base.
       // No es una copia por descuido: el motor escribe con la llave maestra, y la red de abajo es la
@@ -187,6 +201,10 @@ panelCuentaSeguraRouter.post(
         camposCambiados: ['telefono'],
       });
       yaQuedoRegistrado(res);
+
+      // El número nuevo queda a la espera, y la espera aparece sola en las tareas pendientes de quien
+      // la tiene a cargo. Por el canal no viaja ningún dato: sólo el nombre de lo que cambió.
+      empujar(cuenta.prestadora_id, ASUNTOS.TELEFONOS_ESPERANDO_HABILITACION);
 
       // El aviso va al correo y no al teléfono: si el número cambió porque alguien se lo llevó,
       // avisar por el teléfono sería avisarle justamente a esa persona.

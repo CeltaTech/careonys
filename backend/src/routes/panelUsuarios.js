@@ -11,6 +11,7 @@ import { guardarLugaresDe } from '../utils/lugaresDeCadaPersona.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 import { ROLES_PANEL } from '../utils/roles.js';
 import { responderError } from '../utils/errorConMotivo.js';
+import { exigirQueElCelularSeaDeUnaSolaPersona } from '../utils/celularDeUnaSolaPersona.js';
 import {
   ACCION_ALTA_DE_CUENTA,
   ACCION_BAJA_DE_CUENTA,
@@ -108,6 +109,8 @@ panelUsuariosRouter.post('/', requiereRolPanel, soloAdministracion, async (req, 
   }
 
   try {
+    // Que el celular no esté ya en otra cuenta lo comprueba `crearCuentaConPerfil`, que es por
+    // donde pasan todas las altas. Acá no se repite: el aviso llega igual como motivo.
     const { userId, passwordTemporal } = await crearCuentaConPerfil({
       email, nombre, telefono, rol: rolNuevo,
       prestadoraId: prestadoraDestino,
@@ -143,6 +146,19 @@ panelUsuariosRouter.post('/', requiereRolPanel, soloAdministracion, async (req, 
 
 panelUsuariosRouter.patch('/:id', requiereRolPanel, soloAdministracion, async (req, res) => {
   const { nombre, telefono } = req.body;
+
+  // Lo mismo que en el alta, antes de escribir: un celular es de una sola persona. Se excluye la
+  // propia cuenta, porque volver a guardar el número que ya tiene no es repetirlo.
+  try {
+    await exigirQueElCelularSeaDeUnaSolaPersona({
+      telefono,
+      prestadoraId: req.usuarioPanel.prestadoraId,
+      usuarioId: req.params.id,
+    });
+  } catch (error) {
+    return responderError(res, error);
+  }
+
   let query = supabase
     .from('usuarios')
     .update({ nombre, telefono })

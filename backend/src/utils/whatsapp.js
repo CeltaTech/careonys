@@ -1,5 +1,6 @@
 import { supabase } from '../db/connection.js';
 import { enviarEmailCoordinador, configuracionEvento } from './email.js';
+import { avisarPorMensajeDeTexto } from './mensajeDeTexto.js';
 import { idiomaParaMeta, nombreParaMeta, valoresDePlantilla } from './nombresDeMeta.js';
 
 export const META_GRAPH_VERSION = 'v20.0';
@@ -181,14 +182,29 @@ export async function telefonoDeAvisos(prestadoraId) {
 // todos modos hay que mandar. Los dos valores que se le dan a la plantilla son el asunto y el
 // cuerpo, en ese orden; una plantilla que pida más de dos no le corresponde a este aviso y también
 // cae a correo.
+//
+// Y EN EL MEDIO ESTÁ EL MENSAJE DE TEXTO, que es el respaldo de WhatsApp para quien no lo usa. Va
+// segundo y no primero porque es la vía débil —sin cifrar y sin constancia de quién mandó qué—, y
+// va antes del correo porque el correo no interrumpe a nadie: un turno que empieza en veinte
+// minutos y no tiene quien lo cubra no puede esperar a que alguien abra su casilla. Hoy no sale
+// ninguno: ninguna Prestadora tiene proveedor cargado, así que este paso contesta que no y el aviso
+// sigue derecho al correo, igual que antes (utils/mensajeDeTexto.js).
+//
+// A qué número van los dos es el mismo: el teléfono propio de quien avisa, si lo tiene, y si no el
+// de contacto de la Prestadora. La columna donde vive ese número se llama `whatsapp_numero` desde
+// que se creó y se queda así —lo que se guarda se nombra por su función y no se renombra—, pero lo
+// que guarda es un teléfono, no una cuenta de WhatsApp.
 export async function notificarCoordinador({ evento, prestadoraId, asunto, texto, telefono }) {
   const config = await configuracionEvento(evento, prestadoraId);
   if (config && config.activo === false) return;
 
+  // El número sólo se busca si alguna de las dos vías que lo necesitan está encendida:
+  // preguntárselo a la base en cada aviso que igual va a salir por correo sería una consulta por
+  // nada.
+  const haceFaltaElNumero = Boolean(config?.whatsapp_activo || config?.mensaje_de_texto_activo);
+  const destino = telefono ?? (haceFaltaElNumero ? await telefonoDeAvisos(prestadoraId) : null);
+
   try {
-    // El número sólo se busca si el canal está encendido: preguntárselo a la base en cada aviso
-    // que igual va a salir por correo sería una consulta por nada.
-    const destino = telefono ?? (config?.whatsapp_activo ? await telefonoDeAvisos(prestadoraId) : null);
     const salio = await avisarPorWhatsapp({
       config,
       prestadoraId,
@@ -197,7 +213,19 @@ export async function notificarCoordinador({ evento, prestadoraId, asunto, texto
     });
     if (salio) return;
   } catch (err) {
-    console.error(`Error enviando WhatsApp de notificación (${evento}), cae a email:`, err.message);
+    console.error(`Error enviando WhatsApp de notificación (${evento}), cae a la vía siguiente:`, err.message);
+  }
+
+  try {
+    const salio = await avisarPorMensajeDeTexto({
+      config,
+      prestadoraId,
+      telefono: destino,
+      texto: `${asunto}: ${texto}`,
+    });
+    if (salio) return;
+  } catch (err) {
+    console.error(`Error enviando mensaje de texto (${evento}), cae a email:`, err.message);
   }
 
   await enviarEmailCoordinador({ evento, prestadoraId, asunto, texto });

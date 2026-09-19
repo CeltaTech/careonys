@@ -9,6 +9,7 @@ import { ModalidadesProvider } from './context/ModalidadesContext';
 import { TenantSessionProvider } from './context/TenantSessionContext';
 import { AdvertenciaLegalProvider } from './context/AdvertenciaLegalContext';
 import { PedidosDeCodigoProvider } from './context/PedidosDeCodigoContext';
+import { TelefonosEsperandoProvider } from './context/TelefonosEsperandoContext';
 import { PuestaEnMarchaProvider, usePuestaEnMarcha } from './context/PuestaEnMarchaContext';
 import { RUTA_PUESTA_EN_MARCHA } from './components/layout/FranjaPuestaEnMarcha';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
@@ -103,6 +104,10 @@ function App() {
                 enrutador porque el menú lo consulta desde cualquier pantalla: un Asistente parado
                 en una puerta tiene que aparecer aunque nadie esté mirando la lista. */}
             <PedidosDeCodigoProvider>
+            {/* Los números cargados que esperan que alguien los habilite. Va acá por el mismo
+                motivo: es una tarea pendiente de la Prestadora que se está mirando ahora, y el
+                contador del menú la consulta desde cualquier pantalla. */}
+            <TelefonosEsperandoProvider>
             {/* Los umbrales del semáforo de guardia. Van acá por el mismo motivo que los pedidos:
                 son los de la Prestadora que se está mirando ahora, y esa la decide la sesión de
                 soporte. */}
@@ -284,6 +289,7 @@ function App() {
             </AdvertenciaLegalProvider>
             </PuestaEnMarchaProvider>
             </UmbralesProvider>
+            </TelefonosEsperandoProvider>
             </PedidosDeCodigoProvider>
           </TenantSessionProvider>
           </ModalidadesProvider>

@@ -129,10 +129,11 @@ jobs:
   # sola dirección no alcanza: hay una por Prestadora y aparecen cada vez que se da una de
   # alta, así que no se pueden ir agregando de a una a mano.
   #
-  # Lo que hace falta son dos cosas, y las dos son "para todas": que el nombre comodín
-  # `*.<dominio del producto>` apunte al Panel, y que el proyecto del Panel acepte ese mismo
-  # comodín como dirección propia. Sin la primera, la dirección no resuelve a ningún lado; sin
-  # la segunda, resuelve y Cloudflare contesta que ese proyecto no atiende ahí.
+  # Hacen falta dos cosas, y sólo una es "para todas": que el nombre comodín
+  # `*.<dominio del producto>` apunte al Panel —eso se hace acá, una vez—, y que el proyecto
+  # del Panel conteste en cada dirección, que se agrega de a una al dar de alta la Prestadora.
+  # Sin la primera, la dirección no resuelve a ningún lado; sin la segunda, resuelve y
+  # Cloudflare contesta que ese proyecto no atiende ahí.
   #
   # Se deja puesto, no se pisa: si el nombre comodín ya existe, no se toca —puede haber sido
   # apuntado a otra cosa a propósito—, se avisa y se sigue. Correrlo dos veces no cambia nada.
@@ -186,20 +187,12 @@ jobs:
             echo "El nombre comodín ${COMODIN} ya existe: no se toca."
           fi
 
-          # 2. Y que el proyecto del Panel conteste en ese nombre.
-          YA_ESTA=$(curl -sS -H "$AUTH" \
-            "$API/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PROYECTO}/domains" \
-            | node -e "let e='';process.stdin.on('data',d=>e+=d).on('end',()=>{const r=JSON.parse(e);console.log((r.result||[]).some(d=>d.name==='${COMODIN}')?'si':'no')})")
-
-          if [ "$YA_ESTA" = "no" ]; then
-            echo "Agregando ${COMODIN} al proyecto ${PROYECTO}."
-            curl -sS -X POST -H "$AUTH" -H 'Content-Type: application/json' \
-              "$API/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PROYECTO}/domains" \
-              --data "{\"name\":\"${COMODIN}\"}" \
-              | node -e "let e='';process.stdin.on('data',d=>e+=d).on('end',()=>{const r=JSON.parse(e);if(!r.success){console.error('No se pudo agregar la dirección al proyecto:',JSON.stringify(r.errors));process.exit(1)}console.log('Dirección agregada al proyecto.')})"
-          else
-            echo "El proyecto ${PROYECTO} ya contesta en ${COMODIN}."
-          fi
+          # 2. Que el proyecto conteste en cada dirección se hace de a una, al dar de alta la
+          #    Prestadora, y no acá. El comodín no sirve para esto: Cloudflare Pages no acepta
+          #    un asterisco como dirección propia de un proyecto y lo rechaza diciendo que la
+          #    dirección es inválida. Probado el 2026-09-19, con el comodín ya creado.
+          echo "El nombre comodín queda puesto. Cada dirección propia se agrega al dar de alta"
+          echo "la Prestadora, que es cuando se sabe cuál es."
 
   # ---------------------------------------------------------------------------
   # La página raíz de careonys.com (el cartel de "en construcción").

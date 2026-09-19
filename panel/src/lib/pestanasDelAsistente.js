@@ -25,6 +25,7 @@ export const PESTANAS = [
   'vinculo_cese',
   'simulador',
   'score_riesgo',
+  'datos_bancarios',
   'guardias',
   'evaluaciones',
   'ausencias',
@@ -35,6 +36,7 @@ export const PESTANAS_COORDINADOR = [
   'perfil',
   'verificacion',
   'certificado',
+  'datos_bancarios',
   'guardias',
   'evaluaciones',
   'ausencias',
@@ -49,13 +51,30 @@ export const PESTANAS_COORDINADOR = [
 export const PESTANAS_SOLO_MARKETPLACE = ['evaluaciones'];
 
 /**
+ * Las que además dependen de una acción que la Prestadora puede reservar. Dónde cobra un
+ * Asistente nace reservado a la administración, pero la Prestadora puede habilitárselo a quien
+ * coordina, así que no alcanza con preguntar el rol. El candado de verdad está en el motor y en
+ * las reglas de acceso de la base; esto es no ofrecer una pestaña que va a contestar que no.
+ */
+export const PESTANAS_POR_PERMISO = {
+  datos_bancarios: 'ver_datos_bancarios_asistente',
+};
+
+/**
  * Las que se le muestran a quien está mirando.
  *
  * Recibe un objeto y no dos valores sueltos: dos banderas seguidas en la llamada se invierten
  * sin que nada avise, y las dos preguntas que contestan no se parecen en nada.
+ *
+ * `puede` es la de los permisos efectivos de la sesión. Si no viene ninguna, se contesta que no:
+ * un permiso que no se pudo resolver no es un permiso concedido.
  */
-export function pestanasDe({ esAdmin, marketplace }) {
+export function pestanasDe({ esAdmin, marketplace, puede = () => false }) {
   const todas = esAdmin ? PESTANAS : PESTANAS_COORDINADOR;
-  if (marketplace) return todas;
-  return todas.filter((pestana) => !PESTANAS_SOLO_MARKETPLACE.includes(pestana));
+  return todas.filter((pestana) => {
+    if (!marketplace && PESTANAS_SOLO_MARKETPLACE.includes(pestana)) return false;
+    const permiso = PESTANAS_POR_PERMISO[pestana];
+    if (permiso) return esAdmin || puede(permiso);
+    return true;
+  });
 }

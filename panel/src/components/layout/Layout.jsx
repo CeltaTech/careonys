@@ -7,6 +7,7 @@ import { useTenantSession } from '../../context/TenantSessionContext';
 import { usePermisos } from '../../context/PermisosContext';
 import { useModalidades } from '../../context/ModalidadesContext';
 import { usePedidosDeCodigo } from '../../context/PedidosDeCodigoContext';
+import { useTelefonosEsperando } from '../../context/TelefonosEsperandoContext';
 import { esAdminOSuperior } from '../../lib/roles';
 import { MODALIDAD } from '../../lib/modalidades';
 import { SelectoresPreferencias } from './SelectoresPreferencias';
@@ -82,6 +83,10 @@ export function Layout() {
   // segundos (ver `context/PedidosDeCodigoContext.jsx`): del otro lado hay alguien parado en una
   // puerta, y no puede depender de que a alguien se le ocurra abrir esa pantalla.
   const { pedidos: pedidosDeCodigo } = usePedidosDeCodigo();
+  // Cuántos números están esperando que alguien los habilite. Mismo motivo que los pedidos de
+  // código: quien cambió su número no puede usarlo para recuperar su clave hasta que se lo
+  // habiliten, y eso no puede depender de que a alguien se le ocurra abrir esa pantalla.
+  const { cuentas: telefonosEsperando } = useTelefonosEsperando();
 
   const esAdmin = esAdminOSuperior(usuario?.rol);
   const esSuperadmin = usuario?.rol === 'superadmin';
@@ -206,7 +211,7 @@ export function Layout() {
         { a: '/auditoria', texto: t.nav.auditoria, ver: esAdmin },
         { a: '/marketplace/auditoria-legal', texto: t.nav.marketplace_auditoria_legal, ver: marketplace },
         { a: '/importacion', texto: t.nav.importacion, ver: esAdmin || puede('importar_datos_masivos') },
-        { a: '/habilitar-clave', texto: t.nav.habilitar_clave, ver: esAdmin || puede('habilitar_cambio_de_clave') },
+        { a: '/habilitar-clave', texto: t.nav.habilitar_clave, ver: esAdmin || puede('habilitar_cambio_de_clave'), contador: telefonosEsperando.length },
         { a: '/prestadoras', texto: t.nav.prestadoras, ver: esSuperadmin },
       ],
     },

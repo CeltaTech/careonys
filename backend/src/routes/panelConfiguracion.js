@@ -12,6 +12,8 @@ import {
 } from '../utils/registroDeActividad.js';
 import { avisoDelCatalogo, mezclarAvisosConCatalogo, sePuedeApagar, VALORES_POR_DEFECTO_AVISO } from '../utils/catalogoAvisos.js';
 import { cosaDelCatalogo, mezclarVisibilidadConCatalogo } from '../utils/catalogoVisibilidad.js';
+import { mensajeDeTextoQueSeGuarda } from '../utils/viaMensajeDeTexto.js';
+import { hayProveedorDeMensajeDeTexto, proveedorDeMensajeDeTexto } from '../utils/mensajeDeTexto.js';
 import { LIMITES_ALERTAS_IA, VALORES_POR_DEFECTO_ALERTAS_IA } from '../utils/revisarAlertasIA.js';
 import { validarUmbralesPremura } from '../utils/umbralesPremura.js';
 import { MINUTOS_QUE_SE_PUEDEN_TOCAR } from '../utils/ordenDeLaEscalada.js';
@@ -579,14 +581,43 @@ panelConfiguracionRouter.delete('/personal-emergencia/:id', async (req, res) => 
 // La pantalla muestra SIEMPRE los ocho avisos del catálogo (utils/catalogoAvisos.js), tenga
 // o no tenga fila guardada cada uno. Antes devolvía solo las filas existentes, así que un
 // aviso sin sembrar era invisible y no se podía apagar aunque se siguiera mandando.
+//
+// Y la vía «mensaje de texto» sale siempre en la lista, con o sin proveedor contratado. Sin
+// proveedor viaja marcada como no disponible, y la pantalla la muestra sin dejar elegirla: el
+// producto no esconde una vía que existe, y tampoco ofrece una que hoy no manda nada.
 panelConfiguracionRouter.get('/notificaciones', async (req, res) => {
   let query = supabase
     .from('configuracion_notificaciones')
-    .select('evento, descripcion, emails, activo, whatsapp_activo, notificar_familia, plantilla_whatsapp_id');
+    .select('evento, descripcion, emails, activo, whatsapp_activo, mensaje_de_texto_activo, notificar_familia, plantilla_whatsapp_id');
   query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query;
   if (error) return responderError(res, error);
-  res.json({ notificaciones: mezclarAvisosConCatalogo(data) });
+
+  const hayProveedor = await hayProveedorDeMensajeDeTexto(req.usuarioPanel.prestadoraId);
+  res.json({ notificaciones: mezclarAvisosConCatalogo(data, { hayProveedorDeMensajeDeTexto: hayProveedor }) });
+});
+
+// Cómo está la vía del mensaje de texto en esta Prestadora. Es lo que la pantalla necesita para
+// decir si hay proveedor, y el único lugar donde se le cuenta a quien configura que ésta es la vía
+// débil. No hay PATCH: cargar un proveedor es cargar datos —una fila en el catálogo y otra en la
+// configuración—, y no hay ninguno contratado que ofrecer en una pantalla.
+panelConfiguracionRouter.get('/mensaje-de-texto', async (req, res) => {
+  const { data, error } = await supabase
+    .from('catalogo_proveedores_de_mensaje_de_texto')
+    .select('proveedor')
+    .eq('activo', true);
+  if (error) return responderError(res, error);
+
+  const proveedor = await proveedorDeMensajeDeTexto(req.usuarioPanel.prestadoraId);
+  res.json({
+    mensaje_de_texto: {
+      hay_proveedor: proveedor !== null,
+      proveedor: proveedor?.proveedor ?? null,
+      // Cuántos conoce el producto. Con el catálogo vacío no hay nada que elegir en ninguna
+      // Prestadora, y eso no es lo mismo que esta Prestadora todavía no haber elegido.
+      proveedores_conocidos: (data ?? []).length,
+    },
+  });
 });
 
 // Inserción-o-actualización, no actualización a secas: la primera vez que la Prestadora toca
@@ -596,7 +627,12 @@ panelConfiguracionRouter.patch('/notificaciones/:evento', async (req, res) => {
   const aviso = avisoDelCatalogo(req.params.evento);
   if (!aviso) return res.status(400).json({ error: 'Aviso desconocido' });
 
-  const { emails, activo, whatsapp_activo, notificar_familia, plantilla_whatsapp_id } = req.body;
+  const { emails, activo, whatsapp_activo, mensaje_de_texto_activo, notificar_familia, plantilla_whatsapp_id } = req.body;
+
+  // Si la vía del mensaje de texto se puede encender no lo decide el navegador: sin proveedor
+  // cargado se guarda apagada aunque venga encendida. La pantalla ya no deja elegirla, pero la
+  // pantalla no es la que manda: el pedido se puede armar a mano.
+  const hayProveedor = await hayProveedorDeMensajeDeTexto(req.usuarioPanel.prestadoraId);
 
   // La plantilla se guarda sólo si es de esta Prestadora. El identificador viene del navegador, y
   // el motor entra a la base con la llave de servicio: sin esta comprobación, una Prestadora podría
@@ -625,6 +661,11 @@ panelConfiguracionRouter.patch('/notificaciones/:evento', async (req, res) => {
       // Un canal que este aviso no usa se guarda apagado aunque el navegador lo mande
       // encendido: dejarlo prendido haría creer que el aviso sale por ahí, y no sale.
       whatsapp_activo: aviso.admite_whatsapp ? Boolean(whatsapp_activo) : false,
+      mensaje_de_texto_activo: mensajeDeTextoQueSeGuarda({
+        aviso,
+        hayProveedor,
+        pedido: mensaje_de_texto_activo,
+      }),
       notificar_familia: aviso.admite_familia ? Boolean(notificar_familia) : false,
       plantilla_whatsapp_id: plantillaId,
     },

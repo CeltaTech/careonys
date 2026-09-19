@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
 import { useModalidades } from '../../context/ModalidadesContext';
+import { usePermisos } from '../../context/PermisosContext';
 import { esAdminOSuperior } from '../../lib/roles';
 import { MODALIDAD } from '../../lib/modalidades';
 import { pestanasDe } from '../../lib/pestanasDelAsistente';
@@ -14,6 +15,7 @@ import { MatriculasTab } from './MatriculasTab';
 import { VinculoCeseTab } from './VinculoCeseTab';
 import { SimuladorVinculoTab } from './SimuladorVinculoTab';
 import { ScoreRiesgoTab } from './ScoreRiesgoTab';
+import { DatosBancariosTab } from './DatosBancariosTab';
 import { GuardiasTab } from './GuardiasTab';
 import { EvaluacionesTab } from './EvaluacionesTab';
 import { AusenciasCoberturaTab } from './AusenciasCoberturaTab';
@@ -27,6 +29,7 @@ export function AsistenteDetalle() {
   const navigate = useNavigate();
   const { usuario } = useAuth();
   const { tieneModalidad } = useModalidades();
+  const { puede } = usePermisos();
   const [asistente, setAsistente] = useState(null);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -69,7 +72,7 @@ export function AsistenteDetalle() {
       <h1>{asistente.nombre}</h1>
 
       <div className="panel-tabs">
-        {pestanasDe({ esAdmin, marketplace }).map((tabId) => (
+        {pestanasDe({ esAdmin, marketplace, puede }).map((tabId) => (
           <button
             key={tabId}
             className={`panel-tab ${tab === tabId ? 'panel-tab-activo' : ''}`}
@@ -88,6 +91,9 @@ export function AsistenteDetalle() {
         {tab === 'vinculo_cese' && esAdmin && <VinculoCeseTab asistente={asistente} onActualizado={recargar} />}
         {tab === 'simulador' && esAdmin && <SimuladorVinculoTab asistente={asistente} />}
         {tab === 'score_riesgo' && esAdmin && <ScoreRiesgoTab asistente={asistente} onActualizado={recargar} />}
+        {tab === 'datos_bancarios' && (esAdmin || puede('ver_datos_bancarios_asistente')) && (
+          <DatosBancariosTab asistente={asistente} />
+        )}
         {tab === 'guardias' && <GuardiasTab asistente={asistente} />}
         {tab === 'evaluaciones' && marketplace && <EvaluacionesTab asistente={asistente} />}
         {tab === 'ausencias' && <AusenciasCoberturaTab asistente={asistente} />}

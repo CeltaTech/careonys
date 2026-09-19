@@ -130,6 +130,10 @@ beforeEach(() => {
   respuestas.set('GET /auth/v1/user', () => ({ id: QUIEN_LLAMA, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ id: QUIEN_LLAMA, rol: 'admin_prestadora', prestadora_id: PRESTADORA }]);
   respuestas.set('POST /rest/v1/usuarios', () => []);
+  // Sin ningún prefijo de celular cargado. Acá se prueba dónde nace la Familia, no la regla de que
+  // un celular es de una sola persona, que tiene sus propias pruebas: con el catálogo vacío ningún
+  // número se reconoce como celular, que es como se comporta un país que todavía no cargó el suyo.
+  respuestas.set('GET /rest/v1/catalogo_prefijos_de_celular', () => []);
   respuestas.set('POST /rest/v1/membresias', () => []);
   respuestas.set('DELETE /rest/v1/usuarios', () => []);
   respuestas.set('POST /auth/v1/admin/users', () => ({ id: NUEVA_CUENTA }));

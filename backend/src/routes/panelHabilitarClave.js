@@ -7,9 +7,12 @@ import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import {
   habilitarCambioDeClave,
   confirmarTelefonoDeLaCuenta,
+  telefonosEsperandoHabilitacion,
   puedeHabilitar,
   minutosDeLaHabilitacion,
 } from '../utils/habilitarCambioDeClave.js';
+import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
+import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
 import { pedirRecuperacionDeClave } from '../utils/recuperacionDeClave.js';
 import { avisarDeSeguridad, AVISO_CAMBIO_HABILITADO } from '../utils/avisoDeSeguridad.js';
 import { registrarActividad, yaQuedoRegistrado } from '../utils/registroDeActividad.js';
@@ -21,8 +24,10 @@ import { registrarActividad, yaQuedoRegistrado } from '../utils/registroDeActivi
 // clave, que es exactamente lo que no se hace. Lo que se abre es una puerta que dura poco y sirve
 // una vez: la persona elige su clave, sola, en su pantalla.
 //
-// LA ACCIÓN ENTRA POR EL CATÁLOGO DE PERMISOS como cualquier otra, y sale reservada a la
-// administración. Que la coordinadora la tenga lo decide cada Prestadora desde Configuración.
+// LA ACCIÓN ENTRA POR EL CATÁLOGO DE PERMISOS como cualquier otra, y de fábrica la tiene también la
+// coordinación: a un Asistente y a una Familia los habilita ella, y a ella la habilita la
+// administración de la Prestadora. Es un valor de fábrica, no una imposición — la Prestadora que
+// prefiera reservarlo a su administración lo cambia desde Configuración.
 //
 // SE HABILITA HACIA ABAJO Y NUNCA A UNO MISMO, y eso no es configurable: está en
 // `utils/habilitarCambioDeClave.js` y además en un disparador de la base.
@@ -101,6 +106,32 @@ async function conFoto(cuenta) {
 }
 
 /**
+ * Los números que están esperando que alguien los habilite.
+ *
+ * ES LA TAREA PENDIENTE, y por eso aparece sola: no hace falta ir a buscar a la persona a mano. Quien
+ * la tiene a cargo la ve en su lista, la llama, verifica que el cambio es real y la habilita.
+ *
+ * LA LISTA LA FILTRA EL MOTOR, no la pantalla: la coordinación ve a los Asistentes y a las Familias;
+ * a quien coordina lo ve la administración de la Prestadora. Nadie se ve a sí mismo.
+ *
+ * NO DEVUELVE NINGÚN NÚMERO DE TELÉFONO. Tampoco va nada por la dirección web: lo único que este
+ * pedido dice es «qué está esperando en la Prestadora de mi sesión».
+ */
+panelHabilitarClaveRouter.get(
+  '/pendientes',
+  requiereRolPanel,
+  requierePermiso(ACCION),
+  exigirOrganizacionActiva,
+  async (req, res) => {
+    try {
+      res.json({ cuentas: await telefonosEsperandoHabilitacion(req.usuarioPanel) });
+    } catch (err) {
+      responderError(res, err);
+    }
+  },
+);
+
+/**
  * Abrir la puerta.
  *
  * Son dos cosas y van juntas: queda anotada la habilitación, y sale el enlace para elegir la clave
@@ -160,6 +191,10 @@ panelHabilitarClaveRouter.post(
         registroId: cuenta.id,
       });
       yaQuedoRegistrado(res);
+
+      // Uno menos esperando. El aviso no lleva ningún dato: dice qué cambió, y cada pantalla que
+      // estaba mirando esa lista la vuelve a pedir por el camino de siempre, que comprueba la sesión.
+      empujar(req.usuarioPanel.prestadoraId, ASUNTOS.TELEFONOS_ESPERANDO_HABILITACION);
 
       res.json({ ok: true });
     } catch (err) {

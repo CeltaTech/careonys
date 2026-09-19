@@ -45,9 +45,10 @@ const CATEGORIAS_PLANTILLA = ['utility', 'marketing', 'authentication'];
    fila era invisible: existía, salía igual y no había forma de apagarlo desde acá.
 
    El nombre de cada aviso sale de las traducciones, nunca de la columna `descripcion` de la
-   base, que está escrita en español y sola (CLAUDE.md §7 regla 1). Esa columna queda de
-   respaldo por si algún día llega un aviso que las traducciones todavía no conocen: es
-   preferible un renglón en español antes que un renglón en blanco.
+   base, que está escrita en español y sola (CLAUDE.md §7 regla 1). Y no hay respaldo en español
+   acá: la frase que falte la avisa `i18n/faltaLaFrase.js`, que es el mecanismo del producto para
+   eso y el mismo en toda pantalla. Un respaldo propio le mostraría castellano a quien está
+   leyendo en inglés o en portugués, y encima taparía la falta en vez de mostrarla.
 
    Y las dos casillas —avisar por WhatsApp, avisar también a la Familia— se dibujan según lo
    que el propio aviso dice de sí mismo (`admite_whatsapp`, `admite_familia`), no según una
@@ -97,6 +98,7 @@ function TabNotificaciones() {
           emails: fila.emails,
           activo: fila.activo,
           whatsapp_activo: fila.whatsapp_activo,
+          mensaje_de_texto_activo: fila.mensaje_de_texto_activo,
           notificar_familia: fila.notificar_familia,
           plantilla_whatsapp_id: fila.plantilla_whatsapp_id || null,
         }),
@@ -119,6 +121,7 @@ function TabNotificaciones() {
               <th>{t.configuracion.notificaciones_col_activo}</th>
               <th>{t.configuracion.notificaciones_col_whatsapp_activo}</th>
               <th>{t.configuracion.notificaciones_col_plantilla_whatsapp}</th>
+              <th>{t.configuracion.notificaciones_col_mensaje_de_texto}</th>
               <th>{t.configuracion.notificaciones_col_notificar_familia}</th>
               <th></th>
             </tr>
@@ -127,7 +130,7 @@ function TabNotificaciones() {
             {notificaciones.map((fila) => {
               /* El nombre del evento se resuelve una sola vez: además de la primera celda, lo
                  llevan los tres controles de la fila, que sueltos dirían solo "Activo". */
-              const nombreEvento = t.configuracion[`notificaciones_evento_${fila.evento}`] || fila.descripcion;
+              const nombreEvento = t.configuracion[`notificaciones_evento_${fila.evento}`];
               return (
                 <tr key={fila.evento}>
                   <td>{nombreEvento}</td>
@@ -191,6 +194,22 @@ function TabNotificaciones() {
                       : null}
                   </td>
                   <td>
+                    {/* La vía existe y sale en la lista aunque no haya proveedor cargado, y entonces
+                        la casilla se muestra sin dejar elegirla. Por qué no se puede está dicho más
+                        abajo, en su propia sección: la casilla lleva su etiqueta y nada más. */}
+                    {fila.admite_mensaje_de_texto
+                      ? (
+                        <input
+                          type="checkbox"
+                          checked={fila.mensaje_de_texto_activo || false}
+                          disabled={!fila.mensaje_de_texto_disponible}
+                          onChange={(e) => set(fila.evento, 'mensaje_de_texto_activo', e.target.checked)}
+                          aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.notificaciones_col_mensaje_de_texto, nombre: nombreEvento })}
+                        />
+                      )
+                      : <span className="panel-dato-vacio" title={t.configuracion.notificaciones_canal_no_disponible}>—</span>}
+                  </td>
+                  <td>
                     {fila.admite_familia
                       ? (
                         <input
@@ -217,6 +236,7 @@ function TabNotificaciones() {
       <TabAvisoGuardiaSinCubrir />
       <TabAvisoPrevioGuardia />
       <TabCorreoDeLaPrestadora />
+      <TabMensajeDeTexto />
     </>
   );
 }
@@ -513,6 +533,53 @@ function TabCorreoDeLaPrestadora() {
             <Button onClick={guardar} disabled={guardando || !casilla.trim()}>
               {guardando ? t.comun.guardando : t.comun.guardar}
             </Button>
+          </div>
+        )}
+      </EstadoLista>
+    </div>
+  );
+}
+
+/* El mensaje de texto: por qué está en la lista y por qué hoy no se puede elegir.
+   ==========================================================================
+
+   Es el único lugar donde se dice que ésta es la vía débil, y está acá y no colgando de la
+   casilla de cada fila. Muestra dos cosas: si esta Prestadora tiene proveedor cargado, y si el
+   producto conoce alguno. No hay nada que guardar: cargar un proveedor es cargar datos. */
+function TabMensajeDeTexto() {
+  const { t } = useLocale();
+  const [via, setVia] = useState(null);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const { mensaje_de_texto: leido } = await llamarApi('/mensaje-de-texto');
+      setVia(leido);
+      setEstado('listo');
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+      setEstado('error');
+    }
+  }, [t]);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  return (
+    <div>
+      <h2>{t.configuracion.mensaje_de_texto_titulo}</h2>
+      <p className="panel-explicacion">{t.configuracion.mensaje_de_texto_explicacion}</p>
+      <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
+        {via && (
+          <div>
+            <Alert variant="warning">{t.configuracion.mensaje_de_texto_via_debil}</Alert>
+            {via.hay_proveedor
+              ? <Alert variant="info">{con(t.configuracion.mensaje_de_texto_con_proveedor, { proveedor: via.proveedor })}</Alert>
+              : <Alert variant="warning">{t.configuracion.mensaje_de_texto_sin_proveedor}</Alert>}
           </div>
         )}
       </EstadoLista>

@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { supabase } from '../db/connection.js';
 import { invitarActivacionCuenta } from './activacionCuenta.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
+import { exigirQueElCelularSeaDeUnaSolaPersona } from './celularDeUnaSolaPersona.js';
 import { coordenadasDeDomicilio } from '../geocodificacion/index.js';
 import { CATALOGO_CIRCULO_FAMILIAR } from './catalogoCirculoFamiliar.js';
 import { laCuentaDelPanelEstaAlAlcance } from '../middleware/alcancePrestadora.js';
@@ -170,6 +171,13 @@ async function limpiarCuentaSobrante(email, prestadoraId) {
 // `enviarActivacion: true` se dispara automáticamente el email de "primera contraseña"
 // (activacionCuenta.js) con un link de token propio, en vez de depender de un canal manual.
 export async function crearCuentaConPerfil({ email, nombre, telefono, rol, prestadoraId, enviarActivacion = false }) {
+  // UN CELULAR ES DE UNA SOLA PERSONA, y se comprueba acá porque acá pasan todas las altas: la del
+  // Panel, la del Asistente y la del círculo de la Familia. Escrito en cada ruta serían tres copias
+  // de la misma decisión. Va antes de crear nada: una cuenta de acceso creada y una ficha rechazada
+  // después dejarían basura. La línea fija de una casa no cae nunca acá, y el aviso no lleva el
+  // número adentro. La unicidad la impone igual la base, con un índice único.
+  await exigirQueElCelularSeaDeUnaSolaPersona({ telefono, prestadoraId });
+
   const passwordTemporal = crypto.randomBytes(24).toString('base64url');
 
   // Con qué correo se le habla al servicio de acceso por esta persona en esta Prestadora. Nunca

@@ -189,6 +189,11 @@ beforeEach(() => {
   // el alta, no la puerta de entrada, que tiene sus propias pruebas.
   respuestas.set('GET /rest/v1/configuracion_plataforma', () => [{ mfa_admin_obligatorio: false }]);
   respuestas.set('GET /rest/v1/sesiones_soporte_tecnico', () => []);
+  // Sin ningún prefijo de celular cargado. Acá se prueba el alta de la Prestadora, no la regla de
+  // que un celular es de una sola persona, que tiene sus propias pruebas: con el catálogo vacío
+  // ningún número se reconoce como celular, que es como se comporta un país que todavía no cargó
+  // el suyo.
+  respuestas.set('GET /rest/v1/catalogo_prefijos_de_celular', () => []);
   // El país está en el catálogo, la Prestadora se crea, la casilla se guarda y la auditoría entra.
   respuestas.set('GET /rest/v1/monedas_por_pais', () => [{ pais: 'AR', moneda: 'ARS' }]);
   respuestas.set('POST /rest/v1/prestadoras', () => [

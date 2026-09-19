@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   PESTANAS,
   PESTANAS_COORDINADOR,
+  PESTANAS_POR_PERMISO,
   PESTANAS_SOLO_MARKETPLACE,
   pestanasDe,
 } from '../pestanasDelAsistente';
@@ -62,6 +63,21 @@ describe('pestanasDelAsistente', () => {
     expect(textos.tope).toContain('{n}');
   });
 
+  it.each(IDIOMAS)('%s nombra los textos de los datos bancarios', (idioma) => {
+    const textos = T[idioma].asistentes.datos_bancarios;
+    for (const clave of [
+      'identificador',
+      'banco',
+      'titular',
+      'actualizado_en',
+      'sin_cuenta',
+      'sin_cuenta_ayuda',
+    ]) {
+      expect(typeof textos[clave], `falta ${clave} en ${idioma}`).toBe('string');
+      expect(textos[clave].length).toBeGreaterThan(0);
+    }
+  });
+
   it('el Coordinador no alcanza ninguna pestaña de datos laborales ni reservados', () => {
     for (const pestana of ['matriculas', 'vinculo_cese', 'simulador', 'score_riesgo']) {
       expect(PESTANAS_COORDINADOR).not.toContain(pestana);
@@ -79,15 +95,59 @@ describe('pestanasDelAsistente', () => {
     expect(new Set(PESTANAS_COORDINADOR).size).toBe(PESTANAS_COORDINADOR.length);
   });
 
+  const TODO_HABILITADO = () => true;
+
   it('entrega una lista u otra según quién mira', () => {
-    expect(pestanasDe({ esAdmin: true, marketplace: true })).toEqual(PESTANAS);
-    expect(pestanasDe({ esAdmin: false, marketplace: true })).toEqual(PESTANAS_COORDINADOR);
+    expect(pestanasDe({ esAdmin: true, marketplace: true, puede: TODO_HABILITADO })).toEqual(PESTANAS);
+    expect(pestanasDe({ esAdmin: false, marketplace: true, puede: TODO_HABILITADO })).toEqual(
+      PESTANAS_COORDINADOR,
+    );
+  });
+
+  // Dónde cobra un Asistente no lo ve cualquiera: entra por una acción que la Prestadora puede
+  // reservar. Sin ella la pestaña no se ofrece, aunque esté en la lista.
+  it('sin el permiso no se ofrece la pestaña que depende de él', () => {
+    const ofrecidas = pestanasDe({ esAdmin: false, marketplace: true, puede: () => false });
+    for (const pestana of Object.keys(PESTANAS_POR_PERMISO)) {
+      expect(ofrecidas, `${pestana} se ofrece sin el permiso`).not.toContain(pestana);
+    }
+  });
+
+  it('con el permiso habilitado, quien coordina la alcanza', () => {
+    for (const [pestana, permiso] of Object.entries(PESTANAS_POR_PERMISO)) {
+      if (!PESTANAS_COORDINADOR.includes(pestana)) continue;
+      const ofrecidas = pestanasDe({
+        esAdmin: false,
+        marketplace: true,
+        puede: (accion) => accion === permiso,
+      });
+      expect(ofrecidas).toContain(pestana);
+    }
+  });
+
+  // Un permiso que no se pudo resolver no es un permiso concedido: sin nadie que conteste, la
+  // pestaña no se ofrece.
+  it('sin quien conteste por los permisos, la pestaña no se ofrece', () => {
+    const ofrecidas = pestanasDe({ esAdmin: false, marketplace: true });
+    for (const pestana of Object.keys(PESTANAS_POR_PERMISO)) {
+      expect(ofrecidas).not.toContain(pestana);
+    }
+  });
+
+  it('toda pestaña con permiso está en la lista completa y el permiso tiene nombre', () => {
+    for (const [pestana, permiso] of Object.entries(PESTANAS_POR_PERMISO)) {
+      expect(PESTANAS).toContain(pestana);
+      for (const idioma of IDIOMAS) {
+        const nombre = T[idioma].configuracion[`permisos_accion_${permiso}`];
+        expect(typeof nombre, `falta el nombre de ${permiso} en ${idioma}`).toBe('string');
+      }
+    }
   });
 
   // Sin marketplace no hay Familias evaluando: la pestaña mostraría siempre nada.
   it('sin marketplace no ofrece las pestañas que dependen de esa modalidad', () => {
     for (const esAdmin of [true, false]) {
-      const ofrecidas = pestanasDe({ esAdmin, marketplace: false });
+      const ofrecidas = pestanasDe({ esAdmin, marketplace: false, puede: TODO_HABILITADO });
       for (const pestana of PESTANAS_SOLO_MARKETPLACE) {
         expect(ofrecidas, `${pestana} se ofrece sin marketplace`).not.toContain(pestana);
       }

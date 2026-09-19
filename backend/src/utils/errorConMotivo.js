@@ -183,6 +183,11 @@ const ESTADO_POR_MOTIVO = {
   // se entendió perfectamente y aun así no corresponde.
   telefono_invalido: 400,
   telefono_sin_verificar: 409,
+  // Y el celular que ya figura en otra cuenta de la misma Prestadora es 409, por lo mismo que el
+  // correo ya tomado: el pedido está bien armado y choca con algo que ya existe. Un celular es de
+  // una sola persona; una línea fija se comparte y no cae nunca acá. El motivo no lleva el número
+  // adentro ni nombra ninguna columna: el teléfono es dato sensible y no sale por ningún lado.
+  celular_de_otra_persona: 409,
   via_de_telefono_no_disponible: 409,
   clave_actual_incorrecta: 400,
   no_puede_habilitar: 403,

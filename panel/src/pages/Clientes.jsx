@@ -14,7 +14,7 @@ import { NuevaClienteModal } from './clientes/NuevaClienteModal';
 import { mensajeDeError } from '../lib/errores';
 
 export function Clientes() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const navigate = useNavigate();
   const { usuario } = useAuth();
   const esAdmin = esAdminOSuperior(usuario?.rol);
@@ -132,7 +132,7 @@ export function Clientes() {
               <div className="lista-tarjeta-meta">
                 <span><strong>{t.clientes.col_telefono}:</strong> {fam.solicitudes?.telefono || '—'}</span>
                 <span><strong>{t.clientes.col_email}:</strong> {fam.solicitudes?.email || '—'}</span>
-                <span><strong>{t.clientes.col_fecha_alta}:</strong> {new Date(fam.created_at).toLocaleDateString()}</span>
+                <span><strong>{t.clientes.col_fecha_alta}:</strong> {new Date(fam.created_at).toLocaleDateString(locale)}</span>
               </div>
               <div className="lista-tarjeta-acciones">
                 <Button variant="secondary" onClick={() => navigate(`/clientes/${fam.id}`)}>{t.comun.ver_detalle}</Button>

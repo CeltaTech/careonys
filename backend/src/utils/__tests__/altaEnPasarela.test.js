@@ -28,6 +28,9 @@ import { createServer } from 'node:http';
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const ACCESO = '33333333-3333-3333-3333-333333333333';
 const CLIENTE = '44444444-4444-4444-4444-444444444444';
+/** La cuenta de la que cuelga ese Legajo de Cliente. Desde que una misma persona puede estar en
+ *  varias Prestadoras, el número del Legajo y el de la cuenta ya no son el mismo. */
+const CUENTA_DE_LA_CLIENTE = '55555555-5555-5555-5555-555555555555';
 const CORREO_DE_LA_CLIENTE = 'cliente@sandbox.local';
 const CREDENCIAL = 'credencial-de-mentira-que-no-tiene-que-salir';
 const REFERENCIA_DE_STRIPE = 'sub_de_mentira';
@@ -48,10 +51,7 @@ const baseFalsa = createServer((req, res) => {
   });
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
-    // El correo del Cliente no está en `usuarios`: vive del lado de las cuentas, y se pide por
-    // el identificador metido en la propia dirección. Se junta bajo una sola clave.
-    const normalizada = ruta.startsWith('/auth/v1/admin/users/') ? '/auth/v1/admin/users/:id' : ruta;
-    const clave = `${req.method} ${normalizada}`;
+    const clave = `${req.method} ${ruta}`;
     llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null });
 
     const preparada = respuestas.get(clave);
@@ -150,7 +150,12 @@ beforeEach(() => {
   respuestas.set('PATCH /rest/v1/accesos_match', () => []);
   respuestas.set('GET /rest/v1/prestadora_pasarela_pago', () => [{ proveedor: 'stripe' }]);
   respuestas.set('POST /rest/v1/rpc/leer_credencial_pasarela_pago', () => CREDENCIAL);
-  respuestas.set('GET /auth/v1/admin/users/:id', () => ({ id: CLIENTE, email: CORREO_DE_LA_CLIENTE }));
+  // El correo real de la persona vive en `usuarios`, y el Legajo de Cliente dice de qué cuenta
+  // cuelga. Son dos consultas, y las dos hacen falta.
+  respuestas.set('GET /rest/v1/clientes', () => [{ usuario_id: CUENTA_DE_LA_CLIENTE }]);
+  respuestas.set('GET /rest/v1/usuarios', () => [
+    { id: CUENTA_DE_LA_CLIENTE, email: CORREO_DE_LA_CLIENTE },
+  ]);
 });
 
 const darDeAlta = (extra = {}) =>
@@ -396,17 +401,31 @@ describe('lo que falta antes de poder cobrar', () => {
   });
 
   it('sin correo del Cliente tampoco: no hay adónde mandarle el comprobante', async () => {
-    respuestas.set('GET /auth/v1/admin/users/:id', () => ({ id: CLIENTE, email: null }));
+    respuestas.set('GET /rest/v1/usuarios', () => [{ id: CUENTA_DE_LA_CLIENTE, email: null }]);
     const resultado = await darDeAlta();
     assert.equal(resultado.motivo, MOTIVO_ALTA.SIN_CORREO_DE_CLIENTE);
     assert.equal(llamadasAStripe.length, 0);
     assert.equal(guardado(), undefined);
   });
 
-  it('el correo se pide por el identificador del Cliente de ese acceso', async () => {
+  it('sin cuenta detrás del Legajo tampoco hay correo al que mandarle nada', async () => {
+    respuestas.set('GET /rest/v1/clientes', () => []);
+    const resultado = await darDeAlta();
+    assert.equal(resultado.motivo, MOTIVO_ALTA.SIN_CORREO_DE_CLIENTE);
+    assert.equal(llamadasAStripe.length, 0);
+    assert.equal(guardado(), undefined);
+  });
+
+  it('el correo se busca por el Legajo del Cliente de ese acceso, y después por su cuenta', async () => {
+    // Son dos pasos porque el número del Legajo ya no es el de la cuenta. Pedirle el correo a
+    // `usuarios` con el número del Legajo no devuelve nada, y eso no se nota.
     await darDeAlta();
-    const pedido = llamadas.find((l) => l.clave === 'GET /auth/v1/admin/users/:id');
-    assert.ok(pedido.url.includes(CLIENTE));
+
+    const legajo = llamadas.find((l) => l.clave === 'GET /rest/v1/clientes');
+    assert.ok(legajo.url.includes(CLIENTE));
+
+    const cuenta = llamadas.find((l) => l.clave === 'GET /rest/v1/usuarios');
+    assert.ok(cuenta.url.includes(CUENTA_DE_LA_CLIENTE));
   });
 });
 

@@ -64,7 +64,7 @@ function resumenDeAccesos(accesos, t) {
 }
 
 export function ClienteDetalle() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { id } = useParams();
   const navigate = useNavigate();
   const { usuario } = useAuth();
@@ -325,7 +325,7 @@ export function ClienteDetalle() {
           )}
           <dl className="panel-detalle-lista">
             <dt>{t.clientes.col_fecha_alta}</dt>
-            <dd>{new Date(cliente.created_at).toLocaleDateString()}</dd>
+            <dd>{new Date(cliente.created_at).toLocaleDateString(locale)}</dd>
           </dl>
           <Button onClick={guardarContacto} disabled={guardandoContacto || !puedeEditarCliente}>
             {guardandoContacto ? t.comun.guardando : t.comun.guardar}
@@ -401,7 +401,7 @@ export function ClienteDetalle() {
       {instruccionPendiente && (
         <Alert variant="warning">
           {con(t.clientes.personas autorizadas.instruccion_pendiente, {
-            fecha: new Date(instruccionPendiente.created_at).toLocaleDateString(),
+            fecha: new Date(instruccionPendiente.created_at).toLocaleDateString(locale),
           })}{' '}
           <Button variant="secondary" onClick={() => setDocumentoAVer(instruccionPendiente)}>
             {t.clientes.personas autorizadas.ver_documento}
@@ -416,7 +416,7 @@ export function ClienteDetalle() {
       {!instruccionPendiente && ultimaInstruccion && (
         <p className="panel-explicacion">
           {con(t.clientes.personas autorizadas.ultima_instruccion, {
-            fecha: new Date(ultimaInstruccion.cerrada_en || ultimaInstruccion.created_at).toLocaleDateString(),
+            fecha: new Date(ultimaInstruccion.cerrada_en || ultimaInstruccion.created_at).toLocaleDateString(locale),
             como: t.clientes.personas autorizadas[`cerrada_${ultimaInstruccion.cerrada_como}`] || '',
           })}
         </p>

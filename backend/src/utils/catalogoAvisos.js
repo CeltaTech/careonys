@@ -87,11 +87,12 @@ export const CATALOGO_AVISOS = [
     evento: 'guardia_sin_cerrar',
     descripcion: 'Una guardia en curso pasó su hora de cierre y nadie la cerró',
     admite_whatsapp: true,
-    // No le llega al Cliente a propósito. Que nadie haya cerrado la guardia es un problema
-    // de la operación de la Prestadora, no del cuidado: el Asistente puede haber estado las
-    // ocho horas y haberse ido a horario. Avisarle al Cliente sería alarmarla por algo que
-    // no le pasó a su Paciente.
-    admite_cliente: false,
+    // La Prestadora puede hacérselo llegar también al Cliente. Que la jornada figure abierta
+    // es, la mayoría de las veces, un problema de la operación —el Asistente estuvo las ocho
+    // horas y se fue a horario, y lo que faltó fue el cierre—, así que nace apagado y lo
+    // enciende quien decide su forma de trabajo. Cuando no es eso, el Cliente es la que está
+    // esperando a su Paciente y no enterarse es lo que no puede pasar.
+    admite_cliente: true,
   },
   {
     evento: 'guardia_sin_cerrar_grave',
@@ -101,13 +102,17 @@ export const CATALOGO_AVISOS = [
     // le llega a quien coordina el día; este le llega a quien tiene autoridad para resolver lo
     // que la coordinación no pudo. Separarlos es lo que le permite a la Prestadora poner
     // destinatarios distintos sin que el primero le llegue a la dirección cada quince minutos.
-    admite_cliente: false,
+    // Y también puede llegarle al Cliente, por el mismo motivo que el de arriba.
+    admite_cliente: true,
   },
   {
     evento: 'alerta_temprana_guardia',
     descripcion: 'Alerta temprana de posible ausencia en una guardia',
     admite_whatsapp: true,
-    admite_cliente: false,
+    // Acá entra la salida sin entrada. Con el aviso encendido, el Cliente se entera de que hay
+    // algo pendiente sobre la guardia de su Paciente; el motivo y de dónde salió la alerta son
+    // de adentro y no viajan.
+    admite_cliente: true,
   },
   {
     evento: 'incidente_relevo_sin_resolver',

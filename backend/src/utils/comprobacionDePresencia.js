@@ -273,7 +273,7 @@ async function resolverCodigo({ guardia, momento, codigo }) {
  *   { codigo: '123456' }                                  — alguien lo mostró, o lo soltó la Prestadora
  *   { motivoSinComprobar: 'nadie_para_mostrar', detalle }  — se entra igual, y queda en la lista
  *
- * Devuelve `{ estado, medio, avisarFamilia }`.
+ * Devuelve `{ estado, medio }`.
  */
 export async function registrarComprobacion({ guardia, momento, lat, lng, comprobacion }) {
   const base = {
@@ -300,9 +300,7 @@ export async function registrarComprobacion({ guardia, momento, lat, lng, compro
       codigo_huella: null,
       codigo_expira_en: null,
     });
-    // A la Familia se le avisa cuando ella no participó de la comprobación. Si el código lo
-    // mostró ella misma, ya se enteró mostrándolo.
-    return { estado: 'comprobada', medio, avisarFamilia: medio !== 'codigo_familia' };
+    return { estado: 'comprobada', medio };
   }
 
   const motivo = comprobacion?.motivoSinComprobar;
@@ -323,7 +321,7 @@ export async function registrarComprobacion({ guardia, momento, lat, lng, compro
     codigo_expira_en: null,
   });
 
-  return { estado: 'sin_comprobar', medio: null, avisarFamilia: false };
+  return { estado: 'sin_comprobar', medio: null };
 }
 
 // ---------------------------------------------------------------------------------------

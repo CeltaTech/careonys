@@ -83,7 +83,6 @@ const {
   aDosDecimales,
   loQueEstaMalEnElCobro,
   primerDiaDelPeriodo,
-  MEDIOS,
   ORIGENES_DE_AFUERA,
   TOPE_DEL_LOTE,
 } = await import('../panelCobros.js');
@@ -155,6 +154,14 @@ beforeEach(() => {
   // De fábrica la cobranza la sigue este sistema, que es lo que hace la mayoría. Las pruebas del
   // caso conectado pisan esta respuesta.
   respuestas.set('GET /rest/v1/configuracion_facturacion_familias', () => [{ regla: {} }]);
+  // Los medios de pago salen de la lista `medios_de_pago_de_la_familia` de la base. Acá contesta
+  // las seis que siembra la migración, más una propia de esta Prestadora, que es el caso que antes
+  // no existía.
+  respuestas.set('GET /rest/v1/opciones_de_lista', () =>
+    ['transferencia', 'efectivo', 'tarjeta', 'debito_automatico', 'cheque', 'otro', 'billetera_virtual'].map(
+      (clave) => ({ clave, prestadora_id: clave === 'billetera_virtual' ? PRESTADORA : null }),
+    ),
+  );
 });
 
 /** Deja a la Prestadora con la cobranza en manos de otro software. */
@@ -176,25 +183,46 @@ function consultasDeDatos() {
 // ---------------------------------------------------------------------------------------
 
 describe('qué cobro se admite', () => {
+  // Los medios ya no se escriben en el código: salen de la lista `medios_de_pago_de_la_familia` de
+  // la base y quien comprueba los recibe. Acá se le pasan a mano los que sembró la migración.
+  const ADMITIDOS = ['transferencia', 'efectivo', 'tarjeta', 'debito_automatico', 'cheque', 'otro'];
+
   it('un monto de cero o negativo no es un cobro', () => {
-    assert.ok(loQueEstaMalEnElCobro({ monto: 0, medio: 'efectivo' }));
-    assert.ok(loQueEstaMalEnElCobro({ monto: -500, medio: 'efectivo' }));
+    assert.ok(loQueEstaMalEnElCobro({ monto: 0, medio: 'efectivo' }, ADMITIDOS));
+    assert.ok(loQueEstaMalEnElCobro({ monto: -500, medio: 'efectivo' }, ADMITIDOS));
   });
 
   it('un medio que no está en la lista se rechaza antes de llegar a la base', () => {
-    assert.ok(loQueEstaMalEnElCobro({ monto: 100, medio: 'trueque' }));
-    for (const medio of MEDIOS) {
-      assert.equal(loQueEstaMalEnElCobro({ monto: 100, medio }), null);
+    assert.ok(loQueEstaMalEnElCobro({ monto: 100, medio: 'trueque' }, ADMITIDOS));
+    for (const medio of ADMITIDOS) {
+      assert.equal(loQueEstaMalEnElCobro({ monto: 100, medio }, ADMITIDOS), null);
     }
   });
 
+  it('una opción propia de la Prestadora se admite igual que una del producto', () => {
+    assert.ok(loQueEstaMalEnElCobro({ monto: 100, medio: 'billetera_virtual' }, ADMITIDOS));
+    assert.equal(
+      loQueEstaMalEnElCobro({ monto: 100, medio: 'billetera_virtual' }, [...ADMITIDOS, 'billetera_virtual']),
+      null,
+    );
+  });
+
+  it('sin lista de medios no se admite ninguno: un control que no supo contra qué comparar niega', () => {
+    assert.ok(loQueEstaMalEnElCobro({ monto: 100, medio: 'efectivo' }));
+    assert.ok(loQueEstaMalEnElCobro({ monto: 100, medio: 'efectivo' }, null));
+    assert.ok(loQueEstaMalEnElCobro({ monto: 100, medio: 'efectivo' }, []));
+  });
+
   it('una fecha que no es una fecha se rechaza', () => {
-    assert.ok(loQueEstaMalEnElCobro({ monto: 100, medio: 'efectivo', fecha_cobro: '10/08/2026' }));
-    assert.equal(loQueEstaMalEnElCobro({ monto: 100, medio: 'efectivo', fecha_cobro: '2026-08-10' }), null);
+    assert.ok(loQueEstaMalEnElCobro({ monto: 100, medio: 'efectivo', fecha_cobro: '10/08/2026' }, ADMITIDOS));
+    assert.equal(
+      loQueEstaMalEnElCobro({ monto: 100, medio: 'efectivo', fecha_cobro: '2026-08-10' }, ADMITIDOS),
+      null,
+    );
   });
 
   it('sin fecha también se admite: la de hoy es la que corresponde a un cobro que entra ahora', () => {
-    assert.equal(loQueEstaMalEnElCobro({ monto: 100, medio: 'efectivo' }), null);
+    assert.equal(loQueEstaMalEnElCobro({ monto: 100, medio: 'efectivo' }, ADMITIDOS), null);
   });
 });
 
@@ -373,7 +401,7 @@ describe('el estado de cuenta lo ve solamente quien tiene la acción habilitada'
     const anotado = await pedir('POST', `/facturas/${FACTURA}/cobros`, {
       monto: 1000,
       fecha_cobro: '2026-08-10',
-      medio: MEDIOS[0],
+      medio: 'transferencia',
     });
     assert.equal(anotado.estado, 403);
 
@@ -709,6 +737,22 @@ describe('anotar un cobro desde el Panel', () => {
     assert.equal(llamadas.some((l) => l.clave.startsWith('POST /rest/v1/cobros_familia')), false);
   });
 
+  /* Los dos lados del dinero eligen de listas distintas, y el cobro de la Familia le pregunta a la
+     suya. Si le preguntara a la del Asistente, las posibilidades de cobranza de la Prestadora
+     quedarían reducidas a las de pagarle a una persona. */
+  it('el cobro de la Familia le pregunta a la lista de la cobranza, no a la del Asistente', async () => {
+    respuestas.set('GET /rest/v1/facturas_familia', () => [FACTURA_EN_LA_BASE]);
+    respuestas.set('POST /rest/v1/cobros_familia', (cuerpo) => [{ id: 'c-1', ...cuerpo }]);
+    respuestas.set('GET /rest/v1/saldos_familia', () => [saldoConCobrado(40000)]);
+
+    await pedir('POST', `/facturas/${FACTURA}/cobros`, { monto: 40000, medio: 'tarjeta' });
+
+    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/opciones_de_lista');
+    assert.ok(consulta, 'no le preguntó a la base por el catálogo de medios');
+    assert.ok(consulta.url.includes('medios_de_pago_de_la_familia'));
+    assert.ok(!consulta.url.includes('medios_de_pago_al_asistente'));
+  });
+
   it('la Coordinadora también puede anotar un cobro, igual que en la base', async () => {
     rolDelUsuario = 'coordinador';
     respuestas.set('GET /rest/v1/facturas_familia', () => [FACTURA_EN_LA_BASE]);
@@ -907,8 +951,15 @@ describe('la puerta de entrada para lo que viene de afuera', () => {
     const consultas = consultasDeDatos();
     assert.ok(consultas.length >= 3);
     for (const consulta of consultas) {
+      // La lista de medios de pago tiene dos pisos: las opciones del producto, que no son de
+      // ninguna Prestadora, y las de ésta. Por eso ahí el filtro se escribe como una alternativa
+      // en vez de una igualdad. Lo que se sigue exigiendo es lo mismo: que la consulta nombre a
+      // esta Prestadora y a ninguna otra.
+      const esperado = consulta.clave.endsWith('/opciones_de_lista')
+        ? `prestadora_id.eq.${PRESTADORA}`
+        : `prestadora_id=eq.${PRESTADORA}`;
       assert.ok(
-        consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`),
+        consulta.url.includes(esperado),
         `esta consulta no filtró por Prestadora: ${consulta.url}`
       );
     }

@@ -2,8 +2,8 @@
 // cobrosDeFamilia.js — qué se admite como cobro, escrito una sola vez
 //
 // POR QUÉ EXISTE
-// La misma decisión —qué medios de cobro hay, qué monto es válido, cómo se lee
-// un período— hacía falta en dos lados: el motor, que la controla antes de
+// La misma decisión —qué monto es válido, cómo se lee un período, contra qué se
+// compara el medio— hacía falta en dos lados: el motor, que la controla antes de
 // escribir en la base, y el Panel, que arma el desplegable y decide si el botón
 // de guardar está habilitado. Escrita dos veces, el día que se agregue un medio
 // nuevo el desplegable y el control se separan, y la pantalla ofrece algo que la
@@ -19,8 +19,10 @@
 // alguna se despegó.
 // ---------------------------------------------------------------------------
 
-/** Los medios que la base admite en `cobros_familia.medio`. */
-export const MEDIOS = ['transferencia', 'efectivo', 'tarjeta', 'debito_automatico', 'cheque', 'otro'];
+// Con qué medio se pagó ya no se escribe acá. Sale de la lista `medios_de_pago_de_la_familia` del
+// registro de dos pisos —las que trae el producto y las que agregó cada Prestadora—, que es otra
+// que la del pago al Asistente porque no son los mismos medios. Quien llama trae esa lista y se la
+// pasa a la comprobación de abajo.
 
 // De dónde puede venir un cobro cargado de afuera. 'panel' es el de adentro y
 // 'migracion' lo escribe una migración y nadie más, por eso ninguno de los dos
@@ -32,8 +34,13 @@ export const ORIGENES_DE_AFUERA = ['importacion', 'api', 'pasarela'];
 // cuesta nada porque el envío es idempotente.
 export const TOPE_DEL_LOTE = 500;
 
-/** Lo que está mal en un cobro que entra, dicho en una frase, o null si está bien. */
-export function loQueEstaMalEnElCobro(cobro) {
+/* Lo que está mal en un cobro que entra, dicho en una frase, o null si está bien.
+ *
+ * `mediosAdmitidos` son las claves de la lista `medios_de_pago_de_la_familia` que alcanzan a esta
+ * Prestadora.
+ * Sin esa lista no se admite ningún medio: un control que no pudo resolver contra qué comparar
+ * tiene que negar, nunca dejar pasar. */
+export function loQueEstaMalEnElCobro(cobro, mediosAdmitidos) {
   if (!cobro || typeof cobro !== 'object') return 'Falta el cobro';
 
   const monto = Number(cobro.monto);
@@ -42,7 +49,8 @@ export function loQueEstaMalEnElCobro(cobro) {
   if (cobro.fecha_cobro !== undefined && cobro.fecha_cobro !== null && !/^\d{4}-\d{2}-\d{2}$/.test(String(cobro.fecha_cobro))) {
     return 'La fecha del cobro va en formato AAAA-MM-DD';
   }
-  if (!MEDIOS.includes(cobro.medio)) return 'El medio de cobro no es uno de los admitidos';
+  const medios = Array.isArray(mediosAdmitidos) ? mediosAdmitidos : [];
+  if (!medios.includes(cobro.medio)) return 'El medio de cobro no es uno de los admitidos';
   return null;
 }
 

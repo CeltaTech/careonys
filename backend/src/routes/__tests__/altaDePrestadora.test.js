@@ -19,6 +19,7 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { correoDeAcceso } from '../../config/correoDeAcceso.js';
+import { IDENTIDAD } from '../../config/identidadProducto.js';
 
 const PRESTADORA_PROPIA = '11111111-1111-1111-1111-111111111111';
 const USUARIO = '22222222-2222-2222-2222-222222222222';
@@ -29,6 +30,10 @@ const DOMINIO_GRATUITO = 'correo-gratis.example';
 
 /** Las casillas de envío que ya están tomadas. Cada prueba carga las que le interesan. */
 let casillasTomadas = [];
+/** Las direcciones de ingreso ya repartidas. Cada prueba carga las que le interesan. */
+let puertasTomadas = [];
+/** Los nombres que el producto se reserva para sus propias pantallas. */
+let puertasReservadas = [];
 
 /** El identificador que el servicio de correo le da al reenvío recién abierto. */
 const REGLA = 'regla-de-mentira';
@@ -189,7 +194,9 @@ beforeEach(() => {
   respuestas.set('POST /rest/v1/prestadoras', () => [
     { id: NUEVA, nombre_fantasia: ALTA_COMPLETA.nombre_fantasia, estado: 'prospecto' },
   ]);
-  respuestas.set('PATCH /rest/v1/configuracion_prestadora', () => []);
+  // La escritura sobre la fila de configuración devuelve la fila tocada: es así como el motor sabe
+  // que la dirección de ingreso quedó anotada de verdad.
+  respuestas.set('PATCH /rest/v1/configuracion_prestadora', () => [{ prestadora_id: NUEVA }]);
   // Donde queda anotado el reenvío recién abierto, para poder cortarlo después.
   respuestas.set('PATCH /rest/v1/prestadoras', () => []);
   respuestas.set('POST /rest/v1/auditoria_soporte_tecnico', () => []);
@@ -213,7 +220,21 @@ beforeEach(() => {
       ? [{ casilla_envio: filaEscritaEn('POST /rest/v1/prestadoras')?.casilla_envio ?? null }]
       : casillasTomadas.map((casilla_envio) => ({ casilla_envio }))
   ));
+  // Y la puerta por la que se entra: las que ya están repartidas, y los nombres que el producto
+  // se guarda para sus propias pantallas.
+  puertasTomadas = [];
+  puertasReservadas = ['www', 'gestion', 'familias', 'asistentes'];
+  respuestas.set('GET /rest/v1/configuracion_prestadora', () => puertasTomadas.map((dominio) => ({ dominio })));
+  respuestas.set('GET /rest/v1/direcciones_reservadas', () => puertasReservadas.map((direccion) => ({ direccion })));
 });
+
+/** La dirección de ingreso que el motor mandó a anotar, si la anotó. */
+function puertaEscrita() {
+  const escritura = llamadas.find(
+    (l) => l.clave === 'PATCH /rest/v1/configuracion_prestadora' && l.cuerpo?.dominio !== undefined
+  );
+  return escritura?.cuerpo?.dominio ?? null;
+}
 
 /**
  * La fila que el motor mandó a escribir en esa tabla. Una escritura de una sola fila viaja como
@@ -467,6 +488,105 @@ describe('la Prestadora nace con su dirección de envío', () => {
   });
 });
 
+describe('la Prestadora nace con su dirección de ingreso', () => {
+  it('se le asigna sola, sin que nadie la teclee, y sale del dominio propio que declaró', async () => {
+    const { estado, cuerpo } = await darDeAlta();
+    assert.equal(estado, 201);
+    assert.equal(puertaEscrita(), 'cuidadosdellitoral', 'la Prestadora quedó sin puerta de ingreso');
+    assert.equal(cuerpo.direccion_ingreso, `cuidadosdellitoral.${IDENTIDAD.dominio}`);
+  });
+
+  it('nadie la puede elegir: lo que venga en el pedido no se mira', async () => {
+    const { cuerpo } = await darDeAlta({ dominio: 'la-que-yo-quiera' });
+    assert.equal(puertaEscrita(), 'cuidadosdellitoral');
+    assert.equal(cuerpo.direccion_ingreso, `cuidadosdellitoral.${IDENTIDAD.dominio}`);
+  });
+
+  it('si la casilla que declaró es gratuita, sale de su nombre', async () => {
+    await darDeAlta({ email_respuestas: `cuidados@${DOMINIO_GRATUITO}` });
+    assert.equal(puertaEscrita(), 'cuidados-del-litoral');
+  });
+
+  it('si la dirección ya está tomada, se le agrega un sufijo', async () => {
+    puertasTomadas = ['cuidadosdellitoral', 'cuidadosdellitoral-2'];
+    await darDeAlta();
+    assert.equal(puertaEscrita(), 'cuidadosdellitoral-3');
+  });
+
+  it('ninguna Prestadora se queda con una dirección del producto', async () => {
+    // El nombre de una Prestadora puede dar justo el de una pantalla del producto. Si se le
+    // asignara, esa pantalla dejaría de tener dirección.
+    await darDeAlta({
+      nombre_fantasia: 'Familias',
+      email_respuestas: `contacto@${DOMINIO_GRATUITO}`,
+    });
+    assert.equal(puertaEscrita(), 'familias-2');
+  });
+
+  it('si el catálogo de direcciones reservadas no contesta, no se crea nada', async () => {
+    // Falla cerrado: suponer que no hay ninguna reservada es justo lo que le entregaría a una
+    // Prestadora la puerta del Panel general.
+    respuestas.set('GET /rest/v1/direcciones_reservadas', () => falla(500, { message: 'la base no contestó' }));
+    const { estado, cuerpo } = await darDeAlta();
+    assert.equal(estado, 500);
+    noCreo();
+    noFiltraLaBase(cuerpo);
+  });
+
+  it('si no queda ninguna dirección libre, no se crea nada', async () => {
+    puertasTomadas = ['cuidadosdellitoral', ...Array.from({ length: 98 }, (_, i) => `cuidadosdellitoral-${i + 2}`)];
+    const { estado, cuerpo } = await darDeAlta();
+    assert.equal(estado, 409);
+    assert.equal(cuerpo.motivo, 'direccion_de_prestadora_no_disponible');
+    noCreo();
+    noFiltraLaBase(cuerpo);
+  });
+
+  it('si la dirección elegida chocó con otra, elige otra y la Prestadora entra igual', async () => {
+    // Dos altas al mismo tiempo pueden elegir la misma dirección: la segunda choca contra el
+    // índice único de la base y vuelve a elegir, ya con la primera tomada.
+    let intentos = 0;
+    respuestas.set('PATCH /rest/v1/configuracion_prestadora', ({ url }) => {
+      if (!url.includes('select=')) return [];
+      intentos += 1;
+      if (intentos === 1) {
+        puertasTomadas = ['cuidadosdellitoral'];
+        return falla(409, { code: '23505', message: 'duplicate key value violates unique constraint "configuracion_prestadora_dominio_unico"' });
+      }
+      return [{ prestadora_id: NUEVA }];
+    });
+
+    const { estado, cuerpo } = await darDeAlta();
+    assert.equal(estado, 201);
+    assert.equal(intentos, 2, 'no volvió a intentar con otra dirección');
+    assert.equal(cuerpo.direccion_ingreso, `cuidadosdellitoral-2.${IDENTIDAD.dominio}`);
+  });
+
+  it('si la dirección no se pudo anotar, no queda Prestadora', async () => {
+    // Una Prestadora sin dirección no tiene por dónde entrar nadie, ni siquiera su
+    // administrador: dejarla creada sería dejar algo que no se puede usar y que además ocupa el
+    // nombre.
+    respuestas.set('PATCH /rest/v1/configuracion_prestadora', ({ url }) => (
+      url.includes('select=') ? falla(500, { message: 'la base no contestó' }) : []
+    ));
+    const { estado, cuerpo } = await darDeAlta();
+    assert.equal(estado, 500);
+    seDeshizo();
+    noFiltraLaBase(cuerpo);
+  });
+
+  it('y tampoco queda si la fila de configuración no existe', async () => {
+    // Sin fila que tocar, la escritura no falla: no toca nada. Si eso se diera por bueno, la
+    // Prestadora quedaría creada y sin puerta.
+    respuestas.set('PATCH /rest/v1/configuracion_prestadora', () => []);
+    const { estado, cuerpo } = await darDeAlta();
+    assert.equal(estado, 409);
+    assert.equal(cuerpo.motivo, 'direccion_de_prestadora_no_disponible');
+    seDeshizo();
+    noFiltraLaBase(cuerpo);
+  });
+});
+
 describe('las respuestas vuelven a la casilla que declaró', () => {
   it('abre el reenvío desde su dirección de envío hacia esa casilla', async () => {
     const { estado, cuerpo } = await darDeAlta();
@@ -647,9 +767,15 @@ describe('si la casilla de respuestas no se pudo guardar, la Prestadora existe i
   it('contesta que se creó y avisa que quedó sin casilla', async () => {
     // Deshacer el alta sería peor: la Prestadora ya está creada y la casilla se vuelve a cargar
     // desde Configuración. Lo que no puede pasar es que nadie se entere.
-    respuestas.set('PATCH /rest/v1/configuracion_prestadora', () =>
-      falla(500, { message: 'la base no contestó' })
-    );
+    // Sobre esa misma fila se escriben dos cosas: la casilla de respuestas y la dirección por la
+    // que se entra. Acá falla sólo la primera —la segunda pide de vuelta la fila escrita y se
+    // reconoce por eso—, porque la dirección sí es motivo para deshacer el alta y tiene su propia
+    // prueba.
+    respuestas.set('PATCH /rest/v1/configuracion_prestadora', ({ url }) => (
+      url.includes('select=')
+        ? [{ prestadora_id: NUEVA }]
+        : falla(500, { message: 'la base no contestó' })
+    ));
     const { estado, cuerpo } = await darDeAlta();
     assert.equal(estado, 201);
     assert.equal(cuerpo.prestadora.id, NUEVA);

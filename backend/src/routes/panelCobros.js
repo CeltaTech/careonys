@@ -9,6 +9,10 @@ import {
   primerDiaDelPeriodo,
 } from '../utils/cobrosDeFamilia.js';
 import {
+  LISTA_DE_MEDIOS_DE_PAGO_DE_LA_FAMILIA,
+  mediosDePagoDeLaPrestadora,
+} from '../utils/mediosDePago.js';
+import {
   loQueEstaMalEnLaCorreccion,
   loQueEstaMalEnLoFacturado,
   plazoDePagoDe,
@@ -85,13 +89,12 @@ import { requierePermiso } from '../utils/permisos.js';
 
 export const panelCobrosRouter = Router();
 
-// Qué medios hay, qué monto vale, cómo se lee un período: escrito una sola vez en
-// `utils/cobrosDeFamilia.js`, que es copia del archivo del Panel. La pantalla arma el
-// desplegable con la misma lista con la que el motor controla, así no puede ofrecer algo que
-// después se rechaza (regla 12 de CLAUDE.md §7). Se vuelven a exportar desde acá porque es de
-// donde las venían tomando quienes las usan.
+// Qué monto vale, cómo se lee un período: escrito una sola vez en `utils/cobrosDeFamilia.js`,
+// que es copia del archivo del Panel. La pantalla arma el desplegable con la misma lista con la
+// que el motor controla, así no puede ofrecer algo que después se rechaza (regla 12 de
+// CLAUDE.md §7). Se vuelven a exportar desde acá porque es de donde las venían tomando quienes
+// las usan. Los medios no están en esa lista: salen de la base, por `utils/mediosDePago.js`.
 export {
-  MEDIOS,
   ORIGENES_DE_AFUERA,
   TOPE_DEL_LOTE,
   loQueEstaMalEnElCobro,
@@ -760,7 +763,14 @@ panelCobrosRouter.post('/facturas/:facturaId/cobros', requiereRolPanel, veElEsta
   const prestadoraId = req.usuarioPanel.prestadoraId;
   const cuerpo = req.body || {};
 
-  const problema = loQueEstaMalEnElCobro(cuerpo);
+  let mediosAdmitidos;
+  try {
+    mediosAdmitidos = await mediosDePagoDeLaPrestadora(prestadoraId, LISTA_DE_MEDIOS_DE_PAGO_DE_LA_FAMILIA);
+  } catch (e) {
+    return responderError(res, e);
+  }
+
+  const problema = loQueEstaMalEnElCobro(cuerpo, mediosAdmitidos);
   if (problema) return res.status(400).json({ error: problema });
 
   let factura;
@@ -918,6 +928,15 @@ panelCobrosRouter.post('/entrada', requiereRolPanel, veElEstadoDeCuenta, async (
     for (const c of data || []) yaEstaban.set(c.referencia_externa, c);
   }
 
+  // La lista de medios se pide una vez por lote y no una vez por renglón, por el mismo motivo
+  // que las referencias de arriba.
+  let mediosAdmitidos;
+  try {
+    mediosAdmitidos = await mediosDePagoDeLaPrestadora(prestadoraId, LISTA_DE_MEDIOS_DE_PAGO_DE_LA_FAMILIA);
+  } catch (e) {
+    return responderError(res, e);
+  }
+
   const resultados = [];
   const facturasTocadas = new Set();
   // Dentro del mismo lote también puede venir la misma referencia dos veces.
@@ -935,7 +954,7 @@ panelCobrosRouter.post('/entrada', requiereRolPanel, veElEstadoDeCuenta, async (
       continue;
     }
 
-    const problema = loQueEstaMalEnElCobro(cobro);
+    const problema = loQueEstaMalEnElCobro(cobro, mediosAdmitidos);
     if (problema) {
       resultados.push({ ...renglon, resultado: 'rechazado', motivo: problema });
       continue;

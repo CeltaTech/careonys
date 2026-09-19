@@ -12,9 +12,9 @@
  *      anotada como SIN COMPROBAR para que el Coordinador la mire después.
  *   2. UN CÓDIGO EQUIVOCADO NO MARCA NADA. Es lo único que se rechaza, porque darlo por bueno
  *      sería no comprobar y decir que sí.
- *   3. A LA FAMILIA SE LE AVISA CUANDO ELLA NO PARTICIPÓ. Si el código lo mostró ella, ya se
- *      enteró mostrándolo; si lo mostró el Asistente que se iba, o lo soltó la Prestadora, se le
- *      avisa que la guardia quedó cubierta y por quién.
+ *   3. A LA FAMILIA SE LE AVISA QUE LLEGÓ, Y LO DISPARA FICHAR LA ENTRADA. Un solo aviso, con el
+ *      nombre de quién llegó, sale con la llegada marcada por cualquiera de los caminos, también
+ *      cuando quedó sin comprobar. Y no sale cuando la llegada no se marcó.
  *   4. EL CÓDIGO NUNCA SE GUARDA EN CLARO. De la base sale la huella y nada más.
  *
  * Y que nada de esto debilitó lo que ya existía: ni el bloqueo por Reporte Diario faltante, ni el
@@ -174,13 +174,13 @@ function intentosSumados() {
     .map((l) => l.cuerpo);
 }
 
-// Cómo se ve desde afuera que salió el aviso de cobertura: para armarlo, el motor va a buscar el
+// Cómo se ve desde afuera que salió el aviso de llegada: para armarlo, el motor va a buscar el
 // nombre del Asistente a `asistentes`. El push en sí no se puede observar acá —sin claves VAPID no
 // sale— y por eso se mira su antesala.
 //
 // Se mira el `select` y no la tabla, porque todo pedido con sesión pasa antes por el middleware,
 // que consulta esa misma tabla para saber cuál es el Legajo de quien entró.
-function avisoDeCoberturaArmado() {
+function avisoDeLlegadaArmado() {
   return llamadas.some(
     (l) => l.clave === 'GET /rest/v1/asistentes'
       && (new URL(l.url, 'http://interno').searchParams.get('select') ?? '').includes('nombre')
@@ -293,8 +293,9 @@ describe('check-in — el piso, que no se negocia: la guardia nunca se traba', (
       assert.equal(fila.lat, LAT);
       assert.equal(fila.lng, LNG);
 
-      // A la Familia no se le avisa: nadie comprobó nada, no hay cobertura que anunciar.
-      assert.equal(avisoDeCoberturaArmado(), false);
+      // El Asistente fichó igual, así que a la Familia se le avisa: enterarse de que llegaron no
+      // depende de con qué se lo comprobó. Lo que quedó sin comprobar lo ve la coordinación.
+      assert.equal(avisoDeLlegadaArmado(), true);
     });
   }
 
@@ -370,8 +371,8 @@ describe('check-in — Plan A: el código lo muestra una persona', () => {
     assert.ok(fila.comprobada_en, 'tiene que quedar cuándo se comprobó');
     assert.equal(fila.motivo_sin_comprobar, null);
 
-    // La Familia participó: lo mostró ella. Avisarle sería contarle algo que acaba de hacer.
-    assert.equal(avisoDeCoberturaArmado(), false);
+    // Que el código lo haya mostrado ella no cambia nada: fichó la entrada, y el aviso avisa eso.
+    assert.equal(avisoDeLlegadaArmado(), true);
   });
 
   it('el código que muestra el Asistente que se va marca la llegada, y a la Familia sí se le avisa', async () => {
@@ -395,7 +396,7 @@ describe('check-in — Plan A: el código lo muestra una persona', () => {
 
     // La Familia no participó de esta comprobación: tiene que enterarse de que la guardia quedó
     // cubierta y por quién.
-    assert.equal(avisoDeCoberturaArmado(), true);
+    assert.equal(avisoDeLlegadaArmado(), true);
   });
 
   it('un código vencido no marca nada, aunque sea el que esa persona mostró hace un minuto', async () => {
@@ -412,6 +413,8 @@ describe('check-in — Plan A: el código lo muestra una persona', () => {
     assert.equal(cuerpo.motivo, 'codigo_incorrecto');
     assert.equal(guardiaMarcada(), false);
     assert.equal(comprobacionesGuardadas().length, 0);
+    // No fichó: no hay nada que avisarle a la Familia.
+    assert.equal(avisoDeLlegadaArmado(), false);
   });
 
   it('un código vigente de otra casa no marca nada: se compara sólo contra quien podría estar en ésta', async () => {
@@ -586,7 +589,7 @@ describe('Plan B — «no hay nadie que me pueda mostrar el código»', () => {
     assert.equal(fila.codigo_huella, null);
     assert.equal(fila.codigo_expira_en, null);
 
-    assert.equal(avisoDeCoberturaArmado(), true);
+    assert.equal(avisoDeLlegadaArmado(), true);
   });
 
   it('el código de la Prestadora vencido no sirve, y lo dice por su nombre', async () => {

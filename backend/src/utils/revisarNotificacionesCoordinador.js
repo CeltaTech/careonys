@@ -63,7 +63,6 @@ export async function revisarNotificacionesCoordinador() {
 // Prestadora, con la misma configuración de premura, la misma insistencia y el mismo
 // Coordinador de respaldo que las alertas tempranas y los incidentes de relevo. Un proceso
 // aparte tendría que volver a leer la misma tabla para hacer exactamente lo mismo.
-const DIAS_HACIA_ATRAS_SIN_CERRAR = 7;
 const MS_POR_MINUTO = 60 * 1000;
 const MS_POR_HORA = 60 * MS_POR_MINUTO;
 
@@ -81,15 +80,15 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
   // solo pasa si alguien lo puso en nulo a mano: mejor callarse que inventar un número.
   if (!minutosDeGracia) return;
 
-  // El filtro por `fecha` es solo para no traerse la agenda entera; la cuenta fina se hace
-  // después contra la hora de fin, que la base guarda en otra columna.
+  // No hay tope hacia atrás: una guardia sin cerrar no se arregla con el paso del tiempo, y
+  // ninguna puede envejecer fuera de la vista. La pantalla del Panel ya pregunta lo mismo sin
+  // límite; el aviso preguntaba sólo por la última semana y se contradecían.
   const { data: guardias, error } = await supabase
     .from('guardias')
     .select('id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, paciente_id, checkout_at, aviso_sin_cerrar_at, aviso_sin_cerrar_veces, aviso_sin_cerrar_backup_at, aviso_sin_cerrar_grave_at, asistentes(nombre)')
     .eq('prestadora_id', prestadoraId)
     .eq('estado', 'activa')
     .is('cerrada_at', null)
-    .gte('fecha', fechaISO(new Date(ahora.getTime() - DIAS_HACIA_ATRAS_SIN_CERRAR * 24 * MS_POR_HORA)))
     .lte('fecha', fechaISO(ahora));
 
   if (error) {

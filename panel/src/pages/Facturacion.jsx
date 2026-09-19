@@ -7,7 +7,7 @@ import { llamarApiCobros } from '../lib/apiCobros';
 import { claseBadge } from '../lib/tonos';
 import { formatearImporte } from '../lib/dinero';
 import { hoyISO } from '../lib/horarios';
-import { MEDIOS, loQueEstaMalEnElCobro } from '../lib/cobrosDeFamilia';
+import { loQueEstaMalEnElCobro } from '../lib/cobrosDeFamilia';
 import {
   FINANCIADORES,
   SENTIDOS_POSIBLES,
@@ -25,6 +25,7 @@ import { FormField } from '../components/ui/FormField';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { mensajeDeError } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
+import { useListaDeOpciones } from '../hooks/useListaDeOpciones';
 
 /* Los saldos de las Familias: lo facturado, lo que entró y lo que falta.
    ==========================================================================
@@ -536,10 +537,14 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
   // El aviso de que falta el motivo aparece recién cuando alguien escribió y borró, no apenas
   // se abre el formulario: un campo en rojo antes de tocarlo se lee como un error propio.
   const [motivoTocado, setMotivoTocado] = useState(false);
+  // Con qué pagó la Familia sale de la base, de la lista `medios_de_pago_de_la_familia`: las que
+  // trae el producto y las que agregó esta Prestadora. El pago al Asistente elige de otra lista,
+  // porque no son los mismos medios.
+  const mediosDePago = useListaDeOpciones('medios_de_pago_de_la_familia');
   const [cobro, setCobro] = useState({
     monto: '',
     fecha_cobro: hoyISO(),
-    medio: MEDIOS[0],
+    medio: '',
     referencia_externa: '',
     observaciones: '',
   });
@@ -575,7 +580,10 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
 
   // La misma comprobación que hace el motor antes de escribir, leída del archivo compartido:
   // así el botón no ofrece guardar algo que después se rechaza (regla 12, §7).
-  const loQueFalta = loQueEstaMalEnElCobro(cobro);
+  const loQueFalta = loQueEstaMalEnElCobro(
+    cobro,
+    mediosDePago.opciones.map((opcion) => opcion.clave),
+  );
   const loQueFaltaEnLoFacturado = loQueEstaMalEnLoFacturado({
     ...facturado,
     fecha_vencimiento: facturado.fecha_vencimiento || null,
@@ -743,7 +751,7 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
                       <tr key={c.id}>
                         <td>{c.fecha_cobro}</td>
                         <td>{formatearImporte(c.monto, c.moneda, locale)}</td>
-                        <td>{traducirValor(t.facturacion, `medio_${c.medio}`)}</td>
+                        <td>{mediosDePago.textos[c.medio] ?? c.medio}</td>
                         <td>{c.referencia_externa || '—'}</td>
                         <td>{traducirValor(t.facturacion, `origen_${c.origen}`)}</td>
                         <td>
@@ -1011,9 +1019,10 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
                     value={cobro.medio}
                     onChange={(e) => setCobro({ ...cobro, medio: e.target.value })}
                   >
-                    {MEDIOS.map((m) => (
-                      <option key={m} value={m}>
-                        {traducirValor(t.facturacion, `medio_${m}`)}
+                    <option value="">{t.facturacion.medio_sin_elegir}</option>
+                    {mediosDePago.opciones.map((opcion) => (
+                      <option key={opcion.id} value={opcion.clave}>
+                        {opcion.texto}
                       </option>
                     ))}
                   </FormField>

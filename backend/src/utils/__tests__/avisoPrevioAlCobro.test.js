@@ -19,6 +19,14 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 
+// Las frases de los avisos ya no están escritas adentro del código: viven en la tabla de mensajes
+// del sistema y se editan desde afuera. Acá se carga lo mismo que siembra la migración, porque las
+// pruebas del motor corren sin base levantada.
+import { sembrarMensajesDelSistema } from '../../i18n/mensajesDelSistema.js';
+import { filasSembradas } from '../../i18n/__tests__/mensajesSembrados.js';
+
+sembrarMensajesDelSistema(filasSembradas());
+
 const ACCESO = '33333333-3333-3333-3333-333333333333';
 const OTRO_ACCESO = '55555555-5555-5555-5555-555555555555';
 const FAMILIA = '11111111-1111-1111-1111-111111111111';

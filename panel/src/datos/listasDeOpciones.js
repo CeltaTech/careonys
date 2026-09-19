@@ -8,8 +8,10 @@
  * después y es de ella. Y no tiene identificadores, porque los pone la base: quien lo consume
  * junta por la clave de la lista.
  *
- * Lo que dice este archivo es exactamente lo que siembra la migración
- * `20261001150000_las_listas_de_opciones.sql`. Si una de las dos cambia, cambian las dos. */
+ * Lo que dice este archivo es exactamente lo que siembran las migraciones
+ * `20261001150000_las_listas_de_opciones.sql` y
+ * `20261003120000_el_medio_de_pago_sale_del_catalogo.sql`. Si una de las dos cambia, cambian
+ * las dos. */
 export const LISTAS_DE_OPCIONES_DE_FABRICA = {
   disponibilidad: {
     i18n: { 'es-AR': 'Disponibilidad', en: 'Availability', 'pt-BR': 'Disponibilidade' },
@@ -38,6 +40,46 @@ export const LISTAS_DE_OPCIONES_DE_FABRICA = {
         },
         orden: 10,
       },
+    ],
+  },
+  medios_de_pago_de_la_familia: {
+    i18n: {
+      'es-AR': 'Medios de pago de la Familia',
+      en: 'Family payment methods',
+      'pt-BR': 'Meios de pagamento da Família',
+    },
+    admite_opciones_propias: true,
+    opciones: [
+      {
+        clave: 'transferencia',
+        i18n: { 'es-AR': 'Transferencia', en: 'Bank transfer', 'pt-BR': 'Transferência' },
+        orden: 10,
+      },
+      { clave: 'efectivo', i18n: { 'es-AR': 'Efectivo', en: 'Cash', 'pt-BR': 'Dinheiro' }, orden: 20 },
+      { clave: 'tarjeta', i18n: { 'es-AR': 'Tarjeta', en: 'Card', 'pt-BR': 'Cartão' }, orden: 30 },
+      {
+        clave: 'debito_automatico',
+        i18n: { 'es-AR': 'Débito automático', en: 'Direct debit', 'pt-BR': 'Débito automático' },
+        orden: 40,
+      },
+      { clave: 'cheque', i18n: { 'es-AR': 'Cheque', en: 'Cheque', 'pt-BR': 'Cheque' }, orden: 50 },
+      { clave: 'otro', i18n: { 'es-AR': 'Otro', en: 'Other', 'pt-BR': 'Outro' }, orden: 60 },
+    ],
+  },
+  medios_de_pago_al_asistente: {
+    i18n: {
+      'es-AR': 'Medios de pago al Asistente',
+      en: 'Assistant payment methods',
+      'pt-BR': 'Meios de pagamento ao Assistente',
+    },
+    admite_opciones_propias: true,
+    opciones: [
+      {
+        clave: 'transferencia',
+        i18n: { 'es-AR': 'Transferencia', en: 'Bank transfer', 'pt-BR': 'Transferência' },
+        orden: 10,
+      },
+      { clave: 'efectivo', i18n: { 'es-AR': 'Efectivo', en: 'Cash', 'pt-BR': 'Dinheiro' }, orden: 20 },
     ],
   },
 };

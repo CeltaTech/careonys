@@ -54,6 +54,10 @@ const CON_MOTIVO = new Map([
   // Depósito de archivos, no tabla: `supabase.storage.from(BUCKET)`. La ruta del archivo empieza
   // por la Prestadora y la política del depósito lo exige.
   ['appAsistentes.js:reportes-fotos', true],
+  // Cómo se llama en cada país el número con el que se identifica una cuenta —CBU, CVU, alias—.
+  // No es de ninguna Prestadora y no tiene columna que la nombre: dos Prestadoras del mismo país
+  // ven la misma sigla. Lo que sí es de alguien —la cuenta— se consulta aparte y sí va filtrado.
+  ['appAsistentes.js:catalogo_identificadores_de_cuenta', true],
 ]);
 
 /**

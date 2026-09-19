@@ -8,6 +8,10 @@ import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 import { responderError } from '../utils/errorConMotivo.js';
 import { bordesDelPeriodo, calcularLiquidacion, esPeriodoValido, primerDia, ultimoDia } from '../utils/calcularLiquidacion.js';
 import { diaCorrido, frecuenciaDePagoDe, periodosQueTocan } from '../utils/frecuenciaDePago.js';
+import {
+  LISTA_DE_MEDIOS_DE_PAGO_AL_ASISTENTE,
+  mediosDePagoDeLaPrestadora,
+} from '../utils/mediosDePago.js';
 
 // La cuenta de cuánto se le paga a alguien por un mes ya no vive acá: la comparte con el
 // Simulador de Vínculo, que proyecta esa misma cuenta bajo los dos tipos de vínculo. El punto
@@ -560,6 +564,28 @@ panelLiquidacionesRouter.post('/:id/pagar', requiereRolPanel, requierePermiso(PE
     return res.status(400).json({ error: 'Hace falta la fecha del pago, en formato AAAA-MM-DD' });
   }
 
+  // Con qué se pagó ya no es texto libre: es una opción de la lista `medios_de_pago_al_asistente`,
+  // que no es la del cobro de la Familia. Anotarlo sigue siendo opcional, pero si se anota
+  // tiene que ser una de las que alcanzan a esta Prestadora. El disparador de la base frena lo
+  // mismo; esto contesta antes y con una frase entendible.
+  const medioAnotado = typeof formaPago === 'string' && formaPago.trim() !== '' ? formaPago.trim() : null;
+  if (medioAnotado !== null) {
+    let mediosAdmitidos;
+    try {
+      // La lista del lado del Asistente, que no es la de la cobranza: acá no se le paga con
+      // tarjeta ni con débito automático a nadie.
+      mediosAdmitidos = await mediosDePagoDeLaPrestadora(
+        req.usuarioPanel.prestadoraId,
+        LISTA_DE_MEDIOS_DE_PAGO_AL_ASISTENTE,
+      );
+    } catch (e) {
+      return responderError(res, e);
+    }
+    if (!mediosAdmitidos.includes(medioAnotado)) {
+      return res.status(400).json({ error: 'El medio de pago no es uno de los admitidos' });
+    }
+  }
+
   const { data: liquidacion, error } = await supabase
     .from('liquidaciones_asistente')
     .select('id, estado')
@@ -575,7 +601,7 @@ panelLiquidacionesRouter.post('/:id/pagar', requiereRolPanel, requierePermiso(PE
     .update({
       estado: 'pagada',
       fecha_pago: fechaPago,
-      forma_pago: formaPago ?? null,
+      forma_pago: medioAnotado,
       referencia_pago: referenciaPago ?? null,
       pagada_por: req.usuarioPanel.id,
       updated_at: new Date().toISOString(),

@@ -8,6 +8,7 @@ import { useFiltros } from '../hooks/useFiltros';
 import { useEscalasLegales } from '../hooks/useEscalasLegales';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { useMonedaActual } from '../hooks/useMonedaActual';
+import { useListaDeOpciones } from '../hooks/useListaDeOpciones';
 import { llamarApiLiquidaciones } from '../lib/apiLiquidaciones';
 import {
   ALCANCES,
@@ -369,6 +370,10 @@ function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
   const [liquidacion, setLiquidacion] = useState(null);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
+  // Con qué se le pagó al Asistente sale de la base, de la lista `medios_de_pago_al_asistente`,
+  // que no es la del cobro de la Familia: a una persona no se le paga con tarjeta ni con débito
+  // automático. Antes era texto libre, y lo escrito a mano no se podía contar.
+  const mediosDePago = useListaDeOpciones('medios_de_pago_al_asistente');
   const [pago, setPago] = useState({ fecha_pago: '', forma_pago: '', referencia_pago: '' });
   const [ocupado, setOcupado] = useState(false);
 
@@ -515,7 +520,9 @@ function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
                 <p className="panel-explicacion">
                   {t.pagos_asistentes.pagada_el.replace('{fecha}', liquidacion.fecha_pago ?? '—')}
                   {liquidacion.forma_pago
-                    ? ` · ${t.pagos_asistentes.pagar_forma}: ${liquidacion.forma_pago}`
+                    ? ` · ${t.pagos_asistentes.pagar_forma}: ${
+                        mediosDePago.textos[liquidacion.forma_pago] ?? liquidacion.forma_pago
+                      }`
                     : ''}
                   {liquidacion.referencia_pago
                     ? ` · ${t.pagos_asistentes.pagar_referencia}: ${liquidacion.referencia_pago}`
@@ -537,9 +544,17 @@ function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
                   <FormField
                     label={t.pagos_asistentes.pagar_forma}
                     name="liquidacion_forma_pago"
+                    type="select"
                     value={pago.forma_pago}
                     onChange={(e) => setPago({ ...pago, forma_pago: e.target.value })}
-                  />
+                  >
+                    <option value="">{t.pagos_asistentes.pagar_forma_sin_elegir}</option>
+                    {mediosDePago.opciones.map((opcion) => (
+                      <option key={opcion.id} value={opcion.clave}>
+                        {opcion.texto}
+                      </option>
+                    ))}
+                  </FormField>
                   <FormField
                     label={t.pagos_asistentes.pagar_referencia}
                     name="liquidacion_referencia_pago"

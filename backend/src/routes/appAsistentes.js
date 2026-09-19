@@ -119,9 +119,13 @@ async function guardiaDelAsistente(guardiaId, usuarioAsistente) {
 //      un código equivocado —ahí la pantalla ofrece reintentar, pedirle uno a la Prestadora, o
 //      entrar con un motivo—, porque aceptar un código que no es sería no comprobar nada y decir
 //      que sí.
-//   4. Esto no decide si un relevo cierra una guardia y abre la siguiente en un solo acto (esa
-//      pregunta sigue abierta). Cada guardia anota su propia comprobación por su cuenta: cuando
-//      hay relevo real quedan dos filas, una contra la que termina y otra contra la que empieza.
+//   4. Un relevo son dos actos, no uno: el que se va ficha su salida y el que llega ficha su
+//      entrada. Cada guardia anota su propia comprobación por su cuenta, así que quedan dos
+//      filas, una contra la que termina y otra contra la que empieza.
+//   5. A la Familia se le avisa una sola vez, y lo dispara fichar la entrada. El aviso lleva el
+//      nombre de quién llegó y nada más: con qué se comprobó es funcionamiento interno y no se le
+//      cuenta. Una llegada sin comprobar avisa igual, porque el Asistente fichó; lo que queda
+//      pendiente lo ve la coordinación en su lista.
 // ============================================================================
 
 // Ordena lo que mandó el teléfono sobre la comprobación. Se acepta el pedido viejo —sin nada—
@@ -150,34 +154,19 @@ function datosDeComprobacion(body) {
   return { motivoSinComprobar: 'otro' };
 }
 
-// Le avisa a la Familia que la guardia quedó cubierta y por quién. Sale cuando la Familia NO
-// participó de la comprobación: cuando el código lo mostró el Asistente que se iba, y cuando lo
-// soltó la Prestadora. Si el código lo mostró la propia Familia, ya se enteró mostrándolo.
-//
-// El texto va en castellano y a mano, como los otros cuatro avisos al celular que ya existen: el
-// motor todavía no tiene catálogo de traducciones (ver el informe de esta tarea).
-async function avisarALaFamiliaDeLaCobertura({ guardia, medio }) {
+// Cómo se llama quien llegó, para decírselo a la Familia. Si no se lo pudo averiguar, el aviso
+// sale igual con una forma genérica: enterarse de que llegaron importa más que el nombre.
+async function nombreDeAsistente(asistenteId) {
   try {
-    const pacientes = await pacientesDeGuardia(guardia, 'id, nombre, familia_id');
-    const { data: asistente } = await supabase
+    const { data } = await supabase
       .from('asistentes')
       .select('nombre')
-      .eq('id', guardia.asistente_id)
+      .eq('id', asistenteId)
       .maybeSingle();
-    const nombreDelAsistente = asistente?.nombre ?? 'el Asistente asignado';
-    const comoSeComprobo = medio === 'codigo_prestadora'
-      ? 'La comprobación la resolvió la Prestadora.'
-      : 'La comprobación la hizo el Asistente que terminaba su guardia.';
-
-    for (const paciente of pacientes.filter((p) => p.familia_id)) {
-      enviarPushFamilia(paciente.familia_id, {
-        titulo: 'La guardia quedó cubierta',
-        cuerpo: `${nombreDelAsistente} está en el domicilio de ${paciente.nombre}. ${comoSeComprobo}`,
-        url: `/pacientes/${paciente.id}`,
-      }).catch((err) => console.error('Error avisando a la Familia de la cobertura:', err.message));
-    }
+    return data?.nombre ?? 'El Asistente asignado';
   } catch (e) {
-    console.error('Error armando el aviso de cobertura para la Familia:', e.message);
+    console.error('Error buscando el nombre del Asistente para el aviso:', e.message);
+    return 'El Asistente asignado';
   }
 }
 
@@ -316,6 +305,63 @@ appAsistentesRouter.get('/perfil/papeles', requiereRolAsistente, async (req, res
       diasAviso,
     }),
     certificado: estadoDelCertificado(certificado || null, { diasAviso }),
+  });
+});
+
+// Adónde se le paga, para que él mismo compruebe que está bien escrito.
+//
+// VA APARTE DE `/perfil` POR EL MISMO MOTIVO QUE LOS PAPELES: `/perfil` se paga en cada arranque
+// de la aplicación, y esto lo mira quien entró a mirarlo. Además es un dato sensible, y un dato
+// sensible que viaja en cada arranque viaja muchas más veces de las que hace falta.
+//
+// DE QUIÉN SON LOS DATOS LO DECIDE LA SESIÓN: no hay ningún identificador en el pedido, así que no
+// hay nada que falsificar. El filtro por Prestadora va igual que en el resto de estas rutas, porque
+// una misma persona tiene una ficha por cada Prestadora donde trabaja.
+//
+// ES SÓLO MIRAR. Corregir es de la administración de la Prestadora, que es quien responde por lo
+// que se paga y por dónde queda anotado quién lo cambió. Acá no hay ninguna escritura, y la base
+// tampoco la admitiría: sobre esta tabla el Asistente tiene política de lectura y ninguna más.
+//
+// Y NO SALE POR NINGÚN OTRO LADO. El número de la cuenta va en el cuerpo de la respuesta y en
+// ningún otro lugar: no viaja en la dirección, no se registra y no entra en ningún mensaje de
+// error. Si la base falla, se contesta sin contar nada de lo que se estaba leyendo.
+appAsistentesRouter.get('/perfil/datos-bancarios', requiereRolAsistente, async (req, res) => {
+  const asistenteId = req.usuarioAsistente.asistenteId;
+  const prestadoraId = req.usuarioAsistente.prestadoraId;
+
+  const { data: cuentas, error } = await supabase
+    .from('datos_bancarios_asistente')
+    .select('pais, identificador_clase, identificador, banco, titular, updated_at')
+    .eq('prestadora_id', prestadoraId)
+    .eq('asistente_id', asistenteId);
+
+  if (error) {
+    return res.status(500).json({ error: 'No se pudieron leer los datos bancarios' });
+  }
+
+  // Cómo se llama ese identificador en su país —CBU, CVU, alias—: sin eso la pantalla mostraría un
+  // número sin decir de qué número se trata, y comprobar que está bien sería adivinar. Sale del
+  // catálogo por país, que es lo que deja sumar un país cargando filas.
+  const paises = [...new Set((cuentas || []).map((c) => c.pais))];
+  let siglas = new Map();
+  if (paises.length > 0) {
+    const { data: catalogo } = await supabase
+      .from('catalogo_identificadores_de_cuenta')
+      .select('pais, codigo, sigla')
+      .in('pais', paises);
+    siglas = new Map((catalogo || []).map((f) => [`${f.pais}:${f.codigo}`, f.sigla]));
+  }
+
+  res.json({
+    cuentas: (cuentas || []).map((cuenta) => ({
+      pais: cuenta.pais,
+      clase: cuenta.identificador_clase,
+      sigla: siglas.get(`${cuenta.pais}:${cuenta.identificador_clase}`) || cuenta.identificador_clase,
+      identificador: cuenta.identificador,
+      banco: cuenta.banco,
+      titular: cuenta.titular,
+      actualizado_en: cuenta.updated_at,
+    })),
   });
 });
 
@@ -593,27 +639,26 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
     return responderError(res, error);
   }
 
-  // A la Familia se le avisa que la guardia quedó cubierta y por quién cuando ella no participó
-  // de la comprobación: cuando el código lo mostró el Asistente que se iba, y cuando lo soltó la
-  // Prestadora.
-  if (comprobacion.avisarFamilia) {
-    await avisarALaFamiliaDeLaCobertura({ guardia, medio: comprobacion.medio });
-  }
-
-  // Push inmediato a la Familia — docs/PRD_04_05_App_Servicio.md:58 ("el Asistente llegó al
-  // domicilio"). Se envía una sola vez porque checkin_at ya se validó arriba como no seteado
-  // antes de este UPDATE.
+  // UN SOLO AVISO, Y LO DISPARA FICHAR LA ENTRADA. Antes salían dos que decían casi lo mismo: éste
+  // sin ninguna condición, y otro —«la guardia quedó cubierta»— sólo cuando la Familia no había
+  // participado de la comprobación. Con un relevo salían los dos juntos. El Asistente fichó: la
+  // Familia se entera, y con el nombre de quién llegó. Cómo se comprobó no se le cuenta, porque es
+  // funcionamiento interno; lo que quedó sin comprobar lo ve la coordinación en su lista.
   //
   // Un aviso por Paciente, no uno por turno: la Familia de cada uno tiene que enterarse de que
   // llegaron a atender al suyo, y con el nombre del suyo. Dos hermanos que viven juntos pero
   // avisan a familias distintas reciben cada uno el suyo. Si las dos personas son de la misma
   // Familia, esa Familia recibe los dos avisos, uno por nombre — es lo correcto: son dos
   // Pacientes distintos, y un aviso solo obligaría a adivinar a cuál se refiere.
+  //
+  // Se envía una sola vez porque checkin_at ya se validó arriba como no seteado antes de este
+  // UPDATE.
   const conFamilia = pacientes.filter((p) => p.familia_id);
+  const nombreDelAsistente = await nombreDeAsistente(guardia.asistente_id);
   for (const p of conFamilia) {
     enviarPushFamilia(p.familia_id, {
       titulo: 'Llegó el Asistente',
-      cuerpo: `El Asistente llegó al domicilio de ${p.nombre}.`,
+      cuerpo: `${nombreDelAsistente} llegó al domicilio de ${p.nombre}.`,
       url: `/pacientes/${p.id}`,
     }).catch((err) => console.error('Error enviando push de llegada a Familia:', err.message));
   }

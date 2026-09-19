@@ -77,22 +77,6 @@ export function vencimientoDe(fechaDeEmision, plazoEnDias) {
 }
 
 /**
- * Cuánto se le reclama a la Familia por esta factura.
- *
- * Es lo que el software de facturación informó haber emitido, más y menos lo que las
- * correcciones hayan movido. Mientras no se haya facturado, lo que se mandó a facturar es la
- * mejor referencia que hay, y es lo que se venía mostrando.
- */
-export function montoQueSeReclama(factura, correcciones = []) {
-  const emitido = factura?.monto_facturado ?? factura?.monto_total ?? 0;
-  const movido = correcciones.reduce((acc, c) => {
-    const monto = Number(c?.monto) || 0;
-    return c?.sentido === SENTIDOS_DE_CORRECCION.RESTA ? acc - monto : acc + monto;
-  }, 0);
-  return aDosDecimales(Number(emitido) + movido);
-}
-
-/**
  * Si el seguimiento de la cobranza es de este sistema o de otro software.
  *
  * Lo decide la Prestadora. Encendido es lo que se viene haciendo: mandar la factura a quien tiene

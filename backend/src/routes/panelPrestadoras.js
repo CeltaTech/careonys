@@ -6,6 +6,11 @@ import { esDireccionDeCorreo, direccionDeEnvioDe } from '../utils/email.js';
 import { crearCuentaConPerfil } from '../utils/cuentasPanel.js';
 import { elegirCasillaDeEnvio } from '../utils/casillaDeEnvio.js';
 import {
+  elegirDireccionDeLaPrestadora,
+  direccionDeIngreso,
+  esChoqueDeDireccion,
+} from '../utils/direccionDeLaPrestadora.js';
+import {
   apuntarReenvioDeRespuestas,
   cortarReenvioDeRespuestas,
   respuestasConfirmadas,
@@ -67,6 +72,17 @@ function insertarPrestadora({ razonSocial, nombreFantasia, pais, identificacionF
 // la casilla lo resuelve el motor eligiendo otra. Por eso se mira cuál de los dos fue.
 function esChoqueDeCasilla(error) {
   return error?.code === '23505' && String(error.message ?? '').includes('casilla_envio');
+}
+
+// La puerta por la que entra la Prestadora queda anotada en su fila de configuración, que es de
+// donde la lee el motor cuando alguien abre la pantalla de ingreso
+// (`middleware/resolverPrestadoraPublica.js`).
+function fijarLaDireccionDeIngreso(prestadoraId, direccion) {
+  return supabase
+    .from('configuracion_prestadora')
+    .update({ dominio: direccion, updated_at: new Date().toISOString() })
+    .eq('prestadora_id', prestadoraId)
+    .select('prestadora_id');
 }
 
 // Deshace una Prestadora recién creada. Se usa en un solo caso: cuando la Prestadora ya entró
@@ -173,6 +189,21 @@ panelPrestadorasRouter.post('/', requiereRolPanel, requiereSuperadmin, async (re
   // elegir ninguna, la Prestadora entra igual y manda desde la dirección común del producto.
   let casillaEnvio = await elegirCasillaDeEnvio({ nombreFantasia, emailRespuestas });
 
+  // Y la dirección por la que se entra a esta Prestadora se elige acá mismo, antes de crear nada:
+  // nadie la teclea, sale de su nombre con la misma regla que la casilla
+  // (`utils/direccionDeLaPrestadora.js`). Si no se le puede dar ninguna, el alta no empieza: una
+  // Prestadora sin dirección no tiene por dónde entrar nadie, ni siquiera su administrador.
+  let direccion;
+  try {
+    direccion = await elegirDireccionDeLaPrestadora({ nombreFantasia, emailRespuestas });
+  } catch (errorAlElegir) {
+    return responderError(res, errorAlElegir);
+  }
+
+  if (!direccion) {
+    return responderError(res, new ErrorConMotivo('direccion_de_prestadora_no_disponible', `no quedó ninguna dirección libre derivada de «${nombreFantasia}»`));
+  }
+
   let { data: prestadora, error } = await insertarPrestadora({
     razonSocial, nombreFantasia, pais, identificacionFiscal, casillaEnvio,
   });
@@ -229,6 +260,34 @@ panelPrestadorasRouter.post('/', requiereRolPanel, requiereSuperadmin, async (re
     emailRespuestas,
   });
 
+  // La puerta. Se anota sobre la misma fila de configuración, y a diferencia de la casilla de
+  // respuestas esto no admite quedar a medias: sin dirección no hay pantalla de ingreso para esta
+  // Prestadora, así que si no se puede anotar se deshace el alta entera.
+  //
+  // Dos altas al mismo tiempo pueden elegir la misma dirección: la que llega segunda choca contra
+  // el índice único de la base y vuelve a elegir, ya con la primera tomada.
+  let { data: puerta, error: errorPuerta } = await fijarLaDireccionDeIngreso(prestadora.id, direccion);
+
+  if (errorPuerta && esChoqueDeDireccion(errorPuerta)) {
+    try {
+      direccion = await elegirDireccionDeLaPrestadora({ nombreFantasia, emailRespuestas });
+    } catch (errorAlReelegir) {
+      console.error('No se pudo volver a elegir la dirección de la Prestadora:', errorAlReelegir.message);
+      direccion = null;
+    }
+    if (direccion) {
+      ({ data: puerta, error: errorPuerta } = await fijarLaDireccionDeIngreso(prestadora.id, direccion));
+    }
+  }
+
+  if (errorPuerta || !puerta?.length) {
+    await deshacerPrestadora(prestadora.id, regla);
+    if (!errorPuerta || esChoqueDeDireccion(errorPuerta)) {
+      return responderError(res, new ErrorConMotivo('direccion_de_prestadora_no_disponible', `no se pudo fijar la dirección de ingreso de «${nombreFantasia}»`));
+    }
+    return responderError(res, errorPuerta);
+  }
+
   // El acceso del administrador. A diferencia de la casilla, esto no admite quedar a medias: una
   // Prestadora sin administrador no tiene quién entre a configurarla, así que si falla se
   // deshace el alta entera y quien la estaba dando la vuelve a intentar con el mismo nombre.
@@ -261,6 +320,8 @@ panelPrestadorasRouter.post('/', requiereRolPanel, requiereSuperadmin, async (re
     // La dirección desde la que va a mandar. Sale nula cuando no se le pudo fijar una propia, y
     // entonces esta Prestadora manda desde la dirección común del producto.
     direccion_envio: direccionEnvio,
+    // Y la dirección por la que entra. Nunca sale nula: sin ella no habría habido alta.
+    direccion_ingreso: direccionDeIngreso(direccion),
     // Si las respuestas vuelven, y si el dueño de la casilla ya confirmó que quiere recibirlas.
     // Son dos cosas distintas: el reenvío puede estar abierto y las respuestas no llegar todavía,
     // porque falta ese clic, que lo da una persona y no el sistema.

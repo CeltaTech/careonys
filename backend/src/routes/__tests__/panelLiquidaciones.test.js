@@ -40,7 +40,9 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, cuerpo: crudo ? JSON.parse(crudo) : null });
+    // La dirección entera, y no sólo el camino: en ella viajan los filtros, y hay pruebas que
+    // miran contra qué lista se preguntó.
+    llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada() : preparada;
@@ -729,5 +731,105 @@ describe('generar el mes', () => {
 
     const escritura = llamadas.find((l) => l.clave === 'POST /rest/v1/liquidaciones_asistente');
     assert.equal(escritura.cuerpo.periodo_hasta, '2026-08-31');
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// Con qué se le pagó
+// ---------------------------------------------------------------------------------------
+
+/* Antes era texto libre: cada quien lo escribía a su manera y después no se podía contar.
+   Ahora es una opción de la lista `medios_de_pago_al_asistente`, que no es la del cobro de la
+   Familia —a una persona no se le paga con tarjeta ni con débito automático—, y el motor la
+   comprueba contra la base antes de escribir. */
+describe('con qué se le pagó al Asistente', () => {
+  const LIQUIDACION = '99999999-9999-9999-9999-999999999999';
+
+  /** La lista de medios que contesta la base: las del producto y una propia de esta Prestadora. */
+  function elCatalogoContesta() {
+    respuestas.set('GET /rest/v1/opciones_de_lista', () =>
+      ['transferencia', 'efectivo', 'billetera_virtual'].map(
+        (clave) => ({ clave, prestadora_id: clave === 'billetera_virtual' ? PRESTADORA : null }),
+      ),
+    );
+  }
+
+  function laLiquidacionEstaPendiente() {
+    respuestas.set('GET /rest/v1/liquidaciones_asistente', () => [{ id: LIQUIDACION, estado: 'pendiente' }]);
+    respuestas.set('PATCH /rest/v1/liquidaciones_asistente', () => [{ id: LIQUIDACION, estado: 'pagada' }]);
+  }
+
+  it('un medio que el catálogo no nombra no llega a la base', async () => {
+    elCatalogoContesta();
+    laLiquidacionEstaPendiente();
+
+    const { estado } = await pedir('POST', `/${LIQUIDACION}/pagar`, {
+      fecha_pago: '2026-09-05',
+      forma_pago: 'trueque',
+    });
+
+    assert.equal(estado, 400);
+    assert.ok(!llamadas.some((l) => l.clave === 'PATCH /rest/v1/liquidaciones_asistente'));
+  });
+
+  it('una opción que agregó la Prestadora se admite igual que una del producto', async () => {
+    elCatalogoContesta();
+    laLiquidacionEstaPendiente();
+
+    const { estado } = await pedir('POST', `/${LIQUIDACION}/pagar`, {
+      fecha_pago: '2026-09-05',
+      forma_pago: 'billetera_virtual',
+    });
+
+    assert.equal(estado, 200);
+    const escritura = llamadas.find((l) => l.clave === 'PATCH /rest/v1/liquidaciones_asistente');
+    assert.equal(escritura.cuerpo.forma_pago, 'billetera_virtual');
+  });
+
+  it('anotar con qué se pagó sigue siendo opcional, y en blanco se guarda como nulo', async () => {
+    elCatalogoContesta();
+    laLiquidacionEstaPendiente();
+
+    const { estado } = await pedir('POST', `/${LIQUIDACION}/pagar`, {
+      fecha_pago: '2026-09-05',
+      forma_pago: '   ',
+    });
+
+    assert.equal(estado, 200);
+    const escritura = llamadas.find((l) => l.clave === 'PATCH /rest/v1/liquidaciones_asistente');
+    assert.equal(escritura.cuerpo.forma_pago, null);
+    // Y sin nada que comprobar, tampoco se le pregunta a la base por el catálogo.
+    assert.ok(!llamadas.some((l) => l.clave === 'GET /rest/v1/opciones_de_lista'));
+  });
+
+  /* Y le pregunta a la lista de su lado del dinero. Si le preguntara a la de la cobranza, se le
+     podría anotar a un Asistente que se le pagó con tarjeta o con débito automático. */
+  it('el pago al Asistente le pregunta a su lista, no a la de la cobranza', async () => {
+    elCatalogoContesta();
+    laLiquidacionEstaPendiente();
+
+    await pedir('POST', `/${LIQUIDACION}/pagar`, {
+      fecha_pago: '2026-09-05',
+      forma_pago: 'transferencia',
+    });
+
+    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/opciones_de_lista');
+    assert.ok(consulta, 'no le preguntó a la base por el catálogo de medios');
+    assert.ok(consulta.url.includes('medios_de_pago_al_asistente'));
+    assert.ok(!consulta.url.includes('medios_de_pago_de_la_familia'));
+  });
+
+  it('si la base no contesta el catálogo, no se escribe nada', async () => {
+    // Sin respuesta preparada, la base de mentira contesta un error, que es lo que pasa cuando
+    // la de verdad no está. Un control que no supo contra qué comparar tiene que negar.
+    laLiquidacionEstaPendiente();
+
+    const { estado } = await pedir('POST', `/${LIQUIDACION}/pagar`, {
+      fecha_pago: '2026-09-05',
+      forma_pago: 'transferencia',
+    });
+
+    assert.notEqual(estado, 200);
+    assert.ok(!llamadas.some((l) => l.clave === 'PATCH /rest/v1/liquidaciones_asistente'));
   });
 });

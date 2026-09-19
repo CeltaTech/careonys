@@ -625,6 +625,115 @@ async function probarQuienEscribeLaConfiguracion(entorno, d) {
     }
   }
 
+  // ---- Y adónde se le paga lo informa él: lo carga, lo corrige y lo saca ----
+  // Mismo molde que la Matrícula, que es el precedente de lo que el Asistente
+  // escribe en su propia ficha. La cuenta es inventada, como todo lo que se
+  // siembra acá, y se borra al terminar.
+  const [[paisDeLaPrestadora]] = consultarBase(
+    `SELECT pais FROM public.prestadoras WHERE id = '${d.prestadora}';`,
+  );
+  const CUENTA_DE_PRUEBA = '0009998887776665554443';
+  const CUENTA_CORREGIDA = '0001112223334445556667';
+  const borrarLaCuentaSembrada = () => consultarBase(
+    `DELETE FROM public.datos_bancarios_asistente WHERE identificador IN ('${CUENTA_DE_PRUEBA}', '${CUENTA_CORREGIDA}');`,
+  );
+  const cuenta = (ficha) => ({
+    prestadora_id: d.prestadora, asistente_id: ficha,
+    pais: paisDeLaPrestadora || 'AR', identificador_clase: 'cbu',
+    identificador: CUENTA_DE_PRUEBA,
+  });
+
+  borrarLaCuentaSembrada();
+  const cuentaPropia = await pedir(entorno, delAsistente, 'POST', 'datos_bancarios_asistente', cuenta(asistenteDeLaSesion));
+  if (cuentaPropia.ok) {
+    bien('el Asistente SÍ carga sus propios datos bancarios', 'asistente_carga_sus_datos_bancarios');
+
+    // Corregir y sacar son la misma facultad que cargar, y sin ellas una cuenta
+    // que se cerró queda puesta: eso es una transferencia que no llega.
+    const corrige = await pedir(
+      entorno, delAsistente, 'PATCH',
+      `datos_bancarios_asistente?asistente_id=eq.${asistenteDeLaSesion}&identificador_clase=eq.cbu`,
+      { identificador: CUENTA_CORREGIDA },
+    );
+    if (corrige.filas.length === 1) {
+      bien('el Asistente SÍ corrige sus propios datos bancarios', 'asistente_corrige_sus_datos_bancarios');
+    } else {
+      const c = corrige.cuerpo || {};
+      mal('el Asistente SÍ corrige sus propios datos bancarios',
+          `${corrige.estado} ${c.code || ''} ${c.message || ''}`.trim() || 'no tocó ninguna fila');
+    }
+
+    const saca = await pedir(
+      entorno, delAsistente, 'DELETE',
+      `datos_bancarios_asistente?asistente_id=eq.${asistenteDeLaSesion}&identificador_clase=eq.cbu`,
+    );
+    const [[quedo]] = consultarBase(
+      `SELECT count(*) FROM public.datos_bancarios_asistente WHERE asistente_id = '${asistenteDeLaSesion}' AND identificador_clase = 'cbu';`,
+    );
+    if (String(quedo) === '0') {
+      bien('el Asistente SÍ saca sus propios datos bancarios', 'asistente_saca_sus_datos_bancarios');
+    } else {
+      const c = saca.cuerpo || {};
+      mal('el Asistente SÍ saca sus propios datos bancarios',
+          `${saca.estado} ${c.code || ''} ${c.message || ''}`.trim() || 'la fila siguió ahí');
+    }
+  } else {
+    const c = cuentaPropia.cuerpo || {};
+    mal('el Asistente SÍ carga sus propios datos bancarios',
+        `${cuentaPropia.estado} ${c.code || ''} ${c.message || ''}`.trim());
+  }
+  borrarLaCuentaSembrada();
+
+  // ESTO ES LO QUE SE ESTÁ PROBANDO DE VERDAD. Cobrar en la cuenta de otro no
+  // es ver un dato de más: es que la plata salga hacia otro lado.
+  if (otraFicha) {
+    const cuentaAjena = await pedir(entorno, delAsistente, 'POST', 'datos_bancarios_asistente', cuenta(otraFicha));
+    if (cuentaAjena.ok) {
+      borrarLaCuentaSembrada();
+      mal('el Asistente NO carga los datos bancarios de otra ficha', 'la base lo dejó escribir en la ficha de otro');
+    } else {
+      bien('el Asistente NO carga los datos bancarios de otra ficha', `rebotó con ${cuentaAjena.estado}`);
+    }
+
+    // Y tampoco corrige la de otro: se le siembra una con la llave del dueño de
+    // la base —que se saltea las políticas— y se intenta cambiarla con su sesión.
+    const [[cuentaDelOtro]] = consultarBase(`
+      INSERT INTO public.datos_bancarios_asistente (prestadora_id, asistente_id, pais, identificador_clase, identificador)
+      VALUES ('${d.prestadora}', '${otraFicha}', '${paisDeLaPrestadora || 'AR'}', 'cbu', '${CUENTA_DE_PRUEBA}')
+      RETURNING id;
+    `);
+    const corrigeLaDeOtro = await pedir(
+      entorno, delAsistente, 'PATCH',
+      `datos_bancarios_asistente?asistente_id=eq.${otraFicha}&identificador_clase=eq.cbu`,
+      { identificador: CUENTA_CORREGIDA },
+    );
+    const [[comoQuedo]] = consultarBase(
+      `SELECT identificador FROM public.datos_bancarios_asistente WHERE id = '${cuentaDelOtro}';`,
+    );
+    if (comoQuedo === CUENTA_DE_PRUEBA) {
+      bien('el Asistente NO corrige los datos bancarios de otra ficha', 'no tocó ninguna fila');
+    } else {
+      mal('el Asistente NO corrige los datos bancarios de otra ficha',
+          `la base lo dejó cambiar la cuenta de otro (${corrigeLaDeOtro.estado})`);
+    }
+
+    const sacaLaDeOtro = await pedir(
+      entorno, delAsistente, 'DELETE',
+      `datos_bancarios_asistente?asistente_id=eq.${otraFicha}&identificador_clase=eq.cbu`,
+    );
+    const [[sigueAhi]] = consultarBase(
+      `SELECT count(*) FROM public.datos_bancarios_asistente WHERE id = '${cuentaDelOtro}';`,
+    );
+    if (String(sigueAhi) === '1') {
+      bien('el Asistente NO saca los datos bancarios de otra ficha', 'no tocó ninguna fila');
+    } else {
+      mal('el Asistente NO saca los datos bancarios de otra ficha',
+          `la base lo dejó borrar la cuenta de otro (${sacaLaDeOtro.estado})`);
+    }
+
+    borrarLaCuentaSembrada();
+  }
+
   return problemas;
 }
 

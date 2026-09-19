@@ -28,6 +28,11 @@ export const ACCION_CAMBIO_DE_PERMISOS = 'cambio_de_permisos_de_la_prestadora';
 export const ACCION_BORRADO_DE_DATOS = 'borrado_de_datos';
 export const ACCION_MODIFICACION_CRITICA = 'modificacion_critica';
 export const ACCION_CAMBIO_DE_MONEDA = 'cambio_de_moneda';
+// Adonde se le paga a un Asistente. Lo informa el, asi que esta es la unica accion que anota acá
+// alguien que no entra por el Panel: queda el renglon igual, porque cambiar una cuenta de destino
+// tiene consecuencia economica. **Nunca se le pasa el numero de la cuenta**, ni entero ni a
+// medias: se anota que cambio, quien y cuando, y para verlo se mira la fila.
+export const ACCION_CAMBIO_DE_DATOS_BANCARIOS = 'cambio_de_datos_bancarios_del_asistente';
 // Se anota desde dos lugares —la pantalla de la cuenta y la activación—, así que el nombre vive
 // acá y no en ninguno de los dos: escrito dos veces, el día que cambie cambiaría en uno solo.
 export const ACCION_VERIFICACION_DE_TELEFONO = 'verificacion_de_telefono';

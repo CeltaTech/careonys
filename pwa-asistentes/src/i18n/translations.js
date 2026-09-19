@@ -71,6 +71,15 @@ export const T = {
         // La guardia de alguien que tiene una licencia registrada y todavía no tiene sustituto.
         // No se dice de qué licencia se trata ni de quién: eso es del legajo (CLAUDE.md §6).
         guardia_de_cobertura_sin_sustituto: 'Esta guardia está anotada dentro de una licencia y todavía no tiene un Asistente sustituto asignado, así que no se puede empezar. Conviene avisarle al Coordinador.',
+        // Los de la cuenta adonde se le paga. Ninguna de estas frases repite lo que se escribió:
+        // es el dato sensible, y un aviso se lee en voz alta o queda a la vista de otro.
+        identificador_vacio: 'Falta el número de la cuenta.',
+        identificador_invalido: 'El número de la cuenta no es válido. Se escribe tal como lo da el banco, sin espacios.',
+        nombre_del_banco_invalido: 'El nombre del banco no es válido.',
+        titular_invalido: 'El nombre del titular no es válido.',
+        clase_de_cuenta_invalida: 'Esa manera de identificar la cuenta no se usa en este país.',
+        pais_sin_configurar: 'Esta Prestadora todavía no configuró su país, así que por ahora no se puede cargar una cuenta.',
+        cuenta_no_encontrada: 'No hay ninguna cuenta cargada de esa clase.',
       },
     },
     comun: {
@@ -649,6 +658,13 @@ export const T = {
         descargo_ya_cargado: 'This rating already has its reply written, and a reply cannot be edited.',
         calificacion_no_encontrada: 'That rating is no longer there.',
         guardia_de_cobertura_sin_sustituto: 'This shift falls inside a registered leave and has no substitute Assistant assigned yet, so it cannot be started. Please tell the Coordinator.',
+        identificador_vacio: 'The account number is missing.',
+        identificador_invalido: 'That account number is not valid. Enter it exactly as the bank gives it, with no spaces.',
+        nombre_del_banco_invalido: 'That bank name is not valid.',
+        titular_invalido: 'That account holder name is not valid.',
+        clase_de_cuenta_invalida: 'That way of identifying an account is not used in this country.',
+        pais_sin_configurar: 'This provider has not set its country yet, so an account cannot be added for now.',
+        cuenta_no_encontrada: 'There is no account of that kind saved.',
       },
     },
     comun: {
@@ -1145,6 +1161,13 @@ export const T = {
         descargo_ya_cargado: 'Esta avaliação já tem a sua resposta escrita, e uma resposta não se edita.',
         calificacion_no_encontrada: 'Essa avaliação não está mais lá.',
         guardia_de_cobertura_sin_sustituto: 'Este plantão está dentro de uma licença registrada e ainda não tem um Assistente substituto designado, então não é possível começá-lo. Convém avisar o Coordenador.',
+        identificador_vacio: 'Falta o número da conta.',
+        identificador_invalido: 'O número da conta não é válido. Escreve-se tal como o banco o fornece, sem espaços.',
+        nombre_del_banco_invalido: 'O nome do banco não é válido.',
+        titular_invalido: 'O nome do titular não é válido.',
+        clase_de_cuenta_invalida: 'Essa maneira de identificar a conta não se usa neste país.',
+        pais_sin_configurar: 'Esta Prestadora ainda não configurou o seu país, então por enquanto não é possível carregar uma conta.',
+        cuenta_no_encontrada: 'Não há nenhuma conta carregada dessa classe.',
       },
     },
     comun: {

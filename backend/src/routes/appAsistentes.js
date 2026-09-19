@@ -53,6 +53,11 @@ import { notificarCoordinador } from '../utils/whatsapp.js';
 import { aviso } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import { cuentasDeLasFichas } from '../utils/cuentaDeLaFicha.js';
+import {
+  ACCION_CAMBIO_DE_DATOS_BANCARIOS,
+  camposQueCambiaron,
+  registrarActividad,
+} from '../utils/registroDeActividad.js';
 
 export const appAsistentesRouter = Router();
 
@@ -318,9 +323,9 @@ appAsistentesRouter.get('/perfil/papeles', requiereRolAsistente, async (req, res
 // hay nada que falsificar. El filtro por Prestadora va igual que en el resto de estas rutas, porque
 // una misma persona tiene una ficha por cada Prestadora donde trabaja.
 //
-// ES SÓLO MIRAR. Corregir es de la administración de la Prestadora, que es quien responde por lo
-// que se paga y por dónde queda anotado quién lo cambió. Acá no hay ninguna escritura, y la base
-// tampoco la admitiría: sobre esta tabla el Asistente tiene política de lectura y ninguna más.
+// ACÁ SE MIRA, Y AL LADO SE CORRIGE. El dato lo informa su dueño, así que él lo carga y él lo
+// corrige, por `/perfil/datos-bancarios/:clase`, que está unos renglones más abajo. Por esta
+// puerta no entra ninguna escritura: es la lista, y nada más.
 //
 // Y NO SALE POR NINGÚN OTRO LADO. El número de la cuenta va en el cuerpo de la respuesta y en
 // ningún otro lugar: no viaja en la dirección, no se registra y no entra en ningún mensaje de
@@ -363,6 +368,187 @@ appAsistentesRouter.get('/perfil/datos-bancarios', requiereRolAsistente, async (
       actualizado_en: cuenta.updated_at,
     })),
   });
+});
+
+// Hasta dónde llega cada cosa que se escribe de una cuenta. Son topes de forma, no de negocio: lo
+// que vale en cada país lo dice el catálogo de identificadores, y quien comprueba que el número sea
+// el suyo es el dueño.
+const LARGO_MINIMO_DEL_IDENTIFICADOR = 4;
+const LARGO_MAXIMO_DEL_IDENTIFICADOR = 64;
+const LARGO_MAXIMO_DEL_NOMBRE = 120;
+// Un identificador de cuenta no lleva espacios ni signos: es el número, el alias o la clave, tal
+// como lo da el banco. Dejar entrar cualquier cosa termina en una transferencia rebotada.
+const IDENTIFICADOR_ADMITIDO = /^[A-Za-z0-9._-]+$/;
+
+// El nombre del banco y el del titular son optativos: hay clases de identificador que no los piden.
+// Devuelve el texto limpio, `null` si no vino nada, y `undefined` si lo que vino no sirve.
+function textoDeLaCuenta(valor, maximo) {
+  if (valor === undefined || valor === null) return null;
+  if (typeof valor !== 'string') return undefined;
+  const limpio = valor.trim();
+  if (limpio === '') return null;
+  if (limpio.length > maximo) return undefined;
+  // eslint-disable-next-line no-control-regex
+  if (/[ -]/.test(limpio)) return undefined;
+  return limpio;
+}
+
+// Adónde se le paga lo informa él, así que él lo carga y él lo corrige.
+//
+// LA CLASE VA EN LA DIRECCIÓN Y EL NÚMERO NO. La clase —CBU, CVU, alias— es una palabra del
+// catálogo y no dice nada de nadie; el identificador es el dato sensible y viaja en el cuerpo, que
+// es lo único que no queda escrito en el registro del servidor ni en el del intermediario.
+//
+// UNA CUENTA POR CLASE. La misma cuenta se dice de varias maneras y cada una es una fila, así que
+// esta puerta pisa la que haya de esa clase o la crea si no hay ninguna. Eso es lo que sostiene el
+// índice único `un_identificador_por_clase_y_asistente`.
+//
+// DE QUIÉN ES LA FILA LO DECIDE LA SESIÓN. Ni el Legajo ni la Prestadora viajan en el pedido, así
+// que no hay dónde escribir los de otra persona. La base lo vuelve a resolver por su cuenta con la
+// política `asistente_corrige_sus_datos_bancarios`, que mira la sesión y no el pedido.
+//
+// SE VALIDA ACÁ LO QUE ENTRA, aunque la base tenga su propio control. La comprobación de la base
+// llega después de que el dato ya entró, y además contesta con el texto crudo de una restricción,
+// que describe tablas y columnas.
+//
+// Y QUEDA ANOTADO QUIÉN LO CAMBIÓ. Se anota la fila y los nombres de las columnas escritas. **Nunca
+// el número de la cuenta**: para verlo se mira la fila, que es justamente lo que se audita.
+appAsistentesRouter.put('/perfil/datos-bancarios/:clase', requiereRolAsistente, async (req, res) => {
+  const { asistenteId, prestadoraId } = req.usuarioAsistente;
+  const clase = String(req.params.clase || '').trim().toLowerCase();
+
+  const { identificador, banco, titular } = req.body || {};
+  if (typeof identificador !== 'string' || identificador.trim() === '') {
+    return res.status(400).json({ error: 'Falta el número de la cuenta', motivo: 'identificador_vacio' });
+  }
+  const numero = identificador.trim();
+  if (
+    numero.length < LARGO_MINIMO_DEL_IDENTIFICADOR
+    || numero.length > LARGO_MAXIMO_DEL_IDENTIFICADOR
+    || !IDENTIFICADOR_ADMITIDO.test(numero)
+  ) {
+    // El aviso no repite lo que se escribió: es el dato sensible.
+    return res.status(400).json({ error: 'El número de la cuenta no es válido', motivo: 'identificador_invalido' });
+  }
+
+  const nombreDelBanco = textoDeLaCuenta(banco, LARGO_MAXIMO_DEL_NOMBRE);
+  if (nombreDelBanco === undefined) {
+    return res.status(400).json({ error: 'El nombre del banco no es válido', motivo: 'nombre_del_banco_invalido' });
+  }
+  const nombreDelTitular = textoDeLaCuenta(titular, LARGO_MAXIMO_DEL_NOMBRE);
+  if (nombreDelTitular === undefined) {
+    return res.status(400).json({ error: 'El nombre del titular no es válido', motivo: 'titular_invalido' });
+  }
+
+  // En qué país se paga lo dice la Prestadora, no el pedido: el catálogo de clases es por país, y
+  // dejar elegir el país sería dejar elegir qué clases valen.
+  const { data: prestadora, error: errorPrestadora } = await supabase
+    .from('prestadoras')
+    .select('pais')
+    .eq('id', prestadoraId)
+    .maybeSingle();
+  if (errorPrestadora) {
+    return res.status(500).json({ error: 'No se pudieron guardar los datos bancarios' });
+  }
+  if (!prestadora?.pais) {
+    return res.status(409).json({ error: 'Todavía no está configurado el país', motivo: 'pais_sin_configurar' });
+  }
+
+  const { data: admitida, error: errorCatalogo } = await supabase
+    .from('catalogo_identificadores_de_cuenta')
+    .select('codigo')
+    .eq('pais', prestadora.pais)
+    .eq('codigo', clase)
+    .eq('activo', true)
+    .maybeSingle();
+  if (errorCatalogo) {
+    return res.status(500).json({ error: 'No se pudieron guardar los datos bancarios' });
+  }
+  if (!admitida) {
+    return res.status(400).json({ error: 'Esa clase de cuenta no se usa acá', motivo: 'clase_de_cuenta_invalida' });
+  }
+
+  const escrito = { identificador: numero, banco: nombreDelBanco, titular: nombreDelTitular };
+
+  // Primero se corrige la que haya, y si no había ninguna se carga. Se hace en dos pasos y no en
+  // uno para que los tres filtros de pertenencia estén escritos: una escritura que resuelve sola
+  // contra qué fila choca no lleva ninguno.
+  const { data: corregida, error: errorCorreccion } = await supabase
+    .from('datos_bancarios_asistente')
+    .update({ ...escrito, updated_at: new Date().toISOString() })
+    .eq('prestadora_id', prestadoraId)
+    .eq('asistente_id', asistenteId)
+    .eq('identificador_clase', clase)
+    .select('id, updated_at');
+  if (errorCorreccion) {
+    return res.status(500).json({ error: 'No se pudieron guardar los datos bancarios' });
+  }
+
+  let fila = corregida?.[0] ?? null;
+  if (!fila) {
+    const { data: cargada, error: errorAlta } = await supabase
+      .from('datos_bancarios_asistente')
+      .insert({
+        prestadora_id: prestadoraId,
+        asistente_id: asistenteId,
+        pais: prestadora.pais,
+        identificador_clase: clase,
+        ...escrito,
+      })
+      .select('id, updated_at');
+    if (errorAlta) {
+      return res.status(500).json({ error: 'No se pudieron guardar los datos bancarios' });
+    }
+    fila = cargada?.[0] ?? null;
+  }
+
+  await registrarActividad(req.usuarioAsistente, ACCION_CAMBIO_DE_DATOS_BANCARIOS, {
+    tablaAfectada: 'datos_bancarios_asistente',
+    registroId: fila?.id ?? null,
+    camposCambiados: camposQueCambiaron(escrito),
+  });
+
+  res.json({
+    pais: prestadora.pais,
+    clase,
+    identificador: numero,
+    banco: nombreDelBanco,
+    titular: nombreDelTitular,
+    actualizado_en: fila?.updated_at ?? null,
+  });
+});
+
+// Y saca la cuenta que ya no es suya.
+//
+// Corregir incluye sacar: una cuenta que se cerró, un alias que dejó de ser de él. Dejarla puesta
+// sin poder quitarla es plata que sale hacia una cuenta que no existe. También es el camino para
+// pasar de decir la cuenta de una manera a decirla de otra, porque cada manera es una fila.
+//
+// La sesión decide qué fila se saca, igual que arriba, y queda anotado que se sacó.
+appAsistentesRouter.delete('/perfil/datos-bancarios/:clase', requiereRolAsistente, async (req, res) => {
+  const { asistenteId, prestadoraId } = req.usuarioAsistente;
+  const clase = String(req.params.clase || '').trim().toLowerCase();
+
+  const { data: sacada, error } = await supabase
+    .from('datos_bancarios_asistente')
+    .delete()
+    .eq('prestadora_id', prestadoraId)
+    .eq('asistente_id', asistenteId)
+    .eq('identificador_clase', clase)
+    .select('id');
+  if (error) {
+    return res.status(500).json({ error: 'No se pudieron guardar los datos bancarios' });
+  }
+  if (!sacada?.length) {
+    return res.status(404).json({ error: 'No hay ninguna cuenta de esa clase', motivo: 'cuenta_no_encontrada' });
+  }
+
+  await registrarActividad(req.usuarioAsistente, ACCION_CAMBIO_DE_DATOS_BANCARIOS, {
+    tablaAfectada: 'datos_bancarios_asistente',
+    registroId: sacada[0].id,
+  });
+
+  res.json({ clase });
 });
 
 // El interruptor de disponibilidad, y lo mueve el Asistente.

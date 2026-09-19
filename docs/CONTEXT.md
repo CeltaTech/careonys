@@ -8,7 +8,7 @@
 ## Modelo de negocio (lo mínimo que el código necesita saber)
 
 - Clientes solicitan un servicio → la prestadora asigna un Asistente Integral (empresa directa,
-  fase actual) → evoluciona a match (cliente elige directamente) y B2B (obras
+  fase actual) → evoluciona a Match (cliente elige directamente) y B2B (obras
   sociales / prepagas, y coordinación de prestadoras terceras).
 - Precio de referencia de lanzamiento: **nunca hardcodear** — se carga desde configuración
   (la lista de precios del Panel), no desde una constante en el código. Mientras no haya
@@ -138,7 +138,7 @@ Etapa 2 — Panel de administración
   - **Reportes, alertas y medicación** — el reporte diario que arma la IA, las alertas por
     patrones, los signos vitales con su autorización, y las indicaciones de medicación.
   - **El dinero** — lista de precios y prestaciones, facturación a los Clientes, cobros,
-    informes a obras sociales y los rieles de cobro del Match.
+    informes a obras sociales y los rieles de cobro de Match.
   - **Match** — vidriera, perfiles públicos, conversaciones con videollamada, formas de
     cobro que arma cada Prestadora, accesos, calificaciones y auditoría legal.
   - **Configuración y gobierno** — configuración por Prestadora y de plataforma, usuarios y

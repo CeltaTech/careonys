@@ -775,7 +775,7 @@ CREATE TABLE ceses (
 ## Tabla: calificaciones_asistente (pendiente #13(b), diseñado 2026-07-13)
 
 Calificación que el Cliente deja sobre el Asistente tras una guardia — informativa para el
-match, no dispara ninguna acción automática del sistema sobre el Asistente. La única
+Match, no dispara ninguna acción automática del sistema sobre el Asistente. La única
 injerencia de la prestadora es decidir si una calificación puntual se muestra en la ficha
 pública del Asistente (`visible_publica`) o no — nunca editar/borrar el contenido de la
 calificación en sí (estrellas/comentario son del Cliente, no de la prestadora).

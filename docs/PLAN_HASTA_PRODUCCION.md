@@ -160,11 +160,13 @@ Asistente**, y eso no se discute: quien centraliza esa plata queda pareciendo el
 trabajo, y ahí aparece la relación de dependencia. En Match la Prestadora cobra el acceso al
 contacto y nada más.
 
-**10.** Los medios de pago al Asistente. Hoy del lado de la Familia hay lista cerrada —transferencia,
-efectivo, tarjeta, débito automático, cheque y otro— y del lado del Asistente el casillero de cómo se
-le pagó es texto libre, así que nadie puede contar después cuánto se pagó de cada forma. Hace falta
-la misma lista de los dos lados, y sale de la base, no del código. Y no hay dónde guardar la cuenta
-bancaria del Asistente, que es lo que un pago por transferencia necesita.
+**10.** Las pantallas de los datos bancarios del Asistente. El dato lo informa él, así que él lo
+carga y él lo corrige: la base ya lo deja escribir su propia fila y ninguna otra, y el motor ya
+tiene por dónde —cargar, corregir y sacar la cuenta—, con lo que entra validado y con el cambio
+anotado. Falta la pantalla donde lo hace, en la aplicación del Asistente, y **espera la maqueta**.
+Y falta la del Panel donde la administración de la Prestadora los mira para pagar, que hoy no
+existe en ningún lado: sin ella no se puede pagar una transferencia a nadie aunque el Asistente ya
+la haya cargado. Esa entra por el permiso `ver_datos_bancarios_asistente`, que ya está.
 
 ---
 

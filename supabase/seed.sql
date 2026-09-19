@@ -379,14 +379,23 @@ INSERT INTO public.datos_reservados_asistente (
 -- ----------------------------------------------------------------------------
 
 INSERT INTO public.legajos
-  (id, prestadora_id, clase, nombre, apellido, documento_tipo, documento_numero, calle, numero, lugar_id, telefono, email)
+  (id, prestadora_id, clase, nombre, apellido, documento_tipo, documento_numero, calle, numero, lugar_id, email)
 VALUES
   ('c0000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'fisica', 'Ramiro', 'Pérez', 'dni', '20111222',
-   'Calle Inventada', '742', 'a1000000-0000-4000-8000-000000000001', '+54 11 4000-0101', 'ramiro.perez@ejemplo.invalido'),
+   'Calle Inventada', '742', 'a1000000-0000-4000-8000-000000000001', 'ramiro.perez@ejemplo.invalido'),
   ('c0000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'fisica', 'Teresa', 'Ibáñez', 'dni', '5333444',
-   'Pasaje Imaginario', '18', 'a1000000-0000-4000-8000-000000000002', '+54 11 4000-0102', NULL),
+   'Pasaje Imaginario', '18', 'a1000000-0000-4000-8000-000000000002', NULL),
   ('c0000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'juridica', 'Mutual del Ejemplo', NULL, 'cuit', '30-99999999-7',
-   'Avenida Ficticia', '1200', 'a1000000-0000-4000-8000-000000000003', '+54 11 4000-0103', 'contacto@mutual.invalido');
+   'Avenida Ficticia', '1200', 'a1000000-0000-4000-8000-000000000003', 'contacto@mutual.invalido');
+
+-- Los teléfonos de contacto del Padrón. Una ficha puede tener varios, y el primero tiene dos a
+-- propósito: así la base de pruebas ejercita el caso de varios y no sólo el de uno.
+INSERT INTO public.telefonos_del_legajo (prestadora_id, legajo_id, telefono)
+VALUES
+  ('11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000001', '+54 11 4000-0101'),
+  ('11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000001', '+54 9 11 5000-0101'),
+  ('11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000002', '+54 11 4000-0102'),
+  ('11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000003', '+54 11 4000-0103');
 
 
 -- ----------------------------------------------------------------------------
@@ -1051,12 +1060,17 @@ INSERT INTO public.usuario_lugares (usuario_id, lugar_id, prestadora_id) VALUES
 -- El Padrón de esta Prestadora. Va antes que su Familia y su Servicio, por el mismo
 -- motivo que en la otra: la contratación cita un Legajo.
 INSERT INTO public.legajos
-  (id, prestadora_id, clase, nombre, apellido, documento_tipo, documento_numero, calle, numero, lugar_id, telefono, email)
+  (id, prestadora_id, clase, nombre, apellido, documento_tipo, documento_numero, calle, numero, lugar_id, email)
 VALUES
   ('c0000000-0000-4000-8000-000000000011', '22222222-2222-4222-8222-222222222222', 'fisica', 'Ramiro', 'Pérez', 'dni', '20111222',
-   'Diagonal Supuesta', '55', 'a2000000-0000-4000-8000-000000000001', '+54 221 400-0101', NULL),
+   'Diagonal Supuesta', '55', 'a2000000-0000-4000-8000-000000000001', NULL),
   ('c0000000-0000-4000-8000-000000000012', '22222222-2222-4222-8222-222222222222', 'fisica', 'Olga', 'Salvatierra', 'le', '2777888',
-   'Calle Figurada', '900', 'a2000000-0000-4000-8000-000000000001', '+54 221 400-0102', NULL);
+   'Calle Figurada', '900', 'a2000000-0000-4000-8000-000000000001', NULL);
+
+INSERT INTO public.telefonos_del_legajo (prestadora_id, legajo_id, telefono)
+VALUES
+  ('22222222-2222-4222-8222-222222222222', 'c0000000-0000-4000-8000-000000000011', '+54 221 400-0101'),
+  ('22222222-2222-4222-8222-222222222222', 'c0000000-0000-4000-8000-000000000012', '+54 221 400-0102');
 
 INSERT INTO public.familias (id, usuario_id, prestadora_id)
 VALUES ('50000000-0000-4000-8000-000000000004', '50000000-0000-4000-8000-000000000004',

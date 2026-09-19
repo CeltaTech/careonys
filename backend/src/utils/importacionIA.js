@@ -7,7 +7,7 @@ import { IDENTIDAD } from '../config/identidadProducto.js';
 import { MODELO_IA } from '../config/modeloIA.js';
 
 // Fase 3 del plan "Terminar la Etapa 2 (Panel)" (importación masiva de datos con IA).
-// Sigue el mismo patrón que backend/src/utils/iaWhatsapp.js: cliente de Anthropic con
+// Sigue el mismo patrón que backend/src/utils/proponerRespuestasIA.js: cliente de Anthropic con
 // inicialización perezosa condicionada a ANTHROPIC_API_KEY, prompt que exige responder
 // solo JSON, y un fallback seguro si la respuesta no es JSON válido o si falta la key
 // (acá el fallback es proponer un mapeo vacío para que el Admin_prestadora lo arme a mano,

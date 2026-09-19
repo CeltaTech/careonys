@@ -23,6 +23,7 @@ import { claseBadge } from '../lib/tonos';
 import { formatearImporte } from '../lib/dinero';
 import { mensajeDeError } from '../lib/errores';
 import { esAdminOSuperior } from '../lib/roles';
+import { laOpcionAlcanzaLasModalidades } from '../lib/modalidades';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { AvisoEscalasProvisorias } from '../components/AvisoEscalasProvisorias';
 import { Alert } from '../components/ui/Alert';
@@ -377,6 +378,18 @@ function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
   const [pago, setPago] = useState({ fecha_pago: '', forma_pago: '', referencia_pago: '' });
   const [ocupado, setOcupado] = useState(false);
 
+  /* Y de esos medios se ofrecen los que alcanzan a las modalidades de trabajo que esta
+     liquidación paga. Un medio que recibe el dinero en bloque y lo reparte no existe en Match:
+     ahí la Familia le paga al Asistente y la Prestadora no toca ese dinero. La base lo frena
+     igual; esto es para no ofrecer algo que va a volver rechazado. */
+  const mediosQueSeOfrecen = useMemo(
+    () =>
+      mediosDePago.opciones.filter((opcion) =>
+        laOpcionAlcanzaLasModalidades(opcion, liquidacion?.modalidades_del_periodo),
+      ),
+    [mediosDePago.opciones, liquidacion?.modalidades_del_periodo],
+  );
+
   const recargar = useCallback(async () => {
     setEstado('cargando');
     setError(null);
@@ -549,7 +562,7 @@ function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
                     onChange={(e) => setPago({ ...pago, forma_pago: e.target.value })}
                   >
                     <option value="">{t.pagos_asistentes.pagar_forma_sin_elegir}</option>
-                    {mediosDePago.opciones.map((opcion) => (
+                    {mediosQueSeOfrecen.map((opcion) => (
                       <option key={opcion.id} value={opcion.clave}>
                         {opcion.texto}
                       </option>

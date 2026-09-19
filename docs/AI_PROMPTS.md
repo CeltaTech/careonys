@@ -135,7 +135,7 @@ modelo sepa a dónde apunta la regla.
 | --- | --- |
 | `reporteIA.js` (Nivel 1) | `incidentes`, `observaciones`, `alimentacion.descripcion` |
 | `alertasIA.js` (Nivel 2) | `descripcion` (la Familia), `detalle_coordinador` |
-| `iaWhatsapp.js` | `respuesta_sugerida` (va al teléfono tal cual), `motivo` |
+| `proponerRespuestasIA.js` | `texto` de cada respuesta preparada, en los tres idiomas (lo lee y lo aprueba una persona de la Prestadora antes de que salga) |
 | `importacionIA.js` (dos prompts) | `motivo`, `advertencias` (en pantalla del Panel) |
 
 **Los prompts tampoco se escriben tuteando al modelo.** Un prompt redactado con "marcá",

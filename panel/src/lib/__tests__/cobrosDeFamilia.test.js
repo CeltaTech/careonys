@@ -59,12 +59,37 @@ describe('el catálogo guardado dice lo mismo que siembra la migración', () => 
     'utf8',
   );
 
+  /* Y la que agrega el medio que recibe en bloque y reparte, que entra sólo en prestación
+     directa. Son dos migraciones y una sola lista: el archivo guardado dice el total. */
+  const migracionEnBloque = readFileSync(
+    fileURLToPath(
+      new URL(
+        '../../../../supabase/migrations/20261004150000_el_medio_que_reparte_en_bloque_entra_solo_en_prestacion_directa.sql',
+        import.meta.url,
+      ),
+    ),
+    'utf8',
+  );
+
   /* Las claves que siembra la migración para una lista, en el orden en que las siembra. Lo que se
      busca es el renglón de la siembra —clave, y en seguida el texto en los tres idiomas—, y no
      cualquier aparición del nombre de la lista: más abajo la migración se nombra a sí misma para
      comprobarse, y eso no es una opción. */
-  const sembradasDe = (lista) =>
-    [...migracion.matchAll(new RegExp(`\\('${lista}', '([a-z_]+)',\\s*'\\{`, 'g'))].map((m) => m[1]);
+  const sembradasDe = (lista) => {
+    const deLaPrimera = [
+      ...migracion.matchAll(new RegExp(`\\('${lista}', '([a-z_]+)',\\s*'\\{`, 'g')),
+    ].map((m) => m[1]);
+    // La segunda siembra una sola opción y dice de qué lista es en su filtro, no en el renglón.
+    const deLaSegunda =
+      lista === 'medios_de_pago_al_asistente'
+        ? [
+            ...migracionEnBloque.matchAll(
+              /INSERT INTO public\.opciones_de_lista[\s\S]*?SELECT NULL, l\.id, '([a-z_]+)'/g,
+            ),
+          ].map((m) => m[1])
+        : [];
+    return [...deLaPrimera, ...deLaSegunda];
+  };
 
   for (const lista of ['medios_de_pago_de_la_familia', 'medios_de_pago_al_asistente']) {
     it(`las claves sembradas de ${lista} son las mismas, y en el mismo orden`, () => {
@@ -90,7 +115,7 @@ describe('el catálogo guardado dice lo mismo que siembra la migración', () => 
      con tarjeta, ni con débito automático, ni con cheque, ni con un «otro» que anota un pago sin
      decir con qué se pagó. La tercera forma del lado del Asistente —la que se pacte— es la puerta
      de las opciones propias, no una opción más. */
-  it('la cobranza ofrece las seis y el pago al Asistente sólo dos', () => {
+  it('la cobranza ofrece las seis y el pago al Asistente tres', () => {
     expect(LISTAS_DE_OPCIONES_DE_FABRICA.medios_de_pago_de_la_familia.opciones.map((o) => o.clave)).toEqual([
       'transferencia',
       'efectivo',
@@ -102,7 +127,44 @@ describe('el catálogo guardado dice lo mismo que siembra la migración', () => 
     expect(LISTAS_DE_OPCIONES_DE_FABRICA.medios_de_pago_al_asistente.opciones.map((o) => o.clave)).toEqual([
       'transferencia',
       'efectivo',
+      'pago_en_bloque',
     ]);
+  });
+
+  /* Y el tercero no vale en todas partes: recibe el dinero en bloque y lo reparte, y eso en Match
+     no existe. Quien centraliza esa plata queda pareciendo el que dirige el trabajo. Que sea
+     imposible elegirlo ahí lo impone la base; acá se comprueba que la marca esté puesta. */
+  it('el medio que reparte en bloque entra sólo en prestación directa', () => {
+    const enBloque = LISTAS_DE_OPCIONES_DE_FABRICA.medios_de_pago_al_asistente.opciones.find(
+      (o) => o.clave === 'pago_en_bloque',
+    );
+    expect(enBloque.modalidades).toEqual(['directa']);
+    // La marca tiene que estar en el renglón que siembra la opción, no en cualquier otro lugar de
+    // la migración: más abajo ella misma se comprueba, y eso comprobaría contra nada.
+    expect(migracionEnBloque).toMatch(
+      /SELECT NULL, l\.id, 'pago_en_bloque',[\s\S]{0,400}?ARRAY\['directa'\]::text\[\][\s\S]{0,200}?FROM public\.listas_de_opciones/,
+    );
+    // Y lo hace cumplir un disparador, que además no puede saltearse las reglas de acceso.
+    expect(migracionEnBloque).toMatch(
+      /ON public\.liquidaciones_asistente\s*\n\s*FOR EACH ROW EXECUTE FUNCTION interno\.el_medio_de_pago_alcanza_la_modalidad\(\)/,
+    );
+    // Se miran los renglones de verdad, no los comentarios: el encabezado la nombra para decir
+    // justamente que ninguna función de acá lo es.
+    const sinComentarios = migracionEnBloque.replace(/^\s*--.*$/gm, '');
+    expect(sinComentarios).not.toMatch(/^\s*SECURITY DEFINER\b/m);
+    expect(sinComentarios).not.toMatch(/LANGUAGE \w+ SECURITY DEFINER/);
+    // Y la migración se lo comprueba a sí misma antes de darse por buena.
+    expect(migracionEnBloque).toContain('p.prosecdef');
+  });
+
+  /* Lo que ya estaba no cambia de alcance: sin marca, una opción vale en todas las modalidades. */
+  it('los medios que ya estaban siguen valiendo en todas las modalidades', () => {
+    for (const clave of ['transferencia', 'efectivo']) {
+      const opcion = LISTAS_DE_OPCIONES_DE_FABRICA.medios_de_pago_al_asistente.opciones.find(
+        (o) => o.clave === clave,
+      );
+      expect(opcion.modalidades).toBe(undefined);
+    }
   });
 
   it('del lado del Asistente no hay tarjeta, ni débito automático, ni cheque, ni «otro»', () => {

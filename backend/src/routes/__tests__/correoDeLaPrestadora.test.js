@@ -152,15 +152,26 @@ beforeEach(() => {
 });
 
 describe('leer cómo está el correo de la Prestadora', () => {
-  it('contesta desde dónde manda, adónde vuelven las respuestas y en qué estado está el reenvío', async () => {
+  it('contesta adónde vuelven las respuestas y en qué estado está el reenvío', async () => {
     const { estado, cuerpo } = await pedir('GET', '/correo');
 
     assert.equal(estado, 200);
-    assert.equal(cuerpo.correo.direccion_envio, 'unaprestadora@ejemplo.test');
     assert.equal(cuerpo.correo.email_respuestas, 'respuestas@ejemplo.test');
     assert.equal(cuerpo.correo.reenvio_abierto, true);
     assert.equal(cuerpo.correo.respuestas_confirmadas, true);
     assert.equal(cuerpo.correo.servicio_configurado, true);
+  });
+
+  it('la dirección desde la que sale el correo no viaja al Panel', async () => {
+    // Es un recurso del sistema: la Prestadora nunca entra a esa casilla y no necesita saber
+    // que existe. Si alguna vez vuelve a viajar, esta prueba se pone roja.
+    const { cuerpo } = await pedir('GET', '/correo');
+    assert.equal('direccion_envio' in cuerpo.correo, false);
+    assert.equal(JSON.stringify(cuerpo).includes('unaprestadora@ejemplo.test'), false);
+
+    const guardado = await pedir('PATCH', '/correo', { email_respuestas: 'otra@ejemplo.test' });
+    assert.equal('direccion_envio' in guardado.cuerpo.correo, false);
+    assert.equal(JSON.stringify(guardado.cuerpo).includes('unaprestadora@ejemplo.test'), false);
   });
 
   it('la casilla que su dueño todavía no confirmó se cuenta como sin confirmar', async () => {

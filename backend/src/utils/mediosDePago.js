@@ -24,6 +24,7 @@
 // ---------------------------------------------------------------------------
 
 import { supabase } from '../db/connection.js';
+import { laOpcionAlcanzaLasModalidades } from './modalidades.js';
 
 /** Las claves de las dos listas. Escritas una vez, porque las nombran el motor y el Panel. */
 export const LISTA_DE_MEDIOS_DE_PAGO_DE_LA_FAMILIA = 'medios_de_pago_de_la_familia';
@@ -46,19 +47,28 @@ const LAS_LISTAS_QUE_EXISTEN = [
  *
  * El motor no pasa por las reglas de acceso de la base, así que el filtro por Prestadora se
  * escribe acá y a mano. Sin él, una Prestadora podría guardar una opción de otra.
+ *
+ * `modalidadesEnJuego` acota todavía más: un medio marcado con modalidades sólo sirve si ninguna
+ * de las que están en juego le queda afuera. Sin ese dato no se filtra por modalidad y la lista
+ * sale entera, que es lo que necesita una pantalla de configuración. La cuenta la hace
+ * `laOpcionAlcanzaLasModalidades`, la misma que usa el Panel.
  */
-export async function mediosDePagoDeLaPrestadora(prestadoraId, claveDeLaLista) {
+export async function mediosDePagoDeLaPrestadora(prestadoraId, claveDeLaLista, modalidadesEnJuego) {
   if (!prestadoraId) return [];
   if (!LAS_LISTAS_QUE_EXISTEN.includes(claveDeLaLista)) return [];
 
   const { data, error } = await supabase
     .from('opciones_de_lista')
-    .select('clave, prestadora_id, listas_de_opciones!inner(clave, prestadora_id)')
+    .select('clave, prestadora_id, modalidades, listas_de_opciones!inner(clave, prestadora_id)')
     .eq('listas_de_opciones.clave', claveDeLaLista)
     .is('listas_de_opciones.prestadora_id', null)
     .eq('activa', true)
     .or(`prestadora_id.is.null,prestadora_id.eq.${prestadoraId}`);
 
   if (error) throw new Error(error.message);
-  return [...new Set((data || []).map((fila) => fila.clave))];
+
+  const alcanzan = modalidadesEnJuego
+    ? (data || []).filter((fila) => laOpcionAlcanzaLasModalidades(fila, modalidadesEnJuego))
+    : data || [];
+  return [...new Set(alcanzan.map((fila) => fila.clave))];
 }

@@ -111,6 +111,30 @@ export function trabajaEnModalidad(asistente, modalidad) {
 }
 
 /**
+ * Si una opción de catálogo se puede usar con las modalidades que están en juego.
+ *
+ * Una opción de `opciones_de_lista` puede venir marcada con las modalidades a las que alcanza.
+ * Sin marca alcanza a todas, que es lo que valía para todas las opciones hasta que la marca
+ * existió. Con marca, alcanza sólo si ninguna de las modalidades en juego le queda afuera: basta
+ * una para que la opción no sirva, porque lo que está en juego no se puede partir.
+ *
+ * El caso que la trajo: el pago en bloque que después se reparte. En prestación directa la
+ * Prestadora paga; en Match la Familia le paga al Asistente y la Prestadora no toca ese dinero,
+ * así que ese medio no existe ahí.
+ *
+ * Esto es la pantalla adelantándose. Lo que no se puede saltear es el disparador de la base
+ * —`interno.el_medio_de_pago_alcanza_la_modalidad()`—, que decide lo mismo con la misma cuenta.
+ *
+ * @param opcion             una fila de `opciones_de_lista`, con `modalidades` o sin ella.
+ * @param modalidadesEnJuego las modalidades de trabajo que toca lo que se está por guardar.
+ */
+export function laOpcionAlcanzaLasModalidades(opcion, modalidadesEnJuego) {
+  const permitidas = lista(opcion?.modalidades);
+  if (permitidas.length === 0) return true;
+  return lista(modalidadesEnJuego).every((modalidad) => permitidas.includes(modalidad));
+}
+
+/**
  * Traduce el rechazo de la base a un motivo, o `null` si el error es otra cosa.
  *
  * Los disparadores levantan un mensaje con esta forma exacta:

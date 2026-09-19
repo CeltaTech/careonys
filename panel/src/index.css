@@ -2325,3 +2325,77 @@ button.panel-kpi-card[aria-pressed='true'] {
   gap: 0.5rem;
   margin-top: 0.15rem;
 }
+
+/* --- El mapa del plantel por zona --- */
+
+/* Un bloque más de la pantalla, con el mismo fondo y el mismo borde que el resto de las tarjetas.
+   El recuadro del mapa lleva su alto desde la configuración, porque un mapa sin alto no se ve. */
+.mapa-plantel {
+  background: var(--superficie);
+  border: 1px solid var(--borde-card);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.mapa-plantel h3 {
+  margin: 0;
+}
+
+.mapa-plantel-cuenta {
+  margin: 0;
+  color: var(--texto-secundario);
+  font-size: 0.85rem;
+}
+
+/* Las zonas, a lo ancho y envolviéndose: una Prestadora puede tener muchas. */
+.mapa-plantel-zonas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.mapa-plantel-zona {
+  background: var(--tono-neutro-fondo);
+  color: var(--tono-neutro-texto);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.mapa-plantel-zona[aria-pressed='true'] {
+  background: var(--tono-info-fondo);
+  color: var(--tono-info-texto);
+  border-color: var(--azul-medio);
+}
+
+.mapa-plantel-lienzo {
+  border-radius: 10px;
+  border: 1px solid var(--borde-card);
+  overflow: hidden;
+}
+
+/* La misma información del mapa, en texto. Se desplaza sola cuando el plantel es grande, para que
+   no empuje al resto de la pantalla hacia abajo. */
+.mapa-plantel-lista {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.2rem;
+  max-height: 9rem;
+  overflow-y: auto;
+  font-size: 0.82rem;
+  color: var(--texto-secundario);
+}
+
+.mapa-plantel-sin-ubicar {
+  margin: 0;
+  color: var(--tono-atencion-texto);
+  font-size: 0.82rem;
+}

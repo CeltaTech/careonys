@@ -355,9 +355,8 @@ Asistente/Familia).
 **Estado 2026-07-14:** el cambio se aplicó contra Supabase real y se verificó ese mismo día
 (catálogo de 4 tipos sembrado por prestadora, columnas viejas
 eliminadas de `asistentes`, `configuracion_notificaciones` migrado al evento genérico
-`vencimiento_documento_asistente`, `dias_aviso_vencimiento_documentos` con default 30 — ver
-en `docs/PLAN_HASTA_PRODUCCION.md` el paso «El vencimiento de documentos avisa por el catálogo»,
-dentro de «Que los avisos lleguen»); el archivo de esquema que llevó ese cambio se eliminó del
+`vencimiento_documento_asistente`, `dias_aviso_vencimiento_documentos` con default 30); el
+archivo de esquema que llevó ese cambio se eliminó del
 repositorio el 2026-08-18. Código de Panel/backend (`backend/src/routes/panelConfiguracion.js`,
 `panel/src/pages/Configuracion.jsx`, `panel/src/pages/asistentes/PerfilTab.jsx`,
 `backend/src/utils/vencimientos.js`) también entregado en el mismo cierre.

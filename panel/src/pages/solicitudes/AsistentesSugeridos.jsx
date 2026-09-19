@@ -4,7 +4,8 @@ import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { asistentesParaSolicitud } from '../../lib/asistentesParaSolicitud';
-import { useLugaresDelPlantel } from '../../hooks/useLugaresDelPlantel';
+import { usePlantelEnElMapa } from '../../hooks/usePlantelEnElMapa';
+import { MapaDelPlantel } from '../../components/mapa/MapaDelPlantel';
 
 /* A quién proponerle esta Solicitud, adentro de la misma ventana donde se la está leyendo.
    Hasta ahora, para pasar de una Solicitud a una guardia había que memorizar la localidad y el
@@ -25,58 +26,62 @@ const CUANTOS_PRIMERO = 5;
 export function AsistentesSugeridos({ solicitud, onAsignar }) {
   const { t } = useLocale();
   const ts = t.solicitudes.sugeridos;
-  const [plantel, setPlantel] = useState([]);
   const [pacientes, setPacientes] = useState([]);
-  const [estado, setEstado] = useState('cargando');
+  const [estadoPacientes, setEstadoPacientes] = useState('cargando');
   const [todos, setTodos] = useState(false);
 
+  /* El plantel y dónde trabaja cada uno llegan del mismo lugar que alimenta el mapa. Antes se
+     pedían acá con una consulta propia, y el mapa hubiera hecho la suya: el mismo plantel traído
+     dos veces, con la posibilidad de que una pantalla lo muestre de una manera y la otra de otra.
+     Las columnas siguen siendo las justas, y ninguna dirección escrita viaja (CLAUDE.md §6). */
+  const elMapa = usePlantelEnElMapa({ solicitud });
+
   const cargar = useCallback(async () => {
-    setEstado('cargando');
+    setEstadoPacientes('cargando');
 
-    // Se pide el plantel entero y no sólo a los activos: quién sigue estando lo decide
-    // `asistentesParaSolicitud`, que es donde está escrita esa regla una sola vez. Las columnas
-    // son las justas para ordenar la lista; ningún dato del Paciente ni domicilio alguno viaja
-    // hasta acá (CLAUDE.md §6).
-    const [{ data: filas, error }, { data: susPacientes, error: errorPacientes }] =
-      await Promise.all([
-        supabase
-          .from('asistentes')
-          .select('id, nombre, estado, especialidades, disponible_para_ofertas')
-          .is('deleted_at', null),
-        solicitud.familia_id
-          ? supabase
-              .from('pacientes')
-              .select('id')
-              .eq('familia_id', solicitud.familia_id)
-              .is('deleted_at', null)
-          : Promise.resolve({ data: [], error: null }),
-      ]);
-
-    if (error || errorPacientes) {
-      setEstado('error');
+    if (!solicitud.familia_id) {
+      setPacientes([]);
+      setEstadoPacientes('listo');
       return;
     }
 
-    setPlantel(filas ?? []);
+    const { data: susPacientes, error } = await supabase
+      .from('pacientes')
+      .select('id')
+      .eq('familia_id', solicitud.familia_id)
+      .is('deleted_at', null);
+
+    if (error) {
+      setEstadoPacientes('error');
+      return;
+    }
+
     setPacientes(susPacientes ?? []);
-    setEstado('listo');
+    setEstadoPacientes('listo');
   }, [solicitud.familia_id]);
 
   useEffect(() => {
     cargar();
   }, [cargar]);
 
-  // Dónde acepta trabajar cada una vive en su propia tabla, así que llega aparte y se le adjunta
-  // a la ficha con los nombres del catálogo. La ficha guarda cuál lugar; el nombre se busca al
-  // mostrarlo, que es lo que después se compara contra la localidad que trae la Solicitud.
-  const lugaresDelPlantel = useLugaresDelPlantel(plantel.map((a) => a.id));
+  const estado =
+    elMapa.estado === 'error' || estadoPacientes === 'error'
+      ? 'error'
+      : elMapa.estado === 'listo' && estadoPacientes === 'listo'
+        ? 'listo'
+        : 'cargando';
+
+  const recargar = useCallback(() => {
+    elMapa.recargar();
+    cargar();
+  }, [elMapa, cargar]);
 
   const sugeridos = useMemo(
     () => asistentesParaSolicitud(
       solicitud,
-      plantel.map((a) => ({ ...a, zonas: lugaresDelPlantel.nombresDe(a.id) })),
+      elMapa.plantel.map((a) => ({ ...a, zonas: elMapa.nombresDeZonasDe(a.id) })),
     ),
-    [solicitud, plantel, lugaresDelPlantel],
+    [solicitud, elMapa],
   );
 
   const visibles = todos ? sugeridos : sugeridos.slice(0, CUANTOS_PRIMERO);
@@ -97,9 +102,20 @@ export function AsistentesSugeridos({ solicitud, onAsignar }) {
       <h3>{ts.titulo}</h3>
       <p className="panel-lateral-subtitulo">{ts.explicacion}</p>
 
+      {/* El mismo mapa de la pantalla del plantel, acá con el lugar de la Solicitud marcado: los
+          puntos quedan ordenados del más cerca al más lejos. Cuando la Solicitud todavía no tiene
+          lugar reconocido, el mapa se muestra igual y no dice nada de distancias. */}
+      <MapaDelPlantel
+        datos={elMapa.datos}
+        origen={elMapa.origen}
+        estado={elMapa.estado}
+        error={elMapa.error}
+        recargar={elMapa.recargar}
+      />
+
       <EstadoLista
         estado={estado}
-        recargar={cargar}
+        recargar={recargar}
         vacio={sugeridos.length === 0}
         mensajeVacio={ts.vacio}
       >

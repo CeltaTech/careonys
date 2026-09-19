@@ -207,6 +207,7 @@ export function Layout() {
       titulo: t.nav.grupo_ajustes,
       enlaces: [
         { a: '/configuracion', texto: t.nav.configuracion, ver: esAdmin },
+        { a: '/respuestas-preparadas', texto: t.nav.respuestas_preparadas, ver: esAdmin },
         { a: '/usuarios-panel', texto: t.nav.usuarios_panel, ver: esAdmin },
         { a: '/auditoria', texto: t.nav.auditoria, ver: esAdmin },
         { a: '/marketplace/auditoria-legal', texto: t.nav.marketplace_auditoria_legal, ver: marketplace },

@@ -31,6 +31,11 @@ grande, y el producto queda en una línea discreta al pie, *"con la tecnología 
 ante una Familia o un Asistente, y **va siempre**: es el crédito de quién hizo el software, no
 una función que se venda. El producto no pregunta qué contrató nadie.
 
+**Esa dirección es un recurso del sistema, no de la Prestadora.** Existe para que el sistema
+mande, y para nada más. La Prestadora nunca entra a esa casilla, nunca la usa y no necesita saber
+que existe: no se le muestra en ninguna pantalla y no viaja en ninguna respuesta del motor hacia
+el Panel. Lo único suyo es **adónde quiere que le lleguen las respuestas**, y eso sí lo configura.
+
 **Cada Prestadora manda desde su propia dirección de correo, bajo el dominio del producto.** Al
 dar de alta una Prestadora se le crea `[prestadora]@careonys.com`, y de ahí salen todos sus
 avisos. Esa dirección sólo manda: **las respuestas se reenvían a la casilla que la Prestadora

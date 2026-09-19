@@ -4,9 +4,8 @@
 // logueado. Hasta el 2026-09-08 el motor averiguaba de qué Prestadora era el aviso mirando el
 // `phone_number_id` que venía adentro del mismo cuerpo del pedido, y no comprobaba nada más.
 // Ese identificador no es un secreto —viaja en cada aviso y se ve en el panel de Meta—, así
-// que cualquiera que lo conociera abría conversaciones, insertaba mensajes, gastaba llamadas
-// al modelo de lenguaje y hacía salir un WhatsApp de verdad con la cuenta de Meta de esa
-// Prestadora, a un número que él mismo elegía.
+// que cualquiera que lo conociera abría conversaciones, insertaba mensajes y hacía salir un
+// WhatsApp de verdad con la cuenta de Meta de esa Prestadora, a un número que él mismo elegía.
 //
 // La forma correcta ya estaba escrita en `webhooksPasarelas.js`, y es la que se copia acá:
 //
@@ -33,7 +32,15 @@
 import express, { Router } from 'express';
 import { supabase } from '../db/connection.js';
 import { enviarWhatsApp } from '../utils/whatsapp.js';
-import { generarRespuestaIA } from '../utils/iaWhatsapp.js';
+import {
+  resolverRespuestaAutomatica,
+  avisarAlServicioDeEmergencias,
+  registrarRespuestaAutomatica,
+  RESULTADO_RESPONDIDA,
+  RESULTADO_DERIVADA,
+  RESULTADO_EMERGENCIA_AVISADA,
+  MOTIVO_ENVIO_FALLIDO,
+} from '../utils/respuestaAutomaticaWhatsapp.js';
 // Cómo se dice del lado de acá lo que Meta contesta sobre una plantilla. Vive junto al alta, y no
 // escrito otra vez acá: es la misma cuenta, y dos copias se despegan el día que Meta agregue una
 // situación nueva.
@@ -242,55 +249,96 @@ async function procesarEventoEntrante(payload, { prestadoraId, phoneNumberIdConf
     .single();
   if (!conversacion) return;
 
-  await supabase.from('mensajes_whatsapp').insert({
-    prestadora_id: prestadoraId,
-    conversacion_id: conversacion.id,
-    direccion: 'entrante',
-    texto,
-    meta_message_id: mensaje.id,
-  });
-
-  const { data: historialCrudo } = await supabase
+  const { data: mensajeEntrante } = await supabase
     .from('mensajes_whatsapp')
-    .select('direccion, texto')
-    .eq('conversacion_id', conversacion.id)
-    .order('created_at', { ascending: true })
-    .limit(20);
+    .insert({
+      prestadora_id: prestadoraId,
+      conversacion_id: conversacion.id,
+      direccion: 'entrante',
+      texto,
+      meta_message_id: mensaje.id,
+    })
+    .select('id')
+    .single();
 
-  const respuestaIA = await generarRespuestaIA({ mensajeEntrante: texto, historial: historialCrudo ?? [], prestadoraId });
+  /* LO QUE SALE DE ACÁ ES SIEMPRE UN TEXTO QUE LA PRESTADORA APROBÓ, O NO SALE NADA.
+     ------------------------------------------------------------------------------
+     La decisión entera vive en `utils/respuestaAutomaticaWhatsapp.js` y no en esta ruta: es la
+     única forma de que ningún otro camino hasta el envío se la saltee. Acá sólo se ejecuta lo
+     que esa función contestó, y no hay ninguna rama que redacte algo. */
+  const decision = await resolverRespuestaAutomatica({ prestadoraId, texto });
 
+  const anotar = (resultado, motivo, extra = {}) =>
+    registrarRespuestaAutomatica({
+      prestadoraId,
+      conversacionId: conversacion.id,
+      mensajeEntranteId: mensajeEntrante?.id ?? null,
+      resultado,
+      motivo,
+      ...extra,
+    });
+
+  // Nunca queda un mensaje sin que el Coordinador se entere (decisión del Desarrollador,
+  // punto 2 de docs/PRD_06_WhatsApp_IA.md). Derivar es dejarlo pedido en la bandeja.
+  const derivarAUnaPersona = () =>
+    supabase
+      .from('conversaciones_whatsapp')
+      .update({ requiere_atencion_coordinador: true })
+      .eq('id', conversacion.id);
+
+  // Una emergencia se deriva igual, y además se resuelve a qué número corresponde llamar en la
+  // jurisdicción de la Prestadora. Sin número configurado no se inventa ninguno: queda la
+  // constancia de que se derivó por eso.
+  if (decision.accion === 'emergencia') {
+    const aviso = await avisarAlServicioDeEmergencias({ prestadoraId });
+    await derivarAUnaPersona();
+    await anotar(
+      aviso.telefono ? RESULTADO_EMERGENCIA_AVISADA : RESULTADO_DERIVADA,
+      aviso.motivo,
+    );
+    return;
+  }
+
+  if (decision.accion === 'derivar') {
+    await derivarAUnaPersona();
+    await anotar(RESULTADO_DERIVADA, decision.motivo);
+    return;
+  }
+
+  // Y acá, el único envío automático que existe. El texto es el aprobado, tal cual: se guarda en
+  // el hilo con el mismo texto que sale, para que lo respondido y lo registrado sean lo mismo.
   const { data: mensajeSaliente } = await supabase
     .from('mensajes_whatsapp')
     .insert({
       prestadora_id: prestadoraId,
       conversacion_id: conversacion.id,
       direccion: 'saliente',
-      texto: respuestaIA.respuestaSugerida ?? '(sin respuesta sugerida — requiere redacción manual del Coordinador)',
-      generado_por_ia: true,
+      texto: decision.texto,
+      generado_por_ia: false,
       enviado_automaticamente: false,
     })
     .select('id')
     .single();
 
-  const enviaAutomatico = respuestaIA.confianzaAlta && !respuestaIA.requiereCoordinador && respuestaIA.respuestaSugerida;
-
-  if (enviaAutomatico) {
-    try {
-      await enviarWhatsApp({ prestadoraId, telefono, texto: respuestaIA.respuestaSugerida });
-      await supabase
-        .from('mensajes_whatsapp')
-        .update({ enviado_automaticamente: true })
-        .eq('id', mensajeSaliente.id);
-      return;
-    } catch (err) {
-      console.error('Error enviando respuesta automática de IA, se escala al Coordinador:', err.message);
-    }
+  try {
+    await enviarWhatsApp({ prestadoraId, telefono, texto: decision.texto });
+  } catch (err) {
+    console.error('Error enviando la respuesta aprobada, se deriva a una persona:', err.message);
+    await derivarAUnaPersona();
+    await anotar(RESULTADO_DERIVADA, MOTIVO_ENVIO_FALLIDO, {
+      mensajeSalienteId: mensajeSaliente?.id ?? null,
+      respuestaPreparadaId: decision.respuesta?.id ?? null,
+    });
+    return;
   }
 
-  // Nunca queda un mensaje sin que el Coordinador se entere (decisión del Desarrollador,
-  // punto 2 de docs/PRD_06_WhatsApp_IA.md).
   await supabase
-    .from('conversaciones_whatsapp')
-    .update({ requiere_atencion_coordinador: true })
-    .eq('id', conversacion.id);
+    .from('mensajes_whatsapp')
+    .update({ enviado_automaticamente: true })
+    .eq('id', mensajeSaliente.id);
+
+  await anotar(RESULTADO_RESPONDIDA, decision.motivo, {
+    mensajeSalienteId: mensajeSaliente?.id ?? null,
+    respuestaPreparadaId: decision.respuesta?.id ?? null,
+  });
 }

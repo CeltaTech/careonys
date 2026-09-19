@@ -497,14 +497,6 @@ function TabCorreoDeLaPrestadora() {
           <div>
             {error && <Alert variant="error">{error}</Alert>}
 
-            <p>
-              <strong>{t.configuracion.correo_salen_desde}</strong>{' '}
-              {correo.direccion_envio || t.configuracion.correo_direccion_comun}
-            </p>
-            {!correo.direccion_envio && (
-              <Alert variant="warning">{t.configuracion.correo_sin_direccion_propia}</Alert>
-            )}
-
             <FormField
               label={t.configuracion.correo_respuestas}
               name="email_respuestas"

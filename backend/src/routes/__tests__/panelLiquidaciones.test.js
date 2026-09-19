@@ -744,6 +744,7 @@ describe('generar el mes', () => {
    comprueba contra la base antes de escribir. */
 describe('con qué se le pagó al Asistente', () => {
   const LIQUIDACION = '99999999-9999-9999-9999-999999999999';
+  const ASISTENTE = '88888888-8888-8888-8888-888888888888';
 
   /** La lista de medios que contesta la base: las del producto y una propia de esta Prestadora. */
   function elCatalogoContesta() {
@@ -755,8 +756,19 @@ describe('con qué se le pagó al Asistente', () => {
   }
 
   function laLiquidacionEstaPendiente() {
-    respuestas.set('GET /rest/v1/liquidaciones_asistente', () => [{ id: LIQUIDACION, estado: 'pendiente' }]);
+    respuestas.set('GET /rest/v1/liquidaciones_asistente', () => [
+      {
+        id: LIQUIDACION,
+        estado: 'pendiente',
+        asistente_id: ASISTENTE,
+        periodo_desde: '2026-08-01',
+        periodo_hasta: '2026-08-31',
+      },
+    ]);
     respuestas.set('PATCH /rest/v1/liquidaciones_asistente', () => [{ id: LIQUIDACION, estado: 'pagada' }]);
+    // De qué modalidad son las guardias que esta liquidación paga. Sin esto el motor no puede
+    // saber si el medio anotado alcanza, y un control que no supo contra qué comparar niega.
+    respuestas.set('GET /rest/v1/guardias', () => [{ canal_modalidad: 'directa' }]);
   }
 
   it('un medio que el catálogo no nombra no llega a la base', async () => {
@@ -831,5 +843,144 @@ describe('con qué se le pagó al Asistente', () => {
 
     assert.notEqual(estado, 200);
     assert.ok(!llamadas.some((l) => l.clave === 'PATCH /rest/v1/liquidaciones_asistente'));
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// Y con qué NO se le puede pagar según la modalidad de trabajo
+// ---------------------------------------------------------------------------------------
+
+/* Hay medios que existen en prestación directa y en ninguna otra modalidad. El que recibe el
+   dinero en bloque y lo reparte es uno: en Match la Familia le paga al Asistente y la Prestadora
+   no toca ese dinero, porque quien centraliza esa plata queda pareciendo el que dirige el
+   trabajo. La liquidación no guarda ninguna modalidad, así que la modalidad sale de las guardias
+   completadas del período. */
+describe('el medio de pago y la modalidad de trabajo', () => {
+  const LIQUIDACION = '99999999-9999-9999-9999-999999999999';
+  const ASISTENTE = '88888888-8888-8888-8888-888888888888';
+
+  /** El catálogo con un medio atado a prestación directa y dos que alcanzan a todas. */
+  function elCatalogoContesta() {
+    respuestas.set('GET /rest/v1/opciones_de_lista', () => [
+      { clave: 'transferencia', prestadora_id: null, modalidades: null },
+      { clave: 'efectivo', prestadora_id: null, modalidades: null },
+      { clave: 'pago_en_bloque', prestadora_id: null, modalidades: ['directa'] },
+    ]);
+  }
+
+  function laLiquidacionEstaPendiente(guardias) {
+    respuestas.set('GET /rest/v1/liquidaciones_asistente', () => [
+      {
+        id: LIQUIDACION,
+        estado: 'pendiente',
+        asistente_id: ASISTENTE,
+        periodo_desde: '2026-08-01',
+        periodo_hasta: '2026-08-31',
+      },
+    ]);
+    respuestas.set('PATCH /rest/v1/liquidaciones_asistente', () => [{ id: LIQUIDACION, estado: 'pagada' }]);
+    respuestas.set('GET /rest/v1/guardias', () => guardias);
+  }
+
+  it('en prestación directa el medio que reparte en bloque se puede elegir', async () => {
+    elCatalogoContesta();
+    laLiquidacionEstaPendiente([{ canal_modalidad: 'directa' }]);
+
+    const { estado } = await pedir('POST', `/${LIQUIDACION}/pagar`, {
+      fecha_pago: '2026-09-05',
+      forma_pago: 'pago_en_bloque',
+    });
+
+    assert.equal(estado, 200);
+    const escritura = llamadas.find((l) => l.clave === 'PATCH /rest/v1/liquidaciones_asistente');
+    assert.equal(escritura.cuerpo.forma_pago, 'pago_en_bloque');
+  });
+
+  it('si el período tiene una guardia de Match, ese medio no entra', async () => {
+    elCatalogoContesta();
+    laLiquidacionEstaPendiente([{ canal_modalidad: 'directa' }, { canal_modalidad: 'marketplace' }]);
+
+    const { estado, cuerpo } = await pedir('POST', `/${LIQUIDACION}/pagar`, {
+      fecha_pago: '2026-09-05',
+      forma_pago: 'pago_en_bloque',
+    });
+
+    assert.equal(estado, 400);
+    assert.equal(cuerpo.motivo, 'medio_de_pago_fuera_de_la_modalidad');
+    assert.ok(!llamadas.some((l) => l.clave === 'PATCH /rest/v1/liquidaciones_asistente'));
+  });
+
+  /* Una guardia sola de Match alcanza para que no entre: lo que se paga no se puede partir en
+     dos, y la mitad que vino de Match no la puede centralizar nadie. */
+  it('con todas las guardias en Match tampoco', async () => {
+    elCatalogoContesta();
+    laLiquidacionEstaPendiente([{ canal_modalidad: 'marketplace' }]);
+
+    const { estado, cuerpo } = await pedir('POST', `/${LIQUIDACION}/pagar`, {
+      fecha_pago: '2026-09-05',
+      forma_pago: 'pago_en_bloque',
+    });
+
+    assert.equal(estado, 400);
+    assert.equal(cuerpo.motivo, 'medio_de_pago_fuera_de_la_modalidad');
+  });
+
+  /* Y lo que no cambia: los medios que ya estaban no llevan modalidad escrita, así que siguen
+     valiendo en todas. Si esta prueba se pusiera roja, la marca nueva habría achicado en
+     silencio lo que ya se podía elegir. */
+  it('la transferencia sigue valiendo en Match, como antes', async () => {
+    elCatalogoContesta();
+    laLiquidacionEstaPendiente([{ canal_modalidad: 'marketplace' }]);
+
+    const { estado } = await pedir('POST', `/${LIQUIDACION}/pagar`, {
+      fecha_pago: '2026-09-05',
+      forma_pago: 'transferencia',
+    });
+
+    assert.equal(estado, 200);
+  });
+
+  /* Sin guardias completadas no hay nada de Match adentro del período: no hay ninguna modalidad
+     que el medio deje afuera, y entonces se admite. */
+  it('un período sin guardias completadas no bloquea ningún medio', async () => {
+    elCatalogoContesta();
+    laLiquidacionEstaPendiente([]);
+
+    const { estado } = await pedir('POST', `/${LIQUIDACION}/pagar`, {
+      fecha_pago: '2026-09-05',
+      forma_pago: 'pago_en_bloque',
+    });
+
+    assert.equal(estado, 200);
+  });
+
+  /* Sólo las guardias completadas: una guardia que no se hizo no movió dinero de nadie, y si se
+     contara, una guardia de Match cancelada dejaría sin medio a una liquidación de directa. */
+  it('sólo se miran las guardias completadas', async () => {
+    elCatalogoContesta();
+    laLiquidacionEstaPendiente([{ canal_modalidad: 'directa' }]);
+
+    await pedir('POST', `/${LIQUIDACION}/pagar`, {
+      fecha_pago: '2026-09-05',
+      forma_pago: 'pago_en_bloque',
+    });
+
+    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/guardias');
+    assert.ok(consulta, 'no le preguntó a la base de qué modalidad son las guardias');
+    assert.ok(consulta.url.includes('estado=eq.completada'));
+    assert.ok(consulta.url.includes(`asistente_id=eq.${ASISTENTE}`));
+  });
+
+  /* Y el detalle dice qué modalidades paga, que es lo que necesita la pantalla para no ofrecer
+     un medio que va a volver rechazado. */
+  it('el detalle de la liquidación dice qué modalidades paga', async () => {
+    laLiquidacionEstaPendiente([{ canal_modalidad: 'marketplace' }, { canal_modalidad: 'marketplace' }]);
+    respuestas.set('GET /rest/v1/liquidaciones_asistente_items', () => []);
+    respuestas.set('GET /rest/v1/asistentes', () => [{ id: ASISTENTE, nombre: 'Asistente de prueba' }]);
+
+    const { estado, cuerpo } = await pedir('GET', `/${LIQUIDACION}`);
+
+    assert.equal(estado, 200);
+    assert.deepEqual(cuerpo.modalidades_del_periodo, ['marketplace']);
   });
 });

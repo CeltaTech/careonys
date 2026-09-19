@@ -8,8 +8,10 @@ import {
   trabajaEnModalidad,
   motivoDeModalidadDelError,
   mensajeDeModalidad,
+  laOpcionAlcanzaLasModalidades,
 } from '../modalidades';
 import { T } from '../../i18n/translations';
+import { opcionesDeFabrica } from '../../datos/listasDeOpciones';
 
 const IDIOMAS = ['es-AR', 'en', 'pt-BR'];
 
@@ -224,5 +226,68 @@ describe('contarPorModalidad', () => {
 
   it('no se cae cuando la consulta no trajo nada', () => {
     expect(contarPorModalidad(undefined, (f) => f.m).directa).toBe(0);
+  });
+});
+
+/* Hay opciones de catálogo que sólo sirven en algunas modalidades de trabajo. El caso que la
+   trajo: el medio de pago que recibe el dinero en bloque y lo reparte, que existe en prestación
+   directa y no en Match, porque ahí la Familia le paga al Asistente y la Prestadora no toca ese
+   dinero. Lo que no se puede saltear es el disparador de la base; esto es lo mismo del lado de
+   la pantalla, para no ofrecer algo que va a volver rechazado. */
+describe('laOpcionAlcanzaLasModalidades', () => {
+  it('una opción sin marca alcanza a todas, que es lo que valía antes de que la marca existiera', () => {
+    expect(laOpcionAlcanzaLasModalidades({ clave: 'transferencia' }, ['marketplace'])).toBe(true);
+    expect(laOpcionAlcanzaLasModalidades({ clave: 'efectivo', modalidades: null }, ['marketplace'])).toBe(
+      true,
+    );
+    expect(laOpcionAlcanzaLasModalidades({ modalidades: [] }, ['marketplace'])).toBe(true);
+  });
+
+  it('una opción marcada alcanza sólo a las modalidades que nombra', () => {
+    const opcion = { clave: 'pago_en_bloque', modalidades: ['directa'] };
+    expect(laOpcionAlcanzaLasModalidades(opcion, ['directa'])).toBe(true);
+    expect(laOpcionAlcanzaLasModalidades(opcion, ['marketplace'])).toBe(false);
+  });
+
+  // Lo que se paga no se puede partir en dos: la mitad que vino de Match no la centraliza nadie.
+  it('una sola modalidad que quede afuera alcanza para que la opción no sirva', () => {
+    const opcion = { clave: 'pago_en_bloque', modalidades: ['directa'] };
+    expect(laOpcionAlcanzaLasModalidades(opcion, ['directa', 'marketplace'])).toBe(false);
+  });
+
+  it('sin ninguna modalidad en juego no hay nada que deje afuera', () => {
+    const opcion = { clave: 'pago_en_bloque', modalidades: ['directa'] };
+    expect(laOpcionAlcanzaLasModalidades(opcion, [])).toBe(true);
+    expect(laOpcionAlcanzaLasModalidades(opcion, undefined)).toBe(true);
+  });
+});
+
+/* Y que el catálogo guardado en el archivo diga lo mismo que la migración que lo siembra. Si se
+   despegaran, el desplegable sin internet ofrecería algo que la base rechaza. */
+describe('los medios de pago al Asistente que trae el producto', () => {
+  const medios = opcionesDeFabrica('medios_de_pago_al_asistente');
+
+  it('el que reparte en bloque está, y atado a prestación directa', () => {
+    const enBloque = medios.find((o) => o.clave === 'pago_en_bloque');
+    expect(enBloque).toBeTruthy();
+    expect(enBloque.modalidades).toEqual(['directa']);
+    IDIOMAS.forEach((idioma) => expect(String(enBloque.i18n[idioma] ?? '').trim()).not.toBe(''));
+  });
+
+  it('los que ya estaban siguen alcanzando a todas las modalidades', () => {
+    ['transferencia', 'efectivo'].forEach((clave) => {
+      expect(medios.find((o) => o.clave === clave).modalidades).toBe(null);
+    });
+  });
+});
+
+/* La frase que ve quien intentó pagar con un medio que su modalidad no admite, en los tres
+   idiomas. Un mensaje de error es texto visible y se traduce como cualquier otro. */
+describe('la frase del medio que no alcanza la modalidad', () => {
+  it('está escrita en los tres idiomas', () => {
+    IDIOMAS.forEach((idioma) => {
+      const frase = T[idioma].errores.motivos.medio_de_pago_fuera_de_la_modalidad;
+      expect(String(frase ?? '').trim()).not.toBe('');
+    });
   });
 });

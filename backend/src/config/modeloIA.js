@@ -4,7 +4,7 @@
 // La regla de la empresa lo pide con estas palabras: «El nombre del modelo de IA vive en un solo
 // lugar, sobreescribible por variable de entorno. Nunca escrito a mano en cada archivo que lo
 // usa» (`celtatech/CLAUDE.md` §8). Todo lo que habla con el modelo —`alertasIA.js`,
-// `iaWhatsapp.js`, `importacionIA.js` y `reporteIA.js`— lo toma de acá y no lo escribe a mano:
+// `proponerRespuestasIA.js`, `importacionIA.js` y `reporteIA.js`— lo toma de acá y no lo escribe a mano:
 // escrito en cada uno, cambiarlo sería acordarse de cuatro archivos, y olvidarse de uno dejaría a
 // una parte del motor hablando con otro modelo sin que nada avisara.
 //

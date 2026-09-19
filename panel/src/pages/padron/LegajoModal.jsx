@@ -9,6 +9,8 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { CamposDeDomicilio } from '../../components/domicilio/CamposDeDomicilio';
 import { DOMICILIO_VACIO, partesDesdeFila, partesParaGuardar } from '../../lib/partesDeDomicilio';
 import { SelectorDeLegajo } from '../../components/padron/SelectorDeLegajo';
+import { TelefonosDelLegajo } from './TelefonosDelLegajo';
+import { cargarUnTelefono } from '../../lib/apiPadronTelefonos';
 
 /* El alta y la corrección de un Legajo.
    ==========================================================================
@@ -27,6 +29,11 @@ import { SelectorDeLegajo } from '../../components/padron/SelectorDeLegajo';
    poder legal para obligarla. Se anota acá y no en cada contratación, para que el día que haya que
    firmar ya esté puesto. No otorga ningún permiso: quien figure ahí no gana acceso a nada.
 
+   LOS TELÉFONOS SON VARIOS, y por eso no están entre los casilleros. Al dar de alta se pide uno,
+   que es lo que se sabe en ese momento; corrigiendo aparece la lista entera, con los que haya, y
+   ahí se agregan, se corrigen y se sacan. Cuál es el preferido para llamar no se elige: es el que
+   esa Persona usa en su cuenta.
+
    NO HAY BOTÓN DE BORRAR, y tampoco lo va a haber. Un Legajo queda con el historial de cómo se
    comportó esa persona en cada rol que desempeñó, y con quien dejó de ser Cliente se vuelve a
    cruzar. La base también lo rechaza, por si alguna pantalla lo intentara igual. */
@@ -40,7 +47,9 @@ export function LegajoModal({ legajo, prestadoraId, tiposDeDocumento, onClose, o
   const [apellido, setApellido] = useState(legajo?.apellido ?? '');
   const [documentoTipo, setDocumentoTipo] = useState(legajo?.documento_tipo ?? '');
   const [documentoNumero, setDocumentoNumero] = useState(legajo?.documento_numero ?? '');
-  const [telefono, setTelefono] = useState(legajo?.telefono ?? '');
+  // Sólo sirve en el alta. La ficha ya cargada no trae ningún teléfono adentro: los tiene aparte,
+  // porque son varios.
+  const [telefono, setTelefono] = useState('');
   const [email, setEmail] = useState(legajo?.email ?? '');
   const [notas, setNotas] = useState(legajo?.notas ?? '');
   const [apoderado, setApoderado] = useState(legajo?.apoderado_legajo_id ?? null);
@@ -74,7 +83,6 @@ export function LegajoModal({ legajo, prestadoraId, tiposDeDocumento, onClose, o
         apellido: esJuridica ? null : apellido.trim(),
         documento_tipo: documentoTipo || null,
         documento_numero: documentoTipo ? documentoNumero.trim() : null,
-        telefono: telefono.trim() || null,
         email: email.trim() || null,
         notas: notas.trim() || null,
         apoderado_legajo_id: esJuridica ? apoderado || null : null,
@@ -91,6 +99,13 @@ export function LegajoModal({ legajo, prestadoraId, tiposDeDocumento, onClose, o
         ? await supabase.from('legajos').update(fila).eq('id', legajo.id).select('id, nombre_visible').single()
         : await supabase.from('legajos').insert({ ...fila, prestadora_id: prestadoraId }).select('id, nombre_visible').single();
       if (errorGuardar) throw errorGuardar;
+
+      // El teléfono del alta se carga recién con la ficha creada, porque cuelga de ella. En la
+      // corrección no pasa por acá: ahí está la lista entera, que se maneja sola.
+      if (!corrigiendo && telefono.trim()) {
+        await cargarUnTelefono(guardado.id, telefono.trim());
+      }
+
       onGuardado(guardado);
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -184,13 +199,17 @@ export function LegajoModal({ legajo, prestadoraId, tiposDeDocumento, onClose, o
 
           <CamposDeDomicilio valor={domicilio} alCambiar={setDomicilio} deshabilitado={guardando} />
 
-          <FormField
-            label={t.padron.telefono}
-            name="telefono"
-            value={telefono}
-            onChange={(e) => setTelefono(e.target.value)}
-            disabled={guardando}
-          />
+          {/* En el alta, un casillero: es el teléfono que se tiene a mano en ese momento. Los
+              demás se agregan después, con la ficha ya creada. */}
+          {!corrigiendo && (
+            <FormField
+              label={t.padron.telefono}
+              name="telefono"
+              value={telefono}
+              onChange={(e) => setTelefono(e.target.value)}
+              disabled={guardando}
+            />
+          )}
           <FormField
             label={t.padron.email}
             name="email"
@@ -218,6 +237,10 @@ export function LegajoModal({ legajo, prestadoraId, tiposDeDocumento, onClose, o
             </Button>
           </div>
         </form>
+
+        {/* Afuera del formulario a propósito: cada teléfono se carga, se corrige y se saca solo, y
+            no espera al botón de guardar de la ficha. */}
+        {corrigiendo && <TelefonosDelLegajo legajoId={legajo.id} puedeEditar />}
       </div>
     </div>
   );

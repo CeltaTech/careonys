@@ -1460,9 +1460,9 @@ async function estadoDelCorreoDe(prestadoraId) {
   const emailRespuestas = data?.email ?? null;
 
   return {
-    // Nula significa que esta Prestadora no tiene dirección propia y manda desde la común del
-    // producto. Pasa con las que se dieron de alta antes de que existiera la casilla propia.
-    direccion_envio: await direccionDeEnvioDe(prestadoraId),
+    // La dirección desde la que sale el correo no viaja hasta acá a propósito. Es un recurso
+    // del sistema, no de la Prestadora: ella nunca la usa, nunca entra a esa casilla y no
+    // necesita saber que existe. Lo suyo es adónde quiere que le lleguen las respuestas.
     email_respuestas: emailRespuestas,
     reenvio_abierto: Boolean(prestadora?.regla_reenvio),
     // Se pregunta en el momento: el clic con el que se confirma la casilla lo da una persona

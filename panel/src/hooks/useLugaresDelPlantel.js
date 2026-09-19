@@ -17,7 +17,12 @@ import { useCatalogoDeLugares } from './useCatalogoDeLugares';
    el array en cada dibujo no debe volver a consultar por eso. */
 export function useLugaresDelPlantel(ids) {
   const clave = [...new Set((ids ?? []).filter(Boolean))].sort().join(',');
-  const { lugares: catalogo, estado: estadoCatalogo, error: errorCatalogo } = useCatalogoDeLugares();
+  const {
+    lugares: catalogo,
+    zonas,
+    estado: estadoCatalogo,
+    error: errorCatalogo,
+  } = useCatalogoDeLugares();
   const [lugaresPorPersona, setLugaresPorPersona] = useState(new Map());
   const [estado, setEstado] = useState('cargando');
   const ultima = useRef(0);
@@ -55,6 +60,9 @@ export function useLugaresDelPlantel(ids) {
       nombresDe: (id) => (lugaresPorPersona.get(id) ?? []).map(nombreDeLugar).filter(Boolean).sort(),
       nombreDeLugar,
       catalogo: catalogo ?? [],
+      // Las zonas salen del mismo catálogo que ya se trajo. Pedirlas aparte sería la misma
+      // consulta dos veces, y el mapa del plantel agrupa justamente por zona.
+      zonas: zonas ?? [],
       estado:
         estado === 'error' || estadoCatalogo === 'error'
           ? 'error'
@@ -65,6 +73,6 @@ export function useLugaresDelPlantel(ids) {
       // texto: el error viaja con el estado o no sirve de nada.
       error: errorCatalogo ?? null,
     }),
-    [lugaresPorPersona, nombreDeLugar, catalogo, estado, estadoCatalogo, errorCatalogo],
+    [lugaresPorPersona, nombreDeLugar, catalogo, zonas, estado, estadoCatalogo, errorCatalogo],
   );
 }

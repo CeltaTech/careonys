@@ -7,6 +7,8 @@ import { useZonasCobertura } from '../hooks/useZonasCobertura';
 import { useOpcionesPostulacion } from '../hooks/useOpcionesPostulacion';
 import { useListaDeOpciones } from '../hooks/useListaDeOpciones';
 import { EstadoLista } from '../components/layout/EstadoLista';
+import { MapaDelPlantel } from '../components/mapa/MapaDelPlantel';
+import { usePlantelEnElMapa } from '../hooks/usePlantelEnElMapa';
 import { FiltroDeCatalogo } from '../components/layout/FiltroDeCatalogo';
 import { PostulacionDetalle } from './PostulacionDetalle';
 import { traducirCodigos } from '../lib/postulacionCodigos';
@@ -54,6 +56,9 @@ export function Postulaciones() {
   const laSituacionFiscal = useListaDeOpciones('situacion_fiscal');
   const { f, set, limpiar, hayFiltros } = useFiltros(FILTROS_INICIALES);
   const [seleccionada, setSeleccionada] = useState(null);
+  // El plantel que hay en este momento, para el mapa. Se arma cada vez que se abre la pantalla:
+  // no hay ninguna foto guardada que pueda quedar vieja.
+  const elMapa = usePlantelEnElMapa();
 
   const filasFiltradas = useMemo(() => filtrarPostulaciones(filas, f), [filas, f]);
 
@@ -64,6 +69,15 @@ export function Postulaciones() {
   return (
     <div>
       <h1>{t.postulaciones.titulo}</h1>
+
+      {/* Dónde está repartida hoy la gente que ya trabaja en la Prestadora. Es el mismo
+          componente que usa la Solicitud, con los mismos números: no hay dos mapas. */}
+      <MapaDelPlantel
+        datos={elMapa.datos}
+        estado={elMapa.estado}
+        error={elMapa.error}
+        recargar={elMapa.recargar}
+      />
 
       {/* Cuántas hay y en qué situación está cada una. Cada número filtra por esa situación, y el
           primero saca el filtro: es la pregunta que se hace después de mirar el número. */}

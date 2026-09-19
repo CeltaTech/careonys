@@ -13,6 +13,7 @@ import { Button } from '../components/ui/Button';
 import { LegajoModal } from './padron/LegajoModal';
 import { mensajeDeError } from '../lib/errores';
 import { palabrasDelDomicilio, partesDesdeFila, renglonDelDomicilio } from '../lib/partesDeDomicilio';
+import { pedirLosTelefonosDelPadron } from '../lib/apiPadronTelefonos';
 
 /* El Padrón de la Prestadora.
    ==========================================================================
@@ -41,6 +42,9 @@ export function Padron() {
   const puedeEditar = esAdmin || puede('editar_padron');
 
   const [filas, setFilas] = useState([]);
+  // Los teléfonos vienen del motor, en un solo pedido para todo el Padrón: pedirlos ficha por ficha
+  // sería un pedido por renglón. Vienen con el preferido ya resuelto.
+  const [telefonos, setTelefonos] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '', clase: '' });
@@ -66,6 +70,16 @@ export function Padron() {
     }
 
     setFilas(data ?? []);
+
+    try {
+      const respuesta = await pedirLosTelefonosDelPadron();
+      setTelefonos(respuesta?.telefonos ?? []);
+    } catch (errorTelefonos) {
+      setError(mensajeDeError(errorTelefonos, t));
+      setEstado('error');
+      return;
+    }
+
     setEstado('listo');
   }, [t]);
 
@@ -86,6 +100,21 @@ export function Padron() {
     (fila) => (fila?.clase === 'juridica' ? fila.nombre : `${fila?.apellido ?? ''}, ${fila?.nombre ?? ''}`),
     [],
   );
+
+  // Los teléfonos de cada ficha, con el preferido adelante: si hay que llamar, ése es el que
+  // atiende. Los demás siguen ahí y siguen sirviendo.
+  const telefonosPorLegajo = useMemo(() => {
+    const porFicha = new Map();
+    for (const uno of telefonos) {
+      const suyos = porFicha.get(uno.legajo_id) ?? [];
+      suyos.push(uno);
+      porFicha.set(uno.legajo_id, suyos);
+    }
+    for (const suyos of porFicha.values()) {
+      suyos.sort((a, b) => Number(Boolean(b.preferido)) - Number(Boolean(a.preferido)));
+    }
+    return porFicha;
+  }, [telefonos]);
 
   // El Apoderado es otro Legajo de este mismo Padrón, así que su nombre ya está cargado y no hace
   // falta volver a pedirlo.
@@ -194,7 +223,18 @@ export function Padron() {
                     {nombrePorId.get(fila.apoderado_legajo_id) || t.padron.apoderado_sin_elegir}
                   </span>
                 )}
-                <span><strong>{t.padron.telefono}:</strong> {fila.telefono || '—'}</span>
+                <span>
+                  <strong>{t.padron.telefono}:</strong>{' '}
+                  {(telefonosPorLegajo.get(fila.id) ?? []).length === 0
+                    ? '—'
+                    : (telefonosPorLegajo.get(fila.id) ?? []).map((uno, indice) => (
+                      <span key={uno.id}>
+                        {indice > 0 && ' · '}
+                        {uno.telefono}
+                        {uno.preferido && ` (${t.padron.telefonos.preferido})`}
+                      </span>
+                    ))}
+                </span>
                 <span><strong>{t.padron.email}:</strong> {fila.email || '—'}</span>
                 <span>
                   <strong>{t.padron.domicilio}:</strong>{' '}

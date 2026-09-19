@@ -19,7 +19,7 @@ export function useListaDeOpciones(claveDeLaLista) {
   const { locale } = useLocale();
 
   const { filas, estado, error, recargar } = useCatalogo('opciones_de_lista', {
-    columnas: 'id, prestadora_id, clave, i18n, orden, listas_de_opciones!inner(clave)',
+    columnas: 'id, prestadora_id, clave, i18n, orden, modalidades, listas_de_opciones!inner(clave)',
     filtros: { 'listas_de_opciones.clave': claveDeLaLista, activa: true },
     orden: 'orden',
     requiere: [claveDeLaLista],

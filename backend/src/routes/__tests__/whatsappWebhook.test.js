@@ -67,9 +67,11 @@ await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 
-// Sin clave de Anthropic la redacción con inteligencia artificial devuelve su respuesta de
-// emergencia sin salir a la red, y el mensaje queda escalado al Coordinador. Es lo que se
-// quiere acá: la prueba mira quién escribe en la base, no qué contesta el modelo.
+// La respuesta automática no redacta nada: elige entre los textos que la Prestadora aprobó. Con
+// el banco vacío —que es como nace— no hay ninguno que sirva, así que todo mensaje queda esperando
+// a una persona. Es lo que se quiere acá: estas pruebas miran quién escribe en la base y con qué
+// Prestadora, no qué se contesta. Qué contesta y qué no lo prueba
+// `utils/__tests__/respuestaAutomaticaWhatsapp.test.js`.
 delete process.env.ANTHROPIC_API_KEY;
 
 // La variable de entorno vieja se deja puesta A PROPÓSITO: una de las pruebas comprueba que ya
@@ -190,6 +192,14 @@ beforeEach(() => {
   respuestas.set('POST /rest/v1/conversaciones_whatsapp', () => [{ id: CONVERSACION }]);
   respuestas.set('POST /rest/v1/mensajes_whatsapp', () => [{ id: MENSAJE }]);
   respuestas.set('PATCH /rest/v1/conversaciones_whatsapp', () => []);
+  // La lista de palabras cargada y el banco de respuestas vacío: ningún texto aprobado que
+  // mandar, así que el mensaje se deriva y queda anotado que se derivó por eso.
+  respuestas.set('GET /rest/v1/terminos_de_salud_y_emergencia', () => [
+    { termino: 'dolor', motivo: 'salud' },
+    { termino: 'no respira', motivo: 'emergencia' },
+  ]);
+  respuestas.set('GET /rest/v1/respuestas_preparadas_whatsapp', () => []);
+  respuestas.set('POST /rest/v1/auditoria_respuesta_automatica_whatsapp', () => []);
 });
 
 // Ninguna prueba le deja trabajo en el aire a la que sigue.
@@ -219,6 +229,28 @@ describe('el aviso entrante de WhatsApp auténtico', () => {
 
     const conversacion = escrituras().find((l) => l.clave === 'PATCH /rest/v1/conversaciones_whatsapp');
     assert.equal(conversacion.cuerpo.requiere_atencion_coordinador, true);
+  });
+
+  it('sin ninguna respuesta aprobada no sale ningún mensaje, y queda anotado por qué', async () => {
+    // El banco nace vacío. Que no haya nada aprobado no puede terminar en un texto improvisado:
+    // termina en una persona. Si algún día se colara una redacción automática, acá aparecería un
+    // mensaje saliente y esta prueba se pondría en rojo.
+    await avisar();
+    await esperarA(() =>
+      escrituras().some((l) => l.clave === 'POST /rest/v1/auditoria_respuesta_automatica_whatsapp'),
+    );
+    await dejarTerminar();
+
+    const saliente = escrituras().find(
+      (l) => l.clave === 'POST /rest/v1/mensajes_whatsapp' && l.cuerpo.direccion === 'saliente',
+    );
+    assert.equal(saliente, undefined);
+
+    const anotacion = escrituras().find(
+      (l) => l.clave === 'POST /rest/v1/auditoria_respuesta_automatica_whatsapp',
+    );
+    assert.equal(anotacion.cuerpo.resultado, 'derivada_a_una_persona');
+    assert.equal(anotacion.cuerpo.motivo, 'sin_respuesta_aprobada');
   });
 
   it('la Prestadora sale de la dirección, no del cuerpo del pedido', async () => {

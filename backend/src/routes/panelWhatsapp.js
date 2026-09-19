@@ -7,17 +7,19 @@ import { responderError } from '../utils/errorConMotivo.js';
 export const panelWhatsappRouter = Router();
 
 // Por qué esta ruta existe:
-// Cuando entra un WhatsApp, la IA redacta una respuesta y la guarda como mensaje saliente
-// SIN enviarla (whatsappWebhook.js:86-97). Si la IA no está segura, marca la conversación
-// como `requiere_atencion_coordinador` y ahí queda: el borrador esperaba a un Coordinador
-// que no tenía ninguna pantalla donde verlo, así que quien escribió por WhatsApp se
-// quedaba sin respuesta. La bandeja del Panel lee las conversaciones directo de Supabase
-// con RLS, pero el envío tiene que pasar por acá: el token de Meta de cada Prestadora vive
-// en Supabase Vault y solo lo puede leer este backend, nunca el navegador.
+// Cuando entra un WhatsApp, la respuesta automática elige entre los textos que la Prestadora
+// aprobó y no escribe ninguno nuevo (`utils/respuestaAutomaticaWhatsapp.js`). Si no hay ninguno
+// que sirva, si el tema toca la salud o si el envío falla, la conversación queda marcada con
+// `requiere_atencion_coordinador` y la contesta una persona desde la bandeja del Panel. Ese es
+// el camino que abre esta ruta.
+//
+// La bandeja lee las conversaciones directo de Supabase con RLS, pero el envío tiene que pasar
+// por acá: el token de Meta de cada Prestadora vive en Supabase Vault y solo lo puede leer este
+// backend, nunca el navegador.
 //
 // Un mensaje saliente con `enviado_automaticamente = false` y `revisado_por_coordinador_at`
-// vacío es un borrador pendiente. Cuando el Coordinador lo envía o lo descarta, se le pone
-// la fecha de revisión y deja de estar pendiente.
+// vacío es un texto que quedó anotado y nunca salió —el caso del envío fallido—. Cuando el
+// Coordinador responde o descarta, se le pone la fecha de revisión y deja de estar pendiente.
 
 async function conversacionDeLaPrestadora(conversacionId, prestadoraId) {
   const { data } = await supabase
@@ -29,6 +31,8 @@ async function conversacionDeLaPrestadora(conversacionId, prestadoraId) {
   return data ?? null;
 }
 
+/** El último saliente que quedó anotado sin salir. Se reusa para no dejar huérfana la fila del
+ *  envío que falló, en vez de sumar una segunda al hilo por el mismo mensaje. */
 async function borradorPendiente(conversacionId) {
   const { data } = await supabase
     .from('mensajes_whatsapp')
@@ -44,7 +48,7 @@ async function borradorPendiente(conversacionId) {
 }
 
 // Envía la respuesta y la deja registrada en el hilo. El texto es el que el Coordinador
-// tiene en pantalla — puede ser el que sugirió la IA, editado, o uno escrito de cero.
+// tiene en pantalla, escrito por él.
 panelWhatsappRouter.post('/conversaciones/:id/responder', requiereRolPanel, async (req, res) => {
   const { texto } = req.body;
   const { prestadoraId } = req.usuarioPanel;
@@ -78,7 +82,7 @@ panelWhatsappRouter.post('/conversaciones/:id/responder', requiereRolPanel, asyn
   let fallo = null;
 
   if (borrador) {
-    // El borrador de la IA pasa a ser el mensaje realmente enviado, con el texto final.
+    // La fila que había quedado anotada pasa a ser el mensaje realmente enviado, con su texto.
     const { error } = await supabase
       .from('mensajes_whatsapp')
       .update({ texto, revisado_por_coordinador_at: ahora })
@@ -115,7 +119,7 @@ panelWhatsappRouter.post('/conversaciones/:id/responder', requiereRolPanel, asyn
 });
 
 // El Coordinador decide que no hace falta responder (ya lo resolvió por teléfono, era spam,
-// etc.). No se envía nada: solo se descarta el borrador y la conversación deja de pedir
+// etc.). No se envía nada: solo se da por revisado lo pendiente y la conversación deja de pedir
 // atención. El mensaje entrante queda en el hilo, no se borra nada.
 panelWhatsappRouter.post('/conversaciones/:id/descartar', requiereRolPanel, async (req, res) => {
   const { prestadoraId } = req.usuarioPanel;

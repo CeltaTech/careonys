@@ -24,7 +24,12 @@ import { direccionRemitente } from './email.js';
 // Quita los acentos y deja sólo lo que puede vivir a la izquierda de una arroba sin traer
 // problemas: letras sin marca, números y guiones. No intenta abarcar todo lo que la norma
 // permite; apunta a una dirección que alguien pueda dictar por teléfono.
-function normalizar(texto) {
+//
+// Sirve para las dos direcciones de una Prestadora —la casilla desde la que manda y la puerta por
+// la que entra—, porque lo que puede vivir a la izquierda de una arroba es lo mismo que puede
+// vivir como primer rótulo de una dirección web. Por eso se exporta: la regla se escribe una vez
+// (`celtatech/CLAUDE.md` §8, punto único de verdad).
+export function normalizar(texto) {
   return String(texto ?? '')
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
@@ -67,7 +72,10 @@ async function esDominioGratuito(dominio) {
 }
 
 // El nombre que le corresponde a esta Prestadora, todavía sin comprobar si está libre.
-async function nombreBase({ nombreFantasia, emailRespuestas }) {
+//
+// Lo consume también la puerta por la que entra —`utils/direccionDeLaPrestadora.js`—, porque las
+// dos direcciones se derivan con la misma regla y la regla se escribe una sola vez.
+export async function nombreBase({ nombreFantasia, emailRespuestas }) {
   const dominio = dominioDe(emailRespuestas);
   if (dominio && !(await esDominioGratuito(dominio))) {
     // El primer rótulo del dominio: de `cuidadosdellitoral.com.ar` sale `cuidadosdellitoral`.

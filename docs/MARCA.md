@@ -79,6 +79,17 @@ Prestadora entra por la suya. `panel/src/lib/puertaDeIngreso.js` traduce esa dir
 que el motor lee, y `backend/src/routes/marcaDeLaPuerta.js` devuelve el nombre y el logotipo sin
 pedir sesión. Si la dirección no corresponde a ninguna Prestadora, no se entra: no hay a cuál.
 
+**Esa dirección se le asigna sola al darla de alta**, nadie la teclea, y sale del nombre con la
+misma regla de tres pasos de arriba: del dominio propio que declaró, si no de su nombre, y con un
+sufijo si el que salió ya está tomado (`backend/src/utils/direccionDeLaPrestadora.js`). Se fija en
+el alta y no cambia nunca, porque es la dirección que quedó anotada en el navegador de toda la
+gente que trabaja ahí.
+
+Los nombres que el producto usa para sus propias pantallas no se le pueden asignar a ninguna
+Prestadora: viven en la tabla `direcciones_reservadas` y no escritos en el código, así que publicar
+una pantalla nueva es agregar una fila. Que ninguna se repita, que ninguna sea un nombre reservado
+y que ninguna cambie lo hace cumplir la base, no la pantalla.
+
 ## 1. Los dos nombres, y por qué importa la diferencia
 
 | | Qué es | ¿Cambia si se renombra el producto? |

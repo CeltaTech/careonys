@@ -148,6 +148,10 @@ const ESTADO_POR_MOTIVO = {
   // dato mal cargado, o sea 400. Ninguno nombra una columna ni una restricción.
   nombre_de_prestadora_repetido: 409,
   pais_sin_moneda: 409,
+  // Y la dirección por la que entra esa Prestadora también es 409: el pedido está bien armado,
+  // lo que pasa es que de ese nombre no queda ninguna dirección libre. Se arregla con otro
+  // nombre, y quien está dando el alta lo puede cambiar ahí mismo.
+  direccion_de_prestadora_no_disponible: 409,
   correo_invalido: 400,
   // Cambiar desde Configuración la moneda en la que trabaja una Prestadora. Es 400 porque el
   // dato vino mal cargado: se eligió una moneda que el catálogo no tiene. No nombra el catálogo

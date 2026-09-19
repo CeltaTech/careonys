@@ -76,6 +76,7 @@ import { avisoDeFacturacionExternaRouter } from './routes/avisoDeFacturacionExte
 import { revisarAlertasIA } from './utils/revisarAlertasIA.js';
 import { revisarAvisosAutomaticosCese } from './utils/avisoAutomaticoCese.js';
 import { responderError } from './utils/errorConMotivo.js';
+import { cargarMensajesDelSistema } from './i18n/cargarMensajesDelSistema.js';
 
 const app = express();
 app.use(cors());
@@ -334,6 +335,17 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Backend escuchando en puerto ${PORT}`);
+
+  // Las frases de los avisos viven en la base y se editan desde afuera. Se traen una vez, acá, y
+  // quedan en memoria: un aviso se arma mientras se está mandando un correo y ahí no hay lugar
+  // para esperar una consulta. Si la lectura falla, el motor sigue levantado y los avisos salen
+  // con la marca de frase faltante, que es lo que se quiere ver.
+  cargarMensajesDelSistema()
+    .then(({ cargadas, error }) => {
+      if (error) return;
+      console.log(`Mensajes del sistema cargados: ${cargadas}`);
+    })
+    .catch((err) => console.error('No se pudieron cargar los mensajes del sistema:', err));
 });
 
 // Red de seguridad de último recurso a nivel de proceso: cubre errores fuera del ciclo

@@ -962,6 +962,15 @@ INSERT INTO public.prestadoras (id, razon_social, nombre_fantasia, identificacio
 VALUES ('22222222-2222-4222-8222-222222222222', 'Cuidados del Sur S.R.L.', 'Cuidar del Sur',
         '30-99999999-7', 'AR', 'certificada', ARRAY['la_plata'], current_date, 'ARS');
 
+-- Su puerta. La base ya le sembró la fila de configuración al insertarla; acá se le anota la
+-- dirección por la que se entra, que es lo que mira el motor para saber de qué Prestadora es una
+-- consulta pública sin sesión iniciada. Sin esto, la segunda Prestadora no tendría por dónde
+-- entrar y la prueba de aislamiento no se podría hacer con las dos.
+UPDATE public.configuracion_prestadora
+   SET dominio = 'cuidardelsur'
+ WHERE prestadora_id = '22222222-2222-4222-8222-222222222222'
+   AND dominio IS NULL;
+
 INSERT INTO public.zonas_cobertura (prestadora_id, codigo, nombre, categoria, orden) VALUES
   ('22222222-2222-4222-8222-222222222222', 'la_plata', 'La Plata', 'ciudad', 10);
 

@@ -16,6 +16,9 @@ name: Publicar las pantallas y la página raíz en Cloudflare Pages
 # Lo que hace falta guardado en los secretos del repositorio:
 #   CLOUDFLARE_API_TOKEN      token acotado "Despliegues Pages - CeltaTech" (solo Pages y DNS)
 #   CLOUDFLARE_ACCOUNT_ID     la cuenta de Cloudflare donde viven los tres proyectos
+#   CLOUDFLARE_ZONE_ID        la zona del dominio del producto. Sin él, la puerta de cada
+#                             Prestadora no se puede dejar abierta desde acá y el trabajo lo
+#                             dice y sigue.
 #   VITE_SUPABASE_URL         \
 #   VITE_SUPABASE_ANON_KEY     |  valores de producción que se compilan adentro de cada
 #   VITE_API_URL               |  aplicación. Están acá porque los archivos .env.production
@@ -117,6 +120,86 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler@4 pages deploy dist --project-name=${{ matrix.proyecto }} --branch=main --commit-dirty=true
+
+  # ---------------------------------------------------------------------------
+  # La puerta de cada Prestadora.
+  #
+  # Cada Prestadora entra por su propia dirección —`cuidardelsur.careonys.com`—, y esa
+  # dirección es la que le dice al Panel a cuál se está entrando. Publicar el Panel en una
+  # sola dirección no alcanza: hay una por Prestadora y aparecen cada vez que se da una de
+  # alta, así que no se pueden ir agregando de a una a mano.
+  #
+  # Lo que hace falta son dos cosas, y las dos son "para todas": que el nombre comodín
+  # `*.<dominio del producto>` apunte al Panel, y que el proyecto del Panel acepte ese mismo
+  # comodín como dirección propia. Sin la primera, la dirección no resuelve a ningún lado; sin
+  # la segunda, resuelve y Cloudflare contesta que ese proyecto no atiende ahí.
+  #
+  # Se deja puesto, no se pisa: si el nombre comodín ya existe, no se toca —puede haber sido
+  # apuntado a otra cosa a propósito—, se avisa y se sigue. Correrlo dos veces no cambia nada.
+  # ---------------------------------------------------------------------------
+  puerta-de-cada-prestadora:
+    runs-on: ubuntu-latest
+    needs: publicar
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ¿Cuál es el dominio del producto?
+        id: dominio
+        run: |
+          # Sale del único archivo donde vive la marca, nunca escrito a mano acá.
+          DOMINIO=$(node -e "import('./panel/src/config/identidadProducto.js').then(m => console.log(m.IDENTIDAD.dominio))")
+          test -n "$DOMINIO" || { echo "No se pudo leer el dominio del producto."; exit 1; }
+          echo "valor=$DOMINIO" >> "$GITHUB_OUTPUT"
+
+      - name: Dejar abierta la puerta de cada Prestadora
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          DOMINIO: ${{ steps.dominio.outputs.valor }}
+          PROYECTO: careonys-panel
+        run: |
+          set -euo pipefail
+
+          if [ -z "${CLOUDFLARE_ZONE_ID:-}" ]; then
+            echo "Falta el secreto CLOUDFLARE_ZONE_ID: la puerta de cada Prestadora hay que"
+            echo "dejarla abierta desde el panel de Cloudflare. Nada de lo publicado se toca."
+            exit 0
+          fi
+
+          API=https://api.cloudflare.com/client/v4
+          AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+          COMODIN="*.${DOMINIO}"
+
+          # 1. El nombre comodín, que es lo que hace que la dirección resuelva a algún lado.
+          EXISTE=$(curl -sS -H "$AUTH" \
+            "$API/zones/${CLOUDFLARE_ZONE_ID}/dns_records?name=${COMODIN}" \
+            | node -e "let e='';process.stdin.on('data',d=>e+=d).on('end',()=>{const r=JSON.parse(e);console.log((r.result||[]).length)})")
+
+          if [ "$EXISTE" = "0" ]; then
+            echo "Creando el nombre comodín ${COMODIN}."
+            curl -sS -X POST -H "$AUTH" -H 'Content-Type: application/json' \
+              "$API/zones/${CLOUDFLARE_ZONE_ID}/dns_records" \
+              --data "{\"type\":\"CNAME\",\"name\":\"*\",\"content\":\"${PROYECTO}.pages.dev\",\"proxied\":true}" \
+              | node -e "let e='';process.stdin.on('data',d=>e+=d).on('end',()=>{const r=JSON.parse(e);if(!r.success){console.error('No se pudo crear el nombre comodín:',JSON.stringify(r.errors));process.exit(1)}console.log('Nombre comodín creado.')})"
+          else
+            echo "El nombre comodín ${COMODIN} ya existe: no se toca."
+          fi
+
+          # 2. Y que el proyecto del Panel conteste en ese nombre.
+          YA_ESTA=$(curl -sS -H "$AUTH" \
+            "$API/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PROYECTO}/domains" \
+            | node -e "let e='';process.stdin.on('data',d=>e+=d).on('end',()=>{const r=JSON.parse(e);console.log((r.result||[]).some(d=>d.name==='${COMODIN}')?'si':'no')})")
+
+          if [ "$YA_ESTA" = "no" ]; then
+            echo "Agregando ${COMODIN} al proyecto ${PROYECTO}."
+            curl -sS -X POST -H "$AUTH" -H 'Content-Type: application/json' \
+              "$API/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PROYECTO}/domains" \
+              --data "{\"name\":\"${COMODIN}\"}" \
+              | node -e "let e='';process.stdin.on('data',d=>e+=d).on('end',()=>{const r=JSON.parse(e);if(!r.success){console.error('No se pudo agregar la dirección al proyecto:',JSON.stringify(r.errors));process.exit(1)}console.log('Dirección agregada al proyecto.')})"
+          else
+            echo "El proyecto ${PROYECTO} ya contesta en ${COMODIN}."
+          fi
 
   # ---------------------------------------------------------------------------
   # La página raíz de careonys.com (el cartel de "en construcción").

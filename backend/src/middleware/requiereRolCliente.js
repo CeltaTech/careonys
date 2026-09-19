@@ -28,10 +28,14 @@ export async function requiereRolCliente(req, res, next) {
   // El usuario logueado puede ser el titular de la cuenta (fila propia en `clientes`) o
   // alguien invitado a las personas autorizadas (fila en `miembros_cliente`, Fase 5) — se
   // resuelve acá una sola vez, no en cada ruta de appClientes.js.
+  //
+  // Y se busca por la cuenta y acotado a la Prestadora de la sesión, porque la misma persona
+  // puede tener otro Legajo en otra Prestadora: la cuenta es una y los Legajos son varios.
   const { data: titular } = await supabase
     .from('clientes')
     .select('id')
-    .eq('id', userData.user.id)
+    .eq('usuario_id', userData.user.id)
+    .eq('prestadora_id', perfil.prestadora_id)
     .maybeSingle();
 
   let clienteId = titular?.id ?? null;
@@ -39,8 +43,9 @@ export async function requiereRolCliente(req, res, next) {
   if (!clienteId) {
     const { data: miembro } = await supabase
       .from('miembros_cliente')
-      .select('cliente_id')
+      .select('cliente_id, clientes!inner(prestadora_id)')
       .eq('usuario_id', userData.user.id)
+      .eq('clientes.prestadora_id', perfil.prestadora_id)
       .maybeSingle();
 
     clienteId = miembro?.cliente_id ?? null;

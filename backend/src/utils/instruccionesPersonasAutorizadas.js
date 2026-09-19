@@ -5,6 +5,7 @@ import { textoDeLaInstruccion, huellaDelDocumento, IDIOMA_DEL_DOCUMENTO } from '
 import { avisarPorWhatsapp } from './whatsapp.js';
 import { enviarEmail, configuracionEvento } from './email.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
+import { cuentaDeLaFicha, cuentasDeLasFichas } from './cuentaDeLaFicha.js';
 import { aviso } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import {
@@ -47,8 +48,12 @@ async function personasDePersonasAutorizadas(clienteId) {
     .order('created_at', { ascending: true });
   if (error) throw new Error(error.message);
 
+  // La fila del titular guarda su cuenta, y `clienteId` es el Legajo: para reconocerla hay que
+  // pedir de qué cuenta cuelga ese Legajo.
+  const cuentaDelTitular = await cuentaDeLaFicha('clientes', clienteId);
+
   return (data ?? [])
-    .filter((fila) => fila.usuario_id !== clienteId)
+    .filter((fila) => fila.usuario_id !== cuentaDelTitular)
     .map((fila) => ({
       usuarioId: fila.usuario_id,
       email: fila.email,
@@ -99,7 +104,7 @@ export async function crearInstruccion({ clienteId, prestadoraId, cargadaPor, ac
 
   const texto = textoDeLaInstruccion({
     prestadora: { nombre: prestadora?.nombre_fantasia },
-    titular: { nombre: await nombreDe(clienteId) },
+    titular: { nombre: await nombreDe(await cuentaDeLaFicha('clientes', clienteId)) },
     cargadaPor: { nombre: await nombreDe(cargadaPor) },
     personas: decidido.map((persona) => ({
       nombre: persona.nombre,
@@ -212,11 +217,9 @@ export async function pedirCodigo({ instruccionId, clienteId }) {
     .eq('id', instruccion.prestadora_id)
     .maybeSingle();
 
-  const { data: titular } = await supabase
-    .from('usuarios')
-    .select('telefono')
-    .eq('id', clienteId)
-    .maybeSingle();
+  // `clienteId` es el Legajo; el teléfono es de la persona y vive en la cuenta de la que cuelga.
+  const cuentasTitular = await cuentasDeLasFichas('clientes', [clienteId], 'telefono');
+  const titular = cuentasTitular.get(clienteId) ?? null;
 
   const remite = prestadora?.nombre_fantasia ?? '';
   const textos = aviso('codigo_instruccion_personas_autorizadas', await idiomaDeLaPrestadora(instruccion.prestadora_id), {

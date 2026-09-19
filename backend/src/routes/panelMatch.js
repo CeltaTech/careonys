@@ -15,6 +15,7 @@ import { advertenciaVigente, advertenciasVigentes, registrarAviso } from '../uti
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { darDeAltaEnPasarela, MOTIVO_ALTA } from '../utils/altaEnPasarela.js';
 import { registrarCobroExitoso } from '../utils/cobrosMatch.js';
+import { cuentasDeLasFichas } from '../utils/cuentaDeLaFicha.js';
 
 export const panelMatchRouter = Router();
 
@@ -480,13 +481,13 @@ panelMatchRouter.get('/accesos', soloAdministracion, async (req, res) => {
   const pacienteIds = [...new Set(data.map((s) => s.paciente_id).filter(Boolean))];
   const asistenteIds = [...new Set(data.map((s) => s.asistente_id).filter(Boolean))];
 
-  const [{ data: usuariosCliente }, { data: pacientes }, { data: asistentes }] = await Promise.all([
-    clienteIds.length ? supabase.from('usuarios').select('id, nombre').in('id', clienteIds) : { data: [] },
+  const [cuentasCliente, { data: pacientes }, { data: asistentes }] = await Promise.all([
+    cuentasDeLasFichas('clientes', clienteIds, 'nombre'),
     pacienteIds.length ? supabase.from('pacientes').select('id, nombre').in('id', pacienteIds) : { data: [] },
     asistenteIds.length ? supabase.from('asistentes').select('id, nombre').in('id', asistenteIds) : { data: [] },
   ]);
 
-  const nombreCliente = new Map((usuariosCliente || []).map((u) => [u.id, u.nombre]));
+  const nombreCliente = new Map([...cuentasCliente].map(([id, datos]) => [id, datos?.nombre ?? null]));
   const nombrePaciente = new Map((pacientes || []).map((p) => [p.id, p.nombre]));
   const nombreAsistente = new Map((asistentes || []).map((a) => [a.id, a.nombre]));
 

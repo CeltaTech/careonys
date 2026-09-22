@@ -28,6 +28,16 @@ informa los datos que requieras para que ingrese. cuando le da el alta tambien t
 tiene acceso y a que no lo tiene»*, y *«Careonys nada tiene que hacer metiendo la nariz donde no la
 llaman»*. Es la regla fundamental de la empresa —`..\..\CLAUDE.md` §2— aplicada al alta.
 
+**Y la cuenta con la que se entra al Panel tampoco es de Careonys.** Cada Prestadora ingresa con el
+usuario, la contraseña y los permisos que le genera CeltaTech. **Del cambio de contraseña, de la
+recuperación y de lo que siga por ese lado se ocupa CeltaTech**, no el producto. Textual del
+Desarrollador: *«Cada prestadora ingresara con el usuario, contraseñas y permisos que le genere
+cletatech. De los cambios de contraseñas, recuperacion de las mismas, etc. tambien se ocupa
+celtatech»*.
+
+Esto habla del **Panel**. La Familia y el Asistente son de la Prestadora, no clientes de CeltaTech,
+y cómo entran ellos no está dicho acá.
+
 **Lo único que Careonys sí hace en el alta es el correo de salida.** Se le crea
 `[prestadora]@careonys.com`, **exclusivamente para enviar**; se crea solo y la Prestadora ni se
 entera de que existe (`docs/MARCA.md`, sección 0). Una dirección de correo no es una dirección web:

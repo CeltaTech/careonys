@@ -73,7 +73,15 @@ cuarto rol comercial, y no se agrega:** la gestión comercial de las cuentas es 
 en su propio panel.
 
 **Superadmin** — rol técnico de CeltaTech. No representa una Prestadora ni la opera
-comercialmente.
+comercialmente. **Y por eso no entra por el Panel:** el soporte técnico entra por el lado de
+CeltaTech y desde ahí hace lo que tenga que hacer. Lo decidió el Desarrollador, textual: *«el
+soporte técnico entre por el lado de CeltaTech, desde celtatech hara lo que tenga que hacer»*. El
+Panel es la herramienta con la que trabaja la Prestadora, y un rol que no es suyo —y que además es
+el más poderoso— no vive ahí.
+
+Lo que **no** cambia es la forma de la sesión de soporte, que es de la empresa y está en
+`..\..\CLAUDE.md` §6: una Organización por vez, cartel visible, corte por inactividad, tope
+absoluto y todo auditado. Cambia desde dónde se abre, no qué es.
 - Entrada propia; segundo factor por código temporal, activable desde Configuración.
 - **Acá la Organización ficticia es Sandbox**, y la sesión de soporte se registra en
   `auditoria_soporte_tecnico`. La forma de esa sesión es la de la empresa y no se toca.
@@ -86,8 +94,10 @@ otras Prestadoras ni a configuración global.
 **En cada Prestadora hay un solo Administrador, y es el que figura en el contrato.** Lo nombra
 CeltaTech, que es también quien se ocupa de su usuario, su contraseña y sus permisos, y de los
 cambios y la recuperación de esa clave. **No hay dos, y el producto no crea ninguno.** Las personas
-en las que ese Administrador delegue funciones propias de él **llevan otro nombre** —hoy,
-Coordinador—, nunca el de Administrador. Textual del Desarrollador: *«en cada prestadora hay un
+en las que ese Administrador delegue funciones propias de él **llevan otro nombre, que todavía no
+está decidido**, nunca el de Administrador. **No es el Coordinador**, que es otra cosa: quien
+organiza el trabajo de un grupo determinado de Asistentes, y que depende de funciones del
+Administrador o de aquel en quien él las delegue o las comparta. Textual del Desarrollador: *«en cada prestadora hay un
 solo administrador, que es el que figura en el contrato y el que nombra celtatech, el resto de las
 personas en las que ese administrador delegue funciones que le corresponde a el, tendrá un nombre
 distinto»*.

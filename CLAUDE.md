@@ -17,6 +17,22 @@ Plataforma de gestión para empresas dedicadas al cuidado de personas. **Careony
 servicios de cuidado.** Las Prestadoras la usan con licencia, cada una en su propia Organización.
 **Ninguna Prestadora tiene relación especial con CeltaTech ni trato privilegiado en el código.**
 
+**El alta de una Prestadora no es de Careonys.** Una Prestadora se registra con CeltaTech, y **sólo
+CeltaTech le da el alta**. Hecha el alta, CeltaTech le informa al producto dos cosas: los datos que
+el producto requiera para que esa Prestadora ingrese, y **a qué tiene acceso y a qué no**. El
+producto recibe e informa: no da de alta, no reparte accesos, no decide qué alcanza cada Prestadora
+y no le crea nada por su cuenta en ese momento.
+
+Lo fijó el Desarrollador, textual: *«Solo celtatech puede dar alta a una prestadora, lo hace y te
+informa los datos que requieras para que ingrese. cuando le da el alta tambien te informa a que
+tiene acceso y a que no lo tiene»*, y *«Careonys nada tiene que hacer metiendo la nariz donde no la
+llaman»*. Es la regla fundamental de la empresa —`..\..\CLAUDE.md` §2— aplicada al alta.
+
+**Lo único que Careonys sí hace en el alta es el correo de salida.** Se le crea
+`[prestadora]@careonys.com`, **exclusivamente para enviar**; se crea solo y la Prestadora ni se
+entera de que existe (`docs/MARCA.md`, sección 0). Una dirección de correo no es una dirección web:
+**no existe ninguna dirección web propia por Prestadora, y no se construye ninguna.**
+
 ## 2. Sandbox
 
 Organización ficticia reservada del sistema, sólo para desarrollo, pruebas, validación y demos
@@ -83,10 +99,6 @@ trabajador de fondo no tiene sesión; del lado del motor la arma
 La línea al pie —*«con la tecnología de {{producto}}»*— **va siempre** y es el **único** uso de
 `IDENTIDAD` en una superficie de Familia o Asistente. **El producto no consulta qué contrató
 ninguna Prestadora**, acá ni en ningún otro lado: eso es de CeltaTech (`celtatech/CLAUDE.md` §2).
-**Y la pantalla de ingreso también sabe de quién es la puerta**: se lo dice la dirección del
-navegador. `panel/src/lib/puertaDeIngreso.js` la traduce al segmento que el motor ya lee, y
-`backend/src/routes/marcaDeLaPuerta.js` devuelve el nombre y el logotipo sin pedir sesión. Detalle
-en `docs/MARCA.md` §0.
 
 **Y para nombrarla adentro de una frase hay marcador, igual que el producto.** `{{prestadora}}`
 en cualquier traducción, resuelto en `src/i18n/marcaEnElTexto.js` (original en el Panel, copia

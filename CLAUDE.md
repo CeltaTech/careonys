@@ -83,6 +83,26 @@ comercialmente.
 **Admin_prestadora** — administrador operativo, acotado a su propia Organización. Sin acceso a
 otras Prestadoras ni a configuración global.
 
+**En cada Prestadora hay un solo Administrador, y es el que figura en el contrato.** Lo nombra
+CeltaTech, que es también quien se ocupa de su usuario, su contraseña y sus permisos, y de los
+cambios y la recuperación de esa clave. **No hay dos, y el producto no crea ninguno.** Las personas
+en las que ese Administrador delegue funciones propias de él **llevan otro nombre** —hoy,
+Coordinador—, nunca el de Administrador. Textual del Desarrollador: *«en cada prestadora hay un
+solo administrador, que es el que figura en el contrato y el que nombra celtatech, el resto de las
+personas en las que ese administrador delegue funciones que le corresponde a el, tendrá un nombre
+distinto»*.
+
+**Del Administrador para abajo, las cuentas las hace la Prestadora.** El Administrador genera y
+administra los usuarios, las contraseñas y los permisos de su gente: coordinadores, Asistentes,
+Familias, círculo familiar. Ahí el ciclo de la clave del producto —pedirla, recuperarla, los
+topes— sí corre; para el Administrador no, porque esa cuenta es de CeltaTech.
+
+**Y reparte permisos adentro de lo que su Prestadora tiene.** Qué alcanza cada Prestadora lo
+informa CeltaTech al dar el alta, y de ahí no se sale. Adentro de eso decide él: el producto deja
+marcado lo que considera prudente, y él lo reconfigura según su criterio y su necesidad. Textual:
+*«Careonys puede dejar marcada por default lo que considera prudente, pero el adminisatador de la
+la prestadora lo reconfigura segun sus criterios y necesidades»*.
+
 ## 6. Lo propio de Careonys en el desarrollo
 
 Lo común a todos los productos —no hardcodear, multiidioma, cuatro estados, apagar el botón,

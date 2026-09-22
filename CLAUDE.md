@@ -83,8 +83,12 @@ el más poderoso— no vive ahí.
 cartel visible, corte por inactividad, tope absoluto y todo auditado —es regla de la empresa,
 `..\..\CLAUDE.md` §6—. **Lo único que cambia es quién la abre: sólo el soporte de CeltaTech, y
 desde CeltaTech.** Textual del Desarrollador: *«la sesión de soporte ya está construida con todos
-sus recaudos, es cierto, pero solo puede ser accedida desde el soporte de celtatech»*. Ninguna
-pantalla del Panel la ofrece.
+sus recaudos, es cierto, pero solo puede ser accedida desde el soporte de celtatech»*.
+
+**Y la Prestadora no la ve ni sabe que existe.** Textual: *«la prestadora no la ve, ni siquiera
+sabe que existe»*. Ninguna pantalla del Panel la ofrece, la nombra ni la deja ver abierta. El
+cartel que exige la regla de la empresa es para quien opera el soporte, que es quien tiene que
+saber en qué Organización está parado.
 - Entrada propia; segundo factor por código temporal, activable desde Configuración.
 - **Acá la Organización ficticia es Sandbox**, y la sesión de soporte se registra en
   `auditoria_soporte_tecnico`. La forma de esa sesión es la de la empresa y no se toca.

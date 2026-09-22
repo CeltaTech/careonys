@@ -79,9 +79,12 @@ soporte técnico entre por el lado de CeltaTech, desde celtatech hara lo que ten
 Panel es la herramienta con la que trabaja la Prestadora, y un rol que no es suyo —y que además es
 el más poderoso— no vive ahí.
 
-Lo que **no** cambia es la forma de la sesión de soporte, que es de la empresa y está en
-`..\..\CLAUDE.md` §6: una Organización por vez, cartel visible, corte por inactividad, tope
-absoluto y todo auditado. Cambia desde dónde se abre, no qué es.
+**La sesión de soporte se queda tal cual está**, con todos sus recaudos: una Organización por vez,
+cartel visible, corte por inactividad, tope absoluto y todo auditado —es regla de la empresa,
+`..\..\CLAUDE.md` §6—. **Lo único que cambia es quién la abre: sólo el soporte de CeltaTech, y
+desde CeltaTech.** Textual del Desarrollador: *«la sesión de soporte ya está construida con todos
+sus recaudos, es cierto, pero solo puede ser accedida desde el soporte de celtatech»*. Ninguna
+pantalla del Panel la ofrece.
 - Entrada propia; segundo factor por código temporal, activable desde Configuración.
 - **Acá la Organización ficticia es Sandbox**, y la sesión de soporte se registra en
   `auditoria_soporte_tecnico`. La forma de esa sesión es la de la empresa y no se toca.

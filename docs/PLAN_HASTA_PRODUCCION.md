@@ -35,14 +35,13 @@ la sección de Reclutamiento está esperando justamente esto.
 
 **1.** Recuperar la clave y cambiarla en las dos aplicaciones de teléfono. El motor, que es común
 a las tres, ya está: las puertas, el aviso por correo y el enlace sirven igual para la Familia y
-para el Asistente. Faltan las pantallas, y **esperan la maqueta**, porque hasta que llegue no se
-toca apariencia ni recorrido ahí.
+para el Asistente. **La pantalla donde se elige la clave nueva también está**, en las dos
+aplicaciones, hecha con lo mínimo para que el enlace del correo no caiga en el vacío. Faltan dos:
+pedir el enlace desde la aplicación sin llamar a nadie, y cambiar la clave estando adentro. Las
+dos **esperan la maqueta**, porque hasta que llegue no se toca apariencia ni recorrido ahí.
 
-**Y mientras tanto hay un camino roto que no espera a nadie.** El correo de recuperación sale y
-lleva un enlace, y ese enlace apunta a una pantalla que en las dos aplicaciones no existe: quien
-lo abre cae en el inicio, sin aviso y sin clave nueva. Un Asistente o una Familia que hoy olvide
-la clave queda afuera. Se corrige antes que el resto de este paso, con lo mínimo para que el
-enlace funcione, y la apariencia se acomoda después con la maqueta.
+**Mientras tanto, quien olvida la clave llama a su Prestadora y ella le manda el enlace** desde el
+Panel. Ese camino funciona hoy.
 
 **2.** Una cuenta por Prestadora. **Un Asistente trabaja en varias Prestadoras y una Familia
 contrata con varias.** Cada una de esas es **una cuenta distinta, con su propia clave**. El mismo

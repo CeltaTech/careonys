@@ -11,6 +11,7 @@ import OfertasDeGuardia from './pages/OfertasDeGuardia';
 import GuardiaActiva from './pages/GuardiaActiva';
 import ReporteDiario from './pages/ReporteDiario';
 import MiPerfil from './pages/MiPerfil';
+import MiClave from './pages/MiClave';
 import MisCalificaciones from './pages/MisCalificaciones';
 import Mensajes from './pages/Mensajes';
 import Conversacion from './pages/Conversacion';
@@ -91,6 +92,9 @@ function Rutas() {
           }
         />
         <Route path="perfil" element={<MiPerfil />} />
+        {/* Cambiar la propia clave estando adentro. No lleva guardián más allá de la sesión:
+            cualquiera que entró puede cambiar la suya, y la pantalla pide la actual antes. */}
+        <Route path="mi-clave" element={<MiClave />} />
         {/* Las calificaciones que le pusieron y el descargo que puede dejar ante cada una
             (pendiente #85). Cuelga de Mi Perfil y no de la barra de abajo: la barra es para el
             trabajo del día, y esto se mira cada tanto. */}

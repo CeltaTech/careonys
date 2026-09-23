@@ -68,6 +68,11 @@ export const api = {
   // vienen: acá se dejó de calcularlos, y la respuesta lo dice en `sigue_la_cobranza`.
   facturas: () => pedido('/facturas'),
   factura: (facturaId) => pedido(`/facturas/${facturaId}`),
+  // La factura en papel, la que emitió el software de facturación de la Prestadora. No vuelve el
+  // archivo sino una dirección que vence enseguida: el depósito es privado y el teléfono baja
+  // derecho de ahí. Se pide recién cuando alguien toca el botón, porque una dirección preparada
+  // de antemano se vence antes de que la usen.
+  direccionDelComprobante: (facturaId) => pedido(`/facturas/${facturaId}/comprobante`),
   // La vidriera del Marketplace. Los filtros van vacíos cuando no se eligió ninguno, y las
   // opciones para elegir vuelven en la misma respuesta: las arma el motor con quien está
   // realmente en la vidriera, así que un lugar sin nadie no se ofrece. Lo que viaja es cuál lugar

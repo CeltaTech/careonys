@@ -64,7 +64,12 @@ import {
   revisarFrecuenciaDePago,
   soloLoQueCorreDeLaFrecuencia,
 } from '../utils/frecuenciaDePago.js';
-import { LARGO_MINIMO_DEL_SECRETO_DEL_AVISO, plazoQueSePuedeGuardar, sigueLaCobranza } from '../utils/facturacionDeFamilias.js';
+import {
+  LARGO_MINIMO_DEL_SECRETO_DEL_AVISO,
+  entregaLaFactura,
+  plazoQueSePuedeGuardar,
+  sigueLaCobranza,
+} from '../utils/facturacionDeFamilias.js';
 import { METROS_TOLERANCIA_POR_OMISION, MINUTOS_TOLERANCIA_POR_OMISION } from '../utils/toleranciaCheckin.js';
 import {
   SEGUNDOS_EN_PANTALLA_POR_OMISION,
@@ -1094,6 +1099,7 @@ panelConfiguracionRouter.get('/facturacion-familias', async (req, res) => {
     configuracion: {
       dias_hasta_el_vencimiento: data?.regla?.dias_hasta_el_vencimiento ?? null,
       sigue_la_cobranza: sigueLaCobranza(data?.regla),
+      entrega_la_factura: entregaLaFactura(data?.regla),
       // Del secreto sale de acá si está cargado o no, nunca su contenido, y tampoco la referencia
       // a la caja fuerte: al navegador no le sirve para nada y sí sirve para terminar en un
       // registro donde no tendría que estar.
@@ -1118,6 +1124,10 @@ panelConfiguracionRouter.put('/facturacion-familias', async (req, res) => {
     return res.status(400).json({ error: 'El seguimiento de la cobranza se enciende o se apaga' });
   }
 
+  if (req.body?.entrega_la_factura !== undefined && typeof req.body.entrega_la_factura !== 'boolean') {
+    return res.status(400).json({ error: 'La entrega de la factura se enciende o se apaga' });
+  }
+
   // Vacío se guarda como objeto vacío y no como un cero: cero es «paga el mismo día» y vacío es
   // «no se acordó nada». Son dos cosas distintas y la pantalla se comporta distinto con cada una.
   const regla = revision.valor === null ? {} : { dias_hasta_el_vencimiento: revision.valor };
@@ -1125,6 +1135,10 @@ panelConfiguracionRouter.put('/facturacion-familias', async (req, res) => {
   // Encendido es lo de fábrica, así que sólo se guarda el apagado: una regla que repite el valor
   // de fábrica hace creer que alguien lo decidió.
   if (req.body?.sigue_la_cobranza === false) regla.sigue_la_cobranza = false;
+
+  // Lo mismo con la entrega de la factura, que es otra decisión: hay Prestadoras que reparten las
+  // facturas por su cuenta y siguen llevando el saldo acá.
+  if (req.body?.entrega_la_factura === false) regla.entrega_la_factura = false;
 
   const { error } = await supabase.from('configuracion_facturacion_familias').upsert(
     {

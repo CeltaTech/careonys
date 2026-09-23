@@ -46,6 +46,7 @@ import express, { Router } from 'express';
 import { comprobarFirmaSinEsquemaPublicado } from '../pasarelas/firmaWebhook.js';
 import { supabase } from '../db/connection.js';
 import { anotarLoFacturado, facturaParaAnotar } from '../utils/anotarLoFacturado.js';
+import { guardarComprobante, loQueEstaMalEnElComprobante } from '../utils/comprobanteDeLaFactura.js';
 import {
   TOPE_DE_FILAS,
   esIdentificador,
@@ -62,21 +63,30 @@ const FORMA_DE_IDENTIFICADOR = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}
 
 avisoDeFacturacionExternaRouter.use(express.raw({ type: 'application/json', limit: '512kb' }));
 
-avisoDeFacturacionExternaRouter.post('/:prestadoraId', async (req, res) => {
-  const { prestadoraId } = req.params;
+// Y el comprobante en sí, que llega como los bytes del PDF y no adentro de un JSON. Va por
+// separado porque son dos cosas distintas: los datos de lo emitido entran aunque el papel no
+// llegue nunca, y el papel puede llegar después. El tope lo acota el depósito también.
+avisoDeFacturacionExternaRouter.use(express.raw({ type: 'application/pdf', limit: '5mb' }));
 
+/**
+ * Que el aviso sea de verdad, y de esa Prestadora. Lo comparten las dos puertas —los datos de lo
+ * emitido y el comprobante—, porque de las dos hay que probar exactamente lo mismo.
+ *
+ * Contesta `{ ok }` y, cuando no, deja el motivo del lado del servidor. Al que golpeó la puerta se
+ * le contesta siempre lo mismo: decirle cuál de las comprobaciones falló es enseñarle a pasarla.
+ */
+async function avisoAutenticado({ prestadoraId, req, res }) {
   function rechazar(motivo) {
-    // El motivo queda del lado del servidor. Al que golpeó la puerta se le contesta siempre lo
-    // mismo: decirle cuál de las comprobaciones falló es enseñarle a pasarla.
     console.warn('Aviso de facturacion rechazado:', prestadoraId, motivo);
-    return res.status(401).json({ error: 'Aviso no autenticado' });
+    res.status(401).json({ error: 'Aviso no autenticado' });
+    return { ok: false };
   }
 
   if (!FORMA_DE_IDENTIFICADOR.test(prestadoraId)) return rechazar('prestadora_de_la_direccion_ilegible');
 
   // Si esto no es un Buffer, el lector de cuerpo crudo no corrió: o el router quedó montado
-  // después del `express.json()` general, o el que llama mandó un tipo de contenido que no es
-  // JSON. En los dos casos no hay con qué comprobar la firma, y sin eso no se sigue.
+  // después del `express.json()` general, o el que llama mandó un tipo de contenido que este
+  // router no lee crudo. En los dos casos no hay con qué comprobar la firma, y sin eso no se sigue.
   const cuerpoCrudo = Buffer.isBuffer(req.body) ? req.body : null;
   if (!cuerpoCrudo) return rechazar('cuerpo_crudo_ausente');
 
@@ -95,6 +105,16 @@ avisoDeFacturacionExternaRouter.post('/:prestadoraId', async (req, res) => {
     cuerpoCrudo,
   });
   if (!comprobacion.valido) return rechazar(comprobacion.motivo);
+
+  return { ok: true, cuerpoCrudo };
+}
+
+avisoDeFacturacionExternaRouter.post('/:prestadoraId', async (req, res) => {
+  const { prestadoraId } = req.params;
+
+  const autenticacion = await avisoAutenticado({ prestadoraId, req, res });
+  if (!autenticacion.ok) return undefined;
+  const { cuerpoCrudo } = autenticacion;
 
   let cuerpo;
   try {
@@ -155,4 +175,60 @@ avisoDeFacturacionExternaRouter.post('/:prestadoraId', async (req, res) => {
     rechazadas: resultados.filter((r) => r.resultado === 'rechazado').length,
     resultados,
   });
+});
+
+// El comprobante en sí: el PDF que emitió ese software.
+//
+// POR QUÉ ENTRA ACÁ Y NO ADENTRO DEL AVISO. Son dos cosas distintas y no siempre llegan juntas.
+// Los datos de lo emitido —el número, el monto, el vencimiento— alcanzan para reclamar; el papel
+// es lo que la Familia baja, y puede llegar después. Metido adentro del JSON habría que
+// convertirlo a texto, que lo agranda un tercio y obliga a mover el tope de los avisos.
+//
+// SE PRUEBA IGUAL QUE EL OTRO AVISO: misma firma, misma cabecera, mismo secreto por Prestadora, y
+// la Prestadora viaja en la dirección y no en el cuerpo. Acá el cuerpo son los bytes del PDF, y se
+// firman tal cual llegaron.
+//
+// UNA FACTURA DE OTRA PRESTADORA SE CONTESTA COMO SI NO EXISTIERA, por lo mismo de siempre: decir
+// cuál identificador cae adentro y cuál no es enseñar a encontrarlos.
+//
+// Y EL MISMO COMPROBANTE MANDADO DOS VECES NO HACE DAÑO: el segundo se guarda con nombre propio y
+// la factura apunta al último. El anterior queda en el depósito sin que nadie lo alcance, que es
+// lo que corresponde con un papel que estuvo vigente.
+avisoDeFacturacionExternaRouter.post('/:prestadoraId/:facturaId/comprobante', async (req, res) => {
+  const { prestadoraId, facturaId } = req.params;
+
+  const autenticacion = await avisoAutenticado({ prestadoraId, req, res });
+  if (!autenticacion.ok) return undefined;
+
+  // De acá para abajo el aviso ya está probado auténtico, así que lo que falle sí se contesta con
+  // detalle: del otro lado hay un software que tiene que poder corregir lo que mandó mal.
+  if (!esIdentificador(facturaId)) return res.status(400).json({ error: 'La factura no se entiende' });
+
+  const problema = loQueEstaMalEnElComprobante(autenticacion.cuerpoCrudo);
+  if (problema) return res.status(400).json({ error: problema });
+
+  const { data: factura, error: errorDeLectura } = await supabase
+    .from('facturas_familia')
+    .select('id, familia_id')
+    .eq('id', facturaId)
+    .eq('prestadora_id', prestadoraId)
+    .maybeSingle();
+  if (errorDeLectura) {
+    console.error('No se pudo leer la factura del comprobante:', prestadoraId, errorDeLectura.message);
+    return res.status(500).json({ error: 'No se pudo atender el aviso' });
+  }
+  if (!factura) return res.status(404).json({ error: 'Factura no encontrada' });
+
+  const { error } = await guardarComprobante({
+    prestadoraId,
+    facturaId: factura.id,
+    familiaId: factura.familia_id,
+    bytes: autenticacion.cuerpoCrudo,
+  });
+  if (error) {
+    console.error('No se pudo guardar el comprobante:', prestadoraId, error.message);
+    return res.status(500).json({ error: 'No se pudo atender el aviso' });
+  }
+
+  return res.status(200).json({ guardado: true });
 });

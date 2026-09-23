@@ -21,6 +21,10 @@ import { darDeBajaElAcceso } from '../utils/bajaDelAcceso.js';
 import { estadoDocumentalParaLaFamilia } from '../utils/estadoDocumentalParaLaFamilia.js';
 import { laCobranzaLaLlevaOtroSoftware, sinLoQueSeCalculaAca } from '../utils/seguimientoDeLaCobranza.js';
 import {
+  direccionParaBajarElComprobante,
+  laPrestadoraEntregaLaFactura,
+} from '../utils/comprobanteDeLaFactura.js';
+import {
   COLUMNAS_PERFIL_PUBLICO,
   FUNCION_QUE_HABILITA_EL_ORDEN,
   ORDEN,
@@ -1029,10 +1033,32 @@ async function saldoDeLaFamilia(req, facturaId) {
   return data ?? null;
 }
 
+/**
+ * Cuáles de estas facturas tienen el comprobante guardado. Devuelve un conjunto de identificadores.
+ *
+ * Es una consulta aparte y no una columna más de la vista: la vista es la resta, y esto es dónde
+ * quedó un archivo. La ruta no sale de acá —al teléfono no le sirve y sí serviría para que quede
+ * escrita en algún registro—: lo único que viaja es si hay papel o no.
+ */
+async function facturasConComprobante(req, facturaIds) {
+  if (facturaIds.length === 0) return new Set();
+  const { data, error } = await supabase
+    .from('facturas_familia')
+    .select('id')
+    .in('id', facturaIds)
+    .eq('familia_id', req.usuarioFamilia.familiaId)
+    .eq('prestadora_id', req.usuarioFamilia.prestadoraId)
+    .not('comprobante_archivo', 'is', null);
+  if (error) throw new Error(error.message);
+  return new Set((data || []).map((f) => f.id));
+}
+
 appFamiliasRouter.get('/facturas', requiereRolFamilia, exigeVisible('familia_pagos_y_suscripcion'), exigeDelCirculo('circulo_dinero'), async (req, res) => {
   let laLlevaOtro;
+  let entrega;
   try {
     laLlevaOtro = await laCobranzaLaLlevaOtroSoftware(req.usuarioFamilia.prestadoraId);
+    entrega = await laPrestadoraEntregaLaFactura(req.usuarioFamilia.prestadoraId);
   } catch (e) {
     return responderError(res, e);
   }
@@ -1045,21 +1071,40 @@ appFamiliasRouter.get('/facturas', requiereRolFamilia, exigeVisible('familia_pag
     .order('periodo', { ascending: false });
   if (error) return responderError(res, error);
 
-  const facturas = laLlevaOtro ? (data || []).map(sinLoQueSeCalculaAca) : data || [];
-  res.json({ facturas, sigue_la_cobranza: !laLlevaOtro });
+  let facturas = laLlevaOtro ? (data || []).map(sinLoQueSeCalculaAca) : data || [];
+
+  // Con la entrega apagada no se dice ni cuáles tienen papel: la Prestadora hace llegar la factura
+  // por su cuenta, y contar acá que existe un archivo que no se puede bajar es peor que no decir
+  // nada.
+  if (entrega) {
+    let conPapel;
+    try {
+      conPapel = await facturasConComprobante(req, facturas.map((f) => f.factura_id));
+    } catch (e) {
+      return responderError(res, e);
+    }
+    facturas = facturas.map((f) => ({ ...f, tiene_comprobante: conPapel.has(f.factura_id) }));
+  }
+
+  res.json({ facturas, sigue_la_cobranza: !laLlevaOtro, entrega_la_factura: entrega });
 });
 
 appFamiliasRouter.get('/facturas/:facturaId', requiereRolFamilia, exigeVisible('familia_pagos_y_suscripcion'), exigeDelCirculo('circulo_dinero'), async (req, res) => {
   let factura;
   let laLlevaOtro;
+  let entrega;
+  let conPapel;
   try {
     laLlevaOtro = await laCobranzaLaLlevaOtroSoftware(req.usuarioFamilia.prestadoraId);
+    entrega = await laPrestadoraEntregaLaFactura(req.usuarioFamilia.prestadoraId);
     factura = await saldoDeLaFamilia(req, req.params.facturaId);
+    conPapel = entrega && factura ? await facturasConComprobante(req, [factura.factura_id]) : new Set();
   } catch (e) {
     return responderError(res, e);
   }
   if (!factura) return res.status(404).json({ error: 'Factura no encontrada' });
   if (laLlevaOtro) factura = sinLoQueSeCalculaAca(factura);
+  if (entrega) factura = { ...factura, tiene_comprobante: conPapel.has(factura.factura_id) };
 
   const { data: renglones, error: errorRenglones } = await supabase
     .from('facturas_familia_items')
@@ -1077,7 +1122,53 @@ appFamiliasRouter.get('/facturas/:facturaId', requiereRolFamilia, exigeVisible('
     .order('fecha_cobro', { ascending: false });
   if (errorCobros) return responderError(res, errorCobros);
 
-  res.json({ factura, renglones: renglones || [], cobros: cobros || [], sigue_la_cobranza: !laLlevaOtro });
+  res.json({
+    factura,
+    renglones: renglones || [],
+    cobros: cobros || [],
+    sigue_la_cobranza: !laLlevaOtro,
+    entrega_la_factura: entrega,
+  });
+});
+
+/**
+ * Bajar el comprobante de una factura.
+ *
+ * QUÉ SE ENTREGA. Una dirección firmada que vence, no el archivo: el depósito es privado y así el
+ * teléfono lo baja derecho de ahí sin que el motor tenga que pasar los bytes por el medio.
+ *
+ * CON LA ENTREGA APAGADA NO HAY PAPEL ACÁ. La Prestadora eligió hacer llegar la factura por su
+ * cuenta, y se contesta lo mismo que si no existiera: la pantalla no ofrece el botón, y quien
+ * llame a la dirección igual no llega a ningún lado.
+ *
+ * LAS DOS PUERTAS DE SIEMPRE: el interruptor de la Prestadora y el acceso que reparte el titular.
+ * Ningún permiso nuevo: quien ya podía ver la factura es quien puede bajarla.
+ */
+appFamiliasRouter.get('/facturas/:facturaId/comprobante', requiereRolFamilia, exigeVisible('familia_pagos_y_suscripcion'), exigeDelCirculo('circulo_dinero'), async (req, res) => {
+  let entrega;
+  try {
+    entrega = await laPrestadoraEntregaLaFactura(req.usuarioFamilia.prestadoraId);
+  } catch (e) {
+    return responderError(res, e);
+  }
+  if (!entrega) return res.status(404).json({ error: 'Comprobante no encontrado' });
+
+  // La factura se busca diciendo de quién es, siempre. Sin estos dos filtros, un identificador
+  // ajeno alcanzaría el comprobante de otra Familia.
+  const { data: factura, error } = await supabase
+    .from('facturas_familia')
+    .select('comprobante_archivo')
+    .eq('id', req.params.facturaId)
+    .eq('familia_id', req.usuarioFamilia.familiaId)
+    .eq('prestadora_id', req.usuarioFamilia.prestadoraId)
+    .maybeSingle();
+  if (error) return responderError(res, error);
+  if (!factura?.comprobante_archivo) return res.status(404).json({ error: 'Comprobante no encontrado' });
+
+  const direccion = await direccionParaBajarElComprobante(factura.comprobante_archivo);
+  if (!direccion) return res.status(502).json({ error: 'El comprobante no se pudo preparar' });
+
+  res.json({ direccion });
 });
 
 // ============================================================================

@@ -91,6 +91,42 @@ export function sigueLaCobranza(regla) {
   return regla?.sigue_la_cobranza !== false;
 }
 
+/**
+ * Si la Familia baja su comprobante desde la aplicación, o si la Prestadora se lo hace llegar por
+ * su cuenta.
+ *
+ * Lo decide la Prestadora, y es una decisión distinta de quién sigue la cobranza: una puede
+ * repartir las facturas por fuera y seguir llevando el saldo acá, y al revés también.
+ *
+ * Encendido, el comprobante que emitió el software de facturación queda disponible en la
+ * aplicación y la Familia lo descarga. Apagado, no se le ofrece: la Prestadora lo hace llegar en
+ * forma independiente, y la aplicación no muestra un botón que no lleva a ninguna parte.
+ *
+ * Sin nada configurado queda encendido. Apagarlo es una decisión que se toma.
+ */
+export function entregaLaFactura(regla) {
+  return regla?.entrega_la_factura !== false;
+}
+
+/** Dónde viven los comprobantes que emitió el software de facturación. */
+export const DEPOSITO_DE_COMPROBANTES = 'comprobantes-familia';
+
+// El mismo par que acota el depósito en la base. Acá está para avisar antes de que el archivo
+// viaje; quien decide es la base.
+export const TIPO_DEL_COMPROBANTE = 'application/pdf';
+export const TAMANO_MAXIMO_DEL_COMPROBANTE = 5 * 1024 * 1024;
+
+/**
+ * Dónde se guarda el comprobante de una factura.
+ *
+ * La ruta empieza por la Prestadora porque la política del depósito exige esa primera carpeta, y
+ * el nombre lleva un identificador único para que volver a subir el comprobante de una factura no
+ * pise el anterior. Cuál es el que vale lo dice la columna de la factura.
+ */
+export function rutaDelComprobante({ prestadoraId, familiaId }) {
+  return `${prestadoraId}/${familiaId}/${crypto.randomUUID()}.pdf`;
+}
+
 /** A quién se le puede reclamar una factura. Son identificadores guardados: no se renombran. */
 export const FINANCIADORES = {
   FAMILIA: 'familia',

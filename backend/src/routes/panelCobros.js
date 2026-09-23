@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
 import {
@@ -27,6 +27,7 @@ import {
 } from '../utils/intercambioDeFacturacion.js';
 import { laCobranzaLaLlevaOtroSoftware } from '../utils/seguimientoDeLaCobranza.js';
 import { anotarLoFacturado, facturaParaAnotar } from '../utils/anotarLoFacturado.js';
+import { guardarComprobante, loQueEstaMalEnElComprobante } from '../utils/comprobanteDeLaFactura.js';
 import { armarLosRenglonesDeLaFactura } from '../utils/facturaDelPeriodo.js';
 import { responderError } from '../utils/errorConMotivo.js';
 import { requierePermiso } from '../utils/permisos.js';
@@ -124,7 +125,9 @@ async function nombresDeFamilias(prestadoraId, ids) {
 async function facturaDeLaPrestadora(prestadoraId, facturaId) {
   const { data, error } = await supabase
     .from('facturas_familia')
-    .select('id, familia_id, periodo, monto_total, moneda, estado, fecha_emision, fecha_vencimiento')
+    .select(
+      'id, familia_id, periodo, monto_total, moneda, estado, fecha_emision, fecha_vencimiento, comprobante_subido_at'
+    )
     .eq('id', facturaId)
     .eq('prestadora_id', prestadoraId)
     .maybeSingle();
@@ -320,8 +323,12 @@ panelCobrosRouter.get('/facturas/:facturaId', requiereRolPanel, veElEstadoDeCuen
   if (errorCorrecciones) return responderError(res, errorCorrecciones);
 
   let nombres;
+  // Cuándo se guardó el papel que baja la Familia. Va la fecha y no la ruta del archivo: la ruta
+  // no la necesita ninguna pantalla, y lo que no viaja no se filtra.
+  let factura;
   try {
     nombres = await nombresDeFamilias(prestadoraId, [saldo.familia_id]);
+    factura = await facturaDeLaPrestadora(prestadoraId, saldo.factura_id);
   } catch (e) {
     return responderError(res, e);
   }
@@ -329,6 +336,7 @@ panelCobrosRouter.get('/facturas/:facturaId', requiereRolPanel, veElEstadoDeCuen
   res.json({
     ...saldo,
     familia_nombre: nombres.get(saldo.familia_id) ?? null,
+    comprobante_subido_at: factura?.comprobante_subido_at ?? null,
     cobros: cobros || [],
     correcciones: correcciones || [],
   });
@@ -572,6 +580,47 @@ panelCobrosRouter.put('/facturas/:facturaId/facturado', requiereRolPanel, async 
 
   res.json({ saldo });
 });
+
+/**
+ * Subir a mano el comprobante que emitió el software de facturación.
+ *
+ * POR QUÉ EXISTE, ADEMÁS DE LA PUERTA CONECTADA. Un software de facturación comprado no siempre
+ * puede empujarle el papel a nadie, y hay Prestadoras que facturan sin ninguno conectado. Sin esta
+ * puerta, la Familia no tendría de dónde bajar la factura salvo que el facturador se conecte.
+ *
+ * EL ARCHIVO LLEGA CRUDO, no adentro de un formulario: es un solo archivo y no lo acompaña ningún
+ * otro dato. Qué se comprueba —que sea un PDF de verdad, que no venga vacío, que no pese de más—
+ * está en `utils/comprobanteDeLaFactura.js`, que es por donde entra también el aviso conectado.
+ */
+panelCobrosRouter.post(
+  '/facturas/:facturaId/comprobante',
+  requiereRolPanel,
+  express.raw({ type: 'application/pdf', limit: '5mb' }),
+  async (req, res) => {
+    const prestadoraId = req.usuarioPanel.prestadoraId;
+
+    const problema = loQueEstaMalEnElComprobante(req.body);
+    if (problema) return res.status(400).json({ error: problema });
+
+    let factura;
+    try {
+      factura = await facturaDeLaPrestadora(prestadoraId, req.params.facturaId);
+    } catch (e) {
+      return responderError(res, e);
+    }
+    if (!factura) return res.status(404).json({ error: 'Factura no encontrada' });
+
+    const { error } = await guardarComprobante({
+      prestadoraId,
+      facturaId: factura.id,
+      familiaId: factura.familia_id,
+      bytes: req.body,
+    });
+    if (error) return responderError(res, error);
+
+    res.json({ ok: true });
+  }
+);
 
 // ---------------------------------------------------------------------------------------
 // El ida y vuelta con el software de facturación, por archivo

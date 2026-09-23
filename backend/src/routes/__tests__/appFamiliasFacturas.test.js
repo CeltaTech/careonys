@@ -92,18 +92,30 @@ async function pedir(ruta) {
  *
  * Se prepara como titular por defecto —que ve todo— y cada prueba cambia lo suyo.
  */
-function sesionDeLaFamilia({ visibilidad = null, accesos = null, titular = true, sigueLaCobranza = true } = {}) {
+function sesionDeLaFamilia({
+  visibilidad = null,
+  accesos = null,
+  titular = true,
+  sigueLaCobranza = true,
+  entregaLaFactura = true,
+} = {}) {
   respuestas.set('GET /auth/v1/user', { id: USUARIO });
   respuestas.set('GET /rest/v1/usuarios', [{ rol: 'familia', prestadora_id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/familias', titular ? [{ id: FAMILIA }] : []);
   respuestas.set('GET /rest/v1/miembros_familia', titular ? [] : [{ familia_id: FAMILIA }]);
   respuestas.set('GET /rest/v1/configuracion_visibilidad_app', visibilidad ?? []);
   respuestas.set('GET /rest/v1/permisos_circulo_familiar', accesos ?? []);
-  // Quién lleva la cobranza. Sin fila configurada la lleva este sistema, que es como nace.
+  // Quién lleva la cobranza y quién reparte la factura. Sin fila configurada las lleva este
+  // sistema, que es como nace: sólo se guarda lo apagado.
+  const regla = {};
+  if (!sigueLaCobranza) regla.sigue_la_cobranza = false;
+  if (!entregaLaFactura) regla.entrega_la_factura = false;
   respuestas.set(
     'GET /rest/v1/configuracion_facturacion_familias',
-    sigueLaCobranza ? [] : [{ regla: { sigue_la_cobranza: false } }]
+    Object.keys(regla).length === 0 ? [] : [{ regla }]
   );
+  // Cuáles facturas tienen el papel guardado. Ninguna, que es como nacen.
+  respuestas.set('GET /rest/v1/facturas_familia', []);
 }
 
 const SALDO = {
@@ -286,6 +298,60 @@ describe('cuando la cobranza la lleva otro software', () => {
 
     const [url] = consultasA('configuracion_facturacion_familias');
     assert.ok(url.includes(`prestadora_id=eq.${PRESTADORA}`), url);
+  });
+});
+
+describe('la factura en papel que baja la Familia', () => {
+  /**
+   * Lo que se cuida acá es que el papel de una Familia no quede al alcance de otra, y que con el
+   * interruptor apagado no se diga ni que existe. Contar que hay un archivo que no se puede bajar
+   * es peor que no decir nada.
+   */
+  it('la lista avisa cuáles tienen papel, sin decir dónde está guardado', async () => {
+    respuestas.set('GET /rest/v1/saldos_familia', [SALDO]);
+    respuestas.set('GET /rest/v1/facturas_familia', [{ id: FACTURA }]);
+
+    const { estado, cuerpo } = await pedir('/facturas');
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.entrega_la_factura, true);
+    assert.equal(cuerpo.facturas[0].tiene_comprobante, true);
+    assert.ok(!('comprobante_archivo' in cuerpo.facturas[0]));
+  });
+
+  it('y la consulta del papel lleva el filtro de Familia y el de Prestadora', async () => {
+    respuestas.set('GET /rest/v1/saldos_familia', [SALDO]);
+    await pedir('/facturas');
+
+    const [url] = consultasA('facturas_familia');
+    assert.ok(url.includes(`familia_id=eq.${FAMILIA}`), url);
+    assert.ok(url.includes(`prestadora_id=eq.${PRESTADORA}`), url);
+  });
+
+  it('con la entrega apagada no se dice ni que el papel existe', async () => {
+    sesionDeLaFamilia({ entregaLaFactura: false });
+    respuestas.set('GET /rest/v1/saldos_familia', [SALDO]);
+    respuestas.set('GET /rest/v1/facturas_familia', [{ id: FACTURA }]);
+
+    const { cuerpo } = await pedir('/facturas');
+    assert.equal(cuerpo.entrega_la_factura, false);
+    assert.ok(!('tiene_comprobante' in cuerpo.facturas[0]));
+  });
+
+  it('la dirección para bajarlo sale con el filtro de Familia puesto', async () => {
+    respuestas.set('GET /rest/v1/facturas_familia', [{ comprobante_archivo: null }]);
+    const { estado } = await pedir(`/facturas/${FACTURA}/comprobante`);
+    assert.equal(estado, 404);
+
+    const [url] = consultasA('facturas_familia');
+    assert.ok(url.includes(`familia_id=eq.${FAMILIA}`), url);
+    assert.ok(url.includes(`prestadora_id=eq.${PRESTADORA}`), url);
+  });
+
+  it('con la entrega apagada, bajarlo tampoco se puede', async () => {
+    sesionDeLaFamilia({ entregaLaFactura: false });
+    const { estado } = await pedir(`/facturas/${FACTURA}/comprobante`);
+    assert.equal(estado, 404);
+    assert.equal(consultasA('facturas_familia').length, 0);
   });
 });
 

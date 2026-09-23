@@ -25,6 +25,7 @@ export default function FacturaDetalle() {
   const { t, locale } = useLocale();
   const [detalle, setDetalle] = useState(undefined);
   const [error, setError] = useState('');
+  const [bajando, setBajando] = useState(false);
 
   useEffect(() => {
     let activo = true;
@@ -43,13 +44,29 @@ export default function FacturaDetalle() {
     };
   }, [facturaId]);
 
+  // La dirección se pide en el momento de tocar el botón y vence enseguida, así que no se guarda
+  // ni se vuelve a usar: cada descarga pide la suya.
+  async function bajarElComprobante() {
+    setBajando(true);
+    setError('');
+    try {
+      const { direccion } = await api.direccionDelComprobante(facturaId);
+      window.location.assign(direccion);
+    } catch (e) {
+      setError(mensajeDeError(e, t, 'comprobante de la factura'));
+    }
+    setBajando(false);
+  }
+
   const volver = (
     <Link to="/facturas" className="btn btn-secondary" style={{ marginBottom: '1rem', fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
       <span aria-hidden="true">←</span> {t.comun.volver}
     </Link>
   );
 
-  if (error) {
+  // El error de la carga tapa la pantalla porque no hay nada que mostrar; el de la descarga se
+  // avisa al lado del botón, sin hacer desaparecer la factura que se estaba mirando.
+  if (error && detalle === undefined) {
     return (
       <div>
         {volver}
@@ -92,6 +109,22 @@ export default function FacturaDetalle() {
         <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.facturas.col_vencimiento}</div>
         <div>{diaEnPalabras(factura.fecha_vencimiento, locale)}</div>
       </div>
+
+      {error && <div className="alert alert-error" role="alert" style={{ marginTop: '1.5rem' }}>{error}</div>}
+
+      {/* El papel sólo se ofrece cuando la Prestadora reparte las facturas por acá y el
+          comprobante ya está guardado. Apagado el interruptor, no se dice ni que existe. */}
+      {detalle.entrega_la_factura && factura.tiene_comprobante && (
+        <button
+          type="button"
+          className="btn btn-secondary"
+          style={{ marginTop: '1.5rem' }}
+          onClick={bajarElComprobante}
+          disabled={bajando}
+        >
+          {bajando ? t.comun.cargando : t.facturas.bajar_comprobante}
+        </button>
+      )}
 
       <h2 style={{ marginTop: '2rem' }}>{t.facturas.renglones_titulo}</h2>
       {renglones.length === 0 ? (

@@ -32,6 +32,7 @@ export function FacturacionFamiliasTab() {
   const { t } = useLocale();
   const [dias, setDias] = useState('');
   const [sigue, setSigue] = useState(true);
+  const [entrega, setEntrega] = useState(true);
   const [prestadoraId, setPrestadoraId] = useState(null);
   const [avisoConectado, setAvisoConectado] = useState(false);
   const [secreto, setSecreto] = useState('');
@@ -51,6 +52,7 @@ export function FacturacionFamiliasTab() {
       const { configuracion } = await llamarApi('/facturacion-familias');
       setDias(configuracion.dias_hasta_el_vencimiento === null ? '' : String(configuracion.dias_hasta_el_vencimiento));
       setSigue(configuracion.sigue_la_cobranza !== false);
+      setEntrega(configuracion.entrega_la_factura !== false);
       setAvisoConectado(!!configuracion.aviso_de_restriccion_conectado);
       setFacturacionConectada(!!configuracion.aviso_de_facturacion_conectado);
       setPrestadoraId(configuracion.prestadora_id ?? null);
@@ -79,6 +81,7 @@ export function FacturacionFamiliasTab() {
         body: JSON.stringify({
           dias_hasta_el_vencimiento: dias === '' ? '' : Number(dias),
           sigue_la_cobranza: sigue,
+          entrega_la_factura: entrega,
         }),
       });
       setGuardado(true);
@@ -156,6 +159,18 @@ export function FacturacionFamiliasTab() {
             checked={sigue}
             onChange={(e) => {
               setSigue(e.target.checked);
+              setGuardado(false);
+            }}
+          />
+          {/* Quién reparte la factura es otra decisión que quién sigue la cobranza: una Prestadora
+              puede hacer llegar las facturas por su cuenta y seguir llevando el saldo acá. */}
+          <FormField
+            label={t.configuracion.factura_entrega_titulo}
+            name="entrega_la_factura"
+            type="checkbox"
+            checked={entrega}
+            onChange={(e) => {
+              setEntrega(e.target.checked);
               setGuardado(false);
             }}
           />

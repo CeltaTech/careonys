@@ -554,6 +554,10 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
     comprobante_numero: '',
     fecha_vencimiento: '',
   });
+  // El papel que va a bajar la Familia. Se sube desde acá porque un software de facturación
+  // comprado no siempre puede empujarlo solo, y hay Prestadoras que facturan sin ninguno
+  // conectado.
+  const campoDelComprobante = useRef(null);
   const [correccion, setCorreccion] = useState({
     sentido: SENTIDOS_POSIBLES[0],
     monto: '',
@@ -608,6 +612,29 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
       await onCambio();
     } catch (e) {
       setError(mensajeDeError(e, t, 'anotar lo que se emitió'));
+    }
+    setProcesando(false);
+  }
+
+  /* Sube el comprobante y lo deja disponible para la Familia. El archivo viaja crudo, tal cual
+     salió del facturador: es un solo archivo y no lo acompaña ningún otro dato. Que sea un PDF de
+     verdad lo comprueba el motor mirando los bytes, no lo que diga el nombre. */
+  async function subirElComprobante(evento) {
+    const archivo = evento.target.files?.[0];
+    evento.target.value = '';
+    if (!archivo) return;
+
+    setProcesando(true);
+    setError(null);
+    try {
+      await llamarApiCobros(`/facturas/${facturaId}/comprobante`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/pdf' },
+        body: await archivo.arrayBuffer(),
+      });
+      await recargar();
+    } catch (e) {
+      setError(mensajeDeError(e, t, 'subir el comprobante'));
     }
     setProcesando(false);
   }
@@ -836,6 +863,22 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
                 >
                   {t.facturacion.anotar_correccion}
                 </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => campoDelComprobante.current?.click()}
+                  disabled={procesando}
+                >
+                  {detalle.comprobante_subido_at
+                    ? t.facturacion.comprobante_reemplazar
+                    : t.facturacion.comprobante_subir}
+                </Button>
+                <input
+                  ref={campoDelComprobante}
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  onChange={subirElComprobante}
+                  style={{ display: 'none' }}
+                />
               </div>
 
               {/* Anular pide por qué, y el motivo queda guardado. Se pregunta acá adentro y no en

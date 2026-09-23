@@ -154,6 +154,9 @@ beforeEach(() => {
   // De fábrica la cobranza la sigue este sistema, que es lo que hace la mayoría. Las pruebas del
   // caso conectado pisan esta respuesta.
   respuestas.set('GET /rest/v1/configuracion_facturacion_familias', () => [{ regla: {} }]);
+  // La factura como está guardada. Se consulta para saber si ya tiene el papel que baja la
+  // Familia; las pruebas que la cambian pisan esta respuesta.
+  respuestas.set('GET /rest/v1/facturas_familia', () => [FACTURA_EN_LA_BASE]);
   // Los medios de pago salen de la lista `medios_de_pago_de_la_familia` de la base. Acá contesta
   // las seis que siembra la migración, más una propia de esta Prestadora, que es el caso que antes
   // no existía.
@@ -508,6 +511,36 @@ describe('el detalle de una factura', () => {
     assert.equal(estado, 200);
     assert.equal(cuerpo.correcciones.length, 1);
     assert.equal(cuerpo.correcciones[0].sentido, 'resta');
+  });
+});
+
+describe('subir a mano el comprobante que baja la Familia', () => {
+  /** El archivo viaja crudo, como sale del facturador: un PDF y nada más. */
+  async function subir(bytes) {
+    const respuesta = await fetch(`${DIRECCION}/facturas/${FACTURA}/comprobante`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer token-de-mentira', 'Content-Type': 'application/pdf' },
+      body: bytes,
+    });
+    return { estado: respuesta.status, cuerpo: await respuesta.json() };
+  }
+
+  it('lo que no es un PDF no entra, aunque diga que lo es', async () => {
+    const { estado } = await subir(Buffer.from('<html>no soy un PDF</html>', 'ascii'));
+    assert.equal(estado, 400);
+    assert.ok(!llamadas.some((l) => l.clave.startsWith('POST /storage')));
+  });
+
+  it('vacío tampoco', async () => {
+    const { estado } = await subir(Buffer.alloc(0));
+    assert.equal(estado, 400);
+  });
+
+  it('la factura de otra Prestadora no existe para esta, y el papel no se guarda', async () => {
+    respuestas.set('GET /rest/v1/facturas_familia', () => []);
+    const { estado } = await subir(Buffer.from('%PDF-1.7 de mentira', 'ascii'));
+    assert.equal(estado, 404);
+    assert.ok(!llamadas.some((l) => l.clave.startsWith('POST /storage')));
   });
 });
 

@@ -57,9 +57,8 @@ jobs:
           DB_PASSWORD: ${{ secrets.BACKUP_DB_PASSWORD }}
           # Los archivos no viajan en el volcado: se bajan del almacenamiento, y para eso hacen
           # falta la dirección del proyecto y la llave de servicio (docs/SECRETOS.md). La
-          # dirección va con nombre propio: prestada de la de las pantallas, apuntaba a otro
-          # proyecto, y la llave buena contra el proyecto equivocado da un error que no se
-          # entiende.
+          # dirección va con nombre propio y no prestada de la de las pantallas: son dos cosas
+          # que hoy coinciden y no tienen por qué seguir coincidiendo.
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}

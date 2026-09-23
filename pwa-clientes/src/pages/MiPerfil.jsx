@@ -104,6 +104,10 @@ export default function MiPerfil() {
       <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '0.5rem 1.5rem' }}>
         <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.nombre}</div>
         <div>{perfil.nombre}</div>
+        {/* El correo es con lo que se entra. Está acá para que quien no se acuerda con cuál se
+            anotó lo pueda mirar, que es lo único que hay para «recuperar el usuario». */}
+        <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.email}</div>
+        <div>{perfil.email}</div>
         <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.telefono}</div>
         <div>{perfil.telefono || '—'}</div>
         {/* El plan contratado es una condición comercial, no un dato del cuidado: va con el

@@ -38,6 +38,29 @@ async function generarDump(rutaSalida) {
   });
 }
 
+/**
+ * Empaqueta el repositorio entero —todas las ramas, todas las etiquetas, toda la historia— en un
+ * solo archivo que se restaura con `git clone <archivo>`.
+ *
+ * Va acá por el mismo motivo que el volcado de la base no confía en el respaldo de Supabase: el
+ * código está en GitHub, pero eso es una sola copia, en una sola cuenta y en manos de un tercero.
+ *
+ * Exige que la copia de trabajo tenga la historia completa: con una copia de un solo commit el
+ * paquete sale igual y no sirve para nada.
+ */
+async function generarPaqueteDelCodigo(rutaSalida) {
+  await new Promise((resolve, reject) => {
+    const proceso = spawn('git', ['bundle', 'create', rutaSalida, '--all'], { cwd: '..' });
+    let stderr = '';
+    proceso.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
+    proceso.on('error', reject);
+    proceso.on('close', (codigo) => {
+      if (codigo !== 0) reject(new Error(`git bundle terminó con código ${codigo}: ${stderr}`));
+      else resolve();
+    });
+  });
+}
+
 function clienteS3({ endpoint, accessKeyId, secretAccessKey, region }) {
   return new S3Client({
     endpoint,
@@ -132,10 +155,22 @@ async function main() {
   // de esta noche ya está arriba, que es lo que no se puede perder.
   console.log('Copiando los archivos de los depósitos...');
   const cuenta = await copiarLosArchivos([destinoS3(r2, requireEnv('R2_BUCKET')), destinoS3(b2, requireEnv('B2_BUCKET'))]);
+
+  // Y por último el código. Último porque es lo único de los tres que tiene otra copia viva en
+  // otro lado; si algo se cae, lo que no se puede perder ya está arriba.
+  console.log('Empaquetando el código...');
+  const nombrePaquete = `${IDENTIDAD.codigo}_codigo_${timestamp}.bundle`;
+  const rutaPaquete = `/tmp/${nombrePaquete}`;
+  await generarPaqueteDelCodigo(rutaPaquete);
+  await subirA(r2, requireEnv('R2_BUCKET'), nombrePaquete, rutaPaquete);
+  await subirA(b2, requireEnv('B2_BUCKET'), nombrePaquete, rutaPaquete);
+  await unlink(rutaPaquete);
+  console.log(`Código: ${nombrePaquete} subido a los dos buckets.`);
+
   if (cuenta.fallados > 0) {
     throw new Error(`${cuenta.fallados} archivos no se pudieron copiar.`);
   }
-  console.log('Respaldo completo: la base y los archivos.');
+  console.log('Respaldo completo: la base, los archivos y el código.');
 }
 
 main().catch((error) => {

@@ -471,6 +471,7 @@ export const T = {
       medio_debito_automatico: 'Débito automático',
       medio_cheque: 'Cheque',
       medio_otro: 'Otro',
+      bajar_comprobante: 'Bajar la factura',
       no_es_comprobante: 'Esta pantalla muestra lo que la Prestadora facturó y lo que registró como cobrado. No es un comprobante fiscal.',
     },
     perfil: {
@@ -935,6 +936,7 @@ export const T = {
       medio_debito_automatico: 'Direct debit',
       medio_cheque: 'Cheque',
       medio_otro: 'Other',
+      bajar_comprobante: 'Download the invoice',
       no_es_comprobante: 'This screen shows what the Provider invoiced and what they recorded as paid. It is not a tax receipt.',
     },
     perfil: {
@@ -1389,6 +1391,7 @@ export const T = {
       medio_debito_automatico: 'Débito automático',
       medio_cheque: 'Cheque',
       medio_otro: 'Outro',
+      bajar_comprobante: 'Baixar a fatura',
       no_es_comprobante: 'Esta tela mostra o que a Prestadora faturou e o que registrou como pago. Não é um comprovante fiscal.',
     },
     perfil: {

@@ -5,6 +5,7 @@ import { LocaleProvider, useLocale } from './i18n/LocaleContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import ActivarCuenta from './pages/ActivarCuenta';
+import ClaveNueva from './pages/ClaveNueva';
 import MisGuardias from './pages/MisGuardias';
 import OfertasDeGuardia from './pages/OfertasDeGuardia';
 import GuardiaActiva from './pages/GuardiaActiva';
@@ -51,6 +52,9 @@ function Rutas() {
         element={cargando ? <div className="estado-cargando" role="status">{t.comun.cargando}</div> : session ? <Navigate to="/guardias" replace /> : <Login />}
       />
       <Route path="/activar-cuenta" element={<ActivarCuenta />} />
+      {/* Adonde apunta el enlace del correo de recuperación. Va afuera del guardián de sesión
+          porque quien llega acá perdió justamente la forma de tener una. */}
+      <Route path="/clave-nueva" element={<ClaveNueva />} />
       <Route
         path="/"
         element={

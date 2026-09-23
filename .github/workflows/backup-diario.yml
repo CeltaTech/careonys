@@ -29,7 +29,9 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # 22 y no 20: el cliente de Supabase necesita el WebSocket nativo, que en 20 no existe.
+          # Con 20 el volcado de la base salía bien y la copia de los archivos moría siempre.
+          node-version: '22'
 
       - name: Instalar dependencias
         working-directory: backend

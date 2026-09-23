@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
 import { entrarConLaLlaveDelAparato, esteAparatoGuardaLlaves, loCancelaronAMano } from '../lib/llaveDelDispositivo';
@@ -92,9 +91,6 @@ export default function Login() {
             {enviando ? t.auth.ingresando : t.auth.ingresar}
           </button>
         </form>
-        {/* Va debajo del botón y no arriba: quien entra todos los días no lo necesita, y quien
-            olvidó la clave lo busca recién después de que no le anduvo. */}
-        <Link to="/recuperar-clave">{t.auth.recuperar_link}</Link>
         {hayLlave && (
           <>
             <div className="login-separador">{t.auth.llave_o}</div>

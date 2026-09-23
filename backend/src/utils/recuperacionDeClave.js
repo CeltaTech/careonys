@@ -88,13 +88,7 @@ export async function pedirRecuperacionDeClave(email, prestadoraId) {
   await emitirElEnlaceYAvisar(usuario, email);
 }
 
-/**
- * Emite el enlace y manda el correo, para una cuenta que ya se encontró.
- *
- * Está escrito una sola vez porque hay dos formas de llegar acá: sin sesión, buscando la cuenta
- * por correo y Prestadora, y con sesión, donde la cuenta ya se sabe. Lo que cambia es cómo se la
- * encuentra; lo que pasa después es lo mismo.
- */
+/** Emite el enlace y manda el correo, para la cuenta que ya se encontró. */
 async function emitirElEnlaceYAvisar(usuario, email) {
   const appUrl = urlAppPorRol(usuario.rol);
   if (!appUrl) {
@@ -132,47 +126,6 @@ async function emitirElEnlaceYAvisar(usuario, email) {
     },
   );
   await enviarEmail({ to: email, asunto: textos.asunto, texto: textos.texto, formato: textos.html });
-}
-
-/**
- * Manda el enlace con el correo y nada más.
- *
- * ES EL «OLVIDÉ MI CONTRASEÑA» DE SIEMPRE, y no hace falta nada más que el correo. Quien lo
- * olvidó no tiene por qué saber cómo está organizado esto por dentro: escribe su correo y recibe
- * el enlace.
- *
- * SI ESE CORREO TIENE CUENTA EN MÁS DE UNA PRESTADORA, sale un enlace por cada una. Cada cuenta
- * tiene su propia clave, así que cada enlace cambia la suya, y el correo que llega dice de cuál
- * se trata. Elegir por la persona cuál de las dos recuperar sería adivinar.
- *
- * NO CONTESTA SI EL CORREO EXISTE. Por eso no devuelve nada y no falla cuando no encuentra a
- * nadie: quien pregunta acá no tiene sesión, y una respuesta distinta convertiría esta puerta en
- * una forma de averiguar quién tiene cuenta, preguntando de a un correo por vez.
- *
- * El tope por hora se cuenta por Prestadora, igual que siempre, para que el tope de una no deje
- * sin recuperar la clave de la otra.
- */
-export async function pedirRecuperacionPorCorreo(email) {
-  const { data: cuentas, error } = await supabase
-    .from('usuarios')
-    .select('id, nombre, rol, prestadora_id')
-    .eq('email', correoComparable(email));
-
-  if (error) throw new Error(error.message);
-
-  if (!cuentas?.length) {
-    console.warn('recuperacionDeClave: se pidió una clave nueva para un correo sin cuenta');
-    return;
-  }
-
-  for (const usuario of cuentas) {
-    if (await seAgotaronLosPedidosDeClave(usuario.prestadora_id, email)) {
-      console.warn('recuperacionDeClave: se alcanzó el tope de pedidos por hora para un correo');
-      continue;
-    }
-    await anotarPedidoDeClave(usuario.prestadora_id, email);
-    await emitirElEnlaceYAvisar(usuario, email);
-  }
 }
 
 /**

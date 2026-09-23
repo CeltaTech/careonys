@@ -22,6 +22,7 @@ import FacturaDetalle from './pages/FacturaDetalle';
 import Medicacion from './pages/Medicacion';
 import Contenidos from './pages/Contenidos';
 import MiPerfil from './pages/MiPerfil';
+import MiClave from './pages/MiClave';
 import FirmarInstruccion from './pages/FirmarInstruccion';
 import CodigoParaElAsistente from './pages/CodigoParaElAsistente';
 import BuscarAsistentes from './pages/BuscarAsistentes';
@@ -227,6 +228,9 @@ function Rutas() {
         <Route path="contenidos" element={<Contenidos />} />
         <Route path="codigo" element={<CodigoParaElAsistente />} />
         <Route path="perfil" element={<MiPerfil />} />
+        {/* Cambiar la propia clave estando adentro. No lleva guardián más allá de la sesión:
+            cualquiera que entró puede cambiar la suya, y la pantalla pide la actual antes. */}
+        <Route path="mi-clave" element={<MiClave />} />
         {/* No lleva guardián: quién tiene una instrucción para firmar lo contesta el motor, y
             quien no tiene ninguna ve que no hay ninguna. Adivinarlo acá dejaría al titular
             afuera de su propia pantalla mientras el perfil todavía viaja. */}

@@ -33,12 +33,14 @@ la sección de Reclutamiento está esperando justamente esto.
   señalados en el paso que los necesita.
 - **El inventario de allá se usa como lista de control**, leyéndolo y sin escribir en él.
 
-**1.** Recuperar la clave y cambiarla en las dos aplicaciones de teléfono. El motor, que es común
-a las tres, ya está: las puertas, el aviso por correo y el enlace sirven igual para la Familia y
-para el Asistente. **La pantalla donde se elige la clave nueva también está**, en las dos
-aplicaciones, hecha con lo mínimo para que el enlace del correo no caiga en el vacío. Faltan dos:
-pedir el enlace desde la aplicación sin llamar a nadie, y cambiar la clave estando adentro. Las
-dos **esperan la maqueta**, porque hasta que llegue no se toca apariencia ni recorrido ahí.
+**1.** Pedir el enlace de la clave desde las dos aplicaciones de teléfono, sin llamar a nadie. Lo
+demás de este tema ya está: el motor es común a las tres, la pantalla donde se elige la clave
+nueva existe en las dos aplicaciones, y **cambiar la propia clave estando adentro también**, con
+la clave actual pedida antes.
+
+**Lo único que falta depende del paso 2.** Para pedir el enlace hay que saber de qué Prestadora es
+la cuenta, y hoy las aplicaciones no lo saben: cada Prestadora es una cuenta distinta, y sin eso no
+hay ninguna clave que reemplazar.
 
 **Mientras tanto, quien olvida la clave llama a su Prestadora y ella le manda el enlace** desde el
 Panel. Ese camino funciona hoy.
@@ -48,8 +50,8 @@ contrata con varias.** Cada una de esas es **una cuenta distinta, con su propia 
 correo puede estar en dos Prestadoras y son dos cuentas: usar el correo de siempre no lo obliga a
 nadie a tener una sola cuenta. Adentro de una Prestadora ese correo no se repite.
 
-**Lo que falta es la pantalla de ingreso de las dos aplicaciones de teléfono, que espera la
-maqueta.** El modelo ya está, la base lo impone, y en el Panel ya funciona: la Prestadora sale de
+**Lo que falta es la pantalla de ingreso de las dos aplicaciones de teléfono.** El modelo ya
+está, la base lo impone, y en el Panel ya funciona: la Prestadora sale de
 la puerta por donde se entró y nunca de lo que venga en el pedido. Las dos aplicaciones todavía
 firman con el correo crudo.
 
@@ -141,13 +143,12 @@ mano, o se baja un archivo con todo lo que falta facturar y se sube el que el so
 lo calcula ni lo entrega cuando la cobranza la lleva otro software —ni en el Panel ni en la
 ventanilla de la Familia—, y las dos pantallas de facturas de esa aplicación dejan de dibujar lo
 que no viene: la lista se queda sin el renglón del saldo y del estado, y el desglose sin tres de
-sus siete renglones. **Espera la maqueta**, porque cambia lo que la Familia ve y las dos
-aplicaciones de teléfono no se tocan hasta que llegue.
+sus siete renglones.
 
 **6.** La pantalla de los datos bancarios del Asistente. El dato lo informa él, así que él lo
 carga y él lo corrige: la base ya lo deja escribir su propia fila y ninguna otra, y el motor ya
 tiene por dónde —cargar, corregir y sacar la cuenta—, con lo que entra validado y con el cambio
-anotado. Falta la pantalla donde lo hace, en la aplicación del Asistente, y **espera la maqueta**.
+anotado. Falta la pantalla donde lo hace, en la aplicación del Asistente.
 
 ---
 
@@ -167,7 +168,7 @@ Existe el andamiaje —base, disparadores, cobros, consentimiento—, la Familia
 
 **10. Usted** — Las dos observaciones de apariencia que quedan, porque las dos son decisiones de diseño: ¿con qué pantalla abre la aplicación de Familia cuando hay más de un Paciente — hoy abre en la lista, y con uno solo ya se saltea al detalle? ¿Y cuál es la identidad visual de las dos aplicaciones, que nunca pasaron por su etapa de diseño?
 
-El Desarrollador está preparando una maqueta orientativa de cómo tienen que verse y cómo se recorren. **Hasta que llegue no se toca nada de apariencia ni de recorrido en las dos aplicaciones**, porque cualquier arreglo suelto de hoy es trabajo que la maqueta va a pisar. Lo que sí se corrige mientras tanto es lo que deja a alguien sin poder hacer su trabajo.
+El Desarrollador está preparando una maqueta orientativa de cómo tienen que verse y cómo se recorren. **La maqueta mejora lo que ya está construido: no es condición para construirlo.** Las pantallas que faltan se hacen ahora, con la apariencia que el producto ya tiene, y cuando la maqueta llegue se acomoda lo que haya que acomodar. Ningún paso de esta lista espera por ella.
 
 **11. Usted** — Rotación y retención de Asistentes: ¿cuál es la fórmula y cuál el umbral?
 

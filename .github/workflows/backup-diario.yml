@@ -35,7 +35,10 @@ jobs:
 
       - name: Instalar dependencias
         working-directory: backend
-        run: npm install --omit=dev
+        # `ci` y no `install`: install ignora el candado de versiones y se trae la última de cada
+        # biblioteca. Así entró una versión del cliente de Supabase que rechaza la llave de
+        # servicio, y la copia de los archivos murió con un error que no tenía nada que ver.
+        run: npm ci --omit=dev
 
       - name: Ejecutar backup
         working-directory: backend

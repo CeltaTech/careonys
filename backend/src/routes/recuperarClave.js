@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import {
   pedirRecuperacionDeClave,
-  pedirRecuperacionPorCorreo,
   cambiarClaveConToken,
   segundoFactorDelEnlace,
 } from '../utils/recuperacionDeClave.js';
@@ -33,27 +32,6 @@ recuperarClaveRouter.post('/pedir/:prestadora', resolverPrestadoraPublica, async
   try {
     if (!email || typeof email !== 'string') throw new ErrorConMotivo('faltan_datos');
     await pedirRecuperacionDeClave(email, req.prestadoraPublica.prestadora_id);
-    res.json({ ok: true });
-  } catch (err) {
-    if (err instanceof ErrorConMotivo) return responderError(res, err);
-    console.error('Error al pedir recuperación de clave:', err.message);
-    res.status(500).json({ error: 'error_interno' });
-  }
-});
-
-// Lo mismo, pero con el correo y nada más. Es la puerta de las dos aplicaciones de teléfono, que
-// no entran por una dirección propia de cada Prestadora y no tienen por qué saber de cuál es la
-// cuenta: quien olvidó la clave escribe su correo, igual que en cualquier otro lado.
-//
-// SI ESE CORREO TIENE CUENTA EN MÁS DE UNA PRESTADORA, sale un enlace por cada una.
-//
-// Contesta lo mismo exista el correo o no, por el mismo motivo que la de arriba.
-recuperarClaveRouter.post('/pedir', async (req, res) => {
-  const { email } = req.body ?? {};
-
-  try {
-    if (!email || typeof email !== 'string') throw new ErrorConMotivo('faltan_datos');
-    await pedirRecuperacionPorCorreo(email);
     res.json({ ok: true });
   } catch (err) {
     if (err instanceof ErrorConMotivo) return responderError(res, err);

@@ -6,6 +6,9 @@ name: Backup diario a buckets (R2 + B2)
 #
 # Y después copia los archivos de los depósitos, que hasta hoy no se respaldaban: una base
 # restaurada sin ellos dice que el certificado está cargado y el certificado no vuelve.
+#
+# Y por último el código entero, con toda su historia. Estaba sólo en GitHub: una copia, en una
+# cuenta, en manos de un tercero.
 on:
   schedule:
     - cron: '0 6 * * *' # 03:00 America/Argentina/Buenos_Aires (UTC-3)
@@ -16,6 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # La historia entera, no el último commit: el respaldo empaqueta el repositorio
+          # completo, y con una copia recortada el paquete sale igual y no sirve para restaurar.
+          fetch-depth: 0
 
       - name: Instalar cliente de Postgres 17 (pg_dump)
         # El servidor de Supabase corre Postgres 17.6 — pg_dump exige que su versión sea

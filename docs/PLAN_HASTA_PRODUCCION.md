@@ -38,6 +38,12 @@ a las tres, ya está: las puertas, el aviso por correo y el enlace sirven igual 
 para el Asistente. Faltan las pantallas, y **esperan la maqueta**, porque hasta que llegue no se
 toca apariencia ni recorrido ahí.
 
+**Y mientras tanto hay un camino roto que no espera a nadie.** El correo de recuperación sale y
+lleva un enlace, y ese enlace apunta a una pantalla que en las dos aplicaciones no existe: quien
+lo abre cae en el inicio, sin aviso y sin clave nueva. Un Asistente o una Familia que hoy olvide
+la clave queda afuera. Se corrige antes que el resto de este paso, con lo mínimo para que el
+enlace funcione, y la apariencia se acomoda después con la maqueta.
+
 **2.** Una cuenta por Prestadora. **Un Asistente trabaja en varias Prestadoras y una Familia
 contrata con varias.** Cada una de esas es **una cuenta distinta, con su propia clave**. El mismo
 correo puede estar en dos Prestadoras y son dos cuentas: usar el correo de siempre no lo obliga a
@@ -114,7 +120,11 @@ clave para las tres, esa puerta daba también a las otras dos y esto no se podí
 nada de esto: no pueden verificar ni cambiar su número con código, entrar desde un equipo nuevo no
 les pide código, y **no pueden cerrar la sesión de todos los equipos**, que es justo lo que
 necesita alguien a quien le robaron el teléfono. La única puerta es el Panel, y ahí no entran.
-El motor ya lo tiene todo resuelto: lo que falta son las pantallas.
+**Acá falta motor y no sólo pantalla**, al revés que en los pasos de arriba: las piezas de fondo
+—mandar el código, comprobarlo, reconocer el equipo, cerrar todas las sesiones— están escritas y
+no conocen ningún rol, pero las únicas puertas que las usan exigen ser del Panel y rechazan a un
+Asistente y a una Familia. Hay que abrir las puertas equivalentes para ellos dos, y recién
+después las pantallas.
 
 ---
 

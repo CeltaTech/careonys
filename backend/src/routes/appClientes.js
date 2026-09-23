@@ -111,7 +111,7 @@ appClientesRouter.get('/perfil', requiereRolCliente, async (req, res) => {
   // columna.
   const { data: usuario, error } = await supabase
     .from('usuarios')
-    .select('nombre, telefono')
+    .select('nombre, telefono, email')
     .eq('id', req.usuarioCliente.id)
     .single();
   if (error || !usuario) {

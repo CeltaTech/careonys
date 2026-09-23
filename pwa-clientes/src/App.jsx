@@ -8,6 +8,7 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import ActivarCuenta from './pages/ActivarCuenta';
 import ClaveNueva from './pages/ClaveNueva';
+import RecuperarClave from './pages/RecuperarClave';
 import MisPacientes from './pages/MisPacientes';
 import PacienteDetalle from './pages/PacienteDetalle';
 import Guardias from './pages/Guardias';
@@ -88,6 +89,8 @@ function Rutas() {
       {/* Adonde apunta el enlace del correo de recuperación. Va afuera del guardián de sesión
           porque quien llega acá perdió justamente la forma de tener una. */}
       <Route path="/clave-nueva" element={<ClaveNueva />} />
+      {/* Donde se pide ese enlace, con el correo y nada más. Afuera del guardián por lo mismo. */}
+      <Route path="/recuperar-clave" element={<RecuperarClave />} />
       <Route
         path="/"
         element={

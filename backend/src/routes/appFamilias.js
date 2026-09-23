@@ -111,7 +111,7 @@ appFamiliasRouter.get('/perfil', requiereRolFamilia, async (req, res) => {
   // columna.
   const { data: usuario, error } = await supabase
     .from('usuarios')
-    .select('nombre, telefono')
+    .select('nombre, telefono, email')
     .eq('id', req.usuarioFamilia.id)
     .single();
   if (error || !usuario) {

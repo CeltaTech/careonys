@@ -1,6 +1,6 @@
 # PLAN HASTA PRODUCCIÓN — Careonys
 
-**Una sola lista, del 1 al 79, en orden.** Se hace el 1, después el 2, y así hasta el final.
+**Una sola lista, del 1 al 80, en orden.** Se hace el 1, después el 2, y así hasta el final.
 
 - Los pasos que empiezan con **Usted** los contesta o los hace el Desarrollador. Los demás los hago yo.
 - **Un paso terminado se borra de este archivo.** No se marca como hecho: se saca.
@@ -582,39 +582,52 @@ dirección, y los dos depósitos de respaldo. El repositorio ya se llama `careon
 
 **66. Usted** — El alta y la baja de Prestadoras: Match expone una puerta firmada para que CeltaTech dé de alta y de baja clientes; Careonys no tiene nada parecido. ¿Se construye la misma, o se siguen dando de alta a mano?
 
-**67.** **Por esa misma puerta tiene que entrar a qué tiene acceso cada Prestadora, y hoy no entra
-nada.** CeltaTech le vende a la Prestadora un plan, y ese plan dice qué modalidades y qué
-prestaciones tiene habilitadas. Eso se lo informa al producto al dar el alta. **Y ahí termina:
-CeltaTech no tiene injerencia, bajo ninguna circunstancia, en el negocio de ninguna Prestadora.**
-Le habilita funciones del software y nada más; qué cobra, a quién, cuánto y con qué condiciones lo
-decide ella sola.
+**67.** **Por esa misma puerta tiene que entrar qué tiene habilitado cada Prestadora, y hoy no
+entra nada.** CeltaTech le vende un plan, y ese plan dice qué puede usar. Eso se lo informa al
+producto. **Y ahí termina: CeltaTech no tiene injerencia, bajo ninguna circunstancia, en el
+negocio de ninguna Prestadora.** Le habilita funciones del software y nada más; qué cobra, a
+quién, cuánto y con qué condiciones lo decide ella sola.
 
-**Entonces son tres niveles, uno arriba del otro, y hoy falta el de arriba:**
+**Son tres niveles, uno arriba del otro, y falta el primero:**
 
-- **CeltaTech habilita**, según el plan que esa Prestadora compró. Ése es el techo. **No existe.**
-- **La Prestadora usa o no usa, y decide cómo**, adentro de ese techo. Existe: lo prende y lo apaga
-  desde su Configuración, y **queda tal cual está**.
-- **La ficha de cada Asistente**, adentro de lo que la Prestadora tenga prendido. Existe.
+- **Lo que CeltaTech le habilita**, según el plan que contrató. **No existe.**
+- **Lo que la Prestadora decide usar**, adentro de eso, desde su Configuración. Existe.
+- **Lo que la ficha de cada Asistente permite**, adentro de lo que la Prestadora usa. Existe.
 
-Como el primero falta, hoy el de la Prestadora es el único, y por eso se habilita Match sola. Del
-lado de CeltaTech el mecanismo ya está construido —un catálogo de capacidades que cada producto
-declara, asignadas a planes y resueltas por suscripción, guardadas como texto que no interpreta—.
-Lo que no existe es el canal por donde eso llegue acá.
+Como falta el primero, el de la Prestadora quedó siendo el único, y por eso hoy se habilita Match
+sola. Del lado de CeltaTech el mecanismo ya está construido —un catálogo de capacidades que cada
+producto declara, asignadas a planes y resueltas por suscripción, guardadas como texto que no
+interpreta—. Lo que no existe es el canal por donde eso llegue acá.
 
-**68.** Construir el techo: recibir de CeltaTech qué tiene habilitado cada Prestadora y dejar su
-Configuración elegir solamente adentro de eso. **La lista de capacidades la declara este
-producto**, que es el que sabe qué significan; del otro lado son texto opaco. Lo que cada
-Prestadora tenga prendido hoy se conserva.
+**Y CeltaTech no sólo habilita al dar el alta: también deshabilita después**, por falta de pago o
+por cambio de plan, la aplicación entera o una parte. **Eso es un apagado distinto del de la
+Prestadora, aunque hoy los dos se dirían igual:**
 
-**69. Usted** — El acompañamiento online: ¿prestación más, o guardia sin domicilio? Si es guardia, hay que decidir qué reemplaza al check-in por ubicación.
+- **El de la Prestadora** es una decisión de negocio de ella: deja de operar con una modalidad.
+  Hoy el sistema no la deja apagar si quedan Asistentes trabajando o Familias con acceso abierto,
+  y está bien que no la deje.
+- **El de CeltaTech no se puede bloquear.** Con esa misma comprobación, una Prestadora que no paga
+  se queda habilitada para siempre con sólo tener un Asistente trabajando.
 
-**70. Usted** — El «Gestor del cuidado»: ¿rol nuevo, variante de Coordinador, o entrada en el catálogo de permisos por Prestadora? La tercera no rompe la regla de los tres roles de Panel; las dos primeras sí. Hoy el Coordinador se asigna por guardia, no por Familia.
+**68. Usted** — Cuando CeltaTech deshabilita y adentro quedan Asistentes trabajando y Familias con
+acceso abierto, ¿qué pasa con eso? Cortar el acceso y dejarlo todo en su lugar no es lo mismo que
+darlo de baja.
 
-**71. Usted** — Cursos para familias: ¿va o no va?
+**69.** Construirlo: recibir de CeltaTech qué tiene habilitado cada Prestadora y que su
+Configuración ofrezca solamente eso; y recibir el deshabilitado posterior, sin la comprobación que
+lleva el apagado de ella, aplicando lo contestado sobre lo que queda en curso. **La lista de
+capacidades la declara este producto**, que es el que sabe qué significan; del otro lado son texto
+opaco. Lo que cada Prestadora tenga hoy en uso se conserva.
 
-**72. Usted** — La regla de los archivos dice «nunca público» y hay un depósito público construido (`marca-prestadoras`); los otros cinco son privados. ¿La regla admite la excepción, o se cierra el depósito?
+**70. Usted** — El acompañamiento online: ¿prestación más, o guardia sin domicilio? Si es guardia, hay que decidir qué reemplaza al check-in por ubicación.
 
-**73. Usted** — La categoría de convenio del Asistente se teclea a mano, y de ella depende su
+**71. Usted** — El «Gestor del cuidado»: ¿rol nuevo, variante de Coordinador, o entrada en el catálogo de permisos por Prestadora? La tercera no rompe la regla de los tres roles de Panel; las dos primeras sí. Hoy el Coordinador se asigna por guardia, no por Familia.
+
+**72. Usted** — Cursos para familias: ¿va o no va?
+
+**73. Usted** — La regla de los archivos dice «nunca público» y hay un depósito público construido (`marca-prestadoras`); los otros cinco son privados. ¿La regla admite la excepción, o se cierra el depósito?
+
+**74. Usted** — La categoría de convenio del Asistente se teclea a mano, y de ella depende su
 remuneración básica. El convenio tiene sus categorías definidas y no las inventa la Prestadora,
 así que tecleadas quedan escritas distinto en cada ficha: no se puede saber cuántos Asistentes hay
 en cada una, ni aplicarle un cambio de escala a todos los de una categoría de una sola vez, y un
@@ -629,9 +642,9 @@ liquidado.
 
 ## El sitio web
 
-**74. Usted** — ¿Se autoriza construir `careonys.com` según `docs/PRD_01_Sitio_Web.md`? El PRD ya está entero. Hoy `sitio-web/` es una página que dice «En construcción». **El diseño se hace de cero**: del sitio público de Match no viaja nada visual.
+**75. Usted** — ¿Se autoriza construir `careonys.com` según `docs/PRD_01_Sitio_Web.md`? El PRD ya está entero. Hoy `sitio-web/` es una página que dice «En construcción». **El diseño se hace de cero**: del sitio público de Match no viaja nada visual.
 
-**75.** Construirlo.
+**76.** Construirlo.
 
 ---
 
@@ -652,7 +665,7 @@ para el tratamiento de dato biométrico, la accesibilidad, la protección de dat
 cuatro preguntas sobre la ubicación de las personas. Los pasos que dependen de ellas dicen qué se
 construye igual mientras tanto.
 
-**76. Usted** — Las escalas legales: la validación, y los dos valores que el código usa y no
+**77. Usted** — Las escalas legales: la validación, y los dos valores que el código usa y no
 existen (`piso_minimo_indemnizacion` y `fraccion_computable_antiguedad`). En el mismo viaje va el
 texto del aviso sobre el abandono de persona: ninguno de los veintiún documentos de `docs/legal/`
 lo menciona —lo único parecido es el abandono de *trabajo*, art. 244 LCT, en
@@ -663,8 +676,8 @@ documento no hay aviso; la mecánica se construye igual, porque no depende de ni
 
 ## Cierre
 
-**77. Usted** — El documento de roles generado desde la base: ¿para quién es, interno de CeltaTech o manual para la Prestadora?
+**78. Usted** — El documento de roles generado desde la base: ¿para quién es, interno de CeltaTech o manual para la Prestadora?
 
-**78.** Generarlo.
+**79.** Generarlo.
 
-**79.** Correr las pruebas y publicar.
+**80.** Correr las pruebas y publicar.

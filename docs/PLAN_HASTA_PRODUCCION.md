@@ -19,57 +19,116 @@ construidas. Si alguna no es suya y se cambia, lo que se levante encima mientras
 y puede tener alguna de más o de menos. Las marcadas **[ya construido]** tienen código o una
 migración aplicada detrás.
 
-**1. Usted** — De cada renglón de abajo, en este orden: ¿la decisión es suya o no? Si no lo es,
-¿se borra, se reescribe sin ponerle autor, o la decide ahora? Se tratan de a una.
+**1. Usted** — De cada renglón de abajo: ¿la decisión es suya o no? Si no lo es, ¿se borra, se
+reescribe sin ponerle autor, o la decide ahora? **Se abre un grupo entero por vez**, en el orden en
+que están, y adentro se contesta renglón por renglón.
 
-**2.** Aplicar lo contestado, renglón por renglón. Cada uno se borra de acá al cerrarse.
+**2.** Aplicar lo contestado. **Un grupo se aplica cuando está contestado entero**, porque adentro
+de un grupo las respuestas se apoyan unas en otras. Cada renglón se borra de acá al cerrarse.
 
-**Lo que cierra la discusión por escrito, es de seguridad, y ya está construido:**
+**Están agrupados por tema, y los grupos van de más grave a menos.** Adentro de un grupo las
+decisiones se sostienen entre sí: contestarlas de a una, salteadas, hace que la respuesta de una
+contradiga la de otra que ya se cerró. **Se contesta grupo por grupo**, y adentro de cada uno,
+renglón por renglón.
+
+### 1. El motor entra a la base con la llave maestra
+
+Es lo más pesado de todo. Está construido, es de seguridad, y además **cierra la discusión por
+escrito**: dice que la alternativa se evaluó y se descartó, y que quien la vuelva a proponer tiene
+que refutar la objeción antes de hablar. Si esa decisión no es suya, lo que hay es una puerta
+cerrada con llave por alguien que no tenía la llave.
 
 - `CLAUDE.md:325` — **[ya construido]** que pasar el motor al pase de cada persona «se evaluó y se descartó», con fecha y con su nombre, y que quien lo reproponga tiene que refutar la objeción antes.
 - `CLAUDE.md:319` — **[ya construido]** que el motor entre a la base con la llave maestra es una decisión y no un olvido.
 - `CLAUDE.md:310` — **[ya construido]** que no se convierta en dueño lo que dispara un cambio en la base.
+
+### 2. Cómo entra cada persona, y quién tiene más poder que nadie
+
+**Este grupo traba el primer paso que se construye.** La cuenta por Prestadora y toda la sección de
+la clave, más abajo en esta misma lista, se apoyan en esto. Si acá cambia algo, cambian las dos.
+
 - `docs/PLAN_HASTA_PRODUCCION.md`, «La entrada y la recuperación de la clave» — el bloque entero titulado «Lo decidido, y no se vuelve a discutir»: las tres vías, cuándo se pide el código, qué es un equipo nuevo, la huella y la cara afuera, y la aplicación de códigos sólo para el rol técnico.
-- `docs/PRD_06_WhatsApp_IA.md:105` — que las credenciales de Meta queden donde ni el rol técnico las lea.
-- `docs/claude_history.md:123` — **[ya construido]** que el depósito de logos sea público para leer, única excepción a «los archivos se guardan privados». **Se contesta junto con el paso de más abajo que pregunta si la regla admite esa excepción o si el depósito se cierra:** ahí se decide qué pasa, acá sólo si la decisión fue suya.
-- `docs/claude_history.md:375` — **[ya construido]** la creación del rol técnico, por encima de la administración de la Prestadora.
 - `docs/PRD_04_05_App_Servicio.md:34` y `:204` — **[ya construido]** que el Asistente y la Familia entren con clave escrita y no con un enlace al correo.
 - `docs/PRD_04_05_App_Servicio.md:231` — **[ya construido]** que al Asistente se lo confirme escaneando adentro de la aplicación, y que se elimine la ficha pública con código de barras.
+- `docs/claude_history.md:375` — **[ya construido]** la creación del rol técnico, por encima de la administración de la Prestadora.
 
-**Lo que define el alcance del producto o del negocio:**
+### 3. El dinero: qué hace Careonys y qué no, y cómo se guarda un Cliente
 
-- `docs/claude_history.md:429` — **[ya construido]** que Careonys guarde el comprobante que emitió otro y no emita ninguno.
+**Es el grupo más grande, el que más código tiene detrás, y el que menos se puede contestar
+salteado.** Los once renglones son una sola arquitectura: si la cobranza sí fuera función de
+Careonys, cambian el padrón, los tres papeles de una contratación y el estado de cuenta. Y al
+revés. **Una respuesta suelta acá rompe las otras diez.**
+
 - `docs/claude_history.md:453` — **[ya construido]** que la cobranza no sea una función de Careonys.
+- `CLAUDE.md:198` — que Careonys no asuma facturación ni cobranzas.
+- `docs/claude_history.md:429` — **[ya construido]** que Careonys guarde el comprobante que emitió otro y no emita ninguno.
 - `docs/claude_history.md:447` — **[ya construido]** que haya tres formas fijas de conectar con la facturación de cada Prestadora.
 - `docs/claude_history.md:435` — que la cobranza se configure distinto en cada Prestadora.
-- `CLAUDE.md:198` — que Careonys no asuma facturación ni cobranzas.
 - `CLAUDE.md:233` — **[ya construido]** que hacia afuera se entregue y no se traiga.
-- `CLAUDE.md:259` — **[ya construido]** que un Legajo no se borre nunca.
-- `CLAUDE.md:265` — que la palabra rol nunca signifique permisos.
-- `CLAUDE.md:279` — **[ya construido]** que el número de Legajo no se muestre.
 - `docs/claude_history.md:459` — **[ya construido]** que haya un padrón único de Clientes. En ese mismo renglón hay una admisión escrita: la regla anterior la escribí yo y usted nunca la pidió. La reemplaza por ésta, también sin cita.
 - `docs/claude_history.md:465` — **[ya construido]** que una contratación se separe en tres papeles distintos.
+- `CLAUDE.md:259` — **[ya construido]** que un Legajo no se borre nunca.
+- `CLAUDE.md:279` — **[ya construido]** que el número de Legajo no se muestre.
+- `CLAUDE.md:265` — que la palabra rol nunca signifique permisos.
+
+### 4. Los avisos: qué detecta el sistema solo y a quién le avisa
+
+Los cuatro son el mismo mecanismo mirado desde documentos distintos. Qué detecta, si se puede
+apagar, y por dónde sale el aviso.
+
+- `docs/DATA_MODEL.md:591` y `docs/PRD_04_05_App_Servicio.md:168` — **[ya construido]** que el sistema detecte las ausencias y avise temprano solo.
+- `docs/PRD_04_05_App_Servicio.md:179` — que las alertas se puedan enchufar y sacar.
+- `docs/PRD_06_WhatsApp_IA.md:121` — el catálogo de avisos, los reintentos y a quién se escala.
+- `docs/PRD_06_WhatsApp_IA.md:26` — que el número y la cuenta de WhatsApp sean de cada Prestadora.
+
+Y colgada de ese último, una decisión de seguridad que sólo tiene sentido si el número es de cada
+Prestadora:
+
+- `docs/PRD_06_WhatsApp_IA.md:105` — que las credenciales de Meta queden donde ni el rol técnico las lea.
+
+### 5. La marca, el sitio y dónde viven los archivos
+
+Los tres se sostienen entre sí: la marca compartida obliga a que el logo de cada Prestadora se vea
+en las pantallas, y de ahí sale el depósito público, que es la única excepción a «los archivos se
+guardan privados».
+
+- `docs/MARCA.md:5` y `:27` — **[ya construido]** el modelo de marca del producto: compartida con la Prestadora y no marca blanca.
+- `docs/claude_history.md:123` — **[ya construido]** que el depósito de logos sea público para leer. **Se contesta junto con el paso de más abajo que pregunta si la regla admite esa excepción o si el depósito se cierra:** ahí se decide qué pasa, acá sólo si la decisión fue suya.
+- `docs/PRD_01_Sitio_Web.md:195` — que la página de cada Prestadora la arme CeltaTech y no sea función de Careonys. **Se contesta antes que el paso que autoriza construir el sitio**, más abajo: si esto no es suyo, ese documento cambia antes de que se construya nada.
+
+### 6. Documentos enteros atribuidos de una sola vez
+
+No es una decisión sino un documento completo puesto a su nombre. Si no es suyo, lo que hay que
+revisar es el documento entero, no un renglón.
+
+- `docs/PRD_07_Modalidad_Marketplace.md:3` — el planteo entero de la modalidad Match.
+- `docs/PRD_02_Panel_Admin.md:15` — el planteo entero del Panel.
+- `docs/PRD_08_Dashboard_Modalidades.md:213` — ocho puntos de diseño del tablero, cerrados de una sola vez y con fecha.
+- `docs/PLAN_CONTINUIDAD_PROVEEDORES.md:229` — qué se hace si cae un proveedor.
+
+### 7. Cómo se elige construir, que no se ve en ninguna pantalla
+
+Las tres deciden con qué criterio se elige, no qué se construye. Por eso van juntas: o valen las
+tres o no vale ninguna.
+
 - `docs/claude_history.md:387` — **[ya construido]** que lo propio del producto no quede atado a la plataforma de base de datos.
 - `docs/claude_history.md:395` — que la arquitectura se elija pensando en que dure, no en lo más rápido de hacer.
 - `docs/claude_history.md:353` — que la empresa tenga que poder operar con poca gente.
-- `docs/MARCA.md:5` y `:27` — **[ya construido]** el modelo de marca del producto: compartida con la Prestadora y no marca blanca.
-- `docs/PRD_07_Modalidad_Marketplace.md:3` — el planteo entero de la modalidad Match.
-- `docs/PRD_08_Dashboard_Modalidades.md:213` — ocho puntos de diseño del tablero, cerrados de una sola vez y con fecha.
-- `docs/PRD_01_Sitio_Web.md:195` — que la página de cada Prestadora la arme CeltaTech y no sea función de Careonys. **Se contesta antes que el paso que autoriza construir el sitio**, más abajo: si esto no es suyo, ese documento cambia antes de que se construya nada.
-- `docs/PRD_02_Panel_Admin.md:15` — el planteo entero del Panel.
-- `docs/PLAN_CONTINUIDAD_PROVEEDORES.md:229` — qué se hace si cae un proveedor.
-- `docs/DATA_MODEL.md:591` y `docs/PRD_04_05_App_Servicio.md:168` — **[ya construido]** que el sistema detecte las ausencias y avise temprano solo.
-- `docs/PRD_04_05_App_Servicio.md:179` — que las alertas se puedan enchufar y sacar.
-- `docs/PRD_06_WhatsApp_IA.md:26` — que el número y la cuenta de WhatsApp sean de cada Prestadora.
-- `docs/PRD_06_WhatsApp_IA.md:121` — el catálogo de avisos, los reintentos y a quién se escala.
+- `docs/claude_history.md:411` — que el nivel visual del producto tenga que superar al de la competencia.
+
+### 8. Sueltas, que no se agrupan con ninguna otra
+
+Éstas sí se contestan de a una, en cualquier orden.
+
 - `docs/claude_history.md:324` — **[ya construido]** que una guardia pueda tener más de un Paciente.
 - `docs/claude_history.md:225` y `:226` — **[ya construido]** que se descarte la pantalla de obra social con reglas escritas en el código, y que el informe de obra social sea sólo del Panel.
 - `docs/claude_history.md:417` — **[ya construido]** que el tipo de cambio quede afuera de la regla de la moneda.
-- `docs/claude_history.md:411` — que el nivel visual del producto tenga que superar al de la competencia.
 - `CLAUDE.md:137` y `docs/claude_history.md:423` — **[ya construido]** que el nombre interno viejo no se toque por ahora. **Queda sin efecto si el paso de más abajo lo saca**, que es lo que hoy dice el plan: si se saca, esta atribución se borra sola.
 
-**Y los nombres, que es lo más liviano.** Acá lo más probable es que la decisión sí sea suya y lo
-que falte sea la cita:
+### 9. Los nombres, todos juntos y de una sola vez
+
+Acá lo más probable es que la decisión sí sea suya y lo que falte sea la cita. **Se contestan los
+cinco de un saque**, con un sí o un no: no hay nada que decidir de a uno.
 
 - `docs/claude_history.md:162` — **[ya construido]** que el producto se llame Careonys.
 - `docs/claude_history.md:171` — **[ya construido]** que la empresa se llame CeltaTech.

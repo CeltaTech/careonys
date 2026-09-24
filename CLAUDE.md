@@ -141,7 +141,7 @@ hasta entonces queda como está. Ver la excepción del glosario, §4.
 **Dónde vive la marca de la Prestadora.** En las dos aplicaciones, `src/context/PerfilContext.jsx`
 la pide una vez a `/perfil` y la entrega con `useMarca()` (`nombre`, `logoUrl`,
 `mostrarMarcaProducto`); el aviso al celular la lee de `src/lib/marcaGuardada.js`, porque el
-trabajador de fondo no tiene sesión; del lado del motor la arma
+trabajador de fondo no tiene sesión; del lado del backend la arma
 `backend/src/utils/marcaPrestadora.js` con `prestadoras.nombre_fantasia` y `prestadoras.logo_url`.
 La línea al pie —*«con la tecnología de {{producto}}»*— **va siempre** y es el **único** uso de
 `IDENTIDAD` en una superficie de Familia o Asistente. **El producto no consulta qué contrató
@@ -158,7 +158,7 @@ texto:** la marca dibujada no pasa por ahí y sigue saliendo de `useMarca()`.
 dirección —`.com.br` y `.pt` son portugués, `.co.uk` inglés— y recién después el navegador,
 comparando sólo la primera parte de la etiqueta para que `pt-PT` caiga en `pt-BR` y `en-GB` en
 `en`. Qué se habla en cada país sale de `i18n/idiomas.js`, que es el mismo archivo para las
-pantallas y el motor. **Sólo se guarda lo que la persona eligió a mano**, para que un navegador
+pantallas y el backend. **Sólo se guarda lo que la persona eligió a mano**, para que un navegador
 que cambia de idioma se siga notando.
 
 **Una frase que falta avisa, no deja un hueco.** `src/i18n/faltaLaFrase.js` envuelve el árbol de
@@ -175,7 +175,7 @@ sin permiso, no encontrado, duplicado, en uso, dato mal cargado, falla del siste
 frase de las traducciones en los tres idiomas. El texto crudo queda en la consola.
 
 **Entre carpetas que se despliegan por separado, el punto único de verdad es un original más
-copias idénticas.** El Panel, las dos aplicaciones y el motor no pueden importarse entre sí. La
+copias idénticas.** El Panel, las dos aplicaciones y el backend no pueden importarse entre sí. La
 lista de qué archivo es copia de cuál está en `scripts/copias_entre_apps.mjs`,
 `scripts/sincronizar_copias.mjs` las regenera y `scripts/verificar_identidad.mjs` corta el build si
 alguna se despegó. Nunca una copia editada a mano.
@@ -311,21 +311,21 @@ mudarla a `interno` y darle el permiso ahí. **No se convierte el disparador en 
 DEFINER`**: sumaría código corriendo con privilegio de dueño y le sacaría la protección por fila a
 las consultas que hace por dentro.
 
-**Ninguna prueba del motor ve esto**, porque el motor entra con la llave de servicio, que puede
+**Ninguna prueba del backend ve esto**, porque el backend entra con la llave de servicio, que puede
 ejecutar todo. Lo prueba `scripts/probar_altas_con_sesion.mjs`, que da de alta con el pase de una
 persona y además le pregunta a la base si algún disparador quedó pidiendo un permiso que no
 tiene. Se corre con la base local levantada, junto con `scripts/probar_aislamiento.mjs`.
 
-**El motor entra a la base con la llave maestra, y eso es una decisión, no un olvido.** Las dos
-aplicaciones de teléfono no consultan la base: le piden todo al motor, y el motor entra con la
+**El backend entra a la base con la llave maestra, y eso es una decisión, no un olvido.** Las dos
+aplicaciones de teléfono no consultan la base: le piden todo al backend, y el backend entra con la
 llave de servicio, que se saltea la protección por fila. Lo que aísla una Prestadora de otra son
 los filtros escritos en cada ruta, y `scripts/probar_aislamiento.mjs`, que falla si alguno falta.
 Las políticas de las quince tablas que leen esas pantallas existen igual —se escribieron el
 2026-09-04— y son la segunda red: hoy alcanzan lo que ya se consulta con el pase de la persona, y
-quedan puestas si algún día cambia el resto. **Pasar el motor al pase de la persona se evaluó y se
+quedan puestas si algún día cambia el resto. **Pasar el backend al pase de la persona se evaluó y se
 descartó** (Desarrollador, 2026-09-04). La propuesta salió de una revisión de arquitectura hecha
 por Claude Code, por analogía con OctoCMS, y no de un defecto observado. Obligaría a habilitar,
-para cualquiera con sesión, dos funciones que hoy sólo alcanza el motor; una de ellas recibe el
+para cualquiera con sesión, dos funciones que hoy sólo alcanza el backend; una de ellas recibe el
 identificador de una Prestadora y contestaría sobre cualquiera. Es abrir una puerta nueva para
 cerrar un riesgo que ya cubren los filtros y la prueba. **Quien vuelva a proponerlo tiene que
 contestar antes esa objeción.**

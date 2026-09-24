@@ -31,15 +31,15 @@ decisiones se sostienen entre sí: contestarlas de a una, salteadas, hace que la
 contradiga la de otra que ya se cerró. **Se contesta grupo por grupo**, y adentro de cada uno,
 renglón por renglón.
 
-### 1. El motor entra a la base con la llave maestra
+### 1. El backend entra a la base con la llave maestra
 
 Es lo más pesado de todo. Está construido, es de seguridad, y además **cierra la discusión por
 escrito**: dice que la alternativa se evaluó y se descartó, y que quien la vuelva a proponer tiene
 que refutar la objeción antes de hablar. Si esa decisión no es suya, lo que hay es una puerta
 cerrada con llave por alguien que no tenía la llave.
 
-- `CLAUDE.md:325` — **[ya construido]** que pasar el motor al pase de cada persona «se evaluó y se descartó», con fecha y con su nombre, y que quien lo reproponga tiene que refutar la objeción antes.
-- `CLAUDE.md:319` — **[ya construido]** que el motor entre a la base con la llave maestra es una decisión y no un olvido.
+- `CLAUDE.md:325` — **[ya construido]** que pasar el backend al pase de cada persona «se evaluó y se descartó», con fecha y con su nombre, y que quien lo reproponga tiene que refutar la objeción antes.
+- `CLAUDE.md:319` — **[ya construido]** que el backend entre a la base con la llave maestra es una decisión y no un olvido.
 - `CLAUDE.md:310` — **[ya construido]** que no se convierta en dueño lo que dispara un cambio en la base.
 
 ### 2. Cómo entra cada persona, y quién tiene más poder que nadie
@@ -246,7 +246,7 @@ este paso la misma persona tiene sesión legítima en dos, y cualquier consulta 
 Prestadora por otra vía que no sea la sesión comprobada devuelve datos de la otra sin que nada
 falle a la vista. Entonces: **ninguna consulta resuelve la Prestadora por lo que venga en el
 pedido**, ni por la ficha, ni por parecido de correo; **la separación la impone la base**, y los
-filtros de las rutas del motor son la segunda red, no la primera. Y la prueba se hace con una
+filtros de las rutas del backend son la segunda red, no la primera. Y la prueba se hace con una
 persona dada de alta en dos Prestadoras, **con datos cargados en las dos**: entrando en una ve todo
 lo suyo de esa y nada de la otra, en las dos direcciones. Una consulta que devuelve vacío no prueba
 nada.
@@ -293,14 +293,14 @@ clave para las tres, esa puerta daba también a las otras dos y esto no se podí
 nada de esto: no pueden verificar ni cambiar su número con código, entrar desde un equipo nuevo no
 les pide código, y **no pueden cerrar la sesión de todos los equipos**, que es justo lo que
 necesita alguien a quien le robaron el teléfono. La única puerta es el Panel, y ahí no entran.
-**Acá falta motor y no sólo pantalla**, al revés que en los pasos de arriba: las piezas de fondo
+**Acá falta backend y no sólo pantalla**, al revés que en los pasos de arriba: las piezas de fondo
 —mandar el código, comprobarlo, reconocer el equipo, cerrar todas las sesiones— están escritas y
 no conocen ningún rol, pero las únicas puertas que las usan exigen ser del Panel y rechazan a un
 Asistente y a una Familia. Hay que abrir las puertas equivalentes para ellos dos, y recién
 después las pantallas.
 
 **9.** Pedir el enlace de la clave nueva desde las dos aplicaciones de teléfono. Hoy no se puede:
-quien se olvidó la clave llama a su Prestadora y ella se lo manda desde el Panel. El motor ya
+quien se olvidó la clave llama a su Prestadora y ella se lo manda desde el Panel. El backend ya
 tiene la puerta, y el Panel ya la usa.
 
 **El trámite es de una Prestadora, y alcanza a una sola.** La Prestadora sale de la puerta por
@@ -333,14 +333,14 @@ software es una pieza aparte** y agregar la segunda no puede obligar a tocar la 
 dos maneras ya están hechas y alcanzan para salir a producción: se anota factura por factura a
 mano, o se baja un archivo con todo lo que falta facturar y se sube el que el software devuelve.
 
-**12.** Terminar de acomodar la pantalla de la Familia al hueco que deja el saldo. El motor ya no
+**12.** Terminar de acomodar la pantalla de la Familia al hueco que deja el saldo. El backend ya no
 lo calcula ni lo entrega cuando la cobranza la lleva otro software —ni en el Panel ni en la
 ventanilla de la Familia—, y las dos pantallas de facturas de esa aplicación dejan de dibujar lo
 que no viene: la lista se queda sin el renglón del saldo y del estado, y el desglose sin tres de
 sus siete renglones.
 
 **13.** La pantalla de los datos bancarios del Asistente. El dato lo informa él, así que él lo
-carga y él lo corrige: la base ya lo deja escribir su propia fila y ninguna otra, y el motor ya
+carga y él lo corrige: la base ya lo deja escribir su propia fila y ninguna otra, y el backend ya
 tiene por dónde —cargar, corregir y sacar la cuenta—, con lo que entra validado y con el cambio
 anotado. Falta la pantalla donde lo hace, en la aplicación del Asistente.
 
@@ -415,7 +415,7 @@ El Desarrollador está preparando una maqueta orientativa de cómo tienen que ve
   a propósito.
 
 **24.** La marca del equipo del Panel usa un solo casillero del navegador para todas las
-Prestadoras: la última pisa a la anterior. El motor la valida contra la Prestadora, así que no
+Prestadoras: la última pisa a la anterior. El backend la valida contra la Prestadora, así que no
 sale ningún dato; es un dato de una Organización viajando adentro del pedido de otra.
 
 ---
@@ -430,13 +430,13 @@ qué base?»**, más abajo.
 
 Los tres arreglos, para que estén escritos:
 
-1. **No existe el formulario público de postulación.** Hay una ruta de motor que acepta doce campos y ninguna pantalla que la use.
+1. **No existe el formulario público de postulación.** Hay una ruta de backend que acepta doce campos y ninguna pantalla que la use.
 2. **Las listas de opciones nacen vacías.** Género, nacionalidad, tipo de registro ante AFIP y los cinco subgrupos de experiencia clínica se cargan por Prestadora, y no hay pantalla donde cargarlos: sin eso el formulario no tiene nada que ofrecer. **Lo resuelve el paso de las listas de opciones por Prestadora.**
 3. **Al incorporar un aspirante se pierden quince datos.** Lo que cargó en la postulación no llega entero a su ficha de Asistente.
 
 **25. Usted** — ¿Dónde vive el formulario público de postulación? No va en `careonys.com`, que le vende software a las Prestadoras: quien busca trabajo de cuidador se postula en la empresa que lo va a contratar. ¿En el sitio de cada Prestadora, con dirección propia?
 
-**26.** La pantalla del formulario, que es lo único que falta: la base y el motor ya guardan y comprueban los campos de las seis secciones de `docs/PRD_03_Reclutamiento.md`, y el motor entrega las listas de opciones en `GET /api/publico/:prestadora/postulacion-asistente/opciones`. Se dibuja desde la declaración, no a mano. Esperaba el paso anterior.
+**26.** La pantalla del formulario, que es lo único que falta: la base y el backend ya guardan y comprueban los campos de las seis secciones de `docs/PRD_03_Reclutamiento.md`, y el backend entrega las listas de opciones en `GET /api/publico/:prestadora/postulacion-asistente/opciones`. Se dibuja desde la declaración, no a mano. Esperaba el paso anterior.
 
 **27. Usted** — ¿Se le bloquea la asignación de guardias a quien no está inscripto en monotributo, o se avisa y decide la Prestadora? La regla del producto dice avisar, no bloquear, así que el PRD y la regla no coinciden.
 
@@ -557,7 +557,7 @@ una copia de trabajo**, que no es un archivo del repositorio y por eso el barrid
 mudanza ya encima**, que es cuando hay que tocar la base de todos modos. Está medido y no se
 pierde: nadie usó nunca la aplicación y todos los datos cargados son inventados, así que
 reconstruir la base los reescribe sin mudanza. Lo que cuesta igual, se haga cuando se haga, son
-cinco nombres de afuera: el nombre del proyecto local, el servicio donde corre el motor con su
+cinco nombres de afuera: el nombre del proyecto local, el servicio donde corre el backend con su
 dirección, y los dos depósitos de respaldo. El repositorio ya se llama `careonys`.
 
 **58. Usted** — ¿Dónde corre un módulo y contra qué base? Hoy `Modulos\` está vacía. **Facturación y créditos y cobranzas ya están decididas como software aparte del que Careonys se sirve**, así que esto no decide si salen, sino dónde corren el día que existan. También decide si con eso se cierran sin construir los adaptadores de pasarela.
@@ -574,7 +574,7 @@ dirección, y los dos depósitos de respaldo. El repositorio ya se llama `careon
 
 **62. Usted** — ¿Careonys va a atender establecimientos donde conviven Pacientes de Familias distintas — una residencia, un geriátrico? Si es más adelante, alcanza con dejarlo dicho.
 
-**63. Usted** — ¿Diez pedidos por minuto y por persona es el número? El contador compartido hace falta el día que el motor se reparta en varios servicios; hoy corre en uno solo.
+**63. Usted** — ¿Diez pedidos por minuto y por persona es el número? El contador compartido hace falta el día que el backend se reparta en varios servicios; hoy corre en uno solo.
 
 **64. Usted** — ¿Los idiomas siguen en un archivo o pasan a la base? De esto depende si sumar un idioma es una publicación o una carga de datos. **Para las listas de opciones ya está contestado** por el paso de las listas por Prestadora, donde la traducción viaja adentro de cada opción; esto decide qué pasa con el resto del texto visible.
 

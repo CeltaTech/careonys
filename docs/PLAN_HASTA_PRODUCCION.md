@@ -65,19 +65,17 @@ propia. **Las dos son la misma Prestadora cobrándole a sus Clientes**, así que
 una no se pueden cerrar sin mirar la otra. El cobro del contacto está tratado más abajo, en la
 sección de la modalidad Match; **lo que se decida acá manda sobre aquello.**
 
-**Y hay dos cosas distintas que hoy se llaman igual: «paquete de contactos».** Hay que separarlas
-antes de contestar el grupo, porque si no la respuesta queda ambigua.
+**Hay una sola venta de contactos construida, y es de la Prestadora a la Familia.** Un importe, sin
+vencimiento, y un saldo que se descuenta de a un Asistente. Lo arma cada Prestadora con sus
+valores, y la Familia le paga a ella. Está construido acá, junto con la suscripción que se renueva
+sola.
 
-- **El que le vende CeltaTech a la Prestadora.** Cuántos contactos le entran a la Prestadora por lo
-  que contrató, cuánto cuesta y qué pasa cuando se acaban. Eso es comercial, es de CeltaTech, y el
-  producto no hace más que contar. **No está construido de este lado, y no se construye.**
-- **El que le vende la Prestadora a la Familia.** Un importe, sin vencimiento, y un saldo que se
-  descuenta de a un Asistente. Lo arma cada Prestadora con sus valores, y la Familia le paga a
-  ella. **Eso sí está construido acá**, junto con la suscripción que se renueva sola.
-
-El primero es un tope; el segundo es una venta. **Hay que decir si son dos cosas o son la misma
-mirada desde los dos lados**, y hace falta un nombre distinto para cada una, porque el que hay hoy
-nombra las dos.
+**CeltaTech vende software, y nada más.** No vende contactos. Así que del otro lado no hay ninguna
+venta de contactos con la que confundir a ésta, y el producto no tiene que preguntarle nada a nadie
+para dejar abrir uno. **Queda un renglón en el plan del Marketplace que dice que el precio y el
+tope de los paquetes de contactos son de CeltaTech, y hay que sacarlo**: nació de leer «la decisión
+comercial no es del producto» como «lo vende CeltaTech», que es otra cosa. Ese repositorio está en
+sólo lectura, así que el renglón se saca cuando se lo toque.
 
 - `docs/claude_history.md:453` — **[ya construido]** que la cobranza no sea una función de Careonys.
 - `CLAUDE.md:198` — que Careonys no asuma facturación ni cobranzas.

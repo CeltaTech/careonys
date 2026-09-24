@@ -1,6 +1,6 @@
 # PLAN HASTA PRODUCCIÓN — Careonys
 
-**Una sola lista, del 1 al 77, en orden.** Se hace el 1, después el 2, y así hasta el final.
+**Una sola lista, del 1 al 79, en orden.** Se hace el 1, después el 2, y así hasta el final.
 
 - Los pasos que empiezan con **Usted** los contesta o los hace el Desarrollador. Los demás los hago yo.
 - **Un paso terminado se borra de este archivo.** No se marca como hecho: se saca.
@@ -582,15 +582,31 @@ dirección, y los dos depósitos de respaldo. El repositorio ya se llama `careon
 
 **66. Usted** — El alta y la baja de Prestadoras: Match expone una puerta firmada para que CeltaTech dé de alta y de baja clientes; Careonys no tiene nada parecido. ¿Se construye la misma, o se siguen dando de alta a mano?
 
-**67. Usted** — El acompañamiento online: ¿prestación más, o guardia sin domicilio? Si es guardia, hay que decidir qué reemplaza al check-in por ubicación.
+**67. Usted** — **Por esa misma puerta tiene que entrar a qué tiene acceso cada Prestadora, y hoy
+no entra nada.** CeltaTech le vende a la Prestadora el acceso a determinadas modalidades y
+prestaciones, y al dar el alta le informa al producto a qué alcanza y a qué no. **Y ahí termina:
+CeltaTech no tiene injerencia, bajo ninguna circunstancia, en el negocio de ninguna Prestadora.**
+Habilita funciones del software y nada más; qué cobra, a quién, cuánto y con qué condiciones lo
+decide cada Prestadora sola. Del lado de
+CeltaTech eso ya está construido: hay un catálogo de capacidades que cada producto declara, se
+asignan a planes y se resuelven por suscripción, y CeltaTech las guarda como texto que no
+interpreta. **Del lado de Careonys no llega nunca.** Las modalidades las enciende y las apaga la
+propia Prestadora desde su Configuración, así que hoy se habilita Match sola. ¿Las modalidades
+pasan a ser una capacidad que informa CeltaTech, y la Prestadora sólo elige adentro de lo que
+tiene? ¿Y qué pasa con una que ya la tenga encendida?
 
-**68. Usted** — El «Gestor del cuidado»: ¿rol nuevo, variante de Coordinador, o entrada en el catálogo de permisos por Prestadora? La tercera no rompe la regla de los tres roles de Panel; las dos primeras sí. Hoy el Coordinador se asigna por guardia, no por Familia.
+**68.** Construirlo según lo contestado. **La lista de capacidades la declara este producto**, que
+es el que sabe qué significan; del otro lado son texto opaco.
 
-**69. Usted** — Cursos para familias: ¿va o no va?
+**69. Usted** — El acompañamiento online: ¿prestación más, o guardia sin domicilio? Si es guardia, hay que decidir qué reemplaza al check-in por ubicación.
 
-**70. Usted** — La regla de los archivos dice «nunca público» y hay un depósito público construido (`marca-prestadoras`); los otros cinco son privados. ¿La regla admite la excepción, o se cierra el depósito?
+**70. Usted** — El «Gestor del cuidado»: ¿rol nuevo, variante de Coordinador, o entrada en el catálogo de permisos por Prestadora? La tercera no rompe la regla de los tres roles de Panel; las dos primeras sí. Hoy el Coordinador se asigna por guardia, no por Familia.
 
-**71. Usted** — La categoría de convenio del Asistente se teclea a mano, y de ella depende su
+**71. Usted** — Cursos para familias: ¿va o no va?
+
+**72. Usted** — La regla de los archivos dice «nunca público» y hay un depósito público construido (`marca-prestadoras`); los otros cinco son privados. ¿La regla admite la excepción, o se cierra el depósito?
+
+**73. Usted** — La categoría de convenio del Asistente se teclea a mano, y de ella depende su
 remuneración básica. El convenio tiene sus categorías definidas y no las inventa la Prestadora,
 así que tecleadas quedan escritas distinto en cada ficha: no se puede saber cuántos Asistentes hay
 en cada una, ni aplicarle un cambio de escala a todos los de una categoría de una sola vez, y un
@@ -605,9 +621,9 @@ liquidado.
 
 ## El sitio web
 
-**72. Usted** — ¿Se autoriza construir `careonys.com` según `docs/PRD_01_Sitio_Web.md`? El PRD ya está entero. Hoy `sitio-web/` es una página que dice «En construcción». **El diseño se hace de cero**: del sitio público de Match no viaja nada visual.
+**74. Usted** — ¿Se autoriza construir `careonys.com` según `docs/PRD_01_Sitio_Web.md`? El PRD ya está entero. Hoy `sitio-web/` es una página que dice «En construcción». **El diseño se hace de cero**: del sitio público de Match no viaja nada visual.
 
-**73.** Construirlo.
+**75.** Construirlo.
 
 ---
 
@@ -628,7 +644,7 @@ para el tratamiento de dato biométrico, la accesibilidad, la protección de dat
 cuatro preguntas sobre la ubicación de las personas. Los pasos que dependen de ellas dicen qué se
 construye igual mientras tanto.
 
-**74. Usted** — Las escalas legales: la validación, y los dos valores que el código usa y no
+**76. Usted** — Las escalas legales: la validación, y los dos valores que el código usa y no
 existen (`piso_minimo_indemnizacion` y `fraccion_computable_antiguedad`). En el mismo viaje va el
 texto del aviso sobre el abandono de persona: ninguno de los veintiún documentos de `docs/legal/`
 lo menciona —lo único parecido es el abandono de *trabajo*, art. 244 LCT, en
@@ -639,8 +655,8 @@ documento no hay aviso; la mecánica se construye igual, porque no depende de ni
 
 ## Cierre
 
-**75. Usted** — El documento de roles generado desde la base: ¿para quién es, interno de CeltaTech o manual para la Prestadora?
+**77. Usted** — El documento de roles generado desde la base: ¿para quién es, interno de CeltaTech o manual para la Prestadora?
 
-**76.** Generarlo.
+**78.** Generarlo.
 
-**77.** Correr las pruebas y publicar.
+**79.** Correr las pruebas y publicar.

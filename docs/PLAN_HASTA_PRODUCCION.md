@@ -582,21 +582,29 @@ dirección, y los dos depósitos de respaldo. El repositorio ya se llama `careon
 
 **66. Usted** — El alta y la baja de Prestadoras: Match expone una puerta firmada para que CeltaTech dé de alta y de baja clientes; Careonys no tiene nada parecido. ¿Se construye la misma, o se siguen dando de alta a mano?
 
-**67. Usted** — **Por esa misma puerta tiene que entrar a qué tiene acceso cada Prestadora, y hoy
-no entra nada.** CeltaTech le vende a la Prestadora el acceso a determinadas modalidades y
-prestaciones, y al dar el alta le informa al producto a qué alcanza y a qué no. **Y ahí termina:
+**67.** **Por esa misma puerta tiene que entrar a qué tiene acceso cada Prestadora, y hoy no entra
+nada.** CeltaTech le vende a la Prestadora un plan, y ese plan dice qué modalidades y qué
+prestaciones tiene habilitadas. Eso se lo informa al producto al dar el alta. **Y ahí termina:
 CeltaTech no tiene injerencia, bajo ninguna circunstancia, en el negocio de ninguna Prestadora.**
-Habilita funciones del software y nada más; qué cobra, a quién, cuánto y con qué condiciones lo
-decide cada Prestadora sola. Del lado de
-CeltaTech eso ya está construido: hay un catálogo de capacidades que cada producto declara, se
-asignan a planes y se resuelven por suscripción, y CeltaTech las guarda como texto que no
-interpreta. **Del lado de Careonys no llega nunca.** Las modalidades las enciende y las apaga la
-propia Prestadora desde su Configuración, así que hoy se habilita Match sola. ¿Las modalidades
-pasan a ser una capacidad que informa CeltaTech, y la Prestadora sólo elige adentro de lo que
-tiene? ¿Y qué pasa con una que ya la tenga encendida?
+Le habilita funciones del software y nada más; qué cobra, a quién, cuánto y con qué condiciones lo
+decide ella sola.
 
-**68.** Construirlo según lo contestado. **La lista de capacidades la declara este producto**, que
-es el que sabe qué significan; del otro lado son texto opaco.
+**Entonces son tres niveles, uno arriba del otro, y hoy falta el de arriba:**
+
+- **CeltaTech habilita**, según el plan que esa Prestadora compró. Ése es el techo. **No existe.**
+- **La Prestadora usa o no usa, y decide cómo**, adentro de ese techo. Existe: lo prende y lo apaga
+  desde su Configuración, y **queda tal cual está**.
+- **La ficha de cada Asistente**, adentro de lo que la Prestadora tenga prendido. Existe.
+
+Como el primero falta, hoy el de la Prestadora es el único, y por eso se habilita Match sola. Del
+lado de CeltaTech el mecanismo ya está construido —un catálogo de capacidades que cada producto
+declara, asignadas a planes y resueltas por suscripción, guardadas como texto que no interpreta—.
+Lo que no existe es el canal por donde eso llegue acá.
+
+**68.** Construir el techo: recibir de CeltaTech qué tiene habilitado cada Prestadora y dejar su
+Configuración elegir solamente adentro de eso. **La lista de capacidades la declara este
+producto**, que es el que sabe qué significan; del otro lado son texto opaco. Lo que cada
+Prestadora tenga prendido hoy se conserva.
 
 **69. Usted** — El acompañamiento online: ¿prestación más, o guardia sin domicilio? Si es guardia, hay que decidir qué reemplaza al check-in por ubicación.
 

@@ -31,7 +31,7 @@ migración aplicada detrás.
 - `CLAUDE.md:310` — **[ya construido]** que no se convierta en dueño lo que dispara un cambio en la base.
 - `docs/PLAN_HASTA_PRODUCCION.md`, «La entrada y la recuperación de la clave» — el bloque entero titulado «Lo decidido, y no se vuelve a discutir»: las tres vías, cuándo se pide el código, qué es un equipo nuevo, la huella y la cara afuera, y la aplicación de códigos sólo para el rol técnico.
 - `docs/PRD_06_WhatsApp_IA.md:105` — que las credenciales de Meta queden donde ni el rol técnico las lea.
-- `docs/claude_history.md:123` — **[ya construido]** que el depósito de logos sea público para leer. Es la única excepción a «los archivos se guardan privados».
+- `docs/claude_history.md:123` — **[ya construido]** que el depósito de logos sea público para leer, única excepción a «los archivos se guardan privados». **Se contesta junto con el paso de más abajo que pregunta si la regla admite esa excepción o si el depósito se cierra:** ahí se decide qué pasa, acá sólo si la decisión fue suya.
 - `docs/claude_history.md:375` — **[ya construido]** la creación del rol técnico, por encima de la administración de la Prestadora.
 - `docs/PRD_04_05_App_Servicio.md:34` y `:204` — **[ya construido]** que el Asistente y la Familia entren con clave escrita y no con un enlace al correo.
 - `docs/PRD_04_05_App_Servicio.md:231` — **[ya construido]** que al Asistente se lo confirme escaneando adentro de la aplicación, y que se elimine la ficha pública con código de barras.
@@ -52,24 +52,21 @@ migración aplicada detrás.
 - `docs/claude_history.md:387` — **[ya construido]** que lo propio del producto no quede atado a la plataforma de base de datos.
 - `docs/claude_history.md:395` — que la arquitectura se elija pensando en que dure, no en lo más rápido de hacer.
 - `docs/claude_history.md:353` — que la empresa tenga que poder operar con poca gente.
-- `docs/MARCA.md:27` — **[ya construido]** que la marca con las Prestadoras sea compartida y no marca blanca.
-- `docs/MARCA.md:5` — el modelo de marca del producto.
-- `docs/PRD_07_Modalidad_Marketplace.md:3` — el planteo de la modalidad Match.
+- `docs/MARCA.md:5` y `:27` — **[ya construido]** el modelo de marca del producto: compartida con la Prestadora y no marca blanca.
+- `docs/PRD_07_Modalidad_Marketplace.md:3` — el planteo entero de la modalidad Match.
 - `docs/PRD_08_Dashboard_Modalidades.md:213` — ocho puntos de diseño del tablero, cerrados de una sola vez y con fecha.
-- `docs/PRD_01_Sitio_Web.md:195` — que la página de cada Prestadora la arme CeltaTech y no sea función de Careonys.
-- `docs/PRD_02_Panel_Admin.md:15` — el planteo del Panel.
+- `docs/PRD_01_Sitio_Web.md:195` — que la página de cada Prestadora la arme CeltaTech y no sea función de Careonys. **Se contesta antes que el paso que autoriza construir el sitio**, más abajo: si esto no es suyo, ese documento cambia antes de que se construya nada.
+- `docs/PRD_02_Panel_Admin.md:15` — el planteo entero del Panel.
 - `docs/PLAN_CONTINUIDAD_PROVEEDORES.md:229` — qué se hace si cae un proveedor.
-- `docs/DATA_MODEL.md:591` — **[ya construido]** que el sistema detecte ausencias y avise temprano solo.
-- `docs/PRD_04_05_App_Servicio.md:168` — que el sistema alerte temprano ante ausencias.
+- `docs/DATA_MODEL.md:591` y `docs/PRD_04_05_App_Servicio.md:168` — **[ya construido]** que el sistema detecte las ausencias y avise temprano solo.
 - `docs/PRD_04_05_App_Servicio.md:179` — que las alertas se puedan enchufar y sacar.
 - `docs/PRD_06_WhatsApp_IA.md:26` — que el número y la cuenta de WhatsApp sean de cada Prestadora.
 - `docs/PRD_06_WhatsApp_IA.md:121` — el catálogo de avisos, los reintentos y a quién se escala.
 - `docs/claude_history.md:324` — **[ya construido]** que una guardia pueda tener más de un Paciente.
-- `docs/claude_history.md:225` — **[ya construido]** que se descarte la pantalla de obra social con reglas escritas en el código.
-- `docs/claude_history.md:226` — **[ya construido]** que el informe de obra social sea sólo del Panel.
+- `docs/claude_history.md:225` y `:226` — **[ya construido]** que se descarte la pantalla de obra social con reglas escritas en el código, y que el informe de obra social sea sólo del Panel.
 - `docs/claude_history.md:417` — **[ya construido]** que el tipo de cambio quede afuera de la regla de la moneda.
 - `docs/claude_history.md:411` — que el nivel visual del producto tenga que superar al de la competencia.
-- `CLAUDE.md:137` y `docs/claude_history.md:423` — **[ya construido]** que el nombre interno viejo no se toque por ahora.
+- `CLAUDE.md:137` y `docs/claude_history.md:423` — **[ya construido]** que el nombre interno viejo no se toque por ahora. **Queda sin efecto si el paso de más abajo lo saca**, que es lo que hoy dice el plan: si se saca, esta atribución se borra sola.
 
 **Y los nombres, que es lo más liviano.** Acá lo más probable es que la decisión sí sea suya y lo
 que falte sea la cita:
@@ -366,9 +363,6 @@ De las especialidades de esta pantalla no queda nada por hacer: `asistentes.espe
 
 **35. Usted** — El PRD promete exportar el reporte a PDF en la aplicación de la Familia, y más adelante dice que la Familia no accede al informe. ¿Cuál de las dos vale?
 
----
-
-
 **36.** Cuatro puntos de las aplicaciones y de lo que sale hacia el teléfono:
 
 - **Los avisos al celular buscan a quién mandarlos sin la Prestadora.** Una suscripción puede
@@ -384,6 +378,8 @@ De las especialidades de esta pantalla no queda nada por hacer: `asistentes.espe
 **El molde es siempre el mismo, y es el que hay que cortar:** el aislamiento vive en quien llama,
 no adentro de la función. Mientras sea así, cualquier pantalla nueva que llame a una de ésas sin
 comprobar antes abre el agujero sin que nadie se entere.
+
+---
 
 ## Configuración que todavía está escrita en el código
 

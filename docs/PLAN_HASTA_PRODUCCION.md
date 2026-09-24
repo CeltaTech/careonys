@@ -52,12 +52,24 @@ la clave, más abajo en esta misma lista, se apoyan en esto. Si acá cambia algo
 - `docs/PRD_04_05_App_Servicio.md:231` — **[ya construido]** que al Asistente se lo confirme escaneando adentro de la aplicación, y que se elimine la ficha pública con código de barras.
 - `docs/claude_history.md:375` — **[ya construido]** la creación del rol técnico, por encima de la administración de la Prestadora.
 
-### 3. El dinero: qué hace Careonys y qué no, y cómo se guarda un Cliente
+### 3. Cómo le cobra una Prestadora a sus Clientes, en todas sus modalidades
 
 **Es el grupo más grande, el que más código tiene detrás, y el que menos se puede contestar
-salteado.** Los once renglones son una sola arquitectura: si la cobranza sí fuera función de
-Careonys, cambian el padrón, los tres papeles de una contratación y el estado de cuenta. Y al
-revés. **Una respuesta suelta acá rompe las otras diez.**
+salteado.** Si la cobranza sí fuera función de Careonys, cambian el padrón, los tres papeles de una
+contratación y el estado de cuenta. Y al revés. **Una respuesta suelta acá rompe las demás.**
+
+**Y se analiza entero, con las dos modalidades a la vista.** Hoy hay dos formas de cobrarle a un
+Cliente y están construidas por separado: en prestación directa se factura el servicio con un
+software de afuera, y en Match se cobra el contacto con un saldo y una suscripción, con pasarela
+propia. **Las dos son la misma Prestadora cobrándole a sus Clientes**, así que las decisiones de
+una no se pueden cerrar sin mirar la otra. El cobro del contacto está tratado más abajo, en la
+sección de la modalidad Match; **lo que se decida acá manda sobre aquello.**
+
+**Queda una cosa por deslindar antes de contestar el grupo:** el paquete de contactos es de
+CeltaTech —el producto cuenta los contactos, y el precio y el tope son comerciales—, mientras que
+la factura del servicio es de la Prestadora. Hay que decir cuál de los dos cobros es de quién,
+porque de eso depende si es una sola forma de cobro con dos caras o son dos cosas distintas que
+comparten pantalla.
 
 - `docs/claude_history.md:453` — **[ya construido]** que la cobranza no sea una función de Careonys.
 - `CLAUDE.md:198` — que Careonys no asuma facturación ni cobranzas.
@@ -101,7 +113,7 @@ guardan privados».
 No es una decisión sino un documento completo puesto a su nombre. Si no es suyo, lo que hay que
 revisar es el documento entero, no un renglón.
 
-- `docs/PRD_07_Modalidad_Marketplace.md:3` — el planteo entero de la modalidad Match.
+- `docs/PRD_07_Modalidad_Marketplace.md:3` — el planteo entero de la modalidad Match. **La parte de cómo se cobra el contacto no se contesta acá: va con el grupo del cobro**, más arriba, junto con la facturación de prestación directa.
 - `docs/PRD_02_Panel_Admin.md:15` — el planteo entero del Panel.
 - `docs/PRD_08_Dashboard_Modalidades.md:213` — ocho puntos de diseño del tablero, cerrados de una sola vez y con fecha.
 - `docs/PLAN_CONTINUIDAD_PROVEEDORES.md:229` — qué se hace si cae un proveedor.
@@ -323,6 +335,10 @@ anotado. Falta la pantalla donde lo hace, en la aplicación del Asistente.
 ## La modalidad Match de cara a la Familia
 
 Existe el andamiaje —base, disparadores, cobros, consentimiento—, la Familia ya puede buscar un Asistente, ver su perfil público, escribirle por adentro de la aplicación y, activando el cobro, ver cómo llegar a él por afuera. **Todavía no puede contratarlo.**
+
+**El cobro del contacto no se decide en esta sección.** Cobrarle un contacto a una Familia y
+facturarle el servicio a un Cliente son dos formas de cobro de la misma Prestadora, y se analizan
+juntas, arriba de todo, en el grupo del cobro. Acá queda lo que es propio de la modalidad.
 
 **14. Usted** — Prioridad de acceso al plantel ante una baja: el PRD la define en una línea (`docs/PRD_07_Modalidad_Marketplace.md:225`) y de ahí salen dos productos distintos. ¿Es que el contacto del reemplazo no vuelva a costar durante una ventana —ni descuenta saldo ni pide un acceso nuevo—, o es que a esa Familia se le avise primero cuando alguien del plantel vuelve a estar disponible? ¿O las dos? Y antes que eso: hoy la Familia no contrata por Match, así que no hay baja que detectar. ¿Qué cuenta como baja — que el Asistente se saque de los disponibles, que la Familia cierre el Servicio, o hay que construir antes el vínculo?
 

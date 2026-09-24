@@ -599,25 +599,25 @@ sola. Del lado de CeltaTech el mecanismo ya está construido —un catálogo de 
 producto declara, asignadas a planes y resueltas por suscripción, guardadas como texto que no
 interpreta—. Lo que no existe es el canal por donde eso llegue acá.
 
-**Y CeltaTech no sólo habilita al dar el alta: también deshabilita después**, por falta de pago o
-por cambio de plan, la aplicación entera o una parte. **Eso es un apagado distinto del de la
-Prestadora, aunque hoy los dos se dirían igual:**
+**Y no es sólo al dar el alta: después también llega la orden de deshabilitar**, la aplicación
+entera o una parte. **Por qué, Careonys no lo sabe ni lo pregunta**: recibe la orden y la ejecuta.
+**Es un apagado distinto del de la Prestadora, aunque hoy los dos se dirían igual:**
 
 - **El de la Prestadora** es una decisión de negocio de ella: deja de operar con una modalidad.
   Hoy el sistema no la deja apagar si quedan Asistentes trabajando o Familias con acceso abierto,
   y está bien que no la deje.
-- **El de CeltaTech no se puede bloquear.** Con esa misma comprobación, una Prestadora que no paga
-  se queda habilitada para siempre con sólo tener un Asistente trabajando.
+- **La orden que llega no se puede bloquear.** Con esa misma comprobación, alcanzaría con tener un
+  Asistente trabajando para que la orden nunca se cumpla.
 
-**68. Usted** — Cuando CeltaTech deshabilita y adentro quedan Asistentes trabajando y Familias con
-acceso abierto, ¿qué pasa con eso? Cortar el acceso y dejarlo todo en su lugar no es lo mismo que
-darlo de baja.
+**68. Usted** — Qué hace Careonys de su lado cuando recibe esa orden y adentro quedan Asistentes
+trabajando y Familias con acceso abierto. Cortar el acceso y dejarlo todo en su lugar no es lo
+mismo que darlo de baja.
 
-**69.** Construirlo: recibir de CeltaTech qué tiene habilitado cada Prestadora y que su
-Configuración ofrezca solamente eso; y recibir el deshabilitado posterior, sin la comprobación que
-lleva el apagado de ella, aplicando lo contestado sobre lo que queda en curso. **La lista de
-capacidades la declara este producto**, que es el que sabe qué significan; del otro lado son texto
-opaco. Lo que cada Prestadora tenga hoy en uso se conserva.
+**69.** Construirlo, todo de este lado: recibir qué tiene habilitado cada Prestadora y que su
+Configuración ofrezca solamente eso; y recibir la orden de deshabilitar, sin la comprobación que
+lleva el apagado de ella, haciendo con lo que quede en curso lo que se conteste arriba. **La lista
+de capacidades la declara este producto**, que es el que sabe qué significan; del otro lado son
+texto opaco. Lo que cada Prestadora tenga hoy en uso se conserva.
 
 **70. Usted** — El acompañamiento online: ¿prestación más, o guardia sin domicilio? Si es guardia, hay que decidir qué reemplaza al check-in por ubicación.
 

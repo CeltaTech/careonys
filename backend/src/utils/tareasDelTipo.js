@@ -7,7 +7,7 @@ import { supabase } from '../db/connection.js';
 // porque es un catálogo, no un dato de cada guardia. Si mañana la Prestadora agrega una
 // tarea, la ven todos a la vez (regla 12 de CLAUDE.md §7).
 //
-// El corte por Prestadora se escribe a mano en las dos consultas. El motor entra a la
+// El corte por Prestadora se escribe a mano en las dos consultas. El backend entra a la
 // base con la llave maestra, así que las cerraduras de la base no lo frenan y el corte
 // tiene que estar en el código (CLAUDE.md §7). Un tipo de la plataforma no tiene
 // Prestadora y lo ven todas; uno propio, solo la Prestadora que lo creó.

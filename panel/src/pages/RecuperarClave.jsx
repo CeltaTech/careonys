@@ -12,7 +12,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 // Donde alguien que perdió su clave pide el enlace para elegir una nueva.
 //
 // LA RESPUESTA ES LA MISMA EXISTA EL CORREO O NO, y eso no es un descuido de la pantalla: lo
-// decide el motor, que contesta igual en los dos casos. Si contestara distinto, esta pantalla
+// decide el backend, que contesta igual en los dos casos. Si contestara distinto, esta pantalla
 // sería una forma de averiguar quién tiene cuenta, preguntando de a un correo por vez, sin
 // necesidad de tener sesión.
 //

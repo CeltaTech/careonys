@@ -24,7 +24,7 @@ import { conElPreferidoMarcado, telefonoLimpio } from '../utils/telefonosDelLega
 // es dato sensible (`celtatech/docs/REGLAS_PRODUCTOS_CAREONYS.md` §4). Por eso corregir un teléfono
 // es un pedido con cuerpo y no una dirección con el número adentro.
 //
-// LA ORGANIZACIÓN SALE SIEMPRE DE LA SESIÓN. El motor entra a la base con la llave de servicio, que
+// LA ORGANIZACIÓN SALE SIEMPRE DE LA SESIÓN. El backend entra a la base con la llave de servicio, que
 // se saltea las reglas de acceso, así que el filtro lo pone este código con `acotarAPrestadora` y
 // nunca un valor que venga en el pedido. El Legajo se comprueba primero: quien pide uno de otra
 // Prestadora recibe lo mismo que quien pide uno que no existe.

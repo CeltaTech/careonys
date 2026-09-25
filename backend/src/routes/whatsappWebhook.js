@@ -1,7 +1,7 @@
 // Punto 6 de docs/PRD_06_WhatsApp_IA.md: mensajes entrantes de WhatsApp de un Asistente.
 //
 // Pendiente #165 — esta dirección es pública: la llama Meta desde afuera, no un usuario
-// logueado. Hasta el 2026-09-08 el motor averiguaba de qué Prestadora era el aviso mirando el
+// logueado. Hasta el 2026-09-08 el backend averiguaba de qué Prestadora era el aviso mirando el
 // `phone_number_id` que venía adentro del mismo cuerpo del pedido, y no comprobaba nada más.
 // Ese identificador no es un secreto —viaja en cada aviso y se ve en el panel de Meta—, así
 // que cualquiera que lo conociera abría conversaciones, insertaba mensajes y hacía salir un

@@ -1,7 +1,7 @@
 /* Los mensajes del sistema: el texto vive en la base, no en este archivo.
    =======================================================================
 
-   POR QUÉ EXISTE. Hasta acá, cada aviso que sale del motor era una función con las frases
+   POR QUÉ EXISTE. Hasta acá, cada aviso que sale del backend era una función con las frases
    escritas adentro, en los tres idiomas. Cambiar una coma era cambiar el archivo y publicar una
    versión nueva. La decisión tomada es que los mensajes del sistema vivan todos juntos en una
    tabla, editable desde afuera por API, y eso es lo que resuelve este archivo.
@@ -76,7 +76,7 @@ export function sembrarMensajesDelSistema(filas) {
   cargadoEl = new Date();
 }
 
-/** Si hay algo cargado. Sirve para que quien arranca el motor sepa si la carga salió o no. */
+/** Si hay algo cargado. Sirve para que quien arranca el backend sepa si la carga salió o no. */
 export function hayMensajesCargados() {
   return cargadoEl !== null && MENSAJES.size > 0;
 }

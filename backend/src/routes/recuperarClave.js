@@ -22,7 +22,7 @@ export const recuperarClaveRouter = Router();
 // sesión la puede abrir cualquiera. La pantalla dice que si ese correo tiene cuenta, va a llegar
 // un mensaje, y eso es verdad en los dos casos.
 //
-// Lo que no tiene todavía es un tope de pedidos por minuto: el que hay en el motor se apoya en
+// Lo que no tiene todavía es un tope de pedidos por minuto: el que hay en el backend se apoya en
 // una sesión ya verificada, y acá no hay ninguna. Pedir de nuevo no abre una puerta más —el
 // enlace anterior se da por usado al emitir el siguiente—, así que lo que queda expuesto es
 // llenarle la casilla de correo a alguien. Anotado, sin construir un contador nuevo.

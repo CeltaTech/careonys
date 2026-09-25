@@ -9,7 +9,7 @@ const EmpresaContext = createContext(null);
 // Sin sesión no se carga nada acá, y es a propósito: esta lectura pasa por RLS y devuelve la
 // configuración propia de quien entró. La pantalla de ingreso sí sabe de qué Prestadora se trata
 // —se lo dice la dirección del navegador—, pero ese dato lo trae otra pieza: la puerta traduce la
-// dirección a segmento (`lib/puertaDeIngreso.js`) y el camino público del motor devuelve sólo el
+// dirección a segmento (`lib/puertaDeIngreso.js`) y el camino público del backend devuelve sólo el
 // nombre y el logotipo. Nada de eso necesita sesión ni pasa por acá.
 // DEVUELVE EL FALLO, NO UN NULO. Sin sesión no hay configuración que leer, y eso es una
 // respuesta; una lectura que no se pudo hacer es otra cosa, y antes las dos

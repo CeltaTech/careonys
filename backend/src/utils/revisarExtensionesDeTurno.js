@@ -41,7 +41,7 @@ const MS_POR_DIA = 24 * 60 * 60 * 1000;
 // días antes de terminar, y todavía uno más para el caso que quedó abierto de ayer.
 const DIAS_HACIA_ATRAS = 4;
 
-// Se recorre de a una Prestadora por vez, y ninguna consulta mezcla dos: el motor entra con la
+// Se recorre de a una Prestadora por vez, y ninguna consulta mezcla dos: el backend entra con la
 // llave de servicio, que se saltea la protección por fila, así que lo único que mantiene cerrado
 // cada cajón es que cada consulta diga para cuál trabaja.
 export async function revisarExtensionesDeTurno() {

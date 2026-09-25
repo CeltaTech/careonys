@@ -21,9 +21,9 @@
 // ocho y setenta y dos horas cubiertas por una sola persona. Un tope de jornada convertiría
 // casi toda guardia larga en horas extra, que es exactamente lo contrario de lo que significan.
 //
-// NO IMPORTA NADA A PROPÓSITO. Este archivo lo usa el Panel y el motor usa una copia generada
+// NO IMPORTA NADA A PROPÓSITO. Este archivo lo usa el Panel y el backend usa una copia generada
 // (`backend/src/utils/formaDePago.js`, ver `scripts/copias_entre_apps.mjs`), y lo que se copia
-// al motor no puede traerse medio Panel atrás.
+// al backend no puede traerse medio Panel atrás.
 // ---------------------------------------------------------------------------
 
 /** Con qué se mide el trabajo. Son identificadores guardados: no se renombran nunca. */

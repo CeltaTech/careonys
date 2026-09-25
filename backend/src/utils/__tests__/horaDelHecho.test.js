@@ -15,7 +15,7 @@ test('la hora del teléfono se respeta cuando está hacia atrás', () => {
   assert.equal(horaDelHecho(haceMediaHora, AHORA), haceMediaHora);
 });
 
-test('un reloj adelantado no escribe nada: queda la hora del motor', () => {
+test('un reloj adelantado no escribe nada: queda la hora del backend', () => {
   const dentroDeUnaHora = '2026-09-19T13:00:00.000Z';
   assert.equal(horaDelHecho(dentroDeUnaHora, AHORA), new Date(AHORA).toISOString());
 });
@@ -26,12 +26,12 @@ test('lo que no es una fecha tampoco decide nada', () => {
   }
 });
 
-test('sin hora del teléfono queda la del motor', () => {
+test('sin hora del teléfono queda la del backend', () => {
   assert.equal(horaDelHecho(undefined, AHORA), new Date(AHORA).toISOString());
   assert.equal(horaDelHecho(null, AHORA), new Date(AHORA).toISOString());
 });
 
-test('la hora exacta del motor se acepta: no está adelantada', () => {
+test('la hora exacta del backend se acepta: no está adelantada', () => {
   assert.equal(horaDelHecho(new Date(AHORA).toISOString(), AHORA), new Date(AHORA).toISOString());
 });
 

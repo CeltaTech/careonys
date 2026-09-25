@@ -76,7 +76,7 @@ export function EntrevistaDePostulacion({ postulacionId }) {
 
   /* Un solo camino para las cuatro operaciones. Cada una manda lo suyo, pero todas apagan los
      botones mientras corren, vuelven a leer la lista al terminar y muestran la frase del catálogo
-     si el motor rechazó el pedido. */
+     si el backend rechazó el pedido. */
   async function operar(hacer) {
     setTrabajando(true);
     setError(null);

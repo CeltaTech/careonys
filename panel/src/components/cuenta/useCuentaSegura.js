@@ -7,9 +7,9 @@ import { mensajeDeError } from '../../lib/errores';
 
    Lo consultan la pantalla de seguridad de la cuenta y la de la propia contraseña, que son los
    dos lugares desde donde se ofrece verificar el teléfono. Escrito dos veces, el día que cambie
-   lo que contesta el motor cambiaría en una sola.
+   lo que contesta el backend cambiaría en una sola.
 
-   EL NÚMERO NO LLEGA HASTA ACÁ. El motor contesta si hay uno cargado, si está verificado y si esa
+   EL NÚMERO NO LLEGA HASTA ACÁ. El backend contesta si hay uno cargado, si está verificado y si esa
    Prestadora tiene por dónde mandar un código; nada de eso necesita leer el número.
 
    Los cuatro estados quedan a la vista de quien lo usa: `estado` vale «cargando», «error» o

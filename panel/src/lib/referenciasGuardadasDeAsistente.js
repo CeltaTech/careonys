@@ -1,13 +1,13 @@
 import { llamadorDe } from './apiPanel';
 
-/* Las referencias laborales van y vuelven por el motor.
+/* Las referencias laborales van y vuelven por el backend.
    ==========================================================================
 
    No porque la tabla esté cerrada —tiene su política y el Panel la alcanzaría con el pase de la
    persona—, sino porque quién verificó y cuándo no los puede escribir la pantalla: son la firma de
    esa verificación, y el servidor es el único que sabe con certeza quién está del otro lado
    (`backend/src/routes/panelReferenciasLaborales.js`). Lo mismo vale para el mínimo, que sale de
-   la configuración de la Prestadora y se cuenta del lado del motor. */
+   la configuración de la Prestadora y se cuenta del lado del backend. */
 
 const llamarApi = llamadorDe('/referencias-laborales');
 

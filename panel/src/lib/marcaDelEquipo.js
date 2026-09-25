@@ -3,8 +3,8 @@ import { IDENTIDAD } from '../config/identidadProducto';
 /* La marca de este aparato.
    ==========================================================================
 
-   QUÉ ES. Un texto al azar que el motor emite y que este navegador guarda. Sirve para una sola
-   cosa: que el motor pueda contestar «desde acá ya se entró antes» y no pedir el código del
+   QUÉ ES. Un texto al azar que el backend emite y que este navegador guarda. Sirve para una sola
+   cosa: que el backend pueda contestar «desde acá ya se entró antes» y no pedir el código del
    teléfono en cada entrada.
 
    QUÉ NO ES. No es una credencial y sola no deja entrar a nadie: se mira **después** de que la
@@ -14,7 +14,7 @@ import { IDENTIDAD } from '../config/identidadProducto';
    DÓNDE SE GUARDA. En el almacenamiento local de este navegador, con el prefijo técnico del
    producto, que es el mismo que usan las demás cosas que persisten. Borrarlo no rompe nada: la
    próxima entrada se trata como si fuera desde un aparato nuevo, que es exactamente lo que es
-   desde el punto de vista del motor.
+   desde el punto de vista del backend.
 
    El almacenamiento local puede estar bloqueado —ventana privada, permisos del navegador—, y
    entonces las dos funciones no hacen nada y no se rompen. Quien esté en esa situación escribe el

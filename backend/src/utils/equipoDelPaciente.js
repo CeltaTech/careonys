@@ -23,10 +23,10 @@
 // QUÉ NO DECIDE ESTA LISTA. Nada. No bloquea, no asigna y no reemplaza a la Coordinadora. Es
 // quiénes son, para que el resto del sistema pueda preguntarlo.
 //
-// Se copia entero al motor (`scripts/copias_entre_apps.mjs`), que lo necesita para saber a quién
+// Se copia entero al backend (`scripts/copias_entre_apps.mjs`), que lo necesita para saber a quién
 // avisarle cuando un turno se queda sin nadie. Por eso no importa nada del Panel.
 
-// Con extensión a propósito: este archivo se copia tal cual al motor, que corre en Node y ahí la
+// Con extensión a propósito: este archivo se copia tal cual al backend, que corre en Node y ahí la
 // ruta sin extensión no resuelve.
 import { inicioDeGuardia } from './horarios.js';
 
@@ -115,7 +115,7 @@ export function soloLoQueCorreDeLaRegla(cambios) {
  * El equipo de un Paciente.
  *
  * Todo llega ya cargado: este archivo no habla con la base, para poder correr igual en el Panel
- * y en el motor.
+ * y en el backend.
  *
  * @param {object} entrada
  * @param {string} entrada.pacienteId De quién es el equipo.

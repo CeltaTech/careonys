@@ -40,7 +40,7 @@ const REGLA = 'regla-de-mentira';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, para poder afirmar que NO pidió algo. */
+/** Todo lo que el backend le pidió a la base, para poder afirmar que NO pidió algo. */
 let llamadas = [];
 /** Lo mismo, del lado del servicio de correo que abre y corta los reenvíos. */
 let pedidosDeCorreo = [];
@@ -128,12 +128,12 @@ const { panelPrestadorasRouter } = await import('../panelPrestadoras.js');
 const app = express();
 app.use(express.json());
 app.use('/api/panel/prestadoras', panelPrestadorasRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/panel/prestadoras`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/prestadoras`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
   correoFalso.close();
 });
@@ -152,7 +152,7 @@ function correoNormal({ metodo, ruta }) {
   return { estado: 200, resultado: {} };
 }
 
-/** Lo que el motor le pidió al servicio de correo, si se lo pidió. */
+/** Lo que el backend le pidió al servicio de correo, si se lo pidió. */
 function pedidoDeCorreo(metodo, final) {
   return pedidosDeCorreo.find((p) => p.metodo === metodo && p.ruta.includes(final));
 }
@@ -199,7 +199,7 @@ beforeEach(() => {
   respuestas.set('POST /rest/v1/prestadoras', () => [
     { id: NUEVA, nombre_fantasia: ALTA_COMPLETA.nombre_fantasia, estado: 'prospecto' },
   ]);
-  // La escritura sobre la fila de configuración devuelve la fila tocada: es así como el motor sabe
+  // La escritura sobre la fila de configuración devuelve la fila tocada: es así como el backend sabe
   // que la dirección de ingreso quedó anotada de verdad.
   respuestas.set('PATCH /rest/v1/configuracion_prestadora', () => [{ prestadora_id: NUEVA }]);
   // Donde queda anotado el reenvío recién abierto, para poder cortarlo después.
@@ -233,7 +233,7 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/direcciones_reservadas', () => puertasReservadas.map((direccion) => ({ direccion })));
 });
 
-/** La dirección de ingreso que el motor mandó a anotar, si la anotó. */
+/** La dirección de ingreso que el backend mandó a anotar, si la anotó. */
 function puertaEscrita() {
   const escritura = llamadas.find(
     (l) => l.clave === 'PATCH /rest/v1/configuracion_prestadora' && l.cuerpo?.dominio !== undefined
@@ -242,7 +242,7 @@ function puertaEscrita() {
 }
 
 /**
- * La fila que el motor mandó a escribir en esa tabla. Una escritura de una sola fila viaja como
+ * La fila que el backend mandó a escribir en esa tabla. Una escritura de una sola fila viaja como
  * objeto suelto y una de varias como lista: acá se devuelve siempre la fila, para que la prueba
  * mire lo que se escribió y no cómo viajó.
  */
@@ -255,7 +255,7 @@ function filaEscritaEn(clave) {
 /** Que el rechazo haya sido de verdad: no quedó ninguna Prestadora creada. */
 function noCreo() {
   const escrituras = llamadas.filter((l) => l.clave === 'POST /rest/v1/prestadoras');
-  assert.deepEqual(escrituras, [], 'el motor creó la Prestadora igual, después de decir que no');
+  assert.deepEqual(escrituras, [], 'el backend creó la Prestadora igual, después de decir que no');
 }
 
 /** Que el alta se haya deshecho de verdad: la Prestadora que alcanzó a crearse quedó borrada. */

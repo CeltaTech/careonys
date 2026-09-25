@@ -1,10 +1,10 @@
 import { supabase } from './supabaseClient';
 import { errorDeLaRespuesta } from './errores';
 
-/* El único camino del Panel hacia el motor.
+/* El único camino del Panel hacia el backend.
    ==========================================================================
 
-   POR QUÉ EXISTE. Todas las llamadas del Panel al motor hacen exactamente lo mismo: buscan la
+   POR QUÉ EXISTE. Todas las llamadas del Panel al backend hacen exactamente lo mismo: buscan la
    sesión, arman la dirección, ponen el encabezado de autorización y el tipo de contenido, leen
    la respuesta y, si no salió bien, levantan un error con el número adentro para que
    `lib/errores.js` sepa distinguir una sesión vencida de un permiso que falta.
@@ -24,16 +24,16 @@ import { errorDeLaRespuesta } from './errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-/** Dónde está el motor, para las pocas pantallas que no lo llaman sino que tienen que **mostrar**
+/** Dónde está el backend, para las pocas pantallas que no lo llaman sino que tienen que **mostrar**
  *  una de sus direcciones para que alguien la copie afuera —hoy la de la entrada de WhatsApp,
  *  que la Prestadora pega en su panel de Meta—. Sale del mismo lugar que usa el `fetch` de acá
- *  arriba: una dirección escrita a mano en una pantalla se despega el día que cambia el motor. */
-export const DIRECCION_DEL_MOTOR = API_URL;
+ *  arriba: una dirección escrita a mano en una pantalla se despega el día que cambia el backend. */
+export const DIRECCION_DEL_BACKEND = API_URL;
 
 /**
  * @param {string} path  Lo que va después de `/api/panel`, empezando con `/`.
  * @param {object} opciones  Lo mismo que acepta `fetch`.
- * @returns {Promise<object>} La respuesta ya convertida. Si el motor contesta un error, se
+ * @returns {Promise<object>} La respuesta ya convertida. Si el backend contesta un error, se
  *                            levanta una excepción que `lib/errores.js` sabe explicar.
  */
 export async function llamarApiPanel(path, opciones = {}) {

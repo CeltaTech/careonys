@@ -14,7 +14,7 @@
 // que le llega. Es del lado de ellos y no se puede saltear: mientras no esté confirmada, las
 // respuestas no llegan. Por eso ese estado se consulta y se muestra, en vez de darlo por hecho.
 //
-// Todo esto es opcional: sin las tres variables cargadas, el motor no intenta nada y la
+// Todo esto es opcional: sin las tres variables cargadas, el backend no intenta nada y la
 // Prestadora se da de alta igual. Lo que pasa entonces es que las respuestas se pierden, y eso
 // se avisa en el Panel.
 
@@ -151,7 +151,7 @@ export async function apuntarReenvioDeRespuestas({
       .update({ regla_reenvio: regla ?? null })
       .eq('id', prestadoraId);
 
-    // El reenvío quedó como tenía que quedar y el motor no sabe con qué cortarlo. Se avisa acá y
+    // El reenvío quedó como tenía que quedar y el backend no sabe con qué cortarlo. Se avisa acá y
     // no se deshace nada: las respuestas están llegando, que es lo que la Prestadora necesita.
     if (error) console.error('Quedó un reenvío sin anotar en la Prestadora:', error.message);
   }

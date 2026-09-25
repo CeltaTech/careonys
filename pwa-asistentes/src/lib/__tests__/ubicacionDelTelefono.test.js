@@ -74,8 +74,8 @@ test('cuando el aparato contesta, lo que vuelve es el punto y nada más', async 
 });
 
 test('un fallo que no es de ubicación sigue su camino', () => {
-  // Falla cerrado: lo del motor se muestra con el catálogo de errores, no con la frase de la
-  // ubicación. Si esto se abriera, cualquier error del motor le diría a la persona que revise
+  // Falla cerrado: lo del backend se muestra con el catálogo de errores, no con la frase de la
+  // ubicación. Si esto se abriera, cualquier error del backend le diría a la persona que revise
   // su GPS.
   assert.equal(esFalloDeUbicacion(new Error('sesion_vencida')), false);
   assert.equal(esFalloDeUbicacion(undefined), false);

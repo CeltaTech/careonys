@@ -76,7 +76,7 @@ async function guardarDesafio(desafio, { para, rol, usuarioId = null, prestadora
 async function gastarDesafio(desafio, { para, rol }) {
   // SIN PRESTADORA A PROPÓSITO
   // Quien está entrando no tiene sesión, así que no hay ninguna Organización de la cual sacar el
-  // filtro. El desafío se busca por el número al azar que emitió el propio motor hace menos de dos
+  // filtro. El desafío se busca por el número al azar que emitió el propio backend hace menos de dos
   // minutos: esa fila es la que dice de qué Prestadora se trata, y no al revés. La escritura que
   // viene después sí la nombra, y sale de esta misma fila.
   const { data: fila } = await supabase
@@ -117,10 +117,10 @@ export const llaveDelDispositivoRouter = Router();
 
 // `topeDePedidos` no se puede montar acá: exige una identidad ya resuelta y, sin sesión, no hay
 // ninguna. El freno de esta puerta es otro y es más duro: cada intento necesita un desafío que el
-// motor emitió hace menos de dos minutos, que sirve una sola vez, y una firma que sólo puede
+// backend emitió hace menos de dos minutos, que sirve una sola vez, y una firma que sólo puede
 // producir una llave guardada en un aparato concreto.
 
-/** Paso 1 de la entrada: el motor inventa el número que el teléfono va a firmar. */
+/** Paso 1 de la entrada: el backend inventa el número que el teléfono va a firmar. */
 llaveDelDispositivoRouter.post('/entrar/desafio', async (req, res) => {
   try {
     const { rol } = req.body ?? {};
@@ -148,9 +148,9 @@ llaveDelDispositivoRouter.post('/entrar/desafio', async (req, res) => {
 /**
  * Paso 2 de la entrada: llega la firma, y si cierra se emite la sesión.
  *
- * La sesión no la arma el motor a mano. Se le pide a Supabase un pase de un solo uso
+ * La sesión no la arma el backend a mano. Se le pide a Supabase un pase de un solo uso
  * (`generateLink`) y el navegador lo canjea con `verifyOtp`, que es el mismo camino que usa
- * cualquier enlace de entrada por correo. Así la sesión nace donde nacen todas y el motor no tiene
+ * cualquier enlace de entrada por correo. Así la sesión nace donde nacen todas y el backend no tiene
  * que firmar nada por su cuenta.
  */
 llaveDelDispositivoRouter.post('/entrar', async (req, res) => {

@@ -1,4 +1,4 @@
-// El motor de los formularios declarados: qué se pide, cuándo se pide y qué se acepta.
+// El backend de los formularios declarados: qué se pide, cuándo se pide y qué se acepta.
 //
 // Los formularios se declaran, no se dibujan. La declaración sale de la base —qué secciones,
 // qué casilleros, de qué tipo, con qué largo máximo, qué formatos de archivo, cuáles se repiten
@@ -22,7 +22,7 @@
 // Lo que se puede declarar
 // ---------------------------------------------------------------------------
 
-/** Los tipos de casillero que el motor sabe dibujar y controlar. */
+/** Los tipos de casillero que el backend sabe dibujar y controlar. */
 export const TIPOS_DE_CAMPO = [
   'texto',
   'texto_largo',
@@ -43,7 +43,7 @@ export const TIPOS_DE_ARCHIVO = ['archivo'];
 export const TIPOS_DE_LISTA = ['lista', 'lista_multiple'];
 
 /**
- * Los motivos que puede devolver el motor. Son códigos, no frases: el motor no sabe en qué
+ * Los motivos que puede devolver el backend. Son códigos, no frases: el backend no sabe en qué
  * idioma está mirando la persona. La frase la busca quien muestra.
  */
 export const MOTIVOS = {

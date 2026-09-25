@@ -1,15 +1,15 @@
 /**
- * Marcar una guardia como ausente, por la puerta del motor.
+ * Marcar una guardia como ausente, por la puerta del backend.
  *
  *   npm test --prefix backend
  *
  * POR QUÉ EXISTE ESTA PRUEBA. Hasta el 2026-09-05 esta operación estaba escrita dos veces: el
- * motor la hacía para la detección automática y el Panel la hacía a mano contra la base. Eran
+ * backend la hacía para la detección automática y el Panel la hacía a mano contra la base. Eran
  * dos versiones de la misma decisión y daban distinto. Ahora hay una sola, y esta ruta es por
  * donde entra el botón del Panel.
  *
  * Se prueba el camino entero contra una base de mentira: se entra con un rol, se pide la ruta y
- * se mira qué terminó escribiendo el motor. Lo que se mira no es que conteste 200, sino **qué
+ * se mira qué terminó escribiendo el backend. Lo que se mira no es que conteste 200, sino **qué
  * guardia quedó anotada como saliente en el incidente de relevo**, que es el dato por el que
  * existe la operación.
  */
@@ -27,7 +27,7 @@ const EL = '66666666-6666-6666-6666-666666666666';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, con la dirección entera: los filtros van ahí. */
+/** Todo lo que el backend le pidió a la base, con la dirección entera: los filtros van ahí. */
 let llamadas = [];
 
 let rolDelUsuario = 'coordinador';
@@ -71,12 +71,12 @@ const { panelGuardiasRouter } = await import('../panelGuardias.js');
 const app = express();
 app.use(express.json());
 app.use('/api/panel/guardias', panelGuardiasRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/panel/guardias`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/guardias`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 
@@ -152,7 +152,7 @@ describe('marcar ausente', () => {
 
   it('una guardia de otra Prestadora no se distingue de una que no existe', async () => {
     // La base contesta vacío porque el filtro de arriba la dejó afuera. Lo que se comprueba es
-    // que el motor no cuenta la diferencia: es un 404 igual que el de un identificador inventado.
+    // que el backend no cuenta la diferencia: es un 404 igual que el de un identificador inventado.
     respuestas.set('GET /rest/v1/guardias', () => []);
     const { estado, cuerpo } = await pedir('POST', `/${GUARDIA_AJENA}/ausente`);
     assert.equal(estado, 404);

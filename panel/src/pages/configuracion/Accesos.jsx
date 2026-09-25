@@ -212,8 +212,8 @@ function TabSeguridad() {
       // Esta pantalla llamaba a `fetch` con una constante `API_URL` que en este archivo nunca
       // se declaró. La excepción caía en el `catch` de acá abajo y se mostraba como un error
       // cualquiera, así que la solapa de Seguridad no cargaba ni guardaba nunca — y desde
-      // afuera parecía un problema del motor. Ahora va por el único camino del Panel hacia el
-      // motor (`lib/apiPanel.js`), que es también el que trae la dirección.
+      // afuera parecía un problema del backend. Ahora va por el único camino del Panel hacia el
+      // backend (`lib/apiPanel.js`), que es también el que trae la dirección.
       const resultado = await llamarApiPanel('/configuracion-plataforma/mfa');
       setMfaObligatorio(resultado.configuracion.mfa_admin_obligatorio);
       setEstado('listo');

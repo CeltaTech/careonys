@@ -31,7 +31,7 @@ const TELEFONO = '+5491122334455';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, con la dirección entera. */
+/** Todo lo que el backend le pidió a la base, con la dirección entera. */
 let llamadas = [];
 
 const baseFalsa = createServer((req, res) => {
@@ -115,7 +115,7 @@ function filaDelCodigo(extra = {}) {
 function prepararComprobacion({ fila, intentos }) {
   respuestas.set('GET /rest/v1/codigos_al_telefono', [fila]);
   // La Prestadora viaja en el pedido y la base falsa la exige, igual que la de verdad: una suma que
-  // llegara sin ella —o con otra— no cuenta nada, y el motor lo tiene que tratar como agotado.
+  // llegara sin ella —o con otra— no cuenta nada, y el backend lo tiene que tratar como agotado.
   respuestas.set('POST /rest/v1/rpc/sumar_intento_de_codigo', ({ cuerpo }) => {
     if (cuerpo?.p_tabla !== 'codigos_al_telefono' || cuerpo.p_id !== fila.id) return undefined;
     if (cuerpo.p_prestadora_id !== PRESTADORA) return undefined;

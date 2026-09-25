@@ -12,7 +12,7 @@ import {
 // El nombre del producto no se escribe a mano en ningún lado, tampoco acá.
 import { IDENTIDAD } from '../../config/identidadProducto.js';
 // Las frases ya no están adentro de `avisos.js`: viven en la tabla y se editan desde afuera. Acá se
-// carga lo mismo que siembra la migración, porque las pruebas del motor corren sin base levantada.
+// carga lo mismo que siembra la migración, porque las pruebas del backend corren sin base levantada.
 import { sembrarMensajesDelSistema } from '../mensajesDelSistema.js';
 import { filasSembradas } from './mensajesSembrados.js';
 

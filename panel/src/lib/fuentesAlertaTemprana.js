@@ -17,7 +17,7 @@
 // Lo que se lee en pantalla sale de i18n, en los tres idiomas.
 //
 // Este archivo existe dos veces y las dos son idénticas: el original es
-// `panel/src/lib/fuentesAlertaTemprana.js` y la copia del motor la mantiene
+// `panel/src/lib/fuentesAlertaTemprana.js` y la copia del backend la mantiene
 // `scripts/sincronizar_copias.mjs`; `scripts/verificar_identidad.mjs` corta el build si se
 // despegó. Nunca se edita la copia a mano.
 

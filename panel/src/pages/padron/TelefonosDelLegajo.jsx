@@ -21,7 +21,7 @@ import {
    adentro de las notas. Acá entran todos, y todos quedan habilitados.
 
    EL PREFERIDO NO SE ELIGE ACÁ. Es el que esa Persona usa en su cuenta, y por eso no hay ningún
-   casillero para marcarlo: lo resuelve el motor al entregar la lista. Quien no tiene cuenta no
+   casillero para marcarlo: lo resuelve el backend al entregar la lista. Quien no tiene cuenta no
    tiene preferido, y la lista sale igual de completa.
 
    SE PUEDEN REPETIR. El mismo número en dos fichas es lo normal cuando viven juntos, y no se

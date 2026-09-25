@@ -77,7 +77,7 @@ export const MOTIVOS_DE_BLOQUEO = [
  * Qué tan estricta es una Prestadora con la verificación de la Matrícula.
  *
  * Son los dos únicos valores que acepta la columna `prestadoras.modo_control_matricula`, y los
- * mismos dos que valida el motor antes de guardarlos. El orden es el de la pantalla: primero el
+ * mismos dos que valida el backend antes de guardarlos. El orden es el de la pantalla: primero el
  * permisivo, después el estricto.
  */
 export const MODOS_DE_CONTROL_MATRICULA = ['flexible', 'estricto'];

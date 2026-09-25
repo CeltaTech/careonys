@@ -23,7 +23,7 @@ import { finDeGuardia, inicioDeGuardia, sumarDias } from './horarios.js';
        miraba el mismo día.
 
    Ahora la operación entera vive acá y la hacen los dos caminos —la detección automática y el
-   botón del Panel, que pasó a pedírsela al motor por `routes/panelGuardias.js`—. La cuenta de
+   botón del Panel, que pasó a pedírsela al backend por `routes/panelGuardias.js`—. La cuenta de
    cuándo termina un turno sale de `utils/horarios.js`, que es copia máquina de
    `panel/src/lib/horarios.js` y donde la regla de la medianoche está escrita una sola vez para
    todo el producto (CLAUDE.md §8, «ningún patrón repetido sin punto único de verdad»).

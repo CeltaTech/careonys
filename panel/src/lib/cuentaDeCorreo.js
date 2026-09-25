@@ -1,4 +1,4 @@
-/* Cómo se lee la cuenta de correo que contesta el motor.
+/* Cómo se lee la cuenta de correo que contesta el backend.
 
    El correo de todas las Prestadoras sale por un mismo servicio de afuera, que acepta hasta
    cierta cantidad por día y por mes. Pasado cualquiera de los dos límites deja de aceptar, y los

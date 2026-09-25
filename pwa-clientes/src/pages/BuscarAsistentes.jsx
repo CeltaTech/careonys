@@ -71,7 +71,7 @@ export default function BuscarAsistentes() {
       <h1>{t.vidriera.titulo}</h1>
       <p className="guardia-card-detalle">{t.vidriera.para_que}</p>
 
-      {/* Las dos listas de opciones salen del motor. Cuando hay una sola opción no se dibuja el
+      {/* Las dos listas de opciones salen del backend. Cuando hay una sola opción no se dibuja el
           filtro: elegirla no cambia nada y ocupa la pantalla de un teléfono. */}
       {zonas.length > 1 && (
         <div className="form-field">

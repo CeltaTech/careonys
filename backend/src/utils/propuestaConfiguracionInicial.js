@@ -69,7 +69,7 @@ export async function proponerConfiguracionInicial({ tipo, filas, mapeo, prestad
   const zonasDeLaPlanilla = valoresDistintos(filas, mapeo, tipo, 'zonas');
   const tiposDeLaPlanilla = valoresDistintos(filas, mapeo, tipo, 'tipo_asistente');
 
-  // El motor entra a la base con la llave maestra: el filtro por Prestadora se escribe acá a
+  // El backend entra a la base con la llave maestra: el filtro por Prestadora se escribe acá a
   // mano o no existe (celtatech/CLAUDE.md §5).
   const { data: zonas, error } = await supabase
     .from('zonas_cobertura')

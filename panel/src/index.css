@@ -1769,7 +1769,7 @@ button.panel-kpi-card[aria-pressed='true'] {
   margin-bottom: 1rem;
 }
 
-/* El documento que firma el titular llega del motor como un texto con sus renglones ya
+/* El documento que firma el titular llega del backend como un texto con sus renglones ya
    puestos: se respetan tal cual, porque son los del papel que alguien va a firmar. */
 .documento-instruccion {
   white-space: pre-wrap;

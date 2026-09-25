@@ -27,10 +27,10 @@ const OTRO = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 let vecesQueCorrio = 0;
 
 /**
- * Un motor mínimo con el tope puesto donde va: después de la sesión verificada, antes del trabajo.
+ * Un backend mínimo con el tope puesto donde va: después de la sesión verificada, antes del trabajo.
  * `identidad` imita lo que deja el control de sesión; `null` es el caso de una ruta mal armada.
  */
-function motorCon({ identidad = { id: QUIEN }, nombre = 'prueba', soloSi = null }) {
+function backendCon({ identidad = { id: QUIEN }, nombre = 'prueba', soloSi = null }) {
   const app = express();
   app.use(express.json());
   app.use((req, _res, siguiente) => {
@@ -45,15 +45,15 @@ function motorCon({ identidad = { id: QUIEN }, nombre = 'prueba', soloSi = null 
 }
 
 /**
- * Los motores levantados en la prueba de turno. Se cierran todos al terminar cada una, incluso si
+ * Los backends levantados en la prueba de turno. Se cierran todos al terminar cada una, incluso si
  * la prueba falló a mitad de camino: un servidor que queda abierto deja el proceso colgado y una
  * prueba que se cuelga en vez de fallar no informa nada.
  */
-let motores = [];
+let backends = [];
 
 async function levantar(app) {
   const servidor = createServer(app);
-  motores.push(servidor);
+  backends.push(servidor);
   servidor.listen(0, '127.0.0.1');
   await new Promise((listo) => servidor.on('listening', listo));
   return { direccion: `http://127.0.0.1:${servidor.address().port}/probar` };
@@ -77,8 +77,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  for (const servidor of motores) servidor.close();
-  motores = [];
+  for (const servidor of backends) servidor.close();
+  backends = [];
   if (TOPE_ORIGINAL === undefined) delete process.env.TOPE_PEDIDOS_POR_MINUTO;
   else process.env.TOPE_PEDIDOS_POR_MINUTO = TOPE_ORIGINAL;
 });
@@ -86,7 +86,7 @@ afterEach(() => {
 describe('el tope de pedidos por minuto', () => {
   it('deja pasar los primeros y frena el que se pasa: sin esto, seis dígitos se prueban de a uno', async () => {
     process.env.TOPE_PEDIDOS_POR_MINUTO = '3';
-    const { direccion } = await levantar(motorCon({}));
+    const { direccion } = await levantar(backendCon({}));
 
     for (let vuelta = 1; vuelta <= 3; vuelta += 1) {
       const { estado } = await pedir(direccion);
@@ -103,7 +103,7 @@ describe('el tope de pedidos por minuto', () => {
 
   it('el número sale de la configuración, no está escrito en el código', async () => {
     process.env.TOPE_PEDIDOS_POR_MINUTO = '1';
-    const { direccion } = await levantar(motorCon({}));
+    const { direccion } = await levantar(backendCon({}));
 
     assert.equal(topePedidosPorMinuto(), 1);
     assert.equal((await pedir(direccion)).estado, 200);
@@ -121,8 +121,8 @@ describe('el tope de pedidos por minuto', () => {
 
   it('cada tope lleva su cuenta: gastar los de una ruta no deja sin pedidos a la otra', async () => {
     process.env.TOPE_PEDIDOS_POR_MINUTO = '1';
-    const firma = await levantar(motorCon({ nombre: 'firma' }));
-    const guardia = await levantar(motorCon({ nombre: 'guardia' }));
+    const firma = await levantar(backendCon({ nombre: 'firma' }));
+    const guardia = await levantar(backendCon({ nombre: 'guardia' }));
 
     assert.equal((await pedir(firma.direccion)).estado, 200);
     assert.equal((await pedir(firma.direccion)).estado, 429);
@@ -131,8 +131,8 @@ describe('el tope de pedidos por minuto', () => {
 
   it('la cuenta es de cada persona: quien no probó nada entra igual', async () => {
     process.env.TOPE_PEDIDOS_POR_MINUTO = '1';
-    const uno = await levantar(motorCon({ identidad: { id: QUIEN } }));
-    const otro = await levantar(motorCon({ identidad: { id: OTRO } }));
+    const uno = await levantar(backendCon({ identidad: { id: QUIEN } }));
+    const otro = await levantar(backendCon({ identidad: { id: OTRO } }));
 
     assert.equal((await pedir(uno.direccion)).estado, 200);
     assert.equal((await pedir(uno.direccion)).estado, 429);
@@ -140,7 +140,7 @@ describe('el tope de pedidos por minuto', () => {
   });
 
   it('sin identidad resuelta se niega: todo control de acceso falla cerrado', async () => {
-    const { direccion } = await levantar(motorCon({ identidad: null }));
+    const { direccion } = await levantar(backendCon({ identidad: null }));
 
     const { estado, cuerpo } = await pedir(direccion);
     assert.equal(estado, 429);
@@ -151,7 +151,7 @@ describe('el tope de pedidos por minuto', () => {
   it('lo que el tope no mira no se cuenta: el piso de la guardia nunca se traba', async () => {
     process.env.TOPE_PEDIDOS_POR_MINUTO = '1';
     const trajoUnCodigo = (req) => Boolean(req.body?.codigo);
-    const { direccion } = await levantar(motorCon({ soloSi: trajoUnCodigo }));
+    const { direccion } = await levantar(backendCon({ soloSi: trajoUnCodigo }));
 
     assert.equal((await pedir(direccion, { codigo: '111111' })).estado, 200);
     assert.equal((await pedir(direccion, { codigo: '222222' })).estado, 429);
@@ -166,7 +166,7 @@ describe('el tope de pedidos por minuto', () => {
     // El tope corre ANTES del trabajo de la ruta, así que no puede contestar distinto según si el
     // código existía: si contestara distinto, sería una forma de averiguar qué existe.
     process.env.TOPE_PEDIDOS_POR_MINUTO = '1';
-    const { direccion } = await levantar(motorCon({}));
+    const { direccion } = await levantar(backendCon({}));
 
     await pedir(direccion, { codigo: '111111' });
     const conCodigo = await pedir(direccion, { codigo: '111111' });

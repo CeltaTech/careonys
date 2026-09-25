@@ -1,4 +1,4 @@
-// El motor que dibuja un formulario declarado.
+// El backend que dibuja un formulario declarado.
 //
 // **Esta pantalla no sabe qué está pidiendo.** No tiene escrito ni un casillero, ni una etiqueta,
 // ni una validación: lee la declaración que salió de la base y dibuja lo que ahí diga. Agregar un
@@ -11,7 +11,7 @@
 //
 // **Y lo que la pantalla controla no es lo que decide.** Acá se controla para que quien carga vea
 // lo que falta sin esperar al servidor; el que decide es el servidor, que vuelve a controlar con
-// este mismo motor antes de dejar guardar nada.
+// este mismo backend antes de dejar guardar nada.
 
 import { useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';

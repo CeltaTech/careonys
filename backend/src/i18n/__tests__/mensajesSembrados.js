@@ -1,7 +1,7 @@
 /* Las frases que siembra la migración, leídas del archivo de la migración.
    ========================================================================
 
-   POR QUÉ SE LEEN DE AHÍ Y NO DE LA BASE. Las pruebas del motor corren sin base levantada. Si
+   POR QUÉ SE LEEN DE AHÍ Y NO DE LA BASE. Las pruebas del backend corren sin base levantada. Si
    estas pruebas se armaran con frases escritas acá adentro, comprobarían que el archivo de pruebas
    está de acuerdo consigo mismo y nada más: una prueba que no puede fallar no prueba nada
    (`celtatech\CLAUDE.md` §12). Leyendo la siembra de verdad, una clave que el código pide y que la

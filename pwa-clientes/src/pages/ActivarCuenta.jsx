@@ -6,7 +6,7 @@ import { MINIMO_DE_CARACTERES, claveAceptable } from '../lib/reglaDeClave';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-// Los tres motivos que contesta el motor son definitivos: con ese mismo enlace, reintentar no
+// Los tres motivos que contesta el backend son definitivos: con ese mismo enlace, reintentar no
 // sirve nunca. Cuando llega uno, el formulario se retira en vez de quedar invitando a un intento
 // que ya se sabe que va a fallar.
 const MOTIVOS_SIN_REINTENTO = ['token_invalido', 'token_ya_usado', 'token_vencido'];
@@ -23,7 +23,7 @@ export default function ActivarCuenta() {
   // Los dos problemas de acá son de un campo concreto —la contraseña corta, la repetida que no
   // coincide—, así que el aviso se cuelga de ese campo y no de todo el formulario: quien lo
   // recorre con un lector de pantalla lo escucha al llegar ahí. Arriba queda el cartel general
-  // solo para lo que contesta el motor, que no es de ningún campo en particular.
+  // solo para lo que contesta el backend, que no es de ningún campo en particular.
   const [errorCampo, setErrorCampo] = useState(null);
 
   const avisoDe = (campo) => (errorCampo?.campo === campo ? errorCampo.texto : undefined);
@@ -54,7 +54,7 @@ export default function ActivarCuenta() {
         body: JSON.stringify({ token, password }),
       });
       const resultado = await respuesta.json();
-      // La explicación viene del motor, que es el único que sabe qué pasó: manda un motivo y
+      // La explicación viene del backend, que es el único que sabe qué pasó: manda un motivo y
       // acá se busca la frase en las traducciones. Esta pantalla no compara códigos.
       if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
       setActivada(true);

@@ -187,7 +187,7 @@ function revisarTextoAMano() {
 
 /* Se revisan únicamente los textos entre comillas. Es lo que se le muestra a
    alguien; todo lo demás es código. Así el control vale igual para el archivo de
-   traducciones, para un mensaje que arma el motor y para un atributo suelto, sin
+   traducciones, para un mensaje que arma el backend y para un atributo suelto, sin
    tener que saber de antemano dónde vive cada texto. */
 const RE_TEXTOS_ENTRE_COMILLAS = /'((?:[^'\\\n]|\\.)*)'|"((?:[^"\\\n]|\\.)*)"|`((?:[^`\\]|\\.)*)`/g;
 

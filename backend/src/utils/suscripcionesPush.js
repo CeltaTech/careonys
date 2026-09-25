@@ -8,7 +8,7 @@ import { supabase } from '../db/connection.js';
 //
 // **Por qué existe el rastro.** La dirección de entrega que emite el navegador es
 // única en toda la tabla, sin condición de Prestadora: quien la mande con sus propias claves se
-// queda con la fila, y el aparato de la otra persona deja de mostrar sus avisos —el motor le sigue
+// queda con la fila, y el aparato de la otra persona deja de mostrar sus avisos —el backend le sigue
 // mandando mensajes, cifrados con claves que ese navegador no tiene—. No se prohíbe porque el caso
 // legítimo es idéntico: cuando dos personas comparten un teléfono, la dirección es la misma y
 // pisarla es lo correcto. Lo que se hace es anotarlo, para poder explicar después por qué alguien

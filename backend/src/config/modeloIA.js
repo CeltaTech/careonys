@@ -1,4 +1,4 @@
-// Punto único de verdad del modelo de IA que usa el motor
+// Punto único de verdad del modelo de IA que usa el backend
 // ============================================================================
 //
 // La regla de la empresa lo pide con estas palabras: «El nombre del modelo de IA vive en un solo
@@ -6,7 +6,7 @@
 // usa» (`celtatech/CLAUDE.md` §8). Todo lo que habla con el modelo —`alertasIA.js`,
 // `proponerRespuestasIA.js`, `importacionIA.js` y `reporteIA.js`— lo toma de acá y no lo escribe a mano:
 // escrito en cada uno, cambiarlo sería acordarse de cuatro archivos, y olvidarse de uno dejaría a
-// una parte del motor hablando con otro modelo sin que nada avisara.
+// una parte del backend hablando con otro modelo sin que nada avisara.
 //
 // ----------------------------------------------------------------------------
 // Por qué se puede cambiar desde afuera
@@ -16,7 +16,7 @@
 // lo prueba en un ambiente sin tocar el código ni publicar una versión, y se vuelve atrás sacando
 // la variable. Sin ella, cada prueba sería un despliegue.
 //
-// Lo que la variable **no** hace es elegir proveedor: el motor habla con Anthropic y sólo con
+// Lo que la variable **no** hace es elegir proveedor: el backend habla con Anthropic y sólo con
 // Anthropic (`@anthropic-ai/sdk`). Poner acá el nombre de un modelo de otra empresa no lo cambia,
 // lo rompe.
 //
@@ -32,7 +32,7 @@
 const MODELO_POR_DEFECTO = 'claude-sonnet-5';
 
 /**
- * El modelo con el que habla el motor.
+ * El modelo con el que habla el backend.
  *
  * Se sobreescribe con la variable de entorno `MODELO_IA`. Una variable vacía o con espacios se
  * trata como si no estuviera: es el caso corriente de un archivo de entorno con el renglón puesto

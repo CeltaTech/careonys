@@ -3,8 +3,8 @@
 // Son códigos fijos, no un catálogo de la Prestadora: lo que el Asistente lee sale de i18n,
 // igual que `falta_reporte` o `continuidad`. Por eso están escritos y no salen de la base.
 //
-// EXISTE DOS VECES porque la pantalla que los ofrece y el motor que los valida se despliegan por
-// separado y no pueden importarse entre sí. Éste es el original; la copia del motor la mantiene
+// EXISTE DOS VECES porque la pantalla que los ofrece y el backend que los valida se despliegan por
+// separado y no pueden importarse entre sí. Éste es el original; la copia del backend la mantiene
 // `scripts/sincronizar_copias.mjs`, y `scripts/verificar_identidad.mjs` corta la construcción si
 // alguna de las dos se despegó. Nunca se edita la copia a mano.
 //

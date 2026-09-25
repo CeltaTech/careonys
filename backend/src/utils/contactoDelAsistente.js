@@ -13,7 +13,7 @@
    exactamente lo que el plan prohíbe: abrir un contacto como efecto colateral de mirar algo.
 
    LA CONFIRMACIÓN NO SE PIDE ACÁ. Acá se dice qué se va a cobrar, con importe y moneda, y la
-   pantalla lo muestra y pregunta. El motor no confía en que lo haya preguntado: lo que lo
+   pantalla lo muestra y pregunta. El backend no confía en que lo haya preguntado: lo que lo
    protege es que abrir cuesta un pedido aparte, que ninguna pantalla manda sin que alguien
    toque el botón.
 

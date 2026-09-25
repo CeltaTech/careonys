@@ -19,7 +19,7 @@ async function llamarApi(path) {
 }
 
 // Ítem G del pendiente #30 — lectura del registro de auditoría de las sesiones de soporte
-// técnico (auditoria_soporte_tecnico). El alcance lo decide el motor, no esta pantalla: se ve
+// técnico (auditoria_soporte_tecnico). El alcance lo decide el backend, no esta pantalla: se ve
 // el registro de una sola Organización, la de la sesión de soporte abierta —y, si no hay
 // ninguna, la Organización de pruebas—. El porqué está escrito en
 // `backend/src/routes/panelAuditoria.js`, que es donde vive el filtro.
@@ -68,7 +68,7 @@ export function Auditoria() {
     }
   }, [t]);
 
-  // Abrir o cerrar una sesión de soporte cambia qué Organización contesta el motor, así que la
+  // Abrir o cerrar una sesión de soporte cambia qué Organización contesta el backend, así que la
   // lista se vuelve a pedir cuando cambia la sesión: si no, quedaría en pantalla el registro de
   // la Prestadora de la que se acaba de salir.
   useEffect(() => {

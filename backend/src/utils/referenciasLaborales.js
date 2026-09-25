@@ -15,13 +15,13 @@
    referencias verificadas se ve en la pantalla; quién puede incorporarse igual lo decide la
    Prestadora, que es la que responde por esa persona.
 
-   ESTE ARCHIVO SE COPIA AL MOTOR (`scripts/copias_entre_apps.mjs`) y no importa nada. La pantalla
-   necesita saber qué resultados ofrecer y si se llegó al mínimo; el motor, qué resultados acepta.
+   ESTE ARCHIVO SE COPIA AL BACKEND (`scripts/copias_entre_apps.mjs`) y no importa nada. La pantalla
+   necesita saber qué resultados ofrecer y si se llegó al mínimo; el backend, qué resultados acepta.
    Escrito de los dos lados, alcanza una letra de diferencia para que la pantalla ofrezca un
-   resultado que el motor rechaza. */
+   resultado que el backend rechaza. */
 
 /* Los cuatro resultados posibles de haber llamado a una referencia, nombrados de a uno: son a la
-   vez lo que se guarda en la base y lo que la pantalla le manda al motor. Se nombran por lo que
+   vez lo que se guarda en la base y lo que la pantalla le manda al backend. Se nombran por lo que
    son y no se renombran (`CLAUDE.md` §8). */
 export const RESULTADO_PENDIENTE = 'pendiente';
 export const RESULTADO_VERIFICADA = 'verificada';

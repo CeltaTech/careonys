@@ -8,7 +8,7 @@
  *
  *   1. DE QUIÉN SON LOS DATOS LO DECIDE LA SESIÓN. El identificador del Asistente no viaja en el
  *      pedido: no hay dónde escribir el de otra persona. Vale para mirar y para escribir.
- *   2. NADIE VE NI TOCA LA CUENTA DE OTRO. El motor entra a la base con la llave de servicio y se
+ *   2. NADIE VE NI TOCA LA CUENTA DE OTRO. El backend entra a la base con la llave de servicio y se
  *      saltea la protección por fila, así que lo único que separa un Asistente de otro —y una
  *      Prestadora de otra— son los filtros de estas rutas. Si faltaran, la pantalla se vería
  *      igual de bien.
@@ -77,12 +77,12 @@ const { appAsistentesRouter } = await import('../appAsistentes.js');
 const app = express();
 app.use(express.json());
 app.use('/api/app-asistentes', appAsistentesRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/app-asistentes`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/app-asistentes`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 
@@ -200,7 +200,7 @@ describe('el Asistente mira adónde se le paga', () => {
     assert.equal(consultasA('catalogo_identificadores_de_cuenta').length, 0);
   });
 
-  // ESTO ES LO QUE SEPARA A UN ASISTENTE DE OTRO. El motor se saltea la protección por fila.
+  // ESTO ES LO QUE SEPARA A UN ASISTENTE DE OTRO. El backend se saltea la protección por fila.
   it('la consulta va filtrada por el Asistente de la sesión y por su Prestadora', async () => {
     await pedirCuentas();
     const consultas = consultasA('datos_bancarios_asistente');
@@ -307,7 +307,7 @@ describe('el Asistente informa adónde se le paga', () => {
     assert.equal(fila.pais, 'AR');
   });
 
-  // ESTO ES LO QUE IMPIDE QUE UN ASISTENTE ESCRIBA LA CUENTA DE OTRO. El motor se saltea la
+  // ESTO ES LO QUE IMPIDE QUE UN ASISTENTE ESCRIBA LA CUENTA DE OTRO. El backend se saltea la
   // protección por fila, así que sin estos filtros la escritura alcanzaría cualquier fila.
   it('la corrección va filtrada por el Asistente de la sesión, su Prestadora y la clase', async () => {
     await guardarCuenta('cbu', { identificador: NUMERO_CORREGIDO });

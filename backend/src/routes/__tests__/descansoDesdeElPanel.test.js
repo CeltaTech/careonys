@@ -11,7 +11,7 @@
  *
  *   1. QUE EL DESCANSO SE CONVIERTA EN UN DESCUENTO O EN UNA FALTA. Anotar un descanso no toca la
  *      guardia. Se comprueba mirando qué se escribió, no lo que la ruta dice de sí misma.
- *   2. QUE UNA PRESTADORA ALCANCE LA GUARDIA DE OTRA. El motor entra con la llave de servicio y se
+ *   2. QUE UNA PRESTADORA ALCANCE LA GUARDIA DE OTRA. El backend entra con la llave de servicio y se
  *      saltea la protección por fila: lo único que separa a una de otra son los filtros de cada
  *      consulta.
  *   3. QUE ENTRE UN RATO IMPOSIBLE. Un fin anterior al principio rompe la restricción de la base, y
@@ -70,12 +70,12 @@ const { panelGuardiasRouter } = await import('../panelGuardias.js');
 const app = express();
 app.use(express.json());
 app.use('/api/panel/guardias', panelGuardiasRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/panel/guardias`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/guardias`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 
@@ -101,7 +101,7 @@ function filasQuePasanLosFiltros(url, filas) {
   );
 }
 
-/** Los descansos que el motor dio de alta en este pedido. */
+/** Los descansos que el backend dio de alta en este pedido. */
 function descansosAnotados() {
   return llamadas
     .filter((l) => l.clave === 'POST /rest/v1/descansos_guardia')

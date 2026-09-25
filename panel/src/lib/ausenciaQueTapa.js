@@ -2,7 +2,7 @@
 //
 // POR QUÉ VIVE EN UN ARCHIVO PROPIO. La pregunta se hace en dos lados que no se pueden
 // importar entre sí: el Panel, cuando arma la lista de quién puede cubrir un hueco
-// (`lib/candidatos.js`), y el motor, cuando el Asistente marca la llegada y hay que saber si
+// (`lib/candidatos.js`), y el backend, cuando el Asistente marca la llegada y hay que saber si
 // esa guardia quedó sin nadie. Escrita dos veces, las dos versiones se separan el día que
 // alguien corrija una sola —y la que quede vieja va a dar por trabajando a quien está de
 // licencia (regla «ningún patrón repetido sin punto único de verdad», CeltaTech §8)—. El

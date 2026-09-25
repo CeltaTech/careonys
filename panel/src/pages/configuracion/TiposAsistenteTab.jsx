@@ -46,7 +46,7 @@ export function TiposAsistenteTab() {
      Antes, si esta lectura fallaba, la pantalla mostraba "flexible" —el primer valor de la
      lista— como si eso fuera lo configurado. Una Prestadora estricta veía la política equivocada,
      y con sólo tocar cualquier otra cosa del selector se guardaba esa mentira encima de la
-     verdadera. El motor, con el mismo dato ausente, supone lo contrario
+     verdadera. El backend, con el mismo dato ausente, supone lo contrario
      (`lib/matricula.js`, MODO_CONTROL_MATRICULA_SUPUESTO): ante la duda exige más, que es lo que
      manda la regla de que todo control de acceso falla cerrado.
 

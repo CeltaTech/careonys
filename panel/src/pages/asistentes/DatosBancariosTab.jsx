@@ -14,7 +14,7 @@ import { EstadoLista } from '../../components/layout/EstadoLista';
    sabe cuál es la suya. Por eso acá no hay ningún casillero.
 
    CÓMO SE LLAMA EL NÚMERO LO DICE LA BASE. CBU, CVU o alias son de Argentina; en otro país son
-   otros. La sigla viene resuelta desde el motor, del catálogo por país. Acá no hay ninguna lista
+   otros. La sigla viene resuelta desde el backend, del catálogo por país. Acá no hay ninguna lista
    escrita.
 
    EL NÚMERO NO SE PIDE POR LA DIRECCIÓN NI SE ESCRIBE EN NINGÚN LADO: llega en la respuesta y se

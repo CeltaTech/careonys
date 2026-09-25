@@ -5,9 +5,9 @@
 // y el texto libre no se traduce; y este aviso lo da alguien apurado, en la calle, en el idioma
 // en que tenga el teléfono.
 //
-// EXISTE DOS VECES porque la pantalla que los ofrece y el motor que los valida se despliegan por
+// EXISTE DOS VECES porque la pantalla que los ofrece y el backend que los valida se despliegan por
 // separado y no pueden importarse entre sí. El original es `pwa-asistentes/src/lib/motivosDemora.js`
-// y la copia del motor la mantiene
+// y la copia del backend la mantiene
 // `scripts/sincronizar_copias.mjs`, y `scripts/verificar_identidad.mjs` corta la construcción si
 // alguna de las dos se despegó. Nunca se edita la copia a mano.
 //

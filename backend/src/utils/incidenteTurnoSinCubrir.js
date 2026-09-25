@@ -23,7 +23,7 @@
 // el incidente significa.
 //
 // Y LA LISTA DE FINALES LA ARMA CADA PRESTADORA, en la tabla `finales_turno_sin_cubrir`. Acá están
-// los que trae el producto —con los que nace— y los dos que escribe el motor solo. Cuál de ellos
+// los que trae el producto —con los que nace— y los dos que escribe el backend solo. Cuál de ellos
 // es una falla lo dice la fila del catálogo, no este archivo: un final que inventó la Prestadora
 // no está en ninguna lista del código.
 //
@@ -31,10 +31,10 @@
 // vacío es grave y qué significa cada forma de cerrarlo; quién abre, quién insiste y quién cierra
 // son el proceso de fondo y la Coordinadora.
 //
-// Se copia entero al motor (`scripts/copias_entre_apps.mjs`), que es quien los abre. Por eso no
+// Se copia entero al backend (`scripts/copias_entre_apps.mjs`), que es quien los abre. Por eso no
 // importa nada del Panel.
 
-// Con extensión a propósito: este archivo se copia tal cual al motor, que corre en Node y ahí la
+// Con extensión a propósito: este archivo se copia tal cual al backend, que corre en Node y ahí la
 // ruta sin extensión no resuelve.
 import { inicioDeGuardia } from './horarios.js';
 
@@ -63,7 +63,7 @@ export const REGLA_QUE_SE_PUEDE_TOCAR = {
  * `finales_turno_sin_cubrir`: saca los que no usa, apaga los que no quiere ofrecer y agrega los
  * suyos. Acá están los que trae el producto, que son con los que nace, y nada más.
  *
- * Están escritos igual porque el motor los necesita: es él quien cierra solo los dos que la base
+ * Están escritos igual porque el backend los necesita: es él quien cierra solo los dos que la base
  * ya dice, y para eso tiene que saber cómo se llaman.
  */
 export const CIERRES = {
@@ -86,7 +86,7 @@ export const CIERRES = {
 export const CIERRES_POSIBLES = Object.values(CIERRES);
 
 /**
- * Los dos que escribe el motor solo, porque la base ya los dice.
+ * Los dos que escribe el backend solo, porque la base ya los dice.
  *
  * No se ofrecen para elegir: que apareció una Asistente asignada, o que el turno se canceló, está
  * escrito, y ofrecerlo como opción invitaría a anotarlo sin que haya pasado.
@@ -137,7 +137,7 @@ export function esDefectoGrave(fila) {
   return Boolean(fila?.es_defecto_grave);
 }
 
-/** Los que se le ofrecen a quien cierra: los encendidos que no escribe el motor. */
+/** Los que se le ofrecen a quien cierra: los encendidos que no escribe el backend. */
 export function finalesQueSeOfrecen(catalogo) {
   return (catalogo ?? [])
     .filter((f) => f?.activo !== false && !f?.lo_escribe_el_sistema)

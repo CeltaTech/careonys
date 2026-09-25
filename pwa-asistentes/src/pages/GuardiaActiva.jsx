@@ -176,7 +176,7 @@ function esErrorDeRed(error) {
   return error instanceof TypeError;
 }
 
-// Los motivos con los que el motor rechaza un código del pase de guardia (pendiente #113, y el
+// Los motivos con los que el backend rechaza un código del pase de guardia (pendiente #113, y el
 // tope de pedidos por minuto en el #177). Son los únicos que no cierran el pase: el Asistente
 // sigue parado en la puerta, y una pantalla que se cierra sola después de un código mal tipeado
 // lo deja sin nada que apretar. El resto de los motivos —falta el Reporte Diario, la guardia no
@@ -206,8 +206,8 @@ export default function GuardiaActiva() {
   // cambie.
   const [, redibujar] = useState(0);
   const [checkinPendiente, setCheckinPendiente] = useState(null); // { desde } o null
-  // Por qué el motor rechazó lo que espera en este teléfono. Es una de las ocho situaciones del
-  // catálogo, nunca el texto crudo del motor, y vacío mientras no haya ningún rechazo.
+  // Por qué el backend rechazó lo que espera en este teléfono. Es una de las ocho situaciones del
+  // catálogo, nunca el texto crudo del backend, y vacío mientras no haya ningún rechazo.
   const [motivoDeLaCola, setMotivoDeLaCola] = useState('');
   // Los dos actos de antes de llegar (pendiente #101) esperando señal. Se miran igual que el
   // check-in pendiente: quien avisó sin conexión tiene que ver que su aviso quedó guardado, o
@@ -338,7 +338,7 @@ export default function GuardiaActiva() {
       } catch (e) {
         if (!esErrorDeRed(e)) throw e;
         // Sin señal: se guarda local y se reintenta solo al volver la conexión. Y el código que
-        // se haya leído no se guarda con el pedido: para cuando la cola llegue al motor va a
+        // se haya leído no se guarda con el pedido: para cuando la cola llegue al backend va a
         // estar vencido hace rato, y un código vencido rebota. Se guarda el motivo que existe
         // justamente para esto, así la llegada entra igual y queda para que el Coordinador la
         // mire. Esa es la diferencia entre una guardia que se traba y una que no.
@@ -350,7 +350,7 @@ export default function GuardiaActiva() {
         sincronizarCola();
       }
     } catch (e) {
-      // Un código que el motor rechaza no cierra el pase: el Asistente sigue parado en la
+      // Un código que el backend rechaza no cierra el pase: el Asistente sigue parado en la
       // puerta y tiene que poder intentar otra cosa ahí mismo, sin volver a empezar.
       if (MOTIVOS_DEL_CODIGO.includes(e.motivo)) return { ok: false, mensaje: mensajeDeError(e, t) };
       setPasandoCheckin(false);
@@ -409,7 +409,7 @@ export default function GuardiaActiva() {
             : t.guardia_activa.cerrar_falta_reporte,
         );
       // El resto de los motivos los explica lib/errores.js con las traducciones: el motivo
-      // que se agregue mañana en el motor va a salir explicado acá sin tocar esta pantalla.
+      // que se agregue mañana en el backend va a salir explicado acá sin tocar esta pantalla.
       else setError(mensajeDeError(e, t, 'cerrar guardia'));
     } finally {
       setCerrando(false);
@@ -476,10 +476,10 @@ export default function GuardiaActiva() {
 
       {aviso && <div className="alert alert-alerta" role="status">{aviso}</div>}
 
-      {/* Lo que espera señal en este teléfono, y el motivo cuando el motor lo rechazó. El motivo
+      {/* Lo que espera señal en este teléfono, y el motivo cuando el backend lo rechazó. El motivo
           se guardaba desde siempre y no se mostraba nunca: la persona veía «pendiente de enviar»
           para algo que ya no se iba a mandar más. La frase sale del catálogo de situaciones, así
-          que nunca llega el texto crudo del motor. */}
+          que nunca llega el texto crudo del backend. */}
       {(checkinPendiente || motivoDeLaCola) && (
         <div className={motivoDeLaCola ? 'alert alert-alerta' : 'alert alert-info'} role="status">
           {motivoDeLaCola ? (
@@ -525,7 +525,7 @@ export default function GuardiaActiva() {
           muestra en su pantalla quien está en la casa. Si no hay nadie que pueda mostrarlo,
           <PaseDeGuardia/> ofrece pedírselo a la Prestadora, y si tampoco así, entrar igual
           eligiendo un motivo — el pase nunca traba la guardia.
-          Se queda dibujado mientras el pedido viaja: si el motor rechaza el código, el aviso
+          Se queda dibujado mientras el pedido viaja: si el backend rechaza el código, el aviso
           aparece adentro del mismo pase y se puede intentar de nuevo sin volver a empezar. */}
       {!guardia.checkin_at && !checkinPendiente && pasandoCheckin && (
         <PaseDeGuardia
@@ -575,7 +575,7 @@ export default function GuardiaActiva() {
           )}
 
           {/* El aviso de antes del intento y el rechazo de después son la misma regla, así que
-              son un solo texto: el del motivo `continuidad` que manda el motor. */}
+              son un solo texto: el del motivo `continuidad` que manda el backend. */}
           {reportesCompletos && !cerradoPendiente && guardia.checkout_bloqueado && (
             <div className="alert alert-alerta" role="status" style={{ marginTop: '1rem' }}>{t.errores.motivos.continuidad}</div>
           )}

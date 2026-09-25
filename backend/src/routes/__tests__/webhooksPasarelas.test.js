@@ -7,7 +7,7 @@
  * texto—, que corte con 401 cuando no hay nada guardado con qué comprobar, y que solo toque
  * la fila del cobro cuando el aviso resultó auténtico.
  *
- * Se levanta el motor de verdad contra una base de mentira que contesta lo que cada prueba le
+ * Se levanta el backend de verdad contra una base de mentira que contesta lo que cada prueba le
  * prepara, igual que `panelCobros.test.js`.
  *
  *   npm test --prefix backend
@@ -40,9 +40,9 @@ const SECRETOS_DE_AMBIENTE = [
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base. */
+/** Todo lo que el backend le pidió a la base. */
 let llamadas = [];
-/** Los rechazos que el motor dejó anotados del lado del servidor. */
+/** Los rechazos que el backend dejó anotados del lado del servidor. */
 let anotados = [];
 
 const baseFalsa = createServer((req, res) => {
@@ -101,9 +101,9 @@ const { webhooksPasarelasRouter } = await import('../webhooksPasarelas.js');
 // trae adentro su propio lector de cuerpo crudo.
 const app = express();
 app.use('/api/webhooks/pasarelas', webhooksPasarelasRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/webhooks/pasarelas`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/webhooks/pasarelas`;
 
 // Los rechazos se anotan del lado del servidor; acá se juntan en vez de imprimirse, para que
 // la prueba pueda comprobar que quedaron anotados y para no ensuciar la salida.
@@ -112,7 +112,7 @@ console.warn = (...partes) => anotados.push(partes.join(' '));
 
 after(() => {
   console.warn = avisarDeVerdad;
-  motor.close();
+  backend.close();
   baseFalsa.close();
   proveedorFalso.close();
 });

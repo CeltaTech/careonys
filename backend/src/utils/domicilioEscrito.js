@@ -12,7 +12,7 @@
 // guardado sigue diciendo el anterior y nadie sabe cuál vale.
 //
 // POR QUÉ ACÁ Y NO EN CADA PANTALLA
-// Lo arman el motor —para las dos aplicaciones de teléfono y para ubicar la
+// Lo arman el backend —para las dos aplicaciones de teléfono y para ubicar la
 // dirección en el mapa— y el Panel, para mostrarlo. Escrito dos veces, una
 // pondría la coma donde la otra no y el mismo domicilio se leería distinto según
 // dónde se lo mire. El original vive acá y la copia del Panel se mantiene sola

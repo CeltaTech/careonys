@@ -32,11 +32,11 @@ export function partesDesdeFila(fila) {
  * El domicilio en un renglón, con el nombre del lugar buscado en el catálogo.
  *
  * Lo necesitan las pantallas que escriben derecho contra la base y tienen que dejar al día la
- * columna del renglón. Las que guardan a través del motor no lo usan: ahí el renglón lo arma el
- * motor con la misma función, porque es él quien conoce los lugares de esa Prestadora.
+ * columna del renglón. Las que guardan a través del backend no lo usan: ahí el renglón lo arma el
+ * backend con la misma función, porque es él quien conoce los lugares de esa Prestadora.
  *
  * `textos` se pasa solamente para mostrar. Para escribir la columna se omite, y entonces las
- * palabras salen en castellano igual que del lado del motor: una misma columna escrita en tres
+ * palabras salen en castellano igual que del lado del backend: una misma columna escrita en tres
  * idiomas según quién la guardó se lee distinta en cada ficha. Es otro motivo por el cual el
  * renglón se arma al mostrarlo y no se guarda.
  */
@@ -51,6 +51,6 @@ export function palabrasDelDomicilio(t) {
 }
 
 /** Las partes listas para guardar. Lo hace `partesDelDomicilio`, que es la misma función que usa el
- *  motor: si cada lado decidiera por su cuenta qué es un casillero vacío, uno guardaría nulo y el
+ *  backend: si cada lado decidiera por su cuenta qué es un casillero vacío, uno guardaría nulo y el
  *  otro una cadena, y las dos fichas se verían distintas sin serlo. */
 export { partesDelDomicilio as partesParaGuardar };

@@ -34,7 +34,7 @@ const DIAS_HACIA_ATRAS = 1;
 
 const MS_POR_HORA = 60 * 60 * 1000;
 
-// Se recorre de a una Prestadora por vez, y su configuración se lee con su propio filtro: el motor
+// Se recorre de a una Prestadora por vez, y su configuración se lee con su propio filtro: el backend
 // entra con la llave de servicio, que se saltea la protección por fila, así que lo único que
 // mantiene cerrado cada cajón es que cada consulta diga para cuál trabaja.
 export async function revisarGuardiasSinCubrir() {

@@ -6,7 +6,7 @@ const PermisosContext = createContext(null);
 const API_URL = import.meta.env.VITE_API_URL;
 
 // Permisos efectivos del usuario logueado (admin/superadmin: todo true; coordinador:
-// según lo que haya configurado su Prestadora en Configuración > Permisos — motor
+// según lo que haya configurado su Prestadora en Configuración > Permisos — backend
 // backend/src/utils/permisos.js). Se carga una vez por sesión, no por pantalla.
 //
 // LAS TRES SITUACIONES SE DICEN POR SEPARADO. `estado` vale 'cargando' mientras la respuesta

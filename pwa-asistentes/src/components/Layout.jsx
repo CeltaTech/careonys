@@ -34,7 +34,7 @@ export default function Layout() {
         if (activo) setOfertasAbiertas((ofertas ?? []).length);
       })
       .catch(() => {
-        // Sin señal o con el motor caído no se muestra ningún número. Un cero inventado sería
+        // Sin señal o con el backend caído no se muestra ningún número. Un cero inventado sería
         // peor que no decir nada: haría creer que no hay nada esperando.
       });
     return () => {

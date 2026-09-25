@@ -13,7 +13,7 @@ import { SIGNOS_VITALES, SIGNOS_VITALES_LEGADO, colorSigno } from '../lib/signos
 // después el martes, y después el miércoles. Una lista que obliga a entrar en todos para
 // encontrar el único que importa no es una lista, es un índice.
 //
-// TODO ESTO YA VIAJABA AL TELÉFONO. El motor manda el ánimo, los incidentes y los signos en la
+// TODO ESTO YA VIAJABA AL TELÉFONO. El backend manda el ánimo, los incidentes y los signos en la
 // misma respuesta de la lista, junto con los rangos contra los que se comparan, y ya recortados
 // según lo que esa Prestadora muestre. No se agregó ninguna consulta: lo que se traía se estaba
 // descartando al dibujar.

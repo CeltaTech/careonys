@@ -8,7 +8,7 @@
  *
  *   1. DE QUIÉN ES LA CARPETA LO DECIDE LA SESIÓN. El identificador del Asistente no viaja en el
  *      pedido: no hay forma de pedir la carpeta de otra persona porque no hay dónde escribirla.
- *   2. EL FILTRO DE PRESTADORA VIAJA EN LAS CUATRO CONSULTAS. El motor entra a la base con la
+ *   2. EL FILTRO DE PRESTADORA VIAJA EN LAS CUATRO CONSULTAS. El backend entra a la base con la
  *      llave de servicio y se saltea la protección por fila, así que lo único que separa una
  *      Prestadora de otra son estos filtros. Si a una consulta le faltara, nadie lo notaría
  *      mirando la pantalla: los datos se verían bien igual.
@@ -31,7 +31,7 @@ const LEGAJO = 'bbbbbbbb-bbbb-bbbb-bbbb-b0000000000b';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, con la dirección entera: los filtros van ahí. */
+/** Todo lo que el backend le pidió a la base, con la dirección entera: los filtros van ahí. */
 let llamadas = [];
 
 const baseFalsa = createServer((req, res) => {
@@ -72,12 +72,12 @@ const { appAsistentesRouter } = await import('../appAsistentes.js');
 const app = express();
 app.use(express.json());
 app.use('/api/app-asistentes', appAsistentesRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/app-asistentes`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/app-asistentes`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 
@@ -170,7 +170,7 @@ describe('la carpeta de papeles del Asistente, desde el teléfono', () => {
     assert.equal(conLaVentanaAncha.cuerpo.carpeta.resumen, 'por_vencer');
   });
 
-  // ESTO ES LO QUE AÍSLA UNA PRESTADORA DE OTRA. El motor entra con la llave de servicio y se
+  // ESTO ES LO QUE AÍSLA UNA PRESTADORA DE OTRA. El backend entra con la llave de servicio y se
   // saltea la protección por fila: si una de estas cuatro consultas perdiera su filtro, traería
   // los papeles de otra Prestadora y la pantalla se vería igual de bien.
   it('las cuatro consultas van filtradas por la Prestadora de la sesión', async () => {

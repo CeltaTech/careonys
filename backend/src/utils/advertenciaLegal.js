@@ -11,7 +11,7 @@ import { supabase } from '../db/connection.js';
 //     y quien llamó sigue adelante igual.
 //   * Queda registrado que se avisó: quién, cuándo, qué función y qué texto se mostró.
 //
-// POR QUÉ ESTO VIVE EN EL MOTOR Y NO EN LA PANTALLA. Hasta acá el registro lo escribía el
+// POR QUÉ ESTO VIVE EN EL BACKEND Y NO EN LA PANTALLA. Hasta acá el registro lo escribía el
 // Panel desde el navegador, en el mismo momento en que la persona cerraba el cartel. Eso
 // hacía que el registro dependiera de que la pantalla se acordara de escribirlo: cualquier
 // otro camino hasta la misma acción —otra pantalla, la dirección escrita a mano— encendía la

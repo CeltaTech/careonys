@@ -8,7 +8,7 @@ import { IDIOMA_POR_DEFECTO, IDIOMAS_SOPORTADOS, normalizarIdioma } from './idio
 import { IDENTIDAD } from '../config/identidadProducto.js';
 import { frase } from './mensajesDelSistema.js';
 
-/* Cómo se arma cada aviso que sale del motor.
+/* Cómo se arma cada aviso que sale del backend.
    ==========================================
 
    POR QUÉ EXISTE. Un aviso que sale por correo, por WhatsApp o al celular es texto visible, y el

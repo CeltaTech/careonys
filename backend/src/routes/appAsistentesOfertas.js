@@ -20,7 +20,7 @@ import { responderError } from '../utils/errorConMotivo.js';
 // ----------------------------------------------------------------------------
 //
 // La base tiene sus propias cerraduras y ya dejan que cada Asistente vea y conteste sus
-// invitaciones y nada más. Pero el motor entra con la llave maestra, así que esas cerraduras
+// invitaciones y nada más. Pero el backend entra con la llave maestra, así que esas cerraduras
 // no lo frenan: cada consulta de este archivo lleva escrito el filtro por Prestadora y por
 // Asistente (CLAUDE.md §5, regla de aislamiento).
 //
@@ -30,7 +30,7 @@ import { responderError } from '../utils/errorConMotivo.js';
 //
 // La misma guardia se le ofrece a varios a la vez, a propósito: se la queda el primero que
 // contesta. Entonces dos personas pueden apretar Aceptar en el mismo segundo, y solo una
-// puede quedarse con el turno. El desempate lo hace la base, no el motor: la guardia se
+// puede quedarse con el turno. El desempate lo hace la base, no el backend: la guardia se
 // reclama con una escritura condicionada a que todavía no tenga Asistente. Postgres traba la
 // fila, y el segundo que llega escribe cero filas y se entera de que llegó tarde. Quien
 // pierde ve un cartel que se lo explica; nunca dos personas con el mismo turno.
@@ -114,7 +114,7 @@ function noSePudo(res, estado, motivo, detalle) {
 // Se muestra solo lo que sigue vivo: sin contestar, con la guardia todavía sin cubrir, sin
 // cancelar y dentro del plazo. Una invitación que se venció o que ganó otro desaparece de la
 // lista porque ya no hay nada que hacer con ella, y una lista de cosas muertas en un teléfono
-// es ruido. Si igual llega a apretar Aceptar sobre una que acaba de morir, el motor se lo
+// es ruido. Si igual llega a apretar Aceptar sobre una que acaba de morir, el backend se lo
 // explica — no falla en silencio.
 appAsistentesOfertasRouter.get('/', requiereRolAsistente, async (req, res) => {
   const { data, error } = await supabase

@@ -4,7 +4,7 @@
  *
  *   npm test --prefix backend
  *
- * POR QUÉ EXISTE ESTA PRUEBA. El motor entra a la base con la llave de servicio y se saltea la
+ * POR QUÉ EXISTE ESTA PRUEBA. El backend entra a la base con la llave de servicio y se saltea la
  * protección por fila, así que lo único que separa una Prestadora de otra son los filtros
  * escritos en cada consulta. Estas tres se apoyaban nada más que en el identificador del
  * Asistente, y una misma persona tiene una ficha por cada Prestadora donde trabaja: el día que
@@ -32,7 +32,7 @@ const CALIFICACION = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, con la dirección entera: los filtros van ahí. */
+/** Todo lo que el backend le pidió a la base, con la dirección entera: los filtros van ahí. */
 let llamadas = [];
 
 const baseFalsa = createServer((req, res) => {
@@ -70,12 +70,12 @@ app.use(express.json());
 // El mismo orden de montaje que en `server.js`: el camino más largo primero.
 app.use('/api/app-asistentes/consentimientos', appAsistentesConsentimientosRouter);
 app.use('/api/app-asistentes', appAsistentesRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/app-asistentes`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/app-asistentes`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 

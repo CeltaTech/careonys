@@ -276,7 +276,7 @@ function AgregarLugar({ lugares, onClose, onAgregado }) {
               nombre: nombrePropio,
               // La provincia y el municipio son los de la localidad que lo contiene: un barrio no
               // está en otro lado que su localidad, y pedirlos de nuevo sería dejar que se carguen
-              // distintos. El país lo pone el motor, que lo sabe por la Prestadora.
+              // distintos. El país lo pone el backend, que lo sabe por la Prestadora.
               provincia: contenedor?.provincia ?? null,
               municipio: contenedor?.municipio ?? null,
               parte_de: dentroDe,

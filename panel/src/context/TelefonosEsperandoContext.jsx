@@ -22,12 +22,12 @@ import { esAdminOSuperior } from '../lib/roles';
    contexto y no estado de la pantalla porque lo consumen dos —el contador del menú y la pantalla
    de habilitar—.
 
-   QUIÉN VE QUÉ LO DECIDE EL MOTOR. Acá no hay ninguna regla de quién habilita a quién: la lista
+   QUIÉN VE QUÉ LO DECIDE EL BACKEND. Acá no hay ninguna regla de quién habilita a quién: la lista
    llega ya filtrada por la ruta, que niega lo que no corresponde aunque la pantalla lo pidiera.
 
    CUÁNDO NO PREGUNTA NADA. Sin sesión, sin Organización activa, y sin el permiso de habilitar: a
    quien no puede habilitar a nadie no le corresponde ninguna de estas tareas, y preguntar sería
-   pedirle al motor que le conteste que no.
+   pedirle al backend que le conteste que no.
 
    NO HAY ESPERA POR TIEMPO. Nada de esta lista se vence ni se habilita solo: sale de la lista
    cuando alguien la habilita.

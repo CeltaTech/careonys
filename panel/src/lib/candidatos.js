@@ -63,7 +63,7 @@ import {
   matriculaQueMandaAl,
   motivoDeBloqueo,
 } from './matricula';
-// Se reexporta más abajo: la cuenta es la misma del lado del motor, así que vive en un archivo
+// Se reexporta más abajo: la cuenta es la misma del lado del backend, así que vive en un archivo
 // propio que se copia allá, y quien la importaba de acá la sigue encontrando.
 import { ausenciaQueTapa, ultimoDiaDeLaGuardia } from './ausenciaQueTapa';
 import { trabajaEnModalidad } from './modalidades';
@@ -226,7 +226,7 @@ export function guardiaQueSePisa(guardia, guardiasDelAsistente) {
 }
 
 // La ausencia registrada que tapa una guardia. Se escribe una sola vez en
-// `lib/ausenciaQueTapa.js`, porque el motor hace la misma pregunta al marcar la llegada, y se
+// `lib/ausenciaQueTapa.js`, porque el backend hace la misma pregunta al marcar la llegada, y se
 // reexporta desde acá porque es una comprobación compartida más, como las de arriba.
 export { ausenciaQueTapa };
 

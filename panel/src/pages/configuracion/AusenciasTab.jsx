@@ -16,10 +16,10 @@ import { REGLA_QUE_SE_PUEDE_TOCAR } from '../../lib/avisoDeAusencia';
    Coordinadora la resuelve cuando puede y se le dice una sola vez. Por debajo, es un turno que
    empieza enseguida y se insiste cada tantas horas hasta que esté tapado.
 
-   NO SE GUARDA LO QUE NO SE TOCÓ. Lo que viaja al motor es solamente lo que difiere de fábrica, y
-   el motor lo vuelve a filtrar. Así, el día que cambie un valor de fábrica, alcanza a todas las
+   NO SE GUARDA LO QUE NO SE TOCÓ. Lo que viaja al backend es solamente lo que difiere de fábrica, y
+   el backend lo vuelve a filtrar. Así, el día que cambie un valor de fábrica, alcanza a todas las
    Prestadoras salvo en lo que cada una decidió. La cuenta y los bordes viven en
-   `lib/avisoDeAusencia.js`, que es el mismo archivo que usa el motor. */
+   `lib/avisoDeAusencia.js`, que es el mismo archivo que usa el backend. */
 export function AusenciasTab() {
   const { t } = useLocale();
   const [regla, setRegla] = useState(null);
@@ -46,7 +46,7 @@ export function AusenciasTab() {
   }, [recargar]);
 
   // El campo vacío no se manda como cero: cero horas dejaría a todas las faltas fuera de la alarma,
-  // y el motor lo rechazaría. Mientras el campo está vacío no se puede guardar.
+  // y el backend lo rechazaría. Mientras el campo está vacío no se puede guardar.
   function cambiar(clave, texto) {
     setGuardado(false);
     setRegla((previa) => ({ ...previa, [clave]: texto === '' ? '' : Number(texto) }));

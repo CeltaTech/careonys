@@ -26,7 +26,7 @@ export const AVISO_CAMBIO_HABILITADO = 'cambio_de_clave_habilitado';
  * Manda uno de los cuatro avisos de seguridad.
  *
  * No interrumpe nada si falla: el aviso acompaña al trabajo, no lo bloquea. Sin correo cargado no
- * hay a dónde mandarlo y se sale en silencio, que es lo mismo que hace el resto del motor.
+ * hay a dónde mandarlo y se sale en silencio, que es lo mismo que hace el resto del backend.
  */
 export async function avisarDeSeguridad(clave, cuenta) {
   if (!cuenta?.email) return;

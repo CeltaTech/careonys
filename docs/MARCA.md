@@ -33,7 +33,7 @@ una función que se venda. El producto no pregunta qué contrató nadie.
 
 **Esa dirección es un recurso del sistema, no de la Prestadora.** Existe para que el sistema
 mande, y para nada más. La Prestadora nunca entra a esa casilla, nunca la usa y no necesita saber
-que existe: no se le muestra en ninguna pantalla y no viaja en ninguna respuesta del motor hacia
+que existe: no se le muestra en ninguna pantalla y no viaja en ninguna respuesta del backend hacia
 el Panel. Lo único suyo es **adónde quiere que le lleguen las respuestas**, y eso sí lo configura.
 
 **Cada Prestadora manda desde su propia dirección de correo, bajo el dominio del producto.** Al
@@ -81,7 +81,7 @@ escrito.
 
 **La pantalla de ingreso muestra la marca de la Prestadora.** Se la dice la dirección: cada
 Prestadora entra por la suya. `panel/src/lib/puertaDeIngreso.js` traduce esa dirección al segmento
-que el motor lee, y `backend/src/routes/marcaDeLaPuerta.js` devuelve el nombre y el logotipo sin
+que el backend lee, y `backend/src/routes/marcaDeLaPuerta.js` devuelve el nombre y el logotipo sin
 pedir sesión. Si la dirección no corresponde a ninguna Prestadora, no se entra: no hay a cuál.
 
 **Esa dirección se le asigna sola al darla de alta**, nadie la teclea, y sale del nombre con la

@@ -15,13 +15,13 @@
    que renovar —monotributo, seguro, antecedentes—, con un catálogo de tipos que también arma cada
    Prestadora. Estas dos no vencen ni se renuevan: se sacan una vez, al incorporarse.
 
-   ESTE ARCHIVO SE COPIA AL MOTOR (`scripts/copias_entre_apps.mjs`) y no importa nada. La pantalla
-   necesita saber qué formatos ofrecer y qué fotos mostrar; el motor, qué acepta y dónde lo guarda.
+   ESTE ARCHIVO SE COPIA AL BACKEND (`scripts/copias_entre_apps.mjs`) y no importa nada. La pantalla
+   necesita saber qué formatos ofrecer y qué fotos mostrar; el backend, qué acepta y dónde lo guarda.
    Escrito de los dos lados, alcanza una letra de diferencia para que la foto se guarde en un lado
    y se busque en otro. */
 
 /* Las dos, nombradas de a una: son a la vez el nombre del archivo adentro del depósito y lo que
-   la pantalla le manda al motor. Se nombran por lo que son y no se renombran (`CLAUDE.md` §8). */
+   la pantalla le manda al backend. Se nombran por lo que son y no se renombran (`CLAUDE.md` §8). */
 export const TIPO_DOCUMENTO = 'documento';
 export const TIPO_PERFIL = 'perfil';
 

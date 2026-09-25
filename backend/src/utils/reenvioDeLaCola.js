@@ -8,7 +8,7 @@ import { supabase } from '../db/connection.js';
  * fila más: dos emergencias de la misma emergencia, dos descansos del mismo descanso.
  *
  * Casi todos los avisos ya están a salvo por su propio estado —una guardia no tiene dos llegadas
- * ni dos cierres—, y para ésos el motor contesta `yaRegistrado` mirando la guardia. Los que sí
+ * ni dos cierres—, y para ésos el backend contesta `yaRegistrado` mirando la guardia. Los que sí
  * pueden pasar dos veces de verdad en el mismo turno necesitan esto: el identificador que el
  * teléfono pone ANTES del primer intento y no cambia entre reintentos.
  *

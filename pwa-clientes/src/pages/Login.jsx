@@ -57,7 +57,7 @@ export default function Login() {
       <div className="login-card">
         <h1>{t.auth.titulo}</h1>
         <p className="login-subtitulo">{t.auth.subtitulo}</p>
-        {/* El error es de los dos campos a la vez: el motor contesta que la combinación no
+        {/* El error es de los dos campos a la vez: el backend contesta que la combinación no
             sirve, no cuál de los dos está mal. Por eso el aviso queda arriba, y los dos campos
             lo señalan con `aria-describedby` — así se escucha también al pararse en cualquiera
             de los dos. Marcar uno solo como equivocado sería adivinar. */}

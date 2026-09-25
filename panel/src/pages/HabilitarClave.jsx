@@ -15,7 +15,7 @@ import { FormField } from '../components/ui/FormField';
    la clave la elige esa persona, sola, en su pantalla. Desde acá no se elige ninguna clave y no se
    ve ninguna.
 
-   SE HABILITA HACIA ABAJO Y NUNCA A UNO MISMO. La lista ya llega filtrada por el motor, así que lo
+   SE HABILITA HACIA ABAJO Y NUNCA A UNO MISMO. La lista ya llega filtrada por el backend, así que lo
    que se ve es lo que se puede hacer.
 
    NO SE MUESTRA NINGÚN NÚMERO DE TELÉFONO. Lo que hay es la foto de la ficha y el correo, que es
@@ -23,7 +23,7 @@ import { FormField } from '../components/ui/FormField';
 
    ARRIBA, LO QUE ESTÁ ESPERANDO. Quien cambió su número queda a la espera, y esa espera aparece
    sola acá: no hace falta ir a buscar a la persona a mano. Se la llama, se verifica que el cambio
-   es real, y recién ahí se habilita. La lista llega filtrada por el motor, igual que la búsqueda:
+   es real, y recién ahí se habilita. La lista llega filtrada por el backend, igual que la búsqueda:
    lo que se ve es lo que se puede hacer. */
 export function HabilitarClave() {
   const { t } = useLocale();
@@ -91,7 +91,7 @@ export function HabilitarClave() {
         body: JSON.stringify({ usuarioId: cuenta.id }),
       });
       setAviso(t.habilitar_clave.telefono_confirmado.replace('{{nombre}}', cuenta.nombre));
-      // Uno menos esperando. El motor ya avisó por el canal, y esto es para quien lo hizo: su
+      // Uno menos esperando. El backend ya avisó por el canal, y esto es para quien lo hizo: su
       // pantalla no espera a que le llegue la vuelta.
       await recargarEsperando();
     } catch (err) {

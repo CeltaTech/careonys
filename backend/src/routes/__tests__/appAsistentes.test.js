@@ -44,7 +44,7 @@ const LNG = -58.4;
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, con la dirección entera: los filtros van ahí. */
+/** Todo lo que el backend le pidió a la base, con la dirección entera: los filtros van ahí. */
 let llamadas = [];
 
 const baseFalsa = createServer((req, res) => {
@@ -86,12 +86,12 @@ const { appAsistentesRouter } = await import('../appAsistentes.js');
 const app = express();
 app.use(express.json());
 app.use('/api/app-asistentes', appAsistentesRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/app-asistentes`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/app-asistentes`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 
@@ -174,7 +174,7 @@ function intentosSumados() {
     .map((l) => l.cuerpo);
 }
 
-// Cómo se ve desde afuera que salió el aviso de llegada: para armarlo, el motor va a buscar el
+// Cómo se ve desde afuera que salió el aviso de llegada: para armarlo, el backend va a buscar el
 // nombre del Asistente a `asistentes`. El push en sí no se puede observar acá —sin claves VAPID no
 // sale— y por eso se mira su antesala.
 //
@@ -233,7 +233,7 @@ beforeEach(() => {
   respuestas.set('POST /rest/v1/rpc/domicilios_de_pacientes_en', () => []);
   respuestas.set('POST /rest/v1/mensajes_asistente', () => []);
   // La comprobación de esta guardia, y el alta o pisada de esa misma fila. El alta devuelve lo
-  // que le mandaron porque el motor la vuelve a leer con `.select().single()`.
+  // que le mandaron porque el backend la vuelve a leer con `.select().single()`.
   respuestas.set('GET /rest/v1/guardia_comprobaciones', () => (comprobacionGuardada ? [comprobacionGuardada] : []));
   respuestas.set('POST /rest/v1/guardia_comprobaciones', ({ cuerpo }) => {
     const fila = Array.isArray(cuerpo) ? cuerpo[0] : cuerpo;
@@ -630,7 +630,7 @@ describe('Plan B — «no hay nadie que me pueda mostrar el código»', () => {
     assert.equal(estado, 400);
     assert.equal(cuerpo.motivo, 'codigo_incorrecto');
 
-    // El intento lo suma la base en un solo paso, no el motor leyendo y volviendo a escribir
+    // El intento lo suma la base en un solo paso, no el backend leyendo y volviendo a escribir
     // (pendiente #177): así dos intentos a la vez cuentan dos y no uno.
     const [sumado] = intentosSumados();
     assert.equal(sumado.p_tabla, 'guardia_comprobaciones');
@@ -639,7 +639,7 @@ describe('Plan B — «no hay nadie que me pueda mostrar el código»', () => {
     assert.equal(
       comprobacionesActualizadas().some((c) => 'codigo_intentos' in c),
       false,
-      'el motor no escribe la cuenta a mano',
+      'el backend no escribe la cuenta a mano',
     );
   });
 

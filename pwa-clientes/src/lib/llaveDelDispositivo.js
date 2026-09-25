@@ -15,7 +15,7 @@
  * sabe cuál ofrecer sin que nadie se lo diga. Pedir el correo antes convertiría esta pantalla en
  * una manera de averiguar quién tiene cuenta.
  *
- * Y LA SESIÓN NACE DONDE NACEN TODAS. El motor no arma ninguna sesión por su cuenta: devuelve un
+ * Y LA SESIÓN NACE DONDE NACEN TODAS. El backend no arma ninguna sesión por su cuenta: devuelve un
  * pase de un solo uso y acá se canjea con `verifyOtp`, que es el mismo camino del enlace de
  * entrada por correo.
  */

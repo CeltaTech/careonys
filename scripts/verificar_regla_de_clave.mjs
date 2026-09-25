@@ -5,7 +5,7 @@
 //   node scripts/verificar_regla_de_clave.mjs
 //
 // El número vive en `backend/src/config/reglaDeClave.js`, y de ahí lo importan
-// el motor y las tres pantallas. Pero la plataforma tiene el suyo escrito en un
+// el backend y las tres pantallas. Pero la plataforma tiene el suyo escrito en un
 // archivo de configuración que no puede importar nada, y es el que manda de
 // verdad: cualquier camino que no pase por nuestras pantallas se valida contra
 // ése. Los dos números tienen que decir lo mismo, y esto falla si se despegan.

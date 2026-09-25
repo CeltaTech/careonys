@@ -17,7 +17,7 @@ import { mensajeDeError } from '../lib/errores';
    vacío y no hay ninguna respuesta escrita en el producto.
 
    Lo que esta pantalla NO decide: que una respuesta marcada `toca_salud` no se pueda aprobar lo
-   hacen cumplir el motor y la base. Acá no se le ofrece el botón, que es otra cosa. */
+   hacen cumplir el backend y la base. Acá no se le ofrece el botón, que es otra cosa. */
 
 const llamar = llamadorDe('/respuestas-preparadas');
 
@@ -143,7 +143,7 @@ export function RespuestasPreparadas() {
   }
 
   function aprobar(respuesta) {
-    // Lo clínico no se aprueba, y se dice acá mismo en vez de dejar que el motor lo rechace.
+    // Lo clínico no se aprueba, y se dice acá mismo en vez de dejar que el backend lo rechace.
     if (respuesta.toca_salud) {
       setAviso(tr.lo_clinico_se_deriva);
       return;

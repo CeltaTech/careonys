@@ -40,7 +40,7 @@ export function cambiosDeLoFacturado(facturado) {
 /**
  * Escribir lo emitido en esa factura. Devuelve lo que contestó la base.
  *
- * El filtro de Prestadora va acá y no en quien llama: el motor entra a la base con la llave de
+ * El filtro de Prestadora va acá y no en quien llama: el backend entra a la base con la llave de
  * servicio, así que si falta ese filtro no lo detiene nadie.
  */
 export async function anotarLoFacturado(prestadoraId, facturaId, facturado) {

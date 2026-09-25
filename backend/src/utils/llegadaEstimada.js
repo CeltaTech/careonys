@@ -23,7 +23,7 @@
 // `toleranciaCheckin.js`. No es una regla del producto.
 //
 // Este archivo existe dos veces y las dos son idénticas: el original es
-// `panel/src/lib/llegadaEstimada.js` y la copia del motor la mantiene
+// `panel/src/lib/llegadaEstimada.js` y la copia del backend la mantiene
 // `scripts/sincronizar_copias.mjs`; `scripts/verificar_identidad.mjs` corta el
 // build si se despegó. Nunca se edita la copia a mano.
 // ---------------------------------------------------------------------------

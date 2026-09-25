@@ -58,7 +58,7 @@ export function SimuladorVinculoTab({ asistente }) {
   const { filas: formulasCrudas, estado: estadoFormulas, error: errorFormulas, recargar: recargarFormulas } = useFormulasCese(asistente.prestadora_id);
   const hoy = new Date().toISOString().slice(0, 10);
 
-  // El catálogo de conceptos lo sirve el motor, porque lo que cobra una persona está detrás del
+  // El catálogo de conceptos lo sirve el backend, porque lo que cobra una persona está detrás del
   // permiso de ver sus pagos. Quien no lo tenga ve el resto del Simulador igual: la proyección
   // del cese no depende de esto.
   const [conceptos, setConceptos] = useState([]);

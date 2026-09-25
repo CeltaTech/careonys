@@ -9,7 +9,7 @@ import { MINIMO_DE_CARACTERES, claveAceptable } from '../lib/reglaDeClave';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-// Los tres motivos que contesta el motor son definitivos: con ese mismo enlace, reintentar no
+// Los tres motivos que contesta el backend son definitivos: con ese mismo enlace, reintentar no
 // sirve nunca. Cuando llega uno, el formulario se retira en vez de quedar invitando a un intento
 // que ya se sabe que va a fallar.
 const MOTIVOS_SIN_REINTENTO = ['token_invalido', 'token_ya_usado', 'token_vencido'];
@@ -18,7 +18,7 @@ const MOTIVOS_SIN_REINTENTO = ['token_invalido', 'token_ya_usado', 'token_vencid
 //
 // Va afuera del Panel, al lado de la entrada y del segundo factor, porque quien llega acá
 // todavía no tiene con qué entrar: trae la llave que le llegó por correo, y esa llave es toda
-// su credencial. El motor la revisa en `/api/activar-cuenta`, que es la misma puerta que usan
+// su credencial. El backend la revisa en `/api/activar-cuenta`, que es la misma puerta que usan
 // las dos aplicaciones de teléfono: la llave no distingue rol, así que no hay una segunda.
 //
 // Existe porque el alta de una Prestadora la crea desde CeltaTech (`panelPrestadoras.js`), y
@@ -50,7 +50,7 @@ export function ActivarCuenta() {
   const [motivoSinReintento, setMotivoSinReintento] = useState('');
   // Los dos problemas de acá son de un campo concreto —la contraseña corta, la repetida que no
   // coincide—, así que el aviso se cuelga de ese campo y no de todo el formulario. Arriba queda
-  // el cartel general sólo para lo que contesta el motor, que no es de ningún campo.
+  // el cartel general sólo para lo que contesta el backend, que no es de ningún campo.
   const [errorCampo, setErrorCampo] = useState(null);
   const [activada, setActivada] = useState(false);
 
@@ -81,7 +81,7 @@ export function ActivarCuenta() {
         body: JSON.stringify({ token, password, telefono: telefono.trim() }),
       });
       const resultado = await respuesta.json().catch(() => ({}));
-      // La explicación viene del motor, que es el único que sabe qué pasó: manda un motivo y acá
+      // La explicación viene del backend, que es el único que sabe qué pasó: manda un motivo y acá
       // se busca la frase en las traducciones. Esta pantalla no compara códigos.
       if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
       setActivada(true);

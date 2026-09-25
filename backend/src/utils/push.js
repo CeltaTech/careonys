@@ -25,11 +25,18 @@ function asegurarConfiguracion() {
 //
 // Devuelve true si al menos una suscripción recibió el push con éxito — lo necesita Fase 11
 // (revisarRecordatoriosPush.js) para decidir si cae a WhatsApp de respaldo.
-async function enviarPush(columna, id, { titulo, cuerpo, url }) {
+//
+// `prestadoraId` es obligatorio y no tiene valor por defecto: el motor entra con la llave de
+// servicio, que se saltea la protección por fila, así que lo único que impide mandarle el aviso de
+// una Prestadora al aparato de otra es este filtro. Colgar del identificador del Asistente o de la
+// Familia no alcanza, porque acá no se lee ninguna de esas dos tablas.
+async function enviarPush(prestadoraId, columna, id, { titulo, cuerpo, url }) {
   // Sin destinatario no hay push. Pasa cuando la guardia está sin cubrir: no hay Asistente
   // a quien avisarle. Se corta acá y no en cada llamador, para no repetir la misma
   // verificación en todos lados.
   if (!id) return false;
+  // Sin Prestadora no se manda nada: un filtro vacío traería las suscripciones de todas.
+  if (!prestadoraId) return false;
   if (!asegurarConfiguracion()) {
     console.error('Push no configurado: falta VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY');
     return false;
@@ -38,6 +45,7 @@ async function enviarPush(columna, id, { titulo, cuerpo, url }) {
   const { data: suscripciones, error } = await supabase
     .from('push_subscriptions')
     .select('id, endpoint, p256dh, auth')
+    .eq('prestadora_id', prestadoraId)
     .eq(columna, id);
 
   if (error || !suscripciones?.length) return false;
@@ -57,7 +65,11 @@ async function enviarPush(columna, id, { titulo, cuerpo, url }) {
         return true;
       } catch (err) {
         if (err.statusCode === 404 || err.statusCode === 410) {
-          await supabase.from('push_subscriptions').delete().eq('id', suscripcion.id);
+          await supabase
+            .from('push_subscriptions')
+            .delete()
+            .eq('prestadora_id', prestadoraId)
+            .eq('id', suscripcion.id);
         } else {
           console.error(`Error enviando push a suscripción ${suscripcion.id}:`, err.message);
         }
@@ -69,10 +81,10 @@ async function enviarPush(columna, id, { titulo, cuerpo, url }) {
   return resultados.some(Boolean);
 }
 
-export function enviarPushAsistente(asistenteId, datos) {
-  return enviarPush('asistente_id', asistenteId, datos);
+export function enviarPushAsistente(prestadoraId, asistenteId, datos) {
+  return enviarPush(prestadoraId, 'asistente_id', asistenteId, datos);
 }
 
-export function enviarPushFamilia(familiaId, datos) {
-  return enviarPush('familia_id', familiaId, datos);
+export function enviarPushFamilia(prestadoraId, familiaId, datos) {
+  return enviarPush(prestadoraId, 'familia_id', familiaId, datos);
 }

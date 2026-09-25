@@ -24,15 +24,24 @@ export function identificadorDelTelefono(cuerpo, campo = 'clienteUuid') {
 /**
  * La fila que ese mismo aviso ya escribió, si está. Sin identificador no hay nada que buscar.
  *
- * Se busca por guardia y por identificador juntos, con el mismo par que hace único el índice de
- * la base: el identificador lo genera el teléfono, y la guardia es lo que lo ata a su Prestadora.
+ * Se busca por Prestadora, por guardia y por identificador juntos. La Prestadora es obligatoria y
+ * no tiene valor por omisión: quien llama la sabe siempre —sale de la sesión de quien manda el
+ * aviso—, y sin ella la consulta alcanzaría la guardia de cualquier otra. Colgar de la guardia no
+ * alcanza, aunque su identificador sea único.
  */
-export async function filaDeEsteAviso({ tabla, guardiaId, clienteUuid, campos = 'id', columna = 'cliente_uuid' }) {
+export async function filaDeEsteAviso({ tabla, prestadoraId, guardiaId, clienteUuid, campos = 'id', columna = 'cliente_uuid' }) {
+  // Falla cerrado: sin Prestadora no se lee nada. Y hacia escribir, como el error de más abajo:
+  // no se afirma que el aviso ya estaba.
+  if (!prestadoraId) {
+    console.error(`filaDeEsteAviso en ${tabla}: sin Prestadora no se busca nada`);
+    return null;
+  }
   if (!clienteUuid) return null;
 
   const { data, error } = await supabase
     .from(tabla)
     .select(campos)
+    .eq('prestadora_id', prestadoraId)
     .eq('guardia_id', guardiaId)
     .eq(columna, clienteUuid)
     .maybeSingle();

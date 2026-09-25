@@ -100,7 +100,13 @@ beforeEach(() => {
   // La base suma el intento en una sola sentencia y devuelve el número nuevo. Se imita de verdad:
   // una base falsa que devolviera siempre 1 dejaría pasar cualquier cantidad de intentos.
   respuestas.set('POST /rest/v1/rpc/sumar_intento_de_codigo', ({ cuerpo }) => {
-    if (cuerpo?.p_tabla !== 'instrucciones_acceso_circulo' || cuerpo.p_id !== INSTRUCCION) return undefined;
+    // La Prestadora viaja en el pedido y la base falsa la exige, igual que la de verdad: una suma
+    // que llegara sin ella —o con otra— no cuenta nada.
+    if (
+      cuerpo?.p_tabla !== 'instrucciones_acceso_circulo'
+      || cuerpo.p_id !== INSTRUCCION
+      || cuerpo.p_prestadora_id !== PRESTADORA
+    ) return undefined;
     instruccion.codigo_intentos = (instruccion.codigo_intentos ?? 0) + 1;
     return instruccion.codigo_intentos;
   });
@@ -108,7 +114,7 @@ beforeEach(() => {
 
 describe('confirmar la instrucción con el código', () => {
   it('el código correcto la cierra, y la huella no queda viva', async () => {
-    const resultado = await confirmarConCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA, codigo: '123456' });
+    const resultado = await confirmarConCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA, prestadoraId: PRESTADORA, codigo: '123456' });
     assert.equal(resultado.ok, true);
 
     const [cierre] = actualizaciones();
@@ -119,11 +125,15 @@ describe('confirmar la instrucción con el código', () => {
   });
 
   it('el intento lo suma la base en un solo paso, no el motor leyendo y escribiendo', async () => {
-    const resultado = await confirmarConCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA, codigo: '000000' });
+    const resultado = await confirmarConCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA, prestadoraId: PRESTADORA, codigo: '000000' });
     assert.equal(resultado.motivo, 'codigo_incorrecto');
 
     const [sumado] = intentosSumados();
-    assert.deepEqual(sumado, { p_tabla: 'instrucciones_acceso_circulo', p_id: INSTRUCCION });
+    assert.deepEqual(sumado, {
+      p_tabla: 'instrucciones_acceso_circulo',
+      p_id: INSTRUCCION,
+      p_prestadora_id: PRESTADORA,
+    });
     assert.equal(instruccion.codigo_intentos, 1);
     // Y el motor no escribió la cuenta por su lado: si lo hiciera, dos intentos a la vez contarían
     // como uno.
@@ -132,7 +142,7 @@ describe('confirmar la instrucción con el código', () => {
 
   it('agotado el tope no se compara nada, ni siquiera el código correcto', async () => {
     instruccion.codigo_intentos = 5;
-    const resultado = await confirmarConCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA, codigo: '123456' });
+    const resultado = await confirmarConCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA, prestadoraId: PRESTADORA, codigo: '123456' });
     assert.equal(resultado.ok, false);
     assert.equal(resultado.motivo, 'demasiados_intentos');
     assert.equal(actualizaciones().length, 0, 'no se puede cerrar nada con el tope agotado');
@@ -140,7 +150,7 @@ describe('confirmar la instrucción con el código', () => {
 
   it('un código vencido no gasta ningún intento', async () => {
     instruccion.codigo_expira_en = haceUnRato(1);
-    const resultado = await confirmarConCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA, codigo: '123456' });
+    const resultado = await confirmarConCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA, prestadoraId: PRESTADORA, codigo: '123456' });
     assert.equal(resultado.motivo, 'vencido');
     assert.equal(intentosSumados().length, 0);
     assert.equal(instruccion.codigo_intentos, 0);
@@ -148,7 +158,7 @@ describe('confirmar la instrucción con el código', () => {
 
   it('si la base no puede contar el intento, se niega: falla cerrado', async () => {
     respuestas.set('POST /rest/v1/rpc/sumar_intento_de_codigo', () => undefined);
-    const resultado = await confirmarConCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA, codigo: '123456' });
+    const resultado = await confirmarConCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA, prestadoraId: PRESTADORA, codigo: '123456' });
     assert.equal(resultado.ok, false);
     assert.equal(resultado.motivo, 'demasiados_intentos');
     assert.equal(actualizaciones().length, 0);
@@ -156,7 +166,7 @@ describe('confirmar la instrucción con el código', () => {
 
   it('sobre una instrucción que ya no está pendiente no se cuenta ni se compara', async () => {
     instruccion.estado = 'cerrada';
-    const resultado = await confirmarConCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA, codigo: '123456' });
+    const resultado = await confirmarConCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA, prestadoraId: PRESTADORA, codigo: '123456' });
     assert.equal(resultado.motivo, 'ya_cerrada');
     assert.equal(intentosSumados().length, 0);
   });
@@ -173,7 +183,7 @@ describe('pedir un código nuevo', () => {
   it('escribe la huella y el vencimiento, y NO vuelve a cero la cuenta de intentos', async () => {
     instruccion.codigo_intentos = 4;
 
-    await pedirCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA }).catch(() => {});
+    await pedirCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA, prestadoraId: PRESTADORA }).catch(() => {});
 
     const [emision] = actualizaciones();
     assert.ok(emision, 'tiene que haberse escrito el código nuevo');
@@ -190,7 +200,7 @@ describe('pedir un código nuevo', () => {
   });
 
   it('se escriben esas dos columnas y ninguna más: ni el código en claro ni la cuenta', async () => {
-    await pedirCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA }).catch(() => {});
+    await pedirCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA, prestadoraId: PRESTADORA }).catch(() => {});
     const [emision] = actualizaciones();
     assert.deepEqual(Object.keys(emision).sort(), ['codigo_expira_en', 'codigo_huella']);
   });
@@ -198,7 +208,7 @@ describe('pedir un código nuevo', () => {
   it('sobre una instrucción que ya no está pendiente no se emite ningún código', async () => {
     instruccion.estado = 'cerrada';
     await assert.rejects(
-      () => pedirCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA }),
+      () => pedirCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA, prestadoraId: PRESTADORA }),
       (error) => error.motivo === 'ya_cerrada',
     );
     assert.equal(actualizaciones().length, 0);
@@ -207,15 +217,15 @@ describe('pedir un código nuevo', () => {
   it('agotados los intentos, pedir otro código sigue sin devolverlos: la salida es otra', async () => {
     // Cinco intentos gastados y el tope alcanzado.
     instruccion.codigo_intentos = 5;
-    const antes = await confirmarConCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA, codigo: '123456' });
+    const antes = await confirmarConCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA, prestadoraId: PRESTADORA, codigo: '123456' });
     assert.equal(antes.motivo, 'demasiados_intentos');
 
     // Se pide un código nuevo, que es lo que antes reiniciaba la cuenta.
-    await pedirCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA }).catch(() => {});
+    await pedirCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA, prestadoraId: PRESTADORA }).catch(() => {});
 
     // Y el código nuevo tampoco sirve: la salida es que la Prestadora cargue otra instrucción o
     // que se cierre con la hoja firmada en papel, no probar cinco veces más.
-    const despues = await confirmarConCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA, codigo: '123456' });
+    const despues = await confirmarConCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA, prestadoraId: PRESTADORA, codigo: '123456' });
     assert.equal(despues.ok, false);
     assert.equal(despues.motivo, 'demasiados_intentos');
   });

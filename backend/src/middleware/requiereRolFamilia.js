@@ -15,6 +15,10 @@ export async function requiereRolFamilia(req, res, next) {
     return res.status(401).json({ error: 'No autorizado' });
   }
 
+  // SIN PRESTADORA A PROPÓSITO
+  // Acá se resuelve, a partir de la cuenta con la que se entró, cuál es la Prestadora de la
+  // sesión. Todo lo que sigue se acota con lo que devuelve esta fila; exigirle el filtro a ella
+  // sería pedirle que ya sepa lo que viene a averiguar.
   const { data: perfil, error: errorPerfil } = await supabase
     .from('usuarios')
     .select('rol, prestadora_id')

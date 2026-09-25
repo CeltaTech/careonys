@@ -161,12 +161,13 @@ function datosDeComprobacion(body) {
 
 // Cómo se llama quien llegó, para decírselo a la Familia. Si no se lo pudo averiguar, el aviso
 // sale igual con una forma genérica: enterarse de que llegaron importa más que el nombre.
-async function nombreDeAsistente(asistenteId) {
+async function nombreDeAsistente(asistenteId, prestadoraId) {
   try {
     const { data } = await supabase
       .from('asistentes')
       .select('nombre')
       .eq('id', asistenteId)
+      .eq('prestadora_id', prestadoraId)
       .maybeSingle();
     return data?.nombre ?? 'El Asistente asignado';
   } catch (e) {
@@ -182,10 +183,11 @@ async function nombreDeAsistente(asistenteId) {
 // Devuelve una lista y no uno solo porque un turno que cubre a varios Pacientes lleva un
 // reporte por cada uno: el de la señora de la casa no es el del marido, y darlos por
 // equivalentes era escribir la comida, la medicación y la presión de los dos en la misma hoja.
-async function reportesDeLaGuardia(guardiaId) {
+async function reportesDeLaGuardia(guardiaId, prestadoraId) {
   const { data } = await supabase
     .from('reportes')
     .select('id, paciente_id')
+    .eq('prestadora_id', prestadoraId)
     .eq('guardia_id', guardiaId);
   return data ?? [];
 }
@@ -194,8 +196,8 @@ async function reportesDeLaGuardia(guardiaId) {
 // cerrar, y lo que la pantalla del Asistente muestra como lo que le queda por hacer.
 async function pacientesSinReporte(guardia) {
   const [pacientes, reportes] = await Promise.all([
-    pacientesDeGuardia(guardia, 'id, nombre'),
-    reportesDeLaGuardia(guardia.id),
+    pacientesDeGuardia(guardia.prestadora_id, guardia, 'id, nombre'),
+    reportesDeLaGuardia(guardia.id, guardia.prestadora_id),
   ]);
   const conReporte = new Set(reportes.map((r) => r.paciente_id));
   return pacientes.filter((p) => !conReporte.has(p.id));
@@ -209,6 +211,7 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
   const { data: perfil, error } = await supabase
     .from('asistentes')
     .select('id, nombre, telefono, email, foto_url, tipo_asistente_id, estado, tipo_vinculo, qr_token, canales, disponible_para_ofertas, disponibilidad_cambiada_en, tipos_asistente(id, clave, nombre, prestadora_id)')
+    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .eq('id', req.usuarioAsistente.asistenteId)
     .single();
   if (error || !perfil) {
@@ -389,7 +392,7 @@ function textoDeLaCuenta(valor, maximo) {
   if (limpio === '') return null;
   if (limpio.length > maximo) return undefined;
   // eslint-disable-next-line no-control-regex
-  if (/[ -]/.test(limpio)) return undefined;
+  if (/[\x00-\x1f]/.test(limpio)) return undefined;
   return limpio;
 }
 
@@ -612,7 +615,7 @@ appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
 
   try {
     const visibilidad = await visibilidadDelPedido(req);
-    const guardias = await conPacientes(data ?? [], camposDePacienteParaElAsistente(visibilidad));
+    const guardias = await conPacientes(req.usuarioAsistente.prestadoraId, data ?? [], camposDePacienteParaElAsistente(visibilidad));
     res.json({ guardias: await conDomicilioDelDia(guardias) });
   } catch (e) {
     responderError(res, e);
@@ -636,7 +639,7 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
 
   let guardia;
   try {
-    const [conSuGente] = await conPacientes([data], camposDePacienteParaElAsistente(visibilidad, { conPatologias: true }));
+    const [conSuGente] = await conPacientes(req.usuarioAsistente.prestadoraId, [data], camposDePacienteParaElAsistente(visibilidad, { conPatologias: true }));
     // La dirección que se muestra es la del día de la guardia. Si es una temporal, cada
     // Paciente viaja además con `domicilio_es_temporal` y `domicilio_motivo`, que es lo que le
     // permite a la pantalla avisar que hoy no se lo atiende en su casa.
@@ -670,6 +673,7 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
     .from('asistentes')
     .select('tipo_asistente_id')
     .eq('id', req.usuarioAsistente.asistenteId)
+    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .maybeSingle();
 
   const { tipo, tareas } = await tipoConSusTareas(
@@ -679,7 +683,7 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
 
   // La pantalla necesita saber a quiénes les falta el reporte: ofrece el cierre recién cuando
   // no queda ninguno, en vez de dejar apretar un botón que el backend va a rechazar.
-  const reportes = await reportesDeLaGuardia(data.id);
+  const reportes = await reportesDeLaGuardia(data.id, req.usuarioAsistente.prestadoraId);
   const conReporte = reportes.map((r) => r.paciente_id);
 
   // Si quedó un descanso abierto, la pantalla tiene que ofrecer terminarlo y no empezar otro. Es
@@ -687,6 +691,7 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
   const { data: descansoAbierto } = await supabase
     .from('descansos_guardia')
     .select('id, inicio_at')
+    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .eq('guardia_id', data.id)
     .is('fin_at', null)
     .maybeSingle();
@@ -767,7 +772,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
   // ve el Asistente en el teléfono, no contra qué mide el motor de este lado.
   let pacientes;
   try {
-    pacientes = await pacientesDeGuardia(guardia, 'id, nombre, lat, lng, familia_id');
+    pacientes = await pacientesDeGuardia(guardia.prestadora_id, guardia, 'id, nombre, lat, lng, familia_id');
     pacientes = await pacientesConDomicilioDelDia(guardia, pacientes);
   } catch (e) {
     return responderError(res, e);
@@ -820,7 +825,8 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
       checkin_lng: registraUbicacion ? lng : null,
       estado: 'activa',
     })
-    .eq('id', guardia.id);
+    .eq('id', guardia.id)
+    .eq('prestadora_id', guardia.prestadora_id);
   if (error) {
     return responderError(res, error);
   }
@@ -840,16 +846,16 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
   // Se envía una sola vez porque checkin_at ya se validó arriba como no seteado antes de este
   // UPDATE.
   const conFamilia = pacientes.filter((p) => p.familia_id);
-  const nombreDelAsistente = await nombreDeAsistente(guardia.asistente_id);
+  const nombreDelAsistente = await nombreDeAsistente(guardia.asistente_id, guardia.prestadora_id);
   for (const p of conFamilia) {
-    enviarPushFamilia(p.familia_id, {
+    enviarPushFamilia(guardia.prestadora_id, p.familia_id, {
       titulo: 'Llegó el Asistente',
       cuerpo: `${nombreDelAsistente} llegó al domicilio de ${p.nombre}.`,
       url: `/pacientes/${p.id}`,
     }).catch((err) => console.error('Error enviando push de llegada a Familia:', err.message));
   }
   if (conFamilia.length > 0) {
-    await supabase.from('guardias').update({ push_llegada_enviado_at: new Date().toISOString() }).eq('id', guardia.id);
+    await supabase.from('guardias').update({ push_llegada_enviado_at: new Date().toISOString() }).eq('id', guardia.id).eq('prestadora_id', guardia.prestadora_id);
   }
 
   if (!dentroDeRango && req.usuarioAsistente.prestadoraId) {
@@ -1038,7 +1044,8 @@ appAsistentesRouter.post('/guardias/:id/aviso-demora', requiereRolAsistente, asy
       await supabase
         .from('alertas_tempranas_guardia')
         .update({ ultima_notificacion_at: detectadoAt, veces_notificado: 1 })
-        .eq('id', alerta.id);
+        .eq('id', alerta.id)
+        .eq('prestadora_id', guardia.prestadora_id);
     }
   } catch (e) {
     console.error('Error avisando al Coordinador del aviso de demora:', e.message);
@@ -1080,6 +1087,7 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
   const clienteUuid = identificadorDelTelefono(req.body);
   const yaEstaba = await filaDeEsteAviso({
     tabla: 'emergencias_guardia',
+    prestadoraId: guardia.prestadora_id,
     guardiaId: guardia.id,
     clienteUuid,
     campos: 'id, reportado_at',
@@ -1124,7 +1132,8 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
       await supabase
         .from('emergencias_guardia')
         .update({ ultima_notificacion_at: new Date().toISOString(), veces_notificado: 1 })
-        .eq('id', emergencia.id);
+        .eq('id', emergencia.id)
+        .eq('prestadora_id', guardia.prestadora_id);
     }
   } catch (e) {
     console.error('Error avisando al Coordinador de una emergencia en guardia:', e.message);
@@ -1255,6 +1264,7 @@ appAsistentesRouter.post('/guardias/:id/descanso/empezar', requiereRolAsistente,
   const clienteUuid = identificadorDelTelefono(req.body);
   const yaEstaba = await filaDeEsteAviso({
     tabla: 'descansos_guardia',
+    prestadoraId: guardia.prestadora_id,
     guardiaId: guardia.id,
     clienteUuid,
     campos: 'id, inicio_at',
@@ -1297,6 +1307,7 @@ appAsistentesRouter.post('/guardias/:id/descanso/terminar', requiereRolAsistente
   const clienteUuid = identificadorDelTelefono(req.body);
   const yaCerrado = await filaDeEsteAviso({
     tabla: 'descansos_guardia',
+    prestadoraId: guardia.prestadora_id,
     guardiaId: guardia.id,
     clienteUuid,
     columna: 'cliente_uuid_fin',
@@ -1309,6 +1320,7 @@ appAsistentesRouter.post('/guardias/:id/descanso/terminar', requiereRolAsistente
   const { data: abierto } = await supabase
     .from('descansos_guardia')
     .select('id, inicio_at')
+    .eq('prestadora_id', guardia.prestadora_id)
     .eq('guardia_id', guardia.id)
     .is('fin_at', null)
     .maybeSingle();
@@ -1324,7 +1336,8 @@ appAsistentesRouter.post('/guardias/:id/descanso/terminar', requiereRolAsistente
   const { error } = await supabase
     .from('descansos_guardia')
     .update({ fin_at: fin, cliente_uuid_fin: clienteUuid })
-    .eq('id', abierto.id);
+    .eq('id', abierto.id)
+    .eq('prestadora_id', guardia.prestadora_id);
 
   if (error) {
     return responderError(res, error);
@@ -1414,7 +1427,7 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
   // la hoja de la persona equivocada es un daño que después nadie encuentra.
   let pacientes;
   try {
-    pacientes = await pacientesDeGuardia(guardia, 'id, nombre');
+    pacientes = await pacientesDeGuardia(guardia.prestadora_id, guardia, 'id, nombre');
   } catch (e) {
     return responderError(res, e);
   }
@@ -1428,7 +1441,7 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
     });
   }
 
-  const reportes = await reportesDeLaGuardia(guardia.id);
+  const reportes = await reportesDeLaGuardia(guardia.id, guardia.prestadora_id);
   if (reportes.some((r) => r.paciente_id === paciente.id)) {
     // yaRegistrado: true — mismo criterio que en /checkin (Fase 9, cliente offline). Antes
     // esta protección contra el envío duplicado la daba el guard de checkout_at; al separar
@@ -1467,7 +1480,8 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
   const { error: errorGuardia } = await supabase
     .from('guardias')
     .update({ push_reporte_enviado_at: new Date().toISOString() })
-    .eq('id', guardia.id);
+    .eq('id', guardia.id)
+    .eq('prestadora_id', guardia.prestadora_id);
   if (errorGuardia) {
     return responderError(res, errorGuardia);
   }
@@ -1478,9 +1492,10 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
     .from('pacientes')
     .select('familia_id')
     .eq('id', paciente.id)
+    .eq('prestadora_id', guardia.prestadora_id)
     .maybeSingle();
   if (datosPaciente?.familia_id) {
-    enviarPushFamilia(datosPaciente.familia_id, {
+    enviarPushFamilia(guardia.prestadora_id, datosPaciente.familia_id, {
       titulo: 'Reporte diario disponible',
       cuerpo: `Ya está listo el reporte de la guardia de ${paciente.nombre}.`,
       url: `/pacientes/${paciente.id}/reportes/${reporte.id}`,
@@ -1599,6 +1614,7 @@ appAsistentesRouter.post('/guardias/:id/checkout', requiereRolAsistente, topeDeP
       estado: 'completada',
     })
     .eq('id', guardia.id)
+    .eq('prestadora_id', guardia.prestadora_id)
     .eq('estado', 'activa')
     .select('id');
   if (error) {
@@ -1664,7 +1680,11 @@ appAsistentesRouter.get('/guardias/:id/comprobacion/:momento', requiereRolAsiste
   const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
   if (!guardia) return res.status(404).json({ error: 'Guardia no encontrada' });
 
-  const fila = await comprobacionDe(guardia.id, momento);
+  const fila = await comprobacionDe({
+    prestadoraId: guardia.prestadora_id,
+    guardiaId: guardia.id,
+    momento,
+  });
   if (!fila) return res.json({ estado: null, codigoDisponible: false });
 
   // Nunca se devuelve la huella ni el código: sólo si ya hay uno esperando que lo tipeen.
@@ -1702,6 +1722,7 @@ appAsistentesRouter.patch('/guardias/:id/ubicacion', requiereRolAsistente, exige
     .from('guardias')
     .update({ ubicacion_actual_lat: lat, ubicacion_actual_lng: lng, ubicacion_actual_at: new Date().toISOString() })
     .eq('id', guardia.id)
+    .eq('prestadora_id', guardia.prestadora_id)
     .eq('estado', 'activa')
     .select('id');
   if (error) {
@@ -1844,6 +1865,7 @@ appAsistentesRouter.patch('/calificaciones/:id/descargo', requiereRolAsistente, 
     .from('calificaciones_asistente')
     .update({ descargo_asistente: descargo.trim(), descargo_en: new Date().toISOString() })
     .eq('id', req.params.id)
+    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .select('id');
   if (error) return responderError(res, error);
@@ -1894,8 +1916,8 @@ async function exigeMarketplace(req) {
 
 /** Cómo se llama la Familia del otro lado. El nombre es de la persona, así que sale de la cuenta
  *  de la que cuelga ese Legajo. */
-async function nombreDeLaFamilia(familiaId) {
-  const cuentas = await cuentasDeLasFichas('familias', [familiaId], 'nombre');
+async function nombreDeLaFamilia(familiaId, prestadoraId) {
+  const cuentas = await cuentasDeLasFichas('familias', [familiaId], 'nombre', prestadoraId);
   return cuentas.get(familiaId)?.nombre || '';
 }
 
@@ -1913,11 +1935,12 @@ appAsistentesRouter.get('/marketplace/conversaciones', requiereRolAsistente, asy
     const hilos = data || [];
     // Los nombres y los mensajes sin leer, en una consulta cada cosa para toda la lista.
     const [personas, { data: sinLeer }] = await Promise.all([
-      cuentasDeLasFichas('familias', hilos.map((c) => c.familia_id), 'nombre'),
+      cuentasDeLasFichas('familias', hilos.map((c) => c.familia_id), 'nombre', req.usuarioAsistente.prestadoraId),
       hilos.length
         ? supabase
             .from('mensajes_marketplace')
             .select('conversacion_id')
+            .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
             .in('conversacion_id', hilos.map((c) => c.id))
             .eq('lado', 'familia')
             .is('leido_at', null)
@@ -1952,7 +1975,7 @@ appAsistentesRouter.get('/marketplace/conversaciones/:id', requiereRolAsistente,
 
     const [mensajes, nombre, enCurso, base] = await Promise.all([
       mensajesDeLaConversacion({ conversacion, desde }),
-      nombreDeLaFamilia(conversacion.familia_id),
+      nombreDeLaFamilia(conversacion.familia_id, conversacion.prestadora_id),
       videollamadaEnCurso(conversacion),
       direccionDeVideollamada(conversacion.prestadora_id),
     ]);

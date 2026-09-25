@@ -45,8 +45,10 @@ let empujados = [];
 /** Los avisos que quedaron del lado del servidor. Se juntan para no ensuciar la salida. */
 let anotados = [];
 
-function avisarDeMentira(familiaId, texto) {
-  empujados.push({ familiaId, texto });
+// El aviso sale nombrando la Prestadora además de la Familia: el dispositivo se busca adentro de
+// un solo cajón (`push.js`).
+function avisarDeMentira(prestadoraId, familiaId, texto) {
+  empujados.push({ prestadoraId, familiaId, texto });
   return Promise.resolve(true);
 }
 
@@ -132,8 +134,16 @@ beforeEach(() => {
   respuestas.clear();
   // Cuántos días dura la gracia lo elige la Prestadora, así que la base tiene que poder
   // contestarlo. Siete es el valor con el que nace su configuración.
+  // La misma tabla contesta dos cosas: los plazos de una Prestadora nombrada, y —cuando se la pide
+  // entera— la lista de Prestadoras que recorre la suspensión diaria
+  // (`prestadorasDelMarketplace.js`). Por eso la fila lleva también su identificador.
   respuestas.set('GET /rest/v1/configuracion_cobro_marketplace', [
-    { dias_de_aviso_antes_del_cobro: 3, dias_de_gracia_por_cobro_rechazado: 7, dias_de_vida_del_cupon: 10 },
+    {
+      prestadora_id: PRESTADORA,
+      dias_de_aviso_antes_del_cobro: 3,
+      dias_de_gracia_por_cobro_rechazado: 7,
+      dias_de_vida_del_cupon: 10,
+    },
   ]);
   respuestas.set('GET /rest/v1/prestadoras', [{ pais: 'AR' }]);
 });
@@ -144,6 +154,7 @@ describe('cuando un cobro no entra', () => {
     respuestas.set('PATCH /rest/v1/accesos_marketplace', [{ id: ACCESO }]);
 
     const { abierta, gracia_hasta } = await abrirElPeriodoDeGracia({
+      prestadoraId: PRESTADORA,
       accesoId: ACCESO,
       avisar: avisarDeMentira,
     });
@@ -154,6 +165,7 @@ describe('cuando un cobro no entra', () => {
     // Lo que este paso vino a sacar: el acceso no se toca, sigue en pie mientras dure la gracia.
     assert.equal(loGuardado().cuerpo.estado, undefined);
     assert.equal(empujados.length, 1);
+    assert.equal(empujados[0].prestadoraId, PRESTADORA);
     assert.equal(empujados[0].familiaId, FAMILIA);
   });
 
@@ -161,11 +173,18 @@ describe('cuando un cobro no entra', () => {
     respuestas.set('GET /rest/v1/accesos_marketplace', [accesoConCobroFallido()]);
     respuestas.set('PATCH /rest/v1/accesos_marketplace', [{ id: ACCESO }]);
 
-    await abrirElPeriodoDeGracia({ accesoId: ACCESO, avisar: avisarDeMentira });
+    await abrirElPeriodoDeGracia({
+      prestadoraId: PRESTADORA,
+      accesoId: ACCESO,
+      avisar: avisarDeMentira,
+    });
 
     assert.match(loGuardado().url, /id=eq\.33333333/);
     assert.match(loGuardado().url, /estado=eq\.vigente/);
     assert.match(loGuardado().url, /gracia_hasta=is\.null/);
+    // Y que el acceso sea de la Prestadora que se nombró: un identificador probado a mano no
+    // alcanza el cajón de otra.
+    assert.match(loGuardado().url, new RegExp(`prestadora_id=eq\\.${PRESTADORA}`));
   });
 
   it('no mueve la fecha ni vuelve a avisar cuando el proveedor reintenta', async () => {
@@ -176,6 +195,7 @@ describe('cuando un cobro no entra', () => {
     ]);
 
     const { abierta, gracia_hasta } = await abrirElPeriodoDeGracia({
+      prestadoraId: PRESTADORA,
       accesoId: ACCESO,
       avisar: avisarDeMentira,
     });
@@ -191,7 +211,11 @@ describe('cuando un cobro no entra', () => {
       accesoConCobroFallido({ estado: 'cancelada' }),
     ]);
 
-    const { abierta } = await abrirElPeriodoDeGracia({ accesoId: ACCESO, avisar: avisarDeMentira });
+    const { abierta } = await abrirElPeriodoDeGracia({
+      prestadoraId: PRESTADORA,
+      accesoId: ACCESO,
+      avisar: avisarDeMentira,
+    });
 
     assert.equal(abierta, false);
     assert.equal(loGuardado(), undefined);
@@ -202,7 +226,11 @@ describe('cuando un cobro no entra', () => {
     respuestas.set('GET /rest/v1/accesos_marketplace', [accesoConCobroFallido()]);
     respuestas.set('PATCH /rest/v1/accesos_marketplace', { __falla: { message: 'la base no contesta' } });
 
-    const { abierta } = await abrirElPeriodoDeGracia({ accesoId: ACCESO, avisar: avisarDeMentira });
+    const { abierta } = await abrirElPeriodoDeGracia({
+      prestadoraId: PRESTADORA,
+      accesoId: ACCESO,
+      avisar: avisarDeMentira,
+    });
 
     assert.equal(abierta, false);
     assert.equal(empujados.length, 0);
@@ -215,6 +243,7 @@ describe('cuando un cobro no entra', () => {
     respuestas.set('PATCH /rest/v1/accesos_marketplace', [{ id: ACCESO }]);
 
     const { abierta } = await abrirElPeriodoDeGracia({
+      prestadoraId: PRESTADORA,
       accesoId: ACCESO,
       avisar: () => Promise.reject(new Error('sin dispositivo')),
     });
@@ -252,6 +281,8 @@ describe('cuando se termina la gracia', () => {
     assert.match(consulta, /estado=eq\.vigente/);
     assert.match(consulta, /gracia_hasta=not\.is\.null/);
     assert.match(consulta, new RegExp(`gracia_hasta=lte\\.${HOY}`));
+    // Y de a una Prestadora por vez, nombrándola.
+    assert.match(consulta, new RegExp(`prestadora_id=eq\\.${PRESTADORA}`));
   });
 
   it('suspende el acceso y vuelve a exigir las mismas condiciones al guardar', async () => {

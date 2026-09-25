@@ -66,30 +66,37 @@ export async function revisarIncidentesTurnoSinCubrir() {
   const desde = fechaISO(new Date(ahora.getTime() - DIAS_HACIA_ATRAS * MS_POR_DIA));
   const hasta = fechaISO(new Date(ahora.getTime() + DIAS_HACIA_ADELANTE * MS_POR_DIA));
 
-  const { data: guardias, error } = await supabase
-    .from('guardias')
-    .select('id, prestadora_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, estado')
-    .gte('fecha', desde)
-    .lte('fecha', hasta);
+  const { data: prestadoras, error } = await supabase
+    .from('prestadoras')
+    .select('id')
+    .eq('estado', 'certificada');
 
   if (error) {
-    console.error('Error consultando turnos para el incidente de turno sin cubrir:', error.message);
+    console.error('Error consultando prestadoras para el incidente de turno sin cubrir:', error.message);
     return;
   }
 
-  const porPrestadora = new Map();
-  for (const guardia of guardias ?? []) {
-    if (!guardia.prestadora_id) continue;
-    if (!porPrestadora.has(guardia.prestadora_id)) porPrestadora.set(guardia.prestadora_id, []);
-    porPrestadora.get(guardia.prestadora_id).push(guardia);
-  }
-
-  for (const [prestadoraId, suyas] of porPrestadora) {
-    await revisarPrestadora({ prestadoraId, guardias: suyas, ahora });
+  for (const { id: prestadoraId } of prestadoras ?? []) {
+    await revisarPrestadora({ prestadoraId, desde, hasta, ahora });
   }
 }
 
-async function revisarPrestadora({ prestadoraId, guardias, ahora }) {
+async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
+  const { data: guardias, error: errorGuardias } = await supabase
+    .from('guardias')
+    .select('id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, estado')
+    .eq('prestadora_id', prestadoraId)
+    .gte('fecha', desde)
+    .lte('fecha', hasta);
+
+  if (errorGuardias) {
+    console.error(
+      `Error consultando turnos para el incidente de turno sin cubrir (prestadora ${prestadoraId}):`,
+      errorGuardias.message
+    );
+    return;
+  }
+
   // Sin fila de configuración corren los valores de fábrica: que una Prestadora no haya tocado
   // nada no puede dejarla sin incidentes.
   const { data: configuracion, error: errorConfig } = await supabase
@@ -123,9 +130,9 @@ async function revisarPrestadora({ prestadoraId, guardias, ahora }) {
   }
 
   const porGuardia = new Map((abiertos ?? []).map((i) => [i.guardia_id, i]));
-  const guardiaPorId = new Map(guardias.map((g) => [g.id, g]));
+  const guardiaPorId = new Map((guardias ?? []).map((g) => [g.id, g]));
 
-  await cerrarLosQueYaNoCorresponden({ abiertos: abiertos ?? [], guardiaPorId, ahora });
+  await cerrarLosQueYaNoCorresponden({ abiertos: abiertos ?? [], guardiaPorId, prestadoraId, ahora });
 
   // Una sola vez por Prestadora: todos los recordatorios de esta vuelta los lee la misma gente.
   const idioma = await idiomaDeLaPrestadora(prestadoraId);
@@ -149,7 +156,7 @@ async function revisarPrestadora({ prestadoraId, guardias, ahora }) {
     tipo: TIPOS_DE_ALARMA.TURNO_SIN_CUBRIR,
   });
 
-  for (const guardia of guardias) {
+  for (const guardia of guardias ?? []) {
     if (!elTurnoYaEsGrave({ guardia, regla, ahora })) continue;
 
     const horas = horasHastaElTurno(guardia, ahora);
@@ -212,7 +219,7 @@ async function revisarPrestadora({ prestadoraId, guardias, ahora }) {
  * que nadie puede saber mirando la base es si el turno terminó en manos de la familia, y ése es
  * justamente el final que importa: lo cierra una persona, desde el Panel.
  */
-async function cerrarLosQueYaNoCorresponden({ abiertos, guardiaPorId, ahora }) {
+async function cerrarLosQueYaNoCorresponden({ abiertos, guardiaPorId, prestadoraId, ahora }) {
   for (const incidente of abiertos) {
     const guardia = guardiaPorId.get(incidente.guardia_id);
     // El turno quedó fuera de la ventana que se mira: no se sabe nada nuevo de él y sigue abierto.
@@ -228,6 +235,7 @@ async function cerrarLosQueYaNoCorresponden({ abiertos, guardiaPorId, ahora }) {
     const { error } = await supabase
       .from('incidentes_turno_sin_cubrir')
       .update({ resuelto_at: ahora.toISOString(), resuelto_como: comoTermino })
+      .eq('prestadora_id', prestadoraId)
       .eq('id', incidente.id);
     if (error) {
       console.error(`Error cerrando el incidente de turno sin cubrir (${incidente.id}):`, error.message);
@@ -285,7 +293,7 @@ async function abrirIncidente({ guardia, prestadoraId }) {
 async function armarElRecordatorio({ guardia, prestadoraId, idioma, horas, veces, ahora }) {
   let pacientes = [];
   try {
-    pacientes = (await pacientesDeGuardias([guardia], 'id, nombre')).get(guardia.id) ?? [];
+    pacientes = (await pacientesDeGuardias(prestadoraId, [guardia], 'id, nombre')).get(guardia.id) ?? [];
   } catch (e) {
     console.error(`Error leyendo los Pacientes del turno ${guardia.id}:`, e.message);
   }
@@ -341,6 +349,7 @@ async function recordar({ incidente, guardia, prestadoraId, idioma, horas, ahora
   const { error } = await supabase
     .from('incidentes_turno_sin_cubrir')
     .update({ ultimo_recordatorio_at: ahora.toISOString(), veces_recordado: veces })
+    .eq('prestadora_id', prestadoraId)
     .eq('id', incidente.id);
   if (error) {
     console.error(`Error marcando el recordatorio del incidente (${incidente.id}):`, error.message);

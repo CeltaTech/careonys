@@ -32,10 +32,14 @@
    condición que lo elige no se apaga sola. */
 
 import { supabase } from '../db/connection.js';
+import { prestadorasDelMarketplace } from './prestadorasDelMarketplace.js';
 
 /**
  * Apaga los accesos dados de baja a los que ya se les terminó el período pagado. Corre una vez por
  * día (`backend/src/server.js`): la fecha se mide en días, no en horas.
+ *
+ * Recorre las Prestadoras de a una, nombrando a cada una en su consulta. Una sola consulta para
+ * todas alcanzaría dos cajones a la vez, que es lo que `celtatech\CLAUDE.md` §5 no admite.
  *
  * @returns {Promise<{ cortados: number }>} Cuántos se apagaron. Lo usa la prueba; el trabajo diario
  *   no mira el número.
@@ -43,15 +47,26 @@ import { supabase } from '../db/connection.js';
 export async function cortarLosAccesosDadosDeBaja() {
   const hoy = new Date().toISOString().slice(0, 10);
 
+  let cortados = 0;
+  for (const prestadoraId of await prestadorasDelMarketplace()) {
+    cortados += await cortarLosDeUnaPrestadora(prestadoraId, hoy);
+  }
+
+  return { cortados };
+}
+
+/** El corte de una sola Prestadora. Una falla suya se anota acá y no deja sin cortar a las demás. */
+async function cortarLosDeUnaPrestadora(prestadoraId, hoy) {
   const { data: accesos, error } = await supabase
     .from('accesos_marketplace')
     .select('id, vigente_hasta, gratis_hasta')
+    .eq('prestadora_id', prestadoraId)
     .eq('estado', 'vigente')
     .not('cancelada_en', 'is', null);
 
   if (error) {
-    console.error('Error consultando los accesos dados de baja:', error.message);
-    return { cortados: 0 };
+    console.error(`Error consultando los accesos dados de baja (prestadora ${prestadoraId}):`, error.message);
+    return 0;
   }
 
   // La fecha sale de una de dos columnas, así que la comparación se hace acá y no en la consulta.
@@ -67,6 +82,7 @@ export async function cortarLosAccesosDadosDeBaja() {
     const { error: errorCorte } = await supabase
       .from('accesos_marketplace')
       .update({ estado: 'cancelada', updated_at: new Date().toISOString() })
+      .eq('prestadora_id', prestadoraId)
       .eq('id', acceso.id)
       // Nadie más lo tocó mientras tanto. Si entre la consulta y el guardado entró un cobro, el
       // acceso ya no está dado de baja y cortarlo le sacaría un período que alguien pagó.
@@ -81,5 +97,5 @@ export async function cortarLosAccesosDadosDeBaja() {
     cortados += 1;
   }
 
-  return { cortados };
+  return cortados;
 }

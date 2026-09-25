@@ -21,6 +21,7 @@ import { createServer } from 'node:http';
 
 const ACCESO = '33333333-3333-3333-3333-333333333333';
 const OTRO_ACCESO = '55555555-5555-5555-5555-555555555555';
+const PRESTADORA = '44444444-4444-4444-4444-444444444444';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba pisa lo que necesita cambiar. */
 const respuestas = new Map();
@@ -102,6 +103,10 @@ beforeEach(() => {
   llamadas = [];
   anotados = [];
   respuestas.clear();
+  // El corte recorre las Prestadoras de a una, y la lista sale de la tabla de configuración de
+  // cobro, que tiene una fila por Prestadora (`prestadorasDelMarketplace.js`). Sin esta respuesta
+  // no hay a quién recorrer y el trabajo no consulta ningún acceso.
+  respuestas.set('GET /rest/v1/configuracion_cobro_marketplace', [{ prestadora_id: PRESTADORA }]);
   respuestas.set('PATCH /rest/v1/accesos_marketplace', []);
 });
 
@@ -161,6 +166,7 @@ describe('el acceso que se corta', () => {
 
     assert.match(loGuardado().url, /estado=eq\.vigente/);
     assert.match(loGuardado().url, /cancelada_en=not\.is\.null/);
+    assert.match(loGuardado().url, new RegExp(`prestadora_id=eq\\.${PRESTADORA}`));
   });
 });
 
@@ -184,6 +190,8 @@ describe('el acceso que no se corta', () => {
     const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_marketplace').url;
     assert.match(consulta, /estado=eq\.vigente/);
     assert.match(consulta, /cancelada_en=not\.is\.null/);
+    // Y de una sola Prestadora. Una consulta que no la nombra alcanza dos cajones a la vez.
+    assert.match(consulta, new RegExp(`prestadora_id=eq\\.${PRESTADORA}`));
   });
 
   it('no escribe nada si la consulta falla', async () => {

@@ -5,7 +5,7 @@ import { ErrorConMotivo } from './errorConMotivo.js';
 import { exigirQueElCelularSeaDeUnaSolaPersona } from './celularDeUnaSolaPersona.js';
 import { coordenadasDeDomicilio } from '../geocodificacion/index.js';
 import { CATALOGO_CIRCULO_FAMILIAR } from './catalogoCirculoFamiliar.js';
-import { laCuentaDelPanelEstaAlAlcance } from '../middleware/alcancePrestadora.js';
+import { acotarAUsuariosDelPanel, laCuentaDelPanelEstaAlAlcance } from '../middleware/alcancePrestadora.js';
 import { APROBADAS, filasDeIncorporacion } from './etapasDeIncorporacion.js';
 import { guardarLugaresDe } from './lugaresDeCadaPersona.js';
 import { nombreDelLugar } from './catalogoDeLugares.js';
@@ -135,12 +135,21 @@ export async function buscarCuentaDeAcceso(email, prestadoraId) {
 // Entonces: si es basura, se borra y el alta sigue. Si detrás hay una persona de verdad, no
 // se toca nada y se explica qué pasa, con un motivo que la pantalla sabe traducir.
 async function limpiarCuentaSobrante(email, prestadoraId) {
+  // Sin Organización no hay con qué acotar la consulta de abajo, y una consulta sin acotar no
+  // puede decidir un borrado: no se toca nada y el alta falla con el error de siempre.
+  if (!prestadoraId) return;
+
   const cuenta = await buscarCuentaDeAcceso(email, prestadoraId);
   if (!cuenta) return; // no se pudo mirar; el alta va a fallar igual, con el error de siempre
 
+  // La Organización se nombra en la consulta, y es la de este alta. Puede: el correo con el que se
+  // le habla al servicio de acceso lleva la Prestadora adentro, así que una cuenta de acceso
+  // encontrada con ese correo sólo puede tener ficha en esta Prestadora. Sin la Organización
+  // escrita, la consulta preguntaría por una cuenta y no por una cuenta de acá.
   const { data: perfil } = await supabase
     .from('usuarios')
     .select('prestadora_id')
+    .eq('prestadora_id', prestadoraId)
     .eq('id', cuenta.id)
     .maybeSingle();
 
@@ -250,17 +259,30 @@ export async function borrarCuenta(userId, { prestadoraId, esSuperadmin = false 
   // corta antes de llegar a la base (CLAUDE.md §5, todo control de acceso falla cerrado).
   if (!userId) throw new Error('No hay permiso para dar de baja esa cuenta');
 
-  const { data: objetivo, error: errorObjetivo } = await supabase
-    .from('usuarios')
-    .select('rol, prestadora_id')
-    .eq('id', userId)
-    .maybeSingle();
+  // Sin Organización activa y sin ser Superadmin no queda nada con qué acotar la lectura, y una
+  // lectura sin acotar es la que hay que evitar. Se corta acá con el mismo aviso de siempre.
+  if (!prestadoraId && !esSuperadmin) throw new Error('No hay permiso para dar de baja esa cuenta');
+
+  // La lectura se acota igual que la comprobación que viene abajo, con el mismo ayudante que usan
+  // las rutas del Panel: la Organización activa **más** el equipo técnico de CeltaTech, que no
+  // pertenece a ninguna y al que ningún filtro por Prestadora alcanza. Así la consulta nombra su
+  // alcance y no se apoya sólo en la comprobación en memoria.
+  const { data: objetivo, error: errorObjetivo } = await acotarAUsuariosDelPanel(
+    supabase.from('usuarios').select('rol, prestadora_id').eq('id', userId),
+    { prestadoraId, rol: esSuperadmin ? 'superadmin' : null },
+  ).maybeSingle();
 
   if (errorObjetivo || !laCuentaDelPanelEstaAlAlcance(objetivo, { prestadoraId, esSuperadmin })) {
     throw new Error('No hay permiso para dar de baja esa cuenta');
   }
 
-  const { error: errorPerfil } = await supabase.from('usuarios').delete().eq('id', userId);
+  // La Organización se nombra en el borrado, y es la de la cuenta que se acaba de comprobar, no la
+  // de quien pide: la excepción del equipo técnico de CeltaTech son cuentas sin Organización, y
+  // filtrar por la de quien pide las dejaría fuera del alcance de su propio borrado.
+  const borrado = supabase.from('usuarios').delete().eq('id', userId);
+  const { error: errorPerfil } = await (objetivo.prestadora_id
+    ? borrado.eq('prestadora_id', objetivo.prestadora_id)
+    : borrado.is('prestadora_id', null));
   if (errorPerfil) throw new Error(errorPerfil.message);
 
   const { error: errorAuth } = await supabase.auth.admin.deleteUser(userId);
@@ -278,8 +300,17 @@ export async function borrarCuenta(userId, { prestadoraId, esSuperadmin = false 
 // pudo o no — para que el problema de verdad sea el que llegue a la pantalla.
 //
 // `filas` son las tablas a limpiar, en orden de hija a madre. `columna` es por dónde se
-// busca (por omisión `id`), `valor` con qué se compara (por omisión el id de la cuenta).
+// busca (por omisión `id`), `valor` con qué se compara (por omisión el id de la cuenta), y
+// `sinPrestadora` marca las tablas que no tienen esa columna (ver las listas de más abajo).
+//
+// `prestadoraId` es obligatorio y no tiene valor por omisión: sin él este borrado alcanzaría
+// filas de cualquier Organización. Falla cerrado — sin Prestadora no se limpia nada.
 export async function deshacerAlta(userId, { prestadoraId, filas = [] } = {}) {
+  if (!prestadoraId) {
+    console.error('deshacerAlta: sin Prestadora no se limpia nada', userId);
+    return false;
+  }
+
   let limpioTodo = true;
 
   // La red propia de esta función, por la misma razón que la de `borrarCuenta`: el borrado de
@@ -289,18 +320,20 @@ export async function deshacerAlta(userId, { prestadoraId, filas = [] } = {}) {
   // Prestadora (`verificaciones_asistente`, `miembros_familia`) y cuelgan de esta misma
   // cuenta — filtrar solo las que sí la tienen dejaría a las otras sin red y, encima, se
   // borran primero. Si la cuenta no es de esta Prestadora, no se limpia nada.
-  if (userId && prestadoraId) {
-    const { data: duena, error: errorDuena } = await supabase
-      .from('usuarios')
-      .select('rol, prestadora_id')
-      .eq('id', userId)
-      .maybeSingle();
+  if (userId) {
+    // La lectura se acota con el mismo ayudante que la de `borrarCuenta`, y sin `esSuperadmin`: lo
+    // que se deshace son altas de Familia, Asistente o círculo de cuidado, todas de una Prestadora.
+    // Una cuenta de otra Organización no aparece, y no aparecer es lo mismo que no estar.
+    const { data: duena, error: errorDuena } = await acotarAUsuariosDelPanel(
+      supabase.from('usuarios').select('rol, prestadora_id').eq('id', userId),
+      { prestadoraId },
+    ).maybeSingle();
     if (errorDuena || !duena) {
       // Sin fila de la que colgar no hay nada que limpiar y tampoco forma de comprobar de quién
       // es. Puede quedar una cuenta de acceso sin nadie detrás; el próximo intento con ese mismo
       // correo la va a reconocer como sobrante y la va a borrar sola (`limpiarCuentaSobrante`).
       // Se anota el id, nunca el correo (CLAUDE.md §6).
-      console.error('deshacerAlta: no existe la cuenta a limpiar', userId);
+      console.error('deshacerAlta: no hay cuenta a limpiar en esta Prestadora', userId);
       return false;
     }
     // La misma regla de siempre, preguntada donde se escribió una sola vez. Sin `esSuperadmin`,
@@ -316,7 +349,12 @@ export async function deshacerAlta(userId, { prestadoraId, filas = [] } = {}) {
     const valor = fila.valor ?? userId;
     if (!valor) continue;
     try {
-      const { error } = await supabase.from(fila.tabla).delete().eq(fila.columna || 'id', valor);
+      // Cada tabla se borra nombrando la Prestadora. Las tres que no tienen esa columna van
+      // marcadas en las listas de abajo: cuelgan de la cuenta, y la pertenencia de la cuenta ya
+      // se comprobó al entrar.
+      let limpieza = supabase.from(fila.tabla).delete().eq(fila.columna || 'id', valor);
+      if (!fila.sinPrestadora) limpieza = limpieza.eq('prestadora_id', prestadoraId);
+      const { error } = await limpieza;
       if (error) throw new Error(error.message);
     } catch (error) {
       limpioTodo = false;
@@ -343,9 +381,13 @@ export async function deshacerAlta(userId, { prestadoraId, filas = [] } = {}) {
 // lo usan tanto el deshacer de un alta cortada como la reversión de un lote importado que la
 // Prestadora rechazó — es la misma lista, y tenerla dos veces es cómo se olvida una tabla en
 // una de las dos (regla 12 de CLAUDE.md §7).
+//
+// `sinPrestadora: true` marca las tablas que no tienen columna de Organización: se borran
+// colgando de la ficha o de la cuenta, cuya pertenencia el deshacer comprueba antes de tocar
+// nada. Todas las demás se borran nombrando la Prestadora.
 export const FILAS_DE_UN_ASISTENTE = [
   { tabla: 'asistente_lugares', columna: 'asistente_id' },
-  { tabla: 'verificaciones_asistente', columna: 'asistente_id' },
+  { tabla: 'verificaciones_asistente', columna: 'asistente_id', sinPrestadora: true },
   { tabla: 'referencias_laborales_asistente', columna: 'asistente_id' },
   { tabla: 'asistentes' },
 ];
@@ -369,8 +411,8 @@ export const filasDeUnaFamilia = (familiaId) =>
   familiaId ? FILAS_DE_UNA_FAMILIA.map((fila) => ({ ...fila, valor: familiaId })) : [];
 
 const FILAS_DE_UN_MIEMBRO_CIRCULO = [
-  { tabla: 'permisos_circulo_familiar', columna: 'usuario_id' },
-  { tabla: 'miembros_familia', columna: 'usuario_id' },
+  { tabla: 'permisos_circulo_familiar', columna: 'usuario_id', sinPrestadora: true },
+  { tabla: 'miembros_familia', columna: 'usuario_id', sinPrestadora: true },
 ];
 
 // Lógica de alta manual de un Asistente, extraída de panelCuentas.js (ruta /asistente-directo)
@@ -521,12 +563,12 @@ export async function activarVerificacionAltaAsistente(asistenteId, prestadoraId
 // Reciben el identificador de la FICHA, que es lo que guarda el lote importado, y buscan de qué
 // cuenta cuelga: son dos números distintos desde que la ficha dejó de ser la cuenta.
 export async function revertirAsistenteImportado(asistenteId, prestadoraId) {
-  const cuentaId = await cuentaDeLaFicha('asistentes', asistenteId);
+  const cuentaId = await cuentaDeLaFicha('asistentes', asistenteId, prestadoraId);
   return deshacerAlta(cuentaId, { prestadoraId, filas: filasDeUnAsistente(asistenteId) });
 }
 
 export async function revertirFamiliaImportada(familiaId, prestadoraId) {
-  const cuentaId = await cuentaDeLaFicha('familias', familiaId);
+  const cuentaId = await cuentaDeLaFicha('familias', familiaId, prestadoraId);
   return deshacerAlta(cuentaId, { prestadoraId, filas: filasDeUnaFamilia(familiaId) });
 }
 
@@ -542,6 +584,14 @@ export async function revertirFamiliaImportada(familiaId, prestadoraId) {
 export async function invitarMiembroCirculo({ email, nombre, telefono, familiaId, prestadoraId, invitadoPor }) {
   if (!nombre || !email || !familiaId) {
     throw new ErrorConMotivo('faltan_datos', 'Faltan datos obligatorios (nombre, email, familiaId)');
+  }
+
+  // Y la Familia tiene que ser de esta Prestadora. Sin esto, un número de Familia de otra alcanza
+  // para meterle a alguien adentro del círculo de cuidado de un Paciente ajeno, con acceso a sus
+  // datos. Que hoy lo tape la pantalla que llama no es aislamiento: es que nadie probó otra puerta.
+  // Falla cerrada — sin Prestadora, o si la Familia no es suya, no se crea nada.
+  if (!prestadoraId || !(await cuentaDeLaFicha('familias', familiaId, prestadoraId))) {
+    throw new ErrorConMotivo('familia_de_otra_prestadora', `familia ${familiaId} fuera de la Prestadora`);
   }
 
   let miembroId;
@@ -577,6 +627,14 @@ export async function invitarMiembroCirculo({ email, nombre, telefono, familiaId
 // cuenta completa, no la fila) y su cuenta, reutilizando `borrarCuenta` para no duplicar la
 // validación de tenant que ya hace esa función.
 export async function revocarMiembroCirculo(usuarioId, { prestadoraId, familiaId }) {
+  // La misma comprobación que al invitar, y por un motivo más fuerte: acá se borra. Los dos
+  // borrados de abajo van por número de cuenta, sin Prestadora, y corren ANTES de `borrarCuenta`,
+  // que es la que valida. Sin esto, un número de Familia ajeno alcanza para dejar sin accesos a
+  // alguien del círculo de otra Prestadora, y la validación llega tarde.
+  if (!prestadoraId || !familiaId || !(await cuentaDeLaFicha('familias', familiaId, prestadoraId))) {
+    throw new ErrorConMotivo('familia_de_otra_prestadora', `familia ${familiaId} fuera de la Prestadora`);
+  }
+
   const { data: miembro, error: errorMiembro } = await supabase
     .from('miembros_familia')
     .select('familia_id')
@@ -699,6 +757,7 @@ export async function crearFamiliaDirecta({
     const { error: errorUpdate } = await supabase
       .from('solicitudes')
       .update({ familia_id: familiaId })
+      .eq('prestadora_id', prestadoraId)
       .eq('id', solicitudId);
     if (errorUpdate) throw new Error(errorUpdate.message);
 

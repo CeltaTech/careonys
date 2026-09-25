@@ -92,7 +92,7 @@ export async function avisarCambioDeAsistente({ guardias, prestadoraId, asistent
 
   let pacientesPorGuardia = new Map();
   try {
-    pacientesPorGuardia = await pacientesDeGuardias(guardias, 'id, nombre, familia_id');
+    pacientesPorGuardia = await pacientesDeGuardias(prestadoraId, guardias, 'id, nombre, familia_id');
   } catch (e) {
     console.error(`Error leyendo los Pacientes de las guardias que cambiaron de Asistente (prestadora ${prestadoraId}):`, e.message);
   }
@@ -121,7 +121,7 @@ export async function avisarCambioDeAsistente({ guardias, prestadoraId, asistent
 
   for (const [familiaId, turnos] of turnosPorFamilia(guardias, pacientesPorGuardia)) {
     try {
-      await enviarPushFamilia(familiaId, {
+      await enviarPushFamilia(prestadoraId, familiaId, {
         ...aviso(`${EVENTO_CAMBIO_DE_ASISTENTE}_familia`, idioma, { asistenteNuevo, turnos }),
         url: '/',
       });

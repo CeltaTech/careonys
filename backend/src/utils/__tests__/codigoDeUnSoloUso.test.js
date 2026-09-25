@@ -33,6 +33,7 @@ import {
 } from '../codigoDeUnSoloUso.js';
 
 const INSTRUCCION = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+const PRESTADORA = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 
 /** Todo lo que se le pidió a la base, para poder afirmar que la suma fue una sola sentencia. */
 let llamadas = [];
@@ -103,19 +104,34 @@ describe('lo que se guarda al emitir un código nuevo', () => {
 });
 
 describe('el intento lo suma la base, en un solo paso', () => {
-  it('se pide con el nombre de la tabla y la fila, y devuelve cuántos van', async () => {
+  it('se pide con el nombre de la tabla, la fila y la Prestadora, y devuelve cuántos van', async () => {
     respuestaDeLaSuma = { estado: 200, valor: 3 };
 
-    const intentos = await sumarIntento({ tabla: 'instrucciones_acceso_circulo', id: INSTRUCCION });
+    const intentos = await sumarIntento({
+      tabla: 'instrucciones_acceso_circulo',
+      id: INSTRUCCION,
+      prestadoraId: PRESTADORA,
+    });
     assert.equal(intentos, 3);
 
     const [llamada] = llamadas;
     assert.equal(llamada.clave, 'POST /rest/v1/rpc/sumar_intento_de_codigo');
-    assert.deepEqual(llamada.cuerpo, { p_tabla: 'instrucciones_acceso_circulo', p_id: INSTRUCCION });
+    assert.deepEqual(llamada.cuerpo, {
+      p_tabla: 'instrucciones_acceso_circulo',
+      p_id: INSTRUCCION,
+      p_prestadora_id: PRESTADORA,
+    });
+  });
+
+  it('sin Prestadora no se cuenta nada, y no se llega a la base', async () => {
+    const intentos = await sumarIntento({ tabla: 'guardia_comprobaciones', id: INSTRUCCION });
+    assert.equal(intentos, null);
+    assert.equal(llamadas.length, 0, 'una consulta sin la Prestadora no puede salir');
+    assert.equal(seAgotaronLosIntentos(intentos), true);
   });
 
   it('no lee para escribir: es una sola ida a la base', async () => {
-    await sumarIntento({ tabla: 'guardia_comprobaciones', id: INSTRUCCION });
+    await sumarIntento({ tabla: 'guardia_comprobaciones', id: INSTRUCCION, prestadoraId: PRESTADORA });
     // Si volviera el «leer, sumar uno y escribir», acá habría un GET antes del POST, y entre esos
     // dos pasos entra cualquier otro intento.
     assert.equal(llamadas.length, 1);
@@ -123,27 +139,38 @@ describe('el intento lo suma la base, en un solo paso', () => {
   });
 
   it('una tabla que no está en la lista no llega a la base', async () => {
-    const intentos = await sumarIntento({ tabla: 'usuarios', id: INSTRUCCION });
+    const intentos = await sumarIntento({ tabla: 'usuarios', id: INSTRUCCION, prestadoraId: PRESTADORA });
     assert.equal(intentos, null);
     assert.equal(llamadas.length, 0, 'un nombre de tabla no puede viajar desde afuera');
     assert.equal(seAgotaronLosIntentos(intentos), true);
   });
 
   it('sin fila que contar tampoco se llama a la base', async () => {
-    assert.equal(await sumarIntento({ tabla: 'guardia_comprobaciones', id: null }), null);
+    assert.equal(
+      await sumarIntento({ tabla: 'guardia_comprobaciones', id: null, prestadoraId: PRESTADORA }),
+      null,
+    );
     assert.equal(llamadas.length, 0);
   });
 
   it('si la base no contesta, se cuenta como agotado', async () => {
     respuestaDeLaSuma = { estado: 400 };
-    const intentos = await sumarIntento({ tabla: 'guardia_comprobaciones', id: INSTRUCCION });
+    const intentos = await sumarIntento({
+      tabla: 'guardia_comprobaciones',
+      id: INSTRUCCION,
+      prestadoraId: PRESTADORA,
+    });
     assert.equal(intentos, null);
     assert.equal(seAgotaronLosIntentos(intentos), true);
   });
 
   it('si la base contesta vacío, también: cero no es una respuesta válida', async () => {
     respuestaDeLaSuma = { estado: 200, valor: null };
-    const intentos = await sumarIntento({ tabla: 'guardia_comprobaciones', id: INSTRUCCION });
+    const intentos = await sumarIntento({
+      tabla: 'guardia_comprobaciones',
+      id: INSTRUCCION,
+      prestadoraId: PRESTADORA,
+    });
     assert.equal(intentos, null);
     assert.equal(seAgotaronLosIntentos(intentos), true);
   });

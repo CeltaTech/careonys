@@ -146,6 +146,7 @@ appAsistentesOfertasRouter.get('/', requiereRolAsistente, async (req, res) => {
     // (`utils/domicilioDelDia.js`).
     const guardias = await conDomicilioDelDia(
       await conPacientes(
+        req.usuarioAsistente.prestadoraId,
         vivas.map((o) => o.guardias),
         camposDePacienteEnLaOferta(visibilidad)
       )
@@ -207,6 +208,7 @@ appAsistentesOfertasRouter.post('/:id/responder', requiereRolAsistente, async (r
       .from('ofertas_guardia')
       .update({ respuesta: 'rechaza', respuesta_at: new Date().toISOString(), motivo })
       .eq('id', oferta.id)
+      .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
       .eq('asistente_id', req.usuarioAsistente.asistenteId)
       .is('respuesta', null)
       .select('id');
@@ -260,6 +262,7 @@ appAsistentesOfertasRouter.post('/:id/responder', requiereRolAsistente, async (r
     .from('ofertas_guardia')
     .update({ respuesta: 'acepta', respuesta_at: new Date().toISOString() })
     .eq('id', oferta.id)
+    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .eq('asistente_id', req.usuarioAsistente.asistenteId);
 
   if (fallaOferta) {
@@ -274,7 +277,8 @@ appAsistentesOfertasRouter.post('/:id/responder', requiereRolAsistente, async (r
         ofrecida_por: guardia.ofrecida_por,
         oferta_limite_at: guardia.oferta_limite_at,
       })
-      .eq('id', guardia.id);
+      .eq('id', guardia.id)
+      .eq('prestadora_id', req.usuarioAsistente.prestadoraId);
 
     const bloqueo = motivoDelBloqueo(fallaOferta);
     if (bloqueo) return noSePudo(res, 409, bloqueo, fallaOferta.message);

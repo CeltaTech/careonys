@@ -113,6 +113,7 @@ appFamiliasRouter.get('/perfil', requiereRolFamilia, async (req, res) => {
     .from('usuarios')
     .select('nombre, telefono, email')
     .eq('id', req.usuarioFamilia.id)
+    .eq('prestadora_id', req.usuarioFamilia.prestadoraId)
     .single();
   if (error || !usuario) {
     return res.status(404).json({ error: 'Perfil no encontrado' });
@@ -151,6 +152,7 @@ appFamiliasRouter.get('/perfil', requiereRolFamilia, async (req, res) => {
       .from('familias')
       .select('plan')
       .eq('id', req.usuarioFamilia.familiaId)
+      .eq('prestadora_id', req.usuarioFamilia.prestadoraId)
       .maybeSingle();
     plan = familia?.plan ?? null;
   }
@@ -158,7 +160,7 @@ appFamiliasRouter.get('/perfil', requiereRolFamilia, async (req, res) => {
   // Y si hay una instrucción esperando su firma, se la ofrece. Sólo al titular: la instrucción
   // dice qué se le dio y qué se le negó a cada uno del círculo, y eso es del titular.
   const pendiente = req.usuarioFamilia.esTitular
-    ? await instruccionPendiente(req.usuarioFamilia.familiaId)
+    ? await instruccionPendiente(req.usuarioFamilia.familiaId, req.usuarioFamilia.prestadoraId)
     : null;
 
   // Si esta Prestadora ofrece marketplace, la aplicación tiene una pantalla más —la vidriera de
@@ -193,7 +195,12 @@ appFamiliasRouter.get('/perfil', requiereRolFamilia, async (req, res) => {
 // ============================================================================
 
 appFamiliasRouter.get('/instruccion-pendiente', requiereRolFamilia, soloElTitular, async (req, res) => {
-  res.json({ instruccion: await instruccionPendiente(req.usuarioFamilia.familiaId) });
+  res.json({
+    instruccion: await instruccionPendiente(
+      req.usuarioFamilia.familiaId,
+      req.usuarioFamilia.prestadoraId,
+    ),
+  });
 });
 
 // Pide el código que llega al teléfono. La persona ya entró con su clave: el código es el segundo
@@ -207,6 +214,7 @@ appFamiliasRouter.post('/instruccion/:instruccionId/codigo', requiereRolFamilia,
     const { enviadoA } = await pedirCodigo({
       instruccionId: req.params.instruccionId,
       familiaId: req.usuarioFamilia.familiaId,
+      prestadoraId: req.usuarioFamilia.prestadoraId,
     });
     res.json({ ok: true, enviadoA });
   } catch (error) {
@@ -218,6 +226,7 @@ appFamiliasRouter.post('/instruccion/:instruccionId/confirmar', requiereRolFamil
   const resultado = await confirmarConCodigo({
     instruccionId: req.params.instruccionId,
     familiaId: req.usuarioFamilia.familiaId,
+    prestadoraId: req.usuarioFamilia.prestadoraId,
     codigo: req.body?.codigo,
     // Con qué aparato firmó, para poder reconstruir el acto. Nunca la dirección de red ni ningún
     // otro dato que no haga falta para eso (CLAUDE.md §6).
@@ -279,6 +288,7 @@ appFamiliasRouter.get('/pacientes/:id', requiereRolFamilia, async (req, res) => 
   const { data: guardiaActiva } = await supabase
     .from('guardias')
     .select(columnasGuardiaActiva)
+    .eq('prestadora_id', paciente.prestadora_id)
     .eq('paciente_id', paciente.id)
     .eq('estado', 'activa')
     .order('fecha', { ascending: false })
@@ -292,6 +302,7 @@ appFamiliasRouter.get('/pacientes/:id', requiereRolFamilia, async (req, res) => 
       // salida_checkin_at es lo que permite decirle a la Familia "en camino": el Asistente
       // ya salió de su casa pero todavía no llegó al domicilio.
       .select('id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, estado, salida_checkin_at, asistente_id, asistentes(nombre, foto_url)')
+      .eq('prestadora_id', paciente.prestadora_id)
       .eq('paciente_id', paciente.id)
       .eq('estado', 'programada')
       .gte('fecha', new Date().toISOString().slice(0, 10))
@@ -320,7 +331,7 @@ appFamiliasRouter.get('/pacientes/:id', requiereRolFamilia, async (req, res) => 
       .eq('id', guardiaProxima.id)
       .eq('prestadora_id', paciente.prestadora_id)
       .maybeSingle();
-    const estimada = await llegadaEstimadaDeGuardia(conSuPuntoDeSalida);
+    const estimada = await llegadaEstimadaDeGuardia(paciente.prestadora_id, conSuPuntoDeSalida);
     llegadaEstimadaAt = estimada ? estimada.toISOString() : null;
   }
 
@@ -332,6 +343,7 @@ appFamiliasRouter.get('/pacientes/:id', requiereRolFamilia, async (req, res) => 
     const { data } = await supabase
       .from('alertas')
       .select('id, nivel, descripcion, created_at')
+      .eq('prestadora_id', paciente.prestadora_id)
       .eq('paciente_id', paciente.id)
       .is('resuelta_at', null)
       .order('created_at', { ascending: false });
@@ -486,6 +498,7 @@ appFamiliasRouter.get('/pacientes/:id/reportes', requiereRolFamilia, exigeDelCir
   const { data, error } = await supabase
     .from('reportes')
     .select(columnas)
+    .eq('prestadora_id', paciente.prestadora_id)
     .eq('paciente_id', paciente.id)
     .order('created_at', { ascending: false })
     .limit(60);
@@ -519,6 +532,7 @@ appFamiliasRouter.get('/pacientes/:id/reportes/:reporteId', requiereRolFamilia, 
     .from('reportes')
     .select(columnasDelReporte(visibilidad))
     .eq('id', req.params.reporteId)
+    .eq('prestadora_id', paciente.prestadora_id)
     .eq('paciente_id', paciente.id)
     .maybeSingle();
   if (error) {
@@ -551,6 +565,7 @@ appFamiliasRouter.get('/pacientes/:id/alertas', requiereRolFamilia, exigeVisible
   const { data, error } = await supabase
     .from('alertas')
     .select('id, nivel, descripcion, reportes_relacionados, resuelta_at, created_at')
+    .eq('prestadora_id', paciente.prestadora_id)
     .eq('paciente_id', paciente.id)
     .order('created_at', { ascending: false })
     .limit(60);
@@ -585,6 +600,7 @@ appFamiliasRouter.get('/pacientes/:id/asistente', requiereRolFamilia, async (req
   const { data: guardia } = await supabase
     .from('guardias')
     .select('id, estado, asistente_id')
+    .eq('prestadora_id', paciente.prestadora_id)
     .eq('paciente_id', paciente.id)
     .not('asistente_id', 'is', null)
     .order('fecha', { ascending: false })
@@ -599,6 +615,7 @@ appFamiliasRouter.get('/pacientes/:id/asistente', requiereRolFamilia, async (req
     .from('asistentes')
     .select('id, nombre, foto_url, tipo_asistente_id')
     .eq('id', guardia.asistente_id)
+    .eq('prestadora_id', paciente.prestadora_id)
     .maybeSingle();
 
   // Qué es esta persona y qué le toca hacer. Sale del catálogo, que se lee desde un solo
@@ -664,6 +681,7 @@ appFamiliasRouter.get('/pacientes/:id/asistente', requiereRolFamilia, async (req
     const { data } = await supabase
       .from('calificaciones_asistente')
       .select('id, estrellas, comentario, created_at')
+      .eq('prestadora_id', paciente.prestadora_id)
       .eq('asistente_id', guardia.asistente_id)
       .eq('paciente_id', paciente.id)
       .order('created_at', { ascending: false });
@@ -715,6 +733,7 @@ appFamiliasRouter.get('/pacientes/:id/verificar-asistente/:qrToken', requiereRol
   const { data: guardiaHoy } = await supabase
     .from('guardias')
     .select('id, estado, hora_inicio, hora_fin, asistente_id')
+    .eq('prestadora_id', paciente.prestadora_id)
     .eq('paciente_id', paciente.id)
     .eq('fecha', hoyISO)
     .order('hora_inicio', { ascending: true })
@@ -804,6 +823,7 @@ appFamiliasRouter.post('/guardias/:guardiaId/calificar', requiereRolFamilia, exi
   const { data: filas } = await supabase
     .from('guardia_pacientes')
     .select('paciente_id, pacientes!inner(nombre, familia_id), guardias!inner(id, asistente_id, prestadora_id)')
+    .eq('prestadora_id', req.usuarioFamilia.prestadoraId)
     .eq('guardia_id', req.params.guardiaId)
     .eq('pacientes.familia_id', req.usuarioFamilia.familiaId);
   const fila = (filas ?? [])
@@ -877,6 +897,7 @@ appFamiliasRouter.delete('/push/suscribir', requiereRolFamilia, async (req, res)
     .from('push_subscriptions')
     .delete()
     .eq('endpoint', endpoint)
+    .eq('prestadora_id', req.usuarioFamilia.prestadoraId)
     .eq('familia_id', req.usuarioFamilia.familiaId);
   if (error) {
     return responderError(res, error);
@@ -1568,6 +1589,7 @@ appFamiliasRouter.get('/marketplace/conversaciones', requiereRolFamilia, async (
       ? await supabase
           .from('mensajes_marketplace')
           .select('conversacion_id')
+          .eq('prestadora_id', req.usuarioFamilia.prestadoraId)
           .in('conversacion_id', hilos.map((c) => c.id))
           .eq('lado', 'asistente')
           .is('leido_at', null)
@@ -1626,7 +1648,7 @@ appFamiliasRouter.get('/marketplace/conversaciones/:id', requiereRolFamilia, asy
 
     const [mensajes, { data: asistente }, enCurso, base] = await Promise.all([
       mensajesDeLaConversacion({ conversacion, desde }),
-      supabase.from('asistentes').select('id, nombre, foto_url').eq('id', conversacion.asistente_id).maybeSingle(),
+      supabase.from('asistentes').select('id, nombre, foto_url').eq('id', conversacion.asistente_id).eq('prestadora_id', conversacion.prestadora_id).maybeSingle(),
       videollamadaEnCurso(conversacion),
       direccionDeVideollamada(conversacion.prestadora_id),
     ]);

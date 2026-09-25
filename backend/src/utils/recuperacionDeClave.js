@@ -146,6 +146,14 @@ async function filaDelEnlace(token) {
 }
 
 async function cuentaDelEnlace(usuarioId) {
+  // SIN PRESTADORA A PROPÓSITO
+  // Ésta es la consulta que averigua la Prestadora, así que no puede nombrarla. Quien canjea el
+  // enlace no tiene sesión, y el enlace tampoco la guarda: `tokens_recuperacion_clave` no tiene
+  // esa columna, a propósito. Las dos puertas que llegan acá —`/segundo-factor` y `/canjear`—
+  // reciben el enlace en el cuerpo del pedido y nada más; la dirección no nombra ninguna
+  // Prestadora, y tomarla de lo que venga en el pedido sería creerle a quien llama. Lee una sola
+  // fila, la del identificador que salió del enlace ya comprobado, y de ella sale la Prestadora
+  // que acota todo lo que viene después.
   const { data } = await supabase
     .from('usuarios')
     .select('id, nombre, email, telefono, telefono_verificado_en, prestadora_id')
@@ -154,15 +162,15 @@ async function cuentaDelEnlace(usuarioId) {
   return data ?? null;
 }
 
-async function haceFaltaElCodigo(usuarioId) {
-  const cuenta = await cuentaDelEnlace(usuarioId);
-  if (!cuenta) return false;
-  return elTelefonoSirveDeSegundoFactor(cuenta);
-}
-
-/** La puerta que la Prestadora dejó abierta para esta cuenta, si hay alguna viva. */
-async function puertaAbiertaParaLaCuenta(usuarioId) {
-  return cambioDeClaveHabilitado(usuarioId);
+/**
+ * La puerta que la Prestadora dejó abierta para esta cuenta, si hay alguna viva.
+ *
+ * Recibe la fila de la cuenta, no el identificador: el enlace no guarda la Prestadora
+ * —`tokens_recuperacion_clave` no tiene esa columna, a propósito— y la fila de la cuenta, que ya
+ * se leyó, es la única fuente. Así no hace falta ninguna consulta extra para averiguarla.
+ */
+async function puertaAbiertaParaLaCuenta(cuenta) {
+  return cambioDeClaveHabilitado(cuenta.id, cuenta.prestadora_id);
 }
 
 /**
@@ -185,12 +193,16 @@ async function puertaAbiertaParaLaCuenta(usuarioId) {
 export async function segundoFactorDelEnlace(token) {
   const fila = await filaDelEnlace(token);
 
-  if (await puertaAbiertaParaLaCuenta(fila.usuario_id)) {
+  // La cuenta se lee primero porque de su fila sale la Prestadora, y sin ella no se puede preguntar
+  // por la puerta abierta.
+  const cuenta = await cuentaDelEnlace(fila.usuario_id);
+  if (!cuenta) return { requiereCodigo: false, vence: null };
+
+  if (await puertaAbiertaParaLaCuenta(cuenta)) {
     return { requiereCodigo: false, vence: null };
   }
 
-  const cuenta = await cuentaDelEnlace(fila.usuario_id);
-  if (!cuenta || !(await elTelefonoSirveDeSegundoFactor(cuenta))) {
+  if (!(await elTelefonoSirveDeSegundoFactor(cuenta))) {
     return { requiereCodigo: false, vence: null };
   }
 
@@ -212,10 +224,20 @@ export async function cambiarClaveConToken(token, claveNueva, codigo = null) {
   // EL SEGUNDO FACTOR SE COMPRUEBA ANTES DE TOMAR EL ENLACE. Al revés, escribir mal el código
   // quemaría el enlace y dejaría a la persona sin forma de entrar, que es justo lo contrario de lo
   // que esta pantalla viene a resolver.
-  const puerta = await puertaAbiertaParaLaCuenta(fila.usuario_id);
-  if (!puerta && (await haceFaltaElCodigo(fila.usuario_id))) {
+  // LA CUENTA SE LEE UNA SOLA VEZ, y de su fila sale la Prestadora de todo lo que viene abajo. Sin
+  // cuenta no se cambia ninguna clave: falla cerrado.
+  const cuenta = await cuentaDelEnlace(fila.usuario_id);
+  if (!cuenta) throw new ErrorConMotivo('token_invalido');
+
+  const puerta = await puertaAbiertaParaLaCuenta(cuenta);
+  if (!puerta && (await elTelefonoSirveDeSegundoFactor(cuenta))) {
     if (!codigo) throw new ErrorConMotivo('faltan_datos');
-    await comprobarCodigoDelTelefono({ usuarioId: fila.usuario_id, uso: USO_RECUPERAR, codigo });
+    await comprobarCodigoDelTelefono({
+      prestadoraId: cuenta.prestadora_id,
+      usuarioId: fila.usuario_id,
+      uso: USO_RECUPERAR,
+      codigo,
+    });
   }
 
   const { data: tomado, error: errorTomar } = await supabase
@@ -238,15 +260,10 @@ export async function cambiarClaveConToken(token, claveNueva, codigo = null) {
 
   // La puerta se gasta recién ahora, con la clave ya cambiada. Gastarla antes dejaría a esa persona
   // sin puerta y sin clave nueva si lo de abajo fallaba, y volver a abrirla exige otro llamado.
-  if (puerta) await usarCambioDeClaveHabilitado(puerta.id);
+  if (puerta) await usarCambioDeClaveHabilitado(puerta.id, cuenta.prestadora_id);
 
   // Y queda avisado. Es el aviso que le llega a alguien a quien le cambiaron la clave sin que él lo
   // pidiera, y es la única forma que tiene de enterarse. Sale después de que la clave ya cambió: un
   // aviso de algo que al final no pasó es peor que ninguno.
-  const { data: cuenta } = await supabase
-    .from('usuarios')
-    .select('id, nombre, email, prestadora_id')
-    .eq('id', fila.usuario_id)
-    .maybeSingle();
-  if (cuenta) await avisarDeSeguridad(AVISO_CLAVE_RECUPERADA, cuenta);
+  await avisarDeSeguridad(AVISO_CLAVE_RECUPERADA, cuenta);
 }

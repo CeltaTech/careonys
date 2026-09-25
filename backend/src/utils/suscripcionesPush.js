@@ -19,6 +19,12 @@ import { supabase } from '../db/connection.js';
 export async function guardarSuscripcionPush({ prestadoraId, rol, usuarioId, endpoint, keys, userAgent }) {
   const columna = rol === 'asistente' ? 'asistente_id' : 'familia_id';
 
+  // SIN PRESTADORA A PROPÓSITO
+  // ESTO NO ES UNA EXCEPCIÓN RESUELTA, ES UN CASO ABIERTO. El identificador del aparato —la
+  // dirección de entrega— es único en toda la tabla sin condición de Prestadora, y esta consulta
+  // mira a propósito todas para detectar que ese teléfono cambió de dueño: acotarla a la Prestadora
+  // de la sesión dejaría de ver justo el cruce que viene a buscar. Es una puerta, y la decisión de
+  // cerrarla o no es de diseño, no mecánica: está planteada al Desarrollador y sin contestar.
   const { data: anterior, error: errorAnterior } = await supabase
     .from('push_subscriptions')
     .select('id, prestadora_id, asistente_id, familia_id')
@@ -39,6 +45,12 @@ export async function guardarSuscripcionPush({ prestadoraId, rol, usuarioId, end
   };
   fila[columna] = usuarioId;
 
+  // SIN PRESTADORA A PROPÓSITO
+  // ESTO NO ES UNA EXCEPCIÓN RESUELTA, ES UN CASO ABIERTO. La Prestadora va adentro de la fila,
+  // pero la columna del conflicto es el identificador del aparato, único en toda la tabla sin
+  // condición de Prestadora: la fila que se pisa puede ser de otra, y eso es a propósito, porque es
+  // el mismo teléfono cambiando de dueño. Es una puerta, y la decisión de cerrarla o no es de
+  // diseño, no mecánica: está planteada al Desarrollador y sin contestar.
   const { data: guardada, error } = await supabase
     .from('push_subscriptions')
     .upsert(fila, { onConflict: 'endpoint' })

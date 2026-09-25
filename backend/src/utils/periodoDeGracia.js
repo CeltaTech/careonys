@@ -41,22 +41,27 @@ import { enDia, importeConMoneda } from './comoSeDiceEnUnAviso.js';
 import { aviso } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import { plazosDeLaPrestadora } from './plazosDeCobroMarketplace.js';
+import { prestadorasDelMarketplace } from './prestadorasDelMarketplace.js';
 
 /**
  * Un cobro no entró. Abre la gracia si no había ninguna abierta, y le avisa a la Familia. No
  * suspende nada: de eso se encarga `suspenderLosQueAgotaronLaGracia` cuando llegue la fecha.
  *
  * @param {object} argumentos
+ * @param {string} argumentos.prestadoraId  Obligatorio. Un identificador de acceso probado a mano
+ *                                          no alcanza el cajón de otra Organización
+ *                                          (`celtatech\CLAUDE.md` §5).
  * @param {string} argumentos.accesoId
  * @param {Function} [argumentos.avisar]  Por dónde sale el aviso, por el mismo motivo que en
  *                                        `avisoPrevioAlCobro.js`: `web-push` sólo entrega contra
  *                                        una dirección segura y la prueba necesita poder mirarlo.
  * @returns {Promise<{abierta: boolean, gracia_hasta: string|null}>}
  */
-export async function abrirElPeriodoDeGracia({ accesoId, avisar = enviarPushFamilia }) {
+export async function abrirElPeriodoDeGracia({ prestadoraId, accesoId, avisar = enviarPushFamilia }) {
   const { data: acceso, error } = await supabase
     .from('accesos_marketplace')
     .select('id, estado, familia_id, paciente_id, prestadora_id, importe, moneda, gracia_hasta')
+    .eq('prestadora_id', prestadoraId)
     .eq('id', accesoId)
     .maybeSingle();
 
@@ -84,6 +89,7 @@ export async function abrirElPeriodoDeGracia({ accesoId, avisar = enviarPushFami
   const { data: guardados, error: errorGuardar } = await supabase
     .from('accesos_marketplace')
     .update({ gracia_hasta: graciaHasta, updated_at: new Date().toISOString() })
+    .eq('prestadora_id', prestadoraId)
     .eq('id', accesoId)
     .eq('estado', 'vigente')
     // Nadie abrió una gracia mientras tanto. Dos avisos de falla que llegan juntos abren una sola,
@@ -99,7 +105,7 @@ export async function abrirElPeriodoDeGracia({ accesoId, avisar = enviarPushFami
 
   try {
     const idioma = await idiomaDeLaPrestadora(acceso.prestadora_id);
-    await avisar(acceso.familia_id, textoDelAvisoDeGracia({ ...acceso, gracia_hasta: graciaHasta }, idioma));
+    await avisar(acceso.prestadora_id, acceso.familia_id, textoDelAvisoDeGracia({ ...acceso, gracia_hasta: graciaHasta }, idioma));
   } catch (falla) {
     // La gracia ya está abierta, que es lo que sostiene el acceso. Que el aviso no haya salido se
     // registra y no deshace nada: deshacerlo suspendería antes de tiempo.
@@ -113,21 +119,39 @@ export async function abrirElPeriodoDeGracia({ accesoId, avisar = enviarPushFami
  * Suspende los accesos a los que se les terminó la gracia sin que el cobro entrara. Corre una vez
  * por día (`backend/src/server.js`): la gracia se mide en días, no en horas.
  *
+ * Recorre las Prestadoras de a una, nombrando a cada una en su consulta. Una sola consulta para
+ * todas alcanzaría dos cajones a la vez, que es lo que `celtatech\CLAUDE.md` §5 no admite.
+ *
  * @returns {Promise<{suspendidos: number}>}
  */
 export async function suspenderLosQueAgotaronLaGracia() {
   const hoy = new Date().toISOString().slice(0, 10);
 
+  let suspendidos = 0;
+  for (const prestadoraId of await prestadorasDelMarketplace()) {
+    suspendidos += await suspenderLosDeUnaPrestadora(prestadoraId, hoy);
+  }
+
+  return { suspendidos };
+}
+
+/** La suspensión de una sola Prestadora. Una falla suya se anota acá y no deja sin suspender a las
+ *  demás. */
+async function suspenderLosDeUnaPrestadora(prestadoraId, hoy) {
   const { data: accesos, error } = await supabase
     .from('accesos_marketplace')
     .select('id')
+    .eq('prestadora_id', prestadoraId)
     .eq('estado', 'vigente')
     .not('gracia_hasta', 'is', null)
     .lte('gracia_hasta', hoy);
 
   if (error) {
-    console.error('Error consultando los accesos con la gracia terminada:', error.message);
-    return { suspendidos: 0 };
+    console.error(
+      `Error consultando los accesos con la gracia terminada (prestadora ${prestadoraId}):`,
+      error.message
+    );
+    return 0;
   }
 
   let suspendidos = 0;
@@ -135,6 +159,7 @@ export async function suspenderLosQueAgotaronLaGracia() {
     const { error: errorSuspender } = await supabase
       .from('accesos_marketplace')
       .update({ estado: 'vencida', updated_at: new Date().toISOString() })
+      .eq('prestadora_id', prestadoraId)
       .eq('id', acceso.id)
       // Que no haya entrado un cobro entre la consulta y el guardado: si entró, la gracia se cerró
       // y suspender ahora apagaría un acceso que alguien acaba de pagar.
@@ -150,7 +175,7 @@ export async function suspenderLosQueAgotaronLaGracia() {
     suspendidos += 1;
   }
 
-  return { suspendidos };
+  return suspendidos;
 }
 
 /** Qué lee la Familia cuando el cobro no entró. Corto y neutro: qué pasó, hasta cuándo hay tiempo y

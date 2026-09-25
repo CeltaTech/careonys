@@ -519,7 +519,7 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
 
     const { error: errorRenglones } = await supabase
       .from('facturas_familia_items')
-      .insert(renglones.map((r) => ({ ...r, factura_id: factura.id })));
+      .insert(renglones.map((r) => ({ ...r, prestadora_id: prestadoraId, factura_id: factura.id })));
 
     if (errorRenglones) {
       await supabase.from('facturas_familia').delete().eq('id', factura.id).eq('prestadora_id', prestadoraId);

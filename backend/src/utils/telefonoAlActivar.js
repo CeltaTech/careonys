@@ -35,6 +35,13 @@ import {
 
 /** La cuenta, con lo justo para decidir. Nunca sale de acá hacia afuera. */
 async function cuentaDe(usuarioId) {
+  // SIN PRESTADORA A PROPÓSITO
+  // Ésta es la consulta que averigua la Prestadora, así que no puede nombrarla. Quien activa su
+  // cuenta todavía no tiene sesión, y el enlace de activación tampoco guarda la Prestadora:
+  // `tokens_activacion_cuenta` no tiene esa columna, así que `activacionCuenta.js` devuelve el
+  // identificador de la cuenta y nada más. Lee una sola fila, la de ese identificador, y de ella
+  // salen la Prestadora y el corte que hacen las dos funciones de abajo antes de tocar nada: sin
+  // Prestadora no se sigue. Las dos escrituras que vienen después sí la nombran.
   const { data, error } = await supabase
     .from('usuarios')
     .select('id, prestadora_id, telefono, telefono_verificado_en')
@@ -100,6 +107,7 @@ export async function ofrecerElCodigoAlActivar({ usuarioId, telefono }) {
   const { error } = await supabase
     .from('usuarios')
     .update({ telefono: numero, telefono_verificado_en: null })
+    .eq('prestadora_id', cuenta.prestadora_id)
     .eq('id', cuenta.id);
   if (error) throw new Error(error.message);
 
@@ -133,12 +141,16 @@ export async function ofrecerElCodigoAlActivar({ usuarioId, telefono }) {
 export async function verificarElTelefonoAlActivar({ usuarioId, clave, codigo }) {
   const cuenta = await cuentaDe(usuarioId);
   if (!cuenta) throw new ErrorConMotivo('no_encontrado');
+  // Sin Prestadora no se sigue: la escritura de más abajo se acota por ella, y un filtro vacío no
+  // acota nada. Es el mismo corte que hace `ofrecerElCodigoAlActivar` antes de tocar la cuenta.
+  if (!cuenta.prestadora_id) throw new ErrorConMotivo('no_encontrado');
 
-  const email = await correoDe(cuenta.id);
+  const email = await correoDe({ prestadoraId: cuenta.prestadora_id, usuarioId: cuenta.id });
   if (!email) throw new ErrorConMotivo('clave_actual_incorrecta');
   await exigirLaClaveActual({ email, clave });
 
   const usado = await comprobarCodigoDelTelefono({
+    prestadoraId: cuenta.prestadora_id,
     usuarioId: cuenta.id,
     uso: USO_VERIFICAR,
     codigo,
@@ -151,6 +163,7 @@ export async function verificarElTelefonoAlActivar({ usuarioId, clave, codigo })
   const { error } = await supabase
     .from('usuarios')
     .update({ telefono_verificado_en: new Date().toISOString() })
+    .eq('prestadora_id', cuenta.prestadora_id)
     .eq('id', cuenta.id);
   if (error) throw new Error(error.message);
 

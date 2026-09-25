@@ -114,7 +114,13 @@ function filaDelCodigo(extra = {}) {
 /** Deja la base falsa lista para que comprobar un código salga bien de punta a punta. */
 function prepararComprobacion({ fila, intentos }) {
   respuestas.set('GET /rest/v1/codigos_al_telefono', [fila]);
-  respuestas.set('POST /rest/v1/rpc/sumar_intento_de_codigo', intentos);
+  // La Prestadora viaja en el pedido y la base falsa la exige, igual que la de verdad: una suma que
+  // llegara sin ella —o con otra— no cuenta nada, y el motor lo tiene que tratar como agotado.
+  respuestas.set('POST /rest/v1/rpc/sumar_intento_de_codigo', ({ cuerpo }) => {
+    if (cuerpo?.p_tabla !== 'codigos_al_telefono' || cuerpo.p_id !== fila.id) return undefined;
+    if (cuerpo.p_prestadora_id !== PRESTADORA) return undefined;
+    return intentos;
+  });
   respuestas.set('PATCH /rest/v1/codigos_al_telefono', [{ id: CODIGO_ID }]);
 }
 
@@ -162,7 +168,7 @@ describe('el vencimiento', () => {
     prepararComprobacion({ fila: filaDelCodigo({ codigo_expira_en: enMinutos(-1) }), intentos: 1 });
 
     const motivo = await motivoDe(
-      comprobarCodigoDelTelefono({ usuarioId: USUARIO, uso: USO_VERIFICAR, codigo: EL_CODIGO }),
+      comprobarCodigoDelTelefono({ prestadoraId: PRESTADORA, usuarioId: USUARIO, uso: USO_VERIFICAR, codigo: EL_CODIGO }),
     );
 
     assert.equal(motivo, 'codigo_vencido');
@@ -173,6 +179,7 @@ describe('el vencimiento', () => {
     prepararComprobacion({ fila: filaDelCodigo({ codigo_expira_en: enMinutos(1) }), intentos: 1 });
 
     const usado = await comprobarCodigoDelTelefono({
+      prestadoraId: PRESTADORA,
       usuarioId: USUARIO,
       uso: USO_VERIFICAR,
       codigo: EL_CODIGO,
@@ -186,7 +193,7 @@ describe('el vencimiento', () => {
     prepararComprobacion({ fila: filaDelCodigo({ codigo_expira_en: enMinutos(-1) }), intentos: 1 });
 
     await motivoDe(
-      comprobarCodigoDelTelefono({ usuarioId: USUARIO, uso: USO_VERIFICAR, codigo: EL_CODIGO }),
+      comprobarCodigoDelTelefono({ prestadoraId: PRESTADORA, usuarioId: USUARIO, uso: USO_VERIFICAR, codigo: EL_CODIGO }),
     );
 
     assert.equal(seContoUnIntento(), false);
@@ -196,7 +203,7 @@ describe('el vencimiento', () => {
     prepararComprobacion({ fila: filaDelCodigo({ codigo_expira_en: null }), intentos: 1 });
 
     const motivo = await motivoDe(
-      comprobarCodigoDelTelefono({ usuarioId: USUARIO, uso: USO_VERIFICAR, codigo: EL_CODIGO }),
+      comprobarCodigoDelTelefono({ prestadoraId: PRESTADORA, usuarioId: USUARIO, uso: USO_VERIFICAR, codigo: EL_CODIGO }),
     );
 
     assert.equal(motivo, 'codigo_vencido');
@@ -208,7 +215,7 @@ describe('el tope de intentos', () => {
     prepararComprobacion({ fila: filaDelCodigo(), intentos: INTENTOS_MAXIMOS + 1 });
 
     const motivo = await motivoDe(
-      comprobarCodigoDelTelefono({ usuarioId: USUARIO, uso: USO_VERIFICAR, codigo: EL_CODIGO }),
+      comprobarCodigoDelTelefono({ prestadoraId: PRESTADORA, usuarioId: USUARIO, uso: USO_VERIFICAR, codigo: EL_CODIGO }),
     );
 
     assert.equal(motivo, 'demasiados_intentos');
@@ -221,6 +228,7 @@ describe('el tope de intentos', () => {
     prepararComprobacion({ fila: filaDelCodigo(), intentos: INTENTOS_MAXIMOS });
 
     const usado = await comprobarCodigoDelTelefono({
+      prestadoraId: PRESTADORA,
       usuarioId: USUARIO,
       uso: USO_VERIFICAR,
       codigo: EL_CODIGO,
@@ -233,7 +241,7 @@ describe('el tope de intentos', () => {
     prepararComprobacion({ fila: filaDelCodigo(), intentos: null });
 
     const motivo = await motivoDe(
-      comprobarCodigoDelTelefono({ usuarioId: USUARIO, uso: USO_VERIFICAR, codigo: EL_CODIGO }),
+      comprobarCodigoDelTelefono({ prestadoraId: PRESTADORA, usuarioId: USUARIO, uso: USO_VERIFICAR, codigo: EL_CODIGO }),
     );
 
     assert.equal(motivo, 'demasiados_intentos');
@@ -243,7 +251,7 @@ describe('el tope de intentos', () => {
     prepararComprobacion({ fila: filaDelCodigo(), intentos: 2 });
 
     const motivo = await motivoDe(
-      comprobarCodigoDelTelefono({ usuarioId: USUARIO, uso: USO_VERIFICAR, codigo: '000000' }),
+      comprobarCodigoDelTelefono({ prestadoraId: PRESTADORA, usuarioId: USUARIO, uso: USO_VERIFICAR, codigo: '000000' }),
     );
 
     assert.equal(motivo, 'codigo_incorrecto');
@@ -254,7 +262,7 @@ describe('el tope de intentos', () => {
     respuestas.set('GET /rest/v1/codigos_al_telefono', []);
 
     const motivo = await motivoDe(
-      comprobarCodigoDelTelefono({ usuarioId: USUARIO, uso: USO_VERIFICAR, codigo: EL_CODIGO }),
+      comprobarCodigoDelTelefono({ prestadoraId: PRESTADORA, usuarioId: USUARIO, uso: USO_VERIFICAR, codigo: EL_CODIGO }),
     );
 
     assert.equal(motivo, 'codigo_incorrecto');

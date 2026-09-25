@@ -76,7 +76,9 @@ panelHabilitarClaveRouter.post(
         .filter((cuenta) => puedeHabilitar(req.usuarioPanel.rol, cuenta.rol));
 
       res.json({
-        cuentas: await Promise.all(alcanzables.map((cuenta) => conFoto(cuenta))),
+        cuentas: await Promise.all(
+          alcanzables.map((cuenta) => conFoto(cuenta, req.usuarioPanel.prestadoraId)),
+        ),
         minutos: minutosDeLaHabilitacion(),
       });
     } catch (err) {
@@ -87,10 +89,13 @@ panelHabilitarClaveRouter.post(
 
 // La foto de la ficha, cuando la hay. Es lo que le permite a quien atiende reconocer a quien llama,
 // y sale de la ficha del Asistente, que es donde vive: el Legajo no guarda ninguna.
-async function conFoto(cuenta) {
+// La Organización va escrita en la consulta y no se deduce de que la cuenta ya haya salido
+// filtrada: la ficha del Asistente es de una Prestadora, y se la pide nombrándola.
+async function conFoto(cuenta, prestadoraId) {
   const { data } = await supabase
     .from('asistentes')
     .select('foto_url')
+    .eq('prestadora_id', prestadoraId)
     .eq('usuario_id', cuenta.id)
     .maybeSingle();
 

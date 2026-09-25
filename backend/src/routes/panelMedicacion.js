@@ -86,6 +86,7 @@ panelMedicacionRouter.post('/:id/aceptar', requiereRolPanel, async (req, res) =>
     .from('indicaciones_medicacion')
     .update({ estado: 'aceptada', revisado_por: req.usuarioPanel.id, revisado_en: new Date().toISOString() })
     .eq('id', indicacion.id)
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .eq('estado', 'pendiente')
     .select('id');
   if (error) return responderError(res, error);
@@ -137,6 +138,7 @@ panelMedicacionRouter.post('/:id/rechazar', requiereRolPanel, async (req, res) =
       revisado_en: new Date().toISOString(),
     })
     .eq('id', indicacion.id)
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .eq('estado', 'pendiente')
     .select('id');
   if (error) return responderError(res, error);

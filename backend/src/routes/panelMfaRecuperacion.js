@@ -18,6 +18,12 @@ async function requiereSesionBasica(req, res, next) {
   const { data: userData, error } = await supabase.auth.getUser(token);
   if (error || !userData?.user) return res.status(401).json({ error: 'No autorizado' });
 
+  // SIN PRESTADORA A PROPÓSITO
+  // Corre antes de que exista sesión del Panel, sobre una cuenta que no es de ninguna Prestadora.
+  // Acá no se nombra ninguna Organización, y no es un olvido: quien llega es soporte técnico de
+  // CeltaTech, que no pertenece a ninguna Prestadora —su `prestadora_id` es nulo—, y todavía no
+  // hay sesión del Panel de la cual sacarla. Lo único que se pregunta es el rol de la cuenta que
+  // el pase ya identificó, y lo que no sea soporte técnico se rechaza en el renglón siguiente.
   const { data: perfil } = await supabase.from('usuarios').select('rol').eq('id', userData.user.id).single();
   if (!perfil || perfil.rol !== 'superadmin') {
     return res.status(403).json({ error: 'Rol sin permiso' });

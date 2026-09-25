@@ -432,12 +432,13 @@ describe('a quién mira este proceso', () => {
 
 describe('estimarLlegadaDeGuardia — qué devuelve y qué no', () => {
   it('sin marca de salida no hay estimación, y eso se dice', async () => {
-    const estimada = await llegadaEstimadaDeGuardia(guardiaQueEmpiezaEn(20));
+    const estimada = await llegadaEstimadaDeGuardia(PRESTADORA, guardiaQueEmpiezaEn(20));
     assert.equal(estimada, null);
   });
 
   it('con salida marcada pero sin punto tampoco: no se inventa una hora', async () => {
     const estimada = await llegadaEstimadaDeGuardia(
+      PRESTADORA,
       guardiaQueEmpiezaEn(20, { salida_checkin_at: haceUnRato(5), salida_lat: null, salida_lng: null })
     );
     assert.equal(estimada, null);
@@ -446,6 +447,7 @@ describe('estimarLlegadaDeGuardia — qué devuelve y qué no', () => {
   it('con salida y punto devuelve una hora posterior a la salida', async () => {
     const salidaAt = haceUnRato(5);
     const estimada = await llegadaEstimadaDeGuardia(
+      PRESTADORA,
       guardiaQueEmpiezaEn(20, { salida_checkin_at: salidaAt, salida_lat: SALIDA_LEJOS.lat, salida_lng: SALIDA_LEJOS.lng })
     );
     assert.ok(estimada instanceof Date);
@@ -454,6 +456,7 @@ describe('estimarLlegadaDeGuardia — qué devuelve y qué no', () => {
 
   it('lo que devuelve es una hora y nunca un punto: el lugar del que salió no viaja', async () => {
     const estimada = await llegadaEstimadaDeGuardia(
+      PRESTADORA,
       guardiaQueEmpiezaEn(20, { salida_checkin_at: haceUnRato(5), salida_lat: SALIDA_LEJOS.lat, salida_lng: SALIDA_LEJOS.lng })
     );
     // Es la garantía de que de acá no sale la ubicación de nadie hacia ninguna pantalla.
@@ -464,7 +467,30 @@ describe('estimarLlegadaDeGuardia — qué devuelve y qué no', () => {
 
   it('sin salida marcada ni siquiera se le pregunta a la base por el domicilio', async () => {
     llamadas = [];
-    await llegadaEstimadaDeGuardia(guardiaQueEmpiezaEn(20));
+    await llegadaEstimadaDeGuardia(PRESTADORA, guardiaQueEmpiezaEn(20));
     assert.equal(llamadas.length, 0);
+  });
+
+  it('sin Prestadora no hay estimación: un filtro vacío no acota nada', async () => {
+    // El aislamiento lo sostiene el filtro, no la pantalla: preguntar por los Pacientes de una
+    // guardia sin decir de quién es sería una consulta que alcanza a cualquiera.
+    llamadas = [];
+    const estimada = await llegadaEstimadaDeGuardia(
+      null,
+      guardiaQueEmpiezaEn(20, { salida_checkin_at: haceUnRato(5), salida_lat: SALIDA_LEJOS.lat, salida_lng: SALIDA_LEJOS.lng })
+    );
+    assert.equal(estimada, null);
+    assert.equal(llamadas.length, 0);
+  });
+
+  it('los Pacientes de la guardia se piden acotados a esa Prestadora', async () => {
+    llamadas = [];
+    await llegadaEstimadaDeGuardia(
+      PRESTADORA,
+      guardiaQueEmpiezaEn(20, { salida_checkin_at: haceUnRato(5), salida_lat: SALIDA_LEJOS.lat, salida_lng: SALIDA_LEJOS.lng })
+    );
+    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/guardia_pacientes');
+    assert.ok(consulta, 'tiene que preguntar por los Pacientes de la guardia');
+    assert.ok(consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`), consulta.url);
   });
 });

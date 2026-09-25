@@ -19,7 +19,10 @@ appAsistentesMedicacionRouter.get('/:pacienteId', requiereRolAsistente, exigeVis
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
 
-  const indicaciones = await medicacionVigenteDelPaciente(req.params.pacienteId);
+  const indicaciones = await medicacionVigenteDelPaciente(
+    req.usuarioAsistente.prestadoraId,
+    req.params.pacienteId,
+  );
 
   const ordenes = [];
   for (const indicacion of indicaciones) {

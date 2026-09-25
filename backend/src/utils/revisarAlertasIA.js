@@ -43,13 +43,33 @@ async function configuracionAlertasIA(prestadoraId) {
 // (b) análisis inmediato si un reporte recién confirmado contiene una palabra clave crítica
 // (configuracion_alertas_ia, nunca hardcodeada — llamado directamente desde
 // appAsistentes.js en vez de por este cron, así que analizarPaciente queda exportado).
+// Se recorre de a una Prestadora por vez, y nunca con una consulta que las mezcle: el motor entra
+// con la llave de servicio, que se saltea la protección por fila, así que lo único que mantiene
+// cerrado cada cajón es que cada consulta diga para cuál trabaja.
 export async function revisarAlertasIA() {
-  const { data: pacientes, error } = await supabase
-    .from('pacientes')
-    .select('id, prestadora_id, ultimo_analisis_ia_at');
+  const { data: prestadoras, error } = await supabase
+    .from('prestadoras')
+    .select('id')
+    .eq('estado', 'certificada');
 
   if (error) {
-    console.error('Error consultando pacientes para IA Nivel 2:', error.message);
+    console.error('Error consultando prestadoras para IA Nivel 2:', error.message);
+    return;
+  }
+
+  for (const { id: prestadoraId } of prestadoras ?? []) {
+    await revisarPrestadora(prestadoraId);
+  }
+}
+
+async function revisarPrestadora(prestadoraId) {
+  const { data: pacientes, error } = await supabase
+    .from('pacientes')
+    .select('id, ultimo_analisis_ia_at')
+    .eq('prestadora_id', prestadoraId);
+
+  if (error) {
+    console.error(`Error consultando pacientes para IA Nivel 2 (prestadora ${prestadoraId}):`, error.message);
     return;
   }
 
@@ -57,6 +77,7 @@ export async function revisarAlertasIA() {
     let query = supabase
       .from('reportes')
       .select('id, created_at')
+      .eq('prestadora_id', prestadoraId)
       .eq('paciente_id', paciente.id)
       .limit(1);
     if (paciente.ultimo_analisis_ia_at) {
@@ -65,7 +86,7 @@ export async function revisarAlertasIA() {
     const { data: hayNuevos } = await query;
     if (!hayNuevos?.length) continue;
 
-    await analizarPaciente(paciente.id, paciente.prestadora_id);
+    await analizarPaciente(paciente.id, prestadoraId);
   }
 }
 
@@ -75,13 +96,14 @@ export async function analizarPaciente(pacienteId, prestadoraId) {
   const { data: paciente } = await supabase
     .from('pacientes')
     .select('patologias, familia_id')
+    .eq('prestadora_id', prestadoraId)
     .eq('id', pacienteId)
     .maybeSingle();
   if (!paciente) return;
 
   // pacientes.medicacion_habitual queda retirada (pendiente #62, docs/PLAN_HASTA_PRODUCCION.md): la
   // IA analiza la medicación vigente real, derivada de indicaciones_medicacion.
-  const medicacionVigente = await medicacionVigenteDelPaciente(pacienteId);
+  const medicacionVigente = await medicacionVigenteDelPaciente(prestadoraId, pacienteId);
 
   const configuracion = await configuracionAlertasIA(prestadoraId);
 
@@ -93,6 +115,7 @@ export async function analizarPaciente(pacienteId, prestadoraId) {
     .select(
       'id, texto_libre, alimentacion, medicacion, signos_vitales, estado_animo, incidentes, observaciones, created_at'
     )
+    .eq('prestadora_id', prestadoraId)
     .eq('paciente_id', pacienteId)
     .order('created_at', { ascending: false })
     .limit(configuracion.reportes_a_analizar);
@@ -121,7 +144,11 @@ export async function analizarPaciente(pacienteId, prestadoraId) {
     return;
   }
 
-  await supabase.from('pacientes').update({ ultimo_analisis_ia_at: new Date().toISOString() }).eq('id', pacienteId);
+  await supabase
+    .from('pacientes')
+    .update({ ultimo_analisis_ia_at: new Date().toISOString() })
+    .eq('prestadora_id', prestadoraId)
+    .eq('id', pacienteId);
 
   if (!resultado || resultado.nivel === 'verde') return;
 
@@ -174,7 +201,7 @@ export async function analizarPaciente(pacienteId, prestadoraId) {
     // El aviso a la Familia se mide según el nivel: la amarilla no es una urgencia y anunciarla
     // con las palabras de la roja asusta sin motivo.
     const textos = aviso('alerta_ia_familia', idioma, { esRoja });
-    enviarPushFamilia(paciente.familia_id, {
+    enviarPushFamilia(prestadoraId, paciente.familia_id, {
       titulo: textos.titulo,
       cuerpo: resultado.descripcion || textos.cuerpo,
       url: `/pacientes/${pacienteId}/alertas`,

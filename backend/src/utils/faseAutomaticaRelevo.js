@@ -168,6 +168,7 @@ export async function correrFaseAutomatica({ incidente, prestadoraId, idioma }) 
   const { data: guardia } = await supabase
     .from('guardias')
     .select('id, asistente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin')
+    .eq('prestadora_id', prestadoraId)
     .eq('id', incidente.guardia_entrante_id)
     .single();
 
@@ -217,12 +218,13 @@ export async function correrFaseAutomatica({ incidente, prestadoraId, idioma }) 
  * cuántos se llegó de verdad.
  */
 async function avisarAlAsistente({ prestadoraId, asistenteId, titulo, cuerpo, config }) {
-  const porPush = await enviarPushAsistente(asistenteId, { titulo, cuerpo, url: '/' });
+  const porPush = await enviarPushAsistente(prestadoraId, asistenteId, { titulo, cuerpo, url: '/' });
   if (porPush) return true;
 
   const { data: asistente } = await supabase
     .from('asistentes')
     .select('telefono')
+    .eq('prestadora_id', prestadoraId)
     .eq('id', asistenteId)
     .single();
   if (!asistente?.telefono) return false;

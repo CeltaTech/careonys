@@ -171,13 +171,14 @@ panelCuentasRouter.post('/familia', requiereRolPanel, exigirOrganizacionActiva, 
       .single();
     if (errorPaciente) throw new Error(errorPaciente.message);
 
-    // SEGURIDAD: depende de que el SELECT de arriba (línea ~23) ya haya validado que
-    // `solicitudId` pertenece al tenant del solicitante — no llamar este UPDATE con un
-    // id que no haya pasado por ese filtro.
+    // La Prestadora se nombra acá también, y no se da por heredada del SELECT de más arriba:
+    // una escritura que sólo dice el identificador de la fila alcanza a cualquier Organización
+    // el día que ese identificador llegue por otro camino.
     const { error: errorUpdate } = await supabase
       .from('solicitudes')
       .update({ familia_id: familiaId })
-      .eq('id', solicitudId);
+      .eq('id', solicitudId)
+      .eq('prestadora_id', prestadoraId);
     if (errorUpdate) throw new Error(errorUpdate.message);
 
     res.json({ ok: true, familiaId, pacienteId: paciente.id });
@@ -297,13 +298,13 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
       if (errorReferencias) throw new Error(errorReferencias.message);
     }
 
-    // SEGURIDAD: depende de que el SELECT de arriba (línea ~100) ya haya validado que
-    // `postulacionId` pertenece al tenant del solicitante — no llamar este UPDATE con un
-    // id que no haya pasado por ese filtro.
+    // Igual que en el alta de Familia: la Organización se nombra en la escritura, no se hereda
+    // del SELECT de más arriba.
     const { error: errorUpdate } = await supabase
       .from('postulaciones')
       .update({ asistente_id: asistenteId })
-      .eq('id', postulacionId);
+      .eq('id', postulacionId)
+      .eq('prestadora_id', prestadoraId);
     if (errorUpdate) throw new Error(errorUpdate.message);
 
     res.json({ ok: true, asistenteId });
@@ -358,8 +359,8 @@ panelCuentasRouter.get('/familia/:familiaId/circulo', requiereRolPanel, exigirOr
   try {
     const [miembros, pendiente, ultima] = await Promise.all([
       circuloConSusAccesos({ familiaId: familia.id, prestadoraId: familia.prestadora_id }),
-      instruccionPendiente(familia.id),
-      ultimaInstruccionCerrada(familia.id),
+      instruccionPendiente(familia.id, familia.prestadora_id),
+      ultimaInstruccionCerrada(familia.id, familia.prestadora_id),
     ]);
     // `pendiente` es un estado normal, no un error: los accesos ya rigen y lo que falta es la
     // firma. La pantalla lo muestra para que nadie se olvide de cerrarlo. Y cuando no hay ninguna
@@ -449,6 +450,7 @@ panelCuentasRouter.get('/familia/:familiaId/circulo/instruccion/:instruccionId/p
     .from('instrucciones_acceso_circulo')
     .select('archivo_firmado_url')
     .eq('id', req.params.instruccionId)
+    .eq('prestadora_id', familia.prestadora_id)
     .eq('familia_id', familia.id)
     .maybeSingle();
 
@@ -587,6 +589,7 @@ panelCuentasRouter.get('/familia/:familiaId/pagador/consentimiento/:consentimien
     .from('consentimientos_pagador')
     .select('archivo_firmado_url')
     .eq('id', req.params.consentimientoId)
+    .eq('prestadora_id', familia.prestadora_id)
     .eq('familia_id', familia.id)
     .maybeSingle();
 
@@ -654,6 +657,7 @@ panelCuentasRouter.get('/familia/:familiaId/pagador/papel/:documentoId/archivo',
     .from('documentos_pagador')
     .select('archivo_url')
     .eq('id', req.params.documentoId)
+    .eq('prestadora_id', familia.prestadora_id)
     .eq('familia_id', familia.id)
     .maybeSingle();
 
@@ -730,7 +734,7 @@ panelCuentasRouter.post('/:usuarioId/reenviar-activacion', requiereRolPanel, exi
   }
 
   try {
-    await reenviarActivacionCuenta(usuario.id);
+    await reenviarActivacionCuenta(usuario.id, req.usuarioPanel.prestadoraId);
     res.json({ ok: true });
   } catch (error) {
     responderError(res, error);

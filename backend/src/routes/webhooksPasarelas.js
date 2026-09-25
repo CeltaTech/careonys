@@ -157,7 +157,14 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', async (req, res) => {
   let periodo = cobro ? cobro.periodo : null;
 
   if (cobro) {
-    await supabase.from('cobros_marketplace').update({ estado_cobro: estadoFinal }).eq('id', cobro.id);
+    // La Prestadora se nombra también acá, aunque el cobro se haya buscado filtrando por ella:
+    // la escritura dice por sí sola para qué Organización trabaja, sin colgar de la lectura de
+    // más arriba.
+    await supabase
+      .from('cobros_marketplace')
+      .update({ estado_cobro: estadoFinal })
+      .eq('prestadora_id', prestadoraId)
+      .eq('id', cobro.id);
   } else if (estadoFinal !== 'pendiente') {
     // El cobro del período nace acá, con el estado que trajo el aviso. Un aviso `pendiente` no
     // deja fila: no dice nada que se pueda anotar, y el mismo período puede traer varios antes de
@@ -185,12 +192,12 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', async (req, res) => {
     // dos cargas a mano del Panel (`utils/cobrosMarketplace.js`). Acá se contaba el mes siguiente
     // desde la fecha de hoy: con eso, un cobro que entraba tarde corría la fecha de cobro un poco
     // más cada mes, y el 31 de enero más un mes daba 3 de marzo.
-    await registrarCobroExitoso({ accesoId, periodo });
+    await registrarCobroExitoso({ prestadoraId, accesoId, periodo });
   } else if (estadoFinal === 'fallido') {
     // Un cobro que no entra no suspende nada hoy: abre el período de gracia, se le avisa a la
     // Familia y se sigue reintentando hasta que se termine (`utils/periodoDeGracia.js`). Es el
     // resguardo del §3.2 del PRD del Marketplace, y acá se suspendía el mismo día.
-    await abrirElPeriodoDeGracia({ accesoId });
+    await abrirElPeriodoDeGracia({ prestadoraId, accesoId });
   }
 
   res.status(200).json({ ok: true });

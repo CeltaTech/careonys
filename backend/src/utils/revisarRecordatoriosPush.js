@@ -41,8 +41,9 @@ async function respaldoWhatsappSiFalla({ prestadoraId, asistenteId, enviadoPorPu
   const { data: asistente } = await supabase
     .from('asistentes')
     .select('telefono')
+    .eq('prestadora_id', prestadoraId)
     .eq('id', asistenteId)
-    .single();
+    .maybeSingle();
   if (!asistente?.telefono) return;
 
   try {
@@ -59,120 +60,142 @@ async function respaldoWhatsappSiFalla({ prestadoraId, asistenteId, enviadoPorPu
   }
 }
 
+// Se recorre de a una Prestadora por vez, y ninguna consulta mezcla dos: el motor entra con la
+// llave de servicio, que se saltea la protección por fila, así que lo único que mantiene cerrado
+// cada cajón es que cada consulta diga para cuál trabaja. Con cuánta anticipación se avisa lo
+// elige cada Prestadora, y ese número viene en la misma fila que trae la lista.
 export async function revisarRecordatoriosPush() {
-  await revisarGuardiasAsignadas();
-  await revisarMensajesCoordinador();
-  await revisarRecordatoriosGuardiaProxima();
+  const { data: prestadoras, error } = await supabase
+    .from('prestadoras')
+    .select('id, minutos_aviso_previo_guardia')
+    .eq('estado', 'certificada');
+
+  if (error) {
+    console.error('Error consultando prestadoras para los avisos al Asistente:', error.message);
+    return;
+  }
+
+  const ahora = new Date();
+
+  for (const prestadora of prestadoras ?? []) {
+    const prestadoraId = prestadora.id;
+    const minutosAntes = prestadora.minutos_aviso_previo_guardia ?? MINUTOS_ANTES_RECORDATORIO;
+    await revisarGuardiasAsignadas(prestadoraId);
+    await revisarMensajesCoordinador(prestadoraId);
+    await revisarRecordatoriosGuardiaProxima(prestadoraId, minutosAntes, ahora);
+  }
 }
 
-async function revisarGuardiasAsignadas() {
+async function revisarGuardiasAsignadas(prestadoraId) {
   const { data: guardias, error } = await supabase
     .from('guardias')
-    .select('id, asistente_id, prestadora_id, fecha, hora_inicio')
+    .select('id, asistente_id, fecha, hora_inicio')
+    .eq('prestadora_id', prestadoraId)
     .is('push_asignacion_enviado_at', null)
     .not('asistente_id', 'is', null);
 
   if (error) {
-    console.error('Error consultando guardias para push de asignación:', error.message);
+    console.error(`Error consultando guardias para push de asignación (prestadora ${prestadoraId}):`, error.message);
     return;
   }
+  if (!guardias?.length) return;
 
-  for (const guardia of guardias ?? []) {
-    const { titulo, cuerpo } = aviso('guardia_asignada', await idiomaDeLaPrestadora(guardia.prestadora_id), {
+  // Una sola vez por Prestadora: todos los avisos de esta vuelta los lee la misma gente.
+  const idioma = await idiomaDeLaPrestadora(prestadoraId);
+
+  for (const guardia of guardias) {
+    const { titulo, cuerpo } = aviso('guardia_asignada', idioma, {
       fecha: guardia.fecha,
       horaInicio: guardia.hora_inicio,
     });
 
-    const enviadoPorPush = await enviarPushAsistente(guardia.asistente_id, {
+    const enviadoPorPush = await enviarPushAsistente(prestadoraId, guardia.asistente_id, {
       titulo,
       cuerpo,
       url: `/guardias/${guardia.id}`,
     });
-    await respaldoWhatsappSiFalla({ prestadoraId: guardia.prestadora_id, asistenteId: guardia.asistente_id, enviadoPorPush, titulo, cuerpo });
+    await respaldoWhatsappSiFalla({ prestadoraId, asistenteId: guardia.asistente_id, enviadoPorPush, titulo, cuerpo });
 
     await supabase
       .from('guardias')
       .update({ push_asignacion_enviado_at: new Date().toISOString() })
+      .eq('prestadora_id', prestadoraId)
       .eq('id', guardia.id);
   }
 }
 
-async function revisarMensajesCoordinador() {
+async function revisarMensajesCoordinador(prestadoraId) {
   const { data: mensajes, error } = await supabase
     .from('mensajes_asistente')
-    .select('id, asistente_id, prestadora_id, mensaje')
+    .select('id, asistente_id, mensaje')
+    .eq('prestadora_id', prestadoraId)
     .is('push_enviado_at', null);
 
   if (error) {
-    console.error('Error consultando mensajes_asistente para push:', error.message);
+    console.error(`Error consultando mensajes_asistente para push (prestadora ${prestadoraId}):`, error.message);
     return;
   }
+  if (!mensajes?.length) return;
 
-  for (const mensaje of mensajes ?? []) {
-    const { titulo } = aviso('mensaje_del_coordinador', await idiomaDeLaPrestadora(mensaje.prestadora_id));
+  const idioma = await idiomaDeLaPrestadora(prestadoraId);
 
-    const enviadoPorPush = await enviarPushAsistente(mensaje.asistente_id, {
+  for (const mensaje of mensajes) {
+    const { titulo } = aviso('mensaje_del_coordinador', idioma);
+
+    const enviadoPorPush = await enviarPushAsistente(prestadoraId, mensaje.asistente_id, {
       titulo,
       cuerpo: mensaje.mensaje,
       url: '/perfil',
     });
-    await respaldoWhatsappSiFalla({ prestadoraId: mensaje.prestadora_id, asistenteId: mensaje.asistente_id, enviadoPorPush, titulo, cuerpo: mensaje.mensaje });
+    await respaldoWhatsappSiFalla({ prestadoraId, asistenteId: mensaje.asistente_id, enviadoPorPush, titulo, cuerpo: mensaje.mensaje });
 
     await supabase
       .from('mensajes_asistente')
       .update({ push_enviado_at: new Date().toISOString() })
+      .eq('prestadora_id', prestadoraId)
       .eq('id', mensaje.id);
   }
 }
 
-async function revisarRecordatoriosGuardiaProxima() {
-  const ahora = new Date();
-
-  // Con cuánta anticipación se avisa lo elige cada Prestadora (pendiente #64).
-  // Se traen los números de una sola vez y no de a uno por guardia: el proceso
-  // recorre todas las Prestadoras juntas y una consulta por guardia sería una
-  // consulta por cada guardia programada del sistema.
-  const { data: prestadoras } = await supabase
-    .from('prestadoras')
-    .select('id, minutos_aviso_previo_guardia');
-  const minutosPorPrestadora = new Map(
-    (prestadoras ?? []).map((p) => [p.id, p.minutos_aviso_previo_guardia ?? MINUTOS_ANTES_RECORDATORIO])
-  );
-
+async function revisarRecordatoriosGuardiaProxima(prestadoraId, minutosAntes, ahora) {
   const { data: guardias, error } = await supabase
     .from('guardias')
-    .select('id, asistente_id, prestadora_id, fecha, hora_inicio')
+    .select('id, asistente_id, fecha, hora_inicio')
+    .eq('prestadora_id', prestadoraId)
     .is('push_recordatorio_enviado_at', null)
     .is('checkin_at', null)
     .eq('estado', 'programada')
     .not('asistente_id', 'is', null);
 
   if (error) {
-    console.error('Error consultando guardias para recordatorio push:', error.message);
+    console.error(`Error consultando guardias para recordatorio push (prestadora ${prestadoraId}):`, error.message);
     return;
   }
+  if (!guardias?.length) return;
 
-  for (const guardia of guardias ?? []) {
-    const minutosAntes = minutosPorPrestadora.get(guardia.prestadora_id) ?? MINUTOS_ANTES_RECORDATORIO;
-    const limite = new Date(ahora.getTime() + minutosAntes * 60_000);
+  const limite = new Date(ahora.getTime() + minutosAntes * 60_000);
+  const idioma = await idiomaDeLaPrestadora(prestadoraId);
+
+  for (const guardia of guardias) {
     const inicio = new Date(`${guardia.fecha}T${guardia.hora_inicio}`);
     if (inicio.getTime() > limite.getTime() || inicio.getTime() < ahora.getTime()) continue;
 
-    const { titulo, cuerpo } = aviso('recordatorio_de_guardia', await idiomaDeLaPrestadora(guardia.prestadora_id), {
+    const { titulo, cuerpo } = aviso('recordatorio_de_guardia', idioma, {
       fecha: guardia.fecha,
       horaInicio: guardia.hora_inicio,
     });
 
-    const enviadoPorPush = await enviarPushAsistente(guardia.asistente_id, {
+    const enviadoPorPush = await enviarPushAsistente(prestadoraId, guardia.asistente_id, {
       titulo,
       cuerpo,
       url: `/guardias/${guardia.id}`,
     });
-    await respaldoWhatsappSiFalla({ prestadoraId: guardia.prestadora_id, asistenteId: guardia.asistente_id, enviadoPorPush, titulo, cuerpo });
+    await respaldoWhatsappSiFalla({ prestadoraId, asistenteId: guardia.asistente_id, enviadoPorPush, titulo, cuerpo });
 
     await supabase
       .from('guardias')
       .update({ push_recordatorio_enviado_at: new Date().toISOString() })
+      .eq('prestadora_id', prestadoraId)
       .eq('id', guardia.id);
   }
 }

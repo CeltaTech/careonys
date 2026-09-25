@@ -280,10 +280,13 @@ async function procesarEventoEntrante(payload, { prestadoraId, phoneNumberIdConf
 
   // Nunca queda un mensaje sin que el Coordinador se entere (decisión del Desarrollador,
   // punto 2 de docs/PRD_06_WhatsApp_IA.md). Derivar es dejarlo pedido en la bandeja.
+  // La Prestadora es la de la dirección que se firmó, y se nombra en la escritura: que la
+  // conversación se haya creado recién acá no alcanza para dejarla sin decir.
   const derivarAUnaPersona = () =>
     supabase
       .from('conversaciones_whatsapp')
       .update({ requiere_atencion_coordinador: true })
+      .eq('prestadora_id', prestadoraId)
       .eq('id', conversacion.id);
 
   // Una emergencia se deriva igual, y además se resuelve a qué número corresponde llamar en la
@@ -335,6 +338,7 @@ async function procesarEventoEntrante(payload, { prestadoraId, phoneNumberIdConf
   await supabase
     .from('mensajes_whatsapp')
     .update({ enviado_automaticamente: true })
+    .eq('prestadora_id', prestadoraId)
     .eq('id', mensajeSaliente.id);
 
   await anotar(RESULTADO_RESPONDIDA, decision.motivo, {

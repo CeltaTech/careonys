@@ -105,9 +105,19 @@ export function desdeCuando(valor) {
  *
  * Sale del catálogo y se pide una sola vez por hilo, no una por mensaje. Ante un error de la base
  * el hilo sale igual: sin el motivo se pierde la explicación, no la conversación.
+ *
+ * El catálogo tiene dos clases de regla: las generales, sin Prestadora, y las de una sola. Se
+ * nombra la Prestadora igual que la política de la tabla —`prestadora_id IS NULL OR
+ * prestadora_id = interno.current_tenant()`—, para que ninguna vuelta traiga la regla de otra.
  */
-async function motivosDelCatalogo() {
-  const { data, error } = await supabase.from('reglas_de_los_mensajes').select('clave, motivo');
+async function motivosDelCatalogo(prestadoraId) {
+  // Sin Prestadora no se consulta: preguntar sin nombrarla traería el catálogo de todas.
+  if (!prestadoraId) return {};
+
+  const { data, error } = await supabase
+    .from('reglas_de_los_mensajes')
+    .select('clave, motivo')
+    .or(`prestadora_id.is.null,prestadora_id.eq.${prestadoraId}`);
 
   if (error) {
     console.error('Error consultando reglas_de_los_mensajes:', error.message);
@@ -129,6 +139,7 @@ export async function mensajesDeLaConversacion({ conversacion, desde = null }) {
   let consulta = supabase
     .from('mensajes_marketplace')
     .select('id, lado, cuerpo, automatico, created_at, leido_at, regla_tapada')
+    .eq('prestadora_id', conversacion.prestadora_id)
     .eq('conversacion_id', conversacion.id);
 
   if (desde) consulta = consulta.gt('created_at', desde);
@@ -140,7 +151,7 @@ export async function mensajesDeLaConversacion({ conversacion, desde = null }) {
   if (error) throw error;
 
   const hayTapado = (data || []).some((m) => m.regla_tapada);
-  const motivos = hayTapado ? await motivosDelCatalogo() : {};
+  const motivos = hayTapado ? await motivosDelCatalogo(conversacion.prestadora_id) : {};
 
   return (data || []).map((m) => mensajeHaciaAfuera(m, motivos));
 }
@@ -152,6 +163,7 @@ export async function marcarLeido({ conversacion, lado }) {
   await supabase
     .from('mensajes_marketplace')
     .update({ leido_at: new Date().toISOString() })
+    .eq('prestadora_id', conversacion.prestadora_id)
     .eq('conversacion_id', conversacion.id)
     .eq('lado', delOtro)
     .is('leido_at', null);
@@ -182,6 +194,7 @@ export async function escribirMensaje({ conversacion, lado, autorUsuarioId, cuer
   await supabase
     .from('conversaciones_marketplace')
     .update({ ultimo_mensaje_at: data.created_at })
+    .eq('prestadora_id', conversacion.prestadora_id)
     .eq('id', conversacion.id);
 
   avisarAlOtroLado({ conversacion, lado });
@@ -198,8 +211,8 @@ function avisarAlOtroLado({ conversacion, lado }) {
   };
   const envio =
     lado === LADO.FAMILIA
-      ? enviarPushAsistente(conversacion.asistente_id, { ...aviso, url: `/mensajes/${conversacion.id}` })
-      : enviarPushFamilia(conversacion.familia_id, { ...aviso, url: `/mensajes/${conversacion.id}` });
+      ? enviarPushAsistente(conversacion.prestadora_id, conversacion.asistente_id, { ...aviso, url: `/mensajes/${conversacion.id}` })
+      : enviarPushFamilia(conversacion.prestadora_id, conversacion.familia_id, { ...aviso, url: `/mensajes/${conversacion.id}` });
 
   envio.catch((err) => console.error('Error enviando push de mensaje del Marketplace:', err.message));
 }
@@ -247,6 +260,7 @@ export async function abrirVideollamada({ conversacion, lado, autorUsuarioId }) 
   const { error } = await supabase
     .from('conversaciones_marketplace')
     .update({ sala_videollamada: sala, sala_abierta_at: abiertaAt })
+    .eq('prestadora_id', conversacion.prestadora_id)
     .eq('id', conversacion.id);
   if (error) throw error;
 

@@ -82,7 +82,7 @@ export async function avisarElPrimerCobroQueViene({ avisar = enviarPushFamilia }
 
     let salio = false;
     try {
-      salio = await avisar(acceso.familia_id, textoDelAviso(acceso, await idiomaDeLaPrestadora(acceso.prestadora_id)));
+      salio = await avisar(acceso.prestadora_id, acceso.familia_id, textoDelAviso(acceso, await idiomaDeLaPrestadora(acceso.prestadora_id)));
     } catch (falla) {
       console.error('No se pudo avisar del primer cobro a una Familia:', falla.message);
       continue;

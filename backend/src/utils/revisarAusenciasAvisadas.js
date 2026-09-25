@@ -48,38 +48,47 @@ const EVENTO_POR_CLASE = {
   [COMO_LLEGO.DE_GOLPE]: 'ausencia_de_golpe',
 };
 
+// Se recorre de a una Prestadora por vez, y ninguna consulta mezcla dos: el motor entra con la
+// llave de servicio, que se saltea la protección por fila, así que lo único que mantiene cerrado
+// cada cajón es que cada consulta diga para cuál trabaja.
 export async function revisarAusenciasAvisadas() {
   const ahora = new Date();
   const desde = fechaISO(new Date(ahora.getTime() - DIAS_HACIA_ATRAS * MS_POR_DIA));
   const hasta = fechaISO(new Date(ahora.getTime() + DIAS_HACIA_ADELANTE * MS_POR_DIA));
 
-  // Las que todavía pueden dejar un turno sin nadie: empezaron o empiezan dentro de la ventana, y
-  // no terminaron antes de ayer. Una licencia sin fecha de vuelta sigue vigente siempre.
-  const { data: ausencias, error } = await supabase
-    .from('ausencias')
-    .select('id, prestadora_id, asistente_id, fecha_inicio, fecha_fin, avisada_en, created_at, aviso_ausencia_at, aviso_ausencia_veces, aviso_ausencia_clase')
-    .lte('fecha_inicio', hasta)
-    .or(`fecha_fin.is.null,fecha_fin.gte.${desde}`);
+  const { data: prestadoras, error } = await supabase
+    .from('prestadoras')
+    .select('id')
+    .eq('estado', 'certificada');
 
   if (error) {
-    console.error('Error consultando ausencias para avisar:', error.message);
+    console.error('Error consultando prestadoras para los avisos de ausencia:', error.message);
     return;
   }
-  if (!ausencias?.length) return;
 
-  const porPrestadora = new Map();
-  for (const ausencia of ausencias) {
-    if (!ausencia.prestadora_id || !ausencia.asistente_id) continue;
-    if (!porPrestadora.has(ausencia.prestadora_id)) porPrestadora.set(ausencia.prestadora_id, []);
-    porPrestadora.get(ausencia.prestadora_id).push(ausencia);
-  }
-
-  for (const [prestadoraId, suyas] of porPrestadora) {
-    await revisarPrestadora({ prestadoraId, ausencias: suyas, desde, hasta, ahora });
+  for (const { id: prestadoraId } of prestadoras ?? []) {
+    await revisarPrestadora({ prestadoraId, desde, hasta, ahora });
   }
 }
 
-async function revisarPrestadora({ prestadoraId, ausencias, desde, hasta, ahora }) {
+async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
+  // Las que todavía pueden dejar un turno sin nadie: empezaron o empiezan dentro de la ventana, y
+  // no terminaron antes de ayer. Una licencia sin fecha de vuelta sigue vigente siempre.
+  const { data: todas, error: errorAusencias } = await supabase
+    .from('ausencias')
+    .select('id, asistente_id, fecha_inicio, fecha_fin, avisada_en, created_at, aviso_ausencia_at, aviso_ausencia_veces, aviso_ausencia_clase')
+    .eq('prestadora_id', prestadoraId)
+    .lte('fecha_inicio', hasta)
+    .or(`fecha_fin.is.null,fecha_fin.gte.${desde}`);
+
+  if (errorAusencias) {
+    console.error(`Error consultando ausencias para avisar (prestadora ${prestadoraId}):`, errorAusencias.message);
+    return;
+  }
+
+  const ausencias = (todas ?? []).filter((a) => a.asistente_id);
+  if (!ausencias.length) return;
+
   // Sin fila de configuración corren los valores de fábrica: que una Prestadora no haya tocado
   // nada no puede dejarla sin avisos.
   const { data: configuracion, error: errorConfig } = await supabase
@@ -122,7 +131,7 @@ async function revisarPrestadora({ prestadoraId, ausencias, desde, hasta, ahora 
   // de ese tamaño depende con qué urgencia sale la Coordinadora a taparlo.
   let pacientesPorGuardia;
   try {
-    pacientesPorGuardia = await pacientesDeGuardias(guardias ?? [], 'id, nombre');
+    pacientesPorGuardia = await pacientesDeGuardias(prestadoraId, guardias ?? [], 'id, nombre');
   } catch (e) {
     console.error(`Error leyendo los Pacientes de las guardias de los ausentes (prestadora ${prestadoraId}):`, e.message);
     return;
@@ -175,6 +184,7 @@ async function revisarPrestadora({ prestadoraId, ausencias, desde, hasta, ahora 
         aviso_ausencia_veces: veces,
         aviso_ausencia_clase: como,
       })
+      .eq('prestadora_id', prestadoraId)
       .eq('id', ausencia.id);
     if (errorUpdate) {
       console.error(`Error marcando el aviso de ausencia (${ausencia.id}):`, errorUpdate.message);

@@ -57,6 +57,7 @@ appFamiliasMedicacionRouter.get('/:pacienteId', requiereRolFamilia, exigeVisible
   const { data, error } = await supabase
     .from('indicaciones_medicacion')
     .select('id, medicamento, dosis, frecuencia, via_administracion, fecha_desde, fecha_hasta, estado, motivo_rechazo, created_at')
+    .eq('prestadora_id', paciente.prestadora_id)
     .eq('paciente_id', paciente.id)
     .order('created_at', { ascending: false });
   if (error) return responderError(res, error);

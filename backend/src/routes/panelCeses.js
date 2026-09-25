@@ -93,11 +93,12 @@ panelCesesRouter.post(
     // baja una persona de a uno, apretando un botón por vez.
     const documentos = { ...cese.documentos_generados, [tipo]: { ruta, generado_en: new Date().toISOString() } };
 
-    const { data: apuntado, error: errorUpdate } = await supabase
+    let apuntar = supabase
       .from('ceses')
       .update({ documentos_generados: documentos })
-      .eq('id', cese.id)
-      .select('id');
+      .eq('id', cese.id);
+    apuntar = acotarAPrestadora(apuntar, req.usuarioPanel);
+    const { data: apuntado, error: errorUpdate } = await apuntar.select('id');
     if (errorUpdate) {
       return responderError(res, errorUpdate);
     }

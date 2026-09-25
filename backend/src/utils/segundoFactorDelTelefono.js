@@ -34,5 +34,9 @@ import { telefonoConfirmadoPorLaPrestadora } from './habilitarCambioDeClave.js';
 export async function elTelefonoSirveDeSegundoFactor(cuenta) {
   if (!cuenta?.telefono || !cuenta?.telefono_verificado_en) return false;
   if (!(await hayViaDeTelefono(cuenta.prestadora_id))) return false;
-  return telefonoConfirmadoPorLaPrestadora({ usuarioId: cuenta.id, telefono: cuenta.telefono });
+  return telefonoConfirmadoPorLaPrestadora({
+    usuarioId: cuenta.id,
+    prestadoraId: cuenta.prestadora_id,
+    telefono: cuenta.telefono,
+  });
 }

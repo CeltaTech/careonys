@@ -89,11 +89,12 @@ panelAusenciasRouter.post(
     // El archivo ya está subido: lo único que falta es que la ausencia lo apunte. Si esa fila ya
     // no está, el certificado queda arriba sin dueño y nadie lo va a encontrar nunca — así que
     // eso se dice, no se contesta que salió todo bien.
-    const { data: apuntada, error: errorUpdate } = await supabase
+    let apuntar = supabase
       .from('ausencias')
       .update({ certificado_url: ruta })
-      .eq('id', ausencia.id)
-      .select('id');
+      .eq('id', ausencia.id);
+    apuntar = acotarAPrestadora(apuntar, req.usuarioPanel);
+    const { data: apuntada, error: errorUpdate } = await apuntar.select('id');
     if (errorUpdate) {
       return responderError(res, errorUpdate);
     }
@@ -111,7 +112,9 @@ panelAusenciasRouter.get('/:id/certificado-url', requiereRolPanel, exigirOrganiz
     return res.status(404).json({ error: 'Ausencia no encontrada' });
   }
 
-  const { data: fila } = await supabase.from('ausencias').select('certificado_url').eq('id', ausencia.id).single();
+  let consultaCertificado = supabase.from('ausencias').select('certificado_url').eq('id', ausencia.id);
+  consultaCertificado = acotarAPrestadora(consultaCertificado, req.usuarioPanel);
+  const { data: fila } = await consultaCertificado.single();
   if (!fila?.certificado_url) {
     return res.status(404).json({ error: 'Esta ausencia no tiene certificado cargado' });
   }

@@ -41,7 +41,7 @@ const VIGENCIA_DEL_CODIGO_MINUTOS = 10;
 // fila —apuntando a sí mismo, que es lo que deja resolver de una consulta a qué Familia pertenece
 // alguien—, pero él no entra en esta cuenta: ve todo siempre, y ninguna instrucción le puede
 // quitar nada, ni siquiera una suya.
-async function personasDelCirculo(familiaId) {
+async function personasDelCirculo(familiaId, prestadoraId) {
   const { data, error } = await supabase
     .from('miembros_familia')
     .select('usuario_id, email, created_at, usuarios!miembros_familia_usuario_id_fkey(nombre)')
@@ -51,7 +51,7 @@ async function personasDelCirculo(familiaId) {
 
   // La fila del titular guarda su cuenta, y `familiaId` es el Legajo: para reconocerla hay que
   // pedir de qué cuenta cuelga ese Legajo.
-  const cuentaDelTitular = await cuentaDeLaFicha('familias', familiaId);
+  const cuentaDelTitular = await cuentaDeLaFicha('familias', familiaId, prestadoraId);
 
   return (data ?? [])
     .filter((fila) => fila.usuario_id !== cuentaDelTitular)
@@ -62,9 +62,14 @@ async function personasDelCirculo(familiaId) {
     }));
 }
 
-async function nombreDe(usuarioId) {
-  if (!usuarioId) return null;
-  const { data } = await supabase.from('usuarios').select('nombre').eq('id', usuarioId).maybeSingle();
+async function nombreDe(usuarioId, prestadoraId) {
+  if (!usuarioId || !prestadoraId) return null;
+  const { data } = await supabase
+    .from('usuarios')
+    .select('nombre')
+    .eq('prestadora_id', prestadoraId)
+    .eq('id', usuarioId)
+    .maybeSingle();
   return data?.nombre ?? null;
 }
 
@@ -76,16 +81,21 @@ async function nombreDe(usuarioId) {
 // completa con el valor de fábrica: guardar sólo lo que vino dejaría filas ausentes, y una fila
 // ausente para la base significa «no».
 export async function crearInstruccion({ familiaId, prestadoraId, cargadaPor, accesosPedidos }) {
+  if (!prestadoraId) throw new ErrorConMotivo('faltan_datos', 'Falta la Prestadora');
+
+  // La Prestadora se nombra en la consulta y no se comprueba después sobre la fila leída: una
+  // Familia de otra Organización no se encuentra, en vez de encontrarse y descartarse.
   const { data: familia } = await supabase
     .from('familias')
-    .select('id, prestadora_id')
+    .select('id')
+    .eq('prestadora_id', prestadoraId)
     .eq('id', familiaId)
     .maybeSingle();
-  if (!familia || familia.prestadora_id !== prestadoraId) {
+  if (!familia) {
     throw new ErrorConMotivo('no_encontrado', 'Familia no encontrada');
   }
 
-  const personas = await personasDelCirculo(familiaId);
+  const personas = await personasDelCirculo(familiaId, prestadoraId);
   if (personas.length === 0) {
     throw new ErrorConMotivo('circulo_vacio', 'Esta Familia no tiene a nadie anotado en su círculo');
   }
@@ -105,8 +115,10 @@ export async function crearInstruccion({ familiaId, prestadoraId, cargadaPor, ac
 
   const texto = textoDeLaInstruccion({
     prestadora: { nombre: prestadora?.nombre_fantasia },
-    titular: { nombre: await nombreDe(await cuentaDeLaFicha('familias', familiaId)) },
-    cargadaPor: { nombre: await nombreDe(cargadaPor) },
+    titular: {
+      nombre: await nombreDe(await cuentaDeLaFicha('familias', familiaId, prestadoraId), prestadoraId),
+    },
+    cargadaPor: { nombre: await nombreDe(cargadaPor, prestadoraId) },
     personas: decidido.map((persona) => ({
       nombre: persona.nombre,
       email: persona.email,
@@ -120,6 +132,7 @@ export async function crearInstruccion({ familiaId, prestadoraId, cargadaPor, ac
   const { error: errorAnular } = await supabase
     .from('instrucciones_acceso_circulo')
     .update({ estado: 'anulada' })
+    .eq('prestadora_id', prestadoraId)
     .eq('familia_id', familiaId)
     .eq('estado', 'pendiente_firma');
   if (errorAnular) throw new Error(errorAnular.message);
@@ -158,10 +171,13 @@ export async function crearInstruccion({ familiaId, prestadoraId, cargadaPor, ac
 
 // Lo que está esperando firma, si hay algo. Lo miran las dos puntas: el Panel para mostrar que
 // quedó pendiente, y la aplicación del titular para ofrecerle firmarla.
-export async function instruccionPendiente(familiaId) {
+export async function instruccionPendiente(familiaId, prestadoraId) {
+  if (!familiaId || !prestadoraId) return null;
+
   const { data } = await supabase
     .from('instrucciones_acceso_circulo')
     .select('id, documento_texto, documento_idioma, created_at')
+    .eq('prestadora_id', prestadoraId)
     .eq('familia_id', familiaId)
     .eq('estado', 'pendiente_firma')
     .maybeSingle();
@@ -172,10 +188,13 @@ export async function instruccionPendiente(familiaId) {
 // La última que quedó firmada, para que la pantalla del Panel diga desde cuándo rige lo que rige y
 // cómo se cerró. Las anuladas no cuentan: son las que quedaron a mitad de camino cuando llegó una
 // instrucción nueva, y nadie las firmó nunca.
-export async function ultimaInstruccionCerrada(familiaId) {
+export async function ultimaInstruccionCerrada(familiaId, prestadoraId) {
+  if (!familiaId || !prestadoraId) return null;
+
   const { data } = await supabase
     .from('instrucciones_acceso_circulo')
     .select('id, documento_texto, documento_idioma, created_at, cerrada_en, cerrada_como')
+    .eq('prestadora_id', prestadoraId)
     .eq('familia_id', familiaId)
     .eq('estado', 'cerrada')
     .order('created_at', { ascending: false })
@@ -189,10 +208,13 @@ export async function ultimaInstruccionCerrada(familiaId) {
 // Prestadora tiene WhatsApp configurado, y si no —o si el envío falla— al correo, que es el único
 // canal que siempre existe. Nunca se pierde la confirmación por un problema de un canal; mismo
 // criterio que los avisos al Coordinador.
-export async function pedirCodigo({ instruccionId, familiaId }) {
+export async function pedirCodigo({ instruccionId, familiaId, prestadoraId }) {
+  if (!prestadoraId) throw new ErrorConMotivo('faltan_datos', 'Falta la Prestadora');
+
   const { data: instruccion } = await supabase
     .from('instrucciones_acceso_circulo')
     .select('id, prestadora_id, estado')
+    .eq('prestadora_id', prestadoraId)
     .eq('id', instruccionId)
     .eq('familia_id', familiaId)
     .maybeSingle();
@@ -209,6 +231,7 @@ export async function pedirCodigo({ instruccionId, familiaId }) {
   const { error } = await supabase
     .from('instrucciones_acceso_circulo')
     .update(campos)
+    .eq('prestadora_id', prestadoraId)
     .eq('id', instruccionId);
   if (error) throw new Error(error.message);
 
@@ -219,7 +242,7 @@ export async function pedirCodigo({ instruccionId, familiaId }) {
     .maybeSingle();
 
   // `familiaId` es el Legajo; el teléfono es de la persona y vive en la cuenta de la que cuelga.
-  const cuentasTitular = await cuentasDeLasFichas('familias', [familiaId], 'telefono');
+  const cuentasTitular = await cuentasDeLasFichas('familias', [familiaId], 'telefono', prestadoraId);
   const titular = cuentasTitular.get(familiaId) ?? null;
 
   const remite = prestadora?.nombre_fantasia ?? '';
@@ -250,7 +273,10 @@ export async function pedirCodigo({ instruccionId, familiaId }) {
   }
 
   // `familiaId` es el Legajo; el correo es de la persona y vive en la cuenta de la que cuelga.
-  const correoTitular = await correoDe(await cuentaDeLaFicha('familias', familiaId));
+  const correoTitular = await correoDe({
+    prestadoraId,
+    usuarioId: await cuentaDeLaFicha('familias', familiaId, prestadoraId),
+  });
   if (!correoTitular) {
     throw new ErrorConMotivo('sin_canal', 'No hay a dónde mandar el código');
   }
@@ -268,10 +294,13 @@ export async function pedirCodigo({ instruccionId, familiaId }) {
 // Cierra la instrucción con el código. Devuelve el motivo del rechazo en vez de lanzarlo, porque
 // la pantalla tiene que poder decir cosas distintas: no es lo mismo «el código no es» que «se
 // venció» o «probó demasiadas veces, pida uno nuevo».
-export async function confirmarConCodigo({ instruccionId, familiaId, codigo, desde }) {
+export async function confirmarConCodigo({ instruccionId, familiaId, prestadoraId, codigo, desde }) {
+  if (!prestadoraId) return { ok: false, motivo: 'no_encontrado' };
+
   const { data: instruccion } = await supabase
     .from('instrucciones_acceso_circulo')
     .select('id, estado, codigo_huella, codigo_expira_en')
+    .eq('prestadora_id', prestadoraId)
     .eq('id', instruccionId)
     .eq('familia_id', familiaId)
     .maybeSingle();
@@ -287,7 +316,11 @@ export async function confirmarConCodigo({ instruccionId, familiaId, codigo, des
 
   // La suma la hace la base en un solo paso. Antes se leía y se escribía por separado, y dos
   // intentos a la vez contaban como uno (pendiente #177).
-  const intentos = await sumarIntento({ tabla: 'instrucciones_acceso_circulo', id: instruccionId });
+  const intentos = await sumarIntento({
+    tabla: 'instrucciones_acceso_circulo',
+    id: instruccionId,
+    prestadoraId,
+  });
   if (seAgotaronLosIntentos(intentos)) return { ok: false, motivo: 'demasiados_intentos' };
 
   if (!codigoCoincide(codigo, instruccion.codigo_huella)) {
@@ -305,6 +338,7 @@ export async function confirmarConCodigo({ instruccionId, familiaId, codigo, des
       codigo_huella: null,
       codigo_expira_en: null,
     })
+    .eq('prestadora_id', prestadoraId)
     .eq('id', instruccionId)
     .eq('estado', 'pendiente_firma');
   if (error) throw new Error(error.message);
@@ -335,6 +369,7 @@ export async function cerrarConPapelFirmado({ instruccionId, prestadoraId, archi
       cerrada_en: new Date().toISOString(),
       archivo_firmado_url: archivoUrl,
     })
+    .eq('prestadora_id', prestadoraId)
     .eq('id', instruccionId)
     .eq('estado', 'pendiente_firma');
   if (error) throw new Error(error.message);
@@ -343,7 +378,7 @@ export async function cerrarConPapelFirmado({ instruccionId, prestadoraId, archi
 // Las once claves con lo decidido para cada persona del círculo, que es lo que dibuja la pantalla
 // del Panel. Se devuelve siempre el catálogo entero, tenga o no fila guardada cada clave.
 export async function circuloConSusAccesos({ familiaId, prestadoraId }) {
-  const personas = await personasDelCirculo(familiaId);
+  const personas = await personasDelCirculo(familiaId, prestadoraId);
   if (personas.length === 0) return [];
 
   const { data: filas } = await supabase

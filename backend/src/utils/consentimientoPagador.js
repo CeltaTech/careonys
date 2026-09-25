@@ -46,6 +46,7 @@ async function familiaConSuPagador({ familiaId, prestadoraId }) {
   const { data: familia } = await supabase
     .from('familias')
     .select('id, prestadora_id, pagador_legajo_id, financiador_tipo')
+    .eq('prestadora_id', prestadoraId)
     .eq('id', familiaId)
     .maybeSingle();
 
@@ -55,11 +56,16 @@ async function familiaConSuPagador({ familiaId, prestadoraId }) {
   return familia;
 }
 
-async function legajo(legajoId) {
+async function legajo({ legajoId, prestadoraId }) {
   if (!legajoId) return null;
+  if (!prestadoraId) {
+    throw new ErrorConMotivo('faltan_datos', 'No se lee un Legajo sin saber de qué Organización es');
+  }
+
   const { data } = await supabase
     .from('legajos')
     .select('id, nombre_visible, clase, documento_tipo, documento_numero, apoderado_legajo_id')
+    .eq('prestadora_id', prestadoraId)
     .eq('id', legajoId)
     .maybeSingle();
   if (!data) return null;
@@ -82,9 +88,9 @@ async function legajo(legajoId) {
 // Devuelve nulo cuando paga una persona física, y también cuando paga una entidad que todavía no
 // tiene Apoderado configurado. Ese segundo caso no rompe nada: el documento se arma igual y la
 // pantalla avisa que falta. No bloquear es la regla, acá como en todo lo demás.
-async function apoderadoDe(pagador) {
+async function apoderadoDe(pagador, prestadoraId) {
   if (pagador?.clase !== 'juridica' || !pagador.apoderadoLegajoId) return null;
-  return legajo(pagador.apoderadoLegajoId);
+  return legajo({ legajoId: pagador.apoderadoLegajoId, prestadoraId });
 }
 
 // Arma el documento con lo de esta contratación, lo guarda tal cual y lo deja esperando firma.
@@ -97,7 +103,7 @@ export async function crearConsentimiento({ familiaId, prestadoraId, cargadoPor 
     throw new ErrorConMotivo('sin_pagador', 'Esta contratación todavía no tiene Pagador elegido');
   }
 
-  const pagador = await legajo(familia.pagador_legajo_id);
+  const pagador = await legajo({ legajoId: familia.pagador_legajo_id, prestadoraId });
   if (!pagador) {
     throw new ErrorConMotivo('no_encontrado', 'El Legajo del Pagador no existe');
   }
@@ -105,8 +111,8 @@ export async function crearConsentimiento({ familiaId, prestadoraId, cargadoPor 
   const [{ cuerpo, idioma }, { data: prestadora }, cliente, apoderado] = await Promise.all([
     cuerpoVigente({ prestadoraId }),
     supabase.from('prestadoras').select('nombre_fantasia').eq('id', prestadoraId).maybeSingle(),
-    nombreDeLaContratacion(familiaId),
-    apoderadoDe(pagador),
+    nombreDeLaContratacion({ familiaId, prestadoraId }),
+    apoderadoDe(pagador, prestadoraId),
   ]);
 
   const texto = textoDelConsentimiento({
@@ -122,6 +128,7 @@ export async function crearConsentimiento({ familiaId, prestadoraId, cargadoPor 
   const { error: errorAnular } = await supabase
     .from('consentimientos_pagador')
     .update({ estado: 'anulado' })
+    .eq('prestadora_id', prestadoraId)
     .eq('familia_id', familiaId)
     .eq('estado', 'pendiente_firma');
   if (errorAnular) throw new Error(errorAnular.message);
@@ -153,10 +160,11 @@ export async function crearConsentimiento({ familiaId, prestadoraId, cargadoPor 
 // que es lo mismo que la pantalla muestra: quien firma tiene que reconocer por quién se obliga.
 // El nombre visible se calcula al mostrarlo y no se guarda (CLAUDE.md del producto §6); acá se
 // escribe adentro del documento porque un documento firmado no se recalcula nunca más.
-async function nombreDeLaContratacion(familiaId) {
+async function nombreDeLaContratacion({ familiaId, prestadoraId }) {
   const { data } = await supabase
     .from('pacientes')
     .select('nombre, created_at')
+    .eq('prestadora_id', prestadoraId)
     .eq('familia_id', familiaId)
     .is('deleted_at', null)
     .order('created_at', { ascending: true })
@@ -189,6 +197,7 @@ export async function cerrarConPapelFirmado({ consentimientoId, prestadoraId, ar
       cerrado_en: new Date().toISOString(),
       archivo_firmado_url: archivoUrl,
     })
+    .eq('prestadora_id', prestadoraId)
     .eq('id', consentimientoId)
     .eq('estado', 'pendiente_firma');
   if (error) throw new Error(error.message);
@@ -223,12 +232,13 @@ export async function estadoDelPagador({ familiaId, prestadoraId }) {
   const familia = await familiaConSuPagador({ familiaId, prestadoraId });
 
   const [pagador, { data: consentimientos }, papeles] = await Promise.all([
-    legajo(familia.pagador_legajo_id),
+    legajo({ legajoId: familia.pagador_legajo_id, prestadoraId }),
     supabase
       .from('consentimientos_pagador')
       // El texto viene entero: la pantalla lo muestra tal como se guardó, y armarlo de nuevo para
       // mostrarlo daría otro documento el día que la Prestadora cambie su modelo.
       .select('id, estado, pagador_legajo_id, pagador_nombre, firmante_nombre, documento_texto, documento_idioma, archivo_firmado_url, cerrado_como, cerrado_en, created_at')
+      .eq('prestadora_id', prestadoraId)
       .eq('familia_id', familiaId)
       .in('estado', ['pendiente_firma', 'cerrado'])
       .order('created_at', { ascending: false }),
@@ -248,7 +258,7 @@ export async function estadoDelPagador({ familiaId, prestadoraId }) {
   // Si paga una entidad, quien firma es su Apoderado. Que no lo tenga configurado no impide nada
   // —el documento se arma igual—, pero saldría sin decir qué persona lo firma, y eso se avisa
   // antes y no después.
-  const apoderado = await apoderadoDe(pagador);
+  const apoderado = await apoderadoDe(pagador, prestadoraId);
   const faltaApoderado = Boolean(pagador && pagador.clase === 'juridica' && !apoderado);
 
   return {
@@ -290,6 +300,7 @@ export async function papelesDelPagador({ familiaId, prestadoraId, financiadorTi
   const { data: cargados } = await supabase
     .from('documentos_pagador')
     .select('id, tipo_documento_id, archivo_url, fecha_vencimiento, created_at')
+    .eq('prestadora_id', prestadoraId)
     .eq('familia_id', familiaId);
 
   const porTipo = new Map((cargados ?? []).map((fila) => [fila.tipo_documento_id, fila]));

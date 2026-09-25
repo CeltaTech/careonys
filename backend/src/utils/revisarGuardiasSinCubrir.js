@@ -34,26 +34,47 @@ const DIAS_HACIA_ATRAS = 1;
 
 const MS_POR_HORA = 60 * 60 * 1000;
 
+// Se recorre de a una Prestadora por vez, y su configuración se lee con su propio filtro: el motor
+// entra con la llave de servicio, que se saltea la protección por fila, así que lo único que
+// mantiene cerrado cada cajón es que cada consulta diga para cuál trabaja.
 export async function revisarGuardiasSinCubrir() {
-  const { data: configuraciones, error } = await supabase
-    .from('configuracion_aviso_guardia_sin_cubrir')
-    .select('prestadora_id, horas_antes, horas_entre_avisos')
-    .eq('activo', true);
+  const { data: prestadoras, error } = await supabase
+    .from('prestadoras')
+    .select('id')
+    .eq('estado', 'certificada');
 
   if (error) {
-    console.error('Error consultando configuracion_aviso_guardia_sin_cubrir:', error.message);
+    console.error('Error consultando prestadoras para el aviso de guardia sin cubrir:', error.message);
     return;
   }
-  if (!configuraciones?.length) return;
 
   const ahora = new Date();
 
-  for (const config of configuraciones) {
-    await revisarPrestadora(config, ahora);
+  for (const { id: prestadoraId } of prestadoras ?? []) {
+    await revisarPrestadora(prestadoraId, ahora);
   }
 }
 
-async function revisarPrestadora({ prestadora_id: prestadoraId, horas_antes: horasAntes, horas_entre_avisos: horasEntreAvisos }, ahora) {
+async function revisarPrestadora(prestadoraId, ahora) {
+  const { data: config, error: errorConfig } = await supabase
+    .from('configuracion_aviso_guardia_sin_cubrir')
+    .select('horas_antes, horas_entre_avisos, activo')
+    .eq('prestadora_id', prestadoraId)
+    .maybeSingle();
+
+  if (errorConfig) {
+    console.error(
+      `Error consultando configuracion_aviso_guardia_sin_cubrir (prestadora ${prestadoraId}):`,
+      errorConfig.message
+    );
+    return;
+  }
+  // Sin fila, o con el aviso apagado, esta Prestadora no quiere enterarse: no hay número que valga
+  // por defecto, porque con cuánta anticipación avisar lo decide cada una.
+  if (!config?.activo) return;
+
+  const horasAntes = config.horas_antes;
+  const horasEntreAvisos = config.horas_entre_avisos;
   const limite = new Date(ahora.getTime() + horasAntes * MS_POR_HORA);
 
   // Una sola vez por Prestadora: todos los avisos de esta vuelta los lee la misma gente.
@@ -81,7 +102,7 @@ async function revisarPrestadora({ prestadora_id: prestadoraId, horas_antes: hor
   // sale a buscar quien lo tape.
   let pacientesPorGuardia;
   try {
-    pacientesPorGuardia = await pacientesDeGuardias(guardias ?? [], 'id, nombre');
+    pacientesPorGuardia = await pacientesDeGuardias(prestadoraId, guardias ?? [], 'id, nombre');
   } catch (e) {
     console.error(`Error leyendo los Pacientes de las guardias sin cubrir (prestadora ${prestadoraId}):`, e.message);
     return;
@@ -126,6 +147,7 @@ async function revisarPrestadora({ prestadora_id: prestadoraId, horas_antes: hor
     const { error: errorUpdate } = await supabase
       .from('guardias')
       .update({ aviso_sin_cubrir_at: ahora.toISOString(), aviso_sin_cubrir_veces: veces })
+      .eq('prestadora_id', prestadoraId)
       .eq('id', guardia.id);
     if (errorUpdate) {
       console.error(`Error marcando el aviso de guardia sin cubrir (${guardia.id}):`, errorUpdate.message);

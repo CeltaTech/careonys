@@ -25,6 +25,11 @@ import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 // insistencia más corto). Mientras no pase ultima_notificacion_at + intervalo_actual, el
 // cron no vuelve a avisar — evita mandar el mismo aviso en cada corrida de 5 minutos.
 export async function revisarNotificacionesCoordinador() {
+  // SIN PRESTADORA A PROPÓSITO
+  // Es el arranque de un trabajo de fondo, que no tiene sesión de nadie. No trae dato de ninguna
+  // Prestadora: trae la configuración de cada una con su identificador, y a partir de ahí el
+  // trabajo recorre de a una, nombrándola en cada consulta de adentro —el idioma, la regla de las
+  // tomas, las alertas, los incidentes y las guardias sin cerrar salen todos de `config.prestadora_id`.
   const { data: configuraciones, error } = await supabase
     .from('configuracion_escalada_coordinador')
     .select('*');
@@ -102,7 +107,7 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
   // de lo que quedó sin confirmar.
   let pacientesPorGuardia;
   try {
-    pacientesPorGuardia = await pacientesDeGuardias(guardias, 'id, nombre');
+    pacientesPorGuardia = await pacientesDeGuardias(prestadoraId, guardias, 'id, nombre');
   } catch (e) {
     console.error(`Error leyendo los Pacientes de las guardias sin cerrar (prestadora ${prestadoraId}):`, e.message);
     return;
@@ -160,6 +165,7 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
       const { error: errorUpdate } = await supabase
         .from('guardias')
         .update({ aviso_sin_cerrar_at: ahora.toISOString(), aviso_sin_cerrar_veces: veces })
+        .eq('prestadora_id', prestadoraId)
         .eq('id', guardia.id);
       if (errorUpdate) {
         console.error(`Error marcando el aviso de guardia sin cerrar (${guardia.id}):`, errorUpdate.message);
@@ -178,7 +184,11 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
           minutosDeAtraso: minutosPremura,
         }),
       });
-      await supabase.from('guardias').update({ aviso_sin_cerrar_backup_at: ahora.toISOString() }).eq('id', guardia.id);
+      await supabase
+        .from('guardias')
+        .update({ aviso_sin_cerrar_backup_at: ahora.toISOString() })
+        .eq('prestadora_id', prestadoraId)
+        .eq('id', guardia.id);
     }
 
     // Los escalones que siguen: todos los Coordinadores, y después la administración. El cuerpo es
@@ -226,6 +236,7 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
       const { error: errorGrave } = await supabase
         .from('guardias')
         .update({ aviso_sin_cerrar_grave_at: ahora.toISOString() })
+        .eq('prestadora_id', prestadoraId)
         .eq('id', guardia.id);
       if (errorGrave) {
         console.error(`Error marcando el aviso grave de guardia sin cerrar (${guardia.id}):`, errorGrave.message);
@@ -269,7 +280,10 @@ function datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora, veces) {
 // los avisos de guardia sin cerrar: la fecha, las horas y los Pacientes.
 const GUARDIA_QUE_NO_SE_PUDO_LEER = { fecha: '—', horaInicio: '—', horaFin: '—', pacientes: [] };
 
-async function datosDeLasGuardias(guardiaIds) {
+// La Prestadora es obligatoria y va primero: una lista de identificadores no dice de quién es cada
+// uno, y preguntar por ellos sin nombrarla alcanzaría guardias de otra Organización
+// (`celtatech\CLAUDE.md` §5).
+async function datosDeLasGuardias(prestadoraId, guardiaIds) {
   const ids = [...new Set((guardiaIds ?? []).filter(Boolean))];
   const mapa = new Map();
   if (ids.length === 0) return mapa;
@@ -277,6 +291,7 @@ async function datosDeLasGuardias(guardiaIds) {
   const { data: guardias, error } = await supabase
     .from('guardias')
     .select('id, fecha, hora_inicio, hora_fin, paciente_id')
+    .eq('prestadora_id', prestadoraId)
     .in('id', ids);
   if (error) {
     console.error('Error leyendo las guardias de los avisos:', error.message);
@@ -285,7 +300,7 @@ async function datosDeLasGuardias(guardiaIds) {
 
   let pacientesPorGuardia = new Map();
   try {
-    pacientesPorGuardia = await pacientesDeGuardias(guardias ?? [], 'id, nombre');
+    pacientesPorGuardia = await pacientesDeGuardias(prestadoraId, guardias ?? [], 'id, nombre');
   } catch (err) {
     console.error('Error leyendo los Pacientes de las guardias de los avisos:', err.message);
   }
@@ -336,7 +351,7 @@ async function revisarAlertas(config, ahora, idioma, reglaDeLasTomas) {
     tipo: TIPOS_DE_ALARMA.ALERTA_TEMPRANA,
   });
 
-  const guardias = await datosDeLasGuardias((alertas ?? []).map((a) => a.guardia_id));
+  const guardias = await datosDeLasGuardias(prestadoraId, (alertas ?? []).map((a) => a.guardia_id));
 
   for (const alerta of alertas ?? []) {
     if (tomadas.has(alerta.id)) continue;
@@ -369,6 +384,7 @@ async function revisarAlertas(config, ahora, idioma, reglaDeLasTomas) {
       await supabase
         .from('alertas_tempranas_guardia')
         .update({ ultima_notificacion_at: ahora.toISOString(), veces_notificado: (alerta.veces_notificado ?? 0) + 1 })
+        .eq('prestadora_id', prestadoraId)
         .eq('id', alerta.id);
     }
 
@@ -379,7 +395,11 @@ async function revisarAlertas(config, ahora, idioma, reglaDeLasTomas) {
         idioma,
         ...aviso('alerta_temprana_respaldo', idioma, { ...guardia, minutos: minutosPremura }),
       });
-      await supabase.from('alertas_tempranas_guardia').update({ backup_notificado_at: ahora.toISOString() }).eq('id', alerta.id);
+      await supabase
+        .from('alertas_tempranas_guardia')
+        .update({ backup_notificado_at: ahora.toISOString() })
+        .eq('prestadora_id', prestadoraId)
+        .eq('id', alerta.id);
     }
 
     // Ver el comentario de las guardias sin cerrar.
@@ -434,7 +454,7 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
     tipo: TIPOS_DE_ALARMA.INCIDENTE_RELEVO,
   });
 
-  const guardias = await datosDeLasGuardias((incidentes ?? []).map((i) => i.guardia_entrante_id));
+  const guardias = await datosDeLasGuardias(prestadoraId, (incidentes ?? []).map((i) => i.guardia_entrante_id));
 
   for (const incidente of incidentes ?? []) {
     if (tomadas.has(incidente.id)) continue;
@@ -462,6 +482,7 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
       await supabase
         .from('incidentes_relevo')
         .update({ ultima_notificacion_at: ahora.toISOString(), veces_notificado: (incidente.veces_notificado ?? 0) + 1 })
+        .eq('prestadora_id', prestadoraId)
         .eq('id', incidente.id);
     }
 
@@ -472,7 +493,11 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
         idioma,
         ...aviso('incidente_relevo_respaldo', idioma, { ...guardia, minutos: minutosPremura }),
       });
-      await supabase.from('incidentes_relevo').update({ backup_notificado_at: ahora.toISOString() }).eq('id', incidente.id);
+      await supabase
+        .from('incidentes_relevo')
+        .update({ backup_notificado_at: ahora.toISOString() })
+        .eq('prestadora_id', prestadoraId)
+        .eq('id', incidente.id);
     }
 
     // Ver el comentario de las guardias sin cerrar.
@@ -518,7 +543,11 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
           ...loQueSeHizo,
         }),
       });
-      await supabase.from('incidentes_relevo').update({ fase_automatica_notificada_at: ahora.toISOString() }).eq('id', incidente.id);
+      await supabase
+        .from('incidentes_relevo')
+        .update({ fase_automatica_notificada_at: ahora.toISOString() })
+        .eq('prestadora_id', prestadoraId)
+        .eq('id', incidente.id);
     }
   }
 }
@@ -542,6 +571,7 @@ async function notificarFamiliaSiCorresponde({ evento, prestadoraId, guardiaId, 
   const { data: guardia } = await supabase
     .from('guardias')
     .select('id, paciente_id')
+    .eq('prestadora_id', prestadoraId)
     .eq('id', guardiaId)
     .single();
   if (!guardia) return;
@@ -551,7 +581,7 @@ async function notificarFamiliaSiCorresponde({ evento, prestadoraId, guardiaId, 
   // primero, y no enterarse es exactamente lo que este aviso existe para evitar.
   let familiaIds;
   try {
-    const pacientes = await pacientesDeGuardia(guardia, 'id, familia_id');
+    const pacientes = await pacientesDeGuardia(prestadoraId, guardia, 'id, familia_id');
     familiaIds = [...new Set(pacientes.map((p) => p.familia_id).filter(Boolean))];
   } catch (err) {
     console.error(`Error leyendo los Pacientes de la guardia ${guardiaId}:`, err.message);
@@ -560,7 +590,7 @@ async function notificarFamiliaSiCorresponde({ evento, prestadoraId, guardiaId, 
   if (familiaIds.length === 0) return;
 
   // Los identificadores son de Legajo; el teléfono es de la persona y vive en su cuenta.
-  const cuentas = await cuentasDeLasFichas('familias', familiaIds, 'telefono');
+  const cuentas = await cuentasDeLasFichas('familias', familiaIds, 'telefono', prestadoraId);
   const telefonoPorFamilia = new Map([...cuentas].map(([id, datos]) => [id, datos?.telefono ?? null]));
 
   // El aviso de la Familia es suyo: dice cuál es la guardia y qué pasó, y nada más. Ni el nivel
@@ -569,7 +599,7 @@ async function notificarFamiliaSiCorresponde({ evento, prestadoraId, guardiaId, 
   const { titulo, cuerpo } = textos;
 
   for (const familiaId of familiaIds) {
-    await enviarPushFamilia(familiaId, { titulo, cuerpo, url: '/' });
+    await enviarPushFamilia(prestadoraId, familiaId, { titulo, cuerpo, url: '/' });
 
     const telefono = telefonoPorFamilia.get(familiaId);
     if (!telefono) continue;
@@ -592,6 +622,7 @@ async function notificarCoordinadorBackup({ backupId, prestadoraId, texto, idiom
   const { data: usuario } = await supabase
     .from('usuarios')
     .select('telefono')
+    .eq('prestadora_id', prestadoraId)
     .eq('id', backupId)
     .single();
 
@@ -611,7 +642,7 @@ async function notificarCoordinadorBackup({ backupId, prestadoraId, texto, idiom
   // ese canal no está andando cae al correo general de la Prestadora, que es el que ya recibió la
   // insistencia: el escalón se quedaría sin llegarle justamente a quien tenía que reaccionar. Que
   // reciba las dos cosas cuando el WhatsApp sí sale es preferible a que no reciba ninguna.
-  const correo = await correoDe(backupId);
+  const correo = await correoDe({ prestadoraId, usuarioId: backupId });
   if (!correo) return;
   try {
     await enviarEmail({ to: correo, asunto: textos.asunto, texto, prestadoraId });

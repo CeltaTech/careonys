@@ -32,6 +32,9 @@ export async function resolverPrestadoraPublica(req, res, next) {
     return res.status(404).json({ error: 'prestadora_no_reconocida' });
   }
 
+  // SIN PRESTADORA A PROPÓSITO
+  // Es la consulta que resuelve cuál es la Prestadora, a partir de la dirección por la que entró
+  // quien todavía no tiene sesión. Pedirle que ya la sepa sería circular.
   const { data, error } = await supabase
     .from('configuracion_prestadora')
     .select('*')

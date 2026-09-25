@@ -74,6 +74,11 @@ async function guardarDesafio(desafio, { para, rol, usuarioId = null, prestadora
  * la misma firma no pasan los dos. El que llega segundo no encuentra nada que actualizar.
  */
 async function gastarDesafio(desafio, { para, rol }) {
+  // SIN PRESTADORA A PROPÓSITO
+  // Quien está entrando no tiene sesión, así que no hay ninguna Organización de la cual sacar el
+  // filtro. El desafío se busca por el número al azar que emitió el propio motor hace menos de dos
+  // minutos: esa fila es la que dice de qué Prestadora se trata, y no al revés. La escritura que
+  // viene después sí la nombra, y sale de esta misma fila.
   const { data: fila } = await supabase
     .from('desafios_de_llave')
     .select('id, para, rol, usuario_id, prestadora_id, vence_en, usado_en')
@@ -85,11 +90,18 @@ async function gastarDesafio(desafio, { para, rol }) {
   if (fila.usado_en) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
   if (desafioVencido(fila.vence_en)) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
 
-  const { data: gastado } = await supabase
+  // La Organización sale de la fila que se acaba de leer, y se nombra en la escritura. El
+  // desafío de entrada la tiene en nulo a propósito —se emite antes de saber quién está
+  // entrando, y así lo exige la restricción `desafios_de_llave_el_alta_sabe_de_quien_es`—, así
+  // que ahí se compara contra nulo, que es exactamente lo que esa fila tiene.
+  const gastar = supabase
     .from('desafios_de_llave')
     .update({ usado_en: new Date().toISOString() })
     .eq('id', fila.id)
-    .is('usado_en', null)
+    .is('usado_en', null);
+  const { data: gastado } = await (fila.prestadora_id
+    ? gastar.eq('prestadora_id', fila.prestadora_id)
+    : gastar.is('prestadora_id', null))
     .select('id')
     .maybeSingle();
   if (!gastado) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
@@ -148,6 +160,11 @@ llaveDelDispositivoRouter.post('/entrar', async (req, res) => {
 
     const { origen, parteConfiable } = dondeViveLaApp(rol);
 
+    // SIN PRESTADORA A PROPÓSITO
+    // Quien está entrando no tiene sesión: es la puerta de calle. La llave se busca por su
+    // identificador, que es lo único que llegó, y es justamente esta fila la que dice de qué
+    // Prestadora es esta persona. Las escrituras que vienen después —revocarla, adelantar el
+    // contador— sí la nombran, y la sacan de acá.
     const { data: llave } = await supabase
       .from('llaves_de_dispositivo')
       .select('id, usuario_id, prestadora_id, rol, credencial_id, clave_publica, contador, transportes, revocada_en')
@@ -186,26 +203,32 @@ llaveDelDispositivoRouter.post('/entrar', async (req, res) => {
       // copia, deja de servir; si es la original, quien la tenga la vuelve a dar de alta con su
       // contraseña, que es una molestia mucho más chica que la alternativa.
       console.warn('Entrada con llave rechazada (contador hacia atras): llave revocada');
+      // La Organización la resuelve la llave, que es la puerta por la que se está entrando: es
+      // la fila que dice de qué Prestadora es esta persona, y se la nombra en la escritura.
       await supabase
         .from('llaves_de_dispositivo')
         .update({ revocada_en: new Date().toISOString() })
-        .eq('id', llave.id);
+        .eq('id', llave.id)
+        .eq('prestadora_id', llave.prestadora_id);
       throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
     }
 
     await supabase
       .from('llaves_de_dispositivo')
       .update({ contador: contadorNuevo, ultimo_uso_en: new Date().toISOString() })
-      .eq('id', llave.id);
+      .eq('id', llave.id)
+      .eq('prestadora_id', llave.prestadora_id);
 
     // El rol sale de la ficha y el correo de la cuenta: son dos tablas distintas, porque
-    // `usuarios` no guarda el correo (ver `correoDeUnaPersona.js`).
+    // `usuarios` no guarda el correo (ver `correoDeUnaPersona.js`). La Organización es la de la
+    // llave, y se nombra: así la cuenta que se busca es además de esa misma Prestadora.
     const { data: persona } = await supabase
       .from('usuarios')
       .select('rol')
       .eq('id', llave.usuario_id)
+      .eq('prestadora_id', llave.prestadora_id)
       .maybeSingle();
-    const email = await correoDe(llave.usuario_id);
+    const email = await correoDe({ prestadoraId: llave.prestadora_id, usuarioId: llave.usuario_id });
     if (!email || persona?.rol !== rol) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
 
     const { data: pase, error: errorPase } = await supabase.auth.admin.generateLink({
@@ -283,13 +306,15 @@ export function routerDeLlavesConSesion(rol) {
         .from('usuarios')
         .select('nombre')
         .eq('id', persona.id)
+        .eq('prestadora_id', persona.prestadoraId)
         .maybeSingle();
-      const correo = await correoDe(persona.id);
+      const correo = await correoDe({ prestadoraId: persona.prestadoraId, usuarioId: persona.id });
       if (!correo) throw new ErrorConMotivo('faltan_datos');
 
       const { data: yaTiene } = await supabase
         .from('llaves_de_dispositivo')
         .select('credencial_id, transportes')
+        .eq('prestadora_id', persona.prestadoraId)
         .eq('usuario_id', persona.id)
         .is('revocada_en', null);
 

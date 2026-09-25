@@ -122,12 +122,29 @@ beforeEach(() => {
   pedidosAlProveedor = [];
   rechazaElProveedor = false;
   respuestas.clear();
-  // Hasta cuándo se puede pagar un cupón lo elige la Prestadora. Diez días es el valor con el
-  // que nace su configuración.
-  respuestas.set('GET /rest/v1/configuracion_cobro_marketplace', [
-    { dias_de_aviso_antes_del_cobro: 3, dias_de_gracia_por_cobro_rechazado: 7, dias_de_vida_del_cupon: 10 },
-  ]);
+  respuestas.set('GET /rest/v1/configuracion_cobro_marketplace', configuracionDeCobro);
 });
+
+/** Los plazos con los que nace la configuración de una Prestadora. Diez días de cupón es el valor
+ *  de arranque, y es el que la prueba del vencimiento mide. */
+const PLAZOS = {
+  dias_de_aviso_antes_del_cobro: 3,
+  dias_de_gracia_por_cobro_rechazado: 7,
+  dias_de_vida_del_cupon: 10,
+};
+
+/** Las Prestadoras que el trabajo diario recorre, en este orden. */
+const LAS_PRESTADORAS = [PRESTADORA, OTRA_PRESTADORA];
+
+/**
+ * `configuracion_cobro_marketplace` contesta dos cosas distintas, y lo único que las separa es el
+ * filtro: pedida entera es la lista de Prestadoras que hay que recorrer
+ * (`prestadorasDelMarketplace.js`); nombrando una, son sus plazos.
+ */
+function configuracionDeCobro(url) {
+  if (url.includes('prestadora_id=eq.')) return [PLAZOS];
+  return LAS_PRESTADORAS.map((id) => ({ prestadora_id: id }));
+}
 
 /** Un acceso esperando cobrar el período de la prueba. */
 function accesoPorCobrar(cambios = {}) {
@@ -144,9 +161,15 @@ function accesoPorCobrar(cambios = {}) {
   };
 }
 
-/** La base con lo mínimo para que el trabajo diario corra entero. */
+/** La base con lo mínimo para que el trabajo diario corra entero.
+ *
+ *  El trabajo consulta de a una Prestadora por vez, así que la base de mentira le contesta sólo los
+ *  accesos de la que nombró la consulta. Contestarle todos sería una base que no puede aislar, y
+ *  entonces la prueba de que cada consulta nombra su Prestadora no podría fallar. */
 function base({ accesos = [accesoPorCobrar()], cobrosExistentes = [] } = {}) {
-  respuestas.set('GET /rest/v1/accesos_marketplace', () => accesos);
+  respuestas.set('GET /rest/v1/accesos_marketplace', (url) =>
+    accesos.filter((a) => url.includes(`prestadora_id=eq.${a.prestadora_id}`))
+  );
   respuestas.set('GET /rest/v1/cobros_marketplace', () => cobrosExistentes);
   respuestas.set('POST /rest/v1/cobros_marketplace', () => []);
   respuestas.set('POST /rest/v1/rpc/leer_credencial_pasarela_pago', () => 'credencial-de-mentira');
@@ -244,24 +267,29 @@ describe('cuando un período se cobra', () => {
   const guardado = () => llamadas.find((l) => l.clave === 'PATCH /rest/v1/accesos_marketplace');
 
   it('el acceso queda vigente y esperando el período siguiente al cobrado', async () => {
-    const resultado = await registrarCobroExitoso({ accesoId: ACCESO, periodo: PERIODO });
+    const resultado = await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: PERIODO });
 
     assert.deepEqual(resultado, { ok: true, proximo_cobro: '2026-09-01', saldo_contactos: null });
     assert.equal(guardado().cuerpo.estado, 'vigente');
     assert.equal(guardado().cuerpo.proximo_cobro, '2026-09-01');
+    // Y el acceso se lee y se escribe nombrando la Prestadora: un identificador de acceso probado a
+    // mano no puede alcanzar el cajón de otra.
+    const leido = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_marketplace');
+    assert.ok(leido.url.includes(`prestadora_id=eq.${PRESTADORA}`));
+    assert.ok(guardado().url.includes(`prestadora_id=eq.${PRESTADORA}`));
   });
 
   it('cierra la gracia que había abierto un cobro fallido', async () => {
     // Entró la plata. Si la fecha quedara puesta, el trabajo diario de `periodoDeGracia.js`
     // suspendería el acceso al llegar por una falla que ya se resolvió.
-    await registrarCobroExitoso({ accesoId: ACCESO, periodo: PERIODO });
+    await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: PERIODO });
     assert.equal(guardado().cuerpo.gracia_hasta, null);
   });
 
   it('lo pagado queda vigente hasta el próximo cobro, no hasta una fecha aparte', async () => {
     // Es el dato que después mira el corte al fin del período pagado. Sin él habría que rehacer la
     // cuenta del cobro para saber hasta cuándo alcanza lo que la Familia ya pagó.
-    await registrarCobroExitoso({ accesoId: ACCESO, periodo: PERIODO });
+    await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: PERIODO });
     assert.equal(guardado().cuerpo.vigente_hasta, '2026-09-01');
   });
 
@@ -275,7 +303,7 @@ describe('cuando un período se cobra', () => {
         formas_de_cobro_marketplace: { periodo_cantidad: null, periodo_unidad: null },
       },
     ]);
-    const resultado = await registrarCobroExitoso({ accesoId: ACCESO, periodo: PERIODO });
+    const resultado = await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: PERIODO });
 
     assert.deepEqual(resultado, { ok: true, proximo_cobro: null, saldo_contactos: null });
     assert.equal(guardado().cuerpo.proximo_cobro, null);
@@ -305,7 +333,7 @@ describe('cuando un período se cobra', () => {
     // que lo sostiene es lo que quedó cargado.
     paquete(5);
     respuestas.set('POST /rest/v1/rpc/sumar_contactos_al_saldo', () => 5);
-    const resultado = await registrarCobroExitoso({ accesoId: ACCESO, periodo: PERIODO });
+    const resultado = await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: PERIODO });
 
     assert.deepEqual(resultado, { ok: true, proximo_cobro: null, saldo_contactos: 5 });
     assert.equal(cargasDeSaldo().length, 1);
@@ -317,7 +345,7 @@ describe('cuando un período se cobra', () => {
     // vez terminarían dejando uno solo cargado. Por eso lo que sale de acá es «sumá tantos».
     paquete(3);
     respuestas.set('POST /rest/v1/rpc/sumar_contactos_al_saldo', () => 11);
-    const resultado = await registrarCobroExitoso({ accesoId: ACCESO, periodo: PERIODO });
+    const resultado = await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: PERIODO });
 
     assert.equal(cargasDeSaldo()[0].cuerpo.p_cuantos, 3, 'lo que trae la compra, no el total');
     assert.equal(resultado.saldo_contactos, 11, 'el total lo contesta la base');
@@ -333,7 +361,7 @@ describe('cuando un período se cobra', () => {
         formas_de_cobro_marketplace: { ...CADA_MES, contactos_incluidos: 0 },
       },
     ]);
-    const resultado = await registrarCobroExitoso({ accesoId: ACCESO, periodo: PERIODO });
+    const resultado = await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: PERIODO });
 
     assert.deepEqual(cargasDeSaldo(), []);
     assert.equal(resultado.saldo_contactos, null);
@@ -344,7 +372,7 @@ describe('cuando un período se cobra', () => {
     // cargó se ve en el registro y se vuelve a cargar; un cobro aplicado a medias, no.
     paquete(5);
     respuestas.delete('POST /rest/v1/rpc/sumar_contactos_al_saldo');
-    const resultado = await registrarCobroExitoso({ accesoId: ACCESO, periodo: PERIODO });
+    const resultado = await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: PERIODO });
 
     assert.equal(resultado.ok, true);
     assert.equal(resultado.saldo_contactos, null);
@@ -360,7 +388,7 @@ describe('cuando un período se cobra', () => {
         formas_de_cobro_marketplace: { periodo_cantidad: 2, periodo_unidad: 'semana' },
       },
     ]);
-    const resultado = await registrarCobroExitoso({ accesoId: ACCESO, periodo: '2026-08-01' });
+    const resultado = await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: '2026-08-01' });
     assert.equal(resultado.proximo_cobro, '2026-08-15');
   });
 
@@ -370,7 +398,7 @@ describe('cuando un período se cobra', () => {
     respuestas.set('GET /rest/v1/accesos_marketplace', () => [
       { id: ACCESO, proximo_cobro: '2026-05-10', formas_de_cobro_marketplace: CADA_MES },
     ]);
-    const resultado = await registrarCobroExitoso({ accesoId: ACCESO, periodo: '2026-05-10' });
+    const resultado = await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: '2026-05-10' });
     assert.equal(resultado.proximo_cobro, '2026-06-10');
   });
 
@@ -380,7 +408,7 @@ describe('cuando un período se cobra', () => {
     respuestas.set('GET /rest/v1/accesos_marketplace', () => [
       { id: ACCESO, proximo_cobro: '2026-09-01', formas_de_cobro_marketplace: CADA_MES },
     ]);
-    const resultado = await registrarCobroExitoso({ accesoId: ACCESO, periodo: '2026-07-01' });
+    const resultado = await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: '2026-07-01' });
     assert.equal(resultado.proximo_cobro, '2026-10-01');
   });
 
@@ -388,13 +416,13 @@ describe('cuando un período se cobra', () => {
     respuestas.set('GET /rest/v1/accesos_marketplace', () => [
       { id: ACCESO, proximo_cobro: null, formas_de_cobro_marketplace: CADA_MES },
     ]);
-    const resultado = await registrarCobroExitoso({ accesoId: ACCESO, periodo: '2026-03-31' });
+    const resultado = await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: '2026-03-31' });
     assert.equal(resultado.proximo_cobro, '2026-04-30');
   });
 
   it('si el acceso no está, se avisa y no se escribe nada', async () => {
     respuestas.set('GET /rest/v1/accesos_marketplace', () => []);
-    const resultado = await registrarCobroExitoso({ accesoId: ACCESO, periodo: PERIODO });
+    const resultado = await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: PERIODO });
 
     assert.deepEqual(resultado, { ok: false });
     assert.equal(guardado(), undefined);
@@ -403,7 +431,7 @@ describe('cuando un período se cobra', () => {
 
   it('si la escritura falla, se avisa y se contesta que no se pudo', async () => {
     respuestas.delete('PATCH /rest/v1/accesos_marketplace');
-    const resultado = await registrarCobroExitoso({ accesoId: ACCESO, periodo: PERIODO });
+    const resultado = await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: PERIODO });
 
     assert.deepEqual(resultado, { ok: false });
     assert.ok(anotados.some((linea) => linea.includes('No se pudo mover el acceso')));
@@ -426,6 +454,10 @@ describe('el trabajo diario que arma los cobros del período', () => {
     assert.ok(
       consulta.url.includes(`proximo_cobro=lte.${hoy}`),
       'sólo los períodos que ya vencieron'
+    );
+    assert.ok(
+      consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`),
+      'y de una sola Prestadora, nombrada en la consulta'
     );
   });
 
@@ -525,6 +557,7 @@ describe('el trabajo diario que arma los cobros del período', () => {
     const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/cobros_marketplace');
     assert.ok(consulta.url.includes(`acceso_id=eq.${ACCESO}`));
     assert.ok(consulta.url.includes(`periodo=eq.${PERIODO}`));
+    assert.ok(consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`));
   });
 
   it('la credencial se lee una vez por Prestadora y riel, no una por acceso', async () => {

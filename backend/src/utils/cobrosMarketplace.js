@@ -48,35 +48,18 @@ import { obtenerAdaptador, armaCobroPorPeriodo } from '../pasarelas/index.js';
 import { cargarContactosEnElSaldo } from './contactosMarketplace.js';
 import { sumarDias } from './fechas.js';
 import { memoriaDePlazos, plazosDeLaPrestadora } from './plazosDeCobroMarketplace.js';
+import { prestadorasDelMarketplace } from './prestadorasDelMarketplace.js';
 
 /**
  * Le pide a cada riel de período el cobro de los períodos que ya vencieron. Corre una vez por día
- * (`backend/src/server.js`). Recorre todas las Prestadoras y nunca corta por una: lo de una no
- * puede dejar sin cobrar a las demás, que es el mismo criterio de `revisarVencimientos`.
+ * (`backend/src/server.js`). Recorre las Prestadoras **de a una** y nunca corta por una: lo de una
+ * no puede dejar sin cobrar a las demás, que es el mismo criterio de `revisarVencimientos`.
+ *
+ * De a una, y no todas juntas: una consulta que alcanza a dos Prestadoras abrió el cajón de las
+ * dos, aunque después el código las separe (`celtatech\CLAUDE.md` §5).
  */
 export async function armarCobrosDelPeriodo() {
   const hoy = new Date().toISOString().slice(0, 10);
-
-  const { data: accesos, error } = await supabase
-    .from('accesos_marketplace')
-    .select(
-      'id, prestadora_id, familia_id, proveedor, importe, moneda, proximo_cobro, ' +
-        'formas_de_cobro_marketplace(periodo_cantidad, periodo_unidad)'
-    )
-    .eq('estado', 'vigente')
-    .not('proveedor', 'is', null)
-    .not('proximo_cobro', 'is', null)
-    .lte('proximo_cobro', hoy);
-
-  if (error) {
-    console.error('Error consultando los accesos por cobrar:', error.message);
-    return;
-  }
-
-  // Sólo los rieles que no cobran solos. Los otros ya están andando del lado del proveedor y
-  // pedirles algo por período crearía un segundo cobro del mismo período.
-  const porArmar = (accesos ?? []).filter((s) => armaCobroPorPeriodo(s.proveedor));
-  if (!porArmar.length) return;
 
   // La credencial es una por Prestadora y riel, y sale de la caja fuerte con una llamada cada
   // vez. Se leen una sola vez por combinación y no una por acceso.
@@ -84,6 +67,35 @@ export async function armarCobrosDelPeriodo() {
   // Hasta cuándo se puede pagar un cupón lo eligió la Prestadora. Se lee una vez por Prestadora
   // y no una por acceso, como la credencial.
   const plazos = memoriaDePlazos();
+
+  for (const prestadoraId of await prestadorasDelMarketplace()) {
+    await armarLosCobrosDeUnaPrestadora(prestadoraId, hoy, credenciales, plazos);
+  }
+}
+
+/** La vuelta de una sola Prestadora. Una falla suya se anota acá y no toca a las demás. */
+async function armarLosCobrosDeUnaPrestadora(prestadoraId, hoy, credenciales, plazos) {
+  const { data: accesos, error } = await supabase
+    .from('accesos_marketplace')
+    .select(
+      'id, prestadora_id, familia_id, proveedor, importe, moneda, proximo_cobro, ' +
+        'formas_de_cobro_marketplace(periodo_cantidad, periodo_unidad)'
+    )
+    .eq('prestadora_id', prestadoraId)
+    .eq('estado', 'vigente')
+    .not('proveedor', 'is', null)
+    .not('proximo_cobro', 'is', null)
+    .lte('proximo_cobro', hoy);
+
+  if (error) {
+    console.error(`Error consultando los accesos por cobrar (prestadora ${prestadoraId}):`, error.message);
+    return;
+  }
+
+  // Sólo los rieles que no cobran solos. Los otros ya están andando del lado del proveedor y
+  // pedirles algo por período crearía un segundo cobro del mismo período.
+  const porArmar = (accesos ?? []).filter((s) => armaCobroPorPeriodo(s.proveedor));
+  if (!porArmar.length) return;
 
   for (const acceso of porArmar) {
     try {
@@ -107,6 +119,7 @@ async function armarUnCobro(acceso, credenciales, plazos) {
   const { data: existentes, error: errorExistentes } = await supabase
     .from('cobros_marketplace')
     .select('id, estado_cobro')
+    .eq('prestadora_id', acceso.prestadora_id)
     .eq('acceso_id', acceso.id)
     .eq('periodo', periodo);
 
@@ -178,16 +191,20 @@ async function credencialDe(prestadoraId, proveedor, credenciales) {
  * (`routes/panelMarketplace.js`).
  *
  * @param {object} argumentos
+ * @param {string} argumentos.prestadoraId  De qué Prestadora es el acceso. Obligatorio y sin valor
+ *   por omisión: un identificador de acceso probado a mano no puede alcanzar el cajón de otra
+ *   (`celtatech\CLAUDE.md` §5).
  * @param {string} argumentos.accesoId
  * @param {string} argumentos.periodo  El período que se cobró, en formato `AAAA-MM-DD`.
  */
-export async function registrarCobroExitoso({ accesoId, periodo }) {
+export async function registrarCobroExitoso({ prestadoraId, accesoId, periodo }) {
   const { data: acceso, error } = await supabase
     .from('accesos_marketplace')
     .select(
       'id, proximo_cobro, ' +
         'formas_de_cobro_marketplace(periodo_cantidad, periodo_unidad, contactos_incluidos)'
     )
+    .eq('prestadora_id', prestadoraId)
     .eq('id', accesoId)
     .maybeSingle();
 
@@ -221,6 +238,7 @@ export async function registrarCobroExitoso({ accesoId, periodo }) {
       ...(proximoCobro ? { vigente_hasta: proximoCobro } : {}),
       updated_at: new Date().toISOString(),
     })
+    .eq('prestadora_id', prestadoraId)
     .eq('id', accesoId);
 
   if (errorActualizar) {

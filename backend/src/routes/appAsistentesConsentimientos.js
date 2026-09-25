@@ -188,13 +188,15 @@ appAsistentesConsentimientosRouter.post('/', requiereRolAsistente, async (req, r
       const { error } = await supabase
         .from('consentimientos_asistente')
         .update({ retirado_at: new Date().toISOString(), motivo_retiro: 'reemplazado_por_decision_nueva' })
-        .eq('id', viva.id);
+        .eq('id', viva.id)
+        .eq('prestadora_id', contexto.asistente.prestadora_id);
       if (error) return res.status(500).json({ error: 'No se pudo registrar la decisión' });
     } else {
       const { error } = await supabase
         .from('consentimientos_asistente')
         .delete()
-        .eq('id', viva.id);
+        .eq('id', viva.id)
+        .eq('prestadora_id', contexto.asistente.prestadora_id);
       if (error) return res.status(500).json({ error: 'No se pudo registrar la decisión' });
     }
   }
@@ -244,6 +246,7 @@ appAsistentesConsentimientosRouter.post('/retirar', requiereRolAsistente, async 
       motivo_retiro: typeof motivo === 'string' && motivo.trim() ? motivo.trim().slice(0, 500) : null,
     })
     .eq('id', viva.id)
+    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .is('retirado_at', null)
     .select('id');
 

@@ -11,6 +11,10 @@ import { marcarAusenteYCrearIncidente } from './marcarAusente.js';
 // Usa el service role (bypassa RLS) porque procesa guardias de todas las prestadoras según
 // su propia configuración — no hay un usuario de panel logueado en este proceso.
 export async function revisarAusenciasAutomaticas() {
+  // SIN PRESTADORA A PROPÓSITO
+  // Es el arranque de un trabajo de fondo, que no tiene sesión de nadie. No trae dato de ninguna
+  // Prestadora: trae sus identificadores y su tolerancia, y a partir de ahí el trabajo recorre de a
+  // una, nombrándola en cada consulta de adentro —la de `guardias`, acá abajo, la nombra.
   const { data: configuraciones, error: errorConfig } = await supabase
     .from('configuracion_ausencia_automatica')
     .select('prestadora_id, minutos_tolerancia_checkin')

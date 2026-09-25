@@ -71,9 +71,16 @@ export async function declaracionDeFormulario(clave, prestadoraId) {
     ?? (formularios ?? []).find((f) => f.prestadora_id === null);
   if (!formulario) throw new ErrorConMotivo(MOTIVOS.formulario_no_declarado, `No hay formulario declarado con clave ${clave}`);
 
+  // Las dos tablas repiten la Organización del formulario, así que se la nombra en las dos. La del
+  // producto la lleva vacía, y ése es el único caso en que se busca por vacío: la fila que no es de
+  // nadie es de todas.
+  const acotarAPrestadora = (consulta) => (formulario.prestadora_id
+    ? consulta.eq('prestadora_id', formulario.prestadora_id)
+    : consulta.is('prestadora_id', null));
+
   const [{ data: secciones, error: errorSecciones }, { data: campos, error: errorCampos }] = await Promise.all([
-    supabase.from('formulario_secciones').select('*').eq('formulario_id', formulario.id).eq('activo', true).order('orden'),
-    supabase.from('formulario_campos').select('*').eq('activo', true),
+    acotarAPrestadora(supabase.from('formulario_secciones').select('*').eq('formulario_id', formulario.id).eq('activo', true)).order('orden'),
+    acotarAPrestadora(supabase.from('formulario_campos').select('*').eq('activo', true)),
   ]);
   if (errorSecciones) throw errorSecciones;
   if (errorCampos) throw errorCampos;

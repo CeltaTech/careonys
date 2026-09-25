@@ -15,12 +15,19 @@ import { supabase } from '../db/connection.js';
 // SIN CORREO, EL AVISO NO SALE PARA ESA PERSONA, pero el proceso sigue: los demás tienen que
 // enterarse igual.
 
-/** El correo de una persona, o nulo si no tiene cuenta o la cuenta no tiene correo. */
-export async function correoDe(usuarioId) {
-  if (!usuarioId) return null;
+/**
+ * El correo de una persona, o nulo si no tiene cuenta o la cuenta no tiene correo.
+ *
+ * LA ORGANIZACIÓN SE NOMBRA Y NO SE SUPONE. Acá se entra con la llave de servicio, así que el
+ * aislamiento lo pone esta consulta y nada más. Sin Organización no se busca a nadie: un valor
+ * vacío devolvería la cuenta de cualquier Prestadora.
+ */
+export async function correoDe({ prestadoraId, usuarioId }) {
+  if (!prestadoraId || !usuarioId) return null;
   const { data, error } = await supabase
     .from('usuarios')
     .select('email')
+    .eq('prestadora_id', prestadoraId)
     .eq('id', usuarioId)
     .maybeSingle();
   if (error || !data?.email) return null;
@@ -32,11 +39,15 @@ export async function correoDe(usuarioId) {
  *
  * El orden de la lista que entra se conserva.
  */
-export async function correosDe(usuarioIds) {
+export async function correosDe({ prestadoraId, usuarioIds }) {
   const ids = (usuarioIds ?? []).filter(Boolean);
-  if (ids.length === 0) return [];
+  if (!prestadoraId || ids.length === 0) return [];
 
-  const { data, error } = await supabase.from('usuarios').select('id, email').in('id', ids);
+  const { data, error } = await supabase
+    .from('usuarios')
+    .select('id, email')
+    .eq('prestadora_id', prestadoraId)
+    .in('id', ids);
   if (error) return [];
 
   const porId = new Map((data ?? []).map((fila) => [fila.id, fila.email]));

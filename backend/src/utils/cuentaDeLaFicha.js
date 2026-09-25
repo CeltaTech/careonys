@@ -12,9 +12,14 @@ import { supabase } from '../db/connection.js';
 // acá y en ningún otro lado.
 
 /** La cuenta de una sola ficha. Devuelve el identificador de la cuenta, o `null`. */
-export async function cuentaDeLaFicha(tabla, fichaId) {
-  if (!fichaId) return null;
-  const { data } = await supabase.from(tabla).select('usuario_id').eq('id', fichaId).maybeSingle();
+export async function cuentaDeLaFicha(tabla, fichaId, prestadoraId) {
+  if (!fichaId || !prestadoraId) return null;
+  const { data } = await supabase
+    .from(tabla)
+    .select('usuario_id')
+    .eq('id', fichaId)
+    .eq('prestadora_id', prestadoraId)
+    .maybeSingle();
   return data?.usuario_id || null;
 }
 
@@ -24,15 +29,16 @@ export async function cuentaDeLaFicha(tabla, fichaId) {
  * `columnas` son las de `usuarios` que hacen falta —`nombre`, `telefono`—, y nunca todas: lo que
  * no se pide no viaja.
  */
-export async function cuentasDeLasFichas(tabla, fichaIds, columnas) {
+export async function cuentasDeLasFichas(tabla, fichaIds, columnas, prestadoraId) {
   const mapa = new Map();
   const unicos = [...new Set((fichaIds ?? []).filter(Boolean))];
-  if (unicos.length === 0) return mapa;
+  if (unicos.length === 0 || !prestadoraId) return mapa;
 
   const { data, error } = await supabase
     .from(tabla)
     .select(`id, usuarios!inner(${columnas})`)
-    .in('id', unicos);
+    .in('id', unicos)
+    .eq('prestadora_id', prestadoraId);
   if (error) {
     console.error(`No se pudieron leer las cuentas de ${tabla}:`, error.message);
     return mapa;

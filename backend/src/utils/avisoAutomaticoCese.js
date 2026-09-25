@@ -17,6 +17,10 @@ const EVENTO_CESE = 'aviso_cese_asistente';
 // Usa el service role (bypassa RLS) porque procesa cierres de todas las prestadoras según su
 // propia configuración — no hay un usuario de panel logueado en este proceso.
 export async function revisarAvisosAutomaticosCese() {
+  // SIN PRESTADORA A PROPÓSITO
+  // Es el arranque de un trabajo de fondo, que no tiene sesión de nadie. No trae dato de ninguna
+  // Prestadora: trae sus identificadores y su plazo, y a partir de ahí el trabajo recorre de a una,
+  // nombrándola en cada consulta de adentro —la de los avisos pendientes, acá abajo, la nombra.
   const { data: configuraciones, error: errorConfig } = await supabase
     .from('configuracion_aviso_cese_asistente')
     .select('prestadora_id, horas_plazo_aviso_verbal')
@@ -60,7 +64,7 @@ async function enviarAvisoCese({ pendiente, prestadoraId }) {
 
   if (!apagado) {
     const { titulo, cuerpo } = aviso('cese_de_servicio', await idiomaDeLaPrestadora(prestadoraId));
-    await enviarPushAsistente(pendiente.asistente_id, { titulo, cuerpo });
+    await enviarPushAsistente(prestadoraId, pendiente.asistente_id, { titulo, cuerpo });
 
     try {
       // Lo empieza la Prestadora, así que va por la plantilla que le eligió al aviso. Sin
@@ -79,6 +83,7 @@ async function enviarAvisoCese({ pendiente, prestadoraId }) {
   const { error: errorUpdate } = await supabase
     .from('cierre_servicio_asistentes')
     .update({ aviso_automatico_enviado_at: new Date().toISOString() })
+    .eq('prestadora_id', prestadoraId)
     .eq('id', pendiente.id);
   if (errorUpdate) {
     console.error(`Error marcando aviso automático de cese enviado (${pendiente.id}):`, errorUpdate.message);

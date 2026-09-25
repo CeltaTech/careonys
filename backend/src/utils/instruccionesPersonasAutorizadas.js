@@ -41,7 +41,7 @@ const VIGENCIA_DEL_CODIGO_MINUTOS = 10;
 // fila —apuntando a sí mismo, que es lo que deja resolver de una consulta a qué Cliente pertenece
 // alguien—, pero él no entra en esta cuenta: ve todo siempre, y ninguna instrucción le puede
 // quitar nada, ni siquiera una suya.
-async function personasDePersonasAutorizadas(clienteId) {
+async function personasDePersonasAutorizadas(clienteId, prestadoraId) {
   const { data, error } = await supabase
     .from('miembros_cliente')
     .select('usuario_id, email, created_at, usuarios!miembros_cliente_usuario_id_fkey(nombre)')
@@ -51,7 +51,7 @@ async function personasDePersonasAutorizadas(clienteId) {
 
   // La fila del titular guarda su cuenta, y `clienteId` es el Legajo: para reconocerla hay que
   // pedir de qué cuenta cuelga ese Legajo.
-  const cuentaDelTitular = await cuentaDeLaFicha('clientes', clienteId);
+  const cuentaDelTitular = await cuentaDeLaFicha('clientes', clienteId, prestadoraId);
 
   return (data ?? [])
     .filter((fila) => fila.usuario_id !== cuentaDelTitular)
@@ -62,9 +62,14 @@ async function personasDePersonasAutorizadas(clienteId) {
     }));
 }
 
-async function nombreDe(usuarioId) {
-  if (!usuarioId) return null;
-  const { data } = await supabase.from('usuarios').select('nombre').eq('id', usuarioId).maybeSingle();
+async function nombreDe(usuarioId, prestadoraId) {
+  if (!usuarioId || !prestadoraId) return null;
+  const { data } = await supabase
+    .from('usuarios')
+    .select('nombre')
+    .eq('prestadora_id', prestadoraId)
+    .eq('id', usuarioId)
+    .maybeSingle();
   return data?.nombre ?? null;
 }
 
@@ -76,16 +81,21 @@ async function nombreDe(usuarioId) {
 // completa con el valor de fábrica: guardar sólo lo que vino dejaría filas ausentes, y una fila
 // ausente para la base significa «no».
 export async function crearInstruccion({ clienteId, prestadoraId, cargadaPor, accesosPedidos }) {
+  if (!prestadoraId) throw new ErrorConMotivo('faltan_datos', 'Falta la Prestadora');
+
+  // La Prestadora se nombra en la consulta y no se comprueba después sobre la fila leída: una
+  // Cliente de otra Organización no se encuentra, en vez de encontrarse y descartarse.
   const { data: cliente } = await supabase
     .from('clientes')
-    .select('id, prestadora_id')
+    .select('id')
+    .eq('prestadora_id', prestadoraId)
     .eq('id', clienteId)
     .maybeSingle();
-  if (!cliente || cliente.prestadora_id !== prestadoraId) {
+  if (!cliente) {
     throw new ErrorConMotivo('no_encontrado', 'Cliente no encontrada');
   }
 
-  const personas = await personasDePersonasAutorizadas(clienteId);
+  const personas = await personasDePersonasAutorizadas(clienteId, prestadoraId);
   if (personas.length === 0) {
     throw new ErrorConMotivo('persona_autorizada_vacio', 'Esta Cliente no tiene a nadie anotado en su personas autorizadas');
   }
@@ -105,8 +115,10 @@ export async function crearInstruccion({ clienteId, prestadoraId, cargadaPor, ac
 
   const texto = textoDeLaInstruccion({
     prestadora: { nombre: prestadora?.nombre_fantasia },
-    titular: { nombre: await nombreDe(await cuentaDeLaFicha('clientes', clienteId)) },
-    cargadaPor: { nombre: await nombreDe(cargadaPor) },
+    titular: {
+      nombre: await nombreDe(await cuentaDeLaFicha('clientes', clienteId, prestadoraId), prestadoraId),
+    },
+    cargadaPor: { nombre: await nombreDe(cargadaPor, prestadoraId) },
     personas: decidido.map((persona) => ({
       nombre: persona.nombre,
       email: persona.email,
@@ -120,6 +132,7 @@ export async function crearInstruccion({ clienteId, prestadoraId, cargadaPor, ac
   const { error: errorAnular } = await supabase
     .from('instrucciones_acceso_personas_autorizadas')
     .update({ estado: 'anulada' })
+    .eq('prestadora_id', prestadoraId)
     .eq('cliente_id', clienteId)
     .eq('estado', 'pendiente_firma');
   if (errorAnular) throw new Error(errorAnular.message);
@@ -158,10 +171,13 @@ export async function crearInstruccion({ clienteId, prestadoraId, cargadaPor, ac
 
 // Lo que está esperando firma, si hay algo. Lo miran las dos puntas: el Panel para mostrar que
 // quedó pendiente, y la aplicación del titular para ofrecerle firmarla.
-export async function instruccionPendiente(clienteId) {
+export async function instruccionPendiente(clienteId, prestadoraId) {
+  if (!clienteId || !prestadoraId) return null;
+
   const { data } = await supabase
     .from('instrucciones_acceso_personas_autorizadas')
     .select('id, documento_texto, documento_idioma, created_at')
+    .eq('prestadora_id', prestadoraId)
     .eq('cliente_id', clienteId)
     .eq('estado', 'pendiente_firma')
     .maybeSingle();
@@ -172,10 +188,13 @@ export async function instruccionPendiente(clienteId) {
 // La última que quedó firmada, para que la pantalla del Panel diga desde cuándo rige lo que rige y
 // cómo se cerró. Las anuladas no cuentan: son las que quedaron a mitad de camino cuando llegó una
 // instrucción nueva, y nadie las firmó nunca.
-export async function ultimaInstruccionCerrada(clienteId) {
+export async function ultimaInstruccionCerrada(clienteId, prestadoraId) {
+  if (!clienteId || !prestadoraId) return null;
+
   const { data } = await supabase
     .from('instrucciones_acceso_personas_autorizadas')
     .select('id, documento_texto, documento_idioma, created_at, cerrada_en, cerrada_como')
+    .eq('prestadora_id', prestadoraId)
     .eq('cliente_id', clienteId)
     .eq('estado', 'cerrada')
     .order('created_at', { ascending: false })
@@ -189,10 +208,13 @@ export async function ultimaInstruccionCerrada(clienteId) {
 // Prestadora tiene WhatsApp configurado, y si no —o si el envío falla— al correo, que es el único
 // canal que siempre existe. Nunca se pierde la confirmación por un problema de un canal; mismo
 // criterio que los avisos al Coordinador.
-export async function pedirCodigo({ instruccionId, clienteId }) {
+export async function pedirCodigo({ instruccionId, clienteId, prestadoraId }) {
+  if (!prestadoraId) throw new ErrorConMotivo('faltan_datos', 'Falta la Prestadora');
+
   const { data: instruccion } = await supabase
     .from('instrucciones_acceso_personas_autorizadas')
     .select('id, prestadora_id, estado')
+    .eq('prestadora_id', prestadoraId)
     .eq('id', instruccionId)
     .eq('cliente_id', clienteId)
     .maybeSingle();
@@ -209,6 +231,7 @@ export async function pedirCodigo({ instruccionId, clienteId }) {
   const { error } = await supabase
     .from('instrucciones_acceso_personas_autorizadas')
     .update(campos)
+    .eq('prestadora_id', prestadoraId)
     .eq('id', instruccionId);
   if (error) throw new Error(error.message);
 
@@ -219,7 +242,7 @@ export async function pedirCodigo({ instruccionId, clienteId }) {
     .maybeSingle();
 
   // `clienteId` es el Legajo; el teléfono es de la persona y vive en la cuenta de la que cuelga.
-  const cuentasTitular = await cuentasDeLasFichas('clientes', [clienteId], 'telefono');
+  const cuentasTitular = await cuentasDeLasFichas('clientes', [clienteId], 'telefono', prestadoraId);
   const titular = cuentasTitular.get(clienteId) ?? null;
 
   const remite = prestadora?.nombre_fantasia ?? '';
@@ -250,7 +273,10 @@ export async function pedirCodigo({ instruccionId, clienteId }) {
   }
 
   // `clienteId` es el Legajo; el correo es de la persona y vive en la cuenta de la que cuelga.
-  const correoTitular = await correoDe(await cuentaDeLaFicha('clientes', clienteId));
+  const correoTitular = await correoDe({
+    prestadoraId,
+    usuarioId: await cuentaDeLaFicha('clientes', clienteId, prestadoraId),
+  });
   if (!correoTitular) {
     throw new ErrorConMotivo('sin_canal', 'No hay a dónde mandar el código');
   }
@@ -268,10 +294,13 @@ export async function pedirCodigo({ instruccionId, clienteId }) {
 // Cierra la instrucción con el código. Devuelve el motivo del rechazo en vez de lanzarlo, porque
 // la pantalla tiene que poder decir cosas distintas: no es lo mismo «el código no es» que «se
 // venció» o «probó demasiadas veces, pida uno nuevo».
-export async function confirmarConCodigo({ instruccionId, clienteId, codigo, desde }) {
+export async function confirmarConCodigo({ instruccionId, clienteId, prestadoraId, codigo, desde }) {
+  if (!prestadoraId) return { ok: false, motivo: 'no_encontrado' };
+
   const { data: instruccion } = await supabase
     .from('instrucciones_acceso_personas_autorizadas')
     .select('id, estado, codigo_huella, codigo_expira_en')
+    .eq('prestadora_id', prestadoraId)
     .eq('id', instruccionId)
     .eq('cliente_id', clienteId)
     .maybeSingle();
@@ -287,7 +316,11 @@ export async function confirmarConCodigo({ instruccionId, clienteId, codigo, des
 
   // La suma la hace la base en un solo paso. Antes se leía y se escribía por separado, y dos
   // intentos a la vez contaban como uno (pendiente #177).
-  const intentos = await sumarIntento({ tabla: 'instrucciones_acceso_personas_autorizadas', id: instruccionId });
+  const intentos = await sumarIntento({
+    tabla: 'instrucciones_acceso_personas_autorizadas',
+    id: instruccionId,
+    prestadoraId,
+  });
   if (seAgotaronLosIntentos(intentos)) return { ok: false, motivo: 'demasiados_intentos' };
 
   if (!codigoCoincide(codigo, instruccion.codigo_huella)) {
@@ -305,6 +338,7 @@ export async function confirmarConCodigo({ instruccionId, clienteId, codigo, des
       codigo_huella: null,
       codigo_expira_en: null,
     })
+    .eq('prestadora_id', prestadoraId)
     .eq('id', instruccionId)
     .eq('estado', 'pendiente_firma');
   if (error) throw new Error(error.message);
@@ -335,6 +369,7 @@ export async function cerrarConPapelFirmado({ instruccionId, prestadoraId, archi
       cerrada_en: new Date().toISOString(),
       archivo_firmado_url: archivoUrl,
     })
+    .eq('prestadora_id', prestadoraId)
     .eq('id', instruccionId)
     .eq('estado', 'pendiente_firma');
   if (error) throw new Error(error.message);
@@ -343,7 +378,7 @@ export async function cerrarConPapelFirmado({ instruccionId, prestadoraId, archi
 // Las once claves con lo decidido para cada persona de las personas autorizadas, que es lo que dibuja la pantalla
 // del Panel. Se devuelve siempre el catálogo entero, tenga o no fila guardada cada clave.
 export async function personas autorizadasConSusAccesos({ clienteId, prestadoraId }) {
-  const personas = await personasDePersonasAutorizadas(clienteId);
+  const personas = await personasDePersonasAutorizadas(clienteId, prestadoraId);
   if (personas.length === 0) return [];
 
   const { data: filas } = await supabase

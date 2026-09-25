@@ -53,13 +53,33 @@ const ACCION_CAMBIO_DE_TELEFONO = 'cambio_de_telefono';
 const ACCION_EQUIPO_NUEVO = 'entrada_desde_un_equipo_nuevo';
 const ACCION_CERRAR_TODO = 'cierre_de_sesion_de_todos_los_equipos';
 
+// La Organización se nombra también en la lectura, y es la propia de la cuenta
+// —`organizacionPropiaId`—, nunca la de una sesión de soporte abierta: acá se mira de quién es la
+// cuenta, no dónde está parada. El caso sin Organización lo resuelve el mismo ayudante que las
+// escrituras de más abajo, para que las dos no puedan discrepar.
 async function miCuenta(usuarioPanel) {
-  const { data } = await supabase
-    .from('usuarios')
-    .select('id, rol, nombre, email, telefono, telefono_verificado_en, prestadora_id')
-    .eq('id', usuarioPanel.id)
-    .maybeSingle();
+  const { data } = await deLaOrganizacionDeLaCuenta(
+    supabase
+      .from('usuarios')
+      .select('id, rol, nombre, email, telefono, telefono_verificado_en, prestadora_id')
+      .eq('id', usuarioPanel.id),
+    { prestadora_id: usuarioPanel.organizacionPropiaId ?? null },
+  ).maybeSingle();
   return data ?? null;
+}
+
+// Toda escritura sobre la propia cuenta dice además para qué Organización trabaja, y no se apoya
+// sólo en el identificador que ya se leyó: así el renglón nombra la Prestadora, y una cuenta que
+// entretanto cambió de Organización no se toca con el dato viejo.
+//
+// La única cuenta del Panel sin Organización es la del soporte técnico de CeltaTech, que no
+// pertenece a ninguna Prestadora (`usuarios.prestadora_id` en nulo, lo exige la restricción
+// `usuarios_prestadora_id_solo_superadmin_null`). Ahí se compara contra nulo, que es exactamente
+// lo que esa cuenta tiene, y nunca se deja la escritura sin comparar nada.
+function deLaOrganizacionDeLaCuenta(query, cuenta) {
+  return cuenta.prestadora_id
+    ? query.eq('prestadora_id', cuenta.prestadora_id)
+    : query.is('prestadora_id', null);
 }
 
 // Cómo está la cuenta. No devuelve el número: la pantalla no lo necesita para nada de lo que
@@ -73,7 +93,7 @@ panelCuentaSeguraRouter.get('/', requiereRolPanel, async (req, res) => {
       telefonoCargado: Boolean(cuenta.telefono),
       telefonoVerificado: Boolean(cuenta.telefono_verificado_en),
       viaDeTelefono: await hayViaDeTelefono(cuenta.prestadora_id),
-      equipos: (await equiposDe(cuenta.id)).map((equipo) => ({
+      equipos: (await equiposDe(cuenta.id, cuenta.prestadora_id)).map((equipo) => ({
         id: equipo.id,
         desde: equipo.primera_entrada_en,
         ultima: equipo.ultima_entrada_en,
@@ -120,6 +140,7 @@ panelCuentaSeguraRouter.post(
       if (!cuenta) throw new ErrorConMotivo('no_encontrado');
 
       const usado = await comprobarCodigoDelTelefono({
+        prestadoraId: cuenta.prestadora_id,
         usuarioId: cuenta.id,
         uso: USO_VERIFICAR,
         codigo,
@@ -132,10 +153,13 @@ panelCuentaSeguraRouter.post(
         throw new ErrorConMotivo('codigo_incorrecto');
       }
 
-      const { error } = await supabase
-        .from('usuarios')
-        .update({ telefono_verificado_en: new Date().toISOString() })
-        .eq('id', cuenta.id);
+      const { error } = await deLaOrganizacionDeLaCuenta(
+        supabase
+          .from('usuarios')
+          .update({ telefono_verificado_en: new Date().toISOString() })
+          .eq('id', cuenta.id),
+        cuenta,
+      );
       if (error) throw new Error(error.message);
 
       await registrarActividad(req.usuarioPanel, ACCION_VERIFICACION_DE_TELEFONO, {
@@ -189,10 +213,13 @@ panelCuentaSeguraRouter.post(
       // `telefono_verificado_en` se pone en nulo acá **y** lo pone en nulo un disparador de la base.
       // No es una copia por descuido: el motor escribe con la llave maestra, y la red de abajo es la
       // que sigue estando el día que otro camino toque esta columna sin acordarse.
-      const { error } = await supabase
-        .from('usuarios')
-        .update({ telefono: numero, telefono_verificado_en: null })
-        .eq('id', cuenta.id);
+      const { error } = await deLaOrganizacionDeLaCuenta(
+        supabase
+          .from('usuarios')
+          .update({ telefono: numero, telefono_verificado_en: null })
+          .eq('id', cuenta.id),
+        cuenta,
+      );
       if (error) throw new Error(error.message);
 
       await registrarActividad(req.usuarioPanel, ACCION_CAMBIO_DE_TELEFONO, {
@@ -240,7 +267,7 @@ panelCuentaSeguraRouter.post('/equipo/reconocer', requiereRolPanel, async (req, 
     const cuenta = await miCuenta(req.usuarioPanel);
     if (!cuenta) throw new ErrorConMotivo('no_encontrado');
 
-    if (await equipoConocido({ usuarioId: cuenta.id, marca })) {
+    if (await equipoConocido({ usuarioId: cuenta.id, prestadoraId: cuenta.prestadora_id, marca })) {
       await anotarEquipo({ usuario: cuenta, marca });
       return res.json({ equipoNuevo: false, requiereCodigo: false, marca });
     }
@@ -281,7 +308,12 @@ panelCuentaSeguraRouter.post(
       const cuenta = await miCuenta(req.usuarioPanel);
       if (!cuenta) throw new ErrorConMotivo('no_encontrado');
 
-      await comprobarCodigoDelTelefono({ usuarioId: cuenta.id, uso: USO_EQUIPO_NUEVO, codigo });
+      await comprobarCodigoDelTelefono({
+        prestadoraId: cuenta.prestadora_id,
+        usuarioId: cuenta.id,
+        uso: USO_EQUIPO_NUEVO,
+        codigo,
+      });
 
       const marca = await anotarEquipo({ usuario: cuenta, marca: null });
       await avisarDeSeguridad(AVISO_EQUIPO_NUEVO, cuenta);
@@ -321,7 +353,7 @@ panelCuentaSeguraRouter.post('/cerrar-sesiones', requiereRolPanel, async (req, r
     });
     yaQuedoRegistrado(res);
 
-    await cerrarSesionEnTodosLosEquipos(cuenta.id);
+    await cerrarSesionEnTodosLosEquipos(cuenta.id, cuenta.prestadora_id);
 
     res.json({ ok: true });
   } catch (err) {

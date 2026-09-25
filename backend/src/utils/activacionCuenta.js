@@ -69,17 +69,25 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, p
 }
 
 // Usado tanto por el alta inicial como por "Reenviar invitación" (token vencido o extraviado).
-export async function reenviarActivacionCuenta(usuarioId) {
+//
+// La Prestadora se recibe y no se deduce de la cuenta: quien pide el reenvío está parado en una
+// Organización, y la cuenta a la que se le reenvía tiene que ser de ésa. Es obligatoria y no tiene
+// valor por omisión — sin ella se corta, porque un filtro vacío no acota nada (CLAUDE.md §5, todo
+// control de acceso falla cerrado).
+export async function reenviarActivacionCuenta(usuarioId, prestadoraId) {
+  if (!prestadoraId) throw new Error('Cuenta no encontrada');
+
   const { data: usuario, error: errorUsuario } = await supabase
     .from('usuarios')
     .select('nombre, rol, prestadora_id')
+    .eq('prestadora_id', prestadoraId)
     .eq('id', usuarioId)
     .single();
   if (errorUsuario || !usuario) throw new Error('Cuenta no encontrada');
 
   // El correo no está en `usuarios` — ver `correoDeUnaPersona.js`. Sin él no hay a dónde mandar
   // la invitación, y decirlo así es distinto de decir que la cuenta no existe.
-  const email = await correoDe(usuarioId);
+  const email = await correoDe({ prestadoraId: usuario.prestadora_id, usuarioId });
   if (!email) throw new Error('La cuenta no tiene correo');
 
   await invitarActivacionCuenta({

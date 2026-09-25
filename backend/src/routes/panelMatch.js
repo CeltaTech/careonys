@@ -482,9 +482,13 @@ panelMatchRouter.get('/accesos', soloAdministracion, async (req, res) => {
   const asistenteIds = [...new Set(data.map((s) => s.asistente_id).filter(Boolean))];
 
   const [cuentasCliente, { data: pacientes }, { data: asistentes }] = await Promise.all([
-    cuentasDeLasFichas('clientes', clienteIds, 'nombre'),
-    pacienteIds.length ? supabase.from('pacientes').select('id, nombre').in('id', pacienteIds) : { data: [] },
-    asistenteIds.length ? supabase.from('asistentes').select('id, nombre').in('id', asistenteIds) : { data: [] },
+    cuentasDeLasFichas('clientes', clienteIds, 'nombre', req.usuarioPanel.prestadoraId),
+    pacienteIds.length
+      ? supabase.from('pacientes').select('id, nombre').eq('prestadora_id', req.usuarioPanel.prestadoraId).in('id', pacienteIds)
+      : { data: [] },
+    asistenteIds.length
+      ? supabase.from('asistentes').select('id, nombre').eq('prestadora_id', req.usuarioPanel.prestadoraId).in('id', asistenteIds)
+      : { data: [] },
   ]);
 
   const nombreCliente = new Map([...cuentasCliente].map(([id, datos]) => [id, datos?.nombre ?? null]));
@@ -545,7 +549,11 @@ panelMatchRouter.post('/cobros/efectivo-manual', soloAdministracion, async (req,
 
   // Y el acceso pasa al período siguiente. Sin esto el período quedaba pagado y el acceso seguía
   // esperando el mismo para siempre, así que el que viene no llegaba nunca.
-  const movimiento = await registrarCobroExitoso({ accesoId, periodo });
+  const movimiento = await registrarCobroExitoso({
+    prestadoraId: req.usuarioPanel.prestadoraId,
+    accesoId,
+    periodo,
+  });
 
   res.json({ ok: true, proximo_cobro: movimiento.proximo_cobro ?? null });
 });
@@ -606,7 +614,11 @@ panelMatchRouter.post('/qr-cobro/canjear', soloAdministracion, async (req, res) 
   if (errorQr) return responderError(res, errorQr);
 
   // Igual que el efectivo en mano: cobrado el período, el acceso pasa al siguiente.
-  const movimiento = await registrarCobroExitoso({ accesoId: qr.acceso_id, periodo: qr.periodo });
+  const movimiento = await registrarCobroExitoso({
+    prestadoraId: req.usuarioPanel.prestadoraId,
+    accesoId: qr.acceso_id,
+    periodo: qr.periodo,
+  });
 
   res.json({ ok: true, monto: qr.monto, proximo_cobro: movimiento.proximo_cobro ?? null });
 });
@@ -665,7 +677,11 @@ panelMatchRouter.get('/calificaciones', async (req, res) => {
 
   const asistenteIds = [...new Set(data.map((c) => c.asistente_id).filter(Boolean))];
   const { data: asistentes } = asistenteIds.length
-    ? await supabase.from('asistentes').select('id, nombre').in('id', asistenteIds)
+    ? await supabase
+        .from('asistentes')
+        .select('id, nombre')
+        .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+        .in('id', asistenteIds)
     : { data: [] };
   const nombreAsistente = new Map((asistentes || []).map((a) => [a.id, a.nombre]));
 

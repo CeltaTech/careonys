@@ -52,6 +52,10 @@ function topeDeCorreo(variable) {
 }
 
 async function cuantosCorreosDesde(desde) {
+  // SIN PRESTADORA A PROPÓSITO
+  // El tope es de la cuenta entera del despachante de correo, así que tiene que contar los envíos
+  // de todas las Prestadoras y también los que no son de ninguna. Acotada daría un número que no se
+  // puede comparar contra ese tope. Devuelve dos totales y ningún dato de nadie.
   const { count, error } = await supabase
     .from('envios_de_correo')
     .select('id', { count: 'exact', head: true })

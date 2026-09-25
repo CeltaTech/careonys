@@ -42,6 +42,12 @@ function requiereSoporteTecnico(req, res, next) {
 // es el que efectivamente cierra (salida_at) una sesión vencida por tope absoluto o por
 // inactividad, así el banner desaparece solo sin que el usuario tenga que hacer nada.
 async function buscarSesionVigenteYCerrarSiVencio(adminId) {
+  // SIN PRESTADORA A PROPÓSITO
+  // Lo que se busca es en qué Prestadora quien da soporte tiene una sesión abierta, sin saber de
+  // antemano en cuál: el dato que se quiere es justamente el que haría falta para filtrar. Y quien
+  // da soporte no pertenece a ninguna —su Organización propia es la de pruebas—, así que acotarla
+  // a la suya no encontraría nunca la sesión abierta en otra, y el cartel nunca se apagaría. El
+  // cierre por vencimiento que viene abajo sí la nombra, y sale de esta misma fila.
   const { data: sesion, error } = await supabase
     .from('sesiones_soporte_tecnico')
     // La moneda viaja con la sesión porque los importes que se muestran y se guardan durante
@@ -61,7 +67,14 @@ async function buscarSesionVigenteYCerrarSiVencio(adminId) {
   const vencioPorInactividad = ahora.getTime() - new Date(sesion.ultima_actividad_at).getTime() > INACTIVIDAD_LIMITE_MS;
 
   if (vencioPorTope || vencioPorInactividad) {
-    await supabase.from('sesiones_soporte_tecnico').update({ salida_at: ahora.toISOString() }).eq('id', sesion.id);
+    // La Prestadora sale de la sesión que se está cerrando, y no de quien pide: quien da soporte
+    // no pertenece a ninguna. Nombrarla es lo que hace que este cierre no pueda tocar la sesión
+    // abierta en otra Organización.
+    await supabase
+      .from('sesiones_soporte_tecnico')
+      .update({ salida_at: ahora.toISOString() })
+      .eq('id', sesion.id)
+      .eq('prestadora_id', sesion.prestadora_id);
     await registrarAuditoria({
       adminId,
       prestadoraId: sesion.prestadora_id,
@@ -90,7 +103,8 @@ panelSesionTenantRouter.post('/actividad', requiereRolPanel, requiereSoporteTecn
     const { error } = await supabase
       .from('sesiones_soporte_tecnico')
       .update({ ultima_actividad_at: new Date().toISOString() })
-      .eq('id', sesion.id);
+      .eq('id', sesion.id)
+      .eq('prestadora_id', sesion.prestadora_id);
 
     if (error) return responderError(res, error);
     res.json({ ok: true, sesion });
@@ -105,6 +119,12 @@ panelSesionTenantRouter.post('/', requiereRolPanel, requiereSoporteTecnico, asyn
     return res.status(400).json({ error: 'Falta prestadora_id' });
   }
 
+  // SIN PRESTADORA A PROPÓSITO
+  // ÉSTA ES LA ÚNICA CONSULTA QUE MIRA A PROPÓSITO TODAS LAS ORGANIZACIONES, y no se le puede
+  // poner el filtro: lo que pregunta es si esta persona ya tiene una sesión abierta en alguna
+  // Prestadora, que es lo que hace cumplir «una por vez». Acotarla a la que se está por abrir
+  // contestaría que no hay ninguna y dejaría dos abiertas a la vez, que es justo lo que la regla
+  // impide. No devuelve ningún dato de la Organización encontrada: sólo que existe.
   const { data: sesionVigente } = await supabase
     .from('sesiones_soporte_tecnico')
     .select('id')
@@ -153,7 +173,8 @@ panelSesionTenantRouter.post('/renovar', requiereRolPanel, requiereSoporteTecnic
         ultima_actividad_at: ahora.toISOString(),
         expira_at: new Date(ahora.getTime() + SESION_DURACION_MS).toISOString(),
       })
-      .eq('id', sesion.id);
+      .eq('id', sesion.id)
+      .eq('prestadora_id', sesion.prestadora_id);
 
     if (error) return responderError(res, error);
     await registrarAuditoria({ adminId: req.usuarioPanel.id, prestadoraId: sesion.prestadora_id, tipoEvento: 'renovacion' });
@@ -164,22 +185,31 @@ panelSesionTenantRouter.post('/renovar', requiereRolPanel, requiereSoporteTecnic
 });
 
 panelSesionTenantRouter.post('/salir', requiereRolPanel, requiereSoporteTecnico, async (req, res) => {
+  // SIN PRESTADORA A PROPÓSITO
+  // Se busca sin nombrar Organización por el mismo motivo que al entrar: quien da soporte no
+  // pertenece a ninguna, y lo que se busca es la única que pueda tener abierta, esté donde esté.
+  // El identificador de esa Prestadora es lo que esta lectura viene a averiguar —sale en el
+  // `select`—, así que exigirlo antes sería pedir el dato que todavía no se tiene. La escritura
+  // que cierra la sesión, tres renglones más abajo, sí lo nombra y lo toma de esta fila.
   const { data: sesionSaliente } = await supabase
     .from('sesiones_soporte_tecnico')
-    .select('prestadora_id')
+    .select('id, prestadora_id')
     .eq('admin_id', req.usuarioPanel.id)
     .is('salida_at', null)
     .maybeSingle();
 
+  // Salir sin ninguna sesión abierta no es un error: no hay nada que cerrar.
+  if (!sesionSaliente) return res.json({ ok: true });
+
+  // La escritura sí la nombra, y sale de la fila encontrada: cierra esa sesión y ninguna otra.
   const { error } = await supabase
     .from('sesiones_soporte_tecnico')
     .update({ salida_at: new Date().toISOString() })
-    .eq('admin_id', req.usuarioPanel.id)
+    .eq('id', sesionSaliente.id)
+    .eq('prestadora_id', sesionSaliente.prestadora_id)
     .is('salida_at', null);
 
   if (error) return responderError(res, error);
-  if (sesionSaliente) {
-    await registrarAuditoria({ adminId: req.usuarioPanel.id, prestadoraId: sesionSaliente.prestadora_id, tipoEvento: 'logout', detalle: { motivo: 'manual' } });
-  }
+  await registrarAuditoria({ adminId: req.usuarioPanel.id, prestadoraId: sesionSaliente.prestadora_id, tipoEvento: 'logout', detalle: { motivo: 'manual' } });
   res.json({ ok: true });
 });

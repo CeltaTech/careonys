@@ -152,11 +152,12 @@ async function plantillaDelCodigo(prestadoraId) {
   return data ?? null;
 }
 
-async function pedidosEnLaUltimaHora(huella) {
+async function pedidosEnLaUltimaHora({ prestadoraId, huella }) {
   const desde = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   const { count, error } = await supabase
     .from('pedidos_de_codigo_al_telefono')
     .select('id', { count: 'exact', head: true })
+    .eq('prestadora_id', prestadoraId)
     .eq('telefono_huella', huella)
     .gte('pedido_en', desde);
 
@@ -191,7 +192,7 @@ export async function mandarCodigoAlTelefono({ usuario, uso, telefono }) {
   if (!plantilla) throw new ErrorConMotivo('via_de_telefono_no_disponible');
 
   const huella = huellaDelTelefono(numero);
-  if ((await pedidosEnLaUltimaHora(huella)) >= topeDeCodigosPorHora()) {
+  if ((await pedidosEnLaUltimaHora({ prestadoraId: usuario.prestadora_id, huella })) >= topeDeCodigosPorHora()) {
     throw new ErrorConMotivo('demasiados_pedidos', 'Se alcanzó el tope de códigos por hora para ese número');
   }
 
@@ -201,6 +202,7 @@ export async function mandarCodigoAlTelefono({ usuario, uso, telefono }) {
   await supabase
     .from('codigos_al_telefono')
     .update({ anulado_en: new Date().toISOString() })
+    .eq('prestadora_id', usuario.prestadora_id)
     .eq('usuario_id', usuario.id)
     .eq('uso', uso)
     .is('verificado_en', null)
@@ -241,6 +243,7 @@ export async function mandarCodigoAlTelefono({ usuario, uso, telefono }) {
     await supabase
       .from('codigos_al_telefono')
       .update({ anulado_en: new Date().toISOString() })
+      .eq('prestadora_id', usuario.prestadora_id)
       .eq('id', fila.id);
     console.error('codigoAlTelefono: no se pudo mandar el código:', e.message);
     throw new ErrorConMotivo('via_de_telefono_no_disponible');
@@ -259,12 +262,13 @@ export async function mandarCodigoAlTelefono({ usuario, uso, telefono }) {
  *
  * @returns {Promise<{ id: string, telefono: string }>} la fila que se acaba de usar.
  */
-export async function comprobarCodigoDelTelefono({ usuarioId, uso, codigo }) {
-  if (!usuarioId || !USOS_DEL_CODIGO.includes(uso)) throw new ErrorConMotivo('faltan_datos');
+export async function comprobarCodigoDelTelefono({ prestadoraId, usuarioId, uso, codigo }) {
+  if (!prestadoraId || !usuarioId || !USOS_DEL_CODIGO.includes(uso)) throw new ErrorConMotivo('faltan_datos');
 
   const { data: fila, error } = await supabase
     .from('codigos_al_telefono')
     .select('id, telefono, codigo_huella, codigo_expira_en, verificado_en, anulado_en')
+    .eq('prestadora_id', prestadoraId)
     .eq('usuario_id', usuarioId)
     .eq('uso', uso)
     .is('verificado_en', null)
@@ -280,7 +284,7 @@ export async function comprobarCodigoDelTelefono({ usuarioId, uso, codigo }) {
 
   if (estaVencido(fila.codigo_expira_en)) throw new ErrorConMotivo('codigo_vencido');
 
-  const intentos = await sumarIntento({ tabla: 'codigos_al_telefono', id: fila.id });
+  const intentos = await sumarIntento({ tabla: 'codigos_al_telefono', id: fila.id, prestadoraId });
   if (seAgotaronLosIntentos(intentos)) throw new ErrorConMotivo('demasiados_intentos');
 
   if (!codigoCoincide(codigo, fila.codigo_huella)) throw new ErrorConMotivo('codigo_incorrecto');
@@ -290,6 +294,7 @@ export async function comprobarCodigoDelTelefono({ usuarioId, uso, codigo }) {
   const { data: tomado, error: errorTomar } = await supabase
     .from('codigos_al_telefono')
     .update({ verificado_en: new Date().toISOString() })
+    .eq('prestadora_id', prestadoraId)
     .eq('id', fila.id)
     .is('verificado_en', null)
     .select('id')

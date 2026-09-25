@@ -10,6 +10,7 @@ export async function resolverVitalesHabilitados(pacienteId, prestadoraId) {
   const { data: autorizacion } = await supabase
     .from('autorizaciones_monitoreo_paciente')
     .select('id')
+    .eq('prestadora_id', prestadoraId)
     .eq('paciente_id', pacienteId)
     .eq('vigente', true)
     .maybeSingle();

@@ -174,10 +174,15 @@ export async function sujetosQuePuedenMostrar(guardia) {
 // La comprobación de una llegada o de una salida
 // ---------------------------------------------------------------------------------------
 
-export async function comprobacionDe(guardiaId, momento) {
+export async function comprobacionDe({ prestadoraId, guardiaId, momento }) {
+  if (!prestadoraId) {
+    throw new ErrorConMotivo('faltan_datos', 'No se busca una comprobación sin saber de qué Organización es');
+  }
+
   const { data } = await supabase
     .from('guardia_comprobaciones')
     .select('*')
+    .eq('prestadora_id', prestadoraId)
     .eq('guardia_id', guardiaId)
     .eq('momento', momento)
     .maybeSingle();
@@ -189,6 +194,15 @@ function ahora() {
 }
 
 async function guardarComprobacion(fila) {
+  if (!fila.prestadora_id) {
+    throw new ErrorConMotivo('faltan_datos', 'No se escribe una comprobación sin saber de qué Organización es');
+  }
+
+  // SIN PRESTADORA A PROPÓSITO
+  // La Prestadora va adentro de la fila —arriba se corta si no viene—, y la columna del conflicto
+  // es el identificador de una guardia, único en toda la base: la fila en conflicto es siempre de
+  // la misma guardia y por lo tanto de la misma Prestadora. La base lo sostiene además con la clave
+  // foránea `(guardia_id, prestadora_id)` contra `guardias`, que rechaza cualquier otra pareja.
   const { data, error } = await supabase
     .from('guardia_comprobaciones')
     .upsert({ ...fila, updated_at: ahora() }, { onConflict: 'guardia_id,momento' })
@@ -220,7 +234,7 @@ async function resolverCodigo({ guardia, momento, codigo }) {
   if (!texto) throw new ErrorConMotivo('faltan_datos', 'Falta el código');
 
   // Primero el de la Prestadora, si esta comprobación estaba esperando uno.
-  const fila = await comprobacionDe(guardia.id, momento);
+  const fila = await comprobacionDe({ prestadoraId: guardia.prestadora_id, guardiaId: guardia.id, momento });
   if (fila?.codigo_huella) {
     // El vencimiento va primero, y es lo que deja andar el caso legítimo: un código vencido no
     // gasta intento, así que quien pide otro porque se le venció no pierde nada (pendiente #177).
@@ -230,7 +244,11 @@ async function resolverCodigo({ guardia, momento, codigo }) {
 
     // Se cuenta el intento antes de comparar, y la suma la hace la base en un solo paso. Antes se
     // leía y se escribía por separado, y dos intentos a la vez contaban como uno.
-    const intentos = await sumarIntento({ tabla: 'guardia_comprobaciones', id: fila.id });
+    const intentos = await sumarIntento({
+      tabla: 'guardia_comprobaciones',
+      id: fila.id,
+      prestadoraId: guardia.prestadora_id,
+    });
     if (seAgotaronLosIntentos(intentos)) {
       throw new ErrorConMotivo('demasiados_intentos', 'Se agotaron los intentos con este código');
     }
@@ -333,7 +351,7 @@ export async function registrarComprobacion({ guardia, momento, lat, lng, compro
  * en la pantalla de la Prestadora. No marca ni la llegada ni la salida: sólo abre el pedido.
  */
 export async function pedirCodigoALaPrestadora({ guardia, momento, texto }) {
-  const yaHay = await comprobacionDe(guardia.id, momento);
+  const yaHay = await comprobacionDe({ prestadoraId: guardia.prestadora_id, guardiaId: guardia.id, momento });
   if (yaHay?.estado === 'comprobada') {
     throw new ErrorConMotivo('ya_comprobada', 'Esta llegada ya quedó comprobada');
   }
@@ -428,6 +446,7 @@ export async function emitirCodigoDeLaPrestadora({ comprobacionId, prestadoraId,
       codigo_emitido_en: ahora(),
       updated_at: ahora(),
     })
+    .eq('prestadora_id', prestadoraId)
     .eq('id', comprobacionId)
     .eq('estado', 'pendiente_de_codigo');
   if (error) throw new Error(error.message);
@@ -491,6 +510,7 @@ export async function cerrarSinComprobar({ comprobacionId, prestadoraId, cerrada
       cerrada_nota: String(nota ?? '').trim().slice(0, LARGO_MAXIMO_DE_LA_NOTA) || null,
       updated_at: ahora(),
     })
+    .eq('prestadora_id', prestadoraId)
     .eq('id', comprobacionId)
     .is('cerrada_en', null);
   if (error) throw new Error(error.message);

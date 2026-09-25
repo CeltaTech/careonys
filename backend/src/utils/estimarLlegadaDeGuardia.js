@@ -25,14 +25,18 @@ import { horaEstimadaDeLlegada } from './llegadaEstimada.js';
 /**
  * La hora estimada de llegada de cada guardia, por id.
  *
+ * `prestadoraId` es obligatorio y va primero: los Pacientes de estas guardias se leen acotados a
+ * ella, y un filtro vacío no acota nada. Sin Prestadora no hay estimación.
+ *
+ * @param {string} prestadoraId
  * @param {Array<object>} guardias filas con `id`, `fecha`, `paciente_id`, `salida_checkin_at`,
  *   `salida_lat` y `salida_lng`
  * @returns {Promise<Map<string, Date|null>>}
  */
-export async function llegadaEstimadaDeGuardias(guardias) {
+export async function llegadaEstimadaDeGuardias(prestadoraId, guardias) {
   const lista = (guardias ?? []).filter(Boolean);
   const estimadas = new Map();
-  if (lista.length === 0) return estimadas;
+  if (lista.length === 0 || !prestadoraId) return estimadas;
 
   // Sólo se le pregunta el domicilio a las guardias que ya tienen salida marcada con punto: las
   // demás no tienen estimación posible y traer sus Pacientes sería una consulta de más.
@@ -44,7 +48,9 @@ export async function llegadaEstimadaDeGuardias(guardias) {
 
   // Acá no se pide `domicilio` a propósito, igual que en el check-in: esto mide una distancia,
   // no muestra una dirección.
-  const conSuGente = await conDomicilioDelDia(await conPacientes(conSalida, 'id, lat, lng'));
+  const conSuGente = await conDomicilioDelDia(
+    await conPacientes(prestadoraId, conSalida, 'id, lat, lng')
+  );
 
   for (const guardia of conSuGente) {
     const distancias = (guardia.pacientes ?? [])
@@ -62,8 +68,8 @@ export async function llegadaEstimadaDeGuardias(guardias) {
 }
 
 /** Lo mismo para una sola guardia. */
-export async function llegadaEstimadaDeGuardia(guardia) {
-  if (!guardia) return null;
-  const estimadas = await llegadaEstimadaDeGuardias([guardia]);
+export async function llegadaEstimadaDeGuardia(prestadoraId, guardia) {
+  if (!guardia || !prestadoraId) return null;
+  const estimadas = await llegadaEstimadaDeGuardias(prestadoraId, [guardia]);
   return estimadas.get(guardia.id) ?? null;
 }

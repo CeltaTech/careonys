@@ -29,6 +29,14 @@ export async function cargarMensajesDelSistema() {
 
   // De a mil, porque la lectura tiene un tope por pedido y el catálogo va a crecer.
   for (;;) {
+    // SIN PRESTADORA A PROPÓSITO
+    // El catálogo se lee una sola vez, al arrancar el motor, cuando todavía no hay ninguna persona
+    // adentro y por lo tanto ninguna Prestadora de la cual hablar. Acotarlo a una dejaría al motor
+    // sin los textos de las demás.
+    //
+    // Y lo leído no se mezcla: cada frase propia queda guardada bajo el identificador de su
+    // Prestadora, y al pedirla se la busca por ese identificador exacto. Una Prestadora que no
+    // escribió la suya recibe la del producto, nunca la de otra —ver `mensajesDelSistema.js`—.
     const { data, error } = await supabase
       .from('mensajes_del_sistema')
       .select('clave, i18n, prestadora_id, activo')

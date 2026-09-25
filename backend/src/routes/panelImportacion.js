@@ -242,10 +242,13 @@ panelImportacionRouter.post(
       }
     }
 
+    // El lote se cierra nombrando la Organización, no sólo con su identificador: una escritura
+    // que sólo dice el número de la fila alcanza a cualquier Prestadora.
     await supabase
       .from('importaciones_prestadora')
       .update({ filas_creadas: creadas, filas_error: errores.length, errores })
-      .eq('id', lote.id);
+      .eq('id', lote.id)
+      .eq('prestadora_id', prestadoraId);
 
     res.json({
       ok: true,
@@ -282,7 +285,8 @@ panelImportacionRouter.get(
       .select(lote.tipo === 'asistente'
         ? 'id, nombre, dni, email, telefono'
         : 'id, plan, pacientes(id, nombre, domicilio)')
-      .eq('importacion_id', lote.id);
+      .eq('importacion_id', lote.id)
+      .eq('prestadora_id', prestadoraId);
     if (errorFilas) {
       return res.status(500).json({ error: 'No se pudieron leer las filas del lote' });
     }
@@ -318,7 +322,8 @@ panelImportacionRouter.post(
     const { data: filas, error: errorFilas } = await supabase
       .from(tabla)
       .select('id')
-      .eq('importacion_id', lote.id);
+      .eq('importacion_id', lote.id)
+      .eq('prestadora_id', prestadoraId);
     if (errorFilas) {
       return res.status(500).json({ error: 'No se pudieron leer las filas del lote' });
     }
@@ -326,7 +331,8 @@ panelImportacionRouter.post(
     const { error: errorUpdate } = await supabase
       .from(tabla)
       .update({ pendiente_conformidad: false })
-      .eq('importacion_id', lote.id);
+      .eq('importacion_id', lote.id)
+      .eq('prestadora_id', prestadoraId);
     if (errorUpdate) {
       return res.status(500).json({ error: 'No se pudo conformar el lote' });
     }
@@ -344,7 +350,8 @@ panelImportacionRouter.post(
     await supabase
       .from('importaciones_prestadora')
       .update({ estado_conformidad: 'confirmada', revisada_en: new Date().toISOString(), revisada_por: req.usuarioPanel.id })
-      .eq('id', lote.id);
+      .eq('id', lote.id)
+      .eq('prestadora_id', prestadoraId);
 
     res.json({ ok: true, filasConfirmadas: filas.length });
   }
@@ -376,7 +383,8 @@ panelImportacionRouter.post(
     const { data: filas, error: errorFilas } = await supabase
       .from(tabla)
       .select('id')
-      .eq('importacion_id', lote.id);
+      .eq('importacion_id', lote.id)
+      .eq('prestadora_id', prestadoraId);
     if (errorFilas) {
       return res.status(500).json({ error: 'No se pudieron leer las filas del lote' });
     }
@@ -395,7 +403,8 @@ panelImportacionRouter.post(
     await supabase
       .from('importaciones_prestadora')
       .update({ estado_conformidad: 'rechazada', revisada_en: new Date().toISOString(), revisada_por: req.usuarioPanel.id })
-      .eq('id', lote.id);
+      .eq('id', lote.id)
+      .eq('prestadora_id', prestadoraId);
 
     res.json({ ok: true, filasRevertidas: revertidas });
   }

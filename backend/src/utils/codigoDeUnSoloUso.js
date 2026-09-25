@@ -122,8 +122,8 @@ const TABLAS_CON_INTENTOS = new Set([
  * Devuelve `null` si no se pudo contar; quien llama tiene que tratar eso como "se agotaron",
  * porque un tope que se saltea cuando la base no contesta no es un tope.
  */
-export async function sumarIntento({ tabla, id }) {
-  if (!TABLAS_CON_INTENTOS.has(tabla) || !id) return null;
+export async function sumarIntento({ tabla, id, prestadoraId }) {
+  if (!TABLAS_CON_INTENTOS.has(tabla) || !id || !prestadoraId) return null;
 
   // La conexión se pide acá adentro y no arriba de todo a propósito. El resto de este archivo son
   // cuentas de criptografía que no tocan la base, y varias pruebas lo importan sin levantar
@@ -131,7 +131,11 @@ export async function sumarIntento({ tabla, id }) {
   // entorno puestas rompería. El módulo se carga una sola vez y queda en memoria.
   const { supabase } = await import('../db/connection.js');
 
-  const { data, error } = await supabase.rpc('sumar_intento_de_codigo', { p_tabla: tabla, p_id: id });
+  const { data, error } = await supabase.rpc('sumar_intento_de_codigo', {
+    p_tabla: tabla,
+    p_id: id,
+    p_prestadora_id: prestadoraId,
+  });
   if (error) {
     // Se anota que no se pudo contar, nunca el código ni el contenido (CLAUDE.md §6).
     console.error('sumarIntento: no se pudo contar el intento:', error.message);

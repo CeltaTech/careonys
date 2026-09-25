@@ -1645,15 +1645,17 @@ panelConfiguracionRouter.post('/whatsapp/plantillas/:id/enviar-a-meta', async (r
     // Lo que Meta objetó queda guardado en la fila: es lo que hay que corregir para volver a
     // intentarlo, y la plantilla se queda en borrador justamente para poder corregirla.
     if (err.motivo === 'meta_no_acepto') {
-      await supabase
+      let anotarElRechazo = supabase
         .from('plantillas_whatsapp')
         .update({ motivo_rechazo: err.message, updated_at: new Date().toISOString() })
         .eq('id', plantilla.id);
+      anotarElRechazo = acotarAPrestadora(anotarElRechazo, req.usuarioPanel);
+      await anotarElRechazo;
     }
     return responderError(res, err);
   }
 
-  const { error: errorGuardado } = await supabase
+  let guardarLoQueContestoMeta = supabase
     .from('plantillas_whatsapp')
     .update({
       meta_template_id: resultado.metaTemplateId,
@@ -1662,6 +1664,8 @@ panelConfiguracionRouter.post('/whatsapp/plantillas/:id/enviar-a-meta', async (r
       updated_at: new Date().toISOString(),
     })
     .eq('id', plantilla.id);
+  guardarLoQueContestoMeta = acotarAPrestadora(guardarLoQueContestoMeta, req.usuarioPanel);
+  const { error: errorGuardado } = await guardarLoQueContestoMeta;
   if (errorGuardado) return responderError(res, errorGuardado);
 
   res.json({ ok: true, estado: resultado.estado });
@@ -1693,7 +1697,7 @@ panelConfiguracionRouter.post('/whatsapp/plantillas/consultar-a-meta', async (re
     if (!enMeta) continue;
     if (enMeta.estado === plantilla.estado && (enMeta.motivo ?? null) === (plantilla.motivo_rechazo ?? null)) continue;
 
-    const { error: errorGuardado } = await supabase
+    let guardarElEstado = supabase
       .from('plantillas_whatsapp')
       .update({
         estado: enMeta.estado,
@@ -1701,6 +1705,8 @@ panelConfiguracionRouter.post('/whatsapp/plantillas/consultar-a-meta', async (re
         updated_at: new Date().toISOString(),
       })
       .eq('id', plantilla.id);
+    guardarElEstado = acotarAPrestadora(guardarElEstado, req.usuarioPanel);
+    const { error: errorGuardado } = await guardarElEstado;
     if (errorGuardado) return responderError(res, errorGuardado);
     cambiadas += 1;
   }

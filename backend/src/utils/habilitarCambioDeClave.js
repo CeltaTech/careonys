@@ -103,6 +103,7 @@ export async function habilitarCambioDeClave({ quien, usuarioId }) {
   await supabase
     .from('cambios_de_clave_habilitados')
     .update({ anulado_en: new Date().toISOString() })
+    .eq('prestadora_id', quien.prestadoraId)
     .eq('usuario_id', usuarioId)
     .is('usado_en', null)
     .is('anulado_en', null);
@@ -218,12 +219,14 @@ export async function telefonosEsperandoHabilitacion(quien) {
     }));
 }
 
-/** ¿Este número ya lo confirmó la Prestadora para esta cuenta? */
-export async function telefonoConfirmadoPorLaPrestadora({ usuarioId, telefono }) {
-  if (!usuarioId || !telefono) return false;
+/** ¿Este número ya lo confirmó la Prestadora para esta cuenta? La Prestadora se nombra siempre, y
+ *  la trae quien llama: es la de la cuenta que se está mirando. */
+export async function telefonoConfirmadoPorLaPrestadora({ usuarioId, prestadoraId, telefono }) {
+  if (!usuarioId || !prestadoraId || !telefono) return false;
   const { data } = await supabase
     .from('telefonos_confirmados_por_la_prestadora')
     .select('id')
+    .eq('prestadora_id', prestadoraId)
     .eq('usuario_id', usuarioId)
     .eq('telefono_huella', huellaDelTelefono(telefono))
     .maybeSingle();
@@ -231,11 +234,12 @@ export async function telefonoConfirmadoPorLaPrestadora({ usuarioId, telefono })
 }
 
 /** La puerta que sigue abierta para esta cuenta, si hay alguna. */
-export async function cambioDeClaveHabilitado(usuarioId) {
-  if (!usuarioId) return null;
+export async function cambioDeClaveHabilitado(usuarioId, prestadoraId) {
+  if (!usuarioId || !prestadoraId) return null;
   const { data } = await supabase
     .from('cambios_de_clave_habilitados')
     .select('id, expira_en')
+    .eq('prestadora_id', prestadoraId)
     .eq('usuario_id', usuarioId)
     .is('usado_en', null)
     .is('anulado_en', null)
@@ -247,11 +251,12 @@ export async function cambioDeClaveHabilitado(usuarioId) {
 }
 
 /** Se gasta la puerta. Devuelve false si otro pedido la gastó primero. */
-export async function usarCambioDeClaveHabilitado(id) {
-  if (!id) return false;
+export async function usarCambioDeClaveHabilitado(id, prestadoraId) {
+  if (!id || !prestadoraId) return false;
   const { data } = await supabase
     .from('cambios_de_clave_habilitados')
     .update({ usado_en: new Date().toISOString() })
+    .eq('prestadora_id', prestadoraId)
     .eq('id', id)
     .is('usado_en', null)
     .select('id')

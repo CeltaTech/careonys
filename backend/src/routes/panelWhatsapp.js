@@ -32,11 +32,15 @@ async function conversacionDeLaPrestadora(conversacionId, prestadoraId) {
 }
 
 /** El último saliente que quedó anotado sin salir. Se reusa para no dejar huérfana la fila del
- *  envío que falló, en vez de sumar una segunda al hilo por el mismo mensaje. */
-async function borradorPendiente(conversacionId) {
+ *  envío que falló, en vez de sumar una segunda al hilo por el mismo mensaje.
+ *
+ *  Se nombra la Prestadora aunque la conversación ya venga comprobada: colgar de la fila padre
+ *  no alcanza. */
+async function borradorPendiente(conversacionId, prestadoraId) {
   const { data } = await supabase
     .from('mensajes_whatsapp')
     .select('id')
+    .eq('prestadora_id', prestadoraId)
     .eq('conversacion_id', conversacionId)
     .eq('direccion', 'saliente')
     .eq('enviado_automaticamente', false)
@@ -72,7 +76,7 @@ panelWhatsappRouter.post('/conversaciones/:id/responder', requiereRolPanel, asyn
   }
 
   const ahora = new Date().toISOString();
-  const borrador = await borradorPendiente(conversacion.id);
+  const borrador = await borradorPendiente(conversacion.id, prestadoraId);
 
   // De acá para abajo el mensaje **ya salió** por WhatsApp y no hay forma de traerlo de vuelta.
   // Por eso lo que falle se anota en el registro del servidor y no se convierte en un error de
@@ -86,6 +90,7 @@ panelWhatsappRouter.post('/conversaciones/:id/responder', requiereRolPanel, asyn
     const { error } = await supabase
       .from('mensajes_whatsapp')
       .update({ texto, revisado_por_coordinador_at: ahora })
+      .eq('prestadora_id', prestadoraId)
       .eq('id', borrador.id);
     if (error) fallo = error;
   } else {
@@ -104,6 +109,7 @@ panelWhatsappRouter.post('/conversaciones/:id/responder', requiereRolPanel, asyn
   const { error: errorConversacion } = await supabase
     .from('conversaciones_whatsapp')
     .update({ requiere_atencion_coordinador: false, ultimo_mensaje_at: ahora })
+    .eq('prestadora_id', prestadoraId)
     .eq('id', conversacion.id);
   if (errorConversacion) fallo = errorConversacion;
 
@@ -130,7 +136,7 @@ panelWhatsappRouter.post('/conversaciones/:id/descartar', requiereRolPanel, asyn
   }
 
   const ahora = new Date().toISOString();
-  const borrador = await borradorPendiente(conversacion.id);
+  const borrador = await borradorPendiente(conversacion.id, prestadoraId);
 
   // Acá no salió nada hacia afuera, así que lo que falle sí se contesta: si la conversación
   // sigue pidiendo atención, el Coordinador tiene que saberlo ahora y no descubrirlo mañana con
@@ -139,6 +145,7 @@ panelWhatsappRouter.post('/conversaciones/:id/descartar', requiereRolPanel, asyn
     const { error } = await supabase
       .from('mensajes_whatsapp')
       .update({ revisado_por_coordinador_at: ahora })
+      .eq('prestadora_id', prestadoraId)
       .eq('id', borrador.id);
     if (error) return responderError(res, error);
   }
@@ -146,6 +153,7 @@ panelWhatsappRouter.post('/conversaciones/:id/descartar', requiereRolPanel, asyn
   const { data: descartada, error } = await supabase
     .from('conversaciones_whatsapp')
     .update({ requiere_atencion_coordinador: false })
+    .eq('prestadora_id', prestadoraId)
     .eq('id', conversacion.id)
     .select('id');
   if (error) return responderError(res, error);

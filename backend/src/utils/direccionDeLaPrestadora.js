@@ -25,6 +25,9 @@ import { nombreBase } from './casillaDeEnvio.js';
 // Las puertas ya repartidas que empiezan igual. Se consultan todas juntas y no de a una para no
 // hacerle una pregunta a la base por cada intento.
 async function direccionesTomadas(base) {
+  // SIN PRESTADORA A PROPÓSITO
+  // Elige un dominio libre antes de que la Prestadora exista. Sin mirar a las demás no puede saber
+  // si está tomado. No sale ningún dato de ninguna: sólo qué rótulos ya están repartidos.
   const { data, error } = await supabase
     .from('configuracion_prestadora')
     .select('dominio')

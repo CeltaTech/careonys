@@ -66,6 +66,7 @@ export async function cubrirGuardiaConSustituto({
   const { error: errorReasignar } = await supabase
     .from('guardias')
     .update({ asistente_id: asistenteSustitutoId })
+    .eq('prestadora_id', prestadoraId)
     .eq('id', guardia.id);
   if (errorReasignar) return { ok: false, motivo: errorReasignar.message };
 

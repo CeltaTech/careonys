@@ -395,7 +395,6 @@ export function EstadoActual() {
   return (
     <div>
       <h1>{t.estado_actual.titulo}</h1>
-      <p className="panel-lateral-subtitulo">{t.estado_actual.subtitulo}</p>
 
       {error && <Alert variant="error">{error}</Alert>}
 

@@ -168,14 +168,12 @@ export function MarketplaceFamilias() {
   return (
     <div>
       <h1>{t.marketplace.familias_titulo}</h1>
-      <p className="panel-explicacion">{t.marketplace.familias_explicacion}</p>
 
       {mensajeCanje && <Alert variant="success">{mensajeCanje}</Alert>}
       {error && <Alert variant="error">{error}</Alert>}
 
       <div style={{ marginBottom: '1.5rem' }}>
         <h2>{t.marketplace.canjear_qr_titulo}</h2>
-        <p className="panel-explicacion">{t.marketplace.canjear_qr_explicacion}</p>
         {!escaneando && (
           <Button
             onClick={() => {
@@ -250,7 +248,6 @@ export function MarketplaceFamilias() {
                           </p>
                         ) : (
                           <>
-                            <p className="panel-explicacion">{t.marketplace.alta_pasarela_explicacion}</p>
                             {rielesConectados.length === 0 ? (
                               <Alert variant="warning">{t.errores.motivos.sin_pasarela_conectada}</Alert>
                             ) : (

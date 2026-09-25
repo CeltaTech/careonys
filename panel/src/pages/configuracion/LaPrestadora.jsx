@@ -315,7 +315,6 @@ function NuevaZona({ onClose, onCreada }) {
         <FormField label={t.configuracion.zonas_col_codigo} name="codigo" value={codigo} onChange={(e) => setCodigo(e.target.value)} required />
         <FormField label={t.configuracion.zonas_col_nombre} name="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
         <FormField label={t.configuracion.zonas_col_categoria} name="categoria" value={categoria} onChange={(e) => setCategoria(e.target.value)} required />
-        <p className="panel-explicacion">{t.configuracion.zonas_categoria_explicacion}</p>
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>{t.comun.cancelar}</Button>
           <Button onClick={handleGuardar} disabled={guardando || !codigo || !nombre}>

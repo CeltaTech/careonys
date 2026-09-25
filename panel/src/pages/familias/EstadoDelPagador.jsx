@@ -324,7 +324,6 @@ function DocumentoDelConsentimiento({ texto, recienGuardado = false, onCerrar })
         <div className="no-imprimir">
           <h2 id={modal.idTitulo}>{textos.documento_titulo}</h2>
           {recienGuardado && <Alert variant="success">{textos.documento_guardado}</Alert>}
-          <p className="panel-explicacion">{textos.documento_explicacion}</p>
         </div>
 
         <div id="area-imprimible">
@@ -436,7 +435,6 @@ function CargarPapelDelPagadorModal({ familiaId, papel, onClose, onCargado }) {
     <div className="panel-modal-fondo" onClick={onClose}>
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
         <h2 id={modal.idTitulo}>{papel.nombre}</h2>
-        <p className="panel-explicacion">{textos.papel_cargar_explicacion}</p>
 
         {error && <Alert variant="error">{error}</Alert>}
 

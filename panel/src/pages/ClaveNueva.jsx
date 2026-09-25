@@ -146,7 +146,6 @@ export function ClaveNueva() {
     <div className="login-pantalla">
       <form className="login-card" onSubmit={handleGuardar}>
         <h1>{t.auth.clave_nueva_titulo}</h1>
-        <p className="login-subtitulo">{t.auth.clave_nueva_subtitulo}</p>
 
         {error && <Alert variant="error">{error}</Alert>}
 

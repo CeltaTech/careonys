@@ -168,7 +168,6 @@ export function MarketplaceAuditoriaLegal() {
       </EstadoLista>
 
       <h2>{t.marketplace.auditoria_legal_registro_titulo}</h2>
-      <p className="panel-explicacion">{t.marketplace.auditoria_legal_explicacion}</p>
 
       <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && eventos.length === 0} recargar={recargar}>
         <table className="panel-tabla">

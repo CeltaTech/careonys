@@ -194,7 +194,6 @@ export function Guardias() {
       <div className="dashboard-seccion">
         <div className="dashboard-seccion-header">
           <h2 className="dashboard-seccion-titulo">{t.guardias.grilla_titulo}</h2>
-          <p className="dashboard-seccion-subtitulo">{t.guardias.grilla_subtitulo}</p>
         </div>
         <EstadoLista
           estado={estadoCarga}

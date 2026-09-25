@@ -119,7 +119,6 @@ export function AccesosDelCirculoModal({ familiaId, miembros, puedeEditar, usuar
     <div className="panel-modal-fondo" onClick={cerrar}>
       <div className="panel-modal panel-modal-ancho" onClick={(e) => e.stopPropagation()} {...modal.props}>
         <h2 id={modal.idTitulo}>{t.familias.circulo.accesos_titulo}</h2>
-        <p className="panel-explicacion">{t.familias.circulo.accesos_explicacion}</p>
 
         {error && <Alert variant="error">{error}</Alert>}
 
@@ -194,7 +193,6 @@ export function DocumentoDeLaInstruccion({ texto, fecha, recienGuardado = false,
         <div className="no-imprimir">
           <h2 id={modal.idTitulo}>{t.familias.circulo.documento_titulo}</h2>
           {recienGuardado && <Alert variant="success">{t.familias.circulo.documento_guardado}</Alert>}
-          <p className="panel-explicacion">{t.familias.circulo.documento_explicacion}</p>
           {fecha && (
             <dl className="panel-detalle-lista">
               <dt>{t.familias.circulo.documento_fecha}</dt>

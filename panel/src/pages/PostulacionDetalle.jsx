@@ -235,7 +235,6 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
           label={t.comun.nota_interna}
           name="nota"
           type="textarea"
-          placeholder={t.comun.nota_interna_placeholder}
           value={nota}
           onChange={(e) => setNota(e.target.value)}
         />
@@ -250,7 +249,6 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
             <p className="panel-explicacion">{t.postulaciones.ya_iniciada_verificacion}</p>
           ) : (
             <div>
-              <p className="panel-explicacion">{t.postulaciones.iniciar_verificacion_explicacion}</p>
 
               {/* Qué va a ser esta persona en la Prestadora. Se elige acá, mirando la
                   postulación, y no se copia de lo que la persona escribió en el

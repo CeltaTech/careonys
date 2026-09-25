@@ -74,7 +74,6 @@ export function GuiaPrimerosPasos() {
             <li key={paso.clave} className={`onboarding-paso${paso.hecho ? ' onboarding-paso-hecho' : ''}`}>
               <div className="onboarding-paso-info">
                 <span className="onboarding-paso-titulo">{textos[`paso_${paso.clave}_titulo`]}</span>
-                <span className="onboarding-paso-explicacion">{textos[`paso_${paso.clave}_explicacion`]}</span>
                 {/* La consecuencia sólo se muestra en lo que falta: al lado de un paso ya hecho
                     sería la advertencia de algo que no va a pasar. */}
                 {!paso.hecho && (

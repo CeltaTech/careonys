@@ -92,7 +92,6 @@ export function FormaDeCobroDetalle({ forma, unidades, soloLectura, onClose, onG
           required
         />
 
-        <p className="panel-explicacion">{t.marketplace.forma_periodo_explicacion}</p>
 
         <FormField
           label={t.marketplace.forma_periodo_cantidad}

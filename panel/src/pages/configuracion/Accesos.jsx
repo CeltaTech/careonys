@@ -260,7 +260,6 @@ function TabSeguridad() {
   return (
     <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
       <h2>{t.configuracion.seguridad_mfa_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.seguridad_mfa_explicacion}</p>
       <label className="panel-checkbox">
         <input type="checkbox" checked={mfaObligatorio} onChange={handleToggle} disabled={guardando} />
         {mfaObligatorio ? t.configuracion.seguridad_mfa_activo : t.configuracion.seguridad_mfa_inactivo}

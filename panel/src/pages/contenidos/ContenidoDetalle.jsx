@@ -101,7 +101,6 @@ export function ContenidoDetalle({ contenido, soloLectura, onClose, onGuardado }
           onChange={(e) => setEnlace(e.target.value)}
           disabled={soloLectura}
         />
-        <p className="panel-explicacion">{t.contenidos.campo_enlace_explicacion}</p>
 
         <FormField
           label={t.contenidos.campo_orden}
@@ -120,7 +119,6 @@ export function ContenidoDetalle({ contenido, soloLectura, onClose, onGuardado }
           onChange={(e) => setPublicado(e.target.checked)}
           disabled={soloLectura}
         />
-        <p className="panel-explicacion">{t.contenidos.campo_publicado_explicacion}</p>
 
         {/* Borrar es definitivo y por eso se pregunta antes, diciendo qué se va a hacer y cómo
             cancelar. No lo apunta nadie: acá no queda ningún vínculo colgando. */}

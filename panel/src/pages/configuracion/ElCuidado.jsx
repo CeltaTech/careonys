@@ -143,7 +143,6 @@ function TabServicios() {
   return (
     <div>
       <h2>{t.configuracion.servicios_horizonte_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.servicios_horizonte_explicacion}</p>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
       {horizonteGuardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
       <FormField
@@ -158,7 +157,6 @@ function TabServicios() {
       </Button>
 
       <h2>{t.configuracion.servicios_ausencia_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.servicios_ausencia_explicacion}</p>
       {ausenciaGuardada && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
       <FormField label={t.configuracion.servicios_ausencia_activa} name="ausencia_activa" type="checkbox" checked={ausenciaActiva} onChange={(e) => { setAusenciaActiva(e.target.checked); setAusenciaGuardada(false); }} />
       <FormField
@@ -203,7 +201,6 @@ function TabServicios() {
       </Button>
 
       <h2>{t.configuracion.servicios_escalada_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.servicios_escalada_explicacion}</p>
       {/* CUÁNTOS MINUTOS DE ATRASO CONVIERTEN UNA LLEGADA TARDE EN UNA ALERTA (pendiente #101).
           Lo decide cada Prestadora acá abajo, no el código. Pero el número se usa aunque nadie
           haya configurado ningún nivel, así que la pantalla dice cuál está rigiendo hoy y de
@@ -515,7 +512,6 @@ function TabServiciosMotivosAvisoPrevio() {
   return (
     <div>
       <h2>{t.configuracion.motivos_aviso_previo_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.motivos_aviso_previo_explicacion}</p>
       {error && <Alert variant="error">{error}</Alert>}
       <div className="panel-filtros">
         <Button onClick={() => setCreandoNuevo(true)}>{t.configuracion.motivos_aviso_previo_nuevo}</Button>
@@ -1190,7 +1186,6 @@ function TabMatriculaMedicacion() {
   return (
     <div>
       <h2>{t.configuracion.matricula_medicacion_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.matricula_medicacion_explicacion}</p>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
       <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && filas.length === 0} recargar={recargar} mensajeVacio={t.configuracion.matricula_medicacion_vacio}>
         <table className="panel-tabla">

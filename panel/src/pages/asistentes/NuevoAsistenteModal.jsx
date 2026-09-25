@@ -125,7 +125,6 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
             />
           ))}
 
-          <p className="panel-explicacion">{t.asistentes.nuevo.ayuda_estado}</p>
 
           <div className="panel-modal-acciones">
             <Button variant="secondary" type="button" onClick={onClose} disabled={guardando}>

@@ -1860,11 +1860,6 @@ button.panel-kpi-card[aria-pressed='true'] {
   color: var(--texto-principal);
 }
 
-.estado-actual-excepcion-ayuda {
-  font-size: 0.78rem;
-  color: var(--texto-secundario);
-}
-
 .estado-actual-franja-vacia {
   color: var(--texto-secundario);
   margin-bottom: 1.5rem;

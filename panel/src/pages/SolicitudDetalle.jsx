@@ -261,7 +261,6 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
           label={t.comun.nota_interna}
           name="nota"
           type="textarea"
-          placeholder={t.comun.nota_interna_placeholder}
           value={nota}
           onChange={(e) => setNota(e.target.value)}
         />
@@ -274,7 +273,6 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
               <p>{t.solicitudes.ya_convertida_familia}</p>
             ) : (
               <>
-                <p>{t.solicitudes.convertir_en_familia_explicacion}</p>
                 {errorConversion && <Alert variant="error">{errorConversion}</Alert>}
                 <Button variant="secondary" onClick={handleConvertirEnFamilia} disabled={convirtiendo}>
                   {convirtiendo ? t.comun.guardando : t.solicitudes.convertir_en_familia}

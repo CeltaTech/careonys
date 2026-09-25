@@ -198,6 +198,10 @@ la sección de Reclutamiento está esperando justamente esto.
 - **La lógica que interesa vive afuera de las pantallas**, salvo cuatro renglones sueltos que están
   señalados en el paso que los necesita.
 - **El inventario de allá se usa como lista de control**, leyéndolo y sin escribir en él.
+- **Las notas con la palabra vieja adentro de las migraciones ya aplicadas de Match se corrigen
+  acá.** Allá no se pueden tocar —una migración aplicada no se edita— y no vale escribir una nueva
+  sólo para eso. Lo que viaja se escribe de este lado con la palabra que manda el glosario, y así
+  esas notas quedan atrás.
 
 **5.** Una cuenta por Prestadora. **Un Asistente trabaja en varias Prestadoras y una Familia
 contrata con varias.** Cada una de esas es **una cuenta distinta, con su propia clave**. El mismo

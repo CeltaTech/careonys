@@ -1,33 +1,38 @@
 import { supabase } from '../db/connection.js';
 
-// Guarda la suscripción de avisos de un aparato, y deja rastro si esa suscripción cambia de dueño.
+// Guarda la suscripción a las notificaciones de un aparato, y deja rastro si esa suscripción
+// cambia de dueño.
 //
 // Escrito una sola vez porque lo usan las dos aplicaciones —la del Asistente y la de la Familia—
 // con el mismo contrato y la misma tabla (regla 12 de CLAUDE.md §7). Tenerlo dos veces es cómo se
 // arregla una sola de las dos.
 //
-// **Por qué existe el rastro.** La dirección de entrega que emite el navegador es
-// única en toda la tabla, sin condición de Prestadora: quien la mande con sus propias claves se
-// queda con la fila, y el aparato de la otra persona deja de mostrar sus avisos —el backend le sigue
-// mandando mensajes, cifrados con claves que ese navegador no tiene—. No se prohíbe porque el caso
-// legítimo es idéntico: cuando dos personas comparten un teléfono, la dirección es la misma y
-// pisarla es lo correcto. Lo que se hace es anotarlo, para poder explicar después por qué alguien
-// dejó de recibir avisos. El porqué completo está en la migración
+// **Por qué existe el rastro.** Adentro de una Prestadora la dirección de entrega que emite el
+// navegador es única: quien la mande con sus propias claves se queda con la fila, y el aparato de
+// la otra persona deja de mostrar sus notificaciones. No se prohíbe porque el caso legítimo es
+// idéntico: cuando dos personas comparten un teléfono, la dirección es la misma y pisarla es lo
+// correcto. Lo que se hace es anotarlo, para poder explicar después por qué alguien dejó de
+// recibir notificaciones. El
+// porqué completo está en la migración
 // supabase/migrations/20260823020000_un_cambio_de_dueno_de_una_suscripcion_de_avisos_queda_anotado.sql
+//
+// **Y el mismo aparato en dos Prestadoras no es el mismo caso.** Un Asistente que trabaja en dos y
+// usa un solo teléfono queda anotado dos veces, una por cada una, y cada Prestadora le manda lo
+// suyo. Lo hace cumplir el único `(prestadora_id, endpoint)` de la migración
+// supabase/migrations/20261006090000_un_aparato_se_anota_una_vez_por_cada_prestadora.sql
 //
 // `rol` es 'asistente' o 'familia'. Devuelve `{ error }`: el llamador decide qué contestar.
 export async function guardarSuscripcionPush({ prestadoraId, rol, usuarioId, endpoint, keys, userAgent }) {
   const columna = rol === 'asistente' ? 'asistente_id' : 'familia_id';
 
-  // SIN PRESTADORA A PROPÓSITO
-  // ESTO NO ES UNA EXCEPCIÓN RESUELTA, ES UN CASO ABIERTO. El identificador del aparato —la
-  // dirección de entrega— es único en toda la tabla sin condición de Prestadora, y esta consulta
-  // mira a propósito todas para detectar que ese teléfono cambió de dueño: acotarla a la Prestadora
-  // de la sesión dejaría de ver justo el cruce que viene a buscar. Es una puerta, y la decisión de
-  // cerrarla o no es de diseño, no mecánica: está planteada al Desarrollador y sin contestar.
+  // Sin Prestadora no se lee nada: un filtro vacío traería la anotación que ese mismo aparato
+  // tenga en otra, que acá no existe.
+  if (!prestadoraId) return { error: new Error('falta la Prestadora') };
+
   const { data: anterior, error: errorAnterior } = await supabase
     .from('push_subscriptions')
-    .select('id, prestadora_id, asistente_id, familia_id')
+    .select('id, asistente_id, familia_id')
+    .eq('prestadora_id', prestadoraId)
     .eq('endpoint', endpoint)
     .maybeSingle();
   if (errorAnterior) return { error: errorAnterior };
@@ -45,15 +50,11 @@ export async function guardarSuscripcionPush({ prestadoraId, rol, usuarioId, end
   };
   fila[columna] = usuarioId;
 
-  // SIN PRESTADORA A PROPÓSITO
-  // ESTO NO ES UNA EXCEPCIÓN RESUELTA, ES UN CASO ABIERTO. La Prestadora va adentro de la fila,
-  // pero la columna del conflicto es el identificador del aparato, único en toda la tabla sin
-  // condición de Prestadora: la fila que se pisa puede ser de otra, y eso es a propósito, porque es
-  // el mismo teléfono cambiando de dueño. Es una puerta, y la decisión de cerrarla o no es de
-  // diseño, no mecánica: está planteada al Desarrollador y sin contestar.
+  // El conflicto es por Prestadora y aparato, nunca por el aparato solo: la fila que se pisa es
+  // siempre de esta Prestadora, y la que ese mismo teléfono tenga en otra no se toca.
   const { data: guardada, error } = await supabase
     .from('push_subscriptions')
-    .upsert(fila, { onConflict: 'endpoint' })
+    .upsert(fila, { onConflict: 'prestadora_id,endpoint' })
     .select('id')
     .single();
   if (error) return { error };
@@ -62,7 +63,10 @@ export async function guardarSuscripcionPush({ prestadoraId, rol, usuarioId, end
   if (duenoAnterior && duenoAnterior !== usuarioId) {
     const { error: errorRastro } = await supabase.from('auditoria_cambio_dueno_push').insert({
       suscripcion_id: guardada.id,
-      prestadora_anterior: anterior.prestadora_id,
+      // Las dos son la misma: un cambio de dueño ocurre siempre adentro de una Prestadora. Las dos
+      // columnas quedan porque son las que tiene la tabla, y una anotación vieja puede traer dos
+      // distintas, de cuando el aparato se anotaba una sola vez en total.
+      prestadora_anterior: prestadoraId,
       prestadora_nueva: prestadoraId,
       usuario_anterior: duenoAnterior,
       usuario_nuevo: usuarioId,
@@ -70,13 +74,14 @@ export async function guardarSuscripcionPush({ prestadoraId, rol, usuarioId, end
       rol_nuevo: rol,
       user_agent: userAgent || null,
     });
-    // Si falla la anotación, la suscripción ya quedó guardada y el aparato va a recibir avisos: no
+    // Si falla la anotación, la suscripción ya quedó guardada y el aparato va a recibir sus
+    // notificaciones: no
     // se le devuelve un error a quien acaba de suscribirse por algo que no puede resolver. Queda en
     // el registro del servidor, que es donde alguien lo va a ir a buscar. Se anotan identificadores,
     // nunca la dirección de entrega ni el correo de nadie (CLAUDE.md §6).
     if (errorRastro) {
       console.error(
-        'No se pudo anotar el cambio de dueño de una suscripción de avisos',
+        'No se pudo anotar el cambio de dueño de una suscripción a las notificaciones',
         guardada.id,
         errorRastro.message,
       );

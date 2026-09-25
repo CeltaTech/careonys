@@ -1,6 +1,7 @@
 import webpush from 'web-push';
 import { supabase } from '../db/connection.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
+import { marcaDeLaPrestadora } from './marcaPrestadora.js';
 
 let configurado = false;
 
@@ -17,6 +18,29 @@ function asegurarConfiguracion() {
   return true;
 }
 
+// En el celular, el encabezado es la Prestadora y el mensaje entero va abajo.
+//
+// POR QUÉ. Una misma aplicación sirve a todas las Prestadoras, así que la notificación es el único
+// canal donde no se sabe de dónde llega: por WhatsApp llega del número de esa Prestadora y por
+// correo, de su casilla. Acá hay que decirlo. Un Asistente que trabaja en dos, si no, lee
+// «Finalización de servicio» y no sabe de cuál de las dos.
+//
+// Se hace en este único lugar y no en cada mensaje: son los mismos ocho mensajes del sistema
+// saliendo por tres canales, y el nombre de la Prestadora sólo hace falta en éste.
+//
+// Sin nombre cargado queda el del producto, que es la misma caída que usan las pantallas cuando la
+// Prestadora no se pudo resolver.
+async function comoSeVeEnElCelular(prestadoraId, titulo, cuerpo) {
+  const { nombre } = await marcaDeLaPrestadora(prestadoraId);
+  const encabezado = nombre || IDENTIDAD.nombre;
+  const sinTitulo = !titulo;
+  if (sinTitulo) return { titulo: encabezado, cuerpo };
+  // El título del mensaje pasa a ser la primera frase del cuerpo. Si ya viene con su propio signo
+  // al final, no se le agrega otro.
+  const cierre = /[.!?…]$/.test(titulo) ? '' : '.';
+  return { titulo: encabezado, cuerpo: cuerpo ? `${titulo}${cierre} ${cuerpo}` : titulo };
+}
+
 // Envía un push a todas las suscripciones activas de una audiencia (Asistente o Familia,
 // nunca ambas — ver CHECK push_subscriptions_una_audiencia en schema_pwa_familias_01.sql).
 // Si una suscripción devuelve 404/410 (dispositivo desinstaló la app o revocó el permiso),
@@ -27,8 +51,8 @@ function asegurarConfiguracion() {
 // (revisarRecordatoriosPush.js) para decidir si cae a WhatsApp de respaldo.
 //
 // `prestadoraId` es obligatorio y no tiene valor por defecto: el backend entra con la llave de
-// servicio, que se saltea la protección por fila, así que lo único que impide mandarle el aviso de
-// una Prestadora al aparato de otra es este filtro. Colgar del identificador del Asistente o de la
+// servicio, que se saltea la protección por fila, así que lo único que impide mandarle la
+// notificación de una Prestadora al aparato de otra es este filtro. Colgar del identificador del Asistente o de la
 // Familia no alcanza, porque acá no se lee ninguna de esas dos tablas.
 async function enviarPush(prestadoraId, columna, id, { titulo, cuerpo, url }) {
   // Sin destinatario no hay push. Pasa cuando la guardia está sin cubrir: no hay Asistente
@@ -50,7 +74,10 @@ async function enviarPush(prestadoraId, columna, id, { titulo, cuerpo, url }) {
 
   if (error || !suscripciones?.length) return false;
 
-  const payload = JSON.stringify({ titulo, cuerpo, url: url || '/' });
+  const payload = JSON.stringify({
+    ...(await comoSeVeEnElCelular(prestadoraId, titulo, cuerpo)),
+    url: url || '/',
+  });
 
   const resultados = await Promise.all(
     suscripciones.map(async (suscripcion) => {

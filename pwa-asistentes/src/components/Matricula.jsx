@@ -45,7 +45,7 @@ export default function Matricula() {
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(true);
   const [formAbierto, setFormAbierto] = useState(false);
-  const [aviso, setAviso] = useState('');
+  const [advertencia, setAdvertencia] = useState('');
 
   const [numero, setNumero] = useState('');
   const [desde, setDesde] = useState('');
@@ -94,7 +94,7 @@ export default function Matricula() {
       setHasta('');
       setArchivo(null);
       setFormAbierto(false);
-      setAviso(tm.cargada);
+      setAdvertencia(tm.cargada);
       await cargar();
     } catch (err) {
       setErrorForm(mensajeDeError(err, t));
@@ -110,7 +110,7 @@ export default function Matricula() {
       const { url } = await api.archivoDeMatricula(ruta);
       window.open(url, '_blank', 'noopener');
     } catch {
-      setAviso(t.comun.error_generico);
+      setAdvertencia(t.comun.error_generico);
     }
   }
 
@@ -170,7 +170,7 @@ export default function Matricula() {
         {cartel.texto}
       </div>
 
-      {aviso && <div className="alert alert-info" role="status">{aviso}</div>}
+      {advertencia && <div className="alert alert-info" role="status">{advertencia}</div>}
 
       {puedeCargar && !formAbierto && (
         <button type="button" className="btn btn-primary" onClick={() => setFormAbierto(true)}>

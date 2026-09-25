@@ -72,8 +72,8 @@ etapa.
 **Las compara una persona, no el producto.** Quien revisa las mira una al lado de la otra y marca
 la etapa como venía haciéndolo; lo que cambió es que ahora queda guardado lo que miró. La
 comparación automática de las dos caras —la columna «comparación por IA» del cuadro— es
-tratamiento de dato biométrico y **no está construida**: falta el documento legal del que salga el
-aviso al Asistente, y falta elegir proveedor (`SECURITY.md`, decisiones pendientes).
+tratamiento de dato biométrico y **no está construida**: falta el documento legal del que salga la
+advertencia al Asistente, y falta elegir proveedor (`SECURITY.md`, decisiones pendientes).
 
 ### Referencias laborales — cómo quedó construido
 
@@ -278,7 +278,7 @@ es el orden con el que la pantalla pide los datos.
   importes. Quien no dijo cuánto pretende cobrar aparece con un guión: se pregunta en la
   entrevista.
 - **La columna de cómo nos conoció se rotula por el dato que hay guardado.** El PRD original la
-  llamaba «canal de llegada», y son dos cosas distintas: acá un canal es por dónde sale un aviso
+  llamaba «canal de llegada», y son dos cosas distintas: acá un canal es por dónde sale un mensaje del sistema
   —WhatsApp, correo, notificación— y está escrito así en `panel/src/lib/modalidades.js`. Lo que la
   postulación guarda es lo que la persona contestó, y así se rotula.
 - **Once condiciones no entran adentro de una pantalla.** El filtrado vive en

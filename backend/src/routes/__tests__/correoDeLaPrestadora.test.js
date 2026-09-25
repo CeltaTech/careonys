@@ -3,13 +3,13 @@
  *
  *   npm test --prefix backend
  *
- * POR QUÉ EXISTE ESTA PRUEBA. Cada Prestadora manda sus avisos desde una dirección del producto
+ * POR QUÉ EXISTE ESTA PRUEBA. Cada Prestadora manda sus mensajes desde una dirección del producto
  * que sólo manda; quien le conteste le escribe a un buzón que no existe, y para que esa respuesta
  * llegue hay un reenvío hacia la casilla que la Prestadora declaró. Esa casilla se cambia desde
  * esta pantalla, y ahí hay tres cosas que se rompen sin hacer ruido:
  *
  *   1. QUE LAS RESPUESTAS SIGAN YENDO A LA CASILLA VIEJA. Cambiar la casilla no es agregar una:
- *      el reenvío anterior sigue abierto si nadie lo corta, y quien conteste un aviso le escribe
+ *      el reenvío anterior sigue abierto si nadie lo corta, y quien conteste un mensaje le escribe
  *      a quien ya no tiene que leerlo.
  *   2. QUE EL BACKEND PIERDA CON QUÉ CORTARLO. El identificador de la regla nueva se anota en la
  *      fila de la Prestadora; sin eso, el día que se vaya queda un reenvío abierto para siempre.

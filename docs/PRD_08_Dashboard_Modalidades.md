@@ -1,6 +1,6 @@
 # Rediseño del dashboard de Admin_prestadora en grupos por modalidad — PROPUESTA
 
-> **Aviso de nombre (2026-08-07).** Este documento fue aprobado el 2026-07-24 y se conserva
+> **Advertencia de nombre (2026-08-07).** Este documento fue aprobado el 2026-07-24 y se conserva
 > tal como se aprobó, así que adentro la tercera modalidad todavía se llama **"cooperativa"**.
 > Desde el 2026-08-07 esa modalidad se llama **Subcontratación**, y el valor guardado en la
 > base es `subcontratacion`. El cambio de nombre y el porqué están en `docs/PLAN_HASTA_PRODUCCION.md`

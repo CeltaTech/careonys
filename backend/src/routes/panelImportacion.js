@@ -36,7 +36,7 @@ function manejarErrorMulter(err, req, res, next) {
   next();
 }
 
-const AVISO_ESTRUCTURA_VIA_IA =
+const ADVERTENCIA_ESTRUCTURA_VIA_IA =
   'La estructura de este archivo fue interpretada por IA — conviene revisar el mapeo con especial atención antes de confirmar';
 
 // Las tres capas de lectura, en un solo lugar. Están escritas acá y no adentro de una ruta
@@ -78,7 +78,7 @@ async function analizarPlanillaSubida({ tipo, archivo, prestadoraId }) {
       headers: lectura.headers,
       filas: lectura.filas,
       mapeoPropuesto: mapeo,
-      advertencias: lectura.viaIA ? [AVISO_ESTRUCTURA_VIA_IA, ...advertencias] : advertencias,
+      advertencias: lectura.viaIA ? [ADVERTENCIA_ESTRUCTURA_VIA_IA, ...advertencias] : advertencias,
       camposDisponibles: CAMPOS_IMPORTACION[tipo],
       archivoNombre: archivo.originalname,
     },

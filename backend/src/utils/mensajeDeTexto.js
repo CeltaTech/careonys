@@ -2,13 +2,14 @@
 // =====================================================================================
 //
 // QUÉ ES ESTE ARCHIVO. La parte del mensaje de texto que le toca a Careonys: saber si una
-// Prestadora tiene proveedor cargado, y ser el único punto por el que un aviso saldría por esa vía.
-// No hay ningún proveedor contratado y acá no está integrado ninguno: el hueco está marcado abajo,
+// Prestadora tiene proveedor cargado, y ser el único punto por el que un mensaje del sistema
+// saldría por esa vía. No hay ningún proveedor contratado y acá no está integrado ninguno: el hueco está marcado abajo,
 // en `mandarPorElProveedor()`, y es lo único que queda por escribir el día que se contrate uno.
 //
 // POR QUÉ EXISTE HOY. Para que encender la vía sea cargar una configuración y nada más. La vía ya
-// sale en la lista de la pantalla de Avisos, ya tiene su columna por aviso, ya tiene dónde vivir la
-// configuración de cada Prestadora y ya está enganchada en la cascada. Lo que falta es el
+// sale en la lista de la pantalla de configuración de mensajes, ya tiene su columna por mensaje,
+// ya tiene dónde vivir la configuración de cada Prestadora y ya está enganchada en la cascada.
+// Lo que falta es el
 // proveedor, no el producto.
 //
 // ES LA VÍA DÉBIL, Y ENTRA COMO RESPALDO. Un mensaje de texto no se cifra, viaja por la red
@@ -16,8 +17,8 @@
 // WhatsApp y antes del correo, y nunca lleva nada que no pueda viajar en un mensaje: ni
 // remuneraciones, ni causales de cese, ni información clínica, ni datos del Paciente.
 //
-// Y SI FALLA, EL AVISO SALE IGUAL. Ninguna falla de esta vía puede dejar un aviso sin mandar: quien
-// llama cae al correo, que es exactamente lo que ya hace con WhatsApp.
+// Y SI FALLA, EL MENSAJE SALE IGUAL. Ninguna falla de esta vía puede dejar un mensaje sin mandar:
+// quien llama cae al correo, que es exactamente lo que ya hace con WhatsApp.
 
 import { supabase } from '../db/connection.js';
 
@@ -52,7 +53,7 @@ export async function hayProveedorDeMensajeDeTexto(prestadoraId) {
  * El día que se contrate uno, acá adentro va la llamada a su API —con el remitente y la credencial
  * que ya vienen en `proveedor`, leída de Vault con el mismo molde que el token de WhatsApp
  * (`leer_token_whatsapp`)— y nada más. No hace falta tocar ningún otro archivo: ni el catálogo de
- * avisos, ni la cascada, ni la pantalla.
+ * mensajes, ni la cascada, ni la pantalla.
  *
  * Mientras tanto avisa que no está escrito, en vez de decir que mandó algo que no mandó.
  */
@@ -74,10 +75,10 @@ export async function enviarMensajeDeTexto({ prestadoraId, telefono, texto }) {
 }
 
 /**
- * Manda el aviso de un evento por mensaje de texto, si esa vía está encendida y hay con qué.
+ * Avisa de un evento por mensaje de texto, si esa vía está encendida y hay con qué.
  *
  * Es el gemelo de `avisarPorWhatsapp()` y tiene la misma forma a propósito: las dos condiciones
- * —la Prestadora encendió la vía para ese aviso, y tiene proveedor— están escritas una sola vez y
+ * —la Prestadora encendió la vía para ese mensaje, y tiene proveedor— están escritas una sola vez y
  * no en cada proceso que avisa.
  *
  * @returns {Promise<boolean>} si el mensaje salió. Falso con la vía apagada, sin teléfono o sin

@@ -11,7 +11,7 @@
 //
 // Y se busca por lo que la fila dice de sí misma, nunca por una lista de tipos escrita a mano:
 // una lista así queda vieja sola en cuanto el catálogo suma una escala nueva, y la escala nueva
-// —justo la que nadie revisó todavía— sería la que pasaría sin aviso.
+// —justo la que nadie revisó todavía— sería la que pasaría sin advertencia.
 //
 // Este archivo no puede vivir en `lib/escalasLegales.js`: ese archivo se copia tal cual al
 // backend (`scripts/copias_entre_apps.mjs`), y esto es una pantalla.
@@ -33,14 +33,14 @@ function esEscalaProvisoria(escala) {
  * Alcanza con una: un cálculo que usa diez valores validados y uno que no, no está validado.
  *
  * Las dos de arriba no salen de este archivo a propósito: quien necesite saberlo es una
- * pantalla, y lo que una pantalla hace con esa respuesta es mostrar este mismo aviso.
+ * pantalla, y lo que una pantalla hace con esa respuesta es mostrar esta misma advertencia.
  */
 function hayEscalasProvisorias(escalas) {
   return (escalas ?? []).some(esEscalaProvisoria);
 }
 
 /**
- * El aviso, para poner donde esas escalas se ven o se usan.
+ * La advertencia, para poner donde esas escalas se ven o se usan.
  *
  * Recibe las escalas tal como las devuelve `useEscalasLegales` y no dibuja nada cuando ninguna
  * es provisoria: mientras están cargando la lista viene vacía, así que el cartel no aparece y

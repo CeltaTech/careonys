@@ -8,13 +8,13 @@ import { comprobarFirma, MOTIVO } from './firmaWebhook.js';
 
 const API_BASE = process.env.MERCADOPAGO_API_BASE || 'https://api.mercadopago.com';
 
-/** Mercado Pago firma sus avisos con la clave secreta que la Prestadora saca del panel de
+/** Mercado Pago firma lo que manda con la clave secreta que la Prestadora saca del panel de
  *  Mercado Pago al configurar la notificación. El Panel lee esta marca para saber si le pide
  *  ese segundo dato o no (regla 12: la lista de quién firma vive en el adaptador, no copiada
  *  en la pantalla). */
 export const REQUIERE_SECRETO_FIRMA = true;
 
-/** El aviso de Mercado Pago dice que algo pasó con un cobro, no que la plata entró: el estado
+/** Lo que entra de Mercado Pago dice que algo pasó con un cobro, no que la plata entró: el estado
  *  no viaja adentro de lo que se firma, solo el identificador. Así que después de comprobar la
  *  firma hay que volver a preguntarle a Mercado Pago por ese identificador, y recién ahí se
  *  sabe. Se pregunta siempre: es una consulta por cobro, y es la diferencia entre creerle a un
@@ -111,7 +111,7 @@ export async function cancelarSuscripcion({ credencial, referenciaExterna }) {
 }
 
 /**
- * Comprueba que el aviso vino de Mercado Pago y recién ahí lo interpreta.
+ * Comprueba que el cobro vino de Mercado Pago y recién ahí lo interpreta.
  *
  * Mercado Pago manda dos cabeceras: `x-signature`, con la forma `ts=<instante>,v1=<firma>`, y
  * `x-request-id`, que identifica ese envío. Lo que se firma no es el cuerpo sino una
@@ -120,17 +120,17 @@ export async function cancelarSuscripcion({ credencial, referenciaExterna }) {
  *
  * El `data.id` que entra en la plantilla es el mismo que después se usa como referencia de
  * cobro: se firma exactamente lo que se va a mirar, no un dato parecido. Mercado Pago lo
- * manda en la dirección del aviso (`?data.id=…`) y también adentro del cuerpo; se prefiere el
+ * manda en la dirección por la que entra (`?data.id=…`) y también adentro del cuerpo; se prefiere el
  * de la dirección, que es el que la pasarela usó para calcular la firma, y si no viniera se
  * cae al del cuerpo. Va en minúsculas porque así lo pide Mercado Pago para los
  * identificadores con letras; para los que son solo números no cambia nada.
  *
  * **Devuelve `pendiente` a propósito, y no es el estado final.** Comprobar la firma dice que
- * el aviso es auténtico, no que la plata entró. Quien resuelve el estado de verdad es la
+ * el cobro es auténtico, no que la plata entró. Quien resuelve el estado de verdad es la
  * consulta que la ruta hace después, porque este adaptador declara `CONFIRMA_CONSULTANDO`.
  */
 export function verificarWebhook({ secretoFirma, headers, consulta, body, ahoraMs }) {
-  const idDelAviso = consulta?.['data.id'] ?? body?.data?.id;
+  const idDelPago = consulta?.['data.id'] ?? body?.data?.id;
   const idDeLaRequisitoria = headers?.['x-request-id'];
 
   // Sin secreto guardado no hay nada contra qué comparar, y sin `x-request-id` falta un
@@ -148,18 +148,18 @@ export function verificarWebhook({ secretoFirma, headers, consulta, body, ahoraM
     cabecera: headers?.['x-signature'],
     claveDelInstante: 'ts',
     textoFirmado: (instante) =>
-      [`id:${String(idDelAviso ?? '').toLowerCase()};request-id:${idDeLaRequisitoria};ts:${instante};`],
+      [`id:${String(idDelPago ?? '').toLowerCase()};request-id:${idDeLaRequisitoria};ts:${instante};`],
     ahoraMs,
   });
   if (!comprobacion.valido) {
     return { valido: false, motivo: comprobacion.motivo, referenciaExterna: null, estado: 'pendiente' };
   }
 
-  if (!idDelAviso) {
+  if (!idDelPago) {
     return { valido: false, motivo: MOTIVO.SIN_REFERENCIA, referenciaExterna: null, estado: 'pendiente' };
   }
 
-  return { valido: true, motivo: null, referenciaExterna: idDelAviso, estado: 'pendiente' };
+  return { valido: true, motivo: null, referenciaExterna: idDelPago, estado: 'pendiente' };
 }
 
 export async function consultarEstado({ credencial, referenciaExterna }) {

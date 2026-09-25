@@ -1,13 +1,13 @@
 /* El comprobante que emitió el software de facturación: guardarlo y volver a buscarlo.
    ==========================================================================
 
-   POR QUÉ EXISTE ESTE ARCHIVO. El comprobante entra por dos puertas —el aviso firmado del software
+   POR QUÉ EXISTE ESTE ARCHIVO. El comprobante entra por dos puertas —firmado, del software
    de facturación, y a mano desde el Panel— y las dos guardan exactamente lo mismo en el mismo
    lugar. Escrito dos veces, alcanza con que una se olvide de una columna para que la misma factura
    quede distinta según por dónde entró (`CLAUDE.md` §8, punto único de verdad).
 
    EL BACKEND SUBE, NO LA PANTALLA. Las dos puertas le entregan los bytes al backend y el backend los
-   deja en el depósito. Así el aviso del software de facturación —que no tiene sesión de nadie— y
+   deja en el depósito. Así lo que entra del software de facturación —que no tiene sesión de nadie— y
    la carga a mano terminan en el mismo sitio, con la misma ruta y la misma comprobación.
 
    QUÉ SE COMPRUEBA ACÁ, ADEMÁS DE LO QUE COMPRUEBA EL DEPÓSITO. Que el archivo sea realmente un

@@ -1,13 +1,13 @@
 import { supabase } from '../db/connection.js';
 
 // ---------------------------------------------------------------------------------------
-// El aviso legal: un solo lugar que lo resuelve y un solo lugar que lo registra
+// La advertencia legal: un solo lugar que la resuelve y un solo lugar que la registra
 //
-// CÓMO FUNCIONA UN AVISO (CLAUDE.md §7, y `docs/legal/<país>.md` para los textos):
+// CÓMO FUNCIONA UNA ADVERTENCIA (CLAUDE.md §7, y `docs/legal/<país>.md` para los textos):
 //
 //   * El producto no prohíbe ni bloquea nada por razones legales. Avisa.
 //   * El texto sale del documento legal de esa jurisdicción, nunca de una analogía con otro
-//     país. Si el país no tiene documento, no hay aviso: `advertenciaVigente` devuelve null
+//     país. Si el país no tiene documento, no hay advertencia: `advertenciaVigente` devuelve null
 //     y quien llamó sigue adelante igual.
 //   * Queda registrado que se avisó: quién, cuándo, qué función y qué texto se mostró.
 //
@@ -16,11 +16,11 @@ import { supabase } from '../db/connection.js';
 // hacía que el registro dependiera de que la pantalla se acordara de escribirlo: cualquier
 // otro camino hasta la misma acción —otra pantalla, la dirección escrita a mano— encendía la
 // función sin dejar rastro de que se avisó, y un registro que se puede saltear no sirve como
-// registro. Ahora el aviso se anota en el mismo pedido que hace la cosa, así que no hay
+// registro. Ahora la advertencia se anota en el mismo pedido que hace la cosa, así que no hay
 // forma de hacer la cosa sin anotarlo. La pantalla sigue mostrando el cartel antes, que es
 // lo que le corresponde: que la persona decida sabiendo.
 //
-// ESTO NUNCA HACE FALLAR A QUIEN LO LLAMA. Un aviso que no se pudo resolver no puede
+// ESTO NUNCA HACE FALLAR A QUIEN LO LLAMA. Una advertencia que no se pudo resolver no puede
 // convertirse en una acción que no se pudo hacer: sería el producto bloqueando por razón
 // legal, que es exactamente lo que la regla prohíbe. Los errores se registran en la consola
 // del servidor y la acción sigue.
@@ -75,7 +75,7 @@ export async function advertenciaVigente(prestadoraId, funcionClave) {
  * Se usa cuando quien llama ya resolvió la advertencia —porque la necesitaba para guardar
  * junto con la cosa que activó— y no tiene sentido volver a preguntársela a la base.
  */
-export async function registrarAviso({ prestadoraId, usuarioId, funcionClave, advertencia }) {
+export async function registrarAdvertencia({ prestadoraId, usuarioId, funcionClave, advertencia }) {
   if (!advertencia) return null;
 
   const { error } = await supabase.from('auditoria_advertencias_legales').insert({
@@ -92,14 +92,14 @@ export async function registrarAviso({ prestadoraId, usuarioId, funcionClave, ad
 }
 
 /**
- * Resuelve el aviso que corresponde y lo deja registrado, todo junto.
+ * Resuelve la advertencia que corresponde y la deja registrada, todo junto.
  *
  * Se llama en el mismo pedido que activa la función. Si la jurisdicción no tiene documento
- * para esa función no registra nada y devuelve `null`: no hubo aviso que dar.
+ * para esa función no registra nada y devuelve `null`: no hubo advertencia que dar.
  *
  * @returns `{ jurisdiccion, texto }` si se avisó, `null` si no había nada que avisar.
  */
-export async function registrarAvisoAlActivar({ prestadoraId, usuarioId, funcionClave }) {
+export async function registrarAdvertenciaAlActivar({ prestadoraId, usuarioId, funcionClave }) {
   const advertencia = await advertenciaVigente(prestadoraId, funcionClave);
-  return registrarAviso({ prestadoraId, usuarioId, funcionClave, advertencia });
+  return registrarAdvertencia({ prestadoraId, usuarioId, funcionClave, advertencia });
 }

@@ -204,7 +204,7 @@ function TabServicios() {
 
       <h2>{t.configuracion.servicios_escalada_titulo}</h2>
       <p className="panel-explicacion">{t.configuracion.servicios_escalada_explicacion}</p>
-      {/* CUÁNTOS MINUTOS DE ATRASO CONVIERTEN UNA LLEGADA TARDE EN UN AVISO (pendiente #101).
+      {/* CUÁNTOS MINUTOS DE ATRASO CONVIERTEN UNA LLEGADA TARDE EN UNA ALERTA (pendiente #101).
           Lo decide cada Prestadora acá abajo, no el código. Pero el número se usa aunque nadie
           haya configurado ningún nivel, así que la pantalla dice cuál está rigiendo hoy y de
           dónde salió: un valor que actúa sin verse es un valor que nadie puede cambiar.
@@ -967,7 +967,7 @@ function NivelEscalada({ nivelExistente, onClose, onGuardado }) {
         {error && <Alert variant="error">{error}</Alert>}
         {/* Qué hace este número, dicho donde se escribe. Sin esto, «Minutos de demora» se lee
             como el tiempo que se espera antes de llamar al siguiente de la lista, y además es
-            el margen a partir del cual una llegada tarde se anota como aviso. */}
+            el margen a partir del cual una llegada tarde se anota como alerta. */}
         <p className="panel-explicacion">{t.configuracion.escalada_minutos_explicacion}</p>
         <FormField label={t.configuracion.escalada_col_nivel} name="nivel" type="number" value={nivel} onChange={(e) => setNivel(e.target.value)} required />
         <FormField label={t.configuracion.escalada_minutos_label} name="minutos_demora" type="number" value={minutosDemora} onChange={(e) => setMinutosDemora(e.target.value)} />

@@ -35,7 +35,7 @@ import { SITUACION, UMBRALES, situacionDeGuardia } from './semaforoGuardia';
  *   asistentesConPapelPorVencer  → Set de ids de Asistentes con un papel próximo a vencer.
  *   asistentesConPapelVencido    → Set de ids de Asistentes con un papel ya vencido.
  *   guardiasSinReporte           → Set de ids de guardias terminadas sin reporte cargado.
- *   diasAviso                    → con cuántos días de anticipación avisa esta Prestadora.
+ *   diasDePreaviso                    → con cuántos días de anticipación avisa esta Prestadora.
  *   asistentesConMatriculaTrabada→ Set de ids de Asistentes que hoy no pueden tomar guardias.
  *   asistentesConMatriculaPorVencer → Set de ids con la matrícula cerca de vencer.
  */
@@ -46,7 +46,7 @@ export function contextoVacio() {
     asistentesConPapelPorVencer: new Set(),
     asistentesConPapelVencido: new Set(),
     guardiasSinReporte: new Set(),
-    diasAviso: 0,
+    diasDePreaviso: 0,
     asistentesConMatriculaTrabada: new Set(),
     asistentesConMatriculaPorVencer: new Set(),
   };
@@ -128,7 +128,7 @@ export const EXCEPCIONES = [
     id: 'documentacion',
     claveEtiqueta: 'exc_documentacion',
     claveAyuda: 'exc_documentacion_ayuda',
-    parametros: (ctx) => ({ dias: ctx?.diasAviso ?? 0 }),
+    parametros: (ctx) => ({ dias: ctx?.diasDePreaviso ?? 0 }),
     // Mira las guardias que todavía van a pasar: un papel que vence no cambia nada de lo que
     // ya ocurrió, pero sí invalida lo que está por venir.
     aplica: (g, ctx) => {
@@ -150,7 +150,7 @@ export const EXCEPCIONES = [
     claveAyuda: 'exc_matricula_ayuda',
     parametros: () => ({}),
     /* Va aparte de "papeles" aunque las dos hablen de vencimientos, y la diferencia es grande:
-       un papel vencido es un aviso —la guardia se hace igual—, mientras que una matrícula sin
+       un papel vencido es una alerta —la guardia se hace igual—, mientras que una matrícula sin
        vigencia la base directamente no la deja asignar. Contarlas juntas mezclaría "hay que
        reclamar un certificado" con "esta guardia no se puede cubrir con esta persona". */
     aplica: (g, ctx) => {

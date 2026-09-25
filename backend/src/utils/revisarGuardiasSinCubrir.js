@@ -2,23 +2,23 @@ import { supabase } from '../db/connection.js';
 import { notificarCoordinador } from './whatsapp.js';
 import { necesitaNotificar } from './insistencia.js';
 import { pacientesDeGuardias } from './pacientesDeGuardia.js';
-import { aviso } from '../i18n/avisos.js';
+import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 
-// Aviso al Coordinador cuando se viene una guardia que todavía no tiene a nadie
+// Mensaje al Coordinador cuando se viene una guardia que todavía no tiene a nadie
 // (pendiente #106, docs/PLAN_HASTA_PRODUCCION.md).
 //
 // Por qué hacía falta un proceso aparte y no alcanzaba con tocar el que ya existía: los
-// tres avisos de revisarRecordatoriosPush.js filtran `.not('asistente_id', 'is', null)`
+// tres mensajes de revisarRecordatoriosPush.js filtran `.not('asistente_id', 'is', null)`
 // porque los tres le hablan al Asistente que tiene la guardia asignada. Un hueco no tiene
-// Asistente, así que no hay a quién avisarle — el destinatario de este aviso es el
+// Asistente, así que no hay a quién avisarle — el destinatario de este mensaje es el
 // Coordinador, que es el único que puede taparlo.
 //
-// Los dos números que gobiernan el aviso (con cuánta anticipación, y cada cuánto repetirlo)
+// Los dos números que gobiernan el mensaje (con cuánta anticipación, y cada cuánto repetirlo)
 // salen de configuracion_aviso_guardia_sin_cubrir, una fila por Prestadora. No hay ningún
 // número escrito acá a propósito (regla 1 de CLAUDE.md §7): una Prestadora de guardias fijas
 // quiere enterarse con tres días de anticipación y una que cubre urgencias se llenaría de
-// avisos inútiles con ese mismo número.
+// mensajes inútiles con ese mismo número.
 //
 // Usa el service role (pasa por encima de RLS) porque recorre todas las Prestadoras según su
 // propia configuración — en este proceso no hay ninguna sesión de Panel abierta. Mismo
@@ -28,7 +28,7 @@ const EVENTO = 'guardia_sin_cubrir';
 
 // Cuánto se sigue avisando un hueco después de la hora a la que tendría que haber empezado.
 // No es una regla de negocio configurable sino el borde de la ventana de búsqueda: pasado un
-// día, la guardia ya no se puede cubrir y el aviso solo sería ruido. Se mide en días porque
+// día, la guardia ya no se puede cubrir y el mensaje solo sería ruido. Se mide en días porque
 // la consulta filtra por el campo `fecha` de la guardia.
 const DIAS_HACIA_ATRAS = 1;
 
@@ -69,7 +69,7 @@ async function revisarPrestadora(prestadoraId, ahora) {
     );
     return;
   }
-  // Sin fila, o con el aviso apagado, esta Prestadora no quiere enterarse: no hay número que valga
+  // Sin fila, o con el mensaje apagado, esta Prestadora no quiere enterarse: no hay número que valga
   // por defecto, porque con cuánta anticipación avisar lo decide cada una.
   if (!config?.activo) return;
 
@@ -77,7 +77,7 @@ async function revisarPrestadora(prestadoraId, ahora) {
   const horasEntreAvisos = config.horas_entre_avisos;
   const limite = new Date(ahora.getTime() + horasAntes * MS_POR_HORA);
 
-  // Una sola vez por Prestadora: todos los avisos de esta vuelta los lee la misma gente.
+  // Una sola vez por Prestadora: todos los mensajes de esta vuelta los lee la misma gente.
   const idioma = await idiomaDeLaPrestadora(prestadoraId);
 
   // El filtro por `fecha` es solo para no traerse la agenda entera: la ventana fina se
@@ -97,7 +97,7 @@ async function revisarPrestadora(prestadoraId, ahora) {
   }
 
   // A quiénes se queda sin atender cada hueco. Se piden los nombres de todos los Pacientes del
-  // turno y no el de uno: un aviso que nombra a una sola persona cuando el turno cubría a dos
+  // turno y no el de uno: un mensaje que nombra a una sola persona cuando el turno cubría a dos
   // le esconde al Coordinador la mitad del problema, y de ese tamaño depende con qué urgencia
   // sale a buscar quien lo tape.
   let pacientesPorGuardia;
@@ -127,7 +127,7 @@ async function revisarPrestadora(prestadoraId, ahora) {
     await notificarCoordinador({
       evento: EVENTO,
       prestadoraId,
-      ...aviso('guardia_sin_cubrir', idioma, {
+      ...mensajeDelSistema('guardia_sin_cubrir', idioma, {
         fecha: guardia.fecha,
         horaInicio: guardia.hora_inicio,
         horaFin: guardia.hora_fin,

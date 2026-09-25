@@ -23,7 +23,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { candidatosParaGuardia, MOTIVO } from '../candidatos';
-import { AVISO, avisosDeAsignacion } from '../avisosAsignacion';
+import { ADVERTENCIA, advertenciasDeAsignacion } from '../avisosAsignacion';
 
 const HUECO = {
   id: 'g-hueco',
@@ -135,21 +135,21 @@ describe('lo que se le muestra a quien confirma', () => {
   };
 
   it('la ausencia registrada llega al cartel, y como algo serio', () => {
-    const avisos = avisosDeAsignacion(HUECO, DE_LICENCIA.id, datos);
-    const ausencia = avisos.find((a) => a.clave === AVISO.AUSENCIA);
+    const advertencias = advertenciasDeAsignacion(HUECO, DE_LICENCIA.id, datos);
+    const ausencia = advertencias.find((a) => a.clave === ADVERTENCIA.AUSENCIA);
     expect(ausencia).toBeTruthy();
     expect(ausencia.grave).toBe(true);
   });
 
   it('el choque de horarios llega al cartel con el horario de la otra guardia', () => {
-    const avisos = avisosDeAsignacion(HUECO, OCUPADA.id, datos);
-    const choque = avisos.find((a) => a.clave === AVISO.SUPERPOSICION);
+    const advertencias = advertenciasDeAsignacion(HUECO, OCUPADA.id, datos);
+    const choque = advertencias.find((a) => a.clave === ADVERTENCIA.SUPERPOSICION);
     expect(choque).toBeTruthy();
     expect(choque.valores).toEqual({ desde: '08:00', hasta: '16:00' });
   });
 
   it('a quien no le pasa nada no se le muestra ningún cartel', () => {
-    expect(avisosDeAsignacion(HUECO, LIBRE.id, datos)).toEqual([]);
+    expect(advertenciasDeAsignacion(HUECO, LIBRE.id, datos)).toEqual([]);
   });
 });
 

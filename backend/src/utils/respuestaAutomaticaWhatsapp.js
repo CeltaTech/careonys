@@ -103,7 +103,7 @@ export async function terminosDeSaludYEmergencia() {
 /**
  * A qué número se avisa una emergencia donde está esa Prestadora.
  *
- * Mismo camino que el aviso legal: sale de la jurisdicción configurada de la Prestadora y de
+ * Mismo camino que la advertencia legal: sale de la jurisdicción configurada de la Prestadora y de
  * ningún otro lado. **Si no hay fila para esa jurisdicción, devuelve `null` y no se inventa
  * ningún número**: llamar a donde no corresponde es peor que no llamar.
  */
@@ -225,13 +225,13 @@ export async function resolverRespuestaAutomatica({ prestadoraId, texto, idioma 
 }
 
 /**
- * El aviso al servicio de emergencias del lugar donde está la Prestadora.
+ * Qué hace falta para avisar al servicio de emergencias del lugar donde está la Prestadora.
  *
  * QUÉ HACE HOY. Resuelve el número de esa jurisdicción y contesta con él. Si no hay ninguno
  * configurado contesta `null`, **y no inventa ninguno**: quien llama deriva a una persona y lo
- * deja registrado. Es el mismo criterio del aviso legal: sin documento no hay aviso.
+ * deja registrado. Es el mismo criterio de la advertencia legal: sin documento no hay advertencia.
  *
- * EL HUECO, ESCRITO ACÁ PARA QUE NO SE PIERDA. El aviso que corresponde a una emergencia es una
+ * EL HUECO, ESCRITO ACÁ PARA QUE NO SE PIERDA. Lo que corresponde ante una emergencia es una
  * llamada de voz, y este producto no tiene por dónde hacerla: las tres vías que tiene —WhatsApp,
  * mensaje de texto y correo— son de mensaje, y además WhatsApp sólo entrega texto libre adentro
  * de una conversación que abrió la otra persona, cosa que un servicio de emergencias nunca hizo.

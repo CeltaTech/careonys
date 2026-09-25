@@ -8,7 +8,7 @@
  * que le llegan a gente real. Lo que se mira acá es justamente lo que no se puede ver desde
  * afuera: a quiénes se les escribió, en qué orden, y a quiénes no.
  *
- * Nadie recibe el push en esta prueba —no hay claves VAPID cargadas—, así que todos los avisos
+ * Nadie recibe el push en esta prueba —no hay claves VAPID cargadas—, así que todos los mensajes
  * caen al canal de respaldo. Eso es a propósito: es el camino que deja ver el destinatario.
  */
 import { strict as assert } from 'node:assert';
@@ -72,7 +72,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
-// Sin claves de push nadie recibe el aviso al celular y todos caen al canal de respaldo, que es
+// Sin claves de push nadie recibe el mensaje al celular y todos caen al canal de respaldo, que es
 // el que deja ver a qué número salió cada mensaje.
 delete process.env.VAPID_PUBLIC_KEY;
 delete process.env.VAPID_PRIVATE_KEY;

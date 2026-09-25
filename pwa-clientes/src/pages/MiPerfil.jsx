@@ -187,7 +187,7 @@ export default function MiPerfil() {
         </>
       )}
 
-      {/* Cómo se entra a esta aplicación. Va acá abajo, junto con los avisos al celular: las dos
+      {/* Cómo se entra a esta aplicación. Va acá abajo, junto con los mensajes al celular: las dos
           son cosas de este aparato y no del cuidado de nadie. */}
       <Link to="/mi-clave" className="btn btn-secondary btn-full" style={{ marginTop: '2rem' }}>
         {t.auth.mi_clave}

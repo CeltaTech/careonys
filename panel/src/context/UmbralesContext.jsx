@@ -37,7 +37,7 @@ const UmbralesContext = createContext(UMBRALES);
 const EstadoDeUmbralesContext = createContext('cargando');
 
 async function cargarUmbralesPropios() {
-  const [avisoSinCubrir, ausenciaAutomatica, escaladaCoordinador] = await Promise.all([
+  const [mensajeSinCubrir, ausenciaAutomatica, escaladaCoordinador] = await Promise.all([
     supabase.from('configuracion_aviso_guardia_sin_cubrir').select('horas_antes').maybeSingle(),
     supabase.from('configuracion_ausencia_automatica').select('minutos_tolerancia_checkin').maybeSingle(),
     supabase
@@ -49,13 +49,13 @@ async function cargarUmbralesPropios() {
   // Si alguna de las tres no se pudo leer, lo que se arme con las otras dos no son los umbrales
   // de esta Prestadora: son los de fábrica en el renglón que faltó, y eso es un número
   // inventado con cara de configurado.
-  if (avisoSinCubrir.error || ausenciaAutomatica.error || escaladaCoordinador.error) {
+  if (mensajeSinCubrir.error || ausenciaAutomatica.error || escaladaCoordinador.error) {
     return { umbrales: UMBRALES, fallo: true };
   }
 
   return {
     umbrales: umbralesDeLaPrestadora({
-      avisoSinCubrir: avisoSinCubrir.data,
+      mensajeSinCubrir: mensajeSinCubrir.data,
       ausenciaAutomatica: ausenciaAutomatica.data,
       escaladaCoordinador: escaladaCoordinador.data,
     }),

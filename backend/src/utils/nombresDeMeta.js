@@ -53,7 +53,7 @@ export function huecosDePlantilla(cuerpoTexto) {
  *
  * Devuelve `null` cuando el texto pide más huecos de los que hay valores para darle. No se rellena
  * con vacío a propósito: un mensaje al que le falta un dato no dice menos, dice otra cosa, y ese
- * mensaje ya no se puede desmandar. Quien llama decide qué hacer con el `null` —hoy el aviso sale
+ * mensaje ya no se puede desmandar. Quien llama decide qué hacer con el `null` —hoy el mensaje sale
  * por correo—, que es siempre mejor que mandar una frase incompleta.
  *
  * @param {string} cuerpoTexto  El texto de la plantilla, tal como se aprobó.

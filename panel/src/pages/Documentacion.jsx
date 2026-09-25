@@ -7,7 +7,7 @@ import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { mensajeDeError } from '../lib/errores';
 import { diasParaVencer, estadoDeVencimiento } from '../lib/reglaVencimientos';
-import { diasDeAvisoDeLaPrestadora } from '../lib/plazoDeAviso';
+import { diasDePreavisoDeLaPrestadora } from '../lib/plazoDeAviso';
 
 export function Documentacion() {
   const { t } = useLocale();
@@ -23,12 +23,12 @@ export function Documentacion() {
     setEstado('cargando');
     setError(null);
 
-    const [{ data: docsData, error: errorDocs }, aviso] = await Promise.all([
+    const [{ data: docsData, error: errorDocs }, diasDePreaviso] = await Promise.all([
       supabase
         .from('documentos_asistente')
         .select('id, fecha_vencimiento, tipos_documento_asistente(nombre, requiere_vencimiento), asistentes(nombre, estado)')
         .not('fecha_vencimiento', 'is', null),
-      diasDeAvisoDeLaPrestadora(prestadoraId),
+      diasDePreavisoDeLaPrestadora(prestadoraId),
     ]);
 
     if (errorDocs) {
@@ -47,7 +47,7 @@ export function Documentacion() {
           tipo_nombre: d.tipos_documento_asistente?.nombre || '—',
           fecha_vencimiento: d.fecha_vencimiento,
           dias,
-          estado_documento: estadoDeVencimiento(dias, aviso),
+          estado_documento: estadoDeVencimiento(dias, diasDePreaviso),
         };
       })
       .sort((a, b) => a.dias - b.dias);

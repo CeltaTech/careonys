@@ -8,8 +8,9 @@ import {
 } from '../utils/registroDeActividad.js';
 
 // Ítem D del pendiente #30: tope de 5 min de
-// inactividad dentro de la sesión de soporte técnico — se corta en silencio, sin aviso previo,
-// distinto del tope absoluto de 60 min (que sí tiene aviso a los 50, ver panelSesionTenant.js).
+// inactividad dentro de la sesión de soporte técnico — se corta en silencio, sin advertencia
+// previa, distinto del tope absoluto de 60 min (que sí advierte a los 50, ver
+// panelSesionTenant.js).
 const INACTIVIDAD_LIMITE_MS = 5 * 60 * 1000;
 
 // Ítem G del pendiente #30: las mutaciones que pasan por rutas Express usan la service

@@ -9,7 +9,7 @@ import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { supabase } from '../lib/supabaseClient';
 import { fechaLimiteDeAviso } from '../lib/reglaVencimientos';
-import { diasDeAvisoDeLaPrestadora } from '../lib/plazoDeAviso';
+import { diasDePreavisoDeLaPrestadora } from '../lib/plazoDeAviso';
 import { ESTADO_EN_CURSO } from '../lib/guardiaSinCerrar';
 import { hoyISO } from '../lib/horarios';
 import { soloSinResolver } from '../lib/alertaSinResolver';
@@ -156,14 +156,14 @@ export function Dashboard() {
       .is('resuelto_at', null)
       .is('guardia_saliente_id', null);
 
-    // El plazo de aviso y hasta qué día hay que mirar salen del mismo lugar que en el Estado
+    // El plazo de preaviso y hasta qué día hay que mirar salen del mismo lugar que en el Estado
     // actual y en Documentación, así que los tres contadores dicen lo mismo (regla 12).
-    const diasAviso = await diasDeAvisoDeLaPrestadora(prestadoraId);
+    const diasDePreaviso = await diasDePreavisoDeLaPrestadora(prestadoraId);
     const { count: countDocumentos, error: errorDocumentos } = await supabase
       .from('documentos_asistente')
       .select('id', { count: 'exact', head: true })
       .not('fecha_vencimiento', 'is', null)
-      .lte('fecha_vencimiento', fechaLimiteDeAviso(diasAviso));
+      .lte('fecha_vencimiento', fechaLimiteDeAviso(diasDePreaviso));
 
     // Las que la IA dejó escritas y todavía no miró nadie. Qué significa «sin resolver» no se
     // escribe acá: lo dice `lib/alertaSinResolver.js`, el mismo archivo que consultan la lista de

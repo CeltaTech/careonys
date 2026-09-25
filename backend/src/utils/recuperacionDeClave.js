@@ -5,10 +5,10 @@ import { correoComparable } from '../config/correoDeAcceso.js';
 import { enviarEmail } from './email.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
 import { marcaDeLaPrestadora } from './marcaPrestadora.js';
-import { aviso } from '../i18n/avisos.js';
+import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDelDestinatario } from '../i18n/idiomas.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
-import { avisarDeSeguridad, AVISO_CLAVE_RECUPERADA } from './avisoDeSeguridad.js';
+import { avisarDeSeguridad, MENSAJE_CLAVE_RECUPERADA } from './avisoDeSeguridad.js';
 import {
   mandarCodigoAlTelefono,
   comprobarCodigoDelTelefono,
@@ -114,7 +114,7 @@ async function emitirElEnlaceYAvisar(usuario, email) {
 
   const link = `${appUrl}/clave-nueva?token=${token}`;
   const marca = await marcaDeLaPrestadora(usuario.prestadora_id);
-  const textos = aviso(
+  const textos = mensajeDelSistema(
     'recuperacion_clave',
     idiomaDelDestinatario(null, await idiomaDeLaPrestadora(usuario.prestadora_id)),
     {
@@ -262,8 +262,8 @@ export async function cambiarClaveConToken(token, claveNueva, codigo = null) {
   // sin puerta y sin clave nueva si lo de abajo fallaba, y volver a abrirla exige otro llamado.
   if (puerta) await usarCambioDeClaveHabilitado(puerta.id, cuenta.prestadora_id);
 
-  // Y queda avisado. Es el aviso que le llega a alguien a quien le cambiaron la clave sin que él lo
-  // pidiera, y es la única forma que tiene de enterarse. Sale después de que la clave ya cambió: un
-  // aviso de algo que al final no pasó es peor que ninguno.
-  await avisarDeSeguridad(AVISO_CLAVE_RECUPERADA, cuenta);
+  // Y queda avisado. Es el mensaje que le llega a alguien a quien le cambiaron la clave sin que él
+  // lo pidiera, y es la única forma que tiene de enterarse. Sale después de que la clave ya
+  // cambió: un mensaje de algo que al final no pasó es peor que ninguno.
+  await avisarDeSeguridad(MENSAJE_CLAVE_RECUPERADA, cuenta);
 }

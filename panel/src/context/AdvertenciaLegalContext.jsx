@@ -26,7 +26,7 @@ const AdvertenciaLegalContext = createContext(null);
 //   if (respuesta === 'seguir') { ...pedirle al backend que la encienda... }
 //
 // Si la jurisdicción de esa Prestadora no tiene texto escrito para esa función, contesta
-// 'seguir' de inmediato, sin mostrar nada: si el país no tiene documento, no hay aviso y no se
+// 'seguir' de inmediato, sin mostrar nada: si el país no tiene documento, no hay advertencia y no se
 // improvisa uno (CLAUDE.md §7).
 //
 // LAS TRES RESPUESTAS SON DISTINTAS. Antes eran dos —sí y

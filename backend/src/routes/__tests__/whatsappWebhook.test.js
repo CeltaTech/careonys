@@ -1,13 +1,13 @@
 /**
  * Pruebas de la entrada de WhatsApp (pendiente #165).
  *
- * Lo que se prueba acá es lo que hacía falta y no estaba: que un aviso que no se puede probar
+ * Lo que se prueba acá es lo que hacía falta y no estaba: que un evento que no se puede probar
  * auténtico se rechace con 401 **antes de escribir una sola fila**, que la Prestadora salga de
  * la dirección y nunca del cuerpo del pedido, y que el saludo inicial de Meta se conteste con
  * el token de esa Prestadora y no con una variable de entorno única para todo el producto.
  *
  * Cada prueba de rechazo está escrita para fallar si se saca la comprobación: si la firma
- * dejara de mirarse, el aviso con firma cambiada contestaría 200 y escribiría, que es
+ * dejara de mirarse, el evento con firma cambiada contestaría 200 y escribiría, que es
  * exactamente lo que se afirma que no pasa.
  *
  * Se levanta el backend de verdad contra una base de mentira que contesta lo que cada prueba le
@@ -32,7 +32,7 @@ const NUMERO_CONFIGURADO = '5490000000001';
 const respuestas = new Map();
 /** Todo lo que el backend le pidió a la base. */
 let llamadas = [];
-/** Los rechazos y avisos que el backend dejó anotados del lado del servidor. */
+/** Lo que el backend dejó anotado del lado del servidor. */
 let anotados = [];
 
 const baseFalsa = createServer((req, res) => {
@@ -164,7 +164,7 @@ async function dejarTerminar() {
 
 /** El backend contesta 200 y recién después sigue trabajando, así que cuando una prueba termina
  *  puede quedar trabajo suyo en el aire. Sin esperarlo, esas escrituras caen adentro de la prueba
- *  siguiente —que ya limpió la lista— y aparecen como filas escritas por un aviso que en realidad
+ *  siguiente —que ya limpió la lista— y aparecen como filas escritas por un evento que en realidad
  *  se rechazó: la prueba acusa un defecto que está en la prueba anterior, no en el backend. Se
  *  espera a que la base de mentira deje de recibir pedidos. */
 async function esperarQuietud({ quieto = 80, tope = 5000 } = {}) {
@@ -358,7 +358,7 @@ describe('el cuerpo crudo del aviso', () => {
   it('en server.js el router va montado ANTES del lector de JSON general', () => {
     // Esta es la parte que se rompe en silencio: si algún día alguien mueve esta línea al montón
     // de las demás rutas, `express.json()` se queda con el pedido primero, la ruta nunca vuelve
-    // a ver los bytes originales y TODOS los avisos —también los auténticos— pasan a
+    // a ver los bytes originales y TODOS los eventos —también los auténticos— pasan a
     // rechazarse. No hay forma de probarlo levantando el servidor de verdad (arranca sus
     // procesos periódicos y se queda escuchando), así que se comprueba el orden escrito.
     const servidor = readFileSync(new URL('../../server.js', import.meta.url), 'utf8');
@@ -412,7 +412,7 @@ describe('el saludo inicial con el que Meta conecta la dirección', () => {
 
 describe('el aviso auténtico que no corresponde atender', () => {
   it('el mismo mensaje mandado dos veces se anota una sola', async () => {
-    // La firma de Meta no lleva instante adentro, así que un aviso auténtico copiado sigue
+    // La firma de Meta no lleva instante adentro, así que un evento auténtico copiado sigue
     // dando firma buena. Lo que corta el reenvío es el identificador del mensaje.
     respuestas.set('GET /rest/v1/mensajes_whatsapp', ({ url }) =>
       url.includes('meta_message_id=eq.') ? [{ id: MENSAJE }] : [],
@@ -455,8 +455,8 @@ describe('el aviso auténtico que no corresponde atender', () => {
    plantilla podía estar aprobada hace una semana y el producto seguirla mostrando como esperando,
    o al revés. */
 describe('el aviso de Meta sobre una plantilla', () => {
-  /** El aviso tal como lo manda Meta cuando termina de revisar. */
-  function avisoDePlantilla(valor) {
+  /** El evento tal como lo manda Meta cuando termina de revisar. */
+  function eventoDePlantilla(valor) {
     return Buffer.from(
       JSON.stringify({
         entry: [{ changes: [{ field: 'message_template_status_update', value: valor }] }],
@@ -476,7 +476,7 @@ describe('el aviso de Meta sobre una plantilla', () => {
 
   it('la aprobación queda guardada, y sobre la plantilla de esa Prestadora', async () => {
     const { estado } = await avisar({
-      cuerpo: avisoDePlantilla({ event: 'APPROVED', message_template_id: 900000000000009, reason: 'NONE' }),
+      cuerpo: eventoDePlantilla({ event: 'APPROVED', message_template_id: 900000000000009, reason: 'NONE' }),
     });
     assert.equal(estado, 200);
 
@@ -484,14 +484,14 @@ describe('el aviso de Meta sobre una plantilla', () => {
     assert.equal(guardado().cuerpo.estado, 'aprobada');
     assert.equal(guardado().cuerpo.motivo_rechazo, null);
     // La Prestadora es la de la dirección, y va en el filtro: el identificador que viene adentro
-    // del aviso no puede elegir la fila de otra.
+    // del evento no puede elegir la fila de otra.
     assert.ok(guardado().url.includes(`prestadora_id=eq.${PRESTADORA}`), guardado().url);
     assert.ok(guardado().url.includes('meta_template_id=eq.900000000000009'), guardado().url);
   });
 
   it('el rechazo guarda además lo que Meta objetó, que es lo que hay que corregir', async () => {
     await avisar({
-      cuerpo: avisoDePlantilla({
+      cuerpo: eventoDePlantilla({
         event: 'REJECTED',
         message_template_id: 900000000000009,
         reason: 'INVALID_FORMAT',
@@ -505,7 +505,7 @@ describe('el aviso de Meta sobre una plantilla', () => {
 
   it('una plantilla que Meta pausó no se sigue mostrando como que va a salir', async () => {
     await avisar({
-      cuerpo: avisoDePlantilla({ event: 'PAUSED', message_template_id: 900000000000009 }),
+      cuerpo: eventoDePlantilla({ event: 'PAUSED', message_template_id: 900000000000009 }),
     });
 
     await esperarA(() => Boolean(guardado()));
@@ -514,7 +514,7 @@ describe('el aviso de Meta sobre una plantilla', () => {
   });
 
   it('un aviso sin identificador de plantilla no escribe nada', async () => {
-    const { estado } = await avisar({ cuerpo: avisoDePlantilla({ event: 'APPROVED' }) });
+    const { estado } = await avisar({ cuerpo: eventoDePlantilla({ event: 'APPROVED' }) });
     assert.equal(estado, 200);
 
     await dejarTerminar();
@@ -523,7 +523,7 @@ describe('el aviso de Meta sobre una plantilla', () => {
 
   it('un aviso de plantilla sin firma se rechaza antes de escribir nada', async () => {
     const { estado } = await avisar({
-      cuerpo: avisoDePlantilla({ event: 'APPROVED', message_template_id: 900000000000009 }),
+      cuerpo: eventoDePlantilla({ event: 'APPROVED', message_template_id: 900000000000009 }),
       firma: null,
     });
     assert.equal(estado, 401);

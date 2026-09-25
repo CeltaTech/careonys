@@ -80,7 +80,7 @@ export const T = {
       // El puntaje dicho en palabras. Las estrellas dibujadas no se leen: un lector de
       // pantalla las nombraría una por una, o las saltearía. Es el mismo texto que en el Panel.
       puntaje_estrellas: '{n} de 5 estrellas',
-      // El aviso que se cuelga del campo que quedó vacío. El cartel de arriba dice cuáles
+      // La advertencia que se cuelga del campo que quedó vacío. El cartel de arriba dice cuáles
       // faltan; este dice, parado en el campo, que ese es uno de ellos.
       campo_obligatorio: 'Hace falta completar este campo.',
     },
@@ -111,7 +111,7 @@ export const T = {
       sin_leer_uno: '1 mensaje sin leer',
       sin_leer: '{n} mensajes sin leer',
       escribirle: 'Escribirle un mensaje',
-      // El aviso del tapado dice las dos cosas que hacen falta para no equivocarse: que el dato
+      // La advertencia del tapado dice las dos cosas que hacen falta para no equivocarse: que el dato
       // de contacto no pasa, y que lo que el producto no reconoce sí pasa. El producto avisa, no
       // bloquea.
       contacto_tapado: 'Los datos de contacto se tapan al enviar el mensaje y no quedan guardados. Lo que no se reconozca como un dato de contacto se ve del otro lado tal como se escribió.',
@@ -169,7 +169,7 @@ export const T = {
       mi_clave_exito: 'La contraseña quedó cambiada.',
       llave_entrar: 'Entrar con huella o cara',
       llave_esperando: 'Esperando el aparato…',
-      // Un solo aviso para todo lo que puede salir mal con la llave, igual que con la contraseña:
+      // Una sola advertencia para todo lo que puede salir mal con la llave, igual que con la contraseña:
       // el backend tampoco dice cuál de las cosas falló, y no hay nada que agregar acá.
       llave_error: 'No se pudo entrar con este aparato. Puede ingresar con su contraseña.',
       llave_o: 'o',
@@ -197,7 +197,7 @@ export const T = {
       titulo: 'Mis Pacientes',
       sin_pacientes: 'Todavía no hay Pacientes vinculados a esta cuenta.',
     },
-    // El aviso de que el Paciente estos días no está en su domicilio habitual. Lo dibuja
+    // La advertencia de que el Paciente estos días no está en su domicilio habitual. Lo dibuja
     // components/DomicilioTemporal.jsx, que es el mismo archivo en las dos aplicaciones, así
     // que estas dos claves existen igual en la del Asistente.
     domicilio: {

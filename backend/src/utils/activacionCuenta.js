@@ -5,7 +5,7 @@ import { ErrorConMotivo } from './errorConMotivo.js';
 import { enviarEmail } from './email.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
 import { marcaDeLaPrestadora } from './marcaPrestadora.js';
-import { aviso } from '../i18n/avisos.js';
+import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDelDestinatario } from '../i18n/idiomas.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 
@@ -58,7 +58,7 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, p
   // Careonys a uno que dice «Activación de la cuenta en undefined».
   const link = `${appUrl}/activar-cuenta?token=${token}`;
   const marca = await marcaDeLaPrestadora(prestadoraId);
-  const textos = aviso('activacion_cuenta', idiomaDelDestinatario(idioma, await idiomaDeLaPrestadora(prestadoraId)), {
+  const textos = mensajeDelSistema('activacion_cuenta', idiomaDelDestinatario(idioma, await idiomaDeLaPrestadora(prestadoraId)), {
     nombre,
     link,
     dias: DIAS_VALIDEZ_TOKEN,
@@ -109,7 +109,7 @@ export async function activarCuentaConToken(token, passwordNueva) {
     .eq('token', token)
     .maybeSingle();
 
-  // Los tres avisos viajan como motivo hasta la pantalla, que los explica en el idioma de
+  // Los tres motivos viajan tal cual hasta la pantalla, que los explica en el idioma de
   // quien mira: son tres problemas distintos y se resuelven distinto —el enlace equivocado se
   // vuelve a abrir desde el correo, el ya usado se saltea entrando por la pantalla de ingreso,
   // y el vencido obliga a pedir una invitación nueva—. Van sin detalle a propósito: el código

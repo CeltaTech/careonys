@@ -5,19 +5,19 @@ import { IDIOMA_POR_DEFECTO, idiomaDePais } from './idiomas.js';
    ====================================
 
    Es la única consulta del backend que contesta esa pregunta. Sale del país configurado de la
-   Prestadora, que es lo único que se sabe sobre dónde está la gente que va a leer el aviso.
+   Prestadora, que es lo único que se sabe sobre dónde está la gente que va a leer el mensaje.
 
-   SE PREGUNTA UNA VEZ POR VUELTA, no una vez por aviso: los procesos de fondo recorren todas las
-   Prestadoras y le mandan varios avisos a cada una, y preguntar adentro del bucle serían decenas
+   SE PREGUNTA UNA VEZ POR VUELTA, no una vez por mensaje: los procesos de fondo recorren todas las
+   Prestadoras y le mandan varios mensajes a cada una, y preguntar adentro del bucle serían decenas
    de consultas para obtener siempre la misma respuesta.
 
    NO SE GUARDA EN MEMORIA ENTRE VUELTAS. El país de una Prestadora se cambia desde Configuración,
-   y una copia guardada haría que el aviso siguiera saliendo en el idioma viejo hasta que alguien
+   y una copia guardada haría que el mensaje siguiera saliendo en el idioma viejo hasta que alguien
    reiniciara el backend. */
 
 /**
- * El idioma de una Prestadora. Si no se la encuentra o no tiene país, el de por defecto: un aviso
- * que sale en castellano es mejor que un aviso que no sale.
+ * El idioma de una Prestadora. Si no se la encuentra o no tiene país, el de por defecto: un
+ * mensaje que sale en castellano es mejor que un mensaje que no sale.
  *
  * @param {string|null|undefined} prestadoraId
  * @returns {Promise<string>}

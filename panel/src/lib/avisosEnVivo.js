@@ -8,14 +8,14 @@ export { ASUNTOS } from './asuntosEnVivo';
    ==========================================================================
 
    QUÉ ES. Una conexión sola, compartida por todas las pantallas, por la que el backend avisa que
-   algo cambió. El aviso no trae ningún dato: dice el asunto, y quien se suscribió vuelve a pedir
+   algo cambió. El mensaje no trae ningún dato: dice el asunto, y quien se suscribió vuelve a pedir
    lo que necesita por la ruta de siempre. El porqué de esa forma está del lado del backend, en
    `backend/src/avisosEnVivo/canal.js`.
 
    POR QUÉ NO `EventSource`. Porque no deja poner encabezados, y sin encabezado de autorización la
    única manera de que el backend sepa quién llama sería mandar el pase en la dirección. Un pase en
    la dirección queda escrito en el registro de cualquier intermediario y en el historial del
-   navegador. Con `fetch` el pase viaja donde tiene que viajar, y leer el formato de los avisos
+   navegador. Con `fetch` el pase viaja donde tiene que viajar, y leer el formato de los mensajes
    —que es texto plano separado por renglones en blanco— son las veinte líneas de `partir()`.
 
    UNA SOLA CONEXIÓN, NO UNA POR PANTALLA. Quien se suscribe la abre si no estaba abierta, y la
@@ -26,7 +26,7 @@ export { ASUNTOS } from './asuntosEnVivo';
    establece, la espera vuelve al principio: lo que se está midiendo es cuánto hace que no hay
    canal, no cuántas veces se intentó en toda la sesión.
 
-   Y QUIEN SE SUSCRIBE NO SE FÍA DE ESTO. El canal hace que el aviso llegue en el momento; que
+   Y QUIEN SE SUSCRIBE NO SE FÍA DE ESTO. El canal hace que el mensaje llegue en el momento; que
    llegue siempre no lo garantiza —el backend puede estar corriendo en más de un proceso, o la
    conexión puede estar cayéndose sin que el navegador lo note—. Por eso quien se suscribe
    conserva su propia vuelta de respaldo, espaciada. */
@@ -45,22 +45,22 @@ let cerrarLaConexion = null;
 let esperaMs = ESPERA_INICIAL_MS;
 let relojDeReintento = null;
 
-/** Parte lo que llega en avisos. El protocolo separa un aviso del siguiente con un renglón en
+/** Parte lo que llega en mensajes. El protocolo separa un mensaje del siguiente con un renglón en
  *  blanco, y lo que queda a medias entre dos lecturas se guarda para la próxima.
  *
  *  Sale afuera para poder probarla: la red entrega los pedazos donde se le ocurre, así que un
- *  aviso cortado al medio es lo normal y no un caso raro. */
+ *  mensaje cortado al medio es lo normal y no un caso raro. */
 export function partir(pendiente, texto) {
   const entero = pendiente + texto;
   const partes = entero.split('\n\n');
-  // Lo último puede ser un aviso incompleto: se devuelve para pegarlo adelante del que viene.
-  return { avisos: partes.slice(0, -1), pendiente: partes[partes.length - 1] };
+  // Lo último puede ser un mensaje incompleto: se devuelve para pegarlo adelante del que viene.
+  return { mensajes: partes.slice(0, -1), pendiente: partes[partes.length - 1] };
 }
 
-/** De un aviso crudo, el asunto. Los renglones que empiezan con dos puntos son comentarios del
+/** De un mensaje crudo, el asunto. Los renglones que empiezan con dos puntos son comentarios del
  *  protocolo —la señal de vida del backend— y no avisan de nada. */
-export function asuntoDe(aviso) {
-  for (const renglon of aviso.split('\n')) {
+export function asuntoDe(mensaje) {
+  for (const renglon of mensaje.split('\n')) {
     if (renglon.startsWith('event:')) return renglon.slice('event:'.length).trim();
   }
   return null;
@@ -72,7 +72,7 @@ function avisar(asunto) {
       escuchar();
     } catch (err) {
       // Lo de una pantalla no puede dejar sin avisar a las otras.
-      console.error('Error atendiendo un aviso en vivo:', err);
+      console.error('Error atendiendo un mensaje en vivo:', err);
     }
   }
 }
@@ -99,8 +99,8 @@ async function conectar() {
     if (done) break;
     const partido = partir(pendiente, value);
     pendiente = partido.pendiente;
-    for (const aviso of partido.avisos) {
-      const asunto = asuntoDe(aviso);
+    for (const mensaje of partido.mensajes) {
+      const asunto = asuntoDe(mensaje);
       if (asunto) avisar(asunto);
     }
   }
@@ -143,7 +143,7 @@ function cerrarSiNoQuedaNadie() {
  *
  * @param {string} asunto  Uno de los de `backend/src/avisosEnVivo/canal.js`.
  * @param {Function} escuchar  Qué hacer cuando ese asunto cambió. No recibe ningún dato: el
- *                             aviso dice qué cambió, no qué quedó.
+ *                             mensaje dice qué cambió, no qué quedó.
  * @returns {Function}
  */
 export function escucharEnVivo(asunto, escuchar) {

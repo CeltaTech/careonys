@@ -21,12 +21,12 @@ export default function ActivarCuenta() {
   const [error, setError] = useState('');
   const [motivoSinReintento, setMotivoSinReintento] = useState('');
   // Los dos problemas de acá son de un campo concreto —la contraseña corta, la repetida que no
-  // coincide—, así que el aviso se cuelga de ese campo y no de todo el formulario: quien lo
+  // coincide—, así que la advertencia se cuelga de ese campo y no de todo el formulario: quien lo
   // recorre con un lector de pantalla lo escucha al llegar ahí. Arriba queda el cartel general
   // solo para lo que contesta el backend, que no es de ningún campo en particular.
   const [errorCampo, setErrorCampo] = useState(null);
 
-  const avisoDe = (campo) => (errorCampo?.campo === campo ? errorCampo.texto : undefined);
+  const advertenciaDe = (campo) => (errorCampo?.campo === campo ? errorCampo.texto : undefined);
   const [activada, setActivada] = useState(false);
 
   async function alEnviar(evento) {
@@ -119,11 +119,11 @@ export default function ActivarCuenta() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              aria-invalid={avisoDe('password') ? 'true' : undefined}
-              aria-describedby={avisoDe('password') ? 'password-error' : undefined}
+              aria-invalid={advertenciaDe('password') ? 'true' : undefined}
+              aria-describedby={advertenciaDe('password') ? 'password-error' : undefined}
             />
-            {avisoDe('password') && (
-              <span className="form-error" id="password-error" role="alert">{avisoDe('password')}</span>
+            {advertenciaDe('password') && (
+              <span className="form-error" id="password-error" role="alert">{advertenciaDe('password')}</span>
             )}
           </div>
           <div className="form-field">
@@ -135,11 +135,11 @@ export default function ActivarCuenta() {
               value={confirmacion}
               onChange={(e) => setConfirmacion(e.target.value)}
               required
-              aria-invalid={avisoDe('confirmacion') ? 'true' : undefined}
-              aria-describedby={avisoDe('confirmacion') ? 'confirmacion-error' : undefined}
+              aria-invalid={advertenciaDe('confirmacion') ? 'true' : undefined}
+              aria-describedby={advertenciaDe('confirmacion') ? 'confirmacion-error' : undefined}
             />
-            {avisoDe('confirmacion') && (
-              <span className="form-error" id="confirmacion-error" role="alert">{avisoDe('confirmacion')}</span>
+            {advertenciaDe('confirmacion') && (
+              <span className="form-error" id="confirmacion-error" role="alert">{advertenciaDe('confirmacion')}</span>
             )}
           </div>
           <button type="submit" className="btn btn-primary btn-full" disabled={enviando}>

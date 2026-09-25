@@ -1,27 +1,27 @@
 import { supabase } from '../db/connection.js';
 import { enviarEmail } from './email.js';
 import { correosDe } from './correoDeUnaPersona.js';
-import { aviso } from '../i18n/avisos.js';
+import { mensajeDelSistema } from '../i18n/avisos.js';
 import { ESCALONES, escalonesQueCorresponden } from './ordenDeLaEscalada.js';
 
 // LA ALARMA QUE NADIE ATIENDE SUBE DE ESCALÓN.
 // ============================================================================
 //
 // QUÉ RESUELVE. Una alarma le insiste a quien coordina y, si no reacciona, pasa a su respaldo. Si
-// el respaldo tampoco reacciona, hasta ayer el aviso se quedaba dando vueltas entre dos personas.
+// el respaldo tampoco reacciona, hasta ayer la alarma se quedaba dando vueltas entre dos personas.
 // Acá están los dos escalones que siguen: todos los Coordinadores de esa Prestadora, y después la
 // administración.
 //
 // ESCALAR NO ES VOLVER A INSISTIR. Insistir es repetirle lo mismo a la misma persona cada tantos
 // minutos, y de eso se ocupa `insistencia.js`. Escalar es ampliar quién se entera, y eso pasa una
-// sola vez por escalón: el segundo aviso a la misma gente no agrega a nadie.
+// sola vez por escalón: el segundo mensaje a la misma gente no agrega a nadie.
 //
 // CUÁNDO SUBE CADA UNO LO DECIDE LA PRESTADORA, en minutos desde que la alarma empezó
 // (`configuracion_escalada_coordinador`). En nulo, ese escalón queda apagado. El orden y los bordes
 // viven en `ordenDeLaEscalada.js`, que es el mismo archivo que le muestra la escalada al Panel.
 //
 // SALE POR CORREO Y NO POR WhatsApp. El WhatsApp de la Prestadora es un número solo, el mismo que
-// ya recibió la insistencia: repetirle el aviso ahí no le llegaría a nadie nuevo, que es justamente
+// ya recibió la insistencia: repetirle el mensaje ahí no le llegaría a nadie nuevo, que es justamente
 // lo único que hace un escalón. Por correo cada persona lo recibe en el suyo.
 
 const MS_POR_MINUTO = 60 * 1000;
@@ -42,7 +42,7 @@ export async function escalonesYaAvisados({ prestadoraId, tipo }) {
     .eq('tipo', tipo);
 
   if (error) {
-    // Sin poder leer qué salió, no se escala: el riesgo de repetirle a todo el mundo un aviso que
+    // Sin poder leer qué salió, no se escala: el riesgo de repetirle a todo el mundo un mensaje que
     // ya recibió es peor que el de tardar una vuelta más. La vuelta siguiente lo intenta de nuevo.
     console.error(`Error consultando los escalones ya avisados (prestadora ${prestadoraId}, ${tipo}):`, error.message);
     return null;
@@ -91,7 +91,7 @@ export async function escalarSiCorresponde({
     const destinatarios = await aQuienLeToca({ prestadoraId, escalon });
 
     // Sin nadie a quien escribirle no se deja constancia: un escalón marcado sin destinatarios
-    // sería un aviso dado por salido que no salió, y la alarma no volvería a intentarlo nunca. El
+    // sería un mensaje dado por salido que no salió, y la alarma no volvería a intentarlo nunca. El
     // renglón en el registro es para que se pueda entender después por qué no llegó.
     if (!destinatarios.length) {
       console.error(
@@ -104,7 +104,7 @@ export async function escalarSiCorresponde({
     // Sin cuerpo no se manda nada, y tampoco se deja constancia: la vuelta siguiente lo reintenta.
     if (!cuerpo) return salidos;
 
-    const { asunto } = aviso(ASUNTO_DE_CADA_ESCALON[escalon], idioma, {
+    const { asunto } = mensajeDelSistema(ASUNTO_DE_CADA_ESCALON[escalon], idioma, {
       minutos: Math.round(minutosPremura),
     });
 

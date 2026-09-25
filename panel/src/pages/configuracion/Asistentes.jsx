@@ -29,7 +29,7 @@ export function ConfiguracionAsistentes() {
 function TabDocumentos() {
   const { t } = useLocale();
   const [tipos, setTipos] = useState([]);
-  const [diasAviso, setDiasAviso] = useState('');
+  const [diasDePreaviso, setDiasDePreaviso] = useState('');
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [creandoNuevo, setCreandoNuevo] = useState(false);
@@ -43,7 +43,7 @@ function TabDocumentos() {
     try {
       const { tipos: filas, dias_aviso_vencimiento_documentos } = await llamarApi('/documentos-tipo');
       setTipos(filas);
-      setDiasAviso(String(dias_aviso_vencimiento_documentos));
+      setDiasDePreaviso(String(dias_aviso_vencimiento_documentos));
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -77,7 +77,7 @@ function TabDocumentos() {
     try {
       await llamarApi('/documentos-tipo/plazo-aviso', {
         method: 'PATCH',
-        body: JSON.stringify({ dias: Number(diasAviso) }),
+        body: JSON.stringify({ dias: Number(diasDePreaviso) }),
       });
       setPlazoGuardado(true);
     } catch (err) {
@@ -97,10 +97,10 @@ function TabDocumentos() {
         label={t.configuracion.documentos_plazo_dias}
         name="dias_aviso"
         type="number"
-        value={diasAviso}
-        onChange={(e) => { setDiasAviso(e.target.value); setPlazoGuardado(false); }}
+        value={diasDePreaviso}
+        onChange={(e) => { setDiasDePreaviso(e.target.value); setPlazoGuardado(false); }}
       />
-      <Button onClick={guardarPlazo} disabled={guardandoPlazo || !diasAviso}>
+      <Button onClick={guardarPlazo} disabled={guardandoPlazo || !diasDePreaviso}>
         {guardandoPlazo ? t.comun.guardando : t.comun.guardar}
       </Button>
 

@@ -127,7 +127,7 @@ export function Asistentes() {
   // mano— y los que entraron por importación de una planilla donde no se pudo
   // reconocer el tipo, que no traen nada. Los dos casos se arreglan en la misma
   // pantalla. Mientras haya aunque sea uno se ofrece pasarlos; cuando no quede
-  // ninguno, el aviso desaparece solo.
+  // ninguno, la alerta desaparece sola.
   const sinTipo = useMemo(
     () => filas.filter((a) => !a.tipo_asistente_id),
     [filas],

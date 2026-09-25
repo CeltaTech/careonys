@@ -217,8 +217,8 @@ describe('cálculo de llegada tardía — los minutos de aviso', () => {
     assert.equal(alerta.prestadora_id, PRESTADORA);
 
     // Ésta es la medida de todo el mecanismo: cuántos minutos antes se enteró la Prestadora.
-    const minutosDeAviso = (inicioDe(guardia).getTime() - new Date(alerta.detectado_at).getTime()) / 60000;
-    assert.ok(minutosDeAviso > 0, `la alerta llegó ${minutosDeAviso} minutos después de la hora de inicio`);
+    const minutosDeAnticipacion = (inicioDe(guardia).getTime() - new Date(alerta.detectado_at).getTime()) / 60000;
+    assert.ok(minutosDeAnticipacion > 0, `la alerta llegó ${minutosDeAnticipacion} minutos después de la hora de inicio`);
   });
 
   it('la cuenta no la reporta nadie: no lleva persona ni motivo', async () => {

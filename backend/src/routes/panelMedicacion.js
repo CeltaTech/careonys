@@ -4,7 +4,7 @@ import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
 import { tipoMatriculaRequerida, hayAsistenteAsignadoConMatricula } from '../utils/medicacionIndicaciones.js';
 import { extensionDeArchivo, rutaDeMatriculaNueva } from '../utils/archivosSubidos.js';
-import { registrarAvisoAlActivar } from '../utils/advertenciaLegal.js';
+import { registrarAdvertenciaAlActivar } from '../utils/advertenciaLegal.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
 // Cierra pendiente #62 (docs/PLAN_HASTA_PRODUCCION.md): cola de revisión de indicaciones de
@@ -95,7 +95,7 @@ panelMedicacionRouter.post('/:id/aceptar', requiereRolPanel, async (req, res) =>
   // Aceptada de verdad, se anota que se avisó. La situación se vuelve a calcular acá y no se
   // recibe del navegador: quien manda el pedido podría decir que no había nada que advertir.
   // Si la jurisdicción de esta Prestadora no tiene texto escrito para esta función, no hay
-  // aviso y no se anota nada — y la indicación queda aceptada igual (CLAUDE.md §7).
+  // advertencia y no se anota nada — y la indicación queda aceptada igual (CLAUDE.md §7).
   const tipoRequerido = await tipoMatriculaRequerida(req.usuarioPanel.prestadoraId, indicacion.via_administracion);
   const sinMatricula = tipoRequerido
     ? !(await hayAsistenteAsignadoConMatricula(
@@ -105,7 +105,7 @@ panelMedicacionRouter.post('/:id/aceptar', requiereRolPanel, async (req, res) =>
       ))
     : false;
   if (sinMatricula) {
-    await registrarAvisoAlActivar({
+    await registrarAdvertenciaAlActivar({
       prestadoraId: req.usuarioPanel.prestadoraId,
       usuarioId: req.usuarioPanel.id,
       funcionClave: 'medicacion_via_sin_matricula',

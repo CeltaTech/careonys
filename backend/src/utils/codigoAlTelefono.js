@@ -38,9 +38,10 @@ export const USOS_DEL_CODIGO = [USO_VERIFICAR, USO_EQUIPO_NUEVO, USO_RECUPERAR];
 
 // La plantilla con la que sale el código, buscada por su nombre fijo.
 //
-// POR QUÉ NO PASA POR `configuracion_notificaciones` como los demás avisos. Ahí cada Prestadora
-// enciende, apaga y elige plantilla; si el código saliera por ese camino, apagar un aviso apagaría
-// el segundo factor, que es justamente lo que no se configura. Acá el nombre está fijo y lo único
+// POR QUÉ NO PASA POR `configuracion_notificaciones` como los demás mensajes del sistema. Ahí cada
+// Prestadora enciende, apaga y elige plantilla; si el código saliera por ese camino, apagar un
+// mensaje apagaría el segundo factor, que es justamente lo que no se configura. Acá el nombre está
+// fijo y lo único
 // que la Prestadora hace es darla de alta y esperar que Meta la apruebe.
 export const PLANTILLA_DEL_CODIGO = 'codigo_de_acceso';
 

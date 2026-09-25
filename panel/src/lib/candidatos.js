@@ -167,7 +167,7 @@ const lista = (x) => (Array.isArray(x) ? x : []);
 // distinta —"¿qué puede salir mal si le doy esta guardia a este Asistente?"— pero se apoya en
 // exactamente las mismas cuentas: si se pisa con otra guardia, cuánto descansa, cuántas horas
 // lleva en la semana, qué papeles vencen. Escribirlas dos veces sería garantizar que algún día
-// la lista de candidatos diga una cosa y el aviso de confirmación diga otra sobre la misma
+// la lista de candidatos diga una cosa y la advertencia de confirmación diga otra sobre la misma
 // persona y la misma guardia — el error más difícil de encontrar, porque no rompe nada: solo
 // hace que nadie vuelva a confiar en la pantalla. Están escritas una sola vez, acá
 // (regla 12 de CLAUDE.md §7).
@@ -640,8 +640,8 @@ function evaluarAsistente(asistente, ctx) {
       ctx.estadoMatricula?.tipo_matricula ?? null
     );
     if (matricula) {
-      const limiteAviso = sumarDiasISO(hueco.fecha, topes.dias_aviso_vencimiento);
-      if (matricula.vigente_hasta && matricula.vigente_hasta <= limiteAviso) {
+      const limiteDePreaviso = sumarDiasISO(hueco.fecha, topes.dias_aviso_vencimiento);
+      if (matricula.vigente_hasta && matricula.vigente_hasta <= limiteDePreaviso) {
         suma(
           enContra,
           MOTIVO.MATRICULA_VENCE,
@@ -661,8 +661,8 @@ function evaluarAsistente(asistente, ctx) {
   //        cargados, y no hay clave de traducción para esa tercera situación.
   const papel = papelQueVencePrimero(asistente.id, documentos);
   if (papel) {
-    const limiteAviso = sumarDiasISO(hueco.fecha, topes.dias_aviso_vencimiento);
-    if (papel.fecha_vencimiento <= limiteAviso) {
+    const limiteDePreaviso = sumarDiasISO(hueco.fecha, topes.dias_aviso_vencimiento);
+    if (papel.fecha_vencimiento <= limiteDePreaviso) {
       suma(enContra, MOTIVO.PAPELES_VENCEN, { fecha: papel.fecha_vencimiento }, pesos.papeles_vencen);
     } else {
       suma(aFavor, MOTIVO.PAPELES_OK, null, pesos.papeles_ok);

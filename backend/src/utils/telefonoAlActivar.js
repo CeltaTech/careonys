@@ -94,7 +94,7 @@ export async function ofrecerElCodigoAlActivar({ usuarioId, telefono }) {
   // activa antes de llegar a esta línea: contestar con un error haría creer que no se activó nada, y
   // la persona no volvería a entrar. Entonces el número no se guarda, no sale ningún código, y la
   // respuesta dice por qué —«lo que ya hizo no se pierde en silencio»—. La línea fija de una casa no
-  // cae nunca acá. El aviso es un motivo pelado: no lleva el número adentro.
+  // cae nunca acá. La respuesta es un motivo pelado: no lleva el número adentro.
   if (await esUnCelularDeOtraPersona({ telefono: escrito, cuenta })) {
     return { codigoEnviado: false, motivo: 'celular_de_otra_persona' };
   }

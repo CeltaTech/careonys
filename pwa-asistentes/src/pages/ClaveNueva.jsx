@@ -17,7 +17,7 @@ const MOTIVOS_SIN_REINTENTO = ['token_invalido', 'token_ya_usado', 'token_vencid
 // clave de una que está en uso—, y los enlaces de una no sirven en la otra.
 //
 // LA APARIENCIA ES LA MÍNIMA A PROPÓSITO. Lo que hace falta hoy es que el enlace del correo
-// llegue a algún lado: sin esta pantalla, quien olvida la clave cae en el inicio sin aviso y
+// llegue a algún lado: sin esta pantalla, quien olvida la clave cae en el inicio sin advertencia y
 // queda afuera. El recorrido se acomoda cuando llegue la maqueta.
 export default function ClaveNueva() {
   const { t } = useLocale();

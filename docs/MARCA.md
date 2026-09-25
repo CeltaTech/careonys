@@ -38,7 +38,7 @@ el Panel. Lo único suyo es **adónde quiere que le lleguen las respuestas**, y 
 
 **Cada Prestadora manda desde su propia dirección de correo, bajo el dominio del producto.** Al
 dar de alta una Prestadora se le crea `[prestadora]@careonys.com`, y de ahí salen todos sus
-avisos. Esa dirección sólo manda: **las respuestas se reenvían a la casilla que la Prestadora
+mensajes. Esa dirección sólo manda: **las respuestas se reenvían a la casilla que la Prestadora
 declare**, que es la suya y vive donde ella quiera.
 
 El nombre de esa dirección sale, en este orden:
@@ -54,7 +54,7 @@ mandaron. Es un nombre guardado, no una marca.
 Va bajo el dominio del producto y no bajo el de cada Prestadora porque la autorización para
 mandar —SPF y DKIM— se carga una sola vez, en `careonys.com`, y de ahí cuelgan todas las
 direcciones. Pedirle eso a cada Prestadora sería pedirle un trabajo que una Prestadora chica no
-va a hacer, y sus avisos terminarían en correo no deseado.
+va a hacer, y sus mensajes terminarían en correo no deseado.
 
 Dos cosas que la decisión **descartó** explícitamente, para que nadie las reabra sin motivo:
 

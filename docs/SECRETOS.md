@@ -47,10 +47,10 @@ Cada uno con el archivo que lo usa, para no tener que buscarlo.
 | `RESEND_API_KEY` | La credencial del despachante por el que sale todo el correo del producto. Va junto con `REMITENTE_AVISOS`, que no es secreta y dice desde qué dirección sale. `backend/src/utils/email.js` | No se manda ningún correo, en silencio | Sin registro |
 | `CLOUDFLARE_EMAIL_ROUTING_TOKEN` | Abrir y cortar el reenvío de las respuestas de cada Prestadora. Va junto con `CLOUDFLARE_ACCOUNT_ID` y `CLOUDFLARE_ZONE_ID`, que no son secretos y dicen sobre qué cuenta y qué dominio se trabaja. **Es un token propio, con permiso de Email Routing: no es el que publica las pantallas** (§3), que está acotado a Pages y DNS. `backend/src/utils/reenvioDeRespuestas.js` | No se abre ningún reenvío, el alta sigue andando y las respuestas se pierden. Se avisa en el Panel | Sin registro |
 | `SMTP_USER` y `SMTP_PASSWORD` | La casilla de correo de la máquina de desarrollo. Es el camino que se usa mientras no haya credencial del despachante; en Railway no entrega nada, porque los puertos de correo están bloqueados. `backend/src/utils/email.js` | En desarrollo no se manda ningún correo, en silencio | Sin registro |
-| `VAPID_PRIVATE_KEY` | Firma los avisos al celular. Va de a pares con `VAPID_PUBLIC_KEY`, que no es secreta y se compila adentro de las pantallas. `backend/src/utils/push.js` | No llega ningún aviso al celular | Sin registro |
+| `VAPID_PRIVATE_KEY` | Firma los mensajes al celular. Va de a pares con `VAPID_PUBLIC_KEY`, que no es secreta y se compila adentro de las pantallas. `backend/src/utils/push.js` | No llega ningún mensaje al celular | Sin registro |
 | `QR_COBRO_SECRET` | Firma el código que se escanea para cobrar en efectivo, para que no se pueda fabricar uno. `backend/src/utils/qrCobroEfectivo.js` | El backend arranca igual y falla recién al generar un código de cobro | Sin registro |
 | `R2_ACCESS_KEY_ID` y `R2_SECRET_ACCESS_KEY` | Subir el respaldo al depósito de Cloudflare R2 | No se guarda el respaldo | Sin registro |
-| `COBRANZA_EFECTIVO_SECRETO_FIRMA_WEBHOOK`, `DEBIN_SECRETO_FIRMA_WEBHOOK`, `MODO_SECRETO_FIRMA_WEBHOOK` | Comprobar que el aviso de cobro lo mandó la pasarela y no cualquiera que conozca la dirección. **Son el respaldo del ambiente:** el secreto que manda es el de esa Prestadora, guardado en la caja fuerte de la base (§4) | El aviso se rechaza, que es lo correcto: mejor no cobrar que dar por cobrado lo que no se cobró | Sin registro |
+| `COBRANZA_EFECTIVO_SECRETO_FIRMA_WEBHOOK`, `DEBIN_SECRETO_FIRMA_WEBHOOK`, `MODO_SECRETO_FIRMA_WEBHOOK` | Comprobar que el cobro informado viene de la pasarela y no de cualquiera que conozca la dirección. **Son el respaldo del ambiente:** el secreto que manda es el de esa Prestadora, guardado en la caja fuerte de la base (§4) | El cobro informado se rechaza, que es lo correcto: mejor no cobrar que dar por cobrado lo que no se cobró | Sin registro |
 | `WHATSAPP_WEBHOOK_VERIFY_TOKEN` | Contestarle a Meta el saludo con que engancha la entrada de WhatsApp. **Quedó de cuando había uno solo para todas**; hoy manda el de cada Prestadora (§4) | El saludo de Meta falla si esa Prestadora tampoco tiene el suyo | Sin registro |
 
 ---
@@ -86,7 +86,7 @@ referencia de una caja de `vault`, y adentro de esa caja está el texto cifrado.
 | Caja | Qué guarda | Funciones que la abren |
 |---|---|---|
 | `pasarela_<proveedor>_<prestadora>` | La credencial con la que esa Prestadora cobra por esa pasarela | `guardar_credencial_pasarela_pago` / `leer_credencial_pasarela_pago` |
-| `pasarela_firma_<proveedor>_<prestadora>` | El secreto con el que esa pasarela firma sus avisos de cobro | `guardar_secreto_firma_pasarela_pago` / `leer_secreto_firma_pasarela_pago` |
+| `pasarela_firma_<proveedor>_<prestadora>` | El secreto con el que esa pasarela firma lo que informa de sus cobros | `guardar_secreto_firma_pasarela_pago` / `leer_secreto_firma_pasarela_pago` |
 | `whatsapp_token_<prestadora>` | El token con el que manda mensajes por WhatsApp | `guardar_token_whatsapp` / `leer_token_whatsapp` |
 | `whatsapp_app_secret_<prestadora>` | Con qué se comprueba la firma de lo que llega de Meta | `guardar_app_secret_whatsapp` / `leer_app_secret_whatsapp` |
 | `whatsapp_verify_token_<prestadora>` | Con qué se contesta el saludo de enganche de Meta | `guardar_verify_token_whatsapp` / `leer_verify_token_whatsapp` |

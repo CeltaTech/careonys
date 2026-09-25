@@ -54,7 +54,7 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
   const [sugiriendoMotivo, setSugiriendoMotivo] = useState(false);
   // Qué contestó la sugerencia la última vez: '' mientras no se pidió ninguna, 'sugerido' cuando
   // el motivo de abajo lo puso el backend, 'sin_sugerencia' cuando ninguno de los motivos de la
-  // Prestadora correspondía. El aviso de que fue una sugerencia tiene que quedar a la vista
+  // Prestadora correspondía. La advertencia de que fue una sugerencia tiene que quedar a la vista
   // mientras la persona mira el desplegable: si desapareciera al aplicarla, el motivo elegido por
   // el backend se vería igual que uno elegido a mano.
   const [sugerencia, setSugerencia] = useState('');

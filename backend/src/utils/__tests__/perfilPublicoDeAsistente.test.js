@@ -12,7 +12,7 @@
  *
  * La segunda es el orden. Con `ranking_plataforma` apagada, la lista no puede premiar a nadie:
  * si alguien la ordenara por calificación "porque queda mejor", la Prestadora estaría usando
- * una función de riesgo legal que nunca encendió y sin el aviso que le corresponde.
+ * una función de riesgo legal que nunca encendió y sin la advertencia que le corresponde.
  *
  * Qué daría con el sistema roto: si el orden neutro fuera alfabético o por fecha de alta, la
  * prueba del reparto parejo encuentra siempre a la misma persona primera; si el promedio se

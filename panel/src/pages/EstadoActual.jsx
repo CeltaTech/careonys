@@ -27,7 +27,7 @@ import {
   fechaLimiteDeAviso,
   urgenciaDeVencimiento,
 } from '../lib/reglaVencimientos';
-import { diasDeAvisoDeLaPrestadora } from '../lib/plazoDeAviso';
+import { diasDePreavisoDeLaPrestadora } from '../lib/plazoDeAviso';
 import { mensajeDeError } from '../lib/errores';
 
 /* El Estado actual.
@@ -79,7 +79,7 @@ export function EstadoActual() {
     asistentesConPapelPorVencer: new Set(),
     asistentesConPapelVencido: new Set(),
     guardiasSinReporte: new Set(),
-    diasAviso: DIAS_AVISO_POR_DEFECTO,
+    diasDePreaviso: DIAS_AVISO_POR_DEFECTO,
     asistentesConMatriculaTrabada: new Set(),
     asistentesConMatriculaPorVencer: new Set(),
   });
@@ -99,8 +99,8 @@ export function EstadoActual() {
     setEstado('cargando');
     setError(null);
 
-    const diasAviso = await diasDeAvisoDeLaPrestadora(prestadoraId);
-    const limitePapeles = fechaLimiteDeAviso(diasAviso);
+    const diasDePreaviso = await diasDePreavisoDeLaPrestadora(prestadoraId);
+    const limitePapeles = fechaLimiteDeAviso(diasDePreaviso);
 
     const [gs, as, ps, ds, em] = await Promise.all([
       supabase
@@ -172,7 +172,7 @@ export function EstadoActual() {
     const porVencer = new Set();
     const vencidos = new Set();
     for (const d of ds.data ?? []) {
-      const estadoPapel = estadoDeVencimiento(diasParaVencer(d.fecha_vencimiento), diasAviso);
+      const estadoPapel = estadoDeVencimiento(diasParaVencer(d.fecha_vencimiento), diasDePreaviso);
       if (estadoPapel === ESTADO_VENCIMIENTO.VENCIDO) vencidos.add(d.asistente_id);
       else porVencer.add(d.asistente_id);
     }
@@ -210,7 +210,7 @@ export function EstadoActual() {
     }
 
     // Dos conjuntos otra vez, por el mismo motivo que los papeles: trabado es rojo y por vencer
-    // es naranja. La ventana de aviso es la misma que la de los documentos — un solo interruptor
+    // es naranja. La ventana de preaviso es la misma que la de los documentos — un solo interruptor
     // para los dos vencimientos, no dos que se separen con el tiempo.
     const matriculaTrabada = new Set();
     const matriculaPorVencer = new Set();
@@ -220,7 +220,7 @@ export function EstadoActual() {
         continue;
       }
       if (fila.requiere_matricula !== true) continue;
-      const urgencia = urgenciaDeVencimiento(fila.dias_para_vencer, diasAviso);
+      const urgencia = urgenciaDeVencimiento(fila.dias_para_vencer, diasDePreaviso);
       if (urgencia !== URGENCIA.NINGUNA) matriculaPorVencer.add(fila.asistente_id);
     }
 
@@ -230,7 +230,7 @@ export function EstadoActual() {
       asistentesConPapelPorVencer: porVencer,
       asistentesConPapelVencido: vencidos,
       guardiasSinReporte: sinReporte,
-      diasAviso,
+      diasDePreaviso,
       asistentesConMatriculaTrabada: matriculaTrabada,
       asistentesConMatriculaPorVencer: matriculaPorVencer,
     });

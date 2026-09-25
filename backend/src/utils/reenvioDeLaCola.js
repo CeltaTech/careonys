@@ -29,11 +29,11 @@ export function identificadorDelTelefono(cuerpo, campo = 'clienteUuid') {
  * aviso—, y sin ella la consulta alcanzaría la guardia de cualquier otra. Colgar de la guardia no
  * alcanza, aunque su identificador sea único.
  */
-export async function filaDeEsteAviso({ tabla, prestadoraId, guardiaId, clienteUuid, campos = 'id', columna = 'cliente_uuid' }) {
+export async function filaDeEsteMensaje({ tabla, prestadoraId, guardiaId, clienteUuid, campos = 'id', columna = 'cliente_uuid' }) {
   // Falla cerrado: sin Prestadora no se lee nada. Y hacia escribir, como el error de más abajo:
   // no se afirma que el aviso ya estaba.
   if (!prestadoraId) {
-    console.error(`filaDeEsteAviso en ${tabla}: sin Prestadora no se busca nada`);
+    console.error(`filaDeEsteMensaje en ${tabla}: sin Prestadora no se busca nada`);
     return null;
   }
   if (!clienteUuid) return null;

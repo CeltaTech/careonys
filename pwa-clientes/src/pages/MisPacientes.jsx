@@ -27,7 +27,7 @@ export default function MisPacientes() {
 
   if (error) return <div className="alert alert-error" role="alert">{error}</div>;
   if (pacientes === null) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
-  // El aviso de instrucción pendiente va también acá: sin Pacientes cargados no hay ninguna otra
+  // La advertencia de instrucción pendiente va también acá: sin Pacientes cargados no hay ninguna otra
   // pantalla adonde ir, y el titular igual tiene algo que firmar.
   if (pacientes.length === 0) {
     return (

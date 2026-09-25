@@ -1,6 +1,6 @@
-// Pendiente #159 — cómo se comprueba que un aviso de cobro vino de verdad de la pasarela.
+// Pendiente #159 — cómo se comprueba que un cobro que entra vino de verdad de la pasarela.
 //
-// Stripe y Mercado Pago firman sus avisos de la misma forma: una cabecera con un instante y
+// Stripe y Mercado Pago firman lo que mandan de la misma forma: una cabecera con un instante y
 // una o más firmas, y un HMAC-SHA256 calculado con un secreto que solo conocen ellos y la
 // Prestadora. Cambian el nombre de la cabecera, el nombre del instante y qué texto se firma;
 // el resto es idéntico. Por eso la comprobación vive acá una sola vez y todos los adaptadores
@@ -16,19 +16,19 @@
 //      corta en el primer carácter distinto, así que tarda un poquito más cuando el
 //      principio coincide. Midiendo esa diferencia muchas veces se adivina la firma
 //      carácter por carácter. `timingSafeEqual` tarda siempre lo mismo.
-//   2. **El instante tiene que ser reciente.** Sin eso, un aviso auténtico que alguien copió
+//   2. **El instante tiene que ser reciente.** Sin eso, un cobro auténtico que alguien copió
 //      hace seis meses —con su firma buena— se puede volver a mandar hoy y sirve igual.
 //   3. **Ante cualquier duda, se rechaza.** Falta el secreto, falta la cabecera, la cabecera
 //      no se entiende: se rechaza. Nunca "se sigue igual".
 
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 
-/** Cuánto puede haber viajado un aviso antes de que deje de aceptarse. Cinco minutos es la
+/** Cuánto puede haber viajado un cobro antes de que deje de aceptarse. Cinco minutos es la
  *  tolerancia que recomiendan las dos pasarelas: alcanza para una demora de red o un reloj
- *  corrido, y no alcanza para reenviar un aviso viejo. */
+ *  corrido, y no alcanza para reenviar uno viejo. */
 export const TOLERANCIA_SEGUNDOS = 5 * 60;
 
-/** Por qué se rechazó un aviso. Se registra del lado del servidor; al que llama se le
+/** Por qué se rechazó un cobro que entró. Se registra del lado del servidor; al que llama se le
  *  contesta siempre lo mismo, sin decirle cuál de las comprobaciones falló. */
 export const MOTIVO = {
   SECRETO_AUSENTE: 'secreto_de_firma_no_guardado',
@@ -40,8 +40,8 @@ export const MOTIVO = {
   SIN_REFERENCIA: 'aviso_sin_referencia_de_cobro',
 };
 
-/** Los motivos que dicen "este aviso no se pudo probar auténtico". Todos terminan en un
- *  rechazo con 401. Queda afuera `SIN_REFERENCIA`, que es otra cosa: el aviso venía firmado
+/** Los motivos que dicen "esto no se pudo probar auténtico". Todos terminan en un
+ *  rechazo con 401. Queda afuera `SIN_REFERENCIA`, que es otra cosa: venía firmado
  *  de verdad, pero adentro no traía ninguna referencia de cobro que mirar. */
 const MOTIVOS_DE_AUTENTICIDAD = new Set([
   MOTIVO.SECRETO_AUSENTE,
@@ -75,7 +75,7 @@ export function partesDeLaCabecera(cabecera) {
 }
 
 /** ¿El instante que viaja en la firma cae dentro de la tolerancia? Se mira la diferencia en
- *  valor absoluto: un aviso fechado en el futuro es tan sospechoso como uno viejo, y suele
+ *  valor absoluto: un cobro fechado en el futuro es tan sospechoso como uno viejo, y suele
  *  ser un reloj mal puesto. */
 export function instanteVigente(segundos, ahoraMs = Date.now()) {
   const instante = Number(segundos);
@@ -84,7 +84,7 @@ export function instanteVigente(segundos, ahoraMs = Date.now()) {
 }
 
 /** El HMAC-SHA256 en hexadecimal de una lista de trozos. Los trozos pueden ser texto o
- *  bytes: el cuerpo crudo del aviso llega como bytes y se firma tal cual llegó, sin pasar
+ *  bytes: el cuerpo crudo llega como bytes y se firma tal cual llegó, sin pasar
  *  por ninguna conversión que pueda cambiarle una coma. */
 export function hmacHex(secreto, trozos) {
   const hmac = createHmac('sha256', secreto);
@@ -135,7 +135,7 @@ export function secretosIguales(recibido, esperado) {
 // así» sin haberlo leído en ningún lado es peor que no comprobar nada: el que viene detrás lo
 // lee como un hecho. Entonces lo que se hace es lo único honesto:
 //
-//   - **Sin secreto configurado, se rechaza todo aviso.** Es el estado en el que salen las dos
+//   - **Sin secreto configurado, se rechaza todo lo que entre.** Es el estado en el que salen las dos
 //     hoy, y es a propósito: prefiero que no entre ninguno a que entre cualquiera.
 //   - **Con secreto configurado, se comprueba contra la convención que declara este producto**
 //     —la de acá abajo—, que no sale de la documentación de ningún proveedor y por eso no se
@@ -143,7 +143,7 @@ export function secretosIguales(recibido, esperado) {
 //     reutilizada, no una segunda.
 //
 // Consecuencia, escrita para que no sorprenda: mientras no se confirme con el proveedor cómo
-// firma de verdad, **un aviso auténtico de Modo o del PSP también se va a rechazar**. Eso es el
+// firma de verdad, **un cobro auténtico de Modo o del PSP también se va a rechazar**. Eso es el
 // control fallando cerrado, no un defecto. El día que se confirme el esquema real, el adaptador
 // de ese proveedor deja de llamar a esta función y reproduce el suyo, igual que Stripe.
 // ---------------------------------------------------------------------------

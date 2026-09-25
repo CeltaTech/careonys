@@ -25,17 +25,17 @@ export function TelefonoDeLaCuenta({ datos, recargar }) {
   const [pidiendo, setPidiendo] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [hayCodigo, setHayCodigo] = useState(false);
-  const [aviso, setAviso] = useState(null);
+  const [mensaje, setMensaje] = useState(null);
   const [errorCaja, setErrorCaja] = useState(null);
 
   async function pedirCodigo() {
     setErrorCaja(null);
-    setAviso(null);
+    setMensaje(null);
     setPidiendo(true);
     try {
       await llamarApiPanel('/cuenta-segura/telefono/codigo', { method: 'POST' });
       setHayCodigo(true);
-      setAviso(t.cuenta_segura.codigo_enviado);
+      setMensaje(t.cuenta_segura.codigo_enviado);
     } catch (err) {
       setErrorCaja(mensajeDeError(err, t, 'CuentaSegura'));
     } finally {
@@ -46,7 +46,7 @@ export function TelefonoDeLaCuenta({ datos, recargar }) {
   async function confirmar(evento) {
     evento.preventDefault();
     setErrorCaja(null);
-    setAviso(null);
+    setMensaje(null);
     setEnviando(true);
     try {
       await llamarApiPanel('/cuenta-segura/telefono/confirmar', {
@@ -66,7 +66,7 @@ export function TelefonoDeLaCuenta({ datos, recargar }) {
   async function cambiar(evento) {
     evento.preventDefault();
     setErrorCaja(null);
-    setAviso(null);
+    setMensaje(null);
     setEnviando(true);
     try {
       await llamarApiPanel('/cuenta-segura/telefono/cambiar', {
@@ -76,7 +76,7 @@ export function TelefonoDeLaCuenta({ datos, recargar }) {
       setClaveActual('');
       setTelefono('');
       setHayCodigo(true);
-      setAviso(t.cuenta_segura.codigo_enviado);
+      setMensaje(t.cuenta_segura.codigo_enviado);
       await recargar();
     } catch (err) {
       setErrorCaja(mensajeDeError(err, t, 'CuentaSegura'));
@@ -97,7 +97,7 @@ export function TelefonoDeLaCuenta({ datos, recargar }) {
       <p>{estadoDelNumero}</p>
 
       {errorCaja && <Alert variant="error">{errorCaja}</Alert>}
-      {aviso && <Alert variant="success">{aviso}</Alert>}
+      {mensaje && <Alert variant="success">{mensaje}</Alert>}
 
       {!datos.viaDeTelefono && <Alert variant="info">{t.cuenta_segura.sin_via}</Alert>}
 

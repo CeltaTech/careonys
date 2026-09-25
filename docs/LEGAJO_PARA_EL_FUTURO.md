@@ -26,6 +26,6 @@ Lo que hay que resolver antes de construirlo, porque cambia qué producto es:
 - **Qué se guarda y por cuánto.** Ver en vivo y guardar lo grabado son dos productos distintos,
   con dos riesgos distintos. Lo grabado en una casa donde se cuida a alguien es dato de salud.
 - **Qué ve la coordinación, y cuándo.** Mirar cuando quiera no es lo mismo que mirar cuando hay
-  un aviso.
+  una alerta.
 - **Careonys no presta el servicio de cuidado y tampoco prestaría el de vigilancia.** Habría que
   definir qué pone el producto y qué pone el proveedor de las cámaras.

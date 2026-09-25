@@ -12,7 +12,7 @@ import { SITUACION, UMBRALES, situacionDeGuardia, umbralesDeLaPrestadora } from 
 describe('umbralesDeLaPrestadora', () => {
   it('toma los tres números de la configuración de la Prestadora', () => {
     const u = umbralesDeLaPrestadora({
-      avisoSinCubrir: { horas_antes: 24 },
+      mensajeSinCubrir: { horas_antes: 24 },
       ausenciaAutomatica: { minutos_tolerancia_checkin: 30 },
       escaladaCoordinador: { minutos_gracia_cierre_guardia: 90 },
     });
@@ -34,7 +34,7 @@ describe('umbralesDeLaPrestadora', () => {
   });
 
   it('una Prestadora que configuró una sola de las tres tablas conserva las otras dos de fábrica', () => {
-    const u = umbralesDeLaPrestadora({ avisoSinCubrir: { horas_antes: 12 } });
+    const u = umbralesDeLaPrestadora({ mensajeSinCubrir: { horas_antes: 12 } });
 
     expect(u.horas_hueco_urgente).toBe(12);
     expect(u.minutos_tolerancia_llegada).toBe(UMBRALES.minutos_tolerancia_llegada);
@@ -46,7 +46,7 @@ describe('umbralesDeLaPrestadora', () => {
     // columnas que esa Prestadora nunca completó. Ninguno de los tres es una decisión suya.
     for (const valor of [0, -3, null, undefined, '', 'mucho', NaN]) {
       const u = umbralesDeLaPrestadora({
-        avisoSinCubrir: { horas_antes: valor },
+        mensajeSinCubrir: { horas_antes: valor },
         ausenciaAutomatica: { minutos_tolerancia_checkin: valor },
         escaladaCoordinador: { minutos_gracia_cierre_guardia: valor },
       });
@@ -93,8 +93,8 @@ describe('el umbral configurado cambia lo que se ve', () => {
       hora_fin: '22:00',
     };
 
-    const conCuarentaYOcho = umbralesDeLaPrestadora({ avisoSinCubrir: { horas_antes: 48 } });
-    const conVeinticuatro = umbralesDeLaPrestadora({ avisoSinCubrir: { horas_antes: 24 } });
+    const conCuarentaYOcho = umbralesDeLaPrestadora({ mensajeSinCubrir: { horas_antes: 48 } });
+    const conVeinticuatro = umbralesDeLaPrestadora({ mensajeSinCubrir: { horas_antes: 24 } });
 
     expect(situacionDeGuardia(hueco, { ahora: AHORA, umbrales: conCuarentaYOcho })).toBe(SITUACION.HUECO_URGENTE);
     expect(situacionDeGuardia(hueco, { ahora: AHORA, umbrales: conVeinticuatro })).toBe(SITUACION.HUECO);

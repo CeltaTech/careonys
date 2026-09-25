@@ -146,7 +146,7 @@ export function GuardiasSinCerrar({ onCerrada }) {
                       {t.guardias_sin_cerrar.cerrar}
                     </Button>
                     {/* Cerrarla es el final; tomarla es decir que alguien la está averiguando
-                        ahora, para que el aviso no siga llegándole a los demás mientras tanto. */}
+                        ahora, para que el mensaje no siga llegándole a los demás mientras tanto. */}
                     <LaTomoYo
                       tipo={TIPOS_DE_ALARMA.GUARDIA_SIN_CERRAR}
                       referenciaId={g.id}

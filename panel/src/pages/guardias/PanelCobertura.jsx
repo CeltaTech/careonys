@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { con } from '../../lib/textos';
 import { candidatosParaGuardia } from '../../lib/candidatos';
 import { pesosYTopesDe } from '../../lib/perfilesDeCandidatos';
-import { avisosDeAsignacion } from '../../lib/avisosAsignacion';
+import { advertenciasDeAsignacion } from '../../lib/avisosAsignacion';
 import { COLUMNAS_ESTADO_MATRICULA, mensajeDeBloqueo } from '../../lib/matricula';
 import { mensajeDeModalidad } from '../../lib/modalidades';
 import { cargarPacientesDeGuardias, pacientesDeGuardia } from '../../lib/pacientesDeGuardia';
@@ -66,7 +66,7 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
   const [elegidos, setElegidos] = useState(() => new Set());
   const [limite, setLimite] = useState('');
   const [enCurso, setEnCurso] = useState(null); // 'asignar:<id>' | 'invitar' | 'retirar:<id>'
-  const [porConfirmar, setPorConfirmar] = useState(null); // { asistenteId, avisos }
+  const [porConfirmar, setPorConfirmar] = useState(null); // { asistenteId, advertencias }
   const contenedor = useRef(null);
 
   const nombrePorAsistente = useMemo(
@@ -237,34 +237,34 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
 
   /* Un paso antes de escribir: ¿hay algo que convenga mirar?
      Si no hay nada, se asigna y listo —no se le pone una pregunta de más a quien está tapando
-     un hueco con el reloj en contra. Si hay algo, se muestra y se pregunta. El aviso nunca
+     un hueco con el reloj en contra. Si hay algo, se muestra y se pregunta. La advertencia nunca
      impide asignar: la Coordinadora sabe cosas que la base no sabe. */
   function pedirAsignar(candidato) {
     const asistenteId = candidato.asistente.id;
-    const avisos = avisosDeAsignacion(guardia, asistenteId, datos ?? {}, datos?.calculo);
+    const advertencias = advertenciasDeAsignacion(guardia, asistenteId, datos ?? {}, datos?.calculo);
     // Sin nada que mirar se asigna y listo. Con algo, se muestra y se pregunta. Y a quien esta
-    // lista desaconseja se le pregunta siempre, aunque no haya salido ningún aviso: pasar por
+    // lista desaconseja se le pregunta siempre, aunque no haya salido ninguna advertencia: pasar por
     // arriba de la propia lista en silencio dejaría sin constancia justo el caso que la necesita.
-    if (avisos.length === 0 && !candidato.desaconsejado) {
-      asignarDirecto(asistenteId, avisos);
+    if (advertencias.length === 0 && !candidato.desaconsejado) {
+      asignarDirecto(asistenteId, advertencias);
       return;
     }
-    setPorConfirmar({ asistenteId, avisos });
+    setPorConfirmar({ asistenteId, advertencias });
   }
 
   /* Asignar, y antes dejar escrito qué se dejó de lado.
      ------------------------------------------------------------------------------------------
      La constancia va PRIMERO y no después, y si falla no se asigna. Lo que se registra es la
-     decisión de quien coordina —esta persona, este turno, estos avisos delante—, y una decisión
+     decisión de quien coordina —esta persona, este turno, estas advertencias delante—, y una decisión
      así no puede quedar sin registrar porque la segunda escritura se cayó. Al revés —asignar y
      después registrar— la que se cae es la constancia, y el turno queda asignado sin que nadie
      sepa qué se pasó por arriba, que es exactamente lo que esto viene a terminar. */
-  async function asignarDirecto(asistenteId, avisos = []) {
+  async function asignarDirecto(asistenteId, advertencias = []) {
     setPorConfirmar(null);
     setEnCurso(`asignar:${asistenteId}`);
     setError(null);
 
-    if (avisos.length > 0) {
+    if (advertencias.length > 0) {
       const { error: fallaConstancia } = await supabase
         .from('auditoria_asignaciones_con_aviso')
         .insert({
@@ -272,7 +272,7 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
           usuario_id: usuario.id,
           guardia_id: guardia.id,
           asistente_id: asistenteId,
-          avisos,
+          avisos: advertencias,
         });
       if (fallaConstancia) {
         setEnCurso(null);
@@ -485,14 +485,14 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
                         </Button>
                       </div>
 
-                      {/* Los avisos se abren DENTRO de la fila de la persona y no en una ventana
+                      {/* Las advertencias se abren DENTRO de la fila de la persona y no en una ventana
                           aparte: así se sigue viendo de quién se está hablando y los motivos que
                           se acaban de leer no desaparecen de la pantalla al preguntar. */}
                       {porConfirmar?.asistenteId === c.asistente.id && (
                         <div className="avisos-asignacion" role="alert">
                           <span className="avisos-asignacion-titulo">{ta.titulo}</span>
                           <ul>
-                            {porConfirmar.avisos.map((a, i) => (
+                            {porConfirmar.advertencias.map((a, i) => (
                               <li key={`a${i}`}>{con(ta[a.clave], a.valores)}</li>
                             ))}
                           </ul>
@@ -500,7 +500,7 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
                           <div className="avisos-asignacion-botones">
                             <Button
                               disabled={enCurso !== null}
-                              onClick={() => asignarDirecto(c.asistente.id, porConfirmar.avisos)}
+                              onClick={() => asignarDirecto(c.asistente.id, porConfirmar.advertencias)}
                             >
                               {ta.asignar_igual}
                             </Button>

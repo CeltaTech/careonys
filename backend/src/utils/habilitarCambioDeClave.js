@@ -77,7 +77,7 @@ async function cuentaDeLaPrestadora(usuarioId, prestadoraId) {
 }
 
 /**
- * Abre la puerta. Devuelve la cuenta a la que se le abrió, para que la ruta mande el aviso y deje
+ * Abre la puerta. Devuelve la cuenta a la que se le abrió, para que la ruta mande el mensaje y deje
  * el renglón en el registro.
  *
  * `quien` es `req.usuarioPanel`: la Prestadora sale siempre de la sesión comprobada, nunca de lo

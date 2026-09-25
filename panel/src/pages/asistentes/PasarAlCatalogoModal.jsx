@@ -28,7 +28,7 @@ import { con } from '../../lib/textos';
 // que sí puede. Cuando la sugerencia duda, no sugiere nada y la casilla queda
 // vacía a propósito.
 //
-// El día que no quede ningún Asistente sin tipo, el aviso de la lista deja de
+// El día que no quede ningún Asistente sin tipo, la alerta de la lista deja de
 // aparecer y esta pantalla no se abre más.
 export function PasarAlCatalogoModal({ asistentes, onClose, onGuardado }) {
   const modal = useModalAccesible(onClose);

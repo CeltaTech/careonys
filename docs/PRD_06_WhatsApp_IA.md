@@ -72,10 +72,10 @@ un mensaje que inicia el negocio (nadie del lado del suplente/franquero escribi�
   edita y confirma; recién ahí se envía a Meta para aprobación. Estado visible en el Panel
   (pestaña Servicios → Notificaciones) por plantilla: Borrador → Enviada a Meta → Aprobada /
   Rechazada. Si Meta rechaza, la IA propone una corrección según el motivo del rechazo.
-- **Si un evento todavía no tiene ninguna plantilla aprobada, el aviso se manda por el canal
+- **Si un evento todavía no tiene ninguna plantilla aprobada, el mensaje se manda por el canal
   que sí está disponible (email, `enviarEmailCoordinador`) y la responsabilidad de tomar
   acción pasa al Coordinador — el sistema y la IA tienen la responsabilidad de garantizar
-  que ese aviso efectivamente le llegue** (nunca queda silenciosamente sin canal ni sin
+  que ese mensaje efectivamente le llegue** (nunca queda silenciosamente sin canal ni sin
   avisar a nadie mientras se espera la aprobación de Meta).
 - Variables de cada plantilla (nombre del Asistente ausente, Paciente, horario, nivel de
   escalada) se mapean a los parámetros que Meta permite dentro de una plantilla aprobada —

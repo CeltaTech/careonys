@@ -2,7 +2,7 @@ import { supabase } from '../db/connection.js';
 import { notificarCoordinador } from './whatsapp.js';
 import { necesitaNotificar } from './insistencia.js';
 import { pacientesDeGuardias } from './pacientesDeGuardia.js';
-import { aviso } from '../i18n/avisos.js';
+import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import {
   COMO_LLEGO,
@@ -11,9 +11,9 @@ import {
   reglaDeAvisoDe,
 } from './avisoDeAusencia.js';
 
-// Aviso a la Coordinadora cuando falta un Asistente, y distinto según cómo llegó la falta.
+// Mensaje a la Coordinadora cuando falta un Asistente, y distinto según cómo llegó la falta.
 //
-// POR QUÉ NO ALCANZABA CON LO QUE YA HABÍA. El aviso de guardia sin cubrir mira los turnos que no
+// POR QUÉ NO ALCANZABA CON LO QUE YA HABÍA. El mensaje de guardia sin cubrir mira los turnos que no
 // tienen a nadie asignado. Un turno cuya Asistente está de licencia sigue teniéndola asignada: la
 // falta está en la ausencia, no en el turno, y por eso ese proceso no lo ve. Este es el que lo ve.
 //
@@ -34,7 +34,7 @@ import {
 const MS_POR_DIA = 24 * 60 * 60 * 1000;
 
 // Cuánto se sigue avisando una ausencia después del turno que dejó sin nadie. No es una regla de
-// negocio sino el borde de la ventana: pasado un día ese turno ya no se puede tapar y el aviso
+// negocio sino el borde de la ventana: pasado un día ese turno ya no se puede tapar y el mensaje
 // sería ruido. Es el mismo día del turno sin cubrir, a propósito.
 const DIAS_HACIA_ATRAS = 1;
 
@@ -90,7 +90,7 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
   if (!ausencias.length) return;
 
   // Sin fila de configuración corren los valores de fábrica: que una Prestadora no haya tocado
-  // nada no puede dejarla sin avisos.
+  // nada no puede dejarla sin mensajes.
   const { data: configuracion, error: errorConfig } = await supabase
     .from('configuracion_ausencias')
     .select('regla')
@@ -103,7 +103,7 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
   }
 
   const regla = reglaDeAvisoDe(configuracion?.regla);
-  // Una sola vez por Prestadora: todos los avisos de esta vuelta los lee la misma gente.
+  // Una sola vez por Prestadora: todos los mensajes de esta vuelta los lee la misma gente.
   const idioma = await idiomaDeLaPrestadora(prestadoraId);
 
   const asistentes = [...new Set(ausencias.map((a) => a.asistente_id))];
@@ -162,7 +162,7 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
     await notificarCoordinador({
       evento: EVENTO_POR_CLASE[como],
       prestadoraId,
-      ...aviso(EVENTO_POR_CLASE[como], idioma, {
+      ...mensajeDelSistema(EVENTO_POR_CLASE[como], idioma, {
         asistente: nombres.get(ausencia.asistente_id) ?? null,
         fechaInicio: ausencia.fecha_inicio,
         fechaFin: ausencia.fecha_fin,
@@ -196,10 +196,10 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
  * Si toca avisar ahora.
  *
  * La que cambió de clase avisa siempre: lo que entró como tarea resultó ser una alarma, y callarla
- * porque «ya se avisó» sería perder el momento en que el aviso importa. La que sigue igual,
+ * porque «ya se avisó» sería perder el momento en que el mensaje importa. La que sigue igual,
  * depende de la clase: la urgente insiste cada tantas horas, la que llegó con margen se dice una
  * sola vez. Repetir cada dos horas algo que tiene tres días es el modo más rápido de que la
- * Coordinadora deje de leer los avisos.
+ * Coordinadora deje de leer los mensajes.
  */
 function corresponde({ como, ausencia, regla, ahora }) {
   if (ausencia.aviso_ausencia_clase && ausencia.aviso_ausencia_clase !== como) return true;
@@ -211,7 +211,7 @@ function corresponde({ como, ausencia, regla, ahora }) {
   });
 }
 
-/** Cómo se llama cada ausente, para que el aviso diga quién falta y no un identificador. */
+/** Cómo se llama cada ausente, para que el mensaje diga quién falta y no un identificador. */
 async function nombresDeAsistentes(ids, prestadoraId) {
   const nombres = new Map();
   if (!ids.length) return nombres;
@@ -221,7 +221,7 @@ async function nombresDeAsistentes(ids, prestadoraId) {
     .eq('prestadora_id', prestadoraId)
     .in('id', ids);
   if (error) {
-    // Sin el nombre el aviso sale igual, diciendo «Un Asistente»: es peor no avisar.
+    // Sin el nombre el mensaje sale igual, diciendo «Un Asistente»: es peor no avisar.
     console.error(`Error leyendo los nombres de los ausentes (prestadora ${prestadoraId}):`, error.message);
     return nombres;
   }

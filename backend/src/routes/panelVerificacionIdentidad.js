@@ -24,7 +24,7 @@ import { responderError } from '../utils/errorConMotivo.js';
 // comprobar de qué Prestadora es el Asistente. Es la misma forma de `documentos-cese`.
 //
 // LO QUE ESTA RUTA NO HACE. No compara las dos caras: eso es dato biométrico, no hay documento
-// legal del que sacar el aviso y no hay proveedor elegido (`docs/SECURITY.md`). Acá las fotos se
+// legal del que sacar la advertencia y no hay proveedor elegido (`docs/SECURITY.md`). Acá las fotos se
 // guardan y se muestran; quien las mira decide, y marca la etapa como venía haciéndolo.
 
 export const panelVerificacionIdentidadRouter = Router();

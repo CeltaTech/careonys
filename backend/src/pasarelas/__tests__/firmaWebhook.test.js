@@ -1,9 +1,9 @@
 /**
- * Pruebas de la comprobación de firma de los avisos de cobro (pendiente #159).
+ * Pruebas de la comprobación de firma de los cobros que entran de la pasarela (pendiente #159).
  *
  * Usan el banco de pruebas que ya trae Node adentro (`node --test`), sin instalar nada:
  * acá no hace falta ni servidor ni base, lo que se prueba es una cuenta —un HMAC— y las
- * cinco formas en que un aviso puede no ser de fiar.
+ * cinco formas en que lo que entra puede no ser de fiar.
  *
  *   npm test --prefix backend
  *
@@ -41,7 +41,7 @@ function firmaStripe(cuerpo, instante = AHORA_S, secreto = SECRETO) {
   return createHmac('sha256', secreto).update(`${instante}.`).update(cuerpo).digest('hex');
 }
 
-function avisoStripe({ cabecera, cuerpoCrudo = CRUDO_STRIPE, secretoFirma = SECRETO } = {}) {
+function cobroStripe({ cabecera, cuerpoCrudo = CRUDO_STRIPE, secretoFirma = SECRETO } = {}) {
   return stripe.verificarWebhook({
     secretoFirma,
     headers: cabecera === undefined ? { 'stripe-signature': `t=${AHORA_S},v1=${firmaStripe(cuerpoCrudo)}` } : cabecera,
@@ -53,7 +53,7 @@ function avisoStripe({ cabecera, cuerpoCrudo = CRUDO_STRIPE, secretoFirma = SECR
 
 describe('Stripe — el aviso de cobro se comprueba antes de creerle', () => {
   it('una firma válida se acepta, y trae la referencia y el estado', () => {
-    const resultado = avisoStripe();
+    const resultado = cobroStripe();
     assert.equal(resultado.valido, true);
     assert.equal(resultado.motivo, null);
     assert.equal(resultado.referenciaExterna, 'sub_1234567890');
@@ -61,28 +61,28 @@ describe('Stripe — el aviso de cobro se comprueba antes de creerle', () => {
   });
 
   it('una firma inventada se rechaza', () => {
-    const resultado = avisoStripe({ cabecera: { 'stripe-signature': `t=${AHORA_S},v1=${'a'.repeat(64)}` } });
+    const resultado = cobroStripe({ cabecera: { 'stripe-signature': `t=${AHORA_S},v1=${'a'.repeat(64)}` } });
     assert.equal(resultado.valido, false);
     assert.equal(resultado.motivo, MOTIVO.FIRMA_NO_COINCIDE);
     assert.ok(esRechazoDeAutenticidad(resultado.motivo));
   });
 
   it('sin cabecera de firma se rechaza', () => {
-    const resultado = avisoStripe({ cabecera: {} });
+    const resultado = cobroStripe({ cabecera: {} });
     assert.equal(resultado.valido, false);
     assert.equal(resultado.motivo, MOTIVO.CABECERA_AUSENTE);
     assert.ok(esRechazoDeAutenticidad(resultado.motivo));
   });
 
   it('una cabecera que no se entiende se rechaza, no se adivina', () => {
-    const resultado = avisoStripe({ cabecera: { 'stripe-signature': 'firma-cualquiera' } });
+    const resultado = cobroStripe({ cabecera: { 'stripe-signature': 'firma-cualquiera' } });
     assert.equal(resultado.valido, false);
     assert.equal(resultado.motivo, MOTIVO.CABECERA_ILEGIBLE);
   });
 
   it('un aviso viejo con firma buena se rechaza igual: así no se reenvía uno copiado', () => {
     const viejo = AHORA_S - TOLERANCIA_SEGUNDOS - 1;
-    const resultado = avisoStripe({
+    const resultado = cobroStripe({
       cabecera: { 'stripe-signature': `t=${viejo},v1=${firmaStripe(CRUDO_STRIPE, viejo)}` },
     });
     assert.equal(resultado.valido, false);
@@ -91,14 +91,14 @@ describe('Stripe — el aviso de cobro se comprueba antes de creerle', () => {
 
   it('justo en el borde de la tolerancia todavía se acepta', () => {
     const alFilo = AHORA_S - TOLERANCIA_SEGUNDOS;
-    const resultado = avisoStripe({
+    const resultado = cobroStripe({
       cabecera: { 'stripe-signature': `t=${alFilo},v1=${firmaStripe(CRUDO_STRIPE, alFilo)}` },
     });
     assert.equal(resultado.valido, true);
   });
 
   it('sin secreto guardado se rechaza — nunca se sigue igual', () => {
-    const resultado = avisoStripe({ secretoFirma: null });
+    const resultado = cobroStripe({ secretoFirma: null });
     assert.equal(resultado.valido, false);
     assert.equal(resultado.motivo, MOTIVO.SECRETO_AUSENTE);
     assert.ok(esRechazoDeAutenticidad(resultado.motivo));
@@ -120,13 +120,13 @@ describe('Stripe — el aviso de cobro se comprueba antes de creerle', () => {
     const cabecera = {
       'stripe-signature': `t=${AHORA_S},v1=${'b'.repeat(64)},v1=${firmaStripe(CRUDO_STRIPE)}`,
     };
-    assert.equal(avisoStripe({ cabecera }).valido, true);
+    assert.equal(cobroStripe({ cabecera }).valido, true);
   });
 
   it('el cuerpo rearmado a partir del objeto ya leído NO coincide: por eso se guarda el crudo', () => {
     // Mismos datos, otros bytes: sin los saltos de línea con que viajó. Si la ruta le pasara
     // al adaptador el cuerpo re-serializado en vez del que llegó, esta sería la respuesta de
-    // todos los avisos, también los auténticos.
+    // todo lo que entra, también lo auténtico.
     const rearmado = Buffer.from(JSON.stringify(EVENTO_STRIPE), 'utf8');
     assert.notEqual(rearmado.toString('utf8'), CRUDO_STRIPE.toString('utf8'));
     const resultado = stripe.verificarWebhook({
@@ -159,18 +159,18 @@ describe('Stripe — el aviso de cobro se comprueba antes de creerle', () => {
 // Mercado Pago
 // ---------------------------------------------------------------------------------------
 
-const ID_AVISO = '2c938084726fca480172750000000000';
+const ID_DEL_PAGO = '2c938084726fca480172750000000000';
 const ID_REQUISITORIA = 'f7a1c2d3-0000-4000-8000-000000000000';
-const CUERPO_MP = { type: 'payment', data: { id: ID_AVISO } };
+const CUERPO_MP = { type: 'payment', data: { id: ID_DEL_PAGO } };
 const CRUDO_MP = Buffer.from(JSON.stringify(CUERPO_MP), 'utf8');
 
-function firmaMercadoPago(instante = AHORA_S, id = ID_AVISO, secreto = SECRETO) {
+function firmaMercadoPago(instante = AHORA_S, id = ID_DEL_PAGO, secreto = SECRETO) {
   return createHmac('sha256', secreto)
     .update(`id:${id.toLowerCase()};request-id:${ID_REQUISITORIA};ts:${instante};`)
     .digest('hex');
 }
 
-function avisoMercadoPago({ cabecera, consulta, secretoFirma = SECRETO } = {}) {
+function cobroMercadoPago({ cabecera, consulta, secretoFirma = SECRETO } = {}) {
   return mercadopago.verificarWebhook({
     secretoFirma,
     headers:
@@ -186,14 +186,14 @@ function avisoMercadoPago({ cabecera, consulta, secretoFirma = SECRETO } = {}) {
 
 describe('Mercado Pago — el aviso de cobro se comprueba antes de creerle', () => {
   it('una firma válida se acepta y trae la referencia', () => {
-    const resultado = avisoMercadoPago();
+    const resultado = cobroMercadoPago();
     assert.equal(resultado.valido, true);
     assert.equal(resultado.motivo, null);
-    assert.equal(resultado.referenciaExterna, ID_AVISO);
+    assert.equal(resultado.referenciaExterna, ID_DEL_PAGO);
   });
 
   it('el estado sigue siendo pendiente: la firma dice que es auténtico, no que la plata entró', () => {
-    assert.equal(avisoMercadoPago().estado, 'pendiente');
+    assert.equal(cobroMercadoPago().estado, 'pendiente');
   });
 
   it('el id firmado es el que viaja en la dirección, que es el que Mercado Pago usó', () => {
@@ -216,7 +216,7 @@ describe('Mercado Pago — el aviso de cobro se comprueba antes de creerle', () 
   });
 
   it('una firma inventada se rechaza', () => {
-    const resultado = avisoMercadoPago({
+    const resultado = cobroMercadoPago({
       cabecera: { 'x-signature': `ts=${AHORA_S},v1=${'c'.repeat(64)}`, 'x-request-id': ID_REQUISITORIA },
     });
     assert.equal(resultado.valido, false);
@@ -224,13 +224,13 @@ describe('Mercado Pago — el aviso de cobro se comprueba antes de creerle', () 
   });
 
   it('sin cabecera de firma se rechaza', () => {
-    const resultado = avisoMercadoPago({ cabecera: { 'x-request-id': ID_REQUISITORIA } });
+    const resultado = cobroMercadoPago({ cabecera: { 'x-request-id': ID_REQUISITORIA } });
     assert.equal(resultado.valido, false);
     assert.equal(resultado.motivo, MOTIVO.CABECERA_AUSENTE);
   });
 
   it('sin el identificador del envío tampoco se sigue: es un tercio de lo que se firma', () => {
-    const resultado = avisoMercadoPago({
+    const resultado = cobroMercadoPago({
       cabecera: { 'x-signature': `ts=${AHORA_S},v1=${firmaMercadoPago()}` },
     });
     assert.equal(resultado.valido, false);
@@ -239,7 +239,7 @@ describe('Mercado Pago — el aviso de cobro se comprueba antes de creerle', () 
 
   it('un aviso viejo con firma buena se rechaza igual', () => {
     const viejo = AHORA_S - TOLERANCIA_SEGUNDOS - 1;
-    const resultado = avisoMercadoPago({
+    const resultado = cobroMercadoPago({
       cabecera: {
         'x-signature': `ts=${viejo},v1=${firmaMercadoPago(viejo)}`,
         'x-request-id': ID_REQUISITORIA,
@@ -250,15 +250,15 @@ describe('Mercado Pago — el aviso de cobro se comprueba antes de creerle', () 
   });
 
   it('sin secreto guardado se rechaza — nunca se sigue igual', () => {
-    const resultado = avisoMercadoPago({ secretoFirma: null });
+    const resultado = cobroMercadoPago({ secretoFirma: null });
     assert.equal(resultado.valido, false);
     assert.equal(resultado.motivo, MOTIVO.SECRETO_AUSENTE);
   });
 
   it('una firma calculada con otro secreto no sirve', () => {
-    const resultado = avisoMercadoPago({
+    const resultado = cobroMercadoPago({
       cabecera: {
-        'x-signature': `ts=${AHORA_S},v1=${firmaMercadoPago(AHORA_S, ID_AVISO, 'otro_secreto')}`,
+        'x-signature': `ts=${AHORA_S},v1=${firmaMercadoPago(AHORA_S, ID_DEL_PAGO, 'otro_secreto')}`,
         'x-request-id': ID_REQUISITORIA,
       },
     });

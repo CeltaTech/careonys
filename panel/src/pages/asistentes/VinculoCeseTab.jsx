@@ -146,7 +146,7 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
   }
 
   // Qué documento le corresponde a cada botón. El telegrama y la notificación de fin de período
-  // de prueba comparten botón porque son el mismo aviso para dos causales distintas, y nunca
+  // de prueba comparten botón porque son la misma advertencia para dos causales distintas, y nunca
   // aparecen los dos: lo decide la causal del cese.
   function documentoDelCese(cese, tipo) {
     if (tipo === TIPO_LIQUIDACION) {
@@ -258,7 +258,7 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
       ) : (
         <>
           <h2>{t.asistentes.tabs.registrar_cese}</h2>
-          {/* El aviso va acá y no arriba de todo: en el historial los montos ya se liquidaron
+          {/* La advertencia va acá y no arriba de todo: en el historial los montos ya se liquidaron
               y no hay nada que confirmar; lo que todavía se puede confirmar es este cálculo. */}
           <AvisoEscalasProvisorias escalas={escalasCrudas} />
           {error && <Alert variant="error">{error}</Alert>}

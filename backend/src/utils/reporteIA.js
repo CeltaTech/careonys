@@ -74,7 +74,7 @@ export async function estructurarReporteIA(textoLibre, prestadoraId) {
   };
 }
 
-// Distancia entre dos puntos GPS (fórmula de Haversine), usada para el aviso de check-in
+// Distancia entre dos puntos GPS (fórmula de Haversine), usada para la alerta de check-in
 // fuera de rango — nunca bloquea (ver PRD_04_05_App_Servicio.md, flujo de Check-in punto 4).
 export function distanciaMetros(lat1, lng1, lat2, lng2) {
   const R = 6371000;

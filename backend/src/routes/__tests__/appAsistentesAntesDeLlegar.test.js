@@ -7,7 +7,7 @@
  * cuatro cosas que hay que garantizar, y ninguna se ve mirando el código:
  *
  *   1. NINGUNO DE LOS DOS BOTONES SE TRABA. Ni por GPS, ni por hora, ni por conexión. Lo que se
- *      gana con ellos son los minutos de aviso que le quedan a la Prestadora para cubrir la
+ *      gana con ellos son los minutos de preaviso que le quedan a la Prestadora para cubrir la
  *      guardia; un botón que se niega a guardar es un aviso perdido. Y hay un motivo técnico
  *      además: un pedido de la cola sin conexión que vuelve con error queda marcado y **corta la
  *      cola entera** (`pwa-asistentes/src/lib/sincronizarCola.js`), así que un rechazo acá
@@ -192,7 +192,7 @@ beforeEach(() => {
   );
   respuestas.set('POST /rest/v1/alertas_tempranas_guardia', () => [{ id: ALERTA }]);
   respuestas.set('PATCH /rest/v1/alertas_tempranas_guardia', () => []);
-  // El aviso al Coordinador pasa por acá antes de salir. Sin configuración cargada el evento se
+  // El mensaje al Coordinador pasa por acá antes de salir. Sin configuración cargada el evento se
   // considera encendido, y el correo no sale porque en las pruebas no hay servidor de correo.
   respuestas.set('GET /rest/v1/configuracion_notificaciones', () => []);
   respuestas.set('GET /rest/v1/configuracion_prestadora', () => []);

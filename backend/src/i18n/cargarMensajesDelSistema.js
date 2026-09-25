@@ -1,17 +1,17 @@
-/* Traer de la base las frases de los avisos, una vez, al arrancar el backend.
-   ==========================================================================
+/* Traer de la base las frases de los mensajes del sistema, una vez, al arrancar el backend.
+   ========================================================================================
 
    POR QUÉ ESTÁ SEPARADO DE `mensajesDelSistema.js`. Ese archivo guarda las frases y no sabe de
    dónde salieron: así lo puede cargar el backend desde la base, y una prueba desde lo que siembra la
    migración, sin levantar ninguna base. Acá está lo único que toca la base.
 
-   POR QUÉ SE CARGA TODO JUNTO Y NO AVISO POR AVISO. Un aviso se arma en el medio de mandar un
+   POR QUÉ SE CARGA TODO JUNTO Y NO MENSAJE POR MENSAJE. Un mensaje se arma en el medio de mandar un
    correo, y ahí no hay lugar para esperar una consulta. Son unos cientos de renglones cortos: entran
    en memoria sin que se note.
 
-   SI LA CARGA FALLA, EL BACKEND ARRANCA IGUAL. Los avisos van a salir con la marca de frase faltante
-   y el aviso queda en el registro, que es exactamente lo que se quiere ver. Un backend que no levanta
-   porque no pudo leer un texto deja sin funcionar todo lo demás, que sí anda. */
+   SI LA CARGA FALLA, EL BACKEND ARRANCA IGUAL. Los mensajes van a salir con la marca de frase
+   faltante y la falla queda en el registro, que es exactamente lo que se quiere ver. Un backend
+   que no levanta porque no pudo leer un texto deja sin funcionar todo lo demás, que sí anda. */
 
 import { supabase } from '../db/connection.js';
 import { sembrarMensajesDelSistema, clavesCargadas } from './mensajesDelSistema.js';

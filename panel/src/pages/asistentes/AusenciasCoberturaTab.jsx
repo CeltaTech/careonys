@@ -334,7 +334,7 @@ export function AusenciasCoberturaTab({ asistente }) {
     setGuardando(false);
 
     // Quien va a la casa del Paciente ya no es el de siempre, así que se avisa. Quién es viaja
-    // explícito, porque el aviso nunca lo deduce de la guardia. Un aviso para todos los turnos y no
+    // explícito, porque el mensaje nunca lo deduce de la guardia. Un mensaje para todos los turnos y no
     // uno por turno.
     await avisarCambioDeAsistente({
       guardiaIds: sinCubrir,

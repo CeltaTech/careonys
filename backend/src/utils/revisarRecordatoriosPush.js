@@ -2,7 +2,7 @@ import { supabase } from '../db/connection.js';
 import { enviarPushAsistente } from './push.js';
 import { avisarPorWhatsapp } from './whatsapp.js';
 import { configuracionEvento } from './email.js';
-import { aviso } from '../i18n/avisos.js';
+import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 
 // Recorre los 3 eventos de push a Asistentes listados en
@@ -20,14 +20,14 @@ export const MINUTOS_ANTES_RECORDATORIO = 60;
 // Los mismos topes que la regla de la base (migración 20260811150000). Se exponen para que el
 // backend rechace el número antes que la base, y el Panel reciba un mensaje en castellano en
 // vez del error crudo de Postgres.
-export const LIMITES_AVISO_PREVIO_GUARDIA = { minimo: 5, maximo: 1440 };
+export const LIMITES_PREAVISO_GUARDIA = { minimo: 5, maximo: 1440 };
 
 const EVENTO_AVISO_RUTINA = 'aviso_rutina_asistente';
 
-// Fase 11: estos avisos son de rutina, no críticos — van solo por push. Si el push falla
+// Fase 11: estos mensajes son de rutina, no críticos — van solo por push. Si el push falla
 // (o la Asistente no tiene ninguna suscripción activa) y la Prestadora activó
 // whatsapp_activo para este evento, recién ahí se manda por WhatsApp. Nunca en paralelo,
-// para no generar costo de mensajería en cada aviso de rutina — mismo criterio que
+// para no generar costo de mensajería en cada mensaje de rutina — mismo criterio que
 // notificarCoordinador() en whatsapp.js, pero con el respaldo condicionado al fallo del
 // push en vez de ser el canal preferido.
 async function respaldoWhatsappSiFalla({ prestadoraId, asistenteId, enviadoPorPush, titulo, cuerpo }) {
@@ -35,7 +35,7 @@ async function respaldoWhatsappSiFalla({ prestadoraId, asistenteId, enviadoPorPu
 
   const config = await configuracionEvento(EVENTO_AVISO_RUTINA, prestadoraId);
   // Que el canal esté encendido y tenga plantilla aprobada lo mira `avisarPorWhatsapp`, en un
-  // solo lugar. Acá sólo se mira si la Prestadora apagó el aviso entero.
+  // solo lugar. Acá sólo se mira si la Prestadora apagó el mensaje entero.
   if (config?.activo === false) return;
 
   const { data: asistente } = await supabase
@@ -47,8 +47,8 @@ async function respaldoWhatsappSiFalla({ prestadoraId, asistenteId, enviadoPorPu
   if (!asistente?.telefono) return;
 
   try {
-    // Lo empieza la Prestadora, así que va por la plantilla que le eligió al aviso. Sin plantilla
-    // aprobada no sale nada: éste es un aviso de rutina y no tiene otro canal atrás.
+    // Lo empieza la Prestadora, así que va por la plantilla que le eligió al mensaje. Sin plantilla
+    // aprobada no sale nada: éste es un mensaje de rutina y no tiene otro canal atrás.
     await avisarPorWhatsapp({
       config,
       prestadoraId,
@@ -100,11 +100,11 @@ async function revisarGuardiasAsignadas(prestadoraId) {
   }
   if (!guardias?.length) return;
 
-  // Una sola vez por Prestadora: todos los avisos de esta vuelta los lee la misma gente.
+  // Una sola vez por Prestadora: todos los mensajes de esta vuelta los lee la misma gente.
   const idioma = await idiomaDeLaPrestadora(prestadoraId);
 
   for (const guardia of guardias) {
-    const { titulo, cuerpo } = aviso('guardia_asignada', idioma, {
+    const { titulo, cuerpo } = mensajeDelSistema('guardia_asignada', idioma, {
       fecha: guardia.fecha,
       horaInicio: guardia.hora_inicio,
     });
@@ -140,7 +140,7 @@ async function revisarMensajesCoordinador(prestadoraId) {
   const idioma = await idiomaDeLaPrestadora(prestadoraId);
 
   for (const mensaje of mensajes) {
-    const { titulo } = aviso('mensaje_del_coordinador', idioma);
+    const { titulo } = mensajeDelSistema('mensaje_del_coordinador', idioma);
 
     const enviadoPorPush = await enviarPushAsistente(prestadoraId, mensaje.asistente_id, {
       titulo,
@@ -180,7 +180,7 @@ async function revisarRecordatoriosGuardiaProxima(prestadoraId, minutosAntes, ah
     const inicio = new Date(`${guardia.fecha}T${guardia.hora_inicio}`);
     if (inicio.getTime() > limite.getTime() || inicio.getTime() < ahora.getTime()) continue;
 
-    const { titulo, cuerpo } = aviso('recordatorio_de_guardia', idioma, {
+    const { titulo, cuerpo } = mensajeDelSistema('recordatorio_de_guardia', idioma, {
       fecha: guardia.fecha,
       horaInicio: guardia.hora_inicio,
     });

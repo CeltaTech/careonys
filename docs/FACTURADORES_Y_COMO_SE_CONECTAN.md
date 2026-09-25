@@ -55,13 +55,13 @@ importe»—. Esta mitad **ya está construida, probada y publicada**, y es una 
 Pero hay un detalle que conviene tener claro, porque cambia las cuentas:
 
 > **Un software de facturación comprado no va a avisar con la firma que Careonys pide.** Careonys
-> tiene su propia forma de comprobar que un aviso es auténtico, y quien programe a medida la puede
+> tiene su propia forma de comprobar que un pedido es auténtico, y quien programe a medida la puede
 > seguir sin problema —para eso está `docs/CONEXION_CON_SOFTWARE_EXTERNO.md`—. Pero un producto ya
 > hecho avisa a su manera, no a la nuestra. TusFacturasAPP, por ejemplo, avisa a la dirección que
 > se le configure y no firma nada.
 
 De ahí sale que la pieza por software tiene **dos mitades chicas** en vez de una: traducir el
-pedido de ida, y recibir el aviso de vuelta como ese software lo mande. Las dos terminan
+pedido de ida, y recibir lo que vuelve como ese software lo mande. Las dos terminan
 escribiendo en el mismo lugar de siempre (`backend/src/utils/anotarLoFacturado.js`), así que el
 resto del producto no se entera de por cuál entró.
 

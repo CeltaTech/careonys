@@ -630,7 +630,7 @@ panelConfiguracionRouter.get('/mensaje-de-texto', async (req, res) => {
 // guardaba nada). La descripción sale del catálogo, nunca del navegador.
 panelConfiguracionRouter.patch('/notificaciones/:evento', async (req, res) => {
   const aviso = avisoDelCatalogo(req.params.evento);
-  if (!aviso) return res.status(400).json({ error: 'Aviso desconocido' });
+  if (!aviso) return res.status(400).json({ error: 'Mensaje desconocido' });
 
   const { emails, activo, whatsapp_activo, mensaje_de_texto_activo, notificar_familia, plantilla_whatsapp_id } = req.body;
 
@@ -703,7 +703,7 @@ panelConfiguracionRouter.patch('/aviso-previo-guardia', async (req, res) => {
     || minutos > LIMITES_AVISO_PREVIO_GUARDIA.maximo
   ) {
     return res.status(400).json({
-      error: `El aviso previo tiene que ser un número entero de minutos, entre ${LIMITES_AVISO_PREVIO_GUARDIA.minimo} y ${LIMITES_AVISO_PREVIO_GUARDIA.maximo}.`,
+      error: `La anticipación tiene que ser un número entero de minutos, entre ${LIMITES_AVISO_PREVIO_GUARDIA.minimo} y ${LIMITES_AVISO_PREVIO_GUARDIA.maximo}.`,
     });
   }
   const { error } = await supabase
@@ -1159,7 +1159,7 @@ panelConfiguracionRouter.put('/facturacion-familias', async (req, res) => {
 // Admin, y una vez cargado no vuelve a mostrarse: de la caja fuerte no sale nada hacia el
 // navegador. Para cambiarlo se escribe uno nuevo, que reemplaza al anterior.
 const soloAdminParaElSecretoDelAviso = exigirAdminDePrestadora(
-  'El secreto del aviso de cobranza es de la Prestadora: solo Admin puede cambiarlo'
+  'La clave del software de cobranzas es de la Prestadora: solo Admin puede cambiarla'
 );
 
 panelConfiguracionRouter.put(
@@ -1189,7 +1189,7 @@ panelConfiguracionRouter.put(
 // Se cierra igual que aquél: lo carga Admin, no se muestra nunca más, y para cambiarlo se escribe
 // uno nuevo que reemplaza al anterior.
 const soloAdminParaElSecretoDeFacturacion = exigirAdminDePrestadora(
-  'El secreto del aviso de facturacion es de la Prestadora: solo Admin puede cambiarlo'
+  'La clave del software de facturación es de la Prestadora: solo Admin puede cambiarla'
 );
 
 panelConfiguracionRouter.put(

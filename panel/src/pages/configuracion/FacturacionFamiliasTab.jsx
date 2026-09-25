@@ -184,7 +184,6 @@ export function FacturacionFamiliasTab() {
               y se sigue anotando a mano o con el archivo. */}
           <section>
             <h3>{t.configuracion.facturacion_aviso_titulo}</h3>
-            <p className="panel-explicacion">{t.configuracion.facturacion_aviso_explicacion}</p>
             {prestadoraId && (
               <FormField
                 label={t.configuracion.facturacion_aviso_direccion}
@@ -219,7 +218,6 @@ export function FacturacionFamiliasTab() {
           {!sigue && (
             <section>
               <h3>{t.configuracion.cobranza_aviso_titulo}</h3>
-              <p className="panel-explicacion">{t.configuracion.cobranza_aviso_explicacion}</p>
               {prestadoraId && (
                 <FormField
                   label={t.configuracion.cobranza_aviso_direccion}

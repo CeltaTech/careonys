@@ -139,13 +139,13 @@ export const CATALOGO_AVISOS = [
   },
   {
     evento: 'vencimiento_documento_asistente',
-    descripcion: 'Documento de un Asistente vencido o por vencer, según el catálogo y el plazo de aviso configurados por la prestadora',
+    descripcion: 'Documento de un Asistente vencido o por vencer',
     admite_whatsapp: true,
     admite_familia: false,
   },
   {
     evento: 'aviso_rutina_asistente',
-    descripcion: 'Avisos de rutina a la Asistente (guardia asignada, mensaje del coordinador, recordatorio de guardia próxima)',
+    descripcion: 'Mensajes de rutina al Asistente: guardia asignada, mensaje del Coordinador, recordatorio de guardia próxima',
     admite_whatsapp: true,
     admite_familia: false,
   },

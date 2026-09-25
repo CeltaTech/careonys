@@ -265,7 +265,7 @@ export const T = {
       cerrar_ok: 'Guardia cerrada.',
       cerrar_falta_reporte: 'Antes de cerrar la guardia hace falta cargar el Reporte Diario.',
       cerrar_faltan_reportes: 'Antes de cerrar la guardia falta el Reporte Diario de: {nombres}.',
-      fuera_de_rango: 'El check-in se hizo lejos del domicilio del Paciente — se registró igual, con un aviso automático para el Coordinador.',
+      fuera_de_rango: 'El check-in se hizo lejos del domicilio del Paciente. Se registró igual y el Coordinador recibe un mensaje.',
       // Pendiente #113 — el pase de guardia. Misma idea que fuera_de_rango: el pase nunca traba
       // el check-in ni el check-out, así que esto es un aviso y no un error.
       quedo_sin_comprobar: 'Quedó registrado sin comprobar. El Coordinador lo va a ver en su lista y puede llamar para confirmarlo.',
@@ -836,7 +836,7 @@ export const T = {
       cerrar_ok: 'Shift closed.',
       cerrar_falta_reporte: 'You need to file the Daily Report before closing the shift.',
       cerrar_faltan_reportes: 'Before closing the shift, the Daily Report is still missing for: {nombres}.',
-      fuera_de_rango: 'You are far from the Patient\'s address — check-in was recorded anyway, with an automatic note for the Coordinator.',
+      fuera_de_rango: 'Check-in was made far from the Patient\'s address. It was recorded anyway and the Coordinator gets a message.',
       quedo_sin_comprobar: 'It was recorded as unverified. The Coordinator will see it on their list and may call to confirm it.',
       sin_conexion_sin_comprobar: 'With no connection the code cannot be checked, so this will be recorded as unverified once the signal is back. The Coordinator will see it on their list.',
       mostrar_mi_codigo: 'Show my code for the handover',
@@ -1353,7 +1353,7 @@ export const T = {
       cerrar_ok: 'Plantão encerrado.',
       cerrar_falta_reporte: 'Antes de encerrar o plantão é preciso preencher o Relatório Diário.',
       cerrar_faltan_reportes: 'Antes de encerrar o plantão ainda falta o Relatório Diário de: {nombres}.',
-      fuera_de_rango: 'O check-in foi feito longe do endereço do Paciente — foi registrado mesmo assim, com um aviso automático para o Coordenador.',
+      fuera_de_rango: 'O check-in foi feito longe do endereço do Paciente. Foi registrado mesmo assim e o Coordenador recebe uma mensagem.',
       quedo_sin_comprobar: 'Ficou registrado sem verificação. O Coordenador vai vê-lo na sua lista e pode ligar para confirmar.',
       sin_conexion_sin_comprobar: 'Sem conexão não é possível verificar o código, então isto vai ser registrado sem verificação quando o sinal voltar. O Coordenador vai vê-lo na sua lista.',
       mostrar_mi_codigo: 'Mostrar o meu código para a rendição',

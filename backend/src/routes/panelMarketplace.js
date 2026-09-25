@@ -116,7 +116,7 @@ panelMarketplaceRouter.put('/pasarela/:proveedor/secreto-firma', soloAdministrac
   const { secretoFirma } = req.body || {};
 
   if (!requiereSecretoFirma(proveedor)) {
-    return res.status(400).json({ error: 'Este proveedor no firma sus avisos de cobro' });
+    return res.status(400).json({ error: 'Este proveedor no firma lo que informa' });
   }
   if (typeof secretoFirma !== 'string' || !secretoFirma.trim()) {
     return res.status(400).json({ error: 'Hace falta el secreto de firma' });

@@ -80,7 +80,7 @@ export const CATALOGO_CIRCULO_FAMILIAR = [
   {
     clave: 'circulo_alertas',
     descripcion: 'Leer las alertas de la revisión de los reportes',
-    ayuda: 'Son avisos que salen de revisar lo que el Asistente escribió. Se leen solos, sin nadie que los explique.',
+    ayuda: 'Son mensajes que salen de revisar lo que el Asistente escribió.',
     de_fabrica: true,
     interruptor: 'familia_alertas_de_la_revision',
   },

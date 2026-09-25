@@ -59,16 +59,17 @@ export function proveedoresDisponibles() {
   return Object.keys(ADAPTADORES);
 }
 
-/** ¿Este proveedor firma sus avisos de cobro? Lo contesta el adaptador, que es el único que
- *  sabe cómo comprueba lo que le llega; el Panel lo consulta para saber si además de la
- *  credencial le tiene que pedir a la Prestadora el secreto de firma (regla 12 del §7). */
+/** ¿Este proveedor firma lo que entrega por la entrada de cobros? Lo contesta el adaptador, que
+ *  es el único que sabe cómo comprueba lo que le llega; el Panel lo consulta para saber si
+ *  además de la credencial le tiene que pedir a la Prestadora el secreto de firma
+ *  (regla 12 del §7). */
 export function requiereSecretoFirma(proveedor) {
   return Boolean(ADAPTADORES[proveedor]?.REQUIERE_SECRETO_FIRMA);
 }
 
-/** ¿Al aviso de este proveedor hay que confirmarlo preguntándole el estado a él mismo? Hay
- *  proveedores cuyo aviso trae el estado adentro de lo que firman —ahí el aviso alcanza— y
- *  otros cuyo aviso solo dice "pasó algo con este cobro". Para los segundos, comprobar la
+/** ¿Lo que entrega este proveedor hay que confirmarlo preguntándole el estado a él mismo? Hay
+ *  proveedores que traen el estado adentro de lo que firman —ahí con eso alcanza— y
+ *  otros que solo dicen "pasó algo con este cobro". Para los segundos, comprobar la
  *  firma no es saber si la plata entró, y la ruta vuelve a preguntar antes de imputar nada.
  *  Lo contesta el adaptador, que es el único que sabe cómo avisa su proveedor (regla 12). */
 export function confirmaConsultando(proveedor) {

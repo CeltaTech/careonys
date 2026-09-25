@@ -23,8 +23,8 @@ import {
 } from '../utils/equiposConocidos.js';
 import {
   avisarDeSeguridad,
-  AVISO_TELEFONO_CAMBIADO,
-  AVISO_EQUIPO_NUEVO,
+  MENSAJE_TELEFONO_CAMBIADO,
+  MENSAJE_EQUIPO_NUEVO,
 } from '../utils/avisoDeSeguridad.js';
 import {
   registrarActividad,
@@ -201,8 +201,8 @@ panelCuentaSeguraRouter.post(
 
       // Un celular es de una sola persona; una línea fija se comparte. La base lo impide con un
       // índice único y esto es la segunda red, para contestar con una frase entendible en vez de un
-      // choque de base. Se comprueba antes de escribir y antes de mandar ningún código, y el aviso
-      // no lleva el número adentro.
+      // choque de base. Se comprueba antes de escribir y antes de mandar ningún código, y el
+      // mensaje no lleva el número adentro.
       await exigirQueElCelularSeaDeUnaSolaPersona({
         telefono,
         prestadoraId: cuenta.prestadora_id,
@@ -233,9 +233,9 @@ panelCuentaSeguraRouter.post(
       // la tiene a cargo. Por el canal no viaja ningún dato: sólo el nombre de lo que cambió.
       empujar(cuenta.prestadora_id, ASUNTOS.TELEFONOS_ESPERANDO_HABILITACION);
 
-      // El aviso va al correo y no al teléfono: si el número cambió porque alguien se lo llevó,
+      // El mensaje va al correo y no al teléfono: si el número cambió porque alguien se lo llevó,
       // avisar por el teléfono sería avisarle justamente a esa persona.
-      await avisarDeSeguridad(AVISO_TELEFONO_CAMBIADO, cuenta);
+      await avisarDeSeguridad(MENSAJE_TELEFONO_CAMBIADO, cuenta);
 
       // Y el código sale para el número nuevo. Que no salga no deshace el cambio: el número quedó
       // cargado y sin verificar, que es un estado perfectamente válido.
@@ -274,13 +274,13 @@ panelCuentaSeguraRouter.post('/equipo/reconocer', requiereRolPanel, async (req, 
 
     // Equipo nuevo. Si esta persona tiene el número verificado y su Prestadora tiene por dónde
     // mandar, se le pide el código. Si no, entra igual y se le avisa por correo: a nadie se le saca
-    // nada, y el aviso es lo que le permite darse cuenta si no fue ella.
+    // nada, y ese mensaje es lo que le permite darse cuenta si no fue ella.
     const puedePedirse = Boolean(cuenta.telefono_verificado_en)
       && await hayViaDeTelefono(cuenta.prestadora_id);
 
     if (!puedePedirse) {
       const marcaNueva = await anotarEquipo({ usuario: cuenta, marca: null });
-      await avisarDeSeguridad(AVISO_EQUIPO_NUEVO, cuenta);
+      await avisarDeSeguridad(MENSAJE_EQUIPO_NUEVO, cuenta);
       await registrarActividad(req.usuarioPanel, ACCION_EQUIPO_NUEVO, {
         tablaAfectada: 'equipos_conocidos',
       });
@@ -316,7 +316,7 @@ panelCuentaSeguraRouter.post(
       });
 
       const marca = await anotarEquipo({ usuario: cuenta, marca: null });
-      await avisarDeSeguridad(AVISO_EQUIPO_NUEVO, cuenta);
+      await avisarDeSeguridad(MENSAJE_EQUIPO_NUEVO, cuenta);
       await registrarActividad(req.usuarioPanel, ACCION_EQUIPO_NUEVO, {
         tablaAfectada: 'equipos_conocidos',
         detalle: { via: 'whatsapp' },

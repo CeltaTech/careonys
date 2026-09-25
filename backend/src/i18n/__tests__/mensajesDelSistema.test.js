@@ -9,7 +9,7 @@ import {
   frase,
 } from '../mensajesDelSistema.js';
 import { IDIOMAS_SOPORTADOS, IDIOMA_POR_DEFECTO } from '../idiomas.js';
-import { aviso, CLAVES_DE_AVISO } from '../avisos.js';
+import { mensajeDelSistema, CLAVES_DE_MENSAJE } from '../avisos.js';
 
 const FILAS = filasSembradas();
 
@@ -68,8 +68,8 @@ test('lo sembrado se carga y queda entero', () => {
 test('todas las claves que pide el código están sembradas, en los tres idiomas', () => {
   sembrarMensajesDelSistema(FILAS);
   for (const idioma of IDIOMAS_SOPORTADOS) {
-    for (const clave of CLAVES_DE_AVISO) {
-      const armado = aviso(clave, idioma, DATOS_MINIMOS[clave] ?? {});
+    for (const clave of CLAVES_DE_MENSAJE) {
+      const armado = mensajeDelSistema(clave, idioma, DATOS_MINIMOS[clave] ?? {});
       for (const [parte, texto] of Object.entries(armado)) {
         assert.ok(
           !texto.includes('[falta:'),
@@ -123,7 +123,7 @@ test('una fila apagada no sale', () => {
   );
 });
 
-// Lo mínimo para poder llamar a cada aviso. No comprueba qué dice: sólo que ninguna pieza falte.
+// Lo mínimo para poder llamar a cada mensaje. No comprueba qué dice: sólo que ninguna pieza falte.
 const DATOS_MINIMOS = {
   origen_de_alerta: { fuente: 'aviso_telefonico' },
   guardia_sin_cerrar: {

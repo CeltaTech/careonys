@@ -115,7 +115,7 @@ panelUsuariosRouter.post('/', requiereRolPanel, soloAdministracion, async (req, 
 
   try {
     // Que el celular no esté ya en otra cuenta lo comprueba `crearCuentaConPerfil`, que es por
-    // donde pasan todas las altas. Acá no se repite: el aviso llega igual como motivo.
+    // donde pasan todas las altas. Acá no se repite: el rechazo llega igual como motivo.
     const { userId, passwordTemporal } = await crearCuentaConPerfil({
       email, nombre, telefono, rol: rolNuevo,
       prestadoraId: prestadoraDestino,

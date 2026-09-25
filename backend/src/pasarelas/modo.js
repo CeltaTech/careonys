@@ -8,11 +8,11 @@ import { comprobarFirmaSinEsquemaPublicado, MOTIVO } from './firmaWebhook.js';
 
 const API_BASE = process.env.MODO_API_BASE || 'https://api.modo.com.ar';
 
-/** Modo no publica cómo firma sus avisos de cobro —el sitio de integraciones para comercios no
- *  tiene sección de notificaciones—, así que acá no se reproduce ningún esquema suyo: se le
- *  exige el que declara este producto (`comprobarFirmaSinEsquemaPublicado`). La marca sigue
- *  siendo `true` porque lo que decide es lo mismo de siempre: sin secreto de firma cargado, los
- *  avisos de este proveedor se rechazan, y el Panel tiene que pedírselo a la Prestadora y
+/** Modo no publica cómo firma las confirmaciones de cobro que manda —el sitio de integraciones
+ *  para comercios no tiene sección de notificaciones—, así que acá no se reproduce ningún esquema
+ *  suyo: se le exige el que declara este producto (`comprobarFirmaSinEsquemaPublicado`). La marca
+ *  sigue siendo `true` porque lo que decide es lo mismo de siempre: sin secreto de firma cargado,
+ *  las llamadas de este proveedor se rechazan, y el Panel tiene que pedírselo a la Prestadora y
  *  avisarle cuando falta. */
 export const REQUIERE_SECRETO_FIRMA = true;
 
@@ -59,9 +59,10 @@ export async function armarCobroDelPeriodo({ credencial, monto, referencia }) {
 }
 
 /**
- * Comprueba que el aviso vino firmado y recién ahí lo interpreta (pendiente #9 del plan).
+ * Comprueba que la confirmación de cobro vino firmada y recién ahí la interpreta (pendiente #9
+ * del plan).
  *
- * Antes acá alcanzaba con que el aviso trajera un identificador: `valido: Boolean(body?.id)`.
+ * Antes acá alcanzaba con que el cuerpo trajera un identificador: `valido: Boolean(body?.id)`.
  * Como la dirección del webhook es pública, eso quería decir que cualquiera que golpeara la
  * puerta con `{"id": "…", "estado": "aprobado"}` daba por cobrada una suscripción.
  *

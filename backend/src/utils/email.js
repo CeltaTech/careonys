@@ -93,7 +93,7 @@ function transporteDelDespachante(clave) {
           to: to.split(',').map((direccion) => direccion.trim()),
           subject,
           text,
-          // El texto va siempre, y el formato sólo cuando el aviso lo trae. Los dos juntos son el
+          // El texto va siempre, y el formato sólo cuando el mensaje lo trae. Los dos juntos son el
           // mismo correo en dos versiones: cada programa de correo muestra la que sabe leer.
           ...(html ? { html } : {}),
           ...(replyTo ? { reply_to: replyTo } : {}),
@@ -197,7 +197,7 @@ async function configuracionEvento(evento, prestadoraId) {
 
 // Si el evento no tiene emails cargados (o está desactivado), antes caía al inbox operativo
 // de la cuenta SMTP compartida (process.env.SMTP_USER) — con más de una prestadora eso
-// significaba que un aviso sin configurar en la prestadora B terminaba en el inbox operativo
+// significaba que un mensaje sin configurar en la prestadora B terminaba en el inbox operativo
 // de la prestadora A. Ahora cae al email de contacto propio de esa prestadora
 // (configuracion_prestadora.email), nunca a una cuenta de otra.
 async function destinatariosEvento(evento, prestadoraId) {
@@ -210,7 +210,7 @@ async function destinatariosEvento(evento, prestadoraId) {
 }
 
 // La dirección que la Prestadora declaró como suya. Se usa para dos cosas distintas y por eso
-// vive en una sola función: es el destino de los avisos que no tienen destinatario configurado,
+// vive en una sola función: es el destino de los mensajes que no tienen destinatario configurado,
 // y es adonde tienen que llegar las respuestas de la gente que recibe un correo del sistema.
 async function emailDeContactoDePrestadora(prestadoraId) {
   if (!prestadoraId) return null;
@@ -237,14 +237,14 @@ async function remitenteVisible(direccion, prestadoraId) {
 // Por acá pasan los dos envíos, y por eso el conteo se anota acá y no en cada uno.
 //
 // El despachante tiene un tope —3.000 correos por mes y como mucho 100 por día— y pasado ese
-// tope deja de aceptar envíos. Sin una cuenta propia, el tope se descubre el día que un aviso
+// tope deja de aceptar envíos. Sin una cuenta propia, el tope se descubre el día que un mensaje
 // no sale; con ella, el Panel lo ve venir.
 //
 // Se anota el hecho y nada más: cuándo, de qué Prestadora, y si el despachante lo tomó. Ni el
 // destinatario, ni el asunto, ni una línea del contenido (`celtatech/CLAUDE.md` §6).
 //
 // Y no anotar nunca rompe un envío. Un correo que salió y no se pudo contar sigue siendo un
-// correo que salió; hacer fallar el aviso porque falló su registro sería cambiar un número por
+// correo que salió; hacer fallar el mensaje porque falló su registro sería cambiar un número por
 // una notificación que no llega.
 async function despachar({ transporter, prestadoraId, mensaje }) {
   let aceptado = false;
@@ -281,7 +281,7 @@ export async function enviarEmailCoordinador({ evento, prestadoraId, asunto, tex
 
 export { configuracionEvento };
 
-// `formato` es opcional: el aviso que lo trae sale en las dos versiones —texto y formato—, y el
+// `formato` es opcional: el mensaje que lo trae sale en las dos versiones —texto y formato—, y el
 // que no, sale como salía. nodemailer y el despachante lo entienden igual.
 export async function enviarEmail({ to, asunto, texto, formato = null, prestadoraId }) {
   if (!hayMedioDeEnvio()) return;

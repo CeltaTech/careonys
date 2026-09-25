@@ -3,7 +3,7 @@ import { supabase } from '../db/connection.js';
 import { resolverPrestadoraPublica } from '../middleware/resolverPrestadoraPublica.js';
 import { enviarEmailCoordinador } from '../utils/email.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
-import { aviso } from '../i18n/avisos.js';
+import { mensajeDelSistema } from '../i18n/avisos.js';
 
 // `mergeParams` para que llegue el `:prestadora` de la dirección donde se monta este router
 // (server.js) — de ahí sale la Prestadora, no de un encabezado (resolverPrestadoraPublica.js).
@@ -37,7 +37,7 @@ solicitudServicioRouter.post('/', resolverPrestadoraPublica, async (req, res) =>
     await enviarEmailCoordinador({
       evento: 'nueva_solicitud_servicio',
       prestadoraId,
-      ...aviso('nueva_solicitud_servicio', await idiomaDeLaPrestadora(prestadoraId), {
+      ...mensajeDelSistema('nueva_solicitud_servicio', await idiomaDeLaPrestadora(prestadoraId), {
         nombre, telefono, email, localidad, modalidad, descripcion,
         tipoServicio: tipo_servicio,
         diasHorario: dias_horario,

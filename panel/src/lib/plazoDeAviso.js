@@ -29,7 +29,7 @@ import { DIAS_AVISO_POR_DEFECTO } from './reglaVencimientos';
  * configuración no puede voltear una pantalla entera — se avisa con el plazo de siempre, que es
  * el mismo con el que nace toda Prestadora nueva.
  */
-export async function diasDeAvisoDeLaPrestadora(prestadoraId) {
+export async function diasDePreavisoDeLaPrestadora(prestadoraId) {
   if (!prestadoraId) return DIAS_AVISO_POR_DEFECTO;
 
   const { data } = await supabase

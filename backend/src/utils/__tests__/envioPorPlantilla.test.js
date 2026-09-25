@@ -6,7 +6,7 @@
  * POR QUÉ EXISTE ESTA PRUEBA. El backend armaba siempre `type: 'text'`. Adentro de una conversación
  * que abrió la otra persona eso anda, y por eso nunca se notó: en las pruebas con una conversación
  * abierta el mensaje llega. El día que la Prestadora empieza el mensaje —que es lo que hace cada
- * aviso al Coordinador y cada recordatorio a la Asistente— Meta lo rechaza, y el aviso se pierde
+ * mensaje al Coordinador y cada recordatorio a la Asistente— Meta lo rechaza, y se pierde
  * sin que nadie se entere. Lo que se prueba acá son las formas de perderlo:
  *
  *   * mandar como texto suelto un mensaje que la Prestadora empieza;
@@ -33,7 +33,7 @@ const TELEFONO = '+5491100000000';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba pisa lo que necesita cambiar. */
 const respuestas = new Map();
-/** Los avisos que quedaron del lado del servidor. Se juntan para no ensuciar la salida. */
+/** Las advertencias que quedaron del lado del servidor. Se juntan para no ensuciar la salida. */
 let anotados = [];
 
 const baseFalsa = createServer((req, res) => {

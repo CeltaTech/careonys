@@ -1,8 +1,8 @@
 // A dónde van a parar las respuestas.
 //
-// Cada Prestadora manda sus avisos desde una dirección suya bajo el dominio del producto
+// Cada Prestadora manda sus mensajes desde una dirección suya bajo el dominio del producto
 // (`utils/casillaDeEnvio.js`). Esa dirección **sólo manda**: no hay ninguna casilla detrás, así
-// que quien le conteste a un aviso le estaría escribiendo a un buzón que no existe. Para que esa
+// que quien le conteste a un mensaje le estaría escribiendo a un buzón que no existe. Para que esa
 // respuesta llegue, el correo que entra a esa dirección se reenvía a la casilla que la Prestadora
 // declaró como suya (`docs/MARCA.md`, sección 0).
 //
@@ -98,7 +98,7 @@ export async function respuestasConfirmadas(emailRespuestas) {
 // que declaró. Devuelve el identificador que Cloudflare le da a esa regla, que es con lo que
 // después se la corta, o `null` si no se pudo abrir.
 //
-// Que no se pueda abrir no detiene el alta: la Prestadora entra, manda sus avisos, y lo único
+// Que no se pueda abrir no detiene el alta: la Prestadora entra, manda sus mensajes, y lo único
 // que falta es que las respuestas vuelvan. Eso se avisa en el Panel, nunca por correo, porque
 // lo que falló es justamente el correo.
 export async function abrirReenvioDeRespuestas({ direccionDeEnvio, emailRespuestas }) {

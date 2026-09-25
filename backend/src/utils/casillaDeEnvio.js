@@ -3,7 +3,7 @@ import { direccionRemitente } from './email.js';
 
 // La dirección desde la que manda cada Prestadora.
 //
-// Cada Prestadora manda sus avisos desde una dirección suya bajo el dominio del producto
+// Cada Prestadora manda sus mensajes desde una dirección suya bajo el dominio del producto
 // —`cuidadosdellitoral@careonys.com`—, que sólo manda: las respuestas se reenvían a la casilla
 // que ella declaró (`docs/MARCA.md`, sección 0). Acá se decide cómo se llama esa casilla.
 //

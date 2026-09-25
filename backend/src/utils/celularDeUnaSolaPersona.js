@@ -25,7 +25,7 @@ import { ErrorConMotivo } from './errorConMotivo.js';
 //
 // EL NÚMERO NO SALE POR NINGÚN LADO. Es dato sensible (`celtatech/docs/REGLAS_PRODUCTOS_CAREONYS.md`
 // §4): no se registra, no viaja en ninguna dirección, no entra en ningún mensaje de error y no se
-// escribe para depurar. Por eso el aviso que sale de acá es un motivo pelado, sin detalle: el
+// escribe para depurar. Por eso lo que sale de acá es un motivo pelado, sin detalle: el
 // detalle se escribe en el registro del servidor (`errorConMotivo.js`), y ahí tampoco puede haber
 // un teléfono.
 

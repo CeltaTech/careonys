@@ -24,7 +24,7 @@ import { hayDomicilioTemporal } from '../components/DomicilioTemporal';
 //      depende del backend: cuando el backend no contesta es justamente cuando más importa, porque
 //      es lo que le dice a la persona que lo que hizo no se perdió.
 //
-// El aviso de consentimiento es su propia zona desde antes y se ocupa de lo suyo.
+// La advertencia de consentimiento es su propia zona desde antes y se ocupa de lo suyo.
 
 // En la tarjeta de una guardia no entran diez nombres, así que se muestran los dos primeros y
 // se dice cuántos faltan. La lista completa está adentro, al abrir la guardia.

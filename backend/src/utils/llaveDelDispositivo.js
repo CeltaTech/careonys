@@ -97,7 +97,7 @@ export function elContadorRetrocedio(guardado, nuevo) {
  * Contesta con un motivo y no con un booleano porque lo que sigue necesita distinguir: la llave
  * revocada se le explica a quien la revocó, y la que apunta a otra persona es un intento de entrar
  * con la llave ajena y se registra. **Ninguno de los dos motivos viaja hacia afuera**: la pantalla
- * recibe siempre el mismo aviso, como en la entrada con contraseña, donde tampoco se dice cuál de
+ * recibe siempre el mismo mensaje, como en la entrada con contraseña, donde tampoco se dice cuál de
  * los dos campos estaba mal (`celtatech/CLAUDE.md` §6).
  */
 export function porQueNoAbre(llave, { usuarioId = null } = {}) {

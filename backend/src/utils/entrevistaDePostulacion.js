@@ -33,7 +33,7 @@ import { supabase } from '../db/connection.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 import { enviarEmail } from './email.js';
 import { marcaDeLaPrestadora } from './marcaPrestadora.js';
-import { aviso } from '../i18n/avisos.js';
+import { mensajeDelSistema } from '../i18n/avisos.js';
 import { normalizarIdioma } from '../i18n/idiomas.js';
 import {
   MINUTOS_DE_ANTICIPO,
@@ -61,7 +61,7 @@ const COLUMNAS = `
 `;
 
 /* El día y la hora tal como los va a leer la persona, en su idioma. Se arma acá y no adentro del
-   catálogo de avisos porque el catálogo recibe hechos ya resueltos y no los va a buscar.
+   catálogo de mensajes porque el catálogo recibe hechos ya resueltos y no los va a buscar.
 
    El producto todavía no guarda huso horario por Prestadora, así que la hora sale en la del
    servidor. Se nota nada más cuando la Prestadora y quien se postula están en husos distintos, y
@@ -101,7 +101,7 @@ async function avisarAlPostulante({ clave, entrevista, postulante, prestadoraId 
 
   try {
     const marca = await marcaDeLaPrestadora(prestadoraId);
-    const { titulo, cuerpo } = aviso(clave, postulante.idioma, {
+    const { titulo, cuerpo } = mensajeDelSistema(clave, postulante.idioma, {
       prestadora: marca?.nombre || '',
       cuando: cuandoEnPalabras(entrevista.agendada_para, postulante.idioma),
       enlace: `${panelUrl}/entrevista/${entrevista.llave_publica}`,

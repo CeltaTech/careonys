@@ -283,7 +283,7 @@ export default function ReporteDiario() {
                     <label htmlFor={`signo-${signo}`}>
                       {t.reporte[`signo_${signo}`]} {rango ? `(${rango.unidad})` : ''}
                     </label>
-                    {/* El aviso de que el valor quedó fuera de rango va atado a la casilla que
+                    {/* La advertencia de que el valor quedó fuera de rango va atada a la casilla que
                         lo produjo: al pararse en ella se escucha el motivo, y no solo el
                         borde rojo, que no se ve sin verlo. */}
                     <input

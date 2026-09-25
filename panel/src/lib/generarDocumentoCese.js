@@ -9,7 +9,7 @@ const MARGEN = 20;
 const ANCHO_UTIL = 170;
 
 // EL DOCUMENTO VA EN CASTELLANO. Todo lo que este archivo escribe —«Certificado de trabajo»,
-// «Se certifica que…», las causales, el aviso legal— está redactado en castellano acá adentro,
+// «Se certifica que…», las causales, la advertencia legal— está redactado en castellano acá adentro,
 // porque es un papel que se firma y se entrega, no una pantalla que cambia de idioma con quien
 // la mira. Entonces las fechas y los importes que van adentro de ese papel se escriben también
 // en castellano: un documento con el cuerpo en castellano y la fecha en formato inglés no se lee.

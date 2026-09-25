@@ -16,7 +16,7 @@
  *   4. QUE UNA CUENTA CHOQUE CONSIGO MISMA. Volver a guardar el número que ya tiene no es repetirlo.
  *   5. QUE EL MISMO NÚMERO ESCRITO DISTINTO PASE POR OTRO. `+54 9 11 5555-1234` y `5491155551234`
  *      son el mismo teléfono.
- *   6. QUE EL NÚMERO SE FILTRE. Es dato sensible: no entra en el aviso, no queda en el registro del
+ *   6. QUE EL NÚMERO SE FILTRE. Es dato sensible: no entra en el mensaje, no queda en el registro del
  *      servidor y no viaja en ninguna dirección — ni siquiera en la consulta a la base.
  *   7. QUE LA COMPROBACIÓN SE SALTEE CUANDO LA BASE NO CONTESTA. Todo control falla cerrado.
  *   8. QUE EL PREFIJO QUEDE ESCRITO EN EL CÓDIGO. Cómo se reconoce un celular depende del país y
@@ -324,7 +324,7 @@ describe('la unicidad la impone la base', () => {
 
   it('ninguna función nueva se saltea la protección por fila', () => {
     // Como atributo de una función va en su propio renglón; lo que aparece adentro de un comentario
-    // o de un texto de aviso no declara nada.
+    // o de un texto cualquiera no declara nada.
     const declarada = migracion
       .split('\n')
       .filter((linea) => /^\s*SECURITY\s+DEFINER\s*$/i.test(linea));

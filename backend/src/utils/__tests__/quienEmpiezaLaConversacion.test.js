@@ -4,9 +4,10 @@
  *   npm test --prefix backend
  *
  * POR QUÉ EXISTE ESTA PRUEBA. Meta entrega un mensaje de texto suelto sólo adentro de una
- * conversación que abrió la otra persona. El mensaje que empieza la Prestadora —cada aviso, cada
- * recordatorio, cada código— tiene que salir por una plantilla aprobada, y si sale como texto
- * suelto se pierde sin que nadie se entere: no hay pantalla que se rompa ni registro que avise.
+ * conversación que abrió la otra persona. Todo lo que empieza la Prestadora —cada mensaje de
+ * rutina, cada recordatorio, cada código— tiene que salir por una plantilla aprobada, y si sale
+ * como texto suelto se pierde sin que nadie se entere: no hay pantalla que se rompa ni registro
+ * que avise.
  *
  * Por eso la regla no se comprueba mensaje por mensaje sino acá: `enviarWhatsApp` la puede usar
  * solamente quien está contestando. Cualquier archivo nuevo que la importe rompe esta prueba, y

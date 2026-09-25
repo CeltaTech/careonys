@@ -13,8 +13,8 @@
  *
  *   1. LOS DESTINATARIOS VIAJAN COMO LISTA. El backend los junta con comas para nodemailer; el
  *      despachante espera una lista. Si se le manda el texto con comas, toma todo eso como una
- *      sola dirección, la rechaza, y no llega ninguno de los avisos de ese evento.
- *   2. LAS RESPUESTAS VUELVEN A LA PRESTADORA. Un aviso sale desde una dirección del producto
+ *      sola dirección, la rechaza, y no llega ninguno de los mensajes de ese evento.
+ *   2. LAS RESPUESTAS VUELVEN A LA PRESTADORA. Un mensaje sale desde una dirección del producto
  *      que no recibe nada; sin la dirección de respuesta, quien conteste le escribe a un buzón
  *      que no existe y esa respuesta se pierde sin que nadie se entere.
  *   3. EL ERROR NO REPITE EL MENSAJE. El despachante contesta el error con el correo entero

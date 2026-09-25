@@ -5,7 +5,7 @@
  *
  * POR QUÉ EXISTE ESTA PRUEBA. El correo de todas las Prestadoras sale por un mismo servicio de
  * afuera que acepta hasta cierta cantidad por día y por mes; pasado ese límite deja de aceptar y
- * los avisos no salen. Sin una cuenta propia, el límite se descubre el día que un aviso no sale.
+ * los mensajes no salen. Sin una cuenta propia, el límite se descubre el día que uno no sale.
  * Acá hay tres cosas que se rompen sin hacer ruido:
  *
  *   1. QUE UN ENVÍO NO SE CUENTE. Si el backend manda por un camino que no pasa por donde se anota,
@@ -13,8 +13,8 @@
  *      las dos salidas de correo que tiene el backend, no sobre una.
  *   2. QUE UN RECHAZO SE CUENTE COMO ENVÍO. Un correo rechazado es justamente la señal de que se
  *      llegó al límite: si se anota como aceptado, la señal desaparece.
- *   3. QUE LA ANOTACIÓN SE LLEVE PUESTO EL CORREO. Un aviso que salió y no se pudo contar sigue
- *      siendo un aviso que salió. Y al revés: lo que se anota es el hecho, nunca a quién iba,
+ *   3. QUE LA ANOTACIÓN SE LLEVE PUESTO EL CORREO. Un mensaje que salió y no se pudo contar sigue
+ *      siendo un mensaje que salió. Y al revés: lo que se anota es el hecho, nunca a quién iba,
  *      el asunto ni una línea del contenido (`celtatech/CLAUDE.md` §6).
  *
  * Se levanta el backend de verdad contra una base de mentira, y el despachante se reemplaza por uno
@@ -218,7 +218,7 @@ describe('cada correo que sale queda contado', () => {
   });
 
   it('si la anotación falla, el correo sale igual', async () => {
-    // Hacer fallar el aviso porque falló su registro sería cambiar un número por una
+    // Hacer fallar el mensaje porque falló su registro sería cambiar un número por una
     // notificación que no llega.
     laBaseDejaAnotar = false;
 

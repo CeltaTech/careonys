@@ -3,7 +3,7 @@ import { enviarEmail } from './email.js';
 import { necesitaNotificar } from './insistencia.js';
 import { pacientesDeGuardias } from './pacientesDeGuardia.js';
 import { equipoDeUnPaciente } from './equipoDeUnPaciente.js';
-import { aviso } from '../i18n/avisos.js';
+import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import {
   CIERRES,
@@ -20,22 +20,22 @@ import { escalonesYaAvisados, escalarSiCorresponde, minutosDesde } from './aviso
 // ============================================================================
 //
 // POR QUÉ NO ALCANZABA CON LO QUE YA HABÍA. `revisarGuardiasSinCubrir.js` avisa y nada más: el
-// aviso sale, llega y se termina, y al día siguiente ese turno ya no entra en la ventana que ese
+// mensaje sale, llega y se termina, y al día siguiente ese turno ya no entra en la ventana que ese
 // proceso mira. El turno queda en `programada` para siempre y nadie tiene que dar cuenta de él.
 // Un turno que nunca se cubrió es una falla del servicio, y una falla del servicio queda abierta
 // hasta que alguien la cierre diciendo cómo terminó.
 //
-// LOS DOS CONVIVEN Y NO SE PISAN. El aviso avisa temprano, con la anticipación que cada Prestadora
+// LOS DOS CONVIVEN Y NO SE PISAN. El mensaje sale temprano, con la anticipación que cada Prestadora
 // configuró; el incidente se abre recién cuando el turno está cerca y ya es grave. Cuándo es eso
 // lo contesta `incidenteTurnoSinCubrir.js`, que es el mismo archivo que usa el Panel.
 //
 // EL RECORDATORIO NO VA AL DESTINO GENERAL DE LA PRESTADORA, VA A QUIEN COORDINA A ESE PACIENTE.
-// Un aviso que le llega a seis personas no le llega a ninguna, y acá hay alguien que puede tapar
+// Un mensaje que le llega a seis personas no le llega a ninguna, y acá hay alguien que puede tapar
 // el turno ahora mismo. Por eso sale por correo a esa persona, con el equipo del Paciente adentro
 // —primero quien cubre francos— para que no tenga que ir a buscar a quién llamar.
 //
-// Y POR ESO NO ESTÁ EN EL CATÁLOGO DE AVISOS. Ese catálogo sirve para elegir a qué dirección va
-// cada aviso y si se manda o no; acá el destinatario no es una dirección elegible sino la persona
+// Y POR ESO NO ESTÁ EN EL CATÁLOGO DE MENSAJES. Ese catálogo sirve para elegir a qué dirección va
+// cada mensaje y si se manda o no; acá el destinatario no es una dirección elegible sino la persona
 // que coordina a ese Paciente, y el recordatorio de un defecto grave no se apaga. Lo que sí decide
 // cada Prestadora son los dos números: a cuántas horas se abre y cada cuánto se insiste.
 //
@@ -193,7 +193,7 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
             veces: (incidente.veces_recordado ?? 0) + 1,
             ahora,
           })
-        ).aviso.texto,
+        ).mensaje.texto,
       yaSalieron: escalonesQueSalieron,
       ahora,
     });
@@ -285,7 +285,7 @@ async function abrirIncidente({ guardia, prestadoraId }) {
 }
 
 /**
- * El aviso de un turno sin cubrir, y a quién coordina se lo escribe.
+ * El mensaje de un turno sin cubrir, y a quién coordina se lo escribe.
  *
  * Vive aparte porque lo piden dos: el recordatorio, que se lo manda a quien coordina, y el
  * escalón, que le manda lo mismo a más gente. El escalón no cuenta otra cosa.
@@ -306,7 +306,7 @@ async function armarElRecordatorio({ guardia, prestadoraId, idioma, horas, veces
 
   return {
     destinatarios,
-    aviso: aviso(EVENTO, idioma, {
+    mensaje: mensajeDelSistema(EVENTO, idioma, {
       fecha: guardia.fecha,
       horaInicio: guardia.hora_inicio,
       horaFin: guardia.hora_fin,
@@ -322,7 +322,7 @@ async function armarElRecordatorio({ guardia, prestadoraId, idioma, horas, veces
 
 async function recordar({ incidente, guardia, prestadoraId, idioma, horas, ahora }) {
   const veces = (incidente.veces_recordado ?? 0) + 1;
-  const { destinatarios, aviso: texto } = await armarElRecordatorio({
+  const { destinatarios, mensaje: texto } = await armarElRecordatorio({
     guardia,
     prestadoraId,
     idioma,

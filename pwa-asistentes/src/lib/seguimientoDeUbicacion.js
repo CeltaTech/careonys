@@ -2,7 +2,7 @@ import { useSeVe } from '../context/PerfilContext';
 
 // ¿Esta Prestadora usa el seguimiento de ubicación?
 //
-// La pregunta vive acá y no adentro de cada pantalla porque la contestan dos: el aviso de que
+// La pregunta vive acá y no adentro de cada pantalla porque la contestan dos: la advertencia de que
 // hay algo para decidir, en Mis Guardias, y el texto con los dos botones, en Mi Perfil. La
 // misma condición escrita en dos archivos se despega el día que cambie (CLAUDE.md §7 regla 12).
 //

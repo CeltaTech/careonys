@@ -14,7 +14,7 @@ import { SelectoresPreferencias } from './SelectoresPreferencias';
 import { FranjaPuestaEnMarcha } from './FranjaPuestaEnMarcha';
 import { EquipoNuevo } from './EquipoNuevo';
 
-const AVISO_MINUTOS_RESTANTES = 10; // aviso "a los 50 minutos" de una sesión de 60
+const ADVERTENCIA_MINUTOS_RESTANTES = 10; // advertencia "a los 50 minutos" de una sesión de 60
 
 function BannerSesionTenant() {
   const { t, locale } = useLocale();
@@ -25,7 +25,7 @@ function BannerSesionTenant() {
   if (!sesion) return null;
 
   const minutosRestantes = (new Date(sesion.expira_at).getTime() - Date.now()) / 60000;
-  const porVencer = minutosRestantes <= AVISO_MINUTOS_RESTANTES;
+  const porVencer = minutosRestantes <= ADVERTENCIA_MINUTOS_RESTANTES;
   const horaExpiracion = new Date(sesion.expira_at).toLocaleTimeString(locale);
 
   async function handleSalir() {
@@ -156,8 +156,8 @@ export function Layout() {
       titulo: t.nav.grupo_cumplimiento,
       enlaces: [
         // Primero lo que avisó una persona que está adentro de una casa. No lleva contador: el
-        // aviso de una emergencia sale en el momento por WhatsApp o por correo, y esta pantalla
-        // es donde se lee lo que ese aviso no puede decir. Se ve con las dos modalidades, porque
+        // mensaje de una emergencia sale en el momento por WhatsApp o por correo, y esta pantalla
+        // es donde se lee lo que ese mensaje no puede decir. Se ve con las dos modalidades, porque
         // en las dos hay Asistentes trabajando en un domicilio.
         { a: '/emergencias', texto: t.nav.emergencias, ver: hayPlantel },
         // Después el pase de guardia, que es lo otro de este grupo que se atiende en el

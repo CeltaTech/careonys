@@ -49,7 +49,7 @@ export const ESTADO_PAPEL = {
  *
  * @param tiposExigidos  los tipos activos de la Prestadora: `[{ id, nombre, requiere_vencimiento }]`.
  * @param documentos     lo cargado de esta persona: `[{ tipo_documento_id, fecha_vencimiento }]`.
- * @param diasAviso      la ventana de aviso de la Prestadora.
+ * @param diasAviso      la ventana de preaviso de la Prestadora.
  * @param ahora          desde cuándo se cuenta (la prueba manda una fecha fija).
  */
 export function carpetaDelAsistente({

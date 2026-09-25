@@ -72,19 +72,19 @@ function numeroUtil(valor) {
  *   horas_para_cerrar          ← `configuracion_escalada_coordinador.minutos_gracia_cierre_guardia`
  *
  * Copiarlos a una tabla propia del semáforo daría dos números para la misma pregunta, y el día
- * que alguien cambie uno la grilla diría una cosa y el aviso otra: la guardia pintada de rojo a
- * las 48 horas mientras el aviso sale a las 24. El color de la grilla y el aviso al Coordinador
+ * que alguien cambie uno la grilla diría una cosa y el mensaje otra: la guardia pintada de rojo a
+ * las 48 horas mientras el mensaje sale a las 24. El color de la grilla y el mensaje al Coordinador
  * son la misma decisión mirada de dos maneras, así que salen del mismo número.
  *
- * QUE EL AVISO ESTÉ APAGADO NO APAGA EL COLOR. Dos de esas tablas tienen un `activo`, que dice
- * si sale el aviso, no a partir de cuándo la situación es urgente. Una Prestadora que prefiere
+ * QUE EL MENSAJE ESTÉ APAGADO NO APAGA EL COLOR. Dos de esas tablas tienen un `activo`, que dice
+ * si sale el mensaje, no a partir de cuándo la situación es urgente. Una Prestadora que prefiere
  * mirar la grilla en vez de recibir correos sigue teniendo su umbral, y por eso acá no se mira.
  *
- * @param config `{ avisoSinCubrir, ausenciaAutomatica, escaladaCoordinador }` — filas tal como
+ * @param config `{ mensajeSinCubrir, ausenciaAutomatica, escaladaCoordinador }` — filas tal como
  *               salen de la base. Cualquiera puede faltar.
  */
 export function umbralesDeLaPrestadora(config = {}) {
-  const horasHueco = numeroUtil(config.avisoSinCubrir?.horas_antes);
+  const horasHueco = numeroUtil(config.mensajeSinCubrir?.horas_antes);
   const minutosLlegada = numeroUtil(config.ausenciaAutomatica?.minutos_tolerancia_checkin);
   const minutosCierre = numeroUtil(config.escaladaCoordinador?.minutos_gracia_cierre_guardia);
 

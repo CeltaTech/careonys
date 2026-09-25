@@ -366,8 +366,8 @@ export function GrillaGuardias({
     const elegida = typeof elegidas.has === 'function' && elegidas.has(guardia.id);
     const espejo = vistaActiva === 'paciente' ? guardia.asistente_nombre : guardia.paciente_nombre;
     // Cuántas personas cubre la guardia. Se avisa solo cuando son más de una, y sobre todo en
-    // la vista por Paciente: ahí la misma guardia está dibujada en varias filas y sin este
-    // aviso parecen guardias distintas. Es una sola guardia, no dos.
+    // la vista por Paciente: ahí la misma guardia está dibujada en varias filas y sin esta
+    // advertencia parecen guardias distintas. Es una sola guardia, no dos.
     const cuantos = guardia.pacientes?.length ?? 0;
     // La palabra del chip es la SITUACIÓN, no la columna `estado` de la base. Dos guardias
     // pueden estar las dos como 'programada' y una estar en curso y la otra sin marca de

@@ -12,7 +12,7 @@
  *      llave de servicio y se saltea la protección por fila, así que lo único que separa una
  *      Prestadora de otra son estos filtros. Si a una consulta le faltara, nadie lo notaría
  *      mirando la pantalla: los datos se verían bien igual.
- *   3. LOS DÍAS DE AVISO SON LOS QUE CONFIGURÓ LA PRESTADORA. Con la ventana ancha, un papel que
+ *   3. LOS DÍAS DE PREAVISO SON LOS QUE CONFIGURÓ LA PRESTADORA. Con la ventana ancha, un papel que
  *      vence en dos meses ya avisa; con la de fábrica, no.
  *
  * Qué daría con el sistema roto: si alguna consulta perdiera su filtro, la prueba del aislamiento
@@ -100,7 +100,7 @@ function consultasA(tabla) {
   return llamadas.filter((l) => l.clave === `GET /rest/v1/${tabla}`).map((l) => l.url);
 }
 
-/** Lo exigido, lo cargado, el Certificado y la ventana de aviso, que cada prueba acomoda. */
+/** Lo exigido, lo cargado, el Certificado y la ventana de preaviso, que cada prueba acomoda. */
 let tiposExigidos;
 let documentos;
 let certificado;

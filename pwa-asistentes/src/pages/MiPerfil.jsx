@@ -190,7 +190,7 @@ export default function MiPerfil() {
           cuando quiera, no un trámite de una sola vez que después desaparece. */}
       <Consentimientos />
 
-      {/* Cómo se entra a esta aplicación. Va al final, junto con los avisos al celular: las dos
+      {/* Cómo se entra a esta aplicación. Va al final, junto con los mensajes al celular: las dos
           son cosas de este aparato y no del trabajo. */}
       <Link to="/mi-clave" className="btn btn-secondary btn-full" style={{ marginTop: '2rem' }}>
         {t.auth.mi_clave}

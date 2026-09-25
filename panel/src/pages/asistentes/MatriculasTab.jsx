@@ -163,7 +163,7 @@ export function MatriculasTab({ asistente }) {
 
   /* El cartel de arriba. Es lo primero que se lee y lo único que hace falta leer cuando algo
      está mal: qué pasa y qué hacer. El motivo lo dice la base, no esta pantalla. */
-  const avisoArriba = useMemo(() => {
+  const alertaArriba = useMemo(() => {
     if (!estadoMatricula) return null;
 
     const motivo = estadoMatricula.motivo_bloqueo;
@@ -226,9 +226,9 @@ export function MatriculasTab({ asistente }) {
       <h2>{tmat.titulo}</h2>
       <p className="panel-explicacion">{tmat.explicacion}</p>
 
-      {avisoArriba && (
-        <Alert variant={avisoArriba.variant}>
-          <strong>{avisoArriba.titulo}</strong> {avisoArriba.detalle}
+      {alertaArriba && (
+        <Alert variant={alertaArriba.variant}>
+          <strong>{alertaArriba.titulo}</strong> {alertaArriba.detalle}
         </Alert>
       )}
       {error && <Alert variant="error">{error}</Alert>}

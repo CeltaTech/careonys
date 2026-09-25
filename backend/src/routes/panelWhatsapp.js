@@ -140,7 +140,7 @@ panelWhatsappRouter.post('/conversaciones/:id/descartar', requiereRolPanel, asyn
 
   // Acá no salió nada hacia afuera, así que lo que falle sí se contesta: si la conversación
   // sigue pidiendo atención, el Coordinador tiene que saberlo ahora y no descubrirlo mañana con
-  // el mismo aviso todavía prendido.
+  // la misma alerta todavía prendida.
   if (borrador) {
     const { error } = await supabase
       .from('mensajes_whatsapp')

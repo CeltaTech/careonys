@@ -62,7 +62,7 @@ export function RespuestasPreparadas() {
   const [respuestas, setRespuestas] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
-  const [aviso, setAviso] = useState(null);
+  const [mensaje, setMensaje] = useState(null);
   // Cuál fila está en curso: mientras tenga valor, ningún botón de esa fila se puede volver a
   // apretar. Es lo que evita dos aprobaciones o dos bajas del mismo renglón.
   const [enCurso, setEnCurso] = useState(null);
@@ -103,13 +103,13 @@ export function RespuestasPreparadas() {
   }
 
   function abrirAlta() {
-    setAviso(null);
+    setMensaje(null);
     setFormulario(FORMULARIO_VACIO);
     setEditando('nueva');
   }
 
   function abrirCorreccion(respuesta) {
-    setAviso(null);
+    setMensaje(null);
     setFormulario(formularioDe(respuesta));
     setEditando(respuesta.id);
   }
@@ -117,12 +117,12 @@ export function RespuestasPreparadas() {
   async function correr(clave, operacion) {
     if (enCurso) return;
     setEnCurso(clave);
-    setAviso(null);
+    setMensaje(null);
     try {
       await operacion();
       await cargar();
     } catch (err) {
-      setAviso(mensajeDeError(err, t));
+      setMensaje(mensajeDeError(err, t));
     } finally {
       setEnCurso(null);
     }
@@ -145,7 +145,7 @@ export function RespuestasPreparadas() {
   function aprobar(respuesta) {
     // Lo clínico no se aprueba, y se dice acá mismo en vez de dejar que el backend lo rechace.
     if (respuesta.toca_salud) {
-      setAviso(tr.lo_clinico_se_deriva);
+      setMensaje(tr.lo_clinico_se_deriva);
       return;
     }
     return correr(respuesta.id, () => llamar(`/${respuesta.id}/aprobar`, { method: 'POST' }));
@@ -165,7 +165,7 @@ export function RespuestasPreparadas() {
       <h1>{tr.titulo}</h1>
       <p className="panel-explicacion">{tr.explicacion}</p>
 
-      {aviso && <Alert variant="error">{aviso}</Alert>}
+      {mensaje && <Alert variant="error">{mensaje}</Alert>}
 
       <div className="panel-filtros">
         <select value={f.estado} onChange={(e) => set('estado', e.target.value)} aria-label={tr.titulo}>

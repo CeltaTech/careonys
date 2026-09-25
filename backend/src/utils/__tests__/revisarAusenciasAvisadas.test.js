@@ -3,18 +3,18 @@
  *
  *   npm test --prefix backend
  *
- * POR QUÉ EXISTE ESTA PRUEBA. El aviso de turno sin cubrir no ve esto: mira los turnos que no
+ * POR QUÉ EXISTE ESTA PRUEBA. El mensaje de turno sin cubrir no ve esto: mira los turnos que no
  * tienen a nadie asignado, y el turno de una Asistente de licencia la sigue teniendo asignada. Si
  * este proceso se equivoca, nadie más lo tapa. Lo que tiene que garantizar:
  *
- *   1. LAS DOS CLASES SALEN COMO DOS AVISOS DISTINTOS. Una es una tarea para cuando se pueda, la
- *      otra es un turno que empieza enseguida. Con un solo aviso, apagar el ruido apagaría también
+ *   1. LAS DOS CLASES SALEN COMO DOS MENSAJES DISTINTOS. Una es una tarea para cuando se pueda, la
+ *      otra es un turno que empieza enseguida. Con un solo mensaje, apagar el ruido apagaría también
  *      la alarma.
  *   2. LA CLASE SE RECALCULA, NO SE CONGELA. Sale de una cuenta que se rehace en cada vuelta, así
  *      que corregir cuándo se supo, o el número de la Prestadora, la cambia — y entonces se vuelve
  *      a avisar, aunque ya se haya avisado recién.
  *   3. LA QUE LLEGÓ CON MARGEN NO INSISTE. Repetir cada dos horas algo que tiene tres días es el
- *      modo más rápido de que la Coordinadora deje de leer los avisos.
+ *      modo más rápido de que la Coordinadora deje de leer los mensajes.
  *   4. LA QUE NO DEJA NINGÚN TURNO SIN NADIE NO AVISA NADA.
  *   5. CADA PRESTADORA SE MIRA CON SU PROPIO NÚMERO, y nunca con la configuración de otra. El
  *      proceso recorre de a una Prestadora por vez, así que con dos cargadas cada una tiene que
@@ -142,8 +142,8 @@ function escenario({
   });
 }
 
-/** Todos los avisos que se pidieron: qué evento y para qué Prestadora. */
-function avisosPedidos() {
+/** Todos los mensajes que se pidieron: qué evento y para qué Prestadora. */
+function mensajesPedidos() {
   return llamadas
     .filter((l) => l.clave === 'GET /rest/v1/configuracion_notificaciones')
     .map((l) => ({
@@ -154,7 +154,7 @@ function avisosPedidos() {
 
 /** Qué evento se pidió avisar, o `undefined` si no se avisó nada. */
 function eventoAvisado() {
-  return avisosPedidos()[0]?.evento;
+  return mensajesPedidos()[0]?.evento;
 }
 
 /** Lo que el proceso marcó en la ausencia, o `undefined` si no marcó nada. */
@@ -188,7 +188,7 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/prestadoras', () => prestadorasEnLaBase);
   respuestas.set('GET /rest/v1/ausencias', (filtros) => soloDeLaPrestadora(filtros, ausenciasEnLaBase));
   respuestas.set('GET /rest/v1/guardias', (filtros) => soloDeLaPrestadora(filtros, guardiasEnLaBase));
-  // Apagado en la configuración de la Prestadora: el aviso no sale por ningún lado y la prueba
+  // Apagado en la configuración de la Prestadora: el mensaje no sale por ningún lado y la prueba
   // igual ve cuál se pidió. Lo que se mira acá es la decisión, no el envío.
   respuestas.set('GET /rest/v1/configuracion_notificaciones', () => [{ activo: false }]);
 });
@@ -323,9 +323,9 @@ describe('cada Prestadora con lo suyo', () => {
 
     await revisarAusenciasAvisadas();
 
-    // Dos avisos, uno por Prestadora, y cada uno con la clase que le corresponde a su falta.
+    // Dos mensajes, uno por Prestadora, y cada uno con la clase que le corresponde a su falta.
     assert.deepEqual(
-      [...avisosPedidos()].sort((a, b) => a.prestadoraId.localeCompare(b.prestadoraId)),
+      [...mensajesPedidos()].sort((a, b) => a.prestadoraId.localeCompare(b.prestadoraId)),
       [
         { evento: 'ausencia_avisada_con_tiempo', prestadoraId: PRESTADORA },
         { evento: 'ausencia_de_golpe', prestadoraId: OTRA_PRESTADORA },

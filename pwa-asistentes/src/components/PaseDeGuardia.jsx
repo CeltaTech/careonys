@@ -35,7 +35,7 @@ const SONDEO_MS = 4000;
  *
  * `onListo(comprobacion)` recibe { codigo } o { motivoSinComprobar, detalle } y devuelve
  * { ok: true } o { ok: false, mensaje }. Cuando el backend rechaza el código —equivocado, vencido,
- * o de otra casa— este componente se queda abierto con el aviso: cerrarlo dejaría al Asistente
+ * o de otra casa— este componente se queda abierto con la advertencia: cerrarlo dejaría al Asistente
  * en la puerta sin nada que apretar.
  */
 export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancelar }) {
@@ -45,9 +45,9 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
   const [texto, setTexto] = useState('');
   const [motivo, setMotivo] = useState('');
   const [detalle, setDetalle] = useState('');
-  // Lo que salió mal en el último intento de comprobar. Es un aviso y no un error: siempre queda
+  // Lo que salió mal en el último intento de comprobar. Es una advertencia y no un error: siempre queda
   // algo para hacer abajo.
-  const [aviso, setAviso] = useState('');
+  const [advertencia, setAdvertencia] = useState('');
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [codigoDisponible, setCodigoDisponible] = useState(false);
@@ -84,13 +84,13 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
     async (comprobacion) => {
       if (enviando) return;
       setEnviando(true);
-      setAviso('');
+      setAdvertencia('');
       setError('');
       await detenerCamara();
       try {
         const resultado = await onListo(comprobacion);
         if (resultado && resultado.ok === false && vivoRef.current) {
-          setAviso(resultado.mensaje);
+          setAdvertencia(resultado.mensaje);
           setCodigo('');
           // La cámara se apagó para mandar el pedido; si el código no sirvió, hay que volver a
           // prenderla para que se pueda intentar de nuevo sin salir y entrar de la pantalla.
@@ -144,7 +144,7 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
   async function pedirALaPrestadora() {
     setEnviando(true);
     setError('');
-    setAviso('');
+    setAdvertencia('');
     await detenerCamara();
     try {
       await api.pedirCodigoALaPrestadora(guardiaId, { momento, texto });
@@ -184,13 +184,13 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
 
   async function irAlPiso() {
     await detenerCamara();
-    setAviso('');
+    setAdvertencia('');
     setError('');
     setPaso('sin_comprobar');
   }
 
   async function volverAlCodigo() {
-    setAviso('');
+    setAdvertencia('');
     setError('');
     setPaso('codigo');
     setIntento((n) => n + 1);
@@ -233,7 +233,7 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
     <div className="guardia-card" style={{ marginTop: '1rem' }}>
       <p className="guardia-card-paciente">{titulo}</p>
 
-      {aviso && <div className="alert alert-alerta" role="status">{aviso}</div>}
+      {advertencia && <div className="alert alert-alerta" role="status">{advertencia}</div>}
       {error && <div className="alert alert-error" role="alert">{error}</div>}
 
       {paso === 'codigo' && (
@@ -245,7 +245,7 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
           <button
             type="button"
             className="btn btn-secondary btn-full"
-            onClick={() => { setPaso('pidiendo'); setAviso(''); setError(''); detenerCamara(); }}
+            onClick={() => { setPaso('pidiendo'); setAdvertencia(''); setError(''); detenerCamara(); }}
             disabled={enviando}
             style={{ marginTop: '0.5rem' }}
           >

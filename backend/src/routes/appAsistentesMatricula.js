@@ -13,7 +13,7 @@ import { responderError } from '../utils/errorConMotivo.js';
 // Sin Matrícula vigente, la base no deja que el Asistente atienda a nadie. Si
 // eso pasa y él no se entera, lo único que ve es que dejaron de ofrecerle
 // guardias, sin ningún motivo a la vista. La regla dice que nunca se bloquea en
-// silencio, y el lugar donde ese aviso llega de verdad es el teléfono, no una
+// silencio, y el lugar donde ese mensaje llega de verdad es el teléfono, no una
 // pantalla del Panel que él no usa.
 //
 // Y el papel lo tiene él. Pedirle a la oficina que lo consiga es hacer trabajo

@@ -28,7 +28,7 @@ import { LoQuePasoEnLaCasa } from './LoQuePasoEnLaCasa';
 
 /* LOS TURNOS QUE QUEDARON SIN NADIE, Y POR QUÉ NO SE VAN SOLOS DE ACÁ
 
-   Un turno sin Asistente asignado produce un aviso, y el aviso se termina cuando se manda. Esta
+   Un turno sin Asistente asignado produce un mensaje, y el mensaje se termina cuando se manda. Esta
    sección muestra la otra mitad: el turno queda abierto hasta que una persona diga cómo terminó.
    Quien abre y quien insiste es el backend; quien cierra a mano es quien coordina.
 

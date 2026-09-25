@@ -12,7 +12,7 @@ import {
 //
 //   1. `calculo_llegada_tardia` — hay marca de salida, y la cuenta de la hora estimada de llegada
 //      pasa la hora de inicio más el margen que configuró la Prestadora. Es la que da minutos de
-//      aviso de verdad: se detecta apenas la persona sale, mucho antes de la hora de inicio.
+//      anticipación de verdad: se detecta apenas la persona sale, mucho antes de la hora de inicio.
 //   2. `sin_aviso_ni_salida` — pasó la hora de inicio con su margen y no hay nada: ni llegada, ni
 //      marca de salida, ni aviso de demora de ninguna clase.
 //

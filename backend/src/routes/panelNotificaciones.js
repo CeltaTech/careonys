@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { enviarEmail } from '../utils/email.js';
 import { supabase } from '../db/connection.js';
-import { aviso } from '../i18n/avisos.js';
+import { mensajeDelSistema } from '../i18n/avisos.js';
 
 export const panelNotificacionesRouter = Router();
 
@@ -28,7 +28,7 @@ panelNotificacionesRouter.post('/postulante', requiereRolPanel, async (req, res)
   try {
     await enviarEmail({
       to: email,
-      ...aviso('estado_postulacion', idioma, {
+      ...mensajeDelSistema('estado_postulacion', idioma, {
         empresa: configuracion?.nombre ?? '',
         nombre,
         estado: nuevoEstado,

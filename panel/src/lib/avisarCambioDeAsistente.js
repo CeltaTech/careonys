@@ -2,10 +2,10 @@ import { llamarApiPanel } from './apiPanel.js';
 
 // Punto único del lado del Panel para avisar que una o varias guardias cambiaron de Asistente.
 //
-// El Panel no puede mandar el aviso: escribe la guardia contra la base, pero no tiene push, ni
+// El Panel no puede mandar el mensaje: escribe la guardia contra la base, pero no tiene push, ni
 // WhatsApp, ni correo. Los tres viven en el backend, así que acá sólo se le pide.
 //
-// **El aviso nunca voltea la operación.** Cuando se llega a esta función la guardia ya cambió de
+// **El mensaje nunca voltea la operación.** Cuando se llega a esta función la guardia ya cambió de
 // manos: contestar un error haría que la pantalla muestre como fallido algo que salió bien. Si el
 // pedido no sale, queda en la consola y la reasignación sigue en pie.
 //

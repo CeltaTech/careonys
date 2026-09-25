@@ -17,7 +17,7 @@ const MOTIVOS_SIN_REINTENTO = ['token_invalido', 'token_ya_usado', 'token_vencid
 // clave de una que está en uso—, y los enlaces de una no sirven en la otra.
 //
 // LA APARIENCIA ES LA MÍNIMA A PROPÓSITO. Lo que hace falta hoy es que el enlace del correo
-// llegue a algún lado: sin esta pantalla, quien olvida la clave cae en el inicio sin aviso y
+// llegue a algún lado: sin esta pantalla, quien olvida la clave cae en el inicio sin advertencia y
 // queda afuera. El recorrido se acomoda cuando llegue la maqueta.
 export default function ClaveNueva() {
   const { t } = useLocale();
@@ -33,7 +33,7 @@ export default function ClaveNueva() {
   const [requiereCodigo, setRequiereCodigo] = useState(false);
   const [codigo, setCodigo] = useState('');
 
-  const avisoDe = (campo) => (errorCampo?.campo === campo ? errorCampo.texto : undefined);
+  const advertenciaDe = (campo) => (errorCampo?.campo === campo ? errorCampo.texto : undefined);
 
   /* EL SEGUNDO FACTOR SE PREGUNTA ACÁ Y NO AL PEDIR EL ENLACE. Preguntarlo antes contestaría si
      ese correo tiene cuenta y si tiene número verificado; acá el enlace ya probó que quien llegó
@@ -152,11 +152,11 @@ export default function ClaveNueva() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              aria-invalid={avisoDe('password') ? 'true' : undefined}
-              aria-describedby={avisoDe('password') ? 'password-error' : undefined}
+              aria-invalid={advertenciaDe('password') ? 'true' : undefined}
+              aria-describedby={advertenciaDe('password') ? 'password-error' : undefined}
             />
-            {avisoDe('password') && (
-              <span className="form-error" id="password-error" role="alert">{avisoDe('password')}</span>
+            {advertenciaDe('password') && (
+              <span className="form-error" id="password-error" role="alert">{advertenciaDe('password')}</span>
             )}
           </div>
           <div className="form-field">
@@ -168,11 +168,11 @@ export default function ClaveNueva() {
               value={confirmacion}
               onChange={(e) => setConfirmacion(e.target.value)}
               required
-              aria-invalid={avisoDe('confirmacion') ? 'true' : undefined}
-              aria-describedby={avisoDe('confirmacion') ? 'confirmacion-error' : undefined}
+              aria-invalid={advertenciaDe('confirmacion') ? 'true' : undefined}
+              aria-describedby={advertenciaDe('confirmacion') ? 'confirmacion-error' : undefined}
             />
-            {avisoDe('confirmacion') && (
-              <span className="form-error" id="confirmacion-error" role="alert">{avisoDe('confirmacion')}</span>
+            {advertenciaDe('confirmacion') && (
+              <span className="form-error" id="confirmacion-error" role="alert">{advertenciaDe('confirmacion')}</span>
             )}
           </div>
           {requiereCodigo && (

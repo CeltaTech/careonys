@@ -136,7 +136,7 @@ export function useTenantSession() {
 
 // Ítem F del pendiente #30: refuerza en el momento de cada confirmación destructiva
 // (Regla 4) que se está actuando dentro de una Prestadora ajena — el banner
-// persistente (item D) ya lo indica todo el tiempo, esto es el aviso puntual al ejecutar.
+// persistente (item D) ya lo indica todo el tiempo, esto es la advertencia puntual al ejecutar.
 export function useConfirmarDestructivo() {
   const { t } = useLocale();
   const { sesion, pedirConfirmacion } = useTenantSession();

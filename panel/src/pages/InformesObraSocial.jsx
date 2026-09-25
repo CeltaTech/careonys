@@ -210,7 +210,7 @@ export function InformesObraSocial() {
   const [cargandoPreview, setCargandoPreview] = useState(false);
   const [validando, setValidando] = useState(false);
   const [error, setError] = useState(null);
-  const [avisoValidacion, setAvisoValidacion] = useState(null);
+  const [mensajeValidacion, setMensajeValidacion] = useState(null);
 
   const [historial, setHistorial] = useState([]);
   const [estadoHistorial, setEstadoHistorial] = useState('cargando');
@@ -257,7 +257,7 @@ export function InformesObraSocial() {
   async function handlePreview(e) {
     e.preventDefault();
     setError(null);
-    setAvisoValidacion(null);
+    setMensajeValidacion(null);
     setCargandoPreview(true);
     setPreview(null);
     try {
@@ -282,7 +282,7 @@ export function InformesObraSocial() {
         method: 'POST',
         body: JSON.stringify({ paciente_id: pacienteId, tipo, periodo_desde: periodoDesde, periodo_hasta: periodoHasta }),
       });
-      setAvisoValidacion(t.informesObraSocial.informe_validado_exito);
+      setMensajeValidacion(t.informesObraSocial.informe_validado_exito);
       setPreview(null);
       recargarHistorial();
     } catch (err) {
@@ -328,7 +328,7 @@ export function InformesObraSocial() {
       <p className="panel-explicacion">{t.informesObraSocial.explicacion}</p>
 
       {error && <Alert variant="error">{error}</Alert>}
-      {avisoValidacion && <Alert variant="success">{avisoValidacion}</Alert>}
+      {mensajeValidacion && <Alert variant="success">{mensajeValidacion}</Alert>}
 
       <form onSubmit={handlePreview} className="panel-filtros">
         <FormField label={t.informesObraSocial.seleccionar_paciente} name="paciente_id" type="select" required value={pacienteId} onChange={(e) => setPacienteId(e.target.value)}>

@@ -48,9 +48,9 @@ export async function cancelarSuscripcion({ credencial, referenciaExterna }) {
 }
 
 /**
- * Comprueba que el aviso vino firmado y recién ahí lo interpreta (pendiente #9 del plan).
+ * Comprueba que el cambio de estado vino firmado y recién ahí lo interpreta (pendiente #9 del plan).
  *
- * Antes acá alcanzaba con que el aviso trajera un identificador: `valido: Boolean(body?.id)`.
+ * Antes acá alcanzaba con que el pedido trajera un identificador: `valido: Boolean(body?.id)`.
  * Como la dirección del webhook es pública, eso quería decir que cualquiera que golpeara la
  * puerta con `{"id": "…", "estado": "debitado"}` daba por cobrada una suscripción.
  *

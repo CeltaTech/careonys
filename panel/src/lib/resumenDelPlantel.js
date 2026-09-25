@@ -77,13 +77,13 @@ const GRAVEDAD = [
  *
  * @param documentos  filas de `documentos_asistente` con `asistente_id`, `fecha_vencimiento` y,
  *                    si vino, `tipos_documento_asistente.requiere_vencimiento`.
- * @param diasAviso   la ventana de aviso de la Prestadora.
+ * @param diasDePreaviso   la ventana de preaviso de la Prestadora.
  * @param desde       desde qué día se cuenta. Se pasa en las pruebas.
  * @returns `Map` de identificador de Asistente a una clave de `ESTADO_VENCIMIENTO`.
  */
 export function documentacionPorAsistente(
   documentos,
-  diasAviso = DIAS_AVISO_POR_DEFECTO,
+  diasDePreaviso = DIAS_AVISO_POR_DEFECTO,
   desde = new Date(),
 ) {
   const porAsistente = new Map();
@@ -96,7 +96,7 @@ export function documentacionPorAsistente(
 
     const estado = estadoDeVencimiento(
       diasParaVencer(documento.fecha_vencimiento, desde),
-      diasAviso,
+      diasDePreaviso,
     );
     const anterior = porAsistente.get(documento.asistente_id);
     if (!anterior || GRAVEDAD.indexOf(estado) < GRAVEDAD.indexOf(anterior)) {

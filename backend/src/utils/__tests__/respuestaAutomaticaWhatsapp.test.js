@@ -66,7 +66,7 @@ const {
   RESULTADO_DERIVADA,
 } = await import('../respuestaAutomaticaWhatsapp.js');
 
-// Los avisos del backend se juntan acá en vez de ensuciar la salida.
+// Las advertencias del backend se juntan acá en vez de ensuciar la salida.
 const avisarDeVerdad = console.warn;
 const errarDeVerdad = console.error;
 let anotados = [];
@@ -330,19 +330,19 @@ describe('la emergencia', () => {
   it('el número sale de la jurisdicción configurada de la Prestadora', async () => {
     respuestas.set('GET /rest/v1/telefonos_de_emergencia', () => [{ telefono: '911' }]);
 
-    const aviso = await avisarAlServicioDeEmergencias({ prestadoraId: PRESTADORA });
+    const derivacion = await avisarAlServicioDeEmergencias({ prestadoraId: PRESTADORA });
 
-    assert.equal(aviso.telefono, '911');
-    assert.equal(aviso.motivo, MOTIVO_EMERGENCIA);
+    assert.equal(derivacion.telefono, '911');
+    assert.equal(derivacion.motivo, MOTIVO_EMERGENCIA);
     const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/telefonos_de_emergencia');
     assert.ok(consulta.url.includes('jurisdiccion=eq.AR'), consulta.url);
   });
 
   it('sin número configurado no se inventa ninguno, y queda dicho el motivo', async () => {
-    const aviso = await avisarAlServicioDeEmergencias({ prestadoraId: PRESTADORA });
+    const derivacion = await avisarAlServicioDeEmergencias({ prestadoraId: PRESTADORA });
 
-    assert.equal(aviso.telefono, null);
-    assert.equal(aviso.motivo, MOTIVO_SIN_TELEFONO_DE_EMERGENCIA);
+    assert.equal(derivacion.telefono, null);
+    assert.equal(derivacion.motivo, MOTIVO_SIN_TELEFONO_DE_EMERGENCIA);
   });
 });
 

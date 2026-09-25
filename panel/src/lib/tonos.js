@@ -136,7 +136,7 @@ export function claseBadge(estado) {
 
 /**
  * La clase de un cartel cuando el tono se sabe de antemano y no viene de un estado de la
- * base. Ejemplo: un aviso de "hay un incidente" que no es una columna, es una condición.
+ * base. Ejemplo: una alerta de "hay un incidente" que no es una columna, es una condición.
  */
 export function claseBadgeTono(tono) {
   return `badge badge-${Object.values(TONO).includes(tono) ? tono : TONO.NEUTRO}`;

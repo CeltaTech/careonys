@@ -49,12 +49,12 @@ export function ActivarCuenta() {
   const [telefonoVerificado, setTelefonoVerificado] = useState(false);
   const [motivoSinReintento, setMotivoSinReintento] = useState('');
   // Los dos problemas de acá son de un campo concreto —la contraseña corta, la repetida que no
-  // coincide—, así que el aviso se cuelga de ese campo y no de todo el formulario. Arriba queda
+  // coincide—, así que el mensaje se cuelga de ese campo y no de todo el formulario. Arriba queda
   // el cartel general sólo para lo que contesta el backend, que no es de ningún campo.
   const [errorCampo, setErrorCampo] = useState(null);
   const [activada, setActivada] = useState(false);
 
-  const avisoDe = (campo) => (errorCampo?.campo === campo ? errorCampo.texto : undefined);
+  const mensajeDe = (campo) => (errorCampo?.campo === campo ? errorCampo.texto : undefined);
 
   async function handleActivar(evento) {
     evento.preventDefault();
@@ -193,7 +193,7 @@ export function ActivarCuenta() {
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          error={avisoDe('password')}
+          error={mensajeDe('password')}
         />
 
         <FormField
@@ -204,7 +204,7 @@ export function ActivarCuenta() {
           required
           value={confirmacion}
           onChange={(e) => setConfirmacion(e.target.value)}
-          error={avisoDe('confirmacion')}
+          error={mensajeDe('confirmacion')}
         />
 
         <FormField

@@ -150,7 +150,7 @@ export function PaseDeGuardia() {
       <p className="panel-explicacion">{t.pase_de_guardia.pedidos_explicacion}</p>
 
       {/* El error de un refresco que falló cuando la lista ya estaba cargada: la lista se queda
-          donde está y el aviso va al lado, porque borrarla escondería un pedido que sigue
+          donde está y el mensaje va al lado, porque borrarla escondería un pedido que sigue
           esperando. */}
       {estadoPedidos === 'listo' && errorPedidos && <Alert variant="error">{errorPedidos}</Alert>}
       {errorAlSoltar && <Alert variant="error">{errorAlSoltar}</Alert>}

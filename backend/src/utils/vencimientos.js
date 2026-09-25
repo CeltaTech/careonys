@@ -1,7 +1,7 @@
 import { supabase } from '../db/connection.js';
 import { notificarCoordinador } from './whatsapp.js';
 import { DIAS_AVISO_POR_DEFECTO, fechaLimiteDeAviso, ventanaDeAviso } from './reglaVencimientos.js';
-import { aviso } from '../i18n/avisos.js';
+import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 
 const EVENTO_VENCIMIENTO_DOCUMENTO = 'vencimiento_documento_asistente';
@@ -27,7 +27,7 @@ export async function revisarVencimientos() {
     // hacen el Panel y la aplicación del Asistente, en `reglaVencimientos.js` (regla 12).
     const anticipacion = ventanaDeAviso(diasAviso ?? DIAS_AVISO_POR_DEFECTO);
     const limiteISO = fechaLimiteDeAviso(anticipacion);
-    // Una sola vez por Prestadora: los avisos de todos sus tipos de documento los lee la misma
+    // Una sola vez por Prestadora: los mensajes de todos sus tipos de documento los lee la misma
     // gente. El nombre del tipo de documento viene del catálogo de ella y sale tal cual.
     const idioma = await idiomaDeLaPrestadora(prestadoraId);
 
@@ -61,12 +61,12 @@ export async function revisarVencimientos() {
       if (!activos.length) continue;
 
       try {
-        // Por el canal que la Prestadora haya elegido para este aviso: con WhatsApp encendido y
+        // Por el canal que la Prestadora haya elegido para este mensaje: con WhatsApp encendido y
         // una plantilla aprobada sale por ahí, y si no, por correo. Nunca por los dos.
         await notificarCoordinador({
           evento: EVENTO_VENCIMIENTO_DOCUMENTO,
           prestadoraId,
-          ...aviso('vencimiento_documentos', idioma, {
+          ...mensajeDelSistema('vencimiento_documentos', idioma, {
             etiqueta,
             dias: anticipacion,
             documentos: activos.map((d) => ({

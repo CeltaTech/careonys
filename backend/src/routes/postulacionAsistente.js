@@ -4,7 +4,7 @@ import { resolverPrestadoraPublica } from '../middleware/resolverPrestadoraPubli
 import { enviarEmailCoordinador } from '../utils/email.js';
 import { normalizarIdioma } from '../i18n/idiomas.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
-import { aviso } from '../i18n/avisos.js';
+import { mensajeDelSistema } from '../i18n/avisos.js';
 import { responderError } from '../utils/errorConMotivo.js';
 import { resolverEscalasVigentes, obtenerValorEscala } from '../utils/escalasLegales.js';
 import { revisarPostulacion } from '../utils/postulacionCompleta.js';
@@ -87,7 +87,7 @@ postulacionAsistenteRouter.post('/', resolverPrestadoraPublica, async (req, res)
     return res.status(500).json({ error: 'error_guardando_postulacion' });
   }
 
-  // El aviso lo lee el Coordinador, así que sale en el idioma de la Prestadora, no en el que la
+  // El mensaje lo lee el Coordinador, así que sale en el idioma de la Prestadora, no en el que la
   // Postulante eligió para el formulario: son dos personas distintas mirando el mismo hecho.
   try {
     await enviarEmailCoordinador({
@@ -95,7 +95,7 @@ postulacionAsistenteRouter.post('/', resolverPrestadoraPublica, async (req, res)
       prestadoraId,
       // Del cuerpo del correo sale sólo el nombre: el documento, el teléfono, el correo y la
       // situación fiscal se miran en el Panel, que es donde el permiso se comprueba.
-      ...aviso('nueva_postulacion_asistente', await idiomaDeLaPrestadora(prestadoraId), {
+      ...mensajeDelSistema('nueva_postulacion_asistente', await idiomaDeLaPrestadora(prestadoraId), {
         nombre: datos.nombre,
       }),
     });

@@ -2,12 +2,12 @@ import { supabase } from '../db/connection.js';
 import { enviarPushAsistente } from './push.js';
 import { avisarPorWhatsapp } from './whatsapp.js';
 import { configuracionEvento } from './email.js';
-import { aviso } from '../i18n/avisos.js';
+import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 
 const EVENTO_CESE = 'aviso_cese_asistente';
 
-// Aviso automático al Asistente cuando se cierra el servicio de su Paciente por una causa
+// Mensaje automático al Asistente cuando se cierra el servicio de su Paciente por una causa
 // ajena a su desempeño (Fase 6, docs/PLAN dentro de
 // C:\Users\Usuario\.claude\plans\distributed-scribbling-wirth.md). El Coordinador debe avisar
 // verbalmente primero (señal de respeto, decisión del Desarrollador 2026-07-22); este proceso
@@ -16,11 +16,11 @@ const EVENTO_CESE = 'aviso_cese_asistente';
 //
 // Usa el service role (bypassa RLS) porque procesa cierres de todas las prestadoras según su
 // propia configuración — no hay un usuario de panel logueado en este proceso.
-export async function revisarAvisosAutomaticosCese() {
+export async function revisarMensajesAutomaticosCese() {
   // SIN PRESTADORA A PROPÓSITO
   // Es el arranque de un trabajo de fondo, que no tiene sesión de nadie. No trae dato de ninguna
   // Prestadora: trae sus identificadores y su plazo, y a partir de ahí el trabajo recorre de a una,
-  // nombrándola en cada consulta de adentro —la de los avisos pendientes, acá abajo, la nombra.
+  // nombrándola en cada consulta de adentro —la de los cierres pendientes, acá abajo, la nombra.
   const { data: configuraciones, error: errorConfig } = await supabase
     .from('configuracion_aviso_cese_asistente')
     .select('prestadora_id, horas_plazo_aviso_verbal')
@@ -51,24 +51,24 @@ export async function revisarAvisosAutomaticosCese() {
     }
 
     for (const pendiente of pendientes ?? []) {
-      await enviarAvisoCese({ pendiente, prestadoraId });
+      await enviarMensajeDeCese({ pendiente, prestadoraId });
     }
   }
 }
 
-async function enviarAvisoCese({ pendiente, prestadoraId }) {
+async function enviarMensajeDeCese({ pendiente, prestadoraId }) {
   const config = await configuracionEvento(EVENTO_CESE, prestadoraId);
   // Apagado en la pantalla de Avisos, no se manda por ningún canal. La marca de enviado se pone
   // igual más abajo: el plazo ya venció y este pendiente no tiene que volver mañana.
   const apagado = config?.activo === false;
 
   if (!apagado) {
-    const { titulo, cuerpo } = aviso('cese_de_servicio', await idiomaDeLaPrestadora(prestadoraId));
+    const { titulo, cuerpo } = mensajeDelSistema('cese_de_servicio', await idiomaDeLaPrestadora(prestadoraId));
     await enviarPushAsistente(prestadoraId, pendiente.asistente_id, { titulo, cuerpo });
 
     try {
-      // Lo empieza la Prestadora, así que va por la plantilla que le eligió al aviso. Sin
-      // plantilla aprobada no sale, y queda el aviso al celular, que ya salió arriba.
+      // Lo empieza la Prestadora, así que va por la plantilla que le eligió al mensaje. Sin
+      // plantilla aprobada no sale, y queda el mensaje al celular, que ya salió arriba.
       await avisarPorWhatsapp({
         config,
         prestadoraId,

@@ -272,7 +272,7 @@ describe('lo que no se pidió, no se completa', () => {
 
   it('el check-in pisa las coordenadas y no arrastra ni la dirección ni el motivo', async () => {
     // El check-in mide una distancia: pide `lat` y `lng` y nada más. Tiene que enterarse de
-    // que la dirección es temporal —el aviso al Coordinador lo dice— pero el motivo no le
+    // que la dirección es temporal —el mensaje al Coordinador lo dice— pero el motivo no le
     // hace falta, y puede decir "internación", que es un dato de salud (CLAUDE.md §6).
     temporales = [EL_VERANO_EN_LA_CASA_DEL_HIJO];
 

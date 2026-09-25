@@ -32,7 +32,7 @@ export function ClaveNueva() {
   const [requiereCodigo, setRequiereCodigo] = useState(false);
   const [codigo, setCodigo] = useState('');
 
-  const avisoDe = (campo) => (errorCampo?.campo === campo ? errorCampo.texto : undefined);
+  const mensajeDe = (campo) => (errorCampo?.campo === campo ? errorCampo.texto : undefined);
 
   /* EL SEGUNDO FACTOR SE PREGUNTA ACÁ Y NO AL PEDIR EL ENLACE. Preguntarlo antes contestaría si
      esa persona tiene cuenta y si tiene número verificado; acá el enlace ya probó que lee ese
@@ -158,7 +158,7 @@ export function ClaveNueva() {
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          error={avisoDe('password')}
+          error={mensajeDe('password')}
         />
 
         <FormField
@@ -169,7 +169,7 @@ export function ClaveNueva() {
           required
           value={confirmacion}
           onChange={(e) => setConfirmacion(e.target.value)}
-          error={avisoDe('confirmacion')}
+          error={mensajeDe('confirmacion')}
         />
 
         {requiereCodigo && (

@@ -3,7 +3,7 @@ import { enviarPushAsistente } from './push.js';
 import { avisarPorWhatsapp } from './whatsapp.js';
 import { configuracionEvento } from './email.js';
 import { seSuperponen } from './horarios.js';
-import { aviso } from '../i18n/avisos.js';
+import { mensajeDelSistema } from '../i18n/avisos.js';
 
 /*
  * La fase automática de la escalada de relevo.
@@ -11,7 +11,7 @@ import { aviso } from '../i18n/avisos.js';
  *
  * QUÉ PASA ANTES DE ACÁ. Un Asistente faltó y nadie lo relevó, así que quedó abierto un incidente
  * de continuidad. A quien coordina se le insiste con la frecuencia que la Prestadora configuró, y
- * si no reacciona el aviso pasa a su respaldo. Cuando se agota también ese plazo —y sólo si la
+ * si no reacciona el mensaje pasa a su respaldo. Cuando se agota también ese plazo —y sólo si la
  * Prestadora encendió `fase_automatica_activa`— el sistema deja de esperar a una persona y sale a
  * buscar quién cubre. Eso es lo que hace este archivo.
  *
@@ -184,7 +184,7 @@ export async function correrFaseAutomatica({ incidente, prestadoraId, idioma }) 
     porRol,
   );
 
-  const { titulo } = aviso('convocatoria_de_relevo', idioma, {
+  const { titulo } = mensajeDelSistema('convocatoria_de_relevo', idioma, {
     fecha: guardia.fecha,
     horaInicio: guardia.hora_inicio,
     horaFin: guardia.hora_fin,
@@ -211,9 +211,9 @@ export async function correrFaseAutomatica({ incidente, prestadoraId, idioma }) 
 /**
  * Le llega al celular, y si no, por WhatsApp.
  *
- * Es el mismo criterio que los avisos de rutina al Asistente (`revisarRecordatoriosPush.js`): el
- * push no cuesta nada y llega a quien tiene la aplicación abierta; el mensaje se manda sólo cuando
- * el push no salió, para no pagar dos veces el mismo aviso. La diferencia con los de rutina es que
+ * Es el mismo criterio que los mensajes de rutina al Asistente (`revisarRecordatoriosPush.js`): el
+ * push no cuesta nada y llega a quien tiene la aplicación abierta; el de WhatsApp se manda sólo
+ * cuando el push no salió, para no pagar dos veces el mismo mensaje. La diferencia con los de rutina es que
  * acá no se calla un error: si no se pudo contactar a alguien, quien coordina tiene que saber a
  * cuántos se llegó de verdad.
  */
@@ -230,7 +230,7 @@ async function avisarAlAsistente({ prestadoraId, asistenteId, titulo, cuerpo, co
   if (!asistente?.telefono) return false;
 
   try {
-    // Lo empieza la Prestadora, así que sale por la plantilla que le eligió al aviso de incidentes.
+    // Lo empieza la Prestadora, así que sale por la plantilla que le eligió al mensaje de incidentes.
     return await avisarPorWhatsapp({ config, prestadoraId, telefono: asistente.telefono, valores: [titulo, cuerpo] });
   } catch (err) {
     console.error(`Error convocando por WhatsApp al asistente ${asistenteId}:`, err.message);

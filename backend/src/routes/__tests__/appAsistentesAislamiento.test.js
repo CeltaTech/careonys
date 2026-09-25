@@ -1,6 +1,6 @@
 /**
  * Las consultas de la aplicación del Asistente que cuelgan de su identificador y de nada más:
- * sus calificaciones, su consentimiento y la baja del aviso al celular.
+ * sus calificaciones, su consentimiento y la baja del mensaje al celular.
  *
  *   npm test --prefix backend
  *

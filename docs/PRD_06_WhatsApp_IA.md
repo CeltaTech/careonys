@@ -9,7 +9,7 @@
 > Cloudflare Pages, en `gestion.careonys.com`.) Ver pendiente #9 de
 > `docs/PLAN_HASTA_PRODUCCION.md` (🟢 Resuelto 2026-07-13), que tiene el detalle completo de la
 > implementación y de lo explícitamente diferido (envío real a Asistentes y endurecimiento
-> del webhook para producción, a probar con una prestadora real con cuenta Meta activa).
+> del aviso entrante (webhook) para producción, a probar con una prestadora real con cuenta Meta activa).
 
 ## Por qué existe este documento
 

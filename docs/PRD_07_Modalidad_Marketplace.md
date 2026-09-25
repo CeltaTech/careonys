@@ -358,7 +358,7 @@ aplicada contra la base real, y las advertencias de Match están escritas en
 laboralista — no hace falta repetirla acá.
 
 El cobro de la Familia tiene su modelo de datos y su backend construidos —período de prueba y
-próxima fecha, historial de cobros, credenciales de pasarela por Prestadora y avisos entrantes de
-seis proveedores de pago—. Lo que falta son los resguardos del §3: la baja en un clic, el corte
+próxima fecha, historial de cobros, credenciales de pasarela por Prestadora y las puertas por las
+que seis proveedores de pago dejan sus datos—. Lo que falta son los resguardos del §3: la baja en un clic, el corte
 diferido, el mensaje previo al primer cobro y el período de gracia con reintentos. Están en
 `docs/PLAN_HASTA_PRODUCCION.md`, sección «El dinero».

@@ -215,7 +215,7 @@ function secretosLeidos() {
   return llamadas.filter((l) => l.clave.startsWith('POST /rest/v1/rpc/'));
 }
 
-describe('el aviso entrante de WhatsApp auténtico', () => {
+describe('el pedido de WhatsApp auténtico', () => {
   it('se acepta, anota el mensaje y deja la conversación esperando al Coordinador', async () => {
     const { estado, cuerpo } = await avisar();
     assert.equal(estado, 200);
@@ -273,7 +273,7 @@ describe('el aviso entrante de WhatsApp auténtico', () => {
   });
 });
 
-describe('el aviso entrante que no se puede probar auténtico', () => {
+describe('el pedido que no se puede probar auténtico', () => {
   it('con la firma cambiada se rechaza con 401 y no toca ninguna fila', async () => {
     const { estado } = await avisar({ firma: `sha256=${'a'.repeat(64)}` });
     assert.equal(estado, 401);

@@ -17,6 +17,10 @@ export async function requiereRolAsistente(req, res, next) {
     return res.status(401).json({ error: 'No autorizado' });
   }
 
+  // SIN PRESTADORA A PROPÓSITO
+  // Es el paso anterior a todo lo demás: de acá sale la Prestadora de esta sesión, y la consulta
+  // que viene abajo —la ficha del Asistente— ya la usa. Pedirle a esta que la sepa de antemano
+  // sería circular: no hay de dónde sacarla salvo de esta misma fila.
   const { data: perfil, error: errorPerfil } = await supabase
     .from('usuarios')
     .select('rol, prestadora_id')

@@ -56,11 +56,16 @@ panelUsuariosRouter.get('/', requiereRolPanel, soloAdministracion, async (req, r
   // Hasta dónde llega cada cuenta, en cuántos lugares. La lista muestra el número y no los
   // nombres: doscientas localidades no entran en una celda, y lo que se necesita de un vistazo es
   // si el alcance está puesto o quedó vacío. Los nombres se ven al abrir la cuenta.
+  // El alcance se cuenta nombrando la Organización, no sólo las cuentas que volvieron arriba: un
+  // identificador de cuenta no dice de qué Prestadora es. Sin Organización activa no se pregunta
+  // nada, y está bien: ahí las únicas cuentas a la vista son las del soporte técnico de CeltaTech,
+  // que no cuelgan de ninguna Prestadora y por eso no tienen ningún lugar asignado.
   const cuentas = data ?? [];
-  const { data: cruces, error: errorLugares } = cuentas.length
+  const { data: cruces, error: errorLugares } = cuentas.length && req.usuarioPanel.prestadoraId
     ? await supabase
       .from('usuario_lugares')
       .select('usuario_id')
+      .eq('prestadora_id', req.usuarioPanel.prestadoraId)
       .in('usuario_id', cuentas.map((cuenta) => cuenta.id))
     : { data: [], error: null };
   if (errorLugares) return responderError(res, errorLugares);
@@ -200,11 +205,16 @@ panelUsuariosRouter.delete('/:id', requiereRolPanel, soloAdministracion, async (
   // función: la ruta y la función no pueden quedar mirando reglas distintas (pendiente #157).
   const alcance = alcanceDelPanel(req.usuarioPanel);
 
-  const { data: usuario } = await supabase
-    .from('usuarios')
-    .select('rol, prestadora_id')
-    .eq('id', req.params.id)
-    .maybeSingle();
+  // La consulta nombra la Organización, con la misma regla que la lista: la Organización activa
+  // más las cuentas del equipo técnico. La comprobación en memoria de abajo se queda igual —
+  // filtrar y preguntar son las dos formas de la misma regla, y las dos hacen falta.
+  const { data: usuario } = await acotarAUsuariosDelPanel(
+    supabase
+      .from('usuarios')
+      .select('rol, prestadora_id')
+      .eq('id', req.params.id),
+    req.usuarioPanel,
+  ).maybeSingle();
 
   // Cuenta que no existe, de otra Prestadora, o de un rol que este solicitante no gestiona:
   // desde afuera son el mismo caso y se contestan igual, para que la respuesta no permita

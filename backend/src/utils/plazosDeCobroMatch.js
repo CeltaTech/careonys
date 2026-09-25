@@ -92,6 +92,11 @@ async function leerlos(prestadoraId) {
  * @returns {Promise<number|null>}
  */
 export async function elPlazoDeAvisoMasLargo() {
+  // SIN PRESTADORA A PROPÓSITO: lo que se busca acá es el plazo más largo de todas, que es
+  // justamente lo que ninguna Prestadora sola puede contestar. Se pregunta antes de saber qué
+  // Prestadoras entran en la vuelta, para abrir la ventana más ancha; después cada acceso se
+  // mide contra el plazo de la suya, que sí se lee nombrándola (`plazosDeLaPrestadora`). No sale
+  // de acá ningún dato de nadie: la respuesta es una cantidad de días.
   const { data, error } = await supabase
     .from(TABLA)
     .select('dias_de_aviso_antes_del_cobro')

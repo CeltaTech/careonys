@@ -61,7 +61,7 @@ export const MOTIVO_VER_CONTACTO = {
 };
 
 const COLUMNAS_DEL_ACCESO =
-  'id, estado, importe, moneda, gratis_hasta, proximo_cobro, saldo_contactos, created_at, ' +
+  'id, prestadora_id, estado, importe, moneda, gratis_hasta, proximo_cobro, saldo_contactos, created_at, ' +
   'formas_de_cobro_match(nombre, renueva_sola, periodo_cantidad, periodo_unidad, contactos_incluidos)';
 
 /** ¿Este acceso está todavía en período gratuito? Se compara por día, que es como está guardado:
@@ -84,12 +84,16 @@ function puedePagar(acceso) {
  * un vigente agotado, para que quien llama pueda distinguir «no tiene acceso» de «se le acabó el
  * saldo», que no son lo mismo y no se arreglan igual.
  *
+ * La Prestadora se pide además del Legajo del Cliente, y es obligatoria: un identificador
+ * probado a mano no alcanza los accesos de otra Organización (`celtatech\CLAUDE.md` §5).
+ *
  * @returns {Promise<{acceso: object|null, hubo_alguno: boolean}>}
  */
-export async function accesoQuePagaElContacto({ clienteId }) {
+export async function accesoQuePagaElContacto({ prestadoraId, clienteId }) {
   const { data, error } = await supabase
     .from('accesos_match')
     .select(COLUMNAS_DEL_ACCESO)
+    .eq('prestadora_id', prestadoraId)
     .eq('cliente_id', clienteId)
     .order('created_at', { ascending: true });
 
@@ -156,6 +160,7 @@ export async function comoEstaElContacto({ prestadoraId, clienteId, asistenteId,
   const { data: yaVisto, error } = await supabase
     .from('contactos_vistos_match')
     .select('id')
+    .eq('prestadora_id', prestadoraId)
     .eq('cliente_id', clienteId)
     .eq('asistente_id', asistenteId)
     .maybeSingle();
@@ -179,7 +184,7 @@ export async function comoEstaElContacto({ prestadoraId, clienteId, asistenteId,
     return { abierto: false, contacto: null, activacion: null };
   }
 
-  const { acceso, hubo_alguno: huboAlguno } = await accesoQuePagaElContacto({ clienteId });
+  const { acceso, hubo_alguno: huboAlguno } = await accesoQuePagaElContacto({ prestadoraId, clienteId });
   if (!acceso) {
     return {
       abierto: false,
@@ -205,7 +210,7 @@ export async function comoEstaElContacto({ prestadoraId, clienteId, asistenteId,
  * @returns {Promise<{ok: boolean, contacto?: object, ya_estaba?: boolean, saldo_contactos?: number, motivo?: string}>}
  */
 export async function abrirElContactoDeUnAsistente({ prestadoraId, clienteId, asistenteId }) {
-  const { acceso, hubo_alguno: huboAlguno } = await accesoQuePagaElContacto({ clienteId });
+  const { acceso, hubo_alguno: huboAlguno } = await accesoQuePagaElContacto({ prestadoraId, clienteId });
   if (!acceso) {
     return { ok: false, motivo: huboAlguno ? MOTIVO_VER_CONTACTO.ACCESO_NO_VIGENTE : MOTIVO_VER_CONTACTO.SIN_ACCESO };
   }
@@ -243,7 +248,13 @@ async function terminarElPeriodoGratuito(acceso) {
   const cambios = { gratis_hasta: hoy, updated_at: new Date().toISOString() };
   if (!acceso.proximo_cobro || acceso.proximo_cobro > hoy) cambios.proximo_cobro = hoy;
 
-  const { error } = await supabase.from('accesos_match').update(cambios).eq('id', acceso.id);
+  // La Prestadora sale de la misma fila que se leyó para elegir el acceso: se nombra igual, porque
+  // guardar por el identificador solo dejaría el cajón abierto (`celtatech\CLAUDE.md` §5).
+  const { error } = await supabase
+    .from('accesos_match')
+    .update(cambios)
+    .eq('prestadora_id', acceso.prestadora_id)
+    .eq('id', acceso.id);
   // El contacto ya está abierto y anotado: si esto falla, lo que queda es un período gratuito que
   // dura un día de más, no un dato regalado. Se registra y no se tira abajo lo que ya salió bien.
   if (error) console.error('Error terminando el período gratuito del acceso:', error.message);

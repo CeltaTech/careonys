@@ -16,13 +16,18 @@ const TIPOS_INFORME = ['planilla_asistencia', 'resumen_mensual'];
  * Devuelve un mapa `id de guardia → cantidad`. Hace falta para repartir las horas: un turno
  * que cubrió a dos personas no le imputa las horas enteras a cada una (ver
  * `utils/horasDeGuardia.js`).
+ *
+ * La Prestadora se nombra acá también, aunque las guardias ya vengan filtradas: colgar de la
+ * fila padre no alcanza, porque un identificador de guardia que llegara de otra Organización
+ * contaría Pacientes ajenos y correría el reparto de horas de este informe.
  */
-async function cuantosPacientesPorGuardia(guardiaIds) {
+async function cuantosPacientesPorGuardia(guardiaIds, prestadoraId) {
   if (guardiaIds.length === 0) return {};
 
   const { data, error } = await supabase
     .from('guardia_pacientes')
     .select('guardia_id')
+    .eq('prestadora_id', prestadoraId)
     .in('guardia_id', guardiaIds);
   if (error) throw new Error(error.message);
 
@@ -70,6 +75,7 @@ async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde
   const { data: enLista, error: errorLista } = await supabase
     .from('guardia_pacientes')
     .select('guardia_id')
+    .eq('prestadora_id', prestadoraId)
     .eq('paciente_id', pacienteId);
   if (errorLista) throw new Error(errorLista.message);
 
@@ -89,7 +95,7 @@ async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde
     guardias = data || [];
   }
 
-  const pacientesPorGuardia = await cuantosPacientesPorGuardia(guardias.map((g) => g.id));
+  const pacientesPorGuardia = await cuantosPacientesPorGuardia(guardias.map((g) => g.id), prestadoraId);
 
   // .filter(Boolean) porque una guardia puede estar sin cubrir: sin este filtro el NULL
   // llega al .in('id', …) contra una columna uuid y la consulta revienta con un 500.
@@ -97,7 +103,7 @@ async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde
   // `guardias.asistente_id` es el Legajo, no la cuenta, y el nombre es de la persona: sale de la
   // cuenta de la que ese Legajo cuelga.
   const nombresAsistente = {};
-  const cuentas = await cuentasDeLasFichas('asistentes', asistenteIds, 'nombre');
+  const cuentas = await cuentasDeLasFichas('asistentes', asistenteIds, 'nombre', prestadoraId);
   for (const [fichaId, datos] of cuentas) nombresAsistente[fichaId] = datos?.nombre ?? '';
 
   // Cada renglón lleva escrito a cuánta gente cubrió ese turno y cuántas horas le tocan a
@@ -251,6 +257,7 @@ panelInformesObraSocialRouter.post('/:id/anular', requiereRolPanel, requierePerm
       anulado_en: new Date().toISOString(),
     })
     .eq('id', informe.id)
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .select()
     .single();
   if (error) return responderError(res, error);

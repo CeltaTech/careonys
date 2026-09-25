@@ -146,7 +146,7 @@ export async function darDeAltaEnPasarela({ accesoId, prestadoraId, proveedor = 
     credencial = data;
   }
 
-  const emailPagador = await correoDeLaCliente(acceso.cliente_id);
+  const emailPagador = await correoDeLaCliente(acceso.cliente_id, prestadoraId);
   // Dos rieles lo exigen y los demás lo ignoran, pero el corte se hace acá para todos: un acceso
   // cuya Cliente no tiene correo no se puede cobrar en ninguno, porque tampoco hay adónde mandarle
   // el comprobante ni el aviso previo.
@@ -264,9 +264,12 @@ async function resolverRiel({ prestadoraId, proveedor }) {
  *  Dos pasos, y los dos hacen falta: `clientes.id` es el Legajo, no la cuenta —dejaron de ser el
  *  mismo número—, así que primero se busca de qué cuenta cuelga ese Legajo y recién ahí el correo,
  *  que vive en `usuarios`. */
-async function correoDeLaCliente(clienteId) {
-  if (!clienteId) return null;
-  return correoDe(await cuentaDeLaFicha('clientes', clienteId));
+async function correoDeLaCliente(clienteId, prestadoraId) {
+  if (!clienteId || !prestadoraId) return null;
+  return correoDe({
+    prestadoraId,
+    usuarioId: await cuentaDeLaFicha('clientes', clienteId, prestadoraId),
+  });
 }
 
 /** Lo que se le devuelve a quien llamó. Nunca la credencial ni nada que venga de la caja fuerte. */

@@ -26,8 +26,12 @@ export const CAMPOS_BASICOS = 'id, nombre, domicilio, lat, lng';
  * por nombre para que dos guardias con la misma gente se lean igual.
  *
  * `campos` tiene que incluir siempre `id`: es con lo que se arma el respaldo.
+ *
+ * `prestadoraId` va primero y no tiene valor por defecto a propósito: el motor entra con la llave
+ * de servicio, que se saltea la protección por fila, así que lo único que separa una Prestadora de
+ * otra es este filtro. Un identificador de turno de otra Prestadora tiene que devolver nada.
  */
-export async function pacientesDeGuardias(guardias, campos = CAMPOS_BASICOS) {
+export async function pacientesDeGuardias(prestadoraId, guardias, campos = CAMPOS_BASICOS) {
   const lista = (guardias ?? []).filter(Boolean);
   const mapa = new Map();
   if (lista.length === 0) return mapa;
@@ -35,6 +39,7 @@ export async function pacientesDeGuardias(guardias, campos = CAMPOS_BASICOS) {
   const { data, error } = await supabase
     .from('guardia_pacientes')
     .select(`guardia_id, pacientes(${campos})`)
+    .eq('prestadora_id', prestadoraId)
     .in(
       'guardia_id',
       lista.map((g) => g.id)
@@ -55,6 +60,7 @@ export async function pacientesDeGuardias(guardias, campos = CAMPOS_BASICOS) {
     const { data: sueltos, error: errorSueltos } = await supabase
       .from('pacientes')
       .select(campos)
+      .eq('prestadora_id', prestadoraId)
       .in('id', [...new Set(sinLista.map((g) => g.paciente_id))]);
     if (errorSueltos) throw new Error(errorSueltos.message);
 
@@ -72,8 +78,8 @@ export async function pacientesDeGuardias(guardias, campos = CAMPOS_BASICOS) {
 }
 
 /** Lo mismo para una sola guardia: devuelve la lista, nunca `null`. */
-export async function pacientesDeGuardia(guardia, campos = CAMPOS_BASICOS) {
-  const mapa = await pacientesDeGuardias([guardia], campos);
+export async function pacientesDeGuardia(prestadoraId, guardia, campos = CAMPOS_BASICOS) {
+  const mapa = await pacientesDeGuardias(prestadoraId, [guardia], campos);
   return mapa.get(guardia?.id) ?? [];
 }
 
@@ -84,8 +90,8 @@ export async function pacientesDeGuardia(guardia, campos = CAMPOS_BASICOS) {
  * ahora trae la lista entera. El nombre se mantiene a propósito: es la misma pregunta, con
  * la respuesta completa.
  */
-export async function conPacientes(guardias, campos = CAMPOS_BASICOS) {
-  const mapa = await pacientesDeGuardias(guardias, campos);
+export async function conPacientes(prestadoraId, guardias, campos = CAMPOS_BASICOS) {
+  const mapa = await pacientesDeGuardias(prestadoraId, guardias, campos);
   return (guardias ?? []).map((g) => ({ ...g, pacientes: mapa.get(g.id) ?? [] }));
 }
 
@@ -100,6 +106,7 @@ export async function asistenteAtiendeAlPaciente(pacienteId, usuarioAsistente) {
   const { data } = await supabase
     .from('guardia_pacientes')
     .select('guardia_id, guardias!inner(asistente_id, prestadora_id)')
+    .eq('prestadora_id', usuarioAsistente.prestadoraId)
     .eq('paciente_id', pacienteId)
     .eq('guardias.asistente_id', usuarioAsistente.asistenteId)
     .eq('guardias.prestadora_id', usuarioAsistente.prestadoraId)
@@ -117,7 +124,7 @@ export async function asistenteAtiendeAlPaciente(pacienteId, usuarioAsistente) {
  * Igual que arriba, si una serie no tiene ninguna fila se cae a la columna vieja: una serie
  * cargada antes de este diseño tiene que seguir generando guardias con su Paciente.
  */
-export async function pacientesDeSeries(series) {
+export async function pacientesDeSeries(prestadoraId, series) {
   const lista = (series ?? []).filter(Boolean);
   const mapa = new Map();
   if (lista.length === 0) return mapa;
@@ -125,6 +132,7 @@ export async function pacientesDeSeries(series) {
   const { data, error } = await supabase
     .from('series_guardias_pacientes')
     .select('serie_id, paciente_id')
+    .eq('prestadora_id', prestadoraId)
     .in(
       'serie_id',
       lista.map((s) => s.id)
@@ -150,6 +158,10 @@ export async function pacientesDeSeries(series) {
  * de la columna vieja en el momento del INSERT, y volver a escribirlo daría conflicto.
  */
 export async function anotarPacientesEnGuardias(guardiaIds, pacienteIds, prestadoraId) {
+  // Falla cerrado: la fila que se escribe lleva la Prestadora adentro, así que sin ella se estaría
+  // anotando en un cajón que no es de nadie. No hay valor por omisión y no se supone ninguno.
+  if (!prestadoraId) throw new Error('No se anotan Pacientes en una guardia sin saber de que Organizacion es');
+
   const guardias = [...new Set(guardiaIds ?? [])];
   const pacientes = [...new Set(pacienteIds ?? [])];
   if (guardias.length === 0 || pacientes.length === 0) return;
@@ -158,6 +170,11 @@ export async function anotarPacientesEnGuardias(guardiaIds, pacienteIds, prestad
     pacientes.map((pacienteId) => ({ guardia_id: guardiaId, paciente_id: pacienteId, prestadora_id: prestadoraId }))
   );
 
+  // SIN PRESTADORA A PROPÓSITO
+  // La Prestadora va adentro de cada fila —arriba se corta si no viene—, y la columna del conflicto
+  // es el identificador de una guardia, único en toda la base: la fila en conflicto es siempre de
+  // la misma guardia y por lo tanto de la misma Prestadora. La base lo sostiene además con la clave
+  // foránea `(guardia_id, prestadora_id)` contra `guardias`, que rechaza cualquier otra pareja.
   const { error } = await supabase
     .from('guardia_pacientes')
     .upsert(filas, { onConflict: 'guardia_id,paciente_id', ignoreDuplicates: true });

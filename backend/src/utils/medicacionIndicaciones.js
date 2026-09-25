@@ -6,11 +6,15 @@ import { supabase } from '../db/connection.js';
 // deprecado), panelMedicacion.js (cola de pendientes) y appAsistentesMedicacion.js (filtro
 // de órdenes).
 
-export async function medicacionVigenteDelPaciente(pacienteId) {
+// `prestadoraId` va primero y sin valor por defecto, como en el resto del archivo: el motor entra
+// con la llave de servicio y se saltea la protección por fila, así que lo único que separa una
+// Prestadora de otra es este filtro.
+export async function medicacionVigenteDelPaciente(prestadoraId, pacienteId) {
   const hoyISO = new Date().toISOString().slice(0, 10);
   const { data } = await supabase
     .from('indicaciones_medicacion')
     .select('id, medicamento, dosis, frecuencia, via_administracion, fecha_desde, fecha_hasta')
+    .eq('prestadora_id', prestadoraId)
     .eq('paciente_id', pacienteId)
     .eq('estado', 'aceptada')
     .lte('fecha_desde', hoyISO)

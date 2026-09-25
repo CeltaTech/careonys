@@ -65,7 +65,7 @@ export async function extenderSeriesGuardiaAbiertas() {
     // adelante saldrían con uno solo, sin que nadie se entere.
     let pacientesPorSerie;
     try {
-      pacientesPorSerie = await pacientesDeSeries(series ?? []);
+      pacientesPorSerie = await pacientesDeSeries(prestadoraId, series ?? []);
     } catch (e) {
       console.error(`Error leyendo los Pacientes de las series de ${prestadoraId}:`, e.message);
       continue;
@@ -75,6 +75,7 @@ export async function extenderSeriesGuardiaAbiertas() {
       const { data: ultimaGuardia, error: errorUltima } = await supabase
         .from('guardias')
         .select('fecha')
+        .eq('prestadora_id', prestadoraId)
         .eq('serie_id', serie.id)
         .order('fecha', { ascending: false })
         .limit(1)

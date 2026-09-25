@@ -24,14 +24,16 @@ export function huellaDeLaMarca(marca) {
   return crypto.createHash('sha256').update(texto).digest('hex');
 }
 
-/** La fila de este aparato, si existe y no está revocada. Falla cerrado: ante cualquier duda, null. */
-export async function equipoConocido({ usuarioId, marca }) {
+/** La fila de este aparato, si existe y no está revocada. Falla cerrado: ante cualquier duda, null.
+ *  La Prestadora se nombra siempre, y sale de la sesión de quien está entrando. */
+export async function equipoConocido({ usuarioId, prestadoraId, marca }) {
   const huella = huellaDeLaMarca(marca);
-  if (!usuarioId || !huella) return null;
+  if (!usuarioId || !prestadoraId || !huella) return null;
 
   const { data, error } = await supabase
     .from('equipos_conocidos')
     .select('id, usuario_id, revocado_en')
+    .eq('prestadora_id', prestadoraId)
     .eq('usuario_id', usuarioId)
     .eq('marca_huella', huella)
     .is('revocado_en', null)
@@ -81,15 +83,18 @@ export async function anotarEquipo({ usuario, marca = null }) {
  *
  * ES LO PRIMERO QUE NECESITA ALGUIEN A QUIEN LE ROBARON EL TELÉFONO, y hasta acá no existía.
  * Cambiar la clave no alcanzaba: las sesiones ya abiertas seguían vivas.
+ *
+ * La Prestadora se nombra en las dos tablas, y la trae quien llama desde la sesión comprobada.
  */
-export async function cerrarSesionEnTodosLosEquipos(usuarioId) {
-  if (!usuarioId) return;
+export async function cerrarSesionEnTodosLosEquipos(usuarioId, prestadoraId) {
+  if (!usuarioId || !prestadoraId) return;
 
   const ahora = new Date().toISOString();
 
   await supabase
     .from('equipos_conocidos')
     .update({ revocado_en: ahora })
+    .eq('prestadora_id', prestadoraId)
     .eq('usuario_id', usuarioId)
     .is('revocado_en', null);
 
@@ -98,6 +103,7 @@ export async function cerrarSesionEnTodosLosEquipos(usuarioId) {
   const { error: errorLlaves } = await supabase
     .from('llaves_de_dispositivo')
     .delete()
+    .eq('prestadora_id', prestadoraId)
     .eq('usuario_id', usuarioId);
   if (errorLlaves) console.error('equiposConocidos: no se pudieron revocar las llaves:', errorLlaves.message);
 
@@ -108,12 +114,13 @@ export async function cerrarSesionEnTodosLosEquipos(usuarioId) {
 }
 
 /** Los aparatos desde los que esta persona entró, para que pueda verlos antes de cerrarlos todos. */
-export async function equiposDe(usuarioId) {
-  if (!usuarioId) return [];
+export async function equiposDe(usuarioId, prestadoraId) {
+  if (!usuarioId || !prestadoraId) return [];
 
   const { data, error } = await supabase
     .from('equipos_conocidos')
     .select('id, primera_entrada_en, ultima_entrada_en')
+    .eq('prestadora_id', prestadoraId)
     .eq('usuario_id', usuarioId)
     .is('revocado_en', null)
     .order('ultima_entrada_en', { ascending: false });

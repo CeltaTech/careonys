@@ -221,6 +221,7 @@ export async function reprogramarEntrevista({ prestadoraId, postulacionId, agend
   const { data, error } = await supabase
     .from('entrevistas_postulacion')
     .update({ agendada_para: cuando })
+    .eq('prestadora_id', prestadoraId)
     .eq('id', viva.id)
     .eq('estado', ESTADO_ENTREVISTA.AGENDADA)
     .select(COLUMNAS)
@@ -258,6 +259,7 @@ export async function cancelarEntrevista({ prestadoraId, postulacionId, usuarioI
       cerrada_at: new Date().toISOString(),
       observaciones,
     })
+    .eq('prestadora_id', prestadoraId)
     .eq('id', viva.id)
     .eq('estado', ESTADO_ENTREVISTA.AGENDADA)
     .select(COLUMNAS)
@@ -301,6 +303,7 @@ export async function cerrarEntrevista({ prestadoraId, postulacionId, estado, us
       cerrada_at: new Date().toISOString(),
       observaciones,
     })
+    .eq('prestadora_id', prestadoraId)
     .eq('id', viva.id)
     .eq('estado', ESTADO_ENTREVISTA.AGENDADA)
     .select(COLUMNAS)
@@ -328,6 +331,10 @@ export async function entrevistaPorLlave(llave) {
   const noExiste = new ErrorConMotivo('no_encontrado', 'Esa entrevista no existe');
   if (!limpia) throw noExiste;
 
+  // SIN PRESTADORA A PROPÓSITO
+  // Esta consulta es anterior a conocer la Prestadora, y no puede ser de otra manera: el postulante
+  // llega sin sesión y lo único que trae es su llave. La Prestadora sale de la fila encontrada, y
+  // de ahí en más todo se le pide a esa misma.
   const { data, error } = await supabase
     .from('entrevistas_postulacion')
     .select(COLUMNAS)

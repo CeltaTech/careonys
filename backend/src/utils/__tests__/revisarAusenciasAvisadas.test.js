@@ -16,7 +16,9 @@
  *   3. LA QUE LLEGÓ CON MARGEN NO INSISTE. Repetir cada dos horas algo que tiene tres días es el
  *      modo más rápido de que la Coordinadora deje de leer los avisos.
  *   4. LA QUE NO DEJA NINGÚN TURNO SIN NADIE NO AVISA NADA.
- *   5. CADA PRESTADORA SE MIRA CON SU PROPIO NÚMERO, y nunca con la configuración de otra.
+ *   5. CADA PRESTADORA SE MIRA CON SU PROPIO NÚMERO, y nunca con la configuración de otra. El
+ *      proceso recorre de a una Prestadora por vez, así que con dos cargadas cada una tiene que
+ *      recibir lo suyo y nada de la otra.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
@@ -25,7 +27,11 @@ import { createServer } from 'node:http';
 const PRESTADORA = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const OTRA_PRESTADORA = '99999999-9999-9999-9999-999999999999';
 const ASISTENTE = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+const ASISTENTE_DE_LA_OTRA = '88888888-8888-8888-8888-888888888888';
 const AUSENCIA = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+const AUSENCIA_DE_LA_OTRA = '77777777-7777-7777-7777-777777777777';
+const GUARDIA = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+const GUARDIA_DE_LA_OTRA = '66666666-6666-6666-6666-666666666666';
 
 const respuestas = new Map();
 let llamadas = [];
@@ -76,44 +82,79 @@ function hora(momento) {
   return `${String(momento.getHours()).padStart(2, '0')}:${String(momento.getMinutes()).padStart(2, '0')}:00`;
 }
 
+/** Lo que hay cargado en la base falsa, que el proceso recorre de a una Prestadora por vez. */
+let prestadorasEnLaBase;
+let ausenciasEnLaBase;
+let guardiasEnLaBase;
+
+/** De qué Prestadora es la consulta. Sin ese filtro la fila no sale: acá no hay RLS que valga. */
+function prestadoraPedida(filtros) {
+  return (filtros.get('prestadora_id') ?? '').replace(/^eq\./, '');
+}
+
+/** Las filas de la Prestadora que pidió la consulta, y ninguna de otra. */
+function soloDeLaPrestadora(filtros, filas) {
+  const prestadoraId = prestadoraPedida(filtros);
+  if (!prestadoraId) return [];
+  return filas.filter((fila) => fila.prestadora_id === prestadoraId);
+}
+
 /**
  * Una ausencia cuyo primer turno empieza dentro de las horas indicadas, y que se supo hace las
  * horas indicadas. Las dos cosas juntas son lo que decide la clase.
+ *
+ * Carga también la Prestadora: el proceso arranca por la lista de Prestadoras certificadas y
+ * después entra de a una, así que una ausencia de una Prestadora que no está cargada no se mira.
  */
-function escenario({ turnoEnHoras, supoHaceHoras, prestadoraId = PRESTADORA, ...resto }) {
+function escenario({
+  turnoEnHoras,
+  supoHaceHoras,
+  prestadoraId = PRESTADORA,
+  ausenciaId = AUSENCIA,
+  asistenteId = ASISTENTE,
+  guardiaId = GUARDIA,
+  ...resto
+}) {
   const inicio = enHoras(turnoEnHoras);
-  respuestas.set('GET /rest/v1/ausencias', () => [
-    {
-      id: AUSENCIA,
-      prestadora_id: prestadoraId,
-      asistente_id: ASISTENTE,
-      fecha_inicio: fecha(enHoras(-24)),
-      fecha_fin: null,
-      avisada_en: enHoras(-supoHaceHoras).toISOString(),
-      created_at: enHoras(-supoHaceHoras).toISOString(),
-      aviso_ausencia_at: null,
-      aviso_ausencia_veces: 0,
-      aviso_ausencia_clase: null,
-      ...resto,
-    },
-  ]);
-  respuestas.set('GET /rest/v1/guardias', () => [
-    {
-      id: 'dddddddd-dddd-dddd-dddd-dddddddddddd',
-      asistente_id: ASISTENTE,
-      paciente_id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
-      fecha: fecha(inicio),
-      hora_inicio: hora(inicio),
-      hora_fin: '23:59:00',
-      estado: 'programada',
-    },
-  ]);
+  if (!prestadorasEnLaBase.some((p) => p.id === prestadoraId)) prestadorasEnLaBase.push({ id: prestadoraId });
+  ausenciasEnLaBase.push({
+    id: ausenciaId,
+    prestadora_id: prestadoraId,
+    asistente_id: asistenteId,
+    fecha_inicio: fecha(enHoras(-24)),
+    fecha_fin: null,
+    avisada_en: enHoras(-supoHaceHoras).toISOString(),
+    created_at: enHoras(-supoHaceHoras).toISOString(),
+    aviso_ausencia_at: null,
+    aviso_ausencia_veces: 0,
+    aviso_ausencia_clase: null,
+    ...resto,
+  });
+  guardiasEnLaBase.push({
+    id: guardiaId,
+    prestadora_id: prestadoraId,
+    asistente_id: asistenteId,
+    paciente_id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+    fecha: fecha(inicio),
+    hora_inicio: hora(inicio),
+    hora_fin: '23:59:00',
+    estado: 'programada',
+  });
+}
+
+/** Todos los avisos que se pidieron: qué evento y para qué Prestadora. */
+function avisosPedidos() {
+  return llamadas
+    .filter((l) => l.clave === 'GET /rest/v1/configuracion_notificaciones')
+    .map((l) => ({
+      evento: l.filtros.get('evento')?.replace(/^eq\./, ''),
+      prestadoraId: prestadoraPedida(l.filtros),
+    }));
 }
 
 /** Qué evento se pidió avisar, o `undefined` si no se avisó nada. */
 function eventoAvisado() {
-  const pedido = llamadas.find((l) => l.clave === 'GET /rest/v1/configuracion_notificaciones');
-  return pedido?.filtros.get('evento')?.replace(/^eq\./, '');
+  return avisosPedidos()[0]?.evento;
 }
 
 /** Lo que el proceso marcó en la ausencia, o `undefined` si no marcó nada. */
@@ -121,9 +162,32 @@ function loMarcado() {
   return llamadas.find((l) => l.clave === 'PATCH /rest/v1/ausencias')?.cuerpo;
 }
 
+/** Todo lo que el proceso marcó, con el filtro con el que lo marcó. */
+function loQueSeMarco() {
+  return llamadas
+    .filter((l) => l.clave === 'PATCH /rest/v1/ausencias')
+    .map((l) => ({
+      cuerpo: l.cuerpo,
+      ausenciaId: (l.filtros.get('id') ?? '').replace(/^eq\./, ''),
+      prestadoraId: prestadoraPedida(l.filtros),
+    }));
+}
+
+/** Las consultas a una tabla, en el orden en que se hicieron. */
+function consultasA(tabla) {
+  return llamadas.filter((l) => l.clave === `GET /rest/v1/${tabla}`);
+}
+
 beforeEach(() => {
   llamadas = [];
   respuestas.clear();
+  prestadorasEnLaBase = [];
+  ausenciasEnLaBase = [];
+  guardiasEnLaBase = [];
+
+  respuestas.set('GET /rest/v1/prestadoras', () => prestadorasEnLaBase);
+  respuestas.set('GET /rest/v1/ausencias', (filtros) => soloDeLaPrestadora(filtros, ausenciasEnLaBase));
+  respuestas.set('GET /rest/v1/guardias', (filtros) => soloDeLaPrestadora(filtros, guardiasEnLaBase));
   // Apagado en la configuración de la Prestadora: el aviso no sale por ningún lado y la prueba
   // igual ve cuál se pidió. Lo que se mira acá es la decisión, no el envío.
   respuestas.set('GET /rest/v1/configuracion_notificaciones', () => [{ activo: false }]);
@@ -148,7 +212,7 @@ describe('cómo llega la falta', () => {
 
   it('la que no deja ningún turno sin nadie no avisa nada', async () => {
     escenario({ turnoEnHoras: 2, supoHaceHoras: 0 });
-    respuestas.set('GET /rest/v1/guardias', () => []);
+    guardiasEnLaBase = [];
     await revisarAusenciasAvisadas();
     assert.equal(eventoAvisado(), undefined, 'avisó por una ausencia que no deja ningún hueco');
     assert.equal(loMarcado(), undefined);
@@ -241,5 +305,56 @@ describe('cada Prestadora con lo suyo', () => {
     ]);
     await revisarAusenciasAvisadas();
     assert.equal(eventoAvisado(), 'ausencia_de_golpe');
+  });
+
+  it('con dos Prestadoras cargadas, cada una recibe lo suyo y nada de la otra', async () => {
+    // Una falta que se puede acomodar en tres días y otra que deja sin nadie el turno de dentro de
+    // dos horas. Son de Prestadoras distintas: si el proceso las mezclara, una Coordinadora vería
+    // el turno de la otra empresa.
+    escenario({ turnoEnHoras: 72, supoHaceHoras: 0 });
+    escenario({
+      turnoEnHoras: 2,
+      supoHaceHoras: 0,
+      prestadoraId: OTRA_PRESTADORA,
+      ausenciaId: AUSENCIA_DE_LA_OTRA,
+      asistenteId: ASISTENTE_DE_LA_OTRA,
+      guardiaId: GUARDIA_DE_LA_OTRA,
+    });
+
+    await revisarAusenciasAvisadas();
+
+    // Dos avisos, uno por Prestadora, y cada uno con la clase que le corresponde a su falta.
+    assert.deepEqual(
+      [...avisosPedidos()].sort((a, b) => a.prestadoraId.localeCompare(b.prestadoraId)),
+      [
+        { evento: 'ausencia_avisada_con_tiempo', prestadoraId: PRESTADORA },
+        { evento: 'ausencia_de_golpe', prestadoraId: OTRA_PRESTADORA },
+      ].sort((a, b) => a.prestadoraId.localeCompare(b.prestadoraId))
+    );
+
+    // Y cada marca quedó en la ausencia de su Prestadora, con el filtro de esa Prestadora puesto.
+    const marcas = loQueSeMarco();
+    assert.equal(marcas.length, 2);
+    const dePrestadora = marcas.find((m) => m.prestadoraId === PRESTADORA);
+    const deLaOtra = marcas.find((m) => m.prestadoraId === OTRA_PRESTADORA);
+    assert.equal(dePrestadora.ausenciaId, AUSENCIA);
+    assert.equal(dePrestadora.cuerpo.aviso_ausencia_clase, 'con_tiempo');
+    assert.equal(deLaOtra.ausenciaId, AUSENCIA_DE_LA_OTRA);
+    assert.equal(deLaOtra.cuerpo.aviso_ausencia_clase, 'de_golpe');
+
+    // Se entró de a una: cada vuelta preguntó por su Prestadora, nunca por las dos juntas.
+    assert.deepEqual(
+      consultasA('ausencias').map((l) => prestadoraPedida(l.filtros)).sort(),
+      [PRESTADORA, OTRA_PRESTADORA].sort()
+    );
+
+    // Y los turnos de cada una se buscaron sólo con los ausentes de esa Prestadora.
+    for (const consulta of consultasA('guardias')) {
+      const asistentes = consulta.filtros.get('asistente_id') ?? '';
+      const propio = prestadoraPedida(consulta.filtros) === PRESTADORA ? ASISTENTE : ASISTENTE_DE_LA_OTRA;
+      const ajeno = propio === ASISTENTE ? ASISTENTE_DE_LA_OTRA : ASISTENTE;
+      assert.match(asistentes, new RegExp(propio));
+      assert.doesNotMatch(asistentes, new RegExp(ajeno));
+    }
   });
 });

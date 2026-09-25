@@ -54,6 +54,10 @@ export async function requiereRolPanel(req, res, next) {
     return res.status(401).json({ error: 'No autorizado' });
   }
 
+  // SIN PRESTADORA A PROPÓSITO
+  // Es el paso anterior a todo lo demás: la Prestadora de la sesión sale de acá, y pedirle a esta
+  // consulta que ya la sepa es circular. Y en el Panel la cuenta puede no pertenecer a ninguna:
+  // la del soporte técnico la lleva vacía por restricción de la base.
   const { data: perfil, error: errorPerfil } = await supabase
     .from('usuarios')
     .select('rol, prestadora_id')
@@ -89,6 +93,11 @@ export async function requiereRolPanel(req, res, next) {
   // el punto único de verdad para RLS (CLAUDE.md §7.12) — acá se replica para que el resto de
   // las rutas reutilice el mismo req.usuarioPanel.prestadoraId sin branches por rol.
   if (perfil.rol === 'superadmin') {
+    // SIN PRESTADORA A PROPÓSITO
+    // Busca en qué Prestadora hay una sesión abierta, sin saber de antemano en cuál. Acotarla a
+    // la Organización propia de quien da soporte —que es Sandbox— no encontraría nunca la que
+    // está abierta en otra. No devuelve dato de la Organización; el paso siguiente sí la nombra,
+    // sacada de la fila hallada.
     const { data: sesion } = await supabase
       .from('sesiones_soporte_tecnico')
       .select('id, prestadora_id, expira_at, ultima_actividad_at')
@@ -116,7 +125,10 @@ export async function requiereRolPanel(req, res, next) {
       await supabase
         .from('sesiones_soporte_tecnico')
         .update({ ultima_actividad_at: ahora.toISOString() })
-        .eq('id', sesion.id);
+        .eq('id', sesion.id)
+        // La Prestadora se nombra igual, aunque el identificador de la sesión ya sea único: colgar
+        // de la fila padre es justamente el molde del defecto que se viene cerrando.
+        .eq('prestadora_id', sesion.prestadora_id);
     }
 
     if (vigente) {

@@ -13,7 +13,24 @@ import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 const VIGENCIA_MINUTOS = 10;
 
 export async function solicitarCodigoRecuperacion(usuarioId) {
-  const correo = await correoDe(usuarioId);
+  // Quien pide este código es alguien del Panel, y el Panel es de una Prestadora: de acá sale
+  // tanto la Prestadora con la que se busca el correo como el idioma en el que se manda.
+  //
+  // SIN PRESTADORA A PROPÓSITO
+  // Ésta es la consulta que averigua la Prestadora, así que no puede nombrarla: es el dato que
+  // va a buscar. Quien llega acá perdió su segundo factor y no tiene sesión del Panel de la cual
+  // sacarlo —la ruta `routes/panelMfaRecuperacion.js` sólo comprobó el pase y el rol—, y la
+  // cuenta que ese pase identifica es la de soporte técnico, que por la restricción
+  // `usuarios_prestadora_id_solo_superadmin_null` tiene la Prestadora vacía: un filtro por esa
+  // columna la dejaría siempre afuera. Lee una sola fila, la de su propio identificador, y la
+  // única columna que trae es la que después acota todo lo que sigue.
+  const { data: usuario } = await supabase
+    .from('usuarios')
+    .select('prestadora_id')
+    .eq('id', usuarioId)
+    .maybeSingle();
+
+  const correo = await correoDe({ prestadoraId: usuario?.prestadora_id, usuarioId });
   if (!correo) {
     throw new Error('No se pudo resolver el email registrado del usuario');
   }
@@ -32,14 +49,6 @@ export async function solicitarCodigoRecuperacion(usuarioId) {
     expira_at: vencimientoEnMinutos(VIGENCIA_MINUTOS),
   });
   if (errorInsert) throw new Error(errorInsert.message);
-
-  // Quien pide este código es alguien del Panel, y el Panel es de una Prestadora: el correo sale
-  // en el idioma de ella. La cuenta de Superadmin no tiene Prestadora y cae en el de por defecto.
-  const { data: usuario } = await supabase
-    .from('usuarios')
-    .select('prestadora_id')
-    .eq('id', usuarioId)
-    .maybeSingle();
 
   await enviarEmail({
     to: correo,

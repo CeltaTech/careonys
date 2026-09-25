@@ -46,6 +46,7 @@ export async function marcarAusenteYCrearIncidente({ guardia, prestadoraId }) {
   const { error: errorUpdate } = await supabase
     .from('guardias')
     .update({ estado: 'ausente' })
+    .eq('prestadora_id', prestadoraId)
     .eq('id', guardia.id);
   if (errorUpdate) return { ok: false, motivo: errorUpdate.message };
 
@@ -80,7 +81,7 @@ export async function marcarAusenteYCrearIncidente({ guardia, prestadoraId }) {
 async function buscarGuardiaSaliente({ guardia, prestadoraId }) {
   let pacienteIds;
   try {
-    pacienteIds = (await pacientesDeGuardia(guardia, 'id')).map((p) => p.id);
+    pacienteIds = (await pacientesDeGuardia(prestadoraId, guardia, 'id')).map((p) => p.id);
   } catch (e) {
     console.error(`Error leyendo los Pacientes de la guardia ${guardia.id}:`, e.message);
     return null;

@@ -90,7 +90,7 @@ export async function equipoDeUnPaciente({ pacienteId, prestadoraId, regla = nul
     conCoordinadores.coordinadores.map(async (c) => ({
       ...c,
       nombre: porId.get(c.usuario_id)?.nombre ?? nombresFijados.get(c.usuario_id) ?? null,
-      email: await correoDe(c.usuario_id),
+      email: await correoDe({ prestadoraId, usuarioId: c.usuario_id }),
     }))
   );
 
@@ -139,7 +139,12 @@ async function guardiasDelPaciente({ pacienteId, prestadoraId, regla, ahora }) {
   // existiera la lista sigue teniendo a su Paciente en la columna.
   const [porLista, porColumnaVieja] = await Promise.all([
     ids.length
-      ? supabase.from('guardias').select(campos).in('id', ids).gte('fecha', desde)
+      ? supabase
+          .from('guardias')
+          .select(campos)
+          .eq('prestadora_id', prestadoraId)
+          .in('id', ids)
+          .gte('fecha', desde)
       : Promise.resolve({ data: [], error: null }),
     supabase
       .from('guardias')
@@ -165,6 +170,7 @@ async function seriesDelPaciente({ pacienteId, prestadoraId }) {
   const { data: vinculos, error } = await supabase
     .from('series_guardias_pacientes')
     .select('serie_id')
+    .eq('prestadora_id', prestadoraId)
     .eq('paciente_id', pacienteId);
   if (error) {
     console.error(`Error leyendo las series del Paciente (${pacienteId}):`, error.message);
@@ -175,7 +181,11 @@ async function seriesDelPaciente({ pacienteId, prestadoraId }) {
   const ids = [...new Set((vinculos ?? []).map((v) => v.serie_id).filter(Boolean))];
   const [porLista, porColumnaVieja] = await Promise.all([
     ids.length
-      ? supabase.from('series_guardias').select(campos).in('id', ids)
+      ? supabase
+          .from('series_guardias')
+          .select(campos)
+          .eq('prestadora_id', prestadoraId)
+          .in('id', ids)
       : Promise.resolve({ data: [], error: null }),
     supabase
       .from('series_guardias')

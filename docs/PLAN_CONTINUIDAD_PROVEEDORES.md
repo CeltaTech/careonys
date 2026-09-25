@@ -124,7 +124,7 @@ que reemplazarlo — para no tener que decidir el procedimiento en el momento de
    - `panel/.env` para el desarrollo local, y el secreto `VITE_API_URL` del repositorio de
      GitHub para lo que se publica (`.github/workflows/publicar-pantallas.yml`) — es la
      variable que apunta a la dirección del backend.
-   - Cualquier aviso entrante (webhook) configurado externamente (ej. el de WhatsApp/Meta Cloud
+   - Cualquier puerta configurada externamente para que otro software deje un dato (ej. la de WhatsApp/Meta Cloud
      API, `docs/PRD_06_WhatsApp_IA.md`) — hay que reconfigurar la URL en el panel de Meta.
 4. El `RAILWAY_TOKEN` usado en GitHub Actions (`docs/PLAN_HASTA_PRODUCCION.md`) solo sirve para el
    auto-deploy — no bloquea la migración, se reemplaza por el token/mecanismo equivalente

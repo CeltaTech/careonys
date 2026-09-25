@@ -69,7 +69,7 @@ export default function EscanearAsistente() {
     } catch (e) {
       setEstado('error');
       // El único caso propio de esta pantalla es el código que no corresponde a nadie: eso
-      // el motor lo contesta como "no encontrado". Todo lo demás —sin señal, sesión vencida,
+      // el backend lo contesta como "no encontrado". Todo lo demás —sin señal, sesión vencida,
       // función apagada en la Prestadora— lo explica lib/errores.js con las traducciones.
       setError(e?.status === 404 ? t.escaneo.error_qr_invalido : mensajeDeError(e, t, 'verificar el QR del Asistente'));
     }

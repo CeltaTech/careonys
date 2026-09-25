@@ -16,14 +16,14 @@ const AdvertenciaLegalContext = createContext(null);
 // de auditoría al cerrar el cartel. Eso hacía que el registro dependiera de que la pantalla se
 // acordara de escribirlo: cualquier otro camino hasta la misma acción encendía la función sin
 // dejar rastro, y un registro que se puede saltear no sirve como registro. Ahora lo anota el
-// motor, en el mismo pedido que hace la cosa (backend/src/utils/advertenciaLegal.js).
+// backend, en el mismo pedido que hace la cosa (backend/src/utils/advertenciaLegal.js).
 //
 // Se usa así:
 //
 //   const { verificarAntesDeActivar } = useAdvertenciaLegal();
 //   const respuesta = await verificarAntesDeActivar(prestadoraId, 'ranking_plataforma');
 //   if (respuesta === 'error') { ...mostrar que no se pudo y no hacer nada... }
-//   if (respuesta === 'seguir') { ...pedirle al motor que la encienda... }
+//   if (respuesta === 'seguir') { ...pedirle al backend que la encienda... }
 //
 // Si la jurisdicción de esa Prestadora no tiene texto escrito para esa función, contesta
 // 'seguir' de inmediato, sin mostrar nada: si el país no tiene documento, no hay aviso y no se

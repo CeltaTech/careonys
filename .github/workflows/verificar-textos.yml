@@ -17,7 +17,7 @@ name: Verificar textos traducidos
 #       Esos se le escapaban al control y se corrigieron dos veces a ojo (#145).
 #
 #   verificar_errores_hacia_afuera.mjs
-#     · que ninguna respuesta del motor lleve al navegador el texto crudo de un error de la
+#     · que ninguna respuesta del backend lleve al navegador el texto crudo de un error de la
 #       base. Un mensaje de error es texto visible como cualquier otro (§8 de CLAUDE.md), y
 #       el de Postgres nombra tablas, columnas y restricciones: quien mire la pantalla con
 #       las herramientas del navegador abiertas se lleva el mapa del esquema. Había 209
@@ -49,7 +49,7 @@ jobs:
 
       # `if: always()` por lo mismo que los de abajo: son problemas distintos y conviene
       # verlos juntos, no uno por vez en dos publicaciones seguidas. Este no necesita ni
-      # `psql` ni credenciales: sólo lee los archivos del motor.
+      # `psql` ni credenciales: sólo lee los archivos del backend.
       - name: Buscar errores de la base que salgan hacia el navegador
         if: always()
         run: node scripts/verificar_errores_hacia_afuera.mjs

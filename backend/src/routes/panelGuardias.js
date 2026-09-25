@@ -16,12 +16,12 @@ export const panelGuardiasRouter = Router();
    POR QUÉ ESTA RUTA. Marcar una ausencia no es un cambio de estado: es un cambio de estado más
    la apertura de un incidente de relevo, y el incidente tiene que decir quién se quedó esperando.
    Averiguar eso lleva su propia consulta y su propia regla, y esa regla ya la tenía escrita el
-   motor para la detección automática. Escrita otra vez del lado del navegador quedaron dos, y
+   backend para la detección automática. Escrita otra vez del lado del navegador quedaron dos, y
    dieron distinto: la del Panel miraba un solo Paciente y un solo día. El detalle de las dos
    diferencias está en `utils/marcarAusente.js`.
 
-   Así que la decisión se mudó entera al motor y el Panel la pide. La Prestadora la pone el
-   motor, nunca el pedido: se busca la guardia acotando a la Organización activa de quien llama,
+   Así que la decisión se mudó entera al backend y el Panel la pide. La Prestadora la pone el
+   backend, nunca el pedido: se busca la guardia acotando a la Organización activa de quien llama,
    y si no aparece, no aparece. Un identificador de otra Prestadora no distingue de uno que no
    existe, que es lo que pide CLAUDE.md §6.
 
@@ -60,7 +60,7 @@ panelGuardiasRouter.post('/:id/ausente', requiereRolPanel, exigirOrganizacionAct
    orden entre ellas importa. Está escrito una sola vez en `utils/cubrirGuardia.js`, con el porqué
    de cada paso.
 
-   La Prestadora la pone el motor, nunca el pedido: la guardia se busca acotada a la Organización
+   La Prestadora la pone el backend, nunca el pedido: la guardia se busca acotada a la Organización
    activa de quien llama, y si no aparece, no aparece. Y el sustituto se comprueba contra esa misma
    Prestadora antes de escribir nada: un identificador de otra Organización no puede terminar
    haciendo una guardia acá.
@@ -161,15 +161,15 @@ panelGuardiasRouter.post('/aviso-cambio-asistente', requiereRolPanel, exigirOrga
   res.json({ ok: true });
 });
 
-/* La tercera excepción: quien atiende el teléfono cuenta lo que le dijeron y el motor sugiere
+/* La tercera excepción: quien atiende el teléfono cuenta lo que le dijeron y el backend sugiere
    cuál de los motivos de la Prestadora es. El aviso lo sigue guardando el Panel contra la base,
    con el pase de la persona, igual que antes — acá no se escribe nada.
 
-   POR QUÉ PASA POR EL MOTOR. La clave de la API del modelo vive en el servidor y no puede salir
+   POR QUÉ PASA POR EL BACKEND. La clave de la API del modelo vive en el servidor y no puede salir
    al navegador (`celtatech/CLAUDE.md` §6). Es toda la razón: no hay ninguna decisión acá que el
    Panel no pudiera tomar.
 
-   LA LISTA LA TRAE EL MOTOR, NO EL PEDIDO. El navegador manda lo que se contó y nada más. Los
+   LA LISTA LA TRAE EL BACKEND, NO EL PEDIDO. El navegador manda lo que se contó y nada más. Los
    motivos se leen de la base acotados a la Organización activa de quien llama: mandados en el
    pedido, cualquiera podría hacer que la sugerencia salga de una lista que no es la suya, y una
    sugerencia de un motivo ajeno es una filtración de cómo trabaja otra Prestadora.
@@ -204,12 +204,12 @@ panelGuardiasRouter.post('/motivo-del-aviso', requiereRolPanel, exigirOrganizaci
    POR QUÉ ESTAS DOS RUTAS. La que estuvo cuarenta y ocho horas adentro puede haberse olvidado de
    marcarlo, y ese rato igual existió: la Coordinadora lo anota después. No puede hacerlo contra la
    base desde el navegador porque la migración que crea la tabla sólo le dio permiso de lectura a
-   quien tiene sesión — escribir es del motor.
+   quien tiene sesión — escribir es del backend.
 
    ACÁ SE ANOTA UN DESCANSO YA TERMINADO, con su principio y su fin. Empezar uno abierto es de la
    Asistente, que es la que está adentro; la Coordinadora registra lo que ya pasó.
 
-   La Prestadora la pone el motor, nunca el pedido: la guardia se busca acotada a la Organización
+   La Prestadora la pone el backend, nunca el pedido: la guardia se busca acotada a la Organización
    activa de quien llama, y si no aparece, no aparece.
 
    Anotar un descanso es trabajo operativo, así que también es del Coordinador. */

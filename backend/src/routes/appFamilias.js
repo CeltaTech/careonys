@@ -133,7 +133,7 @@ appFamiliasRouter.get('/perfil', requiereRolFamilia, async (req, res) => {
   // Qué eligió mostrar esta Prestadora, por el mismo motivo que la marca: la aplicación lo
   // necesita para dibujar el menú y las pantallas desde el primer momento, y ya está pidiendo
   // el perfil. Es una lista de qué dibujar, no un permiso: el candado de verdad está en cada
-  // consulta del motor, que directamente no manda lo apagado.
+  // consulta del backend, que directamente no manda lo apagado.
   const visibilidad = await visibilidadDelPedido(req);
 
   // Qué le dejaron ver a esta persona, por el mismo motivo que los dos de arriba: la aplicación
@@ -369,11 +369,11 @@ appFamiliasRouter.get('/pacientes/:id', requiereRolFamilia, async (req, res) => 
 // resto de la semana, y lo que pasó con las que ya fueron— termina preguntándose por teléfono,
 // y esa llamada la atiende la Coordinadora.
 //
-// EL DÍA LO PONE EL TELÉFONO, NO EL SERVIDOR. El motor puede estar corriendo en otro huso
+// EL DÍA LO PONE EL TELÉFONO, NO EL SERVIDOR. El backend puede estar corriendo en otro huso
 // horario que la Familia; a las diez de la noche en Buenos Aires, el reloj del servidor ya
 // puede estar en el día siguiente. Si el servidor eligiera la semana, habría noches en que
 // la Familia abriría la aplicación y vería la semana que viene. Por eso la pantalla manda su
-// propio día y el motor devuelve la semana que lo contiene.
+// propio día y el backend devuelve la semana que lo contiene.
 // ============================================================================
 
 appFamiliasRouter.get('/pacientes/:id/guardias', requiereRolFamilia, exigeDelCirculo('circulo_guardias'), async (req, res) => {
@@ -394,7 +394,7 @@ appFamiliasRouter.get('/pacientes/:id/guardias', requiereRolFamilia, exigeDelCir
   // —el matrimonio que vive en la misma casa— (ver utils/pacientesDeGuardia.js). Buscando por
   // la columna vieja, esa Familia vería media semana.
   //
-  // Los tres filtros están escritos a mano y los tres hacen falta: el motor entra a la base con
+  // Los tres filtros están escritos a mano y los tres hacen falta: el backend entra a la base con
   // la llave maestra, así que las cerraduras de la base no lo frenan. `paciente_id` ya salió
   // comprobado contra la Familia por `pacienteDeLaFamilia`, y la Prestadora se vuelve a exigir
   // de los dos lados —en la tabla del medio y en la guardia— para que ni una fila de otra
@@ -448,7 +448,7 @@ appFamiliasRouter.get('/pacientes/:id/guardias', requiereRolFamilia, exigeDelCir
     desde: semana.desde,
     hasta: semana.hasta,
     // Los días con los que la pantalla vuelve a pedir la semana de al lado. Van armados desde
-    // el motor para que la pantalla no tenga que hacer cuentas de calendario por su cuenta.
+    // el backend para que la pantalla no tenga que hacer cuentas de calendario por su cuenta.
     semanaAnterior: semana.semanaAnterior,
     semanaSiguiente: semana.semanaSiguiente,
     dias: semana.dias.map((fecha) => ({
@@ -626,7 +626,7 @@ appFamiliasRouter.get('/pacientes/:id/asistente', requiereRolFamilia, async (req
   );
 
   // El filtro por Prestadora va aunque el identificador del Asistente ya sea de una sola: una
-  // misma persona tiene una ficha por cada Prestadora donde trabaja, y el motor entra con la
+  // misma persona tiene una ficha por cada Prestadora donde trabaja, y el backend entra con la
   // llave de servicio, así que lo único que separa una Prestadora de otra son estos filtros.
   const { data: certificado } = await supabase
     .from('certificados')
@@ -1010,7 +1010,7 @@ appFamiliasRouter.get('/qr-cobro/:id', requiereRolFamilia, exigeVisible('familia
 //
 // LA CUENTA YA ESTABA HECHA Y NO SE VOLVIÓ A HACER ACÁ. Lo facturado menos lo cobrado lo resuelve
 // la vista `saldos_familia`, que es el único lugar donde vive esa resta, y el estado de hoy lo
-// calcula la base con la fecha de vencimiento. Repetir la resta del lado del motor daría dos
+// calcula la base con la fecha de vencimiento. Repetir la resta del lado del backend daría dos
 // respuestas posibles para la misma pregunta, y una de las dos la vería la Familia.
 //
 // LO QUE SE MUESTRA ES EL DESGLOSE, no un total suelto. Un importe sin decir de qué es no se
@@ -1156,7 +1156,7 @@ appFamiliasRouter.get('/facturas/:facturaId', requiereRolFamilia, exigeVisible('
  * Bajar el comprobante de una factura.
  *
  * QUÉ SE ENTREGA. Una dirección firmada que vence, no el archivo: el depósito es privado y así el
- * teléfono lo baja derecho de ahí sin que el motor tenga que pasar los bytes por el medio.
+ * teléfono lo baja derecho de ahí sin que el backend tenga que pasar los bytes por el medio.
  *
  * CON LA ENTREGA APAGADA NO HAY PAPEL ACÁ. La Prestadora eligió hacer llegar la factura por su
  * cuenta, y se contesta lo mismo que si no existiera: la pantalla no ofrece el botón, y quien
@@ -1553,7 +1553,7 @@ appFamiliasRouter.post(
 // pregunta una sola cosa —si está abierto— y tapa `contactoTapado.js`.
 //
 // LA PUERTA SIGUE SIENDO LA MODALIDAD. Igual que la vidriera: donde la Prestadora no ofrece
-// marketplace no hay a quién escribirle, y el motor lo contesta con todas las letras.
+// marketplace no hay a quién escribirle, y el backend lo contesta con todas las letras.
 // ============================================================================
 
 /** El hilo que se pide, comprobando que sea de esta Familia y de esta Prestadora. El que no

@@ -25,7 +25,7 @@
 // ---------------------------------------------------------------------------
 
 // Un dominio que no existe y que no puede existir: `.invalid` está reservado justamente para
-// esto. Nadie recibe nada acá, y no hace falta: los avisos por correo los manda el motor a la
+// esto. Nadie recibe nada acá, y no hace falta: los avisos por correo los manda el backend a la
 // dirección de verdad, con su propio enlace.
 const DOMINIO_INTERNO = 'acceso.careonys.invalid';
 
@@ -38,7 +38,7 @@ export function correoComparable(email) {
  * Con qué correo se le habla al servicio de acceso por esta persona en esta Prestadora.
  *
  * Es asíncrona porque el resumen lo calcula la plataforma, y del lado del navegador eso sólo
- * está disponible así. El mismo archivo corre en el motor y en las tres pantallas.
+ * está disponible así. El mismo archivo corre en el backend y en las tres pantallas.
  */
 export async function correoDeAcceso(email, prestadoraId) {
   const correo = correoComparable(email);

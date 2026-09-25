@@ -100,7 +100,7 @@ export function MarketplaceFamilias() {
     setError(null);
     setMensajeCanje(null);
     try {
-      // El riel sólo se manda cuando hay más de uno conectado; con uno solo lo resuelve el motor.
+      // El riel sólo se manda cuando hay más de uno conectado; con uno solo lo resuelve el backend.
       const elegido = rielesConectados.length > 1 ? rielElegido[accesoId] : null;
       await llamarApi(`/accesos/${accesoId}/alta-en-pasarela`, {
         method: 'POST',

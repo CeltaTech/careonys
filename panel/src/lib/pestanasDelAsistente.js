@@ -53,7 +53,7 @@ export const PESTANAS_SOLO_MARKETPLACE = ['evaluaciones'];
 /**
  * Las que además dependen de una acción que la Prestadora puede reservar. Dónde cobra un
  * Asistente nace reservado a la administración, pero la Prestadora puede habilitárselo a quien
- * coordina, así que no alcanza con preguntar el rol. El candado de verdad está en el motor y en
+ * coordina, así que no alcanza con preguntar el rol. El candado de verdad está en el backend y en
  * las reglas de acceso de la base; esto es no ofrecer una pestaña que va a contestar que no.
  */
 export const PESTANAS_POR_PERMISO = {

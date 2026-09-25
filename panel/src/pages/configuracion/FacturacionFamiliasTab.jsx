@@ -27,7 +27,7 @@ import {
 
    Lo de acá rige para toda la Prestadora; con una Familia en particular se puede acordar otro
    plazo desde su ficha, y ese gana. La cuenta vive en `lib/facturacionDeFamilias.js`, que es el
-   mismo archivo que usa el motor. */
+   mismo archivo que usa el backend. */
 export function FacturacionFamiliasTab() {
   const { t } = useLocale();
   const [dias, setDias] = useState('');
@@ -67,7 +67,7 @@ export function FacturacionFamiliasTab() {
     recargar();
   }, [recargar]);
 
-  // La misma comprobación que hace el motor antes de escribir, leída del archivo compartido: así
+  // La misma comprobación que hace el backend antes de escribir, leída del archivo compartido: así
   // el botón no ofrece guardar algo que después se rechaza.
   const revisado = plazoQueSePuedeGuardar(dias === '' ? '' : Number(dias));
 

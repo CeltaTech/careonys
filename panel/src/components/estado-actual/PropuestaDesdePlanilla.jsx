@@ -18,7 +18,7 @@ import { FormField } from '../ui/FormField';
    a una es convertir cada exigencia en un formulario más, que es justo lo contrario de lo que
    tiene que hacer el producto.
 
-   NO ES UNA LECTURA NUEVA. Usa la que ya existe —la de la pantalla de importación, motor
+   NO ES UNA LECTURA NUEVA. Usa la que ya existe —la de la pantalla de importación, backend
    `backend/src/routes/panelImportacion.js`—: las mismas tres capas (formato conocido, dump SQL,
    juicio de la IA para lo demás) y el mismo mapeo propuesto. Lo único que agrega es la
    pregunta que la importación no hacía: qué de lo que nombra la planilla todavía no está

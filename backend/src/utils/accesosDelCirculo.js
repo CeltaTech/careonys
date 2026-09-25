@@ -8,7 +8,7 @@ import { visibilidadDelPedido } from './visibilidadPrestadora.js';
 // del valor de fábrica ni del tope de la Prestadora.
 //
 // Entramos con la llave maestra del servidor, así que las políticas de la base no nos frenan: el
-// filtro va escrito acá a mano, como en el resto del motor. Las políticas dicen lo mismo y son la
+// filtro va escrito acá a mano, como en el resto del backend. Las políticas dicen lo mismo y son la
 // segunda red.
 //
 // El titular no se consulta: ve todo, siempre, y esa decisión no se configura.
@@ -51,7 +51,7 @@ export async function accesosDelPedido(req) {
 // Prestadora: primero se pregunta si la función existe en esta aplicación, y recién después si
 // esta persona la tiene.
 //
-// Es el candado del lado del motor. La aplicación ya sabe qué no le dieron y no dibuja la pantalla,
+// Es el candado del lado del backend. La aplicación ya sabe qué no le dieron y no dibuja la pantalla,
 // pero alguien puede llamar a la dirección igual. Sin esto, la instrucción firmada sería una
 // decoración.
 //

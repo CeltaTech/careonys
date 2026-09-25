@@ -98,15 +98,15 @@ app.use('/api/avisos-de-facturacion', avisoDeFacturacionExternaRouter);
 
 app.use(express.json());
 
-/* Qué versión del motor está corriendo ahora mismo.
+/* Qué versión del backend está corriendo ahora mismo.
    ==========================================================================
 
    La publicación la escribe `.github/workflows/deploy-backend.yml` en `version.txt` justo
-   antes de subir el motor, así que este número es el del código que efectivamente está en el
+   antes de subir el backend, así que este número es el del código que efectivamente está en el
    aire — no el del último push, que puede haber quedado a mitad de camino.
 
    Existe porque Railway a veces corta el hilo de los registros de la construcción y el
-   automatismo se da por fallado sin que nadie sepa si el motor se actualizó o no. Con esto la
+   automatismo se da por fallado sin que nadie sepa si el backend se actualizó o no. Con esto la
    respuesta se pide, no se supone: la publicación misma espera a que esta dirección devuelva
    la versión que acaba de subir, y recién ahí se da por buena (CLAUDE.md §8).
 
@@ -171,7 +171,7 @@ app.use('/api/recuperar-clave', recuperarClaveRouter);
 // no tiene ninguna cuenta con la que entrar. La Prestadora sale de la llave, no de la dirección.
 app.use('/api/entrevista', entrevistaPublicaRouter);
 // Sin sesión también, y por la misma razón: quien entra con la huella todavía no tiene ninguna.
-// Lo que reemplaza a la sesión es un desafío de un solo uso que el motor emitió hace dos minutos
+// Lo que reemplaza a la sesión es un desafío de un solo uso que el backend emitió hace dos minutos
 // y una firma que sólo puede hacer una llave guardada adentro de un teléfono concreto.
 app.use('/api/llave-de-dispositivo', llaveDelDispositivoRouter);
 app.use('/api/app-asistentes', appAsistentesRouter);
@@ -344,7 +344,7 @@ app.listen(PORT, () => {
 
   // Las frases de los avisos viven en la base y se editan desde afuera. Se traen una vez, acá, y
   // quedan en memoria: un aviso se arma mientras se está mandando un correo y ahí no hay lugar
-  // para esperar una consulta. Si la lectura falla, el motor sigue levantado y los avisos salen
+  // para esperar una consulta. Si la lectura falla, el backend sigue levantado y los avisos salen
   // con la marca de frase faltante, que es lo que se quiere ver.
   cargarMensajesDelSistema()
     .then(({ cargadas, error }) => {

@@ -2,14 +2,14 @@
  * Pruebas de la liquidación del Asistente.
  *
  * Usan el banco de pruebas que ya trae Node adentro (`node --test`), sin instalar nada, igual
- * que el resto de las pruebas del motor:
+ * que el resto de las pruebas del backend:
  *
  *   npm test --prefix backend
  *
  * Dos clases de prueba conviven acá. Las cuentas —horas, base, conceptos, escalas— se prueban
  * llamando a las funciones directamente, sin nada alrededor. Las reglas de acceso y el
  * generar, que no son una cuenta sino una conversación con la base, se prueban levantando el
- * motor de verdad contra una base de mentira que contesta lo que cada prueba le prepara. Así
+ * backend de verdad contra una base de mentira que contesta lo que cada prueba le prepara. Así
  * lo que se comprueba es el camino entero —permiso, filtros, escritura— y no una imitación.
  */
 import { strict as assert } from 'node:assert';
@@ -26,7 +26,7 @@ const USUARIO = '22222222-2222-2222-2222-222222222222';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, para poder afirmar que NO pidió algo. */
+/** Todo lo que el backend le pidió a la base, para poder afirmar que NO pidió algo. */
 let llamadas = [];
 
 let rolDelUsuario = 'admin_prestadora';
@@ -53,7 +53,7 @@ const baseFalsa = createServer((req, res) => {
     }
 
     // `.single()` pide una fila sola con este encabezado; `.maybeSingle()` sobre una lectura
-    // pide la lista y la achica del lado del motor. Se imita eso y nada más.
+    // pide la lista y la achica del lado del backend. Se imita eso y nada más.
     const unoSolo = (req.headers.accept || '').includes('vnd.pgrst.object+json');
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(unoSolo && Array.isArray(valor) ? valor[0] ?? null : valor));
@@ -82,12 +82,12 @@ const {
 const app = express();
 app.use(express.json());
 app.use('/api/panel/liquidaciones', panelLiquidacionesRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/panel/liquidaciones`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/liquidaciones`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 
@@ -740,7 +740,7 @@ describe('generar el mes', () => {
 
 /* Antes era texto libre: cada quien lo escribía a su manera y después no se podía contar.
    Ahora es una opción de la lista `medios_de_pago_al_asistente`, que no es la del cobro de la
-   Familia —a una persona no se le paga con tarjeta ni con débito automático—, y el motor la
+   Familia —a una persona no se le paga con tarjeta ni con débito automático—, y el backend la
    comprueba contra la base antes de escribir. */
 describe('con qué se le pagó al Asistente', () => {
   const LIQUIDACION = '99999999-9999-9999-9999-999999999999';
@@ -766,7 +766,7 @@ describe('con qué se le pagó al Asistente', () => {
       },
     ]);
     respuestas.set('PATCH /rest/v1/liquidaciones_asistente', () => [{ id: LIQUIDACION, estado: 'pagada' }]);
-    // De qué modalidad son las guardias que esta liquidación paga. Sin esto el motor no puede
+    // De qué modalidad son las guardias que esta liquidación paga. Sin esto el backend no puede
     // saber si el medio anotado alcanza, y un control que no supo contra qué comparar niega.
     respuestas.set('GET /rest/v1/guardias', () => [{ canal_modalidad: 'directa' }]);
   }

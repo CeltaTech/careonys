@@ -17,7 +17,7 @@ import { MINIMO_DE_CARACTERES, claveAceptable } from '../lib/reglaDeClave';
 // que se sentó frente a una computadora desatendida. Sin ese paso, el cambio de clave sería la
 // forma más cómoda de quedarse con una cuenta ajena.
 //
-// No pasa por el motor: la cuenta se cambia contra el servicio de acceso, con la sesión de quien
+// No pasa por el backend: la cuenta se cambia contra el servicio de acceso, con la sesión de quien
 // está pidiendo el cambio. Nadie puede cambiar así la de otro.
 // Y ACÁ TAMBIÉN SE OFRECE VERIFICAR EL TELÉFONO, porque es el otro momento en que alguien se
 // ocupa de cómo entra. Es la misma sección que la pantalla de seguridad de la cuenta, escrita

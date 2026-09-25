@@ -20,7 +20,7 @@ import { responderError } from '../utils/errorConMotivo.js';
 //
 // POR QUÉ SUBE POR ACÁ Y NO DERECHO DESDE EL PANEL. El depósito `fotos-identidad` es privado y no
 // tiene ninguna política: nadie lo alcanza con su propio pase, porque adentro hay imágenes de
-// documentos de identidad. Lo escribe y lo lee el motor con la llave maestra, después de
+// documentos de identidad. Lo escribe y lo lee el backend con la llave maestra, después de
 // comprobar de qué Prestadora es el Asistente. Es la misma forma de `documentos-cese`.
 //
 // LO QUE ESTA RUTA NO HACE. No compara las dos caras: eso es dato biométrico, no hay documento

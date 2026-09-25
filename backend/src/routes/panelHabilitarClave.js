@@ -116,7 +116,7 @@ async function conFoto(cuenta, prestadoraId) {
  * ES LA TAREA PENDIENTE, y por eso aparece sola: no hace falta ir a buscar a la persona a mano. Quien
  * la tiene a cargo la ve en su lista, la llama, verifica que el cambio es real y la habilita.
  *
- * LA LISTA LA FILTRA EL MOTOR, no la pantalla: la coordinación ve a los Asistentes y a las Familias;
+ * LA LISTA LA FILTRA EL BACKEND, no la pantalla: la coordinación ve a los Asistentes y a las Familias;
  * a quien coordina lo ve la administración de la Prestadora. Nadie se ve a sí mismo.
  *
  * NO DEVUELVE NINGÚN NÚMERO DE TELÉFONO. Tampoco va nada por la dirección web: lo único que este

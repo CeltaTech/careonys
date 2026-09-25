@@ -1,11 +1,11 @@
 // ---------------------------------------------------------------------------
-// verificar_errores_hacia_afuera.mjs — que el motor no vuelva a contarle a la
+// verificar_errores_hacia_afuera.mjs — que el backend no vuelva a contarle a la
 // pantalla el texto crudo de un error de la base.
 //
 // Uso, desde la raíz del repo:
 //   node scripts/verificar_errores_hacia_afuera.mjs
 //
-// POR QUÉ EXISTE. El motor entra a la base con la llave maestra, así que el
+// POR QUÉ EXISTE. El backend entra a la base con la llave maestra, así que el
 // texto de un error de Postgres describe la base entera: nombra tablas,
 // columnas y restricciones —"insert or update on table facturas_familia_items
 // violates foreign key constraint …"—. Eso no puede llegar al navegador
@@ -42,7 +42,7 @@ import { join, dirname, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
-const MOTOR = join(RAIZ, 'backend', 'src');
+const BACKEND = join(RAIZ, 'backend', 'src');
 
 const DIRECTORIOS_IGNORADOS = new Set(['node_modules', '__tests__', '.git', 'dist', 'build']);
 
@@ -68,7 +68,7 @@ function archivosJs(directorio) {
 
 const hallazgos = [];
 
-for (const ruta of archivosJs(MOTOR)) {
+for (const ruta of archivosJs(BACKEND)) {
   const relativa = relative(RAIZ, ruta);
   if (ARCHIVOS_PERMITIDOS.has(relativa)) continue;
 
@@ -82,7 +82,7 @@ for (const ruta of archivosJs(MOTOR)) {
 }
 
 if (hallazgos.length === 0) {
-  console.log('✓ Ningún cuerpo de respuesta del motor lleva el texto crudo de un error.');
+  console.log('✓ Ningún cuerpo de respuesta del backend lleva el texto crudo de un error.');
   process.exit(0);
 }
 

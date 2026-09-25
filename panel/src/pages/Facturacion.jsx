@@ -47,8 +47,8 @@ import { useListaDeOpciones } from '../hooks/useListaDeOpciones';
    `ver_estado_de_cuenta_familia`, que de fábrica es la administración de la Prestadora. Sin ella
    esta pantalla no muestra saldos ni estados de cuenta ni el detalle de una factura, y tampoco
    los pide: lo que queda a la vista es mandar a facturar, que sí es trabajo de la coordinación.
-   Esconder una tabla no protege nada por sí solo —el motor controla lo mismo en cada ruta—, pero
-   mostrar un número que después el motor rechaza es peor todavía.
+   Esconder una tabla no protege nada por sí solo —el backend controla lo mismo en cada ruta—, pero
+   mostrar un número que después el backend rechaza es peor todavía.
 
    POR QUÉ EL ESTADO YA NO SE MARCA A MANO. El botón de "marcar como cobrado" desapareció, y no
    por prolijidad: el estado ahora se deduce de la resta y de la fecha de vencimiento, y la base
@@ -56,14 +56,14 @@ import { useListaDeOpciones } from '../hooks/useListaDeOpciones';
    sería un dato que la base pisa al instante.
 
    POR DÓNDE PUEDE ENTRAR LA PLATA. Acá se anota lo que se cobró en el mostrador o por
-   transferencia, pero no es la única puerta: el motor tiene una entrada para lotes que vienen de
+   transferencia, pero no es la única puerta: el backend tiene una entrada para lotes que vienen de
    un archivo importado, del sistema contable de la Prestadora o de una pasarela. Por eso al lado
    de cada saldo se muestra de dónde salió el dato y de cuándo es: un número que puso otro
    sistema tiene que poder distinguirse de uno que cargó una persona.
 
    Y LA FACTURA TAMPOCO SE ARMA ACÁ. Qué renglones lleva la factura de un período —qué
    prestaciones corren ese mes y qué paquete cobra su precio pactado en lugar de la suma de los
-   suyos— es un cálculo sobre plata, y vive en el motor, en `utils/facturaDelPeriodo.js`. La
+   suyos— es un cálculo sobre plata, y vive en el backend, en `utils/facturaDelPeriodo.js`. La
    pantalla pide el período y la fecha de vencimiento, y muestra cuántas facturas salieron.
 
    QUIÉN EMITE EL COMPROBANTE Y QUÉ SE ANOTA ACÁ. El producto no emite comprobantes y no va a
@@ -122,7 +122,7 @@ function soloLaFecha(momento) {
 }
 
 /* Deja un texto en la carpeta de descargas de quien está mirando. Se hace acá y no en
-   `intercambioDeFacturacion.js` porque ese archivo también corre en el motor, donde no hay
+   `intercambioDeFacturacion.js` porque ese archivo también corre en el backend, donde no hay
    navegador. */
 function bajarComoArchivo(nombre, texto) {
   const direccion = URL.createObjectURL(new Blob([texto], { type: 'text/csv;charset=utf-8' }));
@@ -140,7 +140,7 @@ export function Facturacion() {
   const confirmarDestructivo = useConfirmarDestructivo();
   // Cuánto debe cada Familia y si está atrasada lo ve solamente quien tenga habilitada esa
   // acción, que de fábrica es la administración. Quien no la tiene sigue pudiendo mandar a
-  // facturar, que es lo otro que se hace en esta pantalla. El motor controla lo mismo: esconder
+  // facturar, que es lo otro que se hace en esta pantalla. El backend controla lo mismo: esconder
   // una tabla no protege nada por sí solo.
   const { puede, cargado: permisosCargados } = usePermisos();
   const veElEstadoDeCuenta = puede('ver_estado_de_cuenta_familia');
@@ -176,7 +176,7 @@ export function Facturacion() {
     try {
       const { sigue_la_cobranza: sigueLaCobranza } = await llamarApiCobros('/configuracion');
       setSigue(sigueLaCobranza !== false);
-      // Lo que no se va a mostrar tampoco se pide: pedirlo devolvería el rechazo del motor y la
+      // Lo que no se va a mostrar tampoco se pide: pedirlo devolvería el rechazo del backend y la
       // pantalla mostraría un error donde en realidad no hay ninguno.
       if (sigueLaCobranza === false) {
         const avisadas = await llamarApiCobros('/restricciones');
@@ -253,8 +253,8 @@ export function Facturacion() {
     }
   }
 
-  /* Sube el archivo que devolvió el software de facturación. El archivo se lee acá y al motor le
-     van las filas ya separadas; quién se guarda y quién se rechaza lo decide el motor, que es el
+  /* Sube el archivo que devolvió el software de facturación. El archivo se lee acá y al backend le
+     van las filas ya separadas; quién se guarda y quién se rechaza lo decide el backend, que es el
      único que puede comprobar que cada factura sea de esta Prestadora. */
   async function handleSubirFacturado(evento) {
     const archivo = evento.target.files?.[0];
@@ -582,7 +582,7 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
     recargar();
   }, [recargar]);
 
-  // La misma comprobación que hace el motor antes de escribir, leída del archivo compartido:
+  // La misma comprobación que hace el backend antes de escribir, leída del archivo compartido:
   // así el botón no ofrece guardar algo que después se rechaza (regla 12, §7).
   const loQueFalta = loQueEstaMalEnElCobro(
     cobro,
@@ -618,7 +618,7 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
 
   /* Sube el comprobante y lo deja disponible para la Familia. El archivo viaja crudo, tal cual
      salió del facturador: es un solo archivo y no lo acompaña ningún otro dato. Que sea un PDF de
-     verdad lo comprueba el motor mirando los bytes, no lo que diga el nombre. */
+     verdad lo comprueba el backend mirando los bytes, no lo que diga el nombre. */
   async function subirElComprobante(evento) {
     const archivo = evento.target.files?.[0];
     evento.target.value = '';

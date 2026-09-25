@@ -11,7 +11,7 @@ import { mensajeDeError } from '../lib/errores';
 // cambia es cómo se llama quien está del otro lado. La copia la genera
 // `scripts/sincronizar_copias.mjs`: nunca se edita a mano.
 //
-// DE DÓNDE SALE EL NOMBRE DEL OTRO. El motor manda `asistente` cuando quien mira es la Familia y
+// DE DÓNDE SALE EL NOMBRE DEL OTRO. El backend manda `asistente` cuando quien mira es la Familia y
 // `familia` cuando quien mira es el Asistente. No hace falta que la pantalla sepa cuál de las dos
 // aplicaciones es: le alcanza con mirar qué vino.
 export default function Mensajes() {

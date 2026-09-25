@@ -6,7 +6,7 @@
  *
  * POR QUÉ EXISTE ESTA PRUEBA. Adentro del depósito `documentos-cese` hay documentos de baja con
  * nombre, documento y montos, y el depósito no tiene ninguna política: lo escribe y lo lee el
- * motor con la llave maestra (`../panelCeses.js`). O sea que lo único que separa una Prestadora de
+ * backend con la llave maestra (`../panelCeses.js`). O sea que lo único que separa una Prestadora de
  * otra son los filtros escritos en esta ruta, y dos decisiones más: que el tipo de documento salga
  * de una lista cerrada —si no, quien manda el pedido elige el nombre del archivo adentro del
  * depósito— y que la ruta de la dirección firmada se arme con los datos del cese y no con nada que
@@ -31,7 +31,7 @@ const CESE = '33333333-3333-3333-3333-333333333333';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió, con la dirección entera: los filtros van ahí. */
+/** Todo lo que el backend le pidió, con la dirección entera: los filtros van ahí. */
 let llamadas = [];
 
 let rolDelUsuario = 'admin_prestadora';
@@ -97,12 +97,12 @@ const { TIPO_LIQUIDACION, TIPO_TELEGRAMA } = await import('../../utils/documento
 const app = express();
 app.use(express.json());
 app.use('/api/panel/ceses', panelCesesRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/panel/ceses`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/ceses`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 

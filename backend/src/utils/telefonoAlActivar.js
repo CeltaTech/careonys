@@ -102,7 +102,7 @@ export async function ofrecerElCodigoAlActivar({ usuarioId, telefono }) {
   const numero = normalizarTelefono(escrito);
 
   // Si el número es otro, el que había deja de estar verificado. `telefono_verificado_en` lo pone
-  // en nulo un disparador de la base además de esto: el motor escribe con la llave maestra, y esa
+  // en nulo un disparador de la base además de esto: el backend escribe con la llave maestra, y esa
   // red de abajo es la que sigue estando el día que otro camino toque esta columna.
   const { error } = await supabase
     .from('usuarios')

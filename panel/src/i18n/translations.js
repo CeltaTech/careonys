@@ -27,7 +27,7 @@ export const T = {
       en_uso: 'No se puede borrar: hay otros registros que dependen de esto.',
       dato_invalido: 'Hay un dato mal cargado. Conviene revisar lo que se escribió.',
       falla_del_sistema: 'Algo falló de nuestro lado. Conviene volver a intentar en un rato.',
-      // Los motivos: cuando el motor sabe exactamente qué pasó, lo dice con un código y la
+      // Los motivos: cuando el backend sabe exactamente qué pasó, lo dice con un código y la
       // frase se busca acá. Ganan siempre por sobre las ocho de arriba, que son lo genérico.
       motivos: {
         correo_de_esta_prestadora: 'Ese correo ya tiene una cuenta en esta Prestadora. Conviene buscarla en la lista antes de crear una nueva.',
@@ -59,7 +59,7 @@ export const T = {
         modalidad_con_accesos: 'No se puede desactivar esa modalidad mientras haya Familias con el acceso vigente. Hace falta darlos de baja antes de desactivarla.',
         modalidad_con_asistentes_y_accesos: 'No se puede desactivar esa modalidad: hay Asistentes que trabajan de esa forma y Familias con el acceso vigente. Hace falta resolver las dos cosas antes de desactivarla.',
         medio_de_pago_fuera_de_la_modalidad: 'Ese medio de pago no se usa en la modalidad de trabajo que paga esta liquidación. Hace falta elegir otro de la lista.',
-        // Dos avisos que antes llegaban como frase armada del lado del motor, en un solo idioma.
+        // Dos avisos que antes llegaban como frase armada del lado del backend, en un solo idioma.
         persona_fuera_del_circulo: 'Esa persona no figura en el círculo de cuidado de esta Familia, así que no hay nada que quitar. Conviene recargar la lista para ver cómo quedó.',
         paciente_no_encontrado: 'No se encontró ese Paciente. Conviene recargar la lista.',
         // El alta de un acceso de Match en la pasarela de cobro. Cada frase dice qué
@@ -746,7 +746,7 @@ export const T = {
       whatsapp_verify_token_cargar: 'Token de verificación de la dirección',
       whatsapp_verify_token_reemplazar: 'Reemplazar el token de verificación (dejar vacío para no cambiarlo)',
       whatsapp_direccion_webhook: 'Dirección para el panel de Meta',
-      whatsapp_entrada_sin_secretos: 'WhatsApp figura activo, pero falta el secreto de la aplicación o el token de verificación. Hasta que los dos estén cargados no entra ningún mensaje: el motor rechaza todo lo que llegue sin firma que se pueda comprobar.',
+      whatsapp_entrada_sin_secretos: 'WhatsApp figura activo, pero falta el secreto de la aplicación o el token de verificación. Hasta que los dos estén cargados no entra ningún mensaje: se rechaza todo lo que llegue sin firma que se pueda comprobar.',
       whatsapp_plantillas_titulo: 'Plantillas de mensaje',
       whatsapp_plantillas_explicacion: 'Meta exige una plantilla pre-aprobada para cualquier mensaje que la prestadora inicia (no una respuesta dentro de una conversación ya abierta). Acá se redactan y se hace seguimiento de su aprobación.',
       whatsapp_plantillas_nueva: 'Nueva plantilla',
@@ -3058,7 +3058,7 @@ export const T = {
       periodo_anio_plural: 'años',
     },
     // Con qué le contesta el motor de formularios a quien carga. La clave de cada motivo es la
-    // misma que devuelve `lib/motorDeFormularios.js`: el motor manda códigos y la frase sale de
+    // misma que devuelve `lib/motorDeFormularios.js`: el backend manda códigos y la frase sale de
     // acá, como toda frase visible. Ninguna explica el programa: dicen qué hay que hacer con el
     // casillero que quedó mal, y aparecen sólo cuando algo se rechazó.
     formularios: {
@@ -3802,7 +3802,7 @@ export const T = {
       whatsapp_verify_token_cargar: 'Address verification token',
       whatsapp_verify_token_reemplazar: 'Replace the verification token (leave empty to keep it unchanged)',
       whatsapp_direccion_webhook: 'Address for the Meta panel',
-      whatsapp_entrada_sin_secretos: 'WhatsApp shows as active, but the app secret or the verification token is missing. Until both are saved no message comes in: the engine rejects anything arriving without a signature it can verify.',
+      whatsapp_entrada_sin_secretos: 'WhatsApp shows as active, but the app secret or the verification token is missing. Until both are saved no message comes in: anything arriving without a signature that can be verified is rejected.',
       whatsapp_plantillas_titulo: 'Message templates',
       whatsapp_plantillas_explicacion: 'Meta requires a pre-approved template for any message the provider initiates (not a reply within an already-open conversation). Templates are drafted and tracked for approval here.',
       whatsapp_plantillas_nueva: 'New template',
@@ -6819,7 +6819,7 @@ export const T = {
       whatsapp_verify_token_cargar: 'Token de verificação do endereço',
       whatsapp_verify_token_reemplazar: 'Substituir o token de verificação (em branco, nada muda)',
       whatsapp_direccion_webhook: 'Endereço para o painel da Meta',
-      whatsapp_entrada_sin_secretos: 'O WhatsApp consta como ativo, mas falta a chave secreta do aplicativo ou o token de verificação. Enquanto os dois não estiverem salvos, nenhuma mensagem entra: o motor recusa tudo o que chegar sem assinatura que se possa verificar.',
+      whatsapp_entrada_sin_secretos: 'O WhatsApp consta como ativo, mas falta a chave secreta do aplicativo ou o token de verificação. Enquanto os dois não estiverem salvos, nenhuma mensagem entra: recusa-se tudo o que chegar sem assinatura que se possa verificar.',
       whatsapp_plantillas_titulo: 'Modelos de mensagem',
       whatsapp_plantillas_explicacion: 'A Meta exige um modelo pré-aprovado para qualquer mensagem iniciada pela prestadora (não uma resposta dentro de uma conversa já aberta). Aqui são redigidos e acompanhados até sua aprovação.',
       whatsapp_plantillas_nueva: 'Novo modelo',
@@ -9130,7 +9130,7 @@ export const T = {
 
 // Cuáles son los tres idiomas y cuál es el de por defecto no se escribe acá: sale de
 // `i18n/idiomas.js`, que es el punto único donde está dicho para todo el producto —las pantallas
-// y el motor—. Estaba escrito cuatro veces, y las cuatro decían lo mismo por suerte, no por
+// y el backend—. Estaba escrito cuatro veces, y las cuatro decían lo mismo por suerte, no por
 // construcción. Se siguen exportando desde este archivo con los nombres de siempre para que
 // ningún punto de consumo cambie.
 export { IDIOMA_POR_DEFECTO as DEFAULT_LOCALE, IDIOMAS_SOPORTADOS as LOCALES } from './idiomas.js';

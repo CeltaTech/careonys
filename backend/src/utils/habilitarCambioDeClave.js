@@ -15,9 +15,9 @@ import { huellaDelTelefono } from './codigoAlTelefono.js';
 // y por eso hay un escalón arriba.
 //
 // LA REGLA ESTÁ ESCRITA DOS VECES A PROPÓSITO: acá y en un disparador de la base
-// (`interno.se_habilita_hacia_abajo_y_nunca_a_uno_mismo`). No es una copia por descuido: el motor
+// (`interno.se_habilita_hacia_abajo_y_nunca_a_uno_mismo`). No es una copia por descuido: el backend
 // entra con la llave maestra y se saltea la protección por fila, así que sin el control de este
-// lado la regla de la base nunca se evaluaría con lo que el motor sabe; y sin la de la base,
+// lado la regla de la base nunca se evaluaría con lo que el backend sabe; y sin la de la base,
 // cualquier camino nuevo que escriba en esa tabla nacería sin control.
 
 const ESCALON = {
@@ -170,7 +170,7 @@ const TOPE_DE_LOS_PENDIENTES = 50;
  *
  * LA LISTA SALE FILTRADA POR QUIÉN PUEDE HABILITAR A QUIÉN, con la misma regla que usan las dos
  * acciones de más arriba. Quien coordina no se ve a sí mismo ni ve a otro que coordine: a la
- * coordinación la habilita la administración de la Prestadora. Es el motor el que lo niega, no la
+ * coordinación la habilita la administración de la Prestadora. Es el backend el que lo niega, no la
  * pantalla.
  *
  * NO DEVUELVE NINGÚN NÚMERO DE TELÉFONO, igual que la búsqueda: lo que hace falta para llamar a esa

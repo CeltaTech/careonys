@@ -11,7 +11,7 @@ import { mensajeDeError } from '../../lib/errores';
 
    Con cuántos días se avisa un cobro que viene, cuántos días se conserva el acceso cuando un
    cobro no entra, y cuántos días vive el cupón de la red de cobranza. Los tres estaban escritos
-   en el motor y son decisiones comerciales de cara a la Familia, así que los elige ella.
+   en el backend y son decisiones comerciales de cara a la Familia, así que los elige ella.
 
    Los números con los que arranca salen de la base, igual que el resto de su configuración: acá
    no hay ninguno escrito. Verlos es de la administración y cambiarlos es del Admin de la

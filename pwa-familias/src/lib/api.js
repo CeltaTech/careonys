@@ -32,7 +32,7 @@ export const api = {
   perfil: () => pedido('/perfil'),
   misPacientes: () => pedido('/pacientes'),
   paciente: (id) => pedido(`/pacientes/${id}`),
-  // El día que se manda es el de este teléfono: el motor devuelve la semana que lo contiene.
+  // El día que se manda es el de este teléfono: el backend devuelve la semana que lo contiene.
   guardiasDelPaciente: (id, dia) => pedido(`/pacientes/${id}/guardias?dia=${encodeURIComponent(dia)}`),
   reportesDelPaciente: (id) => pedido(`/pacientes/${id}/reportes`),
   reporteDelPaciente: (id, reporteId) => pedido(`/pacientes/${id}/reportes/${reporteId}`),
@@ -59,7 +59,7 @@ export const api = {
   confirmarInstruccion: (id, codigo) => pedido(`/instruccion/${id}/confirmar`, { method: 'POST', body: JSON.stringify({ codigo }) }),
   // El pase de guardia (pendiente #113): el código que se le muestra al Asistente que llega. No
   // lleva el Paciente adentro porque el código es del círculo familiar entero, y quién es ese
-  // círculo lo resuelve el motor con la sesión de quien pide, nunca con un dato de este teléfono.
+  // círculo lo resuelve el backend con la sesión de quien pide, nunca con un dato de este teléfono.
   codigoDePresencia: () => pedido('/codigo-de-presencia'),
   // Las facturas de la Familia. La lista trae la resta ya hecha —lo facturado, lo cobrado y lo
   // que falta— porque esa resta la hace la base en un solo lugar y no se vuelve a hacer acá; el
@@ -74,7 +74,7 @@ export const api = {
   // de antemano se vence antes de que la usen.
   direccionDelComprobante: (facturaId) => pedido(`/facturas/${facturaId}/comprobante`),
   // La vidriera del Marketplace. Los filtros van vacíos cuando no se eligió ninguno, y las
-  // opciones para elegir vuelven en la misma respuesta: las arma el motor con quien está
+  // opciones para elegir vuelven en la misma respuesta: las arma el backend con quien está
   // realmente en la vidriera, así que un lugar sin nadie no se ofrece. Lo que viaja es cuál lugar
   // y no cómo se llama: dos localidades de provincias distintas pueden llamarse igual, y filtrar
   // por el nombre traería las dos.
@@ -96,10 +96,10 @@ export const api = {
   verElContactoDelAsistente: (asistenteId) =>
     pedido(`/marketplace/asistentes/${asistenteId}/contacto`, { method: 'POST' }),
   // EL CHAT CON UN ASISTENTE DE LA VIDRIERA. El chat no se cobra: lo que se cobra es el dato de
-  // contacto, y por eso sale tapado de acá hasta que esa pareja lo abra. Quien tapa es el motor,
+  // contacto, y por eso sale tapado de acá hasta que esa pareja lo abra. Quien tapa es el backend,
   // una sola vez para las dos puntas.
   conversacionesDelMarketplace: () => pedido('/marketplace/conversaciones'),
-  // Con `desde`, el motor contesta nada más lo posterior a ese momento: es el refresco del hilo
+  // Con `desde`, el backend contesta nada más lo posterior a ese momento: es el refresco del hilo
   // abierto, que pide lo que le falta y no vuelve a bajar lo que ya está en pantalla.
   conversacionDelMarketplace: (id, desde = null) =>
     pedido(`/marketplace/conversaciones/${id}${desde ? `?desde=${encodeURIComponent(desde)}` : ''}`),
@@ -109,7 +109,7 @@ export const api = {
     pedido(`/marketplace/asistentes/${asistenteId}/conversacion`, { method: 'POST' }),
   escribirEnConversacion: (id, cuerpo) =>
     pedido(`/marketplace/conversaciones/${id}/mensajes`, { method: 'POST', body: JSON.stringify({ cuerpo }) }),
-  // La videollamada de esta Prestadora. Donde no configuró ninguna, el motor contesta que no hay
+  // La videollamada de esta Prestadora. Donde no configuró ninguna, el backend contesta que no hay
   // y la pantalla no ofrece el botón.
   abrirVideollamada: (id) => pedido(`/marketplace/conversaciones/${id}/videollamada`, { method: 'POST' }),
   // Lo que la Prestadora escribió para quien cuida en su casa. Vuelve sólo lo publicado, y no
@@ -119,7 +119,7 @@ export const api = {
   // antes de tener sesión y va por su propia puerta (`lib/llaveDelDispositivo.js`). Acá está lo que
   // se hace desde adentro: ver cuáles tiene, agregar una en este aparato y sacar la de uno que ya
   // no usa. Lo que vuelve son fechas: ni la credencial ni la mitad pública de la llave salen del
-  // motor, porque para reconocer cuál es cuál no hacen falta.
+  // backend, porque para reconocer cuál es cuál no hacen falta.
   llaves: () => pedido('/llaves'),
   desafioDeLlave: () => pedido('/llaves/desafio', { method: 'POST' }),
   guardarLlave: (respuesta) => pedido('/llaves', { method: 'POST', body: JSON.stringify({ respuesta }) }),

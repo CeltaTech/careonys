@@ -22,15 +22,15 @@ import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 // pedidos donde todavía no se resolvió de qué Prestadora se trata. La decisión definitiva es del
 // Desarrollador y está planteada en el informe.
 //
-// QUIÉN CUENTA COMO "EL MISMO". La identidad la resuelve el motor de la sesión ya verificada
+// QUIÉN CUENTA COMO "EL MISMO". La identidad la resuelve el backend de la sesión ya verificada
 // —`req.usuarioFamilia`, `req.usuarioAsistente`, `req.usuarioPanel`—, nunca un dato que venga en
 // el pedido: un encabezado o una dirección de red los elige quien llama. Si no hay identidad
 // resuelta, se niega: todo control de acceso falla cerrado (CLAUDE.md §5).
 //
 // LO QUE ESTE TOPE NO ES. La cuenta vive en la memoria de este proceso. Con varias copias del
-// motor corriendo a la vez, cada una lleva la suya y el tope efectivo se multiplica por la
+// backend corriendo a la vez, cada una lleva la suya y el tope efectivo se multiplica por la
 // cantidad de copias. Alcanza para lo que tiene que frenar —probar seis dígitos de a uno—, y el
-// día que el motor corra repartido, esto se muda a un contador compartido sin cambiar las rutas.
+// día que el backend corra repartido, esto se muda a un contador compartido sin cambiar las rutas.
 
 const VENTANA_MS = 60 * 1000;
 const TOPE_POR_OMISION = 10;
@@ -57,7 +57,7 @@ export function topePedidosPorMinuto() {
 // Clave -> las horas de los pedidos que todavía entran en la ventana.
 const pedidos = new Map();
 
-// Se limpia sobre la marcha y no con una tarea de fondo: el motor ya lanza varias al arrancar, y
+// Se limpia sobre la marcha y no con una tarea de fondo: el backend ya lanza varias al arrancar, y
 // una décima que sólo existe para vaciar un mapa mantendría vivo el proceso en las pruebas.
 let desdeLaUltimaLimpieza = 0;
 const PEDIDOS_ENTRE_LIMPIEZAS = 500;

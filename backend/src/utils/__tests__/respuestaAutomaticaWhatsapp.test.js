@@ -19,7 +19,7 @@ const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base. */
+/** Todo lo que el backend le pidió a la base. */
 let llamadas = [];
 
 const baseFalsa = createServer((req, res) => {
@@ -66,7 +66,7 @@ const {
   RESULTADO_DERIVADA,
 } = await import('../respuestaAutomaticaWhatsapp.js');
 
-// Los avisos del motor se juntan acá en vez de ensuciar la salida.
+// Los avisos del backend se juntan acá en vez de ensuciar la salida.
 const avisarDeVerdad = console.warn;
 const errarDeVerdad = console.error;
 let anotados = [];
@@ -227,7 +227,7 @@ describe('lo clínico se deriva siempre a una persona', () => {
   });
 
   it('una respuesta marcada como que toca la salud no se usa ni estando aprobada', async () => {
-    // La base ya no deja aprobarla; esta es la segunda red, adentro del motor.
+    // La base ya no deja aprobarla; esta es la segunda red, adentro del backend.
     respuestas.set('GET /rest/v1/respuestas_preparadas_whatsapp', () => [
       respuestaPreparada({ toca_salud: true }),
     ]);

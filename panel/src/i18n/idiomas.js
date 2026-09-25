@@ -2,7 +2,7 @@
    ========================
 
    El producto habla tres idiomas desde el primer día, y hasta acá eso valía para las pantallas y
-   no para lo que sale del motor: el aviso que llega por correo, por WhatsApp o al celular estaba
+   no para lo que sale del backend: el aviso que llega por correo, por WhatsApp o al celular estaba
    escrito en castellano adentro del código, archivo por archivo. Este es el punto único donde se
    dice cuáles son los tres, cuál es el de por defecto y cómo se decide el de un aviso.
 

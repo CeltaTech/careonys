@@ -13,7 +13,7 @@
 // NO LLEVA GUARDIÁN, y es a propósito: el código no revela ningún dato del Paciente ni de la
 // Prestadora, y su único efecto es dejar entrar a quien ya tenía la guardia asignada. Cualquiera
 // del círculo familiar puede estar en la casa el día que toquen el timbre, así que cualquiera lo
-// tiene que poder mostrar. El motor piensa igual: su dirección sólo pide tener sesión de Familia.
+// tiene que poder mostrar. El backend piensa igual: su dirección sólo pide tener sesión de Familia.
 
 import { Link } from 'react-router-dom';
 import CodigoDePresencia from '../components/CodigoDePresencia';

@@ -16,7 +16,7 @@
 // interpreta. De una corrección, lo único que Careonys mira es para qué lado mueve el saldo y por
 // cuánto.
 //
-// NO IMPORTA NADA A PROPÓSITO. Este archivo lo usa el Panel y el motor usa una copia generada
+// NO IMPORTA NADA A PROPÓSITO. Este archivo lo usa el Panel y el backend usa una copia generada
 // (`backend/src/utils/facturacionDeFamilias.js`, ver `scripts/copias_entre_apps.mjs`).
 // ---------------------------------------------------------------------------
 

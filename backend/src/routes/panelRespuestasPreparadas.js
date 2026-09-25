@@ -28,7 +28,7 @@ import { IDIOMAS_SOPORTADOS } from '../i18n/idiomas.js';
    y la base la rechaza también, con la restricción `lo_que_toca_salud_no_se_aprueba`. Queda en
    el banco para que la lea una persona, que es lo que corresponde.
 
-   EL AISLAMIENTO. El motor entra a la base con la llave de servicio, así que la Prestadora sale
+   EL AISLAMIENTO. El backend entra a la base con la llave de servicio, así que la Prestadora sale
    de `req.usuarioPanel.prestadoraId` y se escribe en cada consulta: es la primera red, y las
    políticas de la tabla son la segunda. */
 
@@ -44,7 +44,7 @@ const COLUMNAS =
   'id, nombre_interno, terminos, i18n, toca_salud, origen, activa, aprobada_at, created_at, updated_at';
 
 /** Las palabras con las que se reconoce una situación: sin repetir, sin espacios de más y sin
- *  vacías. Se comparan en minúsculas del lado del motor, así que se guardan ya así. */
+ *  vacías. Se comparan en minúsculas del lado del backend, así que se guardan ya así. */
 function terminosQueSeGuardan(terminos) {
   if (!Array.isArray(terminos)) return null;
   return [...new Set(terminos.map((termino) => String(termino).trim().toLowerCase()).filter(Boolean))];

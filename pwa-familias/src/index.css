@@ -640,11 +640,11 @@ h3 {
 
 /* ---------- La instrucción del círculo familiar ---------- */
 
-/* El documento que firma el titular, tal cual lo armó el motor: renglones cortados donde los
+/* El documento que firma el titular, tal cual lo armó el backend: renglones cortados donde los
    cortó él y separaciones hechas con guiones. `pre-wrap` respeta esos cortes y además parte los
    renglones largos al ancho del teléfono; con el `pre` de fábrica habría que leerlo corriendo la
    pantalla de costado, y un documento que se firma no se lee así. La tipografía de ancho fijo es
-   la que mantiene alineado lo que el motor alineó contando caracteres. */
+   la que mantiene alineado lo que el backend alineó contando caracteres. */
 .documento-instruccion {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.8rem;

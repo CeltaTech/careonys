@@ -3,7 +3,7 @@
 //
 // POR QUÉ EXISTE
 // La misma decisión —qué monto es válido, cómo se lee un período, contra qué se
-// compara el medio— hacía falta en dos lados: el motor, que la controla antes de
+// compara el medio— hacía falta en dos lados: el backend, que la controla antes de
 // escribir en la base, y el Panel, que arma el desplegable y decide si el botón
 // de guardar está habilitado. Escrita dos veces, el día que se agregue un medio
 // nuevo el desplegable y el control se separan, y la pantalla ofrece algo que la
@@ -14,7 +14,7 @@
 // `cobros_familia`: si algo se cuela por acá, la base lo frena igual. Esto sirve
 // para contestar antes y con una frase entendible, no para ser la única guarda.
 //
-// El original vive en el Panel y se copia al motor; la lista de copias está en
+// El original vive en el Panel y se copia al backend; la lista de copias está en
 // `scripts/copias_entre_apps.mjs` y `verificar_identidad.mjs` corta el build si
 // alguna se despegó.
 // ---------------------------------------------------------------------------

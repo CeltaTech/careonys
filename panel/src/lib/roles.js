@@ -11,8 +11,8 @@
 // Careonys. Lo que hacía de técnico —entrar a una Prestadora real, una por vez— lo hace ahora
 // superadmin con una sesión de soporte técnico (sesiones_soporte_tecnico); RLS via
 // current_tenant() se encarga de que sin sesión abierta no vea más que su propia Organización.
-// El motor usa este mismo archivo, copiado por máquina (scripts/copias_entre_apps.mjs). Hasta
-// el 2026-09-04 la lista estaba escrita a mano en cinco rutas del motor y no todas decían lo
+// El backend usa este mismo archivo, copiado por máquina (scripts/copias_entre_apps.mjs). Hasta
+// el 2026-09-04 la lista estaba escrita a mano en cinco rutas del backend y no todas decían lo
 // mismo: tres funciones llamadas `requiereAdminOSuperior`, y la de marketplace dejaba pasar al
 // Coordinador donde las otras dos no. Buscar el nombre daba tres resultados que parecían la
 // misma función. El texto de cada error se queda en su ruta —no es lo mismo negar la

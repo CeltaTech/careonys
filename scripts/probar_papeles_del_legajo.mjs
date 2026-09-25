@@ -9,7 +9,7 @@
 // POR QUÉ EXISTE
 //
 // El depósito «documentos-asistente» es el primero que el Panel escribe con el pase de la persona
-// que entró, y no con la llave de servicio del motor. Lo que lo aísla son sus políticas, no un
+// que entró, y no con la llave de servicio del backend. Lo que lo aísla son sus políticas, no un
 // filtro escrito en una pantalla. Una política no se prueba leyéndola: se prueba entrando.
 //
 // Y LA RUTA EMPIEZA POR LA PRESTADORA a propósito. Empezando por la cuenta, el día que una misma

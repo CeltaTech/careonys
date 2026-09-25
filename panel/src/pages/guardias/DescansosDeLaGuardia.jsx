@@ -20,8 +20,8 @@ import { mensajeDeError } from '../../lib/errores';
  * ACÁ SE ANOTA UN RATO YA TERMINADO, con su principio y su fin. Empezar uno abierto es de la
  * Asistente, que es la que está adentro.
  *
- * POR QUÉ PASA POR EL MOTOR. La migración que crea la tabla sólo le dio permiso de lectura a quien
- * tiene sesión: escribir es del motor, que además resuelve la Prestadora por la Organización activa
+ * POR QUÉ PASA POR EL BACKEND. La migración que crea la tabla sólo le dio permiso de lectura a quien
+ * tiene sesión: escribir es del backend, que además resuelve la Prestadora por la Organización activa
  * de quien llama y no por lo que venga en el pedido.
  */
 export function DescansosDeLaGuardia({ guardiaId }) {

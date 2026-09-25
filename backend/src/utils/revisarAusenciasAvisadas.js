@@ -48,7 +48,7 @@ const EVENTO_POR_CLASE = {
   [COMO_LLEGO.DE_GOLPE]: 'ausencia_de_golpe',
 };
 
-// Se recorre de a una Prestadora por vez, y ninguna consulta mezcla dos: el motor entra con la
+// Se recorre de a una Prestadora por vez, y ninguna consulta mezcla dos: el backend entra con la
 // llave de servicio, que se saltea la protección por fila, así que lo único que mantiene cerrado
 // cada cajón es que cada consulta diga para cuál trabaja.
 export async function revisarAusenciasAvisadas() {

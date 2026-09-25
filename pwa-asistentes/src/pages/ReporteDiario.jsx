@@ -48,7 +48,7 @@ export default function ReporteDiario() {
   const [textoLibre, setTextoLibre] = useState('');
   const [estructurando, setEstructurando] = useState(false);
   const [estructurado, setEstructurado] = useState(null);
-  // Del archivo elegido se guarda sólo la ruta que devuelve el motor: el archivo en sí no se
+  // Del archivo elegido se guarda sólo la ruta que devuelve el backend: el archivo en sí no se
   // vuelve a mirar, y tenerlo en memoria en un teléfono no aporta nada.
   const [fotoUrl, setFotoUrl] = useState(null);
   const [confirmando, setConfirmando] = useState(false);

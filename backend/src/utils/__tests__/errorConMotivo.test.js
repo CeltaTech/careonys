@@ -3,13 +3,13 @@
  *
  *   npm test --prefix backend
  *
- * POR QUÉ EXISTE ESTA PRUEBA. El motor entra a la base con la llave maestra, así que el texto
+ * POR QUÉ EXISTE ESTA PRUEBA. El backend entra a la base con la llave maestra, así que el texto
  * crudo de un error de Postgres describe la base entera: nombra tablas, columnas y
  * restricciones. Ese texto no puede llegar nunca al navegador (`celtatech/CLAUDE.md` §6) —
  * quien mire la pantalla con las herramientas del navegador abiertas se lleva el mapa del
  * esquema sin haber atacado nada.
  *
- * Y era exactamente lo que pasaba: 208 lugares del motor contestaban
+ * Y era exactamente lo que pasaba: 208 lugares del backend contestaban
  * `res.status(500).json({ error: error.message })`. `responderError` existía como punto único
  * para esto y también lo mandaba, contradiciendo el comentario escrito tres renglones más
  * arriba en su propio archivo.

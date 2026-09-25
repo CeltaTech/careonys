@@ -61,7 +61,7 @@ export default function AntesDeLlegar({ t, locale, guardiaId, guardia, salidaPen
       punto = null;
     }
     // El identificador del envío se pone antes del primer intento, no al encolar: si la salida
-    // llegó al motor y lo que se perdió fue la respuesta, el reenvío tiene que traer el mismo
+    // llegó al backend y lo que se perdió fue la respuesta, el reenvío tiene que traer el mismo
     // identificador para que allá se reconozca en vez de anotarse dos veces.
     const clienteUuid = nuevoId();
     const datos = { ...punto, medioTransporte: medioTransporte.trim() || undefined, clienteUuid };
@@ -79,7 +79,7 @@ export default function AntesDeLlegar({ t, locale, guardiaId, guardia, salidaPen
         return;
       }
       // Sin señal: se guarda en el teléfono y sale solo. La hora que le va a quedar es la de
-      // cuando llegue al motor y no la de ahora — se dice así en pantalla, sin disimularlo.
+      // cuando llegue al backend y no la de ahora — se dice así en pantalla, sin disimularlo.
       await agregarACola({ id: clienteUuid, tipo: 'salida', guardiaId, payload: datos });
       setAviso(t.antes_de_llegar.sin_conexion);
       setAbriendoSalida(false);

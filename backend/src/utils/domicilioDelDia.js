@@ -1,4 +1,4 @@
-// Dónde se atiende a cada Paciente el día de su guardia, del lado del motor.
+// Dónde se atiende a cada Paciente el día de su guardia, del lado del backend.
 //
 // POR QUÉ EXISTE. El Paciente tiene una sola dirección, la de su ficha, y hay temporadas en que
 // no está ahí: el verano en la casa de un hijo, una internación, una mudanza mientras arreglan
@@ -149,7 +149,7 @@ export async function pacientesConDomicilioDelDia(guardia, pacientes) {
  * La Familia no está mirando un turno: está mirando a los suyos, y lo que pregunta es dónde
  * se los está atendiendo ahora. Por eso acá la fecha es la de hoy y no la de ninguna guardia.
  *
- * El día se saca igual que en todo el resto del motor, con la fecha del servidor; no hay una
+ * El día se saca igual que en todo el resto del backend, con la fecha del servidor; no hay una
  * hora por Prestadora en ningún lado del producto todavía, y resolverlo acá solo para esta
  * pantalla dejaría dos criterios de "hoy" conviviendo.
  */

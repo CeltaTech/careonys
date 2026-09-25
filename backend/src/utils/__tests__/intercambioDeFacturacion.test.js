@@ -1,10 +1,10 @@
 /**
- * Pruebas del ida y vuelta por archivo, del lado del motor.
+ * Pruebas del ida y vuelta por archivo, del lado del backend.
  *
  * El archivo que se prueba acá es una copia generada del que vive en el Panel
  * (`scripts/copias_entre_apps.mjs`), y allá está probado en detalle. Lo que se comprueba acá es
  * lo que la copia puede romper y el original no: que resuelva sus propias importaciones corriendo
- * en el motor, y que la decisión por renglón —lo único que la ruta de importación delega— dé lo
+ * en el backend, y que la decisión por renglón —lo único que la ruta de importación delega— dé lo
  * mismo de los dos lados.
  *
  * No hace falta base de datos: la decisión recibe lo que la base contestó, no la consulta.

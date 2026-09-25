@@ -6,7 +6,7 @@
  * POR QUÉ EXISTE ESTA PRUEBA. Estas tres funciones son el punto único de verdad de dos cosas que
  * antes estaban escritas a mano en tres pantallas: el nombre con el que se baja un documento y la
  * ruta con la que se guarda. La ruta importa más de lo que parece: empieza por la Prestadora, y es
- * lo que el motor firma para dejar ver un documento de baja con nombre, documento y montos
+ * lo que el backend firma para dejar ver un documento de baja con nombre, documento y montos
  * (`../documentosDeCese.js`).
  *
  * Con el sistema roto —una ruta que no empiece por la Prestadora, o una lista de tipos abierta—

@@ -45,7 +45,7 @@ describe('sumarDias', () => {
   });
 
   it('cuenta en UTC, así no se corre un día según a qué hora se la llame', () => {
-    // Los trabajos diarios del motor corren a la hora que arrancó el servidor. Contando en la zona
+    // Los trabajos diarios del backend corren a la hora que arrancó el servidor. Contando en la zona
     // horaria de la máquina, el mismo cálculo da una fecha distinta según si son las 21 o las 03.
     assert.equal(sumarDias('2026-09-01T23:59:59Z', 10), '2026-09-11');
   });

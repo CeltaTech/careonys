@@ -36,7 +36,7 @@ export function FormaDeCobroDetalle({ forma, unidades, soloLectura, onClose, onG
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
 
-  // Un campo vacío es «no tiene», no cero. Mandarlo como texto vacío haría que el motor lo
+  // Un campo vacío es «no tiene», no cero. Mandarlo como texto vacío haría que el backend lo
   // rechace por no ser un entero, cuando lo que la persona quiso decir es que ahí no hay nada.
   const vacioEsNulo = (valor) => (valor === '' || valor === null ? null : valor);
 
@@ -112,7 +112,7 @@ export function FormaDeCobroDetalle({ forma, unidades, soloLectura, onClose, onG
           disabled={soloLectura}
         >
           <option value="">{t.marketplace.forma_periodo_sin_unidad}</option>
-          {/* Las unidades vienen del motor, que las lee del catálogo de la base: acá no hay
+          {/* Las unidades vienen del backend, que las lee del catálogo de la base: acá no hay
               ninguna lista escrita a mano. */}
           {unidades.map((unidad) => (
             <option key={unidad} value={unidad}>

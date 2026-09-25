@@ -79,22 +79,22 @@ describe('mensajeDeError', () => {
   });
 });
 
-/* El camino entero, del motor a la pantalla.
+/* El camino entero, del backend a la pantalla.
    ==========================================================================
 
    Las pruebas de arriba comprueban las dos piezas por separado. Ésta comprueba que están
-   enganchadas, que es justo lo que estuvo roto: el motor mandaba el motivo, la pantalla armaba
+   enganchadas, que es justo lo que estuvo roto: el backend mandaba el motivo, la pantalla armaba
    el error a mano con `new Error(resultado.error)` y el motivo se perdía en ese renglón. El
    mecanismo estaba entero y no funcionaba, porque nadie recorría el camino de punta a punta.
 
-   Lo que se simula es la respuesta del motor tal como llega: un número, un texto crudo para el
-   registro del servidor y un motivo. La frase no viaja nunca desde el motor —no sabe en qué
+   Lo que se simula es la respuesta del backend tal como llega: un número, un texto crudo para el
+   registro del servidor y un motivo. La frase no viaja nunca desde el backend —no sabe en qué
    idioma está mirando la persona—, así que se busca acá, en las traducciones. */
-describe('del motor a la pantalla', () => {
+describe('del backend a la pantalla', () => {
   // Lo mínimo que `errorDeLaRespuesta` mira de la respuesta de `fetch`.
   const respuestaConNumero = (status) => ({ ok: false, status });
 
-  it('el motivo que manda el motor llega hasta la frase traducida', () => {
+  it('el motivo que manda el backend llega hasta la frase traducida', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const error = errorDeLaRespuesta(respuestaConNumero(409), {
       error: 'A user with this email address has already been registered',
@@ -108,7 +108,7 @@ describe('del motor a la pantalla', () => {
     // perdía al armar el error a mano: la persona leía "ya existe un registro con esos datos"
     // en vez de enterarse de que ese correo ya está en uso.
     expect(texto).not.toBe(t.errores.duplicado);
-    // Ni el texto crudo del motor, que está escrito para quien programa.
+    // Ni el texto crudo del backend, que está escrito para quien programa.
     expect(texto).not.toMatch(/registered|email/i);
   });
 
@@ -145,7 +145,7 @@ describe('del motor a la pantalla', () => {
   });
 
   it('un motivo sin traducción no le muestra un código a nadie', () => {
-    // El motor puede adelantarse a las traducciones. Si eso pasa, se cae a la situación del
+    // El backend puede adelantarse a las traducciones. Si eso pasa, se cae a la situación del
     // número y quien mira ve una frase, nunca `motivo_que_nadie_tradujo`.
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const texto = mensajeDeError(errorDeLaRespuesta(respuestaConNumero(409), { motivo: 'motivo_que_nadie_tradujo' }), t);

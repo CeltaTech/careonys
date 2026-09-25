@@ -35,7 +35,7 @@ function RutaPrivada({ children }) {
 
 // El chat con las Familias de la vidriera cuelga de la modalidad en la que trabaja la
 // Prestadora, no de un interruptor que ella encienda: donde no hay Marketplace no hay con quién
-// hablar. El candado de verdad está en el motor, que contesta que no ofrece esa modalidad; esto
+// hablar. El candado de verdad está en el backend, que contesta que no ofrece esa modalidad; esto
 // es para que no quede una dirección que lleve a una pantalla de error.
 function SoloConMarketplace({ children }) {
   if (!useOfreceMarketplace()) return <Navigate to="/guardias" replace />;

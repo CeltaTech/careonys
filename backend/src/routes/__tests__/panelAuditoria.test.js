@@ -38,7 +38,7 @@ const REGISTRO = [
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, con su dirección entera —filtros incluidos—. */
+/** Todo lo que el backend le pidió a la base, con su dirección entera —filtros incluidos—. */
 let llamadas = [];
 
 let rolDelUsuario = 'superadmin';
@@ -93,12 +93,12 @@ const { panelAuditoriaRouter } = await import('../panelAuditoria.js');
 const app = express();
 app.use(express.json());
 app.use('/api/panel/auditoria', panelAuditoriaRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/panel/auditoria`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/auditoria`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 
@@ -168,7 +168,7 @@ describe('el Superadmin ve la Prestadora de su sesión de soporte, y ninguna otr
     await pedirRegistro();
 
     const consulta = consultaAlRegistro();
-    assert.ok(consulta, 'el motor no consultó el registro');
+    assert.ok(consulta, 'el backend no consultó el registro');
     assert.equal(
       consulta.searchParams.get('prestadora_id'),
       `eq.${PRESTADORA_A}`,
@@ -237,7 +237,7 @@ describe('falla cerrado', () => {
     const { estado } = await pedirRegistro();
 
     assert.equal(estado, 403);
-    assert.equal(consultaAlRegistro(), undefined, 'el motor consultó el registro antes de negar');
+    assert.equal(consultaAlRegistro(), undefined, 'el backend consultó el registro antes de negar');
   });
 
   it('el Coordinador no entra al registro de auditoría', async () => {
@@ -246,6 +246,6 @@ describe('falla cerrado', () => {
     const { estado } = await pedirRegistro();
 
     assert.equal(estado, 403);
-    assert.equal(consultaAlRegistro(), undefined, 'el motor consultó el registro antes de negar');
+    assert.equal(consultaAlRegistro(), undefined, 'el backend consultó el registro antes de negar');
   });
 });

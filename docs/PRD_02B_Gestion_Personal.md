@@ -20,7 +20,7 @@ números hardcodeados — ver regla 10 de `CLAUDE.md`.
 | # | Función |
 |---|---|
 | 1 | Registrar tipo de vínculo por Asistente (monotributo / dependencia) |
-| 2 | Motor de cálculo de cese (`calcularCese`) — 13 causales |
+| 2 | Backend de cálculo de cese (`calcularCese`) — 13 causales |
 | 3 | Simulador de Vínculo (costo comparado monotributo vs. dependencia, sin ejecutar cese) |
 | 4 | Score de riesgo de reclasificación (0-100) |
 | 5 | Gestión de ausencias (enfermedad/accidente inculpable, licencias) |
@@ -71,7 +71,7 @@ Regla que más se rompe (repetida a propósito): toda lectura de `escalas_legale
 fecha_del_hecho)` — la fecha del hecho que se está calculando, **nunca** la fecha actual del
 sistema.
 
-## Motor de cálculo de cese
+## Backend de cálculo de cese
 
 Función pura y testeable, sin efectos secundarios de UI ni de red — debe poder testearse con
 un array de fixtures de `escalas_legales` congelado:
@@ -119,7 +119,7 @@ fórmula para estos tres casos.
 ## Simulador de Vínculo
 
 Pantalla separada (no ejecuta ningún cese real) que compara, para un Asistente hipotético o
-existente, el costo mensual total bajo monotributo vs. bajo dependencia — usa el mismo motor
+existente, el costo mensual total bajo monotributo vs. bajo dependencia — usa el mismo backend
 `calcularCese` para proyectar el costo de un eventual cese sin causa a distintas antigüedades
 (3, 6, 12, 24 meses), mostrando ambos escenarios lado a lado. Objetivo: darle a
 Admin_prestadora una herramienta de decisión antes de blanquear un vínculo, no una

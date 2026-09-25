@@ -26,7 +26,7 @@ import {
 
    Y EL MÍNIMO NO IMPIDE NADA. Si faltan referencias verificadas se dice, y se dice también que la
    decisión es de la Prestadora: el producto avisa, no bloquea (`celtatech/CLAUDE.md` §7). Cuántas
-   se esperan sale de la configuración de esa Prestadora, y viene contado desde el motor. */
+   se esperan sale de la configuración de esa Prestadora, y viene contado desde el backend. */
 
 export function ReferenciasLaborales({ asistente }) {
   const { t, locale } = useLocale();

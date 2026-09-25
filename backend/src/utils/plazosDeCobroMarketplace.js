@@ -1,7 +1,7 @@
 /* Los plazos del cobro de marketplace, tal como los eligió cada Prestadora.
    ========================================================================
 
-   QUÉ RESUELVE. Tres plazos comerciales estaban escritos en el motor: con cuántos días se avisa un
+   QUÉ RESUELVE. Tres plazos comerciales estaban escritos en el backend: con cuántos días se avisa un
    cobro que viene, cuántos dura la gracia cuando un cobro no entra, y cuántos vive el cupón de la
    red de cobranza. Los tres miran a la Familia, así que los elige la Prestadora
    (`configuracion_cobro_marketplace`).
@@ -19,7 +19,7 @@
    Prestadoras y tocan varios accesos de cada una: el mapa que se les pasa guarda lo leído mientras
    dura la vuelta, y se tira al terminarla. No se guarda entre vueltas, por el mismo motivo que el
    idioma: un plazo que se cambia desde el Panel tiene que regir a la vuelta siguiente, sin que
-   nadie reinicie el motor. */
+   nadie reinicie el backend. */
 
 import { supabase } from '../db/connection.js';
 

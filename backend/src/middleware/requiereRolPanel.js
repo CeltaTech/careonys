@@ -153,7 +153,7 @@ export async function requiereRolPanel(req, res, next) {
   // LA ENTRADA ADMINISTRATIVA AL REGISTRO DE ACTIVIDAD.
   //
   // El Panel valida la clave contra Supabase directamente, así que la entrada no pasa por
-  // ninguna ruta del motor: el primer pedido que llega con esa cuenta es lo más cerca que se
+  // ninguna ruta del backend: el primer pedido que llega con esa cuenta es lo más cerca que se
   // está de verla entrar, y acá pasan todos. La función se ocupa de que no quede un renglón por
   // pedido, y de no interrumpir el trabajo si la escritura falla.
   //

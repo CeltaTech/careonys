@@ -22,7 +22,7 @@ import {
 
    LO QUE SE VE SE VUELVE A MEDIR ACÁ. Una toma vencida es una alarma que volvió, y quien mira la
    pantalla tiene que verla volver sin recargar nada. Por eso la vigencia se calcula contra el
-   momento en que se dibuja, con el mismo archivo que usa el motor. */
+   momento en que se dibuja, con el mismo archivo que usa el backend. */
 
 const VISTA = 'alarmas_tomadas_quien_la_tomo';
 const TABLA = 'alarmas_tomadas';

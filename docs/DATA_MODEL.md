@@ -433,7 +433,7 @@ CREATE TABLE configuracion_referencias_laborales (
 - **Llegan solas desde la postulación:** `POST /api/panel/cuentas/asistente` copia acá las que la
   persona cargó en su formulario, todas en `pendiente`. También se pueden cargar a mano, hasta el
   tope de cinco, que es el mismo que admite ese formulario.
-- **La firma de la verificación —`verificada_por` y `verificada_en`— la escribe el motor**, nunca la
+- **La firma de la verificación —`verificada_por` y `verificada_en`— la escribe el backend**, nunca la
   pantalla: por eso estas tres rutas van por `/api/panel/referencias-laborales` y no por Supabase
   directo. Volver el resultado a `pendiente` las borra, y el CHECK
   `referencias_laborales_asistente_verificada_tiene_firma` impide que quede al revés.
@@ -443,7 +443,7 @@ CREATE TABLE configuracion_referencias_laborales (
 - **El mínimo no bloquea nada.** Si faltan, la pantalla lo dice y aclara que la decisión es de la
   Prestadora (`celtatech/CLAUDE.md` §7).
 - Los cuatro resultados y la cuenta contra el mínimo viven en `panel/src/lib/referenciasLaborales.js`,
-  que es el original de la copia que usa el motor.
+  que es el original de la copia que usa el backend.
 
 ## Depósito: fotos-identidad
 
@@ -451,14 +451,14 @@ Las dos fotos con las que se verifica la identidad de un Asistente: la del docum
 cara. Creado por
 `supabase/migrations/20260915210000_las_dos_fotos_de_la_verificacion_de_identidad_tienen_donde_vivir.sql`.
 
-- Privado y sin ninguna política: lo escribe y lo lee el motor con la llave de servicio, después
+- Privado y sin ninguna política: lo escribe y lo lee el backend con la llave de servicio, después
   de comprobar de qué Prestadora es el Asistente. Mismo patrón que `documentos-cese`.
 - La ruta es `<prestadora_id>/<asistente_id>/<documento|perfil>`, sin extensión, y se vuelve a
   armar con esos tres datos cada vez que hay que buscar una foto.
 - **No hay ninguna columna que diga si una foto está cargada.** Como la ruta se deduce, el archivo
   es la única verdad posible; una columna podría decir que sí cuando el archivo ya no está.
 - Qué tipos hay y cómo se arma la ruta está en `panel/src/lib/fotosDeIdentidad.js`, que es el
-  original de la copia que usa el motor.
+  original de la copia que usa el backend.
 
 ## Tabla: validaciones_faciales
 
@@ -909,14 +909,14 @@ CREATE TABLE opciones_postulacion (
 
 `opciones_postulacion` nace vacía a propósito: qué géneros, qué nacionalidades y qué experiencia
 clínica ofrece su formulario lo carga cada Prestadora. El formulario público no consulta la base
-—se las pide al motor, que resuelve la Prestadora por el dominio del sitio—, así que la tabla no
+—se las pide al backend, que resuelve la Prestadora por el dominio del sitio—, así que la tabla no
 tiene política para quien no inició sesión.
 
 RLS activada desde la creación de ambas tablas (regla 8 de `CLAUDE.md`); el backend Express
 escribe con la Service Role Key (bypassea RLS por ser server-only), sin policies públicas de
 lectura/escritura. En Etapa 2, `postulaciones` sigue siendo la tabla de entrada cruda del
 formulario público; cuando un Coordinador la aprueba, se crea directamente el registro de
-`asistentes` (ver sección "Reclutamiento (PRD_03)" arriba) — ya no hay migración de motor de
+`asistentes` (ver sección "Reclutamiento (PRD_03)" arriba) — ya no hay migración de backend de
 base de datos de por medio.
 
 ## Diagrama de relaciones (resumen)

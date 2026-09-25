@@ -12,10 +12,10 @@
  * ingreso.
  *
  * LO QUE VUELVE SON FECHAS Y NADA MÁS. Ni la credencial ni la mitad pública de la llave salen del
- * motor. Para reconocer cuál aparato es cuál alcanza con cuándo se guardó y cuándo se usó por
+ * backend. Para reconocer cuál aparato es cuál alcanza con cuándo se guardó y cuándo se usó por
  * última vez, y cualquier otra cosa sería un dato de más dando vueltas.
  *
- * SACAR NO BORRA. El motor marca la llave como revocada y deja constancia; desde afuera se ve
+ * SACAR NO BORRA. El backend marca la llave como revocada y deja constancia; desde afuera se ve
  * igual, porque la lista muestra sólo las que siguen sirviendo.
  */
 import { useEffect, useState } from 'react';

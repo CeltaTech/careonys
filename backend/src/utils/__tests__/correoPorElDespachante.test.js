@@ -4,14 +4,14 @@
  *   npm test --prefix backend
  *
  * POR QUÉ EXISTE ESTA PRUEBA. Railway no deja salir tráfico por los puertos de correo, así que
- * el envío por SMTP no entrega nada. Que el motor use el despachante no se puede comprobar
+ * el envío por SMTP no entrega nada. Que el backend use el despachante no se puede comprobar
  * mirando el código, porque los dos caminos conviven a propósito: el de SMTP queda para la
  * máquina de desarrollo. Lo que hay que sostener es que **la elección del medio la hacen las
  * variables de entorno**, y no una edición a mano el día del corte.
  *
  * Y hay cuatro cosas más que se rompen en silencio:
  *
- *   1. LOS DESTINATARIOS VIAJAN COMO LISTA. El motor los junta con comas para nodemailer; el
+ *   1. LOS DESTINATARIOS VIAJAN COMO LISTA. El backend los junta con comas para nodemailer; el
  *      despachante espera una lista. Si se le manda el texto con comas, toma todo eso como una
  *      sola dirección, la rechaza, y no llega ninguno de los avisos de ese evento.
  *   2. LAS RESPUESTAS VUELVEN A LA PRESTADORA. Un aviso sale desde una dirección del producto
@@ -41,7 +41,7 @@ let originales;
 let fetchOriginal;
 let pedidos;
 
-// Se anota lo que va al despachante y nada más. El motor además cuenta cada correo que sale, y
+// Se anota lo que va al despachante y nada más. El backend además cuenta cada correo que sale, y
 // esa anotación es otro pedido: mezclarla acá haría que esta prueba hablara de dos cosas.
 function contestarComoElDespachante({ estado = 200, cuerpo = {} } = {}) {
   globalThis.fetch = async (url, opciones) => {

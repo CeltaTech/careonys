@@ -21,7 +21,7 @@ async function llamarApi(path, opciones = {}) {
     },
   });
   const resultado = await respuesta.json().catch(() => ({}));
-  // El motor manda en `codigo` el detalle de por qué no se pudo enviar —hoy
+  // El backend manda en `codigo` el detalle de por qué no se pudo enviar —hoy
   // `whatsapp_no_configurado` o `envio_fallido`, de `routes/panelWhatsapp.js`—, que es
   // exactamente lo que `lib/errores.js` llama un motivo: un código con el que dice qué pasó, no
   // una frase. Se lo pasa como tal para que viaje adentro del error junto con el número de la

@@ -1,6 +1,6 @@
 import { llamadorDe } from './apiPanel';
 
-/* Las rutas de Cobros del motor.
+/* Las rutas de Cobros del backend.
    ==========================================================================
 
    POR QUÉ EXISTE. El saldo de una Familia es una resta —lo facturado menos lo cobrado— y esa

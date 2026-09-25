@@ -285,7 +285,7 @@ de una condición que hasta entonces estaba escrita a mano en cada policy.
 
 En la misma migración se eliminó `familia_ve_asistente_asignado`, que le daba a la Familia la
 ficha completa del Asistente asignado. La aplicación de Familias nunca consulta `asistentes`
-—pide todo por el motor—, así que era una puerta abierta sin uso.
+—pide todo por el backend—, así que era una puerta abierta sin uso.
 
 **El estado de cuenta de la Familia lo ve la administración.** Cuánto debe cada Familia y si está
 atrasada se veía con el solo hecho de tener un rol de Panel, o sea también desde la coordinación
@@ -294,7 +294,7 @@ de turnos, que arma las guardias y no interviene en el trato económico. Desde
 acción `ver_estado_de_cuenta_familia` del catálogo `catalogo_acciones_permisos`, que nace
 reservada a la administración y que cada Prestadora abre o cierra desde su Panel.
 
-Donde manda es en el motor, porque entra a la base con la llave de servicio: el middleware
+Donde manda es en el backend, porque entra a la base con la llave de servicio: el middleware
 `requierePermiso('ver_estado_de_cuenta_familia')` cierra en `backend/src/routes/panelCobros.js`
 las seis rutas que entregan o mueven el estado de cuenta —los saldos, el que llegó de afuera, el
 detalle de una factura, anotar un cobro, anularlo y la entrada de lotes—. Lo que sirve para
@@ -416,7 +416,7 @@ las obliga a estar ahí es la seguridad, no la comodidad: leer el saldo, restarl
 escribirlo son dos viajes, y dos ventanas abiertas a la vez descuentan una sola vez. Adentro de la
 base el descuento y la anotación pasan juntos, con la fila del acceso tomada.
 
-Ninguna de las dos funciones es `SECURITY DEFINER` —entra el motor con la llave de servicio, y el
+Ninguna de las dos funciones es `SECURITY DEFINER` —entra el backend con la llave de servicio, y el
 esquema `interno` es para las que usan las políticas—, y las dos revocan `PUBLIC`, `anon` y
 `authenticated` en la misma migración que las crea: quedan al alcance de `service_role` y de nadie
 más. Sin eso serían dos direcciones web, y una de ellas gasta plata ajena.
@@ -485,7 +485,7 @@ depósito `fotos-identidad`, creado por
 `supabase/migrations/20260915210000_las_dos_fotos_de_la_verificacion_de_identidad_tienen_donde_vivir.sql`.
 
 - **Es privado y no tiene ninguna política, a propósito.** Nadie lo alcanza con su propio pase.
-  Lo escribe y lo lee el motor con la llave de servicio, después de comprobar de qué Prestadora es
+  Lo escribe y lo lee el backend con la llave de servicio, después de comprobar de qué Prestadora es
   el Asistente (`backend/src/routes/panelVerificacionIdentidad.js`). Con RLS encendida y ninguna
   política, la base niega sola: falla cerrado. Es la misma forma de `certificados-medicos`,
   `autorizaciones-monitoreo` y `documentos-cese`.

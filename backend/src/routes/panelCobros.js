@@ -84,7 +84,7 @@ import { requierePermiso } from '../utils/permisos.js';
    son dato sensible (CLAUDE.md §6): no se loguean y no viajan por la URL. Por la URL viaja el
    identificador de una factura o un período, que no dicen cuánto debe nadie.
 
-   Y EL AISLAMIENTO. El motor entra con la clave de servicio, o sea sin las reglas de acceso de
+   Y EL AISLAMIENTO. El backend entra con la clave de servicio, o sea sin las reglas de acceso de
    la base: acá el aislamiento entre Prestadoras lo garantiza cada consulta con su filtro de
    `prestadora_id`, o no lo garantiza nadie. */
 
@@ -92,7 +92,7 @@ export const panelCobrosRouter = Router();
 
 // Qué monto vale, cómo se lee un período: escrito una sola vez en `utils/cobrosDeFamilia.js`,
 // que es copia del archivo del Panel. La pantalla arma el desplegable con la misma lista con la
-// que el motor controla, así no puede ofrecer algo que después se rechaza (regla 12 de
+// que el backend controla, así no puede ofrecer algo que después se rechaza (regla 12 de
 // CLAUDE.md §7). Se vuelven a exportar desde acá porque es de donde las venían tomando quienes
 // las usan. Los medios no están en esa lista: salen de la base, por `utils/mediosDePago.js`.
 export {
@@ -107,7 +107,7 @@ export {
  * Los nombres de estas Familias, para las listas que se muestran en pantalla.
  *
  * Se buscan aparte y filtrando por Prestadora en vez de traerlos colgados de la factura,
- * porque el motor no pasa por las reglas de acceso de la base.
+ * porque el backend no pasa por las reglas de acceso de la base.
  */
 async function nombresDeFamilias(prestadoraId, ids) {
   const unicos = [...new Set(ids)];
@@ -502,7 +502,7 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
         periodo,
         monto_total: montoTotal,
         // La emisión se escribe en vez de dejarla en el valor por defecto de la base: el plazo
-        // de pago se cuenta desde este mismo día, y si uno lo pone la base y el otro el motor,
+        // de pago se cuenta desde este mismo día, y si uno lo pone la base y el otro el backend,
         // un cambio de día entre los dos daría un vencimiento corrido.
         fecha_emision: hoy,
         fecha_vencimiento: vencimiento,
@@ -636,7 +636,7 @@ panelCobrosRouter.post(
  * mismos, y están escritos una sola vez en `utils/intercambioDeFacturacion.js`.
  *
  * ACÁ SALEN LAS FILAS, NO EL ARCHIVO. Quien lo pide es el Panel, que lo arma con ese mismo
- * archivo compartido y lo baja. Así el motor no tiene que saber nada de planillas de cálculo.
+ * archivo compartido y lo baja. Así el backend no tiene que saber nada de planillas de cálculo.
  *
  * UNA FACTURA YA FACTURADA NO SALE. Lo que se manda a facturar es lo que todavía no se facturó;
  * volver a mandar lo emitido llevaría a emitirlo dos veces.

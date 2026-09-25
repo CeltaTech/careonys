@@ -16,7 +16,7 @@ import EnlaceAlMapa from '../components/EnlaceAlMapa';
 // misma carpeta de documentos sería inventar una verificación distinta según quién mire.
 //
 // LAS OPINIONES VAN SIN QUIÉN LAS ESCRIBIÓ. Quien calificó es una Familia, y su nombre no es
-// parte de lo que se publica. El motor ya no lo manda; acá no habría de dónde sacarlo.
+// parte de lo que se publica. El backend ya no lo manda; acá no habría de dónde sacarlo.
 //
 // CÓMO LLEGAR A LA PERSONA SE PIDE APARTE, Y CON SU PROPIO BOTÓN. Eso es lo que el Marketplace
 // vende, así que verlo cuesta. Mirar este perfil no abre nada: la pantalla pregunta qué pasaría
@@ -24,7 +24,7 @@ import EnlaceAlMapa from '../components/EnlaceAlMapa';
 // confirmación. Recién cuando alguien toca «sí» sale el pedido que cobra. Abrir un contacto no
 // puede ser nunca el efecto de haber entrado a una pantalla.
 //
-// Y QUIEN NO MIRA LA PLATA NO VE NINGUNA DE ESAS FRASES. El motor le contesta si el contacto ya
+// Y QUIEN NO MIRA LA PLATA NO VE NINGUNA DE ESAS FRASES. El backend le contesta si el contacto ya
 // está abierto y nada más: cuánto sale y cuánto saldo queda es plata, y en el círculo familiar no
 // la mira cualquiera.
 export default function PerfilPublicoAsistente() {

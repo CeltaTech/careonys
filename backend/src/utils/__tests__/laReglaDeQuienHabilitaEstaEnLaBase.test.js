@@ -3,8 +3,8 @@
  *
  *   node --test "src/**\/__tests__/*.test.js"   (desde backend/)
  *
- * POR QUÉ ESTÁ ESCRITA DOS VECES. El motor entra a la base con la llave de servicio, así que sin el
- * control de este lado la regla de la base nunca se evaluaría con lo que el motor sabe; y sin la de
+ * POR QUÉ ESTÁ ESCRITA DOS VECES. El backend entra a la base con la llave de servicio, así que sin el
+ * control de este lado la regla de la base nunca se evaluaría con lo que el backend sabe; y sin la de
  * la base, cualquier camino nuevo que escriba en esas tablas nacería sin control. Dos copias de la
  * misma decisión son dos lugares donde corregirla, y basta con que alguien arregle una para que la
  * otra quede contestando otra cosa: eso es exactamente lo que había pasado.
@@ -43,7 +43,7 @@ const LA_COORDINACION_HABILITA = migracion(
 
 const LOS_CINCO_ROLES = ['superadmin', 'admin_prestadora', 'coordinador', 'asistente', 'familia'];
 
-describe('el motor: un rol que no se entiende no habilita a nadie', () => {
+describe('el backend: un rol que no se entiende no habilita a nadie', () => {
   it('no habilita a nadie, de ningún escalón', () => {
     for (const rol of LOS_CINCO_ROLES) {
       assert.equal(puedeHabilitar('lo_que_sea', rol), false);
@@ -67,7 +67,7 @@ describe('el motor: un rol que no se entiende no habilita a nadie', () => {
   });
 });
 
-describe('la base dice lo mismo que el motor', () => {
+describe('la base dice lo mismo que el backend', () => {
   it('el rol que no se entiende no tiene escalón: la base devuelve nulo, no un número', () => {
     assert.match(EL_ROL_QUE_NO_SE_ENTIENDE, /ELSE NULL::smallint/);
     const conNumero = /ELSE\s+\d+::smallint/.exec(EL_ROL_QUE_NO_SE_ENTIENDE);

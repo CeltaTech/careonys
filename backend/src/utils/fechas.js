@@ -1,4 +1,4 @@
-// Cuentas de calendario del motor, escritas una sola vez.
+// Cuentas de calendario del backend, escritas una sola vez.
 //
 // POR QUÉ EXISTE. Sumar días a una fecha parece tan simple que cada archivo se lo escribía
 // solo, y así estaba: la generación de series de guardias tenía su propia copia. Dos copias

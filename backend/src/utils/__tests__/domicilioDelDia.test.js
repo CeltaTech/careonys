@@ -2,21 +2,21 @@
  * Pruebas de dónde se atiende a cada Paciente el día de su guardia.
  *
  * Usan el banco de pruebas que ya trae Node adentro (`node --test`), sin instalar nada, igual
- * que el resto de las pruebas del motor:
+ * que el resto de las pruebas del backend:
  *
  *   npm test --prefix backend
  *
  * ACÁ NO SE PRUEBA EL CRITERIO, SE PRUEBA QUIÉN PREGUNTA Y CÓMO APLICA LA RESPUESTA. Cuál
  * dirección gana un día dado lo decide la función `domicilios_de_pacientes_en` de la base
  * (migración 20260821220000_donde_se_atiende_al_paciente_este_dia.sql) y no este archivo. Lo
- * que el motor tiene que hacer bien es otra cosa: preguntar por la fecha de cada guardia y no
+ * que el backend tiene que hacer bien es otra cosa: preguntar por la fecha de cada guardia y no
  * por la de hoy, preguntar una vez por día y no una vez por Paciente, y pisar solamente los
  * campos que la consulta pidió.
  *
  * Por eso la base de mentira de abajo contesta con la misma regla que la función SQL —un
  * período que empieza el día que empieza y termina el día que termina, sin final si no lo
  * tiene—: así, cuando una prueba dice "el primer día del período cuenta como adentro", lo que
- * queda comprobado es que el motor preguntó por el día correcto. Que la función SQL conteste
+ * queda comprobado es que el backend preguntó por el día correcto. Que la función SQL conteste
  * eso mismo se comprueba contra la base de verdad, no acá.
  */
 import { strict as assert } from 'node:assert';
@@ -35,7 +35,7 @@ const FICHAS = new Map([
 
 /** Las temporadas cargadas para esta prueba. Cada `it` prepara las suyas. */
 let temporales = [];
-/** Todo lo que el motor le preguntó a la base, para poder contar las preguntas. */
+/** Todo lo que el backend le preguntó a la base, para poder contar las preguntas. */
 let preguntas = [];
 
 // Copia exacta del criterio de la migración: la temporal vigente ese día, y si no la ficha.
@@ -202,7 +202,7 @@ describe('la dirección del día de la guardia', () => {
 
   it('cada guardia se resuelve con su propia fecha, no con la de la primera', async () => {
     // Es el caso de la lista de turnos: una semana entera de golpe, con la temporada empezando
-    // en el medio. Si el motor preguntara una sola vez por "hoy", media lista quedaría mal.
+    // en el medio. Si el backend preguntara una sola vez por "hoy", media lista quedaría mal.
     temporales = [EL_VERANO_EN_LA_CASA_DEL_HIJO];
 
     const guardias = await conDomicilioDelDia([
@@ -305,7 +305,7 @@ describe('lo que no se pidió, no se completa', () => {
 
 describe('lo que ve la Familia, que mira hoy y no un turno', () => {
   // La Familia no entra a una guardia: entra a ver a los suyos. La pregunta que hace su
-  // aplicación es "¿dónde lo están atendiendo ahora?", y la fecha la pone el motor.
+  // aplicación es "¿dónde lo están atendiendo ahora?", y la fecha la pone el backend.
   const hoy = () => new Date().toISOString().slice(0, 10);
 
   it('pregunta por el día de hoy, no por ninguna fecha de guardia', async () => {

@@ -21,7 +21,7 @@ import { ContenidoDetalle } from './ContenidoDetalle';
 
    Quién la escribe lo decide cada Prestadora en Configuración › Accesos. Verla la ve cualquiera
    del Panel: un borrador hay que poder revisarlo. Sin el permiso, la pantalla es de sólo lectura,
-   y quien niega de verdad es el motor. */
+   y quien niega de verdad es el backend. */
 export function ContenidoParaFamilias() {
   const { t } = useLocale();
   const { usuario } = useAuth();

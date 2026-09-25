@@ -17,7 +17,7 @@
  *      sacó una máquina.
  *   3. NO SE ESCRIBE UNA SALIDA DESPUÉS DE LA LLEGADA. Un pedido que llega tarde desde la cola
  *      no inventa una hora que no pasó.
- *   4. UNA PRESTADORA NO ALCANZA LA GUARDIA DE OTRA. El motor entra con la llave de servicio, así
+ *   4. UNA PRESTADORA NO ALCANZA LA GUARDIA DE OTRA. El backend entra con la llave de servicio, así
  *      que lo único que aísla son los filtros de cada consulta.
  *
  * La base falsa de acá abajo honra los filtros de la consulta de guardias a propósito: si alguien
@@ -49,7 +49,7 @@ const LNG = -58.4;
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, con la dirección entera: los filtros van ahí. */
+/** Todo lo que el backend le pidió a la base, con la dirección entera: los filtros van ahí. */
 let llamadas = [];
 
 const baseFalsa = createServer((req, res) => {
@@ -90,12 +90,12 @@ const { appAsistentesRouter } = await import('../appAsistentes.js');
 const app = express();
 app.use(express.json());
 app.use('/api/app-asistentes', appAsistentesRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/app-asistentes`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/app-asistentes`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 
@@ -141,7 +141,7 @@ function guardiaDePrueba(extra = {}) {
  * La base falsa filtra de verdad por los `eq` que vengan en la dirección.
  *
  * Es lo que convierte la prueba de aislamiento en una prueba: una base que contestara siempre la
- * misma fila daría 200 aunque el motor consultara sin filtrar por Prestadora.
+ * misma fila daría 200 aunque el backend consultara sin filtrar por Prestadora.
  */
 function filaQuePasaLosFiltros(url, filas) {
   const parametros = new URL(url, 'http://interno').searchParams;
@@ -159,14 +159,14 @@ function filaQuePasaLosFiltros(url, filas) {
   );
 }
 
-/** Las alertas tempranas que el motor dio de alta en este pedido. */
+/** Las alertas tempranas que el backend dio de alta en este pedido. */
 function alertasAnotadas() {
   return llamadas
     .filter((l) => l.clave === 'POST /rest/v1/alertas_tempranas_guardia')
     .map((l) => (Array.isArray(l.cuerpo) ? l.cuerpo[0] : l.cuerpo));
 }
 
-/** Lo que el motor le escribió a la guardia, si le escribió algo. */
+/** Lo que el backend le escribió a la guardia, si le escribió algo. */
 function guardiasActualizadas() {
   return llamadas.filter((l) => l.clave === 'PATCH /rest/v1/guardias');
 }
@@ -397,7 +397,7 @@ describe('aviso de demora — el acto de la persona, anotado como suyo', () => {
 
   it('el aviso sale en el momento, sin esperar la vuelta del proceso de fondo', async () => {
     await pedir('POST', `/guardias/${GUARDIA}/aviso-demora`, { motivo: 'transporte' });
-    // Se mira la antesala del envío, que es lo único observable acá: el motor fue a buscar la
+    // Se mira la antesala del envío, que es lo único observable acá: el backend fue a buscar la
     // configuración del evento del Coordinador, y después anotó en la fila que ya notificó.
     assert.ok(
       llamadas.some((l) => l.clave === 'GET /rest/v1/configuracion_notificaciones'),

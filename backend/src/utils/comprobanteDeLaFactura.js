@@ -6,7 +6,7 @@
    lugar. Escrito dos veces, alcanza con que una se olvide de una columna para que la misma factura
    quede distinta según por dónde entró (`CLAUDE.md` §8, punto único de verdad).
 
-   EL MOTOR SUBE, NO LA PANTALLA. Las dos puertas le entregan los bytes al motor y el motor los
+   EL BACKEND SUBE, NO LA PANTALLA. Las dos puertas le entregan los bytes al backend y el backend los
    deja en el depósito. Así el aviso del software de facturación —que no tiene sesión de nadie— y
    la carga a mano terminan en el mismo sitio, con la misma ruta y la misma comprobación.
 
@@ -65,7 +65,7 @@ export function loQueEstaMalEnElComprobante(bytes) {
 /**
  * Deja el comprobante en el depósito y lo anota en la factura. Devuelve `{ error }`.
  *
- * El filtro de Prestadora va acá y no en quien llama: el motor entra a la base con la llave de
+ * El filtro de Prestadora va acá y no en quien llama: el backend entra a la base con la llave de
  * servicio, así que si falta ese filtro no lo detiene nadie.
  */
 export async function guardarComprobante({ prestadoraId, facturaId, familiaId, bytes }) {

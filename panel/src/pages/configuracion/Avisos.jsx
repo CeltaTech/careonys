@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { esAdminDePrestadora } from '../../lib/roles';
 import { supabase } from '../../lib/supabaseClient';
 import { llamarApiConfiguracion as llamarApi } from '../../lib/apiConfiguracion';
-import { DIRECCION_DEL_MOTOR } from '../../lib/apiPanel';
+import { DIRECCION_DEL_BACKEND } from '../../lib/apiPanel';
 import { ordenarTramosPremura } from '../../lib/tramosPremura';
 import { MINUTOS_QUE_SE_PUEDEN_TOCAR, ordenDeLaEscalada } from '../../lib/ordenDeLaEscalada';
 import { traducirValor } from '../../i18n/valores';
@@ -467,7 +467,7 @@ function TabCorreoDeLaPrestadora() {
     recargar();
   }, [recargar]);
 
-  // El motor contesta el estado nuevo, así que no hace falta volver a preguntárselo: guardar la
+  // El backend contesta el estado nuevo, así que no hace falta volver a preguntárselo: guardar la
   // casilla mueve el reenvío, y lo que hay que mostrar después es cómo quedó ese movimiento.
   async function guardar() {
     setGuardando(true);
@@ -751,7 +751,7 @@ function TabAvisoGuardiaSinCubrir() {
    son las claves con las que esta Prestadora habla con Meta, y Superadmin es un rol técnico de
    CeltaTech. La sesión de soporte técnico tampoco lo habilita.
 
-   Quien decide de verdad es el motor (`backend/src/routes/panelConfiguracion.js`, las dos rutas
+   Quien decide de verdad es el backend (`backend/src/routes/panelConfiguracion.js`, las dos rutas
    `/whatsapp`): escribiendo la dirección a mano se llega igual, y ahí se niega. Esto de acá es
    para que no se le muestre a Superadmin un formulario que no va a poder guardar, y para que
    entienda por qué no lo ve — una pantalla que esconde algo sin decirlo se lee como una falla
@@ -781,8 +781,8 @@ function TabWhatsapp() {
    ==========================================================================
 
    Son cinco datos y no tres (pendiente #165). A los que identifican la cuenta —número, WABA,
-   identificador del número— y al token con el que el motor manda mensajes, se les suman los dos
-   con los que el motor **le cree a un mensaje que entra**: el secreto de la aplicación, con el
+   identificador del número— y al token con el que el backend manda mensajes, se les suman los dos
+   con los que el backend **le cree a un mensaje que entra**: el secreto de la aplicación, con el
    que Meta firma cada aviso, y el token de verificación del saludo inicial. Ese último era
    antes una sola variable de entorno para todo el producto: el mismo texto para todas las
    Prestadoras, así que quien lo supiera de una lo sabía de todas. Ahora es de cada una y se
@@ -898,10 +898,10 @@ function TabWhatsappCredenciales() {
             <FormField
               label={t.configuracion.whatsapp_direccion_webhook}
               name="direccion_webhook"
-              value={`${DIRECCION_DEL_MOTOR}/api/whatsapp-webhook/${form.prestadora_id}`}
+              value={`${DIRECCION_DEL_BACKEND}/api/whatsapp-webhook/${form.prestadora_id}`}
               readOnly
             />
-            {/* Sin los dos secretos cargados, el motor rechaza todo lo que entre por esa
+            {/* Sin los dos secretos cargados, el backend rechaza todo lo que entre por esa
                 dirección. Es el comportamiento correcto, pero desde afuera se ve como que
                 WhatsApp no anda, así que se dice acá antes de que alguien lo averigüe. */}
             {form.activo && !(form.app_secret_cargado && form.verify_token_cargado) && (
@@ -944,7 +944,7 @@ function TabWhatsappPlantillas() {
     recargar();
   }, [recargar]);
 
-  // El alta de la plantilla en Meta la hace el motor, que es el único lado que tiene el token de
+  // El alta de la plantilla en Meta la hace el backend, que es el único lado que tiene el token de
   // la Prestadora. Acá no se elige ningún estado: el que quede lo escribe lo que Meta conteste.
   async function enviarAMeta(fila) {
     setActualizandoId(fila.id);
@@ -1122,7 +1122,7 @@ function QueDijoLaIA({ propuesta }) {
 
 /* La corrección de una plantilla que Meta rechazó. Se muestra el texto propuesto y no se guarda
    solo: quien coordina lo lee y decide. El botón de usarlo aparece únicamente mientras la
-   plantilla es un borrador, que es lo único que el motor deja editar — el texto de una plantilla
+   plantilla es un borrador, que es lo único que el backend deja editar — el texto de una plantilla
    que ya salió no se cambia de este lado sin que Meta se entere. */
 function CorreccionDeLaIA({ plantilla, propuesta, aplicando, onAplicar, onClose }) {
   const modal = useModalAccesible(onClose);
@@ -1263,7 +1263,7 @@ const escaladaGraveSinCerrarValida = (valor) => {
 };
 
 /* El campo vacío apaga ese escalón, y apagarlo es una decisión válida: no hay un interruptor
-   aparte. Por eso vacío pasa la revisión y sale como nulo hacia el motor. */
+   aparte. Por eso vacío pasa la revisión y sale como nulo hacia el backend. */
 const minutosDeEscalonValidos = (valor, campo) => {
   if (valor === null || valor === undefined || valor === '') return true;
   const { minimo, maximo } = MINUTOS_QUE_SE_PUEDEN_TOCAR[campo];
@@ -1328,7 +1328,7 @@ function TabWhatsappEscaladaCoordinador() {
     setEstado('cargando');
     setError(null);
     try {
-      /* La lista de Coordinadores llega con la configuración, del motor. Antes se pedía acá
+      /* La lista de Coordinadores llega con la configuración, del backend. Antes se pedía acá
          mismo a la tabla `usuarios`, y esa tabla deja que cada persona lea su propia fila y
          ninguna otra: la lista volvía vacía y el desplegable del Coordinador de respaldo
          aparecía sin nadie adentro, así que no se podía elegir a nadie. Es el mismo reparto
@@ -1384,7 +1384,7 @@ function TabWhatsappEscaladaCoordinador() {
     }
     setGuardando(true);
     setError(null);
-    // Se ordenan antes de mandarlos: el motor lee la lista de arriba hacia abajo y se
+    // Se ordenan antes de mandarlos: el backend lee la lista de arriba hacia abajo y se
     // queda con el primer tramo que le sirve, así que un tramo fuera de orden no se
     // alcanza nunca. Y el servidor además la rechaza si llega desordenada.
     const ordenados = ordenarTramosPremura(form.umbrales_premura);
@@ -1504,7 +1504,7 @@ function TabWhatsappEscaladaCoordinador() {
 
    ES UN SOLO NÚMERO Y NO APAGA NADA. Cuando el rato se cumple, la alarma vuelve como si nadie la
    hubiera tomado. Por eso el número tiene borde por arriba y por abajo, y los dos están escritos
-   en `lib/alarmasTomadas.js`, que es el mismo archivo que usa el motor. */
+   en `lib/alarmasTomadas.js`, que es el mismo archivo que usa el backend. */
 function CuantoDuraTomarUnaAlarma() {
   const { t } = useLocale();
   const [minutos, setMinutos] = useState('');

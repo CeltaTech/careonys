@@ -17,7 +17,7 @@
 // aplicación cuyo `/perfil` todavía no lo manda recibe `false`, que es la respuesta segura.
 //
 // QUÉ SE VE Y QUÉ NO. Cada Prestadora elige, desde Configuración › Las aplicaciones, qué
-// muestran los teléfonos. El candado de verdad está en el motor, que directamente no manda
+// muestran los teléfonos. El candado de verdad está en el backend, que directamente no manda
 // lo apagado; esto de acá es para que no quede un botón que no lleva a ningún lado ni un
 // casillero vacío que haga creer que alguien lo está controlando (tarea 65).
 //
@@ -97,7 +97,7 @@ export function useContactoDeLaPrestadora() {
 // Devuelve la pregunta, no la lista: `seVe('familia_signos_vitales')`.
 //
 // Se pregunta por la clave en vez de repartir la lista entera porque la lista vive en el
-// motor (`backend/src/utils/catalogoVisibilidad.js`) y no se copia acá: un interruptor nuevo
+// backend (`backend/src/utils/catalogoVisibilidad.js`) y no se copia acá: un interruptor nuevo
 // no obliga a tocar este archivo.
 //
 // Mientras la respuesta no llegó, contesta que sí a todo. Es lo mismo que hacían las dos

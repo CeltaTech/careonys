@@ -26,7 +26,7 @@ function asegurarConfiguracion() {
 // Devuelve true si al menos una suscripción recibió el push con éxito — lo necesita Fase 11
 // (revisarRecordatoriosPush.js) para decidir si cae a WhatsApp de respaldo.
 //
-// `prestadoraId` es obligatorio y no tiene valor por defecto: el motor entra con la llave de
+// `prestadoraId` es obligatorio y no tiene valor por defecto: el backend entra con la llave de
 // servicio, que se saltea la protección por fila, así que lo único que impide mandarle el aviso de
 // una Prestadora al aparato de otra es este filtro. Colgar del identificador del Asistente o de la
 // Familia no alcanza, porque acá no se lee ninguna de esas dos tablas.

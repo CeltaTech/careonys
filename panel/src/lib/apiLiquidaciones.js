@@ -1,9 +1,9 @@
 import { llamadorDe } from './apiPanel';
 
-/* Las rutas de Liquidaciones del motor.
+/* Las rutas de Liquidaciones del backend.
    ==========================================================================
 
-   POR QUÉ EXISTE. Lo que se le liquida a un Asistente lo arma el motor, no el navegador: la
+   POR QUÉ EXISTE. Lo que se le liquida a un Asistente lo arma el backend, no el navegador: la
    cuenta usa la escala legal vigente a la fecha del período y tiene que quedar congelada, así
    que se hace de un lado solo. El Panel pide y muestra; no calcula ni escribe importes.
 

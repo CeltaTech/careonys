@@ -1,6 +1,6 @@
 // Los lugares guardados de una persona, leídos desde el Panel.
 //
-// **Es la misma pieza que del lado del motor**, escrita acá porque el Panel consulta la base por
+// **Es la misma pieza que del lado del backend**, escrita acá porque el Panel consulta la base por
 // su cuenta y las dos carpetas no pueden importarse entre sí. Lo que no se repite es la decisión:
 // las dos preguntan lo mismo a las mismas tablas, y la Organización la resuelve la protección por
 // fila, no un filtro escrito en la pantalla.

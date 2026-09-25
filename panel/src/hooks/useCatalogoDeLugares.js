@@ -8,7 +8,7 @@ import { mensajeDeError } from '../lib/errores';
 
    Tres pantallas la necesitan —la de Configuración, la ficha de la Asistente y el alcance de una
    coordinadora— y las tres la piden acá, no cada una por su lado. Es el mismo punto único de
-   verdad que del lado del motor: si la carga se escribiera tres veces, una mostraría los apagados
+   verdad que del lado del backend: si la carga se escribiera tres veces, una mostraría los apagados
    y otra no, y nadie sabría cuál está bien.
 
    Devuelve los cuatro estados, para que la pantalla los muestre con `EstadoLista`.

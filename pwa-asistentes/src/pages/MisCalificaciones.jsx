@@ -9,11 +9,11 @@ import { mensajeDeError } from '../lib/errores';
 //
 // POR QUÉ EXISTE ESTA PANTALLA. Una calificación no se corrige ni se borra: queda escrita, y
 // algunas se ven en el perfil público. Lo único que equilibra eso es que la persona calificada
-// pueda dejar su versión al lado, y que se lea junto con la otra. El motor y la base ya lo
+// pueda dejar su versión al lado, y que se lea junto con la otra. El backend y la base ya lo
 // tenían resuelto; lo que faltaba era la pantalla desde donde se hace.
 //
 // EL DESCARGO SE ESCRIBE UNA SOLA VEZ. No es una decisión de esta pantalla: la policy
-// `asistente_carga_su_descargo` sólo deja escribir mientras el campo está vacío, y el motor
+// `asistente_carga_su_descargo` sólo deja escribir mientras el campo está vacío, y el backend
 // contesta 409 al segundo intento. Acá eso se convierte en dos cosas: el formulario desaparece
 // en cuanto hay descargo, y antes de guardar se pregunta de nuevo, porque no va a haber una
 // segunda oportunidad de decirlo mejor.
@@ -67,7 +67,7 @@ function Descargo({ calificacion, onGuardado, t, locale }) {
     setError('');
     try {
       await api.cargarDescargo(calificacion.id, texto);
-      // La lista se vuelve a pedir al motor en vez de dar por hecho lo que se acaba de mandar:
+      // La lista se vuelve a pedir al backend en vez de dar por hecho lo que se acaba de mandar:
       // lo que se muestra de acá en más es lo que quedó guardado, no lo que se escribió.
       await onGuardado();
     } catch (e) {

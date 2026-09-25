@@ -74,7 +74,7 @@ medio de una emergencia no busca su caso en un desplegable, y clasificarlas es u
 negocio de cada Prestadora que el producto no inventa.
 
 **Sale aunque no haya señal.** Es un tipo más de la cola sin conexión
-(`pwa-asistentes/src/lib/colaOffline.js`), y por eso el motor acepta acá —y sólo acá— el momento
+(`pwa-asistentes/src/lib/colaOffline.js`), y por eso el backend acepta acá —y sólo acá— el momento
 que marca el teléfono: un aviso que estuvo media hora esperando red guardado con la hora de la
 sincronización contaría mal lo que pasó. Se acepta hacia atrás nada más; una hora futura es un
 reloj mal puesto.
@@ -289,7 +289,7 @@ real de `guardias.modalidad` que la Prestadora haya usado — sin catálogo cerr
 particular (CLAUDE.md §2/§7).
 
 El informe solo puede guardarse/imprimirse después de que un usuario de la Prestadora con el
-permiso `validar_informe_obra_social` (motor de `permisos_prestadora`) lo valide. Al validar,
+permiso `validar_informe_obra_social` (backend de `permisos_prestadora`) lo valide. Al validar,
 queda congelado como snapshot inmutable en `informes_obra_social.contenido` (JSONB) — nunca
 se edita después; solo se anula (con motivo y auditoría) y se genera uno nuevo. Ver
 `backend/src/routes/panelInformesObraSocial.js` y `panel/src/pages/InformesObraSocial.jsx`.

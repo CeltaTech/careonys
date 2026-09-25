@@ -6,7 +6,7 @@ import { supabase } from '../db/connection.js';
 // deprecado), panelMedicacion.js (cola de pendientes) y appAsistentesMedicacion.js (filtro
 // de órdenes).
 
-// `prestadoraId` va primero y sin valor por defecto, como en el resto del archivo: el motor entra
+// `prestadoraId` va primero y sin valor por defecto, como en el resto del archivo: el backend entra
 // con la llave de servicio y se saltea la protección por fila, así que lo único que separa una
 // Prestadora de otra es este filtro.
 export async function medicacionVigenteDelPaciente(prestadoraId, pacienteId) {
@@ -33,7 +33,7 @@ export async function tipoMatriculaRequerida(prestadoraId, viaAdministracion) {
   return data?.tipo_matricula_requerida ?? null;
 }
 
-// El filtro por Prestadora va aunque el identificador del Asistente ya sea de una sola: el motor
+// El filtro por Prestadora va aunque el identificador del Asistente ya sea de una sola: el backend
 // entra con la llave de servicio y se saltea la protección por fila, así que lo único que separa
 // una Prestadora de otra son estos filtros. Y de acá cuelga si se puede dar una medicación.
 export async function asistenteTieneMatriculaVigente(prestadoraId, asistenteId, tipoRequerido) {

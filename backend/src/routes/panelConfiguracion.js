@@ -640,7 +640,7 @@ panelConfiguracionRouter.patch('/notificaciones/:evento', async (req, res) => {
   const hayProveedor = await hayProveedorDeMensajeDeTexto(req.usuarioPanel.prestadoraId);
 
   // La plantilla se guarda sólo si es de esta Prestadora. El identificador viene del navegador, y
-  // el motor entra a la base con la llave de servicio: sin esta comprobación, una Prestadora podría
+  // el backend entra a la base con la llave de servicio: sin esta comprobación, una Prestadora podría
   // mandar sus avisos con la plantilla de otra.
   let plantillaId = null;
   if (aviso.admite_whatsapp && plantilla_whatsapp_id) {
@@ -773,7 +773,7 @@ panelConfiguracionRouter.patch('/alertas-ia', async (req, res) => {
 });
 
 // --- Qué muestran las dos aplicaciones de teléfono. La lista completa sale del catálogo del
-//     motor (utils/catalogoVisibilidad.js) y la pantalla la muestra entera, tenga o no fila
+//     backend (utils/catalogoVisibilidad.js) y la pantalla la muestra entera, tenga o no fila
 //     guardada cada interruptor; la tabla solo guarda lo que la Prestadora cambió. Mismo patrón
 //     que /notificaciones. ---
 panelConfiguracionRouter.get('/visibilidad-app', async (req, res) => {
@@ -814,7 +814,7 @@ panelConfiguracionRouter.patch('/visibilidad-app/:clave', async (req, res) => {
 // --- Cómo se ordena la lista de candidatos para un hueco. Tres formas armadas y, para quien
 //     quiera, el detalle abierto número por número. Las tres formas, los valores de fábrica y el
 //     borde de cada número están en utils/perfilesDeCandidatos.js, que es copia del original del
-//     Panel: así el motor comprueba contra la misma lista con la que el Panel dibuja la pantalla.
+//     Panel: así el backend comprueba contra la misma lista con la que el Panel dibuja la pantalla.
 //
 //     Se guarda solamente lo que corre respecto del perfil elegido, nunca la tabla entera:
 //     guardar los cuarenta números congelaría los valores de fábrica apenas alguien abriera la
@@ -944,7 +944,7 @@ panelConfiguracionRouter.put('/ausencias', async (req, res) => {
 
 // --- A cuántas horas un turno sin nadie se vuelve un incidente grave ---
 //
-// Los dos números con los que el motor abre el incidente y le insiste a quien coordina. Lo que no
+// Los dos números con los que el backend abre el incidente y le insiste a quien coordina. Lo que no
 // se configura acá es el destino ni si el recordatorio se manda: un defecto grave no se apaga, y
 // el destinatario es quien coordina a ese Paciente, no una dirección elegible.
 
@@ -1418,7 +1418,7 @@ panelConfiguracionRouter.patch('/whatsapp', soloAdminDePrestadora, async (req, r
     if (errorToken) return responderError(res, errorToken);
   }
 
-  // Los dos secretos con los que el motor le cree a un aviso entrante de Meta (pendiente #165):
+  // Los dos secretos con los que el backend le cree a un aviso entrante de Meta (pendiente #165):
   // el de la aplicación, con el que se comprueba la firma de cada mensaje, y el token del
   // saludo inicial, que ahora es de esta Prestadora y no uno solo para todo el producto. Los
   // dos van a la caja fuerte y no vuelven a mostrarse acá, igual que el token de acceso.
@@ -2023,12 +2023,12 @@ panelConfiguracionRouter.patch('/documentos-tipo/:id', async (req, res) => {
 //     Qué acciones existen y qué pasa con cada una cuando la Prestadora no configuró nada NO se
 //     decide acá: sale del catálogo de la base, que es el único lugar donde está escrito. Hasta
 //     el 2026-08-19 esta pantalla tenía su propia lista de tres acciones y mostraba un estado
-//     que el motor no aplicaba (pendiente #127). Ver backend/src/utils/permisos.js. ---
+//     que el backend no aplicaba (pendiente #127). Ver backend/src/utils/permisos.js. ---
 
 // Los Coordinadores de una Prestadora, para las pantallas de Configuración que hacen elegir uno
-// de una lista. Sale del motor y no del navegador porque la tabla `usuarios` sólo deja que cada
+// de una lista. Sale del backend y no del navegador porque la tabla `usuarios` sólo deja que cada
 // persona lea su propia fila: pedida desde el Panel, la lista vuelve vacía y el desplegable
-// aparece sin nadie adentro. El motor entra con la llave maestra —decisión escrita en
+// aparece sin nadie adentro. El backend entra con la llave maestra —decisión escrita en
 // `CLAUDE.md` §6— y acota a la Prestadora acá, en la única consulta que hace falta escribir.
 // Todo el router está reservado a Admin y Superadmin de la Organización activa (ver el
 // `use` de arriba), así que esta lista no llega a más gente de la que ya podía verla.
@@ -2280,7 +2280,7 @@ panelConfiguracionRouter.patch('/modalidades/:modalidad', async (req, res) => {
 // NINGÚN VALOR DE ARRANQUE SE ESCRIBE ACÁ. Los que valen mientras la Prestadora no tocó nada
 // son los `DEFAULT` de cada columna, y esa es la única fuente. Si la fila llegara a faltar se
 // la pide a la base, que la crea con esos mismos valores; copiarlos acá haría que el formulario
-// prometa un número y el motor use otro apenas alguien cambie la migración.
+// prometa un número y el backend use otro apenas alguien cambie la migración.
 // Lo que sí vive acá son los dos bordes de lo que se puede guardar.
 const MINUTOS_DE_UN_DIA = 24 * 60;
 const HORAS_DE_TRES_DIAS = 72;

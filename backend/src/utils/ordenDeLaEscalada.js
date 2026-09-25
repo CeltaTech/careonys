@@ -8,15 +8,15 @@
    campos numéricos sueltos, y quien los carga no ve lo que acaba de armar. `ordenDeLaEscalada()`
    arma esa frase.
 
-   Y EL MOTOR TAMBIÉN LEE ACÁ. Hasta los dos escalones de arriba cada uno miraba su propio umbral
+   Y EL BACKEND TAMBIÉN LEE ACÁ. Hasta los dos escalones de arriba cada uno miraba su propio umbral
    por su cuenta y este archivo era sólo para mostrar. Los dos últimos son iguales entre sí y valen
    para las cuatro clases de alarma, así que la pregunta «¿a qué escalones ya llegó una alarma que
-   lleva tantos minutos?» se contesta una sola vez, acá, y el motor la usa
-   (`escalonesQueCorresponden()`). Por eso el archivo se copia entero al motor
+   lleva tantos minutos?» se contesta una sola vez, acá, y el backend la usa
+   (`escalonesQueCorresponden()`). Por eso el archivo se copia entero al backend
    (`scripts/copias_entre_apps.mjs`) y no importa nada del Panel.
 
    LO QUE ACÁ NO PASA. No se avisa, no se decide a quién, no se guarda nada. Quién recibe cada
-   escalón y la constancia de que salió son del motor
+   escalón y la constancia de que salió son del backend
    (`backend/src/utils/avisosDeEscalon.js`).
 
    VIVE ACÁ, EN lib/, porque es una regla que se puede probar sola, sin abrir un navegador. */
@@ -78,7 +78,7 @@ export const MINUTOS_QUE_SE_PUEDEN_TOCAR = {
  * significaría que una alarma de ayer todavía estuviera avisando al escalón de hace horas.
  *
  * Un escalón sin minuto está apagado y no aparece nunca. Lo que sale de acá es lo que corresponde
- * por el reloj, no lo que falta avisar: de eso ya salió y de eso no, lo sabe el motor.
+ * por el reloj, no lo que falta avisar: de eso ya salió y de eso no, lo sabe el backend.
  *
  * @param {object} config La fila de `configuracion_escalada_coordinador`.
  * @param {number} minutosPremura Minutos desde que la alarma empezó.
@@ -142,7 +142,7 @@ export function ordenDeLaEscalada(config = {}) {
   if (administracion !== null) escalones.push({ clave: 'administracion', minuto: administracion });
 
   // El orden de llegada desempata: dos escalones puestos en el mismo minuto salen los dos, y en
-  // el orden en que están escritos acá, que es el que usa el motor dentro de una misma pasada.
+  // el orden en que están escritos acá, que es el que usa el backend dentro de una misma pasada.
   return escalones
     .map((escalon, llegada) => ({ ...escalon, llegada }))
     .sort((a, b) => {

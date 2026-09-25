@@ -53,7 +53,7 @@ export function asistenteBajoVinculo(asistenteBase, tipoVinculo) {
  * Qué escala rige cada tipo a una fecha, para que un concepto la encuentre por su tipo.
  *
  * Las de categoría de convenio quedan afuera: un concepto apunta a un tipo de escala, no a una
- * categoría, y elegirle una sería adivinar. Es el mismo criterio con el que el motor arma esta
+ * categoría, y elegirle una sería adivinar. Es el mismo criterio con el que el backend arma esta
  * misma lista para un mes entero (`escalasEstablesDelPeriodo`), y por eso da lo mismo que acá
  * se mire un solo día: una proyección es de hoy, no de un período cerrado.
  */

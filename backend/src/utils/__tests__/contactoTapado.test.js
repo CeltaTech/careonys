@@ -8,9 +8,9 @@
  * alcanza con que alguien escriba su número. Estas pruebas son las del agujero, no las de la
  * expresión regular.
  *
- * DÓNDE SE TAPA, Y POR QUÉ LA PRUEBA VA CONTRA LA BASE. El tapado dejó de vivir en el motor: lo
+ * DÓNDE SE TAPA, Y POR QUÉ LA PRUEBA VA CONTRA LA BASE. El tapado dejó de vivir en el backend: lo
  * hacen el cuerpo de reglas de `public.reglas_de_los_mensajes` y el disparador de
- * `mensajes_marketplace`, antes de escribir. Probar el motor no probaría nada, porque el motor ya
+ * `mensajes_marketplace`, antes de escribir. Probar el backend no probaría nada, porque el backend ya
  * no tapa. Así que lo que estas pruebas hacen es **guardar un mensaje de verdad y leer lo que
  * quedó guardado**: si el dato sigue ahí, la prueba falla.
  *

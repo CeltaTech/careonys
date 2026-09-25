@@ -13,7 +13,7 @@ on:
       - '.github/workflows/deploy-backend.yml'
   # También se puede disparar a mano, igual que `publicar-pantallas.yml`. Hace falta cuando el
   # push no llega a convertirse en despliegue: el 2026-08-06 GitHub tardó media hora en procesar
-  # los push y este automatismo directamente no arrancó, con el motor del sistema quedando en la
+  # los push y este automatismo directamente no arrancó, con el backend del sistema quedando en la
   # versión vieja. Sin este botón la única salida era `railway up` a mano, y el token de Railway
   # no está en la máquina del Desarrollador: vive solo como secreto del repositorio.
   workflow_dispatch:
@@ -27,7 +27,7 @@ jobs:
       - name: Instalar Railway CLI
         run: npm install -g @railway/cli
 
-      # Deja escrito adentro de lo que se sube qué versión es. El motor lo devuelve en /health y
+      # Deja escrito adentro de lo que se sube qué versión es. El backend lo devuelve en /health y
       # el último paso lo usa para saber si la publicación llegó de verdad.
       - name: Anotar qué versión se está subiendo
         run: git rev-parse --short HEAD > backend/version.txt
@@ -36,8 +36,8 @@ jobs:
       # construcción ("Failed to stream build logs") y el comando devuelve error aunque la
       # construcción siga su curso y termine publicando. Pasó dos veces seguidas el 2026-08-13.
       # Ese corte no es un fallo del despliegue, así que no se cuenta como tal: quien dice si
-      # salió bien es el paso siguiente, que le pregunta al motor en vivo qué versión corre.
-      - name: Subir el motor a Railway
+      # salió bien es el paso siguiente, que le pregunta al backend en vivo qué versión corre.
+      - name: Subir el backend a Railway
         working-directory: backend
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
@@ -45,22 +45,22 @@ jobs:
 
       # Acá se decide si la publicación salió bien, y es la comprobación que pide CLAUDE.md §8:
       # no alcanza con que el push haya subido, tiene que estar respondiendo la versión nueva.
-      # Hasta 5 minutos, preguntando cada 10 segundos, porque Railway levanta el motor nuevo y
+      # Hasta 5 minutos, preguntando cada 10 segundos, porque Railway levanta el backend nuevo y
       # recién después apaga el viejo.
       - name: Comprobar que la versión nueva está respondiendo
         run: |
           esperada=$(cat backend/version.txt)
           echo "Esperando la versión $esperada"
           for intento in $(seq 1 30); do
-            viva=$(curl -s --max-time 10 "$MOTOR/health" | grep -o '"version":"[^"]*"' | cut -d'"' -f4)
+            viva=$(curl -s --max-time 10 "$BACKEND/health" | grep -o '"version":"[^"]*"' | cut -d'"' -f4)
             if [ "$viva" = "$esperada" ]; then
-              echo "El motor está corriendo la versión $viva."
+              echo "El backend está corriendo la versión $viva."
               exit 0
             fi
             echo "  intento $intento: responde \"$viva\""
             sleep 10
           done
-          echo "El motor nunca llegó a responder la versión $esperada. La publicación no se completó."
+          echo "El backend nunca llegó a responder la versión $esperada. La publicación no se completó."
           exit 1
         env:
-          MOTOR: https://aurevia-backend-production-e7ee.up.railway.app
+          BACKEND: https://aurevia-backend-production-e7ee.up.railway.app

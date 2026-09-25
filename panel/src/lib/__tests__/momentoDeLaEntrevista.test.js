@@ -9,7 +9,7 @@ import { desdeElCampo, paraElCampo } from '../momentoDeLaEntrevista';
    vuelta den lo mismo sea cual sea. Escribir «10:00 se guarda como 13:00Z» sólo probaría el huso
    de acá, y pasaría a fallar en la máquina que publica. */
 
-describe('el día y la hora de una entrevista, del campo al motor y de vuelta', () => {
+describe('el día y la hora de una entrevista, del campo al backend y de vuelta', () => {
   it('ida y vuelta no corren la cita', () => {
     const enElCampo = '2026-10-07T10:00';
     expect(paraElCampo(desdeElCampo(enElCampo))).toBe(enElCampo);
@@ -20,7 +20,7 @@ describe('el día y la hora de una entrevista, del campo al motor y de vuelta', 
     expect(desdeElCampo(paraElCampo(guardado))).toBe(guardado);
   });
 
-  it('lo que sale para el motor es siempre universal', () => {
+  it('lo que sale para el backend es siempre universal', () => {
     expect(desdeElCampo('2026-10-07T10:00')).toMatch(/Z$/);
   });
 
@@ -33,7 +33,7 @@ describe('el día y la hora de una entrevista, del campo al motor y de vuelta', 
   });
 
   // Falla cerrado: una fecha a medio escribir no se manda como cita. Quien llama mira el `null` y
-  // no llama al motor.
+  // no llama al backend.
   it('una fecha a medio escribir no se manda', () => {
     expect(desdeElCampo('')).toBeNull();
     expect(desdeElCampo('2026-13-45T99:99')).toBeNull();

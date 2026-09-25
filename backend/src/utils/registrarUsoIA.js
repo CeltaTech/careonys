@@ -24,7 +24,7 @@ import { supabase } from '../db/connection.js';
 //
 // Si el registro falla nunca corta el flujo principal — guardar el reporte, la alerta, el mapeo o
 // la respuesta de WhatsApp importa más que contar su consumo; el error queda en el registro del
-// motor.
+// backend.
 export async function registrarUsoIA({ prestadoraId, modulo, modelo, proveedor = 'anthropic', respuestaAnthropic }) {
   try {
     const { error } = await supabase.from('uso_ia').insert({

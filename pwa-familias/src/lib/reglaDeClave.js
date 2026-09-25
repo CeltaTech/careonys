@@ -2,7 +2,7 @@
 // reglaDeClave.js — el único lugar que decide qué clave se acepta
 //
 // El mínimo estaba escrito a mano en cuatro archivos —la ruta de activación del
-// motor y las tres pantallas que fijan una clave—, y la plataforma tenía el suyo,
+// backend y las tres pantallas que fijan una clave—, y la plataforma tenía el suyo,
 // más corto. La plataforma es la que manda de verdad: cualquier camino que no
 // pase por esos cuatro archivos aceptaba una clave más corta. Ahora el número
 // vive acá, las cuatro lo importan, y `scripts/verificar_regla_de_clave.mjs`

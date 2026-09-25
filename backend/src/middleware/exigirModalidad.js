@@ -6,7 +6,7 @@ import { supabase } from '../db/connection.js';
    POR QUÉ EXISTE. Hasta ahora las pantallas y las rutas de Marketplace se abrían por rol y
    nada más. El menú del Panel sí escondía sus enlaces cuando la Prestadora no tenía la
    modalidad encendida (`panel/src/components/layout/Layout.jsx`), pero esconder un enlace no
-   es un candado: escribiendo la dirección a mano se entraba igual, y el motor contestaba
+   es un candado: escribiendo la dirección a mano se entraba igual, y el backend contestaba
    como si la modalidad estuviera encendida. Una Prestadora que trabaja solamente en
    prestación directa llegaba así a las pasarelas de cobro, a los accesos y a las
    calificaciones del Marketplace.

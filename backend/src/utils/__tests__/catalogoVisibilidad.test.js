@@ -38,7 +38,7 @@ describe('catálogo de visibilidad', () => {
   });
 
   it('la clave empieza con el nombre de su aplicación', () => {
-    // No es capricho: la pantalla del Panel agrupa por aplicación y el motor lee las claves
+    // No es capricho: la pantalla del Panel agrupa por aplicación y el backend lee las claves
     // sueltas. Que se lean solas evita mirar el catálogo para saber a quién le pega apagarla.
     for (const cosa of CATALOGO_VISIBILIDAD) {
       const prefijo = cosa.app === 'familias' ? 'familia_' : 'asistente_';
@@ -132,7 +132,7 @@ describe('columnasSegunVisibilidad', () => {
   });
 
   it('un interruptor que no está en la lista se toma como encendida', () => {
-    // Pasa mientras una versión vieja del motor y una nueva del catálogo conviven un rato: es
+    // Pasa mientras una versión vieja del backend y una nueva del catálogo conviven un rato: es
     // preferible seguir mostrando lo que ya se mostraba a romper la pantalla.
     assert.equal(columnasSegunVisibilidad([['patologias', 'clave_desconocida']], {}), 'patologias');
   });

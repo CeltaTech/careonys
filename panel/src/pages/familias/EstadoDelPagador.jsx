@@ -18,7 +18,7 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
    NO BLOQUEA NADA. La contratación sigue, el Servicio se presta y la Familia se da de alta igual.
    Esto avisa; decidir es de quien tiene la responsabilidad.
 
-   QUÉ CUENTA COMO DEFINIDO NO SE DECIDE ACÁ. Lo contesta el motor, en un solo lugar, y esta
+   QUÉ CUENTA COMO DEFINIDO NO SE DECIDE ACÁ. Lo contesta el backend, en un solo lugar, y esta
    pantalla lo muestra. Repartida entre pantallas, la misma pregunta terminaría contestándose
    distinto según dónde se mire. */
 export function EstadoDelPagador({ familiaId, puedeRegistrar }) {

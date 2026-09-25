@@ -23,16 +23,16 @@ import {
    LAS DOS FORMAS SE USAN, así que el sistema no elige por nadie: sale de fábrica pagando la parte
    proporcional, y cada Prestadora lo cambia si su arreglo con la gente es el otro.
 
-   NO SE GUARDA LO QUE NO SE TOCÓ. Lo que viaja al motor es solamente lo que difiere de fábrica, y
-   el motor lo vuelve a filtrar. La cuenta vive en `lib/formaDePago.js`, que es el mismo archivo
-   que usa el motor.
+   NO SE GUARDA LO QUE NO SE TOCÓ. Lo que viaja al backend es solamente lo que difiere de fábrica, y
+   el backend lo vuelve a filtrar. La cuenta vive en `lib/formaDePago.js`, que es el mismo archivo
+   que usa el backend.
 
    Y ABAJO, LA OTRA PREGUNTA DEL DINERO, QUE NO ES LA MISMA. Con qué se mide el trabajo —hora,
    guardia, semana o mes— se elige en la ficha de cada persona. Cada cuánto cobra se elige acá, y
    son independientes: se le puede pagar por hora y cobrar por mes. Esto es lo que rige para toda
    la Prestadora; con cada persona se puede arreglar distinto desde su ficha. No cambia ningún
    importe: sólo desde qué día hasta qué día va cada período. Vive en `lib/frecuenciaDePago.js`,
-   que también es el mismo archivo que usa el motor. */
+   que también es el mismo archivo que usa el backend. */
 export function PagoAsistentesTab() {
   const { t } = useLocale();
   const [regla, setRegla] = useState(null);
@@ -70,8 +70,8 @@ export function PagoAsistentesTab() {
     setFrecuencia((previa) => ({ ...previa, [clave]: valor }));
   }
 
-  // Un campo vacío no es un cero: se deja escribir mientras se borra, y lo que viaja al motor
-  // es el número. Si quedó vacío al guardar, vale lo de fábrica, que es lo que el motor hace
+  // Un campo vacío no es un cero: se deja escribir mientras se borra, y lo que viaja al backend
+  // es el número. Si quedó vacío al guardar, vale lo de fábrica, que es lo que el backend hace
   // con cualquier valor fuera de borde.
   function cambiarDiasHastaElPago(texto) {
     if (texto === '') return cambiarFrecuencia('dias_hasta_el_pago', '');

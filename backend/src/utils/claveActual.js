@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 
-// COMPROBAR LA CLAVE ACTUAL, DEL LADO DEL MOTOR.
+// COMPROBAR LA CLAVE ACTUAL, DEL LADO DEL BACKEND.
 //
 // QUÉ PROTEGE. Cambiar el número de teléfono con el que se entra, y cerrar la sesión en todos los
 // equipos, son dos cosas que no puede hacer quien se sienta un minuto en una máquina abierta. Tener
@@ -9,7 +9,7 @@ import { ErrorConMotivo } from './errorConMotivo.js';
 //
 // POR QUÉ NO SE HACE EN LA PANTALLA. `MiClave.jsx` la comprueba del lado del navegador para cambiar
 // la clave propia, y ahí alcanza porque el servicio de acceso vuelve a pedirla igual al escribir la
-// nueva. Acá no: lo que sigue lo escribe el motor con la llave maestra, así que si la comprobación
+// nueva. Acá no: lo que sigue lo escribe el backend con la llave maestra, así que si la comprobación
 // viviera en la pantalla, quien llame a la dirección directamente se la saltea.
 //
 // SE USA LA LLAVE PÚBLICA Y NO LA MAESTRA. La maestra cambia la clave de cualquiera sin conocer la
@@ -17,7 +17,7 @@ import { ErrorConMotivo } from './errorConMotivo.js';
 // como esa persona: si entra, la clave era ésa.
 //
 // Y EL CLIENTE NO GUARDA LA SESIÓN. `persistSession: false` y `autoRefreshToken: false`: lo único
-// que interesa es si el intento entró o no. Sin eso, el proceso del motor acumularía sesiones de
+// que interesa es si el intento entró o no. Sin eso, el proceso del backend acumularía sesiones de
 // gente que sólo quiso comprobar su clave.
 
 let cliente = null;

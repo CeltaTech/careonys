@@ -769,7 +769,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
   //
   // Acá no se pide `domicilio` a propósito: esto mide una distancia, no muestra una dirección.
   // Y no se pasa por el interruptor `asistente_domicilio_del_paciente` tampoco: ese decide qué
-  // ve el Asistente en el teléfono, no contra qué mide el motor de este lado.
+  // ve el Asistente en el teléfono, no contra qué mide el backend de este lado.
   let pacientes;
   try {
     pacientes = await pacientesDeGuardia(guardia.prestadora_id, guardia, 'id, nombre, lat, lng, familia_id');
@@ -1794,7 +1794,7 @@ appAsistentesRouter.delete('/push/suscribir', requiereRolAsistente, async (req, 
     return res.status(400).json({ error: 'Falta el endpoint de la suscripción' });
   }
 
-  // El filtro por Prestadora va aunque el identificador del Asistente ya sea de una sola: el motor
+  // El filtro por Prestadora va aunque el identificador del Asistente ya sea de una sola: el backend
   // entra con la llave de servicio y se saltea la protección por fila, así que lo único que separa
   // una Prestadora de otra son estos filtros. Y esto borra.
   const { error } = await supabase

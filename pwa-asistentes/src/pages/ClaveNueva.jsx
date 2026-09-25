@@ -6,13 +6,13 @@ import { MINIMO_DE_CARACTERES, claveAceptable } from '../lib/reglaDeClave';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-// Los tres motivos que contesta el motor son definitivos: con ese mismo enlace, reintentar no
+// Los tres motivos que contesta el backend son definitivos: con ese mismo enlace, reintentar no
 // sirve nunca, así que el formulario se retira en vez de invitar a un intento que va a fallar.
 const MOTIVOS_SIN_REINTENTO = ['token_invalido', 'token_ya_usado', 'token_vencido'];
 
 // Donde se elige la clave nueva, con el enlace que llegó por correo.
 //
-// Es la hermana de `ActivarCuenta`: el mismo formulario contra otra puerta del motor. Se escriben
+// Es la hermana de `ActivarCuenta`: el mismo formulario contra otra puerta del backend. Se escriben
 // aparte porque no son lo mismo —una enciende una cuenta que nunca se usó y la otra reemplaza la
 // clave de una que está en uso—, y los enlaces de una no sirven en la otra.
 //
@@ -54,7 +54,7 @@ export default function ClaveNueva() {
         if (!vigente || !respuesta.ok) return;
         if (resultado.requiereCodigo) setRequiereCodigo(true);
       } catch (err) {
-        // Que esto falle no puede trabar el cambio de clave: el motor vuelve a exigir el código
+        // Que esto falle no puede trabar el cambio de clave: el backend vuelve a exigir el código
         // al canjear, así que lo que se pierde es el casillero, no el control.
         console.error('ClaveNueva:', err?.message);
       }

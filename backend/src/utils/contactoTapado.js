@@ -6,7 +6,7 @@
    recién al salir. Las tres cosas iban contra la regla que comparten este producto y su hermano
    —la de datos y marca, §4—: qué se tapa es dato y no código, y se tapa antes de guardar, del
    lado de la base. Con el texto guardado entero, quien llegara al dato por
-   cualquier otra vía —otra ruta del motor, una consulta directa, un respaldo— lo veía completo.
+   cualquier otra vía —otra ruta del backend, una consulta directa, un respaldo— lo veía completo.
 
    DÓNDE SE TAPA AHORA. En la base, antes de escribir, con el cuerpo de reglas de
    `public.reglas_de_los_mensajes` y el disparador de
@@ -22,7 +22,7 @@
 /**
  * Prepara un mensaje para salir hacia una pantalla.
  *
- * Es la única puerta por la que un mensaje del chat sale del motor.
+ * Es la única puerta por la que un mensaje del chat sale del backend.
  *
  * @param {object} mensaje  La fila tal como está en la base, ya tapada.
  * @param {Record<string, object>} motivos  Por clave de regla, el motivo en los tres idiomas.
@@ -39,7 +39,7 @@ export function mensajeHaciaAfuera(mensaje, motivos = {}) {
     cuerpo: mensaje.cuerpo,
     tapado: regla !== null,
     // El motivo viaja en los tres idiomas y la pantalla elige el suyo. Traducirlo acá ataría el
-    // texto del catálogo al idioma que adivinó el motor.
+    // texto del catálogo al idioma que adivinó el backend.
     motivo_tapado: regla === null ? null : motivos[regla] ?? null,
   };
 }

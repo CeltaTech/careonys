@@ -7,7 +7,7 @@ import { correoComparable } from '../config/correoDeAcceso.js';
 // QUÉ RESUELVE. Pedir una clave nueva no exige sesión —quien llega ahí perdió justamente la forma
 // de tener una—, así que la puerta la abre cualquiera desde afuera. Sin tope, cualquiera le llena
 // la casilla de correo a una persona repitiendo el pedido, y cada mensaje lo paga la Prestadora.
-// El tope del motor (`middleware/topeDePedidos.js`) no sirve acá: cuenta por persona con sesión.
+// El tope del backend (`middleware/topeDePedidos.js`) no sirve acá: cuenta por persona con sesión.
 //
 // SE CUENTA POR HUELLA DEL CORREO Y POR PRESTADORA. La huella, y no el correo, porque para contar
 // alcanza con reconocer que es el mismo, y así el renglón que queda no dice a quién se le mandó

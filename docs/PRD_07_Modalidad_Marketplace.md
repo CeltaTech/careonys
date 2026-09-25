@@ -209,7 +209,7 @@ período se lo vuelve a armar todos los días mientras la gracia dure. La fecha 
 no se mueve: si cada reintento la corriera, el acceso no se suspendería nunca.
 
 **Llegado ese día sin que el cobro haya entrado, el acceso se suspende.** Lo hace el mismo trabajo
-diario del motor (§3.7), y vuelve a comprobar en ese instante que el cobro siga sin entrar.
+diario del backend (§3.7), y vuelve a comprobar en ese instante que el cobro siga sin entrar.
 
 **Y cuando entra la plata, la gracia se cierra y el acceso vuelve a quedar vigente**, incluso si ya
 se lo había suspendido.
@@ -346,7 +346,7 @@ resueltas y no van a hacer cambiar la respuesta.
 
 - **La columna `asistentes.canales` existe pero no la lee nadie.** Está creada en la base,
   con su regla (`directo`, `marketplace`, al menos uno) y su valor de arranque, y ninguna
-  pantalla ni ruta del motor la consulta: hoy nada impide ofrecerle una guardia de
+  pantalla ni ruta del backend la consulta: hoy nada impide ofrecerle una guardia de
   Match a un Asistente que solo trabaja en prestación directa. Tiene fila propia,
   la `#154`, en `docs/PLAN_HASTA_PRODUCCION.md`.
 - **Rediseño del dashboard de Admin_prestadora** en "grupos fundamentales" por modalidad —
@@ -357,7 +357,7 @@ aplicada contra la base real, y las advertencias de Match están escritas en
 `docs/legal/argentina.md`, que lleva su propia nota de revisión pendiente por un abogado
 laboralista — no hace falta repetirla acá.
 
-El cobro de la Familia tiene su modelo de datos y su motor construidos —período de prueba y
+El cobro de la Familia tiene su modelo de datos y su backend construidos —período de prueba y
 próxima fecha, historial de cobros, credenciales de pasarela por Prestadora y avisos entrantes de
 seis proveedores de pago—. Lo que falta son los resguardos del §3: la baja en un clic, el corte
 diferido, el aviso previo al primer cobro y el período de gracia con reintentos. Están en

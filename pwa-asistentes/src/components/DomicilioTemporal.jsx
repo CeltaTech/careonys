@@ -2,7 +2,7 @@
 //
 // El Paciente tiene una sola dirección cargada, la habitual, y hay temporadas en que no
 // está ahí: el verano en la casa de un hijo, una internación, una mudanza mientras arreglan el
-// departamento. El motor resuelve eso solo — en `domicilio`, `lat` y `lng` manda la dirección
+// departamento. El backend resuelve eso solo — en `domicilio`, `lat` y `lng` manda la dirección
 // del día de esa guardia, la temporal si hay una vigente y si no la habitual — y agrega dos
 // campos para poder decirlo:
 //
@@ -34,7 +34,7 @@ function textoDelDomicilio(paciente) {
   return typeof paciente?.domicilio === 'string' ? paciente.domicilio.trim() : '';
 }
 
-/* La pregunta entera, en un solo lugar: hay dirección para mostrar Y el motor la marcó como
+/* La pregunta entera, en un solo lugar: hay dirección para mostrar Y el backend la marcó como
    temporal. El orden importa — sin dirección no hay nada que marcar. */
 export function domicilioEsTemporal(paciente) {
   return Boolean(textoDelDomicilio(paciente)) && paciente?.domicilio_es_temporal === true;

@@ -177,7 +177,7 @@ function App() {
                         candado de modalidad: una Familia de prestación directa cuida en su casa
                         igual que una de marketplace. Verla la ve cualquiera del Panel —un
                         borrador hay que poder revisarlo—; escribirla es un permiso, y quien lo
-                        niega de verdad es el motor. */}
+                        niega de verdad es el backend. */}
                     <Route path="contenidos" element={<ContenidoParaFamilias />} />
                     <Route path="servicios/:id" element={<ServicioDetalle />} />
                     <Route path="medicacion" element={<Medicacion />} />
@@ -186,14 +186,14 @@ function App() {
                     <Route path="alertas" element={<Alertas />} />
                     {/* Lo que un Asistente avisó apretando el botón de emergencia de su guardia.
                         Sin candado propio, igual que sus vecinas de Cumplimiento: quien está de
-                        turno cuando entra una es el Coordinador, y el motor pide lo mismo. */}
+                        turno cuando entra una es el Coordinador, y el backend pide lo mismo. */}
                     <Route path="emergencias" element={<EmergenciasEnGuardia />} />
                     <Route path="comunicacion" element={<Comunicacion />} />
                     {/* El pase de guardia (pendiente #113) va al lado de la verificación de
                         guardias y no adentro: aquélla audita hacia atrás con un rango de fechas,
                         ésta se atiende ahora. Sin candado propio, igual que sus vecinas de
                         Cumplimiento: quien está de turno cuando entra un pedido es el
-                        Coordinador, y el motor pide exactamente lo mismo. */}
+                        Coordinador, y el backend pide exactamente lo mismo. */}
                     <Route path="pase-de-guardia" element={<PaseDeGuardia />} />
                     <Route path="verificacion-guardias" element={<Evv />} />
                     <Route path="facturacion" element={<Facturacion />} />
@@ -244,7 +244,7 @@ function App() {
                         Prestadora tiene Marketplace. Hasta ahora sólo tenían el primero, así que
                         una Prestadora de prestación directa entraba escribiendo la dirección a
                         mano. El de acá es para no mostrar lo que no corresponde; el que niega de
-                        verdad es el del motor (backend/src/middleware/exigirModalidad.js). */}
+                        verdad es el del backend (backend/src/middleware/exigirModalidad.js). */}
                     <Route
                       path="marketplace/familias"
                       element={
@@ -263,7 +263,7 @@ function App() {
                         /* Con qué números cobra la Prestadora. Mismo candado que la pantalla de
                            la plata: es configuración de dinero, no operación. El Superadmin entra
                            y mira, para poder dar soporte, pero no cambia nada: eso lo niega el
-                           motor, que es donde el permiso niega de verdad. */
+                           backend, que es donde el permiso niega de verdad. */
                         <ProtectedRoute roles={ROLES_ADMINISTRACION} modalidad={MODALIDAD.MARKETPLACE}>
                           <FormasDeCobro />
                         </ProtectedRoute>

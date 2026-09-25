@@ -13,7 +13,7 @@
  *   2. QUE EL DETALLE SALGA POR UN CANAL PÚBLICO. El texto que escribió el Asistente es
  *      información sensible (`celtatech/CLAUDE.md` §6): el aviso dice de qué guardia se trata y
  *      nada más, y el texto se lee entrando al Panel.
- *   3. QUE UNA PRESTADORA ALCANCE LA EMERGENCIA DE OTRA. El motor entra a la base con la llave de
+ *   3. QUE UNA PRESTADORA ALCANCE LA EMERGENCIA DE OTRA. El backend entra a la base con la llave de
  *      servicio y se saltea la protección por fila, así que lo único que separa a una de otra son
  *      los filtros escritos en cada consulta.
  *   4. QUE SE PIERDA EL MOMENTO EN QUE PASÓ. El aviso puede quedar media hora en la cola sin
@@ -42,7 +42,7 @@ const DETALLE = 'El Paciente se cayó en el baño y no puede levantarse. Llamé 
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, con la dirección entera: los filtros van ahí. */
+/** Todo lo que el backend le pidió a la base, con la dirección entera: los filtros van ahí. */
 let llamadas = [];
 
 const baseFalsa = createServer((req, res) => {
@@ -91,12 +91,12 @@ const app = express();
 app.use(express.json());
 app.use('/api/app-asistentes', appAsistentesRouter);
 app.use('/api/panel/emergencias', panelEmergenciasRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const RAIZ = `http://127.0.0.1:${motor.address().port}`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const RAIZ = `http://127.0.0.1:${backend.address().port}`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 
@@ -155,7 +155,7 @@ function emergenciaDePrueba(extra = {}) {
  * La base falsa filtra de verdad por los `eq` y los `in` que vengan en la dirección.
  *
  * Es lo que convierte la prueba de aislamiento en una prueba: una base que contestara siempre la
- * misma fila daría 200 aunque el motor consultara sin filtrar por Prestadora.
+ * misma fila daría 200 aunque el backend consultara sin filtrar por Prestadora.
  */
 function filasQuePasanLosFiltros(url, filas) {
   const parametros = new URL(url, 'http://interno').searchParams;
@@ -174,7 +174,7 @@ function filasQuePasanLosFiltros(url, filas) {
   );
 }
 
-/** Las emergencias que el motor dio de alta en este pedido. */
+/** Las emergencias que el backend dio de alta en este pedido. */
 function emergenciasAnotadas() {
   return llamadas
     .filter((l) => l.clave === 'POST /rest/v1/emergencias_guardia')

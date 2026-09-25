@@ -59,7 +59,7 @@ export default function ReporteDetalle() {
       </div>
 
       {/* Mismo motivo que los signos vitales: la Prestadora que no muestra la medicación
-          tampoco la muestra adentro del reporte del día. Sin esta condición el motor deja de
+          tampoco la muestra adentro del reporte del día. Sin esta condición el backend deja de
           mandarla pero el título queda igual, con un "sin datos" debajo que hace creer que ese
           día no se le dio nada. */}
       {seVe('familia_medicacion_del_paciente') && (
@@ -78,7 +78,7 @@ export default function ReporteDetalle() {
       )}
 
       {/* La Prestadora que no hace enfermería no toma estos valores. Sin esta condición el
-          motor deja de mandarlos pero el título queda igual, con un "sin datos" debajo que
+          backend deja de mandarlos pero el título queda igual, con un "sin datos" debajo que
           hace creer que alguien los está controlando y ese día no los cargó. */}
       {seVe('familia_signos_vitales') && (
         <div className="reporte-preview-campo">

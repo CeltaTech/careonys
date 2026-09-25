@@ -171,7 +171,7 @@ describe('cuáles se le ofrecen a quien cierra', () => {
     { nombre: 'Apagado', activo: false, lo_escribe_el_sistema: false, orden: 5 },
   ];
 
-  it('los dos que escribe el motor no se ofrecen, y los apagados tampoco', () => {
+  it('los dos que escribe el backend no se ofrecen, y los apagados tampoco', () => {
     const ofrecidos = finalesQueSeOfrecen(catalogo).map(valorDelFinal);
     expect(ofrecidos).toEqual([CIERRES.NO_FUE_NADIE, CIERRES.SE_RESOLVIO_DE_OTRA_MANERA]);
   });

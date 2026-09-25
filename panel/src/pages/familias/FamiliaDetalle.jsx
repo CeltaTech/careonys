@@ -49,7 +49,7 @@ const API_URL = import.meta.env.VITE_API_URL;
    Prestadora necesita de un vistazo es si esa persona ve todo, no ve nada, o ve una parte. El
    detalle está a un clic, en la ventana de accesos.
 
-   Se cuenta sobre lo que manda el motor y no sobre una lista escrita acá, así que una casilla
+   Se cuenta sobre lo que manda el backend y no sobre una lista escrita acá, así que una casilla
    nueva del catálogo cambia sola el «7 de 11» sin tocar esta pantalla. */
 function resumenDeAccesos(accesos, t) {
   const total = accesos?.length ?? 0;
@@ -140,7 +140,7 @@ export function FamiliaDetalle() {
     setEstadoCirculo('cargando');
     setErrorCirculo(null);
     try {
-      // Por el único camino del Panel hacia el motor: es el que hace viajar el número de la
+      // Por el único camino del Panel hacia el backend: es el que hace viajar el número de la
       // respuesta adentro del error, y sin ese número todo falla igual —una sesión vencida se
       // vería como «ocurrió un error»—.
       const resultado = await llamarApiPanel(`/cuentas/familia/${id}/circulo`);

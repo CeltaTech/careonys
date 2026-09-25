@@ -5,7 +5,7 @@ import { esAdminOSuperior } from '../utils/roles.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
 // Ítem G del pendiente #30 — lectura del registro de auditoría de las sesiones de soporte
-// técnico (tabla auditoria_soporte_tecnico). El motor entra a la base con la llave de servicio,
+// técnico (tabla auditoria_soporte_tecnico). El backend entra a la base con la llave de servicio,
 // que no pasa por las reglas de la base (CLAUDE.md de Careonys §6), así que el alcance de lo que
 // se entrega se escribe acá a mano. Esas reglas siguen existiendo y siguen rigiendo cuando algo
 // consulta la tabla directo con el pase de la persona, no a través de esta ruta.

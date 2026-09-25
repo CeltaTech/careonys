@@ -90,7 +90,7 @@ export default function MiPerfil() {
   if (error) return <div className="alert alert-error" role="alert">{error}</div>;
   if (!perfil) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
 
-  // El orden es el que mandó el motor, que es el del catálogo: dos personas del mismo círculo
+  // El orden es el que mandó el backend, que es el del catálogo: dos personas del mismo círculo
   // leen su lista en el mismo orden y se pueden comparar renglón por renglón.
   const accesos = perfil.accesos ? Object.entries(perfil.accesos) : null;
   const loQueVe = accesos ? accesos.filter(([, permitido]) => permitido).map(([clave]) => clave) : [];

@@ -42,7 +42,7 @@
   técnico** de `superadmin` — el rol comercial se fue entero a CeltaTech y ya no existe en
   Careonys.
   **El correo, que es lo único estructural que sigue abierto.** Railway bloquea los puertos de
-  correo, así que el motor no puede entrar a ninguna casilla —ni propia ni de una Prestadora— y
+  correo, así que el backend no puede entrar a ninguna casilla —ni propia ni de una Prestadora— y
   **hoy no se entrega ningún correo**. El envío ya pasa por un despachante que habla por el puerto
   443 (`backend/src/utils/email.js`); falta dar de alta la cuenta, crear la dirección de envío
   propia de cada Prestadora bajo `careonys.com` y el reenvío de las respuestas a la casilla que
@@ -236,7 +236,7 @@ el que se reclama; mientras no haya nada anotado se muestra lo que se mandó a f
 emitida no se toca: la corrección es otro comprobante, que se anota en
 `correcciones_factura_familia` con su sentido y su monto. Sin software conectado el sistema
 funciona igual, anotando esos datos a mano. La cuenta de la resta vive en un solo lugar, la vista
-`saldos_familia`, y las comprobaciones que hacen la pantalla y el motor salen del mismo archivo,
+`saldos_familia`, y las comprobaciones que hacen la pantalla y el backend salen del mismo archivo,
 `lib/facturacionDeFamilias.js`. El plazo de pago acordado es lo que fija el vencimiento: hay uno
 general de la Prestadora y uno por Familia, que gana sobre el general; vacío quiere decir que no se
 acordó nada y cero, que paga el mismo día.
@@ -284,7 +284,7 @@ que la Prestadora carga desde Configuración y que vive en la caja fuerte de la 
 cargado no entra ningún aviso. Acepta una factura o varias, y contesta renglón por renglón qué
 pasó con cada una. Qué columnas van y
 qué columnas vuelven está en un solo lugar, `panel/src/lib/intercambioDeFacturacion.js`, con copia
-generada en el motor; **sus títulos no se traducen**, porque son la forma que el otro software
+generada en el backend; **sus títulos no se traducen**, porque son la forma que el otro software
 tiene que leer y escribir, y traducirlos daría un archivo distinto por idioma. Al subir, una
 factura que ya tiene comprobante anotado no se pisa: se cuenta aparte y se avisa, así volver a
 subir el mismo archivo —o repetir un aviso— no hace daño. Se leen hasta 500 filas por vez. Las tres
@@ -310,7 +310,7 @@ se carga cuando entra la plata y se gasta de a un Asistente, con la cuenta hecha
 base; el detalle está en `docs/PRD_07_Modalidad_Marketplace.md` §3.5. Y una forma que se renueva
 sola se da de baja en un clic desde la aplicación de la Familia: apaga la renovación y conserva
 el período ya pagado hasta el final (§3.6); el acceso se apaga solo al llegar esa fecha, con un
-trabajo diario del motor (§3.7). El período gratuito que cargó la Prestadora se convierte en una
+trabajo diario del backend (§3.7). El período gratuito que cargó la Prestadora se convierte en una
 fecha el día del alta —la del primer cobro—, se le informa a los rieles que cobran solos, y ese
 mismo trabajo diario avisa al teléfono de quien paga unos días antes de que llegue: nunca un cobro
 silencioso (§3.8). Y un cobro que no entra no apaga nada en el acto: abre un período de gracia de

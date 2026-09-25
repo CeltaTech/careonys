@@ -32,7 +32,7 @@ describe('ordenDeLaEscalada', () => {
     expect(ordenDeLaEscalada({})).toEqual([{ clave: 'insistencia', minuto: 0 }]);
   });
 
-  it('dos escalones en el mismo minuto salen los dos, en el orden en que los corre el motor', () => {
+  it('dos escalones en el mismo minuto salen los dos, en el orden en que los corre el backend', () => {
     expect(claves({ ...COMPLETA, minutosAntesFaseAutomatica: 15 }))
       .toEqual(['insistencia', 'respaldo', 'fase_automatica']);
   });

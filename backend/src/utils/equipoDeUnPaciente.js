@@ -13,12 +13,12 @@ import { correoDe } from './correoDeUnaPersona.js';
 // ============================================================================
 //
 // QUÉ HACE Y QUÉ NO. `equipoDelPaciente.js` contesta quiénes son el equipo, pero recibiéndolo todo
-// ya cargado: no habla con la base, para poder correr igual en el Panel y en el motor. Este archivo
-// es el que va a buscar esos datos del lado del motor, que es donde corren los procesos de fondo y
+// ya cargado: no habla con la base, para poder correr igual en el Panel y en el backend. Este archivo
+// es el que va a buscar esos datos del lado del backend, que es donde corren los procesos de fondo y
 // donde no hay ninguna pantalla que los haya traído antes.
 //
 // NO SE COPIA A NINGUNA PARTE, y por eso vive acá y no en el Panel: el Panel ya trae estos datos
-// con la sesión de la persona que está mirando (`pages/familias/EquipoDelPaciente.jsx`), y el motor
+// con la sesión de la persona que está mirando (`pages/familias/EquipoDelPaciente.jsx`), y el backend
 // entra con la llave de servicio. Lo que sí es el mismo en los dos lados —la regla de quién es del
 // equipo— está en el archivo que se copia, y acá no se repite.
 //

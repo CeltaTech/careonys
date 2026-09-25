@@ -8,16 +8,16 @@
  * los avisos no salen. Sin una cuenta propia, el límite se descubre el día que un aviso no sale.
  * Acá hay tres cosas que se rompen sin hacer ruido:
  *
- *   1. QUE UN ENVÍO NO SE CUENTE. Si el motor manda por un camino que no pasa por donde se anota,
+ *   1. QUE UN ENVÍO NO SE CUENTE. Si el backend manda por un camino que no pasa por donde se anota,
  *      la cuenta queda corta y el Panel muestra margen que no existe. Por eso se comprueba sobre
- *      las dos salidas de correo que tiene el motor, no sobre una.
+ *      las dos salidas de correo que tiene el backend, no sobre una.
  *   2. QUE UN RECHAZO SE CUENTE COMO ENVÍO. Un correo rechazado es justamente la señal de que se
  *      llegó al límite: si se anota como aceptado, la señal desaparece.
  *   3. QUE LA ANOTACIÓN SE LLEVE PUESTO EL CORREO. Un aviso que salió y no se pudo contar sigue
  *      siendo un aviso que salió. Y al revés: lo que se anota es el hecho, nunca a quién iba,
  *      el asunto ni una línea del contenido (`celtatech/CLAUDE.md` §6).
  *
- * Se levanta el motor de verdad contra una base de mentira, y el despachante se reemplaza por uno
+ * Se levanta el backend de verdad contra una base de mentira, y el despachante se reemplaza por uno
  * que contesta lo que la prueba le diga. Los datos son inventados.
  */
 import { strict as assert } from 'node:assert';
@@ -29,7 +29,7 @@ const USUARIO = '22222222-2222-2222-2222-222222222222';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, con la dirección entera. */
+/** Todo lo que el backend le pidió a la base, con la dirección entera. */
 let llamadas = [];
 /** Cuántas filas dice la base que hay, cuando le preguntan una cuenta. */
 let cuantasFilas = 0;
@@ -113,12 +113,12 @@ const { enviarEmail, enviarEmailCoordinador } = await import('../../utils/email.
 const app = express();
 app.use(express.json());
 app.use('/api/panel/configuracion-plataforma', panelConfiguracionPlataformaRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/panel/configuracion-plataforma`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/configuracion-plataforma`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
   globalThis.fetch = fetchDeVerdad;
   delete process.env.RESEND_API_KEY;

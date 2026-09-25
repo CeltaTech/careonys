@@ -6,7 +6,7 @@
  * POR QUÉ EXISTE ESTA PRUEBA. `matriculas_asistente` era la única tabla de las que consultan las
  * dos aplicaciones de teléfono sin columna de Organización: colgaba del Asistente y nada más. La
  * migración `20260916040000_la_matricula_del_asistente_dice_de_que_prestadora_es.sql` le puso la
- * columna, y esto comprueba que las consultas la usan. El motor entra a la base con la llave de
+ * columna, y esto comprueba que las consultas la usan. El backend entra a la base con la llave de
  * servicio y se saltea la protección por fila, así que un filtro que falta no se ve: la pantalla
  * anda igual de bien.
  *
@@ -28,7 +28,7 @@ const LEGAJO = 'bbbbbbbb-bbbb-4bbb-8bbb-b0000000000b';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, con la dirección entera: los filtros van ahí. */
+/** Todo lo que el backend le pidió a la base, con la dirección entera: los filtros van ahí. */
 let llamadas = [];
 
 const baseFalsa = createServer((req, res) => {
@@ -60,12 +60,12 @@ const { appAsistentesMatriculaRouter } = await import('../appAsistentesMatricula
 const app = express();
 app.use(express.json());
 app.use('/api/app-asistentes/matricula', appAsistentesMatriculaRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/app-asistentes/matricula`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/app-asistentes/matricula`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 

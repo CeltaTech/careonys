@@ -107,7 +107,7 @@ function ElTextoQueFirma() {
             }}
           />
 
-          {/* Los marcadores los manda el motor, del mismo archivo que después los reemplaza: la
+          {/* Los marcadores los manda el backend, del mismo archivo que después los reemplaza: la
               lista no se puede despegar de lo que de verdad anda. */}
           <p className="panel-explicacion">
             {t.configuracion.consentimiento_pagador_marcadores} {datos.marcadores.join('  ')}

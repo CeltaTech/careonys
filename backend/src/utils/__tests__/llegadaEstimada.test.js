@@ -16,7 +16,7 @@
  *      no tiene ni un dato.
  *   3. NINGUNA HORA INVENTADA. Sin salida o sin distancia no hay estimación, y eso se dice.
  *
- * Este archivo prueba la copia del motor, que es la que corre en el servidor. El original vive
+ * Este archivo prueba la copia del backend, que es la que corre en el servidor. El original vive
  * en `panel/src/lib/llegadaEstimada.js` y `scripts/verificar_identidad.mjs` corta el build si las
  * dos se despegaron.
  */

@@ -67,7 +67,7 @@ function PantallaPermitida({ pantalla, children }) {
 
 // La vidriera no cuelga de un interruptor de los que la Prestadora enciende y apaga: cuelga de
 // la modalidad en la que trabaja, que es otra cosa y ya está decidida en otro lado. El candado
-// de verdad está en el motor, que contesta que no ofrece esa modalidad; esto es para que no
+// de verdad está en el backend, que contesta que no ofrece esa modalidad; esto es para que no
 // quede una dirección que lleve a una pantalla de error.
 function SoloConMarketplace({ children }) {
   if (!useOfreceMarketplace()) return <Navigate to="/pacientes" replace />;
@@ -165,7 +165,7 @@ function Rutas() {
         {/* El código que se le muestra al Asistente que llega (pendiente #113). No va colgado de
             un Paciente porque el código es del círculo familiar entero, y no lleva guardián
             porque cualquiera del círculo puede ser quien esté en la casa cuando toquen el
-            timbre. El motor pide lo mismo: tener sesión de Familia y nada más. */}
+            timbre. El backend pide lo mismo: tener sesión de Familia y nada más. */}
         {/* Las facturas no cuelgan de un Paciente: se le factura al círculo familiar entero, y
             una misma factura puede tener renglones de más de una persona cuidada. El detalle va
             detrás del mismo par de decisiones que la lista, o quien no tiene el dinero no ve la
@@ -224,14 +224,14 @@ function Rutas() {
         />
         {/* Lo que la Prestadora escribió para quien cuida en su casa. No lleva guardián: no
             cuelga de un Paciente ni de una modalidad, y no muestra nada de nadie. Lo que no
-            está publicado no sale del motor, así que acá no hay nada que adivinar. */}
+            está publicado no sale del backend, así que acá no hay nada que adivinar. */}
         <Route path="contenidos" element={<Contenidos />} />
         <Route path="codigo" element={<CodigoParaElAsistente />} />
         <Route path="perfil" element={<MiPerfil />} />
         {/* Cambiar la propia clave estando adentro. No lleva guardián más allá de la sesión:
             cualquiera que entró puede cambiar la suya, y la pantalla pide la actual antes. */}
         <Route path="mi-clave" element={<MiClave />} />
-        {/* No lleva guardián: quién tiene una instrucción para firmar lo contesta el motor, y
+        {/* No lleva guardián: quién tiene una instrucción para firmar lo contesta el backend, y
             quien no tiene ninguna ve que no hay ninguna. Adivinarlo acá dejaría al titular
             afuera de su propia pantalla mientras el perfil todavía viaja. */}
         <Route path="instruccion" element={<FirmarInstruccion />} />

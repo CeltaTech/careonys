@@ -53,10 +53,10 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
   const [avisoPrevioTexto, setAvisoPrevioTexto] = useState('');
   const [sugiriendoMotivo, setSugiriendoMotivo] = useState(false);
   // Qué contestó la sugerencia la última vez: '' mientras no se pidió ninguna, 'sugerido' cuando
-  // el motivo de abajo lo puso el motor, 'sin_sugerencia' cuando ninguno de los motivos de la
+  // el motivo de abajo lo puso el backend, 'sin_sugerencia' cuando ninguno de los motivos de la
   // Prestadora correspondía. El aviso de que fue una sugerencia tiene que quedar a la vista
   // mientras la persona mira el desplegable: si desapareciera al aplicarla, el motivo elegido por
-  // el motor se vería igual que uno elegido a mano.
+  // el backend se vería igual que uno elegido a mano.
   const [sugerencia, setSugerencia] = useState('');
   const [horasExtra, setHorasExtra] = useState(String(guardia.horas_extra ?? 0));
   const [horasExtraMotivo, setHorasExtraMotivo] = useState(guardia.horas_extra_motivo ?? '');
@@ -173,7 +173,7 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
     });
   }
 
-  /* Marcar la ausencia se lo pide al motor, y no se hace acá.
+  /* Marcar la ausencia se lo pide al backend, y no se hace acá.
      La decisión completa —dejar la guardia en `ausente` y abrir el incidente diciendo quién se
      quedó esperando el relevo— vive en `backend/src/utils/marcarAusente.js`, que es la misma que
      usa la detección automática. Hasta el 2026-09-05 esta pantalla tenía su propia versión, y las
@@ -200,15 +200,15 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
     onClose();
   }
 
-  /* Lo que contó quien llamó, leído por el motor, para que el desplegable venga preelegido.
+  /* Lo que contó quien llamó, leído por el backend, para que el desplegable venga preelegido.
      Quien atiende el teléfono sostiene la conversación y elige un motivo al mismo tiempo, y lo
      que se elige mal ahí no se nota nunca más: la Prestadora termina contando mal sus ausencias.
 
      Es una sugerencia y nada más. Se aplica sobre el mismo desplegable de siempre, que se puede
-     cambiar con un clic, y si el motor no encuentra ninguno que corresponda, el desplegable queda
+     cambiar con un clic, y si el backend no encuentra ninguno que corresponda, el desplegable queda
      como estaba. La pantalla sin IA es exactamente la que era antes.
 
-     LO QUE SE CONTÓ NO SE GUARDA. Este texto sube al motor para esta pregunta y no se manda en el
+     LO QUE SE CONTÓ NO SE GUARDA. Este texto sube al backend para esta pregunta y no se manda en el
      alta: lo que se escribe en `alertas_tempranas_guardia` es el motivo elegido, como siempre.
      Puede traer el diagnóstico de quien llama o el de un familiar suyo, que es dato de salud de
      una persona que no es Paciente de nadie (`celtatech/CLAUDE.md` §6). */

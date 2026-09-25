@@ -8,11 +8,11 @@
  *
  * SE ACEPTA SÓLO HACIA ATRÁS. El reloj del teléfono lo maneja quien lo tiene en la mano, así que
  * una hora futura es un reloj mal puesto —o algo peor— y con eso no se escribe nada: se usa la
- * hora del motor. Hacia atrás no hace falta tope: el dato que llega tarde es exactamente el caso
+ * hora del backend. Hacia atrás no hace falta tope: el dato que llega tarde es exactamente el caso
  * que esta función existe para no perder.
  *
  * Lo que no se puede leer como fecha tampoco decide nada. Ante un valor ausente, vacío o que no
- * es una fecha, queda la hora del motor: falla cerrado hacia el dato que el motor sí conoce.
+ * es una fecha, queda la hora del backend: falla cerrado hacia el dato que el backend sí conoce.
  *
  * Esta decisión estaba escrita cuatro veces, una por ruta, con las mismas cuatro líneas copiadas.
  * Acá está una sola vez, y las rutas la consumen.

@@ -9,7 +9,7 @@
  *
  * QUÉ SE PRUEBA ACÁ Y QUÉ NO. Que la regla esté también en la base —el disparador
  * `interno.se_habilita_hacia_abajo_y_nunca_a_uno_mismo`— no se prueba desde acá: sin base levantada
- * nada de este archivo puede comprobar un disparador. Lo que se prueba es el filtro del motor, que
+ * nada de este archivo puede comprobar un disparador. Lo que se prueba es el filtro del backend, que
  * es el que decide qué sale de la ruta, y cada caso está por el error que evita:
  *
  *   1. QUE LA LISTA SALGA SIN FILTRAR. Quien coordina vería a otro que coordina y podría habilitarlo.

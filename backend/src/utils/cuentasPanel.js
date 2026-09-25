@@ -17,7 +17,7 @@ import { correoComparable, correoDeAcceso } from '../config/correoDeAcceso.js';
 // los generales de CeltaTech (`prestadora_id` vacío) o los que creó ella misma. Devuelve el
 // mismo id si está bien, y `null` si no vino ninguno.
 //
-// Hace falta escribirlo: el motor entra a la base con la llave maestra, así que las reglas
+// Hace falta escribirlo: el backend entra a la base con la llave maestra, así que las reglas
 // de aislamiento de la base no lo frenan. El filtro por Prestadora se escribe acá a mano o
 // no existe (CLAUDE.md §5, regla de aislamiento).
 export async function validarTipoAsistente(tipoAsistenteId, prestadoraId) {
@@ -88,7 +88,7 @@ export function resolverTipoAsistenteEnCatalogo(texto, catalogo) {
 
 // ¿El servicio de acceso está diciendo que ese correo ya está tomado? El texto viene en
 // inglés y sin código propio, así que hay que reconocerlo por lo que dice. Se mira acá, en
-// un solo lugar, para no repartir la frase en inglés por todo el motor.
+// un solo lugar, para no repartir la frase en inglés por todo el backend.
 function correoYaTomado(errorAuth) {
   return /already (been )?registered|already exists|email.*taken/i.test(errorAuth?.message || '');
 }

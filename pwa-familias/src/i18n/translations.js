@@ -12,7 +12,7 @@ export const T = {
       en_uso: 'No se puede borrar: hay otros registros que dependen de esto.',
       dato_invalido: 'Hay un dato mal cargado. Conviene revisar lo que se escribió.',
       falla_del_sistema: 'Algo falló de nuestro lado. Se puede volver a probar en un rato.',
-      // Los motivos: cuando el motor sabe exactamente qué pasó, lo dice con un código y la
+      // Los motivos: cuando el backend sabe exactamente qué pasó, lo dice con un código y la
       // frase se busca acá. Ganan siempre por sobre las ocho de arriba, que son lo genérico.
       // Están solo los que puede recibir esta aplicación: cuando se pide una función que la
       // Prestadora tiene apagada, y los cinco de la activación de la cuenta.
@@ -29,7 +29,7 @@ export const T = {
         // Los tres del código para firmar la instrucción. Cada uno se sale distinto: el
         // equivocado se vuelve a escribir, el vencido obliga a pedir otro, y el tercero avisa
         // que ya no se puede seguir probando.
-        // Estas claves son, letra por letra, los motivos que manda el motor al confirmar la firma
+        // Estas claves son, letra por letra, los motivos que manda el backend al confirmar la firma
         // (`backend/src/utils/instruccionesCirculo.js`). Una que no coincida no se ve rota: cae en
         // el mensaje general y la persona lee «ocurrió un error» justo cuando se equivocó de dígito.
         codigo_incorrecto: 'Ese código no es correcto. Conviene revisarlo y escribirlo de nuevo.',
@@ -124,7 +124,7 @@ export const T = {
       empezar_videollamada: 'Empezar una videollamada',
       entrar_a_la_videollamada: 'Entrar a la videollamada',
       // Lo que escribe el producto adentro del hilo. No lo dijo ninguna persona, y por eso la
-      // frase sale de acá y no viaja como texto desde el motor.
+      // frase sale de acá y no viaja como texto desde el backend.
       avisos: {
         videollamada_empezo: 'Empezó una videollamada.',
       },
@@ -170,7 +170,7 @@ export const T = {
       llave_entrar: 'Entrar con huella o cara',
       llave_esperando: 'Esperando el aparato…',
       // Un solo aviso para todo lo que puede salir mal con la llave, igual que con la contraseña:
-      // el motor tampoco dice cuál de las cosas falló, y no hay nada que agregar acá.
+      // el backend tampoco dice cuál de las cosas falló, y no hay nada que agregar acá.
       llave_error: 'No se pudo entrar con este aparato. Puede ingresar con su contraseña.',
       llave_o: 'o',
     },
@@ -539,7 +539,7 @@ export const T = {
       hasta: 'Hasta',
     },
     // Los once accesos del círculo familiar, dichos como los lee quien está anotado en uno. En el
-    // orden del catálogo del motor, que es el orden en el que llegan: dos personas del mismo
+    // orden del catálogo del backend, que es el orden en el que llegan: dos personas del mismo
     // círculo comparan sus listas renglón por renglón.
     //
     // Son frases cortas y en sustantivo porque la misma lista se usa para las dos columnas, la de
@@ -1524,7 +1524,7 @@ export const T = {
 
 // Cuáles son los tres idiomas y cuál es el de por defecto no se escribe acá: sale de
 // `i18n/idiomas.js`, que es el punto único donde está dicho para todo el producto —las pantallas
-// y el motor—. Estaba escrito cuatro veces, y las cuatro decían lo mismo por suerte, no por
+// y el backend—. Estaba escrito cuatro veces, y las cuatro decían lo mismo por suerte, no por
 // construcción. Se siguen exportando desde este archivo con los nombres de siempre para que
 // ningún punto de consumo cambie.
 export { IDIOMA_POR_DEFECTO as DEFAULT_LOCALE, IDIOMAS_SOPORTADOS as LOCALES } from './idiomas.js';

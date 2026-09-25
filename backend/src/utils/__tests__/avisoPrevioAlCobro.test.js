@@ -21,7 +21,7 @@ import { createServer } from 'node:http';
 
 // Las frases de los avisos ya no están escritas adentro del código: viven en la tabla de mensajes
 // del sistema y se editan desde afuera. Acá se carga lo mismo que siembra la migración, porque las
-// pruebas del motor corren sin base levantada.
+// pruebas del backend corren sin base levantada.
 import { sembrarMensajesDelSistema } from '../../i18n/mensajesDelSistema.js';
 import { filasSembradas } from '../../i18n/__tests__/mensajesSembrados.js';
 
@@ -153,7 +153,7 @@ describe('a quién se le avisa', () => {
 
   it('avisa también el mismo día del primer cobro', async () => {
     // Es el último momento en que el aviso todavía es previo. Si el trabajo no corrió antes —el
-    // motor estuvo caído, la Familia no tenía dispositivo—, éste es el día que queda.
+    // backend estuvo caído, la Familia no tenía dispositivo—, éste es el día que queda.
     respuestas.set('GET /rest/v1/accesos_marketplace', [accesoPorCobrarse({ gratis_hasta: HOY })]);
 
     assert.equal((await avisarElPrimerCobroQueViene({ avisar: avisarDeMentira })).avisados, 1);

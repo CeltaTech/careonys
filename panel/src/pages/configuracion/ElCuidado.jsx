@@ -209,7 +209,7 @@ function TabServicios() {
           haya configurado ningún nivel, así que la pantalla dice cuál está rigiendo hoy y de
           dónde salió: un valor que actúa sin verse es un valor que nadie puede cambiar.
           El cálculo no se repite acá —sale de `minutosDeDemoraTolerados`, la misma función que
-          usa el motor para decidir— así que la pantalla no puede decir un número y el sistema
+          usa el backend para decidir— así que la pantalla no puede decir un número y el sistema
           usar otro. */}
       <p className="panel-explicacion">
         {con(t.configuracion.escalada_demora_en_uso, { minutos: minutosDeDemoraTolerados(niveles) })}

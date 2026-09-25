@@ -16,7 +16,7 @@
 // que para saber el rol de quien mira. Acá se pregunta una vez y lo consumen todas, que es lo que
 // pide la regla del punto único de verdad.
 //
-// EL CANDADO DE VERDAD NO ESTÁ ACÁ. Está en el motor, que directamente no manda lo que esa
+// EL CANDADO DE VERDAD NO ESTÁ ACÁ. Está en el backend, que directamente no manda lo que esa
 // persona no tiene, y en las políticas de la base. Esto es para que no quede un botón que lleva
 // a una pantalla vacía ni un formulario que va a terminar en un rechazo.
 
@@ -58,7 +58,7 @@ export function CirculoProvider({ children }) {
       });
     } catch {
       // Sin esta respuesta la aplicación igual abre: se ve todo hasta el próximo intento. Lo
-      // apagado no viene igual desde el motor, así que en el peor caso se ve un botón de más,
+      // apagado no viene igual desde el backend, así que en el peor caso se ve un botón de más,
       // nunca un dato de más.
     }
   }, []);
@@ -78,7 +78,7 @@ export function CirculoProvider({ children }) {
       instruccionPendiente: circulo.instruccionPendiente,
       recargar,
       // Se pregunta por la clave en vez de repartir la lista entera, igual que `useSeVe`: el
-      // catálogo de accesos vive en el motor (`backend/src/utils/catalogoCirculoFamiliar.js`) y
+      // catálogo de accesos vive en el backend (`backend/src/utils/catalogoCirculoFamiliar.js`) y
       // no se copia acá, así que un acceso nuevo no obliga a tocar este archivo.
       //
       // Mientras la respuesta no llegó contesta que sí a todo, por el mismo motivo que aquel:

@@ -16,7 +16,7 @@ import { nombreBase } from './casillaDeEnvio.js';
 // escrita una sola vez, en `casillaDeEnvio.js`. Lo único distinto es contra qué se comprueba que
 // esté libre: las puertas ya repartidas, y los nombres que el producto se reserva para sí.
 //
-// Lo guardado es el rótulo solo —`cuidardelsur`—, que es lo que el Panel le manda al motor
+// Lo guardado es el rótulo solo —`cuidardelsur`—, que es lo que el Panel le manda al backend
 // cuando alguien abre la pantalla de ingreso. Una Prestadora con dominio propio puede tener
 // guardada la dirección entera, y por eso lo reservado se comprueba únicamente cuando el valor
 // no tiene ningún punto: `familias.cuidardelsur.com.ar` es de ella y no choca con nada del
@@ -39,7 +39,7 @@ async function direccionesTomadas(base) {
 
 // Los nombres que el producto se reserva: los que ya publica para sí mismo. Salen de la base y no
 // de una lista escrita acá, porque agregar una pantalla nueva no puede obligar a publicar el
-// motor de nuevo.
+// backend de nuevo.
 //
 // Si el catálogo no contesta, se corta. Acá no se puede tomar el camino prudente de suponer que
 // están todos reservados —no quedaría ningún nombre— ni el de suponer que no hay ninguno, que es

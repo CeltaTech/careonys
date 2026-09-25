@@ -16,7 +16,7 @@ import { FormField } from '../ui/FormField';
 
    NO SE PIDE EL CÓDIGO A QUIEN NO PUEDE RECIBIRLO. La cuenta sin número verificado, y la Prestadora
    que todavía no tiene por dónde mandarlo, entran igual que siempre y reciben un aviso por correo.
-   Eso lo resuelve el motor: acá lo único que se hace es mostrar el casillero cuando el motor lo pide.
+   Eso lo resuelve el backend: acá lo único que se hace es mostrar el casillero cuando el backend lo pide.
 
    Mientras el código esté pendiente, la pantalla de atrás no se usa. */
 export function EquipoNuevo() {

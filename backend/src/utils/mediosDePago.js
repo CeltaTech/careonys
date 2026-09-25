@@ -3,7 +3,7 @@
 //
 // POR QUÉ EXISTE
 // Con qué se pagó sale del registro de listas de opciones, que tiene dos pisos:
-// las opciones que trae el producto y las que agregó cada Prestadora. El motor
+// las opciones que trae el producto y las que agregó cada Prestadora. El backend
 // necesita esa lista para controlar antes de escribir, y la única forma de que
 // no se separe del desplegable del Panel es que los dos la lean del mismo lado.
 //
@@ -20,13 +20,13 @@
 // `liquidaciones_asistente` frenan igual lo que se cuele por acá. Esto sirve para
 // contestar antes y con una frase entendible.
 //
-// Este archivo no tiene copia: habla con la base, así que vive sólo en el motor.
+// Este archivo no tiene copia: habla con la base, así que vive sólo en el backend.
 // ---------------------------------------------------------------------------
 
 import { supabase } from '../db/connection.js';
 import { laOpcionAlcanzaLasModalidades } from './modalidades.js';
 
-/** Las claves de las dos listas. Escritas una vez, porque las nombran el motor y el Panel. */
+/** Las claves de las dos listas. Escritas una vez, porque las nombran el backend y el Panel. */
 export const LISTA_DE_MEDIOS_DE_PAGO_DE_LA_FAMILIA = 'medios_de_pago_de_la_familia';
 export const LISTA_DE_MEDIOS_DE_PAGO_AL_ASISTENTE = 'medios_de_pago_al_asistente';
 
@@ -45,7 +45,7 @@ const LAS_LISTAS_QUE_EXISTEN = [
  * Una lista que no es ninguna de las dos devuelve vacío, y vacío no admite ningún medio: lo que no
  * supo contra qué comparar niega.
  *
- * El motor no pasa por las reglas de acceso de la base, así que el filtro por Prestadora se
+ * El backend no pasa por las reglas de acceso de la base, así que el filtro por Prestadora se
  * escribe acá y a mano. Sin él, una Prestadora podría guardar una opción de otra.
  *
  * `modalidadesEnJuego` acota todavía más: un medio marcado con modalidades sólo sirve si ninguna

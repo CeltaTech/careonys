@@ -9,17 +9,17 @@
 // POR QUÉ EXISTE
 //
 // El Panel escribe en la base directamente desde el navegador, con el pase de
-// la persona que entró. El motor, en cambio, entra con la llave de servicio,
+// la persona que entró. El backend, en cambio, entra con la llave de servicio,
 // que puede todo. Son dos roles distintos con permisos distintos, y hasta que
 // se escribió esta prueba **ninguna prueba del producto escribía con el pase de
-// una persona**: las del motor pasan por la llave de servicio, y
+// una persona**: las del backend pasan por la llave de servicio, y
 // `probar_aislamiento.mjs` abre sesión de persona pero solamente lee.
 //
 // Por ese hueco se coló un defecto que estuvo dado de alta en el código sin que
 // nada lo notara: catorce tablas tenían un disparador que llamaba a una función
 // que quien inserta no tenía permiso de ejecutar, así que toda alta hecha desde
 // el Panel se caía con «42501 permission denied». Con la llave de servicio
-// entraba sin problema, y por eso las 576 pruebas del motor seguían en verde.
+// entraba sin problema, y por eso las 576 pruebas del backend seguían en verde.
 //
 // QUÉ PRUEBA
 //
@@ -58,7 +58,7 @@
 //     una Familia y no el Panel, y cuya política exige además una suscripción
 //     del Marketplace y el permiso de dinero adentro del Círculo.
 //   · `fn_modalidades_de_asistente_nuevo`, que corre sólo al insertar un
-//     Asistente, y un Asistente lo da de alta el motor: su identificador es el
+//     Asistente, y un Asistente lo da de alta el backend: su identificador es el
 //     de la persona, que tiene que existir antes.
 //
 // Los dos llaman a la misma función que otro disparador que sí se prueba acá,

@@ -18,8 +18,8 @@
 //      tablas que tienen columna de Prestadora, entra como administradora de
 //      cada una y comprueba que ninguna consulta devuelva una fila ajena.
 //
-//   2. EL CAMINO DEL MOTOR. Las dos aplicaciones de celular no consultan la
-//      base: le piden todo al motor, y el motor entra a la base con la llave
+//   2. EL CAMINO DEL BACKEND. Las dos aplicaciones de celular no consultan la
+//      base: le piden todo al backend, y el backend entra a la base con la llave
 //      de servicio, que se saltea las políticas por diseño. Ahí no hay base
 //      que proteja nada: la separación está escrita a mano, condición por
 //      condición, en cada consulta. La prueba intenta a propósito alcanzar
@@ -31,7 +31,7 @@
 //
 // UNA RESPUESTA AFIRMATIVA NO ES UNA FILTRACIÓN. Cuando el intento escribe, la
 // prueba mira la fila ajena antes y después y compara. Hace falta, porque el
-// motor a veces contesta que sí sobre cero filas: la condición de Prestadora se
+// backend a veces contesta que sí sobre cero filas: la condición de Prestadora se
 // aplicó, no encontró nada que modificar, y aun así la respuesta salió
 // afirmativa. Eso no es que se haya llevado nada —no cambió ni un dato— y por
 // eso no hace fallar esta prueba; sale como aviso y tiene su propio pendiente.
@@ -44,7 +44,7 @@
 //
 // QUÉ NECESITA. Las dos Prestadoras de prueba que siembra `supabase/seed.sql`:
 // Sandbox y Cuidar del Sur. Si la base no tiene las dos, avisa y no corre.
-// El tramo del motor se saltea solo si el motor no está levantado, porque la
+// El tramo del backend se saltea solo si el backend no está levantado, porque la
 // mitad que sí se puede probar vale igual.
 //
 // QUÉ NO PRUEBA. Que las cuentas vean lo que les corresponde adentro de su
@@ -106,7 +106,7 @@ function leerEntorno() {
   return {
     base: valores.VITE_SUPABASE_URL,
     llavePublica: valores.VITE_SUPABASE_ANON_KEY,
-    motor: process.env.URL_MOTOR || valores.VITE_API_URL || 'http://127.0.0.1:4000',
+    backend: process.env.URL_BACKEND || valores.VITE_API_URL || 'http://127.0.0.1:4000',
   };
 }
 
@@ -412,24 +412,24 @@ async function probarLasDosAplicaciones({ base, llavePublica }, sesiones, person
 }
 
 // ---------------------------------------------------------------------------
-// Segunda puerta: el motor
+// Segunda puerta: el backend
 // ---------------------------------------------------------------------------
 
-async function motorLevantado(motor) {
+async function backendLevantado(backend) {
   try {
-    await fetch(`${motor}/api/panel/configuracion/zonas`, { signal: AbortSignal.timeout(2500) });
+    await fetch(`${backend}/api/panel/configuracion/zonas`, { signal: AbortSignal.timeout(2500) });
     return true;
   } catch {
     return false;
   }
 }
 
-async function probarElMotor({ motor }, sesiones, piezas) {
-  console.log('\n== El motor: intentos deliberados de alcanzar datos ajenos ==\n');
+async function probarElBackend({ backend }, sesiones, piezas) {
+  console.log('\n== El backend: intentos deliberados de alcanzar datos ajenos ==\n');
 
   // Cada intento dice quién, qué, cómo, adónde, con qué cuerpo y —cuando
   // escribe— con qué consulta se mira la fila ajena antes y después. Esa
-  // consulta es la que decide de verdad: una respuesta afirmativa del motor
+  // consulta es la que decide de verdad: una respuesta afirmativa del backend
   // no prueba que haya tocado nada, y de hecho a veces no toca nada.
   const zonaAjena = `SELECT md5(t::text) FROM public.zonas_cobertura t WHERE id = '${piezas.zonaA}';`;
   const usuarioAjeno = `SELECT md5(t::text) FROM public.usuarios t WHERE id = '${piezas.usuarioA}';`;
@@ -477,7 +477,7 @@ async function probarElMotor({ motor }, sesiones, piezas) {
 
   for (const [quien, que, metodo, ruta, token, cuerpo, huella] of intentos) {
     const antes = huella ? JSON.stringify(consultarBase(huella)) : null;
-    const r = await fetch(`${motor}${ruta}`, {
+    const r = await fetch(`${backend}${ruta}`, {
       method: metodo,
       headers: {
         Authorization: `Bearer ${token}`,
@@ -494,7 +494,7 @@ async function probarElMotor({ motor }, sesiones, piezas) {
       problemas.push(`${quien} pudo ${que}: la fila ajena cambió (${metodo} ${ruta})`);
       console.log(`  ${etiqueta} ${rojo(`${r.status}  ENTRÓ Y ESCRIBIÓ`)}`);
     } else if (huella && contestoQueSi) {
-      // El motor no tocó nada, pero contestó que sí. No es una filtración:
+      // El backend no tocó nada, pero contestó que sí. No es una filtración:
       // es una respuesta que miente, anotada como pendiente aparte.
       respuestasVacias.push(`${metodo} ${ruta.replace(/\/[0-9a-f-]{36}/g, '/…')} contestó ${r.status} sin modificar nada`);
       console.log(`  ${etiqueta} ${verde(`${r.status}  sin efecto`)} ${gris('(contestó que sí)')}`);
@@ -507,7 +507,7 @@ async function probarElMotor({ motor }, sesiones, piezas) {
   }
 
   // El control al revés: si esto no pasa, la prueba de arriba no prueba nada,
-  // porque un motor caído bloquea todo y parece impecable.
+  // porque un backend caído bloquea todo y parece impecable.
   console.log('\n  Control — cada una con lo suyo, acá SÍ tiene que pasar:\n');
   const controles = [
     ['admin A', 'ver sus zonas',       `/api/panel/configuracion/zonas`, sesiones.adminA],
@@ -516,7 +516,7 @@ async function probarElMotor({ motor }, sesiones, piezas) {
     ['asistente A', 'ver sus guardias', `/api/app-asistentes/guardias`,  sesiones.asistenteA],
   ];
   for (const [quien, que, ruta, token] of controles) {
-    const r = await fetch(`${motor}${ruta}`, { headers: { Authorization: `Bearer ${token}` } });
+    const r = await fetch(`${backend}${ruta}`, { headers: { Authorization: `Bearer ${token}` } });
     const etiqueta = `${quien} debe poder ${que}`.padEnd(52);
     if (r.ok) {
       console.log(`  ${etiqueta} ${verde(`${r.status}  bien`)}`);
@@ -591,12 +591,12 @@ async function principal() {
   problemas.push(...(await probarLasDosAplicaciones(entorno, sesiones, personas)));
   let respuestasVacias = [];
 
-  if (await motorLevantado(entorno.motor)) {
-    const delMotor = await probarElMotor(entorno, sesiones, piezas);
-    problemas.push(...delMotor.problemas);
-    respuestasVacias = delMotor.respuestasVacias;
+  if (await backendLevantado(entorno.backend)) {
+    const delBackend = await probarElBackend(entorno, sesiones, piezas);
+    problemas.push(...delBackend.problemas);
+    respuestasVacias = delBackend.respuestasVacias;
   } else {
-    console.log(gris(`\n== El motor no responde en ${entorno.motor}; ese tramo queda sin probar ==`));
+    console.log(gris(`\n== El backend no responde en ${entorno.backend}; ese tramo queda sin probar ==`));
     console.log(gris('   Levantalo con:  cd backend && npm run dev'));
   }
 

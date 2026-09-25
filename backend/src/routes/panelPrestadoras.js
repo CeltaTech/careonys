@@ -69,13 +69,13 @@ function insertarPrestadora({ razonSocial, nombreFantasia, pais, identificacionF
 
 // Dos índices únicos pueden rechazar este insert —el del nombre de fantasía y el de la casilla
 // de envío—, y no se contestan igual: el del nombre lo corrige quien está dando el alta, y el de
-// la casilla lo resuelve el motor eligiendo otra. Por eso se mira cuál de los dos fue.
+// la casilla lo resuelve el backend eligiendo otra. Por eso se mira cuál de los dos fue.
 function esChoqueDeCasilla(error) {
   return error?.code === '23505' && String(error.message ?? '').includes('casilla_envio');
 }
 
 // La puerta por la que entra la Prestadora queda anotada en su fila de configuración, que es de
-// donde la lee el motor cuando alguien abre la pantalla de ingreso
+// donde la lee el backend cuando alguien abre la pantalla de ingreso
 // (`middleware/resolverPrestadoraPublica.js`).
 function fijarLaDireccionDeIngreso(prestadoraId, direccion) {
   return supabase

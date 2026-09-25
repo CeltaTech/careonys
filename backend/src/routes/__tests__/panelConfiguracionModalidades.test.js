@@ -24,7 +24,7 @@ const USUARIO = '22222222-2222-2222-2222-222222222222';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, para poder afirmar que NO pidió algo. */
+/** Todo lo que el backend le pidió a la base, para poder afirmar que NO pidió algo. */
 let llamadas = [];
 
 const baseFalsa = createServer((req, res) => {
@@ -64,12 +64,12 @@ const { panelConfiguracionRouter } = await import('../panelConfiguracion.js');
 const app = express();
 app.use(express.json());
 app.use('/api/panel/configuracion', panelConfiguracionRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/panel/configuracion`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/configuracion`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 
@@ -82,7 +82,7 @@ async function apagar(modalidad, activa = false) {
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
 
-/** Un Asistente cualquiera, de los que el motor sólo mira si hay o no hay. */
+/** Un Asistente cualquiera, de los que el backend sólo mira si hay o no hay. */
 const UN_ASISTENTE = [{ id: '44444444-4444-4444-4444-444444444444' }];
 /** Un acceso del Marketplace, ídem. */
 const UN_ACCESO = [{ id: '55555555-5555-5555-5555-555555555555' }];
@@ -101,7 +101,7 @@ beforeEach(() => {
 /** Que el rechazo haya sido de verdad: la modalidad quedó como estaba. */
 function noApago() {
   const escrituras = llamadas.filter((l) => l.clave === 'POST /rest/v1/prestadora_modalidades');
-  assert.deepEqual(escrituras, [], 'el motor apagó la modalidad igual, después de decir que no');
+  assert.deepEqual(escrituras, [], 'el backend apagó la modalidad igual, después de decir que no');
 }
 
 /**

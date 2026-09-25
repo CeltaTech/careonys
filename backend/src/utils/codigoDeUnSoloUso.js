@@ -99,13 +99,13 @@ export function codigoNuevoParaGuardar(expiraEn) {
 // El intento lo suma la base, en un solo paso (pendiente #177)
 // ---------------------------------------------------------------------------------------
 //
-// Antes el motor leía `codigo_intentos`, le sumaba uno y lo volvía a escribir. Entre la lectura
+// Antes el backend leía `codigo_intentos`, le sumaba uno y lo volvía a escribir. Entre la lectura
 // y la escritura entra cualquier otro pedido: dos intentos simultáneos leen 2, los dos escriben
 // 3, y de cinco intentos se cuenta uno. Repitiendo eso en paralelo el tope no se alcanza nunca.
 //
 // Acá la suma la hace la base adentro de una sola sentencia (`codigo_intentos + 1` con
 // `RETURNING`), que es atómica: cada llamada devuelve su propio número y ninguna pisa a la otra.
-// La función SQL vive en `public` porque el motor la llama por API, y sólo la puede ejecutar la
+// La función SQL vive en `public` porque el backend la llama por API, y sólo la puede ejecutar la
 // llave de servicio — ver la migración
 // `20260909130000_el_tope_de_intentos_de_un_codigo_es_un_tope.sql`.
 //

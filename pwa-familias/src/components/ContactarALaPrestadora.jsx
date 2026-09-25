@@ -12,7 +12,7 @@ import { con } from '../lib/textos';
  * NO LLEVA A NINGUNA PERSONA. Lleva al contacto que la Prestadora cargó en su configuración.
  * Dónde suena es decisión de ella. El teléfono de un Coordinador o de un Asistente no aparece
  * acá ni podría: cómo llegar a alguien del plantel es lo que la modalidad Marketplace abre a
- * pedido, y el motor directamente no lo manda.
+ * pedido, y el backend directamente no lo manda.
  *
  * NO VIAJA NADA ADENTRO DE LA DIRECCIÓN. Ni el nombre del Paciente, ni la alerta, ni su nivel.
  * Un `?text=` con eso escrito adentro sale del teléfono, queda en el historial del navegador y

@@ -3,7 +3,7 @@
  *
  *   npm test --prefix backend
  *
- * POR QUÉ EXISTE ESTA PRUEBA. El motor armaba siempre `type: 'text'`. Adentro de una conversación
+ * POR QUÉ EXISTE ESTA PRUEBA. El backend armaba siempre `type: 'text'`. Adentro de una conversación
  * que abrió la otra persona eso anda, y por eso nunca se notó: en las pruebas con una conversación
  * abierta el mensaje llega. El día que la Prestadora empieza el mensaje —que es lo que hace cada
  * aviso al Coordinador y cada recordatorio a la Asistente— Meta lo rechaza, y el aviso se pierde

@@ -2,18 +2,18 @@
  * Pruebas de los cobros de la Familia y del saldo que sale de restarlos.
  *
  * Usan el banco de pruebas que ya trae Node adentro (`node --test`), sin instalar nada, igual
- * que el resto de las pruebas del motor:
+ * que el resto de las pruebas del backend:
  *
  *   npm test --prefix backend
  *
  * Dos clases de prueba conviven acá. Las comprobaciones sueltas —qué monto se admite, qué
  * medio, cómo se lee un período— se prueban llamando a las funciones directamente. Todo lo
- * demás, que no es una cuenta sino una conversación con la base, se prueba levantando el motor
+ * demás, que no es una cuenta sino una conversación con la base, se prueba levantando el backend
  * de verdad contra una base de mentira que contesta lo que cada prueba le prepara. Así lo que
  * se comprueba es el camino entero —permiso, filtros, escritura— y no una imitación.
  *
  * Y hay una prueba que mira otra cosa: que TODA consulta lleve el filtro de Prestadora escrito.
- * El motor entra a la base con la clave de servicio, o sea sin las reglas de acceso: si una
+ * El backend entra a la base con la clave de servicio, o sea sin las reglas de acceso: si una
  * consulta se olvida ese filtro, una Prestadora ve la plata de otra y nada la detiene.
  */
 import { strict as assert } from 'node:assert';
@@ -31,7 +31,7 @@ const FAMILIA = '44444444-4444-4444-4444-444444444444';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, con la dirección entera: los filtros van ahí. */
+/** Todo lo que el backend le pidió a la base, con la dirección entera: los filtros van ahí. */
 let llamadas = [];
 
 let rolDelUsuario = 'admin_prestadora';
@@ -63,7 +63,7 @@ const baseFalsa = createServer((req, res) => {
     }
 
     // `.single()` pide una fila sola con este encabezado; `.maybeSingle()` sobre una lectura
-    // pide la lista y la achica del lado del motor. Se imita eso y nada más.
+    // pide la lista y la achica del lado del backend. Se imita eso y nada más.
     const unoSolo = (req.headers.accept || '').includes('vnd.pgrst.object+json');
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(unoSolo && Array.isArray(valor) ? valor[0] ?? null : valor));
@@ -90,12 +90,12 @@ const {
 const app = express();
 app.use(express.json());
 app.use('/api/panel/cobros', panelCobrosRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/panel/cobros`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/cobros`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 

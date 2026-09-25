@@ -14,7 +14,7 @@
  *      abre ningún hueco y no se marca ninguna ausencia.
  *   3. QUE QUEDEN DOS DESCANSOS ABIERTOS. Terminar sin haber empezado, o empezar de nuevo sin
  *      haber cerrado, dejaría una pantalla con dos botones y sin saber cuál es cuál.
- *   4. QUE UNA PRESTADORA ALCANCE LA GUARDIA DE OTRA. El motor entra con la llave de servicio y se
+ *   4. QUE UNA PRESTADORA ALCANCE LA GUARDIA DE OTRA. El backend entra con la llave de servicio y se
  *      saltea la protección por fila: lo único que separa a una de otra son los filtros de cada
  *      consulta.
  *   5. QUE SE PIERDA EL MOMENTO EN QUE PASÓ. El aviso puede quedar en la cola sin conexión, y ese
@@ -77,12 +77,12 @@ const { appAsistentesRouter } = await import('../appAsistentes.js');
 const app = express();
 app.use(express.json());
 app.use('/api/app-asistentes', appAsistentesRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const RAIZ = `http://127.0.0.1:${motor.address().port}`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const RAIZ = `http://127.0.0.1:${backend.address().port}`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 
@@ -132,7 +132,7 @@ function filasQuePasanLosFiltros(url, filas) {
   );
 }
 
-/** Los descansos que el motor dio de alta en este pedido. */
+/** Los descansos que el backend dio de alta en este pedido. */
 function descansosAnotados() {
   return llamadas
     .filter((l) => l.clave === 'POST /rest/v1/descansos_guardia')
@@ -249,7 +249,7 @@ describe('terminar el descanso', () => {
 
   // Un fin anterior al inicio rompe la restricción de la base, y el error saldría como falla del
   // sistema delante de alguien que sólo apretó un botón.
-  it('un reloj que da un fin anterior al inicio no rompe nada: vale la hora del motor', async () => {
+  it('un reloj que da un fin anterior al inicio no rompe nada: vale la hora del backend', async () => {
     descansosEnLaBase = [
       { id: DESCANSO, guardia_id: GUARDIA, inicio_at: new Date(Date.now() - 60 * 1000).toISOString(), fin_at: null },
     ];

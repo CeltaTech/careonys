@@ -6,7 +6,7 @@ import { MOTIVOS_SIN_COMPROBAR } from '../lib/motivosSinComprobar';
 
 const LECTOR_ID = 'lector-codigo-de-presencia';
 
-// Cada cuánto se le vuelve a preguntar al motor si en la Prestadora ya soltaron el código. No es
+// Cada cuánto se le vuelve a preguntar al backend si en la Prestadora ya soltaron el código. No es
 // una regla de negocio ni una decisión de ninguna Prestadora: es el pulso de una pantalla que
 // está esperando, y el Asistente está parado en la puerta mientras tanto. Mismo criterio que el
 // sondeo del cobro por QR en la aplicación de las Familias.
@@ -34,7 +34,7 @@ const SONDEO_MS = 4000;
  *   salida hacia adelante.
  *
  * `onListo(comprobacion)` recibe { codigo } o { motivoSinComprobar, detalle } y devuelve
- * { ok: true } o { ok: false, mensaje }. Cuando el motor rechaza el código —equivocado, vencido,
+ * { ok: true } o { ok: false, mensaje }. Cuando el backend rechaza el código —equivocado, vencido,
  * o de otra casa— este componente se queda abierto con el aviso: cerrarlo dejaría al Asistente
  * en la puerta sin nada que apretar.
  */
@@ -167,7 +167,7 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
         const estado = await api.estadoDeComprobacion(guardiaId, momento);
         if (!cancelado) setCodigoDisponible(Boolean(estado.codigoDisponible));
       } catch {
-        // Sin señal o con el motor caído, el próximo ciclo vuelve a preguntar. Y si nunca llega,
+        // Sin señal o con el backend caído, el próximo ciclo vuelve a preguntar. Y si nunca llega,
         // abajo está el botón de entrar igual.
       }
     }

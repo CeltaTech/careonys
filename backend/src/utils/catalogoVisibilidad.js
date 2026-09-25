@@ -205,7 +205,7 @@ export function visibilidadEfectiva(filasGuardadas) {
 // `columnas` es una lista de textos; los que llevan condición se escriben como
 // `['patologias', 'familia_patologias_del_paciente']` y solo entran si ese interruptor está
 // prendida. Una clave que no esté en la lista se toma como prendida: mientras conviven una
-// versión vieja del motor con una nueva del catálogo, es preferible seguir mostrando lo que
+// versión vieja del backend con una nueva del catálogo, es preferible seguir mostrando lo que
 // ya se mostraba antes que dejar la pantalla en blanco.
 export function columnasSegunVisibilidad(columnas, visibilidad) {
   return columnas

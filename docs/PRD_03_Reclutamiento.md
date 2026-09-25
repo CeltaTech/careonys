@@ -61,7 +61,7 @@ Estas 5 etapas post-postulación son exactamente `etapa_filtro` en `verificacion
 
 Las dos fotos se cargan y se ven juntas desde la ficha del Asistente, en la pestaña de
 verificación (`panel/src/pages/asistentes/FotosDeIdentidad.jsx`). Quedan guardadas en el depósito
-`fotos-identidad` (`DATA_MODEL.md`), que sube y firma el motor
+`fotos-identidad` (`DATA_MODEL.md`), que sube y firma el backend
 (`backend/src/routes/panelVerificacionIdentidad.js`).
 
 **El bloque de las fotos está afuera de la lista de etapas**, y no es un olvido: cada Prestadora
@@ -83,7 +83,7 @@ crea la cuenta, una fila cada una y todas sin llamar. Desde la pestaña de verif
 contestó: verificada, no responde o rechazada, con una nota interna. También se pueden cargar a
 mano, hasta las mismas cinco que admite el formulario, para quien entró sin postulación.
 
-**Quién llamó y cuándo los escribe el motor** (`backend/src/routes/panelReferenciasLaborales.js`),
+**Quién llamó y cuándo los escribe el backend** (`backend/src/routes/panelReferenciasLaborales.js`),
 no la pantalla: son la firma de esa verificación. Volver el resultado a «sin llamar» los borra.
 
 **El mínimo de dos verificadas es configuración de cada Prestadora**, no un número escrito en el
@@ -225,7 +225,7 @@ nombres tienen que coincidir.
 
 **Las listas de opciones no están escritas en la pantalla.** Género, nacionalidad, tipo de
 registro ante AFIP y los cinco subgrupos de experiencia clínica viven en `opciones_postulacion`,
-una fila por opción y por Prestadora, y el motor las entrega en `GET
+una fila por opción y por Prestadora, y el backend las entrega en `GET
 /api/publico/:prestadora/postulacion-asistente/opciones`. Las opciones que este documento enumera
 más arriba son lo que se esperaba encontrar, no lo que el sistema impone: **cada Prestadora carga
 las suyas, y la tabla nace vacía.** El catálogo completo de experiencia clínica quedó en el
@@ -329,7 +329,7 @@ cuándo fue, de si la persona vino ni de quién había quedado en llamarla.
   obliga a mandarle una llave nueva, y el Panel copia ese enlace y no la sala.
 - **La sala aparece recién a la hora de la cita.** Llegar temprano no es equivocarse: la pantalla
   del postulante no muestra ningún error, dice en qué momento está —todavía no, entre ahora, ya
-  pasó— y qué corresponde hacer. Del lado del motor eso viaja como un dato de la respuesta, no como
+  pasó— y qué corresponde hacer. Del lado del backend eso viaja como un dato de la respuesta, no como
   una falla.
 - **Sin dirección de videollamada la entrevista se agenda igual.** La dirección base es
   configuración de cada Prestadora (`prestadoras.videollamada_base_url`), y el producto le agrega
@@ -338,7 +338,7 @@ cuándo fue, de si la persona vino ni de quién había quedado en llamarla.
   prohíbe (`celtatech/CLAUDE.md` §7).
 - **El día y la hora se convierten en un solo lugar**
   (`panel/src/lib/momentoDeLaEntrevista.js`), porque el campo del navegador habla en la hora de
-  quien mira y el motor guarda un instante universal. Su prueba hace ir y volver sin fijar ningún
+  quien mira y el backend guarda un instante universal. Su prueba hace ir y volver sin fijar ningún
   huso: escrita con un huso adentro pasaría acá y fallaría en la máquina que publica.
 
 ## Programa de capacitación (Etapa 5 del Proceso de Incorporación de Asistentes)

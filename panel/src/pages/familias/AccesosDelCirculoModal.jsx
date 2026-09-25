@@ -15,10 +15,10 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
 
    QUIÉN DECIDE, QUE NO ES UN DETALLE. El titular no configura nada por su cuenta: le dice a la
    Prestadora qué puede ver cada persona de su círculo, la Prestadora lo carga acá, y al guardar
-   el motor arma el documento en castellano con eso escrito. El titular lo firma —en papel o
+   el backend arma el documento en castellano con eso escrito. El titular lo firma —en papel o
    confirmándolo desde su aplicación—, y así, el día que alguien diga «yo nunca autoricé eso»,
    está la instrucción con nombre, fecha y firma. Por eso el documento aparece DESPUÉS de
-   guardar: lo escribe el motor, que es el único que sabe qué quedó guardado.
+   guardar: lo escribe el backend, que es el único que sabe qué quedó guardado.
 
    LA LISTA NO SE ESCRIBE ACÁ. Las once casillas, con su descripción y su ayuda, viven en
    `backend/src/utils/catalogoCirculoFamiliar.js`, que es el único lugar donde se agrega o se
@@ -32,11 +32,11 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
 /* Las dos casillas que «Sólo mirar» apaga: son las únicas del catálogo con las que alguien
    del círculo ESCRIBE algo —calificar al trabajador, pedir un cambio de medicación—; el resto
    sólo deja leer. Están escritas acá y en ningún otro lado de esta pantalla. El día que el
-   catálogo sume una tercera acción de escritura, el motor tendría que decir cuáles son en vez
+   catálogo sume una tercera acción de escritura, el backend tendría que decir cuáles son en vez
    de que el Panel las conozca de memoria; mientras sean estas dos, la lista alcanza. */
 const ACCIONES_QUE_ESCRIBEN = ['circulo_califica_al_asistente', 'circulo_pide_medicacion'];
 
-/* De la respuesta del motor a lo que la pantalla va tildando: { usuarioId: { clave: bool } }.
+/* De la respuesta del backend a lo que la pantalla va tildando: { usuarioId: { clave: bool } }.
    `permitido` ya viene con el tope de la Prestadora aplicado, así que lo topado arranca apagado
    sin que esta pantalla tenga que resolverlo de nuevo. */
 function accesosElegidosDe(miembros) {
@@ -175,7 +175,7 @@ export function AccesosDelCirculoModal({ familiaId, miembros, puedeEditar, usuar
   );
 }
 
-/* El texto que firma el titular, tal como lo escribió el motor.
+/* El texto que firma el titular, tal como lo escribió el backend.
    ==========================================================================
 
    El Panel no lo arma ni lo retoca: lo muestra. El documento tiene que decir exactamente lo

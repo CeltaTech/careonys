@@ -12,7 +12,7 @@ import { mensajeDeError } from '../lib/errores';
  * después.
  *
  * LO USAN LAS DOS APLICACIONES y por eso no sabe en cuál está: quién lo muestra —la Familia, o el
- * Asistente que se va cuando hay relevo— lo resuelve el motor con la sesión de quien pide, nunca
+ * Asistente que se va cuando hay relevo— lo resuelve el backend con la sesión de quien pide, nunca
  * con un dato que mande el teléfono. Acá llega como `pedirCodigo`, una función sin argumentos que
  * devuelve { codigo, segundos, expiraEn }.
  *
@@ -21,7 +21,7 @@ import { mensajeDeError } from '../lib/errores';
  * renovación y queda solamente el botón de pedir otro a mano.
  */
 export default function CodigoDePresencia({ t, pedirCodigo }) {
-  // undefined = todavía cargando · null = el motor no devolvió ningún código · objeto = listo
+  // undefined = todavía cargando · null = el backend no devolvió ningún código · objeto = listo
   const [codigo, setCodigo] = useState(undefined);
   const [error, setError] = useState('');
   const [pidiendo, setPidiendo] = useState(false);

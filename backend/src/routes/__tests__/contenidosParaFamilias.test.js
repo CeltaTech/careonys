@@ -9,14 +9,14 @@
  *
  * Los casos están escritos por el error que evitan:
  *
- *   1. QUE UNA PRESTADORA VEA O TOQUE EL CONTENIDO DE OTRA. El motor entra a la base con la llave
+ *   1. QUE UNA PRESTADORA VEA O TOQUE EL CONTENIDO DE OTRA. El backend entra a la base con la llave
  *      de servicio y se saltea la protección por fila, así que lo único que separa a una de otra
  *      son los filtros escritos en cada consulta. Si falta uno, no falla nada: contesta de más.
  *   2. QUE UN BORRADOR LLEGUE A UNA FAMILIA. Publicar es una decisión de quien escribe, y hasta
  *      que la toma lo escrito existe sólo del lado del Panel.
  *   3. QUE ESCRIBA QUIEN LA PRESTADORA NO HABILITÓ. Leer la biblioteca es de cualquiera del
  *      Panel —un borrador hay que poder revisarlo—; escribirla es una acción del catálogo de
- *      permisos, y quien niega de verdad es el motor.
+ *      permisos, y quien niega de verdad es el backend.
  *   4. QUE UN ENLACE LLEVE A CUALQUIER LADO. Lo que se guarda termina en un enlace que toca una
  *      Familia, así que se admite una dirección cifrada y nada más.
  *
@@ -33,7 +33,7 @@ const CONTENIDO = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, con la dirección entera: los filtros van ahí. */
+/** Todo lo que el backend le pidió a la base, con la dirección entera: los filtros van ahí. */
 let llamadas = [];
 
 let rolDelUsuario = 'admin_prestadora';
@@ -85,12 +85,12 @@ const app = express();
 app.use(express.json());
 app.use('/api/panel/contenidos', panelContenidosRouter);
 app.use('/api/app-familias', appFamiliasRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const RAIZ = `http://127.0.0.1:${motor.address().port}`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const RAIZ = `http://127.0.0.1:${backend.address().port}`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 

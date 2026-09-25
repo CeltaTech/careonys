@@ -24,7 +24,7 @@ import { createServer } from 'node:http';
 
 // Las frases de los avisos ya no están escritas adentro del código: viven en la tabla de mensajes
 // del sistema y se editan desde afuera. Acá se carga lo mismo que siembra la migración, porque las
-// pruebas del motor corren sin base levantada.
+// pruebas del backend corren sin base levantada.
 import { sembrarMensajesDelSistema } from '../../i18n/mensajesDelSistema.js';
 import { filasSembradas } from '../../i18n/__tests__/mensajesSembrados.js';
 

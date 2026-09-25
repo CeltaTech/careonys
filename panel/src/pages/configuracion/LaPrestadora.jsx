@@ -336,7 +336,7 @@ function NuevaZona({ onClose, onCreada }) {
    igual que el token de WhatsApp y que la contraseña del correo saliente, y Superadmin es un rol
    técnico de CeltaTech. La sesión de soporte técnico tampoco lo habilita.
 
-   Quien decide de verdad es el motor (`backend/src/routes/panelMarketplace.js`, el PATCH de la
+   Quien decide de verdad es el backend (`backend/src/routes/panelMarketplace.js`, el PATCH de la
    pasarela y el PUT del secreto de firma): escribiendo la dirección a mano se llega igual, y ahí
    se niega. Esto de acá es para no mostrar botones que no van a poder guardar, y para que quien
    los busca entienda por qué no están. */

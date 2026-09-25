@@ -7,12 +7,12 @@ import { nombreDeArchivo } from './documentosDeCese';
    El PDF lo arma el navegador y se lo lleva quien apretó el botón. Eso solo no alcanza: un mes
    después nadie puede decir qué documento se le entregó a esa persona, y volver a apretar el botón
    no devuelve el mismo papel, porque el cálculo se rehace con las escalas vigentes hoy. Entonces
-   el mismo archivo que se baja sube al motor, que lo guarda en un depósito privado y lo anota en
+   el mismo archivo que se baja sube al backend, que lo guarda en un depósito privado y lo anota en
    `ceses.documentos_generados` (`backend/src/routes/panelCeses.js`).
 
    POR QUÉ NO SUBE DERECHO AL DEPÓSITO. Ese depósito no tiene políticas y nadie lo alcanza con su
    propio pase: adentro hay documentos de baja con nombre, documento y montos. Lo escribe y lo lee
-   el motor con la llave maestra, después de comprobar de qué Prestadora es el cese. */
+   el backend con la llave maestra, después de comprobar de qué Prestadora es el cese. */
 
 const llamarApiCeses = llamadorDe('/ceses');
 

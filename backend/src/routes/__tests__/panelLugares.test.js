@@ -31,7 +31,7 @@ const ZONA = '77777777-7777-7777-7777-777777777777';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, con los filtros de la dirección incluidos. */
+/** Todo lo que el backend le pidió a la base, con los filtros de la dirección incluidos. */
 let llamadas = [];
 
 const baseFalsa = createServer((req, res) => {
@@ -82,12 +82,12 @@ const app = express();
 app.use(express.json());
 app.use('/api/panel/configuracion', panelConfiguracionRouter);
 app.use('/api/panel/lugares-de-trabajo', panelLugaresDeTrabajoRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const RAIZ = `http://127.0.0.1:${motor.address().port}/api/panel`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const RAIZ = `http://127.0.0.1:${backend.address().port}/api/panel`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
   organismoFalso.close();
 });
@@ -101,7 +101,7 @@ async function pedir(metodo, ruta, cuerpo) {
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
 
-/** Lo que el motor escribió en esa tabla, o `undefined` si no escribió nada. */
+/** Lo que el backend escribió en esa tabla, o `undefined` si no escribió nada. */
 function loEscritoEn(tabla) {
   return llamadas.find((l) => l.clave === `POST /rest/v1/${tabla}`)?.cuerpo;
 }

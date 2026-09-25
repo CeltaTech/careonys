@@ -13,7 +13,7 @@
  * Entonces lo que se cuida acá es que la comparación no se despegue: que las zonas se reconozcan
  * por código o por nombre pero sin perder los números —"AMBA 1" no es "AMBA 2"—, que un tipo
  * ambiguo se avise en vez de darse por resuelto, y que las dos consultas lleven escrito el filtro
- * por Prestadora, que es lo único que separa una de otra cuando el motor entra con la llave
+ * por Prestadora, que es lo único que separa una de otra cuando el backend entra con la llave
  * maestra (celtatech/CLAUDE.md §5).
  */
 import { strict as assert } from 'node:assert';

@@ -311,7 +311,7 @@ que nadie busque dos archivos que no existen. Lo que sí es innegociable es la s
 ## Estados visuales de alertas (Nivel 2 de IA)
 
 Las tres clases `.alerta-verde` / `.alerta-amarilla` / `.alerta-roja` que este documento
-describía **ya no existen** (retiradas el 2026-07-31). Los tres niveles que devuelve el motor
+describía **ya no existen** (retiradas el 2026-07-31). Los tres niveles que devuelve el backend
 de alertas (ver `AI_PROMPTS.md`) pasaron al sistema de tonos: `roja` → `critico`,
 `amarilla` → `atencion`, `verde` → `exito`. Ese mapeo vive en `panel/src/lib/tonos.js` y la
 pantalla solo llama a `claseBadge(nivel)`.

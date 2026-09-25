@@ -58,7 +58,7 @@ const {
   paisesConGeocodificador,
 } = await import('../index.js');
 
-// Lo que el motor deja anotado del lado del servidor se junta acá, para poder comprobar qué
+// Lo que el backend deja anotado del lado del servidor se junta acá, para poder comprobar qué
 // dice —y sobre todo qué no dice— sin ensuciar la salida de las pruebas.
 let anotados = [];
 const avisarDeVerdad = console.warn;

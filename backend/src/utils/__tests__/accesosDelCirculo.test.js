@@ -1,5 +1,5 @@
 /**
- * Pruebas del candado del lado del motor.
+ * Pruebas del candado del lado del backend.
  *
  * La aplicación ya sabe qué no le dieron a cada persona y no dibuja la pantalla, pero cualquiera
  * puede llamar a la dirección igual desde un navegador. Esto es lo que la frena, y sin esto la
@@ -72,7 +72,7 @@ describe('exigeDelCirculo', () => {
   });
 
   it('falla cerrado ante un acceso que no está en la lista', async () => {
-    // Pasa mientras una versión vieja del motor y una nueva del catálogo conviven un rato.
+    // Pasa mientras una versión vieja del backend y una nueva del catálogo conviven un rato.
     // CLAUDE.md: ante un dato que no se pudo resolver, la respuesta es denegar.
     const res = unaRespuesta();
     let siguio = false;

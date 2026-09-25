@@ -27,7 +27,7 @@
 // advertencia legal. Si algún día hay que advertir algo sobre dejar sola a la persona atendida, el
 // texto sale del documento legal de ese país y no de acá.
 //
-// Se copia entero al motor (`scripts/copias_entre_apps.mjs`). Por eso no importa nada del Panel.
+// Se copia entero al backend (`scripts/copias_entre_apps.mjs`). Por eso no importa nada del Panel.
 
 /**
  * Por qué medio se habló con la Familia. Guardado, no visible: el texto de cada uno vive en las

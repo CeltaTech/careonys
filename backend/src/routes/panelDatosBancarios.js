@@ -14,7 +14,7 @@ import { responderError } from '../utils/errorConMotivo.js';
 
    POR DÓNDE SE ENTRA. Por el permiso `ver_datos_bancarios_asistente`, que nace reservada a
    administración, con el mismo molde que `ver_pagos_asistente`. La Prestadora sale siempre de
-   la sesión, nunca del pedido, y va escrita en cada consulta: el motor entra a la base con la
+   la sesión, nunca del pedido, y va escrita en cada consulta: el backend entra a la base con la
    llave de servicio, o sea sin las reglas de acceso por fila, y acá el aislamiento lo garantiza
    cada consulta o no lo garantiza nadie (`CLAUDE.md` §5).
 

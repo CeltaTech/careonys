@@ -25,7 +25,7 @@ async function pedido(ruta, opciones = {}) {
     // motivo, que es lo que después le permite a la pantalla explicar por qué no se pudo.
     const error = errorDeLaRespuesta(respuesta, datos);
     if (datos.yaRegistrado) error.yaRegistrado = true;
-    // Cuando falta un reporte, el motor dice de quiénes falta. Con un turno que cubre a
+    // Cuando falta un reporte, el backend dice de quiénes falta. Con un turno que cubre a
     // tres personas, "falta un reporte" no le dice al Asistente cuál le quedó pendiente.
     if (datos.pacientesSinReporte) error.pacientesSinReporte = datos.pacientesSinReporte;
     throw error;
@@ -37,13 +37,13 @@ async function pedido(ruta, opciones = {}) {
  * Los datos de un acto del turno, con la hora del hecho y el identificador del envío puestos por
  * el teléfono.
  *
- * LA HORA DEL HECHO LA PONE EL TELÉFONO, y el motor la guarda en su propia columna, aparte de la
+ * LA HORA DEL HECHO LA PONE EL TELÉFONO, y el backend la guarda en su propia columna, aparte de la
  * hora en que el dato le llegó a la base. Las dos no son la misma y no se mezclan: un check-in
  * que esperó tres horas de señal ocurrió cuando la persona llegó, no cuando volvió la red.
  *
  * EL IDENTIFICADOR VA PUESTO DE ANTEMANO, antes del primer intento, para que un reenvío no
  * duplique. Si el envío sale y la respuesta se pierde, el segundo intento llega con el mismo
- * identificador y el motor lo reconoce en vez de anotar el hecho dos veces.
+ * identificador y el backend lo reconoce en vez de anotar el hecho dos veces.
  *
  * Los dos se respetan si ya vienen: la cola manda los que anotó cuando pasó la cosa, y ésos son
  * los que valen.
@@ -146,7 +146,7 @@ export const api = {
   // otra punta. El dato de contacto sale tapado para los dos lados hasta que esa pareja lo abra:
   // tapar de un solo lado no taparía nada, porque alcanza con que lo escriba el otro.
   conversacionesDelMarketplace: () => pedido('/marketplace/conversaciones'),
-  // Con `desde`, el motor contesta nada más lo posterior a ese momento: es el refresco del hilo
+  // Con `desde`, el backend contesta nada más lo posterior a ese momento: es el refresco del hilo
   // abierto, que pide lo que le falta y no vuelve a bajar lo que ya está en pantalla.
   conversacionDelMarketplace: (id, desde = null) =>
     pedido(`/marketplace/conversaciones/${id}${desde ? `?desde=${encodeURIComponent(desde)}` : ''}`),
@@ -157,7 +157,7 @@ export const api = {
   // antes de tener sesión y va por su propia puerta (`lib/llaveDelDispositivo.js`). Acá está lo que
   // se hace desde adentro: ver cuáles tiene, agregar una en este aparato y sacar la de uno que ya
   // no usa. Lo que vuelve son fechas: ni la credencial ni la mitad pública de la llave salen del
-  // motor, porque para reconocer cuál es cuál no hacen falta.
+  // backend, porque para reconocer cuál es cuál no hacen falta.
   llaves: () => pedido('/llaves'),
   desafioDeLlave: () => pedido('/llaves/desafio', { method: 'POST' }),
   guardarLlave: (respuesta) => pedido('/llaves', { method: 'POST', body: JSON.stringify({ respuesta }) }),

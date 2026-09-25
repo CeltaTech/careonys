@@ -25,7 +25,7 @@ export const INTERRUPTOR_DE_LA_PANTALLA = {
 // titular de la cuenta le pidió a la Prestadora para cada persona anotada en su círculo: si le
 // negó los reportes a un hermano, ese hermano no los ve, aunque la Prestadora los ofrezca.
 //
-// El titular ve todo, siempre: el motor le contesta las once claves en verdadero, así que no hay
+// El titular ve todo, siempre: el backend le contesta las once claves en verdadero, así que no hay
 // ningún caso especial escrito acá.
 //
 // Hay más pantallas acá que arriba porque hay cosas que la Prestadora no puede apagar —los

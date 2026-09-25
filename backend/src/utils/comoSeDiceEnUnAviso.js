@@ -1,4 +1,4 @@
-/* Cómo se dicen una fecha y un importe adentro de un aviso que sale del motor.
+/* Cómo se dicen una fecha y un importe adentro de un aviso que sale del backend.
    ============================================================================
 
    POR QUÉ EXISTE. Dos avisos del Marketplace —el previo al primer cobro y el del cobro que no
@@ -6,7 +6,7 @@
    decisión es una que se corrige y otra que queda como estaba (`celtatech\CLAUDE.md` §8, ningún
    patrón repetido sin punto único de verdad).
 
-   LA FECHA SE ARMA A MANO, y no con el formateador del sistema operativo: el motor corre en un
+   LA FECHA SE ARMA A MANO, y no con el formateador del sistema operativo: el backend corre en un
    servidor cuya configuración no es la de quien lee el aviso.
 
    Y EL IMPORTE NUNCA VA SOLO. Todo importe se muestra con su moneda. */

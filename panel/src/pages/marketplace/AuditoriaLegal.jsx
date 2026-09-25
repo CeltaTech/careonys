@@ -100,7 +100,7 @@ export function MarketplaceAuditoriaLegal() {
         method: 'PUT',
         body: JSON.stringify({ activa }),
       });
-      // Quien anota que se avisó es el motor, así que la auditoría se vuelve a leer de la base
+      // Quien anota que se avisó es el backend, así que la auditoría se vuelve a leer de la base
       // en vez de darla por escrita acá.
       await Promise.all([recargarFunciones(), recargar()]);
     } catch (err) {
@@ -142,7 +142,7 @@ export function MarketplaceAuditoriaLegal() {
                     checked={f.activa}
                     // Se apaga mientras el cambio está en curso, para que no salgan dos
                     // pedidos por un doble clic; y para el Coordinador queda de sólo lectura,
-                    // igual que el candado del motor y el de la base.
+                    // igual que el candado del backend y el de la base.
                     disabled={!esAdmin || cambiando === f.clave}
                     onChange={(e) => cambiar(f, e.target.checked)}
                   />

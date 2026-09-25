@@ -15,7 +15,7 @@ import { FormField } from '../components/ui/FormField';
    Tres cosas, y son de quien está mirando la pantalla: verificar el número que tiene cargado,
    cambiarlo, y cerrar la sesión en todos los equipos.
 
-   EL NÚMERO NO LLEGA HASTA ACÁ. El motor contesta si hay uno cargado y si está verificado, nada
+   EL NÚMERO NO LLEGA HASTA ACÁ. El backend contesta si hay uno cargado y si está verificado, nada
    más: para verificarlo no hace falta leerlo, y para cambiarlo se escribe el nuevo.
 
    ESTO NO APARECE EN LA CONFIGURACIÓN DE LA PRESTADORA. Cómo se entra y cómo se recupera la clave

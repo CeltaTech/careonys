@@ -8,7 +8,7 @@
  *   1. EMITIR UN CÓDIGO NUEVO NO DEVUELVE INTENTOS. Si volviera a escribirse `codigo_intentos: 0`
  *      junto con la huella nueva, la prueba «lo que se guarda al emitir» fallaría: alcanzaría con
  *      pedir otro código para tener cinco intentos más, y así hasta acertar los seis dígitos.
- *   2. EL INTENTO LO SUMA LA BASE, EN UN SOLO PASO. Si el motor volviera a leer y escribir por
+ *   2. EL INTENTO LO SUMA LA BASE, EN UN SOLO PASO. Si el backend volviera a leer y escribir por
  *      separado, la prueba «no lee para escribir» fallaría, porque aparecería una consulta de
  *      lectura antes de la suma. Dos intentos a la vez contarían como uno.
  *   3. SE FALLA CERRADO. Ante una base que no contesta, o que contesta cualquier cosa, la

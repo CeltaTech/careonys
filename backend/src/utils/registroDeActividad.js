@@ -10,7 +10,7 @@ import { supabase } from '../db/connection.js';
 // estas funciones: si la misma decision se copiara ruta por ruta, el dia que cambie el nombre de
 // una accion habria que acordarse de todas.
 //
-// POR QUE LO ESCRIBE EL MOTOR Y NO UN DISPARADOR DE LA BASE. El motor entra con la llave de
+// POR QUE LO ESCRIBE EL BACKEND Y NO UN DISPARADOR DE LA BASE. El backend entra con la llave de
 // servicio (decision escrita en el `CLAUDE.md` de Careonys), asi que adentro de un disparador
 // `auth.uid()` da vacio y no habria forma de saber quien hizo la accion. Es el mismo motivo por
 // el que la auditoria de la sesion de soporte tambien se escribe desde Express.
@@ -38,7 +38,7 @@ export const ACCION_CAMBIO_DE_DATOS_BANCARIOS = 'cambio_de_datos_bancarios_del_a
 export const ACCION_VERIFICACION_DE_TELEFONO = 'verificacion_de_telefono';
 
 // Cada cuanto vuelve a anotarse la entrada al Panel de la misma cuenta. La sesion del Panel no
-// pasa por ninguna ruta del motor al abrirse —la clave se valida contra Supabase directamente—,
+// pasa por ninguna ruta del backend al abrirse —la clave se valida contra Supabase directamente—,
 // asi que la entrada se reconoce en el primer pedido que llega con esa cuenta. Sin esta ventana,
 // cada pedido de la jornada dejaria un renglon de entrada y el registro se volveria ilegible.
 // Se puede correr por ambiente sin publicar una version nueva.
@@ -46,7 +46,7 @@ const MINUTOS_ENTRE_ENTRADAS = Number(process.env.MINUTOS_ENTRE_ENTRADAS_REGISTR
 
 // Cuando se anoto por ultima vez la entrada de cada cuenta, en este proceso. Vive en memoria a
 // proposito: preguntarle a la base en cada pedido costaria una consulta por pedido para no
-// escribir nada. Si el motor se reinicia, lo unico que pasa es que la entrada se anota una vez
+// escribir nada. Si el backend se reinicia, lo unico que pasa es que la entrada se anota una vez
 // mas, que es el lado seguro del error.
 const ultimaEntrada = new Map();
 

@@ -124,7 +124,7 @@ describe('confirmar la instrucción con el código', () => {
     assert.equal(cierre.codigo_expira_en, null);
   });
 
-  it('el intento lo suma la base en un solo paso, no el motor leyendo y escribiendo', async () => {
+  it('el intento lo suma la base en un solo paso, no el backend leyendo y escribiendo', async () => {
     const resultado = await confirmarConCodigo({ instruccionId: INSTRUCCION, familiaId: FAMILIA, prestadoraId: PRESTADORA, codigo: '000000' });
     assert.equal(resultado.motivo, 'codigo_incorrecto');
 
@@ -135,7 +135,7 @@ describe('confirmar la instrucción con el código', () => {
       p_prestadora_id: PRESTADORA,
     });
     assert.equal(instruccion.codigo_intentos, 1);
-    // Y el motor no escribió la cuenta por su lado: si lo hiciera, dos intentos a la vez contarían
+    // Y el backend no escribió la cuenta por su lado: si lo hiciera, dos intentos a la vez contarían
     // como uno.
     assert.equal(actualizaciones().some((a) => 'codigo_intentos' in a), false);
   });

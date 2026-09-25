@@ -54,9 +54,9 @@ export const MINUTOS_CODIGO_DE_LA_PRESTADORA_MINIMO = 1;
 export const MINUTOS_CODIGO_DE_LA_PRESTADORA_MAXIMO = 120;
 
 // La lista corta que el Asistente elige cuando entra sin comprobar. Se re-exporta desde acá para
-// que el resto del motor la siga pidiendo en un solo lugar, pero la lista en sí vive en
+// que el resto del backend la siga pidiendo en un solo lugar, pero la lista en sí vive en
 // `motivosSinComprobar.js`, que es copia del archivo que usa la pantalla: el teléfono ofrece los
-// motivos y el motor los valida, y las dos listas tienen que ser la misma.
+// motivos y el backend los valida, y las dos listas tienen que ser la misma.
 export { MOTIVOS_SIN_COMPROBAR };
 
 const LARGO_MAXIMO_DEL_PEDIDO = 500;
@@ -117,7 +117,7 @@ export async function codigoParaMostrar({ prestadoraId, sujetoTipo, sujetoId }) 
 
 /**
  * Quiénes podrían estar mostrando un código válido para esta guardia. Se resuelve del lado del
- * motor y nunca con un dato que venga en el pedido: si el teléfono pudiera decir a quién
+ * backend y nunca con un dato que venga en el pedido: si el teléfono pudiera decir a quién
  * comparar, podría decir cualquiera.
  *
  * Son dos: los círculos familiares de los Pacientes de esta guardia, y el Asistente que todavía

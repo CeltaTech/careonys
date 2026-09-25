@@ -89,7 +89,7 @@ test('dos pantallas de la misma Organización reciben las dos', () => {
   assert.equal(avisosDe(otra).length, 1);
 });
 
-// Sin esto el registro crecería con cada pestaña que se cerró, y el motor le escribiría a
+// Sin esto el registro crecería con cada pestaña que se cerró, y el backend le escribiría a
 // conexiones muertas en cada aviso.
 test('la conexión que se va deja de estar en la lista', () => {
   const prestadora = otraPrestadora();
@@ -116,7 +116,7 @@ test('una conexión rota no deja sin aviso a las otras', () => {
 
   escuchar(rota, prestadora);
   escuchar(sana, prestadora);
-  // Se cae después de haber quedado conectada, que es el caso real: el motor todavía la tiene en
+  // Se cae después de haber quedado conectada, que es el caso real: el backend todavía la tiene en
   // la lista cuando le va a escribir.
   rota.write = () => {
     throw new Error('conexión cerrada');
@@ -143,7 +143,7 @@ test('la señal de vida sale sola y la conexión se cierra al cumplir su tiempo'
   );
   assert.equal(res.terminada, false);
 
-  // Pasada la vida de la conexión, la cierra el motor para que la pantalla la reabra y el
+  // Pasada la vida de la conexión, la cierra el backend para que la pantalla la reabra y el
   // permiso se vuelva a comprobar.
   t.mock.timers.tick(15 * 60 * 1000);
   assert.equal(res.terminada, true);

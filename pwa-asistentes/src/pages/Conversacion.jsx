@@ -11,16 +11,16 @@ import HiloDeMensajes from '../components/HiloDeMensajes';
 // `scripts/sincronizar_copias.mjs`—, porque es la misma conversación. El hilo lo dibuja
 // `components/HiloDeMensajes.jsx`, que también es uno solo.
 //
-// QUIÉN ES «YO». El motor manda `asistente` cuando quien mira es la Familia y `familia` cuando
+// QUIÉN ES «YO». El backend manda `asistente` cuando quien mira es la Familia y `familia` cuando
 // quien mira es el Asistente: quien ve el nombre de un Asistente del otro lado es, justamente, la
 // Familia. Así la pantalla no necesita saber en cuál de las dos aplicaciones está corriendo.
 //
-// EL TAPADO NO SE DECIDE ACÁ, NI SIQUIERA EN EL MOTOR. Lo tapa la base antes de guardar el
+// EL TAPADO NO SE DECIDE ACÁ, NI SIQUIERA EN EL BACKEND. Lo tapa la base antes de guardar el
 // mensaje, así que lo que llega es lo único que hay, y con cada mensaje tapado llega el motivo en
 // los tres idiomas. Esta pantalla elige el suyo y lo muestra.
 //
 // EL HILO ABIERTO SE REFRESCA SOLO, Y PIDE NADA MÁS LO QUE LE FALTA. Con el momento del último
-// mensaje que ya tiene, el motor contesta lo posterior y nada más. Volver a bajar la conversación
+// mensaje que ya tiene, el backend contesta lo posterior y nada más. Volver a bajar la conversación
 // entera cada vez es gastar la conexión de un teléfono en traer lo que ya está en pantalla.
 //
 // Y UN REFRESCO QUE FALLA NO BORRA LO LEÍDO. Lo que ya se bajó queda donde está, se avisa que no
@@ -72,7 +72,7 @@ export default function Conversacion() {
     anotarHastaDonde(data.mensajes);
     setDatos((previo) => {
       if (!previo) return data;
-      // `solo_lo_nuevo` lo dice el motor, y por eso la pantalla no lo deduce de lo que pidió.
+      // `solo_lo_nuevo` lo dice el backend, y por eso la pantalla no lo deduce de lo que pidió.
       return {
         ...data,
         mensajes: data.solo_lo_nuevo ? [...previo.mensajes, ...data.mensajes] : data.mensajes,

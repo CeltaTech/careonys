@@ -2,7 +2,7 @@
 // =====================================================================================
 //
 // Es el punto único de verdad de esa condición. La pantalla de Avisos dibuja la casilla con lo que
-// contesta el motor, y el motor guarda lo que dice este archivo: la misma decisión no está escrita
+// contesta el backend, y el backend guarda lo que dice este archivo: la misma decisión no está escrita
 // dos veces. Función pura, sin base de datos, para que se pueda probar sola
 // (utils/__tests__/viaMensajeDeTexto.test.js).
 //

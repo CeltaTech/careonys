@@ -13,7 +13,7 @@
  *      (`celtatech/CLAUDE.md` §6).
  *   2. QUE UNA LLAVE CRUCE DE APLICACIÓN. Una llave dada de alta en la aplicación del Asistente no
  *      puede servir para entrar a la de la Familia: son dos permisos distintos.
- *   3. QUE UNA PRESTADORA ALCANCE LA LLAVE DE OTRA. El motor entra con la llave de servicio y se
+ *   3. QUE UNA PRESTADORA ALCANCE LA LLAVE DE OTRA. El backend entra con la llave de servicio y se
  *      saltea la protección por fila, así que lo único que separa a una de otra son los filtros
  *      escritos en cada consulta.
  *   4. QUE SE PUEDA SACAR UNA LLAVE AJENA. La baja filtra por la persona de la sesión, así que
@@ -46,7 +46,7 @@ const CREDENCIAL_DESCONOCIDA = 'Y3JlZGVuY2lhbC1xdWUtbm8tZXhpc3Rl';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, con la dirección entera: los filtros van ahí. */
+/** Todo lo que el backend le pidió a la base, con la dirección entera: los filtros van ahí. */
 let llamadas = [];
 
 const baseFalsa = createServer((req, res) => {
@@ -97,12 +97,12 @@ const app = express();
 app.use(express.json());
 app.use('/api/llave-de-dispositivo', llaveDelDispositivoRouter);
 app.use('/api/app-asistentes/llaves', requiereRolAsistente, routerDeLlavesConSesion('asistente'));
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const RAIZ = `http://127.0.0.1:${motor.address().port}`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const RAIZ = `http://127.0.0.1:${backend.address().port}`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 
@@ -120,7 +120,7 @@ async function pedir(metodo, ruta, cuerpo) {
  * La base falsa filtra de verdad por los `eq` y los `is` que vengan en la dirección.
  *
  * Es lo que convierte la prueba de aislamiento en una prueba: una base que contestara siempre la
- * misma fila daría 200 aunque el motor consultara sin filtrar por Prestadora.
+ * misma fila daría 200 aunque el backend consultara sin filtrar por Prestadora.
  */
 function filasQuePasanLosFiltros(url, filas) {
   const parametros = new URL(url, 'http://interno').searchParams;

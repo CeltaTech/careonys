@@ -11,9 +11,9 @@
  * Hasta el 2026-09-10 ese registro lo escribía el navegador al cerrar el cartel, así que
  * dependía de que la pantalla se acordara de escribirlo: cualquier otro camino hasta la misma
  * acción encendía la función sin dejar rastro. Un registro que se puede saltear no sirve como
- * registro. Ahora lo escribe el motor en el mismo pedido que enciende la función, y eso es lo
+ * registro. Ahora lo escribe el backend en el mismo pedido que enciende la función, y eso es lo
  * que se prueba acá: no la función que arma la fila —eso sería probar un `insert`—, sino el
- * camino entero, desde el pedido del Panel hasta lo que el motor le manda a la base.
+ * camino entero, desde el pedido del Panel hasta lo que el backend le manda a la base.
  *
  * Las cuatro cosas que se comprueban, y las cuatro pueden fallar:
  *
@@ -37,7 +37,7 @@ const TEXTO_ARGENTINO =
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, para poder afirmar qué escribió y qué no. */
+/** Todo lo que el backend le pidió a la base, para poder afirmar qué escribió y qué no. */
 let llamadas = [];
 
 let rolDelUsuario = 'admin_prestadora';
@@ -81,12 +81,12 @@ const { panelMarketplaceRouter } = await import('../panelMarketplace.js');
 const app = express();
 app.use(express.json());
 app.use('/api/panel/marketplace', panelMarketplaceRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/panel/marketplace`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/marketplace`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 
@@ -99,7 +99,7 @@ async function pedir(metodo, ruta, cuerpo) {
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
 
-/** Lo que el motor le mandó a la base para esa tabla, ya desenvuelto si vino como lista. */
+/** Lo que el backend le mandó a la base para esa tabla, ya desenvuelto si vino como lista. */
 function escrituras(tabla) {
   return llamadas
     .filter((l) => l.clave === `POST /rest/v1/${tabla}`)
@@ -114,7 +114,7 @@ beforeEach(() => {
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: rolDelUsuario, prestadora_id: PRESTADORA }]);
   respuestas.set('POST /rest/v1/rpc/prestadora_tiene_modalidad_activa', () => true);
-  // El catálogo de las cinco funciones sale de la base, no de una lista escrita en el motor.
+  // El catálogo de las cinco funciones sale de la base, no de una lista escrita en el backend.
   respuestas.set('GET /rest/v1/catalogo_funciones_marketplace', () => [{ clave: FUNCION, orden: 1 }]);
   respuestas.set('GET /rest/v1/configuracion_funciones_marketplace', () => []);
   respuestas.set('POST /rest/v1/configuracion_funciones_marketplace', () => []);

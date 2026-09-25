@@ -140,7 +140,7 @@ export default function PacienteDetalle() {
           {enCamino && <div className="guardia-card-detalle">{t.paciente.en_camino}</div>}
           {/* A qué hora se estima que llega (pendiente #101). Es una hora y nada más: la Familia
               nunca ve por dónde va quien viene. El punto del que salió el Asistente es casi
-              siempre su casa, y eso no viaja a este teléfono — el motor lo usa para la cuenta y
+              siempre su casa, y eso no viaja a este teléfono — el backend lo usa para la cuenta y
               manda sólo el resultado.
 
               Se dice «alrededor de» a propósito, y abajo se aclara que es una estimación: una

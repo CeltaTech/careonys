@@ -1,12 +1,12 @@
-/* El canal único por el que el motor le avisa al Panel que algo cambió.
+/* El canal único por el que el backend le avisa al Panel que algo cambió.
    ==========================================================================
 
-   QUÉ RESUELVE. Hasta acá el Panel no tenía ningún canal abierto contra el motor: la única
+   QUÉ RESUELVE. Hasta acá el Panel no tenía ningún canal abierto contra el backend: la única
    pantalla que necesitaba enterarse de algo en el momento —el pase de guardia, con alguien
    parado en una puerta esperando el código— preguntaba cada doce segundos, y así estaba escrito
    en su propio archivo, como solución de mientras tanto. Preguntar cada tanto tiene dos
    defectos que no se arreglan bajando el número: lo que se ve llega siempre tarde, y el costo
-   lo paga el motor en cada vuelta aunque no haya pasado nada.
+   lo paga el backend en cada vuelta aunque no haya pasado nada.
 
    ES UNO SOLO, Y POR ESO ESTÁ ACÁ. La segunda pantalla que necesite avisos en vivo no abre su
    propio canal: se cuelga de éste con un asunto nuevo. Un canal por pantalla serían tantas
@@ -19,14 +19,14 @@
    —la que ya está escrita y probada— y hace que una conexión que quedó abierta de más no pueda
    mostrar nada: el permiso se vuelve a comprobar en cada consulta, no una sola vez al abrir.
 
-   POR QUÉ SSE Y NO UN SOCKET. El aviso va en un solo sentido, del motor a la pantalla; el Panel
-   le habla al motor por las rutas que ya tiene. Un socket bidireccional agregaría una biblioteca,
-   un protocolo propio y una segunda forma de entrar al motor para conseguir lo mismo. Esto es
+   POR QUÉ SSE Y NO UN SOCKET. El aviso va en un solo sentido, del backend a la pantalla; el Panel
+   le habla al backend por las rutas que ya tiene. Un socket bidireccional agregaría una biblioteca,
+   un protocolo propio y una segunda forma de entrar al backend para conseguir lo mismo. Esto es
    HTTP corriente y lo atraviesa cualquier intermediario.
 
    LO QUE ESTE CANAL NO GARANTIZA, Y CÓMO SE CUBRE. Las conexiones abiertas viven en la memoria
    del proceso que las atiende, así que un aviso nacido en un proceso no llega a una pantalla
-   conectada a otro. Mientras el motor corra en un solo proceso no hay diferencia; el día que
+   conectada a otro. Mientras el backend corra en un solo proceso no hay diferencia; el día que
    corra en varios, lo que se pierde es la inmediatez y no el dato, porque del otro lado la
    pantalla igual vuelve a preguntar cada tanto —espaciado, no cada doce segundos—. Ese respaldo
    es parte del diseño y no una precaución sobrante: un canal en vivo que se cae sin que nadie se
@@ -46,7 +46,7 @@ export { ASUNTOS } from './asuntos.js';
  *  segundos están cómodamente por debajo del minuto que suele usar cualquiera de ellos. */
 const CADA_CUANTO_LA_SEÑAL_DE_VIDA_MS = 20 * 1000;
 
-/** Cuánto vive una conexión antes de que el motor la cierre para que la pantalla la reabra.
+/** Cuánto vive una conexión antes de que el backend la cierre para que la pantalla la reabra.
  *  Quince minutos: bastante como para que reabrir no sea un costo, y bastante poco como para
  *  que el permiso se vuelva a comprobar dentro de la hora que dura como mucho una sesión de
  *  soporte (`celtatech/CLAUDE.md` §6). */

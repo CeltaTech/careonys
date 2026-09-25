@@ -41,7 +41,7 @@ panelMarketplaceRouter.use(exigirModalidad('marketplace'));
 // no es plata: las calificaciones y la auditoría de advertencias legales.
 //
 // Hasta el 2026-09-04 este archivo tenía una función llamada `requiereAdminOSuperior` que
-// dejaba pasar al Coordinador; las otras dos del motor, con el mismo nombre, no. Ahora el
+// dejaba pasar al Coordinador; las otras dos del backend, con el mismo nombre, no. Ahora el
 // control se escribe una sola vez (middleware/exigirAdministracion.js) y lo único que se
 // decide acá es a qué rutas se le pide.
 const soloAdministracion = exigirAdministracion('Rol sin permiso');
@@ -198,7 +198,7 @@ panelMarketplaceRouter.patch('/pasarela/:proveedor', soloAdministracion, soloAdm
 // columna que diga «esto es una suscripción»: la forma sale de cómo se combinen las piezas, y
 // una combinación nueva no necesita migración.
 //
-// POR QUÉ PASAN POR EL MOTOR Y NO DERECHO A LA BASE. La lista de precios de prestación directa
+// POR QUÉ PASAN POR EL BACKEND Y NO DERECHO A LA BASE. La lista de precios de prestación directa
 // se escribe desde la pantalla con la sesión de quien mira, y alcanza. Acá no: lo que decide que
 // estas pantallas existan es la modalidad contratada, y ese candado vive en este riel
 // (`exigirModalidad`, arriba). Escribiendo la dirección a mano se entraba igual.
@@ -386,7 +386,7 @@ panelMarketplaceRouter.patch('/formas-de-cobro/:id', soloAdministracion, soloAdm
 
 // ============================================================================
 // Los plazos del cobro — con cuánto se avisa, cuánto dura la gracia y cuánto vive el cupón.
-// Los tres estaban escritos en el motor y son decisiones comerciales de cara a la Familia, así
+// Los tres estaban escritos en el backend y son decisiones comerciales de cara a la Familia, así
 // que los elige la Prestadora. Mismo candado que la forma de cobro, por el mismo motivo.
 // ============================================================================
 
@@ -423,7 +423,7 @@ panelMarketplaceRouter.get('/plazos-de-cobro', soloAdministracion, async (req, r
   if (error) return responderError(res, error);
 
   // Toda Prestadora nace con esta fila. Si igual faltara, se le pide a la misma función que usa
-  // el alta y se vuelve a leer: lo que el formulario muestra es lo que el motor va a usar.
+  // el alta y se vuelve a leer: lo que el formulario muestra es lo que el backend va a usar.
   if (!data) {
     const { error: errorSiembra } = await supabase.rpc('sembrar_configuracion_prestadora', {
       p_prestadora_id: req.usuarioPanel.prestadoraId,
@@ -751,7 +751,7 @@ function fallaDelSistema(res, donde, error) {
 // ----------------------------------------------------------------------------
 //
 // AVISA, NO BLOQUEA (CLAUDE.md §7). Encender cualquiera de las cinco siempre se puede. Lo que
-// hace el motor es mostrar el aviso escrito para la jurisdicción de esa Prestadora —si esa
+// hace el backend es mostrar el aviso escrito para la jurisdicción de esa Prestadora —si esa
 // jurisdicción tiene documento— y dejar registrado que se avisó, cuándo y a quién. Si el país
 // no tiene documento, no hay aviso y la función se enciende igual: no se improvisa un texto
 // por parecido con otro país, y la falta de texto nunca se convierte en un impedimento.

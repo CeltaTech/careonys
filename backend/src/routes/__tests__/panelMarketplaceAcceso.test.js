@@ -4,15 +4,15 @@
  *   npm test --prefix backend
  *
  * POR QUÉ EXISTE ESTA PRUEBA. Hasta el 2026-09-04 este router dejaba pasar al Coordinador a
- * todo, incluida la pasarela de pago y los cobros. Otras dos rutas del motor tenían una
+ * todo, incluida la pasarela de pago y los cobros. Otras dos rutas del backend tenían una
  * función con el mismo nombre que no lo dejaba pasar, así que la diferencia no se veía leyendo:
  * había que abrir los tres archivos y comparar tres listas escritas a mano. El Desarrollador lo
  * cerró ese día: la plata del Marketplace no es del Coordinador.
  *
  * Lo que se prueba no es la función del candado —eso sería probar un `includes`—, sino el
- * camino entero: se levanta el motor de verdad contra una base de mentira, se entra con cada
+ * camino entero: se levanta el backend de verdad contra una base de mentira, se entra con cada
  * rol y se mira qué contesta cada ruta. Y en el caso que se niega se comprueba, además, que el
- * motor NO le haya preguntado nada a la base: un 403 que igual leyó la tabla ya filtró que esa
+ * backend NO le haya preguntado nada a la base: un 403 que igual leyó la tabla ya filtró que esa
  * fila existe.
  */
 import { strict as assert } from 'node:assert';
@@ -27,7 +27,7 @@ const SESION_SOPORTE = '44444444-4444-4444-4444-444444444444';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, para poder afirmar que NO pidió algo. */
+/** Todo lo que el backend le pidió a la base, para poder afirmar que NO pidió algo. */
 let llamadas = [];
 
 let rolDelUsuario = 'admin_prestadora';
@@ -74,12 +74,12 @@ const { panelMarketplaceRouter } = await import('../panelMarketplace.js');
 const app = express();
 app.use(express.json());
 app.use('/api/panel/marketplace', panelMarketplaceRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/panel/marketplace`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/marketplace`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 
@@ -140,7 +140,7 @@ function noTocoLaPlata() {
   const tocadas = llamadas
     .map((l) => l.clave)
     .filter((clave) => TABLAS_DE_PLATA.some((tabla) => clave.includes(tabla)));
-  assert.deepEqual(tocadas, [], `el motor le preguntó a la base antes de negar: ${tocadas.join(', ')}`);
+  assert.deepEqual(tocadas, [], `el backend le preguntó a la base antes de negar: ${tocadas.join(', ')}`);
 }
 
 // ---------------------------------------------------------------------------------------
@@ -185,7 +185,7 @@ describe('lo que sí es del Coordinador', () => {
 
   it('ve la auditoría de advertencias legales', async () => {
     rolDelUsuario = 'coordinador';
-    // Cuáles son las funciones de riesgo lo dice la base, no una lista escrita en el motor
+    // Cuáles son las funciones de riesgo lo dice la base, no una lista escrita en el backend
     // (CLAUDE.md §8): la ruta lee el catálogo antes de filtrar la auditoría.
     respuestas.set('GET /rest/v1/catalogo_funciones_marketplace', () => [
       { clave: 'ranking_plataforma', orden: 1 },
@@ -211,7 +211,7 @@ describe('lo que sí es del Coordinador', () => {
     const escritura = await pedir('PUT', '/funciones-riesgo/ranking_plataforma', { activa: true });
     assert.equal(escritura.estado, 403);
     const escrituras = llamadas.filter((l) => l.clave === 'POST /rest/v1/configuracion_funciones_marketplace');
-    assert.deepEqual(escrituras, [], 'el motor guardó el encendido antes de negarlo');
+    assert.deepEqual(escrituras, [], 'el backend guardó el encendido antes de negarlo');
   });
 });
 
@@ -300,7 +300,7 @@ describe('sin la modalidad Marketplace no se entra', () => {
     modalidadMarketplace = false;
     await pedir('GET', '/accesos');
     const pregunta = llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/prestadora_tiene_modalidad_activa');
-    assert.ok(pregunta, 'el motor no le preguntó a la base si la modalidad está activa');
+    assert.ok(pregunta, 'el backend no le preguntó a la base si la modalidad está activa');
     assert.deepEqual(pregunta.cuerpo, { p_prestadora_id: PRESTADORA, p_modalidad: 'marketplace' });
   });
 });
@@ -388,7 +388,7 @@ describe('Superadmin no llega a las credenciales de cobro de una Prestadora', ()
 //
 // POR QUÉ ACÁ Y NO SOLO EN LA BASE. La tabla ya rechaza un importe negativo o un período a
 // medias, pero lo hace con un código crudo de Postgres, y de ahí la pantalla sólo puede decir
-// «hay un dato mal cargado». Comprobándolo en el motor, cada pieza mal cargada viaja con su
+// «hay un dato mal cargado». Comprobándolo en el backend, cada pieza mal cargada viaja con su
 // propio motivo y quien la cargó lee cuál corregir. Se comprueba además que nada se escribió:
 // un rechazo que igual tocó la tabla no es un rechazo.
 
@@ -418,7 +418,7 @@ function noEscribioLaForma() {
   const escrituras = llamadas.filter(
     (l) => l.clave.includes('formas_de_cobro_marketplace') && l.clave.startsWith('GET') === false
   );
-  assert.deepEqual(escrituras, [], 'el motor escribió la forma de cobro antes de rechazarla');
+  assert.deepEqual(escrituras, [], 'el backend escribió la forma de cobro antes de rechazarla');
 }
 
 describe('la Prestadora arma su forma de cobro', () => {

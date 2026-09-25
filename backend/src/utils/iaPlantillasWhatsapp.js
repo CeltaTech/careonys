@@ -97,14 +97,14 @@ function obtenerCliente() {
 /**
  * Le pide al modelo una propuesta de texto y devuelve lo que se puede mostrar.
  *
- * @throws {ErrorConMotivo} `ia_no_configurada` si el motor no tiene con qué hablarle al modelo, y
+ * @throws {ErrorConMotivo} `ia_no_configurada` si el backend no tiene con qué hablarle al modelo, y
  *   `ia_sin_propuesta` si lo que contestó no se pudo leer. La segunda no es una falla del sistema:
  *   se vuelve a pedir y suele salir, y decirlo como falla mandaría a buscar donde no hay nada.
  */
 async function proponerTexto({ system, pedido, prestadoraId }) {
   const anthropic = obtenerCliente();
   if (!anthropic) {
-    throw new ErrorConMotivo('ia_no_configurada', 'Falta ANTHROPIC_API_KEY en el motor');
+    throw new ErrorConMotivo('ia_no_configurada', 'Falta ANTHROPIC_API_KEY en el backend');
   }
 
   const respuesta = await anthropic.messages.create({

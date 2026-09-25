@@ -27,7 +27,7 @@ export const CAMPOS_BASICOS = 'id, nombre, domicilio, lat, lng';
  *
  * `campos` tiene que incluir siempre `id`: es con lo que se arma el respaldo.
  *
- * `prestadoraId` va primero y no tiene valor por defecto a propósito: el motor entra con la llave
+ * `prestadoraId` va primero y no tiene valor por defecto a propósito: el backend entra con la llave
  * de servicio, que se saltea la protección por fila, así que lo único que separa una Prestadora de
  * otra es este filtro. Un identificador de turno de otra Prestadora tiene que devolver nada.
  */

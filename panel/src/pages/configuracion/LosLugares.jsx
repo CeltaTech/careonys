@@ -104,7 +104,6 @@ export function TabLugares() {
       )}
 
       <h2>{t.configuracion.lugares_zonas_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.lugares_zonas_explicacion}</p>
       {zonas.map((zona) => (
         <LugaresDeLaZona key={zona.id} zona={zona} lugares={lugares} onGuardado={recargar} />
       ))}

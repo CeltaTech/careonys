@@ -267,7 +267,6 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
                         <tr>
                           <td colSpan={5}>
                             <div className="panel-resultado-calculo">
-                              <p className="panel-explicacion">{t.domicilios_temporales.terminar_explicacion}</p>
                               <FormField
                                 label={t.domicilios_temporales.terminar_fecha}
                                 name={`fecha_termino_${p.id}`}

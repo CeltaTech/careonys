@@ -61,7 +61,6 @@ const conjunto = (c) => (c instanceof Set ? c : new Set());
  * Cada una tiene:
  *   id            → la clave técnica; también es lo que viaja en la URL del filtro.
  *   claveEtiqueta → dónde está su nombre en los tres idiomas.
- *   claveAyuda    → dónde está la explicación de una línea.
  *   parametros    → qué valores necesita ese texto. Los números que aparecen en una explicación
  *                   salen siempre de acá y nunca escritos adentro de la traducción: si el texto
  *                   dijera "dos horas" por su cuenta, el día que ese umbral cambie la frase
@@ -74,7 +73,6 @@ export const EXCEPCIONES = [
   {
     id: 'sin_cubrir',
     claveEtiqueta: 'exc_sin_cubrir',
-    claveAyuda: 'exc_sin_cubrir_ayuda',
     parametros: () => ({}),
     aplica: (g, ctx) => {
       const s = situacionDeGuardia(g, ctx);
@@ -88,7 +86,6 @@ export const EXCEPCIONES = [
   {
     id: 'ofrecidas_sin_respuesta',
     claveEtiqueta: 'exc_ofrecidas_sin_respuesta',
-    claveAyuda: 'exc_ofrecidas_sin_respuesta_ayuda',
     parametros: () => ({}),
     aplica: (g, ctx) => {
       const s = situacionDeGuardia(g, ctx);
@@ -102,7 +99,6 @@ export const EXCEPCIONES = [
   {
     id: 'tarde',
     claveEtiqueta: 'exc_tarde',
-    claveAyuda: 'exc_tarde_ayuda',
     parametros: () => ({}),
     aplica: (g, ctx) => {
       const s = situacionDeGuardia(g, ctx);
@@ -114,7 +110,6 @@ export const EXCEPCIONES = [
   {
     id: 'sin_cerrar',
     claveEtiqueta: 'exc_sin_cerrar',
-    claveAyuda: 'exc_sin_cerrar_ayuda',
     // Cuántas horas son "más de" lo dice `semaforoGuardia.js`, no el texto: si el número
     // viviera escrito en las tres traducciones, el día que una Prestadora lo cambie la
     // explicación seguiría diciendo dos horas mientras el contador cuenta otra cosa.
@@ -127,7 +122,6 @@ export const EXCEPCIONES = [
   {
     id: 'documentacion',
     claveEtiqueta: 'exc_documentacion',
-    claveAyuda: 'exc_documentacion_ayuda',
     parametros: (ctx) => ({ dias: ctx?.diasDePreaviso ?? 0 }),
     // Mira las guardias que todavía van a pasar: un papel que vence no cambia nada de lo que
     // ya ocurrió, pero sí invalida lo que está por venir.
@@ -147,7 +141,6 @@ export const EXCEPCIONES = [
   {
     id: 'matricula',
     claveEtiqueta: 'exc_matricula',
-    claveAyuda: 'exc_matricula_ayuda',
     parametros: () => ({}),
     /* Va aparte de "papeles" aunque las dos hablen de vencimientos, y la diferencia es grande:
        un papel vencido es una alerta —la guardia se hace igual—, mientras que una matrícula sin
@@ -169,7 +162,6 @@ export const EXCEPCIONES = [
   {
     id: 'reportes',
     claveEtiqueta: 'exc_reportes',
-    claveAyuda: 'exc_reportes_ayuda',
     parametros: () => ({}),
     aplica: (g, ctx) =>
       situacionDeGuardia(g, ctx) === SITUACION.COMPLETADA &&
@@ -199,7 +191,6 @@ export function resumenDeExcepciones(guardias, ctx) {
     return {
       id: exc.id,
       claveEtiqueta: exc.claveEtiqueta,
-      claveAyuda: exc.claveAyuda,
       parametros: exc.parametros(ctx),
       cantidad: caen.length,
       critica: caen.length > 0 && exc.esCritica(caen, ctx),

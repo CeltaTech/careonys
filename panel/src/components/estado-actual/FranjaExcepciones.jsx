@@ -50,7 +50,6 @@ export function FranjaExcepciones({ guardias, ctx, excepcionActiva, onElegir }) 
   // (`lib/textos.js`). No se hace acá a mano con `.replace` para que ninguna pantalla tenga su
   // propia versión de lo mismo (regla 12).
   const nombreDe = (exc) => con(t.estado_actual[exc.claveEtiqueta], exc.parametros);
-  const ayudaDe = (exc) => con(t.estado_actual[exc.claveAyuda], exc.parametros);
 
   const todoEnOrden = resumen.every((exc) => exc.cantidad === 0);
   const activa = resumen.find((exc) => exc.id === excepcionActiva) ?? null;
@@ -82,12 +81,10 @@ export function FranjaExcepciones({ guardias, ctx, excepcionActiva, onElegir }) 
               // Botón de verdad y no un div que escucha clics: así se llega con el tabulador y
               // `aria-pressed` le dice a un lector de pantalla si ese filtro está puesto o no.
               aria-pressed={elegida}
-              title={ayudaDe(exc)}
               onClick={() => alTocar(exc.id)}
             >
               <span className="estado-actual-excepcion-valor">{exc.cantidad}</span>
               <span className="estado-actual-excepcion-etiqueta">{nombreDe(exc)}</span>
-              <span className="estado-actual-excepcion-ayuda">{ayudaDe(exc)}</span>
             </button>
           );
         })}

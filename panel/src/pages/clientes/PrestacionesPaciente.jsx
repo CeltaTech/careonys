@@ -923,7 +923,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                 {asistentesAviso.length > 0 && (
                   <>
                     <h3>{t.prestaciones.aviso_asistente_titulo}</h3>
-                    <p className="panel-explicacion">{t.prestaciones.aviso_asistente_explicacion}</p>
                     <table className="panel-tabla">
                       <thead>
                         <tr>

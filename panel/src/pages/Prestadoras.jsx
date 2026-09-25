@@ -202,7 +202,6 @@ export function Prestadoras() {
   return (
     <div>
       <h1>{t.prestadoras.titulo}</h1>
-      <p className="panel-explicacion">{t.prestadoras.explicacion}</p>
 
       {error && <Alert variant="error">{error}</Alert>}
       {mensaje && <Alert variant={mensaje.variante}>{mensaje.texto}</Alert>}
@@ -216,7 +215,6 @@ export function Prestadoras() {
       {formularioAbierto && (
         <form onSubmit={handleAlta}>
           <h2>{t.prestadoras.alta_titulo}</h2>
-          <p className="panel-explicacion">{t.prestadoras.alta_explicacion}</p>
 
           <FormField
             label={t.prestadoras.campo_nombre_fantasia}

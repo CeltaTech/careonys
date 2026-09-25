@@ -90,7 +90,6 @@ function TabDocumentos() {
   return (
     <div>
       <h2>{t.configuracion.documentos_plazo_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.documentos_plazo_explicacion}</p>
       {error && <Alert variant="error">{error}</Alert>}
       {plazoGuardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
       <FormField
@@ -105,7 +104,6 @@ function TabDocumentos() {
       </Button>
 
       <h2>{t.configuracion.documentos_tipos_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.documentos_tipos_explicacion}</p>
       <div className="panel-filtros">
         <Button onClick={() => setCreandoNuevo(true)}>{t.configuracion.documentos_tipos_nuevo}</Button>
       </div>

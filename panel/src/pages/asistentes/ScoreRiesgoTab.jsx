@@ -98,7 +98,6 @@ export function ScoreRiesgoTab({ asistente, onActualizado }) {
       {advertencias.map((a, i) => <Alert key={i} variant="error">{a}</Alert>)}
 
       <h3>{t.asistentes.score.deducidos_titulo}</h3>
-      <p>{t.asistentes.score.deducidos_explicacion}</p>
       <ul className="score-riesgo-deducidos">
         {INDICADORES_DEDUCIDOS.map((indicador) => {
           const deducido = deducidos[indicador];
@@ -116,7 +115,6 @@ export function ScoreRiesgoTab({ asistente, onActualizado }) {
       </ul>
 
       <h3>{t.asistentes.score.a_mano_titulo}</h3>
-      <p>{t.asistentes.score.a_mano_explicacion}</p>
       {aMano.map((indicador) => (
         <FormField
           key={indicador}

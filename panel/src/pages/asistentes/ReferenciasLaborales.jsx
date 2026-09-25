@@ -166,7 +166,6 @@ export function ReferenciasLaborales({ asistente }) {
       {estado === 'listo' && hayLugar && (
         <form className="panel-referencia-nueva" onSubmit={agregar}>
           <h4>{tr.agregar_titulo}</h4>
-          <p className="panel-explicacion">{tr.agregar_explicacion}</p>
           <FormField
             label={tr.campo_nombre}
             name="referencia-nombre"

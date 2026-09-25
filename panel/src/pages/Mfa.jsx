@@ -207,9 +207,9 @@ export function Mfa() {
     <div className="login-pantalla">
       <form className="login-card" onSubmit={handleVerificar}>
         <h1>{mfaEstado === 'requiere_enrolamiento' ? t.auth.mfa_titulo_enrolar : t.auth.mfa_titulo_verificar}</h1>
-        <p className="login-subtitulo">
-          {mfaEstado === 'requiere_enrolamiento' ? t.auth.mfa_explicacion_enrolar : t.auth.mfa_explicacion_verificar}
-        </p>
+        {mfaEstado === 'requiere_enrolamiento' && (
+          <p className="login-subtitulo">{t.auth.mfa_explicacion_enrolar}</p>
+        )}
 
         {error && <Alert variant="error">{error}</Alert>}
 

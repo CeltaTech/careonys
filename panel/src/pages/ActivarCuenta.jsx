@@ -181,7 +181,6 @@ export function ActivarCuenta() {
     <div className="login-pantalla">
       <form className="login-card" onSubmit={handleActivar}>
         <h1>{t.auth.activar_titulo}</h1>
-        <p className="login-subtitulo">{t.auth.activar_subtitulo}</p>
 
         {error && <Alert variant="error">{error}</Alert>}
 

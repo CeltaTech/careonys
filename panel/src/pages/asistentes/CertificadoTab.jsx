@@ -90,7 +90,6 @@ export function CertificadoTab({ asistente }) {
                 </div>
               </>
             )}
-            <p className="panel-explicacion">{t.asistentes.certificado.nota_pagina_publica}</p>
           </div>
         ) : (
           <div>

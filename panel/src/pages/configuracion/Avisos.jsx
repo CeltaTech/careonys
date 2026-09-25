@@ -290,7 +290,6 @@ function TabAvisoPrevioGuardia() {
   return (
     <div>
       <h2>{t.configuracion.aviso_previo_guardia_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.aviso_previo_guardia_explicacion}</p>
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         <div>
           {error && <Alert variant="error">{error}</Alert>}
@@ -709,7 +708,6 @@ function TabMensajeGuardiaSinCubrir() {
   return (
     <div>
       <h2>{t.configuracion.aviso_guardia_sin_cubrir_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.aviso_guardia_sin_cubrir_explicacion}</p>
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         {config && (
           <div>
@@ -854,7 +852,6 @@ function TabWhatsappCredenciales() {
   return (
     <div>
       <h2>{t.configuracion.whatsapp_credenciales_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.whatsapp_credenciales_explicacion}</p>
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         {form && (
           <div>
@@ -1301,7 +1298,6 @@ function EscaladaEnOrden({ form }) {
   return (
     <div>
       <h3>{t.configuracion.escalada_orden_titulo}</h3>
-      <p className="panel-explicacion">{t.configuracion.escalada_orden_explicacion}</p>
       <ol>
         {pasos.map((paso) => (
           <li key={paso.clave}>
@@ -1417,7 +1413,6 @@ function TabWhatsappEscaladaCoordinador() {
   return (
     <div>
       <h2>{t.configuracion.whatsapp_escalada_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.whatsapp_escalada_explicacion}</p>
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         {form && (
           <div>

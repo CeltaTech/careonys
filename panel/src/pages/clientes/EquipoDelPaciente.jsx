@@ -227,7 +227,6 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
         <h2 id={modal.idTitulo}>
           {t.equipo_paciente.titulo} — {paciente.nombre}
         </h2>
-        <p className="panel-explicacion">{t.equipo_paciente.explicacion}</p>
 
         {estado === 'cargando' && <p className="estado-cargando">{t.comun.cargando}</p>}
         {estado === 'error' && <Alert variant="error">{error || t.comun.error_generico}</Alert>}
@@ -340,7 +339,6 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
             {datos.afuera.length > 0 && (
               <>
                 <h3>{t.equipo_paciente.afuera_titulo}</h3>
-                <p className="panel-explicacion">{t.equipo_paciente.afuera_explicacion}</p>
                 <ul>
                   {datos.afuera.map((a) => (
                     <li key={a.asistente_id}>

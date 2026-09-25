@@ -75,7 +75,6 @@ export function FotosDeIdentidad({ asistente }) {
   return (
     <section className="panel-card-verificacion">
       <h3>{tf.titulo}</h3>
-      <p className="panel-explicacion">{tf.explicacion}</p>
       {/* Sólo cuando la carga salió bien: si el estado es de error, el cartel lo pone `EstadoLista`
           con su botón de reintentar, y los dos juntos dirían lo mismo dos veces. */}
       {error && estado === 'listo' && <Alert variant="error">{error}</Alert>}

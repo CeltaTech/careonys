@@ -134,7 +134,6 @@ export function Auditoria() {
   return (
     <div>
       <h1>{t.auditoria.titulo}</h1>
-      <p className="panel-explicacion">{t.auditoria.explicacion}</p>
       {esSuperadmin && <p className="panel-explicacion">{t.auditoria.alcance_superadmin}</p>}
 
       <EstadoLista
@@ -168,7 +167,6 @@ export function Auditoria() {
       </EstadoLista>
 
       <h2>{t.auditoria.actividad_titulo}</h2>
-      <p className="panel-explicacion">{t.auditoria.actividad_explicacion}</p>
 
       <EstadoLista
         estado={estadoActividad}

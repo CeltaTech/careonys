@@ -73,7 +73,6 @@ export function VerificacionTab({ asistente }) {
   return (
     <div>
       <h2>{t.asistentes.verificacion.titulo}</h2>
-      <p className="panel-explicacion">{t.asistentes.verificacion.explicacion}</p>
       {(error || errorEtapas) && <Alert variant="error">{error || errorEtapas}</Alert>}
       {estadoCombinado === 'listo' && avance.completo && <Alert variant="info">{t.asistentes.verificacion.proceso_completo}</Alert>}
 

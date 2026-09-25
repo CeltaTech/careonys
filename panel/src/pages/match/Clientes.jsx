@@ -168,14 +168,12 @@ export function MatchClientes() {
   return (
     <div>
       <h1>{t.match.clientes_titulo}</h1>
-      <p className="panel-explicacion">{t.match.clientes_explicacion}</p>
 
       {mensajeCanje && <Alert variant="success">{mensajeCanje}</Alert>}
       {error && <Alert variant="error">{error}</Alert>}
 
       <div style={{ marginBottom: '1.5rem' }}>
         <h2>{t.match.canjear_qr_titulo}</h2>
-        <p className="panel-explicacion">{t.match.canjear_qr_explicacion}</p>
         {!escaneando && (
           <Button
             onClick={() => {
@@ -250,7 +248,6 @@ export function MatchClientes() {
                           </p>
                         ) : (
                           <>
-                            <p className="panel-explicacion">{t.match.alta_pasarela_explicacion}</p>
                             {rielesConectados.length === 0 ? (
                               <Alert variant="warning">{t.errores.motivos.sin_pasarela_conectada}</Alert>
                             ) : (

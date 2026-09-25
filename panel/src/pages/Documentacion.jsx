@@ -69,7 +69,6 @@ export function Documentacion() {
   return (
     <div>
       <h1>{t.documentacion.titulo}</h1>
-      <p className="panel-explicacion">{t.documentacion.explicacion}</p>
 
       <div className="panel-filtros">
         <select value={f.filtro} onChange={(e) => set('filtro', e.target.value)} aria-label={t.comun.filtro_estado}>

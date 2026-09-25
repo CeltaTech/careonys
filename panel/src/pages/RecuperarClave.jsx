@@ -66,7 +66,6 @@ export function RecuperarClave() {
     <div className="login-pantalla">
       <form className="login-card" onSubmit={handlePedir}>
         <h1>{t.auth.recuperar_titulo}</h1>
-        <p className="login-subtitulo">{t.auth.recuperar_subtitulo}</p>
 
         {error && <Alert variant="error">{error}</Alert>}
 

@@ -139,7 +139,6 @@ export function Comunicacion() {
   return (
     <div>
       <h1>{t.comunicacion.titulo}</h1>
-      <p className="panel-explicacion">{t.comunicacion.explicacion}</p>
 
       {mensajeWhatsapp && <Alert variant="error">{mensajeWhatsapp}</Alert>}
 

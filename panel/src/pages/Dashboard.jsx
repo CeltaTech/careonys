@@ -212,7 +212,6 @@ export function Dashboard() {
       <div className="dashboard-seccion">
         <div className="dashboard-seccion-header">
           <h2 className="dashboard-seccion-titulo">{t.dashboard.seccion_actividad_titulo}</h2>
-          <p className="dashboard-seccion-subtitulo">{t.dashboard.seccion_actividad_subtitulo}</p>
         </div>
         <EstadoLista
           estado={estadoGeneral}
@@ -307,7 +306,6 @@ export function Dashboard() {
       <div className="dashboard-seccion">
         <div className="dashboard-seccion-header">
           <h2 className="dashboard-seccion-titulo">{t.dashboard.seccion_alertas_titulo}</h2>
-          <p className="dashboard-seccion-subtitulo">{t.dashboard.seccion_alertas_subtitulo}</p>
         </div>
         <EstadoLista
           estado={errorAlertas ? 'error' : ausentesSinRelevo === null ? 'cargando' : 'listo'}

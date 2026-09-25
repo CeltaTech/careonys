@@ -231,7 +231,6 @@ function CerrarGuardiaModal({ guardia, usuario, confirmarDestructivo, onClose, o
           <dd>{textoDePacientes(guardia.pacientes_nombres, t.guardias.pacientes_y_mas)}</dd>
         </dl>
 
-        <p className="panel-explicacion">{t.guardias_sin_cerrar.modal_explicacion}</p>
 
         <FormField
           label={t.guardias_sin_cerrar.motivo_label}

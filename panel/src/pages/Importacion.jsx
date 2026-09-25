@@ -168,7 +168,6 @@ export function Importacion() {
   return (
     <div>
       <h1>{t.importacion.titulo}</h1>
-      <p>{t.importacion.explicacion}</p>
 
       {error && <Alert variant="error">{error}</Alert>}
 
@@ -193,7 +192,6 @@ export function Importacion() {
       {paso === 2 && analisis && (
         <div>
           <h2>{t.importacion.paso2_titulo}</h2>
-          <p>{t.importacion.paso2_explicacion}</p>
 
           {analisis.advertencias.length > 0 && (
             <Alert variant="info">
@@ -311,7 +309,6 @@ export function Importacion() {
       {paso === 4 && revision && (
         <div>
           <h2>{t.importacion.paso4_titulo}</h2>
-          <p>{t.importacion.paso4_explicacion}</p>
 
           {revisionFinal === 'conformada' && <Alert variant="success">{t.importacion.conformidad_exito}</Alert>}
           {revisionFinal === 'rechazada' && <Alert variant="info">{t.importacion.rechazo_exito}</Alert>}

@@ -22,7 +22,6 @@ export function Configuracion() {
   return (
     <div>
       <h1>{t.configuracion.titulo}</h1>
-      <p className="panel-explicacion">{t.configuracion.explicacion}</p>
 
       <div className="panel-tabs">
         {SECCIONES.map((seccion) => (

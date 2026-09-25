@@ -878,7 +878,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
       asistente_id: guardia.asistente_id,
       prestadora_id: guardia.prestadora_id,
       usuario_id: guardia.asistente_id,
-      mensaje: `Aviso automático del sistema: check-in fuera de rango (${distancia} m ${contraQueSeMidio}) en la guardia del ${guardia.fecha}.`,
+      mensaje: `Mensaje automático: check-in fuera de rango (${distancia} m ${contraQueSeMidio}) en la guardia del ${guardia.fecha}.`,
     }).then(({ error: errorNota }) => {
       if (errorNota) console.error('Error registrando nota de check-in fuera de rango:', errorNota.message);
     });

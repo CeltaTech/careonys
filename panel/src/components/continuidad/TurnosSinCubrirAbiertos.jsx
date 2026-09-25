@@ -30,7 +30,7 @@ import { LoQuePasoEnLaCasa } from './LoQuePasoEnLaCasa';
 
    Un turno sin Asistente asignado produce un aviso, y el aviso se termina cuando se manda. Esta
    sección muestra la otra mitad: el turno queda abierto hasta que una persona diga cómo terminó.
-   Quien abre y quien insiste es el motor; quien cierra a mano es quien coordina.
+   Quien abre y quien insiste es el backend; quien cierra a mano es quien coordina.
 
    EL FINAL QUE SE ELIGE NO ES UN TRÁMITE. Que nadie haya ido, o que la persona atendida haya
    quedado sola, no es una variante de «se cubrió»: es un defecto grave que no se pudo solucionar,
@@ -44,7 +44,7 @@ import { LoQuePasoEnLaCasa } from './LoQuePasoEnLaCasa';
    de quien coordina no entra en ninguna lista.
 
    LO QUE CIERRA SOLO NO APARECE ACÁ. Si apareció una Asistente asignada, o el turno se canceló,
-   el motor lo cierra sin preguntar: eso ya está escrito en la base. Lo que nadie puede saber
+   el backend lo cierra sin preguntar: eso ya está escrito en la base. Lo que nadie puede saber
    mirando la base es cómo se arregló la casa esa noche. */
 
 const TABLA = 'incidentes_turno_sin_cubrir';

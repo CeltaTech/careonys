@@ -43,7 +43,7 @@ import { useModalAccesible } from '../hooks/useModalAccesible';
    y no se vuelve a calcular. Si el navegador rehiciera la cuenta para mostrarla, la foto
    dejaría de serlo — bastaría con abrir la pantalla un mes después para ver otro número. Por
    eso todo lo que se ve son datos guardados, y el único botón que produce algo se los pide al
-   motor. Los importes tampoco se suman de nuevo para el total: el total también está guardado.
+   backend. Los importes tampoco se suman de nuevo para el total: el total también está guardado.
 
    LAS DOS SOLAPAS. "Liquidaciones" es el mes: qué se le liquidó a cada uno y qué se pagó.
    "Conceptos" es el catálogo de sumas y restas de la Prestadora, que es lo que hace la cuenta
@@ -194,7 +194,7 @@ function LiquidacionesTab({ esAdmin }) {
   }, [recargar]);
 
   // Rehacer un mes borra y vuelve a escribir lo que ya estaba, así que se pregunta antes
-  // (regla 4). Lo que ya figura pagado no se toca, y eso lo garantiza el motor, no el aviso.
+  // (regla 4). Lo que ya figura pagado no se toca, y eso lo garantiza el backend, no el aviso.
   async function generar() {
     if (!(await confirmarDestructivo(t.pagos_asistentes.confirmar_generar))) return;
     setGenerando(true);
@@ -329,8 +329,8 @@ function ResultadoGeneracion({ resultado }) {
   const conNombres = [
     { texto: t.pagos_asistentes.resultado_ya_pagadas, nombres: lista(resultado.omitidas_ya_pagadas) },
     { texto: t.pagos_asistentes.resultado_sin_dato_base, nombres: lista(resultado.sin_dato_base) },
-    // El motor explica cada salteo en una línea que empieza con el nombre del concepto. Acá se
-    // muestra el nombre y el porqué lo pone la frase traducida: la explicación del motor está
+    // El backend explica cada salteo en una línea que empieza con el nombre del concepto. Acá se
+    // muestra el nombre y el porqué lo pone la frase traducida: la explicación del backend está
     // escrita en un solo idioma y nombra unidades internas, así que no se le pasa a nadie.
     {
       texto: t.pagos_asistentes.resultado_sin_escala,
@@ -359,7 +359,7 @@ function ResultadoGeneracion({ resultado }) {
  * Una liquidación abierta: de dónde salió cada número y qué se hace con ella.
  *
  * Los renglones se muestran tal como se guardaron, con el nombre y el valor que tenía el
- * concepto ese día. El único renglón que no se muestra copiado es el de la base: el motor lo
+ * concepto ese día. El único renglón que no se muestra copiado es el de la base: el backend lo
  * guarda con el detalle de la cuenta para poder explicarlo años después, y la etiqueta que se
  * lee sale de `base_unidad`, que sí está en los tres idiomas.
  */

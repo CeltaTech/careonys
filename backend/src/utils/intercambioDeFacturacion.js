@@ -21,7 +21,7 @@
 // tres formas distintas según el idioma de quien lo bajó, y ninguna Prestadora podría dejar
 // configurado su software una sola vez. Por eso se nombran por su función y no cambian nunca.
 //
-// NO IMPORTA NADA A PROPÓSITO. Este archivo lo usa el Panel y el motor usa una copia generada
+// NO IMPORTA NADA A PROPÓSITO. Este archivo lo usa el Panel y el backend usa una copia generada
 // (`backend/src/utils/intercambioDeFacturacion.js`, ver `scripts/copias_entre_apps.mjs`).
 // ---------------------------------------------------------------------------
 
@@ -52,7 +52,7 @@ export const COLUMNAS_QUE_VUELVEN = [
  * Cuántas filas como máximo se leen de un archivo de una vez.
  *
  * El mismo tope que el lote de cobros, y por el mismo motivo: un archivo enorme cargado por error
- * no puede quedarse con el motor. Quien tenga más, sube dos archivos.
+ * no puede quedarse con el backend. Quien tenga más, sube dos archivos.
  */
 export const TOPE_DE_FILAS = 500;
 

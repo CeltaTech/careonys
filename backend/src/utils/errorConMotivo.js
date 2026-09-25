@@ -1,16 +1,16 @@
 // Un error que la pantalla puede explicar.
 //
-// El problema que resuelve: hasta ahora, cuando algo fallaba adentro del motor, lo único que
+// El problema que resuelve: hasta ahora, cuando algo fallaba adentro del backend, lo único que
 // subía era el texto crudo del error. Ese texto está escrito para quien programa —a veces
 // derecho en inglés, como "A user with this email address has already been registered"— y
 // `lib/errores.js` del Panel no tiene forma de reconocerlo, así que termina mostrando una
 // frase genérica. Quien está del otro lado lee "Algo falló de nuestro lado" y se queda sin
 // saber qué pasó ni qué hacer.
 //
-// La solución es la que ya usaba el cierre de guardia (`routes/appAsistentes.js`): el motor
+// La solución es la que ya usaba el cierre de guardia (`routes/appAsistentes.js`): el backend
 // manda un **motivo**, que es un código —`correo_ya_tomado`, `sin_etapas_incorporacion`—, y
 // la frase vive en las traducciones, en los tres idiomas. Nunca se manda la frase desde acá:
-// el motor no sabe en qué idioma está mirando la persona, y una frase escrita en el código
+// el backend no sabe en qué idioma está mirando la persona, y una frase escrita en el código
 // sería texto visible a mano (reglas 1 y 2 de CLAUDE.md §7).
 //
 // Esta clase existe para que ese mecanismo también funcione cuando el aviso nace adentro de

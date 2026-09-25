@@ -18,7 +18,7 @@ import { lugaresDeVarias, personasEnLosLugares } from '../../lib/lugaresDeCadaPe
 // pantalla, así que quien empezó a venir aparece sola y quien dejó de venir desaparece sola.
 //
 // Quién entra sin que nadie la ponga no se decide acá: la regla vive en
-// `src/lib/equipoDelPaciente.js`, que se copia al motor, y los dos números que la gobiernan los
+// `src/lib/equipoDelPaciente.js`, que se copia al backend, y los dos números que la gobiernan los
 // configura cada Prestadora.
 export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
   const modal = useModalAccesible(onClose);

@@ -62,7 +62,7 @@ const COLUMNAS_ESTADO =
   'asistente_id, requiere_matricula, tipo_matricula, motivo_bloqueo, matricula_id, vigente_hasta, verificada_at, dias_para_vencer';
 
 // El filtro por Prestadora va aunque el identificador del Asistente ya sea de
-// una sola: el motor entra con la llave de servicio y se saltea la protección
+// una sola: el backend entra con la llave de servicio y se saltea la protección
 // por fila, así que lo único que separa una Prestadora de otra son estos
 // filtros. La vista ya trae la columna, porque sale del Asistente.
 async function estadoDelAsistente(prestadoraId, asistenteId) {

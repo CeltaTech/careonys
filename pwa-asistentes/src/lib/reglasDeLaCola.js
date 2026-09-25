@@ -10,7 +10,7 @@
 //    después en ese mismo teléfono. Lo que quedó de una sesión anterior no se manda: se descarta.
 //    Y falla cerrado — sin dueño conocido no se manda nada, ni siquiera lo que no tiene dueño.
 //
-// 2. HAY UN TOPE DE INTENTOS. Un envío que el motor rechaza por un motivo real no mejora por
+// 2. HAY UN TOPE DE INTENTOS. Un envío que el backend rechaza por un motivo real no mejora por
 //    repetirse: lo único que logra reintentarlo para siempre es tapar el rechazo. Al llegar al
 //    tope, el ítem deja de mandarse y se queda a la vista con el motivo por el que no entró.
 //
@@ -18,7 +18,7 @@
 //    queda anotado y se muestra. El defecto es del sistema, no de ella.
 //
 // EL MOTIVO QUE SE GUARDA ES UNA DE LAS OCHO SITUACIONES de `lib/errores.js`, nunca el texto
-// crudo del motor: eso describe tablas y columnas y no puede llegar a una pantalla. La frase la
+// crudo del backend: eso describe tablas y columnas y no puede llegar a una pantalla. La frase la
 // busca después la pantalla en las traducciones, en el idioma de quien mira.
 
 /**

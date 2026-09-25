@@ -64,7 +64,7 @@ export function ElSoftwareDeAfuera() {
     setGuardado(null);
   }
 
-  // La misma condición que comprueba el motor: hace falta credencial cuando todavía no hay
+  // La misma condición que comprueba el backend: hace falta credencial cuando todavía no hay
   // ninguna, y también cuando se cambió de software.
   function faltaLaCredencial(conexion) {
     const escrito = borrador[conexion.clase] ?? {};

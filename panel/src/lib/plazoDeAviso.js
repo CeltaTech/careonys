@@ -3,13 +3,13 @@
 //
 // POR QUÉ EXISTE
 // Tres pantallas necesitaban el mismo número y cada una lo pedía a su manera:
-// dos se lo pedían al motor por una puerta que solo abre para Administrador o
+// dos se lo pedían al backend por una puerta que solo abre para Administrador o
 // más, y la tercera lo leía derecho de la base. Para una Coordinadora las dos
 // primeras fallaban y se quedaban con el valor de arranque, así que la misma
 // Prestadora que configuró 60 días veía el tablero contado con 30. Un número,
 // una forma de pedirlo (regla 12 de CLAUDE.md §7).
 //
-// POR QUÉ SE LEE DE LA BASE Y NO DEL MOTOR
+// POR QUÉ SE LEE DE LA BASE Y NO DEL BACKEND
 // Porque es la única forma que funciona para los tres roles que miran estas
 // pantallas. La base ya deja que cada quien vea la ficha de su propia
 // Prestadora y de ninguna otra; igual se pide por id, escrito, porque filtrar

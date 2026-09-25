@@ -8,7 +8,7 @@
    forma. Es el caso que describe «ningún patrón repetido sin punto único de verdad»
    (`../../../CLAUDE.md` §8).
 
-   Y hay una segunda razón: desde que los documentos del cese quedan guardados, el motor tiene
+   Y hay una segunda razón: desde que los documentos del cese quedan guardados, el backend tiene
    que saber cuáles son los tipos que acepta, y esa lista no puede vivir en una pantalla. Por eso
    este archivo se copia a `backend/src/utils/documentosDeCese.js`
    (`scripts/copias_entre_apps.mjs`) y no importa nada: lo que se copia entre carpetas que se
@@ -23,7 +23,7 @@
 
 /* Los tres que cuelgan de un cese y quedan guardados en el depósito. Se nombran de a uno y no
    como tres textos sueltos porque son a la vez el nombre del archivo adentro del depósito, la
-   clave de `ceses.documentos_generados` y lo que la pantalla le manda al motor: escritos a mano
+   clave de `ceses.documentos_generados` y lo que la pantalla le manda al backend: escritos a mano
    en cada lugar, alcanza con una letra de diferencia para que el documento se guarde en un lado y
    se busque en otro. */
 export const TIPO_LIQUIDACION = 'liquidacion_final';

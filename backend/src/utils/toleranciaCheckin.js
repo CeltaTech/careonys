@@ -1,13 +1,13 @@
 // Cuán lejos del domicilio puede marcar un Asistente y que igual cuente como haber llegado.
 //
 // Este archivo existe más de una vez a propósito (ver `scripts/copias_entre_apps.mjs`): la
-// misma pregunta se contesta en dos lados. En el motor, cuando entra un check-in y hay que
+// misma pregunta se contesta en dos lados. En el backend, cuando entra un check-in y hay que
 // decidir si se le avisa al Coordinador que alguien marcó lejos. Y en el Panel, en la pantalla
 // de control de llegadas, que muestra si ese mismo check-in quedó verificado o fuera de rango.
 //
-// Cuando cada lado llevaba su propio número, las dos respuestas no coincidían: el motor
+// Cuando cada lado llevaba su propio número, las dos respuestas no coincidían: el backend
 // toleraba los metros que la Prestadora había configurado y la pantalla un valor fijo escrito
-// a mano, más del doble. El mismo check-in podía estar bien para el motor y mal para la
+// a mano, más del doble. El mismo check-in podía estar bien para el backend y mal para la
 // pantalla que se usa justamente para auditar los check-in.
 //
 // El valor lo elige cada Prestadora en Configuración → El cuidado, y se guarda en

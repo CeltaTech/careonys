@@ -11,14 +11,14 @@
  *   1. QUE LAS RESPUESTAS SIGAN YENDO A LA CASILLA VIEJA. Cambiar la casilla no es agregar una:
  *      el reenvío anterior sigue abierto si nadie lo corta, y quien conteste un aviso le escribe
  *      a quien ya no tiene que leerlo.
- *   2. QUE EL MOTOR PIERDA CON QUÉ CORTARLO. El identificador de la regla nueva se anota en la
+ *   2. QUE EL BACKEND PIERDA CON QUÉ CORTARLO. El identificador de la regla nueva se anota en la
  *      fila de la Prestadora; sin eso, el día que se vaya queda un reenvío abierto para siempre.
  *   3. QUE LA PANTALLA NO PUEDA EXPLICAR NADA. Las dos fallas posibles —el servicio sin
  *      configurar y la casilla sin confirmar por su dueño— se avisan en el Panel y nunca por
  *      correo, porque lo que falló es justamente el correo. Para poder avisarlas, la ruta las
  *      tiene que contestar.
  *
- * Se levanta el motor de verdad contra una base de mentira y contra un servicio de reenvío de
+ * Se levanta el backend de verdad contra una base de mentira y contra un servicio de reenvío de
  * mentira, y se mira qué pidió cada uno. Los datos son inventados.
  */
 import { strict as assert } from 'node:assert';
@@ -34,9 +34,9 @@ const REGLA_NUEVA = 'regla-nueva';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, con la dirección entera. */
+/** Todo lo que el backend le pidió a la base, con la dirección entera. */
 let llamadas = [];
-/** Todo lo que el motor le pidió al servicio de reenvío. */
+/** Todo lo que el backend le pidió al servicio de reenvío. */
 let pedidosDeReenvio = [];
 /** Si la casilla de respuestas figura confirmada por su dueño. */
 let casillaConfirmada = true;
@@ -113,12 +113,12 @@ const { panelConfiguracionRouter } = await import('../panelConfiguracion.js');
 const app = express();
 app.use(express.json());
 app.use('/api/panel/configuracion', panelConfiguracionRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/panel/configuracion`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/configuracion`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
   reenvioFalso.close();
 });

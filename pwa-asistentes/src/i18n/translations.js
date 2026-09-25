@@ -12,9 +12,9 @@ export const T = {
       en_uso: 'No se puede borrar: hay otros registros que dependen de esto.',
       dato_invalido: 'Hay un dato mal cargado. Hace falta revisar lo que se escribió.',
       falla_del_sistema: 'Algo falló de nuestro lado. Conviene volver a intentar en un rato.',
-      // Los motivos: cuando el motor sabe exactamente qué pasó, lo dice con un código y la
+      // Los motivos: cuando el backend sabe exactamente qué pasó, lo dice con un código y la
       // frase se busca acá. Ganan siempre por sobre las ocho de arriba, que son lo genérico.
-      // Están solo los que puede recibir esta aplicación —los que manda el motor en las
+      // Están solo los que puede recibir esta aplicación —los que manda el backend en las
       // direcciones de /app-asistentes y en la de activar la cuenta—, no los del Panel.
       //
       // `falta_reporte` no está a propósito: esa frase lleva adentro los nombres de los
@@ -95,7 +95,7 @@ export const T = {
       confirmar: 'Confirmar',
       volver: 'Volver',
       pendiente_de_enviar: 'Guardado, pendiente de enviar',
-      // Lo que quedó anotado en el teléfono y el motor rechazó. El motivo sale del catálogo de
+      // Lo que quedó anotado en el teléfono y el backend rechazó. El motivo sale del catálogo de
       // situaciones y se lee adentro de la guardia, que es donde hay lugar para decirlo entero.
       no_se_pudo_enviar: 'No se pudo enviar',
     },
@@ -138,7 +138,7 @@ export const T = {
       empezar_videollamada: 'Empezar una videollamada',
       entrar_a_la_videollamada: 'Entrar a la videollamada',
       // Lo que escribe el producto adentro del hilo. No lo dijo ninguna persona, y por eso la
-      // frase sale de acá y no viaja como texto desde el motor.
+      // frase sale de acá y no viaja como texto desde el backend.
       avisos: {
         videollamada_empezo: 'Empezó una videollamada.',
       },
@@ -184,7 +184,7 @@ export const T = {
       llave_entrar: 'Entrar con huella o cara',
       llave_esperando: 'Esperando el aparato…',
       // Un solo aviso para todo lo que puede salir mal con la llave, igual que con la contraseña:
-      // el motor tampoco dice cuál de las cosas falló, y no hay nada que agregar acá.
+      // el backend tampoco dice cuál de las cosas falló, y no hay nada que agregar acá.
       llave_error: 'No se pudo entrar con este aparato. Puede ingresar con su contraseña.',
       llave_o: 'o',
     },
@@ -1672,7 +1672,7 @@ export const T = {
 
 // Cuáles son los tres idiomas y cuál es el de por defecto no se escribe acá: sale de
 // `i18n/idiomas.js`, que es el punto único donde está dicho para todo el producto —las pantallas
-// y el motor—. Estaba escrito cuatro veces, y las cuatro decían lo mismo por suerte, no por
+// y el backend—. Estaba escrito cuatro veces, y las cuatro decían lo mismo por suerte, no por
 // construcción. Se siguen exportando desde este archivo con los nombres de siempre para que
 // ningún punto de consumo cambie.
 export { IDIOMA_POR_DEFECTO as DEFAULT_LOCALE, IDIOMAS_SOPORTADOS as LOCALES } from './idiomas.js';

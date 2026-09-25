@@ -18,7 +18,7 @@ import { periodoEnPalabras, diaEnPalabras } from '../lib/fechaEnPalabras';
 // una nota de trabajo de la Prestadora.
 //
 // LO COBRADO, EL SALDO Y EL ESTADO PUEDEN NO VENIR. Con la cobranza en manos de otro software, el
-// motor deja de calcularlos y no los manda. Lo que no viene no se dibuja: un cero o un guion se
+// backend deja de calcularlos y no los manda. Lo que no viene no se dibuja: un cero o un guion se
 // leen como si fueran ciertos. Los renglones y la fecha siguen, que son datos guardados.
 export default function FacturaDetalle() {
   const { facturaId } = useParams();

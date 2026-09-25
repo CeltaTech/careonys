@@ -17,7 +17,7 @@ import { responderError } from '../utils/errorConMotivo.js';
 //
 // POR QUÉ SUBE POR ACÁ Y NO DERECHO DESDE EL PANEL. El depósito `documentos-cese` es privado y no
 // tiene ninguna política: nadie lo alcanza con su propio pase, porque adentro hay documentos de
-// baja con nombre, documento y montos. Lo escribe y lo lee el motor con la llave maestra, después
+// baja con nombre, documento y montos. Lo escribe y lo lee el backend con la llave maestra, después
 // de comprobar que el cese es de la Prestadora de quien pide. Es la misma forma de
 // `certificados-medicos` y `autorizaciones-monitoreo`.
 //

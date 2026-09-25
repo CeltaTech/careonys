@@ -11,7 +11,7 @@ import { MINIMO_DE_CARACTERES, claveAceptable } from '../lib/reglaDeClave';
 // lo agarró desbloqueado. Sin ese paso, el cambio de clave sería la forma más cómoda de quedarse
 // con una cuenta ajena.
 //
-// No pasa por el motor: la clave se cambia contra el servicio de acceso, con la sesión de quien
+// No pasa por el backend: la clave se cambia contra el servicio de acceso, con la sesión de quien
 // está pidiendo el cambio. Nadie puede cambiar así la de otro. Es el mismo camino que ya usa el
 // Panel en `panel/src/pages/MiClave.jsx`.
 export default function MiClave() {

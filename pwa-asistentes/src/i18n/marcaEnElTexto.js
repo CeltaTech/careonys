@@ -46,7 +46,7 @@ const oyentes = new Set();
 /**
  * Anota con qué nombre se presenta la Prestadora de esta sesión.
  *
- * Lo llaman los contextos que reciben ese dato del motor. Un nombre vacío vuelve al estado de
+ * Lo llaman los contextos que reciben ese dato del backend. Un nombre vacío vuelve al estado de
  * «todavía no se sabe», que es lo que corresponde al salir de la sesión: el nombre de la
  * Prestadora anterior no puede quedar colgado en la pantalla de ingreso de la siguiente.
  *

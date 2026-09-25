@@ -10,7 +10,7 @@
  * dejara de mirarse, el aviso con firma cambiada contestaría 200 y escribiría, que es
  * exactamente lo que se afirma que no pasa.
  *
- * Se levanta el motor de verdad contra una base de mentira que contesta lo que cada prueba le
+ * Se levanta el backend de verdad contra una base de mentira que contesta lo que cada prueba le
  * prepara, igual que `webhooksPasarelas.test.js`.
  *
  *   npm test --prefix backend
@@ -30,9 +30,9 @@ const NUMERO_CONFIGURADO = '5490000000001';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base. */
+/** Todo lo que el backend le pidió a la base. */
 let llamadas = [];
-/** Los rechazos y avisos que el motor dejó anotados del lado del servidor. */
+/** Los rechazos y avisos que el backend dejó anotados del lado del servidor. */
 let anotados = [];
 
 const baseFalsa = createServer((req, res) => {
@@ -88,9 +88,9 @@ const { whatsappWebhookRouter } = await import('../whatsappWebhook.js');
 // trae adentro su propio lector de cuerpo crudo.
 const app = express();
 app.use('/api/whatsapp-webhook', whatsappWebhookRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/whatsapp-webhook`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/whatsapp-webhook`;
 
 // Los rechazos se anotan del lado del servidor; acá se juntan en vez de imprimirse, para que la
 // prueba pueda comprobar que quedaron anotados y para no ensuciar la salida.
@@ -99,7 +99,7 @@ console.warn = (...partes) => anotados.push(partes.join(' '));
 
 after(() => {
   console.warn = avisarDeVerdad;
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 
@@ -144,7 +144,7 @@ async function saludar({ token = TOKEN_DE_SALUDO, modo = 'subscribe', prestadora
   return { estado: respuesta.status, cuerpo: await respuesta.text() };
 }
 
-/** El motor contesta 200 y sigue trabajando después: lo que escribe en la base no está listo
+/** El backend contesta 200 y sigue trabajando después: lo que escribe en la base no está listo
  *  cuando vuelve la respuesta. Se espera a que pase lo que la prueba está por mirar, en vez de
  *  dormir un rato fijo y esperar que alcance. */
 async function esperarA(condicion, { intentos = 200, cada = 10 } = {}) {
@@ -162,10 +162,10 @@ async function dejarTerminar() {
   await new Promise((listo) => setTimeout(listo, 100));
 }
 
-/** El motor contesta 200 y recién después sigue trabajando, así que cuando una prueba termina
+/** El backend contesta 200 y recién después sigue trabajando, así que cuando una prueba termina
  *  puede quedar trabajo suyo en el aire. Sin esperarlo, esas escrituras caen adentro de la prueba
  *  siguiente —que ya limpió la lista— y aparecen como filas escritas por un aviso que en realidad
- *  se rechazó: la prueba acusa un defecto que está en la prueba anterior, no en el motor. Se
+ *  se rechazó: la prueba acusa un defecto que está en la prueba anterior, no en el backend. Se
  *  espera a que la base de mentira deje de recibir pedidos. */
 async function esperarQuietud({ quieto = 80, tope = 5000 } = {}) {
   const arranque = Date.now();
@@ -205,7 +205,7 @@ beforeEach(() => {
 // Ninguna prueba le deja trabajo en el aire a la que sigue.
 afterEach(esperarQuietud);
 
-/** Lo que el motor escribió en la base. Las llamadas a funciones (`/rpc/`) quedan afuera: leer
+/** Lo que el backend escribió en la base. Las llamadas a funciones (`/rpc/`) quedan afuera: leer
  *  un secreto no es escribir. */
 function escrituras() {
   return llamadas.filter((l) => (l.clave.startsWith('POST ') || l.clave.startsWith('PATCH ')) && !l.clave.includes('/rpc/'));

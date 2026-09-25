@@ -41,7 +41,7 @@ const CODIGO_PERMISO_NEGADO = 1;
  * ¿Este error es uno de los dos fallos de ubicación?
  *
  * Falla cerrado: cualquier otra cosa no se toma por fallo de ubicación y sigue su camino, que es
- * el de los errores del motor.
+ * el de los errores del backend.
  */
 export function esFalloDeUbicacion(error) {
   return FALLOS_DE_UBICACION.includes(error?.message);

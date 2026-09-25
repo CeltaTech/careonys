@@ -19,9 +19,9 @@ import { hayDomicilioTemporal } from '../components/DomicilioTemporal';
 //
 // Las zonas son dos, y ninguna se lleva a la otra por delante:
 //
-//   1. LOS TURNOS, que los pide el motor.
+//   1. LOS TURNOS, que los pide el backend.
 //   2. LO QUE ESPERA SEÑAL EN ESTE TELÉFONO, que sale de la cola guardada en el aparato. No
-//      depende del motor: cuando el motor no contesta es justamente cuando más importa, porque
+//      depende del backend: cuando el backend no contesta es justamente cuando más importa, porque
 //      es lo que le dice a la persona que lo que hizo no se perdió.
 //
 // El aviso de consentimiento es su propia zona desde antes y se ocupa de lo suyo.
@@ -136,7 +136,7 @@ export default function MisGuardias() {
             <span className="badge badge-alerta">{t.domicilio.temporal}</span>
           )}
           {quedoSinCerrar(g) && <span className="badge badge-alerta">{t.guardias.sin_cerrar}</span>}
-          {/* Lo que espera señal, y lo que el motor rechazó. En una tarjeta de lista no entra la
+          {/* Lo que espera señal, y lo que el backend rechazó. En una tarjeta de lista no entra la
               frase entera del rechazo: acá se dice cuál es la guardia y el motivo se lee adentro,
               que es donde hay lugar para contarlo. */}
           {enEsteTelefono?.has(g.id) && (

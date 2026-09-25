@@ -15,7 +15,7 @@ import { periodoEnPalabras } from '../lib/fechaEnPalabras';
 // que alguien va a discutir por teléfono.
 //
 // Y DOS DE ESOS TRES PUEDEN NO VENIR. Cuando la cobranza de la Prestadora la lleva otro software,
-// el motor no manda lo que falta ni lo que entró, porque acá dejó de calcularlo. Lo que no viene
+// el backend no manda lo que falta ni lo que entró, porque acá dejó de calcularlo. Lo que no viene
 // no se muestra: no se pone un cero ni un guion, que se leerían como si fueran ciertos. Queda un
 // hueco en la pantalla, y así queda hasta que llegue la maqueta.
 export default function Facturas() {

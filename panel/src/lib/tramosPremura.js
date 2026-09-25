@@ -1,4 +1,4 @@
-/* Los tramos con los que se le insiste al Coordinador, puestos en el orden que el motor
+/* Los tramos con los que se le insiste al Coordinador, puestos en el orden que el backend
    espera leerlos.
 
    QUÉ ES UN TRAMO. Una frase: "mientras falten hasta X minutos para que el problema se

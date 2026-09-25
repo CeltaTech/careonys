@@ -36,7 +36,7 @@ describe('el segmento que sale de la dirección', () => {
   });
 
   it('la dirección del producto sin ninguna Prestadora adelante no es de nadie', () => {
-    // Viaja entera y el motor no la reconoce: lo que no puede pasar es que caiga en la primera
+    // Viaja entera y el backend no la reconoce: lo que no puede pasar es que caiga en la primera
     // Prestadora cargada.
     expect(segmentoDeLaPuerta(IDENTIDAD.dominio)).toBe(IDENTIDAD.dominio);
   });
@@ -64,7 +64,7 @@ describe('cuándo se da por reconocida la puerta', () => {
   });
 
   it('y un nombre solo no alcanza', () => {
-    // Que el motor conteste algo no quiere decir que haya Prestadora: sin identificador no hay
+    // Que el backend conteste algo no quiere decir que haya Prestadora: sin identificador no hay
     // cuenta de acceso que armar.
     expect(laPuertaEstaReconocida({ nombre: 'Cuidar del Sur' })).toBe(false);
   });

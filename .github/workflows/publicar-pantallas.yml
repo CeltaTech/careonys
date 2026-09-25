@@ -9,7 +9,7 @@ name: Publicar las pantallas y la página raíz en Cloudflare Pages
 # publica. Hasta el 2026-08-02 el despliegue era un comando a mano, y eso deja abierta la
 # posibilidad de que el sitio en vivo se quede con una versión vieja sin que nada avise
 # (ver CLAUDE.md §8). Este archivo cierra ese agujero: hace lo mismo que ya hace
-# `deploy-backend.yml` para el motor del sistema.
+# `deploy-backend.yml` para el backend del sistema.
 #
 # Cada aplicación se arma y se sube sola, y solo si su carpeta cambió.
 #

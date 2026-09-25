@@ -27,7 +27,7 @@ const USUARIO = '22222222-2222-2222-2222-222222222222';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, con los filtros de la dirección incluidos. */
+/** Todo lo que el backend le pidió a la base, con los filtros de la dirección incluidos. */
 let llamadas = [];
 
 const baseFalsa = createServer((req, res) => {
@@ -71,12 +71,12 @@ const { panelConfiguracionRouter } = await import('../panelConfiguracion.js');
 const app = express();
 app.use(express.json());
 app.use('/api/panel/configuracion', panelConfiguracionRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/panel/configuracion`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/configuracion`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 
@@ -96,7 +96,7 @@ async function guardar(cuerpo) {
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
 
-/** Lo que el motor escribió, o `undefined` si no escribió nada. */
+/** Lo que el backend escribió, o `undefined` si no escribió nada. */
 function loEscrito() {
   return llamadas.find((l) => l.clave === 'POST /rest/v1/configuracion_pago_asistentes')?.cuerpo;
 }

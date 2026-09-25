@@ -7,7 +7,7 @@ import { visibilidadDeFabrica, visibilidadEfectiva } from './catalogoVisibilidad
 // del valor de fábrica por su cuenta (CLAUDE.md §7 regla 12).
 //
 // Entramos con la llave maestra del servidor, así que las políticas de la base no nos frenan:
-// el filtro por Prestadora va escrito acá a mano, como en el resto del motor.
+// el filtro por Prestadora va escrito acá a mano, como en el resto del backend.
 export async function visibilidadDeLaPrestadora(prestadoraId) {
   if (!prestadoraId) {
     return visibilidadDeFabrica();
@@ -39,7 +39,7 @@ export async function visibilidadDelPedido(req) {
 // Corta el pedido cuando la Prestadora apagó esa función. Va en la cadena de la ruta, después
 // del middleware de sesión.
 //
-// Es el candado del lado del motor: la aplicación ya sabe qué está apagado y no dibuja el
+// Es el candado del lado del backend: la aplicación ya sabe qué está apagado y no dibuja el
 // botón, pero alguien puede llamar a la dirección igual desde el navegador. Sin esto, apagar
 // una función sería una decoración.
 export function exigeVisible(clave) {

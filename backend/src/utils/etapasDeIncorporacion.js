@@ -13,7 +13,7 @@
 // tenían por qué existir en la tabla de esa Prestadora, así que la ficha mostraba una etapa que
 // la pantalla de configuración no podía nombrar.
 //
-// UNA SOLA PUERTA. Las dos maneras entran ahora por este archivo, que es el único lugar del motor
+// UNA SOLA PUERTA. Las dos maneras entran ahora por este archivo, que es el único lugar del backend
 // que sabe de dónde salen las etapas y en qué orden van.
 //
 // SIN ETAPAS NO SE EMPIEZA. Una Prestadora sin ninguna etapa activa no tiene proceso de

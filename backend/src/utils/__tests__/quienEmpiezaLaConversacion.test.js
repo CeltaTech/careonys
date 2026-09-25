@@ -18,7 +18,7 @@ import { describe, it } from 'node:test';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const MOTOR = new URL('../../', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+const BACKEND = new URL('../../', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 
 /** Los que contestan adentro de una conversación que abrió la otra persona. */
 const CONTESTAN = new Set([
@@ -30,11 +30,11 @@ const CONTESTAN = new Set([
   'utils/whatsapp.js',
 ]);
 
-function archivosDelMotor(carpeta, relativo = '') {
-  return readdirSync(join(MOTOR, carpeta, relativo), { withFileTypes: true }).flatMap((entrada) => {
+function archivosDelBackend(carpeta, relativo = '') {
+  return readdirSync(join(BACKEND, carpeta, relativo), { withFileTypes: true }).flatMap((entrada) => {
     const camino = relativo ? `${relativo}/${entrada.name}` : entrada.name;
     if (entrada.isDirectory()) {
-      return entrada.name === '__tests__' ? [] : archivosDelMotor(carpeta, camino);
+      return entrada.name === '__tests__' ? [] : archivosDelBackend(carpeta, camino);
     }
     return entrada.name.endsWith('.js') ? [`${carpeta}/${camino}`] : [];
   });
@@ -42,8 +42,8 @@ function archivosDelMotor(carpeta, relativo = '') {
 
 describe('el mensaje que empieza la Prestadora no sale por texto suelto', () => {
   it('sólo lo manda quien está contestando una conversación abierta', () => {
-    const importadores = [...archivosDelMotor('routes'), ...archivosDelMotor('utils')].filter(
-      (archivo) => /\benviarWhatsApp\b(?!PorPlantilla)/.test(readFileSync(join(MOTOR, archivo), 'utf8')),
+    const importadores = [...archivosDelBackend('routes'), ...archivosDelBackend('utils')].filter(
+      (archivo) => /\benviarWhatsApp\b(?!PorPlantilla)/.test(readFileSync(join(BACKEND, archivo), 'utf8')),
     );
 
     assert.deepEqual(importadores.sort(), [...CONTESTAN].sort());

@@ -29,7 +29,7 @@ const CORREO = 'marta.gimenez@ejemplo.test';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, con la dirección entera. */
+/** Todo lo que el backend le pidió a la base, con la dirección entera. */
 let llamadas = [];
 
 const baseFalsa = createServer((req, res) => {

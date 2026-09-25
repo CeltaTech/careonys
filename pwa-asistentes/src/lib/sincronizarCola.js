@@ -12,7 +12,7 @@
 // que protege —protege el filtro—, pero deja de ocupar lugar en el teléfono algo que no se va a
 // mandar jamás.
 //
-// Y HAY UN TOPE DE INTENTOS: lo que el motor rechaza por un motivo real no mejora por repetirse.
+// Y HAY UN TOPE DE INTENTOS: lo que el backend rechaza por un motivo real no mejora por repetirse.
 // Al agotarse, el ítem se queda anotado con su motivo, a la vista, y no se manda más.
 import { api } from './api';
 import { situacionDelError } from './errores';
@@ -49,7 +49,7 @@ function avisar() {
  * Manda un ítem de la cola.
  *
  * La hora del hecho y el identificador del envío viajan siempre, y son los dos que anotó el
- * teléfono cuando pasó la cosa: con ellos el motor guarda la hora en que ocurrió —aparte de la
+ * teléfono cuando pasó la cosa: con ellos el backend guarda la hora en que ocurrió —aparte de la
  * hora en que el dato le llegó— y reconoce un reenvío en vez de duplicarlo.
  */
 function mandar(item) {
@@ -99,7 +99,7 @@ export async function sincronizarCola() {
           continue;
         }
         // El motivo que se guarda es una de las ocho situaciones del catálogo, nunca el texto
-        // crudo del motor: eso describe tablas y columnas y no puede llegar a una pantalla.
+        // crudo del backend: eso describe tablas y columnas y no puede llegar a una pantalla.
         await marcarIntentoFallido(item.id, situacionDelError(error));
         trabadas.add(item.guardiaId);
         avisar();

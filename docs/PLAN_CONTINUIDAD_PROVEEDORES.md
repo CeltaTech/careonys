@@ -60,7 +60,7 @@ la prueba hay que rehacerla con datos cargados—. Qué decide cada una está en
 `backend/src/utils/comprobacionDeRestauracion.js`, que sí tiene pruebas propias.
 
 No hace falta repetirla en cada sesión: alcanza cuando cambia el esquema de forma
-significativa (una tabla nueva con relaciones complejas, un cambio de motor de base) o, como
+significativa (una tabla nueva con relaciones complejas, un cambio de backend de base) o, como
 mínimo, una vez cada varios meses, para detectar si algún cambio futuro rompió en silencio la
 restaurabilidad del volcado.
 
@@ -167,11 +167,11 @@ que reemplazarlo — para no tener que decidir el procedimiento en el momento de
 
 **Por qué hay un despachante y no una casilla.** Railway no deja salir tráfico por los puertos
 de correo —se probaron los tres desde el propio servidor y los tres cortaron a los 260
-milisegundos, que es la firma de un bloqueo y no de una demora—, así que el motor no puede
+milisegundos, que es la firma de un bloqueo y no de una demora—, así que el backend no puede
 entrar a ninguna casilla: ni a una propia ni a la de una Prestadora. El envío sale por un
 despachante que habla por el puerto 443, como cualquier otro pedido web. Eso convierte la
 restricción en el primer filtro de cualquier reemplazo: **un proveedor de SMTP puro no sirve
-mientras el motor corra en Railway.**
+mientras el backend corra en Railway.**
 
 1. **Uso actual: un despachante, con una dirección de envío por Prestadora.** `RESEND_API_KEY`
    y `REMITENTE_AVISOS`, cargadas en Railway (ver `docs/SECRETOS.md`), consumidas en

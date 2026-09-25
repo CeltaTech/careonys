@@ -92,7 +92,7 @@ siempre ve lo que la IA respondió (registrado en el sistema, no oculto). Para s
 comunes la IA puede actuar de forma automática — pero cuáles cuentan como "comunes" es
 **configurable por prestadora, caso por caso**, no una lista fija igual para todas. Cuando la
 IA no tiene una respuesta clara, avisa de inmediato al Coordinador en vez de decidir "no sé"
-en silencio o dejar el mensaje sin atender. Motor de IA: mismo proveedor que Niveles 1-2
+en silencio o dejar el mensaje sin atender. Backend de IA: mismo proveedor que Niveles 1-2
 (Anthropic/Claude, `docs/CONTEXT.md:158`) salvo que la implementación encuentre un motivo
 técnico concreto para otra cosa.
 
@@ -170,7 +170,7 @@ resolverse, y cada escalón tiene su propio umbral en `configuracion_escalada_co
 la insistencia arranca con el incidente y usa los tramos de `umbrales_premura`, el respaldo
 entra en `minutos_antes_backup` y la búsqueda automática en `minutos_antes_fase_automatica`.
 O sea que el orden no se elige de una lista: lo arman esos números, y una Prestadora que quiera
-salir a buscar antes de pasar al respaldo sólo tiene que ponerle menos minutos. El motor no
+salir a buscar antes de pasar al respaldo sólo tiene que ponerle menos minutos. El backend no
 recorre ninguna secuencia —cada escalón mira su umbral y marca su propia fecha, en
 `backend/src/utils/revisarNotificacionesCoordinador.js`—, y el Panel muestra el orden
 resultante mientras se configura (`panel/src/lib/ordenDeLaEscalada.js`).

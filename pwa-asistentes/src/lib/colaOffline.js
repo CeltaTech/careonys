@@ -80,7 +80,7 @@ export async function duenoDeLaSesion() {
 //
 // `ocurridoEn` es la hora del hecho puesta por el teléfono, y se anota en el momento de encolar,
 // no en el de mandar: lo que importa de un check-in que esperó tres horas de señal es cuándo
-// llegó la persona, no cuándo apareció la red. Viaja al motor junto con el envío, y allá se
+// llegó la persona, no cuándo apareció la red. Viaja al backend junto con el envío, y allá se
 // guarda en su propia columna, aparte de la hora en que el dato llegó a la base.
 export async function agregarACola({ id, tipo, guardiaId, payload }) {
   const item = {
@@ -120,7 +120,7 @@ export async function listarCola() {
 /**
  * Lo que se manda: la cola de esta sesión sin lo que ya agotó sus intentos.
  *
- * Es la única puerta por la que algo sale del teléfono hacia el motor, y las dos reglas están
+ * Es la única puerta por la que algo sale del teléfono hacia el backend, y las dos reglas están
  * puestas en ella: el dueño y el tope.
  */
 export async function colaParaMandar() {

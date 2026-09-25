@@ -267,7 +267,7 @@ export function NuevaGuardiaModal({ onClose, onCreada, inicial = {} }) {
     }
 
     // El Servicio no se repite acá: lo copia la base desde la serie, para que las guardias que
-    // genera esta pantalla y las que genera el motor de noche salgan iguales sin que la regla
+    // genera esta pantalla y las que genera el backend de noche salgan iguales sin que la regla
     // esté escrita dos veces. Ver la migración
     // 20260910200000_la_guardia_hereda_el_servicio_de_su_serie.sql.
     const fechas = generarFechasSerie(vigenteDesde, vigenteHasta, diasSemana);

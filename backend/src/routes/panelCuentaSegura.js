@@ -211,7 +211,7 @@ panelCuentaSeguraRouter.post(
 
       const numero = normalizarTelefono(telefono);
       // `telefono_verificado_en` se pone en nulo acá **y** lo pone en nulo un disparador de la base.
-      // No es una copia por descuido: el motor escribe con la llave maestra, y la red de abajo es la
+      // No es una copia por descuido: el backend escribe con la llave maestra, y la red de abajo es la
       // que sigue estando el día que otro camino toque esta columna sin acordarse.
       const { error } = await deLaOrganizacionDeLaCuenta(
         supabase

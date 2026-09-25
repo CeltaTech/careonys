@@ -8,10 +8,10 @@
 // y las tres formas armadas de correrlos, y la configuración de cada Prestadora manda sobre
 // los dos.
 //
-// POR QUÉ ESTÁ SEPARADO DE `candidatos.js`. Porque el motor también tiene que conocerlos —es el
+// POR QUÉ ESTÁ SEPARADO DE `candidatos.js`. Porque el backend también tiene que conocerlos —es el
 // que recibe lo que la Prestadora guarda y tiene que comprobar que sea un número razonable— y
 // `candidatos.js` arrastra media docena de archivos del Panel. Éste no arrastra nada: se copia
-// entero al motor (`scripts/copias_entre_apps.mjs`). `candidatos.js` los vuelve a exportar, así
+// entero al backend (`scripts/copias_entre_apps.mjs`). `candidatos.js` los vuelve a exportar, así
 // que quien los importaba de allá los sigue encontrando.
 //
 // LO QUE NO SE CONFIGURA, Y POR QUÉ. Los cinco motivos que bloquean —ya tiene otra guardia, tiene
@@ -25,7 +25,7 @@
 // turno de alguien que ya está adentro es una decisión de la Coordinadora, caso por caso, ante un
 // problema puntual. Nunca una norma que se deje configurada.
 
-// Con extensión a propósito: este archivo se copia tal cual al motor, que corre en Node y ahí la
+// Con extensión a propósito: este archivo se copia tal cual al backend, que corre en Node y ahí la
 // ruta sin extensión no resuelve.
 import { DIAS_AVISO_POR_DEFECTO } from './reglaVencimientos.js';
 

@@ -111,7 +111,7 @@ export function situacionDelError(error) {
 }
 
 /**
- * Convierte una respuesta fallida del motor en un Error que la pantalla pueda explicar.
+ * Convierte una respuesta fallida del backend en un Error que la pantalla pueda explicar.
  *
  * Existe porque el `fetch` del navegador no falla cuando el servidor contesta que no: hay que
  * mirar `respuesta.ok` a mano y armar el error uno mismo. Cuando cada pantalla lo arma a su
@@ -140,14 +140,14 @@ export function errorDeLaRespuesta(respuesta, datos) {
  *
  * Hay dos niveles de explicación, y siempre gana el más específico:
  *
- * 1. **El motivo**, si el motor mandó uno. Un motivo es un código —`correo_de_otra_cuenta`,
- *    `sin_etapas_incorporacion`— con el que el motor dice exactamente qué pasó y qué hay que
+ * 1. **El motivo**, si el backend mandó uno. Un motivo es un código —`correo_de_otra_cuenta`,
+ *    `sin_etapas_incorporacion`— con el que el backend dice exactamente qué pasó y qué hay que
  *    hacer. Es lo mejor que se le puede mostrar a una persona: en vez de "Ya existe un
  *    registro con esos datos", lee que ese correo ya tiene cuenta en esta Prestadora.
  * 2. **La situación**, si no hay motivo: una de las ocho de arriba, deducida del código o del
  *    texto del error. Es lo genérico, y por eso va segundo.
  *
- * El motivo nunca viaja como frase hecha desde el motor —el motor no sabe en qué idioma está
+ * El motivo nunca viaja como frase hecha desde el backend —el backend no sabe en qué idioma está
  * mirando la persona—, así que la frase se busca acá, en las traducciones, en los tres
  * idiomas. Si llegara un motivo sin traducción, se cae a la situación y nadie ve un código.
  */

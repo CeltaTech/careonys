@@ -4,7 +4,7 @@
 //
 // POR QUÉ EXISTE
 // La misma pregunta —"¿esta persona está obligada a entrar con segundo factor?"—
-// la contestaban dos lugares por separado: el motor, cuando revisa cada pedido
+// la contestaban dos lugares por separado: el backend, cuando revisa cada pedido
 // que entra, y el Panel, cuando decide si te manda a la pantalla del segundo
 // factor. Dos respuestas para una sola pregunta, con la lista de roles escrita a
 // mano en cada lado (regla 12 de CLAUDE.md §7).
@@ -23,7 +23,7 @@
 // problema de fondo se pueda encontrar (CLAUDE.md §6).
 //
 // ESTE ARCHIVO EXISTE DOS VECES
-// El original es este. La copia vive en el motor, porque cada carpeta se publica
+// El original es este. La copia vive en el backend, porque cada carpeta se publica
 // por su cuenta y no puede importar código de la otra. La lista está en
 // `scripts/copias_entre_apps.mjs`, `scripts/sincronizar_copias.mjs` la vuelve a
 // copiar y `scripts/verificar_identidad.mjs` corta el build si se despegó.

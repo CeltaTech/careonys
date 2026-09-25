@@ -14,7 +14,7 @@
  *      la misma hora y no vuelve a escribir ni a avisar.
  *   4. QUE SE AVISE SIN ESTAR DE MÁS. Sin extensión abierta no hay nada que avisar por acá: el
  *      turno está corriendo y para eso está el botón de emergencia.
- *   5. QUE UNA PRESTADORA ALCANCE LA EXTENSIÓN DE OTRA. El motor entra con la llave de servicio y
+ *   5. QUE UNA PRESTADORA ALCANCE LA EXTENSIÓN DE OTRA. El backend entra con la llave de servicio y
  *      se saltea la protección por fila: lo único que separa a una de otra son los filtros.
  *   6. QUE SE PIERDA EL MOMENTO. El aviso puede quedar en la cola sin conexión, y esa demora es
  *      justamente el dato.
@@ -76,12 +76,12 @@ const { appAsistentesRouter } = await import('../appAsistentes.js');
 const app = express();
 app.use(express.json());
 app.use('/api/app-asistentes', appAsistentesRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const RAIZ = `http://127.0.0.1:${motor.address().port}`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const RAIZ = `http://127.0.0.1:${backend.address().port}`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 
@@ -99,7 +99,7 @@ let extensionesEnLaBase;
 
 /**
  * La base falsa filtra de verdad por los `eq` y los `is` de la dirección: sin esto, la prueba de
- * aislamiento pasaría aunque el motor consultara sin filtrar por Prestadora.
+ * aislamiento pasaría aunque el backend consultara sin filtrar por Prestadora.
  */
 function filasQuePasanLosFiltros(url, filas) {
   const parametros = new URL(url, 'http://interno').searchParams;

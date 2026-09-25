@@ -32,7 +32,7 @@ async function edadMinimaVigente(prestadoraId, hoy) {
 }
 
 // Las listas de opciones del formulario. El sitio público no consulta la base: se las pide acá,
-// y el motor entra con la llave de servicio filtrando por la Prestadora que resolvió la
+// y el backend entra con la llave de servicio filtrando por la Prestadora que resolvió la
 // dirección. Van sólo las activas y en su orden.
 postulacionAsistenteRouter.get('/opciones', resolverPrestadoraPublica, async (req, res) => {
   const prestadoraId = req.prestadoraPublica.prestadora_id;

@@ -42,7 +42,7 @@ export default function DescansoEnGuardia({ t, locale, guardiaId, descansoAbiert
     setError('');
     setUltimoCierre(null);
     setTrabajando(true);
-    // El identificador del envío se pone antes del primer intento: si el descanso llegó al motor
+    // El identificador del envío se pone antes del primer intento: si el descanso llegó al backend
     // y lo que se perdió fue la respuesta, el reenvío tiene que traer el mismo para no anotarlo
     // dos veces.
     const clienteUuid = nuevoId();

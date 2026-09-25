@@ -42,7 +42,7 @@ export function Padron() {
   const puedeEditar = esAdmin || puede('editar_padron');
 
   const [filas, setFilas] = useState([]);
-  // Los teléfonos vienen del motor, en un solo pedido para todo el Padrón: pedirlos ficha por ficha
+  // Los teléfonos vienen del backend, en un solo pedido para todo el Padrón: pedirlos ficha por ficha
   // sería un pedido por renglón. Vienen con el preferido ya resuelto.
   const [telefonos, setTelefonos] = useState([]);
   const [estado, setEstado] = useState('cargando');

@@ -66,7 +66,7 @@ export function ProtectedRoute({ children, soloAdmin = false, roles = null, perm
   // prestación directa, la mire quien la mire. El menú ya esconde estos enlaces
   // (`layout/Layout.jsx`), pero esconder un enlace no impide escribir la dirección a mano.
   //
-  // Esto es para no mostrar lo que no corresponde. **El candado de verdad está en el motor**
+  // Esto es para no mostrar lo que no corresponde. **El candado de verdad está en el backend**
   // (`backend/src/middleware/exigirModalidad.js`), que es lo único que no se puede saltear.
   //
   // Mismo criterio de espera que el permiso, y por el mismo motivo: mientras no se sepa qué

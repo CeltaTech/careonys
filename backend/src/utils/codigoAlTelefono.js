@@ -67,7 +67,7 @@ export function minutosDeVidaDelCodigo() {
  * Cuántos códigos se le mandan como mucho a un mismo número en una hora.
  *
  * CADA ENVÍO CUESTA PLATA, y lo paga la Prestadora. Sin tope, cualquiera desde afuera pide códigos
- * hasta que a ella le llegue la factura. El tope del motor (`middleware/topeDePedidos.js`) no sirve
+ * hasta que a ella le llegue la factura. El tope del backend (`middleware/topeDePedidos.js`) no sirve
  * para esto: cuenta por persona con sesión, y dos de los tres usos ocurren sin ninguna.
  */
 export function topeDeCodigosPorHora() {

@@ -5,7 +5,7 @@
  *   node --test backend/src/routes/__tests__/panelReferenciasLaborales.test.js
  *
  * POR QUÉ EXISTE ESTA PRUEBA. Una referencia laboral es el nombre y el teléfono de una persona que
- * no usa el producto y que no tiene forma de enterarse de nada. El motor entra a la base con la
+ * no usa el producto y que no tiene forma de enterarse de nada. El backend entra a la base con la
  * llave maestra, así que lo único que separa una Prestadora de otra son los filtros escritos en
  * esta ruta (`../panelReferenciasLaborales.js`). Y hay dos decisiones más que sostener: que quién
  * verificó y cuándo los escriba el servidor y no el pedido —si no, la firma de la verificación la
@@ -32,7 +32,7 @@ const REFERENCIA = '55555555-5555-5555-5555-555555555555';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió, con la dirección entera: los filtros van ahí. */
+/** Todo lo que el backend le pidió, con la dirección entera: los filtros van ahí. */
 let llamadas = [];
 
 let rolDelUsuario = 'admin_prestadora';
@@ -63,7 +63,7 @@ const baseFalsa = createServer((req, res) => {
     }
 
     // El pedido de cuenta exacta contesta el total en el encabezado y sin cuerpo, como el de
-    // verdad: es así como el motor sabe cuántas referencias hay sin traérselas todas.
+    // verdad: es así como el backend sabe cuántas referencias hay sin traérselas todas.
     if (req.method === 'HEAD') {
       const total = Array.isArray(valor) ? valor.length : 0;
       res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Range': `0-${Math.max(total - 1, 0)}/${total}` });
@@ -90,12 +90,12 @@ const { panelReferenciasLaboralesRouter } = await import('../panelReferenciasLab
 const app = express();
 app.use(express.json());
 app.use('/api/panel/referencias-laborales', panelReferenciasLaboralesRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/panel/referencias-laborales`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/referencias-laborales`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 

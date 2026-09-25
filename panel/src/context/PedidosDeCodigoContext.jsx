@@ -15,13 +15,13 @@ import { mensajeDeError } from '../lib/errores';
    alcanza: quien está de turno pasa el día en Guardias o en Estado actual, y el pedido llegaría
    cuando a alguien se le ocurriera ir a mirar.
 
-   CÓMO SE ENTERA. Por el canal en vivo (`lib/avisosEnVivo.js`): el motor empuja el asunto en
+   CÓMO SE ENTERA. Por el canal en vivo (`lib/avisosEnVivo.js`): el backend empuja el asunto en
    cuanto un pedido entra o se resuelve, y acá se vuelve a pedir la lista. El aviso no trae
    ningún dato —dice qué cambió, no qué quedó—, así que la lista sale siempre de la misma ruta,
    que comprueba la sesión y filtra por la Organización.
 
    Y IGUAL SE PREGUNTA CADA TANTO, ESPACIADO. Que el aviso llegue en el momento lo da el canal;
-   que llegue siempre, no: puede estar caído sin que el navegador lo note, o el motor puede estar
+   que llegue siempre, no: puede estar caído sin que el navegador lo note, o el backend puede estar
    corriendo en más de un proceso y el aviso nacer en uno distinto del que atiende esta conexión.
    Sin esta vuelta de respaldo, un canal que se cae en silencio deja la pantalla quieta para
    siempre, que es peor que llegar tarde. Con el canal andando no cambia nada de lo que se ve; sin

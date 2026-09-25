@@ -69,7 +69,7 @@ async function textoVigente({ jurisdiccion, clave, modalidad, idioma }) {
   return data || null;
 }
 
-// El filtro por Prestadora va aunque el identificador del Asistente ya sea de una sola: el motor
+// El filtro por Prestadora va aunque el identificador del Asistente ya sea de una sola: el backend
 // entra a la base con la llave de servicio y se saltea la protección por fila, así que lo único
 // que separa una Prestadora de otra son estos filtros. Es la puerta de entrada de todo lo demás:
 // lo que se actualiza o se borra después va por el identificador que sale de acá.

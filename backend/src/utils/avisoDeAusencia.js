@@ -29,10 +29,10 @@
 // ausencia; qué se hace con esa respuesta lo deciden el proceso que manda los avisos y la
 // Coordinadora.
 //
-// Se copia entero al motor (`scripts/copias_entre_apps.mjs`), que es quien manda los avisos. Por
+// Se copia entero al backend (`scripts/copias_entre_apps.mjs`), que es quien manda los avisos. Por
 // eso no importa nada del Panel.
 
-// Con extensión a propósito: este archivo se copia tal cual al motor, que corre en Node y ahí la
+// Con extensión a propósito: este archivo se copia tal cual al backend, que corre en Node y ahí la
 // ruta sin extensión no resuelve.
 import { inicioDeGuardia } from './horarios.js';
 import { ausenciaQueTapaLaGuardia } from './ausenciaQueTapa.js';
@@ -152,7 +152,7 @@ export function turnosQueDejaSinNadie({ ausencia, guardias = [] } = {}) {
  * Cómo llegó una ausencia, y con cuántas horas de anticipación.
  *
  * Todo llega ya cargado: este archivo no habla con la base, para poder correr igual en el Panel y
- * en el motor.
+ * en el backend.
  *
  * @param {object} entrada
  * @param {object} entrada.ausencia Con `asistente_id`, `fecha_inicio`, `fecha_fin` y `avisada_en`.

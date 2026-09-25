@@ -14,7 +14,7 @@ import EnlaceAlMapa from '../components/EnlaceAlMapa';
 // tiempo. Sin eso, aceptar es apostar.
 //
 // Una oferta que se venció o que ganó otro no aparece: no hay nada que hacer con ella. Si
-// alguien acepta justo cuando eso pasa, el motor lo dice con todas las letras — nunca falla
+// alguien acepta justo cuando eso pasa, el backend lo dice con todas las letras — nunca falla
 // en silencio ni deja dos personas con el mismo turno.
 
 // Cuánto falta para el plazo, en la unidad más grande que tenga sentido. Días si faltan días,

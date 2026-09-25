@@ -16,10 +16,10 @@ import { IDENTIDAD } from '../config/identidadProducto.js';
 // el mismo camino y con el mismo mensaje. Nadie averigua dónde más trabaja una persona probando su
 // correo.
 //
-// CÓMO SE LE DICE AL MOTOR. El motor ya sabe resolver una Prestadora, y lo hace por un segmento de
+// CÓMO SE LE DICE AL BACKEND. El backend ya sabe resolver una Prestadora, y lo hace por un segmento de
 // la dirección —`/api/publico/:prestadora/…`—, que busca contra `configuracion_prestadora.dominio`
 // (`backend/src/middleware/resolverPrestadoraPublica.js`). No se inventa otro mecanismo: la
-// pantalla traduce el subdominio del navegador a ese segmento, y el motor queda como está.
+// pantalla traduce el subdominio del navegador a ese segmento, y el backend queda como está.
 
 /**
  * Qué segmento le corresponde a la dirección desde la que se abrió la pantalla.
@@ -29,7 +29,7 @@ import { IDENTIDAD } from '../config/identidadProducto.js';
  * viaja entero también, que es lo que hace que la máquina de trabajo entre por la Prestadora de
  * pruebas.
  *
- * Una dirección vacía devuelve vacío, y con eso el motor contesta que no reconoce ninguna
+ * Una dirección vacía devuelve vacío, y con eso el backend contesta que no reconoce ninguna
  * Prestadora: no se adivina, y no se cae a ninguna por descarte.
  *
  * @param {string} direccion  el nombre de la máquina del navegador (`window.location.hostname`)

@@ -87,7 +87,7 @@ export default function ExtensionDeTurno({ t, locale, guardiaId, extension, alAv
       <p style={{ marginBottom: '0.25rem' }}>{tr.busqueda}</p>
       <ul>
         {/* El camino entero y no `tr.pasos[…]`: el verificador de textos huérfanos reconoce
-            así que estas cinco claves se usan, aunque la clave la elija el motor. */}
+            así que estas cinco claves se usan, aunque la clave la elija el backend. */}
         {(extension.pasos ?? []).map((paso) => (
           <li key={paso}>{t.extension.pasos[paso] ?? paso}</li>
         ))}

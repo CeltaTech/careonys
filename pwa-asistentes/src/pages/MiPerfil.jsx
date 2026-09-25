@@ -44,7 +44,7 @@ export default function MiPerfil() {
   // El interruptor de disponibilidad. Lo mueve el Asistente y nadie más: `estado` —lo que decide
   // la Prestadora— es otra cosa y se muestra arriba, sin tocar.
   //
-  // Lo que queda en pantalla es lo que contestó el motor, no lo que se mandó. Si el pedido no
+  // Lo que queda en pantalla es lo que contestó el backend, no lo que se mandó. Si el pedido no
   // llegó, el interruptor tiene que seguir mostrando lo de antes: decirle a alguien que quedó no
   // disponible cuando en realidad no quedó es el único error que esta pantalla no puede cometer.
   async function alternarDisponibilidad() {

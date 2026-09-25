@@ -76,7 +76,7 @@ export function AusenciasCoberturaTab({ asistente }) {
   } = useMotivosSustitucionGuardia(prestadoraId);
 
   // La fila del catálogo que está elegida en el formulario de una ausencia. Se busca por lo que se
-  // guarda —la clave o el nombre—, que es lo mismo que viaja al motor, y sirve para saber si esa
+  // guarda —la clave o el nombre—, que es lo mismo que viaja al backend, y sirve para saber si esa
   // causa obliga a explicar.
   function motivoElegido(ausenciaId) {
     const valor = coberturaForm[ausenciaId]?.motivo;
@@ -274,7 +274,7 @@ export function AusenciasCoberturaTab({ asistente }) {
     }
   }
 
-  // Un turno cubierto por vez, y cada uno se lo pide al motor.
+  // Un turno cubierto por vez, y cada uno se lo pide al backend.
   //
   // Hasta hoy se guardaba una sola fila, con `guardia_original_id` vacía: decía que alguien iba a
   // cubrir la ausencia, y no qué turno iba a tomar. Con eso ninguna pantalla podía contestar quién
@@ -283,7 +283,7 @@ export function AusenciasCoberturaTab({ asistente }) {
   //
   // Y tampoco se escribe más contra la base desde acá. Cubrir un turno es dejar escrito a quién le
   // tocaba y por qué lo hace otro, y pasar la guardia a nombre de quien la hace, para que pueda
-  // verla y ficharla. Son dos escrituras que valen juntas, y viven una sola vez en el motor
+  // verla y ficharla. Son dos escrituras que valen juntas, y viven una sola vez en el backend
   // (`backend/src/utils/cubrirGuardia.js`).
   //
   // Se cubren solamente los turnos que todavía no tienen sustituto: apretar dos veces no duplica

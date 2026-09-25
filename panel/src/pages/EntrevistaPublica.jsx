@@ -13,10 +13,10 @@ import { errorDeLaRespuesta, mensajeDeError } from '../lib/errores';
 
    QUÉ SE VE Y QUÉ NO. Con qué Prestadora es la entrevista, cuándo, y —si es la hora— el botón
    para entrar. Nada del postulante, nada de quien lo va a entrevistar y nada de lo que se haya
-   anotado por dentro: el motor no lo manda, y esta pantalla no lo pide.
+   anotado por dentro: el backend no lo manda, y esta pantalla no lo pide.
 
    LA SALA SÓLO APARECE A LA HORA. Llegar temprano no es equivocarse, así que no hay ningún error:
-   el motor contesta bien y dice en qué momento está la cita. Acá eso se convierte en las tres
+   el backend contesta bien y dice en qué momento está la cita. Acá eso se convierte en las tres
    cosas que la persona puede necesitar leer —vuelva más tarde, entre ahora, o ya pasó— y no en un
    cartel de falla. */
 

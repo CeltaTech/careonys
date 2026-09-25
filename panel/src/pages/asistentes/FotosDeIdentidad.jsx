@@ -51,7 +51,7 @@ export function FotosDeIdentidad({ asistente }) {
 
   async function subir(tipo, archivo) {
     if (!archivo) return;
-    // El tamaño y el formato se miran también acá, aunque el motor los vuelva a mirar: así quien
+    // El tamaño y el formato se miran también acá, aunque el backend los vuelva a mirar: así quien
     // eligió el archivo equivocado se entera antes de esperar la subida entera. Lo que decide
     // sigue siendo el servidor (`celtatech/CLAUDE.md` §6).
     if (!FORMATOS_DE_FOTO.includes(archivo.type) || archivo.size > TAMANO_MAXIMO_DE_FOTO) {

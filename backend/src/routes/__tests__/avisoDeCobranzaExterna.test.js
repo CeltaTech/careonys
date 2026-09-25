@@ -29,7 +29,7 @@ const SECRETO = 'un-secreto-largo-de-mas-de-32-caracteres';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, con los filtros de la dirección incluidos. */
+/** Todo lo que el backend le pidió a la base, con los filtros de la dirección incluidos. */
 let llamadas = [];
 
 const baseFalsa = createServer((req, res) => {
@@ -82,12 +82,12 @@ const app = express();
 // Montado como en `server.js`: antes de cualquier lector de JSON general, porque la firma se
 // calcula sobre los bytes exactos que llegaron.
 app.use('/api/avisos-de-cobranza', avisoDeCobranzaExternaRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/avisos-de-cobranza`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/avisos-de-cobranza`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 
@@ -109,7 +109,7 @@ async function avisar(cuerpo, { firma, prestadora = PRESTADORA } = {}) {
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
 
-/** Lo que el motor escribió en cada tabla, o `undefined` si no escribió nada. */
+/** Lo que el backend escribió en cada tabla, o `undefined` si no escribió nada. */
 function laRestriccion() {
   return llamadas.find((l) => l.clave === 'POST /rest/v1/restricciones_de_cobranza')?.cuerpo;
 }

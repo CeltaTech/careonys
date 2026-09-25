@@ -12,12 +12,12 @@ import { mensajeDeError } from '../lib/errores';
 
 /*
  * Esta pantalla existe para auditar los check-in, así que tiene que dar el mismo veredicto que
- * dio el motor cuando ese check-in entró. Dos cosas hacen falta para eso, y las dos vienen de
+ * dio el backend cuando ese check-in entró. Dos cosas hacen falta para eso, y las dos vienen de
  * afuera de este archivo:
  *
  *   - **Cuántos metros se toleran** los elige cada Prestadora en Configuración → El cuidado.
  *     Antes acá había un número fijo de trescientos metros, más del doble de lo que tolera el
- *     motor por omisión: el mismo check-in podía estar bien para uno y mal para la otra.
+ *     backend por omisión: el mismo check-in podía estar bien para uno y mal para la otra.
  *   - **Contra qué dirección se mide** es la del día de ese turno, no la que figura hoy en la
  *     ficha. Si el Paciente pasó una temporada en otra casa, el Asistente fue ahí.
  */

@@ -43,7 +43,7 @@ async function configuracionAlertasIA(prestadoraId) {
 // (b) análisis inmediato si un reporte recién confirmado contiene una palabra clave crítica
 // (configuracion_alertas_ia, nunca hardcodeada — llamado directamente desde
 // appAsistentes.js en vez de por este cron, así que analizarPaciente queda exportado).
-// Se recorre de a una Prestadora por vez, y nunca con una consulta que las mezcle: el motor entra
+// Se recorre de a una Prestadora por vez, y nunca con una consulta que las mezcle: el backend entra
 // con la llave de servicio, que se saltea la protección por fila, así que lo único que mantiene
 // cerrado cada cajón es que cada consulta diga para cuál trabaja.
 export async function revisarAlertasIA() {

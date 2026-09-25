@@ -1,7 +1,7 @@
 // Dónde estaba viviendo cada Paciente un día determinado.
 //
 // La regla —cuándo manda la dirección de siempre y cuándo una temporal— está escrita una sola
-// vez, en la función `domicilios_de_pacientes_en` de la base, y desde ahí la usan el motor y
+// vez, en la función `domicilios_de_pacientes_en` de la base, y desde ahí la usan el backend y
 // el Panel (regla 12 de CLAUDE.md §7). Este archivo no la vuelve a escribir: solamente le
 // pregunta, y acomoda la respuesta para que la pantalla la pueda buscar por fecha y Paciente.
 //

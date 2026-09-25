@@ -20,7 +20,7 @@
 // QUÉ NO DECIDE ESTE ARCHIVO. No toma nada, no avisa y no resuelve nada. Contesta qué tipos de
 // alarma existen, cuánto dura hacerse cargo de una y si una toma sigue en pie.
 //
-// Se copia entero al motor (`scripts/copias_entre_apps.mjs`), que es quien deja de insistir cuando
+// Se copia entero al backend (`scripts/copias_entre_apps.mjs`), que es quien deja de insistir cuando
 // una alarma está tomada. Por eso no importa nada del Panel.
 
 /**

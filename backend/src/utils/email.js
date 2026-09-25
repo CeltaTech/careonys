@@ -4,7 +4,7 @@ import { supabase } from '../db/connection.js';
 import { marcaDeLaPrestadora } from './marcaPrestadora.js';
 
 /** Por qué servidor sale el correo cuando se usa el camino SMTP. Sale del entorno: escrito en el
- *  código ata el producto a un proveedor de correo, y quien corra el motor con otra casilla no
+ *  código ata el producto a un proveedor de correo, y quien corra el backend con otra casilla no
  *  tendría dónde decirlo. El valor de reserva es el de la máquina de desarrollo, para que quien ya
  *  tenía sus dos variables cargadas no note ningún cambio. El puerto va con él: no todos los
  *  servidores escuchan en el mismo. */
@@ -17,7 +17,7 @@ const SMTP_PORT = Number(process.env.SMTP_PORT) || 465;
 //
 // Railway no deja salir tráfico por los puertos de correo: se probaron los tres —25, 465 y
 // 587— desde el propio servidor y los tres cortaron a los 260 milisegundos, que es la firma de
-// un bloqueo y no de una demora. Así que el motor no puede entrar a ninguna casilla de correo,
+// un bloqueo y no de una demora. Así que el backend no puede entrar a ninguna casilla de correo,
 // ni propia ni de una Prestadora, y el envío tiene que salir por un despachante que hable por
 // el puerto 443, como cualquier otro pedido web.
 //
@@ -27,7 +27,7 @@ const SMTP_PORT = Number(process.env.SMTP_PORT) || 465;
 // el armado de cada correo no sabe por dónde viaja.
 //
 // El camino por SMTP no se borra: se usa mientras no haya credencial del despachante. Así el
-// motor corriendo fuera de Railway —la máquina de desarrollo— sigue mandando como siempre.
+// backend corriendo fuera de Railway —la máquina de desarrollo— sigue mandando como siempre.
 //
 // Lo que se manda no cambia por esto. A quién va, qué dice y con qué marca sale de
 // `destinatariosEvento` y de la marca de la Prestadora, que no saben por dónde viaja el correo.
@@ -52,7 +52,7 @@ export function dominioDeEnvio() {
   return dominio || null;
 }
 
-// Si no hay ningún medio configurado, el motor no intenta mandar y no falla: es lo que ya
+// Si no hay ningún medio configurado, el backend no intenta mandar y no falla: es lo que ya
 // hacía cuando lo único que miraba era `SMTP_USER`.
 export function hayMedioDeEnvio() {
   if (credencialDelDespachante() && direccionRemitente()) return true;

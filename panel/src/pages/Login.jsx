@@ -17,8 +17,8 @@ const API_URL = import.meta.env.VITE_API_URL;
 // donde se elija ni de nada que venga en el pedido. Sin saber de cuál se trata no hay ninguna
 // cuenta que abrir: la misma persona tiene una cuenta distinta en cada Prestadora donde trabaja, y
 // con qué correo se le habla al servicio de acceso lleva la Prestadora adentro
-// (`lib/correoDeAcceso.js`). El mecanismo del motor es el mismo que ya usa recuperar la clave, y no
-// se inventa otro: la pantalla traduce la dirección a un segmento y el motor lo resuelve contra el
+// (`lib/correoDeAcceso.js`). El mecanismo del backend es el mismo que ya usa recuperar la clave, y no
+// se inventa otro: la pantalla traduce la dirección a un segmento y el backend lo resuelve contra el
 // dominio configurado (`lib/puertaDeIngreso.js`).
 //
 // FALLA CERRADO. Mientras no se reconozca la Prestadora no se ofrece entrar, no se ofrece elegir

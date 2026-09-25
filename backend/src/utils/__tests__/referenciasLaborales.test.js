@@ -12,7 +12,7 @@ import {
   estadoDeLasReferencias,
 } from '../referenciasLaborales.js';
 
-// El módulo que comparten la pantalla y el motor. Lo que acá se acepte, la base lo acepta: el
+// El módulo que comparten la pantalla y el backend. Lo que acá se acepte, la base lo acepta: el
 // CHECK de `referencias_laborales_asistente` lleva exactamente estos cuatro nombres.
 
 describe('los cuatro resultados de una referencia', () => {

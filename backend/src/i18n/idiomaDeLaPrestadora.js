@@ -4,7 +4,7 @@ import { IDIOMA_POR_DEFECTO, idiomaDePais } from './idiomas.js';
 /* En qué idioma escribe una Prestadora.
    ====================================
 
-   Es la única consulta del motor que contesta esa pregunta. Sale del país configurado de la
+   Es la única consulta del backend que contesta esa pregunta. Sale del país configurado de la
    Prestadora, que es lo único que se sabe sobre dónde está la gente que va a leer el aviso.
 
    SE PREGUNTA UNA VEZ POR VUELTA, no una vez por aviso: los procesos de fondo recorren todas las
@@ -13,7 +13,7 @@ import { IDIOMA_POR_DEFECTO, idiomaDePais } from './idiomas.js';
 
    NO SE GUARDA EN MEMORIA ENTRE VUELTAS. El país de una Prestadora se cambia desde Configuración,
    y una copia guardada haría que el aviso siguiera saliendo en el idioma viejo hasta que alguien
-   reiniciara el motor. */
+   reiniciara el backend. */
 
 /**
  * El idioma de una Prestadora. Si no se la encuentra o no tiene país, el de por defecto: un aviso

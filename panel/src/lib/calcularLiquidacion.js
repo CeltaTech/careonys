@@ -6,7 +6,7 @@
 // días, el mes cerrado. Acá eso llega hecho y esta cuenta no se entera de dónde salieron los
 // bordes. Quien no cambió nada sigue liquidando el mes calendario, exactamente igual que antes.
 //
-// POR QUÉ EXISTE ESTE ARCHIVO. Esta cuenta vivía adentro de la ruta del motor que genera las
+// POR QUÉ EXISTE ESTE ARCHIVO. Esta cuenta vivía adentro de la ruta del backend que genera las
 // liquidaciones, que era el único lugar que la necesitaba. Dejó de serlo: el Simulador de
 // Vínculo compara lo que cuesta por mes la misma persona bajo monotributo y bajo dependencia,
 // y esa comparación es exactamente esta cuenta hecha dos veces. Escrita de nuevo del lado del
@@ -14,13 +14,13 @@
 // sola, y entonces la liquidación de marzo y la proyección que la anunció dirían cosas
 // distintas.
 //
-// Por eso vive acá, del lado del Panel, y el motor usa una copia generada
+// Por eso vive acá, del lado del Panel, y el backend usa una copia generada
 // (`backend/src/utils/calcularLiquidacion.js`, ver `scripts/copias_entre_apps.mjs`). Es la
 // misma forma que ya tiene `escalasLegales.js`, que decide qué escala rige a una fecha.
 //
 // LO ÚNICO QUE IMPORTA ES A SU HERMANO COPIADO. `formaDePago.js` también vive en las dos
 // carpetas y con el mismo nombre, así que la ruta relativa vale igual de los dos lados. Fuera
-// de eso no entra nada: lo que se copia al motor no puede traerse medio Panel atrás.
+// de eso no entra nada: lo que se copia al backend no puede traerse medio Panel atrás.
 //
 // LO QUE NO ES: un comprobante fiscal. El producto no emite facturas ni notas y no está
 // previsto que lo haga. Esto es la cuenta interna de qué se le paga a quién.

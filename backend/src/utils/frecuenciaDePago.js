@@ -20,9 +20,9 @@
 // fábrica; cuál rige lo elige cada Prestadora en su configuración, y se puede correr persona
 // por persona, porque con cada una se arregla distinto.
 //
-// NO IMPORTA NADA A PROPÓSITO. Este archivo lo usa el Panel y el motor usa una copia generada
+// NO IMPORTA NADA A PROPÓSITO. Este archivo lo usa el Panel y el backend usa una copia generada
 // (`backend/src/utils/frecuenciaDePago.js`, ver `scripts/copias_entre_apps.mjs`), y lo que se
-// copia al motor no puede traerse medio Panel atrás.
+// copia al backend no puede traerse medio Panel atrás.
 // ---------------------------------------------------------------------------
 
 /** Cada cuánto se cierra un período. Son identificadores guardados: no se renombran nunca. */

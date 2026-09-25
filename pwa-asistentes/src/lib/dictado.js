@@ -21,7 +21,7 @@
 /**
  * Qué reconocedor tiene este navegador, si tiene alguno.
  *
- * Los dos nombres son el mismo motor: `webkitSpeechRecognition` es como lo publicaron Chrome y
+ * Los dos nombres son el mismo backend: `webkitSpeechRecognition` es como lo publicaron Chrome y
  * Safari antes de que el nombre sin prefijo se estandarizara, y es el único que existe en varias
  * versiones de iPhone que hoy están en la mano de alguien.
  */

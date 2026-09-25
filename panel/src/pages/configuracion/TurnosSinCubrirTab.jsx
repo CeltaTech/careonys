@@ -19,10 +19,10 @@ import { REGLA_QUE_SE_PUEDE_TOCAR } from '../../lib/incidenteTurnoSinCubrir';
    defecto grave no se apaga. Dibujar acá una casilla para apagarlo sería ofrecer algo que el
    producto no hace.
 
-   NO SE GUARDA LO QUE NO SE TOCÓ. Viaja solamente lo que difiere de fábrica, y el motor lo vuelve
+   NO SE GUARDA LO QUE NO SE TOCÓ. Viaja solamente lo que difiere de fábrica, y el backend lo vuelve
    a filtrar. Así el día que cambie un valor de fábrica alcanza a todas las Prestadoras salvo en lo
    que cada una decidió. La cuenta y los bordes viven en `lib/incidenteTurnoSinCubrir.js`, que es el
-   mismo archivo que usa el motor. */
+   mismo archivo que usa el backend. */
 export function TurnosSinCubrirTab() {
   const { t } = useLocale();
   const [regla, setRegla] = useState(null);

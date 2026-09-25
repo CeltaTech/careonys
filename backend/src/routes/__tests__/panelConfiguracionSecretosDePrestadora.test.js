@@ -16,8 +16,8 @@
  * que el siguiente que aparezca se agregue en uno solo.
  *
  * Lo que se prueba no es la función del candado —eso sería probar una comparación—, sino el
- * camino entero: se levanta el motor de verdad contra una base de mentira, se entra con cada rol
- * y se mira qué contesta cada ruta. Y en el caso que se niega se comprueba, además, que el motor
+ * camino entero: se levanta el backend de verdad contra una base de mentira, se entra con cada rol
+ * y se mira qué contesta cada ruta. Y en el caso que se niega se comprueba, además, que el backend
  * no le haya preguntado nada a la base: un 403 que igual leyó la tabla ya dijo si la Prestadora
  * tiene cargadas sus claves, que es justamente lo que no se quiere contar.
  *
@@ -35,7 +35,7 @@ const SESION_SOPORTE = '44444444-4444-4444-4444-444444444444';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, para poder afirmar que NO pidió algo. */
+/** Todo lo que el backend le pidió a la base, para poder afirmar que NO pidió algo. */
 let llamadas = [];
 
 let rolDelUsuario = 'admin_prestadora';
@@ -80,12 +80,12 @@ const { panelConfiguracionRouter } = await import('../panelConfiguracion.js');
 const app = express();
 app.use(express.json());
 app.use('/api/panel/configuracion', panelConfiguracionRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/panel/configuracion`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/configuracion`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 
@@ -140,7 +140,7 @@ function noTocoLosSecretos() {
   const tocadas = llamadas
     .map((l) => l.clave)
     .filter((clave) => RASTROS_DE_LOS_SECRETOS.some((rastro) => clave.includes(rastro)));
-  assert.deepEqual(tocadas, [], `el motor le preguntó a la base antes de negar: ${tocadas.join(', ')}`);
+  assert.deepEqual(tocadas, [], `el backend le preguntó a la base antes de negar: ${tocadas.join(', ')}`);
 }
 
 /** Lo que la base contesta cuando la ruta sí llega a leer y a escribir los secretos. */

@@ -5,9 +5,9 @@
  *
  *   node --test "src/**\/__tests__/*.test.js"
  *
- * Se levanta el motor de verdad contra una base de mentira que contesta lo que cada prueba le
+ * Se levanta el backend de verdad contra una base de mentira que contesta lo que cada prueba le
  * prepara, y se mira la dirección entera de cada consulta. Eso es lo que permite comprobar las dos
- * cosas que importan acá: que ninguna consulta se olvide el filtro de Prestadora —el motor entra
+ * cosas que importan acá: que ninguna consulta se olvide el filtro de Prestadora —el backend entra
  * con la llave de servicio, o sea sin las reglas de acceso—, y que el número no se escriba nunca en
  * una dirección.
  *
@@ -31,7 +31,7 @@ const CELULAR = '+54 9 11 5555-9876';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Recibe el cuerpo y la dirección entera. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base. Los filtros viajan en la dirección. */
+/** Todo lo que el backend le pidió a la base. Los filtros viajan en la dirección. */
 let llamadas = [];
 
 let rolDelUsuario = 'admin_prestadora';
@@ -82,12 +82,12 @@ const { conElPreferidoMarcado, telefonoLimpio } = await import('../../utils/tele
 const app = express();
 app.use(express.json());
 app.use('/api/panel/padron/telefonos', panelPadronTelefonosRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/panel/padron/telefonos`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/padron/telefonos`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 
@@ -135,7 +135,7 @@ beforeEach(() => {
   // Sin cuentas cargadas: entonces no hay ningún preferido, que es el caso más común al empezar.
   lasCuentasLlevan();
   // El Padrón de la base, con fichas de dos Prestadoras, y la base contestando lo que la consulta
-  // le pide. Es la única forma de que esta prueba pueda fallar: el motor entra con la llave de
+  // le pide. Es la única forma de que esta prueba pueda fallar: el backend entra con la llave de
   // servicio, así que si la ruta se olvida el filtro de Prestadora, la ficha ajena aparece. Una
   // base de mentira que devuelve vacío por su cuenta aprobaría igual a una ruta sin filtro.
   respuestas.set('GET /rest/v1/legajos', (_cuerpo, url) => {

@@ -351,7 +351,7 @@ panelLiquidacionesRouter.get('/', requiereRolPanel, requierePermiso(PERMISO_LECT
   if (error) return responderError(res, error);
 
   // El nombre se busca aparte y filtrando por Prestadora, en vez de traerlo colgado de la
-  // liquidación: el motor entra con la clave de servicio, o sea sin las reglas de acceso de
+  // liquidación: el backend entra con la clave de servicio, o sea sin las reglas de acceso de
   // la base, y acá el aislamiento entre Prestadoras lo garantiza cada consulta o no lo
   // garantiza nadie (CLAUDE.md §5).
   const nombres = await nombresDeAsistentes(req.usuarioPanel.prestadoraId, (data || []).map((l) => l.asistente_id));

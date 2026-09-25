@@ -3,7 +3,7 @@ import { supabase } from '../db/connection.js';
 
 // QUÉ ES UN EQUIPO NUEVO. Un aparato que no tiene llave guardada y desde el que nunca se entró.
 // Nada más que eso: no se reconoce el navegador, no se mira desde dónde se conecta y no se guarda
-// ningún dato del aparato. Lo único que hay es una marca al azar que emite el motor, que el
+// ningún dato del aparato. Lo único que hay es una marca al azar que emite el backend, que el
 // navegador conserva, y de la que acá queda la huella.
 //
 // POR QUÉ NO ALCANZA `llaves_de_dispositivo`. Ésa es la llave de huella o cara de las dos

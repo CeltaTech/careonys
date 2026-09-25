@@ -1,16 +1,16 @@
-/* Traer de la base las frases de los avisos, una vez, al arrancar el motor.
+/* Traer de la base las frases de los avisos, una vez, al arrancar el backend.
    ==========================================================================
 
    POR QUÉ ESTÁ SEPARADO DE `mensajesDelSistema.js`. Ese archivo guarda las frases y no sabe de
-   dónde salieron: así lo puede cargar el motor desde la base, y una prueba desde lo que siembra la
+   dónde salieron: así lo puede cargar el backend desde la base, y una prueba desde lo que siembra la
    migración, sin levantar ninguna base. Acá está lo único que toca la base.
 
    POR QUÉ SE CARGA TODO JUNTO Y NO AVISO POR AVISO. Un aviso se arma en el medio de mandar un
    correo, y ahí no hay lugar para esperar una consulta. Son unos cientos de renglones cortos: entran
    en memoria sin que se note.
 
-   SI LA CARGA FALLA, EL MOTOR ARRANCA IGUAL. Los avisos van a salir con la marca de frase faltante
-   y el aviso queda en el registro, que es exactamente lo que se quiere ver. Un motor que no levanta
+   SI LA CARGA FALLA, EL BACKEND ARRANCA IGUAL. Los avisos van a salir con la marca de frase faltante
+   y el aviso queda en el registro, que es exactamente lo que se quiere ver. Un backend que no levanta
    porque no pudo leer un texto deja sin funcionar todo lo demás, que sí anda. */
 
 import { supabase } from '../db/connection.js';
@@ -30,8 +30,8 @@ export async function cargarMensajesDelSistema() {
   // De a mil, porque la lectura tiene un tope por pedido y el catálogo va a crecer.
   for (;;) {
     // SIN PRESTADORA A PROPÓSITO
-    // El catálogo se lee una sola vez, al arrancar el motor, cuando todavía no hay ninguna persona
-    // adentro y por lo tanto ninguna Prestadora de la cual hablar. Acotarlo a una dejaría al motor
+    // El catálogo se lee una sola vez, al arrancar el backend, cuando todavía no hay ninguna persona
+    // adentro y por lo tanto ninguna Prestadora de la cual hablar. Acotarlo a una dejaría al backend
     // sin los textos de las demás.
     //
     // Y lo leído no se mezcla: cada frase propia queda guardada bajo el identificador de su

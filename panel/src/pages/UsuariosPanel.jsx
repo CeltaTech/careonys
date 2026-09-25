@@ -237,7 +237,7 @@ function EditarUsuarioPanel({ usuario, onClose, onActualizado }) {
   const [borrando, setBorrando] = useState(false);
   const [error, setError] = useState(null);
 
-  /* Hasta dónde llega esta cuenta. Vive en su propia tabla y se lee y se escribe por el motor, que
+  /* Hasta dónde llega esta cuenta. Vive en su propia tabla y se lee y se escribe por el backend, que
      deja guardados exactamente los lugares que quedaron tildados. Mientras no se pudo leer no se
      manda nada al guardar: escribir una lista que no se llegó a cargar dejaría a la coordinadora
      sin alcance sin que nadie lo haya decidido. */

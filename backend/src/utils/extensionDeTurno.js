@@ -111,7 +111,7 @@ export const PASOS_DE_LA_BUSQUEDA = {
  * Los pasos ya dados, en el orden en que pasaron.
  *
  * Recibe hechos ya leídos de la base, no los busca: así se prueba sin base y así la pantalla no
- * depende de cuántas consultas haga el motor.
+ * depende de cuántas consultas haga el backend.
  */
 export function pasosDeLaBusqueda({ relevo, coordinacionAvisada, escalado }) {
   const pasos = [];

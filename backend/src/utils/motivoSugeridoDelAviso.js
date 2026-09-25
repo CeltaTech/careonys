@@ -29,7 +29,7 @@ import { MODELO_IA } from '../config/modeloIA.js';
    LO QUE SE DICE NO SE GUARDA NI SE REGISTRA. La frase puede traer el diagnóstico de quien
    llama o el de un familiar suyo, que es dato de salud de una persona que no es Paciente de
    nadie. Viaja al modelo para esta pregunta y no queda escrito en ningún lado: ni en la base
-   —lo que se guarda es el motivo elegido, como siempre— ni en el registro del motor, ni
+   —lo que se guarda es el motivo elegido, como siempre— ni en el registro del backend, ni
    siquiera cuando algo falla (`celtatech/CLAUDE.md` §6).
 
    SIN EL TRATO, Y A PROPÓSITO. Los demás pedidos al modelo le suman `TRATO_IA` porque lo que

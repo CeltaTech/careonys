@@ -6,7 +6,7 @@ import { MINIMO_DE_CARACTERES, claveAceptable } from '../lib/reglaDeClave';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-// Los tres motivos que contesta el motor son definitivos: con ese mismo enlace, reintentar no
+// Los tres motivos que contesta el backend son definitivos: con ese mismo enlace, reintentar no
 // sirve nunca. Cuando llega uno, el formulario se retira en vez de quedar invitando a un intento
 // que ya se sabe que va a fallar.
 const MOTIVOS_SIN_REINTENTO = ['token_invalido', 'token_ya_usado', 'token_vencido'];
@@ -50,7 +50,7 @@ export default function ActivarCuenta() {
         body: JSON.stringify({ token, password }),
       });
       const resultado = await respuesta.json();
-      // La explicación viene del motor, que es el único que sabe qué pasó: manda un motivo y
+      // La explicación viene del backend, que es el único que sabe qué pasó: manda un motivo y
       // acá se busca la frase en las traducciones. Esta pantalla no compara códigos.
       if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
       setActivada(true);

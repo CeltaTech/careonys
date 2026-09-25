@@ -5,7 +5,7 @@
  *   node --test backend/src/routes/__tests__/panelVerificacionIdentidad.test.js
  *
  * POR QUÉ EXISTE ESTA PRUEBA. Adentro del depósito `fotos-identidad` hay imágenes de documentos de
- * identidad, y el depósito no tiene ninguna política: lo escribe y lo lee el motor con la llave
+ * identidad, y el depósito no tiene ninguna política: lo escribe y lo lee el backend con la llave
  * maestra (`../panelVerificacionIdentidad.js`). O sea que lo único que separa una Prestadora de
  * otra son los filtros escritos en esta ruta, y dos decisiones más: que el tipo de foto salga de
  * una lista cerrada —si no, quien manda el pedido elige el nombre del archivo adentro del
@@ -31,7 +31,7 @@ const ASISTENTE = '44444444-4444-4444-4444-444444444444';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió, con la dirección entera: los filtros van ahí. */
+/** Todo lo que el backend le pidió, con la dirección entera: los filtros van ahí. */
 let llamadas = [];
 
 let rolDelUsuario = 'admin_prestadora';
@@ -108,12 +108,12 @@ const { TIPO_DOCUMENTO, TIPO_PERFIL, rutaEnElDeposito } = await import('../../ut
 const app = express();
 app.use(express.json());
 app.use('/api/panel/verificacion-identidad', panelVerificacionIdentidadRouter);
-const motor = app.listen(0, '127.0.0.1');
-await new Promise((listo) => motor.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${motor.address().port}/api/panel/verificacion-identidad`;
+const backend = app.listen(0, '127.0.0.1');
+await new Promise((listo) => backend.on('listening', listo));
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/verificacion-identidad`;
 
 after(() => {
-  motor.close();
+  backend.close();
   baseFalsa.close();
 });
 

@@ -12,7 +12,7 @@
 //
 // ESTE ARCHIVO EXISTE TRES VECES
 // El original es este. Las copias viven en la aplicación del Asistente y en el
-// motor, porque cada carpeta se publica por su cuenta y no puede importar
+// backend, porque cada carpeta se publica por su cuenta y no puede importar
 // código de las otras. La lista está en `scripts/copias_entre_apps.mjs`,
 // `scripts/sincronizar_copias.mjs` las vuelve a copiar y
 // `scripts/verificar_identidad.mjs` corta el build si alguna se despegó.

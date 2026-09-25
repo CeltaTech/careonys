@@ -101,7 +101,7 @@ export function PerfilTab({ asistente, onActualizado }) {
   const [mensajeReenvio, setMensajeReenvio] = useState(null);
 
   /* Dónde acepta trabajar esta persona. No está en la ficha: está en una tabla que la cruza con
-     cada lugar, y por eso se lee y se escribe por el motor, que deja guardados exactamente los que
+     cada lugar, y por eso se lee y se escribe por el backend, que deja guardados exactamente los que
      quedaron tildados. Mientras no se pudo leer, no se manda nada al guardar: escribir una lista
      que no se llegó a cargar borraría los lugares que la persona ya tenía. */
   const [lugares, setLugares] = useState([]);
@@ -165,10 +165,10 @@ export function PerfilTab({ asistente, onActualizado }) {
       ...(esAdmin && {
         /* Dónde vive, escrito para que lo lea una persona. Las coordenadas (`lat`/`lng`) no se
            cargan a mano acá: se sacan de esta dirección con el servicio del país de la
-           Prestadora, que vive en el motor (`backend/src/geocodificacion/`) y hoy corre solo en
-           las altas. Esta pantalla escribe derecho contra la base, sin pasar por el motor, así
+           Prestadora, que vive en el backend (`backend/src/geocodificacion/`) y hoy corre solo en
+           las altas. Esta pantalla escribe derecho contra la base, sin pasar por el backend, así
            que un domicilio corregido desde acá deja las coordenadas como estaban — mientras
-           esta pantalla no guarde a través del motor, eso no cambia.
+           esta pantalla no guarde a través del backend, eso no cambia.
            Viaja solo cuando la pantalla lo tenía para mostrar: la vista que lee el Coordinador
            (`asistentes_coordinador`) no trae esta columna, así que mandarlo igual borraría un
            domicilio ya cargado que esa pantalla nunca llegó a mostrar. */
@@ -223,7 +223,7 @@ export function PerfilTab({ asistente, onActualizado }) {
       }
     }
 
-    // Los lugares van por el motor, que es el único que escribe esa tabla.
+    // Los lugares van por el backend, que es el único que escribe esa tabla.
     if (estadoLugares === 'listo') {
       try {
         await llamarApiLugaresDeTrabajo(`/asistente/${asistente.id}`, {

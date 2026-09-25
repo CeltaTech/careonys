@@ -30,7 +30,7 @@ const LARGO_DE_TEXTO_LIBRE = 500;
 //
 // Se cuenta sobre el texto `AAAA-MM-DD` y no con `new Date()`: una fecha de nacimiento es un día
 // del calendario, y `new Date('2008-09-15').getFullYear()` contesta según el huso horario de la
-// máquina donde corra el motor, así que en un servidor al oeste el mismo cumpleaños cae un día
+// máquina donde corra el backend, así que en un servidor al oeste el mismo cumpleaños cae un día
 // antes y alguien queda menor de edad por estar encendido en otro país.
 export function aniosCumplidos(fechaNacimiento, fechaDelHecho) {
   const [anioN, mesN, diaN] = fechaNacimiento.split('-').map(Number);

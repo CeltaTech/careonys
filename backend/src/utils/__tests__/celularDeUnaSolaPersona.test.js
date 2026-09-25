@@ -6,7 +6,7 @@
  * QUÉ SE PRUEBA ACÁ Y QUÉ NO. La unicidad la impone la base con un índice único
  * (`supabase/migrations/20261004100000_un_celular_es_de_una_sola_persona.sql`), y eso no se prueba
  * desde acá: sin base levantada, nada de lo que hay en este archivo puede comprobar un índice. Lo
- * que se prueba es la segunda red del motor, que es la que contesta con una frase entendible, y cada
+ * que se prueba es la segunda red del backend, que es la que contesta con una frase entendible, y cada
  * caso está por el error que evita:
  *
  *   1. QUE EL MISMO CELULAR ENTRE EN DOS PERSONAS. Es el defecto que se viene a corregir.
@@ -47,7 +47,7 @@ const LINEA_FIJA = '+54 11 5555-1234';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
-/** Todo lo que el motor le pidió a la base, con la dirección entera. */
+/** Todo lo que el backend le pidió a la base, con la dirección entera. */
 let llamadas = [];
 
 const baseFalsa = createServer((req, res) => {

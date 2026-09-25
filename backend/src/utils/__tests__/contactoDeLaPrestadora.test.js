@@ -3,7 +3,7 @@
  *
  *   npm test --prefix backend
  *
- * QUÉ SE PRUEBA ACÁ. Que se pregunte por la Prestadora de quien mira y por ninguna otra —el motor
+ * QUÉ SE PRUEBA ACÁ. Que se pregunte por la Prestadora de quien mira y por ninguna otra —el backend
  * entra con la llave de servicio y se saltea la protección por fila, así que ese filtro es lo
  * único que separa una Prestadora de otra—; que un canal cargado a medias no cuente como canal; y
  * que una consulta que falla no rompa la pantalla ni invente un teléfono.

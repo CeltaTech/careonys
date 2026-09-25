@@ -1,19 +1,19 @@
 import { supabase } from './supabaseClient';
 
-// Los nombres de los asuntos: copia del original del motor, y se reexportan para que una pantalla
+// Los nombres de los asuntos: copia del original del backend, y se reexportan para que una pantalla
 // importe el canal y sus asuntos del mismo lugar.
 export { ASUNTOS } from './asuntosEnVivo';
 
-/* El único canal abierto del Panel contra el motor.
+/* El único canal abierto del Panel contra el backend.
    ==========================================================================
 
-   QUÉ ES. Una conexión sola, compartida por todas las pantallas, por la que el motor avisa que
+   QUÉ ES. Una conexión sola, compartida por todas las pantallas, por la que el backend avisa que
    algo cambió. El aviso no trae ningún dato: dice el asunto, y quien se suscribió vuelve a pedir
-   lo que necesita por la ruta de siempre. El porqué de esa forma está del lado del motor, en
+   lo que necesita por la ruta de siempre. El porqué de esa forma está del lado del backend, en
    `backend/src/avisosEnVivo/canal.js`.
 
    POR QUÉ NO `EventSource`. Porque no deja poner encabezados, y sin encabezado de autorización la
-   única manera de que el motor sepa quién llama sería mandar el pase en la dirección. Un pase en
+   única manera de que el backend sepa quién llama sería mandar el pase en la dirección. Un pase en
    la dirección queda escrito en el registro de cualquier intermediario y en el historial del
    navegador. Con `fetch` el pase viaja donde tiene que viajar, y leer el formato de los avisos
    —que es texto plano separado por renglones en blanco— son las veinte líneas de `partir()`.
@@ -21,20 +21,20 @@ export { ASUNTOS } from './asuntosEnVivo';
    UNA SOLA CONEXIÓN, NO UNA POR PANTALLA. Quien se suscribe la abre si no estaba abierta, y la
    última que se va la cierra. Dos pantallas escuchando dos asuntos distintos comparten la misma.
 
-   SI SE CAE, VUELVE A INTENTAR, CADA VEZ MÁS ESPACIADO. Un motor que se está reiniciando no
+   SI SE CAE, VUELVE A INTENTAR, CADA VEZ MÁS ESPACIADO. Un backend que se está reiniciando no
    tiene que recibir un intento por segundo de cada Panel abierto. Y en cuanto una conexión se
    establece, la espera vuelve al principio: lo que se está midiendo es cuánto hace que no hay
    canal, no cuántas veces se intentó en toda la sesión.
 
    Y QUIEN SE SUSCRIBE NO SE FÍA DE ESTO. El canal hace que el aviso llegue en el momento; que
-   llegue siempre no lo garantiza —el motor puede estar corriendo en más de un proceso, o la
+   llegue siempre no lo garantiza —el backend puede estar corriendo en más de un proceso, o la
    conexión puede estar cayéndose sin que el navegador lo note—. Por eso quien se suscribe
    conserva su propia vuelta de respaldo, espaciada. */
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 /** Cuánto se espera antes de volver a intentar, y hasta dónde crece. El primer reintento es casi
- *  inmediato porque la caída más común es el propio motor publicándose de nuevo. */
+ *  inmediato porque la caída más común es el propio backend publicándose de nuevo. */
 const ESPERA_INICIAL_MS = 1000;
 const ESPERA_MAXIMA_MS = 60 * 1000;
 
@@ -58,7 +58,7 @@ export function partir(pendiente, texto) {
 }
 
 /** De un aviso crudo, el asunto. Los renglones que empiezan con dos puntos son comentarios del
- *  protocolo —la señal de vida del motor— y no avisan de nada. */
+ *  protocolo —la señal de vida del backend— y no avisan de nada. */
 export function asuntoDe(aviso) {
   for (const renglon of aviso.split('\n')) {
     if (renglon.startsWith('event:')) return renglon.slice('event:'.length).trim();

@@ -117,7 +117,7 @@ test('una cuenta de intentos rota no deja mandar para siempre', () => {
 // El motivo que se muestra
 // ---------------------------------------------------------------------------
 
-test('el motivo que se guarda es una situación del catálogo, nunca el texto del motor', () => {
+test('el motivo que se guarda es una situación del catálogo, nunca el texto del backend', () => {
   const fallido = conIntentoFallido(item(), 'duplicado');
   assert.equal(fallido.situacion, 'duplicado');
   // Sin situación clasificada queda la genérica: nunca se guarda vacío, porque entonces la

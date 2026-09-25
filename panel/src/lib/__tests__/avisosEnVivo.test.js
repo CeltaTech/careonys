@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { partir, asuntoDe, ASUNTOS } from '../avisosEnVivo';
 
-/* Lo que se prueba acá es la lectura del formato que manda el motor. La red entrega los pedazos
+/* Lo que se prueba acá es la lectura del formato que manda el backend. La red entrega los pedazos
    donde se le ocurre: un aviso puede llegar partido al medio y dos avisos pueden llegar juntos.
    Si esto se lee mal, la pantalla no se entera de nada y no hay ningún error a la vista. */
 
@@ -40,7 +40,7 @@ describe('asuntoDe', () => {
     );
   });
 
-  // La señal de vida del motor llega como comentario del protocolo. Tomarla por un aviso haría
+  // La señal de vida del backend llega como comentario del protocolo. Tomarla por un aviso haría
   // que la pantalla volviera a pedir la lista cada veinte segundos sin que hubiera pasado nada.
   it('no ve ningún asunto en un comentario del protocolo', () => {
     expect(asuntoDe(': sigo acá')).toBe(null);

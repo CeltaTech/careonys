@@ -1,7 +1,7 @@
 /* De qué avisa el canal en vivo. El original vive acá y el Panel tiene una copia idéntica.
    ==========================================================================
 
-   ESTÁ APARTE DEL CANAL PORQUE LO NECESITAN LOS DOS LADOS. El motor empuja uno de estos nombres y
+   ESTÁ APARTE DEL CANAL PORQUE LO NECESITAN LOS DOS LADOS. El backend empuja uno de estos nombres y
    el Panel se suscribe a uno de estos nombres; escrito en cada lado por separado, un nombre mal
    tipeado no rompe nada y deja una pantalla que no se actualiza nunca. Las dos carpetas se
    despliegan por su cuenta y no pueden importarse entre sí, así que el punto único de verdad es

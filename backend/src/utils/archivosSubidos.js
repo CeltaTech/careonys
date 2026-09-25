@@ -1,7 +1,7 @@
 /* Cómo se nombra y dónde se guarda un archivo que sube alguien.
    ==========================================================================
 
-   POR QUÉ EXISTE ESTE ARCHIVO. Las seis rutas del motor que reciben un archivo armaban su ruta
+   POR QUÉ EXISTE ESTE ARCHIVO. Las seis rutas del backend que reciben un archivo armaban su ruta
    del depósito a mano, y la misma línea que traduce el tipo de archivo a una extensión estaba
    escrita cinco veces. Peor todavía en la Matrícula: la ruta se armaba igual en dos rutas
    distintas —la del teléfono del Asistente y la del Panel— y una tercera la comprobaba con otra

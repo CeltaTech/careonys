@@ -141,7 +141,7 @@ describe('la dirección que no se puede ubicar en la puerta', () => {
 
   it('el servicio reconoce la calle pero no el número: no se guarda un punto aproximado', async () => {
     // Este es el caso que parece un dato bueno y no lo es: un punto en el medio de la cuadra
-    // cae adentro o afuera de los 150 metros del aviso de check-in por azar.
+    // cae adentro o afuera de los 150 metros de la alerta de check-in por azar.
     respuestaDelServicio = encontrada({ altura: null });
     const ubicacion = await coordenadasDeDomicilio({ prestadoraId: PRESTADORA, direccion: DIRECCION });
     assert.deepEqual(ubicacion, { lat: null, lng: null });

@@ -7,7 +7,7 @@ import { comprobarFirma, MOTIVO } from './firmaWebhook.js';
 
 const API_BASE = process.env.STRIPE_API_BASE || 'https://api.stripe.com/v1';
 
-/** Stripe firma sus avisos, así que la Prestadora tiene que cargar el secreto de firma del
+/** Stripe firma lo que manda, así que la Prestadora tiene que cargar el secreto de firma del
  *  endpoint además de la credencial de cobro. El Panel lee esta marca para saber si le pide
  *  ese segundo dato o no (regla 12: la lista de quién firma vive en el adaptador, no
  *  copiada en la pantalla). */
@@ -101,7 +101,7 @@ export async function cancelarSuscripcion({ credencial, referenciaExterna }) {
 }
 
 /**
- * Comprueba que el aviso vino de Stripe y recién ahí lo interpreta (pendiente #159).
+ * Comprueba que el cobro vino de Stripe y recién ahí lo interpreta (pendiente #159).
  *
  * Stripe manda la cabecera `Stripe-Signature` con la forma `t=<instante>,v1=<firma>`, y la
  * firma es el HMAC-SHA256 de `<instante>.<cuerpo crudo>` con el secreto de firma de ese
@@ -128,7 +128,7 @@ export function verificarWebhook({ secretoFirma, headers, cuerpoCrudo, body, aho
 
   // Qué identificador se devuelve. Lo que este producto guardó al dar de alta es la suscripción
   // de Stripe, no la factura de cada mes: la factura nace del lado de Stripe y acá no existe
-  // hasta que llega este aviso. Así que en el aviso de una factura se mira a qué suscripción
+  // hasta que llega esto. Así que cuando lo que entra es una factura se mira a qué suscripción
   // pertenece, y sólo si no lo dice se usa el identificador del objeto —que es lo correcto para
   // `customer.subscription.deleted`, donde el objeto *es* la suscripción—. Stripe pone ese dato
   // en dos lugares según la versión de su API y se prueban los dos, porque devolver el

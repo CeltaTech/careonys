@@ -10,7 +10,7 @@ import {
   ACCION_CAMBIO_DE_PERMISOS,
   registrarActividad,
 } from '../utils/registroDeActividad.js';
-import { avisoDelCatalogo, mezclarAvisosConCatalogo, sePuedeApagar, VALORES_POR_DEFECTO_AVISO } from '../utils/catalogoAvisos.js';
+import { mensajeDelCatalogo, mezclarMensajesConCatalogo, sePuedeApagar, VALORES_POR_DEFECTO_MENSAJE } from '../utils/catalogoAvisos.js';
 import { cosaDelCatalogo, mezclarVisibilidadConCatalogo } from '../utils/catalogoVisibilidad.js';
 import { mensajeDeTextoQueSeGuarda } from '../utils/viaMensajeDeTexto.js';
 import { hayProveedorDeMensajeDeTexto, proveedorDeMensajeDeTexto } from '../utils/mensajeDeTexto.js';
@@ -57,7 +57,7 @@ import {
   hayReenvioConfigurado,
   respuestasConfirmadas,
 } from '../utils/reenvioDeRespuestas.js';
-import { LIMITES_AVISO_PREVIO_GUARDIA } from '../utils/revisarRecordatoriosPush.js';
+import { LIMITES_PREAVISO_GUARDIA } from '../utils/revisarRecordatoriosPush.js';
 import { reglaDePagoDe, revisarReglaDePago, soloLoQueCorreDelPago } from '../utils/formaDePago.js';
 import {
   frecuenciaDePagoDe,
@@ -583,9 +583,9 @@ panelConfiguracionRouter.delete('/personal-emergencia/:id', async (req, res) => 
 // (supabase/migrations/) — antes era una fila global por
 // evento, compartida sin darse cuenta por todas las prestadoras licenciatarias.
 //
-// La pantalla muestra SIEMPRE los ocho avisos del catálogo (utils/catalogoAvisos.js), tenga
+// La pantalla muestra SIEMPRE los ocho mensajes del catálogo (utils/catalogoAvisos.js), tenga
 // o no tenga fila guardada cada uno. Antes devolvía solo las filas existentes, así que un
-// aviso sin sembrar era invisible y no se podía apagar aunque se siguiera mandando.
+// mensaje sin sembrar era invisible y no se podía apagar aunque se siguiera mandando.
 //
 // Y la vía «mensaje de texto» sale siempre en la lista, con o sin proveedor contratado. Sin
 // proveedor viaja marcada como no disponible, y la pantalla la muestra sin dejar elegirla: el
@@ -599,7 +599,7 @@ panelConfiguracionRouter.get('/notificaciones', async (req, res) => {
   if (error) return responderError(res, error);
 
   const hayProveedor = await hayProveedorDeMensajeDeTexto(req.usuarioPanel.prestadoraId);
-  res.json({ notificaciones: mezclarAvisosConCatalogo(data, { hayProveedorDeMensajeDeTexto: hayProveedor }) });
+  res.json({ notificaciones: mezclarMensajesConCatalogo(data, { hayProveedorDeMensajeDeTexto: hayProveedor }) });
 });
 
 // Cómo está la vía del mensaje de texto en esta Prestadora. Es lo que la pantalla necesita para
@@ -626,11 +626,11 @@ panelConfiguracionRouter.get('/mensaje-de-texto', async (req, res) => {
 });
 
 // Inserción-o-actualización, no actualización a secas: la primera vez que la Prestadora toca
-// un aviso, la fila todavía no existe y un UPDATE no hacía nada (guardaba en silencio y no
+// un mensaje, la fila todavía no existe y un UPDATE no hacía nada (guardaba en silencio y no
 // guardaba nada). La descripción sale del catálogo, nunca del navegador.
 panelConfiguracionRouter.patch('/notificaciones/:evento', async (req, res) => {
-  const aviso = avisoDelCatalogo(req.params.evento);
-  if (!aviso) return res.status(400).json({ error: 'Mensaje desconocido' });
+  const mensaje = mensajeDelCatalogo(req.params.evento);
+  if (!mensaje) return res.status(400).json({ error: 'Mensaje desconocido' });
 
   const { emails, activo, whatsapp_activo, mensaje_de_texto_activo, notificar_familia, plantilla_whatsapp_id } = req.body;
 
@@ -641,9 +641,9 @@ panelConfiguracionRouter.patch('/notificaciones/:evento', async (req, res) => {
 
   // La plantilla se guarda sólo si es de esta Prestadora. El identificador viene del navegador, y
   // el backend entra a la base con la llave de servicio: sin esta comprobación, una Prestadora podría
-  // mandar sus avisos con la plantilla de otra.
+  // mandar sus mensajes con la plantilla de otra.
   let plantillaId = null;
-  if (aviso.admite_whatsapp && plantilla_whatsapp_id) {
+  if (mensaje.admite_whatsapp && plantilla_whatsapp_id) {
     const { data: plantilla } = await supabase
       .from('plantillas_whatsapp')
       .select('id')
@@ -657,21 +657,21 @@ panelConfiguracionRouter.patch('/notificaciones/:evento', async (req, res) => {
   const { error } = await supabase.from('configuracion_notificaciones').upsert(
     {
       prestadora_id: req.usuarioPanel.prestadoraId,
-      evento: aviso.evento,
-      descripcion: aviso.descripcion,
-      emails: Array.isArray(emails) ? emails.map((correo) => String(correo).trim()).filter(Boolean) : [...VALORES_POR_DEFECTO_AVISO.emails],
-      // Un aviso que la persona está esperando para poder seguir no se apaga aunque el navegador
+      evento: mensaje.evento,
+      descripcion: mensaje.descripcion,
+      emails: Array.isArray(emails) ? emails.map((correo) => String(correo).trim()).filter(Boolean) : [...VALORES_POR_DEFECTO_MENSAJE.emails],
+      // Un mensaje que la persona está esperando para poder seguir no se apaga aunque el navegador
       // lo mande apagado: la pantalla no ofrece esa casilla, y el emisor tampoco la obedecería.
-      activo: sePuedeApagar(aviso) ? (activo === undefined ? VALORES_POR_DEFECTO_AVISO.activo : Boolean(activo)) : true,
-      // Un canal que este aviso no usa se guarda apagado aunque el navegador lo mande
-      // encendido: dejarlo prendido haría creer que el aviso sale por ahí, y no sale.
-      whatsapp_activo: aviso.admite_whatsapp ? Boolean(whatsapp_activo) : false,
+      activo: sePuedeApagar(mensaje) ? (activo === undefined ? VALORES_POR_DEFECTO_MENSAJE.activo : Boolean(activo)) : true,
+      // Un canal que este mensaje no usa se guarda apagado aunque el navegador lo mande
+      // encendido: dejarlo prendido haría creer que el mensaje sale por ahí, y no sale.
+      whatsapp_activo: mensaje.admite_whatsapp ? Boolean(whatsapp_activo) : false,
       mensaje_de_texto_activo: mensajeDeTextoQueSeGuarda({
-        aviso,
+        mensaje,
         hayProveedor,
         pedido: mensaje_de_texto_activo,
       }),
-      notificar_familia: aviso.admite_familia ? Boolean(notificar_familia) : false,
+      notificar_familia: mensaje.admite_familia ? Boolean(notificar_familia) : false,
       plantilla_whatsapp_id: plantillaId,
     },
     { onConflict: 'evento,prestadora_id' }
@@ -699,11 +699,11 @@ panelConfiguracionRouter.patch('/aviso-previo-guardia', async (req, res) => {
   const { minutos } = req.body;
   if (
     !Number.isInteger(minutos)
-    || minutos < LIMITES_AVISO_PREVIO_GUARDIA.minimo
-    || minutos > LIMITES_AVISO_PREVIO_GUARDIA.maximo
+    || minutos < LIMITES_PREAVISO_GUARDIA.minimo
+    || minutos > LIMITES_PREAVISO_GUARDIA.maximo
   ) {
     return res.status(400).json({
-      error: `La anticipación tiene que ser un número entero de minutos, entre ${LIMITES_AVISO_PREVIO_GUARDIA.minimo} y ${LIMITES_AVISO_PREVIO_GUARDIA.maximo}.`,
+      error: `La anticipación tiene que ser un número entero de minutos, entre ${LIMITES_PREAVISO_GUARDIA.minimo} y ${LIMITES_PREAVISO_GUARDIA.maximo}.`,
     });
   }
   const { error } = await supabase
@@ -1107,7 +1107,7 @@ panelConfiguracionRouter.get('/facturacion-familias', async (req, res) => {
       // Lo mismo para el secreto con el que firma el software de facturación, que es otro: son dos
       // software distintos y pueden ser de dos proveedores que no se conocen.
       aviso_de_facturacion_conectado: !!data?.secreto_del_aviso_de_facturacion_secret_id,
-      // Para que la pantalla pueda mostrar a qué dirección tiene que mandar sus avisos el otro
+      // Para que la pantalla pueda mostrar a qué dirección tiene que escribir el otro
       // software. No es un secreto: sin el secreto de firma, conocerla no sirve de nada.
       prestadora_id: req.usuarioPanel.prestadoraId,
     },
@@ -1152,7 +1152,7 @@ panelConfiguracionRouter.put('/facturacion-familias', async (req, res) => {
   res.json({ ok: true });
 });
 
-// El secreto con el que el otro software de créditos y cobranzas firma sus avisos de restricción.
+// El secreto con el que el otro software de créditos y cobranzas firma lo que entrega.
 //
 // Se cierra más que el resto de la configuración, por lo mismo que las credenciales de WhatsApp:
 // es una llave de la Prestadora, y Superadmin es un rol técnico de CeltaTech. Quien lo carga es
@@ -1418,7 +1418,7 @@ panelConfiguracionRouter.patch('/whatsapp', soloAdminDePrestadora, async (req, r
     if (errorToken) return responderError(res, errorToken);
   }
 
-  // Los dos secretos con los que el backend le cree a un aviso entrante de Meta (pendiente #165):
+  // Los dos secretos con los que el backend le cree a lo que entra de Meta (pendiente #165):
   // el de la aplicación, con el que se comprueba la firma de cada mensaje, y el token del
   // saludo inicial, que ahora es de esta Prestadora y no uno solo para todo el producto. Los
   // dos van a la caja fuerte y no vuelven a mostrarse acá, igual que el token de acceso.
@@ -1447,7 +1447,7 @@ panelConfiguracionRouter.patch('/whatsapp', soloAdminDePrestadora, async (req, r
 // Prestadora manda desde una dirección propia bajo el dominio del producto, que le fija el alta
 // (`utils/casillaDeEnvio.js`) y que despacha el mismo servicio para todas. Lo único que la
 // Prestadora elige es **adónde quiere que le lleguen las respuestas**, porque esa dirección sólo
-// manda: quien le conteste un aviso le estaría escribiendo a un buzón que no existe
+// manda: quien le conteste un mensaje le estaría escribiendo a un buzón que no existe
 // (`utils/reenvioDeRespuestas.js`).
 //
 // Y por eso tampoco lleva el candado angosto que llevaba la contraseña: la casilla de respuestas
@@ -1588,7 +1588,7 @@ panelConfiguracionRouter.post('/whatsapp/plantillas/redactar', async (req, res) 
   const prestadoraId = req.usuarioPanel.prestadoraId;
   try {
     // El idioma no se le pregunta a la pantalla: es el de la Prestadora, resuelto donde ya se
-    // resuelve para todos los avisos.
+    // resuelve para todos los mensajes.
     const propuesta = await redactarPlantillaWhatsapp({
       proposito,
       categoria,
@@ -1671,9 +1671,9 @@ panelConfiguracionRouter.post('/whatsapp/plantillas/:id/enviar-a-meta', async (r
   res.json({ ok: true, estado: resultado.estado });
 });
 
-// Preguntarle a Meta cómo quedaron las plantillas que ya salieron. El camino normal es el aviso
-// automático de Meta, que entra por `whatsappWebhook.js` y no le pide nada a nadie; esto es la
-// otra puerta, para cuando ese aviso no está conectado o se perdió uno. Se pregunta por todas en
+// Preguntarle a Meta cómo quedaron las plantillas que ya salieron. El camino normal es lo que
+// Meta manda sola, que entra por `whatsappWebhook.js` y no le pide nada a nadie; esto es la
+// otra puerta, para cuando esa entrada no está conectada o se perdió una. Se pregunta por todas en
 // un solo pedido y se escriben únicamente las que cambiaron.
 panelConfiguracionRouter.post('/whatsapp/plantillas/consultar-a-meta', async (req, res) => {
   let query = supabase
@@ -1723,7 +1723,7 @@ panelConfiguracionRouter.delete('/whatsapp/plantillas/:id', async (req, res) => 
   res.json({ ok: true });
 });
 
-// --- Catálogo de tipos de documento de Asistente (vencimientos a trackear) + plazo de aviso
+// --- Catálogo de tipos de documento de Asistente (vencimientos a trackear) + plazo de preaviso
 //     configurable por prestadora (pendiente #18 punto 1, docs/PLAN_HASTA_PRODUCCION.md — ver
 //     supabase/migrations/). El plazo vive en la tabla "prestadoras",
 //     de gestión exclusiva de superadmin por RLS (schema_multitenant_01.sql) — se expone acá
@@ -1765,7 +1765,7 @@ panelConfiguracionRouter.patch('/documentos-tipo/plazo-aviso', async (req, res) 
 });
 
 // --- Qué tan estricto es el control de matrícula en esta prestadora.
-//     Mismo motivo que el plazo de aviso de más arriba: el dato vive en la tabla "prestadoras",
+//     Mismo motivo que el plazo de preaviso de más arriba: el dato vive en la tabla "prestadoras",
 //     que por RLS solo superadmin puede modificar. El navegador no la puede escribir ni aunque
 //     lo intente; el backend sí, porque usa la service role key y acota siempre a la prestadora
 //     de quien pide. Los dos valores posibles los fija una restricción de la base

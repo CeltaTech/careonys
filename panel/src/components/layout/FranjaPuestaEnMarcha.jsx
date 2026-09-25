@@ -8,7 +8,7 @@ export const RUTA_PUESTA_EN_MARCHA = '/puesta-en-marcha';
    ==========================================================================
 
    POR QUÉ NO SE PUEDE CERRAR. Es el punto del pedido: la Prestadora tiene que terminar de
-   cargar lo suyo, y un aviso que se cierra con una cruz se cierra la primera vez y no se ve
+   cargar lo suyo, y un mensaje que se cierra con una cruz se cierra la primera vez y no se ve
    nunca más. Esta franja no lleva cruz y no guarda ningún «ya lo vi»: se apaga sola, y sólo
    cuando el último paso está hecho. No hay nada que descartar mientras el trabajo siga sin
    hacer, y no hay nada que mostrar cuando ya está.

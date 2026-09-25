@@ -4,7 +4,7 @@ import { supabase } from '../db/connection.js';
 //
 // Desde que una misma persona puede estar en varias Prestadoras, el Legajo de Asistente y el de
 // Familia tienen identificador propio, y ese número ya no es el de la cuenta. Todo lo que cuelga
-// del Legajo —guardias, matrículas, pacientes, avisos— guarda el del Legajo; lo de la persona
+// del Legajo —guardias, matrículas, pacientes, mensajes— guarda el del Legajo; lo de la persona
 // —cómo se llama, qué teléfono tiene, con qué entra— sigue estando en la cuenta.
 //
 // Preguntarle a `usuarios` con un número de Legajo no devuelve nada, y el defecto no se nota: la

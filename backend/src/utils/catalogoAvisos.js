@@ -1,37 +1,37 @@
-// Catálogo único de los avisos que emite Careonys.
+// Catálogo único de los mensajes del sistema que emite Careonys.
 //
-// ESTE ES EL ÚNICO LUGAR DONDE SE AGREGA UN AVISO NUEVO. La lista de acá abajo es la fuente de
+// ESTE ES EL ÚNICO LUGAR DONDE SE AGREGA UN MENSAJE NUEVO. La lista de acá abajo es la fuente de
 // verdad (CLAUDE.md §7 regla 12): la pantalla la muestra completa y las filas guardadas solo
-// aportan lo que la Prestadora eligió. Ningún aviso depende de que alguien se acuerde de
+// aportan lo que la Prestadora eligió. Ningún mensaje depende de que alguien se acuerde de
 // sembrarle una fila en `configuracion_notificaciones`: si eso hiciera falta, la fila que
-// faltara dejaría al aviso fuera de la pantalla de Avisos del Panel —sin poder apagarlo ni
-// redirigirlo a otro correo— aunque el aviso se siguiera mandando igual.
+// faltara dejaría al mensaje fuera de la pantalla de Avisos del Panel —sin poder apagarlo ni
+// redirigirlo a otro correo— aunque el mensaje se siguiera mandando igual.
 //
-// Para agregar un aviso: se suma una entrada acá y nada más. No hace falta ninguna migración
-// ni ninguna siembra — la fila se crea sola la primera vez que la Prestadora guarda ese aviso
+// Para agregar un mensaje: se suma una entrada acá y nada más. No hace falta ninguna migración
+// ni ninguna siembra — la fila se crea sola la primera vez que la Prestadora guarda ese mensaje
 // desde el Panel. Al revés también vale: un evento que se deja de emitir se saca de esta lista
 // y desaparece de la pantalla, aunque queden filas viejas en la base (se ignoran).
 //
 // Qué significa cada campo:
-//   evento          — la clave con la que el código emite el aviso.
+//   evento          — la clave con la que el código emite el mensaje.
 //   descripcion     — para qué sirve, en español. Es la que se guarda en la fila y la que ve
 //                     el Panel si todavía no hay traducción cargada para ese evento.
-//   admite_whatsapp — si el aviso puede salir por WhatsApp además de por correo. Solo pueden
+//   admite_whatsapp — si el mensaje puede salir por WhatsApp además de por correo. Solo pueden
 //                     los que pasan por `notificarCoordinador()` (utils/whatsapp.js) o por el
 //                     respaldo de `revisarRecordatoriosPush.js`; los que llaman directo a
 //                     `enviarEmailCoordinador()` no miran `whatsapp_activo` en ningún lado, así
 //                     que dibujarles la casilla sería ofrecer algo que no ocurre. Encender la
-//                     casilla no alcanza: el aviso lo empieza la Prestadora, y Meta esos mensajes
+//                     casilla no alcanza: el mensaje lo empieza la Prestadora, y Meta esos mensajes
 //                     los entrega solamente con una plantilla aprobada, la que la Prestadora le
 //                     elija en `plantilla_whatsapp_id`. El mensaje sale al número de WhatsApp de
 //                     contacto de la Prestadora, salvo que quien avisa tenga uno propio —el de la
 //                     Familia, el del respaldo— (`utils/whatsapp.js`).
-//   admite_familia  — si el aviso, además de al Coordinador, le puede llegar a la Familia.
+//   admite_familia  — si el mensaje, además de al Coordinador, le puede llegar a la Familia.
 //
 // La vía «mensaje de texto» no lleva campo propio acá: se deduce de `admite_whatsapp`, porque entra
 // como su respaldo y en el mismo punto de decisión. La regla y el porqué están en
 // utils/viaMensajeDeTexto.js, que es su punto único de verdad.
-//   se_puede_apagar — si la Prestadora puede decidir que este aviso no se mande. Casi todos sí.
+//   se_puede_apagar — si la Prestadora puede decidir que este mensaje no se mande. Casi todos sí.
 //                     Los que no son los que la persona está esperando en ese mismo momento para
 //                     poder seguir —hoy, el código de un solo uso del Círculo—: ahí la
 //                     configuración elige por qué canal sale, nunca si sale. Dibujarles la casilla
@@ -43,7 +43,7 @@
 //   guardia_sin_cerrar_grave       → utils/revisarNotificacionesCoordinador.js (notificarCoordinador)
 //   alerta_temprana_guardia        → utils/revisarNotificacionesCoordinador.js:65 (notificarCoordinador)
 //   incidente_relevo_sin_resolver  → utils/revisarNotificacionesCoordinador.js:113, 143, 213
-//                                    (notificarCoordinador) + :160 aviso a la Familia
+//                                    (notificarCoordinador) + :160 mensaje a la Familia
 //   alerta_ia_nivel2               → utils/revisarAlertasIA.js:114 (notificarCoordinador)
 //   vencimiento_documento_asistente→ utils/vencimientos.js (notificarCoordinador)
 //   aviso_rutina_asistente         → utils/revisarRecordatoriosPush.js:24 (push, con respaldo WhatsApp)
@@ -63,7 +63,7 @@
 
 import { admiteMensajeDeTexto, sePuedeElegirMensajeDeTexto } from './viaMensajeDeTexto.js';
 
-export const CATALOGO_AVISOS = [
+export const CATALOGO_MENSAJES = [
   {
     evento: 'guardia_sin_cubrir',
     descripcion: 'Una guardia próxima sigue sin Asistente asignado',
@@ -76,7 +76,7 @@ export const CATALOGO_AVISOS = [
     admite_whatsapp: true,
     // No le llega a la Familia. Todavía no le pasó nada a su Paciente: hay tiempo de sobra para
     // conseguir a alguien, y avisarle sería alarmarla por un problema que probablemente no llegue
-    // a existir. Si el turno igual queda sin nadie, el aviso que sale es otro.
+    // a existir. Si el turno igual queda sin nadie, el mensaje que sale es otro.
     admite_familia: false,
   },
   {
@@ -115,7 +115,7 @@ export const CATALOGO_AVISOS = [
     evento: 'alerta_temprana_guardia',
     descripcion: 'Alerta temprana de posible ausencia en una guardia',
     admite_whatsapp: true,
-    // Acá entra la salida sin entrada. Con el aviso encendido, la Familia se entera de que hay
+    // Acá entra la salida sin entrada. Con el mensaje encendido, la Familia se entera de que hay
     // algo pendiente sobre la guardia de su Paciente; el motivo y de dónde salió la alerta son
     // de adentro y no viajan.
     admite_familia: true,
@@ -171,7 +171,7 @@ export const CATALOGO_AVISOS = [
     evento: 'cambio_de_asistente',
     descripcion: 'Una guardia pasó a manos de otro Asistente',
     admite_whatsapp: true,
-    // A la Familia le cambia quién entra a su casa, así que este aviso le puede llegar. Que le
+    // A la Familia le cambia quién entra a su casa, así que este mensaje le puede llegar. Que le
     // llegue o no lo decide la Prestadora en la pantalla de Avisos, como en todos los demás: acá
     // se dice que el canal existe, nunca que está encendido.
     admite_familia: true,
@@ -193,9 +193,9 @@ export const CATALOGO_AVISOS = [
     descripcion: 'El Asistente que se quedó esperando el relevo avisó que no puede continuar',
     admite_whatsapp: true,
     // Tampoco por esta puerta. Acá además hay un turno que puede terminar sin nadie adentro, y esa
-    // conversación con la Familia la tiene la Prestadora, no un aviso automático.
+    // conversación con la Familia la tiene la Prestadora, no un mensaje automático.
     admite_familia: false,
-    // Es el aviso más urgente que emite el producto: la única persona que está tapando el agujero
+    // Es el mensaje más urgente que emite el producto: la única persona que está tapando el agujero
     // dice que ya no da más. Nunca se apaga.
     se_puede_apagar: false,
   },
@@ -210,32 +210,32 @@ export const CATALOGO_AVISOS = [
   },
 ];
 
-// Lo que vale para un aviso que todavía no tiene fila guardada. No son valores elegidos acá:
+// Lo que vale para un mensaje que todavía no tiene fila guardada. No son valores elegidos acá:
 // son exactamente los que aplica hoy el código cuando no encuentra la fila. `configuracionEvento()`
 // y `destinatariosEvento()` (utils/email.js) y `notificarCoordinador()` (utils/whatsapp.js) solo
-// se frenan si la fila existe Y dice `activo: false`; sin fila el aviso se manda igual, al correo
+// se frenan si la fila existe Y dice `activo: false`; sin fila el mensaje se manda igual, al correo
 // de contacto de la Prestadora. De ahí que `activo` arranque en verdadero y los demás en falso.
-export const VALORES_POR_DEFECTO_AVISO = {
+export const VALORES_POR_DEFECTO_MENSAJE = {
   emails: [],
   activo: true,
   whatsapp_activo: false,
-  // La vía nace apagada en todos los avisos y en todas las Prestadoras. Mientras no haya proveedor
+  // La vía nace apagada en todos los mensajes y en todas las Prestadoras. Mientras no haya proveedor
   // cargado tampoco se puede encender (utils/viaMensajeDeTexto.js).
   mensaje_de_texto_activo: false,
   notificar_familia: false,
-  // Sin plantilla elegida el aviso no sale por WhatsApp aunque el canal esté encendido: Meta no
+  // Sin plantilla elegida el mensaje no sale por WhatsApp aunque el canal esté encendido: Meta no
   // entrega como texto suelto un mensaje que empieza la Prestadora (utils/whatsapp.js).
   plantilla_whatsapp_id: null,
 };
 
-export function avisoDelCatalogo(evento) {
-  return CATALOGO_AVISOS.find((aviso) => aviso.evento === evento) ?? null;
+export function mensajeDelCatalogo(evento) {
+  return CATALOGO_MENSAJES.find((mensaje) => mensaje.evento === evento) ?? null;
 }
 
 // Punto único: la ausencia del campo significa que sí se puede apagar, y esa lectura no se
 // escribe dos veces.
-export function sePuedeApagar(aviso) {
-  return aviso?.se_puede_apagar !== false;
+export function sePuedeApagar(mensaje) {
+  return mensaje?.se_puede_apagar !== false;
 }
 
 // El catálogo completo con lo que cada Prestadora haya guardado encima. Función pura, sin base
@@ -248,41 +248,41 @@ export function sePuedeApagar(aviso) {
 // tiene con qué mandar un mensaje de texto. Sin él la vía igual sale en la lista —`admite_...` en
 // verdadero— y no se puede elegir —`..._disponible` en falso—. Ausente vale como que no hay, que es
 // el caso de todas hoy.
-export function mezclarAvisosConCatalogo(filasGuardadas, { hayProveedorDeMensajeDeTexto = false } = {}) {
+export function mezclarMensajesConCatalogo(filasGuardadas, { hayProveedorDeMensajeDeTexto = false } = {}) {
   const porEvento = new Map((filasGuardadas ?? []).map((fila) => [fila.evento, fila]));
 
-  return CATALOGO_AVISOS.map((aviso) => {
-    const fila = porEvento.get(aviso.evento);
+  return CATALOGO_MENSAJES.map((mensaje) => {
+    const fila = porEvento.get(mensaje.evento);
     return {
-      evento: aviso.evento,
-      descripcion: aviso.descripcion,
-      admite_whatsapp: aviso.admite_whatsapp,
-      // Que el producto sepa mandar este aviso por mensaje de texto, y que esta Prestadora pueda
+      evento: mensaje.evento,
+      descripcion: mensaje.descripcion,
+      admite_whatsapp: mensaje.admite_whatsapp,
+      // Que el producto sepa mandar este mensaje por mensaje de texto, y que esta Prestadora pueda
       // elegirlo hoy, son dos cosas distintas y viajan aparte: la pantalla dibuja la casilla con la
       // primera y la deja elegir con la segunda.
-      admite_mensaje_de_texto: admiteMensajeDeTexto(aviso),
+      admite_mensaje_de_texto: admiteMensajeDeTexto(mensaje),
       mensaje_de_texto_disponible: sePuedeElegirMensajeDeTexto({
-        aviso,
+        mensaje,
         hayProveedor: hayProveedorDeMensajeDeTexto,
       }),
-      admite_familia: aviso.admite_familia,
-      se_puede_apagar: sePuedeApagar(aviso),
+      admite_familia: mensaje.admite_familia,
+      se_puede_apagar: sePuedeApagar(mensaje),
       // Para que la pantalla pueda distinguir "la Prestadora eligió esto" de "todavía no eligió
       // nada y esto es lo que pasa mientras tanto".
       configurado: Boolean(fila),
-      emails: fila?.emails ?? [...VALORES_POR_DEFECTO_AVISO.emails],
-      // Un aviso que no se puede apagar se muestra encendido aunque una fila vieja diga que no:
+      emails: fila?.emails ?? [...VALORES_POR_DEFECTO_MENSAJE.emails],
+      // Un mensaje que no se puede apagar se muestra encendido aunque una fila vieja diga que no:
       // su emisor no mira esta columna, y mostrar «apagado» sería describir algo que no pasa.
-      activo: sePuedeApagar(aviso) ? (fila?.activo ?? VALORES_POR_DEFECTO_AVISO.activo) : true,
-      whatsapp_activo: fila?.whatsapp_activo ?? VALORES_POR_DEFECTO_AVISO.whatsapp_activo,
-      // Sin proveedor se muestra apagada aunque una fila vieja diga que sí: el aviso no sale por
+      activo: sePuedeApagar(mensaje) ? (fila?.activo ?? VALORES_POR_DEFECTO_MENSAJE.activo) : true,
+      whatsapp_activo: fila?.whatsapp_activo ?? VALORES_POR_DEFECTO_MENSAJE.whatsapp_activo,
+      // Sin proveedor se muestra apagada aunque una fila vieja diga que sí: el mensaje no sale por
       // ahí, y mostrar «encendida» sería describir algo que no pasa. Es el mismo criterio con el
-      // que un aviso que no se puede apagar se muestra siempre encendido.
-      mensaje_de_texto_activo: sePuedeElegirMensajeDeTexto({ aviso, hayProveedor: hayProveedorDeMensajeDeTexto })
-        ? (fila?.mensaje_de_texto_activo ?? VALORES_POR_DEFECTO_AVISO.mensaje_de_texto_activo)
+      // que un mensaje que no se puede apagar se muestra siempre encendido.
+      mensaje_de_texto_activo: sePuedeElegirMensajeDeTexto({ mensaje, hayProveedor: hayProveedorDeMensajeDeTexto })
+        ? (fila?.mensaje_de_texto_activo ?? VALORES_POR_DEFECTO_MENSAJE.mensaje_de_texto_activo)
         : false,
-      notificar_familia: fila?.notificar_familia ?? VALORES_POR_DEFECTO_AVISO.notificar_familia,
-      plantilla_whatsapp_id: fila?.plantilla_whatsapp_id ?? VALORES_POR_DEFECTO_AVISO.plantilla_whatsapp_id,
+      notificar_familia: fila?.notificar_familia ?? VALORES_POR_DEFECTO_MENSAJE.notificar_familia,
+      plantilla_whatsapp_id: fila?.plantilla_whatsapp_id ?? VALORES_POR_DEFECTO_MENSAJE.plantilla_whatsapp_id,
     };
   });
 }

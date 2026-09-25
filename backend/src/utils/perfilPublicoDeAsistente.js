@@ -29,7 +29,7 @@
 // LA CALIFICACIÓN SE MUESTRA SI LA PRESTADORA MUESTRA CALIFICACIONES. Es la misma
 // decisión que ya toma `familia_califica_al_asistente`, no una nueva: donde no se
 // califica, tampoco se publica el promedio. Y mostrar el promedio no es ordenar
-// por él — son dos cosas distintas y la segunda es la que tiene aviso legal.
+// por él — son dos cosas distintas y la segunda es la que tiene advertencia legal.
 // ---------------------------------------------------------------------------
 
 /**

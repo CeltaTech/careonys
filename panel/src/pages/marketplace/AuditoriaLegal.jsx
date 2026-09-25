@@ -82,7 +82,7 @@ export function MarketplaceAuditoriaLegal() {
   }, [recargarFunciones, recargar]);
 
   async function cambiar(funcion, activa) {
-    // El aviso va antes de pedir el cambio: sirve para decidir, y después de encendida ya no
+    // La advertencia va antes de pedir el cambio: sirve para decidir, y después de encendida ya no
     // hay nada que decidir. Si la persona lo cancela, no se enciende nada.
     if (activa) {
       const respuesta = await verificarAntesDeActivar(prestadoraId, funcion.clave);

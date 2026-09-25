@@ -22,7 +22,7 @@ import {
    dos casos sin anotar, que es exactamente lo que pasaba hasta hoy.
 
    ESTO NO AVISA NADA, Y NO ES UN OLVIDO. De que falta el relevo ya se enteró quien coordina, por
-   los procesos que miran eso; repetírselo desde acá sería el mismo aviso con otro nombre. Lo único
+   los procesos que miran eso; repetírselo desde acá sería la misma alerta con otro nombre. Lo único
    que sale de esta pieza hacia el Coordinador es el «no puedo continuar», y ése lo manda la ruta
    que lo recibe, en el momento, no este proceso.
 

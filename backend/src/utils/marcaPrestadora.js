@@ -3,12 +3,12 @@
 // Acá hay tres marcas y no se mezclan: CeltaTech es la empresa y no la ve
 // nadie dentro del producto; Careonys es el producto y lo ve quien trabaja en
 // la Prestadora; y la Prestadora es la que contrataron la Familia y el
-// Asistente. En toda pantalla, correo o aviso dirigido a esos dos últimos, la
+// Asistente. En toda pantalla, correo o mensaje dirigido a esos dos últimos, la
 // marca principal es la de **su** Prestadora (`CLAUDE.md` §7, regla 1).
 //
 // Este archivo es el único lugar que la busca. Existe por la regla 12: la
 // misma pregunta la hacen las dos aplicaciones, el correo de activación y los
-// avisos que llegan al teléfono, y si cada uno la resolviera por su cuenta,
+// mensajes que llegan al teléfono, y si cada uno la resolviera por su cuenta,
 // el día que cambie algo se cambiaría en tres lados y se olvidaría el cuarto.
 
 import { supabase } from '../db/connection.js';

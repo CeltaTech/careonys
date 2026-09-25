@@ -15,7 +15,7 @@ import { useModalAccesible } from '../hooks/useModalAccesible';
 
    DE DÓNDE VIENEN. Las aprieta un Asistente desde la aplicación mientras está trabajando
    (`pwa-asistentes/src/components/EmergenciaEnGuardia.jsx`). Cuando entra una, el Coordinador
-   recibe el aviso por WhatsApp o por correo en el momento; ese aviso dice de qué guardia se trata
+   recibe el mensaje por WhatsApp o por correo en el momento; ese mensaje dice de qué guardia se trata
    y nada más, porque sale por un canal público. **El texto que escribió el Asistente se lee acá**,
    que es donde el permiso se comprueba.
 
@@ -136,7 +136,7 @@ export function EmergenciasEnGuardia() {
   );
 }
 
-/* El detalle, que es lo único que no viajó por ningún aviso, y la forma de marcarla atendida.
+/* El detalle, que es lo único que no viajó por ningún mensaje, y la forma de marcarla atendida.
    La nota es opcional: obligarla haría que quien está resolviendo algo urgente tenga que
    escribir antes de poder seguir. */
 function DetalleDeEmergencia({ emergencia, onClose, onAtendida }) {

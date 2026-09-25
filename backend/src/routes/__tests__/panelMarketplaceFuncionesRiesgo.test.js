@@ -20,8 +20,8 @@
  *   1. Encender deja la fila de auditoría, con quién, qué función, qué jurisdicción y qué
  *      texto exacto se mostró.
  *   2. Apagar no deja ninguna: lo que el documento advierte es de usar la función.
- *   3. Una jurisdicción sin documento escrito enciende igual y no registra nada. El aviso que
- *      no existe no se improvisa, y su ausencia nunca se convierte en un impedimento.
+ *   3. Una jurisdicción sin documento escrito enciende igual y no registra nada. La advertencia
+ *      que no existe no se improvisa, y su ausencia nunca se convierte en un impedimento.
  *   4. Si el registro falla, la función se enciende igual. Al revés sería el producto
  *      bloqueando por una razón legal, que es justo lo que la regla prohíbe.
  */
@@ -170,7 +170,7 @@ describe('apagarla no avisa nada', () => {
 
 describe('un país sin documento legal escrito', () => {
   it('enciende igual y no registra nada', async () => {
-    // Si el país no tiene documento, no hay aviso: no se deduce por parecido con otro país, y
+    // Si el país no tiene documento, no hay advertencia: no se deduce por parecido con otro país, y
     // la falta de texto no se convierte en un impedimento (CLAUDE.md §7).
     paisDeLaPrestadora = 'UY';
     const { estado, cuerpo } = await pedir('PUT', `/funciones-riesgo/${FUNCION}`, { activa: true });

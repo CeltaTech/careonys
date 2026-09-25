@@ -35,7 +35,7 @@
 // QUÉ NO ESTÁ ACÁ, A PROPÓSITO:
 //   - Invitar o sacar gente del círculo. Eso lo hace la Prestadora desde el Panel. Estos accesos
 //     dicen qué ve quien ya está anotado, no quién está anotado.
-//   - Los avisos al teléfono. A quién le llega cada aviso se decide en Configuración › Avisos
+//   - Los mensajes al teléfono. A quién le llega cada uno se decide en Configuración › Avisos
 //     (`catalogoAvisos.js`), y poner acá otra casilla dejaría la misma regla en dos lugares.
 //   - Cualquier cosa que la Prestadora tenga apagada para toda su aplicación. Ver abajo.
 

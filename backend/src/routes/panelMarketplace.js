@@ -11,7 +11,7 @@ import { tokenQrCobroValido } from '../utils/qrCobroEfectivo.js';
 import { exigirAdministracion, exigirAdminDePrestadora } from '../middleware/exigirAdministracion.js';
 import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { exigirModalidad } from '../middleware/exigirModalidad.js';
-import { advertenciaVigente, advertenciasVigentes, registrarAviso } from '../utils/advertenciaLegal.js';
+import { advertenciaVigente, advertenciasVigentes, registrarAdvertencia } from '../utils/advertenciaLegal.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { darDeAltaEnPasarela, MOTIVO_ALTA } from '../utils/altaEnPasarela.js';
 import { registrarCobroExitoso } from '../utils/cobrosMarketplace.js';
@@ -80,7 +80,7 @@ panelMarketplaceRouter.get('/pasarela', soloAdministracion, async (req, res) => 
 
   // Qué secretos tiene guardados cada proveedor. Nunca el texto —eso no sale de la caja
   // fuerte ni para el Admin que lo cargó—, solamente si está o no está: sin el secreto de
-  // firma, los avisos de cobro de esa pasarela se rechazan y la pantalla tiene que poder
+  // firma, los cobros que informa esa pasarela se rechazan y la pantalla tiene que poder
   // decirlo (pendiente #159).
   const { data: secretos, error: errorSecretos } = await supabase
     .from('credenciales_pasarela_pago')
@@ -104,7 +104,7 @@ panelMarketplaceRouter.get('/pasarela', soloAdministracion, async (req, res) => 
   res.json({ pasarelas });
 });
 
-// El secreto con el que la pasarela firma sus avisos de cobro (pendiente #159). Lo normal es
+// El secreto con el que la pasarela firma los cobros que informa (pendiente #159). Lo normal es
 // que llegue junto con la credencial, en el mismo paso de conexión (ver el PATCH de más
 // abajo): los dos datos se sacan del mismo panel del proveedor y en el mismo viaje, y
 // partirlo en dos trámites era pedirle a la Prestadora que volviera por lo mismo. Esta ruta
@@ -161,7 +161,7 @@ panelMarketplaceRouter.patch('/pasarela/:proveedor', soloAdministracion, soloAdm
   }
 
   // El secreto de firma viaja en la misma llamada que la credencial cuando el proveedor firma
-  // sus avisos: son dos datos del mismo panel del proveedor, se copian de una sola vez. Si no
+  // lo que informa: son dos datos del mismo panel del proveedor, se copian de una sola vez. Si no
   // vino, la pasarela igual se conecta y la pantalla avisa que le falta — hay pasarelas que se
   // conectaron antes de que esto existiera, y no se las deja tiradas.
   if (requiereSecretoFirma(proveedor) && typeof secretoFirma === 'string' && secretoFirma.trim()) {
@@ -393,7 +393,7 @@ panelMarketplaceRouter.patch('/formas-de-cobro/:id', soloAdministracion, soloAdm
 const CAMPOS_DE_LOS_PLAZOS =
   'dias_de_aviso_antes_del_cobro, dias_de_gracia_por_cobro_rechazado, dias_de_vida_del_cupon';
 
-/** Los tres son días enteros y ninguno baja de uno: el aviso previo y la gracia son resguardos
+/** Los tres son días enteros y ninguno baja de uno: el preaviso y la gracia son resguardos
  *  obligatorios de toda forma que se renueva sola, y cero es apagarlos. Hacia arriba no hay
  *  borde. Falla cerrado: lo que no se entiende es un rechazo, nunca un valor por omisión. */
 function plazosValidados(cuerpo) {
@@ -718,7 +718,7 @@ panelMarketplaceRouter.patch('/calificaciones/:id/visibilidad', async (req, res)
 // que, en Argentina, acercan el vínculo con el Asistente a una relación de dependencia:
 // el ranking calculado por la plataforma, la consecuencia automática atada a la calificación,
 // el precio u horario fijado por la plataforma, la exclusividad y la mediación de conflictos.
-// Cada una tiene su texto de aviso escrito en ese documento, y desde la migración
+// Cada una tiene su texto de advertencia escrito en ese documento, y desde la migración
 // 20260910140000 esos cinco textos están cargados en `advertencias_legales`.
 //
 // CUÁL ES LA LISTA. Sale de la base, de `catalogo_funciones_marketplace`, y no de una lista
@@ -747,13 +747,13 @@ function fallaDelSistema(res, donde, error) {
 }
 
 // ----------------------------------------------------------------------------
-// Encender y apagar cada función — el aviso avisa, no bloquea
+// Encender y apagar cada función — la advertencia avisa, no bloquea
 // ----------------------------------------------------------------------------
 //
 // AVISA, NO BLOQUEA (CLAUDE.md §7). Encender cualquiera de las cinco siempre se puede. Lo que
-// hace el backend es mostrar el aviso escrito para la jurisdicción de esa Prestadora —si esa
+// hace el backend es mostrar la advertencia escrita para la jurisdicción de esa Prestadora —si esa
 // jurisdicción tiene documento— y dejar registrado que se avisó, cuándo y a quién. Si el país
-// no tiene documento, no hay aviso y la función se enciende igual: no se improvisa un texto
+// no tiene documento, no hay advertencia y la función se enciende igual: no se improvisa un texto
 // por parecido con otro país, y la falta de texto nunca se convierte en un impedimento.
 //
 // Y ninguna de las cinco queda apagada por decisión del sistema: nacen apagadas porque nadie
@@ -774,7 +774,7 @@ panelMarketplaceRouter.get('/funciones-riesgo', async (req, res) => {
   if (error) return fallaDelSistema(res, 'funciones de riesgo encendidas', error);
 
   const porClave = new Map((guardadas || []).map((f) => [f.funcion_clave, f]));
-  const avisos = await advertenciasVigentes(prestadoraId, (catalogo || []).map((f) => f.clave));
+  const advertencias = await advertenciasVigentes(prestadoraId, (catalogo || []).map((f) => f.clave));
 
   res.json({
     funciones: (catalogo || []).map((f) => {
@@ -788,7 +788,7 @@ panelMarketplaceRouter.get('/funciones-riesgo', async (req, res) => {
         // El texto viaja para que la pantalla pueda mostrarlo ANTES de encender, que es el
         // único momento en el que sirve. Si esta jurisdicción no tiene documento para esta
         // función, viaja `null` y no hay nada que mostrar.
-        texto_advertencia: avisos.get(f.clave)?.texto ?? null,
+        texto_advertencia: advertencias.get(f.clave)?.texto ?? null,
       };
     }),
   });
@@ -812,8 +812,8 @@ panelMarketplaceRouter.put('/funciones-riesgo/:clave', soloAdministracion, async
     return res.status(404).json({ error: 'No se encontró esa función' });
   }
 
-  // El aviso se resuelve antes de guardar porque forma parte de lo que se guarda: la fila
-  // queda diciendo que esta función se encendió sabiendo esto. Apagar no lleva aviso: lo que
+  // La advertencia se resuelve antes de guardar porque forma parte de lo que se guarda: la fila
+  // queda diciendo que esta función se encendió sabiendo esto. Apagar no lleva advertencia: lo que
   // el documento legal advierte es de usar la función, no de dejar de usarla.
   const advertencia = activa ? await advertenciaVigente(prestadoraId, req.params.clave) : null;
   const ahora = new Date().toISOString();
@@ -832,11 +832,11 @@ panelMarketplaceRouter.put('/funciones-riesgo/:clave', soloAdministracion, async
     );
   if (error) return fallaDelSistema(res, 'encender función de riesgo', error);
 
-  // Recién con la función efectivamente encendida se anota que se avisó: un registro de un
-  // aviso sobre algo que no llegó a pasar no es un registro, es ruido. Al revés no aplica —
+  // Recién con la función efectivamente encendida se anota que se avisó: el registro de una
+  // advertencia sobre algo que no llegó a pasar no es un registro, es ruido. Al revés no aplica —
   // que el registro falle nunca hace fallar el encendido (utils/advertenciaLegal.js).
   if (advertencia) {
-    await registrarAviso({ prestadoraId, usuarioId, funcionClave: req.params.clave, advertencia });
+    await registrarAdvertencia({ prestadoraId, usuarioId, funcionClave: req.params.clave, advertencia });
   }
 
   res.json({ ok: true, activa, advertencia });

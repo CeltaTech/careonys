@@ -112,7 +112,7 @@ export function Prestadoras() {
   const [formularioAbierto, setFormularioAbierto] = useState(false);
   const [campos, setCampos] = useState(CAMPOS_VACIOS);
   const [creando, setCreando] = useState(false);
-  const [aviso, setAviso] = useState(null);
+  const [mensaje, setMensaje] = useState(null);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -165,16 +165,16 @@ export function Prestadoras() {
     evento.preventDefault();
     setCreando(true);
     setError(null);
-    setAviso(null);
+    setMensaje(null);
     try {
       const resultado = await llamarApi('/prestadoras', {
         method: 'POST',
         body: JSON.stringify(campos),
       });
-      // Si la casilla de respuestas no se pudo guardar, la Prestadora existe igual: el aviso lo
+      // Si la casilla de respuestas no se pudo guardar, la Prestadora existe igual: el mensaje lo
       // dice acá y no se pierde, porque ese dato se vuelve a cargar desde Configuración.
       const plantilla = resultado.casilla_respuestas_guardada ? t.prestadoras.alta_lista : t.prestadoras.alta_sin_casilla;
-      setAviso({
+      setMensaje({
         variante: resultado.casilla_respuestas_guardada ? 'success' : 'warning',
         texto: plantilla.replace('{prestadora}', resultado.prestadora.nombre_fantasia),
       });
@@ -205,10 +205,10 @@ export function Prestadoras() {
       <p className="panel-explicacion">{t.prestadoras.explicacion}</p>
 
       {error && <Alert variant="error">{error}</Alert>}
-      {aviso && <Alert variant={aviso.variante}>{aviso.texto}</Alert>}
+      {mensaje && <Alert variant={mensaje.variante}>{mensaje.texto}</Alert>}
 
       {!formularioAbierto && (
-        <Button onClick={() => { setAviso(null); setFormularioAbierto(true); }} disabled={Boolean(sesion)}>
+        <Button onClick={() => { setMensaje(null); setFormularioAbierto(true); }} disabled={Boolean(sesion)}>
           {t.prestadoras.alta_abrir}
         </Button>
       )}

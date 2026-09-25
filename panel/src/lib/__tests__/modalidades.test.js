@@ -112,7 +112,7 @@ describe('motivoDeModalidadDelError', () => {
   });
 
   it('no confunde la palabra vieja con la nueva', () => {
-    // "canal" se retiró: en este producto un canal es por dónde sale un aviso, no cómo
+    // "canal" se retiró: en este producto un canal es por dónde sale un mensaje, no cómo
     // trabaja un Asistente. Si un rechazo viejo llegara igual, no se lo interpreta.
     expect(motivoDeModalidadDelError({ message: 'canal_bloquea:marketplace:' })).toBeNull();
   });

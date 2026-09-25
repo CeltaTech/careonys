@@ -15,7 +15,7 @@ export function ProtectedRoute({ children, soloAdmin = false, roles = null, perm
   // Que no se haya podido averiguar algo no es lo mismo que que no exista: se lo dice, y la
   // pantalla no se abre. Sin esto, una lectura fallida dejaba un «Cargando…» para siempre o,
   // peor, un vacío que se lee como «acá no hay nada».
-  function avisoDeFalla() {
+  function mensajeDeFalla() {
     return (
       <div className="pantalla-cargando">
         <Alert variant="error">{t.comun.error_generico}</Alert>
@@ -28,7 +28,7 @@ export function ProtectedRoute({ children, soloAdmin = false, roles = null, perm
   }
 
   if (estadoSesion === 'error') {
-    return avisoDeFalla();
+    return mensajeDeFalla();
   }
 
   // Qué roles entran al Panel se decide en un solo lugar (lib/roles.js, CLAUDE.md §7.12) —
@@ -57,7 +57,7 @@ export function ProtectedRoute({ children, soloAdmin = false, roles = null, perm
   // correcto para equivocarse.
   if (permiso && !esAdminOSuperior(usuario.rol)) {
     if (estadoPermisos === 'cargando') return <div className="pantalla-cargando">{t.comun.cargando}</div>;
-    if (estadoPermisos === 'error') return avisoDeFalla();
+    if (estadoPermisos === 'error') return mensajeDeFalla();
     if (!puede(permiso)) return <Navigate to="/" replace />;
   }
 
@@ -74,7 +74,7 @@ export function ProtectedRoute({ children, soloAdmin = false, roles = null, perm
   // es el lado correcto para equivocarse.
   if (modalidad) {
     if (estadoModalidades === 'cargando') return <div className="pantalla-cargando">{t.comun.cargando}</div>;
-    if (estadoModalidades === 'error') return avisoDeFalla();
+    if (estadoModalidades === 'error') return mensajeDeFalla();
     if (!tieneModalidad(modalidad)) return <Navigate to="/" replace />;
   }
 

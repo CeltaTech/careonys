@@ -19,7 +19,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { hoyISO, sumarDias } from '../lib/horarios';
-import { diasDeAvisoDeLaPrestadora } from '../lib/plazoDeAviso';
+import { diasDePreavisoDeLaPrestadora } from '../lib/plazoDeAviso';
 import { usePrestadoraActual } from './usePrestadoraActual';
 import { useUmbrales } from '../context/UmbralesContext';
 import {
@@ -46,7 +46,7 @@ export function usePanoramaDelPlantel() {
     const desde = hoyISO();
     const hasta = sumarDias(desde, DIAS_DE_HORIZONTE);
 
-    const [{ data: guardias, error }, { data: documentos, error: errorDocs }, diasAviso] =
+    const [{ data: guardias, error }, { data: documentos, error: errorDocs }, diasDePreaviso] =
       await Promise.all([
         supabase
           .from('guardias')
@@ -58,12 +58,12 @@ export function usePanoramaDelPlantel() {
           .from('documentos_asistente')
           .select('asistente_id, fecha_vencimiento, tipos_documento_asistente(requiere_vencimiento)')
           .not('fecha_vencimiento', 'is', null),
-        diasDeAvisoDeLaPrestadora(prestadoraId),
+        diasDePreavisoDeLaPrestadora(prestadoraId),
       ]);
 
     setPanorama({
       guardias: error ? null : guardiasActivasPorAsistente(guardias, { umbrales }),
-      documentacion: errorDocs ? null : documentacionPorAsistente(documentos, diasAviso),
+      documentacion: errorDocs ? null : documentacionPorAsistente(documentos, diasDePreaviso),
     });
   }, [prestadoraId, umbrales]);
 

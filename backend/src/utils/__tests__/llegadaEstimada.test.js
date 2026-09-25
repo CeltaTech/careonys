@@ -1,6 +1,6 @@
 /**
  * La cuenta de la hora estimada de llegada, y a partir de cuántos minutos de atraso eso se
- * convierte en un aviso (pendiente #101).
+ * convierte en una alerta (pendiente #101).
  *
  *   npm test --prefix backend
  *

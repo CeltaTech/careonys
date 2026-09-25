@@ -19,7 +19,7 @@
  * tiene cuenta y quién no, que es justo lo que `celtatech/CLAUDE.md` §6 prohíbe.
  *
  * Y POR ESO TAMPOCO SE EXPLICA QUÉ SALIÓ MAL. La llave que no existe, la que fue revocada y la que
- * apunta a otra persona salen las tres como el mismo aviso, igual que la entrada con contraseña no
+ * apunta a otra persona salen las tres como el mismo mensaje, igual que la entrada con contraseña no
  * dice cuál de los dos campos estaba mal.
  */
 import { Router } from 'express';
@@ -46,7 +46,7 @@ import {
   rolesConLlaveDeDispositivo,
 } from '../utils/llaveDelDispositivo.js';
 
-/** El aviso único que ve la pantalla cuando no se pudo entrar. Nunca dice por qué. */
+/** El mensaje único que ve la pantalla cuando no se pudo entrar. Nunca dice por qué. */
 const NO_SE_PUDO_ENTRAR = 'llave_no_sirve';
 
 function rolValido(rol) {
@@ -174,7 +174,7 @@ llaveDelDispositivoRouter.post('/entrar', async (req, res) => {
 
     const motivo = porQueNoAbre(llave);
     if (motivo) {
-      // El motivo queda del lado de adentro. Hacia afuera va siempre el mismo aviso.
+      // El motivo queda del lado de adentro. Hacia afuera va siempre el mismo mensaje.
       console.warn(`Entrada con llave rechazada (${motivo})`);
       throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
     }

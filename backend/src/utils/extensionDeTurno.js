@@ -3,7 +3,7 @@ import { finDeGuardia, inicioDeGuardia } from './horarios.js';
 /* Cuándo una Asistente quedó de más, y qué se le puede contar de la búsqueda.
    ==========================================================================
 
-   Acá está la decisión y nada más: ni consultas a la base, ni avisos. Eso lo hace
+   Acá está la decisión y nada más: ni consultas a la base, ni mensajes. Eso lo hace
    `revisarExtensionesDeTurno.js`. Separado porque esta parte es la que se prueba sola, y porque
    la misma cuenta la va a necesitar después la liquidación de las horas de más.
 
@@ -50,7 +50,7 @@ export function laQueSigue(guardia, candidatas) {
  *   - el turno que venía después no arrancó: no hay ninguno cargado, o el que hay no tiene marca
  *     de llegada.
  *
- * No hay ninguna tolerancia acá. Quien llega tarde ya tiene su propio aviso mucho antes, con el
+ * No hay ninguna tolerancia acá. Quien llega tarde ya tiene su propia alerta mucho antes, con el
  * margen que cada Prestadora configuró; sumar minutos de gracia en este lugar los contaría dos
  * veces y le restaría horas a la que se quedó.
  */
@@ -97,7 +97,7 @@ export function cuandoTermino({ guardia, relevo, ahora }) {
 export const PASOS_DE_LA_BUSQUEDA = {
   /** Quien coordina está enterado. */
   COORDINACION_AVISADA: 'coordinacion_avisada',
-  /** El aviso ya subió de escalón: lo sabe más gente que quien coordina a ese Paciente. */
+  /** La alerta ya subió de escalón: lo sabe más gente que quien coordina a ese Paciente. */
   ESCALADO: 'escalado',
   /** El turno se ofreció y está esperando que alguien lo tome. */
   TURNO_OFRECIDO: 'turno_ofrecido',

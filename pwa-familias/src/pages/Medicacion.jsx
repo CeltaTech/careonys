@@ -14,11 +14,11 @@ const ESTADO_CLASE = {
 };
 
 // Los cinco que hay que completar sí o sí. Están acá y no repartidos por el formulario para
-// que el aviso general de arriba y el que se cuelga de cada campo digan siempre lo mismo.
+// que la advertencia general de arriba y la que se cuelga de cada campo digan siempre lo mismo.
 const CAMPOS_OBLIGATORIOS = ['medicamento', 'dosis', 'frecuencia', 'via', 'fecha_desde'];
 
 // Un campo del formulario, con su etiqueta atada al control (`htmlFor`/`id`) y, cuando falta
-// completarlo, el aviso colgado del propio campo (`aria-describedby` + `aria-invalid`). Sin
+// completarlo, la advertencia colgada del propio campo (`aria-describedby` + `aria-invalid`). Sin
 // esto un lector de pantalla anuncia siete cajas sin nombre, y el motivo del rechazo queda
 // arriba de todo, suelto, sin decir de cuál de las siete cajas está hablando.
 function Campo({ nombre, etiqueta, tipo = 'text', valor, alCambiar, placeholder, accept, error }) {
@@ -67,7 +67,7 @@ export default function Medicacion() {
   const [fechaHasta, setFechaHasta] = useState('');
   const [archivo, setArchivo] = useState(null);
   // Cuáles quedaron sin completar, no solo que quedó alguno: es lo que permite colgar el
-  // aviso del campo vacío en vez de dejarlo suelto arriba.
+  // la advertencia del campo vacío en vez de dejarla suelta arriba.
   const [faltantes, setFaltantes] = useState([]);
 
   const cargar = useCallback(() => {
@@ -82,7 +82,7 @@ export default function Medicacion() {
     cargar();
   }, [cargar]);
 
-  // Qué aviso le toca a este campo: el mismo texto para todos, colgado de cada uno.
+  // Qué advertencia le toca a este campo: el mismo texto para todos, colgado de cada uno.
   const faltaEn = (campo) => (faltantes.includes(campo) ? t.comun.campo_obligatorio : undefined);
 
   async function handleSubmit(e) {
@@ -162,7 +162,7 @@ export default function Medicacion() {
         <>
           <h2 style={{ marginTop: '1.5rem' }}>{t.medicacion.nueva_titulo}</h2>
 
-          {/* No es un error: nada falló y no hay nada que reintentar. Es un aviso de por qué el
+          {/* No es un error: nada falló y no hay nada que reintentar. Es una advertencia de por qué el
               formulario no está, y con el dato que hace falta para conseguirlo. */}
           {!puedePedirla && <div className="alert" role="status">{t.medicacion.sin_acceso_pedir}</div>}
 

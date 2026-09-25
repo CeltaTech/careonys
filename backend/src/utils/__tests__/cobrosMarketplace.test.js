@@ -198,8 +198,8 @@ describe('un período después de una fecha', () => {
   });
 
   it('y si ese día no existe, es el último del mes', () => {
-    // Con `setMonth(+1)`, que es lo que hacía el aviso de cobro, el 31 de enero daba 3 de marzo, y
-    // de ahí en adelante el acceso cobraba el 3 de cada mes en vez del 31.
+    // Con `setMonth(+1)`, que es lo que hacía la entrada de la pasarela, el 31 de enero daba 3 de
+    // marzo, y de ahí en adelante el acceso cobraba el 3 de cada mes en vez del 31.
     assert.equal(sumarPeriodo('2026-01-31', 1, 'mes'), '2026-02-28');
     assert.equal(sumarPeriodo('2026-03-31', 1, 'mes'), '2026-04-30');
     assert.equal(sumarPeriodo('2026-05-31', 1, 'mes'), '2026-06-30');
@@ -492,8 +492,9 @@ describe('el trabajo diario que arma los cobros del período', () => {
   });
 
   it('la referencia que se le da al proveedor identifica el período, no el acceso', async () => {
-    // Es lo que permite que dos períodos de la misma Familia no se confundan cuando vuelven los
-    // avisos: con la referencia del acceso, el aviso del segundo período pisaría al del primero.
+    // Es lo que permite que dos períodos de la misma Familia no se confundan cuando vuelve la
+    // respuesta del proveedor: con la referencia del acceso, el cobro del segundo período pisaría
+    // al del primero.
     base();
     await armarCobrosDelPeriodo();
     assert.equal(pedidosAlProveedor[0].cuerpo.referencia_externa, `${ACCESO}:${PERIODO}`);
@@ -612,9 +613,9 @@ describe('el trabajo diario que arma los cobros del período', () => {
     await armarCobrosDelPeriodo();
 
     assert.deepEqual(inserciones(), []);
-    const aviso = anotados.find((linea) => linea.includes('Error armando el cobro'));
-    assert.ok(aviso, 'queda registrado, porque es plata');
-    assert.equal(aviso.includes(FAMILIA), false, 'sin el identificador de la Familia');
+    const registro = anotados.find((linea) => linea.includes('Error armando el cobro'));
+    assert.ok(registro, 'queda registrado, porque es plata');
+    assert.equal(registro.includes(FAMILIA), false, 'sin el identificador de la Familia');
   });
 
   it('si no se puede guardar el cobro armado, queda avisado y el trabajo sigue', async () => {

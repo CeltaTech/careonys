@@ -3,23 +3,23 @@ import { notificarCoordinador } from './whatsapp.js';
 import { enviarPushFamilia } from './push.js';
 import { configuracionEvento } from './email.js';
 import { pacientesDeGuardias } from './pacientesDeGuardia.js';
-import { aviso } from '../i18n/avisos.js';
+import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 
-// Aviso de que una o varias guardias pasaron a manos de otro Asistente.
+// Mensaje del sistema que anuncia que una o varias guardias pasaron a manos de otro Asistente.
 //
 // Lo pide el Panel, que es donde se reasigna: ahí se cambia el Asistente de una guardia, se la
 // arrastra a otra fila del cuadro y se asigna la cobertura de una ausencia. El Panel no puede
-// mandar este aviso por su cuenta —habla con la base directo y no tiene push, ni WhatsApp, ni
+// mandar este mensaje por su cuenta —habla con la base directo y no tiene push, ni WhatsApp, ni
 // correo—, así que llama a `routes/panelGuardias.js` y ahí se entra por acá.
 //
 // **El Asistente nuevo llega explícito y no se lee de `guardias.asistente_id`.** Quien llama puede
-// pedir el aviso con las guardias tal como estaban antes de moverlas, y ahí esa columna todavía
-// nombra al Asistente anterior: si el aviso la mirara, anunciaría el cambio nombrando justamente a
-// quien deja de tenerlas.
+// pedir el mensaje con las guardias tal como estaban antes de moverlas, y ahí esa columna todavía
+// nombra al Asistente anterior: si el mensaje la mirara, anunciaría el cambio nombrando justamente
+// a quien deja de tenerlas.
 //
-// **Un solo aviso para todas las guardias, y no uno por guardia.** Una ausencia puede dejar diez
-// turnos descubiertos, y diez avisos por una sola decisión serían diez correos al Coordinador por
+// **Un solo mensaje para todas las guardias, y no uno por guardia.** Una ausencia puede dejar diez
+// turnos descubiertos, y diez mensajes por una sola decisión serían diez correos al Coordinador por
 // algo que se hizo de una vez.
 export const EVENTO_CAMBIO_DE_ASISTENTE = 'cambio_de_asistente';
 
@@ -34,7 +34,7 @@ function nombresDePacientes(pacientes) {
 }
 
 // Los turnos como los lee el Coordinador: todos juntos, con sus Pacientes.
-export function turnosDelAviso(guardias, pacientesPorGuardia) {
+export function turnosDelMensaje(guardias, pacientesPorGuardia) {
   return [...(guardias ?? [])].sort(porCuandoOcurre).map((guardia) => ({
     fecha: guardia.fecha,
     horaInicio: guardia.hora_inicio,
@@ -83,7 +83,7 @@ async function nombreDelAsistente(asistenteId, prestadoraId) {
   return data?.nombre ?? null;
 }
 
-// El aviso completo. Nunca tira: quien lo llama ya cambió la guardia, y hacer fallar la operación
+// El mensaje completo. Nunca tira: quien lo llama ya cambió la guardia, y hacer fallar la operación
 // por un canal que no salió mostraría como fallido algo que salió bien.
 export async function avisarCambioDeAsistente({ guardias, prestadoraId, asistenteNuevoId, asistenteAnteriorId }) {
   if (!guardias?.length || !prestadoraId) return;
@@ -102,27 +102,27 @@ export async function avisarCambioDeAsistente({ guardias, prestadoraId, asistent
     nombreDelAsistente(asistenteAnteriorId, prestadoraId),
   ]);
 
-  const datos = { asistenteNuevo, asistenteAnterior, turnos: turnosDelAviso(guardias, pacientesPorGuardia) };
+  const datos = { asistenteNuevo, asistenteAnterior, turnos: turnosDelMensaje(guardias, pacientesPorGuardia) };
 
   try {
     await notificarCoordinador({
       evento: EVENTO_CAMBIO_DE_ASISTENTE,
       prestadoraId,
-      ...aviso(EVENTO_CAMBIO_DE_ASISTENTE, idioma, datos),
+      ...mensajeDelSistema(EVENTO_CAMBIO_DE_ASISTENTE, idioma, datos),
     });
   } catch (e) {
     console.error(`Error avisando al Coordinador el cambio de Asistente (prestadora ${prestadoraId}):`, e.message);
   }
 
   // A la Familia le llega sólo si la Prestadora lo encendió. El valor de arranque es que no
-  // (`VALORES_POR_DEFECTO_AVISO`), y encenderlo desde acá sería decidir por ella cómo trabaja.
+  // (`VALORES_POR_DEFECTO_MENSAJE`), y encenderlo desde acá sería decidir por ella cómo trabaja.
   const config = await configuracionEvento(EVENTO_CAMBIO_DE_ASISTENTE, prestadoraId);
   if (!config?.notificar_familia) return;
 
   for (const [familiaId, turnos] of turnosPorFamilia(guardias, pacientesPorGuardia)) {
     try {
       await enviarPushFamilia(prestadoraId, familiaId, {
-        ...aviso(`${EVENTO_CAMBIO_DE_ASISTENTE}_familia`, idioma, { asistenteNuevo, turnos }),
+        ...mensajeDelSistema(`${EVENTO_CAMBIO_DE_ASISTENTE}_familia`, idioma, { asistenteNuevo, turnos }),
         url: '/',
       });
     } catch (e) {

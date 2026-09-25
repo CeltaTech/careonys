@@ -85,13 +85,13 @@ async function leerlos(prestadoraId) {
 }
 
 /**
- * El plazo de aviso más largo que hay configurado. Es lo que abre la ventana de la consulta del
- * aviso previo, que recorre todas las Prestadoras de una vez: se traen los accesos que entran en
+ * El plazo de preaviso más largo que hay configurado. Es lo que abre la ventana de la consulta del
+ * preaviso, que recorre todas las Prestadoras de una vez: se traen los accesos que entran en
  * la ventana más ancha y después cada uno se mide contra el plazo de la suya.
  *
  * @returns {Promise<number|null>}
  */
-export async function elPlazoDeAvisoMasLargo() {
+export async function elPlazoDePreavisoMasLargo() {
   // SIN PRESTADORA A PROPÓSITO: lo que se busca acá es el plazo más largo de todas, que es
   // justamente lo que ninguna Prestadora sola puede contestar. Se pregunta antes de saber qué
   // Prestadoras entran en la vuelta, para abrir la ventana más ancha; después cada acceso se

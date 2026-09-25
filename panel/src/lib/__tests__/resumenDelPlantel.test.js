@@ -95,7 +95,7 @@ describe('documentacionPorAsistente', () => {
     expect(estados.get('paso')).toBe(ESTADO_VENCIMIENTO.VENCIDO);
   });
 
-  it('respeta la ventana de aviso que configuró la Prestadora', () => {
+  it('respeta la ventana de preaviso que configuró la Prestadora', () => {
     const papeles = [papel({ fecha_vencimiento: '2026-10-20' })];
     expect(documentacionPorAsistente(papeles, 30, AHORA).get('a')).toBe(
       ESTADO_VENCIMIENTO.VIGENTE,

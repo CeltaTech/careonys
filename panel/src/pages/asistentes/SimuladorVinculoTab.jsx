@@ -147,7 +147,7 @@ export function SimuladorVinculoTab({ asistente }) {
     );
   }, [escalasResueltas, estadoConceptos, conceptos, moneda, jurisdiccion, asistente, hoy]);
 
-  // El mismo concepto se saltea en los dos vínculos, así que el aviso es del catálogo y se dice
+  // El mismo concepto se saltea en los dos vínculos, así que la advertencia es del catálogo y se dice
   // una vez: repetirlo por columna haría parecer que son problemas distintos.
   const sinEscala = [...new Set(VINCULOS.flatMap((v) => mensual?.[v]?.sinEscala ?? []))];
 
@@ -188,7 +188,7 @@ export function SimuladorVinculoTab({ asistente }) {
     <div>
       <h2>{t.asistentes.simulador.titulo}</h2>
       <Alert variant="info">{t.asistentes.simulador.explicacion}</Alert>
-      {/* Las proyecciones se calculan con estas escalas: el aviso va arriba de la tabla, no
+      {/* Las proyecciones se calculan con estas escalas: la advertencia va arriba de la tabla, no
           después, para que no se lea un número antes de saber de dónde sale. */}
       <AvisoEscalasProvisorias escalas={escalasCrudas} />
 
@@ -235,8 +235,8 @@ export function SimuladorVinculoTab({ asistente }) {
             {conceptos.length === 0 && (
               <Alert variant="info">{t.asistentes.simulador.sin_conceptos}</Alert>
             )}
-            {sinEscala.map((aviso) => (
-              <Alert key={aviso} variant="info">{t.asistentes.simulador.concepto_sin_escala.replace('{detalle}', aviso)}</Alert>
+            {sinEscala.map((detalle) => (
+              <Alert key={detalle} variant="info">{t.asistentes.simulador.concepto_sin_escala.replace('{detalle}', detalle)}</Alert>
             ))}
           </>
         )}

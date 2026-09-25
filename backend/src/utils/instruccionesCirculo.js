@@ -7,7 +7,7 @@ import { enviarEmail, configuracionEvento } from './email.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 import { cuentaDeLaFicha, cuentasDeLasFichas } from './cuentaDeLaFicha.js';
 import { correoDe } from './correoDeUnaPersona.js';
-import { aviso } from '../i18n/avisos.js';
+import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import {
   codigoCoincide,
@@ -207,7 +207,7 @@ export async function ultimaInstruccionCerrada(familiaId, prestadoraId) {
 // El código que el titular necesita para confirmar desde la aplicación. Va al teléfono cuando la
 // Prestadora tiene WhatsApp configurado, y si no —o si el envío falla— al correo, que es el único
 // canal que siempre existe. Nunca se pierde la confirmación por un problema de un canal; mismo
-// criterio que los avisos al Coordinador.
+// criterio que los mensajes al Coordinador.
 export async function pedirCodigo({ instruccionId, familiaId, prestadoraId }) {
   if (!prestadoraId) throw new ErrorConMotivo('faltan_datos', 'Falta la Prestadora');
 
@@ -246,7 +246,7 @@ export async function pedirCodigo({ instruccionId, familiaId, prestadoraId }) {
   const titular = cuentasTitular.get(familiaId) ?? null;
 
   const remite = prestadora?.nombre_fantasia ?? '';
-  const textos = aviso('codigo_instruccion_circulo', await idiomaDeLaPrestadora(instruccion.prestadora_id), {
+  const textos = mensajeDelSistema('codigo_instruccion_circulo', await idiomaDeLaPrestadora(instruccion.prestadora_id), {
     codigo,
     minutos: VIGENCIA_DEL_CODIGO_MINUTOS,
     remite,
@@ -255,7 +255,7 @@ export async function pedirCodigo({ instruccionId, familiaId, prestadoraId }) {
 
   if (titular?.telefono) {
     try {
-      // Lo empieza la Prestadora, así que sólo sale por la plantilla que le eligió al aviso. Sin
+      // Lo empieza la Prestadora, así que sólo sale por la plantilla que le eligió al mensaje. Sin
       // plantilla aprobada `avisarPorWhatsapp` devuelve que no salió, y el código va por correo:
       // la Familia lo está esperando en la pantalla para poder firmar.
       const config = await configuracionEvento('codigo_instruccion_circulo', instruccion.prestadora_id);

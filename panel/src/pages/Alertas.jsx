@@ -13,7 +13,7 @@ import { sigueSinResolver, sigueSinResolverYEsCritica } from '../lib/alertaSinRe
 // Alertas de la IA Nivel 2 (backend/src/utils/revisarAlertasIA.js): la IA lee los últimos
 // reportes de cada Paciente y, si detecta un patrón preocupante, deja una alerta con dos
 // textos — uno para la Familia (descripcion) y otro para el Coordinador
-// (detalle_coordinador). Hasta esta pantalla el segundo no lo leía nadie: el aviso de
+// (detalle_coordinador). Hasta esta pantalla el segundo no lo leía nadie: el mensaje de
 // WhatsApp decía "ver detalle en el Panel" y el Panel no tenía dónde mostrarlo.
 
 // Rojo primero, después amarillo: la lista se ordena por gravedad, no solo por fecha.

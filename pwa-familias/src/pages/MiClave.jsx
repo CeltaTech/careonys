@@ -25,7 +25,7 @@ export default function MiClave() {
   const [errorCampo, setErrorCampo] = useState(null);
   const [cambiada, setCambiada] = useState(false);
 
-  const avisoDe = (campo) => (errorCampo?.campo === campo ? errorCampo.texto : undefined);
+  const advertenciaDe = (campo) => (errorCampo?.campo === campo ? errorCampo.texto : undefined);
 
   async function alEnviar(evento) {
     evento.preventDefault();
@@ -89,11 +89,11 @@ export default function MiClave() {
             value={actual}
             onChange={(e) => setActual(e.target.value)}
             required
-            aria-invalid={avisoDe('actual') ? 'true' : undefined}
-            aria-describedby={avisoDe('actual') ? 'actual-error' : undefined}
+            aria-invalid={advertenciaDe('actual') ? 'true' : undefined}
+            aria-describedby={advertenciaDe('actual') ? 'actual-error' : undefined}
           />
-          {avisoDe('actual') && (
-            <span className="form-error" id="actual-error" role="alert">{avisoDe('actual')}</span>
+          {advertenciaDe('actual') && (
+            <span className="form-error" id="actual-error" role="alert">{advertenciaDe('actual')}</span>
           )}
         </div>
         <div className="form-field">
@@ -105,11 +105,11 @@ export default function MiClave() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            aria-invalid={avisoDe('password') ? 'true' : undefined}
-            aria-describedby={avisoDe('password') ? 'password-error' : undefined}
+            aria-invalid={advertenciaDe('password') ? 'true' : undefined}
+            aria-describedby={advertenciaDe('password') ? 'password-error' : undefined}
           />
-          {avisoDe('password') && (
-            <span className="form-error" id="password-error" role="alert">{avisoDe('password')}</span>
+          {advertenciaDe('password') && (
+            <span className="form-error" id="password-error" role="alert">{advertenciaDe('password')}</span>
           )}
         </div>
         <div className="form-field">
@@ -121,11 +121,11 @@ export default function MiClave() {
             value={confirmacion}
             onChange={(e) => setConfirmacion(e.target.value)}
             required
-            aria-invalid={avisoDe('confirmacion') ? 'true' : undefined}
-            aria-describedby={avisoDe('confirmacion') ? 'confirmacion-error' : undefined}
+            aria-invalid={advertenciaDe('confirmacion') ? 'true' : undefined}
+            aria-describedby={advertenciaDe('confirmacion') ? 'confirmacion-error' : undefined}
           />
-          {avisoDe('confirmacion') && (
-            <span className="form-error" id="confirmacion-error" role="alert">{avisoDe('confirmacion')}</span>
+          {advertenciaDe('confirmacion') && (
+            <span className="form-error" id="confirmacion-error" role="alert">{advertenciaDe('confirmacion')}</span>
           )}
         </div>
         <button type="submit" className="btn btn-primary btn-full" disabled={guardando}>

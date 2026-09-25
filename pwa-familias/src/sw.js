@@ -15,14 +15,14 @@ self.addEventListener('activate', (event) => {
 // domicilio, reporte confirmado, alerta ROJA). El payload lo arma el backend
 // (backend/src/utils/push.js) como { titulo, cuerpo, url }.
 //
-// El nombre que encabeza el aviso es el de la Prestadora, no el del producto: es a ella a
+// El nombre que encabeza el mensaje es el de la Prestadora, no el del producto: es a ella a
 // quien la Familia llamó (`CLAUDE.md` §7, regla 1). Como acá no hay sesión abierta, se lee
 // del depósito que dejó la aplicación (lib/marcaGuardada.js).
 self.addEventListener('push', (event) => {
-  event.waitUntil(mostrarAviso(event));
+  event.waitUntil(mostrarMensaje(event));
 });
 
-async function mostrarAviso(event) {
+async function mostrarMensaje(event) {
   let datos = { titulo: '', cuerpo: '' };
   try {
     datos = event.data.json();

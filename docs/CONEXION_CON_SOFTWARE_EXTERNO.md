@@ -11,8 +11,8 @@ de la pantalla de Configuración → Facturación de Familias:
 2. **El secreto**, que ella escribe en esa misma pantalla. Es el único que lo conoce: Careonys lo
    guarda y no lo vuelve a mostrar nunca, ni a ella. Si se pierde, se carga uno nuevo.
 
-**Mientras la Prestadora no haya cargado el secreto, no entra ningún aviso.** La puerta contesta
-que no está autenticado, y eso es lo correcto: sin secreto no hay forma de probar que el aviso es
+**Mientras la Prestadora no haya cargado el secreto, no entra ningún pedido.** La puerta contesta
+que no está autenticado, y eso es lo correcto: sin secreto no hay forma de probar que el pedido es
 suyo.
 
 ---
@@ -29,7 +29,7 @@ rompiera la conexión al otro.
 | Que a una Familia se le restringe el servicio por falta de pago | `POST /api/avisos-de-cobranza/<identificador de la Prestadora>` |
 
 En las dos, **el identificador de la Prestadora va en la dirección y nunca en el cuerpo**. Lo que
-venga adentro del aviso no elige sobre quién se escribe.
+venga adentro del pedido no elige sobre quién se escribe.
 
 ---
 
@@ -62,13 +62,13 @@ línea agregados.
   se envía otro que sólo cambia en un espacio o en el orden de dos campos, no coincide. Se firma lo
   mismo que se manda.
 - **El reloj corrido.** El instante tiene que caer dentro de **cinco minutos** de la hora real, para
-  adelante o para atrás. Sirve para que un aviso auténtico copiado hace meses no se pueda volver a
+  adelante o para atrás. Sirve para que un pedido auténtico copiado hace meses no se pueda volver a
   mandar hoy.
 - **El tipo de contenido.** Tiene que ser `application/json`.
 
 **Se puede mandar más de una firma**, separadas por coma (`ts=…,v1=…,v1=…`), y alcanza con que una
 coincida. Sirve el día que se cambia el secreto: durante el cambio se mandan las dos y no se pierde
-ningún aviso.
+ningún pedido.
 
 ### Ejemplo del cálculo
 
@@ -131,7 +131,7 @@ sin cambiar nada.
 | `comprobante_numero` | no | El número que le puso el software de facturación |
 | `fecha_vencimiento` | no | `AAAA-MM-DD`. **Sólo si vence en otra fecha que la acordada.** Si no viene, la acordada no se toca |
 
-**Hasta 500 facturas por aviso.**
+**Hasta 500 facturas por pedido.**
 
 **Respuesta**, renglón por renglón, para que se sepa qué pasó con cada una:
 
@@ -146,11 +146,11 @@ sin cambiar nada.
 }
 ```
 
-**Repetir un aviso no hace daño.** Una factura que ya tiene comprobante anotado no se pisa: se
+**Repetir un pedido no hace daño.** Una factura que ya tiene comprobante anotado no se pisa: se
 contesta `ya_facturada` y se sigue. Así, un software que reintenta porque no le llegó la respuesta
 no termina cambiando lo que ya se había guardado.
 
-**Un renglón malo no arruina el aviso.** Los demás se anotan igual, y el que falló dice por qué.
+**Un renglón malo no arruina el pedido.** Los demás se anotan igual, y el que falló dice por qué.
 
 ---
 
@@ -185,7 +185,7 @@ menos una**:
 | `familia_id` | sí | De qué Familia se trata |
 | `restringida` | si no va `estado_de_cuenta` | `true` cuando empieza la restricción, `false` cuando se levanta |
 | `motivo` | no | Hasta 500 caracteres |
-| `numero_del_aviso` | no | El número del aviso del lado de quien lo manda. **Repetir el mismo número no anota dos veces** |
+| `numero_del_aviso` | no | El número con el que lo numeró quien lo manda. **Repetir el mismo número no anota dos veces** |
 | `estado_de_cuenta` | si no va `restringida` | Cómo está la cuenta de esa Familia |
 
 Y adentro de `estado_de_cuenta`:
@@ -213,12 +213,12 @@ inscripta esa persona y bajo qué condición es asunto de quien factura.
 
 | Código | Qué quiere decir | Qué hacer |
 |---|---|---|
-| `200` | El aviso entró. Mirar los renglones de la respuesta | Nada |
-| `400` | El aviso estaba firmado bien, pero algún dato está mal. La respuesta dice cuál | Corregir el dato y reenviar |
-| `401` | No se pudo probar que el aviso sea auténtico | Ver más abajo |
-| `404` | Sólo en el aviso de cobranza: esa Familia no es de esta Prestadora | Revisar el identificador |
+| `200` | El pedido entró. Mirar los renglones de la respuesta | Nada |
+| `400` | El pedido estaba firmado bien, pero algún dato está mal. La respuesta dice cuál | Corregir el dato y reenviar |
+| `401` | No se pudo probar que el pedido sea auténtico | Ver más abajo |
+| `404` | Sólo en la puerta de cobranza: esa Familia no es de esta Prestadora | Revisar el identificador |
 
-En el aviso de facturación no hay `404`: una factura que no es de esta Prestadora se contesta
+En la puerta de facturación no hay `404`: una factura que no es de esta Prestadora se contesta
 adentro de la respuesta, en su renglón, igual que si no existiera. Decir cuál identificador cae
 adentro y cuál no sería enseñar a encontrarlos.
 

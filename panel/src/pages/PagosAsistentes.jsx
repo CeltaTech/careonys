@@ -194,7 +194,7 @@ function LiquidacionesTab({ esAdmin }) {
   }, [recargar]);
 
   // Rehacer un mes borra y vuelve a escribir lo que ya estaba, así que se pregunta antes
-  // (regla 4). Lo que ya figura pagado no se toca, y eso lo garantiza el backend, no el aviso.
+  // (regla 4). Lo que ya figura pagado no se toca, y eso lo garantiza el backend, no la advertencia.
   async function generar() {
     if (!(await confirmarDestructivo(t.pagos_asistentes.confirmar_generar))) return;
     setGenerando(true);
@@ -334,7 +334,7 @@ function ResultadoGeneracion({ resultado }) {
     // escrita en un solo idioma y nombra unidades internas, así que no se le pasa a nadie.
     {
       texto: t.pagos_asistentes.resultado_sin_escala,
-      nombres: lista(resultado.sin_escala).map((aviso) => String(aviso).split(':')[0]),
+      nombres: lista(resultado.sin_escala).map((detalle) => String(detalle).split(':')[0]),
     },
   ];
 
@@ -472,7 +472,7 @@ function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
               </dl>
 
               {/* Horas anotadas que no se pagaron porque la ficha no tiene cargado cuánto vale
-                  la hora extra. Sin este aviso, el recibo sale más chico de lo que corresponde y
+                  la hora extra. Sin esta advertencia, el recibo sale más chico de lo que corresponde y
                   nadie tiene por dónde enterarse. */}
               {liquidacion.horas_extra > 0 && liquidacion.valor_hora_extra === null && (
                 <Alert variant="warning">{t.pagos_asistentes.horas_extra_sin_valor}</Alert>
@@ -635,7 +635,7 @@ function ConceptosTab() {
 
   /* Un concepto no se borra nunca: dar de baja es dejarlo inactivo. Borrarlo dejaría a los
      renglones ya liquidados apuntando al vacío, y esos renglones son la explicación de un pago
-     que ya se hizo. Reactivar no necesita aviso; dar de baja sí, porque cambia lo que se va a
+     que ya se hizo. Reactivar no necesita advertencia; dar de baja sí, porque cambia lo que se va a
      liquidar de acá en adelante (regla 4). */
   async function alternarActivo(concepto) {
     if (concepto.activo && !(await confirmarDestructivo(t.pagos_asistentes.confirmar_baja))) return;

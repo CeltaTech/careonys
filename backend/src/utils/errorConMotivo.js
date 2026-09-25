@@ -13,7 +13,7 @@
 // el backend no sabe en qué idioma está mirando la persona, y una frase escrita en el código
 // sería texto visible a mano (reglas 1 y 2 de CLAUDE.md §7).
 //
-// Esta clase existe para que ese mecanismo también funcione cuando el aviso nace adentro de
+// Esta clase existe para que ese mecanismo también funcione cuando el motivo nace adentro de
 // una función auxiliar y tiene que atravesar varios `throw` hasta llegar a la ruta.
 export class ErrorConMotivo extends Error {
   // `motivo` es el código que la pantalla traduce. `detalle` es para el registro del
@@ -57,7 +57,7 @@ const ESTADO_POR_MOTIVO = {
   modalidad_con_asistentes: 409,
   modalidad_con_accesos: 409,
   modalidad_con_asistentes_y_accesos: 409,
-  // Dos avisos que antes viajaban como frase adentro del `Error` y que, al dejar de mandarse el
+  // Dos motivos que antes viajaban como frase adentro del `Error` y que, al dejar de mandarse el
   // texto crudo, se habrían perdido: quien mira leería "algo falló de nuestro lado" cuando en
   // realidad no falló nada, sólo que lo que pidió no corresponde. El de la persona es 409 —el
   // pedido está bien armado, lo que pasa es que esa persona no es del círculo de esa Familia—;

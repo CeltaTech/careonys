@@ -104,7 +104,7 @@ export async function listarProvincias({ prestadoraId }) {
  * una comodidad para poder medir distancias, y ninguna alta se cae por no tenerlas.
  *
  * **Por qué se descarta lo aproximado.** Un punto en el medio de la cuadra parece un dato
- * bueno y no lo es: el aviso de check-in fuera de rango tolera 150 metros por omisión
+ * bueno y no lo es: la alerta de check-in fuera de rango tolera 150 metros por omisión
  * (`configuracion_ausencia_automatica.metros_tolerancia_checkin`), y una dirección ubicada
  * solo hasta la calle cae adentro o afuera de esos metros por azar. Una distancia inventada
  * es peor que ninguna distancia, porque parece confiable.

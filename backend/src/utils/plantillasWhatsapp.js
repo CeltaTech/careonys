@@ -98,9 +98,9 @@ export async function darDeAltaEnMeta(plantilla) {
 /**
  * Le pregunta a Meta cómo quedaron las plantillas de una Prestadora.
  *
- * Meta las revisa a su tiempo y el resultado llega por su aviso automático, que la Prestadora
- * configura en su panel. Esto es la otra puerta: la que se usa cuando ese aviso no está conectado,
- * cuando se perdió uno, o cuando alguien quiere mirar ahora mismo. Se trae la lista entera en un
+ * Meta las revisa a su tiempo y el resultado llega solo a la dirección que la Prestadora configura
+ * en su panel. Esto es la otra puerta: la que se usa cuando esa dirección no está conectada, cuando
+ * se perdió un resultado, o cuando alguien quiere mirar ahora mismo. Se trae la lista entera en un
  * pedido y no una plantilla por vez, que serían tantas llamadas como plantillas tenga.
  *
  * @param {string} prestadoraId

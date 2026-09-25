@@ -33,9 +33,9 @@ export async function credencialesWhatsapp(prestadoraId) {
 // ======================================================================================
 //
 // Meta entrega texto libre solamente adentro de una conversación que abrió la otra persona, y
-// durante las veinticuatro horas que sigue abierta. Un mensaje que la Prestadora empieza —un aviso
-// al Coordinador, un recordatorio a la Asistente— fuera de esa ventana lo rechaza, salvo que vaya
-// con una plantilla aprobada de antemano.
+// durante las veinticuatro horas que sigue abierta. Un mensaje que la Prestadora empieza —uno del
+// sistema al Coordinador, un recordatorio a la Asistente— fuera de esa ventana lo rechaza, salvo
+// que vaya con una plantilla aprobada de antemano.
 //
 // Por eso hay dos funciones y no una con un parámetro más: quien escribe el código tiene que
 // decidir cuál de los dos casos es el suyo, y esa decisión no la puede tomar el envío por su
@@ -110,11 +110,11 @@ export async function enviarWhatsAppPorPlantilla({ prestadoraId, telefono, plant
 }
 
 /**
- * Con qué plantilla sale un aviso por WhatsApp, si es que sale.
+ * Con qué plantilla sale un mensaje por WhatsApp, si es que sale.
  *
  * Devuelve `null` cuando la Prestadora no eligió ninguna o cuando la que eligió todavía no está
- * aprobada. No se busca una parecida ni se elige la primera aprobada que haya: cuál es el mensaje
- * de cada aviso lo decide la Prestadora, y adivinarlo sería mandarle a la gente un texto que nadie
+ * aprobada. No se busca una parecida ni se elige la primera aprobada que haya: con qué texto sale
+ * cada mensaje lo decide la Prestadora, y adivinarlo sería mandarle a la gente un texto que nadie
  * mandó.
  */
 export async function plantillaDelEvento(plantillaId, prestadoraId) {
@@ -131,10 +131,10 @@ export async function plantillaDelEvento(plantillaId, prestadoraId) {
 }
 
 /**
- * Manda el aviso de un evento por WhatsApp, con la plantilla que la Prestadora le eligió.
+ * Manda el mensaje de un evento por WhatsApp, con la plantilla que la Prestadora le eligió.
  *
- * Es el único camino por el que un aviso sale por WhatsApp, y existe para que las dos condiciones
- * —la Prestadora encendió el canal para ese aviso, y le eligió una plantilla que Meta aprobó—
+ * Es el único camino por el que un mensaje sale por WhatsApp, y existe para que las dos condiciones
+ * —la Prestadora encendió el canal para ese mensaje, y le eligió una plantilla que Meta aprobó—
  * estén escritas una sola vez y no en cada proceso que avisa.
  *
  * @param {object} config     La fila de `configuracion_notificaciones` de ese evento.
@@ -154,14 +154,14 @@ export async function avisarPorWhatsapp({ config, prestadoraId, telefono, valore
 }
 
 /**
- * A qué número le llega un aviso al Coordinador cuando quien avisa no tiene uno propio.
+ * A qué número le llega un mensaje al Coordinador cuando quien avisa no tiene uno propio.
  *
- * Es el mismo criterio que usa el correo: sin destinatarios cargados, el aviso cae al contacto de
+ * Es el mismo criterio que usa el correo: sin destinatarios cargados, el mensaje cae al contacto de
  * la Prestadora (`utils/email.js`). Sin esto, la casilla de WhatsApp de la pantalla de Avisos
- * quedaba encendida sin que saliera nunca un mensaje, porque los avisos que nacen de un proceso
+ * quedaba encendida sin que saliera nunca un mensaje, porque los que nacen de un proceso
  * —una guardia sin cubrir, un documento por vencer— no tienen a quién preguntarle el número.
  */
-export async function telefonoDeAvisos(prestadoraId) {
+export async function telefonoDeMensajes(prestadoraId) {
   const { data } = await supabase
     .from('configuracion_prestadora')
     .select('whatsapp_numero')
@@ -174,21 +174,21 @@ export async function telefonoDeAvisos(prestadoraId) {
 // Envío al Coordinador de un evento configurado (Módulo 8 > Notificaciones del Panel):
 // intenta WhatsApp si el evento lo tiene activado, hay un teléfono de destino y la Prestadora le
 // eligió una plantilla aprobada; si falla cualquiera de esas tres cosas, cae a email — nunca se
-// pierde un aviso por un problema del canal WhatsApp (docs/PRD_06_WhatsApp_IA.md punto B,
+// pierde un mensaje por un problema del canal WhatsApp (docs/PRD_06_WhatsApp_IA.md punto B,
 // "ningún mensaje queda sin respuesta").
 //
-// El aviso lo empieza la Prestadora, así que va por plantilla y no por texto libre. Sin plantilla
+// El mensaje lo empieza la Prestadora, así que va por plantilla y no por texto libre. Sin plantilla
 // elegida el mensaje no se intenta: Meta lo rechazaría, y el intento retrasaría el correo que de
 // todos modos hay que mandar. Los dos valores que se le dan a la plantilla son el asunto y el
-// cuerpo, en ese orden; una plantilla que pida más de dos no le corresponde a este aviso y también
+// cuerpo, en ese orden; una plantilla que pida más de dos no le corresponde a este mensaje y también
 // cae a correo.
 //
 // Y EN EL MEDIO ESTÁ EL MENSAJE DE TEXTO, que es el respaldo de WhatsApp para quien no lo usa. Va
 // segundo y no primero porque es la vía débil —sin cifrar y sin constancia de quién mandó qué—, y
 // va antes del correo porque el correo no interrumpe a nadie: un turno que empieza en veinte
 // minutos y no tiene quien lo cubra no puede esperar a que alguien abra su casilla. Hoy no sale
-// ninguno: ninguna Prestadora tiene proveedor cargado, así que este paso contesta que no y el aviso
-// sigue derecho al correo, igual que antes (utils/mensajeDeTexto.js).
+// ninguno: ninguna Prestadora tiene proveedor cargado, así que este paso contesta que no y el
+// mensaje sigue derecho al correo, igual que antes (utils/mensajeDeTexto.js).
 //
 // A qué número van los dos es el mismo: el teléfono propio de quien avisa, si lo tiene, y si no el
 // de contacto de la Prestadora. La columna donde vive ese número se llama `whatsapp_numero` desde
@@ -199,10 +199,10 @@ export async function notificarCoordinador({ evento, prestadoraId, asunto, texto
   if (config && config.activo === false) return;
 
   // El número sólo se busca si alguna de las dos vías que lo necesitan está encendida:
-  // preguntárselo a la base en cada aviso que igual va a salir por correo sería una consulta por
+  // preguntárselo a la base en cada mensaje que igual va a salir por correo sería una consulta por
   // nada.
   const haceFaltaElNumero = Boolean(config?.whatsapp_activo || config?.mensaje_de_texto_activo);
-  const destino = telefono ?? (haceFaltaElNumero ? await telefonoDeAvisos(prestadoraId) : null);
+  const destino = telefono ?? (haceFaltaElNumero ? await telefonoDeMensajes(prestadoraId) : null);
 
   try {
     const salio = await avisarPorWhatsapp({

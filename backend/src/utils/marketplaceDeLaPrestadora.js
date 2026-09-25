@@ -42,7 +42,7 @@ export async function ofreceMarketplace(prestadoraId) {
  *
  * Falla cerrado a propósito: si la consulta no contesta, la función se da por apagada. Con una
  * función de riesgo legal, el error de leer de menos es que la lista salga mezclada; el de leer
- * de más es que la Prestadora use una función que nunca encendió y sin el aviso que le
+ * de más es que la Prestadora use una función que nunca encendió y sin la advertencia que le
  * corresponde.
  */
 export async function funcionDeRiesgoEncendida(prestadoraId, clave) {

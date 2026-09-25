@@ -9,7 +9,7 @@ const API_BASE = process.env.COBRANZA_EFECTIVO_API_BASE;
 
 /** Las redes de cobranza extrabancaria tampoco publican un esquema de firma común —cada una
  *  tiene el suyo, y ninguno está abierto—, así que este riel entra por la misma puerta que Modo
- *  y el DEBIN: sin secreto de firma cargado se rechaza todo aviso. Se corrigió junto con esos
+ *  y el DEBIN: sin secreto de firma cargado se rechaza todo lo que entre. Se corrigió junto con esos
  *  dos porque tenía exactamente el mismo agujero, y un defecto encontrado en un riel se revisa
  *  en todos (`celtatech\CLAUDE.md` §8). */
 export const REQUIERE_SECRETO_FIRMA = true;
@@ -51,7 +51,7 @@ export async function armarCobroDelPeriodo({ credencial, monto, referencia, venc
   return { referenciaExterna, urlAccion: null, codigoCupon };
 }
 
-/** Comprueba que el aviso vino firmado y recién ahí lo interpreta. Antes alcanzaba con que
+/** Comprueba que el cobro vino firmado y recién ahí lo interpreta. Antes alcanzaba con que
  *  trajera un identificador, y la dirección del webhook es pública. Ver el porqué del esquema
  *  en `firmaWebhook.js`, en `comprobarFirmaSinEsquemaPublicado`. */
 export function verificarWebhook({ secretoFirma, headers, cuerpoCrudo, body, ahoraMs }) {

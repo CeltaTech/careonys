@@ -1,17 +1,17 @@
 /**
- * Por dónde le llega un aviso a quien coordina, y a qué número.
+ * Por dónde le llega un mensaje a quien coordina, y a qué número.
  *
  *   npm test --prefix backend
  *
- * POR QUÉ EXISTE ESTA PRUEBA. La pantalla de Avisos dibuja una casilla de WhatsApp por aviso, y
- * encenderla no rompe nada: si el aviso no tiene a quién mandárselo, el mensaje simplemente no
- * sale y el correo llega igual. O sea que la casilla puede quedar encendida durante meses sin que
- * nadie note que no hizo nada. Eso es justo lo que pasaba con los avisos que nacen de un proceso
+ * POR QUÉ EXISTE ESTA PRUEBA. La pantalla de Avisos dibuja una casilla de WhatsApp por mensaje, y
+ * encenderla no rompe nada: si el mensaje no tiene a quién mandárselo, simplemente no sale
+ * y el correo llega igual. O sea que la casilla puede quedar encendida durante meses sin que
+ * nadie note que no hizo nada. Eso es justo lo que pasaba con los mensajes que nacen de un proceso
  * —una guardia sin cubrir, un documento por vencer—: ninguno tenía un número de destino.
  *
  * Acá se mira que, con el canal encendido y una plantilla aprobada, el mensaje efectivamente salga
  * al WhatsApp de contacto de la Prestadora; y que con el canal apagado no se le pregunte nada a la
- * base, porque ese aviso va por correo.
+ * base, porque ese mensaje va por correo.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
@@ -68,7 +68,7 @@ globalThis.fetch = async (url, opciones) => {
   });
 };
 
-const { notificarCoordinador, telefonoDeAvisos } = await import('../whatsapp.js');
+const { notificarCoordinador, telefonoDeMensajes } = await import('../whatsapp.js');
 
 after(() => {
   globalThis.fetch = fetchDeVerdad;
@@ -164,7 +164,7 @@ describe('a qué número le llega un aviso', () => {
       return [{ whatsapp_numero: WHATSAPP_DE_LA_PRESTADORA }];
     });
 
-    assert.equal(await telefonoDeAvisos(PRESTADORA), WHATSAPP_DE_LA_PRESTADORA);
+    assert.equal(await telefonoDeMensajes(PRESTADORA), WHATSAPP_DE_LA_PRESTADORA);
     assert.equal(parametros.get('prestadora_id'), `eq.${PRESTADORA}`);
   });
 });

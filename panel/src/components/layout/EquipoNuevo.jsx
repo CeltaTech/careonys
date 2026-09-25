@@ -15,7 +15,7 @@ import { FormField } from '../ui/FormField';
    ya se entró antes, no aparece nada.
 
    NO SE PIDE EL CÓDIGO A QUIEN NO PUEDE RECIBIRLO. La cuenta sin número verificado, y la Prestadora
-   que todavía no tiene por dónde mandarlo, entran igual que siempre y reciben un aviso por correo.
+   que todavía no tiene por dónde mandarlo, entran igual que siempre y reciben un mensaje por correo.
    Eso lo resuelve el backend: acá lo único que se hace es mostrar el casillero cuando el backend lo pide.
 
    Mientras el código esté pendiente, la pantalla de atrás no se usa. */

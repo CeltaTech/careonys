@@ -198,7 +198,7 @@ export default function GuardiaActiva() {
   const seVe = useSeVe();
   const [guardia, setGuardia] = useState(null);
   const [error, setError] = useState('');
-  const [aviso, setAviso] = useState('');
+  const [advertencia, setAdvertencia] = useState('');
   const [haciendoCheckin, setHaciendoCheckin] = useState(false);
   // El latido que vuelve a dibujar la pantalla cada medio minuto mientras la guardia está
   // abierta: lo que se ve arriba es cuánto lleva adentro, y eso cambia solo con el reloj. El
@@ -322,17 +322,17 @@ export default function GuardiaActiva() {
   // lo que no se pudo comprobar queda anotado como tal y el check-in se marca igual.
   async function alHacerCheckin(comprobacion) {
     setError('');
-    setAviso('');
+    setAdvertencia('');
     setHaciendoCheckin(true);
     try {
       const { lat, lng } = await obtenerUbicacion();
       const clienteUuid = nuevoId();
       try {
         const resultado = await api.checkin(id, { lat, lng, clienteUuid, comprobacion });
-        const avisos = [];
-        if (!resultado.dentroDeRango) avisos.push(t.guardia_activa.fuera_de_rango);
-        if (resultado.comprobacion === 'sin_comprobar') avisos.push(t.guardia_activa.quedo_sin_comprobar);
-        if (avisos.length > 0) setAviso(avisos.join(' '));
+        const advertencias = [];
+        if (!resultado.dentroDeRango) advertencias.push(t.guardia_activa.fuera_de_rango);
+        if (resultado.comprobacion === 'sin_comprobar') advertencias.push(t.guardia_activa.quedo_sin_comprobar);
+        if (advertencias.length > 0) setAdvertencia(advertencias.join(' '));
         setPasandoCheckin(false);
         cargar();
       } catch (e) {
@@ -345,7 +345,7 @@ export default function GuardiaActiva() {
         const sinRed = { motivoSinComprobar: 'sin_conexion' };
         await agregarACola({ id: clienteUuid, tipo: 'checkin', guardiaId: id, payload: { lat, lng, clienteUuid, comprobacion: sinRed } });
         setCheckinPendiente({ desde: Date.now() });
-        setAviso(t.guardia_activa.sin_conexion_sin_comprobar);
+        setAdvertencia(t.guardia_activa.sin_conexion_sin_comprobar);
         setPasandoCheckin(false);
         sincronizarCola();
       }
@@ -368,14 +368,14 @@ export default function GuardiaActiva() {
   // nunca traba el cierre, y viaja junto con la ubicación en el mismo pedido.
   async function alCerrarGuardia(comprobacion) {
     setError('');
-    setAviso('');
+    setAdvertencia('');
     setCerrando(true);
     try {
       const { lat, lng } = await obtenerUbicacion();
       const clienteUuid = nuevoId();
       try {
         const resultado = await api.checkout(id, { lat, lng, clienteUuid, comprobacion });
-        if (resultado.comprobacion === 'sin_comprobar') setAviso(t.guardia_activa.quedo_sin_comprobar);
+        if (resultado.comprobacion === 'sin_comprobar') setAdvertencia(t.guardia_activa.quedo_sin_comprobar);
         setPasandoCheckout(false);
         setConfirmandoCierre(false);
         cargar();
@@ -387,7 +387,7 @@ export default function GuardiaActiva() {
         const sinRed = { motivoSinComprobar: 'sin_conexion' };
         await agregarACola({ id: clienteUuid, tipo: 'checkout', guardiaId: id, payload: { lat, lng, clienteUuid, comprobacion: sinRed } });
         setCerradoPendiente(true);
-        setAviso(t.guardia_activa.sin_conexion_sin_comprobar);
+        setAdvertencia(t.guardia_activa.sin_conexion_sin_comprobar);
         setPasandoCheckout(false);
         setConfirmandoCierre(false);
         sincronizarCola();
@@ -474,7 +474,7 @@ export default function GuardiaActiva() {
         <div className="alert alert-info" role="status">{con(t.guardia_activa.varios_pacientes, { n: pacientes.length })}</div>
       )}
 
-      {aviso && <div className="alert alert-alerta" role="status">{aviso}</div>}
+      {advertencia && <div className="alert alert-alerta" role="status">{advertencia}</div>}
 
       {/* Lo que espera señal en este teléfono, y el motivo cuando el backend lo rechazó. El motivo
           se guardaba desde siempre y no se mostraba nunca: la persona veía «pendiente de enviar»
@@ -525,7 +525,7 @@ export default function GuardiaActiva() {
           muestra en su pantalla quien está en la casa. Si no hay nadie que pueda mostrarlo,
           <PaseDeGuardia/> ofrece pedírselo a la Prestadora, y si tampoco así, entrar igual
           eligiendo un motivo — el pase nunca traba la guardia.
-          Se queda dibujado mientras el pedido viaja: si el backend rechaza el código, el aviso
+          Se queda dibujado mientras el pedido viaja: si el backend rechaza el código, la advertencia
           aparece adentro del mismo pase y se puede intentar de nuevo sin volver a empezar. */}
       {!guardia.checkin_at && !checkinPendiente && pasandoCheckin && (
         <PaseDeGuardia
@@ -574,7 +574,7 @@ export default function GuardiaActiva() {
             </div>
           )}
 
-          {/* El aviso de antes del intento y el rechazo de después son la misma regla, así que
+          {/* La advertencia de antes del intento y el rechazo de después son la misma regla, así que
               son un solo texto: el del motivo `continuidad` que manda el backend. */}
           {reportesCompletos && !cerradoPendiente && guardia.checkout_bloqueado && (
             <div className="alert alert-alerta" role="status" style={{ marginTop: '1rem' }}>{t.errores.motivos.continuidad}</div>

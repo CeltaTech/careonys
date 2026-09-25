@@ -36,7 +36,7 @@ describe('pestanasDelAsistente', () => {
       expect(typeof textos[clave], `falta ${clave} en ${idioma}`).toBe('string');
       expect(textos[clave].length).toBeGreaterThan(0);
     }
-    // Sin el hueco, el aviso diría que se muestran "las últimas guardias" sin decir cuántas, y
+    // Sin el hueco, la advertencia diría que se muestran "las últimas guardias" sin decir cuántas, y
     // nadie sabría cuánto quedó afuera.
     expect(textos.tope).toContain('{n}');
   });

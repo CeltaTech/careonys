@@ -212,7 +212,7 @@ async function guardarComprobacion(fila) {
 
   // La pantalla de la Prestadora se entera acá y no cuando le toque preguntar. Sale en toda
   // escritura y no sólo en las que entran o salen de «esperando código»: por acá pasan dos
-  // escrituras por guardia, el aviso no lleva ningún dato y lo único que provoca del otro lado
+  // escrituras por guardia, el mensaje no lleva ningún dato y lo único que provoca del otro lado
   // es que la lista se vuelva a pedir. Averiguar antes el estado anterior costaría una consulta
   // por escritura —más de lo que ahorra— y dejaría la puerta abierta a olvidarse de un camino.
   empujar(fila.prestadora_id, ASUNTOS.PEDIDOS_DE_CODIGO);

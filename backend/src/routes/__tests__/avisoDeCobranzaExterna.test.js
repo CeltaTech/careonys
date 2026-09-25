@@ -4,13 +4,13 @@
  *   npm test --prefix backend
  *
  * POR QUÉ EXISTE ESTA PRUEBA. Es una dirección pública: la llama un software de afuera, sin sesión.
- * Lo único que separa un aviso de verdad de uno inventado es la firma, y lo único que separa una
+ * Lo único que separa una entrada de verdad de una inventada es la firma, y lo único que separa una
  * Prestadora de otra es el filtro escrito en la consulta. Seis agujeros que tapa:
  *
- *  1. Que entre un aviso sin firma, con una firma que no da, o cuando esa Prestadora todavía no
+ *  1. Que entre algo sin firma, con una firma que no da, o cuando esa Prestadora todavía no
  *     cargó ningún secreto.
  *  2. Que el secreto de una Prestadora sirva para escribir sobre una Familia de otra.
- *  3. Que el mismo aviso repetido anote dos veces.
+ *  3. Que lo mismo mandado dos veces se anote dos veces.
  *  4. Que quien hoy manda sólo la restricción deje de entrar al ampliarse la puerta.
  *  5. Que entre un estado de cuenta sin moneda, o con un saldo que no es número.
  *  6. Que la respuesta, o el rechazo, cuente algo de la base.
@@ -76,12 +76,12 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 // en el momento en que se importa, y con la dirección que haya en ese instante.
 const { default: express } = await import('express');
 await import('express-async-errors');
-const { avisoDeCobranzaExternaRouter } = await import('../avisoDeCobranzaExterna.js');
+const { cobranzaExternaRouter } = await import('../avisoDeCobranzaExterna.js');
 
 const app = express();
 // Montado como en `server.js`: antes de cualquier lector de JSON general, porque la firma se
 // calcula sobre los bytes exactos que llegaron.
-app.use('/api/avisos-de-cobranza', avisoDeCobranzaExternaRouter);
+app.use('/api/avisos-de-cobranza', cobranzaExternaRouter);
 const backend = app.listen(0, '127.0.0.1');
 await new Promise((listo) => backend.on('listening', listo));
 const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/avisos-de-cobranza`;
@@ -147,43 +147,43 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------------------
 
 describe('sin firma no entra nada', () => {
-  const AVISO = { familia_id: FAMILIA, restringida: true };
+  const RESTRICCION = { familia_id: FAMILIA, restringida: true };
 
   it('el aviso sin cabecera de firma se rechaza y no escribe', async () => {
-    const { estado } = await avisar(AVISO, { firma: null });
+    const { estado } = await avisar(RESTRICCION, { firma: null });
     assert.equal(estado, 401);
     assert.equal(laRestriccion(), undefined, 'dijo que no y escribió igual');
   });
 
   it('una firma calculada con otro secreto no entra', async () => {
-    const { estado } = await avisar(AVISO, { firma: firmaDe(JSON.stringify(AVISO), 'otro-secreto') });
+    const { estado } = await avisar(RESTRICCION, { firma: firmaDe(JSON.stringify(RESTRICCION), 'otro-secreto') });
     assert.equal(estado, 401);
     assert.equal(laRestriccion(), undefined);
   });
 
   it('una firma de hace horas no entra', async () => {
     const vieja = Math.floor(Date.now() / 1000) - 60 * 60 * 5;
-    const { estado } = await avisar(AVISO, { firma: firmaDe(JSON.stringify(AVISO), SECRETO, vieja) });
+    const { estado } = await avisar(RESTRICCION, { firma: firmaDe(JSON.stringify(RESTRICCION), SECRETO, vieja) });
     assert.equal(estado, 401);
     assert.equal(laRestriccion(), undefined);
   });
 
   it('sin secreto cargado no entra ningún aviso, aunque venga firmado', async () => {
     secretoCargado = null;
-    const { estado } = await avisar(AVISO);
+    const { estado } = await avisar(RESTRICCION);
     assert.equal(estado, 401);
     assert.equal(laRestriccion(), undefined);
   });
 
   it('una Prestadora que no tiene forma de identificador se corta antes de tocar la base', async () => {
-    const { estado } = await avisar(AVISO, { prestadora: 'la-de-siempre' });
+    const { estado } = await avisar(RESTRICCION, { prestadora: 'la-de-siempre' });
     assert.equal(estado, 401);
     assert.equal(llamadas.length, 0, 'le preguntó a la base por algo que no es un identificador');
   });
 
   it('el rechazo no cuenta cuál de las comprobaciones falló', async () => {
-    const sinFirma = await avisar(AVISO, { firma: null });
-    const conOtroSecreto = await avisar(AVISO, { firma: firmaDe(JSON.stringify(AVISO), 'otro') });
+    const sinFirma = await avisar(RESTRICCION, { firma: null });
+    const conOtroSecreto = await avisar(RESTRICCION, { firma: firmaDe(JSON.stringify(RESTRICCION), 'otro') });
     assert.deepEqual(sinFirma.cuerpo, conOtroSecreto.cuerpo);
     noFiltraLaBase(sinFirma.cuerpo);
   });

@@ -28,9 +28,9 @@
 // CLAUDE.md §3: el sistema advierte, no decide por la Prestadora.
 //
 // QUÉ NO ESTÁ ACÁ, A PROPÓSITO:
-//   - Los avisos al teléfono. A quién le llega cada aviso ya se decide en Configuración ›
-//     Avisos (`catalogoAvisos.js`). Poner acá otra casilla que decidiera lo mismo dejaría la
-//     misma regla escrita en dos lugares (CLAUDE.md §7 regla 12).
+//   - Los mensajes del sistema al teléfono. A quién le llega cada uno ya se decide en la
+//     configuración de mensajes (`catalogoAvisos.js`). Poner acá otra casilla que decidiera lo
+//     mismo dejaría la misma regla escrita en dos lugares (CLAUDE.md §7 regla 12).
 //   - El consentimiento del Asistente para el seguimiento de ubicación. Eso no es una
 //     preferencia de la Prestadora sino una decisión de la persona, y tiene su propio circuito
 //     (`/consentimientos` en la aplicación del Asistente). Apagar acá la ubicación en vivo la

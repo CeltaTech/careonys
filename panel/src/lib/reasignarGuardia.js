@@ -16,7 +16,7 @@ import { avisarCambioDeAsistente } from './avisarCambioDeAsistente';
         así que sin este paso la asignación entera falla.
      3. Si la guardia estaba marcada como ausente, había un incidente de relevo abierto por
         ella. Asignar a alguien la cubre de verdad, así que ese incidente se cierra acá. Si no,
-        el aviso de "necesita relevo" sigue encendido aunque el Paciente ya tenga quien lo
+        la alerta de "necesita relevo" sigue encendida aunque el Paciente ya tenga quien lo
         cuide, y alguien va a salir a resolver un problema que ya no existe.
      4. Se avisa el cambio, porque a la casa del Paciente entra otra persona. El aviso sale
         después de guardar y no antes, y no puede voltear la reasignación: la guardia ya cambió.

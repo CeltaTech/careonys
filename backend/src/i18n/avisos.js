@@ -8,12 +8,12 @@ import { IDIOMA_POR_DEFECTO, IDIOMAS_SOPORTADOS, normalizarIdioma } from './idio
 import { IDENTIDAD } from '../config/identidadProducto.js';
 import { frase } from './mensajesDelSistema.js';
 
-/* Cómo se arma cada aviso que sale del backend.
+/* Cómo se arma cada mensaje del sistema que sale del backend.
    ==========================================
 
-   POR QUÉ EXISTE. Un aviso que sale por correo, por WhatsApp o al celular es texto visible, y el
+   POR QUÉ EXISTE. Un mensaje que sale por correo, por WhatsApp o al celular es texto visible, y el
    texto visible se traduce (`celtatech\CLAUDE.md` §8). Antes ese castellano estaba escrito adentro
-   de cada archivo que mandaba el aviso —una docena de archivos—, así que el producto hablaba tres
+   de cada archivo que lo mandaba —una docena de archivos—, así que el producto hablaba tres
    idiomas en la pantalla y uno solo apenas salía de ella.
 
    ACÁ NO HAY NINGUNA FRASE ESCRITA. Las frases viven en `mensajes_del_sistema`, que se edita desde
@@ -26,9 +26,9 @@ import { frase } from './mensajesDelSistema.js';
    Asistente marcó su salida o no— y reciben el asunto y el texto ya armados. Ninguna decisión de
    redacción queda del lado del emisor, porque ahí volvería a existir en un solo idioma.
 
-   UNA CLAVE QUE NO EXISTE SIGUE ROMPIENDO ACÁ, y a propósito: las claves de aviso son las de este
-   archivo, no las de la tabla. Que las palabras se editen desde afuera no significa que alguien
-   pueda inventar un aviso nuevo sin código que lo mande.
+   UNA CLAVE QUE NO EXISTE SIGUE ROMPIENDO ACÁ, y a propósito: las claves de mensaje son las de
+   este archivo, no las de la tabla. Que las palabras se editen desde afuera no significa que
+   alguien pueda inventar un mensaje nuevo sin código que lo mande.
 
    SI FALTA UNA FRASE, no sale un hueco mudo: sale la marca que deja `mensajesDelSistema.js`, y
    queda avisado por consola. */
@@ -68,12 +68,12 @@ function comoTextoHTML(valor) {
 
    Quien lea el correo en un programa que no muestra formato recibe igual la versión en texto, que
    sí lleva la dirección escrita entera. */
-function correoConBoton({ saludo, cuerpo, boton, link, pieDeAviso, marca }) {
+function correoConBoton({ saludo, cuerpo, boton, link, pieDelMensaje, marca }) {
   const partes = [
     `<p>${comoTextoHTML(saludo)}</p>`,
     `<p>${comoTextoHTML(cuerpo)}</p>`,
     `<p><a href="${comoTextoHTML(link)}">${comoTextoHTML(boton)}</a></p>`,
-    `<p>${comoTextoHTML(pieDeAviso)}</p>`,
+    `<p>${comoTextoHTML(pieDelMensaje)}</p>`,
   ];
   if (marca) partes.push(`<hr><p>${comoTextoHTML(marca)}</p>`);
   return partes.join('\n');
@@ -94,7 +94,7 @@ function pacientesDe(t, pacientes) {
   return unirNombres(pacientes, t('comun.conjuncion'), t('comun.paciente_sin_nombre'));
 }
 
-/** El renglón que abre casi todos los avisos de guardia: cuál es, cuándo y para quién. */
+/** El renglón que abre casi todos los mensajes de guardia: cuál es, cuándo y para quién. */
 function lineaGuardia(t, d) {
   return t('comun.linea_guardia', {
     fecha: d.fecha,
@@ -122,9 +122,9 @@ function lineaDeArranque(t, d) {
   return t(d.yaEmpezo ? 'comun.tendria_que_haber_empezado' : 'comun.empieza_en', { horas: d.horas });
 }
 
-// El aviso tiene que servir para actuar, no solo para enterarse. Por eso dice en qué punto está la
-// búsqueda: si todavía no se ofreció a nadie, si se ofreció y nadie contestó, o si contestaron
-// todos que no. Son tres situaciones con tres acciones distintas.
+// El mensaje tiene que servir para actuar, no solo para enterarse. Por eso dice en qué punto
+// está la búsqueda: si todavía no se ofreció a nadie, si se ofreció y nadie contestó, o si
+// contestaron todos que no. Son tres situaciones con tres acciones distintas.
 function estadoDeLaBusqueda(t, { ofrecida, invitados, sinContestar, aceptaron }) {
   if (!ofrecida) return t('guardia_sin_cubrir.sin_ofrecer');
   if (invitados === 0) return t('guardia_sin_cubrir.publicada_sin_invitar');
@@ -159,7 +159,7 @@ const CLAVE_POR_ESTADO_DE_POSTULACION = {
   rechazado: 'estado_postulacion.rechazado',
 };
 
-/* Cada aviso, armado. `t` es la frase en el idioma de quien lo va a leer, y ya trae resuelto el
+/* Cada mensaje, armado. `t` es la frase en el idioma de quien lo va a leer, y ya trae resuelto el
    piso de la Prestadora cuando ella escribió el suyo. */
 const ARMADORES = {
   origen_de_alerta: (t, { fuente }) => ({
@@ -499,21 +499,21 @@ const ARMADORES = {
   activacion_cuenta: (t, d) => {
     const saludo = t('comun.saludo', { nombre: d.nombre });
     const cuerpo = t('activacion_cuenta.cuerpo', { empresa: d.empresa });
-    const pieDeAviso = t('activacion_cuenta.pie_de_aviso', { dias: d.dias });
+    const pieDelMensaje = t('activacion_cuenta.pie_de_aviso', { dias: d.dias });
     const marca = t('comun.marca', { producto: d.producto });
     return {
       asunto: t('activacion_cuenta.asunto', { empresa: d.empresa }),
       texto: [
         saludo, '', cuerpo, '',
         t('activacion_cuenta.invitacion_al_enlace'), d.link, '',
-        pieDeAviso, '', '—', marca,
+        pieDelMensaje, '', '—', marca,
       ].join('\n'),
       html: correoConBoton({
         saludo,
         cuerpo,
         boton: t('activacion_cuenta.boton'),
         link: d.link,
-        pieDeAviso,
+        pieDelMensaje,
         marca,
       }),
     };
@@ -522,21 +522,21 @@ const ARMADORES = {
   recuperacion_clave: (t, d) => {
     const saludo = t('comun.saludo', { nombre: d.nombre });
     const cuerpo = t('recuperacion_clave.cuerpo', { empresa: d.empresa });
-    const pieDeAviso = t('recuperacion_clave.pie_de_aviso', { horas: d.horas });
+    const pieDelMensaje = t('recuperacion_clave.pie_de_aviso', { horas: d.horas });
     const marca = t('comun.marca', { producto: d.producto });
     return {
       asunto: t('recuperacion_clave.asunto', { empresa: d.empresa }),
       texto: [
         saludo, '', cuerpo, '',
         t('recuperacion_clave.invitacion_al_enlace'), d.link, '',
-        pieDeAviso, '', '—', marca,
+        pieDelMensaje, '', '—', marca,
       ].join('\n'),
       html: correoConBoton({
         saludo,
         cuerpo,
         boton: t('recuperacion_clave.boton'),
         link: d.link,
-        pieDeAviso,
+        pieDelMensaje,
         marca,
       }),
     };
@@ -602,19 +602,19 @@ const ARMADORES = {
   }),
 
   // No dice por qué se cerró el servicio: el motivo es del Paciente y de su Familia. Y no dice
-  // nada del desempeño del Asistente, porque este aviso sale justamente cuando el cierre no
+  // nada del desempeño del Asistente, porque este mensaje sale justamente cuando el cierre no
   // tuvo que ver con él.
   cese_de_servicio: (t) => ({
     titulo: t('cese_de_servicio.titulo'),
     cuerpo: t('cese_de_servicio.cuerpo'),
   }),
 
-  /* Los tres avisos de la entrevista salen por correo, porque quien se postuló todavía no tiene
+  /* Los tres mensajes de la entrevista salen por correo, porque quien se postuló todavía no tiene
      ninguna aplicación instalada: lo único que dejó es su correo.
 
      EL ENLACE NO ES LA SALA. Lleva a una pantalla del producto, que comprueba que sea la hora
      antes de dejar entrar. Por eso el mismo enlace sigue sirviendo si la entrevista se
-     reprograma, y por eso el aviso dice desde cuándo se puede entrar. */
+     reprograma, y por eso el mensaje dice desde cuándo se puede entrar. */
   entrevista_agendada: (t, d) => ({
     titulo: t('entrevista_agendada.titulo', { prestadora: d.prestadora }),
     cuerpo: t('entrevista_agendada.cuerpo', {
@@ -633,20 +633,20 @@ const ARMADORES = {
     }) + pie(t),
   }),
 
-  // No dice por qué se canceló. El motivo es de la Prestadora, y un aviso automático que lo
+  // No dice por qué se canceló. El motivo es de la Prestadora, y un mensaje automático que lo
   // adelante contesta mal una pregunta que todavía no se hizo.
   entrevista_cancelada: (t, d) => ({
     titulo: t('entrevista_cancelada.titulo', { prestadora: d.prestadora }),
     cuerpo: t('entrevista_cancelada.cuerpo', { cuando: d.cuando }) + pie(t),
   }),
 
-  // Los cuatro avisos de la seguridad de la cuenta. Salen siempre, sin que nadie los configure:
+  // Los cuatro mensajes de la seguridad de la cuenta. Salen siempre, sin que nadie los configure:
   // quien recibe uno que no reconoce es la única persona que puede darse cuenta de que alguien más
   // está entrando. Por eso cada uno dice qué hacer, y lo que hay que hacer es siempre lo mismo.
   // Ninguna Prestadora los reescribe, y eso está marcado en la propia tabla.
   //
-  // NINGUNO LLEVA EL NÚMERO NI EL CÓDIGO. Son datos sensibles y no viajan por correo. El aviso dice
-  // que el número cambió, no a cuál.
+  // NINGUNO LLEVA EL NÚMERO NI EL CÓDIGO. Son datos sensibles y no viajan por correo. El mensaje
+  // dice que el número cambió, no a cuál.
   clave_recuperada: (t, d) => ({
     asunto: t('clave_recuperada.asunto', { prestadora: d.prestadora }),
     texto: t('clave_recuperada.texto', { nombre: d.nombre, prestadora: d.prestadora }) + pie(t),
@@ -672,24 +672,24 @@ const ARMADORES = {
 };
 
 /** Las claves del catálogo, para que una prueba pueda recorrerlas sin que nadie las escriba dos veces. */
-export const CLAVES_DE_AVISO = Object.keys(ARMADORES);
+export const CLAVES_DE_MENSAJE = Object.keys(ARMADORES);
 
 /** Los idiomas del catálogo, en el mismo orden en que los declara `idiomas.js`. */
 export const IDIOMAS_DEL_CATALOGO = IDIOMAS_SOPORTADOS;
 
 /**
- * Un aviso armado: `{ asunto, texto }` para los que salen por correo o WhatsApp, `{ titulo,
+ * Un mensaje armado: `{ asunto, texto }` para los que salen por correo o WhatsApp, `{ titulo,
  * cuerpo }` para los que llegan al celular.
  *
- * Una clave que no existe rompe acá y no en el buzón de nadie: un aviso vacío que sale es peor que
- * un proceso que falla, porque el que sale nadie lo mira.
+ * Una clave que no existe rompe acá y no en el buzón de nadie: un mensaje vacío que sale es peor
+ * que un proceso que falla, porque el que sale nadie lo mira.
  *
  * @param {string} clave
  * @param {string|null|undefined} idioma
  * @param {object} [datos]
  * @param {string|null} [prestadoraId]  para que salga el texto propio de esa Prestadora, si escribió uno
  */
-export function aviso(clave, idioma, datos = {}, prestadoraId = null) {
+export function mensajeDelSistema(clave, idioma, datos = {}, prestadoraId = null) {
   const armar = ARMADORES[clave];
   if (!armar) throw new Error(`Aviso desconocido: ${clave}`);
   const idiomaFirme = normalizarIdioma(idioma);

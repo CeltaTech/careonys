@@ -12,7 +12,7 @@ import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
    en la de las alertas tempranas de ausencia: las dos hablan de otra cosa, y mezclarlas haría que
    un aviso de alguien que está adentro de una casa se lea con el mismo peso que una estadística.
 
-   EL DETALLE SE LEE ACÁ Y EN NINGÚN OTRO LADO. El aviso inmediato que sale por WhatsApp o por
+   EL DETALLE SE LEE ACÁ Y EN NINGÚN OTRO LADO. El mensaje inmediato que sale por WhatsApp o por
    correo dice que hay una emergencia y de qué guardia; el texto que escribió el Asistente es
    información sensible y no viaja por un canal público (`celtatech/CLAUDE.md` §6). Esta ruta es
    la puerta donde el permiso se comprueba.

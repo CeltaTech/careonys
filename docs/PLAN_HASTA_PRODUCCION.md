@@ -97,14 +97,14 @@ sólo lectura, así que el renglón se saca cuando se lo toque.
 - `CLAUDE.md:279` — **[ya construido]** que el número de Legajo no se muestre.
 - `CLAUDE.md:265` — que la palabra rol nunca signifique permisos.
 
-### 4. Los avisos: qué detecta el sistema solo y a quién le avisa
+### 4. Los mensajes: qué detecta el sistema solo y a quién le avisa
 
 Los cuatro son el mismo mecanismo mirado desde documentos distintos. Qué detecta, si se puede
-apagar, y por dónde sale el aviso.
+apagar, y por dónde sale el mensaje.
 
 - `docs/DATA_MODEL.md:591` y `docs/PRD_04_05_App_Servicio.md:168` — **[ya construido]** que el sistema detecte las ausencias y avise temprano solo.
 - `docs/PRD_04_05_App_Servicio.md:179` — que las alertas se puedan enchufar y sacar.
-- `docs/PRD_06_WhatsApp_IA.md:121` — el catálogo de avisos, los reintentos y a quién se escala.
+- `docs/PRD_06_WhatsApp_IA.md:121` — el catálogo de mensajes, los reintentos y a quién se escala.
 - `docs/PRD_06_WhatsApp_IA.md:26` — que el número y la cuenta de WhatsApp sean de cada Prestadora.
 
 Y colgada de ese último, una decisión de seguridad que sólo tiene sentido si el número es de cada
@@ -216,7 +216,7 @@ probando su correo.
 **Nunca en dos a la vez.** Para hacer o ver algo en la segunda Prestadora hay que salir de la
 primera y entrar a la otra. No existe ninguna pantalla que muestre las dos juntas, ni una lista con
 una columna que diga de cuál es cada cosa. Estando en una, la otra no existe: ni sus turnos, ni sus
-pacientes, ni sus avisos, ni sus papeles. Al cambiar se descarta todo lo que estaba cargado.
+pacientes, ni sus mensajes, ni sus papeles. Al cambiar se descarta todo lo que estaba cargado.
 
 **Y no hay excepción posible.** Con una sesión abierta en una Prestadora no se entra en otra hasta
 cerrar esa. Ninguna situación la habilita. Lo único que se mueve entre Organizaciones es la sesión
@@ -372,7 +372,7 @@ código. Lo guardado no se toca.
 
 ## Los huecos del Panel
 
-**17. Usted** — De la Solicitud: ¿cómo se le presenta la Asistente nueva a la Familia — aviso sin respuesta, aceptación explícita, o fuera del sistema?
+**17. Usted** — De la Solicitud: ¿cómo se le presenta la Asistente nueva a la Familia — mensaje sin respuesta, aceptación explícita, o fuera del sistema?
 
 **18. Usted** — Las dos observaciones de apariencia que quedan, porque las dos son decisiones de diseño: ¿con qué pantalla abre la aplicación de Familia cuando hay más de un Paciente — hoy abre en la lista, y con uno solo ya se saltea al detalle? ¿Y cuál es la identidad visual de las dos aplicaciones, que nunca pasaron por su etapa de diseño?
 
@@ -424,7 +424,7 @@ Los tres arreglos, para que estén escritos:
 
 **26.** Construirlo según lo contestado.
 
-**27. Usted** — Comparar automáticamente la foto del documento con la foto de la cara es tratamiento de dato biométrico, y hacen falta dos decisiones suyas: ¿cuál es el documento legal del que sale el aviso al Asistente, que hoy no existe y sin el cual no hay aviso? ¿Y qué proveedor compara las dos caras? Guardar las dos fotos y mostrarlas juntas ya está hecho: hoy las compara una persona.
+**27. Usted** — Comparar automáticamente la foto del documento con la foto de la cara es tratamiento de dato biométrico, y hacen falta dos decisiones suyas: ¿cuál es el documento legal del que sale la advertencia al Asistente, que hoy no existe y sin la cual no hay advertencia? ¿Y qué proveedor compara las dos caras? Guardar las dos fotos y mostrarlas juntas ya está hecho: hoy las compara una persona.
 
 **28.** Construirlo según lo contestado.
 
@@ -442,7 +442,7 @@ Los tres arreglos, para que estén escritos:
 
 - **El tiempo de viaje real sale de un servicio de mapas ajeno.** Cuál se contrata, con qué cuenta y qué se le manda en cada consulta —las coordenadas de la casa de una persona salen del producto— es decisión suya, y la credencial la pone usted.
 - **Dónde vive el Asistente ya se guarda**, con su dirección escrita y sus coordenadas, y anotado como dato sensible que no sale hacia la Familia. Las coordenadas quedan vacías mientras nadie ubique la dirección en un mapa, y completarlas depende del servicio de mapas del punto anterior. Esto **no es una decisión suya**: está tomada y construida.
-- **Y exige mirar el teléfono antes de que la guardia empiece.** Hoy el GPS se lee cuando la persona aprieta un botón. Leerlo sola, mientras todavía no empezó a trabajar, es seguir a alguien fuera de su horario: hay que decidir si se hace, con qué aviso y con qué permiso.
+- **Y exige mirar el teléfono antes de que la guardia empiece.** Hoy el GPS se lee cuando la persona aprieta un botón. Leerlo sola, mientras todavía no empezó a trabajar, es seguir a alguien fuera de su horario: hay que decidir si se hace, con qué advertencia y con qué permiso.
 
 **33.** Con eso contestado, construirlo — incluida la lista de medios de transporte, que hoy es texto libre escrito en cada salida y por eso no hay contra qué traducirlo a una velocidad.
 
@@ -454,14 +454,14 @@ De las especialidades de esta pantalla no queda nada por hacer: `asistentes.espe
 
 **36.** Cuatro puntos de las aplicaciones y de lo que sale hacia el teléfono:
 
-- **Los avisos al celular buscan a quién mandarlos sin la Prestadora.** Una suscripción puede
-  cambiar de dueño y de Prestadora —el propio código lo anota cuando pasa—, y entonces un aviso
+- **Los mensajes al celular buscan a quién mandarlos sin la Prestadora.** Una suscripción puede
+  cambiar de dueño y de Prestadora —el propio código lo anota cuando pasa—, y entonces un mensaje
   armado con datos de una sale al aparato de otra.
 - **El esquema de medicación de un Paciente se pide sin la Prestadora**, y la función ni siquiera
   la admite. Es dato de salud, lo más sensible que hay acá.
 - **Qué signos vitales se autorizó monitorear**: la función recibe la Prestadora y no la usa.
 - **La marca de la Prestadora queda guardada en el aparato y no se borra al salir.** Un teléfono
-  compartido sigue mostrando el nombre de la anterior en los avisos hasta que llegue el primer
+  compartido sigue mostrando el nombre de la anterior en los mensajes hasta que llegue el primer
   perfil de la nueva.
 
 **El molde es siempre el mismo, y es el que hay que cortar:** el aislamiento vive en quien llama,
@@ -495,13 +495,13 @@ depósito de los papeles del legajo, más arriba en esta lista; hoy sólo se gua
 
 ## Datos personales
 
-**46. Usted** — Protección de datos personales: el texto lo tiene que dar el Desarrollador. `docs/legal/argentina.md` tiene ocho secciones y ninguna es de esto. Sin documento no hay aviso.
+**46. Usted** — Protección de datos personales: el texto lo tiene que dar el Desarrollador. `docs/legal/argentina.md` tiene ocho secciones y ninguna es de esto. Sin documento no hay advertencia.
 
-**47.** El aviso, y qué se hace con los datos de un Servicio cerrado hace años, que hoy no se purgan nunca.
+**47.** La advertencia, y qué se hace con los datos de un Servicio cerrado hace años, que hoy no se purgan nunca.
 
 **48. Usted** — La ubicación de las personas: cuatro preguntas para el profesional legal. En los 21 archivos de `docs/legal/` no aparece ni una vez «ubicación», «GPS» ni la ley 25.326. El registro del consentimiento está construido; los textos sembrados son de relleno. **Mientras no haya respuesta, el seguimiento no se enciende con nadie real.**
 
-**49.** Sembrar los textos reales y encender el seguimiento y el aviso de demora en el trayecto.
+**49.** Sembrar los textos reales y encender el seguimiento y el mensaje de demora en el trayecto.
 
 ---
 
@@ -529,7 +529,7 @@ una copia de trabajo**, que no es un archivo del repositorio y por eso el barrid
 
 ## Marca y dominio por Prestadora
 
-**54.** Que la conversación quede guardada adentro del producto, según lo que se conteste sobre el botón de contacto de «Asistente Asignado», más arriba en esta misma lista. Hasta que el Panel no tenga un hilo de dos puntas, lo que se hablan la Familia y el Asistente en prestación directa se va a WhatsApp y no queda adentro de ningún lado. El chat interno ya está construido entero —hilos, mensajes, tapado del contacto, pantallas en las dos aplicaciones, aviso al celular y videollamada—, pero **sólo funciona donde la Prestadora pone Asistentes disponibles para que la Familia elija**: exige una Familia y un Asistente que se hayan encontrado ahí. En prestación directa no hay hilo, y hacia la Prestadora tampoco: el único canal con el Panel va en un solo sentido, del Panel al Asistente, y no hay dónde guardar lo que contesta.
+**54.** Que la conversación quede guardada adentro del producto, según lo que se conteste sobre el botón de contacto de «Asistente Asignado», más arriba en esta misma lista. Hasta que el Panel no tenga un hilo de dos puntas, lo que se hablan la Familia y el Asistente en prestación directa se va a WhatsApp y no queda adentro de ningún lado. El chat interno ya está construido entero —hilos, mensajes, tapado del contacto, pantallas en las dos aplicaciones, mensaje al celular y videollamada—, pero **sólo funciona donde la Prestadora pone Asistentes disponibles para que la Familia elija**: exige una Familia y un Asistente que se hayan encontrado ahí. En prestación directa no hay hilo, y hacia la Prestadora tampoco: el único canal con el Panel va en un solo sentido, del Panel al Asistente, y no hay dónde guardar lo que contesta.
 
 ---
 
@@ -642,17 +642,17 @@ tiene que seguir dando el mismo número que dio el día que se hizo. Eso ya es r
 —*los cálculos legales y económicos van parametrizados por jurisdicción, y a la escala vigente a la
 fecha del hecho*—, y acá se confirma.
 
-Las que ya están identificadas, cada una con su paso propio más adelante en esta lista: el aviso
+Las que ya están identificadas, cada una con su paso propio más adelante en esta lista: la advertencia
 para el tratamiento de dato biométrico, la accesibilidad, la protección de datos personales, y las
 cuatro preguntas sobre la ubicación de las personas. Los pasos que dependen de ellas dicen qué se
 construye igual mientras tanto.
 
 **75. Usted** — Las escalas legales: la validación, y los dos valores que el código usa y no
 existen (`piso_minimo_indemnizacion` y `fraccion_computable_antiguedad`). En el mismo viaje va el
-texto del aviso sobre el abandono de persona: ninguno de los veintiún documentos de `docs/legal/`
+texto de la advertencia sobre el abandono de persona: ninguno de los veintiún documentos de `docs/legal/`
 lo menciona —lo único parecido es el abandono de *trabajo*, art. 244 LCT, en
 `docs/legal/argentina.md:147`, que es otra cosa—, y la regla del producto prohíbe improvisarlo. Sin
-documento no hay aviso; la mecánica se construye igual, porque no depende de ninguna ley.
+documento no hay advertencia; la mecánica se construye igual, porque no depende de ninguna ley.
 
 ---
 

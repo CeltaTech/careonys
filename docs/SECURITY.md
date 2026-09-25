@@ -89,7 +89,7 @@ prestadora real) con acceso administrativo de negocio (comercial, todas las pres
 El diseño de reemplazo (roles `superadmin` acotado a sandbox + `admin_plataforma` nuevo,
 con el "modo dentro de una prestadora" — banner notorio, advertencia en acciones
 destructivas vía Regla 4 de `CLAUDE.md`, log de auditoría de todo login/acción sensible,
-timeout de 5 min de inactividad + tope de 60 min con aviso a los 50) es el que se
+timeout de 5 min de inactividad + tope de 60 min con advertencia a los 50) es el que se
 implementó.
 
 **Nota (2026-07-15, cierra la anterior):** el mecanismo se implementó — `current_tenant()`
@@ -298,7 +298,7 @@ Donde manda es en el backend, porque entra a la base con la llave de servicio: e
 `requierePermiso('ver_estado_de_cuenta_familia')` cierra en `backend/src/routes/panelCobros.js`
 las seis rutas que entregan o mueven el estado de cuenta —los saldos, el que llegó de afuera, el
 detalle de una factura, anotar un cobro, anularlo y la entrada de lotes—. Lo que sirve para
-facturar no lo lleva, y el aviso de que una Familia quedó restringida tampoco: no dice cuánto
+facturar no lo lleva, y que una Familia quedó restringida tampoco: no dice cuánto
 debe, y quien coordina necesita verlo para trabajar. La política de lectura de
 `estados_de_cuenta_externos` pide además esa acción, como segunda red para el día en que esa
 tabla se lea con el pase de una persona. `saldos_familia` no se tocó: su política alcanza también
@@ -442,7 +442,7 @@ CREATE POLICY prestadora_ve_los_contactos_vistos ON contactos_vistos_marketplace
 **Pendiente de decisión, no bloquea desarrollo:** `guardias_tracking_gps` guarda histórico de
 posiciones GPS del Asistente durante una guardia activa — esto es un dato personal sensible
 bajo Ley 25.326 (geolocalización de una persona física). Falta definir política de retención
-(cuánto tiempo se conserva el histórico) y si se necesita un aviso/consentimiento explícito
+(cuánto tiempo se conserva el histórico) y si se necesita una advertencia/consentimiento explícito
 al Asistente más allá del que ya cubre el vínculo contractual — no se ha tomado ninguna
 decisión de producto sobre esto todavía.
 
@@ -501,9 +501,9 @@ depósito `fotos-identidad`, creado por
 
 - Proveedor de reconocimiento facial para la etapa de verificación de identidad del Proceso
   de Incorporación de Asistentes: no elegido.
-- Documento legal del que salga el aviso al Asistente por el tratamiento de su dato biométrico:
-  no existe. Sin ese documento no hay aviso —`celtatech/CLAUDE.md` §7 dice que no se improvisa—,
-  y sin aviso no se compara ninguna cara.
+- Documento legal del que salga la advertencia al Asistente por el tratamiento de su dato biométrico:
+  no existe. Sin ese documento no hay advertencia —`celtatech/CLAUDE.md` §7 dice que no se improvisa—,
+  y sin advertencia no se compara ninguna cara.
 - Si se automatiza la consulta de antecedentes penales: proveedor no elegido.
 - Cómo la Prestadora le cobra a la Familia el cuidado prestado **en prestación directa**: no hay
   decisión de negocio, y por lo tanto tampoco de seguridad de datos de pago. En la modalidad

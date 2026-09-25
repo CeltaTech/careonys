@@ -183,7 +183,7 @@ export async function crearCuentaConPerfil({ email, nombre, telefono, rol, prest
   // UN CELULAR ES DE UNA SOLA PERSONA, y se comprueba acá porque acá pasan todas las altas: la del
   // Panel, la del Asistente y la del círculo de la Familia. Escrito en cada ruta serían tres copias
   // de la misma decisión. Va antes de crear nada: una cuenta de acceso creada y una ficha rechazada
-  // después dejarían basura. La línea fija de una casa no cae nunca acá, y el aviso no lleva el
+  // después dejarían basura. La línea fija de una casa no cae nunca acá, y el mensaje no lleva el
   // número adentro. La unicidad la impone igual la base, con un índice único.
   await exigirQueElCelularSeaDeUnaSolaPersona({ telefono, prestadoraId });
 
@@ -260,7 +260,7 @@ export async function borrarCuenta(userId, { prestadoraId, esSuperadmin = false 
   if (!userId) throw new Error('No hay permiso para dar de baja esa cuenta');
 
   // Sin Organización activa y sin ser Superadmin no queda nada con qué acotar la lectura, y una
-  // lectura sin acotar es la que hay que evitar. Se corta acá con el mismo aviso de siempre.
+  // lectura sin acotar es la que hay que evitar. Se corta acá con el mismo mensaje de siempre.
   if (!prestadoraId && !esSuperadmin) throw new Error('No hay permiso para dar de baja esa cuenta');
 
   // La lectura se acota igual que la comprobación que viene abajo, con el mismo ayudante que usan

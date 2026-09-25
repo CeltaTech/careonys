@@ -14,7 +14,7 @@ import {
 import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
 import { pedirRecuperacionDeClave } from '../utils/recuperacionDeClave.js';
-import { avisarDeSeguridad, AVISO_CAMBIO_HABILITADO } from '../utils/avisoDeSeguridad.js';
+import { avisarDeSeguridad, MENSAJE_CAMBIO_HABILITADO } from '../utils/avisoDeSeguridad.js';
 import { registrarActividad, yaQuedoRegistrado } from '../utils/registroDeActividad.js';
 
 // LA PRESTADORA HABILITA UN CAMBIO DE CLAVE. NO ELIGE NINGUNA CLAVE Y NO VE NINGUNA.
@@ -161,9 +161,9 @@ panelHabilitarClaveRouter.post(
       });
       yaQuedoRegistrado(res);
 
-      // El aviso sale igual que la puerta: al correo de esa persona. Es la única forma que tiene de
+      // El mensaje sale igual que la puerta: al correo de esa persona. Es la única forma que tiene de
       // enterarse si nadie llamó en su nombre.
-      await avisarDeSeguridad(AVISO_CAMBIO_HABILITADO, cuenta);
+      await avisarDeSeguridad(MENSAJE_CAMBIO_HABILITADO, cuenta);
       await pedirRecuperacionDeClave(cuenta.email, cuenta.prestadora_id);
 
       res.json({ ok: true, minutos: minutosDeLaHabilitacion() });
@@ -197,7 +197,7 @@ panelHabilitarClaveRouter.post(
       });
       yaQuedoRegistrado(res);
 
-      // Uno menos esperando. El aviso no lleva ningún dato: dice qué cambió, y cada pantalla que
+      // Uno menos esperando. El mensaje no lleva ningún dato: dice qué cambió, y cada pantalla que
       // estaba mirando esa lista la vuelve a pedir por el camino de siempre, que comprueba la sesión.
       empujar(req.usuarioPanel.prestadoraId, ASUNTOS.TELEFONOS_ESPERANDO_HABILITACION);
 

@@ -37,7 +37,7 @@ export function ConfiguracionAvisos() {
 
 const CATEGORIAS_PLANTILLA = ['utility', 'marketing', 'authentication'];
 
-/* La lista de avisos que se pueden prender y apagar.
+/* La lista de mensajes que se pueden prender y apagar.
    ==========================================================================
 
    El servidor devuelve TODOS los avisos que el producto sabe mandar, tenga o no tenga
@@ -67,7 +67,7 @@ function TabNotificaciones() {
     try {
       const { notificaciones: filas } = await llamarApi('/notificaciones');
       setNotificaciones(filas);
-      /* Las plantillas aprobadas son las que se pueden elegir. Un aviso que la Prestadora empieza
+      /* Las plantillas aprobadas son las que se pueden elegir. Un mensaje que la Prestadora empieza
          Meta lo entrega solamente con una de ellas, así que ofrecerle las demás sería ofrecerle
          mensajes que no van a salir. Si la consulta falla, la pantalla igual sirve para todo lo
          demás y el selector queda vacío. */
@@ -144,7 +144,7 @@ function TabNotificaciones() {
                     />
                   </td>
                   <td>
-                    {/* Un aviso que la persona está esperando para poder seguir no se apaga, así
+                    {/* Un mensaje que la persona está esperando para poder seguir no se apaga, así
                         que no se le dibuja la casilla: ofrecerla sería ofrecer algo que no ocurre. */}
                     {fila.se_puede_apagar === false
                       ? <span className="panel-dato-vacio" title={t.configuracion.notificaciones_no_se_apaga}>—</span>
@@ -232,8 +232,8 @@ function TabNotificaciones() {
           </tbody>
         </table>
       </EstadoLista>
-      <TabAvisoCese />
-      <TabAvisoGuardiaSinCubrir />
+      <TabMensajeDeCese />
+      <TabMensajeGuardiaSinCubrir />
       <TabAvisoPrevioGuardia />
       <TabCorreoDeLaPrestadora />
       <TabMensajeDeTexto />
@@ -579,7 +579,7 @@ function TabMensajeDeTexto() {
   );
 }
 
-function TabAvisoCese() {
+function TabMensajeDeCese() {
   const { t } = useLocale();
   const prestadoraId = usePrestadoraActual();
   const [config, setConfig] = useState(null);
@@ -654,10 +654,10 @@ function TabAvisoCese() {
   );
 }
 
-// Los dos números del aviso de guardia sin cubrir (pendiente #106). Mismo camino que
-// TabAvisoCese —el navegador escribe directo en la tabla y RLS decide si puede— en vez de
+// Los dos números del mensaje de guardia sin cubrir (pendiente #106). Mismo camino que
+// TabMensajeDeCese —el navegador escribe directo en la tabla y RLS decide si puede— en vez de
 // una ruta nueva del backend: es la misma clase de dato y no hay motivo para dos caminos.
-function TabAvisoGuardiaSinCubrir() {
+function TabMensajeGuardiaSinCubrir() {
   const { t } = useLocale();
   const prestadoraId = usePrestadoraActual();
   const [config, setConfig] = useState(null);
@@ -960,7 +960,7 @@ function TabWhatsappPlantillas() {
   }
 
   // Meta revisa las plantillas a su tiempo y avisa sola cuando termina. Esto es para mirar ahora
-  // mismo, y para cuando ese aviso no llegó: se le pregunta por todas juntas y se recarga.
+  // mismo, y para cuando ese mensaje no llegó: se le pregunta por todas juntas y se recarga.
   async function consultarAMeta() {
     setConsultando(true);
     setError(null);
@@ -1236,7 +1236,7 @@ function NuevaPlantillaWhatsapp({ onClose, onCreada }) {
   );
 }
 
-/* El tope de la espera del aviso de guardia sin cerrar: un día entero, escrito como lo que es.
+/* El tope de la espera del mensaje de guardia sin cerrar: un día entero, escrito como lo que es.
    Más allá de un día el aviso deja de avisar —la guardia ya lleva una jornada abierta y nadie
    se enteró—, y la base rechaza igual cualquier número que se pase. Se comprueba también acá
    para que quien administra la Prestadora lea qué se esperaba en vez de una falla del sistema.
@@ -1249,7 +1249,7 @@ const esperaGuardiaSinCerrarValida = (valor) => {
   return Number.isInteger(minutos) && minutos > 0 && minutos <= MINUTOS_DE_UN_DIA;
 };
 
-/* El tope de la espera antes de que ese mismo aviso escale: tres días enteros. Más allá de
+/* El tope de la espera antes de que ese mismo mensaje escale: tres días enteros. Más allá de
    ahí ya no hay nada que escalar, porque una guardia que lleva tres días abierta significa
    una Familia que hace tres días no sabe si a su Paciente lo cuidaron. La base rechaza igual
    cualquier número que se pase; se comprueba también acá por el mismo motivo que la espera de
@@ -1353,14 +1353,14 @@ function TabWhatsappEscaladaCoordinador() {
   }
 
   async function guardar() {
-    // Nada se manda con una espera imposible: sin ella el aviso de guardia sin cerrar no
+    // Nada se manda con una espera imposible: sin ella el mensaje de guardia sin cerrar no
     // llegaría nunca, que es justo lo que no puede pasar.
     if (!esperaGuardiaSinCerrarValida(form.minutos_gracia_cierre_guardia)) {
       setGuardado(false);
       setError(con(t.configuracion.whatsapp_escalada_minutos_guardia_sin_cerrar_invalido, { maximo: MINUTOS_DE_UN_DIA }));
       return;
     }
-    // Ni con una escalada imposible: pasado ese plazo el aviso sale una vez más, por el evento
+    // Ni con una escalada imposible: pasado ese plazo el mensaje sale una vez más, por el evento
     // `guardia_sin_cerrar_grave`, hacia quien la Prestadora haya puesto en su propia lista de
     // destinatarios — la gente con autoridad para resolverlo. Si el plazo no llega nunca, esa
     // segunda salida tampoco.

@@ -52,7 +52,7 @@ hora, modalidad, estado. Botón prominente "CHECK-IN" en la guardia activa o pr�
 3. Registra `checkin_lat`/`checkin_lng`/`checkin_at` en `guardias` (ver `DATA_MODEL.md`).
 4. Valida distancia contra el domicilio del paciente:
    - Dentro del rango → check-in exitoso, guardia pasa a `activa`.
-   - Fuera del rango → aviso + opción de confirmar igual, con nota automática al coordinador
+   - Fuera del rango → advertencia + opción de confirmar igual, con nota automática al coordinador
      (no bloquear el check-in — el Asistente puede tener razones legítimas, ver regla de
      "nunca penalizar" en `CLAUDE.md`).
 5. Notificación push a la Familia: "Tu Asistente [nombre] llegó al domicilio".
@@ -66,7 +66,7 @@ Botón "Check-out" habilitado recién después de las horas mínimas de la modal
 ### El botón de emergencia — cómo quedó construido
 
 **La palabra no aparece escrita en ninguna línea de la aplicación.** El botón, el formulario y los
-avisos salen de `pwa-asistentes/src/i18n/translations.js` en los tres idiomas, como todo el resto.
+mensajes salen de `pwa-asistentes/src/i18n/translations.js` en los tres idiomas, como todo el resto.
 
 Se aprieta desde la Guardia Activa (`pwa-asistentes/src/components/EmergenciaEnGuardia.jsx`) y
 **no tiene lista de tipos para elegir**: se escribe qué está pasando y se manda. Quien está en el
@@ -81,13 +81,13 @@ reloj mal puesto.
 
 **Se guarda primero y se avisa después.** La fila queda en `emergencias_guardia`
 (`backend/src/routes/appAsistentes.js`, `POST /guardias/:id/emergencia`) y recién entonces sale el
-aviso al Coordinador, adentro de un `try`: si el envío falla, quien reportó igual recibe que salió
+mensaje al Coordinador, adentro de un `try`: si el envío falla, quien reportó igual recibe que salió
 bien —su acto ya está guardado— y la fila queda sin marca de notificada.
 
 **El evento no se puede apagar.** Está en `backend/src/utils/catalogoAvisos.js` con
 `se_puede_apagar: false`: la Prestadora elige por qué canal sale y a qué dirección, nunca si sale.
 
-**El detalle no viaja por el canal público.** El aviso inmediato dice que hay una emergencia, de
+**El detalle no viaja por el canal público.** El mensaje inmediato dice que hay una emergencia, de
 qué guardia y de cuándo; el texto que escribió el Asistente es información sensible
 (`celtatech/CLAUDE.md` §6) y se lee entrando al Panel, en «Emergencias avisadas»
 (`panel/src/pages/EmergenciasEnGuardia.jsx`, `backend/src/routes/panelEmergencias.js`). Ahí se
@@ -155,7 +155,7 @@ La lista va ordenada por gravedad —vencido, sin cargar, falta la fecha, por ve
 lo que hay que resolver queda arriba sin tener que buscarlo.
 
 **El resumen es el mismo que ve el otro lado del producto.** Lo calcula la misma función que
-alimenta al Panel de la Prestadora y a la Familia, con la ventana de aviso que configuró esa
+alimenta al Panel de la Prestadora y a la Familia, con la ventana de preaviso que configuró esa
 Prestadora. Si cada pantalla contara por su cuenta, el teléfono diría «al día» y el Panel «falta un
 papel», cada uno con razón según su propia cuenta.
 

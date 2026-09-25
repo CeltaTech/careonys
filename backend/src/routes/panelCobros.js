@@ -52,7 +52,7 @@ import { requierePermiso } from '../utils/permisos.js';
    y eso es peor que no tener ninguna. Sin nada conectado no cambia nada.
 
    LA PUERTA DE ENTRADA ABIERTA. La plata puede entrar por donde sea: cargada acá, importada de
-   un archivo, empujada por el sistema contable de la Prestadora, avisada por una pasarela. La
+   un archivo, empujada por el sistema contable de la Prestadora, traída por una pasarela. La
    ruta `/entrada` acepta un lote de cobros de cualquiera de esos orígenes y contesta uno por
    uno qué pasó con cada uno. Es idempotente: quien reintenta el mismo envío con la misma
    `referencia_externa` recibe "duplicado" y no se suma plata de más. Nada acá está atado a un
@@ -77,7 +77,7 @@ import { requierePermiso } from '../utils/permisos.js';
    la administración y que cada Prestadora abre o cierra desde su Panel. Lleva ese portero todo lo
    que entrega o mueve el estado de cuenta —los saldos, el estado de cuenta que llegó de afuera, el
    detalle de una factura, anotar un cobro, anularlo y la entrada de lotes—; no lo lleva lo que
-   sirve para facturar. El aviso de que una Familia quedó restringida tampoco: eso no dice cuánto
+   sirve para facturar. Que una Familia haya quedado restringida tampoco: eso no dice cuánto
    debe, y quien coordina necesita saberlo para trabajar.
 
    NADA DE PLATA EN LOS REGISTROS NI EN LA DIRECCIÓN. Los importes y los datos de las Familias
@@ -154,8 +154,8 @@ async function saldoDeLaFactura(prestadoraId, facturaId) {
 // para que una persona de la Prestadora sepa que a esa Familia le pusieron una restricción y
 // resuelva qué hacer. Ningún Servicio se corta ni ninguna Guardia se cancela por esto.
 //
-// De cada Familia vale el aviso más nuevo: los anteriores quedan guardados, pero lo que rige hoy
-// es el último. Y se devuelven sólo las que están restringidas, porque un aviso que levantó una
+// De cada Familia vale la fila más nueva: las anteriores quedan guardadas, pero lo que rige hoy
+// es la última. Y se devuelven sólo las que están restringidas, porque una fila que levantó una
 // restricción no tiene nada que mostrar.
 // ---------------------------------------------------------------------------------------
 
@@ -204,8 +204,10 @@ panelCobrosRouter.get('/restricciones', requiereRolPanel, async (req, res) => {
   // El más nuevo de cada Familia, que es el que rige. La consulta ya vino del más nuevo al más
   // viejo, así que alcanza con quedarse con el primero de cada una.
   const ultimoDeCadaFamilia = new Map();
-  for (const aviso of data || []) {
-    if (!ultimoDeCadaFamilia.has(aviso.familia_id)) ultimoDeCadaFamilia.set(aviso.familia_id, aviso);
+  for (const restriccion of data || []) {
+    if (!ultimoDeCadaFamilia.has(restriccion.familia_id)) {
+      ultimoDeCadaFamilia.set(restriccion.familia_id, restriccion);
+    }
   }
   const vigentes = [...ultimoDeCadaFamilia.values()].filter((a) => a.restringida);
 
@@ -227,7 +229,7 @@ panelCobrosRouter.get('/restricciones', requiereRolPanel, async (req, res) => {
 // ningún cobro anotado de este lado y no se compara contra la resta de `saldos_familia`: son dos
 // respuestas posibles para la misma pregunta, y con un software conectado la que vale es la de él.
 //
-// De cada Familia rige el aviso más nuevo, y esa elección la hace la vista
+// De cada Familia rige el estado de cuenta más nuevo, y esa elección la hace la vista
 // `estado_de_cuenta_externo_vigente`. Los anteriores quedan guardados.
 // ---------------------------------------------------------------------------------------
 
@@ -566,8 +568,8 @@ panelCobrosRouter.put('/facturas/:facturaId/facturado', requiereRolPanel, async 
   if (!factura) return res.status(404).json({ error: 'Factura no encontrada' });
 
   // Qué columnas quedan escritas —y que el vencimiento sólo se pise si quien emitió informa uno—
-  // está en `utils/anotarLoFacturado.js`, que es por donde escriben también el archivo y el aviso
-  // del software de facturación.
+  // está en `utils/anotarLoFacturado.js`, que es por donde escriben también el archivo y lo que
+  // informa el software de facturación.
   const { error } = await anotarLoFacturado(prestadoraId, factura.id, cuerpo);
   if (error) return responderError(res, error, 400);
 
@@ -590,7 +592,8 @@ panelCobrosRouter.put('/facturas/:facturaId/facturado', requiereRolPanel, async 
  *
  * EL ARCHIVO LLEGA CRUDO, no adentro de un formulario: es un solo archivo y no lo acompaña ningún
  * otro dato. Qué se comprueba —que sea un PDF de verdad, que no venga vacío, que no pese de más—
- * está en `utils/comprobanteDeLaFactura.js`, que es por donde entra también el aviso conectado.
+ * está en `utils/comprobanteDeLaFactura.js`, que es por donde entra también el comprobante que
+ * llega por la puerta conectada.
  */
 panelCobrosRouter.post(
   '/facturas/:facturaId/comprobante',

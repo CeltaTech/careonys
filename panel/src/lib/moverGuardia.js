@@ -84,7 +84,7 @@ export async function moverGuardia(guardia, { fila, filaOrigen, fecha, vista, ho
 
   // Arrastrarla a la fila de otro Asistente es cambiarle quién entra a la casa, así que se avisa,
   // igual que cuando se la reasigna desde la pantalla. Moverla de día o de hora dentro de la misma
-  // fila no cambia de manos y no avisa nada. El aviso va después de guardar y no voltea el
+  // fila no cambia de manos y no avisa nada. El mensaje va después de guardar y no voltea el
   // movimiento: la guardia ya se movió.
   if (!porPaciente && fila && fila !== guardia.asistente_id) {
     await avisarCambioDeAsistente({

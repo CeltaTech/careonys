@@ -135,7 +135,7 @@ soporte técnico, una por vez, con banner, auditoría y vencimiento).
 El diseño de esa sesión, tal como se implementó: banner notorio con la Prestadora activa,
 advertencia adicional antes de operaciones destructivas, log de auditoría de todo login y de
 toda acción sensible, timeout de 5 minutos de inactividad y tope absoluto de 60 minutos de
-sesión con aviso a los 50.
+sesión con advertencia a los 50.
 
 Hasta el 2026-07-28 esta maquinaria era del rol comercial `admin_plataforma`. Ese rol se fue
 entero a CeltaTech (Nivel 1) y **ya no existe en Careonys**: las dos tablas se renombraron
@@ -176,7 +176,7 @@ es el punto único de verdad** (`CLAUDE.md` §7.12): el middleware
 segunda regla, para que la aplicación y la base nunca discrepen sobre en qué Prestadora está
 parado quien consulta.
 
-El tope absoluto de sesión (60 min, con aviso a los 50) y el resto de las reglas de UI (banner
+El tope absoluto de sesión (60 min, con advertencia a los 50) y el resto de las reglas de UI (banner
 visible, advertencia extra antes de operaciones destructivas) están implementados en
 `panel/src/context/TenantSessionContext.jsx` y `backend/src/routes/panelSesionTenant.js`
 (`requiereSoporteTecnico`, único que puede crear/cerrar una fila de
@@ -334,7 +334,7 @@ CREATE TABLE documentos_asistente (
   UNIQUE (asistente_id, tipo_documento_id)
 );
 
--- prestadoras: plazo de aviso configurable, reemplaza el fijo de 30 días que tenía
+-- prestadoras: plazo de preaviso configurable, reemplaza el fijo de 30 días que tenía
 -- backend/src/utils/vencimientos.js
 ALTER TABLE prestadoras ADD COLUMN dias_aviso_vencimiento_documentos SMALLINT NOT NULL DEFAULT 30;
 ```
@@ -465,7 +465,7 @@ cara. Creado por
 **No está construida, y no se construye todavía.** Guardar las dos fotos y mostrarlas juntas ya
 está hecho (depósito `fotos-identidad`, acá arriba): hoy las compara una persona. Esta tabla haría
 falta el día que las compare el producto, que es tratamiento de dato biométrico y necesita dos
-cosas que no existen: el documento legal del que salga el aviso al Asistente, y un proveedor
+cosas que no existen: el documento legal del que salga la advertencia al Asistente, y un proveedor
 elegido (ver `SECURITY.md`, decisiones pendientes).
 
 ```sql

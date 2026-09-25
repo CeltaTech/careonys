@@ -38,7 +38,7 @@ export async function estadoDeLaExtension({ guardiaId, prestadoraId }) {
   if (!extension) return null;
 
   const relevo = await elRelevo(extension.relevo_guardia_id, prestadoraId);
-  const { coordinacionAvisada, escalado } = await comoVaElAviso({
+  const { coordinacionAvisada, escalado } = await comoVaElMensaje({
     guardiaId,
     relevoId: extension.relevo_guardia_id,
     prestadoraId,
@@ -69,17 +69,17 @@ async function elRelevo(relevoId, prestadoraId) {
 }
 
 /**
- * Si quien coordina ya está enterado, y si el aviso ya subió de escalón.
+ * Si quien coordina ya está enterado, y si el mensaje ya subió de escalón.
  *
  * Se pregunta por los dos expedientes que puede haber abiertos, porque hay dos maneras distintas
  * de que falte el relevo y cada una abre el suyo: el que se abre cuando la Asistente asignada no
  * llegó —cuelga del turno que quedó esperando, que es justamente éste— y el que se abre cuando el
  * turno se acercaba sin nadie asignado, que cuelga del turno vacío.
  *
- * «Avisada» quiere decir que el aviso salió, no que se abrió el expediente: un expediente abierto
+ * «Avisada» quiere decir que el mensaje salió, no que se abrió el expediente: un expediente abierto
  * del que todavía no salió ningún correo no enteró a nadie, y decirle que sí sería mentirle.
  */
-async function comoVaElAviso({ guardiaId, relevoId, prestadoraId }) {
+async function comoVaElMensaje({ guardiaId, relevoId, prestadoraId }) {
   const referencias = [];
   let coordinacionAvisada = false;
 

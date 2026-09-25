@@ -5,7 +5,7 @@
 // credencial correspondiente.
 //
 // Pendiente #159 — que la dirección sea pública quiere decir que cualquiera puede golpearla.
-// Lo único que separa un aviso de cobro de verdad de uno inventado es la firma que trae, y
+// Lo único que separa un cobro de verdad de uno inventado es la firma que trae, y
 // esa firma se comprueba acá antes de tocar una sola fila. Dos consecuencias de eso, que son
 // las que hacen que esto funcione:
 //
@@ -29,7 +29,7 @@ export const webhooksPasarelasRouter = Router();
 
 // El lector del cuerpo crudo viaja con el router y no suelto en `server.js`: quien monte este
 // router se lleva el lector puesto, y lo único que hay que recordar afuera es montarlo antes
-// del `express.json()` general. Un megabyte es holgado para el aviso más grande que manda
+// del `express.json()` general. Un megabyte es holgado para el cuerpo más grande que manda
 // cualquiera de las dos pasarelas.
 webhooksPasarelasRouter.use(express.raw({ type: 'application/json', limit: '1mb' }));
 
@@ -72,7 +72,7 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', async (req, res) => {
 
   // Sin fila de credenciales no hay nada guardado para esta Prestadora en este proveedor: ni
   // credencial ni secreto de firma. Antes el proceso seguía igual y terminaba dando por bueno
-  // un aviso que nadie firmó; ahora corta acá.
+  // un cobro que nadie firmó; ahora corta acá.
   if (!credencialFila) return rechazar(MOTIVO.SECRETO_AUSENTE);
 
   const [{ data: credencial }, { data: secretoFirma }] = await Promise.all([
@@ -96,7 +96,7 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', async (req, res) => {
   });
 
   if (!valido) {
-    // Un aviso que no se pudo probar auténtico se rechaza con 401. Los demás casos —viene
+    // Lo que no se pudo probar auténtico se rechaza con 401. Los demás casos —viene
     // firmado de verdad pero adentro no trae ninguna referencia de cobro— siguen contestando
     // 200: reintentarlo no cambia nada, y devolver un error hace que el proveedor lo repita
     // indefinidamente.
@@ -104,7 +104,7 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', async (req, res) => {
     return res.status(200).json({ ok: true });
   }
 
-  // La referencia que trae el aviso puede ser una de dos cosas, y las dos son legítimas:
+  // La referencia que trae la pasarela puede ser una de dos cosas, y las dos son legítimas:
   //
   //   * **la del cobro**, en los rieles a los que este producto les arma el cobro mes a mes
   //     (`modo`, `cobranza_efectivo`): la referencia se guardó al armarlo y la fila ya existe;
@@ -122,7 +122,7 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', async (req, res) => {
     .eq('referencia_externa', referenciaExterna)
     .maybeSingle();
 
-  const { data: accesoDelAviso } = cobro
+  const { data: accesoDelCobro } = cobro
     ? { data: null }
     : await supabase
         .from('accesos_marketplace')
@@ -131,13 +131,13 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', async (req, res) => {
         .eq('referencia_externa', referenciaExterna)
         .maybeSingle();
 
-  // Ni un cobro ni un acceso de esta Prestadora: el aviso vino firmado pero habla de algo
+  // Ni un cobro ni un acceso de esta Prestadora: lo que llegó vino firmado pero habla de algo
   // que acá no existe. Se contesta 200 para que el proveedor no lo repita para siempre.
-  if (!cobro && !accesoDelAviso) {
+  if (!cobro && !accesoDelCobro) {
     return res.status(200).json({ ok: true });
   }
 
-  // Hay proveedores cuyo aviso no dice si la plata entró: dice que pasó algo con un cobro y
+  // Hay proveedores que no dicen si la plata entró: dicen que pasó algo con un cobro y
   // nada más. Para esos se vuelve a preguntar, de sistema a sistema, usando el mismo
   // identificador que acabó de matchear la fila — el mismo que venía firmado, no uno parecido.
   // Si la consulta se cae, el cobro queda como estaba: quedarse corto es recuperable, dar por
@@ -153,7 +153,7 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', async (req, res) => {
     }
   }
 
-  const accesoId = cobro ? cobro.acceso_id : accesoDelAviso.id;
+  const accesoId = cobro ? cobro.acceso_id : accesoDelCobro.id;
   let periodo = cobro ? cobro.periodo : null;
 
   if (cobro) {
@@ -166,18 +166,18 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', async (req, res) => {
       .eq('prestadora_id', prestadoraId)
       .eq('id', cobro.id);
   } else if (estadoFinal !== 'pendiente') {
-    // El cobro del período nace acá, con el estado que trajo el aviso. Un aviso `pendiente` no
-    // deja fila: no dice nada que se pueda anotar, y el mismo período puede traer varios antes de
-    // que la plata entre.
-    periodo = accesoDelAviso.proximo_cobro || new Date().toISOString().slice(0, 10);
-    // Sin `referencia_externa`, a propósito: la que trajo el aviso es la del acceso, no la de este
-    // período. Guardarla acá haría que el aviso del período siguiente encontrara esta misma fila y
-    // pisara el cobro anterior en vez de anotar uno nuevo.
+    // El cobro del período nace acá, con el estado que trajo la pasarela. Un estado `pendiente` no
+    // deja fila: no dice nada que se pueda anotar, y la pasarela puede mandar varios sobre el mismo
+    // período antes de que la plata entre.
+    periodo = accesoDelCobro.proximo_cobro || new Date().toISOString().slice(0, 10);
+    // Sin `referencia_externa`, a propósito: la que trajo la pasarela es la del acceso, no la de
+    // este período. Guardarla acá haría que el cobro del período siguiente encontrara esta misma
+    // fila y pisara el cobro anterior en vez de anotar uno nuevo.
     const { error: errorInsertar } = await supabase.from('cobros_marketplace').insert({
       acceso_id: accesoId,
       prestadora_id: prestadoraId,
       medio: proveedor,
-      monto: accesoDelAviso.importe,
+      monto: accesoDelCobro.importe,
       periodo,
       estado_cobro: estadoFinal,
     });

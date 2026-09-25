@@ -120,14 +120,14 @@ panelGuardiasRouter.post('/:id/cubrir', requiereRolPanel, exigirOrganizacionActi
 });
 
 /* La tercera excepción, y por el mismo motivo que la primera: el Panel cambia el Asistente de una
-   guardia contra la base, pero avisarlo no lo puede hacer él. El aviso sale por WhatsApp, por
+   guardia contra la base, pero avisarlo no lo puede hacer él. El mensaje sale por WhatsApp, por
    correo y por el celular de la Familia, y ninguno de los tres pasa por el navegador.
 
-   La guardia ya se cambió cuando llega este pedido. Así que el aviso no puede voltear nada: si
+   La guardia ya se cambió cuando llega este pedido. Así que el mensaje no puede voltear nada: si
    falla un canal queda registrado adentro de `avisarCambioDeAsistente` y la respuesta sigue
    siendo buena, porque lo que la pantalla informa es la reasignación, que salió bien.
 
-   El Asistente nuevo viaja en el pedido y no se deduce de la guardia, porque este aviso también
+   El Asistente nuevo viaja en el pedido y no se deduce de la guardia, porque este mensaje también
    lo usa la reasignación, donde la guardia todavía puede estar contando al anterior. La
    Prestadora, en cambio, nunca viaja: sale de las guardias, que se buscan acotadas a la
    Organización activa de quien llama. */

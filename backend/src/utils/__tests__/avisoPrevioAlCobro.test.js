@@ -1,25 +1,25 @@
 /**
- * El aviso previo al primer cobro, cuando está por terminar el período gratuito.
+ * El preaviso del primer cobro, cuando está por terminar el período gratuito.
  *
  *   npm test --prefix backend
  *
  * POR QUÉ EXISTE ESTA PRUEBA. El §3.2 del `docs/PRD_07_Modalidad_Marketplace.md` dice «nunca un
- * cobro silencioso», y un aviso se puede equivocar de las cuatro maneras, todas caras:
+ * cobro silencioso», y un mensaje se puede equivocar de las cuatro maneras, todas caras:
  *
  *   * no salir, y entonces el cobro es silencioso, que es lo que este trabajo viene a impedir;
- *   * salir tarde —después de la fecha del cobro—, que no es un aviso previo sino una noticia;
+ *   * salir tarde —después de la fecha del cobro—, que no es un preaviso sino una noticia;
  *   * salir todos los días, y entonces deja de leerse antes de llegar el día que importa;
  *   * salirle a quien ya se dio de baja, que es anunciarle un cobro que no va a ocurrir.
  *
  * La entrega del push se reemplaza acá. `web-push` sólo entrega contra una dirección segura, así
- * que no hay servicio de mentira posible; lo que esta prueba necesita decidir es si el aviso salió
+ * que no hay servicio de mentira posible; lo que esta prueba necesita decidir es si el mensaje salió
  * o no, porque de eso depende todo lo demás: a quién se le manda, qué dice y qué queda anotado.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 
-// Las frases de los avisos ya no están escritas adentro del código: viven en la tabla de mensajes
+// Las frases de los mensajes ya no están escritas adentro del código: viven en la tabla de mensajes
 // del sistema y se editan desde afuera. Acá se carga lo mismo que siembra la migración, porque las
 // pruebas del backend corren sin base levantada.
 import { sembrarMensajesDelSistema } from '../../i18n/mensajesDelSistema.js';
@@ -37,7 +37,7 @@ const PRESTADORA = '44444444-4444-4444-4444-444444444444';
 const respuestas = new Map();
 /** Todo lo que se le pidió a la base, para poder afirmar que NO se pidió algo. */
 let llamadas = [];
-/** Los avisos que se le mandaron a cada Familia, y si el envío salió. */
+/** Los mensajes que se le mandaron a cada Familia, y si el envío salió. */
 let empujados = [];
 let elEnvioSale = true;
 
@@ -47,7 +47,7 @@ function avisarDeMentira(familiaId, texto) {
   empujados.push({ familiaId, texto });
   return Promise.resolve(elEnvioSale);
 }
-/** Los avisos que quedaron del lado del servidor. Se juntan para no ensuciar la salida. */
+/** Lo que quedó anotado del lado del servidor. Se junta para no ensuciar la salida. */
 let anotados = [];
 
 const baseFalsa = createServer((req, res) => {
@@ -86,7 +86,7 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma en
 // el momento en que se importa el archivo.
-const { avisarElPrimerCobroQueViene, textoDelAviso } = await import('../avisoPrevioAlCobro.js');
+const { avisarElPrimerCobroQueViene, textoDelMensaje } = await import('../avisoPrevioAlCobro.js');
 
 const avisarDeVerdad = console.error;
 console.error = (...partes) => anotados.push(partes.join(' '));
@@ -152,7 +152,7 @@ describe('a quién se le avisa', () => {
   });
 
   it('avisa también el mismo día del primer cobro', async () => {
-    // Es el último momento en que el aviso todavía es previo. Si el trabajo no corrió antes —el
+    // Es el último momento en que el mensaje todavía es previo. Si el trabajo no corrió antes —el
     // backend estuvo caído, la Familia no tenía dispositivo—, éste es el día que queda.
     respuestas.set('GET /rest/v1/accesos_marketplace', [accesoPorCobrarse({ gratis_hasta: HOY })]);
 
@@ -192,7 +192,7 @@ describe('a quién se le avisa', () => {
 describe('qué dice el aviso', () => {
   it('nombra el día, el importe con su moneda y adónde ir', () => {
     // El cuerpo del push viaja cifrado, así que lo que se comprueba es lo que la función arma.
-    const texto = textoDelAviso(accesoPorCobrarse({ gratis_hasta: '2026-10-07' }));
+    const texto = textoDelMensaje(accesoPorCobrarse({ gratis_hasta: '2026-10-07' }));
 
     assert.match(texto.cuerpo, /7\/10\/2026/);
     assert.match(texto.cuerpo, /4500\.00 ARS/);
@@ -201,7 +201,7 @@ describe('qué dice el aviso', () => {
   });
 
   it('nunca deja el importe sin su moneda', () => {
-    const texto = textoDelAviso(accesoPorCobrarse({ moneda: 'BRL' }));
+    const texto = textoDelMensaje(accesoPorCobrarse({ moneda: 'BRL' }));
 
     assert.match(texto.cuerpo, /4500\.00 BRL/);
   });
@@ -209,7 +209,7 @@ describe('qué dice el aviso', () => {
 
 describe('cuando el aviso no llega', () => {
   it('no lo anota si no había dispositivo al que mandarlo', async () => {
-    // Anotarlo sería dar por avisada a una Familia que no recibió nada, y el aviso no volvería a
+    // Anotarlo sería dar por avisada a una Familia que no recibió nada, y el mensaje no volvería a
     // salir nunca. Sin anotarlo, mañana se vuelve a intentar mientras la ventana dure.
     respuestas.set('GET /rest/v1/accesos_marketplace', [accesoPorCobrarse()]);
     elEnvioSale = false;

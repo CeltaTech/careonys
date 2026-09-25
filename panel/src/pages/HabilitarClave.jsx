@@ -39,12 +39,12 @@ export function HabilitarClave() {
   const [cuentas, setCuentas] = useState([]);
   const [minutos, setMinutos] = useState(null);
   const [trabajando, setTrabajando] = useState(null);
-  const [aviso, setAviso] = useState(null);
+  const [mensaje, setMensaje] = useState(null);
 
   async function buscar(evento) {
     evento.preventDefault();
     setError(null);
-    setAviso(null);
+    setMensaje(null);
     setEstado('cargando');
     try {
       const respuesta = await llamarApiPanel('/habilitar-clave/buscar', {
@@ -62,14 +62,14 @@ export function HabilitarClave() {
 
   async function habilitar(cuenta) {
     setError(null);
-    setAviso(null);
+    setMensaje(null);
     setTrabajando(`habilitar:${cuenta.id}`);
     try {
       const respuesta = await llamarApiPanel('/habilitar-clave', {
         method: 'POST',
         body: JSON.stringify({ usuarioId: cuenta.id }),
       });
-      setAviso(
+      setMensaje(
         t.habilitar_clave.habilitado
           .replace('{{nombre}}', cuenta.nombre)
           .replace('{{minutos}}', String(respuesta.minutos ?? minutos ?? '')),
@@ -83,14 +83,14 @@ export function HabilitarClave() {
 
   async function confirmarTelefono(cuenta) {
     setError(null);
-    setAviso(null);
+    setMensaje(null);
     setTrabajando(`telefono:${cuenta.id}`);
     try {
       await llamarApiPanel('/habilitar-clave/telefono', {
         method: 'POST',
         body: JSON.stringify({ usuarioId: cuenta.id }),
       });
-      setAviso(t.habilitar_clave.telefono_confirmado.replace('{{nombre}}', cuenta.nombre));
+      setMensaje(t.habilitar_clave.telefono_confirmado.replace('{{nombre}}', cuenta.nombre));
       // Uno menos esperando. El backend ya avisó por el canal, y esto es para quien lo hizo: su
       // pantalla no espera a que le llegue la vuelta.
       await recargarEsperando();
@@ -161,7 +161,7 @@ export function HabilitarClave() {
       </form>
 
       {error && <Alert variant="error">{error}</Alert>}
-      {aviso && <Alert variant="success">{aviso}</Alert>}
+      {mensaje && <Alert variant="success">{mensaje}</Alert>}
 
       {estado !== 'inicial' && (
         <EstadoLista

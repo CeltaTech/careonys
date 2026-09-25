@@ -3,7 +3,7 @@
  *
  *   npx vitest run   (desde panel/)
  *
- * POR QUÉ EXISTE ESTA PRUEBA. El aviso de «se alcanzó el límite» es lo único que separa a quien
+ * POR QUÉ EXISTE ESTA PRUEBA. La alerta de «se alcanzó el límite» es lo único que separa a quien
  * administra la plataforma de enterarse el día que un correo no sale. Se rompe de dos maneras
  * silenciosas: quedándose mirando un solo período —el mes se llena aunque el día tenga margen—, y
  * dando por alcanzado un límite que nadie cargó, que es avisar de algo que no se sabe.
@@ -26,7 +26,7 @@ describe('se alcanzó el límite', () => {
   });
 
   it('avisa cuando se llenó el mes, aunque el día tenga margen', () => {
-    // Es el caso que se pasa por alto: quedan 98 del día y ninguno del mes, y los avisos no salen
+    // Es el caso que se pasa por alto: quedan 98 del día y ninguno del mes, y los mensajes no salen
     // igual.
     expect(seAlcanzoElLimite({ del_dia: 2, del_mes: 3000, tope_diario: 100, tope_mensual: 3000 })).toBe(true);
   });

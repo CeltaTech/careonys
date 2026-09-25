@@ -11,7 +11,7 @@
 // ve acá sigue siendo lo que se firmó. Por eso no se lo vuelve a armar ni se lo reacomoda.
 //
 // ESTO NO FRENA NADA. La instrucción ya rige desde que la Prestadora la cargó; lo que falta es la
-// constancia firmada. Por eso el aviso de las otras pantallas no bloquea, y por eso acá se puede
+// constancia firmada. Por eso la advertencia de las otras pantallas no bloquea, y por eso acá se puede
 // volver sin firmar.
 
 import { useEffect, useRef, useState } from 'react';
@@ -46,7 +46,7 @@ export default function FirmarInstruccion() {
   const [firmado, setFirmado] = useState(false);
   const reloj = useRef(null);
 
-  // A dónde se vuelve. El aviso que trae hasta acá deja anotado de qué pantalla salió, así que se
+  // A dónde se vuelve. La advertencia que trae hasta acá deja anotada de qué pantalla salió, así que se
   // vuelve a esa y no a un lugar fijo. Escribiendo la dirección a mano no hay nada anotado y se
   // cae a la pantalla de siempre.
   const desde = location.state?.desde ?? '/pacientes';
@@ -96,7 +96,7 @@ export default function FirmarInstruccion() {
     try {
       await api.confirmarInstruccion(instruccion.id, codigo);
       setFirmado(true);
-      // Recién ahora el aviso de instrucción pendiente tiene que desaparecer de todas las
+      // Recién ahora la advertencia de instrucción pendiente tiene que desaparecer de todas las
       // pantallas, y no cuando la firma todavía estaba viajando.
       recargar();
       reloj.current = setTimeout(() => navigate(desde, { replace: true }), MS_ANTES_DE_VOLVER);

@@ -6,9 +6,9 @@ import assert from 'node:assert/strict';
 // Mismo recurso que en `accesosDelCirculo.test.js`.
 process.env.SUPABASE_URL = 'http://127.0.0.1:1';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
-const { turnosDelAviso, turnosPorFamilia } = await import('../avisoCambioDeAsistente.js');
+const { turnosDelMensaje, turnosPorFamilia } = await import('../avisoCambioDeAsistente.js');
 
-// Las dos armadas del aviso son puras, así que se prueban sin base de datos. Los datos son
+// Las dos armadas del mensaje son puras, así que se prueban sin base de datos. Los datos son
 // inventados (CLAUDE.md §6).
 const GUARDIAS = [
   { id: 'g-2', fecha: '2026-10-08', hora_inicio: '08:00', hora_fin: '16:00' },
@@ -24,7 +24,7 @@ const PACIENTES = new Map([
 ]);
 
 test('los turnos del Coordinador salen ordenados por cuándo ocurren', () => {
-  const turnos = turnosDelAviso(GUARDIAS, PACIENTES);
+  const turnos = turnosDelMensaje(GUARDIAS, PACIENTES);
   assert.deepEqual(turnos.map((t) => t.fecha), ['2026-10-07', '2026-10-08']);
   assert.deepEqual(turnos[0], {
     fecha: '2026-10-07', horaInicio: '22:00', horaFin: '06:00', pacientes: ['Elena'],
@@ -33,12 +33,12 @@ test('los turnos del Coordinador salen ordenados por cuándo ocurren', () => {
 });
 
 test('sin guardias no hay turnos', () => {
-  assert.deepEqual(turnosDelAviso([], new Map()), []);
-  assert.deepEqual(turnosDelAviso(null, null), []);
+  assert.deepEqual(turnosDelMensaje([], new Map()), []);
+  assert.deepEqual(turnosDelMensaje(null, null), []);
 });
 
 test('un turno sin Pacientes cargados no rompe el aviso', () => {
-  const turnos = turnosDelAviso([{ id: 'g-9', fecha: '2026-10-07', hora_inicio: '08:00', hora_fin: '16:00' }], new Map());
+  const turnos = turnosDelMensaje([{ id: 'g-9', fecha: '2026-10-07', hora_inicio: '08:00', hora_fin: '16:00' }], new Map());
   assert.deepEqual(turnos[0].pacientes, []);
 });
 

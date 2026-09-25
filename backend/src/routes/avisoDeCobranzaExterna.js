@@ -4,18 +4,18 @@
 // sistema sino de otro software suyo. Con esa decisión tomada, ese software es el que sabe cómo
 // viene cada Familia, y por acá lo cuenta. Dos cosas puede decir, juntas o por separado: **si a
 // una Familia hay que ponerle alguna restricción**, y **cómo está su cuenta** —cuánto debe, en qué
-// moneda y si está atrasada—. Un aviso trae por lo menos una de las dos.
+// moneda y si está atrasada—. Cada entrada trae por lo menos una de las dos.
 //
 // Y NADA DE ESO SE CALCULA ACÁ. Lo que entra se anota y se muestra tal como llegó. No se completa
 // con lo que este sistema tenga anotado y no se compara contra nada: un saldo que llega de afuera
 // y otro calculado acá serían dos verdades para lo mismo.
 //
-// LO QUE ESTE AVISO NO HACE. No corta ningún Servicio, no cancela ninguna Guardia y no bloquea
+// LO QUE ESTO NO HACE. No corta ningún Servicio, no cancela ninguna Guardia y no bloquea
 // ninguna pantalla. Se anota y se muestra. Quien decide qué hacer con una Familia que no paga es
 // una persona de la Prestadora.
 //
-// CÓMO SE SABE QUE EL AVISO ES DE VERDAD. Es una dirección pública: la llama un software de
-// afuera, no alguien con sesión. Se hace lo mismo que con los avisos de cobro de las pasarelas:
+// CÓMO SE SABE QUE LO QUE LLEGA ES DE VERDAD. Es una dirección pública: la llama un software de
+// afuera, no alguien con sesión. Se hace lo mismo que con los cobros de las pasarelas:
 //
 //   1. **La Prestadora viaja en la dirección, no en el cuerpo.** Una dirección distinta por
 //      Prestadora. Lo que venga adentro del cuerpo no elige sobre quién se escribe.
@@ -37,7 +37,7 @@ import { supabase } from '../db/connection.js';
 import { comprobarFirmaSinEsquemaPublicado } from '../pasarelas/firmaWebhook.js';
 import { aDosDecimales, loQueEstaMalEnElAviso } from '../utils/facturacionDeFamilias.js';
 
-export const avisoDeCobranzaExternaRouter = Router();
+export const cobranzaExternaRouter = Router();
 
 /** La Prestadora llega en la dirección, así que lo primero que se mira es que tenga forma de
  *  identificador. Sin esto, cualquier texto suelto se le pasa a la base y el error que vuelve
@@ -50,14 +50,14 @@ const LARGO_MAXIMO_DEL_MOTIVO = 500;
 
 /** Motivos propios de esta entrada. Se anotan del lado del servidor; al que llama se le contesta
  *  siempre lo mismo. */
-const MOTIVO_AVISO = {
+const MOTIVO_DE_RECHAZO = {
   PRESTADORA_ILEGIBLE: 'prestadora_de_la_direccion_ilegible',
   CUERPO_ILEGIBLE: 'cuerpo_ilegible',
 };
 
-avisoDeCobranzaExternaRouter.use(express.raw({ type: 'application/json', limit: '256kb' }));
+cobranzaExternaRouter.use(express.raw({ type: 'application/json', limit: '256kb' }));
 
-avisoDeCobranzaExternaRouter.post('/:prestadoraId', async (req, res) => {
+cobranzaExternaRouter.post('/:prestadoraId', async (req, res) => {
   const { prestadoraId } = req.params;
 
   function rechazar(motivo) {
@@ -67,7 +67,7 @@ avisoDeCobranzaExternaRouter.post('/:prestadoraId', async (req, res) => {
     return res.status(401).json({ error: 'Aviso no autenticado' });
   }
 
-  if (!FORMA_DE_IDENTIFICADOR.test(prestadoraId)) return rechazar(MOTIVO_AVISO.PRESTADORA_ILEGIBLE);
+  if (!FORMA_DE_IDENTIFICADOR.test(prestadoraId)) return rechazar(MOTIVO_DE_RECHAZO.PRESTADORA_ILEGIBLE);
 
   // Si esto no es un Buffer, el lector de cuerpo crudo no corrió: o el router quedó montado
   // después del `express.json()` general, o el que llama mandó un tipo de contenido que no es
@@ -80,11 +80,11 @@ avisoDeCobranzaExternaRouter.post('/:prestadoraId', async (req, res) => {
   });
 
   // Sin secreto cargado esa Prestadora no conectó ningún software de cobranzas, y no hay con qué
-  // probar que el aviso es suyo. Se rechaza; nunca «se sigue igual».
+  // probar que lo que llega es suyo. Se rechaza; nunca «se sigue igual».
   const comprobacion = comprobarFirmaSinEsquemaPublicado({
     secretoFirma: secreto,
     // Acá no hay secreto de ambiente que valga: un secreto compartido probaría quién firmó, no de
-    // qué Prestadora es el aviso, y de esto hay uno por Prestadora o no hay ninguno.
+    // qué Prestadora es lo que llega, y de esto hay uno por Prestadora o no hay ninguno.
     secretoDeAmbiente: null,
     headers: req.headers,
     cuerpoCrudo,
@@ -95,12 +95,12 @@ avisoDeCobranzaExternaRouter.post('/:prestadoraId', async (req, res) => {
   try {
     cuerpo = JSON.parse(cuerpoCrudo.toString('utf8'));
   } catch {
-    console.warn('Aviso de restriccion rechazado:', prestadoraId, MOTIVO_AVISO.CUERPO_ILEGIBLE);
+    console.warn('Aviso de restriccion rechazado:', prestadoraId, MOTIVO_DE_RECHAZO.CUERPO_ILEGIBLE);
     return res.status(400).json({ error: 'Cuerpo ilegible' });
   }
 
-  // De acá para abajo el aviso ya está probado auténtico, así que lo que falle sí se contesta con
-  // detalle: del otro lado hay un software que tiene que poder corregir lo que mandó mal.
+  // De acá para abajo lo que llegó ya está probado auténtico, así que lo que falle sí se contesta
+  // con detalle: del otro lado hay un software que tiene que poder corregir lo que mandó mal.
   const malo = loQueEstaMalEnElAviso(cuerpo);
   if (malo) return res.status(400).json({ error: 'Aviso incompleto', dato: malo });
 
@@ -113,13 +113,13 @@ avisoDeCobranzaExternaRouter.post('/:prestadoraId', async (req, res) => {
     return res.status(400).json({ error: 'Aviso incompleto', dato: 'motivo' });
   }
 
-  // Qué trae este aviso. La comprobación de que trae por lo menos una de las dos cosas ya la hizo
+  // Qué trae lo que llegó. La comprobación de que trae por lo menos una de las dos cosas ya la hizo
   // `loQueEstaMalEnElAviso`; acá sólo se mira cuál de las dos para saber qué anotar.
   const traeRestriccion = cuerpo.restringida !== undefined && cuerpo.restringida !== null;
   const traeEstado = cuerpo.estado_de_cuenta !== undefined && cuerpo.estado_de_cuenta !== null;
 
   // La Familia tiene que ser de esta Prestadora. El disparador de la base resuelve la Prestadora a
-  // partir de la Familia, así que un aviso de una Familia ajena caería en la Prestadora de ella:
+  // partir de la Familia, así que una entrada de una Familia ajena caería en la Prestadora de ella:
   // sin este control, quien tiene el secreto de una podría escribir sobre cualquier otra.
   const { data: familia } = await supabase
     .from('familias')
@@ -131,10 +131,10 @@ avisoDeCobranzaExternaRouter.post('/:prestadoraId', async (req, res) => {
 
   const numeroDelAviso = String(cuerpo.numero_del_aviso ?? '').trim() || null;
 
-  // El mismo aviso mandado dos veces no es un problema: el software de afuera reintenta cuando no
-  // le llegó la respuesta. Lo que ya estaba anotado se deja como está y se sigue con lo demás —no
-  // se corta acá—, porque un aviso que trae las dos cosas puede haber anotado una sola la vez
-  // anterior. `23505` es la clave repetida.
+  // La misma entrada mandada dos veces no es un problema: el software de afuera reintenta cuando
+  // no le llegó la respuesta. Lo que ya estaba anotado se deja como está y se sigue con lo demás
+  // —no se corta acá—, porque una entrada que trae las dos cosas puede haber anotado una sola la
+  // vez anterior. `23505` es la clave repetida.
   let todoEstabaAnotado = true;
   async function anotar(tabla, fila, queEs) {
     const { error } = await supabase.from(tabla).insert(fila);

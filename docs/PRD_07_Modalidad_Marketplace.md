@@ -77,7 +77,7 @@ qué fecha y con cuántos contactos.
 
 Resguardos obligatorios, no opcionales:
 
-- Aviso previo antes de cualquier cobro por vencimiento del período gratuito. Nunca un cobro
+- Mensaje previo antes de cualquier cobro por vencimiento del período gratuito. Nunca un cobro
   silencioso.
 - Baja autoservicio en un clic, sin tener que escribirle a nadie. El patrón contrario fue parte de
   la sanción de la FTC a Care.com en 2024, por USD 8,5 millones.
@@ -116,7 +116,7 @@ apuntando a algo que existe.
 
 **Se carga cuando entra la plata.** El paquete se paga una vez, y ése es el momento en que el
 saldo existe: `registrarCobroExitoso` —el único lugar por el que pasan los tres caminos del cobro,
-el aviso del proveedor, el efectivo en mano y el canje del QR— le suma al acceso los contactos que
+lo que informa el proveedor, el efectivo en mano y el canje del QR— le suma al acceso los contactos que
 traiga la forma.
 
 **Suma, no pisa.** Un paquete no vence por calendario, así que lo que quedó sin abrir de una
@@ -179,20 +179,20 @@ se crea la suscripción si nadie le dice lo contrario, y ahí el período gratui
 esta base. Los rieles a los que hay que armarles el cobro de cada período no necesitan que se les
 diga nada: ese cobro se arma recién cuando llega la fecha.
 
-**Se avisa unos días antes, y a más tardar el mismo día.** El aviso le llega al teléfono de quien
+**Se avisa unos días antes, y a más tardar el mismo día.** El mensaje le llega al teléfono de quien
 paga, dice qué día empieza a cobrarse, cuánto —con su moneda— y que puede darse de baja antes; el
 enlace lleva a la pantalla del acceso, donde está el botón. Lo manda un trabajo del sistema una vez
 por día, el mismo que apaga los accesos dados de baja.
 
-**Se avisa una vez sola, y queda anotado cuándo.** La marca se guarda después de que el aviso
+**Se avisa una vez sola, y queda anotado cuándo.** La marca se guarda después de que el mensaje
 salió: si no había ningún dispositivo al que mandarlo, al día siguiente se vuelve a intentar
 mientras la ventana dure.
 
 **A quien se dio de baja durante el período gratuito no se le avisa.** No viene ningún cobro, que
 es lo que la baja consigue.
 
-**Este aviso no se puede apagar.** No está entre los que cada Prestadora enciende según cómo
-trabaja: es el resguardo del §3.2, y un aviso obligatorio que se pueda apagar no es obligatorio.
+**Este mensaje no se puede apagar.** No está entre los que cada Prestadora enciende según cómo
+trabaja: es el resguardo del §3.2, y un mensaje obligatorio que se pueda apagar no es obligatorio.
 
 ### 3.9 Qué pasa cuando un cobro no entra
 
@@ -200,7 +200,7 @@ trabaja: es el resguardo del §3.2, y un aviso obligatorio que se pueda apagar n
 fecha en que se suspende se escribe el día de la primera falla, y desde ahí el acceso queda igual
 que estaba: la Familia sigue usándolo mientras dure.
 
-**Se avisa al abrirla, una vez.** El aviso dice cuánto no se pudo cobrar —con su moneda—, hasta qué
+**Se avisa al abrirla, una vez.** El mensaje dice cuánto no se pudo cobrar —con su moneda—, hasta qué
 día alcanza el acceso y que después queda suspendido, y lleva a la pantalla donde se paga.
 
 **Los reintentos los pone cada riel, y la gracia no se estira con ninguno.** Los que cobran solos
@@ -360,5 +360,5 @@ laboralista — no hace falta repetirla acá.
 El cobro de la Familia tiene su modelo de datos y su backend construidos —período de prueba y
 próxima fecha, historial de cobros, credenciales de pasarela por Prestadora y avisos entrantes de
 seis proveedores de pago—. Lo que falta son los resguardos del §3: la baja en un clic, el corte
-diferido, el aviso previo al primer cobro y el período de gracia con reintentos. Están en
+diferido, el mensaje previo al primer cobro y el período de gracia con reintentos. Están en
 `docs/PLAN_HASTA_PRODUCCION.md`, sección «El dinero».

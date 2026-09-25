@@ -9,7 +9,7 @@
       desde el primer día y no los llamaba nadie. Eso lo hace `armarCobrosDelPeriodo`, una vez por
       día.
 
-   2. **Anotar que un período se cobró, y mover el acceso al siguiente.** Hasta acá, el aviso del
+   2. **Anotar que un período se cobró, y mover el acceso al siguiente.** Hasta acá, lo que entraba del
       proveedor movía `proximo_cobro` y las dos cargas a mano del Panel —el efectivo en mano y el
       canje del QR— no lo movían: el período quedaba pagado y el acceso seguía esperando el mismo
       para siempre, así que el siguiente no llegaba nunca. Ahora los tres pasan por
@@ -145,7 +145,7 @@ async function armarUnCobro(acceso, credenciales, plazos) {
     credencial,
     monto: Number(acceso.importe),
     // La referencia que se le da al proveedor identifica el período, no el acceso: es lo que
-    // permite que dos períodos de la misma Familia no se confundan cuando vuelven los avisos.
+    // permite que dos períodos de la misma Familia no se confundan cuando vuelve la respuesta.
     referencia: `${acceso.id}:${periodo}`,
     vencimiento: sumarDias(periodo, plazosDeEsta.dias_de_vida_del_cupon),
   });
@@ -186,7 +186,7 @@ async function credencialDe(prestadoraId, proveedor, credenciales) {
  * Un período entró. Es el único lugar que decide qué le pasa al acceso cuando eso ocurre: queda
  * `vigente` y su próximo cobro pasa a ser un período **contado desde el que se cobró**.
  *
- * Lo llaman los tres caminos por los que entra la plata: el aviso del proveedor
+ * Lo llaman los tres caminos por los que entra la plata: lo que manda el proveedor
  * (`routes/webhooksPasarelas.js`), la carga de efectivo en mano y el canje del QR
  * (`routes/panelMarketplace.js`).
  *
@@ -280,8 +280,8 @@ export function proximaFecha(fechaISO, forma) {
  * Tantos días, semanas, meses o años después. Las cuatro unidades son las que la Prestadora
  * puede elegir al armar su forma de cobro (`formas_de_cobro_marketplace.periodo_unidad`).
  *
- * Por meses y años no se escribe con `setMonth(+1)` a secas, que es lo que hacía el aviso de
- * cobro: el 31 de enero más un mes da 3 de marzo, y a partir de ahí el cobro cae el 3 de cada mes
+ * Por meses y años no se escribe con `setMonth(+1)` a secas, que es lo que hacía la entrada de
+ * la pasarela: el 31 de enero más un mes da 3 de marzo, y a partir de ahí el cobro cae el 3 de cada mes
  * en vez del 31. Un período corrido de más por año. Cuando el día no existe en el mes al que se
  * llega, se usa el último de ese mes.
  */

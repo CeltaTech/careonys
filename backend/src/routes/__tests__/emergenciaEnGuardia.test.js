@@ -11,7 +11,7 @@
  *      quien la reportó recibe que salió bien: su acto no depende de que WhatsApp conteste. La
  *      fila queda sin marca de notificada y el proceso de fondo la reintenta.
  *   2. QUE EL DETALLE SALGA POR UN CANAL PÚBLICO. El texto que escribió el Asistente es
- *      información sensible (`celtatech/CLAUDE.md` §6): el aviso dice de qué guardia se trata y
+ *      información sensible (`celtatech/CLAUDE.md` §6): el mensaje dice de qué guardia se trata y
  *      nada más, y el texto se lee entrando al Panel.
  *   3. QUE UNA PRESTADORA ALCANCE LA EMERGENCIA DE OTRA. El backend entra a la base con la llave de
  *      servicio y se saltea la protección por fila, así que lo único que separa a una de otra son
@@ -206,7 +206,7 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/pacientes', ({ url }) =>
     filasQuePasanLosFiltros(url, [{ id: PACIENTE, prestadora_id: PRESTADORA, nombre: 'Elsa Puig' }])
   );
-  // El aviso al Coordinador pasa por acá antes de salir. Sin configuración cargada el evento se
+  // El mensaje al Coordinador pasa por acá antes de salir. Sin configuración cargada el evento se
   // considera encendido, y el correo no sale porque en las pruebas no hay servidor de correo.
   respuestas.set('GET /rest/v1/configuracion_notificaciones', () => []);
   respuestas.set('GET /rest/v1/configuracion_prestadora', () => []);

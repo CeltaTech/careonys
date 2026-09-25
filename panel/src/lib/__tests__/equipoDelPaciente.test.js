@@ -233,7 +233,7 @@ describe('quién coordina a este Paciente', () => {
   });
 
   it('con alguien fijado, manda esa persona sola', () => {
-    // Un aviso que le llega a seis personas no le llega a ninguna.
+    // Un mensaje que le llega a seis personas no le llega a ninguna.
     const equipo = equipoDelPaciente({
       pacienteId: PACIENTE,
       coordinadoresQueAlcanzan: ['u-1', 'u-2'],

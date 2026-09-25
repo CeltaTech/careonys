@@ -142,8 +142,8 @@ Etapa 2 — Panel de administración
   - **Match** — vidriera, perfiles públicos, conversaciones con videollamada, formas de
     cobro que arma cada Prestadora, accesos, calificaciones y auditoría legal.
   - **Configuración y gobierno** — configuración por Prestadora y de plataforma, usuarios y
-    permisos, segundo factor con su recuperación, auditoría, importación, contenidos, avisos en
-    vivo y los canales de aviso (correo, WhatsApp, push).
+    permisos, segundo factor con su recuperación, auditoría, importación, contenidos, mensajes en
+    vivo y los canales por los que salen (correo, WhatsApp, push).
 
   Sobre los precios, la regla de negocio central sigue vigente: ningún medio público habla de
   precios — la lista es referencia interna, y cada Paciente tiene su Prestación con precio final
@@ -250,11 +250,11 @@ avisa —cómo está la cuenta de cada Familia, en `estados_de_cuenta_externos`,
 pusieron una restricción—, tal como llegó y sin completar lo que no vino. Las rutas que entregan
 la resta de este sistema contestan `409` con esa configuración, para que nunca haya dos números
 para lo mismo en la misma pantalla; el que se muestra sale de `GET
-/api/panel/cobros/estados-de-cuenta`, que lee la vista `estado_de_cuenta_externo_vigente` —el
-aviso más nuevo de cada Familia—. Ese otro software avisa por una
+/api/panel/cobros/estados-de-cuenta`, que lee la vista `estado_de_cuenta_externo_vigente` —lo
+último que entró de cada Familia—. Ese otro software avisa por una
 puerta propia, `POST /api/avisos-de-cobranza/:prestadoraId`, firmada con un secreto que la
 Prestadora carga una sola vez y que se guarda en la caja fuerte de la base, nunca a la vista. El
-aviso repetido no suma nada, una Prestadora no puede escribir sobre la Familia de otra, y **lo
+pedido repetido no suma nada, una Prestadora no puede escribir sobre la Familia de otra, y **lo
 avisado se muestra y no decide nada**: quien decide es una persona. La puerta está en
 `backend/src/routes/avisoDeCobranzaExterna.js` y la prueba en
 `scripts/probar_aviso_de_cobranza.mjs`. El interruptor también se consulta desde la pantalla de
@@ -266,7 +266,7 @@ Familia y si está atrasada no es información de quien coordina turnos: entra p
 que cada Prestadora abre o cierra desde su Panel, con el mismo molde que `ver_pagos_asistente`.
 Lleva ese portero todo lo que entrega o mueve el estado de cuenta —los saldos, el que llegó de
 afuera, el detalle de una factura, anotar un cobro, anularlo y la entrada de lotes—; no lo lleva
-lo que sirve para facturar, ni el aviso de que una Familia quedó restringida, que no dice cuánto
+lo que sirve para facturar, ni que una Familia quedó restringida, que no dice cuánto
 debe y que quien coordina necesita ver para trabajar. Sin la acción, la pantalla de Facturación no
 muestra saldos ni estados de cuenta y tampoco los pide. El detalle está en `docs/SECURITY.md`.
 
@@ -281,16 +281,16 @@ escribir sin el manual de uno concreto; **el software de facturación llamando a
 y es una sola puerta para todos**: `POST /api/avisos-de-facturacion/:prestadoraId`, firmada con un
 secreto propio —distinto del de cobranzas, porque pueden ser dos proveedores que no se conocen—
 que la Prestadora carga desde Configuración y que vive en la caja fuerte de la base. Sin secreto
-cargado no entra ningún aviso. Acepta una factura o varias, y contesta renglón por renglón qué
+cargado no entra ningún pedido. Acepta una factura o varias, y contesta renglón por renglón qué
 pasó con cada una. Qué columnas van y
 qué columnas vuelven está en un solo lugar, `panel/src/lib/intercambioDeFacturacion.js`, con copia
 generada en el backend; **sus títulos no se traducen**, porque son la forma que el otro software
 tiene que leer y escribir, y traducirlos daría un archivo distinto por idioma. Al subir, una
 factura que ya tiene comprobante anotado no se pisa: se cuenta aparte y se avisa, así volver a
-subir el mismo archivo —o repetir un aviso— no hace daño. Se leen hasta 500 filas por vez. Las tres
+subir el mismo archivo —o repetir un pedido— no hace daño. Se leen hasta 500 filas por vez. Las tres
 maneras escriben en la factura por el mismo lugar, `backend/src/utils/anotarLoFacturado.js`. **Lo
 que se le entrega a quien programa del otro lado** —las dos direcciones, cómo se arma la firma, qué
-datos lleva cada aviso y qué contesta— está en `docs/CONEXION_CON_SOFTWARE_EXTERNO.md`, escrito para
+datos lleva cada pedido y qué contesta— está en `docs/CONEXION_CON_SOFTWARE_EXTERNO.md`, escrito para
 alguien que no conoce Careonys por dentro.
 
 **A quién se le reclama no es siempre la Familia.** Puede ser una obra social o un tercero, y eso
@@ -329,7 +329,7 @@ cosa que se agregue acá:
   base con un disparador —la Matrícula, la modalidad de trabajo— deja el botón apagado, porque
   apretarlo fallaría igual. Lo que desaconseja la pantalla —que se pise con otra guardia, que haya
   una ausencia registrada— deja el botón encendido: la base lo acepta, y quien coordina puede
-  saber algo que el sistema no sabe. Cuando se asigna con un aviso delante, la decisión queda
+  saber algo que el sistema no sabe. Cuando se asigna con una alerta delante, la decisión queda
   escrita en `auditoria_asignaciones_con_aviso`, que no se puede corregir ni borrar. Vive en
   `panel/src/lib/candidatos.js` y `panel/src/lib/avisosAsignacion.js`.
 - **El equipo de un Paciente** son las Asistentes que habitualmente trabajan con él más la persona

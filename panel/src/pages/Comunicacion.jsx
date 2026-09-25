@@ -35,14 +35,14 @@ export function Comunicacion() {
   const [conversaciones, setConversaciones] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
-  const [avisoWhatsapp, setAvisoWhatsapp] = useState(null);
+  const [mensajeWhatsapp, setMensajeWhatsapp] = useState(null);
   const [seleccionada, setSeleccionada] = useState(null);
   const { f, set, limpiar, hayFiltros } = useFiltros({ canal: 'todos', soloPendientes: false });
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
     setError(null);
-    setAvisoWhatsapp(null);
+    setMensajeWhatsapp(null);
 
     const [
       { data: asistentesData, error: errorAsistentes },
@@ -74,7 +74,7 @@ export function Comunicacion() {
 
     // Si el canal de WhatsApp falla (por ejemplo, porque este rol no lo tiene habilitado),
     // la bandeja igual muestra el canal interno y avisa qué quedó afuera.
-    if (errorConversaciones) setAvisoWhatsapp(mensajeDeError(errorConversaciones, t));
+    if (errorConversaciones) setMensajeWhatsapp(mensajeDeError(errorConversaciones, t));
 
     const ultimoInterno = ultimoPorClave(mensajesInternos ?? [], 'asistente_id');
     const ultimoWhatsapp = ultimoPorClave(mensajesWhatsapp ?? [], 'conversacion_id');
@@ -141,7 +141,7 @@ export function Comunicacion() {
       <h1>{t.comunicacion.titulo}</h1>
       <p className="panel-explicacion">{t.comunicacion.explicacion}</p>
 
-      {avisoWhatsapp && <Alert variant="error">{avisoWhatsapp}</Alert>}
+      {mensajeWhatsapp && <Alert variant="error">{mensajeWhatsapp}</Alert>}
 
       <div className="panel-comunicacion-layout">
         <div className="panel-comunicacion-lista-wrap">

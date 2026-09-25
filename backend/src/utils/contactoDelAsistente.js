@@ -132,7 +132,7 @@ export async function datosDeContacto({ prestadoraId, asistenteId }) {
 /** Lo que la pantalla necesita para preguntar antes de cobrar: qué forma se va a usar, cuánto
  *  sale, y si tocar el botón termina el período gratuito. Es lo que se muestra en la
  *  confirmación, y por eso sale armado de un solo lugar. */
-function avisoDeLaActivacion(acceso) {
+function advertenciaDeLaActivacion(acceso) {
   if (!acceso) return null;
   const forma = acceso.formas_de_cobro_marketplace || {};
   return {
@@ -197,7 +197,7 @@ export async function comoEstaElContacto({ prestadoraId, familiaId, asistenteId,
     return { abierto: false, contacto: null, activacion: null, motivo: MOTIVO_VER_CONTACTO.SALDO_AGOTADO };
   }
 
-  return { abierto: false, contacto: null, activacion: avisoDeLaActivacion(acceso) };
+  return { abierto: false, contacto: null, activacion: advertenciaDeLaActivacion(acceso) };
 }
 
 /**

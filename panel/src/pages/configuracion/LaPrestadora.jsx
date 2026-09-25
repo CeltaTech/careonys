@@ -457,8 +457,8 @@ function TabPasarela() {
                     <td>{t.configuracion[`pasarela_${fila.proveedor}`]}</td>
                     <td>
                       {fila.activo ? t.configuracion.pasarela_activa : t.configuracion.pasarela_inactiva}
-                      {/* Una pasarela conectada pero sin secreto de firma no cobra: sus avisos
-                          de cobro se rechazan por no poder comprobarse. Se dice acá, en la
+                      {/* Una pasarela conectada pero sin secreto de firma no cobra: los cobros
+                          que informa se rechazan por no poder comprobarse. Se dice acá, en la
                           misma fila, y no en un error después de que el cobro no entró. */}
                       {fila.activo && fila.requiere_secreto_firma && !fila.secreto_firma_cargado && (
                         <div className="panel-explicacion">{t.configuracion.pasarela_secreto_firma_falta}</div>

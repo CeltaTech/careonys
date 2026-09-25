@@ -13,7 +13,7 @@
 //
 // QUÉ ENTRA. Lo mismo que trae el archivo de vuelta: de qué factura se trata, cómo se llama el
 // comprobante, qué número tiene, por cuánto quedó y —si quien emitió informa uno distinto del
-// acordado— para cuándo vence. Se puede mandar una factura o varias en el mismo aviso. Qué datos
+// acordado— para cuándo vence. Se puede mandar una factura o varias en el mismo pedido. Qué datos
 // son y qué se hace con cada renglón está escrito una sola vez en
 // `utils/intercambioDeFacturacion.js`, que es el mismo archivo que usan la carga a mano y el
 // archivo: los tres caminos entran por la misma puerta.
@@ -22,8 +22,9 @@
 // interpreta, y el monto es el que informa quien emitió: el producto no conoce los impuestos de
 // ningún país y no compara ese número contra nada.
 //
-// CÓMO SE SABE QUE EL AVISO ES DE VERDAD. Es una dirección pública: la llama un software de
-// afuera, no alguien con sesión. Se hace lo mismo que con el aviso del otro software de cobranzas:
+// CÓMO SE SABE QUE LO QUE LLEGA ES DE VERDAD. Es una dirección pública: la llama un software de
+// afuera, no alguien con sesión. Se hace lo mismo que con lo que entrega el otro software de
+// cobranzas:
 //
 //   1. **La Prestadora viaja en la dirección, no en el cuerpo.** Lo que venga adentro no elige
 //      sobre quién se escribe.
@@ -34,7 +35,7 @@
 //   4. **La factura tiene que ser de esa Prestadora.** Si no lo es, se contesta lo mismo que si no
 //      existiera, porque decir cuál identificador cae adentro y cuál no es enseñar a encontrarlos.
 //
-// Y EL MISMO AVISO REPETIDO NO HACE DAÑO. Una factura que ya tiene comprobante anotado no se pisa:
+// Y EL MISMO PEDIDO REPETIDO NO HACE DAÑO. Una factura que ya tiene comprobante anotado no se pisa:
 // se contesta que ya estaba. Así el software que reintenta porque no le llegó la respuesta no
 // termina cambiando lo que ya se había guardado.
 //
@@ -54,28 +55,28 @@ import {
   queHacerConLaFilaFacturada,
 } from '../utils/intercambioDeFacturacion.js';
 
-export const avisoDeFacturacionExternaRouter = Router();
+export const facturacionExternaRouter = Router();
 
 /** La Prestadora llega en la dirección, así que lo primero que se mira es que tenga forma de
  *  identificador. Sin esto, cualquier texto suelto se le pasa a la base y el error que vuelve
  *  habla de tipos de columna: ruido en el registro por algo que se contesta acá mismo. */
 const FORMA_DE_IDENTIFICADOR = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-avisoDeFacturacionExternaRouter.use(express.raw({ type: 'application/json', limit: '512kb' }));
+facturacionExternaRouter.use(express.raw({ type: 'application/json', limit: '512kb' }));
 
 // Y el comprobante en sí, que llega como los bytes del PDF y no adentro de un JSON. Va por
 // separado porque son dos cosas distintas: los datos de lo emitido entran aunque el papel no
 // llegue nunca, y el papel puede llegar después. El tope lo acota el depósito también.
-avisoDeFacturacionExternaRouter.use(express.raw({ type: 'application/pdf', limit: '5mb' }));
+facturacionExternaRouter.use(express.raw({ type: 'application/pdf', limit: '5mb' }));
 
 /**
- * Que el aviso sea de verdad, y de esa Prestadora. Lo comparten las dos puertas —los datos de lo
+ * Que el pedido sea de verdad, y de esa Prestadora. Lo comparten las dos puertas —los datos de lo
  * emitido y el comprobante—, porque de las dos hay que probar exactamente lo mismo.
  *
  * Contesta `{ ok }` y, cuando no, deja el motivo del lado del servidor. Al que golpeó la puerta se
  * le contesta siempre lo mismo: decirle cuál de las comprobaciones falló es enseñarle a pasarla.
  */
-async function avisoAutenticado({ prestadoraId, req, res }) {
+async function pedidoAutenticado({ prestadoraId, req, res }) {
   function rechazar(motivo) {
     console.warn('Aviso de facturacion rechazado:', prestadoraId, motivo);
     res.status(401).json({ error: 'Aviso no autenticado' });
@@ -95,11 +96,11 @@ async function avisoAutenticado({ prestadoraId, req, res }) {
   });
 
   // Sin secreto cargado esa Prestadora no conectó ningún software de facturación, y no hay con qué
-  // probar que el aviso es suyo. Se rechaza; nunca «se sigue igual».
+  // probar que el pedido es suyo. Se rechaza; nunca «se sigue igual».
   const comprobacion = comprobarFirmaSinEsquemaPublicado({
     secretoFirma: secreto,
     // Acá no hay secreto de ambiente que valga: un secreto compartido probaría quién firmó, no de
-    // qué Prestadora es el aviso, y de esto hay uno por Prestadora o no hay ninguno.
+    // qué Prestadora es el pedido, y de esto hay uno por Prestadora o no hay ninguno.
     secretoDeAmbiente: null,
     headers: req.headers,
     cuerpoCrudo,
@@ -109,10 +110,10 @@ async function avisoAutenticado({ prestadoraId, req, res }) {
   return { ok: true, cuerpoCrudo };
 }
 
-avisoDeFacturacionExternaRouter.post('/:prestadoraId', async (req, res) => {
+facturacionExternaRouter.post('/:prestadoraId', async (req, res) => {
   const { prestadoraId } = req.params;
 
-  const autenticacion = await avisoAutenticado({ prestadoraId, req, res });
+  const autenticacion = await pedidoAutenticado({ prestadoraId, req, res });
   if (!autenticacion.ok) return undefined;
   const { cuerpoCrudo } = autenticacion;
 
@@ -124,7 +125,7 @@ avisoDeFacturacionExternaRouter.post('/:prestadoraId', async (req, res) => {
     return res.status(400).json({ error: 'Cuerpo ilegible' });
   }
 
-  // De acá para abajo el aviso ya está probado auténtico, así que lo que falle sí se contesta con
+  // De acá para abajo el pedido ya está probado auténtico, así que lo que falle sí se contesta con
   // detalle: del otro lado hay un software que tiene que poder corregir lo que mandó mal.
   //
   // Una factura sola y varias se escriben igual: el que manda una no tiene por qué armar una
@@ -179,12 +180,12 @@ avisoDeFacturacionExternaRouter.post('/:prestadoraId', async (req, res) => {
 
 // El comprobante en sí: el PDF que emitió ese software.
 //
-// POR QUÉ ENTRA ACÁ Y NO ADENTRO DEL AVISO. Son dos cosas distintas y no siempre llegan juntas.
+// POR QUÉ ENTRA ACÁ Y NO ADENTRO DEL PEDIDO. Son dos cosas distintas y no siempre llegan juntas.
 // Los datos de lo emitido —el número, el monto, el vencimiento— alcanzan para reclamar; el papel
 // es lo que la Familia baja, y puede llegar después. Metido adentro del JSON habría que
-// convertirlo a texto, que lo agranda un tercio y obliga a mover el tope de los avisos.
+// convertirlo a texto, que lo agranda un tercio y obliga a mover el tope de los pedidos.
 //
-// SE PRUEBA IGUAL QUE EL OTRO AVISO: misma firma, misma cabecera, mismo secreto por Prestadora, y
+// SE PRUEBA IGUAL QUE EL OTRO PEDIDO: misma firma, misma cabecera, mismo secreto por Prestadora, y
 // la Prestadora viaja en la dirección y no en el cuerpo. Acá el cuerpo son los bytes del PDF, y se
 // firman tal cual llegaron.
 //
@@ -194,13 +195,13 @@ avisoDeFacturacionExternaRouter.post('/:prestadoraId', async (req, res) => {
 // Y EL MISMO COMPROBANTE MANDADO DOS VECES NO HACE DAÑO: el segundo se guarda con nombre propio y
 // la factura apunta al último. El anterior queda en el depósito sin que nadie lo alcance, que es
 // lo que corresponde con un papel que estuvo vigente.
-avisoDeFacturacionExternaRouter.post('/:prestadoraId/:facturaId/comprobante', async (req, res) => {
+facturacionExternaRouter.post('/:prestadoraId/:facturaId/comprobante', async (req, res) => {
   const { prestadoraId, facturaId } = req.params;
 
-  const autenticacion = await avisoAutenticado({ prestadoraId, req, res });
+  const autenticacion = await pedidoAutenticado({ prestadoraId, req, res });
   if (!autenticacion.ok) return undefined;
 
-  // De acá para abajo el aviso ya está probado auténtico, así que lo que falle sí se contesta con
+  // De acá para abajo el pedido ya está probado auténtico, así que lo que falle sí se contesta con
   // detalle: del otro lado hay un software que tiene que poder corregir lo que mandó mal.
   if (!esIdentificador(facturaId)) return res.status(400).json({ error: 'La factura no se entiende' });
 

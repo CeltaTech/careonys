@@ -34,7 +34,7 @@ export function FacturacionFamiliasTab() {
   const [sigue, setSigue] = useState(true);
   const [entrega, setEntrega] = useState(true);
   const [prestadoraId, setPrestadoraId] = useState(null);
-  const [avisoConectado, setAvisoConectado] = useState(false);
+  const [cobranzaConectada, setCobranzaConectada] = useState(false);
   const [secreto, setSecreto] = useState('');
   const [guardandoSecreto, setGuardandoSecreto] = useState(false);
   const [facturacionConectada, setFacturacionConectada] = useState(false);
@@ -53,7 +53,7 @@ export function FacturacionFamiliasTab() {
       setDias(configuracion.dias_hasta_el_vencimiento === null ? '' : String(configuracion.dias_hasta_el_vencimiento));
       setSigue(configuracion.sigue_la_cobranza !== false);
       setEntrega(configuracion.entrega_la_factura !== false);
-      setAvisoConectado(!!configuracion.aviso_de_restriccion_conectado);
+      setCobranzaConectada(!!configuracion.aviso_de_restriccion_conectado);
       setFacturacionConectada(!!configuracion.aviso_de_facturacion_conectado);
       setPrestadoraId(configuracion.prestadora_id ?? null);
       setEstado('listo');
@@ -104,7 +104,7 @@ export function FacturacionFamiliasTab() {
         body: JSON.stringify({ secreto }),
       });
       setSecreto('');
-      setAvisoConectado(true);
+      setCobranzaConectada(true);
     } catch (err) {
       setError(mensajeDeError(err, t));
     } finally {
@@ -180,7 +180,7 @@ export function FacturacionFamiliasTab() {
 
           {/* Que el software de facturación avise solo lo que emitió. Se ofrece siempre, sin
               importar quién sigue la cobranza: son dos decisiones distintas, y facturar lo hace
-              siempre alguien de afuera. Mientras no haya secreto cargado, no entra ningún aviso,
+              siempre alguien de afuera. Mientras no haya secreto cargado, no entra ningún dato,
               y se sigue anotando a mano o con el archivo. */}
           <section>
             <h3>{t.configuracion.facturacion_aviso_titulo}</h3>
@@ -227,7 +227,7 @@ export function FacturacionFamiliasTab() {
                 />
               )}
               <Alert variant="info">
-                {avisoConectado
+                {cobranzaConectada
                   ? t.configuracion.cobranza_aviso_conectado
                   : t.configuracion.cobranza_aviso_sin_conectar}
               </Alert>

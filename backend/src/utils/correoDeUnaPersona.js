@@ -8,11 +8,11 @@ import { supabase } from '../db/connection.js';
 // servicio de acceso exige que no se repita ninguno (ver `config/correoDeAcceso.js`). Pedirle el
 // correo a ese lado devuelve una dirección que no existe y a la que no llega nadie.
 //
-// POR QUÉ ESTE ARCHIVO EXISTE. Porque eso no se ve. Un aviso mandado a la dirección equivocada no
+// POR QUÉ ESTE ARCHIVO EXISTE. Porque eso no se ve. Un mensaje mandado a la dirección equivocada no
 // falla: se manda, y no llega. Con el correo en un solo lugar, ninguna parte del backend tiene que
 // acordarse de cuál de los dos lados preguntar.
 //
-// SIN CORREO, EL AVISO NO SALE PARA ESA PERSONA, pero el proceso sigue: los demás tienen que
+// SIN CORREO, EL MENSAJE NO SALE PARA ESA PERSONA, pero el proceso sigue: los demás tienen que
 // enterarse igual.
 
 /**

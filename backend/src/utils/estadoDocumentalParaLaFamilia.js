@@ -42,7 +42,7 @@ export const RESUMEN_DOCUMENTAL = {
   SIN_EXIGENCIAS: 'sin_exigencias',
   /** Todo lo que se exige está cargado y vigente. */
   AL_DIA: 'al_dia',
-  /** Todo cargado y vigente, pero algo entra en la ventana de aviso. */
+  /** Todo cargado y vigente, pero algo entra en la ventana de preaviso. */
   POR_VENCER: 'por_vencer',
   /** Falta cargar alguno de los que se exigen. */
   INCOMPLETA: 'incompleta',
@@ -68,7 +68,7 @@ export const ESTADO_MATRICULA = {
  * @param tiposExigidos   los tipos activos de la Prestadora: `[{ id, requiere_vencimiento }]`.
  * @param documentos      lo cargado de este Asistente: `[{ tipo_documento_id, fecha_vencimiento }]`.
  * @param matricula       una fila de `estado_matricula_asistente`, o `null`.
- * @param diasAviso       la ventana de aviso de la Prestadora.
+ * @param diasAviso       la ventana de preaviso de la Prestadora.
  * @param ahora           desde cuándo se cuenta (la prueba manda una fecha fija).
  */
 export function estadoDocumentalParaLaFamilia({

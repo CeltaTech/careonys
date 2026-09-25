@@ -33,7 +33,7 @@ const TOKEN = 'token-de-mentira-que-no-tiene-que-salir';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba pisa lo que necesita cambiar. */
 const respuestas = new Map();
-/** Los avisos que quedaron del lado del servidor. Se juntan para no ensuciar la salida. */
+/** Lo que quedó escrito del lado del servidor. Se junta para no ensuciar la salida. */
 let anotados = [];
 
 const baseFalsa = createServer((req, res) => {

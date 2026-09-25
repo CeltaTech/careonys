@@ -47,10 +47,10 @@ import { faltaElSustituto, MOTIVO_SIN_SUSTITUTO } from '../utils/guardiaSinSusti
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
 import { MOTIVOS_DEMORA } from '../utils/motivosDemora.js';
 import { horaDelHecho } from '../utils/horaDelHecho.js';
-import { identificadorDelTelefono, filaDeEsteAviso } from '../utils/reenvioDeLaCola.js';
+import { identificadorDelTelefono, filaDeEsteMensaje } from '../utils/reenvioDeLaCola.js';
 import { FUENTE_AVISO_DEMORA_ASISTENTE } from '../utils/fuentesAlertaTemprana.js';
 import { notificarCoordinador } from '../utils/whatsapp.js';
-import { aviso } from '../i18n/avisos.js';
+import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import { cuentasDeLasFichas } from '../utils/cuentaDeLaFicha.js';
 import {
@@ -127,7 +127,7 @@ async function guardiaDelAsistente(guardiaId, usuarioAsistente) {
 //   4. Un relevo son dos actos, no uno: el que se va ficha su salida y el que llega ficha su
 //      entrada. Cada guardia anota su propia comprobación por su cuenta, así que quedan dos
 //      filas, una contra la que termina y otra contra la que empieza.
-//   5. A la Familia se le avisa una sola vez, y lo dispara fichar la entrada. El aviso lleva el
+//   5. A la Familia se le avisa una sola vez, y lo dispara fichar la entrada. El mensaje lleva el
 //      nombre de quién llegó y nada más: con qué se comprobó es funcionamiento interno y no se le
 //      cuenta. Una llegada sin comprobar avisa igual, porque el Asistente fichó; lo que queda
 //      pendiente lo ve la coordinación en su lista.
@@ -159,7 +159,7 @@ function datosDeComprobacion(body) {
   return { motivoSinComprobar: 'otro' };
 }
 
-// Cómo se llama quien llegó, para decírselo a la Familia. Si no se lo pudo averiguar, el aviso
+// Cómo se llama quien llegó, para decírselo a la Familia. Si no se lo pudo averiguar, el mensaje
 // sale igual con una forma genérica: enterarse de que llegaron importa más que el nombre.
 async function nombreDeAsistente(asistenteId, prestadoraId) {
   try {
@@ -430,7 +430,7 @@ appAsistentesRouter.put('/perfil/datos-bancarios/:clase', requiereRolAsistente, 
     || numero.length > LARGO_MAXIMO_DEL_IDENTIFICADOR
     || !IDENTIFICADOR_ADMITIDO.test(numero)
   ) {
-    // El aviso no repite lo que se escribió: es el dato sensible.
+    // El mensaje no repite lo que se escribió: es el dato sensible.
     return res.status(400).json({ error: 'El número de la cuenta no es válido', motivo: 'identificador_invalido' });
   }
 
@@ -765,7 +765,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
   // Las coordenadas contra las que se mide son las del DÍA DE ESTA GUARDIA, no las de la ficha:
   // si el Paciente está pasando una temporada en otro lado, el Asistente fue a donde le
   // dijeron, y medir contra la casa de siempre lo daba fuera de rango y le mandaba al
-  // Coordinador un aviso que era un falso positivo (pendiente #153).
+  // Coordinador una alerta que era un falso positivo (pendiente #153).
   //
   // Acá no se pide `domicilio` a propósito: esto mide una distancia, no muestra una dirección.
   // Y no se pasa por el interruptor `asistente_domicilio_del_paciente` tampoco: ese decide qué
@@ -786,17 +786,17 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
 
   // Con varios Pacientes se mide contra el domicilio MÁS CERCANO. Casi siempre viven todos en
   // la misma casa y da lo mismo; cuando no, estar en la puerta de uno de ellos no es llegar
-  // tarde ni al lugar equivocado, y el aviso al Coordinador sería un falso positivo.
+  // tarde ni al lugar equivocado, y la alerta al Coordinador sería un falso positivo.
   //
   // Se guarda cuál fue el más cercano, no solamente cuántos metros: si la medición terminó
-  // siendo contra una dirección temporal, el aviso al Coordinador tiene que decirlo.
+  // siendo contra una dirección temporal, la alerta al Coordinador tiene que decirlo.
   const medidos = pacientes
     .filter((p) => p.lat != null && p.lng != null)
     .map((p) => ({ paciente: p, metros: Math.round(distanciaMetros(lat, lng, p.lat, p.lng)) }));
   const masCerca = medidos.reduce((mejor, actual) => (mejor && mejor.metros <= actual.metros ? mejor : actual), null);
   const distancia = masCerca ? masCerca.metros : null;
   // `llegoAlDomicilio` contesta `null` cuando no hay con qué medir, y eso no es llegar lejos:
-  // es no saber. Sin coordenadas no se le manda un aviso al Coordinador.
+  // es no saber. Sin coordenadas no se le manda ninguna alerta al Coordinador.
   const dentroDeRango = llegoAlDomicilio(distancia, config) !== false;
 
   // La comprobación se resuelve ANTES de marcar el check-in, y es lo único que puede rechazar el
@@ -831,17 +831,17 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
     return responderError(res, error);
   }
 
-  // UN SOLO AVISO, Y LO DISPARA FICHAR LA ENTRADA. Antes salían dos que decían casi lo mismo: éste
+  // UN SOLO MENSAJE, Y LO DISPARA FICHAR LA ENTRADA. Antes salían dos que decían casi lo mismo: éste
   // sin ninguna condición, y otro —«la guardia quedó cubierta»— sólo cuando la Familia no había
   // participado de la comprobación. Con un relevo salían los dos juntos. El Asistente fichó: la
   // Familia se entera, y con el nombre de quién llegó. Cómo se comprobó no se le cuenta, porque es
   // funcionamiento interno; lo que quedó sin comprobar lo ve la coordinación en su lista.
   //
-  // Un aviso por Paciente, no uno por turno: la Familia de cada uno tiene que enterarse de que
+  // Un mensaje por Paciente, no uno por turno: la Familia de cada uno tiene que enterarse de que
   // llegaron a atender al suyo, y con el nombre del suyo. Dos hermanos que viven juntos pero
   // avisan a familias distintas reciben cada uno el suyo. Si las dos personas son de la misma
-  // Familia, esa Familia recibe los dos avisos, uno por nombre — es lo correcto: son dos
-  // Pacientes distintos, y un aviso solo obligaría a adivinar a cuál se refiere.
+  // Familia, esa Familia recibe los dos mensajes, uno por nombre — es lo correcto: son dos
+  // Pacientes distintos, y uno solo obligaría a adivinar a cuál se refiere.
   //
   // Se envía una sola vez porque checkin_at ya se validó arriba como no seteado antes de este
   // UPDATE.
@@ -863,7 +863,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
     // mensajes_asistente, el mismo canal que ya usa el Panel para comunicación con Asistentes,
     // en vez de crear una tabla nueva de notas para un solo caso.
     //
-    // Contra qué se midió, dicho en el aviso: si ese día regía una dirección temporal, el
+    // Contra qué se midió, dicho en la alerta: si ese día regía una dirección temporal, el
     // Coordinador tiene que saberlo, porque "fuera de rango" sin esa aclaración lo manda a
     // buscar un problema donde no lo hay.
     //
@@ -896,7 +896,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
 // Lo que el sistema calcula solo es un hecho, no un mérito de nadie, y por eso se guarda con
 // otro código de origen y no se mezcla nunca con el aviso que dio la persona.
 //
-// LA MEDIDA DE ESTO SON LOS MINUTOS DE AVISO que le da a la Prestadora para cubrir la guardia.
+// LA MEDIDA DE ESTO SON LOS MINUTOS DE PREAVISO que le da a la Prestadora para cubrir la guardia.
 // De ahí salen dos decisiones: ninguno de los dos botones se traba —ni por GPS, ni por hora, ni
 // por conexión: van a la cola de la aplicación como el check-in—, y el aviso de demora sale
 // hacia el Coordinador en el momento, sin esperar la vuelta del proceso de fondo.
@@ -919,7 +919,7 @@ appAsistentesRouter.post('/guardias/:id/salida', requiereRolAsistente, async (re
   // El punto de salida es opcional a propósito. Sin él la hora de salida se guarda igual y lo
   // único que se pierde es la estimación de llegada, que pasa a ser "no se sabe". Trabar el
   // botón porque el GPS no contestó adentro de un edificio sería perder justamente los minutos
-  // de aviso que este botón existe para ganar.
+  // de preaviso que este botón existe para ganar.
   const hayPunto = typeof lat === 'number' && typeof lng === 'number';
   if ((lat !== undefined && lat !== null && typeof lat !== 'number')
     || (lng !== undefined && lng !== null && typeof lng !== 'number')) {
@@ -1018,7 +1018,7 @@ appAsistentesRouter.post('/guardias/:id/aviso-demora', requiereRolAsistente, asy
     return responderError(res, error);
   }
 
-  // El aviso sale ahora, no en la próxima vuelta del proceso de fondo: entre una cosa y la otra
+  // El mensaje sale ahora, no en la próxima vuelta del proceso de fondo: entre una cosa y la otra
   // hay hasta cinco minutos, y cinco minutos son la mitad del margen con el que se consigue un
   // reemplazo. Se usa el mismo evento configurable que ya emite la insistencia, así que la
   // Prestadora que lo apagó no recibe nada por esta puerta tampoco.
@@ -1033,10 +1033,10 @@ appAsistentesRouter.post('/guardias/:id/aviso-demora', requiereRolAsistente, asy
     await notificarCoordinador({
       evento: 'alerta_temprana_guardia',
       prestadoraId: guardia.prestadora_id,
-      ...aviso('aviso_demora_asistente', idioma, {
+      ...mensajeDelSistema('aviso_demora_asistente', idioma, {
         fecha: guardia.fecha,
         horaInicio: guardia.hora_inicio,
-        origen: aviso('origen_de_alerta', idioma, { fuente: FUENTE_AVISO_DEMORA_ASISTENTE }).texto,
+        origen: mensajeDelSistema('origen_de_alerta', idioma, { fuente: FUENTE_AVISO_DEMORA_ASISTENTE }).texto,
         motivo,
       }),
     });
@@ -1085,7 +1085,7 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
      pasar dos veces en la misma guardia, así que acá el estado no alcanza para reconocer un
      reenvío: lo reconoce el identificador que el teléfono puso antes del primer intento. */
   const clienteUuid = identificadorDelTelefono(req.body);
-  const yaEstaba = await filaDeEsteAviso({
+  const yaEstaba = await filaDeEsteMensaje({
     tabla: 'emergencias_guardia',
     prestadoraId: guardia.prestadora_id,
     guardiaId: guardia.id,
@@ -1123,7 +1123,7 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
     await notificarCoordinador({
       evento: 'emergencia_en_guardia',
       prestadoraId: guardia.prestadora_id,
-      ...aviso('emergencia_en_guardia', idioma, {
+      ...mensajeDelSistema('emergencia_en_guardia', idioma, {
         fecha: guardia.fecha,
         horaInicio: guardia.hora_inicio,
       }),
@@ -1216,7 +1216,7 @@ appAsistentesRouter.post('/guardias/:id/no-puedo-continuar', requiereRolAsistent
     await notificarCoordinador({
       evento: 'no_puede_continuar_la_extension',
       prestadoraId: guardia.prestadora_id,
-      ...aviso('no_puede_continuar_la_extension', idioma, {
+      ...mensajeDelSistema('no_puede_continuar_la_extension', idioma, {
         fecha: guardia.fecha,
         horaInicio: guardia.hora_inicio,
         horaFin: guardia.hora_fin,
@@ -1245,7 +1245,8 @@ appAsistentesRouter.post('/guardias/:id/no-puedo-continuar', requiereRolAsistent
    ausencia. Quien está disponible está trabajando.
 
    NO SE LE AVISA A NADIE. Descansar de noche en un turno largo es lo normal, no un incidente. Un
-   aviso al Coordinador por cada descanso convertiría lo corriente en algo que hay que justificar.
+   mensaje al Coordinador por cada descanso convertiría lo corriente en algo que hay que
+   justificar.
 
    NO HAY TOPE NI HORARIO PERMITIDO. Cuánto y cuándo sale de cómo viene el servicio ese día, no de
    un número fijado de antemano (decisión del Desarrollador). */
@@ -1262,7 +1263,7 @@ appAsistentesRouter.post('/guardias/:id/descanso/empezar', requiereRolAsistente,
   // así que dos filas iguales pueden ser dos descansos de verdad. Lo que dice que es el mismo es
   // el identificador que puso el teléfono.
   const clienteUuid = identificadorDelTelefono(req.body);
-  const yaEstaba = await filaDeEsteAviso({
+  const yaEstaba = await filaDeEsteMensaje({
     tabla: 'descansos_guardia',
     prestadoraId: guardia.prestadora_id,
     guardiaId: guardia.id,
@@ -1305,7 +1306,7 @@ appAsistentesRouter.post('/guardias/:id/descanso/terminar', requiereRolAsistente
      ya llegó encuentra el descanso cerrado y sin él saldría por el 404 de más abajo, diciéndole a
      quien cerró su descanso que no había ninguno abierto. */
   const clienteUuid = identificadorDelTelefono(req.body);
-  const yaCerrado = await filaDeEsteAviso({
+  const yaCerrado = await filaDeEsteMensaje({
     tabla: 'descansos_guardia',
     prestadoraId: guardia.prestadora_id,
     guardiaId: guardia.id,
@@ -1486,8 +1487,8 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
     return responderError(res, errorGuardia);
   }
 
-  // El aviso va a la Familia de este Paciente y a ninguna otra: el reporte habla de él. Si el
-  // turno cubre a dos hermanos, cada Familia recibe su aviso cuando le toca, no el del otro.
+  // El mensaje va a la Familia de este Paciente y a ninguna otra: el reporte habla de él. Si el
+  // turno cubre a dos hermanos, cada Familia recibe el suyo cuando le toca, no el del otro.
   const { data: datosPaciente } = await supabase
     .from('pacientes')
     .select('familia_id')
@@ -1819,7 +1820,7 @@ appAsistentesRouter.delete('/push/suscribir', requiereRolAsistente, async (req, 
 // ============================================================================
 
 appAsistentesRouter.get('/calificaciones', requiereRolAsistente, async (req, res) => {
-  // Mismo motivo que en la baja del aviso al celular: una misma persona tiene una ficha por cada
+  // Mismo motivo que en la baja del mensaje al celular: una misma persona tiene una ficha por cada
   // Prestadora donde trabaja, y sin este filtro vería las calificaciones de la otra.
   const { data, error } = await supabase
     .from('calificaciones_asistente')

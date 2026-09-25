@@ -1,9 +1,9 @@
 // Punto 6 de docs/PRD_06_WhatsApp_IA.md: mensajes entrantes de WhatsApp de un Asistente.
 //
 // Pendiente #165 — esta dirección es pública: la llama Meta desde afuera, no un usuario
-// logueado. Hasta el 2026-09-08 el backend averiguaba de qué Prestadora era el aviso mirando el
+// logueado. Hasta el 2026-09-08 el backend averiguaba de qué Prestadora era el evento mirando el
 // `phone_number_id` que venía adentro del mismo cuerpo del pedido, y no comprobaba nada más.
-// Ese identificador no es un secreto —viaja en cada aviso y se ve en el panel de Meta—, así
+// Ese identificador no es un secreto —viaja en cada evento y se ve en el panel de Meta—, así
 // que cualquiera que lo conociera abría conversaciones, insertaba mensajes y hacía salir un
 // WhatsApp de verdad con la cuenta de Meta de esa Prestadora, a un número que él mismo elegía.
 //
@@ -46,7 +46,7 @@ import {
 // situación nueva.
 import { estadoSegunMeta, motivoDeMeta } from '../utils/plantillasWhatsapp.js';
 // La comparación que no filtra por tiempo y el cálculo del HMAC viven en un solo lugar y se
-// reusan: son los mismos que usan los avisos de cobro de las pasarelas. Escribirlos otra vez
+// reusan: son los mismos que usan los cobros que entran por las pasarelas. Escribirlos otra vez
 // acá sería la segunda copia de una cuenta que tiene que dar siempre igual.
 import { MOTIVO, firmasIguales, hmacHex, secretosIguales } from '../pasarelas/firmaWebhook.js';
 
@@ -68,7 +68,7 @@ const MOTIVO_WHATSAPP = {
 
 // El lector del cuerpo crudo viaja con el router y no suelto en `server.js`: quien monte este
 // router se lleva el lector puesto, y lo único que hay que recordar afuera es montarlo antes
-// del `express.json()` general. Un megabyte es holgado para el aviso más grande que manda
+// del `express.json()` general. Un megabyte es holgado para el evento más grande que manda
 // Meta por un mensaje de texto.
 whatsappWebhookRouter.use(express.raw({ type: 'application/json', limit: '1mb' }));
 
@@ -137,7 +137,7 @@ whatsappWebhookRouter.post('/:prestadoraId', async (req, res) => {
 
   // Meta firma el cuerpo entero con el secreto de la aplicación y lo escribe como
   // `sha256=<hexadecimal>`. No hay instante adentro —a diferencia de Stripe y Mercado Pago—,
-  // así que no hay ventana de vencimiento que comprobar: lo que corta el reenvío de un aviso
+  // así que no hay ventana de vencimiento que comprobar: lo que corta el reenvío de un evento
   // viejo es el identificador de mensaje, más abajo.
   const cabecera = req.get('X-Hub-Signature-256');
   if (!cabecera) return rechazar(MOTIVO.CABECERA_AUSENTE);
@@ -164,7 +164,7 @@ whatsappWebhookRouter.post('/:prestadoraId', async (req, res) => {
   res.status(200).json({ ok: true });
 
   try {
-    await repartirAviso(cuerpo, {
+    await repartirEvento(cuerpo, {
       prestadoraId,
       phoneNumberIdConfigurado: configuracion.phone_number_id,
     });
@@ -176,7 +176,7 @@ whatsappWebhookRouter.post('/:prestadoraId', async (req, res) => {
 // Por esta misma puerta entran dos cosas distintas, y Meta las distingue con el nombre del campo:
 // los mensajes que escribe una persona, y el resultado de la revisión de una plantilla. Lo segundo
 // es lo que hace que «aprobada» y «rechazada» dejen de depender de que alguien las escriba a mano.
-async function repartirAviso(payload, contexto) {
+async function repartirEvento(payload, contexto) {
   const cambio = payload?.entry?.[0]?.changes?.[0];
   if (cambio?.field === 'message_template_status_update') {
     return anotarResultadoDePlantilla(cambio.value, contexto.prestadoraId);
@@ -185,7 +185,7 @@ async function repartirAviso(payload, contexto) {
 }
 
 /** El resultado de la revisión, guardado en la plantilla. La Prestadora es la de la dirección, y
- *  va en el filtro: el identificador que viene adentro del aviso no elige fila de otra. */
+ *  va en el filtro: el identificador que viene adentro del evento no elige fila de otra. */
 async function anotarResultadoDePlantilla(valor, prestadoraId) {
   const metaTemplateId = valor?.message_template_id;
   if (!metaTemplateId) return;
@@ -202,7 +202,7 @@ async function anotarResultadoDePlantilla(valor, prestadoraId) {
 }
 
 /**
- * @param payload                    el aviso ya comprobado auténtico
+ * @param payload                    el evento ya comprobado auténtico
  * @param prestadoraId               la Prestadora de la dirección, nunca una sacada del cuerpo
  * @param phoneNumberIdConfigurado   el número que esa Prestadora tiene configurado
  */
@@ -216,8 +216,8 @@ async function procesarEventoEntrante(payload, { prestadoraId, phoneNumberIdConf
   if (!telefono || !texto) return;
 
   // El `phone_number_id` del cuerpo ya no elige la Prestadora: eso lo hace la dirección. Lo
-  // único que se hace con él es comprobar que el aviso hable del número que esta Prestadora
-  // tiene configurado. Si no coincide, el aviso es auténtico pero no es para esta puerta —una
+  // único que se hace con él es comprobar que el evento hable del número que esta Prestadora
+  // tiene configurado. Si no coincide, el evento es auténtico pero no es para esta puerta —una
   // dirección mal copiada en el panel de Meta, por ejemplo—, y no se procesa.
   const phoneNumberId = cambios?.metadata?.phone_number_id;
   if (phoneNumberIdConfigurado && phoneNumberId && phoneNumberId !== phoneNumberIdConfigurado) {
@@ -225,7 +225,7 @@ async function procesarEventoEntrante(payload, { prestadoraId, phoneNumberIdConf
     return;
   }
 
-  // Un mensaje se atiende una sola vez. La firma de Meta no lleva instante, así que un aviso
+  // Un mensaje se atiende una sola vez. La firma de Meta no lleva instante, así que un evento
   // auténtico copiado sigue dando firma buena mañana; volver a procesarlo gastaría otra llamada
   // al modelo de lenguaje y haría salir otro WhatsApp. El identificador que Meta le pone a cada
   // mensaje es lo que lo corta, y se pregunta antes de escribir nada.
@@ -293,11 +293,11 @@ async function procesarEventoEntrante(payload, { prestadoraId, phoneNumberIdConf
   // jurisdicción de la Prestadora. Sin número configurado no se inventa ninguno: queda la
   // constancia de que se derivó por eso.
   if (decision.accion === 'emergencia') {
-    const aviso = await avisarAlServicioDeEmergencias({ prestadoraId });
+    const servicioDeEmergencias = await avisarAlServicioDeEmergencias({ prestadoraId });
     await derivarAUnaPersona();
     await anotar(
-      aviso.telefono ? RESULTADO_EMERGENCIA_AVISADA : RESULTADO_DERIVADA,
-      aviso.motivo,
+      servicioDeEmergencias.telefono ? RESULTADO_EMERGENCIA_AVISADA : RESULTADO_DERIVADA,
+      servicioDeEmergencias.motivo,
     );
     return;
   }

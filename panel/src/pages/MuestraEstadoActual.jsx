@@ -115,7 +115,7 @@ export function MuestraEstadoActual() {
       asistentesConPapelPorVencer: new Set(['a2']),
       asistentesConPapelVencido: new Set(['a3']),
       guardiasSinReporte: new Set(['g9']),
-      diasAviso: 30,
+      diasDePreaviso: 30,
     }),
     []
   );

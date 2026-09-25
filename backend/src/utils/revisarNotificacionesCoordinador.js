@@ -12,7 +12,7 @@ import { intervaloParaPremura } from './umbralesPremura.js';
 import { reglaDeLaToma, tomadasAhora } from './tomasDeAlarma.js';
 import { TIPOS_DE_ALARMA } from './alarmasTomadas.js';
 import { horasEntre } from './horasDeGuardia.js';
-import { aviso } from '../i18n/avisos.js';
+import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 
 // Insistencia al Coordinador según premura, con coordinador de respaldo si no hay
@@ -23,7 +23,7 @@ import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 // "Premura" = minutos transcurridos desde que se detectó la alerta/incidente. Cada
 // prestadora define sus propios tramos en umbrales_premura (más urgente = intervalo de
 // insistencia más corto). Mientras no pase ultima_notificacion_at + intervalo_actual, el
-// cron no vuelve a avisar — evita mandar el mismo aviso en cada corrida de 5 minutos.
+// cron no vuelve a avisar — evita mandar el mismo mensaje en cada corrida de 5 minutos.
 export async function revisarNotificacionesCoordinador() {
   // SIN PRESTADORA A PROPÓSITO
   // Es el arranque de un trabajo de fondo, que no tiene sesión de nadie. No trae dato de ninguna
@@ -42,7 +42,7 @@ export async function revisarNotificacionesCoordinador() {
 
   const ahora = new Date();
 
-  // El idioma se pregunta una vez por Prestadora y no una por aviso: todos los que salen en esta
+  // El idioma se pregunta una vez por Prestadora y no una por mensaje: todos los que salen en esta
   // vuelta los lee la misma gente, la del Panel de esa Prestadora.
   for (const config of configuraciones) {
     const idioma = await idiomaDeLaPrestadora(config.prestadora_id);
@@ -55,7 +55,7 @@ export async function revisarNotificacionesCoordinador() {
   }
 }
 
-// Aviso de guardia que terminó y nadie cerró.
+// Mensaje de guardia que terminó y nadie cerró.
 //
 // Una guardia sin cerrar suele ser señal de problemas, así que nunca puede quedar así: quien
 // coordina tiene que tomar cartas en el asunto apenas pasa la hora de cierre.
@@ -87,7 +87,7 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
 
   // No hay tope hacia atrás: una guardia sin cerrar no se arregla con el paso del tiempo, y
   // ninguna puede envejecer fuera de la vista. La pantalla del Panel ya pregunta lo mismo sin
-  // límite; el aviso preguntaba sólo por la última semana y se contradecían.
+  // límite; esta revisión preguntaba sólo por la última semana y se contradecían.
   const { data: guardias, error } = await supabase
     .from('guardias')
     .select('id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, paciente_id, checkout_at, aviso_sin_cerrar_at, aviso_sin_cerrar_veces, aviso_sin_cerrar_backup_at, aviso_sin_cerrar_grave_at, asistentes(nombre)')
@@ -102,7 +102,7 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
   }
   if (!guardias?.length) return;
 
-  // A quiénes atendía la guardia. Mismo criterio que el aviso de guardia sin cubrir: un turno
+  // A quiénes atendía la guardia. Mismo criterio que el mensaje de guardia sin cubrir: un turno
   // puede cubrir a más de un Paciente y nombrar a uno solo le esconde al Coordinador la mitad
   // de lo que quedó sin confirmar.
   let pacientesPorGuardia;
@@ -148,7 +148,7 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
       await notificarCoordinador({
         evento: 'guardia_sin_cerrar',
         prestadoraId,
-        ...aviso('guardia_sin_cerrar', idioma, datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora, veces)),
+        ...mensajeDelSistema('guardia_sin_cerrar', idioma, datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora, veces)),
       });
 
       // Y a la Familia, si la Prestadora lo tiene encendido para este evento. La jornada que
@@ -158,7 +158,7 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
         evento: 'guardia_sin_cerrar',
         prestadoraId,
         guardiaId: guardia.id,
-        textos: aviso('guardia_sin_cerrar_familia', idioma, datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora, veces)),
+        textos: mensajeDelSistema('guardia_sin_cerrar_familia', idioma, datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora, veces)),
         idioma,
       });
 
@@ -177,7 +177,7 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
         backupId,
         prestadoraId,
         idioma,
-        ...aviso('guardia_sin_cerrar_respaldo', idioma, {
+        ...mensajeDelSistema('guardia_sin_cerrar_respaldo', idioma, {
           fecha: guardia.fecha,
           horaInicio: guardia.hora_inicio,
           horaFin: guardia.hora_fin,
@@ -202,7 +202,7 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
       idioma,
       ahora,
       yaSalieron: escalonesQueSalieron,
-      texto: aviso('guardia_sin_cerrar_respaldo', idioma, {
+      texto: mensajeDelSistema('guardia_sin_cerrar_respaldo', idioma, {
         fecha: guardia.fecha,
         horaInicio: guardia.hora_inicio,
         horaFin: guardia.hora_fin,
@@ -210,8 +210,8 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
       }).texto,
     });
 
-    // El tercer escalón. A esta altura la insistencia al Coordinador y el aviso a su respaldo
-    // ya salieron y no alcanzaron: la guardia lleva horas abierta. Deja de ser un aviso de
+    // El tercer escalón. A esta altura la insistencia al Coordinador y el mensaje a su respaldo
+    // ya salieron y no alcanzaron: la guardia lleva horas abierta. Deja de ser un mensaje de
     // operación y pasa a ser una emergencia, que sale una sola vez por su propio evento y a
     // sus propios destinatarios.
     if (
@@ -222,14 +222,14 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
       await notificarCoordinador({
         evento: 'guardia_sin_cerrar_grave',
         prestadoraId,
-        ...aviso('guardia_sin_cerrar_grave', idioma, datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora)),
+        ...mensajeDelSistema('guardia_sin_cerrar_grave', idioma, datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora)),
       });
 
       await notificarFamiliaSiCorresponde({
         evento: 'guardia_sin_cerrar_grave',
         prestadoraId,
         guardiaId: guardia.id,
-        textos: aviso('guardia_sin_cerrar_grave_familia', idioma, datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora)),
+        textos: mensajeDelSistema('guardia_sin_cerrar_grave_familia', idioma, datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora)),
         idioma,
       });
 
@@ -256,7 +256,7 @@ function finDeLaGuardia(guardia) {
   return new Date(inicio.getTime() + horasEntre(guardia.hora_inicio, guardia.hora_fin, guardia.dias_hasta_el_fin) * MS_POR_HORA);
 }
 
-// Lo que los dos avisos de guardia sin cerrar —el de rutina y el que escala— necesitan saber
+// Lo que los dos mensajes de guardia sin cerrar —el de rutina y el que escala— necesitan saber
 // para dejar al Coordinador en condiciones de actuar sin entrar al Panel a averiguar nada: a
 // quién se atendía, a qué hora terminaba, cuánto hace que venció el plazo y —lo que decide qué
 // hacer— si el Asistente marcó su salida. Las palabras las pone el catálogo, en el idioma que
@@ -275,9 +275,9 @@ function datosDeLaGuardia(guardia, pacientesPorGuardia, fin, ahora, veces) {
 }
 
 // A una persona no se le muestra un identificador de guardia. Las alertas tempranas y los
-// incidentes de relevo guardan el id de la guardia, así que antes de armar los avisos se leen de
+// incidentes de relevo guardan el id de la guardia, así que antes de armar los mensajes se leen de
 // una sola vez las guardias de toda la vuelta y se dejan listos los mismos datos que ya llevan
-// los avisos de guardia sin cerrar: la fecha, las horas y los Pacientes.
+// los mensajes de guardia sin cerrar: la fecha, las horas y los Pacientes.
 const GUARDIA_QUE_NO_SE_PUDO_LEER = { fecha: '—', horaInicio: '—', horaFin: '—', pacientes: [] };
 
 // La Prestadora es obligatoria y va primero: una lista de identificadores no dice de quién es cada
@@ -363,21 +363,21 @@ async function revisarAlertas(config, ahora, idioma, reglaDeLasTomas) {
       await notificarCoordinador({
         evento: 'alerta_temprana_guardia',
         prestadoraId,
-        ...aviso('alerta_temprana_sin_resolver', idioma, {
+        ...mensajeDelSistema('alerta_temprana_sin_resolver', idioma, {
           ...guardia,
-          origen: aviso('origen_de_alerta', idioma, { fuente: alerta.fuente }).texto,
+          origen: mensajeDelSistema('origen_de_alerta', idioma, { fuente: alerta.fuente }).texto,
           motivo: alerta.motivo,
           minutos: minutosPremura,
         }),
       });
 
       // La salida sin entrada entra por acá: es una alerta temprana de guardia, y a la Familia
-      // le llega diciendo que hay un aviso pendiente, sin el motivo interno ni el origen.
+      // le llega diciendo que hay algo pendiente, sin el motivo interno ni el origen.
       await notificarFamiliaSiCorresponde({
         evento: 'alerta_temprana_guardia',
         prestadoraId,
         guardiaId: alerta.guardia_id,
-        textos: aviso('alerta_temprana_guardia_familia', idioma, guardia),
+        textos: mensajeDelSistema('alerta_temprana_guardia_familia', idioma, guardia),
         idioma,
       });
 
@@ -393,7 +393,7 @@ async function revisarAlertas(config, ahora, idioma, reglaDeLasTomas) {
         backupId,
         prestadoraId,
         idioma,
-        ...aviso('alerta_temprana_respaldo', idioma, { ...guardia, minutos: minutosPremura }),
+        ...mensajeDelSistema('alerta_temprana_respaldo', idioma, { ...guardia, minutos: minutosPremura }),
       });
       await supabase
         .from('alertas_tempranas_guardia')
@@ -412,7 +412,7 @@ async function revisarAlertas(config, ahora, idioma, reglaDeLasTomas) {
       idioma,
       ahora,
       yaSalieron: escalonesQueSalieron,
-      texto: aviso('alerta_temprana_respaldo', idioma, {
+      texto: mensajeDelSistema('alerta_temprana_respaldo', idioma, {
         ...guardia,
         minutos: minutosPremura,
       }).texto,
@@ -466,16 +466,16 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
       await notificarCoordinador({
         evento: 'incidente_relevo_sin_resolver',
         prestadoraId,
-        ...aviso('incidente_relevo_sin_resolver', idioma, { ...guardia, minutos: minutosPremura }),
+        ...mensajeDelSistema('incidente_relevo_sin_resolver', idioma, { ...guardia, minutos: minutosPremura }),
       });
 
-      // A la Familia le llega su propio aviso, no el de quien coordina: son dos personas
+      // A la Familia le llega su propio mensaje, no el de quien coordina: son dos personas
       // distintas mirando el mismo hecho, y a la Familia no le corresponde nada de adentro.
       await notificarFamiliaSiCorresponde({
         evento: 'incidente_relevo_sin_resolver',
         prestadoraId,
         guardiaId: incidente.guardia_entrante_id,
-        textos: aviso('incidente_relevo_familia', idioma, guardia ?? GUARDIA_QUE_NO_SE_PUDO_LEER),
+        textos: mensajeDelSistema('incidente_relevo_familia', idioma, guardia ?? GUARDIA_QUE_NO_SE_PUDO_LEER),
         idioma,
       });
 
@@ -491,7 +491,7 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
         backupId,
         prestadoraId,
         idioma,
-        ...aviso('incidente_relevo_respaldo', idioma, { ...guardia, minutos: minutosPremura }),
+        ...mensajeDelSistema('incidente_relevo_respaldo', idioma, { ...guardia, minutos: minutosPremura }),
       });
       await supabase
         .from('incidentes_relevo')
@@ -510,7 +510,7 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
       idioma,
       ahora,
       yaSalieron: escalonesQueSalieron,
-      texto: aviso('incidente_relevo_respaldo', idioma, {
+      texto: mensajeDelSistema('incidente_relevo_respaldo', idioma, {
         ...guardia,
         minutos: minutosPremura,
       }).texto,
@@ -525,7 +525,7 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
       // prioridad y el texto que la Prestadora cargó en `configuracion_escalada_relevo`
       // (`utils/faseAutomaticaRelevo.js`). Nadie queda asignado: se pregunta quién puede.
       //
-      // Si la búsqueda falla entera, el aviso a quien coordina sale igual. Es lo único que impide
+      // Si la búsqueda falla entera, el mensaje a quien coordina sale igual. Es lo único que impide
       // que un incidente se quede esperando en silencio a un proceso que no pudo hacer nada.
       let loQueSeHizo = { contactados: 0, sinNivel: false, sinOrden: false, quedaElFamiliar: false };
       try {
@@ -537,7 +537,7 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
       await notificarCoordinador({
         evento: 'incidente_relevo_sin_resolver',
         prestadoraId,
-        ...aviso('incidente_relevo_fase_automatica', idioma, {
+        ...mensajeDelSistema('incidente_relevo_fase_automatica', idioma, {
           ...guardia,
           minutosUmbral: minutosAntesFaseAutomatica,
           ...loQueSeHizo,
@@ -552,7 +552,7 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
   }
 }
 
-// "Ausente sin relevo previo" es una alerta crítica: a diferencia del respaldo de avisos de
+// "Ausente sin relevo previo" es una alerta crítica: a diferencia del respaldo de mensajes de
 // rutina (revisarRecordatoriosPush.js), acá va push + WhatsApp a la vez, nunca uno de respaldo
 // del otro. Apagado por defecto: cada
 // Prestadora decide si su política es avisarle a la Familia o no (algunas prefieren no
@@ -578,7 +578,7 @@ async function notificarFamiliaSiCorresponde({ evento, prestadoraId, guardiaId, 
 
   // Un turno puede cubrir a más de un Paciente, y cada uno tiene su propia Familia esperando.
   // Se avisa a todas: la Familia del segundo Paciente se quedó igual de sin cuidado que la del
-  // primero, y no enterarse es exactamente lo que este aviso existe para evitar.
+  // primero, y no enterarse es exactamente lo que este mensaje existe para evitar.
   let familiaIds;
   try {
     const pacientes = await pacientesDeGuardia(prestadoraId, guardia, 'id, familia_id');
@@ -593,7 +593,7 @@ async function notificarFamiliaSiCorresponde({ evento, prestadoraId, guardiaId, 
   const cuentas = await cuentasDeLasFichas('familias', familiaIds, 'telefono', prestadoraId);
   const telefonoPorFamilia = new Map([...cuentas].map(([id, datos]) => [id, datos?.telefono ?? null]));
 
-  // El aviso de la Familia es suyo: dice cuál es la guardia y qué pasó, y nada más. Ni el nivel
+  // El mensaje de la Familia es suyo: dice cuál es la guardia y qué pasó, y nada más. Ni el nivel
   // de escalada, ni los minutos de la cuenta interna, ni ningún identificador. Lo arma quien
   // llama, con el catálogo del evento que corresponda.
   const { titulo, cuerpo } = textos;
@@ -604,8 +604,8 @@ async function notificarFamiliaSiCorresponde({ evento, prestadoraId, guardiaId, 
     const telefono = telefonoPorFamilia.get(familiaId);
     if (!telefono) continue;
     try {
-      // Lo empieza la Prestadora, así que sale por la plantilla del aviso, con los dos valores
-      // del aviso de la Familia: el título y el cuerpo.
+      // Lo empieza la Prestadora, así que sale por la plantilla del mensaje, con los dos valores
+      // del mensaje de la Familia: el título y el cuerpo.
       await avisarPorWhatsapp({ config, prestadoraId, telefono, valores: [titulo, cuerpo] });
     } catch (err) {
       console.error(`Error enviando WhatsApp a Familia (${evento}, guardia ${guardiaId}):`, err.message);
@@ -628,7 +628,7 @@ async function notificarCoordinadorBackup({ backupId, prestadoraId, texto, idiom
 
   if (!usuario) return;
 
-  const textos = aviso('escalada_a_respaldo', idioma);
+  const textos = mensajeDelSistema('escalada_a_respaldo', idioma);
 
   await notificarCoordinador({
     evento: 'incidente_relevo_sin_resolver',

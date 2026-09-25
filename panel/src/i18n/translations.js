@@ -59,7 +59,7 @@ export const T = {
         modalidad_con_accesos: 'No se puede desactivar esa modalidad mientras haya Familias con el acceso vigente. Hace falta darlos de baja antes de desactivarla.',
         modalidad_con_asistentes_y_accesos: 'No se puede desactivar esa modalidad: hay Asistentes que trabajan de esa forma y Familias con el acceso vigente. Hace falta resolver las dos cosas antes de desactivarla.',
         medio_de_pago_fuera_de_la_modalidad: 'Ese medio de pago no se usa en la modalidad de trabajo que paga esta liquidación. Hace falta elegir otro de la lista.',
-        // Dos avisos que antes llegaban como frase armada del lado del backend, en un solo idioma.
+        // Dos mensajes que antes llegaban como frase armada del lado del backend, en un solo idioma.
         persona_fuera_del_circulo: 'Esa persona no figura en el círculo de cuidado de esta Familia, así que no hay nada que quitar. Conviene recargar la lista para ver cómo quedó.',
         paciente_no_encontrado: 'No se encontró ese Paciente. Conviene recargar la lista.',
         // El alta de un acceso de Match en la pasarela de cobro. Cada frase dice qué

@@ -27,7 +27,7 @@
    era hasta ahora un dato que la Prestadora cargaba y que no leía nadie: el período gratuito no
    existía. El primer día que se cobra sale de ese número contado desde el alta, y se guarda dos
    veces porque son dos preguntas distintas: `gratis_hasta` dice hasta cuándo no se cobra —es lo que
-   mira el aviso previo del §3.2— y `proximo_cobro` dice qué período toca. Las dos son la misma
+   mira el preaviso del §3.2— y `proximo_cobro` dice qué período toca. Las dos son la misma
    fecha el primer día, y desde el primer cobro cada una sigue su camino.
 
    Y SE ESCRIBE UNA VEZ SOLA, ACÁ. Mañana la activación del lado de la Familia va a dar de alta
@@ -42,7 +42,7 @@
 
    NO CAMBIA EL ESTADO DEL ACCESO. Dar de alta no es cobrar. El acceso queda `vigente` cuando entra
    la plata del primer período, y eso lo decide `registrarCobroExitoso`
-   (`cobrosMarketplace.js`), que es adonde llegan tanto el aviso del proveedor como la carga a mano
+   (`cobrosMarketplace.js`), que es adonde llegan tanto el cobro que informa el proveedor como la carga a mano
    del Panel. Acá se guarda dónde quedó dada de alta y nada más.
 
    FALLA CERRADO. Sin riel conectado, sin credencial, sin período, sin correo de la Familia o con
@@ -149,7 +149,7 @@ export async function darDeAltaEnPasarela({ accesoId, prestadoraId, proveedor = 
   const emailPagador = await correoDeLaFamilia(acceso.familia_id, prestadoraId);
   // Dos rieles lo exigen y los demás lo ignoran, pero el corte se hace acá para todos: un acceso
   // cuya Familia no tiene correo no se puede cobrar en ninguno, porque tampoco hay adónde mandarle
-  // el comprobante ni el aviso previo.
+  // el comprobante ni el preaviso.
   if (!emailPagador) {
     return { ok: false, motivo: MOTIVO_ALTA.SIN_CORREO_DE_FAMILIA };
   }

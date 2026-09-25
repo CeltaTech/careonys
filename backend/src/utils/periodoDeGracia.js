@@ -3,11 +3,11 @@
 
    QUÉ RESUELVE. El §3.2 del `docs/PRD_07_Modalidad_Marketplace.md` pide «período de gracia con
    reintentos antes de suspender el acceso. Ni corte en el acto ni reintentos indefinidos sin
-   avisar». Hasta acá el aviso de un cobro fallido dejaba el acceso `vencida` en el acto: una
-   tarjeta vencida, un saldo que entraba un día tarde o un aviso repetido del proveedor apagaban el
+   avisar». Hasta acá un cobro fallido dejaba el acceso `vencida` en el acto: una
+   tarjeta vencida, un saldo que entraba un día tarde o una falla repetida del proveedor apagaban el
    acceso el mismo día, sin avisarle a nadie y sin un solo reintento.
 
-   SON DOS MOMENTOS Y ESTÁN LOS DOS ACÁ. Abrir la gracia es un instante —llega el aviso de que el
+   SON DOS MOMENTOS Y ESTÁN LOS DOS ACÁ. Abrir la gracia es un instante —llega el dato de que el
    cobro falló— y la suspensión es el paso del tiempo, días después, sin que nadie toque nada. Viven
    juntos porque los dos contestan la misma pregunta —qué le pasa a un acceso cuyo cobro no entra— y
    separarlos haría que la fecha la escribiera uno y la leyera otro.
@@ -15,30 +15,30 @@
    QUÉ SON LOS REINTENTOS, POR RIEL. Ninguno se agrega acá, porque los dos ya existen y lo único que
    les faltaba era que el acceso siguiera en pie mientras tanto:
 
-     * Los rieles que cobran solos reintentan de su lado y mandan un aviso nuevo por cada intento.
+     * Los rieles que cobran solos reintentan de su lado e informan cada intento nuevo.
      * Los que hay que armarles el cobro de cada período lo vuelven a armar todos los días mientras
        el cobro de ese período esté fallido y el acceso siga `vigente` (`cobrosMarketplace.js`).
 
-   Y por eso la gracia no se estira con cada aviso: se abre una vez, con la primera falla, y la
+   Y por eso la gracia no se estira con cada falla informada: se abre una vez, con la primera falla, y la
    fecha no se mueve. Estirarla a cada reintento sería el «reintentos indefinidos» que el §3.2
    prohíbe — un proveedor que reintenta cada tres días no suspendería nunca.
 
    SE AVISA AL ABRIRLA, UNA VEZ. La Familia se entera de que el cobro no entró, de hasta cuándo
    tiene para resolverlo y de que después el acceso se suspende. Sale una sola vez sin necesidad de
-   marca aparte: el aviso viaja con la apertura, y la apertura sólo ocurre cuando no había ninguna
+   marca aparte: el mensaje viaja con la apertura, y la apertura sólo ocurre cuando no había ninguna
    gracia abierta.
 
    LA GRACIA SE CIERRA CUANDO ENTRA LA PLATA, y eso lo hace `registrarCobroExitoso`, que es el único
    lugar que decide qué le pasa a un acceso cuando se cobra (`cobrosMarketplace.js`).
 
-   Y UNA SUSPENSIÓN QUE FALLA NO SUSPENDE A LAS DEMÁS. Mismo criterio que el corte y que el aviso
-   previo: se anota y se sigue; lo que no se suspendió hoy se suspende mañana. */
+   Y UNA SUSPENSIÓN QUE FALLA NO SUSPENDE A LAS DEMÁS. Mismo criterio que el corte y que el
+   preaviso: se anota y se sigue; lo que no se suspendió hoy se suspende mañana. */
 
 import { supabase } from '../db/connection.js';
 import { enviarPushFamilia } from './push.js';
 import { sumarDias } from './fechas.js';
 import { enDia, importeConMoneda } from './comoSeDiceEnUnAviso.js';
-import { aviso } from '../i18n/avisos.js';
+import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import { plazosDeLaPrestadora } from './plazosDeCobroMarketplace.js';
 import { prestadorasDelMarketplace } from './prestadorasDelMarketplace.js';
@@ -52,7 +52,7 @@ import { prestadorasDelMarketplace } from './prestadorasDelMarketplace.js';
  *                                          no alcanza el cajón de otra Organización
  *                                          (`celtatech\CLAUDE.md` §5).
  * @param {string} argumentos.accesoId
- * @param {Function} [argumentos.avisar]  Por dónde sale el aviso, por el mismo motivo que en
+ * @param {Function} [argumentos.avisar]  Por dónde sale el mensaje, por el mismo motivo que en
  *                                        `avisoPrevioAlCobro.js`: `web-push` sólo entrega contra
  *                                        una dirección segura y la prueba necesita poder mirarlo.
  * @returns {Promise<{abierta: boolean, gracia_hasta: string|null}>}
@@ -73,7 +73,7 @@ export async function abrirElPeriodoDeGracia({ prestadoraId, accesoId, avisar = 
   // Un acceso que ya está suspendido o dado de baja no tiene gracia que abrir: lo que falló no le
   // saca nada que todavía tenga.
   if (acceso.estado !== 'vigente') return { abierta: false, gracia_hasta: null };
-  // Ya hay una gracia corriendo. El aviso de este reintento no la mueve ni vuelve a avisar.
+  // Ya hay una gracia corriendo. Lo que informe este reintento no la mueve ni vuelve a avisar.
   if (acceso.gracia_hasta) return { abierta: false, gracia_hasta: acceso.gracia_hasta };
 
   // Cuántos días dura la gracia lo eligió la Prestadora. Sin ese dato no se abre ninguna: una
@@ -92,8 +92,8 @@ export async function abrirElPeriodoDeGracia({ prestadoraId, accesoId, avisar = 
     .eq('prestadora_id', prestadoraId)
     .eq('id', accesoId)
     .eq('estado', 'vigente')
-    // Nadie abrió una gracia mientras tanto. Dos avisos de falla que llegan juntos abren una sola,
-    // y el que pierde no vuelve a avisar.
+    // Nadie abrió una gracia mientras tanto. Dos fallas que llegan juntas abren una sola,
+    // y la que pierde no vuelve a avisar.
     .is('gracia_hasta', null)
     .select('id');
 
@@ -105,9 +105,9 @@ export async function abrirElPeriodoDeGracia({ prestadoraId, accesoId, avisar = 
 
   try {
     const idioma = await idiomaDeLaPrestadora(acceso.prestadora_id);
-    await avisar(acceso.prestadora_id, acceso.familia_id, textoDelAvisoDeGracia({ ...acceso, gracia_hasta: graciaHasta }, idioma));
+    await avisar(acceso.prestadora_id, acceso.familia_id, textoDelMensajeDeGracia({ ...acceso, gracia_hasta: graciaHasta }, idioma));
   } catch (falla) {
-    // La gracia ya está abierta, que es lo que sostiene el acceso. Que el aviso no haya salido se
+    // La gracia ya está abierta, que es lo que sostiene el acceso. Que el mensaje no haya salido se
     // registra y no deshace nada: deshacerlo suspendería antes de tiempo.
     console.error('No se pudo avisar del cobro que no entró:', falla.message);
   }
@@ -181,9 +181,9 @@ async function suspenderLosDeUnaPrestadora(prestadoraId, hoy) {
 /** Qué lee la Familia cuando el cobro no entró. Corto y neutro: qué pasó, hasta cuándo hay tiempo y
  *  qué ocurre si no se resuelve. El enlace lleva a la pantalla del acceso, que es donde se paga.
  *  Se exporta porque el cuerpo del push viaja cifrado: es la única forma de comprobar qué dice. */
-export function textoDelAvisoDeGracia(acceso, idioma) {
+export function textoDelMensajeDeGracia(acceso, idioma) {
   return {
-    ...aviso('cobro_no_realizado', idioma, {
+    ...mensajeDelSistema('cobro_no_realizado', idioma, {
       importe: importeConMoneda(acceso),
       dia: enDia(acceso.gracia_hasta),
     }),

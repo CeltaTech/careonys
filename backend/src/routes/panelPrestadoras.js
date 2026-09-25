@@ -131,7 +131,7 @@ panelPrestadorasRouter.get('/paises', requiereRolPanel, requiereSuperadmin, asyn
 //
 // Lo que se pide es lo mínimo con lo que la Prestadora puede empezar a existir: cómo se llama
 // para el mundo, cómo se llama ante la ley, en qué país trabaja, a qué casilla quiere que le
-// lleguen las respuestas de los avisos que manda, y quién va a ser su administrador. Todo lo
+// lleguen las respuestas de los mensajes que manda, y quién va a ser su administrador. Todo lo
 // demás —zonas, plazos, formas de cobro— lo configura ella después, y la fila de configuración
 // inicial la siembra sola la base al insertar (disparador
 // `trg_sembrar_configuracion_prestadora`).
@@ -184,7 +184,7 @@ panelPrestadorasRouter.post('/', requiereRolPanel, requiereSuperadmin, async (re
     return responderError(res, new ErrorConMotivo('pais_sin_moneda', `país ${pais} fuera del catálogo de monedas`));
   }
 
-  // La dirección desde la que va a mandar sus avisos se elige acá, una sola vez, y entra con
+  // La dirección desde la que va a mandar sus mensajes se elige acá, una sola vez, y entra con
   // ella: se fija al darla de alta y no cambia nunca (`utils/casillaDeEnvio.js`). Si no se pudo
   // elegir ninguna, la Prestadora entra igual y manda desde la dirección común del producto.
   let casillaEnvio = await elegirCasillaDeEnvio({ nombreFantasia, emailRespuestas });
@@ -251,7 +251,7 @@ panelPrestadorasRouter.post('/', requiereRolPanel, requiereSuperadmin, async (re
   // (`utils/reenvioDeRespuestas.js`). Se abre acá, con el alta, porque la dirección de envío ya
   // quedó fijada y desde este momento puede recibir una respuesta.
   //
-  // Si no se pudo abrir, la Prestadora entra igual: manda sus avisos y lo único que falta es que
+  // Si no se pudo abrir, la Prestadora entra igual: manda sus mensajes y lo único que falta es que
   // las respuestas vuelvan. Eso se avisa en el Panel, nunca por correo.
   const direccionEnvio = await direccionDeEnvioDe(prestadora.id);
   const regla = await apuntarReenvioDeRespuestas({

@@ -6,7 +6,7 @@
 // `domicilios_temporales_paciente`, y acá es donde se las pregunta. Sin esto el producto mandaría
 // gente a la casa de siempre, y no sería un problema de prolijidad: el check-in mediría la
 // distancia contra la casa de siempre, la daría por fuera de rango y le mandaría al Coordinador
-// un aviso automático que sería un falso positivo.
+// una alerta automática que sería un falso positivo.
 //
 // LA REGLA NO VIVE ACÁ, Y ES A PROPÓSITO (regla 12 de CLAUDE.md §7). Cuál dirección gana un día
 // dado —la temporal vigente, o la de la ficha si no hay ninguna— lo decide una sola vez la

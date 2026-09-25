@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { aviso, CLAVES_DE_AVISO, IDIOMAS_DEL_CATALOGO } from '../avisos.js';
+import { mensajeDelSistema, CLAVES_DE_MENSAJE, IDIOMAS_DEL_CATALOGO } from '../avisos.js';
 import {
   IDIOMA_POR_DEFECTO,
   IDIOMAS_SOPORTADOS,
@@ -18,7 +18,7 @@ import { filasSembradas } from './mensajesSembrados.js';
 
 sembrarMensajesDelSistema(filasSembradas());
 
-// Lo que hace falta para armar cada aviso. No se usa para comprobar qué dice —eso lo decide quien
+// Lo que hace falta para armar cada mensaje. No se usa para comprobar qué dice —eso lo decide quien
 // escribe el catálogo— sino para poder llamarlos a todos y ver que ninguno se rompe ni deja un
 // «undefined» a la vista en alguno de los tres idiomas.
 const DATOS = {
@@ -48,7 +48,7 @@ const DATOS = {
   escalada_a_todos_los_coordinadores: { minutos: 45 },
   escalada_a_la_administracion: { minutos: 90 },
   // Ni la alerta temprana ni el incidente de relevo llevan el identificador de la guardia: dicen
-  // la fecha, la hora y a quién se atiende, igual que los avisos de guardia sin cerrar.
+  // la fecha, la hora y a quién se atiende, igual que los mensajes de guardia sin cerrar.
   alerta_temprana_sin_resolver: {
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
     origen: 'un origen', motivo: 'no contesta', minutos: 30,
@@ -68,7 +68,7 @@ const DATOS = {
     contactados: 3, sinNivel: false, sinOrden: false, quedaElFamiliar: true,
   },
   convocatoria_de_relevo: { fecha: '2026-10-07', horaInicio: '22:00', horaFin: '06:00' },
-  // El de la Familia es otro aviso: no lleva minutos, ni nivel de escalada, ni identificador.
+  // El de la Familia es otro mensaje: no lleva minutos, ni nivel de escalada, ni identificador.
   incidente_relevo_familia: { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00' },
   cambio_de_asistente: {
     asistenteNuevo: 'Rita Solano', asistenteAnterior: 'Marcos Peña',
@@ -102,10 +102,10 @@ const DATOS = {
     yaEmpezo: false, horas: 12, veces: 2,
     cubrenFrancos: ['Rita Solano'], candidatos: ['Rita Solano', 'Marta Ruiz'],
   },
-  // El aviso no lleva el detalle a propósito: lo que escribió el Asistente es información sensible
+  // El mensaje no lleva el detalle a propósito: lo que escribió el Asistente es información sensible
   // y se lee entrando al Panel (`celtatech/CLAUDE.md` §6).
   emergencia_en_guardia: { fecha: '2026-10-07', horaInicio: '08:00' },
-  // Tampoco lleva el detalle, por lo mismo: el aviso dice de qué turno se trata y nada más.
+  // Tampoco lleva el detalle, por lo mismo: el mensaje dice de qué turno se trata y nada más.
   no_puede_continuar_la_extension: { fecha: '2026-10-07', horaInicio: '22:00', horaFin: '06:00' },
   alerta_ia_coordinador: { esRoja: true },
   alerta_ia_familia: { esRoja: false },
@@ -124,7 +124,7 @@ const DATOS = {
     empresa: 'Cuidados del Sur', producto: IDENTIDAD.nombre,
   },
   estado_postulacion: { empresa: 'Cuidados del Sur', nombre: 'Marta', estado: 'aprobado' },
-  // El aviso no lleva el documento, el teléfono, el correo ni la situación fiscal de quien se
+  // El mensaje no lleva el documento, el teléfono, el correo ni la situación fiscal de quien se
   // postula: eso se mira entrando al Panel, igual que el detalle de una emergencia.
   nueva_postulacion_asistente: { nombre: 'Marta' },
   nueva_solicitud_servicio: {
@@ -150,33 +150,33 @@ const DATOS = {
     prestadora: 'Cuidados del Sur', cuando: 'martes, 7 de octubre de 2026, 10:00',
   },
   // Los cuatro de la seguridad de la cuenta. Llevan lo mismo y nada más: a quién se le avisa y de
-  // parte de quién. Ni el número ni el código entran acá, porque tampoco entran en el aviso.
+  // parte de quién. Ni el número ni el código entran acá, porque tampoco entran en el mensaje.
   clave_recuperada: { nombre: 'Marta Giménez', prestadora: 'Cuidados del Sur' },
   telefono_cambiado: { nombre: 'Marta Giménez', prestadora: 'Cuidados del Sur' },
   entrada_desde_equipo_nuevo: { nombre: 'Marta Giménez', prestadora: 'Cuidados del Sur' },
   cambio_de_clave_habilitado: { nombre: 'Marta Giménez', prestadora: 'Cuidados del Sur' },
 };
 
-// Sin esto, un aviso que existe en castellano y no en portugués saldría en castellano sin que
+// Sin esto, un mensaje que existe en castellano y no en portugués saldría en castellano sin que
 // nadie se entere: el catálogo contestaría igual y nadie vería el hueco hasta que lo lea alguien
 // que no habla castellano.
 test('los tres idiomas tienen exactamente las mismas claves', () => {
   assert.deepEqual([...IDIOMAS_DEL_CATALOGO].sort(), [...IDIOMAS_SOPORTADOS].sort());
   for (const idioma of IDIOMAS_DEL_CATALOGO) {
-    for (const clave of CLAVES_DE_AVISO) {
-      assert.doesNotThrow(() => aviso(clave, idioma, DATOS[clave]), `falta ${clave} en ${idioma}`);
+    for (const clave of CLAVES_DE_MENSAJE) {
+      assert.doesNotThrow(() => mensajeDelSistema(clave, idioma, DATOS[clave]), `falta ${clave} en ${idioma}`);
     }
   }
 });
 
 test('la lista de datos de prueba cubre todas las claves del catálogo', () => {
-  assert.deepEqual([...CLAVES_DE_AVISO].sort(), Object.keys(DATOS).sort());
+  assert.deepEqual([...CLAVES_DE_MENSAJE].sort(), Object.keys(DATOS).sort());
 });
 
 test('ningún aviso deja un hueco a la vista en ninguno de los tres idiomas', () => {
   for (const idioma of IDIOMAS_DEL_CATALOGO) {
-    for (const clave of CLAVES_DE_AVISO) {
-      for (const [parte, texto] of Object.entries(aviso(clave, idioma, DATOS[clave]))) {
+    for (const clave of CLAVES_DE_MENSAJE) {
+      for (const [parte, texto] of Object.entries(mensajeDelSistema(clave, idioma, DATOS[clave]))) {
         assert.equal(typeof texto, 'string', `${clave}.${parte} en ${idioma} no es texto`);
         assert.ok(texto.length > 0, `${clave}.${parte} en ${idioma} está vacío`);
         assert.ok(!texto.includes('undefined'), `${clave}.${parte} en ${idioma} dice «undefined»`);
@@ -188,26 +188,26 @@ test('ningún aviso deja un hueco a la vista en ninguno de los tres idiomas', ()
 
 test('un idioma que no está en el catálogo cae en el de por defecto', () => {
   assert.deepEqual(
-    aviso('mensaje_del_coordinador', 'fr-FR'),
-    aviso('mensaje_del_coordinador', IDIOMA_POR_DEFECTO)
+    mensajeDelSistema('mensaje_del_coordinador', 'fr-FR'),
+    mensajeDelSistema('mensaje_del_coordinador', IDIOMA_POR_DEFECTO)
   );
   assert.deepEqual(
-    aviso('mensaje_del_coordinador', null),
-    aviso('mensaje_del_coordinador', IDIOMA_POR_DEFECTO)
+    mensajeDelSistema('mensaje_del_coordinador', null),
+    mensajeDelSistema('mensaje_del_coordinador', IDIOMA_POR_DEFECTO)
   );
 });
 
 test('los tres idiomas dicen cosas distintas', () => {
-  const titulos = IDIOMAS_DEL_CATALOGO.map((i) => aviso('mensaje_del_coordinador', i).titulo);
+  const titulos = IDIOMAS_DEL_CATALOGO.map((i) => mensajeDelSistema('mensaje_del_coordinador', i).titulo);
   assert.equal(new Set(titulos).size, IDIOMAS_DEL_CATALOGO.length);
 });
 
 test('una clave que no existe se avisa, no se devuelve vacía', () => {
-  assert.throws(() => aviso('un_aviso_que_no_existe', 'es-AR'), /un_aviso_que_no_existe/);
+  assert.throws(() => mensajeDelSistema('un_aviso_que_no_existe', 'es-AR'), /un_aviso_que_no_existe/);
 });
 
-// Los tres avisos de guardia que le llegan a la Familia, probados rompiéndolos a propósito.
-const AVISOS_DE_GUARDIA_PARA_LA_FAMILIA = [
+// Los tres mensajes de guardia que le llegan a la Familia, probados rompiéndolos a propósito.
+const MENSAJES_DE_GUARDIA_PARA_LA_FAMILIA = [
   'guardia_sin_cerrar_familia',
   'guardia_sin_cerrar_grave_familia',
   'alerta_temprana_guardia_familia',
@@ -215,8 +215,8 @@ const AVISOS_DE_GUARDIA_PARA_LA_FAMILIA = [
 
 test('una guardia sin Pacientes cargados se nombra igual, sin dejar el renglón cortado', () => {
   for (const idioma of IDIOMAS_DEL_CATALOGO) {
-    for (const clave of AVISOS_DE_GUARDIA_PARA_LA_FAMILIA) {
-      const { cuerpo } = aviso(clave, idioma, { ...DATOS[clave], pacientes: [] });
+    for (const clave of MENSAJES_DE_GUARDIA_PARA_LA_FAMILIA) {
+      const { cuerpo } = mensajeDelSistema(clave, idioma, { ...DATOS[clave], pacientes: [] });
       assert.equal(cuerpo.includes('undefined'), false, `${clave} en ${idioma} deja un hueco`);
       assert.equal(/\s,/.test(cuerpo), false, `${clave} en ${idioma} deja una coma suelta`);
     }
@@ -224,7 +224,7 @@ test('una guardia sin Pacientes cargados se nombra igual, sin dejar el renglón 
 });
 
 test('nada de adentro entra en el texto de la Familia', () => {
-  // El aviso de quien coordina lleva el nombre del Asistente, los minutos de la cuenta interna,
+  // El mensaje de quien coordina lleva el nombre del Asistente, los minutos de la cuenta interna,
   // el escalón y el identificador de la guardia. Si alguno se cuela acá, la Familia está viendo
   // lo que no es suyo.
   const deAdentro = {
@@ -240,8 +240,8 @@ test('nada de adentro entra en el texto de la Familia', () => {
     motivo: 'sin marcar salida',
   };
   for (const idioma of IDIOMAS_DEL_CATALOGO) {
-    for (const clave of AVISOS_DE_GUARDIA_PARA_LA_FAMILIA) {
-      const { titulo, cuerpo } = aviso(clave, idioma, deAdentro);
+    for (const clave of MENSAJES_DE_GUARDIA_PARA_LA_FAMILIA) {
+      const { titulo, cuerpo } = mensajeDelSistema(clave, idioma, deAdentro);
       assert.ok(cuerpo.includes('Marta Giménez'), `${clave} en ${idioma} no nombra al Paciente`);
       const texto = `${titulo} ${cuerpo}`;
       for (const prohibido of ['Rocío Paz', '137', 'guardia-uuid-0001', 'sin marcar salida']) {
@@ -262,7 +262,7 @@ test('el idioma sale del país cuando nadie eligió uno', () => {
   assert.equal(idiomaDePais('br'), 'pt-BR');
   assert.equal(idiomaDePais(' US '), 'en');
   assert.equal(idiomaDePais('AR'), IDIOMA_POR_DEFECTO);
-  // Un país sin idioma conocido no deja el aviso sin texto: sale en el de por defecto.
+  // Un país sin idioma conocido no deja el mensaje sin texto: sale en el de por defecto.
   assert.equal(idiomaDePais('XX'), IDIOMA_POR_DEFECTO);
   assert.equal(idiomaDePais(null), IDIOMA_POR_DEFECTO);
 });

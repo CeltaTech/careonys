@@ -1,11 +1,11 @@
 /**
- * Pruebas del camino entero del aviso de cobro de una pasarela (pendiente #159).
+ * Pruebas del camino entero de un cobro que entra de una pasarela (pendiente #159).
  *
  * Las cuentas de la firma están probadas aparte, en `pasarelas/__tests__/firmaWebhook.test.js`.
  * Lo que se prueba acá es lo otro, que es donde esto se rompe de verdad: que la ruta reciba
  * los bytes tal cual llegaron —no el objeto que express arma y alguien vuelve a convertir a
  * texto—, que corte con 401 cuando no hay nada guardado con qué comprobar, y que solo toque
- * la fila del cobro cuando el aviso resultó auténtico.
+ * la fila del cobro cuando lo que llegó resultó auténtico.
  *
  * Se levanta el backend de verdad contra una base de mentira que contesta lo que cada prueba le
  * prepara, igual que `panelCobros.test.js`.
@@ -57,7 +57,7 @@ const baseFalsa = createServer((req, res) => {
 
     // A la respuesta preparada se le pasa también la dirección con sus filtros: hay dos consultas
     // distintas que caen en la misma tabla —la que busca el acceso por la referencia del
-    // aviso y la que la lee por su identificador antes de moverla— y sólo el filtro las separa.
+    // que llegó y la que la lee por su identificador antes de moverla— y sólo el filtro las separa.
     const preparada = respuestas.get(clave);
     const valor =
       typeof preparada === 'function' ? preparada(crudo ? JSON.parse(crudo) : null, req.url) : preparada;
@@ -77,7 +77,7 @@ await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 
-// Un Mercado Pago de mentira. Hace falta porque su aviso no dice si la plata entró —solo trae
+// Un Mercado Pago de mentira. Hace falta porque lo que manda no dice si la plata entró —solo trae
 // el identificador del cobro—, así que la ruta le vuelve a preguntar antes de imputar nada, y
 // eso es lo que se prueba más abajo.
 let respuestaDelProveedor = { status: 'authorized' };
@@ -160,7 +160,7 @@ beforeEach(() => {
   respuestas.set('POST /rest/v1/cobros_marketplace', () => []);
   respuestas.set('PATCH /rest/v1/accesos_marketplace', () => []);
   // Dos consultas distintas caen acá y se distinguen por el filtro: la ruta busca el acceso
-  // **por la referencia del aviso** —y de fábrica no la encuentra, porque la de fábrica es la de
+  // **por la referencia que llegó** —y de fábrica no la encuentra, porque la de fábrica es la de
   // un cobro—, y `registrarCobroExitoso` la lee **por su identificador** antes de moverla. Por ese
   // mismo identificador la lee `abrirElPeriodoDeGracia` cuando el cobro no entra, y de ahí salen el
   // estado y la gracia: un acceso vigente al que todavía no se le abrió ninguna.
@@ -295,7 +295,7 @@ describe('el cuerpo crudo', () => {
   it('en server.js el router va montado ANTES del lector de JSON general', () => {
     // Esta es la parte que se rompe en silencio: si algún día alguien mueve esta línea al
     // montón de las demás rutas, `express.json()` se queda con el pedido primero, la ruta
-    // nunca vuelve a ver los bytes originales y TODOS los avisos —también los auténticos—
+    // nunca vuelve a ver los bytes originales y TODOS los pedidos —también los auténticos—
     // pasan a rechazarse. No hay forma de probarlo levantando el servidor de verdad (arranca
     // sus procesos periódicos y se queda escuchando), así que se comprueba el orden escrito.
     const servidor = readFileSync(new URL('../../server.js', import.meta.url), 'utf8');
@@ -308,10 +308,10 @@ describe('el cuerpo crudo', () => {
 });
 
 // ---------------------------------------------------------------------------
-// El aviso que no alcanza por sí solo (pendiente #159, decisión del 2026-08-22)
+// Lo que llega y no alcanza por sí solo (pendiente #159, decisión del 2026-08-22)
 //
 // Mercado Pago avisa "pasó algo con este cobro" y nada más: el estado no viaja adentro de lo
-// que firma. Comprobar la firma prueba que el aviso es auténtico, no que la plata entró. Por
+// que firma. Comprobar la firma prueba que lo que llegó es auténtico, no que la plata entró. Por
 // eso la ruta le vuelve a preguntar al propio Mercado Pago, de sistema a sistema, y recién con
 // esa respuesta imputa. Lo que se prueba acá es que esa segunda pregunta pase de verdad, que
 // mande el mismo identificador que venía firmado, y que si se cae no dé nada por cobrado.
@@ -320,15 +320,15 @@ describe('el cuerpo crudo', () => {
 const CRUDO_MP = Buffer.from(JSON.stringify({ action: 'payment.updated', data: { id: 'PAGO-123' } }), 'utf8');
 const REQUISITORIA = 'req-de-mentira';
 
-async function avisarMercadoPago({ idDelAviso = 'PAGO-123' } = {}) {
+async function avisarMercadoPago({ idDelPago = 'PAGO-123' } = {}) {
   const instante = Math.floor(Date.now() / 1000);
   // Mercado Pago firma una plantilla de tres datos, no el cuerpo, y pide el identificador en
   // minúsculas. Acá se manda en mayúsculas a propósito, para que la prueba falle si algún día
   // se deja de bajar a minúsculas antes de firmar.
   const firma = createHmac('sha256', SECRETO)
-    .update(`id:${idDelAviso.toLowerCase()};request-id:${REQUISITORIA};ts:${instante};`)
+    .update(`id:${idDelPago.toLowerCase()};request-id:${REQUISITORIA};ts:${instante};`)
     .digest('hex');
-  const respuesta = await fetch(`${DIRECCION}/mercadopago/${PRESTADORA}?data.id=${idDelAviso}`, {
+  const respuesta = await fetch(`${DIRECCION}/mercadopago/${PRESTADORA}?data.id=${idDelPago}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -407,7 +407,7 @@ describe('el aviso de Mercado Pago, que no dice si la plata entró', () => {
 // Los rieles que no publican cómo firman: Modo, DEBIN y la red de cobranza extrabancaria
 // (paso 9 del plan)
 //
-// Hasta ahora los tres daban por bueno cualquier aviso que trajera un identificador
+// Hasta ahora los tres daban por bueno cualquier pedido que trajera un identificador
 // —`valido: Boolean(body?.id)`—, y la dirección es pública: alcanzaba con golpear la puerta
 // con `{"id": "…", "estado": "aprobado"}` para dar por cobrado un acceso. Ninguno de los
 // tres proveedores publica su esquema de firma, así que no se les reprodujo ninguno: se les
@@ -421,12 +421,12 @@ describe('el aviso de Mercado Pago, que no dice si la plata entró', () => {
 // ---------------------------------------------------------------------------
 
 const RIELES_SIN_ESQUEMA = [
-  { proveedor: 'modo', variable: 'MODO_SECRETO_FIRMA_WEBHOOK', aviso: { id: 'MODO-1', estado: 'aprobado' } },
-  { proveedor: 'debin', variable: 'DEBIN_SECRETO_FIRMA_WEBHOOK', aviso: { id: 'DEBIN-1', estado: 'debitado' } },
+  { proveedor: 'modo', variable: 'MODO_SECRETO_FIRMA_WEBHOOK', evento: { id: 'MODO-1', estado: 'aprobado' } },
+  { proveedor: 'debin', variable: 'DEBIN_SECRETO_FIRMA_WEBHOOK', evento: { id: 'DEBIN-1', estado: 'debitado' } },
   {
     proveedor: 'cobranza_efectivo',
     variable: 'COBRANZA_EFECTIVO_SECRETO_FIRMA_WEBHOOK',
-    aviso: { id: 'CUPON-1', estado: 'pagado' },
+    evento: { id: 'CUPON-1', estado: 'pagado' },
   },
 ];
 
@@ -448,8 +448,8 @@ async function avisarRiel(proveedor, cuerpo, { firma } = {}) {
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
 
-for (const { proveedor, variable, aviso } of RIELES_SIN_ESQUEMA) {
-  const CRUDO_RIEL = Buffer.from(JSON.stringify(aviso), 'utf8');
+for (const { proveedor, variable, evento } of RIELES_SIN_ESQUEMA) {
+  const CRUDO_RIEL = Buffer.from(JSON.stringify(evento), 'utf8');
 
   describe(`el aviso de cobro de ${proveedor}, que no publica esquema de firma`, () => {
     it('sin firma alguna se rechaza con 401 y no toca ninguna fila', async () => {
@@ -539,10 +539,10 @@ for (const { proveedor, variable, aviso } of RIELES_SIN_ESQUEMA) {
 }
 
 // ---------------------------------------------------------------------------
-// El aviso de un riel que cobra solo, donde la referencia es la del acceso
+// El cobro de un riel que cobra solo, donde la referencia es la del acceso
 //
 // `mercadopago`, `stripe` y `debin` quedan cobrando del lado del proveedor desde el alta de la
-// acceso: de este lado nadie arma el cobro de cada período, así que cuando llega el aviso no hay
+// acceso: de este lado nadie arma el cobro de cada período, así que cuando llega el cobro no hay
 // ninguna fila que tenga esa referencia. Hasta acá se buscaba únicamente entre los cobros: no se
 // encontraba nada, se contestaba 200 y se seguía de largo, así que el acceso cobraba todos
 // los meses del lado del proveedor y en esta base no figuraba ninguno.
@@ -551,7 +551,7 @@ for (const { proveedor, variable, aviso } of RIELES_SIN_ESQUEMA) {
 // anotarlo mal, que son las que rompen el mes siguiente en vez de éste.
 // ---------------------------------------------------------------------------
 
-/** Un aviso de Stripe armado a medida. El cuerpo va con sangría, como lo manda Stripe. */
+/** Un evento de Stripe armado a medida. El cuerpo va con sangría, como lo manda Stripe. */
 function eventoStripe(tipo, objeto = { id: 'sub_1234567890' }) {
   return Buffer.from(JSON.stringify({ type: tipo, data: { object: objeto } }, null, 2), 'utf8');
 }
@@ -583,7 +583,7 @@ describe('el aviso de un riel que cobra solo, con la referencia del acceso', () 
   });
 
   it('el cobro que nace del aviso no se queda con la referencia del acceso', async () => {
-    // Si se guardara, el aviso del mes que viene encontraría esta misma fila y pisaría el cobro
+    // Si se guardara, el cobro del mes que viene encontraría esta misma fila y pisaría el cobro
     // anterior en vez de anotar uno nuevo: la Familia pagaría doce meses y la base mostraría uno.
     sinCobroYConAcceso();
     await avisar();
@@ -623,7 +623,7 @@ describe('el aviso de un riel que cobra solo, con la referencia del acceso', () 
   });
 
   it('sin cobro y sin acceso con esa referencia se contesta 200 y no se escribe nada', async () => {
-    // El aviso vino firmado pero habla de algo que acá no existe. Se contesta 200 para que el
+    // Lo que llegó vino firmado pero habla de algo que acá no existe. Se contesta 200 para que el
     // proveedor no lo repita para siempre.
     respuestas.set('GET /rest/v1/cobros_marketplace', () => []);
     respuestas.set('GET /rest/v1/accesos_marketplace', () => []);
@@ -659,7 +659,7 @@ describe('el aviso de una factura de Stripe', () => {
   it('se busca por la suscripción, no por la factura', async () => {
     // Lo que este producto guardó al dar de alta es la suscripción de Stripe. La factura nace del
     // lado de Stripe y acá no existe: buscar por su identificador equivale a no encontrar nunca
-    // nada, y hasta el paso 5 ningún aviso de Stripe imputaba un solo cobro.
+    // nada, y hasta el paso 5 ningún evento de Stripe imputaba un solo cobro.
     await avisar({ cuerpo: eventoStripe('invoice.paid', { id: 'in_de_una_factura', subscription: 'sub_1234567890' }) });
     const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/cobros_marketplace');
     assert.ok(busqueda.url.includes('sub_1234567890'), 'se busca por la suscripción');

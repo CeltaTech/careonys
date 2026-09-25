@@ -19,7 +19,7 @@
    LA VIDEOLLAMADA NO SE ARMA ACÁ. Cómo se hace una sala —de dónde sale la dirección, qué nombre
    lleva y cuánto vale— es lo mismo en el chat que en la entrevista de reclutamiento, así que vive
    una sola vez en `videollamada.js`. Acá queda nada más lo propio de un hilo: que la sala se
-   guarda en la conversación y que el aviso de que empezó una se escribe adentro del hilo. */
+   guarda en la conversación y que el mensaje de que empezó una se escribe adentro del hilo. */
 
 import { supabase } from '../db/connection.js';
 import { mensajeHaciaAfuera } from './contactoTapado.js';
@@ -37,7 +37,7 @@ export const LADO = { FAMILIA: 'familia', ASISTENTE: 'asistente' };
 
 /** El cuerpo de los mensajes que escribe el producto. Son claves de traducción, no texto
  *  visible: la frase que se lee sale de las traducciones, en los tres idiomas. */
-export const AVISO_AUTOMATICO = { VIDEOLLAMADA: 'videollamada_empezo' };
+export const MENSAJE_AUTOMATICO = { VIDEOLLAMADA: 'videollamada_empezo' };
 
 /** Cuántos mensajes se traen de un hilo. Alcanza para leer una conversación entera de las que
  *  pasan antes de contratar a alguien, y pone un techo a lo que viaja en un pedido. */
@@ -201,18 +201,18 @@ export async function escribirMensaje({ conversacion, lado, autorUsuarioId, cuer
   return data;
 }
 
-/* El aviso al celular no lleva el mensaje adentro. Dos motivos, y los dos alcanzan solos: un
-   aviso se lee en la pantalla bloqueada, delante de cualquiera que esté al lado; y el cuerpo sin
-   tapar es justamente el dato que el Marketplace vende. Dice que hay algo nuevo y dónde está. */
+/* Lo que le suena en el celular no lleva el mensaje adentro. Dos motivos, y los dos alcanzan
+   solos: se lee desde la pantalla bloqueada, delante de cualquiera que esté al lado; y el cuerpo
+   sin tapar es justamente el dato que el Marketplace vende. Dice que hay algo nuevo y dónde está. */
 function avisarAlOtroLado({ conversacion, lado }) {
-  const aviso = {
+  const mensaje = {
     titulo: 'Mensaje nuevo',
     cuerpo: 'Tiene un mensaje nuevo en el chat.',
   };
   const envio =
     lado === LADO.FAMILIA
-      ? enviarPushAsistente(conversacion.prestadora_id, conversacion.asistente_id, { ...aviso, url: `/mensajes/${conversacion.id}` })
-      : enviarPushFamilia(conversacion.prestadora_id, conversacion.familia_id, { ...aviso, url: `/mensajes/${conversacion.id}` });
+      ? enviarPushAsistente(conversacion.prestadora_id, conversacion.asistente_id, { ...mensaje, url: `/mensajes/${conversacion.id}` })
+      : enviarPushFamilia(conversacion.prestadora_id, conversacion.familia_id, { ...mensaje, url: `/mensajes/${conversacion.id}` });
 
   envio.catch((err) => console.error('Error enviando push de mensaje del Marketplace:', err.message));
 }
@@ -225,9 +225,9 @@ function salaVigente(conversacion) {
 /**
  * La videollamada que está pasando ahora en este hilo, si hay alguna.
  *
- * Es lo que hace que el otro lado pueda entrar: el aviso que queda escrito en el hilo dice que
+ * Es lo que hace que el otro lado pueda entrar: el mensaje que queda escrito en el hilo dice que
  * empezó una, y la dirección sale de acá. Vencida la sala, contesta que no hay ninguna, y el
- * aviso viejo queda como lo que es, una constancia de que aquella vez se hablaron.
+ * mensaje viejo queda como lo que es, una constancia de que aquella vez se hablaron.
  *
  * @returns {Promise<{url: string}|null>}
  */
@@ -267,13 +267,13 @@ export async function abrirVideollamada({ conversacion, lado, autorUsuarioId }) 
   conversacion.sala_videollamada = sala;
   conversacion.sala_abierta_at = abiertaAt;
 
-  // El aviso en el hilo es lo que le hace sonar el teléfono al otro lado. Sin él, la sala existe
+  // El mensaje en el hilo es lo que le hace sonar el teléfono al otro lado. Sin él, la sala existe
   // y no la sabe nadie.
   await escribirMensaje({
     conversacion,
     lado,
     autorUsuarioId,
-    cuerpo: AVISO_AUTOMATICO.VIDEOLLAMADA,
+    cuerpo: MENSAJE_AUTOMATICO.VIDEOLLAMADA,
     automatico: true,
   });
 

@@ -159,12 +159,12 @@ export function Facturacion() {
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [generando, setGenerando] = useState(false);
-  const [avisoGeneracion, setAvisoGeneracion] = useState(null);
+  const [mensajeGeneracion, setMensajeGeneracion] = useState(null);
   const [detalleId, setDetalleId] = useState(null);
   // El ida y vuelta por archivo. El campo de archivo va escondido y lo abre el botón, para que
   // los tres botones de la fila se vean iguales.
   const [intercambiando, setIntercambiando] = useState(false);
-  const [avisoIntercambio, setAvisoIntercambio] = useState(null);
+  const [mensajeIntercambio, setMensajeIntercambio] = useState(null);
   // Qué renglones del archivo no se pudieron anotar y por qué. Se muestran con el número de
   // renglón del archivo, para que quien lo subió los encuentre sin contar.
   const [rechazos, setRechazos] = useState([]);
@@ -202,13 +202,13 @@ export function Facturacion() {
   // Un saldo sin fecha de vencimiento no se puede reclamar ni mostrar como vencido, y esa fecha
   // no la decide el sistema: sale del plazo acordado con cada Familia, o se escribe acá para
   // toda la tanda y entonces pisa lo acordado. La Familia que no tiene ninguna de las dos cosas
-  // no se factura, y el aviso dice cuántas quedaron así.
+  // no se factura, y el mensaje dice cuántas quedaron así.
   async function handleGenerar() {
     const confirmado = await confirmarDestructivo(t.facturacion.confirmar_generar);
     if (!confirmado) return;
 
     setGenerando(true);
-    setAvisoGeneracion(null);
+    setMensajeGeneracion(null);
     setError(null);
 
     try {
@@ -216,7 +216,7 @@ export function Facturacion() {
         method: 'POST',
         body: JSON.stringify(vencimiento ? { periodo: mes, fecha_vencimiento: vencimiento } : { periodo: mes }),
       });
-      setAvisoGeneracion(
+      setMensajeGeneracion(
         t.facturacion.resultado_generacion
           .replace('{generadas}', generadas)
           .replace('{sinPrestaciones}', sinPrestaciones)
@@ -235,17 +235,17 @@ export function Facturacion() {
      qué volver a salir. */
   async function handleBajarParaFacturar() {
     setIntercambiando(true);
-    setAvisoIntercambio(null);
+    setMensajeIntercambio(null);
     setError(null);
 
     try {
       const filas = await llamarApiCobros(`/para-facturar?periodo=${mes}`);
       if (filas.length === 0) {
-        setAvisoIntercambio(t.facturacion.exportar_vacio);
+        setMensajeIntercambio(t.facturacion.exportar_vacio);
         return;
       }
       bajarComoArchivo(`para-facturar-${mes}.csv`, armarArchivo(filas));
-      setAvisoIntercambio(t.facturacion.exportar_listo.replace('{cantidad}', filas.length));
+      setMensajeIntercambio(t.facturacion.exportar_listo.replace('{cantidad}', filas.length));
     } catch (e) {
       setError(mensajeDeError(e, t, 'archivo para facturar'));
     } finally {
@@ -262,7 +262,7 @@ export function Facturacion() {
     if (!archivo) return;
 
     setIntercambiando(true);
-    setAvisoIntercambio(null);
+    setMensajeIntercambio(null);
     setRechazos([]);
     setError(null);
 
@@ -284,7 +284,7 @@ export function Facturacion() {
         method: 'POST',
         body: JSON.stringify({ filas }),
       });
-      setAvisoIntercambio(
+      setMensajeIntercambio(
         t.facturacion.resultado_importacion
           .replace('{anotadas}', resultado.anotadas)
           .replace('{yaFacturadas}', resultado.ya_facturadas)
@@ -313,7 +313,7 @@ export function Facturacion() {
       </Alert>
 
       {error && estado !== 'error' && <Alert variant="error">{error}</Alert>}
-      {avisoGeneracion && <Alert variant="info">{avisoGeneracion}</Alert>}
+      {mensajeGeneracion && <Alert variant="info">{mensajeGeneracion}</Alert>}
 
       {!sigue && (
         <>
@@ -431,7 +431,7 @@ export function Facturacion() {
 
       <p className="panel-explicacion">{t.facturacion.intercambio_explicacion}</p>
 
-      {avisoIntercambio && <Alert variant="info">{avisoIntercambio}</Alert>}
+      {mensajeIntercambio && <Alert variant="info">{mensajeIntercambio}</Alert>}
 
       {rechazos.length > 0 && (
         <Alert variant="error">
@@ -534,7 +534,7 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
   const [formulario, setFormulario] = useState('cobro');
   const [aAnular, setAAnular] = useState(null);
   const [motivo, setMotivo] = useState('');
-  // El aviso de que falta el motivo aparece recién cuando alguien escribió y borró, no apenas
+  // El mensaje de que falta el motivo aparece recién cuando alguien escribió y borró, no apenas
   // se abre el formulario: un campo en rojo antes de tocarlo se lee como un error propio.
   const [motivoTocado, setMotivoTocado] = useState(false);
   // Con qué pagó la Familia sale de la base, de la lista `medios_de_pago_de_la_familia`: las que

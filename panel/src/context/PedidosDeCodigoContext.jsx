@@ -16,13 +16,13 @@ import { mensajeDeError } from '../lib/errores';
    cuando a alguien se le ocurriera ir a mirar.
 
    CÓMO SE ENTERA. Por el canal en vivo (`lib/avisosEnVivo.js`): el backend empuja el asunto en
-   cuanto un pedido entra o se resuelve, y acá se vuelve a pedir la lista. El aviso no trae
+   cuanto un pedido entra o se resuelve, y acá se vuelve a pedir la lista. El mensaje no trae
    ningún dato —dice qué cambió, no qué quedó—, así que la lista sale siempre de la misma ruta,
    que comprueba la sesión y filtra por la Organización.
 
-   Y IGUAL SE PREGUNTA CADA TANTO, ESPACIADO. Que el aviso llegue en el momento lo da el canal;
+   Y IGUAL SE PREGUNTA CADA TANTO, ESPACIADO. Que el mensaje llegue en el momento lo da el canal;
    que llegue siempre, no: puede estar caído sin que el navegador lo note, o el backend puede estar
-   corriendo en más de un proceso y el aviso nacer en uno distinto del que atiende esta conexión.
+   corriendo en más de un proceso y el mensaje nacer en uno distinto del que atiende esta conexión.
    Sin esta vuelta de respaldo, un canal que se cae en silencio deja la pantalla quieta para
    siempre, que es peor que llegar tarde. Con el canal andando no cambia nada de lo que se ve; sin
    él, la pantalla se comporta como antes, sólo que más lenta.
@@ -78,7 +78,7 @@ export function PedidosDeCodigoProvider({ children }) {
     } catch (err) {
       setError(mensajeDeError(err, t));
       // La primera consulta que falla deja la pantalla en error; una que falla después de haber
-      // traído algo deja lo que ya se había traído, con el aviso al lado.
+      // traído algo deja lo que ya se había traído, con la advertencia al lado.
       setEstado((anterior) => (anterior === 'cargando' ? 'error' : anterior));
     } finally {
       enVueloRef.current = false;

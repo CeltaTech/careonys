@@ -11,7 +11,7 @@
  *     mismo día, que es justo lo que este trabajo vino a sacar;
  *   * si la gracia se vuelve a abrir con cada reintento del proveedor, la fecha se corre para
  *     adelante sin parar y el acceso no se suspende nunca;
- *   * si se avisa una vez por reintento, el aviso deja de leerse antes del día que importa;
+ *   * si se avisa una vez por reintento, el mensaje deja de leerse antes del día que importa;
  *   * y si la suspensión no vuelve a exigir sus condiciones al guardar, apaga un acceso que alguien
  *     acaba de pagar entre la consulta y el guardado.
  *
@@ -22,7 +22,7 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 
-// Las frases de los avisos ya no están escritas adentro del código: viven en la tabla de mensajes
+// Las frases ya no están escritas adentro del código: viven en la tabla de mensajes
 // del sistema y se editan desde afuera. Acá se carga lo mismo que siembra la migración, porque las
 // pruebas del backend corren sin base levantada.
 import { sembrarMensajesDelSistema } from '../../i18n/mensajesDelSistema.js';
@@ -40,12 +40,12 @@ const PRESTADORA = '44444444-4444-4444-4444-444444444444';
 const respuestas = new Map();
 /** Todo lo que se le pidió a la base, para poder afirmar que NO se pidió algo. */
 let llamadas = [];
-/** Los avisos que se le mandaron a cada Familia. */
+/** Los mensajes que se le mandaron a cada Familia. */
 let empujados = [];
-/** Los avisos que quedaron del lado del servidor. Se juntan para no ensuciar la salida. */
+/** Lo que quedó escrito del lado del servidor. Se junta para no ensuciar la salida. */
 let anotados = [];
 
-// El aviso sale nombrando la Prestadora además de la Familia: el dispositivo se busca adentro de
+// El mensaje sale nombrando la Prestadora además de la Familia: el dispositivo se busca adentro de
 // un solo cajón (`push.js`).
 function avisarDeMentira(prestadoraId, familiaId, texto) {
   empujados.push({ prestadoraId, familiaId, texto });
@@ -88,7 +88,7 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma en
 // el momento en que se importa el archivo.
-const { abrirElPeriodoDeGracia, suspenderLosQueAgotaronLaGracia, textoDelAvisoDeGracia } =
+const { abrirElPeriodoDeGracia, suspenderLosQueAgotaronLaGracia, textoDelMensajeDeGracia } =
   await import('../periodoDeGracia.js');
 
 const avisarDeVerdad = console.error;
@@ -188,7 +188,7 @@ describe('cuando un cobro no entra', () => {
   });
 
   it('no mueve la fecha ni vuelve a avisar cuando el proveedor reintenta', async () => {
-    // Es la mitad «ni reintentos indefinidos» del §3.2: si cada aviso de falla corriera la fecha
+    // Es la mitad «ni reintentos indefinidos» del §3.2: si cada falla informada corriera la fecha
     // siete días más, un proveedor que reintenta cada tres no suspendería nunca.
     respuestas.set('GET /rest/v1/accesos_marketplace', [
       accesoConCobroFallido({ gracia_hasta: corrido(4) }),
@@ -256,7 +256,7 @@ describe('cuando un cobro no entra', () => {
 
 describe('qué dice el aviso del cobro que no entró', () => {
   it('nombra el importe con su moneda, hasta cuándo hay tiempo y adónde ir', () => {
-    const texto = textoDelAvisoDeGracia(accesoConCobroFallido({ gracia_hasta: '2026-10-07' }));
+    const texto = textoDelMensajeDeGracia(accesoConCobroFallido({ gracia_hasta: '2026-10-07' }));
 
     assert.match(texto.cuerpo, /4500\.00 ARS/);
     assert.match(texto.cuerpo, /7\/10\/2026/);
@@ -265,7 +265,7 @@ describe('qué dice el aviso del cobro que no entró', () => {
   });
 
   it('nunca deja el importe sin su moneda', () => {
-    const texto = textoDelAvisoDeGracia(accesoConCobroFallido({ moneda: 'BRL', gracia_hasta: HOY }));
+    const texto = textoDelMensajeDeGracia(accesoConCobroFallido({ moneda: 'BRL', gracia_hasta: HOY }));
 
     assert.match(texto.cuerpo, /4500\.00 BRL/);
   });

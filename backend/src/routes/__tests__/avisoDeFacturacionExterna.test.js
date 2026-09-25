@@ -4,13 +4,13 @@
  *   npm test --prefix backend
  *
  * POR QUÉ EXISTE ESTA PRUEBA. Es una dirección pública: la llama un software de afuera, sin
- * sesión. Lo único que separa un aviso de verdad de uno inventado es la firma, y lo único que
+ * sesión. Lo único que separa un pedido de verdad de uno inventado es la firma, y lo único que
  * separa una Prestadora de otra es el filtro escrito en la consulta. Cinco agujeros que tapa:
  *
- *  1. Que entre un aviso sin firma, con una firma que no da, o cuando esa Prestadora todavía no
+ *  1. Que entre un pedido sin firma, con una firma que no da, o cuando esa Prestadora todavía no
  *     cargó ningún secreto.
  *  2. Que el secreto de una Prestadora sirva para escribir sobre una factura de otra.
- *  3. Que una factura ya facturada se pise. El mismo aviso repetido tiene que no hacer nada.
+ *  3. Que una factura ya facturada se pise. El mismo pedido repetido tiene que no hacer nada.
  *  4. Que un identificador mal escrito llegue hasta la base.
  *  5. Que la respuesta, o el rechazo, cuente algo de la base.
  *
@@ -67,12 +67,12 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 // en el momento en que se importa, y con la dirección que haya en ese instante.
 const { default: express } = await import('express');
 await import('express-async-errors');
-const { avisoDeFacturacionExternaRouter } = await import('../avisoDeFacturacionExterna.js');
+const { facturacionExternaRouter } = await import('../avisoDeFacturacionExterna.js');
 
 const app = express();
 // Montado como en `server.js`: antes de cualquier lector de JSON general, porque la firma se
 // calcula sobre los bytes exactos que llegaron.
-app.use('/api/avisos-de-facturacion', avisoDeFacturacionExternaRouter);
+app.use('/api/avisos-de-facturacion', facturacionExternaRouter);
 const backend = app.listen(0, '127.0.0.1');
 await new Promise((listo) => backend.on('listening', listo));
 const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/avisos-de-facturacion`;
@@ -105,7 +105,7 @@ function loEscrito() {
   return llamadas.find((l) => l.clave === 'PATCH /rest/v1/facturas_familia')?.cuerpo;
 }
 
-const AVISO = {
+const LO_FACTURADO = {
   factura_id: FACTURA,
   comprobante_tipo: 'Factura B',
   comprobante_numero: '0001-00000123',
@@ -133,40 +133,40 @@ beforeEach(() => {
 
 describe('sin firma no entra nada', () => {
   it('el aviso sin cabecera de firma se rechaza y no escribe', async () => {
-    const { estado } = await avisar(AVISO, { firma: null });
+    const { estado } = await avisar(LO_FACTURADO, { firma: null });
     assert.equal(estado, 401);
     assert.equal(loEscrito(), undefined, 'dijo que no y escribió igual');
   });
 
   it('una firma calculada con otro secreto no entra', async () => {
-    const { estado } = await avisar(AVISO, { firma: firmaDe(JSON.stringify(AVISO), 'otro-secreto') });
+    const { estado } = await avisar(LO_FACTURADO, { firma: firmaDe(JSON.stringify(LO_FACTURADO), 'otro-secreto') });
     assert.equal(estado, 401);
     assert.equal(loEscrito(), undefined);
   });
 
   it('una firma de hace horas no entra', async () => {
     const vieja = Math.floor(Date.now() / 1000) - 60 * 60 * 5;
-    const { estado } = await avisar(AVISO, { firma: firmaDe(JSON.stringify(AVISO), SECRETO, vieja) });
+    const { estado } = await avisar(LO_FACTURADO, { firma: firmaDe(JSON.stringify(LO_FACTURADO), SECRETO, vieja) });
     assert.equal(estado, 401);
     assert.equal(loEscrito(), undefined);
   });
 
   it('sin secreto cargado no entra ningún aviso, aunque venga firmado', async () => {
     secretoCargado = null;
-    const { estado } = await avisar(AVISO);
+    const { estado } = await avisar(LO_FACTURADO);
     assert.equal(estado, 401);
     assert.equal(loEscrito(), undefined);
   });
 
   it('una Prestadora que no tiene forma de identificador se corta antes de tocar la base', async () => {
-    const { estado } = await avisar(AVISO, { prestadora: 'la-de-siempre' });
+    const { estado } = await avisar(LO_FACTURADO, { prestadora: 'la-de-siempre' });
     assert.equal(estado, 401);
     assert.equal(llamadas.length, 0, 'le preguntó a la base por algo que no es un identificador');
   });
 
   it('el rechazo no cuenta cuál de las comprobaciones falló', async () => {
-    const sinFirma = await avisar(AVISO, { firma: null });
-    const conOtroSecreto = await avisar(AVISO, { firma: firmaDe(JSON.stringify(AVISO), 'otro') });
+    const sinFirma = await avisar(LO_FACTURADO, { firma: null });
+    const conOtroSecreto = await avisar(LO_FACTURADO, { firma: firmaDe(JSON.stringify(LO_FACTURADO), 'otro') });
     assert.deepEqual(sinFirma.cuerpo, conOtroSecreto.cuerpo);
     noFiltraLaBase(sinFirma.cuerpo);
   });
@@ -174,7 +174,7 @@ describe('sin firma no entra nada', () => {
 
 describe('el aviso firmado se anota', () => {
   it('guarda el comprobante, su número y el monto que informó quien emitió', async () => {
-    const { estado, cuerpo } = await avisar(AVISO);
+    const { estado, cuerpo } = await avisar(LO_FACTURADO);
     assert.equal(estado, 200);
     assert.equal(cuerpo.anotadas, 1);
     assert.equal(loEscrito().comprobante_tipo, 'Factura B');
@@ -184,12 +184,12 @@ describe('el aviso firmado se anota', () => {
   });
 
   it('no pisa el vencimiento acordado cuando el aviso no informa ninguno', async () => {
-    await avisar(AVISO);
+    await avisar(LO_FACTURADO);
     assert.equal('fecha_vencimiento' in loEscrito(), false);
   });
 
   it('lo escribe sólo sobre una factura de esa Prestadora', async () => {
-    await avisar(AVISO);
+    await avisar(LO_FACTURADO);
     const escritura = llamadas.find((l) => l.clave === 'PATCH /rest/v1/facturas_familia');
     assert.equal(escritura.filtros.get('prestadora_id'), `eq.${PRESTADORA}`);
     const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/facturas_familia');
@@ -197,8 +197,8 @@ describe('el aviso firmado se anota', () => {
   });
 
   it('atiende varias facturas en el mismo aviso', async () => {
-    const { cuerpo } = await avisar({ facturas: [AVISO, AVISO] });
-    // La segunda es la misma factura repetida adentro del mismo aviso: se anota una sola vez.
+    const { cuerpo } = await avisar({ facturas: [LO_FACTURADO, LO_FACTURADO] });
+    // La segunda es la misma factura repetida adentro del mismo pedido: se anota una sola vez.
     assert.equal(cuerpo.anotadas, 1);
     assert.equal(cuerpo.ya_facturadas, 1);
   });
@@ -207,7 +207,7 @@ describe('el aviso firmado se anota', () => {
 describe('lo que no se toca', () => {
   it('una factura que ya tiene comprobante anotado no se pisa', async () => {
     facturaEnLaBase = { id: FACTURA, facturado_at: '2026-09-10T10:00:00Z' };
-    const { estado, cuerpo } = await avisar(AVISO);
+    const { estado, cuerpo } = await avisar(LO_FACTURADO);
     assert.equal(estado, 200);
     assert.equal(cuerpo.ya_facturadas, 1);
     assert.equal(loEscrito(), undefined, 'pisó una factura ya emitida');
@@ -215,14 +215,14 @@ describe('lo que no se toca', () => {
 
   it('una factura que no es de esa Prestadora se rechaza como si no existiera', async () => {
     facturaEnLaBase = null;
-    const { cuerpo } = await avisar(AVISO, { prestadora: OTRA_PRESTADORA });
+    const { cuerpo } = await avisar(LO_FACTURADO, { prestadora: OTRA_PRESTADORA });
     assert.equal(cuerpo.rechazadas, 1);
     assert.equal(cuerpo.resultados[0].motivo, 'no_encontrada');
     assert.equal(loEscrito(), undefined);
   });
 
   it('un identificador mal escrito no llega hasta la base', async () => {
-    const { cuerpo } = await avisar({ ...AVISO, factura_id: '0001-00000123' });
+    const { cuerpo } = await avisar({ ...LO_FACTURADO, factura_id: '0001-00000123' });
     assert.equal(cuerpo.rechazadas, 1);
     assert.equal(cuerpo.resultados[0].motivo, 'factura_id');
     assert.equal(
@@ -233,7 +233,7 @@ describe('lo que no se toca', () => {
   });
 
   it('un aviso sin el nombre del comprobante se rechaza diciendo cuál es el dato', async () => {
-    const { cuerpo } = await avisar({ ...AVISO, comprobante_tipo: '' });
+    const { cuerpo } = await avisar({ ...LO_FACTURADO, comprobante_tipo: '' });
     assert.equal(cuerpo.rechazadas, 1);
     assert.equal(cuerpo.resultados[0].motivo, 'comprobante_tipo');
     assert.equal(loEscrito(), undefined);
@@ -241,14 +241,14 @@ describe('lo que no se toca', () => {
 
   it('un renglón malo no impide que se anoten los demás', async () => {
     const { cuerpo } = await avisar({
-      facturas: [{ ...AVISO, factura_id: 'cualquier-cosa' }, AVISO],
+      facturas: [{ ...LO_FACTURADO, factura_id: 'cualquier-cosa' }, LO_FACTURADO],
     });
     assert.equal(cuerpo.rechazadas, 1);
     assert.equal(cuerpo.anotadas, 1);
   });
 
   it('la respuesta no cuenta nada de la base', async () => {
-    const { cuerpo } = await avisar({ ...AVISO, comprobante_tipo: '' });
+    const { cuerpo } = await avisar({ ...LO_FACTURADO, comprobante_tipo: '' });
     noFiltraLaBase(cuerpo);
   });
 });

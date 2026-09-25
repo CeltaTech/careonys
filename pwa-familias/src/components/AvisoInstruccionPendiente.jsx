@@ -8,7 +8,7 @@
 // instrucción no es suya y no hay nada que puedan hacer con ella.
 //
 // Se dibuja en la pantalla principal y en Mi Perfil. La lista de Pacientes se saltea sola cuando
-// hay uno solo, así que las dos son «la pantalla principal» según la Familia, y el aviso tiene que
+// hay uno solo, así que las dos son «la pantalla principal» según la Familia, y la advertencia tiene que
 // aparecer igual en las dos.
 
 import { Link, useLocation } from 'react-router-dom';

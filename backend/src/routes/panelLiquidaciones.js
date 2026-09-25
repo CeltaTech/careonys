@@ -461,7 +461,7 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
     rehechas: 0,
     omitidas_ya_pagadas: [],
     sin_dato_base: [],
-    // El mismo concepto se saltea para todos los que le corresponden, así que el aviso es del
+    // El mismo concepto se saltea para todos los que le corresponden, así que la alerta es del
     // catálogo y no de cada persona: se dice una vez.
     sin_escala: new Set(),
   };
@@ -516,7 +516,7 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
         if (!resultado.sin_dato_base.includes(asistente.nombre)) resultado.sin_dato_base.push(asistente.nombre);
         continue;
       }
-      for (const aviso of calculada.sinEscala) resultado.sin_escala.add(aviso);
+      for (const alerta of calculada.sinEscala) resultado.sin_escala.add(alerta);
 
       // Rehacer un período es borrar la liquidación anterior y generar otra. Se borra recién
       // acá, con la cuenta nueva ya hecha, para no dejarlo sin nada si algo salía mal antes.

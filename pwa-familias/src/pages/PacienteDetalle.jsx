@@ -105,7 +105,7 @@ export default function PacienteDetalle() {
     <div>
       <h1>{paciente.nombre}</h1>
       {/* Con un solo Paciente la lista se saltea sola y ésta es la primera pantalla que ve la
-          Familia, así que el aviso de la instrucción sin firmar tiene que estar acá también. */}
+          Familia, así que la advertencia de la instrucción sin firmar tiene que estar acá también. */}
       <AvisoInstruccionPendiente />
       <p className="guardia-card-detalle">
         {t.paciente.domicilio}: <EnlaceAlMapa lugar={paciente} t={t} />

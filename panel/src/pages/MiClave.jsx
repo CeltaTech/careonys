@@ -36,7 +36,7 @@ export function MiClave() {
   const [errorCampo, setErrorCampo] = useState(null);
   const [cambiada, setCambiada] = useState(false);
 
-  const avisoDe = (campo) => (errorCampo?.campo === campo ? errorCampo.texto : undefined);
+  const mensajeDe = (campo) => (errorCampo?.campo === campo ? errorCampo.texto : undefined);
 
   async function handleGuardar(evento) {
     evento.preventDefault();
@@ -99,7 +99,7 @@ export function MiClave() {
           required
           value={actual}
           onChange={(e) => setActual(e.target.value)}
-          error={avisoDe('actual')}
+          error={mensajeDe('actual')}
         />
 
         <FormField
@@ -110,7 +110,7 @@ export function MiClave() {
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          error={avisoDe('password')}
+          error={mensajeDe('password')}
         />
 
         <FormField
@@ -121,7 +121,7 @@ export function MiClave() {
           required
           value={confirmacion}
           onChange={(e) => setConfirmacion(e.target.value)}
-          error={avisoDe('confirmacion')}
+          error={mensajeDe('confirmacion')}
         />
 
         <Button type="submit" disabled={guardando}>

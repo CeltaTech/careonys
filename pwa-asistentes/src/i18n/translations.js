@@ -72,7 +72,7 @@ export const T = {
         // No se dice de qué licencia se trata ni de quién: eso es del legajo (CLAUDE.md §6).
         guardia_de_cobertura_sin_sustituto: 'Esta guardia está anotada dentro de una licencia y todavía no tiene un Asistente sustituto asignado, así que no se puede empezar. Conviene avisarle al Coordinador.',
         // Los de la cuenta adonde se le paga. Ninguna de estas frases repite lo que se escribió:
-        // es el dato sensible, y un aviso se lee en voz alta o queda a la vista de otro.
+        // es el dato sensible, y una advertencia se lee en voz alta o queda a la vista de otro.
         identificador_vacio: 'Falta el número de la cuenta.',
         identificador_invalido: 'El número de la cuenta no es válido. Se escribe tal como lo da el banco, sin espacios.',
         nombre_del_banco_invalido: 'El nombre del banco no es válido.',
@@ -125,7 +125,7 @@ export const T = {
       // dice nada. Esta frase es la que se escucha.
       sin_leer_uno: '1 mensaje sin leer',
       sin_leer: '{n} mensajes sin leer',
-      // El aviso del tapado dice las dos cosas que hacen falta para no equivocarse: que el dato
+      // La advertencia del tapado dice las dos cosas que hacen falta para no equivocarse: que el dato
       // de contacto no pasa, y que lo que el producto no reconoce sí pasa. El producto avisa, no
       // bloquea.
       contacto_tapado: 'Los datos de contacto se tapan al enviar el mensaje y no quedan guardados. Lo que no se reconozca como un dato de contacto se ve del otro lado tal como se escribió.',
@@ -183,7 +183,7 @@ export const T = {
       mi_clave_exito: 'La contraseña quedó cambiada.',
       llave_entrar: 'Entrar con huella o cara',
       llave_esperando: 'Esperando el aparato…',
-      // Un solo aviso para todo lo que puede salir mal con la llave, igual que con la contraseña:
+      // Una sola advertencia para todo lo que puede salir mal con la llave, igual que con la contraseña:
       // el backend tampoco dice cuál de las cosas falló, y no hay nada que agregar acá.
       llave_error: 'No se pudo entrar con este aparato. Puede ingresar con su contraseña.',
       llave_o: 'o',
@@ -245,7 +245,7 @@ export const T = {
       tomada: 'La guardia quedó tomada.',
       ver_el_turno: 'Ver la guardia',
     },
-    // El aviso de que la dirección de esta guardia no es la de siempre. Lo dibuja
+    // La advertencia de que la dirección de esta guardia no es la de siempre. Lo dibuja
     // components/DomicilioTemporal.jsx, que es el mismo archivo en las dos aplicaciones, así
     // que estas dos claves existen igual en la de la Familia.
     domicilio: {
@@ -267,7 +267,7 @@ export const T = {
       cerrar_faltan_reportes: 'Antes de cerrar la guardia falta el Reporte Diario de: {nombres}.',
       fuera_de_rango: 'El check-in se hizo lejos del domicilio del Paciente. Se registró igual y el Coordinador recibe un mensaje.',
       // Pendiente #113 — el pase de guardia. Misma idea que fuera_de_rango: el pase nunca traba
-      // el check-in ni el check-out, así que esto es un aviso y no un error.
+      // el check-in ni el check-out, así que esto es una advertencia y no un error.
       quedo_sin_comprobar: 'Quedó registrado sin comprobar. El Coordinador lo va a ver en su lista y puede llamar para confirmarlo.',
       sin_conexion_sin_comprobar: 'Sin conexión no se puede comprobar el código, así que esto se va a registrar sin comprobar cuando vuelva la señal. El Coordinador lo va a ver en su lista.',
       // Cuando el que se va es este Asistente, es él quien le muestra el código al relevo.

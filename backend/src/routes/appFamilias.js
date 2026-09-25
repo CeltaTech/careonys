@@ -867,11 +867,11 @@ appFamiliasRouter.post('/push/suscribir', requiereRolFamilia, async (req, res) =
     return res.status(400).json({ error: 'Suscripción push incompleta' });
   }
 
-  // La suscripción se guarda a nombre de la Familia, no de quien la registró. Los avisos se
+  // La suscripción se guarda a nombre de la Familia, no de quien la registró. Los mensajes se
   // mandan con `enviarPushFamilia(familia.id)`, así que una fila guardada con el identificador
   // propio de la persona no la encuentra nadie: para el titular daba igual —su identificador y
   // el de su Familia son el mismo—, pero quien está en el círculo familiar y no es el titular se
-  // suscribía y no recibía nunca ningún aviso.
+  // suscribía y no recibía nunca ninguno.
   const { error } = await guardarSuscripcionPush({
     prestadoraId: req.usuarioFamilia.prestadoraId,
     rol: 'familia',

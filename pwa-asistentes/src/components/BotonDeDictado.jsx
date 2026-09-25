@@ -29,7 +29,7 @@ export default function BotonDeDictado({ t, locale, valor, alCambiar, campo, dis
   const tr = t.dictado;
   const [escuchando, setEscuchando] = useState(false);
   const [parcial, setParcial] = useState('');
-  const [aviso, setAviso] = useState('');
+  const [advertencia, setAdvertencia] = useState('');
   const cortar = useRef(null);
   // Lo que hay escrito, sin que la función que escucha se quede con una copia vieja: el
   // reconocedor se crea una vez y sigue llamando a la misma función mientras dura el dictado.
@@ -47,7 +47,7 @@ export default function BotonDeDictado({ t, locale, valor, alCambiar, campo, dis
       cortar.current?.();
       return;
     }
-    setAviso('');
+    setAdvertencia('');
     setEscuchando(true);
     cortar.current = dictar({
       idioma: locale,
@@ -63,7 +63,7 @@ export default function BotonDeDictado({ t, locale, valor, alCambiar, campo, dis
         setEscuchando(false);
         setParcial('');
         cortar.current = null;
-        setAviso(motivo ? tr[`error_${motivo}`] : '');
+        setAdvertencia(motivo ? tr[`error_${motivo}`] : '');
       },
     });
   }
@@ -90,9 +90,9 @@ export default function BotonDeDictado({ t, locale, valor, alCambiar, campo, dis
         </p>
       )}
 
-      {aviso && (
+      {advertencia && (
         <p className="guardia-card-detalle" role="status">
-          {aviso}
+          {advertencia}
         </p>
       )}
     </>

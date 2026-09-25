@@ -6,7 +6,7 @@
  * POR QUÉ EXISTE ESTA PRUEBA. Hasta ahora una Prestadora sólo aparecía sembrando la base local o
  * corriendo un guión de prueba: el Panel las listaba y no las creaba. El alta es el momento en el
  * que se declara cómo se llama, en qué país trabaja y a qué casilla quiere que le lleguen las
- * respuestas de los avisos, y de ahí cuelga todo lo demás. Un alta que sale a medias —o que
+ * respuestas de los mensajes, y de ahí cuelga todo lo demás. Un alta que sale a medias —o que
  * rechaza algo y lo crea igual— deja una Prestadora que nadie pidió, con un nombre que puede
  * chocar con otra.
  *
@@ -664,7 +664,7 @@ describe('las respuestas vuelven a la casilla que declaró', () => {
 
   it('sin el servicio configurado no se intenta nada y el alta sale igual', async () => {
     // Es el estado en el que está el producto hasta que se cargue la credencial. Hasta entonces
-    // la Prestadora se da de alta, manda sus avisos, y las respuestas se pierden.
+    // la Prestadora se da de alta, manda sus mensajes, y las respuestas se pierden.
     const token = process.env.CLOUDFLARE_EMAIL_ROUTING_TOKEN;
     delete process.env.CLOUDFLARE_EMAIL_ROUTING_TOKEN;
     try {

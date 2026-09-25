@@ -3,7 +3,7 @@ import { analizarAlertaIA } from './alertasIA.js';
 import { notificarCoordinador } from './whatsapp.js';
 import { enviarPushFamilia } from './push.js';
 import { medicacionVigenteDelPaciente } from './medicacionIndicaciones.js';
-import { aviso } from '../i18n/avisos.js';
+import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 
 // Lo que vale mientras la Prestadora no haya elegido otra cosa. Son los mismos valores que
@@ -188,7 +188,7 @@ export async function analizarPaciente(pacienteId, prestadoraId) {
   const idioma = await idiomaDeLaPrestadora(prestadoraId);
 
   if (avisarCoordinador) {
-    const textos = aviso('alerta_ia_coordinador', idioma, { esRoja });
+    const textos = mensajeDelSistema('alerta_ia_coordinador', idioma, { esRoja });
     await notificarCoordinador({
       evento: 'alerta_ia_nivel2',
       prestadoraId,
@@ -198,9 +198,9 @@ export async function analizarPaciente(pacienteId, prestadoraId) {
   }
 
   if (avisarFamilia && paciente.familia_id) {
-    // El aviso a la Familia se mide según el nivel: la amarilla no es una urgencia y anunciarla
+    // El mensaje a la Familia se mide según el nivel: la amarilla no es una urgencia y anunciarla
     // con las palabras de la roja asusta sin motivo.
-    const textos = aviso('alerta_ia_familia', idioma, { esRoja });
+    const textos = mensajeDelSistema('alerta_ia_familia', idioma, { esRoja });
     enviarPushFamilia(prestadoraId, paciente.familia_id, {
       titulo: textos.titulo,
       cuerpo: resultado.descripcion || textos.cuerpo,

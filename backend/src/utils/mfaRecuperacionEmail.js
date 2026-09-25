@@ -3,7 +3,7 @@ import { enviarEmail } from './email.js';
 import { correoDe } from './correoDeUnaPersona.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
 import { codigoNuevo, huellaDelCodigo, estaVencido, vencimientoEnMinutos } from './codigoDeUnSoloUso.js';
-import { aviso } from '../i18n/avisos.js';
+import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 
 // Pendiente #37 — recuperación de acceso por email cuando se pierde el dispositivo TOTP.
@@ -52,7 +52,7 @@ export async function solicitarCodigoRecuperacion(usuarioId) {
 
   await enviarEmail({
     to: correo,
-    ...aviso('mfa_codigo_recuperacion', await idiomaDeLaPrestadora(usuario?.prestadora_id), {
+    ...mensajeDelSistema('mfa_codigo_recuperacion', await idiomaDeLaPrestadora(usuario?.prestadora_id), {
       codigo,
       minutos: VIGENCIA_MINUTOS,
       producto: IDENTIDAD.nombre,

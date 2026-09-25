@@ -74,10 +74,10 @@ import { panelGuardiasRouter } from './routes/panelGuardias.js';
 import { panelComprobacionesRouter } from './routes/panelComprobaciones.js';
 import { panelAvisosEnVivoRouter } from './routes/panelAvisosEnVivo.js';
 import { webhooksPasarelasRouter } from './routes/webhooksPasarelas.js';
-import { avisoDeCobranzaExternaRouter } from './routes/avisoDeCobranzaExterna.js';
-import { avisoDeFacturacionExternaRouter } from './routes/avisoDeFacturacionExterna.js';
+import { cobranzaExternaRouter } from './routes/avisoDeCobranzaExterna.js';
+import { facturacionExternaRouter } from './routes/avisoDeFacturacionExterna.js';
 import { revisarAlertasIA } from './utils/revisarAlertasIA.js';
-import { revisarAvisosAutomaticosCese } from './utils/avisoAutomaticoCese.js';
+import { revisarMensajesAutomaticosCese } from './utils/avisoAutomaticoCese.js';
 import { responderError } from './utils/errorConMotivo.js';
 import { cargarMensajesDelSistema } from './i18n/cargarMensajesDelSistema.js';
 
@@ -93,8 +93,8 @@ app.use(cors());
    adentro; acá lo único que hace falta es que se monten primero. */
 app.use('/api/webhooks/pasarelas', webhooksPasarelasRouter);
 app.use('/api/whatsapp-webhook', whatsappWebhookRouter);
-app.use('/api/avisos-de-cobranza', avisoDeCobranzaExternaRouter);
-app.use('/api/avisos-de-facturacion', avisoDeFacturacionExternaRouter);
+app.use('/api/avisos-de-cobranza', cobranzaExternaRouter);
+app.use('/api/avisos-de-facturacion', facturacionExternaRouter);
 
 app.use(express.json());
 
@@ -238,14 +238,14 @@ setInterval(() => {
   revisarAlertasIA().catch((err) => console.error('Error en revisión de alertas IA Nivel 2:', err.message));
 }, UN_DIA_MS);
 
-// Aviso automático de cese de servicio al Asistente (Fase 6) — el plazo se mide en horas,
+// Mensaje automático de cese de servicio al Asistente (Fase 6) — el plazo se mide en horas,
 // misma cadencia que revisarAusenciasAutomaticas.
-revisarAvisosAutomaticosCese().catch((err) => console.error('Error en revisión inicial de avisos automáticos de cese:', err.message));
+revisarMensajesAutomaticosCese().catch((err) => console.error('Error en revisión inicial de avisos automáticos de cese:', err.message));
 setInterval(() => {
-  revisarAvisosAutomaticosCese().catch((err) => console.error('Error en revisión de avisos automáticos de cese:', err.message));
+  revisarMensajesAutomaticosCese().catch((err) => console.error('Error en revisión de avisos automáticos de cese:', err.message));
 }, CINCO_MINUTOS_MS);
 
-// Aviso al Coordinador de guardias próximas que siguen sin cubrir (pendiente #106,
+// Mensaje al Coordinador de guardias próximas que siguen sin cubrir (pendiente #106,
 // docs/PLAN_HASTA_PRODUCCION.md). Con cuánta anticipación avisar y cada cuánto repetirlo los define
 // cada Prestadora en configuracion_aviso_guardia_sin_cubrir; acá solo se fija cada cuánto se
 // mira, y se mira seguido porque la anticipación configurada puede ser de pocas horas.
@@ -254,7 +254,7 @@ setInterval(() => {
   revisarGuardiasSinCubrir().catch((err) => console.error('Error en revisión de guardias sin cubrir:', err.message));
 }, CINCO_MINUTOS_MS);
 
-// Aviso a la Coordinadora cuando falta un Asistente, y distinto según cómo llegó la falta: con
+// Mensaje a la Coordinadora cuando falta un Asistente, y distinto según cómo llegó la falta: con
 // margen para conseguir reemplazo, o con el turno empezando enseguida. El de arriba no lo ve,
 // porque mira los turnos sin nadie asignado y el de una Asistente de licencia la sigue teniendo
 // asignada. Se mira seguido porque la clase se recalcula: la que ayer tenía tres días de margen
@@ -265,7 +265,7 @@ setInterval(() => {
 }, CINCO_MINUTOS_MS);
 
 // El turno que llega sin nadie abre un incidente que queda abierto hasta que una persona diga cómo
-// terminó. El aviso de arriba mira los mismos turnos, pero avisa y se termina; éste deja constancia
+// terminó. El mensaje de arriba mira los mismos turnos, pero avisa y se termina; éste deja constancia
 // y le insiste a quien coordina a ese Paciente. Se mira seguido porque la insistencia se cuenta en
 // horas y el turno que se acerca cambia de estado solo.
 revisarIncidentesTurnoSinCubrir().catch((err) => console.error('Error en revisión inicial de incidentes de turno sin cubrir:', err.message));
@@ -308,7 +308,7 @@ setInterval(() => {
   cortarLosAccesosDadosDeBaja().catch((err) => console.error('Error cortando accesos del Marketplace:', err.message));
 }, UN_DIA_MS);
 
-// El aviso previo al primer cobro, cuando está por terminar el período gratuito. Es el resguardo
+// El preaviso del primer cobro, cuando está por terminar el período gratuito. Es el resguardo
 // del §3.2 del PRD del Marketplace: nunca un cobro silencioso. Se cuenta en días, así que corre con
 // la misma cadencia diaria que los dos de arriba.
 avisarElPrimerCobroQueViene().catch((err) => console.error('Error en el aviso previo inicial del Marketplace:', err.message));
@@ -342,9 +342,9 @@ const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`Backend escuchando en puerto ${PORT}`);
 
-  // Las frases de los avisos viven en la base y se editan desde afuera. Se traen una vez, acá, y
-  // quedan en memoria: un aviso se arma mientras se está mandando un correo y ahí no hay lugar
-  // para esperar una consulta. Si la lectura falla, el backend sigue levantado y los avisos salen
+  // Las frases de los mensajes viven en la base y se editan desde afuera. Se traen una vez, acá, y
+  // quedan en memoria: un mensaje se arma mientras se está mandando un correo y ahí no hay lugar
+  // para esperar una consulta. Si la lectura falla, el backend sigue levantado y los mensajes salen
   // con la marca de frase faltante, que es lo que se quiere ver.
   cargarMensajesDelSistema()
     .then(({ cargadas, error }) => {

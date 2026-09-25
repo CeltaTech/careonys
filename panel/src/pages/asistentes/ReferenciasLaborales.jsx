@@ -95,7 +95,7 @@ export function ReferenciasLaborales({ asistente }) {
           con su botón de reintentar, y los dos juntos dirían lo mismo dos veces. */}
       {error && estado === 'listo' && <Alert variant="error">{error}</Alert>}
 
-      {/* El aviso del mínimo sólo aparece si esta Prestadora espera alguna. En cero no hay nada que
+      {/* La advertencia del mínimo sólo aparece si esta Prestadora espera alguna. En cero no hay nada que
           avisar, y un cartel diciendo que se alcanzó un mínimo de cero no informa nada. */}
       {estado === 'listo' && datos?.seExigenReferencias && (
         datos.alcanza

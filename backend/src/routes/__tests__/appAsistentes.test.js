@@ -12,7 +12,7 @@
  *      anotada como SIN COMPROBAR para que el Coordinador la mire después.
  *   2. UN CÓDIGO EQUIVOCADO NO MARCA NADA. Es lo único que se rechaza, porque darlo por bueno
  *      sería no comprobar y decir que sí.
- *   3. A LA FAMILIA SE LE AVISA QUE LLEGÓ, Y LO DISPARA FICHAR LA ENTRADA. Un solo aviso, con el
+ *   3. A LA FAMILIA SE LE AVISA QUE LLEGÓ, Y LO DISPARA FICHAR LA ENTRADA. Un solo mensaje, con el
  *      nombre de quién llegó, sale con la llegada marcada por cualquiera de los caminos, también
  *      cuando quedó sin comprobar. Y no sale cuando la llegada no se marcó.
  *   4. EL CÓDIGO NUNCA SE GUARDA EN CLARO. De la base sale la huella y nada más.
@@ -174,13 +174,13 @@ function intentosSumados() {
     .map((l) => l.cuerpo);
 }
 
-// Cómo se ve desde afuera que salió el aviso de llegada: para armarlo, el backend va a buscar el
+// Cómo se ve desde afuera que salió el mensaje de llegada: para armarlo, el backend va a buscar el
 // nombre del Asistente a `asistentes`. El push en sí no se puede observar acá —sin claves VAPID no
 // sale— y por eso se mira su antesala.
 //
 // Se mira el `select` y no la tabla, porque todo pedido con sesión pasa antes por el middleware,
 // que consulta esa misma tabla para saber cuál es el Legajo de quien entró.
-function avisoDeLlegadaArmado() {
+function mensajeDeLlegadaArmado() {
   return llamadas.some(
     (l) => l.clave === 'GET /rest/v1/asistentes'
       && (new URL(l.url, 'http://interno').searchParams.get('select') ?? '').includes('nombre')
@@ -223,7 +223,7 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/guardia_pacientes', guardiaPacientesRespuesta);
   respuestas.set('GET /rest/v1/pacientes', () => [{ id: PACIENTE, familia_id: FAMILIA }]);
   // Dos consultas distintas a la misma tabla: la del middleware, que busca el Legajo por la
-  // cuenta, y la del nombre, que arma el aviso. Se reparten por el `select`.
+  // cuenta, y la del nombre, que arma el mensaje. Se reparten por el `select`.
   respuestas.set('GET /rest/v1/asistentes', ({ url }) => {
     const select = new URL(url, 'http://interno').searchParams.get('select') ?? '';
     if (!select.includes('nombre')) return [{ id: LEGAJO, prestadora_id: PRESTADORA }];
@@ -295,7 +295,7 @@ describe('check-in — el piso, que no se negocia: la guardia nunca se traba', (
 
       // El Asistente fichó igual, así que a la Familia se le avisa: enterarse de que llegaron no
       // depende de con qué se lo comprobó. Lo que quedó sin comprobar lo ve la coordinación.
-      assert.equal(avisoDeLlegadaArmado(), true);
+      assert.equal(mensajeDeLlegadaArmado(), true);
     });
   }
 
@@ -371,8 +371,8 @@ describe('check-in — Plan A: el código lo muestra una persona', () => {
     assert.ok(fila.comprobada_en, 'tiene que quedar cuándo se comprobó');
     assert.equal(fila.motivo_sin_comprobar, null);
 
-    // Que el código lo haya mostrado ella no cambia nada: fichó la entrada, y el aviso avisa eso.
-    assert.equal(avisoDeLlegadaArmado(), true);
+    // Que el código lo haya mostrado ella no cambia nada: fichó la entrada, y el mensaje avisa eso.
+    assert.equal(mensajeDeLlegadaArmado(), true);
   });
 
   it('el código que muestra el Asistente que se va marca la llegada, y a la Familia sí se le avisa', async () => {
@@ -396,7 +396,7 @@ describe('check-in — Plan A: el código lo muestra una persona', () => {
 
     // La Familia no participó de esta comprobación: tiene que enterarse de que la guardia quedó
     // cubierta y por quién.
-    assert.equal(avisoDeLlegadaArmado(), true);
+    assert.equal(mensajeDeLlegadaArmado(), true);
   });
 
   it('un código vencido no marca nada, aunque sea el que esa persona mostró hace un minuto', async () => {
@@ -414,7 +414,7 @@ describe('check-in — Plan A: el código lo muestra una persona', () => {
     assert.equal(guardiaMarcada(), false);
     assert.equal(comprobacionesGuardadas().length, 0);
     // No fichó: no hay nada que avisarle a la Familia.
-    assert.equal(avisoDeLlegadaArmado(), false);
+    assert.equal(mensajeDeLlegadaArmado(), false);
   });
 
   it('un código vigente de otra casa no marca nada: se compara sólo contra quien podría estar en ésta', async () => {
@@ -589,7 +589,7 @@ describe('Plan B — «no hay nadie que me pueda mostrar el código»', () => {
     assert.equal(fila.codigo_huella, null);
     assert.equal(fila.codigo_expira_en, null);
 
-    assert.equal(avisoDeLlegadaArmado(), true);
+    assert.equal(mensajeDeLlegadaArmado(), true);
   });
 
   it('el código de la Prestadora vencido no sirve, y lo dice por su nombre', async () => {

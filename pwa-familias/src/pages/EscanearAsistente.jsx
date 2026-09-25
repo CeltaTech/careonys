@@ -111,7 +111,7 @@ export default function EscanearAsistente() {
       {estado === 'resultado' && resultado && (
         <div>
           {/* Estos motivos no son errores: llegan en una respuesta correcta y cada uno pinta
-              el aviso de otro color, así que no pasan por lib/errores.js. */}
+              la advertencia de otro color, así que no pasan por lib/errores.js. */}
           {resultado.motivo === 'sin_guardia_hoy' && (
             <div className="alert alert-info" role="status">{t.escaneo.resultado_sin_guardia}</div>
           )}

@@ -310,9 +310,10 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
               </p>
             )}
 
-            {/* Sin nadie que coordine, la sección entera no sale: vacía no ofrece ningún botón
-                ni ninguna información, y un título con un cartel debajo diciendo que no hay nada
-                es justamente el lugar vacío que no hace falta ocupar. */}
+            {/* El cartel «Nadie por ahora.» se va por decisión del Desarrollador, y con él sale
+                la sección entera: un título con un cartel debajo diciendo que no hay nada es
+                justamente el lugar vacío que no hace falta ocupar. Y el caso no debería existir:
+                sin coordinador asignado no hay Servicio habilitado. */}
             {datos.coordinadores.length > 0 && (
               <>
                 <h3>{t.equipo_paciente.coordinacion_titulo}</h3>

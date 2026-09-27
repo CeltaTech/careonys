@@ -596,19 +596,34 @@ El tercero es la misma confusión de las dos secciones anteriores con el Cliente
 
 ## 11. Cuando no figura nadie coordinando a esa persona
 
-**Lo que preguntó el Desarrollador acá no se contesta desde este documento, y pasó al plan del
-Servicio**, en `docs/PLAN_EL_ACTO_DE_ARMAR_UN_SERVICIO.md`, paso 7.
+**Este cartel está cerrado, y lo cerró el Desarrollador.** El cartel era «Nadie por ahora.», en la
+sección **«Quién coordina»** de la ventana del equipo de un Paciente. Su indicación, textual:
 
-El cartel es «Nadie por ahora.», en la sección **«Quién coordina»** de la ventana del equipo de un
-Paciente. La decisión del punto 15 es **CAMBIAR**, y lo que pide es que se conteste para qué sirve
-mostrar eso ahí, diciendo además que **eso no lo decide Claude Code**. La respuesta depende de algo
-que hoy no existe: el acto de armar el Servicio, donde se asigna quién coordina. Mientras no exista,
-el vacío es la señal de que falta esa asignación.
+> El cartel de "Nadie por ahora" se va.
 
-**Hay un error ejecutado acá, y es mío.** Se trató este cartel como si la decisión fuera BORRAR: la
-sección entera quedó oculta mientras la lista está vacía. La decisión era CAMBIAR y la pregunta
-seguía abierta, así que **eso no correspondía y corresponde revertirlo**. Espera la indicación del
-Desarrollador. Por eso las dos claves de traducción de esa sección no se borraron.
+Está ejecutado: el texto salió de los tres idiomas y la sección entera no se muestra mientras la
+lista está vacía, en `panel/src/pages/clientes/EquipoDelPaciente.jsx:316`.
+
+**Y el motivo por el que se va es que el caso no debería existir.** Lo explicó al cerrarlo, textual:
+
+> 1 sola persona coordina todo el servicio, si interviene otra persona en la coordinación es eventual
+> seguramente debido a alguna emergencia.
+>
+> Por otro lado, cuando ingresa un cliente (cliente) nueva, y se acuerda el servicio, inmediatamente
+> se asigna quien ha de coordinar para que esta persona comience a armar el equipo que brindara el
+> servicio.
+>
+> Si no se asigna coordinador no hay forma de dar por habilitado el servicio.
+> Seria como decir que se hara "tal cosa", pero sin asignar un responsable de que eso se haga
+
+**Eso no es lo que hace el código hoy, y abre trabajo que no es de carteles.** Hoy la coordinación es
+una lista que el sistema deduce de las zonas y fijar a una persona es opcional. Lo que el
+Desarrollador fijó —una sola persona, asignada a mano al acordar el Servicio, y sin ella no hay
+Servicio habilitado— está anotado en `docs/PLAN_EL_ACTO_DE_ARMAR_UN_SERVICIO.md`, paso 7.
+
+**Queda pendiente una consecuencia**, que tampoco es un cartel: el párrafo que sigue debajo de ese
+título dice «Mientras nadie esté fijado, son todos los que trabajan en la zona», y eso describe el
+modelo que el Desarrollador acaba de contradecir. Sale cuando se haga el paso 7.
 
 El número 11 se conserva a propósito: los carteles se nombran por su número y renumerarlos dejaría
 sin sentido todo lo ya decidido sobre los demás.

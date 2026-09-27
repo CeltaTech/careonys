@@ -318,30 +318,54 @@ reusa esa palabra y no se inventa otra.
   Paciente. La distancia en línea recta se queda como está —incluida la decisión de callarse si falta
   una de las dos puntas—, pero deja de ser lo único.
 
-### Paso 7. Los tres estados de la coordinación
+### Paso 7. Una sola persona coordina, y se asigna al acordar el Servicio
 
-El Desarrollador fijó el modelo: **sin asignar / asignado, y ahí va el nombre / vacante, y ahí
-aparece la administración.** Y la regla de fondo: «Si no hay nadie coordinando, no hay operacion con
-esa familia».
+**El Desarrollador fijó cuatro cosas acá, y las cuatro cambian el modelo que tiene el código.**
+Textuales:
 
-**FALTA DEFINIR EL TEXTO** del tercer estado. Es texto visible y lo aprueba el Desarrollador.
+> 1 sola persona coordina todo el servicio, si interviene otra persona en la coordinación es eventual
+> seguramente debido a alguna emergencia.
+>
+> Por otro lado, cuando ingresa un cliente (familia) nueva, y se acuerda el servicio, inmediatamente
+> se asigna quien ha de coordinar para que esta persona comience a armar el equipo que brindara el
+> servicio.
+>
+> Si no se asigna coordinador no hay forma de dar por habilitado el servicio.
+> Seria como decir que se hara "tal cosa", pero sin asignar un responsable de que eso se haga
 
-**Y acá se contesta una pregunta que venía de la revisión de carteles.** Sobre el cartel «Nadie por
-ahora.» de la sección «Quién coordina», el Desarrollador escribió en `docs/CARTELES_DEL_PANEL.docx`,
-punto 15, cartel 11:
+Y de antes, la regla de fondo y los tres estados: «Si no hay nadie coordinando, no hay operacion con
+esa familia», y **sin asignar / asignado, y ahí va el nombre / vacante, y ahí aparece la
+administración.**
 
-> ¿Cuál es la utilidad de mostrar esta información aquí? Si no hay nada que realmente lo justifique
-> (y eso no lo decide Claude code) directamente no tiene sentido algún mensaje
+**Qué tiene el código hoy, y no es esto.** La coordinación de un Paciente es **una lista**, y el
+sistema la **deduce de las zonas** cuando nadie fijó a alguien a mano —`coordinadoresDelEquipo()`, en
+`panel/src/lib/equipoDelPaciente.js`—. Fijar a una persona es opcional y no es condición de nada. Las
+tres diferencias:
 
-La utilidad depende de este paso: **ese vacío es la señal de que falta asignar quién coordina**, y
-sin el acto de armar el Servicio no hay otro lugar donde eso se vea. Con el paso 4 hecho, el caso
-deja de aparecer por sí solo, porque la asignación se hace al armar el Servicio.
+| | Hoy | Lo que fijó el Desarrollador |
+|---|---|---|
+| Cuántos | varios a la vez | **una sola persona** |
+| Cómo se llega | se deduce de las zonas | **se asigna a mano al acordar el Servicio** |
+| Si falta | el Servicio funciona igual | **el Servicio no se habilita** |
 
-**Y hay un error ejecutado que corresponde deshacer.** Ese cartel se trató como si la decisión fuera
-BORRAR: la sección entera quedó oculta mientras la lista está vacía. La decisión era CAMBIAR y la
-pregunta seguía abierta, así que **eso no correspondía**. Corresponde revertir el ocultamiento.
-**Esperando la indicación del Desarrollador.** Por eso las dos claves de traducción de esa sección no
-se borraron.
+La segunda persona no desaparece, pero no es lo corriente: es **eventual, por una emergencia**. Así
+que es una excepción anotada como tal, no una lista abierta.
+
+**Lo que esto obliga en el paso 4.** La asignación de quién coordina es una de las cuatro cosas que
+se dicen al armar el Servicio, y **es requisito para habilitarlo**: sin ella el Servicio queda sin
+habilitar, y eso se ve.
+
+**FALTA DEFINIR EL TEXTO** del tercer estado —el de la vacante, cuando quien coordinaba deja la
+función y el rol lo cubre la administración—. Es texto visible y lo aprueba el Desarrollador.
+
+**El cartel #11 se cerró acá, y está ejecutado.** El Desarrollador indicó: «El cartel de "Nadie por
+ahora" se va.» Salió de los tres idiomas y con él la sección entera mientras la lista está vacía
+—`panel/src/pages/familias/EquipoDelPaciente.jsx:316`—. **Y el caso no debería existir**, porque sin
+coordinador asignado no hay Servicio habilitado.
+
+**Queda una consecuencia por ejecutar en este paso**: el párrafo que hay debajo de ese título dice
+«Mientras nadie esté fijado, son todos los que trabajan en la zona», y describe justamente el modelo
+que se cambia acá. Sale cuando este paso se haga.
 
 ### Paso 8. Los tres criterios de sugerencia que faltan
 
@@ -363,8 +387,7 @@ Nada de esto se resuelve por criterio propio. Cada punto traba lo que tiene al l
    renombra nunca, así que se aprueba antes de escribir la migración.
 2. **Qué dice el aviso del hueco** (paso 3). Texto visible.
 3. **Qué dice el tercer estado de la coordinación** (paso 7). Texto visible.
-4. **Si se revierte el ocultamiento de la sección «Quién coordina»** (paso 7).
-5. **Si «suspender» es distinto de «pausar»** (paso 5). En el pedido aparecen las dos palabras:
+4. **Si «suspender» es distinto de «pausar»** (paso 5). En el pedido aparecen las dos palabras:
    «Se debe pausar, suspender, modificar, cancelar. etc». Si son dos cosas distintas, hacen falta dos
    acciones; si es la misma dicha de dos maneras, alcanza una. **No se decide por criterio propio.**
 

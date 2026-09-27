@@ -191,13 +191,6 @@ export function Padron() {
         recargar={recargar}
         filtrado={hayFiltros}
         onLimpiarFiltros={limpiar}
-        mensajeVacio={filas.length === 0 ? t.padron.vacio_titulo : undefined}
-        ayudaVacio={filas.length === 0 ? t.padron.vacio_ayuda : undefined}
-        accionVacio={
-          filas.length === 0 && puedeEditar ? (
-            <Button onClick={() => setEnEdicion('nuevo')}>{t.padron.nuevo_titulo}</Button>
-          ) : undefined
-        }
       >
         <div className="lista-tarjetas">
           {filtradas.map((fila) => (

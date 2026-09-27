@@ -358,25 +358,21 @@ export function NuevaGuardiaModal({ onClose, onCreada, inicial = {} }) {
               {t.guardias.nueva_guardia.pacientes}
               <span className="required">*</span>
             </label>
-            {pacientes.length === 0 ? (
-              <p className="panel-explicacion">{t.guardias.nueva_guardia.pacientes_sin_ninguno}</p>
-            ) : (
-              <div className="panel-lista-pacientes">
-                {pacientes.map((p) => (
-                  <label key={p.id}>
-                    <input
-                      type="checkbox"
-                      checked={pacienteIds.includes(p.id)}
-                      onChange={() => togglePaciente(p.id)}
-                    />
-                    <span>
-                      {p.nombre}
-                      {p.domicilio && <small>{p.domicilio}</small>}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            )}
+            <div className="panel-lista-pacientes">
+              {pacientes.map((p) => (
+                <label key={p.id}>
+                  <input
+                    type="checkbox"
+                    checked={pacienteIds.includes(p.id)}
+                    onChange={() => togglePaciente(p.id)}
+                  />
+                  <span>
+                    {p.nombre}
+                    {p.domicilio && <small>{p.domicilio}</small>}
+                  </span>
+                </label>
+              ))}
+            </div>
           </div>
           <p className="panel-explicacion">{t.guardias.nueva_guardia.pacientes_ayuda}</p>
 

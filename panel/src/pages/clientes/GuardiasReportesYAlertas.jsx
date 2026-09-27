@@ -145,8 +145,6 @@ export function GuardiasActivasDeLaCliente({ pacientes }) {
       error={error}
       vacio={estado === 'listo' && datos.filas.length === 0}
       recargar={recargar}
-      mensajeVacio={t.clientes.guardias_vacio}
-      ayudaVacio={t.clientes.guardias_vacio_ayuda}
     >
       <>
         {datos.tope && (
@@ -317,8 +315,6 @@ export function AlertasDeLaCliente({ pacientes }) {
       error={error}
       vacio={estado === 'listo' && datos.filas.length === 0}
       recargar={recargar}
-      mensajeVacio={t.clientes.alertas_vacio}
-      ayudaVacio={t.clientes.alertas_vacio_ayuda}
     >
       <table className="panel-tabla">
         <thead>

@@ -310,30 +310,33 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
               </p>
             )}
 
-            <h3>{t.equipo_paciente.coordinacion_titulo}</h3>
-            <p className="panel-explicacion">{t.equipo_paciente.coordinacion_explicacion}</p>
-            {datos.coordinadores.length === 0 ? (
-              <p className="estado-vacio">{t.equipo_paciente.sin_coordinacion}</p>
-            ) : (
-              <ul>
-                {datos.coordinadores.map((c) => (
-                  <li key={c.usuario_id}>
-                    {datos.nombreDeUsuario(c.usuario_id)} — {explicacionDeOrigen[c.origen]}
-                    {puedeEditar && c.decidido && (
-                      <>
-                        {' '}
-                        <Button
-                          variant="secondary"
-                          disabled={enCurso === c.usuario_id}
-                          onClick={() => volverADeducir(c)}
-                        >
-                          {t.equipo_paciente.volver_a_deducir}
-                        </Button>
-                      </>
-                    )}
-                  </li>
-                ))}
-              </ul>
+            {/* Sin nadie que coordine, la sección entera no sale: vacía no ofrece ningún botón
+                ni ninguna información, y un título con un cartel debajo diciendo que no hay nada
+                es justamente el lugar vacío que no hace falta ocupar. */}
+            {datos.coordinadores.length > 0 && (
+              <>
+                <h3>{t.equipo_paciente.coordinacion_titulo}</h3>
+                <p className="panel-explicacion">{t.equipo_paciente.coordinacion_explicacion}</p>
+                <ul>
+                  {datos.coordinadores.map((c) => (
+                    <li key={c.usuario_id}>
+                      {datos.nombreDeUsuario(c.usuario_id)} — {explicacionDeOrigen[c.origen]}
+                      {puedeEditar && c.decidido && (
+                        <>
+                          {' '}
+                          <Button
+                            variant="secondary"
+                            disabled={enCurso === c.usuario_id}
+                            onClick={() => volverADeducir(c)}
+                          >
+                            {t.equipo_paciente.volver_a_deducir}
+                          </Button>
+                        </>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
 
             {datos.afuera.length > 0 && (

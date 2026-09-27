@@ -1,7 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useAuth } from './AuthContext';
-import { useTenantSession } from './TenantSessionContext';
 import { useModalidades } from './ModalidadesContext';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { llamarApiPanel } from '../lib/apiPanel';
@@ -86,13 +85,12 @@ function armarPasos({ modalidades, empresa, zonas, precios, gente, familias, hay
 
 export function PuestaEnMarchaProvider({ children }) {
   const { usuario } = useAuth();
-  const { sesion } = useTenantSession();
   const { modalidades, cargado: modalidadesCargadas } = useModalidades();
   const prestadoraId = usePrestadoraActual();
 
-  // Un Superadmin mirando por una sesión de soporte ve el estado de la Prestadora que visita,
-  // pero la guía no es un trabajo para él: los botones de acción no se le muestran.
-  const informativo = sesion !== null;
+  // La guía no es un trabajo del rol técnico: ve el estado, pero los botones de acción no se le
+  // muestran.
+  const informativo = usuario?.rol === 'superadmin';
   const corresponde = esAdminOSuperior(usuario?.rol) && Boolean(prestadoraId);
 
   const [estado, setEstado] = useState('cargando'); // cargando | error | listo

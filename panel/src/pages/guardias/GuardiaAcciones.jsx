@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { llamarApiPanel } from '../../lib/apiPanel';
 import { obtenerUbicacion } from '../../lib/ubicacion';
 import { useAuth } from '../../context/AuthContext';
-import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
+import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import { useMotivosAvisoPrevio } from '../../hooks/useMotivosAvisoPrevio';
 import { useMotivosDeResolucion } from '../../hooks/useMotivosDeResolucion';
 import { resolver } from '../../lib/resoluciones';

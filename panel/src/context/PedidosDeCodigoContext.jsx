@@ -32,7 +32,7 @@ import { mensajeDeError } from '../lib/errores';
    cada uno habría dos consultas en curso preguntando lo mismo y pudiendo contestar distinto.
 
    CUÁNDO NO PREGUNTA NADA. Sin sesión iniciada, y sin Organización activa —el Superadmin que
-   todavía no abrió una sesión de soporte no está adentro de ninguna Prestadora, así que no hay
+   todavía no abrió un permiso de acceso no está adentro de ninguna Prestadora, así que no hay
    pedidos que traer—. En los dos casos el contador no se muestra.
 
    SI LA CONSULTA FALLA, LA LISTA ANTERIOR SE QUEDA. Un corte de red de dos segundos no tiene por

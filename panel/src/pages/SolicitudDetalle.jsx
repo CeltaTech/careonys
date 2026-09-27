@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
-import { useConfirmarDestructivo } from '../context/TenantSessionContext';
+import { useConfirmarDestructivo } from '../context/ConfirmacionContext';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { useMotivosDeResolucion } from '../hooks/useMotivosDeResolucion';
 import { resolver } from '../lib/resoluciones';

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
-import { useConfirmarDestructivo } from '../context/TenantSessionContext';
+import { useConfirmarDestructivo } from '../context/ConfirmacionContext';
 import { useZonasCobertura } from '../hooks/useZonasCobertura';
 import { useOpcionesPostulacion } from '../hooks/useOpcionesPostulacion';
 import { useListaDeOpciones } from '../hooks/useListaDeOpciones';

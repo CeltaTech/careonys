@@ -10,9 +10,9 @@
 //     }
 //
 // O sea: si el rol era superadmin, no se filtraba nada, y podía leer y escribir datos de
-// cualquier Prestadora sin abrir la sesión de soporte técnico y sin quedar auditado. Eso
+// cualquier Prestadora sin abrir el permiso de acceso y sin quedar auditado. Eso
 // contradecía de frente a CLAUDE.md §5 ("Si una tarea técnica requiere operar sobre una
-// Prestadora real, se hace siempre abriendo una sesión de soporte técnico").
+// Prestadora real, se hace siempre abriendo un permiso de acceso").
 //
 // Ya no hace falta ninguna rama por rol: requiereRolPanel.js deja en
 // req.usuarioPanel.prestadoraId la Prestadora correcta para cualquier rol —la de la sesión de

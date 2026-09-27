@@ -34,7 +34,7 @@ let rolDelUsuario = 'admin_prestadora';
 let prestadoraDelUsuario = PRESTADORA;
 /** Qué contesta la base cuando se le pregunta si esta Prestadora tiene la modalidad encendida. */
 let modalidadMarketplace = true;
-/** Con sesión de soporte abierta, un Superadmin queda parado adentro de esta Prestadora. */
+/** Con permiso de acceso abierto, un Superadmin queda parado adentro de esta Prestadora. */
 let sesionDeSoporteAbierta = false;
 
 const baseFalsa = createServer((req, res) => {
@@ -107,7 +107,7 @@ beforeEach(() => {
   // El segundo factor no es lo que se prueba acá: se lo deja apagado para que el camino llegue
   // hasta el candado del rol.
   respuestas.set('GET /rest/v1/configuracion_plataforma', () => [{ mfa_admin_obligatorio: false }]);
-  respuestas.set('GET /rest/v1/sesiones_soporte_tecnico', () =>
+  respuestas.set('GET /rest/v1/permisos_de_acceso', () =>
     sesionDeSoporteAbierta
       ? [
           {
@@ -119,8 +119,8 @@ beforeEach(() => {
         ]
       : []
   );
-  respuestas.set('PATCH /rest/v1/sesiones_soporte_tecnico', () => []);
-  respuestas.set('POST /rest/v1/auditoria_soporte_tecnico', () => []);
+  respuestas.set('PATCH /rest/v1/permisos_de_acceso', () => []);
+  respuestas.set('POST /rest/v1/auditoria_de_accesos', () => []);
 });
 
 /** Las tablas y funciones que sólo se tocan cuando la ruta llegó a hacer su trabajo. */
@@ -309,9 +309,9 @@ describe('sin la modalidad Marketplace no se entra', () => {
 // Y adentro de la plata hay una parte más angosta todavía: las credenciales con las que la
 // Prestadora cobra. Son un secreto de ella, igual que el token de WhatsApp y que la contraseña
 // del correo saliente, así que Superadmin queda afuera de cargarlas y de reemplazarlas aunque
-// tenga la sesión de soporte abierta. Las pruebas se hacen con esa sesión ABIERTA a propósito:
+// tenga el permiso de acceso abierto. Las pruebas se hacen con ese permiso ABIERTO a propósito:
 // sin ella, Superadmin no está parado en ninguna Prestadora y la ruta corta antes por otro
-// motivo; el caso que importa es el de adentro de la sesión de soporte.
+// motivo; el caso que importa es el de adentro del permiso de acceso.
 
 const RUTAS_DE_LAS_CREDENCIALES_DE_COBRO = [
   ['PUT', '/pasarela/mercadopago/secreto-firma', { secretoFirma: 'lo que sea' }],
@@ -320,7 +320,7 @@ const RUTAS_DE_LAS_CREDENCIALES_DE_COBRO = [
 
 describe('Superadmin no llega a las credenciales de cobro de una Prestadora', () => {
   for (const [metodo, ruta, cuerpo] of RUTAS_DE_LAS_CREDENCIALES_DE_COBRO) {
-    it(`${metodo} ${ruta}, aun con la sesión de soporte abierta`, async () => {
+    it(`${metodo} ${ruta}, aun con el permiso de acceso abierto`, async () => {
       rolDelUsuario = 'superadmin';
       prestadoraDelUsuario = null;
       sesionDeSoporteAbierta = true;

@@ -44,37 +44,46 @@ async function main() {
   const token = sesion.session.access_token;
   const headers = () => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' });
 
-  // 1. Sin sesión de tenant activa: debe dar 400 explícito, no 403 ni crash
+  // 1. Sin permiso de acceso abierto: debe dar 400 explícito, no 403 ni crash
   const rSinTenant = await fetch(`${API}/configuracion/empresa`, { headers: headers() });
-  console.log('1. GET /configuracion/empresa sin sesión de tenant:', rSinTenant.status);
-  if (rSinTenant.status !== 400) throw new Error('FALLO: esperaba 400 sin sesión de tenant, dio ' + rSinTenant.status);
+  console.log('1. GET /configuracion/empresa sin permiso de acceso:', rSinTenant.status);
+  if (rSinTenant.status !== 400) throw new Error('FALLO: esperaba 400 sin permiso de acceso, dio ' + rSinTenant.status);
 
-  // 2. Entrar a la prestadora sandbox
-  const rEntrar = await fetch(`${API}/sesion-tenant`, { method: 'POST', headers: headers(), body: JSON.stringify({ prestadora_id: SANDBOX_ID }) });
-  console.log('2. POST /sesion-tenant (entrar a sandbox):', rEntrar.status);
-  if (!rEntrar.ok) throw new Error('FALLO al entrar a la prestadora: ' + (await rEntrar.text()));
+  // 2. Abrir el permiso de acceso a Sandbox. Se escribe la fila, que es exactamente lo que hace
+  //    CeltaTech desde su lado: el producto no tiene ninguna ruta para abrirlo
+  //    (`celtatech/docs/EL_PERMISO_DE_ACCESO.md`).
+  const ahora = new Date();
+  const { error: errorPermiso } = await admin.from('permisos_de_acceso').insert({
+    admin_id: authUserId,
+    prestadora_id: SANDBOX_ID,
+    entrada_at: ahora.toISOString(),
+    ultima_actividad_at: ahora.toISOString(),
+    expira_at: new Date(ahora.getTime() + 60 * 60 * 1000).toISOString(),
+  });
+  console.log('2. Permiso de acceso abierto sobre Sandbox:', errorPermiso ? errorPermiso.message : 'OK');
+  if (errorPermiso) throw new Error('FALLO al abrir el permiso de acceso: ' + errorPermiso.message);
 
-  // 3. Con sesión de tenant activa, antes del fix esto daba 403 — ahora debe dar 200
+  // 3. Con el permiso abierto, antes del fix esto daba 403 — ahora debe dar 200
   const rConTenant = await fetch(`${API}/configuracion/empresa`, { headers: headers() });
   const jConTenant = await rConTenant.json();
-  console.log('3. GET /configuracion/empresa con sesión de tenant activa:', rConTenant.status, jConTenant.empresa ? '(datos recibidos)' : jConTenant);
-  if (rConTenant.status !== 200) throw new Error('FALLO: esperaba 200 con sesión de tenant activa, dio ' + rConTenant.status + ' — ' + JSON.stringify(jConTenant));
+  console.log('3. GET /configuracion/empresa con el permiso abierto:', rConTenant.status, jConTenant.empresa ? '(datos recibidos)' : jConTenant);
+  if (rConTenant.status !== 200) throw new Error('FALLO: esperaba 200 con el permiso abierto, dio ' + rConTenant.status + ' — ' + JSON.stringify(jConTenant));
 
   // 4. Otra ruta del mismo router (zonas), para confirmar que el fix cubre todo el router, no solo /empresa
   const rZonas = await fetch(`${API}/configuracion/zonas`, { headers: headers() });
-  console.log('4. GET /configuracion/zonas con sesión de tenant activa:', rZonas.status);
+  console.log('4. GET /configuracion/zonas con el permiso abierto:', rZonas.status);
   if (rZonas.status !== 200) throw new Error('FALLO: esperaba 200 en /zonas, dio ' + rZonas.status);
 
-  console.log('Pendiente #36 verificado correctamente: 400 sin sesión de tenant, 200 en /empresa y /zonas con sesión activa.');
+  console.log('Pendiente #36 verificado correctamente: 400 sin permiso de acceso, 200 en /empresa y /zonas con el permiso abierto.');
 }
 
 async function limpiar() {
   if (authUserId) {
-    // el paso 2 (entrar a la Prestadora) deja fila en sesiones_soporte_tecnico y en
-    // auditoria_soporte_tecnico — hay que borrarlas antes que el usuario o el delete de abajo
-    // falla en silencio por FK y deja el usuario de prueba huérfano (pasó en la corrida anterior).
-    await admin.from('sesiones_soporte_tecnico').delete().eq('admin_id', authUserId);
-    await admin.from('auditoria_soporte_tecnico').delete().eq('admin_id', authUserId);
+    // el paso 2 deja fila en permisos_de_acceso y en auditoria_de_accesos — hay que borrarlas
+    // antes que el usuario o el delete de abajo falla en silencio por FK y deja el usuario de
+    // prueba huérfano (pasó en una corrida anterior).
+    await admin.from('permisos_de_acceso').delete().eq('admin_id', authUserId);
+    await admin.from('auditoria_de_accesos').delete().eq('admin_id', authUserId);
     await admin.from('usuarios').delete().eq('id', authUserId);
     await admin.auth.admin.deleteUser(authUserId);
   }

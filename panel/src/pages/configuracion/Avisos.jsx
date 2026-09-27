@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
-import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
+import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import { useAuth } from '../../context/AuthContext';
 import { esAdminDePrestadora } from '../../lib/roles';
 import { supabase } from '../../lib/supabaseClient';
@@ -747,7 +747,7 @@ function TabMensajeGuardiaSinCubrir() {
    Las plantillas y la escalada al Coordinador son configuración: quien administra la
    Prestadora las toca, y Superadmin también, porque es quien da soporte. Las credenciales no:
    son las claves con las que esta Prestadora habla con Meta, y Superadmin es un rol técnico de
-   CeltaTech. La sesión de soporte técnico tampoco lo habilita.
+   CeltaTech. El permiso de acceso tampoco lo habilita.
 
    Quien decide de verdad es el backend (`backend/src/routes/panelConfiguracion.js`, las dos rutas
    `/whatsapp`): escribiendo la dirección a mano se llega igual, y ahí se niega. Esto de acá es

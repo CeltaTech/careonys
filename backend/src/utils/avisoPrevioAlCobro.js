@@ -58,6 +58,12 @@ export async function avisarElPrimerCobroQueViene({ avisar = enviarPushFamilia }
   if (!plazoMasLargo) return { avisados: 0 };
   const hastaCuando = sumarDias(hoy, plazoMasLargo);
 
+  // SIN PRESTADORA A PROPÓSITO
+  // Es el barrido de la noche, y no lo pide nadie: busca en qué Prestadoras hay un primer cobro a
+  // la vista sin saber de antemano en cuáles. Acotarlo a una sola no encontraría los de las demás,
+  // y no hay ninguna sesión de la que sacar cuál. Lo que sí se hace es trabajar de a una: la fila
+  // trae su `prestadora_id`, y con ese dato se resuelven el plazo, el idioma y el aviso de cada
+  // una, una por vez.
   const { data: accesos, error } = await supabase
     .from('accesos_marketplace')
     .select('id, familia_id, paciente_id, prestadora_id, importe, moneda, gratis_hasta')
@@ -95,6 +101,9 @@ export async function avisarElPrimerCobroQueViene({ avisar = enviarPushFamilia }
       .from('accesos_marketplace')
       .update({ aviso_previo_en: new Date().toISOString(), updated_at: new Date().toISOString() })
       .eq('id', acceso.id)
+      // La Prestadora se nombra igual, aunque el identificador ya sea único: es la fila leída
+      // arriba, y este barrido pasa por todas.
+      .eq('prestadora_id', acceso.prestadora_id)
       .is('aviso_previo_en', null);
 
     if (errorAnotar) {

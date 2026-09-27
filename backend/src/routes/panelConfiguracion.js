@@ -1349,7 +1349,7 @@ panelConfiguracionRouter.put(
 // (`soloAdministracion`) deja pasar a Superadmin, y para casi toda la configuración está bien:
 // Superadmin es quien da soporte. Pero estas tres claves son con las que la Prestadora habla
 // con Meta, y Superadmin es un rol técnico de CeltaTech: no tiene por qué poder leer si están
-// cargadas ni, mucho menos, reemplazarlas. La sesión de soporte técnico tampoco lo habilita —
+// cargadas ni, mucho menos, reemplazarlas. El permiso de acceso tampoco lo habilita —
 // existe para mirar los datos de una Organización por vez y queda auditada, no para alcanzar
 // sus credenciales (`panel/src/lib/roles.js`, `esAdminDePrestadora`).
 //

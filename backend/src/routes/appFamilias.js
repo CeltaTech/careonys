@@ -922,6 +922,7 @@ appFamiliasRouter.get('/acceso/:pacienteId', requiereRolFamilia, exigeVisible('f
       'id, estado, importe, moneda, gratis_hasta, proximo_cobro, cancelada_en, vigente_hasta, ' +
         'formas_de_cobro_marketplace(renueva_sola)'
     )
+    .eq('prestadora_id', req.usuarioFamilia.prestadoraId)
     .eq('familia_id', req.usuarioFamilia.familiaId)
     .eq('paciente_id', req.params.pacienteId)
     .maybeSingle();
@@ -969,6 +970,7 @@ appFamiliasRouter.post('/qr-cobro', requiereRolFamilia, exigeVisible('familia_pa
     .from('accesos_marketplace')
     .select('id, familia_id, importe, proximo_cobro')
     .eq('id', accesoId)
+    .eq('prestadora_id', req.usuarioFamilia.prestadoraId)
     .eq('familia_id', req.usuarioFamilia.familiaId)
     .maybeSingle();
   if (!acceso) {

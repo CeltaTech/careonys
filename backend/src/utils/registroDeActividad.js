@@ -13,7 +13,7 @@ import { supabase } from '../db/connection.js';
 // POR QUE LO ESCRIBE EL BACKEND Y NO UN DISPARADOR DE LA BASE. El backend entra con la llave de
 // servicio (decision escrita en el `CLAUDE.md` de Careonys), asi que adentro de un disparador
 // `auth.uid()` da vacio y no habria forma de saber quien hizo la accion. Es el mismo motivo por
-// el que la auditoria de la sesion de soporte tambien se escribe desde Express.
+// el que la auditoria de los accesos tambien se escribe desde Express.
 //
 // NUNCA SE LE PASA UN DATO SENSIBLE. Ninguna clave, ningun dato de contenido, ninguna
 // direccion, ningun importe y ninguna remuneracion. La base ademas lo hace cumplir: `detalle`
@@ -51,7 +51,7 @@ const MINUTOS_ENTRE_ENTRADAS = Number(process.env.MINUTOS_ENTRE_ENTRADAS_REGISTR
 const ultimaEntrada = new Map();
 
 // La Prestadora sale siempre de la sesion comprobada, nunca de lo que venga en el pedido.
-// `req.usuarioPanel` lo arma `requiereRolPanel`, que resuelve la precedencia —sesion de soporte
+// `req.usuarioPanel` lo arma `requiereRolPanel`, que resuelve la precedencia —permiso de acceso
 // primero, Organizacion propia despues— con el mismo orden que la funcion SQL
 // `interno.current_tenant()`.
 export async function registrarActividad(usuarioPanel, accion, {

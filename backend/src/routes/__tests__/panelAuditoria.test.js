@@ -6,10 +6,10 @@
  * POR QUÉ EXISTE ESTA PRUEBA. Hasta el 2026-09-08 esta ruta le entregaba al Superadmin el
  * registro de auditoría de todas las Prestadoras a la vez, mientras que la base —desde la
  * migración `20260822180000`, política `superadmin_lee_auditoria_de_su_sesion_activa`— sólo le
- * dejaba leer el de la Prestadora con la sesión de soporte abierta. Los dos lados decían cosas
+ * dejaba leer el de la Prestadora con el permiso de acceso abierto. Los dos lados decían cosas
  * distintas; era el pendiente #158. El Desarrollador resolvió que manda el alcance de la base:
- * una Prestadora por vez, la de la sesión de soporte, y para mirar otra se abre la sesión sobre
- * esa otra. Fuera de una sesión de soporte no se alcanza ninguna Prestadora real, sólo la
+ * una Prestadora por vez, la del permiso de acceso, y para mirar otra se abre uno sobre
+ * esa otra. Fuera de un permiso de acceso no se alcanza ninguna Prestadora real, sólo la
  * Organización ficticia de pruebas.
  *
  * Lo que se prueba no es que el código llame a `.eq()` —eso sería probar la biblioteca—, sino
@@ -43,7 +43,7 @@ let llamadas = [];
 
 let rolDelUsuario = 'superadmin';
 let prestadoraDelUsuario = SANDBOX;
-/** La sesión de soporte abierta, o `null` si no hay ninguna. */
+/** El permiso de acceso abierto, o `null` si no hay ninguno. */
 let sesionDeSoporte = null;
 
 function sesionVigenteSobre(prestadoraId) {
@@ -111,7 +111,7 @@ async function pedirRegistro() {
 
 /** La consulta al registro, tal como le llegó a la base. `undefined` si nunca se hizo. */
 function consultaAlRegistro() {
-  return llamadas.find((l) => l.clave === 'GET /rest/v1/auditoria_soporte_tecnico')?.url;
+  return llamadas.find((l) => l.clave === 'GET /rest/v1/auditoria_de_accesos')?.url;
 }
 
 beforeEach(() => {
@@ -125,12 +125,12 @@ beforeEach(() => {
   // El segundo factor no es lo que se prueba acá: se lo deja apagado para que el candado de
   // `requiereRolPanel` no se meta en el medio.
   respuestas.set('GET /rest/v1/configuracion_plataforma', () => [{ mfa_admin_obligatorio: false }]);
-  respuestas.set('GET /rest/v1/sesiones_soporte_tecnico', () => (sesionDeSoporte ? [sesionDeSoporte] : []));
-  respuestas.set('PATCH /rest/v1/sesiones_soporte_tecnico', () => []);
+  respuestas.set('GET /rest/v1/permisos_de_acceso', () => (sesionDeSoporte ? [sesionDeSoporte] : []));
+  respuestas.set('PATCH /rest/v1/permisos_de_acceso', () => []);
 
   /* La base de mentira aplica el filtro de verdad. Es lo que hace que estas pruebas puedan
      fallar: sin filtro, contesta las cuatro filas de las tres Organizaciones. */
-  respuestas.set('GET /rest/v1/auditoria_soporte_tecnico', (url) => {
+  respuestas.set('GET /rest/v1/auditoria_de_accesos', (url) => {
     const filtro = url.searchParams.get('prestadora_id');
     if (!filtro) return REGISTRO;
     const prestadoraId = filtro.replace(/^eq\./, '');
@@ -142,7 +142,7 @@ const organizacionesDe = (eventos) => [...new Set(eventos.map((e) => e.prestador
 
 // ---------------------------------------------------------------------------------------
 
-describe('el Superadmin ve la Prestadora de su sesión de soporte, y ninguna otra', () => {
+describe('el Superadmin ve la Prestadora de su permiso de acceso, y ninguna otra', () => {
   it('con la sesión abierta sobre una Prestadora, ve esa', async () => {
     sesionDeSoporte = sesionVigenteSobre(PRESTADORA_A);
     const { estado, cuerpo } = await pedirRegistro();
@@ -159,7 +159,7 @@ describe('el Superadmin ve la Prestadora de su sesión de soporte, y ninguna otr
     assert.deepEqual(organizacionesDe(cuerpo.eventos), [PRESTADORA_B]);
     assert.ok(
       !cuerpo.eventos.some((e) => e.prestadora_id === PRESTADORA_A),
-      'se coló el registro de una Prestadora sobre la que no hay sesión de soporte'
+      'se coló el registro de una Prestadora sobre la que no hay permiso de acceso'
     );
   });
 
@@ -177,7 +177,7 @@ describe('el Superadmin ve la Prestadora de su sesión de soporte, y ninguna otr
   });
 });
 
-describe('sin sesión de soporte abierta no se alcanza ninguna Prestadora real', () => {
+describe('sin permiso de acceso abierto no se alcanza ninguna Prestadora real', () => {
   it('el Superadmin sólo ve la Organización de pruebas', async () => {
     sesionDeSoporte = null;
     const { estado, cuerpo } = await pedirRegistro();
@@ -218,8 +218,8 @@ describe('el Admin_prestadora ve lo suyo', () => {
     assert.deepEqual(organizacionesDe(cuerpo.eventos), [PRESTADORA_A]);
   });
 
-  it('y una sesión de soporte ajena no lo mueve de ahí', async () => {
-    // La sesión de soporte es de superadmin: el middleware ni la consulta para otro rol. Si
+  it('y un permiso de acceso ajeno no lo mueve de ahí', async () => {
+    // El permiso de acceso es de superadmin: el middleware ni lo consulta para otro rol. Si
     // alguna vez lo hiciera, este Admin_prestadora terminaría mirando otra Prestadora.
     rolDelUsuario = 'admin_prestadora';
     prestadoraDelUsuario = PRESTADORA_A;

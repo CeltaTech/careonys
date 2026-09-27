@@ -326,11 +326,20 @@ esa familia».
 
 **FALTA DEFINIR EL TEXTO** del tercer estado. Es texto visible y lo aprueba el Desarrollador.
 
-**Y acá se resuelve una decisión que venía de la revisión de carteles.** El cartel «Nadie por ahora.»
-de la sección «Quién coordina» se dio de baja y se ejecutó: la sección entera quedó oculta cuando la
-lista está vacía. Con lo que explicó el Desarrollador después, **ese vacío no es normal: es la señal
-de que falta asignar quién coordina**, y ocultarlo esconde justamente lo que hay que ver.
-Corresponde revertir el ocultamiento, y el paso 4 hace que el caso deje de aparecer por sí solo.
+**Y acá se contesta una pregunta que venía de la revisión de carteles.** Sobre el cartel «Nadie por
+ahora.» de la sección «Quién coordina», el Desarrollador escribió en `docs/CARTELES_DEL_PANEL.docx`,
+punto 15, cartel 11:
+
+> ¿Cuál es la utilidad de mostrar esta información aquí? Si no hay nada que realmente lo justifique
+> (y eso no lo decide Claude code) directamente no tiene sentido algún mensaje
+
+La utilidad depende de este paso: **ese vacío es la señal de que falta asignar quién coordina**, y
+sin el acto de armar el Servicio no hay otro lugar donde eso se vea. Con el paso 4 hecho, el caso
+deja de aparecer por sí solo, porque la asignación se hace al armar el Servicio.
+
+**Y hay un error ejecutado que corresponde deshacer.** Ese cartel se trató como si la decisión fuera
+BORRAR: la sección entera quedó oculta mientras la lista está vacía. La decisión era CAMBIAR y la
+pregunta seguía abierta, así que **eso no correspondía**. Corresponde revertir el ocultamiento.
 **Esperando la indicación del Desarrollador.** Por eso las dos claves de traducción de esa sección no
 se borraron.
 

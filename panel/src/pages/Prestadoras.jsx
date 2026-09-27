@@ -4,9 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useTenantSession } from '../context/TenantSessionContext';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
-import { FormField } from '../components/ui/FormField';
 import { EstadoLista } from '../components/layout/EstadoLista';
-import { traducirValor } from '../i18n/valores';
 import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
 import { seAlcanzoElLimite, contraSuLimite } from '../lib/cuentaDeCorreo';
 
@@ -26,17 +24,6 @@ async function llamarApi(path, opciones = {}) {
   if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
   return resultado;
 }
-
-const CAMPOS_VACIOS = {
-  razon_social: '',
-  nombre_fantasia: '',
-  identificacion_fiscal: '',
-  pais: '',
-  email_respuestas: '',
-  admin_nombre: '',
-  admin_email: '',
-  admin_telefono: '',
-};
 
 /* Cuánto correo salió, contra el límite del servicio que lo despacha.
 
@@ -106,23 +93,16 @@ export function Prestadoras() {
   const [error, setError] = useState(null);
   const [entrando, setEntrando] = useState(null);
   const [saliendo, setSaliendo] = useState(false);
-  const [paises, setPaises] = useState([]);
-  const [formularioAbierto, setFormularioAbierto] = useState(false);
-  const [campos, setCampos] = useState(CAMPOS_VACIOS);
-  const [creando, setCreando] = useState(false);
-  const [mensaje, setMensaje] = useState(null);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
     setError(null);
     try {
-      const [{ prestadoras: filas }, { paises: catalogo }] = await Promise.all([
+      const [{ prestadoras: filas }] = await Promise.all([
         llamarApi('/prestadoras'),
-        llamarApi('/prestadoras/paises'),
         recargarSesion(),
       ]);
       setPrestadoras(filas);
-      setPaises(catalogo);
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -150,41 +130,6 @@ export function Prestadoras() {
     }
   }
 
-  function cambiarCampo(nombre, valor) {
-    setCampos((anteriores) => ({ ...anteriores, [nombre]: valor }));
-  }
-
-  function cerrarFormulario() {
-    setFormularioAbierto(false);
-    setCampos(CAMPOS_VACIOS);
-  }
-
-  async function handleAlta(evento) {
-    evento.preventDefault();
-    setCreando(true);
-    setError(null);
-    setMensaje(null);
-    try {
-      const resultado = await llamarApi('/prestadoras', {
-        method: 'POST',
-        body: JSON.stringify(campos),
-      });
-      // Si la casilla de respuestas no se pudo guardar, la Prestadora existe igual: el mensaje lo
-      // dice acá y no se pierde, porque ese dato se vuelve a cargar desde Configuración.
-      const plantilla = resultado.casilla_respuestas_guardada ? t.prestadoras.alta_lista : t.prestadoras.alta_sin_casilla;
-      setMensaje({
-        variante: resultado.casilla_respuestas_guardada ? 'success' : 'warning',
-        texto: plantilla.replace('{prestadora}', resultado.prestadora.nombre_fantasia),
-      });
-      cerrarFormulario();
-      await recargar();
-    } catch (err) {
-      setError(mensajeDeError(err, t));
-    } finally {
-      setCreando(false);
-    }
-  }
-
   async function handleSalir() {
     setSaliendo(true);
     setError(null);
@@ -202,104 +147,6 @@ export function Prestadoras() {
       <h1>{t.prestadoras.titulo}</h1>
 
       {error && <Alert variant="error">{error}</Alert>}
-      {mensaje && <Alert variant={mensaje.variante}>{mensaje.texto}</Alert>}
-
-      {!formularioAbierto && (
-        <Button onClick={() => { setMensaje(null); setFormularioAbierto(true); }} disabled={Boolean(sesion)}>
-          {t.prestadoras.alta_abrir}
-        </Button>
-      )}
-
-      {formularioAbierto && (
-        <form onSubmit={handleAlta}>
-          <h2>{t.prestadoras.alta_titulo}</h2>
-
-          <FormField
-            label={t.prestadoras.campo_nombre_fantasia}
-            name="nombre_fantasia"
-            required
-            value={campos.nombre_fantasia}
-            onChange={(e) => cambiarCampo('nombre_fantasia', e.target.value)}
-          />
-
-          <FormField
-            label={t.prestadoras.campo_razon_social}
-            name="razon_social"
-            required
-            value={campos.razon_social}
-            onChange={(e) => cambiarCampo('razon_social', e.target.value)}
-          />
-
-          <FormField
-            label={t.prestadoras.campo_identificacion_fiscal}
-            name="identificacion_fiscal"
-            value={campos.identificacion_fiscal}
-            onChange={(e) => cambiarCampo('identificacion_fiscal', e.target.value)}
-          />
-
-          <FormField
-            label={t.prestadoras.campo_pais}
-            name="pais"
-            type="select"
-            required
-            value={campos.pais}
-            onChange={(e) => cambiarCampo('pais', e.target.value)}
-          >
-            <option value="">{t.comun.seleccionar}</option>
-            {paises.map((p) => (
-              <option key={p.pais} value={p.pais}>{traducirValor(t.prestadoras, `pais_${p.pais}`)}</option>
-            ))}
-          </FormField>
-
-          <FormField
-            label={t.prestadoras.campo_email_respuestas}
-            name="email_respuestas"
-            type="email"
-            required
-            value={campos.email_respuestas}
-            onChange={(e) => cambiarCampo('email_respuestas', e.target.value)}
-          />
-
-          {/* Quién va a administrar la Prestadora. Su cuenta se crea junto con ella: es la
-              persona que entra al Panel a completar la configuración, así que sin ella la
-              Prestadora no puede empezar. La contraseña no se elige acá ni se muestra: le llega
-              a esa persona por correo, para que la ponga ella. */}
-          <h3>{t.prestadoras.alta_administrador_titulo}</h3>
-          <p className="panel-explicacion">{t.prestadoras.alta_administrador_explicacion}</p>
-
-          <FormField
-            label={t.prestadoras.campo_admin_nombre}
-            name="admin_nombre"
-            required
-            value={campos.admin_nombre}
-            onChange={(e) => cambiarCampo('admin_nombre', e.target.value)}
-          />
-
-          <FormField
-            label={t.prestadoras.campo_admin_email}
-            name="admin_email"
-            type="email"
-            required
-            value={campos.admin_email}
-            onChange={(e) => cambiarCampo('admin_email', e.target.value)}
-          />
-
-          <FormField
-            label={t.prestadoras.campo_admin_telefono}
-            name="admin_telefono"
-            type="tel"
-            value={campos.admin_telefono}
-            onChange={(e) => cambiarCampo('admin_telefono', e.target.value)}
-          />
-
-          <Button type="submit" disabled={creando}>
-            {creando ? t.prestadoras.alta_creando : t.prestadoras.alta_confirmar}
-          </Button>
-          <Button variant="secondary" type="button" onClick={cerrarFormulario} disabled={creando}>
-            {t.prestadoras.alta_cancelar}
-          </Button>
-        </form>
-      )}
 
       {sesion && (
         <Alert variant="info">

@@ -265,12 +265,21 @@ suyo:
 |---|---|---|
 | **Servicio** | el acuerdo entero | cuidado domiciliario, por tiempo indeterminado |
 | **Prestación** | cada cosa del acuerdo, con su precio y sus propios días y horarios | el cuidado por horas; aparte, la kinesiología |
-| **Guardia** | el período que hay que cubrir sin interrupción | los 7 días, de 00:00 a 24:00 |
+| **Guardia** | el período que hay que cubrir sin interrupción, y de qué es | la de cuidados: los 7 días, de 00:00 a 24:00. Aparte, la de enfermería |
 | **Turno de guardia** | la parte que cubre una Asistente, hasta que entrega las responsabilidades | tres turnos de ocho horas, tres personas |
 
 Lo del paso 1 se carga en el segundo nivel: los días y horarios de una Prestación. Un renglón puede
 ir de 00:00 a 24:00, y ningún turno puede. **Repartir la guardia en turnos es trabajo de quien
 coordina**, y es lo que el paso 2 compara contra lo pactado.
+
+**Un Servicio incluye varias guardias, y cada una es de algo:** de cuidados, de enfermería, de lo
+que el Servicio haya acordado. Y eso hoy no se puede saber: ni `guardias` ni `series_guardias`
+tienen de qué es —verificado en la foto de la base—, **el tipo lo lleva únicamente la persona**, en
+`asistentes.tipo_asistente_id`, que apunta al catálogo `tipos_asistente`. Así que de qué es una
+guardia se deduce de quién la cubre, **y mientras no haya nadie asignado no dice nada**. Eso es
+justamente lo que el paso 2 necesita para avisar el hueco: sin el tipo puesto en la guardia, el
+aviso puede decir que falta cubrir un horario, pero no qué hace falta ahí, y la sugerencia de
+Asistentes del paso 8 no tiene contra qué comparar la capacidad.
 
 **Y hay un desajuste de nombre guardado que decide el Desarrollador, porque tocarlo no es gratis.**
 Lo que la base llama `guardias` es el turno: cada fila lleva una Asistente, un día, una hora de

@@ -36,7 +36,7 @@ describe('lo que sí está al alcance', () => {
     assert.equal(laCuentaDelPanelEstaAlAlcance(CUENTA_DEL_EQUIPO_TECNICO, alcance), true);
   });
 
-  it('la Prestadora que un Superadmin está visitando con una sesión de soporte', () => {
+  it('la Prestadora que un Superadmin está visitando con un permiso de acceso', () => {
     // `requiereRolPanel` ya dejó en `prestadoraId` la Prestadora de la sesión abierta, con la
     // misma precedencia que `current_tenant()`. Acá no se reinventa: se usa ese valor.
     const alcance = alcanceDelPanel({ rol: 'superadmin', prestadoraId: PRESTADORA_AJENA });
@@ -48,7 +48,7 @@ describe('lo que sí está al alcance', () => {
 describe('lo que no está al alcance de nadie', () => {
   it('una cuenta de otra Prestadora, aunque quien pida sea Superadmin', () => {
     // El corazón del pendiente #157: ser Superadmin no es un pase libre. Para llegar a una
-    // Prestadora hay que entrar con una sesión de soporte, y entonces queda auditado.
+    // Prestadora hay que entrar con un permiso de acceso, y entonces queda auditado.
     const alcance = alcanceDelPanel({ rol: 'superadmin', prestadoraId: PRESTADORA_PROPIA });
     const cuenta = { rol: 'admin_prestadora', prestadora_id: PRESTADORA_AJENA };
     assert.equal(laCuentaDelPanelEstaAlAlcance(cuenta, alcance), false);

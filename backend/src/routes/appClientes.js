@@ -922,6 +922,7 @@ appClientesRouter.get('/acceso/:pacienteId', requiereRolCliente, exigeVisible('c
       'id, estado, importe, moneda, gratis_hasta, proximo_cobro, cancelada_en, vigente_hasta, ' +
         'formas_de_cobro_match(renueva_sola)'
     )
+    .eq('prestadora_id', req.usuarioCliente.prestadoraId)
     .eq('cliente_id', req.usuarioCliente.clienteId)
     .eq('paciente_id', req.params.pacienteId)
     .maybeSingle();
@@ -969,6 +970,7 @@ appClientesRouter.post('/qr-cobro', requiereRolCliente, exigeVisible('cliente_pa
     .from('accesos_match')
     .select('id, cliente_id, importe, proximo_cobro')
     .eq('id', accesoId)
+    .eq('prestadora_id', req.usuarioCliente.prestadoraId)
     .eq('cliente_id', req.usuarioCliente.clienteId)
     .maybeSingle();
   if (!acceso) {

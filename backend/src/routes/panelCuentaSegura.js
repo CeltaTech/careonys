@@ -54,7 +54,7 @@ const ACCION_EQUIPO_NUEVO = 'entrada_desde_un_equipo_nuevo';
 const ACCION_CERRAR_TODO = 'cierre_de_sesion_de_todos_los_equipos';
 
 // La Organización se nombra también en la lectura, y es la propia de la cuenta
-// —`organizacionPropiaId`—, nunca la de una sesión de soporte abierta: acá se mira de quién es la
+// —`organizacionPropiaId`—, nunca la de un permiso de acceso abierto: acá se mira de quién es la
 // cuenta, no dónde está parada. El caso sin Organización lo resuelve el mismo ayudante que las
 // escrituras de más abajo, para que las dos no puedan discrepar.
 async function miCuenta(usuarioPanel) {

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
-import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
+import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import { useMotivosDeResolucion } from '../../hooks/useMotivosDeResolucion';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { Button } from '../../components/ui/Button';
@@ -163,7 +163,7 @@ export function BarraAccionesMasivas({ seleccionadas = [], asistentes = [], onAp
     // Cancelar guardias es destructivo (regla 4 de CLAUDE.md §7): se pregunta antes, diciendo
     // cuántas son y que desde acá no se deshace. Se usa la confirmación del proyecto y no un
     // `window.confirm`, porque esa es la que además avisa cuando se está trabajando dentro de
-    // una Prestadora ajena en una sesión de soporte técnico.
+    // una Prestadora ajena en un permiso de acceso.
     if (accion === 'cancelar') {
       const mensaje = con(textos.confirmar_cancelar, { n: cantidad });
       if (!(await confirmarDestructivo(mensaje))) return;

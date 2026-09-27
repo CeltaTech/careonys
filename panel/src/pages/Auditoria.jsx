@@ -4,7 +4,6 @@ import { supabase } from '../lib/supabaseClient';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
 import { useAuth } from '../context/AuthContext';
-import { useTenantSession } from '../context/TenantSessionContext';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -18,20 +17,13 @@ async function llamarApi(path) {
   return resultado;
 }
 
-// Ítem G del pendiente #30 — lectura del registro de auditoría de las sesiones de soporte
-// técnico (auditoria_soporte_tecnico). El alcance lo decide el backend, no esta pantalla: se ve
-// el registro de una sola Organización, la de la sesión de soporte abierta —y, si no hay
-// ninguna, la Organización de pruebas—. El porqué está escrito en
-// `backend/src/routes/panelAuditoria.js`, que es donde vive el filtro.
-//
-// Lo que sí es de esta pantalla es que el vacío se entienda. Sin sesión de soporte abierta la
-// lista casi siempre viene vacía, y una lista vacía sin explicación se lee como "se perdieron
-// los datos" o como una pantalla rota. Por eso el cartel del vacío cambia en ese caso y dice
-// cuál es la salida: abrir la sesión de soporte sobre la Prestadora que se quiere mirar.
+// Lectura del registro de los accesos (auditoria_de_accesos) y del registro de actividad de la
+// Prestadora. El alcance lo decide el backend, no esta pantalla: se ve el registro de una sola
+// Organización. El porqué está escrito en `backend/src/routes/panelAuditoria.js`, que es donde
+// vive el filtro.
 export function Auditoria() {
   const { t, locale } = useLocale();
   const { usuario } = useAuth();
-  const { sesion } = useTenantSession();
   const [eventos, setEventos] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -67,13 +59,10 @@ export function Auditoria() {
     }
   }, [t]);
 
-  // Abrir o cerrar una sesión de soporte cambia qué Organización contesta el backend, así que la
-  // lista se vuelve a pedir cuando cambia la sesión: si no, quedaría en pantalla el registro de
-  // la Prestadora de la que se acaba de salir.
   useEffect(() => {
     recargar();
     recargarActividad();
-  }, [recargar, recargarActividad, sesion?.id]);
+  }, [recargar, recargarActividad]);
 
   function descripcionEvento(evento) {
     if (evento.tipo_evento === 'login') return t.auditoria.evento_login;
@@ -133,7 +122,6 @@ export function Auditoria() {
   return (
     <div>
       <h1>{t.auditoria.titulo}</h1>
-      {esSuperadmin && <p className="panel-explicacion">{t.auditoria.alcance_superadmin}</p>}
 
       <EstadoLista
         estado={estado}

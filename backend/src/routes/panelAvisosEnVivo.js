@@ -13,7 +13,7 @@ export const panelAvisosEnVivoRouter = Router();
  * ningún dato no lo vuelve inofensivo: quién escucha los avisos de una Organización es
  * exactamente el mismo dato que quién ve sus listas.
  *
- * SIN ORGANIZACIÓN ACTIVA NO HAY CANAL. El Superadmin que todavía no abrió una sesión de soporte
+ * SIN ORGANIZACIÓN ACTIVA NO HAY CANAL. El Superadmin que todavía no abrió un permiso de acceso
  * no está adentro de ninguna Prestadora, así que no hay avisos suyos que escuchar.
  *
  * NO CONTESTA Y SE CIERRA: la respuesta queda abierta y el canal escribe en ella. Quién cierra

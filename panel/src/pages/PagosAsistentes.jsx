@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
 import { usePermisos } from '../context/PermisosContext';
-import { useConfirmarDestructivo } from '../context/TenantSessionContext';
+import { useConfirmarDestructivo } from '../context/ConfirmacionContext';
 import { traducirValor } from '../i18n/valores';
 import { useFiltros } from '../hooks/useFiltros';
 import { useEscalasLegales } from '../hooks/useEscalasLegales';

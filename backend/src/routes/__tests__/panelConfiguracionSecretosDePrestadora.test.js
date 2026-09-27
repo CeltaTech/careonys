@@ -7,7 +7,7 @@
  * administración, que deja pasar a Admin_prestadora **y a Superadmin**. Para casi toda la
  * configuración está bien: Superadmin es quien da soporte. Para un puñado no: son las claves con
  * las que esta Prestadora habla con un tercero —hoy Meta, en WhatsApp—, y Superadmin es un rol
- * técnico de CeltaTech, no de la Prestadora. La sesión de soporte técnico tampoco lo habilita —
+ * técnico de CeltaTech, no de la Prestadora. El permiso de acceso tampoco lo habilita —
  * existe para mirar los datos de una Organización por vez y queda auditada, no para alcanzar sus
  * credenciales.
  *
@@ -21,9 +21,9 @@
  * no le haya preguntado nada a la base: un 403 que igual leyó la tabla ya dijo si la Prestadora
  * tiene cargadas sus claves, que es justamente lo que no se quiere contar.
  *
- * La prueba se hace con la sesión de soporte ABIERTA a propósito. Sin ella, un Superadmin no
+ * La prueba se hace con el permiso de acceso ABIERTO a propósito. Sin él, un Superadmin no
  * está parado en ninguna Prestadora y la ruta corta antes por otro motivo; el caso que importa
- * —y el que hasta hoy pasaba— es el de adentro de la sesión de soporte.
+ * —y el que hasta hoy pasaba— es el de adentro del permiso de acceso.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
@@ -40,7 +40,7 @@ let llamadas = [];
 
 let rolDelUsuario = 'admin_prestadora';
 let prestadoraDelUsuario = PRESTADORA;
-/** Con sesión de soporte abierta, un Superadmin queda parado adentro de esta Prestadora. */
+/** Con permiso de acceso abierto, un Superadmin queda parado adentro de esta Prestadora. */
 let sesionDeSoporteAbierta = false;
 
 const baseFalsa = createServer((req, res) => {
@@ -111,7 +111,7 @@ beforeEach(() => {
   // El segundo factor no es lo que se está probando acá: se lo deja apagado para que el camino
   // llegue hasta el candado del rol, que es lo que importa.
   respuestas.set('GET /rest/v1/configuracion_plataforma', () => [{ mfa_admin_obligatorio: false }]);
-  respuestas.set('GET /rest/v1/sesiones_soporte_tecnico', () =>
+  respuestas.set('GET /rest/v1/permisos_de_acceso', () =>
     sesionDeSoporteAbierta
       ? [
           {
@@ -123,8 +123,8 @@ beforeEach(() => {
         ]
       : []
   );
-  respuestas.set('PATCH /rest/v1/sesiones_soporte_tecnico', () => []);
-  respuestas.set('POST /rest/v1/auditoria_soporte_tecnico', () => []);
+  respuestas.set('PATCH /rest/v1/permisos_de_acceso', () => []);
+  respuestas.set('POST /rest/v1/auditoria_de_accesos', () => []);
 });
 
 /** Todo lo que sólo se toca cuando la ruta llegó a hacer su trabajo con los secretos. */
@@ -187,7 +187,7 @@ const RUTAS_DE_LOS_SECRETOS = [
 
 describe('Superadmin no llega a los secretos de una Prestadora', () => {
   for (const [metodo, ruta, cuerpo, mensajeEsperado] of RUTAS_DE_LOS_SECRETOS) {
-    it(`${metodo} ${ruta}, aun con la sesión de soporte abierta`, async () => {
+    it(`${metodo} ${ruta}, aun con el permiso de acceso abierto`, async () => {
       rolDelUsuario = 'superadmin';
       prestadoraDelUsuario = null;
       sesionDeSoporteAbierta = true;

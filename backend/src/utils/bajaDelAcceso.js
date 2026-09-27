@@ -111,7 +111,9 @@ export async function darDeBajaElAcceso({ accesoId, clienteId = null, prestadora
       proximo_cobro: null,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', acceso.id);
+    .eq('id', acceso.id)
+    // La Prestadora se nombra igual, aunque el identificador ya sea único: es la fila leída arriba.
+    .eq('prestadora_id', acceso.prestadora_id);
 
   if (errorGuardar) {
     // Acá la renovación ya quedó apagada del lado del proveedor y sin anotar de este lado. No se

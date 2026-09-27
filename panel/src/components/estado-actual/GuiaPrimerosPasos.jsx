@@ -27,7 +27,7 @@ import { PropuestaDesdePlanilla } from './PropuestaDesdePlanilla';
    contexto, que con un Coordinador contesta que no falta nada.
 
    ADMIN_PRESTADORA VS. SUPERADMIN DE VISITA. Quien entra con su propia Prestadora puede tocar
-   cada paso; un Superadmin mirando por una sesión de soporte técnico ve exactamente lo mismo
+   cada paso; un Superadmin mirando por un permiso de acceso ve exactamente lo mismo
    pero sin botones de acción — la guía es de la Prestadora que visita, no un trabajo para él. */
 
 export function GuiaPrimerosPasos() {

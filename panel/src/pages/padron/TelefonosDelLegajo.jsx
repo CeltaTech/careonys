@@ -5,7 +5,7 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
-import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
+import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import {
   cargarUnTelefono,
   corregirUnTelefono,

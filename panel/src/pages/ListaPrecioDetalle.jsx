@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
-import { useConfirmarDestructivo } from '../context/TenantSessionContext';
+import { useConfirmarDestructivo } from '../context/ConfirmacionContext';
 import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';

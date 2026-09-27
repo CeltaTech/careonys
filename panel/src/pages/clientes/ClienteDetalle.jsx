@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
 import { usePermisos } from '../../context/PermisosContext';
-import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
+import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import { esAdminOSuperior } from '../../lib/roles';
 import { linkWhatsapp } from '../../lib/telefono';
 import { supabase } from '../../lib/supabaseClient';

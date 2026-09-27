@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { traducirValor } from '../../i18n/valores';
 import { con } from '../../lib/textos';
-import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
+import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import { llamarApiConfiguracion as llamarApi } from '../../lib/apiConfiguracion';
 import { FINANCIADORES, FINANCIADORES_POSIBLES } from '../../lib/facturacionDeClientes';
 import { Button } from '../../components/ui/Button';

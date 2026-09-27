@@ -129,22 +129,21 @@ current_tenant()) OR (...)`, y `current_tenant()` para `superadmin` resuelve a s
 
 Modelo de 2 niveles: `admin_prestadora` (acotado a su propia `prestadora_id`, sin cambios) y
 `superadmin` (rol técnico de CeltaTech; su acceso ordinario es únicamente la Organización
-Sandbox, y para entrar a una Prestadora real tiene que abrir explícitamente una sesión de
-soporte técnico, una por vez, con banner, auditoría y vencimiento).
+Sandbox, y para entrar a una Prestadora real hace falta un permiso de acceso abierto, uno por
+vez, auditado y con vencimiento).
 
-El diseño de esa sesión, tal como se implementó: banner notorio con la Prestadora activa,
-advertencia adicional antes de operaciones destructivas, log de auditoría de todo login y de
-toda acción sensible, timeout de 5 minutos de inactividad y tope absoluto de 60 minutos de
-sesión con advertencia a los 50.
+**El permiso lo abre CeltaTech desde su lado, y el producto no tiene ninguna ruta para abrirlo,
+renovarlo ni cerrarlo a pedido.** La cerradura está acá porque la base es la que decide qué filas
+ve una consulta; la llave —quién puede abrirlo y con qué recaudos— es de CeltaTech. Qué tiene que
+construir de ese lado está en `celtatech/docs/EL_PERMISO_DE_ACCESO.md`.
 
-Hasta el 2026-07-28 esta maquinaria era del rol comercial `admin_plataforma`. Ese rol se fue
-entero a CeltaTech (Nivel 1) y **ya no existe en Careonys**: las dos tablas se renombraron
-(`sesiones_tenant_admin_plataforma` → `sesiones_soporte_tecnico`,
-`auditoria_admin_plataforma` → `auditoria_soporte_tecnico`) y el permiso pasó a `superadmin`.
-La maquinaria en sí no cambió. Ver `celtatech/docs/PLAN_SEPARACION_CELTATECH.md`, Etapa 2, paso 7.
+Lo que el producto hace cumplir: corte a los 5 minutos de inactividad, tope absoluto de 60
+minutos, cierre automático en el primer pedido que llegue después de vencido, y auditoría de la
+entrada, de la salida con su motivo y de cada escritura hecha con el permiso abierto. La
+Prestadora no lo ve ni sabe que existe: ninguna pantalla del Panel lo nombra.
 
 ```sql
-CREATE TABLE sesiones_soporte_tecnico (
+CREATE TABLE permisos_de_acceso (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   admin_id UUID NOT NULL REFERENCES usuarios(id),
   prestadora_id UUID NOT NULL REFERENCES prestadoras(id),
@@ -154,7 +153,7 @@ CREATE TABLE sesiones_soporte_tecnico (
   salida_at TIMESTAMPTZ
 );
 
-CREATE TABLE auditoria_soporte_tecnico (
+CREATE TABLE auditoria_de_accesos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   admin_id UUID NOT NULL REFERENCES usuarios(id),
   prestadora_id UUID REFERENCES prestadoras(id),
@@ -167,23 +166,20 @@ CREATE TABLE auditoria_soporte_tecnico (
 );
 ```
 
-`current_tenant()` (función Postgres) resuelve, en orden: (1) si hay una sesión vigente en
-`sesiones_soporte_tecnico` para el `superadmin` actual con `ultima_actividad_at > NOW() - 5
-min` (timeout de inactividad), esa `prestadora_id`; (2) si no, el `usuarios.prestadora_id`
+`current_tenant()` (función Postgres) resuelve, en orden: (1) si hay un permiso vigente en
+`permisos_de_acceso` para el `superadmin` actual con `ultima_actividad_at > NOW() - 5
+min` (corte por inactividad), esa `prestadora_id`; (2) si no, el `usuarios.prestadora_id`
 propio (caso `admin_prestadora`/`superadmin` fuera de sesión/etc). **Ese orden de precedencia
 es el punto único de verdad** (`CLAUDE.md` §7.12): el middleware
 `backend/src/middleware/requiereRolPanel.js` lo refleja tal cual en JS en vez de inventar una
 segunda regla, para que la aplicación y la base nunca discrepen sobre en qué Prestadora está
 parado quien consulta.
 
-El tope absoluto de sesión (60 min, con advertencia a los 50) y el resto de las reglas de UI (banner
-visible, advertencia extra antes de operaciones destructivas) están implementados en
-`panel/src/context/TenantSessionContext.jsx` y `backend/src/routes/panelSesionTenant.js`
-(`requiereSoporteTecnico`, único que puede crear/cerrar una fila de
-`sesiones_soporte_tecnico`). RLS habilitada en ambas tablas.
-
-La ruta HTTP se sigue llamando `/api/panel/sesion-tenant` a propósito: renombrarla obligaba a
-tocar el frontend sin ganar nada: el nombre viejo quedó solo en la dirección, no en los datos.
+El tope absoluto (60 min) y el corte por inactividad los hace cumplir
+`backend/src/middleware/requiereRolPanel.js`, que es el único lugar por el que pasan todos los
+pedidos: ahí se cierra el permiso vencido, se anota el motivo —`tope_60min` o `inactividad_5min`—
+y se refresca `ultima_actividad_at` si sigue vigente. El cartel y el aviso a los 50 son de la
+herramienta de CeltaTech. RLS habilitada en ambas tablas.
 
 ## Tablas: advertencias_legales / auditoria_advertencias_legales (pendiente #51, infraestructura
 ## resuelta 2026-07-18 — integración con un toggle real todavía pendiente)

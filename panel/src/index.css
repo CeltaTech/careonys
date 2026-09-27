@@ -311,53 +311,8 @@ h2 {
   min-width: 0;
 }
 
-.banner-sesion-tenant {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 1.5rem;
-  background: var(--naranja-alerta);
-  color: var(--texto-sobre-color);
-  font-weight: 600;
-  font-size: 0.9rem;
-  position: sticky;
-  top: 0;
-  z-index: 5;
-}
-
-.banner-sesion-tenant-acciones {
-  display: flex;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
-
-.banner-sesion-tenant-salir {
-  background: var(--superficie);
-  border: none;
-  color: var(--naranja-alerta-texto);
-  border-radius: 999px;
-  padding: 0.4rem 1rem;
-  font-weight: 700;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.banner-sesion-tenant-salir:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.banner-sesion-tenant-advertencia {
-  background: var(--rojo-peligro);
-}
-
-.banner-sesion-tenant-advertencia .banner-sesion-tenant-salir {
-  color: var(--rojo-peligro);
-}
-
 /* Lo que a la Prestadora le falta cargar, reclamado arriba de cualquier pantalla.
-   Va debajo del banner de sesión de soporte y no usa el mismo fondo naranja lleno a propósito:
+   No usa un fondo lleno a propósito:
    dos franjas macizas seguidas compiten, y ésta es un pendiente, no una alarma. Entonces
    superficie común y el naranja sólo en el canto izquierdo, que es el que llama la atención.
    No lleva `position: sticky` porque el banner de arriba ya se queda fijo y dos elementos

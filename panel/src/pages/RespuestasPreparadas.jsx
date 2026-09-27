@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
-import { useConfirmarDestructivo } from '../context/TenantSessionContext';
+import { useConfirmarDestructivo } from '../context/ConfirmacionContext';
 import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Alert } from '../components/ui/Alert';

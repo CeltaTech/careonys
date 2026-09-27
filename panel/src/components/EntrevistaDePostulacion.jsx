@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
-import { useConfirmarDestructivo } from '../context/TenantSessionContext';
+import { useConfirmarDestructivo } from '../context/ConfirmacionContext';
 import { llamadorDe } from '../lib/apiPanel';
 import { desdeElCampo, paraElCampo } from '../lib/momentoDeLaEntrevista';
 import { mensajeDeError } from '../lib/errores';

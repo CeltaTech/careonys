@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { traducirValor } from '../i18n/valores';
-import { useConfirmarDestructivo } from '../context/TenantSessionContext';
+import { useConfirmarDestructivo } from '../context/ConfirmacionContext';
 import { usePermisos } from '../context/PermisosContext';
 import { llamarApiCobros } from '../lib/apiCobros';
 import { claseBadge } from '../lib/tonos';

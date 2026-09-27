@@ -3,7 +3,6 @@ import { Fragment, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
 import { useEmpresa } from '../../context/EmpresaContext';
-import { useTenantSession } from '../../context/TenantSessionContext';
 import { usePermisos } from '../../context/PermisosContext';
 import { useModalidades } from '../../context/ModalidadesContext';
 import { usePedidosDeCodigo } from '../../context/PedidosDeCodigoContext';
@@ -13,65 +12,6 @@ import { MODALIDAD } from '../../lib/modalidades';
 import { SelectoresPreferencias } from './SelectoresPreferencias';
 import { FranjaPuestaEnMarcha } from './FranjaPuestaEnMarcha';
 import { EquipoNuevo } from './EquipoNuevo';
-
-const ADVERTENCIA_MINUTOS_RESTANTES = 10; // advertencia "a los 50 minutos" de una sesión de 60
-
-function BannerSesionTenant() {
-  const { t, locale } = useLocale();
-  const { sesion, salir, renovar } = useTenantSession();
-  const [saliendo, setSaliendo] = useState(false);
-  const [renovando, setRenovando] = useState(false);
-
-  if (!sesion) return null;
-
-  const minutosRestantes = (new Date(sesion.expira_at).getTime() - Date.now()) / 60000;
-  const porVencer = minutosRestantes <= ADVERTENCIA_MINUTOS_RESTANTES;
-  const horaExpiracion = new Date(sesion.expira_at).toLocaleTimeString(locale);
-
-  async function handleSalir() {
-    setSaliendo(true);
-    try {
-      await salir();
-    } finally {
-      setSaliendo(false);
-    }
-  }
-
-  async function handleRenovar() {
-    setRenovando(true);
-    try {
-      await renovar();
-    } finally {
-      setRenovando(false);
-    }
-  }
-
-  return (
-    <div className={porVencer ? 'banner-sesion-tenant banner-sesion-tenant-advertencia' : 'banner-sesion-tenant'}>
-      <span>
-        <strong>{porVencer ? t.prestadoras.sesion_advertencia.replace('{hora}', horaExpiracion) : t.prestadoras.sesion_activa_titulo}</strong>
-        {!porVencer && (
-          <>
-            {': '}
-            {sesion.prestadoras?.nombre_fantasia}
-            {' — '}
-            {t.prestadoras.sesion_activa_expira.replace('{hora}', horaExpiracion)}
-          </>
-        )}
-      </span>
-      <span className="banner-sesion-tenant-acciones">
-        {porVencer && (
-          <button className="banner-sesion-tenant-salir" onClick={handleRenovar} disabled={renovando}>
-            {renovando ? t.prestadoras.renovando : t.prestadoras.seguir_trabajando}
-          </button>
-        )}
-        <button className="banner-sesion-tenant-salir" onClick={handleSalir} disabled={saliendo}>
-          {saliendo ? t.prestadoras.saliendo : t.prestadoras.salir}
-        </button>
-      </span>
-    </div>
-  );
-}
 
 export function Layout() {
   const { t } = useLocale();
@@ -273,8 +213,7 @@ export function Layout() {
         {/* Entrar desde un aparato nuevo: se pregunta una sola vez por aparato, apenas se entra.
             Mientras el código esté pendiente, la pantalla de atrás no se usa. */}
         <EquipoNuevo />
-        <BannerSesionTenant />
-        {/* Debajo de la sesión de soporte y encima de todo lo demás: mientras la Prestadora no
+        {/* Encima de todo lo demás: mientras la Prestadora no
             termine de cargar lo suyo, el reclamo la acompaña a la pantalla que abra. Se apaga
             solo cuando no falta nada (ver `FranjaPuestaEnMarcha.jsx`). */}
         <FranjaPuestaEnMarcha />

@@ -6,7 +6,7 @@ import { EmpresaProvider } from './context/EmpresaContext';
 import { UmbralesProvider } from './context/UmbralesContext';
 import { PermisosProvider } from './context/PermisosContext';
 import { ModalidadesProvider } from './context/ModalidadesContext';
-import { TenantSessionProvider } from './context/TenantSessionContext';
+import { ConfirmacionProvider } from './context/ConfirmacionContext';
 import { AdvertenciaLegalProvider } from './context/AdvertenciaLegalContext';
 import { PedidosDeCodigoProvider } from './context/PedidosDeCodigoContext';
 import { TelefonosEsperandoProvider } from './context/TelefonosEsperandoContext';
@@ -98,23 +98,22 @@ function App() {
         <AuthProvider>
           <PermisosProvider>
           <ModalidadesProvider>
-          <TenantSessionProvider>
-            {/* Va adentro de la sesión de soporte porque los pedidos que trae son los de la
-                Prestadora que se está mirando ahora, y esa la decide esa sesión. Y va afuera del
-                enrutador porque el menú lo consulta desde cualquier pantalla: un Asistente parado
-                en una puerta tiene que aparecer aunque nadie esté mirando la lista. */}
+          <ConfirmacionProvider>
+            {/* Los pedidos que trae son los de la Prestadora en la que se está trabajando ahora.
+                Va afuera del enrutador porque el menú lo consulta desde cualquier pantalla: un
+                Asistente parado en una puerta tiene que aparecer aunque nadie esté mirando la
+                lista. */}
             <PedidosDeCodigoProvider>
             {/* Los números cargados que esperan que alguien los habilite. Va acá por el mismo
                 motivo: es una tarea pendiente de la Prestadora que se está mirando ahora, y el
                 contador del menú la consulta desde cualquier pantalla. */}
             <TelefonosEsperandoProvider>
             {/* Los umbrales del semáforo de guardia. Van acá por el mismo motivo que los pedidos:
-                son los de la Prestadora que se está mirando ahora, y esa la decide la sesión de
-                soporte. */}
+                son los de la Prestadora en la que se está trabajando ahora. */}
             <UmbralesProvider>
             {/* Qué le falta cargar a la Prestadora para poder trabajar. Va acá por el mismo
-                motivo que los dos de arriba: es de la Prestadora que se está mirando ahora, y
-                esa la decide la sesión de soporte. Y afuera del enrutador porque lo consultan
+                motivo que los dos de arriba: es de la Prestadora en la que se está trabajando
+                ahora. Y afuera del enrutador porque lo consultan
                 tres cosas a la vez — la entrada, la franja del menú y la propia guía. */}
             <PuestaEnMarchaProvider>
             <AdvertenciaLegalProvider>
@@ -291,7 +290,7 @@ function App() {
             </UmbralesProvider>
             </TelefonosEsperandoProvider>
             </PedidosDeCodigoProvider>
-          </TenantSessionProvider>
+          </ConfirmacionProvider>
           </ModalidadesProvider>
           </PermisosProvider>
         </AuthProvider>

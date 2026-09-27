@@ -7,27 +7,31 @@ import {
   registrarEntradaAlPanel,
 } from '../utils/registroDeActividad.js';
 
-// Ítem D del pendiente #30: tope de 5 min de
-// inactividad dentro de la sesión de soporte técnico — se corta en silencio, sin advertencia
-// previa, distinto del tope absoluto de 60 min (que sí advierte a los 50, ver
-// panelSesionTenant.js).
+// EL PERMISO DE ACCESO, DE ESTE LADO.
+//
+// El permiso con el que alguien de CeltaTech entra a los datos de una Prestadora lo abre CeltaTech
+// desde su lado: acá no hay ninguna ruta que lo abra, lo renueve ni lo cierre a pedido. Lo que
+// queda de este lado es hacerlo cumplir, que es lo que no puede vivir en ningún otro lugar: la que
+// decide qué filas ve una consulta es esta base.
+//
+// El corte por inactividad es a los 5 minutos y se hace en silencio. El tope absoluto está escrito
+// en cada fila, en `expira_at`, y es de 60 minutos.
 const INACTIVIDAD_LIMITE_MS = 5 * 60 * 1000;
 
-// Ítem G del pendiente #30: las mutaciones que pasan por rutas Express usan la service
-// role key (backend/src/db/connection.js) — sin JWT de usuario, así que los triggers de
-// auditoria_soporte_tecnico no las ven, porque auth.uid() da NULL dentro de un trigger
-// disparado por una escritura con service role.
-// Se audita acá, a nivel de request, en vez de a nivel de tabla/fila.
+// Las escrituras que pasan por rutas Express usan la llave de servicio
+// (backend/src/db/connection.js) —sin pase de la persona—, así que el disparador que anota en
+// `auditoria_de_accesos` no las ve: `auth.uid()` da NULL adentro de un disparador lanzado por una
+// escritura con esa llave. Se anotan acá, a nivel de pedido, en vez de a nivel de fila.
 const METODOS_MUTACION = ['POST', 'PUT', 'PATCH', 'DELETE'];
 
-async function registrarAuditoriaMutacionExpress({ adminId, prestadoraId, metodo, ruta }) {
-  const { error } = await supabase.from('auditoria_soporte_tecnico').insert({
+async function registrarAuditoria({ adminId, prestadoraId, tipoEvento, detalle }) {
+  const { error } = await supabase.from('auditoria_de_accesos').insert({
     admin_id: adminId,
     prestadora_id: prestadoraId,
-    tipo_evento: 'mutacion',
-    detalle: { metodo, ruta },
+    tipo_evento: tipoEvento,
+    detalle,
   });
-  if (error) console.error('Error registrando auditoría de soporte técnico (Express):', error.message);
+  if (error) console.error('Error registrando la auditoría del acceso:', error.message);
 }
 
 // Ítem H del pendiente #30: decodifica el claim `aal` del JWT ya validado por
@@ -83,24 +87,24 @@ export async function requiereRolPanel(req, res, next) {
   }
 
   let prestadoraId = perfil.prestadora_id;
-  let dentroDeSesionSoporte = false;
+  let conPermisoDeAcceso = false;
 
-  // Etapa 2 de la separación CeltaTech / Careonys (2026-07-28): la sesión de soporte técnico
-  // era exclusiva de admin_plataforma, el rol comercial que se fue a CeltaTech. Ahora es de
-  // superadmin, el rol técnico (CLAUDE.md §5).
-  // Superadmin sin sesión de soporte abierta sigue viendo únicamente su propia Organización
-  // (Sandbox, por su prestadora_id). Con sesión abierta, ve la Prestadora de esa sesión.
-  // Es exactamente el mismo orden de precedencia que la función SQL current_tenant(), que es
-  // el punto único de verdad para RLS (CLAUDE.md §7.12) — acá se replica para que el resto de
-  // las rutas reutilice el mismo req.usuarioPanel.prestadoraId sin branches por rol.
+  // Sin permiso de acceso abierto, el rol técnico ve únicamente su propia Organización —Sandbox,
+  // por su `prestadora_id`—. Con uno abierto, ve la Prestadora de ese permiso.
+  //
+  // Es exactamente el mismo orden que aplica la función SQL `current_tenant()`, que es el punto
+  // único de verdad de la protección por fila: acá se repite para que el resto de las rutas use el
+  // mismo `req.usuarioPanel.prestadoraId` sin preguntar por el rol. Si los dos no dijeran lo mismo,
+  // una ruta armaría la consulta apuntando a una Prestadora y la base la contestaría apuntando a
+  // otra.
   if (perfil.rol === 'superadmin') {
     // SIN PRESTADORA A PROPÓSITO
-    // Busca en qué Prestadora hay una sesión abierta, sin saber de antemano en cuál. Acotarla a
-    // la Organización propia de quien da soporte —que es Sandbox— no encontraría nunca la que
-    // está abierta en otra. No devuelve dato de la Organización; el paso siguiente sí la nombra,
-    // sacada de la fila hallada.
-    const { data: sesion } = await supabase
-      .from('sesiones_soporte_tecnico')
+    // Busca en qué Prestadora hay un permiso abierto, sin saber de antemano en cuál. Acotarlo a la
+    // Organización propia de quien entra —que es Sandbox— no encontraría nunca el que está abierto
+    // en otra. No devuelve dato de la Organización; el paso siguiente sí la nombra, sacada de la
+    // fila hallada.
+    const { data: permiso } = await supabase
+      .from('permisos_de_acceso')
       .select('id, prestadora_id, expira_at, ultima_actividad_at')
       .eq('admin_id', userData.user.id)
       .is('salida_at', null)
@@ -109,37 +113,51 @@ export async function requiereRolPanel(req, res, next) {
       .maybeSingle();
 
     const ahora = new Date();
-    const vigente = Boolean(
-      sesion &&
-        new Date(sesion.expira_at) > ahora &&
-        ahora.getTime() - new Date(sesion.ultima_actividad_at).getTime() <= INACTIVIDAD_LIMITE_MS
-    );
+    const vencioPorTope = Boolean(permiso) && new Date(permiso.expira_at) <= ahora;
+    const vencioPorInactividad =
+      Boolean(permiso) &&
+      ahora.getTime() - new Date(permiso.ultima_actividad_at).getTime() > INACTIVIDAD_LIMITE_MS;
+    const vigente = Boolean(permiso) && !vencioPorTope && !vencioPorInactividad;
 
-    // El cierre real de la sesión vencida (salida_at) lo hace GET /sesion-tenant, que el
-    // frontend hace polling cada 30s — acá alcanza con no exponer prestadoraId si no está
-    // vigente, más info directa a Supabase con RLS queda igual bloqueada por current_tenant().
-    // El polling de estado (GET /sesion-tenant) y el heartbeat de actividad (POST /actividad)
-    // no bumpean acá — /actividad ya lo hace explícitamente, y contar el polling como
-    // actividad real anularía el propio timeout de inactividad.
-    const esRutaPropiaDeSesion = req.baseUrl === '/api/panel/sesion-tenant';
-    if (sesion && vigente && !esRutaPropiaDeSesion) {
+    // ACÁ SE CIERRA EL PERMISO VENCIDO, Y NO EN NINGÚN OTRO LADO.
+    //
+    // No alcanza con dejar de contestar sobre esa Prestadora: mientras la fila siga sin `salida_at`,
+    // `current_tenant()` la sigue encontrando, así que la base seguiría abriéndole el cajón a una
+    // consulta hecha con el pase de esa persona. Y este es el único lugar por el que pasan todos los
+    // pedidos, así que es el único que puede enterarse de que el tiempo se cumplió. Antes lo cerraba
+    // la pantalla que preguntaba cada 30 segundos, y eso hacía depender de una pantalla algo que
+    // tiene que pasar igual con la pantalla cerrada.
+    if (permiso && !vigente) {
       await supabase
-        .from('sesiones_soporte_tecnico')
-        .update({ ultima_actividad_at: ahora.toISOString() })
-        .eq('id', sesion.id)
-        // La Prestadora se nombra igual, aunque el identificador de la sesión ya sea único: colgar
+        .from('permisos_de_acceso')
+        .update({ salida_at: ahora.toISOString() })
+        .eq('id', permiso.id)
+        // La Prestadora se nombra igual, aunque el identificador del permiso ya sea único: colgar
         // de la fila padre es justamente el molde del defecto que se viene cerrando.
-        .eq('prestadora_id', sesion.prestadora_id);
+        .eq('prestadora_id', permiso.prestadora_id);
+
+      await registrarAuditoria({
+        adminId: userData.user.id,
+        prestadoraId: permiso.prestadora_id,
+        tipoEvento: 'logout',
+        detalle: { motivo: vencioPorTope ? 'tope_60min' : 'inactividad_5min' },
+      });
     }
 
-    if (vigente) {
-      prestadoraId = sesion.prestadora_id;
-      dentroDeSesionSoporte = true;
+    if (permiso && vigente) {
+      await supabase
+        .from('permisos_de_acceso')
+        .update({ ultima_actividad_at: ahora.toISOString() })
+        .eq('id', permiso.id)
+        .eq('prestadora_id', permiso.prestadora_id);
+
+      prestadoraId = permiso.prestadora_id;
+      conPermisoDeAcceso = true;
     }
   }
 
-  // `prestadoraId` es la Organización sobre la que se está trabajando ahora (la de la sesión de
-  // soporte si hay una abierta). `organizacionPropiaId` es la Organización a la que pertenece la
+  // `prestadoraId` es la Organización sobre la que se está trabajando ahora (la del permiso de
+  // acceso si hay uno abierto). `organizacionPropiaId` es la Organización a la que pertenece la
   // cuenta en sí, que no cambia al entrar a una Prestadora. Casi todo el código quiere la
   // primera; la segunda hace falta en el único lugar donde importa de quién es la cuenta y no
   // dónde está parada: al dar de alta otra cuenta superadmin (panelUsuarios.js).
@@ -148,7 +166,7 @@ export async function requiereRolPanel(req, res, next) {
     rol: perfil.rol,
     prestadoraId,
     organizacionPropiaId: perfil.prestadora_id,
-    dentroDeSesionSoporte,
+    conPermisoDeAcceso,
   };
 
   // LA ENTRADA ADMINISTRATIVA AL REGISTRO DE ACTIVIDAD.
@@ -158,7 +176,7 @@ export async function requiereRolPanel(req, res, next) {
   // está de verla entrar, y acá pasan todos. La función se ocupa de que no quede un renglón por
   // pedido, y de no interrumpir el trabajo si la escritura falla.
   //
-  // Esto es del registro de la Prestadora, no de la auditoría de soporte técnico: son dos
+  // Esto es del registro de la Prestadora, no de la auditoría de los accesos: son dos
   // preguntas distintas y viven en dos tablas distintas, por el motivo escrito en la migración
   // `20261001110000_registro_de_actividad.sql`.
   registrarEntradaAlPanel(req.usuarioPanel).catch((error) => {
@@ -184,19 +202,16 @@ export async function requiereRolPanel(req, res, next) {
     });
   }
 
-  // La ruta de sesión de soporte (entrar/salir/renovar) ya audita login/logout/renovación
-  // explícitamente (panelSesionTenant.js) — no duplicar acá como "mutacion" genérica.
-  // Solo se audita lo que pasa dentro de una Prestadora ajena: el trabajo de superadmin en su
-  // propia Organización (Sandbox) no genera registro de soporte.
-  const esRutaPropiaDeSesion = req.baseUrl === '/api/panel/sesion-tenant';
-  if (dentroDeSesionSoporte && METODOS_MUTACION.includes(req.method) && !esRutaPropiaDeSesion) {
+  // Sólo se anota lo que se hace adentro de una Prestadora ajena: el trabajo del rol técnico en su
+  // propia Organización —Sandbox— no es un acceso a los datos de nadie.
+  if (conPermisoDeAcceso && METODOS_MUTACION.includes(req.method)) {
     res.on('finish', () => {
       if (res.statusCode >= 200 && res.statusCode < 300) {
-        registrarAuditoriaMutacionExpress({
+        registrarAuditoria({
           adminId: userData.user.id,
           prestadoraId,
-          metodo: req.method,
-          ruta: req.originalUrl,
+          tipoEvento: 'mutacion',
+          detalle: { metodo: req.method, ruta: req.originalUrl },
         });
       }
     });

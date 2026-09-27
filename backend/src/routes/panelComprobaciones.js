@@ -24,7 +24,7 @@ export const panelComprobacionesRouter = Router();
  *   se traba. Queda anotada para que el Coordinador la mire después y la cierre.
  *
  * LA PRESTADORA LA PONE EL BACKEND, NUNCA EL PEDIDO. Las cuatro rutas resuelven la Organización con
- * `req.usuarioPanel.prestadoraId`, que ya trae la de la sesión de soporte si hay una abierta. Un
+ * `req.usuarioPanel.prestadoraId`, que ya trae la del permiso de acceso si hay uno abierto. Un
  * identificador de otra Prestadora no se distingue de uno que no existe: las dos cosas contestan
  * `no_encontrado`.
  *

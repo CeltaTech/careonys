@@ -79,21 +79,28 @@ soporte técnico entre por el lado de CeltaTech, desde celtatech hara lo que ten
 Panel es la herramienta con la que trabaja la Prestadora, y un rol que no es suyo —y que además es
 el más poderoso— no vive ahí.
 
-**La sesión de soporte se queda tal cual está**, con todos sus recaudos: una Organización por vez,
-cartel visible, corte por inactividad, tope absoluto y todo auditado —es regla de la empresa,
-`..\..\CLAUDE.md` §6—. **Lo único que cambia es quién la abre: sólo el soporte de CeltaTech, y
-desde CeltaTech.** Textual del Desarrollador: *«la sesión de soporte ya está construida con todos
-sus recaudos, es cierto, pero solo puede ser accedida desde el soporte de celtatech»*.
+**Para entrar a una Prestadora real hace falta un permiso de acceso**, con todos sus recaudos: una
+Organización por vez, corte por inactividad a los 5 minutos, tope absoluto de 60 y todo auditado
+—es regla de la empresa, `..\..\CLAUDE.md` §6—. **Lo abre CeltaTech desde su lado, y el producto
+no tiene ninguna ruta para abrirlo, renovarlo ni cerrarlo a pedido.** Textual del Desarrollador:
+*«la sesión de soporte ya está construida con todos sus recaudos, es cierto, pero solo puede ser
+accedida desde el soporte de celtatech»*. Qué tiene que construir CeltaTech está escrito en
+`celtatech/docs/EL_PERMISO_DE_ACCESO.md`.
 
-**Y la Prestadora no la ve ni sabe que existe.** Textual: *«la prestadora no la ve, ni siquiera
-sabe que existe»*. Ninguna pantalla del Panel la ofrece, la nombra ni la deja ver abierta. El
-cartel que exige la regla de la empresa es para quien opera el soporte, que es quien tiene que
-saber en qué Organización está parado.
+**La cerradura está acá y la llave es de CeltaTech.** El permiso se anota en esta base porque es
+la que decide qué filas ve una consulta; quién tiene derecho a abrirlo no se anota adentro del
+producto.
+
+**Y la Prestadora no lo ve ni sabe que existe.** Textual: *«la prestadora no la ve, ni siquiera
+sabe que existe»*. Ninguna pantalla del Panel lo ofrece, lo nombra ni lo deja ver abierto. El
+cartel que exige la regla de la empresa es de la herramienta con la que opera CeltaTech.
 - Entrada propia; segundo factor por código temporal, activable desde Configuración.
-- **Acá la Organización ficticia es Sandbox**, y la sesión de soporte se registra en
-  `auditoria_soporte_tecnico`. La forma de esa sesión es la de la empresa y no se toca.
-- La precedencia —sesión de soporte primero, Organización propia después— la define la función
-  SQL `current_tenant()`, y el middleware `requiereRolPanel.js` la refleja, no la reinventa.
+- **Acá la Organización ficticia es Sandbox.** El permiso vive en `permisos_de_acceso` y lo que
+  se hace con él, en `auditoria_de_accesos`. La forma del permiso es la de la empresa y no se toca.
+- La precedencia —permiso de acceso primero, Organización propia después— la define la función
+  SQL `current_tenant()`, y el middleware `requiereRolPanel.js` la refleja, no la reinventa. Ahí
+  vive además el cierre por vencimiento, porque es el único lugar por el que pasan todos los
+  pedidos.
 
 **Admin_prestadora** — administrador operativo, acotado a su propia Organización. Sin acceso a
 otras Prestadoras ni a configuración global.

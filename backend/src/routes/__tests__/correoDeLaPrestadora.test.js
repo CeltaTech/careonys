@@ -140,7 +140,7 @@ beforeEach(() => {
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'admin_prestadora', prestadora_id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/configuracion_plataforma', () => [{ mfa_admin_obligatorio: false }]);
-  respuestas.set('GET /rest/v1/sesiones_soporte_tecnico', () => []);
+  respuestas.set('GET /rest/v1/permisos_de_acceso', () => []);
   // Las dos columnas que se le preguntan a la Prestadora, juntas: la casilla desde la que manda y
   // el reenvío que tiene abierto hoy.
   respuestas.set('GET /rest/v1/prestadoras', () => [

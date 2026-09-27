@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useEmpresa } from '../../context/EmpresaContext';
-import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
+import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import { useEscalasLegales } from '../../hooks/useEscalasLegales';
 import { useFormulasCese } from '../../hooks/useFormulasCese';
 import { yaCargo } from '../../hooks/useCatalogo';

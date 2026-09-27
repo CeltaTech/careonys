@@ -103,8 +103,6 @@ export function SelectorDeLegajo({
           </option>
         ))}
       </FormField>
-
-      {estado === 'vacio' && <p className="panel-explicacion">{t.padron.selector_vacio}</p>}
     </>
   );
 }

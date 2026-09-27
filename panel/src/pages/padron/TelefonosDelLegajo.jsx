@@ -120,8 +120,6 @@ export function TelefonosDelLegajo({ legajoId, puedeEditar }) {
         estado={estado}
         error={error}
         vacio={estado === 'listo' && filas.length === 0}
-        mensajeVacio={tr.sin_telefonos}
-        ayudaVacio={tr.sin_telefonos_ayuda}
         recargar={recargar}
       >
         <ul className="panel-telefonos-lista">

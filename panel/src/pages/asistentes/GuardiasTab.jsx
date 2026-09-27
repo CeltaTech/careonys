@@ -102,8 +102,6 @@ export function GuardiasTab({ asistente }) {
       error={error}
       vacio={estado === 'listo' && datos.filas.length === 0}
       recargar={cargar}
-      mensajeVacio={t.asistentes.historial.vacio}
-      ayudaVacio={t.asistentes.historial.vacio_ayuda}
     >
       <>
         {datos.tope && (

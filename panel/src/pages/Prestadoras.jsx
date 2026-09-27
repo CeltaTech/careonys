@@ -79,8 +79,6 @@ function ContadorDeCorreo() {
         error={error}
         recargar={cargar}
         vacio={estado === 'listo' && correos.del_mes === 0}
-        mensajeVacio={t.prestadoras.correos_vacio}
-        ayudaVacio={t.prestadoras.correos_vacio_ayuda}
       >
         {seAlcanzoElLimite(correos) && <Alert variant="error">{t.prestadoras.correos_tope_alcanzado}</Alert>}
         <table className="panel-tabla">

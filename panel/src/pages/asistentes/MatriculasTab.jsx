@@ -238,10 +238,6 @@ export function MatriculasTab({ asistente }) {
           {tmat.nueva}
         </Button>
       </div>
-      {tiposDeMatricula.length === 0 && estado === 'listo' && (
-        <p className="panel-explicacion">{tmat.sin_tipos_de_matricula}</p>
-      )}
-
       <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && matriculas.length === 0} recargar={recargar} mensajeVacio={tmat.sin_matriculas}>
         <table className="panel-tabla">
           <thead>

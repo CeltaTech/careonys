@@ -303,7 +303,6 @@ describe('el mapa habla los tres idiomas', () => {
     'sin_ubicacion',
     'a_distancia',
     'punto_de_la_solicitud',
-    'vacio_sin_plantel',
     'vacio_sin_ubicacion',
     'vacio_ayuda',
   ];

@@ -75,8 +75,6 @@ export function EvaluacionesTab({ asistente }) {
       error={error}
       vacio={estado === 'listo' && datos.filas.length === 0}
       recargar={cargar}
-      mensajeVacio={t.asistentes.evaluaciones.vacio}
-      ayudaVacio={t.asistentes.evaluaciones.vacio_ayuda}
     >
       <>
         <p className="panel-explicacion">{t.asistentes.evaluaciones.donde_se_cambia}</p>

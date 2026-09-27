@@ -369,9 +369,7 @@ function TareasDelTipo({ tipo, vias, prestadoraId }) {
 
       <h3 style={{ marginTop: '1.5rem' }}>{t.configuracion.tareas_vedadas_titulo}</h3>
       <p className="panel-explicacion">{t.configuracion.tareas_vedadas_explicacion}</p>
-      {vedadas.length === 0 ? (
-        <p className="panel-explicacion">{t.configuracion.tareas_vedadas_ninguna}</p>
-      ) : (
+      {vedadas.length > 0 && (
         <ul>
           {vedadas.map((via) => (
             <li key={via}>{via}</li>

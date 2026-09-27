@@ -145,8 +145,6 @@ export function GuardiasActivasDeLaFamilia({ pacientes }) {
       error={error}
       vacio={estado === 'listo' && datos.filas.length === 0}
       recargar={recargar}
-      mensajeVacio={t.familias.guardias_vacio}
-      ayudaVacio={t.familias.guardias_vacio_ayuda}
     >
       <>
         {datos.tope && (
@@ -317,8 +315,6 @@ export function AlertasDeLaFamilia({ pacientes }) {
       error={error}
       vacio={estado === 'listo' && datos.filas.length === 0}
       recargar={recargar}
-      mensajeVacio={t.familias.alertas_vacio}
-      ayudaVacio={t.familias.alertas_vacio_ayuda}
     >
       <table className="panel-tabla">
         <thead>

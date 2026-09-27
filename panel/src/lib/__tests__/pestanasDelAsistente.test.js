@@ -30,8 +30,6 @@ describe('pestanasDelAsistente', () => {
       'col_registro',
       'col_situacion',
       'sin_registro',
-      'vacio',
-      'vacio_ayuda',
     ]) {
       expect(typeof textos[clave], `falta ${clave} en ${idioma}`).toBe('string');
       expect(textos[clave].length).toBeGreaterThan(0);
@@ -54,8 +52,6 @@ describe('pestanasDelAsistente', () => {
       'visible',
       'no_visible',
       'donde_se_cambia',
-      'vacio',
-      'vacio_ayuda',
     ]) {
       expect(typeof textos[clave], `falta ${clave} en ${idioma}`).toBe('string');
       expect(textos[clave].length).toBeGreaterThan(0);

@@ -30,20 +30,21 @@ import { Button } from '../ui/Button';
        …la tabla…
      </EstadoLista>
 
-   `filtrado` y `onLimpiarFiltros` son opcionales: una pantalla que no los pasa muestra el
-   cartel de "todavía no hay nada".
+   `filtrado` y `onLimpiarFiltros` son opcionales: una pantalla que no los pasa no habla del
+   filtro.
+
+   Y `mensajeVacio` también es opcional. Sin él, la lista vacía no muestra ningún cartel: no hay
+   texto genérico de reemplazo, a propósito. Un espacio vacío no es un problema que haya que
+   explicar, y el cartel que aclara lo obvio le resta claridad a la pantalla.
 
    El vacío llega de dos maneras y las dos valen. La pantalla que hace una cuenta propia —porque
    filtró, o porque junta varias listas— lo dice con `vacio`. La que carga su lista con
    `useCatalogo` no cuenta nada: ahí el vacío es un estado del catálogo y viene adentro de
    `estado`, igual que «cargando» y «error».
 
-   `ayudaVacio` también es opcional, y es el segundo renglón del cartel: el que dice qué hacer.
-   Por defecto es el genérico —"cuando se cargue el primer registro va a aparecer acá"—, pero
-   hay listas donde el vacío no significa que falte cargar algo sino que falta abrir algo. La
-   pantalla de Auditoría es una: fuera de una sesión de soporte, el Superadmin no está mirando
-   una lista incompleta sino la Organización de pruebas, y el cartel tiene que decirlo. Como
-   siempre, el texto sale de las traducciones, no de acá. */
+   `ayudaVacio` también es opcional, y es el segundo renglón del cartel. No tiene valor por
+   defecto: sin él, el cartel es una sola frase. Como siempre, el texto sale de las
+   traducciones, no de acá. */
 export function EstadoLista({
   estado,
   error,
@@ -91,11 +92,15 @@ export function EstadoLista({
       );
     }
 
-    // Sin filtros: no hay ni un dato todavía, y la salida es crear el primero.
+    // Sin filtros: no hay ni un dato todavía. Acá no hay nada que decir, y no se dice nada:
+    // una lista vacía se entiende mirándola. La pantalla que sí tiene algo propio que decir
+    // —o un botón que ofrecer— lo pasa; la que no pasa nada no muestra ningún cartel.
+    if (!mensajeVacio && !accionVacio) return null;
+
     return (
       <div className="estado-vacio-bloque" role="status">
-        <p className="estado-vacio-titulo">{mensajeVacio || t.comun.sin_datos_titulo}</p>
-        <p className="estado-vacio">{ayudaVacio || t.comun.sin_datos_ayuda}</p>
+        {mensajeVacio && <p className="estado-vacio-titulo">{mensajeVacio}</p>}
+        {ayudaVacio && <p className="estado-vacio">{ayudaVacio}</p>}
         {accionVacio}
       </div>
     );

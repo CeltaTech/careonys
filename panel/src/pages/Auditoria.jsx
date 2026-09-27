@@ -40,7 +40,6 @@ export function Auditoria() {
   const [errorActividad, setErrorActividad] = useState(null);
 
   const esSuperadmin = usuario?.rol === 'superadmin';
-  const sinSesionDeSoporte = esSuperadmin && !sesion;
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -141,8 +140,6 @@ export function Auditoria() {
         error={error}
         vacio={estado === 'listo' && eventos.length === 0}
         recargar={recargar}
-        mensajeVacio={sinSesionDeSoporte ? t.auditoria.vacio_sin_sesion_titulo : undefined}
-        ayudaVacio={sinSesionDeSoporte ? t.auditoria.vacio_sin_sesion_ayuda : undefined}
       >
         <table className="panel-tabla">
           <thead>

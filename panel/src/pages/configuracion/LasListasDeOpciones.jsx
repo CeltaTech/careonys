@@ -184,7 +184,7 @@ function OpcionesDeLaLista({ lista }) {
         </table>
       </EstadoLista>
 
-      {lista.admite_opciones_propias ? (
+      {lista.admite_opciones_propias && (
         <div className="panel-detalle">
           <h3>{t.configuracion.listas_agregar_titulo}</h3>
           <FormField
@@ -197,8 +197,6 @@ function OpcionesDeLaLista({ lista }) {
             {agregando ? t.comun.guardando : t.configuracion.listas_agregar}
           </Button>
         </div>
-      ) : (
-        <p className="panel-explicacion">{t.configuracion.listas_cerrada}</p>
       )}
     </div>
   );

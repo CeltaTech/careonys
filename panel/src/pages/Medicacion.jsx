@@ -108,7 +108,7 @@ export function Medicacion() {
       <p className="panel-explicacion">{t.medicacion.explicacion}</p>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
 
-      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && pendientes.length === 0} recargar={recargar} mensajeVacio={t.medicacion.sin_pendientes}>
+      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && pendientes.length === 0} recargar={recargar}>
         {pendientes.map((fila) => (
           <div key={fila.id} className="panel-card-verificacion" style={{ marginBottom: '1rem' }}>
             <p>

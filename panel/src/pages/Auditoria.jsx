@@ -3,7 +3,6 @@ import { useLocale } from '../i18n/LocaleContext';
 import { supabase } from '../lib/supabaseClient';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
-import { useAuth } from '../context/AuthContext';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -23,15 +22,12 @@ async function llamarApi(path) {
 // vive el filtro.
 export function Auditoria() {
   const { t, locale } = useLocale();
-  const { usuario } = useAuth();
   const [eventos, setEventos] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [actividad, setActividad] = useState([]);
   const [estadoActividad, setEstadoActividad] = useState('cargando');
   const [errorActividad, setErrorActividad] = useState(null);
-
-  const esSuperadmin = usuario?.rol === 'superadmin';
 
   const recargar = useCallback(async () => {
     setEstado('cargando');

@@ -89,7 +89,6 @@ export function Layout() {
   const { cuentas: telefonosEsperando } = useTelefonosEsperando();
 
   const esAdmin = esAdminOSuperior(usuario?.rol);
-  const esSuperadmin = usuario?.rol === 'superadmin';
   // El nombre de cada modalidad sale de lib/modalidades.js, que es el mismo lugar del que lo
   // toma el candado de la dirección (App.jsx): si el enlace y la pantalla no leyeran la misma
   // constante, podrían dejar de coincidir sin que nadie lo note.
@@ -213,7 +212,6 @@ export function Layout() {
         { a: '/marketplace/auditoria-legal', texto: t.nav.marketplace_auditoria_legal, ver: marketplace },
         { a: '/importacion', texto: t.nav.importacion, ver: esAdmin || puede('importar_datos_masivos') },
         { a: '/habilitar-clave', texto: t.nav.habilitar_clave, ver: esAdmin || puede('habilitar_cambio_de_clave'), contador: telefonosEsperando.length },
-        { a: '/prestadoras', texto: t.nav.prestadoras, ver: esSuperadmin },
       ],
     },
   ];

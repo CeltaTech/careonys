@@ -26,6 +26,19 @@ puesto, qué quedaría si se lo saca, y los problemas que se ven ahí.
 **Los problemas que figuran al final de cada ficha son observaciones, no decisiones.** Nada de esto
 se tocó ni se va a tocar sin orden.
 
+**Quién decide, y de dónde sale la decisión.** Las decisiones las fijó el Desarrollador en
+`docs/CARTELES_DEL_PANEL.docx`, «Criterios definitivos para los carteles del Panel», punto 15. **Ese
+documento manda sobre éste:** cada ficha cierra con la decisión que le corresponde, copiada textual
+de ahí y sin interpretarla. Las cinco acciones posibles son BORRAR —que significa ningún cartel, y
+nunca uno más corto—, CAMBIAR, AJUSTAR, DEJAR y REVISAR.
+
+**Y el punto 13 de ese documento es obligatorio: no se redacta libremente.** Acá se detecta, se
+ubica, se describe y se aplica exactamente un texto aprobado. Donde hace falta un texto y no hay uno
+aprobado, queda escrito que falta definirlo. Nunca se inventa.
+
+**El relevamiento son veintiséis, y el punto 15 avisa que no alcanza:** «hay que evaluar
+absolutamente todos». Lo que todavía no se relevó está anotado al pie.
+
 ---
 
 # PARTE I — Los dos carteles de fábrica
@@ -83,6 +96,12 @@ al lado: dice que no hay nada y no dice qué hacer ni adónde ir.
 El cuarto es que el segundo renglón describe cómo funciona el programa —que hay una lista, que se
 cargan registros, que los registros aparecen— en vez de decirle a quien lee qué le toca hacer.
 
+
+**Decisión del Desarrollador: BORRAR.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> Ningún cartel.
+
 ---
 
 ## 2. El cartel de filtro sin resultados
@@ -123,6 +142,12 @@ eligió un estado lee una frase que no habla de lo que hizo.
 
 El tercero es que hay pantallas que nunca llegan a este cartel aunque tengan filtros: Documentación
 es una, porque su filtro de arranque no cuenta como filtro y la manda siempre al cartel genérico.
+
+
+**Decisión del Desarrollador: CAMBIAR.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> «No encontramos resultados. Revise los filtros seleccionados.» (solo se aplica si realmente el usuario interactúa con la lista, caso contrario no existe ningún mensaje)
 
 ---
 
@@ -176,6 +201,12 @@ El tercero es que el segundo renglón explica la regla del Padrón —que cada u
 y después se lo cita— en vez de decir qué hacer ahora. Es una buena regla y está bien que exista;
 el lugar donde está escrita es el que no corresponde.
 
+
+**Decisión del Desarrollador: Borrar.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> No hay ningún mal en que la pantalla este vacia. La misma dejara de estarlo cuando cargue a su primer cliente. Es tan obvio que es insultante mencionarlo
+
 ---
 
 ## 4. El casillero que elige del Padrón, cuando el Padrón está vacío
@@ -223,6 +254,16 @@ El tercero es que es una explicación debajo de un casillero, que es justo lo qu
 El cuarto es que el desplegable queda con aspecto de estar usable —se abre, tiene buscador, dice
 «Sin elegir»— cuando adentro no hay ni una opción.
 
+
+**Decisión del Desarrollador: Borrar.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> Si no hay datos en el padrón (¿de clientes?)a cuento de que hay que mostrar algún mensaje aclarando nada
+
+Y en la columna del problema dejó escrita esta pregunta, que sigue sin contestar:
+
+> ¿Qué carajo es un selector?
+
 ---
 
 ## 5. Los teléfonos de la ficha de un Legajo
@@ -261,6 +302,12 @@ cargar varios; el botón lo demuestra apretándolo.
 
 El segundo es que el bloque sólo existe al corregir un Legajo, nunca al darlo de alta, así que quien
 lee este cartel ya cargó a esa persona entera y no es su primera vez en la pantalla.
+
+
+**Decisión del Desarrollador: BORRAR.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> Ningún cartel.
 
 ---
 
@@ -326,6 +373,12 @@ casillero donde se elige, es el título de la subsección entera, y es el rengl�
 elegido. El tercero es que la frase «Se configura en Configuración» dice la misma palabra dos veces
 en cinco palabras, y aun así no dice en qué parte de esa pantalla hay que buscar.
 
+
+**Decisión del Desarrollador: CAMBIAR.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> Por favor cargar [documentación] en [lugar donde hacerlo].
+
 ---
 
 ## 7. Cuando las personas autorizadas no tiene instrucción firmada
@@ -385,6 +438,12 @@ El cuarto es que si la lista de las personas autorizadas falla al cargar, este t
 condiciones es que la lista haya cargado bien—, y la sección queda muda sobre la firma: no dice que
 está ni que falta.
 
+
+**Decisión del Desarrollador: CAMBIAR.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> Reemplazar «Personas autorizadas» por «Personas autorizadas» Ningún mensaje
+
 ---
 
 ## 8. Cuando el Cliente no tiene guardias por delante
@@ -428,6 +487,12 @@ nada. Son dos situaciones distintas con el mismo cartel.
 
 El tercero es que el segundo renglón promete de más: dice que las guardias que se programen van a
 aparecer acá, y la lista muestra hasta cincuenta y descarta lo cancelado y lo terminado.
+
+
+**Decisión del Desarrollador: BORRAR.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> (la columna quedó vacía)
 
 ---
 
@@ -475,6 +540,12 @@ cartel en vez de que se le diga que no tiene a quién atenderle.
 El cuarto es que no nombra la pantalla de Reportes diarios, que es donde se ven todos y donde se
 resuelve lo que quedó sin confirmar.
 
+
+**Decisión del Desarrollador: CAMBIAR.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> Si hace falta cartel: «No existen reportes aún.»
+
 ---
 
 ## 10. Cuando el Cliente no tiene alertas sin resolver
@@ -515,22 +586,38 @@ primer renglón. Lo que aporta está en la segunda mitad.
 
 El tercero es la misma confusión de las dos secciones anteriores con el Cliente sin Pacientes.
 
+
+**Decisión del Desarrollador: Borrar.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> (la columna quedó vacía)
+
 ---
 
 ## 11. Cuando no figura nadie coordinando a esa persona
 
-**Este cartel salió de esta revisión y pasó al plan del Servicio**, en
-`docs/PLAN_EL_ACTO_DE_ARMAR_UN_SERVICIO.md`, paso 7.
+**Lo que preguntó el Desarrollador acá no se contesta desde este documento, y pasó al plan del
+Servicio**, en `docs/PLAN_EL_ACTO_DE_ARMAR_UN_SERVICIO.md`, paso 7.
 
-Llegó acá como un cartel —«Nadie por ahora.», en la sección **«Quién coordina»** de la ventana del
-equipo de un Paciente—, y la revisión mostró que lo que tiene no es un problema de redacción: el
-vacío es la señal de que falta asignar quién coordina, y eso se resuelve donde el Servicio se arma.
-La baja del cartel está ejecutada —la sección entera queda oculta mientras la lista está vacía—, y
-**si ese ocultamiento se revierte lo decide el Desarrollador en el plan del Servicio**, no acá. Por
-eso las dos claves de traducción de esa sección no se borraron.
+El cartel es «Nadie por ahora.», en la sección **«Quién coordina»** de la ventana del equipo de un
+Paciente. La decisión del punto 15 es **CAMBIAR**, y lo que pide es que se conteste para qué sirve
+mostrar eso ahí, diciendo además que **eso no lo decide Claude Code**. La respuesta depende de algo
+que hoy no existe: el acto de armar el Servicio, donde se asigna quién coordina. Mientras no exista,
+el vacío es la señal de que falta esa asignación.
 
-El número 11 se conserva vacío a propósito: los carteles se nombran por su número y renumerarlos
-dejaría sin sentido todo lo ya decidido sobre los demás.
+**Hay un error ejecutado acá, y es mío.** Se trató este cartel como si la decisión fuera BORRAR: la
+sección entera quedó oculta mientras la lista está vacía. La decisión era CAMBIAR y la pregunta
+seguía abierta, así que **eso no correspondía y corresponde revertirlo**. Espera la indicación del
+Desarrollador. Por eso las dos claves de traducción de esa sección no se borraron.
+
+El número 11 se conserva a propósito: los carteles se nombran por su número y renumerarlos dejaría
+sin sentido todo lo ya decidido sobre los demás.
+
+
+**Decisión del Desarrollador: CAMBIAR.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> ¿Cuál es la utilidad de mostrar esta información aquí? Si no hay nada que realmente lo justifique (y eso no lo decide Claude code) directamente no tiene sentido algún mensaje
 
 ---
 
@@ -589,6 +676,12 @@ realmente se revisó. El segundo es que los dos renglones dicen la misma cosa do
 negativo y otra en positivo, y ninguno agrega nada: el segundo renglón es el lugar donde
 normalmente va qué hacer o qué va a hacer aparecer algo acá, y acá se usa para repetir.
 
+
+**Decisión del Desarrollador: CAMBIAR.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> Si todo esta en orden no hace falta ningún mensaje, si hay guardias si cerrar se muestran, y si corresponde a la pantalla también como se solucionan
+
 ---
 
 ## 13. Cuando hay que armar un turno y no figura ninguna persona a atender
@@ -645,6 +738,12 @@ personas que se atienden en este turno»— pide algo imposible en ese momento y
 segundo es que el cartel cuenta mal el hecho cuando dice «todavía»: la lista deja afuera a las
 personas dadas de baja, así que una empresa que tuvo Pacientes y cerró la atención de todos ellos va
 a leer que no cargó ninguno todavía, que es exactamente lo contrario de lo que pasó.
+
+
+**Decisión del Desarrollador: BORRAR.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> Si no hay pacientes no hay guardias
 
 ---
 
@@ -709,6 +808,12 @@ la suerte. El segundo es que la explicación de la sección queda puesta arriba 
 escrita como una orden a cumplir ahora —averigüe, y recién entonces suelte el código—, cuando abajo
 dice que no hay nadie a quien atender. Las dos frases juntas se leen mal.
 
+
+**Decisión del Desarrollador: AJUSTAR.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> Si se considera necesario: «Esperando código de pase.»
+
 ---
 
 ## 15. Cuando no quedó ninguna llegada o salida pendiente de revisar
@@ -764,6 +869,12 @@ y el cartel sólo cuenta una. Leído tal cual, borra de la vista un problema que
 segundo es que el primer renglón nunca dice ninguna qué: «No quedó ninguna sin comprobar», suelto,
 no nombra el sujeto, y hay que subir hasta el título de la sección para saber que se está hablando
 de llegadas y salidas.
+
+
+**Decisión del Desarrollador: CAMBIAR.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> Si esto es en el Panel de control el mensaje podría ser (en caso de corresponder alguno): «Existen llegadas o salidas sin comprobar.» Si es en las app hay que estudiarlo
 
 ---
 
@@ -822,6 +933,12 @@ significa justamente lo contrario: que no quedó nada por revisar, que es la bue
 dice «el primer registro» como si nunca hubiera habido ninguna, cuando lo más probable es que
 hubiera muchas y ya estén todas resueltas.
 
+
+**Decisión del Desarrollador: Borrar.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> Si no hay nada que decir mejor no decir nada
+
 ---
 
 # Plantel → Plantel de Asistentes → una persona
@@ -867,6 +984,12 @@ terminado ni empezado nada.
 El tercero es que es un callejón sin salida justo cuando más falta hace: el renglón que manda a la
 pantalla de Guardias sólo sale cuando hay filas, así que la persona que no tiene ninguna es
 exactamente la que no recibe la indicación de adónde ir a asignarle una.
+
+
+**Decisión del Desarrollador: BORRAR.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> Si no hay nada que decir mejor no decir nada
 
 ---
 
@@ -915,6 +1038,12 @@ en cero igual.
 
 El cuarto es que es una explicación puesta debajo de un control, en el lugar de una lista.
 
+
+**Decisión del Desarrollador: BORRAR.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> Si no hay nada que decir mejor no decir nada
+
 ---
 
 ## 19. Cuando esa persona no recibió ninguna evaluación
@@ -957,6 +1086,12 @@ estar. El segundo renglón no agrega nada.
 
 El cuarto es menor y es de forma: este título termina en punto, y los títulos de los demás carteles
 del Panel no llevan punto.
+
+
+**Decisión del Desarrollador: BORRAR.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> Si no hay nada que decir mejor no decir nada
 
 ---
 
@@ -1016,6 +1151,12 @@ como título del cartel y otra como renglón de ayuda. Y donde tendría que esta
 que explica qué hacer o qué esperar— no hay nada: el texto que existe para eso, «Las fichas con el
 domicilio ubicado aparecen acá.», nunca se llega a mostrar en esta situación.
 
+
+**Decisión del Desarrollador: BORRAR.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> Si no hay nada que decir mejor no decir nada
+
 ---
 
 ## 21. Mapa del plantel — cuando hay plantel pero ninguna ubicación cargada
@@ -1065,6 +1206,12 @@ muestra ningún cartel: si se elige una zona que no tiene a nadie ubicado, el di
 sin puntos y no aparece ninguna explicación, porque el cartel sólo mira el total del plantel y no la
 zona elegida.
 
+
+**Decisión del Desarrollador: CAMBIAR.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> No ubica la situación, asi que no puedo decir si va o no va algún cartel
+
 ---
 
 # Ajustes → Prestadoras
@@ -1113,6 +1260,12 @@ no salió ninguno. Y el segundo renglón dice que las cuentas «aparecen acá» 
 como si antes no existieran: existen, valen cero, y lo que las esconde es esta misma decisión de tapar
 la tabla. Además, tapar la tabla tapa también los topes, que es la única parte del Panel donde se ven
 cuáles son.
+
+
+**Decisión del Desarrollador: BORRAR.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> Si no hay nada que decir mejor no decir nada
 
 ---
 
@@ -1177,6 +1330,12 @@ Aparte de eso, esta pantalla le nombra al usuario la sesión de soporte técnico
 pruebas, dos cosas que por regla la Prestadora no ve ni sabe que existen. Eso ya está informado como
 asunto aparte.
 
+
+**Decisión del Desarrollador: BORRAR.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> Si no hay nada que decir mejor no decir nada
+
 ---
 
 # Ajustes → Configuración → Listas de opciones
@@ -1233,6 +1392,12 @@ la misma pantalla, dice que cada lista trae las opciones del producto y además 
 Prestadora. Lo que distingue a ésta no es venir del producto, es no admitir agregados. Leído tal cual,
 sugiere que las otras listas no vienen del producto, que es falso. Además, no dice de quién depende
 eso ni a quién pedírselo: queda como una puerta cerrada sin llave conocida.
+
+
+**Decisión del Desarrollador: BORRAR.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> Si no hay nada que decir mejor no decir nada
 
 ---
 
@@ -1293,6 +1458,12 @@ lee como un permiso amplio cuando en realidad no hay nada configurado todavía. 
 sección está escrito en negativo, «Además, no puede administrar estas vías», de modo que la secuencia
 que se lee es una prohibición seguida de la palabra «Ninguna», que obliga a releer para entender que
 no hay ninguna prohibición.
+
+
+**Decisión del Desarrollador: BORRAR.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> Si no hay nada que decir mejor no decir nada
 
 ---
 
@@ -1355,6 +1526,12 @@ Prestadora, el aviso aparece igual pero los botones para resolverlo no están, a
 y no hay ninguna manera de actuar desde ahí; el aviso tampoco dice a quién hay que pedírselo, eso está
 escrito más arriba en otro recuadro.
 
+
+**Decisión del Desarrollador: CAMBIAR.** Del punto 15 de
+`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
+
+> Debe indicar únicamente que falta la credencial necesaria, con una redacción formal y sencilla. Texto a aprobar. Quiero suponer que en ninguna pantalla dice «La Prestadora»
+
 ---
 
 # Lo que queda afuera de este documento
@@ -1366,3 +1543,16 @@ analicen en detalle los procedimientos y la lógica de esa pantalla. Textual: *�
 particular, ningún cartel es mas útil que tener uno vacío esperando. Puede llega a aparecer uno, y
 hay que analizar en detalle primero los procedimientos y la lógica de los mismos antes de decir si o
 no cuando eventualmente surja la necesidad»*. No se toca y no se opina sobre él acá.
+
+**Lo que el punto 15 manda evaluar y todavía no se relevó.** Su título dice «Aplicación algunos de
+los casos, hay que evaluar absolutamente todos», así que los veintiséis de acá no cierran la
+revisión. Falta relevar, con la misma ficha de ocho apartados:
+
+1. Los textos al pie de los casilleros, cuando un dato está mal cargado.
+2. Los avisos de «se guardó».
+3. Las ventanas de confirmar.
+4. Los carteles de las dos aplicaciones de teléfono, la de los Clientes y la de los Asistentes.
+5. El cartel de Habilitar clave, que está parado por la decisión de arriba.
+
+**Y el punto 8 abre un trabajo aparte**, que no es de carteles: eliminar el tuteo y el voseo de todo
+el Panel y de las dos aplicaciones, sin excepción.

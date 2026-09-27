@@ -61,6 +61,7 @@ import { LasListasDeOpciones } from './pages/configuracion/LasListasDeOpciones';
 import { ConfiguracionAvisos } from './pages/configuracion/Avisos';
 import { ConfiguracionAplicaciones } from './pages/configuracion/LasAplicaciones';
 import { ConfiguracionAccesos } from './pages/configuracion/Accesos';
+import { SoporteTecnico } from './pages/configuracion/SoporteTecnico';
 import { Medicacion } from './pages/Medicacion';
 import { Importacion } from './pages/Importacion';
 import { InformesObraSocial } from './pages/InformesObraSocial';
@@ -223,6 +224,7 @@ function App() {
                       <Route path="avisos" element={<ConfiguracionAvisos />} />
                       <Route path="aplicaciones" element={<ConfiguracionAplicaciones />} />
                       <Route path="accesos" element={<ConfiguracionAccesos />} />
+                      <Route path="soporte" element={<SoporteTecnico />} />
                     </Route>
                     <Route path="mi-clave" element={<MiClave />} />
                     {/* La seguridad de la propia cuenta la tiene cualquiera que entre al Panel:

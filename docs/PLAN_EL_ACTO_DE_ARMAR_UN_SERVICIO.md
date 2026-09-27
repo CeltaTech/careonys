@@ -344,16 +344,81 @@ tres diferencias:
 
 | | Hoy | Lo que fijó el Desarrollador |
 |---|---|---|
-| Cuántos | varios a la vez | **una sola persona** |
-| Cómo se llega | se deduce de las zonas | **se asigna a mano al acordar el Servicio** |
+| Quién responde por el Servicio | nadie en particular: una lista deducida de las zonas | **una sola persona, asignada** |
+| Cómo se llega | el sistema la deduce | **se asigna a mano al acordar el Servicio** |
 | Si falta | el Servicio funciona igual | **el Servicio no se habilita** |
 
-La segunda persona no desaparece, pero no es lo corriente: es **eventual, por una emergencia**. Así
-que es una excepción anotada como tal, no una lista abierta.
+#### Responder por el Servicio y ver una emergencia son dos cosas distintas
+
+Lo precisó el Desarrollador, textual:
+
+> Se asigna una sola ppersona, pero, creo que desto hablamos mucho, las emergencias las ven todos, un
+> problema nunca puede quedar si resolver a causa de que, por alguna causa, la persona asignada no
+> este disponible para resolverla
+
+Entonces **«una sola persona» es la responsabilidad, no la visibilidad.** Lo asignado es quién
+responde por ese Servicio y quién arma su equipo. Una emergencia la ve cualquiera que pueda
+resolverla, y eso no depende de quién esté asignado: **ningún problema queda sin resolver porque la
+persona asignada no esté disponible.**
+
+**Esto ya funciona así, y no se toca.** La bandeja de emergencias del Panel acota los avisos **a la
+Prestadora y a nada más** —`backend/src/routes/panelEmergencias.js`, con `acotarAPrestadora`—: no
+filtra por lugar, ni por zona, ni por quién coordina. Verificado: en ese archivo no aparece ninguna
+mención de lugares ni de coordinador. Quien tiene el permiso las ve, y así queda.
+
+**Y hay un mecanismo más, que también queda como está.** Cuando un aviso lleva demasiado tiempo sin
+respuesta, pasa al coordinador de respaldo de la Prestadora, configurado a mano en
+`configuracion_escalada_coordinador` y ejecutado por
+`backend/src/utils/revisarNotificacionesCoordinador.js`. Es una red distinta de la anterior —espera
+una cantidad de minutos y avisa a una persona concreta— y las dos conviven.
+
+**La consecuencia para este paso es una sola, y es lo que hay que cuidar al construirlo:** la
+asignación no puede convertirse en un filtro de visibilidad. Asignar a una persona dice quién
+responde; **no le saca la emergencia de la vista a nadie.**
 
 **Lo que esto obliga en el paso 4.** La asignación de quién coordina es una de las cuatro cosas que
 se dicen al armar el Servicio, y **es requisito para habilitarlo**: sin ella el Servicio queda sin
 habilitar, y eso se ve.
+
+#### El sistema sugiere y la administración decide
+
+El Desarrollador lo precisó, textual:
+
+> El sistema va a "sugerir" a que coordinador asignarle el servicio, en administracion, cuando dan de
+> alta el servicio aceptan o rechazan la sugerencia.
+>
+> Al sugerir el sistema tiene en cuenta la zona o lugares donde el coordinador tiene centrada su mayor
+> carga de trabajo y que tan grande es esa carga de trabajo. A un coordinador de berazategui
+> dificilmente se le asigne un nuevo servicio en san isidro
+
+Es la misma forma que ya rige para las Asistentes: **el sistema adivina y sugiere, pero no asigna.**
+Acá la sugerencia se acepta o se rechaza al dar de alta el Servicio, y quien decide es administración.
+
+**Son dos criterios, y ninguno de los dos existe hoy.**
+
+| El criterio | Qué hace falta | Qué hay |
+|---|---|---|
+| Dónde tiene centrada su carga | contar el trabajo por lugar, y quedarse con los lugares donde se concentra | nada |
+| Qué tan grande es esa carga | contar cuánto trabajo tiene encima | nada |
+
+**Por qué no existen, verificado en el código.** No hay ningún mecanismo que sugiera un coordinador:
+lo único parecido es `coordinadoresDelEquipo()` —`panel/src/lib/equipoDelPaciente.js:226`—, que
+**deduce** una lista por zona y no propone a nadie. Y toda la carga que el sistema mide hoy es **de
+Asistentes**, no de coordinadores: `resumenDelPlantel.js:51` cuenta guardias por Asistente y
+`candidatos.js:283` cuenta sus horas semanales. Lo único que se cuenta por usuario del Panel es
+**cuántos lugares alcanza** —`backend/src/routes/panelUsuarios.js:65-77`, mostrado en
+`panel/src/pages/UsuariosPanel.jsx:92`—, que es hasta dónde llega, no cuánto trabajo tiene ahí.
+
+**Y falta una sola pieza para que los dos criterios se puedan calcular: que cada Servicio tenga su
+coordinador anotado.** Hoy nadie está atribuido a un coordinador concreto, y los lugares de dos
+coordinadores se solapan libremente —`usuario_lugares` no tiene exclusividad—, así que un Paciente de
+un lugar compartido cuenta para todos los que lo alcanzan: repartir esa carga sería inventarla. Con
+la asignación de este paso hecha, contar por lugar sale cruzando con `pacientes.lugar_id`.
+
+**Orden, entonces:** primero la asignación —que es lo que crea el dato—, y la sugerencia después, con
+los Servicios ya asignados. Las dos columnas donde eso podría anotarse ya existen y **hoy no las
+escribe nadie**: `equipo_paciente.usuario_id` sólo se llena a mano, y `guardias.coordinador_id` no la
+escribe ninguna línea del Panel ni del backend. Cuál de las dos se usa es parte de este paso.
 
 **FALTA DEFINIR EL TEXTO** del tercer estado —el de la vacante, cuando quien coordinaba deja la
 función y el rol lo cubre la administración—. Es texto visible y lo aprueba el Desarrollador.

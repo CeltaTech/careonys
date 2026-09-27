@@ -265,7 +265,7 @@ suyo:
 |---|---|---|
 | **Servicio** | el acuerdo entero | cuidado domiciliario, por tiempo indeterminado |
 | **Prestación** | cada cosa del acuerdo, con su precio y sus propios días y horarios | el cuidado por horas; aparte, la kinesiología |
-| **Guardia** | el período que hay que cubrir sin interrupción, y de qué es | la de cuidados: los 7 días, de 00:00 a 24:00. Aparte, la de enfermería |
+| **Guardia** | el cuidado a cubrir, con sus días y su horario, y de qué es | la de cuidados: los 7 días, de 00:00 a 24:00. Aparte, la de enfermería, de 8 a 14 los martes |
 | **Turno de guardia** | la parte que cubre una Asistente, hasta que entrega las responsabilidades | tres turnos de ocho horas, tres personas |
 
 Lo del paso 1 se carga en el segundo nivel: los días y horarios de una Prestación. Un renglón puede

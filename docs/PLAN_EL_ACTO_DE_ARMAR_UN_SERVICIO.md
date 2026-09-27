@@ -138,7 +138,7 @@ noche hay que cancelar y volver a cargar, y la continuidad se pierde.
 
 `PrestacionesPaciente.jsx:466` y `:470` pausan **todos** los turnos programados y **todas** las
 series activas del Paciente de una vez. `:528` y `:529` los reactivan igual, en bloque. No hay forma
-de suspender una sola serie, ni un tramo, ni de decir hasta cuándo.
+de suspender una sola serie, ni uno de los horarios pactados, ni de decir hasta cuándo.
 
 ### 4.5. La zona está modelada y cargada, y las dos decisiones que dependen de ella la ignoran
 
@@ -242,28 +242,56 @@ esté hecho.
 
 Reemplazar en **Clientes › Familias › ficha › Prestaciones del Paciente** los dos casilleros de texto
 libre por la misma forma que ya tiene la serie: días de la semana marcados, hora de inicio y hora de
-fin, y la posibilidad de cargar más de un tramo.
+fin, y la posibilidad de cargar más de un renglón.
 
 Lo pactado pasa a guardarse como dato, en tabla propia y no adentro del campo de configuración
 —`prestaciones.configuracion` es un campo sin forma, y una cuenta no se puede apoyar ahí—. Cada
-tramo lleva sus días, su hora de inicio y su hora de fin, y apunta a la Prestación.
+renglón lleva sus días, su hora de inicio y su hora de fin, y apunta a la Prestación.
 
-**Falta que el Desarrollador apruebe el nombre de esa tabla y de sus columnas** antes de escribir la
-migración: lo guardado se nombra por lo que hace y no se renombra nunca (`celtatech/CLAUDE.md` §8), y
-no se inventan nombres.
+**Esto no necesita ninguna palabra nueva, y el glosario ya lo tenía resuelto.** Lo que se guarda son
+**los días y horarios de una Prestación**, con más de un renglón cuando haga falta. El glosario de los
+productos Careonys ya dice las dos cosas: la Prestación es «cada cosa del acuerdo, con su precio»
+—`celtatech/docs/GLOSARIO_PRODUCTOS_CAREONYS.md:37`— y del Servicio dice «cada cosa del acuerdo tiene
+sus propios días y horarios» —`:36`—. Así que la tabla se nombra por eso y no hay nada que decidir.
+
+**Y la palabra «tramo» no se usa acá**, porque en este producto ya nombra otra cosa: los renglones de
+premura con los que se le insiste al Coordinador —`panel/src/i18n/translations.js:689`, «Agregar un
+tramo»— y el período liquidado, que por dentro es `col_tramo`.
+
+**Y lo pactado no se carga con la forma de un turno.** Son cuatro niveles y cada renglón vive en el
+suyo:
+
+| | Qué es | Ejemplo del caso de la familia «XX» |
+|---|---|---|
+| **Servicio** | el acuerdo entero | cuidado domiciliario, por tiempo indeterminado |
+| **Prestación** | cada cosa del acuerdo, con su precio y sus propios días y horarios | el cuidado por horas; aparte, la kinesiología |
+| **Guardia** | el período que hay que cubrir sin interrupción | los 7 días, de 00:00 a 24:00 |
+| **Turno de guardia** | la parte que cubre una Asistente, hasta que entrega las responsabilidades | tres turnos de ocho horas, tres personas |
+
+Lo del paso 1 se carga en el segundo nivel: los días y horarios de una Prestación. Un renglón puede
+ir de 00:00 a 24:00, y ningún turno puede. **Repartir la guardia en turnos es trabajo de quien
+coordina**, y es lo que el paso 2 compara contra lo pactado.
+
+**Y hay un desajuste de nombre guardado que decide el Desarrollador, porque tocarlo no es gratis.**
+Lo que la base llama `guardias` es el turno: cada fila lleva una Asistente, un día, una hora de
+inicio y una de fin, con su check-in y su check-out
+—`supabase/migrations/20260819160000_foto_de_la_base.sql:2043-2062`—. El nivel de la guardia
+completa, el período repartido entre varias, **no tiene tabla**. Las dos salidas son quedarse con el
+nombre como está y entender que una fila es un turno, o renombrar lo guardado, que es una migración
+de datos sobre `guardias`, `series_guardias` y todo lo que las nombra.
 
 Qué queda afectado: el insert de `PrestacionesPaciente.jsx:238`, la tabla de prestaciones vigentes de
 esa misma pantalla, y la siembra de datos de prueba.
 
 ### Paso 2. La cuenta de lo pactado contra lo cubierto
 
-Un punto único de verdad que reciba un Servicio y un período y conteste qué tramos pactados no están
+Un punto único de verdad que reciba un Servicio y un período y conteste qué horarios pactados no están
 cubiertos por ninguna serie vigente, con su día y su horario. Una sola función que consuman los tres
 momentos y las pantallas, nunca la misma resta escrita en cada lugar
 (`celtatech/CLAUDE.md` §8, punto único de verdad).
 
 Qué tiene que resolver, y está verificado que hoy nada lo hace: que una serie cubra a varios
-Pacientes, que un tramo pactado lo cubran dos series distintas, que una serie pausada no cuente como
+Pacientes, que un horario pactado lo cubran dos series distintas, que una serie pausada no cuente como
 cobertura, y que una serie sin fecha de fin cubra hacia adelante sin límite.
 
 ### Paso 3. La cuenta corre en los tres momentos
@@ -298,12 +326,12 @@ hoy no tiene dónde decirse:
 
 Una serie tiene que poder editarse —horario, días, Asistente— sin cancelarla y volver a cargarla,
 para que la continuidad no se pierda. Y las cuatro acciones tienen que poder alcanzar una sola serie
-o un solo tramo, no el Paciente entero:
+o un solo horario pactado, no el Paciente entero:
 
 | Acción | Hoy | Con este paso |
 |---|---|---|
 | Modificar | No existe en ningún nivel | Sobre una serie, sin perder su historia |
-| Pausar | Todo el Paciente de una vez, sin fecha de vuelta | Una serie o un tramo, con fecha de vuelta opcional |
+| Pausar | Todo el Paciente de una vez, sin fecha de vuelta | Una serie o un horario pactado, con fecha de vuelta opcional |
 | Suspender | No se distingue de pausar | Según lo decida el Desarrollador: ver sección 8 |
 | Cancelar | El Servicio entero, o un turno suelto con alcance parcial | Una serie, con su motivo del catálogo |
 
@@ -448,11 +476,9 @@ cada uno necesita datos que hoy no se guardan.
 
 Nada de esto se resuelve por criterio propio. Cada punto traba lo que tiene al lado.
 
-1. **El nombre de la tabla de tramos pactados y de sus columnas** (paso 1). Lo guardado no se
-   renombra nunca, así que se aprueba antes de escribir la migración.
-2. **Qué dice el aviso del hueco** (paso 3). Texto visible.
-3. **Qué dice el tercer estado de la coordinación** (paso 7). Texto visible.
-4. **Si «suspender» es distinto de «pausar»** (paso 5). En el pedido aparecen las dos palabras:
+1. **Qué dice el aviso del hueco** (paso 3). Texto visible.
+2. **Qué dice el tercer estado de la coordinación** (paso 7). Texto visible.
+3. **Si «suspender» es distinto de «pausar»** (paso 5). En el pedido aparecen las dos palabras:
    «Se debe pausar, suspender, modificar, cancelar. etc». Si son dos cosas distintas, hacen falta dos
    acciones; si es la misma dicha de dos maneras, alcanza una. **No se decide por criterio propio.**
 

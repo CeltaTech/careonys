@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useState } from 'react';
 import { con } from '../../lib/textos';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useModalidades } from '../../context/ModalidadesContext';
-import { useConfirmarDestructivo } from '../../context/TenantSessionContext';
+import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import { useAuth } from '../../context/AuthContext';
 import { esAdminDePrestadora } from '../../lib/roles';
 import { llamarApiConfiguracion as llamarApi } from '../../lib/apiConfiguracion';
@@ -333,7 +333,7 @@ function NuevaZona({ onClose, onCreada }) {
    es lo que hace falta para dar soporte cuando a una Prestadora no le entran los cobros. Lo que
    no: cargar y reemplazar la credencial y el secreto de firma. Son secretos de la Prestadora,
    igual que el token de WhatsApp y que la contraseña del correo saliente, y Superadmin es un rol
-   técnico de CeltaTech. La sesión de soporte técnico tampoco lo habilita.
+   técnico de CeltaTech. El permiso de acceso tampoco lo habilita.
 
    Quien decide de verdad es el backend (`backend/src/routes/panelMatch.js`, el PATCH de la
    pasarela y el PUT del secreto de firma): escribiendo la dirección a mano se llega igual, y ahí

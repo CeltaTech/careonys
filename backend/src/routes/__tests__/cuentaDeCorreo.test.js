@@ -150,7 +150,7 @@ beforeEach(() => {
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'superadmin', prestadora_id: null }]);
   respuestas.set('GET /rest/v1/configuracion_plataforma', () => [{ mfa_admin_obligatorio: false }]);
-  respuestas.set('GET /rest/v1/sesiones_soporte_tecnico', () => []);
+  respuestas.set('GET /rest/v1/permisos_de_acceso', () => []);
   respuestas.set('GET /rest/v1/prestadoras', () => [
     { casilla_envio: null, nombre_fantasia: null, logo_url: null },
   ]);

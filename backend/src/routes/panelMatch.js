@@ -21,7 +21,7 @@ export const panelMatchRouter = Router();
 
 panelMatchRouter.use(requiereRolPanel);
 
-// Todo lo de match pasa adentro de una Prestadora. Superadmin sin sesión de soporte
+// Todo lo de match pasa adentro de una Prestadora. Superadmin sin permiso de acceso
 // abierta no está parado en ninguna, y entonces no hay sobre qué operar. El corte lo pone el
 // middleware compartido con el resto de los routers: hasta hoy este archivo tenía su propia
 // copia de la misma condición, con otro texto (CLAUDE.md §8, «ningún patrón repetido sin punto

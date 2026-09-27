@@ -14,7 +14,7 @@
 // SE LEE CON EL PASE DE QUIEN MIRA. Las tres tablas tienen política de lectura para el Coordinador
 // y para el Admin de su Prestadora, así que la protección por fila resuelve de cuál se trata: acá
 // no viaja ningún identificador de Prestadora, que es lo que haría falsificable la consulta. Lo que
-// sí se mira es `usePrestadoraActual()`, y sólo para volver a preguntar: una sesión de soporte
+// sí se mira es `usePrestadoraActual()`, y sólo para volver a preguntar: un permiso de acceso
 // abierta cambia la Prestadora sin cambiar la sesión, y sin esto la grilla de la Prestadora ajena
 // se pintaría con los umbrales de la anterior.
 //

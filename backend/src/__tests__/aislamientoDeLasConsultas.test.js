@@ -101,6 +101,17 @@ function tablasConPrestadora() {
       if (/\bprestadora_id\b/i.test(sql.slice(desde, i))) tablas.add(m[1]);
     }
 
+    // La tabla que cambió de nombre se sigue: la columna se la lleva puesta, así que el nombre
+    // nuevo hereda la obligación de filtrar y el viejo deja de existir. Sin esto, una tabla
+    // renombrada se leería como catálogo del producto y sus consultas pasarían sin filtro.
+    // `RENAME COLUMN` y `RENAME CONSTRAINT` no entran: acá se pide `RENAME TO` pegado a la tabla.
+    const renombradas = sql.matchAll(
+      /alter\s+table\s+(?:only\s+)?(?:public\.)?"?([a-z_0-9]+)"?\s+rename\s+to\s+"?([a-z_0-9]+)"?/gis
+    );
+    for (const m of renombradas) {
+      if (tablas.delete(m[1])) tablas.add(m[2]);
+    }
+
     // Y la que se quitó.
     const quitadas = sql.matchAll(
       /alter\s+table\s+(?:only\s+)?(?:public\.)?"?([a-z_0-9]+)"?[^;]*?drop\s+column\s+(?:if\s+exists\s+)?"?prestadora_id"?/gis

@@ -39,7 +39,7 @@ export function exigirAdministracion(mensaje) {
    soporte y necesita ver y arreglar la configuración de una Prestadora. Pero hay un puñado de
    cosas donde no corresponde, y son **los secretos de la Prestadora**: la clave con la que
    ella habla con un tercero. Superadmin es un rol técnico de CeltaTech, y CeltaTech no tiene
-   por qué poder leer ni reemplazar esa clave. La sesión de soporte técnico tampoco lo
+   por qué poder leer ni reemplazar esa clave. El permiso de acceso tampoco lo
    habilita: esa sesión existe para mirar los datos de una Organización por vez y queda
    auditada, no para alcanzar sus credenciales.
 

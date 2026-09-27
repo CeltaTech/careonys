@@ -69,7 +69,7 @@ de este proyecto, con alcance distinto, no el que traía Money Suite):
 
 | Rol | Alcance |
 |---|---|
-| `superadmin` | Técnico (código/infra/base de datos), sin carácter administrativo de negocio. Su acceso ordinario de Panel es únicamente la prestadora de prueba fija (Sandbox). Para entrar a una prestadora real abre una **sesión de soporte técnico**: una por vez, acotada en el tiempo y auditada — ver abajo. Login propio, MFA obligatorio |
+| `superadmin` | Técnico (código/infra/base de datos), sin carácter administrativo de negocio. Su acceso ordinario de Panel es únicamente la prestadora de prueba fija (Sandbox). Para entrar a una prestadora real hace falta un **permiso de acceso**, que abre CeltaTech desde su lado: una prestadora por vez, acotado en el tiempo y auditado — ver abajo. Login propio, MFA obligatorio |
 | `admin_prestadora` | Todo el negocio de su propia prestadora (cero visibilidad de otras prestadoras) |
 | `coordinador` | Su zona asignada (clientes, pacientes, guardias, Asistentes de esa zona), dentro de su propia prestadora |
 | `asistente` | Sus propias guardias, su perfil, su certificado |
@@ -99,13 +99,17 @@ dejó de ser cierto en el pendiente #30.
 **Nota (2026-07-28, Etapa 2 de la separación CeltaTech/Careonys — reemplaza a `admin_plataforma`
 en todo lo anterior):** el rol `admin_plataforma` **ya no existe en Careonys**. Era el rol
 comercial, y lo comercial se fue entero a CeltaTech (Nivel 1). La maquinaria del "modo dentro
-de una prestadora" no se borró: se re-apuntó a `superadmin` y pasó a llamarse **sesión de
-soporte técnico** (tablas `sesiones_soporte_tecnico` y `auditoria_soporte_tecnico`, guardia
-`requiereSoporteTecnico` en `backend/src/routes/panelSesionTenant.js`). Todo lo que dice el
-párrafo anterior sobre banner, auditoría y límites de tiempo sigue vigente palabra por
-palabra; lo único que cambió es quién tiene la llave. Probado de punta a punta contra la base
-local con `backend/scripts/test_etapa2_sesion_soporte.mjs` (13 chequeos). Ver
-`celtatech/docs/PLAN_SEPARACION_CELTATECH.md`, Etapa 2, paso 7.
+de una prestadora" no se borró: se re-apuntó a `superadmin` y hoy se llama **permiso de acceso**
+(tablas `permisos_de_acceso` y `auditoria_de_accesos`). Todo lo que dice el párrafo anterior sobre
+auditoría y límites de tiempo sigue vigente palabra por palabra.
+
+**El permiso lo abre CeltaTech desde su lado, y el producto ya no tiene ninguna ruta para abrirlo,
+renovarlo ni cerrarlo a pedido.** La cerradura está acá —la base es la que decide qué filas ve una
+consulta— y la llave es de CeltaTech. Lo que queda de este lado es hacerlo cumplir, y vive entero
+en `backend/src/middleware/requiereRolPanel.js`: cierre del permiso vencido con su motivo, refresco
+de la marca de actividad y auditoría de cada escritura. El cartel y el aviso a los 50 minutos son
+de la herramienta de CeltaTech; la Prestadora no ve nada. Qué tiene que construir CeltaTech está en
+`celtatech/docs/EL_PERMISO_DE_ACCESO.md`.
 
 `superadmin` es el único rol, además de `admin_prestadora`, con acceso de escritura a
 configuración de sistema (planes/módulos activables, si se construye esa idea de
@@ -121,16 +125,15 @@ sesión de tenant dinámica "todavía no está implementada en código". Las dos
 ser ciertas en el pendiente #30 (2026-07-15) y quedaron escritas casi un mes de más. Estado
 real, verificado contra la base el 2026-07-28:
 
-- `current_tenant()` resuelve la sesión de soporte técnico primero y el `prestadora_id` propio
+- `current_tenant()` resuelve el permiso de acceso primero y el `prestadora_id` propio
   después (definición completa abajo, copiada de la base, no del diseño).
 - `es_superadmin()` no es un bypass: devuelve `TRUE` solo si el usuario es `superadmin` **y**,
   cuando `configuracion_plataforma.mfa_admin_obligatorio` está en ON, además viene con segundo
   factor verificado (`aal2`). Las policies la usan siempre junto al tenant
   (`es_superadmin() AND prestadora_id = current_tenant()`), nunca sola.
 
-Desde la Etapa 2 (2026-07-28) la tabla que consulta `current_tenant()` se llama
-`sesiones_soporte_tecnico` y el rol habilitado es `superadmin` — antes eran
-`sesiones_tenant_admin_plataforma` y `admin_plataforma`.
+La tabla que consulta `current_tenant()` se llama `permisos_de_acceso` y el rol habilitado es
+`superadmin`.
 
 Toda policy de RLS escrita desde el Bloque 2 en adelante usa estas dos funciones SQL en vez
 de repetir el `EXISTS (SELECT ... FROM usuarios WHERE id = auth.uid() ...)` a mano:
@@ -140,8 +143,8 @@ de repetir el `EXISTS (SELECT ... FROM usuarios WHERE id = auth.uid() ...)` a ma
 CREATE OR REPLACE FUNCTION current_tenant() RETURNS UUID
   LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT COALESCE(
-    -- 1º: ¿hay una sesión de soporte técnico abierta y vigente? Entonces manda esa.
-    (SELECT s.prestadora_id FROM sesiones_soporte_tecnico s
+    -- 1º: ¿hay un permiso de acceso abierto y vigente? Entonces manda esa Prestadora.
+    (SELECT s.prestadora_id FROM permisos_de_acceso s
       WHERE s.admin_id = auth.uid()
         AND s.salida_at IS NULL
         AND s.expira_at > NOW()
@@ -188,7 +191,7 @@ salirse de él. Una policy que diga solamente `USING (es_superadmin())` sobre un
 | `uso_ia` | `superadmin_lee_uso_ia` | Medición de consumo de IA por Prestadora, en tokens. Sin datos personales y sin importes. |
 | `prestadora_modalidades` | `superadmin_lee_modalidades` | Ídem: qué modalidades tiene activadas cada Prestadora. |
 | `prestadora_pasarela_pago` | `superadmin_lee_pasarela` | Estado de conexión de la pasarela por Prestadora (proveedor y estado, sin credenciales). |
-| `auditoria_soporte_tecnico` | `superadmin_lee_toda_la_auditoria` | A propósito: el registro de auditoría se lee entero o no sirve como auditoría. |
+| `auditoria_de_accesos` | `superadmin_lee_toda_la_auditoria` | A propósito: el registro de auditoría se lee entero o no sirve como auditoría. |
 
 Ninguna de las cinco toca datos de Clientes, Pacientes ni Asistentes — ver las columnas de
 esas tablas en `docs/DATA_MODEL.md`. **Si una tabla nueva necesita entrar en esta lista, no se

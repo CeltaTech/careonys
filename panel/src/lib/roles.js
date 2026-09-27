@@ -9,7 +9,7 @@
 // Etapa 2 de la separación CeltaTech / Careonys (2026-07-28): acá también estaba
 // admin_plataforma, el rol comercial. Se fue entero a CeltaTech y ya no existe dentro de
 // Careonys. Lo que hacía de técnico —entrar a una Prestadora real, una por vez— lo hace ahora
-// superadmin con una sesión de soporte técnico (sesiones_soporte_tecnico); RLS via
+// superadmin con un permiso de acceso (permisos_de_acceso); RLS via
 // current_tenant() se encarga de que sin sesión abierta no vea más que su propia Organización.
 // El backend usa este mismo archivo, copiado por máquina (scripts/copias_entre_apps.mjs). Hasta
 // el 2026-09-04 la lista estaba escrita a mano en cinco rutas del backend y no todas decían lo
@@ -33,7 +33,7 @@ export const ROLES_PANEL = [...ROLES_ADMINISTRACION, 'coordinador'];
 // Y hay un puñado de cosas donde Superadmin NO tiene el acceso de Admin_prestadora, que es la
 // excepción a lo que dice el párrafo de arriba: **los secretos de la Prestadora**. Superadmin es
 // un rol técnico de CeltaTech, y CeltaTech no tiene por qué poder leer ni reemplazar la clave con
-// la que una Prestadora habla con un tercero. La sesión de soporte técnico tampoco lo habilita:
+// la que una Prestadora habla con un tercero. El permiso de acceso tampoco lo habilita:
 // esa sesión existe para mirar los datos de una Organización por vez y queda auditada, no para
 // alcanzar sus credenciales.
 //

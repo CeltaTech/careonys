@@ -31,7 +31,7 @@ export const panelUsuariosRouter = Router();
 // igual tiene algo que gestionar: las cuentas de su propio equipo técnico, que no pertenecen a
 // ninguna Prestadora. De eso se ocupa acotarAUsuariosDelPanel(). Lo que ya NO pasa (pendiente
 // #98, cerrado el 2026-07-28) es que Superadmin vea las cuentas de Prestadoras en las que no
-// entró: para eso hay que abrir una sesión de soporte técnico, y entonces queda auditado.
+// entró: para eso hay que abrir un permiso de acceso, y entonces queda auditado.
 const soloAdministracion = exigirAdministracion('Solo Admin o Superadmin puede gestionar usuarios del panel');
 
 // Roles que el solicitante tiene permitido crear/editar/borrar.
@@ -94,15 +94,15 @@ panelUsuariosRouter.post('/', requiereRolPanel, soloAdministracion, async (req, 
   // destino a mano, ni siquiera Superadmin (pendiente #98, cerrado el 2026-07-28): antes podía
   // mandar un `prestadora_id` en el cuerpo del pedido y dar de alta una cuenta con acceso a
   // cualquier Prestadora sin haber entrado a ninguna, y sin que quedara auditado.
-  // Para dar de alta al primer Admin de una Prestadora, se abre una sesión de soporte técnico
+  // Para dar de alta al primer Admin de una Prestadora, se abre un permiso de acceso
   // en esa Prestadora y se crea la cuenta desde adentro — sale igual de fácil y queda registrado
-  // en auditoria_soporte_tecnico. Una cuenta superadmin nueva no lleva Prestadora ninguna
+  // en auditoria_de_accesos. Una cuenta superadmin nueva no lleva Prestadora ninguna
   // (prestadora_id nulo), que es lo que exige la restricción
   // usuarios_prestadora_id_solo_superadmin_null en la base.
   //
   // La cuenta superadmin nueva es el único caso aparte: se ancla a la Organización propia de
-  // quien la crea (la Sandbox), nunca a la Prestadora de la sesión de soporte abierta. Si se
-  // usara `prestadoraId` acá, un Superadmin dentro de una sesión de soporte le estaría dejando a
+  // quien la crea (la Sandbox), nunca a la Prestadora del permiso de acceso abierto. Si se
+  // usara `prestadoraId` acá, un Superadmin dentro de un permiso de acceso le estaría dejando a
   // otro Superadmin una Prestadora real como Organización propia, que es justo lo que la
   // restricción de acceso de CLAUDE.md §5 viene a impedir.
   const prestadoraDestino = rolNuevo === 'superadmin'

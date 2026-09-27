@@ -70,7 +70,7 @@ export function Asistentes() {
     [escalasCrudas, estadoEscalas, hoy],
   );
   // Mientras las escalas no estén —o cuando quien mira no tiene una Prestadora propia, como el
-  // Superadmin fuera de una sesión de soporte— el renglón no muestra número: un cero se leería
+  // Superadmin fuera de un permiso de acceso— el renglón no muestra número: un cero se leería
   // como «sin riesgo», y lo que pasa es que todavía no se pudo calcular.
   function puntajeDeRiesgo(asistente) {
     if (!escalasResueltas) return null;

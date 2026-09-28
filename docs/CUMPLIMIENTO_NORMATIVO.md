@@ -173,12 +173,12 @@ internacional.
 
 | País | Norma de datos | Historia clínica | Conservación | Brecha |
 |---|---|---|---|---|
-| **Argentina** | Ley 25.326 y Decreto 1558/2001 — AAIP. Arts. 2, 7, 8 y 9. Res. AAIP 47/2018 | Ley 26.529; Ley 27.553 | Mínimo 10 años; copia al paciente en 48 horas | Sin plazo legal |
-| **Brasil** | LGPD 13.709/2018 — ANPD. Arts. 5º II, 11, 46, 48, 41. Res. CD/ANPD 15/2024 y 19/2024 | Res. CFM 1.821/2007; Lei 14.510/2022; Res. CFM 2.314/2022 | Papel 20 años; **electrónico, guarda permanente** | 3 días hábiles, a la autoridad y al titular |
+| **Argentina** | Ley 25.326 y Decreto 1558/2001 — AAIP. Arts. 2, 4(7), 7, 8, 9, 10, 11(4), 21 y 25. Res. AAIP 47/2018 y 126/2024 | Ley 26.529 y Decreto 1089/2012; Ley 27.553 y **Decreto 98/2023**; Ley 27.706 | Mínimo 10 años **desde la última actuación**; copia al paciente en 48 horas | Sin plazo legal |
+| **Brasil** | LGPD 13.709/2018 — ANPD, hoy agencia reguladora por Lei 15.352/2026. Arts. 5º II, 11, 42 §1º, 46, 48, 41. Res. CD/ANPD 15/2024 y 19/2024 | Res. CFM 1.821/2007; Lei 13.787/2018; Lei 14.510/2022; Res. CFM 2.314/2022; RDC ANVISA 11/2006 | **20 años desde el último registro, cualquier soporte** (Lei 13.787/2018 art. 6º §5) | 3 días hábiles, a la autoridad y al titular |
 | **Chile** | Ley 19.628; **Ley 21.719 vigente desde el 1-12-2026**, crea la APDP | Ley 20.584 art. 13; Decreto 41/2012 | **15 años, o hasta los 34 años del paciente** | 72 horas |
 | **México** | LFPDPPP de 2025, vigente desde el 21-03-2025. Autoridad: Secretaría Anticorrupción y Buen Gobierno | NOM-004-SSA3-2012 5.4; **NOM-024-SSA3-2012** | 5 años desde el último acto médico | De inmediato, **sólo al titular** |
-| **Colombia** | Ley 1581/2012, Ley 1266/2008, Decreto 1074/2015 — SIC. Arts. 5, 6, 17 f) y n) | Res. 1995/1999 mod. 839/2017; Ley 2015/2020 | **5 años de gestión + 15 de archivo** | Sin plazo en horas |
-| **Perú** | Ley 29733 y **DS 016-2024-JUS, vigente desde el 30-03-2025** | NTS 139-MINSA/2018/DGAIEN; RENHICE (Ley 30024, DL 1306) | 20 años | **48 horas** |
+| **Colombia** | Ley 1581/2012, Ley 1266/2008, Decreto 1074/2015 — SIC. Arts. 5, 6, 17 f) y n), 23 d) | Res. 1995/1999 mod. **839/2017**; Ley 2015/2020; Res. 1888/2025 | **15 años desde la última atención**: 5 de gestión + 10 de archivo central | **15 días hábiles**, sólo a la autoridad |
+| **Perú** | Ley 29733 y **DS 016-2024-JUS, vigente desde el 30-03-2025**. Arts. 34, 37, 46, 51, 52; 132-134 | NTS 139-MINSA/2018/DGAIN (RM 214-2018); RENHICE (Ley 30024 y **DS 039-2015-SA**) | ⚠️ Sin verificar: las fuentes discrepan entre 15 y 20 años | **48 horas**, a la autoridad **y al titular** |
 | **Uruguay** | Ley 18.331, Decreto 414/009, Ley 19.670 arts. 37-40, Decreto 64/020. **Adecuación europea por Decisión 2012/484/UE** | HCEN: Ley 19.355 art. 466 y Decreto 242/017; Ley 19.869 | 2 + 3 = 5 años (Decreto 355/982) | 72 horas, **sólo a la autoridad** |
 | **Ecuador** | LOPDP de 2021 y Reglamento — SPDP. **Art. 31: los datos de salud deben anonimizarse o pseudonimizarse**. Res. SPDP-SPD-2026-0004-R | AM-00115-2021, AM-5216-2014, AM-5316-2016 | 15 años desde la última atención | Según la resolución de transferencias |
 | **Costa Rica** | Ley 8968, Decreto 37554-JP y reformas — PRODHAB. Arts. 5, 9, 10, 11, 14; reglamento arts. 32, 34, 45, 47 | Reglamento del Expediente de Salud de la CCSS: arts. 10, 16, 17, 19, 32, 50 | Pasivo a los 5 años (art. 50); **desasociar a los 10 (Ley art. 6)** | **5 días hábiles desde que ocurrió** |
@@ -204,7 +204,24 @@ habilita alojar el padrón completo de una Prestadora en Brasil.** No se la invo
 **Lo que sí habilita: las cláusulas contractuales tipo del Anexo II de la Disposición 60-E/2016**,
 que son precisamente las de prestación de servicios de tratamiento, incorporadas al contrato entre
 CeltaTech y la Prestadora. **En obra** — tramo 1. Es un requisito del contrato, no del código, y hay
-que tenerlo firmado antes del alta.
+que tenerlo firmado antes del alta. Si el contrato se aparta del modelo, hay que presentarlo a la
+AAIP dentro de los 30 días corridos de firmado.
+
+**Y hay cuatro países donde alojar no necesita ningún instrumento**, porque la propia lista los
+declara adecuados: la Unión Europea, el Reino Unido, Suiza y **Uruguay**. Uruguay es el único de
+la región, y es el de menor demora de conexión desde Argentina. No se propone mudar nada: queda
+anotado porque la decisión de región todavía no se tomó y este dato la cambia.
+
+**Un aislamiento que falle no es un descuido: es una cesión.** El art. 11(4) dice que en una cesión
+el cesionario queda sujeto a las mismas obligaciones y **el cedente responde solidaria y
+conjuntamente**. Si datos de una Prestadora alcanzaran a otra, eso es jurídicamente una cesión sin
+consentimiento del titular, y arrastra a las dos. Es el argumento legal —no técnico— del plan de
+aislamiento.
+
+**El contrato con el encargado es obligatorio y tiene contenido mínimo.** No sale de la ley sino de
+la reglamentación del art. 25 por el Decreto 1558/2001: contrato escrito, **con los niveles de
+seguridad**. Terminada la prestación los datos se destruyen, salvo autorización expresa, y con ella
+pueden guardarse hasta dos años.
 
 Lo demás de Argentina:
 
@@ -220,7 +237,24 @@ Lo demás de Argentina:
 - **Ley 26.529.** Historia clínica cronológica, foliada y completa, propiedad del paciente, con
   copia entregada dentro de las 48 horas y conservación de **diez años como mínimo**. **En obra** —
   tramos 4, 5 y 7.
-- **Ley 27.553.** Receta electrónica y teleasistencia.
+- **El art. 4(7) manda destruir, y la Ley 26.529 manda guardar diez años.** No es contradicción sino
+  dos relojes: el dato deja de ser necesario y se destruye, salvo el que una ley obliga a conservar.
+  La consecuencia de producto es que la conservación se parametriza por tipo de dato, con el plazo
+  más largo mandando, y nunca hay un borrado automático que alcance al registro clínico. **En obra**
+  — tramo 4.
+- **Ley 27.553 y Decreto 98/2023 — teleasistencia.** El art. 4 del Anexo es el más exigente que
+  tiene Argentina sobre un producto como éste: obliga a resguardar credenciales y accesos, a alojar
+  los servidores en lugar seguro, a **detectar desviaciones de información**, a **cifrar audio y
+  video** —única exigencia expresa de cifrado en todo el derecho argentino—, y alcanza los registros
+  médicos **y los administrativos con nombre**. Su inciso l) dice que **el dato sanitario disociado
+  no es dato sensible**, que es lo que habilita los paneles agregados para un tercero pagador.
+  ⚠️ Su inciso a) exige que las plataformas **se constituyan como responsables del tratamiento en
+  territorio argentino**, lo que choca con el reparto responsable/encargado de la Ley 25.326 y con
+  que la responsable es la Prestadora. **Hay que resolverlo con abogado antes de vender**, y sólo
+  aplica si Careonys presta teleasistencia en los términos de esa norma.
+- **Ley 27.706 art. 7.** Trazabilidad que asocie inequívocamente cada acción a una persona, y al
+  menos tres niveles de acceso: consulta; consulta y actualización; consulta, actualización y
+  modificación. **En obra** — tramos 2 y 8. ⚠️ Sin verificar si fue reglamentada.
 - **Registro de bases del art. 21.** Lo inscribe la Prestadora, es gratuito, y el producto le avisa.
   **En obra** — tramo 11.
 - **Sin plazo legal de notificación de brechas.** Se aplica igual el de 24 horas del tramo 6, porque
@@ -248,7 +282,7 @@ salud todavía no está escrita ahí. **En obra** — tramo 11.
 5. **Plazo de conservación y anonimización al vencer** (Costa Rica art. 6, Panamá Decreto art. 7,
    Ecuador art. 31). **En obra** — tramo 4.
 
-**Dos obligaciones particulares que no se deducen de ningún parecido con otro país:**
+**Cinco obligaciones particulares que no se deducen de ningún parecido con otro país:**
 
 - **Costa Rica, art. 9 de la Ley 8968.** Tratar datos de salud exige que quien los trate esté sujeto
   a secreto profesional «o a una obligación equivalente de secreto». El personal técnico del
@@ -256,6 +290,27 @@ salud todavía no está escrita ahí. **En obra** — tramo 11.
   falta gravísima. **En obra** — tramo 8.
 - **Brasil, art. 11 §4º de la LGPD.** Prohíbe compartir datos de salud con fines de ventaja
   económica. Cierra cualquier monetización, incluso agregada. **Cumple** — tramo 13.
+- **Brasil, art. 42 §1º I de la LGPD.** Quien trata datos por cuenta de otro responde
+  **solidariamente y queda equiparado al responsable** cuando incumple la ley o se aparta de las
+  instrucciones recibidas. Un aislamiento que falle es exactamente ese supuesto, y abre el catálogo
+  entero del art. 52: multa, suspensión de la base hasta seis meses y prohibición de tratar. Es, con
+  el art. 11(4) argentino, la razón legal del plan de aislamiento. **En obra** — plan de
+  aislamiento.
+- **Perú: los ingresos económicos de la familia son dato sensible.** El art. 2.5 de la Ley 29733
+  pone «ingresos económicos» en la misma categoría que la salud. Es el único de los diez que lo
+  hace, y significa que en Perú la facturación entra en la categoría más protegida: consentimiento
+  **por escrito con firma** —manuscrita, digital o electrónica—, y las mismas medidas que el dato
+  clínico. **En obra** — tramos 4, 8 y 11.
+- **Perú: el registro de accesos se conserva dos años y tiene que estar disponible de inmediato.**
+  El art. 46 del DS 016-2024-JUS lo dice con esa palabra, y enumera qué anotar: cuentas, hora de
+  inicio y de fin de sesión, y las operaciones de tratamiento, **visualización**, modificación,
+  eliminación, importación y exportación. Es la exigencia más precisa de los diez países y fija el
+  piso del tramo 2. El art. 51 agrega respaldos **semanales** con verificación de integridad, y el
+  52 exige cifrado en toda transferencia externa. **En obra** — tramos 2, 9 y 10.
+- **Perú exige representante en el país a quien opera desde afuera.** Art. VII del Título Preliminar
+  del DS 016-2024-JUS. Es obligación de CeltaTech, no del producto, y es societaria: hay que
+  resolverla antes de vender ahí. Ninguno de los otros nueve países la tiene. **No alcanza** — no
+  es materia de este plan.
 
 **Transferencia internacional.** Argentina, Brasil, Perú, Uruguay y Ecuador exigen cláusulas
 contractuales del modelo de su autoridad; Panamá aprobó las cláusulas de la Red Iberoamericana por
@@ -265,11 +320,28 @@ transferencia, sin régimen de adecuación; Colombia incluye a Estados Unidos co
 Circular Externa 005 de 2017; dentro de la Comunidad Andina las transferencias se consideran
 adecuadas. **En obra** — tramos 1 y 11.
 
-**Registro de bases ante la autoridad.** Perú inscribe todo banco de datos en el RNPD; Uruguay
-dentro de los 90 días de iniciar actividad; Argentina en el registro del art. 21, gratuito;
-Colombia sólo por encima de 100.000 UVT; Costa Rica sólo si hay distribución, difusión o
-comercialización, con canon anual; Brasil, México y Panamá no tienen registro. **En obra** — tramo
-11, como aviso por país. Nunca como bloqueo.
+**Para Brasil, estar en São Paulo no es un problema: es la solución.** Un dato brasileño alojado en
+Brasil no es transferencia y no necesita instrumento alguno. Lo que sí hay que mirar es que las
+cláusulas-patrón del Anexo II de la Resolución CD/ANPD 19/2024 se adoptan **íntegras y sin
+modificar** —cualquier cambio las invalida— y que el plazo para adaptar contratos anteriores venció
+el 23 de agosto de 2025. Brasil reconoció adecuada únicamente a la Unión Europea, por Resolución
+CD/ANPD 32/2026. Estados Unidos no está en ninguna de las dos listas, ni la brasileña ni la
+argentina.
+
+**Registro de bases ante la autoridad.** Perú inscribe todo banco de datos en el Registro Nacional,
+sin umbral y de forma gratuita; Uruguay dentro de los 90 días de iniciar actividad; **Argentina en
+el registro del art. 21, gratuito, obligatorio y sin excepción por tamaño de empresa** —incluidas
+las cámaras de vigilancia, y alcanza también a responsables no establecidos en el país—; Colombia
+sólo por encima de 100.000 UVT de activos, con actualización anual entre el 2 de enero y el 31 de
+marzo y aviso de cambios sustanciales dentro de los 10 primeros días hábiles del mes siguiente;
+Costa Rica sólo si hay distribución, difusión o comercialización, con canon anual; Brasil, México y
+Panamá no tienen registro. **En obra** — tramo 11, como aviso por país. Nunca como bloqueo.
+
+Lo que esto le pide al producto es concreto: **cada Prestadora es la responsable y es quien
+inscribe**, CeltaTech es el encargado, y el producto tiene que poder entregarle a cada una lo que
+el formulario le pide —categorías de datos, medidas de seguridad, personas con acceso, tiempo de
+conservación, encargados y países—. Sin eso, la Prestadora no puede inscribir, y sin inscripción
+el art. 21(3) argentino prohíbe toda cesión.
 
 **Cuatro integraciones nacionales obligatorias que este plan no construye**, y cada una es obra
 propia: HCEN uruguayo, interoperabilidad colombiana, RENHICE peruano y la certificación
@@ -339,6 +411,23 @@ Se declara para que nadie lo tome por cumplido.
 - En Latinoamérica quedaron sin verificar los regímenes sancionatorios de casi todos los países,
   varios plazos de respuesta a derechos, el número de artículo panameño de los veinte años, y el
   monto vigente del canon costarricense.
+- **El plazo de conservación de la historia clínica peruana.** La NTS 139-MINSA no se pudo leer en
+  su texto oficial y las fuentes secundarias discrepan entre 15 y 20 años. **Ninguna de las dos
+  cifras se usa hasta confirmarla.** Es el hueco más importante que quedó abierto.
+- **La versión consolidada del Título V de la autoridad colombiana.** De ahí sale la lista de países
+  adecuados, y no se pudo comprobar si alguna circular posterior a 2017 la cambió. La conclusión de
+  que Colombia acepta a Estados Unidos depende de eso.
+- **Si el art. 15 de la Resolución 1995/1999 colombiana está derogado o modificado.** Los quince
+  años no están en duda; de qué norma cuelgan, sí. Y hay un proyecto de resolución de historia
+  clínica de julio de 2026 que reemplazaría todo el régimen.
+- **Ninguna resolución de la autoridad brasileña se pudo comprobar contra el diario oficial**, que
+  estuvo caído; se leyeron de copias de terceros. Tampoco se leyó el manual de certificación SBIS
+  ni las portarias de consolidación del sistema público brasileño, y **las normas de la agencia de
+  planes de salud brasileña no se relevaron**.
+- **Si la Ley 27.706 argentina fue reglamentada**, y si el Ministerio de Salud dictó la política de
+  seguridad que le ordena el Decreto 98/2023.
+- **Los valores de las unidades con que se calculan las multas** —UVT y salario mínimo colombianos,
+  UIT peruana— no se consultaron para 2026.
 - **Este documento es relevamiento de fuentes públicas, no asesoramiento legal.** Antes de vender en
   un país, ese país tiene que tener su documento propio en `docs/legal/`, revisado por un
   profesional de esa jurisdicción.

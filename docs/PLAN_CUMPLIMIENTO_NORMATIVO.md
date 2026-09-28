@@ -101,7 +101,15 @@ Hoy hay una sola región. Lo que las normas obligan:
   disposición**, incorporadas al contrato entre CeltaTech y la Prestadora. Es trabajo de contrato,
   no de código, y tiene que estar firmado antes del alta de la primera Prestadora real. La excepción
   de datos médicos del art. 12(2)(b) es para un intercambio concreto exigido por el tratamiento del
-  paciente y no cubre alojar el padrón: no se la invoca.
+  paciente y no cubre alojar el padrón: no se la invoca. **Y hay cuatro destinos donde no haría
+  falta ningún instrumento porque la lista argentina los declara adecuados: la Unión Europea, el
+  Reino Unido, Suiza y Uruguay.** Uruguay es el único de la región y el de menor demora de
+  conexión. Es dato para la decisión de región, que sigue sin tomarse.
+- **Brasil, donde São Paulo deja de ser un problema.** Un dato brasileño alojado en Brasil no es
+  transferencia y no necesita instrumento. Brasil sólo declaró adecuada a la Unión Europea
+  (Resolución CD/ANPD 32/2026); hacia cualquier otro destino rigen las cláusulas-patrón del Anexo
+  II de la Resolución CD/ANPD 19/2024, que se adoptan **íntegras y sin modificar** —cualquier cambio
+  las invalida— y cuyo plazo de adaptación de contratos anteriores venció el 23 de agosto de 2025.
 - **Latinoamérica.** Ninguno de los diez países prohíbe el destino. Costa Rica exige consentimiento
   expreso que cubra específicamente la transferencia internacional, no el genérico de tratamiento
   (Ley 8968 art. 14; omitirlo es falta gravísima). Panamá exige informar cuál condición del art. 33
@@ -147,8 +155,20 @@ Tres propiedades que no son opcionales:
 - **Disponible para el cliente cuando lo pida.** C5 OPS-15.01AC. Y por Panamá, con la identificación
   y el período de todas las personas que ingresaron.
 
-Conservación: por jurisdicción, con piso de tres años (EHDS art. 9) y sin superar el plazo de la
-historia clínica de ese país.
+**Qué operaciones se anotan lo fija Perú, que es el país más preciso de todos.** El art. 46 del
+DS 016-2024-JUS enumera: cuentas de usuario, **hora de inicio y de fin de sesión**, y las
+operaciones de tratamiento, **visualización**, modificación, eliminación, importación y exportación.
+Brasil lo dice distinto y pide lo mismo: el art. 13 III del Decreto 8.771/2016 exige inventario de
+accesos con momento, duración, identidad del responsable y archivo alcanzado. Argentina, por la Ley
+27.706 art. 7, pide que cada acción quede asociada inequívocamente a una persona. Se construye
+contra el más exigente de los tres y alcanza a los tres.
+
+Conservación: por jurisdicción, con piso de tres años (EHDS art. 9), **mínimo de dos años y
+disponibilidad inmediata por Perú** (art. 46, que usa esa palabra), y sin superar el plazo de la
+historia clínica de ese país. A eso se suma un piso propio de Brasil que no es de protección de
+datos: el art. 15 del Marco Civil de Internet obliga a guardar **seis meses** de registros de acceso
+a la aplicación, bajo secreto y entregables sólo por orden judicial. Es obligación de quien opera el
+producto, no de la Prestadora.
 
 Y lo que no se construye con una lista recordada: **la norma holandesa NEN 7513 es de pago y no se
 leyó.** Antes de vender en Países Bajos hay que comprarla y comparar campo por campo.
@@ -183,8 +203,15 @@ Lo que la tabla tiene que poder expresar, porque hay un país que lo obliga:
 
 - Un plazo que corre **desde la muerte del paciente** (Panamá, 20 años).
 - Una **fórmula por edad** (Chile: 15 años, o hasta que el paciente cumpla 34 si es más largo).
-- **Guarda permanente**, que rompe cualquier purga escrita en años (Brasil, prontuário electrónico).
-- **Dos plazos encadenados** (Colombia: 5 años de gestión más 15 de archivo).
+- **Dos plazos encadenados** (Colombia: 5 años de gestión más 10 de archivo central, 15 en total
+  desde la última atención; 30 si el paciente fue víctima de violaciones a los derechos humanos, y
+  guarda permanente si la historia integra un proceso por delitos de lesa humanidad).
+- **Un vencimiento que no habilita a borrar solo.** Brasil dice 20 años desde el último registro,
+  para cualquier soporte, pero la ley dice que los prontuários **«podrán» ser eliminados**, previa
+  revisión de una comisión y con registro del destino final; Colombia exige un acta de eliminación
+  firmada y remitida a dos organismos. Vencido el plazo el sistema **avisa y espera**, nunca borra.
+  Y hay una norma del consejo médico brasileño que sigue diciendo guarda permanente y que nunca fue
+  revocada expresamente: por las dudas, el defecto no elimina.
 - **Desasociar en vez de borrar** al vencer (Costa Rica, 10 años desde el hecho registrado).
 - **Anonimizar o pseudonimizar el dato vivo**, no al vencer (Ecuador, LOPDP art. 31). Es la única
   norma del relevamiento que pide una técnica concreta sobre el dato de salud mientras se usa, y si
@@ -300,6 +327,11 @@ de emergencia. Probar el plan es «Addressable», y el Decreto 41/2012 chileno l
 requisito de la ficha clínica: respaldos, medidas contra accesos no autorizados y capacidad de
 restaurar el servicio. En Francia la copia de respaldo es una de las actividades certificables del
 référentiel HDS.
+
+**Y hay un país que fija frecuencia.** El art. 51 del DS 016-2024-JUS peruano exige copias de
+respaldo **semanales** con verificación de integridad. Es el único plazo numérico del relevamiento,
+así que manda: si el respaldo diario que hoy corre se detuviera, la falta empezaría a contarse a la
+semana.
 
 Se construye la restauración probada y con constancia, no la promesa de que se puede.
 

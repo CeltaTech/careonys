@@ -3,6 +3,13 @@
 **Una sola lista, en orden.** Se hace el 1, después el 2, y así hasta el final. **Acá no se escribe
 cuántos pasos son**, porque el total se corre solo con cada paso que se borra.
 
+**Está todo acá.** Lo que falta para vender, lo que falta para que el aislamiento lo haga cumplir
+la base, y lo que falta para resistir una auditoría de datos de salud. No hay otra lista.
+
+**El orden se eligió por un criterio y no por otro:** primero lo que obliga a reescribir si se deja
+para después, y al final lo que se agrega encima sin tocar nada. No se escribe algo para después
+cambiarlo.
+
 - Los pasos que empiezan con **Usted** los contesta o los hace el Desarrollador. Los demás los hago yo.
 - **Un paso terminado se borra de este archivo.** No se marca como hecho: se saca.
 - **No se abren pendientes nuevos.** Un problema que aparece se arregla en el momento; si no cabe en la tarea que se está haciendo, se agrega como paso en el lugar de la lista que le corresponde.
@@ -34,9 +41,9 @@ renglón por renglón.
 
 ### 1. Quién decide qué filas ve una consulta
 
-Esto ya no se contesta acá: está resuelto y tiene su propio plan, en
-`docs/PLAN_AISLAMIENTO_DE_RAIZ.md`. La llave que alcanza todas las Prestadoras sale del producto y
-el aislamiento lo hace cumplir la base. Queda un solo renglón de este tema sin decidir:
+Esto ya no se contesta acá: está resuelto y es la sección «Los cimientos» de esta misma lista. La
+llave que alcanza todas las Prestadoras sale del producto y el aislamiento lo hace cumplir la base.
+Queda un solo renglón de este tema sin decidir:
 
 - `CLAUDE.md:310` — **[ya construido]** que no se convierta en dueño lo que dispara un cambio en la base.
 
@@ -172,6 +179,386 @@ documentos ya citan lo que salió de ahí como decidido por usted, sin arrastrar
 
 ---
 
+## Los cimientos
+
+**Va primero, y es lo único de esta lista que no se puede reordenar.** Todo lo de acá toca las
+mismas dos cosas: cómo le habla el producto a la base, y la forma de lo que queda guardado. Hecho
+ahora es un trabajo; hecho después es el mismo trabajo más deshacer lo que se haya construido
+encima.
+
+**El criterio con el que se armó es del Desarrollador:** no se escribe algo para después cambiarlo.
+Entonces entra acá todo lo que obligaría a volver sobre código o datos ya escritos, y queda para el
+final de esta lista todo lo que se agrega encima sin tocar nada.
+
+**Mientras dure no sale ninguna pantalla nueva.** Ese es el precio de hacerlo en este orden, y es
+el que evita el enredo.
+
+**Cada paso termina con su comprobación, y no se empieza el siguiente sin que la del anterior pase.**
+
+### Qué hay hoy
+
+Medido contra la base en vivo y contra el código, no contra documentos.
+
+**Una sola llave abre todo.** El backend entra con `SUPABASE_SERVICE_ROLE_KEY`, que alcanza las 182
+tablas de todas las Prestadoras y se saltea la protección por fila. Se crea en
+`backend/src/db/connection.js` y la importan 135 archivos. La nombran además
+`backend/src/utils/cuentasPanel.js`, que la manda a mano en una cabecera, y
+`backend/src/routes/appFamilias.js`.
+
+**Lo que separa una Prestadora de otra es un filtro escrito a mano.** `acotarAPrestadora` agrega la
+condición en 71 renglones. De las 886 consultas del backend, **111 no nombran la Prestadora**, y de
+ésas **17 confían en un identificador que viene de afuera sin comprobar de quién es** —sólo en 1 se
+verificó que la comprobación exista—. Si falta un filtro, la base contesta igual: no tiene con qué
+darse cuenta.
+
+**Los archivos más sensibles son los peor protegidos.** De los 11 depósitos, cuatro no tienen
+ninguna política: `certificados-medicos`, `autorizaciones-monitoreo`, `documentos-cese` y
+`fotos-identidad`. Ahí están los certificados médicos y las fotos de identidad. Los sirve el backend
+con la llave maestra, y el aislamiento son **22 lugares donde se compara a mano el comienzo de la
+ruta del archivo** (`panelMedicacion.js:181`, `panelVitalesAutorizacion.js:79`).
+
+**La protección por fila está puesta y hoy no protege de nada.** Las 182 tablas la tienen encendida
+y 170 tienen política, y ninguna depende de nada que aporte el backend: la Prestadora la resuelve
+`interno.current_tenant()` con la cuenta de quien entró. **La base ya sabe aislar y nadie le está
+preguntando.**
+
+**Hay trabajo que hoy no podría hacerse sin la llave maestra**, porque no tiene ninguna persona
+detrás: 16 tareas programadas, 4 entradas que llaman terceros, el alta de cuentas y la recuperación
+de clave. Eso alcanza 9 tablas que una sesión no toca, 4 cuya protección por fila niega todo, 28
+funciones y los 4 depósitos sin política.
+
+**Nadie sabe quién leyó qué.** `registro_actividad` anota once acciones y todas son escrituras o
+entradas al Panel: ninguna lectura queda registrada. `auditoria_de_accesos` tiene `admin_id` no
+nulo, así que sólo alcanza al personal de CeltaTech, y tiene cero filas. Y no es inmutable: la
+llave maestra puede borrarlo.
+
+**El registro clínico se sobreescribe.** `indicaciones_medicacion` y `rangos_referencia_vitales`
+tienen `updated_at` y ningún historial: corregir pisa lo anterior.
+
+**No hay fecha de fallecimiento** en ninguna columna de ninguna tabla, y no existe nada de
+conservación: cero apariciones de `anonimiz`, `purga`, `retencion`, `conservacion` y
+`derecho_al_olvido`. Lo que hay es borrado lógico: un dato marcado como borrado queda para siempre.
+
+**No hay exportación ni portabilidad.** El derecho de acceso se atiende a mano, contra la base.
+
+**El cierre por inactividad existe sólo para el permiso de acceso de CeltaTech.** Las sesiones de la
+gente de la Prestadora no se cierran. **El segundo factor está construido y apagado**:
+`requiereRolPanel.js:82-85` rechaza el pase que no llegó a `aal2`, gobernado por
+`configuracion_plataforma.mfa_admin_obligatorio`, que hoy vale `false`.
+
+**La estructura de configuración por país está hecha y vacía.** `advertencias_legales` tiene 13
+filas, todas de jurisdicción `AR`, y las trece son de materia laboral o del Marketplace: ninguna es
+de protección de datos. `escalas_legales` también es sólo `AR`.
+
+**Los datos están en São Paulo** (`sa-east-1`). Para Brasil es tratamiento local; para todos los
+demás países es transferencia internacional hacia Brasil.
+
+**Lo que sí está bien.** Los secretos de pasarelas viven en Supabase Vault, no en claro. Diez de
+los once depósitos son privados y se sirven con dirección firmada. El consentimiento se registra
+con texto versionado, con quién consintió, por qué medio, desde cuándo y hasta cuándo.
+
+### Qué queda cuando esto termina
+
+- **`SUPABASE_SERVICE_ROLE_KEY` no existe en el producto.** No está en el código, ni en el
+  repositorio, ni en las variables de entorno del backend.
+- **Todo pedido de una persona viaja con el pase de esa persona**, y la base decide qué filas
+  contesta. Un filtro olvidado no devuelve datos de otra Prestadora: no devuelve nada.
+- **El trabajo sin persona detrás tiene su propia credencial**, acotada a sus tablas y funciones y
+  de a una Prestadora por vez. Es la llave del cuarto de máquinas, no la del edificio.
+- **`acotarAPrestadora` se borra.** Con la base decidiendo, un filtro en el código es una
+  duplicación que puede contradecirla.
+- **Cada lectura de un dato de salud deja constancia**, con la Prestadora, la persona que accedió,
+  el paciente, la categoría de dato, el momento y el origen. Consultable por paciente.
+- **Esa constancia no se puede alterar sin que se note.**
+- **Los cuatro depósitos sin política tienen política**, y ningún archivo se autoriza comparando
+  texto de una ruta.
+- **Ninguna corrección clínica pisa lo anterior.**
+- **El estado de la base se lee en un archivo, no en 150.**
+- **Nadie puede volver a abrir la puerta sin que el automatismo lo pare.**
+
+Y lo que queda cuando termina el resto de esta lista, que se apoya sobre lo anterior:
+
+- **Cada dato tiene plazo, y al vencer se borra o se desasocia**, según lo que mande el país de esa
+  Prestadora y la clase de registro.
+- **Una persona puede pedir lo suyo y llevárselo**, y el sistema lo arma solo, dentro del plazo de
+  su país.
+- **Un incidente se puede acotar a las personas realmente alcanzadas y avisar en 24 horas.**
+- **El sistema sabe en qué país opera cada Prestadora** y de ahí salen los plazos, los textos y los
+  avisos. Ninguno está escrito en el código.
+- **Existen los documentos que la auditoría pide**, y dicen la verdad porque salen del sistema.
+
+### Los pasos
+
+**5. Usted** — **Dónde viven los datos.** Es lo primero porque condiciona todo lo demás y porque
+no es una decisión de programación. Hoy hay una sola región, en São Paulo, y eso alcanza para
+Latinoamérica y Estados Unidos y no alcanza para Europa.
+
+Lo que obliga cada lado:
+
+- **Alemania.** El §393 SGB V limita el lugar de tratamiento a Alemania, el Espacio Económico
+  Europeo o un tercer país con adecuación donde el proveedor tenga establecimiento nacional, y
+  exige dictamen BSI C5 Tipo 2 vigente. Brasil no califica.
+- **Francia.** Alojar datos de salud exige alojador certificado HDS (art. L.1111-8 del Code de la
+  santé publique). Hacerlo sin certificación es delito (art. L.1115-1).
+- **Unión Europea en general.** Brasil no tiene decisión de adecuación: sería transferencia del
+  Capítulo V, con cláusulas y evaluación de impacto de la transferencia.
+- **Estados Unidos.** No hay requisito de residencia, pero sí de contrato: el proveedor de nube es
+  business associate y hace falta acuerdo firmado (45 CFR 164.308(b)(1) y 164.502(e)). Supabase lo
+  ofrece sólo en nivel Team o Enterprise más complemento pago, y exige recuperación a un punto en
+  el tiempo, forzado de SSL, restricciones de red y registro de conexiones siempre encendido.
+- **Argentina, que es el primer mercado.** Es el caso más fácil y no es automático: Brasil no
+  figura en la lista de países adecuados del art. 3 de la Disposición 60-E/2016, sustituido por la
+  Resolución AAIP 34/2019. Alojar en São Paulo es transferencia del art. 12 de la Ley 25.326, y lo
+  que la habilita son las cláusulas contractuales tipo del Anexo II de esa disposición, adentro del
+  contrato entre CeltaTech y la Prestadora. **Tiene que estar firmado antes del alta de la primera
+  Prestadora real.** La excepción de datos médicos del art. 12(2)(b) es para un intercambio
+  concreto exigido por el tratamiento de un paciente y no cubre alojar el padrón: no se la invoca.
+  **Y hay cuatro destinos donde no haría falta ningún instrumento, porque la lista argentina los
+  declara adecuados: la Unión Europea, el Reino Unido, Suiza y Uruguay.** Uruguay es el único de la
+  región y el de menor demora de conexión, y eso es dato para esta misma decisión.
+- **Brasil.** Un dato brasileño alojado en Brasil no es transferencia y no necesita instrumento.
+  Brasil sólo declaró adecuada a la Unión Europea (Resolución CD/ANPD 32/2026); hacia cualquier
+  otro destino rigen las cláusulas-patrón del Anexo II de la Resolución CD/ANPD 19/2024, que se
+  adoptan **íntegras y sin modificar** —cualquier cambio las invalida— y cuyo plazo de adaptación
+  de contratos anteriores venció el 23 de agosto de 2025.
+- **Latinoamérica.** Ninguno de los diez países prohíbe el destino ni obliga a alojar dentro de sus
+  fronteras. Costa Rica exige consentimiento expreso que cubra específicamente la transferencia
+  internacional, no el genérico de tratamiento (Ley 8968 art. 14; omitirlo es falta gravísima).
+  Panamá exige informar cuál condición del art. 33 se invoca. Argentina, Brasil y Perú exigen
+  cláusulas contractuales del modelo de su autoridad. Colombia no exige nada especial hacia Estados
+  Unidos.
+- **Tres países no llaman transferencia a esto.** **Ecuador** lo dice expresamente —art. 4 y art.
+  34 de la LOPDP, y art. 23 de la Resolución SPDP-SPD-2026-0004-R: «el encargo de tratamiento no
+  constituye una transferencia ni comunicación de datos personales»—, y en consecuencia las
+  cláusulas iberoamericanas entre responsable y encargado **no son aplicables allá**: lo que hace
+  falta es el contrato de encargo del art. 34. **Costa Rica** excluyó lo mismo al reformar la
+  definición. **Uruguay** llegó al mismo lugar por otro camino: Brasil no está en su lista de
+  países adecuados (Resoluciones URCDP 23/021 y 63/023), pero la URCDP declaró ajustadas a la
+  normativa nacional las cláusulas contractuales de AWS (Resolución 42/022) y autorizó
+  transferencias fundadas en ellas (Resolución 18/024). Eso habilita São Paulo para datos
+  uruguayos.
+- **Chile, que es el caso más incómodo.** Su ley entra en vigor el 1-12-2026 y **la Agencia todavía
+  no está constituida**: no hay lista de países adecuados, no hay cláusulas modelo, no hay contratos
+  tipo. La única vía practicable es la del art. 27 lit. b), cláusulas contractuales, y el art. 28
+  pone **la carga de acreditarlo sobre la Prestadora**, que sólo puede hacerlo con documentación que
+  le dé CeltaTech. Además el art. 15 bis prohíbe subencargar sin **autorización específica y por
+  escrito** de cada Prestadora —el proveedor de nube es un subencargado, y la autorización hay que
+  pedirla y guardarla—. Y no hay refugio geográfico: el art. 1 bis lit. b) aplica la ley chilena al
+  encargado que trabaja para un responsable establecido en Chile, esté donde esté.
+
+**La pregunta es una sola:** ¿el producto se queda en una región y se vende sólo donde esa región
+habilita, o pasa a tener **una instalación por mercado** —São Paulo para Latinoamérica y Estados
+Unidos, Europa para Europa—, con cada Prestadora alojada donde su país permite?
+
+**Se verificó que la segunda opción no choca con nada del producto.** Cada Prestadora es un cajón
+cerrado, el banco de Asistentes es por Prestadora —las 45 fichas de hoy llevan su Prestadora
+cargada, ninguna queda suelta— y la elección es por cercanía al paciente, así que nada necesita ser
+único cruzando el océano. Lo único que cambia es que el identificador de una Prestadora deja de ser
+único en el producto y pasa a serlo por instalación, y que la puerta de entrada tiene que saber a
+qué instalación mandar a cada quien.
+
+**Y hay una consecuencia que se paga se conteste lo que se conteste, así que se construye igual:**
+ninguna parte del código puede dar por sentado que hay una sola base. La Prestadora trae consigo a
+cuál pertenece. Dejarlo previsto ahora no cuesta nada; agregarlo después es reescribir.
+
+**Mientras esto no se decida, Europa y Estados Unidos no se venden.** No es una limitación de esta
+lista: es el estado de hecho de hoy.
+
+**Comprobación:** por cada país donde haya una Prestadora dada de alta, `docs/CUMPLIMIENTO_NORMATIVO.md`
+nombra qué habilita el alojamiento y con qué instrumento. Sin eso, el alta no se aprueba.
+
+**6. Usted** — **El segundo nivel de aislamiento, el que Chile exige.** El art. 13 de la Ley
+20.584 prohíbe ver la historia de una persona a quien no está vinculado a su atención, y aclara que
+eso **incluye al personal de salud y administrativo de la propia Prestadora**. El art. 9 del Decreto
+41/2012 obliga a tomar medidas para impedirlo. Es un segundo nivel: no por rol, sino por vínculo con
+esa persona. Un rol administrativo que hoy ve todo el padrón de su Prestadora cumple la regla de la
+empresa y **no** cumple la ley chilena.
+
+No es obra chica y tiene su propia decisión de alcance: **qué rol conserva vista del padrón completo
+y cuál no.** Se pregunta acá y no más abajo porque, si va, va en la misma pasada que el resto de
+estos pasos —una condición más en una política—, y si se difiere es una reescritura de permisos.
+
+**¿Se construye ahora, o se difiere aceptando que Chile no se vende hasta entonces?**
+
+**7.** **La credencial del trabajo sin persona.** Es lo primero que se construye porque hasta que
+exista, quitar la llave maestra rompe la mitad del producto.
+
+Se crea en la base un rol propio —`tarea_de_fondo`— con permiso **sólo** sobre las 9 tablas de la
+entrada, las 4 de secretos y códigos, y las 28 funciones ya inventariadas. Nada más. El backend no
+guarda una credencial de ese rol: **firma un pase corto, para una Prestadora y para un trabajo.**
+
+`interno.current_tenant()` suma una tercera fuente después de las dos que ya tiene: cuando quien
+consulta es `tarea_de_fondo`, la Prestadora sale del pase firmado. Un pase sin Prestadora no
+resuelve nada y la base niega todo: falla cerrado, igual que hoy.
+
+Las 4 entradas que llaman terceros llegan sin saber a qué Prestadora corresponden. Primero se
+resuelve la Prestadora por la firma del mensaje —que ya se verifica—, y recién con ese dato se firma
+el pase. Leer el secreto de firma es lo único que pasa por una función que resuelve la Prestadora
+adentro.
+
+**Comprobación:** con el pase de una Prestadora se lee lo suyo y se pide algo de la otra; lo segundo
+falla. Y con ese pase se pide una tabla que no está en la lista: también falla.
+
+**8.** **Los archivos.** Los cuatro depósitos sin política reciben política, con la Prestadora en
+el comienzo de la ruta exigida por la base. Los 22 lugares donde el código compara texto de ruta se
+borran. Los archivos se siguen sirviendo con dirección firmada y vencimiento.
+
+**Comprobación:** con el pase de una persona de una Prestadora se pide un archivo de la otra, con la
+ruta correcta y todo. Tiene que fallar en la base, no en el código.
+
+**9.** **El pase de la persona en el backend, y el registro de lecturas en la misma pasada.**
+
+`connection.js` deja de exportar un cliente y pasa a entregar **el cliente de quien está pidiendo**,
+armado con el pase que viene en el pedido. Los 135 archivos cambian de qué importan, no de qué
+hacen. `requiereRolPanel.js` deja de validar el pase con la llave maestra y lo valida con la clave
+pública, que es para lo que está; y deja de leer `usuarios` sin filtro, porque con el pase de la
+persona la base ya le contesta una sola fila. Se hace **por grupos de rutas**, y al terminar cada
+grupo `acotarAPrestadora` sale de esas rutas.
+
+**El registro de accesos va acá y no en un paso aparte**, porque es el mismo archivo reescrito una
+sola vez en vez de dos barridos por los mismos 135. Es un registro separado del de actividad,
+porque anotan cosas distintas y tienen plazos distintos. **Seis campos por evento:** la Prestadora,
+la persona que accedió, el paciente, las categorías de dato alcanzadas, el momento y el origen. Los
+cinco primeros son el Anexo II sección 3 del EHDS; el paciente lo piden Suecia y Países Bajos, y sin
+él no se puede acotar un incidente.
+
+Tres propiedades que no son opcionales:
+
+- **Consultable por paciente.** Un registro que sólo se lee por fecha no contesta «quién vio lo
+  mío», que es el derecho del art. 9 del EHDS, ni sirve para acotar una notificación de brecha. En
+  Uruguay es derecho del paciente: el art. 12 del Decreto 122/019 obliga a registrar todo acceso a
+  la historia clínica, y los arts. 13 a 17 le dan al paciente la vía para verlo.
+- **Integridad demostrable.** Ninguna norma usa la palabra «inmutable»: lo que exigen es poder
+  demostrar que no fue alterado. Cada entrada encadenada con la anterior alcanza, y no depende de
+  ningún privilegio de base de datos.
+- **Disponible para el cliente cuando lo pida** (C5 OPS-15.01AC, y Panamá con la identificación y el
+  período de todas las personas que ingresaron).
+
+**Qué operaciones se anotan lo fija Perú, que es el más preciso:** el art. 46 del DS 016-2024-JUS
+enumera cuentas de usuario, hora de inicio y de fin de sesión, y las operaciones de tratamiento,
+**visualización**, modificación, eliminación, importación y exportación. Brasil lo dice distinto y
+pide lo mismo: el art. 13 III del Decreto 8.771/2016 exige inventario de accesos con momento,
+duración, identidad del responsable y archivo alcanzado. Y Argentina, por el art. 7 de la Ley
+27.706, pide que cada acción quede asociada inequívocamente a una persona. Se construye
+contra el más exigente y alcanza a los tres. Y el art. 9 del Decreto 41/2012 chileno lo escribe como
+requisito reglamentario fiscalizado: «Este sistema debe llevar registro de las fechas y personas que
+han accedido a las fichas.»
+
+Su conservación es por jurisdicción, con piso de tres años (EHDS art. 9), mínimo de dos y
+disponibilidad inmediata por Perú, sin superar el plazo de la historia clínica de ese país, y con
+un piso propio de Brasil que no es de protección de datos: seis meses de registros de acceso por el
+art. 15 del Marco Civil de Internet, bajo secreto y entregables sólo por orden judicial.
+
+**Y lo que no se construye con una lista recordada:** la norma holandesa NEN 7513 es de pago y no se
+leyó. Antes de vender en Países Bajos hay que comprarla y comparar campo por campo.
+
+**Comprobación:** las 1798 pruebas del backend, y las dos de aislamiento con dos Prestadoras con
+datos cargados. Más una que hoy no existe: **quitarle el filtro a una consulta a propósito y
+verificar que sigue sin traer datos de la otra Prestadora.** Si eso pasa, la base está protegiendo.
+Y sobre el registro: se lee un paciente desde dos Prestadoras con dos personas distintas y contesta
+las dos, por paciente, con los seis campos; se altera una entrada del medio y la cadena queda rota y
+el sistema lo dice.
+
+**10.** **Se cierra la puerta.** Sale `SUPABASE_SERVICE_ROLE_KEY` del backend y de sus variables de
+entorno. Se borra `acotarAPrestadora`. Los 17 casos que confiaban en un identificador de afuera
+dejan de ser un riesgo porque la base ya no les cree.
+
+**Comprobación:** el producto funciona sin esa variable definida. Es la única prueba que no se puede
+falsear.
+
+**11.** **El registro clínico no se pisa.** Versionado con nota aclaratoria: la corrección se
+agrega, la anterior queda, las dos con fecha, hora y autor. Alcanza a `indicaciones_medicacion`,
+`rangos_referencia_vitales` y toda tabla clínica nueva.
+
+Va acá y no más abajo porque es un cambio del modelo de datos: hacerlo antes es una migración,
+hacerlo después es una migración más lo que ya se perdió, que no se recupera.
+
+Lo exigen el art. 32 del Reglamento del Expediente de Salud de la CCSS de Costa Rica —prohibidos
+correctores, tachaduras y sobreescritura— y su art. 17, que dice que los registros incorporados no
+pueden excluirse. Brasil pide irrefutabilidad del prontuário; Argentina, historia clínica
+cronológica, foliada y completa; y el art. 13 del Decreto 242/017 uruguayo dice que la información
+no puede alterarse ni eliminarse sin que quede registrada la modificación, y que la corrección
+agrega el dato nuevo sin suprimir lo corregido.
+
+**Comprobación:** se corrige una indicación y quedan las dos versiones, cada una con su autor y su
+momento.
+
+**12.** **Las columnas que la conservación necesita.** Sólo las columnas y la tabla de reglas
+vacía: el motor que decide y avisa va al final de esta lista, donde no cuesta más hacerlo después.
+Van acá porque agregar columnas a una base cargada de datos reales de salud es otro orden de
+trabajo.
+
+Hace falta la **fecha de fallecimiento**, que hoy no existe en ninguna columna. Es un dato que llega
+de afuera y puede no llegar nunca: el sistema no se entera solo de que alguien murió. De ahí que en
+Panamá la regla sea al revés de lo que parece —el plazo corre desde la muerte, así que **mientras
+ese dato falte no hay vencimiento que calcular y la purga automática queda bloqueada.**
+
+Y hace falta la tabla de reglas de retención, por jurisdicción y por clase de registro, porque cada
+país cuenta desde un hecho distinto y el art. 9(4) del GDPR deja los plazos a la ley nacional.
+Ninguno de esos plazos puede estar escrito en el código.
+
+**Comprobación:** la columna existe, admite estar vacía, y ninguna tarea de purga corre sobre una
+fila que no la tiene cargada.
+
+**13.** **Cifrado y custodia de claves.** El cifrado en reposo y en tránsito es «Addressable» en
+Estados Unidos, lo que no quiere decir opcional: el 164.306(d)(3) da tres salidas y las dos últimas
+exigen documento conservado seis años.
+
+La razón de verdad para cifrar es otra: **el puerto seguro de la notificación de brechas.** La regla
+alcanza sólo a datos «no asegurados» (164.402), y la guía del Secretario condiciona el amparo a que
+la clave que permitiría descifrar no haya sido comprometida. De ahí el requisito de diseño:
+**custodia de claves separada del depósito de datos y con alcance por Prestadora.** Una clave para
+todas convierte un compromiso en brecha de todas. Va acá porque es estructural, no un agregado.
+
+Y el cifrado no salva la notificación en Europa: el art. 34(3)(a) exime de comunicar a las personas,
+nunca de notificar a la autoridad. **Frente a una falla de la aplicación o a una consulta que cruza
+Prestadoras el cifrado en reposo no vale nada**, porque en ese camino el dato ya estaba descifrado.
+Por eso no reemplaza a ninguno de los pasos anteriores.
+
+**Comprobación:** las claves de una Prestadora no descifran nada de otra.
+
+**14.** **Un solo archivo dice el estado.** Se funden las 150 migraciones en una maestra única y se
+enciende el esquema declarado —`supabase/config.toml:64` ya tiene el renglón, vacío—. La maestra
+vuelve a fundirse con cada migración nueva, así que siempre contiene todo el sistema.
+
+Va al final de los cimientos porque cada semana que pasa son más migraciones para fundir.
+
+**Comprobación:** se reconstruye la base desde cero con la maestra y se compara el esquema contra la
+base de hoy. Si no son idénticos, la fundición está mal.
+
+**15.** **Para que no vuelva.** Tres automatismos que cortan la publicación:
+
+- **La llave maestra no entra.** Si `SUPABASE_SERVICE_ROLE_KEY` aparece en `backend/src`, el push no
+  sale.
+- **Ninguna tabla nace sin protección.** Una tabla en el esquema declarado sin protección por fila y
+  sin al menos una política corta la publicación. Lo mismo un depósito de archivos sin política.
+- **La prueba que puede fallar.** La prueba de aislamiento corre con el filtro del código quitado a
+  propósito en una consulta. Si aprueba igual, es la base la que protege. Con esto, una prueba de
+  aislamiento verde vuelve a significar algo.
+
+**16.** **La documentación que queda falsa.** Se revisaron 1363 archivos. Lo que trababa el cambio
+—la regla de `CLAUDE.md` que declaraba la llave maestra como decisión tomada, y el grupo de este
+mismo plan que la repetía— ya salió. Quedan **127 renglones que describen el estado de hoy y
+quedarán falsos**: 18 en documentación y 109 en comentarios de código. **Se corrigen en el paso
+donde dejan de ser ciertos, no antes ni en un barrido aparte.**
+
+**65 comentarios viven dentro de migraciones ya aplicadas y no se tocan.** Una migración es una
+instrucción que ya se ejecutó: no manda, no se le contesta y no se la corrige. Con el esquema
+declarado encendido, el estado se lee en un archivo y ninguna migración vieja se puede confundir con
+el estado de hoy. Eso resuelve los 65 sin escribir nada.
+
+Y hay una premisa caída afuera de este repositorio: `productos\Careonys-Marketplace\docs\PLAN.md:44-48`
+apoya toda la etapa 2 de la fusión en que «Careonys protege por el servidor». **Ahí no se toca
+nada**, así que queda señalado y se decide cuando la fusión llegue a esa etapa.
+
+### Qué no hacen los cimientos
+
+No cambian ninguna pantalla, ningún texto visible ni ninguna regla de negocio, y no cambian qué ve
+cada rol. Nadie que use el producto nota nada, salvo que a partir de acá un error de programación no
+puede filtrar datos de otra Prestadora.
+
+---
+
 ## La mudanza desde Match
 
 **Va primero, y por eso está acá arriba.** Casi todo lo que sigue se encarece si se construye
@@ -200,7 +587,7 @@ la sección de Reclutamiento está esperando justamente esto.
   sólo para eso. Lo que viaja se escribe de este lado con la palabra que manda el glosario, y así
   esas notas quedan atrás.
 
-**5.** Una cuenta por Prestadora. **Un Asistente trabaja en varias Prestadoras y una Familia
+**17.** Una cuenta por Prestadora. **Un Asistente trabaja en varias Prestadoras y una Familia
 contrata con varias.** Cada una de esas es **una cuenta distinta, con su propia clave**. El mismo
 correo puede estar en dos Prestadoras y son dos cuentas: usar el correo de siempre no lo obliga a
 nadie a tener una sola cuenta. Adentro de una Prestadora ese correo no se repite.
@@ -292,16 +679,16 @@ títulos:
   Solicitud. Cuando el turno cuelgue del Servicio esa ventana cambia de raíz, **y es la misma
   ventana que toca la sección de carteles**, más abajo. Una sola pasada.
 
-**6. Usted** — Aprobar ese plan, que todavía no está aprobado. Hasta que lo esté no se escribe
+**18. Usted** — Aprobar ese plan, que todavía no está aprobado. Hasta que lo esté no se escribe
 código de producción de ninguno de sus ocho pasos.
 
-**7. Usted** — Las tres respuestas que ese plan espera, cada una con su situación delante en el
+**19. Usted** — Las tres respuestas que ese plan espera, cada una con su situación delante en el
 documento: qué dice el aviso cuando queda un horario pactado sin nadie que lo cubra; qué dice el
 tercer estado de la coordinación, el de la vacante que cubre la administración mientras no haya
 nadie asignado; y si «suspender» es distinto de «pausar» —una sola acción con fecha de vuelta
 opcional, o dos, una por tiempo conocido y otra indefinida—.
 
-**8. Usted** — Y dos que aparecieron al escribir la escala de cuatro niveles, las dos sobre lo
+**20. Usted** — Y dos que aparecieron al escribir la escala de cuatro niveles, las dos sobre lo
 guardado:
 
 - **La tabla `guardias` guarda turnos**, no guardias: cada fila lleva una Asistente, un día, un
@@ -316,7 +703,7 @@ guardado:
   cubrir un horario pero no de qué, y la sugerencia de Asistentes no tiene contra qué comparar. ¿El
   tipo pasa a la guardia?
 
-**9. Usted** — Y una que aparece al cruzar el acto con la regla del producto: **el Pagador.** La
+**21. Usted** — Y una que aparece al cruzar el acto con la regla del producto: **el Pagador.** La
 regla dice que quien asume la obligación de pagar queda definido recién cuando firma, y que eso
 tiene que estar listo **el día que se firma con la Familia** — que es exactamente este acto. Pero
 la firma vive hoy en otra pantalla, dentro de la ficha de la Familia, con su propio estado y sus
@@ -324,13 +711,13 @@ botones de armar el consentimiento y registrar la firma; y el único requisito q
 para habilitar un Servicio es el coordinador asignado. ¿Son dos requisitos, y un Servicio sin
 Pagador firmado tampoco se habilita? ¿O el acto muestra cómo está esa firma y deja seguir?
 
-**10.** Construir los ocho pasos de ese plan, en el orden que tiene escrito.
+**22.** Construir los ocho pasos de ese plan, en el orden que tiene escrito.
 
-**11.** Sacar de los tres idiomas la explicación de la coordinación que hoy acompaña al equipo del
+**23.** Sacar de los tres idiomas la explicación de la coordinación que hoy acompaña al equipo del
 Paciente, que dice que mientras nadie esté fijado son todos los que trabajan en la zona. Describe el
 modelo que este plan reemplaza. Va junto con el paso del coordinador asignado, no antes.
 
-**12.** Agregar el tipo «Servicio» a Ajustes › Importación, que hoy no está entre los tipos que se
+**24.** Agregar el tipo «Servicio» a Ajustes › Importación, que hoy no está entre los tipos que se
 pueden importar. Va después de que el acto exista: importar un Servicio sin coordinador asignado
 sería dar de alta algo que el producto no habilita.
 
@@ -363,7 +750,7 @@ clave para las tres, esa puerta daba también a las otras dos y esto no se podí
 - **Nada de esto puede impedirle a nadie trabajar.** La habilitación es para que un número se vuelva
   llave, nunca para entrar.
 
-**13.** Lo mismo, en las dos aplicaciones de teléfono. Hoy un Asistente y una Familia no tienen
+**25.** Lo mismo, en las dos aplicaciones de teléfono. Hoy un Asistente y una Familia no tienen
 nada de esto: no pueden verificar ni cambiar su número con código, entrar desde un equipo nuevo no
 les pide código, y **no pueden cerrar la sesión de todos los equipos**, que es justo lo que
 necesita alguien a quien le robaron el teléfono. La única puerta es el Panel, y ahí no entran.
@@ -373,7 +760,7 @@ no conocen ningún rol, pero las únicas puertas que las usan exigen ser del Pan
 Asistente y a una Familia. Hay que abrir las puertas equivalentes para ellos dos, y recién
 después las pantallas.
 
-**14.** Pedir el enlace de la clave nueva desde las dos aplicaciones de teléfono. Hoy no se puede:
+**26.** Pedir el enlace de la clave nueva desde las dos aplicaciones de teléfono. Hoy no se puede:
 quien se olvidó la clave llama a su Prestadora y ella se lo manda desde el Panel. El backend ya
 tiene la puerta, y el Panel ya la usa.
 
@@ -393,7 +780,7 @@ averiguaría quién tiene cuenta preguntando de a un correo por vez.
 
 ## El dinero
 
-**15.** Escribir la conexión de ida con el software de facturación de la primera Prestadora, cuando
+**27.** Escribir la conexión de ida con el software de facturación de la primera Prestadora, cuando
 haya una y ella lo elija. **No se escribe antes**: se miraron los cinco que más se usan en
 Argentina y se conectan todos parecido pero con datos distintos, así que escribir uno a ciegas es
 acertar con suerte. Lo investigado está en `docs/FACTURADORES_Y_COMO_SE_CONECTAN.md`. **Cada
@@ -401,7 +788,7 @@ software es una pieza aparte** y agregar la segunda no puede obligar a tocar la 
 dos maneras ya están hechas y alcanzan para salir a producción: se anota factura por factura a
 mano, o se baja un archivo con todo lo que falta facturar y se sube el que el software devuelve.
 
-**16.** La pantalla de los datos bancarios del Asistente. El dato lo informa él, así que él lo
+**28.** La pantalla de los datos bancarios del Asistente. El dato lo informa él, así que él lo
 carga y él lo corrige: la base ya lo deja escribir su propia fila y ninguna otra, y el backend ya
 tiene por dónde —cargar, corregir y sacar la cuenta—, con lo que entra validado y con el cambio
 anotado. Falta la pantalla donde lo hace, en la aplicación del Asistente.
@@ -427,19 +814,19 @@ cuarenta archivos de este producto. Se saca en tres tandas, y no son la misma co
 - **Los nombres de archivo y de función del código.** No son marca ni son dato guardado, así que
   acá sí hay una decisión: se dejan o se cambian con la tanda visible.
 
-**17. Usted** — La tercera tanda: ¿los archivos y funciones que llevan el nombre viejo se cambian
+**29. Usted** — La tercera tanda: ¿los archivos y funciones que llevan el nombre viejo se cambian
 o se dejan?
 
-**18.** Sacar el nombre viejo de lo visible y de lo escrito, y aplicar lo contestado sobre el
+**30.** Sacar el nombre viejo de lo visible y de lo escrito, y aplicar lo contestado sobre el
 código. Lo guardado no se toca. **Va en una sola pasada con el barrido de tuteo y voseo** de la
 sección de los carteles, más abajo: los dos reescriben las traducciones del Panel en los tres
 idiomas, y hacerlo dos veces es tocar el mismo archivo dos veces.
 
-**19. Usted** — Prioridad de acceso al plantel ante una baja: el PRD la define en una línea (`docs/PRD_07_Modalidad_Marketplace.md:225`) y de ahí salen dos productos distintos. ¿Es que el contacto del reemplazo no vuelva a costar durante una ventana —ni descuenta saldo ni pide un acceso nuevo—, o es que a esa Familia se le avise primero cuando alguien del plantel vuelve a estar disponible? ¿O las dos? Y antes que eso: hoy la Familia no contrata por Match, así que no hay baja que detectar. ¿Qué cuenta como baja — que el Asistente se saque de los disponibles, que la Familia cierre el Servicio, o hay que construir antes el vínculo?
+**31. Usted** — Prioridad de acceso al plantel ante una baja: el PRD la define en una línea (`docs/PRD_07_Modalidad_Marketplace.md:225`) y de ahí salen dos productos distintos. ¿Es que el contacto del reemplazo no vuelva a costar durante una ventana —ni descuenta saldo ni pide un acceso nuevo—, o es que a esa Familia se le avise primero cuando alguien del plantel vuelve a estar disponible? ¿O las dos? Y antes que eso: hoy la Familia no contrata por Match, así que no hay baja que detectar. ¿Qué cuenta como baja — que el Asistente se saque de los disponibles, que la Familia cierre el Servicio, o hay que construir antes el vínculo?
 
-**20.** Construirla según lo contestado.
+**32.** Construirla según lo contestado.
 
-**21.** Tres puntos de Match donde la Prestadora no se aplica:
+**33.** Tres puntos de Match donde la Prestadora no se aplica:
 
 - **El saldo de contactos y el estado de la suscripción de una Familia se buscan sin la
   Prestadora.** Una de las dos funciones la recibe y no la usa en ninguna consulta. **Es
@@ -454,17 +841,17 @@ idiomas, y hacerlo dos veces es tocar el mismo archivo dos veces.
 
 ## Los huecos del Panel
 
-**22. Usted** — De la Solicitud: ¿cómo se le presenta la Asistente nueva a la Familia — mensaje sin respuesta, aceptación explícita, o fuera del sistema? **Cuelga del acto de armar el Servicio**, más arriba en esta lista: sin Servicio armado no hay a qué Familia presentarle a nadie.
+**34. Usted** — De la Solicitud: ¿cómo se le presenta la Asistente nueva a la Familia — mensaje sin respuesta, aceptación explícita, o fuera del sistema? **Cuelga del acto de armar el Servicio**, más arriba en esta lista: sin Servicio armado no hay a qué Familia presentarle a nadie.
 
-**23. Usted** — Las dos observaciones de apariencia que quedan, porque las dos son decisiones de diseño: ¿con qué pantalla abre la aplicación de Familia cuando hay más de un Paciente — hoy abre en la lista, y con uno solo ya se saltea al detalle? ¿Y cuál es la identidad visual de las dos aplicaciones, que nunca pasaron por su etapa de diseño?
+**35. Usted** — Las dos observaciones de apariencia que quedan, porque las dos son decisiones de diseño: ¿con qué pantalla abre la aplicación de Familia cuando hay más de un Paciente — hoy abre en la lista, y con uno solo ya se saltea al detalle? ¿Y cuál es la identidad visual de las dos aplicaciones, que nunca pasaron por su etapa de diseño?
 
 El Desarrollador está preparando una maqueta orientativa de cómo tienen que verse y cómo se recorren. **La maqueta mejora lo que ya está construido: no es condición para construirlo.** Las pantallas que faltan se hacen ahora, con la apariencia que el producto ya tiene, y cuando la maqueta llegue se acomoda lo que haya que acomodar. Ningún paso de esta lista espera por ella.
 
-**24. Usted** — Rotación y retención de Asistentes: ¿cuál es la fórmula y cuál el umbral?
+**36. Usted** — Rotación y retención de Asistentes: ¿cuál es la fórmula y cuál el umbral?
 
-**25.** Ponerlo en el tablero. Se calcula desde `ceses` y `asistentes`, sin tabla nueva.
+**37.** Ponerlo en el tablero. Se calcula desde `ceses` y `asistentes`, sin tabla nueva.
 
-**26.** El aislamiento del Panel, que hoy descansa entero en la base. Tres cosas:
+**38.** El aislamiento del Panel, que hoy descansa entero en la base. Tres cosas:
 
 - **Unas cuarenta consultas no llevan ningún filtro propio.** Si una política se afloja, o entra
   una tabla nueva sin la suya, esas pantallas muestran listas y números mezclados y nada en el
@@ -475,7 +862,7 @@ El Desarrollador está preparando una maqueta orientativa de cómo tienen que ve
 - **Al lado de cada cuenta se cuenta en cuántos lugares trabaja, y suma los de otras
   Prestadoras.** Deja deducir que esa persona trabaja en otra.
 
-**27.** La marca del equipo del Panel usa un solo casillero del navegador para todas las
+**39.** La marca del equipo del Panel usa un solo casillero del navegador para todas las
 Prestadoras: la última pisa a la anterior. El backend la valida contra la Prestadora, así que no
 sale ningún dato; es un dato de una Organización viajando adentro del pedido de otra.
 
@@ -520,44 +907,44 @@ trabajo:
 **Y el texto de la sugerencia de Asistentes es el mismo trabajo que el acto**, no uno de carteles:
 la pantalla dice que ordena por zona y el cálculo no la mira. Se arregla arreglando el cálculo.
 
-**28. Usted** — Los siete carteles que esperan su texto. Tres de ellos ya tienen el texto o el
+**40. Usted** — Los siete carteles que esperan su texto. Tres de ellos ya tienen el texto o el
 molde escrito en el `.docx` y lo único que falta es confirmarlo.
 
-**29. Usted** — Las dos preguntas que usted dejó escritas en el `.docx` y que siguen sin
+**41. Usted** — Las dos preguntas que usted dejó escritas en el `.docx` y que siguen sin
 contestar: qué es un selector, y si alguna pantalla dice «La Prestadora».
 
-**30. Usted** — El cartel que quedó parado porque no ubicó la situación. Va con la pantalla
+**42. Usted** — El cartel que quedó parado porque no ubicó la situación. Va con la pantalla
 delante.
 
-**31. Usted** — Los tres grupos que quedaron sin autorizar: los once textos que salen por ser una
+**43. Usted** — Los tres grupos que quedaron sin autorizar: los once textos que salen por ser una
 aclaración debajo de un casillero, los catorce que pasarían a formar parte de la etiqueta del
 casillero, y los nueve casilleros que están mal hechos y por eso necesitaban esa aclaración.
 
-**32. Usted** — Habilitar clave: qué carteles lleva se decide después de analizar el procedimiento
+**44. Usted** — Habilitar clave: qué carteles lleva se decide después de analizar el procedimiento
 y su lógica, no antes.
 
-**33. Usted** — El bloque del segundo factor en Configuración › Accesos, con dos frases que
+**45. Usted** — El bloque del segundo factor en Configuración › Accesos, con dos frases que
 nombran un rol que no existe. **Y detrás hay una decisión que no está en ninguna parte de esta
 lista:** la regla del producto dice que hay un solo Administrador por Prestadora y que las personas
 en las que él delega funciones propias **llevan otro nombre, que todavía no está decidido**. Sin
 ese nombre, esas dos frases no se pueden reescribir.
 
-**34. Usted** — Tres cosas que son texto visible y no se pueden decidir de mi lado: la
+**46. Usted** — Tres cosas que son texto visible y no se pueden decidir de mi lado: la
 contradicción del certificado, donde dos textos dicen cosas distintas del mismo código; las cuatro
 frases que le nombran al usuario el permiso de acceso, que la regla del producto dice que la
 Prestadora no ve ni sabe que existe; y la advertencia legal escrita adentro del
 código de la aplicación del Asistente, que según la regla tiene que salir del documento legal de ese
 país.
 
-**35.** Aplicar todo lo contestado, y lo que ya está autorizado: el cambio de «Círculo de cuidado»
+**47.** Aplicar todo lo contestado, y lo que ya está autorizado: el cambio de «Círculo de cuidado»
 a «Personas autorizadas», que es grande y no lleva ningún mensaje.
 
-**36.** Lo que no espera ninguna respuesta porque ya es regla escrita: sacar el tuteo y el voseo de
+**48.** Lo que no espera ninguna respuesta porque ya es regla escrita: sacar el tuteo y el voseo de
 todo el Panel y de las dos aplicaciones, sin excepción —va en la misma pasada que el nombre viejo—;
 quitar los textos que no se alcanzan desde ninguna pantalla; y escribir la regla de que cuando un
 texto sale sale el cartel entero, donde vive la regla del casillero.
 
-**37.** Relevar lo que todavía no está relevado y el propio relevamiento manda mirar: los textos al
+**49.** Relevar lo que todavía no está relevado y el propio relevamiento manda mirar: los textos al
 pie de los casilleros, los avisos de que algo se guardó, las ventanas de confirmar, los carteles de
 las dos aplicaciones y los de Habilitar clave.
 
@@ -579,43 +966,43 @@ Los tres arreglos, para que estén escritos:
 2. **Las listas de opciones nacen vacías.** Género, nacionalidad, tipo de registro ante AFIP y los cinco subgrupos de experiencia clínica se cargan por Prestadora. **La pantalla donde se cargan ya está construida** —`panel/src/pages/configuracion/LasListasDeOpciones.jsx`—, así que lo que queda es sembrar las listas de cada Prestadora: mientras estén vacías el formulario no tiene nada que ofrecer.
 3. **Al incorporar un aspirante se pierden quince datos.** Lo que cargó en la postulación no llega entero a su ficha de Asistente.
 
-**38. Usted** — ¿Dónde vive el formulario público de postulación? No va en `careonys.com`, que le vende software a las Prestadoras: quien busca trabajo de cuidador se postula en la empresa que lo va a contratar. ¿En el sitio de cada Prestadora, con dirección propia?
+**50. Usted** — ¿Dónde vive el formulario público de postulación? No va en `careonys.com`, que le vende software a las Prestadoras: quien busca trabajo de cuidador se postula en la empresa que lo va a contratar. ¿En el sitio de cada Prestadora, con dirección propia?
 
-**39.** La pantalla del formulario, que es lo único que falta: la base y el backend ya guardan y comprueban los campos de las seis secciones de `docs/PRD_03_Reclutamiento.md`, y el backend entrega las listas de opciones en `GET /api/publico/:prestadora/postulacion-asistente/opciones`. Se dibuja desde la declaración, no a mano. Esperaba el paso anterior.
+**51.** La pantalla del formulario, que es lo único que falta: la base y el backend ya guardan y comprueban los campos de las seis secciones de `docs/PRD_03_Reclutamiento.md`, y el backend entrega las listas de opciones en `GET /api/publico/:prestadora/postulacion-asistente/opciones`. Se dibuja desde la declaración, no a mano. Esperaba el paso anterior.
 
-**40. Usted** — ¿Se le bloquea la asignación de guardias a quien no está inscripto en monotributo, o se avisa y decide la Prestadora? La regla del producto dice avisar, no bloquear, así que el PRD y la regla no coinciden. **Lo que se asigna es un turno de guardia**, y asignarlo supone el Servicio armado, más arriba en esta lista.
+**52. Usted** — ¿Se le bloquea la asignación de guardias a quien no está inscripto en monotributo, o se avisa y decide la Prestadora? La regla del producto dice avisar, no bloquear, así que el PRD y la regla no coinciden. **Lo que se asigna es un turno de guardia**, y asignarlo supone el Servicio armado, más arriba en esta lista.
 
-**41.** Construirlo según lo contestado.
+**53.** Construirlo según lo contestado.
 
-**42. Usted** — Comparar automáticamente la foto del documento con la foto de la cara es tratamiento de dato biométrico, y hacen falta dos decisiones suyas: ¿cuál es el documento legal del que sale la advertencia al Asistente, que hoy no existe y sin la cual no hay advertencia? ¿Y qué proveedor compara las dos caras? Guardar las dos fotos y mostrarlas juntas ya está hecho: hoy las compara una persona.
+**54. Usted** — Comparar automáticamente la foto del documento con la foto de la cara es tratamiento de dato biométrico, y hacen falta dos decisiones suyas: ¿cuál es el documento legal del que sale la advertencia al Asistente, que hoy no existe y sin la cual no hay advertencia? ¿Y qué proveedor compara las dos caras? Guardar las dos fotos y mostrarlas juntas ya está hecho: hoy las compara una persona.
 
-**43.** Construirlo según lo contestado.
+**55.** Construirlo según lo contestado.
 
-**44. Usted** — El programa de capacitación: qué contenido lleva, cuántas preguntas y qué nota se necesita para aprobar. Hoy «capacitación» es sólo el nombre de una etapa.
+**56. Usted** — El programa de capacitación: qué contenido lleva, cuántas preguntas y qué nota se necesita para aprobar. Hoy «capacitación» es sólo el nombre de una etapa.
 
-**45.** Construirlo.
+**57.** Construirlo.
 
 ---
 
 ## Las dos aplicaciones
 
-**46. Usted** — Compartir el Certificado de Aptitud: ¿hacia dónde y por qué medio? Hoy se puede ver, con su estado y su fecha. Compartirlo hacia afuera exige decidir a quién se le manda, por qué canal y qué ve quien lo recibe, porque no existe ninguna verificación pública del certificado: sin eso, lo compartido sería una imagen que no prueba nada.
+**58. Usted** — Compartir el Certificado de Aptitud: ¿hacia dónde y por qué medio? Hoy se puede ver, con su estado y su fecha. Compartirlo hacia afuera exige decidir a quién se le manda, por qué canal y qué ve quien lo recibe, porque no existe ninguna verificación pública del certificado: sin eso, lo compartido sería una imagen que no prueba nada.
 
-**47. Usted** — La alerta por salida del domicilio, dos decisiones que no puedo tomar yo. Hoy la cuenta se hace con una velocidad media única y distancia en línea recta (`backend/src/utils/llegadaEstimada.js:39-45`), se dispara recién cuando alguien marcó la salida, y mide llegada tarde, no que el Asistente siga en su casa.
+**59. Usted** — La alerta por salida del domicilio, dos decisiones que no puedo tomar yo. Hoy la cuenta se hace con una velocidad media única y distancia en línea recta (`backend/src/utils/llegadaEstimada.js:39-45`), se dispara recién cuando alguien marcó la salida, y mide llegada tarde, no que el Asistente siga en su casa.
 
 - **El tiempo de viaje real sale de un servicio de mapas ajeno.** Cuál se contrata, con qué cuenta y qué se le manda en cada consulta —las coordenadas de la casa de una persona salen del producto— es decisión suya, y la credencial la pone usted.
 - **Dónde vive el Asistente ya se guarda**, con su dirección escrita y sus coordenadas, y anotado como dato sensible que no sale hacia la Familia. Las coordenadas quedan vacías mientras nadie ubique la dirección en un mapa, y completarlas depende del servicio de mapas del punto anterior. Esto **no es una decisión suya**: está tomada y construida.
 - **Y exige mirar el teléfono antes de que la guardia empiece.** Hoy el GPS se lee cuando la persona aprieta un botón. Leerlo sola, mientras todavía no empezó a trabajar, es seguir a alguien fuera de su horario: hay que decidir si se hace, con qué advertencia y con qué permiso.
 
-**48.** Con eso contestado, construirlo — incluida la lista de medios de transporte, que hoy es texto libre escrito en cada salida y por eso no hay contra qué traducirlo a una velocidad.
+**60.** Con eso contestado, construirlo — incluida la lista de medios de transporte, que hoy es texto libre escrito en cada salida y por eso no hay contra qué traducirlo a una velocidad.
 
-**49. Usted** — El botón de contacto de «Asistente Asignado»: ¿a quién llama? El PRD lo dejó abierto —«WhatsApp o chat interno» (`docs/PRD_04_05_App_Servicio.md:224`)— y las dos salidas tienen consecuencias. Darle a la Familia el teléfono del Asistente es entregar el dato personal de quien trabaja, y es exactamente lo que Match cobra por abrir: ahí el contacto va tapado hasta que alguien paga. La otra salida es que el botón lleve a la Prestadora, que es con quien la Familia tiene el trato en prestación directa, usando el contacto que ella misma configura. Hay una tercera: el hilo interno, que hoy existe sólo para Match y con el tapado puesto.
+**61. Usted** — El botón de contacto de «Asistente Asignado»: ¿a quién llama? El PRD lo dejó abierto —«WhatsApp o chat interno» (`docs/PRD_04_05_App_Servicio.md:224`)— y las dos salidas tienen consecuencias. Darle a la Familia el teléfono del Asistente es entregar el dato personal de quien trabaja, y es exactamente lo que Match cobra por abrir: ahí el contacto va tapado hasta que alguien paga. La otra salida es que el botón lleve a la Prestadora, que es con quien la Familia tiene el trato en prestación directa, usando el contacto que ella misma configura. Hay una tercera: el hilo interno, que hoy existe sólo para Match y con el tapado puesto.
 
 De las especialidades de esta pantalla no queda nada por hacer: `asistentes.especialidades` está retirada por comentario de la migración y no se escribe más. Lo vigente es el tipo de Asistente, que ya se muestra, con sus Tareas de lo que corresponde y lo que no.
 
-**50. Usted** — El PRD promete exportar el reporte a PDF en la aplicación de la Familia, y más adelante dice que la Familia no accede al informe. ¿Cuál de las dos vale?
+**62. Usted** — El PRD promete exportar el reporte a PDF en la aplicación de la Familia, y más adelante dice que la Familia no accede al informe. ¿Cuál de las dos vale?
 
-**51.** Cuatro puntos de las aplicaciones y de lo que sale hacia el teléfono:
+**63.** Cuatro puntos de las aplicaciones y de lo que sale hacia el teléfono:
 
 - **Los mensajes al celular buscan a quién mandarlos sin la Prestadora.** Una suscripción puede
   cambiar de dueño y de Prestadora —el propio código lo anota cuando pasa—, y entonces un mensaje
@@ -635,23 +1022,23 @@ comprobar antes abre el agujero sin que nadie se entere.
 
 ## Configuración que todavía está escrita en el código
 
-**52. Usted** — ¿Cooperativa como tercera modalidad de vínculo?
+**64. Usted** — ¿Cooperativa como tercera modalidad de vínculo?
 
-**53.** Construirla: migración que abra tres CHECK, filas de conceptos y fórmulas de cese.
+**65.** Construirla: migración que abra tres CHECK, filas de conceptos y fórmulas de cese.
 
-**54. Usted** — Nivel de complejidad: ¿qué significa cada uno de los tres? ¿Condiciona qué tipo de Asistente se admite? Hoy se carga y se edita, y el cálculo de candidatos no lo mira.
+**66. Usted** — Nivel de complejidad: ¿qué significa cada uno de los tres? ¿Condiciona qué tipo de Asistente se admite? Hoy se carga y se edita, y el cálculo de candidatos no lo mira.
 
-**55.** Que el cálculo de candidatos lo use.
+**67.** Que el cálculo de candidatos lo use.
 
-**56. Usted** — Verificar matrícula: ¿alcanza con mirar el archivo, o hay que comprobar contra el registro del colegio profesional? La mitad técnica está construida.
+**68. Usted** — Verificar matrícula: ¿alcanza con mirar el archivo, o hay que comprobar contra el registro del colegio profesional? La mitad técnica está construida.
 
-**57.** Construir la verificación según lo contestado.
+**69.** Construir la verificación según lo contestado.
 
-**58. Usted** — Accesibilidad: el código está hecho, falta la respuesta legal. `docs/legal/argentina.md` no la menciona.
+**70. Usted** — Accesibilidad: el código está hecho, falta la respuesta legal. `docs/legal/argentina.md` no la menciona.
 
-**59. Usted** — El Certificado de Aptitud impreso: ¿qué lleva? Hoy la pantalla genera el código de barras y ahí termina.
+**71. Usted** — El Certificado de Aptitud impreso: ¿qué lleva? Hoy la pantalla genera el código de barras y ahí termina.
 
-**60.** Armarlo. La subida del certificado a un depósito de archivos **ya está resuelta**: el
+**72.** Armarlo. La subida del certificado a un depósito de archivos **ya está resuelta**: el
 depósito de los papeles del legajo del Asistente está construido, en
 `supabase/migrations/20260929100000_los_papeles_del_legajo_del_asistente_tienen_donde_vivir.sql`.
 Hoy sólo se guardan fechas.
@@ -660,21 +1047,21 @@ Hoy sólo se guardan fechas.
 
 ## Datos personales
 
-**61. Usted** — Protección de datos personales: el texto lo tiene que dar el Desarrollador. `docs/legal/argentina.md` tiene ocho secciones y ninguna es de esto. Sin documento no hay advertencia.
+**73. Usted** — Protección de datos personales: el texto lo tiene que dar el Desarrollador. `docs/legal/argentina.md` tiene ocho secciones y ninguna es de esto. Sin documento no hay advertencia.
 
-**62.** La advertencia, y qué se hace con los datos de un Servicio cerrado hace años, que hoy no se purgan nunca.
+**74.** La advertencia. Qué se hace con los datos de un Servicio cerrado hace años, que hoy no se purgan nunca, no se contesta acá: es el tramo de conservación y borrado, más abajo en esta misma lista.
 
-**63. Usted** — La ubicación de las personas: cuatro preguntas para el profesional legal. En los 21 archivos de `docs/legal/` no aparece ni una vez «ubicación», «GPS» ni la ley 25.326. El registro del consentimiento está construido; los textos sembrados son de relleno. **Mientras no haya respuesta, el seguimiento no se enciende con nadie real.**
+**75. Usted** — La ubicación de las personas: cuatro preguntas para el profesional legal. En los 21 archivos de `docs/legal/` no aparece ni una vez «ubicación», «GPS» ni la ley 25.326. El registro del consentimiento está construido; los textos sembrados son de relleno. **Mientras no haya respuesta, el seguimiento no se enciende con nadie real.**
 
-**64.** Sembrar los textos reales y encender el seguimiento y el mensaje de demora en el trayecto.
+**76.** Sembrar los textos reales y encender el seguimiento y el mensaje de demora en el trayecto.
 
 ---
 
 ## Respaldo, continuidad y secretos
 
-**65. Usted** — El alta del gestor de contraseñas, y completar las cinco filas en blanco de `celtatech/docs/CUENTAS.md`.
+**77. Usted** — El alta del gestor de contraseñas, y completar las cinco filas en blanco de `celtatech/docs/CUENTAS.md`.
 
-**66.** Rotar clave por clave lo que corresponda, decidiéndolo de a una. Si se rota la clave secreta de Supabase, se actualiza en Railway en el mismo acto. Entra acá la clave de servicio de Supabase que estuvo escrita en texto plano en la configuración de permisos de la máquina: los comandos que la llevaban adentro ya se borraron, pero la clave en sí se rota el día de la liberación, no antes.
+**78.** Rotar clave por clave lo que corresponda, decidiéndolo de a una. Si se rota la clave secreta de Supabase, se actualiza en Railway en el mismo acto. Entra acá la clave de servicio de Supabase que estuvo escrita en texto plano en la configuración de permisos de la máquina: los comandos que la llevaban adentro ya se borraron, pero la clave en sí se rota el día de la liberación, no antes.
 
 **Ya no queda ninguna contraseña escrita en el repositorio.** Todas salen del entorno, y las
 cuentas de la base local nacen sin clave: se la pone un programa aparte después de cada
@@ -686,44 +1073,44 @@ prueba del escaneo del Asistente.
 Y queda además **una contraseña de prueba en texto plano dentro de la configuración de permisos de
 una copia de trabajo**, que no es un archivo del repositorio y por eso el barrido no la alcanzó.
 
-**67. Usted** — Correr `node scripts/probar_restauracion.mjs` desde `backend/`, con Docker encendido y las variables del respaldo diario más las de la base de producción cargadas en el entorno. Baja el último respaldo, lo restaura en una base efímera, compara las tablas, las filas y los archivos del espejo contra lo que hay hoy, y borra todo al terminar. Le toca a usted porque pide las llaves del bucket y de la base, que viven en la caja fuerte. La prueba anterior verificó 30 tablas de un esquema que hoy tiene 105 y no tocó ningún archivo, porque todavía no se respaldaban. **Si contesta `no_probado`, no salió mal: quiere decir que todo coincidió y no había nada cargado que comparar**, y entonces hay que repetirla con datos de prueba.
+**79. Usted** — Correr `node scripts/probar_restauracion.mjs` desde `backend/`, con Docker encendido y las variables del respaldo diario más las de la base de producción cargadas en el entorno. Baja el último respaldo, lo restaura en una base efímera, compara las tablas, las filas y los archivos del espejo contra lo que hay hoy, y borra todo al terminar. Le toca a usted porque pide las llaves del bucket y de la base, que viven en la caja fuerte. La prueba anterior verificó 30 tablas de un esquema que hoy tiene 105 y no tocó ningún archivo, porque todavía no se respaldaban. **Si contesta `no_probado`, no salió mal: quiere decir que todo coincidió y no había nada cargado que comparar**, y entonces hay que repetirla con datos de prueba.
 
-**68. Usted** — Los dominios se renovaron en julio de 2026 y vencen en julio de 2027, y esa fecha hoy no está en ningún calendario: `celtatech.com` y `careonys.com` en Cloudflare, y `celtatech.com.ar` y `celtatech.net.ar` en NIC Argentina. Poner un recordatorio un mes antes de cada uno y, donde el registrador lo permita, dejar la renovación automática encendida — NIC Argentina no la tiene, así que ésos son los dos que de verdad dependen del recordatorio. Un dominio vencido no se cae despacio: deja de resolver, y con él se van las pantallas, el correo de la empresa y la entrada a las cuentas que se registraron con ese correo.
+**80. Usted** — Los dominios se renovaron en julio de 2026 y vencen en julio de 2027, y esa fecha hoy no está en ningún calendario: `celtatech.com` y `careonys.com` en Cloudflare, y `celtatech.com.ar` y `celtatech.net.ar` en NIC Argentina. Poner un recordatorio un mes antes de cada uno y, donde el registrador lo permita, dejar la renovación automática encendida — NIC Argentina no la tiene, así que ésos son los dos que de verdad dependen del recordatorio. Un dominio vencido no se cae despacio: deja de resolver, y con él se van las pantallas, el correo de la empresa y la entrada a las cuentas que se registraron con ese correo.
 
 ---
 
 ## Marca y dominio por Prestadora
 
-**69.** Que la conversación quede guardada adentro del producto, según lo que se conteste sobre el botón de contacto de «Asistente Asignado», más arriba en esta misma lista. Hasta que el Panel no tenga un hilo de dos puntas, lo que se hablan la Familia y el Asistente en prestación directa se va a WhatsApp y no queda adentro de ningún lado. El chat interno ya está construido entero —hilos, mensajes, tapado del contacto, pantallas en las dos aplicaciones, mensaje al celular y videollamada—, pero **sólo funciona donde la Prestadora pone Asistentes disponibles para que la Familia elija**: exige una Familia y un Asistente que se hayan encontrado ahí. En prestación directa no hay hilo, y hacia la Prestadora tampoco: el único canal con el Panel va en un solo sentido, del Panel al Asistente, y no hay dónde guardar lo que contesta.
+**81.** Que la conversación quede guardada adentro del producto, según lo que se conteste sobre el botón de contacto de «Asistente Asignado», más arriba en esta misma lista. Hasta que el Panel no tenga un hilo de dos puntas, lo que se hablan la Familia y el Asistente en prestación directa se va a WhatsApp y no queda adentro de ningún lado. El chat interno ya está construido entero —hilos, mensajes, tapado del contacto, pantallas en las dos aplicaciones, mensaje al celular y videollamada—, pero **sólo funciona donde la Prestadora pone Asistentes disponibles para que la Familia elija**: exige una Familia y un Asistente que se hayan encontrado ahí. En prestación directa no hay hilo, y hacia la Prestadora tampoco: el único canal con el Panel va en un solo sentido, del Panel al Asistente, y no hay dónde guardar lo que contesta.
 
 ---
 
 ## Módulos
 
-**70.** Sacar el nombre viejo `aurevia` de adentro del producto. **Se decide y se hace con la
+**82.** Sacar el nombre viejo `aurevia` de adentro del producto. **Se decide y se hace con la
 mudanza ya encima**, que es cuando hay que tocar la base de todos modos. Está medido y no se
 pierde: nadie usó nunca la aplicación y todos los datos cargados son inventados, así que
 reconstruir la base los reescribe sin mudanza. Lo que cuesta igual, se haga cuando se haga, son
 cinco nombres de afuera: el nombre del proyecto local, el servicio donde corre el backend con su
 dirección, y los dos depósitos de respaldo. El repositorio ya se llama `careonys`.
 
-**71. Usted** — ¿Dónde corre un módulo y contra qué base? Hoy `Modulos\` está vacía. **Facturación y créditos y cobranzas ya están decididas como software aparte del que Careonys se sirve**, así que esto no decide si salen, sino dónde corren el día que existan. También decide si con eso se cierran sin construir los adaptadores de pasarela.
+**83. Usted** — ¿Dónde corre un módulo y contra qué base? Hoy `Modulos\` está vacía. **Facturación y créditos y cobranzas ya están decididas como software aparte del que Careonys se sirve**, así que esto no decide si salen, sino dónde corren el día que existan. También decide si con eso se cierran sin construir los adaptadores de pasarela.
 
-**72.** Sacar la facturación y la cobranza a un módulo, cuando haya dónde correrlo.
+**84.** Sacar la facturación y la cobranza a un módulo, cuando haya dónde correrlo.
 
 ---
 
 ## Decisiones que no traban nada empezado
 
-**73. Usted** — Subcontratación: no existe ninguna tabla de Empresa subcontratada y el Panel no la ofrece a propósito. La precondición era no abrirla hasta que una Prestadora real lo pida. ¿Sigue valiendo?
+**85. Usted** — Subcontratación: no existe ninguna tabla de Empresa subcontratada y el Panel no la ofrece a propósito. La precondición era no abrirla hasta que una Prestadora real lo pida. ¿Sigue valiendo?
 
-**74. Usted** — Un tercero que sólo mira: ¿cómo entra un financiador que sólo consulta? Un cuarto rol, un Coordinador de sólo lectura desde el catálogo de permisos, o no se hace.
+**86. Usted** — Un tercero que sólo mira: ¿cómo entra un financiador que sólo consulta? Un cuarto rol, un Coordinador de sólo lectura desde el catálogo de permisos, o no se hace.
 
-**75. Usted** — ¿Careonys va a atender establecimientos donde conviven Pacientes de Familias distintas — una residencia, un geriátrico? Si es más adelante, alcanza con dejarlo dicho.
+**87. Usted** — ¿Careonys va a atender establecimientos donde conviven Pacientes de Familias distintas — una residencia, un geriátrico? Si es más adelante, alcanza con dejarlo dicho.
 
-**76. Usted** — ¿Diez pedidos por minuto y por persona es el número? El contador compartido hace falta el día que el backend se reparta en varios servicios; hoy corre en uno solo.
+**88. Usted** — ¿Diez pedidos por minuto y por persona es el número? El contador compartido hace falta el día que el backend se reparta en varios servicios; hoy corre en uno solo.
 
-**77. Usted** — ¿Los idiomas siguen en un archivo o pasan a la base? De esto depende si sumar un
+**89. Usted** — ¿Los idiomas siguen en un archivo o pasan a la base? De esto depende si sumar un
 idioma es una publicación o una carga de datos. **Y está contestado a medias sin que nadie lo
 anotara**, así que la pregunta es más chica de lo que parece:
 
@@ -736,11 +1123,11 @@ Así que lo único que esto decide es ese último resto. **Y se contesta despué
 carteles**, más arriba: es justamente ese archivo el que se barre ahí, y no tiene sentido mudar
 texto que va a salir.
 
-**78. Usted** — El puntaje interno de calidad del Asistente, que sólo ve el Admin: ¿sigue en pie ahora que existen las estrellas que pone la Familia? Si sigue, faltan dos respuestas: qué lo compone, y la garantía de que ninguna acción automática dependa de él. El lugar donde iría ya está hecho (`datos_reservados_asistente` y su permiso).
+**90. Usted** — El puntaje interno de calidad del Asistente, que sólo ve el Admin: ¿sigue en pie ahora que existen las estrellas que pone la Familia? Si sigue, faltan dos respuestas: qué lo compone, y la garantía de que ninguna acción automática dependa de él. El lugar donde iría ya está hecho (`datos_reservados_asistente` y su permiso).
 
-**79. Usted** — El alta y la baja de Prestadoras: Match expone una puerta firmada para que CeltaTech dé de alta y de baja clientes; Careonys no tiene nada parecido. ¿Se construye la misma, o se siguen dando de alta a mano?
+**91. Usted** — El alta y la baja de Prestadoras: Match expone una puerta firmada para que CeltaTech dé de alta y de baja clientes; Careonys no tiene nada parecido. ¿Se construye la misma, o se siguen dando de alta a mano?
 
-**80.** **Por esa misma puerta tiene que entrar qué tiene habilitado cada Prestadora, y hoy no
+**92.** **Por esa misma puerta tiene que entrar qué tiene habilitado cada Prestadora, y hoy no
 entra nada.** CeltaTech le vende un plan, y ese plan dice qué puede usar. Eso se lo informa al
 producto. **Y ahí termina: CeltaTech no tiene injerencia, bajo ninguna circunstancia, en el
 negocio de ninguna Prestadora.** Le habilita funciones del software y nada más; qué cobra, a
@@ -767,19 +1154,19 @@ entera o una parte. **Por qué, Careonys no lo sabe ni lo pregunta**: recibe la 
 - **La orden que llega no se puede bloquear.** Con esa misma comprobación, alcanzaría con tener un
   Asistente trabajando para que la orden nunca se cumpla.
 
-**81. Usted** — Qué hace Careonys de su lado cuando recibe esa orden y adentro quedan Asistentes
+**93. Usted** — Qué hace Careonys de su lado cuando recibe esa orden y adentro quedan Asistentes
 trabajando y Familias con acceso abierto. Cortar el acceso y dejarlo todo en su lugar no es lo
 mismo que darlo de baja.
 
-**82.** Construirlo, todo de este lado: recibir qué tiene habilitado cada Prestadora y que su
+**94.** Construirlo, todo de este lado: recibir qué tiene habilitado cada Prestadora y que su
 Configuración ofrezca solamente eso; y recibir la orden de deshabilitar, sin la comprobación que
 lleva el apagado de ella, haciendo con lo que quede en curso lo que se conteste arriba. **La lista
 de capacidades la declara este producto**, que es el que sabe qué significan; del otro lado son
 texto opaco. Lo que cada Prestadora tenga hoy en uso se conserva.
 
-**83. Usted** — El acompañamiento online: ¿prestación más, o guardia sin domicilio? Si es guardia, hay que decidir qué reemplaza al check-in por ubicación. **Las dos palabras son ahora dos niveles distintos del glosario**, así que la pregunta elige entre uno y el otro: una Prestación con su precio y sus horarios, o una guardia que se reparte en turnos. Y lo que reemplaza al check-in por ubicación es del turno, no de la guardia.
+**95. Usted** — El acompañamiento online: ¿prestación más, o guardia sin domicilio? Si es guardia, hay que decidir qué reemplaza al check-in por ubicación. **Las dos palabras son ahora dos niveles distintos del glosario**, así que la pregunta elige entre uno y el otro: una Prestación con su precio y sus horarios, o una guardia que se reparte en turnos. Y lo que reemplaza al check-in por ubicación es del turno, no de la guardia.
 
-**84. Usted** — El «Gestor del cuidado»: ¿rol nuevo, variante de Coordinador, o entrada en el catálogo de permisos por Prestadora? La tercera no rompe la regla de los tres roles de Panel; las dos primeras sí.
+**96. Usted** — El «Gestor del cuidado»: ¿rol nuevo, variante de Coordinador, o entrada en el catálogo de permisos por Prestadora? La tercera no rompe la regla de los tres roles de Panel; las dos primeras sí.
 
 **Se contesta después del acto de armar el Servicio**, más arriba en esta lista, por dos motivos. El
 primero es que **la premisa con la que estaba escrita esta pregunta no es cierta**: decía que hoy el
@@ -790,11 +1177,11 @@ segundo es que ese acto cambia el modelo: **una sola persona coordina todo el Se
 al acordarlo, y sin ella el Servicio no se habilita.** Con eso construido, la pregunta es si hace
 falta alguien más además de esa persona, que es otra pregunta.
 
-**85. Usted** — Cursos para familias: ¿va o no va?
+**97. Usted** — Cursos para familias: ¿va o no va?
 
-**86. Usted** — La regla de los archivos dice «nunca público» y hay un depósito público construido (`marca-prestadoras`); los otros cinco son privados. ¿La regla admite la excepción, o se cierra el depósito?
+**98. Usted** — La regla de los archivos dice «nunca público» y hay un depósito público construido (`marca-prestadoras`); los otros cinco son privados. ¿La regla admite la excepción, o se cierra el depósito?
 
-**87. Usted** — La categoría de convenio del Asistente se teclea a mano, y de ella depende su
+**99. Usted** — La categoría de convenio del Asistente se teclea a mano, y de ella depende su
 remuneración básica. El convenio tiene sus categorías definidas y no las inventa la Prestadora,
 así que tecleadas quedan escritas distinto en cada ficha: no se puede saber cuántos Asistentes hay
 en cada una, ni aplicarle un cambio de escala a todos los de una categoría de una sola vez, y un
@@ -809,9 +1196,277 @@ qué pasa con lo ya liquidado.
 
 ## El sitio web
 
-**88. Usted** — ¿Se autoriza construir `careonys.com` según `docs/PRD_01_Sitio_Web.md`? El PRD ya está entero. Hoy `sitio-web/` es una página que dice «En construcción». **El diseño se hace de cero**: del sitio público de Match no viaja nada visual.
+**100. Usted** — ¿Se autoriza construir `careonys.com` según `docs/PRD_01_Sitio_Web.md`? El PRD ya está entero. Hoy `sitio-web/` es una página que dice «En construcción». **El diseño se hace de cero**: del sitio público de Match no viaja nada visual.
 
-**89.** Construirlo.
+**101.** Construirlo.
+
+---
+
+## El cumplimiento que se agrega encima
+
+**Va al final porque nada de esto obliga a reescribir lo anterior.** Son piezas que se apoyan sobre
+lo que dejaron los cimientos y se suman sin tocarlo. Hacerlas antes no ahorra nada y demora el MVP;
+hacerlas después cuesta lo mismo.
+
+**Lo que sí es condición:** antes de dar de alta una Prestadora real de un país, ese país tiene que
+tener cargado lo suyo. La lista por país, con artículo, está en `docs/CUMPLIMIENTO_NORMATIVO.md`.
+
+**102.** **La revisión del registro de accesos, que es lo que casi nadie hace.** El 45 CFR
+164.308(a)(1)(ii)(D) es «Required», no «Addressable»: hay que **revisar** los registros, con
+constancia fechada y revisor con nombre. Un registro que nadie mira incumple aunque sea perfecto.
+
+Se construye como trabajo del sistema, no como formulario: el sistema junta lo que se sale de lo
+normal —accesos fuera de horario, a pacientes sin relación de cuidado con quien accede, en volumen
+inusual— y se lo presenta a quien revisa. Quien revisa firma que revisó, y esa firma es la
+evidencia.
+
+El acceso a un paciente sin relación de cuidado es la regla sueca —Patientdatalagen 4 kap. 2 §— y
+es la más fina del conjunto: no alcanza con pertenecer a la Prestadora. Chile la escribió como
+requisito de arquitectura, y por eso su parte está en los cimientos y no acá.
+
+**Comprobación:** la constancia de revisión existe, tiene fecha y nombre, y se puede mostrar para
+cualquier mes.
+
+**103.** **El motor de conservación y borrado.** Las columnas y la tabla de reglas ya existen desde
+los cimientos; acá se carga y se construye lo que decide.
+
+Lo que la tabla tiene que poder expresar, porque hay un país que obliga a cada forma:
+
+- Un plazo que corre **desde la muerte del paciente** (Panamá, 20 años). Sin fecha de fallecimiento
+  no hay vencimiento que calcular y la purga queda bloqueada. Lo único que deja destruir antes es
+  lo que no sea relevante para la asistencia, a los dos años de la última atención, y eso excluye el
+  núcleo documental del art. 50 de la Ley 68.
+- **Dos plazos encadenados que la norma suma** (Perú: 5 años de archivo activo más 15 de pasivo, 20
+  en total desde la última atención, y 40 años para el cáncer de origen ocupacional). El reloj se
+  reinicia con cada atención, la eliminación la autoriza el Archivo General de la Nación, y de la
+  historia electrónica no se borra ningún dato.
+- **Un piso de guarda que no autoriza a borrar cuando se cumple** (México, 5 años desde el último
+  acto médico). Dice hasta cuándo hay que guardar; no dice que después se pueda tirar.
+- **Un vencimiento independiente del clínico** (Costa Rica, art. 11 del reglamento: diez años desde
+  que terminó el objeto del tratamiento).
+- Un plazo que corre **desde el último ingreso de información** (Chile, 15 años, art. 11 del
+  Decreto 41/2012). Cualquier anotación posterior reinicia el reloj de toda la ficha.
+- **Dos plazos encadenados** (Colombia: 5 de gestión más 10 de archivo central, 15 en total desde la
+  última atención; 30 si el paciente fue víctima de violaciones a los derechos humanos, y guarda
+  permanente si la historia integra un proceso por delitos de lesa humanidad).
+- **Un vencimiento que no habilita a borrar solo.** Brasil dice 20 años desde el último registro,
+  pero los prontuários «podrán» ser eliminados, previa revisión de una comisión y con registro del
+  destino final; Colombia exige acta de eliminación firmada y remitida a dos organismos; Chile dice
+  que vencidos los 15 años el prestador **podrá** eliminar, y si lo hace necesita acta
+  protocolizada ante notario. **Vencido el plazo el sistema avisa y espera, nunca borra.** Y hay una
+  norma del consejo médico brasileño que sigue diciendo guarda permanente y que nunca fue revocada
+  expresamente: por las dudas, el defecto no elimina.
+- **Desasociar en vez de borrar** al vencer (Costa Rica, 10 años desde el hecho registrado).
+- **Seudonimizar el dato derivado**, no al vencer (Ecuador, LOPDP art. 31 numeral 2). Sobre el dato
+  operativo no es posible —identificar al paciente es la finalidad del producto—, pero sí sobre
+  tableros, estadísticas, reportes agregados, entornos de prueba, respaldos analíticos y el registro
+  de actividad. **Se seudonimiza y no se anonimiza, y es deliberado:** el numeral 3 exige
+  autorización previa de la autoridad, protocolo técnico e informe del ministerio de salud para
+  tratar datos de salud **anonimizados**, y no menciona la seudonimización.
+- **Un vencimiento donde lo correcto es no borrar** (Uruguay). Los cinco años del Decreto 355/982
+  son una facultad de destruir, pensada para el papel. Y el art. 13 del Decreto 242/017 va al revés.
+
+**El plazo de Ecuador está sin verificar** y se carga como dato el día que aparezca la fuente
+oficial, sin tocar código.
+
+El borrado tiene que alcanzar los respaldos, o hay que documentar por escrito que no puede: el
+borrado incompleto en entorno de varios clientes está nombrado como amenaza en el Apéndice C de
+NIST SP 800-66r2, lo que lo convierte en amenaza razonablemente anticipada del 164.306(a)(2).
+
+**Y el borrado es por dato, no por cuenta.** El art. 17(3) del GDPR dice «en la medida en que»: que
+la historia clínica deba conservarse no hace inborrables las preferencias de comunicación, los
+perfiles opcionales, las notas no clínicas ni las copias analíticas. Acá se contesta qué pasa con
+los datos de un Servicio cerrado hace años.
+
+**Comprobación:** con dos Prestadoras de países distintos y las mismas fechas cargadas, el motor
+decide distinto en cada una y lo explica citando la regla que aplicó.
+
+**104.** **Los derechos de la persona.** Exportación de lo propio, en formato que se pueda leer en
+otro lado: el Anexo II sección 2 del EHDS lo convierte en deber duro contra el encierro en el
+proveedor, y la portabilidad está en casi todas las leyes latinoamericanas.
+
+Plazo de respuesta por jurisdicción: Costa Rica cinco días hábiles, Panamá diez para responder y
+cinco para modificar, Argentina cuarenta y ocho horas para la copia de la historia clínica. Sale de
+la configuración del país, con aviso a quien tiene que contestar antes de que venza. Y quién hereda
+el derecho al fallecer cambia por país: en Costa Rica pasa a sucesores o herederos.
+
+**Comprobación:** un pedido de acceso cargado en una Prestadora de Costa Rica vence a los cinco días
+hábiles y avisa antes; el mismo pedido en Panamá vence a los diez.
+
+**105.** **Las brechas, construidas para 24 horas.** Hay cinco relojes y manda el más corto. Europa:
+NIS2 exige aviso temprano a las 24 horas, y el art. 33(2) del GDPR obliga al encargado a avisarle al
+responsable sin dilación indebida, sin umbral y sin derecho a filtrar. Estados Unidos: el 164.410 da
+60 días al proveedor, pero **la regla no le da al cliente 60 días nuevos**, así que un proveedor que
+consuma los suyos deja a su cliente en infracción automática. Latinoamérica: Costa Rica cinco días
+hábiles **contados desde que ocurrió**, no desde que se supo, avisando al titular **y** a la
+autoridad; Perú 48 horas; Brasil tres días hábiles; Panamá y Uruguay 72 horas; Ecuador cinco días
+hábiles a la autoridad de datos **y a la de telecomunicaciones**, con el encargado obligado a
+avisarle al responsable en dos, y tres días al titular contados desde cuando se conoció el riesgo;
+Chile no pone plazo en horas y dice «sin dilaciones indebidas», que es peor porque no da margen.
+
+**Dos relojes distintos en el mismo expediente es lo normal.** De ahí la decisión de diseño: el
+sistema anota **los dos momentos** —cuándo ocurrió y cuándo se supo— en todo incidente, y cada país
+calcula con el que le corresponde. Guardar uno solo obliga a elegir a cuál país incumplirle.
+
+Lo que se construye: poder decir por evento qué Prestadora y qué pacientes —sin eso cualquier
+incidente se vuelve notificación masiva—; registro de todos los incidentes, notificados o no (art.
+33(5) del GDPR, art. 38 del Decreto 285 panameño); la evaluación de cuatro factores del 164.402(2),
+porque allá todo acceso no permitido se presume brecha salvo que se demuestre baja probabilidad de
+compromiso y la carga de la prueba es de la empresa; y plantillas de aviso por jurisdicción, con el
+contenido mínimo de cada una —el 164.404(c) pide cinco elementos—.
+
+**Comprobación:** un incidente de prueba sobre una Prestadora produce la lista de pacientes
+alcanzados, el texto de aviso del país de esa Prestadora y la cuenta regresiva correcta.
+
+**106.** **Quién entra y cómo.**
+
+- **Segundo factor obligatorio.** Está construido y apagado: `requiereRolPanel.js:82-85`, gobernado
+  por `configuracion_plataforma.mfa_admin_obligatorio`. Encenderlo es cambiar un dato. Ninguna norma
+  vigente de Estados Unidos lo exige —el 164.312(d) es un estándar desnudo—, pero ningún comprador
+  grande compra sin él.
+- **Ninguna cuenta compartida.** El 164.312(a)(2)(i) exige identificación única por persona y está
+  marcado «Required»: una cuenta compartida es incumplimiento liso y llano.
+- **Acceso de emergencia.** El 164.312(a)(2)(ii) también es «Required» y hoy no existe: una vía
+  definida para llegar al dato cuando la normal no está, registrada y revisada como cualquier otra.
+- **Cierre por inactividad para todos**, no sólo para el permiso de acceso de CeltaTech.
+- **El acceso del personal propio.** C5 OPS-30.01B cubre la separación cliente-de-cliente **y**
+  cliente-del-proveedor: el camino por el que el personal de CeltaTech alcanza los datos está dentro
+  del alcance de la auditoría. La forma ya está escrita en `..\..\CLAUDE.md` §6 —una Organización
+  por vez, acotado, con corte por inactividad, todo auditado— y lo que faltaba era que no exista
+  ninguna credencial permanente que alcance a varias, que es lo que resuelven los cimientos.
+
+**Comprobación:** con el segundo factor obligatorio encendido, una cuenta sin él no entra a ninguna
+pantalla del Panel.
+
+**107.** **Respaldos que se probaron.** El 164.308(a)(7)(ii)(A), (B) y (C) son «Required»: copia
+exacta y recuperable, restauración y modo de emergencia. El Decreto 41/2012 chileno lo escribe como
+requisito de la ficha clínica, y en Francia la copia de respaldo es una de las actividades
+certificables del référentiel HDS.
+
+**Y hay un país que fija frecuencia:** el art. 51 del DS 016-2024-JUS peruano exige copias
+**semanales** con verificación de integridad. Es el único plazo numérico del relevamiento, así que
+manda.
+
+Se construye la restauración probada **y con constancia**, no la promesa de que se puede. La prueba
+en sí es la que ya está más arriba en esta lista; lo que falta acá es que deje constancia, que se
+repita sola y que quede atada a la frecuencia peruana.
+
+**Comprobación:** una restauración completa a un entorno aparte, con constancia de fecha y de qué
+se verificó.
+
+**108.** **La configuración por país, cargada.** La estructura existe y está vacía de esta materia.
+Se carga, por jurisdicción: plazos de conservación con su hecho de inicio, plazo de brecha con su
+destinatario y desde cuándo corre, plazo de respuesta a los derechos, mecanismo de transferencia
+internacional, contacto del delegado u oficial de protección de datos donde sea obligatorio, y el
+texto de consentimiento que cubra específicamente la transferencia internacional donde haga falta.
+
+Vale la regla de la empresa: **el producto avisa, no bloquea**, y el aviso sale del documento legal
+de ese país. Si el país no tiene documento, no hay aviso, y sin documento no se vende ahí.
+
+**Y los documentos legales de `docs/legal/` hay que ampliarlos, empezando por Argentina.** Los 21
+archivos existen, pero el de Argentina —el único desarrollado— cubre riesgo laboral. La materia de
+protección de datos de salud, conservación del expediente y notificación de brechas no está escrita
+en ninguno.
+
+**Comprobación:** ningún plazo de estos aparece escrito en el código.
+
+**109. Usted** — **Las designaciones que no son programación.** Representante legal en Perú y en
+Ecuador, y delegado de protección de datos en Ecuador y en Uruguay. Son designaciones de CeltaTech
+y condición para vender en esos países.
+
+**110.** **Los documentos que pide la auditoría.** Son entregables, y sin ellos lo construido no
+cuenta.
+
+- **Análisis de riesgos que nombre expresamente el acceso entre Prestadoras como amenaza**, citando
+  el Apéndice C de NIST SP 800-66r2, que lo enumera en tres eventos. Sin esto, nada más ayuda.
+- **Evaluación de impacto.** Obligatoria y previa al tratamiento: concurren el art. 35(3)(b) del
+  GDPR y cuatro de los nueve criterios de la guía WP248 contra un umbral de dos, y los ficheros de
+  pacientes están en las listas de Francia y España. El encargado no la hace, pero el art. 28(3)(f)
+  lo obliga a asistir: es un entregable del producto. Brasil, Perú, Uruguay, Ecuador y Panamá piden
+  su equivalente.
+- **Registro de actividades del art. 30(2).** La exención del 30(5) no sirve: tratar datos del
+  art. 9 la derriba.
+- **La prueba de aislamiento repetible**, más **una prueba de penetración de tercero dirigida al
+  acceso entre Prestadoras.** C5 la pide como evidencia cuando la separación no se puede demostrar
+  internamente, y el art. 32(1)(d) del GDPR convierte la verificación periódica en obligación legal.
+- **La documentación de cada «Addressable» que no se implemente**, conservada seis años
+  (164.316(b)(2)(i)).
+- **La constancia de prácticas de seguridad reconocidas.** El 42 U.S.C. §17941 obliga al regulador a
+  considerarlas, pero exige acreditar **no menos de los doce meses anteriores**: lo adoptado después
+  del incidente no vale nada. Es la única palanca real que existe, y hay que empezar a acumularla
+  temprano.
+- **`docs/CUMPLIMIENTO_NORMATIVO.md`** se mantiene al día con cada paso.
+
+**Comprobación:** cada documento existe y lo que afirma se puede verificar en el sistema.
+
+**111.** **Lo que no se hace nunca.**
+
+- **No se entrenan modelos con datos de las Prestadoras.** Prohibido por tres vías: el art. 28(10)
+  del GDPR convierte al encargado en responsable, el EHDS haría del producto titular de datos
+  sanitarios y su art. 54 lo prohíbe expresamente, y el art. 11 §4º de la LGPD brasileña prohíbe
+  compartir datos de salud con fines de ventaja económica.
+- **Nada de riesgo alto del AI Act sin saberlo.** La exposición no está en la vía clínica sino en el
+  Anexo III punto 4(b): la IA que asigna tareas según comportamiento o rasgos personales o evalúa
+  desempeño. Un emparejamiento o una planificación de Asistentes que los puntúa **es alto riesgo**,
+  y la salida del art. 6(3) queda cerrada por el perfilado. Rige desde el 2 de diciembre de 2027,
+  con autoevaluación, pero no hay norma armonizada y tampoco presunción de conformidad. **La
+  transparencia del art. 50 no se aplazó y rige desde el 2 de agosto de 2026.**
+
+**Comprobación:** un automatismo que corte la publicación si aparece una llamada de entrenamiento
+con datos de producción.
+
+### Lo que no hay que construir
+
+Cada renglón es un ahorro, y está verificado.
+
+- **No hace falta una base de datos por Prestadora.** Ninguna norma prohíbe la base compartida ni
+  prescribe esquema, base o instancia por cliente. C5 admite expresamente recursos compartidos y
+  dice que la separación criptográfica no es obligatoria en todos.
+- **No hace falta que el control de acceso viva fuera de la aplicación.** Lo que exigen es poder
+  demostrar la separación, que es distinto.
+- **No hace falta certificarse en HIPAA: no existe esa certificación.** Todo sello que diga lo
+  contrario es autoafirmación y no sirve como defensa.
+- **No existe «estar certificado en GDPR».** Los arts. 42 y 43 certifican operaciones concretas, no
+  organizaciones, y el 42(4) dice que no reducen la responsabilidad.
+- **SOC 2 no es una certificación** y no contiene ninguna regla que diga «aísle a sus clientes».
+  Sirve igual, porque es el sustituto de mercado del derecho de auditoría que HIPAA no da.
+- **C5 no es una certificación**, es un dictamen de auditor. Pero el §393 SGB V lo vuelve condición
+  legal en Alemania.
+- **ISO 27799 no se certifica**, y 27017 y 27018 no se certifican por separado.
+- **No hace falta construir el proyecto estadounidense de 2025.** No es ley y está en acciones de
+  largo plazo con fecha proyectada en julio de 2027.
+- **El producto no es una DiGA alemana.**
+- **El Reglamento de ciberresiliencia no alcanza al software como servicio.**
+- **El esquema nacional de seguridad español no aplica** salvo que se venda al sector público.
+- **HIPAA no exige inventario de activos, ni mapa de red, ni auditoría anual, ni prueba de
+  restauración, ni prueba de penetración.** Varias están igual en esta lista, pero porque las piden
+  C5, el mercado o la prueba del aislamiento.
+
+### Lo que quedó sin verificar y no se completó de memoria
+
+- **El référentiel HDS francés no se pudo leer.** Es donde estaría la exigencia francesa de
+  compartimentación entre clientes. Se pide al organismo certificador cuando se abra esa
+  conversación.
+- **La norma holandesa NEN 7513:2018 es de pago.** Su lista de campos y su plazo son desconocidos.
+- **El plazo de conservación de Ecuador** no se pudo confirmar en fuente oficial.
+- **El precio del complemento de Supabase para datos de salud estadounidenses** no está publicado.
+- **Los importes de sanción ajustados del año en curso** no se consultaron.
+- **Italia, Bélgica, Polonia, Dinamarca, Noruega y Finlandia** no se relevaron. El de Finlandia es
+  el que más importa: clasifica los sistemas en clase A o B con evaluación de conformidad por
+  organismos aprobados.
+- En Latinoamérica quedaron sin verificar los regímenes sancionatorios de casi todos los países y
+  varios plazos de respuesta a derechos.
+
+### Lo que esta lista no hace
+
+**No construye interoperabilidad nacional.** Uruguay obliga a intercambiar por la plataforma HCEN,
+Colombia a interoperar la historia clínica electrónica, Perú a declarar al RENHICE, y México exige
+que el sistema de expediente electrónico esté certificado ante la Dirección General de Información
+en Salud antes de vender —y la NOM-024-SSA3-2012 numeral 1.2 pone esa obligación sobre el
+desarrollador, o sea CeltaTech—. Son cuatro obras propias, cada una con su plan, y ninguna es
+condición para las demás.
+
+**No reemplaza a un abogado de cada país.** Todo esto es relevamiento de fuentes públicas.
 
 ---
 
@@ -827,12 +1482,17 @@ tiene que seguir dando el mismo número que dio el día que se hizo. Eso ya es r
 —*los cálculos legales y económicos van parametrizados por jurisdicción, y a la escala vigente a la
 fecha del hecho*—, y acá se confirma.
 
-Las que ya están identificadas, cada una con su paso propio más adelante en esta lista: la advertencia
-para el tratamiento de dato biométrico, la accesibilidad, la protección de datos personales, y las
-cuatro preguntas sobre la ubicación de las personas. Los pasos que dependen de ellas dicen qué se
+Las que ya están identificadas, cada una con su paso propio en esta lista: la advertencia para el
+tratamiento de dato biométrico, la accesibilidad, la protección de datos personales, y las cuatro
+preguntas sobre la ubicación de las personas. Los pasos que dependen de ellas dicen qué se
 construye igual mientras tanto.
 
-**90. Usted** — Las escalas legales: la validación, y los dos valores que el código usa y no
+**Y hay una tanda que no espera al MVP, porque no es consulta sino contrato:** las cláusulas
+contractuales tipo que habilitan alojar en São Paulo los datos de una Prestadora argentina tienen
+que estar firmadas antes del alta de la primera Prestadora real. Eso está en «Los cimientos», y por
+eso está ahí y no acá.
+
+**112. Usted** — Las escalas legales: la validación, y los dos valores que el código usa y no
 existen (`piso_minimo_indemnizacion` y `fraccion_computable_antiguedad`). En el mismo viaje va el
 texto de la advertencia sobre el abandono de persona: ninguno de los veintiún documentos de `docs/legal/`
 lo menciona —lo único parecido es el abandono de *trabajo*, art. 244 LCT, en
@@ -843,8 +1503,8 @@ documento no hay advertencia; la mecánica se construye igual, porque no depende
 
 ## Cierre
 
-**91. Usted** — El documento de roles generado desde la base: ¿para quién es, interno de CeltaTech o manual para la Prestadora?
+**113. Usted** — El documento de roles generado desde la base: ¿para quién es, interno de CeltaTech o manual para la Prestadora?
 
-**92.** Generarlo.
+**114.** Generarlo.
 
-**93.** Correr las pruebas y publicar.
+**115.** Correr las pruebas y publicar.

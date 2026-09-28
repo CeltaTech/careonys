@@ -32,15 +32,12 @@ decisiones se sostienen entre sí: contestarlas de a una, salteadas, hace que la
 contradiga la de otra que ya se cerró. **Se contesta grupo por grupo**, y adentro de cada uno,
 renglón por renglón.
 
-### 1. El backend entra a la base con la llave maestra
+### 1. Quién decide qué filas ve una consulta
 
-Es lo más pesado de todo. Está construido, es de seguridad, y además **cierra la discusión por
-escrito**: dice que la alternativa se evaluó y se descartó, y que quien la vuelva a proponer tiene
-que refutar la objeción antes de hablar. Si esa decisión no es suya, lo que hay es una puerta
-cerrada con llave por alguien que no tenía la llave.
+Esto ya no se contesta acá: está resuelto y tiene su propio plan, en
+`docs/PLAN_AISLAMIENTO_DE_RAIZ.md`. La llave que alcanza todas las Prestadoras sale del producto y
+el aislamiento lo hace cumplir la base. Queda un solo renglón de este tema sin decidir:
 
-- `CLAUDE.md:325` — **[ya construido]** que pasar el backend al pase de cada persona «se evaluó y se descartó», con fecha y con su nombre, y que quien lo reproponga tiene que refutar la objeción antes.
-- `CLAUDE.md:319` — **[ya construido]** que el backend entre a la base con la llave maestra es una decisión y no un olvido.
 - `CLAUDE.md:310` — **[ya construido]** que no se convierta en dueño lo que dispara un cambio en la base.
 
 ### 2. Cómo entra cada persona, y quién tiene más poder que nadie

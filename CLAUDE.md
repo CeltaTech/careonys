@@ -323,19 +323,15 @@ ejecutar todo. Lo prueba `scripts/probar_altas_con_sesion.mjs`, que da de alta c
 persona y además le pregunta a la base si algún disparador quedó pidiendo un permiso que no
 tiene. Se corre con la base local levantada, junto con `scripts/probar_aislamiento.mjs`.
 
-**El backend entra a la base con la llave maestra, y eso es una decisión, no un olvido.** Las dos
-aplicaciones de teléfono no consultan la base: le piden todo al backend, y el backend entra con la
-llave de servicio, que se saltea la protección por fila. Lo que aísla una Prestadora de otra son
-los filtros escritos en cada ruta, y `scripts/probar_aislamiento.mjs`, que falla si alguno falta.
-Las políticas de las quince tablas que leen esas pantallas existen igual —se escribieron el
-2026-09-04— y son la segunda red: hoy alcanzan lo que ya se consulta con el pase de la persona, y
-quedan puestas si algún día cambia el resto. **Pasar el backend al pase de la persona se evaluó y se
-descartó** (Desarrollador, 2026-09-04). La propuesta salió de una revisión de arquitectura hecha
-por Claude Code, por analogía con OctoCMS, y no de un defecto observado. Obligaría a habilitar,
-para cualquiera con sesión, dos funciones que hoy sólo alcanza el backend; una de ellas recibe el
-identificador de una Prestadora y contestaría sobre cualquiera. Es abrir una puerta nueva para
-cerrar un riesgo que ya cubren los filtros y la prueba. **Quien vuelva a proponerlo tiene que
-contestar antes esa objeción.**
+**El aislamiento lo hace cumplir la base, y el backend todavía no está ahí.** Hoy el backend entra
+con `SUPABASE_SERVICE_ROLE_KEY`, que alcanza todas las Prestadoras y se saltea la protección por
+fila, así que lo que separa una de otra son los filtros escritos a mano en cada ruta. Eso incumple
+`..\..\CLAUDE.md` §5 —«no se puede tener una credencial que alcance a todas las Organizaciones»— y
+se está reemplazando: **cada pedido de una persona pasa al pase de esa persona, y lo que no tiene
+persona detrás lleva una credencial acotada a sus tablas y funciones, de a una Prestadora por
+vez.** El plan, con los tramos y sus comprobaciones, está en `docs/PLAN_AISLAMIENTO_DE_RAIZ.md`.
+Ninguna propuesta que agregue una red más encima de la llave maestra se acepta: el arreglo es
+sacarla.
 
 **Ninguna palabra de Careonys entra en un módulo** —Prestadora, Guardia, Paciente, Servicio— si el
 otro producto no la tiene. Todavía no hay ningún módulo; sacar una pieza de acá para convertirla
@@ -380,9 +376,9 @@ esta sesión: [Z].»*
 empresa. Un documento del producto se cita desde la raíz del producto —`docs/CONTEXT.md`—; uno de
 la empresa, con la ruta entera desde `celtatech/` —`celtatech/docs/ARQUITECTURA_NIVELES.md`—.
 
-**El estado real se consulta acá:** la base local con
-`docker exec supabase_db_careonys psql -U postgres -d postgres -c "…"`, y qué migraciones corrieron
-en la nube con `supabase migration list --linked`.
+**El estado real se le pregunta a la base**, con `supabase db query --linked "…"`, que consulta la
+instancia enlazada y no necesita Docker. Las migraciones no son el estado: son instrucciones que ya
+se ejecutaron. Si hace falta saber si quedó alguna sin aplicar, `supabase migration list --linked`.
 
 **Por qué cambió una regla** va a `docs/claude_history.md`, en una línea: qué decía antes, qué
 dice ahora y el motivo. Se revisa antes de proponer algo que suene a tema ya debatido.

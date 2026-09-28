@@ -333,6 +333,20 @@ vez.** El plan, con los tramos y sus comprobaciones, está en `docs/PLAN_AISLAMI
 Ninguna propuesta que agregue una red más encima de la llave maestra se acepta: el arreglo es
 sacarla.
 
+**Y el sistema tiene que poder demostrar lo que hace, no sólo hacerlo.** Careonys trata datos de
+salud, así que lo alcanzan HIPAA en Estados Unidos, el Reglamento General de Protección de
+Datos y las normas nacionales en Europa, y las diez leyes de protección de datos y de historia
+clínica de los países latinoamericanos donde se vende. Qué exige cada una, con artículo, y en qué
+estado está el producto frente a ella, está en `docs/CUMPLIMIENTO_NORMATIVO.md`; qué hay que
+construir para llegar, en `docs/PLAN_CUMPLIMIENTO_NORMATIVO.md`. **Ninguna afirmación de
+cumplimiento se escribe sin artículo citado, y no se afirma ninguna certificación**: de HIPAA no
+existe certificación de ninguna clase, y de protección de datos europea tampoco.
+
+**Los datos están alojados en São Paulo.** Para todo país que no sea Brasil eso es transferencia
+internacional, y para Alemania y Francia hoy impide vender. Antes de dar de alta una Prestadora de
+un país nuevo, el documento de cumplimiento tiene que decir qué habilita alojar allá los datos de
+salud de ese país.
+
 **Ninguna palabra de Careonys entra en un módulo** —Prestadora, Guardia, Paciente, Servicio— si el
 otro producto no la tiene. Todavía no hay ningún módulo; sacar una pieza de acá para convertirla
 en uno entra por `..\..\CLAUDE.md` §11, nunca como parte de otra tarea. Anotado en

@@ -329,7 +329,8 @@ fila, así que lo que separa una de otra son los filtros escritos a mano en cada
 `..\..\CLAUDE.md` §5 —«no se puede tener una credencial que alcance a todas las Organizaciones»— y
 se está reemplazando: **cada pedido de una persona pasa al pase de esa persona, y lo que no tiene
 persona detrás lleva una credencial acotada a sus tablas y funciones, de a una Prestadora por
-vez.** El plan, con los tramos y sus comprobaciones, está en `docs/PLAN_AISLAMIENTO_DE_RAIZ.md`.
+vez.** Los pasos, con sus comprobaciones, están en `docs/PLAN_HASTA_PRODUCCION.md`, sección «Los
+cimientos».
 Ninguna propuesta que agregue una red más encima de la llave maestra se acepta: el arreglo es
 sacarla.
 
@@ -338,7 +339,7 @@ salud, así que lo alcanzan HIPAA en Estados Unidos, el Reglamento General de Pr
 Datos y las normas nacionales en Europa, y las diez leyes de protección de datos y de historia
 clínica de los países latinoamericanos donde se vende. Qué exige cada una, con artículo, y en qué
 estado está el producto frente a ella, está en `docs/CUMPLIMIENTO_NORMATIVO.md`; qué hay que
-construir para llegar, en `docs/PLAN_CUMPLIMIENTO_NORMATIVO.md`. **Ninguna afirmación de
+construir para llegar, en `docs/PLAN_HASTA_PRODUCCION.md`. **Ninguna afirmación de
 cumplimiento se escribe sin artículo citado, y no se afirma ninguna certificación**: de HIPAA no
 existe certificación de ninguna clase, y de protección de datos europea tampoco.
 

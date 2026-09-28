@@ -19,8 +19,11 @@ cambiarlo.
 
 ## Por dónde se empieza
 
-**La obra arranca por la sección «Los cimientos», en su primer paso de construcción.** Es lo que
-hay que hacer antes que cualquier otra cosa, y mientras dure **no sale ninguna pantalla nueva**.
+**La obra arranca por la sección «Los cimientos», y adentro por «La credencial del trabajo sin
+persona».** Es lo que hay que hacer antes que cualquier otra cosa, y mientras dure **no sale
+ninguna pantalla nueva**. Lo que construye «Dónde viven los datos» —que el código no dé por
+sentado que hay una sola base— va en la misma pasada que «El pase de la persona en el backend»,
+porque los dos reescriben el mismo archivo de conexión.
 
 **El plan está aprobado en su ordenamiento y en sus dos decisiones de fondo**, que ya no se
 vuelven a preguntar: los datos viven en São Paulo con el código previsto para más de una

@@ -110,11 +110,29 @@ Hoy hay una sola región. Lo que las normas obligan:
   (Resolución CD/ANPD 32/2026); hacia cualquier otro destino rigen las cláusulas-patrón del Anexo
   II de la Resolución CD/ANPD 19/2024, que se adoptan **íntegras y sin modificar** —cualquier cambio
   las invalida— y cuyo plazo de adaptación de contratos anteriores venció el 23 de agosto de 2025.
-- **Latinoamérica.** Ninguno de los diez países prohíbe el destino. Costa Rica exige consentimiento
-  expreso que cubra específicamente la transferencia internacional, no el genérico de tratamiento
-  (Ley 8968 art. 14; omitirlo es falta gravísima). Panamá exige informar cuál condición del art. 33
-  se invoca. Argentina, Brasil, Perú, Uruguay y Ecuador exigen cláusulas contractuales del modelo de
-  su autoridad. Colombia no exige nada especial hacia Estados Unidos.
+- **Latinoamérica.** Ninguno de los diez países prohíbe el destino, y ninguno obliga a alojar dentro
+  de sus fronteras. Costa Rica exige consentimiento expreso que cubra específicamente la
+  transferencia internacional, no el genérico de tratamiento (Ley 8968 art. 14; omitirlo es falta
+  gravísima). Panamá exige informar cuál condición del art. 33 se invoca. Argentina, Brasil y Perú
+  exigen cláusulas contractuales del modelo de su autoridad. Colombia no exige nada especial hacia
+  Estados Unidos.
+- **Tres países no llaman transferencia a esto.** **Ecuador** lo dice expresamente —art. 4 y art. 34
+  de la LOPDP, y art. 23 de la Resolución SPDP-SPD-2026-0004-R: «el encargo de tratamiento no
+  constituye una transferencia ni comunicación de datos personales»—, y en consecuencia las
+  cláusulas iberoamericanas entre responsable y encargado **no son aplicables allá**: lo que hace
+  falta es el contrato de encargo del art. 34. **Costa Rica** excluyó lo mismo al reformar la
+  definición. **Uruguay** llegó al mismo lugar por otro camino: Brasil no está en su lista de países
+  adecuados (Resoluciones URCDP 23/021 y 63/023), pero la URCDP declaró ajustadas a la normativa
+  nacional **las cláusulas contractuales de AWS** (Resolución 42/022) y autorizó transferencias
+  fundadas en ellas (Resolución 18/024). Eso habilita São Paulo para datos uruguayos.
+- **Chile, que es el caso más incómodo.** Su ley entra en vigor el 1-12-2026 y **la Agencia todavía
+  no está constituida**: no hay lista de países adecuados, no hay cláusulas modelo, no hay contratos
+  tipo. La única vía practicable es la del art. 27 lit. b), cláusulas contractuales, y el art. 28
+  pone **la carga de acreditarlo sobre la Prestadora**, que sólo puede hacerlo con documentación que
+  le dé CeltaTech. Además el art. 15 bis prohíbe subencargar sin **autorización específica y por
+  escrito** de cada Prestadora: el proveedor de nube es un subencargado, y la autorización hay que
+  pedirla y guardarla. Y no hay refugio geográfico: el art. 1 bis lit. b) aplica la ley chilena al
+  encargado que trabaja para un responsable establecido en Chile, esté donde esté.
 
 **Lo que hay que decidir, y es del Desarrollador:** si el producto se queda en una sola región y se
 vende sólo donde esa región habilita, o si pasa a tener **una instalación por mercado** —Brasil para
@@ -154,6 +172,15 @@ Tres propiedades que no son opcionales:
   ningún privilegio de base de datos.
 - **Disponible para el cliente cuando lo pida.** C5 OPS-15.01AC. Y por Panamá, con la identificación
   y el período de todas las personas que ingresaron.
+- **Y consultable por la propia persona.** Uruguay lo convierte en derecho: el art. 12 del Decreto
+  122/019 obliga a registrar todo acceso a la historia clínica y los arts. 13 a 17 le dan al paciente
+  la vía para verlo.
+
+**Hay un país donde el registro de lecturas no sale de la ley de datos sino del reglamento
+sanitario, y por eso es el más concreto de todos.** El art. 9 del Decreto 41/2012 chileno: «Este
+sistema debe llevar registro de las fechas y personas que han accedido a las fichas.» No es una
+recomendación de seguridad: es un requisito reglamentario fiscalizado por la Superintendencia de
+Salud.
 
 **Qué operaciones se anotan lo fija Perú, que es el país más preciso de todos.** El art. 46 del
 DS 016-2024-JUS enumera: cuentas de usuario, **hora de inicio y de fin de sesión**, y las
@@ -190,6 +217,20 @@ evidencia.
 El acceso a un paciente sin relación de cuidado es la regla sueca —Patientdatalagen 4 kap. 2 §— y es
 la más fina del conjunto: no alcanza con pertenecer a la Prestadora.
 
+**Y ya no es sólo sueca.** Chile la escribió en su ley de derechos del paciente, y de la forma más
+explícita que se encontró en todo el relevamiento. El art. 13 de la Ley 20.584 prohíbe el acceso de
+terceros no relacionados con la atención y aclara: «**Ello incluye al personal de salud y
+administrativo del mismo prestador, no vinculado a la atención de la persona**, independiente de la
+modalidad de atención prestada.» El art. 9 del Decreto 41/2012 obliga a tomar medidas para
+impedirlo.
+
+Eso convierte lo que era un criterio de revisión en un requisito de arquitectura, y tiene una
+consecuencia que conviene ver ahora y no después: **el aislamiento no termina en la Prestadora.**
+Adentro de una Prestadora hace falta un segundo nivel, por vínculo con la atención de esa persona y
+no por rol. Un rol administrativo que hoy ve todo el padrón de su Prestadora cumple la regla de la
+empresa y **no** cumple la ley chilena. Esto se resuelve en el plan de aislamiento, no acá, pero
+nace de este tramo.
+
 **Comprobación:** la constancia de revisión existe, tiene fecha y nombre, y se puede mostrar para
 cualquier mes.
 
@@ -202,7 +243,9 @@ desde un hecho distinto.
 Lo que la tabla tiene que poder expresar, porque hay un país que lo obliga:
 
 - Un plazo que corre **desde la muerte del paciente** (Panamá, 20 años).
-- Una **fórmula por edad** (Chile: 15 años, o hasta que el paciente cumpla 34 si es más largo).
+- Un plazo que corre **desde el último ingreso de información**, no desde la última atención ni
+  desde el alta (Chile, 15 años, art. 11 del Decreto 41/2012). La diferencia no es sutil: cualquier
+  anotación posterior reinicia el reloj de toda la ficha.
 - **Dos plazos encadenados** (Colombia: 5 años de gestión más 10 de archivo central, 15 en total
   desde la última atención; 30 si el paciente fue víctima de violaciones a los derechos humanos, y
   guarda permanente si la historia integra un proceso por delitos de lesa humanidad).
@@ -213,9 +256,22 @@ Lo que la tabla tiene que poder expresar, porque hay un país que lo obliga:
   Y hay una norma del consejo médico brasileño que sigue diciendo guarda permanente y que nunca fue
   revocada expresamente: por las dudas, el defecto no elimina.
 - **Desasociar en vez de borrar** al vencer (Costa Rica, 10 años desde el hecho registrado).
-- **Anonimizar o pseudonimizar el dato vivo**, no al vencer (Ecuador, LOPDP art. 31). Es la única
-  norma del relevamiento que pide una técnica concreta sobre el dato de salud mientras se usa, y si
-  se aplica en serio toca el diseño de las tablas y de los informes.
+- **Seudonimizar el dato derivado**, no al vencer (Ecuador, LOPDP art. 31 numeral 2). Es la única
+  norma del relevamiento que pide una técnica concreta sobre el dato de salud mientras se usa. Dice
+  «siempre que sea posible», y sobre el dato operativo no es posible —identificar al paciente es la
+  finalidad misma del producto—, pero sí sobre todo lo demás: tableros, estadísticas, reportes
+  agregados, entornos de desarrollo y prueba, respaldos analíticos y el propio registro de
+  actividad. **Se seudonimiza y no se anonimiza, y eso es deliberado:** el numeral 3 del mismo
+  artículo exige autorización previa de la autoridad, protocolo técnico e informe favorable del
+  ministerio de salud para todo tratamiento de datos de salud **anonimizados**, y no menciona la
+  seudonimización. Anonimizar abre un trámite; seudonimizar cumple igual y no lo abre.
+- **Un vencimiento donde lo correcto es no borrar** (Uruguay). Los cinco años del Decreto 355/982
+  son una **facultad de destruir**, pensada para el papel: quien no destruye no incumple. Y para la
+  historia electrónica el art. 13 del Decreto 242/017 va al revés: «La información no podrá ser
+  alterada o eliminada sin que quede registrada la modificación», y la corrección agrega el dato
+  nuevo «sin suprimir lo corregido». Chile dice lo mismo de otro modo: vencidos los 15 años el
+  prestador **podrá** eliminar, y si lo hace necesita acta protocolizada ante notario. Los tres
+  confirman la regla del tramo: vencido el plazo el sistema avisa y espera.
 
 Hace falta además la **fecha de fallecimiento**, que hoy no existe en ninguna columna.
 
@@ -252,7 +308,18 @@ art. 33(2) obliga al encargado a avisarle al responsable «sin dilación indebid
 derecho a filtrar. Estados Unidos: el 164.410 da 60 días al proveedor, pero **la regla no le da al
 cliente 60 días nuevos**, así que un proveedor que consuma los suyos deja a su cliente en infracción
 automática. Latinoamérica: Costa Rica cinco días hábiles **contados desde que ocurrió**, no desde
-que se supo; Perú 48 horas; Brasil tres días hábiles; Panamá, Chile y Uruguay 72 horas.
+que se supo, y avisando al titular **y** a la autoridad; Perú 48 horas; Brasil tres días hábiles;
+Panamá y Uruguay 72 horas; Ecuador cinco días hábiles a la autoridad de datos **y a la de
+telecomunicaciones**, con el encargado obligado a avisarle al responsable en dos, y tres días al
+titular contados desde otro momento —cuando se conoció el riesgo, no cuando se constató la
+vulneración—; Chile no pone plazo en horas y dice «sin dilaciones indebidas», que es peor porque no
+da margen que administrar.
+
+**Dos relojes distintos en el mismo expediente es lo normal, no la excepción.** Costa Rica cuenta
+desde el hecho, Ecuador cuenta una cosa desde la constancia y otra desde el conocimiento del riesgo.
+De ahí sale la decisión de diseño del tramo: el sistema anota **los dos momentos** —cuándo ocurrió y
+cuándo se supo— en todo incidente, y cada país calcula su vencimiento con el que le corresponde.
+Guardar uno solo obliga a elegir a cuál país incumplirle.
 
 Lo que se construye:
 

@@ -470,7 +470,7 @@ rota y cuándo se rotó por última vez. Sin ningún valor adentro, y no se le a
 ## Cumplimiento normativo
 
 Está en `docs/CUMPLIMIENTO_NORMATIVO.md`, con el artículo de cada norma y el estado del producto
-frente a ella. Lo que falta construir, en `docs/PLAN_CUMPLIMIENTO_NORMATIVO.md`. Acá no se
+frente a ella. Lo que falta construir, en `docs/PLAN_HASTA_PRODUCCION.md`. Acá no se
 duplica ninguna de las dos cosas.
 
 Lo que no espera: Careonys trata datos de salud, así que lo alcanzan HIPAA en Estados Unidos, el
@@ -496,8 +496,8 @@ depósito `fotos-identidad`, creado por
   lo lee el backend con la llave de servicio, después de comprobar de qué Prestadora es el Asistente
   (`backend/src/routes/panelVerificacionIdentidad.js`). Con RLS encendida y ninguna política, la
   base niega sola. Es la misma forma de `certificados-medicos`, `autorizaciones-monitoreo` y
-  `documentos-cese`, y **los cuatro reciben política** en el tramo 2 de
-  `docs/PLAN_AISLAMIENTO_DE_RAIZ.md`: el aislamiento de un archivo no puede depender de que el
+  `documentos-cese`, y **los cuatro reciben política** en el paso de los archivos de la sección
+  «Los cimientos» de `docs/PLAN_HASTA_PRODUCCION.md`: el aislamiento de un archivo no puede depender de que el
   backend compare bien el comienzo de una ruta.
 - **La ruta empieza por la Prestadora** y se arma siempre con los mismos tres datos —Prestadora,
   Asistente y cuál de las dos fotos es—, nunca con algo que venga en el pedido. Va sin extensión:

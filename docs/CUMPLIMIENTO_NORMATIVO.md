@@ -10,7 +10,7 @@ el producto.
 | Estado | Qué significa |
 |---|---|
 | **Cumple** | Está construido y se puede mostrar funcionando |
-| **En obra** | Está planificado en `docs/PLAN_CUMPLIMIENTO_NORMATIVO.md` o en `docs/PLAN_AISLAMIENTO_DE_RAIZ.md`, con su tramo |
+| **En obra** | Está planificado en `docs/PLAN_HASTA_PRODUCCION.md`, con su paso |
 | **No alcanza** | La norma no aplica al producto, y se dice por qué |
 
 Lo que no está en ninguno de los tres no se afirma.
@@ -630,7 +630,8 @@ prueba nada, porque una política que niega todo devuelve exactamente lo mismo.
 
 Y hay un hallazgo que deshace una historia de aislamiento por lo demás buena: **una credencial que
 pueda leer a todos los clientes.** Hoy Careonys la tiene. Sacarla es el objeto entero de
-`docs/PLAN_AISLAMIENTO_DE_RAIZ.md`, y es la condición previa de casi todo lo de este documento.
+la sección «Los cimientos» de `docs/PLAN_HASTA_PRODUCCION.md`, y es la condición previa de casi
+todo lo de este documento.
 
 ---
 

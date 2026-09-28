@@ -173,3 +173,12 @@ Tres automatismos que cortan la publicación:
 No cambia ninguna pantalla, ningún texto visible ni ninguna regla de negocio. No cambia qué ve cada
 rol. Nadie que use el producto nota nada, salvo que a partir de acá un error de programación no
 puede filtrar datos de otra Prestadora.
+
+**Y no cierra el aislamiento de adentro de la Prestadora, que Chile exige.** El art. 13 de la Ley
+20.584 prohíbe ver la historia de una persona a quien no está vinculado a su atención, y aclara que
+eso **incluye al personal de salud y administrativo de la propia Prestadora**. Es un segundo nivel:
+no por rol, sino por vínculo con esa persona. Este plan deja la base decidiendo por Prestadora; el
+segundo nivel decidiría por paciente, y es obra aparte con su propia decisión de alcance —qué rol
+conserva vista del padrón completo y cuál no—. Queda nombrado acá para que no se lo confunda con lo
+que este plan sí resuelve, y porque la arquitectura que sale de este plan es la que lo hace
+posible: con la base decidiendo, agregar una condición más es una política, no una reescritura.

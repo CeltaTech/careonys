@@ -94,6 +94,14 @@ Hoy hay una sola región. Lo que las normas obligan:
   business associate y hace falta acuerdo firmado (45 CFR 164.308(b)(1) y 164.502(e)). Supabase lo
   ofrece sólo en nivel Team o Enterprise más complemento pago, y exige recuperación a un punto en el
   tiempo, forzado de SSL, restricciones de red y registro de conexiones siempre encendido.
+- **Argentina, que es el primer mercado.** Es el caso más fácil, pero no es automático: **Brasil no
+  figura en la lista de países con legislación adecuada** del art. 3 de la Disposición 60-E/2016,
+  sustituido por la Resolución AAIP 34/2019. Alojar en São Paulo es transferencia del art. 12 de la
+  Ley 25.326, y lo que la habilita son **las cláusulas contractuales tipo del Anexo II de esa misma
+  disposición**, incorporadas al contrato entre CeltaTech y la Prestadora. Es trabajo de contrato,
+  no de código, y tiene que estar firmado antes del alta de la primera Prestadora real. La excepción
+  de datos médicos del art. 12(2)(b) es para un intercambio concreto exigido por el tratamiento del
+  paciente y no cubre alojar el padrón: no se la invoca.
 - **Latinoamérica.** Ninguno de los diez países prohíbe el destino. Costa Rica exige consentimiento
   expreso que cubra específicamente la transferencia internacional, no el genérico de tratamiento
   (Ley 8968 art. 14; omitirlo es falta gravísima). Panamá exige informar cuál condición del art. 33
@@ -308,6 +316,11 @@ específicamente la transferencia internacional donde haga falta.
 
 Vale la regla de la empresa: **el producto avisa, no bloquea**, y el aviso sale del documento legal
 de ese país. Si el país no tiene documento, no hay aviso, y sin documento no se vende ahí.
+
+**Y los documentos legales de `docs/legal/` hay que ampliarlos, empezando por Argentina.** Los 21
+archivos de país existen, pero el de Argentina —el único desarrollado— cubre riesgo laboral:
+penalización de inasistencias, rankings, puntuaciones. La materia de protección de datos de salud,
+conservación del expediente y notificación de brechas todavía no está escrita en ninguno.
 
 **Comprobación:** ningún plazo de estos aparece escrito en el código.
 

@@ -17,6 +17,25 @@ cambiarlo.
 
 ---
 
+## Por dónde se empieza
+
+**La obra arranca por la sección «Los cimientos», en su primer paso de construcción.** Es lo que
+hay que hacer antes que cualquier otra cosa, y mientras dure **no sale ninguna pantalla nueva**.
+
+**El plan está aprobado en su ordenamiento y en sus dos decisiones de fondo**, que ya no se
+vuelven a preguntar: los datos viven en São Paulo con el código previsto para más de una
+instalación, y el segundo nivel de aislamiento se construye ahora.
+
+**Los pasos de «Lo que se dijo que decidió usted» no frenan la obra.** Son una conversación con el
+Desarrollador, renglón por renglón, y avanzan cuando él abra un grupo. Ninguno de ellos es
+condición del trabajo de los cimientos.
+
+**Lo único que quedó sin contestar, y se contesta recién al escribir esa política:** si en Chile el
+segundo nivel va clavado sin interruptor, o si el interruptor existe y apagarlo avisa y queda
+registrado quién lo hizo. Está planteado en el paso que le corresponde.
+
+---
+
 ## Lo que se dijo que decidió usted
 
 **Va primero porque condiciona todo lo demás.** Una revisión de los documentos del producto

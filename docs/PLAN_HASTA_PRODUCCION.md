@@ -309,7 +309,8 @@ Brasil no figura en la lista de países adecuados de la autoridad argentina, as�
 Paulo es una transferencia internacional. Lo que la habilita son las cláusulas contractuales tipo
 que esa misma autoridad redactó y publicó: se adoptan tal como están, adentro del contrato entre
 CeltaTech y la Prestadora. No hay que buscar proveedor en Argentina: la ley no obliga a alojar
-dentro del país.
+dentro del país. **Cuál es esa cláusula, de dónde sale, quién la firma y qué hay que definir antes
+de redactarla está en `celtatech/docs/CLAUSULA_TRANSFERENCIA_INTERNACIONAL.md`.**
 
 Lo que obliga cada lado, que es lo que sostiene todo lo anterior:
 
@@ -1490,7 +1491,9 @@ construye igual mientras tanto.
 **Y hay una tanda que no espera al MVP, porque no es consulta sino contrato:** las cláusulas
 contractuales tipo que habilitan alojar en São Paulo los datos de una Prestadora argentina tienen
 que estar firmadas antes del alta de la primera Prestadora real. Eso está en «Los cimientos», y por
-eso está ahí y no acá.
+eso está ahí y no acá. El material para esa consulta —cuál es la cláusula, cuáles son las dos vías
+vigentes y qué hay que definir antes de redactar— está en
+`celtatech/docs/CLAUSULA_TRANSFERENCIA_INTERNACIONAL.md`.
 
 **112. Usted** — Las escalas legales: la validación, y los dos valores que el código usa y no
 existen (`piso_minimo_indemnizacion` y `fraccion_computable_antiguedad`). En el mismo viaje va el

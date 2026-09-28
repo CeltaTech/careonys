@@ -175,14 +175,14 @@ internacional.
 |---|---|---|---|---|
 | **Argentina** | Ley 25.326 y Decreto 1558/2001 — AAIP. Arts. 2, 4(7), 7, 8, 9, 10, 11(4), 21 y 25. Res. AAIP 47/2018 y 126/2024 | Ley 26.529 y Decreto 1089/2012; Ley 27.553 y **Decreto 98/2023**; Ley 27.706 | Mínimo 10 años **desde la última actuación**; copia al paciente en 48 horas | Sin plazo legal |
 | **Brasil** | LGPD 13.709/2018 — ANPD, hoy agencia reguladora por Lei 15.352/2026. Arts. 5º II, 11, 42 §1º, 46, 48, 41. Res. CD/ANPD 15/2024 y 19/2024 | Res. CFM 1.821/2007; Lei 13.787/2018; Lei 14.510/2022; Res. CFM 2.314/2022; RDC ANVISA 11/2006 | **20 años desde el último registro, cualquier soporte** (Lei 13.787/2018 art. 6º §5) | 3 días hábiles, a la autoridad y al titular |
-| **Chile** | Ley 19.628; **Ley 21.719 vigente desde el 1-12-2026**, crea la APDP | Ley 20.584 art. 13; Decreto 41/2012 | **15 años, o hasta los 34 años del paciente** | 72 horas |
+| **Chile** | Ley 19.628; **Ley 21.719 vigente desde el 1-12-2026**, crea la APDP. Arts. 1 bis, 13, 14 quinquies, 14 sexies, 15 bis, 15 ter, 16 bis, 27-29, 34 quáter | Ley 20.584 arts. 3, 12 y 13; **Decreto 41/2012 arts. 6-13**; Ley 21.541 (telemedicina); Ley 21.668 | **15 años desde el último ingreso de información** (Decreto 41/2012 art. 11). Eliminar después es **facultativo** (art. 12) | **«Sin dilaciones indebidas»**, sin plazo en horas. También al titular por ser datos sensibles |
 | **México** | LFPDPPP de 2025, vigente desde el 21-03-2025. Autoridad: Secretaría Anticorrupción y Buen Gobierno | NOM-004-SSA3-2012 5.4; **NOM-024-SSA3-2012** | 5 años desde el último acto médico | De inmediato, **sólo al titular** |
 | **Colombia** | Ley 1581/2012, Ley 1266/2008, Decreto 1074/2015 — SIC. Arts. 5, 6, 17 f) y n), 23 d) | Res. 1995/1999 mod. **839/2017**; Ley 2015/2020; Res. 1888/2025 | **15 años desde la última atención**: 5 de gestión + 10 de archivo central | **15 días hábiles**, sólo a la autoridad |
 | **Perú** | Ley 29733 y **DS 016-2024-JUS, vigente desde el 30-03-2025**. Arts. 34, 37, 46, 51, 52; 132-134 | NTS 139-MINSA/2018/DGAIN (RM 214-2018); RENHICE (Ley 30024 y **DS 039-2015-SA**) | ⚠️ Sin verificar: las fuentes discrepan entre 15 y 20 años | **48 horas**, a la autoridad **y al titular** |
-| **Uruguay** | Ley 18.331, Decreto 414/009, Ley 19.670 arts. 37-40, Decreto 64/020. **Adecuación europea por Decisión 2012/484/UE** | HCEN: Ley 19.355 art. 466 y Decreto 242/017; Ley 19.869 | 2 + 3 = 5 años (Decreto 355/982) | 72 horas, **sólo a la autoridad** |
-| **Ecuador** | LOPDP de 2021 y Reglamento — SPDP. **Art. 31: los datos de salud deben anonimizarse o pseudonimizarse**. Res. SPDP-SPD-2026-0004-R | AM-00115-2021, AM-5216-2014, AM-5316-2016 | 15 años desde la última atención | Según la resolución de transferencias |
-| **Costa Rica** | Ley 8968, Decreto 37554-JP y reformas — PRODHAB. Arts. 5, 9, 10, 11, 14; reglamento arts. 32, 34, 45, 47 | Reglamento del Expediente de Salud de la CCSS: arts. 10, 16, 17, 19, 32, 50 | Pasivo a los 5 años (art. 50); **desasociar a los 10 (Ley art. 6)** | **5 días hábiles desde que ocurrió** |
-| **Panamá** | Ley 81 de 2019 y Decreto 285 de 2021 — ANTAI. Arts. 8, 13, 19, 20, 28, 31, 47-50; decreto arts. 8, 33, 35, 36, 38 | Ley 68 de 2003; telesalud Ley 203 de 2021 | **20 años desde la muerte del paciente** | De inmediato y dentro de **72 horas**, a los dos |
+| **Uruguay** | Ley 18.331 arts. 4 E, 18, 19 y 23; Decreto 414/009; Decreto 64/020 arts. 4, 6 y 10. **Adecuación europea por Decisión 2012/484/UE** | HCEN: Decreto 242/017 arts. 3, 13 y 16; Decreto 122/019; Ley 19.869 y Decreto 127/024 (telemedicina) | 2 + 3 = 5 años (Decreto 355/982), pero es **facultad de destruir, no obligación de conservar**; la historia electrónica **no se borra** (242/017 art. 13) | 72 horas, **sólo a la autoridad** |
+| **Ecuador** | LOPDP de 2021 y Reglamento — SPDP. **Art. 31: los datos de salud se seudonimizan «siempre que sea posible»**. Arts. 3, 34, 42, 43, 46, 47, 48, 51. Res. SPDP-SPD-2026-0004-R | AM-00115-2021, AM-5216-2014, AM-5316-2016 | 15 años desde la última atención | **5 días hábiles** a la SPDP **y a ARCOTEL** (art. 43); el encargado avisa al responsable en **2 días**; al titular, **3 días desde que se conoció el riesgo** (art. 46) |
+| **Costa Rica** | Ley 8968 —**sin ninguna reforma desde 2011**— y Decreto 37554-JP, reformado por los decretos 40008-JP y 41582 — PRODHAB. Arts. 5, 9, 10, 11, 14; reglamento arts. 32, 34, 45, 47 | Reglamento del Expediente de Salud de la CCSS: arts. 10, 16, 17, 19, 32, 50 | Pasivo a los 5 años (art. 50); **desasociar a los 10 (Ley art. 6)** | **5 días hábiles desde que ocurrió el hecho**, no desde que se conoce (reglamento art. 38), **al titular y a la autoridad** (art. 39) |
+| **Panamá** | Ley 81 de 2019 y Decreto 285 de 2021 — ANTAI. Arts. 8, 13, 19, 20, 28, 31, 47-50; decreto arts. 8, 33, 35, 36, 38 | Ley 68 de 2003 **arts. 49 y 50**; telesalud Ley 203 de 2021, que impone **HL7 obligatorio** | **20 años desde la muerte del paciente** (Ley 68 art. 49), y el mismo plazo para el núcleo documental tasado del art. 50 | De inmediato y dentro de **72 horas**, a los dos |
 
 ### Argentina, que es donde se vende primero
 
@@ -282,8 +282,74 @@ salud todavía no está escrita ahí. **En obra** — tramo 11.
 5. **Plazo de conservación y anonimización al vencer** (Costa Rica art. 6, Panamá Decreto art. 7,
    Ecuador art. 31). **En obra** — tramo 4.
 
-**Cinco obligaciones particulares que no se deducen de ningún parecido con otro país:**
+**Las obligaciones particulares, que no se deducen de ningún parecido con otro país:**
 
+- **Chile: el aislamiento tiene que seguir adentro de la Prestadora.** Es el hallazgo que más lejos
+  llega de los diez países. El art. 13 de la Ley 20.584 prohíbe el acceso de terceros no
+  relacionados con la atención «**Ello incluye al personal de salud y administrativo del mismo
+  prestador, no vinculado a la atención de la persona**», y el art. 9 del Decreto 41/2012 obliga a
+  tomar medidas para impedirlo. No alcanza con separar Prestadora de Prestadora: adentro de una
+  Prestadora, quien no participa de la atención de esa persona no puede ver su historia. Es un
+  segundo nivel de aislamiento, por vínculo con la atención y no por rol. **En obra** — plan de
+  aislamiento y tramo 2.
+- **Chile: el registro de accesos es de lecturas, y es reglamentario.** El mismo art. 9 del Decreto
+  41/2012: «Este sistema debe llevar registro de las fechas y personas que han accedido a las
+  fichas.» No es auditoría de escritura. **En obra** — tramo 2.
+- **Chile: no hay refugio geográfico.** El art. 1 bis lit. b) de la Ley 19.628 nueva aplica la ley
+  chilena al encargado que trata datos por cuenta de un responsable establecido en Chile, esté
+  donde esté y con la base donde esté. Y el art. 3 de la Ley 20.584 lo dice desde el lado sanitario:
+  el prestador es el responsable, los proveedores tienen «las responsabilidades propias de un
+  mandatario», y **no lo exime usar software de terceros**.
+- **Chile: subcontratar el alojamiento necesita permiso escrito de cada Prestadora.** El art. 15 bis
+  prohíbe subencargar sin autorización específica y por escrito del responsable, y aun autorizada
+  subsiste la responsabilidad solidaria. El proveedor de nube es un subencargado. **En obra** —
+  tramo 1.
+- **Chile: la situación socioeconómica pasa a ser dato sensible.** El art. 2 lit. g) del texto que
+  entra en vigor la pone junto a la salud. Es el segundo país que lo hace, después de Perú. Y el
+  matiz importa: lo que la Familia paga por el servicio se trata por la ejecución del contrato (art.
+  13 lit. c), pero una evaluación socioeconómica para asignar escalas de precio o subsidios es dato
+  sensible y necesita base propia.
+- **Ecuador: seudonimizar sí, anonimizar no.** El art. 31 numeral 2 manda seudonimizar o anonimizar
+  los datos de salud «siempre que sea posible». Sobre el dato operativo no se activa —identificar al
+  paciente es la finalidad misma del producto—, pero sí sobre todo lo derivado: tableros,
+  estadísticas, reportes agregados, entornos de desarrollo y prueba, respaldos analíticos y
+  registros de actividad. Y hay una trampa en el numeral 3: **todo tratamiento de datos de salud
+  anonimizados necesita autorización previa de la autoridad**, con protocolo técnico e informe
+  favorable de la autoridad sanitaria. **No menciona la seudonimización.** De ahí sale la regla del
+  producto: se seudonimiza, no se anonimiza. **En obra** — tramo 4.
+- **Ecuador exige representante local, y alcanza al encargado.** Art. 3 de la LOPDP y del
+  Reglamento: quien no está establecido en Ecuador designa apoderado especial con residencia en el
+  país, con poder apostillado. La única excepción —tratamiento ocasional, sin gran escala de
+  categorías especiales, sin riesgo— no aplica a un producto de salud por ninguno de los tres
+  filtros. Y el art. 6 de la Resolución SPDP-SPDP-2024-0002-R obliga además a **entregarle a la
+  autoridad** el acuerdo de encargo, el registro de actividades de tratamiento, el análisis de
+  riesgo, el flujo de datos y el detalle de las medidas de seguridad. Es el segundo país con
+  representante local, después de Perú. **No alcanza** — es obligación societaria de CeltaTech.
+- **Ecuador y Uruguay exigen delegado de protección de datos, y alcanza al encargado.** Ecuador por
+  el art. 48 de la LOPDP —gran escala de categorías especiales— con el art. 47 in fine extendiendo
+  las obligaciones al encargado, y con requisitos de persona: título de tercer nivel en Derecho,
+  Comunicación o Tecnologías y cinco años de experiencia mínima. Uruguay por el art. 10 del Decreto
+  64/020, cuando se tratan datos sensibles como actividad principal. **No alcanza** — es obligación
+  societaria de CeltaTech, no del producto. En Chile, en cambio, el art. 50 lo deja **potestativo**.
+- **El cifrado de audio y video ya no es una rareza argentina: son dos países.** El Decreto 98/2023
+  argentino y el art. 10 del Decreto 127/024 uruguayo, que exige «sistema de cifrado actualizado» en
+  los servicios con transmisión de audio y video en simultáneo. **En obra** — tramo 9.
+- **Uruguay: la historia clínica electrónica no se borra.** El art. 13 del Decreto 242/017: «La
+  información no podrá ser alterada o eliminada sin que quede registrada la modificación», y la
+  corrección agrega el dato nuevo «sin suprimir lo corregido». Los cinco años del Decreto 355/982
+  son **facultad de destruir**, pensada para el papel: quien no destruye no incumple. Refuerza la
+  regla del tramo 4 —vencido el plazo el sistema avisa y espera, nunca borra— con un país donde
+  borrar sería lo incorrecto.
+
+- **Panamá castiga penalmente la falla de aislamiento.** La Ley 203 de 2021 reformó el art. 291 del
+  Código Penal para agravar la intrusión contra bases de datos que contienen información médica. Es
+  el único de los diez países donde el riesgo deja de ser administrativo. **En obra** — plan de
+  aislamiento.
+- **Costa Rica cuenta el plazo de brecha desde el hecho, no desde que se descubre.** El art. 38 del
+  reglamento: «cinco días hábiles a partir del momento en que ocurrió la vulnerabilidad». Es el
+  reloj más hostil de los diez, porque puede empezar a correr antes de que nadie sepa que hay algo
+  que informar, y el art. 39 obliga a avisarle al titular **y** a la autoridad. De acá sale por qué
+  el tramo 6 se construye contra detección y no contra aviso. **En obra** — tramo 6.
 - **Costa Rica, art. 9 de la Ley 8968.** Tratar datos de salud exige que quien los trate esté sujeto
   a secreto profesional «o a una obligación equivalente de secreto». El personal técnico del
   proveedor tiene que estar contractualmente sujeto, o el tratamiento cae en la prohibición, que es
@@ -312,13 +378,42 @@ salud todavía no está escrita ahí. **En obra** — tramo 11.
   resolverla antes de vender ahí. Ninguno de los otros nueve países la tiene. **No alcanza** — no
   es materia de este plan.
 
-**Transferencia internacional.** Argentina, Brasil, Perú, Uruguay y Ecuador exigen cláusulas
-contractuales del modelo de su autoridad; Panamá aprobó las cláusulas de la Red Iberoamericana por
+**Transferencia internacional, y la pregunta previa que casi nadie hace.** Antes de preguntarse con
+qué instrumento se transfiere, hay que preguntarse **si esto es una transferencia**. Y la respuesta
+cambia de país en país, porque cada uno define la palabra a su manera.
+
+**Tres países dicen que entregarle los datos al encargado no es transferencia:**
+
+- **Ecuador.** El art. 4 de la LOPDP define la transferencia como la que se hace «a una persona
+  **distinta al titular, responsable o encargado**», y el art. 34 agrega que el acceso del encargado
+  no constituye transferencia ni comunicación. El art. 23 de la Resolución SPDP-SPD-2026-0004-R lo
+  dice sin rodeos: «el encargo de tratamiento no constituye una transferencia ni comunicación de
+  datos personales. En consecuencia, las CCM entre responsables y encargados, emitidas por la RIPD,
+  no son aplicables en la República del Ecuador.» Lo que sí exige es el **contrato de encargo** del
+  art. 34 y las medidas de los arts. 37-42.
+- **Costa Rica.** La definición reformada de transferencia excluye la entrega de datos al encargado
+  o al intermediario tecnológico.
+- **Uruguay** no lo excluye por definición, pero llegó al mismo resultado por otro camino: la URCDP
+  declaró **ajustadas a la normativa nacional las cláusulas contractuales de AWS** (Resolución
+  42/022) y autorizó transferencias a servidores de AWS fundadas en ellas (Resolución 18/024). Eso
+  es lo que habilita São Paulo para datos uruguayos, y hace falta porque **Brasil no está en la
+  lista de países adecuados** de la Resolución URCDP 23/021, ampliada por la 63/023.
+
+**Los que sí la exigen:** Argentina, Brasil y Perú, con las cláusulas del modelo de su autoridad.
+**Chile** no tiene todavía lista de países adecuados ni cláusulas modelo —la Agencia no está
+constituida—, así que la única vía practicable al 1-12-2026 es la del art. 27 lit. b), cláusulas
+contractuales, **y la carga de acreditarlo es de la Prestadora** (art. 28), que sólo puede hacerlo
+con documentación que le dé CeltaTech. **Panamá** aprobó las cláusulas de la Red Iberoamericana por
 Resolución ANTAI-DG-003-2026, pero para datos de salud su art. 13 vuelve prácticamente ineludible el
-consentimiento explícito; Costa Rica exige consentimiento expreso que cubra específicamente la
-transferencia, sin régimen de adecuación; Colombia incluye a Estados Unidos como adecuado por
-Circular Externa 005 de 2017; dentro de la Comunidad Andina las transferencias se consideran
+consentimiento explícito. **Costa Rica** exige consentimiento expreso que cubra específicamente la
+transferencia, sin régimen de adecuación. **Colombia** incluye a Estados Unidos como adecuado por
+Circular Externa 005 de 2017, y dentro de la Comunidad Andina las transferencias se consideran
 adecuadas. **En obra** — tramos 1 y 11.
+
+**Y una advertencia que vale para los tres países que no llaman transferencia al encargo:** que no
+haya que firmar cláusulas de transferencia no alivia nada. El contrato de encargo sigue siendo
+obligatorio, con contenido mínimo, y las medidas de seguridad son las mismas. Lo único que
+desaparece es un trámite.
 
 **Para Brasil, estar en São Paulo no es un problema: es la solución.** Un dato brasileño alojado en
 Brasil no es transferencia y no necesita instrumento alguno. Lo que sí hay que mirar es que las
@@ -334,8 +429,13 @@ el registro del art. 21, gratuito, obligatorio y sin excepción por tamaño de e
 las cámaras de vigilancia, y alcanza también a responsables no establecidos en el país—; Colombia
 sólo por encima de 100.000 UVT de activos, con actualización anual entre el 2 de enero y el 31 de
 marzo y aviso de cambios sustanciales dentro de los 10 primeros días hábiles del mes siguiente;
-Costa Rica sólo si hay distribución, difusión o comercialización, con canon anual; Brasil, México y
-Panamá no tienen registro. **En obra** — tramo 11, como aviso por país. Nunca como bloqueo.
+Costa Rica sólo si hay distribución, difusión o comercialización, con un canon de 200 dólares (art.
+78 del reglamento) que por ese alcance **no le toca a una Prestadora** ni a CeltaTech; **Ecuador, cada
+base o tratamiento dentro de los 10 días hábiles de iniciado** (art. 51 de la LOPDP y art. 86 del
+Reglamento), aunque el registro **no figura como trámite publicado** en el catálogo de la autoridad,
+que tiene seis y ninguno es éste; Brasil, México y Panamá no tienen registro. **Chile tampoco**, y
+además el art. tercero transitorio de la Ley 21.719 ordena **eliminar** el registro de bancos de
+datos que hoy lleva el Registro Civil. **En obra** — tramo 11, como aviso por país. Nunca como bloqueo.
 
 Lo que esto le pide al producto es concreto: **cada Prestadora es la responsable y es quien
 inscribe**, CeltaTech es el encargado, y el producto tiene que poder entregarle a cada una lo que
@@ -343,9 +443,15 @@ el formulario le pide —categorías de datos, medidas de seguridad, personas co
 conservación, encargados y países—. Sin eso, la Prestadora no puede inscribir, y sin inscripción
 el art. 21(3) argentino prohíbe toda cesión.
 
-**Cuatro integraciones nacionales obligatorias que este plan no construye**, y cada una es obra
-propia: HCEN uruguayo, interoperabilidad colombiana, RENHICE peruano y la certificación
-NOM-024-SSA3-2012 mexicana, que es del producto y hay que obtenerla antes de vender en México.
+**Cinco integraciones nacionales obligatorias que este plan no construye**, y cada una es obra
+propia: HCEN uruguayo, interoperabilidad colombiana, RENHICE peruano, la certificación
+NOM-024-SSA3-2012 mexicana —que es del producto y hay que obtenerla antes de vender en México— y
+**Panamá, que es la más exigente en lo técnico**: la Ley 203 de 2021 impone **HL7 obligatorio**,
+clasificación internacional de enfermedades e interoperabilidad con los sistemas públicos, más un
+convenio escrito entre la Prestadora y el proveedor tecnológico que hay que poder exhibir ante la
+autoridad sanitaria. Y esa misma ley reformó el art. 291 del Código Penal para **agravar penalmente
+la intrusión contra bases con datos médicos**: en Panamá una falla de aislamiento no termina en
+multa administrativa.
 
 ---
 
@@ -409,8 +515,34 @@ Se declara para que nadie lo tome por cumplido.
   conformidad por organismos aprobados.
 - **Las posiciones de la autoridad francesa, PGSSI-S, Ségur y ESMS numérique** no se pudieron leer.
 - En Latinoamérica quedaron sin verificar los regímenes sancionatorios de casi todos los países,
-  varios plazos de respuesta a derechos, el número de artículo panameño de los veinte años, y el
-  monto vigente del canon costarricense.
+  varios plazos de respuesta a derechos.
+- **Si Chile posterga la vigencia de su ley al 1-12-2027.** Hay un proyecto en trámite —boletín
+  18.623-07, ingresado el 1-9-2026— que lo haría. **No es ley**, y su texto no se pudo leer: el
+  sitio de la Cámara devolvió 403. Todo el diseño se hace contra el 1-12-2026, que es la fecha
+  vigente.
+- **Los estándares de seguridad que el art. 3 de la Ley 20.584 chilena manda dictar al Ministerio de
+  Salud.** Se sabe que existen como mandato y que el prestador responde por incumplirlos; **no se
+  identificó el acto que los contiene**. Puede haber requisitos técnicos obligatorios adicionales a
+  los del Decreto 41/2012.
+- **El reglamento chileno de acreditación de plataformas de salud digital** (art. 10 bis de la Ley
+  20.584) y la actualización del Decreto 41/2012 que ordenó la Ley 21.668. No se localizaron.
+- **Si existen cláusulas contractuales modelo chilenas.** Una fuente secundaria afirma que sí. Se
+  considera dudoso: la Agencia que debería dictarlas no está constituida —el Senado rechazó la
+  propuesta de consejeros el 20-5-2026 por falta de quórum—, y sin Agencia tampoco hay lista de
+  países adecuados, ni contratos tipo, ni mecanismo de certificación.
+- **Si el proveedor de nube en Brasil cuenta como «agente de tratamento brasileiro»** a los efectos
+  del art. 4º IV de la LGPD, y si Argentina «proporciona grado de protección adecuado» a esos mismos
+  efectos. De esas dos respuestas depende que los datos de una Prestadora argentina alojados en São
+  Paulo queden o no fuera de la ley brasileña. Son preguntas para abogado brasileño.
+- **El encuadre sanitario chileno de cada Prestadora.** El Decreto 1/2022 excluye de la
+  hospitalización domiciliaria a la atención domiciliaria ambulatoria y de libre elección, lo que
+  cambia mucho la carga regulatoria. Depende de cómo esté constituida y autorizada cada Prestadora,
+  y no es algo que el producto pueda resolver en abstracto.
+- **El régimen uruguayo de cuidados domiciliarios sin habilitación sanitaria.** El Decreto 242/017
+  obliga a todos los prestadores a llevar historia clínica electrónica y a usar la Plataforma, pero
+  delega condiciones y plazos en el Ministerio, que sólo los fijó para siete grupos del Plan de
+  Adopción. Los cuidados domiciliarios sin habilitación sanitaria **no están en ninguno**. La
+  internación domiciliaria sí es servicio habilitado y entraría como prestador privado parcial.
 - **El plazo de conservación de la historia clínica peruana.** La NTS 139-MINSA no se pudo leer en
   su texto oficial y las fuentes secundarias discrepan entre 15 y 20 años. **Ninguna de las dos
   cifras se usa hasta confirmarla.** Es el hueco más importante que quedó abierto.

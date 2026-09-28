@@ -368,18 +368,28 @@ Lo que obliga cada lado, que es lo que sostiene todo lo anterior:
 **Comprobación:** por cada país donde haya una Prestadora dada de alta, `docs/CUMPLIMIENTO_NORMATIVO.md`
 nombra qué habilita el alojamiento y con qué instrumento. Sin eso, el alta no se aprueba.
 
-**6. Usted** — **El segundo nivel de aislamiento, el que Chile exige.** El art. 13 de la Ley
+**6.** **El segundo nivel de aislamiento, el que Chile exige.** El art. 13 de la Ley
 20.584 prohíbe ver la historia de una persona a quien no está vinculado a su atención, y aclara que
 eso **incluye al personal de salud y administrativo de la propia Prestadora**. El art. 9 del Decreto
 41/2012 obliga a tomar medidas para impedirlo. Es un segundo nivel: no por rol, sino por vínculo con
 esa persona. Un rol administrativo que hoy ve todo el padrón de su Prestadora cumple la regla de la
 empresa y **no** cumple la ley chilena.
 
-No es obra chica y tiene su propia decisión de alcance: **qué rol conserva vista del padrón completo
-y cuál no.** Se pregunta acá y no más abajo porque, si va, va en la misma pasada que el resto de
-estos pasos —una condición más en una política—, y si se difiere es una reescritura de permisos.
+**Se construye ahora, y va en la misma pasada que el resto de estos pasos** —es una condición más
+en una política—. Diferirlo sería reescribir permisos después.
 
-**¿Se construye ahora, o se difiere aceptando que Chile no se vende hasta entonces?**
+**Encendido siempre en Chile, y elegible en el resto.** Donde la ley lo exige no hay interruptor.
+Donde no lo exige, cada Prestadora decide si lo usa, porque es forma de trabajo suya: una empresa
+chica donde la administración atiende todo el padrón trabaja de una manera y una grande de otra.
+**Nace encendido**, y quien lo apaga lo hace a propósito. Que en un país no esté exigido no lo
+vuelve mala idea: es lo correcto con datos de salud en cualquier lado.
+
+**Qué país es cada Prestadora ya está en la base** —`prestadoras.pais`—, así que de ahí sale si el
+interruptor se ofrece o no. Que sea obligatorio en Chile no se escribe en el código: sale de la
+configuración por país, igual que las advertencias legales.
+
+**Queda una pieza de este paso sin decidir, y no traba el arranque porque se contesta antes de
+escribir la política:** qué rol conserva la vista del padrón completo con el interruptor encendido.
 
 **7.** **La credencial del trabajo sin persona.** Es lo primero que se construye porque hasta que
 exista, quitar la llave maestra rompe la mitad del producto.

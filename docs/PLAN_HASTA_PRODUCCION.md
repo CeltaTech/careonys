@@ -289,11 +289,29 @@ Y lo que queda cuando termina el resto de esta lista, que se apoya sobre lo ante
 
 ### Los pasos
 
-**5. Usted** — **Dónde viven los datos.** Es lo primero porque condiciona todo lo demás y porque
-no es una decisión de programación. Hoy hay una sola región, en São Paulo, y eso alcanza para
-Latinoamérica y Estados Unidos y no alcanza para Europa.
+**5.** **Dónde viven los datos: São Paulo, y el código preparado para más de una instalación.**
+Decidido. No se abre alojamiento europeo hasta que haya un cliente europeo: pagar por un mercado
+que todavía no existe es gasto sin contrapartida, y esa puerta se abre el día que haga falta.
+Hasta entonces **Europa no se vende**, y no por trámite: Alemania y Francia exigen que los datos
+de salud estén alojados allá. **Estados Unidos sí se puede vender sin mudar nada**, porque no
+exige residencia: lo que pide es el contrato con el proveedor de la nube, que es dinero y no obra.
 
-Lo que obliga cada lado:
+Lo que se construye acá es una sola cosa: **ninguna parte del código da por sentado que hay una
+sola base. La Prestadora trae consigo a cuál pertenece.** Dejarlo previsto ahora no cuesta nada;
+agregarlo el día que aparezca el cliente europeo es reescribir. Cuando eso pase, el identificador
+de una Prestadora deja de ser único en el producto y pasa a serlo por instalación, y la puerta de
+entrada tiene que saber a qué instalación mandar a cada quien. Nada más del producto se resiente:
+cada Prestadora es un cajón cerrado, el banco de Asistentes es por Prestadora y la elección es por
+cercanía al paciente, así que nada necesita ser único cruzando el océano.
+
+**Y lo que no es código: las cláusulas firmadas antes del alta de la primera Prestadora real.**
+Brasil no figura en la lista de países adecuados de la autoridad argentina, así que alojar en São
+Paulo es una transferencia internacional. Lo que la habilita son las cláusulas contractuales tipo
+que esa misma autoridad redactó y publicó: se adoptan tal como están, adentro del contrato entre
+CeltaTech y la Prestadora. No hay que buscar proveedor en Argentina: la ley no obliga a alojar
+dentro del país.
+
+Lo que obliga cada lado, que es lo que sostiene todo lo anterior:
 
 - **Alemania.** El §393 SGB V limita el lugar de tratamiento a Alemania, el Espacio Económico
   Europeo o un tercer país con adecuación donde el proveedor tenga establecimiento nacional, y
@@ -345,24 +363,6 @@ Lo que obliga cada lado:
   escrito** de cada Prestadora —el proveedor de nube es un subencargado, y la autorización hay que
   pedirla y guardarla—. Y no hay refugio geográfico: el art. 1 bis lit. b) aplica la ley chilena al
   encargado que trabaja para un responsable establecido en Chile, esté donde esté.
-
-**La pregunta es una sola:** ¿el producto se queda en una región y se vende sólo donde esa región
-habilita, o pasa a tener **una instalación por mercado** —São Paulo para Latinoamérica y Estados
-Unidos, Europa para Europa—, con cada Prestadora alojada donde su país permite?
-
-**Se verificó que la segunda opción no choca con nada del producto.** Cada Prestadora es un cajón
-cerrado, el banco de Asistentes es por Prestadora —las 45 fichas de hoy llevan su Prestadora
-cargada, ninguna queda suelta— y la elección es por cercanía al paciente, así que nada necesita ser
-único cruzando el océano. Lo único que cambia es que el identificador de una Prestadora deja de ser
-único en el producto y pasa a serlo por instalación, y que la puerta de entrada tiene que saber a
-qué instalación mandar a cada quien.
-
-**Y hay una consecuencia que se paga se conteste lo que se conteste, así que se construye igual:**
-ninguna parte del código puede dar por sentado que hay una sola base. La Prestadora trae consigo a
-cuál pertenece. Dejarlo previsto ahora no cuesta nada; agregarlo después es reescribir.
-
-**Mientras esto no se decida, Europa y Estados Unidos no se venden.** No es una limitación de esta
-lista: es el estado de hecho de hoy.
 
 **Comprobación:** por cada país donde haya una Prestadora dada de alta, `docs/CUMPLIMIENTO_NORMATIVO.md`
 nombra qué habilita el alojamiento y con qué instrumento. Sin eso, el alta no se aprueba.

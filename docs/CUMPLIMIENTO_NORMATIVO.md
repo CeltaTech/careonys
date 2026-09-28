@@ -184,6 +184,55 @@ internacional.
 | **Costa Rica** | Ley 8968, Decreto 37554-JP y reformas — PRODHAB. Arts. 5, 9, 10, 11, 14; reglamento arts. 32, 34, 45, 47 | Reglamento del Expediente de Salud de la CCSS: arts. 10, 16, 17, 19, 32, 50 | Pasivo a los 5 años (art. 50); **desasociar a los 10 (Ley art. 6)** | **5 días hábiles desde que ocurrió** |
 | **Panamá** | Ley 81 de 2019 y Decreto 285 de 2021 — ANTAI. Arts. 8, 13, 19, 20, 28, 31, 47-50; decreto arts. 8, 33, 35, 36, 38 | Ley 68 de 2003; telesalud Ley 203 de 2021 | **20 años desde la muerte del paciente** | De inmediato y dentro de **72 horas**, a los dos |
 
+### Argentina, que es donde se vende primero
+
+Es el país más fácil de los diez, y aun así hay un punto que hay que resolver antes de la primera
+Prestadora real.
+
+**Alojar en São Paulo es, para Argentina, transferencia a un país sin legislación adecuada.** El
+art. 3 de la Disposición 60-E/2016, sustituido por el art. 1 de la Resolución AAIP 34/2019 y
+vigente, enumera taxativamente los países adecuados: los de la Unión Europea y el Espacio Económico
+Europeo, el Reino Unido, Suiza, Guernsey, Jersey, Isla de Man, Islas Feroe, Canadá sólo en su
+sector privado, Andorra, Nueva Zelanda, Uruguay e Israel sólo para datos de tratamiento
+automatizado. **Brasil no está.**
+
+El art. 12(1) de la Ley 25.326 prohíbe la transferencia hacia países sin protección adecuada. Su
+inciso 2(b) exceptúa el intercambio de datos médicos cuando lo exija el tratamiento del afectado o
+una investigación epidemiológica: **es una excepción angosta, para un intercambio concreto, y no
+habilita alojar el padrón completo de una Prestadora en Brasil.** No se la invoca.
+
+**Lo que sí habilita: las cláusulas contractuales tipo del Anexo II de la Disposición 60-E/2016**,
+que son precisamente las de prestación de servicios de tratamiento, incorporadas al contrato entre
+CeltaTech y la Prestadora. **En obra** — tramo 1. Es un requisito del contrato, no del código, y hay
+que tenerlo firmado antes del alta.
+
+Lo demás de Argentina:
+
+- **Ley 25.326 arts. 8 y 9.** El art. 8 habilita a los establecimientos sanitarios y a los
+  profesionales de la salud a tratar datos de salud respetando el secreto profesional. El art. 9(1)
+  exige medidas técnicas y organizativas contra la adulteración, la pérdida y **la consulta o
+  tratamiento no autorizado**, y el 9(2) prohíbe registrar datos en bancos que no reúnan condiciones
+  técnicas de integridad y seguridad. La medida contra la consulta no autorizada es el aislamiento:
+  **en obra**, plan de aislamiento.
+- **Resolución AAIP 47/2018.** Medidas de seguridad recomendadas y contenido del informe de
+  incidente. No es obligatoria, pero es el estándar contra el que mide la autoridad. **En obra** —
+  tramos 2, 6, 8 y 9.
+- **Ley 26.529.** Historia clínica cronológica, foliada y completa, propiedad del paciente, con
+  copia entregada dentro de las 48 horas y conservación de **diez años como mínimo**. **En obra** —
+  tramos 4, 5 y 7.
+- **Ley 27.553.** Receta electrónica y teleasistencia.
+- **Registro de bases del art. 21.** Lo inscribe la Prestadora, es gratuito, y el producto le avisa.
+  **En obra** — tramo 11.
+- **Sin plazo legal de notificación de brechas.** Se aplica igual el de 24 horas del tramo 6, porque
+  el sistema se construye contra el reloj más corto y no por país.
+- **Los proyectos de nueva ley de protección de datos no están sancionados.** No se construye contra
+  ellos.
+
+**Y falta el documento legal argentino de protección de datos.** `docs/legal/argentina.md` existe,
+pero es de riesgo laboral: penalización de inasistencias, rankings, puntuaciones. La regla de la
+empresa exige que antes de vender en un país ese país tenga su documento, y la materia de datos de
+salud todavía no está escrita ahí. **En obra** — tramo 11.
+
 **Las cinco exigencias que los diez comparten, y que el plan traduce a producto:**
 
 1. **Consentimiento expreso para datos de salud** (Costa Rica art. 5, Panamá art. 8, Brasil art. 11,

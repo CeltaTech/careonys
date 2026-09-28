@@ -469,9 +469,14 @@ rota y cuándo se rotó por última vez. Sin ningún valor adentro, y no se le a
 
 ## Cumplimiento normativo
 
-- Ley 25.326 (Protección de Datos Personales, Argentina) aplica a todos los datos de
-  salud y datos personales de pacientes, Asistentes y clientes.
-- No aplica GDPR salvo expansión internacional futura (no está en el roadmap actual).
+Está en `docs/CUMPLIMIENTO_NORMATIVO.md`, con el artículo de cada norma y el estado del producto
+frente a ella. Lo que falta construir, en `docs/PLAN_CUMPLIMIENTO_NORMATIVO.md`. Acá no se
+duplica ninguna de las dos cosas.
+
+Lo que no espera: Careonys trata datos de salud, así que lo alcanzan HIPAA en Estados Unidos, el
+Reglamento General de Protección de Datos en Europa y las leyes de los diez países
+latinoamericanos relevados —no sólo la Ley 25.326 argentina—. **Y los datos están alojados en São
+Paulo**, lo que para todo país que no sea Brasil es transferencia internacional.
 
 ## Verificación de antecedentes penales (etapa 3 del Proceso de Incorporación de Asistentes)
 
@@ -487,11 +492,13 @@ Las dos fotos con las que se verifica la identidad —la del documento y la de l
 depósito `fotos-identidad`, creado por
 `supabase/migrations/20260915210000_las_dos_fotos_de_la_verificacion_de_identidad_tienen_donde_vivir.sql`.
 
-- **Es privado y no tiene ninguna política, a propósito.** Nadie lo alcanza con su propio pase.
-  Lo escribe y lo lee el backend con la llave de servicio, después de comprobar de qué Prestadora es
-  el Asistente (`backend/src/routes/panelVerificacionIdentidad.js`). Con RLS encendida y ninguna
-  política, la base niega sola: falla cerrado. Es la misma forma de `certificados-medicos`,
-  `autorizaciones-monitoreo` y `documentos-cese`.
+- **Es privado y hoy no tiene ninguna política.** Nadie lo alcanza con su propio pase: lo escribe y
+  lo lee el backend con la llave de servicio, después de comprobar de qué Prestadora es el Asistente
+  (`backend/src/routes/panelVerificacionIdentidad.js`). Con RLS encendida y ninguna política, la
+  base niega sola. Es la misma forma de `certificados-medicos`, `autorizaciones-monitoreo` y
+  `documentos-cese`, y **los cuatro reciben política** en el tramo 2 de
+  `docs/PLAN_AISLAMIENTO_DE_RAIZ.md`: el aislamiento de un archivo no puede depender de que el
+  backend compare bien el comienzo de una ruta.
 - **La ruta empieza por la Prestadora** y se arma siempre con los mismos tres datos —Prestadora,
   Asistente y cuál de las dos fotos es—, nunca con algo que venga en el pedido. Va sin extensión:
   el formato viaja en el tipo de contenido.

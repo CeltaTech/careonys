@@ -242,7 +242,21 @@ desde un hecho distinto.
 
 Lo que la tabla tiene que poder expresar, porque hay un país que lo obliga:
 
-- Un plazo que corre **desde la muerte del paciente** (Panamá, 20 años).
+- Un plazo que corre **desde la muerte del paciente** (Panamá, 20 años). Y no hay plazo alternativo
+  para el paciente vivo: mientras no conste el fallecimiento, **no hay vencimiento que calcular**, así
+  que la purga automática tiene que quedar bloqueada. Lo único que Panamá deja destruir antes es lo
+  que no sea relevante para la asistencia, a los dos años de la última atención, y eso excluye el
+  núcleo documental del art. 50 de la Ley 68.
+- **Dos plazos encadenados que la propia norma suma** (Perú: 5 años de archivo activo más 15 de
+  pasivo, 20 en total desde la última atención, y 40 años para el cáncer de origen ocupacional). El
+  reloj se reinicia con cada atención, la eliminación la autoriza el Archivo General de la Nación, y
+  de la historia electrónica no se borra ningún dato.
+- **Un piso de guarda que no autoriza a borrar cuando se cumple** (México, 5 años desde el último
+  acto médico). La norma dice hasta cuándo hay que guardar; **no dice que después se pueda tirar**,
+  y ninguna otra norma mexicana lo autoriza.
+- **Un vencimiento independiente del clínico** (Costa Rica, art. 11 del reglamento: diez años desde
+  que terminó el objeto del tratamiento, salvo acuerdo de partes, relación continuada o interés
+  público).
 - Un plazo que corre **desde el último ingreso de información**, no desde la última atención ni
   desde el alta (Chile, 15 años, art. 11 del Decreto 41/2012). La diferencia no es sutil: cualquier
   anotación posterior reinicia el reloj de toda la ficha.
@@ -273,7 +287,9 @@ Lo que la tabla tiene que poder expresar, porque hay un país que lo obliga:
   prestador **podrá** eliminar, y si lo hace necesita acta protocolizada ante notario. Los tres
   confirman la regla del tramo: vencido el plazo el sistema avisa y espera.
 
-Hace falta además la **fecha de fallecimiento**, que hoy no existe en ninguna columna.
+Hace falta además la **fecha de fallecimiento**, que hoy no existe en ninguna columna. Y es un dato
+que llega de afuera y puede no llegar nunca: el sistema no se entera solo de que alguien murió. De
+ahí que en Panamá la regla sea al revés de lo que parece —mientras ese dato falte, no se purga nada.
 
 Y el borrado tiene que alcanzar los respaldos, o hay que documentar por escrito que no puede: el
 borrado incompleto en entorno de varios clientes está nombrado como amenaza en el Apéndice C de NIST

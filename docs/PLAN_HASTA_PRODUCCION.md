@@ -372,15 +372,22 @@ nombra qué habilita el alojamiento y con qué instrumento. Sin eso, el alta no 
 20.584 prohíbe ver la historia de una persona a quien no está vinculado a su atención, y aclara que
 eso **incluye al personal de salud y administrativo de la propia Prestadora**. El art. 9 del Decreto
 41/2012 obliga a tomar medidas para impedirlo. Es un segundo nivel: no por rol, sino por vínculo con
-esa persona. Un rol administrativo que hoy ve todo el padrón de su Prestadora cumple la regla de la
-empresa y **no** cumple la ley chilena.
+esa persona. Hoy quien tiene un rol que alcanza a toda su Prestadora ve la información de salud de
+cualquier paciente de ella, atienda a esa persona o no: eso cumple la regla de la empresa y **no**
+cumple la ley chilena.
+
+**De qué se habla y de qué no.** Lo que se restringe es **la información de salud**: la historia
+clínica, las indicaciones, los registros de lo que se le hizo a esa persona. El Padrón —quién es
+el Cliente, cómo se lo ubica, sus datos fiscales— no entra acá y queda como está, porque quien
+administra lo necesita para trabajar y ahí no hay ningún dato de salud.
 
 **Se construye ahora, y va en la misma pasada que el resto de estos pasos** —es una condición más
 en una política—. Diferirlo sería reescribir permisos después.
 
 **Encendido siempre en Chile, y elegible en el resto.** Donde la ley lo exige no hay interruptor.
 Donde no lo exige, cada Prestadora decide si lo usa, porque es forma de trabajo suya: una empresa
-chica donde la administración atiende todo el padrón trabaja de una manera y una grande de otra.
+chica donde las mismas personas atienden a todos los pacientes trabaja de una manera y una grande
+de otra.
 **Nace encendido**, y quien lo apaga lo hace a propósito. Que en un país no esté exigido no lo
 vuelve mala idea: es lo correcto con datos de salud en cualquier lado.
 
@@ -388,8 +395,11 @@ vuelve mala idea: es lo correcto con datos de salud en cualquier lado.
 interruptor se ofrece o no. Que sea obligatorio en Chile no se escribe en el código: sale de la
 configuración por país, igual que las advertencias legales.
 
-**Queda una pieza de este paso sin decidir, y no traba el arranque porque se contesta antes de
-escribir la política:** qué rol conserva la vista del padrón completo con el interruptor encendido.
+**Con el interruptor encendido, la regla es una sola: la información de salud de un paciente la
+alcanza quien está vinculado a su atención, y nadie más.** No hay rol que se salve por ser el más
+alto: un Administrador que no atiende a esa persona tampoco la ve. El vínculo se prueba con lo que
+ya está en la base —a quién se le está prestando el Servicio y quién lo presta—, no con una lista
+aparte que alguien tenga que mantener.
 
 **7.** **La credencial del trabajo sin persona.** Es lo primero que se construye porque hasta que
 exista, quitar la llave maestra rompe la mitad del producto.

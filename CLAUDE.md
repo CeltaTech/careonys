@@ -214,7 +214,7 @@ facturación conectado, o **con ninguno conectado**. Con ninguno, Careonys
 sigue funcionando con lo que él mismo registra. **Conectado, Careonys no calcula: muestra lo que
 recibe, tal como lo recibe.** No lo recalcula, no lo completa con lo suyo y no lo compara contra
 nada. Un número que llega de afuera y otro calculado acá son dos verdades para lo mismo, y eso es
-peor que no tener ninguna.
+peor que no tener ninguna. Textual del Desarrollador: *«cada prestadora elige como hacerlo»*.
 
 **El estado de cuenta lo ve solamente la administración de la Prestadora.** Cuánto debe una Familia
 y si está atrasada no es información de quien coordina turnos ni de nadie más: entra por el
@@ -230,17 +230,20 @@ lo que sea, y en los cuatro casos se guarda una sola vez, con todo lo que se sab
 lo ubica, qué servicio recibe y cómo figura ante el organismo fiscal. Nada de eso se guarda por
 segunda vez en otra pantalla, en otra tabla ni en el software de otro.
 
-**Se lo cita todas las veces que haga falta; se lo copia ninguna.** Una obra social puede estar
+**Se lo consulta todas las veces que haga falta; se lo copia ninguna.** Una obra social puede estar
 nombrada en cien Legajos, y en los cien es la misma: lo que cada uno guarda es cuál, no cómo se
 llama. El nombre escrito a mano en cada lugar termina siempre en datos que se contradicen entre
 sí, y entonces no hay forma de saber cuál vale. **Y no hay excepción.** Que un comprobante emitido
 conserve los datos del día que se emitió es asunto de quien lo emite —el software de facturación o
 el contable—, no de Careonys, que no emite ninguno.
 
-**Hacia afuera se entrega, y no se trae.** Careonys avisa que apareció un Cliente y cada software
-conectado lo da de alta con lo suyo. **Al revés no**: un cliente creado adentro del facturador no
-existe para Careonys. Un solo emisor y muchos receptores; dos padrones hablándose de igual a igual
-divergen siempre.
+**Hacia afuera se entrega, y no se trae.** Careonys le dice al software de facturación, para una
+Prestadora: hacé las facturas con estos datos e informame lo que corresponda. **Al revés no**: el
+mismo software puede estar trabajando para otros fines y con otros clientes, y nada de eso le llega
+a Careonys, porque no es información suya. Un cliente creado adentro del facturador no existe para
+Careonys. Un solo emisor y muchos receptores; dos padrones hablándose de igual a igual divergen
+siempre. Textual del Desarrollador: *«Careonys le dice al facturado externo "para tal prestadora
+hace las facturas con tales datos y informame de los datos que correpondan»*.
 
 **Si del otro lado editan lo que salió de acá, se avisa, no se bloquea.** Un software comprado deja
 cambiar el nombre o el domicilio de su cliente y eso no se puede impedir desde afuera. Lo que
@@ -248,8 +251,11 @@ corresponde es que la Prestadora vea que se despegaron, no que el producto inten
 
 **Una contratación tiene tres roles, y siempre son tres.** Quien contrata el Servicio es el
 Cliente Contratante; para quién se contrata es el Paciente; y quien asume la obligación de pagar es
-el Pagador. Los tres pueden ser la misma persona, y eso es lo corriente, pero **se anotan aparte
-igual**: coincidir hoy no es coincidir siempre. Cada uno de los tres lleva todos sus datos —nombre,
+el Pagador. Cada rol lo pueden tener una o más personas, físicas o jurídicas, y **una misma
+persona puede tener varios roles**. Los tres pueden ser la misma persona, y eso es lo corriente,
+pero **se anotan aparte igual**: coincidir hoy no es coincidir siempre. Textual del Desarrollador:
+*«Pueden ser 1 o mas personas (físicas o jurídicas)»* y *«una misma persona puede tener varios
+roles»*. **Se dice «rol», nunca «papel».** Cada uno de los tres lleva todos sus datos —nombre,
 apellido, datos fiscales, domicilio, teléfono—, y esos datos están en la base de la Prestadora, no
 en un papel.
 
@@ -279,7 +285,7 @@ desempeñó. Con quien dejó de ser Cliente se vuelve a cruzar: como Pagador de 
 como familiar de otro Paciente, como financiador. Ese historial es justamente lo que se pierde el
 día que alguien borra el Legajo «porque ya no está activa».
 
-**Rol nunca significa permisos.** Un rol dice qué papel cumple alguien en una contratación. Quién
+**Rol nunca significa permisos.** Un rol dice qué lugar ocupa alguien en una contratación. Quién
 puede ver o hacer qué cosa es otra cosa, se llama de otra manera y se guarda en otro lado.
 
 **Un casillero que nombra algo que existe en otro lado es una lista, y nunca texto libre.** Si lo

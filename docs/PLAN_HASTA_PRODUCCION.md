@@ -61,51 +61,6 @@ decisiones se sostienen entre sí: contestarlas de a una, salteadas, hace que la
 contradiga la de otra que ya se cerró. **Se contesta grupo por grupo**, y adentro de cada uno,
 renglón por renglón.
 
-### 2. Cómo le cobra una Prestadora a sus Clientes, en todas sus modalidades
-
-**Es el grupo más grande, el que más código tiene detrás, y el que menos se puede contestar
-salteado.** Si la cobranza sí fuera función de Careonys, cambian el padrón, los tres papeles de una
-contratación y el estado de cuenta. Y al revés. **Una respuesta suelta acá rompe las demás.**
-
-**Y se analiza entero, con las dos modalidades a la vista.** Hoy hay dos formas de cobrarle a un
-Cliente y están construidas por separado: en prestación directa se factura el servicio con un
-software de afuera, y en Match se cobra el contacto con un saldo y una suscripción, con pasarela
-propia. **Las dos son la misma Prestadora cobrándole a sus Clientes**, así que las decisiones de
-una no se pueden cerrar sin mirar la otra. El cobro del contacto está tratado más abajo, en la
-sección de la modalidad Match; **lo que se decida acá manda sobre aquello.**
-
-**Hay una sola venta de contactos construida, y es de la Prestadora a la Familia.** Un importe, sin
-vencimiento, y un saldo que se descuenta de a un Asistente. Lo arma cada Prestadora con sus
-valores, y la Familia le paga a ella. Está construido acá, junto con la suscripción que se renueva
-sola.
-
-**CeltaTech vende software, y nada más.** No vende contactos. Así que del otro lado no hay ninguna
-venta de contactos con la que confundir a ésta, y el producto no tiene que preguntarle nada a nadie
-para dejar abrir uno.
-
-**Y vender el acceso a una cantidad de contactos es de cada Prestadora, una por una, sin mezclarse
-con ninguna otra.** Cuántos contactos trae un paquete y cuánto sale lo decide cada una para sí, y
-ni el saldo, ni el estado de la suscripción, ni el contacto que se abre alcanzan jamás a otra.
-**De esa regla sale directo el primer punto del paso de Match, más abajo**: hoy el saldo y el
-estado de la suscripción de una Familia se buscan sin la Prestadora.
-
-**Y queda un renglón para sacar en el plan de Match**, que dice que el precio y el tope de los
-paquetes de contactos son de CeltaTech. Nació de leer «la decisión comercial no es del producto»
-como «lo vende CeltaTech», que es otra cosa: la decide cada Prestadora. Ese repositorio está en
-sólo lectura, así que el renglón se saca cuando se lo toque.
-
-- `docs/claude_history.md:453` — **[ya construido]** que la cobranza no sea una función de Careonys.
-- `CLAUDE.md:198` — que Careonys no asuma facturación ni cobranzas.
-- `docs/claude_history.md:429` — **[ya construido]** que Careonys guarde el comprobante que emitió otro y no emita ninguno.
-- `docs/claude_history.md:447` — **[ya construido]** que haya tres formas fijas de conectar con la facturación de cada Prestadora.
-- `docs/claude_history.md:435` — que la cobranza se configure distinto en cada Prestadora.
-- `CLAUDE.md:233` — **[ya construido]** que hacia afuera se entregue y no se traiga.
-- `docs/claude_history.md:459` — **[ya construido]** que haya un padrón único de Clientes. En ese mismo renglón hay una admisión escrita: la regla anterior la escribí yo y usted nunca la pidió. La reemplaza por ésta, también sin cita.
-- `docs/claude_history.md:465` — **[ya construido]** que una contratación se separe en tres papeles distintos.
-- `CLAUDE.md:259` — **[ya construido]** que un Legajo no se borre nunca.
-- `CLAUDE.md:279` — **[ya construido]** que el número de Legajo no se muestre.
-- `CLAUDE.md:265` — que la palabra rol nunca signifique permisos.
-
 ### 3. Los mensajes: qué detecta el sistema solo y a quién le avisa
 
 Los cuatro son el mismo mecanismo mirado desde documentos distintos. Qué detecta, si se puede
@@ -136,7 +91,7 @@ guardan privados».
 No es una decisión sino un documento completo puesto a su nombre. Si no es suyo, lo que hay que
 revisar es el documento entero, no un renglón.
 
-- `docs/PRD_07_Modalidad_Marketplace.md:3` — el planteo entero de la modalidad Match. **La parte de cómo se cobra el contacto no se contesta acá: va con el grupo del cobro**, más arriba, junto con la facturación de prestación directa.
+- `docs/PRD_07_Modalidad_Marketplace.md:3` — el planteo entero de la modalidad Match. **La parte de cómo se cobra el contacto no se contesta acá: ya está escrita en la sección de la modalidad Match**, más abajo.
 - `docs/PRD_02_Panel_Admin.md:15` — el planteo entero del Panel.
 - `docs/PRD_08_Dashboard_Modalidades.md:213` — ocho puntos de diseño del tablero, cerrados de una sola vez y con fecha.
 - `docs/PLAN_CONTINUIDAD_PROVEEDORES.md:229` — qué se hace si cae un proveedor.
@@ -811,6 +766,12 @@ software es una pieza aparte** y agregar la segunda no puede obligar a tocar la 
 dos maneras ya están hechas y alcanzan para salir a producción: se anota factura por factura a
 mano, o se baja un archivo con todo lo que falta facturar y se sube el que el software devuelve.
 
+**Esas dos maneras indirectas se revisan antes contra la norma de protección de datos.** El
+Desarrollador duda de que sean seguras: el archivo sale de Careonys, queda en la computadora de
+alguien y se sube a mano a otro software, y en ese camino nadie controla por dónde anda. Se cierra
+cuando está escrito, con la norma a la vista, si se pueden usar tal como están, con qué recaudos, o
+si hay que sacarlas.
+
 **28.** La pantalla de los datos bancarios del Asistente. El dato lo informa él, así que él lo
 carga y él lo corrige: la base ya lo deja escribir su propia fila y ninguna otra, y el backend ya
 tiene por dónde —cargar, corregir y sacar la cuenta—, con lo que entra validado y con el cambio
@@ -822,9 +783,28 @@ anotado. Falta la pantalla donde lo hace, en la aplicación del Asistente.
 
 Existe el andamiaje —base, disparadores, cobros, consentimiento—, la Familia ya puede buscar un Asistente, ver su perfil público, escribirle por adentro de la aplicación y, activando el cobro, ver cómo llegar a él por afuera. **Todavía no puede contratarlo.**
 
-**El cobro del contacto no se decide en esta sección.** Cobrarle un contacto a una Familia y
-facturarle el servicio a un Cliente son dos formas de cobro de la misma Prestadora, y se analizan
-juntas, arriba de todo, en el grupo del cobro. Acá queda lo que es propio de la modalidad.
+**Cobrarle un contacto a una Familia y facturarle el servicio a un Cliente son dos formas de cobro
+de la misma Prestadora**, y cada Prestadora elige cómo cobra.
+
+**Hay una sola venta de contactos construida, y es de la Prestadora a la Familia.** Un importe, sin
+vencimiento, y un saldo que se descuenta de a un Asistente. Lo arma cada Prestadora con sus
+valores, y la Familia le paga a ella. Está construido acá, junto con la suscripción que se renueva
+sola.
+
+**CeltaTech vende software, y nada más.** No vende contactos. Así que del otro lado no hay ninguna
+venta de contactos con la que confundir a ésta, y el producto no tiene que preguntarle nada a nadie
+para dejar abrir uno.
+
+**Y vender el acceso a una cantidad de contactos es de cada Prestadora, una por una, sin mezclarse
+con ninguna otra.** Cuántos contactos trae un paquete y cuánto sale lo decide cada una para sí, y
+ni el saldo, ni el estado de la suscripción, ni el contacto que se abre alcanzan jamás a otra.
+**De esa regla sale directo el primer punto del paso de Match, más abajo**: hoy el saldo y el
+estado de la suscripción de una Familia se buscan sin la Prestadora.
+
+**Y queda un renglón para sacar en el plan de Match**, que dice que el precio y el tope de los
+paquetes de contactos son de CeltaTech. Nació de leer «la decisión comercial no es del producto»
+como «lo vende CeltaTech», que es otra cosa: la decide cada Prestadora. Ese repositorio está en
+sólo lectura, así que el renglón se saca cuando se lo toque.
 
 **Y la modalidad se llama Match, no Marketplace.** El nombre viejo sigue escrito en unos ciento
 cuarenta archivos de este producto. Se saca en tres tandas, y no son la misma cosa:

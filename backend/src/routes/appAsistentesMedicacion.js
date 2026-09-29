@@ -3,6 +3,8 @@ import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
 import { medicacionVigenteDelPaciente, tipoMatriculaRequerida, asistenteTieneMatriculaVigente } from '../utils/medicacionIndicaciones.js';
 import { asistenteAtiendeAlPaciente } from '../utils/pacientesDeGuardia.js';
 import { exigeVisible } from '../utils/visibilidadPrestadora.js';
+import { anotarAccesoADatosDeSalud, origenDelPedido } from '../utils/registroDeAccesos.js';
+import { responderError } from '../utils/errorConMotivo.js';
 
 // Cierra pendiente #62 (docs/PLAN_HASTA_PRODUCCION.md): órdenes de medicación de solo lectura para el
 // Asistente asignado — nunca muestra una vía que este Asistente en particular no está
@@ -33,6 +35,18 @@ appAsistentesMedicacionRouter.get('/:pacienteId', requiereRolAsistente, exigeVis
       tipoRequerido
     );
     if (habilitado) ordenes.push(indicacion);
+  }
+
+  // Antes de entregar las ordenes queda anotado quien las vio. Si no se puede anotar, no se
+  // entregan (docs/PLAN_HASTA_PRODUCCION.md, paso 9).
+  try {
+    await anotarAccesoADatosDeSalud(req.usuarioAsistente, {
+      pacienteId: req.params.pacienteId,
+      categorias: ['indicaciones_medicacion'],
+      origen: origenDelPedido(req),
+    });
+  } catch (error) {
+    return responderError(res, error);
   }
 
   res.json({ ordenes });

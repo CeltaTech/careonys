@@ -484,14 +484,22 @@ lo pidió, nunca por un dato escrito en el pedido, y no puede tocar la cuenta de
 - **Dar de baja.** Lo pide el Administrador desde el Panel, con su propia sesión. Se borran juntas
   la cuenta y la anotación de a qué Prestadora pertenece.
 
+Hasta el paso 9, dar de alta y dar de baja no viajan con la sesión del Administrador sino con la
+credencial del trabajo sin persona, generada para la Prestadora de esa sesión, que el backend ya
+comprobó. En el paso 9 pasan a la sesión de la persona, como todo lo demás.
+
 Nadie que no haya entrado al sistema puede usar estos procedimientos. Dar de alta y dar de baja
 sólo los pide alguien con sesión abierta; poner la clave, sólo las pantallas de activación y de
 recuperación.
 
-**Dos cosas más usan hoy la llave maestra, y las resuelve Supabase por su cuenta.** Cerrar la
-sesión en todos los aparatos lo pide la propia persona, y Supabase ya se lo permite con su propia
-sesión. Entrar con la huella o con la cara hoy lo arma el producto, que después le pide a Supabase
-una credencial de entrada: se reemplaza por la entrada con huella o cara que ofrece Supabase.
+**Cerrar la sesión en todos los aparatos ya no usa la llave maestra.** Lo pide la propia persona,
+y Supabase se lo permite con su propia sesión.
+
+**Entrar con la huella o con la cara sigue usando la llave maestra, y queda así por ahora.** La
+huella la comprueba el propio teléfono; después el producto le pide a Supabase una credencial de
+entrada para esa persona, y ese pedido va con la llave maestra. Supabase ofrece hacerlo por su
+cuenta, pero todavía como prueba: se evalúa cuando esté firme. Es el último uso de la llave
+maestra que queda en este paso.
 
 **El producto no crea las cuentas de los Administradores ni la del Superadmin.** Hoy el Panel
 permite crearlas y recuperarles la clave: las dos cosas se sacan. El producto se queda con las

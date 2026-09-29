@@ -19,6 +19,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import crypto from 'node:crypto';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const QUIEN_LLAMA = '22222222-2222-2222-2222-222222222222';
@@ -41,12 +42,7 @@ const baseFalsa = createServer((req, res) => {
   });
   req.on('end', () => {
     const direccion = new URL(req.url, 'http://interno');
-    // La cuenta de acceso se borra por una dirección que lleva el identificador adentro; se la
-    // anota por su forma, para que la prueba pueda preguntar si se borró sin saber cuál.
-    const ruta = direccion.pathname.startsWith('/auth/v1/admin/users/')
-      ? '/auth/v1/admin/users/:id'
-      : direccion.pathname;
-    const clave = `${req.method} ${ruta}`;
+    const clave = `${req.method} ${direccion.pathname}`;
     llamadas.push({ clave, ruta: direccion.pathname, filtros: direccion.searchParams, cuerpo: crudo ? JSON.parse(crudo) : null });
 
     const preparada = respuestas.get(clave);
@@ -65,6 +61,11 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+process.env.SUPABASE_ANON_KEY = 'clave-publica-de-mentira';
+// Una clave inventada para generar la credencial del trabajo sin persona, con la que se piden el
+// alta y la baja de la cuenta. Nace acá y se descarta al terminar.
+const { privateKey } = crypto.generateKeyPairSync('ec', { namedCurve: 'P-256' });
+process.env.CLAVE_DEL_TRABAJO_SIN_PERSONA = JSON.stringify({ ...privateKey.export({ format: 'jwk' }), kid: 'prueba' });
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se lee en
 // el momento del import.
@@ -116,9 +117,9 @@ beforeEach(() => {
   );
   respuestas.set('POST /rest/v1/usuarios', () => []);
   respuestas.set('POST /rest/v1/membresias', () => []);
-  respuestas.set('DELETE /rest/v1/usuarios', () => []);
-  respuestas.set('POST /auth/v1/admin/users', () => ({ id: NUEVA_CUENTA }));
-  respuestas.set('DELETE /auth/v1/admin/users/:id', () => ({}));
+  // El alta y la baja de la cuenta las hace la base, cada una en un solo procedimiento.
+  respuestas.set('POST /rest/v1/rpc/dar_de_alta_la_cuenta', () => NUEVA_CUENTA);
+  respuestas.set('POST /rest/v1/rpc/dar_de_baja_la_cuenta', () => true);
   respuestas.set('GET /rest/v1/usuario_lugares', () => []);
   respuestas.set('DELETE /rest/v1/usuario_lugares', () => []);
   respuestas.set('POST /rest/v1/usuario_lugares', () => []);
@@ -162,7 +163,7 @@ describe('el alta de una Asistente', () => {
 
     // La ficha se borra y la cuenta de acceso también: no queda nadie a medias.
     assert.equal(hubo('DELETE /rest/v1/asistentes'), true);
-    assert.equal(hubo('DELETE /auth/v1/admin/users/:id'), true);
+    assert.equal(hubo('POST /rest/v1/rpc/dar_de_baja_la_cuenta'), true);
   });
 });
 
@@ -171,7 +172,6 @@ describe('el alta de una cuenta del Panel', () => {
     const { estado } = await pedir('POST', '/usuarios', {
       email: 'coordinacion@ejemplo.invalido',
       nombre: 'Persona De Prueba',
-      rol: 'coordinador',
       lugares: [LUGAR],
     });
     assert.equal(estado, 200);
@@ -186,20 +186,17 @@ describe('el alta de una cuenta del Panel', () => {
     const { estado } = await pedir('POST', '/usuarios', {
       email: 'coordinacion@ejemplo.invalido',
       nombre: 'Persona De Prueba',
-      rol: 'coordinador',
       lugares: [LUGAR],
     });
 
     assert.notEqual(estado, 200);
-    assert.equal(hubo('DELETE /rest/v1/usuarios'), true);
-    assert.equal(hubo('DELETE /auth/v1/admin/users/:id'), true);
+    assert.equal(hubo('POST /rest/v1/rpc/dar_de_baja_la_cuenta'), true);
   });
 
   it('sin lugares no se toca la lista, porque no hay alcance que decidir', async () => {
     const { estado } = await pedir('POST', '/usuarios', {
       email: 'coordinacion@ejemplo.invalido',
       nombre: 'Persona De Prueba',
-      rol: 'coordinador',
     });
     assert.equal(estado, 200);
     assert.equal(hubo('DELETE /rest/v1/usuario_lugares'), false);

@@ -21,7 +21,7 @@
    una sola vez en `videollamada.js`. Acá queda nada más lo propio de un hilo: que la sala se
    guarda en la conversación y que el mensaje de que empezó una se escribe adentro del hilo. */
 
-import { supabase } from '../db/connection.js';
+import { supabase, enLaPrestadora } from '../db/connection.js';
 import { mensajeHaciaAfuera } from './contactoTapado.js';
 import { enviarPushAsistente, enviarPushCliente } from './push.js';
 import {
@@ -209,10 +209,11 @@ function avisarAlOtroLado({ conversacion, lado }) {
     titulo: 'Mensaje nuevo',
     cuerpo: 'Tiene un mensaje nuevo en el chat.',
   };
-  const envio =
+  // Sigue corriendo después de contestar, así que entra con la credencial de esta Prestadora.
+  const envio = enLaPrestadora(conversacion.prestadora_id, 'aviso de mensaje', () =>
     lado === LADO.CLIENTE
       ? enviarPushAsistente(conversacion.prestadora_id, conversacion.asistente_id, { ...mensaje, url: `/mensajes/${conversacion.id}` })
-      : enviarPushCliente(conversacion.prestadora_id, conversacion.cliente_id, { ...mensaje, url: `/mensajes/${conversacion.id}` });
+      : enviarPushCliente(conversacion.prestadora_id, conversacion.cliente_id, { ...mensaje, url: `/mensajes/${conversacion.id}` }));
 
   envio.catch((err) => console.error('Error enviando push de mensaje del Match:', err.message));
 }

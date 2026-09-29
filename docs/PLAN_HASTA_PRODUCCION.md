@@ -275,7 +275,7 @@ de protección de datos. `escalas_legales` también es sólo `AR`.
 demás países es transferencia internacional hacia Brasil.
 
 **Lo que sí está bien.** Los secretos de pasarelas viven en Supabase Vault, no en claro. Diez de
-los once depósitos son privados y se sirven con dirección firmada. El consentimiento se registra
+los once depósitos son privados y se sirven con enlace temporal. El consentimiento se registra
 con texto versionado, con quién consintió, por qué medio, desde cuándo y hasta cuándo.
 
 ### Qué queda cuando esto termina
@@ -528,7 +528,7 @@ backend y en cada pantalla que la use, se comprueba que todo sigue entrando, y r
 
 **8.** **Los archivos.** Los cuatro depósitos sin política reciben política, con la Prestadora en
 el comienzo de la ruta exigida por la base. Los 22 lugares donde el código compara texto de ruta se
-borran. Los archivos se siguen sirviendo con dirección firmada y vencimiento.
+borran. Los archivos se siguen sirviendo con enlace temporal.
 
 **Comprobación:** con la credencial de una persona de una Prestadora se pide un archivo de la otra, con la
 ruta correcta y todo. Tiene que fallar en la base, no en el código.

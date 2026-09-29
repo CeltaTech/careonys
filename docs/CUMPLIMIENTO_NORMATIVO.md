@@ -638,8 +638,7 @@ todo lo de este documento.
 ## 5. Lo que hoy cumple, sin obra pendiente
 
 - Los secretos de las pasarelas de pago no están en claro en la base: viven en Supabase Vault.
-- Diez de los once depósitos de archivos son privados y se sirven con dirección firmada y
-  vencimiento.
+- Diez de los once depósitos de archivos son privados y se sirven con enlace temporal.
 - El consentimiento se registra con texto versionado, con quién consintió, por qué medio, desde
   cuándo y hasta cuándo.
 - Existe la estructura de aviso legal por jurisdicción, con constancia de que se avisó.

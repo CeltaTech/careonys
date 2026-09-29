@@ -502,7 +502,7 @@ depósito `fotos-identidad`, creado por
 - **La ruta empieza por la Prestadora** y se arma siempre con los mismos tres datos —Prestadora,
   Asistente y cuál de las dos fotos es—, nunca con algo que venga en el pedido. Va sin extensión:
   el formato viaja en el tipo de contenido.
-- **Las fotos se sirven con dirección firmada que vence al minuto**, nunca con dirección pública.
+- **Las fotos se sirven con enlace temporal que vence al minuto**, nunca con dirección pública.
 - **Comparar las dos caras no lo hace el producto.** Hoy las mira una persona y marca la etapa.
   Compararlas automáticamente es tratamiento de dato biométrico, y no se construye hasta que estén
   las dos decisiones de más abajo.

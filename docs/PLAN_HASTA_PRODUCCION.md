@@ -490,6 +490,11 @@ Nadie que no haya entrado al sistema puede usar estos procedimientos. Dar de alt
 sólo los pide alguien con sesión abierta; poner la clave, sólo las pantallas de activación y de
 recuperación.
 
+**Dos cosas más usan hoy la llave maestra, y las resuelve Supabase por su cuenta.** Cerrar la
+sesión en todos los aparatos lo pide la propia persona, y Supabase ya se lo permite con su propia
+sesión. Entrar con la huella o con la cara hoy lo arma el producto, que después le pide a Supabase
+un pase de entrada: se reemplaza por la entrada con huella o cara que ofrece Supabase.
+
 **El producto no crea las cuentas de los Administradores ni la del Superadmin.** Hoy el Panel
 permite crearlas y recuperarles la clave: las dos cosas se sacan. El producto se queda con las
 cuentas que cada Administrador le da a su gente: coordinadores, Asistentes, Clientes y personas autorizadas

@@ -22,6 +22,7 @@
 import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
 import { supabase } from './supabaseClient';
 import { errorDeLaRespuesta } from './errores';
+import { leerMarcaGuardada } from './marcaGuardada';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -46,6 +47,15 @@ export function loCancelaronAMano(error) {
   return error?.name === 'NotAllowedError' || error?.name === 'AbortError';
 }
 
+/**
+ * La Prestadora de este aparato, tal como quedó anotada con la marca la última vez que alguien
+ * entró acá (`marcaGuardada.js`). La entrada con huella busca la llave adentro de ella; sin ese
+ * dato no hay dónde buscar, y el botón no se ofrece.
+ */
+export async function rotuloGuardado() {
+  return (await leerMarcaGuardada())?.rotulo || null;
+}
+
 async function puertaDeCalle(ruta, cuerpo) {
   const respuesta = await fetch(`${API_URL}/api/llave-de-dispositivo${ruta}`, {
     method: 'POST',
@@ -62,9 +72,12 @@ async function puertaDeCalle(ruta, cuerpo) {
  * que hacer nada más: `onAuthStateChange` se entera solo.
  */
 export async function entrarConLaLlaveDelAparato(rol) {
-  const opciones = await puertaDeCalle('/entrar/desafio', { rol });
+  const rotulo = await rotuloGuardado();
+  if (!rotulo) throw new Error('sin Prestadora anotada en este aparato');
+  const puerta = `/${encodeURIComponent(rotulo)}/entrar`;
+  const opciones = await puertaDeCalle(`${puerta}/desafio`, { rol });
   const firma = await startAuthentication({ optionsJSON: opciones });
-  const { email, pase } = await puertaDeCalle('/entrar', { rol, respuesta: firma });
+  const { email, pase } = await puertaDeCalle(puerta, { rol, respuesta: firma });
 
   const { error } = await supabase.auth.verifyOtp({ email, token: pase, type: 'magiclink' });
   if (error) throw error;

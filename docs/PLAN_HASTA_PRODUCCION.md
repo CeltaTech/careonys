@@ -245,8 +245,8 @@ y 170 tienen política, y ninguna depende de nada que aporte el backend: la Pres
 preguntando.**
 
 **Hay trabajo que hoy no podría hacerse sin la llave maestra**, porque no tiene ninguna persona
-detrás: 17 tareas programadas, 4 entradas que llaman terceros, 8 puertas públicas y lo que el
-backend sigue haciendo después de contestar. Y hay operaciones sobre cuentas que hoy sólo se hacen
+detrás: la carga de los mensajes del sistema al arrancar, 4 entradas que llaman terceros y 8
+puertas públicas. Y hay operaciones sobre cuentas que hoy sólo se hacen
 con la llave maestra. El detalle está en el paso de la credencial del trabajo sin persona.
 
 **Nadie sabe quién leyó qué.** `registro_actividad` anota once acciones y todas son escrituras o
@@ -429,7 +429,10 @@ exista, quitar la llave maestra rompe la mitad del producto.
 **Lo que ya está hecho.** La base reconoce la credencial: el rol `trabajo_sin_persona`, la tercera
 fuente de `interno.current_tenant()` y el permiso tabla por tabla, con su política de esta
 Prestadora. El backend la genera en `backend/src/db/connection.js`, y **las 16 tareas automatizadas
-ya corren con ella, de a una Prestadora por vez** (`server.js`, función `programar`). La conexión
+ya corren con ella, de a una Prestadora por vez** (`server.js`, función `programar`). También los
+avisos que el backend manda después de contestar: la llegada del Asistente y el reporte listo a la
+Familia, el análisis inmediato de la IA (`appAsistentes.js`) y el aviso de mensaje nuevo del
+Marketplace (`conversacionMarketplace.js`). La conexión
 cambia sola según la Prestadora en curso, así que lo que sigue se muda envolviéndolo en
 `enLaPrestadora`, sin tocar las funciones que llama.
 
@@ -441,9 +444,6 @@ cambia sola según la Prestadora en curso, así que lo que sigue se muda envolvi
   facturación. Las cuatro traen la Prestadora en la dirección y la confirman con el secreto de ella.
 - **8 puertas públicas:** las cuatro de `/api/publico/:prestadora/`, la activación de la cuenta, la
   recuperación de la clave, la entrevista y la entrada con la llave del dispositivo.
-- **Lo que el backend sigue haciendo después de contestar:** `appAsistentes.js:851`, `:877`,
-  `:1499` y `:1510-1528` —este último escribe datos clínicos: alertas y pacientes—, y
-  `conversacionMarketplace.js:217`.
 
 **Lo que tocan:** 81 tablas, 11 funciones y un depósito, `comprobantes-familia`. De las tablas, 11
 no tienen ninguna política y 16 sólo le contestan a `authenticated`. Ninguna tiene la protección

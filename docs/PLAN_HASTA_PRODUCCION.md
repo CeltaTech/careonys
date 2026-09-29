@@ -450,6 +450,26 @@ consentimiento firmado; la regla de `CLAUDE.md` §6 es el piso, y si una norma p
 **Del lado del Asistente falta una cosa:** su consentimiento sobre la ubicación guarda el texto que
 aceptó (`appAsistentesConsentimientos.js:211`), pero la aplicación le muestra siempre el vigente.
 Cuando la Prestadora lo cambia, deja de poder ver lo que firmó.
+**Y el consentimiento del Pagador lo lee cualquiera con sesión en la Prestadora.** Las políticas
+`consentimientos_pagador_los_lee_su_organizacion` y `documentos_pagador_los_lee_su_organizacion`
+sólo miran la Prestadora, así que una Familia o un Asistente con su credencial leen el texto armado
+con los datos del Pagador de cualquier otra Familia. Se acota al personal de la Prestadora y a
+quien firmó.
+
+**Qué ve cada rol sale de qué necesita para cumplir su función.** En la ficha de la Familia, el
+coordinador:
+
+- **Ve y usa entero:** Contacto (nombre, teléfono, correo, localidad), Pacientes, Personas
+  autorizadas, Guardias activas, Historial de reportes y Alertas activas.
+- **No ve:** los datos comerciales —plan, plazo de pago, quién paga—, que hoy están adentro de
+  Contacto y pasan a ser una parte aparte; y la del Pagador —lo que firma y la documentación que se
+  le pide—. Hoy esa parte la ve con `editar_datos_familia`, que tiene de fábrica
+  (`routes/panelCuentas.js:493`, `:584` y `:652`).
+- **Lo que no ve, lo ve si el Administrador se lo habilita** en «Permisos de Coordinadores».
+- **Un permiso por parte, para ver y para cargar.** No hay uno para mirar y otro para cargar.
+- El backend y la base aplican el mismo corte que la pantalla.
+
+Después, lo mismo con la ficha del Asistente y la del Paciente.
 
 **El registro de accesos va acá y no en un paso aparte**, porque es el mismo archivo reescrito una
 sola vez en vez de dos barridos por los mismos 135. Es un registro separado del de actividad,
@@ -938,8 +958,7 @@ Prestadora no ve ni sabe que existe; y la advertencia legal escrita adentro del
 código de la aplicación del Asistente, que según la regla tiene que salir del documento legal de ese
 país.
 
-**47.** Aplicar todo lo contestado, y lo que ya está autorizado: el cambio de «Círculo de cuidado»
-a «Personas autorizadas», que es grande y no lleva ningún mensaje.
+**47.** Aplicar todo lo contestado.
 
 **48.** Lo que no espera ninguna respuesta porque ya es regla escrita: sacar el tuteo y el voseo de
 todo el Panel y de las dos aplicaciones, sin excepción —va en la misma pasada que el nombre viejo—;

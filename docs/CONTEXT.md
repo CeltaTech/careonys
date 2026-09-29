@@ -128,7 +128,7 @@ Etapa 2 — Panel de administración
   - **Plantel y gestión del personal** — vínculo dual monotributo/dependencia, ceses con las
     trece causales, simulador de vínculo, score de riesgo de reclasificación, ausencias y
     cobertura, liquidaciones y pagos a Asistentes.
-  - **Familias, Pacientes y Servicios** — ficha, círculo familiar con qué ve cada persona,
+  - **Familias, Pacientes y Servicios** — ficha, personas autorizadas con qué ve cada una,
     instrucciones que firma el titular, y el Servicio contratado con su continuidad.
   - **Guardias** — series y guardias, ofertas, cobertura, grilla, acciones masivas, guardias sin
     cerrar, pase de guardia con código de presencia, emergencias en guardia, domicilios
@@ -222,7 +222,7 @@ Ningún documento original lo especificó: el «Modelo UPE» cubre la facturaci�
 Planillas 3, pero no el cobro directo a familias particulares. Se construyó después, y hoy los dos
 caminos están hechos.
 
-**En prestación directa**, la factura del círculo familiar vive en `facturas_familia`, la maneja
+**En prestación directa**, la factura de la Familia vive en `facturas_familia`, la maneja
 `backend/src/routes/panelCobros.js`, se sigue desde `panel/src/pages/Facturacion.jsx`, y
 la Familia la ve en su aplicación (`facturas()` / `factura(id)` en `pwa-familias/src/lib/api.js`).
 Una factura no cuelga de ningún Paciente: se le factura al círculo entero, y un mismo comprobante

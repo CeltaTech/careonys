@@ -118,7 +118,7 @@ distinto»*.
 
 **Del Administrador para abajo, las cuentas las hace la Prestadora.** El Administrador genera y
 administra los usuarios, las contraseñas y los permisos de su gente: coordinadores, Asistentes,
-Familias, círculo familiar. Ahí el ciclo de la clave del producto —pedirla, recuperarla, los
+Familias, personas autorizadas. Ahí el ciclo de la clave del producto —pedirla, recuperarla, los
 topes— sí corre; para el Administrador no, porque esa cuenta es de CeltaTech.
 
 **Y reparte permisos adentro de lo que su Prestadora tiene.** Qué alcanza cada Prestadora lo

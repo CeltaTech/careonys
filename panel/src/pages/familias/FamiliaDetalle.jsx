@@ -421,9 +421,6 @@ export function FamiliaDetalle() {
           })}
         </p>
       )}
-      {!instruccionPendiente && !ultimaInstruccion && estadoCirculo === 'listo' && (
-        <p className="panel-explicacion">{t.familias.circulo.sin_instruccion}</p>
-      )}
 
       {estadoCirculo === 'cargando' && <p className="estado-cargando">{t.comun.cargando}</p>}
       {estadoCirculo === 'error' && <p className="estado-vacio">{errorCirculo || t.comun.error_generico}</p>}

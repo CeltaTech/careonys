@@ -108,7 +108,7 @@ describe('textoDeLaInstruccion', () => {
 
   it('un círculo vacío no produce una hoja en blanco', () => {
     const texto = unaHoja([]);
-    assert.match(texto, /No hay ninguna persona anotada en el círculo familiar\./);
+    assert.match(texto, /No hay ninguna persona autorizada\./);
   });
 
   it('deja escrito que esto no le quita nada al titular', () => {

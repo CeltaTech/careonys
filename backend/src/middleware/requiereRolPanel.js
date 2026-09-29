@@ -1,4 +1,4 @@
-import { supabase } from '../db/connection.js';
+import { abrirSesionDelPedido, clienteDelPedido, supabase } from '../db/connection.js';
 import { elRolUsaSegundoFactor, elSegundoFactorEsObligatorio } from '../utils/reglaMfaObligatorio.js';
 import { ROLES_PANEL } from '../utils/roles.js';
 import {
@@ -18,12 +18,18 @@ import {
 // en cada fila, en `expira_at`, y es de 60 minutos.
 const INACTIVIDAD_LIMITE_MS = 5 * 60 * 1000;
 
-// Las escrituras que pasan por rutas Express usan la llave de servicio
-// (backend/src/db/connection.js) —sin pase de la persona—, así que el disparador que anota en
-// `auditoria_de_accesos` no las ve: `auth.uid()` da NULL adentro de un disparador lanzado por una
-// escritura con esa llave. Se anotan acá, a nivel de pedido, en vez de a nivel de fila.
+// Las escrituras de las rutas que todavía usan la llave maestra (`supabase`, en
+// backend/src/db/connection.js) no llevan la credencial de la persona, así que el disparador que
+// anota en `auditoria_de_accesos` no las ve: `auth.uid()` da NULL adentro de un disparador lanzado
+// por una escritura con esa llave. Se anotan acá, a nivel de pedido, en vez de a nivel de fila.
+//
+// Las rutas ya migradas a `clienteDelPedido(req)` sí llevan la credencial, y ahí el disparador
+// anota cada fila. Mientras convivan las dos formas, en esas rutas queda anotado dos veces: por
+// fila y por pedido. Se saca de acá cuando no quede ninguna ruta con la maestra.
 const METODOS_MUTACION = ['POST', 'PUT', 'PATCH', 'DELETE'];
 
+// Con la maestra a propósito: `auditoria_de_accesos` no tiene política que deje escribir a una
+// persona, y no debe tenerla —quien está siendo auditado no escribe su propia auditoría—.
 async function registrarAuditoria({ adminId, prestadoraId, tipoEvento, detalle }) {
   const { error } = await supabase.from('auditoria_de_accesos').insert({
     admin_id: adminId,
@@ -34,39 +40,25 @@ async function registrarAuditoria({ adminId, prestadoraId, tipoEvento, detalle }
   if (error) console.error('Error registrando la auditoría del acceso:', error.message);
 }
 
-// Ítem H del pendiente #30: decodifica el claim `aal` del JWT ya validado por
-// supabase.auth.getUser() más arriba (no hace falta reverificar firma, solo leer el
-// payload) — Supabase no expone el AAL en el objeto `user`, solo en el JWT en sí.
-function leerAalDelToken(token) {
-  try {
-    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'));
-    return payload.aal ?? null;
-  } catch {
-    return null;
-  }
-}
-
 export async function requiereRolPanel(req, res, next) {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-
-  if (!token) {
+  // La credencial se comprueba con la clave pública de la instalación que la emitió, y de ahí en
+  // más todo lo que este middleware lee de la persona lo lee con esa misma credencial
+  // (`db/connection.js`, «La credencial de la persona»).
+  const sesion = await abrirSesionDelPedido(req);
+  if (!sesion) {
     return res.status(401).json({ error: 'No autorizado' });
   }
+  const db = clienteDelPedido(req);
 
-  const { data: userData, error: errorUsuario } = await supabase.auth.getUser(token);
-  if (errorUsuario || !userData?.user) {
-    return res.status(401).json({ error: 'No autorizado' });
-  }
-
-  // SIN PRESTADORA A PROPÓSITO
+  // SIN FILTRO DE PRESTADORA, Y NO LE HACE FALTA
   // Es el paso anterior a todo lo demás: la Prestadora de la sesión sale de acá, y pedirle a esta
   // consulta que ya la sepa es circular. Y en el Panel la cuenta puede no pertenecer a ninguna:
-  // la del soporte técnico la lleva vacía por restricción de la base.
-  const { data: perfil, error: errorPerfil } = await supabase
+  // la del soporte técnico la lleva vacía por restricción de la base. Con la credencial de la
+  // persona la base le devuelve su propia fila y ninguna otra.
+  const { data: perfil, error: errorPerfil } = await db
     .from('usuarios')
     .select('rol, prestadora_id')
-    .eq('id', userData.user.id)
+    .eq('id', sesion.id)
     .single();
 
   if (errorPerfil || !perfil || !ROLES_PANEL.includes(perfil.rol)) {
@@ -77,11 +69,13 @@ export async function requiereRolPanel(req, res, next) {
   // configuración no se puede leer, se exige el segundo factor igual y queda registrado
   // (panel/src/lib/reglaMfaObligatorio.js, copiado acá; CLAUDE.md §7 regla 12).
   if (elRolUsaSegundoFactor(perfil.rol)) {
-    const lecturaConfig = await supabase
+    const lecturaConfig = await db
       .from('configuracion_plataforma')
       .select('mfa_admin_obligatorio')
       .single();
-    if (elSegundoFactorEsObligatorio(lecturaConfig) && leerAalDelToken(token) !== 'aal2') {
+    // El nivel con que entró sale de la credencial ya verificada: Supabase no lo pone en ningún
+    // otro lado.
+    if (elSegundoFactorEsObligatorio(lecturaConfig) && sesion.aal !== 'aal2') {
       return res.status(403).json({ error: 'MFA requerido', codigo: 'mfa_requerido' });
     }
   }
@@ -98,15 +92,15 @@ export async function requiereRolPanel(req, res, next) {
   // una ruta armaría la consulta apuntando a una Prestadora y la base la contestaría apuntando a
   // otra.
   if (perfil.rol === 'superadmin') {
-    // SIN PRESTADORA A PROPÓSITO
+    // SIN FILTRO DE PRESTADORA, Y NO LE HACE FALTA
     // Busca en qué Prestadora hay un permiso abierto, sin saber de antemano en cuál. Acotarlo a la
     // Organización propia de quien entra —que es Sandbox— no encontraría nunca el que está abierto
     // en otra. No devuelve dato de la Organización; el paso siguiente sí la nombra, sacada de la
-    // fila hallada.
-    const { data: permiso } = await supabase
+    // fila hallada. Con la credencial de la persona, la base le muestra sólo sus propios permisos.
+    const { data: permiso } = await db
       .from('permisos_de_acceso')
       .select('id, prestadora_id, expira_at, ultima_actividad_at')
-      .eq('admin_id', userData.user.id)
+      .eq('admin_id', sesion.id)
       .is('salida_at', null)
       .order('entrada_at', { ascending: false })
       .limit(1)
@@ -128,7 +122,7 @@ export async function requiereRolPanel(req, res, next) {
     // la pantalla que preguntaba cada 30 segundos, y eso hacía depender de una pantalla algo que
     // tiene que pasar igual con la pantalla cerrada.
     if (permiso && !vigente) {
-      await supabase
+      await db
         .from('permisos_de_acceso')
         .update({ salida_at: ahora.toISOString() })
         .eq('id', permiso.id)
@@ -137,7 +131,7 @@ export async function requiereRolPanel(req, res, next) {
         .eq('prestadora_id', permiso.prestadora_id);
 
       await registrarAuditoria({
-        adminId: userData.user.id,
+        adminId: sesion.id,
         prestadoraId: permiso.prestadora_id,
         tipoEvento: 'logout',
         detalle: { motivo: vencioPorTope ? 'tope_60min' : 'inactividad_5min' },
@@ -145,7 +139,7 @@ export async function requiereRolPanel(req, res, next) {
     }
 
     if (permiso && vigente) {
-      await supabase
+      await db
         .from('permisos_de_acceso')
         .update({ ultima_actividad_at: ahora.toISOString() })
         .eq('id', permiso.id)
@@ -162,7 +156,7 @@ export async function requiereRolPanel(req, res, next) {
   // primera; la segunda hace falta en el único lugar donde importa de quién es la cuenta y no
   // dónde está parada: al dar de alta otra cuenta superadmin (panelUsuarios.js).
   req.usuarioPanel = {
-    id: userData.user.id,
+    id: sesion.id,
     rol: perfil.rol,
     prestadoraId,
     organizacionPropiaId: perfil.prestadora_id,
@@ -208,7 +202,7 @@ export async function requiereRolPanel(req, res, next) {
     res.on('finish', () => {
       if (res.statusCode >= 200 && res.statusCode < 300) {
         registrarAuditoria({
-          adminId: userData.user.id,
+          adminId: sesion.id,
           prestadoraId,
           tipoEvento: 'mutacion',
           detalle: { metodo: req.method, ruta: req.originalUrl },

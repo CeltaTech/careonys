@@ -20,6 +20,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 
 const SANDBOX = '00000000-0000-0000-0000-00000000000a';
 const PRESTADORA_A = '11111111-1111-1111-1111-111111111111';
@@ -104,7 +105,7 @@ after(() => {
 
 async function pedirRegistro() {
   const respuesta = await fetch(DIRECCION, {
-    headers: { Authorization: 'Bearer token-de-mentira' },
+    headers: { Authorization: sesionDePrueba(SUPERADMIN) },
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }

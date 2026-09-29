@@ -35,6 +35,7 @@ import { enviarEmail } from './email.js';
 import { marcaDeLaPrestadora } from './marcaPrestadora.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { normalizarIdioma } from '../i18n/idiomas.js';
+import { rotuloDeLaPrestadora } from './direccionDeLaPrestadora.js';
 import {
   MINUTOS_DE_ANTICIPO,
   direccionDeVideollamada,
@@ -89,22 +90,32 @@ async function datosDelPostulante(postulacionId, prestadoraId) {
   return data;
 }
 
+/* El enlace del postulante, el mismo para el correo y para el botón de copiar del Panel. Lleva la
+   dirección de la Prestadora, porque quien lo abre no tiene sesión y es la dirección la que dice en
+   cuál se busca la llave. Sin dirección de Panel o de Prestadora no hay enlace que sirva: nulo. */
+export async function enlaceDeLaEntrevista({ prestadoraId, llave }) {
+  const panelUrl = String(process.env.PANEL_URL || '').replace(/\/+$/, '');
+  const rotulo = await rotuloDeLaPrestadora(prestadoraId);
+  if (!panelUrl || !rotulo || !llave) return null;
+  return `${panelUrl}/entrevista/${encodeURIComponent(rotulo)}/${llave}`;
+}
+
 /* El correo no corta la operación si falla. La entrevista quedó agendada y eso es lo que importa;
    un servidor de correo caído no puede deshacer una cita que las dos partes ya acordaron. Queda
    registrado para que alguien lo mire. */
 async function avisarAlPostulante({ clave, entrevista, postulante, prestadoraId }) {
-  const panelUrl = String(process.env.PANEL_URL || '').replace(/\/+$/, '');
-  if (!panelUrl) {
-    console.error('entrevistaDePostulacion: falta PANEL_URL, no se le avisó al postulante');
-    return;
-  }
-
   try {
+    const enlace = await enlaceDeLaEntrevista({ prestadoraId, llave: entrevista.llave_publica });
+    if (!enlace) {
+      console.error('entrevistaDePostulacion: falta PANEL_URL o la dirección de la Prestadora, no se le avisó al postulante');
+      return;
+    }
+
     const marca = await marcaDeLaPrestadora(prestadoraId);
     const { titulo, cuerpo } = mensajeDelSistema(clave, postulante.idioma, {
       prestadora: marca?.nombre || '',
       cuando: cuandoEnPalabras(entrevista.agendada_para, postulante.idioma),
-      enlace: `${panelUrl}/entrevista/${entrevista.llave_publica}`,
+      enlace,
       anticipo: MINUTOS_DE_ANTICIPO,
     });
 
@@ -332,9 +343,8 @@ export async function entrevistaPorLlave(llave) {
   if (!limpia) throw noExiste;
 
   // SIN PRESTADORA A PROPÓSITO
-  // Esta consulta es anterior a conocer la Prestadora, y no puede ser de otra manera: el postulante
-  // llega sin sesión y lo único que trae es su llave. La Prestadora sale de la fila encontrada, y
-  // de ahí en más todo se le pide a esa misma.
+  // Corre adentro de la Prestadora de la dirección (`middleware/resolverPrestadoraPublica.js`), así
+  // que la base sólo deja ver entrevistas de ella: la llave de otra no existe desde acá.
   const { data, error } = await supabase
     .from('entrevistas_postulacion')
     .select(COLUMNAS)

@@ -23,7 +23,7 @@ import { errorDeLaRespuesta, mensajeDeError } from '../lib/errores';
 const API_URL = import.meta.env.VITE_API_URL;
 
 export function EntrevistaPublica() {
-  const { llave } = useParams();
+  const { prestadora, llave } = useParams();
   const { t, locale } = useLocale();
   const tr = t.entrevistaPublica;
 
@@ -35,7 +35,9 @@ export function EntrevistaPublica() {
     let activo = true;
     async function traer() {
       try {
-        const respuesta = await fetch(`${API_URL}/api/entrevista/${encodeURIComponent(llave)}`);
+        const respuesta = await fetch(
+          `${API_URL}/api/entrevista/${encodeURIComponent(prestadora)}/${encodeURIComponent(llave)}`,
+        );
         const resultado = await respuesta.json().catch(() => ({}));
         if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
         if (activo) setEntrevista(resultado);
@@ -52,7 +54,7 @@ export function EntrevistaPublica() {
     return () => {
       activo = false;
     };
-  }, [llave]);
+  }, [prestadora, llave]);
 
   if (cargando) {
     return (

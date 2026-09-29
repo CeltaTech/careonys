@@ -82,6 +82,30 @@ export function direccionDeIngreso(rotulo) {
   return dominio ? `${nombre}.${dominio}` : nombre;
 }
 
+// El enlace que va en un correo con un código de un solo uso: activar la cuenta o elegir una clave
+// nueva. Lleva la dirección de la Prestadora, porque quien lo abre todavía no tiene sesión y es la
+// dirección la que dice en cuál se busca el código (`middleware/resolverPrestadoraPublica.js`).
+// Sin dirección no hay enlace que sirva, y devuelve nulo.
+export async function enlaceConCodigo({ appUrl, pantalla, prestadoraId, codigo }) {
+  if (!appUrl) return null;
+  const rotulo = await rotuloDeLaPrestadora(prestadoraId);
+  if (!rotulo) return null;
+  const parametros = new URLSearchParams({ prestadora: rotulo, token: codigo });
+  return `${appUrl}/${pantalla}?${parametros}`;
+}
+
+// El rótulo guardado de la puerta de una Prestadora, o nulo si no tiene.
+export async function rotuloDeLaPrestadora(prestadoraId) {
+  if (!prestadoraId) return null;
+  const { data, error } = await supabase
+    .from('configuracion_prestadora')
+    .select('dominio')
+    .eq('prestadora_id', prestadoraId)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.dominio || null;
+}
+
 // El choque de dos altas simultáneas: las dos eligieron el mismo nombre porque ninguna de las dos
 // veía a la otra todavía. Lo resuelve el índice único de la base, y quien alta reintenta.
 export function esChoqueDeDireccion(error) {

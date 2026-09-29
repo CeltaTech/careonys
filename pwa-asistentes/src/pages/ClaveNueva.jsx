@@ -22,7 +22,9 @@ const MOTIVOS_SIN_REINTENTO = ['token_invalido', 'token_ya_usado', 'token_vencid
 export default function ClaveNueva() {
   const { t } = useLocale();
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
+  // El enlace sirve sólo si trae las dos cosas: la Prestadora dice en cuál se busca el código.
+  const prestadora = searchParams.get('prestadora');
+  const token = prestadora ? searchParams.get('token') : null;
   const [password, setPassword] = useState('');
   const [confirmacion, setConfirmacion] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -45,7 +47,7 @@ export default function ClaveNueva() {
 
     (async () => {
       try {
-        const respuesta = await fetch(`${API_URL}/api/recuperar-clave/segundo-factor`, {
+        const respuesta = await fetch(`${API_URL}/api/recuperar-clave/${encodeURIComponent(prestadora)}/segundo-factor`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token }),
@@ -83,7 +85,7 @@ export default function ClaveNueva() {
 
     setEnviando(true);
     try {
-      const respuesta = await fetch(`${API_URL}/api/recuperar-clave/canjear`, {
+      const respuesta = await fetch(`${API_URL}/api/recuperar-clave/${encodeURIComponent(prestadora)}/canjear`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password, codigo: codigo || null }),

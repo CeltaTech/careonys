@@ -31,7 +31,7 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     llamadas.push({ clave: `${req.method} ${ruta}`, cuerpo: crudo ? JSON.parse(crudo) : null });
-    if (contestaConError || `${req.method} ${ruta}` !== 'POST /rest/v1/accesos_a_datos_de_salud') {
+    if (contestaConError || `${req.method} ${ruta}` !== 'POST /rest/v1/consultas_a_hce') {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: 'violates check constraint "tabla_interna_con_detalle"', code: '23514' }));
       return;
@@ -45,7 +45,7 @@ await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 
-const { anotarAccesoADatosDeSalud, origenDelPedido } = await import('../registroDeAccesos.js');
+const { anotarConsultaAHce, origenDelPedido } = await import('../registroDeConsultas.js');
 
 const avisarDeVerdad = console.error;
 console.error = (...partes) => anotados.push(partes.join(' '));
@@ -63,7 +63,7 @@ beforeEach(() => {
 
 const quien = { id: PERSONA, asistenteId: 'otra-cosa', prestadoraId: PRESTADORA };
 const anotar = (cambios = {}, persona = quien) =>
-  anotarAccesoADatosDeSalud(persona, {
+  anotarConsultaAHce(persona, {
     pacienteId: PACIENTE,
     categorias: ['indicaciones_medicacion'],
     origen: 'GET /api/app-asistentes/medicacion/:pacienteId',
@@ -71,7 +71,7 @@ const anotar = (cambios = {}, persona = quien) =>
   });
 
 function renglon() {
-  return llamadas.find((l) => l.clave === 'POST /rest/v1/accesos_a_datos_de_salud')?.cuerpo;
+  return llamadas.find((l) => l.clave === 'POST /rest/v1/consultas_a_hce')?.cuerpo;
 }
 
 describe('lo que queda anotado', () => {

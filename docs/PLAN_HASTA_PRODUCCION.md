@@ -426,10 +426,17 @@ aparte que alguien tenga que mantener.
 **7.** **La credencial del trabajo sin persona.** Es lo primero que se construye porque hasta que
 exista, quitar la llave maestra rompe la mitad del producto.
 
-**Qué es trabajo sin persona**, medido contra el código y contra la base en vivo:
+**Lo que ya está hecho.** La base reconoce la credencial: el rol `trabajo_sin_persona`, la tercera
+fuente de `interno.current_tenant()` y el permiso tabla por tabla, con su política de esta
+Prestadora. El backend la genera en `backend/src/db/connection.js`, y **las 16 tareas automatizadas
+ya corren con ella, de a una Prestadora por vez** (`server.js`, función `programar`). La conexión
+cambia sola según la Prestadora en curso, así que lo que sigue se muda envolviéndolo en
+`enLaPrestadora`, sin tocar las funciones que llama.
 
-- **17 tareas programadas.** Las 16 de `backend/src/server.js:194-322` y la carga de
-  `mensajes_del_sistema` al arrancar (`server.js:345`).
+**Qué falta mudar**, medido contra el código y contra la base en vivo:
+
+- **La carga de `mensajes_del_sistema` al arrancar** (`server.js`, al final). Sigue con la llave
+  maestra porque sus 158 filas no son de ninguna Prestadora: la credencial del trabajo no las ve.
 - **4 entradas que llaman terceros:** pasarelas, WhatsApp, aviso de cobranza y aviso de
   facturación. Las cuatro traen la Prestadora en la dirección y la confirman con el secreto de ella.
 - **8 puertas públicas:** las cuatro de `/api/publico/:prestadora/`, la activación de la cuenta, la
@@ -442,15 +449,8 @@ exista, quitar la llave maestra rompe la mitad del producto.
 no tienen ninguna política y 16 sólo le contestan a `authenticated`. Ninguna tiene la protección
 forzada para su dueño.
 
-**Por qué hoy no se puede sin la llave maestra:** `interno.current_tenant()` saca la Prestadora de
-dos fuentes y las dos son `auth.uid()`. Sin sesión no devuelve nada, y todas las políticas de esas
-81 tablas pasan por ahí.
-
 **Lo que hoy cruza Prestadoras, y se corrige en este paso:**
 
-- `avisoPrevioAlCobro.js:61-70` lee de una vez los accesos vigentes de todas.
-- `cargarMensajesDelSistema.js:32-43` junta los textos de todas en una memoria común.
-- `plazosDeCobroMarketplace.js:95-101` calcula un máximo sobre todas.
 - El código de activación (`activacionCuenta.js:107`), el de recuperación
   (`recuperacionDeClave.js:137`), la llave pública de la entrevista
   (`entrevistaDePostulacion.js:339`) y la llave del dispositivo
@@ -508,15 +508,6 @@ con ese rol, en «Lo que se dijo que decidió usted».
 `interno.prestadora_del_estado_de_cuenta` completan la Prestadora leyendo `familias` con los
 permisos de quien inserta.
 
-Se crea en la base un rol propio —`trabajo_sin_persona`— con permiso **sólo** sobre lo que ese trabajo
-toca, según la lista de arriba. Nada más. El backend no
-guarda una credencial permanente de ese rol: **genera una credencial corta, para una Prestadora y para un trabajo**,
-con una clave propia que Supabase reconoce.
-
-`interno.current_tenant()` suma una tercera fuente después de las dos que ya tiene: cuando quien
-consulta es `trabajo_sin_persona`, la Prestadora sale de esa credencial. Una credencial sin Prestadora no
-resuelve nada y la base niega todo: falla cerrado, igual que hoy.
-
 Las 4 entradas que llaman terceros traen la Prestadora en la dirección. Primero se confirma que el
 mensaje viene de quien dice venir —eso ya se verifica—, y recién con ese dato se genera la credencial. Leer la clave con
 que se comprueba cada mensaje es lo único que pasa por una función que resuelve la Prestadora
@@ -527,6 +518,10 @@ falla. Y con esa credencial se pide una tabla que no está en la lista: también
 un pedido con la sesión de un Administrador de una Prestadora para dar de alta y dar de baja a una
 persona de la otra, y se usa un código de activación de una Prestadora entrando por la otra: la
 base rechaza las tres cosas.
+
+**Al cerrar el paso se revoca en Supabase la clave vieja con que se generaban las credenciales**,
+la compartida. Mientras siga aceptada, cualquiera que la tenga puede generarse una credencial de
+cualquier rol.
 
 **8.** **Los archivos.** Los cuatro depósitos sin política reciben política, con la Prestadora en
 el comienzo de la ruta exigida por la base. Los 22 lugares donde el código compara texto de ruta se

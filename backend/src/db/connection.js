@@ -2,10 +2,10 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import crypto from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import {
-  instalacionDeLaCredencial,
-  instalacionDeLaPrestadora,
-  lasInstalaciones,
-} from './instalaciones.js';
+  regionDeLaCredencial,
+  regionDeLaPrestadora,
+  lasRegiones,
+} from './regiones.js';
 
 /* La conexión con la base.
    ========================
@@ -30,7 +30,7 @@ import {
    pedido que la necesita: un trabajo largo nunca queda con una vencida.
 
    NINGUNA CONEXIÓN SUPONE QUE HAY UNA SOLA BASE. Toda conexión nueva —la de la persona y la del
-   trabajo— se arma con la instalación de la Prestadora (`db/instalaciones.js`). Hoy hay una sola,
+   trabajo— se arma con la región de la Prestadora (`db/regiones.js`). Hoy hay una sola,
    y el día que haya más, el único lugar que cambia es ése. */
 
 const URL = process.env.SUPABASE_URL;
@@ -71,9 +71,9 @@ export function generarCredencial({ prestadoraId = null, trabajo }) {
   return { credencial: `${cabecera}.${cuerpo}.${firma.toString('base64url')}`, vence: ahora + DURACION_S };
 }
 
-function conexionDelTrabajo({ prestadoraId, trabajo, instalacion = instalacionDeLaPrestadora(prestadoraId) }) {
+function conexionDelTrabajo({ prestadoraId, trabajo, region = regionDeLaPrestadora(prestadoraId) }) {
   let vigente = null;
-  return createClient(instalacion.url, instalacion.clavePublica, {
+  return createClient(region.url, region.clavePublica, {
     accessToken: async () => {
       if (!vigente || vigente.vence - MARGEN_S < Date.now() / 1000) {
         vigente = generarCredencial({ prestadoraId, trabajo });
@@ -104,18 +104,18 @@ export function enLaPrestadora(prestadoraId, trabajo, hacer) {
  * La conexión de un trabajo que todavía no sabe su Prestadora. La base sólo le deja averiguarla:
  * la lista a recorrer, o la de una dirección pública.
  */
-export function sinPrestadora(trabajo, instalacion = instalacionDeLaPrestadora(null)) {
-  return conexionDelTrabajo({ prestadoraId: null, trabajo, instalacion });
+export function sinPrestadora(trabajo, region = regionDeLaPrestadora(null)) {
+  return conexionDelTrabajo({ prestadoraId: null, trabajo, region });
 }
 
 /**
  * Corre `hacer` una vez por cada Prestadora, de a una, cada vez con su propia credencial. Lo que
- * falla en una se anota y no frena a las demás. Recorre todas las instalaciones: cada una contesta
+ * falla en una se anota y no frena a las demás. Recorre todas las regiones: cada una contesta
  * por las Prestadoras que viven en ella.
  */
 export async function paraCadaPrestadora(trabajo, hacer) {
-  for (const instalacion of lasInstalaciones()) {
-    const { data, error } = await sinPrestadora(trabajo, instalacion).rpc('prestadoras_a_recorrer');
+  for (const region of lasRegiones()) {
+    const { data, error } = await sinPrestadora(trabajo, region).rpc('prestadoras_a_recorrer');
     if (error) {
       console.error(`${trabajo}: no se pudo saber qué Prestadoras recorrer:`, error.message);
       continue;
@@ -123,7 +123,7 @@ export async function paraCadaPrestadora(trabajo, hacer) {
     for (const prestadoraId of data ?? []) {
       try {
         await contexto.run(
-          conexionDelTrabajo({ prestadoraId, trabajo, instalacion }),
+          conexionDelTrabajo({ prestadoraId, trabajo, region }),
           () => hacer(prestadoraId),
         );
       } catch (err) {
@@ -140,11 +140,11 @@ export async function paraCadaPrestadora(trabajo, hacer) {
    inició sesión, no con la maestra. La base sabe entonces quién pide y le contesta sólo lo de su
    Prestadora: el aislamiento lo hace cumplir ella y no un filtro escrito en cada ruta.
 
-   CÓMO SE COMPRUEBA. La firma se verifica con la clave pública de la instalación que la emitió
+   CÓMO SE COMPRUEBA. La firma se verifica con la clave pública de la región que la emitió
    (`auth.getClaims`, que baja esa clave una vez y la guarda). Con eso se sabe que la credencial es
    auténtica y no está vencida; lo demás se exige acá, porque `getClaims` no lo mira:
    - que sea de una persona —`role` igual a `authenticated`— y no la del trabajo sin persona, la
-     pública o cualquier otra que la instalación también firme;
+     pública o cualquier otra que la región también firme;
    - que diga quién es —`sub`—.
    Si algo de eso falta, no hay persona, y la ruta contesta que no está autorizada.
 
@@ -153,15 +153,15 @@ export async function paraCadaPrestadora(trabajo, hacer) {
    rutas la piden con `clienteDelPedido(req)`, y si nadie la abrió, esa función no inventa una:
    corta el pedido. */
 
-/** El que verifica firmas, uno por instalación, para que la clave pública bajada no se pierda. */
+/** El que verifica firmas, uno por región, para que la clave pública bajada no se pierda. */
 const verificadores = new Map();
-function verificadorDe(instalacion) {
-  if (!verificadores.has(instalacion)) {
-    verificadores.set(instalacion, createClient(instalacion.url, instalacion.clavePublica, {
+function verificadorDe(region) {
+  if (!verificadores.has(region)) {
+    verificadores.set(region, createClient(region.url, region.clavePublica, {
       auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     }));
   }
-  return verificadores.get(instalacion);
+  return verificadores.get(region);
 }
 
 /** Las conexiones abiertas por pedido. Sólo este archivo las escribe: nadie más puede ponerle una. */
@@ -183,23 +183,23 @@ export async function abrirSesionDelPedido(req) {
   const credencial = credencialDelPedido(req);
   if (!credencial) return null;
 
-  const instalacion = instalacionDeLaCredencial(credencial);
-  if (!instalacion) return null;
+  const region = regionDeLaCredencial(credencial);
+  if (!region) return null;
 
   let datos;
   try {
-    const { data, error } = await verificadorDe(instalacion).auth.getClaims(credencial);
+    const { data, error } = await verificadorDe(region).auth.getClaims(credencial);
     if (error) return null;
     datos = data?.claims;
   } catch {
     return null;
   }
 
-  if (!datos || datos.iss !== instalacion.emisor) return null;
+  if (!datos || datos.iss !== region.emisor) return null;
   if (datos.role !== 'authenticated') return null;
   if (typeof datos.sub !== 'string' || !datos.sub) return null;
 
-  conexionesDePedidos.set(req, createClient(instalacion.url, instalacion.clavePublica, {
+  conexionesDePedidos.set(req, createClient(region.url, region.clavePublica, {
     accessToken: async () => credencial,
   }));
   return { id: datos.sub, aal: datos.aal ?? null };

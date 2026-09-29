@@ -128,12 +128,12 @@ describe('el Panel', () => {
     assert.equal(lecturasDe('usuarios').length, 0);
   });
 
-  it('una credencial de otra instalación no pasa', async () => {
+  it('una credencial de otra región no pasa', async () => {
     usuarioDeLaBase = { rol: 'admin_prestadora', prestadora_id: PRESTADORA };
 
     const { estado } = await pasarPor(
       requiereRolPanel,
-      sesionDePrueba(PERSONA, { emisor: 'https://otra-instalacion.example/auth/v1' }),
+      sesionDePrueba(PERSONA, { emisor: 'https://otra-region.example/auth/v1' }),
     );
 
     assert.equal(estado, 401);

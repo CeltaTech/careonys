@@ -41,7 +41,7 @@ async function registrarAuditoria({ adminId, prestadoraId, tipoEvento, detalle }
 }
 
 export async function requiereRolPanel(req, res, next) {
-  // La credencial se comprueba con la clave pública de la instalación que la emitió, y de ahí en
+  // La credencial se comprueba con la clave pública de la región que la emitió, y de ahí en
   // más todo lo que este middleware lee de la persona lo lee con esa misma credencial
   // (`db/connection.js`, «La credencial de la persona»).
   const sesion = await abrirSesionDelPedido(req);

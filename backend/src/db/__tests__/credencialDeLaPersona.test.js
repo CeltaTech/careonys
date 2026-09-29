@@ -1,16 +1,16 @@
 /**
- * La credencial de la persona: se comprueba con la clave pública de la instalación que la emitió,
+ * La credencial de la persona: se comprueba con la clave pública de la región que la emitió,
  * y la conexión que queda en el pedido lleva esa credencial y ninguna otra.
  *
  *   node --test src/db/__tests__/credencialDeLaPersona.test.js
  *
  * POR QUÉ EXISTE ESTA PRUEBA. Una ruta migrada entra a la base con la conexión que devuelve
  * `clienteDelPedido(req)` (`../connection.js`), y la base le contesta según quién sea. Si esa
- * conexión se abriera con una credencial falsa, vencida, de otra instalación o que no es de una
+ * conexión se abriera con una credencial falsa, vencida, de otra región o que no es de una
  * persona, la base le contestaría a quien no corresponde. Todo eso lo decide `abrirSesionDelPedido`.
  *
  * La base es de mentira y contesta por HTTP como la de verdad, incluida la lista de claves
- * públicas de la instalación. Las credenciales se firman acá, con una clave hecha en el momento.
+ * públicas de la región. Las credenciales se firman acá, con una clave hecha en el momento.
  *
  * Con el sistema roto —la firma sin comprobar, el emisor o el tipo de credencial sin mirar, o la
  * conexión armada con la llave maestra— las pruebas de rechazo y la de la credencial que llega a la
@@ -23,7 +23,7 @@ import { createServer } from 'node:http';
 import { generateKeyPairSync, sign } from 'node:crypto';
 
 const PERSONA = '22222222-2222-2222-2222-222222222222';
-const KID = 'clave-de-la-instalacion';
+const KID = 'clave-de-la-region';
 
 const { privateKey: clavePrivada, publicKey: clavePublica } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
 const { privateKey: otraClavePrivada } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
@@ -60,7 +60,7 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-maestra-de-mentira';
 process.env.SUPABASE_ANON_KEY = 'clave-publica-de-mentira';
 
 const { abrirSesionDelPedido, clienteDelPedido } = await import('../connection.js');
-const { instalacionDeLaCredencial, instalacionDeLaPrestadora } = await import('../instalaciones.js');
+const { regionDeLaCredencial, regionDeLaPrestadora } = await import('../regiones.js');
 
 after(() => baseFalsa.close());
 
@@ -71,7 +71,7 @@ beforeEach(() => {
 
 const enBase64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
 
-/** Una credencial firmada como la firma la instalación, con lo que cada prueba le cambie. */
+/** Una credencial firmada como la firma la región, con lo que cada prueba le cambie. */
 function credencial(cambios = {}, { llave = clavePrivada, kid = KID } = {}) {
   const ahora = Math.floor(Date.now() / 1000);
   const cabecera = enBase64({ alg: 'ES256', typ: 'JWT', kid });
@@ -102,7 +102,7 @@ describe('abrir la sesión de la persona', () => {
     assert.deepEqual(sesion, { id: PERSONA, aal: 'aal2' });
   });
 
-  it('la firma se comprueba con la clave pública de la instalación, sin preguntarle a la base por la persona', async () => {
+  it('la firma se comprueba con la clave pública de la región, sin preguntarle a la base por la persona', async () => {
     await abrirSesionDelPedido(pedidoCon(`Bearer ${credencial()}`));
 
     assert.equal(llamadas.some((l) => l.ruta === '/auth/v1/user'), false);
@@ -135,8 +135,8 @@ describe('abrir la sesión de la persona', () => {
     assert.equal(await abrirSesionDelPedido(req), null);
   });
 
-  it('una credencial de otra instalación no abre nada, aunque la firma sea buena', async () => {
-    const req = pedidoCon(`Bearer ${credencial({ iss: 'https://otra-instalacion.example/auth/v1' })}`);
+  it('una credencial de otra región no abre nada, aunque la firma sea buena', async () => {
+    const req = pedidoCon(`Bearer ${credencial({ iss: 'https://otra-region.example/auth/v1' })}`);
 
     assert.equal(await abrirSesionDelPedido(req), null);
     assert.equal(llamadas.length, 0, 'ni siquiera se le pregunta a nadie');
@@ -184,21 +184,21 @@ describe('la conexión del pedido', () => {
   });
 });
 
-describe('la instalación', () => {
+describe('la región', () => {
   it('la de una credencial es la que la emitió', () => {
-    const instalacion = instalacionDeLaCredencial(credencial());
+    const region = regionDeLaCredencial(credencial());
 
-    assert.equal(instalacion.url, URL_BASE);
-    assert.equal(instalacion.emisor, `${URL_BASE}/auth/v1`);
+    assert.equal(region.url, URL_BASE);
+    assert.equal(region.emisor, `${URL_BASE}/auth/v1`);
   });
 
-  it('un emisor que no es de ninguna instalación no elige ninguna', () => {
-    assert.equal(instalacionDeLaCredencial(credencial({ iss: 'https://otra.example/auth/v1' })), null);
-    assert.equal(instalacionDeLaCredencial(credencial({ iss: undefined })), null);
-    assert.equal(instalacionDeLaCredencial('no-es-una-credencial'), null);
+  it('un emisor que no es de ninguna región no elige ninguna', () => {
+    assert.equal(regionDeLaCredencial(credencial({ iss: 'https://otra.example/auth/v1' })), null);
+    assert.equal(regionDeLaCredencial(credencial({ iss: undefined })), null);
+    assert.equal(regionDeLaCredencial('no-es-una-credencial'), null);
   });
 
   it('la de una Prestadora sale del mismo lugar', () => {
-    assert.equal(instalacionDeLaPrestadora('11111111-1111-1111-1111-111111111111').url, URL_BASE);
+    assert.equal(regionDeLaPrestadora('11111111-1111-1111-1111-111111111111').url, URL_BASE);
   });
 });

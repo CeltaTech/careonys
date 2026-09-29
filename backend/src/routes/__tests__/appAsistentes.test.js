@@ -23,7 +23,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
-import { generateKeyPairSync } from 'node:crypto';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 import { huellaDelCodigo } from '../../utils/codigoDeUnSoloUso.js';
 import { olvidarPedidos } from '../../middleware/topeDePedidos.js';
 
@@ -77,13 +77,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
-// Los avisos que salen después de contestar entran con la credencial de la Prestadora: la prueba
-// necesita con qué generarla. Una clave hecha en el momento, que no vale en ninguna base.
-process.env.SUPABASE_ANON_KEY = 'clave-publica-de-mentira';
-process.env.CLAVE_DEL_TRABAJO_SIN_PERSONA = JSON.stringify({
-  ...generateKeyPairSync('ec', { namedCurve: 'P-256' }).privateKey.export({ format: 'jwk' }),
-  kid: 'clave-de-prueba',
-});
+prepararCredencialDePrueba();
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma
 // en el momento en que se importa, y con la dirección que haya en ese instante.

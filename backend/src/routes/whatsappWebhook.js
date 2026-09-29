@@ -31,6 +31,7 @@
 // Meta conectada. Eso se cierra el día que haya una.
 import express, { Router } from 'express';
 import { supabase } from '../db/connection.js';
+import { enLaPrestadoraDeLaDireccion } from '../middleware/enLaPrestadoraDeLaDireccion.js';
 import { enviarWhatsApp } from '../utils/whatsapp.js';
 import {
   resolverRespuestaAutomatica,
@@ -77,7 +78,7 @@ whatsappWebhookRouter.use(express.raw({ type: 'application/json', limit: '1mb' }
 // Prestadora escribió en su panel de Meta. Ese token ahora sale de la caja fuerte de esa
 // Prestadora — es la parte del pendiente #165 que hace que conectar la dirección de una no
 // sirva para conectarse a la de otra.
-whatsappWebhookRouter.get('/:prestadoraId', async (req, res) => {
+whatsappWebhookRouter.get('/:prestadoraId', enLaPrestadoraDeLaDireccion('Saludo de WhatsApp', (res) => res.status(403).send('Verificación fallida')), async (req, res) => {
   const { prestadoraId } = req.params;
 
   function rechazar(motivo) {
@@ -104,7 +105,7 @@ whatsappWebhookRouter.get('/:prestadoraId', async (req, res) => {
   return res.status(200).send(String(challenge ?? ''));
 });
 
-whatsappWebhookRouter.post('/:prestadoraId', async (req, res) => {
+whatsappWebhookRouter.post('/:prestadoraId', enLaPrestadoraDeLaDireccion('Aviso de WhatsApp'), async (req, res) => {
   const { prestadoraId } = req.params;
 
   function rechazar(motivo) {

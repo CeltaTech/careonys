@@ -304,7 +304,7 @@ detalle de una factura, anotar un cobro, anularlo y la entrada de lotes—. Lo q
 facturar no lo lleva, y que un Cliente quedó restringida tampoco: no dice cuánto
 debe, y quien coordina necesita verlo para trabajar. La política de lectura de
 `estados_de_cuenta_externos` pide además esa acción, como segunda red para el día en que esa
-tabla se lea con el pase de una persona. `saldos_cliente` no se tocó: su política alcanza también
+tabla se lea con la credencial de una persona. `saldos_cliente` no se tocó: su política alcanza también
 a quien manda a facturar, que sí es trabajo de la coordinación.
 
 **Lo reservado de la ficha también vive aparte (2026-08-19).** El mismo agujero seguía abierto

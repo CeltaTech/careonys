@@ -13,6 +13,17 @@
  *     su rol: agregar una llave, ver las propias y darlas de baja son cosas de alguien que ya
  *     entró.
  *
+ * LA PUERTA DE CALLE TRABAJA ADENTRO DE UNA PRESTADORA. La Prestadora sale de la dirección
+ * (`/:prestadora/entrar…`), igual que en la activación y en la clave nueva
+ * (`middleware/resolverPrestadoraPublica.js`), y todo lo que se le pide a la base corre con la
+ * credencial del trabajo sin persona de esa Prestadora: el desafío nace con ella, y la llave y el
+ * desafío se buscan sólo adentro de ella. Una llave de otra Prestadora no existe desde acá.
+ *
+ * LA ÚNICA EXCEPCIÓN ES EL PASE DE ENTRADA. Pedirle a Supabase la sesión de la persona
+ * (`auth.admin.generateLink`) sigue haciéndose con la llave maestra, y es la única llamada que la
+ * usa. Por eso esa llamada va afuera de la Prestadora: la conexión la elige sola
+ * (`db/connection.js`), y afuera de un trabajo es la maestra.
+ *
  * NO SE PREGUNTA EL CORREO PARA ENTRAR, Y ESO ES LA DIFERENCIA. La llave se crea «detectable»
  * (`residentKey: 'required'`), así que el teléfono sabe cuál ofrecer sin que nadie le diga de
  * quién es. Preguntar el correo antes convertiría a la pantalla de ingreso en una lista de quién
@@ -36,6 +47,7 @@ import { correoDe } from '../utils/correoDeUnaPersona.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
+import { resolverPrestadoraPublica } from '../middleware/resolverPrestadoraPublica.js';
 import {
   MINUTOS_DE_VIDA_DEL_DESAFIO,
   comoSeVeLaLlave,
@@ -72,17 +84,18 @@ async function guardarDesafio(desafio, { para, rol, usuarioId = null, prestadora
  *
  * El `usado_en IS NULL` va adentro del `update` y no antes: así dos pedidos que llegan juntos con
  * la misma firma no pasan los dos. El que llega segundo no encuentra nada que actualizar.
+ *
+ * La Prestadora la trae quien llama —la de la dirección en la entrada, la de la sesión en el alta—
+ * y se nombra en la lectura y en la escritura: un desafío emitido para otra no se encuentra.
  */
-async function gastarDesafio(desafio, { para, rol }) {
-  // SIN PRESTADORA A PROPÓSITO
-  // Quien está entrando no tiene sesión, así que no hay ninguna Organización de la cual sacar el
-  // filtro. El desafío se busca por el número al azar que emitió el propio backend hace menos de dos
-  // minutos: esa fila es la que dice de qué Prestadora se trata, y no al revés. La escritura que
-  // viene después sí la nombra, y sale de esta misma fila.
+async function gastarDesafio(desafio, { para, rol, prestadoraId }) {
+  if (!prestadoraId) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
+
   const { data: fila } = await supabase
     .from('desafios_de_llave')
     .select('id, para, rol, usuario_id, prestadora_id, vence_en, usado_en')
     .eq('desafio', desafio)
+    .eq('prestadora_id', prestadoraId)
     .maybeSingle();
 
   if (!fila) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
@@ -90,18 +103,12 @@ async function gastarDesafio(desafio, { para, rol }) {
   if (fila.usado_en) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
   if (desafioVencido(fila.vence_en)) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
 
-  // La Organización sale de la fila que se acaba de leer, y se nombra en la escritura. El
-  // desafío de entrada la tiene en nulo a propósito —se emite antes de saber quién está
-  // entrando, y así lo exige la restricción `desafios_de_llave_el_alta_sabe_de_quien_es`—, así
-  // que ahí se compara contra nulo, que es exactamente lo que esa fila tiene.
-  const gastar = supabase
+  const { data: gastado } = await supabase
     .from('desafios_de_llave')
     .update({ usado_en: new Date().toISOString() })
     .eq('id', fila.id)
-    .is('usado_en', null);
-  const { data: gastado } = await (fila.prestadora_id
-    ? gastar.eq('prestadora_id', fila.prestadora_id)
-    : gastar.is('prestadora_id', null))
+    .eq('prestadora_id', prestadoraId)
+    .is('usado_en', null)
     .select('id')
     .maybeSingle();
   if (!gastado) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
@@ -121,7 +128,7 @@ export const llaveDelDispositivoRouter = Router();
 // producir una llave guardada en un aparato concreto.
 
 /** Paso 1 de la entrada: el backend inventa el número que el teléfono va a firmar. */
-llaveDelDispositivoRouter.post('/entrar/desafio', async (req, res) => {
+llaveDelDispositivoRouter.post('/:prestadora/entrar/desafio', resolverPrestadoraPublica, async (req, res) => {
   try {
     const { rol } = req.body ?? {};
     if (!rolValido(rol)) throw new ErrorConMotivo('faltan_datos');
@@ -136,7 +143,12 @@ llaveDelDispositivoRouter.post('/entrar/desafio', async (req, res) => {
       allowCredentials: [],
     });
 
-    await guardarDesafio(opciones.challenge, { para: 'entrada', rol });
+    // Todavía no se sabe quién está entrando, pero sí por qué Prestadora: el desafío nace con ella.
+    await guardarDesafio(opciones.challenge, {
+      para: 'entrada',
+      rol,
+      prestadoraId: req.prestadoraPublica.prestadora_id,
+    });
     res.json(opciones);
   } catch (err) {
     if (err instanceof ErrorConMotivo) return responderError(res, err);
@@ -152,85 +164,30 @@ llaveDelDispositivoRouter.post('/entrar/desafio', async (req, res) => {
  * (`generateLink`) y el navegador lo canjea con `verifyOtp`, que es el mismo camino que usa
  * cualquier enlace de entrada por correo. Así la sesión nace donde nacen todas y el backend no tiene
  * que firmar nada por su cuenta.
+ *
+ * EN DOS TRAMOS. Todo lo que decide si la llave abre corre adentro de la Prestadora de la
+ * dirección (`quienAbreConEstaLlave`). El pase se pide después, ya afuera, porque es la única
+ * llamada que sigue con la llave maestra. Por eso la puerta no va montada delante de la ruta como
+ * en el paso 1: lo que corre detrás de ella queda entero adentro de la Prestadora.
  */
-llaveDelDispositivoRouter.post('/entrar', async (req, res) => {
+llaveDelDispositivoRouter.post('/:prestadora/entrar', async (req, res) => {
   try {
     const { rol, respuesta } = req.body ?? {};
     if (!rolValido(rol) || !respuesta?.id) throw new ErrorConMotivo('faltan_datos');
 
-    const { origen, parteConfiable } = dondeViveLaApp(rol);
-
-    // SIN PRESTADORA A PROPÓSITO
-    // Quien está entrando no tiene sesión: es la puerta de calle. La llave se busca por su
-    // identificador, que es lo único que llegó, y es justamente esta fila la que dice de qué
-    // Prestadora es esta persona. Las escrituras que vienen después —revocarla, adelantar el
-    // contador— sí la nombran, y la sacan de acá.
-    const { data: llave } = await supabase
-      .from('llaves_de_dispositivo')
-      .select('id, usuario_id, prestadora_id, rol, credencial_id, clave_publica, contador, transportes, revocada_en')
-      .eq('credencial_id', respuesta.id)
-      .eq('rol', rol)
-      .maybeSingle();
-
-    const motivo = porQueNoAbre(llave);
-    if (motivo) {
-      // El motivo queda del lado de adentro. Hacia afuera va siempre el mismo mensaje.
-      console.warn(`Entrada con llave rechazada (${motivo})`);
-      throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
-    }
-
-    const desafio = leerDesafio(respuesta);
-    await gastarDesafio(desafio, { para: 'entrada', rol });
-
-    const verificacion = await verifyAuthenticationResponse({
-      response: respuesta,
-      expectedChallenge: desafio,
-      expectedOrigin: origen,
-      expectedRPID: parteConfiable,
-      requireUserVerification: true,
-      credential: {
-        id: llave.credencial_id,
-        publicKey: isoBase64URL.toBuffer(llave.clave_publica),
-        counter: Number(llave.contador),
-        transports: llave.transportes ?? undefined,
-      },
+    let email = null;
+    await resolverPrestadoraPublica(req, res, async () => {
+      email = await quienAbreConEstaLlave({
+        prestadoraId: req.prestadoraPublica.prestadora_id,
+        rol,
+        respuesta,
+      });
     });
-    if (!verificacion.verified) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
+    // Una dirección que no es de ninguna Prestadora ya tuvo su respuesta en la puerta.
+    if (res.headersSent) return;
+    if (!email) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
 
-    const contadorNuevo = verificacion.authenticationInfo?.newCounter ?? 0;
-    if (elContadorRetrocedio(Number(llave.contador), contadorNuevo)) {
-      // Dos aparatos con la misma llave. No se deja entrar, y la llave queda revocada: si es una
-      // copia, deja de servir; si es la original, quien la tenga la vuelve a dar de alta con su
-      // contraseña, que es una molestia mucho más chica que la alternativa.
-      console.warn('Entrada con llave rechazada (contador hacia atras): llave revocada');
-      // La Organización la resuelve la llave, que es la puerta por la que se está entrando: es
-      // la fila que dice de qué Prestadora es esta persona, y se la nombra en la escritura.
-      await supabase
-        .from('llaves_de_dispositivo')
-        .update({ revocada_en: new Date().toISOString() })
-        .eq('id', llave.id)
-        .eq('prestadora_id', llave.prestadora_id);
-      throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
-    }
-
-    await supabase
-      .from('llaves_de_dispositivo')
-      .update({ contador: contadorNuevo, ultimo_uso_en: new Date().toISOString() })
-      .eq('id', llave.id)
-      .eq('prestadora_id', llave.prestadora_id);
-
-    // El rol sale de la ficha y el correo de la cuenta: son dos tablas distintas, porque
-    // `usuarios` no guarda el correo (ver `correoDeUnaPersona.js`). La Organización es la de la
-    // llave, y se nombra: así la cuenta que se busca es además de esa misma Prestadora.
-    const { data: persona } = await supabase
-      .from('usuarios')
-      .select('rol')
-      .eq('id', llave.usuario_id)
-      .eq('prestadora_id', llave.prestadora_id)
-      .maybeSingle();
-    const email = await correoDe({ prestadoraId: llave.prestadora_id, usuarioId: llave.usuario_id });
-    if (!email || persona?.rol !== rol) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
-
+    // Afuera de la Prestadora: la llave maestra, sólo para esto.
     const { data: pase, error: errorPase } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
       email,
@@ -241,11 +198,86 @@ llaveDelDispositivoRouter.post('/entrar', async (req, res) => {
 
     res.json({ email, pase: pase.properties.hashed_token });
   } catch (err) {
+    if (res.headersSent) return;
     if (err instanceof ErrorConMotivo) return responderError(res, err);
     console.error('Error al entrar con llave:', err.message);
     res.status(500).json({ error: 'error_interno' });
   }
 });
+
+/**
+ * ¿Abre esta llave, en esta Prestadora? Devuelve el correo de acceso de la persona, o falla con el
+ * mensaje único. Corre adentro de la Prestadora: la llave, el desafío y la persona se buscan ahí.
+ */
+async function quienAbreConEstaLlave({ prestadoraId, rol, respuesta }) {
+  const { origen, parteConfiable } = dondeViveLaApp(rol);
+
+  const { data: llave } = await supabase
+    .from('llaves_de_dispositivo')
+    .select('id, usuario_id, prestadora_id, rol, credencial_id, clave_publica, contador, transportes, revocada_en')
+    .eq('credencial_id', respuesta.id)
+    .eq('rol', rol)
+    .eq('prestadora_id', prestadoraId)
+    .maybeSingle();
+
+  const motivo = porQueNoAbre(llave);
+  if (motivo) {
+    // El motivo queda del lado de adentro. Hacia afuera va siempre el mismo mensaje.
+    console.warn(`Entrada con llave rechazada (${motivo})`);
+    throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
+  }
+
+  const desafio = leerDesafio(respuesta);
+  await gastarDesafio(desafio, { para: 'entrada', rol, prestadoraId });
+
+  const verificacion = await verifyAuthenticationResponse({
+    response: respuesta,
+    expectedChallenge: desafio,
+    expectedOrigin: origen,
+    expectedRPID: parteConfiable,
+    requireUserVerification: true,
+    credential: {
+      id: llave.credencial_id,
+      publicKey: isoBase64URL.toBuffer(llave.clave_publica),
+      counter: Number(llave.contador),
+      transports: llave.transportes ?? undefined,
+    },
+  });
+  if (!verificacion.verified) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
+
+  const contadorNuevo = verificacion.authenticationInfo?.newCounter ?? 0;
+  if (elContadorRetrocedio(Number(llave.contador), contadorNuevo)) {
+    // Dos aparatos con la misma llave. No se deja entrar, y la llave queda revocada: si es una
+    // copia, deja de servir; si es la original, quien la tenga la vuelve a dar de alta con su
+    // contraseña, que es una molestia mucho más chica que la alternativa.
+    console.warn('Entrada con llave rechazada (contador hacia atras): llave revocada');
+    await supabase
+      .from('llaves_de_dispositivo')
+      .update({ revocada_en: new Date().toISOString() })
+      .eq('id', llave.id)
+      .eq('prestadora_id', prestadoraId);
+    throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
+  }
+
+  await supabase
+    .from('llaves_de_dispositivo')
+    .update({ contador: contadorNuevo, ultimo_uso_en: new Date().toISOString() })
+    .eq('id', llave.id)
+    .eq('prestadora_id', prestadoraId);
+
+  // El rol sale de la ficha y el correo de la cuenta: son dos tablas distintas, porque
+  // `usuarios` no guarda el correo (ver `correoDeUnaPersona.js`).
+  const { data: persona } = await supabase
+    .from('usuarios')
+    .select('rol')
+    .eq('id', llave.usuario_id)
+    .eq('prestadora_id', prestadoraId)
+    .maybeSingle();
+  const email = await correoDe({ prestadoraId, usuarioId: llave.usuario_id });
+  if (!email || persona?.rol !== rol) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
+
+  return email;
+}
 
 /** El desafío viaja adentro de lo que el navegador firmó, en base64url. */
 function leerDesafio(respuesta) {
@@ -363,7 +395,11 @@ export function routerDeLlavesConSesion(rol) {
 
       const { origen, parteConfiable } = dondeViveLaApp(rol);
       const desafio = leerDesafio(respuesta);
-      const fila = await gastarDesafio(desafio, { para: 'alta', rol });
+      const fila = await gastarDesafio(desafio, {
+        para: 'alta',
+        rol,
+        prestadoraId: persona.prestadoraId,
+      });
       // El desafío es de quien lo pidió, y de nadie más: sin esto, alguien podría hacerse dar uno
       // y presentarlo desde otra sesión.
       if (fila.usuario_id !== persona.id) throw new ErrorConMotivo('llave_no_sirve');

@@ -21,7 +21,7 @@ export const entrevistaPublicaRouter = Router();
 
 entrevistaPublicaRouter.get('/:prestadora/:llave', resolverPrestadoraPublica, async (req, res) => {
   try {
-    res.json(await entrevistaPorLlave(req.params.llave));
+    res.json(await entrevistaPorLlave(req.params.llave, req.prestadoraPublica.prestadora_id));
   } catch (error) {
     responderError(res, error);
   }

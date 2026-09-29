@@ -337,18 +337,19 @@ export async function cerrarEntrevista({ prestadoraId, postulacionId, estado, us
  *
  * @returns {Promise<{prestadora: string, agendada_para: string, momento: string, url: string|null}>}
  */
-export async function entrevistaPorLlave(llave) {
+export async function entrevistaPorLlave(llave, prestadoraId) {
   const limpia = String(llave || '').trim();
   const noExiste = new ErrorConMotivo('no_encontrado', 'Esa entrevista no existe');
-  if (!limpia) throw noExiste;
+  if (!limpia || !prestadoraId) throw noExiste;
 
-  // SIN PRESTADORA A PROPÓSITO
-  // Corre adentro de la Prestadora de la dirección (`middleware/resolverPrestadoraPublica.js`), así
-  // que la base sólo deja ver entrevistas de ella: la llave de otra no existe desde acá.
+  // La llave se busca sólo adentro de la Prestadora de la dirección
+  // (`middleware/resolverPrestadoraPublica.js`). La base ya no deja ver las de otra, y la consulta
+  // además la nombra: la llave de otra Prestadora no existe desde acá.
   const { data, error } = await supabase
     .from('entrevistas_postulacion')
     .select(COLUMNAS)
     .eq('llave_publica', limpia)
+    .eq('prestadora_id', prestadoraId)
     .maybeSingle();
 
   if (error) throw new Error(error.message);

@@ -346,7 +346,7 @@ describe('la puerta del postulante', () => {
   it('a la hora de la cita da la dirección de la sala y nada más', async () => {
     yaHayUnaAgendada({ agendada_para: new Date().toISOString() });
 
-    const vista = await entrevistaPorLlave(LLAVE);
+    const vista = await entrevistaPorLlave(LLAVE, PRESTADORA);
 
     assert.equal(vista.momento, 'ahora');
     assert.equal(vista.url, `${BASE_DE_SALAS}/sala-de-mentira`);
@@ -364,7 +364,7 @@ describe('la puerta del postulante', () => {
   it('antes de tiempo dice cuándo volver, sin dar la sala', async () => {
     yaHayUnaAgendada({ agendada_para: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString() });
 
-    const vista = await entrevistaPorLlave(LLAVE);
+    const vista = await entrevistaPorLlave(LLAVE, PRESTADORA);
 
     assert.equal(vista.momento, 'todavia_no');
     assert.equal(vista.url, null);
@@ -377,7 +377,7 @@ describe('la puerta del postulante', () => {
     const hace = MINUTOS_DE_TOLERANCIA + 10;
     yaHayUnaAgendada({ agendada_para: new Date(Date.now() - hace * 60 * 1000).toISOString() });
 
-    const vista = await entrevistaPorLlave(LLAVE);
+    const vista = await entrevistaPorLlave(LLAVE, PRESTADORA);
 
     assert.equal(vista.momento, 'ya_paso');
     assert.equal(vista.url, null);
@@ -386,11 +386,21 @@ describe('la puerta del postulante', () => {
   // Falla cerrado, y contesta lo mismo en los tres casos: probar llaves no dice nada.
   it('una llave que no existe, una vacía y una entrevista cerrada contestan igual', async () => {
     entrevistas = [];
-    assert.equal(await elMotivo(entrevistaPorLlave('otra-llave')), 'no_encontrado');
-    assert.equal(await elMotivo(entrevistaPorLlave('')), 'no_encontrado');
-    assert.equal(await elMotivo(entrevistaPorLlave(null)), 'no_encontrado');
+    assert.equal(await elMotivo(entrevistaPorLlave('otra-llave', PRESTADORA)), 'no_encontrado');
+    assert.equal(await elMotivo(entrevistaPorLlave('', PRESTADORA)), 'no_encontrado');
+    assert.equal(await elMotivo(entrevistaPorLlave(null, PRESTADORA)), 'no_encontrado');
 
     yaHayUnaAgendada({ estado: 'cancelada', sala_videollamada: null });
-    assert.equal(await elMotivo(entrevistaPorLlave(LLAVE)), 'no_encontrado');
+    assert.equal(await elMotivo(entrevistaPorLlave(LLAVE, PRESTADORA)), 'no_encontrado');
+  });
+
+  // La base falsa aplica el filtro: si la consulta dejara de nombrar la Prestadora, la llave
+  // aparecería desde la puerta de la otra y esta prueba fallaría.
+  it('la llave de una Prestadora no existe desde la puerta de otra, ni sin puerta', async () => {
+    yaHayUnaAgendada();
+    assert.equal(await elMotivo(entrevistaPorLlave(LLAVE, PRESTADORA_AJENA)), 'no_encontrado');
+    assert.equal(await elMotivo(entrevistaPorLlave(LLAVE, null)), 'no_encontrado');
+    // Y desde la propia sí: la prueba de arriba no pasa porque no se encuentre nada nunca.
+    assert.equal((await entrevistaPorLlave(LLAVE, PRESTADORA)).momento, 'todavia_no');
   });
 });

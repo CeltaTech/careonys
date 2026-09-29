@@ -522,7 +522,9 @@ base rechaza las tres cosas.
 
 **Al cerrar el paso se revoca en Supabase la clave vieja con que se generaban las credenciales**,
 la compartida. Mientras siga aceptada, cualquiera que la tenga puede generarse una credencial de
-cualquier rol.
+cualquier rol. **Antes hay que cambiar la llave pública:** la que usa hoy el backend salió de esa
+clave vieja, y al revocarla deja de valer. Se reemplaza por la llave pública nueva de Supabase en el
+backend y en cada pantalla que la use, se comprueba que todo sigue entrando, y recién ahí se revoca.
 
 **8.** **Los archivos.** Los cuatro depósitos sin política reciben política, con la Prestadora en
 el comienzo de la ruta exigida por la base. Los 22 lugares donde el código compara texto de ruta se

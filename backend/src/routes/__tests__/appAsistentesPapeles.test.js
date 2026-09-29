@@ -23,6 +23,7 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { olvidarPedidos } from '../../middleware/topeDePedidos.js';
+import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const USUARIO = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'; // la cuenta: usuarios.id === auth.uid()
@@ -83,7 +84,7 @@ after(() => {
 
 async function pedirPapeles() {
   const respuesta = await fetch(`${DIRECCION}/perfil/papeles`, {
-    headers: { Authorization: 'Bearer token-de-mentira' },
+    headers: { Authorization: sesionDePrueba(USUARIO) },
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
@@ -224,7 +225,7 @@ describe('el Certificado que viaja con el perfil', () => {
 
   it('la consulta del Certificado va filtrada por la Prestadora de la sesión', async () => {
     const respuesta = await fetch(`${DIRECCION}/perfil`, {
-      headers: { Authorization: 'Bearer token-de-mentira' },
+      headers: { Authorization: sesionDePrueba(USUARIO) },
     });
     assert.equal(respuesta.status, 200);
     const consultas = consultasA('certificados');

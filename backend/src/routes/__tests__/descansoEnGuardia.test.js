@@ -25,6 +25,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const OTRA_PRESTADORA = '99999999-9999-4999-8999-999999999999';
@@ -89,7 +90,7 @@ after(() => {
 async function pedir(metodo, ruta, cuerpo) {
   const opciones = {
     method: metodo,
-    headers: { Authorization: 'Bearer token-de-mentira', 'Content-Type': 'application/json' },
+    headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
   };
   if (cuerpo !== undefined) opciones.body = JSON.stringify(cuerpo);
   const respuesta = await fetch(`${RAIZ}${ruta}`, opciones);

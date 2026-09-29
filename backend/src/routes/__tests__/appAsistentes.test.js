@@ -26,6 +26,7 @@ import { createServer } from 'node:http';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 import { huellaDelCodigo } from '../../utils/codigoDeUnSoloUso.js';
 import { olvidarPedidos } from '../../middleware/topeDePedidos.js';
+import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const USUARIO = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'; // la cuenta: usuarios.id === auth.uid()
@@ -100,7 +101,7 @@ after(() => {
 async function pedir(metodo, ruta, cuerpo) {
   const respuesta = await fetch(`${DIRECCION}${ruta}`, {
     method: metodo,
-    headers: { Authorization: 'Bearer token-de-mentira', 'Content-Type': 'application/json' },
+    headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
     body: cuerpo !== undefined ? JSON.stringify(cuerpo) : undefined,
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };

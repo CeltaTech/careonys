@@ -27,6 +27,7 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { MOTIVOS_DEMORA } from '../../utils/motivosDemora.js';
+import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 import {
   FUENTE_AVISO_DEMORA_ASISTENTE,
   FUENTE_CALCULO_LLEGADA_TARDIA,
@@ -102,7 +103,7 @@ after(() => {
 async function pedir(metodo, ruta, cuerpo) {
   const respuesta = await fetch(`${DIRECCION}${ruta}`, {
     method: metodo,
-    headers: { Authorization: 'Bearer token-de-mentira', 'Content-Type': 'application/json' },
+    headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
     body: cuerpo !== undefined ? JSON.stringify(cuerpo) : undefined,
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };

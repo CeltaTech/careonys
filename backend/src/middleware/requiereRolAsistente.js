@@ -1,30 +1,25 @@
-import { supabase } from '../db/connection.js';
+import { abrirSesionDelPedido, clienteDelPedido } from '../db/connection.js';
 
-// Mismo patrón que requiereRolPanel.js (verificación de Bearer token contra Supabase Auth +
-// lookup de rol/prestadora en `usuarios`), acotado al rol `asistente` — Etapa 3 (PWA
-// Asistentes). No reutiliza requiereRolPanel porque ese exige un rol de Panel y arrastra
-// lógica de modo-Prestadora/MFA que no aplica acá.
+// Mismo patrón que requiereRolPanel.js (credencial comprobada con la clave pública de la
+// instalación que la emitió + lookup de rol/prestadora en `usuarios` con la credencial de la
+// persona), acotado al rol `asistente` — Etapa 3 (PWA Asistentes). No reutiliza requiereRolPanel
+// porque ese exige un rol de Panel y arrastra lógica de modo-Prestadora/MFA que no aplica acá.
 export async function requiereRolAsistente(req, res, next) {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-
-  if (!token) {
+  const sesion = await abrirSesionDelPedido(req);
+  if (!sesion) {
     return res.status(401).json({ error: 'No autorizado' });
   }
+  const db = clienteDelPedido(req);
 
-  const { data: userData, error: errorUsuario } = await supabase.auth.getUser(token);
-  if (errorUsuario || !userData?.user) {
-    return res.status(401).json({ error: 'No autorizado' });
-  }
-
-  // SIN PRESTADORA A PROPÓSITO
+  // SIN FILTRO DE PRESTADORA, Y NO LE HACE FALTA
   // Es el paso anterior a todo lo demás: de acá sale la Prestadora de esta sesión, y la consulta
   // que viene abajo —la ficha del Asistente— ya la usa. Pedirle a esta que la sepa de antemano
-  // sería circular: no hay de dónde sacarla salvo de esta misma fila.
-  const { data: perfil, error: errorPerfil } = await supabase
+  // sería circular: no hay de dónde sacarla salvo de esta misma fila, que la base le devuelve a
+  // su dueño y a nadie más.
+  const { data: perfil, error: errorPerfil } = await db
     .from('usuarios')
     .select('rol, prestadora_id')
-    .eq('id', userData.user.id)
+    .eq('id', sesion.id)
     .single();
 
   if (errorPerfil || !perfil || perfil.rol !== 'asistente') {
@@ -35,10 +30,10 @@ export async function requiereRolAsistente(req, res, next) {
   // cómo se llama—; `asistenteId` es lo suyo en esta Prestadora, con su antigüedad, sus lugares y
   // sus matrículas. La misma persona puede tener otro en otra Prestadora, y por eso se busca
   // acotado a la Prestadora de esta sesión.
-  const { data: ficha, error: errorFicha } = await supabase
+  const { data: ficha, error: errorFicha } = await db
     .from('asistentes')
     .select('id')
-    .eq('usuario_id', userData.user.id)
+    .eq('usuario_id', sesion.id)
     .eq('prestadora_id', perfil.prestadora_id)
     .maybeSingle();
 
@@ -47,7 +42,7 @@ export async function requiereRolAsistente(req, res, next) {
   }
 
   req.usuarioAsistente = {
-    id: userData.user.id,
+    id: sesion.id,
     asistenteId: ficha.id,
     prestadoraId: perfil.prestadora_id,
   };

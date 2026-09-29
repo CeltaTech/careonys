@@ -20,6 +20,7 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { olvidarPedidos } from '../../middleware/topeDePedidos.js';
+import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const USUARIO = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'; // la cuenta: usuarios.id === auth.uid()
@@ -102,7 +103,7 @@ describe('la Matrícula que el Asistente ve de sí mismo', () => {
     ]);
 
     const respuesta = await fetch(DIRECCION, {
-      headers: { Authorization: 'Bearer token-de-mentira' },
+      headers: { Authorization: sesionDePrueba(USUARIO) },
     });
     assert.equal(respuesta.status, 200);
 

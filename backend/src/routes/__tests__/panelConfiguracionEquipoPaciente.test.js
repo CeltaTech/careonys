@@ -20,6 +20,7 @@ import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 
 import { REGLA_DE_EQUIPO } from '../../utils/equipoDelPaciente.js';
+import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const USUARIO = '22222222-2222-2222-2222-222222222222';
@@ -81,7 +82,7 @@ after(() => {
 
 async function leer() {
   const respuesta = await fetch(`${DIRECCION}/equipo-paciente`, {
-    headers: { Authorization: 'Bearer token-de-mentira' },
+    headers: { Authorization: sesionDePrueba(USUARIO) },
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
@@ -89,7 +90,7 @@ async function leer() {
 async function guardar(cuerpo) {
   const respuesta = await fetch(`${DIRECCION}/equipo-paciente`, {
     method: 'PUT',
-    headers: { Authorization: 'Bearer token-de-mentira', 'Content-Type': 'application/json' },
+    headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
     body: JSON.stringify(cuerpo),
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };

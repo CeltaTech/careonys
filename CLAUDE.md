@@ -285,6 +285,9 @@ desempeñó. Con quien dejó de ser Cliente se vuelve a cruzar: como Pagador de 
 como familiar de otro Paciente, como financiador. Ese historial es justamente lo que se pierde el
 día que alguien borra el Legajo «porque ya no está activa».
 
+**Y la cuenta de una persona tampoco se borra, por la misma razón que no se borra una HCE.** Se
+puede desactivar, suspender, bloquear o marcar con la advertencia que haga falta; borrar, nunca.
+
 **Rol nunca significa permisos.** Un rol dice qué lugar ocupa alguien en una contratación. Quién
 puede ver o hacer qué cosa es otra cosa, se llama de otra manera y se guarda en otro lado.
 

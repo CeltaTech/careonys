@@ -398,27 +398,6 @@ alto: un Administrador que no atiende a esa persona tampoco la ve. El vínculo s
 ya está en la base —a quién se le está prestando el Servicio y quién lo presta—, no con una lista
 aparte que alguien tenga que mantener.
 
-**7.** **Se revoca la clave vieja con que se generaban las credenciales**, la compartida. Mientras
-siga aceptada, cualquiera que la tenga puede generarse una credencial de cualquier rol. **Antes hay
-que cambiar las dos llaves que salieron de ella:** la maestra que usa el backend y la pública que
-usan el backend y cada pantalla. Se reemplazan por las nuevas de Supabase, se comprueba que todo
-sigue entrando, y recién ahí se revoca.
-
-**Entrar con la huella o con la cara sigue usando la llave maestra, y queda así por ahora.** La
-huella la comprueba el propio teléfono; después el producto le pide a Supabase una credencial de
-entrada para esa persona, y ese pedido va con la llave maestra
-(`routes/llaveDelDispositivo.js:191`). Supabase ofrece hacerlo por su cuenta, pero todavía como
-prueba: se evalúa cuando esté firme.
-
-**Queda para después recuperar el código extra que se le pide al personal técnico al entrar**
-(`utils/mfaRecuperacionEmail.js:87-90`), porque esas personas no pertenecen a ninguna Prestadora.
-El rol técnico se queda: es la cuenta con la que entra la persona de CeltaTech cuando le abren un
-permiso de acceso, y el backend sólo busca ese permiso para ese rol
-(`middleware/requiereRolPanel.js:100`).
-
-**Comprobación:** con la clave vieja revocada, se entra al Panel y a las dos aplicaciones, y una
-credencial generada con la clave vieja es rechazada.
-
 **9.** **La credencial de la persona en el backend, y el registro de lecturas en la misma pasada.**
 
 `connection.js` deja de exportar un cliente y pasa a entregar **el cliente de quien está pidiendo**,
@@ -518,6 +497,18 @@ el sistema lo dice.
 **10.** **Se cierra la puerta.** Sale `SUPABASE_SERVICE_ROLE_KEY` del backend y de sus variables de
 entorno. Se borra `acotarAPrestadora`. Los 17 casos que confiaban en un identificador de afuera
 dejan de ser un riesgo porque la base ya no les cree.
+
+**Entrar con la huella o con la cara sigue usando la llave maestra, y queda así por ahora.** La
+huella la comprueba el propio teléfono; después el producto le pide a Supabase una credencial de
+entrada para esa persona, y ese pedido va con la llave maestra
+(`routes/llaveDelDispositivo.js:191`). Supabase ofrece hacerlo por su cuenta, pero todavía como
+prueba: se evalúa cuando esté firme.
+
+**Queda para después recuperar el código extra que se le pide al personal técnico al entrar**
+(`utils/mfaRecuperacionEmail.js:87-90`), porque esas personas no pertenecen a ninguna Prestadora.
+El rol técnico se queda: es la cuenta con la que entra la persona de CeltaTech cuando le abren un
+permiso de acceso, y el backend sólo busca ese permiso para ese rol
+(`middleware/requiereRolPanel.js:100`).
 
 **Comprobación:** el producto funciona sin esa variable definida. Es la única prueba que no se puede
 falsear.

@@ -469,40 +469,42 @@ Prestadora**, así que cada una de estas operaciones se hace adentro de la Prest
 cuenta y se comprueba contra ella. **La llave maestra no se conserva para ninguna:** la pieza que
 sólo funciona con ella se reemplaza.
 
-**El alta, la clave y la baja de la gente de un Administrador los hace la base.** Son funciones que
-escriben en las tablas de cuentas de Supabase, que viven en la misma base, y que sacan la
-Prestadora del pase de quien las llama, nunca del pedido. Las crea una migración. Son tres:
+**Dar de alta a una persona, ponerle la clave y darla de baja lo hace la base de datos.** Hoy lo
+hace el programa pidiéndoselo a Supabase —el servicio que guarda las cuentas con que la gente
+entra—, y para pedírselo usa la llave maestra. Pero esas cuentas están guardadas en la misma base
+de datos que todo lo demás, así que la base puede hacerlo sola, sin llave maestra. Lo hace con tres
+procedimientos propios, uno por operación. Cada uno sabe para qué Prestadora trabaja por quién se
+lo pidió, nunca por un dato escrito en el pedido, y no puede tocar la cuenta de otra Prestadora.
 
-- **El alta.** La llama el Administrador con su pase. Crea la cuenta y su renglón de `usuarios` en
-  una sola operación. Reemplaza a `cuentasPanel.js:196-228` y a `limpiarCuentaSobrante`
-  (`cuentasPanel.js:137`).
-- **El cambio de clave, al activar y al recuperar.** Lo habilita el código de un solo uso, que la
-  función busca en la Prestadora del pase y consume al cambiar la clave. Reemplaza a
-  `activacionCuenta.js:146` y a `recuperacionDeClave.js:253`.
-- **La baja.** La llama el Administrador con su pase. Borra la cuenta y su renglón de `usuarios` en
-  una sola operación. Reemplaza a `cuentasPanel.js:288`.
+- **Dar de alta.** Lo pide el Administrador desde el Panel, con su propia sesión. Se crea la cuenta
+  de la persona y, en el mismo momento, se anota a qué Prestadora pertenece y qué rol tiene. Se
+  hacen las dos cosas o ninguna: nunca queda una cuenta a medio crear.
+- **Poner o cambiar la clave.** Pasa cuando la persona activa su cuenta por primera vez o cuando
+  olvidó la clave. Todavía no tiene sesión, así que lo que la autoriza es el código de un solo uso
+  que recibió por correo. Ese código se busca sólo dentro de la Prestadora por la que la persona
+  entró, y queda anulado en el mismo momento en que se cambia la clave.
+- **Dar de baja.** Lo pide el Administrador desde el Panel, con su propia sesión. Se borran juntas
+  la cuenta y la anotación de a qué Prestadora pertenece.
 
-El alta y la baja se conceden sólo a `authenticated`, y el cambio de clave sólo a `tarea_de_fondo`.
-Las tres le revocan a `PUBLIC` y a `anon`, y la migración termina con
-`NOTIFY pgrst, 'reload schema';`.
+Nadie que no haya entrado al sistema puede usar estos procedimientos. Dar de alta y dar de baja
+sólo los pide alguien con sesión abierta; poner la clave, sólo las pantallas de activación y de
+recuperación.
 
-**Una comprobación corre sola una vez por día**, como tarea programada y sin depender de ninguna
-publicación, en el Sandbox: da de alta una cuenta con un correo inventado, le cambia la clave, entra
-y la da de baja. Si un paso falla, manda ese mismo día un mensaje del sistema a CeltaTech.
+**Todos los días se prueba que esto siga andando**, porque Supabase puede cambiar cómo guarda las
+cuentas y, si eso los rompe, nadie puede entrar. Una tarea corre sola una vez por día, sin depender
+de que se publique una versión nueva: en el Sandbox da de alta a una persona inventada, le pone
+clave, entra con ella y la da de baja. Si algo falla, ese mismo día le llega a CeltaTech un mensaje
+del sistema.
 
-**Dos de esas operaciones no le tocan al producto, y salen en vez de reemplazarse.** La cuenta del
-Administrador la genera CeltaTech, que se ocupa también del cambio y de la recuperación de su clave,
-y el producto no crea ninguna (`CLAUDE.md:31-36` y `:108-110`). Y el Superadmin no entra por el
-Panel (`CLAUDE.md:75-80`). Hoy el Superadmin crea desde el Panel cuentas de Administrador y de
-Superadmin (`backend/src/routes/panelUsuarios.js:38-40`, `:88` y `:108-110`), y la recuperación de
-la clave del producto les corre también al Administrador y al Superadmin
-(`recuperacionDeClave.js:31-38`). Lo que el producto conserva es lo que hace cada Administrador
-con su gente: las cuentas de coordinadores, Asistentes, Clientes y personas autorizadas
-(`CLAUDE.md:119-122`).
+**Hay cuentas que el producto no crea: las de los Administradores y la del Superadmin.** Las da
+CeltaTech, que también se ocupa de cambiarles y de recuperarles la clave. Hoy el Superadmin puede
+crear esas cuentas desde el Panel, y la pantalla de recuperar la clave también les sirve a ellos:
+las dos cosas se sacan. El producto se queda con las cuentas que cada Administrador le da a su
+gente: coordinadores, Asistentes, Clientes y personas autorizadas.
 
-Queda afuera la recuperación del segundo factor del rol técnico (`mfaRecuperacionEmail.js:87-90`),
-porque ese rol no pertenece a ninguna Prestadora. Se resuelve con lo que se conteste sobre el rol
-técnico en «Lo que se dijo que decidió usted».
+**Queda para después recuperar el código extra que se le pide al personal técnico al entrar**,
+porque esas personas no pertenecen a ninguna Prestadora. Se resuelve cuando usted conteste qué pasa
+con ese rol, en «Lo que se dijo que decidió usted».
 
 **Y dos disparadores lo van a sentir:** `interno.prestadora_de_la_restriccion` e
 `interno.prestadora_del_estado_de_cuenta` completan la Prestadora leyendo `clientes` con los
@@ -522,9 +524,9 @@ adentro.
 
 **Comprobación:** con el pase de una Prestadora se lee lo suyo y se pide algo de la otra; lo segundo
 falla. Y con ese pase se pide una tabla que no está en la lista: también falla. Un Administrador
-de una Prestadora intenta dar de alta, cambiar la clave y dar de baja una cuenta de la otra: las
-tres cosas fallan en la base. Y la comprobación diaria se rompe a propósito una vez para ver que el
-mensaje del sistema llega.
+de una Prestadora intenta dar de alta y dar de baja a una persona de la otra, y un código de
+activación de una Prestadora se usa entrando por la otra: las tres cosas fallan. Y se hace fallar a
+propósito una vez la prueba diaria, para ver que el mensaje del sistema le llega a CeltaTech.
 
 **8.** **Los archivos.** Los cuatro depósitos sin política reciben política, con la Prestadora en
 el comienzo de la ruta exigida por la base. Los 22 lugares donde el código compara texto de ruta se

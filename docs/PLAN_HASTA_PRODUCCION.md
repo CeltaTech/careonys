@@ -360,11 +360,12 @@ Chile, la restricción queda fija y no se apaga. Lo que falta:
   `interno.encadenar_acceso_a_datos_de_salud`, los disparadores `…_interruptor_de_salud…` y el
   mensaje «No tiene permiso para verificar el registro de accesos». Cierre: una migración nueva los
   renombra y el mensaje sale del catálogo aprobado.
-- **Dar de baja una cuenta que ya hizo algo falla**: `dar_de_baja_la_cuenta` borra la fila de
-  `usuarios`, y `registro_actividad` la sigue nombrando. Probado en vivo con una cuenta de prueba
-  que cambió la restricción; quedó bloqueada sin poder entrar. Cierre: la baja deja la persona
-  sin entrada y conserva la fila, y las dos cuentas «Prueba Inventada» de la Prestadora de
-  pruebas se dan de baja así.
+- **La baja de una cuenta desde el Panel la borra**, y una cuenta tiene un Legajo, que no se borra
+  nunca (`CLAUDE.md:282`). `panelUsuarios.js:198` llama a `borrarCuenta`, y `dar_de_baja_la_cuenta`
+  borra la fila de `usuarios`; con actividad anotada, además, la base lo rechaza. Cierre: la baja
+  le quita la entrada a la persona y no borra nada, y las dos cuentas «Prueba Inventada» de la
+  Prestadora de pruebas, hoy bloqueadas, se dan de baja así. Deshacer un alta cortada por la mitad
+  (`deshacerAlta`) no entra: ahí todavía no hay Legajo.
 
 **9.** **La credencial de la persona en el backend, y el registro de lecturas en la misma pasada.**
 

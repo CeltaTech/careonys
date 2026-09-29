@@ -259,6 +259,16 @@ financiador exija, completa y firmada. Eso tiene que estar listo el día que se 
 Familia; de ahí en más el cobro es asunto de créditos y cobranzas, que **sólo le informa a Careonys
 en qué situación están los pagos** —al día, vencido hace tantos días— y nada más.
 
+**Cada persona ve lo que firmó, y lo que firmó otro no, salvo que sea parte firmante.** Vale para
+todo documento en el que alguien da su consentimiento, firmado en papel o en pantalla. La
+Prestadora es parte de todos, porque son con ella. Un Asistente que consiente que la Prestadora
+siga su ubicación tiene derecho a ver ese documento; la Familia podrá ver o no esa ubicación, según
+se configure su aplicación, pero el documento no lo ve nunca. Textual del Desarrollador: *«cada
+persona tiene acceso a ver lo que firma, no asi a lo que firma otra persona, salvo que sea parte
+involucrada»*. **Es el piso:** la norma de cada país sobre seguridad y confidencialidad se revisa,
+y si pide más, manda la norma. Para que se pueda cumplir, **quien firma queda guardado como un
+Legajo**, nunca como un nombre tecleado.
+
 **La Persona se guarda una sola vez, y los roles la citan.** El rol es una anotación que apunta a
 un Legajo, nunca una copia de sus datos ni un Legajo nuevo. Si la misma Persona contrata, recibe el
 cuidado y paga, hay un Legajo y tres anotaciones.

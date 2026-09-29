@@ -436,6 +436,21 @@ e `interno.prestadora_del_estado_de_cuenta` completan la Prestadora leyendo `fam
 permisos de quien inserta. **Y el historial del registro clínico pasa a tener autor** en lo que se
 corrige desde el Panel, que hoy queda anotado sin persona porque lo escribe la llave maestra.
 
+**Y la autorización de monitoreo de los signos vitales pasa a verla sólo quien la firmó.** Hoy la
+Familia y el Asistente de ese Paciente leen el renglón entero —quién la firmó, en qué carácter,
+cuándo—, aunque no el archivo (políticas `familia_lee_autorizaciones_de_sus_pacientes` y
+`asistente_lee_autorizaciones_de_sus_pacientes`). El Asistente no es parte: sale. La Familia la ve
+sólo si quien entra es quien la firmó, y hoy eso no se puede saber, porque el firmante está
+guardado como texto tecleado (`nombre_avala`, `rol_avala`) y no como un Legajo. **Pasa a ser un
+Legajo elegido del Padrón**, igual que el firmante del consentimiento del Pagador. Lo que las
+aplicaciones necesitan saber es si hay autorización vigente, no quién firmó: eso lo contesta una
+función de `interno` que devuelve sí o no (`utils/vitalesReferencia.js:9` hoy lo lee con la llave
+maestra). **Antes de construirlo se revisa la norma de cada país** sobre quién puede ver un
+consentimiento firmado; la regla de `CLAUDE.md` §6 es el piso, y si una norma pide más, manda la norma.
+**Del lado del Asistente falta una cosa:** su consentimiento sobre la ubicación guarda el texto que
+aceptó (`appAsistentesConsentimientos.js:211`), pero la aplicación le muestra siempre el vigente.
+Cuando la Prestadora lo cambia, deja de poder ver lo que firmó.
+
 **El registro de accesos va acá y no en un paso aparte**, porque es el mismo archivo reescrito una
 sola vez en vez de dos barridos por los mismos 135. Es un registro separado del de actividad,
 porque anotan cosas distintas y tienen plazos distintos. **Seis campos por evento:** la Prestadora,

@@ -492,7 +492,7 @@ Las dos fotos con las que se verifica la identidad —la del documento y la de l
 depósito `fotos-identidad`, creado por
 `supabase/migrations/20260915210000_las_dos_fotos_de_la_verificacion_de_identidad_tienen_donde_vivir.sql`.
 
-- **Es privado y hoy no tiene ninguna política.** Nadie lo alcanza con su propio pase: lo escribe y
+- **Es privado y hoy no tiene ninguna política.** Nadie lo alcanza con su propia sesión: lo escribe y
   lo lee el backend con la llave de servicio, después de comprobar de qué Prestadora es el Asistente
   (`backend/src/routes/panelVerificacionIdentidad.js`). Con RLS encendida y ninguna política, la
   base niega sola. Es la misma forma de `certificados-medicos`, `autorizaciones-monitoreo` y

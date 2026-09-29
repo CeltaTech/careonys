@@ -643,7 +643,7 @@ todo lo de este documento.
 - El consentimiento se registra con texto versionado, con quién consintió, por qué medio, desde
   cuándo y hasta cuándo.
 - Existe la estructura de aviso legal por jurisdicción, con constancia de que se avisó.
-- El segundo factor está construido y el backend rechaza el pase que no llegó a segundo factor.
+- El segundo factor está construido y el backend rechaza la credencial que no llegó a segundo factor.
 - No se entrenan modelos con datos de los Clientes, y no se monetiza ningún dato de salud.
 - El tráfico va cifrado.
 

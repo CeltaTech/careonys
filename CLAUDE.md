@@ -319,7 +319,7 @@ DEFINER`**: sumaría código corriendo con privilegio de dueño y le sacaría la
 las consultas que hace por dentro.
 
 **Ninguna prueba del backend ve esto**, porque el backend entra con la llave de servicio, que puede
-ejecutar todo. Lo prueba `scripts/probar_altas_con_sesion.mjs`, que da de alta con el pase de una
+ejecutar todo. Lo prueba `scripts/probar_altas_con_sesion.mjs`, que da de alta con la credencial de una
 persona y además le pregunta a la base si algún disparador quedó pidiendo un permiso que no
 tiene. Se corre con la base local levantada, junto con `scripts/probar_aislamiento.mjs`.
 
@@ -327,7 +327,7 @@ tiene. Se corre con la base local levantada, junto con `scripts/probar_aislamien
 con `SUPABASE_SERVICE_ROLE_KEY`, que alcanza todas las Prestadoras y se saltea la protección por
 fila, así que lo que separa una de otra son los filtros escritos a mano en cada ruta. Eso incumple
 `..\..\CLAUDE.md` §5 —«no se puede tener una credencial que alcance a todas las Organizaciones»— y
-se está reemplazando: **cada pedido de una persona pasa al pase de esa persona, y lo que no tiene
+se está reemplazando: **cada pedido de una persona pasa a la credencial de esa persona, y lo que no tiene
 persona detrás lleva una credencial acotada a sus tablas y funciones, de a una Prestadora por
 vez.** Los pasos, con sus comprobaciones, están en `docs/PLAN_HASTA_PRODUCCION.md`, sección «Los
 cimientos».

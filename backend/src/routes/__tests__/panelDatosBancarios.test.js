@@ -21,6 +21,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 
 // ---------------------------------------------------------------------------------------
 // La base de mentira
@@ -97,7 +98,7 @@ after(() => {
 
 async function pedir(ruta) {
   const respuesta = await fetch(`${DIRECCION}${ruta}`, {
-    headers: { Authorization: 'Bearer token-de-mentira' },
+    headers: { Authorization: sesionDePrueba(USUARIO) },
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }

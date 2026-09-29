@@ -20,6 +20,7 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import crypto from 'node:crypto';
+import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const QUIEN_LLAMA = '22222222-2222-2222-2222-222222222222';
@@ -89,7 +90,7 @@ after(() => {
 async function pedir(metodo, ruta, cuerpo) {
   const respuesta = await fetch(`${RAIZ}${ruta}`, {
     method: metodo,
-    headers: { Authorization: 'Bearer token-de-mentira', 'Content-Type': 'application/json' },
+    headers: { Authorization: sesionDePrueba(QUIEN_LLAMA), 'Content-Type': 'application/json' },
     body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };

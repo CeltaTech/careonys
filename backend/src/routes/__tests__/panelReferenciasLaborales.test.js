@@ -5,24 +5,28 @@
  *   node --test backend/src/routes/__tests__/panelReferenciasLaborales.test.js
  *
  * POR QUÉ EXISTE ESTA PRUEBA. Una referencia laboral es el nombre y el teléfono de una persona que
- * no usa el producto y que no tiene forma de enterarse de nada. El backend entra a la base con la
- * llave maestra, así que lo único que separa una Prestadora de otra son los filtros escritos en
- * esta ruta (`../panelReferenciasLaborales.js`). Y hay dos decisiones más que sostener: que quién
- * verificó y cuándo los escriba el servidor y no el pedido —si no, la firma de la verificación la
- * pone quien quiera—, y que el mínimo salga de la configuración de la Prestadora y no de un número
- * escrito en el código.
+ * no usa el producto y que no tiene forma de enterarse de nada. Esta ruta
+ * (`../panelReferenciasLaborales.js`) entra a la base con la credencial de quien pide, y no con la
+ * llave maestra: lo que separa una Prestadora de otra es la protección por fila de la base, y lo
+ * que hay que sostener acá es que cada consulta vaya de verdad con esa credencial. Y hay dos
+ * decisiones más: que quién verificó y cuándo los escriba el servidor y no el pedido —si no, la
+ * firma de la verificación la pone quien quiera—, y que el mínimo salga de la configuración de la
+ * Prestadora y no de un número escrito en el código.
  *
  * Por eso la base es de mentira y contesta por HTTP como la de verdad: además del resultado se
- * mira **qué se le pidió**, que es donde viven esos filtros.
+ * mira **qué se le pidió y con qué credencial**.
  *
- * Con el sistema roto —un filtro de menos, o la firma tomada del cuerpo del pedido— las pruebas
- * del Asistente ajeno y la de la firma dan al revés.
+ * Con el sistema roto —una consulta con la llave maestra, o la firma tomada del cuerpo del
+ * pedido— las pruebas de la credencial y la de la firma dan al revés. Lo que esta prueba no puede
+ * ver es la protección por fila en sí: la base de mentira no la tiene. Eso lo prueba
+ * `scripts/probar_aislamiento.mjs` contra una base de verdad.
  *
  * Datos inventados, como manda CLAUDE.md §6.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const OTRA_PRESTADORA = '99999999-9999-9999-9999-999999999999';
@@ -47,7 +51,12 @@ const baseFalsa = createServer((req, res) => {
     // La cuenta exacta viaja como HEAD, y la contesta lo mismo que prepara la lista: es la misma
     // consulta, pedida sin cuerpo. Por eso se busca por GET.
     const clave = `${req.method === 'HEAD' ? 'GET' : req.method} ${ruta}`;
-    llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null });
+    llamadas.push({
+      clave,
+      url: req.url,
+      cuerpo: crudo ? JSON.parse(crudo) : null,
+      credencial: req.headers.authorization,
+    });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada(crudo ? JSON.parse(crudo) : null, req.url) : preparada;
@@ -99,11 +108,15 @@ after(() => {
   baseFalsa.close();
 });
 
+/** La credencial que mandó el último pedido: la base tiene que recibir esa y ninguna otra. */
+let credencialEnviada = null;
+
 async function llamar(camino, opciones = {}) {
+  credencialEnviada = sesionDePrueba(USUARIO);
   const respuesta = await fetch(`${DIRECCION}${camino}`, {
     ...opciones,
     headers: {
-      Authorization: 'Bearer token-de-mentira',
+      Authorization: credencialEnviada,
       ...(opciones.body ? { 'Content-Type': 'application/json' } : {}),
       ...opciones.headers,
     },
@@ -169,13 +182,28 @@ describe('ver las referencias laborales', () => {
     assert.equal(cuerpo.seExigenReferencias, true);
   });
 
-  it('la consulta lleva los dos filtros: la Prestadora y el Asistente', async () => {
+  it('todo se pide con la credencial de quien llama, y nada con la llave maestra', async () => {
+    respuestas.set('GET /rest/v1/referencias_laborales_asistente', () => []);
+
+    await llamar(`/${ASISTENTE}`);
+
+    // El registro de actividad queda afuera: no es de esta ruta, lo escribe el middleware y todavía
+    // con la llave maestra (`utils/registroDeActividad.js`).
+    const aLaBase = llamadas.filter(
+      (l) => l.clave.includes(' /rest/v1/') && !l.clave.endsWith('/registro_actividad'),
+    );
+    assert.ok(aLaBase.length >= 3, 'la ruta tiene que haber consultado la base');
+    for (const llamada of aLaBase) {
+      assert.equal(llamada.credencial, credencialEnviada, `${llamada.clave} no fue con la credencial de quien pide`);
+    }
+  });
+
+  it('la consulta nombra al Asistente del que se habla', async () => {
     respuestas.set('GET /rest/v1/referencias_laborales_asistente', () => []);
 
     await llamar(`/${ASISTENTE}`);
 
     const consulta = consultasDeReferencias()[0];
-    assert.ok(consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`));
     assert.ok(consulta.url.includes(`asistente_id=eq.${ASISTENTE}`));
   });
 
@@ -350,7 +378,7 @@ describe('anotar el resultado de una referencia', () => {
     assert.equal(consultasDeReferencias().length, 0);
   });
 
-  it('el cambio lleva los tres filtros: la referencia, la Prestadora y el Asistente', async () => {
+  it('el cambio nombra la referencia y su Asistente, y va con la credencial de quien pide', async () => {
     respuestas.set('PATCH /rest/v1/referencias_laborales_asistente', () => [unaReferencia({ resultado: 'rechazada' })]);
 
     await llamar(`/${ASISTENTE}/${REFERENCIA}`, {
@@ -360,8 +388,8 @@ describe('anotar el resultado de una referencia', () => {
 
     const cambio = consultasDeReferencias().find((l) => l.clave.startsWith('PATCH '));
     assert.ok(cambio.url.includes(`id=eq.${REFERENCIA}`));
-    assert.ok(cambio.url.includes(`prestadora_id=eq.${PRESTADORA}`));
     assert.ok(cambio.url.includes(`asistente_id=eq.${ASISTENTE}`));
+    assert.equal(cambio.credencial, credencialEnviada);
   });
 
   it('una referencia que no es de esta persona vuelve como no encontrada', async () => {

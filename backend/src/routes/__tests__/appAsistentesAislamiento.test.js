@@ -22,6 +22,7 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { olvidarPedidos } from '../../middleware/topeDePedidos.js';
+import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const USUARIO = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'; // la cuenta: usuarios.id === auth.uid()
@@ -106,7 +107,7 @@ describe('las calificaciones que el Asistente ve de sí mismo', () => {
     ]);
 
     const respuesta = await fetch(`${DIRECCION}/calificaciones`, {
-      headers: { Authorization: 'Bearer token-de-mentira' },
+      headers: { Authorization: sesionDePrueba(USUARIO) },
     });
     assert.equal(respuesta.status, 200);
 
@@ -126,7 +127,7 @@ describe('la baja del aviso al celular', () => {
 
     const respuesta = await fetch(`${DIRECCION}/push/suscribir`, {
       method: 'DELETE',
-      headers: { Authorization: 'Bearer token-de-mentira', 'Content-Type': 'application/json' },
+      headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
       body: JSON.stringify({ endpoint: 'https://aviso.ejemplo.test/abc' }),
     });
     assert.equal(respuesta.status, 200);
@@ -154,7 +155,7 @@ describe('la decisión de consentimiento que ya tomó', () => {
     respuestas.set('GET /rest/v1/consentimientos_asistente', []);
 
     const respuesta = await fetch(`${DIRECCION}/consentimientos`, {
-      headers: { Authorization: 'Bearer token-de-mentira' },
+      headers: { Authorization: sesionDePrueba(USUARIO) },
     });
     assert.equal(respuesta.status, 200);
 

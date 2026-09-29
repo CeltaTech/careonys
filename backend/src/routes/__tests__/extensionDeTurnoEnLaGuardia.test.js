@@ -24,6 +24,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const OTRA_PRESTADORA = '99999999-9999-4999-8999-999999999999';
@@ -88,7 +89,7 @@ after(() => {
 async function desdeElTelefono(id, cuerpo) {
   const respuesta = await fetch(`${RAIZ}/api/app-asistentes/guardias/${id}/no-puedo-continuar`, {
     method: 'POST',
-    headers: { Authorization: 'Bearer token-de-mentira', 'Content-Type': 'application/json' },
+    headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
     body: JSON.stringify(cuerpo ?? {}),
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
@@ -329,7 +330,7 @@ describe('avisar que no puede continuar la extensión', () => {
 describe('la extensión que viaja con el turno', () => {
   async function verElTurno() {
     const respuesta = await fetch(`${RAIZ}/api/app-asistentes/guardias/${GUARDIA}`, {
-      headers: { Authorization: 'Bearer token-de-mentira' },
+      headers: { Authorization: sesionDePrueba(USUARIO) },
     });
     return { estado: respuesta.status, cuerpo: await respuesta.json() };
   }

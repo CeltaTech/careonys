@@ -329,8 +329,8 @@ DEFINER`**: sumaría código corriendo con privilegio de dueño y le sacaría la
 las consultas que hace por dentro. El Desarrollador la adoptó como propia, textual: *«no era mia,
 pero desde ahora en mas lo es»*.
 
-**Ninguna prueba del backend ve esto**, porque el backend entra con la llave de servicio, que puede
-ejecutar todo. Lo prueba `scripts/probar_altas_con_sesion.mjs`, que da de alta con la credencial de una
+**Ninguna prueba del backend ve esto**: casi todo el backend entra todavía con la llave de
+servicio, que puede ejecutar todo, y las pruebas del backend contestan con una base de mentira. Lo prueba `scripts/probar_altas_con_sesion.mjs`, que da de alta con la credencial de una
 persona y además le pregunta a la base si algún disparador quedó pidiendo un permiso que no
 tiene. Se corre con la base local levantada, junto con `scripts/probar_aislamiento.mjs`.
 
@@ -338,7 +338,10 @@ tiene. Se corre con la base local levantada, junto con `scripts/probar_aislamien
 con `SUPABASE_SERVICE_ROLE_KEY`, que alcanza todas las Prestadoras y se saltea la protección por
 fila, así que lo que separa una de otra son los filtros escritos a mano en cada ruta. Las tareas
 automatizadas ya salieron de ahí: corren de a una Prestadora por vez con la credencial del trabajo
-sin persona, que genera `backend/src/db/connection.js`. Lo demás todavía no, y eso incumple
+sin persona, que genera `backend/src/db/connection.js`. Los tres middleware de entrada también:
+comprueban la credencial con la clave pública y leen a la persona con `clienteDelPedido(req)`, que
+es la única forma en que una ruta toma la conexión de quien pide; la primera ruta que la usa es
+`panelReferenciasLaborales.js`. Las demás rutas todavía no, y eso incumple
 `..\..\CLAUDE.md` §5 —«no se puede tener una credencial que alcance a todas las Organizaciones»— y
 se está reemplazando: **cada pedido de una persona pasa a la credencial de esa persona, y lo que no tiene
 persona detrás lleva una credencial acotada a sus tablas y funciones, de a una Prestadora por

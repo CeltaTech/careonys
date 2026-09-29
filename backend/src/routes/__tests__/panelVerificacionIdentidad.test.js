@@ -23,6 +23,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const OTRA_PRESTADORA = '99999999-9999-9999-9999-999999999999';
@@ -129,7 +130,7 @@ async function subir(asistenteId, { tipo, archivo = unaFoto() } = {}) {
 
   const respuesta = await fetch(`${DIRECCION}/${asistenteId}/foto`, {
     method: 'POST',
-    headers: { Authorization: 'Bearer token-de-mentira' },
+    headers: { Authorization: sesionDePrueba(USUARIO) },
     body: cuerpo,
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
@@ -137,7 +138,7 @@ async function subir(asistenteId, { tipo, archivo = unaFoto() } = {}) {
 
 async function pedirLasFotos(asistenteId) {
   const respuesta = await fetch(`${DIRECCION}/${asistenteId}/fotos`, {
-    headers: { Authorization: 'Bearer token-de-mentira' },
+    headers: { Authorization: sesionDePrueba(USUARIO) },
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
@@ -303,7 +304,7 @@ describe('los enlaces temporales de las dos fotos', () => {
     respuestas.set('GET /rest/v1/asistentes', () => [unAsistente()]);
 
     const respuesta = await fetch(`${DIRECCION}/${ASISTENTE}/fotos?prestadora_id=${OTRA_PRESTADORA}`, {
-      headers: { Authorization: 'Bearer token-de-mentira' },
+      headers: { Authorization: sesionDePrueba(USUARIO) },
     });
     const cuerpo = await respuesta.json();
 

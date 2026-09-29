@@ -19,6 +19,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 
 // ---------------------------------------------------------------------------------------
 // La base de mentira
@@ -102,7 +103,7 @@ after(() => {
 async function pedir(metodo, ruta, cuerpo) {
   const respuesta = await fetch(`${DIRECCION}${ruta}`, {
     method: metodo,
-    headers: { Authorization: 'Bearer token-de-mentira', 'Content-Type': 'application/json' },
+    headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
     body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
@@ -519,7 +520,7 @@ describe('subir a mano el comprobante que baja el Cliente', () => {
   async function subir(bytes) {
     const respuesta = await fetch(`${DIRECCION}/facturas/${FACTURA}/comprobante`, {
       method: 'POST',
-      headers: { Authorization: 'Bearer token-de-mentira', 'Content-Type': 'application/pdf' },
+      headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/pdf' },
       body: bytes,
     });
     return { estado: respuesta.status, cuerpo: await respuesta.json() };

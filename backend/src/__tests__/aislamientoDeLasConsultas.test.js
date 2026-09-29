@@ -21,6 +21,13 @@
  * está más abajo. No hay ninguna lista de excepciones acá adentro: una lista por archivo y tabla
  * dejaba de mirar también a las consultas vecinas de ese mismo archivo, que sí estaban atadas.
  *
+ * LA QUE VA CON LA CREDENCIAL DE LA PERSONA NO SE MIRA. Una consulta hecha con la conexión que
+ * devuelve `clienteDelPedido(req)` (`db/connection.js`) entra a la base con la credencial de quien
+ * pide, y ahí la que separa una Prestadora de otra es la protección por fila, no un filtro escrito.
+ * Pedirle el filtro sería volver a poner la red encima de la llave maestra que se está sacando. Se
+ * reconoce por el nombre con que la consulta llama a esa conexión, y sólo si en ese archivo ese
+ * nombre no recibe ningún otro valor.
+ *
  * Qué daría con el sistema roto: sacarle a cualquier consulta su filtro de Prestadora la deja
  * suelta, y esta prueba la nombra con archivo y renglón.
  */
@@ -197,7 +204,15 @@ function consultasDe(texto) {
       encabezado = renglones[k] + '\n' + encabezado;
     }
 
-    salida.push({ renglon: i + 1, tabla, seSabeQueTablaEs, cadena, encabezado });
+    // Con qué conexión se hace: el nombre pegado al `.from(`, o el del renglón de arriba cuando la
+    // consulta se escribe partida.
+    const pegado = renglones[i].match(/([A-Za-z_$][\w$]*)\s*\.from\(/);
+    const partido = /^\s*\.from\(/.test(renglones[i]) && i > 0
+      ? renglones[i - 1].match(/([A-Za-z_$][\w$]*)\s*$/)
+      : null;
+    const conexion = (pegado ?? partido)?.[1] ?? null;
+
+    salida.push({ renglon: i + 1, tabla, seSabeQueTablaEs, cadena, encabezado, conexion });
   }
 
   return salida;
@@ -229,6 +244,23 @@ function esAlta(cadena) {
   return /\.insert\(/.test(cadena) && !/\.upsert\(/.test(cadena);
 }
 
+/**
+ * Los nombres que, en este archivo, guardan la conexión de la persona y ninguna otra cosa.
+ *
+ * Un nombre que en algún renglón recibe otro valor queda afuera: ahí ya no se sabe con qué
+ * credencial va la consulta, y se le exige el filtro como a cualquiera.
+ */
+function conexionesDeLaPersona(texto) {
+  const nombres = new Set(
+    [...texto.matchAll(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*clienteDelPedido\(/g)].map((m) => m[1]),
+  );
+  for (const nombre of [...nombres]) {
+    const asignaciones = [...texto.matchAll(new RegExp(`\\b${nombre}\\s*=(?!=)\\s*([^;\\n]*)`, 'g'))];
+    if (asignaciones.some((m) => !m[1].startsWith('clienteDelPedido('))) nombres.delete(nombre);
+  }
+  return nombres;
+}
+
 const ARCHIVOS = archivosDe(FUENTE);
 const CON_COLUMNA = tablasConPrestadora();
 
@@ -239,7 +271,9 @@ function sueltas() {
   for (const camino of ARCHIVOS) {
     const nombre = relative(FUENTE, camino).replace(/\\/g, '/');
     const texto = readFileSync(camino, 'utf8');
+    const deLaPersona = conexionesDeLaPersona(texto);
     for (const consulta of consultasDe(texto)) {
+      if (deLaPersona.has(consulta.conexion)) continue;
       if (consulta.seSabeQueTablaEs && !CON_COLUMNA.has(consulta.tabla)) continue;
       if (esAlta(consulta.cadena)) continue;
       if (ATADURAS.some((atadura) => sinLoQueSePide(consulta.cadena).includes(atadura))) continue;
@@ -281,11 +315,13 @@ describe('las consultas del backend', () => {
       const texto = readFileSync(camino, 'utf8');
       if (!texto.includes(MARCA)) continue;
 
+      const deLaPersona = conexionesDeLaPersona(texto);
       let pegadas = 0;
       for (const consulta of consultasDe(texto)) {
         if (!consulta.encabezado.includes(MARCA)) continue;
         pegadas++;
         const atada =
+          deLaPersona.has(consulta.conexion) ||
           (consulta.seSabeQueTablaEs && !CON_COLUMNA.has(consulta.tabla)) ||
           esAlta(consulta.cadena) ||
           ATADURAS.some((atadura) => sinLoQueSePide(consulta.cadena).includes(atadura));

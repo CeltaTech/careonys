@@ -27,6 +27,7 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { olvidarPedidos } from '../../middleware/topeDePedidos.js';
+import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const USUARIO = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'; // la cuenta: usuarios.id === auth.uid()
@@ -88,7 +89,7 @@ after(() => {
 
 async function pedirCuentas() {
   const respuesta = await fetch(`${DIRECCION}/perfil/datos-bancarios`, {
-    headers: { Authorization: 'Bearer token-de-mentira' },
+    headers: { Authorization: sesionDePrueba(USUARIO) },
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
@@ -96,7 +97,7 @@ async function pedirCuentas() {
 async function guardarCuenta(clase, cuerpo, extra = '') {
   const respuesta = await fetch(`${DIRECCION}/perfil/datos-bancarios/${clase}${extra}`, {
     method: 'PUT',
-    headers: { Authorization: 'Bearer token-de-mentira', 'Content-Type': 'application/json' },
+    headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
     body: JSON.stringify(cuerpo),
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
@@ -105,7 +106,7 @@ async function guardarCuenta(clase, cuerpo, extra = '') {
 async function sacarCuenta(clase) {
   const respuesta = await fetch(`${DIRECCION}/perfil/datos-bancarios/${clase}`, {
     method: 'DELETE',
-    headers: { Authorization: 'Bearer token-de-mentira' },
+    headers: { Authorization: sesionDePrueba(USUARIO) },
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
@@ -219,7 +220,7 @@ describe('el Asistente mira adónde se le paga', () => {
     const otro = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
     const respuesta = await fetch(
       `${DIRECCION}/perfil/datos-bancarios?asistente_id=${otro}&prestadora_id=${otro}`,
-      { headers: { Authorization: 'Bearer token-de-mentira' } },
+      { headers: { Authorization: sesionDePrueba(USUARIO) } },
     );
     assert.equal(respuesta.status, 200);
 
@@ -265,7 +266,7 @@ describe('el Asistente mira adónde se le paga', () => {
     for (const metodo of ['POST', 'PUT', 'PATCH', 'DELETE']) {
       const respuesta = await fetch(`${DIRECCION}/perfil/datos-bancarios`, {
         method: metodo,
-        headers: { Authorization: 'Bearer token-de-mentira', 'Content-Type': 'application/json' },
+        headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
         body: JSON.stringify({ identificador: '9999999999999999999999' }),
       });
       assert.equal(respuesta.status, 404, `${metodo} encontró una puerta que no tendría que existir`);

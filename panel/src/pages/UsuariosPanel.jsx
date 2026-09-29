@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
-import { useAuth } from '../context/AuthContext';
 import { useConfirmarDestructivo } from '../context/ConfirmacionContext';
 import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
@@ -32,8 +31,6 @@ async function llamarApi(path, opciones = {}) {
 
 export function UsuariosPanel() {
   const { t } = useLocale();
-  const { usuario } = useAuth();
-  const esSuperadmin = usuario?.rol === 'superadmin';
   const [usuarios, setUsuarios] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
@@ -57,7 +54,9 @@ export function UsuariosPanel() {
     recargar();
   }, [recargar]);
 
-  const puedeEditar = (fila) => esSuperadmin || fila.rol === 'coordinador';
+  /* Desde acá se gestiona sólo la coordinación: la cuenta del Administrador y la del equipo técnico
+     las hace CeltaTech. */
+  const puedeEditar = (fila) => fila.rol === 'coordinador';
 
   return (
     <div>
@@ -66,7 +65,7 @@ export function UsuariosPanel() {
 
       <div className="panel-filtros">
         <Button onClick={() => setCreandoNuevo(true)}>
-          {esSuperadmin ? t.usuarios_panel.nuevo_usuario : t.usuarios_panel.nuevo_coordinador}
+          {t.usuarios_panel.nuevo_coordinador}
         </Button>
       </div>
 
@@ -103,7 +102,6 @@ export function UsuariosPanel() {
 
       {creandoNuevo && (
         <NuevoUsuarioPanel
-          esSuperadmin={esSuperadmin}
           onClose={() => setCreandoNuevo(false)}
           onCreado={() => {
             recargar();
@@ -125,7 +123,7 @@ export function UsuariosPanel() {
   );
 }
 
-function NuevoUsuarioPanel({ esSuperadmin, onClose, onCreado }) {
+function NuevoUsuarioPanel({ onClose, onCreado }) {
   const modal = useModalAccesible(onClose);
   const modalCreada = useModalAccesible(onClose);
   const { t } = useLocale();
@@ -137,7 +135,6 @@ function NuevoUsuarioPanel({ esSuperadmin, onClose, onCreado }) {
      escritos a mano, una letra distinta en uno de los dos no encontraba a nadie y nadie se
      enteraba. */
   const [lugares, setLugares] = useState([]);
-  const [rol, setRol] = useState('coordinador');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
   const [creado, setCreado] = useState(null);
@@ -146,17 +143,9 @@ function NuevoUsuarioPanel({ esSuperadmin, onClose, onCreado }) {
     setGuardando(true);
     setError(null);
     try {
-      const rolFinal = esSuperadmin ? rol : 'coordinador';
       const resultado = await llamarApi('', {
         method: 'POST',
-        body: JSON.stringify({
-          email,
-          nombre,
-          telefono,
-          rol: rolFinal,
-          // Sólo quien coordina se acota: quien administra alcanza toda la Organización.
-          lugares: rolFinal === 'coordinador' ? lugares : [],
-        }),
+        body: JSON.stringify({ email, nombre, telefono, lugares }),
       });
       setCreado({ email, passwordTemporal: resultado.passwordTemporal });
       onCreado();
@@ -190,31 +179,13 @@ function NuevoUsuarioPanel({ esSuperadmin, onClose, onCreado }) {
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
-        <h2 id={modal.idTitulo}>{esSuperadmin ? t.usuarios_panel.nuevo_usuario : t.usuarios_panel.nuevo_coordinador}</h2>
+        <h2 id={modal.idTitulo}>{t.usuarios_panel.nuevo_coordinador}</h2>
         {error && <Alert variant="error">{error}</Alert>}
         <FormField label={t.usuarios_panel.col_nombre} name="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
         <FormField label={t.usuarios_panel.col_email} name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        {esSuperadmin && (
-          <FormField label={t.usuarios_panel.campo_rol} name="rol" type="select" value={rol} onChange={(e) => setRol(e.target.value)}>
-            <option value="coordinador">{t.usuarios_panel.rol_coordinador}</option>
-            <option value="admin_prestadora">{t.usuarios_panel.rol_admin_prestadora}</option>
-            <option value="superadmin">{t.usuarios_panel.rol_superadmin}</option>
-          </FormField>
-        )}
-        {/* Antes acá había un selector de Prestadora. Se sacó al cerrar el pendiente #98
-            (2026-07-28): la cuenta nueva nace siempre en la Organización en la que se está
-            trabajando, y para crear la de otra Prestadora hay que entrar con una sesión de
-            soporte técnico, que deja registro. El selector permitía saltearse ese registro. */}
-        {esSuperadmin && rol !== 'superadmin' && (
-          <p className="panel-explicacion">{t.usuarios_panel.aviso_organizacion_activa}</p>
-        )}
         <FormField label={t.usuarios_panel.col_telefono} name="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
-        {(!esSuperadmin || rol === 'coordinador') && (
-          <>
-            <h3>{t.configuracion.lugares_alcance_titulo}</h3>
-            <ElegirLugares valor={lugares} onChange={setLugares} deshabilitado={guardando} />
-          </>
-        )}
+        <h3>{t.configuracion.lugares_alcance_titulo}</h3>
+        <ElegirLugares valor={lugares} onChange={setLugares} deshabilitado={guardando} />
         <p className="panel-explicacion">{t.usuarios_panel.aviso_password_temporal}</p>
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>{t.comun.cancelar}</Button>

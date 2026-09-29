@@ -46,6 +46,7 @@
 import express, { Router } from 'express';
 import { comprobarFirmaSinEsquemaPublicado } from '../pasarelas/firmaWebhook.js';
 import { supabase } from '../db/connection.js';
+import { enLaPrestadoraDeLaDireccion } from '../middleware/enLaPrestadoraDeLaDireccion.js';
 import { anotarLoFacturado, facturaParaAnotar } from '../utils/anotarLoFacturado.js';
 import { guardarComprobante, loQueEstaMalEnElComprobante } from '../utils/comprobanteDeLaFactura.js';
 import {
@@ -110,7 +111,7 @@ async function pedidoAutenticado({ prestadoraId, req, res }) {
   return { ok: true, cuerpoCrudo };
 }
 
-facturacionExternaRouter.post('/:prestadoraId', async (req, res) => {
+facturacionExternaRouter.post('/:prestadoraId', enLaPrestadoraDeLaDireccion('Aviso de facturacion'), async (req, res) => {
   const { prestadoraId } = req.params;
 
   const autenticacion = await pedidoAutenticado({ prestadoraId, req, res });
@@ -195,7 +196,7 @@ facturacionExternaRouter.post('/:prestadoraId', async (req, res) => {
 // Y EL MISMO COMPROBANTE MANDADO DOS VECES NO HACE DAÑO: el segundo se guarda con nombre propio y
 // la factura apunta al último. El anterior queda en el depósito sin que nadie lo alcance, que es
 // lo que corresponde con un papel que estuvo vigente.
-facturacionExternaRouter.post('/:prestadoraId/:facturaId/comprobante', async (req, res) => {
+facturacionExternaRouter.post('/:prestadoraId/:facturaId/comprobante', enLaPrestadoraDeLaDireccion('Aviso de facturacion'), async (req, res) => {
   const { prestadoraId, facturaId } = req.params;
 
   const autenticacion = await pedidoAutenticado({ prestadoraId, req, res });

@@ -245,8 +245,7 @@ y 170 tienen política, y ninguna depende de nada que aporte el backend: la Pres
 preguntando.**
 
 **Hay trabajo que hoy no podría hacerse sin la llave maestra**, porque no tiene ninguna persona
-detrás: la carga de los mensajes del sistema al arrancar, 4 entradas que llaman terceros y 8
-puertas públicas. Y hay operaciones sobre cuentas que hoy sólo se hacen
+detrás: la carga de los mensajes del sistema al arrancar y 8 puertas públicas. Y hay operaciones sobre cuentas que hoy sólo se hacen
 con la llave maestra. El detalle está en el paso de la credencial del trabajo sin persona.
 
 **Nadie sabe quién leyó qué.** `registro_actividad` anota once acciones y todas son escrituras o
@@ -432,7 +431,11 @@ Prestadora. El backend la genera en `backend/src/db/connection.js`, y **las 16 t
 ya corren con ella, de a una Prestadora por vez** (`server.js`, función `programar`). También los
 avisos que el backend manda después de contestar: la llegada del Asistente y el reporte listo a la
 Cliente, el análisis inmediato de la IA (`appAsistentes.js`) y el aviso de mensaje nuevo del
-Match (`conversacionMatch.js`). La conexión
+Match (`conversacionMatch.js`). Y las 4 entradas que llaman otros programas —pasarelas,
+WhatsApp, aviso de cobranza y aviso de facturación—: traen la Prestadora en la dirección, y todo lo
+que corre detrás entra con la credencial de esa Prestadora
+(`middleware/enLaPrestadoraDeLaDireccion.js`), así que ni un pedido falsificado alcanza a otra. El
+secreto con que cada ruta comprueba el mensaje se lee adentro de esa misma Prestadora. La conexión
 cambia sola según la Prestadora en curso, así que lo que sigue se muda envolviéndolo en
 `enLaPrestadora`, sin tocar las funciones que llama.
 
@@ -440,8 +443,6 @@ cambia sola según la Prestadora en curso, así que lo que sigue se muda envolvi
 
 - **La carga de `mensajes_del_sistema` al arrancar** (`server.js`, al final). Sigue con la llave
   maestra porque sus 158 filas no son de ninguna Prestadora: la credencial del trabajo no las ve.
-- **4 entradas que llaman terceros:** pasarelas, WhatsApp, aviso de cobranza y aviso de
-  facturación. Las cuatro traen la Prestadora en la dirección y la confirman con el secreto de ella.
 - **8 puertas públicas:** las cuatro de `/api/publico/:prestadora/`, la activación de la cuenta, la
   recuperación de la clave, la entrevista y la entrada con la llave del dispositivo.
 
@@ -507,11 +508,6 @@ con ese rol, en «Lo que se dijo que decidió usted».
 **Y dos disparadores lo van a sentir:** `interno.prestadora_de_la_restriccion` e
 `interno.prestadora_del_estado_de_cuenta` completan la Prestadora leyendo `clientes` con los
 permisos de quien inserta.
-
-Las 4 entradas que llaman terceros traen la Prestadora en la dirección. Primero se confirma que el
-mensaje viene de quien dice venir —eso ya se verifica—, y recién con ese dato se genera la credencial. Leer la clave con
-que se comprueba cada mensaje es lo único que pasa por una función que resuelve la Prestadora
-adentro.
 
 **Comprobación:** con la credencial de una Prestadora se lee lo suyo y se pide algo de la otra; lo segundo
 falla. Y con esa credencial se pide una tabla que no está en la lista: también falla. Se arma a mano

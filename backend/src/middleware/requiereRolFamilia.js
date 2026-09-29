@@ -1,7 +1,7 @@
 import { abrirSesionDelPedido, clienteDelPedido } from '../db/connection.js';
 
 // Mismo patrón que requiereRolAsistente.js, acotado al rol `familia` — Etapa 4 (PWA
-// Familias). La credencial se comprueba con la clave pública de la instalación que la emitió, y
+// Familias). La credencial se comprueba con la clave pública de la región que la emitió, y
 // todo lo que se lee acá se lee con la credencial de la persona (`db/connection.js`).
 export async function requiereRolFamilia(req, res, next) {
   const sesion = await abrirSesionDelPedido(req);

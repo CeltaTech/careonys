@@ -1,7 +1,7 @@
 import { abrirSesionDelPedido, clienteDelPedido } from '../db/connection.js';
 
 // Mismo patrón que requiereRolPanel.js (credencial comprobada con la clave pública de la
-// instalación que la emitió + lookup de rol/prestadora en `usuarios` con la credencial de la
+// región que la emitió + lookup de rol/prestadora en `usuarios` con la credencial de la
 // persona), acotado al rol `asistente` — Etapa 3 (PWA Asistentes). No reutiliza requiereRolPanel
 // porque ese exige un rol de Panel y arrastra lógica de modo-Prestadora/MFA que no aplica acá.
 export async function requiereRolAsistente(req, res, next) {

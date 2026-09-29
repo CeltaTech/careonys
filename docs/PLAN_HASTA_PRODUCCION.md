@@ -441,8 +441,6 @@ cambia sola según la Prestadora en curso, así que lo que sigue se muda envolvi
 
 **Qué falta mudar**, medido contra el código y contra la base en vivo:
 
-- **La carga de `mensajes_del_sistema` al arrancar** (`server.js`, al final). Sigue con la llave
-  maestra porque sus 158 filas no son de ninguna Prestadora: la credencial del trabajo no las ve.
 - **8 puertas públicas:** las cuatro de `/api/publico/:prestadora/`, la activación de la cuenta, la
   recuperación de la clave, la entrevista y la entrada con la llave del dispositivo.
 
@@ -458,7 +456,6 @@ forzada para su dueño.
   (`routes/llaveDelDispositivo.js:59-98` y `:169-171`) se buscan sin saber la Prestadora, y el desafío de la llave nace sin ella. **La Prestadora
   sale de la puerta por donde se entró**, como en todo el producto, y la búsqueda se hace adentro de
   ella.
-- La política `superadmin_ve_todos_los_envios_de_correo` de `envios_de_correo` no pide Prestadora.
 
 **Las operaciones sobre cuentas.** Hoy pasan por la administración de cuentas de Supabase, que sólo
 funciona con la llave maestra. Sin sesión: la clave al activar (`activacionCuenta.js:146`), la clave

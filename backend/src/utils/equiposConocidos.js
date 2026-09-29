@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { supabase } from '../db/connection.js';
+import { cerrarTodasLasSesionesDe } from './claveActual.js';
 
 // QUÉ ES UN EQUIPO NUEVO. Un aparato que no tiene llave guardada y desde el que nunca se entró.
 // Nada más que eso: no se reconoce el navegador, no se mira desde dónde se conecta y no se guarda
@@ -84,10 +85,11 @@ export async function anotarEquipo({ usuario, marca = null }) {
  * ES LO PRIMERO QUE NECESITA ALGUIEN A QUIEN LE ROBARON EL TELÉFONO, y hasta acá no existía.
  * Cambiar la clave no alcanzaba: las sesiones ya abiertas seguían vivas.
  *
- * La Prestadora se nombra en las dos tablas, y la trae quien llama desde la sesión comprobada.
+ * La Prestadora se nombra en las dos tablas, y la trae quien llama desde la sesión comprobada. Las
+ * sesiones se cierran con la de la propia persona, que es la que pidió cerrarlas.
  */
-export async function cerrarSesionEnTodosLosEquipos(usuarioId, prestadoraId) {
-  if (!usuarioId || !prestadoraId) return;
+export async function cerrarSesionEnTodosLosEquipos(usuarioId, prestadoraId, token) {
+  if (!usuarioId || !prestadoraId || !token) return;
 
   const ahora = new Date().toISOString();
 
@@ -109,8 +111,7 @@ export async function cerrarSesionEnTodosLosEquipos(usuarioId, prestadoraId) {
 
   // Y las sesiones que ya estaban abiertas. Sin esto lo anterior no sirve: quien tiene el aparato
   // en la mano sigue adentro hasta que su pase venza solo.
-  const { error } = await supabase.auth.admin.signOut(usuarioId, 'global');
-  if (error) console.error('equiposConocidos: no se pudieron cerrar las sesiones:', error.message);
+  await cerrarTodasLasSesionesDe(token);
 }
 
 /** Los aparatos desde los que esta persona entró, para que pueda verlos antes de cerrarlos todos. */

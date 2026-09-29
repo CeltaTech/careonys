@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
-import { supabase } from '../db/connection.js';
+import { supabase, enLaPrestadora } from '../db/connection.js';
 import { estructurarReporteIA, distanciaMetros } from '../utils/reporteIA.js';
 import { enviarPushCliente } from '../utils/push.js';
 import { analizarPaciente } from '../utils/revisarAlertasIA.js';
@@ -847,12 +847,14 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
   // UPDATE.
   const conCliente = pacientes.filter((p) => p.cliente_id);
   const nombreDelAsistente = await nombreDeAsistente(guardia.asistente_id, guardia.prestadora_id);
+  //
+  // Sigue corriendo después de contestar, así que entra con la credencial de esta Prestadora.
   for (const p of conCliente) {
-    enviarPushCliente(guardia.prestadora_id, p.cliente_id, {
+    enLaPrestadora(guardia.prestadora_id, 'aviso de llegada', () => enviarPushCliente(guardia.prestadora_id, p.cliente_id, {
       titulo: 'Llegó el Asistente',
       cuerpo: `${nombreDelAsistente} llegó al domicilio de ${p.nombre}.`,
       url: `/pacientes/${p.id}`,
-    }).catch((err) => console.error('Error enviando push de llegada a Cliente:', err.message));
+    })).catch((err) => console.error('Error enviando push de llegada a Cliente:', err.message));
   }
   if (conCliente.length > 0) {
     await supabase.from('guardias').update({ push_llegada_enviado_at: new Date().toISOString() }).eq('id', guardia.id).eq('prestadora_id', guardia.prestadora_id);
@@ -1495,37 +1497,36 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
     .eq('id', paciente.id)
     .eq('prestadora_id', guardia.prestadora_id)
     .maybeSingle();
+  // Lo que sigue corre después de contestar, así que entra con la credencial de esta Prestadora.
   if (datosPaciente?.cliente_id) {
-    enviarPushCliente(guardia.prestadora_id, datosPaciente.cliente_id, {
+    enLaPrestadora(guardia.prestadora_id, 'aviso de reporte', () => enviarPushCliente(guardia.prestadora_id, datosPaciente.cliente_id, {
       titulo: 'Reporte diario disponible',
       cuerpo: `Ya está listo el reporte de la guardia de ${paciente.nombre}.`,
       url: `/pacientes/${paciente.id}/reportes/${reporte.id}`,
-    }).catch((err) => console.error('Error enviando push de reporte a Cliente:', err.message));
+    })).catch((err) => console.error('Error enviando push de reporte a Cliente:', err.message));
   }
 
   // IA Nivel 2 — análisis inmediato si el texto libre contiene una palabra clave crítica
   // configurada por la Prestadora (docs/AI_PROMPTS.md:43-45 — nunca hardcodeada). Sin fila
   // configurada, no se dispara nada acá; el análisis nocturno sigue corriendo igual.
   if (textoLibre) {
-    supabase
-      .from('configuracion_alertas_ia')
-      .select('palabras_clave')
-      .eq('prestadora_id', guardia.prestadora_id)
-      .maybeSingle()
-      .then(({ data: config }) => {
-        const palabrasClave = config?.palabras_clave || [];
-        const textoNormalizado = textoLibre.toLowerCase();
-        const contieneCritica = palabrasClave.some((palabra) => textoNormalizado.includes(String(palabra).toLowerCase()));
-        if (contieneCritica) {
-          // Se revisa a la persona de la que habla el reporte, y a nadie más. Antes había que
-          // revisar a todos los del turno porque el texto no decía de quién hablaba; ahora lo
-          // dice, y levantar una alerta sobre alguien que no era es ruido que le hace perder
-          // confianza al Cliente en las alertas que sí importan.
-          analizarPaciente(paciente.id, guardia.prestadora_id).catch((err) =>
-            console.error('Error en análisis inmediato de IA Nivel 2:', err.message)
-          );
-        }
-      });
+    enLaPrestadora(guardia.prestadora_id, 'análisis inmediato', async () => {
+      const { data: config } = await supabase
+        .from('configuracion_alertas_ia')
+        .select('palabras_clave')
+        .eq('prestadora_id', guardia.prestadora_id)
+        .maybeSingle();
+      const palabrasClave = config?.palabras_clave || [];
+      const textoNormalizado = textoLibre.toLowerCase();
+      const contieneCritica = palabrasClave.some((palabra) => textoNormalizado.includes(String(palabra).toLowerCase()));
+      if (contieneCritica) {
+        // Se revisa a la persona de la que habla el reporte, y a nadie más. Antes había que
+        // revisar a todos los del turno porque el texto no decía de quién hablaba; ahora lo
+        // dice, y levantar una alerta sobre alguien que no era es ruido que le hace perder
+        // confianza al Cliente en las alertas que sí importan.
+        await analizarPaciente(paciente.id, guardia.prestadora_id);
+      }
+    }).catch((err) => console.error('Error en análisis inmediato de IA Nivel 2:', err.message));
   }
 
   res.json({ ok: true, reporteId: reporte.id });

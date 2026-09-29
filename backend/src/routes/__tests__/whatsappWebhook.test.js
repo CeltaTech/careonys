@@ -20,6 +20,7 @@ import { after, afterEach, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { createHmac } from 'node:crypto';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const CONVERSACION = '22222222-2222-2222-2222-222222222222';
@@ -66,6 +67,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // La respuesta automática no redacta nada: elige entre los textos que la Prestadora aprobó. Con
 // el banco vacío —que es como nace— no hay ninguno que sirva, así que todo mensaje queda esperando

@@ -20,6 +20,7 @@
 
 import express, { Router } from 'express';
 import { supabase } from '../db/connection.js';
+import { enLaPrestadoraDeLaDireccion } from '../middleware/enLaPrestadoraDeLaDireccion.js';
 import { obtenerAdaptador, confirmaConsultando } from '../pasarelas/index.js';
 import { esRechazoDeAutenticidad, MOTIVO } from '../pasarelas/firmaWebhook.js';
 import { registrarCobroExitoso } from '../utils/cobrosMarketplace.js';
@@ -33,7 +34,7 @@ export const webhooksPasarelasRouter = Router();
 // cualquiera de las dos pasarelas.
 webhooksPasarelasRouter.use(express.raw({ type: 'application/json', limit: '1mb' }));
 
-webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', async (req, res) => {
+webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', enLaPrestadoraDeLaDireccion('Aviso de pasarela'), async (req, res) => {
   const { proveedor, prestadoraId } = req.params;
 
   function rechazar(motivo) {

@@ -17,6 +17,7 @@ import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { createHmac } from 'node:crypto';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const COBRO = '55555555-5555-5555-5555-555555555555';
@@ -76,6 +77,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // Un Mercado Pago de mentira. Hace falta porque lo que manda no dice si la plata entró —solo trae
 // el identificador del cobro—, así que la ruta le vuelve a preguntar antes de imputar nada, y

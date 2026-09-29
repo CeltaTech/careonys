@@ -34,6 +34,7 @@
 // `ts=<instante>,v1=<hmac-sha256 en hexadecimal>` calculado sobre `<instante>.<cuerpo crudo>`.
 import express, { Router } from 'express';
 import { supabase } from '../db/connection.js';
+import { enLaPrestadoraDeLaDireccion } from '../middleware/enLaPrestadoraDeLaDireccion.js';
 import { comprobarFirmaSinEsquemaPublicado } from '../pasarelas/firmaWebhook.js';
 import { aDosDecimales, loQueEstaMalEnElAviso } from '../utils/facturacionDeFamilias.js';
 
@@ -57,7 +58,7 @@ const MOTIVO_DE_RECHAZO = {
 
 cobranzaExternaRouter.use(express.raw({ type: 'application/json', limit: '256kb' }));
 
-cobranzaExternaRouter.post('/:prestadoraId', async (req, res) => {
+cobranzaExternaRouter.post('/:prestadoraId', enLaPrestadoraDeLaDireccion('Aviso de cobranza'), async (req, res) => {
   const { prestadoraId } = req.params;
 
   function rechazar(motivo) {

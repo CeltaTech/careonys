@@ -23,6 +23,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const OTRA_PRESTADORA = '99999999-9999-9999-9999-999999999999';
@@ -118,7 +119,7 @@ async function subir(ceseId, { tipo, archivo = unPdf() } = {}) {
 
   const respuesta = await fetch(`${DIRECCION}/${ceseId}/documento`, {
     method: 'POST',
-    headers: { Authorization: 'Bearer token-de-mentira' },
+    headers: { Authorization: sesionDePrueba(USUARIO) },
     body: cuerpo,
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
@@ -126,7 +127,7 @@ async function subir(ceseId, { tipo, archivo = unPdf() } = {}) {
 
 async function pedirDireccion(ruta) {
   const respuesta = await fetch(`${DIRECCION}${ruta}`, {
-    headers: { Authorization: 'Bearer token-de-mentira' },
+    headers: { Authorization: sesionDePrueba(USUARIO) },
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }

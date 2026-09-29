@@ -1,28 +1,24 @@
-import { supabase } from '../db/connection.js';
+import { abrirSesionDelPedido, clienteDelPedido } from '../db/connection.js';
 
 // Mismo patrón que requiereRolAsistente.js, acotado al rol `familia` — Etapa 4 (PWA
-// Familias).
+// Familias). La credencial se comprueba con la clave pública de la instalación que la emitió, y
+// todo lo que se lee acá se lee con la credencial de la persona (`db/connection.js`).
 export async function requiereRolFamilia(req, res, next) {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-
-  if (!token) {
+  const sesion = await abrirSesionDelPedido(req);
+  if (!sesion) {
     return res.status(401).json({ error: 'No autorizado' });
   }
+  const db = clienteDelPedido(req);
 
-  const { data: userData, error: errorUsuario } = await supabase.auth.getUser(token);
-  if (errorUsuario || !userData?.user) {
-    return res.status(401).json({ error: 'No autorizado' });
-  }
-
-  // SIN PRESTADORA A PROPÓSITO
+  // SIN FILTRO DE PRESTADORA, Y NO LE HACE FALTA
   // Acá se resuelve, a partir de la cuenta con la que se entró, cuál es la Prestadora de la
   // sesión. Todo lo que sigue se acota con lo que devuelve esta fila; exigirle el filtro a ella
-  // sería pedirle que ya sepa lo que viene a averiguar.
-  const { data: perfil, error: errorPerfil } = await supabase
+  // sería pedirle que ya sepa lo que viene a averiguar. La base le devuelve su propia fila y
+  // ninguna otra.
+  const { data: perfil, error: errorPerfil } = await db
     .from('usuarios')
     .select('rol, prestadora_id')
-    .eq('id', userData.user.id)
+    .eq('id', sesion.id)
     .single();
 
   if (errorPerfil || !perfil || perfil.rol !== 'familia') {
@@ -35,20 +31,20 @@ export async function requiereRolFamilia(req, res, next) {
   //
   // Y se busca por la cuenta y acotado a la Prestadora de la sesión, porque la misma persona
   // puede tener otro Legajo en otra Prestadora: la cuenta es una y los Legajos son varios.
-  const { data: titular } = await supabase
+  const { data: titular } = await db
     .from('familias')
     .select('id')
-    .eq('usuario_id', userData.user.id)
+    .eq('usuario_id', sesion.id)
     .eq('prestadora_id', perfil.prestadora_id)
     .maybeSingle();
 
   let familiaId = titular?.id ?? null;
 
   if (!familiaId) {
-    const { data: miembro } = await supabase
+    const { data: miembro } = await db
       .from('miembros_familia')
       .select('familia_id, familias!inner(prestadora_id)')
-      .eq('usuario_id', userData.user.id)
+      .eq('usuario_id', sesion.id)
       .eq('familias.prestadora_id', perfil.prestadora_id)
       .maybeSingle();
 
@@ -64,7 +60,7 @@ export async function requiereRolFamilia(req, res, next) {
   // son once accesos que el titular pidió por escrito, y los resuelve `accesosDelPedido` en las
   // rutas que los necesitan, para no consultarlos en los pedidos que no los miran.
   req.usuarioFamilia = {
-    id: userData.user.id,
+    id: sesion.id,
     familiaId,
     esTitular: Boolean(titular),
     prestadoraId: perfil.prestadora_id,

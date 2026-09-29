@@ -301,6 +301,12 @@ entrada tiene que saber a qué instalación mandar a cada quien. Nada más del p
 cada Prestadora es un cajón cerrado, el banco de Asistentes es por Prestadora y la elección es por
 cercanía al paciente, así que nada necesita ser único cruzando el océano.
 
+**En el backend, el punto donde se elige la instalación ya existe:** `backend/src/db/instalaciones.js`.
+Hoy hay una sola, armada con `SUPABASE_URL` y `SUPABASE_ANON_KEY`; la credencial de una persona se
+manda a la instalación que la emitió, y una que no emitió ninguna no entra. Falta lo que
+todavía no tiene de dónde sacarse: a qué instalación pertenece cada Prestadora y la puerta de
+entrada de las pantallas.
+
 **Y lo que no es código: las cláusulas firmadas antes del alta de la primera Prestadora real.**
 Brasil no figura en la lista de países adecuados de la autoridad argentina, así que alojar en São
 Paulo es una transferencia internacional. Lo que la habilita son las cláusulas contractuales tipo
@@ -400,12 +406,22 @@ aparte que alguien tenga que mantener.
 
 **9.** **La credencial de la persona en el backend, y el registro de lecturas en la misma pasada.**
 
-`connection.js` deja de exportar un cliente y pasa a entregar **el cliente de quien está pidiendo**,
-armado con la credencial que viene en el pedido. Los 135 archivos cambian de qué importan, no de qué
-hacen. `requiereRolPanel.js` deja de validar la credencial con la llave maestra y lo valida con la clave
-pública, que es para lo que está; y deja de leer `usuarios` sin filtro, porque con la credencial de la
-persona la base ya le contesta una sola fila. Se hace **por grupos de rutas**, y al terminar cada
-grupo `acotarAPrestadora` sale de esas rutas.
+**La base ya está.** `backend/src/db/connection.js` entrega **el cliente de quien está pidiendo**
+con `clienteDelPedido(req)`, armado con la credencial que viene en el pedido y la clave pública de
+la instalación. Los tres middleware de entrada (`requiereRolPanel.js`, `requiereRolFamilia.js`,
+`requiereRolAsistente.js`) comprueban la credencial con la clave pública y leen a la persona con su
+propia credencial. La primera ruta migrada es `panelReferenciasLaborales.js`, y es el molde.
+
+**Lo que falta son las rutas.** Siguen importando `supabase`, la llave maestra, y se pasan **por
+grupos**: en cada manejador `const db = clienteDelPedido(req)`, las funciones auxiliares reciben
+`db`, y `acotarAPrestadora` y los filtros por la Prestadora de la sesión salen de esas rutas; al
+insertar, la Prestadora se toma de una fila que la base ya le dejó ver a la persona. El paso
+termina cuando ninguna ruta de persona importa `supabase`. Ahí sale también la anotación por
+pedido de `requiereRolPanel.js` para el permiso de acceso, que mientras convivan las dos formas
+deja las escrituras de las rutas migradas anotadas dos veces. Quedan con la maestra, además,
+`panelMfaRecuperacion.js` —que valida la credencial con `getUser` de la maestra— y las escrituras
+de `utils/registroDeActividad.js` y de `auditoria_de_accesos`. `panelVerificacionIdentidad.js` no
+puede pasar hasta que el depósito `fotos-identidad` tenga políticas.
 
 **En la misma pasada salen las tres comparaciones de ruta de archivo** que todavía hace el código
 (`panelMedicacion.js:181`, `panelVitalesAutorizacion.js:79` y `appAsistentesMatricula.js:192`): los

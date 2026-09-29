@@ -29,14 +29,15 @@ import { enlaceConCodigo } from './direccionDeLaPrestadora.js';
 // esté vivo en una casilla de correo, mejor. Siete días serían siete días de puerta abierta.
 const HORAS_VALIDEZ = 2;
 
-const ROLES_DE_PANEL = ['superadmin', 'admin_prestadora', 'coordinador'];
+// Las cuentas que el producto da de alta, y por eso las únicas cuya clave recupera.
+const ROLES_QUE_RECUPERAN_LA_CLAVE = ['coordinador', 'asistente', 'cliente'];
 
 // A qué pantalla manda el enlace. Es el mismo reparto que el de la activación, y por el mismo
 // motivo: cada rol entra por una puerta distinta, y un enlace a la puerta equivocada deja a la
 // persona afuera sin entender por qué.
 function urlAppPorRol(rol) {
   if (rol === 'asistente') return process.env.PWA_ASISTENTES_URL;
-  if (ROLES_DE_PANEL.includes(rol)) return process.env.PANEL_URL;
+  if (rol === 'coordinador') return process.env.PANEL_URL;
   return process.env.PWA_CLIENTES_URL;
 }
 
@@ -73,12 +74,15 @@ export async function pedirRecuperacionDeClave(email, prestadoraId) {
   await anotarPedidoDeClave(prestadoraId, email);
 
   // La cuenta se busca en la Prestadora por donde se entró. Es la misma tabla que impone que ese
-  // correo no se repita adentro de una, así que acá hay una fila o ninguna.
+  // correo no se repita adentro de una, así que acá hay una fila o ninguna. Y sólo entre la gente
+  // de la Prestadora: la clave del Administrador y la del equipo técnico las maneja CeltaTech, y
+  // para el producto ese correo es uno más sin cuenta.
   const { data: usuario } = await supabase
     .from('usuarios')
     .select('id, nombre, rol, prestadora_id')
     .eq('prestadora_id', prestadoraId)
     .eq('email', correoComparable(email))
+    .in('rol', ROLES_QUE_RECUPERAN_LA_CLAVE)
     .maybeSingle();
 
   if (!usuario) {

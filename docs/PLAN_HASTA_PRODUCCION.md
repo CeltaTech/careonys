@@ -245,9 +245,9 @@ y 170 tienen política, y ninguna depende de nada que aporte el backend: la Pres
 preguntando.**
 
 **Hay trabajo que hoy no podría hacerse sin la llave maestra**, porque no tiene ninguna persona
-detrás: 16 tareas programadas, 4 entradas que llaman terceros, el alta de cuentas y la recuperación
-de clave. Eso alcanza 9 tablas que una sesión no toca, 4 cuya protección por fila niega todo, 28
-funciones y los 4 depósitos sin política.
+detrás: 17 tareas programadas, 4 entradas que llaman terceros, 8 puertas públicas y lo que el
+backend sigue haciendo después de contestar. Y hay operaciones sobre cuentas que hoy sólo se hacen
+con la llave maestra. El detalle está en el paso de la credencial del trabajo sin persona.
 
 **Nadie sabe quién leyó qué.** `registro_actividad` anota once acciones y todas son escrituras o
 entradas al Panel: ninguna lectura queda registrada. `auditoria_de_accesos` tiene `admin_id` no
@@ -426,17 +426,77 @@ aparte que alguien tenga que mantener.
 **7.** **La credencial del trabajo sin persona.** Es lo primero que se construye porque hasta que
 exista, quitar la llave maestra rompe la mitad del producto.
 
-Se crea en la base un rol propio —`tarea_de_fondo`— con permiso **sólo** sobre las 9 tablas de la
-entrada, las 4 de secretos y códigos, y las 28 funciones ya inventariadas. Nada más. El backend no
+**Qué es trabajo sin persona**, medido contra el código y contra la base en vivo:
+
+- **17 tareas programadas.** Las 16 de `backend/src/server.js:194-322` y la carga de
+  `mensajes_del_sistema` al arrancar (`server.js:345`).
+- **4 entradas que llaman terceros:** pasarelas, WhatsApp, aviso de cobranza y aviso de
+  facturación. Las cuatro traen la Prestadora en la dirección y la confirman con el secreto de ella.
+- **8 puertas públicas:** las cuatro de `/api/publico/:prestadora/`, la activación de la cuenta, la
+  recuperación de la clave, la entrevista y la entrada con la llave del dispositivo.
+- **Lo que el backend sigue haciendo después de contestar:** `appAsistentes.js:851`, `:877`,
+  `:1499` y `:1510-1528` —este último escribe datos clínicos: alertas y pacientes—, y
+  `conversacionMarketplace.js:217`.
+
+**Lo que tocan:** 81 tablas, 11 funciones y un depósito, `comprobantes-familia`. De las tablas, 11
+no tienen ninguna política y 16 sólo le contestan a `authenticated`. Ninguna tiene la protección
+forzada para su dueño.
+
+**Por qué hoy no se puede sin la llave maestra:** `interno.current_tenant()` saca la Prestadora de
+dos fuentes y las dos son `auth.uid()`. Sin sesión no devuelve nada, y todas las políticas de esas
+81 tablas pasan por ahí.
+
+**Lo que hoy cruza Prestadoras, y se corrige en este paso:**
+
+- `avisoPrevioAlCobro.js:61-70` lee de una vez los accesos vigentes de todas.
+- `cargarMensajesDelSistema.js:32-43` junta los textos de todas en una memoria común.
+- `plazosDeCobroMarketplace.js:95-101` calcula un máximo sobre todas.
+- El código de activación (`activacionCuenta.js:107`), el de recuperación
+  (`recuperacionDeClave.js:137`), la llave pública de la entrevista
+  (`entrevistaDePostulacion.js:339`) y la llave del dispositivo
+  (`routes/llaveDelDispositivo.js:59-98` y `:169-171`) se buscan sin saber la Prestadora, y el desafío de la llave nace sin ella. **La Prestadora
+  sale de la puerta por donde se entró**, como en todo el producto, y la búsqueda se hace adentro de
+  ella.
+- La política `superadmin_ve_todos_los_envios_de_correo` de `envios_de_correo` no pide Prestadora.
+
+**Las operaciones sobre cuentas.** Hoy pasan por la administración de cuentas de Supabase, que sólo
+funciona con la llave maestra. Sin sesión: la clave al activar (`activacionCuenta.js:146`), la clave
+al recuperar (`recuperacionDeClave.js:253`) y la entrada con la llave del dispositivo
+(`routes/llaveDelDispositivo.js:234`). Desde el Panel: crear, buscar y borrar cuentas
+(`cuentasPanel.js:107-111`, `:157`, `:196`, `:207`, `:228`, `:288`) y cerrar la sesión en todos los
+equipos (`equiposConocidos.js:112`). **Con la cuenta por Prestadora, cada cuenta es de una sola
+Prestadora**, así que cada una de estas operaciones se hace adentro de la Prestadora dueña de la
+cuenta y se comprueba contra ella. **La llave maestra no se conserva para ninguna:** la pieza que
+sólo funciona con ella se reemplaza.
+
+**Dos de esas operaciones no le tocan al producto, y salen en vez de reemplazarse.** La cuenta del
+Administrador la genera CeltaTech, que se ocupa también del cambio y de la recuperación de su clave,
+y el producto no crea ninguna (`CLAUDE.md:31-36` y `:108-110`). Y el Superadmin no entra por el
+Panel (`CLAUDE.md:75-80`). Hoy el Superadmin crea desde el Panel cuentas de Administrador y de
+Superadmin (`backend/src/routes/panelUsuarios.js:38-40`, `:88` y `:108-110`), y la recuperación de
+la clave del producto les corre también al Administrador y al Superadmin
+(`recuperacionDeClave.js:31-38`). Lo que el producto conserva es lo que hace cada Administrador
+con su gente: las cuentas de coordinadores, Asistentes, Familias y círculo familiar
+(`CLAUDE.md:119-122`).
+
+Queda afuera la recuperación del segundo factor del rol técnico (`mfaRecuperacionEmail.js:87-90`),
+porque ese rol no pertenece a ninguna Prestadora. Se resuelve con lo que se conteste sobre el rol
+técnico en «Lo que se dijo que decidió usted».
+
+**Y dos disparadores lo van a sentir:** `interno.prestadora_de_la_restriccion` e
+`interno.prestadora_del_estado_de_cuenta` completan la Prestadora leyendo `familias` con los
+permisos de quien inserta.
+
+Se crea en la base un rol propio —`tarea_de_fondo`— con permiso **sólo** sobre lo que ese trabajo
+toca, según la lista de arriba. Nada más. El backend no
 guarda una credencial de ese rol: **firma un pase corto, para una Prestadora y para un trabajo.**
 
 `interno.current_tenant()` suma una tercera fuente después de las dos que ya tiene: cuando quien
 consulta es `tarea_de_fondo`, la Prestadora sale del pase firmado. Un pase sin Prestadora no
 resuelve nada y la base niega todo: falla cerrado, igual que hoy.
 
-Las 4 entradas que llaman terceros llegan sin saber a qué Prestadora corresponden. Primero se
-resuelve la Prestadora por la firma del mensaje —que ya se verifica—, y recién con ese dato se firma
-el pase. Leer el secreto de firma es lo único que pasa por una función que resuelve la Prestadora
+Las 4 entradas que llaman terceros traen la Prestadora en la dirección. Primero se confirma con la
+firma del mensaje —que ya se verifica—, y recién con ese dato se firma el pase. Leer el secreto de firma es lo único que pasa por una función que resuelve la Prestadora
 adentro.
 
 **Comprobación:** con el pase de una Prestadora se lee lo suyo y se pide algo de la otra; lo segundo

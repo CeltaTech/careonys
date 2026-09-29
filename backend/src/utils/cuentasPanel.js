@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { supabase } from '../db/connection.js';
+import { supabase, enLaPrestadora } from '../db/connection.js';
 import { invitarActivacionCuenta } from './activacionCuenta.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 import { exigirQueElCelularSeaDeUnaSolaPersona } from './celularDeUnaSolaPersona.js';
@@ -11,7 +11,6 @@ import { guardarLugaresDe } from './lugaresDeCadaPersona.js';
 import { nombreDelLugar } from './catalogoDeLugares.js';
 import { domicilioEscrito, partesDelDomicilio } from './domicilioEscrito.js';
 import { cuentaDeLaFicha } from './cuentaDeLaFicha.js';
-import { correoComparable, correoDeAcceso } from '../config/correoDeAcceso.js';
 
 // Comprueba que un tipo de Asistente exista y sea de los que esta Prestadora puede usar:
 // los generales de CeltaTech (`prestadora_id` vacío) o los que creó ella misma. Devuelve el
@@ -86,148 +85,46 @@ export function resolverTipoAsistenteEnCatalogo(texto, catalogo) {
   return encontrados.length === 1 ? encontrados[0].id : null;
 }
 
-// ¿El servicio de acceso está diciendo que ese correo ya está tomado? El texto viene en
-// inglés y sin código propio, así que hay que reconocerlo por lo que dice. Se mira acá, en
-// un solo lugar, para no repartir la frase en inglés por todo el backend.
-function correoYaTomado(errorAuth) {
-  return /already (been )?registered|already exists|email.*taken/i.test(errorAuth?.message || '');
-}
+// Los motivos con que la base rechaza un alta o una baja, y que la pantalla sabe traducir. El
+// resto de los errores de la base no viaja: es texto crudo (CLAUDE.md §6).
+const MOTIVOS_DE_LA_BASE = ['correo_de_esta_prestadora', 'faltan_datos'];
 
-// Busca la cuenta de acceso de una persona EN UNA PRESTADORA, sin recorrer la lista entera.
+// Da de alta una cuenta: su cuenta de ingreso y su fila en `usuarios`, juntas.
 //
-// La Prestadora no es un detalle: la misma persona tiene una cuenta distinta en cada una, y
-// buscar sólo por el correo devolvería la de otra. Con qué correo se le habla al servicio de
-// acceso lo decide `correoDeAcceso`, que es el único lugar donde eso se arma.
+// Lo hace la base con `dar_de_alta_la_cuenta`, sin llave maestra: o pasan las dos o ninguna, y la
+// Prestadora sale de la credencial de este trabajo, nunca de lo que venga en el pedido. Una cuenta
+// de ingreso que quedó sola de un alta anterior la borra la misma base antes de seguir.
 //
-// El filtro del servicio de acceso busca por parecido, no por igualdad, así que la igualdad se
-// comprueba acá igual. Recorrer todas las cuentas no es alternativa: con cientos de Prestadoras
-// son decenas de miles de filas (CLAUDE.md §2).
-export async function buscarCuentaDeAcceso(email, prestadoraId) {
-  const interno = await correoDeAcceso(email, prestadoraId);
-  const url = `${process.env.SUPABASE_URL}/auth/v1/admin/users?filter=${encodeURIComponent(interno)}`;
-  const respuesta = await fetch(url, {
-    headers: {
-      apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-    },
-  });
-  if (!respuesta.ok) return null;
-
-  const cuerpo = await respuesta.json().catch(() => null);
-  const buscado = interno.toLowerCase();
-  return (cuerpo?.users || []).find((u) => String(u.email || '').toLowerCase() === buscado) || null;
-}
-
-// Lo que evita que un alta cortada por la mitad deje trabada la segunda vuelta.
+// Sólo la gente de la Prestadora: coordinación, Asistentes, Familias y su círculo. La cuenta del
+// Administrador y la del equipo técnico son de CeltaTech, y la base se niega a crearlas.
 //
-// Un alta hace dos cosas en orden: primero crea la cuenta de acceso, después la persona
-// (Asistente, Familia, miembro del círculo). Si el segundo paso falla, el primero se
-// deshace — pero ese deshacer puede no llegar a correr nunca: si el servidor se cae en el
-// medio, si se corta la red, si el deshacer mismo falla. Y entonces queda una cuenta de
-// acceso sola, sin nadie detrás.
-//
-// Esa cuenta sola es basura reconocible: existe en el acceso pero no tiene fila en
-// `usuarios`, y sin esa fila ninguna pantalla del producto la reconoce — no se puede entrar
-// a ningún lado con ella. Tampoco puede tener un link de activación vivo: el link se emite
-// después de la fila de `usuarios` y se borra junto con ella. O sea que borrarla no le quita
-// nada a nadie.
-//
-// Entonces: si es basura, se borra y el alta sigue. Si detrás hay una persona de verdad, no
-// se toca nada y se explica qué pasa, con un motivo que la pantalla sabe traducir.
-async function limpiarCuentaSobrante(email, prestadoraId) {
-  // Sin Organización no hay con qué acotar la consulta de abajo, y una consulta sin acotar no
-  // puede decidir un borrado: no se toca nada y el alta falla con el error de siempre.
-  if (!prestadoraId) return;
-
-  const cuenta = await buscarCuentaDeAcceso(email, prestadoraId);
-  if (!cuenta) return; // no se pudo mirar; el alta va a fallar igual, con el error de siempre
-
-  // La Organización se nombra en la consulta, y es la de este alta. Puede: el correo con el que se
-  // le habla al servicio de acceso lleva la Prestadora adentro, así que una cuenta de acceso
-  // encontrada con ese correo sólo puede tener ficha en esta Prestadora. Sin la Organización
-  // escrita, la consulta preguntaría por una cuenta y no por una cuenta de acá.
-  const { data: perfil } = await supabase
-    .from('usuarios')
-    .select('prestadora_id')
-    .eq('prestadora_id', prestadoraId)
-    .eq('id', cuenta.id)
-    .maybeSingle();
-
-  if (!perfil) {
-    await supabase.auth.admin.deleteUser(cuenta.id);
-    // Queda constancia porque significa que un alta anterior se cortó por la mitad. Nunca el
-    // correo: es un dato personal y esto va al registro del servidor (CLAUDE.md §6).
-    console.warn('cuentasPanel: se borró una cuenta de acceso sobrante de un alta anterior', cuenta.id);
-    return;
-  }
-
-  // Hay alguien detrás, y sólo puede ser de esta Prestadora: el correo con el que se le habla al
-  // servicio de acceso lleva la Prestadora adentro, así que la cuenta de la misma persona en otra
-  // Prestadora es otra cuenta y no se cruza con ésta. Antes acá se distinguían dos casos y el
-  // segundo le contaba a un administrador que ese correo existía en otra Prestadora, que es
-  // exactamente lo que el aislamiento no permite (CLAUDE.md §2 y §6). Ese caso ya no existe.
-  throw new ErrorConMotivo(
-    'correo_de_esta_prestadora',
-    `El correo ya tiene una cuenta de acceso (${cuenta.id})`,
-  );
-}
-
-// Mecanismo compartido: crea una cuenta real de Supabase Auth + su fila en `usuarios`.
-// Para Coordinador/Admin/Superadmin (panelUsuarios.js) el Panel SÍ existe hoy y quien la crea
-// está también en el Panel, así que `passwordTemporal` se devuelve al caller para que la
-// comunique manualmente — ese flujo no cambia (fuera del alcance del pendiente #75). Para
-// Familia/Asistente/Círculo (panelCuentas.js), la persona nunca ve `passwordTemporal`: con
-// `enviarActivacion: true` se dispara automáticamente el email de "primera contraseña"
-// (activacionCuenta.js) con un link de token propio, en vez de depender de un canal manual.
+// Para la coordinación, `passwordTemporal` vuelve al Panel para que se la comuniquen. Para
+// Familia, Asistente y círculo la persona nunca la ve: con `enviarActivacion: true` sale el correo
+// para elegir la primera clave (activacionCuenta.js).
 export async function crearCuentaConPerfil({ email, nombre, telefono, rol, prestadoraId, enviarActivacion = false }) {
+  if (!prestadoraId) throw new ErrorConMotivo('faltan_datos', 'crearCuentaConPerfil: falta la Prestadora');
+
   // UN CELULAR ES DE UNA SOLA PERSONA, y se comprueba acá porque acá pasan todas las altas: la del
   // Panel, la del Asistente y la del círculo de la Familia. Escrito en cada ruta serían tres copias
-  // de la misma decisión. Va antes de crear nada: una cuenta de acceso creada y una ficha rechazada
-  // después dejarían basura. La línea fija de una casa no cae nunca acá, y el mensaje no lleva el
+  // de la misma decisión. La línea fija de una casa no cae nunca acá, y el mensaje no lleva el
   // número adentro. La unicidad la impone igual la base, con un índice único.
   await exigirQueElCelularSeaDeUnaSolaPersona({ telefono, prestadoraId });
 
   const passwordTemporal = crypto.randomBytes(24).toString('base64url');
 
-  // Con qué correo se le habla al servicio de acceso por esta persona en esta Prestadora. Nunca
-  // el que la persona escribió: ése es el mismo en todas, y acá cada Prestadora tiene su cuenta.
-  const correoInterno = await correoDeAcceso(email, prestadoraId);
-
-  let { data: authData, error: errorAuth } = await supabase.auth.admin.createUser({
-    email: correoInterno,
-    password: passwordTemporal,
-    email_confirm: true,
-  });
-
-  // Ya estaba tomado, o sea que esa persona ya tiene cuenta EN ESTA PRESTADORA. Antes de
-  // rendirse hay que mirar qué hay detrás: puede ser basura de un alta anterior que se cortó,
-  // y en ese caso el alta tiene que seguir.
-  if (errorAuth && correoYaTomado(errorAuth)) {
-    await limpiarCuentaSobrante(email, prestadoraId);
-    ({ data: authData, error: errorAuth } = await supabase.auth.admin.createUser({
-      email: correoInterno,
-      password: passwordTemporal,
-      email_confirm: true,
+  const { data: userId, error } = await enLaPrestadora(prestadoraId, 'alta de cuenta', () =>
+    supabase.rpc('dar_de_alta_la_cuenta', {
+      p_email: email,
+      p_clave: passwordTemporal,
+      p_rol: rol,
+      p_nombre: nombre,
+      p_telefono: telefono ?? null,
     }));
+  if (error) {
+    if (MOTIVOS_DE_LA_BASE.includes(error.message)) throw new ErrorConMotivo(error.message);
+    throw new Error(error.message);
   }
-
-  if (errorAuth) {
-    throw new Error(errorAuth.message);
-  }
-
-  const userId = authData.user.id;
-
-  const { error: errorPerfil } = await supabase
-    .from('usuarios')
-    // El correo va acá y no del lado del acceso: allá lo que queda es un resumen, y además el
-    // aislamiento entre Prestadoras no se puede imponer de ese lado. Se guarda comparable, que es
-    // como se busca.
-    .insert({ id: userId, rol, nombre, telefono, email: correoComparable(email), prestadora_id: prestadoraId });
-
-  if (errorPerfil) {
-    await supabase.auth.admin.deleteUser(userId);
-    throw new Error(errorPerfil.message);
-  }
+  if (!userId) throw new Error('crearCuentaConPerfil: la base no devolvió la cuenta');
 
   if (enviarActivacion) {
     try {
@@ -242,51 +139,19 @@ export async function crearCuentaConPerfil({ email, nombre, telefono, rol, prest
   return { userId, passwordTemporal };
 }
 
-// Da de baja una cuenta: su fila de `usuarios` y su cuenta de acceso.
+// Da de baja una cuenta: su fila de `usuarios` y su cuenta de ingreso, juntas.
 //
-// La comprobación de Prestadora es la de `middleware/alcancePrestadora.js`, escrita una sola vez
-// y compartida con la ruta que llama a esta función (pendiente #157, cerrado el 2026-09-09).
-// Hasta ese día acá había una segunda copia de la misma regla, más floja por dos motivos: se
-// salteaba entera cuando quien pedía era Superadmin —un llamador que se olvidara de acotar antes
-// borraba cualquier cuenta de cualquier Prestadora—, y comparaba las dos Organizaciones sin
-// exigir que existieran, así que dos vacíos daban permiso.
-//
-// `esSuperadmin` dejó de ser un pase libre: habilita únicamente la excepción que ya existe del
-// otro lado, las cuentas del equipo técnico de CeltaTech, que no pertenecen a ninguna
-// Organización. Una cuenta de otra Prestadora se niega igual, la pida quien la pida.
-export async function borrarCuenta(userId, { prestadoraId, esSuperadmin = false } = {}) {
-  // Sin identificador no hay a quién comprobar, y `.eq('id', undefined)` no filtra nada: se
-  // corta antes de llegar a la base (CLAUDE.md §5, todo control de acceso falla cerrado).
-  if (!userId) throw new Error('No hay permiso para dar de baja esa cuenta');
+// Lo hace la base con `dar_de_baja_la_cuenta`, adentro de la Prestadora que se nombra acá: una
+// cuenta de otra Prestadora, una que no existe y la del Administrador o del equipo técnico se
+// contestan igual, que no hay nada que dar de baja. Sin cuenta o sin Prestadora no se le pregunta
+// nada a la base (CLAUDE.md §5, todo control de acceso falla cerrado).
+export async function borrarCuenta(userId, { prestadoraId } = {}) {
+  if (!userId || !prestadoraId) throw new Error('No hay permiso para dar de baja esa cuenta');
 
-  // Sin Organización activa y sin ser Superadmin no queda nada con qué acotar la lectura, y una
-  // lectura sin acotar es la que hay que evitar. Se corta acá con el mismo mensaje de siempre.
-  if (!prestadoraId && !esSuperadmin) throw new Error('No hay permiso para dar de baja esa cuenta');
-
-  // La lectura se acota igual que la comprobación que viene abajo, con el mismo ayudante que usan
-  // las rutas del Panel: la Organización activa **más** el equipo técnico de CeltaTech, que no
-  // pertenece a ninguna y al que ningún filtro por Prestadora alcanza. Así la consulta nombra su
-  // alcance y no se apoya sólo en la comprobación en memoria.
-  const { data: objetivo, error: errorObjetivo } = await acotarAUsuariosDelPanel(
-    supabase.from('usuarios').select('rol, prestadora_id').eq('id', userId),
-    { prestadoraId, rol: esSuperadmin ? 'superadmin' : null },
-  ).maybeSingle();
-
-  if (errorObjetivo || !laCuentaDelPanelEstaAlAlcance(objetivo, { prestadoraId, esSuperadmin })) {
-    throw new Error('No hay permiso para dar de baja esa cuenta');
-  }
-
-  // La Organización se nombra en el borrado, y es la de la cuenta que se acaba de comprobar, no la
-  // de quien pide: la excepción del equipo técnico de CeltaTech son cuentas sin Organización, y
-  // filtrar por la de quien pide las dejaría fuera del alcance de su propio borrado.
-  const borrado = supabase.from('usuarios').delete().eq('id', userId);
-  const { error: errorPerfil } = await (objetivo.prestadora_id
-    ? borrado.eq('prestadora_id', objetivo.prestadora_id)
-    : borrado.is('prestadora_id', null));
-  if (errorPerfil) throw new Error(errorPerfil.message);
-
-  const { error: errorAuth } = await supabase.auth.admin.deleteUser(userId);
-  if (errorAuth) throw new Error(errorAuth.message);
+  const { data: borrada, error } = await enLaPrestadora(prestadoraId, 'baja de cuenta', () =>
+    supabase.rpc('dar_de_baja_la_cuenta', { p_usuario: userId }));
+  if (error) throw new Error(error.message);
+  if (borrada !== true) throw new Error('No hay permiso para dar de baja esa cuenta');
 }
 
 // Deshace un alta que se cortó por la mitad. **Nunca falla**: pase lo que pase, termina.
@@ -331,7 +196,7 @@ export async function deshacerAlta(userId, { prestadoraId, filas = [] } = {}) {
     if (errorDuena || !duena) {
       // Sin fila de la que colgar no hay nada que limpiar y tampoco forma de comprobar de quién
       // es. Puede quedar una cuenta de acceso sin nadie detrás; el próximo intento con ese mismo
-      // correo la va a reconocer como sobrante y la va a borrar sola (`limpiarCuentaSobrante`).
+      // correo la va a reconocer como sobrante y la va a borrar sola (`dar_de_alta_la_cuenta`).
       // Se anota el id, nunca el correo (CLAUDE.md §6).
       console.error('deshacerAlta: no hay cuenta a limpiar en esta Prestadora', userId);
       return false;
@@ -369,7 +234,7 @@ export async function deshacerAlta(userId, { prestadoraId, filas = [] } = {}) {
       limpioTodo = false;
       // Se anota el id, nunca el correo (CLAUDE.md §6). Si esto aparece en el registro, quedó
       // una cuenta de acceso sin nadie detrás — y el próximo intento con ese mismo correo la
-      // va a reconocer como sobrante y la va a borrar sola (ver `limpiarCuentaSobrante`).
+      // va a reconocer como sobrante y la va a borrar sola (ver `dar_de_alta_la_cuenta`).
       console.error('deshacerAlta: quedó una cuenta de acceso sin borrar', userId, error.message);
     }
   }

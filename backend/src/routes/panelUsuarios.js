@@ -23,22 +23,14 @@ import {
 
 export const panelUsuariosRouter = Router();
 
-// Ver y gestionar otros usuarios del panel es sensible (alta/baja de acceso). Admin gestiona
-// Coordinadores. Superadmin además gestiona cuentas de Admin y de otros Superadmin (acceso
-// técnico del Módulo 8) — ver CLAUDE.md glosario y docs/CONTEXT.md.
-//
-// Ojo: acá no se exige prestadoraId, y es a propósito. Un Superadmin sin Organización activa
-// igual tiene algo que gestionar: las cuentas de su propio equipo técnico, que no pertenecen a
-// ninguna Prestadora. De eso se ocupa acotarAUsuariosDelPanel(). Lo que ya NO pasa (pendiente
-// #98, cerrado el 2026-07-28) es que Superadmin vea las cuentas de Prestadoras en las que no
-// entró: para eso hay que abrir un permiso de acceso, y entonces queda auditado.
+// Ver y gestionar otros usuarios del panel es sensible (alta/baja de acceso). Desde acá se
+// gestiona la coordinación de la Prestadora y nada más: la cuenta del Administrador y la del
+// equipo técnico las hace CeltaTech, no el producto (CLAUDE.md §5). La lista sigue mostrando todas
+// las cuentas del Panel, pero sólo las de coordinación se crean, se corrigen y se dan de baja.
 const soloAdministracion = exigirAdministracion('Solo Admin o Superadmin puede gestionar usuarios del panel');
 
-// Roles que el solicitante tiene permitido crear/editar/borrar.
-function rolesGestionables(rolSolicitante) {
-  if (rolSolicitante === 'superadmin') return ROLES_PANEL;
-  return ['coordinador'];
-}
+// Los roles que se crean, se corrigen y se dan de baja desde acá.
+const ROLES_GESTIONABLES = ['coordinador'];
 
 panelUsuariosRouter.get('/', requiereRolPanel, soloAdministracion, async (req, res) => {
   let query = supabase
@@ -79,37 +71,17 @@ panelUsuariosRouter.get('/', requiereRolPanel, soloAdministracion, async (req, r
 });
 
 panelUsuariosRouter.post('/', requiereRolPanel, soloAdministracion, async (req, res) => {
-  const { email, nombre, telefono, lugares, rol } = req.body;
+  const { email, nombre, telefono, lugares } = req.body;
   if (!email || !nombre) {
     return res.status(400).json({ error: 'Faltan email o nombre' });
   }
 
-  const rolPermitidos = rolesGestionables(req.usuarioPanel.rol);
-  const rolNuevo = req.usuarioPanel.rol === 'superadmin' ? (rol || 'coordinador') : 'coordinador';
-  if (!rolPermitidos.includes(rolNuevo)) {
-    return res.status(403).json({ error: 'No hay permiso para crear cuentas con ese rol' });
-  }
+  const rolNuevo = 'coordinador';
 
   // La cuenta nueva nace SIEMPRE en la Organización activa de quien la crea. Nadie elige el
-  // destino a mano, ni siquiera Superadmin (pendiente #98, cerrado el 2026-07-28): antes podía
-  // mandar un `prestadora_id` en el cuerpo del pedido y dar de alta una cuenta con acceso a
-  // cualquier Prestadora sin haber entrado a ninguna, y sin que quedara auditado.
-  // Para dar de alta al primer Admin de una Prestadora, se abre un permiso de acceso
-  // en esa Prestadora y se crea la cuenta desde adentro — sale igual de fácil y queda registrado
-  // en auditoria_de_accesos. Una cuenta superadmin nueva no lleva Prestadora ninguna
-  // (prestadora_id nulo), que es lo que exige la restricción
-  // usuarios_prestadora_id_solo_superadmin_null en la base.
-  //
-  // La cuenta superadmin nueva es el único caso aparte: se ancla a la Organización propia de
-  // quien la crea (la Sandbox), nunca a la Prestadora del permiso de acceso abierto. Si se
-  // usara `prestadoraId` acá, un Superadmin dentro de un permiso de acceso le estaría dejando a
-  // otro Superadmin una Prestadora real como Organización propia, que es justo lo que la
-  // restricción de acceso de CLAUDE.md §5 viene a impedir.
-  const prestadoraDestino = rolNuevo === 'superadmin'
-    ? req.usuarioPanel.organizacionPropiaId
-    : req.usuarioPanel.prestadoraId;
-
-  if (!prestadoraDestino && rolNuevo !== 'superadmin') {
+  // destino a mano: un destino que viniera en el pedido lo falsifica quien llama.
+  const prestadoraDestino = req.usuarioPanel.prestadoraId;
+  if (!prestadoraDestino) {
     return res.status(400).json({ error: 'Hace falta entrar a una prestadora antes de dar de alta la cuenta' });
   }
 
@@ -129,7 +101,7 @@ panelUsuariosRouter.post('/', requiereRolPanel, soloAdministracion, async (req, 
       try {
         await guardarLugaresDe('usuario_lugares', 'usuario_id', userId, prestadoraDestino, lugares);
       } catch (error) {
-        await borrarCuenta(userId, alcanceDelPanel(req.usuarioPanel));
+        await borrarCuenta(userId, { prestadoraId: prestadoraDestino });
         throw error;
       }
     }
@@ -168,7 +140,7 @@ panelUsuariosRouter.patch('/:id', requiereRolPanel, soloAdministracion, async (r
     .from('usuarios')
     .update({ nombre, telefono })
     .eq('id', req.params.id)
-    .in('rol', rolesGestionables(req.usuarioPanel.rol));
+    .in('rol', ROLES_GESTIONABLES);
 
   query = acotarAUsuariosDelPanel(query, req.usuarioPanel);
 
@@ -200,9 +172,6 @@ panelUsuariosRouter.delete('/:id', requiereRolPanel, soloAdministracion, async (
     return res.status(400).json({ error: 'La cuenta propia no se da de baja desde acá' });
   }
 
-  // Sobre qué Organización se está trabajando y si se alcanza además al equipo técnico. Se arma
-  // una vez y viaja tal cual hasta `borrarCuenta`, que vuelve a comprobar lo mismo con la misma
-  // función: la ruta y la función no pueden quedar mirando reglas distintas (pendiente #157).
   const alcance = alcanceDelPanel(req.usuarioPanel);
 
   // La consulta nombra la Organización, con la misma regla que la lista: la Organización activa
@@ -220,11 +189,16 @@ panelUsuariosRouter.delete('/:id', requiereRolPanel, soloAdministracion, async (
   // desde afuera son el mismo caso y se contestan igual, para que la respuesta no permita
   // averiguar qué cuentas tienen las demás Prestadoras.
   if (!laCuentaDelPanelEstaAlAlcance(usuario, alcance)
-    || !rolesGestionables(req.usuarioPanel.rol).includes(usuario.rol)) {
+    || !ROLES_GESTIONABLES.includes(usuario.rol)) {
     return res.status(400).json({ error: 'No hay permiso para dar de baja esa cuenta' });
   }
 
-  await borrarCuenta(req.params.id, alcance);
+  // La baja la hace la base, adentro de la Prestadora de la cuenta que se acaba de comprobar.
+  try {
+    await borrarCuenta(req.params.id, { prestadoraId: usuario.prestadora_id });
+  } catch (error) {
+    return responderError(res, error);
+  }
 
   // Una baja de cuenta es a la vez cambio de membresía y borrado de datos, y se anota con el
   // nombre que más dice de los dos. El renglón queda aunque la cuenta ya no exista: el registro

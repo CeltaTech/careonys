@@ -481,7 +481,7 @@ lo pidió, nunca por un dato escrito en el pedido, y no puede tocar la cuenta de
   hacen las dos cosas o ninguna: nunca queda una cuenta a medio crear.
 - **Poner o cambiar la clave.** Pasa cuando la persona activa su cuenta por primera vez o cuando
   olvidó la clave. Todavía no tiene sesión, así que lo que la autoriza es el código de un solo uso
-  que recibió por correo. Ese código se busca sólo dentro de la Prestadora por la que la persona
+  que recibió. Ese código se busca sólo dentro de la Prestadora por la que la persona
   entró, y queda anulado en el mismo momento en que se cambia la clave.
 - **Dar de baja.** Lo pide el Administrador desde el Panel, con su propia sesión. Se borran juntas
   la cuenta y la anotación de a qué Prestadora pertenece.
@@ -496,11 +496,10 @@ de que se publique una versión nueva: en el Sandbox da de alta a una persona in
 clave, entra con ella y la da de baja. Si algo falla, ese mismo día le llega a CeltaTech un mensaje
 del sistema.
 
-**Hay cuentas que el producto no crea: las de los Administradores y la del Superadmin.** Las da
-CeltaTech, que también se ocupa de cambiarles y de recuperarles la clave. Hoy el Superadmin puede
-crear esas cuentas desde el Panel, y la pantalla de recuperar la clave también les sirve a ellos:
-las dos cosas se sacan. El producto se queda con las cuentas que cada Administrador le da a su
-gente: coordinadores, Asistentes, Clientes y personas autorizadas.
+**El producto no crea las cuentas de los Administradores ni la del Superadmin.** Hoy el Panel
+permite crearlas y recuperarles la clave: las dos cosas se sacan. El producto se queda con las
+cuentas que cada Administrador le da a su gente: coordinadores, Asistentes, Clientes y personas autorizadas
+familiar.
 
 **Queda para después recuperar el código extra que se le pide al personal técnico al entrar**,
 porque esas personas no pertenecen a ninguna Prestadora. Se resuelve cuando usted conteste qué pasa
@@ -523,9 +522,10 @@ firma del mensaje —que ya se verifica—, y recién con ese dato se firma el p
 adentro.
 
 **Comprobación:** con el pase de una Prestadora se lee lo suyo y se pide algo de la otra; lo segundo
-falla. Y con ese pase se pide una tabla que no está en la lista: también falla. Un Administrador
-de una Prestadora intenta dar de alta y dar de baja a una persona de la otra, y un código de
-activación de una Prestadora se usa entrando por la otra: las tres cosas fallan. Y se hace fallar a
+falla. Y con ese pase se pide una tabla que no está en la lista: también falla. Se arma a mano
+un pedido con la sesión de un Administrador de una Prestadora para dar de alta y dar de baja a una
+persona de la otra, y se usa un código de activación de una Prestadora entrando por la otra: la
+base rechaza las tres cosas. Y se hace fallar a
 propósito una vez la prueba diaria, para ver que el mensaje del sistema le llega a CeltaTech.
 
 **8.** **Los archivos.** Los cuatro depósitos sin política reciben política, con la Prestadora en

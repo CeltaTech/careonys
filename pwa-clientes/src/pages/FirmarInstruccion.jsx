@@ -59,7 +59,7 @@ export default function FirmarInstruccion() {
         if (activo) setInstruccion(pendiente ?? null);
       })
       .catch((e) => {
-        if (activo) setError(mensajeDeError(e, t, 'instrucción de las personas autorizadas'));
+        if (activo) setError(mensajeDeError(e, t, 'instrucción sobre las personas autorizadas'));
       });
     return () => {
       activo = false;

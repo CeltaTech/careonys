@@ -421,9 +421,6 @@ export function ClienteDetalle() {
           })}
         </p>
       )}
-      {!instruccionPendiente && !ultimaInstruccion && estadoPersonasAutorizadas === 'listo' && (
-        <p className="panel-explicacion">{t.clientes.personas autorizadas.sin_instruccion}</p>
-      )}
 
       {estadoPersonasAutorizadas === 'cargando' && <p className="estado-cargando">{t.comun.cargando}</p>}
       {estadoPersonasAutorizadas === 'error' && <p className="estado-vacio">{errorPersonasAutorizadas || t.comun.error_generico}</p>}

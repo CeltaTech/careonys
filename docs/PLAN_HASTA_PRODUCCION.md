@@ -19,11 +19,8 @@ cambiarlo.
 
 ## Por dónde se empieza
 
-**La obra arranca por la sección «Los cimientos», y adentro por «La credencial del trabajo sin
-persona».** Es lo que hay que hacer antes que cualquier otra cosa, y mientras dure **no sale
-ninguna pantalla nueva**. Lo que construye «Dónde viven los datos» —que el código no dé por
-sentado que hay una sola base— va en la misma pasada que «La credencial de la persona en el backend»,
-porque los dos reescriben el mismo archivo de conexión.
+**La obra está en la sección «Los cimientos».** Es lo que hay que hacer antes que cualquier otra
+cosa, y mientras dure **no sale ninguna pantalla nueva**.
 
 **El plan está aprobado en su ordenamiento y en sus dos decisiones de fondo**, que ya no se
 vuelven a preguntar: los datos viven en São Paulo con el código previsto para más de una
@@ -32,10 +29,6 @@ región, y el segundo nivel de aislamiento se construye ahora.
 **Los pasos de «Lo que se dijo que decidió usted» no frenan la obra.** Son una conversación con el
 Desarrollador, renglón por renglón, y avanzan cuando él abra un grupo. Ninguno de ellos es
 condición del trabajo de los cimientos.
-
-**Lo único que quedó sin contestar:** si en Chile el segundo nivel va clavado sin interruptor, o si
-el interruptor existe y apagarlo avisa y queda registrado quién lo hizo. La política ya está
-escrita con la primera forma, y la pregunta está planteada en el paso que le corresponde.
 
 ---
 
@@ -159,11 +152,9 @@ condición en 71 renglones. De las 886 consultas del backend, **111 no nombran l
 verificó que la comprobación exista—. Si falta un filtro, la base contesta igual: no tiene con qué
 darse cuenta.
 
-**Los archivos más sensibles son los peor protegidos.** De los 11 depósitos, cuatro no tienen
-ninguna política: `certificados-medicos`, `autorizaciones-monitoreo`, `documentos-cese` y
-`fotos-identidad`. Ahí están los certificados médicos y las fotos de identidad. Los sirve el backend
-con la llave maestra, y el aislamiento son **22 lugares donde se compara a mano el comienzo de la
-ruta del archivo** (`panelMedicacion.js:181`, `panelVitalesAutorizacion.js:79`).
+**Los 11 depósitos de archivos tienen política**, pero el backend los sirve con la llave maestra,
+que no pasa por ella, y el aislamiento real sigue siendo **comparar a mano el comienzo de la ruta
+del archivo** (`panelMedicacion.js:181`, `panelVitalesAutorizacion.js:79`).
 
 **La protección por fila está puesta y hoy no protege de nada.** Las 182 tablas la tienen encendida
 y 170 tienen política, y ninguna depende de nada que aporte el backend: la Prestadora la resuelve
@@ -177,8 +168,8 @@ quedan la entrada con la huella (`routes/llaveDelDispositivo.js:191`), la recupe
 extra del personal técnico (`utils/mfaRecuperacionEmail.js:87-90`) y todo lo que pide una persona
 desde las pantallas.
 
-**Nadie sabe quién leyó qué.** `registro_actividad` anota once acciones y todas son escrituras o
-entradas al Panel: ninguna lectura queda registrada. `auditoria_de_accesos` tiene `admin_id` no
+**Casi nadie sabe quién leyó qué.** Las lecturas de información de salud se anotan encadenadas en
+`consultas_a_hce`, pero hoy sólo desde `appAsistentesMedicacion.js`; el resto se suma con el paso 9. `auditoria_de_accesos` tiene `admin_id` no
 nulo, así que sólo alcanza al personal de CeltaTech, y tiene cero filas. Y no es inmutable: la
 llave maestra puede borrarlo.
 

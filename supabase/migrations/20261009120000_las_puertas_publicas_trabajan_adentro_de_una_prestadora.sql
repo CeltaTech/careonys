@@ -36,6 +36,9 @@ GRANT EXECUTE ON FUNCTION public.prestadora_de_la_direccion(text) TO trabajo_sin
 -- sola operación: o pasan las dos cosas o ninguna, y dos pedidos con el mismo código no pasan los
 -- dos. Sin llave maestra: la cuenta de ingreso vive en esta misma base.
 --
+-- Sólo para la gente de la Prestadora: la clave del Administrador y la del equipo técnico las
+-- maneja CeltaTech, no el producto.
+--
 -- Devuelve la cuenta a la que se le puso la clave, o vacío si el código no sirve.
 CREATE OR REPLACE FUNCTION public.poner_clave_con_codigo(p_uso text, p_codigo text, p_clave text)
  RETURNS uuid
@@ -58,12 +61,14 @@ BEGIN
       FROM usuarios u
      WHERE t.token = p_codigo AND t.usado_en IS NULL AND t.expira_en > now()
        AND u.id = t.usuario_id AND u.prestadora_id = v_prestadora
+       AND u.rol IN ('coordinador', 'asistente', 'familia')
     RETURNING t.usuario_id INTO v_usuario;
   ELSIF p_uso = 'recuperacion' THEN
     UPDATE tokens_recuperacion_clave t SET usado_en = now()
       FROM usuarios u
      WHERE t.token = p_codigo AND t.usado_en IS NULL AND t.expira_en > now()
        AND u.id = t.usuario_id AND u.prestadora_id = v_prestadora
+       AND u.rol IN ('coordinador', 'asistente', 'familia')
     RETURNING t.usuario_id INTO v_usuario;
   ELSE
     RETURN NULL;

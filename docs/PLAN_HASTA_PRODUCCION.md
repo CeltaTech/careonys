@@ -353,9 +353,10 @@ Chile, la restricción queda fija y no se apaga. Lo que falta:
 - **Una persona sacada a mano del equipo sigue atendiendo al paciente** para la base si tiene
   guardias o series suyas en un Servicio vigente: la regla no mira las exclusiones del equipo.
   Cierre: decidir si una exclusión le quita la lectura.
-- **Quién cambia la restricción.** La base deja cambiarla al Administrador de la Prestadora con
-  sesión; lo anotado en `LEGAJO_PARA_EL_FUTURO.md` dice que la cambia CeltaTech. Cierre: el
-  Desarrollador elige, y la política de `configuracion_de_hce` queda igual a lo elegido.
+- **Ninguna pantalla ofrece la restricción.** Donde el país la exige es fija, y sólo CeltaTech la
+  mueve, desde `requerimientos_legales_de_hce_por_pais`; donde no, es decisión de la Prestadora y
+  la cambia su Administrador, cosa que la base ya permite. Cierre: la configuración de la
+  Prestadora la muestra, y sólo la deja cambiar donde el país no la exige.
 - **Quedan nombres viejos en lo aplicado:** `interno.el_registro_de_accesos_no_se_toca`,
   `interno.encadenar_acceso_a_datos_de_salud`, los disparadores `…_interruptor_de_salud…` y el
   mensaje «No tiene permiso para verificar el registro de accesos». Cierre: una migración nueva los

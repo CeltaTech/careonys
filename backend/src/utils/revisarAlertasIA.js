@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { supabase } from '../db/connection.js';
 import { analizarAlertaIA } from './alertasIA.js';
 import { notificarCoordinador } from './whatsapp.js';
@@ -152,9 +153,13 @@ export async function analizarPaciente(pacienteId, prestadoraId) {
 
   if (!resultado || resultado.nivel === 'verde') return;
 
-  const { data: alerta, error: errorAlerta } = await supabase
+  // El número se genera acá y no se le pide a la base de vuelta: el trabajo nocturno puede
+  // escribir alertas pero no leerlas.
+  const alerta = { id: randomUUID() };
+  const { error: errorAlerta } = await supabase
     .from('alertas')
     .insert({
+      id: alerta.id,
       prestadora_id: prestadoraId,
       paciente_id: pacienteId,
       nivel: resultado.nivel,
@@ -162,9 +167,7 @@ export async function analizarPaciente(pacienteId, prestadoraId) {
       detalle_coordinador: resultado.detalle_coordinador,
       campos_preocupantes: resultado.campos_preocupantes,
       reportes_relacionados: reportes.map((r) => r.id),
-    })
-    .select('id')
-    .single();
+    });
   if (errorAlerta) {
     console.error(`Error insertando alerta IA Nivel 2 para paciente ${pacienteId}:`, errorAlerta.message);
     return;

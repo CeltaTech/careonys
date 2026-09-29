@@ -42,6 +42,7 @@ import { panelEmergenciasRouter } from './routes/panelEmergencias.js';
 import { llaveDelDispositivoRouter, routerDeLlavesConSesion } from './routes/llaveDelDispositivo.js';
 import { requiereRolAsistente } from './middleware/requiereRolAsistente.js';
 import { requiereRolCliente } from './middleware/requiereRolCliente.js';
+import { paraCadaPrestadora } from './db/connection.js';
 import { revisarVencimientos } from './utils/vencimientos.js';
 import { revisarAusenciasAutomaticas } from './utils/ausenciaAutomatica.js';
 import { revisarNotificacionesCoordinador } from './utils/revisarNotificacionesCoordinador.js';
@@ -191,135 +192,98 @@ app.use('/api/panel/avisos-en-vivo', panelAvisosEnVivoRouter);
 // `/api/webhooks/pasarelas` no está en esta lista a propósito: se monta más arriba, antes del
 // lector de JSON, por el motivo que explica el comentario de allá.
 
+// Las tareas automatizadas. Cada una corre de a una Prestadora por vez, con la credencial de esa
+// sola Prestadora (db/connection.js): lo que la tarea consulta, la base se lo recorta a esa
+// Prestadora, y lo que falla en una no frena a las demás. Arranca apenas se levanta el backend y
+// después se repite con su cadencia.
+function programar(tarea, cadaMs) {
+  const correr = () => paraCadaPrestadora(tarea.name, () => tarea())
+    .catch((err) => console.error(`${tarea.name}:`, err?.message ?? err));
+  correr();
+  setInterval(correr, cadaMs);
+}
+
 const UN_DIA_MS = 24 * 60 * 60 * 1000;
-revisarVencimientos().catch((err) => console.error('Error en revisión inicial de vencimientos:', err.message));
-setInterval(() => {
-  revisarVencimientos().catch((err) => console.error('Error en revisión de vencimientos:', err.message));
-}, UN_DIA_MS);
+programar(revisarVencimientos, UN_DIA_MS);
 
 // Margen de tolerancia se mide en minutos (no en días como los vencimientos), por eso
 // corre cada 5 minutos en vez de una vez por día.
 const CINCO_MINUTOS_MS = 5 * 60 * 1000;
-revisarAusenciasAutomaticas().catch((err) => console.error('Error en revisión inicial de ausencias automáticas:', err.message));
-setInterval(() => {
-  revisarAusenciasAutomaticas().catch((err) => console.error('Error en revisión de ausencias automáticas:', err.message));
-}, CINCO_MINUTOS_MS);
+programar(revisarAusenciasAutomaticas, CINCO_MINUTOS_MS);
 
 // Insistencia de Coordinador (punto 5, docs/PRD_06_WhatsApp_IA.md) — corre con la misma
 // cadencia que revisarAusenciasAutomaticas porque también se mide en minutos, no en días.
-revisarNotificacionesCoordinador().catch((err) => console.error('Error en revisión inicial de notificaciones al Coordinador:', err.message));
-setInterval(() => {
-  revisarNotificacionesCoordinador().catch((err) => console.error('Error en revisión de notificaciones al Coordinador:', err.message));
-}, CINCO_MINUTOS_MS);
+programar(revisarNotificacionesCoordinador, CINCO_MINUTOS_MS);
 
 // Renovación automática del horizonte de guardias de series abiertas (pendiente #18 punto 2,
 // docs/PLAN_HASTA_PRODUCCION.md) — se mide en días, misma cadencia que revisarVencimientos.
-extenderSeriesGuardiaAbiertas().catch((err) => console.error('Error en extensión inicial de series de guardia:', err.message));
-setInterval(() => {
-  extenderSeriesGuardiaAbiertas().catch((err) => console.error('Error en extensión de series de guardia:', err.message));
-}, UN_DIA_MS);
+programar(extenderSeriesGuardiaAbiertas, UN_DIA_MS);
 
 // Push a Asistentes (nueva guardia asignada, mensajes del coordinador, recordatorios) —
 // docs/PRD_04_05_App_Servicio.md:115. Misma cadencia que revisarAusenciasAutomaticas.
-revisarRecordatoriosPush().catch((err) => console.error('Error en revisión inicial de recordatorios push:', err.message));
-setInterval(() => {
-  revisarRecordatoriosPush().catch((err) => console.error('Error en revisión de recordatorios push:', err.message));
-}, CINCO_MINUTOS_MS);
+programar(revisarRecordatoriosPush, CINCO_MINUTOS_MS);
 
 // IA Nivel 2 (Alertas por patrones) — job nocturno, docs/AI_PROMPTS.md:43. Misma cadencia
 // que revisarVencimientos (se mide en días, no minutos); el disparo inmediato por palabra
 // clave crítica corre aparte, en el momento de confirmar el reporte (appAsistentes.js).
-revisarAlertasIA().catch((err) => console.error('Error en revisión inicial de alertas IA Nivel 2:', err.message));
-setInterval(() => {
-  revisarAlertasIA().catch((err) => console.error('Error en revisión de alertas IA Nivel 2:', err.message));
-}, UN_DIA_MS);
+programar(revisarAlertasIA, UN_DIA_MS);
 
 // Mensaje automático de cese de servicio al Asistente (Fase 6) — el plazo se mide en horas,
 // misma cadencia que revisarAusenciasAutomaticas.
-revisarMensajesAutomaticosCese().catch((err) => console.error('Error en revisión inicial de avisos automáticos de cese:', err.message));
-setInterval(() => {
-  revisarMensajesAutomaticosCese().catch((err) => console.error('Error en revisión de avisos automáticos de cese:', err.message));
-}, CINCO_MINUTOS_MS);
+programar(revisarMensajesAutomaticosCese, CINCO_MINUTOS_MS);
 
 // Mensaje al Coordinador de guardias próximas que siguen sin cubrir (pendiente #106,
 // docs/PLAN_HASTA_PRODUCCION.md). Con cuánta anticipación avisar y cada cuánto repetirlo los define
 // cada Prestadora en configuracion_aviso_guardia_sin_cubrir; acá solo se fija cada cuánto se
 // mira, y se mira seguido porque la anticipación configurada puede ser de pocas horas.
-revisarGuardiasSinCubrir().catch((err) => console.error('Error en revisión inicial de guardias sin cubrir:', err.message));
-setInterval(() => {
-  revisarGuardiasSinCubrir().catch((err) => console.error('Error en revisión de guardias sin cubrir:', err.message));
-}, CINCO_MINUTOS_MS);
+programar(revisarGuardiasSinCubrir, CINCO_MINUTOS_MS);
 
 // Mensaje a la Coordinadora cuando falta un Asistente, y distinto según cómo llegó la falta: con
 // margen para conseguir reemplazo, o con el turno empezando enseguida. El de arriba no lo ve,
 // porque mira los turnos sin nadie asignado y el de una Asistente de licencia la sigue teniendo
 // asignada. Se mira seguido porque la clase se recalcula: la que ayer tenía tres días de margen
 // hoy puede ser urgente.
-revisarAusenciasAvisadas().catch((err) => console.error('Error en revisión inicial de ausencias avisadas:', err.message));
-setInterval(() => {
-  revisarAusenciasAvisadas().catch((err) => console.error('Error en revisión de ausencias avisadas:', err.message));
-}, CINCO_MINUTOS_MS);
+programar(revisarAusenciasAvisadas, CINCO_MINUTOS_MS);
 
 // El turno que llega sin nadie abre un incidente que queda abierto hasta que una persona diga cómo
 // terminó. El mensaje de arriba mira los mismos turnos, pero avisa y se termina; éste deja constancia
 // y le insiste a quien coordina a ese Paciente. Se mira seguido porque la insistencia se cuenta en
 // horas y el turno que se acerca cambia de estado solo.
-revisarIncidentesTurnoSinCubrir().catch((err) => console.error('Error en revisión inicial de incidentes de turno sin cubrir:', err.message));
-setInterval(() => {
-  revisarIncidentesTurnoSinCubrir().catch((err) => console.error('Error en revisión de incidentes de turno sin cubrir:', err.message));
-}, CINCO_MINUTOS_MS);
+programar(revisarIncidentesTurnoSinCubrir, CINCO_MINUTOS_MS);
 
 // Alertas de llegada demorada que nadie avisó (pendiente #101, docs/PLAN_HASTA_PRODUCCION.md). Sólo detecta
 // y anota; de avisarle al Coordinador se ocupa revisarNotificacionesCoordinador, que ya insiste
 // sobre esa misma tabla. Corre seguido porque lo que mira son minutos: cuanto antes se anote,
 // más tiempo queda para cubrir la guardia.
-revisarLlegadasDemoradas().catch((err) => console.error('Error en revisión inicial de llegadas demoradas:', err.message));
-setInterval(() => {
-  revisarLlegadasDemoradas().catch((err) => console.error('Error en revisión de llegadas demoradas:', err.message));
-}, CINCO_MINUTOS_MS);
+programar(revisarLlegadasDemoradas, CINCO_MINUTOS_MS);
 
 // La Asistente que se queda adentro porque el relevo no llegó. Sólo anota desde cuándo está de
 // más y hasta cuándo: no avisa nada —de que falta el relevo ya se enteró quien coordina— y no
 // decide nada. Corre seguido porque lo que mira son minutos, y porque su pantalla necesita saber
 // que quedó de más apenas pasa la hora.
-revisarExtensionesDeTurno().catch((err) => console.error('Error en revisión inicial de extensiones de turno:', err.message));
-setInterval(() => {
-  revisarExtensionesDeTurno().catch((err) => console.error('Error en revisión de extensiones de turno:', err.message));
-}, CINCO_MINUTOS_MS);
+programar(revisarExtensionesDeTurno, CINCO_MINUTOS_MS);
 
 // El cobro de cada período de los accesos del Match, en los rieles que no cobran solos. El
 // período más corto que una forma de cobro puede tener es de un día, así que corre con la misma
 // cadencia diaria que revisarVencimientos. Los rieles que sí cobran solos no entran acá: la
 // función misma los descarta preguntándole a cada adaptador, no con una lista escrita en el trabajo.
-armarCobrosDelPeriodo().catch((err) => console.error('Error en el armado inicial de cobros del Match:', err.message));
-setInterval(() => {
-  armarCobrosDelPeriodo().catch((err) => console.error('Error armando los cobros del Match:', err.message));
-}, UN_DIA_MS);
+programar(armarCobrosDelPeriodo, UN_DIA_MS);
 
 // El corte de los accesos del Match a los que se les terminó el período pagado. Quien se da
 // de baja conserva lo pagado hasta el final, y este trabajo es el que apaga el acceso cuando llega
 // esa fecha. Se mide en días, así que corre con la misma cadencia diaria que revisarVencimientos.
-cortarLosAccesosDadosDeBaja().catch((err) => console.error('Error en el corte inicial de accesos del Match:', err.message));
-setInterval(() => {
-  cortarLosAccesosDadosDeBaja().catch((err) => console.error('Error cortando accesos del Match:', err.message));
-}, UN_DIA_MS);
+programar(cortarLosAccesosDadosDeBaja, UN_DIA_MS);
 
 // El preaviso del primer cobro, cuando está por terminar el período gratuito. Es el resguardo
 // del §3.2 del PRD del Match: nunca un cobro silencioso. Se cuenta en días, así que corre con
 // la misma cadencia diaria que los dos de arriba.
-avisarElPrimerCobroQueViene().catch((err) => console.error('Error en el aviso previo inicial del Match:', err.message));
-setInterval(() => {
-  avisarElPrimerCobroQueViene().catch((err) => console.error('Error avisando del primer cobro del Match:', err.message));
-}, UN_DIA_MS);
+programar(avisarElPrimerCobroQueViene, UN_DIA_MS);
 
 // La suspensión de los accesos a los que se les terminó el período de gracia sin que el cobro
 // entrara. Es la otra mitad del resguardo del §3.2: un cobro que falla no suspende en el acto, abre
 // una gracia, y este trabajo es el que la cierra cuando llega la fecha. Se cuenta en días, así que
 // corre con la misma cadencia diaria que los tres de arriba.
-suspenderLosQueAgotaronLaGracia().catch((err) => console.error('Error en la suspensión inicial de accesos del Match:', err.message));
-setInterval(() => {
-  suspenderLosQueAgotaronLaGracia().catch((err) => console.error('Error suspendiendo accesos del Match:', err.message));
-}, UN_DIA_MS);
+programar(suspenderLosQueAgotaronLaGracia, UN_DIA_MS);
 
 // Middleware de error único (pendiente #91) — punto único de verdad para toda excepción no
 // atrapada en cualquiera de las 129 rutas (Regla 12): nunca se expone el stack ni detalle

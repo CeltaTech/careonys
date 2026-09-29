@@ -490,12 +490,6 @@ Nadie que no haya entrado al sistema puede usar estos procedimientos. Dar de alt
 sólo los pide alguien con sesión abierta; poner la clave, sólo las pantallas de activación y de
 recuperación.
 
-**Todos los días se prueba que esto siga andando**, porque Supabase puede cambiar cómo guarda las
-cuentas y, si eso los rompe, nadie puede entrar. Una tarea corre sola una vez por día, sin depender
-de que se publique una versión nueva: en el Sandbox da de alta a una persona inventada, le pone
-clave, entra con ella y la da de baja. Si algo falla, ese mismo día le llega a CeltaTech un mensaje
-del sistema.
-
 **El producto no crea las cuentas de los Administradores ni la del Superadmin.** Hoy el Panel
 permite crearlas y recuperarles la clave: las dos cosas se sacan. El producto se queda con las
 cuentas que cada Administrador le da a su gente: coordinadores, Asistentes, Clientes y personas autorizadas
@@ -525,8 +519,7 @@ adentro.
 falla. Y con ese pase se pide una tabla que no está en la lista: también falla. Se arma a mano
 un pedido con la sesión de un Administrador de una Prestadora para dar de alta y dar de baja a una
 persona de la otra, y se usa un código de activación de una Prestadora entrando por la otra: la
-base rechaza las tres cosas. Y se hace fallar a
-propósito una vez la prueba diaria, para ver que el mensaje del sistema le llega a CeltaTech.
+base rechaza las tres cosas.
 
 **8.** **Los archivos.** Los cuatro depósitos sin política reciben política, con la Prestadora en
 el comienzo de la ruta exigida por la base. Los 22 lugares donde el código compara texto de ruta se

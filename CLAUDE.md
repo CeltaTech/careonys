@@ -316,7 +316,8 @@ comprueba contra ese rol y no contra su dueño. Si la función que llama está c
 no es abrirle la función a `authenticated` en `public` —eso la convierte en dirección web— sino
 mudarla a `interno` y darle el permiso ahí. **No se convierte el disparador en `SECURITY
 DEFINER`**: sumaría código corriendo con privilegio de dueño y le sacaría la protección por fila a
-las consultas que hace por dentro.
+las consultas que hace por dentro. El Desarrollador la adoptó como propia, textual: *«no era mia,
+pero desde ahora en mas lo es»*.
 
 **Ninguna prueba del backend ve esto**, porque el backend entra con la llave de servicio, que puede
 ejecutar todo. Lo prueba `scripts/probar_altas_con_sesion.mjs`, que da de alta con la credencial de una

@@ -61,25 +61,7 @@ decisiones se sostienen entre sí: contestarlas de a una, salteadas, hace que la
 contradiga la de otra que ya se cerró. **Se contesta grupo por grupo**, y adentro de cada uno,
 renglón por renglón.
 
-### 1. Quién decide qué filas ve una consulta
-
-Esto ya no se contesta acá: está resuelto y es la sección «Los cimientos» de esta misma lista. La
-llave que alcanza todas las Prestadoras sale del producto y el aislamiento lo hace cumplir la base.
-Queda un solo renglón de este tema sin decidir:
-
-- `CLAUDE.md:310` — **[ya construido]** que no se convierta en dueño lo que dispara un cambio en la base.
-
-### 2. Cómo entra cada persona, y quién tiene más poder que nadie
-
-**Este grupo traba el primer paso que se construye.** La cuenta por Prestadora y toda la sección de
-la clave, más abajo en esta misma lista, se apoyan en esto. Si acá cambia algo, cambian las dos.
-
-- `docs/PLAN_HASTA_PRODUCCION.md`, «La entrada y la recuperación de la clave» — el bloque entero titulado «Lo decidido, y no se vuelve a discutir»: las tres vías, cuándo se pide el código, qué es un equipo nuevo, la huella y la cara afuera, y la aplicación de códigos sólo para el rol técnico.
-- `docs/PRD_04_05_App_Servicio.md:34` y `:204` — **[ya construido]** que el Asistente y el Cliente entren con clave escrita y no con un enlace al correo.
-- `docs/PRD_04_05_App_Servicio.md:231` — **[ya construido]** que al Asistente se lo confirme escaneando adentro de la aplicación, y que se elimine la ficha pública con código de barras.
-- `docs/claude_history.md:375` — **[ya construido]** la creación del rol técnico, por encima de la administración de la Prestadora.
-
-### 3. Cómo le cobra una Prestadora a sus Clientes, en todas sus modalidades
+### 2. Cómo le cobra una Prestadora a sus Clientes, en todas sus modalidades
 
 **Es el grupo más grande, el que más código tiene detrás, y el que menos se puede contestar
 salteado.** Si la cobranza sí fuera función de Careonys, cambian el padrón, los tres papeles de una
@@ -124,7 +106,7 @@ sólo lectura, así que el renglón se saca cuando se lo toque.
 - `CLAUDE.md:279` — **[ya construido]** que el número de Legajo no se muestre.
 - `CLAUDE.md:265` — que la palabra rol nunca signifique permisos.
 
-### 4. Los mensajes: qué detecta el sistema solo y a quién le avisa
+### 3. Los mensajes: qué detecta el sistema solo y a quién le avisa
 
 Los cuatro son el mismo mecanismo mirado desde documentos distintos. Qué detecta, si se puede
 apagar, y por dónde sale el mensaje.
@@ -139,7 +121,7 @@ Prestadora:
 
 - `docs/PRD_06_WhatsApp_IA.md:105` — que las credenciales de Meta queden donde ni el rol técnico las lea.
 
-### 5. La marca, el sitio y dónde viven los archivos
+### 4. La marca, el sitio y dónde viven los archivos
 
 Los tres se sostienen entre sí: la marca compartida obliga a que el logo de cada Prestadora se vea
 en las pantallas, y de ahí sale el depósito público, que es la única excepción a «los archivos se
@@ -149,7 +131,7 @@ guardan privados».
 - `docs/claude_history.md:123` — **[ya construido]** que el depósito de logos sea público para leer. **Se contesta junto con el paso de más abajo que pregunta si la regla admite esa excepción o si el depósito se cierra:** ahí se decide qué pasa, acá sólo si la decisión fue suya.
 - `docs/PRD_01_Sitio_Web.md:195` — que la página de cada Prestadora la arme CeltaTech y no sea función de Careonys. **Se contesta antes que el paso que autoriza construir el sitio**, más abajo: si esto no es suyo, ese documento cambia antes de que se construya nada.
 
-### 6. Documentos enteros atribuidos de una sola vez
+### 5. Documentos enteros atribuidos de una sola vez
 
 No es una decisión sino un documento completo puesto a su nombre. Si no es suyo, lo que hay que
 revisar es el documento entero, no un renglón.
@@ -159,7 +141,7 @@ revisar es el documento entero, no un renglón.
 - `docs/PRD_08_Dashboard_Modalidades.md:213` — ocho puntos de diseño del tablero, cerrados de una sola vez y con fecha.
 - `docs/PLAN_CONTINUIDAD_PROVEEDORES.md:229` — qué se hace si cae un proveedor.
 
-### 7. Cómo se elige construir, que no se ve en ninguna pantalla
+### 6. Cómo se elige construir, que no se ve en ninguna pantalla
 
 Las tres deciden con qué criterio se elige, no qué se construye. Por eso van juntas: o valen las
 tres o no vale ninguna.
@@ -169,7 +151,7 @@ tres o no vale ninguna.
 - `docs/claude_history.md:353` — que la empresa tenga que poder operar con poca gente.
 - `docs/claude_history.md:411` — que el nivel visual del producto tenga que superar al de la competencia.
 
-### 8. Sueltas, que no se agrupan con ninguna otra
+### 7. Sueltas, que no se agrupan con ninguna otra
 
 Éstas sí se contestan de a una, en cualquier orden.
 
@@ -177,17 +159,6 @@ tres o no vale ninguna.
 - `docs/claude_history.md:225` y `:226` — **[ya construido]** que se descarte la pantalla de obra social con reglas escritas en el código, y que el informe de obra social sea sólo del Panel.
 - `docs/claude_history.md:417` — **[ya construido]** que el tipo de cambio quede afuera de la regla de la moneda.
 - `CLAUDE.md:137` y `docs/claude_history.md:423` — **[ya construido]** que el nombre interno viejo no se toque por ahora. **Queda sin efecto si el paso de más abajo lo saca**, que es lo que hoy dice el plan: si se saca, esta atribución se borra sola.
-
-### 9. Los nombres, todos juntos y de una sola vez
-
-Acá lo más probable es que la decisión sí sea suya y lo que falte sea la cita. **Se contestan los
-cinco de un saque**, con un sí o un no: no hay nada que decidir de a uno.
-
-- `docs/claude_history.md:162` — **[ya construido]** que el producto se llame Careonys.
-- `docs/claude_history.md:171` — **[ya construido]** que la empresa se llame CeltaTech.
-- `docs/claude_history.md:208` — **[ya construido]** que la sección se llame Documentación.
-- `docs/claude_history.md:267` — **[ya construido]** que se diga Estado actual.
-- `docs/claude_history.md:85` — **[ya construido]** que la pantalla de ajustes se llame Interruptores.
 
 **3.** La segunda etapa: los otros dos grupos de la misma revisión. Veinticuatro renglones que sí
 traen una cita suya —hay que comprobar que la cita sostenga lo que cuelga de ella— y trece donde
@@ -507,8 +478,9 @@ cuentas que cada Administrador le da a su gente: coordinadores, Asistentes, Clie
 familiar.
 
 **Queda para después recuperar el código extra que se le pide al personal técnico al entrar**,
-porque esas personas no pertenecen a ninguna Prestadora. Se resuelve cuando usted conteste qué pasa
-con ese rol, en «Lo que se dijo que decidió usted».
+porque esas personas no pertenecen a ninguna Prestadora. El rol técnico se queda: es la cuenta con
+la que entra la persona de CeltaTech cuando le abren un permiso de acceso, y el backend sólo busca
+ese permiso para ese rol (`middleware/requiereRolPanel.js:100`).
 
 **Y dos disparadores lo van a sentir:** `interno.prestadora_de_la_restriccion` e
 `interno.prestadora_del_estado_de_cuenta` completan la Prestadora leyendo `clientes` con los

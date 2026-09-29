@@ -391,9 +391,12 @@ esta sesión: [Z].»*
 empresa. Un documento del producto se cita desde la raíz del producto —`docs/CONTEXT.md`—; uno de
 la empresa, con la ruta entera desde `celtatech/` —`celtatech/docs/ARQUITECTURA_NIVELES.md`—.
 
-**El estado real se le pregunta a la base**, con `supabase db query --linked "…"`, que consulta la
-instancia enlazada y no necesita Docker. Las migraciones no son el estado: son instrucciones que ya
-se ejecutaron. Si hace falta saber si quedó alguna sin aplicar, `supabase migration list --linked`.
+**Todo se verifica contra el código escrito y la base en vivo, nunca contra documentos ni
+migraciones** (`..\..\CLAUDE.md` §12). Acá, cómo: la base se consulta con
+`supabase db query --linked "…"`, que pregunta a la instancia enlazada y no necesita Docker. Las
+migraciones no son el estado: son instrucciones que ya se ejecutaron, y este producto juntó
+tantas que se contradicen entre sí. `supabase migration list --linked` sólo sirve para saber si
+quedó alguna sin aplicar, nunca para saber cómo está la base.
 
 **Por qué cambió una regla** va a `docs/claude_history.md`, en una línea: qué decía antes, qué
 dice ahora y el motivo. Se revisa antes de proponer algo que suene a tema ya debatido.

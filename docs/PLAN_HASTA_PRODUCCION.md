@@ -370,8 +370,8 @@ termina cuando ninguna ruta de persona importa `supabase`. Ahí sale también la
 pedido de `requiereRolPanel.js` para el permiso de acceso, que mientras convivan las dos formas
 deja las escrituras de las rutas migradas anotadas dos veces. Quedan con la maestra, además,
 `panelMfaRecuperacion.js` —que valida la credencial con `getUser` de la maestra— y las escrituras
-de `utils/registroDeActividad.js` y de `auditoria_de_accesos`. `panelVerificacionIdentidad.js` no
-puede pasar hasta que el depósito `fotos-identidad` tenga políticas.
+de `utils/registroDeActividad.js` y de `auditoria_de_accesos`. El depósito `fotos-identidad` ya tiene
+su política, así que `panelVerificacionIdentidad.js` pasa como las demás.
 
 **El registro de consultas a HCE entra ruta por ruta en la misma pasada.** Hoy lo anota sólo
 `appAsistentesMedicacion.js`, con `anotarConsultaAHce` de `utils/registroDeConsultas.js`; toda ruta

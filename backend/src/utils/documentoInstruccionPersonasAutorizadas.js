@@ -35,20 +35,20 @@ export function textoDeLaInstruccion({ prestadora, titular, personas, cargadaPor
   const cuando = fecha ?? new Date();
   const renglones = [];
 
-  renglones.push('INSTRUCCIÓN SOBRE LOS ACCESOS DEL PERSONAS_AUTORIZADAS FAMILIAR');
+  renglones.push('INSTRUCCIÓN SOBRE LOS ACCESOS DE LAS PERSONAS AUTORIZADAS');
   renglones.push('');
   renglones.push(`Prestadora: ${prestadora?.nombre ?? '—'}`);
   renglones.push(`Titular de la cuenta: ${titular?.nombre ?? '—'}`);
   renglones.push(`Fecha: ${fechaLegible(cuando)}`);
   renglones.push('');
-  renglones.push('El titular de la cuenta instruye a la Prestadora para que las personas anotadas');
-  renglones.push('en su personas autorizadas tengan, en la aplicación, exactamente los accesos que se');
-  renglones.push('detallan a continuación, y ninguno más.');
+  renglones.push('El titular de la cuenta instruye a la Prestadora para que las personas autorizadas');
+  renglones.push('tengan, en la aplicación, exactamente los accesos que se detallan a continuación,');
+  renglones.push('y ninguno más.');
   renglones.push('');
 
   if (personas.length === 0) {
     renglones.push(SEPARADOR);
-    renglones.push('No hay ninguna persona anotada en las personas autorizadas.');
+    renglones.push('No hay ninguna persona autorizada.');
     renglones.push(SEPARADOR);
   }
 

@@ -5,7 +5,7 @@ los ojos cada cartel que el sistema pone por su cuenta. Cada ficha arranca dicie
 llega a esa pantalla** —el camino por el menú, los clics— y qué hay que hacer para que ese cartel
 aparezca.
 
-**Son veintiséis.** Están ordenados por el camino del menú, de arriba abajo, para que se puedan ir
+**Son veinticinco.** Están ordenados por el camino del menú, de arriba abajo, para que se puedan ir
 viendo uno atrás del otro sin saltar de un lado al otro del Panel.
 
 **Qué se cuenta acá como cartel.** Todo texto que el Panel dice por su cuenta, sin que sea un dato
@@ -36,7 +36,7 @@ nunca uno más corto—, CAMBIAR, AJUSTAR, DEJAR y REVISAR.
 ubica, se describe y se aplica exactamente un texto aprobado. Donde hace falta un texto y no hay uno
 aprobado, queda escrito que falta definirlo. Nunca se inventa.
 
-**El relevamiento son veintiséis, y el punto 15 avisa que no alcanza:** «hay que evaluar
+**El relevamiento son veinticinco, y el punto 15 avisa que no alcanza:** «hay que evaluar
 absolutamente todos». Lo que todavía no se relevó está anotado al pie.
 
 ---
@@ -381,75 +381,10 @@ en cinco palabras, y aun así no dice en qué parte de esa pantalla hay que busc
 
 ---
 
-## 7. Cuando las personas autorizadas no tiene instrucción firmada
+## 7. Cuando el Cliente no tiene guardias por delante
 
 **Cómo llegar.** Menú lateral → grupo **Clientes** → **Clientes** → clic en un Cliente → bajar
-hasta la sección **«Personas autorizadas»**, que está debajo de «Pacientes». El texto está al pie de
-esa sección, después de la lista de personas de las personas autorizadas.
-
-**Qué es eso y para qué se usa.** Las personas autorizadas es la gente allegada al Paciente que además
-del cuidado formal participa: un hijo, una vecina, un sobrino. La instrucción firmada es el
-documento donde el Cliente deja dicho qué puede hacer cada uno de ellos y qué no. El texto no es un
-cartel de lista vacía sino un párrafo que avisa que ese documento no está.
-
-**Qué se ve en pantalla, de arriba abajo.**
-- El nombre del Cliente, arriba.
-- Las secciones anteriores: «Contacto» y «Pacientes».
-- Título de sección: «Personas autorizadas»
-- Debajo, la explicación de la sección, de tres renglones, sobre qué es las personas autorizadas y para qué sirve
-  la instrucción firmada.
-- La lista de las personas de las personas autorizadas, con sus botones —entre ellos el que abre la ventana
-  «Accesos»—.
-- Al pie, este párrafo cuando no hay instrucción firmada.
-- Más abajo, las secciones de «Guardias activas», «Historial de reportes» y «Alertas activas».
-
-**El texto, textual.**
-Un solo párrafo: «Todavía no hay ninguna instrucción firmada para este personas autorizadas.»
-
-**Cuándo aparece.** Con tres condiciones a la vez, y una de ellas es la que lo vuelve raro: que la
-lista de las personas autorizadas haya cargado bien, que no exista ninguna instrucción firmada, y **que haya al
-menos una persona en las personas autorizadas**. Con las personas autorizadas vacío este texto no sale.
-
-**Qué desaparece mientras el texto está puesto.** El bloque de la instrucción firmada: la fecha en
-que se firmó, quién la firmó y el enlace para abrir el documento.
-
-**Qué queda alrededor si el texto se saca.** El título de la sección, su explicación de tres
-renglones, la lista de las personas de las personas autorizadas con sus botones, y un blanco al pie: nada que
-indique que la instrucción falta.
-
-**Problemas que se ven acá. Es el más serio de los doce que no estaban en este documento.**
-
-El primero es que es un callejón sin salida sin ninguna indicación. El único camino para armar esa
-instrucción está escondido dentro de la ventana «Accesos» de una de las personas de las personas autorizadas, en un
-botón que dice «Guardar y armar el documento». Quien lea este párrafo no tiene manera de deducir
-eso: el texto no nombra la ventana, no nombra el botón y no dice que haya que entrar en la ficha de
-alguien.
-
-El segundo es que **describe una situación que no debería poder existir y la cuenta como si fuera
-una lista vacía normal**. Hay gente anotada en las personas autorizadas —ésa es una de las tres condiciones— y no
-hay ningún documento que diga qué puede hacer cada uno. Eso no es «todavía no se cargó nada»: es
-que se empezó por el final.
-
-El tercero es que no se distingue de la explicación de la sección, que está tres renglones más
-arriba y también habla de la instrucción firmada. Puestos uno debajo del otro, el segundo se lee
-como continuación del primero y no como un aviso.
-
-El cuarto es que si la lista de las personas autorizadas falla al cargar, este texto no sale —porque una de sus tres
-condiciones es que la lista haya cargado bien—, y la sección queda muda sobre la firma: no dice que
-está ni que falta.
-
-
-**Decisión del Desarrollador: CAMBIAR.** Del punto 15 de
-`docs/CARTELES_DEL_PANEL.docx`, copiada textual y sin interpretar:
-
-> Reemplazar «Personas autorizadas» por «Personas autorizadas» Ningún mensaje
-
----
-
-## 8. Cuando el Cliente no tiene guardias por delante
-
-**Cómo llegar.** Menú lateral → grupo **Clientes** → **Clientes** → clic en un Cliente → bajar
-hasta la sección **«Guardias activas»**, que está después de las personas autorizadas.
+hasta la sección **«Guardias activas»**, que está después de «Personas autorizadas».
 
 **Qué es eso y para qué se usa.** Es la parte de la ficha donde se ven los turnos que vienen para
 los Pacientes de esa Cliente. La lista descarta lo cancelado y lo ya terminado, y muestra hasta
@@ -496,7 +431,7 @@ aparecer acá, y la lista muestra hasta cincuenta y descarta lo cancelado y lo t
 
 ---
 
-## 9. Cuando el Cliente no tiene reportes
+## 8. Cuando el Cliente no tiene reportes
 
 **Cómo llegar.** El mismo camino: **Clientes → Clientes → un Cliente**, y bajar hasta la sección
 **«Historial de reportes»**, que está justo debajo de las guardias activas.
@@ -548,7 +483,7 @@ resuelve lo que quedó sin confirmar.
 
 ---
 
-## 10. Cuando el Cliente no tiene alertas sin resolver
+## 9. Cuando el Cliente no tiene alertas sin resolver
 
 **Cómo llegar.** El mismo camino: **Clientes → Clientes → un Cliente**, y bajar del todo, hasta la
 sección **«Alertas activas»**, que es la última de la ficha.
@@ -575,7 +510,7 @@ Paciente, cuándo y en qué situación quedó cada una.
 **Qué queda alrededor si el cartel se saca.** El título «Alertas activas» y un blanco al pie de la
 ficha.
 
-**Problemas que se ven acá.** Tres. **Es, de los veintiséis, el mejor escrito: el único que nombra
+**Problemas que se ven acá.** Tres. **Es, de los veinticinco, el mejor escrito: el único que nombra
 adónde ir a ver lo que no se muestra acá.**
 
 El primero es que la misma cosa lleva tres nombres en cuatro renglones: el título dice «activas», el
@@ -594,7 +529,7 @@ El tercero es la misma confusión de las dos secciones anteriores con el Cliente
 
 ---
 
-## 11. Cuando no figura nadie coordinando a esa persona
+## 10. Cuando no figura nadie coordinando a esa persona
 
 **Este cartel está cerrado, y lo cerró el Desarrollador.** El cartel era «Nadie por ahora.», en la
 sección **«Quién coordina»** de la ventana del equipo de un Paciente. Su indicación, textual:
@@ -638,7 +573,7 @@ sin sentido todo lo ya decidido sobre los demás.
 
 # Cobertura → Guardias
 
-## 12. Cuando no quedó ninguna guardia abierta de días anteriores
+## 11. Cuando no quedó ninguna guardia abierta de días anteriores
 
 **Cómo llegar.** Menú lateral → grupo **Cobertura** → **Guardias**. El cartel está arriba de todo,
 antes de los filtros y de la grilla de turnos, en la sección **«Guardias sin cerrar»**. Se ve ni
@@ -699,7 +634,7 @@ normalmente va qué hacer o qué va a hacer aparecer algo acá, y acá se usa pa
 
 ---
 
-## 13. Cuando hay que armar un turno y no figura ninguna persona a atender
+## 12. Cuando hay que armar un turno y no figura ninguna persona a atender
 
 **Cómo llegar.** Menú lateral → grupo **Cobertura** → **Guardias** → botón para crear una guardia
 nueva. Se abre una ventana encima de la pantalla. El cartel está en el medio de esa ventana, en el
@@ -764,7 +699,7 @@ a leer que no cargó ninguno todavía, que es exactamente lo contrario de lo que
 
 # Cumplimiento → Pase de guardia
 
-## 14. Cuando nadie está esperando que le suelten un código de llegada
+## 13. Cuando nadie está esperando que le suelten un código de llegada
 
 **Cómo llegar.** Menú lateral → grupo **Cumplimiento** → **Pase de guardia**. El cartel está en la
 mitad de arriba de la pantalla, en la sección **«Esperando un código»**. Se ve ni bien se entra.
@@ -831,7 +766,7 @@ dice que no hay nadie a quien atender. Las dos frases juntas se leen mal.
 
 ---
 
-## 15. Cuando no quedó ninguna llegada o salida pendiente de revisar
+## 14. Cuando no quedó ninguna llegada o salida pendiente de revisar
 
 **Cómo llegar.** Menú lateral → grupo **Cumplimiento** → **Pase de guardia**, y bajar hasta la
 segunda mitad de la pantalla: la sección **«Llegadas y salidas sin comprobar»**. Es la misma
@@ -895,7 +830,7 @@ de llegadas y salidas.
 
 # Cumplimiento → Medicación
 
-## 16. Cuando no hay ninguna indicación de medicación esperando revisión
+## 15. Cuando no hay ninguna indicación de medicación esperando revisión
 
 **Cómo llegar.** Menú lateral → grupo **Cumplimiento** → **Medicación**. El cartel ocupa
 prácticamente toda la pantalla: se ve ni bien se entra, sin apretar nada. Este enlace del menú sólo
@@ -958,7 +893,7 @@ hubiera muchas y ya estén todas resueltas.
 
 # Plantel → Plantel de Asistentes → una persona
 
-## 17. Cuando esa persona no tiene guardias trabajadas
+## 16. Cuando esa persona no tiene guardias trabajadas
 
 **Cómo llegar.** Menú lateral → grupo **Plantel** → **Plantel de Asistentes** → clic en una persona
 → solapa **«Guardias trabajadas»**.
@@ -1008,7 +943,7 @@ exactamente la que no recibe la indicación de adónde ir a asignarle una.
 
 ---
 
-## 18. Cuando ningún tipo de Asistente exige matrícula
+## 17. Cuando ningún tipo de Asistente exige matrícula
 
 **Cómo llegar.** Menú lateral → grupo **Plantel** → **Plantel de Asistentes** → clic en una persona
 → solapa **«Matrículas»**. El texto está en el lugar de la lista de matrículas.
@@ -1061,7 +996,7 @@ El cuarto es que es una explicación puesta debajo de un control, en el lugar de
 
 ---
 
-## 19. Cuando esa persona no recibió ninguna evaluación
+## 18. Cuando esa persona no recibió ninguna evaluación
 
 **Cómo llegar.** Menú lateral → grupo **Plantel** → **Plantel de Asistentes** → clic en una persona
 → solapa **«Evaluaciones recibidas»**. Esta solapa sólo existe con la modalidad de Match.
@@ -1114,7 +1049,7 @@ del Panel no llevan punto.
 
 Los dos carteles que siguen son del mismo mapa, que se ve en dos lugares distintos del Panel.
 
-## 20. Mapa del plantel — cuando no hay nadie en el plantel
+## 19. Mapa del plantel — cuando no hay nadie en el plantel
 
 **Cómo llegar.** Por cualquiera de estos dos caminos:
 - Menú lateral → grupo **Plantel** → **Postulaciones**, y bajar hasta la sección **«Mapa del plantel
@@ -1174,7 +1109,7 @@ domicilio ubicado aparecen acá.», nunca se llega a mostrar en esta situación.
 
 ---
 
-## 21. Mapa del plantel — cuando hay plantel pero ninguna ubicación cargada
+## 20. Mapa del plantel — cuando hay plantel pero ninguna ubicación cargada
 
 **Cómo llegar.** El mismo camino que el cartel anterior: **Plantel → Postulaciones**, o **Clientes →
 Solicitudes de Servicio → abrir una Solicitud**, y bajar hasta **«Mapa del plantel por zona»**. La
@@ -1231,7 +1166,7 @@ zona elegida.
 
 # Ajustes → Prestadoras
 
-## 22. Correo enviado — cuando no salió ningún correo
+## 21. Correo enviado — cuando no salió ningún correo
 
 **Cómo llegar.** Menú lateral → grupo **Ajustes** → **Prestadoras** → sección **«Correo enviado»**,
 que está arriba del listado de Prestadoras. **Este enlace del menú sólo lo ve el soporte técnico.**
@@ -1286,7 +1221,7 @@ cuáles son.
 
 # Ajustes → Auditoría
 
-## 23. Cuando no hay sesión de soporte técnico abierta
+## 22. Cuando no hay sesión de soporte técnico abierta
 
 **Cómo llegar.** Menú lateral → grupo **Ajustes** → **Auditoría**. El cartel está en la primera
 tabla de la pantalla. **Sólo aparece si quien está mirando es del soporte técnico**: el
@@ -1355,7 +1290,7 @@ asunto aparte.
 
 # Ajustes → Configuración → Listas de opciones
 
-## 24. El aviso de que una lista no admite opciones propias
+## 23. El aviso de que una lista no admite opciones propias
 
 **Cómo llegar.** Menú lateral → grupo **Ajustes** → **Configuración** → solapa **«Listas de
 opciones»** → elegir en el desplegable una lista que no admita agregados. El aviso está al pie del
@@ -1418,7 +1353,7 @@ eso ni a quién pedírselo: queda como una puerta cerrada sin llave conocida.
 
 # Ajustes → Configuración → Asistentes
 
-## 25. El renglón que se muestra cuando no hay ninguna vía prohibida
+## 24. El renglón que se muestra cuando no hay ninguna vía prohibida
 
 **Cómo llegar.** Menú lateral → grupo **Ajustes** → **Configuración** → solapa **«Asistentes»** →
 elegir un tipo de Asistente → bajar hasta el final del bloque de tareas, a la sección **«Además, no
@@ -1484,7 +1419,7 @@ no hay ninguna prohibición.
 
 # Ajustes → Configuración → La Prestadora
 
-## 26. El aviso de que falta la clave de un proveedor conectado
+## 25. El aviso de que falta la clave de un proveedor conectado
 
 **Cómo llegar.** Menú lateral → grupo **Ajustes** → **Configuración** → solapa **«La Prestadora»** →
 bajar hasta la sección **«Pasarela de pago»**. El aviso está adentro de la tabla, en la columna
@@ -1560,7 +1495,7 @@ hay que analizar en detalle primero los procedimientos y la lógica de los mismo
 no cuando eventualmente surja la necesidad»*. No se toca y no se opina sobre él acá.
 
 **Lo que el punto 15 manda evaluar y todavía no se relevó.** Su título dice «Aplicación algunos de
-los casos, hay que evaluar absolutamente todos», así que los veintiséis de acá no cierran la
+los casos, hay que evaluar absolutamente todos», así que los veinticinco de acá no cierran la
 revisión. Falta relevar, con la misma ficha de ocho apartados:
 
 1. Los textos al pie de los casilleros, cuando un dato está mal cargado.

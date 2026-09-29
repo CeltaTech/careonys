@@ -7,6 +7,7 @@ import {
   cancelarEntrevista,
   cerrarEntrevista,
   entrevistasDeLaPostulacion,
+  enlaceDeLaEntrevista,
   reprogramarEntrevista,
 } from '../utils/entrevistaDePostulacion.js';
 
@@ -39,10 +40,18 @@ panelEntrevistasRouter.get(
   exigirOrganizacionActiva,
   async (req, res) => {
     try {
-      const entrevistas = await entrevistasDeLaPostulacion({
-        prestadoraId: req.usuarioPanel.prestadoraId,
+      const prestadoraId = req.usuarioPanel.prestadoraId;
+      const filas = await entrevistasDeLaPostulacion({
+        prestadoraId,
         postulacionId: req.params.postulacionId,
       });
+      // El enlace que copia el Panel es el mismo que le llega al postulante por correo.
+      const entrevistas = await Promise.all(
+        filas.map(async (fila) => ({
+          ...fila,
+          enlace: await enlaceDeLaEntrevista({ prestadoraId, llave: fila.llave_publica }),
+        })),
+      );
       res.json({ entrevistas });
     } catch (error) {
       responderError(res, error);

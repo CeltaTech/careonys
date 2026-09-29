@@ -48,7 +48,7 @@ recuperarClaveRouter.post('/pedir/:prestadora', resolverPrestadoraPublica, async
 //
 // A NADIE SE LE SACA NADA: la cuenta sin teléfono verificado contesta `requiereCodigo: false` y
 // sigue recuperando por correo como siempre.
-recuperarClaveRouter.post('/segundo-factor', async (req, res) => {
+recuperarClaveRouter.post('/:prestadora/segundo-factor', resolverPrestadoraPublica, async (req, res) => {
   const { token } = req.body ?? {};
 
   try {
@@ -63,7 +63,10 @@ recuperarClaveRouter.post('/segundo-factor', async (req, res) => {
 
 // Canjear el enlace por la clave nueva. Los tres motivos que pueden salir son los mismos de la
 // activación, y la pantalla los traduce igual.
-recuperarClaveRouter.post('/canjear', async (req, res) => {
+//
+// Las dos puertas del enlace llevan la Prestadora en la dirección, que el enlace del correo trae:
+// el enlace se busca sólo adentro de ella.
+recuperarClaveRouter.post('/:prestadora/canjear', resolverPrestadoraPublica, async (req, res) => {
   const { token, password, codigo } = req.body;
 
   try {

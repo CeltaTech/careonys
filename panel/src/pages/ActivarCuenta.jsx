@@ -18,7 +18,7 @@ const MOTIVOS_SIN_REINTENTO = ['token_invalido', 'token_ya_usado', 'token_vencid
 //
 // Va afuera del Panel, al lado de la entrada y del segundo factor, porque quien llega acá
 // todavía no tiene con qué entrar: trae la llave que le llegó por correo, y esa llave es toda
-// su credencial. El backend la revisa en `/api/activar-cuenta`, que es la misma puerta que usan
+// su credencial. El backend la revisa en `/api/activar-cuenta/:prestadora`, que es la misma puerta que usan
 // las dos aplicaciones de teléfono: la llave no distingue rol, así que no hay una segunda.
 //
 // Existe porque el alta de una Prestadora la crea desde CeltaTech (`panelPrestadoras.js`), y
@@ -29,11 +29,13 @@ const MOTIVOS_SIN_REINTENTO = ['token_invalido', 'token_ya_usado', 'token_vencid
 // también: sin número no sale ningún código, y con código a medias la cuenta ya quedó activa y la
 // pantalla de ingreso sigue a la vista. **Verificar es una oferta, nunca un requisito para
 // entrar.** El mecanismo es el que ya existe —el mismo código, el mismo tope, el mismo
-// vencimiento—, llamado desde `/api/activar-cuenta/telefono/confirmar`.
+// vencimiento—, llamado desde `/api/activar-cuenta/:prestadora/telefono/confirmar`.
 export function ActivarCuenta() {
   const { t } = useLocale();
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
+  // El enlace sirve sólo si trae las dos cosas: la Prestadora dice en cuál se busca el código.
+  const prestadora = searchParams.get('prestadora');
+  const token = prestadora ? searchParams.get('token') : null;
   const [password, setPassword] = useState('');
   const [confirmacion, setConfirmacion] = useState('');
   const [telefono, setTelefono] = useState('');
@@ -75,7 +77,7 @@ export function ActivarCuenta() {
 
     setEnviando(true);
     try {
-      const respuesta = await fetch(`${API_URL}/api/activar-cuenta`, {
+      const respuesta = await fetch(`${API_URL}/api/activar-cuenta/${encodeURIComponent(prestadora)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password, telefono: telefono.trim() }),
@@ -101,7 +103,7 @@ export function ActivarCuenta() {
     setErrorCodigo(null);
     setConfirmando(true);
     try {
-      const respuesta = await fetch(`${API_URL}/api/activar-cuenta/telefono/confirmar`, {
+      const respuesta = await fetch(`${API_URL}/api/activar-cuenta/${encodeURIComponent(prestadora)}/telefono/confirmar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password, codigo }),

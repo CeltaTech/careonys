@@ -8,6 +8,7 @@ import { marcaDeLaPrestadora } from './marcaPrestadora.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDelDestinatario } from '../i18n/idiomas.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
+import { enlaceConCodigo } from './direccionDeLaPrestadora.js';
 
 const DIAS_VALIDEZ_TOKEN = 7;
 
@@ -44,6 +45,14 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, p
   const token = crypto.randomBytes(32).toString('base64url');
   const expiraEn = new Date(Date.now() + DIAS_VALIDEZ_TOKEN * 24 * 60 * 60 * 1000).toISOString();
 
+  // El enlace se arma antes de guardar el código: sin la dirección de la Prestadora no hay enlace
+  // que sirva, y un código guardado que no viaja en ningún correo no le sirve a nadie.
+  const link = await enlaceConCodigo({ appUrl, pantalla: 'activar-cuenta', prestadoraId, codigo: token });
+  if (!link) {
+    console.error('invitarActivacionCuenta: la Prestadora no tiene dirección, no se envió el email de activación');
+    return;
+  }
+
   const { error } = await supabase
     .from('tokens_activacion_cuenta')
     .insert({ usuario_id: usuarioId, token, expira_en: expiraEn });
@@ -56,7 +65,6 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, p
   //
   // Si la marca llegara vacía se usa el nombre del producto: es preferible un correo que dice
   // Careonys a uno que dice «Activación de la cuenta en undefined».
-  const link = `${appUrl}/activar-cuenta?token=${token}`;
   const marca = await marcaDeLaPrestadora(prestadoraId);
   const textos = mensajeDelSistema('activacion_cuenta', idiomaDelDestinatario(idioma, await idiomaDeLaPrestadora(prestadoraId)), {
     nombre,
@@ -99,9 +107,10 @@ export async function reenviarActivacionCuenta(usuarioId, prestadoraId) {
   });
 }
 
-// Consumido por el endpoint público POST /api/activar-cuenta — valida el token (existe, no
-// vencido, no usado), fija la contraseña real elegida por la persona, y lo marca usado.
-// Nunca expone a qué Prestadora pertenece la cuenta ni ningún otro dato del usuario.
+// Consumido por el endpoint público POST /api/activar-cuenta/:prestadora — corre adentro de la
+// Prestadora de la dirección, así que el código sólo se encuentra si es de ella. Valida el token
+// (existe, no vencido, no usado), fija la contraseña elegida por la persona, y lo marca usado.
+// Nunca expone ningún dato del usuario.
 export async function activarCuentaConToken(token, passwordNueva) {
   const { data: fila, error: errorFila } = await supabase
     .from('tokens_activacion_cuenta')
@@ -119,40 +128,23 @@ export async function activarCuentaConToken(token, passwordNueva) {
   if (fila.usado_en) throw new ErrorConMotivo('token_ya_usado');
   if (new Date(fila.expira_en) < new Date()) throw new ErrorConMotivo('token_vencido');
 
-  // EL ENLACE SE TOMA ANTES DE TOCAR LA CLAVE, y se toma condicionado a que siga libre.
-  //
-  // Antes era al revés: se fijaba la clave y recién después se marcaba el enlace como usado,
-  // sin que las dos escrituras fueran juntas. Son dos sistemas distintos —la cuenta y la base—
-  // así que no hay transacción que las abarque, y eso dejaba dos huecos. Si la segunda
-  // escritura fallaba, el enlace quedaba sirviendo con la clave ya cambiada: un enlace de un
-  // solo uso que se podía usar de nuevo. Y dos pedidos con el mismo enlace al mismo tiempo
-  // pasaban los dos, porque los dos leían `usado_en` vacío antes de que ninguno escribiera.
-  //
-  // Tomándolo primero, el `is('usado_en', null)` lo resuelve: el segundo pedido no encuentra
-  // nada que actualizar y se va por donde se va un enlace ya usado. Lo que puede quedar mal
-  // ahora es lo contrario —enlace consumido sin clave nueva—, y eso falla cerrado: nadie entra
-  // con una clave que no se fijó. Igual se devuelve el enlace si la cuenta no acepta la clave,
-  // para que quien se equivocó pueda volver a intentar con ese mismo correo.
-  const { data: tomado, error: errorTomar } = await supabase
-    .from('tokens_activacion_cuenta')
-    .update({ usado_en: new Date().toISOString() })
-    .eq('id', fila.id)
-    .is('usado_en', null)
-    .select('id')
-    .maybeSingle();
-  if (errorTomar) throw new Error(errorTomar.message);
-  if (!tomado) throw new ErrorConMotivo('token_ya_usado');
-
-  const { error: errorPassword } = await supabase.auth.admin.updateUserById(fila.usuario_id, { password: passwordNueva });
-  if (errorPassword) {
-    await supabase.from('tokens_activacion_cuenta').update({ usado_en: null }).eq('id', fila.id);
-    throw new Error(errorPassword.message);
-  }
+  // EL CÓDIGO SE GASTA Y LA CLAVE SE PONE EN UNA SOLA OPERACIÓN DE LA BASE
+  // (`poner_clave_con_codigo`): o pasan las dos o no pasa ninguna. Dos pedidos con el mismo código
+  // al mismo tiempo no pasan los dos, porque el segundo ya no lo encuentra libre y se va por donde
+  // se va un enlace ya usado. Y el código se busca sólo adentro de la Prestadora de la dirección:
+  // el de otra no existe desde acá.
+  const { data: usuarioId, error: errorClave } = await supabase.rpc('poner_clave_con_codigo', {
+    p_uso: 'activacion',
+    p_codigo: token,
+    p_clave: passwordNueva,
+  });
+  if (errorClave) throw new Error(errorClave.message);
+  if (!usuarioId) throw new ErrorConMotivo('token_ya_usado');
 
   // De quién era el enlace. Lo devuelve para lo que sigue en la misma pantalla —ofrecerle
   // verificar el teléfono—, y no sale de acá hacia el navegador: lo que viaja es si salió el
   // código, nunca a quién ni a qué número.
-  return { usuarioId: fila.usuario_id };
+  return { usuarioId };
 }
 
 // De quién es este enlace, **ya usado**.

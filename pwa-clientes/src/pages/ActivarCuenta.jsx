@@ -14,7 +14,9 @@ const MOTIVOS_SIN_REINTENTO = ['token_invalido', 'token_ya_usado', 'token_vencid
 export default function ActivarCuenta() {
   const { t } = useLocale();
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
+  // El enlace sirve sólo si trae las dos cosas: la Prestadora dice en cuál se busca el código.
+  const prestadora = searchParams.get('prestadora');
+  const token = prestadora ? searchParams.get('token') : null;
   const [password, setPassword] = useState('');
   const [confirmacion, setConfirmacion] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -48,7 +50,7 @@ export default function ActivarCuenta() {
 
     setEnviando(true);
     try {
-      const respuesta = await fetch(`${API_URL}/api/activar-cuenta`, {
+      const respuesta = await fetch(`${API_URL}/api/activar-cuenta/${encodeURIComponent(prestadora)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password }),

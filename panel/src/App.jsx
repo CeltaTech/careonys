@@ -124,7 +124,7 @@ function App() {
                   {/* La entrevista del postulante. Va acá afuera, con la entrada y el segundo
                       factor, porque quien la abre no tiene ninguna cuenta con la que entrar: trae
                       la llave que le llegó por correo, y esa llave es toda su credencial. */}
-                  <Route path="/entrevista/:llave" element={<EntrevistaPublica />} />
+                  <Route path="/entrevista/:prestadora/:llave" element={<EntrevistaPublica />} />
                   {/* Donde el administrador de una Prestadora recién dada de alta elige su
                       contraseña. Va acá afuera por lo mismo: la llave le llegó por correo y
                       todavía no tiene ninguna cuenta con la que entrar. */}

@@ -128,7 +128,8 @@ export function EntrevistaDePostulacion({ postulacionId }) {
   }
 
   async function handleCopiar() {
-    await navigator.clipboard.writeText(`${window.location.origin}/entrevista/${viva.llave_publica}`);
+    if (!viva.enlace) return;
+    await navigator.clipboard.writeText(viva.enlace);
     setCopiado(true);
   }
 

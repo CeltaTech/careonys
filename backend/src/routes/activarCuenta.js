@@ -3,6 +3,7 @@ import { activarCuentaConToken, cuentaQueActivoConEsteToken } from '../utils/act
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { claveAceptable } from '../config/reglaDeClave.js';
 import { telefonoAceptable } from '../utils/codigoAlTelefono.js';
+import { resolverPrestadoraPublica } from '../middleware/resolverPrestadoraPublica.js';
 import {
   ofrecerElCodigoAlActivar,
   verificarElTelefonoAlActivar,
@@ -25,7 +26,11 @@ export const activarCuentaRouter = Router();
 // que contestaba antes, que es lo que siguen mandando las dos aplicaciones de teléfono. Con él, el
 // número queda cargado sin verificar y sale el código — y que el código no salga tampoco impide
 // entrar: verificar es una oferta, nunca un requisito (`utils/telefonoAlActivar.js`).
-activarCuentaRouter.post('/', async (req, res) => {
+//
+// LA PRESTADORA VIAJA EN LA DIRECCIÓN, y el código se busca sólo adentro de ella. El enlace del
+// correo la trae (`utils/direccionDeLaPrestadora.js`, `enlaceConCodigo`), y el código de otra
+// Prestadora no existe desde acá.
+activarCuentaRouter.post('/:prestadora', resolverPrestadoraPublica, async (req, res) => {
   const { token, password, telefono } = req.body ?? {};
 
   try {
@@ -55,7 +60,7 @@ activarCuentaRouter.post('/', async (req, res) => {
 // podría colgarle a la cuenta un número suyo, y con un número verificado se recupera la clave.
 //
 // NI EL NÚMERO NI EL CÓDIGO VIAJAN POR LA DIRECCIÓN WEB: todo va en el cuerpo del pedido.
-activarCuentaRouter.post('/telefono/confirmar', async (req, res) => {
+activarCuentaRouter.post('/:prestadora/telefono/confirmar', resolverPrestadoraPublica, async (req, res) => {
   const { token, password, codigo } = req.body ?? {};
 
   try {

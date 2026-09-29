@@ -1,4 +1,4 @@
-import { supabase } from '../db/connection.js';
+import { supabase, sinPrestadora, enLaPrestadora } from '../db/connection.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
 // De qué Prestadora es un pedido que llega sin sesión: los dos formularios del sitio público de
@@ -22,6 +22,8 @@ import { responderError } from '../utils/errorConMotivo.js';
 // Lo que esto **no** hace: un formulario público sigue siendo abierto por definición, y cualquiera
 // puede mandarle datos inventados a la Prestadora que quiera. Lo que se termina acá es que el
 // destino lo elija un encabezado ajeno o una adivinanza del servidor.
+const TRABAJO = 'Puerta pública';
+
 export async function resolverPrestadoraPublica(req, res, next) {
   const identificador = String(req.params.prestadora || '')
     .trim()
@@ -32,18 +34,26 @@ export async function resolverPrestadoraPublica(req, res, next) {
     return res.status(404).json({ error: 'prestadora_no_reconocida' });
   }
 
-  // SIN PRESTADORA A PROPÓSITO
-  // Es la consulta que resuelve cuál es la Prestadora, a partir de la dirección por la que entró
-  // quien todavía no tiene sesión. Pedirle que ya la sepa sería circular.
-  const { data, error } = await supabase
-    .from('configuracion_prestadora')
-    .select('*')
-    .eq('dominio', identificador)
-    .maybeSingle();
+  // Quien golpea todavía no dice de qué Prestadora es: lo dice la dirección. La credencial sin
+  // Prestadora sólo sirve para esa pregunta, y con la respuesta se entra a la Prestadora y a ninguna
+  // otra. Todo lo que corre detrás de la puerta queda adentro de ella.
+  const { data: prestadoraId, error } = await sinPrestadora(TRABAJO)
+    .rpc('prestadora_de_la_direccion', { p_direccion: identificador });
 
   if (error) return responderError(res, error);
-  if (!data) return res.status(404).json({ error: 'prestadora_no_reconocida' });
+  if (!prestadoraId) return res.status(404).json({ error: 'prestadora_no_reconocida' });
 
-  req.prestadoraPublica = data;
-  return next();
+  return enLaPrestadora(prestadoraId, TRABAJO, async () => {
+    const { data, error: errorConfiguracion } = await supabase
+      .from('configuracion_prestadora')
+      .select('*')
+      .eq('prestadora_id', prestadoraId)
+      .maybeSingle();
+
+    if (errorConfiguracion) return responderError(res, errorConfiguracion);
+    if (!data) return res.status(404).json({ error: 'prestadora_no_reconocida' });
+
+    req.prestadoraPublica = data;
+    return next();
+  });
 }

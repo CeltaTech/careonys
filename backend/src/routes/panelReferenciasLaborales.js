@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
-import { supabase } from '../db/connection.js';
+import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
+import { clienteDelPedido } from '../db/connection.js';
 import {
   esResultadoDeReferencia,
   estadoDeLasReferencias,
@@ -20,25 +20,32 @@ import { responderError } from '../utils/errorConMotivo.js';
 // LO QUE ESTA RUTA NO HACE. No impide nada. Que falten referencias verificadas se ve en la
 // pantalla; incorporar igual a esa persona lo decide la Prestadora, que es la que responde por
 // ella (`CLAUDE.md` §7: el producto avisa, no bloquea).
+//
+// CON LA CREDENCIAL DE QUIEN PIDE. Todo lo de esta ruta entra a la base con `clienteDelPedido(req)`,
+// no con la llave maestra: la base sabe quién pide y le contesta sólo lo de su Prestadora. Por eso
+// ninguna consulta lleva el filtro de la Prestadora de la sesión. Los filtros que quedan dicen de
+// qué Asistente y de qué referencia se habla, y la Prestadora que se nombra es la de la fila del
+// Asistente que la base ya dejó ver, no un dato del pedido.
 
 export const panelReferenciasLaboralesRouter = Router();
 
 const COLUMNAS = 'id, nombre, telefono, vinculo, resultado, notas, verificada_por, verificada_en, created_at';
 
-async function asistenteDeLaPrestadora(asistenteId, usuarioPanel) {
-  let query = supabase
+// Si la base no lo deja ver, para quien pregunta no existe: es de otra Prestadora o está fuera de
+// su alcance.
+async function asistenteVisible(db, asistenteId) {
+  const { data } = await db
     .from('asistentes')
     .select('id, prestadora_id')
-    .eq('id', asistenteId);
-  query = acotarAPrestadora(query, usuarioPanel);
-  const { data } = await query.maybeSingle();
+    .eq('id', asistenteId)
+    .maybeSingle();
   return data;
 }
 
 // Cuántas espera esta Prestadora. Sin fila de configuración no se espera ninguna, y entonces no
 // hay nada que avisar: el número nunca sale escrito en el código.
-async function minimoDeLaPrestadora(prestadoraId) {
-  const { data } = await supabase
+async function minimoDeLaPrestadora(db, prestadoraId) {
+  const { data } = await db
     .from('configuracion_referencias_laborales')
     .select('minimo_verificadas')
     .eq('prestadora_id', prestadoraId)
@@ -56,21 +63,21 @@ panelReferenciasLaboralesRouter.get(
   requiereRolPanel,
   exigirOrganizacionActiva,
   async (req, res) => {
-    const asistente = await asistenteDeLaPrestadora(req.params.asistenteId, req.usuarioPanel);
+    const db = clienteDelPedido(req);
+    const asistente = await asistenteVisible(db, req.params.asistenteId);
     if (!asistente) {
       return res.status(404).json({ error: 'asistente_no_encontrado', motivo: 'asistente_no_encontrado' });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('referencias_laborales_asistente')
       .select(COLUMNAS)
-      .eq('prestadora_id', asistente.prestadora_id)
       .eq('asistente_id', asistente.id)
       .order('created_at');
     if (error) return responderError(res, error);
 
     const referencias = data ?? [];
-    const minimo = await minimoDeLaPrestadora(asistente.prestadora_id);
+    const minimo = await minimoDeLaPrestadora(db, asistente.prestadora_id);
     res.json({ referencias, ...estadoDeLasReferencias(referencias, minimo) });
   },
 );
@@ -88,24 +95,26 @@ panelReferenciasLaboralesRouter.post(
       return res.status(400).json({ error: 'faltan_datos', motivo: 'faltan_datos' });
     }
 
-    const asistente = await asistenteDeLaPrestadora(req.params.asistenteId, req.usuarioPanel);
+    const db = clienteDelPedido(req);
+    const asistente = await asistenteVisible(db, req.params.asistenteId);
     if (!asistente) {
       return res.status(404).json({ error: 'asistente_no_encontrado', motivo: 'asistente_no_encontrado' });
     }
 
     // El tope es el mismo del formulario de postulación: por acá no se carga más de lo que por
     // allá se puede escribir. Se cuenta en el servidor porque es acá donde entra el dato.
-    const { count, error: errorCuenta } = await supabase
+    const { count, error: errorCuenta } = await db
       .from('referencias_laborales_asistente')
       .select('id', { count: 'exact', head: true })
-      .eq('prestadora_id', asistente.prestadora_id)
       .eq('asistente_id', asistente.id);
     if (errorCuenta) return responderError(res, errorCuenta);
     if ((count ?? 0) >= TOPE_DE_REFERENCIAS) {
       return res.status(400).json({ error: 'demasiadas_referencias', motivo: 'demasiadas_referencias' });
     }
 
-    const { data, error } = await supabase
+    // La fila nace con la Prestadora del Asistente, que es la columna que exige la tabla. Si no
+    // fuera la de quien pide, la base rechaza el alta.
+    const { data, error } = await db
       .from('referencias_laborales_asistente')
       .insert({
         prestadora_id: asistente.prestadora_id,
@@ -135,7 +144,8 @@ panelReferenciasLaboralesRouter.patch(
       return res.status(400).json({ error: 'resultado_invalido', motivo: 'resultado_invalido' });
     }
 
-    const asistente = await asistenteDeLaPrestadora(req.params.asistenteId, req.usuarioPanel);
+    const db = clienteDelPedido(req);
+    const asistente = await asistenteVisible(db, req.params.asistenteId);
     if (!asistente) {
       return res.status(404).json({ error: 'asistente_no_encontrado', motivo: 'asistente_no_encontrado' });
     }
@@ -151,13 +161,12 @@ panelReferenciasLaboralesRouter.patch(
       updated_at: new Date().toISOString(),
     };
 
-    // Los dos filtros van juntos: el de la Prestadora es el que impide tocar la referencia de un
-    // Asistente ajeno aunque alguien sepa su identificador.
-    const { data, error } = await supabase
+    // La referencia y su Asistente van juntos: una referencia de otro Asistente de la misma
+    // Prestadora no se toca por esta dirección aunque alguien sepa su identificador.
+    const { data, error } = await db
       .from('referencias_laborales_asistente')
       .update(cambios)
       .eq('id', req.params.referenciaId)
-      .eq('prestadora_id', asistente.prestadora_id)
       .eq('asistente_id', asistente.id)
       .select(COLUMNAS)
       .maybeSingle();

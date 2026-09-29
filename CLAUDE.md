@@ -325,7 +325,9 @@ tiene. Se corre con la base local levantada, junto con `scripts/probar_aislamien
 
 **El aislamiento lo hace cumplir la base, y el backend todavía no está ahí.** Hoy el backend entra
 con `SUPABASE_SERVICE_ROLE_KEY`, que alcanza todas las Prestadoras y se saltea la protección por
-fila, así que lo que separa una de otra son los filtros escritos a mano en cada ruta. Eso incumple
+fila, así que lo que separa una de otra son los filtros escritos a mano en cada ruta. Las tareas
+automatizadas ya salieron de ahí: corren de a una Prestadora por vez con la credencial del trabajo
+sin persona, que genera `backend/src/db/connection.js`. Lo demás todavía no, y eso incumple
 `..\..\CLAUDE.md` §5 —«no se puede tener una credencial que alcance a todas las Organizaciones»— y
 se está reemplazando: **cada pedido de una persona pasa a la credencial de esa persona, y lo que no tiene
 persona detrás lleva una credencial acotada a sus tablas y funciones, de a una Prestadora por

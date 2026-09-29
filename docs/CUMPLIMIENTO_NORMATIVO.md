@@ -297,8 +297,9 @@ salud todavía no está escrita ahí. **En obra** — tramo 11.
   prestador, no vinculado a la atención de la persona**», y el art. 9 del Decreto 41/2012 obliga a
   tomar medidas para impedirlo. No alcanza con separar Prestadora de Prestadora: adentro de una
   Prestadora, quien no participa de la atención de esa persona no puede ver su historia. Es un
-  segundo nivel de aislamiento, por vínculo con la atención y no por rol. **En obra** — plan de
-  aislamiento y tramo 2.
+  segundo nivel de aislamiento, por vínculo con la atención y no por rol. **Escrito y sin aplicar**
+  — `supabase/migrations/20261010700000_la_informacion_de_salud_la_ve_quien_atiende.sql`; lo que
+  falta está en el paso 6 de `PLAN_HASTA_PRODUCCION.md`.
 - **Chile: el registro de accesos es de lecturas, y es reglamentario.** El mismo art. 9 del Decreto
   41/2012: «Este sistema debe llevar registro de las fechas y personas que han accedido a las
   fichas.» No es auditoría de escritura. **En obra** — tramo 2.

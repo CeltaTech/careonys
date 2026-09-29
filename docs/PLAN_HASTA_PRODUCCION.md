@@ -472,48 +472,46 @@ sólo funciona con ella se reemplaza.
 **El alta, la clave y la baja de la gente de un Administrador los hace la base.** Son funciones que
 escriben directamente en las tablas de cuentas del proveedor —que viven en la misma base— y que
 sacan la Prestadora del pase de quien las llama, nunca del pedido. Las crea una migración, como
-todo lo demás. Son dos, porque la baja no toca las tablas del proveedor:
+todo lo demás. Son tres:
 
 - **El alta.** La llama el Administrador con su propio pase, con el mismo control de rol que hoy
   hace la ruta. Crea la cuenta y la ficha de `usuarios` juntas, en una sola operación: o quedan
   las dos o no queda ninguna. Con eso desaparece la cuenta sola que deja un alta cortada por la
-  mitad, y con ella `limpiarCuentaSobrante` (`cuentasPanel.js:137-173`). Si la cuenta ya existe y
-  no tiene ficha —la de alguien que se dio de baja—, se reusa: se le deja la clave inservible y se
-  cierran las sesiones que le quedaran, para que nadie entre con lo de antes. Si ya tiene ficha,
-  se rechaza con el motivo de hoy. Se concede sólo a `authenticated`.
+  mitad, y con ella `limpiarCuentaSobrante` (`cuentasPanel.js:137-173`). Si el correo ya tiene
+  cuenta en esa Prestadora, se rechaza con el motivo de hoy. Se concede sólo a `authenticated`.
 - **El cambio de clave, al activar y al recuperar.** No hay sesión: lo habilita el código de un
   solo uso, que la función busca adentro de la Prestadora del pase —la de la puerta por donde se
   entró— y consume en la misma operación en que cambia la clave. Reemplaza a
   `activacionCuenta.js:146` y a `recuperacionDeClave.js:253`. Se concede sólo a `tarea_de_fondo`,
   que es con lo que corren esas dos puertas.
+- **La baja.** La llama el Administrador con su propio pase. Comprueba que la cuenta sea de su
+  Prestadora y borra la ficha y la cuenta juntas, en una sola operación. Reemplaza a
+  `cuentasPanel.js:288`. Se concede sólo a `authenticated`.
 
-Las dos le revocan a `PUBLIC` y a `anon` en la misma migración que las crea, y la migración
+Las tres le revocan a `PUBLIC` y a `anon` en la misma migración que las crea, y la migración
 termina con `NOTIFY pgrst, 'reload schema';`.
 
-**La baja borra la ficha y nada más, porque sin ficha la cuenta no alcanza nada.** Medido contra el
-código y contra la base en vivo:
+**La baja tiene que borrar la cuenta, aunque sin ficha la cuenta ya no alcance nada.** Las puertas
+del backend y `interno.current_tenant()` leen `usuarios` en cada pedido, así que sin ficha no
+entra a ningún dato. Pero la cuenta que queda traba la vuelta de esa persona: el correo con que se
+le habla al proveedor es el mismo cada vez que vuelve a la misma Prestadora, y el proveedor no
+admite dos cuentas con el mismo correo. Reusar la vieja no es opción: su número queda escrito en 15
+columnas de historia que no se borran con la ficha —quién atendió una emergencia, quién verificó una
+matrícula, quién registró un descanso—, y todo eso pasaría a figurar a nombre del alta nueva. Si
+detrás del correo hubiera otra persona, esa historia sería de alguien que no la hizo.
 
-- Las cuatro puertas del backend —`requiereRolPanel.js:66-74`, `requiereRolAsistente.js:24-32`,
-  `requiereRolFamilia.js:22-30` y `panelMfaRecuperacion.js:27-30`— leen `usuarios` en cada
-  pedido y, sin fila, rechazan. Una sesión que siga abierta queda afuera en el pedido siguiente.
-- En la base, todo lo de una Prestadora pasa por `interno.current_tenant()`, que sin fila de
-  `usuarios` no devuelve ninguna. Y borrar la fila arrastra la ficha de Asistente, la de Familia,
-  la del círculo y sus permisos.
-- Queda un solo lugar que no pregunta por la ficha: la política `instrucciones_circulo_titular_lee`
-  del depósito `instrucciones-acceso-circulo`, que deja leer la carpeta con el número de la cuenta
-  sin mirar la Prestadora. Se le exige la Prestadora al comienzo de la ruta en el paso de los
-  archivos, y con eso la cuenta sin ficha no lee nada.
-- Lo que sí puede hacer es entrar al proveedor y leer los catálogos comunes que se leen con
-  cualquier sesión. Ninguno es de una Prestadora. La cuenta que queda no guarda nombre ni correo:
-  el correo es el resumen de `correoDeAcceso.js`, y la clave, su resumen cifrado.
+Esas columnas conservan el número de la cuenta borrada, que no se vuelve a dar nunca.
+
+**Y un depósito no pregunta por la ficha.** La política `instrucciones_circulo_titular_lee` del
+depósito `instrucciones-acceso-circulo` deja leer la carpeta con el número de la cuenta sin mirar la
+Prestadora. Se le exige la Prestadora en el paso de los archivos.
 
 **Las tablas del proveedor las cambia el proveedor cuando quiere, y si eso rompe estas funciones se
 rompe entrar al sistema.** Por eso hay una comprobación que **corre sola una vez por día**, como
 tarea programada y sin depender de ninguna publicación, en la Organización ficticia de pruebas: da
-de alta una cuenta con un correo inventado, le pone clave con el código de activación, entra, borra
-la ficha, comprueba que esa sesión ya no alcanza nada, la vuelve a dar de alta con el mismo correo y
-entra otra vez. Si cualquier paso falla, avisa a CeltaTech ese mismo día. Como la baja no toca el
-proveedor, en la Organización ficticia queda una cuenta sin ficha por día.
+de alta una cuenta con un correo inventado, le pone clave con el código de activación, entra, la da
+de baja y comprueba que con esa clave ya no se entra. Si cualquier paso falla, avisa a CeltaTech
+ese mismo día.
 
 **Dos de esas operaciones no le tocan al producto, y salen en vez de reemplazarse.** La cuenta del
 Administrador la genera CeltaTech, que se ocupa también del cambio y de la recuperación de su clave,
@@ -547,8 +545,8 @@ adentro.
 
 **Comprobación:** con el pase de una Prestadora se lee lo suyo y se pide algo de la otra; lo segundo
 falla. Y con ese pase se pide una tabla que no está en la lista: también falla. Un Administrador
-de una Prestadora intenta dar de alta y cambiar la clave de una cuenta de la otra: las dos cosas
-fallan en la base. Y la comprobación diaria se rompe a propósito una vez —con un paso que no
+de una Prestadora intenta dar de alta, cambiar la clave y dar de baja una cuenta de la otra: las
+tres cosas fallan en la base. Y la comprobación diaria se rompe a propósito una vez —con un paso que no
 puede salir bien— para ver que el aviso llega.
 
 **8.** **Los archivos.** Los cuatro depósitos sin política reciben política, con la Prestadora en

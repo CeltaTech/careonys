@@ -22,7 +22,7 @@ cambiarlo.
 **La obra arranca por la sección «Los cimientos», y adentro por «La credencial del trabajo sin
 persona».** Es lo que hay que hacer antes que cualquier otra cosa, y mientras dure **no sale
 ninguna pantalla nueva**. Lo que construye «Dónde viven los datos» —que el código no dé por
-sentado que hay una sola base— va en la misma pasada que «El pase de la persona en el backend»,
+sentado que hay una sola base— va en la misma pasada que «La credencial de la persona en el backend»,
 porque los dos reescriben el mismo archivo de conexión.
 
 **El plan está aprobado en su ordenamiento y en sus dos decisiones de fondo**, que ya no se
@@ -265,7 +265,7 @@ conservación: cero apariciones de `anonimiz`, `purga`, `retencion`, `conservaci
 
 **El cierre por inactividad existe sólo para el permiso de acceso de CeltaTech.** Las sesiones de la
 gente de la Prestadora no se cierran. **El segundo factor está construido y apagado**:
-`requiereRolPanel.js:82-85` rechaza el pase que no llegó a `aal2`, gobernado por
+`requiereRolPanel.js:82-85` rechaza la credencial que no llegó a `aal2`, gobernado por
 `configuracion_plataforma.mfa_admin_obligatorio`, que hoy vale `false`.
 
 **La estructura de configuración por país está hecha y vacía.** `advertencias_legales` tiene 13
@@ -283,7 +283,7 @@ con texto versionado, con quién consintió, por qué medio, desde cuándo y has
 
 - **`SUPABASE_SERVICE_ROLE_KEY` no existe en el producto.** No está en el código, ni en el
   repositorio, ni en las variables de entorno del backend.
-- **Todo pedido de una persona viaja con el pase de esa persona**, y la base decide qué filas
+- **Todo pedido de una persona viaja con la credencial de esa persona**, y la base decide qué filas
   contesta. Un filtro olvidado no devuelve datos de otra Prestadora: no devuelve nada.
 - **El trabajo sin persona detrás tiene su propia credencial**, acotada a sus tablas y funciones y
   de a una Prestadora por vez. Es la llave del cuarto de máquinas, no la del edificio.
@@ -493,7 +493,7 @@ recuperación.
 **Dos cosas más usan hoy la llave maestra, y las resuelve Supabase por su cuenta.** Cerrar la
 sesión en todos los aparatos lo pide la propia persona, y Supabase ya se lo permite con su propia
 sesión. Entrar con la huella o con la cara hoy lo arma el producto, que después le pide a Supabase
-un pase de entrada: se reemplaza por la entrada con huella o cara que ofrece Supabase.
+una credencial de entrada: se reemplaza por la entrada con huella o cara que ofrece Supabase.
 
 **El producto no crea las cuentas de los Administradores ni la del Superadmin.** Hoy el Panel
 permite crearlas y recuperarles la clave: las dos cosas se sacan. El producto se queda con las
@@ -508,20 +508,22 @@ con ese rol, en «Lo que se dijo que decidió usted».
 `interno.prestadora_del_estado_de_cuenta` completan la Prestadora leyendo `familias` con los
 permisos de quien inserta.
 
-Se crea en la base un rol propio —`tarea_de_fondo`— con permiso **sólo** sobre lo que ese trabajo
+Se crea en la base un rol propio —`trabajo_sin_persona`— con permiso **sólo** sobre lo que ese trabajo
 toca, según la lista de arriba. Nada más. El backend no
-guarda una credencial de ese rol: **firma un pase corto, para una Prestadora y para un trabajo.**
+guarda una credencial permanente de ese rol: **genera una credencial corta, para una Prestadora y para un trabajo**,
+con una clave propia que Supabase reconoce.
 
 `interno.current_tenant()` suma una tercera fuente después de las dos que ya tiene: cuando quien
-consulta es `tarea_de_fondo`, la Prestadora sale del pase firmado. Un pase sin Prestadora no
+consulta es `trabajo_sin_persona`, la Prestadora sale de esa credencial. Una credencial sin Prestadora no
 resuelve nada y la base niega todo: falla cerrado, igual que hoy.
 
-Las 4 entradas que llaman terceros traen la Prestadora en la dirección. Primero se confirma con la
-firma del mensaje —que ya se verifica—, y recién con ese dato se firma el pase. Leer el secreto de firma es lo único que pasa por una función que resuelve la Prestadora
+Las 4 entradas que llaman terceros traen la Prestadora en la dirección. Primero se confirma que el
+mensaje viene de quien dice venir —eso ya se verifica—, y recién con ese dato se genera la credencial. Leer la clave con
+que se comprueba cada mensaje es lo único que pasa por una función que resuelve la Prestadora
 adentro.
 
-**Comprobación:** con el pase de una Prestadora se lee lo suyo y se pide algo de la otra; lo segundo
-falla. Y con ese pase se pide una tabla que no está en la lista: también falla. Se arma a mano
+**Comprobación:** con la credencial de una Prestadora se lee lo suyo y se pide algo de la otra; lo segundo
+falla. Y con esa credencial se pide una tabla que no está en la lista: también falla. Se arma a mano
 un pedido con la sesión de un Administrador de una Prestadora para dar de alta y dar de baja a una
 persona de la otra, y se usa un código de activación de una Prestadora entrando por la otra: la
 base rechaza las tres cosas.
@@ -530,15 +532,15 @@ base rechaza las tres cosas.
 el comienzo de la ruta exigida por la base. Los 22 lugares donde el código compara texto de ruta se
 borran. Los archivos se siguen sirviendo con dirección firmada y vencimiento.
 
-**Comprobación:** con el pase de una persona de una Prestadora se pide un archivo de la otra, con la
+**Comprobación:** con la credencial de una persona de una Prestadora se pide un archivo de la otra, con la
 ruta correcta y todo. Tiene que fallar en la base, no en el código.
 
-**9.** **El pase de la persona en el backend, y el registro de lecturas en la misma pasada.**
+**9.** **La credencial de la persona en el backend, y el registro de lecturas en la misma pasada.**
 
 `connection.js` deja de exportar un cliente y pasa a entregar **el cliente de quien está pidiendo**,
-armado con el pase que viene en el pedido. Los 135 archivos cambian de qué importan, no de qué
-hacen. `requiereRolPanel.js` deja de validar el pase con la llave maestra y lo valida con la clave
-pública, que es para lo que está; y deja de leer `usuarios` sin filtro, porque con el pase de la
+armado con la credencial que viene en el pedido. Los 135 archivos cambian de qué importan, no de qué
+hacen. `requiereRolPanel.js` deja de validar la credencial con la llave maestra y lo valida con la clave
+pública, que es para lo que está; y deja de leer `usuarios` sin filtro, porque con la credencial de la
 persona la base ya le contesta una sola fila. Se hace **por grupos de rutas**, y al terminar cada
 grupo `acotarAPrestadora` sale de esas rutas.
 

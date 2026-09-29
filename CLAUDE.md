@@ -287,6 +287,7 @@ día que alguien borra el Legajo «porque ya no está activa».
 
 **Y la cuenta de una persona tampoco se borra, por la misma razón que no se borra una HCE.** Se
 puede desactivar, suspender, bloquear o marcar con la advertencia que haga falta; borrar, nunca.
+En el Panel, el Administrador desactiva una cuenta dejando siempre una nota que diga por qué.
 
 **Rol nunca significa permisos.** Un rol dice qué lugar ocupa alguien en una contratación. Quién
 puede ver o hacer qué cosa es otra cosa, se llama de otra manera y se guarda en otro lado.

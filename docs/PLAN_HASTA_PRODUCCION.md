@@ -362,8 +362,9 @@ Chile, la restricción queda fija y no se apaga. Lo que falta:
   renombra y el mensaje sale del catálogo aprobado.
 - **La baja de una cuenta desde el Panel la borra**, y una cuenta tiene un Legajo, que no se borra
   nunca (`CLAUDE.md:282`). `panelUsuarios.js:198` llama a `borrarCuenta`, y `dar_de_baja_la_cuenta`
-  borra la fila de `usuarios`; con actividad anotada, además, la base lo rechaza. Cierre: la baja
-  le quita la entrada a la persona y no borra nada, y las dos cuentas «Prueba Inventada» de la
+  borra la fila de `usuarios`; con actividad anotada, además, la base lo rechaza. Cierre: el
+  Administrador desactiva la cuenta con una nota obligatoria que diga por qué, la persona se queda
+  sin entrada y no se borra nada, y las dos cuentas «Prueba Inventada» de la
   Prestadora de pruebas, hoy bloqueadas, se dan de baja así. Deshacer un alta cortada por la mitad
   (`deshacerAlta`) no entra: ahí todavía no hay Legajo.
 

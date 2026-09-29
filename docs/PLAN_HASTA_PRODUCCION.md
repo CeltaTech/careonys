@@ -528,7 +528,7 @@ backend y en cada pantalla que la use, se comprueba que todo sigue entrando, y r
 
 **8.** **Los archivos.** Los cuatro depósitos sin política reciben política, con la Prestadora en
 el comienzo de la ruta exigida por la base. Los 22 lugares donde el código compara texto de ruta se
-borran. Los archivos se siguen sirviendo con enlace temporal y vencimiento.
+borran. Los archivos se siguen sirviendo con enlace temporal.
 
 **Comprobación:** con la credencial de una persona de una Prestadora se pide un archivo de la otra, con la
 ruta correcta y todo. Tiene que fallar en la base, no en el código.

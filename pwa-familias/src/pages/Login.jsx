@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
-import { entrarConLaLlaveDelAparato, esteAparatoGuardaLlaves, loCancelaronAMano } from '../lib/llaveDelDispositivo';
+import { entrarConLaLlaveDelAparato, esteAparatoGuardaLlaves, loCancelaronAMano, rotuloGuardado } from '../lib/llaveDelDispositivo';
 
 export default function Login() {
   const { login } = useAuth();
@@ -17,8 +17,8 @@ export default function Login() {
   // que no ofrecerla. Mientras no conteste, el botón no está.
   useEffect(() => {
     let vigente = true;
-    esteAparatoGuardaLlaves().then((puede) => {
-      if (vigente) setHayLlave(puede);
+    Promise.all([esteAparatoGuardaLlaves(), rotuloGuardado()]).then(([puede, rotulo]) => {
+      if (vigente) setHayLlave(puede && Boolean(rotulo));
     });
     return () => {
       vigente = false;

@@ -165,7 +165,8 @@ app.use('/api/panel/habilitar-clave', panelHabilitarClaveRouter);
 app.use('/api/activar-cuenta', activarCuentaRouter);
 app.use('/api/recuperar-clave', recuperarClaveRouter);
 // Sin sesión, como la activación de cuenta: quien llega trae la llave que le llegó por correo, y
-// no tiene ninguna cuenta con la que entrar. La Prestadora sale de la llave, no de la dirección.
+// no tiene ninguna cuenta con la que entrar. La Prestadora sale de la dirección, y la llave se busca
+// sólo adentro de ella.
 app.use('/api/entrevista', entrevistaPublicaRouter);
 // Sin sesión también, y por la misma razón: quien entra con la huella todavía no tiene ninguna.
 // Lo que reemplaza a la sesión es un desafío de un solo uso que el backend emitió hace dos minutos

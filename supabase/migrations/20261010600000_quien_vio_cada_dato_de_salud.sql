@@ -2,7 +2,7 @@
 --
 -- Hasta acá ninguna lectura quedaba anotada: `registro_actividad` anota escrituras y entradas al
 -- Panel, y nada más. Desde acá cada lectura de un dato de salud deja un renglón en
--- `accesos_a_datos_de_salud`, que es un registro aparte del de actividad porque anota otra cosa y
+-- `consultas_a_hce`, que es un registro aparte del de actividad porque anota otra cosa y
 -- va a tener otro plazo de conservación (`docs/PLAN_HASTA_PRODUCCION.md`, paso 9).
 --
 -- Seis datos por renglón: la Prestadora, la persona que accedió, el paciente, las categorías de
@@ -13,7 +13,7 @@
 --     existe, así que no hace falta inventar un catálogo de palabras, y la base comprueba que la
 --     tabla exista: una categoría mal escrita no entra.
 --   * El origen es por dónde llegó la lectura: el método y la ruta del pedido, sin lo que viaje
---     después del signo de pregunta. Lo arma `backend/src/utils/registroDeAccesos.js`.
+--     después del signo de pregunta. Lo arma `backend/src/utils/registroDeConsultas.js`.
 --   * El momento lo pone la base, con su reloj. No se le cree a quien inserta.
 --
 -- Consultable por paciente: hay un índice por Prestadora, paciente y momento, porque «quién vio lo
@@ -25,7 +25,7 @@
 -- sus seis datos más el resumen anterior. Lo calcula la base en el momento de insertar; lo que
 -- traiga quien inserta en esas columnas se descarta. Si alguien cambia un renglón del medio, su
 -- resumen deja de coincidir; si además recalcula el suyo, deja de coincidir con el que guarda el
--- siguiente; si borra uno, queda un hueco en la numeración. `public.verificar_cadena_de_accesos()`
+-- siguiente; si borra uno, queda un hueco en la numeración. `public.verificar_cadena_de_consultas()`
 -- recorre la cadena y dice en qué renglón se rompe.
 --
 -- Lo que la cadena no ve: quien tenga el dueño de la base puede recalcular la cadena entera desde
@@ -59,7 +59,7 @@
 
 -- ─── El registro ────────────────────────────────────────────────────────────────────────────
 
-CREATE TABLE public.accesos_a_datos_de_salud (
+CREATE TABLE public.consultas_a_hce (
   id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   prestadora_id    uuid NOT NULL REFERENCES public.prestadoras(id),
   -- Sin clave foránea hacia `usuarios` ni hacia `pacientes`: dar de baja una cuenta o borrar un
@@ -74,48 +74,48 @@ CREATE TABLE public.accesos_a_datos_de_salud (
   resumen_anterior bytea,
   resumen          bytea NOT NULL,
 
-  CONSTRAINT accesos_a_datos_de_salud_un_numero_por_cadena UNIQUE (prestadora_id, numero),
-  CONSTRAINT accesos_a_datos_de_salud_alguna_categoria
+  CONSTRAINT consultas_a_hce_un_numero_por_cadena UNIQUE (prestadora_id, numero),
+  CONSTRAINT consultas_a_hce_alguna_categoria
     CHECK (cardinality(categorias) > 0 AND array_position(categorias, NULL) IS NULL),
-  CONSTRAINT accesos_a_datos_de_salud_el_origen_no_va_vacio
+  CONSTRAINT consultas_a_hce_el_origen_no_va_vacio
     CHECK (btrim(origen) <> '' AND length(origen) <= 300),
   -- Sin persona, sólo el trabajo sin persona.
-  CONSTRAINT accesos_a_datos_de_salud_dice_quien
+  CONSTRAINT consultas_a_hce_dice_quien
     CHECK (usuario_id IS NOT NULL OR credencial_rol = 'trabajo_sin_persona'),
-  CONSTRAINT accesos_a_datos_de_salud_la_cadena_empieza_en_uno
+  CONSTRAINT consultas_a_hce_la_cadena_empieza_en_uno
     CHECK (numero >= 1 AND (numero = 1) = (resumen_anterior IS NULL))
 );
 
-COMMENT ON TABLE public.accesos_a_datos_de_salud IS
+COMMENT ON TABLE public.consultas_a_hce IS
   'Quién leyó qué dato de salud de qué paciente, cuándo y por dónde. Una cadena por Prestadora: cada renglón guarda el resumen SHA-256 del anterior y el suyo. Lo escribe la base, no se edita y no se borra.';
-COMMENT ON COLUMN public.accesos_a_datos_de_salud.categorias IS
+COMMENT ON COLUMN public.consultas_a_hce.categorias IS
   'Las tablas de donde salió lo leído. La base comprueba que existan.';
-COMMENT ON COLUMN public.accesos_a_datos_de_salud.origen IS
+COMMENT ON COLUMN public.consultas_a_hce.origen IS
   'Por dónde llegó la lectura: método y ruta del pedido, sin lo que viaja después del signo de pregunta.';
 
-CREATE INDEX accesos_a_datos_de_salud_por_paciente
-  ON public.accesos_a_datos_de_salud (prestadora_id, paciente_id, momento);
+CREATE INDEX consultas_a_hce_por_paciente
+  ON public.consultas_a_hce (prestadora_id, paciente_id, momento);
 
-ALTER TABLE public.accesos_a_datos_de_salud ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.consultas_a_hce ENABLE ROW LEVEL SECURITY;
 
 -- Los permisos por defecto del esquema le dan todo a todos: se sacan, y queda insertar y leer.
-REVOKE ALL ON public.accesos_a_datos_de_salud
+REVOKE ALL ON public.consultas_a_hce
   FROM PUBLIC, anon, authenticated, service_role, trabajo_sin_persona;
-GRANT SELECT, INSERT ON public.accesos_a_datos_de_salud TO authenticated;
-GRANT INSERT ON public.accesos_a_datos_de_salud TO trabajo_sin_persona;
+GRANT SELECT, INSERT ON public.consultas_a_hce TO authenticated;
+GRANT INSERT ON public.consultas_a_hce TO trabajo_sin_persona;
 -- La llave maestra sigue anotando y leyendo mientras exista (paso 10 la saca), pero no edita ni
 -- borra.
-GRANT SELECT, INSERT ON public.accesos_a_datos_de_salud TO service_role;
+GRANT SELECT, INSERT ON public.consultas_a_hce TO service_role;
 
-CREATE POLICY cada_persona_anota_lo_que_ella_leyo ON public.accesos_a_datos_de_salud
+CREATE POLICY cada_persona_anota_lo_que_ella_leyo ON public.consultas_a_hce
   FOR INSERT TO authenticated
   WITH CHECK (prestadora_id = interno.current_tenant() AND usuario_id = auth.uid());
 
-CREATE POLICY el_trabajo_sin_persona_anota_en_su_prestadora ON public.accesos_a_datos_de_salud
+CREATE POLICY el_trabajo_sin_persona_anota_en_su_prestadora ON public.consultas_a_hce
   FOR INSERT TO trabajo_sin_persona
   WITH CHECK (prestadora_id = interno.current_tenant() AND usuario_id IS NULL);
 
-CREATE POLICY lo_lee_la_administracion_de_la_prestadora ON public.accesos_a_datos_de_salud
+CREATE POLICY lo_lee_la_administracion_de_la_prestadora ON public.consultas_a_hce
   FOR SELECT TO authenticated
   USING (
     prestadora_id = interno.current_tenant()
@@ -140,11 +140,11 @@ GRANT EXECUTE ON FUNCTION interno.el_registro_de_accesos_no_se_toca()
   TO authenticated, service_role, trabajo_sin_persona;
 
 CREATE TRIGGER trg_el_registro_de_accesos_no_se_toca
-  BEFORE UPDATE OR DELETE ON public.accesos_a_datos_de_salud
+  BEFORE UPDATE OR DELETE ON public.consultas_a_hce
   FOR EACH ROW EXECUTE FUNCTION interno.el_registro_de_accesos_no_se_toca();
 
 CREATE TRIGGER trg_el_registro_de_accesos_no_se_vacia
-  BEFORE TRUNCATE ON public.accesos_a_datos_de_salud
+  BEFORE TRUNCATE ON public.consultas_a_hce
   FOR EACH STATEMENT EXECUTE FUNCTION interno.el_registro_de_accesos_no_se_toca();
 
 -- ─── El resumen de un renglón ───────────────────────────────────────────────────────────────
@@ -152,7 +152,7 @@ CREATE TRIGGER trg_el_registro_de_accesos_no_se_vacia
 -- verificación. El momento se escribe en UTC y con microsegundos, para que el texto no dependa de
 -- la zona horaria de quien calcula.
 
-CREATE FUNCTION interno.resumen_del_acceso(e public.accesos_a_datos_de_salud)
+CREATE FUNCTION interno.resumen_de_la_consulta(e public.consultas_a_hce)
 RETURNS bytea
 LANGUAGE sql
 STABLE
@@ -173,7 +173,7 @@ AS $$
 $$;
 
 -- La usan sólo funciones que corren como dueño.
-REVOKE ALL ON FUNCTION interno.resumen_del_acceso(public.accesos_a_datos_de_salud)
+REVOKE ALL ON FUNCTION interno.resumen_de_la_consulta(public.consultas_a_hce)
   FROM PUBLIC, anon, authenticated, service_role, trabajo_sin_persona;
 
 -- ─── Encadenar al insertar ──────────────────────────────────────────────────────────────────
@@ -246,17 +246,17 @@ BEGIN
 
   -- Una cadena por Prestadora, de a un renglón por vez: dos lecturas simultáneas no pueden
   -- colgarse las dos del mismo renglón anterior. Si igual pasara, la unicidad del número lo frena.
-  PERFORM pg_advisory_xact_lock(hashtextextended('accesos_a_datos_de_salud:' || NEW.prestadora_id::text, 0));
+  PERFORM pg_advisory_xact_lock(hashtextextended('consultas_a_hce:' || NEW.prestadora_id::text, 0));
 
   SELECT a.numero, a.resumen INTO v_ultimo
-    FROM accesos_a_datos_de_salud a
+    FROM consultas_a_hce a
    WHERE a.prestadora_id = NEW.prestadora_id
    ORDER BY a.numero DESC
    LIMIT 1;
 
   NEW.numero := COALESCE(v_ultimo.numero, 0) + 1;
   NEW.resumen_anterior := v_ultimo.resumen;
-  NEW.resumen := interno.resumen_del_acceso(NEW);
+  NEW.resumen := interno.resumen_de_la_consulta(NEW);
 
   RETURN NEW;
 END;
@@ -267,7 +267,7 @@ REVOKE ALL ON FUNCTION interno.encadenar_acceso_a_datos_de_salud()
   FROM PUBLIC, anon, authenticated, service_role, trabajo_sin_persona;
 
 CREATE TRIGGER trg_encadenar_acceso_a_datos_de_salud
-  BEFORE INSERT ON public.accesos_a_datos_de_salud
+  BEFORE INSERT ON public.consultas_a_hce
   FOR EACH ROW EXECUTE FUNCTION interno.encadenar_acceso_a_datos_de_salud();
 
 -- ─── Verificar la cadena ────────────────────────────────────────────────────────────────────
@@ -278,19 +278,19 @@ CREATE TRIGGER trg_encadenar_acceso_a_datos_de_salud
 --   no_sigue_al_anterior       el resumen anterior que guarda no es el del renglón de antes;
 --   el_renglon_fue_alterado    sus datos ya no dan su resumen.
 
-CREATE FUNCTION interno.verificar_cadena_de_accesos(p_prestadora uuid)
+CREATE FUNCTION interno.verificar_cadena_de_consultas(p_prestadora uuid)
 RETURNS TABLE (intacta boolean, renglones bigint, rota_en_numero bigint, rota_en_id uuid, motivo text)
 LANGUAGE plpgsql
 STABLE
 SET search_path TO 'public', 'interno'
 AS $$
 DECLARE
-  r           accesos_a_datos_de_salud;
+  r           consultas_a_hce;
   v_esperado  bigint := 1;
   v_anterior  bytea := NULL;
 BEGIN
   FOR r IN
-    SELECT * FROM accesos_a_datos_de_salud a
+    SELECT * FROM consultas_a_hce a
      WHERE a.prestadora_id = p_prestadora
      ORDER BY a.numero
   LOOP
@@ -302,7 +302,7 @@ BEGIN
       RETURN QUERY SELECT false, v_esperado - 1, r.numero, r.id, 'no_sigue_al_anterior'::text;
       RETURN;
     END IF;
-    IF r.resumen IS DISTINCT FROM interno.resumen_del_acceso(r) THEN
+    IF r.resumen IS DISTINCT FROM interno.resumen_de_la_consulta(r) THEN
       RETURN QUERY SELECT false, v_esperado - 1, r.numero, r.id, 'el_renglon_fue_alterado'::text;
       RETURN;
     END IF;
@@ -315,14 +315,14 @@ END;
 $$;
 
 -- Recibe una Prestadora cualquiera: no la llama nadie de afuera, sólo la puerta de abajo.
-REVOKE ALL ON FUNCTION interno.verificar_cadena_de_accesos(uuid)
+REVOKE ALL ON FUNCTION interno.verificar_cadena_de_consultas(uuid)
   FROM PUBLIC, anon, authenticated, service_role, trabajo_sin_persona;
 
 -- La puerta. No recibe ninguna Prestadora: verifica la de quien pregunta. Es `SECURITY DEFINER`
 -- porque tiene que recorrer la cadena entera aunque quien pregunta no alcance a ver todos los
 -- renglones, y por eso ella misma pide ser la administración de la Prestadora, el soporte con
 -- permiso abierto o el trabajo sin persona de esa Prestadora. Cualquier otro caso falla cerrado.
-CREATE FUNCTION public.verificar_cadena_de_accesos()
+CREATE FUNCTION public.verificar_cadena_de_consultas()
 RETURNS TABLE (intacta boolean, renglones bigint, rota_en_numero bigint, rota_en_id uuid, motivo text)
 LANGUAGE plpgsql
 STABLE
@@ -338,11 +338,11 @@ BEGIN
              OR COALESCE(auth.jwt() ->> 'role', '') = 'trabajo_sin_persona') THEN
     RAISE EXCEPTION 'No tiene permiso para verificar el registro de accesos' USING ERRCODE = '42501';
   END IF;
-  RETURN QUERY SELECT * FROM interno.verificar_cadena_de_accesos(v_prest);
+  RETURN QUERY SELECT * FROM interno.verificar_cadena_de_consultas(v_prest);
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.verificar_cadena_de_accesos() FROM PUBLIC, anon, service_role;
-GRANT EXECUTE ON FUNCTION public.verificar_cadena_de_accesos() TO authenticated, trabajo_sin_persona;
+REVOKE ALL ON FUNCTION public.verificar_cadena_de_consultas() FROM PUBLIC, anon, service_role;
+GRANT EXECUTE ON FUNCTION public.verificar_cadena_de_consultas() TO authenticated, trabajo_sin_persona;
 
 NOTIFY pgrst, 'reload schema';

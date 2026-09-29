@@ -215,21 +215,26 @@ y 170 tienen política, y ninguna depende de nada que aporte el backend: la Pres
 `interno.current_tenant()` con la cuenta de quien entró. **La base ya sabe aislar y nadie le está
 preguntando.**
 
-**Hay trabajo que hoy no podría hacerse sin la llave maestra**, porque no tiene ninguna persona
-detrás: la carga de los mensajes del sistema al arrancar y 8 puertas públicas. Y hay operaciones sobre cuentas que hoy sólo se hacen
-con la llave maestra. El detalle está en el paso de la credencial del trabajo sin persona.
+**Lo que no tiene persona detrás ya no usa la llave maestra**: las tareas automatizadas, la carga de
+los mensajes del sistema, las entradas que llaman otros programas y las 8 puertas públicas corren
+con la credencial del trabajo sin persona, de a una Prestadora por vez. Con la llave maestra
+quedan la entrada con la huella (`routes/llaveDelDispositivo.js:191`), la recuperación del código
+extra del personal técnico (`utils/mfaRecuperacionEmail.js:87-90`) y todo lo que pide una persona
+desde las pantallas.
 
 **Nadie sabe quién leyó qué.** `registro_actividad` anota once acciones y todas son escrituras o
 entradas al Panel: ninguna lectura queda registrada. `auditoria_de_accesos` tiene `admin_id` no
 nulo, así que sólo alcanza al personal de CeltaTech, y tiene cero filas. Y no es inmutable: la
 llave maestra puede borrarlo.
 
-**El registro clínico se sobreescribe.** `indicaciones_medicacion` y `rangos_referencia_vitales`
-tienen `updated_at` y ningún historial: corregir pisa lo anterior.
+**El registro clínico ya no se pisa.** Cada alta, corrección o baja de `indicaciones_medicacion` y
+`rangos_referencia_vitales` deja una copia en `versiones_registro_clinico`, con autor, momento y
+nota aclaratoria, y ese historial no lo edita ni lo borra nadie. Mientras el backend escriba con la
+llave maestra, lo que se corrige desde el Panel queda sin autor: eso se arregla con el paso 9.
 
-**No hay fecha de fallecimiento** en ninguna columna de ninguna tabla, y no existe nada de
-conservación: cero apariciones de `anonimiz`, `purga`, `retencion`, `conservacion` y
-`derecho_al_olvido`. Lo que hay es borrado lógico: un dato marcado como borrado queda para siempre.
+**La conservación tiene dónde apoyarse y nada que la haga correr.** Existen
+`pacientes.fecha_fallecimiento` y la tabla `reglas_de_conservacion`, vacía; no hay ninguna tarea que
+purgue. Lo que hay es borrado lógico: un dato marcado como borrado queda para siempre.
 
 **No hay exportación ni portabilidad.** El derecho de acceso se atiende a mano, contra la base.
 
@@ -393,117 +398,26 @@ alto: un Administrador que no atiende a esa persona tampoco la ve. El vínculo s
 ya está en la base —a quién se le está prestando el Servicio y quién lo presta—, no con una lista
 aparte que alguien tenga que mantener.
 
-**7.** **La credencial del trabajo sin persona.** Es lo primero que se construye porque hasta que
-exista, quitar la llave maestra rompe la mitad del producto.
-
-**Lo que ya está hecho.** La base reconoce la credencial: el rol `trabajo_sin_persona`, la tercera
-fuente de `interno.current_tenant()` y el permiso tabla por tabla, con su política de esta
-Prestadora. El backend la genera en `backend/src/db/connection.js`, y **las 16 tareas automatizadas
-ya corren con ella, de a una Prestadora por vez** (`server.js`, función `programar`). También los
-avisos que el backend manda después de contestar: la llegada del Asistente y el reporte listo a la
-Cliente, el análisis inmediato de la IA (`appAsistentes.js`) y el aviso de mensaje nuevo del
-Match (`conversacionMatch.js`). Y las 4 entradas que llaman otros programas —pasarelas,
-WhatsApp, aviso de cobranza y aviso de facturación—: traen la Prestadora en la dirección, y todo lo
-que corre detrás entra con la credencial de esa Prestadora
-(`middleware/enLaPrestadoraDeLaDireccion.js`), así que ni un pedido falsificado alcanza a otra. El
-secreto con que cada ruta comprueba el mensaje se lee adentro de esa misma Prestadora. La conexión
-cambia sola según la Prestadora en curso, así que lo que sigue se muda envolviéndolo en
-`enLaPrestadora`, sin tocar las funciones que llama.
-
-**Qué falta mudar**, medido contra el código y contra la base en vivo:
-
-- **8 puertas públicas:** las cuatro de `/api/publico/:prestadora/`, la activación de la cuenta, la
-  recuperación de la clave, la entrevista y la entrada con la llave del dispositivo.
-
-**Lo que tocan:** 81 tablas, 11 funciones y un depósito, `comprobantes-cliente`. De las tablas, 11
-no tienen ninguna política y 16 sólo le contestan a `authenticated`. Ninguna tiene la protección
-forzada para su dueño.
-
-**Lo que hoy cruza Prestadoras, y se corrige en este paso:**
-
-- El código de activación (`activacionCuenta.js:107`), el de recuperación
-  (`recuperacionDeClave.js:137`), la llave pública de la entrevista
-  (`entrevistaDePostulacion.js:339`) y la llave del dispositivo
-  (`routes/llaveDelDispositivo.js:59-98` y `:169-171`) se buscan sin saber la Prestadora, y el desafío de la llave nace sin ella. **La Prestadora
-  sale de la puerta por donde se entró**, como en todo el producto, y la búsqueda se hace adentro de
-  ella.
-
-**Las operaciones sobre cuentas.** Hoy pasan por la administración de cuentas de Supabase, que sólo
-funciona con la llave maestra. Sin sesión: la clave al activar (`activacionCuenta.js:146`), la clave
-al recuperar (`recuperacionDeClave.js:253`) y la entrada con la llave del dispositivo
-(`routes/llaveDelDispositivo.js:234`). Desde el Panel: crear, buscar y borrar cuentas
-(`cuentasPanel.js:107-111`, `:157`, `:196`, `:207`, `:228`, `:288`) y cerrar la sesión en todos los
-equipos (`equiposConocidos.js:112`). **Con la cuenta por Prestadora, cada cuenta es de una sola
-Prestadora**, así que cada una de estas operaciones se hace adentro de la Prestadora dueña de la
-cuenta y se comprueba contra ella. **La llave maestra no se conserva para ninguna:** la pieza que
-sólo funciona con ella se reemplaza.
-
-**Dar de alta a una persona, ponerle la clave y darla de baja lo hace la base de datos.** Hoy lo
-hace el programa pidiéndoselo a Supabase —el servicio que guarda las cuentas con que la gente
-entra—, y para pedírselo usa la llave maestra. Pero esas cuentas están guardadas en la misma base
-de datos que todo lo demás, así que la base puede hacerlo sola, sin llave maestra. Lo hace con tres
-procedimientos propios, uno por operación. Cada uno sabe para qué Prestadora trabaja por quién se
-lo pidió, nunca por un dato escrito en el pedido, y no puede tocar la cuenta de otra Prestadora.
-
-- **Dar de alta.** Lo pide el Administrador desde el Panel, con su propia sesión. Se crea la cuenta
-  de la persona y, en el mismo momento, se anota a qué Prestadora pertenece y qué rol tiene. Se
-  hacen las dos cosas o ninguna: nunca queda una cuenta a medio crear.
-- **Poner o cambiar la clave.** Pasa cuando la persona activa su cuenta por primera vez o cuando
-  olvidó la clave. Todavía no tiene sesión, así que lo que la autoriza es el código de un solo uso
-  que recibió. Ese código se busca sólo dentro de la Prestadora por la que la persona
-  entró, y queda anulado en el mismo momento en que se cambia la clave.
-- **Dar de baja.** Lo pide el Administrador desde el Panel, con su propia sesión. Se borran juntas
-  la cuenta y la anotación de a qué Prestadora pertenece.
-
-Hasta el paso 9, dar de alta y dar de baja no viajan con la sesión del Administrador sino con la
-credencial del trabajo sin persona, generada para la Prestadora de esa sesión, que el backend ya
-comprobó. En el paso 9 pasan a la sesión de la persona, como todo lo demás.
-
-Nadie que no haya entrado al sistema puede usar estos procedimientos. Dar de alta y dar de baja
-sólo los pide alguien con sesión abierta; poner la clave, sólo las pantallas de activación y de
-recuperación.
-
-**Cerrar la sesión en todos los aparatos ya no usa la llave maestra.** Lo pide la propia persona,
-y Supabase se lo permite con su propia sesión.
+**7.** **Se revoca la clave vieja con que se generaban las credenciales**, la compartida. Mientras
+siga aceptada, cualquiera que la tenga puede generarse una credencial de cualquier rol. **Antes hay
+que cambiar las dos llaves que salieron de ella:** la maestra que usa el backend y la pública que
+usan el backend y cada pantalla. Se reemplazan por las nuevas de Supabase, se comprueba que todo
+sigue entrando, y recién ahí se revoca.
 
 **Entrar con la huella o con la cara sigue usando la llave maestra, y queda así por ahora.** La
 huella la comprueba el propio teléfono; después el producto le pide a Supabase una credencial de
-entrada para esa persona, y ese pedido va con la llave maestra. Supabase ofrece hacerlo por su
-cuenta, pero todavía como prueba: se evalúa cuando esté firme. Es el último uso de la llave
-maestra que queda en este paso.
+entrada para esa persona, y ese pedido va con la llave maestra
+(`routes/llaveDelDispositivo.js:191`). Supabase ofrece hacerlo por su cuenta, pero todavía como
+prueba: se evalúa cuando esté firme.
 
-**El producto no crea las cuentas de los Administradores ni la del Superadmin.** Hoy el Panel
-permite crearlas y recuperarles la clave: las dos cosas se sacan. El producto se queda con las
-cuentas que cada Administrador le da a su gente: coordinadores, Asistentes, Clientes y personas autorizadas
-familiar.
+**Queda para después recuperar el código extra que se le pide al personal técnico al entrar**
+(`utils/mfaRecuperacionEmail.js:87-90`), porque esas personas no pertenecen a ninguna Prestadora.
+El rol técnico se queda: es la cuenta con la que entra la persona de CeltaTech cuando le abren un
+permiso de acceso, y el backend sólo busca ese permiso para ese rol
+(`middleware/requiereRolPanel.js:100`).
 
-**Queda para después recuperar el código extra que se le pide al personal técnico al entrar**,
-porque esas personas no pertenecen a ninguna Prestadora. El rol técnico se queda: es la cuenta con
-la que entra la persona de CeltaTech cuando le abren un permiso de acceso, y el backend sólo busca
-ese permiso para ese rol (`middleware/requiereRolPanel.js:100`).
-
-**Y dos disparadores lo van a sentir:** `interno.prestadora_de_la_restriccion` e
-`interno.prestadora_del_estado_de_cuenta` completan la Prestadora leyendo `clientes` con los
-permisos de quien inserta.
-
-**Comprobación:** con la credencial de una Prestadora se lee lo suyo y se pide algo de la otra; lo segundo
-falla. Y con esa credencial se pide una tabla que no está en la lista: también falla. Se arma a mano
-un pedido con la sesión de un Administrador de una Prestadora para dar de alta y dar de baja a una
-persona de la otra, y se usa un código de activación de una Prestadora entrando por la otra: la
-base rechaza las tres cosas.
-
-**Al cerrar el paso se revoca en Supabase la clave vieja con que se generaban las credenciales**,
-la compartida. Mientras siga aceptada, cualquiera que la tenga puede generarse una credencial de
-cualquier rol. **Antes hay que cambiar la llave pública:** la que usa hoy el backend salió de esa
-clave vieja, y al revocarla deja de valer. Se reemplaza por la llave pública nueva de Supabase en el
-backend y en cada pantalla que la use, se comprueba que todo sigue entrando, y recién ahí se revoca.
-
-**8.** **Los archivos.** Los cuatro depósitos sin política reciben política, con la Prestadora en
-el comienzo de la ruta exigida por la base. Los 22 lugares donde el código compara texto de ruta se
-borran. Los archivos se siguen sirviendo con enlace temporal.
-
-**Comprobación:** con la credencial de una persona de una Prestadora se pide un archivo de la otra, con la
-ruta correcta y todo. Tiene que fallar en la base, no en el código.
+**Comprobación:** con la clave vieja revocada, se entra al Panel y a las dos aplicaciones, y una
+credencial generada con la clave vieja es rechazada.
 
 **9.** **La credencial de la persona en el backend, y el registro de lecturas en la misma pasada.**
 
@@ -513,6 +427,14 @@ hacen. `requiereRolPanel.js` deja de validar la credencial con la llave maestra 
 pública, que es para lo que está; y deja de leer `usuarios` sin filtro, porque con la credencial de la
 persona la base ya le contesta una sola fila. Se hace **por grupos de rutas**, y al terminar cada
 grupo `acotarAPrestadora` sale de esas rutas.
+
+**En la misma pasada salen las tres comparaciones de ruta de archivo** que todavía hace el código
+(`panelMedicacion.js:181`, `panelVitalesAutorizacion.js:79` y `appAsistentesMatricula.js:192`): los
+depósitos ya exigen la Prestadora al comienzo de la ruta, y con la credencial de la persona es la
+base la que dice que no. **Dos disparadores lo van a sentir:** `interno.prestadora_de_la_restriccion`
+e `interno.prestadora_del_estado_de_cuenta` completan la Prestadora leyendo `clientes` con los
+permisos de quien inserta. **Y el historial del registro clínico pasa a tener autor** en lo que se
+corrige desde el Panel, que hoy queda anotado sin persona porque lo escribe la llave maestra.
 
 **El registro de accesos va acá y no en un paso aparte**, porque es el mismo archivo reescrito una
 sola vez en vez de dos barridos por los mismos 135. Es un registro separado del de actividad,
@@ -551,7 +473,7 @@ art. 15 del Marco Civil de Internet, bajo secreto y entregables sólo por orden 
 **Y lo que no se construye con una lista recordada:** la norma holandesa NEN 7513 es de pago y no se
 leyó. Antes de vender en Países Bajos hay que comprarla y comparar campo por campo.
 
-**Comprobación:** las 1798 pruebas del backend, y las dos de aislamiento con dos Prestadoras con
+**Comprobación:** las 1815 pruebas del backend, y las dos de aislamiento con dos Prestadoras con
 datos cargados. Más una que hoy no existe: **quitarle el filtro a una consulta a propósito y
 verificar que sigue sin traer datos de la otra Prestadora.** Si eso pasa, la base está protegiendo.
 Y sobre el registro: se lee un paciente desde dos Prestadoras con dos personas distintas y contesta
@@ -564,40 +486,6 @@ dejan de ser un riesgo porque la base ya no les cree.
 
 **Comprobación:** el producto funciona sin esa variable definida. Es la única prueba que no se puede
 falsear.
-
-**11.** **El registro clínico no se pisa.** Versionado con nota aclaratoria: la corrección se
-agrega, la anterior queda, las dos con fecha, hora y autor. Alcanza a `indicaciones_medicacion`,
-`rangos_referencia_vitales` y toda tabla clínica nueva.
-
-Va acá y no más abajo porque es un cambio del modelo de datos: hacerlo antes es una migración,
-hacerlo después es una migración más lo que ya se perdió, que no se recupera.
-
-Lo exigen el art. 32 del Reglamento del Expediente de Salud de la CCSS de Costa Rica —prohibidos
-correctores, tachaduras y sobreescritura— y su art. 17, que dice que los registros incorporados no
-pueden excluirse. Brasil pide irrefutabilidad del prontuário; Argentina, historia clínica
-cronológica, foliada y completa; y el art. 13 del Decreto 242/017 uruguayo dice que la información
-no puede alterarse ni eliminarse sin que quede registrada la modificación, y que la corrección
-agrega el dato nuevo sin suprimir lo corregido.
-
-**Comprobación:** se corrige una indicación y quedan las dos versiones, cada una con su autor y su
-momento.
-
-**12.** **Las columnas que la conservación necesita.** Sólo las columnas y la tabla de reglas
-vacía: el motor que decide y avisa va al final de esta lista, donde no cuesta más hacerlo después.
-Van acá porque agregar columnas a una base cargada de datos reales de salud es otro orden de
-trabajo.
-
-Hace falta la **fecha de fallecimiento**, que hoy no existe en ninguna columna. Es un dato que llega
-de afuera y puede no llegar nunca: el sistema no se entera solo de que alguien murió. De ahí que en
-Panamá la regla sea al revés de lo que parece —el plazo corre desde la muerte, así que **mientras
-ese dato falte no hay vencimiento que calcular y la purga automática queda bloqueada.**
-
-Y hace falta la tabla de reglas de retención, por jurisdicción y por clase de registro, porque cada
-país cuenta desde un hecho distinto y el art. 9(4) del GDPR deja los plazos a la ley nacional.
-Ninguno de esos plazos puede estar escrito en el código.
-
-**Comprobación:** la columna existe, admite estar vacía, y ninguna tarea de purga corre sobre una
-fila que no la tiene cargada.
 
 **13.** **Cifrado y custodia de claves.** El cifrado en reposo y en tránsito es «Addressable» en
 Estados Unidos, lo que no quiere decir opcional: el 164.306(d)(3) da tres salidas y las dos últimas
@@ -1328,6 +1216,12 @@ cualquier mes.
 
 **103.** **El motor de conservación y borrado.** Las columnas y la tabla de reglas ya existen desde
 los cimientos; acá se carga y se construye lo que decide.
+
+**Antes de construirlo se contesta:** qué clases de registro existen, porque la tabla las guarda
+como texto libre; quién carga las reglas, que hoy sólo entran por migración; si la fecha de
+fallecimiento se muda al Legajo cuando el Paciente pase a citar uno; si su cambio se audita; cómo se
+borra lo vencido del historial del registro clínico, que hoy no lo puede borrar nadie; y qué otras
+tablas son clínicas y se versionan, además de las dos que ya lo hacen.
 
 Lo que la tabla tiene que poder expresar, porque hay un país que obliga a cada forma:
 

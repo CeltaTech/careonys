@@ -37,8 +37,10 @@ jobs:
       # construcción siga su curso y termine publicando. Pasó dos veces seguidas el 2026-08-13.
       # Ese corte no es un fallo del despliegue, así que no se cuenta como tal: quien dice si
       # salió bien es el paso siguiente, que le pregunta al backend en vivo qué versión corre.
+      # Se sube desde la raíz del repositorio: el servicio tiene `backend` como carpeta raíz y la
+      # busca adentro de lo que recibe. Subido desde `backend/`, esa carpeta no existe en el paquete
+      # y la construcción falla.
       - name: Subir el backend a Railway
-        working-directory: backend
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: railway up --service careonys-backend --environment production --ci || true

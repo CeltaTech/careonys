@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { ErrorConMotivo } from './errorConMotivo.js';
+import { correoDeAcceso } from '../config/correoDeAcceso.js';
 
 // COMPROBAR LA CLAVE ACTUAL, DEL LADO DEL BACKEND.
 //
@@ -43,12 +44,15 @@ export function olvidarClientePublico() {
 /**
  * ¿Esta es la clave actual de esta cuenta?
  *
+ * Se entra con el correo de acceso, no con el de la persona: el servicio de acceso guarda el de la
+ * cuenta en esa Prestadora (`config/correoDeAcceso.js`), y con el otro no encuentra a nadie.
+ *
  * Falla cerrado: sin llave pública configurada no se puede comprobar nada, y lo que corresponde es
  * negar. Una comprobación que se saltea cuando falta una variable de entorno no es una
  * comprobación (CLAUDE.md de la empresa §5).
  */
-export async function esLaClaveActual({ email, clave }) {
-  if (!email || !clave) return false;
+export async function esLaClaveActual({ email, prestadoraId, clave }) {
+  if (!email || !prestadoraId || !clave) return false;
 
   const publico = clientePublico();
   if (!publico) {
@@ -56,7 +60,10 @@ export async function esLaClaveActual({ email, clave }) {
     return false;
   }
 
-  const { data, error } = await publico.auth.signInWithPassword({ email, password: clave });
+  const { data, error } = await publico.auth.signInWithPassword({
+    email: await correoDeAcceso(email, prestadoraId),
+    password: clave,
+  });
   if (error || !data?.user) return false;
 
   // La sesión que se acaba de abrir se cierra en el acto: acá no se estaba entrando a ningún lado.
@@ -65,8 +72,8 @@ export async function esLaClaveActual({ email, clave }) {
 }
 
 /** Lo mismo, pero lanzando el motivo que la pantalla traduce. */
-export async function exigirLaClaveActual({ email, clave }) {
-  if (!(await esLaClaveActual({ email, clave }))) {
+export async function exigirLaClaveActual({ email, prestadoraId, clave }) {
+  if (!(await esLaClaveActual({ email, prestadoraId, clave }))) {
     throw new ErrorConMotivo('clave_actual_incorrecta');
   }
 }

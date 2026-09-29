@@ -1,7 +1,7 @@
 import { abrirSesionDelPedido, clienteDelPedido } from '../db/connection.js';
 
 // Mismo patrón que requiereRolAsistente.js, acotado al rol `cliente` — Etapa 4 (PWA
-// Clientes). La credencial se comprueba con la clave pública de la instalación que la emitió, y
+// Clientes). La credencial se comprueba con la clave pública de la región que la emitió, y
 // todo lo que se lee acá se lee con la credencial de la persona (`db/connection.js`).
 export async function requiereRolCliente(req, res, next) {
   const sesion = await abrirSesionDelPedido(req);

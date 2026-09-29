@@ -27,7 +27,7 @@ porque los dos reescriben el mismo archivo de conexión.
 
 **El plan está aprobado en su ordenamiento y en sus dos decisiones de fondo**, que ya no se
 vuelven a preguntar: los datos viven en São Paulo con el código previsto para más de una
-instalación, y el segundo nivel de aislamiento se construye ahora.
+región, y el segundo nivel de aislamiento se construye ahora.
 
 **Los pasos de «Lo que se dijo que decidió usted» no frenan la obra.** Son una conversación con el
 Desarrollador, renglón por renglón, y avanzan cuando él abra un grupo. Ninguno de ellos es
@@ -241,25 +241,32 @@ Y lo que queda cuando termina el resto de esta lista, que se apoya sobre lo ante
 
 ### Los pasos
 
-**5.** **Dónde viven los datos: São Paulo, y el código preparado para más de una instalación.**
+**5.** **Dónde viven los datos: São Paulo, y el código preparado para más de una región.**
 Decidido. No se abre alojamiento europeo hasta que haya un cliente europeo: pagar por un mercado
 que todavía no existe es gasto sin contrapartida, y esa puerta se abre el día que haga falta.
 Hasta entonces **Europa no se vende**, y no por trámite: Alemania y Francia exigen que los datos
-de salud estén alojados allá. **Estados Unidos sí se puede vender sin mudar nada**, porque no
+de salud estén en Europa —no necesariamente en su propio país— y con un proveedor que tenga la
+certificación de salud de ese país. Eso se comprueba contra la norma de cada uno el día que se
+escriba su documento legal. **Estados Unidos sí se puede vender sin mudar nada**, porque no
 exige residencia: lo que pide es el contrato con el proveedor de la nube, que es dinero y no obra.
+
+**Una región es el lugar del mundo donde viven los datos de una Prestadora, con todo lo que los
+toca**: la base, los archivos, las copias de respaldo, el Backend y los servicios que reciban esos
+datos. Es una copia entera del producto, con el mismo código y sin nada compartido con las demás.
+Cada Prestadora vive en una sola, que no tiene por qué ser la de su país.
 
 Lo que se construye acá es una sola cosa: **ninguna parte del código da por sentado que hay una
 sola base. La Prestadora trae consigo a cuál pertenece.** Dejarlo previsto ahora no cuesta nada;
 agregarlo el día que aparezca el cliente europeo es reescribir. Cuando eso pase, el identificador
-de una Prestadora deja de ser único en el producto y pasa a serlo por instalación, y la puerta de
-entrada tiene que saber a qué instalación mandar a cada quien. Nada más del producto se resiente:
+de una Prestadora deja de ser único en el producto y pasa a serlo por región, y la puerta de
+entrada tiene que saber a qué región mandar a cada quien. Nada más del producto se resiente:
 cada Prestadora es un cajón cerrado, el banco de Asistentes es por Prestadora y la elección es por
 cercanía al paciente, así que nada necesita ser único cruzando el océano.
 
-**En el backend, el punto donde se elige la instalación ya existe:** `backend/src/db/instalaciones.js`.
+**En el backend, el punto donde se elige la región ya existe:** `backend/src/db/regiones.js`.
 Hoy hay una sola, armada con `SUPABASE_URL` y `SUPABASE_ANON_KEY`; la credencial de una persona se
-manda a la instalación que la emitió, y una que no emitió ninguna no entra. Falta lo que
-todavía no tiene de dónde sacarse: a qué instalación pertenece cada Prestadora y la puerta de
+manda a la región que la emitió, y una que no emitió ninguna no entra. Falta lo que
+todavía no tiene de dónde sacarse: a qué región pertenece cada Prestadora y la puerta de
 entrada de las pantallas.
 
 **Y lo que no es código: las cláusulas firmadas antes del alta de la primera Prestadora real.**
@@ -357,7 +364,7 @@ presta; donde la tabla de exigencias por país lo pide, el interruptor no se apa
 
 **La base ya está.** `backend/src/db/connection.js` entrega **el cliente de quien está pidiendo**
 con `clienteDelPedido(req)`, armado con la credencial que viene en el pedido y la clave pública de
-la instalación. Los tres middleware de entrada (`requiereRolPanel.js`, `requiereRolCliente.js`,
+la región. Los tres middleware de entrada (`requiereRolPanel.js`, `requiereRolCliente.js`,
 `requiereRolAsistente.js`) comprueban la credencial con la clave pública y leen a la persona con su
 propia credencial. La primera ruta migrada es `panelReferenciasLaborales.js`, y es el molde.
 

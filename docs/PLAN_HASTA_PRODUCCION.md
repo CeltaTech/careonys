@@ -33,9 +33,9 @@ instalación, y el segundo nivel de aislamiento se construye ahora.
 Desarrollador, renglón por renglón, y avanzan cuando él abra un grupo. Ninguno de ellos es
 condición del trabajo de los cimientos.
 
-**Lo único que quedó sin contestar, y se contesta recién al escribir esa política:** si en Chile el
-segundo nivel va clavado sin interruptor, o si el interruptor existe y apagarlo avisa y queda
-registrado quién lo hizo. Está planteado en el paso que le corresponde.
+**Lo único que quedó sin contestar:** si en Chile el segundo nivel va clavado sin interruptor, o si
+el interruptor existe y apagarlo avisa y queda registrado quién lo hizo. La política ya está
+escrita con la primera forma, y la pregunta está planteada en el paso que le corresponde.
 
 ---
 
@@ -365,38 +365,32 @@ Lo que obliga cada lado, que es lo que sostiene todo lo anterior:
 **Comprobación:** por cada país donde haya una Prestadora dada de alta, `docs/CUMPLIMIENTO_NORMATIVO.md`
 nombra qué habilita el alojamiento y con qué instrumento. Sin eso, el alta no se aprueba.
 
-**6.** **El segundo nivel de aislamiento, el que Chile exige.** El art. 13 de la Ley
-20.584 prohíbe ver la historia de una persona a quien no está vinculado a su atención, y aclara que
-eso **incluye al personal de salud y administrativo de la propia Prestadora**. El art. 9 del Decreto
-41/2012 obliga a tomar medidas para impedirlo. Es un segundo nivel: no por rol, sino por vínculo con
-esa persona. Hoy quien tiene un rol que alcanza a toda su Prestadora ve la información de salud de
-cualquier paciente de ella, atienda a esa persona o no: eso cumple la regla de la empresa y **no**
-cumple la ley chilena.
+**6.** **Lo que queda del segundo nivel de aislamiento, el que Chile exige.** La regla ya está
+escrita en la base (`supabase/migrations/20261010700000_la_informacion_de_salud_la_ve_quien_atiende.sql`),
+probada adentro de una transacción que se deshizo, y **todavía sin aplicar**. Con el interruptor
+encendido, la información de salud de un paciente la lee sólo quien recibe el Servicio o quien lo
+presta; donde la tabla de exigencias por país lo pide, el interruptor no se apaga. Lo que falta:
 
-**De qué se habla y de qué no.** Lo que se restringe es **la información de salud**: la historia
-clínica, las indicaciones, los registros de lo que se le hizo a esa persona. El Padrón —quién es
-el Cliente, cómo se lo ubica, sus datos fiscales— no entra acá y queda como está, porque quien
-administra lo necesita para trabajar y ahí no hay ningún dato de salud.
-
-**Se construye ahora, y va en la misma pasada que el resto de estos pasos** —es una condición más
-en una política—. Diferirlo sería reescribir permisos después.
-
-**Encendido siempre en Chile, y elegible en el resto.** Donde la ley lo exige no hay interruptor.
-Donde no lo exige, cada Prestadora decide si lo usa, porque es forma de trabajo suya: una empresa
-chica donde las mismas personas atienden a todos los pacientes trabaja de una manera y una grande
-de otra.
-**Nace encendido**, y quien lo apaga lo hace a propósito. Que en un país no esté exigido no lo
-vuelve mala idea: es lo correcto con datos de salud en cualquier lado.
-
-**Qué país es cada Prestadora ya está en la base** —`prestadoras.pais`—, así que de ahí sale si el
-interruptor se ofrece o no. Que sea obligatorio en Chile no se escribe en el código: sale de la
-configuración por país, igual que las advertencias legales.
-
-**Con el interruptor encendido, la regla es una sola: la información de salud de un paciente la
-alcanza quien está vinculado a su atención, y nadie más.** No hay rol que se salve por ser el más
-alto: un Administrador que no atiende a esa persona tampoco la ve. El vínculo se prueba con lo que
-ya está en la base —a quién se le está prestando el Servicio y quién lo presta—, no con una lista
-aparte que alguien tenga que mantener.
+- **Aplicarla.** Cierre: la migración corrida contra la base y la misma prueba repetida en vivo.
+- **La pregunta de Chile.** Hoy va clavado sin interruptor. La otra forma —el interruptor existe,
+  apagarlo avisa y queda registrado— sería un aviso de riesgo legal como los demás, y cambiaría
+  el disparador que hoy lo rechaza. Cierre: el Desarrollador elige una de las dos.
+- **Hasta el paso 9 protege sólo lo que se lee con sesión propia.** El backend entra con la llave
+  de servicio, que no pasa por RLS. Cierre: el paso 9 terminado, y la prueba repetida por el
+  backend con la credencial de la persona.
+- **Escribir un registro clínico también pide el vínculo** cuando se pide la fila de vuelta: la
+  base rechaza un alta que devuelve una fila que quien la cargó no puede leer, y un cambio o un
+  borrado no alcanza filas que no se leen. Un Administrador no vinculado que carga un rango de un
+  paciente recibe un rechazo. Cierre: al llegar el paso 9, revisar cada pantalla que escribe en
+  esas tablas.
+- **Las columnas de salud de la ficha del paciente** —patologías, medicación habitual, nivel de
+  complejidad— quedan afuera: RLS filtra filas, no columnas. Cierre: se mudan a una tabla propia
+  que siga la misma regla, o se decide que no son historia clínica.
+- **Una persona sacada a mano del equipo sigue vinculada** si tiene guardias o series del paciente
+  en un Servicio vigente: el vínculo no mira las exclusiones del equipo. Cierre: decidir si una
+  exclusión le quita la lectura.
+- **Ninguna pantalla ofrece el interruptor.** La base lo guarda y lo hace cumplir; mostrarlo en la
+  configuración de la Prestadora, y sólo donde el país no lo exige, es trabajo de pantalla aparte.
 
 **9.** **La credencial de la persona en el backend, y el registro de lecturas en la misma pasada.**
 

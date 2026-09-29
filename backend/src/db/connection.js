@@ -87,12 +87,19 @@ export function enLaPrestadora(prestadoraId, trabajo, hacer) {
 }
 
 /**
+ * La conexión de un trabajo que todavía no sabe su Prestadora. La base sólo le deja averiguarla:
+ * la lista a recorrer, o la de una dirección pública.
+ */
+export function sinPrestadora(trabajo) {
+  return conexionDelTrabajo({ prestadoraId: null, trabajo });
+}
+
+/**
  * Corre `hacer` una vez por cada Prestadora, de a una, cada vez con su propia credencial. Lo que
  * falla en una se anota y no frena a las demás.
  */
 export async function paraCadaPrestadora(trabajo, hacer) {
-  const lista = conexionDelTrabajo({ prestadoraId: null, trabajo });
-  const { data, error } = await lista.rpc('prestadoras_a_recorrer');
+  const { data, error } = await sinPrestadora(trabajo).rpc('prestadoras_a_recorrer');
   if (error) {
     console.error(`${trabajo}: no se pudo saber qué Prestadoras recorrer:`, error.message);
     return;

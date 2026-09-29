@@ -20,6 +20,7 @@ import {
   usarCambioDeClaveHabilitado,
 } from './habilitarCambioDeClave.js';
 import { seAgotaronLosPedidosDeClave, anotarPedidoDeClave } from './topeDePedidosDeClave.js';
+import { enlaceConCodigo } from './direccionDeLaPrestadora.js';
 
 // EL ENLACE DURA POCO, y menos que el de activación.
 //
@@ -107,12 +108,24 @@ async function emitirElEnlaceYAvisar(usuario, email) {
   const token = crypto.randomBytes(32).toString('base64url');
   const expiraEn = new Date(Date.now() + HORAS_VALIDEZ * 60 * 60 * 1000).toISOString();
 
+  // Sin la dirección de la Prestadora no hay enlace que sirva: quien lo abre todavía no tiene
+  // sesión, y es la dirección la que dice en cuál se busca el código.
+  const link = await enlaceConCodigo({
+    appUrl,
+    pantalla: 'clave-nueva',
+    prestadoraId: usuario.prestadora_id,
+    codigo: token,
+  });
+  if (!link) {
+    console.error('recuperacionDeClave: la Prestadora no tiene dirección, no se envió el correo');
+    return;
+  }
+
   const { error } = await supabase
     .from('tokens_recuperacion_clave')
     .insert({ usuario_id: usuario.id, token, expira_en: expiraEn });
   if (error) throw new Error(error.message);
 
-  const link = `${appUrl}/clave-nueva?token=${token}`;
   const marca = await marcaDeLaPrestadora(usuario.prestadora_id);
   const textos = mensajeDelSistema(
     'recuperacion_clave',
@@ -147,13 +160,9 @@ async function filaDelEnlace(token) {
 
 async function cuentaDelEnlace(usuarioId) {
   // SIN PRESTADORA A PROPÓSITO
-  // Ésta es la consulta que averigua la Prestadora, así que no puede nombrarla. Quien canjea el
-  // enlace no tiene sesión, y el enlace tampoco la guarda: `tokens_recuperacion_clave` no tiene
-  // esa columna, a propósito. Las dos puertas que llegan acá —`/segundo-factor` y `/canjear`—
-  // reciben el enlace en el cuerpo del pedido y nada más; la dirección no nombra ninguna
-  // Prestadora, y tomarla de lo que venga en el pedido sería creerle a quien llama. Lee una sola
-  // fila, la del identificador que salió del enlace ya comprobado, y de ella sale la Prestadora
-  // que acota todo lo que viene después.
+  // Corre adentro de la Prestadora de la dirección (`middleware/resolverPrestadoraPublica.js`), así
+  // que la base sólo deja ver cuentas de ella: el enlace de otra no llega hasta acá. De la fila sale
+  // la Prestadora que acota lo que viene después.
   const { data } = await supabase
     .from('usuarios')
     .select('id, nombre, email, telefono, telefono_verificado_en, prestadora_id')
@@ -213,10 +222,9 @@ export async function segundoFactorDelEnlace(token) {
 /**
  * Canjea el enlace por la clave nueva.
  *
- * El enlace se toma antes de tocar la clave, condicionado a que siga libre, por lo mismo que en
- * la activación: son dos sistemas distintos y no hay transacción que los abarque. Tomándolo
- * primero, dos pedidos simultáneos con el mismo enlace no pasan los dos, y un enlace de un solo
- * uso no queda sirviendo de nuevo si la segunda escritura falla.
+ * El enlace se gasta y la clave se pone en una sola operación de la base
+ * (`poner_clave_con_codigo`), igual que en la activación: o pasan las dos o ninguna, y dos pedidos
+ * simultáneos con el mismo enlace no pasan los dos.
  */
 export async function cambiarClaveConToken(token, claveNueva, codigo = null) {
   const fila = await filaDelEnlace(token);
@@ -240,23 +248,13 @@ export async function cambiarClaveConToken(token, claveNueva, codigo = null) {
     });
   }
 
-  const { data: tomado, error: errorTomar } = await supabase
-    .from('tokens_recuperacion_clave')
-    .update({ usado_en: new Date().toISOString() })
-    .eq('id', fila.id)
-    .is('usado_en', null)
-    .select('id')
-    .maybeSingle();
-  if (errorTomar) throw new Error(errorTomar.message);
-  if (!tomado) throw new ErrorConMotivo('token_ya_usado');
-
-  const { error: errorClave } = await supabase.auth.admin.updateUserById(fila.usuario_id, {
-    password: claveNueva,
+  const { data: usuarioId, error: errorClave } = await supabase.rpc('poner_clave_con_codigo', {
+    p_uso: 'recuperacion',
+    p_codigo: token,
+    p_clave: claveNueva,
   });
-  if (errorClave) {
-    await supabase.from('tokens_recuperacion_clave').update({ usado_en: null }).eq('id', fila.id);
-    throw new Error(errorClave.message);
-  }
+  if (errorClave) throw new Error(errorClave.message);
+  if (!usuarioId) throw new ErrorConMotivo('token_ya_usado');
 
   // La puerta se gasta recién ahora, con la clave ya cambiada. Gastarla antes dejaría a esa persona
   // sin puerta y sin clave nueva si lo de abajo fallaba, y volver a abrirla exige otro llamado.

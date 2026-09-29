@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { entrevistaPorLlave } from '../utils/entrevistaDePostulacion.js';
 import { responderError } from '../utils/errorConMotivo.js';
+import { resolverPrestadoraPublica } from '../middleware/resolverPrestadoraPublica.js';
 
 /* La única puerta del postulante.
    ==============================
@@ -9,17 +10,16 @@ import { responderError } from '../utils/errorConMotivo.js';
    cuenta que darle. Lo que trae es la llave que le llegó por correo, y la llave es toda su
    credencial. Es la misma forma que ya tiene la activación de cuenta (`activarCuenta.js`).
 
-   NO LLEVA LA PRESTADORA EN LA DIRECCIÓN, y ahí se separa de los tres caminos públicos del sitio
-   de una Prestadora. Aquéllos atienden a cualquiera que entre al sitio, así que la dirección tiene
-   que decir de qué Prestadora se trata. Acá la Prestadora sale de la llave: pedírsela a la persona
-   sería pedirle un dato que no tiene.
+   LA PRESTADORA VIAJA EN LA DIRECCIÓN, igual que en la activación y en la clave nueva. El enlace
+   del correo ya la trae (`enlaceDeLaEntrevista`), así que no se le pide a la persona ningún dato
+   que no tenga, y la llave se busca sólo adentro de esa Prestadora.
 
    LO QUE SALE LO DECIDE `entrevistaPorLlave`, que falla cerrado y no distingue una llave que no
    existe de una entrevista que ya se cerró. */
 
 export const entrevistaPublicaRouter = Router();
 
-entrevistaPublicaRouter.get('/:llave', async (req, res) => {
+entrevistaPublicaRouter.get('/:prestadora/:llave', resolverPrestadoraPublica, async (req, res) => {
   try {
     res.json(await entrevistaPorLlave(req.params.llave));
   } catch (error) {

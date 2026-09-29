@@ -36,7 +36,6 @@ Repasar el Panel y las dos aplicaciones de teléfono, pantalla por pantalla, par
 muestra a cada quien y qué se deja afuera a propósito.
 
 Hay configuraciones que hoy existen sólo en la base y que ninguna pantalla muestra. Por ejemplo,
-el interruptor de cada Prestadora que reserva la HCE a quienes atienden al Paciente: lo cambia
-CeltaTech y la Prestadora no lo ve. En ese repaso se decide, una por una, si la Prestadora tiene
-que verla o manejarla, y con qué palabras. La redacción de lo que se muestre la aprueba el
+cuáles personas de la Prestadora ven la HCE de un Paciente. En ese repaso se decide, una por una,
+si la Prestadora tiene que verla o manejarla, y con qué palabras. La redacción de lo que se muestre la aprueba el
 Desarrollador.

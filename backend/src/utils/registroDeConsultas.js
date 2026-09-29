@@ -2,7 +2,7 @@ import { supabase } from '../db/connection.js';
 
 // EL PUNTO UNICO DE VERDAD PARA ANOTAR QUIEN LEYO UN DATO DE SALUD.
 //
-// Cada lectura de un dato de salud deja un renglon en `accesos_a_datos_de_salud`: la Prestadora,
+// Cada lectura de un dato de salud deja un renglon en `consultas_a_hce`: la Prestadora,
 // la persona que accedio, el paciente, las categorias de dato alcanzadas, el momento y el origen.
 // La tabla, la cadena de resumenes que demuestra que nadie la altero y quien puede leerla estan en
 // `supabase/migrations/20261010600000_quien_vio_cada_dato_de_salud.sql`.
@@ -40,7 +40,7 @@ export function origenDelPedido(req) {
 // `cliente` es la conexion con la que se escribe. Mientras el backend entre con la llave maestra
 // es la de siempre; cuando cada pedido pase a la credencial de la persona (paso 9 del plan), se
 // le pasa la de ese pedido y la base empieza a comprobar la Prestadora y la persona por su cuenta.
-export async function anotarAccesoADatosDeSalud(quien, { pacienteId, categorias, origen }, { cliente = supabase } = {}) {
+export async function anotarConsultaAHce(quien, { pacienteId, categorias, origen }, { cliente = supabase } = {}) {
   const lista = Array.isArray(categorias) ? categorias.filter(Boolean) : [];
   const origenLimpio = String(origen ?? '').split('?')[0].trim();
 
@@ -48,7 +48,7 @@ export async function anotarAccesoADatosDeSalud(quien, { pacienteId, categorias,
     throw new Error('No se pudo anotar el acceso a datos de salud: faltan datos para identificarlo');
   }
 
-  const { error } = await cliente.from('accesos_a_datos_de_salud').insert({
+  const { error } = await cliente.from('consultas_a_hce').insert({
     prestadora_id: quien.prestadoraId,
     usuario_id: quien.id,
     paciente_id: pacienteId,

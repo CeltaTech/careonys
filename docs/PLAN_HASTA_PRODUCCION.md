@@ -335,30 +335,24 @@ nombra qué habilita el alojamiento y con qué instrumento. Sin eso, el alta no 
 
 **6.** **Lo que queda del segundo nivel de aislamiento, el que Chile exige.** La regla ya está
 escrita en la base (`supabase/migrations/20261010700000_la_informacion_de_salud_la_ve_quien_atiende.sql`),
-probada adentro de una transacción que se deshizo, y **todavía sin aplicar**. Con el interruptor
-encendido, la información de salud de un paciente la lee sólo quien recibe el Servicio o quien lo
-presta; donde la tabla de exigencias por país lo pide, el interruptor no se apaga. Lo que falta:
+y aplicada. Con la restricción de HCE encendida, la información de salud de un paciente la lee
+sólo quien lo atiende; donde la tabla de requerimientos legales de HCE por país la pide, como en
+Chile, la restricción queda fija y no se apaga. Lo que falta:
 
-- **Aplicarla.** Cierre: la migración corrida contra la base y la misma prueba repetida en vivo.
-- **La pregunta de Chile.** Hoy va clavado sin interruptor. La otra forma —el interruptor existe,
-  apagarlo avisa y queda registrado— sería un aviso de riesgo legal como los demás, y cambiaría
-  el disparador que hoy lo rechaza. Cierre: el Desarrollador elige una de las dos.
 - **Hasta el paso 9 protege sólo lo que se lee con sesión propia.** El backend entra con la llave
   de servicio, que no pasa por RLS. Cierre: el paso 9 terminado, y la prueba repetida por el
   backend con la credencial de la persona.
-- **Escribir un registro clínico también pide el vínculo** cuando se pide la fila de vuelta: la
+- **Escribir un registro clínico también pide atender al paciente** cuando se pide la fila de vuelta: la
   base rechaza un alta que devuelve una fila que quien la cargó no puede leer, y un cambio o un
-  borrado no alcanza filas que no se leen. Un Administrador no vinculado que carga un rango de un
+  borrado no alcanza filas que no se leen. Un Administrador que no lo atiende y carga un rango de un
   paciente recibe un rechazo. Cierre: al llegar el paso 9, revisar cada pantalla que escribe en
   esas tablas.
 - **Las columnas de salud de la ficha del paciente** —patologías, medicación habitual, nivel de
   complejidad— quedan afuera: RLS filtra filas, no columnas. Cierre: se mudan a una tabla propia
   que siga la misma regla, o se decide que no son historia clínica.
-- **Una persona sacada a mano del equipo sigue vinculada** si tiene guardias o series del paciente
-  en un Servicio vigente: el vínculo no mira las exclusiones del equipo. Cierre: decidir si una
-  exclusión le quita la lectura.
-- **Ninguna pantalla ofrece el interruptor.** La base lo guarda y lo hace cumplir; mostrarlo en la
-  configuración de la Prestadora, y sólo donde el país no lo exige, es trabajo de pantalla aparte.
+- **Una persona sacada a mano del equipo sigue atendiendo al paciente** para la base si tiene
+  guardias o series suyas en un Servicio vigente: la regla no mira las exclusiones del equipo.
+  Cierre: decidir si una exclusión le quita la lectura.
 
 **9.** **La credencial de la persona en el backend, y el registro de lecturas en la misma pasada.**
 
@@ -378,6 +372,13 @@ deja las escrituras de las rutas migradas anotadas dos veces. Quedan con la maes
 `panelMfaRecuperacion.js` —que valida la credencial con `getUser` de la maestra— y las escrituras
 de `utils/registroDeActividad.js` y de `auditoria_de_accesos`. `panelVerificacionIdentidad.js` no
 puede pasar hasta que el depósito `fotos-identidad` tenga políticas.
+
+**El registro de consultas a HCE entra ruta por ruta en la misma pasada.** Hoy lo anota sólo
+`appAsistentesMedicacion.js`, con `anotarConsultaAHce` de `utils/registroDeConsultas.js`; toda ruta
+que devuelva información de salud de un paciente lo llama al migrarla. **Y la cadena de
+`consultas_a_hce` tiene un hueco:** quien pueda borrar las últimas filas se lleva también su
+resumen, y lo que queda sigue verificando bien. Cierre: el último resumen se guarda además fuera de
+la base, y `verificar_cadena_de_consultas` lo compara.
 
 **En la misma pasada salen las tres comparaciones de ruta de archivo** que todavía hace el código
 (`panelMedicacion.js:181`, `panelVitalesAutorizacion.js:79` y `appAsistentesMatricula.js:192`): los

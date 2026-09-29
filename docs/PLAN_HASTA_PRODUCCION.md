@@ -353,6 +353,18 @@ Chile, la restricción queda fija y no se apaga. Lo que falta:
 - **Una persona sacada a mano del equipo sigue atendiendo al paciente** para la base si tiene
   guardias o series suyas en un Servicio vigente: la regla no mira las exclusiones del equipo.
   Cierre: decidir si una exclusión le quita la lectura.
+- **Quién cambia la restricción.** La base deja cambiarla al Administrador de la Prestadora con
+  sesión; lo anotado en `LEGAJO_PARA_EL_FUTURO.md` dice que la cambia CeltaTech. Cierre: el
+  Desarrollador elige, y la política de `configuracion_de_hce` queda igual a lo elegido.
+- **Quedan nombres viejos en lo aplicado:** `interno.el_registro_de_accesos_no_se_toca`,
+  `interno.encadenar_acceso_a_datos_de_salud`, los disparadores `…_interruptor_de_salud…` y el
+  mensaje «No tiene permiso para verificar el registro de accesos». Cierre: una migración nueva los
+  renombra y el mensaje sale del catálogo aprobado.
+- **Dar de baja una cuenta que ya hizo algo falla**: `dar_de_baja_la_cuenta` borra la fila de
+  `usuarios`, y `registro_actividad` la sigue nombrando. Probado en vivo con una cuenta de prueba
+  que cambió la restricción; quedó bloqueada sin poder entrar. Cierre: la baja deja la persona
+  sin entrada y conserva la fila, y las dos cuentas «Prueba Inventada» de la Prestadora de
+  pruebas se dan de baja así.
 
 **9.** **La credencial de la persona en el backend, y el registro de lecturas en la misma pasada.**
 

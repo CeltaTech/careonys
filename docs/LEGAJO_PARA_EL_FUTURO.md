@@ -29,3 +29,14 @@ Lo que hay que resolver antes de construirlo, porque cambia qué producto es:
   una alerta.
 - **Careonys no presta el servicio de cuidado y tampoco prestaría el de vigilancia.** Habría que
   definir qué pone el producto y qué pone el proveedor de las cámaras.
+
+## Qué muestra cada pantalla, y qué queda afuera
+
+Repasar el Panel y las dos aplicaciones de teléfono, pantalla por pantalla, para ver qué se le
+muestra a cada quien y qué se deja afuera a propósito.
+
+Hay configuraciones que hoy existen sólo en la base y que ninguna pantalla muestra. Por ejemplo,
+el interruptor de cada Prestadora que reserva la HCE a quienes atienden al Paciente: lo cambia
+CeltaTech y la Prestadora no lo ve. En ese repaso se decide, una por una, si la Prestadora tiene
+que verla o manejarla, y con qué palabras. La redacción de lo que se muestre la aprueba el
+Desarrollador.

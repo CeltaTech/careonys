@@ -11,12 +11,30 @@
 
    SI LA CARGA FALLA, EL BACKEND ARRANCA IGUAL. Los mensajes van a salir con la marca de frase
    faltante y la falla queda en el registro, que es exactamente lo que se quiere ver. Un backend
-   que no levanta porque no pudo leer un texto deja sin funcionar todo lo demás, que sí anda. */
+   que no levanta porque no pudo leer un texto deja sin funcionar todo lo demás, que sí anda.
 
-import { supabase } from '../db/connection.js';
+   SE LEE DE A UNA PRESTADORA, CON LA CREDENCIAL DE CADA UNA. Lo propio de cada Prestadora se lee
+   adentro de ella, y el texto del producto, que es igual para todas, una sola vez, adentro de la
+   primera. Así ninguna lectura alcanza a dos Prestadoras. Y lo leído no se mezcla: cada frase propia
+   queda guardada bajo el identificador de su Prestadora, y al pedirla se la busca por ese
+   identificador exacto —ver `mensajesDelSistema.js`—. */
+
+import { supabase, paraCadaPrestadora } from '../db/connection.js';
 import { sembrarMensajesDelSistema, clavesCargadas } from './mensajesDelSistema.js';
 
 const DE_A = 1000;
+const TRABAJO = 'cargar_mensajes_del_sistema';
+
+/** Lee de a mil, porque la lectura tiene un tope por pedido y el catálogo va a crecer. */
+async function leerTodo(armarConsulta) {
+  const filas = [];
+  for (let desde = 0; ; desde += DE_A) {
+    const { data, error } = await armarConsulta().range(desde, desde + DE_A - 1);
+    if (error) throw error;
+    filas.push(...(data ?? []));
+    if (!data || data.length < DE_A) return filas;
+  }
+}
 
 /**
  * Lee `mensajes_del_sistema` entera y la deja cargada en memoria.
@@ -25,34 +43,32 @@ const DE_A = 1000;
  */
 export async function cargarMensajesDelSistema() {
   const filas = [];
-  let desde = 0;
+  let delProductoLeido = false;
+  let fallo = null;
 
-  // De a mil, porque la lectura tiene un tope por pedido y el catálogo va a crecer.
-  for (;;) {
-    // SIN PRESTADORA A PROPÓSITO
-    // El catálogo se lee una sola vez, al arrancar el backend, cuando todavía no hay ninguna persona
-    // adentro y por lo tanto ninguna Prestadora de la cual hablar. Acotarlo a una dejaría al backend
-    // sin los textos de las demás.
-    //
-    // Y lo leído no se mezcla: cada frase propia queda guardada bajo el identificador de su
-    // Prestadora, y al pedirla se la busca por ese identificador exacto. Una Prestadora que no
-    // escribió la suya recibe la del producto, nunca la de otra —ver `mensajesDelSistema.js`—.
-    const { data, error } = await supabase
-      .from('mensajes_del_sistema')
-      .select('clave, i18n, prestadora_id, activo')
-      .eq('activo', true)
-      .range(desde, desde + DE_A - 1);
-
-    if (error) {
+  await paraCadaPrestadora(TRABAJO, async (prestadoraId) => {
+    try {
+      if (!delProductoLeido) {
+        // El texto del producto no es de ninguna Prestadora: es el que sale cuando la suya no
+        // escribió uno propio. La base se lo deja leer a cada Prestadora, y se lee una sola vez.
+        filas.push(...await leerTodo(() => supabase
+          .from('mensajes_del_sistema')
+          .select('clave, i18n, prestadora_id, activo')
+          .is('prestadora_id', null)
+          .eq('activo', true)));
+        delProductoLeido = true;
+      }
+      filas.push(...await leerTodo(() => supabase
+        .from('mensajes_del_sistema')
+        .select('clave, i18n, prestadora_id, activo')
+        .eq('prestadora_id', prestadoraId)
+        .eq('activo', true)));
+    } catch (error) {
+      fallo = error.message;
       console.error('No se pudieron leer los mensajes del sistema:', error.message);
-      return { cargadas: clavesCargadas().length, error: error.message };
     }
-
-    filas.push(...(data ?? []));
-    if (!data || data.length < DE_A) break;
-    desde += DE_A;
-  }
+  });
 
   sembrarMensajesDelSistema(filas);
-  return { cargadas: clavesCargadas().length, error: null };
+  return { cargadas: clavesCargadas().length, error: fallo };
 }

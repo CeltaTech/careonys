@@ -353,7 +353,9 @@ panelCuentaSeguraRouter.post('/cerrar-sesiones', requiereRolPanel, async (req, r
     });
     yaQuedoRegistrado(res);
 
-    await cerrarSesionEnTodosLosEquipos(cuenta.id, cuenta.prestadora_id);
+    // Con la sesión que vino en el pedido, ya comprobada por `requiereRolPanel`.
+    const token = String(req.headers.authorization || '').replace(/^Bearer /, '');
+    await cerrarSesionEnTodosLosEquipos(cuenta.id, cuenta.prestadora_id, token);
 
     res.json({ ok: true });
   } catch (err) {

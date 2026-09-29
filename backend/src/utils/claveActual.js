@@ -67,8 +67,23 @@ export async function esLaClaveActual({ email, prestadoraId, clave }) {
   if (error || !data?.user) return false;
 
   // La sesión que se acaba de abrir se cierra en el acto: acá no se estaba entrando a ningún lado.
-  await publico.auth.signOut().catch(() => {});
+  // Sólo ésa: sin decirlo, la biblioteca cierra todas las de la persona, y comprobar la clave
+  // terminaba sacándola de todos sus aparatos, incluido el que estaba usando.
+  await publico.auth.signOut({ scope: 'local' }).catch(() => {});
   return true;
+}
+
+/**
+ * Cierra todas las sesiones abiertas de una persona, con su propia sesión y la llave pública.
+ * No hace falta la llave maestra: el servicio de acceso deja que cada cual cierre las suyas.
+ * Devuelve si el servicio de acceso lo confirmó.
+ */
+export async function cerrarTodasLasSesionesDe(token) {
+  const publico = clientePublico();
+  if (!publico || !token) return false;
+  const { error } = await publico.auth.admin.signOut(token, 'global');
+  if (error) console.error('claveActual: no se pudieron cerrar las sesiones:', error.message);
+  return !error;
 }
 
 /** Lo mismo, pero lanzando el motivo que la pantalla traduce. */

@@ -155,7 +155,9 @@ export function TurnosSinCubrirAbiertos() {
               </div>
             </div>
             <div className="panel-modal-acciones">
-              <Button onClick={() => setCerrando(i)}>{t.continuidad.turnos_vacios_cerrar}</Button>
+              {!tomas.laTieneOtraPersona(TIPOS_DE_ALARMA.TURNO_SIN_CUBRIR, i.id) && (
+                <Button onClick={() => setCerrando(i)}>{t.continuidad.turnos_vacios_cerrar}</Button>
+              )}
               {/* Cerrarlo dice cómo terminó; tomarlo dice que alguien está buscando quién lo
                   cubra ahora mismo, y mientras tanto el recordatorio no le llega a los demás. */}
               <LaTomoYo tipo={TIPOS_DE_ALARMA.TURNO_SIN_CUBRIR} referenciaId={i.id} {...tomas} />

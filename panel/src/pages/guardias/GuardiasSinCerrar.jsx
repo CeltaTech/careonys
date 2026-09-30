@@ -142,9 +142,11 @@ export function GuardiasSinCerrar({ onCerrada }) {
                     </span>
                   </td>
                   <td>
-                    <Button variant="secondary" onClick={() => setACerrar(g)}>
-                      {t.guardias_sin_cerrar.cerrar}
-                    </Button>
+                    {!tomas.laTieneOtraPersona(TIPOS_DE_ALARMA.GUARDIA_SIN_CERRAR, g.id) && (
+                      <Button variant="secondary" onClick={() => setACerrar(g)}>
+                        {t.guardias_sin_cerrar.cerrar}
+                      </Button>
+                    )}
                     {/* Cerrarla es el final; tomarla es decir que alguien la está averiguando
                         ahora, para que el mensaje no siga llegándole a los demás mientras tanto. */}
                     <LaTomoYo

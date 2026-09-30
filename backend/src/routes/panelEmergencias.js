@@ -27,7 +27,9 @@ import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsulta
 
    ATENDER SIGUE CON LA LLAVE MAESTRA. La tabla no le da a nadie del Panel permiso para
    modificarla, ni tiene una política que lo deje; mientras eso no exista, marcarla atendida se
-   hace con la llave maestra y con la Prestadora de la sesión escrita en cada consulta. */
+   hace con la llave maestra y con la Prestadora de la sesión escrita en cada consulta. Quién puede
+   atenderla lo decide igual la base, con quien figura en `atendida_por`: si otra persona la tiene
+   tomada, la rechaza. */
 
 export const panelEmergenciasRouter = Router();
 
@@ -182,8 +184,10 @@ panelEmergenciasRouter.post('/:id/atencion', requiereRolPanel, exigirOrganizacio
     req.usuarioPanel,
   );
 
+  // La base no deja atenderla si otra persona la tiene tomada, ni a quien coordina otra zona sin
+  // haberla tomado. Eso es falta de permiso, no una falla.
   if (error) {
-    return responderError(res, error);
+    return responderError(res, error, error.code === '42501' ? 403 : 500);
   }
 
   res.json({ ok: true });

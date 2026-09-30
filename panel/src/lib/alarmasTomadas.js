@@ -28,7 +28,7 @@
  *
  * El valor es lo guardado y no cambia nunca; la fila a la que apunta cada una vive en su propia
  * tabla y la toma guarda su identificador. No hay una tabla única de alarmas, y no hace falta:
- * lo único que las cuatro comparten es que insisten hasta que alguien las atiende.
+ * lo único que todas comparten es que insisten hasta que alguien las atiende.
  */
 export const TIPOS_DE_ALARMA = {
   /** Alguien avisó que una Asistente no llega, o la cuenta dice que no llega. */
@@ -39,6 +39,8 @@ export const TIPOS_DE_ALARMA = {
   GUARDIA_SIN_CERRAR: 'guardia_sin_cerrar',
   /** Un turno que se acerca sin nadie asignado. */
   TURNO_SIN_CUBRIR: 'incidente_turno_sin_cubrir',
+  /** Una emergencia avisada desde una guardia en curso. */
+  EMERGENCIA: 'emergencia_guardia',
 };
 
 export const TIPOS_DE_ALARMA_POSIBLES = Object.values(TIPOS_DE_ALARMA);

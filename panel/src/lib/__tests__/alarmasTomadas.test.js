@@ -18,8 +18,8 @@ const minutosDespues = (n) => new Date(AHORA.getTime() + n * 60_000).toISOString
 const minutosAntes = (n) => new Date(AHORA.getTime() - n * 60_000).toISOString();
 
 describe('los tipos de alarma', () => {
-  it('reconoce los cuatro y ninguno más', () => {
-    expect(TIPOS_DE_ALARMA_POSIBLES).toHaveLength(4);
+  it('reconoce los cinco y ninguno más', () => {
+    expect(TIPOS_DE_ALARMA_POSIBLES).toHaveLength(5);
     for (const tipo of TIPOS_DE_ALARMA_POSIBLES) expect(esTipoDeAlarma(tipo)).toBe(true);
     expect(esTipoDeAlarma('incidente_inventado')).toBe(false);
     expect(esTipoDeAlarma(undefined)).toBe(false);
@@ -122,8 +122,8 @@ describe('cuánto le queda a una toma', () => {
   });
 });
 
-describe('las cuatro clases de alarma tienen nombre guardado propio', () => {
+describe('las cinco clases de alarma tienen nombre guardado propio', () => {
   it('no se repiten entre sí', () => {
-    expect(new Set(Object.values(TIPOS_DE_ALARMA)).size).toBe(4);
+    expect(new Set(Object.values(TIPOS_DE_ALARMA)).size).toBe(5);
   });
 });

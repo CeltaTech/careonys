@@ -434,11 +434,28 @@ escrito encima por qué. Lo que queda, agrupado por lo que hay que hacer:
   Superadmin (`contenidos_para_familias`, `indicaciones_medicacion`, `prestadoras`, varias de
   cobros y del Marketplace), y `usuarios` sólo deja leer la fila propia, así que toda lista de
   cuentas sigue con la maestra. Donde el comportamiento cambiaba, esas rutas volvieron a la
-  maestra: primero se alinean las políticas y después se migran. Tres de esas políticas dicen algo
-  distinto de lo que hace el Panel, y antes de alinearlas se decide cuál de los dos tiene razón: el
-  Coordinador limitado a su zona en ausencias, guardias y emergencias; las Familias y los
-  Asistentes pendientes de conformidad, que la base oculta y el Panel factura y liquida; y la
-  invitación a una guardia, que la base sólo deja ver si la guardia está marcada como ofrecida.
+  maestra: primero se alinean las políticas y después se migran. Dos de esas políticas dicen algo
+  distinto de lo que hace el Panel, y antes de alinearlas se decide cuál de los dos tiene razón: las
+  Familias y los Asistentes pendientes de conformidad, que la base oculta y el Panel factura y
+  liquida; y la invitación a una guardia, que la base sólo deja ver si la guardia está marcada como
+  ofrecida.
+- **La zona del Coordinador, decidida.** Cada Coordinador ve lo de su trabajo diario, que es su
+  zona; el Administrador ve todo. El padrón de Asistentes disponibles lo ven todos los
+  Coordinadores. Una alarma que llega al escalón de todos los Coordinadores la puede ver y resolver
+  cualquiera, pero primero tiene que hacerse cargo, y la base admite **una sola toma por alarma**:
+  los demás ven quién la tiene y no pueden resolverla mientras esté tomada. Hoy la toma existe y no
+  es exclusiva (`alarmas_tomadas` no impide dos tomas a la vez). **Las emergencias entran en la
+  escalada** como las otras cuatro alarmas: hoy se avisan una sola vez y no insisten ni escalan.
+- **La ausencia del Coordinador es la misma que la del Asistente.** Se registra igual, y en vez de
+  un sustituto por guardia lleva quién lo cubre: durante la ausencia, esa persona ve lo del ausente
+  además de lo suyo. Sin certificado ni trámite aparte. Y para los dos: **la fecha prevista de
+  vuelta es obligatoria** —hoy la fecha de fin puede quedar vacía—, se puede cambiar en cualquier
+  momento y **cada cambio queda registrado** (fecha anterior, fecha nueva, quién y cuándo). **La
+  fecha real de vuelta** se anota cuando se constata que la persona retomó, antes o después de la
+  prevista. Al llegar la prevista sin vuelta anotada, el sistema pregunta —al Coordinador por el
+  Asistente, al Administrador por el Coordinador— si retomó o si hay nueva fecha prevista, e
+  insiste hasta que alguien conteste; mientras tanto la cobertura sigue, y no quedan huecos. La
+  pregunta sale por el mismo camino que ya avisa las ausencias (`utils/revisarAusenciasAvisadas.js`).
 - **Funciones de la base que `authenticated` no puede ejecutar**: las de guardar los secretos de
   WhatsApp, de la conexión con software externo y de los avisos de cobranza y facturación,
   `intercambiar_orden_etapas_incorporacion` y `sembrar_configuracion_prestadora`. La de la conexión

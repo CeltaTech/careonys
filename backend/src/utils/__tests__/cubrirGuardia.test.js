@@ -116,6 +116,7 @@ describe('cubrir una guardia con un sustituto', () => {
       motivo: 'emergencia',
       motivo_detalle: 'se quedó sin transporte',
       costo_adicional: '1500',
+      cobertura_de_ausencia_id: null,
     });
   });
 

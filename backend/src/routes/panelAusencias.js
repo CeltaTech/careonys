@@ -6,6 +6,9 @@ import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcan
 import { supabase } from '../db/connection.js';
 import { extensionDeArchivo } from '../utils/archivosSubidos.js';
 import { responderError } from '../utils/errorConMotivo.js';
+import { cubrirGuardiaConSustituto } from '../utils/cubrirGuardia.js';
+import { estrenarCobertura, hastaDondeCubrir } from '../utils/coberturaDeAusencia.js';
+import { hoyISO } from '../utils/horarios.js';
 
 // CON LA LLAVE MAESTRA, TODAVÍA. La ausencia, el depósito y el enlace temporal van con la llave
 // maestra, después de comprobar que la ausencia es de la Prestadora de quien pide. En la base, la
@@ -146,4 +149,118 @@ panelAusenciasRouter.get('/:id/certificado-url', requiereRolPanel, exigirOrganiz
   }
 
   res.json({ url: data.signedUrl });
+});
+
+/* Cubrir la ausencia de un Asistente por turno fijo.
+   --------------------------------------------------
+   Quien coordina elige un sustituto y, si quiere, uno solo de los turnos fijos del ausente. Por
+   cada turno fijo que tenga guardias en la ausencia queda anotada una cobertura, que se aplica
+   ahora y que el trabajo programado va corriendo si la ausencia se estira o se acorta
+   (`utils/coberturaDeAusencia.js`). Las guardias sueltas, que no son de ningún turno fijo, se
+   cubren una por una como siempre.
+
+   Un turno fijo que ya tiene sustituto vigente no se vuelve a cubrir: apretar dos veces no duplica
+   nada.
+
+   Con la llave maestra, igual que el resto de esta ruta y que `POST /guardias/:id/cubrir`: la
+   ausencia se busca acotada a la Prestadora de quien pide, y el sustituto se comprueba contra esa
+   misma Prestadora antes de escribir nada.
+
+   Contesta las guardias que quedaron cubiertas, para que el Panel avise el cambio a quien
+   corresponda. */
+panelAusenciasRouter.post('/:id/cobertura', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
+  const {
+    asistente_sustituto_id: asistenteSustitutoId,
+    serie_id: serieElegida = null,
+    motivo = null,
+    motivo_detalle: motivoDetalle = null,
+    costo_adicional: costoAdicional = null,
+  } = req.body ?? {};
+  if (!asistenteSustitutoId) return res.status(400).json({ error: 'Falta el Asistente que cubre' });
+
+  let consulta = supabase
+    .from('ausencias')
+    .select('id, prestadora_id, asistente_id, fecha_inicio, fecha_fin, fecha_vuelta_real')
+    .eq('id', req.params.id);
+  consulta = acotarAPrestadora(consulta, req.usuarioPanel);
+  const { data: ausencia, error } = await consulta.maybeSingle();
+  if (error) return responderError(res, error);
+  if (!ausencia?.asistente_id) return res.status(404).json({ error: 'Ausencia no encontrada' });
+  if (ausencia.asistente_id === asistenteSustitutoId) {
+    return res.status(400).json({ error: 'El sustituto no puede ser el mismo Asistente ausente' });
+  }
+
+  const { data: sustituto } = await supabase
+    .from('asistentes')
+    .select('id')
+    .eq('id', asistenteSustitutoId)
+    .eq('prestadora_id', ausencia.prestadora_id)
+    .maybeSingle();
+  if (!sustituto) return res.status(404).json({ error: 'No se encontró ese Asistente' });
+
+  const hoy = hoyISO();
+  const desde = ausencia.fecha_inicio > hoy ? ausencia.fecha_inicio : hoy;
+  const hasta = hastaDondeCubrir(ausencia, hoy);
+  if (desde > hasta) return res.json({ guardia_ids: [] });
+
+  let consultaGuardias = supabase
+    .from('guardias')
+    .select('id, prestadora_id, asistente_id, serie_id')
+    .eq('prestadora_id', ausencia.prestadora_id)
+    .eq('asistente_id', ausencia.asistente_id)
+    .eq('estado', 'programada')
+    .gte('fecha', desde)
+    .lte('fecha', hasta);
+  if (serieElegida) consultaGuardias = consultaGuardias.eq('serie_id', serieElegida);
+  const { data: guardias, error: errorGuardias } = await consultaGuardias;
+  if (errorGuardias) return responderError(res, errorGuardias);
+
+  const { data: vigentes, error: errorVigentes } = await supabase
+    .from('coberturas_de_ausencia')
+    .select('serie_id')
+    .eq('prestadora_id', ausencia.prestadora_id)
+    .eq('ausencia_id', ausencia.id)
+    .is('objetada_at', null);
+  if (errorVigentes) return responderError(res, errorVigentes);
+  const yaCubiertas = new Set((vigentes ?? []).map((c) => c.serie_id));
+
+  const series = [...new Set((guardias ?? []).map((g) => g.serie_id).filter((s) => s && !yaCubiertas.has(s)))];
+  const sueltas = (guardias ?? []).filter((g) => !g.serie_id);
+  const cubiertas = [];
+
+  for (const serieId of series) {
+    const { data: cobertura, error: errorAlta } = await supabase
+      .from('coberturas_de_ausencia')
+      .insert({
+        prestadora_id: ausencia.prestadora_id,
+        ausencia_id: ausencia.id,
+        serie_id: serieId,
+        asistente_sustituto_id: asistenteSustitutoId,
+        motivo,
+        motivo_detalle: motivoDetalle,
+        costo_adicional: costoAdicional,
+        asignada_por: req.usuarioPanel.id,
+      })
+      .select('id, prestadora_id, serie_id, asistente_sustituto_id, motivo, motivo_detalle, costo_adicional')
+      .single();
+    if (errorAlta) return responderError(res, errorAlta);
+    const resultado = await estrenarCobertura({ db: supabase, cobertura, ausencia });
+    cubiertas.push(...resultado.cubiertas);
+  }
+
+  for (const guardia of sueltas) {
+    const resultado = await cubrirGuardiaConSustituto({
+      db: supabase,
+      guardia,
+      asistenteSustitutoId,
+      ausenciaId: ausencia.id,
+      motivo,
+      motivoDetalle,
+      costoAdicional,
+    });
+    if (!resultado.ok) return res.status(500).json({ error: resultado.motivo });
+    cubiertas.push(guardia.id);
+  }
+
+  res.json({ guardia_ids: cubiertas });
 });

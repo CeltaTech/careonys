@@ -57,6 +57,9 @@
 //   no_puede_continuar_la_extension→ routes/appAsistentes.js (notificarCoordinador)
 //   ausencia_avisada_con_tiempo    → utils/revisarAusenciasAvisadas.js (notificarCoordinador)
 //   ausencia_de_golpe              → utils/revisarAusenciasAvisadas.js (notificarCoordinador)
+//   vuelta_de_ausencia_sin_confirmar    → utils/revisarAusenciasAvisadas.js (notificarCoordinador)
+//   vuelta_de_coordinador_sin_confirmar → utils/revisarAusenciasAvisadas.js (notificarCoordinador)
+//   cobertura_objetada             → routes/appAsistentes.js (notificarCoordinador)
 // No hay ningún otro evento emitido. El vencimiento de documentos tiene un solo evento genérico,
 // `vencimiento_documento_asistente`, y no uno por tipo de documento, porque qué documentos se le
 // piden a un Asistente lo define el catálogo de cada Prestadora.
@@ -87,6 +90,26 @@ export const CATALOGO_MENSAJES = [
     // uno es una tarea para cuando se pueda, el otro es un turno que hay que tapar ahora. Con un
     // solo evento la Prestadora tendría que apagar los dos juntos, y el que no se puede apagar es
     // justamente éste.
+    admite_familia: false,
+  },
+  {
+    evento: 'vuelta_de_ausencia_sin_confirmar',
+    descripcion: 'Pasó la fecha prevista de vuelta de un Asistente y nadie anotó si volvió',
+    admite_whatsapp: true,
+    admite_familia: false,
+  },
+  {
+    evento: 'vuelta_de_coordinador_sin_confirmar',
+    descripcion: 'Pasó la fecha prevista de vuelta de un Coordinador y nadie anotó si volvió',
+    admite_whatsapp: true,
+    // Separado del de arriba para que la Prestadora lo mande a la administración y no a quien
+    // coordina, que es justamente quien está ausente.
+    admite_familia: false,
+  },
+  {
+    evento: 'cobertura_objetada',
+    descripcion: 'Un Asistente avisó que no puede cubrir el turno fijo que se le asignó durante una ausencia',
+    admite_whatsapp: true,
     admite_familia: false,
   },
   {

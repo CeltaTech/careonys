@@ -452,22 +452,6 @@ escrito encima por qué. Lo que queda, agrupado por lo que hay que hacer:
   (`supabase/migrations/20261012000000_quien_toma_una_alarma_atiende_la_guardia.sql`). La lista de
   emergencias del Panel ya lee con la credencial de quien pide (`backend/src/routes/panelEmergencias.js`);
   los nombres y marcarla atendida siguen con la maestra.
-- **La ausencia del Coordinador es la misma que la del Asistente.** Se registra igual y lleva quién
-  lo cubre: durante la ausencia, esa persona ve lo del ausente además de lo suyo. **Y la del
-  Asistente se cubre igual, por turno fijo y no guardia por guardia**: las guardias casi siempre
-  salen de una serie sin fecha de fin (`series_guardias`, `vigente_hasta` vacío), y el sustituto se
-  asigna a la serie por el período de la ausencia —Patricia cubre el lunes a viernes de 8 a 16 de
-  Ana mientras Ana está de vacaciones—. Hoy `guardias_cobertura` guarda un sustituto por guardia.
-  Si la ausencia se extiende, la cobertura se extiende sola y al sustituto se le avisa y se le
-  pregunta si tiene alguna objeción; si la tiene, esas guardias quedan sin cubrir y le llegan al
-  Coordinador como hoy. Cubrir una guardia suelta sigue siendo posible. Sin certificado ni trámite aparte. Y para los dos: **la fecha prevista de
-  vuelta es obligatoria** —hoy la fecha de fin puede quedar vacía—, se puede cambiar en cualquier
-  momento y **cada cambio queda registrado** (fecha anterior, fecha nueva, quién y cuándo). **La
-  fecha real de vuelta** se anota cuando se constata que la persona retomó, antes o después de la
-  prevista. Al llegar la prevista sin vuelta anotada, el sistema pregunta —al Coordinador por el
-  Asistente, al Administrador por el Coordinador— si retomó o si hay nueva fecha prevista, e
-  insiste hasta que alguien conteste; mientras tanto la cobertura sigue, y no quedan huecos. La
-  pregunta sale por el mismo camino que ya avisa las ausencias (`utils/revisarAusenciasAvisadas.js`).
 - **Funciones de la base que `authenticated` no puede ejecutar**: las de guardar los secretos de
   WhatsApp, de la conexión con software externo y de los avisos de cobranza y facturación,
   `intercambiar_orden_etapas_incorporacion` y `sembrar_configuracion_prestadora`. La de la conexión

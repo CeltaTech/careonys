@@ -11,14 +11,15 @@ import { generarConstanciaAusencia, descargarPDF } from '../../lib/generarDocume
 import { ESTADO_ACTIVO } from '../../lib/candidatos';
 import { guardiasAfectadas, guardiasSinCubrir, sumarLasYaCubiertas } from '../../lib/guardiasAfectadas';
 import { diasComputados } from '../../lib/diasDeAusencia';
-import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
+import { mensajeDeError } from '../../lib/errores';
 import { con } from '../../lib/textos';
 import { avisarCambioDeAsistente } from '../../lib/avisarCambioDeAsistente';
-import { llamarApiPanel } from '../../lib/apiPanel';
+import { llamadorDe } from '../../lib/apiPanel';
 import { useMotivosSustitucionGuardia } from '../../hooks/useMotivosSustitucionGuardia';
 import { nombreMotivoSustitucion, valorGuardado } from '../../lib/motivoDeSustitucion';
+import { hoyISO, sumarDias } from '../../lib/horarios';
 
-const TIPOS = ['enfermedad_inculpable', 'accidente_inculpable', 'otra_licencia', 'ausencia_no_justificada'];
+const TIPOS =['enfermedad_inculpable', 'accidente_inculpable', 'otra_licencia', 'ausencia_no_justificada'];
 
 // El momento de ahora con la forma que pide una caja de fecha y hora (`2026-09-16T14:30`), en hora
 // local. `toISOString()` a secas daría la hora en UTC, que en horario argentino se lee tres horas
@@ -38,21 +39,7 @@ function momentoGuardado(texto) {
   const momento = new Date(texto);
   return Number.isNaN(momento.getTime()) ? null : momento.toISOString();
 }
-const API_URL = import.meta.env.VITE_API_URL;
-
-async function llamarApiAusencias(path, opciones = {}) {
-  const { data } = await supabase.auth.getSession();
-  const respuesta = await fetch(`${API_URL}/api/panel/ausencias${path}`, {
-    ...opciones,
-    headers: {
-      Authorization: `Bearer ${data.session?.access_token}`,
-      ...opciones.headers,
-    },
-  });
-  const resultado = await respuesta.json().catch(() => ({}));
-  if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
-  return resultado;
-}
+const llamarApiAusencias = llamadorDe('/ausencias');
 
 export function AusenciasCoberturaTab({ asistente }) {
   const { t, locale } = useLocale();
@@ -66,7 +53,10 @@ export function AusenciasCoberturaTab({ asistente }) {
   const [guardando, setGuardando] = useState(false);
   const [nueva, setNueva] = useState({ tipo: 'enfermedad_inculpable', fecha_inicio: '', fecha_fin: '', observaciones: '', avisada_en: ahoraLocal() });
   const [coberturaForm, setCoberturaForm] = useState({});
-  const [cierreForm, setCierreForm] = useState({});
+  const [fechaForm, setFechaForm] = useState({});
+  const [cambiosDeFecha, setCambiosDeFecha] = useState({});
+  const [turnosCubiertos, setTurnosCubiertos] = useState({});
+  const [turnosFijos, setTurnosFijos] = useState([]);
   const [subiendoCertificado, setSubiendoCertificado] = useState(null);
   const [errorCertificado, setErrorCertificado] = useState(null);
   const {
@@ -86,7 +76,11 @@ export function AusenciasCoberturaTab({ asistente }) {
 
   async function recargar() {
     setEstado('cargando');
-    const [{ data: dataAusencias, error: errorAusencias }, { data: dataAsistentes }] = await Promise.all([
+    const [
+      { data: dataAusencias, error: errorAusencias },
+      { data: dataAsistentes },
+      { data: dataSeries, error: errorSeries },
+    ] = await Promise.all([
       supabase.from('ausencias').select('*').eq('asistente_id', asistente.id).order('fecha_inicio', { ascending: false }),
       // Quién puede cubrir esta ausencia. Es repartir trabajo, así que solo entra quien sigue en
       // el plantel; y se filtra en la consulta porque esta lista no muestra a nadie, solo llena
@@ -94,9 +88,11 @@ export function AusenciasCoberturaTab({ asistente }) {
       // contesta `estaEnElPlantel`, para que la regla quede escrita en un solo lugar
       // (regla 12 de CLAUDE.md §7).
       supabase.from('asistentes').select('id, nombre').eq('estado', ESTADO_ACTIVO).neq('id', asistente.id),
+      // Los turnos fijos de esta persona, para elegir cuál se cubre.
+      supabase.from('series_guardias').select('id, dias_semana, hora_inicio, hora_fin').eq('asistente_id', asistente.id),
     ]);
-    if (errorAusencias) {
-      setError(mensajeDeError(errorAusencias, t));
+    if (errorAusencias || errorSeries) {
+      setError(mensajeDeError(errorAusencias ?? errorSeries, t));
       setEstado('error');
       return;
     }
@@ -106,23 +102,44 @@ export function AusenciasCoberturaTab({ asistente }) {
     // que invitaría a asignar de nuevo lo que ya está asignado.
     const lista = dataAusencias ?? [];
     const porAusencia = {};
+    const cambiosPorAusencia = {};
+    const turnosPorAusencia = {};
     if (lista.length > 0) {
-      const { data: dataCobertura, error: errorCobertura } = await supabase
-        .from('guardias_cobertura')
-        .select('id, ausencia_id, guardia_original_id')
-        .in('ausencia_id', lista.map((a) => a.id));
-      if (errorCobertura) {
-        setError(mensajeDeError(errorCobertura, t));
+      const ids = lista.map((a) => a.id);
+      const [
+        { data: dataCobertura, error: errorCobertura },
+        { data: dataCambios, error: errorCambios },
+        { data: dataTurnos, error: errorTurnos },
+      ] = await Promise.all([
+        supabase.from('guardias_cobertura').select('id, ausencia_id, guardia_original_id').in('ausencia_id', ids),
+        supabase.from('ausencias_cambios_de_fecha').select('id, ausencia_id, fecha_anterior, fecha_nueva, cambiado_at')
+          .in('ausencia_id', ids).order('cambiado_at'),
+        supabase.from('coberturas_de_ausencia')
+          .select('id, ausencia_id, objetada_at, asistentes(nombre), series_guardias(dias_semana, hora_inicio, hora_fin)')
+          .in('ausencia_id', ids).order('created_at'),
+      ]);
+      const errorLectura = errorCobertura ?? errorCambios ?? errorTurnos;
+      if (errorLectura) {
+        setError(mensajeDeError(errorLectura, t));
         setEstado('error');
         return;
       }
       for (const cobertura of dataCobertura ?? []) {
         (porAusencia[cobertura.ausencia_id] ??= []).push(cobertura);
       }
+      for (const cambio of dataCambios ?? []) {
+        (cambiosPorAusencia[cambio.ausencia_id] ??= []).push(cambio);
+      }
+      for (const turno of dataTurnos ?? []) {
+        (turnosPorAusencia[turno.ausencia_id] ??= []).push(turno);
+      }
     }
 
     setAusencias(lista);
     setCoberturas(porAusencia);
+    setCambiosDeFecha(cambiosPorAusencia);
+    setTurnosCubiertos(turnosPorAusencia);
+    setTurnosFijos(dataSeries ?? []);
     setOtrosAsistentes(dataAsistentes ?? []);
     setEstado('listo');
   }
@@ -134,21 +151,19 @@ export function AusenciasCoberturaTab({ asistente }) {
   // cobertura quedaba colgada de la ausencia sin decir de qué día. Cuál cuenta lo decide
   // `guardiasAfectadas`, y acá sólo se traen las de esta persona desde el primer día.
   //
-  // Las guardias de la ausencia abierta se piden igual: sin fecha de fin la lista alcanza todo lo
-  // que ya esté armado hacia adelante, y se vuelve a calcular el día que se le cargue el cierre.
+  // La fecha de fin es siempre la prevista, y se vuelve a calcular cada vez que se la cambia o se
+  // registra la vuelta.
   //
   // Y lo ya cubierto se suma aparte, porque la consulta no lo encuentra: un turno cubierto pasó a
   // nombre de quien lo hace, así que dejó de ser de esta persona. Por qué eso importa lo explica
   // `sumarLasYaCubiertas`, que es donde vive la regla.
   async function guardiasDeLaAusencia(ausencia) {
-    const consulta = supabase
+    const { data, error: errorGuardias } = await supabase
       .from('guardias')
       .select('id, fecha, estado')
       .eq('asistente_id', asistente.id)
-      .gte('fecha', ausencia.fecha_inicio);
-    const { data, error: errorGuardias } = ausencia.fecha_fin
-      ? await consulta.lte('fecha', ausencia.fecha_fin)
-      : await consulta;
+      .gte('fecha', ausencia.fecha_inicio)
+      .lte('fecha', ausencia.fecha_fin);
     if (errorGuardias) throw errorGuardias;
 
     return sumarLasYaCubiertas(guardiasAfectadas(data ?? [], ausencia), coberturas[ausencia.id]);
@@ -170,7 +185,7 @@ export function AusenciasCoberturaTab({ asistente }) {
   }
 
   async function registrarAusencia() {
-    if (!nueva.fecha_inicio) return;
+    if (!nueva.fecha_inicio || !nueva.fecha_fin) return;
     setGuardando(true);
     setError(null);
 
@@ -191,7 +206,7 @@ export function AusenciasCoberturaTab({ asistente }) {
       asistente_id: asistente.id,
       tipo: nueva.tipo,
       fecha_inicio: nueva.fecha_inicio,
-      fecha_fin: nueva.fecha_fin || null,
+      fecha_fin: nueva.fecha_fin,
       observaciones: nueva.observaciones || null,
       avisada_en: momentoGuardado(nueva.avisada_en),
       guardias_afectadas: afectadas,
@@ -206,40 +221,57 @@ export function AusenciasCoberturaTab({ asistente }) {
     recargar();
   }
 
-  // Cerrar una ausencia que estaba en curso: se le pone el día en que terminó y, con eso, los dos
-  // números que hasta que ese día se sabe no se podían calcular. Los días computados son los que
-  // imprime la constancia que se le entrega a la persona, y la lista de guardias se rehace porque
-  // mientras la ausencia estaba abierta alcanzaba todo lo que hubiera hacia adelante.
-  //
-  // Los tres valores se guardan de una sola vez: una ausencia cerrada sin su cuenta, o con una
-  // cuenta de cuando todavía estaba abierta, es peor que una sin cerrar.
-  async function cerrarAusencia(ausencia) {
-    const fechaFin = cierreForm[ausencia.id];
-    if (!fechaFin) return;
+  // Mover el fin de la ausencia: una fecha prevista nueva, o la vuelta. La vuelta deja el último
+  // día de ausencia en el anterior. Cada cambio de la fecha prevista lo anota la base en el
+  // historial; acá se rehacen los dos números que dependen de ella —los días computados, que
+  // imprime la constancia, y los turnos que quedaron sin Asistente— y se guardan junto con la
+  // fecha, de una sola vez. La cobertura por turno fijo la corre sola el backend.
+  async function moverElFin(ausencia, { fechaFin, fechaVuelta = null }) {
+    if (!fechaFin || fechaFin < ausencia.fecha_inicio) return;
     setGuardando(true);
     setError(null);
 
-    const cerrada = { ...ausencia, fecha_fin: fechaFin };
+    const movida = { ...ausencia, fecha_fin: fechaFin };
     let afectadas;
     try {
-      afectadas = await guardiasDeLaAusencia(cerrada);
+      afectadas = await guardiasDeLaAusencia(movida);
     } catch {
       setGuardando(false);
       setError(t.comun.error_generico);
       return;
     }
 
-    const { error: errorUpdate } = await supabase
-      .from('ausencias')
-      .update({ fecha_fin: fechaFin, guardias_afectadas: afectadas, dias_computados: diasComputados(cerrada) })
-      .eq('id', ausencia.id);
+    const cambios = { fecha_fin: fechaFin, guardias_afectadas: afectadas, dias_computados: diasComputados(movida) };
+    if (fechaVuelta) cambios.fecha_vuelta_real = fechaVuelta;
+    const { error: errorUpdate } = await supabase.from('ausencias').update(cambios).eq('id', ausencia.id);
     setGuardando(false);
     if (errorUpdate) {
-      setError(t.comun.error_generico);
+      setError(mensajeDeError(errorUpdate, t));
       return;
     }
-    setCierreForm((prev) => ({ ...prev, [ausencia.id]: '' }));
+    setFechaForm((prev) => ({ ...prev, [ausencia.id]: {} }));
     recargar();
+  }
+
+  function cambiarFechaPrevista(ausencia) {
+    return moverElFin(ausencia, { fechaFin: fechaForm[ausencia.id]?.prevista });
+  }
+
+  function registrarVuelta(ausencia) {
+    const vuelta = fechaForm[ausencia.id]?.vuelta;
+    if (!vuelta || vuelta <= ausencia.fecha_inicio) return;
+    return moverElFin(ausencia, { fechaFin: sumarDias(vuelta, -1), fechaVuelta: vuelta });
+  }
+
+  // Un turno fijo se describe por sus días y su horario: «Lunes, Miércoles 08:00–20:00».
+  function nombreDelTurno(serie) {
+    if (!serie) return '';
+    const dias = (serie.dias_semana ?? []).map((d) => t.guardias.nueva_guardia.dias[d] ?? d).join(', ');
+    return `${dias} ${serie.hora_inicio?.slice(0, 5) ?? ''}–${serie.hora_fin?.slice(0, 5) ?? ''}`;
+  }
+
+  function fechaVisible(fecha) {
+    return new Date(`${fecha}T00:00:00`).toLocaleDateString(locale);
   }
 
   function descargarConstancia(ausencia) {
@@ -274,20 +306,13 @@ export function AusenciasCoberturaTab({ asistente }) {
     }
   }
 
-  // Un turno cubierto por vez, y cada uno se lo pide al backend.
+  // La cobertura se pide al backend por turno fijo, para toda la ausencia: el sustituto hace ese
+  // turno hasta la vuelta, y si la fecha prevista se corre la cobertura la sigue sola
+  // (`backend/src/utils/coberturaDeAusencia.js`). Sin turno elegido van todos los turnos fijos del
+  // ausente, y las guardias sueltas se cubren una por una. Un turno que ya tiene sustituto no se
+  // vuelve a cubrir: apretar dos veces no duplica nada.
   //
-  // Hasta hoy se guardaba una sola fila, con `guardia_original_id` vacía: decía que alguien iba a
-  // cubrir la ausencia, y no qué turno iba a tomar. Con eso ninguna pantalla podía contestar quién
-  // va mañana a lo de un Paciente, ni si quedaron turnos sin nadie. El costo adicional es el de
-  // cada guardia cubierta, y por eso va igual en todos los turnos.
-  //
-  // Y tampoco se escribe más contra la base desde acá. Cubrir un turno es dejar escrito a quién le
-  // tocaba y por qué lo hace otro, y pasar la guardia a nombre de quien la hace, para que pueda
-  // verla y ficharla. Son dos escrituras que valen juntas, y viven una sola vez en el backend
-  // (`backend/src/utils/cubrirGuardia.js`).
-  //
-  // Se cubren solamente los turnos que todavía no tienen sustituto: apretar dos veces no duplica
-  // la cobertura de un mismo turno.
+  // Una guardia sola, fuera de esto, se sigue cubriendo desde la guardia misma.
   async function asignarCobertura(ausencia) {
     const formulario = coberturaForm[ausencia.id] ?? {};
     const sustitutoId = formulario.asistente_sustituto_id;
@@ -295,37 +320,22 @@ export function AusenciasCoberturaTab({ asistente }) {
     setGuardando(true);
     setError(null);
 
-    let sinCubrir;
+    let cubiertas;
     try {
-      const afectadas = await afectadasDe(ausencia);
-      sinCubrir = guardiasSinCubrir(afectadas, coberturas[ausencia.id]);
-    } catch {
-      setGuardando(false);
-      setError(t.comun.error_generico);
-      return;
-    }
-
-    // Sin turnos descubiertos no hay cobertura que cargar. Guardar una fila suelta volvería a
-    // dejar una cobertura que no cubre nada en particular, que es justo lo que esto viene a
-    // terminar.
-    if (sinCubrir.length === 0) {
-      setGuardando(false);
-      return;
-    }
-
-    try {
-      for (const guardiaId of sinCubrir) {
-        await llamarApiPanel(`/guardias/${guardiaId}/cubrir`, {
-          method: 'POST',
-          body: JSON.stringify({
-            asistente_sustituto_id: sustitutoId,
-            ausencia_id: ausencia.id,
-            motivo: formulario.motivo || null,
-            motivo_detalle: formulario.motivo_detalle || null,
-            costo_adicional: formulario.costo_adicional || null,
-          }),
-        });
-      }
+      // Las ausencias cargadas antes de que existiera la lista de turnos afectados la calculan
+      // ahora, para que la tarjeta pueda decir cuántos faltan.
+      await afectadasDe(ausencia);
+      const respuesta = await llamarApiAusencias(`/${ausencia.id}/cobertura`, {
+        method: 'POST',
+        body: JSON.stringify({
+          asistente_sustituto_id: sustitutoId,
+          serie_id: formulario.serie_id || null,
+          motivo: formulario.motivo || null,
+          motivo_detalle: formulario.motivo_detalle || null,
+          costo_adicional: formulario.costo_adicional || null,
+        }),
+      });
+      cubiertas = respuesta.guardia_ids ?? [];
     } catch (err) {
       setGuardando(false);
       setError(mensajeDeError(err, t));
@@ -336,8 +346,8 @@ export function AusenciasCoberturaTab({ asistente }) {
     // Quien va a la casa del Paciente ya no es el de siempre, así que se avisa. Quién es viaja
     // explícito, porque el mensaje nunca lo deduce de la guardia. Un mensaje para todos los turnos y no
     // uno por turno.
-    await avisarCambioDeAsistente({
-      guardiaIds: sinCubrir,
+    if (cubiertas.length > 0) await avisarCambioDeAsistente({
+      guardiaIds: cubiertas,
       asistenteNuevoId: sustitutoId,
       asistenteAnteriorId: asistente?.id ?? null,
     });
@@ -362,30 +372,76 @@ export function AusenciasCoberturaTab({ asistente }) {
           return (
           <div key={a.id} className="panel-card-ausencia">
             <p>
-              <strong>{t.asistentes.ausencias[`tipo_${a.tipo}`]}</strong> — {new Date(a.fecha_inicio).toLocaleDateString(locale)}
-              {a.fecha_fin ? ` → ${new Date(a.fecha_fin).toLocaleDateString(locale)}` : ` (${t.asistentes.ausencias.en_curso})`}
+              <strong>{t.asistentes.ausencias[`tipo_${a.tipo}`]}</strong> — {fechaVisible(a.fecha_inicio)}
+              {a.fecha_vuelta_real
+                ? ` · ${con(t.asistentes.ausencias.volvio_el, { fecha: fechaVisible(a.fecha_vuelta_real) })}`
+                : ` → ${fechaVisible(a.fecha_fin)} (${t.asistentes.ausencias.prevista})`}
             </p>
             {a.dias_computados !== null && a.dias_computados !== undefined && (
               <p>{con(t.asistentes.ausencias.dias_computados, { n: a.dias_computados })}</p>
             )}
             {a.observaciones && <p>{a.observaciones}</p>}
 
-            {/* Una ausencia en curso se cierra acá, y hasta que se cierre no hay cuánto duró ni
-                lista firme de turnos descubiertos: mientras no se sabe cuándo termina, alcanza
-                todo lo que haya hacia adelante. */}
-            {!a.fecha_fin && (
+            {/* Pasada la fecha prevista sin vuelta registrada, la cobertura sigue y el sistema
+                pregunta hasta que alguien la anote. */}
+            {!a.fecha_vuelta_real && a.fecha_fin < hoyISO() && (
+              <Alert variant="warning">{t.asistentes.ausencias.vuelta_sin_confirmar}</Alert>
+            )}
+
+            {/* Mientras no volvió, se puede correr la fecha prevista o anotar la vuelta. */}
+            {!a.fecha_vuelta_real && (
               <div className="panel-cierre-ausencia">
                 <FormField
-                  label={t.asistentes.ausencias.fecha_fin}
-                  name={`cierre-${a.id}`}
+                  label={t.asistentes.ausencias.nueva_fecha_prevista}
+                  name={`prevista-${a.id}`}
                   type="date"
-                  value={cierreForm[a.id] || ''}
-                  onChange={(e) => setCierreForm((prev) => ({ ...prev, [a.id]: e.target.value }))}
+                  value={fechaForm[a.id]?.prevista || ''}
+                  onChange={(e) => setFechaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], prevista: e.target.value } }))}
                 />
-                <Button variant="secondary" onClick={() => cerrarAusencia(a)} disabled={guardando || !cierreForm[a.id]}>
-                  {t.asistentes.ausencias.cerrar_ausencia}
+                <Button variant="secondary" onClick={() => cambiarFechaPrevista(a)} disabled={guardando || !fechaForm[a.id]?.prevista}>
+                  {t.asistentes.ausencias.cambiar_fecha_prevista}
+                </Button>
+                <FormField
+                  label={t.asistentes.ausencias.fecha_vuelta}
+                  name={`vuelta-${a.id}`}
+                  type="date"
+                  value={fechaForm[a.id]?.vuelta || ''}
+                  onChange={(e) => setFechaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], vuelta: e.target.value } }))}
+                />
+                <Button variant="secondary" onClick={() => registrarVuelta(a)} disabled={guardando || !fechaForm[a.id]?.vuelta}>
+                  {t.asistentes.ausencias.registrar_vuelta}
                 </Button>
               </div>
+            )}
+
+            {cambiosDeFecha[a.id]?.length > 0 && (
+              <div className="panel-historial-fechas">
+                <p><strong>{t.asistentes.ausencias.historial_fechas}</strong></p>
+                <ul>
+                  {cambiosDeFecha[a.id].map((c) => (
+                    <li key={c.id}>
+                      {con(t.asistentes.ausencias.cambio_de_fecha, {
+                        antes: fechaVisible(c.fecha_anterior),
+                        despues: fechaVisible(c.fecha_nueva),
+                        cuando: new Date(c.cambiado_at).toLocaleDateString(locale),
+                      })}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {turnosCubiertos[a.id]?.length > 0 && (
+              <ul className="panel-turnos-cubiertos">
+                {turnosCubiertos[a.id].map((c) => (
+                  <li key={c.id}>
+                    {con(c.objetada_at ? t.asistentes.ausencias.turno_objetado : t.asistentes.ausencias.turno_cubierto_por, {
+                      turno: nombreDelTurno(c.series_guardias),
+                      nombre: c.asistentes?.nombre ?? '',
+                    })}
+                  </li>
+                ))}
+              </ul>
             )}
 
             {/* Cuántos turnos dejó descubiertos. Las ausencias cargadas antes de que esto se
@@ -444,11 +500,25 @@ export function AusenciasCoberturaTab({ asistente }) {
                   value={coberturaForm[a.id]?.asistente_sustituto_id || ''}
                   onChange={(e) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], asistente_sustituto_id: e.target.value } }))}
                 >
-                  <option value="">{t.comun.todos}</option>
+                  <option value="">{t.guardias.nueva_guardia.elegir}</option>
                   {otrosAsistentes.map((o) => (
                     <option key={o.id} value={o.id}>{o.nombre}</option>
                   ))}
                 </FormField>
+                {turnosFijos.length > 0 && (
+                  <FormField
+                    label={t.asistentes.ausencias.turno_fijo}
+                    name={`turno-${a.id}`}
+                    type="select"
+                    value={coberturaForm[a.id]?.serie_id || ''}
+                    onChange={(e) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], serie_id: e.target.value } }))}
+                  >
+                    <option value="">{t.asistentes.ausencias.todos_los_turnos}</option>
+                    {turnosFijos.map((s) => (
+                      <option key={s.id} value={s.id}>{nombreDelTurno(s)}</option>
+                    ))}
+                  </FormField>
+                )}
                 {/* Por qué la hace otro. La lista sale del catálogo de la Prestadora: si se quedó
                     sin ninguna encendida no hay nada que elegir, y se lo dice, porque un
                     desplegable vacío no explica nada. */}
@@ -502,7 +572,7 @@ export function AusenciasCoberturaTab({ asistente }) {
         {TIPOS.map((tipo) => <option key={tipo} value={tipo}>{t.asistentes.ausencias[`tipo_${tipo}`]}</option>)}
       </FormField>
       <FormField label={t.asistentes.ausencias.fecha_inicio} name="fecha_inicio" type="date" value={nueva.fecha_inicio} onChange={(e) => setNueva((f) => ({ ...f, fecha_inicio: e.target.value }))} required />
-      <FormField label={t.asistentes.ausencias.fecha_fin} name="fecha_fin" type="date" value={nueva.fecha_fin} onChange={(e) => setNueva((f) => ({ ...f, fecha_fin: e.target.value }))} />
+      <FormField label={t.asistentes.ausencias.fecha_fin} name="fecha_fin" type="date" value={nueva.fecha_fin} onChange={(e) => setNueva((f) => ({ ...f, fecha_fin: e.target.value }))} required />
       <FormField
         label={t.asistentes.ausencias.avisada_en}
         name="avisada_en"
@@ -511,7 +581,7 @@ export function AusenciasCoberturaTab({ asistente }) {
         onChange={(e) => setNueva((f) => ({ ...f, avisada_en: e.target.value }))}
       />
       <FormField label={t.comun.nota_interna} name="observaciones" type="textarea" value={nueva.observaciones} onChange={(e) => setNueva((f) => ({ ...f, observaciones: e.target.value }))} />
-      <Button onClick={registrarAusencia} disabled={guardando || !nueva.fecha_inicio}>
+      <Button onClick={registrarAusencia} disabled={guardando || !nueva.fecha_inicio || !nueva.fecha_fin}>
         {guardando ? t.comun.guardando : t.asistentes.ausencias.registrar_nueva}
       </Button>
     </div>

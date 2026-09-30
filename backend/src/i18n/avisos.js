@@ -110,6 +110,17 @@ function cuantosAsistentes(t, n) {
 }
 
 /** El renglón de la ausencia, con fecha de vuelta o sin ella. */
+/** La pregunta por una vuelta que nadie anotó: la de un Asistente y la de un Coordinador. */
+function preguntaDeVuelta(t, d, clave, nombre) {
+  return {
+    asunto: t(`${clave}.asunto`, { nombre }),
+    texto: [
+      t(`${clave}.cuerpo`, { nombre, fecha: d.fecha }),
+      d.veces > 1 ? t('comun.aviso_repetido_ausencia', { veces: d.veces }) : null,
+    ].filter(Boolean).join('\n'),
+  };
+}
+
 function lineaDeAusencia(t, d) {
   const asistente = d.asistente ?? t('comun.un_asistente');
   return d.fechaFin
@@ -422,6 +433,17 @@ const ARMADORES = {
         : null,
       d.veces > 1 ? t('comun.aviso_repetido_ausencia', { veces: d.veces }) : null,
     ].filter(Boolean).join('\n'),
+  }),
+
+  vuelta_de_ausencia_sin_confirmar: (t, d) => preguntaDeVuelta(t, d, 'vuelta_de_ausencia_sin_confirmar',
+    d.nombre ?? t('comun.un_asistente')),
+
+  vuelta_de_coordinador_sin_confirmar: (t, d) => preguntaDeVuelta(t, d, 'vuelta_de_coordinador_sin_confirmar',
+    d.nombre ?? ''),
+
+  cobertura_objetada: (t, d) => ({
+    asunto: t('cobertura_objetada.asunto', { nombre: d.nombre ?? t('comun.un_asistente') }),
+    texto: t('cobertura_objetada.cuerpo', { nombre: d.nombre ?? t('comun.un_asistente') }),
   }),
 
   guardia_sin_cubrir: (t, d) => ({

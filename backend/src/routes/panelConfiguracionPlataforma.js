@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { supabase } from '../db/connection.js';
+import { clienteDelPedido, supabase } from '../db/connection.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
 // Interruptor de MFA obligatorio para superadmin.
@@ -8,6 +8,10 @@ import { responderError } from '../utils/errorConMotivo.js';
 // router, separado de panelConfiguracion.js (que es admin_prestadora-scoped). Solo
 // superadmin puede tocarlo, que es justamente el rol que este toggle protege
 // (CLAUDE.md §5).
+//
+// El interruptor se lee y se cambia con la credencial de quien pide (`clienteDelPedido(req)`): la
+// base deja leerlo a cualquiera con sesión y cambiarlo sólo al Superadmin
+// (`superadmin_escribe_configuracion_plataforma`).
 export const panelConfiguracionPlataformaRouter = Router();
 
 panelConfiguracionPlataformaRouter.use(requiereRolPanel);
@@ -20,7 +24,7 @@ function requiereSuperadmin(req, res, next) {
 }
 
 panelConfiguracionPlataformaRouter.get('/mfa', requiereSuperadmin, async (req, res) => {
-  const { data, error } = await supabase
+  const { data, error } = await clienteDelPedido(req)
     .from('configuracion_plataforma')
     .select('mfa_admin_obligatorio, updated_at')
     .single();
@@ -33,7 +37,7 @@ panelConfiguracionPlataformaRouter.patch('/mfa', requiereSuperadmin, async (req,
   if (typeof mfa_admin_obligatorio !== 'boolean') {
     return res.status(400).json({ error: 'mfa_admin_obligatorio debe ser booleano' });
   }
-  const { error } = await supabase
+  const { error } = await clienteDelPedido(req)
     .from('configuracion_plataforma')
     .update({ mfa_admin_obligatorio, actualizado_por: req.usuarioPanel.id, updated_at: new Date().toISOString() })
     .eq('id', true);
@@ -56,6 +60,9 @@ async function cuantosCorreosDesde(desde) {
   // El tope es de la cuenta entera del despachante de correo, así que tiene que contar los envíos
   // de todas las Prestadoras y también los que no son de ninguna. Acotada daría un número que no se
   // puede comparar contra ese tope. Devuelve dos totales y ningún dato de nadie.
+  //
+  // Por eso cuenta con la llave maestra: con la credencial de quien pide, la base sólo le deja
+  // ver los envíos de su Prestadora (`la_prestadora_ve_sus_envios_de_correo`).
   const { count, error } = await supabase
     .from('envios_de_correo')
     .select('id', { count: 'exact', head: true })

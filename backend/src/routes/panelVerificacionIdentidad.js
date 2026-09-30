@@ -18,10 +18,12 @@ import { responderError } from '../utils/errorConMotivo.js';
 // la foto de la persona (`docs/PRD_03_Reclutamiento.md`), y no había ningún lado donde guardar
 // esas dos fotos: quien revisaba las recibía por fuera del producto y marcaba la etapa a mano.
 //
-// POR QUÉ SUBE POR ACÁ Y NO DERECHO DESDE EL PANEL. El depósito `fotos-identidad` es privado y no
-// tiene ninguna política: nadie lo alcanza con su propio pase, porque adentro hay imágenes de
-// documentos de identidad. Lo escribe y lo lee el backend con la llave maestra, después de
-// comprobar de qué Prestadora es el Asistente. Es la misma forma de `documentos-cese`.
+// POR QUÉ SUBE POR ACÁ Y NO DERECHO DESDE EL PANEL. El depósito `fotos-identidad` es privado,
+// porque adentro hay imágenes de documentos de identidad. Lo escribe y lo lee el backend con la
+// llave maestra, después de comprobar de qué Prestadora es el Asistente. Es la misma forma de
+// `documentos-cese`. La base tiene políticas para la tabla y para el depósito, pero son más
+// estrechas que lo que esta ruta le deja hacer a cada rol (ver el comentario de cada consulta);
+// si se adoptan o no se decide aparte.
 //
 // LO QUE ESTA RUTA NO HACE. No compara las dos caras: eso es dato biométrico, no hay documento
 // legal del que sacar la advertencia y no hay proveedor elegido (`docs/SECURITY.md`). Acá las fotos se
@@ -41,6 +43,11 @@ const upload = multer({
 });
 
 async function asistenteDeLaPrestadora(asistenteId, usuarioPanel) {
+  // Con la llave maestra: con la credencial de la persona, `coordinador_lee_asistentes_de_su_zona`
+  // (interno.coordinador_alcanza_asistente) le deja al Coordinador sólo los de su zona, y
+  // `oculta_pendientes_de_conformidad` (RESTRICTIVE, NOT pendiente_conformidad) contesta 404 a
+  // todos los roles por el Asistente pendiente. Hasta ahora cualquier rol del Panel alcanzaba a
+  // todos los de su Prestadora. Si se acota o no se decide aparte.
   let query = supabase
     .from('asistentes')
     .select('id, prestadora_id')
@@ -77,6 +84,9 @@ panelVerificacionIdentidadRouter.post(
       return res.status(404).json({ error: 'asistente_no_encontrado', motivo: 'asistente_no_encontrado' });
     }
 
+    // Con la llave maestra: `fotos_identidad_las_alcanza_quien_administra_o_coordina` le pide al
+    // Coordinador que alcance a ese Asistente (interno.coordinador_alcanza_asistente); la ruta sale
+    // de la fila ya acotada a la Prestadora de la sesión. Si se acota o no se decide aparte.
     const { error: errorSubida } = await supabase.storage
       .from(BUCKET)
       .upload(rutaEnElDeposito(asistente.prestadora_id, asistente.id, tipo), req.file.buffer, {
@@ -108,6 +118,8 @@ panelVerificacionIdentidadRouter.get(
     // de la Prestadora, el Asistente y el tipo, así que el archivo es la única verdad posible.
     // Una columna que dijera «esta foto está subida» podría decir que sí cuando el archivo ya no
     // está, y entonces la pantalla mostraría un hueco sin explicar por qué.
+    //
+    // Con la llave maestra, por la misma política del depósito que al subir.
     const firmadas = await Promise.all(FOTOS_DE_IDENTIDAD.map(async (tipo) => {
       const { data } = await supabase.storage
         .from(BUCKET)

@@ -42,7 +42,7 @@ const baseFalsa = createServer((req, res) => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
     const cuerpo = crudo ? JSON.parse(crudo) : null;
-    llamadas.push({ clave, url: req.url, cuerpo });
+    llamadas.push({ clave, url: req.url, cuerpo, credencial: req.headers.authorization });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada({ cuerpo, url: req.url }) : preparada;
@@ -81,10 +81,14 @@ after(() => {
   baseFalsa.close();
 });
 
+/** La credencial que mandó el último pedido. */
+let credencialEnviada = null;
+
 async function pedir(metodo, ruta) {
+  credencialEnviada = sesionDePrueba(USUARIO);
   const respuesta = await fetch(`${DIRECCION}${ruta}`, {
     method: metodo,
-    headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
+    headers: { Authorization: credencialEnviada, 'Content-Type': 'application/json' },
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
@@ -145,9 +149,13 @@ describe('marcar ausente', () => {
     assert.equal(incidente.nivel_actual, 1);
   });
 
-  it('la guardia se busca acotada a la Prestadora activa', async () => {
+  // Con la llave maestra y acotada a la Prestadora activa: con la credencial del Coordinador la base
+  // le dejaría ver sólo las guardias de su zona (`coordinador_gestiona_guardias_de_su_zona`), y
+  // marcar la ausencia es trabajo suyo en cualquier guardia de la Prestadora.
+  it('la guardia se busca con la llave maestra, acotada a la Prestadora activa', async () => {
     await pedir('POST', `/${GUARDIA}/ausente`);
     const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/guardias');
+    assert.equal(lectura.credencial, 'Bearer clave-de-mentira');
     assert.match(decodeURIComponent(lectura.url), new RegExp(`prestadora_id=eq\\.${PRESTADORA}`));
   });
 

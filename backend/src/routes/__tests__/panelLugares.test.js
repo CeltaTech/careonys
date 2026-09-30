@@ -43,7 +43,12 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const direccion = new URL(req.url, 'http://interno');
     const clave = `${req.method} ${direccion.pathname}`;
-    llamadas.push({ clave, filtros: direccion.searchParams, cuerpo: crudo ? JSON.parse(crudo) : null });
+    llamadas.push({
+      clave,
+      filtros: direccion.searchParams,
+      cuerpo: crudo ? JSON.parse(crudo) : null,
+      credencial: req.headers.authorization,
+    });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada(direccion.searchParams) : preparada;
@@ -120,8 +125,9 @@ beforeEach(() => {
     // alcance se está por cambiar.
     filtros.get('id') === `eq.${COORDINADORA}` ? [{ id: COORDINADORA }] : [quienLlama],
   );
-  // El país de la Prestadora es el que decide con qué organismo se habla.
-  respuestas.set('GET /rest/v1/prestadoras', () => [{ pais: 'AR' }]);
+  // El país de la Prestadora es el que decide con qué organismo se habla. Y su identificador,
+  // porque la Prestadora con la que se escribe es la que la base deja ver a quien pide.
+  respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA, pais: 'AR' }]);
   respuestas.set('GET /rest/v1/lugares', () => []);
   respuestas.set('POST /rest/v1/lugares', () => [{ id: LUGAR }]);
   respuestas.set('PATCH /rest/v1/lugares', () => [{ id: LUGAR }]);
@@ -243,7 +249,9 @@ describe('qué lugares abarca una zona', () => {
 
     const borrado = llamadas.find((l) => l.clave === 'DELETE /rest/v1/zona_lugares');
     assert.equal(borrado.filtros.get('zona_id'), `eq.${ZONA}`);
-    assert.equal(borrado.filtros.get('prestadora_id'), `eq.${PRESTADORA}`);
+    // La Organización no va escrita en el filtro: el borrado va con la credencial de quien pide,
+    // y la base lo acota a la suya.
+    assert.equal(borrado.credencial, sesionDePrueba(USUARIO));
     assert.deepEqual(
       loEscritoEn('zona_lugares').map((f) => f.lugar_id),
       [LUGAR, OTRO_LUGAR],

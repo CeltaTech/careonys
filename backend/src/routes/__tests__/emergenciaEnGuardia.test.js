@@ -13,14 +13,20 @@
  *   2. QUE EL DETALLE SALGA POR UN CANAL PÚBLICO. El texto que escribió el Asistente es
  *      información sensible (`celtatech/CLAUDE.md` §6): el mensaje dice de qué guardia se trata y
  *      nada más, y el texto se lee entrando al Panel.
- *   3. QUE UNA PRESTADORA ALCANCE LA EMERGENCIA DE OTRA. El backend entra a la base con la llave de
- *      servicio y se saltea la protección por fila, así que lo único que separa a una de otra son
- *      los filtros escritos en cada consulta.
+ *   3. QUE UNA PRESTADORA ALCANCE LA EMERGENCIA DE OTRA. Leer la bandeja del Panel y marcarla
+ *      atendida siguen con la llave de servicio, porque las políticas de la base son más estrechas
+ *      que lo que la pantalla mostraba; ahí lo que separa una Prestadora de otra son los filtros
+ *      escritos en la consulta. De quién es cada guardia y la anotación de quién vio el detalle van
+ *      con la credencial de quien pide.
  *   4. QUE SE PIERDA EL MOMENTO EN QUE PASÓ. El aviso puede quedar media hora en la cola sin
  *      conexión, y esa media hora es justamente el dato.
  *
  * La base falsa honra los filtros de la dirección a propósito: si alguien saca el filtro por
- * Prestadora, las pruebas de aislamiento dejan de pasar.
+ * Prestadora donde todavía va escrito, las pruebas de aislamiento dejan de pasar. E imita la
+ * protección por fila en lo único que hace falta: con la credencial de quien pide contesta sólo lo
+ * de su Prestadora, y con la llave de servicio contesta todo. Si a la bandeja se le cayera el filtro
+ * de la Prestadora, la emergencia ajena aparecería. La protección por fila en sí no se ve acá: la prueba
+ * `scripts/probar_aislamiento.mjs` contra una base de verdad.
  *
  * Los datos son inventados.
  */
@@ -55,10 +61,15 @@ const baseFalsa = createServer((req, res) => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
     const cuerpo = crudo ? JSON.parse(crudo) : null;
-    llamadas.push({ clave, url: req.url, cuerpo });
+    const credencial = req.headers.authorization;
+    llamadas.push({ clave, url: req.url, cuerpo, credencial });
 
     const preparada = respuestas.get(clave);
-    const valor = typeof preparada === 'function' ? preparada({ cuerpo, url: req.url }) : preparada;
+    let valor = typeof preparada === 'function' ? preparada({ cuerpo, url: req.url, credencial }) : preparada;
+    // La protección por fila de mentira: a quien pide, sólo lo de su Prestadora.
+    if (req.method === 'GET' && Array.isArray(valor) && credencial === credencialEnviada) {
+      valor = valor.filter((fila) => !Object.hasOwn(fila, 'prestadora_id') || fila.prestadora_id === PRESTADORA);
+    }
     if (valor === undefined) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: `la prueba no preparó respuesta para ${clave}` }));
@@ -101,10 +112,14 @@ after(() => {
   baseFalsa.close();
 });
 
+/** La credencial que mandó el último pedido: la base tiene que recibir esa, y no la llave de servicio. */
+let credencialEnviada = null;
+
 async function pedir(metodo, ruta, cuerpo) {
+  credencialEnviada = sesionDePrueba(USUARIO);
   const opciones = {
     method: metodo,
-    headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
+    headers: { Authorization: credencialEnviada, 'Content-Type': 'application/json' },
   };
   if (cuerpo !== undefined) opciones.body = JSON.stringify(cuerpo);
   const respuesta = await fetch(`${RAIZ}${ruta}`, opciones);
@@ -207,6 +222,10 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/pacientes', ({ url }) =>
     filasQuePasanLosFiltros(url, [{ id: PACIENTE, prestadora_id: PRESTADORA, nombre: 'Elsa Puig' }])
   );
+  respuestas.set('GET /rest/v1/guardia_pacientes', ({ url }) =>
+    filasQuePasanLosFiltros(url, [{ guardia_id: GUARDIA, paciente_id: PACIENTE, prestadora_id: PRESTADORA }])
+  );
+  respuestas.set('POST /rest/v1/consultas_a_hce', () => []);
   // El mensaje al Coordinador pasa por acá antes de salir. Sin configuración cargada el evento se
   // considera encendido, y el correo no sale porque en las pruebas no hay servidor de correo.
   respuestas.set('GET /rest/v1/configuracion_notificaciones', () => []);
@@ -343,14 +362,54 @@ describe('la bandeja del Panel', () => {
     assert.equal(cuerpo.emergencias[0].guardia.fecha, '2026-09-15');
   });
 
-  it('todas las consultas van acotadas a la Prestadora de la sesión', async () => {
+  // Leer la bandeja sigue con la llave maestra: las políticas de la base son más estrechas que lo
+  // que la pantalla mostraba (la información de salud sólo a quien atiende, el Coordinador sólo su
+  // zona, los pendientes de conformidad escondidos). Lo que separa las Prestadoras ahí es el filtro
+  // escrito en cada consulta. Los pacientes que se anotan sí van con la credencial de quien pide.
+  it('la lista y los nombres van con la llave maestra y el filtro de la Prestadora', async () => {
     await enElPanel('/');
     const consultadas = llamadas.filter((l) => l.clave.startsWith('GET /rest/v1/'));
     for (const tabla of ['emergencias_guardia', 'guardias', 'asistentes', 'pacientes']) {
       const consulta = consultadas.find((l) => l.clave.endsWith(`/${tabla}`));
       assert.ok(consulta, `tiene que haberse consultado ${tabla}`);
-      assert.ok(consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`), consulta.url);
+      assert.notEqual(consulta.credencial, credencialEnviada, `${tabla} fue con la credencial de quien pide`);
+      assert.ok(consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`), `${tabla} sin filtro de Prestadora: ${consulta.url}`);
     }
+    const deQuienEs = consultadas.find((l) => l.clave.endsWith('/guardia_pacientes'));
+    assert.ok(deQuienEs, 'tiene que haberse consultado guardia_pacientes');
+    assert.equal(deQuienEs.credencial, credencialEnviada, 'guardia_pacientes no fue con la credencial de quien pide');
+  });
+
+  it('el Coordinador ve también la emergencia de una guardia que no es de su zona', async () => {
+    // La base de mentira imita acá la política del Coordinador: con la credencial de quien pide,
+    // la emergencia y la guardia de otra zona no se ven. Si la bandeja volviera a esa credencial,
+    // la lista saldría vacía o sin la guardia.
+    emergenciasEnLaBase = [emergenciaDePrueba({ guardia_id: GUARDIA_DE_OTRO_ASISTENTE })];
+    const fueraDeSuZona = (filas) => ({ url, credencial }) =>
+      credencial === credencialEnviada ? [] : filasQuePasanLosFiltros(url, filas());
+    respuestas.set('GET /rest/v1/emergencias_guardia', fueraDeSuZona(() => emergenciasEnLaBase));
+    respuestas.set('GET /rest/v1/guardias', fueraDeSuZona(() => guardiasEnLaBase));
+    const { estado, cuerpo } = await enElPanel('/');
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.emergencias.length, 1);
+    assert.equal(cuerpo.emergencias[0].guardia.fecha, '2026-09-15');
+  });
+
+  it('antes de entregar el detalle queda anotado quién lo vio, con su credencial', async () => {
+    const { estado } = await enElPanel('/');
+    assert.equal(estado, 200);
+    const anotaciones = llamadas.filter((l) => l.clave === 'POST /rest/v1/consultas_a_hce');
+    assert.equal(anotaciones.length, 1);
+    const anotada = Array.isArray(anotaciones[0].cuerpo) ? anotaciones[0].cuerpo[0] : anotaciones[0].cuerpo;
+    assert.equal(anotada.paciente_id, PACIENTE);
+    assert.equal(anotaciones[0].credencial, credencialEnviada);
+  });
+
+  it('si no se puede anotar quién lo vio, el detalle no se entrega', async () => {
+    respuestas.set('POST /rest/v1/consultas_a_hce', () => ({ __estado: 500, __cuerpo: { message: 'falla' } }));
+    const { estado, cuerpo } = await enElPanel('/');
+    assert.notEqual(estado, 200);
+    assert.equal(JSON.stringify(cuerpo).includes(DETALLE), false);
   });
 
   it('la emergencia de otra Prestadora no aparece', async () => {

@@ -4,15 +4,18 @@
  *
  *   npm test --prefix backend
  *
- * POR QUÉ EXISTE ESTA PRUEBA. El backend entra a la base con la llave de servicio y se saltea la
- * protección por fila, así que lo único que separa una Prestadora de otra son los filtros
- * escritos en cada consulta. La de `certificados` se apoyaba nada más que en el identificador
- * del Asistente, y una misma persona tiene una ficha por cada Prestadora donde trabaja: si ese
- * identificador se repitiera, el Cliente vería el Certificado de otra Prestadora y la pantalla
- * se vería igual de bien. No lo encuentra nadie mirando.
+ * POR QUÉ EXISTE ESTA PRUEBA. Una misma persona tiene una ficha por cada Prestadora donde
+ * trabaja: si el identificador del Asistente se repitiera, el Cliente vería el Certificado de
+ * otra Prestadora y la pantalla se vería igual de bien. No lo encuentra nadie mirando.
  *
- * Qué daría con el sistema roto: sin el filtro de Prestadora, las dos comprobaciones de abajo
- * fallan. Los datos son inventados.
+ * Las dos puertas lo cuidan distinto. La del Asistente asignado consulta con la credencial de la
+ * persona, y la que separa una Prestadora de otra es la protección por fila de la base: acá se
+ * comprueba que la consulta salga con esa credencial y no con la llave maestra. El escaneo sigue
+ * con la llave maestra —el Asistente escaneado puede no estar asignado, y la base no se lo deja
+ * ver al Cliente—, así que ahí lo único que separa una Prestadora de otra es el filtro escrito.
+ *
+ * Qué daría con el sistema roto: con la consulta de vuelta en la llave maestra, o sin el filtro
+ * de Prestadora en el escaneo, las comprobaciones de abajo fallan. Los datos son inventados.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
@@ -35,7 +38,7 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, url: req.url });
+    llamadas.push({ clave, url: req.url, autorizacion: req.headers.authorization });
 
     const preparada = respuestas.get(clave);
     // Lo que esta prueba no prepara contesta vacío: acá se mira con qué filtros se consultó una
@@ -71,9 +74,13 @@ after(() => {
   baseFalsa.close();
 });
 
+/** La credencial de la persona de la prueba. La de la llave maestra es otra: `clave-de-mentira`. */
+let credencial;
+
 async function pedir(ruta) {
+  credencial = sesionDePrueba(USUARIO);
   const respuesta = await fetch(`${DIRECCION}${ruta}`, {
-    headers: { Authorization: sesionDePrueba(USUARIO) },
+    headers: { Authorization: credencial },
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
@@ -102,7 +109,7 @@ beforeEach(() => {
 });
 
 describe('el Certificado en la pantalla del Asistente asignado', () => {
-  it('se pide filtrado por la Prestadora del Paciente, no sólo por el Asistente', async () => {
+  it('se pide con la credencial de la persona, no con la llave maestra', async () => {
     respuestas.set('GET /rest/v1/guardias', [
       { id: 'g-1', estado: 'cerrada', asistente_id: ASISTENTE },
     ]);
@@ -110,13 +117,14 @@ describe('el Certificado en la pantalla del Asistente asignado', () => {
     const { estado } = await pedir(`/pacientes/${PACIENTE}/asistente`);
     assert.equal(estado, 200);
 
-    const [url] = consultasA('certificados');
-    assert.ok(url, 'no se consultó el Certificado');
-    assert.ok(
-      url.includes(`prestadora_id=eq.${PRESTADORA}`),
-      'la consulta del Certificado no lleva el filtro de Prestadora'
+    const consultas = llamadas.filter((l) => l.clave === 'GET /rest/v1/certificados');
+    assert.equal(consultas.length, 1, 'no se consultó el Certificado');
+    assert.equal(
+      consultas[0].autorizacion,
+      credencial,
+      'la consulta del Certificado no salió con la credencial de la persona'
     );
-    assert.ok(url.includes(`asistente_id=eq.${ASISTENTE}`), url);
+    assert.ok(consultas[0].url.includes(`asistente_id=eq.${ASISTENTE}`), consultas[0].url);
   });
 });
 

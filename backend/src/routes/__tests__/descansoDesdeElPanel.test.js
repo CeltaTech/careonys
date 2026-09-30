@@ -13,7 +13,8 @@
  *      guardia. Se comprueba mirando qué se escribió, no lo que la ruta dice de sí misma.
  *   2. QUE UNA PRESTADORA ALCANCE LA GUARDIA DE OTRA. El backend entra con la llave de servicio y se
  *      saltea la protección por fila: lo único que separa a una de otra son los filtros de cada
- *      consulta.
+ *      consulta. Va con la llave maestra porque con la credencial del Coordinador la base le dejaría
+ *      ver sólo las guardias y los descansos de su zona, y hoy los anota en toda la Prestadora.
  *   3. QUE ENTRE UN RATO IMPOSIBLE. Un fin anterior al principio rompe la restricción de la base, y
  *      el texto crudo de esa restricción nombra tablas y columnas.
  *   4. QUE SE ANOTE UN DESCANSO QUE TODAVÍA NO PASÓ. Acá se registra lo que ya ocurrió.
@@ -44,10 +45,11 @@ const baseFalsa = createServer((req, res) => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
     const cuerpo = crudo ? JSON.parse(crudo) : null;
-    llamadas.push({ clave, url: req.url, cuerpo });
+    const credencial = req.headers.authorization;
+    llamadas.push({ clave, url: req.url, cuerpo, credencial });
 
     const preparada = respuestas.get(clave);
-    const valor = typeof preparada === 'function' ? preparada({ cuerpo, url: req.url }) : preparada;
+    const valor = typeof preparada === 'function' ? preparada({ cuerpo, url: req.url, credencial }) : preparada;
     if (valor === undefined) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: `la prueba no preparó respuesta para ${clave}` }));
@@ -80,10 +82,17 @@ after(() => {
   baseFalsa.close();
 });
 
+/** Con qué llega a la base lo que va con la llave maestra. */
+const LLAVE_MAESTRA = 'Bearer clave-de-mentira';
+
+/** La credencial que mandó el último pedido. */
+let credencialEnviada = null;
+
 async function pedir(metodo, ruta, cuerpo) {
+  credencialEnviada = sesionDePrueba(USUARIO);
   const opciones = {
     method: metodo,
-    headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
+    headers: { Authorization: credencialEnviada, 'Content-Type': 'application/json' },
   };
   if (cuerpo !== undefined) opciones.body = JSON.stringify(cuerpo);
   const respuesta = await fetch(`${DIRECCION}${ruta}`, opciones);
@@ -100,6 +109,15 @@ function filasQuePasanLosFiltros(url, filas) {
       return true;
     })
   );
+}
+
+/**
+ * Lo que la base deja ver según la credencial, como hace la protección por fila: la maestra ve
+ * todo, y la de la persona sólo lo de su Prestadora.
+ */
+function visiblesPara(credencial, filas) {
+  if (credencial === LLAVE_MAESTRA) return filas;
+  return filas.filter((fila) => fila.prestadora_id === PRESTADORA);
 }
 
 /** Los descansos que el backend dio de alta en este pedido. */
@@ -129,9 +147,11 @@ beforeEach(() => {
 
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'coordinador', prestadora_id: PRESTADORA }]);
-  respuestas.set('GET /rest/v1/guardias', ({ url }) => filasQuePasanLosFiltros(url, guardiasEnLaBase));
-  respuestas.set('GET /rest/v1/descansos_guardia', ({ url }) =>
-    filasQuePasanLosFiltros(url, descansosEnLaBase)
+  respuestas.set('GET /rest/v1/guardias', ({ url, credencial }) =>
+    filasQuePasanLosFiltros(url, visiblesPara(credencial, guardiasEnLaBase))
+  );
+  respuestas.set('GET /rest/v1/descansos_guardia', ({ url, credencial }) =>
+    filasQuePasanLosFiltros(url, visiblesPara(credencial, descansosEnLaBase))
   );
   respuestas.set('POST /rest/v1/descansos_guardia', ({ cuerpo }) => {
     const fila = Array.isArray(cuerpo) ? cuerpo[0] : cuerpo;
@@ -173,10 +193,14 @@ describe('anotar un descanso desde el Panel', () => {
     assert.equal(descansosAnotados()[0].nota, 'Lo avisó por teléfono.');
   });
 
-  it('la guardia se busca acotada a la Prestadora activa', async () => {
+  it('la guardia se busca con la llave maestra, acotada a la Prestadora activa', async () => {
     await pedir('POST', `/${GUARDIA}/descansos`, ANOCHE);
     const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/guardias');
+    assert.equal(lectura.credencial, LLAVE_MAESTRA);
     assert.match(decodeURIComponent(lectura.url), new RegExp(`prestadora_id=eq\\.${PRESTADORA}`));
+
+    const alta = llamadas.find((l) => l.clave === 'POST /rest/v1/descansos_guardia');
+    assert.equal(alta.credencial, LLAVE_MAESTRA);
   });
 
   it('la guardia de otra Prestadora no se distingue de una que no existe', async () => {
@@ -219,7 +243,7 @@ describe('anotar un descanso desde el Panel', () => {
 });
 
 describe('ver los descansos de una guardia', () => {
-  it('devuelve los de esa guardia y los pide acotados a la Prestadora', async () => {
+  it('devuelve los de esa guardia y los pide con la llave maestra, acotados a la Prestadora', async () => {
     descansosEnLaBase = [
       { id: DESCANSO, guardia_id: GUARDIA, prestadora_id: PRESTADORA, ...ANOCHE, nota: null },
       { id: 'otro', guardia_id: 'otra-guardia', prestadora_id: PRESTADORA, ...ANOCHE, nota: null },
@@ -230,6 +254,7 @@ describe('ver los descansos de una guardia', () => {
     assert.equal(cuerpo.descansos[0].id, DESCANSO);
 
     const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/descansos_guardia');
+    assert.equal(lectura.credencial, LLAVE_MAESTRA);
     assert.match(decodeURIComponent(lectura.url), new RegExp(`prestadora_id=eq\\.${PRESTADORA}`));
   });
 

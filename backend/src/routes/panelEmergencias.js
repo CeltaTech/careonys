@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
-import { supabase } from '../db/connection.js';
+import { clienteDelPedido, supabase } from '../db/connection.js';
 import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
+import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
 
 /* Las emergencias avisadas desde una guardia, del lado del Panel.
    ==============================================================
@@ -17,8 +18,16 @@ import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
    información sensible y no viaja por un canal público (`celtatech/CLAUDE.md` §6). Esta ruta es
    la puerta donde el permiso se comprueba.
 
-   LA PRESTADORA SALE DE LA SESIÓN, nunca del pedido: `req.usuarioPanel.prestadoraId`, que ya
-   resolvió el middleware. */
+   LEER SIGUE CON LA LLAVE MAESTRA, con la Prestadora de la sesión escrita en cada consulta. Las
+   políticas de la base para esta tabla y para los nombres son más estrechas que lo que la pantalla
+   mostraba hasta ahora (ver el comentario de cada consulta); si se las adopta o no se decide
+   aparte. Lo que sí va con la credencial de quien pide es la anotación: el detalle es información
+   de salud, y antes de entregarlo queda anotado quién lo vio, paciente por paciente, y si no se
+   puede anotar no se entrega.
+
+   ATENDER SIGUE CON LA LLAVE MAESTRA. La tabla no le da a nadie del Panel permiso para
+   modificarla, ni tiene una política que lo deje; mientras eso no exista, marcarla atendida se
+   hace con la llave maestra y con la Prestadora de la sesión escrita en cada consulta. */
 
 export const panelEmergenciasRouter = Router();
 
@@ -31,6 +40,9 @@ async function conNombres(emergencias, usuarioPanel) {
   const guardiaIds = [...new Set(emergencias.map((e) => e.guardia_id))];
   if (guardiaIds.length === 0) return [];
 
+  // Con la llave maestra: con la credencial de la persona, `coordinador_gestiona_guardias_de_su_zona`
+  // (interno.coordinador_alcanza_guardia) le deja al Coordinador sólo las guardias de su zona, y la
+  // lista de emergencias que ve es la de toda la Prestadora. Si se acota o no se decide aparte.
   const { data: guardias } = await acotarAPrestadora(
     supabase.from('guardias').select('id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, asistente_id, paciente_id').in('id', guardiaIds),
     usuarioPanel,
@@ -41,6 +53,10 @@ async function conNombres(emergencias, usuarioPanel) {
   const asistenteIds = [...new Set((guardias ?? []).map((g) => g.asistente_id).filter(Boolean))];
   const pacienteIds = [...new Set((guardias ?? []).map((g) => g.paciente_id).filter(Boolean))];
 
+  // Los nombres, también con la llave maestra: `oculta_pendientes_de_conformidad` (RESTRICTIVE,
+  // NOT pendiente_conformidad) esconde a todos los roles el Asistente y el Paciente pendientes, y
+  // `coordinador_lee_asistentes_de_su_zona` le deja al Coordinador sólo los de su zona; la
+  // pantalla mostraba el nombre igual. Si se acota o no se decide aparte.
   const [{ data: asistentes }, { data: pacientes }] = await Promise.all([
     asistenteIds.length
       ? acotarAPrestadora(supabase.from('asistentes').select('id, nombre').in('id', asistenteIds), usuarioPanel)
@@ -68,10 +84,29 @@ async function conNombres(emergencias, usuarioPanel) {
   });
 }
 
+/* De quién es la información de salud que se va a entregar: los pacientes de cada guardia con
+   una emergencia en la lista. Son los mismos que mira la base para dejar ver el detalle. Si no se
+   pueden saber, no se entrega nada: se lanza el error y la ruta contesta que falló. */
+async function pacientesDeLasGuardias(db, emergencias) {
+  const guardiaIds = [...new Set(emergencias.map((e) => e.guardia_id))];
+  if (guardiaIds.length === 0) return [];
+
+  const { data, error } = await db.from('guardia_pacientes').select('paciente_id').in('guardia_id', guardiaIds);
+  if (error) throw error;
+  return [...new Set((data ?? []).map((fila) => fila.paciente_id).filter(Boolean))];
+}
+
 /* La más nueva primero, y con un filtro para ver sólo las que están esperando: lo primero que hace
    quien abre esta pantalla es mirar si hay algo sin atender. El tope existe para que una Prestadora
    con años de historia no se traiga todo de una vez. */
 panelEmergenciasRouter.get('/', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
+  const db = clienteDelPedido(req);
+  // Con la llave maestra: la política RESTRICTIVE `la_informacion_de_salud_la_ve_quien_atiende`
+  // exige interno.alcanza_la_informacion_de_salud sobre algún paciente de la guardia, y con la
+  // restricción de la historia clínica activa (el valor de fábrica) el Administrador y el
+  // Superadministrador que no atienden al paciente dejan de ver la emergencia; además
+  // `coordinador_lee_emergencias_de_su_zona` le deja al Coordinador sólo las de su zona. Hasta
+  // ahora cada rol veía todas las de su Prestadora. Si se acota o no se decide aparte.
   let consulta = acotarAPrestadora(
     supabase
       .from('emergencias_guardia')
@@ -90,8 +125,24 @@ panelEmergenciasRouter.get('/', requiereRolPanel, exigirOrganizacionActiva, asyn
     return responderError(res, error);
   }
 
+  const emergencias = data ?? [];
+
+  // Antes de entregar el detalle queda anotado quién lo vio. Si no se puede anotar, no se
+  // entrega (docs/PLAN_HASTA_PRODUCCION.md, paso 9).
   try {
-    res.json({ emergencias: await conNombres(data ?? [], req.usuarioPanel) });
+    for (const pacienteId of await pacientesDeLasGuardias(db, emergencias)) {
+      await anotarConsultaAHce(
+        req.usuarioPanel,
+        { pacienteId, categorias: ['emergencias_guardia'], origen: origenDelPedido(req) },
+        { cliente: db },
+      );
+    }
+  } catch (errorAnotacion) {
+    return responderError(res, errorAnotacion);
+  }
+
+  try {
+    res.json({ emergencias: await conNombres(emergencias, req.usuarioPanel) });
   } catch (e) {
     responderError(res, e);
   }
@@ -99,7 +150,9 @@ panelEmergenciasRouter.get('/', requiereRolPanel, exigirOrganizacionActiva, asyn
 
 /* Atenderla es decir qué se hizo, y queda con nombre y hora. Un aviso que nadie marcó no se
    distingue de uno que quedó sin leer, y eso es justamente lo que hay que poder mirar después.
-   No se puede volver atrás desde acá: lo que ya se atendió, se atendió. */
+   No se puede volver atrás desde acá: lo que ya se atendió, se atendió.
+
+   Va con la llave maestra: ver el encabezado. */
 panelEmergenciasRouter.post('/:id/atencion', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
   const nota = typeof req.body?.nota === 'string' ? req.body.nota.trim() : '';
 

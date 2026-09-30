@@ -16,13 +16,20 @@ import { responderError } from '../utils/errorConMotivo.js';
 // que es lo que no pasa cuando la oferta se avisa por teléfono o por mensaje.
 //
 // ----------------------------------------------------------------------------
-// El corte por Prestadora se escribe a mano, siempre
+// Qué credencial usa cada parte
 // ----------------------------------------------------------------------------
 //
-// La base tiene sus propias cerraduras y ya dejan que cada Asistente vea y conteste sus
-// invitaciones y nada más. Pero el backend entra con la llave maestra, así que esas cerraduras
-// no lo frenan: cada consulta de este archivo lleva escrito el filtro por Prestadora y por
-// Asistente (CLAUDE.md §5, regla de aislamiento).
+// La lista también sigue con la llave maestra y con el filtro por Prestadora y por Asistente:
+// con la credencial del Asistente, la política de `guardias` que le deja ver una guardia sin
+// cubrir pide además que esté marcada como ofrecida, y el código nunca pidió eso. Lo que hacen
+// después `conPacientes`, `conDomicilioDelDia` y `visibilidadDelPedido` corre con la maestra.
+//
+// Contestar sigue con la llave maestra, y por eso cada consulta de esa parte lleva escrito el
+// filtro por Prestadora y por Asistente (CLAUDE.md §5, regla de aislamiento). La base no deja
+// que un Asistente escriba en una guardia que todavía no es suya, y aceptar es justamente
+// ponerse en una que no tiene a nadie. Y la invitación se lee junto con su guardia: con la
+// credencial de la persona, una guardia que ya tomó otro dejaría de verse, y quien llegó tarde
+// recibiría «no encontrada» en lugar de enterarse de que el turno ya se cubrió.
 //
 // ----------------------------------------------------------------------------
 // Aceptar es una carrera, y hay que perderla bien
@@ -117,6 +124,10 @@ function noSePudo(res, estado, motivo, detalle) {
 // es ruido. Si igual llega a apretar Aceptar sobre una que acaba de morir, el backend se lo
 // explica — no falla en silencio.
 appAsistentesOfertasRouter.get('/', requiereRolAsistente, async (req, res) => {
+  // CON LA LLAVE MAESTRA, Y CON LA PRESTADORA Y EL ASISTENTE ESCRITOS. Con la credencial del
+  // Asistente, la guardia embebida sólo se ve por `asistente_ve_guardias_ofrecidas`, que además
+  // pide `ofrecida_at` cargado: una invitación cuya guardia no tiene esa marca desaparecería de la
+  // lista, y hoy aparece. Si eso cambia se decide aparte.
   const { data, error } = await supabase
     .from('ofertas_guardia')
     .select(`id, invitado_at, guardia_id, guardias!inner(${CAMPOS_DE_GUARDIA})`)

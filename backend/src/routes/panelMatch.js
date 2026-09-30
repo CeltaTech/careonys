@@ -1,11 +1,17 @@
 // Pendiente #85 (docs/PLAN_HASTA_PRODUCCION.md), Grupo 3 Match — rutas del Panel: pasarela de
 // pago por Prestadora, accesos y cobros, calificaciones con descargo, y la auditoría de
-// advertencias legales de match. Mismo patrón de scoping por prestadora_id/rol que
-// panelConfiguracion.js.
+// advertencias legales de match.
+//
+// CON LA CREDENCIAL DE QUIEN PIDE. Cada manejador entra a la base con `clienteDelPedido(req)`, y
+// qué filas ve lo decide la RLS por la membresía de esa persona: no hay filtro por Prestadora
+// escrito acá. Lo que se inserta toma la Prestadora de una fila que la base ya dejó ver
+// (`prestadoraVisible`), nunca de la sesión ni del pedido. Donde queda la llave maestra, un
+// comentario dice por qué: son tablas o funciones cuyas políticas no alcanzan a algún rol que
+// esta ruta sí deja pasar, y ahí el filtro por Prestadora se mantiene.
 
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { supabase } from '../db/connection.js';
+import { clienteDelPedido, supabase } from '../db/connection.js';
 import { proveedoresDisponibles, obtenerAdaptador, requiereSecretoFirma } from '../pasarelas/index.js';
 import { tokenQrCobroValido } from '../utils/qrCobroEfectivo.js';
 import { exigirAdministracion, exigirAdminDePrestadora } from '../middleware/exigirAdministracion.js';
@@ -65,6 +71,15 @@ const soloAdminArmaLaFormaDeCobro = exigirAdminDePrestadora(
   'Cómo cobra la Prestadora lo decide ella: solo Admin puede armar y cambiar sus formas de cobro'
 );
 
+/** La Prestadora en la que está parada quien pide, tal como la base se la deja ver. De acá sale
+ *  el `prestadora_id` de todo lo que se escribe: nunca de la sesión ni del pedido. */
+async function prestadoraVisible(db) {
+  const { data, error } = await db.from('prestadoras').select('id').maybeSingle();
+  if (error) throw error;
+  if (!data?.id) throw new ErrorConMotivo('no_encontrado', 'la base no deja ver la Prestadora de quien pide');
+  return data.id;
+}
+
 // ============================================================================
 // Pasarela de pago — la Prestadora activa uno o varios de los 6 rieles, cada uno con su
 // propia credencial (Supabase Vault, ver schema_match_pasarelas_01.sql). El secreto
@@ -72,16 +87,18 @@ const soloAdminArmaLaFormaDeCobro = exigirAdminDePrestadora(
 // ============================================================================
 
 panelMatchRouter.get('/pasarela', soloAdministracion, async (req, res) => {
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('prestadora_pasarela_pago')
-    .select('proveedor, estado_conexion, conectada_en, updated_at')
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId);
+    .select('proveedor, estado_conexion, conectada_en, updated_at');
   if (error) return responderError(res, error);
 
   // Qué secretos tiene guardados cada proveedor. Nunca el texto —eso no sale de la caja
   // fuerte ni para el Admin que lo cargó—, solamente si está o no está: sin el secreto de
   // firma, los cobros que informa esa pasarela se rechazan y la pantalla tiene que poder
   // decirlo (pendiente #159).
+  // Con la llave maestra: `credenciales_pasarela_pago` no tiene política para `authenticated`,
+  // y lo que se lee de ella es sólo si el identificador del secreto está puesto.
   const { data: secretos, error: errorSecretos } = await supabase
     .from('credenciales_pasarela_pago')
     .select('proveedor, secreto_firma_secret_id')
@@ -122,8 +139,17 @@ panelMatchRouter.put('/pasarela/:proveedor/secreto-firma', soloAdministracion, s
     return res.status(400).json({ error: 'Hace falta el secreto de firma' });
   }
 
+  let prestadoraId;
+  try {
+    prestadoraId = await prestadoraVisible(clienteDelPedido(req));
+  } catch (error) {
+    return responderError(res, error);
+  }
+
+  // Con la llave maestra: `authenticated` no tiene permiso para ejecutar la función que guarda
+  // el secreto en la caja fuerte.
   const { error } = await supabase.rpc('guardar_secreto_firma_pasarela_pago', {
-    p_prestadora_id: req.usuarioPanel.prestadoraId,
+    p_prestadora_id: prestadoraId,
     p_proveedor: proveedor,
     p_secreto: secretoFirma.trim(),
   });
@@ -140,20 +166,30 @@ panelMatchRouter.patch('/pasarela/:proveedor', soloAdministracion, soloAdminDePr
     return res.status(400).json({ error: 'Proveedor desconocido' });
   }
 
+  const db = clienteDelPedido(req);
+
   if (activo === false) {
-    const { error } = await supabase
+    const { error } = await db
       .from('prestadora_pasarela_pago')
       .delete()
-      .eq('prestadora_id', req.usuarioPanel.prestadoraId)
       .eq('proveedor', proveedor);
     if (error) return responderError(res, error);
     return res.json({ ok: true });
   }
 
+  let prestadoraId;
+  try {
+    prestadoraId = await prestadoraVisible(db);
+  } catch (error) {
+    return responderError(res, error);
+  }
+
+  // Las dos funciones que guardan en la caja fuerte van con la llave maestra: `authenticated` no
+  // tiene permiso para ejecutarlas.
   const requiereCredencial = proveedor !== 'efectivo_manual';
   if (requiereCredencial && credencial) {
     const { error: errorCredencial } = await supabase.rpc('guardar_credencial_pasarela_pago', {
-      p_prestadora_id: req.usuarioPanel.prestadoraId,
+      p_prestadora_id: prestadoraId,
       p_proveedor: proveedor,
       p_credencial: credencial,
     });
@@ -166,16 +202,16 @@ panelMatchRouter.patch('/pasarela/:proveedor', soloAdministracion, soloAdminDePr
   // conectaron antes de que esto existiera, y no se las deja tiradas.
   if (requiereSecretoFirma(proveedor) && typeof secretoFirma === 'string' && secretoFirma.trim()) {
     const { error: errorSecreto } = await supabase.rpc('guardar_secreto_firma_pasarela_pago', {
-      p_prestadora_id: req.usuarioPanel.prestadoraId,
+      p_prestadora_id: prestadoraId,
       p_proveedor: proveedor,
       p_secreto: secretoFirma.trim(),
     });
     if (errorSecreto) return responderError(res, errorSecreto);
   }
 
-  const { error } = await supabase.from('prestadora_pasarela_pago').upsert(
+  const { error } = await db.from('prestadora_pasarela_pago').upsert(
     {
-      prestadora_id: req.usuarioPanel.prestadoraId,
+      prestadora_id: prestadoraId,
       proveedor,
       estado_conexion: requiereCredencial ? 'conectada' : 'conectada',
       activada_por: req.usuarioPanel.id,
@@ -216,8 +252,8 @@ const CAMPOS_DE_LA_FORMA =
 
 /** Las unidades de tiempo que el producto conoce. Salen de la base, nunca de una lista escrita
  *  acá (CLAUDE.md §8): la tabla es lo mismo que mira la clave foránea de la forma de cobro. */
-async function unidadesDePeriodo() {
-  const { data, error } = await supabase
+async function unidadesDePeriodo(db) {
+  const { data, error } = await db
     .from('catalogo_periodos_cobro')
     .select('clave, orden')
     .order('orden', { ascending: true });
@@ -313,6 +349,9 @@ function errorDeGuardado(error) {
 }
 
 panelMatchRouter.get('/formas-de-cobro', soloAdministracion, async (req, res) => {
+  const db = clienteDelPedido(req);
+  // La lista, con la llave maestra: la política de lectura de `formas_de_cobro_match` es
+  // sólo del Admin de la Prestadora, y Superadmin —que la ve para dar soporte— la recibiría vacía.
   const { data, error } = await supabase
     .from('formas_de_cobro_match')
     .select(CAMPOS_DE_LA_FORMA)
@@ -324,7 +363,7 @@ panelMatchRouter.get('/formas-de-cobro', soloAdministracion, async (req, res) =>
   // conocerlas: el catálogo está en la base y esta ruta es la única puerta hacia él.
   let unidades;
   try {
-    unidades = await unidadesDePeriodo();
+    unidades = await unidadesDePeriodo(db);
   } catch (errorCatalogo) {
     return responderError(res, errorCatalogo);
   }
@@ -333,18 +372,26 @@ panelMatchRouter.get('/formas-de-cobro', soloAdministracion, async (req, res) =>
 });
 
 panelMatchRouter.post('/formas-de-cobro', soloAdministracion, soloAdminArmaLaFormaDeCobro, async (req, res) => {
+  const db = clienteDelPedido(req);
   let valores;
   try {
-    valores = formaValidada(req.body || {}, await unidadesDePeriodo());
+    valores = formaValidada(req.body || {}, await unidadesDePeriodo(db));
   } catch (error) {
     return responderError(res, error, 400);
   }
 
+  let prestadoraId;
+  try {
+    prestadoraId = await prestadoraVisible(db);
+  } catch (error) {
+    return responderError(res, error);
+  }
+
   // La moneda no viaja: la completa el disparador con la de la Prestadora, que es el único lugar
   // donde está decidida (`CLAUDE.md` de Careonys, «la moneda de cada importe se completa sola»).
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('formas_de_cobro_match')
-    .insert({ ...valores, prestadora_id: req.usuarioPanel.prestadoraId })
+    .insert({ ...valores, prestadora_id: prestadoraId })
     .select(CAMPOS_DE_LA_FORMA)
     .single();
   if (error) return responderError(res, errorDeGuardado(error));
@@ -356,27 +403,26 @@ panelMatchRouter.patch('/formas-de-cobro/:id', soloAdministracion, soloAdminArma
   // Se lee la forma entera antes de tocarla por dos motivos. Uno: si no es de esta Prestadora, no
   // existe, y se contesta lo mismo que si no existiera. Dos: las piezas se comprueban entre sí
   // —renovarse sola exige período—, y eso no se puede hacer mirando sólo lo que vino en el pedido.
-  const { data: actual, error: errorLectura } = await supabase
+  const db = clienteDelPedido(req);
+  const { data: actual, error: errorLectura } = await db
     .from('formas_de_cobro_match')
     .select(CAMPOS_DE_LA_FORMA)
     .eq('id', req.params.id)
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
   if (errorLectura) return responderError(res, errorLectura);
   if (!actual) return responderError(res, new ErrorConMotivo('no_encontrado', 'Forma de cobro de otra Prestadora o inexistente'));
 
   let valores;
   try {
-    valores = formaValidada({ ...actual, ...req.body }, await unidadesDePeriodo());
+    valores = formaValidada({ ...actual, ...req.body }, await unidadesDePeriodo(db));
   } catch (error) {
     return responderError(res, error, 400);
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('formas_de_cobro_match')
     .update({ ...valores, updated_at: new Date().toISOString() })
     .eq('id', req.params.id)
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .select(CAMPOS_DE_LA_FORMA)
     .single();
   if (error) return responderError(res, errorDeGuardado(error));
@@ -415,25 +461,32 @@ function plazosValidados(cuerpo) {
 }
 
 panelMatchRouter.get('/plazos-de-cobro', soloAdministracion, async (req, res) => {
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('configuracion_cobro_match')
     .select(CAMPOS_DE_LOS_PLAZOS)
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
   if (error) return responderError(res, error);
 
   // Toda Prestadora nace con esta fila. Si igual faltara, se le pide a la misma función que usa
   // el alta y se vuelve a leer: lo que el formulario muestra es lo que el backend va a usar.
   if (!data) {
+    let prestadoraId;
+    try {
+      prestadoraId = await prestadoraVisible(db);
+    } catch (errorPrestadora) {
+      return responderError(res, errorPrestadora);
+    }
+
+    // Con la llave maestra: `authenticated` no tiene permiso para ejecutar la función del alta.
     const { error: errorSiembra } = await supabase.rpc('sembrar_configuracion_prestadora', {
-      p_prestadora_id: req.usuarioPanel.prestadoraId,
+      p_prestadora_id: prestadoraId,
     });
     if (errorSiembra) return responderError(res, errorSiembra);
 
-    const { data: recien, error: errorRelectura } = await supabase
+    const { data: recien, error: errorRelectura } = await db
       .from('configuracion_cobro_match')
       .select(CAMPOS_DE_LOS_PLAZOS)
-      .eq('prestadora_id', req.usuarioPanel.prestadoraId)
       .maybeSingle();
     if (errorRelectura) return responderError(res, errorRelectura);
     return res.json({ plazos: recien });
@@ -450,10 +503,20 @@ panelMatchRouter.patch('/plazos-de-cobro', soloAdministracion, soloAdminArmaLaFo
     return responderError(res, error, 400);
   }
 
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  let prestadoraId;
+  try {
+    prestadoraId = await prestadoraVisible(db);
+  } catch (error) {
+    return responderError(res, error);
+  }
+
+  // El filtro no aísla —eso lo hace la RLS—: nombra la única fila de esta Prestadora, porque
+  // un UPDATE sin ninguna condición la base de Supabase lo rechaza.
+  const { data, error } = await db
     .from('configuracion_cobro_match')
     .update({ ...valores, updated_at: new Date().toISOString() })
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .eq('prestadora_id', prestadoraId)
     .select(CAMPOS_DE_LOS_PLAZOS)
     .single();
   if (error) return responderError(res, error);
@@ -470,6 +533,8 @@ panelMatchRouter.patch('/plazos-de-cobro', soloAdministracion, soloAdminArmaLaFo
 // que el nombre real vive en usuarios — resolverlo acá evita mostrar UUID crudo en el Panel
 // (CLAUDE.md §7 regla 7, "sin datos crudos").
 panelMatchRouter.get('/accesos', soloAdministracion, async (req, res) => {
+  // Los accesos, con la llave maestra: la política de lectura de `accesos_match` no
+  // alcanza a Superadmin, que esta ruta deja pasar con el permiso de acceso abierto.
   const { data, error } = await supabase
     .from('accesos_match')
     .select('id, cliente_id, paciente_id, asistente_id, estado, importe, gratis_hasta, proximo_cobro, cancelada_en, created_at, proveedor, url_accion, alta_en_pasarela')
@@ -484,9 +549,15 @@ panelMatchRouter.get('/accesos', soloAdministracion, async (req, res) => {
   const [cuentasCliente, { data: pacientes }, { data: asistentes }] = await Promise.all([
     cuentasDeLasFichas('clientes', clienteIds, 'nombre', req.usuarioPanel.prestadoraId),
     pacienteIds.length
+      // Los nombres de Pacientes y Asistentes, con la llave maestra: la política restrictiva
+      // `oculta_pendientes_de_conformidad` de `pacientes` y de `asistentes` (NOT
+      // pendiente_conformidad) esconde a Admin y a Superadmin las fichas pendientes de
+      // conformidad, y el acceso de una de ellas llegaría sin nombre, cosa que antes no pasaba.
+      // Se decide aparte.
       ? supabase.from('pacientes').select('id, nombre').eq('prestadora_id', req.usuarioPanel.prestadoraId).in('id', pacienteIds)
       : { data: [] },
     asistenteIds.length
+      // Misma política restrictiva que la de arriba, en `asistentes`.
       ? supabase.from('asistentes').select('id, nombre').eq('prestadora_id', req.usuarioPanel.prestadoraId).in('id', asistenteIds)
       : { data: [] },
   ]);
@@ -506,6 +577,7 @@ panelMatchRouter.get('/accesos', soloAdministracion, async (req, res) => {
 });
 
 panelMatchRouter.get('/accesos/:id/cobros', soloAdministracion, async (req, res) => {
+  // Con la llave maestra: la política de lectura de `cobros_match` no alcanza a Superadmin.
   const { data, error } = await supabase
     .from('cobros_match')
     .select('id, medio, monto, periodo, estado_cobro, referencia_externa, fecha_cobro, registrado_por, created_at')
@@ -525,9 +597,12 @@ panelMatchRouter.post('/cobros/efectivo-manual', soloAdministracion, async (req,
     return res.status(400).json({ error: 'Faltan acceso_id, monto, periodo o fecha_cobro' });
   }
 
+  // Con la llave maestra: la política de alta de `cobros_match` excluye a Superadmin, y la
+  // de lectura de `accesos_match` tampoco lo alcanza. Por eso el filtro por Prestadora
+  // sigue escrito acá.
   const { data: acceso } = await supabase
     .from('accesos_match')
-    .select('id')
+    .select('id, prestadora_id')
     .eq('id', accesoId)
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
@@ -537,7 +612,7 @@ panelMatchRouter.post('/cobros/efectivo-manual', soloAdministracion, async (req,
 
   const { error } = await supabase.from('cobros_match').insert({
     acceso_id: accesoId,
-    prestadora_id: req.usuarioPanel.prestadoraId,
+    prestadora_id: acceso.prestadora_id,
     medio: 'efectivo_manual',
     monto,
     periodo,
@@ -566,6 +641,9 @@ panelMatchRouter.post('/qr-cobro/canjear', soloAdministracion, async (req, res) 
     return res.status(400).json({ error: 'QR inválido o vencido' });
   }
 
+  // Con la llave maestra: `qr_cobro_efectivo` no tiene política de modificación para el Panel, y
+  // el alta en `cobros_match` excluye a Superadmin. Por eso el filtro por Prestadora sigue
+  // escrito acá.
   const { data: qr } = await supabase
     .from('qr_cobro_efectivo')
     .select('id, acceso_id, monto, periodo, expira_en, usado_en')
@@ -583,7 +661,7 @@ panelMatchRouter.post('/qr-cobro/canjear', soloAdministracion, async (req, res) 
 
   const { data: acceso } = await supabase
     .from('accesos_match')
-    .select('id')
+    .select('id, prestadora_id')
     .eq('id', qr.acceso_id)
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
@@ -595,7 +673,7 @@ panelMatchRouter.post('/qr-cobro/canjear', soloAdministracion, async (req, res) 
     .from('cobros_match')
     .insert({
       acceso_id: qr.acceso_id,
-      prestadora_id: req.usuarioPanel.prestadoraId,
+      prestadora_id: acceso.prestadora_id,
       medio: 'efectivo_manual',
       monto: qr.monto,
       periodo: qr.periodo,
@@ -668,14 +746,16 @@ panelMatchRouter.post('/accesos/:id/alta-en-pasarela', soloAdministracion, async
 // ============================================================================
 
 panelMatchRouter.get('/calificaciones', async (req, res) => {
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('calificaciones_asistente')
     .select('id, asistente_id, paciente_id, cliente_id, estrellas, comentario, visible_publica, descargo_asistente, descargo_en, created_at')
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .order('created_at', { ascending: false });
   if (error) return responderError(res, error);
 
   const asistenteIds = [...new Set(data.map((c) => c.asistente_id).filter(Boolean))];
+  // Los nombres, con la llave maestra: el Coordinador sólo alcanza los Asistentes de su zona, y
+  // una calificación de un Asistente de otra zona quedaría sin nombre en la lista.
   const { data: asistentes } = asistenteIds.length
     ? await supabase
         .from('asistentes')
@@ -697,6 +777,8 @@ panelMatchRouter.patch('/calificaciones/:id/visibilidad', async (req, res) => {
   }
   // La escritura devuelve la fila tocada: sin esto la base contesta que salió bien aunque no
   // haya encontrado ninguna, y la pantalla muestra un cambio de visibilidad que no ocurrió.
+  // Con la llave maestra: la política de modificación de `calificaciones_asistente` no incluye a
+  // Superadmin. Por eso el filtro por Prestadora sigue escrito acá.
   const { data: modificada, error } = await supabase
     .from('calificaciones_asistente')
     .update({ visible_publica: visiblePublica })
@@ -728,8 +810,8 @@ panelMatchRouter.patch('/calificaciones/:id/visibilidad', async (req, res) => {
 // ============================================================================
 
 /** Las funciones de riesgo, en el orden en que las escribe el documento legal. */
-async function catalogoDeFuncionesDeRiesgo() {
-  return supabase
+async function catalogoDeFuncionesDeRiesgo(db) {
+  return db
     .from('catalogo_funciones_match')
     .select('clave, orden')
     .order('orden', { ascending: true });
@@ -762,15 +844,15 @@ function fallaDelSistema(res, donde, error) {
 // POR QUÉ EL REGISTRO SE ESCRIBE ACÁ Y NO EN LA PANTALLA: ver utils/advertenciaLegal.js.
 
 panelMatchRouter.get('/funciones-riesgo', async (req, res) => {
+  const db = clienteDelPedido(req);
   const prestadoraId = req.usuarioPanel.prestadoraId;
 
-  const { data: catalogo, error: errorCatalogo } = await catalogoDeFuncionesDeRiesgo();
+  const { data: catalogo, error: errorCatalogo } = await catalogoDeFuncionesDeRiesgo(db);
   if (errorCatalogo) return fallaDelSistema(res, 'catálogo de funciones de riesgo', errorCatalogo);
 
-  const { data: guardadas, error } = await supabase
+  const { data: guardadas, error } = await db
     .from('configuracion_funciones_match')
-    .select('funcion_clave, activa, advertida_en')
-    .eq('prestadora_id', prestadoraId);
+    .select('funcion_clave, activa, advertida_en');
   if (error) return fallaDelSistema(res, 'funciones de riesgo encendidas', error);
 
   const porClave = new Map((guardadas || []).map((f) => [f.funcion_clave, f]));
@@ -802,14 +884,21 @@ panelMatchRouter.put('/funciones-riesgo/:clave', soloAdministracion, async (req,
     return res.status(400).json({ error: 'Falta activa (booleano)' });
   }
 
-  const prestadoraId = req.usuarioPanel.prestadoraId;
+  const db = clienteDelPedido(req);
   const usuarioId = req.usuarioPanel.id;
 
   // La clave se valida contra el catálogo de la base, no contra una lista escrita acá.
-  const { data: catalogo, error: errorCatalogo } = await catalogoDeFuncionesDeRiesgo();
+  const { data: catalogo, error: errorCatalogo } = await catalogoDeFuncionesDeRiesgo(db);
   if (errorCatalogo) return fallaDelSistema(res, 'catálogo de funciones de riesgo', errorCatalogo);
   if (!(catalogo || []).some((f) => f.clave === req.params.clave)) {
     return res.status(404).json({ error: 'No se encontró esa función' });
+  }
+
+  let prestadoraId;
+  try {
+    prestadoraId = await prestadoraVisible(db);
+  } catch (error) {
+    return responderError(res, error);
   }
 
   // La advertencia se resuelve antes de guardar porque forma parte de lo que se guarda: la fila
@@ -818,7 +907,7 @@ panelMatchRouter.put('/funciones-riesgo/:clave', soloAdministracion, async (req,
   const advertencia = activa ? await advertenciaVigente(prestadoraId, req.params.clave) : null;
   const ahora = new Date().toISOString();
 
-  const { error } = await supabase
+  const { error } = await db
     .from('configuracion_funciones_match')
     .upsert(
       {
@@ -847,9 +936,13 @@ panelMatchRouter.put('/funciones-riesgo/:clave', soloAdministracion, async (req,
 // ----------------------------------------------------------------------------
 
 panelMatchRouter.get('/auditoria-legal', async (req, res) => {
-  const { data: catalogo, error: errorCatalogo } = await catalogoDeFuncionesDeRiesgo();
+  const { data: catalogo, error: errorCatalogo } = await catalogoDeFuncionesDeRiesgo(clienteDelPedido(req));
   if (errorCatalogo) return fallaDelSistema(res, 'catálogo de funciones de riesgo', errorCatalogo);
 
+  // Con la llave maestra: la política de lectura de `auditoria_advertencias_legales` deja afuera
+  // al Coordinador, que esta ruta deja pasar, y la de `usuarios` sólo le muestra su propia fila,
+  // así que el nombre de quien encendió cada función llegaría vacío. Por eso el filtro por
+  // Prestadora sigue escrito acá.
   const { data, error } = await supabase
     .from('auditoria_advertencias_legales')
     .select('id, usuario_id, funcion_clave, jurisdiccion, texto_mostrado, created_at, usuarios(nombre)')

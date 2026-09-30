@@ -1,6 +1,6 @@
 import express, { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { supabase } from '../db/connection.js';
+import { clienteDelPedido, supabase } from '../db/connection.js';
 import {
   ORIGENES_DE_AFUERA,
   TOPE_DEL_LOTE,
@@ -84,9 +84,13 @@ import { requierePermiso } from '../utils/permisos.js';
    son dato sensible (CLAUDE.md §6): no se loguean y no viajan por la URL. Por la URL viaja el
    identificador de una factura o un período, que no dicen cuánto debe nadie.
 
-   Y EL AISLAMIENTO. El backend entra con la clave de servicio, o sea sin las reglas de acceso de
-   la base: acá el aislamiento entre Prestadoras lo garantiza cada consulta con su filtro de
-   `prestadora_id`, o no lo garantiza nadie. */
+   CON LA CREDENCIAL DE QUIEN PIDE. Lo de esta ruta entra a la base con `clienteDelPedido(req)`,
+   no con la llave maestra: la base sabe quién pide y le contesta sólo lo de su Prestadora. Por eso
+   ninguna consulta lleva el filtro de la Prestadora de la sesión, y la Prestadora que se escribe al
+   insertar es la de la fila que la base ya dejó ver —la factura, el Cliente—, no un dato del
+   pedido. Quedan con la maestra, cada una con su motivo escrito al lado, las pocas lecturas y
+   escrituras que la base todavía no le abre a todos los roles que esta ruta deja pasar, o que
+   les esconde a todos, como los Clientes pendientes de conformidad. */
 
 export const panelCobrosRouter = Router();
 
@@ -106,12 +110,15 @@ export {
 /**
  * Los nombres de estas Clientes, para las listas que se muestran en pantalla.
  *
- * Se buscan aparte y filtrando por Prestadora en vez de traerlos colgados de la factura,
- * porque el backend no pasa por las reglas de acceso de la base.
+ * Se buscan aparte en vez de traerlos colgados de la factura, y siempre dentro de la Prestadora
+ * de quien pide.
  */
 async function nombresDeClientes(prestadoraId, ids) {
   const unicos = [...new Set(ids)];
   if (unicos.length === 0) return new Map();
+  // Con la llave maestra: la política restrictiva `oculta_pendientes_de_conformidad` de `clientes`
+  // (`NOT pendiente_conformidad`) le esconde a todos los roles los Clientes pendientes de
+  // conformidad, y sus facturas y saldos se mostraban con el nombre. Se decide aparte.
   const { data, error } = await supabase
     .from('clientes')
     .select('id, solicitudes!clientes_solicitud_id_fkey(nombre)')
@@ -121,27 +128,28 @@ async function nombresDeClientes(prestadoraId, ids) {
   return new Map((data || []).map((f) => [f.id, f.solicitudes?.nombre ?? null]));
 }
 
-/** La factura de esta Prestadora, o null. Nunca se busca una factura sin decir de quién es. */
-async function facturaDeLaPrestadora(prestadoraId, facturaId) {
-  const { data, error } = await supabase
+/**
+ * La factura, si la base la deja ver; si no, null: es de otra Prestadora y para quien pide no
+ * existe. Trae su Prestadora, que es la que se escribe en lo que se le cuelga.
+ */
+async function facturaVisible(db, facturaId) {
+  const { data, error } = await db
     .from('facturas_cliente')
     .select(
-      'id, cliente_id, periodo, monto_total, moneda, estado, fecha_emision, fecha_vencimiento, comprobante_subido_at'
+      'id, prestadora_id, cliente_id, periodo, monto_total, moneda, estado, fecha_emision, fecha_vencimiento, comprobante_subido_at'
     )
     .eq('id', facturaId)
-    .eq('prestadora_id', prestadoraId)
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data ?? null;
 }
 
 /** El saldo calculado de una factura, leído del único lugar donde vive esa resta. */
-async function saldoDeLaFactura(prestadoraId, facturaId) {
-  const { data, error } = await supabase
+async function saldoDeLaFactura(db, facturaId) {
+  const { data, error } = await db
     .from('saldos_cliente')
     .select('*')
     .eq('factura_id', facturaId)
-    .eq('prestadora_id', prestadoraId)
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data ?? null;
@@ -182,6 +190,8 @@ function noSeCalculaAca(res) {
  * secreto de la caja fuerte no se toca acá.
  */
 panelCobrosRouter.get('/configuracion', requiereRolPanel, async (req, res) => {
+  // Con la maestra: la base le abre `configuracion_facturacion_clientes` sólo a la administración,
+  // y esta lectura la necesita también quien coordina.
   const { data, error } = await supabase
     .from('configuracion_facturacion_clientes')
     .select('regla')
@@ -194,6 +204,8 @@ panelCobrosRouter.get('/configuracion', requiereRolPanel, async (req, res) => {
 panelCobrosRouter.get('/restricciones', requiereRolPanel, async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
 
+  // Con la maestra: la base le abre `restricciones_de_cobranza` sólo a la administración, y quien
+  // coordina necesita saber qué Cliente quedó restringida para trabajar.
   const { data, error } = await supabase
     .from('restricciones_de_cobranza')
     .select('id, cliente_id, restringida, motivo, origen, created_at')
@@ -234,18 +246,17 @@ panelCobrosRouter.get('/restricciones', requiereRolPanel, async (req, res) => {
 // ---------------------------------------------------------------------------------------
 
 panelCobrosRouter.get('/estados-de-cuenta', requiereRolPanel, veElEstadoDeCuenta, async (req, res) => {
-  const prestadoraId = req.usuarioPanel.prestadoraId;
+  const db = clienteDelPedido(req);
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('estado_de_cuenta_externo_vigente')
     .select('cliente_id, saldo, moneda, atrasado, dias_de_atraso, vencimiento_mas_antiguo, fecha_del_estado, informado_at')
-    .eq('prestadora_id', prestadoraId)
     .order('informado_at', { ascending: false });
   if (error) return responderError(res, error);
 
   let nombres;
   try {
-    nombres = await nombresDeClientes(prestadoraId, (data || []).map((e) => e.cliente_id));
+    nombres = await nombresDeClientes(req.usuarioPanel.prestadoraId, (data || []).map((e) => e.cliente_id));
   } catch (e) {
     return responderError(res, e);
   }
@@ -271,10 +282,10 @@ panelCobrosRouter.get('/saldos', requiereRolPanel, veElEstadoDeCuenta, async (re
     return responderError(res, e);
   }
 
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('saldos_cliente')
     .select('*')
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .eq('periodo', periodo)
     .order('fecha_emision', { ascending: false });
   if (error) return responderError(res, error);
@@ -292,11 +303,12 @@ panelCobrosRouter.get('/saldos', requiereRolPanel, veElEstadoDeCuenta, async (re
 /** El detalle de una factura: su saldo y todos los cobros que la fueron bajando. */
 panelCobrosRouter.get('/facturas/:facturaId', requiereRolPanel, veElEstadoDeCuenta, async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
+  const db = clienteDelPedido(req);
 
   let saldo;
   try {
     if (await laCobranzaLaLlevaOtroSoftware(prestadoraId)) return noSeCalculaAca(res);
-    saldo = await saldoDeLaFactura(prestadoraId, req.params.facturaId);
+    saldo = await saldoDeLaFactura(db, req.params.facturaId);
   } catch (e) {
     return responderError(res, e);
   }
@@ -304,22 +316,20 @@ panelCobrosRouter.get('/facturas/:facturaId', requiereRolPanel, veElEstadoDeCuen
 
   // Los anulados vienen también: anular no es borrar, y el rastro de una plata que se dio de
   // baja es justamente lo que hay que poder mirar después.
-  const { data: cobros, error } = await supabase
+  const { data: cobros, error } = await db
     .from('cobros_cliente')
     .select('*')
     .eq('factura_id', saldo.factura_id)
-    .eq('prestadora_id', prestadoraId)
     .order('fecha_cobro', { ascending: false })
     .order('created_at', { ascending: false });
   if (error) return responderError(res, error);
 
   // Las correcciones van al lado de los cobros y no adentro de ellos: son dos cosas distintas.
   // Un cobro es plata que entró; una corrección es lo que se dejó de deber o se pasó a deber.
-  const { data: correcciones, error: errorCorrecciones } = await supabase
+  const { data: correcciones, error: errorCorrecciones } = await db
     .from('correcciones_factura_cliente')
     .select('*')
     .eq('factura_id', saldo.factura_id)
-    .eq('prestadora_id', prestadoraId)
     .order('fecha', { ascending: false })
     .order('created_at', { ascending: false });
   if (errorCorrecciones) return responderError(res, errorCorrecciones);
@@ -330,7 +340,7 @@ panelCobrosRouter.get('/facturas/:facturaId', requiereRolPanel, veElEstadoDeCuen
   let factura;
   try {
     nombres = await nombresDeClientes(prestadoraId, [saldo.cliente_id]);
-    factura = await facturaDeLaPrestadora(prestadoraId, saldo.factura_id);
+    factura = await facturaVisible(db, saldo.factura_id);
   } catch (e) {
     return responderError(res, e);
   }
@@ -377,6 +387,10 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
   const vencimientoDeLaTanda = String(req.body?.fecha_vencimiento ?? '').slice(0, 10);
   const vencimientoEscrito = /^\d{4}-\d{2}-\d{2}$/.test(vencimientoDeLaTanda);
 
+  const db = clienteDelPedido(req);
+
+  // Con la maestra: la base le abre `configuracion_facturacion_clientes` sólo a la administración,
+  // y generar las facturas también lo hace quien coordina.
   const { data: configuracion, error: errorConfiguracion } = await supabase
     .from('configuracion_facturacion_clientes')
     .select('regla')
@@ -387,15 +401,20 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
 
   const hoy = new Date().toISOString().slice(0, 10);
 
+  // Cada Cliente trae su Prestadora: es la que se escribe en su factura.
+  // Con la llave maestra: la política restrictiva `oculta_pendientes_de_conformidad` de
+  // `clientes` y de `pacientes` (`NOT pendiente_conformidad`) le esconde a todos los roles las
+  // Clientes y los Pacientes pendientes de conformidad, que esta tanda facturaba. Se decide aparte.
   const { data: clientes, error: errorClientes } = await supabase
     .from('clientes')
-    .select('id, dias_hasta_el_vencimiento, financiador_tipo, pagador_legajo_id, pacientes(id, nombre)')
+    .select('id, prestadora_id, dias_hasta_el_vencimiento, financiador_tipo, pagador_legajo_id, pacientes(id, nombre)')
     .eq('prestadora_id', prestadoraId)
     .is('deleted_at', null);
   if (errorClientes) return responderError(res, errorClientes);
 
   // Quién paga es un Legajo del Padrón. Su nombre se busca acá una sola vez, y de acá sale la
-  // copia que se lleva cada factura.
+  // copia que se lleva cada factura. Con la maestra: la base abre `legajos` a quien tiene la acción
+  // de ver el Padrón, y generar las facturas no la pide.
   const pagadorIds = [...new Set((clientes || []).map((f) => f.pagador_legajo_id).filter(Boolean))];
   const nombresDePagadores = new Map();
   if (pagadorIds.length > 0) {
@@ -417,38 +436,34 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
   let itemsDePaquete = [];
 
   if (pacienteIds.length > 0) {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('prestaciones')
       .select('id, paciente_id, servicio_id, tipo_servicio, precio_final, vigente_desde, vigente_hasta')
-      .eq('prestadora_id', prestadoraId)
       .eq('estado', 'vigente')
       .in('paciente_id', pacienteIds);
     if (error) return responderError(res, error);
     prestaciones = data || [];
 
-    const { data: datosPaquetes, error: errorPaquetes } = await supabase
+    const { data: datosPaquetes, error: errorPaquetes } = await db
       .from('paquetes_prestaciones')
       .select('id, paciente_id, nombre, precio_paquete, estado')
-      .eq('prestadora_id', prestadoraId)
       .in('paciente_id', pacienteIds);
     if (errorPaquetes) return responderError(res, errorPaquetes);
     paquetes = datosPaquetes || [];
 
     if (paquetes.length > 0) {
-      const { data: datosItems, error: errorItems } = await supabase
+      const { data: datosItems, error: errorItems } = await db
         .from('paquete_prestacion_items')
         .select('paquete_id, prestacion_id')
-        .eq('prestadora_id', prestadoraId)
         .in('paquete_id', paquetes.map((pq) => pq.id));
       if (errorItems) return responderError(res, errorItems);
       itemsDePaquete = datosItems || [];
     }
   }
 
-  const { data: existentes, error: errorExistentes } = await supabase
+  const { data: existentes, error: errorExistentes } = await db
     .from('facturas_cliente')
     .select('cliente_id')
-    .eq('prestadora_id', prestadoraId)
     .eq('periodo', periodo);
   if (errorExistentes) return responderError(res, errorExistentes);
   const yaFacturadas = new Set((existentes || []).map((f) => f.cliente_id));
@@ -496,10 +511,10 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
 
     const montoTotal = aDosDecimales(renglones.reduce((acc, r) => acc + r.monto, 0));
 
-    const { data: factura, error: errorFactura } = await supabase
+    const { data: factura, error: errorFactura } = await db
       .from('facturas_cliente')
       .insert({
-        prestadora_id: prestadoraId,
+        prestadora_id: cliente.prestadora_id,
         cliente_id: cliente.id,
         periodo,
         monto_total: montoTotal,
@@ -515,16 +530,16 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
         financiador_tipo: cliente.financiador_tipo ?? null,
         financiador_nombre: nombresDePagadores.get(cliente.pagador_legajo_id) ?? null,
       })
-      .select('id')
+      .select('id, prestadora_id')
       .single();
     if (errorFactura) return responderError(res, errorFactura, 400);
 
-    const { error: errorRenglones } = await supabase
+    const { error: errorRenglones } = await db
       .from('facturas_cliente_items')
-      .insert(renglones.map((r) => ({ ...r, prestadora_id: prestadoraId, factura_id: factura.id })));
+      .insert(renglones.map((r) => ({ ...r, prestadora_id: factura.prestadora_id, factura_id: factura.id })));
 
     if (errorRenglones) {
-      await supabase.from('facturas_cliente').delete().eq('id', factura.id).eq('prestadora_id', prestadoraId);
+      await db.from('facturas_cliente').delete().eq('id', factura.id);
       return responderError(res, errorRenglones, 400);
     }
 
@@ -559,9 +574,10 @@ panelCobrosRouter.put('/facturas/:facturaId/facturado', requiereRolPanel, async 
   const problema = loQueEstaMalEnLoFacturado(cuerpo);
   if (problema) return res.status(400).json({ error: `Falta o está mal el dato: ${problema}` });
 
+  const db = clienteDelPedido(req);
   let factura;
   try {
-    factura = await facturaDeLaPrestadora(prestadoraId, req.params.facturaId);
+    factura = await facturaVisible(db, req.params.facturaId);
   } catch (e) {
     return responderError(res, e);
   }
@@ -575,7 +591,7 @@ panelCobrosRouter.put('/facturas/:facturaId/facturado', requiereRolPanel, async 
 
   let saldo;
   try {
-    saldo = await saldoDeLaFactura(prestadoraId, factura.id);
+    saldo = await saldoDeLaFactura(db, factura.id);
   } catch (e) {
     return responderError(res, e);
   }
@@ -607,7 +623,7 @@ panelCobrosRouter.post(
 
     let factura;
     try {
-      factura = await facturaDeLaPrestadora(prestadoraId, req.params.facturaId);
+      factura = await facturaVisible(clienteDelPedido(req), req.params.facturaId);
     } catch (e) {
       return responderError(res, e);
     }
@@ -648,10 +664,10 @@ panelCobrosRouter.get('/para-facturar', requiereRolPanel, async (req, res) => {
   const periodo = primerDiaDelPeriodo(req.query.periodo);
   if (!periodo) return res.status(400).json({ error: 'Falta el período, en formato AAAA-MM' });
 
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('saldos_cliente')
     .select('*')
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .eq('periodo', periodo)
     .is('facturado_at', null)
     .order('fecha_emision', { ascending: true });
@@ -762,24 +778,27 @@ panelCobrosRouter.post('/facturado/importar', requiereRolPanel, async (req, res)
  * se está moviendo es plata de un tercero.
  */
 panelCobrosRouter.post('/facturas/:facturaId/correcciones', requiereRolPanel, async (req, res) => {
-  const prestadoraId = req.usuarioPanel.prestadoraId;
   const cuerpo = req.body || {};
 
   const problema = loQueEstaMalEnLaCorreccion(cuerpo);
   if (problema) return res.status(400).json({ error: `Falta o está mal el dato: ${problema}` });
 
+  const db = clienteDelPedido(req);
   let factura;
   try {
-    factura = await facturaDeLaPrestadora(prestadoraId, req.params.facturaId);
+    factura = await facturaVisible(db, req.params.facturaId);
   } catch (e) {
     return responderError(res, e);
   }
   if (!factura) return res.status(404).json({ error: 'Factura no encontrada' });
 
+  // Con la maestra: la base no le da a `authenticated` permiso de alta en
+  // `correcciones_factura_cliente`. La factura ya la dejó ver la credencial de quien pide, y la
+  // Prestadora que se escribe es la de esa factura.
   const { data, error } = await supabase
     .from('correcciones_factura_cliente')
     .insert({
-      prestadora_id: prestadoraId,
+      prestadora_id: factura.prestadora_id,
       factura_id: factura.id,
       sentido: cuerpo.sentido,
       monto: aDosDecimales(cuerpo.monto),
@@ -795,7 +814,7 @@ panelCobrosRouter.post('/facturas/:facturaId/correcciones', requiereRolPanel, as
 
   let saldo;
   try {
-    saldo = await saldoDeLaFactura(prestadoraId, factura.id);
+    saldo = await saldoDeLaFactura(db, factura.id);
   } catch (e) {
     return responderError(res, e);
   }
@@ -825,18 +844,19 @@ panelCobrosRouter.post('/facturas/:facturaId/cobros', requiereRolPanel, veElEsta
   const problema = loQueEstaMalEnElCobro(cuerpo, mediosAdmitidos);
   if (problema) return res.status(400).json({ error: problema });
 
+  const db = clienteDelPedido(req);
   let factura;
   try {
-    factura = await facturaDeLaPrestadora(prestadoraId, req.params.facturaId);
+    factura = await facturaVisible(db, req.params.facturaId);
   } catch (e) {
     return responderError(res, e);
   }
   if (!factura) return res.status(404).json({ error: 'Factura no encontrada' });
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('cobros_cliente')
     .insert({
-      prestadora_id: prestadoraId,
+      prestadora_id: factura.prestadora_id,
       factura_id: factura.id,
       monto: aDosDecimales(cuerpo.monto),
       fecha_cobro: cuerpo.fecha_cobro ?? new Date().toISOString().slice(0, 10),
@@ -852,7 +872,7 @@ panelCobrosRouter.post('/facturas/:facturaId/cobros', requiereRolPanel, veElEsta
 
   let saldo;
   try {
-    saldo = await saldoDeLaFactura(prestadoraId, factura.id);
+    saldo = await saldoDeLaFactura(db, factura.id);
   } catch (e) {
     return responderError(res, e);
   }
@@ -866,21 +886,20 @@ panelCobrosRouter.post('/facturas/:facturaId/cobros', requiereRolPanel, veElEsta
  * existió, y con plata de un tercero eso es justo lo que no puede pasar.
  */
 panelCobrosRouter.post('/cobros/:id/anular', requiereRolPanel, veElEstadoDeCuenta, async (req, res) => {
-  const prestadoraId = req.usuarioPanel.prestadoraId;
   const motivo = String(req.body?.motivo ?? '').trim();
   if (!motivo) return res.status(400).json({ error: 'Hace falta decir por qué se anula el cobro' });
 
-  const { data: cobro, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data: cobro, error } = await db
     .from('cobros_cliente')
     .select('id, factura_id, estado')
     .eq('id', req.params.id)
-    .eq('prestadora_id', prestadoraId)
     .maybeSingle();
   if (error) return responderError(res, error);
   if (!cobro) return res.status(404).json({ error: 'Cobro no encontrado' });
   if (cobro.estado === 'anulado') return res.status(400).json({ error: 'Este cobro ya figura anulado' });
 
-  const { data, error: errorAnulacion } = await supabase
+  const { data, error: errorAnulacion } = await db
     .from('cobros_cliente')
     .update({
       estado: 'anulado',
@@ -890,14 +909,13 @@ panelCobrosRouter.post('/cobros/:id/anular', requiereRolPanel, veElEstadoDeCuent
       updated_at: new Date().toISOString(),
     })
     .eq('id', cobro.id)
-    .eq('prestadora_id', prestadoraId)
     .select()
     .single();
   if (errorAnulacion) return responderError(res, errorAnulacion);
 
   let saldo;
   try {
-    saldo = await saldoDeLaFactura(prestadoraId, cobro.factura_id);
+    saldo = await saldoDeLaFactura(db, cobro.factura_id);
   } catch (e) {
     return responderError(res, e);
   }
@@ -913,12 +931,12 @@ panelCobrosRouter.post('/cobros/:id/anular', requiereRolPanel, veElEstadoDeCuent
  * Ubicar la factura que un cobro de afuera dice estar pagando.
  *
  * Se admiten dos formas de nombrarla, porque un sistema de afuera no siempre conoce el
- * identificador nuestro: o `factura_id` directo, o el Cliente más el período. Nunca se busca
- * sin el filtro de Prestadora.
+ * identificador nuestro: o `factura_id` directo, o el Cliente más el período. La base contesta
+ * sólo las facturas que quien pide puede ver.
  */
-async function ubicarFactura(prestadoraId, cobro) {
+async function ubicarFactura(db, cobro) {
   if (cobro.factura_id) {
-    const factura = await facturaDeLaPrestadora(prestadoraId, cobro.factura_id);
+    const factura = await facturaVisible(db, cobro.factura_id);
     return { factura, motivo: factura ? null : 'No hay ninguna factura con ese identificador' };
   }
 
@@ -927,10 +945,9 @@ async function ubicarFactura(prestadoraId, cobro) {
     return { factura: null, motivo: 'Falta decir qué factura se está pagando: o el identificador, o el Cliente y el período' };
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('facturas_cliente')
-    .select('id, cliente_id, periodo, monto_total, moneda, estado, fecha_emision, fecha_vencimiento')
-    .eq('prestadora_id', prestadoraId)
+    .select('id, prestadora_id, cliente_id, periodo, monto_total, moneda, estado, fecha_emision, fecha_vencimiento')
     .eq('cliente_id', cobro.cliente_id)
     .eq('periodo', periodo)
     .maybeSingle();
@@ -968,12 +985,12 @@ panelCobrosRouter.post('/entrada', requiereRolPanel, veElEstadoDeCuenta, async (
   // Lo que ya entró antes con estas mismas referencias. Se pregunta una vez por el lote entero
   // y no una vez por renglón: un lote de quinientos serían quinientas consultas.
   const referencias = cobros.map((c) => c?.referencia_externa).filter((r) => typeof r === 'string' && r.length > 0);
+  const db = clienteDelPedido(req);
   const yaEstaban = new Map();
   if (referencias.length > 0) {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('cobros_cliente')
       .select('id, referencia_externa, factura_id')
-      .eq('prestadora_id', prestadoraId)
       .eq('origen', origen)
       .in('referencia_externa', [...new Set(referencias)]);
     if (error) return responderError(res, error);
@@ -1014,7 +1031,7 @@ panelCobrosRouter.post('/entrada', requiereRolPanel, veElEstadoDeCuenta, async (
 
     let ubicacion;
     try {
-      ubicacion = await ubicarFactura(prestadoraId, cobro);
+      ubicacion = await ubicarFactura(db, cobro);
     } catch (e) {
       return responderError(res, e);
     }
@@ -1023,10 +1040,10 @@ panelCobrosRouter.post('/entrada', requiereRolPanel, veElEstadoDeCuenta, async (
       continue;
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('cobros_cliente')
       .insert({
-        prestadora_id: prestadoraId,
+        prestadora_id: ubicacion.factura.prestadora_id,
         factura_id: ubicacion.factura.id,
         monto: aDosDecimales(cobro.monto),
         fecha_cobro: cobro.fecha_cobro ?? new Date().toISOString().slice(0, 10),
@@ -1067,10 +1084,9 @@ panelCobrosRouter.post('/entrada', requiereRolPanel, veElEstadoDeCuenta, async (
   // propio sistema sin tener que volver a preguntar.
   let saldos = [];
   if (facturasTocadas.size > 0) {
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from('saldos_cliente')
       .select('factura_id, monto_total, cobrado, saldo, estado, moneda, actualizado_en, origenes')
-      .eq('prestadora_id', prestadoraId)
       .in('factura_id', [...facturasTocadas]);
     if (error) return responderError(res, error);
     saldos = data || [];

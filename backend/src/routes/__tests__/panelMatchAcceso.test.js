@@ -46,7 +46,12 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, cuerpo: crudo ? JSON.parse(crudo) : null });
+    llamadas.push({
+      clave,
+      busqueda: decodeURIComponent(new URL(req.url, 'http://interno').search),
+      cuerpo: crudo ? JSON.parse(crudo) : null,
+      credencial: req.headers.authorization,
+    });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada() : preparada;
@@ -84,10 +89,14 @@ after(() => {
   baseFalsa.close();
 });
 
+/** La credencial que mandó el último pedido: lo que la ruta escribe tiene que ir con ésa. */
+let credencialEnviada = null;
+
 async function pedir(metodo, ruta, cuerpo) {
+  credencialEnviada = sesionDePrueba(USUARIO);
   const respuesta = await fetch(`${DIRECCION}${ruta}`, {
     method: metodo,
-    headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
+    headers: { Authorization: credencialEnviada, 'Content-Type': 'application/json' },
     body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
@@ -122,6 +131,8 @@ beforeEach(() => {
   );
   respuestas.set('PATCH /rest/v1/permisos_de_acceso', () => []);
   respuestas.set('POST /rest/v1/auditoria_de_accesos', () => []);
+  // La Prestadora de lo que se escribe sale de la que la base deja ver a quien pide.
+  respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA }]);
 });
 
 /** Las tablas y funciones que sólo se tocan cuando la ruta llegó a hacer su trabajo. */
@@ -231,6 +242,34 @@ describe('la administración sí pasa el candado', () => {
     const { estado, cuerpo } = await pedir('GET', '/pasarela');
     assert.equal(estado, 200);
     assert.ok(Array.isArray(cuerpo.pasarelas));
+  });
+});
+
+describe('la lista de accesos trae los nombres aunque la ficha esté pendiente de conformidad', () => {
+  // La política restrictiva `oculta_pendientes_de_conformidad` de `pacientes` y de `asistentes`
+  // esconde las fichas pendientes a quien pide. Antes de pasar a la credencial de la persona, el
+  // nombre salía igual, y así tiene que seguir: los nombres se leen con la llave maestra,
+  // acotados a la Prestadora de la sesión.
+  it('pide los nombres con la llave maestra y con el filtro de la Prestadora', async () => {
+    const PACIENTE = '66666666-6666-6666-6666-666666666666';
+    const ASISTENTE = '77777777-7777-7777-7777-777777777777';
+    respuestas.set('GET /rest/v1/accesos_match', () => [
+      { id: ACCESO, cliente_id: null, paciente_id: PACIENTE, asistente_id: ASISTENTE, estado: 'activo' },
+    ]);
+    respuestas.set('GET /rest/v1/pacientes', () => [{ id: PACIENTE, nombre: 'Paciente inventado' }]);
+    respuestas.set('GET /rest/v1/asistentes', () => [{ id: ASISTENTE, nombre: 'Asistente inventada' }]);
+
+    const { estado, cuerpo } = await pedir('GET', '/accesos');
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.accesos[0].paciente_nombre, 'Paciente inventado');
+    assert.equal(cuerpo.accesos[0].asistente_nombre, 'Asistente inventada');
+
+    for (const tabla of ['pacientes', 'asistentes']) {
+      const lectura = llamadas.find((l) => l.clave === `GET /rest/v1/${tabla}`);
+      assert.ok(lectura, `no se leyeron los nombres de ${tabla}`);
+      assert.notEqual(lectura.credencial, credencialEnviada, `${tabla} se leyó con la credencial de la persona`);
+      assert.match(lectura.busqueda, new RegExp(`prestadora_id=eq\\.${PRESTADORA}`), `${tabla} se leyó sin la Prestadora`);
+    }
   });
 });
 
@@ -454,6 +493,11 @@ describe('la Prestadora arma su forma de cobro', () => {
     // La moneda la completa el disparador de la base con la de la Prestadora: si viajara desde
     // acá habría dos lugares decidiéndola.
     assert.equal('moneda' in escritura.cuerpo, false);
+    // Y se escribe con la credencial de quien pide, no con la llave maestra: la que decide si
+    // esta persona puede escribir en esta Prestadora es la RLS.
+    assert.equal(escritura.credencial, credencialEnviada);
+    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/prestadoras');
+    assert.equal(lectura.credencial, credencialEnviada);
   });
 
   it('un paquete sin período tampoco se renueva solo', async () => {

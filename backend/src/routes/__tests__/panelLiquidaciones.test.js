@@ -43,7 +43,13 @@ const baseFalsa = createServer((req, res) => {
     const clave = `${req.method} ${ruta}`;
     // La dirección entera, y no sólo el camino: en ella viajan los filtros, y hay pruebas que
     // miran contra qué lista se preguntó.
-    llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null });
+    llamadas.push({
+      clave,
+      url: req.url,
+      cuerpo: crudo ? JSON.parse(crudo) : null,
+      // Con qué credencial llegó: la de la persona o la llave maestra.
+      credencial: req.headers.authorization ?? null,
+    });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada() : preparada;
@@ -92,10 +98,14 @@ after(() => {
   baseFalsa.close();
 });
 
+/** La credencial que mandó el último pedido. */
+let credencialEnviada = null;
+
 async function pedir(metodo, ruta, cuerpo) {
+  credencialEnviada = sesionDePrueba(USUARIO);
   const respuesta = await fetch(`${DIRECCION}${ruta}`, {
     method: metodo,
-    headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
+    headers: { Authorization: credencialEnviada, 'Content-Type': 'application/json' },
     body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
@@ -517,7 +527,7 @@ describe('quién puede mirar y quién puede tocar', () => {
 
 describe('generar el mes', () => {
   function prepararLaBase({ liquidacionesExistentes = [], remuneracion, configuracionPago = [], guardias } = {}) {
-    respuestas.set('GET /rest/v1/prestadoras', () => [{ pais: 'AR', moneda: 'ARS' }]);
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA, pais: 'AR', moneda: 'ARS' }]);
     // La fecha de la guardia importa: desde que el período puede ser una semana, cada uno se
     // queda con las guardias que caen adentro de sus bordes.
     respuestas.set('GET /rest/v1/guardias', () => guardias ?? [
@@ -764,6 +774,7 @@ describe('con qué se le pagó al Asistente', () => {
         asistente_id: ASISTENTE,
         periodo_desde: '2026-08-01',
         periodo_hasta: '2026-08-31',
+        prestadora_id: PRESTADORA,
       },
     ]);
     respuestas.set('PATCH /rest/v1/liquidaciones_asistente', () => [{ id: LIQUIDACION, estado: 'pagada' }]);
@@ -877,6 +888,7 @@ describe('el medio de pago y la modalidad de trabajo', () => {
         asistente_id: ASISTENTE,
         periodo_desde: '2026-08-01',
         periodo_hasta: '2026-08-31',
+        prestadora_id: PRESTADORA,
       },
     ]);
     respuestas.set('PATCH /rest/v1/liquidaciones_asistente', () => [{ id: LIQUIDACION, estado: 'pagada' }]);
@@ -983,5 +995,101 @@ describe('el medio de pago y la modalidad de trabajo', () => {
 
     assert.equal(estado, 200);
     assert.deepEqual(cuerpo.modalidades_del_periodo, ['match']);
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// Con qué credencial entra cada ruta
+// ---------------------------------------------------------------------------------------
+
+/* El catálogo y todo lo que escribe van con la credencial de quien pide: la que separa una
+   Prestadora de otra es la protección por fila de la base. Las dos lecturas de liquidaciones
+   siguen con la llave maestra, porque a un Coordinador la base le recorta los Asistentes a su
+   zona. Con el sistema roto —una consulta con la llave cambiada— una de las dos da al revés. Lo
+   que esta prueba no ve es la protección por fila en sí: la base de mentira no la tiene. */
+describe('con qué credencial entra cada ruta', () => {
+  const LLAVE_MAESTRA = 'Bearer clave-de-mentira';
+  // Lo que pide `requiereRolPanel` para saber quién es y qué puede: no es de esta ruta.
+  const deLaSesion = (l) =>
+    l.clave === 'GET /auth/v1/user' ||
+    l.clave === 'GET /rest/v1/usuarios' ||
+    l.clave.startsWith('POST /rest/v1/rpc/') ||
+    l.clave.includes('registro_actividad');
+
+  it('el catálogo de conceptos se lee con la credencial de quien pide', async () => {
+    respuestas.set('GET /rest/v1/conceptos_liquidacion', () => []);
+    await pedir('GET', '/conceptos');
+    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/conceptos_liquidacion');
+    assert.equal(consulta.credencial, credencialEnviada);
+    assert.ok(!consulta.url.includes('prestadora_id='), 'el aislamiento lo hace la base, no un filtro');
+  });
+
+  it('un concepto nuevo nace con la Prestadora que la base deja ver', async () => {
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA }]);
+    respuestas.set('POST /rest/v1/conceptos_liquidacion', () => ({ id: 'c-nuevo' }));
+    const { estado } = await pedir('POST', '/conceptos', {
+      nombre: 'Concepto nuevo',
+      signo: 'suma',
+      unidad: 'porcentaje',
+      origen_valor: 'propio',
+      valor: 5,
+    });
+    assert.equal(estado, 200);
+    const alta = llamadas.find((l) => l.clave === 'POST /rest/v1/conceptos_liquidacion');
+    assert.equal(alta.cuerpo.prestadora_id, PRESTADORA);
+    assert.equal(alta.credencial, credencialEnviada);
+  });
+
+  it('generar el mes va con la llave maestra y nombra a la Prestadora en cada lectura', async () => {
+    // Con la credencial de quien pide, la base le esconde a todos los roles el Asistente importado
+    // que espera conformidad (y con él su remuneración), y ese Asistente hoy se liquida.
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA, pais: 'AR', moneda: 'ARS' }]);
+    respuestas.set('GET /rest/v1/guardias', () => [
+      { id: 'g-1', fecha: '2026-08-10', estado: 'completada', hora_inicio: '08:00:00', hora_fin: '16:00:00', asistente_id: 'a-1' },
+    ]);
+    respuestas.set('GET /rest/v1/asistentes', () => [
+      { id: 'a-1', nombre: 'Asistente importado de prueba', estado: 'activo', tipo_vinculo: 'monotributo', fecha_alta: '2020-01-01', fecha_baja: null },
+    ]);
+    respuestas.set('GET /rest/v1/remuneraciones_asistente', () => [{ asistente_id: 'a-1', valor_hora: 1500, sueldo_basico: null }]);
+    respuestas.set('GET /rest/v1/configuracion_pago_asistentes', () => []);
+    respuestas.set('GET /rest/v1/conceptos_liquidacion', () => []);
+    respuestas.set('GET /rest/v1/escalas_legales', () => []);
+    respuestas.set('GET /rest/v1/liquidaciones_asistente', () => []);
+    respuestas.set('POST /rest/v1/liquidaciones_asistente', () => ({ id: 'liq-nueva', moneda: 'ARS' }));
+    respuestas.set('POST /rest/v1/liquidaciones_asistente_items', () => null);
+
+    const { estado, cuerpo } = await pedir('POST', '/generar', { periodo: '2026-08' });
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.generadas, 1);
+
+    const aLaBase = llamadas.filter((l) => l.clave.includes('/rest/v1/') && !deLaSesion(l));
+    assert.ok(aLaBase.length >= 8, 'la ruta tiene que haber consultado la base');
+    for (const llamada of aLaBase) {
+      assert.equal(llamada.credencial, LLAVE_MAESTRA, `${llamada.clave} no fue con la llave maestra`);
+    }
+    // Con la llave maestra el aislamiento es el filtro: cada lectura de datos de la Prestadora lo lleva.
+    for (const tabla of ['guardias', 'asistentes', 'remuneraciones_asistente', 'configuracion_pago_asistentes', 'conceptos_liquidacion', 'liquidaciones_asistente']) {
+      const lectura = llamadas.find((l) => l.clave === `GET /rest/v1/${tabla}`);
+      assert.ok(lectura.url.includes(`prestadora_id=eq.${PRESTADORA}`), `${tabla} sin el filtro de la Prestadora`);
+    }
+    const asistentes = llamadas.find((l) => l.clave === 'GET /rest/v1/asistentes');
+    assert.ok(!asistentes.url.includes('pendiente_conformidad'), 'el Asistente pendiente de conformidad no se deja afuera');
+    const alta = llamadas.find((l) => l.clave === 'POST /rest/v1/liquidaciones_asistente');
+    assert.equal(alta.cuerpo.prestadora_id, PRESTADORA);
+  });
+
+  it('el detalle de una liquidación sigue con la llave maestra y nombrando a la Prestadora', async () => {
+    respuestas.set('GET /rest/v1/liquidaciones_asistente', () => [
+      { id: 'liq-1', estado: 'pendiente', asistente_id: 'a-1', periodo_desde: '2026-08-01', periodo_hasta: '2026-08-31' },
+    ]);
+    respuestas.set('GET /rest/v1/liquidaciones_asistente_items', () => []);
+    respuestas.set('GET /rest/v1/asistentes', () => [{ id: 'a-1', nombre: 'Asistente de prueba' }]);
+    respuestas.set('GET /rest/v1/guardias', () => []);
+
+    const { estado } = await pedir('GET', '/liq-1');
+    assert.equal(estado, 200);
+    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/liquidaciones_asistente');
+    assert.equal(lectura.credencial, LLAVE_MAESTRA);
+    assert.ok(lectura.url.includes(`prestadora_id=eq.${PRESTADORA}`));
   });
 });

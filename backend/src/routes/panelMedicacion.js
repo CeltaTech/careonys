@@ -60,8 +60,8 @@ panelMedicacionRouter.get('/pendientes', requiereRolPanel, async (req, res) => {
   const db = clienteDelPedido(req);
   // Con la llave maestra: la política RESTRICTIVE `la_informacion_de_salud_la_ve_quien_atiende`
   // exige interno.alcanza_la_informacion_de_salud(paciente_id), y con la restricción de la
-  // historia clínica activa (el valor de fábrica) el Administrador y el Superadministrador que no
-  // atienden al paciente dejan de ver la indicación; además `oculta_pendientes_de_conformidad`
+  // historia clínica activa (el valor de fábrica) el Superadministrador que no atiende al paciente
+  // deja de ver la indicación —el Administrador sí la ve—; además `oculta_pendientes_de_conformidad`
   // (RESTRICTIVE, NOT pendiente_conformidad) deja en null el paciente y la familia embebidos si
   // están pendientes. Hasta ahora cada rol veía toda la bandeja de su Prestadora. Si se acota o no
   // se decide aparte.

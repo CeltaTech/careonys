@@ -9,6 +9,9 @@ import { Alert } from '../components/ui/Alert';
 import { FormField } from '../components/ui/FormField';
 import { mensajeDeError } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
+import { useAlarmasTomadas } from '../hooks/useAlarmasTomadas';
+import { LaTomoYo } from '../components/continuidad/LaTomoYo';
+import { TIPOS_DE_ALARMA } from '../lib/alarmasTomadas';
 
 /* Las emergencias avisadas desde una guardia.
    ==========================================================================
@@ -33,6 +36,7 @@ export function EmergenciasEnGuardia() {
   const [error, setError] = useState(null);
   const [soloSinAtender, setSoloSinAtender] = useState(true);
   const [seleccionada, setSeleccionada] = useState(null);
+  const tomas = useAlarmasTomadas();
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -115,6 +119,9 @@ export function EmergenciasEnGuardia() {
                   <button onClick={() => setSeleccionada(emergencia)}>
                     {t.comun.ver_detalle}
                   </button>
+                  {!emergencia.atendida_at && (
+                    <LaTomoYo tipo={TIPOS_DE_ALARMA.EMERGENCIA} referenciaId={emergencia.id} {...tomas} />
+                  )}
                 </td>
               </tr>
             ))}
@@ -125,10 +132,12 @@ export function EmergenciasEnGuardia() {
       {seleccionada && (
         <DetalleDeEmergencia
           emergencia={seleccionada}
+          laTieneOtraPersona={tomas.laTieneOtraPersona(TIPOS_DE_ALARMA.EMERGENCIA, seleccionada.id)}
           onClose={() => setSeleccionada(null)}
           onAtendida={() => {
             setSeleccionada(null);
             recargar();
+            tomas.recargar();
           }}
         />
       )}
@@ -139,7 +148,7 @@ export function EmergenciasEnGuardia() {
 /* El detalle, que es lo único que no viajó por ningún mensaje, y la forma de marcarla atendida.
    La nota es opcional: obligarla haría que quien está resolviendo algo urgente tenga que
    escribir antes de poder seguir. */
-function DetalleDeEmergencia({ emergencia, onClose, onAtendida }) {
+function DetalleDeEmergencia({ emergencia, laTieneOtraPersona, onClose, onAtendida }) {
   const modal = useModalAccesible(onClose);
   const { t, locale } = useLocale();
   const [nota, setNota] = useState('');
@@ -201,7 +210,7 @@ function DetalleDeEmergencia({ emergencia, onClose, onAtendida }) {
           <Button variant="secondary" onClick={onClose} disabled={guardando}>
             {t.comun.cerrar}
           </Button>
-          {!emergencia.atendida_at && (
+          {!emergencia.atendida_at && !laTieneOtraPersona && (
             <Button onClick={marcarAtendida} disabled={guardando}>
               {guardando ? t.comun.guardando : t.emergencias.marcar_atendida}
             </Button>

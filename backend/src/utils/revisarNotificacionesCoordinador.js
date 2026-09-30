@@ -29,7 +29,7 @@ export async function revisarNotificacionesCoordinador() {
   // Es el arranque de un trabajo de fondo, que no tiene sesión de nadie. No trae dato de ninguna
   // Prestadora: trae la configuración de cada una con su identificador, y a partir de ahí el
   // trabajo recorre de a una, nombrándola en cada consulta de adentro —el idioma, la regla de las
-  // tomas, las alertas, los incidentes y las guardias sin cerrar salen todos de `config.prestadora_id`.
+  // tomas, las alertas, las emergencias, los incidentes y las guardias sin cerrar salen todos de `config.prestadora_id`.
   const { data: configuraciones, error } = await supabase
     .from('configuracion_escalada_coordinador')
     .select('*');
@@ -47,9 +47,10 @@ export async function revisarNotificacionesCoordinador() {
   for (const config of configuraciones) {
     const idioma = await idiomaDeLaPrestadora(supabase, config.prestadora_id);
     // Cuánto dura hacerse cargo de una alarma también se pregunta una vez por Prestadora: es el
-    // mismo número para las tres clases de alarma que siguen.
+    // mismo número para todas las clases de alarma que siguen.
     const reglaDeLasTomas = await reglaDeLaToma(config.prestadora_id);
     await revisarAlertas(config, ahora, idioma, reglaDeLasTomas);
+    await revisarEmergencias(config, ahora, idioma, reglaDeLasTomas);
     await revisarIncidentes(config, ahora, idioma, reglaDeLasTomas);
     await revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas);
   }
@@ -416,6 +417,75 @@ async function revisarAlertas(config, ahora, idioma, reglaDeLasTomas) {
         ...guardia,
         minutos: minutosPremura,
       }).texto,
+    });
+  }
+}
+
+// La emergencia que nadie atendió entra en la misma escalera que las demás alarmas: insiste a quien
+// coordina y, si nadie la toma, sube a todos los Coordinadores y después a la administración. El
+// mensaje es el mismo que salió cuando el Asistente la avisó, y dice de qué guardia se trata y nada
+// más: lo que escribió el Asistente se lee en el Panel.
+async function revisarEmergencias(config, ahora, idioma, reglaDeLasTomas) {
+  const { prestadora_id: prestadoraId, umbrales_premura: umbrales } = config;
+
+  const { data: emergencias, error } = await supabase
+    .from('emergencias_guardia')
+    .select('id, guardia_id, reportado_at, ultima_notificacion_at, veces_notificado')
+    .eq('prestadora_id', prestadoraId)
+    .is('atendida_at', null);
+
+  if (error) {
+    console.error(`Error consultando emergencias_guardia (prestadora ${prestadoraId}):`, error.message);
+    return;
+  }
+  if (!emergencias?.length) return;
+
+  // Ver el comentario de las guardias sin cerrar.
+  const tomadas = await tomadasAhora({
+    prestadoraId,
+    tipo: TIPOS_DE_ALARMA.EMERGENCIA,
+    ahora,
+    regla: reglaDeLasTomas,
+  });
+
+  const escalonesQueSalieron = await escalonesYaAvisados({
+    prestadoraId,
+    tipo: TIPOS_DE_ALARMA.EMERGENCIA,
+  });
+
+  const guardias = await datosDeLasGuardias(prestadoraId, emergencias.map((e) => e.guardia_id));
+
+  for (const emergencia of emergencias) {
+    if (tomadas.has(emergencia.id)) continue;
+    const guardia = guardias.get(emergencia.guardia_id) ?? GUARDIA_QUE_NO_SE_PUDO_LEER;
+    const mensaje = mensajeDelSistema('emergencia_en_guardia', idioma, {
+      fecha: guardia.fecha,
+      horaInicio: guardia.horaInicio,
+    });
+    const minutosPremura = (ahora.getTime() - new Date(emergencia.reportado_at).getTime()) / 60_000;
+    const intervalo = intervaloParaPremura(umbrales, minutosPremura);
+
+    if (necesitaNotificar({ ultimaNotificacionAt: emergencia.ultima_notificacion_at, intervaloMinutos: intervalo, ahora })) {
+      await notificarCoordinador({ evento: 'emergencia_en_guardia', prestadoraId, ...mensaje });
+
+      await supabase
+        .from('emergencias_guardia')
+        .update({ ultima_notificacion_at: ahora.toISOString(), veces_notificado: (emergencia.veces_notificado ?? 0) + 1 })
+        .eq('prestadora_id', prestadoraId)
+        .eq('id', emergencia.id);
+    }
+
+    // Ver el comentario de las guardias sin cerrar.
+    await escalarSiCorresponde({
+      prestadoraId,
+      tipo: TIPOS_DE_ALARMA.EMERGENCIA,
+      referenciaId: emergencia.id,
+      minutosPremura,
+      config,
+      idioma,
+      ahora,
+      yaSalieron: escalonesQueSalieron,
+      texto: mensaje.texto,
     });
   }
 }

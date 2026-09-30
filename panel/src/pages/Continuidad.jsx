@@ -319,9 +319,11 @@ export function Continuidad() {
                   {t.continuidad.avanzar_nivel}
                 </Button>
               )}
-              <Button onClick={() => setIncidenteResolviendo(i)} disabled={actualizandoId === i.id}>
-                {t.continuidad.resolver}
-              </Button>
+              {!tomas.laTieneOtraPersona(TIPOS_DE_ALARMA.INCIDENTE_RELEVO, i.id) && (
+                <Button onClick={() => setIncidenteResolviendo(i)} disabled={actualizandoId === i.id}>
+                  {t.continuidad.resolver}
+                </Button>
+              )}
               {/* Resolver dice que el problema terminó; tomarlo dice que alguien está en eso
                   ahora. Mientras tanto el incidente no insiste y tampoco escala solo. */}
               <LaTomoYo tipo={TIPOS_DE_ALARMA.INCIDENTE_RELEVO} referenciaId={i.id} {...tomas} />
@@ -385,9 +387,11 @@ export function Continuidad() {
               {a.motivo && <div>{t.continuidad.col_motivo}: {t.continuidad[`motivo_demora_${a.motivo}`] || a.motivo}</div>}
             </div>
             <div className="panel-modal-acciones">
-              <Button onClick={() => resolverAlerta(a)} disabled={actualizandoId === a.id}>
-                {t.continuidad.resolver_alerta}
-              </Button>
+              {!tomas.laTieneOtraPersona(TIPOS_DE_ALARMA.ALERTA_TEMPRANA, a.id) && (
+                <Button onClick={() => resolverAlerta(a)} disabled={actualizandoId === a.id}>
+                  {t.continuidad.resolver_alerta}
+                </Button>
+              )}
               <LaTomoYo tipo={TIPOS_DE_ALARMA.ALERTA_TEMPRANA} referenciaId={a.id} {...tomas} />
             </div>
           </div>

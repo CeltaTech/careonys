@@ -443,9 +443,13 @@ escrito encima por qué. Lo que queda, agrupado por lo que hay que hacer:
   zona; el Administrador ve todo. El padrón de Asistentes disponibles lo ven todos los
   Coordinadores. Una alarma que llega al escalón de todos los Coordinadores la puede ver y resolver
   cualquiera, pero primero tiene que hacerse cargo, y la base admite **una sola toma por alarma**:
-  los demás ven quién la tiene y no pueden resolverla mientras esté tomada. Hoy la toma existe y no
-  es exclusiva (`alarmas_tomadas` no impide dos tomas a la vez). **Las emergencias entran en la
-  escalada** como las otras cuatro alarmas: hoy se avisan una sola vez y no insisten ni escalan.
+  los demás ven quién la tiene y no pueden resolverla mientras esté tomada. Las emergencias entran
+  en la misma escalera. Eso ya lo hace cumplir la base
+  (`supabase/migrations/20261011000000_una_sola_toma_por_alarma.sql`) y la emergencia insiste y
+  escala (`backend/src/utils/revisarNotificacionesCoordinador.js`, `revisarEmergencias`). **Falta
+  que las rutas lean con la credencial de quien pide**: la lista de emergencias del Panel
+  (`backend/src/routes/panelEmergencias.js`) todavía lee con la maestra y le muestra al Coordinador
+  todas las de la Prestadora, no las de su zona más las escaladas.
 - **La ausencia del Coordinador es la misma que la del Asistente.** Se registra igual y lleva quién
   lo cubre: durante la ausencia, esa persona ve lo del ausente además de lo suyo. **Y la del
   Asistente se cubre igual, por turno fijo y no guardia por guardia**: las guardias casi siempre

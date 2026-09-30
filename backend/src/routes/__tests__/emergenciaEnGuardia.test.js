@@ -13,11 +13,10 @@
  *   2. QUE EL DETALLE SALGA POR UN CANAL PÚBLICO. El texto que escribió el Asistente es
  *      información sensible (`celtatech/CLAUDE.md` §6): el mensaje dice de qué guardia se trata y
  *      nada más, y el texto se lee entrando al Panel.
- *   3. QUE UNA PRESTADORA ALCANCE LA EMERGENCIA DE OTRA. Leer la bandeja del Panel y marcarla
- *      atendida siguen con la llave de servicio, porque las políticas de la base son más estrechas
- *      que lo que la pantalla mostraba; ahí lo que separa una Prestadora de otra son los filtros
- *      escritos en la consulta. De quién es cada guardia y la anotación de quién vio el detalle van
- *      con la credencial de quien pide.
+ *   3. QUE UNA PRESTADORA ALCANCE LA EMERGENCIA DE OTRA. La bandeja del Panel, de quién es cada
+ *      guardia y la anotación de quién vio el detalle van con la credencial de quien pide. Los
+ *      nombres y marcarla atendida siguen con la llave de servicio, y ahí lo que separa una
+ *      Prestadora de otra son los filtros escritos en la consulta.
  *   4. QUE SE PIERDA EL MOMENTO EN QUE PASÓ. El aviso puede quedar media hora en la cola sin
  *      conexión, y esa media hora es justamente el dato.
  *
@@ -362,33 +361,42 @@ describe('la bandeja del Panel', () => {
     assert.equal(cuerpo.emergencias[0].guardia.fecha, '2026-09-15');
   });
 
-  // Leer la bandeja sigue con la llave maestra: las políticas de la base son más estrechas que lo
-  // que la pantalla mostraba (la información de salud sólo a quien atiende, el Coordinador sólo su
-  // zona, los pendientes de conformidad escondidos). Lo que separa las Prestadoras ahí es el filtro
-  // escrito en cada consulta. Los pacientes que se anotan sí van con la credencial de quien pide.
-  it('la lista y los nombres van con la llave maestra y el filtro de la Prestadora', async () => {
+  // La lista va con la credencial de quien pide, y cuáles ve lo decide la base: el Coordinador, su
+  // zona, las que llegaron a todos y las que tiene tomadas. Los nombres siguen con la llave maestra
+  // y el filtro de la Prestadora escrito en la consulta.
+  it('la lista va con la credencial de quien pide, y los nombres con la llave maestra', async () => {
     await enElPanel('/');
     const consultadas = llamadas.filter((l) => l.clave.startsWith('GET /rest/v1/'));
-    for (const tabla of ['emergencias_guardia', 'guardias', 'asistentes', 'pacientes']) {
+    for (const tabla of ['emergencias_guardia', 'guardia_pacientes']) {
+      const consulta = consultadas.find((l) => l.clave.endsWith(`/${tabla}`));
+      assert.ok(consulta, `tiene que haberse consultado ${tabla}`);
+      assert.equal(consulta.credencial, credencialEnviada, `${tabla} no fue con la credencial de quien pide`);
+    }
+    for (const tabla of ['guardias', 'asistentes', 'pacientes']) {
       const consulta = consultadas.find((l) => l.clave.endsWith(`/${tabla}`));
       assert.ok(consulta, `tiene que haberse consultado ${tabla}`);
       assert.notEqual(consulta.credencial, credencialEnviada, `${tabla} fue con la credencial de quien pide`);
       assert.ok(consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`), `${tabla} sin filtro de Prestadora: ${consulta.url}`);
     }
-    const deQuienEs = consultadas.find((l) => l.clave.endsWith('/guardia_pacientes'));
-    assert.ok(deQuienEs, 'tiene que haberse consultado guardia_pacientes');
-    assert.equal(deQuienEs.credencial, credencialEnviada, 'guardia_pacientes no fue con la credencial de quien pide');
   });
 
-  it('el Coordinador ve también la emergencia de una guardia que no es de su zona', async () => {
+  it('la emergencia que la base no le deja ver no aparece', async () => {
     // La base de mentira imita acá la política del Coordinador: con la credencial de quien pide,
-    // la emergencia y la guardia de otra zona no se ven. Si la bandeja volviera a esa credencial,
-    // la lista saldría vacía o sin la guardia.
+    // la emergencia de otra zona que no llegó a todos no se ve. Si la bandeja volviera a la llave
+    // maestra, aparecería.
     emergenciasEnLaBase = [emergenciaDePrueba({ guardia_id: GUARDIA_DE_OTRO_ASISTENTE })];
-    const fueraDeSuZona = (filas) => ({ url, credencial }) =>
-      credencial === credencialEnviada ? [] : filasQuePasanLosFiltros(url, filas());
-    respuestas.set('GET /rest/v1/emergencias_guardia', fueraDeSuZona(() => emergenciasEnLaBase));
-    respuestas.set('GET /rest/v1/guardias', fueraDeSuZona(() => guardiasEnLaBase));
+    respuestas.set('GET /rest/v1/emergencias_guardia', ({ url, credencial }) =>
+      credencial === credencialEnviada ? [] : filasQuePasanLosFiltros(url, emergenciasEnLaBase));
+    const { estado, cuerpo } = await enElPanel('/');
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.emergencias.length, 0);
+  });
+
+  it('la que llegó a todos trae su guardia aunque no sea de su zona', async () => {
+    // La guardia de otra zona no se le ve con su credencial; el nombre y la fecha salen igual.
+    emergenciasEnLaBase = [emergenciaDePrueba({ guardia_id: GUARDIA_DE_OTRO_ASISTENTE })];
+    respuestas.set('GET /rest/v1/guardias', ({ url, credencial }) =>
+      credencial === credencialEnviada ? [] : filasQuePasanLosFiltros(url, guardiasEnLaBase));
     const { estado, cuerpo } = await enElPanel('/');
     assert.equal(estado, 200);
     assert.equal(cuerpo.emergencias.length, 1);

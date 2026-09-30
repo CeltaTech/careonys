@@ -18,12 +18,12 @@ import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsulta
    información sensible y no viaja por un canal público (`celtatech/CLAUDE.md` §6). Esta ruta es
    la puerta donde el permiso se comprueba.
 
-   LEER SIGUE CON LA LLAVE MAESTRA, con la Prestadora de la sesión escrita en cada consulta. Las
-   políticas de la base para esta tabla y para los nombres son más estrechas que lo que la pantalla
-   mostraba hasta ahora (ver el comentario de cada consulta); si se las adopta o no se decide
-   aparte. Lo que sí va con la credencial de quien pide es la anotación: el detalle es información
-   de salud, y antes de entregarlo queda anotado quién lo vio, paciente por paciente, y si no se
-   puede anotar no se entrega.
+   LA LISTA SE LEE CON LA CREDENCIAL DE QUIEN PIDE, y la base decide cuáles ve: el Administrador,
+   todas las de su Prestadora; el Coordinador, las de su zona, las que llegaron a todos los
+   Coordinadores y las que tiene tomadas. La anotación también va con esa credencial: el detalle es
+   información de salud, y antes de entregarlo queda anotado quién lo vio, paciente por paciente, y
+   si no se puede anotar no se entrega. Los nombres todavía se buscan con la llave maestra (ver
+   `conNombres`).
 
    ATENDER SIGUE CON LA LLAVE MAESTRA. La tabla no le da a nadie del Panel permiso para
    modificarla, ni tiene una política que lo deje; mientras eso no exista, marcarla atendida se
@@ -42,9 +42,7 @@ async function conNombres(emergencias, usuarioPanel) {
   const guardiaIds = [...new Set(emergencias.map((e) => e.guardia_id))];
   if (guardiaIds.length === 0) return [];
 
-  // Con la llave maestra: con la credencial de la persona, `coordinador_gestiona_guardias_de_su_zona`
-  // (interno.coordinador_alcanza_guardia) le deja al Coordinador sólo las guardias de su zona, y la
-  // lista de emergencias que ve es la de toda la Prestadora. Si se acota o no se decide aparte.
+  // Con la llave maestra, acotada a las guardias de las emergencias que la base ya dejó ver.
   const { data: guardias } = await acotarAPrestadora(
     supabase.from('guardias').select('id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, asistente_id, paciente_id').in('id', guardiaIds),
     usuarioPanel,
@@ -103,14 +101,8 @@ async function pacientesDeLasGuardias(db, emergencias) {
    con años de historia no se traiga todo de una vez. */
 panelEmergenciasRouter.get('/', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
   const db = clienteDelPedido(req);
-  // Con la llave maestra: la política RESTRICTIVE `la_informacion_de_salud_la_ve_quien_atiende`
-  // exige interno.alcanza_la_informacion_de_salud sobre algún paciente de la guardia, y con la
-  // restricción de la historia clínica activa (el valor de fábrica) el Superadministrador que no
-  // atiende al paciente deja de ver la emergencia —el Administrador sí la ve—; además
-  // `coordinador_lee_emergencias_de_su_zona` le deja al Coordinador sólo las de su zona. Hasta
-  // ahora cada rol veía todas las de su Prestadora. Si se acota o no se decide aparte.
   let consulta = acotarAPrestadora(
-    supabase
+    db
       .from('emergencias_guardia')
       .select('id, guardia_id, reportado_por, reportado_at, detalle, atendida_at, atendida_por, atendida_nota')
       .order('reportado_at', { ascending: false })

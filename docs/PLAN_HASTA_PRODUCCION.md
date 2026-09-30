@@ -60,6 +60,34 @@ Los cuatro son el mismo mecanismo mirado desde documentos distintos. Qué detect
 apagar, y por dónde sale el mensaje.
 
 - `docs/DATA_MODEL.md:591` y `docs/PRD_04_05_App_Servicio.md:168` — **[ya construido]** que el sistema detecte las ausencias y avise temprano solo.
+  **Contestado, con cambios. Se aplica cuando cierre el grupo.** El sistema junta información y
+  sugiere; **decide el Coordinador**, y cada Prestadora ajusta todo a su forma de trabajar.
+  - **Titular que avisa que se demora:** el GPS calcula cuánto le falta. Dentro del margen de
+    espera toma el turno con llegada tarde registrada. Fuera del margen se pregunta a los
+    relevos si están disponibles y cuánto tardan; el Coordinador compara y, si llega antes el
+    titular, se cancela la búsqueda; si llega antes un relevo, la guardia pasa a él y al titular
+    se le avisa que no vaya.
+  - **Titular que no avisa:** si el GPS no lo muestra en camino a tiempo, el Coordinador recibe
+    un preaviso y pone en marcha el reemplazo. Si el titular aparece tarde, esté el relevo
+    trabajando o en camino, el Coordinador decide quién se queda.
+  - **A los relevos se les pregunta siempre** si están disponibles y cuánto tardan, también al
+    personal de emergencia. Cada uno escribe su tiempo y el GPS calcula otro; los dos son
+    referencia y el Coordinador los ve juntos.
+  - **Orden de llamado, configurable por Prestadora:** personal de emergencia, si lo tiene; si
+    no, el franquero; después quienes cubren la misma guardia en otros días u horarios. Hoy ese
+    último grupo no se puede elegir aparte: está mezclado con todo el plantel libre, en el grupo
+    guardado como `suplente` (`backend/src/utils/faseAutomaticaRelevo.js:38`), palabra que no
+    se muestra en pantalla.
+  - **El Asistente del turno saliente se queda** hasta que lo releven.
+  - **Lo anotado del Asistente y el estado de la guardia son dos cosas.** Si llega tarde y
+    marca, queda «llegada tarde», aunque ya se lo hubiera marcado ausente: esa marca es
+    provisoria. Si no llega nunca, «ausente». Una guardia cubierta nunca figura ausente.
+  - **El pedido de relevo se cierra como resuelto** con la llegada del titular o del relevo, o
+    cuando el Coordinador elige entre los dos, y deja de insistirse. Hoy sigue abierto aunque el
+    titular llegue.
+  - **A todos los que se les preguntó se les avisa que quedó resuelto**, hayan contestado o no.
+  - **Penalizar al titular y compensar al relevo son dos opciones separadas** que cada
+    Prestadora usa o no. Hoy no existen.
 - `docs/PRD_04_05_App_Servicio.md:179` — que las alertas se puedan enchufar y sacar.
 - `docs/PRD_06_WhatsApp_IA.md:121` — el catálogo de mensajes, los reintentos y a quién se escala.
 - `docs/PRD_06_WhatsApp_IA.md:26` — que el número y la cuenta de WhatsApp sean de cada Prestadora.

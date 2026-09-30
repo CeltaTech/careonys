@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
-import { supabase } from '../db/connection.js';
+import { supabase, clienteDelPedido } from '../db/connection.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { exigirLaClaveActual } from '../utils/claveActual.js';
 import { exigirQueElCelularSeaDeUnaSolaPersona } from '../utils/celularDeUnaSolaPersona.js';
@@ -53,21 +53,25 @@ const ACCION_CAMBIO_DE_TELEFONO = 'cambio_de_telefono';
 const ACCION_EQUIPO_NUEVO = 'entrada_desde_un_equipo_nuevo';
 const ACCION_CERRAR_TODO = 'cierre_de_sesion_de_todos_los_equipos';
 
-// La Organización se nombra también en la lectura, y es la propia de la cuenta
-// —`organizacionPropiaId`—, nunca la de un permiso de acceso abierto: acá se mira de quién es la
-// cuenta, no dónde está parada. El caso sin Organización lo resuelve el mismo ayudante que las
-// escrituras de más abajo, para que las dos no puedan discrepar.
-async function miCuenta(usuarioPanel) {
-  const { data } = await deLaOrganizacionDeLaCuenta(
-    supabase
-      .from('usuarios')
-      .select('id, rol, nombre, email, telefono, telefono_verificado_en, prestadora_id')
-      .eq('id', usuarioPanel.id),
-    { prestadora_id: usuarioPanel.organizacionPropiaId ?? null },
-  ).maybeSingle();
+// La propia cuenta se lee con la credencial de quien pide (`clienteDelPedido(req)`), no con la llave
+// maestra: la base le deja ver a cada persona su propia fila y ninguna otra, así que no hace falta
+// nombrar la Organización. La Prestadora que se usa después es la de esa fila, la propia de la
+// cuenta, nunca la de un permiso de acceso abierto: acá se mira de quién es la cuenta, no dónde
+// está parada.
+async function miCuenta(db, usuarioPanel) {
+  // SIN PRESTADORA A PROPÓSITO
+  // `db` es siempre `clienteDelPedido(req)`: todos los que llaman a esta función se la pasan así, y
+  // con esa credencial la base sólo deja ver la fila de la propia cuenta.
+  const { data } = await db.from('usuarios')
+    .select('id, rol, nombre, email, telefono, telefono_verificado_en, prestadora_id')
+    .eq('id', usuarioPanel.id)
+    .maybeSingle();
   return data ?? null;
 }
 
+// Las dos escrituras sobre la propia cuenta —marcar el número verificado y cambiarlo— siguen con la
+// llave maestra: la base no le da a nadie con sesión permiso de modificar su fila de `usuarios`.
+//
 // Toda escritura sobre la propia cuenta dice además para qué Organización trabaja, y no se apoya
 // sólo en el identificador que ya se leyó: así el renglón nombra la Prestadora, y una cuenta que
 // entretanto cambió de Organización no se toca con el dato viejo.
@@ -86,7 +90,7 @@ function deLaOrganizacionDeLaCuenta(query, cuenta) {
 // ofrece, y un número que no viaja es un número que no se filtra.
 panelCuentaSeguraRouter.get('/', requiereRolPanel, async (req, res) => {
   try {
-    const cuenta = await miCuenta(req.usuarioPanel);
+    const cuenta = await miCuenta(clienteDelPedido(req), req.usuarioPanel);
     if (!cuenta) throw new ErrorConMotivo('no_encontrado');
 
     res.json({
@@ -114,7 +118,7 @@ panelCuentaSeguraRouter.post(
   topeDePedidos({ nombre: 'codigo_al_telefono' }),
   async (req, res) => {
     try {
-      const cuenta = await miCuenta(req.usuarioPanel);
+      const cuenta = await miCuenta(clienteDelPedido(req), req.usuarioPanel);
       if (!cuenta) throw new ErrorConMotivo('no_encontrado');
       if (!cuenta.telefono) throw new ErrorConMotivo('telefono_invalido');
 
@@ -136,7 +140,7 @@ panelCuentaSeguraRouter.post(
       const { codigo } = req.body ?? {};
       if (!codigo) throw new ErrorConMotivo('faltan_datos');
 
-      const cuenta = await miCuenta(req.usuarioPanel);
+      const cuenta = await miCuenta(clienteDelPedido(req), req.usuarioPanel);
       if (!cuenta) throw new ErrorConMotivo('no_encontrado');
 
       const usado = await comprobarCodigoDelTelefono({
@@ -194,7 +198,7 @@ panelCuentaSeguraRouter.post(
       if (!claveActual || !telefono) throw new ErrorConMotivo('faltan_datos');
       if (!telefonoAceptable(telefono)) throw new ErrorConMotivo('telefono_invalido');
 
-      const cuenta = await miCuenta(req.usuarioPanel);
+      const cuenta = await miCuenta(clienteDelPedido(req), req.usuarioPanel);
       if (!cuenta) throw new ErrorConMotivo('no_encontrado');
 
       await exigirLaClaveActual({ email: cuenta.email, prestadoraId: cuenta.prestadora_id, clave: claveActual });
@@ -264,7 +268,7 @@ panelCuentaSeguraRouter.post(
 panelCuentaSeguraRouter.post('/equipo/reconocer', requiereRolPanel, async (req, res) => {
   try {
     const { marca } = req.body ?? {};
-    const cuenta = await miCuenta(req.usuarioPanel);
+    const cuenta = await miCuenta(clienteDelPedido(req), req.usuarioPanel);
     if (!cuenta) throw new ErrorConMotivo('no_encontrado');
 
     if (await equipoConocido({ usuarioId: cuenta.id, prestadoraId: cuenta.prestadora_id, marca })) {
@@ -305,7 +309,7 @@ panelCuentaSeguraRouter.post(
       const { codigo } = req.body ?? {};
       if (!codigo) throw new ErrorConMotivo('faltan_datos');
 
-      const cuenta = await miCuenta(req.usuarioPanel);
+      const cuenta = await miCuenta(clienteDelPedido(req), req.usuarioPanel);
       if (!cuenta) throw new ErrorConMotivo('no_encontrado');
 
       await comprobarCodigoDelTelefono({
@@ -340,7 +344,7 @@ panelCuentaSeguraRouter.post('/cerrar-sesiones', requiereRolPanel, async (req, r
     const { claveActual } = req.body ?? {};
     if (!claveActual) throw new ErrorConMotivo('faltan_datos');
 
-    const cuenta = await miCuenta(req.usuarioPanel);
+    const cuenta = await miCuenta(clienteDelPedido(req), req.usuarioPanel);
     if (!cuenta) throw new ErrorConMotivo('no_encontrado');
 
     await exigirLaClaveActual({ email: cuenta.email, prestadoraId: cuenta.prestadora_id, clave: claveActual });

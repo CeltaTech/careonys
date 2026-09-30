@@ -8,10 +8,9 @@
  *
  *   1. DE QUIÉN SON LOS DATOS LO DECIDE LA SESIÓN. El identificador del Asistente no viaja en el
  *      pedido: no hay dónde escribir el de otra persona. Vale para mirar y para escribir.
- *   2. NADIE VE NI TOCA LA CUENTA DE OTRO. El backend entra a la base con la llave de servicio y se
- *      saltea la protección por fila, así que lo único que separa un Asistente de otro —y una
- *      Prestadora de otra— son los filtros de estas rutas. Si faltaran, la pantalla se vería
- *      igual de bien.
+ *   2. NADIE VE NI TOCA LA CUENTA DE OTRO. Estas rutas entran a la base con la credencial de quien
+ *      pide, y la base le contesta sólo lo de su Prestadora; el Asistente lo separan los filtros
+ *      por su Legajo. Si volvieran a la llave maestra, la pantalla se vería igual de bien.
  *   3. EL NÚMERO DE LA CUENTA NO SALE POR NINGÚN OTRO LADO. Va en el cuerpo del pedido y en el de
  *      la respuesta, y en ningún otro lugar: ni en la dirección de una consulta, ni en un mensaje
  *      de error, ni en el registro de actividad.
@@ -51,7 +50,7 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, url: req.url, cuerpo: crudo });
+    llamadas.push({ clave, url: req.url, cuerpo: crudo, credencial: req.headers.authorization });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada({ url: req.url }) : preparada;
@@ -152,7 +151,8 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'asistente', prestadora_id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/asistentes', () => [{ id: LEGAJO, prestadora_id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/datos_bancarios_asistente', () => cuentas);
-  respuestas.set('GET /rest/v1/prestadoras', () => [{ pais: 'AR' }]);
+  // La base le deja ver al Asistente una sola Prestadora, la suya: de esa fila sale la de la cuenta.
+  respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA, pais: 'AR' }]);
   // El catálogo contesta lo que se le pregunta: la lista entera cuando se la piden por país, y la
   // clase sola cuando se pregunta si esa clase existe. Sin el filtro, una clase inventada pasaría.
   respuestas.set('GET /rest/v1/catalogo_identificadores_de_cuenta', ({ url }) => {
@@ -201,19 +201,17 @@ describe('el Asistente mira adónde se le paga', () => {
     assert.equal(consultasA('catalogo_identificadores_de_cuenta').length, 0);
   });
 
-  // ESTO ES LO QUE SEPARA A UN ASISTENTE DE OTRO. El backend se saltea la protección por fila.
-  it('la consulta va filtrada por el Asistente de la sesión y por su Prestadora', async () => {
+  // ESTO ES LO QUE SEPARA A UN ASISTENTE DE OTRO: el filtro por su Legajo, y la credencial de
+  // quien pide, con la que la base contesta sólo lo de su Prestadora.
+  it('la consulta va filtrada por el Asistente de la sesión y con su credencial', async () => {
     await pedirCuentas();
-    const consultas = consultasA('datos_bancarios_asistente');
-    assert.equal(consultas.length, 1);
+    const lecturas = llamadas.filter((l) => l.clave === 'GET /rest/v1/datos_bancarios_asistente');
+    assert.equal(lecturas.length, 1);
     assert.ok(
-      consultas[0].includes(`asistente_id=eq.${LEGAJO}`),
+      lecturas[0].url.includes(`asistente_id=eq.${LEGAJO}`),
       'la consulta no se acota al Asistente de la sesión',
     );
-    assert.ok(
-      consultas[0].includes(`prestadora_id=eq.${PRESTADORA}`),
-      'la consulta no lleva el filtro de Prestadora',
-    );
+    assert.notEqual(lecturas[0].credencial, 'Bearer clave-de-mentira', 'la consulta fue con la llave maestra');
   });
 
   it('el identificador que llega en el pedido no cambia de quién son las cuentas', async () => {
@@ -308,14 +306,14 @@ describe('el Asistente informa adónde se le paga', () => {
     assert.equal(fila.pais, 'AR');
   });
 
-  // ESTO ES LO QUE IMPIDE QUE UN ASISTENTE ESCRIBA LA CUENTA DE OTRO. El backend se saltea la
-  // protección por fila, así que sin estos filtros la escritura alcanzaría cualquier fila.
-  it('la corrección va filtrada por el Asistente de la sesión, su Prestadora y la clase', async () => {
+  // ESTO ES LO QUE IMPIDE QUE UN ASISTENTE ESCRIBA LA CUENTA DE OTRO: el filtro por su Legajo, y
+  // la credencial de quien pide, con la que la base no deja alcanzar otra Prestadora.
+  it('la corrección va filtrada por el Asistente de la sesión y la clase, con su credencial', async () => {
     await guardarCuenta('cbu', { identificador: NUMERO_CORREGIDO });
-    const correccion = escriturasA('datos_bancarios_asistente', 'PATCH')[0].url;
-    assert.ok(correccion.includes(`asistente_id=eq.${LEGAJO}`), 'la corrección no se acota al Asistente de la sesión');
-    assert.ok(correccion.includes(`prestadora_id=eq.${PRESTADORA}`), 'la corrección no lleva el filtro de Prestadora');
-    assert.ok(correccion.includes('identificador_clase=eq.cbu'), 'la corrección no dice qué cuenta toca');
+    const [correccion] = escriturasA('datos_bancarios_asistente', 'PATCH');
+    assert.ok(correccion.url.includes(`asistente_id=eq.${LEGAJO}`), 'la corrección no se acota al Asistente de la sesión');
+    assert.ok(correccion.url.includes('identificador_clase=eq.cbu'), 'la corrección no dice qué cuenta toca');
+    assert.notEqual(correccion.credencial, 'Bearer clave-de-mentira', 'la corrección fue con la llave maestra');
   });
 
   it('un Asistente no escribe la cuenta de otro, diga lo que diga el pedido', async () => {
@@ -423,7 +421,7 @@ describe('el Asistente informa adónde se le paga', () => {
     const borrados = escriturasA('datos_bancarios_asistente', 'DELETE');
     assert.equal(borrados.length, 1);
     assert.ok(borrados[0].url.includes(`asistente_id=eq.${LEGAJO}`), 'el borrado no se acota al Asistente de la sesión');
-    assert.ok(borrados[0].url.includes(`prestadora_id=eq.${PRESTADORA}`), 'el borrado no lleva el filtro de Prestadora');
+    assert.notEqual(borrados[0].credencial, 'Bearer clave-de-mentira', 'el borrado fue con la llave maestra');
     assert.ok(borrados[0].url.includes('identificador_clase=eq.cbu'), 'el borrado no dice qué cuenta saca');
 
     const renglon = JSON.parse(escriturasA('registro_actividad', 'POST')[0].cuerpo);

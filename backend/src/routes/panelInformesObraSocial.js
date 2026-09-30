@@ -1,12 +1,31 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { supabase } from '../db/connection.js';
+import { supabase, clienteDelPedido } from '../db/connection.js';
 import { requierePermiso } from '../utils/permisos.js';
 import { horasEntre, horasImputadasAlPaciente } from '../utils/horasDeGuardia.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { cuentasDeLasFichas } from '../utils/cuentaDeLaFicha.js';
+import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
 
 export const panelInformesObraSocialRouter = Router();
+
+// CON LA LLAVE MAESTRA, Y FILTRADO A MANO POR LA PRESTADORA. Esta ruta no pasa todavía a la
+// credencial de quien pide porque la base es más estrecha que lo que la ruta hace hoy, y cambiar
+// qué ve cada rol se decide aparte:
+// - `legajos_los_lee_su_organizacion` pide el permiso `ver_padron`: sin él, el informe saldría con
+//   el nombre de la obra social vacío.
+// - `coordinador_gestiona_guardias_de_su_zona` (guardias) y
+//   `coordinador_gestiona_informes_obra_social_de_su_zona` le muestran al coordinador sólo lo de
+//   los Asistentes de su zona: el informe de un Paciente perdería los turnos de los Asistentes de
+//   otras zonas, y la lista de informes, los de esos Pacientes.
+// - `la_informacion_de_salud_la_ve_quien_atiende` (restrictiva, informes_obra_social) esconde el
+//   informe a quien no atiende al Paciente donde rige la restricción de historia clínica.
+// - `oculta_pendientes_de_conformidad` (restrictiva, pacientes) esconde al Paciente importado que
+//   espera conformidad, y el informe daría «no encontrado».
+//
+// Un informe es información de salud de un Paciente: cada vez que se arma o se entrega uno, queda
+// anotado quién lo vio (`utils/registroDeConsultas.js`), antes de responder, con la credencial de
+// quien pide. Si no se pudo anotar, no se entrega.
 
 const TIPOS_INFORME = ['planilla_asistencia', 'resumen_mensual'];
 
@@ -164,6 +183,11 @@ panelInformesObraSocialRouter.get('/preview', requiereRolPanel, async (req, res)
       periodoDesde,
       periodoHasta,
     });
+    await anotarConsultaAHce(
+      req.usuarioPanel,
+      { pacienteId, categorias: ['pacientes', 'guardias'], origen: origenDelPedido(req) },
+      { cliente: clienteDelPedido(req) },
+    );
     res.json({ contenido });
   } catch (error) {
     responderError(res, error, 400);
@@ -179,6 +203,11 @@ panelInformesObraSocialRouter.post('/', requiereRolPanel, requierePermiso('valid
   try {
     const prestadoraId = req.usuarioPanel.prestadoraId;
     const contenido = await construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde, periodoHasta });
+    await anotarConsultaAHce(
+      req.usuarioPanel,
+      { pacienteId, categorias: ['pacientes', 'guardias', 'informes_obra_social'], origen: origenDelPedido(req) },
+      { cliente: clienteDelPedido(req) },
+    );
 
     const { data: informe, error: errorInsert } = await supabase
       .from('informes_obra_social')
@@ -228,6 +257,15 @@ panelInformesObraSocialRouter.get('/:id', requiereRolPanel, async (req, res) => 
     .maybeSingle();
   if (error) return responderError(res, error);
   if (!data) return res.status(404).json({ error: 'Informe no encontrado' });
+  try {
+    await anotarConsultaAHce(
+      req.usuarioPanel,
+      { pacienteId: data.paciente_id, categorias: ['informes_obra_social'], origen: origenDelPedido(req) },
+      { cliente: clienteDelPedido(req) },
+    );
+  } catch (errorAnotacion) {
+    return responderError(res, errorAnotacion);
+  }
   res.json(data);
 });
 
@@ -239,13 +277,24 @@ panelInformesObraSocialRouter.post('/:id/anular', requiereRolPanel, requierePerm
 
   const { data: informe } = await supabase
     .from('informes_obra_social')
-    .select('id, estado')
+    .select('id, estado, paciente_id')
     .eq('id', req.params.id)
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
   if (!informe) return res.status(404).json({ error: 'Informe no encontrado' });
   if (informe.estado === 'anulado') {
     return res.status(400).json({ error: 'Este informe ya está anulado' });
+  }
+
+  // Lo que se devuelve es el informe entero, con su contenido: se anota antes de tocarlo.
+  try {
+    await anotarConsultaAHce(
+      req.usuarioPanel,
+      { pacienteId: informe.paciente_id, categorias: ['informes_obra_social'], origen: origenDelPedido(req) },
+      { cliente: clienteDelPedido(req) },
+    );
+  } catch (errorAnotacion) {
+    return responderError(res, errorAnotacion);
   }
 
   const { data, error } = await supabase

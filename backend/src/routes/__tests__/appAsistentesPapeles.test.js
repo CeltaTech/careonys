@@ -8,10 +8,10 @@
  *
  *   1. DE QUIÉN ES LA CARPETA LO DECIDE LA SESIÓN. El identificador del Asistente no viaja en el
  *      pedido: no hay forma de pedir la carpeta de otra persona porque no hay dónde escribirla.
- *   2. EL FILTRO DE PRESTADORA VIAJA EN LAS CUATRO CONSULTAS. El backend entra a la base con la
- *      llave de servicio y se saltea la protección por fila, así que lo único que separa una
- *      Prestadora de otra son estos filtros. Si a una consulta le faltara, nadie lo notaría
- *      mirando la pantalla: los datos se verían bien igual.
+ *   2. CADA CONSULTA QUEDA ACOTADA A LA PRESTADORA DE LA SESIÓN. Las que van con la credencial de
+ *      quien pide las acota la base; las dos que siguen con la llave maestra, porque la base
+ *      todavía no le da al Asistente permiso para leer esas tablas, llevan el filtro escrito. Si
+ *      una se saliera de las dos formas, nadie lo notaría mirando la pantalla.
  *   3. LOS DÍAS DE PREAVISO SON LOS QUE CONFIGURÓ LA PRESTADORA. Con la ventana ancha, un papel que
  *      vence en dos meses ya avisa; con la de fábrica, no.
  *
@@ -43,7 +43,7 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, url: req.url });
+    llamadas.push({ clave, url: req.url, credencial: req.headers.authorization });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada({ url: req.url }) : preparada;
@@ -171,12 +171,12 @@ describe('la carpeta de papeles del Asistente, desde el teléfono', () => {
     assert.equal(conLaVentanaAncha.cuerpo.carpeta.resumen, 'por_vencer');
   });
 
-  // ESTO ES LO QUE AÍSLA UNA PRESTADORA DE OTRA. El backend entra con la llave de servicio y se
-  // saltea la protección por fila: si una de estas cuatro consultas perdiera su filtro, traería
-  // los papeles de otra Prestadora y la pantalla se vería igual de bien.
-  it('las cuatro consultas van filtradas por la Prestadora de la sesión', async () => {
+  // ESTO ES LO QUE AÍSLA UNA PRESTADORA DE OTRA. Las que siguen con la llave maestra llevan el
+  // filtro escrito; las que van con la credencial de quien pide las acota la base. Si una de las
+  // cuatro se saliera de las dos formas, traería lo de otra Prestadora y se vería igual de bien.
+  it('las cuatro consultas quedan acotadas a la Prestadora de la sesión', async () => {
     await pedirPapeles();
-    for (const tabla of ['tipos_documento_asistente', 'documentos_asistente', 'certificados']) {
+    for (const tabla of ['tipos_documento_asistente', 'documentos_asistente']) {
       const consultas = consultasA(tabla);
       assert.equal(consultas.length, 1, `se consultó ${tabla} ${consultas.length} veces`);
       assert.ok(
@@ -184,7 +184,11 @@ describe('la carpeta de papeles del Asistente, desde el teléfono', () => {
         `la consulta a ${tabla} no lleva el filtro de Prestadora`
       );
     }
-    assert.ok(consultasA('prestadoras')[0].includes(`id=eq.${PRESTADORA}`));
+    for (const tabla of ['certificados', 'prestadoras']) {
+      const lecturas = llamadas.filter((l) => l.clave === `GET /rest/v1/${tabla}`);
+      assert.equal(lecturas.length, 1, `se consultó ${tabla} ${lecturas.length} veces`);
+      assert.notEqual(lecturas[0].credencial, 'Bearer clave-de-mentira', `la consulta a ${tabla} fue con la llave maestra`);
+    }
   });
 
   it('de quién es la carpeta lo decide la sesión, y se pide siempre por ese Asistente', async () => {
@@ -207,9 +211,8 @@ describe('la carpeta de papeles del Asistente, desde el teléfono', () => {
 
 // `GET /perfil` devuelve el mismo Certificado que la carpeta, por una consulta propia. Son dos
 // consultas a la misma tabla escritas en dos lugares, y una de ellas estuvo sin el filtro de
-// Prestadora: se veía igual de bien, porque el identificador del Asistente ya alcanza mientras
-// nunca se repita. Lo que separa una Prestadora de otra son estos filtros, así que el que falta
-// no lo encuentra nadie mirando la pantalla.
+// Prestadora: se veía igual de bien. Ahora va con la credencial de quien pide, y la base le
+// contesta sólo lo de su Prestadora; con la llave maestra, esta comprobación falla.
 describe('el Certificado que viaja con el perfil', () => {
   beforeEach(() => {
     respuestas.set('GET /rest/v1/asistentes', () => [
@@ -223,17 +226,18 @@ describe('el Certificado que viaja con el perfil', () => {
     respuestas.set('GET /rest/v1/lugares', () => []);
   });
 
-  it('la consulta del Certificado va filtrada por la Prestadora de la sesión', async () => {
+  it('la consulta del Certificado va con la credencial de quien pide y por su Legajo', async () => {
     const respuesta = await fetch(`${DIRECCION}/perfil`, {
       headers: { Authorization: sesionDePrueba(USUARIO) },
     });
     assert.equal(respuesta.status, 200);
-    const consultas = consultasA('certificados');
-    assert.equal(consultas.length, 1);
-    assert.ok(
-      consultas[0].includes(`prestadora_id=eq.${PRESTADORA}`),
-      'la consulta del Certificado no lleva el filtro de Prestadora'
+    const lecturas = llamadas.filter((l) => l.clave === 'GET /rest/v1/certificados');
+    assert.equal(lecturas.length, 1);
+    assert.notEqual(
+      lecturas[0].credencial,
+      'Bearer clave-de-mentira',
+      'la consulta del Certificado fue con la llave maestra'
     );
-    assert.ok(consultas[0].includes(`asistente_id=eq.${LEGAJO}`));
+    assert.ok(lecturas[0].url.includes(`asistente_id=eq.${LEGAJO}`));
   });
 });

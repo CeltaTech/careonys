@@ -38,7 +38,12 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const direccion = new URL(req.url, 'http://interno');
     const clave = `${req.method} ${direccion.pathname}`;
-    llamadas.push({ clave, filtros: direccion.searchParams, cuerpo: crudo ? JSON.parse(crudo) : null });
+    llamadas.push({
+      clave,
+      filtros: direccion.searchParams,
+      cuerpo: crudo ? JSON.parse(crudo) : null,
+      credencial: req.headers.authorization,
+    });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada(direccion.searchParams) : preparada;
@@ -105,6 +110,8 @@ beforeEach(() => {
   respuestas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: rolDelUsuario, prestadora_id: PRESTADORA }]);
+  // La Prestadora con la que se escribe es la que la base deja ver a quien pide.
+  respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/configuracion_facturacion_clientes', () => []);
   respuestas.set('POST /rest/v1/configuracion_facturacion_clientes', () => []);
 });
@@ -126,10 +133,10 @@ describe('leer el plazo de pago', () => {
     assert.equal(cuerpo.configuracion.dias_hasta_el_vencimiento, 10);
   });
 
-  it('la consulta lleva el filtro de Prestadora escrito', async () => {
+  it('la consulta va con la credencial de quien pide, y la base acota a su Prestadora', async () => {
     await leer();
     const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/configuracion_facturacion_clientes');
-    assert.equal(consulta.filtros.get('prestadora_id'), `eq.${PRESTADORA}`);
+    assert.equal(consulta.credencial, sesionDePrueba(USUARIO));
   });
 });
 

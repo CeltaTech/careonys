@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
-import { supabase } from '../db/connection.js';
+import { clienteDelPedido, supabase } from '../db/connection.js';
 import { exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { esRutaDeMatriculaDe, extensionDeArchivo, rutaDeMatriculaNueva } from '../utils/archivosSubidos.js';
 import { responderError } from '../utils/errorConMotivo.js';
@@ -31,6 +31,17 @@ import { responderError } from '../utils/errorConMotivo.js';
 //     si se pudiera cambiar después, no serviría como constancia de nada. Se
 //     corrige cargando la nueva, que es lo que pasa en la vida real cuando el
 //     organismo emite una renovación.
+//
+// CON LA CREDENCIAL DE QUIEN PIDE
+// Las consultas a la base entran con `clienteDelPedido(req)`, no con la llave
+// maestra: la base le contesta al Asistente sólo lo suyo. Por eso ninguna de
+// ellas lleva el filtro de la Prestadora de la sesión.
+//
+// EL DEPÓSITO SIGUE CON LA LLAVE MAESTRA
+// Subir el archivo y firmar el enlace van con la llave maestra, y la ruta se
+// comprueba a mano con `utils/archivosSubidos.js`: las políticas del depósito
+// piden que la carpeta sea el usuario de la sesión, y la ruta la arma la ficha
+// del Asistente (ver el comentario de cada llamada).
 // ============================================================================
 
 export const appAsistentesMatriculaRouter = Router();
@@ -61,15 +72,12 @@ function manejarErrorMulter(err, req, res, next) {
 const COLUMNAS_ESTADO =
   'asistente_id, requiere_matricula, tipo_matricula, motivo_bloqueo, matricula_id, vigente_hasta, verificada_at, dias_para_vencer';
 
-// El filtro por Prestadora va aunque el identificador del Asistente ya sea de
-// una sola: el backend entra con la llave de servicio y se saltea la protección
-// por fila, así que lo único que separa una Prestadora de otra son estos
-// filtros. La vista ya trae la columna, porque sale del Asistente.
-async function estadoDelAsistente(prestadoraId, asistenteId) {
-  const { data } = await supabase
+// La vista se lee con los permisos de quien pide, así que la base ya la acota a
+// la Prestadora de la sesión.
+async function estadoDelAsistente(db, asistenteId) {
+  const { data } = await db
     .from('estado_matricula_asistente')
     .select(COLUMNAS_ESTADO)
-    .eq('prestadora_id', prestadoraId)
     .eq('asistente_id', asistenteId)
     .maybeSingle();
   return data ?? null;
@@ -80,21 +88,21 @@ async function estadoDelAsistente(prestadoraId, asistenteId) {
 // ---------------------------------------------------------------------------
 
 appAsistentesMatriculaRouter.get('/', requiereRolAsistente, async (req, res) => {
-  const estado = await estadoDelAsistente(req.usuarioAsistente.prestadoraId, req.usuarioAsistente.asistenteId);
+  const db = clienteDelPedido(req);
+  const estado = await estadoDelAsistente(db, req.usuarioAsistente.asistenteId);
 
   // Con cuántos días de anticipación avisa esta Prestadora. Es el mismo número
   // que usa para los demás papeles que vencen: dos ventanas distintas para la
   // misma idea terminan siempre desalineadas (CLAUDE.md §7.12).
-  const { data: prestadora } = await supabase
+  const { data: prestadora } = await db
     .from('prestadoras')
     .select('dias_aviso_vencimiento_documentos')
     .eq('id', req.usuarioAsistente.prestadoraId)
     .maybeSingle();
 
-  const { data: matriculas, error } = await supabase
+  const { data: matriculas, error } = await db
     .from('matriculas_asistente')
     .select('id, tipo, numero_matricula, vigente_desde, vigente_hasta, archivo_url, verificada_at, cargada_por_el_asistente, created_at')
-    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .order('vigente_desde', { ascending: false });
   if (error) return responderError(res, error);
@@ -128,7 +136,8 @@ appAsistentesMatriculaRouter.post(
   async (req, res) => {
     const { numeroMatricula, vigenteDesde, vigenteHasta } = req.body;
 
-    const estado = await estadoDelAsistente(req.usuarioAsistente.prestadoraId, req.usuarioAsistente.asistenteId);
+    const db = clienteDelPedido(req);
+    const estado = await estadoDelAsistente(db, req.usuarioAsistente.asistenteId);
     // El tipo no lo elige el Asistente: lo dice su tipo de Asistente en el
     // catálogo. Dejarlo elegir sería dejarlo cargar la Matrícula equivocada y
     // seguir trabado sin entender por qué.
@@ -139,17 +148,23 @@ appAsistentesMatriculaRouter.post(
       return res.status(400).json({ error: 'Falta la fecha desde la que vale la matrícula' });
     }
 
-    const { data: asistente } = await supabase
+    // La Prestadora con la que se arma la ruta y se da el alta es la de la ficha que la base ya
+    // le dejó ver, no un dato del pedido.
+    const { data: asistente } = await db
       .from('asistentes')
       .select('id, prestadora_id')
       .eq('id', req.usuarioAsistente.asistenteId)
-      .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
       .maybeSingle();
     if (!asistente) return res.status(404).json({ error: 'Asistente no encontrado' });
 
     let archivoUrl = null;
     if (req.file) {
       const ruta = rutaDeMatriculaNueva(asistente.prestadora_id, asistente.id, extensionDeArchivo(req.file.mimetype));
+      // Con la llave maestra: `prescripciones_asistente_sube_su_matricula` exige
+      // (storage.foldername(name))[3] = auth.uid(), y la ruta lleva el identificador de la
+      // ficha del Asistente, que para toda ficha nueva es distinto del de su usuario; con la
+      // credencial de la persona la subida se rechaza. Si se cambia la ruta o la política se
+      // decide aparte. La ruta la arma `rutaDeMatriculaNueva` con la Prestadora de la ficha.
       const { error: errorSubida } = await supabase.storage
         .from(BUCKET)
         .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
@@ -157,7 +172,7 @@ appAsistentesMatriculaRouter.post(
       archivoUrl = ruta;
     }
 
-    const { error } = await supabase.from('matriculas_asistente').insert({
+    const { error } = await db.from('matriculas_asistente').insert({
       prestadora_id: asistente.prestadora_id,
       asistente_id: asistente.id,
       tipo: estado.tipo_matricula,
@@ -171,7 +186,7 @@ appAsistentesMatriculaRouter.post(
     if (error) return responderError(res, error);
 
     res.json({
-      estado: await estadoDelAsistente(req.usuarioAsistente.prestadoraId, req.usuarioAsistente.asistenteId),
+      estado: await estadoDelAsistente(db, req.usuarioAsistente.asistenteId),
     });
   }
 );
@@ -193,6 +208,10 @@ appAsistentesMatriculaRouter.get('/archivo-url', requiereRolAsistente, async (re
     return res.status(400).json({ error: 'Ruta de archivo inválida' });
   }
 
+  // Con la llave maestra: `prescripciones_asistente_lee_su_matricula` exige
+  // (storage.foldername(name))[3] = auth.uid(), y la carpeta es el identificador de la ficha,
+  // no el del usuario; con la credencial de la persona el Asistente no podría abrir su propio
+  // archivo. Si se cambia la ruta o la política se decide aparte.
   const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(ruta, 60);
   if (error) return responderError(res, error);
 

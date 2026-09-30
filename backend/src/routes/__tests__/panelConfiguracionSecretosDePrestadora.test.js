@@ -52,7 +52,12 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null });
+    llamadas.push({
+      clave,
+      url: req.url,
+      cuerpo: crudo ? JSON.parse(crudo) : null,
+      credencial: req.headers.authorization,
+    });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada() : preparada;
@@ -160,6 +165,8 @@ function prepararLosSecretos() {
     },
   ]);
   respuestas.set('POST /rest/v1/configuracion_whatsapp_prestadora', () => []);
+  // La Prestadora con la que se escribe es la que la base deja ver a quien pide.
+  respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA }]);
   respuestas.set('POST /rest/v1/rpc/guardar_token_whatsapp', () => null);
   respuestas.set('POST /rest/v1/rpc/guardar_app_secret_whatsapp', () => null);
   respuestas.set('POST /rest/v1/rpc/guardar_verify_token_whatsapp', () => null);
@@ -261,11 +268,11 @@ describe('Admin_prestadora sí llega a los secretos de su Prestadora', () => {
     assert.equal(JSON.stringify(cuerpo).includes('cccccccc-0000-4000-8000-000000000000'), false);
   });
 
-  it('la lectura va acotada a su propia Prestadora', async () => {
+  it('la lectura va con la credencial de quien pide, y la base acota a su Prestadora', async () => {
     prepararLosSecretos();
     await pedir('GET', '/whatsapp');
     const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/configuracion_whatsapp_prestadora');
-    assert.ok(busqueda.url.includes(`prestadora_id=eq.${PRESTADORA}`));
+    assert.equal(busqueda.credencial, sesionDePrueba(USUARIO));
   });
 
   it('las guarda: los tres secretos van a la caja fuerte, cada uno por su función', async () => {

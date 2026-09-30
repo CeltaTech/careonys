@@ -15,6 +15,11 @@
 
 const enBase64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
 
+// Un solo momento de emisión para toda la prueba. Las pruebas comparan la credencial que llegó a la
+// base con la que mandaron armándola otra vez; con la hora de cada llamada, dos armadas a caballo
+// de un cambio de segundo salían distintas y la prueba fallaba de vez en cuando sin motivo.
+const EMITIDA = Math.floor(Date.now() / 1000);
+
 /**
  * El encabezado `Authorization` de una persona de mentira.
  *
@@ -23,7 +28,7 @@ const enBase64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
  */
 export function sesionDePrueba(usuarioId, { aal = 'aal1', rol = 'authenticated', emisor } = {}) {
   process.env.SUPABASE_ANON_KEY ??= 'clave-publica-de-mentira';
-  const ahora = Math.floor(Date.now() / 1000);
+  const ahora = EMITIDA;
   const cabecera = enBase64({ alg: 'HS256', typ: 'JWT' });
   const cuerpo = enBase64({
     sub: usuarioId,

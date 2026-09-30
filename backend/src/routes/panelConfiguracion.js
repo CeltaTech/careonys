@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
-import { supabase } from '../db/connection.js';
+import { clienteDelPedido, supabase } from '../db/connection.js';
 import { accionesDePermisos } from '../utils/permisos.js';
 import { exigirAdministracion, exigirAdminDePrestadora } from '../middleware/exigirAdministracion.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import {
   ACCION_CAMBIO_DE_MONEDA,
   ACCION_CAMBIO_DE_PERMISOS,
+  ACCION_MODIFICACION_CRITICA,
   registrarActividad,
 } from '../utils/registroDeActividad.js';
 import { mensajeDelCatalogo, mezclarMensajesConCatalogo, sePuedeApagar, VALORES_POR_DEFECTO_MENSAJE } from '../utils/catalogoAvisos.js';
@@ -96,14 +97,45 @@ const soloAdministracion = exigirAdministracion('Solo Admin o Superadmin puede e
 // resto de los routers (CLAUDE.md §7.12) — antes esta misma condición estaba escrita acá a mano.
 panelConfiguracionRouter.use(requiereRolPanel, soloAdministracion, exigirOrganizacionActiva);
 
+// CON LA CREDENCIAL DE QUIEN PIDE. Lo de esta ruta entra a la base con `clienteDelPedido(req)`, no
+// con la llave maestra: la base sabe quién pide y le contesta sólo lo de su Prestadora. Por eso las
+// consultas no llevan el filtro de la Prestadora de la sesión, y la Prestadora con la que nace una
+// fila nueva es la que la base ya dejó ver (`prestadoraVisible`), no un dato de la sesión ni del
+// pedido.
+//
+// LO QUE SIGUE CON LA MAESTRA lleva al lado un comentario que dice por qué. Son cuatro casos: lo
+// que la base todavía no le deja hacer a la Administración de la Prestadora (cambiar su fila de
+// `prestadoras`, escribir la forma de pago de los Asistentes, las conexiones con software externo),
+// las funciones que guardan secretos o reordenan, que no se le dieron a quien inicia sesión, la
+// lista de Coordinadores, que sale de `usuarios`, y el registro de actividad.
+
+// La Prestadora de quien pide, tal como la base la deja ver. Toda cuenta del Panel ve una sola
+// fila de `prestadoras`: la suya. Si no ve ninguna, o ve más de una, no se sabe para quién se
+// escribe y no se escribe nada.
+async function prestadoraVisible(db) {
+  const { data, error } = await db.from('prestadoras').select('id').maybeSingle();
+  if (error) throw error;
+  if (!data?.id) throw new ErrorConMotivo('no_encontrado', 'la base no deja ver la Prestadora de quien pide');
+  return data.id;
+}
+
+// La misma, para un manejador: si no se la puede saber, contesta el error y devuelve `null`.
+async function prestadoraVisibleOContestar(db, res) {
+  try {
+    return await prestadoraVisible(db);
+  } catch (error) {
+    responderError(res, error);
+    return null;
+  }
+}
+
 // --- Datos de la prestadora (configuracion_prestadora, ver schema_multitenant_04.sql —
 //     reemplaza el singleton configuracion_empresa: cada prestadora tiene su propia fila) ---
 panelConfiguracionRouter.get('/empresa', async (req, res) => {
-  const prestadoraId = req.usuarioPanel.prestadoraId;
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('configuracion_prestadora')
     .select('*')
-    .eq('prestadora_id', prestadoraId)
     .single();
   if (error) return responderError(res, error);
   res.json({ empresa: data });
@@ -119,10 +151,15 @@ panelConfiguracionRouter.patch('/empresa', async (req, res) => {
   // en el alta y una Prestadora dada de alta a mano puede quedarse sin ella. Sin esta
   // comprobación, la pantalla de Configuración guarda, dice que guardó, y al recargar está todo
   // como antes.
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+  // El filtro nombra la fila que se cambia —la base no acepta un cambio sin ninguno—; que sea de
+  // quien pide lo decide ella.
+  const { data, error } = await db
     .from('configuracion_prestadora')
     .update({ nombre, telefono, whatsapp_numero, email, zona_cobertura_texto, updated_at: new Date().toISOString() })
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .eq('prestadora_id', prestadoraId)
     .select('prestadora_id');
   if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'Esta Prestadora todavía no tiene configuración cargada' });
@@ -148,22 +185,22 @@ panelConfiguracionRouter.patch('/empresa', async (req, res) => {
 
 // Las monedas que el producto conoce, sin repetir y en orden. Un solo punto de verdad para las
 // dos rutas de abajo: la que muestra la lista y la que comprueba lo que se eligió.
-async function monedasDelCatalogo() {
-  const { data, error } = await supabase.from('monedas_por_pais').select('moneda');
+async function monedasDelCatalogo(db) {
+  const { data, error } = await db.from('monedas_por_pais').select('moneda');
   if (error) throw error;
   return [...new Set((data ?? []).map((fila) => fila.moneda))].sort();
 }
 
 panelConfiguracionRouter.get('/moneda', async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const db = clienteDelPedido(req);
+    const { data, error } = await db
       .from('prestadoras')
       .select('moneda')
-      .eq('id', req.usuarioPanel.prestadoraId)
       .single();
     if (error) throw error;
 
-    const monedas = await monedasDelCatalogo();
+    const monedas = await monedasDelCatalogo(db);
 
     // La que está guardada va en la lista aunque el catálogo ya no la tenga: si no, la pantalla
     // mostraría el casillero vacío y el primer guardado cambiaría la moneda sin que nadie lo
@@ -185,23 +222,27 @@ panelConfiguracionRouter.patch('/moneda', async (req, res) => {
 
     // Se comprueba contra el catálogo antes de escribir. Sin esto, una moneda inventada la
     // rechazaría el dominio `moneda_iso` de la base, y ese error nombra el dominio y la columna.
-    const monedas = await monedasDelCatalogo();
+    const db = clienteDelPedido(req);
+    const monedas = await monedasDelCatalogo(db);
     if (!monedas.includes(moneda)) {
       return responderError(res, new ErrorConMotivo('moneda_desconocida', `moneda ${moneda} fuera del catálogo`));
     }
 
     // Cuál era la moneda antes, leída antes de pisarla: sin esto el registro puede decir que se
     // cambió la moneda pero no de cuál a cuál, y la mitad de «qué cambió» se pierde.
-    const { data: antes } = await supabase
+    const { data: antes } = await db
       .from('prestadoras')
-      .select('moneda')
-      .eq('id', req.usuarioPanel.prestadoraId)
+      .select('id, moneda')
       .maybeSingle();
+    if (!antes) return responderError(res, new ErrorConMotivo('no_encontrado', 'la base no deja ver la Prestadora de quien pide'));
 
+    // CON LA MAESTRA: la base sólo le deja cambiar `prestadoras` al Superadmin, y la moneda la
+    // cambia la Administración de la Prestadora. La fila que se cambia es la que la base acaba de
+    // dejar ver con la credencial de quien pide.
     const { data, error } = await supabase
       .from('prestadoras')
       .update({ moneda })
-      .eq('id', req.usuarioPanel.prestadoraId)
+      .eq('id', antes.id)
       .select('moneda');
     if (error) throw error;
     if (!data?.length) return responderError(res, new ErrorConMotivo('no_encontrado', 'la Prestadora de la sesión no existe'));
@@ -225,9 +266,8 @@ panelConfiguracionRouter.patch('/moneda', async (req, res) => {
 
 // --- Zonas de cobertura ---
 panelConfiguracionRouter.get('/zonas', async (req, res) => {
-  let query = supabase.from('zonas_cobertura').select('*').order('orden');
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data, error } = await query;
+  const db = clienteDelPedido(req);
+  const { data, error } = await db.from('zonas_cobertura').select('*').order('orden');
   if (error) return responderError(res, error);
   res.json({ zonas: data });
 });
@@ -237,30 +277,32 @@ panelConfiguracionRouter.post('/zonas', async (req, res) => {
   if (!codigo || !nombre || !categoria) {
     return res.status(400).json({ error: 'Faltan código, nombre o categoría' });
   }
-  const { error } = await supabase
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+  const { error } = await db
     .from('zonas_cobertura')
-    .insert({ codigo, nombre, categoria, orden: orden ?? 0, prestadora_id: req.usuarioPanel.prestadoraId });
+    .insert({ codigo, nombre, categoria, orden: orden ?? 0, prestadora_id: prestadoraId });
   if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
 panelConfiguracionRouter.patch('/zonas/:id', async (req, res) => {
   const { nombre, categoria, activa, orden } = req.body;
-  let query = supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('zonas_cobertura')
     .update({ nombre, categoria, activa, orden })
-    .eq('id', req.params.id);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data, error } = await query.select('id');
+    .eq('id', req.params.id)
+    .select('id');
   if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró esa zona de cobertura' });
   res.json({ ok: true });
 });
 
 panelConfiguracionRouter.delete('/zonas/:id', async (req, res) => {
-  let query = supabase.from('zonas_cobertura').delete().eq('id', req.params.id);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data, error } = await query.select('id');
+  const db = clienteDelPedido(req);
+  const { data, error } = await db.from('zonas_cobertura').delete().eq('id', req.params.id).select('id');
   if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró esa zona de cobertura' });
   res.json({ ok: true });
@@ -314,9 +356,12 @@ panelConfiguracionRouter.post('/lugares', async (req, res) => {
   }
   // El país es el de la Prestadora y no viaja en el pedido: un lugar de una Prestadora argentina
   // es argentino, y un valor que llega de afuera lo escribe quien llama.
+  const db = clienteDelPedido(req);
   let pais;
+  let prestadoraId;
   try {
-    pais = await paisDeLaPrestadora(req.usuarioPanel.prestadoraId);
+    prestadoraId = await prestadoraVisible(db);
+    pais = await paisDeLaPrestadora(prestadoraId);
   } catch (error) {
     return responderError(res, error);
   }
@@ -325,10 +370,10 @@ panelConfiguracionRouter.post('/lugares', async (req, res) => {
   // De dónde salió no lo dice quien llama: lo dice si trajo o no el identificador del organismo.
   // Así nadie puede marcar como oficial algo que escribió a mano.
   const fuente = String(id_oficial ?? '').trim() ? 'oficial' : 'propio';
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('lugares')
     .insert({
-      prestadora_id: req.usuarioPanel.prestadoraId,
+      prestadora_id: prestadoraId,
       nombre: String(nombre).trim(),
       pais,
       provincia: provincia ?? null,
@@ -356,12 +401,12 @@ panelConfiguracionRouter.patch('/lugares/:id', async (req, res) => {
   if (!Object.keys(cambios).length) return res.status(400).json({ error: 'No hay nada para cambiar' });
   cambios.updated_at = new Date().toISOString();
 
-  let query = supabase.from('lugares').update(cambios).eq('id', req.params.id);
+  const db = clienteDelPedido(req);
+  let query = db.from('lugares').update(cambios).eq('id', req.params.id);
   // El nombre de un lugar oficial es el del organismo y no se edita a mano: si se pudiera, dos
   // Prestadoras terminarían llamando distinto a la misma localidad y el identificador diría una
   // cosa y la pantalla otra.
   if (cambios.nombre !== undefined) query = query.eq('fuente', 'propio');
-  query = acotarAPrestadora(query, req.usuarioPanel);
   const { data, error } = await query.select('id');
   if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró ese lugar, o su nombre lo pone el organismo oficial' });
@@ -374,9 +419,8 @@ panelConfiguracionRouter.patch('/lugares/:id', async (req, res) => {
 // nunca para imponer. Un mismo lugar puede estar en más de una zona.
 
 panelConfiguracionRouter.get('/zonas/:id/lugares', async (req, res) => {
-  let query = supabase.from('zona_lugares').select('lugar_id').eq('zona_id', req.params.id);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data, error } = await query;
+  const db = clienteDelPedido(req);
+  const { data, error } = await db.from('zona_lugares').select('lugar_id').eq('zona_id', req.params.id);
   if (error) return responderError(res, error);
   res.json({ lugares: (data ?? []).map((fila) => fila.lugar_id) });
 });
@@ -385,28 +429,27 @@ panelConfiguracionRouter.put('/zonas/:id/lugares', async (req, res) => {
   const lugares = Array.isArray(req.body?.lugares) ? req.body.lugares : null;
   if (!lugares) return res.status(400).json({ error: 'Falta la lista de lugares' });
 
-  const prestadoraId = req.usuarioPanel.prestadoraId;
-  // Que la zona sea de esta Organización se comprueba antes de borrar nada: sin esto, un
-  // identificador de otra Prestadora entraría al borrado y se llevaría puestos sus renglones.
-  const { data: zona, error: errorZona } = await supabase
+  const db = clienteDelPedido(req);
+  // Que la zona sea de esta Organización se comprueba antes de borrar nada: si la base no la deja
+  // ver, es de otra Prestadora y no se toca ningún renglón.
+  const { data: zona, error: errorZona } = await db
     .from('zonas_cobertura')
-    .select('id')
+    .select('id, prestadora_id')
     .eq('id', req.params.id)
-    .eq('prestadora_id', prestadoraId)
     .maybeSingle();
   if (errorZona) return responderError(res, errorZona);
   if (!zona) return res.status(404).json({ error: 'No se encontró esa zona de cobertura' });
 
-  const { error: errorBorrado } = await supabase
+  const { error: errorBorrado } = await db
     .from('zona_lugares')
     .delete()
-    .eq('zona_id', req.params.id)
-    .eq('prestadora_id', prestadoraId);
+    .eq('zona_id', zona.id);
   if (errorBorrado) return responderError(res, errorBorrado);
 
   if (lugares.length) {
-    const { error } = await supabase.from('zona_lugares').insert(
-      lugares.map((lugarId) => ({ zona_id: req.params.id, lugar_id: lugarId, prestadora_id: prestadoraId })),
+    // Los renglones nacen con la Prestadora de la zona que la base dejó ver.
+    const { error } = await db.from('zona_lugares').insert(
+      lugares.map((lugarId) => ({ zona_id: zona.id, lugar_id: lugarId, prestadora_id: zona.prestadora_id })),
     );
     // Si alguno de los lugares no es de esta Organización, la clave foránea compuesta lo rechaza y
     // no entra ninguno.
@@ -417,9 +460,8 @@ panelConfiguracionRouter.put('/zonas/:id/lugares', async (req, res) => {
 
 // --- Servicios: escalada de relevo (protocolo de continuidad de guardia) ---
 panelConfiguracionRouter.get('/escalada-relevo', async (req, res) => {
-  let query = supabase.from('configuracion_escalada_relevo').select('*').order('nivel');
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data, error } = await query;
+  const db = clienteDelPedido(req);
+  const { data, error } = await db.from('configuracion_escalada_relevo').select('*').order('nivel');
   if (error) return responderError(res, error);
   res.json({ niveles: data });
 });
@@ -429,30 +471,32 @@ panelConfiguracionRouter.post('/escalada-relevo', async (req, res) => {
   if (!nivel || !plantilla_mensaje) {
     return res.status(400).json({ error: 'Faltan nivel o plantilla de mensaje' });
   }
-  const { error } = await supabase
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+  const { error } = await db
     .from('configuracion_escalada_relevo')
-    .insert({ nivel, minutos_demora, orden_prioridad, plantilla_mensaje, prestadora_id: req.usuarioPanel.prestadoraId });
+    .insert({ nivel, minutos_demora, orden_prioridad, plantilla_mensaje, prestadora_id: prestadoraId });
   if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
 panelConfiguracionRouter.patch('/escalada-relevo/:id', async (req, res) => {
   const { nivel, minutos_demora, orden_prioridad, plantilla_mensaje } = req.body;
-  let query = supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('configuracion_escalada_relevo')
     .update({ nivel, minutos_demora, orden_prioridad, plantilla_mensaje })
-    .eq('id', req.params.id);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data, error } = await query.select('id');
+    .eq('id', req.params.id)
+    .select('id');
   if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró ese nivel de la escalada de relevo' });
   res.json({ ok: true });
 });
 
 panelConfiguracionRouter.delete('/escalada-relevo/:id', async (req, res) => {
-  let query = supabase.from('configuracion_escalada_relevo').delete().eq('id', req.params.id);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data, error } = await query.select('id');
+  const db = clienteDelPedido(req);
+  const { data, error } = await db.from('configuracion_escalada_relevo').delete().eq('id', req.params.id).select('id');
   if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró ese nivel de la escalada de relevo' });
   res.json({ ok: true });
@@ -464,11 +508,10 @@ panelConfiguracionRouter.delete('/escalada-relevo/:id', async (req, res) => {
 //     desde el Panel; sin DELETE — se discontinúa con el toggle "activa" para no romper
 //     verificaciones_asistente ya existentes que referencian esa etapa. ---
 panelConfiguracionRouter.get('/etapas-incorporacion', async (req, res) => {
-  const prestadoraId = req.usuarioPanel.prestadoraId;
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('etapas_incorporacion_asistente')
     .select('*')
-    .eq('prestadora_id', prestadoraId)
     .order('orden');
   if (error) return responderError(res, error);
   res.json({ etapas: data });
@@ -477,29 +520,31 @@ panelConfiguracionRouter.get('/etapas-incorporacion', async (req, res) => {
 panelConfiguracionRouter.post('/etapas-incorporacion', async (req, res) => {
   const { clave, nombre } = req.body;
   if (!clave || !nombre) return res.status(400).json({ error: 'Faltan clave o nombre' });
-  const { data: maxOrden, error: errorMax } = await supabase
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+  const { data: maxOrden, error: errorMax } = await db
     .from('etapas_incorporacion_asistente')
     .select('orden')
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .order('orden', { ascending: false })
     .limit(1)
     .maybeSingle();
   if (errorMax) return responderError(res, errorMax);
-  const { error } = await supabase
+  const { error } = await db
     .from('etapas_incorporacion_asistente')
-    .insert({ clave, nombre, orden: (maxOrden?.orden ?? 0) + 1, prestadora_id: req.usuarioPanel.prestadoraId });
+    .insert({ clave, nombre, orden: (maxOrden?.orden ?? 0) + 1, prestadora_id: prestadoraId });
   if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
 panelConfiguracionRouter.patch('/etapas-incorporacion/:id', async (req, res) => {
   const { nombre, activa } = req.body;
-  let query = supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('etapas_incorporacion_asistente')
     .update({ nombre, activa })
-    .eq('id', req.params.id);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data, error } = await query.select('id');
+    .eq('id', req.params.id)
+    .select('id');
   if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró esa etapa del Proceso de Incorporación de Asistentes' });
   res.json({ ok: true });
@@ -512,11 +557,10 @@ panelConfiguracionRouter.patch('/etapas-incorporacion/:id/mover', async (req, re
   if (direccion !== 'arriba' && direccion !== 'abajo') {
     return res.status(400).json({ error: 'direccion debe ser "arriba" o "abajo"' });
   }
-  const prestadoraId = req.usuarioPanel.prestadoraId;
-  const { data: etapas, error: errorEtapas } = await supabase
+  const db = clienteDelPedido(req);
+  const { data: etapas, error: errorEtapas } = await db
     .from('etapas_incorporacion_asistente')
     .select('*')
-    .eq('prestadora_id', prestadoraId)
     .order('orden');
   if (errorEtapas) return responderError(res, errorEtapas);
 
@@ -527,6 +571,8 @@ panelConfiguracionRouter.patch('/etapas-incorporacion/:id/mover', async (req, re
 
   const actual = etapas[indice];
   const vecino = etapas[indiceVecino];
+  // CON LA MAESTRA: la función que intercambia el orden no se le dio a quien inicia sesión. Las
+  // dos etapas que recibe son las que la base acaba de dejar ver con la credencial de quien pide.
   const { error: errorSwap } = await supabase.rpc('intercambiar_orden_etapas_incorporacion', {
     p_id_a: actual.id, p_orden_a: vecino.orden, p_id_b: vecino.id, p_orden_b: actual.orden,
   });
@@ -537,6 +583,11 @@ panelConfiguracionRouter.patch('/etapas-incorporacion/:id/mover', async (req, re
 // --- Servicios: personal de emergencia (roster de suplentes/franqueros/emergencia
 //     disponibles para el protocolo de continuidad de guardia, Parte 2 de Módulo 6) ---
 panelConfiguracionRouter.get('/personal-emergencia', async (req, res) => {
+  // Queda con la llave maestra y el filtro de la Prestadora: el nombre embebido sale de
+  // `asistentes`, donde la política restrictiva `oculta_pendientes_de_conformidad` esconde al
+  // Asistente importado que todavía espera conformidad (`pendiente_conformidad = true`), para
+  // superadmin y admin_prestadora por igual; con la credencial de la persona su nombre saldría
+  // vacío en esta lista, y antes se mostraba. Se decide aparte.
   let query = supabase
     .from('personal_emergencia')
     .select('id, asistente_id, tipo, activo, created_at, asistentes(nombre)')
@@ -552,27 +603,28 @@ panelConfiguracionRouter.post('/personal-emergencia', async (req, res) => {
   if (!asistente_id || !tipo) {
     return res.status(400).json({ error: 'Faltan asistente_id o tipo' });
   }
-  const { error } = await supabase
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+  const { error } = await db
     .from('personal_emergencia')
-    .insert({ asistente_id, tipo, prestadora_id: req.usuarioPanel.prestadoraId });
+    .insert({ asistente_id, tipo, prestadora_id: prestadoraId });
   if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
 panelConfiguracionRouter.patch('/personal-emergencia/:id', async (req, res) => {
   const { activo } = req.body;
-  let query = supabase.from('personal_emergencia').update({ activo }).eq('id', req.params.id);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data, error } = await query.select('id');
+  const db = clienteDelPedido(req);
+  const { data, error } = await db.from('personal_emergencia').update({ activo }).eq('id', req.params.id).select('id');
   if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró a esa persona en el personal de emergencia' });
   res.json({ ok: true });
 });
 
 panelConfiguracionRouter.delete('/personal-emergencia/:id', async (req, res) => {
-  let query = supabase.from('personal_emergencia').delete().eq('id', req.params.id);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data, error } = await query.select('id');
+  const db = clienteDelPedido(req);
+  const { data, error } = await db.from('personal_emergencia').delete().eq('id', req.params.id).select('id');
   if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró a esa persona en el personal de emergencia' });
   res.json({ ok: true });
@@ -591,11 +643,10 @@ panelConfiguracionRouter.delete('/personal-emergencia/:id', async (req, res) => 
 // proveedor viaja marcada como no disponible, y la pantalla la muestra sin dejar elegirla: el
 // producto no esconde una vía que existe, y tampoco ofrece una que hoy no manda nada.
 panelConfiguracionRouter.get('/notificaciones', async (req, res) => {
-  let query = supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('configuracion_notificaciones')
     .select('evento, descripcion, emails, activo, whatsapp_activo, mensaje_de_texto_activo, notificar_cliente, plantilla_whatsapp_id');
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data, error } = await query;
   if (error) return responderError(res, error);
 
   const hayProveedor = await hayProveedorDeMensajeDeTexto(req.usuarioPanel.prestadoraId);
@@ -607,7 +658,8 @@ panelConfiguracionRouter.get('/notificaciones', async (req, res) => {
 // débil. No hay PATCH: cargar un proveedor es cargar datos —una fila en el catálogo y otra en la
 // configuración—, y no hay ninguno contratado que ofrecer en una pantalla.
 panelConfiguracionRouter.get('/mensaje-de-texto', async (req, res) => {
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('catalogo_proveedores_de_mensaje_de_texto')
     .select('proveedor')
     .eq('activo', true);
@@ -637,26 +689,28 @@ panelConfiguracionRouter.patch('/notificaciones/:evento', async (req, res) => {
   // Si la vía del mensaje de texto se puede encender no lo decide el navegador: sin proveedor
   // cargado se guarda apagada aunque venga encendida. La pantalla ya no deja elegirla, pero la
   // pantalla no es la que manda: el pedido se puede armar a mano.
-  const hayProveedor = await hayProveedorDeMensajeDeTexto(req.usuarioPanel.prestadoraId);
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+  const hayProveedor = await hayProveedorDeMensajeDeTexto(prestadoraId);
 
-  // La plantilla se guarda sólo si es de esta Prestadora. El identificador viene del navegador, y
-  // el backend entra a la base con la llave de servicio: sin esta comprobación, una Prestadora podría
+  // La plantilla se guarda sólo si la base la deja ver, que es lo mismo que decir que es de esta
+  // Prestadora. El identificador viene del navegador: sin esta comprobación, una Prestadora podría
   // mandar sus mensajes con la plantilla de otra.
   let plantillaId = null;
   if (mensaje.admite_whatsapp && plantilla_whatsapp_id) {
-    const { data: plantilla } = await supabase
+    const { data: plantilla } = await db
       .from('plantillas_whatsapp')
       .select('id')
       .eq('id', plantilla_whatsapp_id)
-      .eq('prestadora_id', req.usuarioPanel.prestadoraId)
       .maybeSingle();
     if (!plantilla) return res.status(400).json({ error: 'Plantilla desconocida' });
     plantillaId = plantilla.id;
   }
 
-  const { error } = await supabase.from('configuracion_notificaciones').upsert(
+  const { error } = await db.from('configuracion_notificaciones').upsert(
     {
-      prestadora_id: req.usuarioPanel.prestadoraId,
+      prestadora_id: prestadoraId,
       evento: mensaje.evento,
       descripcion: mensaje.descripcion,
       emails: Array.isArray(emails) ? emails.map((correo) => String(correo).trim()).filter(Boolean) : [...VALORES_POR_DEFECTO_MENSAJE.emails],
@@ -686,10 +740,10 @@ panelConfiguracionRouter.patch('/notificaciones/:evento', async (req, res) => {
 //     anterior. Mismo patrón que /guardias/horizonte-generacion: el valor vive en
 //     "prestadoras" y se expone acá para reusar el acotado por Prestadora de este router. ---
 panelConfiguracionRouter.get('/aviso-previo-guardia', async (req, res) => {
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('prestadoras')
     .select('minutos_aviso_previo_guardia')
-    .eq('id', req.usuarioPanel.prestadoraId)
     .single();
   if (error) return responderError(res, error);
   res.json({ minutos_aviso_previo_guardia: data.minutos_aviso_previo_guardia });
@@ -706,10 +760,14 @@ panelConfiguracionRouter.patch('/aviso-previo-guardia', async (req, res) => {
       error: `La anticipación tiene que ser un número entero de minutos, entre ${LIMITES_PREAVISO_GUARDIA.minimo} y ${LIMITES_PREAVISO_GUARDIA.maximo}.`,
     });
   }
+  const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
+  if (!prestadoraId) return;
+  // CON LA MAESTRA: la base sólo le deja cambiar `prestadoras` al Superadmin. La fila es la que la
+  // base acaba de dejar ver con la credencial de quien pide.
   const { error } = await supabase
     .from('prestadoras')
     .update({ minutos_aviso_previo_guardia: minutos })
-    .eq('id', req.usuarioPanel.prestadoraId);
+    .eq('id', prestadoraId);
   if (error) return responderError(res, error);
   res.json({ ok: true });
 });
@@ -721,6 +779,10 @@ panelConfiguracionRouter.patch('/aviso-previo-guardia', async (req, res) => {
 //     "Configuración sobre programación" (CLAUDE.md §2). Mismo patrón que /ausencia-automatica. ---
 panelConfiguracionRouter.get('/alertas-ia', async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
+  // Queda con la llave maestra y el filtro de la Prestadora: en `configuracion_alertas_ia` la
+  // única política del Panel que alcanza al administrador, `admin_gestiona_configuracion_alertas_ia`,
+  // exige rol admin_prestadora, y no hay ninguna para superadmin; con su credencial no vería la
+  // fila y la pantalla le mostraría los valores de fábrica. Se decide aparte.
   const { data, error } = await supabase
     .from('configuracion_alertas_ia')
     .select('palabras_clave, reportes_a_analizar, roja_avisa_cliente, amarilla_avisa_cliente, amarilla_avisa_coordinador')
@@ -759,6 +821,9 @@ panelConfiguracionRouter.patch('/alertas-ia', async (req, res) => {
     ),
   ];
 
+  // Queda con la llave maestra y el filtro de la Prestadora: la política de escritura de
+  // `configuracion_alertas_ia`, `admin_gestiona_configuracion_alertas_ia`, exige rol
+  // admin_prestadora, y superadmin, que llega a esta ruta, dejaría de poder guardar. Se decide aparte.
   const { error } = await supabase.from('configuracion_alertas_ia').upsert({
     prestadora_id: req.usuarioPanel.prestadoraId,
     palabras_clave: palabrasNormalizadas,
@@ -777,6 +842,10 @@ panelConfiguracionRouter.patch('/alertas-ia', async (req, res) => {
 //     guardada cada interruptor; la tabla solo guarda lo que la Prestadora cambió. Mismo patrón
 //     que /notificaciones. ---
 panelConfiguracionRouter.get('/visibilidad-app', async (req, res) => {
+  // Queda con la llave maestra y el filtro de la Prestadora: en `configuracion_visibilidad_app`
+  // la única política del Panel que alcanza al administrador, `admin_gestiona_visibilidad_app`,
+  // exige rol admin_prestadora, y no hay ninguna para superadmin; con su credencial no vería lo
+  // guardado y la pantalla le mostraría el catálogo de fábrica. Se decide aparte.
   const { data, error } = await supabase
     .from('configuracion_visibilidad_app')
     .select('clave, visible')
@@ -798,6 +867,9 @@ panelConfiguracionRouter.patch('/visibilidad-app/:clave', async (req, res) => {
     return res.status(400).json({ error: 'Falta decir si se muestra o no' });
   }
 
+  // Queda con la llave maestra y el filtro de la Prestadora: la política de escritura de
+  // `configuracion_visibilidad_app`, `admin_gestiona_visibilidad_app`, exige rol
+  // admin_prestadora, y superadmin, que llega a esta ruta, dejaría de poder guardar. Se decide aparte.
   const { error } = await supabase.from('configuracion_visibilidad_app').upsert(
     {
       prestadora_id: req.usuarioPanel.prestadoraId,
@@ -820,10 +892,10 @@ panelConfiguracionRouter.patch('/visibilidad-app/:clave', async (req, res) => {
 //     guardar los cuarenta números congelaría los valores de fábrica apenas alguien abriera la
 //     pantalla y le diera a guardar sin tocar nada. ---
 panelConfiguracionRouter.get('/calculo-candidatos', async (req, res) => {
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('configuracion_calculo_candidatos')
     .select('perfil, pesos, topes')
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
   if (error) return responderError(res, error);
 
@@ -852,9 +924,12 @@ panelConfiguracionRouter.put('/calculo-candidatos', async (req, res) => {
     return res.status(400).json({ error: `El valor de «${revision.clave}» está fuera de lo permitido` });
   }
 
-  const { error } = await supabase.from('configuracion_calculo_candidatos').upsert(
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+  const { error } = await db.from('configuracion_calculo_candidatos').upsert(
     {
-      prestadora_id: req.usuarioPanel.prestadoraId,
+      prestadora_id: prestadoraId,
       perfil: perfil ?? PERFIL_POR_DEFECTO,
       pesos: corridos.pesos,
       topes: corridos.topes,
@@ -872,10 +947,10 @@ panelConfiguracionRouter.put('/calculo-candidatos', async (req, res) => {
 // turnos, y en qué ventana de días, alguien entra sin que nadie la ponga.
 
 panelConfiguracionRouter.get('/equipo-paciente', async (req, res) => {
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('configuracion_equipo_paciente')
     .select('regla')
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
   if (error) return responderError(res, error);
 
@@ -892,9 +967,12 @@ panelConfiguracionRouter.put('/equipo-paciente', async (req, res) => {
     return res.status(400).json({ error: `El valor de «${revision.clave}» está fuera de lo permitido` });
   }
 
-  const { error } = await supabase.from('configuracion_equipo_paciente').upsert(
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+  const { error } = await db.from('configuracion_equipo_paciente').upsert(
     {
-      prestadora_id: req.usuarioPanel.prestadoraId,
+      prestadora_id: prestadoraId,
       regla: corridos,
       updated_at: new Date().toISOString(),
     },
@@ -911,10 +989,10 @@ panelConfiguracionRouter.put('/equipo-paciente', async (req, res) => {
 // pantalla recibe además los valores que están rigiendo.
 
 panelConfiguracionRouter.get('/ausencias', async (req, res) => {
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('configuracion_ausencias')
     .select('regla')
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
   if (error) return responderError(res, error);
 
@@ -930,9 +1008,12 @@ panelConfiguracionRouter.put('/ausencias', async (req, res) => {
     return res.status(400).json({ error: `El valor de «${revision.clave}» está fuera de lo permitido` });
   }
 
-  const { error } = await supabase.from('configuracion_ausencias').upsert(
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+  const { error } = await db.from('configuracion_ausencias').upsert(
     {
-      prestadora_id: req.usuarioPanel.prestadoraId,
+      prestadora_id: prestadoraId,
       regla: corridos,
       updated_at: new Date().toISOString(),
     },
@@ -949,10 +1030,10 @@ panelConfiguracionRouter.put('/ausencias', async (req, res) => {
 // el destinatario es quien coordina a ese Paciente, no una dirección elegible.
 
 panelConfiguracionRouter.get('/incidentes-turno-sin-cubrir', async (req, res) => {
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('configuracion_incidentes_turno_sin_cubrir')
     .select('regla')
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
   if (error) return responderError(res, error);
 
@@ -968,9 +1049,12 @@ panelConfiguracionRouter.put('/incidentes-turno-sin-cubrir', async (req, res) =>
     return res.status(400).json({ error: `El valor de «${revision.clave}» está fuera de lo permitido` });
   }
 
-  const { error } = await supabase.from('configuracion_incidentes_turno_sin_cubrir').upsert(
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+  const { error } = await db.from('configuracion_incidentes_turno_sin_cubrir').upsert(
     {
-      prestadora_id: req.usuarioPanel.prestadoraId,
+      prestadora_id: prestadoraId,
       regla: corridos,
       updated_at: new Date().toISOString(),
     },
@@ -987,10 +1071,10 @@ panelConfiguracionRouter.put('/incidentes-turno-sin-cubrir', async (req, res) =>
 // configura: cuando el rato se cumple, la alarma vuelve como si nadie la hubiera tomado.
 
 panelConfiguracionRouter.get('/alarmas-tomadas', async (req, res) => {
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('configuracion_alarmas_tomadas')
     .select('regla')
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
   if (error) return responderError(res, error);
 
@@ -1006,9 +1090,12 @@ panelConfiguracionRouter.put('/alarmas-tomadas', async (req, res) => {
     return res.status(400).json({ error: `El valor de «${revision.clave}» está fuera de lo permitido` });
   }
 
-  const { error } = await supabase.from('configuracion_alarmas_tomadas').upsert(
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+  const { error } = await db.from('configuracion_alarmas_tomadas').upsert(
     {
-      prestadora_id: req.usuarioPanel.prestadoraId,
+      prestadora_id: prestadoraId,
       regla: corridos,
       updated_at: new Date().toISOString(),
     },
@@ -1027,10 +1114,10 @@ panelConfiguracionRouter.put('/alarmas-tomadas', async (req, res) => {
 // acá está el valor con el que sale de fábrica —la parte proporcional— y la Prestadora lo cambia.
 
 panelConfiguracionRouter.get('/pago-asistentes', async (req, res) => {
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('configuracion_pago_asistentes')
     .select('regla, frecuencia_pago')
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
   if (error) return responderError(res, error);
 
@@ -1064,9 +1151,14 @@ panelConfiguracionRouter.put('/pago-asistentes', async (req, res) => {
       .json({ error: `El valor de «${revisionDeLaFrecuencia.clave}» está fuera de lo permitido` });
   }
 
+  const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
+  if (!prestadoraId) return;
+  // CON LA MAESTRA: la tabla tiene políticas para que la Administración escriba, pero a quien
+  // inicia sesión no se le dio permiso de escritura sobre ella, y con su credencial la base
+  // rechaza el guardado. La Prestadora es la que la base acaba de dejar ver.
   const { error } = await supabase.from('configuracion_pago_asistentes').upsert(
     {
-      prestadora_id: req.usuarioPanel.prestadoraId,
+      prestadora_id: prestadoraId,
       regla: corridos,
       frecuencia_pago: corridosDeLaFrecuencia,
       updated_at: new Date().toISOString(),
@@ -1088,12 +1180,14 @@ panelConfiguracionRouter.put('/pago-asistentes', async (req, res) => {
 // entonces la pantalla sigue pidiendo la fecha como hasta ahora.
 
 panelConfiguracionRouter.get('/facturacion-clientes', async (req, res) => {
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('configuracion_facturacion_clientes')
     .select('regla, secreto_del_aviso_secret_id, secreto_del_aviso_de_facturacion_secret_id')
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
   if (error) return responderError(res, error);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
 
   res.json({
     configuracion: {
@@ -1109,7 +1203,7 @@ panelConfiguracionRouter.get('/facturacion-clientes', async (req, res) => {
       aviso_de_facturacion_conectado: !!data?.secreto_del_aviso_de_facturacion_secret_id,
       // Para que la pantalla pueda mostrar a qué dirección tiene que escribir el otro
       // software. No es un secreto: sin el secreto de firma, conocerla no sirve de nada.
-      prestadora_id: req.usuarioPanel.prestadoraId,
+      prestadora_id: prestadoraId,
     },
   });
 });
@@ -1140,9 +1234,12 @@ panelConfiguracionRouter.put('/facturacion-clientes', async (req, res) => {
   // facturas por su cuenta y siguen llevando el saldo acá.
   if (req.body?.entrega_la_factura === false) regla.entrega_la_factura = false;
 
-  const { error } = await supabase.from('configuracion_facturacion_clientes').upsert(
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+  const { error } = await db.from('configuracion_facturacion_clientes').upsert(
     {
-      prestadora_id: req.usuarioPanel.prestadoraId,
+      prestadora_id: prestadoraId,
       regla,
       updated_at: new Date().toISOString(),
     },
@@ -1171,8 +1268,12 @@ panelConfiguracionRouter.put(
       return res.status(400).json({ error: 'El secreto es demasiado corto' });
     }
 
+    const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
+    if (!prestadoraId) return;
+    // CON LA MAESTRA: la función que guarda el secreto en la caja fuerte no se le dio a quien
+    // inicia sesión. La Prestadora es la que la base acaba de dejar ver.
     const { error } = await supabase.rpc('guardar_secreto_del_aviso_de_cobranza', {
-      p_prestadora_id: req.usuarioPanel.prestadoraId,
+      p_prestadora_id: prestadoraId,
       p_secreto: secreto,
     });
     if (error) return responderError(res, error);
@@ -1201,8 +1302,11 @@ panelConfiguracionRouter.put(
       return res.status(400).json({ error: 'El secreto es demasiado corto' });
     }
 
+    const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
+    if (!prestadoraId) return;
+    // CON LA MAESTRA, por lo mismo que el secreto de arriba.
     const { error } = await supabase.rpc('guardar_secreto_del_aviso_de_facturacion', {
-      p_prestadora_id: req.usuarioPanel.prestadoraId,
+      p_prestadora_id: prestadoraId,
       p_secreto: secreto,
     });
     if (error) return responderError(res, error);
@@ -1227,7 +1331,8 @@ panelConfiguracionRouter.get('/software-externo', async (req, res) => {
   try {
     // Con qué software se puede conectar sale de la base, no de la pantalla: sumar uno es una
     // fila, no una versión nueva del producto.
-    const { data: catalogo, error: errorDelCatalogo } = await supabase
+    const db = clienteDelPedido(req);
+    const { data: catalogo, error: errorDelCatalogo } = await db
       .from('catalogo_software_externo')
       .select('clave, clase, nombre')
       .eq('activo', true)
@@ -1235,10 +1340,14 @@ panelConfiguracionRouter.get('/software-externo', async (req, res) => {
       .order('orden');
     if (errorDelCatalogo) throw errorDelCatalogo;
 
+    const prestadoraId = await prestadoraVisible(db);
+    // CON LA MAESTRA: a quien inicia sesión no se le dio ningún permiso sobre esta tabla, y con su
+    // credencial la base rechaza hasta la lectura. Se pide sólo lo de la Prestadora que la base
+    // acaba de dejar ver.
     const { data: conexiones, error } = await supabase
       .from('conexiones_con_software_externo')
       .select('clase, software, credencial_secret_id')
-      .eq('prestadora_id', req.usuarioPanel.prestadoraId);
+      .eq('prestadora_id', prestadoraId);
     if (error) throw error;
 
     res.json({
@@ -1282,7 +1391,8 @@ panelConfiguracionRouter.put(
       // Se comprueba contra el catálogo y contra la clase: un facturador no puede quedar anotado
       // como el software de cobranzas. La base lo impide igual con la clave foránea; esto es para
       // contestar con un mensaje del catálogo en vez de con un error de la base.
-      const { data: delCatalogo, error: errorDelCatalogo } = await supabase
+      const db = clienteDelPedido(req);
+      const { data: delCatalogo, error: errorDelCatalogo } = await db
         .from('catalogo_software_externo')
         .select('clave')
         .eq('clave', software)
@@ -1296,10 +1406,14 @@ panelConfiguracionRouter.put(
 
       const credencial = String(req.body?.credencial ?? '').trim();
 
+      // CON LA MAESTRA, la lectura y el guardado: a quien inicia sesión no se le dio ningún
+      // permiso sobre las conexiones ni la función que las guarda. La Prestadora es la que la base
+      // deja ver con la credencial de quien pide.
+      const prestadoraId = await prestadoraVisible(db);
       const { data: antes, error: errorDeLaLectura } = await supabase
         .from('conexiones_con_software_externo')
         .select('software, credencial_secret_id')
-        .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+        .eq('prestadora_id', prestadoraId)
         .eq('clase', clase)
         .maybeSingle();
       if (errorDeLaLectura) throw errorDeLaLectura;
@@ -1313,7 +1427,7 @@ panelConfiguracionRouter.put(
       }
 
       const { error } = await supabase.rpc('guardar_conexion_con_software_externo', {
-        p_prestadora_id: req.usuarioPanel.prestadoraId,
+        p_prestadora_id: prestadoraId,
         p_clase: clase,
         p_software: software,
         // Vacío quiere decir «no se toca la que hay». Va como nulo para que la función de la base
@@ -1360,13 +1474,14 @@ const soloAdminDePrestadora = exigirAdminDePrestadora(
 );
 
 panelConfiguracionRouter.get('/whatsapp', soloAdminDePrestadora, async (req, res) => {
-  const prestadoraId = req.usuarioPanel.prestadoraId;
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('configuracion_whatsapp_prestadora')
     .select('prestadora_id, activo, numero_telefono, waba_id, phone_number_id, verificado_at, updated_at, app_secret_secret_id, verify_token_secret_id')
-    .eq('prestadora_id', prestadoraId)
     .maybeSingle();
   if (error) return responderError(res, error);
+  const prestadoraId = data?.prestadora_id ?? await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
   // De los tres secretos sale de acá si están cargados o no, nunca su contenido: la referencia
   // a la caja fuerte tampoco viaja al navegador, porque no le sirve para nada y sí sirve para
   // aparecer en un registro donde no tendría que estar.
@@ -1396,9 +1511,11 @@ panelConfiguracionRouter.get('/whatsapp', soloAdminDePrestadora, async (req, res
 
 panelConfiguracionRouter.patch('/whatsapp', soloAdminDePrestadora, async (req, res) => {
   const { activo, numero_telefono, waba_id, phone_number_id, token, app_secret, verify_token } = req.body;
-  const prestadoraId = req.usuarioPanel.prestadoraId;
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
 
-  const { error } = await supabase
+  const { error } = await db
     .from('configuracion_whatsapp_prestadora')
     .upsert({
       prestadora_id: prestadoraId,
@@ -1410,6 +1527,8 @@ panelConfiguracionRouter.patch('/whatsapp', soloAdminDePrestadora, async (req, r
     });
   if (error) return responderError(res, error);
 
+  // CON LA MAESTRA, las tres claves: las funciones que las guardan en la caja fuerte no se le
+  // dieron a quien inicia sesión. La Prestadora es la que la base acaba de dejar ver.
   if (token) {
     const { error: errorToken } = await supabase.rpc('guardar_token_whatsapp', {
       p_prestadora_id: prestadoraId,
@@ -1458,17 +1577,15 @@ panelConfiguracionRouter.patch('/whatsapp', soloAdminDePrestadora, async (req, r
 // Lo que la pantalla necesita saber para explicar en qué estado está el correo de esta
 // Prestadora. Son cuatro cosas distintas y ninguna se deduce de otra, así que se arman juntas y
 // las devuelven tanto la lectura como el guardado.
-async function estadoDelCorreoDe(prestadoraId) {
-  const { data } = await supabase
+async function estadoDelCorreoDe(db) {
+  const { data } = await db
     .from('configuracion_prestadora')
     .select('email')
-    .eq('prestadora_id', prestadoraId)
     .maybeSingle();
 
-  const { data: prestadora } = await supabase
+  const { data: prestadora } = await db
     .from('prestadoras')
     .select('regla_reenvio')
-    .eq('id', prestadoraId)
     .maybeSingle();
 
   const emailRespuestas = data?.email ?? null;
@@ -1490,7 +1607,7 @@ async function estadoDelCorreoDe(prestadoraId) {
 
 panelConfiguracionRouter.get('/correo', async (req, res) => {
   try {
-    res.json({ correo: await estadoDelCorreoDe(req.usuarioPanel.prestadoraId) });
+    res.json({ correo: await estadoDelCorreoDe(clienteDelPedido(req)) });
   } catch (error) {
     responderError(res, error);
   }
@@ -1498,14 +1615,17 @@ panelConfiguracionRouter.get('/correo', async (req, res) => {
 
 panelConfiguracionRouter.patch('/correo', async (req, res) => {
   const { email_respuestas: emailRespuestas } = req.body;
-  const prestadoraId = req.usuarioPanel.prestadoraId;
 
   if (!esDireccionDeCorreo(emailRespuestas)) {
     // Mismo motivo que la casilla mal escrita en el alta: es el mismo dato y se arregla igual.
     return responderError(res, new ErrorConMotivo('correo_invalido'));
   }
 
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+
+  const { data, error } = await db
     .from('configuracion_prestadora')
     .update({ email: emailRespuestas, updated_at: new Date().toISOString() })
     .eq('prestadora_id', prestadoraId)
@@ -1515,10 +1635,9 @@ panelConfiguracionRouter.patch('/correo', async (req, res) => {
 
   // El reenvío tiene que seguir a la casilla. Si se guardara la casilla nueva sin mover el
   // reenvío, las respuestas seguirían yendo a la vieja y nadie se enteraría.
-  const { data: prestadora } = await supabase
+  const { data: prestadora } = await db
     .from('prestadoras')
     .select('regla_reenvio')
-    .eq('id', prestadoraId)
     .maybeSingle();
 
   await apuntarReenvioDeRespuestas({
@@ -1528,15 +1647,16 @@ panelConfiguracionRouter.patch('/correo', async (req, res) => {
     reglaAnterior: prestadora?.regla_reenvio ?? null,
   });
 
-  res.json({ correo: await estadoDelCorreoDe(prestadoraId) });
+  res.json({ correo: await estadoDelCorreoDe(db) });
 });
 
 // --- WhatsApp: plantillas de mensaje (requieren aprobación de Meta antes de poder
 //     usarse para un mensaje que la prestadora inicia) ---
 panelConfiguracionRouter.get('/whatsapp/plantillas', async (req, res) => {
-  let query = supabase.from('plantillas_whatsapp').select('*').order('created_at', { ascending: false });
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data, error } = await query;
+  const { data, error } = await clienteDelPedido(req)
+    .from('plantillas_whatsapp')
+    .select('*')
+    .order('created_at', { ascending: false });
   if (error) return responderError(res, error);
   res.json({ plantillas: data });
 });
@@ -1546,12 +1666,15 @@ panelConfiguracionRouter.post('/whatsapp/plantillas', async (req, res) => {
   if (!nombre_interno || !categoria || !cuerpo_texto) {
     return res.status(400).json({ error: 'Faltan nombre_interno, categoria o cuerpo_texto' });
   }
-  const { error } = await supabase.from('plantillas_whatsapp').insert({
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+  const { error } = await db.from('plantillas_whatsapp').insert({
     nombre_interno,
     categoria,
     idioma: idioma || 'es-AR',
     cuerpo_texto,
-    prestadora_id: req.usuarioPanel.prestadoraId,
+    prestadora_id: prestadoraId,
     created_by: req.usuarioPanel.id,
   });
   if (error) return responderError(res, error);
@@ -1565,13 +1688,12 @@ panelConfiguracionRouter.patch('/whatsapp/plantillas/:id', async (req, res) => {
   const { cuerpo_texto } = req.body;
   if (!cuerpo_texto) return responderError(res, new ErrorConMotivo('faltan_datos', 'Falta cuerpo_texto'));
 
-  let query = supabase
+  const { data, error } = await clienteDelPedido(req)
     .from('plantillas_whatsapp')
     .update({ cuerpo_texto, updated_at: new Date().toISOString() })
     .eq('id', req.params.id)
-    .eq('estado', 'borrador');
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data, error } = await query.select('id');
+    .eq('estado', 'borrador')
+    .select('id');
   if (error) return responderError(res, error);
   // La que no existe, la de otra Prestadora y la que ya salió hacia Meta contestan lo mismo: el
   // texto de una plantilla que ya se mandó no se cambia de este lado sin que Meta se entere.
@@ -1585,8 +1707,8 @@ panelConfiguracionRouter.patch('/whatsapp/plantillas/:id', async (req, res) => {
 // (`docs/PRD_06_WhatsApp_IA.md:49`).
 panelConfiguracionRouter.post('/whatsapp/plantillas/redactar', async (req, res) => {
   const { proposito, categoria } = req.body ?? {};
-  const prestadoraId = req.usuarioPanel.prestadoraId;
   try {
+    const prestadoraId = await prestadoraVisible(clienteDelPedido(req));
     // El idioma no se le pregunta a la pantalla: es el de la Prestadora, resuelto donde ya se
     // resuelve para todos los mensajes.
     const propuesta = await redactarPlantillaWhatsapp({
@@ -1604,20 +1726,21 @@ panelConfiguracionRouter.post('/whatsapp/plantillas/redactar', async (req, res) 
 // Corregir la que Meta rechazó, leyendo lo que Meta objetó. Lo que hoy queda escrito en la fila es
 // la sigla con la que Meta nombra su objeción, en inglés; acá se convierte en otro texto.
 panelConfiguracionRouter.post('/whatsapp/plantillas/:id/corregir', async (req, res) => {
-  let query = supabase
+  const { data: filas, error } = await clienteDelPedido(req)
     .from('plantillas_whatsapp')
-    .select('id, categoria, idioma, cuerpo_texto, motivo_rechazo')
+    .select('id, prestadora_id, categoria, idioma, cuerpo_texto, motivo_rechazo')
     .eq('id', req.params.id);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data: filas, error } = await query;
   if (error) return responderError(res, error);
-  const plantilla = filas?.[0];
-  if (!plantilla) return responderError(res, new ErrorConMotivo('no_encontrado', 'Plantilla inexistente o de otra Prestadora'));
+  const fila = filas?.[0];
+  if (!fila) return responderError(res, new ErrorConMotivo('no_encontrado', 'Plantilla inexistente o de otra Prestadora'));
+  // La Prestadora sale de la fila que la base dejó ver; a la IA le llega la plantilla sin ella,
+  // como antes.
+  const { prestadora_id: prestadoraId, ...plantilla } = fila;
 
   try {
     const propuesta = await corregirPlantillaWhatsapp({
       plantilla,
-      prestadoraId: req.usuarioPanel.prestadoraId,
+      prestadoraId,
     });
     res.json({ propuesta });
   } catch (err) {
@@ -1628,9 +1751,8 @@ panelConfiguracionRouter.post('/whatsapp/plantillas/:id/corregir', async (req, r
 // Dar de alta la plantilla en Meta. Hasta que esto existió, el botón del Panel cambiaba el estado
 // guardado y nada más.
 panelConfiguracionRouter.post('/whatsapp/plantillas/:id/enviar-a-meta', async (req, res) => {
-  let query = supabase.from('plantillas_whatsapp').select('*').eq('id', req.params.id);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data: filas, error } = await query;
+  const db = clienteDelPedido(req);
+  const { data: filas, error } = await db.from('plantillas_whatsapp').select('*').eq('id', req.params.id);
   if (error) return responderError(res, error);
   const plantilla = filas?.[0];
   if (!plantilla) return responderError(res, new ErrorConMotivo('no_encontrado', 'Plantilla inexistente o de otra Prestadora'));
@@ -1645,17 +1767,15 @@ panelConfiguracionRouter.post('/whatsapp/plantillas/:id/enviar-a-meta', async (r
     // Lo que Meta objetó queda guardado en la fila: es lo que hay que corregir para volver a
     // intentarlo, y la plantilla se queda en borrador justamente para poder corregirla.
     if (err.motivo === 'meta_no_acepto') {
-      let anotarElRechazo = supabase
+      await db
         .from('plantillas_whatsapp')
         .update({ motivo_rechazo: err.message, updated_at: new Date().toISOString() })
         .eq('id', plantilla.id);
-      anotarElRechazo = acotarAPrestadora(anotarElRechazo, req.usuarioPanel);
-      await anotarElRechazo;
     }
     return responderError(res, err);
   }
 
-  let guardarLoQueContestoMeta = supabase
+  const { error: errorGuardado } = await db
     .from('plantillas_whatsapp')
     .update({
       meta_template_id: resultado.metaTemplateId,
@@ -1664,8 +1784,6 @@ panelConfiguracionRouter.post('/whatsapp/plantillas/:id/enviar-a-meta', async (r
       updated_at: new Date().toISOString(),
     })
     .eq('id', plantilla.id);
-  guardarLoQueContestoMeta = acotarAPrestadora(guardarLoQueContestoMeta, req.usuarioPanel);
-  const { error: errorGuardado } = await guardarLoQueContestoMeta;
   if (errorGuardado) return responderError(res, errorGuardado);
 
   res.json({ ok: true, estado: resultado.estado });
@@ -1676,17 +1794,16 @@ panelConfiguracionRouter.post('/whatsapp/plantillas/:id/enviar-a-meta', async (r
 // otra puerta, para cuando esa entrada no está conectada o se perdió una. Se pregunta por todas en
 // un solo pedido y se escriben únicamente las que cambiaron.
 panelConfiguracionRouter.post('/whatsapp/plantillas/consultar-a-meta', async (req, res) => {
-  let query = supabase
+  const db = clienteDelPedido(req);
+  const { data: plantillas, error } = await db
     .from('plantillas_whatsapp')
     .select('id, meta_template_id, estado, motivo_rechazo')
     .not('meta_template_id', 'is', null);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data: plantillas, error } = await query;
   if (error) return responderError(res, error);
 
   let estados;
   try {
-    estados = await traerEstadosDeMeta(req.usuarioPanel.prestadoraId);
+    estados = await traerEstadosDeMeta(await prestadoraVisible(db));
   } catch (err) {
     return responderError(res, err);
   }
@@ -1697,7 +1814,7 @@ panelConfiguracionRouter.post('/whatsapp/plantillas/consultar-a-meta', async (re
     if (!enMeta) continue;
     if (enMeta.estado === plantilla.estado && (enMeta.motivo ?? null) === (plantilla.motivo_rechazo ?? null)) continue;
 
-    let guardarElEstado = supabase
+    const { error: errorGuardado } = await db
       .from('plantillas_whatsapp')
       .update({
         estado: enMeta.estado,
@@ -1705,8 +1822,6 @@ panelConfiguracionRouter.post('/whatsapp/plantillas/consultar-a-meta', async (re
         updated_at: new Date().toISOString(),
       })
       .eq('id', plantilla.id);
-    guardarElEstado = acotarAPrestadora(guardarElEstado, req.usuarioPanel);
-    const { error: errorGuardado } = await guardarElEstado;
     if (errorGuardado) return responderError(res, errorGuardado);
     cambiadas += 1;
   }
@@ -1715,9 +1830,11 @@ panelConfiguracionRouter.post('/whatsapp/plantillas/consultar-a-meta', async (re
 });
 
 panelConfiguracionRouter.delete('/whatsapp/plantillas/:id', async (req, res) => {
-  let query = supabase.from('plantillas_whatsapp').delete().eq('id', req.params.id);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data, error } = await query.select('id');
+  const { data, error } = await clienteDelPedido(req)
+    .from('plantillas_whatsapp')
+    .delete()
+    .eq('id', req.params.id)
+    .select('id');
   if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró esa plantilla de WhatsApp' });
   res.json({ ok: true });
@@ -1726,15 +1843,14 @@ panelConfiguracionRouter.delete('/whatsapp/plantillas/:id', async (req, res) => 
 // --- Catálogo de tipos de documento de Asistente (vencimientos a trackear) + plazo de preaviso
 //     configurable por prestadora (pendiente #18 punto 1, docs/PLAN_HASTA_PRODUCCION.md — ver
 //     supabase/migrations/). El plazo vive en la tabla "prestadoras",
-//     de gestión exclusiva de superadmin por RLS (schema_multitenant_01.sql) — se expone acá
-//     porque el backend usa la service role key y aplica el mismo scoping por prestadora que
-//     el resto de este archivo. ---
+//     que por RLS sólo superadmin puede modificar: se lee con la credencial de quien pide, y
+//     el cambio va con la maestra sobre la Prestadora que la base deja ver. ---
 panelConfiguracionRouter.get('/documentos-tipo', async (req, res) => {
-  const prestadoraId = req.usuarioPanel.prestadoraId;
+  const db = clienteDelPedido(req);
 
   const [{ data: tipos, error: errorTipos }, { data: prestadora, error: errorPrestadora }] = await Promise.all([
-    supabase.from('tipos_documento_asistente').select('*').eq('prestadora_id', prestadoraId).order('nombre'),
-    supabase.from('prestadoras').select('dias_aviso_vencimiento_documentos').eq('id', prestadoraId).single(),
+    db.from('tipos_documento_asistente').select('*').order('nombre'),
+    db.from('prestadoras').select('dias_aviso_vencimiento_documentos').single(),
   ]);
   if (errorTipos) return responderError(res, errorTipos);
   if (errorPrestadora) return responderError(res, errorPrestadora);
@@ -1744,9 +1860,12 @@ panelConfiguracionRouter.get('/documentos-tipo', async (req, res) => {
 panelConfiguracionRouter.post('/documentos-tipo', async (req, res) => {
   const { nombre, requiere_vencimiento } = req.body;
   if (!nombre) return res.status(400).json({ error: 'Falta nombre' });
-  const { error } = await supabase
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+  const { error } = await db
     .from('tipos_documento_asistente')
-    .insert({ nombre, requiere_vencimiento: requiere_vencimiento ?? true, prestadora_id: req.usuarioPanel.prestadoraId });
+    .insert({ nombre, requiere_vencimiento: requiere_vencimiento ?? true, prestadora_id: prestadoraId });
   if (error) return responderError(res, error);
   res.json({ ok: true });
 });
@@ -1756,10 +1875,13 @@ panelConfiguracionRouter.patch('/documentos-tipo/plazo-aviso', async (req, res) 
   if (!Number.isInteger(dias) || dias <= 0) {
     return res.status(400).json({ error: 'dias debe ser un entero positivo' });
   }
+  const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
+  if (!prestadoraId) return;
+  // CON LA MAESTRA: la fila de la Prestadora sólo la modifica superadmin por RLS.
   const { error } = await supabase
     .from('prestadoras')
     .update({ dias_aviso_vencimiento_documentos: dias })
-    .eq('id', req.usuarioPanel.prestadoraId);
+    .eq('id', prestadoraId);
   if (error) return responderError(res, error);
   res.json({ ok: true });
 });
@@ -1774,10 +1896,9 @@ panelConfiguracionRouter.patch('/documentos-tipo/plazo-aviso', async (req, res) 
 const MODOS_DE_CONTROL_MATRICULA = ['flexible', 'estricto'];
 
 panelConfiguracionRouter.get('/modo-control-matricula', async (req, res) => {
-  const { data, error } = await supabase
+  const { data, error } = await clienteDelPedido(req)
     .from('prestadoras')
     .select('modo_control_matricula')
-    .eq('id', req.usuarioPanel.prestadoraId)
     .single();
   if (error) return responderError(res, error);
   res.json({ modo: data.modo_control_matricula });
@@ -1788,10 +1909,13 @@ panelConfiguracionRouter.patch('/modo-control-matricula', async (req, res) => {
   if (!MODOS_DE_CONTROL_MATRICULA.includes(modo)) {
     return res.status(400).json({ error: 'modo debe ser flexible o estricto' });
   }
+  const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
+  if (!prestadoraId) return;
+  // CON LA MAESTRA: la fila de la Prestadora sólo la modifica superadmin por RLS.
   const { error } = await supabase
     .from('prestadoras')
     .update({ modo_control_matricula: modo })
-    .eq('id', req.usuarioPanel.prestadoraId);
+    .eq('id', prestadoraId);
   if (error) return responderError(res, error);
   res.json({ ok: true });
 });
@@ -1799,11 +1923,9 @@ panelConfiguracionRouter.patch('/modo-control-matricula', async (req, res) => {
 // --- Catálogo de motivos de aviso previo de guardia, configurable por prestadora. Mismo patrón
 //     que /documentos-tipo. ---
 panelConfiguracionRouter.get('/motivos-aviso-previo', async (req, res) => {
-  const prestadoraId = req.usuarioPanel.prestadoraId;
-  const { data, error } = await supabase
+  const { data, error } = await clienteDelPedido(req)
     .from('motivos_aviso_previo_guardia')
     .select('*')
-    .eq('prestadora_id', prestadoraId)
     .order('nombre');
   if (error) return responderError(res, error);
   res.json({ motivos: data });
@@ -1812,21 +1934,23 @@ panelConfiguracionRouter.get('/motivos-aviso-previo', async (req, res) => {
 panelConfiguracionRouter.post('/motivos-aviso-previo', async (req, res) => {
   const { nombre } = req.body;
   if (!nombre) return res.status(400).json({ error: 'Falta nombre' });
-  const { error } = await supabase
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+  const { error } = await db
     .from('motivos_aviso_previo_guardia')
-    .insert({ nombre, prestadora_id: req.usuarioPanel.prestadoraId });
+    .insert({ nombre, prestadora_id: prestadoraId });
   if (error) return responderError(res, error);
   res.json({ ok: true });
 });
 
 panelConfiguracionRouter.patch('/motivos-aviso-previo/:id', async (req, res) => {
   const { nombre, activo } = req.body;
-  let query = supabase
+  const { data, error } = await clienteDelPedido(req)
     .from('motivos_aviso_previo_guardia')
     .update({ nombre, activo })
-    .eq('id', req.params.id);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data, error } = await query.select('id');
+    .eq('id', req.params.id)
+    .select('id');
   if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró ese motivo de aviso previo' });
   res.json({ ok: true });
@@ -1839,10 +1963,9 @@ panelConfiguracionRouter.patch('/motivos-aviso-previo/:id', async (req, res) => 
 //     apagarlas, borrarlas y agregar las que quiera. La base lo controla en el disparador
 //     "validar_motivo_cierres_servicio_paciente", no acá. ---
 panelConfiguracionRouter.get('/motivos-cierre-servicio', async (req, res) => {
-  const { data, error } = await supabase
+  const { data, error } = await clienteDelPedido(req)
     .from('motivos_cierre_servicio')
     .select('*')
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .order('orden');
   if (error) return responderError(res, error);
   res.json({ motivos: data });
@@ -1854,12 +1977,15 @@ panelConfiguracionRouter.get('/motivos-cierre-servicio', async (req, res) => {
 panelConfiguracionRouter.post('/motivos-cierre-servicio', async (req, res) => {
   const { nombre, pide_detalle } = req.body;
   if (!nombre) return res.status(400).json({ error: 'Falta nombre' });
-  const { error } = await supabase
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+  const { error } = await db
     .from('motivos_cierre_servicio')
     .insert({
       nombre,
       pide_detalle: pide_detalle === true,
-      prestadora_id: req.usuarioPanel.prestadoraId,
+      prestadora_id: prestadoraId,
     });
   if (error) return responderError(res, error);
   res.json({ ok: true });
@@ -1878,9 +2004,11 @@ panelConfiguracionRouter.patch('/motivos-cierre-servicio/:id', async (req, res) 
     return res.status(400).json({ error: 'No hay nada que cambiar' });
   }
   cambios.updated_at = new Date().toISOString();
-  let query = supabase.from('motivos_cierre_servicio').update(cambios).eq('id', req.params.id);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data, error } = await query.select('id');
+  const { data, error } = await clienteDelPedido(req)
+    .from('motivos_cierre_servicio')
+    .update(cambios)
+    .eq('id', req.params.id)
+    .select('id');
   if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró ese motivo de cierre' });
   res.json({ ok: true });
@@ -1889,9 +2017,11 @@ panelConfiguracionRouter.patch('/motivos-cierre-servicio/:id', async (req, res) 
 /* Borrar no rompe la historia: el cierre guarda el texto del motivo, no una referencia a esta
    fila, así que los cierres viejos siguen diciendo lo que decían. */
 panelConfiguracionRouter.delete('/motivos-cierre-servicio/:id', async (req, res) => {
-  let query = supabase.from('motivos_cierre_servicio').delete().eq('id', req.params.id);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data, error } = await query.select('id');
+  const { data, error } = await clienteDelPedido(req)
+    .from('motivos_cierre_servicio')
+    .delete()
+    .eq('id', req.params.id)
+    .select('id');
   if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró ese motivo de cierre' });
   res.json({ ok: true });
@@ -1902,11 +2032,9 @@ panelConfiguracionRouter.delete('/motivos-cierre-servicio/:id', async (req, res)
 //     /documentos-tipo/plazo-aviso: valor en "prestadoras", expuesto acá para reusar el
 //     scoping por prestadora ya resuelto en este router. ---
 panelConfiguracionRouter.get('/guardias/horizonte-generacion', async (req, res) => {
-  const prestadoraId = req.usuarioPanel.prestadoraId;
-  const { data, error } = await supabase
+  const { data, error } = await clienteDelPedido(req)
     .from('prestadoras')
     .select('dias_generacion_series_guardia')
-    .eq('id', prestadoraId)
     .single();
   if (error) return responderError(res, error);
   res.json({ dias_generacion_series_guardia: data.dias_generacion_series_guardia });
@@ -1917,10 +2045,13 @@ panelConfiguracionRouter.patch('/guardias/horizonte-generacion', async (req, res
   if (!Number.isInteger(dias) || dias <= 0) {
     return res.status(400).json({ error: 'dias debe ser un entero positivo' });
   }
+  const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
+  if (!prestadoraId) return;
+  // CON LA MAESTRA: la fila de la Prestadora sólo la modifica superadmin por RLS.
   const { error } = await supabase
     .from('prestadoras')
     .update({ dias_generacion_series_guardia: dias })
-    .eq('id', req.usuarioPanel.prestadoraId);
+    .eq('id', prestadoraId);
   if (error) return responderError(res, error);
   res.json({ ok: true });
 });
@@ -1931,14 +2062,12 @@ panelConfiguracionRouter.patch('/guardias/horizonte-generacion', async (req, res
 //     al validar el check-in) y backend/src/utils/ausenciaAutomatica.js (uso de
 //     minutos_tolerancia_checkin y activo). ---
 panelConfiguracionRouter.get('/ausencia-automatica', async (req, res) => {
-  const prestadoraId = req.usuarioPanel.prestadoraId;
-  const { data, error } = await supabase
+  const { data, error } = await clienteDelPedido(req)
     .from('configuracion_ausencia_automatica')
     .select(
       'activo, minutos_tolerancia_checkin, metros_tolerancia_checkin, ' +
       'segundos_codigo_en_pantalla, minutos_codigo_de_la_prestadora',
     )
-    .eq('prestadora_id', prestadoraId)
     .maybeSingle();
   if (error) return responderError(res, error);
   res.json({
@@ -1989,10 +2118,13 @@ panelConfiguracionRouter.patch('/ausencia-automatica', async (req, res) => {
       error: `minutos_codigo_de_la_prestadora debe estar entre ${MINUTOS_CODIGO_DE_LA_PRESTADORA_MINIMO} y ${MINUTOS_CODIGO_DE_LA_PRESTADORA_MAXIMO}`,
     });
   }
-  const { error } = await supabase
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+  const { error } = await db
     .from('configuracion_ausencia_automatica')
     .upsert({
-      prestadora_id: req.usuarioPanel.prestadoraId,
+      prestadora_id: prestadoraId,
       activo: Boolean(activo),
       minutos_tolerancia_checkin,
       metros_tolerancia_checkin,
@@ -2005,12 +2137,11 @@ panelConfiguracionRouter.patch('/ausencia-automatica', async (req, res) => {
 
 panelConfiguracionRouter.patch('/documentos-tipo/:id', async (req, res) => {
   const { nombre, requiere_vencimiento, activo } = req.body;
-  let query = supabase
+  const { data, error } = await clienteDelPedido(req)
     .from('tipos_documento_asistente')
     .update({ nombre, requiere_vencimiento, activo })
-    .eq('id', req.params.id);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data, error } = await query.select('id');
+    .eq('id', req.params.id)
+    .select('id');
   if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró ese tipo de documento' });
   res.json({ ok: true });
@@ -2032,6 +2163,7 @@ panelConfiguracionRouter.patch('/documentos-tipo/:id', async (req, res) => {
 // `CLAUDE.md` §6— y acota a la Prestadora acá, en la única consulta que hace falta escribir.
 // Todo el router está reservado a Admin y Superadmin de la Organización activa (ver el
 // `use` de arriba), así que esta lista no llega a más gente de la que ya podía verla.
+// CON LA MAESTRA por eso mismo; la Prestadora que recibe es la que la base dejó ver a quien pide.
 function coordinadoresDeLaPrestadora(prestadoraId) {
   return supabase
     .from('usuarios')
@@ -2042,11 +2174,12 @@ function coordinadoresDeLaPrestadora(prestadoraId) {
 }
 
 panelConfiguracionRouter.get('/permisos', async (req, res) => {
-  const prestadoraId = req.usuarioPanel.prestadoraId;
+  const db = clienteDelPedido(req);
   try {
+    const prestadoraId = await prestadoraVisible(db);
     const [acciones, { data: filas, error: errorFilas }, { data: coordinadores, error: errorCoordinadores }] = await Promise.all([
       accionesDePermisos(),
-      supabase.from('permisos_prestadora').select('*').eq('prestadora_id', prestadoraId),
+      db.from('permisos_prestadora').select('*'),
       coordinadoresDeLaPrestadora(prestadoraId),
     ]);
     if (errorFilas) return responderError(res, errorFilas);
@@ -2083,16 +2216,18 @@ panelConfiguracionRouter.patch('/permisos/:accion', async (req, res) => {
   }
   // Cuál era el alcance antes, leído antes de pisarlo. Puede no haber fila: ahí el alcance que
   // regía era el de fábrica del catálogo, y eso se anota tal cual.
-  const { data: antes } = await supabase
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+  const { data: antes } = await db
     .from('permisos_prestadora')
     .select('alcance')
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .eq('accion', accion)
     .maybeSingle();
 
-  const { error } = await supabase.from('permisos_prestadora').upsert(
+  const { error } = await db.from('permisos_prestadora').upsert(
     {
-      prestadora_id: req.usuarioPanel.prestadoraId,
+      prestadora_id: prestadoraId,
       accion,
       alcance,
       excepciones_permitir: excepciones_permitir || [],
@@ -2122,10 +2257,9 @@ panelConfiguracionRouter.patch('/permisos/:accion', async (req, res) => {
 });
 
 panelConfiguracionRouter.get('/politica-verificacion', async (req, res) => {
-  const { data, error } = await supabase
+  const { data, error } = await clienteDelPedido(req)
     .from('prestadoras')
     .select('politica_verificacion_alta_manual')
-    .eq('id', req.usuarioPanel.prestadoraId)
     .single();
   if (error) return responderError(res, error);
   res.json({ politica_verificacion_alta_manual: data.politica_verificacion_alta_manual });
@@ -2136,10 +2270,13 @@ panelConfiguracionRouter.patch('/politica-verificacion', async (req, res) => {
   if (!['omitir', 'pendiente', 'aprobado'].includes(politica)) {
     return res.status(400).json({ error: 'Política inválida' });
   }
+  const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
+  if (!prestadoraId) return;
+  // CON LA MAESTRA: la fila de la Prestadora sólo la modifica superadmin por RLS.
   const { error } = await supabase
     .from('prestadoras')
     .update({ politica_verificacion_alta_manual: politica })
-    .eq('id', req.usuarioPanel.prestadoraId);
+    .eq('id', prestadoraId);
   if (error) return responderError(res, error);
   res.json({ ok: true });
 });
@@ -2184,6 +2321,10 @@ const ACCESO_EN_CURSO = 'vigente';
  */
 async function loQueImpideApagar(prestadoraId, modalidad) {
   const [asistentes, accesos] = await Promise.all([
+    // Queda con la llave maestra y el filtro de la Prestadora: en `asistentes` la política
+    // restrictiva `oculta_pendientes_de_conformidad` esconde a los importados que esperan
+    // conformidad (`pendiente_conformidad = true`), para superadmin y admin_prestadora, y esta
+    // comprobación los contaba como Asistentes que atan la modalidad. Se decide aparte.
     supabase
       .from('asistentes')
       .select('id')
@@ -2193,6 +2334,10 @@ async function loQueImpideApagar(prestadoraId, modalidad) {
       .contains('canales', [modalidad])
       .limit(1),
     modalidad === MODALIDAD_MATCH
+      // Queda con la llave maestra y el filtro de la Prestadora: la única política de lectura
+      // del Panel sobre `accesos_match`, `prestadora_ve_accesos_match`, exige rol
+      // admin_prestadora o coordinador; para superadmin no habría accesos vigentes y podría
+      // apagar el Match con accesos en curso. Se decide aparte.
       ? supabase
           .from('accesos_match')
           .select('id')
@@ -2217,10 +2362,9 @@ async function loQueImpideApagar(prestadoraId, modalidad) {
 }
 
 panelConfiguracionRouter.get('/modalidades', async (req, res) => {
-  const { data, error } = await supabase
+  const { data, error } = await clienteDelPedido(req)
     .from('prestadora_modalidades')
-    .select('modalidad, activa')
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId);
+    .select('modalidad, activa');
   if (error) return responderError(res, error);
 
   const porModalidad = Object.fromEntries((data || []).map((f) => [f.modalidad, f.activa]));
@@ -2259,6 +2403,10 @@ panelConfiguracionRouter.patch('/modalidades/:modalidad', async (req, res) => {
   }
 
   const ahora = new Date().toISOString();
+  // Queda con la llave maestra y el filtro de la Prestadora: la política de escritura de
+  // `prestadora_modalidades`, `admin_prestadora_gestiona_sus_modalidades`, exige rol
+  // admin_prestadora, y superadmin, que llega a esta ruta, dejaría de poder encender o apagar
+  // una modalidad. Se decide aparte.
   const { error } = await supabase.from('prestadora_modalidades').upsert(
     {
       prestadora_id: req.usuarioPanel.prestadoraId,
@@ -2286,15 +2434,16 @@ const MINUTOS_DE_UN_DIA = 24 * 60;
 const HORAS_DE_TRES_DIAS = 72;
 
 panelConfiguracionRouter.get('/escalada-coordinador', async (req, res) => {
-  const prestadoraId = req.usuarioPanel.prestadoraId;
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
   // La lista de Coordinadores viaja con la configuración, y no la pide el navegador por su
   // cuenta: es el mismo reparto que ya usa `/permisos`, con la misma consulta escrita una sola
   // vez más arriba.
   const [{ data, error }, { data: coordinadores, error: errorCoordinadores }] = await Promise.all([
-    supabase
+    db
       .from('configuracion_escalada_coordinador')
       .select('*')
-      .eq('prestadora_id', prestadoraId)
       .maybeSingle(),
     coordinadoresDeLaPrestadora(prestadoraId),
   ]);
@@ -2307,14 +2456,15 @@ panelConfiguracionRouter.get('/escalada-coordinador', async (req, res) => {
   // que el formulario muestra es lo que la base va a usar de verdad, y no una copia.
   let escalada = data;
   if (!escalada) {
+    // CON LA MAESTRA: la función que siembra la configuración no se le dio a quien inicia
+    // sesión. La Prestadora es la que la base acaba de dejar ver.
     const { error: errorSiembra } = await supabase.rpc('sembrar_configuracion_prestadora', {
       p_prestadora_id: prestadoraId,
     });
     if (errorSiembra) return responderError(res, errorSiembra);
-    const { data: recien, error: errorRelectura } = await supabase
+    const { data: recien, error: errorRelectura } = await db
       .from('configuracion_escalada_coordinador')
       .select('*')
-      .eq('prestadora_id', prestadoraId)
       .maybeSingle();
     if (errorRelectura) return responderError(res, errorRelectura);
     escalada = recien;
@@ -2380,10 +2530,13 @@ panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
   const enMinutosOApagado = (valor) =>
     valor === undefined || valor === null || valor === '' ? null : Number(valor);
 
-  const { error } = await supabase
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+  const { error } = await db
     .from('configuracion_escalada_coordinador')
     .upsert({
-      prestadora_id: req.usuarioPanel.prestadoraId,
+      prestadora_id: prestadoraId,
       coordinador_backup_id,
       minutos_antes_backup,
       umbrales_premura,
@@ -2419,7 +2572,7 @@ panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
 
 panelConfiguracionRouter.get('/consentimiento-pagador', async (req, res) => {
   try {
-    const vigente = await cuerpoVigente({ prestadoraId: req.usuarioPanel.prestadoraId });
+    const vigente = await cuerpoVigente({ prestadoraId: await prestadoraVisible(clienteDelPedido(req)) });
     // Los marcadores se devuelven para que quien escriba el suyo sepa cuáles puede usar. Salen del
     // mismo archivo que los reemplaza, para que la lista no se despegue de lo que de verdad anda.
     res.json({ ...vigente, marcadores: MARCADORES, modeloDelProducto: MODELO_DE_FABRICA });
@@ -2430,23 +2583,26 @@ panelConfiguracionRouter.get('/consentimiento-pagador', async (req, res) => {
 
 panelConfiguracionRouter.put('/consentimiento-pagador', async (req, res) => {
   const { cuerpo, idioma } = req.body || {};
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
 
   // Vaciarlo es volver al modelo del producto, no dejar a la Prestadora sin texto: se borra la
   // fila y vuelve a regir el modelo.
   if (!String(cuerpo ?? '').trim()) {
-    const { error } = await supabase
+    const { error } = await db
       .from('textos_consentimiento_pagador')
       .delete()
-      .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+      .eq('prestadora_id', prestadoraId)
       .eq('idioma', idioma || IDIOMA_DEL_DOCUMENTO);
     if (error) return responderError(res, error);
     return res.json({ ok: true, esDelProducto: true });
   }
 
-  const { error } = await supabase
+  const { error } = await db
     .from('textos_consentimiento_pagador')
     .upsert({
-      prestadora_id: req.usuarioPanel.prestadoraId,
+      prestadora_id: prestadoraId,
       idioma: idioma || IDIOMA_DEL_DOCUMENTO,
       cuerpo,
       actualizado_por: req.usuarioPanel.id,
@@ -2460,12 +2616,10 @@ panelConfiguracionRouter.put('/consentimiento-pagador', async (req, res) => {
 // que trabaja con ese financiador, y adivinarlo desde acá sería inventar un requisito que nadie
 // pidió. Vacío quiere decir «no se exige ninguno», y es una respuesta válida.
 panelConfiguracionRouter.get('/documentos-pagador', async (req, res) => {
-  let query = supabase
+  const { data, error } = await clienteDelPedido(req)
     .from('tipos_documento_pagador')
     .select('id, nombre, financiador_tipo, requiere_vencimiento, activo')
     .order('nombre');
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data, error } = await query;
   if (error) return responderError(res, error);
   res.json({ tipos: data ?? [] });
 });
@@ -2476,10 +2630,13 @@ panelConfiguracionRouter.post('/documentos-pagador', async (req, res) => {
     return res.status(400).json({ error: 'Falta el nombre del documento' });
   }
 
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+  const { data, error } = await db
     .from('tipos_documento_pagador')
     .insert({
-      prestadora_id: req.usuarioPanel.prestadoraId,
+      prestadora_id: prestadoraId,
       nombre: String(nombre).trim(),
       // Vacío es «a todos los financiadores», y así se guarda: nulo.
       financiador_tipo: financiador_tipo || null,
@@ -2500,9 +2657,11 @@ panelConfiguracionRouter.patch('/documentos-pagador/:id', async (req, res) => {
   if (requiere_vencimiento !== undefined) cambios.requiere_vencimiento = Boolean(requiere_vencimiento);
   if (activo !== undefined) cambios.activo = Boolean(activo);
 
-  let query = supabase.from('tipos_documento_pagador').update(cambios).eq('id', req.params.id);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data, error } = await query.select('id');
+  const { data, error } = await clienteDelPedido(req)
+    .from('tipos_documento_pagador')
+    .update(cambios)
+    .eq('id', req.params.id)
+    .select('id');
   if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'Ese documento no existe' });
   res.json({ ok: true });
@@ -2511,9 +2670,11 @@ panelConfiguracionRouter.patch('/documentos-pagador/:id', async (req, res) => {
 // No se borra: se apaga. Un tipo borrado se llevaría puestos los papeles ya cargados con él, y lo
 // que se quiso decir es «esto ya no se pide más», no «esto nunca se pidió».
 panelConfiguracionRouter.delete('/documentos-pagador/:id', async (req, res) => {
-  let query = supabase.from('tipos_documento_pagador').update({ activo: false }).eq('id', req.params.id);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data, error } = await query.select('id');
+  const { data, error } = await clienteDelPedido(req)
+    .from('tipos_documento_pagador')
+    .update({ activo: false })
+    .eq('id', req.params.id)
+    .select('id');
   if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'Ese documento no existe' });
   res.json({ ok: true });

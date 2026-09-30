@@ -42,6 +42,7 @@ const baseFalsa = createServer((req, res) => {
       clave,
       filtros: direccion.searchParams,
       cuerpo: crudo ? JSON.parse(crudo) : null,
+      credencial: req.headers.authorization,
     });
 
     const preparada = respuestas.get(clave);
@@ -106,6 +107,8 @@ beforeEach(() => {
   respuestas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'admin_prestadora', prestadora_id: PRESTADORA }]);
+  // La Prestadora con la que se escribe es la que la base deja ver a quien pide.
+  respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/configuracion_equipo_paciente', () => []);
   respuestas.set('POST /rest/v1/configuracion_equipo_paciente', () => []);
 });
@@ -133,10 +136,10 @@ describe('leer con cuántos turnos se entra al equipo', () => {
     assert.deepEqual(cuerpo.configuracion.corridos, { dias_hacia_atras: 180 });
   });
 
-  it('pregunta por esta Prestadora y no por cualquiera', async () => {
+  it('pregunta con la credencial de quien pide, y la base acota a su Prestadora', async () => {
     await leer();
     const pregunta = llamadas.find((l) => l.clave === 'GET /rest/v1/configuracion_equipo_paciente');
-    assert.equal(pregunta.filtros.get('prestadora_id'), `eq.${PRESTADORA}`);
+    assert.equal(pregunta.credencial, sesionDePrueba(USUARIO));
   });
 
   it('un número guardado fuera de borde se ignora y manda el de fábrica', async () => {

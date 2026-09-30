@@ -17,11 +17,12 @@
  *      sacó una máquina.
  *   3. NO SE ESCRIBE UNA SALIDA DESPUÉS DE LA LLEGADA. Un pedido que llega tarde desde la cola
  *      no inventa una hora que no pasó.
- *   4. UNA PRESTADORA NO ALCANZA LA GUARDIA DE OTRA. El backend entra con la llave de servicio, así
- *      que lo único que aísla son los filtros de cada consulta.
+ *   4. UNA PRESTADORA NO ALCANZA LA GUARDIA DE OTRA. La guardia se busca y se escribe con la
+ *      credencial de quien pide, y la base le contesta sólo lo de su Prestadora.
  *
- * La base falsa de acá abajo honra los filtros de la consulta de guardias a propósito: si alguien
- * saca el filtro por Prestadora o por Asistente, la prueba del aislamiento deja de pasar.
+ * La base falsa de acá abajo honra los filtros de la consulta de guardias y, con la credencial de
+ * una persona, deja ver sólo su Prestadora: si la guardia se buscara con la llave maestra, o sin el
+ * filtro por Asistente, la prueba del aislamiento deja de pasar.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
@@ -62,10 +63,11 @@ const baseFalsa = createServer((req, res) => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
     const cuerpo = crudo ? JSON.parse(crudo) : null;
-    llamadas.push({ clave, url: req.url, cuerpo });
+    const credencial = req.headers.authorization;
+    llamadas.push({ clave, url: req.url, cuerpo, credencial });
 
     const preparada = respuestas.get(clave);
-    const valor = typeof preparada === 'function' ? preparada({ cuerpo, url: req.url }) : preparada;
+    const valor = typeof preparada === 'function' ? preparada({ cuerpo, url: req.url, credencial }) : preparada;
     if (valor === undefined) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: `la prueba no preparó respuesta para ${clave}` }));
@@ -160,6 +162,18 @@ function filaQuePasaLosFiltros(url, filas) {
   );
 }
 
+/**
+ * Lo que la base deja ver según con qué credencial se le pide.
+ *
+ * Con la llave maestra ve todo. Con la credencial de una persona, sólo las filas de la Prestadora
+ * donde entró, que es lo que hace la protección por fila de verdad. Sin esto, la prueba de que la
+ * guardia de otra Prestadora no aparece pasaría igual con la llave maestra y sin filtro.
+ */
+function loQueVeLaCredencial(credencial, filas) {
+  if (credencial === 'Bearer clave-de-mentira') return filas;
+  return filas.filter((fila) => fila.prestadora_id === PRESTADORA);
+}
+
 /** Las alertas tempranas que el backend dio de alta en este pedido. */
 function alertasAnotadas() {
   return llamadas
@@ -186,7 +200,9 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'asistente', prestadora_id: PRESTADORA }]);
   // El Legajo con el que entra la sesión: lo busca el middleware por la cuenta y la Prestadora.
   respuestas.set('GET /rest/v1/asistentes', () => [{ id: LEGAJO, prestadora_id: PRESTADORA }]);
-  respuestas.set('GET /rest/v1/guardias', ({ url }) => filaQuePasaLosFiltros(url, guardiasEnLaBase));
+  respuestas.set('GET /rest/v1/guardias', ({ url, credencial }) =>
+    filaQuePasaLosFiltros(url, loQueVeLaCredencial(credencial, guardiasEnLaBase))
+  );
   respuestas.set('PATCH /rest/v1/guardias', () => []);
   respuestas.set('GET /rest/v1/alertas_tempranas_guardia', ({ url }) =>
     filaQuePasaLosFiltros(url, alertasEnLaBase)
@@ -285,10 +301,11 @@ describe('salida — el acto de avisar que se sale, que es lo que da los minutos
     assert.equal(guardiasActualizadas().length, 0);
   });
 
-  it('la escritura también va acotada a la Prestadora, no sólo la lectura', async () => {
+  it('la escritura también va con la credencial de quien pide, no sólo la lectura', async () => {
     await pedir('POST', `/guardias/${GUARDIA}/salida`, { lat: LAT, lng: LNG });
     const [escritura] = guardiasActualizadas();
-    assert.ok(escritura.url.includes(`prestadora_id=eq.${PRESTADORA}`), escritura.url);
+    assert.ok(escritura.credencial, 'la salida se escribió sin credencial');
+    assert.notEqual(escritura.credencial, 'Bearer clave-de-mentira', 'la salida se escribió con la llave maestra');
     assert.ok(escritura.url.includes(`id=eq.${GUARDIA}`), escritura.url);
   });
 });

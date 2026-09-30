@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
-import { supabase, enLaPrestadora } from '../db/connection.js';
+import { supabase, enLaPrestadora, clienteDelPedido } from '../db/connection.js';
+import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
 import { estructurarReporteIA, distanciaMetros } from '../utils/reporteIA.js';
 import { enviarPushCliente } from '../utils/push.js';
 import { analizarPaciente } from '../utils/revisarAlertasIA.js';
@@ -61,6 +62,15 @@ import {
 
 export const appAsistentesRouter = Router();
 
+// CON LA CREDENCIAL DE QUIEN PIDE. Lo que esta ruta lee y escribe entra a la base con
+// `clienteDelPedido(req)`, no con la llave maestra: la base sabe qué Asistente pide y le contesta
+// sólo lo suyo y de su Prestadora. Por eso esas consultas no llevan el filtro de la Prestadora de
+// la sesión, y la Prestadora que se escribe al guardar es la de una fila que la base ya dejó ver.
+//
+// Lo que sigue con la maestra lo dice en su renglón, con el motivo: casi siempre es una tabla en la
+// que la base todavía no tiene una política para el Asistente. Ahí el filtro de la Prestadora se
+// queda, porque es lo único que la separa de las otras.
+
 // Con qué datos del Paciente se dibuja la pantalla del Asistente en esta Prestadora. El
 // domicilio exacto y las patologías tienen cada uno su interruptor: hay quien da la dirección
 // recién al confirmar el turno, y hay quien no manda datos clínicos al teléfono de nadie.
@@ -98,13 +108,14 @@ function manejarErrorMulter(err, req, res, next) {
   next();
 }
 
-async function guardiaDelAsistente(guardiaId, usuarioAsistente) {
-  const { data } = await supabase
+// La guardia, si es de este Asistente. Si la base no la deja ver, para quien pide no existe: es de
+// otra persona o de otra Prestadora. La Prestadora de la fila es la que usa todo lo que sigue.
+async function guardiaDelAsistente(db, guardiaId, usuarioAsistente) {
+  const { data } = await db
     .from('guardias')
     .select('id, prestadora_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, checkout_bloqueado')
     .eq('id', guardiaId)
     .eq('asistente_id', usuarioAsistente.asistenteId)
-    .eq('prestadora_id', usuarioAsistente.prestadoraId)
     .maybeSingle();
   return data;
 }
@@ -161,13 +172,12 @@ function datosDeComprobacion(body) {
 
 // Cómo se llama quien llegó, para decírselo al Cliente. Si no se lo pudo averiguar, el mensaje
 // sale igual con una forma genérica: enterarse de que llegaron importa más que el nombre.
-async function nombreDeAsistente(asistenteId, prestadoraId) {
+async function nombreDeAsistente(db, asistenteId) {
   try {
-    const { data } = await supabase
+    const { data } = await db
       .from('asistentes')
       .select('nombre')
       .eq('id', asistenteId)
-      .eq('prestadora_id', prestadoraId)
       .maybeSingle();
     return data?.nombre ?? 'El Asistente asignado';
   } catch (e) {
@@ -183,6 +193,11 @@ async function nombreDeAsistente(asistenteId, prestadoraId) {
 // Devuelve una lista y no uno solo porque un turno que cubre a varios Pacientes lleva un
 // reporte por cada uno: el de la señora de la casa no es el del marido, y darlos por
 // equivalentes era escribir la comida, la medicación y la presión de los dos en la misma hoja.
+//
+// SIGUE CON LA LLAVE MAESTRA. La base deja ver un reporte sólo a quien atiende al Paciente por un
+// Servicio vigente, y esta ruta pregunta por los reportes de una guardia del Asistente sin mirar el
+// Servicio: con la credencial de quien pide, una guardia sin Servicio vigente parecería sin
+// reportes y no se podría cerrar.
 async function reportesDeLaGuardia(guardiaId, prestadoraId) {
   const { data } = await supabase
     .from('reportes')
@@ -208,24 +223,20 @@ async function pacientesSinReporte(guardia) {
 // ============================================================================
 
 appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
-  const { data: perfil, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data: perfil, error } = await db
     .from('asistentes')
     .select('id, nombre, telefono, email, foto_url, tipo_asistente_id, estado, tipo_vinculo, qr_token, canales, disponible_para_ofertas, disponibilidad_cambiada_en, tipos_asistente(id, clave, nombre, prestadora_id)')
-    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .eq('id', req.usuarioAsistente.asistenteId)
     .single();
   if (error || !perfil) {
     return res.status(404).json({ error: 'Perfil no encontrado' });
   }
 
-  // El filtro por Prestadora va aunque el identificador del Asistente ya sea de una sola: una
-  // misma persona tiene una ficha por cada Prestadora donde trabaja, y una consulta que no
-  // nombra la Organización queda a merced de que ese identificador nunca se repita. Es la misma
-  // consulta que hace `/perfil/papeles`, y se escribe igual.
-  const { data: certificado } = await supabase
+  // Es la misma consulta que hace `/perfil/papeles`, y se escribe igual.
+  const { data: certificado } = await db
     .from('certificados')
     .select('activo, fecha_emision, fecha_vencimiento')
-    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .order('fecha_emision', { ascending: false })
     .limit(1)
@@ -275,7 +286,11 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
 appAsistentesRouter.get('/perfil/papeles', requiereRolAsistente, async (req, res) => {
   const asistenteId = req.usuarioAsistente.asistenteId;
   const prestadoraId = req.usuarioAsistente.prestadoraId;
+  const db = clienteDelPedido(req);
 
+  // Los papeles exigidos y los cargados siguen con la llave maestra, y por eso con el filtro de la
+  // Prestadora: la base todavía no tiene una política que le deje leerlos al Asistente. El
+  // certificado y los días de aviso van con la credencial de quien pide.
   const [{ data: tiposExigidos }, { data: documentos }, { data: certificado }, { data: prestadora }] =
     await Promise.all([
       supabase
@@ -289,18 +304,17 @@ appAsistentesRouter.get('/perfil/papeles', requiereRolAsistente, async (req, res
         .select('tipo_documento_id, fecha_vencimiento')
         .eq('prestadora_id', prestadoraId)
         .eq('asistente_id', asistenteId),
-      supabase
+      db
         .from('certificados')
         .select('activo, fecha_emision, fecha_vencimiento')
-        .eq('prestadora_id', prestadoraId)
         .eq('asistente_id', asistenteId)
         .order('fecha_emision', { ascending: false })
         .limit(1)
         .maybeSingle(),
-      supabase
+      // La base le deja ver al Asistente una sola Prestadora, la suya.
+      db
         .from('prestadoras')
         .select('dias_aviso_vencimiento_documentos')
-        .eq('id', prestadoraId)
         .maybeSingle(),
     ]);
 
@@ -323,8 +337,8 @@ appAsistentesRouter.get('/perfil/papeles', requiereRolAsistente, async (req, res
 // sensible que viaja en cada arranque viaja muchas más veces de las que hace falta.
 //
 // DE QUIÉN SON LOS DATOS LO DECIDE LA SESIÓN: no hay ningún identificador en el pedido, así que no
-// hay nada que falsificar. El filtro por Prestadora va igual que en el resto de estas rutas, porque
-// una misma persona tiene una ficha por cada Prestadora donde trabaja.
+// hay nada que falsificar. Y la base, que recibe la credencial de quien pide, contesta sólo las
+// filas de su ficha en la Prestadora donde entró.
 //
 // ACÁ SE MIRA, Y AL LADO SE CORRIGE. El dato lo informa su dueño, así que él lo carga y él lo
 // corrige, por `/perfil/datos-bancarios/:clase`, que está unos renglones más abajo. Por esta
@@ -335,12 +349,11 @@ appAsistentesRouter.get('/perfil/papeles', requiereRolAsistente, async (req, res
 // error. Si la base falla, se contesta sin contar nada de lo que se estaba leyendo.
 appAsistentesRouter.get('/perfil/datos-bancarios', requiereRolAsistente, async (req, res) => {
   const asistenteId = req.usuarioAsistente.asistenteId;
-  const prestadoraId = req.usuarioAsistente.prestadoraId;
+  const db = clienteDelPedido(req);
 
-  const { data: cuentas, error } = await supabase
+  const { data: cuentas, error } = await db
     .from('datos_bancarios_asistente')
     .select('pais, identificador_clase, identificador, banco, titular, updated_at')
-    .eq('prestadora_id', prestadoraId)
     .eq('asistente_id', asistenteId);
 
   if (error) {
@@ -353,7 +366,7 @@ appAsistentesRouter.get('/perfil/datos-bancarios', requiereRolAsistente, async (
   const paises = [...new Set((cuentas || []).map((c) => c.pais))];
   let siglas = new Map();
   if (paises.length > 0) {
-    const { data: catalogo } = await supabase
+    const { data: catalogo } = await db
       .from('catalogo_identificadores_de_cuenta')
       .select('pais, codigo, sigla')
       .in('pais', paises);
@@ -407,8 +420,9 @@ function textoDeLaCuenta(valor, maximo) {
 // índice único `un_identificador_por_clase_y_asistente`.
 //
 // DE QUIÉN ES LA FILA LO DECIDE LA SESIÓN. Ni el Legajo ni la Prestadora viajan en el pedido, así
-// que no hay dónde escribir los de otra persona. La base lo vuelve a resolver por su cuenta con la
-// política `asistente_corrige_sus_datos_bancarios`, que mira la sesión y no el pedido.
+// que no hay dónde escribir los de otra persona. Todo va con la credencial de quien pide, y la base
+// lo vuelve a resolver por su cuenta con las políticas `asistente_corrige_sus_datos_bancarios` y
+// `asistente_carga_sus_datos_bancarios`, que miran la sesión y no el pedido.
 //
 // SE VALIDA ACÁ LO QUE ENTRA, aunque la base tenga su propio control. La comprobación de la base
 // llega después de que el dato ya entró, y además contesta con el texto crudo de una restricción,
@@ -417,7 +431,7 @@ function textoDeLaCuenta(valor, maximo) {
 // Y QUEDA ANOTADO QUIÉN LO CAMBIÓ. Se anota la fila y los nombres de las columnas escritas. **Nunca
 // el número de la cuenta**: para verlo se mira la fila, que es justamente lo que se audita.
 appAsistentesRouter.put('/perfil/datos-bancarios/:clase', requiereRolAsistente, async (req, res) => {
-  const { asistenteId, prestadoraId } = req.usuarioAsistente;
+  const { asistenteId } = req.usuarioAsistente;
   const clase = String(req.params.clase || '').trim().toLowerCase();
 
   const { identificador, banco, titular } = req.body || {};
@@ -444,11 +458,12 @@ appAsistentesRouter.put('/perfil/datos-bancarios/:clase', requiereRolAsistente, 
   }
 
   // En qué país se paga lo dice la Prestadora, no el pedido: el catálogo de clases es por país, y
-  // dejar elegir el país sería dejar elegir qué clases valen.
-  const { data: prestadora, error: errorPrestadora } = await supabase
+  // dejar elegir el país sería dejar elegir qué clases valen. La base le deja ver al Asistente una
+  // sola Prestadora, la suya, y de esa fila sale también la Prestadora de la cuenta que se carga.
+  const db = clienteDelPedido(req);
+  const { data: prestadora, error: errorPrestadora } = await db
     .from('prestadoras')
-    .select('pais')
-    .eq('id', prestadoraId)
+    .select('id, pais')
     .maybeSingle();
   if (errorPrestadora) {
     return res.status(500).json({ error: 'No se pudieron guardar los datos bancarios' });
@@ -457,7 +472,7 @@ appAsistentesRouter.put('/perfil/datos-bancarios/:clase', requiereRolAsistente, 
     return res.status(409).json({ error: 'Todavía no está configurado el país', motivo: 'pais_sin_configurar' });
   }
 
-  const { data: admitida, error: errorCatalogo } = await supabase
+  const { data: admitida, error: errorCatalogo } = await db
     .from('catalogo_identificadores_de_cuenta')
     .select('codigo')
     .eq('pais', prestadora.pais)
@@ -474,12 +489,11 @@ appAsistentesRouter.put('/perfil/datos-bancarios/:clase', requiereRolAsistente, 
   const escrito = { identificador: numero, banco: nombreDelBanco, titular: nombreDelTitular };
 
   // Primero se corrige la que haya, y si no había ninguna se carga. Se hace en dos pasos y no en
-  // uno para que los tres filtros de pertenencia estén escritos: una escritura que resuelve sola
-  // contra qué fila choca no lleva ninguno.
-  const { data: corregida, error: errorCorreccion } = await supabase
+  // uno para que los filtros de pertenencia estén escritos: una escritura que resuelve sola contra
+  // qué fila choca no lleva ninguno.
+  const { data: corregida, error: errorCorreccion } = await db
     .from('datos_bancarios_asistente')
     .update({ ...escrito, updated_at: new Date().toISOString() })
-    .eq('prestadora_id', prestadoraId)
     .eq('asistente_id', asistenteId)
     .eq('identificador_clase', clase)
     .select('id, updated_at');
@@ -489,10 +503,10 @@ appAsistentesRouter.put('/perfil/datos-bancarios/:clase', requiereRolAsistente, 
 
   let fila = corregida?.[0] ?? null;
   if (!fila) {
-    const { data: cargada, error: errorAlta } = await supabase
+    const { data: cargada, error: errorAlta } = await db
       .from('datos_bancarios_asistente')
       .insert({
-        prestadora_id: prestadoraId,
+        prestadora_id: prestadora.id,
         asistente_id: asistenteId,
         pais: prestadora.pais,
         identificador_clase: clase,
@@ -529,13 +543,12 @@ appAsistentesRouter.put('/perfil/datos-bancarios/:clase', requiereRolAsistente, 
 //
 // La sesión decide qué fila se saca, igual que arriba, y queda anotado que se sacó.
 appAsistentesRouter.delete('/perfil/datos-bancarios/:clase', requiereRolAsistente, async (req, res) => {
-  const { asistenteId, prestadoraId } = req.usuarioAsistente;
+  const { asistenteId } = req.usuarioAsistente;
   const clase = String(req.params.clase || '').trim().toLowerCase();
 
-  const { data: sacada, error } = await supabase
+  const { data: sacada, error } = await clienteDelPedido(req)
     .from('datos_bancarios_asistente')
     .delete()
-    .eq('prestadora_id', prestadoraId)
     .eq('asistente_id', asistenteId)
     .eq('identificador_clase', clase)
     .select('id');
@@ -571,6 +584,9 @@ appAsistentesRouter.patch('/perfil/disponibilidad', requiereRolAsistente, async 
 
   // Se pide de vuelta la fila que se tocó: la base contesta que salió bien aunque no haya
   // encontrado ninguna, y acá lo que se muestra después es justamente el estado del interruptor.
+  //
+  // SIGUE CON LA LLAVE MAESTRA: la base no tiene ninguna política que le deje al Asistente
+  // corregir su propia ficha, así que con su credencial la escritura no alcanzaría ninguna fila.
   const { data: guardada, error } = await supabase
     .from('asistentes')
     .update({ disponible_para_ofertas: disponible, disponibilidad_cambiada_en: new Date().toISOString() })
@@ -600,11 +616,10 @@ appAsistentesRouter.patch('/perfil/disponibilidad', requiereRolAsistente, async 
 // un turno de enero puede caer en la temporada en que el Paciente está en la casa de un hijo
 // (`utils/domicilioDelDia.js`).
 appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
-  const { data, error } = await supabase
+  const { data, error } = await clienteDelPedido(req)
     .from('guardias')
     .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, checkout_bloqueado')
     .eq('asistente_id', req.usuarioAsistente.asistenteId)
-    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .order('fecha', { ascending: false })
     .order('hora_inicio', { ascending: false })
     .limit(100);
@@ -623,12 +638,12 @@ appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
 });
 
 appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) => {
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('guardias')
     .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, modalidad, estado, salida_checkin_at, medio_transporte, checkin_at, checkout_at, checkout_bloqueado')
     .eq('id', req.params.id)
     .eq('asistente_id', req.usuarioAsistente.asistenteId)
-    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .maybeSingle();
 
   if (error || !data) {
@@ -669,11 +684,10 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
   //
   // El tipo se pide acá y no se guarda con la guardia: si la Prestadora corrige el catálogo,
   // el cambio tiene que llegar al próximo turno sin arrastrar la copia vieja.
-  const { data: quienEs } = await supabase
+  const { data: quienEs } = await db
     .from('asistentes')
     .select('tipo_asistente_id')
     .eq('id', req.usuarioAsistente.asistenteId)
-    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .maybeSingle();
 
   const { tipo, tareas } = await tipoConSusTareas(
@@ -688,6 +702,8 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
 
   // Si quedó un descanso abierto, la pantalla tiene que ofrecer terminarlo y no empezar otro. Es
   // una sola fila como máximo: la base no admite dos abiertos en la misma guardia.
+  //
+  // SIGUE CON LA LLAVE MAESTRA: `descansos_guardia` no tiene ninguna política para el Asistente.
   const { data: descansoAbierto } = await supabase
     .from('descansos_guardia')
     .select('id, inicio_at')
@@ -703,6 +719,27 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
     guardiaId: data.id,
     prestadoraId: req.usuarioAsistente.prestadoraId,
   });
+
+  // Lo que esta respuesta muestra de la salud de cada Paciente queda anotado antes de salir: las
+  // patologías, si la Prestadora las deja ver, y sus signos vitales, si los toma. Si no se pudo
+  // anotar, no se muestra.
+  const categorias = [
+    ...(visibilidad.asistente_patologias_del_paciente ? ['pacientes'] : []),
+    ...(visibilidad.asistente_signos_vitales ? ['rangos_referencia_vitales', 'autorizaciones_monitoreo_paciente'] : []),
+  ];
+  if (categorias.length) {
+    try {
+      for (const p of guardia.pacientes ?? []) {
+        await anotarConsultaAHce(
+          req.usuarioAsistente,
+          { pacienteId: p.id, categorias, origen: origenDelPedido(req) },
+          { cliente: db },
+        );
+      }
+    } catch (e) {
+      return responderError(res, e);
+    }
+  }
 
   res.json({
     guardia,
@@ -738,7 +775,8 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
   // #113): se junta además de lat/lng de arriba, no en cambio de ellas.
   const comprobacionPedida = datosDeComprobacion(req.body);
 
-  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  const db = clienteDelPedido(req);
+  const guardia = await guardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
   if (!guardia) {
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }
@@ -778,10 +816,9 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
     return responderError(res, e);
   }
 
-  const { data: config } = await supabase
+  const { data: config } = await db
     .from('configuracion_ausencia_automatica')
     .select('metros_tolerancia_checkin')
-    .eq('prestadora_id', guardia.prestadora_id)
     .maybeSingle();
 
   // Con varios Pacientes se mide contra el domicilio MÁS CERCANO. Casi siempre viven todos en
@@ -817,7 +854,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
   // guardado es dónde estaba.
   const registraUbicacion = await puedeRegistrarUbicacion(guardia.asistente_id);
 
-  const { error } = await supabase
+  const { error } = await db
     .from('guardias')
     .update({
       checkin_at: new Date().toISOString(),
@@ -825,8 +862,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
       checkin_lng: registraUbicacion ? lng : null,
       estado: 'activa',
     })
-    .eq('id', guardia.id)
-    .eq('prestadora_id', guardia.prestadora_id);
+    .eq('id', guardia.id);
   if (error) {
     return responderError(res, error);
   }
@@ -846,7 +882,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
   // Se envía una sola vez porque checkin_at ya se validó arriba como no seteado antes de este
   // UPDATE.
   const conCliente = pacientes.filter((p) => p.cliente_id);
-  const nombreDelAsistente = await nombreDeAsistente(guardia.asistente_id, guardia.prestadora_id);
+  const nombreDelAsistente = await nombreDeAsistente(db, guardia.asistente_id);
   //
   // Sigue corriendo después de contestar, así que entra con la credencial de esta Prestadora.
   for (const p of conCliente) {
@@ -857,7 +893,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
     })).catch((err) => console.error('Error enviando push de llegada a Cliente:', err.message));
   }
   if (conCliente.length > 0) {
-    await supabase.from('guardias').update({ push_llegada_enviado_at: new Date().toISOString() }).eq('id', guardia.id).eq('prestadora_id', guardia.prestadora_id);
+    await db.from('guardias').update({ push_llegada_enviado_at: new Date().toISOString() }).eq('id', guardia.id);
   }
 
   if (!dentroDeRango && req.usuarioAsistente.prestadoraId) {
@@ -876,7 +912,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
       ? 'del domicilio temporal del Paciente, el que regía ese día'
       : 'del domicilio del Paciente';
 
-    await supabase.from('mensajes_asistente').insert({
+    await db.from('mensajes_asistente').insert({
       asistente_id: guardia.asistente_id,
       prestadora_id: guardia.prestadora_id,
       usuario_id: guardia.asistente_id,
@@ -928,7 +964,7 @@ appAsistentesRouter.post('/guardias/:id/salida', requiereRolAsistente, async (re
     return res.status(400).json({ error: 'Ubicación inválida' });
   }
 
-  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  const guardia = await guardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
   if (!guardia) {
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }
@@ -950,7 +986,7 @@ appAsistentesRouter.post('/guardias/:id/salida', requiereRolAsistente, async (re
   }
 
   const salidaAt = new Date().toISOString();
-  const { error } = await supabase
+  const { error } = await clienteDelPedido(req)
     .from('guardias')
     .update({
       salida_checkin_at: salidaAt,
@@ -958,8 +994,7 @@ appAsistentesRouter.post('/guardias/:id/salida', requiereRolAsistente, async (re
       salida_lng: hayPunto ? lng : null,
       medio_transporte: medioDeTransporteDelPedido(req.body),
     })
-    .eq('id', guardia.id)
-    .eq('prestadora_id', req.usuarioAsistente.prestadoraId);
+    .eq('id', guardia.id);
 
   if (error) {
     return responderError(res, error);
@@ -976,7 +1011,7 @@ appAsistentesRouter.post('/guardias/:id/aviso-demora', requiereRolAsistente, asy
   const pedido = typeof req.body?.motivo === 'string' ? req.body.motivo.trim() : '';
   const motivo = MOTIVOS_DEMORA.includes(pedido) ? pedido : 'otro';
 
-  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  const guardia = await guardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
   if (!guardia) {
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }
@@ -989,6 +1024,9 @@ appAsistentesRouter.post('/guardias/:id/aviso-demora', requiereRolAsistente, asy
   // Un aviso por guardia mientras el anterior siga abierto. Sin esto, la cola sin conexión
   // podría dejar tres filas iguales y el Coordinador vería tres alertas de la misma persona por
   // el mismo viaje.
+  //
+  // SIGUE CON LA LLAVE MAESTRA, igual que las otras dos escrituras de esta ruta:
+  // `alertas_tempranas_guardia` no tiene ninguna política para el Asistente.
   const { data: yaAbierta } = await supabase
     .from('alertas_tempranas_guardia')
     .select('id, motivo, detectado_at')
@@ -1074,7 +1112,7 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
     return responderError(res, new ErrorConMotivo('faltan_datos', 'emergencia sin detalle'));
   }
 
-  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  const guardia = await guardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
   if (!guardia) {
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }
@@ -1098,6 +1136,8 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
     return res.json({ ok: true, yaRegistrado: true, reportadoAt: yaEstaba.reportado_at });
   }
 
+  // SIGUE CON LA LLAVE MAESTRA, igual que la marca del aviso de más abajo: `emergencias_guardia`
+  // no tiene ninguna política que le deje escribir al Asistente.
   const { data: emergencia, error } = await supabase
     .from('emergencias_guardia')
     .insert({
@@ -1165,11 +1205,13 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
    entrando al Panel (`celtatech/CLAUDE.md` §6). Y el detalle es opcional: quien está en el medio
    de algo puede no estar en condiciones de escribir nada. */
 appAsistentesRouter.post('/guardias/:id/no-puedo-continuar', requiereRolAsistente, async (req, res) => {
-  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  const guardia = await guardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
   if (!guardia) {
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }
 
+  // SIGUE CON LA LLAVE MAESTRA, igual que las dos escrituras de más abajo: `extensiones_de_turno`
+  // no tiene ninguna política para el Asistente.
   const { data: extension, error: errorExtension } = await supabase
     .from('extensiones_de_turno')
     .select('id, no_puede_continuar_at')
@@ -1251,9 +1293,12 @@ appAsistentesRouter.post('/guardias/:id/no-puedo-continuar', requiereRolAsistent
    justificar.
 
    NO HAY TOPE NI HORARIO PERMITIDO. Cuánto y cuándo sale de cómo viene el servicio ese día, no de
-   un número fijado de antemano (decisión del Desarrollador). */
+   un número fijado de antemano (decisión del Desarrollador).
+
+   SIGUEN CON LA LLAVE MAESTRA las lecturas y escrituras de `descansos_guardia`: la tabla no tiene
+   ninguna política para el Asistente. La guardia, en cambio, se busca con su credencial. */
 appAsistentesRouter.post('/guardias/:id/descanso/empezar', requiereRolAsistente, async (req, res) => {
-  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  const guardia = await guardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
   if (!guardia) {
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }
@@ -1297,7 +1342,7 @@ appAsistentesRouter.post('/guardias/:id/descanso/empezar', requiereRolAsistente,
 });
 
 appAsistentesRouter.post('/guardias/:id/descanso/terminar', requiereRolAsistente, async (req, res) => {
-  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  const guardia = await guardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
   if (!guardia) {
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }
@@ -1359,7 +1404,7 @@ appAsistentesRouter.post('/guardias/:id/reporte/estructurar', requiereRolAsisten
     return res.status(400).json({ error: 'Falta el texto del reporte' });
   }
 
-  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  const guardia = await guardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
   if (!guardia) {
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }
@@ -1386,7 +1431,7 @@ appAsistentesRouter.post(
     if (!req.file) {
       return res.status(400).json({ error: 'Falta la foto' });
     }
-    const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+    const guardia = await guardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
     if (!guardia) {
       return res.status(404).json({ error: 'Guardia no encontrada' });
     }
@@ -1394,6 +1439,8 @@ appAsistentesRouter.post(
     const extension = req.file.mimetype === 'image/png' ? 'png' : 'jpg';
     const ruta = `${guardia.prestadora_id}/${guardia.id}/${Date.now()}.${extension}`;
 
+    // SIGUE CON LA LLAVE MAESTRA: la política del depósito compara la guardia con la cuenta de
+    // quien pide y no con su Legajo, así que con su credencial la subida se rechazaría siempre.
     const { error } = await supabase.storage
       .from('reportes-fotos')
       .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
@@ -1416,7 +1463,8 @@ appAsistentesRouter.post(
 appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente, async (req, res) => {
   const { pacienteId, textoLibre, alimentacion, medicacion, signosVitales, estadoAnimo, incidentes, observaciones, fotoUrl } = req.body;
 
-  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  const db = clienteDelPedido(req);
+  const guardia = await guardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
   if (!guardia) {
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }
@@ -1457,6 +1505,9 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
   // historia clínica de un Paciente un dato que esa Prestadora decidió no tomar.
   const visibilidad = await visibilidadDelPedido(req);
 
+  // SIGUE CON LA LLAVE MAESTRA por lo mismo que `reportesDeLaGuardia`: devolver la fila recién
+  // escrita pide poder leerla, y la base sólo deja leer la información de salud a quien atiende al
+  // Paciente en un Servicio vigente, que una guardia puede no tener.
   const { data: reporte, error: errorReporte } = await supabase
     .from('reportes')
     .insert({
@@ -1480,17 +1531,19 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
     return responderError(res, errorReporte);
   }
 
-  const { error: errorGuardia } = await supabase
+  const { error: errorGuardia } = await db
     .from('guardias')
     .update({ push_reporte_enviado_at: new Date().toISOString() })
-    .eq('id', guardia.id)
-    .eq('prestadora_id', guardia.prestadora_id);
+    .eq('id', guardia.id);
   if (errorGuardia) {
     return responderError(res, errorGuardia);
   }
 
   // El mensaje va al Cliente de este Paciente y a ninguna otra: el reporte habla de él. Si el
   // turno cubre a dos hermanos, cada Cliente recibe el suyo cuando le toca, no el del otro.
+  //
+  // SIGUE CON LA LLAVE MAESTRA: la función de la base que dice qué Pacientes le tocan a un
+  // Asistente compara las guardias con su cuenta y no con su Legajo, y no le devuelve ninguno.
   const { data: datosPaciente } = await supabase
     .from('pacientes')
     .select('cliente_id')
@@ -1558,7 +1611,8 @@ appAsistentesRouter.post('/guardias/:id/checkout', requiereRolAsistente, topeDeP
   // #113): se junta además de lat/lng de arriba, no en cambio de ellas.
   const comprobacionPedida = datosDeComprobacion(req.body);
 
-  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  const db = clienteDelPedido(req);
+  const guardia = await guardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
   if (!guardia) {
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }
@@ -1607,7 +1661,7 @@ appAsistentesRouter.post('/guardias/:id/checkout', requiereRolAsistente, topeDeP
   // consentimiento de seguimiento vigente.
   const registraUbicacion = await puedeRegistrarUbicacion(guardia.asistente_id);
 
-  const { data: cerrada, error } = await supabase
+  const { data: cerrada, error } = await db
     .from('guardias')
     .update({
       checkout_at: new Date().toISOString(),
@@ -1616,7 +1670,6 @@ appAsistentesRouter.post('/guardias/:id/checkout', requiereRolAsistente, topeDeP
       estado: 'completada',
     })
     .eq('id', guardia.id)
-    .eq('prestadora_id', guardia.prestadora_id)
     .eq('estado', 'activa')
     .select('id');
   if (error) {
@@ -1660,7 +1713,7 @@ appAsistentesRouter.post('/guardias/:id/comprobacion/pedido', requiereRolAsisten
     return res.status(400).json({ error: 'Momento inválido', motivo: 'faltan_datos' });
   }
 
-  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  const guardia = await guardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
   if (!guardia) return res.status(404).json({ error: 'Guardia no encontrada' });
 
   try {
@@ -1679,7 +1732,7 @@ appAsistentesRouter.get('/guardias/:id/comprobacion/:momento', requiereRolAsiste
     return res.status(400).json({ error: 'Momento inválido', motivo: 'faltan_datos' });
   }
 
-  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  const guardia = await guardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
   if (!guardia) return res.status(404).json({ error: 'Guardia no encontrada' });
 
   const fila = await comprobacionDe({
@@ -1706,7 +1759,8 @@ appAsistentesRouter.patch('/guardias/:id/ubicacion', requiereRolAsistente, exige
     return res.status(400).json({ error: 'Faltan coordenadas GPS' });
   }
 
-  const guardia = await guardiaDelAsistente(req.params.id, req.usuarioAsistente);
+  const db = clienteDelPedido(req);
+  const guardia = await guardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
   if (!guardia || guardia.estado !== 'activa') {
     return res.status(404).json({ error: 'Guardia activa no encontrada' });
   }
@@ -1720,11 +1774,10 @@ appAsistentesRouter.patch('/guardias/:id/ubicacion', requiereRolAsistente, exige
 
   // Solo mientras la guardia siga activa: si se cerró entre la lectura de arriba y esta línea,
   // el mapa del Cliente no tiene que seguir moviéndose. Y si no se escribió nada, se dice.
-  const { data: marcada, error } = await supabase
+  const { data: marcada, error } = await db
     .from('guardias')
     .update({ ubicacion_actual_lat: lat, ubicacion_actual_lng: lng, ubicacion_actual_at: new Date().toISOString() })
     .eq('id', guardia.id)
-    .eq('prestadora_id', guardia.prestadora_id)
     .eq('estado', 'activa')
     .select('id');
   if (error) {
@@ -1752,6 +1805,10 @@ appAsistentesRouter.get('/pacientes/:id/reportes', requiereRolAsistente, exigeVi
   // ánimo, los incidentes y la foto: ocho datos de salud que llegaban al teléfono y que
   // ninguna pantalla dibujaba. Si alguna vez hace falta mostrar alguno, se agrega acá con su
   // interruptor, no se deja "por las dudas" (tarea 65).
+  //
+  // SIGUE CON LA LLAVE MAESTRA: la base sólo deja leer los reportes a quien atiende al Paciente en
+  // un Servicio vigente, y de las guardias de otros Asistentes no le deja ver ninguna, así que con
+  // su credencial se perderían los reportes de los turnos que no fueron suyos.
   const { data, error } = await supabase
     .from('reportes')
     .select('id, observaciones, created_at, guardias!inner(fecha)')
@@ -1762,6 +1819,21 @@ appAsistentesRouter.get('/pacientes/:id/reportes', requiereRolAsistente, exigeVi
   if (error) {
     return responderError(res, error);
   }
+
+  // Lo que se muestra de la salud de este Paciente queda anotado antes de salir. Si no se pudo
+  // anotar, no se muestra.
+  if (data?.length) {
+    try {
+      await anotarConsultaAHce(
+        req.usuarioAsistente,
+        { pacienteId: req.params.id, categorias: ['reportes'], origen: origenDelPedido(req) },
+        { cliente: clienteDelPedido(req) },
+      );
+    } catch (e) {
+      return responderError(res, e);
+    }
+  }
+
   res.json({ reportes: data });
 });
 
@@ -1796,13 +1868,11 @@ appAsistentesRouter.delete('/push/suscribir', requiereRolAsistente, async (req, 
     return res.status(400).json({ error: 'Falta el endpoint de la suscripción' });
   }
 
-  // El filtro por Prestadora va aunque el identificador del Asistente ya sea de una sola: el backend
-  // entra con la llave de servicio y se saltea la protección por fila, así que lo único que separa
-  // una Prestadora de otra son estos filtros. Y esto borra.
-  const { error } = await supabase
+  // Va con la credencial de quien pide: la base sólo deja borrar las suscripciones de su propia
+  // ficha en la Prestadora donde entró.
+  const { error } = await clienteDelPedido(req)
     .from('push_subscriptions')
     .delete()
-    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .eq('endpoint', endpoint)
     .eq('asistente_id', req.usuarioAsistente.asistenteId);
   if (error) {
@@ -1821,12 +1891,11 @@ appAsistentesRouter.delete('/push/suscribir', requiereRolAsistente, async (req, 
 // ============================================================================
 
 appAsistentesRouter.get('/calificaciones', requiereRolAsistente, async (req, res) => {
-  // Mismo motivo que en la baja del mensaje al celular: una misma persona tiene una ficha por cada
-  // Prestadora donde trabaja, y sin este filtro vería las calificaciones de la otra.
-  const { data, error } = await supabase
+  // La base ya contesta sólo lo de su Prestadora. El filtro por Legajo va igual, porque dentro de
+  // la Prestadora la base deja ver las calificaciones de todos.
+  const { data, error } = await clienteDelPedido(req)
     .from('calificaciones_asistente')
     .select('id, estrellas, comentario, visible_publica, descargo_asistente, descargo_en, created_at')
-    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .order('created_at', { ascending: false });
   if (error) return responderError(res, error);
@@ -1841,10 +1910,10 @@ appAsistentesRouter.patch('/calificaciones/:id/descargo', requiereRolAsistente, 
     return res.status(400).json({ error: 'Falta el texto del descargo', motivo: 'descargo_vacio' });
   }
 
-  const { data: calificacion } = await supabase
+  const db = clienteDelPedido(req);
+  const { data: calificacion } = await db
     .from('calificaciones_asistente')
     .select('id, descargo_asistente')
-    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .eq('id', req.params.id)
     .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .maybeSingle();
@@ -1863,11 +1932,10 @@ appAsistentesRouter.patch('/calificaciones/:id/descargo', requiereRolAsistente, 
   // afecta, y que no puede volver a cargar. La base contesta que salió bien aunque no haya
   // encontrado la fila, así que se pide que devuelva la que tocó: si no volvió ninguna, el
   // descargo no quedó guardado y hay que decirlo, nunca contestar que sí.
-  const { data: guardada, error } = await supabase
+  const { data: guardada, error } = await db
     .from('calificaciones_asistente')
     .update({ descargo_asistente: descargo.trim(), descargo_en: new Date().toISOString() })
     .eq('id', req.params.id)
-    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .select('id');
   if (error) return responderError(res, error);
@@ -1896,12 +1964,11 @@ appAsistentesRouter.patch('/calificaciones/:id/descargo', requiereRolAsistente, 
 
 /** El hilo que se pide, comprobando que sea suyo y de esta Prestadora. El que no existe y el
  *  ajeno contestan lo mismo. */
-async function conversacionDelAsistente(req) {
-  const { data } = await supabase
+async function conversacionDelAsistente(db, req) {
+  const { data } = await db
     .from('conversaciones_match')
     .select('id, prestadora_id, cliente_id, asistente_id, ultimo_mensaje_at, sala_videollamada, sala_abierta_at')
     .eq('id', req.params.id)
-    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .maybeSingle();
 
@@ -1926,10 +1993,10 @@ async function nombreDeLaCliente(clienteId, prestadoraId) {
 appAsistentesRouter.get('/match/conversaciones', requiereRolAsistente, async (req, res) => {
   try {
     await exigeMatch(req);
-    const { data, error } = await supabase
+    const db = clienteDelPedido(req);
+    const { data, error } = await db
       .from('conversaciones_match')
       .select('id, cliente_id, ultimo_mensaje_at')
-      .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
       .eq('asistente_id', req.usuarioAsistente.asistenteId)
       .order('ultimo_mensaje_at', { ascending: false, nullsFirst: false });
     if (error) return responderError(res, error);
@@ -1939,10 +2006,9 @@ appAsistentesRouter.get('/match/conversaciones', requiereRolAsistente, async (re
     const [personas, { data: sinLeer }] = await Promise.all([
       cuentasDeLasFichas('clientes', hilos.map((c) => c.cliente_id), 'nombre', req.usuarioAsistente.prestadoraId),
       hilos.length
-        ? supabase
+        ? db
             .from('mensajes_match')
             .select('conversacion_id')
-            .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
             .in('conversacion_id', hilos.map((c) => c.id))
             .eq('lado', 'cliente')
             .is('leido_at', null)
@@ -1969,7 +2035,7 @@ appAsistentesRouter.get('/match/conversaciones', requiereRolAsistente, async (re
 appAsistentesRouter.get('/match/conversaciones/:id', requiereRolAsistente, async (req, res) => {
   try {
     await exigeMatch(req);
-    const conversacion = await conversacionDelAsistente(req);
+    const conversacion = await conversacionDelAsistente(clienteDelPedido(req), req);
 
     // El refresco del hilo abierto pide nada más lo posterior a lo que ya tiene. Sin `desde` sale
     // el hilo entero, que es lo que hace falta al abrirlo.
@@ -2001,7 +2067,7 @@ appAsistentesRouter.get('/match/conversaciones/:id', requiereRolAsistente, async
 appAsistentesRouter.post('/match/conversaciones/:id/mensajes', requiereRolAsistente, async (req, res) => {
   try {
     await exigeMatch(req);
-    const conversacion = await conversacionDelAsistente(req);
+    const conversacion = await conversacionDelAsistente(clienteDelPedido(req), req);
 
     const cuerpo = String(req.body?.cuerpo ?? '').trim();
     if (!cuerpo) throw new ErrorConMotivo('faltan_datos');
@@ -2024,7 +2090,7 @@ appAsistentesRouter.post('/match/conversaciones/:id/mensajes', requiereRolAsiste
 appAsistentesRouter.post('/match/conversaciones/:id/videollamada', requiereRolAsistente, async (req, res) => {
   try {
     await exigeMatch(req);
-    const conversacion = await conversacionDelAsistente(req);
+    const conversacion = await conversacionDelAsistente(clienteDelPedido(req), req);
     const sala = await abrirVideollamada({
       conversacion,
       lado: LADO.ASISTENTE,

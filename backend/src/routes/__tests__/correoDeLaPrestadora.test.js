@@ -51,7 +51,7 @@ const baseFalsa = createServer((req, res) => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
     const cuerpo = crudo ? JSON.parse(crudo) : null;
-    llamadas.push({ clave, url: req.url, cuerpo });
+    llamadas.push({ clave, url: req.url, cuerpo, credencial: req.headers.authorization });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada({ cuerpo, url: req.url }) : preparada;
@@ -143,9 +143,10 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/configuracion_plataforma', () => [{ mfa_admin_obligatorio: false }]);
   respuestas.set('GET /rest/v1/permisos_de_acceso', () => []);
   // Las dos columnas que se le preguntan a la Prestadora, juntas: la casilla desde la que manda y
-  // el reenvío que tiene abierto hoy.
+  // el reenvío que tiene abierto hoy. Y su identificador, porque la Prestadora con la que se
+  // escribe es la que la base deja ver a quien pide.
   respuestas.set('GET /rest/v1/prestadoras', () => [
-    { casilla_envio: 'unaprestadora', regla_reenvio: REGLA_VIEJA },
+    { id: PRESTADORA, casilla_envio: 'unaprestadora', regla_reenvio: REGLA_VIEJA },
   ]);
   respuestas.set('PATCH /rest/v1/prestadoras', () => []);
   respuestas.set('GET /rest/v1/configuracion_prestadora', () => [{ email: 'respuestas@ejemplo.test' }]);
@@ -185,10 +186,10 @@ describe('leer cómo está el correo de la Prestadora', () => {
     assert.equal(cuerpo.correo.respuestas_confirmadas, false);
   });
 
-  it('lo que lee es de su propia Prestadora', async () => {
+  it('lo que lee va con la credencial de quien pide, y la base acota a su Prestadora', async () => {
     await pedir('GET', '/correo');
     const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/configuracion_prestadora');
-    assert.ok(busqueda.url.includes(`prestadora_id=eq.${PRESTADORA}`));
+    assert.equal(busqueda.credencial, sesionDePrueba(USUARIO));
   });
 });
 

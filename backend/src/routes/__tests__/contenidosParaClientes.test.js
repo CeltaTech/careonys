@@ -9,9 +9,12 @@
  *
  * Los casos están escritos por el error que evitan:
  *
- *   1. QUE UNA PRESTADORA VEA O TOQUE EL CONTENIDO DE OTRA. El backend entra a la base con la llave
- *      de servicio y se saltea la protección por fila, así que lo único que separa a una de otra
- *      son los filtros escritos en cada consulta. Si falta uno, no falla nada: contesta de más.
+ *   1. QUE UNA PRESTADORA VEA O TOQUE EL CONTENIDO DE OTRA. Leer, del lado del Panel, va con la
+ *      credencial de quien pide, y lo que separa a una de otra es la protección por fila de la
+ *      base: lo que se sostiene acá es que esa consulta vaya de verdad con esa credencial.
+ *      Escribir sigue con la llave de servicio, que se saltea la protección por fila, así que ahí
+ *      lo único que separa a una de otra son los filtros escritos en cada consulta. Si falta uno,
+ *      no falla nada: contesta de más.
  *   2. QUE UN BORRADOR LLEGUE A UNA CLIENTE. Publicar es una decisión de quien escribe, y hasta
  *      que la toma lo escrito existe sólo del lado del Panel.
  *   3. QUE ESCRIBA QUIEN LA PRESTADORA NO HABILITÓ. Leer la biblioteca es de cualquiera del
@@ -48,7 +51,7 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null });
+    llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null, credencial: req.headers.authorization });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada({ url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null }) : preparada;
@@ -95,10 +98,14 @@ after(() => {
   baseFalsa.close();
 });
 
+/** La credencial que mandó el último pedido. */
+let credencialEnviada = null;
+
 async function pedir(metodo, ruta, cuerpo) {
+  credencialEnviada = sesionDePrueba(USUARIO);
   const respuesta = await fetch(`${RAIZ}${ruta}`, {
     method: metodo,
-    headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
+    headers: { Authorization: credencialEnviada, 'Content-Type': 'application/json' },
     body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
@@ -255,17 +262,26 @@ describe('quién toca la biblioteca', () => {
 // ---------------------------------------------------------------------------------------
 
 describe('el contenido de una Prestadora no se ve ni se toca desde otra', () => {
-  it('toda consulta del Panel lleva el filtro de Prestadora escrito', async () => {
+  it('leer la biblioteca desde el Panel va con la credencial de quien pide, no con la llave maestra', async () => {
+    respuestas.set('GET /rest/v1/contenidos_para_clientes', () => [CONTENIDO_EN_LA_BASE]);
+
+    await enElPanel('/');
+
+    const [lectura] = consultasALaBiblioteca();
+    assert.ok(lectura, 'la ruta tenía que consultar la base');
+    assert.equal(lectura.credencial, credencialEnviada);
+  });
+
+  it('toda escritura del Panel lleva el filtro de Prestadora escrito', async () => {
     respuestas.set('GET /rest/v1/contenidos_para_clientes', () => [CONTENIDO_EN_LA_BASE]);
     respuestas.set('PATCH /rest/v1/contenidos_para_clientes', () => [CONTENIDO_EN_LA_BASE]);
     respuestas.set('DELETE /rest/v1/contenidos_para_clientes', () => [{ id: CONTENIDO }]);
 
-    await enElPanel('/');
     await enElPanel(`/${CONTENIDO}`, 'PATCH', { publicado: true });
     await enElPanel(`/${CONTENIDO}`, 'DELETE');
 
     const consultas = consultasALaBiblioteca();
-    assert.ok(consultas.length >= 4);
+    assert.ok(consultas.length >= 3);
     for (const consulta of consultas) {
       assert.ok(
         consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`),
@@ -322,8 +338,10 @@ describe('la biblioteca del lado del Cliente', () => {
     assert.equal(estado, 200);
     assert.equal(cuerpo.contenidos.length, 1);
 
+    // La Prestadora la separa la base: la consulta sale con la credencial de la persona, y la
+    // política sólo deja ver lo de la Prestadora de su Cliente.
     const consulta = consultasALaBiblioteca()[0];
-    assert.ok(consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`), consulta.url);
+    assert.equal(consulta.credencial, credencialEnviada, 'la biblioteca no salió con la credencial de la persona');
     assert.ok(consulta.url.includes('publicado=eq.true'), `un borrador no sale hacia el Cliente: ${consulta.url}`);
   });
 

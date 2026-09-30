@@ -27,6 +27,16 @@ function manejarErrorMulter(err, req, res, next) {
   next();
 }
 
+// CON LA LLAVE MAESTRA, Y FILTRADO A MANO POR LA PRESTADORA. Esta ruta no pasa todavía a la
+// credencial de quien pide porque la base es más estrecha que lo que la ruta hace hoy, y cambiar
+// qué puede hacer cada rol se decide aparte:
+// - `pacientes` lleva la política restrictiva `oculta_pendientes_de_conformidad`, que esconde a
+//   todos los roles el Paciente importado que espera conformidad; con la credencial de la persona
+//   ese Paciente daría «no encontrado».
+// - El depósito sólo deja subir con `autorizaciones_monitoreo_las_gestiona_quien_administra`, que
+//   pide `es_admin_prestadora()` o `es_superadmin()`: el coordinador, que hoy sube la
+//   autorización, dejaría de poder.
+// Por eso también se conserva la comparación de la ruta del archivo con la del Paciente.
 async function pacienteDeLaPrestadora(pacienteId, usuarioPanel) {
   let query = supabase.from('pacientes').select('id, prestadora_id').eq('id', pacienteId);
   query = acotarAPrestadora(query, usuarioPanel);
@@ -37,8 +47,7 @@ async function pacienteDeLaPrestadora(pacienteId, usuarioPanel) {
 // Solo sube el archivo y devuelve la ruta de storage — el registro en
 // autorizaciones_monitoreo_paciente (nombre de quien avala, rol, tipo de firma, fecha) lo
 // inserta el Panel directamente vía supabase-js (RLS ya lo permite a admin_prestadora,
-// mismo criterio que el resto de la ficha del Paciente). Acá solo se resuelve el archivo,
-// porque el bucket es privado y sin policies (regla 7 de CLAUDE.md — dato sensible).
+// mismo criterio que el resto de la ficha del Paciente). Acá solo se resuelve el archivo.
 panelVitalesAutorizacionRouter.post(
   '/:pacienteId/archivo',
   requiereRolPanel,

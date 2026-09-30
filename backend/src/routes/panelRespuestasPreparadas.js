@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
-import { supabase } from '../db/connection.js';
+import { clienteDelPedido } from '../db/connection.js';
 import { responderError } from '../utils/errorConMotivo.js';
 import { ACCION_MODIFICACION_CRITICA, registrarActividad } from '../utils/registroDeActividad.js';
 import { IDIOMAS_SOPORTADOS } from '../i18n/idiomas.js';
@@ -28,9 +28,11 @@ import { IDIOMAS_SOPORTADOS } from '../i18n/idiomas.js';
    y la base la rechaza también, con la restricción `lo_que_toca_salud_no_se_aprueba`. Queda en
    el banco para que la lea una persona, que es lo que corresponde.
 
-   EL AISLAMIENTO. El backend entra a la base con la llave de servicio, así que la Prestadora sale
-   de `req.usuarioPanel.prestadoraId` y se escribe en cada consulta: es la primera red, y las
-   políticas de la tabla son la segunda. */
+   CON LA CREDENCIAL DE QUIEN PIDE. Todo lo de esta ruta entra a la base con
+   `clienteDelPedido(req)`, no con la llave maestra: la base sabe quién pide y le contesta sólo el
+   banco de su Prestadora. Por eso ninguna consulta lleva el filtro de la Prestadora de la sesión,
+   y la respuesta nueva nace con la Prestadora que la base deja ver a quien pide, no con un dato
+   del pedido. El registro de actividad sigue con la llave maestra: es de `registrarActividad`. */
 
 export const panelRespuestasPreparadasRouter = Router();
 
@@ -39,6 +41,12 @@ panelRespuestasPreparadasRouter.use(
   exigirAdministracion('Solo Admin o Superadmin puede tocar las respuestas preparadas'),
   exigirOrganizacionActiva,
 );
+
+/** La Prestadora de quien pide, tal como la base se la deja ver. Sin ella no se da de alta nada. */
+async function prestadoraVisible(db) {
+  const { data } = await db.from('prestadoras').select('id').maybeSingle();
+  return data?.id ?? null;
+}
 
 const COLUMNAS =
   'id, nombre_interno, terminos, i18n, toca_salud, origen, activa, aprobada_at, created_at, updated_at';
@@ -64,10 +72,10 @@ function textoQueSeGuarda(i18n) {
 }
 
 panelRespuestasPreparadasRouter.get('/', async (req, res) => {
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('respuestas_preparadas_whatsapp')
     .select(COLUMNAS)
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .order('created_at', { ascending: false });
   if (error) return responderError(res, error);
   // Una lista vacía es lo corriente: el banco nace vacío y se llena acá.
@@ -83,11 +91,16 @@ panelRespuestasPreparadasRouter.post('/', async (req, res) => {
   if (!terminos?.length) return res.status(400).json({ error: 'Falta con qué palabras se reconoce esta respuesta' });
   if (!texto) return res.status(400).json({ error: 'Falta el texto en los tres idiomas' });
 
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisible(db);
+  // Con la Organización activa comprobada, esto no pasa: si pasa, falla cerrado.
+  if (!prestadoraId) throw new Error('La base no deja ver la Prestadora de quien pide');
+
   // Las dos columnas de la aprobación no se escriben acá ni aunque vengan en el pedido.
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('respuestas_preparadas_whatsapp')
     .insert({
-      prestadora_id: req.usuarioPanel.prestadoraId,
+      prestadora_id: prestadoraId,
       nombre_interno: nombre,
       terminos,
       i18n: texto,
@@ -135,11 +148,11 @@ panelRespuestasPreparadasRouter.patch('/:id', async (req, res) => {
     cambios.aprobada_por = null;
   }
 
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('respuestas_preparadas_whatsapp')
     .update(cambios)
     .eq('id', req.params.id)
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .select(COLUMNAS);
   if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró esa respuesta preparada' });
@@ -149,11 +162,11 @@ panelRespuestasPreparadasRouter.patch('/:id', async (req, res) => {
 // Aprobar es lo que habilita a que ese texto salga solo, así que queda registrado: quién, cuándo
 // y sobre qué fila. **El texto no entra en el registro.**
 panelRespuestasPreparadasRouter.post('/:id/aprobar', async (req, res) => {
-  const { data: respuesta, error: errorLectura } = await supabase
+  const db = clienteDelPedido(req);
+  const { data: respuesta, error: errorLectura } = await db
     .from('respuestas_preparadas_whatsapp')
     .select('id, toca_salud')
     .eq('id', req.params.id)
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .maybeSingle();
   if (errorLectura) return responderError(res, errorLectura);
   if (!respuesta) return res.status(404).json({ error: 'No se encontró esa respuesta preparada' });
@@ -161,7 +174,7 @@ panelRespuestasPreparadasRouter.post('/:id/aprobar', async (req, res) => {
     return res.status(400).json({ error: 'Lo que toca la salud se deriva siempre a una persona' });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('respuestas_preparadas_whatsapp')
     .update({
       aprobada_at: new Date().toISOString(),
@@ -170,7 +183,6 @@ panelRespuestasPreparadasRouter.post('/:id/aprobar', async (req, res) => {
       updated_at: new Date().toISOString(),
     })
     .eq('id', respuesta.id)
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .select(COLUMNAS);
   if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró esa respuesta preparada' });
@@ -185,11 +197,11 @@ panelRespuestasPreparadasRouter.post('/:id/aprobar', async (req, res) => {
 });
 
 panelRespuestasPreparadasRouter.post('/:id/desaprobar', async (req, res) => {
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('respuestas_preparadas_whatsapp')
     .update({ aprobada_at: null, aprobada_por: null, updated_at: new Date().toISOString() })
     .eq('id', req.params.id)
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .select(COLUMNAS);
   if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró esa respuesta preparada' });
@@ -205,11 +217,11 @@ panelRespuestasPreparadasRouter.post('/:id/desaprobar', async (req, res) => {
 
 // El borrado lo anota solo `requiereRolPanel`, que engancha todo pedido de borrado del Panel.
 panelRespuestasPreparadasRouter.delete('/:id', async (req, res) => {
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('respuestas_preparadas_whatsapp')
     .delete()
     .eq('id', req.params.id)
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .select('id');
   if (error) return responderError(res, error);
   if (!data?.length) return res.status(404).json({ error: 'No se encontró esa respuesta preparada' });

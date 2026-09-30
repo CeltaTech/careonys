@@ -12,9 +12,11 @@
  * de verdad contra una base de mentira que contesta lo que cada prueba le prepara. Así lo que
  * se comprueba es el camino entero —permiso, filtros, escritura— y no una imitación.
  *
- * Y hay una prueba que mira otra cosa: que TODA consulta lleve el filtro de Prestadora escrito.
- * El backend entra a la base con la clave de servicio, o sea sin las reglas de acceso: si una
- * consulta se olvida ese filtro, una Prestadora ve la plata de otra y nada la detiene.
+ * Y hay una prueba que mira otra cosa: que cada consulta de la ruta vaya con la credencial de
+ * quien pide y no con la llave maestra. Lo que separa la plata de una Prestadora de la de otra es
+ * la protección por fila de la base, y esa protección sólo actúa si la base sabe quién pregunta.
+ * Lo que esta prueba no puede ver es la protección en sí: la base de mentira no la tiene. Eso lo
+ * prueba `scripts/probar_aislamiento.mjs` contra una base de verdad.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
@@ -45,7 +47,12 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null });
+    llamadas.push({
+      clave,
+      url: req.url,
+      cuerpo: crudo ? JSON.parse(crudo) : null,
+      credencial: req.headers.authorization,
+    });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada(crudo ? JSON.parse(crudo) : null) : preparada;
@@ -100,10 +107,14 @@ after(() => {
   baseFalsa.close();
 });
 
+/** La credencial que mandó el último pedido: la base tiene que recibir esa y ninguna otra. */
+let credencialEnviada = null;
+
 async function pedir(metodo, ruta, cuerpo) {
+  credencialEnviada = sesionDePrueba(USUARIO);
   const respuesta = await fetch(`${DIRECCION}${ruta}`, {
     method: metodo,
-    headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
+    headers: { Authorization: credencialEnviada, 'Content-Type': 'application/json' },
     body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
@@ -111,6 +122,7 @@ async function pedir(metodo, ruta, cuerpo) {
 
 const FACTURA_EN_LA_BASE = {
   id: FACTURA,
+  prestadora_id: PRESTADORA,
   cliente_id: CLIENTE,
   periodo: '2026-08-01',
   monto_total: '100000.00',
@@ -175,11 +187,57 @@ function laCobranzaEsDeAfuera() {
   ]);
 }
 
-/** Todas las consultas a la base que llevaron —o no— el filtro de Prestadora escrito. */
-function consultasDeDatos() {
+/**
+ * Lo que no hace esta ruta con la credencial de quien pide: la entrada de la persona y su permiso,
+ * que resuelven el middleware y `utils/permisos.js`; el registro de actividad; y las lecturas que
+ * la ruta o `utils/` hacen todavía con la llave maestra, cada una con su motivo escrito al lado.
+ */
+const CON_LA_MAESTRA = [
+  '/usuarios',
+  '/rpc/tiene_permiso_de',
+  '/registro_actividad',
+  '/configuracion_facturacion_clientes',
+  '/opciones_de_lista',
+  '/legajos',
+  // Los nombres de los Clientes y los Clientes que se facturan: la base esconde las pendientes de
+  // conformidad a todos los roles, y esta ruta las mostraba y las facturaba.
+  '/clientes',
+];
+
+/** Todas las consultas a la base que hizo la ruta con la credencial de quien pide. */
+function consultasDeLaRuta() {
   return llamadas.filter(
-    (l) => l.clave.startsWith('GET /rest/v1/') && !l.clave.endsWith('/usuarios')
+    (l) => l.clave.includes(' /rest/v1/') && !CON_LA_MAESTRA.some((t) => l.clave.endsWith(t))
   );
+}
+
+/**
+ * Cada consulta de la ruta fue con la credencial de quien pide, y ninguna lleva escrito el filtro
+ * de la Prestadora de la sesión: qué filas ve lo decide la base.
+ */
+function todoConLaCredencialDeQuienPide(minimo) {
+  const consultas = consultasDeLaRuta();
+  assert.ok(consultas.length >= minimo, 'la ruta tiene que haber consultado la base');
+  for (const consulta of consultas) {
+    assert.equal(consulta.credencial, credencialEnviada, `${consulta.clave} no fue con la credencial de quien pide`);
+    assert.ok(
+      !consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`),
+      `${consulta.clave} filtró por la Prestadora de la sesión: ${consulta.url}`
+    );
+  }
+}
+
+/**
+ * Los Clientes se leen con la llave maestra y atadas a la Prestadora de la sesión: así aparecen
+ * también las pendientes de conformidad, que la base esconde a todos los roles.
+ */
+function clientesConLaMaestraYLaPrestadora() {
+  const lecturas = llamadas.filter((l) => l.clave === 'GET /rest/v1/clientes');
+  assert.ok(lecturas.length > 0, 'la ruta tiene que haber leído los Clientes');
+  for (const lectura of lecturas) {
+    assert.equal(lectura.credencial, 'Bearer clave-de-mentira', 'los Clientes van con la llave maestra');
+    assert.ok(lectura.url.includes(`prestadora_id=eq.${PRESTADORA}`), `sin la Prestadora: ${lectura.url}`);
+  }
 }
 
 // ---------------------------------------------------------------------------------------
@@ -340,17 +398,14 @@ describe('el estado de cuenta que llegó de afuera', () => {
     assert.equal(cuerpo[0].saldo, '-1200.00');
   });
 
-  it('toda consulta lleva el filtro de Prestadora escrito', async () => {
+  it('todo se pide con la credencial de quien llama, y nada con la llave maestra', async () => {
     respuestas.set('GET /rest/v1/estado_de_cuenta_externo_vigente', () => [ESTADO_QUE_LLEGO]);
     respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, solicitudes: { nombre: 'Cliente de prueba' } }]);
 
     await pedir('GET', '/estados-de-cuenta');
 
-    const consultas = consultasDeDatos();
-    assert.ok(consultas.length > 0);
-    for (const consulta of consultas) {
-      assert.ok(consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`), consulta.clave);
-    }
+    todoConLaCredencialDeQuienPide(1);
+    clientesConLaMaestraYLaPrestadora();
   });
 
   it('sin ningún aviso todavía, la lista viene vacía y no se inventa nada', async () => {
@@ -454,20 +509,14 @@ describe('la lista de saldos', () => {
     assert.ok(cuerpo[0].actualizado_en);
   });
 
-  it('toda consulta lleva el filtro de Prestadora escrito', async () => {
+  it('todo se pide con la credencial de quien llama, y nada con la llave maestra', async () => {
     respuestas.set('GET /rest/v1/saldos_cliente', () => [saldoConCobrado(40000)]);
     respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, solicitudes: { nombre: 'Cliente de prueba' } }]);
 
     await pedir('GET', '/saldos?periodo=2026-08');
 
-    const consultas = consultasDeDatos();
-    assert.ok(consultas.length >= 2);
-    for (const consulta of consultas) {
-      assert.ok(
-        consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`),
-        `esta consulta no filtró por Prestadora: ${consulta.url}`
-      );
-    }
+    todoConLaCredencialDeQuienPide(1);
+    clientesConLaMaestraYLaPrestadora();
   });
 
   it('quien no es del Panel no entra', async () => {
@@ -971,7 +1020,7 @@ describe('la puerta de entrada para lo que viene de afuera', () => {
     assert.equal(insercion.cuerpo.referencia_externa, 'X-1');
   });
 
-  it('toda consulta del lote lleva el filtro de Prestadora escrito', async () => {
+  it('todo el lote se pide con la credencial de quien llama, y el cobro nace con la Prestadora de su factura', async () => {
     respuestas.set('GET /rest/v1/cobros_cliente', () => []);
     respuestas.set('GET /rest/v1/facturas_cliente', () => [FACTURA_EN_LA_BASE]);
     respuestas.set('POST /rest/v1/cobros_cliente', () => [{ id: 'c-6', factura_id: FACTURA }]);
@@ -982,23 +1031,25 @@ describe('la puerta de entrada para lo que viene de afuera', () => {
       cobros: [{ cliente_id: CLIENTE, periodo: '2026-08', monto: 40000, medio: 'transferencia', referencia_externa: 'Y-1' }],
     });
 
-    const consultas = consultasDeDatos();
-    assert.ok(consultas.length >= 3);
-    for (const consulta of consultas) {
-      // La lista de medios de pago tiene dos pisos: las opciones del producto, que no son de
-      // ninguna Prestadora, y las de ésta. Por eso ahí el filtro se escribe como una alternativa
-      // en vez de una igualdad. Lo que se sigue exigiendo es lo mismo: que la consulta nombre a
-      // esta Prestadora y a ninguna otra.
-      const esperado = consulta.clave.endsWith('/opciones_de_lista')
-        ? `prestadora_id.eq.${PRESTADORA}`
-        : `prestadora_id=eq.${PRESTADORA}`;
-      assert.ok(
-        consulta.url.includes(esperado),
-        `esta consulta no filtró por Prestadora: ${consulta.url}`
-      );
-    }
+    todoConLaCredencialDeQuienPide(4);
     const insercion = llamadas.find((l) => l.clave === 'POST /rest/v1/cobros_cliente');
     assert.equal(insercion.cuerpo.prestadora_id, PRESTADORA);
+  });
+
+  it('la Prestadora del cobro sale de la factura que la base dejó ver, no de la sesión', async () => {
+    const OTRA = '99999999-9999-9999-9999-999999999999';
+    respuestas.set('GET /rest/v1/cobros_cliente', () => []);
+    respuestas.set('GET /rest/v1/facturas_cliente', () => [{ ...FACTURA_EN_LA_BASE, prestadora_id: OTRA }]);
+    respuestas.set('POST /rest/v1/cobros_cliente', () => [{ id: 'c-7', factura_id: FACTURA }]);
+    respuestas.set('GET /rest/v1/saldos_cliente', () => [saldoConCobrado(40000)]);
+
+    await pedir('POST', '/entrada', {
+      origen: 'api',
+      cobros: [{ factura_id: FACTURA, monto: 40000, medio: 'transferencia', referencia_externa: 'Y-2' }],
+    });
+
+    const insercion = llamadas.find((l) => l.clave === 'POST /rest/v1/cobros_cliente');
+    assert.equal(insercion.cuerpo.prestadora_id, OTRA);
   });
 
   it('quien no es del Panel no entra tampoco por acá', async () => {
@@ -1030,13 +1081,18 @@ function baseConUnaCliente({
     plazoDeLaPrestadora === null ? [] : [{ regla: { dias_hasta_el_vencimiento: plazoDeLaPrestadora } }]
   );
   respuestas.set('GET /rest/v1/clientes', () => [
-    { id: CLIENTE, dias_hasta_el_vencimiento: plazoDeLaCliente, pacientes: [{ id: PACIENTE, nombre: 'Juana Pérez' }] },
+    {
+      id: CLIENTE,
+      prestadora_id: PRESTADORA,
+      dias_hasta_el_vencimiento: plazoDeLaCliente,
+      pacientes: [{ id: PACIENTE, nombre: 'Juana Pérez' }],
+    },
   ]);
   respuestas.set('GET /rest/v1/prestaciones', () => prestaciones);
   respuestas.set('GET /rest/v1/paquetes_prestaciones', () => paquetes);
   respuestas.set('GET /rest/v1/paquete_prestacion_items', () => items);
   respuestas.set('GET /rest/v1/facturas_cliente', () => yaFacturadas);
-  respuestas.set('POST /rest/v1/facturas_cliente', () => [{ id: FACTURA }]);
+  respuestas.set('POST /rest/v1/facturas_cliente', () => [{ id: FACTURA, prestadora_id: PRESTADORA }]);
   respuestas.set('POST /rest/v1/facturas_cliente_items', () => []);
 }
 
@@ -1179,10 +1235,11 @@ describe('generar las facturas de un período', () => {
     assert.equal(estado, 400);
     const borrado = llamadas.find((l) => l.clave === 'DELETE /rest/v1/facturas_cliente');
     assert.ok(borrado, 'la factura sin renglones tiene que borrarse');
-    assert.ok(borrado.url.includes(`prestadora_id=eq.${PRESTADORA}`));
+    assert.ok(borrado.url.includes(`id=eq.${FACTURA}`));
+    assert.equal(borrado.credencial, credencialEnviada);
   });
 
-  it('toda consulta lleva el filtro de Prestadora escrito', async () => {
+  it('todo se pide con la credencial de quien llama, y la factura nace con la Prestadora de su Cliente', async () => {
     baseConUnaCliente({
       prestaciones: [unaPrestacion()],
       paquetes: [{ id: 9, paciente_id: PACIENTE, nombre: null, precio_paquete: '1.00', estado: 'de_baja' }],
@@ -1191,16 +1248,12 @@ describe('generar las facturas de un período', () => {
 
     await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
 
-    const consultas = consultasDeDatos();
-    assert.ok(consultas.length >= 5);
-    for (const consulta of consultas) {
-      assert.ok(
-        consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`),
-        `esta consulta no filtró por Prestadora: ${consulta.url}`
-      );
-    }
+    todoConLaCredencialDeQuienPide(6);
+    clientesConLaMaestraYLaPrestadora();
     const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente');
     assert.equal(factura.cuerpo.prestadora_id, PRESTADORA);
+    const renglones = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente_items');
+    assert.equal(renglones.cuerpo[0].prestadora_id, PRESTADORA);
   });
 
   it('quien no es del Panel no genera facturas', async () => {

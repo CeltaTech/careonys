@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
-import { supabase } from '../db/connection.js';
+import { clienteDelPedido } from '../db/connection.js';
 import { normalizarIdioma } from '../i18n/idiomas.js';
 
 // ============================================================================
@@ -17,6 +17,11 @@ import { normalizarIdioma } from '../i18n/idiomas.js';
 // libre, y si no es libre no es válido (ver el análisis en PENDIENTES #102). Se
 // puede rechazar, el rechazo se registra, y la persona sigue usando todo lo
 // demás con normalidad.
+//
+// Con la credencial de quien pide: todo entra a la base con `clienteDelPedido(req)`, no
+// con la llave maestra. La base sabe qué Asistente pide y le deja ver y escribir sólo
+// lo de su propia ficha, así que ninguna consulta lleva el filtro de la Prestadora de
+// la sesión. La Prestadora que se escribe es la de la ficha que la base ya dejó ver.
 // ============================================================================
 
 export const appAsistentesConsentimientosRouter = Router();
@@ -32,16 +37,15 @@ function modalidadDeVinculo(tipoVinculo) {
 }
 
 // Devuelve { asistente, jurisdiccion } o null si falta algo para poder decidir.
-async function contextoDelAsistente(usuarioAsistente) {
-  const { data: asistente } = await supabase
+async function contextoDelAsistente(db, usuarioAsistente) {
+  const { data: asistente } = await db
     .from('asistentes')
     .select('id, prestadora_id, tipo_vinculo')
     .eq('id', usuarioAsistente.asistenteId)
-    .eq('prestadora_id', usuarioAsistente.prestadoraId)
     .maybeSingle();
   if (!asistente) return null;
 
-  const { data: prestadora } = await supabase
+  const { data: prestadora } = await db
     .from('prestadoras')
     .select('pais')
     .eq('id', asistente.prestadora_id)
@@ -54,8 +58,8 @@ async function contextoDelAsistente(usuarioAsistente) {
 // Texto vigente para una jurisdicción + tema + modalidad + idioma. Si no hay
 // fila, devuelve null: sin texto no hay consentimiento posible, y no se
 // inventa uno por analogía con otro país (CLAUDE.md §3).
-async function textoVigente({ jurisdiccion, clave, modalidad, idioma }) {
-  const { data } = await supabase
+async function textoVigente(db, { jurisdiccion, clave, modalidad, idioma }) {
+  const { data } = await db
     .from('textos_consentimiento')
     .select('id, version, idioma, titulo, cuerpo, puntos_clave, es_borrador')
     .eq('jurisdiccion', jurisdiccion)
@@ -69,15 +73,12 @@ async function textoVigente({ jurisdiccion, clave, modalidad, idioma }) {
   return data || null;
 }
 
-// El filtro por Prestadora va aunque el identificador del Asistente ya sea de una sola: el backend
-// entra a la base con la llave de servicio y se saltea la protección por fila, así que lo único
-// que separa una Prestadora de otra son estos filtros. Es la puerta de entrada de todo lo demás:
-// lo que se actualiza o se borra después va por el identificador que sale de acá.
-async function decisionViva(prestadoraId, asistenteId, clave) {
-  const { data } = await supabase
+// Es la puerta de entrada de todo lo demás: lo que se actualiza o se borra después va por el
+// identificador que sale de acá, y la base sólo deja ver las decisiones de la propia ficha.
+async function decisionViva(db, asistenteId, clave) {
+  const { data } = await db
     .from('consentimientos_asistente')
     .select('id, decision, version_mostrada, decidido_at, texto_consentimiento_id')
-    .eq('prestadora_id', prestadoraId)
     .eq('asistente_id', asistenteId)
     .eq('clave', clave)
     .is('retirado_at', null)
@@ -94,7 +95,8 @@ async function decisionViva(prestadoraId, asistenteId, clave) {
 // ============================================================================
 appAsistentesConsentimientosRouter.get('/', requiereRolAsistente, async (req, res) => {
   const idioma = normalizarIdioma(req.query.idioma);
-  const contexto = await contextoDelAsistente(req.usuarioAsistente);
+  const db = clienteDelPedido(req);
+  const contexto = await contextoDelAsistente(db, req.usuarioAsistente);
   if (!contexto) {
     return res.status(404).json({ error: 'Perfil no encontrado' });
   }
@@ -103,7 +105,7 @@ appAsistentesConsentimientosRouter.get('/', requiereRolAsistente, async (req, re
   const items = [];
 
   for (const clave of CLAVES) {
-    const texto = await textoVigente({
+    const texto = await textoVigente(db, {
       jurisdiccion: contexto.jurisdiccion,
       clave,
       modalidad,
@@ -113,7 +115,7 @@ appAsistentesConsentimientosRouter.get('/', requiereRolAsistente, async (req, re
     // error: es el caso normal de un país sin documento legal cargado.
     if (!texto) continue;
 
-    const decision = await decisionViva(contexto.asistente.prestadora_id, contexto.asistente.id, clave);
+    const decision = await decisionViva(db, contexto.asistente.id, clave);
     items.push({
       clave,
       modalidad,
@@ -160,13 +162,14 @@ appAsistentesConsentimientosRouter.post('/', requiereRolAsistente, async (req, r
     return res.status(400).json({ error: 'Decisión no válida' });
   }
 
-  const contexto = await contextoDelAsistente(req.usuarioAsistente);
+  const db = clienteDelPedido(req);
+  const contexto = await contextoDelAsistente(db, req.usuarioAsistente);
   if (!contexto) {
     return res.status(404).json({ error: 'Perfil no encontrado' });
   }
 
   const modalidad = modalidadDeVinculo(contexto.asistente.tipo_vinculo);
-  const texto = await textoVigente({
+  const texto = await textoVigente(db, {
     jurisdiccion: contexto.jurisdiccion,
     clave,
     modalidad,
@@ -176,7 +179,7 @@ appAsistentesConsentimientosRouter.post('/', requiereRolAsistente, async (req, r
     return res.status(409).json({ error: 'Todavía no hay texto de consentimiento para este país' });
   }
 
-  const viva = await decisionViva(contexto.asistente.prestadora_id, contexto.asistente.id, clave);
+  const viva = await decisionViva(db, contexto.asistente.id, clave);
   if (viva) {
     if (viva.texto_consentimiento_id === texto.id && viva.decision === decision) {
       return res.json({ ok: true, sin_cambios: true });
@@ -185,23 +188,21 @@ appAsistentesConsentimientosRouter.post('/', requiereRolAsistente, async (req, r
     // Un 'rechazado' que cambia de opinión se reemplaza borrando el anterior:
     // no hay nada que preservar, nunca autorizó nada.
     if (viva.decision === 'otorgado') {
-      const { error } = await supabase
+      const { error } = await db
         .from('consentimientos_asistente')
         .update({ retirado_at: new Date().toISOString(), motivo_retiro: 'reemplazado_por_decision_nueva' })
-        .eq('id', viva.id)
-        .eq('prestadora_id', contexto.asistente.prestadora_id);
+        .eq('id', viva.id);
       if (error) return res.status(500).json({ error: 'No se pudo registrar la decisión' });
     } else {
-      const { error } = await supabase
+      const { error } = await db
         .from('consentimientos_asistente')
         .delete()
-        .eq('id', viva.id)
-        .eq('prestadora_id', contexto.asistente.prestadora_id);
+        .eq('id', viva.id);
       if (error) return res.status(500).json({ error: 'No se pudo registrar la decisión' });
     }
   }
 
-  const { error } = await supabase.from('consentimientos_asistente').insert({
+  const { error } = await db.from('consentimientos_asistente').insert({
     prestadora_id: contexto.asistente.prestadora_id,
     asistente_id: contexto.asistente.id,
     clave,
@@ -230,7 +231,8 @@ appAsistentesConsentimientosRouter.post('/retirar', requiereRolAsistente, async 
     return res.status(400).json({ error: 'Consentimiento desconocido' });
   }
 
-  const viva = await decisionViva(req.usuarioAsistente.prestadoraId, req.usuarioAsistente.asistenteId, clave);
+  const db = clienteDelPedido(req);
+  const viva = await decisionViva(db, req.usuarioAsistente.asistenteId, clave);
   if (!viva || viva.decision !== 'otorgado') {
     return res.status(409).json({ error: 'No hay un consentimiento vigente para retirar' });
   }
@@ -239,14 +241,13 @@ appAsistentesConsentimientosRouter.post('/retirar', requiereRolAsistente, async 
   // instante, pero acá se contesta "listo, retirado" y eso es lo que la persona se lleva: si no
   // quedó escrito, no se le puede decir que sí. Un consentimiento que alguien cree retirado y
   // sigue vigente es exactamente lo que la ley no perdona.
-  const { data: retirado, error } = await supabase
+  const { data: retirado, error } = await db
     .from('consentimientos_asistente')
     .update({
       retirado_at: new Date().toISOString(),
       motivo_retiro: typeof motivo === 'string' && motivo.trim() ? motivo.trim().slice(0, 500) : null,
     })
     .eq('id', viva.id)
-    .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
     .is('retirado_at', null)
     .select('id');
 

@@ -6,10 +6,17 @@
  *   node --test "src/**\/__tests__/*.test.js"
  *
  * Se levanta el backend de verdad contra una base de mentira que contesta lo que cada prueba le
- * prepara, y se mira la dirección entera de cada consulta. Eso es lo que permite comprobar las dos
- * cosas que importan acá: que ninguna consulta se olvide el filtro de Prestadora —el backend entra
- * con la llave de servicio, o sea sin las reglas de acceso—, y que el número no se escriba nunca en
- * una dirección.
+ * prepara, y se mira la dirección entera de cada consulta y con qué credencial llegó. Eso es lo que
+ * permite comprobar las dos cosas que importan acá: que cada consulta separe una Prestadora de
+ * otra —leer va con la credencial de quien pide y lo separa la protección por fila de la base;
+ * cargar, corregir y sacar siguen con la llave maestra y lo separa el filtro escrito en la
+ * consulta—, y que el número no se escriba nunca en una dirección.
+ *
+ * La base de mentira imita esa protección en lo único que hace falta: con la credencial de quien
+ * pide contesta sólo las fichas de su Prestadora, y con la llave maestra contesta las que pida el
+ * filtro de la dirección. Así, una lectura que volviera a la llave maestra, o una escritura que
+ * perdiera el filtro, encontraría la ficha ajena, y las pruebas de aislamiento darían al revés. La
+ * protección por fila en sí la prueba `scripts/probar_aislamiento.mjs` contra una base de verdad.
  *
  * Los números son inventados.
  */
@@ -47,10 +54,10 @@ const baseFalsa = createServer((req, res) => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
     const cuerpo = crudo ? JSON.parse(crudo) : null;
-    llamadas.push({ clave, url: req.url, cuerpo });
+    llamadas.push({ clave, url: req.url, cuerpo, credencial: req.headers.authorization });
 
     const preparada = respuestas.get(clave);
-    const valor = typeof preparada === 'function' ? preparada(cuerpo, req.url) : preparada;
+    const valor = typeof preparada === 'function' ? preparada(cuerpo, req.url, req.headers.authorization) : preparada;
     if (valor === undefined) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: `la prueba no preparó respuesta para ${clave}` }));
@@ -92,10 +99,17 @@ after(() => {
   baseFalsa.close();
 });
 
+/** La credencial que mandó el último pedido: las lecturas tienen que llegar con esa. */
+let credencialEnviada = null;
+
+/** Si la base, con la credencial de quien pide, le deja ver el Padrón (`ver_padron`). */
+let laBaseLeDejaVerElPadron = true;
+
 async function pedir(metodo, ruta, cuerpo) {
+  credencialEnviada = sesionDePrueba(USUARIO);
   const respuesta = await fetch(`${DIRECCION}${ruta}`, {
     method: metodo,
-    headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
+    headers: { Authorization: credencialEnviada, 'Content-Type': 'application/json' },
     body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
@@ -135,17 +149,23 @@ beforeEach(() => {
   respuestas.set('POST /rest/v1/rpc/tiene_permiso_de', () => tienePermiso);
   // Sin cuentas cargadas: entonces no hay ningún preferido, que es el caso más común al empezar.
   lasCuentasLlevan();
-  // El Padrón de la base, con fichas de dos Prestadoras, y la base contestando lo que la consulta
-  // le pide. Es la única forma de que esta prueba pueda fallar: el backend entra con la llave de
-  // servicio, así que si la ruta se olvida el filtro de Prestadora, la ficha ajena aparece. Una
-  // base de mentira que devuelve vacío por su cuenta aprobaría igual a una ruta sin filtro.
-  respuestas.set('GET /rest/v1/legajos', (_cuerpo, url) => {
+  laBaseLeDejaVerElPadron = true;
+  // El Padrón de la base, con fichas de dos Prestadoras. Con la credencial de quien pide, la base
+  // contesta sólo las de su Prestadora, y ninguna si no tiene el permiso de ver el Padrón; con la
+  // llave maestra, las que pida el filtro de la dirección. Es la única forma de que esta prueba
+  // pueda fallar: si la lectura volviera a la llave maestra, o la escritura perdiera el filtro, la
+  // ficha ajena aparecería. Una base de mentira que devuelve vacío por su cuenta aprobaría igual.
+  respuestas.set('GET /rest/v1/legajos', (_cuerpo, url, credencial) => {
     const pedido = new URL(url, 'http://interno').searchParams;
     const valorDe = (parametro) => (pedido.get(parametro) ?? '').replace(/^eq\./, '') || null;
     const id = valorDe('id');
     const prestadora = valorDe('prestadora_id');
+    const conSesion = credencial === credencialEnviada;
+    if (conSesion && !laBaseLeDejaVerElPadron) return [];
     return PADRON_EN_LA_BASE.filter(
-      (ficha) => (!id || ficha.id === id) && (!prestadora || ficha.prestadora_id === prestadora),
+      (ficha) => (!id || ficha.id === id)
+        && (!conSesion || ficha.prestadora_id === PRESTADORA)
+        && (!prestadora || ficha.prestadora_id === prestadora),
     );
   });
 });
@@ -302,7 +322,7 @@ describe('una ficha de otra Prestadora', () => {
     assert.deepEqual(ajeno.cuerpo, noExiste.cuerpo);
   });
 
-  it('la Prestadora nunca sale del pedido: viene de la sesión', async () => {
+  it('la Prestadora nunca sale del pedido: viene de la ficha que la base dejó ver', async () => {
     respuestas.set('POST /rest/v1/telefonos_del_legajo', (cuerpo) => [
       filaTelefono(TELEFONO_ID, cuerpo.legajo_id, cuerpo.telefono),
     ]);
@@ -319,7 +339,7 @@ describe('una ficha de otra Prestadora', () => {
 // Que toda consulta lleve el filtro escrito
 // ---------------------------------------------------------------------------------------
 
-describe('el filtro de Prestadora', () => {
+describe('la credencial de quien pide', () => {
   beforeEach(() => {
     respuestas.set('GET /rest/v1/telefonos_del_legajo', () => [filaTelefono('a', LEGAJO, CASA)]);
     respuestas.set('POST /rest/v1/telefonos_del_legajo', () => [filaTelefono(TELEFONO_ID, LEGAJO, CASA)]);
@@ -327,17 +347,54 @@ describe('el filtro de Prestadora', () => {
     respuestas.set('DELETE /rest/v1/telefonos_del_legajo', () => [{ id: TELEFONO_ID }]);
   });
 
-  it('va escrito en toda consulta a la tabla, sea leer, corregir o sacar', async () => {
-    await pedir('GET', '/');
-    await pedir('GET', `/${LEGAJO}`);
-    await pedir('PATCH', `/${LEGAJO}/${TELEFONO_ID}`, { telefono: CELULAR });
-    await pedir('DELETE', `/${LEGAJO}/${TELEFONO_ID}`);
+  it('va en toda consulta de lectura a la ficha y a sus teléfonos', async () => {
+    const pedidos = [
+      ['GET', '/'],
+      ['GET', `/${LEGAJO}`],
+    ];
+    for (const [metodo, ruta, cuerpo] of pedidos) {
+      llamadas = [];
+      await pedir(metodo, ruta, cuerpo);
+      const aLaBase = llamadas.filter(
+        (l) => l.clave.includes('/rest/v1/telefonos_del_legajo') || l.clave.includes('/rest/v1/legajos'),
+      );
+      assert.ok(aLaBase.length >= 1, `${metodo} ${ruta} tenía que consultar la base`);
+      for (const llamada of aLaBase) {
+        assert.equal(llamada.credencial, credencialEnviada, `${llamada.clave} no fue con la credencial de quien pide`);
+      }
+    }
+  });
 
-    const sinFiltro = consultasDeDatos().filter(
-      (l) => l.clave !== 'POST /rest/v1/telefonos_del_legajo'
-        && !l.url.includes(`prestadora_id=eq.${PRESTADORA}`),
-    );
-    assert.deepEqual(sinFiltro.map((l) => l.url), [], 'ninguna consulta sin el filtro');
+  // Cargar, corregir y sacar siguen con la llave maestra: las políticas de escritura piden
+  // `editar_padron`, pero leer la ficha y el renglón escrito piden además `ver_padron`.
+  it('cargar, corregir y sacar van con la llave maestra y el filtro de la Prestadora', async () => {
+    const pedidos = [
+      ['POST', `/${LEGAJO}`, { telefono: CASA }],
+      ['PATCH', `/${LEGAJO}/${TELEFONO_ID}`, { telefono: CELULAR }],
+      ['DELETE', `/${LEGAJO}/${TELEFONO_ID}`],
+    ];
+    for (const [metodo, ruta, cuerpo] of pedidos) {
+      llamadas = [];
+      const { estado } = await pedir(metodo, ruta, cuerpo);
+      assert.equal(estado, 200, `${metodo} ${ruta}`);
+      const aLaBase = llamadas.filter(
+        (l) => l.clave.includes('/rest/v1/telefonos_del_legajo') || l.clave.includes('/rest/v1/legajos'),
+      );
+      assert.ok(aLaBase.length >= 2, `${metodo} ${ruta} tenía que leer la ficha y escribir`);
+      for (const llamada of aLaBase) {
+        assert.notEqual(llamada.credencial, credencialEnviada, `${llamada.clave} fue con la credencial de quien pide`);
+        const filtrada = llamada.url.includes(`prestadora_id=eq.${PRESTADORA}`)
+          || llamada.cuerpo?.prestadora_id === PRESTADORA;
+        assert.ok(filtrada, `${llamada.clave} sin la Prestadora de la sesión: ${llamada.url}`);
+      }
+    }
+  });
+
+  it('quien puede editar el Padrón y no verlo carga, corrige y saca igual', async () => {
+    laBaseLeDejaVerElPadron = false;
+    assert.equal((await pedir('POST', `/${LEGAJO}`, { telefono: CASA })).estado, 200);
+    assert.equal((await pedir('PATCH', `/${LEGAJO}/${TELEFONO_ID}`, { telefono: CELULAR })).estado, 200);
+    assert.equal((await pedir('DELETE', `/${LEGAJO}/${TELEFONO_ID}`)).estado, 200);
   });
 
   it('corregir y sacar filtran además por la ficha', async () => {

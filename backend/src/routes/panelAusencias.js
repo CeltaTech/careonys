@@ -7,6 +7,13 @@ import { supabase } from '../db/connection.js';
 import { extensionDeArchivo } from '../utils/archivosSubidos.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
+// CON LA LLAVE MAESTRA, TODAVÍA. La ausencia, el depósito y el enlace temporal van con la llave
+// maestra, después de comprobar que la ausencia es de la Prestadora de quien pide. En la base, la
+// política `coordinador_gestiona_ausencias_de_su_zona` le deja a quien coordina sólo las ausencias
+// de los Asistentes de su zona, y la del depósito (`certificados_los_alcanza_quien_ve_la_ausencia`)
+// pide una ausencia que quien pide vea; esta ruta le mostraba a quien coordina todas las de la
+// Prestadora. Si eso se estrecha se decide aparte.
+
 export const panelAusenciasRouter = Router();
 
 const BUCKET = 'certificados-medicos';
@@ -33,6 +40,9 @@ function clienteR2() {
 }
 
 async function ausenciaDeLaPrestadora(ausenciaId, usuarioPanel) {
+  // Con la llave maestra: la política `coordinador_gestiona_ausencias_de_su_zona` le deja a quien
+  // coordina sólo las ausencias de su zona (`coordinador_alcanza_asistente`), y esta ruta le
+  // alcanzaba todas las de la Prestadora. Se decide aparte.
   let query = supabase.from('ausencias').select('id, prestadora_id, asistente_id').eq('id', ausenciaId);
   query = acotarAPrestadora(query, usuarioPanel);
   const { data } = await query.maybeSingle();
@@ -65,6 +75,9 @@ panelAusenciasRouter.post(
     const extension = extensionDeArchivo(req.file.mimetype);
     const ruta = `${ausencia.prestadora_id}/${ausencia.id}/certificado.${extension}`;
 
+    // Con la llave maestra: la política del depósito `certificados_los_alcanza_quien_ve_la_ausencia`
+    // pide una ausencia que quien pide vea, y a quien coordina sólo le deja las de su zona. Se
+    // decide aparte. La ruta empieza por la Prestadora de la ausencia, ya comprobada.
     const { error: errorSubida } = await supabase.storage
       .from(BUCKET)
       .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
@@ -89,6 +102,8 @@ panelAusenciasRouter.post(
     // El archivo ya está subido: lo único que falta es que la ausencia lo apunte. Si esa fila ya
     // no está, el certificado queda arriba sin dueño y nadie lo va a encontrar nunca — así que
     // eso se dice, no se contesta que salió todo bien.
+    // Con la llave maestra: por `coordinador_gestiona_ausencias_de_su_zona` quien coordina sólo
+    // escribe las ausencias de su zona. Se decide aparte.
     let apuntar = supabase
       .from('ausencias')
       .update({ certificado_url: ruta })
@@ -112,6 +127,8 @@ panelAusenciasRouter.get('/:id/certificado-url', requiereRolPanel, exigirOrganiz
     return res.status(404).json({ error: 'Ausencia no encontrada' });
   }
 
+  // Con la llave maestra, por la misma política `coordinador_gestiona_ausencias_de_su_zona`. Se
+  // decide aparte.
   let consultaCertificado = supabase.from('ausencias').select('certificado_url').eq('id', ausencia.id);
   consultaCertificado = acotarAPrestadora(consultaCertificado, req.usuarioPanel);
   const { data: fila } = await consultaCertificado.single();
@@ -119,6 +136,8 @@ panelAusenciasRouter.get('/:id/certificado-url', requiereRolPanel, exigirOrganiz
     return res.status(404).json({ error: 'Esta ausencia no tiene certificado cargado' });
   }
 
+  // Con la llave maestra, por la política del depósito
+  // `certificados_los_alcanza_quien_ve_la_ausencia`. Se decide aparte.
   const { data, error } = await supabase.storage
     .from(BUCKET)
     .createSignedUrl(fila.certificado_url, 60);

@@ -34,9 +34,14 @@ const baseFalsa = createServer((req, res) => {
     crudo += parte;
   });
   req.on('end', () => {
-    const ruta = new URL(req.url, 'http://interno').pathname;
-    const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, cuerpo: crudo ? JSON.parse(crudo) : null });
+    const direccion = new URL(req.url, 'http://interno');
+    const clave = `${req.method} ${direccion.pathname}`;
+    llamadas.push({
+      clave,
+      consulta: direccion.searchParams,
+      cuerpo: crudo ? JSON.parse(crudo) : null,
+      credencial: req.headers.authorization,
+    });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada() : preparada;
@@ -177,10 +182,47 @@ describe('cuando no hay nada colgando, se apaga', () => {
     assert.equal(escritura.cuerpo.prestadora_id, PRESTADORA);
   });
 
-  it('pregunta por esta Prestadora, no por cualquiera', async () => {
+  it('pregunta acotando a la Prestadora de quien pide, con la llave maestra', async () => {
+    // Con la credencial de la persona, la política restrictiva de `asistentes` esconde a los
+    // importados que esperan conformidad, y la de `accesos_match` no alcanza a superadmin:
+    // la comprobación dejaría de ver lo que ata la modalidad. Por eso pregunta con la maestra y
+    // el filtro de la Prestadora escrito en la consulta.
     await apagar('match');
-    const pregunta = llamadas.find((l) => l.clave === 'GET /rest/v1/asistentes');
-    assert.ok(pregunta, 'apagó sin mirar si hay Asistentes trabajando de esa forma');
+    for (const tabla of ['asistentes', 'accesos_match']) {
+      const pregunta = llamadas.find((l) => l.clave === `GET /rest/v1/${tabla}`);
+      assert.ok(pregunta, `apagó sin mirar ${tabla}`);
+      assert.equal(pregunta.credencial, 'Bearer clave-de-mentira');
+      assert.equal(pregunta.consulta.get('prestadora_id'), `eq.${PRESTADORA}`);
+    }
+  });
+});
+
+describe('superadmin también enciende y apaga', () => {
+  beforeEach(() => {
+    respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'superadmin', prestadora_id: PRESTADORA }]);
+    respuestas.set('GET /rest/v1/configuracion_plataforma', () => [{ mfa_admin_obligatorio: false }]);
+    respuestas.set('GET /rest/v1/permisos_de_acceso', () => []);
+  });
+
+  it('guarda en la Prestadora sobre la que trabaja', async () => {
+    // La política de escritura de `prestadora_modalidades` sólo deja a admin_prestadora; la ruta
+    // escribe con la maestra para que superadmin conserve lo que podía hacer.
+    const { estado, cuerpo } = await apagar('match');
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.ok, true);
+    const escritura = llamadas.find((l) => l.clave === 'POST /rest/v1/prestadora_modalidades');
+    assert.ok(escritura, 'superadmin no pudo guardar');
+    assert.equal(escritura.credencial, 'Bearer clave-de-mentira');
+    assert.equal(escritura.cuerpo.prestadora_id, PRESTADORA);
+    assert.equal(escritura.cuerpo.activa, false);
+  });
+
+  it('y ve los accesos vigentes que impiden apagar el Match', async () => {
+    respuestas.set('GET /rest/v1/accesos_match', () => UN_ACCESO);
+    const { estado, cuerpo } = await apagar('match');
+    assert.equal(estado, 409);
+    assert.equal(cuerpo.motivo, 'modalidad_con_accesos');
+    noApago();
   });
 });
 

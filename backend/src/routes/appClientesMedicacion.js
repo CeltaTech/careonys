@@ -1,16 +1,27 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolCliente } from '../middleware/requiereRolCliente.js';
-import { supabase } from '../db/connection.js';
+import { clienteDelPedido, supabase } from '../db/connection.js';
 import { exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { exigeDePersonasAutorizadas } from '../utils/accesosDePersonasAutorizadas.js';
 import { extensionDeArchivo } from '../utils/archivosSubidos.js';
+import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
 // Cierra pendiente #62 (docs/PLAN_HASTA_PRODUCCION.md): el Cliente solicita la indicación de
 // medicación desde su propia PWA (consentimiento implícito por venir de su sesión
 // autenticada + timestamp) — el Panel decide aceptar/rechazar (panelMedicacion.js). Sin
 // esto, la indicación queda en 'pendiente' y no llega a las órdenes del Asistente.
+//
+// CON LA CREDENCIAL DE QUIEN PIDE. La lectura entra a la base con `clienteDelPedido(req)`, no con
+// la llave maestra: la base le contesta al Cliente sólo lo de su Prestadora y sólo si su personas autorizadas
+// la deja ver la medicación. Por eso no lleva el filtro de la Prestadora de la sesión.
+//
+// EL ALTA SIGUE CON LA MAESTRA. El alta devuelve la fila recién creada, y la base sólo devuelve
+// lo que quien pide puede leer: una persona de las personas autorizadas a la que se le dejó pedir medicación pero
+// no verla recibiría un rechazo en vez del alta (políticas `cliente_carga_indicaciones_de_sus_pacientes`
+// y `cliente_lee_indicaciones_de_sus_pacientes`). Hasta que eso se resuelva, el alta y el archivo
+// van como estaban; el Paciente, en cambio, se lee con la credencial de quien pide.
 
 export const appClientesMedicacionRouter = Router();
 
@@ -33,13 +44,12 @@ function manejarErrorMulter(err, req, res, next) {
   next();
 }
 
-async function pacienteDeLaCliente(pacienteId, usuarioCliente) {
-  const { data } = await supabase
+async function pacienteDeLaCliente(db, pacienteId, usuarioCliente) {
+  const { data } = await db
     .from('pacientes')
     .select('id, prestadora_id, cliente_id')
     .eq('id', pacienteId)
     .eq('cliente_id', usuarioCliente.clienteId)
-    .eq('prestadora_id', usuarioCliente.prestadoraId)
     .maybeSingle();
   return data;
 }
@@ -49,18 +59,30 @@ async function pacienteDeLaCliente(pacienteId, usuarioCliente) {
 // decisión, la del titular sobre cada persona de su personas autorizadas. Van en este orden: primero si la
 // función existe en esta aplicación, después si a esta persona se la dieron.
 appClientesMedicacionRouter.get('/:pacienteId', requiereRolCliente, exigeVisible('cliente_medicacion_del_paciente'), exigeDePersonasAutorizadas('persona_autorizada_medicacion'), async (req, res) => {
-  const paciente = await pacienteDeLaCliente(req.params.pacienteId, req.usuarioCliente);
+  const db = clienteDelPedido(req);
+  const paciente = await pacienteDeLaCliente(db, req.params.pacienteId, req.usuarioCliente);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('indicaciones_medicacion')
     .select('id, medicamento, dosis, frecuencia, via_administracion, fecha_desde, fecha_hasta, estado, motivo_rechazo, created_at')
-    .eq('prestadora_id', paciente.prestadora_id)
     .eq('paciente_id', paciente.id)
     .order('created_at', { ascending: false });
   if (error) return responderError(res, error);
+
+  // Antes de entregar la medicación queda anotado quién la vio. Si no se puede anotar, no se
+  // entrega (docs/PLAN_HASTA_PRODUCCION.md, paso 9).
+  try {
+    await anotarConsultaAHce(req.usuarioCliente, {
+      pacienteId: paciente.id,
+      categorias: ['indicaciones_medicacion'],
+      origen: origenDelPedido(req),
+    }, { cliente: db });
+  } catch (errorAnotacion) {
+    return responderError(res, errorAnotacion);
+  }
 
   res.json({ indicaciones: data });
 });
@@ -77,7 +99,9 @@ appClientesMedicacionRouter.post(
   upload.single('prescripcion'),
   manejarErrorMulter,
   async (req, res) => {
-    const paciente = await pacienteDeLaCliente(req.params.pacienteId, req.usuarioCliente);
+    // El Paciente se lee con la credencial de quien pide: la Prestadora con la que se arma la
+    // ruta y se da el alta es la de la fila que la base ya le dejó ver.
+    const paciente = await pacienteDeLaCliente(clienteDelPedido(req), req.params.pacienteId, req.usuarioCliente);
     if (!paciente) {
       return res.status(404).json({ error: 'Paciente no encontrado' });
     }

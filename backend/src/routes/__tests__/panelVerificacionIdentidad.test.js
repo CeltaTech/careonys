@@ -49,7 +49,7 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, url: req.url, cuerpo: crudo && req.headers['content-type']?.includes('json') ? JSON.parse(crudo) : crudo });
+    llamadas.push({ clave, url: req.url, cuerpo: crudo && req.headers['content-type']?.includes('json') ? JSON.parse(crudo) : crudo, credencial: req.headers.authorization });
 
     // El depósito de archivos: subir y firmar. No se guarda nada, alcanza con contestar como
     // contesta el de verdad y dejar anotado qué ruta se tocó.
@@ -297,6 +297,28 @@ describe('los enlaces temporales de las dos fotos', () => {
     assert.equal(llamadas.some((l) => l.clave.startsWith('POST /storage/v1/')), false);
     const lectura = consultasDeAsistentes().find((l) => l.clave.startsWith('GET '));
     assert.ok(lectura.url.includes(`prestadora_id=eq.${PRESTADORA}`), lectura.url);
+  });
+
+  // El Asistente, la subida y las firmas siguen con la llave maestra: con la credencial de quien
+  // pide, la base le deja al Coordinador sólo los Asistentes de su zona y le esconde a todos los
+  // roles el pendiente de conformidad, y el depósito le exige lo mismo. Lo que separa las
+  // Prestadoras es el filtro escrito en la consulta del Asistente.
+  it('el Asistente, la subida y las dos firmas van con la llave maestra', async () => {
+    respuestas.set('GET /rest/v1/asistentes', () => [unAsistente()]);
+
+    const credencialDeQuienPide = sesionDePrueba(USUARIO);
+    await subir(ASISTENTE, { tipo: TIPO_DOCUMENTO });
+    await pedirLasFotos(ASISTENTE);
+
+    const pedidos = llamadas.filter(
+      (l) => l.clave === 'GET /rest/v1/asistentes' || l.clave.startsWith('POST /storage/v1/'),
+    );
+    assert.equal(pedidos.filter((l) => l.clave.startsWith('POST /storage/v1/object/sign/')).length, 2);
+    assert.ok(pedidos.some((l) => l.clave.startsWith('POST /storage/v1/object/fotos-identidad/')), 'no se subió nada que mirar');
+    for (const pedido of pedidos) {
+      assert.notEqual(pedido.credencial, credencialDeQuienPide, `${pedido.clave} fue con la credencial de quien pide`);
+      assert.equal(pedido.credencial, 'Bearer clave-de-mentira', `${pedido.clave} no fue con la llave maestra`);
+    }
   });
 
   it('la Prestadora que venga en el pedido no se usa para firmar nada', async () => {

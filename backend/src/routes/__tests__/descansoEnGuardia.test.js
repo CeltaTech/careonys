@@ -14,9 +14,9 @@
  *      abre ningún hueco y no se marca ninguna ausencia.
  *   3. QUE QUEDEN DOS DESCANSOS ABIERTOS. Terminar sin haber empezado, o empezar de nuevo sin
  *      haber cerrado, dejaría una pantalla con dos botones y sin saber cuál es cuál.
- *   4. QUE UNA PRESTADORA ALCANCE LA GUARDIA DE OTRA. El backend entra con la llave de servicio y se
- *      saltea la protección por fila: lo único que separa a una de otra son los filtros de cada
- *      consulta.
+ *   4. QUE UNA PRESTADORA ALCANCE LA GUARDIA DE OTRA. La guardia se busca con la credencial de
+ *      quien pide, y la base le contesta sólo las de su Prestadora; esta base de mentira hace lo
+ *      mismo. El descanso sigue con la llave maestra, y toma la Prestadora de esa guardia.
  *   5. QUE SE PIERDA EL MOMENTO EN QUE PASÓ. El aviso puede quedar en la cola sin conexión, y ese
  *      rato es justamente el dato.
  *
@@ -51,10 +51,11 @@ const baseFalsa = createServer((req, res) => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
     const cuerpo = crudo ? JSON.parse(crudo) : null;
-    llamadas.push({ clave, url: req.url, cuerpo });
+    const credencial = req.headers.authorization;
+    llamadas.push({ clave, url: req.url, cuerpo, credencial });
 
     const preparada = respuestas.get(clave);
-    const valor = typeof preparada === 'function' ? preparada({ cuerpo, url: req.url }) : preparada;
+    const valor = typeof preparada === 'function' ? preparada({ cuerpo, url: req.url, credencial }) : preparada;
     if (valor === undefined) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: `la prueba no preparó respuesta para ${clave}` }));
@@ -133,6 +134,15 @@ function filasQuePasanLosFiltros(url, filas) {
   );
 }
 
+/**
+ * Lo que la base le deja ver a cada credencial: la llave maestra ve todo; la sesión de una persona,
+ * sólo las filas de su Prestadora. Es lo que hace la protección por fila en la base de verdad.
+ */
+function loQueVeLaCredencial(credencial, filas) {
+  if (credencial === 'Bearer clave-de-mentira') return filas;
+  return filas.filter((fila) => fila.prestadora_id === PRESTADORA);
+}
+
 /** Los descansos que el backend dio de alta en este pedido. */
 function descansosAnotados() {
   return llamadas
@@ -159,7 +169,9 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'asistente', prestadora_id: PRESTADORA }]);
   // El Legajo con el que entra la sesión: lo busca el middleware por la cuenta y la Prestadora.
   respuestas.set('GET /rest/v1/asistentes', () => [{ id: LEGAJO, prestadora_id: PRESTADORA }]);
-  respuestas.set('GET /rest/v1/guardias', ({ url }) => filasQuePasanLosFiltros(url, guardiasEnLaBase));
+  respuestas.set('GET /rest/v1/guardias', ({ url, credencial }) =>
+    filasQuePasanLosFiltros(url, loQueVeLaCredencial(credencial, guardiasEnLaBase))
+  );
   respuestas.set('GET /rest/v1/descansos_guardia', ({ url }) =>
     filasQuePasanLosFiltros(url, descansosEnLaBase)
   );

@@ -85,7 +85,7 @@ export async function proponerConfiguracionInicial({ tipo, filas, mapeo, prestad
     yaConfiguradas.add(comparable(zona.nombre));
   }
 
-  const catalogo = await catalogoDeTiposAsistente(prestadoraId);
+  const catalogo = await catalogoDeTiposAsistente(supabase, prestadoraId);
 
   return {
     filasTotales,

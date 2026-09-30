@@ -63,7 +63,7 @@ async function enviarMensajeDeCese({ pendiente, prestadoraId }) {
   const apagado = config?.activo === false;
 
   if (!apagado) {
-    const { titulo, cuerpo } = mensajeDelSistema('cese_de_servicio', await idiomaDeLaPrestadora(prestadoraId));
+    const { titulo, cuerpo } = mensajeDelSistema('cese_de_servicio', await idiomaDeLaPrestadora(supabase, prestadoraId));
     await enviarPushAsistente(prestadoraId, pendiente.asistente_id, { titulo, cuerpo });
 
     try {

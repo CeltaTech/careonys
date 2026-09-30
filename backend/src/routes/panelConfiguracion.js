@@ -5,6 +5,7 @@ import { clienteDelPedido, supabase } from '../db/connection.js';
 import { accionesDePermisos } from '../utils/permisos.js';
 import { exigirAdministracion, exigirAdminDePrestadora } from '../middleware/exigirAdministracion.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
+import { prestadoraVisible, prestadoraVisibleOContestar } from '../utils/prestadoraVisible.js';
 import {
   ACCION_CAMBIO_DE_MONEDA,
   ACCION_CAMBIO_DE_PERMISOS,
@@ -108,26 +109,6 @@ panelConfiguracionRouter.use(requiereRolPanel, soloAdministracion, exigirOrganiz
 // `prestadoras`, escribir la forma de pago de los Asistentes, las conexiones con software externo),
 // las funciones que guardan secretos o reordenan, que no se le dieron a quien inicia sesión, la
 // lista de Coordinadores, que sale de `usuarios`, y el registro de actividad.
-
-// La Prestadora de quien pide, tal como la base la deja ver. Toda cuenta del Panel ve una sola
-// fila de `prestadoras`: la suya. Si no ve ninguna, o ve más de una, no se sabe para quién se
-// escribe y no se escribe nada.
-async function prestadoraVisible(db) {
-  const { data, error } = await db.from('prestadoras').select('id').maybeSingle();
-  if (error) throw error;
-  if (!data?.id) throw new ErrorConMotivo('no_encontrado', 'la base no deja ver la Prestadora de quien pide');
-  return data.id;
-}
-
-// La misma, para un manejador: si no se la puede saber, contesta el error y devuelve `null`.
-async function prestadoraVisibleOContestar(db, res) {
-  try {
-    return await prestadoraVisible(db);
-  } catch (error) {
-    responderError(res, error);
-    return null;
-  }
-}
 
 // --- Datos de la prestadora (configuracion_prestadora, ver schema_multitenant_04.sql —
 //     reemplaza el singleton configuracion_empresa: cada prestadora tiene su propia fila) ---
@@ -316,7 +297,7 @@ panelConfiguracionRouter.delete('/zonas/:id', async (req, res) => {
 
 panelConfiguracionRouter.get('/lugares', async (req, res) => {
   try {
-    res.json({ lugares: await lugaresDeLaPrestadora(req.usuarioPanel.prestadoraId) });
+    res.json({ lugares: await lugaresDeLaPrestadora(clienteDelPedido(req), req.usuarioPanel.prestadoraId) });
   } catch (error) {
     responderError(res, error);
   }
@@ -361,7 +342,7 @@ panelConfiguracionRouter.post('/lugares', async (req, res) => {
   let prestadoraId;
   try {
     prestadoraId = await prestadoraVisible(db);
-    pais = await paisDeLaPrestadora(prestadoraId);
+    pais = await paisDeLaPrestadora(db, prestadoraId);
   } catch (error) {
     return responderError(res, error);
   }
@@ -1714,7 +1695,7 @@ panelConfiguracionRouter.post('/whatsapp/plantillas/redactar', async (req, res) 
     const propuesta = await redactarPlantillaWhatsapp({
       proposito,
       categoria,
-      idioma: await idiomaDeLaPrestadora(prestadoraId),
+      idioma: await idiomaDeLaPrestadora(clienteDelPedido(req), prestadoraId),
       prestadoraId,
     });
     res.json({ propuesta });
@@ -2178,7 +2159,7 @@ panelConfiguracionRouter.get('/permisos', async (req, res) => {
   try {
     const prestadoraId = await prestadoraVisible(db);
     const [acciones, { data: filas, error: errorFilas }, { data: coordinadores, error: errorCoordinadores }] = await Promise.all([
-      accionesDePermisos(),
+      accionesDePermisos(db),
       db.from('permisos_prestadora').select('*'),
       coordinadoresDeLaPrestadora(prestadoraId),
     ]);
@@ -2201,9 +2182,10 @@ panelConfiguracionRouter.get('/permisos', async (req, res) => {
 
 panelConfiguracionRouter.patch('/permisos/:accion', async (req, res) => {
   const { accion } = req.params;
+  const db = clienteDelPedido(req);
   let acciones;
   try {
-    acciones = await accionesDePermisos();
+    acciones = await accionesDePermisos(db);
   } catch (e) {
     return responderError(res, e);
   }
@@ -2216,7 +2198,6 @@ panelConfiguracionRouter.patch('/permisos/:accion', async (req, res) => {
   }
   // Cuál era el alcance antes, leído antes de pisarlo. Puede no haber fila: ahí el alcance que
   // regía era el de fábrica del catálogo, y eso se anota tal cual.
-  const db = clienteDelPedido(req);
   const prestadoraId = await prestadoraVisibleOContestar(db, res);
   if (!prestadoraId) return;
   const { data: antes } = await db

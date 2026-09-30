@@ -101,7 +101,7 @@ async function revisarGuardiasAsignadas(prestadoraId) {
   if (!guardias?.length) return;
 
   // Una sola vez por Prestadora: todos los mensajes de esta vuelta los lee la misma gente.
-  const idioma = await idiomaDeLaPrestadora(prestadoraId);
+  const idioma = await idiomaDeLaPrestadora(supabase, prestadoraId);
 
   for (const guardia of guardias) {
     const { titulo, cuerpo } = mensajeDelSistema('guardia_asignada', idioma, {
@@ -137,7 +137,7 @@ async function revisarMensajesCoordinador(prestadoraId) {
   }
   if (!mensajes?.length) return;
 
-  const idioma = await idiomaDeLaPrestadora(prestadoraId);
+  const idioma = await idiomaDeLaPrestadora(supabase, prestadoraId);
 
   for (const mensaje of mensajes) {
     const { titulo } = mensajeDelSistema('mensaje_del_coordinador', idioma);
@@ -174,7 +174,7 @@ async function revisarRecordatoriosGuardiaProxima(prestadoraId, minutosAntes, ah
   if (!guardias?.length) return;
 
   const limite = new Date(ahora.getTime() + minutosAntes * 60_000);
-  const idioma = await idiomaDeLaPrestadora(prestadoraId);
+  const idioma = await idiomaDeLaPrestadora(supabase, prestadoraId);
 
   for (const guardia of guardias) {
     const inicio = new Date(`${guardia.fecha}T${guardia.hora_inicio}`);

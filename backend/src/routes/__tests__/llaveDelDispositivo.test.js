@@ -40,6 +40,9 @@ const USUARIO = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 // El Legajo de esa persona en esta Prestadora, que es otro número que el de la cuenta.
 const LEGAJO = 'bbbbbbbb-bbbb-4bbb-8bbb-b0000000000b';
 const OTRA_PERSONA = '88888888-8888-4888-8888-888888888888';
+// Quien entra por la aplicación de Familias, y el Legajo de su Familia.
+const FAMILIAR = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
+const FAMILIA = 'ffffffff-ffff-4fff-8fff-f0000000000f';
 const LLAVE = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const LLAVE_AJENA = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 const LLAVE_DE_OTRA_PRESTADORA = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
@@ -62,7 +65,13 @@ const baseFalsa = createServer((req, res) => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
     const cuerpo = crudo ? JSON.parse(crudo) : null;
-    llamadas.push({ clave, url: req.url, cuerpo, credencial: credencialDe(req.headers.authorization) });
+    llamadas.push({
+      clave,
+      url: req.url,
+      cuerpo,
+      credencial: credencialDe(req.headers.authorization),
+      autorizacion: req.headers.authorization ?? null,
+    });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada({ cuerpo, url: req.url }) : preparada;
@@ -122,11 +131,14 @@ const { default: express } = await import('express');
 await import('express-async-errors');
 const { llaveDelDispositivoRouter, routerDeLlavesConSesion } = await import('../llaveDelDispositivo.js');
 const { requiereRolAsistente } = await import('../../middleware/requiereRolAsistente.js');
+const { requiereRolFamilia } = await import('../../middleware/requiereRolFamilia.js');
+const { olvidarPedidos } = await import('../../middleware/topeDePedidos.js');
 
 const app = express();
 app.use(express.json());
 app.use('/api/llave-de-dispositivo', llaveDelDispositivoRouter);
 app.use('/api/app-asistentes/llaves', requiereRolAsistente, routerDeLlavesConSesion('asistente'));
+app.use('/api/app-familias/llaves', requiereRolFamilia, routerDeLlavesConSesion('familia'));
 const backend = app.listen(0, '127.0.0.1');
 await new Promise((listo) => backend.on('listening', listo));
 const RAIZ = `http://127.0.0.1:${backend.address().port}`;
@@ -136,10 +148,10 @@ after(() => {
   baseFalsa.close();
 });
 
-async function pedir(metodo, ruta, cuerpo) {
+async function pedir(metodo, ruta, cuerpo, { usuario = USUARIO } = {}) {
   const opciones = {
     method: metodo,
-    headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
+    headers: { Authorization: sesionDePrueba(usuario), 'Content-Type': 'application/json' },
   };
   if (cuerpo !== undefined) opciones.body = JSON.stringify(cuerpo);
   const respuesta = await fetch(`${RAIZ}${ruta}`, opciones);
@@ -217,7 +229,12 @@ beforeEach(() => {
     filasQuePasanLosFiltros(url, [
       { id: USUARIO, rol: 'asistente', prestadora_id: PRESTADORA, nombre: 'Ana Prueba', email: 'ana@ejemplo.com' },
       { id: OTRA_PERSONA, rol: 'asistente', prestadora_id: PRESTADORA, nombre: 'Bruno Prueba', email: 'bruno@ejemplo.com' },
+      { id: FAMILIAR, rol: 'familia', prestadora_id: PRESTADORA, nombre: 'Carla Prueba', email: 'carla@ejemplo.com' },
     ])
+  );
+  // El Legajo de la Familia con el que entra la sesión de la aplicación de Familias.
+  respuestas.set('GET /rest/v1/familias', ({ url }) =>
+    filasQuePasanLosFiltros(url, [{ id: FAMILIA, usuario_id: FAMILIAR, prestadora_id: PRESTADORA }])
   );
   respuestas.set('GET /rest/v1/llaves_de_dispositivo', ({ url }) =>
     filasQuePasanLosFiltros(url, llavesEnLaBase)
@@ -550,6 +567,86 @@ describe('la baja', () => {
     const inventada = await pedir('DELETE', '/api/app-asistentes/llaves/00000000-0000-4000-8000-000000000000');
     assert.equal(deOtra.estado, 404);
     assert.deepEqual(deOtra, inventada);
+  });
+});
+
+describe('el alta de una llave lee la ficha propia con la credencial de la persona', () => {
+  const pedirAlta = (ruta = '/api/app-asistentes/llaves/desafio', usuario = USUARIO) =>
+    pedir('POST', ruta, {}, { usuario });
+  const lecturaDeLaFicha = () =>
+    llamadas.find((l) => l.clave === 'GET /rest/v1/usuarios' && l.url.includes('email'));
+
+  beforeEach(() => olvidarPedidos());
+
+  it('el nombre y el correo salen de la fila propia, pedida con la credencial de quien entró', async () => {
+    const { estado, cuerpo } = await pedirAlta();
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.user.name, 'ana@ejemplo.com');
+    assert.equal(cuerpo.user.displayName, 'Ana Prueba');
+
+    const ficha = lecturaDeLaFicha();
+    assert.ok(ficha, 'no se leyó la ficha propia');
+    assert.equal(ficha.autorizacion, sesionDePrueba(USUARIO));
+    assert.equal(ficha.credencial.maestra, false);
+    assert.ok(ficha.url.includes(`id=eq.${USUARIO}`));
+  });
+
+  it('ninguna lectura de `usuarios` va con la maestra', async () => {
+    await pedirAlta();
+    const conLaMaestra = llamadas.filter((l) => l.clave === 'GET /rest/v1/usuarios' && l.credencial.maestra);
+    assert.deepEqual(conLaMaestra, []);
+  });
+
+  it('lo mismo desde la aplicación de Familias', async () => {
+    const { estado, cuerpo } = await pedirAlta('/api/app-familias/llaves/desafio', FAMILIAR);
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.user.name, 'carla@ejemplo.com');
+
+    const ficha = lecturaDeLaFicha();
+    assert.equal(ficha.autorizacion, sesionDePrueba(FAMILIAR));
+    assert.ok(ficha.url.includes(`id=eq.${FAMILIAR}`));
+
+    const guardado = llamadas.find((l) => l.clave === 'POST /rest/v1/desafios_de_llave');
+    assert.equal(guardado.cuerpo.rol, 'familia');
+    assert.equal(guardado.cuerpo.usuario_id, FAMILIAR);
+    assert.equal(guardado.cuerpo.prestadora_id, PRESTADORA);
+  });
+
+  it('si la base no le devuelve la ficha propia, no se emite ningún desafío', async () => {
+    respuestas.set('GET /rest/v1/usuarios', ({ url }) =>
+      url.includes('email') ? [] : filasQuePasanLosFiltros(url, [
+        { id: USUARIO, rol: 'asistente', prestadora_id: PRESTADORA },
+      ])
+    );
+    const { estado, cuerpo } = await pedirAlta();
+    assert.equal(estado, 400);
+    assert.equal(cuerpo.motivo, 'faltan_datos');
+    assert.equal(llamadas.filter((l) => l.clave === 'POST /rest/v1/desafios_de_llave').length, 0);
+  });
+
+  it('no ofrece como nuevas las llaves que la persona ya tiene, y sólo ésas', async () => {
+    const { cuerpo } = await pedirAlta();
+    assert.deepEqual(
+      cuerpo.excludeCredentials.map((c) => c.id),
+      [CREDENCIAL_VIVA]
+    );
+  });
+
+  it('las llaves y los desafíos van con la credencial de la persona, filtrados por ella y su Prestadora', async () => {
+    await pedirAlta();
+    await misLlaves();
+    const deLlaves = llamadas.filter((l) =>
+      ['GET /rest/v1/llaves_de_dispositivo', 'POST /rest/v1/desafios_de_llave'].includes(l.clave)
+    );
+    assert.ok(deLlaves.length >= 3);
+    for (const llamada of deLlaves) {
+      assert.equal(llamada.credencial.maestra, false, llamada.clave);
+      assert.equal(llamada.autorizacion, sesionDePrueba(USUARIO), llamada.clave);
+    }
+    for (const lectura of deLlaves.filter((l) => l.clave.startsWith('GET '))) {
+      assert.ok(lectura.url.includes(`prestadora_id=eq.${PRESTADORA}`));
+      assert.ok(lectura.url.includes(`usuario_id=eq.${USUARIO}`));
+    }
   });
 });
 

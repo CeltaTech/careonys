@@ -45,7 +45,7 @@ export async function revisarNotificacionesCoordinador() {
   // El idioma se pregunta una vez por Prestadora y no una por mensaje: todos los que salen en esta
   // vuelta los lee la misma gente, la del Panel de esa Prestadora.
   for (const config of configuraciones) {
-    const idioma = await idiomaDeLaPrestadora(config.prestadora_id);
+    const idioma = await idiomaDeLaPrestadora(supabase, config.prestadora_id);
     // Cuánto dura hacerse cargo de una alarma también se pregunta una vez por Prestadora: es el
     // mismo número para las tres clases de alarma que siguen.
     const reglaDeLasTomas = await reglaDeLaToma(config.prestadora_id);

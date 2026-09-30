@@ -2,6 +2,7 @@ import { enviarEmail } from './email.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDelDestinatario } from '../i18n/idiomas.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
+import { supabase } from '../db/connection.js';
 import { marcaDeLaPrestadora } from './marcaPrestadora.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
 
@@ -35,7 +36,7 @@ export async function avisarDeSeguridad(clave, cuenta) {
     const marca = await marcaDeLaPrestadora(cuenta.prestadora_id);
     const textos = mensajeDelSistema(
       clave,
-      idiomaDelDestinatario(null, await idiomaDeLaPrestadora(cuenta.prestadora_id)),
+      idiomaDelDestinatario(null, await idiomaDeLaPrestadora(supabase, cuenta.prestadora_id)),
       {
         nombre: cuenta.nombre ?? '',
         prestadora: marca?.nombre || IDENTIDAD.nombre,

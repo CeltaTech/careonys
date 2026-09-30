@@ -16,13 +16,17 @@ import { cuentaDeLaFicha } from './cuentaDeLaFicha.js';
 // los generales de CeltaTech (`prestadora_id` vacío) o los que creó ella misma. Devuelve el
 // mismo id si está bien, y `null` si no vino ninguno.
 //
-// Hace falta escribirlo: el backend entra a la base con la llave maestra, así que las reglas
-// de aislamiento de la base no lo frenan. El filtro por Prestadora se escribe acá a mano o
-// no existe (CLAUDE.md §5, regla de aislamiento).
-export async function validarTipoAsistente(tipoAsistenteId, prestadoraId) {
+// Hace falta escribirlo: entra con la conexión que recibe, y quien llama puede pasar la llave
+// maestra, que las reglas de aislamiento de la base no frenan. El filtro por Prestadora se escribe
+// acá a mano o no existe (CLAUDE.md §5, regla de aislamiento).
+//
+// Todas las funciones de este archivo que van a la base reciben la conexión de quien las llama,
+// salvo `crearCuentaConPerfil` y `borrarCuenta`, que entran con la credencial del trabajo sin
+// persona, adentro de la Prestadora que se les nombra.
+export async function validarTipoAsistente(db, tipoAsistenteId, prestadoraId) {
   if (!tipoAsistenteId) return null;
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('tipos_asistente')
     .select('id')
     .eq('id', tipoAsistenteId)
@@ -52,15 +56,15 @@ function comparable(texto) {
 // tipo decide si a esa persona se le va a exigir Matrícula para poder atender, y adivinarlo
 // mal deja trabajando a alguien que no debería. El que entra sin tipo aparece después en la
 // lista de Asistentes, marcado, para que una persona lo complete — se ve, no se esconde.
-export async function resolverTipoAsistentePorNombre(texto, prestadoraId) {
+export async function resolverTipoAsistentePorNombre(db, texto, prestadoraId) {
   if (!comparable(texto)) return null;
-  return resolverTipoAsistenteEnCatalogo(texto, await catalogoDeTiposAsistente(prestadoraId));
+  return resolverTipoAsistenteEnCatalogo(texto, await catalogoDeTiposAsistente(db, prestadoraId));
 }
 
 // Los tipos que esa Prestadora puede usar: los cuatro de fábrica (sin Prestadora) más los
 // propios. El filtro por Prestadora va escrito acá a mano por el mismo motivo que arriba.
-export async function catalogoDeTiposAsistente(prestadoraId) {
-  const { data, error } = await supabase
+export async function catalogoDeTiposAsistente(db, prestadoraId) {
+  const { data, error } = await db
     .from('tipos_asistente')
     .select('id, clave, nombre, prestadora_id')
     .or(`prestadora_id.is.null,prestadora_id.eq.${prestadoraId}`)
@@ -170,7 +174,7 @@ export async function borrarCuenta(userId, { prestadoraId } = {}) {
 //
 // `prestadoraId` es obligatorio y no tiene valor por omisión: sin él este borrado alcanzaría
 // filas de cualquier Organización. Falla cerrado — sin Prestadora no se limpia nada.
-export async function deshacerAlta(userId, { prestadoraId, filas = [] } = {}) {
+export async function deshacerAlta(db, userId, { prestadoraId, filas = [] } = {}) {
   if (!prestadoraId) {
     console.error('deshacerAlta: sin Prestadora no se limpia nada', userId);
     return false;
@@ -190,7 +194,7 @@ export async function deshacerAlta(userId, { prestadoraId, filas = [] } = {}) {
     // que se deshace son altas de Familia, Asistente o círculo de cuidado, todas de una Prestadora.
     // Una cuenta de otra Organización no aparece, y no aparecer es lo mismo que no estar.
     const { data: duena, error: errorDuena } = await acotarAUsuariosDelPanel(
-      supabase.from('usuarios').select('rol, prestadora_id').eq('id', userId),
+      db.from('usuarios').select('rol, prestadora_id').eq('id', userId),
       { prestadoraId },
     ).maybeSingle();
     if (errorDuena || !duena) {
@@ -217,9 +221,11 @@ export async function deshacerAlta(userId, { prestadoraId, filas = [] } = {}) {
       // Cada tabla se borra nombrando la Prestadora. Las tres que no tienen esa columna van
       // marcadas en las listas de abajo: cuelgan de la cuenta, y la pertenencia de la cuenta ya
       // se comprobó al entrar.
-      let limpieza = supabase.from(fila.tabla).delete().eq(fila.columna || 'id', valor);
-      if (!fila.sinPrestadora) limpieza = limpieza.eq('prestadora_id', prestadoraId);
-      const { error } = await limpieza;
+      const { error } = await db
+        .from(fila.tabla)
+        .delete()
+        .eq(fila.columna || 'id', valor)
+        .match(fila.sinPrestadora ? {} : { prestadora_id: prestadoraId });
       if (error) throw new Error(error.message);
     } catch (error) {
       limpioTodo = false;
@@ -288,7 +294,7 @@ const FILAS_DE_UN_MIEMBRO_CIRCULO = [
 export async function crearAsistenteDirecto({
   nombre, telefono, email, dni, domicilio, domicilioPartido, tipo_asistente_id, tipo_asistente, lugares, estado,
   tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales, modalidades,
-  prestadoraId, usuarioPanelId, importacionId,
+  prestadoraId, usuarioPanelId, importacionId, db,
 }) {
   if (!nombre || !email) {
     throw new ErrorConMotivo('faltan_datos', 'Faltan datos obligatorios (nombre, email)');
@@ -305,8 +311,8 @@ export async function crearAsistenteDirecto({
   // porque lo eligió de una lista; una planilla importada manda el nombre escrito, que hay
   // que buscar en el catálogo. Si viene el identificador, manda ese.
   const tipoAsistenteId = tipo_asistente_id
-    ? await validarTipoAsistente(tipo_asistente_id, prestadoraId)
-    : await resolverTipoAsistentePorNombre(tipo_asistente, prestadoraId);
+    ? await validarTipoAsistente(db, tipo_asistente_id, prestadoraId)
+    : await resolverTipoAsistentePorNombre(db, tipo_asistente, prestadoraId);
 
   // Dónde vive, escrito para que lo lea una persona, y ese mismo lugar en coordenadas para
   // poder medir distancias — la cercanía al elegir a quién llamar, y de dónde salió el viaje.
@@ -320,7 +326,7 @@ export async function crearAsistenteDirecto({
   // planilla trae. En los dos casos se guardan las partes que haya, y el renglón lo arma
   // `domicilioEscrito`, que es el único lugar donde se decide dónde va cada coma.
   const partes = partesDelDomicilio(domicilioPartido);
-  const nombreDeSuLugar = await nombreDelLugar(partes.lugar_id, prestadoraId);
+  const nombreDeSuLugar = await nombreDelLugar(db, partes.lugar_id, prestadoraId);
   const domicilioDelAsistente = domicilioEscrito({ ...partes, lugar: nombreDeSuLugar }) || domicilio || null;
   const ubicacion = await coordenadasDeDomicilio({ prestadoraId, direccion: domicilioDelAsistente });
 
@@ -335,7 +341,7 @@ export async function crearAsistenteDirecto({
       email, nombre, telefono, rol: 'asistente', prestadoraId, enviarActivacion: true,
     }));
 
-    const { data: fichaNueva, error: errorAsistente } = await supabase.from('asistentes').insert({
+    const { data: fichaNueva, error: errorAsistente } = await db.from('asistentes').insert({
       usuario_id: cuentaId,
       nombre,
       dni: dni || null,
@@ -361,13 +367,13 @@ export async function crearAsistenteDirecto({
     // que el alta y la corrección dejen la lista igual. Si alguno de los lugares no es de esta
     // Organización, la clave foránea compuesta rechaza la escritura entera, el alta se deshace
     // como cualquier otro tropiezo y no queda una ficha a medias.
-    await guardarLugaresDe('asistente_lugares', 'asistente_id', asistenteId, prestadoraId, lugares);
+    await guardarLugaresDe(db, 'asistente_lugares', 'asistente_id', asistenteId, prestadoraId, lugares);
 
     // Lo que cobra el Asistente va a su propia tabla, no a la ficha: ahí la base exige el
     // permiso `ver_pagos_asistente` antes de mostrarlo. Si el alta no trae ningún importe no
     // se crea la fila — una fila vacía no dice nada distinto de que no haya fila.
     if (categoria_cct || valor_hora || sueldo_basico) {
-      const { error: errorRemuneracion } = await supabase.from('remuneraciones_asistente').insert({
+      const { error: errorRemuneracion } = await db.from('remuneraciones_asistente').insert({
         asistente_id: asistenteId,
         prestadora_id: prestadoraId,
         categoria_cct: categoria_cct || null,
@@ -385,11 +391,11 @@ export async function crearAsistenteDirecto({
       return { asistenteId };
     }
 
-    await activarVerificacionAltaAsistente(asistenteId, prestadoraId, usuarioPanelId);
+    await activarVerificacionAltaAsistente(db, asistenteId, prestadoraId, usuarioPanelId);
 
     return { asistenteId };
   } catch (error) {
-    await deshacerAlta(cuentaId, { prestadoraId, filas: filasDeUnAsistente(asistenteId) });
+    await deshacerAlta(db, cuentaId, { prestadoraId, filas: filasDeUnAsistente(asistenteId) });
     throw error;
   }
 }
@@ -397,8 +403,8 @@ export async function crearAsistenteDirecto({
 // Extraída de crearAsistenteDirecto para que el alta manual (arriba) y la conformidad
 // post-importación (panelImportacion.js /conformar) apliquen exactamente la misma política
 // de verificación en vez de duplicarla (Regla 12, CLAUDE.md §7).
-export async function activarVerificacionAltaAsistente(asistenteId, prestadoraId, usuarioPanelId) {
-  const { data: prestadora, error: errorPrestadora } = await supabase
+export async function activarVerificacionAltaAsistente(db, asistenteId, prestadoraId, usuarioPanelId) {
+  const { data: prestadora, error: errorPrestadora } = await db
     .from('prestadoras')
     .select('politica_verificacion_alta_manual')
     .eq('id', prestadoraId)
@@ -414,7 +420,7 @@ export async function activarVerificacionAltaAsistente(asistenteId, prestadoraId
       aprobadas: politica === 'aprobado' ? APROBADAS.TODAS : APROBADAS.NINGUNA,
       revisadoPor: usuarioPanelId,
     });
-    const { error: errorVerificaciones } = await supabase.from('verificaciones_asistente').insert(filasVerificacion);
+    const { error: errorVerificaciones } = await db.from('verificaciones_asistente').insert(filasVerificacion);
     if (errorVerificaciones) throw new Error(errorVerificaciones.message);
   }
 }
@@ -427,14 +433,14 @@ export async function activarVerificacionAltaAsistente(asistenteId, prestadoraId
 //
 // Reciben el identificador de la FICHA, que es lo que guarda el lote importado, y buscan de qué
 // cuenta cuelga: son dos números distintos desde que la ficha dejó de ser la cuenta.
-export async function revertirAsistenteImportado(asistenteId, prestadoraId) {
+export async function revertirAsistenteImportado(db, asistenteId, prestadoraId) {
   const cuentaId = await cuentaDeLaFicha('asistentes', asistenteId, prestadoraId);
-  return deshacerAlta(cuentaId, { prestadoraId, filas: filasDeUnAsistente(asistenteId) });
+  return deshacerAlta(db, cuentaId, { prestadoraId, filas: filasDeUnAsistente(asistenteId) });
 }
 
-export async function revertirFamiliaImportada(familiaId, prestadoraId) {
+export async function revertirFamiliaImportada(db, familiaId, prestadoraId) {
   const cuentaId = await cuentaDeLaFicha('familias', familiaId, prestadoraId);
-  return deshacerAlta(cuentaId, { prestadoraId, filas: filasDeUnaFamilia(familiaId) });
+  return deshacerAlta(db, cuentaId, { prestadoraId, filas: filasDeUnaFamilia(familiaId) });
 }
 
 // Invita a una persona al círculo de cuidado de una Familia ya existente: crea su cuenta con
@@ -446,7 +452,7 @@ export async function revertirFamiliaImportada(familiaId, prestadoraId) {
 // No es un adorno — la función de la base niega cuando no encuentra fila, así que una persona
 // recién anotada y sin filas no vería absolutamente nada y nadie sabría por qué. Después, si el
 // titular quiere darle menos, lo pide por escrito y se carga la instrucción.
-export async function invitarMiembroCirculo({ email, nombre, telefono, familiaId, prestadoraId, invitadoPor }) {
+export async function invitarMiembroCirculo({ db, email, nombre, telefono, familiaId, prestadoraId, invitadoPor }) {
   if (!nombre || !email || !familiaId) {
     throw new ErrorConMotivo('faltan_datos', 'Faltan datos obligatorios (nombre, email, familiaId)');
   }
@@ -465,12 +471,12 @@ export async function invitarMiembroCirculo({ email, nombre, telefono, familiaId
       email, nombre, telefono, rol: 'familia', prestadoraId, enviarActivacion: true,
     }));
 
-    const { error: errorMiembro } = await supabase
+    const { error: errorMiembro } = await db
       .from('miembros_familia')
       .insert({ usuario_id: miembroId, familia_id: familiaId, email, creado_por: invitadoPor });
     if (errorMiembro) throw new Error(errorMiembro.message);
 
-    const { error: errorAccesos } = await supabase
+    const { error: errorAccesos } = await db
       .from('permisos_circulo_familiar')
       .insert(CATALOGO_CIRCULO_FAMILIAR.map((cosa) => ({
         familia_id: familiaId,
@@ -482,7 +488,7 @@ export async function invitarMiembroCirculo({ email, nombre, telefono, familiaId
 
     return { miembroId };
   } catch (error) {
-    await deshacerAlta(miembroId, { prestadoraId, filas: FILAS_DE_UN_MIEMBRO_CIRCULO });
+    await deshacerAlta(db, miembroId, { prestadoraId, filas: FILAS_DE_UN_MIEMBRO_CIRCULO });
     throw error;
   }
 }
@@ -491,7 +497,7 @@ export async function invitarMiembroCirculo({ email, nombre, telefono, familiaId
 // `miembros_familia` (RLS/`ON DELETE CASCADE` no alcanza porque el borrado real es la
 // cuenta completa, no la fila) y su cuenta, reutilizando `borrarCuenta` para no duplicar la
 // validación de tenant que ya hace esa función.
-export async function revocarMiembroCirculo(usuarioId, { prestadoraId, familiaId }) {
+export async function revocarMiembroCirculo(db, usuarioId, { prestadoraId, familiaId }) {
   // La misma comprobación que al invitar, y por un motivo más fuerte: acá se borra. Los dos
   // borrados de abajo van por número de cuenta, sin Prestadora, y corren ANTES de `borrarCuenta`,
   // que es la que valida. Sin esto, un número de Familia ajeno alcanza para dejar sin accesos a
@@ -500,7 +506,7 @@ export async function revocarMiembroCirculo(usuarioId, { prestadoraId, familiaId
     throw new ErrorConMotivo('familia_de_otra_prestadora', `familia ${familiaId} fuera de la Prestadora`);
   }
 
-  const { data: miembro, error: errorMiembro } = await supabase
+  const { data: miembro, error: errorMiembro } = await db
     .from('miembros_familia')
     .select('familia_id')
     .eq('usuario_id', usuarioId)
@@ -515,8 +521,8 @@ export async function revocarMiembroCirculo(usuarioId, { prestadoraId, familiaId
     );
   }
 
-  await supabase.from('permisos_circulo_familiar').delete().eq('usuario_id', usuarioId);
-  await supabase.from('miembros_familia').delete().eq('usuario_id', usuarioId);
+  await db.from('permisos_circulo_familiar').delete().eq('usuario_id', usuarioId);
+  await db.from('miembros_familia').delete().eq('usuario_id', usuarioId);
   await borrarCuenta(usuarioId, { prestadoraId });
 }
 
@@ -526,7 +532,7 @@ export async function crearFamiliaDirecta({
   nombreContacto, telefono, email, localidad, plan,
   nombrePaciente, domicilioPaciente, domicilioDelPacientePartido,
   fechaNacimientoPaciente, nivelComplejidadPaciente, patologiasPaciente,
-  prestadoraId, importacionId,
+  prestadoraId, importacionId, db,
 }) {
   if (!nombreContacto || !email || !nombrePaciente) {
     throw new ErrorConMotivo('faltan_datos', 'Faltan datos obligatorios (nombreContacto, email, nombrePaciente)');
@@ -537,7 +543,7 @@ export async function crearFamiliaDirecta({
   // el renglón se arma con `domicilioEscrito`, que es el único lugar donde se decide dónde va cada
   // coma. El nombre del lugar se busca acá porque vive en otra tabla.
   const partes = partesDelDomicilio(domicilioDelPacientePartido);
-  const nombreDeSuLugar = await nombreDelLugar(partes.lugar_id, prestadoraId);
+  const nombreDeSuLugar = await nombreDelLugar(db, partes.lugar_id, prestadoraId);
   const renglonPartido = domicilioEscrito({ ...partes, lugar: nombreDeSuLugar });
 
   // Lo que va a quedar escrito en `pacientes.domicilio`, y su punto en el mapa si se lo puede
@@ -557,7 +563,7 @@ export async function crearFamiliaDirecta({
   let familiaId;
   let solicitudId;
   try {
-    const { data: solicitud, error: errorSolicitud } = await supabase
+    const { data: solicitud, error: errorSolicitud } = await db
       .from('solicitudes')
       .insert({
         prestadora_id: prestadoraId,
@@ -585,7 +591,7 @@ export async function crearFamiliaDirecta({
       email, nombre: nombreContacto, telefono, rol: 'familia', prestadoraId, enviarActivacion: true,
     }));
 
-    const { data: fichaNueva, error: errorFamilia } = await supabase
+    const { data: fichaNueva, error: errorFamilia } = await db
       .from('familias')
       .insert({
         usuario_id: cuentaId,
@@ -600,7 +606,7 @@ export async function crearFamiliaDirecta({
     if (errorFamilia) throw new Error(errorFamilia.message);
     familiaId = fichaNueva.id;
 
-    const { data: paciente, error: errorPaciente } = await supabase
+    const { data: paciente, error: errorPaciente } = await db
       .from('pacientes')
       .insert({
         familia_id: familiaId,
@@ -619,7 +625,7 @@ export async function crearFamiliaDirecta({
       .single();
     if (errorPaciente) throw new Error(errorPaciente.message);
 
-    const { error: errorUpdate } = await supabase
+    const { error: errorUpdate } = await db
       .from('solicitudes')
       .update({ familia_id: familiaId })
       .eq('prestadora_id', prestadoraId)
@@ -628,7 +634,7 @@ export async function crearFamiliaDirecta({
 
     return { familiaId, pacienteId: paciente.id };
   } catch (error) {
-    await deshacerAlta(cuentaId, {
+    await deshacerAlta(db, cuentaId, {
       prestadoraId,
       // La solicitud se creó antes que la cuenta y no cuelga de ella, así que se limpia por
       // su propio identificador. Va última porque las familias la apuntan.

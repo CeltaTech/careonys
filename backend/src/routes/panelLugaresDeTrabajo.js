@@ -17,8 +17,9 @@
 // que a la que todavía no tiene ninguno no la ve y no le podría cargar el primero; y en `usuarios`
 // cada persona lee sólo su propia fila (`usuario_ve_su_propia_fila`), así que la administración no
 // encontraría a la coordinadora cuyo alcance cambia. Las lecturas y la escritura de los lugares
-// viven además en `utils/catalogoDeLugares.js` y `utils/lugaresDeCadaPersona.js`, que entran con
-// la maestra.
+// viven además en `utils/catalogoDeLugares.js` y `utils/lugaresDeCadaPersona.js`, y acá se les pasa
+// la maestra por lo mismo, y porque `zonas_cobertura` sólo la lee la administración: con la
+// credencial de quien coordina, el catálogo le llegaría sin el atajo de las zonas.
 
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
@@ -58,7 +59,7 @@ async function existeEnLaOrganizacion(tabla, id, prestadoraId) {
 // punto único de verdad que usa Configuración.
 panelLugaresDeTrabajoRouter.get('/catalogo', async (req, res) => {
   try {
-    res.json(await catalogoDeLugares(req.usuarioPanel.prestadoraId));
+    res.json(await catalogoDeLugares(supabase, req.usuarioPanel.prestadoraId));
   } catch (error) {
     responderError(res, error);
   }
@@ -68,7 +69,7 @@ panelLugaresDeTrabajoRouter.get('/catalogo', async (req, res) => {
 
 panelLugaresDeTrabajoRouter.get('/asistente/:id', async (req, res) => {
   try {
-    const lugares = await lugaresDe('asistente_lugares', 'asistente_id', req.params.id, req.usuarioPanel.prestadoraId);
+    const lugares = await lugaresDe(supabase, 'asistente_lugares', 'asistente_id', req.params.id, req.usuarioPanel.prestadoraId);
     res.json({ lugares });
   } catch (error) {
     responderError(res, error);
@@ -84,7 +85,7 @@ panelLugaresDeTrabajoRouter.put('/asistente/:id', async (req, res) => {
     if (!(await existeEnLaOrganizacion('asistentes', req.params.id, prestadoraId))) {
       return res.status(404).json({ error: 'No se encontró esa Asistente' });
     }
-    await guardarLugaresDe('asistente_lugares', 'asistente_id', req.params.id, prestadoraId, lugares);
+    await guardarLugaresDe(supabase, 'asistente_lugares', 'asistente_id', req.params.id, prestadoraId, lugares);
     res.json({ ok: true });
   } catch (error) {
     responderError(res, error);
@@ -95,7 +96,7 @@ panelLugaresDeTrabajoRouter.put('/asistente/:id', async (req, res) => {
 
 panelLugaresDeTrabajoRouter.get('/usuario/:id', soloAdministracion, async (req, res) => {
   try {
-    const lugares = await lugaresDe('usuario_lugares', 'usuario_id', req.params.id, req.usuarioPanel.prestadoraId);
+    const lugares = await lugaresDe(supabase, 'usuario_lugares', 'usuario_id', req.params.id, req.usuarioPanel.prestadoraId);
     res.json({ lugares });
   } catch (error) {
     responderError(res, error);
@@ -111,7 +112,7 @@ panelLugaresDeTrabajoRouter.put('/usuario/:id', soloAdministracion, async (req, 
     if (!(await existeEnLaOrganizacion('usuarios', req.params.id, prestadoraId))) {
       return res.status(404).json({ error: 'No se encontró esa persona' });
     }
-    await guardarLugaresDe('usuario_lugares', 'usuario_id', req.params.id, prestadoraId, lugares);
+    await guardarLugaresDe(supabase, 'usuario_lugares', 'usuario_id', req.params.id, prestadoraId, lugares);
     res.json({ ok: true });
   } catch (error) {
     responderError(res, error);

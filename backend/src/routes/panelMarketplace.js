@@ -19,6 +19,7 @@ import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { exigirModalidad } from '../middleware/exigirModalidad.js';
 import { advertenciaVigente, advertenciasVigentes, registrarAdvertencia } from '../utils/advertenciaLegal.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
+import { prestadoraVisible } from '../utils/prestadoraVisible.js';
 import { darDeAltaEnPasarela, MOTIVO_ALTA } from '../utils/altaEnPasarela.js';
 import { registrarCobroExitoso } from '../utils/cobrosMarketplace.js';
 import { cuentasDeLasFichas } from '../utils/cuentaDeLaFicha.js';
@@ -70,15 +71,6 @@ const soloAdminDePrestadora = exigirAdminDePrestadora(
 const soloAdminArmaLaFormaDeCobro = exigirAdminDePrestadora(
   'Cómo cobra la Prestadora lo decide ella: solo Admin puede armar y cambiar sus formas de cobro'
 );
-
-/** La Prestadora en la que está parada quien pide, tal como la base se la deja ver. De acá sale
- *  el `prestadora_id` de todo lo que se escribe: nunca de la sesión ni del pedido. */
-async function prestadoraVisible(db) {
-  const { data, error } = await db.from('prestadoras').select('id').maybeSingle();
-  if (error) throw error;
-  if (!data?.id) throw new ErrorConMotivo('no_encontrado', 'la base no deja ver la Prestadora de quien pide');
-  return data.id;
-}
 
 // ============================================================================
 // Pasarela de pago — la Prestadora activa uno o varios de los 6 rieles, cada uno con su

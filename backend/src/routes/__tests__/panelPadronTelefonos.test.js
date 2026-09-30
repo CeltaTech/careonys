@@ -86,6 +86,7 @@ await import('express-async-errors');
 const { panelPadronTelefonosRouter } = await import('../panelPadronTelefonos.js');
 const { huellaComparable } = await import('../../utils/celularDeUnaSolaPersona.js');
 const { conElPreferidoMarcado, telefonoLimpio } = await import('../../utils/telefonosDelLegajo.js');
+const { supabase } = await import('../../db/connection.js');
 
 const app = express();
 app.use(express.json());
@@ -208,21 +209,21 @@ describe('cuál es el preferido para llamar', () => {
       filaTelefono('a', LEGAJO, CASA, '2026-09-01T10:00:00Z'),
       filaTelefono('b', LEGAJO, CELULAR, '2026-09-02T10:00:00Z'),
     ];
-    const marcados = await conElPreferidoMarcado(filas, PRESTADORA);
+    const marcados = await conElPreferidoMarcado(supabase, filas, PRESTADORA);
     assert.deepEqual(marcados.map((f) => f.preferido), [false, true]);
   });
 
   it('sin cuenta no hay preferido, y no se inventa ninguno', async () => {
     lasCuentasLlevan();
     const filas = [filaTelefono('a', LEGAJO, CASA), filaTelefono('b', LEGAJO, CELULAR)];
-    const marcados = await conElPreferidoMarcado(filas, PRESTADORA);
+    const marcados = await conElPreferidoMarcado(supabase, filas, PRESTADORA);
     assert.deepEqual(marcados.map((f) => f.preferido), [false, false]);
     assert.equal(marcados.length, 2, 'los demás siguen habilitados igual');
   });
 
   it('el número no viaja en la consulta que resuelve el preferido: viaja su huella', async () => {
     lasCuentasLlevan(CELULAR);
-    await conElPreferidoMarcado([filaTelefono('a', LEGAJO, CELULAR)], PRESTADORA);
+    await conElPreferidoMarcado(supabase, [filaTelefono('a', LEGAJO, CELULAR)], PRESTADORA);
     const consulta = llamadas.find((l) => l.url.includes('telefono_comparable'));
     assert.ok(consulta, 'se preguntó por las cuentas');
     assert.ok(!consulta.url.includes(digitos(CELULAR)), 'el número no está escrito en la dirección');
@@ -231,7 +232,7 @@ describe('cuál es el preferido para llamar', () => {
 
   it('no poder comprobarlo deja la lista sin nada señalado, nunca con una señal inventada', async () => {
     respuestas.set('GET /rest/v1/usuarios', () => ({ __estado: 500, __cuerpo: { message: 'caída' } }));
-    const marcados = await conElPreferidoMarcado([filaTelefono('a', LEGAJO, CELULAR)], PRESTADORA);
+    const marcados = await conElPreferidoMarcado(supabase, [filaTelefono('a', LEGAJO, CELULAR)], PRESTADORA);
     assert.equal(marcados[0].preferido, false);
   });
 });

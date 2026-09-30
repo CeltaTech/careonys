@@ -1,17 +1,15 @@
-import { supabase } from '../db/connection.js';
-
 // Punto único de verdad (Regla 12, CLAUDE.md §7) para resolver "medicación vigente" de un
 // Paciente y "¿puede este Asistente administrar esta vía?" — consumido por
 // appFamilias.js/appAsistentes.js (para dejar de leer pacientes.medicacion_habitual,
 // deprecado), panelMedicacion.js (cola de pendientes) y appAsistentesMedicacion.js (filtro
 // de órdenes).
 
-// `prestadoraId` va primero y sin valor por defecto, como en el resto del archivo: el backend entra
-// con la llave de servicio y se saltea la protección por fila, así que lo único que separa una
-// Prestadora de otra es este filtro.
-export async function medicacionVigenteDelPaciente(prestadoraId, pacienteId) {
+// Cada función entra con la conexión que recibe, que va primero. Detrás va `prestadoraId`, sin
+// valor por defecto, como en el resto del archivo: quien llama puede pasar la llave maestra, que se
+// saltea la protección por fila, y ahí lo único que separa una Prestadora de otra es este filtro.
+export async function medicacionVigenteDelPaciente(db, prestadoraId, pacienteId) {
   const hoyISO = new Date().toISOString().slice(0, 10);
-  const { data } = await supabase
+  const { data } = await db
     .from('indicaciones_medicacion')
     .select('id, medicamento, dosis, frecuencia, via_administracion, fecha_desde, fecha_hasta')
     .eq('prestadora_id', prestadoraId)
@@ -23,8 +21,8 @@ export async function medicacionVigenteDelPaciente(prestadoraId, pacienteId) {
   return data || [];
 }
 
-export async function tipoMatriculaRequerida(prestadoraId, viaAdministracion) {
-  const { data } = await supabase
+export async function tipoMatriculaRequerida(db, prestadoraId, viaAdministracion) {
+  const { data } = await db
     .from('configuracion_matricula_via_medicacion')
     .select('tipo_matricula_requerida')
     .eq('prestadora_id', prestadoraId)
@@ -33,13 +31,13 @@ export async function tipoMatriculaRequerida(prestadoraId, viaAdministracion) {
   return data?.tipo_matricula_requerida ?? null;
 }
 
-// El filtro por Prestadora va aunque el identificador del Asistente ya sea de una sola: el backend
-// entra con la llave de servicio y se saltea la protección por fila, así que lo único que separa
+// El filtro por Prestadora va aunque el identificador del Asistente ya sea de una sola: quien llama
+// puede pasar la llave maestra, que se saltea la protección por fila, y ahí lo único que separa
 // una Prestadora de otra son estos filtros. Y de acá cuelga si se puede dar una medicación.
-export async function asistenteTieneMatriculaVigente(prestadoraId, asistenteId, tipoRequerido) {
+export async function asistenteTieneMatriculaVigente(db, prestadoraId, asistenteId, tipoRequerido) {
   if (!tipoRequerido) return true;
   const hoyISO = new Date().toISOString().slice(0, 10);
-  const { data } = await supabase
+  const { data } = await db
     .from('matriculas_asistente')
     .select('id')
     .eq('prestadora_id', prestadoraId)
@@ -60,9 +58,9 @@ export async function asistenteTieneMatriculaVigente(prestadoraId, asistenteId, 
 // personas de la misma casa, el Asistente atiende a las dos, y para la segunda no aparecía
 // nadie. De acá cuelga si se puede aceptar una indicación de medicación que requiere
 // matrícula, así que quedarse corto significa rechazar un pedido que sí se podía cumplir.
-export async function asistentesAsignadosAlPaciente(prestadoraId, pacienteId) {
+export async function asistentesAsignadosAlPaciente(db, prestadoraId, pacienteId) {
   const hoyISO = new Date().toISOString().slice(0, 10);
-  const { data } = await supabase
+  const { data } = await db
     .from('guardia_pacientes')
     .select('guardias!inner(asistente_id)')
     .eq('prestadora_id', prestadoraId)
@@ -72,11 +70,11 @@ export async function asistentesAsignadosAlPaciente(prestadoraId, pacienteId) {
   return [...new Set((data || []).map((f) => f.guardias?.asistente_id).filter(Boolean))];
 }
 
-export async function hayAsistenteAsignadoConMatricula(prestadoraId, pacienteId, tipoRequerido) {
+export async function hayAsistenteAsignadoConMatricula(db, prestadoraId, pacienteId, tipoRequerido) {
   if (!tipoRequerido) return true;
-  const asignados = await asistentesAsignadosAlPaciente(prestadoraId, pacienteId);
+  const asignados = await asistentesAsignadosAlPaciente(db, prestadoraId, pacienteId);
   for (const asistenteId of asignados) {
-    if (await asistenteTieneMatriculaVigente(prestadoraId, asistenteId, tipoRequerido)) return true;
+    if (await asistenteTieneMatriculaVigente(db, prestadoraId, asistenteId, tipoRequerido)) return true;
   }
   return false;
 }

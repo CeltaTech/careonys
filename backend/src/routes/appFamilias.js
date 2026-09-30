@@ -1460,12 +1460,13 @@ appFamiliasRouter.get('/marketplace/asistentes', requiereRolFamilia, async (req,
 
     // Dónde trabaja cada uno. Está en la tabla que cruza a la persona con cada lugar, así que el
     // filtro se resuelve acá y no en la consulta de fichas: se piden los lugares de todo el pool
-    // una sola vez, y con eso se arma tanto la lista de opciones como el recorte.
+    // una sola vez, y con eso se arma tanto la lista de opciones como el recorte. Con la
+    // credencial de la Familia: los lugares y quién trabaja en cada uno los lee toda la Prestadora.
     const lugaresPorAsistente = await lugaresDeVarias(
-      'asistente_lugares', 'asistente_id', (todos || []).map((a) => a.id), prestadoraId
+      clienteDelPedido(req), 'asistente_lugares', 'asistente_id', (todos || []).map((a) => a.id), prestadoraId
     );
     const lugaresOfrecidos = await lugaresPorNombre(
-      [...new Set([...lugaresPorAsistente.values()].flat())], prestadoraId
+      clienteDelPedido(req), [...new Set([...lugaresPorAsistente.values()].flat())], prestadoraId
     );
 
     const lugarElegido = req.query.zona ? String(req.query.zona) : null;
@@ -1551,8 +1552,10 @@ appFamiliasRouter.get('/marketplace/asistentes/:id', requiereRolFamilia, async (
       opiniones = data || [];
     }
 
+    // Con la credencial de la Familia, por lo mismo que en la vidriera.
     const dondeTrabaja = await nombresDeLugares(
-      await lugaresDe('asistente_lugares', 'asistente_id', asistente.id, prestadoraId),
+      clienteDelPedido(req),
+      await lugaresDe(clienteDelPedido(req), 'asistente_lugares', 'asistente_id', asistente.id, prestadoraId),
       prestadoraId
     );
 

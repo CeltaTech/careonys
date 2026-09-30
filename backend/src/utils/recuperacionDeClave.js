@@ -133,7 +133,7 @@ async function emitirElEnlaceYAvisar(usuario, email) {
   const marca = await marcaDeLaPrestadora(usuario.prestadora_id);
   const textos = mensajeDelSistema(
     'recuperacion_clave',
-    idiomaDelDestinatario(null, await idiomaDeLaPrestadora(usuario.prestadora_id)),
+    idiomaDelDestinatario(null, await idiomaDeLaPrestadora(supabase, usuario.prestadora_id)),
     {
       nombre: usuario.nombre,
       link,

@@ -1,4 +1,4 @@
-import { supabase } from '../db/connection.js';
+import { clienteDelPedido } from '../db/connection.js';
 import { CATALOGO_CIRCULO_FAMILIAR, accesosEfectivos } from './catalogoCirculoFamiliar.js';
 import { visibilidadDelPedido } from './visibilidadPrestadora.js';
 
@@ -7,12 +7,11 @@ import { visibilidadDelPedido } from './visibilidadPrestadora.js';
 // claves resueltas —no las filas crudas—, para que ninguna ruta tenga que acordarse por su cuenta
 // del valor de fábrica ni del tope de la Prestadora.
 //
-// Entramos con la llave maestra del servidor, así que las políticas de la base no nos frenan: el
-// filtro va escrito acá a mano, como en el resto del backend. Las políticas dicen lo mismo y son la
-// segunda red.
+// Entra con la conexión que recibe. El filtro va escrito igual: quien llama puede pasar la llave
+// maestra, y ahí las políticas de la base no frenan nada.
 //
 // El titular no se consulta: ve todo, siempre, y esa decisión no se configura.
-export async function accesosDeLaPersona({ usuarioId, familiaId, esTitular, visibilidad }) {
+export async function accesosDeLaPersona({ db, usuarioId, familiaId, esTitular, visibilidad }) {
   if (esTitular) {
     return accesosEfectivos({ esTitular: true, visibilidad });
   }
@@ -21,7 +20,7 @@ export async function accesosDeLaPersona({ usuarioId, familiaId, esTitular, visi
   // anotado en dos círculos —cada persona tiene una sola fila de membresía—, pero preguntar por
   // media clave es de esas cosas que funcionan hasta el día que dejan de funcionar, y ese día
   // devolvería los accesos que otro titular le dio en otra Familia.
-  const { data } = await supabase
+  const { data } = await db
     .from('permisos_circulo_familiar')
     .select('clave, permitido')
     .eq('familia_id', familiaId)
@@ -33,10 +32,13 @@ export async function accesosDeLaPersona({ usuarioId, familiaId, esTitular, visi
 // Lo mismo, pero contestando una sola vez por pedido: hay rutas que lo necesitan dos veces (para
 // cortar el acceso y después para armar la respuesta) y no tiene sentido volver a preguntarle a la
 // base en el mismo pedido. Mismo patrón que `visibilidadDelPedido`.
+//
+// Con la credencial de quien pide: cada persona del círculo lee sus propios accesos.
 export async function accesosDelPedido(req) {
   if (!req.accesosDelCirculo) {
     const visibilidad = await visibilidadDelPedido(req);
     req.accesosDelCirculo = await accesosDeLaPersona({
+      db: clienteDelPedido(req),
       usuarioId: req.usuarioFamilia?.id,
       familiaId: req.usuarioFamilia?.familiaId,
       esTitular: req.usuarioFamilia?.esTitular === true,

@@ -238,7 +238,7 @@ async function fichasDeAsistentes(ids, prestadoraId) {
 /** Dónde acepta trabajar cada Asistente del equipo, para saber después quién los coordina. */
 async function lugaresDelEquipo(ids, prestadoraId) {
   try {
-    const porAsistente = await lugaresDeVarias('asistente_lugares', 'asistente_id', ids, prestadoraId);
+    const porAsistente = await lugaresDeVarias(supabase, 'asistente_lugares', 'asistente_id', ids, prestadoraId);
     return [...new Set([...porAsistente.values()].flat())];
   } catch (error) {
     console.error(`Error leyendo los lugares del equipo (prestadora ${prestadoraId}):`, error.message);
@@ -256,7 +256,7 @@ async function lugaresDelEquipo(ids, prestadoraId) {
 async function coordinadoresDeLosLugares({ lugares, prestadoraId }) {
   let alcanzan = [];
   try {
-    alcanzan = await personasEnLosLugares('usuario_lugares', 'usuario_id', lugares, prestadoraId);
+    alcanzan = await personasEnLosLugares(supabase, 'usuario_lugares', 'usuario_id', lugares, prestadoraId);
   } catch (error) {
     console.error(`Error leyendo quien coordina cada lugar (prestadora ${prestadoraId}):`, error.message);
     return [];

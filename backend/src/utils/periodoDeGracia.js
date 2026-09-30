@@ -104,7 +104,7 @@ export async function abrirElPeriodoDeGracia({ prestadoraId, accesoId, avisar = 
   if (!guardados?.length) return { abierta: false, gracia_hasta: null };
 
   try {
-    const idioma = await idiomaDeLaPrestadora(acceso.prestadora_id);
+    const idioma = await idiomaDeLaPrestadora(supabase, acceso.prestadora_id);
     await avisar(acceso.prestadora_id, acceso.familia_id, textoDelMensajeDeGracia({ ...acceso, gracia_hasta: graciaHasta }, idioma));
   } catch (falla) {
     // La gracia ya está abierta, que es lo que sostiene el acceso. Que el mensaje no haya salido se

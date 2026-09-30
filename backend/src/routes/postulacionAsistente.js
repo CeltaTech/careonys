@@ -95,7 +95,7 @@ postulacionAsistenteRouter.post('/', resolverPrestadoraPublica, async (req, res)
       prestadoraId,
       // Del cuerpo del correo sale sólo el nombre: el documento, el teléfono, el correo y la
       // situación fiscal se miran en el Panel, que es donde el permiso se comprueba.
-      ...mensajeDelSistema('nueva_postulacion_asistente', await idiomaDeLaPrestadora(prestadoraId), {
+      ...mensajeDelSistema('nueva_postulacion_asistente', await idiomaDeLaPrestadora(supabase, prestadoraId), {
         nombre: datos.nombre,
       }),
     });

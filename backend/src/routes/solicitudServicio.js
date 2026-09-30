@@ -37,7 +37,7 @@ solicitudServicioRouter.post('/', resolverPrestadoraPublica, async (req, res) =>
     await enviarEmailCoordinador({
       evento: 'nueva_solicitud_servicio',
       prestadoraId,
-      ...mensajeDelSistema('nueva_solicitud_servicio', await idiomaDeLaPrestadora(prestadoraId), {
+      ...mensajeDelSistema('nueva_solicitud_servicio', await idiomaDeLaPrestadora(supabase, prestadoraId), {
         nombre, telefono, email, localidad, modalidad, descripcion,
         tipoServicio: tipo_servicio,
         diasHorario: dias_horario,

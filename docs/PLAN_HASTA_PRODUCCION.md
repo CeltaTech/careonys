@@ -1225,6 +1225,12 @@ texto que va a salir.
 
 **91. Usted** — El alta y la baja de Prestadoras: Match expone una puerta firmada para que CeltaTech dé de alta y de baja clientes; Careonys no tiene nada parecido. ¿Se construye la misma, o se siguen dando de alta a mano?
 
+**Usted — para analizar, no para resolver ahora.** Un registro de cambios general: qué dato
+cambió, de qué valor a qué valor, quién y cuándo, para cualquier tabla que lo necesite. Hoy no
+existe: cada cambio que se registra tiene su tabla propia (`auditoria_*`, el historial del registro
+clínico). El primero que lo va a necesitar es el cambio de la fecha prevista de vuelta de una
+ausencia; si el general se decide antes de construirlo, ese cambio se anota ahí.
+
 **92.** **Por esa misma puerta tiene que entrar qué tiene habilitado cada Prestadora, y hoy no
 entra nada.** CeltaTech le vende un plan, y ese plan dice qué puede usar. Eso se lo informa al
 producto. **Y ahí termina: CeltaTech no tiene injerencia, bajo ninguna circunstancia, en el

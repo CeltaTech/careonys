@@ -104,7 +104,7 @@ export async function analizarPaciente(pacienteId, prestadoraId) {
 
   // pacientes.medicacion_habitual queda retirada (pendiente #62, docs/PLAN_HASTA_PRODUCCION.md): la
   // IA analiza la medicación vigente real, derivada de indicaciones_medicacion.
-  const medicacionVigente = await medicacionVigenteDelPaciente(prestadoraId, pacienteId);
+  const medicacionVigente = await medicacionVigenteDelPaciente(supabase, prestadoraId, pacienteId);
 
   const configuracion = await configuracionAlertasIA(prestadoraId);
 
@@ -188,7 +188,7 @@ export async function analizarPaciente(pacienteId, prestadoraId) {
   // Lo que escribió la revisión sale tal como lo escribió: es el detalle de este Paciente, no
   // una frase del producto. El catálogo pone el asunto y la frase de reemplazo para cuando la
   // revisión no dejó ninguna.
-  const idioma = await idiomaDeLaPrestadora(prestadoraId);
+  const idioma = await idiomaDeLaPrestadora(supabase, prestadoraId);
 
   if (avisarCoordinador) {
     const textos = mensajeDelSistema('alerta_ia_coordinador', idioma, { esRoja });

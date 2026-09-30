@@ -1,4 +1,3 @@
-import { supabase } from '../db/connection.js';
 import { IDIOMA_POR_DEFECTO, idiomaDePais } from './idiomas.js';
 
 /* En qué idioma escribe una Prestadora.
@@ -13,19 +12,24 @@ import { IDIOMA_POR_DEFECTO, idiomaDePais } from './idiomas.js';
 
    NO SE GUARDA EN MEMORIA ENTRE VUELTAS. El país de una Prestadora se cambia desde Configuración,
    y una copia guardada haría que el mensaje siguiera saliendo en el idioma viejo hasta que alguien
-   reiniciara el backend. */
+   reiniciara el backend.
+
+   ENTRA CON LA CONEXIÓN QUE RECIBE: la de la persona cuando hay una pidiendo, y la que ya usa el
+   proceso cuando no. El filtro por Prestadora va escrito igual, porque quien llama puede pasar la
+   llave maestra. */
 
 /**
  * El idioma de una Prestadora. Si no se la encuentra o no tiene país, el de por defecto: un
  * mensaje que sale en castellano es mejor que un mensaje que no sale.
  *
+ * @param {object} db conexión con la que se consulta
  * @param {string|null|undefined} prestadoraId
  * @returns {Promise<string>}
  */
-export async function idiomaDeLaPrestadora(prestadoraId) {
+export async function idiomaDeLaPrestadora(db, prestadoraId) {
   if (!prestadoraId) return IDIOMA_POR_DEFECTO;
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('prestadoras')
     .select('pais')
     .eq('id', prestadoraId)

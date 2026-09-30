@@ -1,4 +1,3 @@
-import { supabase } from '../db/connection.js';
 import { huellaComparable } from './celularDeUnaSolaPersona.js';
 
 // CUÁL DE LOS TELÉFONOS DE UNA FICHA ES EL PREFERIDO PARA LLAMAR.
@@ -25,6 +24,9 @@ import { huellaComparable } from './celularDeUnaSolaPersona.js';
 // Y ESTO NO TIENE NADA QUE VER CON LA REGLA DEL CELULAR ÚNICO. Aquélla impide que dos cuentas de
 // la misma Prestadora compartan un celular. Acá no se impide nada: sólo se mira si alguno de estos
 // números coincide con el de alguna cuenta, para señalarlo.
+//
+// ENTRA CON LA CONEXIÓN QUE RECIBE. El filtro por Prestadora va escrito igual, porque quien llama
+// puede pasar la llave maestra.
 
 /**
  * Las huellas de los teléfonos de cuentas de esa Prestadora que aparecen en esta lista.
@@ -32,11 +34,11 @@ import { huellaComparable } from './celularDeUnaSolaPersona.js';
  * Se pregunta por las huellas que hay, y no por todas las cuentas: así la consulta no crece con el
  * tamaño de la Prestadora.
  */
-async function huellasQueSonDeUnaCuenta(huellas, prestadoraId) {
+async function huellasQueSonDeUnaCuenta(db, huellas, prestadoraId) {
   const buscadas = [...new Set((huellas ?? []).filter(Boolean))];
   if (buscadas.length === 0 || !prestadoraId) return new Set();
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('usuarios')
     .select('telefono_comparable')
     .eq('prestadora_id', prestadoraId)
@@ -62,12 +64,12 @@ async function huellasQueSonDeUnaCuenta(huellas, prestadoraId) {
  * estuvieran cargados en su ficha, queda señalado el más antiguo de los dos. «El de preferencia»
  * es uno, y elegirlo por antigüedad hace que la pantalla muestre siempre lo mismo.
  */
-export async function conElPreferidoMarcado(telefonos, prestadoraId) {
+export async function conElPreferidoMarcado(db, telefonos, prestadoraId) {
   const filas = telefonos ?? [];
   if (filas.length === 0) return [];
 
   const huellaDe = new Map(filas.map((fila) => [fila.id, huellaComparable(fila.telefono)]));
-  const deUnaCuenta = await huellasQueSonDeUnaCuenta([...huellaDe.values()], prestadoraId);
+  const deUnaCuenta = await huellasQueSonDeUnaCuenta(db, [...huellaDe.values()], prestadoraId);
 
   // Uno por ficha, y el más antiguo cuando hay más de uno que coincide.
   const elegido = new Map();

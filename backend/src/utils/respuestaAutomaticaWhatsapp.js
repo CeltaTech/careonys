@@ -208,7 +208,7 @@ export async function resolverRespuestaAutomatica({ prestadoraId, texto, idioma 
     return { accion: 'derivar', motivo: MOTIVO_SIN_RESPUESTA_APROBADA, respuesta: null, texto: null };
   }
 
-  const idiomaDelTexto = idioma ?? (await idiomaDeLaPrestadora(prestadoraId));
+  const idiomaDelTexto = idioma ?? (await idiomaDeLaPrestadora(supabase, prestadoraId));
   const textoAprobado = elegida.i18n?.[idiomaDelTexto] ?? elegida.i18n?.[IDIOMA_POR_DEFECTO];
 
   // Sin texto en ese idioma no hay nada que mandar, y no se traduce ni se arma uno parecido.

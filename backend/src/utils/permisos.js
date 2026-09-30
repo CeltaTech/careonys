@@ -16,13 +16,19 @@ import { supabase } from '../db/connection.js';
 // comparten una decisión no pueden compartir código, el punto único de verdad es una función
 // de la base — es lo que manda la regla 12 del §7 de CLAUDE.md para este caso exacto.
 
+// CON LA CONEXIÓN QUE RECIBEN. Cada función entra a la base con la que le pasa quien la llama:
+// la de la persona si su ruta la usa, la maestra si la ruta quedó con ella a propósito. Las dos
+// preguntas a `tiene_permiso_de` y `permisos_efectivos_de` la reciben igual, pero hoy sólo la
+// maestra puede hacerlas: la base no le da a una persona con sesión permiso para llamarlas.
+
 // El catálogo cambia con una migración, o sea junto con una versión nueva del backend, así que
-// alcanza con leerlo una vez por arranque.
+// alcanza con leerlo una vez por arranque. Es el mismo para todas las Prestadoras, y la base se lo
+// deja leer a cualquiera que haya iniciado sesión.
 let catalogoEnMemoria = null;
 
-export async function accionesDePermisos() {
+export async function accionesDePermisos(db) {
   if (catalogoEnMemoria) return catalogoEnMemoria;
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('catalogo_acciones_permisos')
     .select('accion, default_solo_admin')
     .order('orden');
@@ -31,8 +37,8 @@ export async function accionesDePermisos() {
   return catalogoEnMemoria;
 }
 
-export async function tienePermiso({ accion, usuarioId }) {
-  const { data, error } = await supabase.rpc('tiene_permiso_de', {
+export async function tienePermiso({ db, accion, usuarioId }) {
+  const { data, error } = await db.rpc('tiene_permiso_de', {
     p_usuario: usuarioId ?? null,
     p_accion: accion,
   });
@@ -54,7 +60,9 @@ export async function tienePermiso({ accion, usuarioId }) {
 // Prestadora no habilitó tiene que verse siempre igual, venga de la ruta que venga.
 export function requierePermiso(accion) {
   return async (req, res, next) => {
-    const permitido = await tienePermiso({ accion, usuarioId: req.usuarioPanel?.id });
+    // Con la maestra: la base no le da a una persona con sesión permiso para llamar a
+    // `tiene_permiso_de`, así que con la suya este portero no dejaría pasar a nadie.
+    const permitido = await tienePermiso({ db: supabase, accion, usuarioId: req.usuarioPanel?.id });
     if (!permitido) {
       return res.status(403).json({ error: 'La Prestadora no habilitó esta acción' });
     }
@@ -64,8 +72,8 @@ export function requierePermiso(accion) {
 
 // Las respuestas de todas las acciones de una sola vez, para cuando el Panel necesita saber
 // qué botones mostrar. Una consulta en vez de una por acción.
-export async function permisosEfectivos(usuarioId) {
-  const { data, error } = await supabase.rpc('permisos_efectivos_de', { p_usuario: usuarioId ?? null });
+export async function permisosEfectivos(db, usuarioId) {
+  const { data, error } = await db.rpc('permisos_efectivos_de', { p_usuario: usuarioId ?? null });
   if (error) throw error;
   return data || {};
 }

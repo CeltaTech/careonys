@@ -221,17 +221,21 @@ panelImportacionRouter.post(
     const errores = [];
     let creadas = 0;
 
+    // Las altas entran con la llave maestra, como el resto de esta ruta: las fichas nacen
+    // pendientes de conformidad, y la política restrictiva `oculta_pendientes_de_conformidad` se
+    // las esconde a quien importa en cuanto las escribe.
+
     for (let i = 0; i < filas.length; i += 1) {
       const fila = filas[i];
       try {
         if (tipo === 'asistente') {
-          const datos = { prestadoraId, usuarioPanelId: req.usuarioPanel.id, importacionId: lote.id };
+          const datos = { prestadoraId, usuarioPanelId: req.usuarioPanel.id, importacionId: lote.id, db: supabase };
           for (const campo of CAMPOS_IMPORTACION.asistente) {
             datos[campo] = valorDesdeFila(fila, mapeo, campo, CAMPOS_LISTA.asistente.has(campo));
           }
           await crearAsistenteDirecto(datos);
         } else {
-          const datos = { prestadoraId, importacionId: lote.id };
+          const datos = { prestadoraId, importacionId: lote.id, db: supabase };
           for (const campo of CAMPOS_IMPORTACION.cliente) {
             datos[campo] = valorDesdeFila(fila, mapeo, campo, CAMPOS_LISTA.cliente.has(campo));
           }
@@ -348,7 +352,7 @@ panelImportacionRouter.post(
     if (lote.tipo === 'asistente') {
       for (const fila of filas) {
         try {
-          await activarVerificacionAltaAsistente(fila.id, prestadoraId, req.usuarioPanel.id);
+          await activarVerificacionAltaAsistente(supabase, fila.id, prestadoraId, req.usuarioPanel.id);
         } catch (error) {
           console.error('Error activando verificación de alta tras conformar importación:', error.message);
         }
@@ -403,8 +407,8 @@ panelImportacionRouter.post(
     let revertidas = 0;
     for (const fila of filas) {
       const limpia = lote.tipo === 'asistente'
-        ? await revertirAsistenteImportado(fila.id, prestadoraId)
-        : await revertirClienteImportada(fila.id, prestadoraId);
+        ? await revertirAsistenteImportado(supabase, fila.id, prestadoraId)
+        : await revertirClienteImportada(supabase, fila.id, prestadoraId);
       if (limpia) revertidas += 1;
     }
 

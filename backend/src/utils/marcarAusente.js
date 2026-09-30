@@ -1,4 +1,3 @@
-import { supabase } from '../db/connection.js';
 import { pacientesDeGuardia } from './pacientesDeGuardia.js';
 import { finDeGuardia, inicioDeGuardia, sumarDias } from './horarios.js';
 
@@ -28,10 +27,10 @@ import { finDeGuardia, inicioDeGuardia, sumarDias } from './horarios.js';
    `panel/src/lib/horarios.js` y donde la regla de la medianoche está escrita una sola vez para
    todo el producto (CLAUDE.md §8, «ningún patrón repetido sin punto único de verdad»).
 
-   Usa la llave de servicio, que se saltea la protección por fila: procesa guardias de cualquier
-   Prestadora según su propia configuración y no hay ninguna sesión abierta en ese proceso. El
-   aislamiento lo pone quien llama — la ruta del Panel acota a la Prestadora activa antes de
-   traer la guardia. */
+   Entra con la conexión que le pasa quien llama. Los dos de hoy le pasan la llave maestra, que se
+   saltea la protección por fila, así que el aislamiento lo pone quien llama — la ruta del Panel
+   acota a la Prestadora activa antes de traer la guardia — y el filtro por Prestadora va escrito
+   igual en cada consulta. */
 
 /**
  * Deja la guardia en `ausente` y le abre el incidente de relevo.
@@ -42,17 +41,17 @@ import { finDeGuardia, inicioDeGuardia, sumarDias } from './horarios.js';
  * Devuelve `{ ok: true }`, o `{ ok: false, motivo }` con un texto para registrar. No levanta
  * excepciones: los dos caminos que la usan quieren seguir andando aunque una guardia falle.
  */
-export async function marcarAusenteYCrearIncidente({ guardia, prestadoraId }) {
-  const { error: errorUpdate } = await supabase
+export async function marcarAusenteYCrearIncidente({ db, guardia, prestadoraId }) {
+  const { error: errorUpdate } = await db
     .from('guardias')
     .update({ estado: 'ausente' })
     .eq('prestadora_id', prestadoraId)
     .eq('id', guardia.id);
   if (errorUpdate) return { ok: false, motivo: errorUpdate.message };
 
-  const saliente = await buscarGuardiaSaliente({ guardia, prestadoraId });
+  const saliente = await buscarGuardiaSaliente({ db, guardia, prestadoraId });
 
-  const { error: errorIncidente } = await supabase.from('incidentes_relevo').insert({
+  const { error: errorIncidente } = await db.from('incidentes_relevo').insert({
     prestadora_id: prestadoraId,
     guardia_saliente_id: saliente,
     guardia_entrante_id: guardia.id,
@@ -78,7 +77,7 @@ export async function marcarAusenteYCrearIncidente({ guardia, prestadoraId }) {
  * de las dos es del día siguiente, así que ordenar por `hora_fin` ordena mal justo en la guardia
  * de noche. Además, ordenar por una columna de la tabla de adentro no ordena las filas de afuera.
  */
-async function buscarGuardiaSaliente({ guardia, prestadoraId }) {
+async function buscarGuardiaSaliente({ db, guardia, prestadoraId }) {
   let pacienteIds;
   try {
     pacienteIds = (await pacientesDeGuardia(prestadoraId, guardia, 'id')).map((p) => p.id);
@@ -88,7 +87,7 @@ async function buscarGuardiaSaliente({ guardia, prestadoraId }) {
   }
   if (pacienteIds.length === 0) return null;
 
-  const { data: candidatas, error } = await supabase
+  const { data: candidatas, error } = await db
     .from('guardia_pacientes')
     .select('guardias!inner(id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin)')
     .in('paciente_id', pacienteIds)

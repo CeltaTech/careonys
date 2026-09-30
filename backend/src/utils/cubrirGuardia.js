@@ -1,4 +1,3 @@
-import { supabase } from '../db/connection.js';
 
 /* Cubrir una guardia con un sustituto: el turno pasa a nombre de quien lo hace
    ==========================================================================
@@ -25,8 +24,9 @@ import { supabase } from '../db/connection.js';
    está cubriendo en el mismo acto. Marcar la ausencia sin sustituto sigue siendo trabajo de
    `marcarAusenteYCrearIncidente`, y no se toca.
 
-   Usa la llave de servicio, que se saltea la protección por fila. El aislamiento lo pone quien
-   llama: la ruta busca la guardia acotada a la Organización activa antes de pedir esto. */
+   Entra con la conexión que le pasa quien llama. La ruta de hoy le pasa la llave maestra, que se
+   saltea la protección por fila, así que el aislamiento lo pone ella: busca la guardia acotada a
+   la Organización activa antes de pedir esto. */
 
 /**
  * Anota la sustitución y pasa la guardia a nombre del sustituto.
@@ -37,6 +37,7 @@ import { supabase } from '../db/connection.js';
  * excepciones.
  */
 export async function cubrirGuardiaConSustituto({
+  db,
   guardia,
   asistenteSustitutoId,
   ausenciaId = null,
@@ -49,7 +50,7 @@ export async function cubrirGuardiaConSustituto({
   // La constancia se escribe antes de mover la guardia. Si fallara, el turno queda como estaba y
   // no se perdió nada. Al revés —la guardia ya a nombre del sustituto y sin nadie anotado— se
   // perdería para siempre a quién le tocaba, que es justamente lo que hay que conservar.
-  const { error: errorCobertura } = await supabase.from('guardias_cobertura').insert({
+  const { error: errorCobertura } = await db.from('guardias_cobertura').insert({
     prestadora_id: prestadoraId,
     ausencia_id: ausenciaId,
     guardia_original_id: guardia.id,
@@ -63,7 +64,7 @@ export async function cubrirGuardiaConSustituto({
 
   // El turno no cambia en nada más: mismo Paciente, mismo día, mismo horario, misma modalidad.
   // Cambia quién lo hace.
-  const { error: errorReasignar } = await supabase
+  const { error: errorReasignar } = await db
     .from('guardias')
     .update({ asistente_id: asistenteSustitutoId })
     .eq('prestadora_id', prestadoraId)

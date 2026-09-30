@@ -268,8 +268,8 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
   // Dónde acepta trabajar, con los nombres puestos. Está guardado en la tabla que la cruza con cada
   // lugar, no en su ficha: una persona puede cubrir dos localidades de una zona y una de otra, y la
   // zona diría de más. La pantalla recibe una lista de nombres, igual que siempre.
-  const lugares = await lugaresDe('asistente_lugares', 'asistente_id', perfil.id, req.usuarioAsistente.prestadoraId);
-  const zonas = await nombresDeLugares(lugares, req.usuarioAsistente.prestadoraId);
+  const lugares = await lugaresDe(db, 'asistente_lugares', 'asistente_id', perfil.id, req.usuarioAsistente.prestadoraId);
+  const zonas = await nombresDeLugares(db, lugares, req.usuarioAsistente.prestadoraId);
 
   res.json({ perfil: { ...perfil, zonas }, certificado: certificado || null, marca, visibilidad, match });
 });
@@ -1025,9 +1025,10 @@ appAsistentesRouter.post('/guardias/:id/aviso-demora', requiereRolAsistente, asy
   // podría dejar tres filas iguales y el Coordinador vería tres alertas de la misma persona por
   // el mismo viaje.
   //
-  // SIGUE CON LA LLAVE MAESTRA, igual que las otras dos escrituras de esta ruta:
-  // `alertas_tempranas_guardia` no tiene ninguna política para el Asistente.
-  const { data: yaAbierta } = await supabase
+  // Las tres consultas van con la credencial del Asistente: la base le deja ver, dar y anotar el
+  // envío sólo de sus propios avisos de demora, en guardias suyas.
+  const db = clienteDelPedido(req);
+  const { data: yaAbierta } = await db
     .from('alertas_tempranas_guardia')
     .select('id, motivo, detectado_at')
     .eq('guardia_id', guardia.id)
@@ -1041,7 +1042,7 @@ appAsistentesRouter.post('/guardias/:id/aviso-demora', requiereRolAsistente, asy
   }
 
   const detectadoAt = new Date().toISOString();
-  const { data: alerta, error } = await supabase
+  const { data: alerta, error } = await db
     .from('alertas_tempranas_guardia')
     .insert({
       prestadora_id: guardia.prestadora_id,
@@ -1069,7 +1070,7 @@ appAsistentesRouter.post('/guardias/:id/aviso-demora', requiereRolAsistente, asy
   try {
     // Lo lee el Coordinador, así que sale en el idioma de la Prestadora y no en el del teléfono
     // del Asistente que dio el aviso.
-    const idioma = await idiomaDeLaPrestadora(guardia.prestadora_id);
+    const idioma = await idiomaDeLaPrestadora(clienteDelPedido(req), guardia.prestadora_id);
     await notificarCoordinador({
       evento: 'alerta_temprana_guardia',
       prestadoraId: guardia.prestadora_id,
@@ -1081,7 +1082,7 @@ appAsistentesRouter.post('/guardias/:id/aviso-demora', requiereRolAsistente, asy
       }),
     });
     if (alerta?.id) {
-      await supabase
+      await db
         .from('alertas_tempranas_guardia')
         .update({ ultima_notificacion_at: detectadoAt, veces_notificado: 1 })
         .eq('id', alerta.id)
@@ -1161,7 +1162,7 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
   // envío falla, la fila queda con `ultima_notificacion_at` en blanco y nunca se le devuelve un
   // error a quien avisó — su acto ya está guardado, que es lo que lo protege.
   try {
-    const idioma = await idiomaDeLaPrestadora(guardia.prestadora_id);
+    const idioma = await idiomaDeLaPrestadora(clienteDelPedido(req), guardia.prestadora_id);
     await notificarCoordinador({
       evento: 'emergencia_en_guardia',
       prestadoraId: guardia.prestadora_id,
@@ -1256,7 +1257,7 @@ appAsistentesRouter.post('/guardias/:id/no-puedo-continuar', requiereRolAsistent
   // `ultima_notificacion_at` en blanco y nunca se le devuelve un error a quien avisó: su acto ya
   // está guardado, que es lo que la protege.
   try {
-    const idioma = await idiomaDeLaPrestadora(guardia.prestadora_id);
+    const idioma = await idiomaDeLaPrestadora(clienteDelPedido(req), guardia.prestadora_id);
     await notificarCoordinador({
       evento: 'no_puede_continuar_la_extension',
       prestadoraId: guardia.prestadora_id,

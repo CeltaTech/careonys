@@ -66,7 +66,7 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, p
   // Si la marca llegara vacía se usa el nombre del producto: es preferible un correo que dice
   // Careonys a uno que dice «Activación de la cuenta en undefined».
   const marca = await marcaDeLaPrestadora(prestadoraId);
-  const textos = mensajeDelSistema('activacion_cuenta', idiomaDelDestinatario(idioma, await idiomaDeLaPrestadora(prestadoraId)), {
+  const textos = mensajeDelSistema('activacion_cuenta', idiomaDelDestinatario(idioma, await idiomaDeLaPrestadora(supabase, prestadoraId)), {
     nombre,
     link,
     dias: DIAS_VALIDEZ_TOKEN,

@@ -83,7 +83,9 @@ const soloAdministracion = exigirAdministracion('Solo Admin puede crear cuentas'
 // única fuente de verdad sigue siendo este chequeo del lado del servidor.
 panelCuentasRouter.get('/permisos-efectivos', requiereRolPanel, async (req, res) => {
   try {
-    res.json({ permisos: await permisosEfectivos(req.usuarioPanel.id) });
+    // Con la maestra: la base no le da a una persona con sesión permiso para llamar a
+    // `permisos_efectivos_de`.
+    res.json({ permisos: await permisosEfectivos(supabase, req.usuarioPanel.id) });
   } catch (e) {
     responderError(res, e);
   }
@@ -133,7 +135,7 @@ panelCuentasRouter.post('/cliente', requiereRolPanel, exigirOrganizacionActiva, 
   // recién creada se pueda encontrar por su localidad: el texto de la solicitud lo escribió quien
   // llamó y no es ninguna de las fichas de la Prestadora. Va filtrado por Prestadora, como
   // cualquier lectura de un lugar, para que un identificador ajeno no conteste nada.
-  const nombreDeSuLugar = await nombreDelLugar(solicitud.lugar_id, prestadoraId);
+  const nombreDeSuLugar = await nombreDelLugar(db, solicitud.lugar_id, prestadoraId);
 
   // La solicitud trae una localidad y no una dirección con altura, así que casi siempre esto
   // vuelve sin coordenadas — y está bien: lo que se guarda en `pacientes.domicilio` es ese
@@ -194,7 +196,9 @@ panelCuentasRouter.post('/cliente', requiereRolPanel, exigirOrganizacionActiva, 
 
     res.json({ ok: true, clienteId, pacienteId: paciente.id });
   } catch (error) {
-    await deshacerAlta(cuentaId, { prestadoraId, filas: filasDeUnaCliente(clienteId) });
+    // Con la llave maestra: deshacer lee la fila de `usuarios` de la cuenta recién creada, y la
+    // política de `usuarios` sólo le deja ver a cada persona la suya.
+    await deshacerAlta(supabase, cuentaId, { prestadoraId, filas: filasDeUnaCliente(clienteId) });
     responderError(res, error);
   }
 });
@@ -207,9 +211,12 @@ panelCuentasRouter.post('/cliente', requiereRolPanel, exigirOrganizacionActiva, 
 panelCuentasRouter.post('/cliente-directa', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('alta_manual_cliente'), async (req, res) => {
   const { nombreContacto, telefono, email, localidad, nombrePaciente, domicilioPaciente, domicilioDelPacientePartido } = req.body;
   try {
+    // Con la llave maestra: `solicitudes` no tiene política de alta para personas, y la
+    // numeración de `clientes` saldría repetida por lo mismo que en el alta de arriba.
     const { clienteId, pacienteId } = await crearClienteDirecta({
       nombreContacto, telefono, email, localidad, nombrePaciente, domicilioPaciente, domicilioDelPacientePartido,
       prestadoraId: req.usuarioPanel.prestadoraId,
+      db: supabase,
     });
     res.json({ ok: true, clienteId, pacienteId });
   } catch (error) {
@@ -257,7 +264,7 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
   let cuentaId;
   let asistenteId;
   try {
-    const tipoAsistenteId = await validarTipoAsistente(tipo_asistente_id, prestadoraId);
+    const tipoAsistenteId = await validarTipoAsistente(db, tipo_asistente_id, prestadoraId);
 
     ({ userId: cuentaId } = await crearCuentaConPerfil({
       email: postulacion.email,
@@ -324,7 +331,9 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
     // `deshacerAlta` nunca falla: si tropieza lo anota en el registro del servidor y sigue.
     // Así el error que llega a la pantalla es siempre el problema de verdad, y la respuesta
     // se manda siempre — antes, un tropiezo del deshacer dejaba a la pantalla esperando.
-    await deshacerAlta(cuentaId, { prestadoraId, filas: filasDeUnAsistente(asistenteId) });
+    // Con la llave maestra, por lo mismo que en el alta del Cliente: la fila de `usuarios` de
+    // la cuenta nueva no la ve quien da el alta.
+    await deshacerAlta(supabase, cuentaId, { prestadoraId, filas: filasDeUnAsistente(asistenteId) });
     responderError(res, error);
   }
 });
@@ -337,11 +346,14 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
 panelCuentasRouter.post('/asistente-directo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('alta_manual_asistente'), async (req, res) => {
   const { nombre, telefono, email, dni, domicilio, domicilioPartido, tipo_asistente_id, lugares, estado, tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales, modalidades } = req.body;
   try {
+    // Con la llave maestra: el permiso se le puede dar a quien coordina, y `asistentes` y
+    // `remuneraciones_asistente` sólo aceptan altas de la administración.
     const { asistenteId } = await crearAsistenteDirecto({
       nombre, telefono, email, dni, domicilio, domicilioPartido, tipo_asistente_id, lugares, estado,
       tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales, modalidades,
       prestadoraId: req.usuarioPanel.prestadoraId,
       usuarioPanelId: req.usuarioPanel.id,
+      db: supabase,
     });
     res.json({ ok: true, asistenteId });
   } catch (error) {
@@ -703,7 +715,10 @@ panelCuentasRouter.post('/cliente/:clienteId/personas autorizadas', requiereRolP
   }
 
   try {
+    // Con la llave maestra: la ruta pide 'editar_datos_cliente', y `permisos_personas_autorizadas`
+    // sólo deja escribir a quien tiene 'configurar_accesos_del_personas_autorizadas'.
     const { miembroId } = await invitarMiembroPersonasAutorizadas({
+      db: supabase,
       email,
       nombre,
       telefono,
@@ -724,7 +739,8 @@ panelCuentasRouter.delete('/cliente/:clienteId/personas autorizadas/:usuarioId',
   }
 
   try {
-    await revocarMiembroPersonasAutorizadas(req.params.usuarioId, { prestadoraId: cliente.prestadora_id, clienteId: cliente.id });
+    // Con la llave maestra, por lo mismo que al invitar.
+    await revocarMiembroPersonasAutorizadas(supabase, req.params.usuarioId, { prestadoraId: cliente.prestadora_id, clienteId: cliente.id });
     res.json({ ok: true });
   } catch (error) {
     responderError(res, error, 400);

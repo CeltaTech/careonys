@@ -7,8 +7,9 @@
 // lista como la dejó quien la cargó.
 //
 // **Se guardan lugares, no zonas.** La zona es el atajo para marcarlos en pantalla.
-
-import { supabase } from '../db/connection.js';
+//
+// **Cada función entra con la conexión que recibe.** El filtro por Prestadora va escrito igual,
+// porque quien llama puede pasar la llave maestra.
 
 /**
  * Los lugares de varias personas de una vez, para no preguntar una por una.
@@ -16,11 +17,11 @@ import { supabase } from '../db/connection.js';
  * Devuelve un mapa de identificador de persona a sus lugares. Quien no tenga ninguno no aparece en
  * el mapa, que es lo mismo que decir que no llega a ningún lado.
  */
-export async function lugaresDeVarias(tabla, columna, ids, prestadoraId) {
+export async function lugaresDeVarias(db, tabla, columna, ids, prestadoraId) {
   const porPersona = new Map();
   const buscados = [...new Set((ids ?? []).filter(Boolean))];
   if (!buscados.length) return porPersona;
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from(tabla)
     .select(`${columna}, lugar_id`)
     .eq('prestadora_id', prestadoraId)
@@ -40,10 +41,10 @@ export async function lugaresDeVarias(tabla, columna, ids, prestadoraId) {
  * Es la comparación que antes se hacía entre dos textos escritos a mano. Ahora las dos puntas son
  * el mismo identificador de lugar, así que una coincidencia es una coincidencia de verdad.
  */
-export async function personasEnLosLugares(tabla, columna, lugares, prestadoraId) {
+export async function personasEnLosLugares(db, tabla, columna, lugares, prestadoraId) {
   const buscados = [...new Set((lugares ?? []).filter(Boolean))];
   if (!buscados.length) return [];
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from(tabla)
     .select(columna)
     .eq('prestadora_id', prestadoraId)
@@ -53,8 +54,8 @@ export async function personasEnLosLugares(tabla, columna, lugares, prestadoraId
 }
 
 /** Los lugares guardados de esa persona, en la tabla que corresponda. */
-export async function lugaresDe(tabla, columna, id, prestadoraId) {
-  const { data, error } = await supabase
+export async function lugaresDe(db, tabla, columna, id, prestadoraId) {
+  const { data, error } = await db
     .from(tabla)
     .select('lugar_id')
     .eq(columna, id)
@@ -73,8 +74,8 @@ export async function lugaresDe(tabla, columna, id, prestadoraId) {
  * foránea compuesta, que rechaza la inserción entera si alguno no lo es. Un control escrito acá
  * además del de la base sería la misma decisión en dos lugares.
  */
-export async function guardarLugaresDe(tabla, columna, id, prestadoraId, lugares) {
-  const { error: errorBorrado } = await supabase
+export async function guardarLugaresDe(db, tabla, columna, id, prestadoraId, lugares) {
+  const { error: errorBorrado } = await db
     .from(tabla)
     .delete()
     .eq(columna, id)
@@ -83,7 +84,7 @@ export async function guardarLugaresDe(tabla, columna, id, prestadoraId, lugares
 
   const elegidos = (Array.isArray(lugares) ? lugares : []).filter(Boolean);
   if (!elegidos.length) return;
-  const { error } = await supabase
+  const { error } = await db
     .from(tabla)
     .insert(elegidos.map((lugarId) => ({ [columna]: id, lugar_id: lugarId, prestadora_id: prestadoraId })));
   if (error) throw error;

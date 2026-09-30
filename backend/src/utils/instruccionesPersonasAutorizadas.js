@@ -100,7 +100,9 @@ export async function crearInstruccion({ clienteId, prestadoraId, cargadaPor, ac
     throw new ErrorConMotivo('persona_autorizada_vacio', 'Esta Cliente no tiene a nadie anotado en su personas autorizadas');
   }
 
-  const visibilidad = await visibilidadDeLaPrestadora(prestadoraId);
+  // Con la maestra, como todo este archivo: lo llama el Panel, y la base no le deja leer a
+  // Superadmin la configuración de la aplicación.
+  const visibilidad = await visibilidadDeLaPrestadora(supabase, prestadoraId);
 
   const { data: prestadora } = await supabase
     .from('prestadoras')
@@ -246,7 +248,7 @@ export async function pedirCodigo({ instruccionId, clienteId, prestadoraId }) {
   const titular = cuentasTitular.get(clienteId) ?? null;
 
   const remite = prestadora?.nombre_fantasia ?? '';
-  const textos = mensajeDelSistema('codigo_instruccion_personas_autorizadas', await idiomaDeLaPrestadora(instruccion.prestadora_id), {
+  const textos = mensajeDelSistema('codigo_instruccion_personas_autorizadas', await idiomaDeLaPrestadora(supabase, instruccion.prestadora_id), {
     codigo,
     minutos: VIGENCIA_DEL_CODIGO_MINUTOS,
     remite,
@@ -386,7 +388,8 @@ export async function personas autorizadasConSusAccesos({ clienteId, prestadoraI
     .select('usuario_id, clave, permitido')
     .eq('cliente_id', clienteId);
 
-  const visibilidad = await visibilidadDeLaPrestadora(prestadoraId);
+  // Con la maestra, por lo mismo que al crear la instrucción.
+  const visibilidad = await visibilidadDeLaPrestadora(supabase, prestadoraId);
   const porPersona = new Map(personas.map((persona) => [persona.usuarioId, []]));
   for (const fila of filas ?? []) {
     porPersona.get(fila.usuario_id)?.push(fila);

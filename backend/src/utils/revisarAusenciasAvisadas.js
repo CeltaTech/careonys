@@ -104,7 +104,7 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
 
   const regla = reglaDeAvisoDe(configuracion?.regla);
   // Una sola vez por Prestadora: todos los mensajes de esta vuelta los lee la misma gente.
-  const idioma = await idiomaDeLaPrestadora(prestadoraId);
+  const idioma = await idiomaDeLaPrestadora(supabase, prestadoraId);
 
   const asistentes = [...new Set(ausencias.map((a) => a.asistente_id))];
   const { data: guardias, error: errorGuardias } = await supabase

@@ -1,4 +1,4 @@
-import { supabase } from '../db/connection.js';
+import { clienteDelPedido } from '../db/connection.js';
 import { visibilidadDeFabrica, visibilidadEfectiva } from './catalogoVisibilidad.js';
 
 // Qué muestra hoy la aplicación de esta Prestadora. Es la única lectura de
@@ -6,13 +6,13 @@ import { visibilidadDeFabrica, visibilidadEfectiva } from './catalogoVisibilidad
 // dieciocho claves resueltas —no las filas crudas—, para que ninguna ruta tenga que acordarse
 // del valor de fábrica por su cuenta (CLAUDE.md §7 regla 12).
 //
-// Entramos con la llave maestra del servidor, así que las políticas de la base no nos frenan:
-// el filtro por Prestadora va escrito acá a mano, como en el resto del backend.
-export async function visibilidadDeLaPrestadora(prestadoraId) {
+// Entra con la conexión que recibe. El filtro por Prestadora va escrito igual: quien llama puede
+// pasar la llave maestra, y ahí las políticas de la base no frenan nada.
+export async function visibilidadDeLaPrestadora(db, prestadoraId) {
   if (!prestadoraId) {
     return visibilidadDeFabrica();
   }
-  const { data } = await supabase
+  const { data } = await db
     .from('configuracion_visibilidad_app')
     .select('clave, visible')
     .eq('prestadora_id', prestadoraId);
@@ -29,9 +29,12 @@ function prestadoraDelPedido(req) {
 // Lo mismo, pero contestando una sola vez por pedido: hay rutas que necesitan la lista dos
 // veces (para cortar el acceso y después para armar la consulta) y no tiene sentido volver a
 // preguntarle a la base en el mismo pedido.
+//
+// Con la credencial de quien pide: el Cliente, su personas autorizadas y el Asistente leen la configuración de
+// su propia Prestadora.
 export async function visibilidadDelPedido(req) {
   if (!req.visibilidadApp) {
-    req.visibilidadApp = await visibilidadDeLaPrestadora(prestadoraDelPedido(req));
+    req.visibilidadApp = await visibilidadDeLaPrestadora(clienteDelPedido(req), prestadoraDelPedido(req));
   }
   return req.visibilidadApp;
 }

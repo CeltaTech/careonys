@@ -29,6 +29,9 @@ import { conElPreferidoMarcado, telefonoLimpio } from '../utils/telefonosDelLega
 // su Prestadora, y sólo si tiene el permiso de ver el Padrón. Por eso esas consultas no llevan el
 // filtro de la Prestadora de la sesión.
 //
+// EL PREFERIDO SE RESUELVE CON LA LLAVE MAESTRA. Hay que mirar el teléfono de las cuentas de la
+// Prestadora, y la política de `usuarios` sólo le deja ver a cada persona su propia fila.
+//
 // ESCRIBIR SIGUE CON LA LLAVE MAESTRA, con la Prestadora de la sesión puesta por este código con
 // `acotarAPrestadora` y nunca un valor que venga en el pedido (ver el comentario de cada consulta).
 //
@@ -81,7 +84,7 @@ panelPadronTelefonosRouter.get(
     const { data, error } = await db.from('telefonos_del_legajo').select(COLUMNAS).order('created_at');
     if (error) return responderError(res, error);
 
-    res.json({ telefonos: await conElPreferidoMarcado(data ?? [], req.usuarioPanel.prestadoraId) });
+    res.json({ telefonos: await conElPreferidoMarcado(supabase, data ?? [], req.usuarioPanel.prestadoraId) });
   },
 );
 
@@ -103,7 +106,7 @@ panelPadronTelefonosRouter.get(
       .order('created_at');
     if (error) return responderError(res, error);
 
-    res.json({ telefonos: await conElPreferidoMarcado(data ?? [], legajo.prestadora_id) });
+    res.json({ telefonos: await conElPreferidoMarcado(supabase, data ?? [], legajo.prestadora_id) });
   },
 );
 
@@ -135,7 +138,7 @@ panelPadronTelefonosRouter.post(
       .single();
     if (error) return responderError(res, error);
 
-    const [conPreferido] = await conElPreferidoMarcado([data], legajo.prestadora_id);
+    const [conPreferido] = await conElPreferidoMarcado(supabase, [data], legajo.prestadora_id);
     res.json({ ok: true, telefono: conPreferido });
   },
 );
@@ -174,7 +177,7 @@ panelPadronTelefonosRouter.patch(
       return res.status(404).json({ error: 'telefono_no_encontrado', motivo: 'telefono_no_encontrado' });
     }
 
-    const [conPreferido] = await conElPreferidoMarcado([data], legajo.prestadora_id);
+    const [conPreferido] = await conElPreferidoMarcado(supabase, [data], legajo.prestadora_id);
     res.json({ ok: true, telefono: conPreferido });
   },
 );

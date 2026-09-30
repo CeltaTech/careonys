@@ -446,10 +446,12 @@ escrito encima por qué. Lo que queda, agrupado por lo que hay que hacer:
   los demás ven quién la tiene y no pueden resolverla mientras esté tomada. Las emergencias entran
   en la misma escalera. Eso ya lo hace cumplir la base
   (`supabase/migrations/20261011000000_una_sola_toma_por_alarma.sql`) y la emergencia insiste y
-  escala (`backend/src/utils/revisarNotificacionesCoordinador.js`, `revisarEmergencias`). **Falta
-  que las rutas lean con la credencial de quien pide**: la lista de emergencias del Panel
-  (`backend/src/routes/panelEmergencias.js`) todavía lee con la maestra y le muestra al Coordinador
-  todas las de la Prestadora, no las de su zona más las escaladas.
+  escala (`backend/src/utils/revisarNotificacionesCoordinador.js`, `revisarEmergencias`). Mientras
+  una emergencia está en el escalón de todos, cualquier Coordinador la lee entera, y quien la toma
+  atiende esa guardia con toda su información mientras la tenga
+  (`supabase/migrations/20261012000000_quien_toma_una_alarma_atiende_la_guardia.sql`). La lista de
+  emergencias del Panel ya lee con la credencial de quien pide (`backend/src/routes/panelEmergencias.js`);
+  los nombres y marcarla atendida siguen con la maestra.
 - **La ausencia del Coordinador es la misma que la del Asistente.** Se registra igual y lleva quién
   lo cubre: durante la ausencia, esa persona ve lo del ausente además de lo suyo. **Y la del
   Asistente se cubre igual, por turno fijo y no guardia por guardia**: las guardias casi siempre

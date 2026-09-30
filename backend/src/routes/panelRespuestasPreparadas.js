@@ -4,6 +4,7 @@ import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { clienteDelPedido } from '../db/connection.js';
 import { responderError } from '../utils/errorConMotivo.js';
+import { prestadoraVisible } from '../utils/prestadoraVisible.js';
 import { ACCION_MODIFICACION_CRITICA, registrarActividad } from '../utils/registroDeActividad.js';
 import { IDIOMAS_SOPORTADOS } from '../i18n/idiomas.js';
 
@@ -41,12 +42,6 @@ panelRespuestasPreparadasRouter.use(
   exigirAdministracion('Solo Admin o Superadmin puede tocar las respuestas preparadas'),
   exigirOrganizacionActiva,
 );
-
-/** La Prestadora de quien pide, tal como la base se la deja ver. Sin ella no se da de alta nada. */
-async function prestadoraVisible(db) {
-  const { data } = await db.from('prestadoras').select('id').maybeSingle();
-  return data?.id ?? null;
-}
 
 const COLUMNAS =
   'id, nombre_interno, terminos, i18n, toca_salud, origen, activa, aprobada_at, created_at, updated_at';
@@ -92,7 +87,8 @@ panelRespuestasPreparadasRouter.post('/', async (req, res) => {
   if (!texto) return res.status(400).json({ error: 'Falta el texto en los tres idiomas' });
 
   const db = clienteDelPedido(req);
-  const prestadoraId = await prestadoraVisible(db);
+  // Sin la Prestadora de quien pide no se da de alta nada.
+  const prestadoraId = await prestadoraVisible(db).catch(() => null);
   // Con la Organización activa comprobada, esto no pasa: si pasa, falla cerrado.
   if (!prestadoraId) throw new Error('La base no deja ver la Prestadora de quien pide');
 

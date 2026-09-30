@@ -22,7 +22,8 @@ import { responderError } from '../utils/errorConMotivo.js';
 // La lista también sigue con la llave maestra y con el filtro por Prestadora y por Asistente:
 // con la credencial del Asistente, la política de `guardias` que le deja ver una guardia sin
 // cubrir pide además que esté marcada como ofrecida, y el código nunca pidió eso. Lo que hacen
-// después `conPacientes`, `conDomicilioDelDia` y `visibilidadDelPedido` corre con la maestra.
+// después `conPacientes` y `conDomicilioDelDia` corre con la maestra; `visibilidadDelPedido`, con
+// la credencial del Asistente.
 //
 // Contestar sigue con la llave maestra, y por eso cada consulta de esa parte lleva escrito el
 // filtro por Prestadora y por Asistente (CLAUDE.md §5, regla de aislamiento). La base no deja

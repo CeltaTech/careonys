@@ -10,13 +10,15 @@
 // marca una zona entera y después se desmarca lo que no; lo que queda guardado son los lugares.
 // Para poder ofrecer ese atajo hace falta saber qué abarca cada zona, y eso se resuelve acá y no
 // con una llamada más desde el navegador.
-
-import { supabase } from '../db/connection.js';
+//
+// **Cada función entra con la conexión que recibe**: la de la persona cuando hay una pidiendo, y
+// la que ya usa el proceso cuando no. El filtro por Prestadora va escrito igual, porque quien llama
+// puede pasar la llave maestra.
 
 /** El país de esa Organización. Un lugar de una Prestadora argentina es argentino: el país no lo
  *  manda la pantalla, porque un valor que viaja en el pedido lo escribe quien llama. */
-export async function paisDeLaPrestadora(prestadoraId) {
-  const { data, error } = await supabase
+export async function paisDeLaPrestadora(db, prestadoraId) {
+  const { data, error } = await db
     .from('prestadoras')
     .select('pais')
     .eq('id', prestadoraId)
@@ -28,8 +30,8 @@ export async function paisDeLaPrestadora(prestadoraId) {
 /** Todos los lugares de esa Organización, ordenados por nombre. Incluye los apagados: quien carga
  *  necesita verlos para volver a encenderlos, y quien elige necesita que un lugar apagado que ya
  *  estaba marcado siga teniendo nombre en pantalla. */
-export async function lugaresDeLaPrestadora(prestadoraId) {
-  const { data, error } = await supabase
+export async function lugaresDeLaPrestadora(db, prestadoraId) {
+  const { data, error } = await db
     .from('lugares')
     .select('*')
     .eq('prestadora_id', prestadoraId)
@@ -45,9 +47,9 @@ export async function lugaresDeLaPrestadora(prestadoraId) {
  *  Organización contestaría el nombre de un lugar ajeno.
  *
  *  Devuelve cadena vacía si no existe, para que el renglón se arme igual sin ese pedazo. */
-export async function nombreDelLugar(lugarId, prestadoraId) {
+export async function nombreDelLugar(db, lugarId, prestadoraId) {
   if (!lugarId) return '';
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('lugares')
     .select('nombre')
     .eq('id', lugarId)
@@ -64,18 +66,18 @@ export async function nombreDelLugar(lugarId, prestadoraId) {
  *  y no de lo que alguien escribió a mano en cada ficha de Asistente.
  *
  *  Filtrado por Prestadora, por el mismo motivo que `nombreDelLugar`. */
-export async function nombresDeLugares(lugarIds, prestadoraId) {
-  return (await lugaresPorNombre(lugarIds, prestadoraId)).map((lugar) => lugar.nombre);
+export async function nombresDeLugares(db, lugarIds, prestadoraId) {
+  return (await lugaresPorNombre(db, lugarIds, prestadoraId)).map((lugar) => lugar.nombre);
 }
 
 /** Esos mismos lugares con su identificador, para las pantallas que además filtran por uno.
  *
  *  Lo que se elige es cuál lugar, no cómo se llama: dos localidades de provincias distintas se
  *  llaman igual, y un filtro por nombre las traería a las dos. */
-export async function lugaresPorNombre(lugarIds, prestadoraId) {
+export async function lugaresPorNombre(db, lugarIds, prestadoraId) {
   const buscados = [...new Set((lugarIds ?? []).filter(Boolean))];
   if (!buscados.length) return [];
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('lugares')
     .select('id, nombre')
     .eq('prestadora_id', prestadoraId)
@@ -86,10 +88,10 @@ export async function lugaresPorNombre(lugarIds, prestadoraId) {
 }
 
 /** Las zonas de cobertura de esa Organización con los lugares que abarca cada una. */
-export async function zonasConSusLugares(prestadoraId) {
+export async function zonasConSusLugares(db, prestadoraId) {
   const [{ data: zonas, error: errorZonas }, { data: cruces, error: errorCruces }] = await Promise.all([
-    supabase.from('zonas_cobertura').select('id, codigo, nombre, activa').eq('prestadora_id', prestadoraId).order('nombre'),
-    supabase.from('zona_lugares').select('zona_id, lugar_id').eq('prestadora_id', prestadoraId),
+    db.from('zonas_cobertura').select('id, codigo, nombre, activa').eq('prestadora_id', prestadoraId).order('nombre'),
+    db.from('zona_lugares').select('zona_id, lugar_id').eq('prestadora_id', prestadoraId),
   ]);
   if (errorZonas) throw errorZonas;
   if (errorCruces) throw errorCruces;
@@ -103,10 +105,10 @@ export async function zonasConSusLugares(prestadoraId) {
 }
 
 /** Lo que necesita cualquier pantalla donde se eligen lugares: la lista y el atajo por zona. */
-export async function catalogoDeLugares(prestadoraId) {
+export async function catalogoDeLugares(db, prestadoraId) {
   const [lugares, zonas] = await Promise.all([
-    lugaresDeLaPrestadora(prestadoraId),
-    zonasConSusLugares(prestadoraId),
+    lugaresDeLaPrestadora(db, prestadoraId),
+    zonasConSusLugares(db, prestadoraId),
   ]);
   return { lugares, zonas };
 }

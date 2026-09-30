@@ -61,7 +61,11 @@ panelGuardiasRouter.post('/:id/ausente', requiereRolPanel, exigirOrganizacionAct
     return res.status(400).json({ error: 'Solo una guardia programada puede marcarse como ausente' });
   }
 
-  const resultado = await marcarAusenteYCrearIncidente({ guardia, prestadoraId: guardia.prestadora_id });
+  const resultado = await marcarAusenteYCrearIncidente({
+    db: supabase, // Con la llave maestra: ver el encabezado.
+    guardia,
+    prestadoraId: guardia.prestadora_id,
+  });
   if (!resultado.ok) return res.status(500).json({ error: resultado.motivo });
 
   res.json({ ok: true });
@@ -120,6 +124,7 @@ panelGuardiasRouter.post('/:id/cubrir', requiereRolPanel, exigirOrganizacionActi
   if (!sustituto) return res.status(404).json({ error: 'No se encontró ese Asistente' });
 
   const resultado = await cubrirGuardiaConSustituto({
+    db: supabase, // Con la llave maestra: ver el encabezado.
     guardia,
     asistenteSustitutoId,
     ausenciaId,

@@ -54,7 +54,7 @@ export async function revisarAusenciasAutomaticas() {
       // Marcar la ausencia y abrir el incidente lo hace `utils/marcarAusente.js`, que es el
       // mismo que usa el botón del Panel. Acá queda sólo la decisión de *cuándo* — el reloj y la
       // tolerancia configurada—, que es lo propio de la detección automática.
-      const resultado = await marcarAusenteYCrearIncidente({ guardia, prestadoraId });
+      const resultado = await marcarAusenteYCrearIncidente({ db: supabase, guardia, prestadoraId });
       if (!resultado.ok) {
         console.error(`Error marcando ausente automático (guardia ${guardia.id}):`, resultado.motivo);
       }

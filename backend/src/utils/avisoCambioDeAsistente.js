@@ -88,7 +88,7 @@ async function nombreDelAsistente(asistenteId, prestadoraId) {
 export async function avisarCambioDeAsistente({ guardias, prestadoraId, asistenteNuevoId, asistenteAnteriorId }) {
   if (!guardias?.length || !prestadoraId) return;
 
-  const idioma = await idiomaDeLaPrestadora(prestadoraId);
+  const idioma = await idiomaDeLaPrestadora(supabase, prestadoraId);
 
   let pacientesPorGuardia = new Map();
   try {

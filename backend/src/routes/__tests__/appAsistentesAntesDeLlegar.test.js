@@ -448,4 +448,17 @@ describe('aviso de demora — el acto de la persona, anotado como suyo', () => {
     assert.ok(consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`), consulta.url);
     assert.ok(consulta.url.includes(`fuente=eq.${FUENTE_AVISO_DEMORA_ASISTENTE}`), consulta.url);
   });
+
+  it('buscar, anotar y marcar el aviso van con la credencial del Asistente, nunca con la maestra', async () => {
+    await pedir('POST', `/guardias/${GUARDIA}/aviso-demora`, { motivo: 'salud' });
+    const conLaAlerta = llamadas.filter((l) => l.clave.endsWith(' /rest/v1/alertas_tempranas_guardia'));
+    assert.deepEqual(
+      conLaAlerta.map((l) => l.clave.split(' ')[0]).sort(),
+      ['GET', 'PATCH', 'POST']
+    );
+    for (const llamada of conLaAlerta) {
+      assert.ok(llamada.credencial, `${llamada.clave} salió sin credencial`);
+      assert.notEqual(llamada.credencial, 'Bearer clave-de-mentira', `${llamada.clave} salió con la llave maestra`);
+    }
+  });
 });

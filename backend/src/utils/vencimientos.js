@@ -29,7 +29,7 @@ export async function revisarVencimientos() {
     const limiteISO = fechaLimiteDeAviso(anticipacion);
     // Una sola vez por Prestadora: los mensajes de todos sus tipos de documento los lee la misma
     // gente. El nombre del tipo de documento viene del catálogo de ella y sale tal cual.
-    const idioma = await idiomaDeLaPrestadora(prestadoraId);
+    const idioma = await idiomaDeLaPrestadora(supabase, prestadoraId);
 
     const { data: tipos, error: errorTipos } = await supabase
       .from('tipos_documento_asistente')

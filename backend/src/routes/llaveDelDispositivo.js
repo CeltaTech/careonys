@@ -42,7 +42,7 @@ import {
 } from '@simplewebauthn/server';
 import { isoBase64URL } from '@simplewebauthn/server/helpers';
 
-import { supabase } from '../db/connection.js';
+import { clienteDelPedido, supabase } from '../db/connection.js';
 import { correoDe } from '../utils/correoDeUnaPersona.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
@@ -66,9 +66,9 @@ function rolValido(rol) {
 }
 
 /** Guarda un desafío nuevo y lo devuelve. Vence solo, y se gasta al usarse. */
-async function guardarDesafio(desafio, { para, rol, usuarioId = null, prestadoraId = null }) {
+async function guardarDesafio(db, desafio, { para, rol, usuarioId = null, prestadoraId = null }) {
   const venceEn = new Date(Date.now() + MINUTOS_DE_VIDA_DEL_DESAFIO * 60 * 1000).toISOString();
-  const { error } = await supabase.from('desafios_de_llave').insert({
+  const { error } = await db.from('desafios_de_llave').insert({
     desafio,
     para,
     rol,
@@ -88,10 +88,10 @@ async function guardarDesafio(desafio, { para, rol, usuarioId = null, prestadora
  * La Prestadora la trae quien llama —la de la dirección en la entrada, la de la sesión en el alta—
  * y se nombra en la lectura y en la escritura: un desafío emitido para otra no se encuentra.
  */
-async function gastarDesafio(desafio, { para, rol, prestadoraId }) {
+async function gastarDesafio(db, desafio, { para, rol, prestadoraId }) {
   if (!prestadoraId) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
 
-  const { data: fila } = await supabase
+  const { data: fila } = await db
     .from('desafios_de_llave')
     .select('id, para, rol, usuario_id, prestadora_id, vence_en, usado_en')
     .eq('desafio', desafio)
@@ -103,7 +103,7 @@ async function gastarDesafio(desafio, { para, rol, prestadoraId }) {
   if (fila.usado_en) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
   if (desafioVencido(fila.vence_en)) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
 
-  const { data: gastado } = await supabase
+  const { data: gastado } = await db
     .from('desafios_de_llave')
     .update({ usado_en: new Date().toISOString() })
     .eq('id', fila.id)
@@ -144,7 +144,7 @@ llaveDelDispositivoRouter.post('/:prestadora/entrar/desafio', resolverPrestadora
     });
 
     // Todavía no se sabe quién está entrando, pero sí por qué Prestadora: el desafío nace con ella.
-    await guardarDesafio(opciones.challenge, {
+    await guardarDesafio(supabase, opciones.challenge, {
       para: 'entrada',
       rol,
       prestadoraId: req.prestadoraPublica.prestadora_id,
@@ -228,7 +228,7 @@ async function quienAbreConEstaLlave({ prestadoraId, rol, respuesta }) {
   }
 
   const desafio = leerDesafio(respuesta);
-  await gastarDesafio(desafio, { para: 'entrada', rol, prestadoraId });
+  await gastarDesafio(supabase, desafio, { para: 'entrada', rol, prestadoraId });
 
   const verificacion = await verifyAuthenticationResponse({
     response: respuesta,
@@ -302,6 +302,11 @@ function leerDesafio(respuesta) {
  * Se escribe una sola vez porque es la misma decisión en los dos lados
  * (`celtatech/CLAUDE.md` §8, «ningún patrón repetido sin punto único de verdad»). Lo único que
  * cambia es de qué propiedad sale la persona, porque cada middleware de rol deja la suya.
+ *
+ * CON QUÉ CREDENCIAL. Todo corre con la de la persona (`clienteDelPedido(req)`): la base le deja
+ * ver su propia ficha, ver y agregar sus propias llaves y darlas de baja, y pedir y gastar sus
+ * propios desafíos de alta, siempre adentro de la Prestadora de su sesión. Los filtros por la
+ * persona y por la Prestadora quedan escritos igual, porque dicen qué se busca.
  */
 export function routerDeLlavesConSesion(rol) {
   if (!rolValido(rol)) throw new Error(`El rol «${rol}» no tiene llave de dispositivo`);
@@ -313,7 +318,7 @@ export function routerDeLlavesConSesion(rol) {
   router.get('/', async (req, res) => {
     try {
       const persona = quienEs(req);
-      const { data, error } = await supabase
+      const { data, error } = await clienteDelPedido(req)
         .from('llaves_de_dispositivo')
         .select('id, creada_en, ultimo_uso_en')
         .eq('usuario_id', persona.id)
@@ -333,17 +338,19 @@ export function routerDeLlavesConSesion(rol) {
     try {
       const persona = quienEs(req);
       const { parteConfiable } = dondeViveLaApp(rol);
+      const db = clienteDelPedido(req);
 
-      const { data: perfil } = await supabase
+      // La fila propia, con la credencial de la persona: la base le devuelve la suya y ninguna
+      // otra. El correo sale de la misma fila, que es de donde lo lee `correoDe`.
+      const { data: perfil } = await db
         .from('usuarios')
-        .select('nombre')
+        .select('nombre, email')
         .eq('id', persona.id)
-        .eq('prestadora_id', persona.prestadoraId)
         .maybeSingle();
-      const correo = await correoDe({ prestadoraId: persona.prestadoraId, usuarioId: persona.id });
+      const correo = perfil?.email || null;
       if (!correo) throw new ErrorConMotivo('faltan_datos');
 
-      const { data: yaTiene } = await supabase
+      const { data: yaTiene } = await db
         .from('llaves_de_dispositivo')
         .select('credencial_id, transportes')
         .eq('prestadora_id', persona.prestadoraId)
@@ -372,7 +379,7 @@ export function routerDeLlavesConSesion(rol) {
         },
       });
 
-      await guardarDesafio(opciones.challenge, {
+      await guardarDesafio(db, opciones.challenge, {
         para: 'alta',
         rol,
         usuarioId: persona.id,
@@ -395,7 +402,8 @@ export function routerDeLlavesConSesion(rol) {
 
       const { origen, parteConfiable } = dondeViveLaApp(rol);
       const desafio = leerDesafio(respuesta);
-      const fila = await gastarDesafio(desafio, {
+      const db = clienteDelPedido(req);
+      const fila = await gastarDesafio(db, desafio, {
         para: 'alta',
         rol,
         prestadoraId: persona.prestadoraId,
@@ -417,7 +425,7 @@ export function routerDeLlavesConSesion(rol) {
       // Vuelve la fila que quedó guardada, y no la que se mandó: la pantalla la agrega a su lista
       // sin volver a pedirla entera, y lo que muestra es lo que la base escribió de verdad. Pasa
       // por el mismo filtro que la lista, así que de acá tampoco sale la credencial ni la llave.
-      const { data, error } = await supabase
+      const { data, error } = await db
         .from('llaves_de_dispositivo')
         .insert({
           prestadora_id: persona.prestadoraId,
@@ -447,7 +455,7 @@ export function routerDeLlavesConSesion(rol) {
   router.delete('/:id', topeDePedidos({ nombre: 'baja_llave_dispositivo' }), async (req, res) => {
     try {
       const persona = quienEs(req);
-      const { data, error } = await supabase
+      const { data, error } = await clienteDelPedido(req)
         .from('llaves_de_dispositivo')
         .update({ revocada_en: new Date().toISOString() })
         .eq('id', req.params.id)

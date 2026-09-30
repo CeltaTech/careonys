@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
+import { clienteDelPedido, supabase } from '../db/connection.js';
 import { medicacionVigenteDelPaciente, tipoMatriculaRequerida, asistenteTieneMatriculaVigente } from '../utils/medicacionIndicaciones.js';
 import { asistenteAtiendeAlPaciente } from '../utils/pacientesDeGuardia.js';
 import { exigeVisible } from '../utils/visibilidadPrestadora.js';
@@ -21,15 +22,22 @@ appAsistentesMedicacionRouter.get('/:pacienteId', requiereRolAsistente, exigeVis
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
 
+  // Con la llave maestra: con la restricción de la historia clínica activa, la base le muestra las
+  // indicaciones sólo a quien atiende al Paciente con un Servicio vigente y una guardia no
+  // cancelada, y la comprobación de arriba deja pasar cualquier guardia suya con ese Paciente.
   const indicaciones = await medicacionVigenteDelPaciente(
+    supabase,
     req.usuarioAsistente.prestadoraId,
     req.params.pacienteId,
   );
 
+  // La vía y las matrículas propias las lee el Asistente con su credencial.
+  const db = clienteDelPedido(req);
   const ordenes = [];
   for (const indicacion of indicaciones) {
-    const tipoRequerido = await tipoMatriculaRequerida(req.usuarioAsistente.prestadoraId, indicacion.via_administracion);
+    const tipoRequerido = await tipoMatriculaRequerida(db, req.usuarioAsistente.prestadoraId, indicacion.via_administracion);
     const habilitado = await asistenteTieneMatriculaVigente(
+      db,
       req.usuarioAsistente.prestadoraId,
       req.usuarioAsistente.asistenteId,
       tipoRequerido

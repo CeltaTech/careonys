@@ -78,7 +78,7 @@ async function revisarPrestadora(prestadoraId, ahora) {
   const limite = new Date(ahora.getTime() + horasAntes * MS_POR_HORA);
 
   // Una sola vez por Prestadora: todos los mensajes de esta vuelta los lee la misma gente.
-  const idioma = await idiomaDeLaPrestadora(prestadoraId);
+  const idioma = await idiomaDeLaPrestadora(supabase, prestadoraId);
 
   // El filtro por `fecha` es solo para no traerse la agenda entera: la ventana fina se
   // decide después contra la hora de inicio, que la base guarda en otra columna.

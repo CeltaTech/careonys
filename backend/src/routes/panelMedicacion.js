@@ -88,11 +88,14 @@ panelMedicacionRouter.get('/pendientes', requiereRolPanel, async (req, res) => {
     return responderError(res, errorAnotacion);
   }
 
+  // La vía la lee quien pide con su credencial. Quién tiene guardia con el Paciente, con la llave
+  // maestra: quien coordina sólo ve las guardias de su zona, y el aviso tiene que mirar todas.
   const pendientes = await Promise.all(
     (data || []).map(async (indicacion) => {
-      const tipoRequerido = await tipoMatriculaRequerida(req.usuarioPanel.prestadoraId, indicacion.via_administracion);
+      const tipoRequerido = await tipoMatriculaRequerida(db, req.usuarioPanel.prestadoraId, indicacion.via_administracion);
       const sinMatricula = tipoRequerido
         ? !(await hayAsistenteAsignadoConMatricula(
+            supabase,
             req.usuarioPanel.prestadoraId,
             indicacion.pacientes.id,
             tipoRequerido
@@ -134,9 +137,11 @@ panelMedicacionRouter.post('/:id/aceptar', requiereRolPanel, async (req, res) =>
   // recibe del navegador: quien manda el pedido podría decir que no había nada que advertir.
   // Si la jurisdicción de esta Prestadora no tiene texto escrito para esta función, no hay
   // advertencia y no se anota nada — y la indicación queda aceptada igual (CLAUDE.md §7).
-  const tipoRequerido = await tipoMatriculaRequerida(req.usuarioPanel.prestadoraId, indicacion.via_administracion);
+  // Igual que en la bandeja: la vía con la credencial de quien pide, las guardias con la maestra.
+  const tipoRequerido = await tipoMatriculaRequerida(clienteDelPedido(req), req.usuarioPanel.prestadoraId, indicacion.via_administracion);
   const sinMatricula = tipoRequerido
     ? !(await hayAsistenteAsignadoConMatricula(
+        supabase,
         req.usuarioPanel.prestadoraId,
         indicacion.paciente_id,
         tipoRequerido

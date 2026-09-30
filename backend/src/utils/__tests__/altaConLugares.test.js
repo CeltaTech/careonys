@@ -74,6 +74,8 @@ const { default: express } = await import('express');
 await import('express-async-errors');
 const { panelUsuariosRouter } = await import('../../routes/panelUsuarios.js');
 const { crearAsistenteDirecto } = await import('../cuentasPanel.js');
+// El alta entra con la conexión que le pasa quien llama; las rutas del Panel le pasan la maestra.
+const { supabase } = await import('../../db/connection.js');
 
 const app = express();
 app.use(express.json());
@@ -144,6 +146,7 @@ describe('el alta de una Asistente', () => {
       email: 'persona@ejemplo.invalido',
       lugares: [LUGAR, OTRO_LUGAR],
       prestadoraId: PRESTADORA,
+      db: supabase,
     });
 
     assert.deepEqual(loEscritoEn('asistente_lugares'), [
@@ -160,6 +163,7 @@ describe('el alta de una Asistente', () => {
       email: 'persona@ejemplo.invalido',
       lugares: [LUGAR],
       prestadoraId: PRESTADORA,
+      db: supabase,
     }));
 
     // La ficha se borra y la cuenta de acceso también: no queda nadie a medias.

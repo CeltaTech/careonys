@@ -82,6 +82,8 @@ const { default: express } = await import('express');
 await import('express-async-errors');
 const { panelCuentasRouter } = await import('../../routes/panelCuentas.js');
 const { crearClienteDirecta } = await import('../cuentasPanel.js');
+// El alta entra con la conexión que le pasa quien llama; las rutas del Panel le pasan la maestra.
+const { supabase } = await import('../../db/connection.js');
 
 const app = express();
 app.use(express.json());
@@ -196,6 +198,7 @@ describe('el alta manual de un Cliente', () => {
       localidad: 'belgrano',
       domicilioDelPacientePartido: { calle: 'Calle Inventada', numero: '100', lugar_id: LUGAR },
       prestadoraId: PRESTADORA,
+      db: supabase,
     });
 
     // Las dos filas nacen juntas: si sólo una llevara el lugar, dirían cosas distintas sobre

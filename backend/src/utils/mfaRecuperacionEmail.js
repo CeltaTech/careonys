@@ -52,7 +52,7 @@ export async function solicitarCodigoRecuperacion(usuarioId) {
 
   await enviarEmail({
     to: correo,
-    ...mensajeDelSistema('mfa_codigo_recuperacion', await idiomaDeLaPrestadora(usuario?.prestadora_id), {
+    ...mensajeDelSistema('mfa_codigo_recuperacion', await idiomaDeLaPrestadora(supabase, usuario?.prestadora_id), {
       codigo,
       minutos: VIGENCIA_MINUTOS,
       producto: IDENTIDAD.nombre,

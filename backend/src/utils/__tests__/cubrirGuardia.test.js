@@ -62,6 +62,8 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 
 // El import va después de las variables de entorno: la conexión se arma al importar.
 const { cubrirGuardiaConSustituto } = await import('../cubrirGuardia.js');
+// La función entra con la conexión que le pasan; la ruta del Panel le pasa la maestra.
+const { supabase } = await import('../../db/connection.js');
 
 /** El turno que el titular no va a poder hacer. */
 const GUARDIA = {
@@ -72,6 +74,7 @@ const GUARDIA = {
 };
 
 const cubrir = (extra = {}) => cubrirGuardiaConSustituto({
+  db: supabase,
   guardia: GUARDIA,
   asistenteSustitutoId: SUSTITUTO,
   ausenciaId: AUSENCIA,

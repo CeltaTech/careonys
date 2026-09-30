@@ -103,7 +103,8 @@ panelUsuariosRouter.post('/', requiereRolPanel, soloAdministracion, async (req, 
     // borra la cuenta recién creada y el alta no ocurrió.
     if (Array.isArray(lugares) && lugares.length > 0) {
       try {
-        await guardarLugaresDe('usuario_lugares', 'usuario_id', userId, prestadoraDestino, lugares);
+        // Con la credencial de quien da el alta: la administración escribe los lugares de su gente.
+        await guardarLugaresDe(clienteDelPedido(req), 'usuario_lugares', 'usuario_id', userId, prestadoraDestino, lugares);
       } catch (error) {
         await borrarCuenta(userId, { prestadoraId: prestadoraDestino });
         throw error;

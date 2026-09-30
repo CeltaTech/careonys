@@ -135,7 +135,7 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
   await cerrarLosQueYaNoCorresponden({ abiertos: abiertos ?? [], guardiaPorId, prestadoraId, ahora });
 
   // Una sola vez por Prestadora: todos los recordatorios de esta vuelta los lee la misma gente.
-  const idioma = await idiomaDeLaPrestadora(prestadoraId);
+  const idioma = await idiomaDeLaPrestadora(supabase, prestadoraId);
 
   // De cuáles ya se hizo cargo alguien. Un incidente tomado no recuerda: recordar existe porque
   // nadie reaccionó, y acá alguien reaccionó. El incidente sigue abierto igual, y cuando a la toma

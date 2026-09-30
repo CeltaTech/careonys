@@ -103,8 +103,8 @@ panelEmergenciasRouter.get('/', requiereRolPanel, exigirOrganizacionActiva, asyn
   const db = clienteDelPedido(req);
   // Con la llave maestra: la política RESTRICTIVE `la_informacion_de_salud_la_ve_quien_atiende`
   // exige interno.alcanza_la_informacion_de_salud sobre algún paciente de la guardia, y con la
-  // restricción de la historia clínica activa (el valor de fábrica) el Administrador y el
-  // Superadministrador que no atienden al paciente dejan de ver la emergencia; además
+  // restricción de la historia clínica activa (el valor de fábrica) el Superadministrador que no
+  // atiende al paciente deja de ver la emergencia —el Administrador sí la ve—; además
   // `coordinador_lee_emergencias_de_su_zona` le deja al Coordinador sólo las de su zona. Hasta
   // ahora cada rol veía todas las de su Prestadora. Si se acota o no se decide aparte.
   let consulta = acotarAPrestadora(

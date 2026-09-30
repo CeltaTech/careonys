@@ -357,7 +357,7 @@ nombra qué habilita el alojamiento y con qué instrumento. Sin eso, el alta no 
 **6.** **Lo que queda del segundo nivel de aislamiento, el que Chile exige.** La regla ya está
 escrita en la base (`supabase/migrations/20261010700000_la_informacion_de_salud_la_ve_quien_atiende.sql`),
 y aplicada. Con la restricción de HCE encendida, la información de salud de un paciente la lee
-sólo quien lo atiende; donde la tabla de requerimientos legales de HCE por país la pide, como en
+sólo quien lo atiende y el Administrador de su Prestadora; donde la tabla de requerimientos legales de HCE por país la pide, como en
 Chile, la restricción queda fija y no se apaga. Lo que falta:
 
 - **Hasta el paso 9 protege sólo lo que se lee con sesión propia.** El backend entra con la llave
@@ -365,8 +365,9 @@ Chile, la restricción queda fija y no se apaga. Lo que falta:
   backend con la credencial de la persona.
 - **Escribir un registro clínico también pide atender al paciente** cuando se pide la fila de vuelta: la
   base rechaza un alta que devuelve una fila que quien la cargó no puede leer, y un cambio o un
-  borrado no alcanza filas que no se leen. Un Administrador que no lo atiende y carga un rango de un
-  paciente recibe un rechazo. Cierre: al llegar el paso 9, revisar cada pantalla que escribe en
+  borrado no alcanza filas que no se leen. Un Coordinador que no lo atiende y carga un rango de un
+  paciente recibe un rechazo; el Administrador sí lee la información de salud de todos los
+  Pacientes de su Prestadora. Cierre: al llegar el paso 9, revisar cada pantalla que escribe en
   esas tablas.
 - **Las columnas de salud de la ficha del paciente** —patologías, medicación habitual, nivel de
   complejidad— quedan afuera: RLS filtra filas, no columnas. Cierre: se mudan a una tabla propia
@@ -438,12 +439,6 @@ escrito encima por qué. Lo que queda, agrupado por lo que hay que hacer:
   Coordinador limitado a su zona en ausencias, guardias y emergencias; los Clientes y los
   Asistentes pendientes de conformidad, que la base oculta y el Panel factura y liquida; y la
   invitación a una guardia, que la base sólo deja ver si la guardia está marcada como ofrecida.
-- **Una decisión del Desarrollador sobre información de salud**: la administración de la
-  Prestadora no ve ni atiende las emergencias de las guardias con su propia sesión. La restrictiva
-  `la_informacion_de_salud_la_ve_quien_atiende` deja pasar sólo a quien atiende al Paciente —la
-  Cliente, el equipo, el Asistente de la guardia y el Coordinador que lo alcanza—, y el
-  Administrador no es ninguno de ésos. Hoy la ruta lo tapa con la maestra. Se decide si la
-  administración alcanza ese dato; hasta entonces la ruta no se migra.
 - **Funciones de la base que `authenticated` no puede ejecutar**: las de guardar los secretos de
   WhatsApp, de la conexión con software externo y de los avisos de cobranza y facturación,
   `intercambiar_orden_etapas_incorporacion` y `sembrar_configuracion_prestadora`. La de la conexión

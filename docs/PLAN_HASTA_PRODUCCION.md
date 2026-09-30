@@ -76,8 +76,10 @@ apagar, y por dónde sale el mensaje.
   - **Orden de llamado, configurable por Prestadora:** personal de emergencia, si lo tiene; si
     no, el franquero; después quienes cubren la misma guardia en otros días u horarios. Hoy ese
     último grupo no se puede elegir aparte: está mezclado con todo el plantel libre, en el grupo
-    guardado como `suplente` (`backend/src/utils/faseAutomaticaRelevo.js:38`), palabra que no
-    se muestra en pantalla.
+    guardado como `suplente` (`backend/src/utils/faseAutomaticaRelevo.js:38`). El nombre guardado
+    queda; el visible no: hoy la configuración del orden lo muestra como «Suplente» en los tres
+    idiomas (`panel/src/i18n/translations.js:638`, `:3526`, `:6375`), palabra que el glosario no
+    admite. La redacción nueva la aprueba el Desarrollador.
   - **El Asistente del turno saliente se queda** hasta que lo releven.
   - **Lo anotado del Asistente y el estado de la guardia son dos cosas.** Si llega tarde y
     marca, queda «llegada tarde», aunque ya se lo hubiera marcado ausente: esa marca es
@@ -425,18 +427,8 @@ corrige desde el Panel, que hoy queda anotado sin persona porque lo escribe la l
 **Lo que dejó la primera pasada por todas las rutas.** Cada manejador que sigue con la maestra lleva
 escrito encima por qué. Lo que queda, agrupado por lo que hay que hacer:
 
-- **Tres defectos de la base**, que hoy tapa la maestra:
-  - `interno.pacientes_del_asistente()` compara `g.asistente_id = auth.uid()`: un Legajo contra una
-    cuenta.
-  - La política del depósito `reportes-fotos` compara también el Legajo con la cuenta. La de
-    `appAsistentesMatricula.js` hace lo mismo y hoy funciona porque en todos los Asistentes los dos
-    números coinciden, pero nada en la base lo exige.
-  - La política `atiende_al_paciente` de `reportes` pide un Servicio vigente, y `guardias.servicio_id`
-    puede quedar vacío.
-- **Tablas sin política**, que sólo la maestra alcanza: `descansos_guardia`,
-  `alertas_tempranas_guardia`, `emergencias_guardia`, `extensiones_de_turno`. Y sin permiso de tabla
-  para `authenticated`: `configuracion_pago_asistentes` (escritura) y
-  `conexiones_con_software_externo`.
+- **Un defecto de la base**, que hoy tapa la maestra: la política `atiende_al_paciente` de
+  `reportes` pide un Servicio vigente, y `guardias.servicio_id` puede quedar vacío.
 - **Políticas más estrechas que lo que hace el Panel**: dejan afuera al coordinador con permiso o al
   Superadmin (`contenidos_para_familias`, `indicaciones_medicacion`, `prestadoras`, varias de
   cobros y del Marketplace), y `usuarios` sólo deja leer la fila propia, así que toda lista de
@@ -446,18 +438,31 @@ escrito encima por qué. Lo que queda, agrupado por lo que hay que hacer:
   Coordinador limitado a su zona en ausencias, guardias y emergencias; las Familias y los
   Asistentes pendientes de conformidad, que la base oculta y el Panel factura y liquida; y la
   invitación a una guardia, que la base sólo deja ver si la guardia está marcada como ofrecida.
+- **Una decisión del Desarrollador sobre información de salud**: la administración de la
+  Prestadora no ve ni atiende las emergencias de las guardias con su propia sesión. La restrictiva
+  `la_informacion_de_salud_la_ve_quien_atiende` deja pasar sólo a quien atiende al Paciente —la
+  Familia, el equipo, el Asistente de la guardia y el Coordinador que lo alcanza—, y el
+  Administrador no es ninguno de ésos. Hoy la ruta lo tapa con la maestra. Se decide si la
+  administración alcanza ese dato; hasta entonces la ruta no se migra.
 - **Funciones de la base que `authenticated` no puede ejecutar**: las de guardar los secretos de
   WhatsApp, de la conexión con software externo y de los avisos de cobranza y facturación,
-  `intercambiar_orden_etapas_incorporacion` y `sembrar_configuracion_prestadora`.
-- **Las funciones de `utils/` siguen con la maestra** y tienen que recibir `db`: permisos,
-  visibilidad de la Prestadora, accesos de las Personas autorizadas, cuentas del Panel, marcar
-  ausente, cubrir guardia, medicación, teléfonos del Legajo, lugares, idioma y país de la
-  Prestadora, y las de WhatsApp —ésas probablemente queden con la maestra, porque leen la bóveda de
-  secretos—.
-- **`routerDeLlavesConSesion` de `utils/llaveDelDispositivo.js`** tiene sesión y sigue con la
-  maestra.
-- **`prestadoraVisible` está escrita dos veces**, en `panelConfiguracion.js` y en
-  `panelMarketplace.js`: pasa a `utils/`.
+  `intercambiar_orden_etapas_incorporacion` y `sembrar_configuracion_prestadora`. La de la conexión
+  con software externo recibe además la Prestadora como dato: la versión que se le abra a
+  `authenticated` la resuelve adentro, con `current_tenant()`, como `ausencias_que_tapan`.
+- **El permiso de tabla de `authenticated` es entero en casi todas las tablas**, y lo que acota es
+  la política. Donde una política le deja actualizar a una persona su propia fila, puede cambiarle
+  cualquier columna si llama a la base directo con su sesión. En los avisos de demora ya está
+  cerrado —el Asistente no puede darlos por resueltos—; las demás políticas de actualización de
+  Asistentes y Familias se revisan con el mismo criterio al alinearlas.
+- **Las funciones de `utils/` que ya reciben la conexión todavía reciben la maestra en muchos
+  llamadores**, cada uno con el motivo escrito encima: las altas y bajas de cuentas del Panel y de
+  la importación, el círculo desde el Panel, los teléfonos preferidos, las guardias al marcar
+  ausente y al cubrir, la medicación del Asistente y el aviso de matrícula. Pasan a la conexión de
+  la ruta cuando se alineen las políticas del renglón de arriba. Las de WhatsApp,
+  `registroDeActividad` y `auditoria_de_accesos` se quedan con la maestra.
+- **Quedan en `utils/` funciones con la maestra adentro que llaman rutas de persona**, entre ellas
+  `pacientesDeGuardia.js`, `cuentaDeLaFicha.js` y la lectura de zonas de
+  `propuestaConfiguracionInicial.js`: tienen que recibir `db` como las demás.
 
 **Y la autorización de monitoreo de los signos vitales pasa a verla sólo quien la firmó.** Hoy la
 Familia y el Asistente de ese Paciente leen el renglón entero —quién la firmó, en qué carácter,

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { usePrestadoraActual } from './usePrestadoraActual';
+import { useAuth } from '../context/AuthContext';
 import {
   alarmasTomadas,
-  hastaCuandoDura,
   reglaDeLaTomaDe,
   tomaVigente,
 } from '../lib/alarmasTomadas';
@@ -29,6 +29,7 @@ const TABLA = 'alarmas_tomadas';
 
 export function useAlarmasTomadas() {
   const prestadoraId = usePrestadoraActual();
+  const { usuario } = useAuth();
   const [tomas, setTomas] = useState([]);
   const [regla, setRegla] = useState(() => reglaDeLaTomaDe(null));
   const [trabajando, setTrabajando] = useState(null);
@@ -58,6 +59,15 @@ export function useAlarmasTomadas() {
     [tomas, regla],
   );
 
+  /** Si otra persona tiene tomada esta alarma. Mientras la tenga, la base no deja resolverla. */
+  const laTieneOtraPersona = useCallback(
+    (tipo, referenciaId) => {
+      const toma = tomaDe(tipo, referenciaId);
+      return Boolean(toma) && toma.tomada_por !== usuario?.id;
+    },
+    [tomaDe, usuario?.id],
+  );
+
   /** Los identificadores de las alarmas de esa clase que alguien está atendiendo. */
   const tomadasDe = useCallback(
     (tipo, ahora = new Date()) => alarmasTomadas(tomas.filter((t) => t.tipo === tipo), ahora, regla),
@@ -68,24 +78,23 @@ export function useAlarmasTomadas() {
     async (tipo, referenciaId, usuarioId) => {
       setTrabajando(referenciaId);
       try {
-        const ahora = new Date();
         // Fila nueva cada vez, nunca pisando la anterior: quién atendió qué y cuándo es justamente
-        // lo que hay que poder reconstruir después.
+        // lo que hay que poder reconstruir después. La hora y el vencimiento los pone la base, y
+        // también rechaza la toma si otra persona llegó antes: en ese caso se recarga y la pantalla
+        // muestra quién la tiene.
         const { error } = await supabase.from(TABLA).insert({
           prestadora_id: prestadoraId,
           tipo,
           referencia_id: referenciaId,
           tomada_por: usuarioId,
-          tomada_at: ahora.toISOString(),
-          vence_at: hastaCuandoDura(ahora, regla).toISOString(),
         });
-        if (error) throw error;
+        if (error) console.error(error);
         await recargar();
       } finally {
         setTrabajando(null);
       }
     },
-    [prestadoraId, regla, recargar],
+    [prestadoraId, recargar],
   );
 
   const soltar = useCallback(
@@ -105,5 +114,5 @@ export function useAlarmasTomadas() {
     [recargar],
   );
 
-  return { regla, tomaDe, tomadasDe, tomar, soltar, recargar, trabajando };
+  return { regla, tomaDe, laTieneOtraPersona, tomadasDe, tomar, soltar, recargar, trabajando };
 }

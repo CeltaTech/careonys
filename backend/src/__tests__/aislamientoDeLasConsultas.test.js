@@ -67,6 +67,9 @@ const ATADURAS = [
  */
 const MARCA = 'SIN PRESTADORA A PROPÓSITO';
 
+/** Cómo se anota la conexión de la persona cuando se pide en el mismo lugar donde se usa. */
+const CONEXION_DIRECTA = 'clienteDelPedido(req)';
+
 /** Recorre `src` entero salvo las pruebas. */
 function archivosDe(carpeta) {
   const salida = [];
@@ -210,7 +213,12 @@ function consultasDe(texto) {
     const partido = /^\s*\.from\(/.test(renglones[i]) && i > 0
       ? renglones[i - 1].match(/([A-Za-z_$][\w$]*)\s*$/)
       : null;
-    const conexion = (pegado ?? partido)?.[1] ?? null;
+    // La conexión de la persona también se pide en el mismo lugar donde se usa, sin guardarla en un
+    // nombre: `clienteDelPedido(req).from(…)`, o partida con `clienteDelPedido(req)` al final del
+    // renglón de arriba.
+    const directa = /clienteDelPedido\(\s*req\s*\)\s*\.from\(/.test(renglones[i]) ||
+      (/^\s*\.from\(/.test(renglones[i]) && i > 0 && /clienteDelPedido\(\s*req\s*\)\s*$/.test(renglones[i - 1]));
+    const conexion = directa ? CONEXION_DIRECTA : (pegado ?? partido)?.[1] ?? null;
 
     salida.push({ renglon: i + 1, tabla, seSabeQueTablaEs, cadena, encabezado, conexion });
   }
@@ -258,6 +266,7 @@ function conexionesDeLaPersona(texto) {
     const asignaciones = [...texto.matchAll(new RegExp(`\\b${nombre}\\s*=(?!=)\\s*([^;\\n]*)`, 'g'))];
     if (asignaciones.some((m) => !m[1].startsWith('clienteDelPedido('))) nombres.delete(nombre);
   }
+  nombres.add(CONEXION_DIRECTA);
   return nombres;
 }
 

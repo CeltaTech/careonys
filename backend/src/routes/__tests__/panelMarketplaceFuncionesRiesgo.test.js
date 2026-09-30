@@ -53,7 +53,7 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, cuerpo: crudo ? JSON.parse(crudo) : null });
+    llamadas.push({ clave, cuerpo: crudo ? JSON.parse(crudo) : null, credencial: req.headers.authorization });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada() : preparada;
@@ -91,10 +91,14 @@ after(() => {
   baseFalsa.close();
 });
 
+/** La credencial que mandó el último pedido: lo que la ruta escribe tiene que ir con ésa. */
+let credencialEnviada = null;
+
 async function pedir(metodo, ruta, cuerpo) {
+  credencialEnviada = sesionDePrueba(USUARIO);
   const respuesta = await fetch(`${DIRECCION}${ruta}`, {
     method: metodo,
-    headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
+    headers: { Authorization: credencialEnviada, 'Content-Type': 'application/json' },
     body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
@@ -119,7 +123,9 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/catalogo_funciones_marketplace', () => [{ clave: FUNCION, orden: 1 }]);
   respuestas.set('GET /rest/v1/configuracion_funciones_marketplace', () => []);
   respuestas.set('POST /rest/v1/configuracion_funciones_marketplace', () => []);
-  respuestas.set('GET /rest/v1/prestadoras', () => [{ pais: paisDeLaPrestadora }]);
+  // La misma fila sirve para las dos preguntas: qué Prestadora deja ver la base a quien pide, y
+  // de qué país es.
+  respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA, pais: paisDeLaPrestadora }]);
   // El texto escrito para Argentina. Otro país no tiene fila, y eso es lo que se prueba abajo.
   respuestas.set('GET /rest/v1/advertencias_legales', () =>
     paisDeLaPrestadora === 'AR' ? [{ funcion_clave: FUNCION, texto_advertencia: TEXTO_ARGENTINO }] : []
@@ -139,6 +145,9 @@ describe('encender una función de riesgo legal', () => {
     assert.equal(encendida[0].prestadora_id, PRESTADORA);
     assert.equal(encendida[0].funcion_clave, FUNCION);
     assert.equal(encendida[0].activa, true);
+    // El encendido va con la credencial de quien pide, no con la llave maestra.
+    const encendido = llamadas.find((l) => l.clave === 'POST /rest/v1/configuracion_funciones_marketplace');
+    assert.equal(encendido.credencial, credencialEnviada);
 
     const registro = escrituras('auditoria_advertencias_legales');
     assert.equal(registro.length, 1, 'se encendió la función sin dejar registrado el aviso');

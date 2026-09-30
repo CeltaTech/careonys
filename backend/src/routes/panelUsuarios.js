@@ -5,7 +5,7 @@ import {
   alcanceDelPanel,
   laCuentaDelPanelEstaAlAlcance,
 } from '../middleware/alcancePrestadora.js';
-import { supabase } from '../db/connection.js';
+import { clienteDelPedido, supabase } from '../db/connection.js';
 import { crearCuentaConPerfil, borrarCuenta } from '../utils/cuentasPanel.js';
 import { guardarLugaresDe } from '../utils/lugaresDeCadaPersona.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
@@ -32,7 +32,12 @@ const soloAdministracion = exigirAdministracion('Solo Admin o Superadmin puede g
 // Los roles que se crean, se corrigen y se dan de baja desde acá.
 const ROLES_GESTIONABLES = ['coordinador'];
 
+// CON LA CREDENCIAL DE QUIEN PIDE va sólo el alcance de cada cuenta. Las cuentas en sí se leen,
+// se corrigen y se dan de baja con la llave maestra: en `usuarios` la base le deja a cada persona
+// ver su propia fila y nada más, y desde acá el Administrador trabaja sobre las de los demás.
+
 panelUsuariosRouter.get('/', requiereRolPanel, soloAdministracion, async (req, res) => {
+  // Llave maestra: `usuarios` sólo deja ver la propia fila (ver arriba).
   let query = supabase
     .from('usuarios')
     .select('id, rol, nombre, telefono, created_at')
@@ -48,16 +53,15 @@ panelUsuariosRouter.get('/', requiereRolPanel, soloAdministracion, async (req, r
   // Hasta dónde llega cada cuenta, en cuántos lugares. La lista muestra el número y no los
   // nombres: doscientas localidades no entran en una celda, y lo que se necesita de un vistazo es
   // si el alcance está puesto o quedó vacío. Los nombres se ven al abrir la cuenta.
-  // El alcance se cuenta nombrando la Organización, no sólo las cuentas que volvieron arriba: un
-  // identificador de cuenta no dice de qué Prestadora es. Sin Organización activa no se pregunta
-  // nada, y está bien: ahí las únicas cuentas a la vista son las del soporte técnico de CeltaTech,
-  // que no cuelgan de ninguna Prestadora y por eso no tienen ningún lugar asignado.
+  // El alcance se lee con la credencial de quien pide, y la base devuelve sólo el de su
+  // Organización: un identificador de cuenta no dice de qué Prestadora es. Sin Organización activa
+  // no se pregunta nada, y está bien: ahí las únicas cuentas a la vista son las del soporte técnico
+  // de CeltaTech, que no cuelgan de ninguna Prestadora y por eso no tienen ningún lugar asignado.
   const cuentas = data ?? [];
   const { data: cruces, error: errorLugares } = cuentas.length && req.usuarioPanel.prestadoraId
-    ? await supabase
+    ? await clienteDelPedido(req)
       .from('usuario_lugares')
       .select('usuario_id')
-      .eq('prestadora_id', req.usuarioPanel.prestadoraId)
       .in('usuario_id', cuentas.map((cuenta) => cuenta.id))
     : { data: [], error: null };
   if (errorLugares) return responderError(res, errorLugares);
@@ -136,6 +140,7 @@ panelUsuariosRouter.patch('/:id', requiereRolPanel, soloAdministracion, async (r
     return responderError(res, error);
   }
 
+  // Llave maestra: la base no deja a nadie tocar la fila de `usuarios` de otra cuenta.
   let query = supabase
     .from('usuarios')
     .update({ nombre, telefono })
@@ -176,7 +181,8 @@ panelUsuariosRouter.delete('/:id', requiereRolPanel, soloAdministracion, async (
 
   // La consulta nombra la Organización, con la misma regla que la lista: la Organización activa
   // más las cuentas del equipo técnico. La comprobación en memoria de abajo se queda igual —
-  // filtrar y preguntar son las dos formas de la misma regla, y las dos hacen falta.
+  // filtrar y preguntar son las dos formas de la misma regla, y las dos hacen falta. Va con la
+  // llave maestra porque la base sólo deja ver la propia fila de `usuarios`.
   const { data: usuario } = await acotarAUsuariosDelPanel(
     supabase
       .from('usuarios')

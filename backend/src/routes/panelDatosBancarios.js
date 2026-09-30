@@ -41,6 +41,10 @@ panelDatosBancariosRouter.get(
 
     // Primero de quién es. Un Asistente de otra Prestadora no existe para esta sesión, y
     // contesta lo mismo que uno que no existe.
+    // Sigue con la llave maestra: con la credencial de la persona, `coordinador_lee_asistentes_de_su_zona`
+    // (interno.coordinador_alcanza_asistente) le deja al Coordinador con el permiso sólo los de su
+    // zona, y `oculta_pendientes_de_conformidad` (RESTRICTIVE, NOT pendiente_conformidad) contesta
+    // 404 a todos los roles por el Asistente pendiente. Si se acota o no se decide aparte.
     const { data: asistente, error: errorAsistente } = await supabase
       .from('asistentes')
       .select('id, nombre')
@@ -50,6 +54,8 @@ panelDatosBancariosRouter.get(
     if (errorAsistente) return responderError(res, errorAsistente);
     if (!asistente) return res.status(404).json({ error: 'Asistente no encontrado' });
 
+    // Misma razón: `lee_los_datos_bancarios_quien_tiene_el_permiso` exige que el Asistente se vea
+    // en `asistentes` con la credencial de quien pide, así que hereda el mismo recorte.
     const { data: cuentas, error } = await supabase
       .from('datos_bancarios_asistente')
       .select('pais, identificador_clase, identificador, banco, titular, updated_at')

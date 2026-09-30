@@ -9,6 +9,14 @@ import { responderError } from '../utils/errorConMotivo.js';
 // que no pasa por las reglas de la base (CLAUDE.md de Careonys §6), así que el alcance de lo que
 // se entrega se escribe acá a mano. Esas reglas siguen existiendo y siguen rigiendo cuando algo
 // consulta la tabla directo con el pase de la persona, no a través de esta ruta.
+//
+// POR QUÉ SIGUE CON LA LLAVE MAESTRA. Las dos tablas sí las deja leer la base a la administración
+// con la credencial de la persona (`admin_prestadora_lee_auditoria_de_su_prestadora`,
+// `superadmin_lee_auditoria_de_su_permiso_vigente`, `administracion_lee_el_registro_de_actividad`).
+// Lo que no deja es el nombre de quien hizo cada cosa: cada renglón lo trae de `usuarios`, y ahí
+// cada persona lee sólo su propia fila (`usuario_ve_su_propia_fila`). Con la credencial de la
+// persona el registro saldría sin nombres. Hasta que la base deje leer el nombre de la gente de la
+// propia Prestadora, esta ruta sigue con la maestra y el filtro por Prestadora escrito acá.
 export const panelAuditoriaRouter = Router();
 
 panelAuditoriaRouter.get('/', requiereRolPanel, async (req, res) => {

@@ -394,6 +394,43 @@ e `interno.prestadora_del_estado_de_cuenta` completan la Prestadora leyendo `fam
 permisos de quien inserta. **Y el historial del registro clínico pasa a tener autor** en lo que se
 corrige desde el Panel, que hoy queda anotado sin persona porque lo escribe la llave maestra.
 
+**Lo que dejó la primera pasada por todas las rutas.** Cada manejador que sigue con la maestra lleva
+escrito encima por qué. Lo que queda, agrupado por lo que hay que hacer:
+
+- **Tres defectos de la base**, que hoy tapa la maestra:
+  - `interno.pacientes_del_asistente()` compara `g.asistente_id = auth.uid()`: un Legajo contra una
+    cuenta.
+  - La política del depósito `reportes-fotos` compara también el Legajo con la cuenta. La de
+    `appAsistentesMatricula.js` hace lo mismo y hoy funciona porque en todos los Asistentes los dos
+    números coinciden, pero nada en la base lo exige.
+  - La política `atiende_al_paciente` de `reportes` pide un Servicio vigente, y `guardias.servicio_id`
+    puede quedar vacío.
+- **Tablas sin política**, que sólo la maestra alcanza: `descansos_guardia`,
+  `alertas_tempranas_guardia`, `emergencias_guardia`, `extensiones_de_turno`. Y sin permiso de tabla
+  para `authenticated`: `configuracion_pago_asistentes` (escritura) y
+  `conexiones_con_software_externo`.
+- **Políticas más estrechas que lo que hace el Panel**: dejan afuera al coordinador con permiso o al
+  Superadmin (`contenidos_para_familias`, `indicaciones_medicacion`, `prestadoras`, varias de
+  cobros y del Marketplace), y `usuarios` sólo deja leer la fila propia, así que toda lista de
+  cuentas sigue con la maestra. Donde el comportamiento cambiaba, esas rutas volvieron a la
+  maestra: primero se alinean las políticas y después se migran. Tres de esas políticas dicen algo
+  distinto de lo que hace el Panel, y antes de alinearlas se decide cuál de los dos tiene razón: el
+  Coordinador limitado a su zona en ausencias, guardias y emergencias; las Familias y los
+  Asistentes pendientes de conformidad, que la base oculta y el Panel factura y liquida; y la
+  invitación a una guardia, que la base sólo deja ver si la guardia está marcada como ofrecida.
+- **Funciones de la base que `authenticated` no puede ejecutar**: las de guardar los secretos de
+  WhatsApp, de la conexión con software externo y de los avisos de cobranza y facturación,
+  `intercambiar_orden_etapas_incorporacion` y `sembrar_configuracion_prestadora`.
+- **Las funciones de `utils/` siguen con la maestra** y tienen que recibir `db`: permisos,
+  visibilidad de la Prestadora, accesos de las Personas autorizadas, cuentas del Panel, marcar
+  ausente, cubrir guardia, medicación, teléfonos del Legajo, lugares, idioma y país de la
+  Prestadora, y las de WhatsApp —ésas probablemente queden con la maestra, porque leen la bóveda de
+  secretos—.
+- **`routerDeLlavesConSesion` de `utils/llaveDelDispositivo.js`** tiene sesión y sigue con la
+  maestra.
+- **`prestadoraVisible` está escrita dos veces**, en `panelConfiguracion.js` y en
+  `panelMarketplace.js`: pasa a `utils/`.
+
 **Y la autorización de monitoreo de los signos vitales pasa a verla sólo quien la firmó.** Hoy la
 Familia y el Asistente de ese Paciente leen el renglón entero —quién la firmó, en qué carácter,
 cuándo—, aunque no el archivo (políticas `familia_lee_autorizaciones_de_sus_pacientes` y

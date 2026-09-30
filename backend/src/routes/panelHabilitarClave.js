@@ -34,6 +34,11 @@ import { registrarActividad, yaQuedoRegistrado } from '../utils/registroDeActivi
 //
 // NADA SENSIBLE VIAJA POR LA DIRECCIÓN WEB: ni el correo que se busca, ni el número, ni nada. Por
 // eso la búsqueda es `POST` y no `GET`.
+//
+// SIGUE CON LA LLAVE MAESTRA, con la Prestadora de la sesión escrita en cada consulta. Lo que se
+// lee acá son las cuentas de otras personas de la Prestadora, y la base le deja leer a cada
+// persona sólo su propia cuenta (`usuarios`, lectura). Con la credencial de quien pide, la búsqueda
+// volvería siempre vacía.
 
 export const panelHabilitarClaveRouter = Router();
 

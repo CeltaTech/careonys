@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { enviarWhatsApp } from '../utils/whatsapp.js';
-import { supabase } from '../db/connection.js';
+import { clienteDelPedido } from '../db/connection.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
 export const panelWhatsappRouter = Router();
@@ -20,27 +20,28 @@ export const panelWhatsappRouter = Router();
 // Un mensaje saliente con `enviado_automaticamente = false` y `revisado_por_coordinador_at`
 // vacío es un texto que quedó anotado y nunca salió —el caso del envío fallido—. Cuando el
 // Coordinador responde o descarta, se le pone la fecha de revisión y deja de estar pendiente.
+//
+// CON LA CREDENCIAL DE QUIEN PIDE. Las conversaciones y los mensajes se leen y se escriben con
+// `clienteDelPedido(req)`, no con la llave maestra: la base sabe quién pide y le contesta sólo lo
+// de su Prestadora. Por eso ninguna consulta lleva el filtro de la Prestadora de la sesión, y la
+// Prestadora que se nombra es la de la conversación que la base ya dejó ver. Lo único que sigue
+// con la llave maestra es el envío, adentro de `enviarWhatsApp`, porque lee el token de Vault.
 
-async function conversacionDeLaPrestadora(conversacionId, prestadoraId) {
-  const { data } = await supabase
+async function conversacionVisible(db, conversacionId) {
+  const { data } = await db
     .from('conversaciones_whatsapp')
     .select('id, telefono, prestadora_id')
     .eq('id', conversacionId)
-    .eq('prestadora_id', prestadoraId)
     .maybeSingle();
   return data ?? null;
 }
 
 /** El último saliente que quedó anotado sin salir. Se reusa para no dejar huérfana la fila del
- *  envío que falló, en vez de sumar una segunda al hilo por el mismo mensaje.
- *
- *  Se nombra la Prestadora aunque la conversación ya venga comprobada: colgar de la fila padre
- *  no alcanza. */
-async function borradorPendiente(conversacionId, prestadoraId) {
-  const { data } = await supabase
+ *  envío que falló, en vez de sumar una segunda al hilo por el mismo mensaje. */
+async function borradorPendiente(db, conversacionId) {
+  const { data } = await db
     .from('mensajes_whatsapp')
     .select('id')
-    .eq('prestadora_id', prestadoraId)
     .eq('conversacion_id', conversacionId)
     .eq('direccion', 'saliente')
     .eq('enviado_automaticamente', false)
@@ -55,19 +56,19 @@ async function borradorPendiente(conversacionId, prestadoraId) {
 // tiene en pantalla, escrito por él.
 panelWhatsappRouter.post('/conversaciones/:id/responder', requiereRolPanel, async (req, res) => {
   const { texto } = req.body;
-  const { prestadoraId } = req.usuarioPanel;
 
   if (!texto || !texto.trim()) {
     return res.status(400).json({ error: 'Falta el texto de la respuesta' });
   }
 
-  const conversacion = await conversacionDeLaPrestadora(req.params.id, prestadoraId);
+  const db = clienteDelPedido(req);
+  const conversacion = await conversacionVisible(db, req.params.id);
   if (!conversacion) {
     return res.status(404).json({ error: 'Conversación inexistente' });
   }
 
   try {
-    await enviarWhatsApp({ prestadoraId, telefono: conversacion.telefono, texto });
+    await enviarWhatsApp({ prestadoraId: conversacion.prestadora_id, telefono: conversacion.telefono, texto });
   } catch (error) {
     // whatsapp_no_configurado es un problema de configuración de la Prestadora, no un fallo
     // del envío — se distingue para que la pantalla pueda decir qué hacer.
@@ -76,7 +77,7 @@ panelWhatsappRouter.post('/conversaciones/:id/responder', requiereRolPanel, asyn
   }
 
   const ahora = new Date().toISOString();
-  const borrador = await borradorPendiente(conversacion.id, prestadoraId);
+  const borrador = await borradorPendiente(db, conversacion.id);
 
   // De acá para abajo el mensaje **ya salió** por WhatsApp y no hay forma de traerlo de vuelta.
   // Por eso lo que falle se anota en el registro del servidor y no se convierte en un error de
@@ -87,15 +88,14 @@ panelWhatsappRouter.post('/conversaciones/:id/responder', requiereRolPanel, asyn
 
   if (borrador) {
     // La fila que había quedado anotada pasa a ser el mensaje realmente enviado, con su texto.
-    const { error } = await supabase
+    const { error } = await db
       .from('mensajes_whatsapp')
       .update({ texto, revisado_por_coordinador_at: ahora })
-      .eq('prestadora_id', prestadoraId)
-      .eq('id', borrador.id);
+        .eq('id', borrador.id);
     if (error) fallo = error;
   } else {
-    const { error } = await supabase.from('mensajes_whatsapp').insert({
-      prestadora_id: prestadoraId,
+    const { error } = await db.from('mensajes_whatsapp').insert({
+      prestadora_id: conversacion.prestadora_id,
       conversacion_id: conversacion.id,
       direccion: 'saliente',
       texto,
@@ -106,10 +106,9 @@ panelWhatsappRouter.post('/conversaciones/:id/responder', requiereRolPanel, asyn
     if (error) fallo = error;
   }
 
-  const { error: errorConversacion } = await supabase
+  const { error: errorConversacion } = await db
     .from('conversaciones_whatsapp')
     .update({ requiere_atencion_coordinador: false, ultimo_mensaje_at: ahora })
-    .eq('prestadora_id', prestadoraId)
     .eq('id', conversacion.id);
   if (errorConversacion) fallo = errorConversacion;
 
@@ -128,32 +127,29 @@ panelWhatsappRouter.post('/conversaciones/:id/responder', requiereRolPanel, asyn
 // etc.). No se envía nada: solo se da por revisado lo pendiente y la conversación deja de pedir
 // atención. El mensaje entrante queda en el hilo, no se borra nada.
 panelWhatsappRouter.post('/conversaciones/:id/descartar', requiereRolPanel, async (req, res) => {
-  const { prestadoraId } = req.usuarioPanel;
-
-  const conversacion = await conversacionDeLaPrestadora(req.params.id, prestadoraId);
+  const db = clienteDelPedido(req);
+  const conversacion = await conversacionVisible(db, req.params.id);
   if (!conversacion) {
     return res.status(404).json({ error: 'Conversación inexistente' });
   }
 
   const ahora = new Date().toISOString();
-  const borrador = await borradorPendiente(conversacion.id, prestadoraId);
+  const borrador = await borradorPendiente(db, conversacion.id);
 
   // Acá no salió nada hacia afuera, así que lo que falle sí se contesta: si la conversación
   // sigue pidiendo atención, el Coordinador tiene que saberlo ahora y no descubrirlo mañana con
   // la misma alerta todavía prendida.
   if (borrador) {
-    const { error } = await supabase
+    const { error } = await db
       .from('mensajes_whatsapp')
       .update({ revisado_por_coordinador_at: ahora })
-      .eq('prestadora_id', prestadoraId)
-      .eq('id', borrador.id);
+        .eq('id', borrador.id);
     if (error) return responderError(res, error);
   }
 
-  const { data: descartada, error } = await supabase
+  const { data: descartada, error } = await db
     .from('conversaciones_whatsapp')
     .update({ requiere_atencion_coordinador: false })
-    .eq('prestadora_id', prestadoraId)
     .eq('id', conversacion.id)
     .select('id');
   if (error) return responderError(res, error);

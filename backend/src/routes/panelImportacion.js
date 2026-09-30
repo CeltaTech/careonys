@@ -16,6 +16,14 @@ import { responderError } from '../utils/errorConMotivo.js';
 
 export const panelImportacionRouter = Router();
 
+// CON LA LLAVE MAESTRA, TODAVÍA. Esta ruta no entra con la credencial de quien pide, y no se puede
+// mudar sin tocar antes la base: no hay regla que le deje a quien tiene sesión dar de alta ni
+// cerrar un lote de `importaciones_prestadora` —sólo leerlo—, y las filas importadas nacen
+// pendientes de conformidad, que es justo lo que la base les esconde a todos en `asistentes`,
+// `familias` y `pacientes`. Con la credencial de la persona, la revisión, la conformidad y el
+// rechazo no verían ninguna fila del lote. Por eso cada consulta sigue nombrando la Prestadora de
+// la sesión.
+
 // Capa 1 (formato conocido): toda extensión que `xlsx` sabe leer (spreadsheets comunes +
 // texto delimitado) más `.sql` (dump estándar, ver intentarParsearSQL). Cualquier otra
 // extensión no se rechaza de plano en el filtro — pasa a /analizar, que intenta la Capa 1

@@ -10,6 +10,15 @@
 // **Y el alcance de la coordinadora se guarda igual, en lugares**, para que las dos puntas de la
 // comparación sean la misma cosa. Mientras se comparaban dos textos escritos a mano, una zona
 // escrita distinta no encontraba a nadie y nadie se enteraba.
+//
+// SIGUE CON LA LLAVE MAESTRA, y por eso cada consulta lleva la Prestadora de la sesión. Con la
+// credencial de quien pide, la base no deja hacer lo que esta ruta hace: quien coordina alcanza a
+// una Asistente sólo por los lugares que comparten (`interno.coordinador_alcanza_asistente`), así
+// que a la que todavía no tiene ninguno no la ve y no le podría cargar el primero; y en `usuarios`
+// cada persona lee sólo su propia fila (`usuario_ve_su_propia_fila`), así que la administración no
+// encontraría a la coordinadora cuyo alcance cambia. Las lecturas y la escritura de los lugares
+// viven además en `utils/catalogoDeLugares.js` y `utils/lugaresDeCadaPersona.js`, que entran con
+// la maestra.
 
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';

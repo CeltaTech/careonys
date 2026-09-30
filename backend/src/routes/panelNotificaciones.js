@@ -12,6 +12,11 @@ const ESTADOS = ['en_revision', 'aprobado', 'rechazado'];
 // (columna `postulaciones.idioma`) — no siempre en español. El nombre de la Prestadora se arma en
 // el momento a partir de `configuracion_prestadora`, para que el mismo software sirva a cualquier
 // Prestadora licenciataria.
+//
+// SIGUE CON LA LLAVE MAESTRA, y por eso la consulta lleva la Prestadora de la sesión. A la ruta
+// entra cualquier rol del Panel, y `configuracion_prestadora` sólo la lee la administración
+// (`prestadora_lee_su_configuracion`): con la credencial de quien coordina, el correo saldría sin el
+// nombre de la Prestadora.
 panelNotificacionesRouter.post('/postulante', requiereRolPanel, async (req, res) => {
   const { email, nombre, nuevoEstado, idioma } = req.body;
 

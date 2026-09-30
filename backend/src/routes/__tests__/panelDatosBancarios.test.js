@@ -50,7 +50,7 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null });
+    llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null, credencial: req.headers.authorization });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada(crudo ? JSON.parse(crudo) : null) : preparada;
@@ -236,6 +236,22 @@ describe('el filtro de Prestadora', () => {
         consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`),
         `esta consulta no filtró por Prestadora: ${consulta.url}`,
       );
+    }
+  });
+
+  // Sigue con la llave maestra: con la credencial de quien pide, la base le deja al Coordinador
+  // con el permiso sólo los Asistentes de su zona y le esconde a todos los roles el Asistente
+  // pendiente de conformidad, y la pantalla contestaría 404 donde antes mostraba la cuenta.
+  it('el Asistente y su cuenta se leen con la llave maestra, no con la credencial de quien pide', async () => {
+    rolDelUsuario = 'coordinador';
+    const credencialDeQuienPide = sesionDePrueba(USUARIO);
+    const { estado } = await pedir(`/${ASISTENTE}`);
+    assert.equal(estado, 200);
+    for (const tabla of ['asistentes', 'datos_bancarios_asistente']) {
+      const consulta = consultasDeDatos().find((l) => l.clave.endsWith(`/${tabla}`));
+      assert.ok(consulta, `no se consultó ${tabla}`);
+      assert.notEqual(consulta.credencial, credencialDeQuienPide, `${tabla} fue con la credencial de quien pide`);
+      assert.equal(consulta.credencial, 'Bearer clave-de-mentira', `${tabla} no fue con la llave maestra`);
     }
   });
 

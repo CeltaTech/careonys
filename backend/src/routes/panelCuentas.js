@@ -2,7 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
-import { supabase } from '../db/connection.js';
+import { clienteDelPedido, supabase } from '../db/connection.js';
 import {
   crearCuentaConPerfil,
   crearAsistenteDirecto,
@@ -39,6 +39,12 @@ import {
   guardarPapel,
   rutaDelArchivo,
 } from '../utils/consentimientoPagador.js';
+
+// CON LA CREDENCIAL DE QUIEN PIDE. Lo que estas rutas leen y escriben en tablas entra con
+// `clienteDelPedido(req)`: la base sabe quién pide y le contesta sólo lo de su Prestadora, así que
+// ninguna consulta lleva el filtro de la Prestadora de la sesión. Cuando una fila nueva nombra a la
+// Prestadora, la toma de la fila que la base ya dejó ver —la solicitud, la postulación, la Familia—.
+// Las pocas que siguen con la llave maestra dicen por qué, cada una en su lugar.
 
 export const panelCuentasRouter = Router();
 
@@ -92,10 +98,9 @@ panelCuentasRouter.get('/modalidades-activas', requiereRolPanel, async (req, res
   if (!req.usuarioPanel.prestadoraId) {
     return res.json({ modalidades: [] });
   }
-  const { data, error } = await supabase
+  const { data, error } = await clienteDelPedido(req)
     .from('prestadora_modalidades')
     .select('modalidad')
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .eq('activa', true);
   if (error) return responderError(res, error);
   res.json({ modalidades: (data || []).map((f) => f.modalidad) });
@@ -107,9 +112,12 @@ panelCuentasRouter.post('/familia', requiereRolPanel, exigirOrganizacionActiva, 
     return res.status(400).json({ error: 'Falta solicitudId' });
   }
 
-  let querySolicitud = supabase.from('solicitudes').select('*').eq('id', solicitudId);
-  querySolicitud = acotarAPrestadora(querySolicitud, req.usuarioPanel);
-  const { data: solicitud, error: errorSolicitud } = await querySolicitud.single();
+  const db = clienteDelPedido(req);
+  const { data: solicitud, error: errorSolicitud } = await db
+    .from('solicitudes')
+    .select('*')
+    .eq('id', solicitudId)
+    .single();
 
   if (errorSolicitud || !solicitud) {
     return res.status(404).json({ error: 'Solicitud no encontrada' });
@@ -118,7 +126,8 @@ panelCuentasRouter.post('/familia', requiereRolPanel, exigirOrganizacionActiva, 
     return res.status(409).json({ error: 'Esta solicitud ya tiene una Familia asociada' });
   }
 
-  const prestadoraId = req.usuarioPanel.prestadoraId;
+  // La Prestadora es la de la solicitud que la base dejó ver, no un dato de la sesión.
+  const prestadoraId = solicitud.prestadora_id;
 
   // El lugar que quien atendió señaló en la lista, si lo señaló. Es lo que hace que la Familia
   // recién creada se pueda encontrar por su localidad: el texto de la solicitud lo escribió quien
@@ -149,6 +158,12 @@ panelCuentasRouter.post('/familia', requiereRolPanel, exigirOrganizacionActiva, 
       enviarActivacion: true,
     }));
 
+    // Con la llave maestra: el disparador `asignar_numero_familias` (función
+    // `interno.asignar_numero_de_cliente`, que no es SECURITY DEFINER) corre con los permisos de quien
+    // inserta y numera con el máximo de `familias` que ve, y la política restrictiva
+    // `oculta_pendientes_de_conformidad` (NOT pendiente_conformidad) le esconde a Admin y a
+    // Superadmin las fichas pendientes. Si la de número más alto estuviera pendiente, el número
+    // saldría repetido y el alta fallaría, cosa que antes no pasaba. Se decide aparte.
     const { data: fichaNueva, error: errorFamilia } = await supabase
       .from('familias')
       .insert({ usuario_id: cuentaId, solicitud_id: solicitudId, prestadora_id: prestadoraId })
@@ -157,7 +172,7 @@ panelCuentasRouter.post('/familia', requiereRolPanel, exigirOrganizacionActiva, 
     if (errorFamilia) throw new Error(errorFamilia.message);
     familiaId = fichaNueva.id;
 
-    const { data: paciente, error: errorPaciente } = await supabase
+    const { data: paciente, error: errorPaciente } = await db
       .from('pacientes')
       .insert({
         familia_id: familiaId,
@@ -171,14 +186,10 @@ panelCuentasRouter.post('/familia', requiereRolPanel, exigirOrganizacionActiva, 
       .single();
     if (errorPaciente) throw new Error(errorPaciente.message);
 
-    // La Prestadora se nombra acá también, y no se da por heredada del SELECT de más arriba:
-    // una escritura que sólo dice el identificador de la fila alcanza a cualquier Organización
-    // el día que ese identificador llegue por otro camino.
-    const { error: errorUpdate } = await supabase
+    const { error: errorUpdate } = await db
       .from('solicitudes')
       .update({ familia_id: familiaId })
-      .eq('id', solicitudId)
-      .eq('prestadora_id', prestadoraId);
+      .eq('id', solicitudId);
     if (errorUpdate) throw new Error(errorUpdate.message);
 
     res.json({ ok: true, familiaId, pacienteId: paciente.id });
@@ -225,9 +236,12 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
     return res.status(400).json({ error: 'Falta indicar el tipo de Asistente' });
   }
 
-  let queryPostulacion = supabase.from('postulaciones').select('*').eq('id', postulacionId);
-  queryPostulacion = acotarAPrestadora(queryPostulacion, req.usuarioPanel);
-  const { data: postulacion, error: errorPostulacion } = await queryPostulacion.single();
+  const db = clienteDelPedido(req);
+  const { data: postulacion, error: errorPostulacion } = await db
+    .from('postulaciones')
+    .select('*')
+    .eq('id', postulacionId)
+    .single();
 
   if (errorPostulacion || !postulacion) {
     return res.status(404).json({ error: 'Postulación no encontrada' });
@@ -236,7 +250,8 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
     return res.status(409).json({ error: 'Esta postulación ya tiene un Asistente asociado' });
   }
 
-  const prestadoraId = req.usuarioPanel.prestadoraId;
+  // La Prestadora es la de la postulación que la base dejó ver, no un dato de la sesión.
+  const prestadoraId = postulacion.prestadora_id;
 
   // La cuenta es la persona; la ficha es lo suyo en esta Prestadora, y la numera la base.
   let cuentaId;
@@ -253,7 +268,7 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
       enviarActivacion: true,
     }));
 
-    const { data: fichaNueva, error: errorAsistente } = await supabase.from('asistentes').insert({
+    const { data: fichaNueva, error: errorAsistente } = await db.from('asistentes').insert({
       usuario_id: cuentaId,
       nombre: postulacion.nombre,
       dni: postulacion.dni,
@@ -273,7 +288,7 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
       aprobadas: APROBADAS.LA_PRIMERA,
       revisadoPor: req.usuarioPanel.id,
     });
-    const { error: errorVerificaciones } = await supabase.from('verificaciones_asistente').insert(filasVerificacion);
+    const { error: errorVerificaciones } = await db.from('verificaciones_asistente').insert(filasVerificacion);
     if (errorVerificaciones) throw new Error(errorVerificaciones.message);
 
     // Las referencias que la persona escribió en el formulario pasan a ser una fila cada una, para
@@ -292,19 +307,16 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
         resultado: RESULTADO_PENDIENTE,
       }));
     if (referenciasDeLaPostulacion.length > 0) {
-      const { error: errorReferencias } = await supabase
+      const { error: errorReferencias } = await db
         .from('referencias_laborales_asistente')
         .insert(referenciasDeLaPostulacion);
       if (errorReferencias) throw new Error(errorReferencias.message);
     }
 
-    // Igual que en el alta de Familia: la Organización se nombra en la escritura, no se hereda
-    // del SELECT de más arriba.
-    const { error: errorUpdate } = await supabase
+    const { error: errorUpdate } = await db
       .from('postulaciones')
       .update({ asistente_id: asistenteId })
-      .eq('id', postulacionId)
-      .eq('prestadora_id', prestadoraId);
+      .eq('id', postulacionId);
     if (errorUpdate) throw new Error(errorUpdate.message);
 
     res.json({ ok: true, asistenteId });
@@ -348,10 +360,21 @@ panelCuentasRouter.post('/asistente-directo', requiereRolPanel, exigirOrganizaci
 // Prestadora decide quién de los suyos la puede cargar. De fábrica, sólo el Admin.
 // ============================================================================
 
+// La Familia de este pedido, acotada a la Prestadora de quien pregunta. Si es de otra, para él no
+// existe.
+// Con la llave maestra: la política restrictiva `oculta_pendientes_de_conformidad` de `familias`
+// (NOT pendiente_conformidad) le esconde a Admin, a Superadmin y al Coordinador la Familia
+// pendiente de conformidad, y la ruta contestaría «no encontrada» donde antes respondía. Se decide
+// aparte.
+async function familiaDelPedido(req) {
+  let query = supabase.from('familias').select('id, prestadora_id').eq('id', req.params.familiaId);
+  query = acotarAPrestadora(query, req.usuarioPanel);
+  const { data } = await query.maybeSingle();
+  return data ?? null;
+}
+
 panelCuentasRouter.get('/familia/:familiaId/circulo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_familia'), async (req, res) => {
-  let queryFamilia = supabase.from('familias').select('id, prestadora_id').eq('id', req.params.familiaId);
-  queryFamilia = acotarAPrestadora(queryFamilia, req.usuarioPanel);
-  const { data: familia } = await queryFamilia.maybeSingle();
+  const familia = await familiaDelPedido(req);
   if (!familia) {
     return res.status(404).json({ error: 'Familia no encontrada' });
   }
@@ -374,9 +397,7 @@ panelCuentasRouter.get('/familia/:familiaId/circulo', requiereRolPanel, exigirOr
 // Carga la instrucción que el titular pidió. Los accesos rigen desde acá; la firma viene después,
 // por la aplicación o en papel.
 panelCuentasRouter.post('/familia/:familiaId/circulo/instruccion', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('configurar_accesos_del_circulo'), async (req, res) => {
-  let queryFamilia = supabase.from('familias').select('id, prestadora_id').eq('id', req.params.familiaId);
-  queryFamilia = acotarAPrestadora(queryFamilia, req.usuarioPanel);
-  const { data: familia } = await queryFamilia.maybeSingle();
+  const familia = await familiaDelPedido(req);
   if (!familia) {
     return res.status(404).json({ error: 'Familia no encontrada' });
   }
@@ -408,13 +429,14 @@ panelCuentasRouter.post(
       return res.status(400).json({ error: 'Archivo faltante o de tipo no permitido (solo PDF, JPG o PNG, hasta 10 MB)' });
     }
 
-    let queryFamilia = supabase.from('familias').select('id, prestadora_id').eq('id', req.params.familiaId);
-    queryFamilia = acotarAPrestadora(queryFamilia, req.usuarioPanel);
-    const { data: familia } = await queryFamilia.maybeSingle();
+    const familia = await familiaDelPedido(req);
     if (!familia) {
       return res.status(404).json({ error: 'Familia no encontrada' });
     }
 
+    // Con la llave maestra: la subida pisa la hoja si ya había una (`upsert`), y el depósito no
+    // tiene política para modificar un archivo, sólo para crearlo y leerlo. La ruta sale de la
+    // Familia que la base ya dejó ver.
     const ruta = `${familia.prestadora_id}/${familia.id}/${req.params.instruccionId}.${extensionDeArchivo(req.file.mimetype)}`;
     const { error: errorSubida } = await supabase.storage
       .from(DEPOSITO_INSTRUCCIONES)
@@ -439,13 +461,15 @@ panelCuentasRouter.post(
 // La hoja firmada, para volver a verla desde el Panel. Nunca dirección pública: se firma por un
 // minuto, igual que el resto de los archivos del producto.
 panelCuentasRouter.get('/familia/:familiaId/circulo/instruccion/:instruccionId/papel', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_familia'), async (req, res) => {
-  let queryFamilia = supabase.from('familias').select('id, prestadora_id').eq('id', req.params.familiaId);
-  queryFamilia = acotarAPrestadora(queryFamilia, req.usuarioPanel);
-  const { data: familia } = await queryFamilia.maybeSingle();
+  const familia = await familiaDelPedido(req);
   if (!familia) {
     return res.status(404).json({ error: 'Familia no encontrada' });
   }
 
+  // Con la llave maestra, filtrada por la Familia que la base ya dejó ver: la tabla y el depósito
+  // de la hoja firmada piden 'configurar_accesos_del_circulo', y esta ruta se abre con
+  // 'editar_datos_familia'. Con la credencial de quien pide, quien edita la Familia sin cargar
+  // instrucciones dejaría de ver la hoja.
   const { data: instruccion } = await supabase
     .from('instrucciones_acceso_circulo')
     .select('archivo_firmado_url')
@@ -480,15 +504,6 @@ panelCuentasRouter.get('/familia/:familiaId/circulo/instruccion/:instruccionId/p
 // falta para trabajar. Hacerlo firmar pide el permiso propio, que nace reservado al Admin.
 
 const DEPOSITO_DEL_PAGADOR = DEPOSITO_PAGADOR;
-
-// La Familia de este pedido, ya acotada a la Prestadora de quien pregunta. Estaba escrito igual en
-// cada ruta del círculo; de acá para abajo va una sola vez.
-async function familiaDelPedido(req) {
-  let query = supabase.from('familias').select('id, prestadora_id').eq('id', req.params.familiaId);
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data } = await query.maybeSingle();
-  return data ?? null;
-}
 
 panelCuentasRouter.get('/familia/:familiaId/pagador', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_familia'), async (req, res) => {
   const familia = await familiaDelPedido(req);
@@ -546,6 +561,7 @@ panelCuentasRouter.post(
   subirPapelFirmado.single('archivo'),
   manejarErrorDeArchivo,
   async (req, res) => {
+    const db = clienteDelPedido(req);
     const familia = await familiaDelPedido(req);
     if (!familia) return res.status(404).json({ error: 'Familia no encontrada' });
 
@@ -560,7 +576,7 @@ panelCuentasRouter.post(
         nombre: `consentimiento-${req.params.consentimientoId}`,
         extension: extensionDeArchivo(req.file.mimetype),
       });
-      const { error: errorSubida } = await supabase.storage
+      const { error: errorSubida } = await db.storage
         .from(DEPOSITO_DEL_PAGADOR)
         .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
       if (errorSubida) return responderError(res, errorSubida);
@@ -582,14 +598,14 @@ panelCuentasRouter.post(
 // Volver a ver la hoja firmada. Nunca dirección pública: se firma por un minuto, igual que el resto
 // de los archivos del producto.
 panelCuentasRouter.get('/familia/:familiaId/pagador/consentimiento/:consentimientoId/papel', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_familia'), async (req, res) => {
+  const db = clienteDelPedido(req);
   const familia = await familiaDelPedido(req);
   if (!familia) return res.status(404).json({ error: 'Familia no encontrada' });
 
-  const { data: consentimiento } = await supabase
+  const { data: consentimiento } = await db
     .from('consentimientos_pagador')
     .select('archivo_firmado_url')
     .eq('id', req.params.consentimientoId)
-    .eq('prestadora_id', familia.prestadora_id)
     .eq('familia_id', familia.id)
     .maybeSingle();
 
@@ -597,6 +613,9 @@ panelCuentasRouter.get('/familia/:familiaId/pagador/consentimiento/:consentimien
     return res.status(404).json({ error: 'No hay hoja firmada guardada' });
   }
 
+  // El enlace temporal va con la llave maestra: el depósito pide 'registrar_consentimiento_pagador'
+  // y esta ruta se abre con 'editar_datos_familia'. El archivo es el de una fila que la base ya
+  // dejó ver a quien pide.
   const { data, error } = await supabase.storage
     .from(DEPOSITO_DEL_PAGADOR)
     .createSignedUrl(consentimiento.archivo_firmado_url, 60);
@@ -619,6 +638,7 @@ panelCuentasRouter.post(
       return res.status(400).json({ error: 'Archivo faltante o de tipo no permitido (solo PDF, JPG o PNG, hasta 10 MB)' });
     }
 
+    const db = clienteDelPedido(req);
     const familia = await familiaDelPedido(req);
     if (!familia) return res.status(404).json({ error: 'Familia no encontrada' });
 
@@ -628,7 +648,7 @@ panelCuentasRouter.post(
       nombre: `papel-${req.params.tipoDocumentoId}`,
       extension: extensionDeArchivo(req.file.mimetype),
     });
-    const { error: errorSubida } = await supabase.storage
+    const { error: errorSubida } = await db.storage
       .from(DEPOSITO_DEL_PAGADOR)
       .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
     if (errorSubida) return responderError(res, errorSubida);
@@ -650,14 +670,14 @@ panelCuentasRouter.post(
 );
 
 panelCuentasRouter.get('/familia/:familiaId/pagador/papel/:documentoId/archivo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_familia'), async (req, res) => {
+  const db = clienteDelPedido(req);
   const familia = await familiaDelPedido(req);
   if (!familia) return res.status(404).json({ error: 'Familia no encontrada' });
 
-  const { data: documento } = await supabase
+  const { data: documento } = await db
     .from('documentos_pagador')
     .select('archivo_url')
     .eq('id', req.params.documentoId)
-    .eq('prestadora_id', familia.prestadora_id)
     .eq('familia_id', familia.id)
     .maybeSingle();
 
@@ -665,6 +685,7 @@ panelCuentasRouter.get('/familia/:familiaId/pagador/papel/:documentoId/archivo',
     return res.status(404).json({ error: 'No hay archivo guardado' });
   }
 
+  // Con la llave maestra, por lo mismo que la hoja firmada de arriba.
   const { data, error } = await supabase.storage
     .from(DEPOSITO_DEL_PAGADOR)
     .createSignedUrl(documento.archivo_url, 60);
@@ -675,11 +696,8 @@ panelCuentasRouter.get('/familia/:familiaId/pagador/papel/:documentoId/archivo',
 
 panelCuentasRouter.post('/familia/:familiaId/circulo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_familia'), async (req, res) => {
   const { nombre, email, telefono } = req.body || {};
-  const prestadoraId = req.usuarioPanel.prestadoraId;
 
-  let queryFamilia = supabase.from('familias').select('id').eq('id', req.params.familiaId);
-  queryFamilia = acotarAPrestadora(queryFamilia, req.usuarioPanel);
-  const { data: familia } = await queryFamilia.maybeSingle();
+  const familia = await familiaDelPedido(req);
   if (!familia) {
     return res.status(404).json({ error: 'Familia no encontrada' });
   }
@@ -689,8 +707,8 @@ panelCuentasRouter.post('/familia/:familiaId/circulo', requiereRolPanel, exigirO
       email,
       nombre,
       telefono,
-      familiaId: req.params.familiaId,
-      prestadoraId,
+      familiaId: familia.id,
+      prestadoraId: familia.prestadora_id,
       invitadoPor: req.usuarioPanel.id,
     });
     res.json({ ok: true, usuarioId: miembroId });
@@ -700,17 +718,13 @@ panelCuentasRouter.post('/familia/:familiaId/circulo', requiereRolPanel, exigirO
 });
 
 panelCuentasRouter.delete('/familia/:familiaId/circulo/:usuarioId', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_familia'), async (req, res) => {
-  const prestadoraId = req.usuarioPanel.prestadoraId;
-
-  let queryFamilia = supabase.from('familias').select('id').eq('id', req.params.familiaId);
-  queryFamilia = acotarAPrestadora(queryFamilia, req.usuarioPanel);
-  const { data: familia } = await queryFamilia.maybeSingle();
+  const familia = await familiaDelPedido(req);
   if (!familia) {
     return res.status(404).json({ error: 'Familia no encontrada' });
   }
 
   try {
-    await revocarMiembroCirculo(req.params.usuarioId, { prestadoraId, familiaId: req.params.familiaId });
+    await revocarMiembroCirculo(req.params.usuarioId, { prestadoraId: familia.prestadora_id, familiaId: familia.id });
     res.json({ ok: true });
   } catch (error) {
     responderError(res, error, 400);
@@ -722,6 +736,8 @@ panelCuentasRouter.delete('/familia/:familiaId/circulo/:usuarioId', requiereRolP
 // automático de crearCuentaConPerfil); Coordinador/Admin/Superadmin siguen con el flujo
 // manual de panelUsuarios.js y no tienen esta ruta disponible.
 panelCuentasRouter.post('/:usuarioId/reenviar-activacion', requiereRolPanel, exigirOrganizacionActiva, soloAdministracion, async (req, res) => {
+  // Con la llave maestra y acotada a mano: en `usuarios` la base sólo le deja ver a cada persona su
+  // propia fila, y acá se busca la cuenta de otra.
   let queryUsuario = supabase.from('usuarios').select('id, rol, prestadora_id').eq('id', req.params.usuarioId);
   queryUsuario = acotarAPrestadora(queryUsuario, req.usuarioPanel);
   const { data: usuario } = await queryUsuario.maybeSingle();

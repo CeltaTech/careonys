@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { supabase } from '../db/connection.js';
+import { clienteDelPedido, supabase } from '../db/connection.js';
 import { tipoMatriculaRequerida, hayAsistenteAsignadoConMatricula } from '../utils/medicacionIndicaciones.js';
 import { extensionDeArchivo, rutaDeMatriculaNueva } from '../utils/archivosSubidos.js';
 import { registrarAdvertenciaAlActivar } from '../utils/advertenciaLegal.js';
 import { responderError } from '../utils/errorConMotivo.js';
+import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
 
 // Cierra pendiente #62 (docs/PLAN_HASTA_PRODUCCION.md): cola de revisión de indicaciones de
 // medicación solicitadas por la Familia (appFamiliasMedicacion.js). Aceptar/rechazar nunca
@@ -18,8 +19,21 @@ import { responderError } from '../utils/errorConMotivo.js';
 // matriculas_asistente y configuracion_matricula_via_medicacion no tienen rutas CRUD
 // acá: el Panel las gestiona directo vía supabase-js bajo RLS (mismo criterio que
 // autorizaciones_monitoreo_paciente/rangos_referencia_vitales — RLS ya lo permite a
-// admin_prestadora). Esta ruta solo resuelve el archivo de evidencia de matrícula,
-// porque el bucket es privado y sin policies (regla 7, CLAUDE.md §6).
+// admin_prestadora). Esta ruta solo resuelve el archivo de evidencia de matrícula.
+//
+// CON LA CREDENCIAL DE QUIEN PIDE. La firma del archivo entra a la base con
+// `clienteDelPedido(req)`, no con la llave maestra: el depósito sólo firma archivos cuya ruta
+// empieza por la Prestadora de quien pide, así que la firma no compara la ruta a mano. La bandeja
+// es información de salud: antes de entregarla queda anotado, con esa misma credencial, quién la
+// vio, paciente por paciente.
+//
+// SIGUEN CON LA LLAVE MAESTRA, con la Prestadora de la sesión escrita en cada consulta:
+// - Leer la bandeja: la base se la acota más que lo que la pantalla mostraba (ver el comentario
+//   de la consulta).
+// - Aceptar y rechazar: la base deja modificar una indicación sólo a la administración, y acá
+//   también la revisa el Coordinador (`indicaciones_medicacion`, modificar).
+// - Subir el archivo de matrícula: el depósito no le deja escribir al Coordinador
+//   (`prescripciones-medicacion`, alta y reemplazo).
 
 export const panelMedicacionRouter = Router();
 
@@ -43,6 +57,14 @@ function manejarErrorMulter(err, req, res, next) {
 }
 
 panelMedicacionRouter.get('/pendientes', requiereRolPanel, async (req, res) => {
+  const db = clienteDelPedido(req);
+  // Con la llave maestra: la política RESTRICTIVE `la_informacion_de_salud_la_ve_quien_atiende`
+  // exige interno.alcanza_la_informacion_de_salud(paciente_id), y con la restricción de la
+  // historia clínica activa (el valor de fábrica) el Administrador y el Superadministrador que no
+  // atienden al paciente dejan de ver la indicación; además `oculta_pendientes_de_conformidad`
+  // (RESTRICTIVE, NOT pendiente_conformidad) deja en null el paciente y la familia embebidos si
+  // están pendientes. Hasta ahora cada rol veía toda la bandeja de su Prestadora. Si se acota o no
+  // se decide aparte.
   const { data, error } = await supabase
     .from('indicaciones_medicacion')
     .select('id, medicamento, dosis, frecuencia, via_administracion, prescripcion_archivo_url, fecha_desde, fecha_hasta, created_at, pacientes(id, nombre), familias(id)')
@@ -50,6 +72,21 @@ panelMedicacionRouter.get('/pendientes', requiereRolPanel, async (req, res) => {
     .eq('estado', 'pendiente')
     .order('created_at', { ascending: true });
   if (error) return responderError(res, error);
+
+  // Antes de entregar la medicación queda anotado quién la vio. Si no se puede anotar, no se
+  // entrega (docs/PLAN_HASTA_PRODUCCION.md, paso 9).
+  const pacienteIds = [...new Set((data || []).map((indicacion) => indicacion.pacientes?.id).filter(Boolean))];
+  try {
+    for (const pacienteId of pacienteIds) {
+      await anotarConsultaAHce(
+        req.usuarioPanel,
+        { pacienteId, categorias: ['indicaciones_medicacion'], origen: origenDelPedido(req) },
+        { cliente: db },
+      );
+    }
+  } catch (errorAnotacion) {
+    return responderError(res, errorAnotacion);
+  }
 
   const pendientes = await Promise.all(
     (data || []).map(async (indicacion) => {
@@ -68,6 +105,7 @@ panelMedicacionRouter.get('/pendientes', requiereRolPanel, async (req, res) => {
   res.json({ pendientes });
 });
 
+// Va con la llave maestra: ver el encabezado.
 panelMedicacionRouter.post('/:id/aceptar', requiereRolPanel, async (req, res) => {
   const { data: indicacion } = await supabase
     .from('indicaciones_medicacion')
@@ -115,6 +153,7 @@ panelMedicacionRouter.post('/:id/aceptar', requiereRolPanel, async (req, res) =>
   res.json({ ok: true });
 });
 
+// Va con la llave maestra: ver el encabezado.
 panelMedicacionRouter.post('/:id/rechazar', requiereRolPanel, async (req, res) => {
   const { motivo_rechazo: motivoRechazo } = req.body || {};
   if (!motivoRechazo) return res.status(400).json({ error: 'Falta el motivo del rechazo' });
@@ -147,6 +186,7 @@ panelMedicacionRouter.post('/:id/rechazar', requiereRolPanel, async (req, res) =
   res.json({ ok: true });
 });
 
+// Va con la llave maestra: ver el encabezado.
 panelMedicacionRouter.post(
   '/matriculas/:asistenteId/archivo',
   requiereRolPanel,
@@ -178,11 +218,13 @@ panelMedicacionRouter.post(
 
 panelMedicacionRouter.get('/archivo-url', requiereRolPanel, async (req, res) => {
   const ruta = req.query.ruta;
-  if (!ruta || !ruta.startsWith(`${req.usuarioPanel.prestadoraId}/`)) {
+  if (!ruta) {
     return res.status(400).json({ error: 'Ruta de archivo inválida' });
   }
 
-  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(ruta, 60);
+  // La política del depósito exige que la ruta empiece por la Prestadora de quien pide: un archivo
+  // de otra no se firma.
+  const { data, error } = await clienteDelPedido(req).storage.from(BUCKET).createSignedUrl(ruta, 60);
   if (error) return responderError(res, error);
 
   res.json({ url: data.signedUrl });

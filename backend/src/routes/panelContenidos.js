@@ -13,12 +13,19 @@
 //
 // NO LLEVA CANDADO DE MODALIDAD. Una Familia de prestación directa cuida en su casa igual que una
 // de marketplace. Por eso este riel no cuelga de `panelMarketplace.js`.
+//
+// CON QUÉ CREDENCIAL. Leer va con la de quien pide (`clienteDelPedido(req)`): la base le contesta
+// sólo lo de su Prestadora, y por eso esa consulta no lleva el filtro de la sesión. Escribir sigue
+// con la llave maestra y con el filtro escrito acá, porque la política de la tabla deja escribir
+// sólo a la administración de la Prestadora, y esta ruta reparte la escritura por el permiso de
+// arriba, que también puede tener un Coordinador. Pasar la escritura a la credencial de quien pide
+// espera a que la política diga lo mismo que el permiso.
 
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { requierePermiso } from '../utils/permisos.js';
-import { supabase } from '../db/connection.js';
+import { clienteDelPedido, supabase } from '../db/connection.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 
 export const panelContenidosRouter = Router();
@@ -79,10 +86,10 @@ function errorDeGuardado(error) {
 }
 
 panelContenidosRouter.get('/', async (req, res) => {
-  const { data, error } = await supabase
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('contenidos_para_familias')
     .select(CAMPOS)
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .order('orden', { ascending: true })
     .order('created_at', { ascending: true });
   if (error) return responderError(res, error);

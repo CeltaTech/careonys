@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
-import { supabase } from '../db/connection.js';
+import { supabase, clienteDelPedido } from '../db/connection.js';
 import { marcarAusenteYCrearIncidente } from '../utils/marcarAusente.js';
 import { cubrirGuardiaConSustituto } from '../utils/cubrirGuardia.js';
 import { avisarCambioDeAsistente } from '../utils/avisoCambioDeAsistente.js';
@@ -9,6 +9,19 @@ import { sugerirMotivoDelAviso } from '../utils/motivoSugeridoDelAviso.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
 export const panelGuardiasRouter = Router();
+
+/* CON LA LLAVE MAESTRA, Y FILTRADO A MANO POR LA PRESTADORA, salvo la lista de motivos del aviso.
+   Esta ruta la usa también el Coordinador, y con su credencial la base le deja ver sólo lo de su
+   zona: `coordinador_gestiona_guardias_de_su_zona` en `guardias`, `coordinador_lee_asistentes_de_su_zona`
+   en `asistentes` y `coordinador_lee_descansos_de_su_zona` en `descansos_guardia`. Hoy marca
+   ausencias, cubre, avisa cambios y anota descansos en cualquier guardia de su Prestadora, y elige
+   sustituto entre todos sus Asistentes. Además `oculta_pendientes_de_conformidad`, restrictiva en
+   `asistentes`, le esconde a todos los roles el Asistente importado que espera conformidad, que hoy
+   puede cubrir. Cambiar eso se decide aparte.
+
+   La lista de motivos sí va con la credencial de quien pide: `coordinador_lee_motivos_aviso_previo`
+   y `admin_prestadora_gestiona_motivos_aviso_previo` le dejan leer a cada rol toda su Prestadora,
+   igual que el filtro de antes. */
 
 /* Las guardias las escribe el Panel directo contra la base, con el pase de la persona, y así
    sigue siendo: reasignar, cancelar, registrar la llegada. Acá vive la excepción.
@@ -180,9 +193,9 @@ panelGuardiasRouter.post('/motivo-del-aviso', requiereRolPanel, exigirOrganizaci
   const texto = typeof req.body?.texto === 'string' ? req.body.texto.trim() : '';
   if (!texto) return res.status(400).json({ error: 'No se indicó lo que se avisó' });
 
-  let query = supabase.from('motivos_aviso_previo_guardia').select('nombre, activo');
-  query = acotarAPrestadora(query, req.usuarioPanel);
-  const { data: motivos, error } = await query;
+  const { data: motivos, error } = await clienteDelPedido(req)
+    .from('motivos_aviso_previo_guardia')
+    .select('nombre, activo');
 
   if (error) return responderError(res, error);
 

@@ -5,18 +5,24 @@
  *   node --test backend/src/routes/__tests__/panelCeses.test.js
  *
  * POR QUÉ EXISTE ESTA PRUEBA. Adentro del depósito `documentos-cese` hay documentos de baja con
- * nombre, documento y montos, y el depósito no tiene ninguna política: lo escribe y lo lee el
- * backend con la llave maestra (`../panelCeses.js`). O sea que lo único que separa una Prestadora de
- * otra son los filtros escritos en esta ruta, y dos decisiones más: que el tipo de documento salga
- * de una lista cerrada —si no, quien manda el pedido elige el nombre del archivo adentro del
- * depósito— y que la ruta de la dirección firmada se arme con los datos del cese y no con nada que
- * venga de afuera.
+ * nombre, documento y montos. La ruta (`../panelCeses.js`) entra a la base y al depósito con la
+ * llave maestra, todavía: la política `admin_gestiona_ceses` de la base deja los ceses sólo a
+ * Superadmin y a la administración, y esta ruta la usa también quien coordina. Entonces lo que
+ * separa una Prestadora de otra es el filtro de la Prestadora escrito en cada consulta del cese, y
+ * lo que hay que sostener acá es que ese filtro esté. Y dos decisiones más: que el tipo de
+ * documento salga de una lista cerrada —si no, quien manda el pedido elige el nombre del archivo
+ * adentro del depósito— y que la ruta de la dirección firmada se arme con los datos del cese y no
+ * con nada que venga de afuera.
  *
  * Por eso la base es de mentira y contesta por HTTP como la de verdad: además del resultado se
- * mira **qué se le pidió**, que es donde viven esos filtros.
+ * mira **qué se le pidió y con qué credencial**. La base de mentira imita las dos cosas que hacen
+ * falta: con la llave maestra contesta los ceses que pide el filtro de la dirección, y todos si no
+ * hay filtro; con la credencial de quien pide imita `admin_gestiona_ceses`, que no le contesta
+ * nada a quien coordina.
  *
- * Con el sistema roto —un filtro de menos, o el tipo tomado tal como viene— las pruebas del cese
- * ajeno y la del tipo inventado dan al revés.
+ * Con el sistema roto —una consulta sin el filtro de la Prestadora, una que vuelva a la
+ * credencial de quien pide, o el tipo tomado tal como viene— las pruebas del cese ajeno, las de
+ * quien coordina y la del tipo inventado dan al revés.
  *
  * Datos inventados, como manda CLAUDE.md §6.
  */
@@ -47,7 +53,12 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, url: req.url, cuerpo: crudo && req.headers['content-type']?.includes('json') ? JSON.parse(crudo) : crudo });
+    llamadas.push({
+      clave,
+      url: req.url,
+      cuerpo: crudo && req.headers['content-type']?.includes('json') ? JSON.parse(crudo) : crudo,
+      credencial: req.headers.authorization,
+    });
 
     // El depósito de archivos: subir y firmar. No se guarda nada, alcanza con contestar como
     // contesta el de verdad y dejar anotado qué ruta se tocó.
@@ -66,7 +77,9 @@ const baseFalsa = createServer((req, res) => {
     }
 
     const preparada = respuestas.get(clave);
-    const valor = typeof preparada === 'function' ? preparada(crudo ? JSON.parse(crudo) : null) : preparada;
+    const valor = typeof preparada === 'function'
+      ? preparada(crudo ? JSON.parse(crudo) : null, req.headers.authorization, req.url)
+      : preparada;
     if (valor === undefined) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: `la prueba no preparó respuesta para ${clave}` }));
@@ -112,22 +125,27 @@ function unPdf(tipoDeclarado = 'application/pdf') {
   return new Blob([new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34])], { type: tipoDeclarado });
 }
 
+/** La credencial que mandó el último pedido: la base tiene que recibir esa y ninguna otra. */
+let credencialEnviada = null;
+
 async function subir(ceseId, { tipo, archivo = unPdf() } = {}) {
   const cuerpo = new FormData();
   if (tipo !== undefined) cuerpo.append('tipo', tipo);
   if (archivo !== null) cuerpo.append('archivo', archivo, 'documento.pdf');
 
+  credencialEnviada = sesionDePrueba(USUARIO);
   const respuesta = await fetch(`${DIRECCION}/${ceseId}/documento`, {
     method: 'POST',
-    headers: { Authorization: sesionDePrueba(USUARIO) },
+    headers: { Authorization: credencialEnviada },
     body: cuerpo,
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
 
 async function pedirDireccion(ruta) {
+  credencialEnviada = sesionDePrueba(USUARIO);
   const respuesta = await fetch(`${DIRECCION}${ruta}`, {
-    headers: { Authorization: sesionDePrueba(USUARIO) },
+    headers: { Authorization: credencialEnviada },
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
@@ -147,7 +165,28 @@ beforeEach(() => {
   respuestas.set('POST /rest/v1/rpc/tiene_permiso_de', () => true);
 });
 
-/** Lo que se le preguntó a la tabla de ceses, que es lo que tiene que llevar el filtro escrito. */
+/** La llave maestra, tal como la manda la conexión del backend. */
+const LLAVE_MAESTRA = 'Bearer clave-de-mentira';
+
+/** Los ceses que hay en la base, para leerlos o escribirlos. Con la llave maestra la base contesta
+ *  los que pide el filtro de la Prestadora de la dirección, y todos si no hay filtro: si la ruta
+ *  perdiera el filtro, el cese ajeno aparecería. Con la credencial de quien pide imita
+ *  `admin_gestiona_ceses`: sólo los de su Prestadora, y a quien coordina ninguno. */
+function cesesEnLaBase(...filas) {
+  const contestar = (_cuerpo, credencial, url) => {
+    if (credencial !== LLAVE_MAESTRA) {
+      if (rolDelUsuario === 'coordinador') return [];
+      return filas.filter((fila) => fila.prestadora_id === PRESTADORA);
+    }
+    const filtro = url.match(/prestadora_id=eq\.([^&]+)/);
+    return filtro ? filas.filter((fila) => fila.prestadora_id === decodeURIComponent(filtro[1])) : filas;
+  };
+  respuestas.set('GET /rest/v1/ceses', contestar);
+  respuestas.set('PATCH /rest/v1/ceses', (cuerpo, credencial, url) =>
+    contestar(cuerpo, credencial, url).map((fila) => ({ id: fila.id })));
+}
+
+/** Lo que se le preguntó a la tabla de ceses. */
 function consultasDeCeses() {
   return llamadas.filter((l) => l.clave.endsWith(' /rest/v1/ceses'));
 }
@@ -206,8 +245,7 @@ describe('guardar un documento de cese', () => {
   });
 
   it('el cese de otra Prestadora no existe para ésta, y nada se sube a su nombre', async () => {
-    // La base contesta vacío porque el filtro la acotó; lo que se comprueba es que el filtro esté.
-    respuestas.set('GET /rest/v1/ceses', () => []);
+    cesesEnLaBase(unCese({ prestadora_id: OTRA_PRESTADORA }));
 
     const { estado, cuerpo } = await subir(CESE, { tipo: TIPO_LIQUIDACION });
 
@@ -236,19 +274,33 @@ describe('guardar un documento de cese', () => {
     assert.equal(JSON.stringify(cuerpo).includes('documentos-cese'), false);
   });
 
-  it('las dos consultas del cese llevan el filtro de Prestadora escrito', async () => {
-    respuestas.set('GET /rest/v1/ceses', () => [unCese()]);
-    respuestas.set('PATCH /rest/v1/ceses', () => [{ id: CESE }]);
+  it('el cese se lee y se escribe atado a la Prestadora de quien pide', async () => {
+    cesesEnLaBase(unCese());
 
     await subir(CESE, { tipo: TIPO_LIQUIDACION });
 
     const consultas = consultasDeCeses();
     assert.ok(consultas.length >= 2);
-    const lectura = consultas.find((l) => l.clave.startsWith('GET '));
-    assert.ok(lectura.url.includes(`prestadora_id=eq.${PRESTADORA}`), lectura.url);
-    // La escritura apunta al cese que ya se comprobó que es de esta Prestadora, y a ningún otro.
+    for (const consulta of consultas) {
+      assert.equal(consulta.credencial, LLAVE_MAESTRA, `${consulta.clave} no fue con la llave maestra`);
+      assert.ok(consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`), `${consulta.clave} sin la Prestadora: ${consulta.url}`);
+    }
+    // La escritura apunta al cese comprobado, y a ningún otro.
     const escritura = consultas.find((l) => l.clave.startsWith('PATCH '));
     assert.ok(escritura.url.includes(`id=eq.${CESE}`), escritura.url);
+  });
+
+  it('quien coordina también guarda el documento, como antes', async () => {
+    rolDelUsuario = 'coordinador';
+    cesesEnLaBase(unCese());
+
+    const { estado, cuerpo } = await subir(CESE, { tipo: TIPO_LIQUIDACION });
+
+    assert.equal(estado, 200);
+    assert.ok(cuerpo.documentos_generados[TIPO_LIQUIDACION]);
+    const subida = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/'));
+    assert.equal(subida.credencial, LLAVE_MAESTRA);
+    assert.equal(subida.clave, `POST /storage/v1/object/documentos-cese/${PRESTADORA}/${CESE}/${TIPO_LIQUIDACION}.pdf`);
   });
 
   it('quien no es del Panel no guarda nada', async () => {
@@ -311,14 +363,40 @@ describe('la dirección firmada del documento guardado', () => {
   });
 
   it('el cese de otra Prestadora no se firma', async () => {
-    respuestas.set('GET /rest/v1/ceses', () => []);
+    cesesEnLaBase(unCese({
+      prestadora_id: OTRA_PRESTADORA,
+      documentos_generados: { [TIPO_LIQUIDACION]: { ruta: 'x', generado_en: '2026-09-01T10:00:00.000Z' } },
+    }));
 
     const { estado, cuerpo } = await pedirDireccion(`/${CESE}/documento-url?tipo=${TIPO_LIQUIDACION}`);
 
     assert.equal(estado, 404);
     assert.equal(cuerpo.motivo, 'cese_no_encontrado');
-    const lectura = consultasDeCeses().find((l) => l.clave.startsWith('GET '));
+    assert.equal(llamadas.some((l) => l.clave.startsWith('POST /storage/v1/')), false);
+  });
+
+  it('el cese se busca atado a la Prestadora de quien pide', async () => {
+    cesesEnLaBase(unCese({
+      documentos_generados: { [TIPO_LIQUIDACION]: { ruta: 'x', generado_en: '2026-09-01T10:00:00.000Z' } },
+    }));
+
+    await pedirDireccion(`/${CESE}/documento-url?tipo=${TIPO_LIQUIDACION}`);
+
+    const lectura = consultasDeCeses()[0];
     assert.ok(lectura.url.includes(`prestadora_id=eq.${PRESTADORA}`), lectura.url);
+  });
+
+  it('quien coordina también ve el documento guardado, como antes', async () => {
+    rolDelUsuario = 'coordinador';
+    cesesEnLaBase(unCese({
+      documentos_generados: { [TIPO_LIQUIDACION]: { ruta: 'x', generado_en: '2026-09-01T10:00:00.000Z' } },
+    }));
+
+    const { estado } = await pedirDireccion(`/${CESE}/documento-url?tipo=${TIPO_LIQUIDACION}`);
+
+    assert.equal(estado, 200);
+    const firma = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/sign/'));
+    assert.equal(firma.credencial, LLAVE_MAESTRA);
   });
 
   it('quien no es del Panel no pide direcciones firmadas', async () => {

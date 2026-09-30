@@ -15,11 +15,16 @@ import { responderError } from '../utils/errorConMotivo.js';
 // volver a apretar el botón no devuelve el mismo papel, porque el cálculo se rehace con las
 // escalas de hoy. `docs/PRD_02B_Gestion_Personal.md:156-163` los pide guardados.
 //
-// POR QUÉ SUBE POR ACÁ Y NO DERECHO DESDE EL PANEL. El depósito `documentos-cese` es privado y no
-// tiene ninguna política: nadie lo alcanza con su propio pase, porque adentro hay documentos de
-// baja con nombre, documento y montos. Lo escribe y lo lee el backend con la llave maestra, después
-// de comprobar que el cese es de la Prestadora de quien pide. Es la misma forma de
-// `certificados-medicos` y `autorizaciones-monitoreo`.
+// POR QUÉ SUBE POR ACÁ Y NO DERECHO DESDE EL PANEL. El depósito `documentos-cese` es privado:
+// adentro hay documentos de baja con nombre, documento y montos. La ruta del archivo la arma esta
+// ruta con los datos del cese, nunca con lo que venga en el pedido, y el tipo sale de una lista
+// cerrada.
+//
+// CON LA LLAVE MAESTRA, TODAVÍA. El cese, el depósito y el enlace temporal van con la llave
+// maestra, después de comprobar que el cese es de la Prestadora de quien pide. La política
+// `admin_gestiona_ceses` de la base deja ver y escribir los ceses sólo a Superadmin y a la
+// administración, y la del depósito (`documentos_cese_los_alcanza_quien_ve_el_cese`) pide un cese
+// que quien pide vea; esta ruta la usa también quien coordina. Si eso se estrecha se decide aparte.
 //
 // EL PDF LO SIGUE ARMANDO EL NAVEGADOR. Armarlo también acá sería tener el generador escrito dos
 // veces, y las dos versiones se separarían el día que alguien corrija una sola: entonces el
@@ -40,6 +45,9 @@ const upload = multer({
 });
 
 async function ceseDeLaPrestadora(ceseId, usuarioPanel) {
+  // Con la llave maestra: la política `admin_gestiona_ceses` deja ver los ceses sólo a Superadmin
+  // y a la administración (`rol = 'admin_prestadora'`), y esta ruta la usa también quien coordina.
+  // Se decide aparte.
   let query = supabase
     .from('ceses')
     .select('id, prestadora_id, documentos_generados')
@@ -79,6 +87,10 @@ panelCesesRouter.post(
       return res.status(404).json({ error: 'cese_no_encontrado', motivo: 'cese_no_encontrado' });
     }
 
+    // Con la llave maestra: la política del depósito `documentos_cese_los_alcanza_quien_ve_el_cese`
+    // pide un cese que quien pide vea, y por `admin_gestiona_ceses` quien coordina no ve ninguno.
+    // Se decide aparte. La ruta empieza por la Prestadora del cese, que ya se comprobó que es la
+    // de quien pide.
     const ruta = rutaEnElDeposito(cese.prestadora_id, cese.id, tipo);
     const { error: errorSubida } = await supabase.storage
       .from(BUCKET)
@@ -93,6 +105,9 @@ panelCesesRouter.post(
     // baja una persona de a uno, apretando un botón por vez.
     const documentos = { ...cese.documentos_generados, [tipo]: { ruta, generado_en: new Date().toISOString() } };
 
+    // Con la llave maestra: la política `admin_gestiona_ceses` deja escribir los ceses sólo a
+    // Superadmin y a la administración, y quien coordina también guarda estos documentos. Se
+    // decide aparte.
     let apuntar = supabase
       .from('ceses')
       .update({ documentos_generados: documentos })
@@ -131,6 +146,9 @@ panelCesesRouter.get('/:id/documento-url', requiereRolPanel, exigirOrganizacionA
     return res.status(404).json({ error: 'documento_no_generado', motivo: 'documento_no_generado' });
   }
 
+  // Con la llave maestra, por la misma política del depósito
+  // (`documentos_cese_los_alcanza_quien_ve_el_cese`), que a quien coordina le niega la firma. Se
+  // decide aparte.
   const { data, error } = await supabase.storage
     .from(BUCKET)
     .createSignedUrl(rutaEnElDeposito(cese.prestadora_id, cese.id, tipo), 60);

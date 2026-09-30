@@ -6,9 +6,10 @@
  * ACÁ SE PRUEBA UNA PANTALLA QUE MUESTRA PLATA DE OTROS, así que los casos están escritos por el
  * error que evitan, y son cinco:
  *
- *   1. QUE UNA FAMILIA VEA LA FACTURA DE OTRA. El backend entra a la base con la llave de servicio
- *      y se saltea la protección por fila, así que lo único que separa a una Familia de otra son
- *      los filtros escritos en cada consulta. Si falta uno, no falla nada: contesta de más.
+ *   1. QUE UNA FAMILIA VEA LA FACTURA DE OTRA. Estas consultas entran a la base con la credencial
+ *      de la persona, y es la protección por fila la que separa a una Familia de otra. Si una
+ *      volviera a la llave maestra, se saltearía esa protección sin que nada fallara: por eso se
+ *      comprueba con qué credencial sale cada una.
  *   2. QUE EL TOTAL LLEGUE SIN DECIR DE QUÉ ES. Un importe sin desglose no se puede comprobar ni
  *      discutir, y quien paga tiene que poder hacer las dos cosas.
  *   3. QUE UN COBRO ANULADO DESAPAREZCA. Anular no es borrar: un pago que se anotó y después se
@@ -45,7 +46,7 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, url: req.url });
+    llamadas.push({ clave, url: req.url, autorizacion: req.headers.authorization });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada({ url: req.url }) : preparada;
@@ -81,9 +82,13 @@ after(() => {
   baseFalsa.close();
 });
 
+/** La credencial de la persona de la prueba. La de la llave maestra es otra: `clave-de-mentira`. */
+let credencial;
+
 async function pedir(ruta) {
+  credencial = sesionDePrueba(USUARIO);
   const respuesta = await fetch(`${DIRECCION}${ruta}`, {
-    headers: { Authorization: sesionDePrueba(USUARIO) },
+    headers: { Authorization: credencial },
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
@@ -142,6 +147,11 @@ function consultasA(tabla) {
   return llamadas.filter((l) => l.clave === `GET /rest/v1/${tabla}`).map((l) => l.url);
 }
 
+/** Con qué credencial se consultó esa tabla, una por consulta. */
+function credencialesDe(tabla) {
+  return llamadas.filter((l) => l.clave === `GET /rest/v1/${tabla}`).map((l) => l.autorizacion);
+}
+
 describe('la lista de facturas de la Familia', () => {
   it('devuelve lo facturado, lo cobrado y lo que falta, del más nuevo al más viejo', async () => {
     respuestas.set('GET /rest/v1/saldos_familia', [SALDO]);
@@ -155,13 +165,13 @@ describe('la lista de facturas de la Familia', () => {
     assert.ok(url.includes('order=periodo.desc'), url);
   });
 
-  it('y la consulta lleva el filtro de Familia y el de Prestadora', async () => {
+  it('y la consulta lleva el filtro de Familia y sale con la credencial de la persona', async () => {
     respuestas.set('GET /rest/v1/saldos_familia', []);
     await pedir('/facturas');
 
     const [url] = consultasA('saldos_familia');
     assert.ok(url.includes(`familia_id=eq.${FAMILIA}`), url);
-    assert.ok(url.includes(`prestadora_id=eq.${PRESTADORA}`), url);
+    assert.deepEqual(credencialesDe('saldos_familia'), [credencial]);
   });
 
   it('sin facturas contesta una lista vacía, no un error', async () => {
@@ -221,7 +231,7 @@ describe('el desglose de una factura', () => {
     assert.equal(estado, 404);
   });
 
-  it('y las tres consultas del desglose llevan el filtro de Prestadora', async () => {
+  it('y las tres consultas del desglose salen con la credencial de la persona', async () => {
     respuestas.set('GET /rest/v1/saldos_familia', [SALDO]);
     respuestas.set('GET /rest/v1/facturas_familia_items', []);
     respuestas.set('GET /rest/v1/cobros_familia', []);
@@ -230,7 +240,7 @@ describe('el desglose de una factura', () => {
     for (const tabla of ['saldos_familia', 'facturas_familia_items', 'cobros_familia']) {
       const urls = consultasA(tabla);
       assert.equal(urls.length, 1, tabla);
-      assert.ok(urls[0].includes(`prestadora_id=eq.${PRESTADORA}`), `${tabla}: ${urls[0]}`);
+      assert.deepEqual(credencialesDe(tabla), [credencial], tabla);
     }
   });
 });
@@ -319,13 +329,13 @@ describe('la factura en papel que baja la Familia', () => {
     assert.ok(!('comprobante_archivo' in cuerpo.facturas[0]));
   });
 
-  it('y la consulta del papel lleva el filtro de Familia y el de Prestadora', async () => {
+  it('y la consulta del papel lleva el filtro de Familia y sale con la credencial de la persona', async () => {
     respuestas.set('GET /rest/v1/saldos_familia', [SALDO]);
     await pedir('/facturas');
 
     const [url] = consultasA('facturas_familia');
     assert.ok(url.includes(`familia_id=eq.${FAMILIA}`), url);
-    assert.ok(url.includes(`prestadora_id=eq.${PRESTADORA}`), url);
+    assert.deepEqual(credencialesDe('facturas_familia'), [credencial]);
   });
 
   it('con la entrega apagada no se dice ni que el papel existe', async () => {
@@ -345,7 +355,7 @@ describe('la factura en papel que baja la Familia', () => {
 
     const [url] = consultasA('facturas_familia');
     assert.ok(url.includes(`familia_id=eq.${FAMILIA}`), url);
-    assert.ok(url.includes(`prestadora_id=eq.${PRESTADORA}`), url);
+    assert.deepEqual(credencialesDe('facturas_familia'), [credencial]);
   });
 
   it('con la entrega apagada, bajarlo tampoco se puede', async () => {

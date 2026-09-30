@@ -1,5 +1,5 @@
 import { supabase } from '../db/connection.js';
-import { ausenciaQueTapaLaGuardia, ultimoDiaDeLaGuardia } from './ausenciaQueTapa.js';
+import { ausenciaQueTapaLaGuardia, finPrevistoDeLaAusencia, ultimoDiaDeLaGuardia } from './ausenciaQueTapa.js';
 
 // Una guardia de cobertura no arranca hasta que tiene sustituto
 // (docs/PRD_02B_Gestion_Personal.md:187).
@@ -50,7 +50,8 @@ export async function faltaElSustituto(guardia) {
     console.error('[guardiaSinSustituto] no se pudieron leer las ausencias', errorAusencias);
     return false;
   }
-  if (!ausenciaQueTapaLaGuardia(guardia, ausencias)) return false;
+  // Contra lo previsto: quien se presenta pasada la fecha prevista volvió (`finPrevistoDeLaAusencia`).
+  if (!ausenciaQueTapaLaGuardia(guardia, ausencias, finPrevistoDeLaAusencia)) return false;
 
   const { data: coberturas, error: errorCobertura } = await supabase
     .from('guardias_cobertura')

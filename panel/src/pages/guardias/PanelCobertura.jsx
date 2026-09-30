@@ -12,6 +12,7 @@ import { COLUMNAS_ESTADO_MATRICULA, mensajeDeBloqueo } from '../../lib/matricula
 import { mensajeDeModalidad } from '../../lib/modalidades';
 import { cargarPacientesDeGuardias, pacientesDeGuardia } from '../../lib/pacientesDeGuardia';
 import { mensajeDeError } from '../../lib/errores';
+import { hoyISO } from '../../lib/horarios';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 
 /* El panel lateral para cubrir una vacante.
@@ -137,7 +138,8 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
       // producto (regla 12 de CLAUDE.md §7).
       //
       // Una ausencia sin fecha de vuelta sigue abierta: por eso entra igual, con `fecha_fin` nula.
-      supabase.rpc('ausencias_que_tapan', { p_desde: iso(desde), p_hasta: iso(hasta) }),
+      // El «hoy» es el de quien mira, no el del servidor: la ausencia abierta tapa hasta hoy.
+      supabase.rpc('ausencias_que_tapan', { p_desde: iso(desde), p_hasta: iso(hasta), p_hoy: hoyISO() }),
     ]);
 
     const fallo = gs.error || hs.error || ds.error || os.error || em.error || au.error;

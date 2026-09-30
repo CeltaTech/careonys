@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { guardiasAfectadas, guardiasSinCubrir, sumarLasYaCubiertas } from '../guardiasAfectadas';
 
-// Una licencia de una semana.
-const AUSENCIA = { fecha_inicio: '2026-08-10', fecha_fin: '2026-08-16' };
+// Una licencia de una semana, con la vuelta ya anotada: así el rango no depende del día en que
+// corra la prueba. Sin vuelta y con la fecha prevista pasada, la ausencia sigue abierta.
+const AUSENCIA = { fecha_inicio: '2026-08-10', fecha_fin: '2026-08-16', fecha_vuelta_real: '2026-08-17' };
 
 const PROGRAMADA = { id: 'g', estado: 'programada', fecha: '2026-08-12' };
 

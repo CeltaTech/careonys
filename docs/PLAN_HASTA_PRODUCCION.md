@@ -446,9 +446,15 @@ escrito encima por qué. Lo que queda, agrupado por lo que hay que hacer:
   los demás ven quién la tiene y no pueden resolverla mientras esté tomada. Hoy la toma existe y no
   es exclusiva (`alarmas_tomadas` no impide dos tomas a la vez). **Las emergencias entran en la
   escalada** como las otras cuatro alarmas: hoy se avisan una sola vez y no insisten ni escalan.
-- **La ausencia del Coordinador es la misma que la del Asistente.** Se registra igual, y en vez de
-  un sustituto por guardia lleva quién lo cubre: durante la ausencia, esa persona ve lo del ausente
-  además de lo suyo. Sin certificado ni trámite aparte. Y para los dos: **la fecha prevista de
+- **La ausencia del Coordinador es la misma que la del Asistente.** Se registra igual y lleva quién
+  lo cubre: durante la ausencia, esa persona ve lo del ausente además de lo suyo. **Y la del
+  Asistente se cubre igual, por turno fijo y no guardia por guardia**: las guardias casi siempre
+  salen de una serie sin fecha de fin (`series_guardias`, `vigente_hasta` vacío), y el sustituto se
+  asigna a la serie por el período de la ausencia —Patricia cubre el lunes a viernes de 8 a 16 de
+  Ana mientras Ana está de vacaciones—. Hoy `guardias_cobertura` guarda un sustituto por guardia.
+  Si la ausencia se extiende, la cobertura se extiende sola y al sustituto se le avisa y se le
+  pregunta si tiene alguna objeción; si la tiene, esas guardias quedan sin cubrir y le llegan al
+  Coordinador como hoy. Cubrir una guardia suelta sigue siendo posible. Sin certificado ni trámite aparte. Y para los dos: **la fecha prevista de
   vuelta es obligatoria** —hoy la fecha de fin puede quedar vacía—, se puede cambiar en cualquier
   momento y **cada cambio queda registrado** (fecha anterior, fecha nueva, quién y cuándo). **La
   fecha real de vuelta** se anota cuando se constata que la persona retomó, antes o después de la

@@ -50,6 +50,7 @@ import { extenderSeriesGuardiaAbiertas } from './utils/generacionSeriesGuardia.j
 import { revisarRecordatoriosPush } from './utils/revisarRecordatoriosPush.js';
 import { revisarGuardiasSinCubrir } from './utils/revisarGuardiasSinCubrir.js';
 import { revisarAusenciasAvisadas } from './utils/revisarAusenciasAvisadas.js';
+import { extenderCoberturasDeAusencia } from './utils/coberturaDeAusencia.js';
 import { revisarIncidentesTurnoSinCubrir } from './utils/revisarIncidentesTurnoSinCubrir.js';
 import { revisarLlegadasDemoradas } from './utils/revisarLlegadasDemoradas.js';
 import { revisarExtensionesDeTurno } from './utils/revisarExtensionesDeTurno.js';
@@ -245,6 +246,11 @@ programar(revisarGuardiasSinCubrir, CINCO_MINUTOS_MS);
 // asignada. Se mira seguido porque la clase se recalcula: la que ayer tenía tres días de margen
 // hoy puede ser urgente.
 programar(revisarAusenciasAvisadas, CINCO_MINUTOS_MS);
+
+// La cobertura de un turno fijo sigue a la ausencia: si se corre la fecha prevista o se anota la
+// vuelta, cubre lo que entró y le devuelve al titular lo que salió. Si pasó la fecha y nadie dijo
+// nada, la va estirando de a poco mientras tanto.
+programar(extenderCoberturasDeAusencia, CINCO_MINUTOS_MS);
 
 // El turno que llega sin nadie abre un incidente que queda abierto hasta que una persona diga cómo
 // terminó. El mensaje de arriba mira los mismos turnos, pero avisa y se termina; éste deja constancia

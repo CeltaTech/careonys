@@ -201,7 +201,7 @@ export function generarConstanciaAusencia({ asistente, ausencia, tipoLabel, nomb
   y = parrafo(doc, `Asistente: ${asistente.nombre} (DNI ${asistente.dni ?? '—'})`, y);
   y = parrafo(doc, `Tipo de ausencia: ${tipoLabel}`, y);
   y = parrafo(doc, `Desde: ${formatoFecha(ausencia.fecha_inicio)}`, y);
-  y = parrafo(doc, `Hasta: ${ausencia.fecha_fin ? formatoFecha(ausencia.fecha_fin) : 'en curso'}`, y);
+  y = parrafo(doc, `Hasta: ${formatoFecha(ausencia.fecha_fin)}${ausencia.fecha_vuelta_real ? '' : ' (prevista)'}`, y);
   if (ausencia.dias_computados !== null && ausencia.dias_computados !== undefined) {
     y = parrafo(doc, `Días computados: ${ausencia.dias_computados}`, y);
   }

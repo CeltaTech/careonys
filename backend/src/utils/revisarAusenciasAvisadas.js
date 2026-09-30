@@ -73,21 +73,20 @@ export async function revisarAusenciasAvisadas() {
 
 async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
   // Las que todavía pueden dejar un turno sin nadie: empezaron o empiezan dentro de la ventana, y
-  // no terminaron antes de ayer. Una licencia sin fecha de vuelta sigue vigente siempre.
+  // no terminaron antes de ayer. Una sin vuelta anotada sigue vigente aunque su fecha prevista
+  // haya pasado (`finEfectivoDeLaAusencia`, utils/ausenciaQueTapa.js).
   const { data: todas, error: errorAusencias } = await supabase
     .from('ausencias')
-    .select('id, asistente_id, fecha_inicio, fecha_fin, avisada_en, created_at, aviso_ausencia_at, aviso_ausencia_veces, aviso_ausencia_clase')
+    .select('id, asistente_id, usuario_id, fecha_inicio, fecha_fin, fecha_vuelta_real, avisada_en, created_at, aviso_ausencia_at, aviso_ausencia_veces, aviso_ausencia_clase, pregunta_vuelta_at, pregunta_vuelta_veces')
     .eq('prestadora_id', prestadoraId)
     .lte('fecha_inicio', hasta)
-    .or(`fecha_fin.is.null,fecha_fin.gte.${desde}`);
+    .or(`fecha_vuelta_real.is.null,fecha_fin.gte.${desde}`);
 
   if (errorAusencias) {
     console.error(`Error consultando ausencias para avisar (prestadora ${prestadoraId}):`, errorAusencias.message);
     return;
   }
-
-  const ausencias = (todas ?? []).filter((a) => a.asistente_id);
-  if (!ausencias.length) return;
+  if (!todas?.length) return;
 
   // Sin fila de configuración corren los valores de fábrica: que una Prestadora no haya tocado
   // nada no puede dejarla sin mensajes.
@@ -105,6 +104,11 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
   const regla = reglaDeAvisoDe(configuracion?.regla);
   // Una sola vez por Prestadora: todos los mensajes de esta vuelta los lee la misma gente.
   const idioma = await idiomaDeLaPrestadora(supabase, prestadoraId);
+
+  await preguntarLaVuelta({ prestadoraId, ausencias: todas, regla, idioma, ahora });
+
+  const ausencias = todas.filter((a) => a.asistente_id);
+  if (!ausencias.length) return;
 
   const asistentes = [...new Set(ausencias.map((a) => a.asistente_id))];
   const { data: guardias, error: errorGuardias } = await supabase
@@ -190,6 +194,71 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
       console.error(`Error marcando el aviso de ausencia (${ausencia.id}):`, errorUpdate.message);
     }
   }
+}
+
+/**
+ * Pasada la fecha prevista sin vuelta anotada, se pregunta si la persona volvió, y se insiste cada
+ * tantas horas —las mismas de la ausencia urgente— hasta que alguien anote la vuelta o una nueva
+ * fecha prevista. Cambiar la fecha vuelve a poner la cuenta en cero (lo hace la base).
+ *
+ * Por un Asistente se le pregunta a quien coordina; por un Coordinador, a la administración. Son dos
+ * mensajes distintos para que la Prestadora pueda mandar cada uno a quien corresponde.
+ */
+async function preguntarLaVuelta({ prestadoraId, ausencias, regla, idioma, ahora }) {
+  const hoy = fechaISO(ahora);
+  const vencidas = ausencias.filter((a) =>
+    !a.fecha_vuelta_real && a.fecha_fin < hoy
+    && necesitaNotificar({
+      ultimaNotificacionAt: a.pregunta_vuelta_at,
+      intervaloMinutos: regla.horas_entre_avisos * 60,
+      ahora,
+    }));
+  if (!vencidas.length) return;
+
+  const nombresAsistentes = await nombresDeAsistentes(
+    [...new Set(vencidas.map((a) => a.asistente_id).filter(Boolean))], prestadoraId);
+  const nombresUsuarios = await nombresDeUsuarios(
+    [...new Set(vencidas.map((a) => a.usuario_id).filter(Boolean))], prestadoraId);
+
+  for (const ausencia of vencidas) {
+    const evento = ausencia.asistente_id ? 'vuelta_de_ausencia_sin_confirmar' : 'vuelta_de_coordinador_sin_confirmar';
+    const veces = (ausencia.pregunta_vuelta_veces ?? 0) + 1;
+    await notificarCoordinador({
+      evento,
+      prestadoraId,
+      ...mensajeDelSistema(evento, idioma, {
+        nombre: ausencia.asistente_id
+          ? nombresAsistentes.get(ausencia.asistente_id)
+          : nombresUsuarios.get(ausencia.usuario_id),
+        fecha: ausencia.fecha_fin,
+        veces,
+      }),
+    });
+
+    const { error } = await supabase
+      .from('ausencias')
+      .update({ pregunta_vuelta_at: ahora.toISOString(), pregunta_vuelta_veces: veces })
+      .eq('prestadora_id', prestadoraId)
+      .eq('id', ausencia.id);
+    if (error) console.error(`Error marcando la pregunta de la vuelta (${ausencia.id}):`, error.message);
+  }
+}
+
+/** Cómo se llama cada Coordinador ausente. */
+async function nombresDeUsuarios(ids, prestadoraId) {
+  const nombres = new Map();
+  if (!ids.length) return nombres;
+  const { data, error } = await supabase
+    .from('usuarios')
+    .select('id, nombre')
+    .eq('prestadora_id', prestadoraId)
+    .in('id', ids);
+  if (error) {
+    console.error(`Error leyendo los nombres de los Coordinadores ausentes (prestadora ${prestadoraId}):`, error.message);
+    return nombres;
+  }
+  for (const fila of data ?? []) nombres.set(fila.id, fila.nombre);
+  return nombres;
 }
 
 /**

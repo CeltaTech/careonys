@@ -51,6 +51,8 @@ import { horaDelHecho } from '../utils/horaDelHecho.js';
 import { identificadorDelTelefono, filaDeEsteMensaje } from '../utils/reenvioDeLaCola.js';
 import { FUENTE_AVISO_DEMORA_ASISTENTE } from '../utils/fuentesAlertaTemprana.js';
 import { notificarCoordinador } from '../utils/whatsapp.js';
+import { devolverAlTitular } from '../utils/coberturaDeAusencia.js';
+import { hoyISO } from '../utils/horarios.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import { cuentasDeLasFichas } from '../utils/cuentaDeLaFicha.js';
@@ -1277,6 +1279,83 @@ appAsistentesRouter.post('/guardias/:id/no-puedo-continuar', requiereRolAsistent
   }
 
   res.json({ ok: true, avisadoAt });
+});
+
+/* Los turnos fijos que este Asistente cubre por la ausencia de otro.
+   --------------------------------------------------------------------------
+   Quien coordina le asigna a alguien el turno fijo de un ausente por toda la ausencia
+   (`utils/coberturaDeAusencia.js`). Acá lo ve, y si no puede hacerlo lo dice: esas guardias
+   vuelven a quedar sin sustituto desde hoy y a quien coordina le llega el aviso. Lo que ya hizo o
+   ya empezó no se toca.
+
+   CON LA LLAVE MAESTRA, filtrado a mano por la Prestadora y por el sustituto:
+   `coberturas_de_ausencia` no tiene ninguna política para el Asistente. */
+appAsistentesRouter.get('/coberturas', requiereRolAsistente, async (req, res) => {
+  const { prestadoraId, asistenteId } = req.usuarioAsistente;
+  const { data, error } = await supabase
+    .from('coberturas_de_ausencia')
+    .select('id, series_guardias(dias_semana, hora_inicio, hora_fin), ausencias(fecha_inicio, fecha_fin, fecha_vuelta_real)')
+    .eq('prestadora_id', prestadoraId)
+    .eq('asistente_sustituto_id', asistenteId)
+    .is('objetada_at', null);
+  if (error) return responderError(res, error);
+
+  const hoy = hoyISO();
+  const coberturas = (data ?? [])
+    .filter((c) => c.ausencias && (!c.ausencias.fecha_vuelta_real || c.ausencias.fecha_vuelta_real > hoy))
+    .map((c) => ({
+      id: c.id,
+      desde: c.ausencias.fecha_inicio,
+      hasta: c.ausencias.fecha_fin,
+      dias_semana: c.series_guardias?.dias_semana ?? [],
+      hora_inicio: c.series_guardias?.hora_inicio ?? null,
+      hora_fin: c.series_guardias?.hora_fin ?? null,
+    }));
+  res.json({ coberturas });
+});
+
+appAsistentesRouter.post('/coberturas/:id/objecion', requiereRolAsistente, async (req, res) => {
+  const { prestadoraId, asistenteId } = req.usuarioAsistente;
+  const { data: cobertura, error } = await supabase
+    .from('coberturas_de_ausencia')
+    .select('id, prestadora_id, objetada_at, ausencias(asistente_id)')
+    .eq('id', req.params.id)
+    .eq('prestadora_id', prestadoraId)
+    .eq('asistente_sustituto_id', asistenteId)
+    .maybeSingle();
+  if (error) return responderError(res, error);
+  if (!cobertura) return responderError(res, new ErrorConMotivo('no_encontrado', 'cobertura ajena o inexistente'));
+  if (cobertura.objetada_at) return res.json({ ok: true });
+
+  const { error: errorMarca } = await supabase
+    .from('coberturas_de_ausencia')
+    .update({ objetada_at: new Date().toISOString() })
+    .eq('id', cobertura.id)
+    .eq('prestadora_id', prestadoraId);
+  if (errorMarca) return responderError(res, errorMarca);
+
+  await devolverAlTitular({
+    db: supabase,
+    cobertura,
+    titularId: cobertura.ausencias.asistente_id,
+    desde: hoyISO(),
+  });
+
+  // Guardado primero, avisado después: si el envío falla, la objeción ya quedó.
+  try {
+    const { data: ficha } = await supabase
+      .from('asistentes').select('nombre').eq('id', asistenteId).eq('prestadora_id', prestadoraId).maybeSingle();
+    const idioma = await idiomaDeLaPrestadora(clienteDelPedido(req), prestadoraId);
+    await notificarCoordinador({
+      evento: 'cobertura_objetada',
+      prestadoraId,
+      ...mensajeDelSistema('cobertura_objetada', idioma, { nombre: ficha?.nombre }),
+    });
+  } catch (e) {
+    console.error('Error avisando al Coordinador de una cobertura objetada:', e.message);
+  }
+
+  res.json({ ok: true });
 });
 
 /* El descanso adentro de la guardia.

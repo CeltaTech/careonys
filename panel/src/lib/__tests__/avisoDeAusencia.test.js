@@ -23,11 +23,20 @@ import {
 const ASISTENTE = 'asistente-1';
 
 /** Una ausencia abierta que empieza el día indicado y que se supo en el momento indicado. */
+function diaSiguiente(fecha) {
+  const dia = new Date(`${fecha}T00:00:00Z`);
+  dia.setUTCDate(dia.getUTCDate() + 1);
+  return dia.toISOString().slice(0, 10);
+}
+
 function ausencia({ desde = '2026-03-10', hasta = null, supo = '2026-03-09T10:00:00', ...resto } = {}) {
   return {
     asistente_id: ASISTENTE,
     fecha_inicio: desde,
     fecha_fin: hasta,
+    // Con fecha de fin, la vuelta queda anotada al día siguiente: así el rango no depende del día
+    // en que corra la prueba. Sin vuelta y con la fecha prevista pasada, la ausencia sigue abierta.
+    fecha_vuelta_real: hasta ? diaSiguiente(hasta) : null,
     avisada_en: supo,
     ...resto,
   };

@@ -8,9 +8,32 @@
 // licencia (regla «ningún patrón repetido sin punto único de verdad», CeltaTech §8)—. El
 // original es éste y la copia la mantiene `scripts/sincronizar_copias.mjs`.
 
-import { finDeGuardia, diaDelMomento } from './horarios.js';
+import { finDeGuardia, diaDelMomento, hoyISO } from './horarios.js';
 
 const lista = (x) => (Array.isArray(x) ? x : []);
+
+/**
+ * Hasta qué día dura de verdad una ausencia, o `null` si sigue abierta.
+ *
+ * `fecha_fin` es el último día previsto, y se carga siempre. Cuando la persona vuelve se anota
+ * `fecha_vuelta_real`, y `fecha_fin` pasa a ser el día anterior. Si la fecha prevista ya pasó y
+ * nadie anotó la vuelta, no se sabe si volvió: la ausencia se sigue contando abierta, porque darla
+ * por terminada dejaría sus guardias sin nadie y sin que nadie se entere.
+ */
+export function finEfectivoDeLaAusencia(ausencia, hoy = hoyISO()) {
+  if (!ausencia?.fecha_fin) return null;
+  if (!ausencia.fecha_vuelta_real && ausencia.fecha_fin < hoy) return null;
+  return ausencia.fecha_fin;
+}
+
+/**
+ * Hasta qué día estaba previsto que durara, sin mirar si ya pasó. Lo usa quien tiene delante a la
+ * persona misma: si se presenta a trabajar pasada la fecha prevista, volvió, aunque nadie lo haya
+ * anotado todavía, y frenarla en la puerta sería cargarle a ella lo que no anotó otro.
+ */
+export function finPrevistoDeLaAusencia(ausencia) {
+  return ausencia?.fecha_fin ?? null;
+}
 
 /**
  * El último día que ocupa una guardia, en el formato de la base: `2026-08-01`.
@@ -34,9 +57,8 @@ export function ultimoDiaDeLaGuardia(guardia) {
  * noche arranca a las 22:00 y termina a las 06:00 del día siguiente, y una licencia que empieza
  * ese día siguiente igual la parte al medio.
  *
- * Una ausencia sin `fecha_fin` es una que sigue abierta, no una que terminó: cuenta desde su
- * inicio y hacia adelante sin límite. Tratarla como cerrada sería dar por trabajando a quien
- * está de licencia y todavía no tiene fecha de vuelta, que es el caso más común de todos.
+ * Hasta dónde llega lo decide `finEfectivoDeLaAusencia`: la que sigue abierta cuenta desde su
+ * inicio y hacia adelante sin límite.
  *
  * **El tipo de ausencia no entra acá, a propósito.** Una licencia por enfermedad o por accidente
  * es información de salud (CLAUDE.md §6) y no tiene por qué salir del legajo, ni viajar hasta
@@ -45,15 +67,13 @@ export function ultimoDiaDeLaGuardia(guardia) {
  * persona no está—, así que distinguirlas agregaría un dato sensible sin cambiar ninguna
  * decisión. Quien llama tampoco lo trae en su consulta.
  */
-export function ausenciaQueTapa(asistenteId, ausencias, primerDia, ultimoDia) {
+export function ausenciaQueTapa(asistenteId, ausencias, primerDia, ultimoDia, finDe = finEfectivoDeLaAusencia) {
   return (
-    lista(ausencias).find(
-      (a) =>
-        a.asistente_id === asistenteId &&
-        a.fecha_inicio &&
-        a.fecha_inicio <= ultimoDia &&
-        (!a.fecha_fin || a.fecha_fin >= primerDia)
-    ) ?? null
+    lista(ausencias).find((a) => {
+      if (a.asistente_id !== asistenteId || !a.fecha_inicio || a.fecha_inicio > ultimoDia) return false;
+      const fin = finDe(a);
+      return fin === null || fin >= primerDia;
+    }) ?? null
   );
 }
 
@@ -64,7 +84,7 @@ export function ausenciaQueTapa(asistenteId, ausencias, primerDia, ultimoDia) {
  * los dos días sueltos. Existe para que ninguno de los dos que la usan tenga que acordarse de
  * que la guardia de noche ocupa dos días.
  */
-export function ausenciaQueTapaLaGuardia(guardia, ausencias) {
+export function ausenciaQueTapaLaGuardia(guardia, ausencias, finDe = finEfectivoDeLaAusencia) {
   if (!guardia?.asistente_id || !guardia?.fecha) return null;
-  return ausenciaQueTapa(guardia.asistente_id, ausencias, guardia.fecha, ultimoDiaDeLaGuardia(guardia));
+  return ausenciaQueTapa(guardia.asistente_id, ausencias, guardia.fecha, ultimoDiaDeLaGuardia(guardia), finDe);
 }

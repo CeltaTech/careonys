@@ -8,6 +8,8 @@
 // más; quien la use trae las guardias de esa persona y pregunta acá. La consulta a la base vive en
 // la pantalla, y así esta regla se puede probar sin base.
 
+import { finEfectivoDeLaAusencia } from './ausenciaQueTapa.js';
+
 /**
  * Los tres estados que una ausencia deja descubiertos. Son los turnos que todavía se van a
  * prestar: el programado, el que está corriendo en este momento —una ausencia puede empezar hoy— y
@@ -35,7 +37,7 @@ export const ESTADOS_QUE_UNA_AUSENCIA_DEJA_SIN_ASISTENTE = ['programada', 'activ
 export function guardiasAfectadas(guardias, ausencia) {
   const desde = ausencia?.fecha_inicio;
   if (!desde) return [];
-  const hasta = ausencia?.fecha_fin || null;
+  const hasta = finEfectivoDeLaAusencia(ausencia);
   return (guardias ?? [])
     .filter((g) => ESTADOS_QUE_UNA_AUSENCIA_DEJA_SIN_ASISTENTE.includes(g?.estado))
     .filter((g) => typeof g?.fecha === 'string' && g.fecha >= desde && (hasta === null || g.fecha <= hasta))

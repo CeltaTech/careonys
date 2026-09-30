@@ -69,6 +69,8 @@ export const api = {
   cambiarDisponibilidad: (disponible) =>
     pedido('/perfil/disponibilidad', { method: 'PATCH', body: JSON.stringify({ disponible }) }),
   misGuardias: () => pedido('/guardias'),
+  misCoberturas: () => pedido('/coberturas'),
+  objetarCobertura: (id) => pedido(`/coberturas/${id}/objecion`, { method: 'POST' }),
   guardia: (id) => pedido(`/guardias/${id}`),
   checkin: (id, datos) => pedido(`/guardias/${id}/checkin`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
   checkout: (id, datos) => pedido(`/guardias/${id}/checkout`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),

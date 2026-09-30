@@ -219,6 +219,12 @@ export const T = {
       sin_cerrar: 'Sin cerrar',
       y_mas: 'y {n} más',
       sin_paciente: 'Sin Paciente asignado',
+      coberturas_titulo: 'Turnos que cubre',
+      cobertura_desde_hasta: 'Del {desde} al {hasta}',
+      no_puedo_cubrirlo: 'No puedo cubrirlo',
+      confirmar_objecion: '¿Confirma que no puede cubrir este turno? Se le avisa a su Coordinador.',
+      objecion_enviada: 'Aviso enviado a su Coordinador.',
+      dias: { lunes: 'Lun', martes: 'Mar', miercoles: 'Mié', jueves: 'Jue', viernes: 'Vie', sabado: 'Sáb', domingo: 'Dom' },
     },
     // Las guardias que la Prestadora ofreció y todavía esperan respuesta. Están en una
     // pantalla aparte de "Mis Guardias" a propósito: una guardia ofrecida todavía no es
@@ -796,6 +802,12 @@ export const T = {
       sin_cerrar: 'Not closed',
       y_mas: 'and {n} more',
       sin_paciente: 'No Patient assigned',
+      coberturas_titulo: 'Shifts you are covering',
+      cobertura_desde_hasta: 'From {desde} to {hasta}',
+      no_puedo_cubrirlo: 'I cannot cover it',
+      confirmar_objecion: 'Confirm you cannot cover this shift? Your Coordinator will be notified.',
+      objecion_enviada: 'Your Coordinator has been notified.',
+      dias: { lunes: 'Mon', martes: 'Tue', miercoles: 'Wed', jueves: 'Thu', viernes: 'Fri', sabado: 'Sat', domingo: 'Sun' },
     },
     ofertas: {
       titulo: 'Offered shifts',
@@ -1313,6 +1325,12 @@ export const T = {
       sin_cerrar: 'Sem encerrar',
       y_mas: 'e mais {n}',
       sin_paciente: 'Sem Paciente atribuído',
+      coberturas_titulo: 'Turnos que cobre',
+      cobertura_desde_hasta: 'De {desde} a {hasta}',
+      no_puedo_cubrirlo: 'Não posso cobrir',
+      confirmar_objecion: 'Confirma que não pode cobrir este turno? O Coordenador será avisado.',
+      objecion_enviada: 'Aviso enviado ao Coordenador.',
+      dias: { lunes: 'Seg', martes: 'Ter', miercoles: 'Qua', jueves: 'Qui', viernes: 'Sex', sabado: 'Sáb', domingo: 'Dom' },
     },
     ofertas: {
       titulo: 'Plantões oferecidos',

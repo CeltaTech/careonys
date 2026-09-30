@@ -91,6 +91,9 @@ const DATOS = {
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena', 'Aníbal'],
     turnos: 1, yaEmpezo: false, horas: 2, veces: 2,
   },
+  vuelta_de_ausencia_sin_confirmar: { nombre: 'Rita Solano', fecha: '2026-10-14', veces: 2 },
+  vuelta_de_coordinador_sin_confirmar: { nombre: 'Marcos Peña', fecha: '2026-10-14', veces: 1 },
+  cobertura_objetada: { nombre: 'Rita Solano' },
   guardia_sin_cubrir: {
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
     yaEmpezo: false, horas: 5,

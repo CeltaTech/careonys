@@ -11,6 +11,7 @@ import { useModalAccesible } from '../hooks/useModalAccesible';
 import { ElegirLugares } from '../components/lugares/ElegirLugares';
 import { llamarApiLugaresDeTrabajo } from '../lib/apiLugaresDeTrabajo';
 import { con } from '../lib/textos';
+import { AusenciasDelCoordinador } from './AusenciasDelCoordinador';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -112,6 +113,7 @@ export function UsuariosPanel() {
       {editando && (
         <EditarUsuarioPanel
           usuario={editando}
+          otrosCoordinadores={usuarios.filter((u) => u.rol === 'coordinador' && u.id !== editando.id)}
           onClose={() => setEditando(null)}
           onActualizado={() => {
             setEditando(null);
@@ -198,7 +200,7 @@ function NuevoUsuarioPanel({ onClose, onCreado }) {
   );
 }
 
-function EditarUsuarioPanel({ usuario, onClose, onActualizado }) {
+function EditarUsuarioPanel({ usuario, otrosCoordinadores, onClose, onActualizado }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const confirmarDestructivo = useConfirmarDestructivo();
@@ -284,6 +286,7 @@ function EditarUsuarioPanel({ usuario, onClose, onActualizado }) {
             <EstadoLista estado={estadoLugares} error={errorLugares} recargar={cargarLugares}>
               <ElegirLugares valor={lugares} onChange={setLugares} deshabilitado={guardando || borrando} />
             </EstadoLista>
+            <AusenciasDelCoordinador usuario={usuario} otrosCoordinadores={otrosCoordinadores} />
           </>
         )}
         <div className="panel-modal-acciones">

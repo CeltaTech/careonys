@@ -41,6 +41,7 @@ export async function cubrirGuardiaConSustituto({
   guardia,
   asistenteSustitutoId,
   ausenciaId = null,
+  coberturaDeAusenciaId = null,
   motivo = null,
   motivoDetalle = null,
   costoAdicional = null,
@@ -53,6 +54,7 @@ export async function cubrirGuardiaConSustituto({
   const { error: errorCobertura } = await db.from('guardias_cobertura').insert({
     prestadora_id: prestadoraId,
     ausencia_id: ausenciaId,
+    cobertura_de_ausencia_id: coberturaDeAusenciaId,
     guardia_original_id: guardia.id,
     asistente_titular_id: guardia.asistente_id,
     asistente_sustituto_id: asistenteSustitutoId,

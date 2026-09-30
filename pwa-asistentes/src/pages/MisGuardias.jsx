@@ -10,6 +10,7 @@ import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
 import { quedoSinCerrar } from '../lib/guardiaSinCerrar';
 import AvisoConsentimientoPendiente from '../components/AvisoConsentimientoPendiente';
+import CoberturasQueCubro from '../components/CoberturasQueCubro';
 import { hayDomicilioTemporal } from '../components/DomicilioTemporal';
 
 // LA PANTALLA DE INICIO PIDE SUS DATOS POR ZONAS SEPARADAS, y cada zona tiene sus cuatro estados
@@ -120,6 +121,8 @@ export default function MisGuardias() {
       {guardias !== null && guardias.length === 0 && (
         <div className="estado-vacio" role="status">{t.guardias.sin_guardias}</div>
       )}
+
+      <CoberturasQueCubro />
 
       {(guardias ?? []).map((g) => (
         <Link key={g.id} to={`/guardias/${g.id}`} className={`guardia-card guardia-${g.estado}`} style={{ display: 'block', textDecoration: 'none' }}>

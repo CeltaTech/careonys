@@ -2,6 +2,7 @@ import { Navigate } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
 import { usePuestaEnMarcha } from '../context/PuestaEnMarchaContext';
 import { GuiaPrimerosPasos } from '../components/estado-actual/GuiaPrimerosPasos';
+import { Cabecera } from '../components/ui/Cabecera';
 
 /* La pantalla donde una Prestadora nueva completa lo que le falta.
    ==========================================================================
@@ -31,7 +32,7 @@ export function PuestaEnMarcha() {
 
   return (
     <div>
-      <h1>{t.puesta_en_marcha.titulo}</h1>
+      <Cabecera titulo={t.puesta_en_marcha.titulo} />
       <GuiaPrimerosPasos />
     </div>
   );

@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 import { FormField } from '../components/ui/FormField';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
+import { Cabecera } from '../components/ui/Cabecera';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { TelefonoDeLaCuenta } from '../components/cuenta/TelefonoDeLaCuenta';
 import { useCuentaSegura } from '../components/cuenta/useCuentaSegura';
@@ -85,7 +86,7 @@ export function MiClave() {
 
   return (
     <div>
-      <h1>{t.auth.mi_clave_titulo}</h1>
+      <Cabecera titulo={t.auth.mi_clave_titulo} />
 
       <form onSubmit={handleGuardar}>
         {error && <Alert variant="error">{error}</Alert>}

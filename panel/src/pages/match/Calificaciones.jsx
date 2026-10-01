@@ -3,6 +3,7 @@ import { useLocale } from '../../i18n/LocaleContext';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
+import { Cabecera } from '../../components/ui/Cabecera';
 import { Estrellas } from '../../components/ui/Estrellas';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
@@ -66,7 +67,7 @@ export function MatchCalificaciones() {
 
   return (
     <div>
-      <h1>{t.match.calificaciones_titulo}</h1>
+      <Cabecera titulo={t.match.calificaciones_titulo} />
       {error && <Alert variant="error">{error}</Alert>}
 
       <EstadoLista estado={estado} error={null} vacio={estado === 'listo' && calificaciones.length === 0} recargar={recargar}>

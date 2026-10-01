@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
+import { Cabecera } from '../components/ui/Cabecera';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { useUmbrales } from '../context/UmbralesContext';
 import { supabase } from '../lib/supabaseClient';
@@ -394,7 +395,7 @@ export function EstadoActual() {
 
   return (
     <div>
-      <h1>{t.estado_actual.titulo}</h1>
+      <Cabecera titulo={t.estado_actual.titulo} />
 
       {error && <Alert variant="error">{error}</Alert>}
 

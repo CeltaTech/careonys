@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
+import { Cabecera } from '../components/ui/Cabecera';
 
 /* Configuración es una cáscara: el título, la barra de las secciones y el hueco
    donde entra la que esté elegida.
@@ -21,7 +22,7 @@ export function Configuracion() {
 
   return (
     <div>
-      <h1>{t.configuracion.titulo}</h1>
+      <Cabecera titulo={t.configuracion.titulo} />
 
       <div className="panel-tabs">
         {SECCIONES.map((seccion) => (

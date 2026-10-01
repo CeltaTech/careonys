@@ -5,6 +5,7 @@ import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
+import { Cabecera } from '../components/ui/Cabecera';
 import { FormField } from '../components/ui/FormField';
 import { llamadorDe } from '../lib/apiPanel';
 import { mensajeDeError } from '../lib/errores';
@@ -162,7 +163,11 @@ export function RespuestasPreparadas() {
 
   return (
     <div>
-      <h1>{tr.titulo}</h1>
+      <Cabecera titulo={tr.titulo}>
+        <Button onClick={abrirAlta} disabled={editando !== null || enCurso !== null}>
+          {tr.agregar}
+        </Button>
+      </Cabecera>
       {mensaje && <Alert variant="error">{mensaje}</Alert>}
 
       <div className="panel-filtros">
@@ -171,9 +176,6 @@ export function RespuestasPreparadas() {
           <option value="sin_aprobar">{tr.filtro_sin_aprobar}</option>
           <option value="aprobadas">{tr.filtro_aprobadas}</option>
         </select>
-        <Button onClick={abrirAlta} disabled={editando !== null || enCurso !== null}>
-          {tr.agregar}
-        </Button>
       </div>
 
       {editando !== null && (

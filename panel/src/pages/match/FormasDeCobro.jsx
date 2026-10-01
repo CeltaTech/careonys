@@ -8,6 +8,7 @@ import { llamarApiMatch } from '../../lib/apiMatch';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
+import { Cabecera } from '../../components/ui/Cabecera';
 import { mensajeDeError } from '../../lib/errores';
 import { FormaDeCobroDetalle } from './FormaDeCobroDetalle';
 import { PlazosDelCobro } from './PlazosDelCobro';
@@ -70,14 +71,10 @@ export function FormasDeCobro() {
 
   return (
     <div>
-      <h1>{t.match.formas_titulo}</h1>
+      <Cabecera titulo={t.match.formas_titulo}>
+        {esAdmin && <Button onClick={() => setCreandoNueva(true)}>{t.match.formas_nueva}</Button>}
+      </Cabecera>
       {estado === 'error' && error && <Alert variant="error">{error}</Alert>}
-
-      {esAdmin && (
-        <div className="panel-filtros">
-          <Button onClick={() => setCreandoNueva(true)}>{t.match.formas_nueva}</Button>
-        </div>
-      )}
 
       <EstadoLista
         estado={estado}

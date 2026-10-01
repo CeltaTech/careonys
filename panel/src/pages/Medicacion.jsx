@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
+import { Cabecera } from '../components/ui/Cabecera';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
 
@@ -104,7 +105,7 @@ export function Medicacion() {
 
   return (
     <div>
-      <h1>{t.medicacion.titulo}</h1>
+      <Cabecera titulo={t.medicacion.titulo} />
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
 
       <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && pendientes.length === 0} recargar={recargar}>

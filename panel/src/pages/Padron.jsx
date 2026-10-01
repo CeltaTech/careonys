@@ -10,6 +10,7 @@ import { useCatalogoDeLugares } from '../hooks/useCatalogoDeLugares';
 import { useTiposDeDocumento } from '../hooks/useTiposDeDocumento';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
+import { Cabecera } from '../components/ui/Cabecera';
 import { LegajoModal } from './padron/LegajoModal';
 import { mensajeDeError } from '../lib/errores';
 import { palabrasDelDomicilio, partesDesdeFila, renglonDelDomicilio } from '../lib/partesDeDomicilio';
@@ -95,7 +96,7 @@ export function Padron() {
 
   // Cómo se nombra cada renglón. La persona física por apellido y nombre; la jurídica por su razón
   // social entera, que no se parte en dos. Está acá, en un solo lugar, porque lo usan el título de
-  // la tarjeta, la búsqueda y el renglón del Apoderado.
+  // la tabla, la búsqueda y el renglón del Apoderado.
   const comoSeLlama = useCallback(
     (fila) => (fila?.clase === 'juridica' ? fila.nombre : `${fila?.apellido ?? ''}, ${fila?.nombre ?? ''}`),
     [],
@@ -149,7 +150,9 @@ export function Padron() {
 
   return (
     <div>
-      <h1>{t.padron.titulo}</h1>
+      <Cabecera titulo={t.padron.titulo}>
+        {puedeEditar && <Button onClick={() => setEnEdicion('nuevo')}>{t.padron.nuevo_titulo}</Button>}
+      </Cabecera>
       <div className="panel-filtros">
         <input
           type="text"
@@ -166,7 +169,6 @@ export function Padron() {
           <option value="fisica">{t.padron.clase_fisica} ({cuantas.fisica})</option>
           <option value="juridica">{t.padron.clase_juridica} ({cuantas.juridica})</option>
         </select>
-        {puedeEditar && <Button onClick={() => setEnEdicion('nuevo')}>{t.padron.nuevo_titulo}</Button>}
       </div>
 
       {enEdicion && (
@@ -190,32 +192,37 @@ export function Padron() {
         filtrado={hayFiltros}
         onLimpiarFiltros={limpiar}
       >
-        <div className="lista-tarjetas">
-          {filtradas.map((fila) => (
-            <div className="lista-tarjeta" key={fila.id}>
-              {/* La tarjeta muestra lo que le corresponde a su clase. Las dos comparten la lista,
-                  porque contratan y pagan igual, pero no son la misma cosa: una entidad tiene razón
-                  social, clave fiscal y alguien que firma por ella; una persona tiene apellido,
-                  nombre y documento, y se representa sola. */}
-              <div className="lista-tarjeta-header">
-                <div>
-                  <p className="lista-tarjeta-titulo">{comoSeLlama(fila)}</p>
-                  <p className="lista-tarjeta-subtitulo">
+        <table className="panel-tabla">
+          <thead>
+            <tr>
+              <th>{t.padron.nombre}</th>
+              <th>{t.padron.apoderado}</th>
+              <th>{t.padron.telefono}</th>
+              <th>{t.padron.email}</th>
+              <th>{t.padron.domicilio}</th>
+              {puedeEditar && <th />}
+            </tr>
+          </thead>
+          <tbody>
+            {filtradas.map((fila) => (
+              /* El renglón muestra lo que le corresponde a su clase. Las dos comparten la lista,
+                 porque contratan y pagan igual, pero no son la misma cosa: una entidad tiene razón
+                 social, clave fiscal y alguien que firma por ella; una persona tiene apellido,
+                 nombre y documento, y se representa sola. */
+              <tr key={fila.id}>
+                <td>
+                  <strong>{comoSeLlama(fila)}</strong>
+                  <div className="lista-tarjeta-subtitulo">
                     {fila.documento_tipo
                       ? `${siglaDeTipo(fila.documento_tipo)} ${fila.documento_numero}`
                       : t.padron.sin_documento}
-                  </p>
-                </div>
-              </div>
-              <div className="lista-tarjeta-meta">
-                {fila.clase === 'juridica' && (
-                  <span>
-                    <strong>{t.padron.apoderado}:</strong>{' '}
-                    {nombrePorId.get(fila.apoderado_legajo_id) || t.padron.apoderado_sin_elegir}
-                  </span>
-                )}
-                <span>
-                  <strong>{t.padron.telefono}:</strong>{' '}
+                  </div>
+                </td>
+                <td>
+                  {fila.clase === 'juridica'
+                    && (nombrePorId.get(fila.apoderado_legajo_id) || t.padron.apoderado_sin_elegir)}
+                </td>
+                <td>
                   {(telefonosPorLegajo.get(fila.id) ?? []).length === 0
                     ? '—'
                     : (telefonosPorLegajo.get(fila.id) ?? []).map((uno, indice) => (
@@ -225,21 +232,20 @@ export function Padron() {
                         {uno.preferido && ` (${t.padron.telefonos.preferido})`}
                       </span>
                     ))}
-                </span>
-                <span><strong>{t.padron.email}:</strong> {fila.email || '—'}</span>
-                <span>
-                  <strong>{t.padron.domicilio}:</strong>{' '}
+                </td>
+                <td>{fila.email || '—'}</td>
+                <td>
                   {renglonDelDomicilio(partesDesdeFila(fila), catalogo.lugares, palabrasDelDomicilio(t)) || '—'}
-                </span>
-              </div>
-              {puedeEditar && (
-                <div className="lista-tarjeta-acciones">
-                  <Button variant="secondary" onClick={() => setEnEdicion(fila)}>{t.comun.editar}</Button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+                </td>
+                {puedeEditar && (
+                  <td>
+                    <Button variant="secondary" onClick={() => setEnEdicion(fila)}>{t.comun.editar}</Button>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </EstadoLista>
     </div>
   );

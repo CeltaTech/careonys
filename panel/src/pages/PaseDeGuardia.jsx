@@ -3,6 +3,7 @@ import { useLocale } from '../i18n/LocaleContext';
 import { usePedidosDeCodigo } from '../context/PedidosDeCodigoContext';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Alert } from '../components/ui/Alert';
+import { Cabecera } from '../components/ui/Cabecera';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { useModalAccesible } from '../hooks/useModalAccesible';
@@ -142,7 +143,7 @@ export function PaseDeGuardia() {
 
   return (
     <div>
-      <h1>{t.pase_de_guardia.titulo}</h1>
+      <Cabecera titulo={t.pase_de_guardia.titulo} />
       <h2>{t.pase_de_guardia.pedidos_titulo}</h2>
       {/* El error de un refresco que falló cuando la lista ya estaba cargada: la lista se queda
           donde está y el mensaje va al lado, porque borrarla escondería un pedido que sigue
@@ -156,7 +157,6 @@ export function PaseDeGuardia() {
         vacio={estadoPedidos === 'listo' && pedidos.length === 0}
         recargar={recargarPedidos}
         mensajeVacio={t.pase_de_guardia.pedidos_vacio}
-        ayudaVacio={t.pase_de_guardia.pedidos_vacio_ayuda}
       >
         {pedidos.map((pedido) => {
           const soltado = codigosSoltados[pedido.id];

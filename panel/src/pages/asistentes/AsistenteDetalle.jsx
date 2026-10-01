@@ -21,6 +21,7 @@ import { EvaluacionesTab } from './EvaluacionesTab';
 import { AusenciasCoberturaTab } from './AusenciasCoberturaTab';
 import { ComunicacionTab } from './ComunicacionTab';
 import { mensajeDeError } from '../../lib/errores';
+import { Cabecera } from '../../components/ui/Cabecera';
 import { CAMPOS_PAGO, CAMPOS_RESERVADOS, conDatosAparte } from '../../lib/fichaAsistente';
 
 export function AsistenteDetalle() {
@@ -68,13 +69,17 @@ export function AsistenteDetalle() {
 
   return (
     <div>
-      <button className="link-volver" onClick={() => navigate('/asistentes')}><span aria-hidden="true">←</span> {t.asistentes.volver_al_plantel}</button>
-      <h1>{asistente.nombre}</h1>
+      <Cabecera titulo={asistente.nombre}>
+        <button className="link-volver" onClick={() => navigate('/asistentes')}><span aria-hidden="true">←</span> {t.asistentes.volver_al_plantel}</button>
+      </Cabecera>
 
-      <div className="panel-tabs">
+      <div className="panel-tabs" role="tablist">
         {pestanasDe({ esAdmin, match, puede }).map((tabId) => (
           <button
             key={tabId}
+            type="button"
+            role="tab"
+            aria-selected={tab === tabId}
             className={`panel-tab ${tab === tabId ? 'panel-tab-activo' : ''}`}
             onClick={() => setTab(tabId)}
           >

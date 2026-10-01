@@ -25,6 +25,7 @@ import { useLugaresDelPlantel } from '../hooks/useLugaresDelPlantel';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
+import { Cabecera } from '../components/ui/Cabecera';
 import { NuevoAsistenteModal } from './asistentes/NuevoAsistenteModal';
 import { PasarAlCatalogoModal } from './asistentes/PasarAlCatalogoModal';
 
@@ -54,7 +55,7 @@ export function Asistentes() {
   });
   const { paraElegir: tiposAsistente, porId: tiposPorId } = useTiposAsistente();
   // Los dos datos que había que entrar a la ficha para ver. Llegan aparte de la lista y no la
-  // demoran: mientras no estén, las tarjetas se muestran sin ellos.
+  // demoran: mientras no estén, la tabla se muestra sin ellos.
   const panorama = usePanoramaDelPlantel();
   // Dónde acepta trabajar cada una. Vive en su propia tabla y no en un renglón de la ficha, así
   // que llega aparte, como el panorama.
@@ -135,7 +136,9 @@ export function Asistentes() {
 
   return (
     <div>
-      <h1>{t.asistentes.titulo}</h1>
+      <Cabecera titulo={t.asistentes.titulo}>
+        {puedeAltaManual && <Button onClick={() => setMostrarNuevo(true)}>{t.asistentes.nuevo.titulo}</Button>}
+      </Cabecera>
 
       <div className="panel-filtros">
         <input
@@ -181,7 +184,6 @@ export function Asistentes() {
             ))}
           </select>
         )}
-        {puedeAltaManual && <Button onClick={() => setMostrarNuevo(true)}>{t.asistentes.nuevo.titulo}</Button>}
       </div>
 
       {puedeAltaManual && sinTipo.length > 0 && (
@@ -228,35 +230,41 @@ export function Asistentes() {
           ) : undefined
         }
       >
-        <div className="lista-tarjetas">
-          {filasFiltradas.map((a) => (
-            <div className="lista-tarjeta" key={a.id}>
-              <div className="lista-tarjeta-header">
-                <div>
-                  <p className="lista-tarjeta-titulo">{a.nombre}</p>
-                  <p className="lista-tarjeta-subtitulo">
-                    {a.tipo_asistente_id ? nombreTipo(tiposPorId.get(a.tipo_asistente_id), t) : t.asistentes.tipo_sin_asignar}
-                  </p>
-                </div>
-                <span className={claseBadge(a.estado)}>
-                  {t.asistentes[`estado_${a.estado}`]}
-                </span>
-              </div>
-              <div className="lista-tarjeta-meta">
-                <span><strong>{t.asistentes.col_zonas}:</strong> {a.zonas.join(', ') || '—'}</span>
-                <span><strong>{t.asistentes.col_especialidades}:</strong> {(a.especialidades || []).join(', ') || '—'}</span>
-                {/* Las dos cuentas del panorama. Cuando la consulta no volvió, el renglón no
-                    aparece: un cero diría que esa persona no tiene ninguna guardia, y lo que
-                    pasó es que no se pudo preguntar. */}
-                {panorama.guardias && (
-                  <span>
-                    <strong>{con(t.asistentes.col_guardias_activas, { dias: DIAS_DE_HORIZONTE })}:</strong>{' '}
-                    {panorama.guardias.get(a.id) ?? 0}
+        <table className="panel-tabla">
+          <thead>
+            <tr>
+              <th>{t.asistentes.col_nombre}</th>
+              <th>{t.asistentes.col_tipo}</th>
+              <th>{t.asistentes.col_estado}</th>
+              <th>{t.asistentes.col_zonas}</th>
+              <th>{t.asistentes.col_especialidades}</th>
+              {/* Las dos cuentas del panorama. Cuando la consulta no volvió, la columna no
+                  aparece: un cero diría que esa persona no tiene ninguna guardia, y lo que
+                  pasó es que no se pudo preguntar. */}
+              {panorama.guardias && <th>{con(t.asistentes.col_guardias_activas, { dias: DIAS_DE_HORIZONTE })}</th>}
+              {panorama.documentacion && <th>{t.asistentes.col_documentacion}</th>}
+              {esAdmin && <th>{t.asistentes.col_vinculo}</th>}
+              {esAdmin && <th>{t.asistentes.col_score_riesgo}</th>}
+              <th>{t.comun.detalle}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filasFiltradas.map((a) => (
+              <tr key={a.id}>
+                <td><strong>{a.nombre}</strong></td>
+                <td>
+                  {a.tipo_asistente_id ? nombreTipo(tiposPorId.get(a.tipo_asistente_id), t) : t.asistentes.tipo_sin_asignar}
+                </td>
+                <td>
+                  <span className={claseBadge(a.estado)}>
+                    {t.asistentes[`estado_${a.estado}`]}
                   </span>
-                )}
+                </td>
+                <td>{a.zonas.join(', ') || '—'}</td>
+                <td>{(a.especialidades || []).join(', ') || '—'}</td>
+                {panorama.guardias && <td>{panorama.guardias.get(a.id) ?? 0}</td>}
                 {panorama.documentacion && (
-                  <span>
-                    <strong>{t.asistentes.col_documentacion}:</strong>{' '}
+                  <td>
                     {panorama.documentacion.has(a.id) ? (
                       <span className={claseBadge(panorama.documentacion.get(a.id))}>
                         {t.asistentes[`documentacion_${panorama.documentacion.get(a.id)}`]}
@@ -264,17 +272,17 @@ export function Asistentes() {
                     ) : (
                       t.asistentes.documentacion_sin_papeles
                     )}
-                  </span>
+                  </td>
                 )}
-                {esAdmin && <span><strong>{t.asistentes.col_vinculo}:</strong> {t.asistentes[`vinculo_${a.tipo_vinculo}`]}</span>}
-                {esAdmin && <span><strong>{t.asistentes.col_score_riesgo}:</strong> {puntajeDeRiesgo(a) ?? '—'}</span>}
-              </div>
-              <div className="lista-tarjeta-acciones">
-                <Button variant="secondary" onClick={() => navigate(`/asistentes/${a.id}`)}>{t.comun.ver_detalle}</Button>
-              </div>
-            </div>
-          ))}
-        </div>
+                {esAdmin && <td>{t.asistentes[`vinculo_${a.tipo_vinculo}`]}</td>}
+                {esAdmin && <td>{puntajeDeRiesgo(a) ?? '—'}</td>}
+                <td>
+                  <Button variant="secondary" onClick={() => navigate(`/asistentes/${a.id}`)}>{t.comun.ver_detalle}</Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </EstadoLista>
     </div>
   );

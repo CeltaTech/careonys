@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
+import { Cabecera } from '../components/ui/Cabecera';
 import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
 import { con } from '../lib/textos';
 import { tomarPlanillaAnalizada } from '../lib/planillaAnalizada';
@@ -167,7 +168,7 @@ export function Importacion() {
 
   return (
     <div>
-      <h1>{t.importacion.titulo}</h1>
+      <Cabecera titulo={t.importacion.titulo} />
 
       {error && <Alert variant="error">{error}</Alert>}
 

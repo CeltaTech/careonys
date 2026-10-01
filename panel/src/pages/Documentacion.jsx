@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
+import { Cabecera } from '../components/ui/Cabecera';
 import { supabase } from '../lib/supabaseClient';
 import { claseBadge } from '../lib/tonos';
 import { useFiltros } from '../hooks/useFiltros';
@@ -68,7 +69,7 @@ export function Documentacion() {
 
   return (
     <div>
-      <h1>{t.documentacion.titulo}</h1>
+      <Cabecera titulo={t.documentacion.titulo} />
 
       <div className="panel-filtros">
         <select value={f.filtro} onChange={(e) => set('filtro', e.target.value)} aria-label={t.comun.filtro_estado}>

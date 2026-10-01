@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
+import { Cabecera } from '../components/ui/Cabecera';
 import { supabase } from '../lib/supabaseClient';
 import { distanciaKm } from '../lib/distancia';
 import { claseBadge } from '../lib/tonos';
@@ -172,7 +173,7 @@ export function Evv() {
 
   return (
     <div>
-      <h1>{t.evv.titulo}</h1>
+      <Cabecera titulo={t.evv.titulo} />
       <div className="panel-filtros">
         <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           {t.guardias.filtro_desde}

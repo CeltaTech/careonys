@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
+import { Cabecera } from '../components/ui/Cabecera';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { traducirValor } from '../i18n/valores';
 import { claseBadge } from '../lib/tonos';
@@ -320,7 +321,7 @@ export function InformesObraSocial() {
 
   return (
     <div>
-      <h1>{t.informesObraSocial.titulo}</h1>
+      <Cabecera titulo={t.informesObraSocial.titulo} />
       {error && <Alert variant="error">{error}</Alert>}
       {mensajeValidacion && <Alert variant="success">{mensajeValidacion}</Alert>}
 

@@ -10,6 +10,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
+import { Cabecera } from '../../components/ui/Cabecera';
 import { PrestacionesPaciente } from './PrestacionesPaciente';
 import { EditarPacienteModal } from './EditarPacienteModal';
 import { NuevoPacienteModal } from './NuevoPacienteModal';
@@ -103,6 +104,7 @@ export function ClienteDetalle() {
   const [quitandoUsuarioId, setQuitandoUsuarioId] = useState(null);
   const [reenviandoUsuarioId, setReenviandoUsuarioId] = useState(null);
   const [mensajeReenvio, setMensajeReenvio] = useState(null);
+  const [tab, setTab] = useState('contacto');
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -253,245 +255,280 @@ export function ClienteDetalle() {
   if (estado === 'no_encontrado') return <p className="estado-vacio">{t.comun.no_encontrado}</p>;
   if (estado === 'error') return <p className="estado-vacio">{error || t.comun.error_generico}</p>;
 
+  // Una pestaña por sección, con el mismo texto que antes llevaba el título de cada una.
+  const pestanas = [
+    ['contacto', t.clientes.contacto],
+    ['pacientes', t.clientes.pacientes],
+    ['personas autorizadas', t.clientes.personas autorizadas.titulo],
+    ['guardias', t.clientes.guardias_activas],
+    ['reportes', t.clientes.historial_reportes],
+    ['alertas', t.clientes.alertas_activas],
+  ];
+
   return (
     <div>
-      <button className="link-volver" onClick={() => navigate('/clientes')}><span aria-hidden="true">←</span> {t.clientes.volver_a_clientes}</button>
-      <h1>{cliente.solicitudes?.nombre || '—'}</h1>
+      <Cabecera titulo={cliente.solicitudes?.nombre || '—'}>
+        <button className="link-volver" onClick={() => navigate('/clientes')}><span aria-hidden="true">←</span> {t.clientes.volver_a_clientes}</button>
+      </Cabecera>
 
-      <h2>{t.clientes.contacto}</h2>
-      {errorContacto && <Alert variant="error">{errorContacto}</Alert>}
-      {contactoGuardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
-      {mensajeReenvio && <Alert variant={mensajeReenvio.tipo}>{mensajeReenvio.texto}</Alert>}
-      {formContacto && (
-        <>
-          <FormField label={t.clientes.col_nombre} name="nombre_contacto" value={formContacto.nombre} onChange={(e) => setCampoContacto('nombre', e.target.value)} disabled={!puedeEditarCliente} />
-          <FormField label={t.clientes.col_telefono} name="telefono_contacto" value={formContacto.telefono} onChange={(e) => setCampoContacto('telefono', e.target.value)} disabled={!puedeEditarCliente} />
-          {formContacto.telefono && (
-            <p className="panel-explicacion">
-              <a href={linkWhatsapp(formContacto.telefono)} target="_blank" rel="noreferrer">{t.clientes.abrir_whatsapp}</a>
-            </p>
-          )}
-          <FormField label={t.clientes.col_email} name="email_contacto" type="email" value={formContacto.email} onChange={(e) => setCampoContacto('email', e.target.value)} disabled={!puedeEditarCliente} />
-          <FormField label={t.clientes.col_localidad} name="localidad_contacto" value={formContacto.localidad} onChange={(e) => setCampoContacto('localidad', e.target.value)} disabled={!puedeEditarCliente} />
-          <FormField label={t.clientes.plan} name="plan_contacto" value={formContacto.plan} onChange={(e) => setCampoContacto('plan', e.target.value)} disabled={!puedeEditarCliente} />
-          {/* Lo acordado con esta Cliente pisa el plazo general de la Prestadora. Vacío quiere
-              decir que no se acordó nada distinto, no que pague el mismo día. */}
-          <FormField
-            label={t.clientes.plazo_de_pago}
-            name="dias_hasta_el_vencimiento"
-            type="number"
-            min="0"
-            max={PLAZO_MAXIMO_EN_DIAS}
-            value={formContacto.dias_hasta_el_vencimiento}
-            onChange={(e) => setCampoContacto('dias_hasta_el_vencimiento', e.target.value)}
-            disabled={!puedeEditarCliente}
-          />
-          {/* A quién se le reclama lo que se le factura a esta Cliente. Vacío es el Cliente, que
-              es lo corriente. Cada factura se lleva este dato copiado el día que se genera, así
-              que cambiarlo acá no toca ninguna factura ya emitida. */}
-          <FormField
-            label={t.clientes.financiador}
-            name="financiador_tipo"
-            type="select"
-            value={formContacto.financiador_tipo}
-            onChange={(e) => setCampoContacto('financiador_tipo', e.target.value)}
-            disabled={!puedeEditarCliente}
+      <div className="panel-tabs" role="tablist">
+        {pestanas.map(([tabId, titulo]) => (
+          <button
+            key={tabId}
+            type="button"
+            role="tab"
+            aria-selected={tab === tabId}
+            className={`panel-tab ${tab === tabId ? 'panel-tab-activo' : ''}`}
+            onClick={() => setTab(tabId)}
           >
-            <option value="">{t.clientes.financiador_cliente}</option>
-            {FINANCIADORES_POSIBLES.filter((f) => f !== FINANCIADORES.CLIENTE).map((f) => (
-              <option key={f} value={f}>{traducirValor(t.clientes, `financiador_${f}`)}</option>
-            ))}
-          </FormField>
-          {/* Quién paga se elige del Padrón y no se teclea: un nombre escrito a mano crea un ente
-              nuevo que no existe, y la misma obra social terminaría escrita de cien maneras.
+            {titulo}
+          </button>
+        ))}
+      </div>
 
-              Se elige siempre, también cuando paga el Cliente: ahí el Pagador es alguien de la
-              Cliente, y cuál es no se adivina. */}
-          <SelectorDeLegajo
-            name="pagador_legajo_id"
-            label={t.clientes.pagador_legajo}
-            valor={formContacto.pagador_legajo_id}
-            alElegir={(legajoId) => setCampoContacto('pagador_legajo_id', legajoId)}
-            deshabilitado={!puedeEditarCliente}
-          />
-          {/* Elegir el Legajo no convierte a nadie en Pagador: lo convierte haber firmado la
-              obligación de pagar. Acá abajo se ve si esa firma está y qué papeles faltan, en el
-              mismo momento en que se lo elige. Avisa, no bloquea.
+      {/* El aviso del reenvío queda afuera de las pestañas: se reenvía desde Contacto y desde el
+          personas autorizadas, y tiene que verse en las dos. */}
+      {mensajeReenvio && <Alert variant={mensajeReenvio.tipo}>{mensajeReenvio.texto}</Alert>}
 
-              Aparece junto al selector y siempre, pague quien pague: el Pagador firma en todos los
-              casos, y quien arma la contratación tiene que ver acá mismo si esa firma está. */}
-          {puedeEditarCliente && (
-            <EstadoDelPagador clienteId={cliente.id} puedeRegistrar={puedeRegistrarConsentimiento} />
-          )}
-          <dl className="panel-detalle-lista">
-            <dt>{t.clientes.col_fecha_alta}</dt>
-            <dd>{new Date(cliente.created_at).toLocaleDateString(locale)}</dd>
-          </dl>
-          <Button onClick={guardarContacto} disabled={guardandoContacto || !puedeEditarCliente}>
-            {guardandoContacto ? t.comun.guardando : t.comun.guardar}
-          </Button>{' '}
-          {puedeEditarCliente && (
-            <Button variant="secondary" onClick={() => reenviarInvitacion(cliente.id)} disabled={reenviandoUsuarioId === cliente.id}>
-              {reenviandoUsuarioId === cliente.id ? t.comun.reenviando_invitacion : t.comun.reenviar_invitacion}
-            </Button>
-          )}
-        </>
-      )}
+      <div className="panel-tab-contenido">
+        {tab === 'contacto' && (
+          <>
+            {errorContacto && <Alert variant="error">{errorContacto}</Alert>}
+            {contactoGuardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
+            {formContacto && (
+              <>
+                <FormField label={t.clientes.col_nombre} name="nombre_contacto" value={formContacto.nombre} onChange={(e) => setCampoContacto('nombre', e.target.value)} disabled={!puedeEditarCliente} />
+                <FormField label={t.clientes.col_telefono} name="telefono_contacto" value={formContacto.telefono} onChange={(e) => setCampoContacto('telefono', e.target.value)} disabled={!puedeEditarCliente} />
+                {formContacto.telefono && (
+                  <p className="panel-explicacion">
+                    <a href={linkWhatsapp(formContacto.telefono)} target="_blank" rel="noreferrer">{t.clientes.abrir_whatsapp}</a>
+                  </p>
+                )}
+                <FormField label={t.clientes.col_email} name="email_contacto" type="email" value={formContacto.email} onChange={(e) => setCampoContacto('email', e.target.value)} disabled={!puedeEditarCliente} />
+                <FormField label={t.clientes.col_localidad} name="localidad_contacto" value={formContacto.localidad} onChange={(e) => setCampoContacto('localidad', e.target.value)} disabled={!puedeEditarCliente} />
+                <FormField label={t.clientes.plan} name="plan_contacto" value={formContacto.plan} onChange={(e) => setCampoContacto('plan', e.target.value)} disabled={!puedeEditarCliente} />
+                {/* Lo acordado con esta Cliente pisa el plazo general de la Prestadora. Vacío quiere
+                    decir que no se acordó nada distinto, no que pague el mismo día. */}
+                <FormField
+                  label={t.clientes.plazo_de_pago}
+                  name="dias_hasta_el_vencimiento"
+                  type="number"
+                  min="0"
+                  max={PLAZO_MAXIMO_EN_DIAS}
+                  value={formContacto.dias_hasta_el_vencimiento}
+                  onChange={(e) => setCampoContacto('dias_hasta_el_vencimiento', e.target.value)}
+                  disabled={!puedeEditarCliente}
+                />
+                {/* A quién se le reclama lo que se le factura a esta Cliente. Vacío es el Cliente, que
+                    es lo corriente. Cada factura se lleva este dato copiado el día que se genera, así
+                    que cambiarlo acá no toca ninguna factura ya emitida. */}
+                <FormField
+                  label={t.clientes.financiador}
+                  name="financiador_tipo"
+                  type="select"
+                  value={formContacto.financiador_tipo}
+                  onChange={(e) => setCampoContacto('financiador_tipo', e.target.value)}
+                  disabled={!puedeEditarCliente}
+                >
+                  <option value="">{t.clientes.financiador_cliente}</option>
+                  {FINANCIADORES_POSIBLES.filter((f) => f !== FINANCIADORES.CLIENTE).map((f) => (
+                    <option key={f} value={f}>{traducirValor(t.clientes, `financiador_${f}`)}</option>
+                  ))}
+                </FormField>
+                {/* Quién paga se elige del Padrón y no se teclea: un nombre escrito a mano crea un ente
+                    nuevo que no existe, y la misma obra social terminaría escrita de cien maneras.
 
-      <h2>{t.clientes.pacientes}</h2>
-      {cliente.pacientes?.length ? (
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.clientes.col_nombre}</th>
-              <th>{t.clientes.fecha_nacimiento}</th>
-              <th>{t.clientes.nivel_complejidad}</th>
-              <th>{t.clientes.domicilio}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {cliente.pacientes.map((p) => (
-              <tr key={p.id}>
-                <td>{p.nombre}</td>
-                <td>{p.fecha_nacimiento || '—'}</td>
-                <td>{p.nivel_complejidad || '—'}</td>
-                <td>{p.domicilio || '—'}</td>
-                <td>
-                  {puedeEditarPaciente && (
-                    <>
-                      <Button variant="secondary" onClick={() => setPacienteAEditar(p)}>
-                        {t.comun.editar}
-                      </Button>{' '}
-                    </>
-                  )}
-                  <Button variant="secondary" onClick={() => setPacienteSeleccionado(p)}>
-                    {t.prestaciones.titulo}
-                  </Button>{' '}
-                  <Button variant="secondary" onClick={() => setPacienteParaVitales(p)}>
-                    {t.vitales_autorizacion.titulo}
-                  </Button>{' '}
-                  <Button variant="secondary" onClick={() => setPacienteParaDomicilios(p)}>
-                    {t.domicilios_temporales.titulo}
-                  </Button>{' '}
-                  <Button variant="secondary" onClick={() => setPacienteParaEquipo(p)}>
-                    {t.equipo_paciente.titulo}
+                    Se elige siempre, también cuando paga el Cliente: ahí el Pagador es alguien de la
+                    Cliente, y cuál es no se adivina. */}
+                <SelectorDeLegajo
+                  name="pagador_legajo_id"
+                  label={t.clientes.pagador_legajo}
+                  valor={formContacto.pagador_legajo_id}
+                  alElegir={(legajoId) => setCampoContacto('pagador_legajo_id', legajoId)}
+                  deshabilitado={!puedeEditarCliente}
+                />
+                {/* Elegir el Legajo no convierte a nadie en Pagador: lo convierte haber firmado la
+                    obligación de pagar. Acá abajo se ve si esa firma está y qué papeles faltan, en el
+                    mismo momento en que se lo elige. Avisa, no bloquea.
+
+                    Aparece junto al selector y siempre, pague quien pague: el Pagador firma en todos los
+                    casos, y quien arma la contratación tiene que ver acá mismo si esa firma está. */}
+                {puedeEditarCliente && (
+                  <EstadoDelPagador clienteId={cliente.id} puedeRegistrar={puedeRegistrarConsentimiento} />
+                )}
+                <dl className="panel-detalle-lista">
+                  <dt>{t.clientes.col_fecha_alta}</dt>
+                  <dd>{new Date(cliente.created_at).toLocaleDateString(locale)}</dd>
+                </dl>
+                <Button onClick={guardarContacto} disabled={guardandoContacto || !puedeEditarCliente}>
+                  {guardandoContacto ? t.comun.guardando : t.comun.guardar}
+                </Button>{' '}
+                {puedeEditarCliente && (
+                  <Button variant="secondary" onClick={() => reenviarInvitacion(cliente.id)} disabled={reenviandoUsuarioId === cliente.id}>
+                    {reenviandoUsuarioId === cliente.id ? t.comun.reenviando_invitacion : t.comun.reenviar_invitacion}
                   </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <p className="estado-vacio">{t.clientes.sin_pacientes}</p>
-      )}
-      {puedeEditarPaciente && (
-        <Button variant="secondary" onClick={() => setMostrarNuevoPaciente(true)}>
-          {t.clientes.agregar_paciente}
-        </Button>
-      )}
+                )}
+              </>
+            )}
+          </>
+        )}
 
-      <h2>{t.clientes.personas autorizadas.titulo}</h2>
-      {/* La instrucción cargada y todavía sin firmar es lo primero que hay que ver: mientras
-          no esté firmada, lo que hay es un pedido anotado, no una autorización. Los dos
-          caminos de cierre están acá al lado —imprimir el papel, o registrar que ya volvió
-          firmado—, porque son lo único que queda por hacer. */}
-      {instruccionPendiente && (
-        <Alert variant="warning">
-          {con(t.clientes.personas autorizadas.instruccion_pendiente, {
-            fecha: new Date(instruccionPendiente.created_at).toLocaleDateString(locale),
-          })}{' '}
-          <Button variant="secondary" onClick={() => setDocumentoAVer(instruccionPendiente)}>
-            {t.clientes.personas autorizadas.ver_documento}
-          </Button>{' '}
-          {puedeEditarCliente && (
-            <Button variant="secondary" onClick={() => setPapelAConfirmar(instruccionPendiente)}>
-              {t.clientes.personas autorizadas.registrar_papel}
-            </Button>
-          )}
-        </Alert>
-      )}
-      {!instruccionPendiente && ultimaInstruccion && (
-        <p className="panel-explicacion">
-          {con(t.clientes.personas autorizadas.ultima_instruccion, {
-            fecha: new Date(ultimaInstruccion.cerrada_en || ultimaInstruccion.created_at).toLocaleDateString(locale),
-            como: t.clientes.personas autorizadas[`cerrada_${ultimaInstruccion.cerrada_como}`] || '',
-          })}
-        </p>
-      )}
+        {tab === 'pacientes' && (
+          <>
+            {cliente.pacientes?.length ? (
+              <table className="panel-tabla">
+                <thead>
+                  <tr>
+                    <th>{t.clientes.col_nombre}</th>
+                    <th>{t.clientes.fecha_nacimiento}</th>
+                    <th>{t.clientes.nivel_complejidad}</th>
+                    <th>{t.clientes.domicilio}</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cliente.pacientes.map((p) => (
+                    <tr key={p.id}>
+                      <td>{p.nombre}</td>
+                      <td>{p.fecha_nacimiento || '—'}</td>
+                      <td>{p.nivel_complejidad || '—'}</td>
+                      <td>{p.domicilio || '—'}</td>
+                      <td>
+                        {puedeEditarPaciente && (
+                          <>
+                            <Button variant="secondary" onClick={() => setPacienteAEditar(p)}>
+                              {t.comun.editar}
+                            </Button>{' '}
+                          </>
+                        )}
+                        <Button variant="secondary" onClick={() => setPacienteSeleccionado(p)}>
+                          {t.prestaciones.titulo}
+                        </Button>{' '}
+                        <Button variant="secondary" onClick={() => setPacienteParaVitales(p)}>
+                          {t.vitales_autorizacion.titulo}
+                        </Button>{' '}
+                        <Button variant="secondary" onClick={() => setPacienteParaDomicilios(p)}>
+                          {t.domicilios_temporales.titulo}
+                        </Button>{' '}
+                        <Button variant="secondary" onClick={() => setPacienteParaEquipo(p)}>
+                          {t.equipo_paciente.titulo}
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className="estado-vacio">{t.clientes.sin_pacientes}</p>
+            )}
+            {puedeEditarPaciente && (
+              <Button variant="secondary" onClick={() => setMostrarNuevoPaciente(true)}>
+                {t.clientes.agregar_paciente}
+              </Button>
+            )}
+          </>
+        )}
 
-      {estadoPersonasAutorizadas === 'cargando' && <p className="estado-cargando">{t.comun.cargando}</p>}
-      {estadoPersonasAutorizadas === 'error' && <p className="estado-vacio">{errorPersonasAutorizadas || t.comun.error_generico}</p>}
-      {estadoPersonasAutorizadas === 'vacio' && <p className="estado-vacio">{t.clientes.personas autorizadas.sin_miembros}</p>}
-      {estadoPersonasAutorizadas === 'listo' && (
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.clientes.personas autorizadas.col_nombre}</th>
-              <th>{t.clientes.personas autorizadas.col_email}</th>
-              <th>{t.clientes.personas autorizadas.col_que_ve}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {personas autorizadas.map((m) => (
-              <tr key={m.usuarioId}>
-                <td>{m.nombre || '—'}</td>
-                <td>{m.email || '—'}</td>
-                <td>{resumenDeAccesos(m.accesos, t)}</td>
-                <td>
-                  <Button
-                    variant="secondary"
-                    onClick={() => setAccesosDe(m.usuarioId)}
-                    aria-label={con(t.comun.campo_de_fila, {
-                      campo: t.clientes.personas autorizadas.accesos_boton,
-                      nombre: m.nombre || m.email || '',
-                    })}
-                  >
-                    {t.clientes.personas autorizadas.accesos_boton}
-                  </Button>{' '}
-                  {puedeEditarCliente && (
-                    <>
-                      <Button
-                        variant="secondary"
-                        onClick={() => reenviarInvitacion(m.usuarioId)}
-                        disabled={reenviandoUsuarioId === m.usuarioId}
-                      >
-                        {reenviandoUsuarioId === m.usuarioId ? t.comun.reenviando_invitacion : t.comun.reenviar_invitacion}
-                      </Button>{' '}
-                      <Button
-                        variant="secondary"
-                        onClick={() => quitarMiembroPersonasAutorizadas(m.usuarioId)}
-                        disabled={quitandoUsuarioId === m.usuarioId}
-                      >
-                        {t.clientes.personas autorizadas.quitar}
-                      </Button>
-                    </>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-      {errorPersonasAutorizadas && estadoPersonasAutorizadas === 'listo' && <Alert variant="error">{errorPersonasAutorizadas}</Alert>}
-      {puedeEditarCliente && (
-        <Button variant="secondary" onClick={() => setMostrarInvitarPersonasAutorizadas(true)}>
-          {t.clientes.personas autorizadas.agregar}
-        </Button>
-      )}
+        {tab === 'personas autorizadas' && (
+          <>
+            {/* La instrucción cargada y todavía sin firmar es lo primero que hay que ver: mientras
+                no esté firmada, lo que hay es un pedido anotado, no una autorización. Los dos
+                caminos de cierre están acá al lado —imprimir el papel, o registrar que ya volvió
+                firmado—, porque son lo único que queda por hacer. */}
+            {instruccionPendiente && (
+              <Alert variant="warning">
+                {con(t.clientes.personas autorizadas.instruccion_pendiente, {
+                  fecha: new Date(instruccionPendiente.created_at).toLocaleDateString(locale),
+                })}{' '}
+                <Button variant="secondary" onClick={() => setDocumentoAVer(instruccionPendiente)}>
+                  {t.clientes.personas autorizadas.ver_documento}
+                </Button>{' '}
+                {puedeEditarCliente && (
+                  <Button variant="secondary" onClick={() => setPapelAConfirmar(instruccionPendiente)}>
+                    {t.clientes.personas autorizadas.registrar_papel}
+                  </Button>
+                )}
+              </Alert>
+            )}
+            {!instruccionPendiente && ultimaInstruccion && (
+              <p className="panel-explicacion">
+                {con(t.clientes.personas autorizadas.ultima_instruccion, {
+                  fecha: new Date(ultimaInstruccion.cerrada_en || ultimaInstruccion.created_at).toLocaleDateString(locale),
+                  como: t.clientes.personas autorizadas[`cerrada_${ultimaInstruccion.cerrada_como}`] || '',
+                })}
+              </p>
+            )}
 
-      {/* Las tres secciones traen sus propios datos y manejan sus propios cuatro estados; viven
-          en `GuardiasReportesYAlertas.jsx` y hacen las mismas preguntas que las pantallas de
-          Guardias, Reportes y Alertas, acotadas a los Pacientes de esta Cliente. */}
-      <h2>{t.clientes.guardias_activas}</h2>
-      <GuardiasActivasDeLaCliente pacientes={cliente.pacientes} />
+            {estadoPersonasAutorizadas === 'cargando' && <p className="estado-cargando">{t.comun.cargando}</p>}
+            {estadoPersonasAutorizadas === 'error' && <p className="estado-vacio">{errorPersonasAutorizadas || t.comun.error_generico}</p>}
+            {estadoPersonasAutorizadas === 'vacio' && <p className="estado-vacio">{t.clientes.personas autorizadas.sin_miembros}</p>}
+            {estadoPersonasAutorizadas === 'listo' && (
+              <table className="panel-tabla">
+                <thead>
+                  <tr>
+                    <th>{t.clientes.personas autorizadas.col_nombre}</th>
+                    <th>{t.clientes.personas autorizadas.col_email}</th>
+                    <th>{t.clientes.personas autorizadas.col_que_ve}</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {personas autorizadas.map((m) => (
+                    <tr key={m.usuarioId}>
+                      <td>{m.nombre || '—'}</td>
+                      <td>{m.email || '—'}</td>
+                      <td>{resumenDeAccesos(m.accesos, t)}</td>
+                      <td>
+                        <Button
+                          variant="secondary"
+                          onClick={() => setAccesosDe(m.usuarioId)}
+                          aria-label={con(t.comun.campo_de_fila, {
+                            campo: t.clientes.personas autorizadas.accesos_boton,
+                            nombre: m.nombre || m.email || '',
+                          })}
+                        >
+                          {t.clientes.personas autorizadas.accesos_boton}
+                        </Button>{' '}
+                        {puedeEditarCliente && (
+                          <>
+                            <Button
+                              variant="secondary"
+                              onClick={() => reenviarInvitacion(m.usuarioId)}
+                              disabled={reenviandoUsuarioId === m.usuarioId}
+                            >
+                              {reenviandoUsuarioId === m.usuarioId ? t.comun.reenviando_invitacion : t.comun.reenviar_invitacion}
+                            </Button>{' '}
+                            <Button
+                              variant="secondary"
+                              onClick={() => quitarMiembroPersonasAutorizadas(m.usuarioId)}
+                              disabled={quitandoUsuarioId === m.usuarioId}
+                            >
+                              {t.clientes.personas autorizadas.quitar}
+                            </Button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {errorPersonasAutorizadas && estadoPersonasAutorizadas === 'listo' && <Alert variant="error">{errorPersonasAutorizadas}</Alert>}
+            {puedeEditarCliente && (
+              <Button variant="secondary" onClick={() => setMostrarInvitarPersonasAutorizadas(true)}>
+                {t.clientes.personas autorizadas.agregar}
+              </Button>
+            )}
+          </>
+        )}
 
-      <h2>{t.clientes.historial_reportes}</h2>
-      <ReportesDeLaCliente pacientes={cliente.pacientes} />
-
-      <h2>{t.clientes.alertas_activas}</h2>
-      <AlertasDeLaCliente pacientes={cliente.pacientes} />
+        {/* Las tres secciones traen sus propios datos y manejan sus propios cuatro estados; viven
+            en `GuardiasReportesYAlertas.jsx` y hacen las mismas preguntas que las pantallas de
+            Guardias, Reportes y Alertas, acotadas a los Pacientes de esta Cliente. */}
+        {tab === 'guardias' && <GuardiasActivasDeLaCliente pacientes={cliente.pacientes} />}
+        {tab === 'reportes' && <ReportesDeLaCliente pacientes={cliente.pacientes} />}
+        {tab === 'alertas' && <AlertasDeLaCliente pacientes={cliente.pacientes} />}
+      </div>
 
       {pacienteSeleccionado && (
         <PrestacionesPaciente paciente={pacienteSeleccionado} onClose={() => setPacienteSeleccionado(null)} />

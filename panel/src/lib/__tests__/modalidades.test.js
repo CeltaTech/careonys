@@ -152,7 +152,6 @@ describe('mensajeDeModalidad', () => {
 describe('los textos existen en los tres idiomas', () => {
   const CLAVES = [
     'etiqueta',
-    'ayuda',
     'directa',
     'marketplace',
     'falta_elegir',

@@ -54,8 +54,6 @@ export function ContenidoParaFamilias() {
   return (
     <div>
       <h1>{t.contenidos.titulo}</h1>
-      <p className="panel-explicacion">{t.contenidos.explicacion}</p>
-
       {estado === 'error' && error && <Alert variant="error">{error}</Alert>}
 
       {puedeEscribir && (

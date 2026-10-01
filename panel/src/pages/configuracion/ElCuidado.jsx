@@ -8,7 +8,7 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { ESTADO_ACTIVO } from '../../lib/candidatos';
-import { MINUTOS_DEMORA_POR_OMISION, minutosDeDemoraTolerados } from '../../lib/llegadaEstimada';
+import { minutosDeDemoraTolerados } from '../../lib/llegadaEstimada';
 import { mensajeDeError } from '../../lib/errores';
 import { esMotivoDeFabrica, nombreMotivo } from '../../lib/motivoDeCierre';
 import { con } from '../../lib/textos';
@@ -178,7 +178,6 @@ function TabServicios() {
           llegado al domicilio. Dos botones harían creer que una decisión se puede guardar sin
           la otra. */}
       <h3>{t.configuracion.servicios_pase_titulo}</h3>
-      <p className="panel-explicacion">{t.configuracion.servicios_pase_explicacion}</p>
       <FormField
         label={t.configuracion.servicios_pase_segundos}
         name="segundos_codigo_en_pantalla"
@@ -210,10 +209,6 @@ function TabServicios() {
           usar otro. */}
       <p className="panel-explicacion">
         {con(t.configuracion.escalada_demora_en_uso, { minutos: minutosDeDemoraTolerados(niveles) })}
-        {' '}
-        {minutosDeDemoraTolerados(niveles) === MINUTOS_DEMORA_POR_OMISION && !niveles.some((n) => Number.isFinite(n.minutos_demora) && n.minutos_demora > 0)
-          ? t.configuracion.escalada_demora_por_omision
-          : t.configuracion.escalada_demora_configurada}
       </p>
       <div className="panel-filtros">
         <Button onClick={() => setCreandoNuevo(true)}>{t.configuracion.escalada_nuevo_nivel}</Button>
@@ -359,7 +354,6 @@ function TabServiciosMotivosCierre() {
   return (
     <div>
       <h2>{t.configuracion.motivos_cierre_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.motivos_cierre_explicacion}</p>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
       <div className="panel-filtros">
         <Button onClick={() => setCreandoNuevo(true)}>{t.configuracion.motivos_cierre_nuevo}</Button>
@@ -634,7 +628,6 @@ function TabServiciosEtapasIncorporacion() {
   return (
     <div>
       <h2>{t.configuracion.etapas_incorporacion_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.etapas_incorporacion_explicacion}</p>
       {error && <Alert variant="error">{error}</Alert>}
       <div className="panel-filtros">
         <Button onClick={() => setCreandoNueva(true)}>{t.configuracion.etapas_incorporacion_nueva}</Button>
@@ -776,7 +769,6 @@ function TabServiciosPersonalEmergencia() {
   return (
     <div>
       <h2>{t.configuracion.personal_emergencia_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.personal_emergencia_explicacion}</p>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
       <div className="panel-filtros">
         <Button onClick={() => setCreandoNuevo(true)}>{t.configuracion.personal_emergencia_nuevo}</Button>
@@ -964,7 +956,6 @@ function NivelEscalada({ nivelExistente, onClose, onGuardado }) {
         {/* Qué hace este número, dicho donde se escribe. Sin esto, «Minutos de demora» se lee
             como el tiempo que se espera antes de llamar al siguiente de la lista, y además es
             el margen a partir del cual una llegada tarde se anota como alerta. */}
-        <p className="panel-explicacion">{t.configuracion.escalada_minutos_explicacion}</p>
         <FormField label={t.configuracion.escalada_col_nivel} name="nivel" type="number" value={nivel} onChange={(e) => setNivel(e.target.value)} required />
         <FormField label={t.configuracion.escalada_minutos_label} name="minutos_demora" type="number" value={minutosDemora} onChange={(e) => setMinutosDemora(e.target.value)} />
         {ordenPrioridad.map((valor, indice) => (
@@ -1059,7 +1050,6 @@ function TabVitales() {
   return (
     <div>
       <h2>{t.configuracion.vitales_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.vitales_explicacion}</p>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
       <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && rangos.length === 0} recargar={recargar}>
         <table className="panel-tabla">

@@ -306,8 +306,6 @@ export function Facturacion() {
   return (
     <div>
       <h1>{t.facturacion.titulo}</h1>
-      <p className="panel-explicacion">{t.facturacion.explicacion}</p>
-
       <Alert variant="info">
         <strong>{t.facturacion.aviso_titulo}.</strong> {t.facturacion.aviso_texto}
       </Alert>
@@ -428,9 +426,6 @@ export function Facturacion() {
           style={{ display: 'none' }}
         />
       </div>
-
-      <p className="panel-explicacion">{t.facturacion.intercambio_explicacion}</p>
-
       {mensajeIntercambio && <Alert variant="info">{mensajeIntercambio}</Alert>}
 
       {rechazos.length > 0 && (

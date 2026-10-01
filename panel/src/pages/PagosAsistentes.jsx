@@ -131,8 +131,6 @@ export function PagosAsistentes() {
   return (
     <div>
       <h1>{t.pagos_asistentes.titulo}</h1>
-      <p className="panel-explicacion">{t.pagos_asistentes.explicacion}</p>
-
       <Alert variant="info">
         <strong>{t.pagos_asistentes.aviso_titulo}.</strong> {t.pagos_asistentes.aviso_texto}
       </Alert>
@@ -657,7 +655,6 @@ function ConceptosTab() {
   return (
     <div>
       <h2>{t.pagos_asistentes.conceptos_titulo}</h2>
-      <p className="panel-explicacion">{t.pagos_asistentes.conceptos_explicacion}</p>
       {estado !== 'error' && error && <Alert variant="error">{error}</Alert>}
 
       <div className="panel-filtros">

@@ -151,8 +151,6 @@ function RegistrarConsentimiento({ guardiaId, pacientes, onClose, onGuardado }) 
     <div className="panel-modal-fondo" onClick={onClose}>
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
         <h3 id={modal.idTitulo}>{t.continuidad.paciente_solo_titulo}</h3>
-        <p className="panel-explicacion">{t.continuidad.paciente_solo_explicacion}</p>
-
         {/* Con un solo Paciente no se pregunta nada: no hay nada que elegir, y una lista de una
             opción es un paso de más. Con dos o más, se elige, porque la Familia de uno no puede
             aceptar nada por el otro. */}

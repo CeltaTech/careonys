@@ -373,7 +373,6 @@ function TabAlertasIA() {
   return (
     <div>
       <h2>{t.configuracion.alertas_ia_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.alertas_ia_explicacion}</p>
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         {form && (
           <div>
@@ -393,7 +392,6 @@ function TabAlertasIA() {
               value={form.reportes_a_analizar ?? ''}
               onChange={(e) => set('reportes_a_analizar', e.target.value)}
             />
-            <p className="panel-explicacion">{t.configuracion.alertas_ia_roja_siempre_coordinador}</p>
             <FormField
               label={t.configuracion.alertas_ia_roja_avisa_familia}
               name="roja_avisa_familia"
@@ -490,7 +488,6 @@ function TabCorreoDeLaPrestadora() {
   return (
     <div>
       <h2>{t.configuracion.correo_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.correo_explicacion}</p>
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         {correo && (
           <div>
@@ -563,7 +560,6 @@ function TabMensajeDeTexto() {
   return (
     <div>
       <h2>{t.configuracion.mensaje_de_texto_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.mensaje_de_texto_explicacion}</p>
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         {via && (
           <div>
@@ -626,7 +622,6 @@ function TabMensajeDeCese() {
   return (
     <div>
       <h2>{t.configuracion.aviso_cese_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.aviso_cese_explicacion}</p>
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         {config && (
           <div>
@@ -1019,7 +1014,6 @@ function TabWhatsappPlantillas() {
   return (
     <div>
       <h2>{t.configuracion.whatsapp_plantillas_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.whatsapp_plantillas_explicacion}</p>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
       <div className="panel-filtros">
         <Button onClick={() => setCreandoNueva(true)}>{t.configuracion.whatsapp_plantillas_nueva}</Button>
@@ -1547,7 +1541,6 @@ function CuantoDuraTomarUnaAlarma() {
   return (
     <div>
       <h2>{t.configuracion.tomar_alarma_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.tomar_alarma_explicacion}</p>
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         <div>
           {error && <Alert variant="error">{error}</Alert>}
@@ -1609,7 +1602,6 @@ function EditorTramosPremura({ tramos, onCambiar }) {
   return (
     <div>
       <h3>{t.configuracion.premura_titulo}</h3>
-      <p className="panel-explicacion">{t.configuracion.premura_explicacion}</p>
       <div className="panel-tramos">
         {lista.map((tramo, indice) => {
           const esUltimo = indice === lista.length - 1;

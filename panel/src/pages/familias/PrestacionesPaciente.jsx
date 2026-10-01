@@ -845,7 +845,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
         {estado === 'listo' && ['admin_prestadora', 'coordinador'].includes(usuario.rol) && (
           <div className="panel-resultado-calculo">
             <h3>{t.prestaciones.hospitalizacion_titulo}</h3>
-            <p className="panel-explicacion">{t.prestaciones.hospitalizacion_explicacion}</p>
             {errorHosp && <Alert variant="error">{errorHosp}</Alert>}
 
             {alertasContingencia.map((alerta) => (
@@ -970,7 +969,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
               cierres.length === 0 && <p className="estado-vacio">{t.prestaciones.sin_servicio_abierto}</p>
             ) : (
               <>
-                <p className="panel-explicacion">{t.prestaciones.cierre_servicio_explicacion}</p>
                 {errorCierre && <Alert variant="error">{errorCierre}</Alert>}
                 <FormField
                   label={t.prestaciones.servicio}

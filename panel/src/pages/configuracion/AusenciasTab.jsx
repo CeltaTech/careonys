@@ -71,7 +71,6 @@ export function AusenciasTab() {
   return (
     <div>
       <h2>{t.configuracion.ausencias_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.ausencias_explicacion}</p>
       {error && <Alert variant="error">{error}</Alert>}
       {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
       <EstadoLista estado={estado} error={error} recargar={recargar}>

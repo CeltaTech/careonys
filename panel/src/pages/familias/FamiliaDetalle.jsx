@@ -392,8 +392,6 @@ export function FamiliaDetalle() {
       )}
 
       <h2>{t.familias.circulo.titulo}</h2>
-      <p className="panel-explicacion">{t.familias.circulo.descripcion}</p>
-
       {/* La instrucción cargada y todavía sin firmar es lo primero que hay que ver: mientras
           no esté firmada, lo que hay es un pedido anotado, no una autorización. Los dos
           caminos de cierre están acá al lado —imprimir el papel, o registrar que ya volvió

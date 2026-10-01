@@ -71,8 +71,6 @@ export function FormasDeCobro() {
   return (
     <div>
       <h1>{t.marketplace.formas_titulo}</h1>
-      <p className="panel-explicacion">{t.marketplace.formas_explicacion}</p>
-
       {estado === 'error' && error && <Alert variant="error">{error}</Alert>}
 
       {esAdmin && (

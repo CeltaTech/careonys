@@ -47,7 +47,6 @@ export function TabLugares() {
   return (
     <div>
       <h2>{t.configuracion.lugares_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.lugares_explicacion}</p>
       {errorAccion && <Alert variant="error">{errorAccion}</Alert>}
 
       <div className="panel-filtros">
@@ -247,7 +246,6 @@ function AgregarLugar({ lugares, onClose, onAgregado }) {
         )}
 
         <h3>{t.configuracion.lugares_propio_titulo}</h3>
-        <p className="panel-explicacion">{t.configuracion.lugares_propio_explicacion}</p>
         <FormField
           label={t.configuracion.lugares_propio_nombre}
           name="nombre_propio"

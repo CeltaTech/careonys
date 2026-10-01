@@ -67,8 +67,6 @@ export function MarketplaceCalificaciones() {
   return (
     <div>
       <h1>{t.marketplace.calificaciones_titulo}</h1>
-      <p className="panel-explicacion">{t.marketplace.calificaciones_explicacion}</p>
-
       {error && <Alert variant="error">{error}</Alert>}
 
       <EstadoLista estado={estado} error={null} vacio={estado === 'listo' && calificaciones.length === 0} recargar={recargar}>

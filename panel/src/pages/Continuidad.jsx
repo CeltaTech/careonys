@@ -281,8 +281,6 @@ export function Continuidad() {
   return (
     <div>
       <h1>{t.continuidad.titulo}</h1>
-      <p className="panel-explicacion">{t.continuidad.explicacion}</p>
-
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
 
       <EstadoLista
@@ -345,8 +343,6 @@ export function Continuidad() {
       </EstadoLista>
 
       <h2>{t.continuidad.alertas_tempranas_titulo}</h2>
-      <p className="panel-explicacion">{t.continuidad.alertas_tempranas_explicacion}</p>
-
       <EstadoLista
         estado={estado}
         error={null}
@@ -399,8 +395,6 @@ export function Continuidad() {
       </EstadoLista>
 
       <h2>{t.continuidad.notificaciones_cierre_titulo}</h2>
-      <p className="panel-explicacion">{t.continuidad.notificaciones_cierre_explicacion}</p>
-
       <EstadoLista
         estado={estado}
         error={null}
@@ -432,8 +426,6 @@ export function Continuidad() {
       <TurnosSinCubrirAbiertos />
 
       <h2>{t.continuidad.excepciones_titulo}</h2>
-      <p className="panel-explicacion">{t.continuidad.excepciones_explicacion}</p>
-
       <EstadoLista
         estado={estado}
         error={null}

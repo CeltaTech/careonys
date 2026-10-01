@@ -115,7 +115,6 @@ export function MarketplaceAuditoriaLegal() {
       <h1>{t.marketplace.auditoria_legal_titulo}</h1>
 
       <h2>{t.marketplace.funciones_riesgo_titulo}</h2>
-      <p className="panel-explicacion">{t.marketplace.funciones_riesgo_explicacion}</p>
       {!esAdmin && <p className="panel-explicacion">{t.marketplace.funciones_riesgo_solo_lectura}</p>}
 
       <EstadoLista

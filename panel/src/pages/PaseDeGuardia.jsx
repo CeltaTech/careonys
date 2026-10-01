@@ -143,11 +143,7 @@ export function PaseDeGuardia() {
   return (
     <div>
       <h1>{t.pase_de_guardia.titulo}</h1>
-      <p className="panel-explicacion">{t.pase_de_guardia.explicacion}</p>
-
       <h2>{t.pase_de_guardia.pedidos_titulo}</h2>
-      <p className="panel-explicacion">{t.pase_de_guardia.pedidos_explicacion}</p>
-
       {/* El error de un refresco que falló cuando la lista ya estaba cargada: la lista se queda
           donde está y el mensaje va al lado, porque borrarla escondería un pedido que sigue
           esperando. */}
@@ -212,8 +208,6 @@ export function PaseDeGuardia() {
       </EstadoLista>
 
       <h2>{t.pase_de_guardia.sin_comprobar_titulo}</h2>
-      <p className="panel-explicacion">{t.pase_de_guardia.sin_comprobar_explicacion}</p>
-
       <EstadoLista
         estado={estadoSinComprobar}
         error={errorSinComprobar}

@@ -163,8 +163,6 @@ export function RespuestasPreparadas() {
   return (
     <div>
       <h1>{tr.titulo}</h1>
-      <p className="panel-explicacion">{tr.explicacion}</p>
-
       {mensaje && <Alert variant="error">{mensaje}</Alert>}
 
       <div className="panel-filtros">

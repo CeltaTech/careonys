@@ -111,8 +111,6 @@ export function EstadoDelPagador({ familiaId, puedeRegistrar }) {
   return (
     <>
       <h3>{textos.titulo}</h3>
-      <p className="panel-explicacion">{textos.explicacion}</p>
-
       {error && <Alert variant="error">{error}</Alert>}
 
       {/* Sin Legajo elegido no hay a quién hacerle firmar nada, y decirlo así es más útil que
@@ -376,8 +374,6 @@ function RegistrarFirmaDelPagadorModal({ familiaId, consentimientoId, onClose, o
     <div className="panel-modal-fondo" onClick={onClose}>
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
         <h2 id={modal.idTitulo}>{textos.registrar_titulo}</h2>
-        <p className="panel-explicacion">{textos.registrar_explicacion}</p>
-
         {error && <Alert variant="error">{error}</Alert>}
 
         <FormField

@@ -62,8 +62,6 @@ export function UsuariosPanel() {
   return (
     <div>
       <h1>{t.usuarios_panel.titulo}</h1>
-      <p className="panel-explicacion">{t.usuarios_panel.explicacion}</p>
-
       <div className="panel-filtros">
         <Button onClick={() => setCreandoNuevo(true)}>
           {t.usuarios_panel.nuevo_coordinador}
@@ -163,7 +161,6 @@ function NuevoUsuarioPanel({ onClose, onCreado }) {
       <div className="panel-modal-fondo" onClick={onClose}>
         <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modalCreada.props}>
           <h2 id={modalCreada.idTitulo}>{t.usuarios_panel.cuenta_creada_titulo}</h2>
-          <p className="panel-explicacion">{t.usuarios_panel.cuenta_creada_explicacion}</p>
           <dl className="panel-detalle-lista">
             <dt>{t.usuarios_panel.col_email}</dt>
             <dd>{creado.email}</dd>

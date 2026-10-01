@@ -183,8 +183,6 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
     <div className="panel-modal-fondo" onClick={onClose}>
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
         <h2 id={modal.idTitulo}>{t.domicilios_temporales.titulo} — {paciente.nombre}</h2>
-        <p className="panel-explicacion">{t.domicilios_temporales.explicacion}</p>
-
         {estado === 'cargando' && <p className="estado-cargando">{t.comun.cargando}</p>}
         {estado === 'error' && <Alert variant="error">{error || t.comun.error_generico}</Alert>}
 

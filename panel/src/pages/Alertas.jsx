@@ -103,8 +103,6 @@ export function Alertas() {
   return (
     <div>
       <h1>{t.alertas.titulo}</h1>
-      <p className="panel-explicacion">{t.alertas.explicacion}</p>
-
       {pendientesRojas > 0 && (
         <p className="panel-explicacion">
           <span className="badge badge-critico">

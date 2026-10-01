@@ -62,8 +62,6 @@ export function ConsentimientosVigentes() {
   return (
     <>
       <h2>{t.continuidad.consentimientos_titulo}</h2>
-      <p className="panel-explicacion">{t.continuidad.consentimientos_explicacion}</p>
-
       <EstadoLista
         estado={estado}
         error={error}

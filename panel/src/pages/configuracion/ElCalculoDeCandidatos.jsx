@@ -92,7 +92,6 @@ export function ElCalculoDeCandidatos() {
   return (
     <div>
       <h2>{tc.calculo_titulo}</h2>
-      <p className="panel-explicacion">{tc.calculo_explicacion}</p>
       <EstadoLista estado={estado} error={error} recargar={recargar}>
         {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
         {guardado && <Alert variant="success">{tc.calculo_guardado}</Alert>}
@@ -123,7 +122,6 @@ export function ElCalculoDeCandidatos() {
 
         {detalleAbierto && (
           <>
-            <p className="panel-explicacion">{tc.calculo_detalle_explicacion}</p>
             <TablaDeNumeros
               titulo={tc.calculo_pesos_titulo}
               bordes={PESOS_QUE_SE_PUEDEN_TOCAR}

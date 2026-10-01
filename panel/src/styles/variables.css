@@ -32,204 +32,198 @@
 
 :root {
   /* ================= 1. LA MARCA ================= */
-  /* Los cinco colores de Careonys. No cambian entre modo claro y oscuro. */
-  --azul-oscuro: oklch(0.22 0.02 250);
-  --azul-medio: oklch(0.65 0.13 250);
-  --verde-exito: oklch(0.55 0.13 165);
-  --naranja-alerta: oklch(0.62 0.13 70);
-  --rojo-peligro: oklch(0.58 0.15 25);
+  --azul-oscuro: oklch(0.274 0.074 252);
+  --azul-medio: oklch(0.566 0.161 253);
+  --verde-exito: oklch(0.618 0.112 176);
+  --naranja-alerta: oklch(0.755 0.156 82);
+  --rojo-peligro: oklch(0.625 0.189 24);
+  --violeta: oklch(0.562 0.167 298);
+
+  /* La acción principal de cada pantalla es verde, y el contador de la barra de arriba, petróleo. */
+  --accion: oklch(0.618 0.112 176);
+  --accion-hover: oklch(0.523 0.093 180);
+  --contador: oklch(0.549 0.089 205);
 
   /* ================= 2. LOS TOKENS ================= */
-
-  /* --- Fondos y superficies ---
-     `--fondo-app` es el papel de la pantalla entera.
-     `--superficie` es una tarjeta, una tabla o un modal apoyado encima de ese papel.
-     `--superficie-hundida` es un renglón metido DENTRO de una tarjeta (el encabezado de
-     una tabla, una celda de la grilla): tiene que leerse como un escalón hacia adentro. */
-  --fondo-app: oklch(0.98 0.004 250);
+  --fondo-app: oklch(0.981 0.005 258);
   --superficie: oklch(1 0 0);
-  --superficie-hundida: oklch(0.98 0.004 250);
-  --superficie-hover: oklch(0.96 0.006 250);
-  --borde-card: oklch(0.9 0.005 250);
-  --sombra-card: 0 1px 2px oklch(0.2 0.01 250 / 0.06);
-  --velo-modal: oklch(0.2 0.01 250 / 0.5);
+  --superficie-hundida: oklch(0.984 0.003 248);
+  --superficie-hover: oklch(0.962 0.009 248);
+  --borde-card: oklch(0.922 0.013 252);
+  --sombra-card: 0 2px 9px oklch(0.27 0.06 252 / 0.055);
+  --velo-modal: oklch(0.24 0.05 259 / 0.5);
 
-  /* `--fondo-alt` es el nombre viejo de `--superficie-hundida`. Se mantiene como sinónimo
-     para no romper nada, pero en código nuevo se usa `--superficie-hundida`. */
+  --texto-principal: oklch(0.239 0.047 259);
+  --texto-secundario: oklch(0.597 0.044 261);
+  --texto-titulo: oklch(0.239 0.047 259);
+
+  --barra-fondo: oklch(0.257 0.069 251);
+  --barra-fondo-abajo: oklch(0.294 0.081 252);
+  --barra-marca: oklch(0.238 0.065 253);
+  --barra-activo: oklch(0.472 0.126 252);
+  --barra-texto: oklch(1 0 0 / 0.86);
+  --barra-texto-activo: oklch(1 0 0);
+  --barra-texto-tenue: oklch(1 0 0 / 0.42);
+  --barra-hover: oklch(1 0 0 / 0.08);
+  --barra-borde: oklch(1 0 0 / 0.09);
+
+  --azul-medio-texto: oklch(0.52 0.161 253);
+  --verde-exito-texto: oklch(0.523 0.093 180);
+  --naranja-alerta-texto: oklch(0.56 0.13 75);
+  --rojo-peligro-texto: oklch(0.52 0.19 24);
+
+  --tono-exito-fondo: oklch(0.618 0.112 176 / 0.13);
+  --tono-exito-texto: oklch(0.48 0.093 180);
+  --tono-atencion-fondo: oklch(0.755 0.156 82 / 0.17);
+  --tono-atencion-texto: oklch(0.5 0.11 75);
+  --tono-critico-fondo: oklch(0.625 0.189 24 / 0.12);
+  --tono-critico-texto: oklch(0.5 0.19 24);
+  --tono-info-fondo: oklch(0.566 0.161 253 / 0.11);
+  --tono-info-texto: oklch(0.47 0.15 253);
+  --tono-violeta-fondo: oklch(0.562 0.167 298 / 0.12);
+  --tono-violeta-texto: oklch(0.47 0.16 298);
+  --tono-neutro-fondo: oklch(0.95 0.008 252);
+  --tono-neutro-texto: oklch(0.5 0.04 261);
+
   --fondo-alt: var(--superficie-hundida);
-
-  /* --- Texto --- */
-  --texto-principal: oklch(0.2 0.01 250);
-  --texto-secundario: oklch(0.5 0.01 250);
-  --texto-titulo: oklch(0.22 0.02 250);
-  /* Texto que se apoya ENCIMA de un color fuerte (un botón azul, un banner naranja).
-     Es casi blanco en los dos modos, porque abajo siempre tiene un color saturado. */
   --texto-sobre-color: oklch(1 0 0);
 
-  /* --- La barra lateral ---
-     Es la única zona del Panel que en modo claro ya era oscura, así que tiene sus propios
-     tokens en vez de reusar los de arriba. */
-  --barra-fondo: oklch(0.22 0.02 250);
-  --barra-texto: oklch(1 0 0 / 0.8);
-  --barra-texto-activo: oklch(1 0 0);
-  --barra-texto-tenue: oklch(1 0 0 / 0.45);
-  --barra-hover: oklch(1 0 0 / 0.08);
+  --radio-card: 11px;
+  --radio-control: 7px;
 
-  /* --- Los cinco colores, en su versión "para texto" ---
-     Mismo tono, más oscuros, para llegar a 4.5:1 sobre el fondo claro (WCAG AA).
-     Se usan ÚNICAMENTE cuando el color pinta letras. Bordes, barras de color y fondos de
-     alerta siguen usando la variable de marca de arriba. En modo oscuro estos mismos
-     tokens se vuelven MÁS CLAROS que la marca, no más oscuros — es la misma idea al revés. */
-  --azul-medio-texto: oklch(0.567 0.13 250);
-  --verde-exito-texto: oklch(0.548 0.13 165);
-  --naranja-alerta-texto: oklch(0.575 0.13 70);
-  --rojo-peligro-texto: oklch(0.45 0.15 25);
+  --densidad-fila-y: 0.7rem;
+  --densidad-fila-texto: 0.8125rem;
 
-  /* --- Los cuatro tonos de señal ---
-     Todo lo que el Panel marca como "está bien / prestá atención / esto es grave / esto es
-     un dato más" sale de acá y de ningún otro lado. `src/lib/tonos.js` es el que decide qué
-     estado del negocio corresponde a qué tono; este archivo solo dice de qué color se pinta
-     cada tono. Un par por tono: un fondo suave y una letra que se lee encima de ese fondo. */
-  --tono-exito-fondo: oklch(0.55 0.13 165 / 0.12);
-  --tono-exito-texto: oklch(0.4 0.13 165);
-  --tono-atencion-fondo: oklch(0.62 0.13 70 / 0.12);
-  --tono-atencion-texto: oklch(0.45 0.13 70);
-  --tono-critico-fondo: oklch(0.58 0.15 25 / 0.12);
-  --tono-critico-texto: oklch(0.45 0.15 25);
-  --tono-info-fondo: oklch(0.65 0.13 250 / 0.12);
-  --tono-info-texto: oklch(0.42 0.13 250);
-  --tono-neutro-fondo: oklch(0.94 0.006 250);
-  --tono-neutro-texto: oklch(0.45 0.01 250);
-
-  /* --- Densidad de las filas ---
-     Cuánto respira cada renglón de una tabla o de la grilla. Lo elige cada persona desde el
-     encabezado y se guarda en su navegador; ver `src/context/PreferenciasVistaContext.jsx`. El valor
-     de acá es el intermedio, que es el de arranque. Los otros dos los pisa ese contexto. */
-  --densidad-fila-y: 0.75rem;
-  --densidad-fila-texto: 0.9rem;
-
-  /* --- Tipografía --- */
-  --font-display: 'Public Sans', sans-serif;
-  --font-body: 'Public Sans', sans-serif;
+  --font-display: 'Inter', 'Segoe UI', sans-serif;
+  --font-body: 'Inter', 'Segoe UI', sans-serif;
 }
 
-/* ================= MODO OSCURO POR PREFERENCIA DEL SISTEMA =================
-   Se aplica cuando la persona no eligió nada en el Panel y su computadora o su teléfono
-   están en modo oscuro. Solo se redefinen los tokens; ninguna pantalla se escribe de nuevo. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --fondo-app: oklch(0.17 0.012 250);
-    --superficie: oklch(0.22 0.014 250);
-    --superficie-hundida: oklch(0.26 0.014 250);
-    --superficie-hover: oklch(0.29 0.014 250);
-    --borde-card: oklch(0.34 0.014 250);
-    --sombra-card: 0 1px 2px oklch(0 0 0 / 0.35);
-    --velo-modal: oklch(0.1 0.01 250 / 0.65);
+  :root:not([data-tema='claro']) {
+    --fondo-app: oklch(0.17 0.025 255);
+    --superficie: oklch(0.215 0.03 255);
+    --superficie-hundida: oklch(0.245 0.032 255);
+    --superficie-hover: oklch(0.27 0.034 255);
+    --borde-card: oklch(0.32 0.03 255);
+    --sombra-card: 0 2px 9px oklch(0 0 0 / 0.35);
+    --velo-modal: oklch(0.1 0.02 255 / 0.65);
 
-    --texto-principal: oklch(0.95 0.005 250);
-    --texto-secundario: oklch(0.72 0.008 250);
-    --texto-titulo: oklch(0.93 0.015 250);
+    --texto-principal: oklch(0.94 0.01 255);
+    --texto-secundario: oklch(0.72 0.03 258);
+    --texto-titulo: oklch(0.96 0.01 255);
 
-    --barra-fondo: oklch(0.13 0.012 250);
-    --barra-texto: oklch(1 0 0 / 0.72);
+    --barra-fondo: oklch(0.17 0.04 253);
+    --barra-fondo-abajo: oklch(0.2 0.05 253);
+    --barra-marca: oklch(0.15 0.035 253);
+    --barra-activo: oklch(0.42 0.11 252);
+    --barra-texto: oklch(1 0 0 / 0.8);
     --barra-texto-activo: oklch(1 0 0);
     --barra-texto-tenue: oklch(1 0 0 / 0.4);
-    --barra-hover: oklch(1 0 0 / 0.1);
+    --barra-hover: oklch(1 0 0 / 0.08);
+    --barra-borde: oklch(1 0 0 / 0.08);
 
-    --azul-medio-texto: oklch(0.75 0.12 250);
-    --verde-exito-texto: oklch(0.75 0.12 165);
-    --naranja-alerta-texto: oklch(0.78 0.12 70);
-    --rojo-peligro-texto: oklch(0.72 0.14 25);
+    --azul-medio-texto: oklch(0.76 0.12 253);
+    --verde-exito-texto: oklch(0.76 0.1 176);
+    --naranja-alerta-texto: oklch(0.82 0.13 82);
+    --rojo-peligro-texto: oklch(0.74 0.15 24);
 
-    --tono-exito-fondo: oklch(0.55 0.13 165 / 0.2);
-    --tono-exito-texto: oklch(0.78 0.12 165);
-    --tono-atencion-fondo: oklch(0.62 0.13 70 / 0.2);
-    --tono-atencion-texto: oklch(0.82 0.12 70);
-    --tono-critico-fondo: oklch(0.58 0.15 25 / 0.22);
-    --tono-critico-texto: oklch(0.76 0.14 25);
-    --tono-info-fondo: oklch(0.65 0.13 250 / 0.2);
-    --tono-info-texto: oklch(0.79 0.12 250);
-    --tono-neutro-fondo: oklch(0.3 0.01 250);
-    --tono-neutro-texto: oklch(0.78 0.008 250);
-  }
+    --tono-exito-fondo: oklch(0.618 0.112 176 / 0.22);
+    --tono-exito-texto: oklch(0.8 0.1 176);
+    --tono-atencion-fondo: oklch(0.755 0.156 82 / 0.2);
+    --tono-atencion-texto: oklch(0.85 0.13 82);
+    --tono-critico-fondo: oklch(0.625 0.189 24 / 0.22);
+    --tono-critico-texto: oklch(0.78 0.14 24);
+    --tono-info-fondo: oklch(0.566 0.161 253 / 0.24);
+    --tono-info-texto: oklch(0.8 0.11 253);
+    --tono-violeta-fondo: oklch(0.562 0.167 298 / 0.24);
+    --tono-violeta-texto: oklch(0.8 0.12 298);
+    --tono-neutro-fondo: oklch(0.3 0.025 255);
+    --tono-neutro-texto: oklch(0.8 0.02 258);
+}
 }
 
-/* ================= MODO ELEGIDO A MANO DESDE EL PANEL =================
-   Cuando la persona elige "claro" u "oscuro" en el encabezado, el Panel escribe
-   `data-tema` en la etiqueta <html> y estas dos reglas le ganan a la preferencia de la
-   computadora. Hacen falta las dos: sin `[data-tema="claro"]`, alguien con la computadora
-   en oscuro no podría forzar el Panel en claro. */
-
 :root[data-tema='claro'] {
-  --fondo-app: oklch(0.98 0.004 250);
+  --fondo-app: oklch(0.981 0.005 258);
   --superficie: oklch(1 0 0);
-  --superficie-hundida: oklch(0.98 0.004 250);
-  --superficie-hover: oklch(0.96 0.006 250);
-  --borde-card: oklch(0.9 0.005 250);
-  --sombra-card: 0 1px 2px oklch(0.2 0.01 250 / 0.06);
-  --velo-modal: oklch(0.2 0.01 250 / 0.5);
+  --superficie-hundida: oklch(0.984 0.003 248);
+  --superficie-hover: oklch(0.962 0.009 248);
+  --borde-card: oklch(0.922 0.013 252);
+  --sombra-card: 0 2px 9px oklch(0.27 0.06 252 / 0.055);
+  --velo-modal: oklch(0.24 0.05 259 / 0.5);
 
-  --texto-principal: oklch(0.2 0.01 250);
-  --texto-secundario: oklch(0.5 0.01 250);
-  --texto-titulo: oklch(0.22 0.02 250);
+  --texto-principal: oklch(0.239 0.047 259);
+  --texto-secundario: oklch(0.597 0.044 261);
+  --texto-titulo: oklch(0.239 0.047 259);
 
-  --barra-fondo: oklch(0.22 0.02 250);
-  --barra-texto: oklch(1 0 0 / 0.8);
+  --barra-fondo: oklch(0.257 0.069 251);
+  --barra-fondo-abajo: oklch(0.294 0.081 252);
+  --barra-marca: oklch(0.238 0.065 253);
+  --barra-activo: oklch(0.472 0.126 252);
+  --barra-texto: oklch(1 0 0 / 0.86);
   --barra-texto-activo: oklch(1 0 0);
-  --barra-texto-tenue: oklch(1 0 0 / 0.45);
+  --barra-texto-tenue: oklch(1 0 0 / 0.42);
   --barra-hover: oklch(1 0 0 / 0.08);
+  --barra-borde: oklch(1 0 0 / 0.09);
 
-  --azul-medio-texto: oklch(0.567 0.13 250);
-  --verde-exito-texto: oklch(0.548 0.13 165);
-  --naranja-alerta-texto: oklch(0.575 0.13 70);
-  --rojo-peligro-texto: oklch(0.45 0.15 25);
+  --azul-medio-texto: oklch(0.52 0.161 253);
+  --verde-exito-texto: oklch(0.523 0.093 180);
+  --naranja-alerta-texto: oklch(0.56 0.13 75);
+  --rojo-peligro-texto: oklch(0.52 0.19 24);
 
-  --tono-exito-fondo: oklch(0.55 0.13 165 / 0.12);
-  --tono-exito-texto: oklch(0.4 0.13 165);
-  --tono-atencion-fondo: oklch(0.62 0.13 70 / 0.12);
-  --tono-atencion-texto: oklch(0.45 0.13 70);
-  --tono-critico-fondo: oklch(0.58 0.15 25 / 0.12);
-  --tono-critico-texto: oklch(0.45 0.15 25);
-  --tono-info-fondo: oklch(0.65 0.13 250 / 0.12);
-  --tono-info-texto: oklch(0.42 0.13 250);
-  --tono-neutro-fondo: oklch(0.94 0.006 250);
-  --tono-neutro-texto: oklch(0.45 0.01 250);
+  --tono-exito-fondo: oklch(0.618 0.112 176 / 0.13);
+  --tono-exito-texto: oklch(0.48 0.093 180);
+  --tono-atencion-fondo: oklch(0.755 0.156 82 / 0.17);
+  --tono-atencion-texto: oklch(0.5 0.11 75);
+  --tono-critico-fondo: oklch(0.625 0.189 24 / 0.12);
+  --tono-critico-texto: oklch(0.5 0.19 24);
+  --tono-info-fondo: oklch(0.566 0.161 253 / 0.11);
+  --tono-info-texto: oklch(0.47 0.15 253);
+  --tono-violeta-fondo: oklch(0.562 0.167 298 / 0.12);
+  --tono-violeta-texto: oklch(0.47 0.16 298);
+  --tono-neutro-fondo: oklch(0.95 0.008 252);
+  --tono-neutro-texto: oklch(0.5 0.04 261);
 }
 
 :root[data-tema='oscuro'] {
-  --fondo-app: oklch(0.17 0.012 250);
-  --superficie: oklch(0.22 0.014 250);
-  --superficie-hundida: oklch(0.26 0.014 250);
-  --superficie-hover: oklch(0.29 0.014 250);
-  --borde-card: oklch(0.34 0.014 250);
-  --sombra-card: 0 1px 2px oklch(0 0 0 / 0.35);
-  --velo-modal: oklch(0.1 0.01 250 / 0.65);
+  --fondo-app: oklch(0.17 0.025 255);
+  --superficie: oklch(0.215 0.03 255);
+  --superficie-hundida: oklch(0.245 0.032 255);
+  --superficie-hover: oklch(0.27 0.034 255);
+  --borde-card: oklch(0.32 0.03 255);
+  --sombra-card: 0 2px 9px oklch(0 0 0 / 0.35);
+  --velo-modal: oklch(0.1 0.02 255 / 0.65);
 
-  --texto-principal: oklch(0.95 0.005 250);
-  --texto-secundario: oklch(0.72 0.008 250);
-  --texto-titulo: oklch(0.93 0.015 250);
+  --texto-principal: oklch(0.94 0.01 255);
+  --texto-secundario: oklch(0.72 0.03 258);
+  --texto-titulo: oklch(0.96 0.01 255);
 
-  --barra-fondo: oklch(0.13 0.012 250);
-  --barra-texto: oklch(1 0 0 / 0.72);
+  --barra-fondo: oklch(0.17 0.04 253);
+  --barra-fondo-abajo: oklch(0.2 0.05 253);
+  --barra-marca: oklch(0.15 0.035 253);
+  --barra-activo: oklch(0.42 0.11 252);
+  --barra-texto: oklch(1 0 0 / 0.8);
   --barra-texto-activo: oklch(1 0 0);
   --barra-texto-tenue: oklch(1 0 0 / 0.4);
-  --barra-hover: oklch(1 0 0 / 0.1);
+  --barra-hover: oklch(1 0 0 / 0.08);
+  --barra-borde: oklch(1 0 0 / 0.08);
 
-  --azul-medio-texto: oklch(0.75 0.12 250);
-  --verde-exito-texto: oklch(0.75 0.12 165);
-  --naranja-alerta-texto: oklch(0.78 0.12 70);
-  --rojo-peligro-texto: oklch(0.72 0.14 25);
+  --azul-medio-texto: oklch(0.76 0.12 253);
+  --verde-exito-texto: oklch(0.76 0.1 176);
+  --naranja-alerta-texto: oklch(0.82 0.13 82);
+  --rojo-peligro-texto: oklch(0.74 0.15 24);
 
-  --tono-exito-fondo: oklch(0.55 0.13 165 / 0.2);
-  --tono-exito-texto: oklch(0.78 0.12 165);
-  --tono-atencion-fondo: oklch(0.62 0.13 70 / 0.2);
-  --tono-atencion-texto: oklch(0.82 0.12 70);
-  --tono-critico-fondo: oklch(0.58 0.15 25 / 0.22);
-  --tono-critico-texto: oklch(0.76 0.14 25);
-  --tono-info-fondo: oklch(0.65 0.13 250 / 0.2);
-  --tono-info-texto: oklch(0.79 0.12 250);
-  --tono-neutro-fondo: oklch(0.3 0.01 250);
-  --tono-neutro-texto: oklch(0.78 0.008 250);
+  --tono-exito-fondo: oklch(0.618 0.112 176 / 0.22);
+  --tono-exito-texto: oklch(0.8 0.1 176);
+  --tono-atencion-fondo: oklch(0.755 0.156 82 / 0.2);
+  --tono-atencion-texto: oklch(0.85 0.13 82);
+  --tono-critico-fondo: oklch(0.625 0.189 24 / 0.22);
+  --tono-critico-texto: oklch(0.78 0.14 24);
+  --tono-info-fondo: oklch(0.566 0.161 253 / 0.24);
+  --tono-info-texto: oklch(0.8 0.11 253);
+  --tono-violeta-fondo: oklch(0.562 0.167 298 / 0.24);
+  --tono-violeta-texto: oklch(0.8 0.12 298);
+  --tono-neutro-fondo: oklch(0.3 0.025 255);
+  --tono-neutro-texto: oklch(0.8 0.02 258);
 }
 
 /* ================= DENSIDAD DE FILAS =================
@@ -238,18 +232,18 @@
    letra. */
 
 :root[data-densidad='comoda'] {
-  --densidad-fila-y: 1rem;
-  --densidad-fila-texto: 0.95rem;
+  --densidad-fila-y: 0.95rem;
+  --densidad-fila-texto: 0.875rem;
 }
 
 :root[data-densidad='normal'] {
-  --densidad-fila-y: 0.75rem;
-  --densidad-fila-texto: 0.9rem;
+  --densidad-fila-y: 0.7rem;
+  --densidad-fila-texto: 0.8125rem;
 }
 
 :root[data-densidad='compacta'] {
   --densidad-fila-y: 0.4rem;
-  --densidad-fila-texto: 0.85rem;
+  --densidad-fila-texto: 0.78rem;
 }
 
 /* Quien pidió que el movimiento se reduzca no ve transiciones. No es un extra: para algunas

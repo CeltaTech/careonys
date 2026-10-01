@@ -317,7 +317,6 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
             {datos.coordinadores.length > 0 && (
               <>
                 <h3>{t.equipo_paciente.coordinacion_titulo}</h3>
-                <p className="panel-explicacion">{t.equipo_paciente.coordinacion_explicacion}</p>
                 <ul>
                   {datos.coordinadores.map((c) => (
                     <li key={c.usuario_id}>

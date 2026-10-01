@@ -392,8 +392,6 @@ export function ClienteDetalle() {
       )}
 
       <h2>{t.clientes.personas autorizadas.titulo}</h2>
-      <p className="panel-explicacion">{t.clientes.personas autorizadas.descripcion}</p>
-
       {/* La instrucción cargada y todavía sin firmar es lo primero que hay que ver: mientras
           no esté firmada, lo que hay es un pedido anotado, no una autorización. Los dos
           caminos de cierre están acá al lado —imprimir el papel, o registrar que ya volvió

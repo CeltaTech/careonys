@@ -187,7 +187,6 @@ export function SimuladorVinculoTab({ asistente }) {
   return (
     <div>
       <h2>{t.asistentes.simulador.titulo}</h2>
-      <Alert variant="info">{t.asistentes.simulador.explicacion}</Alert>
       {/* Las proyecciones se calculan con estas escalas: la advertencia va arriba de la tabla, no
           después, para que no se lea un número antes de saber de dónde sale. */}
       <AvisoEscalasProvisorias escalas={escalasCrudas} />

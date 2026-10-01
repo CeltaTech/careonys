@@ -105,7 +105,6 @@ export function Medicacion() {
   return (
     <div>
       <h1>{t.medicacion.titulo}</h1>
-      <p className="panel-explicacion">{t.medicacion.explicacion}</p>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
 
       <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && pendientes.length === 0} recargar={recargar}>

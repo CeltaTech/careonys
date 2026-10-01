@@ -150,8 +150,6 @@ export function Padron() {
   return (
     <div>
       <h1>{t.padron.titulo}</h1>
-      <p className="panel-explicacion">{t.padron.explicacion}</p>
-
       <div className="panel-filtros">
         <input
           type="text"

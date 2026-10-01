@@ -90,7 +90,6 @@ export function ScoreRiesgoTab({ asistente, onActualizado }) {
   return (
     <div>
       <h2>{t.asistentes.score.titulo}</h2>
-      <Alert variant="info">{t.asistentes.score.explicacion}</Alert>
       {/* El puntaje sale de pesos que hoy son provisorios: se dice antes de mostrarlo. */}
       <AvisoEscalasProvisorias escalas={escalasCrudas} />
       {errorEscalas && <Alert variant="error">{errorEscalas}</Alert>}

@@ -349,8 +349,6 @@ export function NuevaGuardiaModal({ onClose, onCreada, inicial = {} }) {
               <option key={a.id} value={a.id}>{a.nombre}</option>
             ))}
           </FormField>
-          <p className="panel-explicacion">{t.guardias.nueva_guardia.sin_asistente_ayuda}</p>
-
           {/* Una lista de marcar y no un desplegable: el desplegable deja elegir uno solo, y
               acá el turno puede cubrir a varios. */}
           <div className="form-field">
@@ -374,8 +372,6 @@ export function NuevaGuardiaModal({ onClose, onCreada, inicial = {} }) {
               ))}
             </div>
           </div>
-          <p className="panel-explicacion">{t.guardias.nueva_guardia.pacientes_ayuda}</p>
-
           <FormField
             label={t.guardias.nueva_guardia.servicio}
             name="servicio_id"

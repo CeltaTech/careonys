@@ -65,7 +65,6 @@ export function HiloComunicacion({ asistenteId, mostrarEncabezado = true, onEnvi
       {mostrarEncabezado && (
         <>
           <h2>{t.asistentes.comunicacion.titulo}</h2>
-          <p className="panel-explicacion">{t.asistentes.comunicacion.explicacion}</p>
         </>
       )}
 

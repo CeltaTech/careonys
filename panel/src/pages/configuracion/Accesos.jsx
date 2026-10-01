@@ -114,7 +114,6 @@ function TabPermisos() {
   return (
     <div>
       <h2>{t.configuracion.permisos_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.permisos_explicacion}</p>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         <table className="panel-tabla">
@@ -169,7 +168,6 @@ function TabPermisos() {
       </EstadoLista>
 
       <h2>{t.configuracion.permisos_verificacion_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.permisos_verificacion_explicacion}</p>
       {politicaGuardada && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
       <FormField
         label={t.configuracion.permisos_verificacion_label}

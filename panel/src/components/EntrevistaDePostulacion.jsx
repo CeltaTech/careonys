@@ -136,8 +136,6 @@ export function EntrevistaDePostulacion({ postulacionId }) {
   return (
     <section className="panel-entrevista">
       <h3>{tr.titulo}</h3>
-      <p className="panel-explicacion">{tr.explicacion}</p>
-
       {error && <Alert variant="error">{error}</Alert>}
 
       {cargando ? (

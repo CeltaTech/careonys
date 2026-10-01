@@ -45,8 +45,6 @@ export function LasListasDeOpciones() {
   return (
     <div>
       <h2>{t.configuracion.listas_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.listas_explicacion}</p>
-
       <EstadoLista
         estado={lasListas.estado}
         error={lasListas.error}

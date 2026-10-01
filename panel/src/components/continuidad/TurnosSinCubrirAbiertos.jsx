@@ -119,8 +119,6 @@ export function TurnosSinCubrirAbiertos() {
   return (
     <>
       <h2>{t.continuidad.turnos_vacios_titulo}</h2>
-      <p className="panel-explicacion">{t.continuidad.turnos_vacios_explicacion}</p>
-
       <EstadoLista
         estado={estado}
         error={error}

@@ -2043,12 +2043,6 @@ button.panel-kpi-card[aria-pressed='true'] {
   white-space: nowrap;
 }
 
-.informe-obra-social-nota {
-  color: var(--texto-secundario);
-  font-size: 0.85rem;
-  margin-top: 0.6rem;
-}
-
 .informe-obra-social-firma {
   margin-top: 3rem;
   max-width: 320px;

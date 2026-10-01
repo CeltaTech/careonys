@@ -224,8 +224,6 @@ export function MatriculasTab({ asistente }) {
   return (
     <div>
       <h2>{tmat.titulo}</h2>
-      <p className="panel-explicacion">{tmat.explicacion}</p>
-
       {alertaArriba && (
         <Alert variant={alertaArriba.variant}>
           <strong>{alertaArriba.titulo}</strong> {alertaArriba.detalle}

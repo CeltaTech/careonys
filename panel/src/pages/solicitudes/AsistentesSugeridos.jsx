@@ -100,7 +100,6 @@ export function AsistentesSugeridos({ solicitud, onAsignar }) {
   return (
     <section className="panel-resultado-calculo">
       <h3>{ts.titulo}</h3>
-      <p className="panel-lateral-subtitulo">{ts.explicacion}</p>
 
       {/* El mismo mapa de la pantalla del plantel, acá con el lugar de la Solicitud marcado: los
           puntos quedan ordenados del más cerca al más lejos. Cuando la Solicitud todavía no tiene

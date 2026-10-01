@@ -81,8 +81,6 @@ export function PasarAlCatalogoModal({ asistentes, onClose, onGuardado }) {
     <div className="panel-modal-fondo" onClick={onClose}>
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
         <h2 id={modal.idTitulo}>{t.asistentes.pasar_al_catalogo.titulo}</h2>
-        <p className="panel-explicacion">{t.asistentes.pasar_al_catalogo.explicacion}</p>
-
         {error && <Alert variant="error">{error}</Alert>}
 
         <table className="panel-tabla">

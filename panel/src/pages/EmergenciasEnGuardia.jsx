@@ -60,8 +60,6 @@ export function EmergenciasEnGuardia() {
   return (
     <div>
       <h1>{t.emergencias.titulo}</h1>
-      <p className="panel-explicacion">{t.emergencias.explicacion}</p>
-
       {estado === 'error' && error && <Alert variant="error">{error}</Alert>}
 
       <div className="panel-filtros">

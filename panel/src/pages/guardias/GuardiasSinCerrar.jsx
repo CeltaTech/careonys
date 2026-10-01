@@ -102,7 +102,6 @@ export function GuardiasSinCerrar({ onCerrada }) {
     <div className="dashboard-seccion">
       <div className="dashboard-seccion-header">
         <h2 className="dashboard-seccion-titulo">{t.guardias_sin_cerrar.titulo}</h2>
-        <p className="dashboard-seccion-subtitulo">{t.guardias_sin_cerrar.subtitulo}</p>
       </div>
 
       {/* `vacio` va en falso a propósito: el cartel de vacío que trae EstadoLista invita a crear

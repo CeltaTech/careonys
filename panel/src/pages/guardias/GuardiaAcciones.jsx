@@ -411,7 +411,6 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
         {puedeAnotarHorasExtra && (
           <div className="panel-resultado-calculo">
             <h3>{t.guardias.detalle.horas_extra_titulo}</h3>
-            <p className="panel-explicacion">{t.guardias.detalle.horas_extra_ayuda}</p>
             <FormField
               label={t.guardias.detalle.horas_extra_cantidad}
               name="horas_extra"

@@ -77,7 +77,6 @@ export function EvaluacionesTab({ asistente }) {
       recargar={cargar}
     >
       <>
-        <p className="panel-explicacion">{t.asistentes.evaluaciones.donde_se_cambia}</p>
         {datos.tope && (
           <p className="panel-explicacion">{con(t.asistentes.evaluaciones.tope, { n: TOPE })}</p>
         )}

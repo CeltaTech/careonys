@@ -89,8 +89,6 @@ export function ConfiguracionAplicaciones() {
   return (
     <div>
       <h2>{t.configuracion.visibilidad_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.visibilidad_de_fabrica}</p>
-
       <EstadoLista
         estado={estado}
         error={error}

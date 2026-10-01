@@ -156,13 +156,10 @@ export function TiposAsistenteTab() {
   return (
     <div>
       <h2>{t.configuracion.tipos_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.tipos_explicacion}</p>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
 
       <div className="panel-detalle">
         <h3>{t.matricula.modo_titulo}</h3>
-        <p className="panel-explicacion">{t.matricula.modo_explicacion}</p>
-
         {estadoModo === 'cargando' && (
           <p className="estado-cargando" role="status">
             {t.comun.cargando}
@@ -339,7 +336,6 @@ function TareasDelTipo({ tipo, vias, prestadoraId }) {
   return (
     <div className="panel-tab-contenido" style={{ marginTop: '1.5rem' }}>
       <h2>{t.configuracion.tareas_titulo} · {nombreTipo(tipo, t)}</h2>
-      <p className="panel-explicacion">{t.configuracion.tareas_explicacion}</p>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
 
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
@@ -368,7 +364,6 @@ function TareasDelTipo({ tipo, vias, prestadoraId }) {
       </EstadoLista>
 
       <h3 style={{ marginTop: '1.5rem' }}>{t.configuracion.tareas_vedadas_titulo}</h3>
-      <p className="panel-explicacion">{t.configuracion.tareas_vedadas_explicacion}</p>
       {vedadas.length > 0 && (
         <ul>
           {vedadas.map((via) => (

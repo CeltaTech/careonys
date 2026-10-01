@@ -252,8 +252,6 @@ export function RegistrarPapelFirmadoModal({ clienteId, instruccionId, onClose, 
     <div className="panel-modal-fondo" onClick={onClose}>
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
         <h2 id={modal.idTitulo}>{t.clientes.personas autorizadas.papel_titulo}</h2>
-        <p className="panel-explicacion">{t.clientes.personas autorizadas.papel_explicacion}</p>
-
         {error && <Alert variant="error">{error}</Alert>}
 
         <FormField

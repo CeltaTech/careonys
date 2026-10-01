@@ -442,7 +442,6 @@ export function PerfilTab({ asistente, onActualizado }) {
           )}
 
           <h2>{t.modalidades.etiqueta}</h2>
-          <p className="panel-explicacion">{t.modalidades.ayuda}</p>
           {modalidadesPosibles.map((modalidad) => (
             <FormField
               key={modalidad}

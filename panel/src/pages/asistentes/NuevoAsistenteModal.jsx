@@ -113,7 +113,6 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
           <ElegirLugares valor={lugares} onChange={setLugares} deshabilitado={guardando} />
 
           <h3>{t.modalidades.etiqueta}</h3>
-          <p className="panel-explicacion">{t.modalidades.ayuda}</p>
           {modalidadesPosibles.map((modalidad) => (
             <FormField
               key={modalidad}

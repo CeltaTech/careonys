@@ -173,8 +173,6 @@ export function Evv() {
   return (
     <div>
       <h1>{t.evv.titulo}</h1>
-      <p className="panel-explicacion">{t.evv.explicacion}</p>
-
       <div className="panel-filtros">
         <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           {t.guardias.filtro_desde}

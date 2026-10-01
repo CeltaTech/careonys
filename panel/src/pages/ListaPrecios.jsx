@@ -31,8 +31,6 @@ export function ListaPrecios() {
   return (
     <div>
       <h1>{t.lista_precios.titulo}</h1>
-      <p className="panel-explicacion">{t.lista_precios.explicacion}</p>
-
       <div className="panel-filtros">
         <input
           type="text"

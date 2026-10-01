@@ -65,7 +65,6 @@ export function CertificadoTab({ asistente }) {
   return (
     <div>
       <h2>{t.asistentes.certificado.titulo}</h2>
-      <p className="panel-explicacion">{t.asistentes.certificado.explicacion}</p>
       {error && <Alert variant="error">{error}</Alert>}
 
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>

@@ -450,7 +450,6 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
 
               <section>
                 <h3>{tp.candidatos_titulo}</h3>
-                <p className="panel-lateral-subtitulo">{tp.candidatos_ayuda}</p>
 
                 {candidatos.length === 0 ? (
                   <p className="estado-vacio">{tp.sin_candidatos}</p>
@@ -498,7 +497,6 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
                               <li key={`a${i}`}>{con(ta[a.clave], a.valores)}</li>
                             ))}
                           </ul>
-                          <p>{ta.ayuda}</p>
                           <div className="avisos-asignacion-botones">
                             <Button
                               disabled={enCurso !== null}
@@ -540,7 +538,6 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
 
               <section>
                 <h3>{tp.invitar_titulo}</h3>
-                <p className="panel-lateral-subtitulo">{tp.invitar_ayuda}</p>
                 <label>
                   {tp.invitar_limite}
                   <input

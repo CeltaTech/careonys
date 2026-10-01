@@ -5,6 +5,7 @@ import { claseBadge } from '../lib/tonos';
 import { useSupabaseTable } from '../hooks/useSupabaseTable';
 import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
+import { Cabecera } from '../components/ui/Cabecera';
 import { SolicitudDetalle } from './SolicitudDetalle';
 
 const ESTADOS = ['nueva', 'en_gestion', 'asignada', 'cancelada', 'completada'];
@@ -29,7 +30,7 @@ export function Solicitudes() {
 
   return (
     <div>
-      <h1>{t.solicitudes.titulo}</h1>
+      <Cabecera titulo={t.solicitudes.titulo} />
 
       <div className="panel-filtros">
         <input

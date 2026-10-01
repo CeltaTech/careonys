@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
+import { Cabecera } from '../components/ui/Cabecera';
 import { supabase } from '../lib/supabaseClient';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
@@ -117,7 +118,7 @@ export function Auditoria() {
 
   return (
     <div>
-      <h1>{t.auditoria.titulo}</h1>
+      <Cabecera titulo={t.auditoria.titulo} />
 
       <EstadoLista
         estado={estado}

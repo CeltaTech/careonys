@@ -10,6 +10,7 @@ import { useCatalogoDeLugares } from '../hooks/useCatalogoDeLugares';
 import { clientesConSuLocalidad, filtrarClientes, localidadesConClientes } from '../lib/clientesPorLocalidad';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
+import { Cabecera } from '../components/ui/Cabecera';
 import { NuevaClienteModal } from './clientes/NuevaClienteModal';
 import { mensajeDeError } from '../lib/errores';
 
@@ -69,7 +70,9 @@ export function Clientes() {
 
   return (
     <div>
-      <h1>{t.clientes.titulo}</h1>
+      <Cabecera titulo={t.clientes.titulo}>
+        {puedeAltaManual && <Button onClick={() => setMostrarNueva(true)}>{t.clientes.nueva.titulo}</Button>}
+      </Cabecera>
 
       <div className="panel-filtros">
         <input
@@ -87,7 +90,6 @@ export function Clientes() {
             ))}
           </select>
         )}
-        {puedeAltaManual &&<Button onClick={() => setMostrarNueva(true)}>{t.clientes.nueva.titulo}</Button>}
       </div>
 
       {mostrarNueva && (
@@ -114,32 +116,37 @@ export function Clientes() {
           ) : undefined
         }
       >
-        <div className="lista-tarjetas">
-          {filasFiltradas.map((fam) => (
-            <div className="lista-tarjeta" key={fam.id}>
-              <div className="lista-tarjeta-header">
-                <div>
-                  <p className="lista-tarjeta-titulo">{fam.solicitudes?.nombre || '—'}</p>
-                  {/* Lo que se muestra son las localidades de sus Pacientes. Mientras no haya
-                      ninguna elegida queda lo que dijo quien llamó, que es lo único que se sabe
-                      de esa Cliente hasta que alguien señale el lugar en la lista. */}
-                  <p className="lista-tarjeta-subtitulo">
-                    {fam.nombresDeLugares.join(', ') || fam.solicitudes?.localidad || '—'}
-                  </p>
-                </div>
-                <span className="badge">{t.clientes.col_pacientes}: {fam.cuantosPacientes}</span>
-              </div>
-              <div className="lista-tarjeta-meta">
-                <span><strong>{t.clientes.col_telefono}:</strong> {fam.solicitudes?.telefono || '—'}</span>
-                <span><strong>{t.clientes.col_email}:</strong> {fam.solicitudes?.email || '—'}</span>
-                <span><strong>{t.clientes.col_fecha_alta}:</strong> {new Date(fam.created_at).toLocaleDateString(locale)}</span>
-              </div>
-              <div className="lista-tarjeta-acciones">
-                <Button variant="secondary" onClick={() => navigate(`/clientes/${fam.id}`)}>{t.comun.ver_detalle}</Button>
-              </div>
-            </div>
-          ))}
-        </div>
+        <table className="panel-tabla">
+          <thead>
+            <tr>
+              <th>{t.clientes.col_nombre}</th>
+              <th>{t.clientes.col_localidad}</th>
+              <th>{t.clientes.col_pacientes}</th>
+              <th>{t.clientes.col_telefono}</th>
+              <th>{t.clientes.col_email}</th>
+              <th>{t.clientes.col_fecha_alta}</th>
+              <th>{t.comun.detalle}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filasFiltradas.map((fam) => (
+              <tr key={fam.id}>
+                <td><strong>{fam.solicitudes?.nombre || '—'}</strong></td>
+                {/* Lo que se muestra son las localidades de sus Pacientes. Mientras no haya
+                    ninguna elegida queda lo que dijo quien llamó, que es lo único que se sabe
+                    de esa Cliente hasta que alguien señale el lugar en la lista. */}
+                <td>{fam.nombresDeLugares.join(', ') || fam.solicitudes?.localidad || '—'}</td>
+                <td>{fam.cuantosPacientes}</td>
+                <td>{fam.solicitudes?.telefono || '—'}</td>
+                <td>{fam.solicitudes?.email || '—'}</td>
+                <td>{new Date(fam.created_at).toLocaleDateString(locale)}</td>
+                <td>
+                  <Button variant="secondary" onClick={() => navigate(`/clientes/${fam.id}`)}>{t.comun.ver_detalle}</Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </EstadoLista>
     </div>
   );

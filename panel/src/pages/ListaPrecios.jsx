@@ -7,6 +7,7 @@ import { useSupabaseTable } from '../hooks/useSupabaseTable';
 import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
+import { Cabecera } from '../components/ui/Cabecera';
 import { formatearImporte } from '../lib/dinero';
 import { ListaPrecioDetalle } from './ListaPrecioDetalle';
 
@@ -30,7 +31,9 @@ export function ListaPrecios() {
 
   return (
     <div>
-      <h1>{t.lista_precios.titulo}</h1>
+      <Cabecera titulo={t.lista_precios.titulo}>
+        {esAdmin && <Button onClick={() => setCreandoNuevo(true)}>{t.lista_precios.nuevo}</Button>}
+      </Cabecera>
       <div className="panel-filtros">
         <input
           type="text"
@@ -39,7 +42,6 @@ export function ListaPrecios() {
           value={f.busqueda}
           onChange={(e) => set('busqueda', e.target.value)}
         />
-        {esAdmin && <Button onClick={() => setCreandoNuevo(true)}>{t.lista_precios.nuevo}</Button>}
       </div>
 
       <EstadoLista

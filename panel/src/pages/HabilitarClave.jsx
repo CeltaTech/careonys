@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
+import { Cabecera } from '../components/ui/Cabecera';
 import { useTelefonosEsperando } from '../context/TelefonosEsperandoContext';
 import { llamarApiPanel } from '../lib/apiPanel';
 import { mensajeDeError } from '../lib/errores';
@@ -103,7 +104,7 @@ export function HabilitarClave() {
 
   return (
     <div>
-      <h1>{t.habilitar_clave.titulo}</h1>
+      <Cabecera titulo={t.habilitar_clave.titulo} />
 
       <section>
         <h2>{t.habilitar_clave.pendientes_titulo}</h2>
@@ -113,7 +114,6 @@ export function HabilitarClave() {
           recargar={recargarEsperando}
           vacio={esperando.length === 0}
           mensajeVacio={t.habilitar_clave.pendientes_vacio}
-          ayudaVacio={t.habilitar_clave.pendientes_vacio_ayuda}
         >
           <table className="panel-tabla">
             <thead>

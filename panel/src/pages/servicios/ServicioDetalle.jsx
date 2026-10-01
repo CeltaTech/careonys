@@ -7,6 +7,7 @@ import { formatearImporte } from '../../lib/dinero';
 import { claseBadge } from '../../lib/tonos';
 import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
+import { Cabecera } from '../../components/ui/Cabecera';
 import { mensajeDeError } from '../../lib/errores';
 import { clienteDelServicio, contactosDeClientes } from '../../lib/clienteDelServicio';
 
@@ -30,6 +31,7 @@ export function ServicioDetalle() {
   const [nombresAsistente, setNombresAsistente] = useState({});
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
+  const [tab, setTab] = useState('cliente');
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -155,13 +157,21 @@ export function ServicioDetalle() {
   const cliente = clienteDelServicio(servicio, contactos);
   const contacto = cliente.contacto;
 
+  // Una pestaña por sección, con el mismo texto que antes llevaba el título de cada una.
+  const pestanas = [
+    ['cliente', t.servicios.detalle.bloque_cliente],
+    ['pacientes', t.servicios.detalle.bloque_pacientes],
+    ['prestaciones', t.servicios.detalle.bloque_prestaciones],
+    ['guardias', t.servicios.detalle.bloque_guardias],
+  ];
+
   return (
     <div>
-      <Button variant="secondary" onClick={() => navigate('/servicios')}>
-        {t.servicios.detalle.volver}
-      </Button>
-
-      <h1>{servicio.etiqueta || '—'}</h1>
+      <Cabecera titulo={servicio.etiqueta || '—'}>
+        <Button variant="secondary" onClick={() => navigate('/servicios')}>
+          {t.servicios.detalle.volver}
+        </Button>
+      </Cabecera>
       <p>
         <span className={claseBadge(servicio.estado)}>
           {traducirValor(t.servicios, `estado_${servicio.estado}`)}
@@ -173,120 +183,135 @@ export function ServicioDetalle() {
         <strong>{t.servicios.solo_lectura_titulo}.</strong> {t.servicios.solo_lectura_texto}
       </Alert>
 
-      <section className="dashboard-seccion">
-        <div className="dashboard-seccion-header">
-          <h2 className="dashboard-seccion-titulo">{t.servicios.detalle.bloque_cliente}</h2>
-        </div>
-        <p><strong>{contacto?.nombre || '—'}</strong></p>
-        <p>{contacto?.localidad || '—'}</p>
-        <p>{contacto?.telefono || '—'} · {contacto?.email || '—'}</p>
-        {/* Quién firmó la contratación. Es sobre él que pesan la responsabilidad legal y
-            comercial, y puede no ser nadie del Cliente. */}
-        <p><strong>{t.servicios.detalle.contratado_por}:</strong> {contratante || '—'}</p>
-        {cliente.ruta && (
-          <Button variant="secondary" onClick={() => navigate(cliente.ruta)}>
-            {t.servicios.detalle.cliente_ver}
-          </Button>
-        )}
-      </section>
+      <div className="panel-tabs" role="tablist">
+        {pestanas.map(([tabId, titulo]) => (
+          <button
+            key={tabId}
+            type="button"
+            role="tab"
+            aria-selected={tab === tabId}
+            className={`panel-tab ${tab === tabId ? 'panel-tab-activo' : ''}`}
+            onClick={() => setTab(tabId)}
+          >
+            {titulo}
+          </button>
+        ))}
+      </div>
 
-      <section className="dashboard-seccion">
-        <div className="dashboard-seccion-header">
-          <h2 className="dashboard-seccion-titulo">{t.servicios.detalle.bloque_pacientes}</h2>
-        </div>
-        {pacientesDelServicio.length === 0 ? (
-          <p className="estado-vacio">{t.servicios.detalle.sin_pacientes}</p>
-        ) : (
-          <ul>
-            {pacientesDelServicio.map((p) => (
-              <li key={p.id}>{p.nombre}</li>
-            ))}
-          </ul>
+      <div className="panel-tab-contenido">
+        {tab === 'cliente' && (
+          <section className="dashboard-seccion">
+            <p><strong>{contacto?.nombre || '—'}</strong></p>
+            <p>{contacto?.localidad || '—'}</p>
+            <p>{contacto?.telefono || '—'} · {contacto?.email || '—'}</p>
+            {/* Quién firmó la contratación. Es sobre él que pesan la responsabilidad legal y
+                comercial, y puede no ser nadie del Cliente. */}
+            <p><strong>{t.servicios.detalle.contratado_por}:</strong> {contratante || '—'}</p>
+            {cliente.ruta && (
+              <Button variant="secondary" onClick={() => navigate(cliente.ruta)}>
+                {t.servicios.detalle.cliente_ver}
+              </Button>
+            )}
+          </section>
         )}
-      </section>
 
-      <section className="dashboard-seccion">
-        <div className="dashboard-seccion-header">
-          <h2 className="dashboard-seccion-titulo">{t.servicios.detalle.bloque_prestaciones}</h2>
-        </div>
-        {prestaciones.length === 0 ? (
-          <p className="estado-vacio">{t.servicios.detalle.sin_prestaciones}</p>
-        ) : (
-          <table className="panel-tabla">
-            <thead>
-              <tr>
-                <th>{t.servicios.detalle.col_que}</th>
-                <th>{t.servicios.detalle.col_para_quien}</th>
-                <th>{t.servicios.detalle.col_precio}</th>
-                <th>{t.servicios.detalle.col_estado}</th>
-                <th>{t.servicios.detalle.col_nota}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {prestaciones.map((p) => (
-                <tr key={p.id}>
-                  <td>{p.tipo_servicio}</td>
-                  <td>{nombresPaciente[p.paciente_id] || '—'}</td>
-                  <td>{formatearImporte(p.precio_final, p.moneda, locale)}</td>
-                  <td>
-                    <span className={claseBadge(p.estado)}>
-                      {traducirValor(t.servicios, `estado_${p.estado}`)}
-                    </span>
-                  </td>
-                  <td>{p.nota || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {tab === 'pacientes' && (
+          <section className="dashboard-seccion">
+            {pacientesDelServicio.length === 0 ? (
+              <p className="estado-vacio">{t.servicios.detalle.sin_pacientes}</p>
+            ) : (
+              <ul>
+                {pacientesDelServicio.map((p) => (
+                  <li key={p.id}>{p.nombre}</li>
+                ))}
+              </ul>
+            )}
+          </section>
         )}
-      </section>
 
-      <section className="dashboard-seccion">
-        <div className="dashboard-seccion-header">
-          <h2 className="dashboard-seccion-titulo">{t.servicios.detalle.bloque_guardias}</h2>
-          <p className="dashboard-seccion-subtitulo">
-            {t.servicios.detalle.guardias_mostradas.replace('{n}', String(GUARDIAS_A_MOSTRAR))}
-          </p>
-        </div>
-        {guardias.length === 0 ? (
-          <p className="estado-vacio">{t.servicios.detalle.sin_guardias}</p>
-        ) : (
-          <table className="panel-tabla">
-            <thead>
-              <tr>
-                <th>{t.servicios.detalle.col_fecha}</th>
-                <th>{t.servicios.detalle.col_horario}</th>
-                <th>{t.servicios.detalle.col_para_quien}</th>
-                <th>{t.servicios.detalle.col_asistente}</th>
-                <th>{t.servicios.detalle.col_estado}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {guardias.map((g) => (
-                <tr key={g.id}>
-                  <td>{g.fecha}</td>
-                  <td>{g.hora_inicio?.slice(0, 5)} – {g.hora_fin?.slice(0, 5)}</td>
-                  <td>{nombresPaciente[g.paciente_id] || '—'}</td>
-                  <td>
-                    {g.asistente_id
-                      ? nombresAsistente[g.asistente_id] || '—'
-                      : t.servicios.detalle.sin_cubrir}
-                  </td>
-                  {/* El estado de la guardia se traduce con los textos de Guardias, no con
-                      unos propios: es el mismo estado, y tener dos listas de nombres para lo
-                      mismo termina con la misma guardia diciendo dos cosas distintas según
-                      la pantalla (regla 12). */}
-                  <td>
-                    <span className={claseBadge(g.estado)}>
-                      {traducirValor(t.guardias, `estado_${g.estado}`)}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {tab === 'prestaciones' && (
+          <section className="dashboard-seccion">
+            {prestaciones.length === 0 ? (
+              <p className="estado-vacio">{t.servicios.detalle.sin_prestaciones}</p>
+            ) : (
+              <table className="panel-tabla">
+                <thead>
+                  <tr>
+                    <th>{t.servicios.detalle.col_que}</th>
+                    <th>{t.servicios.detalle.col_para_quien}</th>
+                    <th>{t.servicios.detalle.col_precio}</th>
+                    <th>{t.servicios.detalle.col_estado}</th>
+                    <th>{t.servicios.detalle.col_nota}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {prestaciones.map((p) => (
+                    <tr key={p.id}>
+                      <td>{p.tipo_servicio}</td>
+                      <td>{nombresPaciente[p.paciente_id] || '—'}</td>
+                      <td>{formatearImporte(p.precio_final, p.moneda, locale)}</td>
+                      <td>
+                        <span className={claseBadge(p.estado)}>
+                          {traducirValor(t.servicios, `estado_${p.estado}`)}
+                        </span>
+                      </td>
+                      <td>{p.nota || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
         )}
-      </section>
+
+        {tab === 'guardias' && (
+          <section className="dashboard-seccion">
+            <div className="dashboard-seccion-header">
+              <p className="dashboard-seccion-subtitulo">
+                {t.servicios.detalle.guardias_mostradas.replace('{n}', String(GUARDIAS_A_MOSTRAR))}
+              </p>
+            </div>
+            {guardias.length === 0 ? (
+              <p className="estado-vacio">{t.servicios.detalle.sin_guardias}</p>
+            ) : (
+              <table className="panel-tabla">
+                <thead>
+                  <tr>
+                    <th>{t.servicios.detalle.col_fecha}</th>
+                    <th>{t.servicios.detalle.col_horario}</th>
+                    <th>{t.servicios.detalle.col_para_quien}</th>
+                    <th>{t.servicios.detalle.col_asistente}</th>
+                    <th>{t.servicios.detalle.col_estado}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {guardias.map((g) => (
+                    <tr key={g.id}>
+                      <td>{g.fecha}</td>
+                      <td>{g.hora_inicio?.slice(0, 5)} – {g.hora_fin?.slice(0, 5)}</td>
+                      <td>{nombresPaciente[g.paciente_id] || '—'}</td>
+                      <td>
+                        {g.asistente_id
+                          ? nombresAsistente[g.asistente_id] || '—'
+                          : t.servicios.detalle.sin_cubrir}
+                      </td>
+                      {/* El estado de la guardia se traduce con los textos de Guardias, no con
+                          unos propios: es el mismo estado, y tener dos listas de nombres para lo
+                          mismo termina con la misma guardia diciendo dos cosas distintas según
+                          la pantalla (regla 12). */}
+                      <td>
+                        <span className={claseBadge(g.estado)}>
+                          {traducirValor(t.guardias, `estado_${g.estado}`)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
+        )}
+      </div>
     </div>
   );
 }

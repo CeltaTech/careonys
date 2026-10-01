@@ -27,6 +27,7 @@ import { laOpcionAlcanzaLasModalidades } from '../lib/modalidades';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { AvisoEscalasProvisorias } from '../components/AvisoEscalasProvisorias';
 import { Alert } from '../components/ui/Alert';
+import { Cabecera } from '../components/ui/Cabecera';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { useModalAccesible } from '../hooks/useModalAccesible';
@@ -130,10 +131,7 @@ export function PagosAsistentes() {
 
   return (
     <div>
-      <h1>{t.pagos_asistentes.titulo}</h1>
-      <Alert variant="info">
-        <strong>{t.pagos_asistentes.aviso_titulo}.</strong> {t.pagos_asistentes.aviso_texto}
-      </Alert>
+      <Cabecera titulo={t.pagos_asistentes.titulo} />
 
       {tabsVisibles.length > 1 && (
         <div className="panel-tabs">
@@ -239,12 +237,10 @@ function LiquidacionesTab({ esAdmin }) {
           <option value="pendiente">{t.pagos_asistentes.estado_pendiente}</option>
           <option value="pagada">{t.pagos_asistentes.estado_pagada}</option>
         </select>
-        {esAdmin ? (
+        {esAdmin && (
           <Button onClick={generar} disabled={generando || estado === 'cargando'}>
             {generando ? t.pagos_asistentes.generando : t.pagos_asistentes.generar}
           </Button>
-        ) : (
-          <span className="panel-explicacion">{t.pagos_asistentes.solo_administracion}</span>
         )}
       </div>
 

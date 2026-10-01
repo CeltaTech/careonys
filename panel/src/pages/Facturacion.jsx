@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
+import { Cabecera } from '../components/ui/Cabecera';
 import { traducirValor } from '../i18n/valores';
 import { useConfirmarDestructivo } from '../context/ConfirmacionContext';
 import { usePermisos } from '../context/PermisosContext';
@@ -305,20 +306,19 @@ export function Facturacion() {
 
   return (
     <div>
-      <h1>{t.facturacion.titulo}</h1>
-      <Alert variant="info">
-        <strong>{t.facturacion.aviso_titulo}.</strong> {t.facturacion.aviso_texto}
-      </Alert>
+      <Cabecera titulo={t.facturacion.titulo}>
+        {sigue && (
+          <Button onClick={handleGenerar} disabled={generando}>
+            {generando ? t.facturacion.generando : t.facturacion.generar}
+          </Button>
+        )}
+      </Cabecera>
 
       {error && estado !== 'error' && <Alert variant="error">{error}</Alert>}
       {mensajeGeneracion && <Alert variant="info">{mensajeGeneracion}</Alert>}
 
       {!sigue && (
         <>
-          <Alert variant="info">
-            <strong>{t.facturacion.cobranza_externa_titulo}.</strong> {t.facturacion.cobranza_externa_texto}
-          </Alert>
-
           {!veElEstadoDeCuenta && (
             <p className="panel-explicacion">{t.facturacion.estado_de_cuenta_reservado}</p>
           )}
@@ -405,9 +405,6 @@ export function Facturacion() {
           {t.facturacion.col_vencimiento}
           <input type="date" value={vencimiento} onChange={(e) => setVencimiento(e.target.value)} />
         </label>
-        <Button onClick={handleGenerar} disabled={generando}>
-          {generando ? t.facturacion.generando : t.facturacion.generar}
-        </Button>
         <Button variant="secondary" onClick={handleBajarParaFacturar} disabled={intercambiando}>
           {t.facturacion.exportar}
         </Button>

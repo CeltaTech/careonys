@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
+import { Cabecera } from '../components/ui/Cabecera';
 import { llamarApiPanel } from '../lib/apiPanel';
 import { mensajeDeError } from '../lib/errores';
 import { EstadoLista } from '../components/layout/EstadoLista';
@@ -26,7 +27,7 @@ export function CuentaSegura() {
 
   return (
     <div>
-      <h1>{t.cuenta_segura.titulo}</h1>
+      <Cabecera titulo={t.cuenta_segura.titulo} />
 
       <EstadoLista estado={estado} error={error} recargar={recargar}>
         {datos && (

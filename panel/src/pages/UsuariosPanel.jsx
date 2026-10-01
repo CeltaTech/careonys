@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
+import { Cabecera } from '../components/ui/Cabecera';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
@@ -61,12 +62,11 @@ export function UsuariosPanel() {
 
   return (
     <div>
-      <h1>{t.usuarios_panel.titulo}</h1>
-      <div className="panel-filtros">
+      <Cabecera titulo={t.usuarios_panel.titulo}>
         <Button onClick={() => setCreandoNuevo(true)}>
           {t.usuarios_panel.nuevo_coordinador}
         </Button>
-      </div>
+      </Cabecera>
 
       <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && usuarios.length === 0} recargar={recargar}>
         <table className="panel-tabla">
@@ -185,7 +185,6 @@ function NuevoUsuarioPanel({ onClose, onCreado }) {
         <FormField label={t.usuarios_panel.col_telefono} name="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
         <h3>{t.configuracion.lugares_alcance_titulo}</h3>
         <ElegirLugares valor={lugares} onChange={setLugares} deshabilitado={guardando} />
-        <p className="panel-explicacion">{t.usuarios_panel.aviso_password_temporal}</p>
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>{t.comun.cancelar}</Button>
           <Button onClick={handleGuardar} disabled={guardando || !email || !nombre}>

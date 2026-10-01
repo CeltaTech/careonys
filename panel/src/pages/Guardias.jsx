@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
+import { Cabecera } from '../components/ui/Cabecera';
 import { supabase } from '../lib/supabaseClient';
 import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
@@ -156,7 +157,9 @@ export function Guardias() {
 
   return (
     <div>
-      <h1>{t.guardias.titulo}</h1>
+      <Cabecera titulo={t.guardias.titulo}>
+        <Button onClick={() => setMostrarNueva(true)}>{t.guardias.nueva}</Button>
+      </Cabecera>
 
       {/* Va arriba de todo y antes de los filtros a propósito: es lo que hay que resolver, y no
           depende del rango de fechas de abajo. Trae sus propios datos, mirando hacia atrás sin
@@ -188,7 +191,6 @@ export function Guardias() {
           />
           {t.guardias.cobertura_solo_huecos}
         </label>
-        <Button onClick={() => setMostrarNueva(true)}>{t.guardias.nueva}</Button>
       </div>
 
       <div className="dashboard-seccion">

@@ -4,6 +4,7 @@ import { Cabecera } from '../components/ui/Cabecera';
 import { supabase } from '../lib/supabaseClient';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
+import '../styles/molde-paginas.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -120,63 +121,75 @@ export function Auditoria() {
     <div>
       <Cabecera titulo={t.auditoria.titulo} />
 
-      <EstadoLista
-        estado={estado}
-        error={error}
-        vacio={estado === 'listo' && eventos.length === 0}
-        recargar={recargar}
-      >
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.auditoria.col_fecha}</th>
-              <th>{t.auditoria.col_admin}</th>
-              <th>{t.auditoria.col_prestadora}</th>
-              <th>{t.auditoria.col_evento}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {eventos.map((evento) => (
-              <tr key={evento.id}>
-                <td>{new Date(evento.created_at).toLocaleString(locale)}</td>
-                <td>{evento.usuarios?.nombre || '—'}</td>
-                <td>{evento.prestadoras?.nombre_fantasia || '—'}</td>
-                <td>{descripcionEvento(evento)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </EstadoLista>
+      <div className="molde-pila">
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.auditoria.titulo}</h2>
+            {estado === 'listo' && <span className="panel-mini">{eventos.length}</span>}
+          </div>
+          <EstadoLista
+            estado={estado}
+            error={error}
+            vacio={estado === 'listo' && eventos.length === 0}
+            recargar={recargar}
+          >
+            <table className="panel-tabla">
+              <thead>
+                <tr>
+                  <th>{t.auditoria.col_fecha}</th>
+                  <th>{t.auditoria.col_admin}</th>
+                  <th>{t.auditoria.col_prestadora}</th>
+                  <th>{t.auditoria.col_evento}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {eventos.map((evento) => (
+                  <tr key={evento.id}>
+                    <td className="panel-mini">{new Date(evento.created_at).toLocaleString(locale)}</td>
+                    <td><b>{evento.usuarios?.nombre || '—'}</b></td>
+                    <td>{evento.prestadoras?.nombre_fantasia || '—'}</td>
+                    <td>{descripcionEvento(evento)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </EstadoLista>
+        </section>
 
-      <h2>{t.auditoria.actividad_titulo}</h2>
-
-      <EstadoLista
-        estado={estadoActividad}
-        error={errorActividad}
-        vacio={estadoActividad === 'listo' && actividad.length === 0}
-        recargar={recargarActividad}
-      >
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.auditoria.col_fecha}</th>
-              <th>{t.auditoria.col_admin}</th>
-              <th>{t.auditoria.col_accion}</th>
-              <th>{t.auditoria.col_que_cambio}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {actividad.map((fila) => (
-              <tr key={fila.id}>
-                <td>{new Date(fila.created_at).toLocaleString(locale)}</td>
-                <td>{fila.usuarios?.nombre || '—'}</td>
-                <td>{nombreDeLaAccion(fila)}</td>
-                <td>{queCambio(fila)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </EstadoLista>
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.auditoria.actividad_titulo}</h2>
+            {estadoActividad === 'listo' && <span className="panel-mini">{actividad.length}</span>}
+          </div>
+          <EstadoLista
+            estado={estadoActividad}
+            error={errorActividad}
+            vacio={estadoActividad === 'listo' && actividad.length === 0}
+            recargar={recargarActividad}
+          >
+            <table className="panel-tabla">
+              <thead>
+                <tr>
+                  <th>{t.auditoria.col_fecha}</th>
+                  <th>{t.auditoria.col_admin}</th>
+                  <th>{t.auditoria.col_accion}</th>
+                  <th>{t.auditoria.col_que_cambio}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {actividad.map((fila) => (
+                  <tr key={fila.id}>
+                    <td className="panel-mini">{new Date(fila.created_at).toLocaleString(locale)}</td>
+                    <td><b>{fila.usuarios?.nombre || '—'}</b></td>
+                    <td>{nombreDeLaAccion(fila)}</td>
+                    <td>{queCambio(fila)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </EstadoLista>
+        </section>
+      </div>
     </div>
   );
 }

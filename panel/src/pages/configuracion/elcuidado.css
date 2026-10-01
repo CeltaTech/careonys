@@ -1,0 +1,15 @@
+/* El lado derecho del título de una tarjeta de El cuidado cuando lleva un dato y un botón. */
+.cuidado-titulo-derecha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.cuidado-acciones-fila {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}

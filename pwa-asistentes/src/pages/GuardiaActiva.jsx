@@ -26,7 +26,7 @@ import CodigoDePresencia from '../components/CodigoDePresencia';
 function ListaDeTareas({ titulo, tareas, vacio }) {
   return (
     <>
-      <h2 style={{ marginTop: '1.5rem' }}>{titulo}</h2>
+      <h3>{titulo}</h3>
       {tareas.length === 0 ? (
         <div className="estado-vacio" role="status">{vacio}</div>
       ) : (
@@ -110,12 +110,12 @@ function DatosDelPaciente({ paciente, mostrarNombre, t }) {
   const idReportes = `reportes-anteriores-${paciente.id}`;
 
   return (
-    <div style={{ marginTop: '1rem' }}>
-      {mostrarNombre && <h2 className="guardia-card-paciente">{paciente.nombre}</h2>}
+    <section className="pwa-card">
+      {mostrarNombre && <h2>{paciente.nombre}</h2>}
 
       {veMedicacion && (
-        <div style={{ marginTop: '1rem' }}>
-          <h3 className="guardia-card-paciente">{t.medicacion.titulo}</h3>
+        <div>
+          <h3>{t.medicacion.titulo}</h3>
           {ordenesMedicacion === null && <div className="estado-cargando" role="status">{t.comun.cargando}</div>}
           {ordenesMedicacion?.length === 0 && (
             <div className="estado-vacio" role="status">{t.medicacion.sin_ordenes}</div>
@@ -139,7 +139,7 @@ function DatosDelPaciente({ paciente, mostrarNombre, t }) {
               distinguen por el nombre que tienen arriba; para quien escucha, todos dirían lo
               mismo, así que ahí el nombre va adentro del botón. */}
           <button
-            className="btn btn-secondary btn-full"
+            className="btn btn-secondary btn-full pwa-card-pie"
             onClick={verReportesAnteriores}
             aria-expanded={mostrandoReportes}
             aria-controls={idReportes}
@@ -151,7 +151,7 @@ function DatosDelPaciente({ paciente, mostrarNombre, t }) {
           >
             {t.guardia_activa.ver_reportes_anteriores}
           </button>
-          <div id={idReportes} style={mostrandoReportes ? { marginTop: '1rem' } : undefined}>
+          <div id={idReportes} className={mostrandoReportes ? 'pwa-card-pie' : undefined}>
             {mostrandoReportes && (
               <>
                 {reportes === null && <div className="estado-cargando" role="status">{t.comun.cargando}</div>}
@@ -168,7 +168,7 @@ function DatosDelPaciente({ paciente, mostrarNombre, t }) {
         </>
       )}
 
-    </div>
+    </section>
   );
 }
 
@@ -436,10 +436,11 @@ export default function GuardiaActiva() {
 
   return (
     <div>
-      <Link to="/guardias" className="btn btn-secondary" style={{ marginBottom: '1rem', fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
+      <Link to="/guardias" className="btn btn-volver">
         <span aria-hidden="true">←</span> {t.comun.volver}
       </Link>
 
+      <section className="pwa-card">
       <h1>{sonVarios ? t.guardia_activa.pacientes : `${t.guardia_activa.paciente}: ${pacientes[0]?.nombre ?? ''}`}</h1>
 
       {pacientes.length === 0 && <div className="estado-vacio" role="status">{t.guardias.sin_paciente}</div>}
@@ -475,6 +476,7 @@ export default function GuardiaActiva() {
       )}
 
       {advertencia && <div className="alert alert-alerta" role="status">{advertencia}</div>}
+      </section>
 
       {/* Lo que espera señal en este teléfono, y el motivo cuando el backend lo rechazó. El motivo
           se guardaba desde siempre y no se mostraba nunca: la persona veía «pendiente de enviar»
@@ -515,7 +517,6 @@ export default function GuardiaActiva() {
           className="btn btn-primary btn-full"
           onClick={() => setPasandoCheckin(true)}
           disabled={haciendoCheckin}
-          style={{ marginTop: '1.5rem' }}
         >
           {haciendoCheckin ? t.guardia_activa.haciendo_checkin : t.guardia_activa.hacer_checkin}
         </button>
@@ -538,11 +539,11 @@ export default function GuardiaActiva() {
       )}
 
       {(guardia.checkin_at || checkinPendiente) && !guardia.checkout_at && (
-        <>
+        <section className="pwa-card">
           <div className="guardia-timer">{tiempoTranscurrido(guardia.checkin_at || checkinPendiente.desde)}</div>
-          <p className="guardia-card-detalle" style={{ textAlign: 'center', marginTop: '-0.5rem' }}>
+          <div className="mini guardia-timer-pie">
             {t.guardia_activa.tiempo_transcurrido}
-          </p>
+          </div>
 
           {/* Un botón por cada persona que todavía no tiene su hoja. Con un solo Paciente se ve
               igual que siempre; con dos, el nombre está en el botón para que no haya que
@@ -553,8 +554,7 @@ export default function GuardiaActiva() {
                 <Link
                   key={p.id}
                   to={`/guardias/${id}/reporte/${p.id}`}
-                  className="btn btn-exito btn-full"
-                  style={{ marginTop: '1rem' }}
+                  className="btn btn-exito btn-full pwa-card-pie"
                 >
                   {sonVarios ? con(t.guardia_activa.cargar_reporte_de, { nombre: p.nombre }) : t.guardia_activa.cargar_reporte}
                 </Link>
@@ -569,7 +569,7 @@ export default function GuardiaActiva() {
               (tarea 66a). El pase por QR (pendiente #113) quedó enchufado más abajo, entre
               la pregunta de cierre y el cierre en sí. */}
           {reportesCompletos && cerradoPendiente && (
-            <div className="alert alert-info" role="status" style={{ marginTop: '1rem' }}>
+            <div className="alert alert-info pwa-card-pie" role="status">
               <span aria-hidden="true">⏳</span> {t.comun.pendiente_de_enviar}
             </div>
           )}
@@ -577,17 +577,17 @@ export default function GuardiaActiva() {
           {/* La advertencia de antes del intento y el rechazo de después son la misma regla, así que
               son un solo texto: el del motivo `continuidad` que manda el backend. */}
           {reportesCompletos && !cerradoPendiente && guardia.checkout_bloqueado && (
-            <div className="alert alert-alerta" role="status" style={{ marginTop: '1rem' }}>{t.errores.motivos.continuidad}</div>
+            <div className="alert alert-alerta pwa-card-pie" role="status">{t.errores.motivos.continuidad}</div>
           )}
 
           {reportesCompletos && !cerradoPendiente && !guardia.checkout_bloqueado && !confirmandoCierre && (
-            <button className="btn btn-primary btn-full" onClick={() => setConfirmandoCierre(true)} style={{ marginTop: '1rem' }}>
+            <button className="btn btn-primary btn-full pwa-card-pie" onClick={() => setConfirmandoCierre(true)}>
               {t.guardia_activa.hacer_checkout}
             </button>
           )}
 
           {reportesCompletos && !cerradoPendiente && !guardia.checkout_bloqueado && confirmandoCierre && (
-            <div style={{ marginTop: '1rem' }}>
+            <div className="pwa-card-pie">
               <p className="guardia-card-detalle">{t.guardia_activa.cerrar_pregunta}</p>
 
               {!pasandoCheckout && (
@@ -596,10 +596,9 @@ export default function GuardiaActiva() {
                     {cerrando ? t.guardia_activa.haciendo_checkout : t.guardia_activa.cerrar_si}
                   </button>
                   <button
-                    className="btn btn-secondary btn-full"
+                    className="btn btn-secondary btn-full pwa-card-pie"
                     onClick={() => setConfirmandoCierre(false)}
                     disabled={cerrando}
-                    style={{ marginTop: '0.5rem' }}
                   >
                     {t.comun.cancelar}
                   </button>
@@ -626,7 +625,7 @@ export default function GuardiaActiva() {
               Se muestra a pedido y no siempre abierto, porque un código de estos se renueva
               solo cada pocos segundos y no tiene sentido tenerlo girando toda la guardia. */}
           {!pasandoCheckout && (
-            <div style={{ marginTop: '1.5rem' }}>
+            <div className="pwa-card-pie">
               <button
                 className="btn btn-secondary btn-full"
                 onClick={() => setMostrandoMiCodigo((abierto) => !abierto)}
@@ -679,7 +678,7 @@ export default function GuardiaActiva() {
               alCambiar={() => revisarPendientes()}
             />
           )}
-        </>
+        </section>
       )}
 
       {guardia.checkout_at && <div className="alert alert-info" role="status">{t.guardia_activa.cerrar_ok}</div>}
@@ -689,10 +688,10 @@ export default function GuardiaActiva() {
           discusión en la puerta cuando le piden algo que no es de su trabajo.
           Si esta persona no tiene tipo cargado no hay lista que mostrar, y no se dibuja nada. */}
       {tipo && (
-        <>
-          <p className="guardia-card-detalle" style={{ marginTop: '1.5rem' }}>
+        <section className="pwa-card">
+          <div className="mini">
             {t.guardia_activa.tipo}: {nombreTipo(tipo, t)}
-          </p>
+          </div>
           <ListaDeTareas
             titulo={t.guardia_activa.tareas_corresponde}
             tareas={tareas?.corresponde || []}
@@ -703,7 +702,7 @@ export default function GuardiaActiva() {
             tareas={tareas?.no_corresponde || []}
             vacio={t.guardia_activa.tareas_vacio}
           />
-        </>
+        </section>
       )}
 
       {pacientes.map((p) => (

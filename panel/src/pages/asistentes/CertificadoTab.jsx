@@ -8,6 +8,8 @@ import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
+import '../../styles/molde-paginas.css';
+import '../hojaDeTarjetas.css';
 
 export function CertificadoTab({ asistente }) {
   const { t, locale } = useLocale();
@@ -63,42 +65,54 @@ export function CertificadoTab({ asistente }) {
   const etapasCompletas = asistente.estado === 'activo';
 
   return (
-    <div>
-      <h2>{t.asistentes.certificado.titulo}</h2>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.asistentes.certificado.titulo}</h2>
+        {certificado && (
+          <span className={claseBadge(certificado.activo ? 'activo' : 'inactivo')}>
+            {certificado.activo ? t.asistentes.certificado.estado_activo : t.asistentes.certificado.estado_inactivo}
+          </span>
+        )}
+      </div>
       {error && <Alert variant="error">{error}</Alert>}
 
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         {certificado ? (
-          <div className="panel-card-verificacion">
-            <p>
-              <span className={claseBadge(certificado.activo ? 'activo' : 'inactivo')}>
-                {certificado.activo ? t.asistentes.certificado.estado_activo : t.asistentes.certificado.estado_inactivo}
-              </span>
-            </p>
-            <p>{t.asistentes.certificado.fecha_emision}: {new Date(certificado.fecha_emision).toLocaleDateString(locale)}</p>
-            {certificado.fecha_vencimiento && (
-              <p>{t.asistentes.certificado.fecha_vencimiento}: {new Date(certificado.fecha_vencimiento).toLocaleDateString(locale)}</p>
-            )}
+          <>
+            <div className="panel-grilla panel-columnas-3">
+              <div className="hoja-dato">
+                <div className="panel-mini">{t.asistentes.certificado.fecha_emision}</div>
+                <b>{new Date(certificado.fecha_emision).toLocaleDateString(locale)}</b>
+              </div>
+              {certificado.fecha_vencimiento && (
+                <div className="hoja-dato">
+                  <div className="panel-mini">{t.asistentes.certificado.fecha_vencimiento}</div>
+                  <b>{new Date(certificado.fecha_vencimiento).toLocaleDateString(locale)}</b>
+                </div>
+              )}
+            </div>
             {qrDataUrl && (
               <>
                 <img src={qrDataUrl} alt={t.asistentes.certificado.titulo} width={280} height={280} />
-                <div>
+                <div className="molde-acciones">
                   <a href={qrDataUrl} download={`certificado-${asistente.id}.png`}>
                     <Button variant="secondary">{t.asistentes.certificado.descargar_qr}</Button>
                   </a>
                 </div>
               </>
             )}
-          </div>
+          </>
         ) : (
-          <div>
+          <>
             {!etapasCompletas && <Alert variant="info">{t.asistentes.certificado.requiere_activo}</Alert>}
-            <Button onClick={emitirCertificado} disabled={emitiendo || !etapasCompletas}>
-              {emitiendo ? t.comun.guardando : t.asistentes.certificado.emitir}
-            </Button>
-          </div>
+            <div className="molde-acciones">
+              <Button onClick={emitirCertificado} disabled={emitiendo || !etapasCompletas}>
+                {emitiendo ? t.comun.guardando : t.asistentes.certificado.emitir}
+              </Button>
+            </div>
+          </>
         )}
       </EstadoLista>
-    </div>
+    </section>
   );
 }

@@ -5,6 +5,7 @@ import { mensajeDeError } from '../../lib/errores';
 import { Alert } from '../ui/Alert';
 import { Button } from '../ui/Button';
 import { FormField } from '../ui/FormField';
+import '../../styles/molde-paginas.css';
 
 /* EL TELÉFONO DE LA PROPIA CUENTA: verificarlo si ya está cargado, o cambiarlo por otro.
 
@@ -86,15 +87,17 @@ export function TelefonoDeLaCuenta({ datos, recargar }) {
   }
 
   const estadoDelNumero = !datos.telefonoCargado
-    ? t.cuenta_segura.sin_telefono
+    ? { texto: t.cuenta_segura.sin_telefono, clase: 'badge-neutro' }
     : datos.telefonoVerificado
-      ? t.cuenta_segura.telefono_verificado
-      : t.cuenta_segura.telefono_sin_verificar;
+      ? { texto: t.cuenta_segura.telefono_verificado, clase: 'badge-exito' }
+      : { texto: t.cuenta_segura.telefono_sin_verificar, clase: 'badge-atencion' };
 
   return (
-    <section className="dashboard-seccion">
-      <h2>{t.cuenta_segura.telefono_titulo}</h2>
-      <p>{estadoDelNumero}</p>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.cuenta_segura.telefono_titulo}</h2>
+        <span className={`badge ${estadoDelNumero.clase}`}>{estadoDelNumero.texto}</span>
+      </div>
 
       {errorCaja && <Alert variant="error">{errorCaja}</Alert>}
       {mensaje && <Alert variant="success">{mensaje}</Alert>}
@@ -102,51 +105,61 @@ export function TelefonoDeLaCuenta({ datos, recargar }) {
       {!datos.viaDeTelefono && <Alert variant="info">{t.cuenta_segura.sin_via}</Alert>}
 
       {datos.viaDeTelefono && datos.telefonoCargado && !datos.telefonoVerificado && (
-        <Button variant="secondary" onClick={pedirCodigo} disabled={pidiendo || enviando}>
-          {pidiendo ? t.comun.guardando : t.cuenta_segura.pedir_codigo}
-        </Button>
+        <div className="molde-acciones">
+          <Button variant="secondary" onClick={pedirCodigo} disabled={pidiendo || enviando}>
+            {pidiendo ? t.comun.guardando : t.cuenta_segura.pedir_codigo}
+          </Button>
+        </div>
       )}
 
       {datos.viaDeTelefono && hayCodigo && (
         <form onSubmit={confirmar}>
-          <FormField
-            label={t.cuenta_segura.codigo}
-            name="codigo"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            required
-            value={codigo}
-            onChange={(e) => setCodigo(e.target.value)}
-          />
-          <Button type="submit" disabled={enviando || !codigo}>
-            {enviando ? t.comun.guardando : t.cuenta_segura.confirmar}
-          </Button>
+          <div className="molde-formgrid">
+            <FormField
+              label={t.cuenta_segura.codigo}
+              name="codigo"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              required
+              value={codigo}
+              onChange={(e) => setCodigo(e.target.value)}
+            />
+          </div>
+          <div className="molde-acciones">
+            <Button type="submit" disabled={enviando || !codigo}>
+              {enviando ? t.comun.guardando : t.cuenta_segura.confirmar}
+            </Button>
+          </div>
         </form>
       )}
 
       <form onSubmit={cambiar}>
         <h3>{t.cuenta_segura.cambiar_telefono_titulo}</h3>
-        <FormField
-          label={t.cuenta_segura.telefono_nuevo}
-          name="telefono"
-          type="tel"
-          autoComplete="tel"
-          required
-          value={telefono}
-          onChange={(e) => setTelefono(e.target.value)}
-        />
-        <FormField
-          label={t.cuenta_segura.clave_actual}
-          name="claveActual"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={claveActual}
-          onChange={(e) => setClaveActual(e.target.value)}
-        />
-        <Button type="submit" disabled={enviando || !telefono || !claveActual}>
-          {enviando ? t.comun.guardando : t.cuenta_segura.cambiar_telefono}
-        </Button>
+        <div className="molde-formgrid">
+          <FormField
+            label={t.cuenta_segura.telefono_nuevo}
+            name="telefono"
+            type="tel"
+            autoComplete="tel"
+            required
+            value={telefono}
+            onChange={(e) => setTelefono(e.target.value)}
+          />
+          <FormField
+            label={t.cuenta_segura.clave_actual}
+            name="claveActual"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={claveActual}
+            onChange={(e) => setClaveActual(e.target.value)}
+          />
+        </div>
+        <div className="molde-acciones">
+          <Button type="submit" disabled={enviando || !telefono || !claveActual}>
+            {enviando ? t.comun.guardando : t.cuenta_segura.cambiar_telefono}
+          </Button>
+        </div>
       </form>
     </section>
   );

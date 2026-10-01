@@ -10,6 +10,7 @@ import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { con } from '../../lib/textos';
+import '../../styles/molde-paginas.css';
 
 /* Quién puede hacer qué: los permisos de cada rol y, para el rol técnico de
    CeltaTech, el segundo factor de ingreso. */
@@ -17,10 +18,10 @@ export function ConfiguracionAccesos() {
   const { usuario } = useAuth();
 
   return (
-    <>
+    <div className="molde-pila">
       <TabPermisos />
       {usuario?.rol === 'superadmin' && <TabSeguridad />}
-    </>
+    </div>
   );
 }
 
@@ -112,8 +113,11 @@ function TabPermisos() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.permisos_titulo}</h2>
+    <>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.permisos_titulo}</h2>
+      </div>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         <table className="panel-tabla">
@@ -127,7 +131,7 @@ function TabPermisos() {
           <tbody>
             {permisos.map((fila) => (
               <tr key={fila.accion}>
-                <td>{t.configuracion[`permisos_accion_${fila.accion}`]}</td>
+                <td><b>{t.configuracion[`permisos_accion_${fila.accion}`]}</b></td>
                 <td>
                   <select
                     value={fila.alcance}
@@ -157,33 +161,42 @@ function TabPermisos() {
                   )}
                 </td>
                 <td>
-                  <button onClick={() => guardar(fila)} disabled={guardandoAccion === fila.accion}>
+                  <Button variant="secondary" onClick={() => guardar(fila)} disabled={guardandoAccion === fila.accion}>
                     {guardandoAccion === fila.accion ? t.comun.guardando : t.comun.guardar}
-                  </button>
+                  </Button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </EstadoLista>
+    </section>
 
-      <h2>{t.configuracion.permisos_verificacion_titulo}</h2>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.permisos_verificacion_titulo}</h2>
+      </div>
       {politicaGuardada && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
-      <FormField
-        label={t.configuracion.permisos_verificacion_label}
-        name="politica_verificacion"
-        type="select"
-        value={politica}
-        onChange={(e) => { setPolitica(e.target.value); setPoliticaGuardada(false); }}
-      >
-        <option value="omitir">{t.configuracion.permisos_verificacion_omitir}</option>
-        <option value="pendiente">{t.configuracion.permisos_verificacion_pendiente}</option>
-        <option value="aprobado">{t.configuracion.permisos_verificacion_aprobado}</option>
-      </FormField>
-      <Button onClick={guardarPolitica} disabled={guardandoPolitica}>
-        {guardandoPolitica ? t.comun.guardando : t.comun.guardar}
-      </Button>
-    </div>
+      <div className="molde-formgrid">
+        <FormField
+          label={t.configuracion.permisos_verificacion_label}
+          name="politica_verificacion"
+          type="select"
+          value={politica}
+          onChange={(e) => { setPolitica(e.target.value); setPoliticaGuardada(false); }}
+        >
+          <option value="omitir">{t.configuracion.permisos_verificacion_omitir}</option>
+          <option value="pendiente">{t.configuracion.permisos_verificacion_pendiente}</option>
+          <option value="aprobado">{t.configuracion.permisos_verificacion_aprobado}</option>
+        </FormField>
+      </div>
+      <div className="molde-acciones">
+        <Button onClick={guardarPolitica} disabled={guardandoPolitica}>
+          {guardandoPolitica ? t.comun.guardando : t.comun.guardar}
+        </Button>
+      </div>
+    </section>
+    </>
   );
 }
 
@@ -256,8 +269,11 @@ function TabSeguridad() {
   }
 
   return (
-    <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
+    <section className="panel-tarjeta">
+    <div className="panel-tarjeta-titulo">
       <h2>{t.configuracion.seguridad_mfa_titulo}</h2>
+    </div>
+    <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
       <label className="panel-checkbox">
         <input type="checkbox" checked={mfaObligatorio} onChange={handleToggle} disabled={guardando} />
         {mfaObligatorio ? t.configuracion.seguridad_mfa_activo : t.configuracion.seguridad_mfa_inactivo}
@@ -284,5 +300,6 @@ function TabSeguridad() {
         </div>
       )}
     </EstadoLista>
+    </section>
   );
 }

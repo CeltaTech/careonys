@@ -6,9 +6,11 @@ import { useSupabaseTable } from '../hooks/useSupabaseTable';
 import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Cabecera } from '../components/ui/Cabecera';
+import { Button } from '../components/ui/Button';
+import { ESTADOS_DE_SOLICITUD as ESTADOS } from '../lib/estadosDeSolicitud';
 import { SolicitudDetalle } from './SolicitudDetalle';
-
-const ESTADOS = ['nueva', 'en_gestion', 'asignada', 'cancelada', 'completada'];
+import '../styles/molde-paginas.css';
+import './hojaDeTarjetas.css';
 
 export function Solicitudes() {
   const { t, locale } = useLocale();
@@ -28,10 +30,28 @@ export function Solicitudes() {
     });
   }, [filas, f]);
 
+  if (seleccionada) {
+    return (
+      <SolicitudDetalle
+        solicitud={seleccionada}
+        onClose={() => setSeleccionada(null)}
+        onActualizada={() => {
+          setSeleccionada(null);
+          recargar();
+        }}
+      />
+    );
+  }
+
   return (
     <div>
       <Cabecera titulo={t.solicitudes.titulo} />
 
+      <section className="panel-tarjeta hoja-desplazable">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.solicitudes.titulo}</h2>
+        {estado === 'listo' && <span className="panel-mini">{filasFiltradas.length}</span>}
+      </div>
       <div className="panel-filtros">
         <input
           type="text"
@@ -74,7 +94,7 @@ export function Solicitudes() {
           <tbody>
             {filasFiltradas.map((s) => (
               <tr key={s.id}>
-                <td>{s.nombre}</td>
+                <td><b>{s.nombre}</b></td>
                 <td>
                   <a href={linkWhatsapp(s.telefono)} target="_blank" rel="noreferrer">{s.telefono}</a>
                 </td>
@@ -88,24 +108,14 @@ export function Solicitudes() {
                   </span>
                 </td>
                 <td>
-                  <button onClick={() => setSeleccionada(s)}>{t.comun.ver_detalle}</button>
+                  <Button variant="secondary" onClick={() => setSeleccionada(s)}>{t.comun.ver_detalle}</Button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </EstadoLista>
-
-      {seleccionada && (
-        <SolicitudDetalle
-          solicitud={seleccionada}
-          onClose={() => setSeleccionada(null)}
-          onActualizada={() => {
-            setSeleccionada(null);
-            recargar();
-          }}
-        />
-      )}
+      </section>
     </div>
   );
 }

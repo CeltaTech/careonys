@@ -72,12 +72,11 @@ export default function BotonDeDictado({ t, locale, valor, alCambiar, campo, dis
     <>
       <button
         type="button"
-        className={`btn btn-secondary${escuchando ? ' dictado-escuchando' : ''}`}
+        className={`btn btn-secondary btn-dictado${escuchando ? ' dictado-escuchando' : ''}`}
         onClick={alternar}
         disabled={disabled}
         aria-pressed={escuchando}
         aria-label={`${escuchando ? tr.escuchando : tr.dictar}: ${campo}`}
-        style={{ fontSize: '0.85rem', padding: '0.4rem 0.9rem', marginTop: '0.4rem' }}
       >
         <span aria-hidden="true">🎤</span> {escuchando ? tr.escuchando : tr.dictar}
       </button>

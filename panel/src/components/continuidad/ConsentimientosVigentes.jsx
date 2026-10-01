@@ -5,6 +5,7 @@ import { EstadoLista } from '../layout/EstadoLista';
 import { diaDelMomento, horaDelMomento } from '../../lib/horarios';
 import { con } from '../../lib/textos';
 import { mensajeDeError } from '../../lib/errores';
+import '../../pages/seguimientoDeGuardias.css';
 
 /* LOS CONSENTIMIENTOS QUE TODAVÍA VALEN
 
@@ -61,7 +62,10 @@ export function ConsentimientosVigentes() {
 
   return (
     <>
-      <h2>{t.continuidad.consentimientos_titulo}</h2>
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.continuidad.consentimientos_titulo}</h2>
+        </div>
       <EstadoLista
         estado={estado}
         error={error}
@@ -70,14 +74,14 @@ export function ConsentimientosVigentes() {
         mensajeVacio={t.continuidad.consentimientos_vacio}
       >
         {filas.map((c) => (
-          <div key={c.id} className="panel-guardia-card guardia-ausente">
+          <div key={c.id} className="panel-fila-alerta seguimiento-fila">
             <div>
-              <strong>{t.continuidad.col_paciente}: {c.paciente_nombre}</strong>
-              <div>{t.continuidad.paciente_solo_quien}: {c.quien_consintio}</div>
-              <div>
+              <b>{t.continuidad.col_paciente}: {c.paciente_nombre}</b>
+              <span className="panel-mini">{t.continuidad.paciente_solo_quien}: {c.quien_consintio}</span>
+              <span className="panel-mini">
                 {t.continuidad.paciente_solo_medio}:{' '}
                 {t.continuidad[`paciente_solo_medio_${c.medio}`] ?? t.continuidad.paciente_solo_medio_desconocido}
-              </div>
+              </span>
               {/* Hasta cuándo vale, que es lo único que hay que mirar para saber si todavía
                   alcanza. Con día y hora: un plazo de ocho horas dicho sólo por el día no dice
                   nada. */}
@@ -87,11 +91,12 @@ export function ConsentimientosVigentes() {
                   hora: horaDelMomento(c.hasta_at, locale) || '—',
                 })}
               </div>
-              {c.nota && <div>{t.continuidad.paciente_solo_nota}: {c.nota}</div>}
+              {c.nota && <span className="panel-mini">{t.continuidad.paciente_solo_nota}: {c.nota}</span>}
             </div>
           </div>
         ))}
       </EstadoLista>
+      </section>
     </>
   );
 }

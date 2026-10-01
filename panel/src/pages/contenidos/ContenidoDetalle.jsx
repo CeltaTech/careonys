@@ -6,6 +6,7 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
+import '../../styles/molde-paginas.css';
 
 /* Una pieza de la biblioteca, para escribirla o cambiarla.
    ==========================================================================
@@ -74,51 +75,59 @@ export function ContenidoDetalle({ contenido, soloLectura, onClose, onGuardado }
 
         {error && <Alert variant="error">{error}</Alert>}
 
-        <FormField
-          label={t.contenidos.campo_titulo}
-          name="titulo"
-          value={titulo}
-          onChange={(e) => setTitulo(e.target.value)}
-          disabled={soloLectura}
-          required
-        />
+        <div className="molde-formgrid">
+          <div className="molde-ancho">
+            <FormField
+              label={t.contenidos.campo_titulo}
+              name="titulo"
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value)}
+              disabled={soloLectura}
+              required
+            />
+          </div>
 
-        <FormField
-          label={t.contenidos.campo_cuerpo}
-          name="cuerpo"
-          type="textarea"
-          rows={10}
-          value={cuerpo}
-          onChange={(e) => setCuerpo(e.target.value)}
-          disabled={soloLectura}
-          required
-        />
+          <div className="molde-ancho">
+            <FormField
+              label={t.contenidos.campo_cuerpo}
+              name="cuerpo"
+              type="textarea"
+              rows={10}
+              value={cuerpo}
+              onChange={(e) => setCuerpo(e.target.value)}
+              disabled={soloLectura}
+              required
+            />
+          </div>
 
-        <FormField
-          label={t.contenidos.campo_enlace}
-          name="enlace_url"
-          value={enlace}
-          onChange={(e) => setEnlace(e.target.value)}
-          disabled={soloLectura}
-        />
+          <FormField
+            label={t.contenidos.campo_enlace}
+            name="enlace_url"
+            value={enlace}
+            onChange={(e) => setEnlace(e.target.value)}
+            disabled={soloLectura}
+          />
 
-        <FormField
-          label={t.contenidos.campo_orden}
-          name="orden"
-          type="number"
-          value={orden}
-          onChange={(e) => setOrden(e.target.value)}
-          disabled={soloLectura}
-        />
+          <FormField
+            label={t.contenidos.campo_orden}
+            name="orden"
+            type="number"
+            value={orden}
+            onChange={(e) => setOrden(e.target.value)}
+            disabled={soloLectura}
+          />
 
-        <FormField
-          label={t.contenidos.campo_publicado}
-          name="publicado"
-          type="checkbox"
-          checked={publicado}
-          onChange={(e) => setPublicado(e.target.checked)}
-          disabled={soloLectura}
-        />
+          <div className="molde-ancho">
+            <FormField
+              label={t.contenidos.campo_publicado}
+              name="publicado"
+              type="checkbox"
+              checked={publicado}
+              onChange={(e) => setPublicado(e.target.checked)}
+              disabled={soloLectura}
+            />
+          </div>
+        </div>
 
         {/* Borrar es definitivo y por eso se pregunta antes, diciendo qué se va a hacer y cómo
             cancelar. No lo apunta nadie: acá no queda ningún vínculo colgando. */}

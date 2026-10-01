@@ -13,8 +13,8 @@ import EstadoDocumental from '../components/EstadoDocumental';
 // propósito: es la que evita la discusión en la puerta.
 function ListaDeTareas({ titulo, tareas, vacio }) {
   return (
-    <>
-      <h2 style={{ marginTop: '1.5rem' }}>{titulo}</h2>
+    <section className="pwa-card">
+      <h2>{titulo}</h2>
       {tareas.length === 0 ? (
         <div className="estado-vacio" role="status">{vacio}</div>
       ) : (
@@ -24,7 +24,7 @@ function ListaDeTareas({ titulo, tareas, vacio }) {
           ))}
         </ul>
       )}
-    </>
+    </section>
   );
 }
 
@@ -84,20 +84,22 @@ export default function AsistenteAsignado() {
   const { asistente, tipo, tareas, certificado, documentacion, evaluaciones, guardiaId } = datos;
 
   return (
-    <div>
-      <Link to={`/pacientes/${id}`} className="btn btn-secondary" style={{ marginBottom: '1rem', fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
+    <>
+      <Link to={`/pacientes/${id}`} className="btn btn-volver">
         <span aria-hidden="true">←</span> {t.comun.volver}
       </Link>
       <h1>{asistente.nombre}</h1>
-      {asistente.foto_url && <img src={asistente.foto_url} alt={asistente.nombre} style={{ width: '100%', maxWidth: 200, borderRadius: '12px', marginBottom: '1rem' }} />}
-      {tipo && (
-        <p className="guardia-card-detalle">
-          {t.asistente.tipo}: {nombreTipo(tipo, t)}
+      <section className="pwa-card">
+        {asistente.foto_url && <img src={asistente.foto_url} alt={asistente.nombre} className="foto-persona" />}
+        {tipo && (
+          <p className="pwa-card-dato">
+            {t.asistente.tipo}: {nombreTipo(tipo, t)}
+          </p>
+        )}
+        <p className="pwa-card-dato">
+          {certificado ? t.asistente.certificado_vigente : t.asistente.certificado_vencido}
         </p>
-      )}
-      <p className="guardia-card-detalle">
-        {certificado ? t.asistente.certificado_vigente : t.asistente.certificado_vencido}
-      </p>
+      </section>
 
       {documentacion && (
         <EstadoDocumental
@@ -125,38 +127,51 @@ export default function AsistenteAsignado() {
       )}
 
       {pantallaPermitida('escanearAsistente', seVe, puedeVer) && (
-        <Link to={`/pacientes/${id}/escanear-asistente`} className="btn btn-primary btn-full" style={{ marginTop: '1rem' }}>
-          {t.asistente.escanear_boton}
-        </Link>
+        <section className="pwa-card">
+          <div className="pwa-acciones pwa-acciones-sola">
+            <Link to={`/pacientes/${id}/escanear-asistente`} className="btn btn-primary btn-full">
+              {t.asistente.escanear_boton}
+            </Link>
+          </div>
+        </section>
       )}
 
       {califica && (
         <>
-          <h2 style={{ marginTop: '1.5rem' }}>{t.asistente.evaluaciones_titulo}</h2>
-          {evaluaciones.length === 0 ? (
-            <div className="estado-vacio" role="status">{t.asistente.sin_evaluaciones}</div>
-          ) : (
-            evaluaciones.map((e) => (
-              <div key={e.id} className="guardia-card">
-                {/* Las estrellas dibujadas no se leen: un lector de pantalla las nombraría una
-                    por una, o directamente las saltearía. Al lado va el mismo dato escrito,
-                    que no se ve pero sí se escucha. */}
-                <div className="guardia-card-paciente">
-                  <span aria-hidden="true">{'★'.repeat(e.estrellas)}{'☆'.repeat(Math.max(0, 5 - e.estrellas))}</span>
-                  <span className="solo-lectores-pantalla">{t.comun.puntaje_estrellas.replace('{n}', e.estrellas)}</span>
+          <section className="pwa-card">
+            <h2>{t.asistente.evaluaciones_titulo}</h2>
+            {evaluaciones.length === 0 ? (
+              <div className="estado-vacio" role="status">{t.asistente.sin_evaluaciones}</div>
+            ) : (
+              evaluaciones.map((e) => (
+                <div key={e.id} className="guardia-card">
+                  {/* Las estrellas dibujadas no se leen: un lector de pantalla las nombraría una
+                      por una, o directamente las saltearía. Al lado va el mismo dato escrito,
+                      que no se ve pero sí se escucha. */}
+                  <div className="guardia-card-paciente">
+                    <span aria-hidden="true">{'★'.repeat(e.estrellas)}{'☆'.repeat(Math.max(0, 5 - e.estrellas))}</span>
+                    <span className="solo-lectores-pantalla">{t.comun.puntaje_estrellas.replace('{n}', e.estrellas)}</span>
+                  </div>
+                  {e.comentario && <div className="guardia-card-detalle">{e.comentario}</div>}
                 </div>
-                {e.comentario && <div className="guardia-card-detalle">{e.comentario}</div>}
-              </div>
-            ))
-          )}
+              ))
+            )}
 
-          {guardiaId && !enviado && !puedeCalificar && (
-            <div style={{ marginTop: '1.5rem' }} className="alert">
-              {t.asistente.calificar_sin_acceso}
-            </div>
-          )}
+            {guardiaId && !enviado && !puedeCalificar && (
+              <div className="pwa-card-pie">
+                <div className="alert">
+                  {t.asistente.calificar_sin_acceso}
+                </div>
+              </div>
+            )}
+            {enviado && (
+              <div className="pwa-card-pie">
+                <div className="alert alert-info" role="status">{t.asistente.calificacion_enviada}</div>
+              </div>
+            )}
+          </section>
           {guardiaId && !enviado && puedeCalificar && (
-            <div style={{ marginTop: '1.5rem' }}>
+            <section className="pwa-card">
               <h2>{t.asistente.calificar_titulo}</h2>
               {/* Los cinco botones son un grupo con nombre, y cada uno dice en palabras cuánto
                   pone: "3 de 5 estrellas". El que quedó elegido se anuncia como apretado, así
@@ -189,11 +204,10 @@ export default function AsistenteAsignado() {
               <button className="btn btn-primary btn-full" disabled={enviando || estrellas < 1} onClick={enviarCalificacion}>
                 {enviando ? t.asistente.enviando_calificacion : t.asistente.enviar_calificacion}
               </button>
-            </div>
+            </section>
           )}
-          {enviado && <div className="alert alert-info" role="status">{t.asistente.calificacion_enviada}</div>}
         </>
       )}
-    </div>
+    </>
   );
 }

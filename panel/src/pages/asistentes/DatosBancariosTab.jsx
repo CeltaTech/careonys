@@ -3,6 +3,7 @@ import { useLocale } from '../../i18n/LocaleContext';
 import { llamarApiPanel } from '../../lib/apiPanel';
 import { mensajeDeError } from '../../lib/errores';
 import { EstadoLista } from '../../components/layout/EstadoLista';
+import '../hojaDeTarjetas.css';
 
 /* Dónde cobra este Asistente, para que la administración le pueda transferir.
    ==========================================================================
@@ -44,13 +45,16 @@ export function DatosBancariosTab({ asistente }) {
   }, [cargar]);
 
   return (
+    <section className="panel-tarjeta hoja-desplazable">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.asistentes.tabs.datos_bancarios}</h2>
+      </div>
     <EstadoLista
       estado={estado}
       error={error}
       vacio={estado === 'listo' && cuentas.length === 0}
       recargar={cargar}
       mensajeVacio={t.asistentes.datos_bancarios.sin_cuenta}
-      ayudaVacio={t.asistentes.datos_bancarios.sin_cuenta_ayuda}
     >
       <table className="panel-tabla">
         <thead>
@@ -65,7 +69,7 @@ export function DatosBancariosTab({ asistente }) {
           {cuentas.map((cuenta) => (
             <tr key={`${cuenta.pais}:${cuenta.clase}`}>
               <td>
-                {cuenta.sigla} {cuenta.identificador}
+                <b>{cuenta.sigla} {cuenta.identificador}</b>
               </td>
               <td>{cuenta.banco || '—'}</td>
               <td>{cuenta.titular || '—'}</td>
@@ -79,5 +83,6 @@ export function DatosBancariosTab({ asistente }) {
         </tbody>
       </table>
     </EstadoLista>
+    </section>
   );
 }

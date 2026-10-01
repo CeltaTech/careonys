@@ -37,6 +37,8 @@ import { llamarApiLugaresDeTrabajo } from '../../lib/apiLugaresDeTrabajo';
 import { generarCertificadoTrabajo, generarCertificadoRemuneracionesServicios, descargarPDF } from '../../lib/generarDocumentoCese';
 import { con } from '../../lib/textos';
 import { errorDeLaRespuesta, mensajeDeError } from '../../lib/errores';
+import '../../styles/molde-paginas.css';
+import '../hojaDeTarjetas.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -270,211 +272,243 @@ export function PerfilTab({ asistente, onActualizado }) {
   }
 
   return (
-    <div>
+    <div className="molde-pila">
       {error && <Alert variant="error">{error}</Alert>}
       {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
 
-      <FormField label={t.asistentes.col_nombre} name="nombre" value={form.nombre} onChange={(e) => set('nombre', e.target.value)} disabled={!puedeEditarIdentidad} />
-      <FormField label={t.asistentes.dni} name="dni" value={form.dni} onChange={(e) => set('dni', e.target.value)} disabled={!puedeEditarIdentidad} />
-      <FormField label={t.asistentes.telefono} name="telefono" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} disabled={!puedeEditarIdentidad} />
-      <FormField label={t.asistentes.email} name="email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} disabled={!puedeEditarIdentidad} />
-      {/* El domicilio solo lo ve la administración: la vista del Coordinador no trae esa
-          columna, así que ahí el campo aparecería siempre vacío por más que el dato exista. */}
-      {esAdmin && (
-        <CamposDeDomicilio
-          valor={form.domicilio}
-          alCambiar={(partes) => set('domicilio', partes)}
-          catalogo={catalogoDeLugares}
-          deshabilitado={!puedeEditarIdentidad}
-        />
-      )}
-
-      <dl className="panel-detalle-lista">
-        <dt>{t.asistentes.fecha_alta}</dt>
-        <dd>{new Date(asistente.fecha_alta).toLocaleDateString(locale)}</dd>
-      </dl>
-
-      <FormField
-        label={t.asistentes.col_tipo}
-        name="tipo_asistente_id"
-        type="select"
-        value={form.tipo_asistente_id}
-        onChange={(e) => set('tipo_asistente_id', e.target.value)}
-        disabled={!puedeEditarIdentidad}
-      >
-        <option value="">{t.asistentes.tipo_sin_asignar}</option>
-        {/* El tipo que tiene puesto puede haberse apagado después; igual se
-            muestra, para que no aparezca vacío ni se pierda al guardar. */}
-        {tiposAsistente.some((tipo) => tipo.id === form.tipo_asistente_id) === false && form.tipo_asistente_id && (
-          <option value={form.tipo_asistente_id}>{nombreTipo(tiposPorId.get(form.tipo_asistente_id), t)}</option>
-        )}
-        {tiposAsistente.map((tipo) => (
-          <option key={tipo.id} value={tipo.id}>{nombreTipo(tipo, t)}</option>
-        ))}
-      </FormField>
-
-      {/* Lo que estaba escrito a mano antes de que existiera el catálogo. Se
-          muestra solo mientras este Asistente no tenga tipo, para que quien
-          mira sepa qué decía la ficha y pueda elegir el que corresponde. */}
-      {!form.tipo_asistente_id && (asistente.especialidades || []).length > 0 && (
-        <p className="panel-explicacion">
-          {t.asistentes.tipo_antes_decia}: {asistente.especialidades.join(', ')}
-        </p>
-      )}
-
-      <h2>{t.configuracion.lugares_elegir_titulo}</h2>
-      <EstadoLista estado={estadoLugares} error={errorLugares} recargar={cargarLugares}>
-        <ElegirLugares
-          catalogo={catalogoDeLugares}
-          valor={lugares}
-          onChange={(siguiente) => { setLugares(siguiente); setGuardado(false); }}
-          deshabilitado={guardando || !puedeEditarIdentidad}
-        />
-      </EstadoLista>
-
-      {asistente.estado === 'cesado' ? (
-        <>
-          <FormField label={t.asistentes.col_estado} name="estado" type="select" value="cesado" disabled>
-            <option value="cesado">{t.asistentes.estado_cesado}</option>
-          </FormField>
-          <Alert variant="info">{t.asistentes.cese.ya_cesado}</Alert>
-        </>
-      ) : (
-        <FormField label={t.asistentes.col_estado} name="estado" type="select" value={form.estado} onChange={(e) => set('estado', e.target.value)} disabled={!puedeEditarIdentidad}>
-          <option value="activo">{t.asistentes.estado_activo}</option>
-          <option value="inactivo">{t.asistentes.estado_inactivo}</option>
-        </FormField>
-      )}
-
-      {esAdmin && (
-        <>
-          <h2>{t.asistentes.tabs.perfil_vinculo}</h2>
-          <FormField label={t.asistentes.col_vinculo} name="tipo_vinculo" type="select" value={form.tipo_vinculo} onChange={(e) => set('tipo_vinculo', e.target.value)}>
-            <option value="monotributo">{t.asistentes.vinculo_monotributo}</option>
-            <option value="dependencia">{t.asistentes.vinculo_dependencia}</option>
-          </FormField>
-
-          {form.tipo_vinculo === 'dependencia' && (
-            <FormField label={t.asistentes.categoria_cct} name="categoria_cct" value={form.categoria_cct} onChange={(e) => set('categoria_cct', e.target.value)} />
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.asistentes.tabs.perfil}</h2>
+        </div>
+        <div className="molde-formgrid">
+          <FormField label={t.asistentes.col_nombre} name="nombre" value={form.nombre} onChange={(e) => set('nombre', e.target.value)} disabled={!puedeEditarIdentidad} />
+          <FormField label={t.asistentes.dni} name="dni" value={form.dni} onChange={(e) => set('dni', e.target.value)} disabled={!puedeEditarIdentidad} />
+          <FormField label={t.asistentes.telefono} name="telefono" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} disabled={!puedeEditarIdentidad} />
+          <FormField label={t.asistentes.email} name="email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} disabled={!puedeEditarIdentidad} />
+          {/* El domicilio solo lo ve la administración: la vista del Coordinador no trae esa
+              columna, así que ahí el campo aparecería siempre vacío por más que el dato exista. */}
+          {esAdmin && (
+            <div className="molde-ancho">
+              <CamposDeDomicilio
+                valor={form.domicilio}
+                alCambiar={(partes) => set('domicilio', partes)}
+                catalogo={catalogoDeLugares}
+                deshabilitado={!puedeEditarIdentidad}
+              />
+            </div>
           )}
 
-          {/* Con qué se mide el trabajo ya no lo deduce el código del vínculo: lo elige quien
-              carga la ficha. Se muestra el valor de la unidad elegida y no los cuatro, porque
-              cuatro casillas de importe al lado invitan a llenar la que no se usa, y un valor
-              cargado que no se paga es una pregunta cada vez que alguien abre la ficha. */}
-          <FormField label={t.asistentes.unidad_medicion} name="unidad_medicion" type="select" value={form.unidad_medicion} onChange={(e) => set('unidad_medicion', e.target.value)}>
-            {UNIDADES_POSIBLES.map((unidad) => (
-              <option key={unidad} value={unidad}>{t.asistentes[`unidad_${unidad}`]}</option>
+          <FormField
+            label={t.asistentes.col_tipo}
+            name="tipo_asistente_id"
+            type="select"
+            value={form.tipo_asistente_id}
+            onChange={(e) => set('tipo_asistente_id', e.target.value)}
+            disabled={!puedeEditarIdentidad}
+          >
+            <option value="">{t.asistentes.tipo_sin_asignar}</option>
+            {/* El tipo que tiene puesto puede haberse apagado después; igual se
+                muestra, para que no aparezca vacío ni se pierda al guardar. */}
+            {tiposAsistente.some((tipo) => tipo.id === form.tipo_asistente_id) === false && form.tipo_asistente_id && (
+              <option value={form.tipo_asistente_id}>{nombreTipo(tiposPorId.get(form.tipo_asistente_id), t)}</option>
+            )}
+            {tiposAsistente.map((tipo) => (
+              <option key={tipo.id} value={tipo.id}>{nombreTipo(tipo, t)}</option>
             ))}
           </FormField>
 
-          <FormField
-            label={t.asistentes[COLUMNA_DEL_VALOR[form.unidad_medicion]]}
-            name={COLUMNA_DEL_VALOR[form.unidad_medicion]}
-            type="number"
-            value={form[COLUMNA_DEL_VALOR[form.unidad_medicion]]}
-            onChange={(e) => set(COLUMNA_DEL_VALOR[form.unidad_medicion], e.target.value)}
+          {asistente.estado === 'cesado' ? (
+            <FormField label={t.asistentes.col_estado} name="estado" type="select" value="cesado" disabled>
+              <option value="cesado">{t.asistentes.estado_cesado}</option>
+            </FormField>
+          ) : (
+            <FormField label={t.asistentes.col_estado} name="estado" type="select" value={form.estado} onChange={(e) => set('estado', e.target.value)} disabled={!puedeEditarIdentidad}>
+              <option value="activo">{t.asistentes.estado_activo}</option>
+              <option value="inactivo">{t.asistentes.estado_inactivo}</option>
+            </FormField>
+          )}
+
+          <div className="hoja-dato">
+            <div className="panel-mini">{t.asistentes.fecha_alta}</div>
+            <b>{new Date(asistente.fecha_alta).toLocaleDateString(locale)}</b>
+          </div>
+
+          {/* Lo que estaba escrito a mano antes de que existiera el catálogo. Se
+              muestra solo mientras este Asistente no tenga tipo, para que quien
+              mira sepa qué decía la ficha y pueda elegir el que corresponde. */}
+          {!form.tipo_asistente_id && (asistente.especialidades || []).length > 0 && (
+            <div className="molde-ancho panel-mini">
+              {t.asistentes.tipo_antes_decia}: {asistente.especialidades.join(', ')}
+            </div>
+          )}
+        </div>
+        {asistente.estado === 'cesado' && <Alert variant="info">{t.asistentes.cese.ya_cesado}</Alert>}
+      </section>
+
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.configuracion.lugares_elegir_titulo}</h2>
+        </div>
+        <EstadoLista estado={estadoLugares} error={errorLugares} recargar={cargarLugares}>
+          <ElegirLugares
+            catalogo={catalogoDeLugares}
+            valor={lugares}
+            onChange={(siguiente) => { setLugares(siguiente); setGuardado(false); }}
+            deshabilitado={guardando || !puedeEditarIdentidad}
           />
+        </EstadoLista>
+      </section>
 
-          {/* Se pregunta siempre, y no sólo a quien cobra por hora: una guardia con horas de más
-              se paga igual midan el trabajo como lo midan. Vacío quiere decir que no está
-              cargado, y entonces la liquidación avisa en vez de estimarlo. */}
-          <FormField label={t.asistentes.valor_hora_extra} name="valor_hora_extra" type="number" value={form.valor_hora_extra} onChange={(e) => set('valor_hora_extra', e.target.value)} />
+      {esAdmin && (
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.asistentes.tabs.perfil_vinculo}</h2>
+          </div>
+          <div className="molde-formgrid">
+            <FormField label={t.asistentes.col_vinculo} name="tipo_vinculo" type="select" value={form.tipo_vinculo} onChange={(e) => set('tipo_vinculo', e.target.value)}>
+              <option value="monotributo">{t.asistentes.vinculo_monotributo}</option>
+              <option value="dependencia">{t.asistentes.vinculo_dependencia}</option>
+            </FormField>
 
-          <FormField label={t.asistentes.horas_semanales} name="horas_semanales" type="number" value={form.horas_semanales} onChange={(e) => set('horas_semanales', e.target.value)} />
+            {form.tipo_vinculo === 'dependencia' && (
+              <FormField label={t.asistentes.categoria_cct} name="categoria_cct" value={form.categoria_cct} onChange={(e) => set('categoria_cct', e.target.value)} />
+            )}
 
-          {/* Cada cuánto cobra es otra cosa que con qué se le mide el trabajo, y por eso va en su
-              propio bloque. Lo normal es que cobre cada cuánto cobra el resto; esto está acá
-              porque con cada persona se arregla distinto, y hasta hoy no había dónde anotarlo.
-              No cambia ni un centavo: sólo desde qué día hasta qué día va su período. */}
-          <FormField
-            label={t.asistentes.frecuencia_pago_propia}
-            name="frecuencia_propia"
-            type="checkbox"
-            checked={form.frecuencia_propia}
-            onChange={(e) => set('frecuencia_propia', e.target.checked)}
-          />
+            {/* Con qué se mide el trabajo ya no lo deduce el código del vínculo: lo elige quien
+                carga la ficha. Se muestra el valor de la unidad elegida y no los cuatro, porque
+                cuatro casillas de importe al lado invitan a llenar la que no se usa, y un valor
+                cargado que no se paga es una pregunta cada vez que alguien abre la ficha. */}
+            <FormField label={t.asistentes.unidad_medicion} name="unidad_medicion" type="select" value={form.unidad_medicion} onChange={(e) => set('unidad_medicion', e.target.value)}>
+              {UNIDADES_POSIBLES.map((unidad) => (
+                <option key={unidad} value={unidad}>{t.asistentes[`unidad_${unidad}`]}</option>
+              ))}
+            </FormField>
 
-          {form.frecuencia_propia && (
-            <>
+            <FormField
+              label={t.asistentes[COLUMNA_DEL_VALOR[form.unidad_medicion]]}
+              name={COLUMNA_DEL_VALOR[form.unidad_medicion]}
+              type="number"
+              value={form[COLUMNA_DEL_VALOR[form.unidad_medicion]]}
+              onChange={(e) => set(COLUMNA_DEL_VALOR[form.unidad_medicion], e.target.value)}
+            />
+
+            {/* Se pregunta siempre, y no sólo a quien cobra por hora: una guardia con horas de más
+                se paga igual midan el trabajo como lo midan. Vacío quiere decir que no está
+                cargado, y entonces la liquidación avisa en vez de estimarlo. */}
+            <FormField label={t.asistentes.valor_hora_extra} name="valor_hora_extra" type="number" value={form.valor_hora_extra} onChange={(e) => set('valor_hora_extra', e.target.value)} />
+
+            <FormField label={t.asistentes.horas_semanales} name="horas_semanales" type="number" value={form.horas_semanales} onChange={(e) => set('horas_semanales', e.target.value)} />
+
+            {/* Cada cuánto cobra es otra cosa que con qué se le mide el trabajo, y por eso va en su
+                propio bloque. Lo normal es que cobre cada cuánto cobra el resto; esto está acá
+                porque con cada persona se arregla distinto, y hasta hoy no había dónde anotarlo.
+                No cambia ni un centavo: sólo desde qué día hasta qué día va su período. */}
+            <div className="molde-ancho">
               <FormField
-                label={t.asistentes.frecuencia_pago_cada_cuanto}
-                name="frecuencia_cada_cuanto"
-                type="select"
-                value={form.frecuencia.cada_cuanto}
-                onChange={(e) => setFrecuencia('cada_cuanto', e.target.value)}
-              >
-                {FRECUENCIAS_POSIBLES.map((cual) => (
-                  <option key={cual} value={cual}>
-                    {t.configuracion.frecuencia_pago_cada_cuanto_opciones[cual]}
-                  </option>
-                ))}
-              </FormField>
+                label={t.asistentes.frecuencia_pago_propia}
+                name="frecuencia_propia"
+                type="checkbox"
+                checked={form.frecuencia_propia}
+                onChange={(e) => set('frecuencia_propia', e.target.checked)}
+              />
+            </div>
 
-              {form.frecuencia.cada_cuanto === FRECUENCIAS.SEMANA && (
+            {form.frecuencia_propia && (
+              <>
                 <FormField
-                  label={t.asistentes.frecuencia_pago_dia_de_corte}
-                  name="frecuencia_dia_de_corte"
+                  label={t.asistentes.frecuencia_pago_cada_cuanto}
+                  name="frecuencia_cada_cuanto"
                   type="select"
-                  value={form.frecuencia.dia_de_corte}
-                  onChange={(e) => setFrecuencia('dia_de_corte', Number(e.target.value))}
+                  value={form.frecuencia.cada_cuanto}
+                  onChange={(e) => setFrecuencia('cada_cuanto', e.target.value)}
                 >
-                  {[1, 2, 3, 4, 5, 6, 7].map((dia) => (
-                    <option key={dia} value={dia}>
-                      {t.configuracion.frecuencia_pago_dias[dia]}
+                  {FRECUENCIAS_POSIBLES.map((cual) => (
+                    <option key={cual} value={cual}>
+                      {t.configuracion.frecuencia_pago_cada_cuanto_opciones[cual]}
                     </option>
                   ))}
                 </FormField>
-              )}
 
-              <FormField
-                label={t.asistentes.frecuencia_pago_dias_hasta_el_pago}
-                name="frecuencia_dias_hasta_el_pago"
-                type="number"
-                min={FRECUENCIA_QUE_SE_PUEDE_TOCAR.dias_hasta_el_pago.minimo}
-                max={FRECUENCIA_QUE_SE_PUEDE_TOCAR.dias_hasta_el_pago.maximo}
-                value={form.frecuencia.dias_hasta_el_pago}
-                onChange={(e) =>
-                  setFrecuencia('dias_hasta_el_pago', e.target.value === '' ? '' : Number(e.target.value))
-                }
-              />
-            </>
-          )}
+                {form.frecuencia.cada_cuanto === FRECUENCIAS.SEMANA && (
+                  <FormField
+                    label={t.asistentes.frecuencia_pago_dia_de_corte}
+                    name="frecuencia_dia_de_corte"
+                    type="select"
+                    value={form.frecuencia.dia_de_corte}
+                    onChange={(e) => setFrecuencia('dia_de_corte', Number(e.target.value))}
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7].map((dia) => (
+                      <option key={dia} value={dia}>
+                        {t.configuracion.frecuencia_pago_dias[dia]}
+                      </option>
+                    ))}
+                  </FormField>
+                )}
 
-          <h2>{t.modalidades.etiqueta}</h2>
-          {modalidadesPosibles.map((modalidad) => (
-            <FormField
-              key={modalidad}
-              label={t.modalidades[modalidad]}
-              name={`modalidad_${modalidad}`}
-              type="checkbox"
-              checked={form.modalidades.includes(modalidad)}
-              onChange={() => alternarModalidad(modalidad)}
-            />
-          ))}
-        </>
+                <FormField
+                  label={t.asistentes.frecuencia_pago_dias_hasta_el_pago}
+                  name="frecuencia_dias_hasta_el_pago"
+                  type="number"
+                  min={FRECUENCIA_QUE_SE_PUEDE_TOCAR.dias_hasta_el_pago.minimo}
+                  max={FRECUENCIA_QUE_SE_PUEDE_TOCAR.dias_hasta_el_pago.maximo}
+                  value={form.frecuencia.dias_hasta_el_pago}
+                  onChange={(e) =>
+                    setFrecuencia('dias_hasta_el_pago', e.target.value === '' ? '' : Number(e.target.value))
+                  }
+                />
+              </>
+            )}
+          </div>
+        </section>
       )}
 
-      <Button onClick={guardar} disabled={guardando || !puedeEditarIdentidad}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
-
       {esAdmin && (
-        <>
-          {mensajeReenvio && <Alert variant={mensajeReenvio.tipo}>{mensajeReenvio.texto}</Alert>}
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.modalidades.etiqueta}</h2>
+          </div>
+          <div className="molde-formgrid">
+            {modalidadesPosibles.map((modalidad) => (
+              <FormField
+                key={modalidad}
+                label={t.modalidades[modalidad]}
+                name={`modalidad_${modalidad}`}
+                type="checkbox"
+                checked={form.modalidades.includes(modalidad)}
+                onChange={() => alternarModalidad(modalidad)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {esAdmin && mensajeReenvio && <Alert variant={mensajeReenvio.tipo}>{mensajeReenvio.texto}</Alert>}
+      <div className="molde-acciones">
+        <Button onClick={guardar} disabled={guardando || !puedeEditarIdentidad}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+        {esAdmin && (
           <Button variant="secondary" onClick={reenviarInvitacion} disabled={reenviando}>
             {reenviando ? t.comun.reenviando_invitacion : t.comun.reenviar_invitacion}
           </Button>
+        )}
+      </div>
 
-          <h2>{t.asistentes.documentos.titulo}</h2>
-          <Button variant="secondary" onClick={descargarCertificadoTrabajo}>
-            {t.asistentes.documentos.certificado_trabajo}
-          </Button>
-          <Button variant="secondary" onClick={descargarCertificadoRemuneraciones}>
-            {t.asistentes.documentos.certificado_remuneraciones}
-          </Button>
-
-          <DocumentosVencimiento asistenteId={asistente.id} />
-        </>
+      {esAdmin && (
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.asistentes.documentos.titulo}</h2>
+          </div>
+          <div className="molde-acciones">
+            <Button variant="secondary" onClick={descargarCertificadoTrabajo}>
+              {t.asistentes.documentos.certificado_trabajo}
+            </Button>
+            <Button variant="secondary" onClick={descargarCertificadoRemuneraciones}>
+              {t.asistentes.documentos.certificado_remuneraciones}
+            </Button>
+          </div>
+        </section>
       )}
+
+      {esAdmin && <DocumentosVencimiento asistenteId={asistente.id} />}
     </div>
   );
 }
@@ -587,8 +621,10 @@ function DocumentosVencimiento({ asistenteId }) {
   }
 
   return (
-    <>
-      <h2>{t.asistentes.documentos.vencimientos_titulo}</h2>
+    <section className="panel-tarjeta hoja-desplazable">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.asistentes.documentos.vencimientos_titulo}</h2>
+      </div>
       {error && <Alert variant="error">{error}</Alert>}
       <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && tipos.length === 0} recargar={recargar} mensajeVacio={t.asistentes.documentos.vencimientos_sin_tipos}>
         <table className="panel-tabla">
@@ -603,7 +639,7 @@ function DocumentosVencimiento({ asistenteId }) {
           <tbody>
             {tipos.map((tipo) => (
               <tr key={tipo.id}>
-                <td>{tipo.nombre}</td>
+                <td><b>{tipo.nombre}</b></td>
                 <td>
                   {tipo.requiere_vencimiento ? (
                     <input
@@ -627,14 +663,14 @@ function DocumentosVencimiento({ asistenteId }) {
                     aria-label={con(t.comun.campo_de_fila, { campo: t.asistentes.documentos.vencimientos_col_papel, nombre: tipo.nombre })}
                   />
                   {rutas[tipo.id] && (
-                    <button onClick={() => mirarPapel(tipo.id)} disabled={abriendoTipoId === tipo.id}>
+                    <button type="button" className="panel-enlace" onClick={() => mirarPapel(tipo.id)} disabled={abriendoTipoId === tipo.id}>
                       {t.asistentes.documentos.papel_mirar}
                     </button>
                   )}
                 </td>
                 <td>
                   {tipo.requiere_vencimiento && (
-                    <button onClick={() => guardarVencimiento(tipo.id)} disabled={guardandoTipoId === tipo.id}>
+                    <button type="button" className="panel-enlace" onClick={() => guardarVencimiento(tipo.id)} disabled={guardandoTipoId === tipo.id}>
                       {guardandoTipoId === tipo.id ? t.comun.guardando : t.comun.guardar}
                     </button>
                   )}
@@ -644,6 +680,6 @@ function DocumentosVencimiento({ asistenteId }) {
           </tbody>
         </table>
       </EstadoLista>
-    </>
+    </section>
   );
 }

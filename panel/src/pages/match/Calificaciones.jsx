@@ -7,6 +7,7 @@ import { Cabecera } from '../../components/ui/Cabecera';
 import { Estrellas } from '../../components/ui/Estrellas';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
+import '../hojaDeTarjetas.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -70,6 +71,11 @@ export function MatchCalificaciones() {
       <Cabecera titulo={t.match.calificaciones_titulo} />
       {error && <Alert variant="error">{error}</Alert>}
 
+      <section className="panel-tarjeta hoja-desplazable">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.match.calificaciones_titulo}</h2>
+        {estado === 'listo' && <span className="panel-mini">{calificaciones.length}</span>}
+      </div>
       <EstadoLista estado={estado} error={null} vacio={estado === 'listo' && calificaciones.length === 0} recargar={recargar}>
         <table className="panel-tabla">
           <thead>
@@ -85,7 +91,7 @@ export function MatchCalificaciones() {
           <tbody>
             {calificaciones.map((c) => (
               <tr key={c.id}>
-                <td>{c.asistente_nombre || '—'}</td>
+                <td><b>{c.asistente_nombre || '—'}</b></td>
                 <td>
                   <Estrellas cantidad={c.estrellas} />
                 </td>
@@ -102,6 +108,7 @@ export function MatchCalificaciones() {
           </tbody>
         </table>
       </EstadoLista>
+      </section>
     </div>
   );
 }

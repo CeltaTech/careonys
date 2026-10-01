@@ -59,7 +59,7 @@ export default function FacturaDetalle() {
   }
 
   const volver = (
-    <Link to="/facturas" className="btn btn-secondary" style={{ marginBottom: '1rem', fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
+    <Link to="/facturas" className="btn btn-volver">
       <span aria-hidden="true">←</span> {t.comun.volver}
     </Link>
   );
@@ -68,10 +68,10 @@ export default function FacturaDetalle() {
   // avisa al lado del botón, sin hacer desaparecer la factura que se estaba mirando.
   if (error && detalle === undefined) {
     return (
-      <div>
+      <>
         {volver}
         <div className="alert alert-error" role="alert">{error}</div>
-      </div>
+      </>
     );
   }
   if (detalle === undefined) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
@@ -79,83 +79,88 @@ export default function FacturaDetalle() {
   const { factura, renglones, cobros } = detalle;
 
   return (
-    <div>
+    <>
       {volver}
       <h1>{periodoEnPalabras(factura.periodo, locale)}</h1>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '0.5rem 1.5rem' }}>
-        <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.facturas.col_facturado}</div>
-        <div>{formatearImporte(factura.monto_total, factura.moneda, locale)}</div>
-        {factura.cobrado !== undefined && (
-          <>
-            <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.facturas.col_cobrado}</div>
-            <div>{formatearImporte(factura.cobrado, factura.moneda, locale)}</div>
-          </>
+      <section className="pwa-card">
+        <dl className="pwa-datos">
+          <dt>{t.facturas.col_facturado}</dt>
+          <dd>{formatearImporte(factura.monto_total, factura.moneda, locale)}</dd>
+          {factura.cobrado !== undefined && (
+            <>
+              <dt>{t.facturas.col_cobrado}</dt>
+              <dd>{formatearImporte(factura.cobrado, factura.moneda, locale)}</dd>
+            </>
+          )}
+          {factura.saldo !== undefined && (
+            <>
+              <dt>{t.facturas.col_saldo}</dt>
+              <dd>{formatearImporte(factura.saldo, factura.moneda, locale)}</dd>
+            </>
+          )}
+          {factura.estado !== undefined && (
+            <>
+              <dt>{t.facturas.col_estado}</dt>
+              <dd>{traducirValor(t.facturas, `estado_${factura.estado}`)}</dd>
+            </>
+          )}
+          <dt>{t.facturas.col_emision}</dt>
+          <dd>{diaEnPalabras(factura.fecha_emision, locale)}</dd>
+          <dt>{t.facturas.col_vencimiento}</dt>
+          <dd>{diaEnPalabras(factura.fecha_vencimiento, locale)}</dd>
+        </dl>
+
+        {/* El papel sólo se ofrece cuando la Prestadora reparte las facturas por acá y el
+            comprobante ya está guardado. Apagado el interruptor, no se dice ni que existe. */}
+        {detalle.entrega_la_factura && factura.tiene_comprobante && (
+          <button
+            type="button"
+            className="btn btn-secondary btn-full btn-abajo"
+            onClick={bajarElComprobante}
+            disabled={bajando}
+          >
+            {bajando ? t.comun.cargando : t.facturas.bajar_comprobante}
+          </button>
         )}
-        {factura.saldo !== undefined && (
-          <>
-            <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.facturas.col_saldo}</div>
-            <div>{formatearImporte(factura.saldo, factura.moneda, locale)}</div>
-          </>
-        )}
-        {factura.estado !== undefined && (
-          <>
-            <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.facturas.col_estado}</div>
-            <div>{traducirValor(t.facturas, `estado_${factura.estado}`)}</div>
-          </>
-        )}
-        <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.facturas.col_emision}</div>
-        <div>{diaEnPalabras(factura.fecha_emision, locale)}</div>
-        <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.facturas.col_vencimiento}</div>
-        <div>{diaEnPalabras(factura.fecha_vencimiento, locale)}</div>
-      </div>
+      </section>
 
-      {error && <div className="alert alert-error" role="alert" style={{ marginTop: '1.5rem' }}>{error}</div>}
+      {error && <div className="alert alert-error" role="alert">{error}</div>}
 
-      {/* El papel sólo se ofrece cuando la Prestadora reparte las facturas por acá y el
-          comprobante ya está guardado. Apagado el interruptor, no se dice ni que existe. */}
-      {detalle.entrega_la_factura && factura.tiene_comprobante && (
-        <button
-          type="button"
-          className="btn btn-secondary"
-          style={{ marginTop: '1.5rem' }}
-          onClick={bajarElComprobante}
-          disabled={bajando}
-        >
-          {bajando ? t.comun.cargando : t.facturas.bajar_comprobante}
-        </button>
-      )}
-
-      <h2 style={{ marginTop: '2rem' }}>{t.facturas.renglones_titulo}</h2>
-      {renglones.length === 0 ? (
-        <div className="estado-vacio" role="status">{t.facturas.sin_renglones}</div>
-      ) : (
-        renglones.map((r) => (
-          <div key={r.id} className="guardia-card">
-            <div className="guardia-card-paciente">{r.descripcion}</div>
-            <div className="guardia-card-detalle">{formatearImporte(r.monto, r.moneda, locale)}</div>
-          </div>
-        ))
-      )}
-
-      <h2 style={{ marginTop: '2rem' }}>{t.facturas.cobros_titulo}</h2>
-      {cobros.length === 0 ? (
-        <div className="estado-vacio" role="status">{t.facturas.sin_cobros}</div>
-      ) : (
-        cobros.map((c) => (
-          <div key={c.id} className="guardia-card">
-            <div className="guardia-card-paciente">
-              {formatearImporte(c.monto, c.moneda, locale)}
-              {c.estado === 'anulado' && <> · {t.facturas.cobro_anulado}</>}
+      <section className="pwa-card">
+        <h2>{t.facturas.renglones_titulo}</h2>
+        {renglones.length === 0 ? (
+          <div className="estado-vacio" role="status">{t.facturas.sin_renglones}</div>
+        ) : (
+          renglones.map((r) => (
+            <div key={r.id} className="guardia-card">
+              <div className="guardia-card-paciente">{r.descripcion}</div>
+              <div className="guardia-card-detalle">{formatearImporte(r.monto, r.moneda, locale)}</div>
             </div>
-            <div className="guardia-card-detalle">
-              {diaEnPalabras(c.fecha_cobro, locale)} · {traducirValor(t.facturas, `medio_${c.medio}`)}
-            </div>
-          </div>
-        ))
-      )}
+          ))
+        )}
+      </section>
 
-      <p className="guardia-card-detalle" style={{ marginTop: '2rem' }}>{t.facturas.no_es_comprobante}</p>
-    </div>
+      <section className="pwa-card">
+        <h2>{t.facturas.cobros_titulo}</h2>
+        {cobros.length === 0 ? (
+          <div className="estado-vacio" role="status">{t.facturas.sin_cobros}</div>
+        ) : (
+          cobros.map((c) => (
+            <div key={c.id} className="guardia-card">
+              <div className="guardia-card-paciente">
+                {formatearImporte(c.monto, c.moneda, locale)}
+                {c.estado === 'anulado' && <> · {t.facturas.cobro_anulado}</>}
+              </div>
+              <div className="guardia-card-detalle">
+                {diaEnPalabras(c.fecha_cobro, locale)} · {traducirValor(t.facturas, `medio_${c.medio}`)}
+              </div>
+            </div>
+          ))
+        )}
+      </section>
+
+      <p className="mini">{t.facturas.no_es_comprobante}</p>
+    </>
   );
 }

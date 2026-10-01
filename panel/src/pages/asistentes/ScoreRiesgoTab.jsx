@@ -11,6 +11,8 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { AvisoEscalasProvisorias } from '../../components/AvisoEscalasProvisorias';
+import '../../styles/molde-paginas.css';
+import '../hojaDeTarjetas.css';
 
 // Qué dice la pantalla debajo de cada indicador que se calculó solo. Vive acá y no en el
 // cálculo porque es texto visible, y el cálculo no conoce el idioma de quien está mirando.
@@ -88,54 +90,71 @@ export function ScoreRiesgoTab({ asistente, onActualizado }) {
   }
 
   return (
-    <div>
-      <h2>{t.asistentes.score.titulo}</h2>
-      {/* El puntaje sale de pesos que hoy son provisorios: se dice antes de mostrarlo. */}
-      <AvisoEscalasProvisorias escalas={escalasCrudas} />
-      {errorEscalas && <Alert variant="error">{errorEscalas}</Alert>}
-      {error && <Alert variant="error">{error}</Alert>}
-      {advertencias.map((a, i) => <Alert key={i} variant="error">{a}</Alert>)}
+    <div className="molde-pila">
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.asistentes.score.titulo}</h2>
+        </div>
+        {/* El puntaje sale de pesos que hoy son provisorios: se dice antes de mostrarlo. */}
+        <AvisoEscalasProvisorias escalas={escalasCrudas} />
+        {errorEscalas && <Alert variant="error">{errorEscalas}</Alert>}
+        {error && <Alert variant="error">{error}</Alert>}
+        {advertencias.map((a, i) => <Alert key={i} variant="error">{a}</Alert>)}
 
-      <h3>{t.asistentes.score.deducidos_titulo}</h3>
-      <ul className="score-riesgo-deducidos">
+        <div className="hoja-dato">
+          <div className="panel-mini">{t.asistentes.score.resultado}</div>
+          <b>{score} / 100</b>
+        </div>
+        {asistente.tipo_vinculo === 'monotributo' && (
+          <p className="score-riesgo-nota">
+            {score >= 60 ? t.asistentes.score.riesgo_alto : score >= 30 ? t.asistentes.score.riesgo_medio : t.asistentes.score.riesgo_bajo}
+          </p>
+        )}
+      </section>
+
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.asistentes.score.deducidos_titulo}</h2>
+        </div>
         {INDICADORES_DEDUCIDOS.map((indicador) => {
           const deducido = deducidos[indicador];
           const faltante = sinDeducir.find((s) => s.indicador === indicador);
           return (
-            <li key={indicador}>
-              <strong>{t.asistentes.score.indicadores[indicador]}</strong>
-              {deducido && <span> — {detalleDeducido(t, indicador, deducido)}</span>}
-              {/* Un indicador que no se pudo deducir se dice, no se muestra en cero: un cero
-                  silencioso se lee como «no hay indicio», que es otra cosa. */}
-              {faltante && <span> — {faltante.motivo === 'sin_dato' ? t.asistentes.score.sin_dato : t.asistentes.score.sin_umbral}</span>}
-            </li>
+            <div key={indicador} className="panel-fila-alerta">
+              <div>
+                <b>{t.asistentes.score.indicadores[indicador]}</b>
+                {deducido && <span className="panel-mini">{detalleDeducido(t, indicador, deducido)}</span>}
+                {/* Un indicador que no se pudo deducir se dice, no se muestra en cero: un cero
+                    silencioso se lee como «no hay indicio», que es otra cosa. */}
+                {faltante && <span className="panel-mini">{faltante.motivo === 'sin_dato' ? t.asistentes.score.sin_dato : t.asistentes.score.sin_umbral}</span>}
+              </div>
+            </div>
           );
         })}
-      </ul>
+      </section>
 
-      <h3>{t.asistentes.score.a_mano_titulo}</h3>
-      {aMano.map((indicador) => (
-        <FormField
-          key={indicador}
-          label={t.asistentes.score.indicadores[indicador]}
-          name={indicador}
-          type="checkbox"
-          checked={Boolean(indicadores[indicador])}
-          onChange={(e) => setIndicadores((prev) => ({ ...prev, [indicador]: e.target.checked ? 1 : 0 }))}
-        />
-      ))}
-
-      <p className="score-riesgo-valor">{t.asistentes.score.resultado}: <strong>{score}</strong> / 100</p>
-
-      {asistente.tipo_vinculo === 'monotributo' && (
-        <p className="score-riesgo-nota">
-          {score >= 60 ? t.asistentes.score.riesgo_alto : score >= 30 ? t.asistentes.score.riesgo_medio : t.asistentes.score.riesgo_bajo}
-        </p>
-      )}
-
-      <Button onClick={guardar} disabled={guardando || !yaCargo(estado)}>
-        {guardando ? t.comun.guardando : t.comun.guardar}
-      </Button>
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.asistentes.score.a_mano_titulo}</h2>
+        </div>
+        <div className="molde-formgrid">
+          {aMano.map((indicador) => (
+            <FormField
+              key={indicador}
+              label={t.asistentes.score.indicadores[indicador]}
+              name={indicador}
+              type="checkbox"
+              checked={Boolean(indicadores[indicador])}
+              onChange={(e) => setIndicadores((prev) => ({ ...prev, [indicador]: e.target.checked ? 1 : 0 }))}
+            />
+          ))}
+        </div>
+        <div className="molde-acciones">
+          <Button onClick={guardar} disabled={guardando || !yaCargo(estado)}>
+            {guardando ? t.comun.guardando : t.comun.guardar}
+          </Button>
+        </div>
+      </section>
     </div>
   );
 }

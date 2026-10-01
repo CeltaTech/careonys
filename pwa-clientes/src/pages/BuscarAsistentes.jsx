@@ -66,40 +66,42 @@ export default function BuscarAsistentes() {
     <div>
       <h1>{t.vidriera.titulo}</h1>
 
-      {/* Las dos listas de opciones salen del backend. Cuando hay una sola opción no se dibuja el
-          filtro: elegirla no cambia nada y ocupa la pantalla de un teléfono. */}
-      {zonas.length > 1 && (
-        <div className="form-field">
-          <label htmlFor="filtro-zona">{t.vidriera.filtro_zona}</label>
-          <select id="filtro-zona" value={zona} onChange={(e) => setZona(e.target.value)}>
-            <option value="">{t.vidriera.todas_las_zonas}</option>
-            {zonas.map((z) => (
-              <option key={z.id} value={z.id}>{z.nombre}</option>
-            ))}
-          </select>
-        </div>
-      )}
-      {tipos.length > 1 && (
-        <div className="form-field">
-          <label htmlFor="filtro-tipo">{t.vidriera.filtro_tipo}</label>
-          <select id="filtro-tipo" value={tipo} onChange={(e) => setTipo(e.target.value)}>
-            <option value="">{t.vidriera.todos_los_tipos}</option>
-            {tipos.map((ti) => (
-              <option key={ti.id} value={ti.id}>{nombreTipo(ti, t)}</option>
-            ))}
-          </select>
-        </div>
-      )}
+      <section className="pwa-card">
+        {/* Las dos listas de opciones salen del backend. Cuando hay una sola opción no se dibuja el
+            filtro: elegirla no cambia nada y ocupa la pantalla de un teléfono. */}
+        {zonas.length > 1 && (
+          <div className="form-field">
+            <label htmlFor="filtro-zona">{t.vidriera.filtro_zona}</label>
+            <select id="filtro-zona" value={zona} onChange={(e) => setZona(e.target.value)}>
+              <option value="">{t.vidriera.todas_las_zonas}</option>
+              {zonas.map((z) => (
+                <option key={z.id} value={z.id}>{z.nombre}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        {tipos.length > 1 && (
+          <div className="form-field">
+            <label htmlFor="filtro-tipo">{t.vidriera.filtro_tipo}</label>
+            <select id="filtro-tipo" value={tipo} onChange={(e) => setTipo(e.target.value)}>
+              <option value="">{t.vidriera.todos_los_tipos}</option>
+              {tipos.map((ti) => (
+                <option key={ti.id} value={ti.id}>{nombreTipo(ti, t)}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
-      <p className="guardia-card-detalle">
-        {orden === 'calificacion' ? t.vidriera.orden_por_calificacion : t.vidriera.orden_neutro}
-      </p>
+        <p className="mini">
+          {orden === 'calificacion' ? t.vidriera.orden_por_calificacion : t.vidriera.orden_neutro}
+        </p>
+      </section>
 
       {asistentes.length === 0 ? (
-        <div className="estado-vacio" role="status">{t.vidriera.sin_resultados}</div>
+        <div className="pwa-card estado-vacio" role="status">{t.vidriera.sin_resultados}</div>
       ) : (
         asistentes.map((a) => (
-          <Link key={a.id} to={`/buscar/${a.id}`} className="guardia-card" style={{ display: 'block' }}>
+          <Link key={a.id} to={`/buscar/${a.id}`} className="guardia-card">
             <div className="guardia-card-paciente">{a.nombre}</div>
             {a.tipo && <div className="guardia-card-detalle">{nombreTipo(a.tipo, t)}</div>}
             {a.zonas.length > 0 && (
@@ -116,7 +118,6 @@ export default function BuscarAsistentes() {
           </Link>
         ))
       )}
-
     </div>
   );
 }

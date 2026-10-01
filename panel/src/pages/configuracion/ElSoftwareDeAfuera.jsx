@@ -8,6 +8,7 @@ import { FormField } from '../../components/ui/FormField';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 import { esAdminDePrestadora } from '../../lib/roles';
+import '../../styles/molde-paginas.css';
 
 // CON QUÉ SOFTWARE DE AFUERA SE CONECTA LA PRESTADORA.
 //
@@ -90,37 +91,38 @@ export function ElSoftwareDeAfuera() {
     }
   }
 
-  return (
-    <>
-      <h2>{t.configuracion.software_externo_titulo}</h2>
-      <EstadoLista
-        estado={estado}
-        error={error}
-        vacio={estado === 'listo' && catalogo.length === 0}
-        recargar={recargar}
-        mensajeVacio={t.configuracion.software_externo_sin_catalogo}
-      >
-        <div>
-          {error && <Alert variant="error">{error}</Alert>}
-          {!puedeCargar && <Alert variant="info">{t.configuracion.software_externo_solo_admin}</Alert>}
+  const contenido = (
+    <EstadoLista
+      estado={estado}
+      error={error}
+      vacio={estado === 'listo' && catalogo.length === 0}
+      recargar={recargar}
+      mensajeVacio={t.configuracion.software_externo_sin_catalogo}
+    >
+      <>
+        {error && <Alert variant="error">{error}</Alert>}
 
-          {conexiones.map((conexion) => {
-            const opciones = catalogo.filter((uno) => uno.clase === conexion.clase);
-            const escrito = borrador[conexion.clase] ?? {};
-            return (
-              <section key={conexion.clase}>
-                <h3>{t.configuracion[`software_externo_${conexion.clase}`]}</h3>
+        {conexiones.map((conexion) => {
+          const opciones = catalogo.filter((uno) => uno.clase === conexion.clase);
+          const escrito = borrador[conexion.clase] ?? {};
+          return (
+            <section key={conexion.clase} className="panel-tarjeta">
+              <div className="panel-tarjeta-titulo">
+                <h2>{t.configuracion[`software_externo_${conexion.clase}`]}</h2>
+                {opciones.length > 0 && (
+                  <span className={`badge ${conexion.credencial_cargada ? 'badge-exito' : 'badge-neutro'}`}>
+                    {conexion.credencial_cargada
+                      ? t.configuracion.facturacion_aviso_conectado
+                      : t.configuracion.facturacion_aviso_sin_conectar}
+                  </span>
+                )}
+              </div>
 
                 {opciones.length === 0 ? (
-                  <Alert variant="info">{t.configuracion.software_externo_sin_catalogo}</Alert>
+                  <p className="molde-vacio">{t.configuracion.software_externo_sin_catalogo}</p>
                 ) : (
                   <>
-                    <Alert variant="info">
-                      {conexion.credencial_cargada
-                        ? t.configuracion.software_externo_credencial_cargada
-                        : t.configuracion.software_externo_credencial_sin_cargar}
-                    </Alert>
-
+                    <div className="molde-formgrid">
                     <FormField
                       label={t.configuracion.software_externo_cual}
                       name={`software-${conexion.clase}`}
@@ -150,6 +152,7 @@ export function ElSoftwareDeAfuera() {
                       disabled={!puedeCargar || guardando === conexion.clase}
                       onChange={(e) => cambiar(conexion.clase, 'credencial', e.target.value)}
                     />
+                    </div>
 
                     {guardado === conexion.clase && (
                       <Alert variant="info">
@@ -157,24 +160,36 @@ export function ElSoftwareDeAfuera() {
                       </Alert>
                     )}
 
-                    <Button
-                      onClick={() => guardar(conexion)}
-                      disabled={
-                        !puedeCargar ||
-                        guardando === conexion.clase ||
-                        !escrito.software ||
-                        faltaLaCredencial(conexion)
-                      }
-                    >
-                      {guardando === conexion.clase ? t.comun.guardando : t.comun.guardar}
-                    </Button>
+                    <div className="molde-acciones">
+                      <Button
+                        onClick={() => guardar(conexion)}
+                        disabled={
+                          !puedeCargar ||
+                          guardando === conexion.clase ||
+                          !escrito.software ||
+                          faltaLaCredencial(conexion)
+                        }
+                      >
+                        {guardando === conexion.clase ? t.comun.guardando : t.comun.guardar}
+                      </Button>
+                    </div>
                   </>
                 )}
-              </section>
-            );
-          })}
-        </div>
-      </EstadoLista>
-    </>
+            </section>
+          );
+        })}
+      </>
+    </EstadoLista>
+  );
+
+  // Cargando, con error o sin catálogo no hay tarjeta por conexión: el estado va en una sola.
+  if (estado === 'listo' && catalogo.length > 0) return contenido;
+  return (
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.software_externo_titulo}</h2>
+      </div>
+      {contenido}
+    </section>
   );
 }

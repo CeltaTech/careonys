@@ -49,7 +49,7 @@ function TarjetaDeOferta({ oferta, onResponder, enCurso, t, locale }) {
   const ocupado = enCurso !== null;
 
   return (
-    <div className="guardia-card guardia-programada">
+    <div className="guardia-card">
       <div className="guardia-card-paciente">
         {nombres.length > 0 ? nombres.join(' · ') : t.guardias.sin_paciente}
       </div>
@@ -98,7 +98,7 @@ function TarjetaDeOferta({ oferta, onResponder, enCurso, t, locale }) {
           es una forma de que nadie diga que no, y lo que la Prestadora necesita saber es que
           este turno hay que ofrecerlo a otro. */}
       {rechazando && (
-        <div style={{ marginTop: '1rem' }}>
+        <div className="pwa-card-pie">
           <div className="form-field">
             <label htmlFor={`motivo-${oferta.id}`}>{t.ofertas.motivo}</label>
             <textarea

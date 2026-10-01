@@ -209,9 +209,10 @@ export default function ReporteDiario() {
 
   return (
     <div>
-      <Link to={`/guardias/${id}`} className="btn btn-secondary" style={{ marginBottom: '1rem', fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
+      <Link to={`/guardias/${id}`} className="btn btn-volver">
         <span aria-hidden="true">←</span> {t.comun.volver}
       </Link>
+      <section className="pwa-card">
       <h1>{paciente ? con(t.reporte.titulo_de, { nombre: paciente.nombre }) : t.reporte.titulo}</h1>
       {error && <div className="alert alert-error" role="alert">{error}</div>}
 
@@ -279,7 +280,7 @@ export default function ReporteDiario() {
                 const rango = rangosVitales[signo];
                 const color = colorSigno(estructurado.signos_vitales?.[signo], rango);
                 return (
-                  <div key={signo} className={`signo-vital-fila${color ? ` signo-vital-${color}` : ''}`} style={{ marginBottom: '0.4rem' }}>
+                  <div key={signo} className={`signo-vital-fila${color ? ` signo-vital-${color}` : ''}`}>
                     <label htmlFor={`signo-${signo}`}>
                       {t.reporte[`signo_${signo}`]} {rango ? `(${rango.unidad})` : ''}
                     </label>
@@ -292,7 +293,6 @@ export default function ReporteDiario() {
                       step="0.1"
                       value={estructurado.signos_vitales?.[signo] || ''}
                       onChange={(e) => actualizarSignos(signo, e.target.value)}
-                      style={{ width: '100%' }}
                       aria-invalid={color === 'alerta' ? true : undefined}
                       aria-describedby={color === 'alerta' ? `signo-${signo}-aviso` : undefined}
                     />
@@ -379,6 +379,7 @@ export default function ReporteDiario() {
           </button>
         </>
       )}
+      </section>
     </div>
   );
 }

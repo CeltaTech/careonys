@@ -27,6 +27,7 @@ import { EstadoLista } from '../components/layout/EstadoLista';
 import { mensajeDeError } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 import { useListaDeOpciones } from '../hooks/useListaDeOpciones';
+import './hojaDeTarjetas.css';
 
 /* Los saldos de los Clientes: lo facturado, lo que entró y lo que falta.
    ==========================================================================
@@ -305,7 +306,7 @@ export function Facturacion() {
   }
 
   return (
-    <div>
+    <div className="panel-grilla">
       <Cabecera titulo={t.facturacion.titulo}>
         {sigue && (
           <Button onClick={handleGenerar} disabled={generando}>
@@ -319,13 +320,11 @@ export function Facturacion() {
 
       {!sigue && (
         <>
-          {!veElEstadoDeCuenta && (
-            <p className="panel-explicacion">{t.facturacion.estado_de_cuenta_reservado}</p>
-          )}
 
           {veElEstadoDeCuenta && (
             <>
-          <h2>{t.facturacion.estados_de_cuenta_titulo}</h2>
+          <section className="panel-tarjeta">
+          <h2 className="panel-tarjeta-titulo">{t.facturacion.estados_de_cuenta_titulo}</h2>
           <EstadoLista
             estado={estado}
             error={error}
@@ -333,7 +332,7 @@ export function Facturacion() {
             mensajeVacio={t.facturacion.estados_de_cuenta_vacio}
             recargar={recargar}
           >
-            <table className="panel-tabla">
+            <div className="hoja-desplazable"><table className="panel-tabla">
               <thead>
                 <tr>
                   <th>{t.facturacion.col_cliente}</th>
@@ -359,12 +358,14 @@ export function Facturacion() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </EstadoLista>
+          </section>
             </>
           )}
 
-          <h2>{t.facturacion.restricciones_titulo}</h2>
+          <section className="panel-tarjeta">
+          <h2 className="panel-tarjeta-titulo">{t.facturacion.restricciones_titulo}</h2>
           <EstadoLista
             estado={estado}
             error={error}
@@ -372,7 +373,7 @@ export function Facturacion() {
             mensajeVacio={t.facturacion.restricciones_vacio}
             recargar={recargar}
           >
-            <table className="panel-tabla">
+            <div className="hoja-desplazable"><table className="panel-tabla">
               <thead>
                 <tr>
                   <th>{t.facturacion.col_cliente}</th>
@@ -389,13 +390,15 @@ export function Facturacion() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           </EstadoLista>
+          </section>
         </>
       )}
 
       {sigue && (
         <>
+      <section className="panel-tarjeta">
       <div className="panel-filtros">
         <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           {t.facturacion.col_periodo}
@@ -437,12 +440,12 @@ export function Facturacion() {
             .join(' ')}
         </Alert>
       )}
+      </section>
 
-      {!veElEstadoDeCuenta && (
-        <p className="panel-explicacion">{t.facturacion.estado_de_cuenta_reservado}</p>
-      )}
 
       {veElEstadoDeCuenta && (
+      <section className="panel-tarjeta">
+      <h2 className="panel-tarjeta-titulo">{t.facturacion.titulo}</h2>
       <EstadoLista
         estado={estado}
         error={error}
@@ -450,7 +453,7 @@ export function Facturacion() {
         mensajeVacio={t.facturacion.vacio_texto}
         recargar={recargar}
       >
-        <table className="panel-tabla">
+        <div className="hoja-desplazable"><table className="panel-tabla">
           <thead>
             <tr>
               <th>{t.facturacion.col_cliente}</th>
@@ -484,15 +487,16 @@ export function Facturacion() {
                 <td>{textoDeOrigenes(s.origenes, t)}</td>
                 <td>{soloLaFecha(s.actualizado_en)}</td>
                 <td>
-                  <Button variant="secondary" onClick={() => setDetalleId(s.factura_id)}>
+                  <button type="button" className="panel-enlace" onClick={() => setDetalleId(s.factura_id)}>
                     {t.comun.ver_detalle}
-                  </Button>
+                  </button>
                 </td>
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </EstadoLista>
+      </section>
       )}
         </>
       )}

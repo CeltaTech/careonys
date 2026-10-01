@@ -81,6 +81,19 @@ function useSeccion(cargar) {
   return { datos, estado, error, recargar };
 }
 
+/** La tarjeta de cada sección, con su título y, a la derecha, el aviso de tope si lo hay. */
+function TarjetaDeSeccion({ titulo, aviso, children }) {
+  return (
+    <section className="panel-tarjeta hoja-desplazable">
+      <div className="panel-tarjeta-titulo">
+        <h2>{titulo}</h2>
+        {aviso && <span className="panel-mini">{aviso}</span>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
 /** Los ids de los Pacientes del Cliente, y sus nombres a mano. */
 function idsDe(pacientes) {
   return (pacientes ?? []).map((p) => p.id).filter(Boolean);
@@ -140,16 +153,16 @@ export function GuardiasActivasDeLaCliente({ pacientes }) {
   const { datos, estado, error, recargar } = useSeccion(cargar);
 
   return (
+    <TarjetaDeSeccion
+      titulo={t.clientes.guardias_activas}
+      aviso={datos.tope && con(t.clientes.guardias_tope, { n: TOPE_GUARDIAS })}
+    >
     <EstadoLista
       estado={estado}
       error={error}
       vacio={estado === 'listo' && datos.filas.length === 0}
       recargar={recargar}
     >
-      <>
-        {datos.tope && (
-          <p className="panel-explicacion">{con(t.clientes.guardias_tope, { n: TOPE_GUARDIAS })}</p>
-        )}
         <table className="panel-tabla">
           <thead>
             <tr>
@@ -176,8 +189,8 @@ export function GuardiasActivasDeLaCliente({ pacientes }) {
             ))}
           </tbody>
         </table>
-      </>
     </EstadoLista>
+    </TarjetaDeSeccion>
   );
 }
 
@@ -231,18 +244,17 @@ export function ReportesDeLaCliente({ pacientes }) {
   const { datos, estado, error, recargar } = useSeccion(cargar);
 
   return (
+    <TarjetaDeSeccion
+      titulo={t.clientes.historial_reportes}
+      aviso={datos.tope && con(t.clientes.reportes_tope, { n: TOPE_REPORTES })}
+    >
     <EstadoLista
       estado={estado}
       error={error}
       vacio={estado === 'listo' && datos.filas.length === 0}
       recargar={recargar}
       mensajeVacio={t.clientes.reportes_vacio}
-      ayudaVacio={t.clientes.reportes_vacio_ayuda}
     >
-      <>
-        {datos.tope && (
-          <p className="panel-explicacion">{con(t.clientes.reportes_tope, { n: TOPE_REPORTES })}</p>
-        )}
         <table className="panel-tabla">
           <thead>
             <tr>
@@ -263,15 +275,15 @@ export function ReportesDeLaCliente({ pacientes }) {
                 <td>
                   {r.incidentes && <span className="badge badge-critico">{t.reportes.senal_incidente}</span>}
                   {r.fuera_de_rango && <span className="badge badge-atencion">{t.reportes.senal_fuera_rango}</span>}
-                  {!r.confirmado_asistente && <span className="badge">{t.reportes.senal_sin_confirmar}</span>}
+                  {!r.confirmado_asistente && <span className="badge badge-neutro">{t.reportes.senal_sin_confirmar}</span>}
                   {!r.incidentes && !r.fuera_de_rango && r.confirmado_asistente && t.reportes.sin_novedades}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-      </>
     </EstadoLista>
+    </TarjetaDeSeccion>
   );
 }
 
@@ -310,6 +322,7 @@ export function AlertasDeLaCliente({ pacientes }) {
   const { datos, estado, error, recargar } = useSeccion(cargar);
 
   return (
+    <TarjetaDeSeccion titulo={t.clientes.alertas_activas}>
     <EstadoLista
       estado={estado}
       error={error}
@@ -339,5 +352,6 @@ export function AlertasDeLaCliente({ pacientes }) {
         </tbody>
       </table>
     </EstadoLista>
+    </TarjetaDeSeccion>
   );
 }

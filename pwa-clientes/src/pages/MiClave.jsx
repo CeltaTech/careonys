@@ -73,13 +73,13 @@ export default function MiClave() {
   }
 
   return (
-    <div>
+    <>
       <h1>{t.auth.mi_clave_titulo}</h1>
 
       {error && <div className="alert alert-error" role="alert">{error}</div>}
       {cambiada && <div className="alert alert-info" role="status">{t.auth.mi_clave_exito}</div>}
 
-      <form onSubmit={alEnviar}>
+      <form className="pwa-card" onSubmit={alEnviar}>
         <div className="form-field">
           <label htmlFor="actual">{t.auth.mi_clave_actual}</label>
           <input
@@ -128,10 +128,10 @@ export default function MiClave() {
             <span className="form-error" id="confirmacion-error" role="alert">{advertenciaDe('confirmacion')}</span>
           )}
         </div>
-        <button type="submit" className="btn btn-primary btn-full" disabled={guardando}>
+        <button type="submit" className="btn btn-primary btn-full btn-abajo" disabled={guardando}>
           {guardando ? t.auth.mi_clave_guardando : t.auth.mi_clave_guardar}
         </button>
       </form>
-    </div>
+    </>
   );
 }

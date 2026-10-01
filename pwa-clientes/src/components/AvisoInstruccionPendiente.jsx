@@ -29,8 +29,7 @@ export default function AvisoInstruccionPendiente() {
       <Link
         to="/instruccion"
         state={{ desde: location.pathname }}
-        className="btn btn-secondary"
-        style={{ fontSize: '0.8rem', padding: '0.4rem 1rem' }}
+        className="btn"
       >
         {t.instruccion.aviso_enlace}
       </Link>

@@ -126,8 +126,8 @@ export default function AntesDeLlegar({ t, locale, guardiaId, guardia, salidaPen
   const hayDemoraAvisada = Boolean(demoraEnEsteTelefono) || avisoPendiente;
 
   return (
-    <div style={{ marginTop: '1rem' }}>
-      <h2 style={{ fontSize: '1rem' }}>{t.antes_de_llegar.titulo}</h2>
+    <section className="pwa-card">
+      <h2>{t.antes_de_llegar.titulo}</h2>
 
       {error && <div className="alert alert-error" role="alert">{error}</div>}
       {advertencia && <div className="alert alert-info" role="status">{advertencia}</div>}
@@ -159,7 +159,7 @@ export default function AntesDeLlegar({ t, locale, guardiaId, guardia, salidaPen
         <div>
           {/* Texto libre y opcional, igual que en el Panel: quien viaja describe su viaje, no
               elige de una lista que alguien tuvo que adivinar antes. */}
-          <div className="form-field" style={{ marginTop: '0.5rem' }}>
+          <div className="form-field pwa-card-pie">
             <label htmlFor="salida-medio-transporte">{t.antes_de_llegar.medio_transporte}</label>
             <input
               id="salida-medio-transporte"
@@ -175,10 +175,9 @@ export default function AntesDeLlegar({ t, locale, guardiaId, guardia, salidaPen
             {registrandoSalida ? t.antes_de_llegar.registrando_salida : t.antes_de_llegar.confirmar_salida}
           </button>
           <button
-            className="btn btn-secondary btn-full"
+            className="btn btn-secondary btn-full pwa-card-pie"
             onClick={() => setAbriendoSalida(false)}
             disabled={registrandoSalida}
-            style={{ marginTop: '0.5rem' }}
           >
             {t.comun.cancelar}
           </button>
@@ -188,7 +187,7 @@ export default function AntesDeLlegar({ t, locale, guardiaId, guardia, salidaPen
       {/* El aviso de demora. No depende de haber marcado la salida: se puede ir demorado antes de
           salir, y de hecho ése es el aviso que más minutos gana. */}
       {hayDemoraAvisada && (
-        <div className="alert alert-alerta" role="status" style={{ marginTop: '1rem' }}>
+        <div className="alert alert-alerta pwa-card-pie" role="status">
           {demoraEnEsteTelefono?.at
             ? con(t.antes_de_llegar.demora_dada, {
                 hora: horaDelMomento(demoraEnEsteTelefono.at, locale),
@@ -200,22 +199,21 @@ export default function AntesDeLlegar({ t, locale, guardiaId, guardia, salidaPen
 
       {!hayDemoraAvisada && !abriendoDemora && (
         <button
-          className="btn btn-secondary btn-full"
+          className="btn btn-secondary btn-full pwa-card-pie"
           onClick={() => setAbriendoDemora(true)}
-          style={{ marginTop: '1rem' }}
         >
           {t.antes_de_llegar.voy_demorado}
         </button>
       )}
 
       {!hayDemoraAvisada && abriendoDemora && (
-        <div style={{ marginTop: '1rem' }}>
+        <div className="pwa-card-pie">
           <p className="guardia-card-detalle">{t.antes_de_llegar.motivo_pregunta}</p>
           {MOTIVOS_DEMORA.map((m) => (
             <label
               key={m}
               htmlFor={`demora-motivo-${m}`}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}
+              className="opcion-unica"
             >
               <input
                 id={`demora-motivo-${m}`}
@@ -230,22 +228,21 @@ export default function AntesDeLlegar({ t, locale, guardiaId, guardia, salidaPen
             </label>
           ))}
           <button
-            className="btn btn-primary btn-full"
+            className="btn btn-primary btn-full pwa-card-pie"
             onClick={alAvisarDemora}
             disabled={avisandoDemora}
           >
             {avisandoDemora ? t.antes_de_llegar.avisando_demora : t.antes_de_llegar.confirmar_demora}
           </button>
           <button
-            className="btn btn-secondary btn-full"
+            className="btn btn-secondary btn-full pwa-card-pie"
             onClick={() => setAbriendoDemora(false)}
             disabled={avisandoDemora}
-            style={{ marginTop: '0.5rem' }}
           >
             {t.comun.cancelar}
           </button>
         </div>
       )}
-    </div>
+    </section>
   );
 }

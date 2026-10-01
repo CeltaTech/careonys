@@ -10,6 +10,8 @@ import { useModalAccesible } from '../hooks/useModalAccesible';
 import { TONO, claseBadgeTono } from '../lib/tonos';
 import { llamarApiComprobaciones } from '../lib/apiComprobaciones';
 import { mensajeDeError } from '../lib/errores';
+import '../styles/molde-paginas.css';
+import './seguimientoDeGuardias.css';
 
 /* El pase de guardia visto desde la Prestadora (pendiente #113).
    ==========================================================================
@@ -144,7 +146,11 @@ export function PaseDeGuardia() {
   return (
     <div>
       <Cabecera titulo={t.pase_de_guardia.titulo} />
-      <h2>{t.pase_de_guardia.pedidos_titulo}</h2>
+      <div className="molde-pila">
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.pase_de_guardia.pedidos_titulo}</h2>
+        </div>
       {/* El error de un refresco que falló cuando la lista ya estaba cargada: la lista se queda
           donde está y el mensaje va al lado, porque borrarla escondería un pedido que sigue
           esperando. */}
@@ -161,20 +167,20 @@ export function PaseDeGuardia() {
         {pedidos.map((pedido) => {
           const soltado = codigosSoltados[pedido.id];
           return (
-            <div key={pedido.id} className="panel-guardia-card guardia-ausente">
+            <div key={pedido.id} className="panel-fila-alerta seguimiento-fila">
               <div>
                 {/* Si es la llegada o la salida es un dato, no un estado: no hay nada mejor ni
                     peor en ninguna de las dos, así que va con el tono que dice justamente eso. */}
-                <strong>{pedido.asistente || '—'}</strong>{' '}
+                <b>{pedido.asistente || '—'}</b>{' '}
                 <span className={claseBadgeTono(TONO.INFO)}>
                   {t.pase_de_guardia[`momento_${pedido.momento}`] ?? pedido.momento}
                 </span>
-                <div>{horario(pedido)}</div>
-                <div>{t.pase_de_guardia.pedido_desde}: {aLaHora(pedido.pedidoEn, locale)}</div>
+                <span className="panel-mini">{horario(pedido)}</span>
+                <span className="panel-mini">{t.pase_de_guardia.pedido_desde}: {aLaHora(pedido.pedidoEn, locale)}</span>
                 {pedido.texto ? (
-                  <p className="panel-resultado-calculo">{pedido.texto}</p>
+                  <p className="seguimiento-texto">{pedido.texto}</p>
                 ) : (
-                  <div>{t.pase_de_guardia.pedido_sin_texto}</div>
+                  <span className="panel-mini">{t.pase_de_guardia.pedido_sin_texto}</span>
                 )}
                 {soltado && (
                   <div className="panel-codigo-soltado">
@@ -189,7 +195,7 @@ export function PaseDeGuardia() {
                   </div>
                 )}
               </div>
-              <div className="panel-modal-acciones">
+              <div className="seguimiento-acciones">
                 <Button
                   variant={pedido.codigoVigente ? 'secondary' : 'primary'}
                   onClick={() => soltarCodigo(pedido)}
@@ -206,36 +212,41 @@ export function PaseDeGuardia() {
           );
         })}
       </EstadoLista>
+      </section>
 
-      <h2>{t.pase_de_guardia.sin_comprobar_titulo}</h2>
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.pase_de_guardia.sin_comprobar_titulo}</h2>
+        </div>
       <EstadoLista
         estado={estadoSinComprobar}
         error={errorSinComprobar}
         vacio={estadoSinComprobar === 'listo' && sinComprobar.length === 0}
         recargar={recargarSinComprobar}
         mensajeVacio={t.pase_de_guardia.sin_comprobar_vacio}
-        ayudaVacio={t.pase_de_guardia.sin_comprobar_vacio_ayuda}
       >
         {sinComprobar.map((fila) => (
-          <div key={fila.id} className="panel-guardia-card guardia-ausente">
+          <div key={fila.id} className="panel-fila-alerta seguimiento-fila">
             <div>
-              <strong>{fila.asistente || '—'}</strong>{' '}
+              <b>{fila.asistente || '—'}</b>{' '}
               <span className={claseBadgeTono(TONO.INFO)}>
                 {t.pase_de_guardia[`momento_${fila.momento}`] ?? fila.momento}
               </span>
-              <div>{horario(fila)}</div>
-              <div>{t.pase_de_guardia.ocurrida_en}: {aLaHora(fila.ocurridaEn, locale)}</div>
-              <div>
+              <span className="panel-mini">{horario(fila)}</span>
+              <span className="panel-mini">{t.pase_de_guardia.ocurrida_en}: {aLaHora(fila.ocurridaEn, locale)}</span>
+              <span className="panel-mini">
                 {t.pase_de_guardia.col_motivo}: {t.pase_de_guardia[`motivo_${fila.motivo}`] ?? fila.motivo}
-              </div>
-              {fila.detalle && <p className="panel-resultado-calculo">{fila.detalle}</p>}
+              </span>
+              {fila.detalle && <p className="seguimiento-texto">{fila.detalle}</p>}
             </div>
-            <div className="panel-modal-acciones">
+            <div className="seguimiento-acciones">
               <Button onClick={() => setCerrando(fila)}>{t.pase_de_guardia.cerrar_accion}</Button>
             </div>
           </div>
         ))}
       </EstadoLista>
+      </section>
+      </div>
 
       {cerrando && (
         <CerrarSinComprobar

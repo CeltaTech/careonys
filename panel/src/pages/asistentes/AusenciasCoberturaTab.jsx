@@ -18,6 +18,8 @@ import { llamadorDe } from '../../lib/apiPanel';
 import { useMotivosSustitucionGuardia } from '../../hooks/useMotivosSustitucionGuardia';
 import { nombreMotivoSustitucion, valorGuardado } from '../../lib/motivoDeSustitucion';
 import { hoyISO, sumarDias } from '../../lib/horarios';
+import '../../styles/molde-paginas.css';
+import './fichaAsistente.css';
 
 const TIPOS =['enfermedad_inculpable', 'accidente_inculpable', 'otra_licencia', 'ausencia_no_justificada'];
 
@@ -357,233 +359,259 @@ export function AusenciasCoberturaTab({ asistente }) {
   }
 
   return (
-    <div>
-      <h2>{t.asistentes.ausencias.titulo}</h2>
-      {error && <Alert variant="error">{error}</Alert>}
-      {errorCertificado && <Alert variant="error">{errorCertificado}</Alert>}
+    <div className="molde-pila">
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.asistentes.ausencias.titulo}</h2>
+        </div>
+        {error && <Alert variant="error">{error}</Alert>}
+        {errorCertificado && <Alert variant="error">{errorCertificado}</Alert>}
 
-      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && ausencias.length === 0} recargar={recargar}>
-        {ausencias.map((a) => {
-          // Cuántos turnos faltan cubrir. Con la lista todavía sin calcular —las ausencias
-          // cargadas antes de que esto existiera— no se sabe, y entonces el sustituto se ofrece
-          // igual: la cuenta se hace al asignarlo.
-          const afectadas = Array.isArray(a.guardias_afectadas) ? a.guardias_afectadas : null;
-          const sinCubrir = afectadas === null ? null : guardiasSinCubrir(afectadas, coberturas[a.id]);
-          return (
-          <div key={a.id} className="panel-card-ausencia">
-            <p>
-              <strong>{t.asistentes.ausencias[`tipo_${a.tipo}`]}</strong> — {fechaVisible(a.fecha_inicio)}
-              {a.fecha_vuelta_real
-                ? ` · ${con(t.asistentes.ausencias.volvio_el, { fecha: fechaVisible(a.fecha_vuelta_real) })}`
-                : ` → ${fechaVisible(a.fecha_fin)} (${t.asistentes.ausencias.prevista})`}
-            </p>
-            {a.dias_computados !== null && a.dias_computados !== undefined && (
-              <p>{con(t.asistentes.ausencias.dias_computados, { n: a.dias_computados })}</p>
-            )}
-            {a.observaciones && <p>{a.observaciones}</p>}
+        <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && ausencias.length === 0} recargar={recargar}>
+          <div>
+          {ausencias.map((a) => {
+            // Cuántos turnos faltan cubrir. Con la lista todavía sin calcular —las ausencias
+            // cargadas antes de que esto existiera— no se sabe, y entonces el sustituto se ofrece
+            // igual: la cuenta se hace al asignarlo.
+            const afectadas = Array.isArray(a.guardias_afectadas) ? a.guardias_afectadas : null;
+            const sinCubrir = afectadas === null ? null : guardiasSinCubrir(afectadas, coberturas[a.id]);
+            return (
+            <div key={a.id} className="panel-fila-alerta">
+              <div className="ficha-asistente-renglon">
+                <b>
+                  {t.asistentes.ausencias[`tipo_${a.tipo}`]} — {fechaVisible(a.fecha_inicio)}
+                  {a.fecha_vuelta_real
+                    ? ` · ${con(t.asistentes.ausencias.volvio_el, { fecha: fechaVisible(a.fecha_vuelta_real) })}`
+                    : ` → ${fechaVisible(a.fecha_fin)} (${t.asistentes.ausencias.prevista})`}
+                </b>
+                {a.dias_computados !== null && a.dias_computados !== undefined && (
+                  <span className="panel-mini">{con(t.asistentes.ausencias.dias_computados, { n: a.dias_computados })}</span>
+                )}
+                {a.observaciones && <span className="panel-mini">{a.observaciones}</span>}
 
-            {/* Pasada la fecha prevista sin vuelta registrada, la cobertura sigue y el sistema
-                pregunta hasta que alguien la anote. */}
-            {!a.fecha_vuelta_real && a.fecha_fin < hoyISO() && (
-              <Alert variant="warning">{t.asistentes.ausencias.vuelta_sin_confirmar}</Alert>
-            )}
+                {/* Cuántos turnos dejó descubiertos. Las ausencias cargadas antes de que esto se
+                    escribiera tienen la columna vacía, y ahí no se dice nada: cero y «no se sabe» no
+                    son lo mismo, y escribir cero haría creer que no hay nada que cubrir. */}
+                {afectadas !== null && (
+                  <span className="panel-mini">
+                    {afectadas.length === 0
+                      ? t.asistentes.ausencias.sin_guardias_afectadas
+                      : con(t.asistentes.ausencias.guardias_afectadas, { n: afectadas.length })}
+                    {afectadas.length > 0 && (
+                      <>
+                        {' — '}
+                        {sinCubrir.length === 0
+                          ? t.asistentes.ausencias.todas_cubiertas
+                          : con(t.asistentes.ausencias.guardias_sin_cubrir, { n: sinCubrir.length })}
+                      </>
+                    )}
+                  </span>
+                )}
 
-            {/* Mientras no volvió, se puede correr la fecha prevista o anotar la vuelta. */}
-            {!a.fecha_vuelta_real && (
-              <div className="panel-cierre-ausencia">
-                <FormField
-                  label={t.asistentes.ausencias.nueva_fecha_prevista}
-                  name={`prevista-${a.id}`}
-                  type="date"
-                  value={fechaForm[a.id]?.prevista || ''}
-                  onChange={(e) => setFechaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], prevista: e.target.value } }))}
-                />
-                <Button variant="secondary" onClick={() => cambiarFechaPrevista(a)} disabled={guardando || !fechaForm[a.id]?.prevista}>
-                  {t.asistentes.ausencias.cambiar_fecha_prevista}
-                </Button>
-                <FormField
-                  label={t.asistentes.ausencias.fecha_vuelta}
-                  name={`vuelta-${a.id}`}
-                  type="date"
-                  value={fechaForm[a.id]?.vuelta || ''}
-                  onChange={(e) => setFechaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], vuelta: e.target.value } }))}
-                />
-                <Button variant="secondary" onClick={() => registrarVuelta(a)} disabled={guardando || !fechaForm[a.id]?.vuelta}>
-                  {t.asistentes.ausencias.registrar_vuelta}
-                </Button>
-              </div>
-            )}
+                {/* Pasada la fecha prevista sin vuelta registrada, la cobertura sigue y el sistema
+                    pregunta hasta que alguien la anote. */}
+                {!a.fecha_vuelta_real && a.fecha_fin < hoyISO() && (
+                  <Alert variant="warning">{t.asistentes.ausencias.vuelta_sin_confirmar}</Alert>
+                )}
 
-            {cambiosDeFecha[a.id]?.length > 0 && (
-              <div className="panel-historial-fechas">
-                <p><strong>{t.asistentes.ausencias.historial_fechas}</strong></p>
-                <ul>
-                  {cambiosDeFecha[a.id].map((c) => (
-                    <li key={c.id}>
-                      {con(t.asistentes.ausencias.cambio_de_fecha, {
-                        antes: fechaVisible(c.fecha_anterior),
-                        despues: fechaVisible(c.fecha_nueva),
-                        cuando: new Date(c.cambiado_at).toLocaleDateString(locale),
-                      })}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+                {/* Mientras no volvió, se puede correr la fecha prevista o anotar la vuelta. */}
+                {!a.fecha_vuelta_real && (
+                  <div className="molde-formgrid">
+                    <div>
+                      <FormField
+                        label={t.asistentes.ausencias.nueva_fecha_prevista}
+                        name={`prevista-${a.id}`}
+                        type="date"
+                        value={fechaForm[a.id]?.prevista || ''}
+                        onChange={(e) => setFechaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], prevista: e.target.value } }))}
+                      />
+                      <Button variant="secondary" onClick={() => cambiarFechaPrevista(a)} disabled={guardando || !fechaForm[a.id]?.prevista}>
+                        {t.asistentes.ausencias.cambiar_fecha_prevista}
+                      </Button>
+                    </div>
+                    <div>
+                      <FormField
+                        label={t.asistentes.ausencias.fecha_vuelta}
+                        name={`vuelta-${a.id}`}
+                        type="date"
+                        value={fechaForm[a.id]?.vuelta || ''}
+                        onChange={(e) => setFechaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], vuelta: e.target.value } }))}
+                      />
+                      <Button variant="secondary" onClick={() => registrarVuelta(a)} disabled={guardando || !fechaForm[a.id]?.vuelta}>
+                        {t.asistentes.ausencias.registrar_vuelta}
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
-            {turnosCubiertos[a.id]?.length > 0 && (
-              <ul className="panel-turnos-cubiertos">
-                {turnosCubiertos[a.id].map((c) => (
-                  <li key={c.id}>
-                    {con(c.objetada_at ? t.asistentes.ausencias.turno_objetado : t.asistentes.ausencias.turno_cubierto_por, {
-                      turno: nombreDelTurno(c.series_guardias),
-                      nombre: c.asistentes?.nombre ?? '',
-                    })}
-                  </li>
-                ))}
-              </ul>
-            )}
+                {cambiosDeFecha[a.id]?.length > 0 && (
+                  <div className="panel-historial-fechas">
+                    <b>{t.asistentes.ausencias.historial_fechas}</b>
+                    {cambiosDeFecha[a.id].map((c) => (
+                      <span key={c.id} className="panel-mini">
+                        {con(t.asistentes.ausencias.cambio_de_fecha, {
+                          antes: fechaVisible(c.fecha_anterior),
+                          despues: fechaVisible(c.fecha_nueva),
+                          cuando: new Date(c.cambiado_at).toLocaleDateString(locale),
+                        })}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
-            {/* Cuántos turnos dejó descubiertos. Las ausencias cargadas antes de que esto se
-                escribiera tienen la columna vacía, y ahí no se dice nada: cero y «no se sabe» no
-                son lo mismo, y escribir cero haría creer que no hay nada que cubrir. */}
-            {afectadas !== null && (
-              <p>
-                {afectadas.length === 0
-                  ? t.asistentes.ausencias.sin_guardias_afectadas
-                  : con(t.asistentes.ausencias.guardias_afectadas, { n: afectadas.length })}
-                {afectadas.length > 0 && (
+                {turnosCubiertos[a.id]?.length > 0 && (
+                  <div className="panel-turnos-cubiertos">
+                    {turnosCubiertos[a.id].map((c) => (
+                      <span key={c.id} className="panel-mini">
+                        {con(c.objetada_at ? t.asistentes.ausencias.turno_objetado : t.asistentes.ausencias.turno_cubierto_por, {
+                          turno: nombreDelTurno(c.series_guardias),
+                          nombre: c.asistentes?.nombre ?? '',
+                        })}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="molde-formgrid">
+                  <div className="molde-campo">
+                    <b>{t.asistentes.ausencias.certificado_medico}</b>
+                    <span className="panel-mini">
+                      {a.certificado_url ? t.asistentes.ausencias.certificado_cargado : t.asistentes.ausencias.sin_certificado}
+                    </span>
+                    <input
+                      type="file"
+                      accept="application/pdf,image/jpeg,image/png"
+                      aria-label={t.asistentes.ausencias.certificado_medico}
+                      disabled={subiendoCertificado === a.id}
+                      onChange={(e) => subirCertificado(a.id, e.target.files?.[0])}
+                    />
+                    {subiendoCertificado === a.id && <span className="panel-mini">{t.asistentes.ausencias.subiendo_certificado}</span>}
+                  </div>
+                </div>
+                <div className="molde-acciones">
+                  <Button variant="secondary" onClick={() => descargarConstancia(a)}>
+                    {t.asistentes.ausencias.descargar_constancia}
+                  </Button>
+                  {a.certificado_url && (
+                    <Button variant="secondary" onClick={() => verCertificado(a.id)}>
+                      {t.asistentes.ausencias.ver_certificado}
+                    </Button>
+                  )}
+                </div>
+
+                {/* Sin turnos que cubrir no se pide ningún sustituto: no habría dónde ponerlo. */}
+                {(sinCubrir === null || sinCubrir.length > 0) && (
                   <>
-                    {' — '}
-                    {sinCubrir.length === 0
-                      ? t.asistentes.ausencias.todas_cubiertas
-                      : con(t.asistentes.ausencias.guardias_sin_cubrir, { n: sinCubrir.length })}
+                    {/* Por qué la hace otro. La lista sale del catálogo de la Prestadora: si se quedó
+                        sin ninguna encendida no hay nada que elegir, y se lo dice, porque un
+                        desplegable vacío no explica nada. */}
+                    {estadoMotivos === 'vacio' && (
+                      <Alert variant="info">{t.asistentes.ausencias.sustitucion_sin_motivos}</Alert>
+                    )}
+                    {errorMotivos && <Alert variant="error">{errorMotivos}</Alert>}
+                    <div className="molde-formgrid">
+                      <FormField
+                        label={t.asistentes.ausencias.asignar_sustituto}
+                        name={`sustituto-${a.id}`}
+                        type="select"
+                        value={coberturaForm[a.id]?.asistente_sustituto_id || ''}
+                        onChange={(e) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], asistente_sustituto_id: e.target.value } }))}
+                      >
+                        <option value="">{t.guardias.nueva_guardia.elegir}</option>
+                        {otrosAsistentes.map((o) => (
+                          <option key={o.id} value={o.id}>{o.nombre}</option>
+                        ))}
+                      </FormField>
+                      {turnosFijos.length > 0 && (
+                        <FormField
+                          label={t.asistentes.ausencias.turno_fijo}
+                          name={`turno-${a.id}`}
+                          type="select"
+                          value={coberturaForm[a.id]?.serie_id || ''}
+                          onChange={(e) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], serie_id: e.target.value } }))}
+                        >
+                          <option value="">{t.asistentes.ausencias.todos_los_turnos}</option>
+                          {turnosFijos.map((s) => (
+                            <option key={s.id} value={s.id}>{nombreDelTurno(s)}</option>
+                          ))}
+                        </FormField>
+                      )}
+                      <FormField
+                        label={t.asistentes.ausencias.sustitucion_motivo}
+                        name={`motivo-sustitucion-${a.id}`}
+                        type="select"
+                        value={coberturaForm[a.id]?.motivo || ''}
+                        onChange={(e) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], motivo: e.target.value } }))}
+                        disabled={estadoMotivos !== 'listo'}
+                      >
+                        <option value="">{t.guardias.nueva_guardia.elegir}</option>
+                        {motivosSustitucion.map((m) => (
+                          <option key={m.id} value={valorGuardado(m)}>
+                            {nombreMotivoSustitucion(m, t)}
+                          </option>
+                        ))}
+                      </FormField>
+                      <FormField
+                        label={t.asistentes.ausencias.costo_adicional}
+                        name={`costo-${a.id}`}
+                        type="number"
+                        value={coberturaForm[a.id]?.costo_adicional || ''}
+                        onChange={(e) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], costo_adicional: e.target.value } }))}
+                      />
+                      {motivoElegido(a.id)?.pide_detalle && (
+                        <div className="molde-ancho">
+                          <FormField
+                            label={t.asistentes.ausencias.sustitucion_motivo_detalle}
+                            name={`motivo-detalle-${a.id}`}
+                            type="textarea"
+                            value={coberturaForm[a.id]?.motivo_detalle || ''}
+                            onChange={(e) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], motivo_detalle: e.target.value } }))}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div className="molde-acciones">
+                      <Button variant="secondary" onClick={() => asignarCobertura(a)} disabled={guardando}>
+                        {t.asistentes.ausencias.guardar_cobertura}
+                      </Button>
+                    </div>
                   </>
                 )}
-              </p>
-            )}
-
-            <Button variant="secondary" onClick={() => descargarConstancia(a)}>
-              {t.asistentes.ausencias.descargar_constancia}
-            </Button>
-
-            <div className="panel-certificado-medico">
-              <p><strong>{t.asistentes.ausencias.certificado_medico}</strong></p>
-              {a.certificado_url ? (
-                <>
-                  <p>{t.asistentes.ausencias.certificado_cargado}</p>
-                  <Button variant="secondary" onClick={() => verCertificado(a.id)}>
-                    {t.asistentes.ausencias.ver_certificado}
-                  </Button>
-                </>
-              ) : (
-                <p>{t.asistentes.ausencias.sin_certificado}</p>
-              )}
-              <label>
-                <input
-                  type="file"
-                  accept="application/pdf,image/jpeg,image/png"
-                  disabled={subiendoCertificado === a.id}
-                  onChange={(e) => subirCertificado(a.id, e.target.files?.[0])}
-                />
-              </label>
-              {subiendoCertificado === a.id && <p>{t.asistentes.ausencias.subiendo_certificado}</p>}
+              </div>
             </div>
-
-            {/* Sin turnos que cubrir no se pide ningún sustituto: no habría dónde ponerlo. */}
-            {(sinCubrir === null || sinCubrir.length > 0) && (
-              <>
-                <FormField
-                  label={t.asistentes.ausencias.asignar_sustituto}
-                  name={`sustituto-${a.id}`}
-                  type="select"
-                  value={coberturaForm[a.id]?.asistente_sustituto_id || ''}
-                  onChange={(e) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], asistente_sustituto_id: e.target.value } }))}
-                >
-                  <option value="">{t.guardias.nueva_guardia.elegir}</option>
-                  {otrosAsistentes.map((o) => (
-                    <option key={o.id} value={o.id}>{o.nombre}</option>
-                  ))}
-                </FormField>
-                {turnosFijos.length > 0 && (
-                  <FormField
-                    label={t.asistentes.ausencias.turno_fijo}
-                    name={`turno-${a.id}`}
-                    type="select"
-                    value={coberturaForm[a.id]?.serie_id || ''}
-                    onChange={(e) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], serie_id: e.target.value } }))}
-                  >
-                    <option value="">{t.asistentes.ausencias.todos_los_turnos}</option>
-                    {turnosFijos.map((s) => (
-                      <option key={s.id} value={s.id}>{nombreDelTurno(s)}</option>
-                    ))}
-                  </FormField>
-                )}
-                {/* Por qué la hace otro. La lista sale del catálogo de la Prestadora: si se quedó
-                    sin ninguna encendida no hay nada que elegir, y se lo dice, porque un
-                    desplegable vacío no explica nada. */}
-                {estadoMotivos === 'vacio' && (
-                  <Alert variant="info">{t.asistentes.ausencias.sustitucion_sin_motivos}</Alert>
-                )}
-                {errorMotivos && <Alert variant="error">{errorMotivos}</Alert>}
-                <FormField
-                  label={t.asistentes.ausencias.sustitucion_motivo}
-                  name={`motivo-sustitucion-${a.id}`}
-                  type="select"
-                  value={coberturaForm[a.id]?.motivo || ''}
-                  onChange={(e) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], motivo: e.target.value } }))}
-                  disabled={estadoMotivos !== 'listo'}
-                >
-                  <option value="">{t.guardias.nueva_guardia.elegir}</option>
-                  {motivosSustitucion.map((m) => (
-                    <option key={m.id} value={valorGuardado(m)}>
-                      {nombreMotivoSustitucion(m, t)}
-                    </option>
-                  ))}
-                </FormField>
-                {motivoElegido(a.id)?.pide_detalle && (
-                  <FormField
-                    label={t.asistentes.ausencias.sustitucion_motivo_detalle}
-                    name={`motivo-detalle-${a.id}`}
-                    type="textarea"
-                    value={coberturaForm[a.id]?.motivo_detalle || ''}
-                    onChange={(e) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], motivo_detalle: e.target.value } }))}
-                  />
-                )}
-                <FormField
-                  label={t.asistentes.ausencias.costo_adicional}
-                  name={`costo-${a.id}`}
-                  type="number"
-                  value={coberturaForm[a.id]?.costo_adicional || ''}
-                  onChange={(e) => setCoberturaForm((prev) => ({ ...prev, [a.id]: { ...prev[a.id], costo_adicional: e.target.value } }))}
-                />
-                <Button variant="secondary" onClick={() => asignarCobertura(a)} disabled={guardando}>
-                  {t.asistentes.ausencias.guardar_cobertura}
-                </Button>
-              </>
-            )}
+            );
+          })}
           </div>
-          );
-        })}
-      </EstadoLista>
+        </EstadoLista>
+      </section>
 
-      <h2>{t.asistentes.ausencias.registrar_nueva}</h2>
-      <FormField label={t.asistentes.ausencias.tipo} name="tipo" type="select" value={nueva.tipo} onChange={(e) => setNueva((f) => ({ ...f, tipo: e.target.value }))}>
-        {TIPOS.map((tipo) => <option key={tipo} value={tipo}>{t.asistentes.ausencias[`tipo_${tipo}`]}</option>)}
-      </FormField>
-      <FormField label={t.asistentes.ausencias.fecha_inicio} name="fecha_inicio" type="date" value={nueva.fecha_inicio} onChange={(e) => setNueva((f) => ({ ...f, fecha_inicio: e.target.value }))} required />
-      <FormField label={t.asistentes.ausencias.fecha_fin} name="fecha_fin" type="date" value={nueva.fecha_fin} onChange={(e) => setNueva((f) => ({ ...f, fecha_fin: e.target.value }))} required />
-      <FormField
-        label={t.asistentes.ausencias.avisada_en}
-        name="avisada_en"
-        type="datetime-local"
-        value={nueva.avisada_en}
-        onChange={(e) => setNueva((f) => ({ ...f, avisada_en: e.target.value }))}
-      />
-      <FormField label={t.comun.nota_interna} name="observaciones" type="textarea" value={nueva.observaciones} onChange={(e) => setNueva((f) => ({ ...f, observaciones: e.target.value }))} />
-      <Button onClick={registrarAusencia} disabled={guardando || !nueva.fecha_inicio || !nueva.fecha_fin}>
-        {guardando ? t.comun.guardando : t.asistentes.ausencias.registrar_nueva}
-      </Button>
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.asistentes.ausencias.registrar_nueva}</h2>
+        </div>
+        <div className="molde-formgrid">
+          <FormField label={t.asistentes.ausencias.tipo} name="tipo" type="select" value={nueva.tipo} onChange={(e) => setNueva((f) => ({ ...f, tipo: e.target.value }))}>
+            {TIPOS.map((tipo) => <option key={tipo} value={tipo}>{t.asistentes.ausencias[`tipo_${tipo}`]}</option>)}
+          </FormField>
+          <FormField
+            label={t.asistentes.ausencias.avisada_en}
+            name="avisada_en"
+            type="datetime-local"
+            value={nueva.avisada_en}
+            onChange={(e) => setNueva((f) => ({ ...f, avisada_en: e.target.value }))}
+          />
+          <FormField label={t.asistentes.ausencias.fecha_inicio} name="fecha_inicio" type="date" value={nueva.fecha_inicio} onChange={(e) => setNueva((f) => ({ ...f, fecha_inicio: e.target.value }))} required />
+          <FormField label={t.asistentes.ausencias.fecha_fin} name="fecha_fin" type="date" value={nueva.fecha_fin} onChange={(e) => setNueva((f) => ({ ...f, fecha_fin: e.target.value }))} required />
+          <div className="molde-ancho">
+            <FormField label={t.comun.nota_interna} name="observaciones" type="textarea" value={nueva.observaciones} onChange={(e) => setNueva((f) => ({ ...f, observaciones: e.target.value }))} />
+          </div>
+        </div>
+        <div className="molde-acciones">
+          <Button onClick={registrarAusencia} disabled={guardando || !nueva.fecha_inicio || !nueva.fecha_fin}>
+            {guardando ? t.comun.guardando : t.asistentes.ausencias.registrar_nueva}
+          </Button>
+        </div>
+      </section>
     </div>
   );
 }

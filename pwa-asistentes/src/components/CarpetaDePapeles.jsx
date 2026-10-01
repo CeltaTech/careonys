@@ -88,8 +88,8 @@ export default function CarpetaDePapeles() {
   );
 
   return (
-    <div>
-      <h2 style={{ marginTop: '2rem' }}>{tp.titulo}</h2>
+    <section className="pwa-card">
+      <h2>{tp.titulo}</h2>
 
       {/* El resumen de la carpeta entera, con la misma palabra que usa el resto del producto.
           Va arriba porque es lo que contesta la pregunta con la que se entra: ¿estoy bien? */}
@@ -113,7 +113,7 @@ export default function CarpetaDePapeles() {
 
       {/* El Certificado va abajo de la carpeta y con su propio título: no es uno más de los
           papeles que se exigen, es lo que la Prestadora emite cuando los demás están. */}
-      <h3 style={{ marginTop: '1.5rem' }}>{tp.certificado_titulo}</h3>
+      <h3>{tp.certificado_titulo}</h3>
       {!certificado ? (
         <p>{tp.certificado_sin_certificado}</p>
       ) : (
@@ -124,6 +124,6 @@ export default function CarpetaDePapeles() {
         </p>
       )}
 
-    </div>
+    </section>
   );
 }

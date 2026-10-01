@@ -7,6 +7,7 @@ import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 import { REGLA_QUE_SE_PUEDE_TOCAR } from '../../lib/avisoDeAusencia';
+import '../../styles/molde-paginas.css';
 
 /* Con cuánta anticipación una falta se considera avisada con tiempo.
    ==========================================================================
@@ -69,13 +70,16 @@ export function AusenciasTab() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.ausencias_titulo}</h2>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.ausencias_titulo}</h2>
+      </div>
       {error && <Alert variant="error">{error}</Alert>}
       {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
       <EstadoLista estado={estado} error={error} recargar={recargar}>
         {regla && (
           <>
+            <div className="molde-formgrid">
             <FormField
               label={t.configuracion.ausencias_horas_con_tiempo}
               name="horas_para_considerarla_con_tiempo"
@@ -94,12 +98,15 @@ export function AusenciasTab() {
               value={regla.horas_entre_avisos}
               onChange={(e) => cambiar('horas_entre_avisos', e.target.value)}
             />
-            <Button onClick={guardar} disabled={guardando || !completos}>
-              {guardando ? t.comun.guardando : t.comun.guardar}
-            </Button>
+            </div>
+            <div className="molde-acciones">
+              <Button onClick={guardar} disabled={guardando || !completos}>
+                {guardando ? t.comun.guardando : t.comun.guardar}
+              </Button>
+            </div>
           </>
         )}
       </EstadoLista>
-    </div>
+    </section>
   );
 }

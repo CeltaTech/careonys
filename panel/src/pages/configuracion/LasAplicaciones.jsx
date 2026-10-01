@@ -6,6 +6,7 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
+import '../../styles/molde-paginas.css';
 
 /* Qué muestran las dos aplicaciones del teléfono.
    ==========================================================================
@@ -87,41 +88,50 @@ export function ConfiguracionAplicaciones() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.visibilidad_titulo}</h2>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.visibilidad_titulo}</h2>
+      </div>
       <EstadoLista
         estado={estado}
         error={error}
         vacio={estado === 'listo' && interruptores.length === 0}
         recargar={recargar}
       >
-        <div>
+        <>
           {error && <Alert variant="error">{error}</Alert>}
           {guardado && <Alert variant="info">{t.configuracion.visibilidad_guardado}</Alert>}
 
-          {APLICACIONES.map((app) => (
-            <div key={app}>
-              <h3>{t.configuracion[`visibilidad_grupo_${app}`]}</h3>
-              {interruptores
-                .filter((interruptor) => interruptor.app === app)
-                .map((interruptor) => (
-                  <FormField
-                    key={interruptor.clave}
-                    label={t.configuracion[`visibilidad_${interruptor.clave}`] || interruptor.descripcion}
-                    name={interruptor.clave}
-                    type="checkbox"
-                    checked={elegido[interruptor.clave] ?? interruptor.de_fabrica}
-                    onChange={(e) => cambiar(interruptor.clave, e.target.checked)}
-                  />
-                ))}
-            </div>
-          ))}
+          <div className="panel-grilla panel-columnas-2">
+            {APLICACIONES.map((app) => (
+              <div key={app}>
+                <h3>{t.configuracion[`visibilidad_grupo_${app}`]}</h3>
+                <div className="molde-formgrid">
+                  {interruptores
+                    .filter((interruptor) => interruptor.app === app)
+                    .map((interruptor) => (
+                      <div key={interruptor.clave} className="molde-ancho">
+                        <FormField
+                          label={t.configuracion[`visibilidad_${interruptor.clave}`] || interruptor.descripcion}
+                          name={interruptor.clave}
+                          type="checkbox"
+                          checked={elegido[interruptor.clave] ?? interruptor.de_fabrica}
+                          onChange={(e) => cambiar(interruptor.clave, e.target.checked)}
+                        />
+                      </div>
+                    ))}
+                </div>
+              </div>
+            ))}
+          </div>
 
-          <Button onClick={guardar} disabled={guardando || cambiadas.length === 0}>
-            {guardando ? t.comun.guardando : t.comun.guardar}
-          </Button>
-        </div>
+          <div className="molde-acciones">
+            <Button onClick={guardar} disabled={guardando || cambiadas.length === 0}>
+              {guardando ? t.comun.guardando : t.comun.guardar}
+            </Button>
+          </div>
+        </>
       </EstadoLista>
-    </div>
+    </section>
   );
 }

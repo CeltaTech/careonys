@@ -18,6 +18,8 @@ import { costoMensualDeCobertura, ventanaDeCobertura } from '../../lib/costoDeCo
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { Alert } from '../../components/ui/Alert';
 import { AvisoEscalasProvisorias } from '../../components/AvisoEscalasProvisorias';
+import '../../styles/molde-paginas.css';
+import '../hojaDeTarjetas.css';
 
 const ANTIGUEDADES_MESES = [3, 6, 12, 24];
 const VINCULOS = ['monotributo', 'dependencia'];
@@ -185,85 +187,89 @@ export function SimuladorVinculoTab({ asistente }) {
   }
 
   return (
-    <div>
-      <h2>{t.asistentes.simulador.titulo}</h2>
-      {/* Las proyecciones se calculan con estas escalas: la advertencia va arriba de la tabla, no
-          después, para que no se lea un número antes de saber de dónde sale. */}
-      <AvisoEscalasProvisorias escalas={escalasCrudas} />
+    <div className="molde-pila">
+      <section className="panel-tarjeta hoja-desplazable">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.asistentes.simulador.costo_mensual}</h2>
+        </div>
+        {/* Las proyecciones se calculan con estas escalas: la advertencia va arriba de la tabla, no
+            después, para que no se lea un número antes de saber de dónde sale. */}
+        <AvisoEscalasProvisorias escalas={escalasCrudas} />
+        <EstadoLista
+          estado={estadoDelBloqueMensual}
+          error={error ?? errorConceptos ?? errorCobertura}
+          vacio={false}
+          recargar={() => { recargar(); cargarConceptos(); cargarCoberturas(); }}
+        >
+          {mensual && (
+            <>
+              <table className="panel-tabla">
+                <thead>
+                  <tr>
+                    <th>{t.asistentes.simulador.concepto}</th>
+                    <th>{t.asistentes.vinculo_monotributo}</th>
+                    <th>{t.asistentes.vinculo_dependencia}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>{t.asistentes.simulador.costo_mensual_total}</td>
+                    <td>{celdaMensual('monotributo')}</td>
+                    <td>{celdaMensual('dependencia')}</td>
+                  </tr>
+                  <tr>
+                    <td>{t.asistentes.simulador.cobertura}</td>
+                    <td>{celdaCobertura()}</td>
+                    <td>{celdaCobertura()}</td>
+                  </tr>
+                  <tr>
+                    <td><b>{t.asistentes.simulador.total_mensual}</b></td>
+                    <td><b>{celdaTotal('monotributo')}</b></td>
+                    <td><b>{celdaTotal('dependencia')}</b></td>
+                  </tr>
+                </tbody>
+              </table>
+              {cobertura?.enOtraMoneda > 0 && (
+                <Alert variant="info">{con(t.asistentes.simulador.cobertura_otra_moneda, { n: cobertura.enOtraMoneda })}</Alert>
+              )}
+              {conceptos.length === 0 && (
+                <Alert variant="info">{t.asistentes.simulador.sin_conceptos}</Alert>
+              )}
+              {sinEscala.map((detalle) => (
+                <Alert key={detalle} variant="info">{t.asistentes.simulador.concepto_sin_escala.replace('{detalle}', detalle)}</Alert>
+              ))}
+            </>
+          )}
+        </EstadoLista>
+      </section>
 
-      <h3>{t.asistentes.simulador.costo_mensual}</h3>
-      <Alert variant="info">{t.asistentes.simulador.costo_mensual_explicacion}</Alert>
-      <EstadoLista
-        estado={estadoDelBloqueMensual}
-        error={error ?? errorConceptos ?? errorCobertura}
-        vacio={false}
-        recargar={() => { recargar(); cargarConceptos(); cargarCoberturas(); }}
-      >
-        {mensual && (
-          <>
+      <section className="panel-tarjeta hoja-desplazable">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.asistentes.simulador.costo_del_cese}</h2>
+        </div>
+        <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
+          {proyecciones && (
             <table className="panel-tabla">
               <thead>
                 <tr>
-                  <th>{t.asistentes.simulador.concepto}</th>
+                  <th>{t.asistentes.simulador.antiguedad_hipotetica}</th>
                   <th>{t.asistentes.vinculo_monotributo}</th>
                   <th>{t.asistentes.vinculo_dependencia}</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>{t.asistentes.simulador.costo_mensual_total}</td>
-                  <td>{celdaMensual('monotributo')}</td>
-                  <td>{celdaMensual('dependencia')}</td>
-                </tr>
-                <tr>
-                  <td>{t.asistentes.simulador.cobertura}</td>
-                  <td>{celdaCobertura()}</td>
-                  <td>{celdaCobertura()}</td>
-                </tr>
-                <tr>
-                  <td><strong>{t.asistentes.simulador.total_mensual}</strong></td>
-                  <td><strong>{celdaTotal('monotributo')}</strong></td>
-                  <td><strong>{celdaTotal('dependencia')}</strong></td>
-                </tr>
+                {ANTIGUEDADES_MESES.map((meses, i) => (
+                  <tr key={meses}>
+                    <td>{t.asistentes.simulador.meses.replace('{n}', meses)}</td>
+                    <td>{proyecciones.monotributo[i].faltaDato ? t.asistentes.simulador.falta_dato_base : formatearImporte(proyecciones.monotributo[i].montoDespidoSinCausa, moneda, locale)}</td>
+                    <td>{proyecciones.dependencia[i].faltaDato ? t.asistentes.simulador.falta_dato_base : formatearImporte(proyecciones.dependencia[i].montoDespidoSinCausa, moneda, locale)}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
-            <p>{con(t.asistentes.simulador.cobertura_explicacion, { meses: cobertura?.meses ?? 0 })}</p>
-            {cobertura?.enOtraMoneda > 0 && (
-              <Alert variant="info">{con(t.asistentes.simulador.cobertura_otra_moneda, { n: cobertura.enOtraMoneda })}</Alert>
-            )}
-            {conceptos.length === 0 && (
-              <Alert variant="info">{t.asistentes.simulador.sin_conceptos}</Alert>
-            )}
-            {sinEscala.map((detalle) => (
-              <Alert key={detalle} variant="info">{t.asistentes.simulador.concepto_sin_escala.replace('{detalle}', detalle)}</Alert>
-            ))}
-          </>
-        )}
-      </EstadoLista>
-
-      <h3>{t.asistentes.simulador.costo_del_cese}</h3>
-      <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
-        {proyecciones && (
-          <table className="panel-tabla">
-            <thead>
-              <tr>
-                <th>{t.asistentes.simulador.antiguedad_hipotetica}</th>
-                <th>{t.asistentes.vinculo_monotributo}</th>
-                <th>{t.asistentes.vinculo_dependencia}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ANTIGUEDADES_MESES.map((meses, i) => (
-                <tr key={meses}>
-                  <td>{t.asistentes.simulador.meses.replace('{n}', meses)}</td>
-                  <td>{proyecciones.monotributo[i].faltaDato ? t.asistentes.simulador.falta_dato_base : formatearImporte(proyecciones.monotributo[i].montoDespidoSinCausa, moneda, locale)}</td>
-                  <td>{proyecciones.dependencia[i].faltaDato ? t.asistentes.simulador.falta_dato_base : formatearImporte(proyecciones.dependencia[i].montoDespidoSinCausa, moneda, locale)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </EstadoLista>
+          )}
+        </EstadoLista>
+      </section>
     </div>
   );
 }

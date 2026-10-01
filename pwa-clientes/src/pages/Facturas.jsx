@@ -42,39 +42,40 @@ export default function Facturas() {
   if (facturas === undefined) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
 
   return (
-    <div>
+    <>
       <h1>{t.facturas.titulo}</h1>
 
       {facturas.length === 0 ? (
-        <div className="estado-vacio" role="status">{t.facturas.sin_facturas}</div>
+        <div className="pwa-card estado-vacio" role="status">{t.facturas.sin_facturas}</div>
       ) : (
-        facturas.map((f) => (
-          <Link
-            key={f.factura_id}
-            to={`/facturas/${f.factura_id}`}
-            className="guardia-card"
-            style={{ display: 'block', textDecoration: 'none' }}
-          >
-            <div className="guardia-card-paciente">{periodoEnPalabras(f.periodo, locale)}</div>
-            {f.saldo !== undefined && (
-              <div className="guardia-card-detalle">
-                {t.facturas.col_saldo}: {formatearImporte(f.saldo, f.moneda, locale)}
-                {' · '}
-                {traducirValor(t.facturas, `estado_${f.estado}`)}
-              </div>
-            )}
-            <div className="guardia-card-detalle">
-              {t.facturas.col_facturado}: {formatearImporte(f.monto_total, f.moneda, locale)}
-              {f.cobrado !== undefined && (
-                <>
+        <section className="pwa-card">
+          {facturas.map((f) => (
+            <Link
+              key={f.factura_id}
+              to={`/facturas/${f.factura_id}`}
+              className="guardia-card"
+            >
+              <div className="guardia-card-paciente">{periodoEnPalabras(f.periodo, locale)}</div>
+              {f.saldo !== undefined && (
+                <div className="guardia-card-detalle">
+                  {t.facturas.col_saldo}: {formatearImporte(f.saldo, f.moneda, locale)}
                   {' · '}
-                  {t.facturas.col_cobrado}: {formatearImporte(f.cobrado, f.moneda, locale)}
-                </>
+                  {traducirValor(t.facturas, `estado_${f.estado}`)}
+                </div>
               )}
-            </div>
-          </Link>
-        ))
+              <div className="guardia-card-detalle">
+                {t.facturas.col_facturado}: {formatearImporte(f.monto_total, f.moneda, locale)}
+                {f.cobrado !== undefined && (
+                  <>
+                    {' · '}
+                    {t.facturas.col_cobrado}: {formatearImporte(f.cobrado, f.moneda, locale)}
+                  </>
+                )}
+              </div>
+            </Link>
+          ))}
+        </section>
       )}
-    </div>
+    </>
   );
 }

@@ -9,6 +9,7 @@ import { EstadoLista } from '../components/layout/EstadoLista';
 import { mensajeDeError } from '../lib/errores';
 import { diasParaVencer, estadoDeVencimiento } from '../lib/reglaVencimientos';
 import { diasDePreavisoDeLaPrestadora } from '../lib/plazoDeAviso';
+import './hojaDeTarjetas.css';
 
 export function Documentacion() {
   const { t } = useLocale();
@@ -71,6 +72,11 @@ export function Documentacion() {
     <div>
       <Cabecera titulo={t.documentacion.titulo} />
 
+      <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.documentacion.titulo}</h2>
+        {estado === 'listo' && <span className="panel-mini">{filasFiltradas.length}</span>}
+      </div>
       <div className="panel-filtros">
         <select value={f.filtro} onChange={(e) => set('filtro', e.target.value)} aria-label={t.comun.filtro_estado}>
           <option value="vencido_o_por_vencer">{t.documentacion.filtro_vencido_o_por_vencer}</option>
@@ -100,7 +106,7 @@ export function Documentacion() {
           <tbody>
             {filasFiltradas.map((d) => (
               <tr key={d.id}>
-                <td>{d.asistente_nombre}</td>
+                <td><b>{d.asistente_nombre}</b></td>
                 <td>{d.tipo_nombre}</td>
                 <td>{d.fecha_vencimiento}</td>
                 <td><span className={claseBadge(d.estado_documento)}>{t.documentacion[`estado_${d.estado_documento}`]}</span></td>
@@ -109,6 +115,7 @@ export function Documentacion() {
           </tbody>
         </table>
       </EstadoLista>
+      </section>
     </div>
   );
 }

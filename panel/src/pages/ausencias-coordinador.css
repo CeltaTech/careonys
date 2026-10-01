@@ -1,0 +1,37 @@
+/* Las ausencias de un Coordinador, adentro de la ventana de su cuenta. */
+
+.ausencias-coord {
+  margin: 14px 0 0;
+}
+
+.ausencias-coord-renglon {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--borde-card);
+}
+
+.ausencias-coord-renglon:last-child {
+  border-bottom: 0;
+}
+
+.ausencias-coord-cabeza {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.ausencias-coord-cabeza b {
+  font-size: 12px;
+}
+
+.ausencias-coord-cabeza .panel-mini,
+.ausencias-coord-historial .panel-mini {
+  display: block;
+  margin-top: 3px;
+}
+
+.ausencias-coord-historial {
+  margin-top: 10px;
+  font-size: 12px;
+}

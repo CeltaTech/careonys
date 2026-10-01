@@ -23,6 +23,8 @@ import {
 } from '../../lib/generarDocumentoCese';
 import { bajarYGuardarDocumentoDeCese, verDocumentoGuardado } from '../../lib/documentosGuardados';
 import { TIPO_LIQUIDACION, TIPO_TELEGRAMA, TIPO_NOTIFICACION_PRUEBA } from '../../lib/documentosDeCese';
+import '../../styles/molde-paginas.css';
+import '../hojaDeTarjetas.css';
 
 const CAUSALES_CON_TELEGRAMA = new Set(['despido_con_justa_causa', 'despido_sin_causa', 'abandono_de_trabajo']);
 
@@ -201,7 +203,7 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
           {corriendo ? t.comun.guardando : etiqueta}
         </Button>
         {guardado && (
-          <Button variant="secondary" onClick={() => verGuardado(cese, tipo)} title={t.asistentes.cese.documento_guardado}>
+          <Button variant="secondary" onClick={() => verGuardado(cese, tipo)}>
             {t.asistentes.cese.ver_documento_guardado}
           </Button>
         )}
@@ -210,73 +212,87 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
   }
 
   return (
-    <div>
-      <h2>{t.asistentes.tabs.historial_ceses}</h2>
-      {errorDocumento && <Alert variant="error">{errorDocumento}</Alert>}
-      <EstadoLista estado={estadoCeses} error={errorCeses} vacio={estadoCeses === 'listo' && ceses.length === 0} recargar={cargarCeses}>
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.asistentes.cese.fecha}</th>
-              <th>{t.asistentes.cese.causal}</th>
-              <th>{t.asistentes.cese.monto}</th>
-              <th>{t.asistentes.cese.revisado_abogado}</th>
-              <th>{t.asistentes.cese.documentos}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ceses.map((c) => (
-              <tr key={c.id}>
-                <td>{new Date(c.fecha_cese).toLocaleDateString(locale)}</td>
-                <td>{t.asistentes.causales[c.causal]}</td>
-                <td>{formatearImporte(c.monto_total, c.moneda, locale)}</td>
-                <td>
-                  {c.revisado_por_abogado ? (
-                    <span className={claseBadgeTono(TONO.EXITO)}>{t.comun.si}</span>
-                  ) : (
-                    <span className={claseBadgeTono(TONO.ATENCION)}>{t.comun.no}</span>
-                  )}
-                </td>
-                <td>
-                  <BotonesDeDocumento cese={c} tipo={TIPO_LIQUIDACION} etiqueta={t.asistentes.cese.descargar_liquidacion} />
-                  {(CAUSALES_CON_TELEGRAMA.has(c.causal) || c.causal === 'periodo_de_prueba') && (
-                    c.causal === 'periodo_de_prueba' ? (
-                      <BotonesDeDocumento cese={c} tipo={TIPO_NOTIFICACION_PRUEBA} etiqueta={t.asistentes.cese.descargar_notificacion_prueba} />
-                    ) : (
-                      <BotonesDeDocumento cese={c} tipo={TIPO_TELEGRAMA} etiqueta={t.asistentes.cese.descargar_telegrama} />
-                    )
-                  )}
-                </td>
+    <div className="molde-pila">
+      <section className="panel-tarjeta hoja-desplazable">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.asistentes.tabs.historial_ceses}</h2>
+        </div>
+        {errorDocumento && <Alert variant="error">{errorDocumento}</Alert>}
+        <EstadoLista estado={estadoCeses} error={errorCeses} vacio={estadoCeses === 'listo' && ceses.length === 0} recargar={cargarCeses}>
+          <table className="panel-tabla">
+            <thead>
+              <tr>
+                <th>{t.asistentes.cese.fecha}</th>
+                <th>{t.asistentes.cese.causal}</th>
+                <th>{t.asistentes.cese.monto}</th>
+                <th>{t.asistentes.cese.revisado_abogado}</th>
+                <th>{t.asistentes.cese.documentos}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </EstadoLista>
+            </thead>
+            <tbody>
+              {ceses.map((c) => (
+                <tr key={c.id}>
+                  <td><b>{new Date(c.fecha_cese).toLocaleDateString(locale)}</b></td>
+                  <td>{t.asistentes.causales[c.causal]}</td>
+                  <td>{formatearImporte(c.monto_total, c.moneda, locale)}</td>
+                  <td>
+                    {c.revisado_por_abogado ? (
+                      <span className={claseBadgeTono(TONO.EXITO)}>{t.comun.si}</span>
+                    ) : (
+                      <span className={claseBadgeTono(TONO.ATENCION)}>{t.comun.no}</span>
+                    )}
+                  </td>
+                  <td>
+                    <div className="molde-acciones">
+                      <BotonesDeDocumento cese={c} tipo={TIPO_LIQUIDACION} etiqueta={t.asistentes.cese.descargar_liquidacion} />
+                      {(CAUSALES_CON_TELEGRAMA.has(c.causal) || c.causal === 'periodo_de_prueba') && (
+                        c.causal === 'periodo_de_prueba' ? (
+                          <BotonesDeDocumento cese={c} tipo={TIPO_NOTIFICACION_PRUEBA} etiqueta={t.asistentes.cese.descargar_notificacion_prueba} />
+                        ) : (
+                          <BotonesDeDocumento cese={c} tipo={TIPO_TELEGRAMA} etiqueta={t.asistentes.cese.descargar_telegrama} />
+                        )
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </EstadoLista>
+        {asistente.estado === 'cesado' && <Alert variant="info">{t.asistentes.cese.ya_cesado}</Alert>}
+      </section>
 
-      {asistente.estado === 'cesado' ? (
-        <Alert variant="info">{t.asistentes.cese.ya_cesado}</Alert>
-      ) : (
-        <>
-          <h2>{t.asistentes.tabs.registrar_cese}</h2>
+      {asistente.estado !== 'cesado' && (
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.asistentes.tabs.registrar_cese}</h2>
+          </div>
           {/* La advertencia va acá y no arriba de todo: en el historial los montos ya se liquidaron
               y no hay nada que confirmar; lo que todavía se puede confirmar es este cálculo. */}
           <AvisoEscalasProvisorias escalas={escalasCrudas} />
           {error && <Alert variant="error">{error}</Alert>}
 
-          <FormField label={t.asistentes.cese.fecha} name="fecha_cese" type="date" value={fechaCese} onChange={(e) => { setFechaCese(e.target.value); setResultado(null); }} />
-          <FormField label={t.asistentes.cese.causal} name="causal" type="select" value={causal} onChange={(e) => { setCausal(e.target.value); setResultado(null); }}>
-            {CAUSALES.map((c) => (
-              <option key={c} value={c}>{t.asistentes.causales[c]}</option>
-            ))}
-          </FormField>
+          <div className="molde-formgrid">
+            <FormField label={t.asistentes.cese.fecha} name="fecha_cese" type="date" value={fechaCese} onChange={(e) => { setFechaCese(e.target.value); setResultado(null); }} />
+            <FormField label={t.asistentes.cese.causal} name="causal" type="select" value={causal} onChange={(e) => { setCausal(e.target.value); setResultado(null); }}>
+              {CAUSALES.map((c) => (
+                <option key={c} value={c}>{t.asistentes.causales[c]}</option>
+              ))}
+            </FormField>
+          </div>
 
-          <Button variant="secondary" onClick={calcular} disabled={!yaCargo(estadoEscalas) || !yaCargo(estadoFormulas)}>
-            {t.asistentes.cese.calcular}
-          </Button>
+          <div className="molde-acciones">
+            <Button variant="secondary" onClick={calcular} disabled={!yaCargo(estadoEscalas) || !yaCargo(estadoFormulas)}>
+              {t.asistentes.cese.calcular}
+            </Button>
+          </div>
 
           {resultado && (
             <div className="panel-resultado-calculo">
-              <p><strong>{t.asistentes.cese.monto}:</strong> {resultado.montoTotal !== null ? formatearImporte(resultado.montoTotal, moneda, locale) : t.asistentes.cese.requiere_calculo_manual}</p>
+              <div className="hoja-dato">
+                <div className="panel-mini">{t.asistentes.cese.monto}</div>
+                <b>{resultado.montoTotal !== null ? formatearImporte(resultado.montoTotal, moneda, locale) : t.asistentes.cese.requiere_calculo_manual}</b>
+              </div>
 
               <details>
                 <summary>{t.asistentes.cese.ver_detalle_calculo}</summary>
@@ -307,15 +323,17 @@ export function VinculoCeseTab({ asistente, onActualizado }) {
                 <Alert variant="error">{t.asistentes.cese.advertencia_requiere_abogado}</Alert>
               )}
 
-              <Button
-                onClick={confirmarCese}
-                disabled={guardando || (resultado.requiereRevisionAbogado && !revisadoAbogado)}
-              >
-                {guardando ? t.comun.guardando : t.asistentes.cese.confirmar_boton}
-              </Button>
+              <div className="molde-acciones">
+                <Button
+                  onClick={confirmarCese}
+                  disabled={guardando || (resultado.requiereRevisionAbogado && !revisadoAbogado)}
+                >
+                  {guardando ? t.comun.guardando : t.asistentes.cese.confirmar_boton}
+                </Button>
+              </div>
             </div>
           )}
-        </>
+        </section>
       )}
     </div>
   );

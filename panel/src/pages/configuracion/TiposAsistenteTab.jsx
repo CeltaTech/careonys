@@ -13,6 +13,7 @@ import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { con } from '../../lib/textos';
+import '../../styles/molde-paginas.css';
 
 /* Los tipos de Asistente y sus tareas.
    Tres cosas conviven en esta pantalla y conviene no confundirlas:
@@ -154,12 +155,11 @@ export function TiposAsistenteTab() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.tipos_titulo}</h2>
-      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
-
-      <div className="panel-detalle">
-        <h3>{t.matricula.modo_titulo}</h3>
+    <>
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.matricula.modo_titulo}</h2>
+        </div>
         {estadoModo === 'cargando' && (
           <p className="estado-cargando" role="status">
             {t.comun.cargando}
@@ -176,90 +176,98 @@ export function TiposAsistenteTab() {
         )}
 
         {estadoModo === 'listo' && (
-          <select
-            id="modo_control_matricula"
-            aria-label={t.matricula.modo_titulo}
-            value={modoControl}
-            disabled={guardandoModo}
-            onChange={(e) => cambiarModo(e.target.value)}
-          >
-            {MODOS_DE_CONTROL_MATRICULA.map((opcion) => (
-              <option key={opcion} value={opcion}>
-                {t.matricula[`modo_${opcion}`]}
-              </option>
-            ))}
-          </select>
+          <div className="molde-formgrid">
+            <div className="molde-campo">
+              <select
+                id="modo_control_matricula"
+                aria-label={t.matricula.modo_titulo}
+                value={modoControl}
+                disabled={guardandoModo}
+                onChange={(e) => cambiarModo(e.target.value)}
+              >
+                {MODOS_DE_CONTROL_MATRICULA.map((opcion) => (
+                  <option key={opcion} value={opcion}>
+                    {t.matricula[`modo_${opcion}`]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         )}
-      </div>
+      </section>
 
-      <div className="panel-filtros">
-        <Button onClick={() => setCreando(true)}>{t.configuracion.tipos_nuevo}</Button>
-      </div>
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.configuracion.tipos_titulo}</h2>
+          <Button onClick={() => setCreando(true)}>{t.configuracion.tipos_nuevo}</Button>
+        </div>
+        {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
 
-      <EstadoLista
-        estado={estado}
-        error={error}
-        vacio={estado === 'listo' && tipos.length === 0}
-        recargar={recargar}
-        mensajeVacio={t.configuracion.tipos_vacio}
-      >
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.configuracion.tipos_col_nombre}</th>
-              <th>{t.configuracion.tipos_col_origen}</th>
-              <th>{t.configuracion.tipos_col_matricula}</th>
-              <th>{t.configuracion.tipos_col_activo}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {tipos.map((tipo) => (
-              <tr key={tipo.id}>
-                <td>
-                  {nombreTipo(tipo, t)}
-                  {tipo.descripcion && <div className="panel-explicacion">{tipo.descripcion}</div>}
-                </td>
-                <td>
-                  {esTipoGeneral(tipo)
-                    ? t.configuracion.tipos_origen_celtatech
-                    : t.configuracion.tipos_origen_propia}
-                </td>
-                <td>
-                  {tipo.requiere_matricula
-                    ? nombreMatricula(tipo.tipo_matricula, t)
-                    : t.configuracion.tipos_sin_matricula}
-                </td>
-                <td>
-                  {esTipoGeneral(tipo) ? (
-                    '—'
-                  ) : (
-                    <input
-                      type="checkbox"
-                      checked={tipo.activo}
-                      onChange={() => alternarActivo(tipo)}
-                      disabled={ocupadoId === tipo.id}
-                      aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.tipos_col_activo, nombre: tipo.nombre })}
-                    />
-                  )}
-                </td>
-                <td>
-                  <button onClick={() => setTipoAbierto(tipoAbierto === tipo.id ? null : tipo.id)}>
-                    {tipoAbierto === tipo.id
-                      ? t.configuracion.tipos_ocultar_tareas
-                      : t.configuracion.tipos_ver_tareas}
-                  </button>{' '}
-                  {!esTipoGeneral(tipo) && (
-                    <button onClick={() => borrar(tipo)} disabled={ocupadoId === tipo.id}>
-                      {t.comun.borrar}
-                    </button>
-                  )}
-                </td>
+        <EstadoLista
+          estado={estado}
+          error={error}
+          vacio={estado === 'listo' && tipos.length === 0}
+          recargar={recargar}
+          mensajeVacio={t.configuracion.tipos_vacio}
+        >
+          <table className="panel-tabla">
+            <thead>
+              <tr>
+                <th>{t.configuracion.tipos_col_nombre}</th>
+                <th>{t.configuracion.tipos_col_origen}</th>
+                <th>{t.configuracion.tipos_col_matricula}</th>
+                <th>{t.configuracion.tipos_col_activo}</th>
+                <th></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </EstadoLista>
+            </thead>
+            <tbody>
+              {tipos.map((tipo) => (
+                <tr key={tipo.id}>
+                  <td>
+                    <b>{nombreTipo(tipo, t)}</b>
+                    {tipo.descripcion && <div className="panel-mini">{tipo.descripcion}</div>}
+                  </td>
+                  <td>
+                    {esTipoGeneral(tipo)
+                      ? t.configuracion.tipos_origen_celtatech
+                      : t.configuracion.tipos_origen_propia}
+                  </td>
+                  <td>
+                    {tipo.requiere_matricula
+                      ? nombreMatricula(tipo.tipo_matricula, t)
+                      : t.configuracion.tipos_sin_matricula}
+                  </td>
+                  <td>
+                    {esTipoGeneral(tipo) ? (
+                      '—'
+                    ) : (
+                      <input
+                        type="checkbox"
+                        checked={tipo.activo}
+                        onChange={() => alternarActivo(tipo)}
+                        disabled={ocupadoId === tipo.id}
+                        aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.tipos_col_activo, nombre: tipo.nombre })}
+                      />
+                    )}
+                  </td>
+                  <td>
+                    <Button variant="secondary" onClick={() => setTipoAbierto(tipoAbierto === tipo.id ? null : tipo.id)}>
+                      {tipoAbierto === tipo.id
+                        ? t.configuracion.tipos_ocultar_tareas
+                        : t.configuracion.tipos_ver_tareas}
+                    </Button>{' '}
+                    {!esTipoGeneral(tipo) && (
+                      <Button variant="secondary" onClick={() => borrar(tipo)} disabled={ocupadoId === tipo.id}>
+                        {t.comun.borrar}
+                      </Button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </EstadoLista>
+      </section>
 
       {tipoAbierto && (
         <TareasDelTipo
@@ -279,7 +287,7 @@ export function TiposAsistenteTab() {
           }}
         />
       )}
-    </div>
+    </>
   );
 }
 
@@ -334,44 +342,50 @@ function TareasDelTipo({ tipo, vias, prestadoraId }) {
   const vedadas = viasVedadasPorMatricula(tipo, vias);
 
   return (
-    <div className="panel-tab-contenido" style={{ marginTop: '1.5rem' }}>
-      <h2>{t.configuracion.tareas_titulo} · {nombreTipo(tipo, t)}</h2>
+    <>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
 
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
-        <ListaDeClase
-          clase="corresponde"
-          titulo={t.configuracion.tareas_corresponde}
-          vacio={t.configuracion.tareas_vacio_corresponde}
-          tareas={tareas.filter((x) => x.clase === 'corresponde')}
-          tipo={tipo}
-          prestadoraId={prestadoraId}
-          ocupadoId={ocupadoId}
-          onBorrar={borrar}
-          onCambio={recargar}
-        />
-        <ListaDeClase
-          clase="no_corresponde"
-          titulo={t.configuracion.tareas_no_corresponde}
-          vacio={t.configuracion.tareas_vacio_no_corresponde}
-          tareas={tareas.filter((x) => x.clase === 'no_corresponde')}
-          tipo={tipo}
-          prestadoraId={prestadoraId}
-          ocupadoId={ocupadoId}
-          onBorrar={borrar}
-          onCambio={recargar}
-        />
+        <div className="panel-grilla panel-columnas-2">
+          <ListaDeClase
+            clase="corresponde"
+            titulo={t.configuracion.tareas_corresponde}
+            vacio={t.configuracion.tareas_vacio_corresponde}
+            tareas={tareas.filter((x) => x.clase === 'corresponde')}
+            tipo={tipo}
+            prestadoraId={prestadoraId}
+            ocupadoId={ocupadoId}
+            onBorrar={borrar}
+            onCambio={recargar}
+          />
+          <ListaDeClase
+            clase="no_corresponde"
+            titulo={t.configuracion.tareas_no_corresponde}
+            vacio={t.configuracion.tareas_vacio_no_corresponde}
+            tareas={tareas.filter((x) => x.clase === 'no_corresponde')}
+            tipo={tipo}
+            prestadoraId={prestadoraId}
+            ocupadoId={ocupadoId}
+            onBorrar={borrar}
+            onCambio={recargar}
+          />
+        </div>
       </EstadoLista>
 
-      <h3 style={{ marginTop: '1.5rem' }}>{t.configuracion.tareas_vedadas_titulo}</h3>
       {vedadas.length > 0 && (
-        <ul>
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.configuracion.tareas_vedadas_titulo}</h2>
+            <span className="panel-mini">{nombreTipo(tipo, t)}</span>
+          </div>
           {vedadas.map((via) => (
-            <li key={via}>{via}</li>
+            <div key={via} className="panel-fila-alerta">
+              <div><b>{via}</b></div>
+            </div>
           ))}
-        </ul>
+        </section>
       )}
-    </div>
+    </>
   );
 }
 
@@ -401,41 +415,45 @@ function ListaDeClase({ clase, titulo, vacio, tareas, tipo, prestadoraId, ocupad
   }
 
   return (
-    <div style={{ marginTop: '1rem' }}>
-      <h3>{titulo}</h3>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{titulo}</h2>
+        <span className="panel-mini">{t.configuracion.tareas_titulo} · {nombreTipo(tipo, t)}</span>
+      </div>
       {error && <Alert variant="error">{error}</Alert>}
       {tareas.length === 0 ? (
-        <p className="panel-explicacion">{vacio}</p>
+        <p className="molde-vacio">{vacio}</p>
       ) : (
-        <ul>
-          {tareas.map((tarea) => (
-            <li key={tarea.id}>
-              {tarea.texto || tarea.clave}
-              {!tarea.prestadora_id ? (
-                <> · {t.configuracion.tipos_origen_celtatech}</>
-              ) : (
-                <>
-                  {' '}
-                  <button onClick={() => onBorrar(tarea)} disabled={ocupadoId === tarea.id}>
-                    {t.comun.borrar}
-                  </button>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
+        tareas.map((tarea) => (
+          <div key={tarea.id} className="panel-fila-alerta">
+            <div><b>{tarea.texto || tarea.clave}</b></div>
+            {!tarea.prestadora_id ? (
+              <span className="badge badge-neutro">{t.configuracion.tipos_origen_celtatech}</span>
+            ) : (
+              <Button variant="secondary" onClick={() => onBorrar(tarea)} disabled={ocupadoId === tarea.id}>
+                {t.comun.borrar}
+              </Button>
+            )}
+          </div>
+        ))
       )}
-      <FormField
-        label={t.configuracion.tareas_agregar}
-        name={`nueva_tarea_${clase}`}
-        value={texto}
-        onChange={(e) => setTexto(e.target.value)}
-        placeholder={t.configuracion.tareas_nueva_placeholder}
-      />
-      <Button onClick={agregar} disabled={agregando || !texto.trim()}>
-        {agregando ? t.comun.guardando : t.configuracion.tareas_agregar}
-      </Button>
-    </div>
+      <div className="molde-formgrid">
+        <div className="molde-ancho">
+          <FormField
+            label={t.configuracion.tareas_agregar}
+            name={`nueva_tarea_${clase}`}
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            placeholder={t.configuracion.tareas_nueva_placeholder}
+          />
+        </div>
+      </div>
+      <div className="molde-acciones">
+        <Button onClick={agregar} disabled={agregando || !texto.trim()}>
+          {agregando ? t.comun.guardando : t.configuracion.tareas_agregar}
+        </Button>
+      </div>
+    </section>
   );
 }
 
@@ -476,29 +494,33 @@ function NuevoTipoModal({ prestadoraId, onClose, onCreado }) {
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
         <h2 id={modal.idTitulo}>{t.configuracion.tipos_nuevo}</h2>
         {error && <Alert variant="error">{error}</Alert>}
-        <FormField
-          label={t.configuracion.tipos_nombre_label}
-          name="tipo_nombre"
-          value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
-          required
-        />
-        <FormField
-          label={t.configuracion.tipos_descripcion_label}
-          name="tipo_descripcion"
-          type="textarea"
-          value={descripcion}
-          onChange={(e) => setDescripcion(e.target.value)}
-        />
-        <FormField
-          label={t.configuracion.tipos_requiere_matricula_label}
-          name="tipo_requiere_matricula"
-          type="checkbox"
-          checked={requiereMatricula}
-          onChange={(e) => setRequiereMatricula(e.target.checked)}
-        />
-        {requiereMatricula && (
-          <>
+        <div className="molde-formgrid">
+          <div className="molde-ancho">
+            <FormField
+              label={t.configuracion.tipos_nombre_label}
+              name="tipo_nombre"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              required
+            />
+          </div>
+          <div className="molde-ancho">
+            <FormField
+              label={t.configuracion.tipos_descripcion_label}
+              name="tipo_descripcion"
+              type="textarea"
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+            />
+          </div>
+          <FormField
+            label={t.configuracion.tipos_requiere_matricula_label}
+            name="tipo_requiere_matricula"
+            type="checkbox"
+            checked={requiereMatricula}
+            onChange={(e) => setRequiereMatricula(e.target.checked)}
+          />
+          {requiereMatricula && (
             <FormField
               label={t.configuracion.tipos_tipo_matricula_label}
               name="tipo_tipo_matricula"
@@ -506,8 +528,8 @@ function NuevoTipoModal({ prestadoraId, onClose, onCreado }) {
               onChange={(e) => setTipoMatricula(e.target.value)}
               required
             />
-          </>
-        )}
+          )}
+        </div>
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>
             {t.comun.cancelar}

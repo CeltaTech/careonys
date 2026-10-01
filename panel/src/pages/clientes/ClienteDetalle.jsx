@@ -40,6 +40,8 @@ import {
 } from '../../lib/facturacionDeClientes';
 import { traducirValor } from '../../i18n/valores';
 import { con } from '../../lib/textos';
+import '../../styles/molde-paginas.css';
+import '../hojaDeTarjetas.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -265,45 +267,68 @@ export function ClienteDetalle() {
     ['alertas', t.clientes.alertas_activas],
   ];
 
+  // La línea de datos de la ficha, con lo que ya se muestra en Contacto.
+  const datosDeLaFicha = [
+    cliente.solicitudes?.localidad,
+    cliente.solicitudes?.telefono,
+    cliente.solicitudes?.email,
+    `${t.clientes.col_fecha_alta}: ${new Date(cliente.created_at).toLocaleDateString(locale)}`,
+  ].filter(Boolean);
+
   return (
     <div>
       <Cabecera titulo={cliente.solicitudes?.nombre || '—'}>
-        <button className="link-volver" onClick={() => navigate('/clientes')}><span aria-hidden="true">←</span> {t.clientes.volver_a_clientes}</button>
+        <Button variant="secondary" onClick={() => navigate('/clientes')}>
+          <span aria-hidden="true">←</span> {t.clientes.volver_a_clientes}
+        </Button>
+        {puedeEditarCliente && (
+          <Button variant="secondary" onClick={() => reenviarInvitacion(cliente.id)} disabled={reenviandoUsuarioId === cliente.id}>
+            {reenviandoUsuarioId === cliente.id ? t.comun.reenviando_invitacion : t.comun.reenviar_invitacion}
+          </Button>
+        )}
       </Cabecera>
+      <div className="panel-mini hoja-ficha-datos">{datosDeLaFicha.join(' · ')}</div>
 
-      <div className="panel-tabs" role="tablist">
-        {pestanas.map(([tabId, titulo]) => (
-          <button
-            key={tabId}
-            type="button"
-            role="tab"
-            aria-selected={tab === tabId}
-            className={`panel-tab ${tab === tabId ? 'panel-tab-activo' : ''}`}
-            onClick={() => setTab(tabId)}
-          >
-            {titulo}
-          </button>
-        ))}
-      </div>
-
-      {/* El aviso del reenvío queda afuera de las pestañas: se reenvía desde Contacto y desde el
-          personas autorizadas, y tiene que verse en las dos. */}
+      {/* El aviso del reenvío queda afuera de las pestañas: se reenvía desde la cabecera y desde
+          las personas autorizadas, y tiene que verse en las dos. */}
       {mensajeReenvio && <Alert variant={mensajeReenvio.tipo}>{mensajeReenvio.texto}</Alert>}
 
-      <div className="panel-tab-contenido">
+      <div className="molde-pila">
+        <section className="panel-tarjeta">
+          <div className="panel-tabs" role="tablist">
+            {pestanas.map(([tabId, titulo]) => (
+              <button
+                key={tabId}
+                type="button"
+                role="tab"
+                aria-selected={tab === tabId}
+                className={`panel-tab ${tab === tabId ? 'panel-tab-activo' : ''}`}
+                onClick={() => setTab(tabId)}
+              >
+                {titulo}
+              </button>
+            ))}
+          </div>
+        </section>
+
         {tab === 'contacto' && (
           <>
+          <section className="panel-tarjeta">
+            <div className="panel-tarjeta-titulo">
+              <h2>{t.clientes.contacto}</h2>
+              {formContacto?.telefono && (
+                <a className="panel-enlace" href={linkWhatsapp(formContacto.telefono)} target="_blank" rel="noreferrer">
+                  {t.clientes.abrir_whatsapp}
+                </a>
+              )}
+            </div>
             {errorContacto && <Alert variant="error">{errorContacto}</Alert>}
             {contactoGuardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
             {formContacto && (
               <>
+              <div className="molde-formgrid">
                 <FormField label={t.clientes.col_nombre} name="nombre_contacto" value={formContacto.nombre} onChange={(e) => setCampoContacto('nombre', e.target.value)} disabled={!puedeEditarCliente} />
                 <FormField label={t.clientes.col_telefono} name="telefono_contacto" value={formContacto.telefono} onChange={(e) => setCampoContacto('telefono', e.target.value)} disabled={!puedeEditarCliente} />
-                {formContacto.telefono && (
-                  <p className="panel-explicacion">
-                    <a href={linkWhatsapp(formContacto.telefono)} target="_blank" rel="noreferrer">{t.clientes.abrir_whatsapp}</a>
-                  </p>
-                )}
                 <FormField label={t.clientes.col_email} name="email_contacto" type="email" value={formContacto.email} onChange={(e) => setCampoContacto('email', e.target.value)} disabled={!puedeEditarCliente} />
                 <FormField label={t.clientes.col_localidad} name="localidad_contacto" value={formContacto.localidad} onChange={(e) => setCampoContacto('localidad', e.target.value)} disabled={!puedeEditarCliente} />
                 <FormField label={t.clientes.plan} name="plan_contacto" value={formContacto.plan} onChange={(e) => setCampoContacto('plan', e.target.value)} disabled={!puedeEditarCliente} />
@@ -340,41 +365,41 @@ export function ClienteDetalle() {
 
                     Se elige siempre, también cuando paga el Cliente: ahí el Pagador es alguien de la
                     Cliente, y cuál es no se adivina. */}
-                <SelectorDeLegajo
-                  name="pagador_legajo_id"
-                  label={t.clientes.pagador_legajo}
-                  valor={formContacto.pagador_legajo_id}
-                  alElegir={(legajoId) => setCampoContacto('pagador_legajo_id', legajoId)}
-                  deshabilitado={!puedeEditarCliente}
-                />
-                {/* Elegir el Legajo no convierte a nadie en Pagador: lo convierte haber firmado la
-                    obligación de pagar. Acá abajo se ve si esa firma está y qué papeles faltan, en el
-                    mismo momento en que se lo elige. Avisa, no bloquea.
-
-                    Aparece junto al selector y siempre, pague quien pague: el Pagador firma en todos los
-                    casos, y quien arma la contratación tiene que ver acá mismo si esa firma está. */}
-                {puedeEditarCliente && (
-                  <EstadoDelPagador clienteId={cliente.id} puedeRegistrar={puedeRegistrarConsentimiento} />
-                )}
-                <dl className="panel-detalle-lista">
-                  <dt>{t.clientes.col_fecha_alta}</dt>
-                  <dd>{new Date(cliente.created_at).toLocaleDateString(locale)}</dd>
-                </dl>
+                <div className="molde-ancho">
+                  <SelectorDeLegajo
+                    name="pagador_legajo_id"
+                    label={t.clientes.pagador_legajo}
+                    valor={formContacto.pagador_legajo_id}
+                    alElegir={(legajoId) => setCampoContacto('pagador_legajo_id', legajoId)}
+                    deshabilitado={!puedeEditarCliente}
+                  />
+                </div>
+              </div>
+              <div className="molde-acciones">
                 <Button onClick={guardarContacto} disabled={guardandoContacto || !puedeEditarCliente}>
                   {guardandoContacto ? t.comun.guardando : t.comun.guardar}
-                </Button>{' '}
-                {puedeEditarCliente && (
-                  <Button variant="secondary" onClick={() => reenviarInvitacion(cliente.id)} disabled={reenviandoUsuarioId === cliente.id}>
-                    {reenviandoUsuarioId === cliente.id ? t.comun.reenviando_invitacion : t.comun.reenviar_invitacion}
-                  </Button>
-                )}
+                </Button>
+              </div>
               </>
             )}
+          </section>
+          {/* Si el Pagador elegido firmó y qué papeles faltan, siempre a la vista. Avisa, no bloquea. */}
+          {formContacto && puedeEditarCliente && (
+            <EstadoDelPagador clienteId={cliente.id} puedeRegistrar={puedeRegistrarConsentimiento} />
+          )}
           </>
         )}
 
         {tab === 'pacientes' && (
-          <>
+          <section className="panel-tarjeta hoja-desplazable">
+            <div className="panel-tarjeta-titulo">
+              <h2>{t.clientes.pacientes}</h2>
+              {puedeEditarPaciente && (
+                <Button variant="secondary" onClick={() => setMostrarNuevoPaciente(true)}>
+                  {t.clientes.agregar_paciente}
+                </Button>
+              )}
+            </div>
             {cliente.pacientes?.length ? (
               <table className="panel-tabla">
                 <thead>
@@ -389,7 +414,7 @@ export function ClienteDetalle() {
                 <tbody>
                   {cliente.pacientes.map((p) => (
                     <tr key={p.id}>
-                      <td>{p.nombre}</td>
+                      <td><b>{p.nombre}</b></td>
                       <td>{p.fecha_nacimiento || '—'}</td>
                       <td>{p.nivel_complejidad || '—'}</td>
                       <td>{p.domicilio || '—'}</td>
@@ -419,14 +444,9 @@ export function ClienteDetalle() {
                 </tbody>
               </table>
             ) : (
-              <p className="estado-vacio">{t.clientes.sin_pacientes}</p>
+              <p className="molde-vacio">{t.clientes.sin_pacientes}</p>
             )}
-            {puedeEditarPaciente && (
-              <Button variant="secondary" onClick={() => setMostrarNuevoPaciente(true)}>
-                {t.clientes.agregar_paciente}
-              </Button>
-            )}
-          </>
+          </section>
         )}
 
         {tab === 'personas autorizadas' && (
@@ -450,18 +470,27 @@ export function ClienteDetalle() {
                 )}
               </Alert>
             )}
+            <section className="panel-tarjeta hoja-desplazable">
+            <div className="panel-tarjeta-titulo">
+              <h2>{t.clientes.personas autorizadas.titulo}</h2>
+              {puedeEditarCliente && (
+                <Button variant="secondary" onClick={() => setMostrarInvitarPersonasAutorizadas(true)}>
+                  {t.clientes.personas autorizadas.agregar}
+                </Button>
+              )}
+            </div>
             {!instruccionPendiente && ultimaInstruccion && (
-              <p className="panel-explicacion">
+              <div className="panel-mini">
                 {con(t.clientes.personas autorizadas.ultima_instruccion, {
                   fecha: new Date(ultimaInstruccion.cerrada_en || ultimaInstruccion.created_at).toLocaleDateString(locale),
                   como: t.clientes.personas autorizadas[`cerrada_${ultimaInstruccion.cerrada_como}`] || '',
                 })}
-              </p>
+              </div>
             )}
 
-            {estadoPersonasAutorizadas === 'cargando' && <p className="estado-cargando">{t.comun.cargando}</p>}
-            {estadoPersonasAutorizadas === 'error' && <p className="estado-vacio">{errorPersonasAutorizadas || t.comun.error_generico}</p>}
-            {estadoPersonasAutorizadas === 'vacio' && <p className="estado-vacio">{t.clientes.personas autorizadas.sin_miembros}</p>}
+            {estadoPersonasAutorizadas === 'cargando' && <p className="molde-vacio">{t.comun.cargando}</p>}
+            {estadoPersonasAutorizadas === 'error' && <p className="molde-vacio">{errorPersonasAutorizadas || t.comun.error_generico}</p>}
+            {estadoPersonasAutorizadas === 'vacio' && <p className="molde-vacio">{t.clientes.personas autorizadas.sin_miembros}</p>}
             {estadoPersonasAutorizadas === 'listo' && (
               <table className="panel-tabla">
                 <thead>
@@ -475,7 +504,7 @@ export function ClienteDetalle() {
                 <tbody>
                   {personas autorizadas.map((m) => (
                     <tr key={m.usuarioId}>
-                      <td>{m.nombre || '—'}</td>
+                      <td><b>{m.nombre || '—'}</b></td>
                       <td>{m.email || '—'}</td>
                       <td>{resumenDeAccesos(m.accesos, t)}</td>
                       <td>
@@ -514,11 +543,7 @@ export function ClienteDetalle() {
               </table>
             )}
             {errorPersonasAutorizadas && estadoPersonasAutorizadas === 'listo' && <Alert variant="error">{errorPersonasAutorizadas}</Alert>}
-            {puedeEditarCliente && (
-              <Button variant="secondary" onClick={() => setMostrarInvitarPersonasAutorizadas(true)}>
-                {t.clientes.personas autorizadas.agregar}
-              </Button>
-            )}
+            </section>
           </>
         )}
 

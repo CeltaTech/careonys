@@ -108,17 +108,17 @@ export default function FirmarInstruccion() {
   }
 
   const volver = (
-    <Link to={desde} className="btn btn-secondary" style={{ marginBottom: '1rem', fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
+    <Link to={desde} className="btn btn-volver">
       <span aria-hidden="true">←</span> {t.comun.volver}
     </Link>
   );
 
   if (error) {
     return (
-      <div>
+      <>
         {volver}
         <div className="alert alert-error" role="alert">{error}</div>
-      </div>
+      </>
     );
   }
 
@@ -126,16 +126,16 @@ export default function FirmarInstruccion() {
 
   if (instruccion === null) {
     return (
-      <div>
+      <>
         {volver}
         <h1>{t.instruccion.titulo}</h1>
-        <div className="estado-vacio" role="status">{t.instruccion.sin_instruccion}</div>
-      </div>
+        <div className="pwa-card estado-vacio" role="status">{t.instruccion.sin_instruccion}</div>
+      </>
     );
   }
 
   return (
-    <div>
+    <>
       {volver}
       <h1>{t.instruccion.titulo}</h1>
 
@@ -147,24 +147,25 @@ export default function FirmarInstruccion() {
         <div className="alert alert-success" role="status">{t.instruccion.firmada}</div>
       ) : (
         <>
-          <h2 style={{ marginTop: '1.5rem' }}>{t.instruccion.firmar_titulo}</h2>
-
           {enviadoA && (
             <div className="alert alert-info" role="status">
               {enviadoA === 'whatsapp' ? t.instruccion.codigo_enviado_whatsapp : t.instruccion.codigo_enviado_email}
             </div>
           )}
 
-          <button type="button" className="btn btn-secondary btn-full" disabled={pidiendoCodigo} onClick={pedirCodigo}>
-            {pidiendoCodigo
-              ? t.instruccion.codigo_pidiendo
-              : enviadoA
-              ? t.instruccion.codigo_pedir_otro
-              : t.instruccion.codigo_pedir}
-          </button>
+          <section className="pwa-card">
+            <h2>{t.instruccion.firmar_titulo}</h2>
+            <button type="button" className="btn btn-secondary btn-full btn-abajo" disabled={pidiendoCodigo} onClick={pedirCodigo}>
+              {pidiendoCodigo
+                ? t.instruccion.codigo_pidiendo
+                : enviadoA
+                ? t.instruccion.codigo_pedir_otro
+                : t.instruccion.codigo_pedir}
+            </button>
+          </section>
 
           {enviadoA && (
-            <form onSubmit={confirmar} style={{ marginTop: '1rem' }}>
+            <form className="pwa-card" onSubmit={confirmar}>
               <div className="form-field">
                 <label htmlFor="codigo-instruccion">{t.instruccion.campo_codigo}</label>
                 <input
@@ -183,7 +184,7 @@ export default function FirmarInstruccion() {
                 />
                 {errorDelCodigo && <span className="form-error" id="codigo-instruccion-error" role="alert">{errorDelCodigo}</span>}
               </div>
-              <button type="submit" className="btn btn-primary btn-full" disabled={confirmando || codigo.length !== LARGO_DEL_CODIGO}>
+              <button type="submit" className="btn btn-primary btn-full btn-abajo" disabled={confirmando || codigo.length !== LARGO_DEL_CODIGO}>
                 {confirmando ? t.instruccion.confirmando : t.instruccion.confirmar}
               </button>
             </form>
@@ -194,6 +195,6 @@ export default function FirmarInstruccion() {
           {!enviadoA && errorDelCodigo && <div className="alert alert-error" role="alert">{errorDelCodigo}</div>}
         </>
       )}
-    </div>
+    </>
   );
 }

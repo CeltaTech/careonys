@@ -7,6 +7,9 @@ import { mensajeDeError } from '../lib/errores';
 import { Button } from './ui/Button';
 import { FormField } from './ui/FormField';
 import { Alert } from './ui/Alert';
+import { claseBadge } from '../lib/tonos';
+import '../styles/molde-paginas.css';
+import '../pages/hojaDeTarjetas.css';
 
 /* La entrevista con un postulante, adentro del producto.
    ==========================================================================
@@ -134,28 +137,32 @@ export function EntrevistaDePostulacion({ postulacionId }) {
   }
 
   return (
-    <section className="panel-entrevista">
-      <h3>{tr.titulo}</h3>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{tr.titulo}</h2>
+      </div>
       {error && <Alert variant="error">{error}</Alert>}
 
       {cargando ? (
-        <p>{t.comun.cargando}</p>
+        <p className="panel-mini">{t.comun.cargando}</p>
       ) : (
         <>
-          {!viva && historia.length === 0 && <p className="panel-explicacion">{tr.vacio}</p>}
+          {!viva && historia.length === 0 && <p className="molde-vacio">{tr.vacio}</p>}
 
           {viva && (
             <>
-              <dl className="panel-detalle-lista">
-                <dt>{tr.cuando}</dt>
-                <dd>{enPalabras(viva.agendada_para)}</dd>
-                <dt>{tr.enlace_del_postulante}</dt>
-                <dd>
+              <div className="panel-grilla panel-columnas-3">
+                <div className="hoja-dato">
+                  <div className="panel-mini">{tr.cuando}</div>
+                  <b>{enPalabras(viva.agendada_para)}</b>
+                </div>
+                <div className="hoja-dato">
+                  <div className="panel-mini">{tr.enlace_del_postulante}</div>
                   <Button variant="secondary" onClick={handleCopiar}>
                     {copiado ? tr.enlace_copiado : tr.enlace_copiar}
                   </Button>
-                </dd>
-              </dl>
+                </div>
+              </div>
 
               {/* El producto no prohíbe: avisa. Sin dirección de videollamada la entrevista se
                   agenda igual, y quien la agendó tiene que enterarse de que va a haber que
@@ -164,23 +171,27 @@ export function EntrevistaDePostulacion({ postulacionId }) {
             </>
           )}
 
-          <FormField
-            label={tr.cuando}
-            name="agendada_para"
-            type="datetime-local"
-            value={cuando}
-            onChange={(e) => setCuando(e.target.value)}
-          />
+          <div className="molde-formgrid">
+            <FormField
+              label={tr.cuando}
+              name="agendada_para"
+              type="datetime-local"
+              value={cuando}
+              onChange={(e) => setCuando(e.target.value)}
+            />
 
-          <FormField
-            label={tr.observaciones}
-            name="observaciones_entrevista"
-            type="textarea"
-            value={observaciones}
-            onChange={(e) => setObservaciones(e.target.value)}
-          />
+            <div className="molde-ancho">
+              <FormField
+                label={tr.observaciones}
+                name="observaciones_entrevista"
+                type="textarea"
+                value={observaciones}
+                onChange={(e) => setObservaciones(e.target.value)}
+              />
+            </div>
+          </div>
 
-          <div className="panel-modal-acciones">
+          <div className="molde-acciones">
             {viva ? (
               <>
                 <Button variant="secondary" onClick={handleReprogramar} disabled={trabajando || !cuando}>
@@ -203,20 +214,17 @@ export function EntrevistaDePostulacion({ postulacionId }) {
             )}
           </div>
 
-          {viva && <p className="panel-explicacion">{tr.cerrar_explicacion}</p>}
-
           {/* La historia. Que a alguien se le haya reprogramado dos veces y no se haya presentado
               es justamente lo que se quiere ver antes de decidir. */}
-          {historia.length > 0 && (
-            <ul className="panel-entrevista-historia">
-              {historia.map((fila) => (
-                <li key={fila.id}>
-                  {enPalabras(fila.agendada_para)} — {tr[`estado_${fila.estado}`]}
-                  {fila.observaciones ? ` — ${fila.observaciones}` : ''}
-                </li>
-              ))}
-            </ul>
-          )}
+          {historia.map((fila) => (
+            <div key={fila.id} className="panel-fila-alerta">
+              <div>
+                <b>{enPalabras(fila.agendada_para)}</b>
+                {fila.observaciones && <span className="panel-mini">{fila.observaciones}</span>}
+              </div>
+              <span className={claseBadge(fila.estado)}>{tr[`estado_${fila.estado}`]}</span>
+            </div>
+          ))}
         </>
       )}
     </section>

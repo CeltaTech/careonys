@@ -79,12 +79,12 @@ export default function ExtensionDeTurno({ t, locale, guardiaId, extension, alAv
   }
 
   return (
-    <div className="alert alert-info" role="status" style={{ marginTop: '1.5rem' }}>
-      <h2 style={{ fontSize: '1rem', marginTop: 0 }}>{tr.titulo}</h2>
+    <div className="alert alert-info pwa-card-pie" role="status">
+      <h2>{tr.titulo}</h2>
       <p>{con(tr.desde, { hora: horaDelMomento(extension.desdeAt, locale) })}</p>
       <p>{tr.sigue_a_cargo}</p>
 
-      <p style={{ marginBottom: '0.25rem' }}>{tr.busqueda}</p>
+      <p>{tr.busqueda}</p>
       <ul>
         {/* El camino entero y no `tr.pasos[…]`: el verificador de textos huérfanos reconoce
             así que estas cinco claves se usan, aunque la clave la elija el backend. */}
@@ -111,7 +111,7 @@ export default function ExtensionDeTurno({ t, locale, guardiaId, extension, alAv
 
       {abriendo && (
         <div>
-          <div className="form-field" style={{ marginTop: '0.5rem' }}>
+          <div className="form-field pwa-card-pie">
             <label htmlFor="extension-detalle">{tr.detalle}</label>
             {/* El detalle no es obligatorio, y eso es la decisión: quien está en el medio de algo
                 puede no estar en condiciones de escribir nada, y el aviso tiene que poder salir
@@ -131,13 +131,12 @@ export default function ExtensionDeTurno({ t, locale, guardiaId, extension, alAv
             {enviando ? tr.enviando : tr.confirmar}
           </button>
           <button
-            className="btn btn-secondary btn-full"
+            className="btn btn-secondary btn-full pwa-card-pie"
             onClick={() => {
               setAbriendo(false);
               setError('');
             }}
             disabled={enviando}
-            style={{ marginTop: '0.5rem' }}
           >
             {t.comun.cancelar}
           </button>

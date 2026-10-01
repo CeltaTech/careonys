@@ -13,6 +13,8 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { CamposDeDomicilio } from '../../components/domicilio/CamposDeDomicilio';
 import { DOMICILIO_VACIO, partesParaGuardar, renglonDelDomicilio } from '../../lib/partesDeDomicilio';
 import { useCatalogoDeLugares } from '../../hooks/useCatalogoDeLugares';
+import '../../styles/molde-paginas.css';
+import '../hojaDeTarjetas.css';
 
 // Dónde se atiende al Paciente cuando no está en el domicilio de su ficha.
 //
@@ -187,94 +189,100 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
         {estado === 'error' && <Alert variant="error">{error || t.comun.error_generico}</Alert>}
 
         {hayDatos && (
-          <>
-            <h3>{t.domicilios_temporales.donde_hoy}</h3>
+          <div className="molde-pila">
             {dondeHoy && (
-              <div className="panel-resultado-calculo">
-                <Alert variant="info">
-                  {dondeHoy.es_temporal ? t.domicilios_temporales.hoy_temporal : t.domicilios_temporales.hoy_habitual}
-                </Alert>
-                <dl className="panel-detalle-lista">
-                  <dt>{t.domicilios_temporales.col_domicilio}</dt>
-                  <dd>{dondeHoy.domicilio || '—'}</dd>
-                  <dt>{t.domicilios_temporales.col_coordenadas}</dt>
-                  <dd>{dondeHoy.lat ?? '—'}, {dondeHoy.lng ?? '—'}</dd>
+              <section className="panel-tarjeta">
+                <div className="panel-tarjeta-titulo">
+                  <h2>{t.domicilios_temporales.donde_hoy}</h2>
+                  <span className="panel-mini">
+                    {dondeHoy.es_temporal ? t.domicilios_temporales.hoy_temporal : t.domicilios_temporales.hoy_habitual}
+                  </span>
+                </div>
+                <div className="panel-grilla panel-columnas-3">
+                  <div className="hoja-dato"><div className="panel-mini">{t.domicilios_temporales.col_domicilio}</div><b>{dondeHoy.domicilio || '—'}</b></div>
+                  <div className="hoja-dato"><div className="panel-mini">{t.domicilios_temporales.col_coordenadas}</div><b>{dondeHoy.lat ?? '—'}, {dondeHoy.lng ?? '—'}</b></div>
                   {dondeHoy.es_temporal && (
                     <>
-                      <dt>{t.domicilios_temporales.col_motivo}</dt>
-                      <dd>{dondeHoy.motivo || '—'}</dd>
-                      <dt>{t.domicilios_temporales.col_desde}</dt>
-                      <dd>{dondeHoy.desde || '—'}</dd>
-                      <dt>{t.domicilios_temporales.col_hasta}</dt>
-                      <dd>{dondeHoy.hasta || t.domicilios_temporales.sin_fecha_fin}</dd>
+                      <div className="hoja-dato"><div className="panel-mini">{t.domicilios_temporales.col_motivo}</div><b>{dondeHoy.motivo || '—'}</b></div>
+                      <div className="hoja-dato"><div className="panel-mini">{t.domicilios_temporales.col_desde}</div><b>{dondeHoy.desde || '—'}</b></div>
+                      <div className="hoja-dato"><div className="panel-mini">{t.domicilios_temporales.col_hasta}</div><b>{dondeHoy.hasta || t.domicilios_temporales.sin_fecha_fin}</b></div>
                     </>
                   )}
-                </dl>
-              </div>
+                </div>
+              </section>
             )}
 
-            {errorFila && <Alert variant="error">{errorFila}</Alert>}
+            <section className="panel-tarjeta hoja-desplazable">
+              <div className="panel-tarjeta-titulo">
+                <h2>{t.domicilios_temporales.titulo}</h2>
+                {puedeEditar && !mostrandoForm && (
+                  <Button variant="secondary" onClick={() => setMostrandoForm(true)}>{t.domicilios_temporales.agregar}</Button>
+                )}
+              </div>
 
-            {estado === 'vacio' && <p className="estado-vacio">{t.domicilios_temporales.sin_domicilios}</p>}
+              {errorFila && <Alert variant="error">{errorFila}</Alert>}
 
-            {estado === 'listo' && (
-              <table className="panel-tabla">
-                <thead>
-                  <tr>
-                    <th>{t.domicilios_temporales.col_desde}</th>
-                    <th>{t.domicilios_temporales.col_hasta}</th>
-                    <th>{t.domicilios_temporales.col_domicilio}</th>
-                    <th>{t.domicilios_temporales.col_motivo}</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {periodos.map((p) => (
-                    <Fragment key={p.id}>
-                      <tr>
-                        <td>{p.fecha_inicio}</td>
-                        <td>{p.fecha_fin || t.domicilios_temporales.sin_fecha_fin}</td>
-                        <td>
-                          {p.domicilio}
-                          {p.id === dondeHoy?.domicilio_temporal_id && (
-                            <>
-                              {' '}
-                              <span className={claseBadgeTono(TONO.EXITO)}>{t.domicilios_temporales.rige_hoy}</span>
-                            </>
-                          )}
-                        </td>
-                        <td>{p.motivo}</td>
-                        <td>
-                          {puedeEditar && (
-                            <>
-                              <Button
-                                variant="secondary"
-                                onClick={() => abrirTerminar(p)}
-                                disabled={filaEnCurso === p.id || terminandoId === p.id}
-                              >
-                                {t.domicilios_temporales.terminar}
-                              </Button>{' '}
-                              <Button variant="secondary" onClick={() => borrarPeriodo(p)} disabled={filaEnCurso === p.id}>
-                                {t.comun.borrar}
-                              </Button>
-                            </>
-                          )}
-                        </td>
-                      </tr>
-                      {terminandoId === p.id && (
+              {estado === 'vacio' && <p className="molde-vacio">{t.domicilios_temporales.sin_domicilios}</p>}
+
+              {estado === 'listo' && (
+                <table className="panel-tabla">
+                  <thead>
+                    <tr>
+                      <th>{t.domicilios_temporales.col_desde}</th>
+                      <th>{t.domicilios_temporales.col_hasta}</th>
+                      <th>{t.domicilios_temporales.col_domicilio}</th>
+                      <th>{t.domicilios_temporales.col_motivo}</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {periodos.map((p) => (
+                      <Fragment key={p.id}>
                         <tr>
-                          <td colSpan={5}>
-                            <div className="panel-resultado-calculo">
-                              <FormField
-                                label={t.domicilios_temporales.terminar_fecha}
-                                name={`fecha_termino_${p.id}`}
-                                type="date"
-                                value={fechaTermino}
-                                min={p.fecha_inicio}
-                                onChange={(e) => setFechaTermino(e.target.value)}
-                                required
-                              />
-                              <div className="panel-modal-acciones">
+                          <td>{p.fecha_inicio}</td>
+                          <td>{p.fecha_fin || t.domicilios_temporales.sin_fecha_fin}</td>
+                          <td>
+                            <b>{p.domicilio}</b>
+                            {p.id === dondeHoy?.domicilio_temporal_id && (
+                              <>
+                                {' '}
+                                <span className={claseBadgeTono(TONO.EXITO)}>{t.domicilios_temporales.rige_hoy}</span>
+                              </>
+                            )}
+                          </td>
+                          <td>{p.motivo}</td>
+                          <td>
+                            {puedeEditar && (
+                              <>
+                                <Button
+                                  variant="secondary"
+                                  onClick={() => abrirTerminar(p)}
+                                  disabled={filaEnCurso === p.id || terminandoId === p.id}
+                                >
+                                  {t.domicilios_temporales.terminar}
+                                </Button>{' '}
+                                <Button variant="secondary" onClick={() => borrarPeriodo(p)} disabled={filaEnCurso === p.id}>
+                                  {t.comun.borrar}
+                                </Button>
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                        {terminandoId === p.id && (
+                          <tr>
+                            <td colSpan={5}>
+                              <div className="molde-formgrid">
+                                <FormField
+                                  label={t.domicilios_temporales.terminar_fecha}
+                                  name={`fecha_termino_${p.id}`}
+                                  type="date"
+                                  value={fechaTermino}
+                                  min={p.fecha_inicio}
+                                  onChange={(e) => setFechaTermino(e.target.value)}
+                                  required
+                                />
+                              </div>
+                              <div className="molde-acciones">
                                 <Button
                                   variant="secondary"
                                   onClick={() => setTerminandoId(null)}
@@ -286,76 +294,78 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
                                   {filaEnCurso === p.id ? t.comun.guardando : t.comun.guardar}
                                 </Button>
                               </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  ))}
-                </tbody>
-              </table>
-            )}
-
-            {puedeEditar && !mostrandoForm && (
-              <div className="panel-modal-acciones">
-                <Button onClick={() => setMostrandoForm(true)}>{t.domicilios_temporales.agregar}</Button>
-              </div>
-            )}
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </section>
 
             {puedeEditar && mostrandoForm && (
-              <div className="panel-resultado-calculo">
-                <h3>{t.domicilios_temporales.nuevo_titulo}</h3>
+              <section className="panel-tarjeta">
+                <div className="panel-tarjeta-titulo">
+                  <h2>{t.domicilios_temporales.nuevo_titulo}</h2>
+                </div>
                 {errorForm && <Alert variant="error">{errorForm}</Alert>}
-                <CamposDeDomicilio
-                  valor={domicilio}
-                  alCambiar={setDomicilio}
-                  catalogo={catalogoDeLugares}
-                  prefijo="temporal_"
-                  deshabilitado={guardando}
-                  requerido
-                />
-                <FormField
-                  label={t.domicilios_temporales.lat}
-                  name="lat_temporal"
-                  type="number"
-                  step="any"
-                  value={lat}
-                  onChange={(e) => setLat(e.target.value)}
-                  required
-                />
-                <FormField
-                  label={t.domicilios_temporales.lng}
-                  name="lng_temporal"
-                  type="number"
-                  step="any"
-                  value={lng}
-                  onChange={(e) => setLng(e.target.value)}
-                  required
-                />
-                <FormField
-                  label={t.domicilios_temporales.col_motivo}
-                  name="motivo_temporal"
-                  value={motivo}
-                  onChange={(e) => setMotivo(e.target.value)}
-                  required
-                />
-                <FormField
-                  label={t.domicilios_temporales.col_desde}
-                  name="fecha_inicio_temporal"
-                  type="date"
-                  value={fechaInicio}
-                  onChange={(e) => setFechaInicio(e.target.value)}
-                  required
-                />
-                <FormField
-                  label={t.domicilios_temporales.col_hasta}
-                  name="fecha_fin_temporal"
-                  type="date"
-                  value={fechaFin}
-                  min={fechaInicio}
-                  onChange={(e) => setFechaFin(e.target.value)}
-                />
-                <div className="panel-modal-acciones">
+                <div className="molde-formgrid">
+                  <div className="molde-ancho">
+                    <CamposDeDomicilio
+                      valor={domicilio}
+                      alCambiar={setDomicilio}
+                      catalogo={catalogoDeLugares}
+                      prefijo="temporal_"
+                      deshabilitado={guardando}
+                      requerido
+                    />
+                  </div>
+                  <FormField
+                    label={t.domicilios_temporales.lat}
+                    name="lat_temporal"
+                    type="number"
+                    step="any"
+                    value={lat}
+                    onChange={(e) => setLat(e.target.value)}
+                    required
+                  />
+                  <FormField
+                    label={t.domicilios_temporales.lng}
+                    name="lng_temporal"
+                    type="number"
+                    step="any"
+                    value={lng}
+                    onChange={(e) => setLng(e.target.value)}
+                    required
+                  />
+                  <div className="molde-ancho">
+                    <FormField
+                      label={t.domicilios_temporales.col_motivo}
+                      name="motivo_temporal"
+                      value={motivo}
+                      onChange={(e) => setMotivo(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <FormField
+                    label={t.domicilios_temporales.col_desde}
+                    name="fecha_inicio_temporal"
+                    type="date"
+                    value={fechaInicio}
+                    onChange={(e) => setFechaInicio(e.target.value)}
+                    required
+                  />
+                  <FormField
+                    label={t.domicilios_temporales.col_hasta}
+                    name="fecha_fin_temporal"
+                    type="date"
+                    value={fechaFin}
+                    min={fechaInicio}
+                    onChange={(e) => setFechaFin(e.target.value)}
+                  />
+                </div>
+                <div className="molde-acciones">
                   <Button
                     variant="secondary"
                     onClick={() => {
@@ -370,9 +380,9 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
                     {guardando ? t.comun.guardando : t.comun.guardar}
                   </Button>
                 </div>
-              </div>
+              </section>
             )}
-          </>
+          </div>
         )}
 
         <div className="panel-modal-acciones">

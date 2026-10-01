@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
+import { Alert } from '../../components/ui/Alert';
+import '../../styles/molde-paginas.css';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { asistentesParaSolicitud } from '../../lib/asistentesParaSolicitud';
 import { usePlantelEnElMapa } from '../../hooks/usePlantelEnElMapa';
@@ -98,8 +100,10 @@ export function AsistentesSugeridos({ solicitud, onAsignar }) {
       : null;
 
   return (
-    <section className="panel-resultado-calculo">
-      <h3>{ts.titulo}</h3>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{ts.titulo}</h2>
+      </div>
 
       {/* El mismo mapa de la pantalla del plantel, acá con el lugar de la Solicitud marcado: los
           puntos quedan ordenados del más cerca al más lejos. Cuando la Solicitud todavía no tiene
@@ -119,54 +123,46 @@ export function AsistentesSugeridos({ solicitud, onAsignar }) {
         mensajeVacio={ts.vacio}
       >
         <>
-          {porQueNo && <p className="estado-vacio">{porQueNo}</p>}
+          {porQueNo && <Alert variant="info">{porQueNo}</Alert>}
 
           {visibles.map((fila) => (
-            <div key={fila.asistente.id} className="candidato">
-              <div className="candidato-cabecera">
-                <span className="candidato-nombre">{fila.asistente.nombre}</span>
-                <span className="candidato-puntaje">{fila.puntaje}</span>
-                {puedeAsignar && (
-                  <Button
-                    onClick={() =>
-                      onAsignar({
-                        asistenteId: fila.asistente.id,
-                        pacienteIds: pacientes.map((p) => p.id),
-                      })
-                    }
-                  >
-                    {ts.asignar}
-                  </Button>
-                )}
+            <div key={fila.asistente.id} className="panel-fila-alerta">
+              <div>
+                <b>{fila.asistente.nombre}</b>
+                <div className="panel-mini">
+                  {[
+                    ...fila.aFavor.map((motivo) => ({ motivo, clase: 'badge badge-exito' })),
+                    ...fila.enContra.map((motivo) => ({ motivo, clase: 'badge badge-atencion' })),
+                  ].map(({ motivo, clase }) => (
+                    <span key={motivo}>
+                      <span className={clase}>{ts[`motivo_${motivo}`]}</span>{' '}
+                    </span>
+                  ))}
+                </div>
               </div>
-
-              <div className="candidato-motivos">
-                {fila.aFavor.length > 0 && (
-                  <ul>
-                    {fila.aFavor.map((motivo) => (
-                      <li key={motivo} className="motivo-a-favor">
-                        {ts[`motivo_${motivo}`]}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {fila.enContra.length > 0 && (
-                  <ul>
-                    {fila.enContra.map((motivo) => (
-                      <li key={motivo} className="motivo-en-contra">
-                        {ts[`motivo_${motivo}`]}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+              <span className="badge badge-info">{fila.puntaje}</span>
+              {puedeAsignar && (
+                <Button
+                  variant="secondary"
+                  onClick={() =>
+                    onAsignar({
+                      asistenteId: fila.asistente.id,
+                      pacienteIds: pacientes.map((p) => p.id),
+                    })
+                  }
+                >
+                  {ts.asignar}
+                </Button>
+              )}
             </div>
           ))}
 
           {sugeridos.length > CUANTOS_PRIMERO && (
-            <Button variant="secondary" onClick={() => setTodos((antes) => !antes)}>
-              {todos ? ts.ver_menos : ts.ver_todos}
-            </Button>
+            <div className="molde-acciones">
+              <Button variant="secondary" onClick={() => setTodos((antes) => !antes)}>
+                {todos ? ts.ver_menos : ts.ver_todos}
+              </Button>
+            </div>
           )}
         </>
       </EstadoLista>

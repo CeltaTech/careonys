@@ -8,6 +8,8 @@ import { EstadoLista } from '../components/layout/EstadoLista';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
+import '../styles/molde-paginas.css';
+import './habilitar-clave.css';
 
 /* HABILITAR UN CAMBIO DE CLAVE.
    ==========================================================================
@@ -106,112 +108,35 @@ export function HabilitarClave() {
     <div>
       <Cabecera titulo={t.habilitar_clave.titulo} />
 
-      <section>
-        <h2>{t.habilitar_clave.pendientes_titulo}</h2>
-        <EstadoLista
-          estado={estadoEsperando}
-          error={errorEsperando}
-          recargar={recargarEsperando}
-          vacio={esperando.length === 0}
-          mensajeVacio={t.habilitar_clave.pendientes_vacio}
-        >
-          <table className="panel-tabla">
-            <thead>
-              <tr>
-                <th>{t.habilitar_clave.columna_persona}</th>
-                <th>{t.habilitar_clave.columna_acciones}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {esperando.map((cuenta) => (
-                <tr key={cuenta.id}>
-                  <td>
-                    <strong>{cuenta.nombre}</strong>
-                    <br />
-                    {cuenta.email}
-                  </td>
-                  <td>
-                    <Button
-                      onClick={() => confirmarTelefono(cuenta)}
-                      disabled={trabajando !== null}
-                    >
-                      {trabajando === `telefono:${cuenta.id}`
-                        ? t.comun.guardando
-                        : t.habilitar_clave.confirmar_telefono}
-                    </Button>
-                  </td>
+      <div className="molde-pila">
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.habilitar_clave.pendientes_titulo}</h2>
+            {estadoEsperando === 'listo' && <span className="panel-mini">{esperando.length}</span>}
+          </div>
+          <EstadoLista
+            estado={estadoEsperando}
+            error={errorEsperando}
+            recargar={recargarEsperando}
+            vacio={esperando.length === 0}
+            mensajeVacio={t.habilitar_clave.pendientes_vacio}
+          >
+            <table className="panel-tabla">
+              <thead>
+                <tr>
+                  <th>{t.habilitar_clave.columna_persona}</th>
+                  <th>{t.habilitar_clave.columna_acciones}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </EstadoLista>
-      </section>
-
-      <form onSubmit={buscar} className="panel-filtros">
-        <FormField
-          label={t.habilitar_clave.buscar}
-          name="texto"
-          required
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-        />
-        <Button type="submit" disabled={estado === 'cargando' || texto.trim().length < 3}>
-          {estado === 'cargando' ? t.comun.cargando : t.habilitar_clave.buscar_boton}
-        </Button>
-      </form>
-
-      {error && <Alert variant="error">{error}</Alert>}
-      {mensaje && <Alert variant="success">{mensaje}</Alert>}
-
-      {estado !== 'inicial' && (
-        <EstadoLista
-          estado={estado === 'inicial' ? 'listo' : estado}
-          error={error}
-          recargar={() => setEstado('inicial')}
-          vacio={cuentas.length === 0}
-          filtrado
-          onLimpiarFiltros={() => {
-            setTexto('');
-            setCuentas([]);
-            setEstado('inicial');
-          }}
-        >
-          <table className="panel-tabla">
-            <thead>
-              <tr>
-                <th>{t.habilitar_clave.columna_persona}</th>
-                <th>{t.habilitar_clave.columna_telefono}</th>
-                <th>{t.habilitar_clave.columna_acciones}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cuentas.map((cuenta) => (
-                <tr key={cuenta.id}>
-                  <td>
-                    {cuenta.foto && <img src={cuenta.foto} alt="" width="40" height="40" />}
-                    <strong>{cuenta.nombre}</strong>
-                    <br />
-                    {cuenta.email}
-                  </td>
-                  <td>
-                    {!cuenta.telefonoCargado
-                      ? t.cuenta_segura.sin_telefono
-                      : cuenta.telefonoVerificado
-                        ? t.cuenta_segura.telefono_verificado
-                        : t.cuenta_segura.telefono_sin_verificar}
-                  </td>
-                  <td>
-                    <Button
-                      onClick={() => habilitar(cuenta)}
-                      disabled={trabajando !== null}
-                    >
-                      {trabajando === `habilitar:${cuenta.id}`
-                        ? t.comun.guardando
-                        : t.habilitar_clave.habilitar}
-                    </Button>
-                    {cuenta.telefonoCargado && !cuenta.telefonoVerificado && (
+              </thead>
+              <tbody>
+                {esperando.map((cuenta) => (
+                  <tr key={cuenta.id}>
+                    <td>
+                      <b>{cuenta.nombre}</b>
+                      <div className="panel-mini">{cuenta.email}</div>
+                    </td>
+                    <td>
                       <Button
-                        variant="secondary"
                         onClick={() => confirmarTelefono(cuenta)}
                         disabled={trabajando !== null}
                       >
@@ -219,14 +144,112 @@ export function HabilitarClave() {
                           ? t.comun.guardando
                           : t.habilitar_clave.confirmar_telefono}
                       </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </EstadoLista>
-      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </EstadoLista>
+        </section>
+
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.habilitar_clave.buscar_boton}</h2>
+            {estado === 'listo' && <span className="panel-mini">{cuentas.length}</span>}
+          </div>
+          <form onSubmit={buscar}>
+            <div className="molde-formgrid">
+              <FormField
+                label={t.habilitar_clave.buscar}
+                name="texto"
+                required
+                value={texto}
+                onChange={(e) => setTexto(e.target.value)}
+              />
+            </div>
+            <div className="molde-acciones">
+              <Button type="submit" disabled={estado === 'cargando' || texto.trim().length < 3}>
+                {estado === 'cargando' ? t.comun.cargando : t.habilitar_clave.buscar_boton}
+              </Button>
+            </div>
+          </form>
+
+          {error && <Alert variant="error">{error}</Alert>}
+          {mensaje && <Alert variant="success">{mensaje}</Alert>}
+
+          {estado !== 'inicial' && (
+            <EstadoLista
+              estado={estado === 'inicial' ? 'listo' : estado}
+              error={error}
+              recargar={() => setEstado('inicial')}
+              vacio={cuentas.length === 0}
+              filtrado
+              onLimpiarFiltros={() => {
+                setTexto('');
+                setCuentas([]);
+                setEstado('inicial');
+              }}
+            >
+              <table className="panel-tabla">
+                <thead>
+                  <tr>
+                    <th>{t.habilitar_clave.columna_persona}</th>
+                    <th>{t.habilitar_clave.columna_telefono}</th>
+                    <th>{t.habilitar_clave.columna_acciones}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cuentas.map((cuenta) => (
+                    <tr key={cuenta.id}>
+                      <td>
+                        <div className="habilitar-clave-persona">
+                          {cuenta.foto && <img src={cuenta.foto} alt="" width="40" height="40" />}
+                          <div>
+                            <b>{cuenta.nombre}</b>
+                            <div className="panel-mini">{cuenta.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        {!cuenta.telefonoCargado ? (
+                          <span className="badge badge-neutro">{t.cuenta_segura.sin_telefono}</span>
+                        ) : cuenta.telefonoVerificado ? (
+                          <span className="badge badge-exito">{t.cuenta_segura.telefono_verificado}</span>
+                        ) : (
+                          <span className="badge badge-atencion">{t.cuenta_segura.telefono_sin_verificar}</span>
+                        )}
+                      </td>
+                      <td>
+                        <div className="habilitar-clave-acciones">
+                          <Button
+                            onClick={() => habilitar(cuenta)}
+                            disabled={trabajando !== null}
+                          >
+                            {trabajando === `habilitar:${cuenta.id}`
+                              ? t.comun.guardando
+                              : t.habilitar_clave.habilitar}
+                          </Button>
+                          {cuenta.telefonoCargado && !cuenta.telefonoVerificado && (
+                            <Button
+                              variant="secondary"
+                              onClick={() => confirmarTelefono(cuenta)}
+                              disabled={trabajando !== null}
+                            >
+                              {trabajando === `telefono:${cuenta.id}`
+                                ? t.comun.guardando
+                                : t.habilitar_clave.confirmar_telefono}
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </EstadoLista>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

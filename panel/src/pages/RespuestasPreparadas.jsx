@@ -9,6 +9,8 @@ import { Cabecera } from '../components/ui/Cabecera';
 import { FormField } from '../components/ui/FormField';
 import { llamadorDe } from '../lib/apiPanel';
 import { mensajeDeError } from '../lib/errores';
+import '../styles/molde-paginas.css';
+import './respuestasPreparadas.css';
 
 /* El banco de respuestas preparadas de WhatsApp.
    ======================================================================================
@@ -170,141 +172,170 @@ export function RespuestasPreparadas() {
       </Cabecera>
       {mensaje && <Alert variant="error">{mensaje}</Alert>}
 
-      <div className="panel-filtros">
-        <select value={f.estado} onChange={(e) => set('estado', e.target.value)} aria-label={tr.titulo}>
-          <option value="todas">{tr.filtro_todas}</option>
-          <option value="sin_aprobar">{tr.filtro_sin_aprobar}</option>
-          <option value="aprobadas">{tr.filtro_aprobadas}</option>
-        </select>
+      <div className="molde-pila">
+        {editando !== null && (
+          <section className="panel-tarjeta">
+            <div className="panel-tarjeta-titulo">
+              <h2>{editando === 'nueva' ? tr.agregar : tr.corregir}</h2>
+            </div>
+            <form onSubmit={guardar}>
+              <div className="molde-formgrid">
+                <FormField
+                  label={tr.nombre}
+                  name="nombre_interno"
+                  required
+                  value={formulario.nombre_interno}
+                  onChange={(e) => cambiar('nombre_interno', e.target.value)}
+                />
+                <FormField
+                  label={tr.terminos}
+                  name="terminos"
+                  required
+                  value={formulario.terminos}
+                  onChange={(e) => cambiar('terminos', e.target.value)}
+                />
+                <div className="molde-ancho">
+                  <FormField
+                    label={tr.texto_es_ar}
+                    name="texto_es_ar"
+                    type="textarea"
+                    required
+                    value={formulario['es-AR']}
+                    onChange={(e) => cambiar('es-AR', e.target.value)}
+                  />
+                </div>
+                <div className="molde-ancho">
+                  <FormField
+                    label={tr.texto_en}
+                    name="texto_en"
+                    type="textarea"
+                    required
+                    value={formulario.en}
+                    onChange={(e) => cambiar('en', e.target.value)}
+                  />
+                </div>
+                <div className="molde-ancho">
+                  <FormField
+                    label={tr.texto_pt_br}
+                    name="texto_pt_br"
+                    type="textarea"
+                    required
+                    value={formulario['pt-BR']}
+                    onChange={(e) => cambiar('pt-BR', e.target.value)}
+                  />
+                </div>
+                <div className="molde-ancho">
+                  <FormField
+                    label={tr.toca_salud}
+                    name="toca_salud"
+                    type="checkbox"
+                    checked={formulario.toca_salud}
+                    onChange={(e) => cambiar('toca_salud', e.target.checked)}
+                  />
+                </div>
+              </div>
+              <div className="molde-acciones">
+                <Button variant="secondary" onClick={() => setEditando(null)} disabled={enCurso !== null}>
+                  {tr.cancelar}
+                </Button>
+                <Button type="submit" disabled={enCurso !== null}>
+                  {tr.guardar}
+                </Button>
+              </div>
+            </form>
+          </section>
+        )}
+
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{tr.titulo}</h2>
+            {estado === 'listo' && <span className="panel-mini">{visibles.length}</span>}
+          </div>
+          <div className="panel-filtros">
+            <select value={f.estado} onChange={(e) => set('estado', e.target.value)} aria-label={tr.titulo}>
+              <option value="todas">{tr.filtro_todas}</option>
+              <option value="sin_aprobar">{tr.filtro_sin_aprobar}</option>
+              <option value="aprobadas">{tr.filtro_aprobadas}</option>
+            </select>
+          </div>
+
+          <EstadoLista
+            estado={estado}
+            error={error}
+            vacio={estado === 'listo' && visibles.length === 0}
+            recargar={cargar}
+            filtrado={hayFiltros}
+            onLimpiarFiltros={limpiar}
+            mensajeVacio={tr.sin_respuestas}
+            accionVacio={<Button onClick={abrirAlta}>{tr.agregar}</Button>}
+          >
+            <table className="panel-tabla">
+              <thead>
+                <tr>
+                  <th>{tr.nombre}</th>
+                  <th>{tr.terminos}</th>
+                  <th>{tr.texto_es_ar}</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {visibles.map((respuesta) => (
+                  <tr key={respuesta.id}>
+                    <td>
+                      <b>{respuesta.nombre_interno}</b>
+                      <div className="respuestas-insignias">
+                        <span className="badge badge-info">
+                          {respuesta.origen === 'ia' ? tr.origen_ia : tr.origen_prestadora}
+                        </span>
+                        <span className={`badge ${respuesta.aprobada_at ? 'badge-exito' : 'badge-atencion'}`}>
+                          {respuesta.aprobada_at ? tr.aprobada : tr.sin_aprobar}
+                        </span>
+                        {respuesta.toca_salud && <span className="badge badge-critico">{tr.toca_salud}</span>}
+                        {!respuesta.activa && <span className="badge badge-neutro">{tr.apagada}</span>}
+                      </div>
+                    </td>
+                    <td>{(respuesta.terminos ?? []).join(', ')}</td>
+                    <td>{respuesta.i18n?.['es-AR']}</td>
+                    <td>
+                      <div className="respuestas-acciones">
+                        <Button
+                          variant="secondary"
+                          onClick={() => abrirCorreccion(respuesta)}
+                          disabled={enCurso !== null || editando !== null}
+                        >
+                          {tr.corregir}
+                        </Button>
+                        {respuesta.aprobada_at ? (
+                          <Button
+                            variant="secondary"
+                            onClick={() => desaprobar(respuesta)}
+                            disabled={enCurso !== null}
+                          >
+                            {tr.desaprobar}
+                          </Button>
+                        ) : (
+                          !respuesta.toca_salud && (
+                            <Button onClick={() => aprobar(respuesta)} disabled={enCurso !== null}>
+                              {tr.aprobar}
+                            </Button>
+                          )
+                        )}
+                        <Button
+                          variant="secondary"
+                          onClick={() => eliminar(respuesta)}
+                          disabled={enCurso !== null}
+                        >
+                          {tr.eliminar}
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </EstadoLista>
+        </section>
       </div>
-
-      {editando !== null && (
-        <form className="panel-formulario" onSubmit={guardar}>
-          <FormField
-            label={tr.nombre}
-            name="nombre_interno"
-            required
-            value={formulario.nombre_interno}
-            onChange={(e) => cambiar('nombre_interno', e.target.value)}
-          />
-          <FormField
-            label={tr.terminos}
-            name="terminos"
-            required
-            value={formulario.terminos}
-            onChange={(e) => cambiar('terminos', e.target.value)}
-          />
-          <FormField
-            label={tr.texto_es_ar}
-            name="texto_es_ar"
-            type="textarea"
-            required
-            value={formulario['es-AR']}
-            onChange={(e) => cambiar('es-AR', e.target.value)}
-          />
-          <FormField
-            label={tr.texto_en}
-            name="texto_en"
-            type="textarea"
-            required
-            value={formulario.en}
-            onChange={(e) => cambiar('en', e.target.value)}
-          />
-          <FormField
-            label={tr.texto_pt_br}
-            name="texto_pt_br"
-            type="textarea"
-            required
-            value={formulario['pt-BR']}
-            onChange={(e) => cambiar('pt-BR', e.target.value)}
-          />
-          <FormField
-            label={tr.toca_salud}
-            name="toca_salud"
-            type="checkbox"
-            checked={formulario.toca_salud}
-            onChange={(e) => cambiar('toca_salud', e.target.checked)}
-          />
-          <Button type="submit" disabled={enCurso !== null}>
-            {tr.guardar}
-          </Button>
-          <Button variant="secondary" onClick={() => setEditando(null)} disabled={enCurso !== null}>
-            {tr.cancelar}
-          </Button>
-        </form>
-      )}
-
-      <EstadoLista
-        estado={estado}
-        error={error}
-        vacio={estado === 'listo' && visibles.length === 0}
-        recargar={cargar}
-        filtrado={hayFiltros}
-        onLimpiarFiltros={limpiar}
-        mensajeVacio={tr.sin_respuestas}
-        accionVacio={<Button onClick={abrirAlta}>{tr.agregar}</Button>}
-      >
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{tr.nombre}</th>
-              <th>{tr.terminos}</th>
-              <th>{tr.texto_es_ar}</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {visibles.map((respuesta) => (
-              <tr key={respuesta.id}>
-                <td>
-                  {respuesta.nombre_interno}
-                  <span className="badge">
-                    {respuesta.origen === 'ia' ? tr.origen_ia : tr.origen_prestadora}
-                  </span>
-                  <span className="badge">
-                    {respuesta.aprobada_at ? tr.aprobada : tr.sin_aprobar}
-                  </span>
-                  {respuesta.toca_salud && <span className="badge">{tr.toca_salud}</span>}
-                  {!respuesta.activa && <span className="badge">{tr.apagada}</span>}
-                </td>
-                <td>{(respuesta.terminos ?? []).join(', ')}</td>
-                <td>{respuesta.i18n?.['es-AR']}</td>
-                <td>
-                  <Button
-                    variant="secondary"
-                    onClick={() => abrirCorreccion(respuesta)}
-                    disabled={enCurso !== null || editando !== null}
-                  >
-                    {tr.corregir}
-                  </Button>
-                  {respuesta.aprobada_at ? (
-                    <Button
-                      variant="secondary"
-                      onClick={() => desaprobar(respuesta)}
-                      disabled={enCurso !== null}
-                    >
-                      {tr.desaprobar}
-                    </Button>
-                  ) : (
-                    !respuesta.toca_salud && (
-                      <Button onClick={() => aprobar(respuesta)} disabled={enCurso !== null}>
-                        {tr.aprobar}
-                      </Button>
-                    )
-                  )}
-                  <Button
-                    variant="secondary"
-                    onClick={() => eliminar(respuesta)}
-                    disabled={enCurso !== null}
-                  >
-                    {tr.eliminar}
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </EstadoLista>
     </div>
   );
 }

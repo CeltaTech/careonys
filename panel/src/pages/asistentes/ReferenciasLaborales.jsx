@@ -11,6 +11,8 @@ import {
   anotarResultadoDeReferencia,
   verReferenciasLaborales,
 } from '../../lib/referenciasGuardadasDeAsistente';
+import '../../styles/molde-paginas.css';
+import './fichaAsistente.css';
 
 /* Las referencias laborales de un Asistente, una por una.
    ==========================================================================
@@ -88,8 +90,11 @@ export function ReferenciasLaborales({ asistente }) {
   const hayLugar = referencias.length < TOPE_DE_REFERENCIAS;
 
   return (
-    <section className="panel-card-verificacion">
-      <h3>{tr.titulo}</h3>
+    <>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{tr.titulo}</h2>
+      </div>
       {/* Sólo cuando la carga salió bien: si el estado es de error, el cartel lo pone `EstadoLista`
           con su botón de reintentar, y los dos juntos dirían lo mismo dos veces. */}
       {error && estado === 'listo' && <Alert variant="error">{error}</Alert>}
@@ -115,12 +120,15 @@ export function ReferenciasLaborales({ asistente }) {
         mensajeVacio={tr.sin_referencias}
         recargar={recargar}
       >
+        <div>
         {referencias.map((referencia) => (
-          <article key={referencia.id} className="panel-referencia-laboral">
-            <h4>{referencia.nombre}</h4>
-            <p className="panel-explicacion">
+          <article key={referencia.id} className="panel-fila-alerta">
+            <div className="ficha-asistente-renglon">
+            <b>{referencia.nombre}</b>
+            <span className="panel-mini">
               {referencia.telefono}{referencia.vinculo ? ` · ${referencia.vinculo}` : ''}
-            </p>
+            </span>
+            <div className="molde-formgrid">
             <FormField
               label={tr.col_resultado}
               name={`resultado-${referencia.id}`}
@@ -133,6 +141,7 @@ export function ReferenciasLaborales({ asistente }) {
                 <option key={opcion} value={opcion}>{tr[`resultado_${opcion}`]}</option>
               ))}
             </FormField>
+            <div className="molde-ancho">
             <FormField
               label={t.comun.nota_interna}
               name={`notas-${referencia.id}`}
@@ -147,24 +156,33 @@ export function ReferenciasLaborales({ asistente }) {
               onBlur={() => anotar(referencia, { notas: referencia.notas || '' })}
               disabled={guardando === referencia.id}
             />
+            </div>
+            </div>
+            </div>
             {/* Quién la verificó no se muestra acá: adentro de una Prestadora el equipo es chico y
                 el nombre no agrega nada a quien mira la ficha. Queda guardado, y sale en la
                 auditoría, que es donde se pregunta quién hizo qué. */}
-            {referencia.verificada_en && (
-              <p className="panel-explicacion">
+            {guardando === referencia.id ? (
+              <span className="panel-mini">{t.comun.guardando}</span>
+            ) : referencia.verificada_en && (
+              <span className="panel-mini">
                 {tr.verificada_por} {new Date(referencia.verificada_en).toLocaleDateString(locale)}
-              </p>
+              </span>
             )}
-            {guardando === referencia.id && <p className="panel-explicacion">{t.comun.guardando}</p>}
           </article>
         ))}
+        </div>
       </EstadoLista>
+    </section>
 
       {/* El formulario queda afuera de `EstadoLista`: es la salida cuando no hay ninguna referencia
           cargada, así que tiene que verse justamente en el caso vacío. */}
       {estado === 'listo' && hayLugar && (
-        <form className="panel-referencia-nueva" onSubmit={agregar}>
-          <h4>{tr.agregar_titulo}</h4>
+        <form className="panel-tarjeta" onSubmit={agregar}>
+          <div className="panel-tarjeta-titulo">
+            <h2>{tr.agregar_titulo}</h2>
+          </div>
+          <div className="molde-formgrid">
           <FormField
             label={tr.campo_nombre}
             name="referencia-nombre"
@@ -185,11 +203,14 @@ export function ReferenciasLaborales({ asistente }) {
             value={nueva.vinculo}
             onChange={(e) => setNueva((previo) => ({ ...previo, vinculo: e.target.value }))}
           />
-          <Button type="submit" variant="secondary" disabled={guardando === 'nueva'}>
-            {guardando === 'nueva' ? t.comun.guardando : tr.agregar}
-          </Button>
+          </div>
+          <div className="molde-acciones">
+            <Button type="submit" variant="secondary" disabled={guardando === 'nueva'}>
+              {guardando === 'nueva' ? t.comun.guardando : tr.agregar}
+            </Button>
+          </div>
         </form>
       )}
-    </section>
+    </>
   );
 }

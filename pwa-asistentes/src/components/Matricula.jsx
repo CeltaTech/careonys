@@ -158,8 +158,8 @@ export default function Matricula() {
   }
 
   return (
-    <div>
-      <h2 style={{ marginTop: '2rem' }}>{tm.titulo}</h2>
+    <section className="pwa-card">
+      <h2>{tm.titulo}</h2>
 
       <div className={cartel.clase}>
         {cartel.titulo && (
@@ -239,7 +239,7 @@ export default function Matricula() {
         </form>
       )}
 
-      <h3 style={{ marginTop: '1.5rem' }}>{tm.lista_titulo}</h3>
+      <h3>{tm.lista_titulo}</h3>
       {matriculas.length === 0 ? (
         <p>{tm.sin_cargas}</p>
       ) : (
@@ -264,6 +264,6 @@ export default function Matricula() {
         </ul>
       )}
 
-    </div>
+    </section>
   );
 }

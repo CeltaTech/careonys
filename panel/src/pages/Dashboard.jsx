@@ -16,6 +16,9 @@ import { hoyISO } from '../lib/horarios';
 import { soloSinResolver } from '../lib/alertaSinResolver';
 import { contarPorModalidad, MODALIDADES_DE_ASISTENTE, modalidadesDelAsistente } from '../lib/modalidades';
 import { ESTADO_ACTIVO, estaEnElPlantel } from '../lib/candidatos';
+import { claseBadgeTono, TONO } from '../lib/tonos';
+import { ESTADOS_DE_SOLICITUD } from '../lib/estadosDeSolicitud';
+import './hojaDeTarjetas.css';
 
 // Los nombres de las modalidades salen de un solo lado: los mismos textos que usa la
 // solapa donde se activan y se desactivan, en Configuración → La Prestadora (Regla 12).
@@ -26,6 +29,13 @@ const NOMBRE_MODALIDAD = {
   directa: (t) => t.configuracion.modalidades_directa,
   match: (t) => t.configuracion.modalidades_match,
   subcontratacion: (t) => t.configuracion.modalidades_subcontratacion,
+};
+
+// El tono de cada modalidad en las donas, sacado de los tonos del producto.
+const COLOR_MODALIDAD = {
+  directa: 'var(--verde-exito)',
+  match: 'var(--violeta)',
+  subcontratacion: 'var(--azul-medio)',
 };
 
 function esHoy(fechaIso) {
@@ -206,147 +216,202 @@ export function Dashboard() {
   const asistentesDisponibles = asistentes.filas.filter(estaEnElPlantel).length;
   const clientesActivas = clientes.filas.filter((f) => !f.deleted_at).length;
 
+  const solicitudesPorEstado = ESTADOS_DE_SOLICITUD.map((e) => ({
+    estado: e,
+    cantidad: solicitudes.filas.filter((s) => (s.estado || 'nueva') === e).length,
+  }));
+  const maximoPorEstado = Math.max(1, ...solicitudesPorEstado.map((fila) => fila.cantidad));
+  const nombreDeModalidad = (modalidad) => NOMBRE_MODALIDAD[modalidad]?.(t) ?? modalidad;
+  const modalidadesDeAsistente = modalidades.filter((modalidad) => MODALIDADES_DE_ASISTENTE.includes(modalidad));
+
   return (
     <div>
       <Cabecera titulo={t.dashboard.titulo} />
 
-      <div className="dashboard-seccion">
-        <div className="dashboard-seccion-header">
-          <h2 className="dashboard-seccion-titulo">{t.dashboard.seccion_actividad_titulo}</h2>
-        </div>
-        <EstadoLista
-          estado={estadoGeneral}
-          error={
-            postulaciones.error ||
-            solicitudes.error ||
-            asistentes.error ||
-            clientes.error ||
-            errorGuardias ||
-            errorVinculos
-          }
-          vacio={false}
-          recargar={() => {
-            postulaciones.recargar();
-            solicitudes.recargar();
-            asistentes.recargar();
-            clientes.recargar();
-            cargarGuardiasEnCurso();
-            cargarVinculosPorModalidad();
-          }}
-        >
-          <div className="dashboard-metricas">
-            {/* Va primero porque es lo único de esta sección que está pasando ahora mismo: las
-                otras cuatro cuentan lo que se acumuló hasta hoy. Y lleva enlace, a diferencia de
-                ellas, porque de acá sí se sigue a algún lado: la lista de Guardias abre en hoy,
-                así que las que este número cuenta están a la vista al llegar. No se le manda el
-                estado por la dirección porque esa pantalla no lee filtros de ahí, y un enlace que
-                promete un filtro que no se aplica es peor que no prometer nada. */}
-            <Link to="/guardias" className="metrica-card">
-              <span className="metrica-valor">{guardiasEnCurso}</span>
-              <span className="metrica-label">{t.dashboard.guardias_en_curso}</span>
-            </Link>
-            <div className="metrica-card">
-              <span className="metrica-valor">{postulacionesHoy}</span>
-              <span className="metrica-label">{t.dashboard.postulaciones_hoy}</span>
-            </div>
-            <div className="metrica-card">
-              <span className="metrica-valor">{postulacionesSemana}</span>
-              <span className="metrica-label">{t.dashboard.postulaciones_semana}</span>
-            </div>
-            <div className="metrica-card">
-              <span className="metrica-valor">{solicitudesPendientes}</span>
-              <span className="metrica-label">{t.dashboard.solicitudes_pendientes}</span>
-            </div>
-            <div className="metrica-card">
-              <span className="metrica-valor">{asistentesDisponibles}</span>
-              <span className="metrica-label">{t.dashboard.asistentes_disponibles}</span>
-            </div>
-            <div className="metrica-card">
-              <span className="metrica-valor">{clientesActivas}</span>
-              <span className="metrica-label">{t.dashboard.clientes_activas}</span>
-            </div>
+      <EstadoLista
+        estado={estadoGeneral}
+        error={
+          postulaciones.error ||
+          solicitudes.error ||
+          asistentes.error ||
+          clientes.error ||
+          errorGuardias ||
+          errorVinculos
+        }
+        vacio={false}
+        recargar={() => {
+          postulaciones.recargar();
+          solicitudes.recargar();
+          asistentes.recargar();
+          clientes.recargar();
+          cargarGuardiasEnCurso();
+          cargarVinculosPorModalidad();
+        }}
+      >
+        <div className="panel-grilla panel-kpis">
+          {/* Va primero porque es lo único que está pasando ahora mismo, y lleva enlace porque la
+              lista de Guardias abre en hoy. */}
+          <Link to="/guardias" className="panel-tarjeta panel-kpi">
+            <div className="panel-kpi-etiqueta">{t.dashboard.guardias_en_curso}</div>
+            <div className="panel-kpi-numero">{guardiasEnCurso}</div>
+          </Link>
+          <div className="panel-tarjeta panel-kpi">
+            <div className="panel-kpi-etiqueta">{t.dashboard.postulaciones_hoy}</div>
+            <div className="panel-kpi-numero">{postulacionesHoy}</div>
           </div>
-          {/* El desglose aparece solamente cuando la Prestadora trabaja de más de una manera: con
-              una sola, cada renglón repetiría el número de arriba.
-
-              Las guardias se abren en las tres modalidades y los vínculos en dos: en la
-              subcontratación el trabajo lo cubre otra empresa con su propio plantel, así que ahí
-              hay guardias y nunca hay gente nuestra. Mostrarle un cero a esa fila diría que esa
-              empresa se quedó sin nadie, que es otra cosa. */}
-          {desgloseModalidadHabilitado && guardiasPorModalidad && vinculosPorModalidad && (
-            <div className="dashboard-metricas dashboard-metricas-desglose">
-              {modalidades.map((modalidad) => (
-                <div key={`guardias-${modalidad}`} className="metrica-card metrica-card-secundaria">
-                  <span className="metrica-valor">{guardiasPorModalidad[modalidad] ?? 0}</span>
-                  <span className="metrica-label">
-                    {t.dashboard.guardias_en_curso_por_modalidad.replace(
-                      '{modalidad}',
-                      NOMBRE_MODALIDAD[modalidad]?.(t) ?? modalidad,
-                    )}
-                  </span>
-                </div>
-              ))}
-              {modalidades
-                .filter((modalidad) => MODALIDADES_DE_ASISTENTE.includes(modalidad))
-                .map((modalidad) => (
-                  <div key={`vinculos-${modalidad}`} className="metrica-card metrica-card-secundaria">
-                    <span className="metrica-valor">{vinculosPorModalidad[modalidad] ?? 0}</span>
-                    <span className="metrica-label">
-                      {t.dashboard.vinculos_activos_por_modalidad.replace(
-                        '{modalidad}',
-                        NOMBRE_MODALIDAD[modalidad]?.(t) ?? modalidad,
-                      )}
-                    </span>
-                  </div>
-                ))}
-            </div>
-          )}
-        </EstadoLista>
-      </div>
-
-      <div className="dashboard-seccion">
-        <div className="dashboard-seccion-header">
-          <h2 className="dashboard-seccion-titulo">{t.dashboard.seccion_alertas_titulo}</h2>
-        </div>
-        <EstadoLista
-          estado={errorAlertas ? 'error' : ausentesSinRelevo === null ? 'cargando' : 'listo'}
-          error={errorAlertas}
-          vacio={false}
-          recargar={cargarAlertas}
-        >
-          <div className="dashboard-metricas">
-            <Link to="/continuidad" className={`metrica-card${ausentesSinRelevo > 0 ? ' metrica-card-alerta' : ''}`}>
-              <span className="metrica-valor">{ausentesSinRelevo}</span>
-              <span className="metrica-label">{t.dashboard.ausentes_sin_relevo}</span>
-            </Link>
-            <Link to="/asistentes" className={`metrica-card${documentosPorVencer > 0 ? ' metrica-card-alerta' : ''}`}>
-              <span className="metrica-valor">{documentosPorVencer}</span>
-              <span className="metrica-label">{t.dashboard.documentacion_por_vencer}</span>
-            </Link>
-            {/* El enlace lleva a la lista de Alertas, que abre filtrada en las pendientes: lo que
-                este número cuenta está a la vista al llegar, sin tocar ningún filtro. */}
-            <Link to="/alertas" className={`metrica-card${alertasIaSinResolver > 0 ? ' metrica-card-alerta' : ''}`}>
-              <span className="metrica-valor">{alertasIaSinResolver}</span>
-              <span className="metrica-label">{t.dashboard.alertas_ia_sin_resolver}</span>
-            </Link>
+          <div className="panel-tarjeta panel-kpi">
+            <div className="panel-kpi-etiqueta">{t.dashboard.postulaciones_semana}</div>
+            <div className="panel-kpi-numero">{postulacionesSemana}</div>
           </div>
-          {desgloseModalidadHabilitado && ausentesPorModalidad && (
-            <div className="dashboard-metricas dashboard-metricas-desglose">
-              {modalidades.map((modalidad) => (
-                <div key={modalidad} className="metrica-card metrica-card-secundaria">
-                  <span className="metrica-valor">{ausentesPorModalidad[modalidad] ?? 0}</span>
-                  <span className="metrica-label">
-                    {t.dashboard.ausentes_sin_relevo_por_modalidad.replace(
-                      '{modalidad}',
-                      NOMBRE_MODALIDAD[modalidad]?.(t) ?? modalidad,
-                    )}
-                  </span>
+          <div className="panel-tarjeta panel-kpi">
+            <div className="panel-kpi-etiqueta">{t.dashboard.solicitudes_pendientes}</div>
+            <div className="panel-kpi-numero">{solicitudesPendientes}</div>
+          </div>
+          <div className="panel-tarjeta panel-kpi">
+            <div className="panel-kpi-etiqueta">{t.dashboard.asistentes_disponibles}</div>
+            <div className="panel-kpi-numero">{asistentesDisponibles}</div>
+          </div>
+          <div className="panel-tarjeta panel-kpi">
+            <div className="panel-kpi-etiqueta">{t.dashboard.clientes_activas}</div>
+            <div className="panel-kpi-numero">{clientesActivas}</div>
+          </div>
+        </div>
+      </EstadoLista>
+
+      <div className="panel-grilla panel-columnas-2">
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.solicitudes.titulo}</h2>
+            <Link to="/solicitudes" className="panel-enlace">{t.comun.ver_detalle}</Link>
+          </div>
+          <EstadoLista
+            estado={solicitudes.estado}
+            error={solicitudes.error}
+            vacio={false}
+            recargar={solicitudes.recargar}
+          >
+            <div className="hoja-barras">
+              {solicitudesPorEstado.map((fila) => (
+                <div key={fila.estado} className="hoja-barra">
+                  <span>{fila.cantidad}</span>
+                  <div
+                    className="hoja-barra-columna"
+                    style={{ height: `${(fila.cantidad / maximoPorEstado) * 100}%` }}
+                  />
+                  <span className="hoja-barra-rotulo">{t.solicitudes[`estado_${fila.estado}`]}</span>
                 </div>
               ))}
             </div>
-          )}
-        </EstadoLista>
+          </EstadoLista>
+        </section>
+
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.dashboard.seccion_alertas_titulo}</h2>
+          </div>
+          <EstadoLista
+            estado={errorAlertas ? 'error' : ausentesSinRelevo === null ? 'cargando' : 'listo'}
+            error={errorAlertas}
+            vacio={false}
+            recargar={cargarAlertas}
+          >
+            <>
+              <Link to="/continuidad" className="panel-fila-alerta">
+                <div><b>{t.dashboard.ausentes_sin_relevo}</b></div>
+                <span className={claseBadgeTono(ausentesSinRelevo > 0 ? TONO.CRITICO : TONO.NEUTRO)}>
+                  {ausentesSinRelevo}
+                </span>
+              </Link>
+              <Link to="/asistentes" className="panel-fila-alerta">
+                <div><b>{t.dashboard.documentacion_por_vencer}</b></div>
+                <span className={claseBadgeTono(documentosPorVencer > 0 ? TONO.ATENCION : TONO.NEUTRO)}>
+                  {documentosPorVencer}
+                </span>
+              </Link>
+              {/* El enlace lleva a la lista de Alertas, que abre filtrada en las pendientes. */}
+              <Link to="/alertas" className="panel-fila-alerta">
+                <div><b>{t.dashboard.alertas_ia_sin_resolver}</b></div>
+                <span className={claseBadgeTono(alertasIaSinResolver > 0 ? TONO.ATENCION : TONO.NEUTRO)}>
+                  {alertasIaSinResolver}
+                </span>
+              </Link>
+            </>
+          </EstadoLista>
+        </section>
       </div>
+
+      {/* El desglose aparece solamente cuando la Prestadora trabaja de más de una manera: con
+          una sola, cada dona repetiría el número de arriba. Los vínculos no muestran la
+          subcontratación, porque esa gente es de otra empresa. */}
+      {desgloseModalidadHabilitado && (
+        <div className="panel-grilla panel-columnas-3">
+          {guardiasPorModalidad && (
+            <DonaPorModalidad
+              titulo={t.dashboard.guardias_en_curso}
+              cuentas={guardiasPorModalidad}
+              modalidades={modalidades}
+              nombreDeModalidad={nombreDeModalidad}
+            />
+          )}
+          {vinculosPorModalidad && (
+            <DonaPorModalidad
+              titulo={t.dashboard.vinculos_activos}
+              cuentas={vinculosPorModalidad}
+              modalidades={modalidadesDeAsistente}
+              nombreDeModalidad={nombreDeModalidad}
+            />
+          )}
+          {ausentesPorModalidad && (
+            <DonaPorModalidad
+              titulo={t.dashboard.ausentes_sin_relevo}
+              cuentas={ausentesPorModalidad}
+              modalidades={modalidades}
+              nombreDeModalidad={nombreDeModalidad}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
+}
+
+/* Una dona con lo que cuenta cada modalidad: el total al medio y, al lado, cuánto es de cada
+   una. Sale sólo de los números que la pantalla ya trajo. */
+function DonaPorModalidad({ titulo, cuentas, modalidades, nombreDeModalidad }) {
+  const filas = modalidades.map((modalidad) => ({ modalidad, cantidad: cuentas[modalidad] ?? 0 }));
+  const total = filas.reduce((suma, fila) => suma + fila.cantidad, 0);
+  let acumulado = 0;
+  const tramos = filas.map((fila) => {
+    const desde = total > 0 ? (acumulado / total) * 100 : 0;
+    acumulado += fila.cantidad;
+    const hasta = total > 0 ? (acumulado / total) * 100 : 0;
+    return `${colorDeModalidad(fila.modalidad)} ${desde}% ${hasta}%`;
+  });
+  const fondo = total > 0 ? `conic-gradient(${tramos.join(', ')})` : 'var(--borde-card)';
+
+  return (
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{titulo}</h2>
+      </div>
+      <div className="panel-grafico">
+        <div className="panel-dona" style={{ background: fondo }}>
+          <b>{total}</b>
+        </div>
+        <div className="panel-leyenda">
+          {filas.map((fila) => (
+            <div key={fila.modalidad}>
+              <i className="panel-punto" style={{ background: colorDeModalidad(fila.modalidad) }} />
+              {nombreDeModalidad(fila.modalidad)} {fila.cantidad}
+              {total > 0 && ` (${Math.round((fila.cantidad / total) * 100)}%)`}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function colorDeModalidad(modalidad) {
+  return COLOR_MODALIDAD[modalidad] ?? 'var(--texto-secundario)';
 }

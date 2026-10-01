@@ -98,48 +98,49 @@ export default function PerfilPublicoAsistente() {
 
   if (error) return <div className="alert alert-error" role="alert">{error}</div>;
   if (datos === null) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
-  if (!datos.asistente) return <div className="estado-vacio" role="status">{t.comun.vacio}</div>;
+  if (!datos.asistente) return <div className="pwa-card estado-vacio" role="status">{t.comun.vacio}</div>;
 
   const { asistente, opiniones } = datos;
   const { verificacion, calificacion } = asistente;
 
   return (
     <div>
-      <Link to="/buscar" className="btn btn-secondary" style={{ marginBottom: '1rem', fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
+      <Link to="/buscar" className="btn btn-volver">
         <span aria-hidden="true">←</span> {t.comun.volver}
       </Link>
       <h1>{asistente.nombre}</h1>
-      {asistente.foto_url && (
-        <img
-          src={asistente.foto_url}
-          alt={asistente.nombre}
-          style={{ width: '100%', maxWidth: 200, borderRadius: '12px', marginBottom: '1rem' }}
-        />
-      )}
-      {asistente.tipo && (
-        <p className="guardia-card-detalle">
-          {t.asistente.tipo}: {nombreTipo(asistente.tipo, t)}
-        </p>
-      )}
-      {asistente.zonas.length > 0 && (
-        <p className="guardia-card-detalle">
-          {t.vidriera.zonas}: {asistente.zonas.join(', ')}
-        </p>
-      )}
-      {asistente.antiguedad_meses !== null && (
-        <p className="guardia-card-detalle">
-          {t.vidriera.antiguedad.replace('{meses}', asistente.antiguedad_meses)}
-        </p>
-      )}
 
-      {/* Escribirle es libre: lo que se cobra es el dato de contacto, y adentro del chat sale
-          tapado hasta que esta Cliente lo abra. El botón se apaga mientras el hilo se abre, y si
-          ya existía uno con esta persona lleva a ese mismo: no hay dos hilos por pareja. */}
-      <button type="button" className="btn btn-primary" onClick={escribirle} disabled={abriendo}>
-        {abriendo ? t.comun.cargando : t.chat.escribirle}
-      </button>
+      <section className="pwa-card">
+        {asistente.foto_url && (
+          <img src={asistente.foto_url} alt={asistente.nombre} className="foto-persona" />
+        )}
+        {asistente.tipo && (
+          <p className="pwa-card-dato">
+            {t.asistente.tipo}: {nombreTipo(asistente.tipo, t)}
+          </p>
+        )}
+        {asistente.zonas.length > 0 && (
+          <p className="pwa-card-dato">
+            {t.vidriera.zonas}: {asistente.zonas.join(', ')}
+          </p>
+        )}
+        {asistente.antiguedad_meses !== null && (
+          <p className="pwa-card-dato">
+            {t.vidriera.antiguedad.replace('{meses}', asistente.antiguedad_meses)}
+          </p>
+        )}
 
-      <section style={{ marginTop: '1.5rem' }}>
+        {/* Escribirle es libre: lo que se cobra es el dato de contacto, y adentro del chat sale
+            tapado hasta que esta Cliente lo abra. El botón se apaga mientras el hilo se abre, y si
+            ya existía uno con esta persona lleva a ese mismo: no hay dos hilos por pareja. */}
+        <div className="pwa-card-pie">
+          <button type="button" className="btn btn-primary btn-full" onClick={escribirle} disabled={abriendo}>
+            {abriendo ? t.comun.cargando : t.chat.escribirle}
+          </button>
+        </div>
+      </section>
+
+      <section className="pwa-card">
         <h2>{t.vidriera.contacto_titulo}</h2>
 
         {errorContacto && <div className="alert alert-error" role="alert">{errorContacto}</div>}
@@ -150,22 +151,22 @@ export default function PerfilPublicoAsistente() {
         {contacto?.abierto && contacto.contacto && (
           <>
             {contacto.contacto.telefono && (
-              <p className="guardia-card-detalle">
+              <p className="pwa-card-dato">
                 {t.vidriera.contacto_telefono}: {contacto.contacto.telefono}
               </p>
             )}
             {contacto.contacto.email && (
-              <p className="guardia-card-detalle">
+              <p className="pwa-card-dato">
                 {t.vidriera.contacto_email}: {contacto.contacto.email}
               </p>
             )}
             {contacto.contacto.domicilio && (
-              <p className="guardia-card-detalle">
+              <p className="pwa-card-dato">
                 {t.vidriera.contacto_domicilio}:{' '}
                 <EnlaceAlMapa lugar={{ domicilio: contacto.contacto.domicilio }} t={t} />
               </p>
             )}
-            <p className="guardia-card-detalle">{t.vidriera.contacto_ya_abierto}</p>
+            <p className="mini mini-abajo">{t.vidriera.contacto_ya_abierto}</p>
           </>
         )}
 
@@ -178,9 +179,11 @@ export default function PerfilPublicoAsistente() {
         )}
 
         {contacto && !contacto.abierto && contacto.activacion && !confirmando && (
-          <button type="button" className="btn btn-secondary" onClick={() => setConfirmando(true)}>
-            {t.vidriera.contacto_ver}
-          </button>
+          <div className="pwa-card-pie">
+            <button type="button" className="btn btn-full" onClick={() => setConfirmando(true)}>
+              {t.vidriera.contacto_ver}
+            </button>
+          </div>
         )}
 
         {/* La confirmación dice qué se va a cobrar antes de cobrarlo, y nombra las cuatro cosas
@@ -200,17 +203,19 @@ export default function PerfilPublicoAsistente() {
             {contacto.activacion.saldo_contactos !== null && (
               <p>{t.vidriera.contacto_confirmar_saldo.replace('{n}', contacto.activacion.saldo_contactos)}</p>
             )}
-            <button type="button" className="btn btn-primary" onClick={verElContacto} disabled={viendoContacto}>
-              {viendoContacto ? t.comun.cargando : t.vidriera.contacto_confirmar_si}
-            </button>{' '}
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setConfirmando(false)}
-              disabled={viendoContacto}
-            >
-              {t.comun.cancelar}
-            </button>
+            <div className="pwa-acciones">
+              <button type="button" className="btn btn-primary btn-full" onClick={verElContacto} disabled={viendoContacto}>
+                {viendoContacto ? t.comun.cargando : t.vidriera.contacto_confirmar_si}
+              </button>
+              <button
+                type="button"
+                className="btn btn-full"
+                onClick={() => setConfirmando(false)}
+                disabled={viendoContacto}
+              >
+                {t.comun.cancelar}
+              </button>
+            </div>
           </div>
         )}
       </section>
@@ -225,26 +230,29 @@ export default function PerfilPublicoAsistente() {
         />
       )}
 
-      <h2 style={{ marginTop: '1.5rem' }}>{t.vidriera.opiniones_titulo}</h2>
-      {calificacion ? (
-        <p className="guardia-card-detalle">
-          {/* Las estrellas dibujadas no se leen: un lector de pantalla las nombraría una por
-              una. Al lado va el mismo dato escrito, que no se ve pero sí se escucha. */}
-          <span aria-hidden="true">
-            {'★'.repeat(Math.round(calificacion.promedio))}
-            {'☆'.repeat(Math.max(0, 5 - Math.round(calificacion.promedio)))}
-          </span>{' '}
-          {t.vidriera.calificacion_cuenta
-            .replace('{promedio}', calificacion.promedio)
-            .replace('{cuantas}', calificacion.cuantas)}
-        </p>
-      ) : (
-        <p className="guardia-card-detalle">{t.vidriera.sin_calificaciones}</p>
-      )}
+      <section className="pwa-card">
+        <h2>{t.vidriera.opiniones_titulo}</h2>
+        {calificacion ? (
+          <p className="pwa-card-dato">
+            {/* Las estrellas dibujadas no se leen: un lector de pantalla las nombraría una por
+                una. Al lado va el mismo dato escrito, que no se ve pero sí se escucha. */}
+            <span aria-hidden="true">
+              {'★'.repeat(Math.round(calificacion.promedio))}
+              {'☆'.repeat(Math.max(0, 5 - Math.round(calificacion.promedio)))}
+            </span>{' '}
+            {t.vidriera.calificacion_cuenta
+              .replace('{promedio}', calificacion.promedio)
+              .replace('{cuantas}', calificacion.cuantas)}
+          </p>
+        ) : (
+          <p className="pwa-card-dato">{t.vidriera.sin_calificaciones}</p>
+        )}
+        {opiniones.length === 0 && (
+          <div className="estado-vacio" role="status">{t.vidriera.sin_opiniones}</div>
+        )}
+      </section>
 
-      {opiniones.length === 0 ? (
-        <div className="estado-vacio" role="status">{t.vidriera.sin_opiniones}</div>
-      ) : (
+      {opiniones.length > 0 && (
         opiniones.map((o) => (
           <div key={o.id} className="guardia-card">
             <div className="guardia-card-paciente">

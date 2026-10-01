@@ -10,6 +10,8 @@ import { diasComputados } from '../lib/diasDeAusencia';
 import { mensajeDeError } from '../lib/errores';
 import { con } from '../lib/textos';
 import { hoyISO, sumarDias } from '../lib/horarios';
+import '../styles/molde-paginas.css';
+import './ausencias-coordinador.css';
 
 /* Las ausencias de un Coordinador.
    ==========================================================================
@@ -128,94 +130,117 @@ export function AusenciasDelCoordinador({ usuario, otrosCoordinadores }) {
   }
 
   return (
-    <div>
-      <h3>{textos.titulo}</h3>
-      {error && estado !== 'error' && <Alert variant="error">{error}</Alert>}
-      <EstadoLista estado={estado} error={error} recargar={recargar}>
-        {ausencias.map((a) => (
-          <div key={a.id} className="panel-card-ausencia">
-            <p>
-              <strong>{textos[`tipo_${a.tipo}`]}</strong> — {fechaVisible(a.fecha_inicio)}
-              {a.fecha_vuelta_real
-                ? ` · ${con(textos.volvio_el, { fecha: fechaVisible(a.fecha_vuelta_real) })}`
-                : ` → ${fechaVisible(a.fecha_fin)} (${textos.prevista})`}
-            </p>
-            {a.coordinador_que_cubre_id && (
-              <p>{con(t.usuarios_panel.lo_cubre, { nombre: nombreDe(a.coordinador_que_cubre_id) })}</p>
-            )}
-            {a.dias_computados !== null && a.dias_computados !== undefined && (
-              <p>{con(textos.dias_computados, { n: a.dias_computados })}</p>
-            )}
-            {!a.fecha_vuelta_real && a.fecha_fin < hoyISO() && (
-              <Alert variant="warning">{textos.vuelta_sin_confirmar}</Alert>
-            )}
-            {!a.fecha_vuelta_real && (
-              <div className="panel-cierre-ausencia">
-                <FormField
-                  label={textos.nueva_fecha_prevista}
-                  name={`prevista-${a.id}`}
-                  type="date"
-                  value={fechaForm[a.id]?.prevista || ''}
-                  onChange={(e) => cambiarFecha(a.id, 'prevista', e.target.value)}
-                />
-                <Button
-                  variant="secondary"
-                  onClick={() => moverElFin(a, { fechaFin: fechaForm[a.id]?.prevista })}
-                  disabled={guardando || !fechaForm[a.id]?.prevista}
-                >
-                  {textos.cambiar_fecha_prevista}
-                </Button>
-                <FormField
-                  label={textos.fecha_vuelta}
-                  name={`vuelta-${a.id}`}
-                  type="date"
-                  value={fechaForm[a.id]?.vuelta || ''}
-                  onChange={(e) => cambiarFecha(a.id, 'vuelta', e.target.value)}
-                />
-                <Button variant="secondary" onClick={() => registrarVuelta(a)} disabled={guardando || !fechaForm[a.id]?.vuelta}>
-                  {textos.registrar_vuelta}
-                </Button>
+    <div className="molde-pila ausencias-coord">
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{textos.titulo}</h2>
+          {estado === 'listo' && <span className="panel-mini">{ausencias.length}</span>}
+        </div>
+        {error && estado !== 'error' && <Alert variant="error">{error}</Alert>}
+        <EstadoLista estado={estado} error={error} recargar={recargar}>
+          {ausencias.map((a) => (
+            <div key={a.id} className="ausencias-coord-renglon">
+              <div className="ausencias-coord-cabeza">
+                <div>
+                  <b>{textos[`tipo_${a.tipo}`]}</b>
+                  <span className="panel-mini">
+                    {fechaVisible(a.fecha_inicio)}
+                    {a.fecha_vuelta_real
+                      ? ` · ${con(textos.volvio_el, { fecha: fechaVisible(a.fecha_vuelta_real) })}`
+                      : ` → ${fechaVisible(a.fecha_fin)}`}
+                  </span>
+                  {a.coordinador_que_cubre_id && (
+                    <span className="panel-mini">{con(t.usuarios_panel.lo_cubre, { nombre: nombreDe(a.coordinador_que_cubre_id) })}</span>
+                  )}
+                  {a.dias_computados !== null && a.dias_computados !== undefined && (
+                    <span className="panel-mini">{con(textos.dias_computados, { n: a.dias_computados })}</span>
+                  )}
+                </div>
+                {!a.fecha_vuelta_real && (
+                  <span className={`badge ${a.fecha_fin < hoyISO() ? 'badge-atencion' : 'badge-info'}`}>{textos.prevista}</span>
+                )}
               </div>
-            )}
-            {cambiosDeFecha[a.id]?.length > 0 && (
-              <div className="panel-historial-fechas">
-                <p><strong>{textos.historial_fechas}</strong></p>
-                <ul>
+              {!a.fecha_vuelta_real && a.fecha_fin < hoyISO() && (
+                <Alert variant="warning">{textos.vuelta_sin_confirmar}</Alert>
+              )}
+              {!a.fecha_vuelta_real && (
+                <>
+                  <div className="molde-formgrid">
+                    <FormField
+                      label={textos.nueva_fecha_prevista}
+                      name={`prevista-${a.id}`}
+                      type="date"
+                      value={fechaForm[a.id]?.prevista || ''}
+                      onChange={(e) => cambiarFecha(a.id, 'prevista', e.target.value)}
+                    />
+                    <FormField
+                      label={textos.fecha_vuelta}
+                      name={`vuelta-${a.id}`}
+                      type="date"
+                      value={fechaForm[a.id]?.vuelta || ''}
+                      onChange={(e) => cambiarFecha(a.id, 'vuelta', e.target.value)}
+                    />
+                  </div>
+                  <div className="molde-acciones">
+                    <Button
+                      variant="secondary"
+                      onClick={() => moverElFin(a, { fechaFin: fechaForm[a.id]?.prevista })}
+                      disabled={guardando || !fechaForm[a.id]?.prevista}
+                    >
+                      {textos.cambiar_fecha_prevista}
+                    </Button>
+                    <Button variant="secondary" onClick={() => registrarVuelta(a)} disabled={guardando || !fechaForm[a.id]?.vuelta}>
+                      {textos.registrar_vuelta}
+                    </Button>
+                  </div>
+                </>
+              )}
+              {cambiosDeFecha[a.id]?.length > 0 && (
+                <div className="ausencias-coord-historial">
+                  <b>{textos.historial_fechas}</b>
                   {cambiosDeFecha[a.id].map((c) => (
-                    <li key={c.id}>
+                    <span key={c.id} className="panel-mini">
                       {con(textos.cambio_de_fecha, {
                         antes: fechaVisible(c.fecha_anterior),
                         despues: fechaVisible(c.fecha_nueva),
                         cuando: new Date(c.cambiado_at).toLocaleDateString(locale),
                       })}
-                    </li>
+                    </span>
                   ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        ))}
-      </EstadoLista>
+                </div>
+              )}
+            </div>
+          ))}
+        </EstadoLista>
+      </section>
 
-      <h3>{textos.registrar_nueva}</h3>
-      <FormField label={textos.tipo} name="tipo-coordinador" type="select" value={nueva.tipo} onChange={(e) => setNueva((f) => ({ ...f, tipo: e.target.value }))}>
-        {TIPOS.map((tipo) => <option key={tipo} value={tipo}>{textos[`tipo_${tipo}`]}</option>)}
-      </FormField>
-      <FormField label={textos.fecha_inicio} name="inicio-coordinador" type="date" value={nueva.fecha_inicio} onChange={(e) => setNueva((f) => ({ ...f, fecha_inicio: e.target.value }))} required />
-      <FormField label={textos.fecha_fin} name="fin-coordinador" type="date" value={nueva.fecha_fin} onChange={(e) => setNueva((f) => ({ ...f, fecha_fin: e.target.value }))} required />
-      <FormField
-        label={t.usuarios_panel.coordinador_que_cubre}
-        name="cubre-coordinador"
-        type="select"
-        value={nueva.coordinador_que_cubre_id}
-        onChange={(e) => setNueva((f) => ({ ...f, coordinador_que_cubre_id: e.target.value }))}
-      >
-        <option value="">{t.guardias.nueva_guardia.elegir}</option>
-        {otrosCoordinadores.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-      </FormField>
-      <Button onClick={registrar} disabled={guardando || !nueva.fecha_inicio || !nueva.fecha_fin}>
-        {guardando ? t.comun.guardando : textos.registrar_nueva}
-      </Button>
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{textos.registrar_nueva}</h2>
+        </div>
+        <div className="molde-formgrid">
+          <FormField label={textos.tipo} name="tipo-coordinador" type="select" value={nueva.tipo} onChange={(e) => setNueva((f) => ({ ...f, tipo: e.target.value }))}>
+            {TIPOS.map((tipo) => <option key={tipo} value={tipo}>{textos[`tipo_${tipo}`]}</option>)}
+          </FormField>
+          <FormField
+            label={t.usuarios_panel.coordinador_que_cubre}
+            name="cubre-coordinador"
+            type="select"
+            value={nueva.coordinador_que_cubre_id}
+            onChange={(e) => setNueva((f) => ({ ...f, coordinador_que_cubre_id: e.target.value }))}
+          >
+            <option value="">{t.guardias.nueva_guardia.elegir}</option>
+            {otrosCoordinadores.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+          </FormField>
+          <FormField label={textos.fecha_inicio} name="inicio-coordinador" type="date" value={nueva.fecha_inicio} onChange={(e) => setNueva((f) => ({ ...f, fecha_inicio: e.target.value }))} required />
+          <FormField label={textos.fecha_fin} name="fin-coordinador" type="date" value={nueva.fecha_fin} onChange={(e) => setNueva((f) => ({ ...f, fecha_fin: e.target.value }))} required />
+        </div>
+        <div className="molde-acciones">
+          <Button onClick={registrar} disabled={guardando || !nueva.fecha_inicio || !nueva.fecha_fin}>
+            {guardando ? t.comun.guardando : textos.registrar_nueva}
+          </Button>
+        </div>
+      </section>
     </div>
   );
 }

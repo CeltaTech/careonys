@@ -25,6 +25,7 @@ import { LaTomoYo } from './LaTomoYo';
 import { TIPOS_DE_ALARMA } from '../../lib/alarmasTomadas';
 import { ORIGENES } from '../../lib/pacienteSolo';
 import { LoQuePasoEnLaCasa } from './LoQuePasoEnLaCasa';
+import '../../pages/seguimientoDeGuardias.css';
 
 /* LOS TURNOS QUE QUEDARON SIN NADIE, Y POR QUÉ NO SE VAN SOLOS DE ACÁ
 
@@ -118,7 +119,10 @@ export function TurnosSinCubrirAbiertos() {
 
   return (
     <>
-      <h2>{t.continuidad.turnos_vacios_titulo}</h2>
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.continuidad.turnos_vacios_titulo}</h2>
+        </div>
       <EstadoLista
         estado={estado}
         error={error}
@@ -127,15 +131,15 @@ export function TurnosSinCubrirAbiertos() {
         mensajeVacio={t.continuidad.turnos_vacios_vacio}
       >
         {abiertos.map((i) => (
-          <div key={i.id} className="panel-guardia-card guardia-ausente">
+          <div key={i.id} className="panel-fila-alerta seguimiento-fila">
             <div>
-              <strong>
+              <b>
                 {i.guardia ? `${i.guardia.fecha} · ${i.guardia.hora_inicio} – ${i.guardia.hora_fin}` : '—'}
-              </strong>
-              <div>
+              </b>
+              <span className="panel-mini">
                 {t.continuidad.col_paciente}:{' '}
                 {i.pacientes.map((p) => p.nombre).filter(Boolean).join(', ') || '—'}
-              </div>
+              </span>
               {/* Cuánto falta, o cuánto hace que tenía que haber empezado. Son la misma cuenta y
                   se dicen distinto a propósito: una pide apurarse, la otra ya es una falla. */}
               {i.horas !== null && (
@@ -145,14 +149,14 @@ export function TurnosSinCubrirAbiertos() {
                     : con(t.continuidad.turnos_vacios_empezo_hace, { n: Math.round(-i.horas) })}
                 </div>
               )}
-              <div>
+              <span className="panel-mini">
                 {t.continuidad.turnos_vacios_abierto_desde}: {diaDelMomento(i.abierto_at) || '—'}
-              </div>
-              <div>
+              </span>
+              <span className="panel-mini">
                 {con(t.continuidad.turnos_vacios_recordatorios, { n: i.veces_recordado ?? 0 })}
-              </div>
+              </span>
             </div>
-            <div className="panel-modal-acciones">
+            <div className="seguimiento-acciones">
               {!tomas.laTieneOtraPersona(TIPOS_DE_ALARMA.TURNO_SIN_CUBRIR, i.id) && (
                 <Button onClick={() => setCerrando(i)}>{t.continuidad.turnos_vacios_cerrar}</Button>
               )}
@@ -173,6 +177,7 @@ export function TurnosSinCubrirAbiertos() {
           </div>
         ))}
       </EstadoLista>
+      </section>
 
       {cerrando && (
         <CerrarTurnoVacio

@@ -11,6 +11,7 @@ import {
   FRECUENCIAS_POSIBLES,
   FRECUENCIA_QUE_SE_PUEDE_TOCAR,
 } from '../../lib/frecuenciaDePago';
+import '../../styles/molde-paginas.css';
 
 /* Cómo se le paga el período a quien cobra un monto fijo.
    ==========================================================================
@@ -94,22 +95,36 @@ export function PagoAsistentesTab() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.pago_asistentes_titulo}</h2>
-      {error && <Alert variant="error">{error}</Alert>}
-      {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
-      <EstadoLista estado={estado} error={error} recargar={recargar}>
-        {regla && frecuencia && (
-          <>
-            <FormField
-              label={t.configuracion.pago_asistentes_prorratear}
-              name="prorratear_monto_fijo"
-              type="checkbox"
-              checked={regla.prorratear_monto_fijo}
-              onChange={(e) => cambiar('prorratear_monto_fijo', e.target.checked)}
-            />
+    <>
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.configuracion.pago_asistentes_titulo}</h2>
+        </div>
+        {error && <Alert variant="error">{error}</Alert>}
+        {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
+        <EstadoLista estado={estado} error={error} recargar={recargar}>
+          {regla && frecuencia && (
+            <div className="molde-formgrid">
+              <div className="molde-ancho">
+                <FormField
+                  label={t.configuracion.pago_asistentes_prorratear}
+                  name="prorratear_monto_fijo"
+                  type="checkbox"
+                  checked={regla.prorratear_monto_fijo}
+                  onChange={(e) => cambiar('prorratear_monto_fijo', e.target.checked)}
+                />
+              </div>
+            </div>
+          )}
+        </EstadoLista>
+      </section>
 
+      {estado === 'listo' && regla && frecuencia && (
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
             <h2>{t.configuracion.frecuencia_pago_titulo}</h2>
+          </div>
+          <div className="molde-formgrid">
             <FormField
               label={t.configuracion.frecuencia_pago_cada_cuanto}
               name="frecuencia_cada_cuanto"
@@ -151,13 +166,14 @@ export function PagoAsistentesTab() {
               value={frecuencia.dias_hasta_el_pago}
               onChange={(e) => cambiarDiasHastaElPago(e.target.value)}
             />
-
+          </div>
+          <div className="molde-acciones">
             <Button onClick={guardar} disabled={guardando}>
               {guardando ? t.comun.guardando : t.comun.guardar}
             </Button>
-          </>
-        )}
-      </EstadoLista>
-    </div>
+          </div>
+        </section>
+      )}
+    </>
   );
 }

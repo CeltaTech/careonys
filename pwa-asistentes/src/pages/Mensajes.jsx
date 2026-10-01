@@ -42,7 +42,7 @@ export default function Mensajes() {
       <h1>{t.chat.titulo}</h1>
 
       {conversaciones.length === 0 ? (
-        <div className="estado-vacio" role="status">{t.chat.sin_conversaciones}</div>
+        <div className="pwa-card estado-vacio" role="status">{t.chat.sin_conversaciones}</div>
       ) : (
         conversaciones.map((c) => {
           const otro = c.asistente || c.cliente || {};
@@ -52,7 +52,7 @@ export default function Mensajes() {
             ? (c.sin_leer === 1 ? t.chat.sin_leer_uno : t.chat.sin_leer.replace('{n}', c.sin_leer))
             : '';
           return (
-            <Link key={c.id} to={`/mensajes/${c.id}`} className="guardia-card" style={{ display: 'block' }}>
+            <Link key={c.id} to={`/mensajes/${c.id}`} className="guardia-card">
               <div className="guardia-card-paciente">{otro.nombre}</div>
               {c.ultimo_mensaje_at && (
                 <div className="guardia-card-detalle">{new Date(c.ultimo_mensaje_at).toLocaleString(locale)}</div>

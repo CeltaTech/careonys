@@ -103,7 +103,9 @@ export const T = {
       // El chat con la otra punta de Match. Sólo aparece donde la Prestadora ofrece esa
       // modalidad de trabajo.
       mensajes: 'Mensajes',
-      guardias: 'Mis Guardias',
+      inicio: 'Inicio',
+      guardias: 'Guardias',
+      servicio: 'Servicio',
       ofertas: 'Ofrecidas',
       perfil: 'Mi Perfil',
       cerrar_sesion: 'Cerrar sesión',
@@ -114,6 +116,25 @@ export const T = {
       // en voz alta, un "3" solo no dice nada. Esta frase es la que se escucha.
       ofertas_sin_contestar_una: '1 guardia ofrecida sin contestar',
       ofertas_sin_contestar: '{n} guardias ofrecidas sin contestar',
+    },
+    barra: {
+      rol: 'Asistente',
+    },
+    inicio: {
+      hola: 'Hola',
+      proxima_guardia: 'Próxima guardia',
+      guardia_en_curso: 'Guardia en curso',
+      hoy: 'Hoy',
+      registrar_inicio: 'Registrar inicio',
+      abrir_guardia: 'Abrir la guardia',
+      sin_proxima: 'No hay ninguna guardia programada.',
+      ver_ofertas: 'Ver las guardias ofrecidas',
+    },
+    servicio: {
+      titulo: 'Servicio',
+      sin_pacientes: 'No hay ningún Paciente asignado por el momento.',
+      sin_proxima: 'Sin guardias programadas',
+      ver_guardia: 'Ver la guardia',
     },
     // EL CHAT CON LA OTRA PUNTA DEL MATCH. Lo dibuja `components/HiloDeMensajes.jsx`, que
     // es el mismo archivo en las dos aplicaciones, así que estas claves tienen que existir en las
@@ -678,13 +699,34 @@ export const T = {
     },
     nav: {
       mensajes: 'Messages',
-      guardias: 'My Shifts',
+      inicio: 'Home',
+      guardias: 'Shifts',
+      servicio: 'Service',
       ofertas: 'Offered',
       perfil: 'My Profile',
       cerrar_sesion: 'Log out',
       menu_principal: 'Main menu',
       ofertas_sin_contestar_una: '1 offered shift with no reply yet',
       ofertas_sin_contestar: '{n} offered shifts with no reply yet',
+    },
+    barra: {
+      rol: 'Assistant',
+    },
+    inicio: {
+      hola: 'Hello',
+      proxima_guardia: 'Next shift',
+      guardia_en_curso: 'Shift in progress',
+      hoy: 'Today',
+      registrar_inicio: 'Record start',
+      abrir_guardia: 'Open the shift',
+      sin_proxima: 'There is no scheduled shift.',
+      ver_ofertas: 'See the offered shifts',
+    },
+    servicio: {
+      titulo: 'Service',
+      sin_pacientes: 'There is no Patient assigned at the moment.',
+      sin_proxima: 'No scheduled shifts',
+      ver_guardia: 'See the shift',
     },
     chat: {
       titulo: 'Messages',
@@ -1177,13 +1219,34 @@ export const T = {
     },
     nav: {
       mensajes: 'Mensagens',
-      guardias: 'Meus Plantões',
+      inicio: 'Início',
+      guardias: 'Plantões',
+      servicio: 'Serviço',
       ofertas: 'Oferecidos',
       perfil: 'Meu Perfil',
       cerrar_sesion: 'Sair',
       menu_principal: 'Menu principal',
       ofertas_sin_contestar_una: '1 plantão oferecido sem resposta',
       ofertas_sin_contestar: '{n} plantões oferecidos sem resposta',
+    },
+    barra: {
+      rol: 'Assistente',
+    },
+    inicio: {
+      hola: 'Olá',
+      proxima_guardia: 'Próximo plantão',
+      guardia_en_curso: 'Plantão em andamento',
+      hoy: 'Hoje',
+      registrar_inicio: 'Registrar início',
+      abrir_guardia: 'Abrir o plantão',
+      sin_proxima: 'Não há nenhum plantão programado.',
+      ver_ofertas: 'Ver os plantões oferecidos',
+    },
+    servicio: {
+      titulo: 'Serviço',
+      sin_pacientes: 'Não há nenhum Paciente atribuído no momento.',
+      sin_proxima: 'Sem plantões programados',
+      ver_guardia: 'Ver o plantão',
     },
     chat: {
       titulo: 'Mensagens',

@@ -80,8 +80,8 @@ export default function Consentimientos({ onCambio }) {
   if (items.length === 0) return null;
 
   return (
-    <div>
-      <h2 style={{ marginTop: '2rem' }}>{t.consentimientos.titulo}</h2>
+    <section className="pwa-card">
+      <h2>{t.consentimientos.titulo}</h2>
       {error && <div className="alert alert-error" role="alert">{error}</div>}
 
       {items.map((item) => {
@@ -104,7 +104,7 @@ export default function Consentimientos({ onCambio }) {
               </ul>
             )}
 
-            <p style={{ whiteSpace: 'pre-line' }}>{item.texto.cuerpo}</p>
+            <p className="texto-con-renglones">{item.texto.cuerpo}</p>
 
             {item.decision?.desactualizada && (
               <div className="alert">{t.consentimientos.texto_cambio}</div>
@@ -167,6 +167,6 @@ export default function Consentimientos({ onCambio }) {
           </section>
         );
       })}
-    </div>
+    </section>
   );
 }

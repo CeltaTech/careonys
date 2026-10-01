@@ -25,6 +25,8 @@ import { TIPOS_DE_ALARMA } from '../lib/alarmasTomadas';
 import { ORIGENES } from '../lib/pacienteSolo';
 import { LoQuePasoEnLaCasa } from '../components/continuidad/LoQuePasoEnLaCasa';
 import { SelectorDeLegajo } from '../components/padron/SelectorDeLegajo';
+import '../styles/molde-paginas.css';
+import './seguimientoDeGuardias.css';
 
 const TIPOS_RESOLUCION = ['suplente', 'franquero', 'emergencia', 'familiar'];
 
@@ -284,6 +286,11 @@ export function Continuidad() {
       <Cabecera titulo={t.continuidad.titulo} />
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
 
+      <div className="molde-pila">
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.continuidad.incidentes_titulo}</h2>
+        </div>
       <EstadoLista
         estado={estado}
         error={error}
@@ -292,27 +299,28 @@ export function Continuidad() {
         mensajeVacio={t.continuidad.vacio}
       >
         {incidentes.map((i) => (
-          <div key={i.id} className="panel-guardia-card guardia-ausente">
+          <div key={i.id} className="panel-fila-alerta seguimiento-fila">
             <div>
-              <strong>{i.fecha} · {i.horario}</strong> · {t.continuidad.col_paciente}: {i.paciente_nombre}
-              <div>{t.continuidad.col_ausente}: {i.asistente_ausente_nombre}</div>
+              <b>{i.fecha} · {i.horario}</b>
+              <span className="panel-mini">{t.continuidad.col_paciente}: {i.paciente_nombre}</span>
+              <span className="panel-mini">{t.continuidad.col_ausente}: {i.asistente_ausente_nombre}</span>
               {i.asistente_saliente_nombre ? (
-                <div>{t.continuidad.col_saliente}: {i.asistente_saliente_nombre}</div>
+                <span className="panel-mini">{t.continuidad.col_saliente}: {i.asistente_saliente_nombre}</span>
               ) : (
                 <div className="panel-guardia-alerta">{t.continuidad.badge_sin_relevo_previo}</div>
               )}
-              <div>{t.continuidad.col_nivel}: {i.nivel_actual}</div>
+              <span className="panel-mini">{t.continuidad.col_nivel}: {i.nivel_actual}</span>
               {i.nivel_config ? (
-                <div className="panel-resultado-calculo">
-                  <div>{t.continuidad.orden_prioridad}: {(i.nivel_config.orden_prioridad || []).map((r) => t.configuracion[`escalada_rol_${r}`]).join(' → ') || '—'}</div>
-                  <div>{t.continuidad.mensaje_sugerido}:</div>
-                  <p>{i.nivel_config.plantilla_mensaje}</p>
-                </div>
+                <>
+                  <span className="panel-mini">{t.continuidad.orden_prioridad}: {(i.nivel_config.orden_prioridad || []).map((r) => t.configuracion[`escalada_rol_${r}`]).join(' → ') || '—'}</span>
+                  <span className="panel-mini">{t.continuidad.mensaje_sugerido}:</span>
+                  <p className="seguimiento-texto">{i.nivel_config.plantilla_mensaje}</p>
+                </>
               ) : (
                 <div className="panel-guardia-alerta">{t.continuidad.sin_configuracion_nivel}</div>
               )}
             </div>
-            <div className="panel-modal-acciones">
+            <div className="seguimiento-acciones">
               {i.hay_nivel_siguiente && (
                 <Button variant="secondary" onClick={() => avanzarNivel(i)} disabled={actualizandoId === i.id}>
                   {t.continuidad.avanzar_nivel}
@@ -342,8 +350,12 @@ export function Continuidad() {
           </div>
         ))}
       </EstadoLista>
+      </section>
 
-      <h2>{t.continuidad.alertas_tempranas_titulo}</h2>
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.continuidad.alertas_tempranas_titulo}</h2>
+        </div>
       <EstadoLista
         estado={estado}
         error={null}
@@ -352,10 +364,11 @@ export function Continuidad() {
         mensajeVacio={t.continuidad.alertas_tempranas_vacio}
       >
         {alertas.map((a) => (
-          <div key={a.id} className="panel-guardia-card guardia-ausente">
+          <div key={a.id} className="panel-fila-alerta seguimiento-fila">
             <div>
-              <strong>{a.fecha} · {a.horario}</strong> · {t.continuidad.col_paciente}: {a.paciente_nombre}
-              <div>{t.continuidad.col_ausente}: {a.asistente_nombre}</div>
+              <b>{a.fecha} · {a.horario}</b>
+              <span className="panel-mini">{t.continuidad.col_paciente}: {a.paciente_nombre}</span>
+              <span className="panel-mini">{t.continuidad.col_ausente}: {a.asistente_nombre}</span>
               {/* DE DÓNDE SALIÓ ESTA ALERTA, dicho en cada fila. Hay cuatro orígenes posibles:
                   el aviso que el Coordinador levantó por teléfono, el que dio el Asistente desde
                   su teléfono, la cuenta de la hora estimada de llegada, y la hora de inicio
@@ -369,21 +382,21 @@ export function Continuidad() {
 
                   Una fuente desconocida —una fila vieja, o una que escriba una versión
                   posterior— no se calla ni se inventa: se dice que no se sabe de dónde salió. */}
-              <div>
+              <span className="panel-mini">
                 {t.continuidad[`fuente_${a.fuente}`] ?? t.continuidad.fuente_desconocida}
                 {a.detectado_at ? ` · ${con(t.continuidad.anotada_a_las, { hora: horaDelMomento(a.detectado_at, locale) })}` : ''}
-              </div>
-              <div className="panel-explicacion">
+              </span>
+              <span className="panel-mini">
                 {laDioUnaPersona(a.fuente) ? t.continuidad.la_dio_una_persona : t.continuidad.la_anoto_el_sistema}
-              </div>
+              </span>
               {/* El motivo se guarda en la misma columna con dos vocabularios distintos: el aviso
                   telefónico guarda el texto del motivo que cargó la Prestadora, y el aviso del
                   Asistente guarda uno de los cinco códigos de `lib/motivosDemora.js`, que se lee
                   traducido. Se prueba el código primero y, si no es uno, se muestra tal cual
                   vino: cambiar el texto de la Prestadora por un guión sería perder el dato. */}
-              {a.motivo && <div>{t.continuidad.col_motivo}: {t.continuidad[`motivo_demora_${a.motivo}`] || a.motivo}</div>}
+              {a.motivo && <span className="panel-mini">{t.continuidad.col_motivo}: {t.continuidad[`motivo_demora_${a.motivo}`] || a.motivo}</span>}
             </div>
-            <div className="panel-modal-acciones">
+            <div className="seguimiento-acciones">
               {!tomas.laTieneOtraPersona(TIPOS_DE_ALARMA.ALERTA_TEMPRANA, a.id) && (
                 <Button onClick={() => resolverAlerta(a)} disabled={actualizandoId === a.id}>
                   {t.continuidad.resolver_alerta}
@@ -394,8 +407,12 @@ export function Continuidad() {
           </div>
         ))}
       </EstadoLista>
+      </section>
 
-      <h2>{t.continuidad.notificaciones_cierre_titulo}</h2>
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.continuidad.notificaciones_cierre_titulo}</h2>
+        </div>
       <EstadoLista
         estado={estado}
         error={null}
@@ -404,15 +421,15 @@ export function Continuidad() {
         mensajeVacio={t.continuidad.notificaciones_cierre_vacio}
       >
         {notificacionesCierre.map((n) => (
-          <div key={n.id} className="panel-guardia-card guardia-ausente">
+          <div key={n.id} className="panel-fila-alerta seguimiento-fila">
             <div>
-              <strong>{t.continuidad.col_paciente}: {n.paciente_nombre}</strong>
-              <div>{t.continuidad.col_ausente}: {n.asistente_nombre}</div>
-              <div>{t.continuidad.notificaciones_cierre_cerrado_por}: {n.cerrado_por_nombre}</div>
-              <div>{t.continuidad.col_motivo}: {nombreMotivoGuardado(n.motivo, t)}</div>
-              {n.motivo_detalle && <div>{n.motivo_detalle}</div>}
+              <b>{t.continuidad.col_paciente}: {n.paciente_nombre}</b>
+              <span className="panel-mini">{t.continuidad.col_ausente}: {n.asistente_nombre}</span>
+              <span className="panel-mini">{t.continuidad.notificaciones_cierre_cerrado_por}: {n.cerrado_por_nombre}</span>
+              <span className="panel-mini">{t.continuidad.col_motivo}: {nombreMotivoGuardado(n.motivo, t)}</span>
+              {n.motivo_detalle && <p className="seguimiento-texto">{n.motivo_detalle}</p>}
             </div>
-            <div className="panel-modal-acciones">
+            <div className="seguimiento-acciones">
               <Button onClick={() => marcarVistaNotificacion(n)} disabled={actualizandoId === n.id}>
                 {t.continuidad.notificaciones_cierre_marcar_visto}
               </Button>
@@ -420,13 +437,17 @@ export function Continuidad() {
           </div>
         ))}
       </EstadoLista>
+      </section>
 
       {/* Trae y recarga sus propios datos: no comparte ninguno con lo de arriba —mira los turnos
           sin nadie asignado, no las ausencias de quien sí lo estaba— y meterlo en la misma
           recarga ataría dos listas que no se enteran una de la otra. */}
       <TurnosSinCubrirAbiertos />
 
-      <h2>{t.continuidad.excepciones_titulo}</h2>
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.continuidad.excepciones_titulo}</h2>
+        </div>
       <EstadoLista
         estado={estado}
         error={null}
@@ -435,17 +456,17 @@ export function Continuidad() {
         mensajeVacio={t.continuidad.excepciones_vacio}
       >
         {excepciones.map((e) => (
-          <div key={e.id} className="panel-guardia-card guardia-ausente">
+          <div key={e.id} className="panel-fila-alerta seguimiento-fila">
             <div>
-              <strong>{t.continuidad.col_paciente}: {e.paciente_nombre}</strong>
-              <div>{t.continuidad.excepciones_col_familiar}: {e.familiar_nombre_visible || '—'}</div>
-              <div>{t.continuidad.excepciones_col_desde}: {diaDelMomento(e.desde_at) || '—'}</div>
+              <b>{t.continuidad.col_paciente}: {e.paciente_nombre}</b>
+              <span className="panel-mini">{t.continuidad.excepciones_col_familiar}: {e.familiar_nombre_visible || '—'}</span>
+              <span className="panel-mini">{t.continuidad.excepciones_col_desde}: {diaDelMomento(e.desde_at) || '—'}</span>
               {/* Por cuál de los tres caminos se llegó hasta acá. Un origen que esta versión no
                   conoce no se calla ni se inventa: se dice que no se sabe. */}
-              <div>
+              <span className="panel-mini">
                 {t.continuidad.excepciones_col_origen}:{' '}
                 {t.continuidad[`excepciones_origen_${e.origen}`] ?? t.continuidad.excepciones_origen_desconocido}
-              </div>
+              </span>
               {/* Cuánto lleva abierta, que es lo que dice cuál mirar primero. El día en que se
                   registró se dice aparte porque «hace tres días» y «el 12» contestan preguntas
                   distintas: una, si esto se está estirando; la otra, contra qué turno mirarlo. */}
@@ -456,9 +477,9 @@ export function Continuidad() {
                     ? t.continuidad.excepciones_abierta_un_dia
                     : con(t.continuidad.excepciones_abierta_dias, { n: e.dias_abierta })}
               </div>
-              {e.motivo && <div>{t.continuidad.col_motivo}: {e.motivo}</div>}
+              {e.motivo && <span className="panel-mini">{t.continuidad.col_motivo}: {e.motivo}</span>}
             </div>
-            <div className="panel-modal-acciones">
+            <div className="seguimiento-acciones">
               <Button onClick={() => cerrarExcepcion(e)} disabled={actualizandoId === e.id}>
                 {t.continuidad.excepciones_cerrar}
               </Button>
@@ -466,11 +487,13 @@ export function Continuidad() {
           </div>
         ))}
       </EstadoLista>
+      </section>
 
       {/* Va debajo y aparte: son dos hechos distintos. Arriba, las casas donde quedó cuidando
           alguien del cliente; acá, aquellas en las que el cliente aceptó que la persona
           atendida quedara sola. Un mismo turno puede tener los dos, y ninguno explica al otro. */}
       <ConsentimientosVigentes />
+      </div>
 
       {incidenteResolviendo && (
         <ResolverIncidente

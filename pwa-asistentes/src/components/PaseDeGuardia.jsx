@@ -199,7 +199,7 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
   const titulo = momento === 'checkin' ? t.pase_de_guardia.titulo_checkin : t.pase_de_guardia.titulo_checkout;
 
   const botonEntrarIgual = (
-    <button type="button" className="btn btn-secondary btn-full" onClick={irAlPiso} disabled={enviando} style={{ marginTop: '0.5rem' }}>
+    <button type="button" className="btn btn-secondary btn-full pwa-card-pie" onClick={irAlPiso} disabled={enviando}>
       {momento === 'checkin' ? t.pase_de_guardia.entrar_igual : t.pase_de_guardia.cerrar_igual}
     </button>
   );
@@ -230,7 +230,7 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
   );
 
   return (
-    <div className="guardia-card" style={{ marginTop: '1rem' }}>
+    <div className="guardia-card">
       <p className="guardia-card-paciente">{titulo}</p>
 
       {advertencia && <div className="alert alert-alerta" role="status">{advertencia}</div>}
@@ -239,15 +239,14 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
       {paso === 'codigo' && (
         <>
           <p className="guardia-card-detalle">{t.pase_de_guardia.instrucciones}</p>
-          <div id={LECTOR_ID} style={{ width: '100%', borderRadius: '12px', overflow: 'hidden' }} />
-          <p className="guardia-card-detalle" style={{ marginTop: '0.75rem' }}>{t.pase_de_guardia.o_tipear}</p>
+          <div id={LECTOR_ID} className="lector-camara" />
+          <p className="guardia-card-detalle pwa-card-pie">{t.pase_de_guardia.o_tipear}</p>
           {campoDelCodigo}
           <button
             type="button"
-            className="btn btn-secondary btn-full"
+            className="btn btn-secondary btn-full pwa-card-pie"
             onClick={() => { setPaso('pidiendo'); setAdvertencia(''); setError(''); detenerCamara(); }}
             disabled={enviando}
-            style={{ marginTop: '0.5rem' }}
           >
             {t.pase_de_guardia.nadie_para_mostrar}
           </button>
@@ -271,7 +270,7 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
           <button type="button" className="btn btn-primary btn-full" onClick={pedirALaPrestadora} disabled={enviando}>
             {enviando ? t.pase_de_guardia.avisando : t.pase_de_guardia.avisar_a_la_prestadora}
           </button>
-          <button type="button" className="btn btn-secondary btn-full" onClick={volverAlCodigo} disabled={enviando} style={{ marginTop: '0.5rem' }}>
+          <button type="button" className="btn btn-secondary btn-full pwa-card-pie" onClick={volverAlCodigo} disabled={enviando}>
             {t.pase_de_guardia.volver_al_codigo}
           </button>
           {botonEntrarIgual}
@@ -298,7 +297,7 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
         <>
           <p className="guardia-card-detalle">{t.pase_de_guardia.sin_comprobar_titulo}</p>
           {MOTIVOS_SIN_COMPROBAR.map((m) => (
-            <label key={m} htmlFor={`pase-motivo-${m}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <label key={m} htmlFor={`pase-motivo-${m}`} className="opcion-unica">
               <input
                 id={`pase-motivo-${m}`}
                 type="radio"
@@ -311,7 +310,7 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
               {t.pase_de_guardia[`motivo_${m}`]}
             </label>
           ))}
-          <div className="form-field" style={{ marginTop: '0.75rem' }}>
+          <div className="form-field pwa-card-pie">
             <label htmlFor="pase-detalle">{t.pase_de_guardia.detalle_label}</label>
             <textarea
               id="pase-detalle"
@@ -329,7 +328,7 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
           >
             {enviando ? t.pase_de_guardia.confirmando : t.pase_de_guardia.sin_comprobar_continuar}
           </button>
-          <button type="button" className="btn btn-secondary btn-full" onClick={volverAlCodigo} disabled={enviando} style={{ marginTop: '0.5rem' }}>
+          <button type="button" className="btn btn-secondary btn-full pwa-card-pie" onClick={volverAlCodigo} disabled={enviando}>
             {t.pase_de_guardia.volver_al_codigo}
           </button>
         </>
@@ -337,10 +336,9 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
 
       <button
         type="button"
-        className="btn btn-secondary btn-full"
+        className="btn btn-secondary btn-full pwa-card-pie"
         onClick={async () => { await detenerCamara(); onCancelar(); }}
         disabled={enviando}
-        style={{ marginTop: '0.5rem' }}
       >
         {t.comun.cancelar}
       </button>

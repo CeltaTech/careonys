@@ -7,6 +7,7 @@ import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 import { REGLA_QUE_SE_PUEDE_TOCAR } from '../../lib/incidenteTurnoSinCubrir';
+import '../../styles/molde-paginas.css';
 
 /* A cuántas horas un turno sin nadie deja de ser un renglón y pasa a ser grave.
    ==========================================================================
@@ -72,13 +73,16 @@ export function TurnosSinCubrirTab() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.turnos_sin_cubrir_titulo}</h2>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.turnos_sin_cubrir_titulo}</h2>
+      </div>
       {error && <Alert variant="error">{error}</Alert>}
       {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
       <EstadoLista estado={estado} error={error} recargar={recargar}>
         {regla && (
           <>
+            <div className="molde-formgrid">
             <FormField
               label={t.configuracion.turnos_sin_cubrir_horas_para_abrirlo}
               name="horas_para_abrirlo"
@@ -97,12 +101,15 @@ export function TurnosSinCubrirTab() {
               value={regla.horas_entre_recordatorios}
               onChange={(e) => cambiar('horas_entre_recordatorios', e.target.value)}
             />
-            <Button onClick={guardar} disabled={guardando || !completos}>
-              {guardando ? t.comun.guardando : t.comun.guardar}
-            </Button>
+            </div>
+            <div className="molde-acciones">
+              <Button onClick={guardar} disabled={guardando || !completos}>
+                {guardando ? t.comun.guardando : t.comun.guardar}
+              </Button>
+            </div>
           </>
         )}
       </EstadoLista>
-    </div>
+    </section>
   );
 }

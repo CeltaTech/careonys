@@ -16,18 +16,20 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { ElCalculoDeCandidatos } from './ElCalculoDeCandidatos';
 import { TurnosSinCubrirTab } from './TurnosSinCubrirTab';
+import '../../styles/molde-paginas.css';
+import './elcuidado.css';
 
 /* Las reglas del cuidado en sí: cómo se arman los Servicios y sus guardias, qué
    signos vitales se toman, y qué matrícula hace falta para cada vía de medicación. */
 export function ConfiguracionCuidado() {
   return (
-    <>
+    <div className="molde-pila">
       <TabServicios />
       <ElCalculoDeCandidatos />
       <TurnosSinCubrirTab />
       <TabVitales />
       <TabMatriculaMedicacion />
-    </>
+    </div>
   );
 }
 
@@ -141,114 +143,137 @@ function TabServicios() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.servicios_horizonte_titulo}</h2>
-      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
-      {horizonteGuardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
-      <FormField
-        label={t.configuracion.servicios_horizonte_dias}
-        name="dias_generacion"
-        type="number"
-        value={diasGeneracion}
-        onChange={(e) => { setDiasGeneracion(e.target.value); setHorizonteGuardado(false); }}
-      />
-      <Button onClick={guardarHorizonte} disabled={guardandoHorizonte || !diasGeneracion}>
-        {guardandoHorizonte ? t.comun.guardando : t.comun.guardar}
-      </Button>
+    <>
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.configuracion.servicios_horizonte_titulo}</h2>
+        </div>
+        {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
+        {horizonteGuardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
+        <div className="molde-formgrid">
+          <FormField
+            label={t.configuracion.servicios_horizonte_dias}
+            name="dias_generacion"
+            type="number"
+            value={diasGeneracion}
+            onChange={(e) => { setDiasGeneracion(e.target.value); setHorizonteGuardado(false); }}
+          />
+        </div>
+        <div className="molde-acciones">
+          <Button onClick={guardarHorizonte} disabled={guardandoHorizonte || !diasGeneracion}>
+            {guardandoHorizonte ? t.comun.guardando : t.comun.guardar}
+          </Button>
+        </div>
+      </section>
 
-      <h2>{t.configuracion.servicios_ausencia_titulo}</h2>
-      {ausenciaGuardada && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
-      <FormField label={t.configuracion.servicios_ausencia_activa} name="ausencia_activa" type="checkbox" checked={ausenciaActiva} onChange={(e) => { setAusenciaActiva(e.target.checked); setAusenciaGuardada(false); }} />
-      <FormField
-        label={t.configuracion.servicios_ausencia_minutos}
-        name="minutos_tolerancia_checkin"
-        type="number"
-        value={minutosTolerancia}
-        onChange={(e) => { setMinutosTolerancia(e.target.value); setAusenciaGuardada(false); }}
-      />
-      <FormField
-        label={t.configuracion.servicios_ausencia_metros}
-        name="metros_tolerancia_checkin"
-        type="number"
-        value={metrosTolerancia}
-        onChange={(e) => { setMetrosTolerancia(e.target.value); setAusenciaGuardada(false); }}
-      />
-      {/* El pase de guardia (pendiente #113). Va acá abajo y con el mismo botón que lo de
-          arriba porque es la misma fila de la base y la misma pregunta: qué cuenta como haber
-          llegado al domicilio. Dos botones harían creer que una decisión se puede guardar sin
-          la otra. */}
-      <h3>{t.configuracion.servicios_pase_titulo}</h3>
-      <FormField
-        label={t.configuracion.servicios_pase_segundos}
-        name="segundos_codigo_en_pantalla"
-        type="number"
-        value={segundosCodigo}
-        onChange={(e) => { setSegundosCodigo(e.target.value); setAusenciaGuardada(false); }}
-      />
-      <FormField
-        label={t.configuracion.servicios_pase_minutos}
-        name="minutos_codigo_de_la_prestadora"
-        type="number"
-        value={minutosCodigoPrestadora}
-        onChange={(e) => { setMinutosCodigoPrestadora(e.target.value); setAusenciaGuardada(false); }}
-      />
-      <Button
-        onClick={guardarAusencia}
-        disabled={guardandoAusencia || !minutosTolerancia || !metrosTolerancia || !segundosCodigo || !minutosCodigoPrestadora}
-      >
-        {guardandoAusencia ? t.comun.guardando : t.comun.guardar}
-      </Button>
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.configuracion.servicios_ausencia_titulo}</h2>
+        </div>
+        {ausenciaGuardada && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
+        <div className="molde-formgrid">
+          <div className="molde-ancho">
+            <FormField label={t.configuracion.servicios_ausencia_activa} name="ausencia_activa" type="checkbox" checked={ausenciaActiva} onChange={(e) => { setAusenciaActiva(e.target.checked); setAusenciaGuardada(false); }} />
+          </div>
+          <FormField
+            label={t.configuracion.servicios_ausencia_minutos}
+            name="minutos_tolerancia_checkin"
+            type="number"
+            value={minutosTolerancia}
+            onChange={(e) => { setMinutosTolerancia(e.target.value); setAusenciaGuardada(false); }}
+          />
+          <FormField
+            label={t.configuracion.servicios_ausencia_metros}
+            name="metros_tolerancia_checkin"
+            type="number"
+            value={metrosTolerancia}
+            onChange={(e) => { setMetrosTolerancia(e.target.value); setAusenciaGuardada(false); }}
+          />
+          {/* El pase de guardia (pendiente #113). Va en la misma tarjeta y con el mismo botón
+              porque es la misma fila de la base y la misma pregunta: qué cuenta como haber
+              llegado al domicilio. Dos botones harían creer que una decisión se puede guardar
+              sin la otra. */}
+          <div className="molde-ancho">
+            <h3>{t.configuracion.servicios_pase_titulo}</h3>
+          </div>
+          <FormField
+            label={t.configuracion.servicios_pase_segundos}
+            name="segundos_codigo_en_pantalla"
+            type="number"
+            value={segundosCodigo}
+            onChange={(e) => { setSegundosCodigo(e.target.value); setAusenciaGuardada(false); }}
+          />
+          <FormField
+            label={t.configuracion.servicios_pase_minutos}
+            name="minutos_codigo_de_la_prestadora"
+            type="number"
+            value={minutosCodigoPrestadora}
+            onChange={(e) => { setMinutosCodigoPrestadora(e.target.value); setAusenciaGuardada(false); }}
+          />
+        </div>
+        <div className="molde-acciones">
+          <Button
+            onClick={guardarAusencia}
+            disabled={guardandoAusencia || !minutosTolerancia || !metrosTolerancia || !segundosCodigo || !minutosCodigoPrestadora}
+          >
+            {guardandoAusencia ? t.comun.guardando : t.comun.guardar}
+          </Button>
+        </div>
+      </section>
 
-      <h2>{t.configuracion.servicios_escalada_titulo}</h2>
-      {/* CUÁNTOS MINUTOS DE ATRASO CONVIERTEN UNA LLEGADA TARDE EN UNA ALERTA (pendiente #101).
-          Lo decide cada Prestadora acá abajo, no el código. Pero el número se usa aunque nadie
-          haya configurado ningún nivel, así que la pantalla dice cuál está rigiendo hoy y de
-          dónde salió: un valor que actúa sin verse es un valor que nadie puede cambiar.
-          El cálculo no se repite acá —sale de `minutosDeDemoraTolerados`, la misma función que
-          usa el backend para decidir— así que la pantalla no puede decir un número y el sistema
-          usar otro. */}
-      <p className="panel-explicacion">
-        {con(t.configuracion.escalada_demora_en_uso, { minutos: minutosDeDemoraTolerados(niveles) })}
-      </p>
-      <div className="panel-filtros">
-        <Button onClick={() => setCreandoNuevo(true)}>{t.configuracion.escalada_nuevo_nivel}</Button>
-      </div>
-      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && niveles.length === 0} recargar={recargar} mensajeVacio={t.configuracion.escalada_vacio}>
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.configuracion.escalada_col_nivel}</th>
-              <th>{t.configuracion.escalada_col_minutos}</th>
-              <th>{t.configuracion.escalada_col_orden}</th>
-              <th>{t.configuracion.escalada_col_mensaje}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {niveles.map((n) => (
-              <tr key={n.id}>
-                <td>{n.nivel}</td>
-                <td>{n.minutos_demora ?? '—'}</td>
-                <td>{(n.orden_prioridad || []).map((r) => t.configuracion[`escalada_rol_${r}`]).join(' → ') || '—'}</td>
-                <td>{n.plantilla_mensaje}</td>
-                <td>
-                  {/* Cada botón dice a qué nivel se refiere: fuera del renglón, «Editar» solo
-                      no dice nada, y esta tabla se lee con lector de pantalla igual que las
-                      demás del Panel. */}
-                  <button
-                    onClick={() => setNivelEditando(n)}
-                    disabled={actualizandoId === n.id}
-                    aria-label={con(t.configuracion.escalada_editar_nivel_numero, { nivel: n.nivel })}
-                  >
-                    {t.comun.editar}
-                  </button>{' '}
-                  <button onClick={() => borrar(n)} disabled={actualizandoId === n.id}>{t.comun.borrar}</button>
-                </td>
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.configuracion.servicios_escalada_titulo}</h2>
+          {/* El atraso que rige hoy (pendiente #101) se muestra porque el número se usa aunque
+              no haya ningún nivel cargado. Sale de `minutosDeDemoraTolerados`, la misma función
+              que usa el backend, así que la pantalla no puede decir uno y el sistema usar otro. */}
+          <div className="cuidado-titulo-derecha">
+            <span className="panel-mini">
+              {con(t.configuracion.escalada_demora_en_uso, { minutos: minutosDeDemoraTolerados(niveles) })}
+            </span>
+            <Button onClick={() => setCreandoNuevo(true)}>{t.configuracion.escalada_nuevo_nivel}</Button>
+          </div>
+        </div>
+        <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && niveles.length === 0} recargar={recargar} mensajeVacio={t.configuracion.escalada_vacio}>
+          <table className="panel-tabla">
+            <thead>
+              <tr>
+                <th>{t.configuracion.escalada_col_nivel}</th>
+                <th>{t.configuracion.escalada_col_minutos}</th>
+                <th>{t.configuracion.escalada_col_orden}</th>
+                <th>{t.configuracion.escalada_col_mensaje}</th>
+                <th></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </EstadoLista>
+            </thead>
+            <tbody>
+              {niveles.map((n) => (
+                <tr key={n.id}>
+                  <td>{n.nivel}</td>
+                  <td>{n.minutos_demora ?? '—'}</td>
+                  <td>{(n.orden_prioridad || []).map((r) => t.configuracion[`escalada_rol_${r}`]).join(' → ') || '—'}</td>
+                  <td>{n.plantilla_mensaje}</td>
+                  <td>
+                    {/* Cada botón dice a qué nivel se refiere: fuera del renglón, «Editar» solo
+                        no dice nada, y esta tabla se lee con lector de pantalla igual que las
+                        demás del Panel. */}
+                    <div className="cuidado-acciones-fila">
+                      <Button
+                        variant="secondary"
+                        onClick={() => setNivelEditando(n)}
+                        disabled={actualizandoId === n.id}
+                        aria-label={con(t.configuracion.escalada_editar_nivel_numero, { nivel: n.nivel })}
+                      >
+                        {t.comun.editar}
+                      </Button>
+                      <Button variant="secondary" onClick={() => borrar(n)} disabled={actualizandoId === n.id}>{t.comun.borrar}</Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </EstadoLista>
+      </section>
 
       {/* Un solo formulario para crear y para editar. Si fueran dos, el día que se agregue un
           campo habría que acordarse de los dos, y el que se olvide queda sin él. */}
@@ -267,7 +292,7 @@ function TabServicios() {
       <TabServiciosMotivosAvisoPrevio />
       <TabServiciosMotivosCierre />
       <TabServiciosEtapasIncorporacion />
-    </div>
+    </>
   );
 }
 
@@ -352,12 +377,12 @@ function TabServiciosMotivosCierre() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.motivos_cierre_titulo}</h2>
-      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
-      <div className="panel-filtros">
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.motivos_cierre_titulo}</h2>
         <Button onClick={() => setCreandoNuevo(true)}>{t.configuracion.motivos_cierre_nuevo}</Button>
       </div>
+      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
       <EstadoLista
         estado={estado}
         error={error}
@@ -405,9 +430,11 @@ function TabServiciosMotivosCierre() {
                     />
                   </td>
                   <td>
-                    <Button variant="secondary" onClick={() => borrar(m)} disabled={actualizandoId === m.id}>
-                      {t.comun.borrar}
-                    </Button>
+                    <div className="cuidado-acciones-fila">
+                      <Button variant="secondary" onClick={() => borrar(m)} disabled={actualizandoId === m.id}>
+                        {t.comun.borrar}
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -441,7 +468,7 @@ function TabServiciosMotivosCierre() {
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -504,12 +531,12 @@ function TabServiciosMotivosAvisoPrevio() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.motivos_aviso_previo_titulo}</h2>
-      {error && <Alert variant="error">{error}</Alert>}
-      <div className="panel-filtros">
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.motivos_aviso_previo_titulo}</h2>
         <Button onClick={() => setCreandoNuevo(true)}>{t.configuracion.motivos_aviso_previo_nuevo}</Button>
       </div>
+      {error && <Alert variant="error">{error}</Alert>}
       <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && motivos.length === 0} recargar={recargar}>
         <table className="panel-tabla">
           <thead>
@@ -549,7 +576,7 @@ function TabServiciosMotivosAvisoPrevio() {
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -626,12 +653,12 @@ function TabServiciosEtapasIncorporacion() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.etapas_incorporacion_titulo}</h2>
-      {error && <Alert variant="error">{error}</Alert>}
-      <div className="panel-filtros">
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.etapas_incorporacion_titulo}</h2>
         <Button onClick={() => setCreandoNueva(true)}>{t.configuracion.etapas_incorporacion_nueva}</Button>
       </div>
+      {error && <Alert variant="error">{error}</Alert>}
       <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && etapas.length === 0} recargar={recargar}>
         <table className="panel-tabla">
           <thead>
@@ -660,20 +687,24 @@ function TabServiciosEtapasIncorporacion() {
                   />
                 </td>
                 <td>
-                  <button
-                    onClick={() => mover(e, 'arriba')}
-                    disabled={actualizandoId === e.id || i === 0}
-                    aria-label={con(t.comun.subir, { nombre: e.nombre })}
-                  >
-                    <span aria-hidden="true">↑</span>
-                  </button>
-                  <button
-                    onClick={() => mover(e, 'abajo')}
-                    disabled={actualizandoId === e.id || i === etapas.length - 1}
-                    aria-label={con(t.comun.bajar, { nombre: e.nombre })}
-                  >
-                    <span aria-hidden="true">↓</span>
-                  </button>
+                  <div className="cuidado-acciones-fila">
+                    <Button
+                      variant="secondary"
+                      onClick={() => mover(e, 'arriba')}
+                      disabled={actualizandoId === e.id || i === 0}
+                      aria-label={con(t.comun.subir, { nombre: e.nombre })}
+                    >
+                      <span aria-hidden="true">↑</span>
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => mover(e, 'abajo')}
+                      disabled={actualizandoId === e.id || i === etapas.length - 1}
+                      aria-label={con(t.comun.bajar, { nombre: e.nombre })}
+                    >
+                      <span aria-hidden="true">↓</span>
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -694,7 +725,7 @@ function TabServiciosEtapasIncorporacion() {
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -767,12 +798,12 @@ function TabServiciosPersonalEmergencia() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.personal_emergencia_titulo}</h2>
-      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
-      <div className="panel-filtros">
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.personal_emergencia_titulo}</h2>
         <Button onClick={() => setCreandoNuevo(true)}>{t.configuracion.personal_emergencia_nuevo}</Button>
       </div>
+      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
       <EstadoLista
         estado={estado}
         error={error}
@@ -807,7 +838,9 @@ function TabServiciosPersonalEmergencia() {
                   />
                 </td>
                 <td>
-                  <button onClick={() => borrar(fila)} disabled={actualizandoId === fila.id}>{t.comun.borrar}</button>
+                  <div className="cuidado-acciones-fila">
+                    <Button variant="secondary" onClick={() => borrar(fila)} disabled={actualizandoId === fila.id}>{t.comun.borrar}</Button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -822,7 +855,7 @@ function TabServiciosPersonalEmergencia() {
           onCreado={() => { setCreandoNuevo(false); recargar(); }}
         />
       )}
-    </div>
+    </section>
   );
 }
 
@@ -953,34 +986,35 @@ function NivelEscalada({ nivelExistente, onClose, onGuardado }) {
             : t.configuracion.escalada_nuevo_nivel}
         </h2>
         {error && <Alert variant="error">{error}</Alert>}
-        {/* Qué hace este número, dicho donde se escribe. Sin esto, «Minutos de demora» se lee
-            como el tiempo que se espera antes de llamar al siguiente de la lista, y además es
-            el margen a partir del cual una llegada tarde se anota como alerta. */}
-        <FormField label={t.configuracion.escalada_col_nivel} name="nivel" type="number" value={nivel} onChange={(e) => setNivel(e.target.value)} required />
-        <FormField label={t.configuracion.escalada_minutos_label} name="minutos_demora" type="number" value={minutosDemora} onChange={(e) => setMinutosDemora(e.target.value)} />
-        {ordenPrioridad.map((valor, indice) => (
-          <FormField
-            key={indice}
-            label={`${t.configuracion.escalada_prioridad_label} ${indice + 1}`}
-            name={`prioridad_${indice}`}
-            type="select"
-            value={valor}
-            onChange={(e) => setPrioridad(indice, e.target.value)}
-          >
-            <option value="">{t.configuracion.escalada_prioridad_vacio}</option>
-            {ROLES_RELEVO.map((rol) => (
-              <option key={rol} value={rol}>{t.configuracion[`escalada_rol_${rol}`]}</option>
-            ))}
-          </FormField>
-        ))}
-        <FormField
-          label={t.configuracion.escalada_col_mensaje}
-          name="plantilla_mensaje"
-          type="textarea"
-          value={plantillaMensaje}
-          onChange={(e) => setPlantillaMensaje(e.target.value)}
-          required
-        />
+        <div className="molde-formgrid">
+          <FormField label={t.configuracion.escalada_col_nivel} name="nivel" type="number" value={nivel} onChange={(e) => setNivel(e.target.value)} required />
+          <FormField label={t.configuracion.escalada_minutos_label} name="minutos_demora" type="number" value={minutosDemora} onChange={(e) => setMinutosDemora(e.target.value)} />
+          {ordenPrioridad.map((valor, indice) => (
+            <FormField
+              key={indice}
+              label={`${t.configuracion.escalada_prioridad_label} ${indice + 1}`}
+              name={`prioridad_${indice}`}
+              type="select"
+              value={valor}
+              onChange={(e) => setPrioridad(indice, e.target.value)}
+            >
+              <option value="">{t.configuracion.escalada_prioridad_vacio}</option>
+              {ROLES_RELEVO.map((rol) => (
+                <option key={rol} value={rol}>{t.configuracion[`escalada_rol_${rol}`]}</option>
+              ))}
+            </FormField>
+          ))}
+          <div className="molde-ancho">
+            <FormField
+              label={t.configuracion.escalada_col_mensaje}
+              name="plantilla_mensaje"
+              type="textarea"
+              value={plantillaMensaje}
+              onChange={(e) => setPlantillaMensaje(e.target.value)}
+              required
+            />
+          </div>
+        </div>
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>{t.comun.cancelar}</Button>
           <Button onClick={handleGuardar} disabled={guardando || !nivel || !plantillaMensaje}>
@@ -1048,8 +1082,10 @@ function TabVitales() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.vitales_titulo}</h2>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.vitales_titulo}</h2>
+      </div>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
       <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && rangos.length === 0} recargar={recargar}>
         <table className="panel-tabla">
@@ -1076,9 +1112,11 @@ function TabVitales() {
                   <td><input type="text" value={fila.unidad} onChange={(e) => set(fila.signo, 'unidad', e.target.value)} aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.vitales_col_unidad, nombre: nombreSigno })} /></td>
                   <td><input type="text" value={fila.fuente} onChange={(e) => set(fila.signo, 'fuente', e.target.value)} aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.vitales_col_fuente, nombre: nombreSigno })} /></td>
                   <td>
-                    <button onClick={() => guardar(fila)} disabled={guardandoSigno === fila.signo}>
-                      {guardandoSigno === fila.signo ? t.comun.guardando : t.comun.guardar}
-                    </button>
+                    <div className="cuidado-acciones-fila">
+                      <Button variant="secondary" onClick={() => guardar(fila)} disabled={guardandoSigno === fila.signo}>
+                        {guardandoSigno === fila.signo ? t.comun.guardando : t.comun.guardar}
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -1086,7 +1124,7 @@ function TabVitales() {
           </tbody>
         </table>
       </EstadoLista>
-    </div>
+    </section>
   );
 }
 
@@ -1174,8 +1212,11 @@ function TabMatriculaMedicacion() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.matricula_medicacion_titulo}</h2>
+    <>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.matricula_medicacion_titulo}</h2>
+      </div>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
       <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && filas.length === 0} recargar={recargar} mensajeVacio={t.configuracion.matricula_medicacion_vacio}>
         <table className="panel-tabla">
@@ -1200,35 +1241,46 @@ function TabMatriculaMedicacion() {
                   />
                 </td>
                 <td>
-                  <button onClick={() => guardar(fila)} disabled={guardandoId === fila.id}>
-                    {guardandoId === fila.id ? t.comun.guardando : t.comun.guardar}
-                  </button>{' '}
-                  <button onClick={() => borrar(fila)} disabled={guardandoId === fila.id}>{t.comun.borrar}</button>
+                  <div className="cuidado-acciones-fila">
+                    <Button variant="secondary" onClick={() => guardar(fila)} disabled={guardandoId === fila.id}>
+                      {guardandoId === fila.id ? t.comun.guardando : t.comun.guardar}
+                    </Button>
+                    <Button variant="secondary" onClick={() => borrar(fila)} disabled={guardandoId === fila.id}>{t.comun.borrar}</Button>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </EstadoLista>
+    </section>
 
-      <h2 style={{ marginTop: '1.5rem' }}>{t.configuracion.matricula_medicacion_nueva}</h2>
-      <FormField
-        label={t.configuracion.matricula_medicacion_col_via}
-        name="nueva_via"
-        value={nuevaVia}
-        onChange={(e) => setNuevaVia(e.target.value)}
-        placeholder={t.configuracion.matricula_medicacion_via_placeholder}
-      />
-      <FormField
-        label={t.configuracion.matricula_medicacion_col_tipo}
-        name="nuevo_tipo"
-        value={nuevoTipo}
-        onChange={(e) => setNuevoTipo(e.target.value)}
-        placeholder={t.configuracion.matricula_medicacion_sin_requisito}
-      />
-      <Button onClick={agregar} disabled={agregando || !nuevaVia}>
-        {agregando ? t.comun.guardando : t.configuracion.matricula_medicacion_agregar}
-      </Button>
-    </div>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.matricula_medicacion_nueva}</h2>
+      </div>
+      <div className="molde-formgrid">
+        <FormField
+          label={t.configuracion.matricula_medicacion_col_via}
+          name="nueva_via"
+          value={nuevaVia}
+          onChange={(e) => setNuevaVia(e.target.value)}
+          placeholder={t.configuracion.matricula_medicacion_via_placeholder}
+        />
+        <FormField
+          label={t.configuracion.matricula_medicacion_col_tipo}
+          name="nuevo_tipo"
+          value={nuevoTipo}
+          onChange={(e) => setNuevoTipo(e.target.value)}
+          placeholder={t.configuracion.matricula_medicacion_sin_requisito}
+        />
+      </div>
+      <div className="molde-acciones">
+        <Button onClick={agregar} disabled={agregando || !nuevaVia}>
+          {agregando ? t.comun.guardando : t.configuracion.matricula_medicacion_agregar}
+        </Button>
+      </div>
+    </section>
+    </>
   );
 }

@@ -11,18 +11,19 @@ import { PagoAsistentesTab } from './PagoAsistentesTab';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { con } from '../../lib/textos';
+import '../../styles/molde-paginas.css';
 
 /* Cómo es el plantel: qué tipos de Asistente existen —con sus tareas y su
    matrícula—, qué documentación se les exige, con cuánta anticipación una falta se
    considera avisada con tiempo y cómo se le paga el período a quien cobra un monto fijo. */
 export function ConfiguracionAsistentes() {
   return (
-    <>
+    <div className="molde-pila">
       <TiposAsistenteTab />
       <TabDocumentos />
       <AusenciasTab />
       <PagoAsistentesTab />
-    </>
+    </div>
   );
 }
 
@@ -88,23 +89,32 @@ function TabDocumentos() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.documentos_plazo_titulo}</h2>
-      {error && <Alert variant="error">{error}</Alert>}
-      {plazoGuardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
-      <FormField
-        label={t.configuracion.documentos_plazo_dias}
-        name="dias_aviso"
-        type="number"
-        value={diasDePreaviso}
-        onChange={(e) => { setDiasDePreaviso(e.target.value); setPlazoGuardado(false); }}
-      />
-      <Button onClick={guardarPlazo} disabled={guardandoPlazo || !diasDePreaviso}>
-        {guardandoPlazo ? t.comun.guardando : t.comun.guardar}
-      </Button>
+    <>
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.configuracion.documentos_plazo_titulo}</h2>
+        </div>
+        {error && <Alert variant="error">{error}</Alert>}
+        {plazoGuardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
+        <div className="molde-formgrid">
+          <FormField
+            label={t.configuracion.documentos_plazo_dias}
+            name="dias_aviso"
+            type="number"
+            value={diasDePreaviso}
+            onChange={(e) => { setDiasDePreaviso(e.target.value); setPlazoGuardado(false); }}
+          />
+        </div>
+        <div className="molde-acciones">
+          <Button onClick={guardarPlazo} disabled={guardandoPlazo || !diasDePreaviso}>
+            {guardandoPlazo ? t.comun.guardando : t.comun.guardar}
+          </Button>
+        </div>
+      </section>
 
-      <h2>{t.configuracion.documentos_tipos_titulo}</h2>
-      <div className="panel-filtros">
+      <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.documentos_tipos_titulo}</h2>
         <Button onClick={() => setCreandoNuevo(true)}>{t.configuracion.documentos_tipos_nuevo}</Button>
       </div>
       <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && tipos.length === 0} recargar={recargar}>
@@ -119,7 +129,7 @@ function TabDocumentos() {
           <tbody>
             {tipos.map((tipo) => (
               <tr key={tipo.id}>
-                <td>{tipo.nombre}</td>
+                <td><b>{tipo.nombre}</b></td>
                 <td>{tipo.requiere_vencimiento ? t.comun.si : t.comun.no}</td>
                 <td>
                   <input
@@ -135,11 +145,12 @@ function TabDocumentos() {
           </tbody>
         </table>
       </EstadoLista>
+      </section>
 
       {creandoNuevo && (
         <NuevoTipoDocumento onClose={() => setCreandoNuevo(false)} onCreado={() => { setCreandoNuevo(false); recargar(); }} />
       )}
-    </div>
+    </>
   );
 }
 
@@ -172,14 +183,20 @@ function NuevoTipoDocumento({ onClose, onCreado }) {
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
         <h2 id={modal.idTitulo}>{t.configuracion.documentos_tipos_nuevo}</h2>
         {error && <Alert variant="error">{error}</Alert>}
-        <FormField label={t.configuracion.documentos_tipos_col_nombre} name="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
-        <FormField
-          label={t.configuracion.documentos_tipos_col_requiere_vencimiento}
-          name="requiere_vencimiento"
-          type="checkbox"
-          checked={requiereVencimiento}
-          onChange={(e) => setRequiereVencimiento(e.target.checked)}
-        />
+        <div className="molde-formgrid">
+          <div className="molde-ancho">
+            <FormField label={t.configuracion.documentos_tipos_col_nombre} name="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
+          </div>
+          <div className="molde-ancho">
+            <FormField
+              label={t.configuracion.documentos_tipos_col_requiere_vencimiento}
+              name="requiere_vencimiento"
+              type="checkbox"
+              checked={requiereVencimiento}
+              onChange={(e) => setRequiereVencimiento(e.target.checked)}
+            />
+          </div>
+        </div>
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>{t.comun.cancelar}</Button>
           <Button onClick={handleGuardar} disabled={guardando || !nombre}>

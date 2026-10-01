@@ -14,6 +14,7 @@ import { Alert } from '../../components/ui/Alert';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { EstadoLista } from '../../components/layout/EstadoLista';
+import '../../styles/molde-paginas.css';
 
 /* Una sola pantalla para todas las listas de opciones.
  *
@@ -43,32 +44,39 @@ export function LasListasDeOpciones() {
     lasListas.filas.find((lista) => lista.clave === claveElegida) ?? lasListas.filas[0] ?? null;
 
   return (
-    <div>
-      <h2>{t.configuracion.listas_titulo}</h2>
-      <EstadoLista
-        estado={lasListas.estado}
-        error={lasListas.error}
-        recargar={lasListas.recargar}
-        mensajeVacio={t.configuracion.listas_vacio}
-      >
-        <div className="panel-filtros">
-          <select
-            aria-label={t.configuracion.listas_elegir}
-            value={listaElegida?.clave ?? ''}
-            onChange={(e) => setClaveElegida(e.target.value)}
-          >
-            {lasListas.filas.map((lista) => (
-              <option key={lista.id} value={lista.clave}>
-                {textoDeLaOpcion(lista.i18n, locale) || lista.clave}
-              </option>
-            ))}
-          </select>
+    <div className="molde-detalle">
+      <section className="panel-tarjeta molde-lista">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.configuracion.listas_titulo}</h2>
         </div>
+        <EstadoLista
+          estado={lasListas.estado}
+          error={lasListas.error}
+          recargar={lasListas.recargar}
+          mensajeVacio={t.configuracion.listas_vacio}
+        >
+          <nav aria-label={t.configuracion.listas_elegir}>
+            {lasListas.filas.map((lista) => {
+              const activa = lista.clave === listaElegida?.clave;
+              return (
+                <button
+                  key={lista.id}
+                  type="button"
+                  className={`molde-renglon ${activa ? 'molde-renglon-activo' : ''}`}
+                  aria-pressed={activa}
+                  onClick={() => setClaveElegida(lista.clave)}
+                >
+                  <b>{textoDeLaOpcion(lista.i18n, locale) || lista.clave}</b>
+                </button>
+              );
+            })}
+          </nav>
+        </EstadoLista>
+      </section>
 
-        {listaElegida && (
-          <OpcionesDeLaLista key={listaElegida.id} lista={listaElegida} />
-        )}
-      </EstadoLista>
+      {listaElegida && (
+        <OpcionesDeLaLista key={listaElegida.id} lista={listaElegida} />
+      )}
     </div>
   );
 }
@@ -149,7 +157,11 @@ function OpcionesDeLaLista({ lista }) {
   }
 
   return (
-    <div className="panel-detalle">
+    <div className="molde-pila">
+      <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{textoDeLaOpcion(lista.i18n, locale) || lista.clave}</h2>
+      </div>
       {error && <Alert variant="error">{error}</Alert>}
 
       <EstadoLista
@@ -181,20 +193,29 @@ function OpcionesDeLaLista({ lista }) {
           </tbody>
         </table>
       </EstadoLista>
+      </section>
 
       {lista.admite_opciones_propias && (
-        <div className="panel-detalle">
-          <h3>{t.configuracion.listas_agregar_titulo}</h3>
-          <FormField
-            label={t.configuracion.listas_texto_label}
-            name={`nueva_opcion_${lista.clave}`}
-            value={texto}
-            onChange={(e) => setTexto(e.target.value)}
-          />
-          <Button onClick={agregar} disabled={agregando || !claveDesdeElTexto(texto)}>
-            {agregando ? t.comun.guardando : t.configuracion.listas_agregar}
-          </Button>
-        </div>
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.configuracion.listas_agregar_titulo}</h2>
+          </div>
+          <div className="molde-formgrid">
+            <div className="molde-ancho">
+              <FormField
+                label={t.configuracion.listas_texto_label}
+                name={`nueva_opcion_${lista.clave}`}
+                value={texto}
+                onChange={(e) => setTexto(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="molde-acciones">
+            <Button onClick={agregar} disabled={agregando || !claveDesdeElTexto(texto)}>
+              {agregando ? t.comun.guardando : t.configuracion.listas_agregar}
+            </Button>
+          </div>
+        </section>
       )}
     </div>
   );
@@ -217,15 +238,21 @@ function RenglonDeOpcion({ opcion, idioma, ocupada, onAlternar, onCorregir }) {
             onChange={(e) => setTexto(e.target.value)}
           />
         ) : (
-          textoDeLaOpcion(opcion.i18n, idioma) || opcion.clave
+          <b>{textoDeLaOpcion(opcion.i18n, idioma) || opcion.clave}</b>
         )}
       </td>
       <td>
-        {esPropia
-          ? t.configuracion.listas_origen_propia
-          : t.configuracion.listas_origen_producto}
+        <span className="panel-mini">
+          {esPropia
+            ? t.configuracion.listas_origen_propia
+            : t.configuracion.listas_origen_producto}
+        </span>
       </td>
-      <td>{opcion.activa ? t.comun.si : t.comun.no}</td>
+      <td>
+        <span className={`badge ${opcion.activa ? 'badge-exito' : 'badge-neutro'}`}>
+          {opcion.activa ? t.comun.si : t.comun.no}
+        </span>
+      </td>
       <td>
         {esPropia && (
           <>
@@ -253,14 +280,14 @@ function RenglonDeOpcion({ opcion, idioma, ocupada, onAlternar, onCorregir }) {
               </>
             ) : (
               <>
-                <button onClick={() => setCorrigiendo(true)} disabled={ocupada}>
+                <Button variant="secondary" onClick={() => setCorrigiendo(true)} disabled={ocupada}>
                   {t.comun.editar}
-                </button>{' '}
-                <button onClick={onAlternar} disabled={ocupada}>
+                </Button>{' '}
+                <Button variant="secondary" onClick={onAlternar} disabled={ocupada}>
                   {opcion.activa
                     ? t.configuracion.listas_apagar
                     : t.configuracion.listas_encender}
-                </button>
+                </Button>
               </>
             )}
           </>

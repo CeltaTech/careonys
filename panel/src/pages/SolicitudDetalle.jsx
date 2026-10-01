@@ -12,11 +12,14 @@ import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
-import { useModalAccesible } from '../hooks/useModalAccesible';
+import { Cabecera } from '../components/ui/Cabecera';
+import { claseBadge } from '../lib/tonos';
 import { useCatalogoDeLugares } from '../hooks/useCatalogoDeLugares';
 import { ElegirUnLugar } from '../components/lugares/ElegirUnLugar';
 import { AsistentesSugeridos } from './solicitudes/AsistentesSugeridos';
 import { NuevaGuardiaModal } from './guardias/NuevaGuardiaModal';
+import '../styles/molde-paginas.css';
+import './hojaDeTarjetas.css';
 
 // Qué se resuelve en esta pantalla. Es el nombre guardado de la tabla, y con él salen los motivos
 // del catálogo de la Prestadora y se escribe la resolución.
@@ -28,7 +31,6 @@ const ESTADO_ASIGNADA = 'asignada';
 const API_URL = import.meta.env.VITE_API_URL;
 
 export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
-  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const { usuario } = useAuth();
   const confirmarDestructivo = useConfirmarDestructivo();
@@ -66,6 +68,7 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
   // Qué Asistente y qué Pacientes se eligieron en la lista de sugeridos, mientras la ventana de
   // guardia nueva está abierta. En nulo, esa ventana no está.
   const [guardiaNueva, setGuardiaNueva] = useState(null);
+  const [tab, setTab] = useState('detalle');
 
   // Una Solicitud con una guardia asignada ya no es una Solicitud nueva ni en gestión, y que ese
   // estado lo tenga que mover alguien a mano es pedirle a una persona que copie lo que el sistema
@@ -170,135 +173,195 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
     onActualizada();
   }
 
+  const esAdmin = esAdminOSuperior(usuario?.rol);
+  const estadoDeLaSolicitud = solicitud.estado || 'nueva';
+  const datosDeLaFicha = [
+    solicitud.telefono,
+    solicitud.localidad,
+    solicitud.tipo_servicio,
+    t.solicitudes[`estado_${estadoDeLaSolicitud}`],
+  ].filter(Boolean);
+  const pestanas = [
+    { id: 'detalle', titulo: t.comun.detalle },
+    { id: 'motivo', titulo: t.comun.motivo },
+    { id: 'sugeridos', titulo: t.solicitudes.sugeridos.titulo },
+  ];
+
   return (
-    <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
-        <h2 id={modal.idTitulo}>{solicitud.nombre}</h2>
-
-        {error && <Alert variant="error">{error}</Alert>}
-
-        <dl className="panel-detalle-lista">
-          <dt>{t.solicitudes.col_telefono}</dt>
-          <dd>
-            <a href={linkWhatsapp(solicitud.telefono)} target="_blank" rel="noreferrer">{solicitud.telefono}</a> ({t.solicitudes.llamar})
-          </dd>
-          <dt>{t.solicitudes.email}</dt>
-          <dd>{solicitud.email}</dd>
-          <dt>{t.solicitudes.nombre_paciente}</dt>
-          <dd>{solicitud.nombre_paciente || '—'}</dd>
-          <dt>{t.solicitudes.col_localidad}</dt>
-          <dd>{solicitud.localidad}</dd>
-          <dt>{t.solicitudes.col_tipo_servicio}</dt>
-          <dd>{solicitud.tipo_servicio}</dd>
-          <dt>{t.solicitudes.col_modalidad}</dt>
-          <dd>{solicitud.modalidad}</dd>
-          <dt>{t.solicitudes.dias_horario}</dt>
-          <dd>{solicitud.dias_horario}</dd>
-          <dt>{t.solicitudes.descripcion}</dt>
-          <dd>{solicitud.descripcion || '—'}</dd>
-          <dt>{t.solicitudes.col_estado}</dt>
-          <dd>{t.solicitudes[`estado_${solicitud.estado || 'nueva'}`]}</dd>
-        </dl>
-
-        {/* Es una lista y nunca texto libre: la localidad ya tiene ficha en la Prestadora y lo que
-            queda guardado es cuál, no cómo se llama. El texto de arriba no se pisa, porque es lo
-            que dijo quien llamó y puede no coincidir con ninguna ficha. */}
-        <ElegirUnLugar
-          lugares={catalogo.lugares}
-          zonas={catalogo.zonas}
-          estado={catalogo.estado}
-          valor={lugar}
-          onChange={(elegido) => setLugar(elegido || '')}
-          label={t.solicitudes.lugar_reconocido}
-          name="lugar_reconocido"
-          deshabilitado={guardando}
-        />
-
-        {/* Los cuatro estados de lo que carga datos: mientras la lista de motivos viene, se avisa;
-            si falló, se ofrece volver a pedirla; si la Prestadora se quedó sin ninguno encendido,
-            no hay nada que elegir. */}
-        {estadoMotivos === 'cargando' && <p>{t.comun.cargando}</p>}
-        {estadoMotivos === 'error' && (
-          <Alert variant="error">
-            {errorMotivos}{' '}
-            <Button variant="secondary" onClick={recargarMotivos}>{t.comun.reintentar}</Button>
-          </Alert>
+    <div>
+      <Cabecera titulo={solicitud.nombre}>
+        <Button variant="secondary" onClick={onClose} disabled={guardando}>
+          {t.comun.cancelar}
+        </Button>
+        {esAdmin && !solicitud.cliente_id && (
+          <Button variant="secondary" onClick={handleConvertirEnCliente} disabled={convirtiendo}>
+            {convirtiendo ? t.comun.guardando : t.solicitudes.convertir_en_cliente}
+          </Button>
         )}
-        {estadoMotivos === 'vacio' && (
-          <Alert variant="info">{t.comun.vacio}</Alert>
-        )}
-
-        <FormField
-          label={t.comun.motivo}
-          name="motivo"
-          type="select"
-          value={motivoId}
-          onChange={(e) => {
-            setMotivoId(e.target.value);
-            setDetalle('');
-          }}
-          disabled={guardando || estadoMotivos !== 'listo'}
+        <Button
+          onClick={handleGuardar}
+          disabled={guardando || (motivoElegido?.pide_detalle && !detalle.trim())}
         >
-          <option value="">{t.comun.motivo_elegir}</option>
-          {motivos.map((motivo) => (
-            <option key={motivo.id} value={motivo.id}>{motivo.nombre}</option>
+          {guardando ? t.comun.guardando : t.comun.guardar}
+        </Button>
+      </Cabecera>
+      {datosDeLaFicha.length > 0 && (
+        <div className="panel-mini hoja-ficha-datos">{datosDeLaFicha.join(' · ')}</div>
+      )}
+
+      {error && <Alert variant="error">{error}</Alert>}
+      {errorConversion && <Alert variant="error">{errorConversion}</Alert>}
+      {esAdmin && solicitud.cliente_id && <Alert variant="info">{t.solicitudes.ya_convertida_cliente}</Alert>}
+
+      <section className="panel-tarjeta">
+        <div className="panel-tabs" role="tablist">
+          {pestanas.map((pestana) => (
+            <button
+              key={pestana.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === pestana.id}
+              className={`panel-tab ${tab === pestana.id ? 'panel-tab-activo' : ''}`}
+              onClick={() => setTab(pestana.id)}
+            >
+              {pestana.titulo}
+            </button>
           ))}
-        </FormField>
-
-        {motivoElegido?.pide_detalle && (
-          <FormField
-            label={t.comun.detalle}
-            name="detalle"
-            type="textarea"
-            value={detalle}
-            onChange={(e) => setDetalle(e.target.value)}
-            disabled={guardando}
-            required
-          />
-        )}
-
-        <FormField
-          label={t.comun.nota_interna}
-          name="nota"
-          type="textarea"
-          value={nota}
-          onChange={(e) => setNota(e.target.value)}
-        />
-
-        <AsistentesSugeridos solicitud={solicitud} onAsignar={setGuardiaNueva} />
-
-        {esAdminOSuperior(usuario?.rol) && (
-          <div className="panel-resultado-calculo">
-            {solicitud.cliente_id ? (
-              <p>{t.solicitudes.ya_convertida_cliente}</p>
-            ) : (
-              <>
-                {errorConversion && <Alert variant="error">{errorConversion}</Alert>}
-                <Button variant="secondary" onClick={handleConvertirEnCliente} disabled={convirtiendo}>
-                  {convirtiendo ? t.comun.guardando : t.solicitudes.convertir_en_cliente}
-                </Button>
-              </>
-            )}
-          </div>
-        )}
-
-        <div className="panel-modal-acciones">
-          <Button variant="secondary" onClick={onClose} disabled={guardando}>
-            {t.comun.cancelar}
-          </Button>
-          <Button
-            onClick={handleGuardar}
-            disabled={guardando || (motivoElegido?.pide_detalle && !detalle.trim())}
-          >
-            {guardando ? t.comun.guardando : t.comun.guardar}
-          </Button>
         </div>
+      </section>
+
+      <div className="panel-tab-contenido molde-pila">
+        {tab === 'detalle' && (
+          <section className="panel-tarjeta">
+            <div className="panel-tarjeta-titulo">
+              <h2>{t.comun.detalle}</h2>
+              <span className={claseBadge(estadoDeLaSolicitud)}>
+                {t.solicitudes[`estado_${estadoDeLaSolicitud}`]}
+              </span>
+            </div>
+            <div className="panel-grilla panel-columnas-3">
+              <div className="hoja-dato">
+                <div className="panel-mini">{t.solicitudes.col_telefono}</div>
+                <b>
+                  <a href={linkWhatsapp(solicitud.telefono)} target="_blank" rel="noreferrer">{solicitud.telefono}</a> ({t.solicitudes.llamar})
+                </b>
+              </div>
+              <div className="hoja-dato">
+                <div className="panel-mini">{t.solicitudes.email}</div>
+                <b>{solicitud.email || '—'}</b>
+              </div>
+              <div className="hoja-dato">
+                <div className="panel-mini">{t.solicitudes.nombre_paciente}</div>
+                <b>{solicitud.nombre_paciente || '—'}</b>
+              </div>
+              <div className="hoja-dato">
+                <div className="panel-mini">{t.solicitudes.col_localidad}</div>
+                <b>{solicitud.localidad || '—'}</b>
+              </div>
+              <div className="hoja-dato">
+                <div className="panel-mini">{t.solicitudes.col_tipo_servicio}</div>
+                <b>{solicitud.tipo_servicio || '—'}</b>
+              </div>
+              <div className="hoja-dato">
+                <div className="panel-mini">{t.solicitudes.col_modalidad}</div>
+                <b>{solicitud.modalidad || '—'}</b>
+              </div>
+              <div className="hoja-dato">
+                <div className="panel-mini">{t.solicitudes.dias_horario}</div>
+                <b>{solicitud.dias_horario || '—'}</b>
+              </div>
+            </div>
+            <div className="hoja-dato">
+              <div className="panel-mini">{t.solicitudes.descripcion}</div>
+              <b>{solicitud.descripcion || '—'}</b>
+            </div>
+          </section>
+        )}
+
+        {tab === 'motivo' && (
+          <section className="panel-tarjeta">
+            <div className="panel-tarjeta-titulo">
+              <h2>{t.comun.motivo}</h2>
+            </div>
+
+            {/* Los cuatro estados de lo que carga datos: mientras la lista de motivos viene, se
+                avisa; si falló, se ofrece volver a pedirla; si no hay ninguno, no hay qué elegir. */}
+            {estadoMotivos === 'cargando' && <p className="molde-vacio">{t.comun.cargando}</p>}
+            {estadoMotivos === 'error' && (
+              <Alert variant="error">
+                {errorMotivos}{' '}
+                <Button variant="secondary" onClick={recargarMotivos}>{t.comun.reintentar}</Button>
+              </Alert>
+            )}
+            {estadoMotivos === 'vacio' && (
+              <Alert variant="info">{t.comun.vacio}</Alert>
+            )}
+
+            <div className="molde-formgrid">
+              {/* Es una lista y nunca texto libre: lo que queda guardado es cuál, no cómo se
+                  llama. La localidad de arriba no se pisa, porque es lo que dijo quien llamó. */}
+              <ElegirUnLugar
+                lugares={catalogo.lugares}
+                zonas={catalogo.zonas}
+                estado={catalogo.estado}
+                valor={lugar}
+                onChange={(elegido) => setLugar(elegido || '')}
+                label={t.solicitudes.lugar_reconocido}
+                name="lugar_reconocido"
+                deshabilitado={guardando}
+              />
+
+              <FormField
+                label={t.comun.motivo}
+                name="motivo"
+                type="select"
+                value={motivoId}
+                onChange={(e) => {
+                  setMotivoId(e.target.value);
+                  setDetalle('');
+                }}
+                disabled={guardando || estadoMotivos !== 'listo'}
+              >
+                <option value="">{t.comun.motivo_elegir}</option>
+                {motivos.map((motivo) => (
+                  <option key={motivo.id} value={motivo.id}>{motivo.nombre}</option>
+                ))}
+              </FormField>
+
+              {motivoElegido?.pide_detalle && (
+                <div className="molde-ancho">
+                  <FormField
+                    label={t.comun.detalle}
+                    name="detalle"
+                    type="textarea"
+                    value={detalle}
+                    onChange={(e) => setDetalle(e.target.value)}
+                    disabled={guardando}
+                    required
+                  />
+                </div>
+              )}
+
+              <div className="molde-ancho">
+                <FormField
+                  label={t.comun.nota_interna}
+                  name="nota"
+                  type="textarea"
+                  value={nota}
+                  onChange={(e) => setNota(e.target.value)}
+                />
+              </div>
+            </div>
+          </section>
+        )}
+
+        {tab === 'sugeridos' && (
+          <AsistentesSugeridos solicitud={solicitud} onAsignar={setGuardiaNueva} />
+        )}
       </div>
 
       {/* La misma ventana de guardia nueva que usa la pantalla de Guardias, con el Asistente y
-          los Pacientes ya elegidos. La fecha y el horario se completan ahí, porque lo que la
-          Cliente dejó escrito en la Solicitud es una frase —"lunes y jueves a la mañana"— y no
-          un turno. */}
+          los Pacientes ya elegidos. La fecha y el horario se completan ahí. */}
       {guardiaNueva && (
         <NuevaGuardiaModal
           inicial={guardiaNueva}

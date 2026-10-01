@@ -1,0 +1,14 @@
+/* Las marcas de cada respuesta debajo de su nombre, y sus botones en una sola línea. */
+.respuestas-insignias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.respuestas-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}

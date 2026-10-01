@@ -13,6 +13,8 @@ import { useModalAccesible } from '../hooks/useModalAccesible';
 import { useAlarmasTomadas } from '../hooks/useAlarmasTomadas';
 import { LaTomoYo } from '../components/continuidad/LaTomoYo';
 import { TIPOS_DE_ALARMA } from '../lib/alarmasTomadas';
+import './hojaDeTarjetas.css';
+import './seguimientoDeGuardias.css';
 
 /* Las emergencias avisadas desde una guardia.
    ==========================================================================
@@ -60,24 +62,26 @@ export function EmergenciasEnGuardia() {
 
   return (
     <div>
-      <Cabecera titulo={t.emergencias.titulo} />
-      {estado === 'error' && error && <Alert variant="error">{error}</Alert>}
-
-      <div className="panel-filtros">
+      <Cabecera titulo={t.emergencias.titulo}>
         <Button
           variant={soloSinAtender ? 'primary' : 'secondary'}
           onClick={() => setSoloSinAtender(true)}
         >
           {t.emergencias.filtro_sin_atender}
-        </Button>{' '}
+        </Button>
         <Button
           variant={soloSinAtender ? 'secondary' : 'primary'}
           onClick={() => setSoloSinAtender(false)}
         >
           {t.emergencias.filtro_todas}
         </Button>
-      </div>
+      </Cabecera>
+      {estado === 'error' && error && <Alert variant="error">{error}</Alert>}
 
+      <section className="panel-tarjeta hoja-desplazable">
+        <div className="panel-tarjeta-titulo">
+          <h2>{soloSinAtender ? t.emergencias.filtro_sin_atender : t.emergencias.filtro_todas}</h2>
+        </div>
       <EstadoLista
         estado={estado}
         error={error}
@@ -98,8 +102,8 @@ export function EmergenciasEnGuardia() {
             {emergencias.map((emergencia) => (
               <tr key={emergencia.id}>
                 <td>
-                  {emergencia.reportado_at?.slice(0, 10)}{' '}
-                  {horaDelMomento(emergencia.reportado_at, locale)}
+                  <b>{emergencia.reportado_at?.slice(0, 10)}</b>
+                  <div className="panel-mini">{horaDelMomento(emergencia.reportado_at, locale)}</div>
                 </td>
                 <td>
                   {emergencia.guardia
@@ -115,18 +119,21 @@ export function EmergenciasEnGuardia() {
                   </span>
                 </td>
                 <td>
-                  <button onClick={() => setSeleccionada(emergencia)}>
-                    {t.comun.ver_detalle}
-                  </button>
-                  {!emergencia.atendida_at && (
-                    <LaTomoYo tipo={TIPOS_DE_ALARMA.EMERGENCIA} referenciaId={emergencia.id} {...tomas} />
-                  )}
+                  <div className="seguimiento-celda-acciones">
+                    <Button variant="secondary" onClick={() => setSeleccionada(emergencia)}>
+                      {t.comun.ver_detalle}
+                    </Button>
+                    {!emergencia.atendida_at && (
+                      <LaTomoYo tipo={TIPOS_DE_ALARMA.EMERGENCIA} referenciaId={emergencia.id} {...tomas} />
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </EstadoLista>
+      </section>
 
       {seleccionada && (
         <DetalleDeEmergencia

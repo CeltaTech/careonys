@@ -530,40 +530,6 @@ a {
   margin-left: 0;
 }
 
-/* Lo que a la Prestadora le falta cargar, reclamado arriba de cualquier pantalla.
-   No usa un fondo lleno a propósito:
-   dos franjas macizas seguidas compiten, y ésta es un pendiente, no una alarma. Entonces
-   superficie común y el naranja sólo en el canto izquierdo, que es el que llama la atención.
-   No lleva `position: sticky` porque el banner de arriba ya se queda fijo y dos elementos
-   pegados al mismo borde se tapan entre sí. */
-.franja-puesta-en-marcha {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.7rem 1.5rem;
-  background: var(--superficie);
-  border-bottom: 1px solid var(--borde-card);
-  border-left: 4px solid var(--naranja-alerta);
-  color: var(--texto-principal);
-  font-size: 0.9rem;
-}
-
-.franja-puesta-en-marcha strong {
-  color: var(--texto-titulo);
-}
-
-.franja-puesta-en-marcha-accion {
-  background: var(--azul-medio);
-  color: var(--texto-sobre-color);
-  border-radius: var(--radio-control);
-  padding: 0.35rem 1rem;
-  font-weight: 700;
-  text-decoration: none;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
 /* Copia de `.top` de la maqueta: hamburguesa, buscador y los enlaces con texto a la derecha. */
 .panel-header {
   position: sticky;

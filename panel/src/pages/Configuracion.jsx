@@ -15,7 +15,7 @@ import { Cabecera } from '../components/ui/Cabecera';
    uno abajo del otro con su título, que es como resuelven esto los programas que
    tienen muchas opciones: una lista de secciones arriba, y adentro de cada
    sección todo a la vista sin más clics. */
-const SECCIONES = ['prestadora', 'asistentes', 'cuidado', 'listas', 'avisos', 'aplicaciones', 'accesos'];
+const SECCIONES = ['prestadora', 'asistentes', 'cuidado', 'listas', 'avisos', 'aplicaciones', 'accesos', 'puesta_en_marcha'];
 
 export function Configuracion() {
   const { t } = useLocale();
@@ -28,7 +28,7 @@ export function Configuracion() {
         {SECCIONES.map((seccion) => (
           <NavLink
             key={seccion}
-            to={seccion}
+            to={seccion.replaceAll('_', '-')}
             className={({ isActive }) => `panel-tab ${isActive ? 'panel-tab-activo' : ''}`}
           >
             {t.configuracion[`seccion_${seccion}`]}

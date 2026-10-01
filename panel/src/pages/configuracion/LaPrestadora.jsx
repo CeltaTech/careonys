@@ -151,7 +151,6 @@ function TabModalidades() {
   return (
     <div>
       <h2>{t.configuracion.modalidades_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.modalidades_explicacion}</p>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         <table className="panel-tabla">
@@ -433,7 +432,6 @@ function TabPasarela() {
   return (
     <div>
       <h2>{t.configuracion.pasarela_titulo}</h2>
-      <p className="panel-explicacion">{t.configuracion.pasarela_explicacion}</p>
       {!puedeTocarLasCredenciales && <Alert variant="info">{t.configuracion.pasarela_credenciales_solo_admin}</Alert>}
       <EstadoLista estado={estado} error={error} vacio={pasarelas.length === 0} recargar={recargar}>
         {error && <Alert variant="error">{error}</Alert>}

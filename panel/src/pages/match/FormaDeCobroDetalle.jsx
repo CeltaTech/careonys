@@ -155,8 +155,6 @@ export function FormaDeCobroDetalle({ forma, unidades, soloLectura, onClose, onG
           onChange={(e) => setOfrecida(e.target.checked)}
           disabled={soloLectura}
         />
-        <p className="panel-explicacion">{t.match.forma_ofrecida_explicacion}</p>
-
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>
             {soloLectura ? t.comun.cerrar : t.comun.cancelar}

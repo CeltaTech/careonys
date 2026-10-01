@@ -128,10 +128,6 @@ function ContenidoInforme({ contenido, t }) {
         </table>
       </div>
 
-      {hayGuardiaCompartida && (
-        <p className="informe-obra-social-nota">{t.informesObraSocial.nota_guardia_compartida}</p>
-      )}
-
       <div className="informe-obra-social-firma">
         <div className="informe-obra-social-firma-linea" />
         <span>{t.informesObraSocial.firma_asistente_o_cliente}</span>
@@ -325,8 +321,6 @@ export function InformesObraSocial() {
   return (
     <div>
       <h1>{t.informesObraSocial.titulo}</h1>
-      <p className="panel-explicacion">{t.informesObraSocial.explicacion}</p>
-
       {error && <Alert variant="error">{error}</Alert>}
       {mensajeValidacion && <Alert variant="success">{mensajeValidacion}</Alert>}
 

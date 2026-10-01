@@ -95,8 +95,6 @@ export function Reportes() {
   return (
     <div>
       <h1>{t.reportes.titulo}</h1>
-      <p className="panel-explicacion">{t.reportes.explicacion}</p>
-
       <div className="panel-filtros">
         <label>
           {t.reportes.desde}{' '}

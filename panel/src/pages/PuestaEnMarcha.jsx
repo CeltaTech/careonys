@@ -32,7 +32,6 @@ export function PuestaEnMarcha() {
   return (
     <div>
       <h1>{t.puesta_en_marcha.titulo}</h1>
-      <p className="panel-lateral-subtitulo">{t.puesta_en_marcha.subtitulo}</p>
       <GuiaPrimerosPasos />
     </div>
   );

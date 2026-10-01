@@ -67,8 +67,6 @@ export function MatchCalificaciones() {
   return (
     <div>
       <h1>{t.match.calificaciones_titulo}</h1>
-      <p className="panel-explicacion">{t.match.calificaciones_explicacion}</p>
-
       {error && <Alert variant="error">{error}</Alert>}
 
       <EstadoLista estado={estado} error={null} vacio={estado === 'listo' && calificaciones.length === 0} recargar={recargar}>

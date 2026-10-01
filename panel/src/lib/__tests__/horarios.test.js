@@ -116,7 +116,6 @@ describe('los textos de las excepciones de familiar', () => {
     const textos = T[idioma].continuidad;
     for (const clave of [
       'excepciones_titulo',
-      'excepciones_explicacion',
       'excepciones_vacio',
       'excepciones_col_familiar',
       'excepciones_col_desde',

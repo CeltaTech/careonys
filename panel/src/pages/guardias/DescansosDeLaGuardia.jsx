@@ -78,8 +78,6 @@ export function DescansosDeLaGuardia({ guardiaId }) {
   return (
     <div className="panel-resultado-calculo">
       <h3>{tr.titulo}</h3>
-      <p className="panel-explicacion">{tr.explicacion}</p>
-
       {error && <Alert variant="error">{error}</Alert>}
 
       {cargando && <p className="panel-explicacion">{t.comun.cargando}</p>}

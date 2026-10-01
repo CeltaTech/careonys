@@ -349,6 +349,7 @@ export const T = {
       seccion_avisos: 'Mensajes',
       seccion_aplicaciones: 'Las aplicaciones',
       seccion_accesos: 'Accesos',
+      seccion_puesta_en_marcha: 'Puesta en marcha',
       seccion_listas: 'Listas de opciones',
       listas_titulo: 'Las listas de opciones',
       listas_elegir: 'Lista',
@@ -955,25 +956,14 @@ export const T = {
       documentacion_por_vencer: 'Documentación por vencer',
       alertas_ia_sin_resolver: 'Alertas de IA sin resolver',
     },
-    // La pantalla donde una Prestadora nueva completa lo que le falta, y la franja que se lo
-    // reclama desde cualquier otra. La franja nombra una sola cosa —la primera que falta— y dice
-    // cuántas quedan; los textos de cada paso salen de `guia_primeros_pasos`, acá abajo.
-    puesta_en_marcha: {
-      titulo: 'Puesta en marcha',
-      franja_titulo: 'Quedan {cantidad} datos por completar',
-      franja_titulo_uno: 'Queda un dato por completar',
-      franja_cta: 'Completar',
-    },
-    // Guía de primeros pasos de una Prestadora nueva. Vive en su propia pantalla
-    // (`pages/PuestaEnMarcha.jsx`), a donde lleva la entrada del Panel mientras quede algo sin
-    // cargar, y cubre otros cinco pasos que el checklist de arriba (`onboarding`), que sigue
+    // Guía de primeros pasos de una Prestadora nueva. Vive como sección de Configuración
+    // (`pages/configuracion/PuestaEnMarcha.jsx`), y cubre otros cinco pasos que el checklist de arriba (`onboarding`), que sigue
     // viviendo en el Resumen del mes.
     //
     // Cada paso tiene cuatro textos, y el cuarto es el que pidió el Desarrollador: la
     // CONSECUENCIA, o sea qué deja de funcionar mientras eso falte. No es una amenaza ni un
     // reproche — es el motivo, dicho una sola vez y en términos del trabajo de la Prestadora.
-    // Se muestra sólo al lado de lo que falta, y la franja del Layout repite la del primer paso
-    // pendiente. Cada una está verificada contra el código que produce ese efecto, no supuesta.
+    // Se muestra sólo al lado de lo que falta. Cada una está verificada contra el código que produce ese efecto, no supuesta.
     guia_primeros_pasos: {
       titulo: 'Guía de primeros pasos',
       titulo_informativo: 'Estado de la configuración inicial',
@@ -3236,6 +3226,7 @@ export const T = {
       seccion_avisos: 'Messages',
       seccion_aplicaciones: 'The apps',
       seccion_accesos: 'Access',
+      seccion_puesta_en_marcha: 'Getting set up',
       seccion_listas: 'Option lists',
       listas_titulo: 'Option lists',
       listas_elegir: 'List',
@@ -3841,12 +3832,6 @@ export const T = {
       ausentes_sin_relevo: 'Absences without prior relief',
       documentacion_por_vencer: 'Documentation about to expire',
       alertas_ia_sin_resolver: 'Unresolved AI alerts',
-    },
-    puesta_en_marcha: {
-      titulo: 'Getting set up',
-      franja_titulo: '{cantidad} details still missing',
-      franja_titulo_uno: 'One detail still missing',
-      franja_cta: 'Complete',
     },
     guia_primeros_pasos: {
       titulo: 'Getting started guide',
@@ -6084,6 +6069,7 @@ export const T = {
       seccion_avisos: 'Mensagens',
       seccion_aplicaciones: 'Os aplicativos',
       seccion_accesos: 'Acessos',
+      seccion_puesta_en_marcha: 'Colocação em funcionamento',
       seccion_listas: 'Listas de opções',
       listas_titulo: 'As listas de opções',
       listas_elegir: 'Lista',
@@ -6689,12 +6675,6 @@ export const T = {
       ausentes_sin_relevo: 'Ausências sem revezamento prévio',
       documentacion_por_vencer: 'Documentação a vencer',
       alertas_ia_sin_resolver: 'Alertas de IA sem resolver',
-    },
-    puesta_en_marcha: {
-      titulo: 'Colocação em funcionamento',
-      franja_titulo: 'Faltam {cantidad} dados a completar',
-      franja_titulo_uno: 'Falta um dado a completar',
-      franja_cta: 'Completar',
     },
     guia_primeros_pasos: {
       titulo: 'Guia de primeiros passos',

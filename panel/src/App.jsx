@@ -10,8 +10,7 @@ import { ConfirmacionProvider } from './context/ConfirmacionContext';
 import { AdvertenciaLegalProvider } from './context/AdvertenciaLegalContext';
 import { PedidosDeCodigoProvider } from './context/PedidosDeCodigoContext';
 import { TelefonosEsperandoProvider } from './context/TelefonosEsperandoContext';
-import { PuestaEnMarchaProvider, usePuestaEnMarcha } from './context/PuestaEnMarchaContext';
-import { RUTA_PUESTA_EN_MARCHA } from './components/layout/FranjaPuestaEnMarcha';
+import { PuestaEnMarchaProvider } from './context/PuestaEnMarchaContext';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { ROLES_ADMINISTRACION, ROLES_PANEL } from './lib/roles';
 import { MODALIDAD } from './lib/modalidades';
@@ -29,7 +28,6 @@ import { Muestra } from './pages/Muestra';
 import { MuestraEstadoActual } from './pages/MuestraEstadoActual';
 import { Dashboard } from './pages/Dashboard';
 import { EstadoActual } from './pages/EstadoActual';
-import { PuestaEnMarcha } from './pages/PuestaEnMarcha';
 import { Postulaciones } from './pages/Postulaciones';
 import { Solicitudes } from './pages/Solicitudes';
 import { Asistentes } from './pages/Asistentes';
@@ -61,6 +59,7 @@ import { LasListasDeOpciones } from './pages/configuracion/LasListasDeOpciones';
 import { ConfiguracionAvisos } from './pages/configuracion/Avisos';
 import { ConfiguracionAplicaciones } from './pages/configuracion/LasAplicaciones';
 import { ConfiguracionAccesos } from './pages/configuracion/Accesos';
+import { ConfiguracionPuestaEnMarcha } from './pages/configuracion/PuestaEnMarcha';
 import { Medicacion } from './pages/Medicacion';
 import { Importacion } from './pages/Importacion';
 import { InformesObraSocial } from './pages/InformesObraSocial';
@@ -70,23 +69,6 @@ import { MarketplaceFamilias } from './pages/marketplace/Familias';
 import { FormasDeCobro } from './pages/marketplace/FormasDeCobro';
 import { MarketplaceCalificaciones } from './pages/marketplace/Calificaciones';
 import { MarketplaceAuditoriaLegal } from './pages/marketplace/AuditoriaLegal';
-
-/* Con qué pantalla abre el Panel.
-   ==========================================================================
-
-   Casi siempre con el Estado actual, que es lo que hay que resolver hoy. La excepción dura lo
-   que dure la puesta en marcha: mientras a la Prestadora le falte cargar algo de lo suyo, entrar
-   la deja donde puede completarlo, y no frente a una grilla de guardias vacía que todavía no le
-   dice nada. Resuelto el último paso, esto deja de desviar y la entrada vuelve a ser la de
-   siempre, sin que nadie apague nada.
-
-   Se espera a saber: mientras el contexto todavía está preguntando contesta que no falta nada
-   —el sentido seguro—, así que desviar con esa respuesta provisoria sería desviar a todos. */
-function EntradaDelPanel() {
-  const { estado, completos } = usePuestaEnMarcha();
-  if (estado === 'listo' && !completos) return <Navigate to={RUTA_PUESTA_EN_MARCHA} replace />;
-  return <EstadoActual />;
-}
 
 function App() {
   return (
@@ -114,7 +96,7 @@ function App() {
             {/* Qué le falta cargar a la Prestadora para poder trabajar. Va acá por el mismo
                 motivo que los dos de arriba: es de la Prestadora en la que se está trabajando
                 ahora. Y afuera del enrutador porque lo consultan
-                tres cosas a la vez — la entrada, la franja del menú y la propia guía. */}
+                la guía, que vive en Configuración. */}
             <PuestaEnMarchaProvider>
             <AdvertenciaLegalProvider>
               <BrowserRouter>
@@ -152,12 +134,7 @@ function App() {
                         Panel es lo que hay que resolver hoy, no el resumen del mes. El resumen
                         no se borró —sigue entero en su propia dirección—, solo dejó de ser lo
                         primero, porque nadie empieza el día leyendo un promedio. */}
-                    <Route index element={<EntradaDelPanel />} />
-                    {/* Donde la Prestadora nueva completa lo que le falta. Tiene dirección propia
-                        —y no es sólo un pedazo del Estado actual— porque es a donde lleva la
-                        entrada mientras quede algo sin cargar, y a donde vuelve la franja desde
-                        cualquier pantalla. Completado todo, se vacía y devuelve a la entrada. */}
-                    <Route path="puesta-en-marcha" element={<PuestaEnMarcha />} />
+                    <Route index element={<EstadoActual />} />
                     <Route path="resumen-del-mes" element={<Dashboard />} />
                     <Route path="postulaciones" element={<Postulaciones />} />
                     <Route path="solicitudes" element={<Solicitudes />} />
@@ -222,6 +199,7 @@ function App() {
                       <Route path="avisos" element={<ConfiguracionAvisos />} />
                       <Route path="aplicaciones" element={<ConfiguracionAplicaciones />} />
                       <Route path="accesos" element={<ConfiguracionAccesos />} />
+                      <Route path="puesta-en-marcha" element={<ConfiguracionPuestaEnMarcha />} />
                     </Route>
                     <Route path="mi-clave" element={<MiClave />} />
                     {/* La seguridad de la propia cuenta la tiene cualquiera que entre al Panel:

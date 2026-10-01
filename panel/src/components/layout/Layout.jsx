@@ -11,7 +11,6 @@ import { esAdminOSuperior } from '../../lib/roles';
 import { MODALIDAD } from '../../lib/modalidades';
 import { supabase } from '../../lib/supabaseClient';
 import { SelectoresPreferencias } from './SelectoresPreferencias';
-import { FranjaPuestaEnMarcha } from './FranjaPuestaEnMarcha';
 import { EquipoNuevo } from './EquipoNuevo';
 
 /* Los dibujos del menú, de trazo, en el color del texto que los rodea. Son los de la maqueta
@@ -404,7 +403,6 @@ export function Layout() {
       <div className="panel-velo" onClick={() => setMenuAbierto(false)} aria-hidden="true" />
       <div className="panel-main">
         <EquipoNuevo />
-        <FranjaPuestaEnMarcha />
         <header className="panel-header">
           <button
             type="button"

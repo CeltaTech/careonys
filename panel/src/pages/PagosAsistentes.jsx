@@ -31,6 +31,8 @@ import { Cabecera } from '../components/ui/Cabecera';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { useModalAccesible } from '../hooks/useModalAccesible';
+import '../styles/molde-paginas.css';
+import './hojaDeTarjetas.css';
 
 /* Lo que la Prestadora le paga al Asistente, guardado.
    ==========================================================================
@@ -133,24 +135,27 @@ export function PagosAsistentes() {
     <div>
       <Cabecera titulo={t.pagos_asistentes.titulo} />
 
-      {tabsVisibles.length > 1 && (
-        <div className="panel-tabs">
-          {tabsVisibles.map((tabId) => (
-            <button
-              key={tabId}
-              className={`panel-tab ${tab === tabId ? 'panel-tab-activo' : ''}`}
-              onClick={() => setTab(tabId)}
-            >
-              {t.pagos_asistentes.tabs[tabId]}
-            </button>
-          ))}
-        </div>
-      )}
+      <section className="panel-tarjeta hoja-desplazable">
+        {tabsVisibles.length > 1 && (
+          <div className="panel-tabs">
+            {tabsVisibles.map((tabId) => (
+              <button
+                key={tabId}
+                type="button"
+                className={`panel-tab ${tab === tabId ? 'panel-tab-activo' : ''}`}
+                onClick={() => setTab(tabId)}
+              >
+                {t.pagos_asistentes.tabs[tabId]}
+              </button>
+            ))}
+          </div>
+        )}
 
-      <div className="panel-tab-contenido">
-        {tab === 'liquidaciones' && <LiquidacionesTab esAdmin={esAdmin} />}
-        {tab === 'conceptos' && esAdmin && <ConceptosTab />}
-      </div>
+        <div className="panel-tab-contenido">
+          {tab === 'liquidaciones' && <LiquidacionesTab esAdmin={esAdmin} />}
+          {tab === 'conceptos' && esAdmin && <ConceptosTab />}
+        </div>
+      </section>
     </div>
   );
 }
@@ -217,6 +222,14 @@ function LiquidacionesTab({ esAdmin }) {
 
   return (
     <div>
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.pagos_asistentes.tabs.liquidaciones}</h2>
+        {esAdmin && (
+          <Button onClick={generar} disabled={generando || estado === 'cargando'}>
+            {generando ? t.pagos_asistentes.generando : t.pagos_asistentes.generar}
+          </Button>
+        )}
+      </div>
       {estado !== 'error' && error && <Alert variant="error">{error}</Alert>}
       {resultado && <ResultadoGeneracion resultado={resultado} />}
 
@@ -237,11 +250,6 @@ function LiquidacionesTab({ esAdmin }) {
           <option value="pendiente">{t.pagos_asistentes.estado_pendiente}</option>
           <option value="pagada">{t.pagos_asistentes.estado_pagada}</option>
         </select>
-        {esAdmin && (
-          <Button onClick={generar} disabled={generando || estado === 'cargando'}>
-            {generando ? t.pagos_asistentes.generando : t.pagos_asistentes.generar}
-          </Button>
-        )}
       </div>
 
       <EstadoLista
@@ -270,7 +278,9 @@ function LiquidacionesTab({ esAdmin }) {
           <tbody>
             {filtradas.map((l) => (
               <tr key={l.id}>
-                <td>{l.asistente_nombre || '—'}</td>
+                <td>
+                  <b>{l.asistente_nombre || '—'}</b>
+                </td>
                 <td>{tramoDelPeriodo(l, locale)}</td>
                 <td>{traducirValor(t.asistentes, `vinculo_${l.tipo_vinculo}`)}</td>
                 <td>{formatearHoras(l.horas, locale)}</td>
@@ -284,9 +294,9 @@ function LiquidacionesTab({ esAdmin }) {
                   <span className={claseBadge(l.estado)}>{traducirValor(t.pagos_asistentes, `estado_${l.estado}`)}</span>
                 </td>
                 <td>
-                  <Button variant="secondary" onClick={() => setAbiertaId(l.id)}>
+                  <button type="button" className="panel-enlace" onClick={() => setAbiertaId(l.id)}>
                     {t.comun.ver_detalle}
-                  </Button>
+                  </button>
                 </td>
               </tr>
             ))}
@@ -540,34 +550,36 @@ function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
               {pendiente && esAdmin && (
                 <div>
                   <h3>{t.pagos_asistentes.pagar_titulo}</h3>
-                  <FormField
-                    label={t.pagos_asistentes.pagar_fecha}
-                    name="liquidacion_fecha_pago"
-                    type="date"
-                    value={pago.fecha_pago}
-                    onChange={(e) => setPago({ ...pago, fecha_pago: e.target.value })}
-                    required
-                  />
-                  <FormField
-                    label={t.pagos_asistentes.pagar_forma}
-                    name="liquidacion_forma_pago"
-                    type="select"
-                    value={pago.forma_pago}
-                    onChange={(e) => setPago({ ...pago, forma_pago: e.target.value })}
-                  >
-                    <option value="">{t.pagos_asistentes.pagar_forma_sin_elegir}</option>
-                    {mediosQueSeOfrecen.map((opcion) => (
-                      <option key={opcion.id} value={opcion.clave}>
-                        {opcion.texto}
-                      </option>
-                    ))}
-                  </FormField>
-                  <FormField
-                    label={t.pagos_asistentes.pagar_referencia}
-                    name="liquidacion_referencia_pago"
-                    value={pago.referencia_pago}
-                    onChange={(e) => setPago({ ...pago, referencia_pago: e.target.value })}
-                  />
+                  <div className="molde-formgrid">
+                    <FormField
+                      label={t.pagos_asistentes.pagar_fecha}
+                      name="liquidacion_fecha_pago"
+                      type="date"
+                      value={pago.fecha_pago}
+                      onChange={(e) => setPago({ ...pago, fecha_pago: e.target.value })}
+                      required
+                    />
+                    <FormField
+                      label={t.pagos_asistentes.pagar_forma}
+                      name="liquidacion_forma_pago"
+                      type="select"
+                      value={pago.forma_pago}
+                      onChange={(e) => setPago({ ...pago, forma_pago: e.target.value })}
+                    >
+                      <option value="">{t.pagos_asistentes.pagar_forma_sin_elegir}</option>
+                      {mediosQueSeOfrecen.map((opcion) => (
+                        <option key={opcion.id} value={opcion.clave}>
+                          {opcion.texto}
+                        </option>
+                      ))}
+                    </FormField>
+                    <FormField
+                      label={t.pagos_asistentes.pagar_referencia}
+                      name="liquidacion_referencia_pago"
+                      value={pago.referencia_pago}
+                      onChange={(e) => setPago({ ...pago, referencia_pago: e.target.value })}
+                    />
+                  </div>
                 </div>
               )}
             </>
@@ -650,12 +662,11 @@ function ConceptosTab() {
 
   return (
     <div>
-      <h2>{t.pagos_asistentes.conceptos_titulo}</h2>
-      {estado !== 'error' && error && <Alert variant="error">{error}</Alert>}
-
-      <div className="panel-filtros">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.pagos_asistentes.conceptos_titulo}</h2>
         <Button onClick={() => setEditando({})}>{t.pagos_asistentes.conceptos_nuevo}</Button>
       </div>
+      {estado !== 'error' && error && <Alert variant="error">{error}</Alert>}
 
       <EstadoLista
         estado={estado}
@@ -679,7 +690,9 @@ function ConceptosTab() {
           <tbody>
             {conceptos.map((c) => (
               <tr key={c.id}>
-                <td>{c.nombre}</td>
+                <td>
+                  <b>{c.nombre}</b>
+                </td>
                 <td>{traducirValor(t.pagos_asistentes, `signo_${c.signo}`)}</td>
                 <td>{traducirValor(t.pagos_asistentes, `unidad_${c.unidad}`)}</td>
                 <td>
@@ -688,7 +701,11 @@ function ConceptosTab() {
                     : formatearValor(c.valor, c.unidad, c.moneda, locale)}
                 </td>
                 <td>{traducirValor(t.pagos_asistentes, `alcance_${c.aplica_a}`)}</td>
-                <td>{c.activo ? t.comun.si : t.comun.no}</td>
+                <td>
+                  <span className={claseBadge(c.activo ? 'activo' : 'inactivo')}>
+                    {c.activo ? t.comun.si : t.comun.no}
+                  </span>
+                </td>
                 <td>
                   <Button variant="secondary" onClick={() => setEditando(c)} disabled={ocupadoId === c.id}>
                     {t.comun.editar}
@@ -779,122 +796,126 @@ function ConceptoModal({ concepto, onCerrar, onGuardado }) {
         <h2 id={modal.idTitulo}>{concepto.id ? t.comun.editar : t.pagos_asistentes.conceptos_nuevo}</h2>
         {error && <Alert variant="error">{error}</Alert>}
 
-        <FormField
-          label={t.pagos_asistentes.concepto_nombre}
-          name="concepto_nombre"
-          value={datos.nombre}
-          onChange={(e) => cambiar('nombre', e.target.value)}
-          required
-        />
-
-        <FormField
-          label={t.pagos_asistentes.col_signo}
-          name="concepto_signo"
-          type="select"
-          value={datos.signo}
-          onChange={(e) => cambiar('signo', e.target.value)}
-        >
-          {SIGNOS.map((signo) => (
-            <option key={signo} value={signo}>
-              {traducirValor(t.pagos_asistentes, `signo_${signo}`)}
-            </option>
-          ))}
-        </FormField>
-
-        <FormField
-          label={t.pagos_asistentes.col_unidad}
-          name="concepto_unidad"
-          type="select"
-          value={datos.unidad}
-          onChange={(e) => cambiar('unidad', e.target.value)}
-        >
-          {UNIDADES.map((unidad) => (
-            <option key={unidad} value={unidad}>
-              {traducirValor(t.pagos_asistentes, `unidad_${unidad}`)}
-            </option>
-          ))}
-        </FormField>
-
-        <FormField
-          label={t.pagos_asistentes.concepto_origen}
-          name="concepto_origen"
-          type="select"
-          value={datos.origen_valor}
-          onChange={(e) => cambiar('origen_valor', e.target.value)}
-        >
-          {ORIGENES.map((origen) => (
-            <option key={origen} value={origen}>
-              {traducirValor(t.pagos_asistentes, `origen_${origen}`)}
-            </option>
-          ))}
-        </FormField>
-
-        {campos.valor && (
+        <div className="molde-formgrid">
           <FormField
-            label={t.pagos_asistentes.concepto_valor}
-            name="concepto_valor"
-            type="number"
-            step="0.0001"
-            value={datos.valor}
-            onChange={(e) => cambiar('valor', e.target.value)}
+            label={t.pagos_asistentes.concepto_nombre}
+            name="concepto_nombre"
+            value={datos.nombre}
+            onChange={(e) => cambiar('nombre', e.target.value)}
             required
           />
-        )}
 
-        {campos.moneda && (
           <FormField
-            label={t.pagos_asistentes.concepto_moneda}
-            name="concepto_moneda"
-            value={moneda ?? ''}
-            readOnly
-            disabled
-          />
-        )}
+            label={t.pagos_asistentes.col_signo}
+            name="concepto_signo"
+            type="select"
+            value={datos.signo}
+            onChange={(e) => cambiar('signo', e.target.value)}
+          >
+            {SIGNOS.map((signo) => (
+              <option key={signo} value={signo}>
+                {traducirValor(t.pagos_asistentes, `signo_${signo}`)}
+              </option>
+            ))}
+          </FormField>
 
-        {campos.escala_tipo && (
-          <>
+          <FormField
+            label={t.pagos_asistentes.col_unidad}
+            name="concepto_unidad"
+            type="select"
+            value={datos.unidad}
+            onChange={(e) => cambiar('unidad', e.target.value)}
+          >
+            {UNIDADES.map((unidad) => (
+              <option key={unidad} value={unidad}>
+                {traducirValor(t.pagos_asistentes, `unidad_${unidad}`)}
+              </option>
+            ))}
+          </FormField>
+
+          <FormField
+            label={t.pagos_asistentes.concepto_origen}
+            name="concepto_origen"
+            type="select"
+            value={datos.origen_valor}
+            onChange={(e) => cambiar('origen_valor', e.target.value)}
+          >
+            {ORIGENES.map((origen) => (
+              <option key={origen} value={origen}>
+                {traducirValor(t.pagos_asistentes, `origen_${origen}`)}
+              </option>
+            ))}
+          </FormField>
+
+          {campos.valor && (
             <FormField
-              label={t.pagos_asistentes.concepto_escala}
-              name="concepto_escala"
-              type="select"
-              value={datos.escala_tipo}
-              onChange={(e) => cambiar('escala_tipo', e.target.value)}
+              label={t.pagos_asistentes.concepto_valor}
+              name="concepto_valor"
+              type="number"
+              step="0.0001"
+              value={datos.valor}
+              onChange={(e) => cambiar('valor', e.target.value)}
               required
-            >
-              <option value="">{t.comun.seleccionar}</option>
-              {tiposDeEscala.map((tipo) => (
-                <option key={tipo} value={tipo}>
-                  {tipo}
-                </option>
-              ))}
-            </FormField>
-            {/* El concepto va a tomar su valor de una de estas escalas todos los meses: si
-                todavía son provisorias, se dice en el momento de elegirla y no después. */}
-            <AvisoEscalasProvisorias escalas={escalas} />
-          </>
-        )}
+            />
+          )}
 
-        <FormField
-          label={t.pagos_asistentes.conceptos_col_alcance}
-          name="concepto_alcance"
-          type="select"
-          value={datos.aplica_a}
-          onChange={(e) => cambiar('aplica_a', e.target.value)}
-        >
-          {ALCANCES.map((alcance) => (
-            <option key={alcance} value={alcance}>
-              {traducirValor(t.pagos_asistentes, `alcance_${alcance}`)}
-            </option>
-          ))}
-        </FormField>
+          {campos.moneda && (
+            <FormField
+              label={t.pagos_asistentes.concepto_moneda}
+              name="concepto_moneda"
+              value={moneda ?? ''}
+              readOnly
+              disabled
+            />
+          )}
 
-        <FormField
-          label={t.pagos_asistentes.concepto_orden}
-          name="concepto_orden"
-          type="number"
-          value={datos.orden}
-          onChange={(e) => cambiar('orden', e.target.value)}
-        />
+          {campos.escala_tipo && (
+            <>
+              <FormField
+                label={t.pagos_asistentes.concepto_escala}
+                name="concepto_escala"
+                type="select"
+                value={datos.escala_tipo}
+                onChange={(e) => cambiar('escala_tipo', e.target.value)}
+                required
+              >
+                <option value="">{t.comun.seleccionar}</option>
+                {tiposDeEscala.map((tipo) => (
+                  <option key={tipo} value={tipo}>
+                    {tipo}
+                  </option>
+                ))}
+              </FormField>
+              {/* El concepto va a tomar su valor de una de estas escalas todos los meses: si
+                  todavía son provisorias, se dice en el momento de elegirla y no después. */}
+              <div className="molde-ancho">
+                <AvisoEscalasProvisorias escalas={escalas} />
+              </div>
+            </>
+          )}
+
+          <FormField
+            label={t.pagos_asistentes.conceptos_col_alcance}
+            name="concepto_alcance"
+            type="select"
+            value={datos.aplica_a}
+            onChange={(e) => cambiar('aplica_a', e.target.value)}
+          >
+            {ALCANCES.map((alcance) => (
+              <option key={alcance} value={alcance}>
+                {traducirValor(t.pagos_asistentes, `alcance_${alcance}`)}
+              </option>
+            ))}
+          </FormField>
+
+          <FormField
+            label={t.pagos_asistentes.concepto_orden}
+            name="concepto_orden"
+            type="number"
+            value={datos.orden}
+            onChange={(e) => cambiar('orden', e.target.value)}
+          />
+        </div>
 
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onCerrar} disabled={guardando}>

@@ -29,36 +29,36 @@ export default function Alertas() {
 
   if (error) return <div className="alert alert-error" role="alert">{error}</div>;
   if (alertas === null) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
-  if (alertas.length === 0) return <div className="estado-vacio" role="status">{t.alertas.sin_alertas}</div>;
+  if (alertas.length === 0) return <div className="pwa-card estado-vacio" role="status">{t.alertas.sin_alertas}</div>;
 
   return (
-    <div>
-      <Link to={`/pacientes/${id}`} className="btn btn-secondary" style={{ marginBottom: '1rem', fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
+    <>
+      <Link to={`/pacientes/${id}`} className="btn btn-volver">
         <span aria-hidden="true">←</span> {t.comun.volver}
       </Link>
       <h1>{t.alertas.titulo}</h1>
       {alertas.map((a) => (
-        <div key={a.id} className={`alert alerta-${a.nivel}`}>
+        <section key={a.id} className="pwa-card">
           <div>
             <span className={`badge badge-${a.nivel}`}>{traducirValor(t.alertas, `nivel_${a.nivel}`)}</span>{' '}
             <span className="badge">{a.resuelta_at ? t.alertas.resuelta : t.alertas.activa}</span>
           </div>
-          <p style={{ margin: '0.5rem 0' }}>{a.descripcion}</p>
+          <div className="pwa-card-dato">{a.descripcion}</div>
           {a.reportes_relacionados?.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+            <div className="lista-enlaces">
               {a.reportes_relacionados.map((reporteId) => (
-                <Link key={reporteId} to={`/pacientes/${id}/reportes/${reporteId}`} style={{ fontSize: '0.85rem' }}>
+                <Link key={reporteId} to={`/pacientes/${id}/reportes/${reporteId}`}>
                   {t.alertas.ver_reportes_relacionados}
                 </Link>
               ))}
             </div>
           )}
-        </div>
+        </section>
       ))}
       {/* Al pie de la lista y no arriba: primero se lee qué pasó, y recién después se
           pregunta. Aparece solamente con esta pantalla cargada y con alguna alerta a la
           vista, que es el momento en que hace falta hablar con alguien. */}
       <ContactarALaPrestadora t={t} />
-    </div>
+    </>
   );
 }

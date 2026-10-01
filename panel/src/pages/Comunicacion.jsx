@@ -10,6 +10,8 @@ import { Alert } from '../components/ui/Alert';
 import { HiloComunicacion } from '../components/comunicacion/HiloComunicacion';
 import { HiloWhatsapp } from '../components/comunicacion/HiloWhatsapp';
 import { mensajeDeError } from '../lib/errores';
+import '../styles/molde-paginas.css';
+import './comunicacion.css';
 
 // Bandeja única: las conversaciones internas con cada Asistente y los WhatsApp que entran
 // al número de la Prestadora se ven en la misma lista. Antes el WhatsApp no se veía en
@@ -143,9 +145,9 @@ export function Comunicacion() {
 
       {mensajeWhatsapp && <Alert variant="error">{mensajeWhatsapp}</Alert>}
 
-      <div className="panel-comunicacion-layout">
-        <div className="panel-comunicacion-lista-wrap">
-          <div className="panel-comunicacion-filtros">
+      <div className="molde-detalle">
+        <section className="panel-tarjeta molde-lista">
+          <div className="comunicacion-filtros">
             <select value={f.canal} onChange={(e) => set('canal', e.target.value)} aria-label={t.comun.filtro_canal}>
               <option value="todos">{t.comunicacion.filtro_todos_los_canales}</option>
               <option value="interno">{t.comunicacion.canal_interno}</option>
@@ -170,41 +172,50 @@ export function Comunicacion() {
             onLimpiarFiltros={limpiar}
             mensajeVacio={t.comunicacion.sin_conversaciones}
           >
-            <div className="panel-comunicacion-lista">
+            <div className="comunicacion-renglones">
               {visibles.map((c) => (
                 <button
                   key={c.clave}
                   type="button"
-                  className={`panel-comunicacion-item ${
-                    seleccionada === c.clave ? 'panel-comunicacion-item-activo' : ''
-                  }`}
+                  className={`molde-renglon ${seleccionada === c.clave ? 'molde-renglon-activo' : ''}`}
                   onClick={() => setSeleccionada(c.clave)}
                 >
-                  <div className="panel-comunicacion-item-cabecera">
-                    <span className="panel-comunicacion-item-nombre">{c.titulo}</span>
-                    <span className="badge">
+                  <b>{c.titulo}</b>
+                  <span className="panel-mini comunicacion-previa">
+                    {c.preview ?? t.comunicacion.sin_mensaje_previo}
+                  </span>
+                  <span className="comunicacion-insignias">
+                    <span className="badge badge-info">
                       {c.canal === 'whatsapp' ? t.comunicacion.canal_whatsapp : t.comunicacion.canal_interno}
                     </span>
-                  </div>
-                  {c.atencion && <span className="badge badge-atencion">{t.comunicacion.espera_respuesta}</span>}
-                  <div className="panel-comunicacion-item-preview">
-                    {c.preview ?? t.comunicacion.sin_mensaje_previo}
-                  </div>
+                    {c.atencion && <span className="badge badge-atencion">{t.comunicacion.espera_respuesta}</span>}
+                  </span>
                 </button>
               ))}
             </div>
           </EstadoLista>
-        </div>
+        </section>
 
-        <div className="panel-comunicacion-hilo">
-          {!abierta && <p className="estado-vacio">{t.comunicacion.seleccionar_conversacion}</p>}
+        <section className="panel-tarjeta comunicacion-hilo">
+          {!abierta && <p className="molde-vacio">{t.comunicacion.seleccionar_conversacion}</p>}
+          {abierta && (
+            <div className="panel-tarjeta-titulo">
+              <h2>{abierta.titulo}</h2>
+              <span className="comunicacion-insignias">
+                {abierta.atencion && <span className="badge badge-atencion">{t.comunicacion.espera_respuesta}</span>}
+                <span className="badge badge-info">
+                  {abierta.canal === 'whatsapp' ? t.comunicacion.canal_whatsapp : t.comunicacion.canal_interno}
+                </span>
+              </span>
+            </div>
+          )}
           {abierta?.canal === 'interno' && (
             <HiloComunicacion asistenteId={abierta.id} mostrarEncabezado={false} onEnviado={recargar} />
           )}
           {abierta?.canal === 'whatsapp' && (
             <HiloWhatsapp conversacionId={abierta.id} onCambio={recargar} />
           )}
-        </div>
+        </section>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { llamarApiConfiguracion as llamarApi } from '../../lib/apiConfiguracion';
 import { Alert } from '../../components/ui/Alert';
+import { Button } from '../../components/ui/Button';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { con } from '../../lib/textos';
 import { mensajeDeError } from '../../lib/errores';
@@ -13,6 +14,7 @@ import {
   PESOS,
   TOPES,
 } from '../../lib/perfilesDeCandidatos';
+import '../../styles/molde-paginas.css';
 
 /**
  * Cómo ordena esta Prestadora la lista de quiénes pueden cubrir un hueco.
@@ -89,38 +91,52 @@ export function ElCalculoDeCandidatos() {
     }
   }
 
+  const botonGuardar = (
+    <div className="molde-acciones">
+      <Button onClick={guardar} disabled={guardando}>
+        {guardando ? t.comun.guardando : t.comun.guardar}
+      </Button>
+    </div>
+  );
+
   return (
-    <div>
-      <h2>{tc.calculo_titulo}</h2>
-      <EstadoLista estado={estado} error={error} recargar={recargar}>
-        {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
-        {guardado && <Alert variant="success">{tc.calculo_guardado}</Alert>}
+    <>
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{tc.calculo_titulo}</h2>
+          {estado === 'listo' && (
+            <button type="button" className="panel-enlace" onClick={() => setDetalleAbierto((abierto) => !abierto)}>
+              {detalleAbierto ? tc.calculo_cerrar_detalle : tc.calculo_abrir_detalle}
+            </button>
+          )}
+        </div>
+        <EstadoLista estado={estado} error={error} recargar={recargar}>
+          {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
+          {guardado && <Alert variant="success">{tc.calculo_guardado}</Alert>}
 
-        <fieldset>
-          <legend>{tc.calculo_forma}</legend>
-          {NOMBRES_DE_PERFIL.map((nombre) => (
-            <label key={nombre}>
-              <input
-                type="radio"
-                name="perfil_calculo_candidatos"
-                value={nombre}
-                checked={perfil === nombre}
-                onChange={() => elegirPerfil(nombre)}
-              />
-              <span>
-                <strong>{tc[`calculo_perfil_${nombre}`]}</strong>
-                <br />
-                {tc[`calculo_perfil_${nombre}_explicacion`]}
-              </span>
-            </label>
-          ))}
-        </fieldset>
+          <fieldset>
+            <legend>{tc.calculo_forma}</legend>
+            <div className="molde-formgrid">
+              {NOMBRES_DE_PERFIL.map((nombre) => (
+                <label key={nombre}>
+                  <input
+                    type="radio"
+                    name="perfil_calculo_candidatos"
+                    value={nombre}
+                    checked={perfil === nombre}
+                    onChange={() => elegirPerfil(nombre)}
+                  />{' '}
+                  {tc[`calculo_perfil_${nombre}`]}
+                </label>
+              ))}
+            </div>
+          </fieldset>
 
-        <button type="button" onClick={() => setDetalleAbierto((abierto) => !abierto)}>
-          {detalleAbierto ? tc.calculo_cerrar_detalle : tc.calculo_abrir_detalle}
-        </button>
+          {!detalleAbierto && botonGuardar}
+        </EstadoLista>
+      </section>
 
-        {detalleAbierto && (
+        {estado === 'listo' && detalleAbierto && (
           <>
             <TablaDeNumeros
               titulo={tc.calculo_pesos_titulo}
@@ -143,23 +159,22 @@ export function ElCalculoDeCandidatos() {
                 setGuardado(false);
               }}
               t={t}
-            />
+            >
+              {botonGuardar}
+            </TablaDeNumeros>
           </>
         )}
-
-        <button type="button" onClick={guardar} disabled={guardando}>
-          {guardando ? t.comun.guardando : t.comun.guardar}
-        </button>
-      </EstadoLista>
-    </div>
+    </>
   );
 }
 
 /** Un número por renglón, con su borde a la vista para que nadie escriba algo que va a rebotar. */
-function TablaDeNumeros({ titulo, bordes, valores, nombreDe, alCambiar, t }) {
+function TablaDeNumeros({ titulo, bordes, valores, nombreDe, alCambiar, t, children }) {
   return (
-    <>
-      <h3>{titulo}</h3>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{titulo}</h2>
+      </div>
       <table className="panel-tabla">
         <thead>
           <tr>
@@ -173,7 +188,7 @@ function TablaDeNumeros({ titulo, bordes, valores, nombreDe, alCambiar, t }) {
             const nombre = nombreDe(clave);
             return (
               <tr key={clave}>
-                <td>{nombre}</td>
+                <td><b>{nombre}</b></td>
                 <td>
                   <input
                     type="number"
@@ -193,6 +208,7 @@ function TablaDeNumeros({ titulo, bordes, valores, nombreDe, alCambiar, t }) {
           })}
         </tbody>
       </table>
-    </>
+      {children}
+    </section>
   );
 }

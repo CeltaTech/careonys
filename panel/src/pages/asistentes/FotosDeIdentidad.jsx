@@ -73,8 +73,10 @@ export function FotosDeIdentidad({ asistente }) {
   }
 
   return (
-    <section className="panel-card-verificacion">
-      <h3>{tf.titulo}</h3>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{tf.titulo}</h2>
+      </div>
       {/* Sólo cuando la carga salió bien: si el estado es de error, el cartel lo pone `EstadoLista`
           con su botón de reintentar, y los dos juntos dirían lo mismo dos veces. */}
       {error && estado === 'listo' && <Alert variant="error">{error}</Alert>}
@@ -111,7 +113,7 @@ function Ranura({ tipo, url, asistenteId, subiendo, onElegir }) {
         // se lleve el enlace. El texto alternativo dice qué es la foto y no de quién: lo lee
         // quien no ve la pantalla, y ahí tampoco corresponde el nombre de la persona.
         ? <img src={url} alt={tf[`titulo_${tipo}`]} />
-        : <p className="estado-vacio">{tf.sin_foto}</p>}
+        : <p className="panel-mini">{tf.sin_foto}</p>}
       <input
         id={idEntrada}
         ref={entrada}

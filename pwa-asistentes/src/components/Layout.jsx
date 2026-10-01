@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
-import { Outlet, NavLink } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
 import { iniciarSincronizacionAutomatica } from '../lib/sincronizarCola';
 import { useMarca, useOfreceMatch } from '../context/PerfilContext';
 import { con } from '../lib/textos';
 import { api } from '../lib/api';
 
+const claseDeLaPestana = ({ isActive }) => (isActive ? 'active' : '');
+
+// La pestaña Guardias queda encendida también en las guardias ofrecidas, que cuelgan de ella.
+const ES_GUARDIAS = /^\/(guardias|ofertas)(\/|$)/;
+
 export default function Layout() {
-  const { logout } = useAuth();
+  const { pathname } = useLocation();
   const { t } = useLocale();
   const marca = useMarca();
   const ofreceMatch = useOfreceMatch();
@@ -43,40 +47,37 @@ export default function Layout() {
   }, []);
 
   return (
-    <div className="app-layout">
+    <div className="pwa-shell">
       {/* Arriba va la Prestadora, que es para quien el Asistente trabaja. Si cargó su logo
           se muestra el logo; si no, su nombre escrito. Mientras el nombre viaja queda el
           espacio vacío: es preferible a mostrar un nombre que después cambia.
           El nombre no es un encabezado: el único título de la pantalla es el de la pantalla
-          que se está mirando, y dos `h1` seguidos dejan a un lector de pantalla sin saber
-          cuál de los dos es el título. */}
-      <header className="app-header">
+          que se está mirando. */}
+      <header className="pwa-top">
         {marca.logoUrl ? (
           <img className="logo-prestadora" src={marca.logoUrl} alt={marca.nombre || ''} />
         ) : (
           <p className="nombre-prestadora">{marca.nombre || ''}</p>
         )}
-        <button className="btn btn-secondary" onClick={logout} style={{ padding: '0.4rem 1rem', fontSize: '0.8rem' }}>
-          {t.nav.cerrar_sesion}
-        </button>
+        <div className="mini mini-arriba">{t.barra.rol}</div>
       </header>
-      <main className="app-content">
-        <Outlet context={{ avisarOfertas: setOfertasAbiertas }} />
+      <main className="pwa-body">
+        <Outlet context={{ avisarOfertas: setOfertasAbiertas, ofertasAbiertas }} />
         {/* La única mención del producto en toda la aplicación, y al pie. Va siempre: es el
             crédito de quién hizo el software, no una función que se venda. */}
         <p className="marca-del-producto">{t.marca.con_tecnologia_de}</p>
       </main>
-      {/* La barra de abajo lleva nombre: sin él, un lector de pantalla anuncia tres enlaces
-          sueltos en vez de una zona por la que se puede saltar de una vez. */}
-      <nav className="app-nav-inferior" aria-label={t.nav.menu_principal}>
-        <NavLink to="/guardias" className={({ isActive }) => (isActive ? 'active' : '')}>
-          {t.nav.guardias}
+      {/* La barra de abajo lleva nombre: sin él, un lector de pantalla anuncia enlaces sueltos
+          en vez de una zona por la que se puede saltar de una vez. */}
+      <nav className="pwa-nav" aria-label={t.nav.menu_principal}>
+        <NavLink to="/inicio" className={claseDeLaPestana}>
+          {t.nav.inicio}
         </NavLink>
-        <NavLink to="/ofertas" className={({ isActive }) => (isActive ? 'active' : '')}>
-          {t.nav.ofertas}
-          {/* El número se ve y se entiende por dónde está. Dicho en voz alta, un "3" pegado a
-              "Ofrecidas" no dice de qué es, así que el número dibujado no se lee y al lado va
-              la frase entera, que no se ve. */}
+        {/* Las guardias ofrecidas cuelgan de Guardias, así que el número de las que esperan
+            respuesta va en esta pestaña. Dibujado se entiende por dónde está; dicho en voz alta,
+            un "3" suelto no dice de qué es, así que al lado va la frase entera, que no se ve. */}
+        <NavLink to="/guardias" className={() => (ES_GUARDIAS.test(pathname) ? 'active' : '')}>
+          {t.nav.guardias}
           {ofertasAbiertas > 0 && (
             <>
               <span className="nav-cuenta" aria-hidden="true">{ofertasAbiertas}</span>
@@ -88,16 +89,16 @@ export default function Layout() {
             </>
           )}
         </NavLink>
+        <NavLink to="/servicio" className={claseDeLaPestana}>
+          {t.nav.servicio}
+        </NavLink>
         {/* El chat con los Clientes de la vidriera. Sólo aparece donde la Prestadora trabaja
             de esa manera: en una que asigna ella a su gente no hay ninguna conversación. */}
         {ofreceMatch && (
-          <NavLink to="/mensajes" className={({ isActive }) => (isActive ? 'active' : '')}>
+          <NavLink to="/mensajes" className={claseDeLaPestana}>
             {t.nav.mensajes}
           </NavLink>
         )}
-        <NavLink to="/perfil" className={({ isActive }) => (isActive ? 'active' : '')}>
-          {t.nav.perfil}
-        </NavLink>
       </nav>
     </div>
   );

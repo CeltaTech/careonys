@@ -1,26 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
+import { traducirValor } from '../i18n/valores';
 import { Cabecera } from '../components/ui/Cabecera';
-import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
-import { useUmbrales } from '../context/UmbralesContext';
-import { supabase } from '../lib/supabaseClient';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
-import { FranjaExcepciones } from '../components/estado-actual/FranjaExcepciones';
-import { GrillaGuardias } from './guardias/GrillaGuardias';
-import { BarraAccionesMasivas } from './guardias/BarraAccionesMasivas';
-import { PanelCobertura } from './guardias/PanelCobertura';
-import { GuardiaAcciones } from './guardias/GuardiaAcciones';
-import { filtrarPorExcepcion } from '../lib/excepciones';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
+import { useUmbrales } from '../context/UmbralesContext';
+import { useModalidades } from '../context/ModalidadesContext';
+import { supabase } from '../lib/supabaseClient';
+import { con } from '../lib/textos';
+import { claseBadge, claseBadgeTono, TONO } from '../lib/tonos';
+import { excepcionPorId, resumenDeExcepciones } from '../lib/excepciones';
 import { estaSinCubrir } from '../lib/cobertura';
-import { reasignarGuardia } from '../lib/reasignarGuardia';
-import { moverGuardia } from '../lib/moverGuardia';
-import { resolver } from '../lib/resoluciones';
 import { cargarPacientesDeGuardias, conPacientes, textoDePacientes } from '../lib/pacientesDeGuardia';
-import { correrHora, hoyISO, sumarDias } from '../lib/horarios';
+import { hoyISO, sumarDias } from '../lib/horarios';
 import { COLUMNAS_ESTADO_MATRICULA } from '../lib/matricula';
 import {
-  DIAS_AVISO_POR_DEFECTO,
   ESTADO_VENCIMIENTO,
   URGENCIA,
   diasParaVencer,
@@ -29,190 +25,278 @@ import {
   urgenciaDeVencimiento,
 } from '../lib/reglaVencimientos';
 import { diasDePreavisoDeLaPrestadora } from '../lib/plazoDeAviso';
+import { EN_PIE, lasQueCorrenElDia } from '../lib/vigenciaPrestacion';
+import { ESTADO_ACTIVO } from '../lib/candidatos';
+import { soloSinResolver } from '../lib/alertaSinResolver';
+import { MODALIDAD, MODALIDADES_DE_PRESTADORA, contarPorModalidad } from '../lib/modalidades';
+import { clienteDelServicio, contactosDeClientes } from '../lib/clienteDelServicio';
 import { mensajeDeError } from '../lib/errores';
+import './EstadoActual.css';
 
-/* El Estado actual.
+/* La Situación operativa: la página de entrada del Panel.
    ==========================================================================
 
-   POR QUÉ EXISTE. La pantalla de entrada del Panel era un tablero: seis números que
-   contaban cosas y no llevaban a ninguna parte. Contar no es el trabajo de una Prestadora;
-   el trabajo es que no quede ningún Paciente sin nadie. Así que la pantalla de entrada
-   ahora muestra el estado actual: arriba lo que está roto, abajo la semana entera, y todo lo de
-   arriba lleva a lo de abajo con un solo clic.
+   Arriba cinco números, al medio los Servicios activos y las alertas que piden a alguien, abajo
+   dos gráficos y las últimas incidencias. Cada bloque lleva a la sección donde se trabaja: acá
+   se mira, no se opera. La grilla de la semana y la cobertura de huecos viven en Guardias.
 
-   LA REGLA QUE ORDENA TODO. Cada contador de arriba usa exactamente la misma función para
-   contar y para filtrar (`lib/excepciones.js`). Por eso el número del cartel y las guardias
-   que aparecen abajo no pueden discrepar: es la misma pregunta hecha una sola vez.
+   Todo lo que se cuenta sale de la base en el momento. Lo que la base no guarda no se muestra
+   con un número puesto a mano. */
 
-   QUÉ CARGA ESTA PANTALLA Y QUÉ NO. Trae las guardias del rango, los nombres, los papeles
-   por vencer y los reportes que faltan — lo que necesitan los siete contadores. Todo lo que
-   hace falta solo para cubrir un hueco (matriculas, invitaciones ya hechas) lo carga el
-   panel lateral cuando se abre, no antes: nadie tiene que pagar esa consulta por entrar. */
-
-/** Cuántos días muestra la pantalla de entrada: la semana que viene. */
-const DIAS_A_LA_VISTA = 7;
-
-/* Cuántos días para atrás también se traen.
-   Tres de las siete excepciones miran al pasado, no al futuro: quien no llegó, quien no marcó
-   la salida y la guardia terminada sin reporte. Si la ventana arrancara hoy, esas guardias se
-   contarían en la franja de arriba —porque la excepción las encuentra— pero al tocar el
-   contador la grilla quedaría vacía, y el número de arriba parecería mentira. Dos días cubren
-   el fin de semana largo sin traer media base. */
+/* Las excepciones miran dos días hacia atrás —quien no llegó, quien no cerró, el reporte que
+   falta— y la semana hacia adelante. Es la misma ventana que usa la grilla de Guardias. */
 const DIAS_HACIA_ATRAS = 2;
+const DIAS_HACIA_ADELANTE = 6;
 
-/* Qué se resuelve cuando desde acá se cancelan muchas Guardias de una vez. Es el nombre guardado de
-   la tabla, el mismo que usa el detalle de una sola. */
-const TABLA_GUARDIAS = 'guardias';
+/* Cuántos Servicios entran en la tabla y cuántas incidencias en la lista. */
+const SERVICIOS_A_LA_VISTA = 5;
+const INCIDENCIAS_A_LA_VISTA = 3;
+
+/* El estado guardado de un Servicio en pie, y el de una Guardia que ya no va a ocurrir. */
+const SERVICIO_EN_PIE = 'vigente';
+const GUARDIA_CANCELADA = 'cancelada';
+
+/* Lo que se le pide a cada Servicio para la tabla y para el gráfico de modalidades. */
+const CONSULTA_SERVICIOS =
+  'id, etiqueta, estado, created_at, tipo_contratante, contratante_id, prestaciones(paciente_id), guardias(paciente_id, canal_modalidad)';
+
+/* Las excepciones que tienen renglón fijo en «Alertas importantes». Las demás aparecen sólo
+   cuando tienen algo. */
+const EXCEPCION_SIN_CUBRIR = 'sin_cubrir';
+const EXCEPCION_TARDE = 'tarde';
+const EXCEPCIONES_CON_RENGLON_PROPIO = new Set([EXCEPCION_SIN_CUBRIR, 'documentacion']);
+
+/* El color de cada modalidad en la dona. */
+const COLOR_MODALIDAD = {
+  [MODALIDAD.DIRECTA]: 'var(--verde-exito)',
+  [MODALIDAD.SUBCONTRATACION]: 'var(--azul-medio)',
+  [MODALIDAD.MATCH]: 'var(--violeta)',
+};
+
+const NOMBRE_MODALIDAD = {
+  [MODALIDAD.DIRECTA]: (t) => t.configuracion.modalidades_directa,
+  [MODALIDAD.MATCH]: (t) => t.configuracion.modalidades_match,
+  [MODALIDAD.SUBCONTRATACION]: (t) => t.configuracion.modalidades_subcontratacion,
+};
+
+/** El fondo de una dona a partir de tramos `{color, cantidad}`. */
+function fondoDeDona(tramos) {
+  const total = tramos.reduce((s, x) => s + x.cantidad, 0);
+  if (total === 0) return 'var(--tono-neutro-fondo)';
+  let acumulado = 0;
+  const partes = tramos
+    .filter((x) => x.cantidad > 0)
+    .map((x) => {
+      const desde = (acumulado / total) * 100;
+      acumulado += x.cantidad;
+      const hasta = (acumulado / total) * 100;
+      return `${x.color} ${desde}% ${hasta}%`;
+    });
+  return `conic-gradient(${partes.join(', ')})`;
+}
+
+const porcentaje = (parte, total) => (total > 0 ? Math.round((parte / total) * 100) : 0);
+
+/* ---------- Íconos de trazo de los recuadros de arriba ---------- */
+
+function IconoServicios() {
+  return (
+    <svg viewBox="0 0 24 24" className="estado-actual-trazo-verde" aria-hidden="true">
+      <circle cx="9" cy="8" r="3" />
+      <circle cx="17" cy="9" r="2.5" />
+      <path d="M3.5 20c.5-4 2.3-6 5.5-6s5 2 5.5 6" />
+      <path d="M14 15c2.8-.3 4.9 1.3 5.4 5" />
+    </svg>
+  );
+}
+
+function IconoPrestaciones() {
+  return (
+    <svg viewBox="0 0 24 24" className="estado-actual-trazo-azul" aria-hidden="true">
+      <rect x="4" y="3" width="15" height="17" rx="2" />
+      <path d="M8 7h7M8 11h5M8 15h4" />
+      <circle cx="17" cy="17" r="4" className="estado-actual-icono-relleno" />
+      <path d="M17 15v2l1 1" />
+    </svg>
+  );
+}
+
+function IconoAsistentes() {
+  return (
+    <svg viewBox="0 0 24 24" className="estado-actual-trazo-violeta" aria-hidden="true">
+      <circle cx="10" cy="8" r="3" />
+      <circle cx="17" cy="10" r="2.5" />
+      <path d="M4 20c.5-4 2.4-6 6-6s5.5 2 6 6" />
+      <path d="M15 15c2.7-.1 4.5 1.5 5 5" />
+    </svg>
+  );
+}
+
+function IconoGuardias() {
+  return (
+    <svg viewBox="0 0 24 24" className="estado-actual-trazo-naranja" aria-hidden="true">
+      <rect x="3.5" y="5" width="17" height="15" rx="2" />
+      <path d="M3.5 10h17M8 3v4M16 3v4" />
+      <path d="M8 14h3M8 17h6" />
+    </svg>
+  );
+}
+
+function IconoCobertura() {
+  return (
+    <svg viewBox="0 0 24 24" className="estado-actual-trazo-verde" aria-hidden="true">
+      <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  );
+}
+
+/* ---------- Piezas ---------- */
+
+function Tarjeta({ titulo, enlace, children }) {
+  return (
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{titulo}</h2>
+        {enlace}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Kpi({ icono, etiqueta, numero, a, textoEnlace }) {
+  return (
+    <div className="panel-tarjeta panel-kpi">
+      <div className="panel-kpi-icono">{icono}</div>
+      <div className="panel-kpi-etiqueta">{etiqueta}</div>
+      <div className="panel-kpi-numero">{numero}</div>
+      <Link className="panel-enlace" to={a}>
+        {textoEnlace}
+      </Link>
+    </div>
+  );
+}
+
+function FilaAlerta({ a, titulo, detalle, cantidad, tono }) {
+  return (
+    <Link className="panel-fila-alerta" to={a}>
+      <div>
+        <b>{titulo}</b>
+        {detalle && <span className="panel-mini">{detalle}</span>}
+      </div>
+      <span className={claseBadgeTono(tono)}>{cantidad}</span>
+    </Link>
+  );
+}
+
+function Mensaje({ children }) {
+  return (
+    <p className="estado-actual-mensaje" role="status">
+      {children}
+    </p>
+  );
+}
 
 export function EstadoActual() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  const tx = t.estado_actual;
+  const navigate = useNavigate();
   const prestadoraId = usePrestadoraActual();
-  // La guía de primeros pasos ya no cuelga de esta pantalla: tiene la suya
-  // (`pages/PuestaEnMarcha.jsx`), a la que la entrada del Panel desvía mientras falte algo por
-  // cargar. Acá se veía encima de una grilla de guardias vacía, que es justo el ruido del que
-  // hay que sacar a una Prestadora nueva.
+  const umbrales = useUmbrales();
+  const { modalidades } = useModalidades();
 
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
-  const [guardias, setGuardias] = useState([]);
-  const [asistentes, setAsistentes] = useState([]);
-  const [ctxExtra, setCtxExtra] = useState({
-    asistentesConPapelPorVencer: new Set(),
-    asistentesConPapelVencido: new Set(),
-    guardiasSinReporte: new Set(),
-    diasDePreaviso: DIAS_AVISO_POR_DEFECTO,
-    asistentesConMatriculaTrabada: new Set(),
-    asistentesConMatriculaPorVencer: new Set(),
-  });
-
-  const [excepcionActiva, setExcepcionActiva] = useState(null);
-  const [vista, setVista] = useState('asistente');
-  const [zoom, setZoom] = useState('semana');
-  const [diaElegido, setDiaElegido] = useState(() => hoyISO());
-  const [seleccionadas, setSeleccionadas] = useState(() => new Set());
-  const [huecoAbierto, setHuecoAbierto] = useState(null);
-  const [detalleAbierto, setDetalleAbierto] = useState(null);
-
-  const desde = useMemo(() => sumarDias(hoyISO(), -DIAS_HACIA_ATRAS), []);
-  const hasta = useMemo(() => sumarDias(hoyISO(), DIAS_A_LA_VISTA - 1), []);
+  const [datos, setDatos] = useState(null);
 
   const cargar = useCallback(async () => {
     setEstado('cargando');
     setError(null);
 
+    const hoy = hoyISO();
+    const desde = sumarDias(hoy, -DIAS_HACIA_ATRAS);
+    const hasta = sumarDias(hoy, DIAS_HACIA_ADELANTE);
     const diasDePreaviso = await diasDePreavisoDeLaPrestadora(prestadoraId);
     const limitePapeles = fechaLimiteDeAviso(diasDePreaviso);
 
-    const [gs, as, ps, ds, em] = await Promise.all([
-      supabase
-        .from('guardias')
-        .select('*')
-        .gte('fecha', desde)
-        .lte('fecha', hasta)
-        .order('fecha', { ascending: true })
-        .order('hora_inicio', { ascending: true }),
-      // Viene el plantel entero, sin filtrar por `estado`, y es a propósito: esta lista se usa
-      // para tres cosas distintas. Una es ponerle el nombre a cada guardia ya asignada de la
-      // grilla, y ahí hace falta también quien ya no trabaja más —si no, una guardia de la
-      // semana pasada aparecería con un guión donde antes había una persona—. Quién puede
-      // *tomar* un hueco es otra pregunta, y la contesta `lib/candidatos.js`, que deja afuera a
-      // quien no está activo: ahí vive esa regla, una sola vez (regla 12 de CLAUDE.md §7).
-      //
-      // Se piden más columnas que el nombre porque el panel de cobertura las necesita para
-      // ordenar candidatos: `horas_semanales` es el tope propio de cada Asistente (el general
-      // solo se usa si esa columna está vacía) y `estado` es lo que separa a quien sigue en el
-      // plantel de quien se fue. Traerlas acá evita una segunda consulta al abrir cada hueco.
-      // `canales` —la columna vieja donde se guarda la modalidad de trabajo, regla 13— viaja
-      // porque el panel de cobertura deja afuera a quien no trabaja en la modalidad
-      // de la vacante. Sin esa columna la pantalla no tendría con qué comparar y los daría a
-      // todos por buenos, hasta que la base rechazara la asignación (lib/modalidades.js).
-      // `lat`/`lng` es dónde vive cada uno, para poder medir la distancia hasta la casa del
-      // Paciente. Viajan las coordenadas y no el domicilio escrito: acá no se muestra la
-      // dirección de nadie, solo se calculan kilómetros (CLAUDE.md §6).
-      // `disponible_para_ofertas` es el interruptor que mueve el propio Asistente desde su
-      // aplicación. Viaja para que la lista de candidatos pueda decirlo; no saca a nadie de la
-      // lista ni impide asignarle la guardia (lib/candidatos.js).
-      supabase
-        .from('asistentes')
-        .select('id, nombre, estado, horas_semanales, canales, lat, lng, disponible_para_ofertas'),
+    const [gs, as, ps, ds, em, sv, pr, al, inc, incAbiertas] = await Promise.all([
+      supabase.from('guardias').select('*').gte('fecha', desde).lte('fecha', hasta),
+      supabase.from('asistentes').select('id, estado'),
       supabase.from('pacientes').select('id, nombre'),
       supabase
         .from('documentos_asistente')
         .select('asistente_id, fecha_vencimiento')
         .not('fecha_vencimiento', 'is', null)
         .lte('fecha_vencimiento', limitePapeles),
-      // La vista contesta de una sola vez si cada Asistente está trabado y cuánto le falta a su
-      // matrícula. El motivo lo decide la base, no esta pantalla: acá solo se lee.
       supabase.from('estado_matricula_asistente').select(COLUMNAS_ESTADO_MATRICULA),
+      supabase
+        .from('servicios')
+        .select(CONSULTA_SERVICIOS)
+        .eq('estado', SERVICIO_EN_PIE)
+        .order('created_at', { ascending: false }),
+      supabase.from('prestaciones').select('id, estado, vigente_desde, vigente_hasta').eq('estado', EN_PIE),
+      soloSinResolver(supabase.from('alertas').select('id', { count: 'exact', head: true })),
+      supabase
+        .from('incidentes_relevo')
+        .select('id, guardia_saliente_id, iniciado_at, resuelto_at')
+        .order('iniciado_at', { ascending: false })
+        .limit(INCIDENCIAS_A_LA_VISTA),
+      supabase.from('incidentes_relevo').select('id', { count: 'exact', head: true }).is('resuelto_at', null),
     ]);
 
-    if (gs.error) {
-      setError(mensajeDeError(gs.error, t));
+    // Un número que no se pudo leer no se muestra como cero: la página entera pasa a error.
+    const fallida = [gs, as, ps, ds, em, sv, pr, al, inc, incAbiertas].find((r) => r.error);
+    if (fallida) {
+      setError(mensajeDeError(fallida.error, t));
       setEstado('error');
       return;
     }
 
-    const nombresAsistente = Object.fromEntries((as.data ?? []).map((a) => [a.id, a.nombre]));
     const nombresPaciente = Object.fromEntries((ps.data ?? []).map((p) => [p.id, p.nombre]));
-
-    // A quiénes atiende cada guardia. Se pregunta después de traerlas, con los ids ya en la
-    // mano, porque un turno puede cubrir a más de una persona y esa lista no vive en la
-    // guardia sino en su propia tabla (ver `lib/pacientesDeGuardia.js`).
     const pacientesPorGuardia = await cargarPacientesDeGuardias((gs.data ?? []).map((g) => g.id));
+    const guardias = conPacientes(gs.data ?? [], pacientesPorGuardia, nombresPaciente);
 
-    const filas = conPacientes(gs.data ?? [], pacientesPorGuardia, nombresPaciente).map((g) => ({
-      ...g,
-      asistente_nombre: nombresAsistente[g.asistente_id] ?? null,
-    }));
-
-    // Dos conjuntos, no uno: un papel que ya venció es rojo y uno que está por vencer es
-    // naranja. Meterlos en la misma bolsa haría que el contador no pudiera distinguirlos.
-    // Quién cae en cuál lo decide `reglaVencimientos.js`, igual que en la pantalla de
-    // Documentación: si acá se contara distinto, el número de arriba y la lista de allá
-    // dirían cosas diferentes sobre los mismos papeles.
+    // Papeles: vencido es rojo, por vencer es naranja. La regla es la de Documentación.
     const porVencer = new Set();
     const vencidos = new Set();
+    let hayPapelVencido = false;
     for (const d of ds.data ?? []) {
       const estadoPapel = estadoDeVencimiento(diasParaVencer(d.fecha_vencimiento), diasDePreaviso);
-      if (estadoPapel === ESTADO_VENCIMIENTO.VENCIDO) vencidos.add(d.asistente_id);
-      else porVencer.add(d.asistente_id);
+      if (estadoPapel === ESTADO_VENCIMIENTO.VENCIDO) {
+        vencidos.add(d.asistente_id);
+        hayPapelVencido = true;
+      } else porVencer.add(d.asistente_id);
     }
 
-    // Los reportes que faltan solo tienen sentido sobre guardias ya terminadas: se pregunta
-    // por esas y nada más, en vez de traer todos los reportes de la Prestadora.
-    //
-    // Falta el reporte mientras falte el de alguno de los Pacientes del turno: si el Asistente
-    // atendió a dos personas y escribió una sola hoja, el turno sigue incompleto.
-    const completadas = filas.filter((g) => g.estado === 'completada');
-    let sinReporte = new Set();
+    // Reportes que faltan, sólo sobre guardias terminadas.
+    const completadas = guardias.filter((g) => g.estado === 'completada');
+    const sinReporte = new Set();
     if (completadas.length > 0) {
-      const { data: reportes } = await supabase
+      const { data: reportes, error: errorReportes } = await supabase
         .from('reportes')
         .select('guardia_id, paciente_id')
         .in(
           'guardia_id',
           completadas.map((g) => g.id),
         );
-      const conReportePorGuardia = new Map();
-      for (const r of reportes ?? []) {
-        if (!conReportePorGuardia.has(r.guardia_id)) conReportePorGuardia.set(r.guardia_id, new Set());
-        conReportePorGuardia.get(r.guardia_id).add(r.paciente_id);
+      if (errorReportes) {
+        setError(mensajeDeError(errorReportes, t));
+        setEstado('error');
+        return;
       }
-      sinReporte = new Set(
-        completadas
-          .filter((g) => {
-            const hechos = conReportePorGuardia.get(g.id);
-            const esperados = g.paciente_ids?.length ? g.paciente_ids : [];
-            if (!hechos) return true;
-            return esperados.some((id) => !hechos.has(id));
-          })
-          .map((g) => g.id),
-      );
+      const hechosPorGuardia = new Map();
+      for (const r of reportes ?? []) {
+        if (!hechosPorGuardia.has(r.guardia_id)) hechosPorGuardia.set(r.guardia_id, new Set());
+        hechosPorGuardia.get(r.guardia_id).add(r.paciente_id);
+      }
+      for (const g of completadas) {
+        const hechos = hechosPorGuardia.get(g.id);
+        const esperados = g.paciente_ids?.length ? g.paciente_ids : [];
+        if (!hechos || esperados.some((id) => !hechos.has(id))) sinReporte.add(g.id);
+      }
     }
 
-    // Dos conjuntos otra vez, por el mismo motivo que los papeles: trabado es rojo y por vencer
-    // es naranja. La ventana de preaviso es la misma que la de los documentos — un solo interruptor
-    // para los dos vencimientos, no dos que se separen con el tiempo.
     const matriculaTrabada = new Set();
     const matriculaPorVencer = new Set();
     for (const fila of em.data ?? []) {
@@ -221,251 +305,360 @@ export function EstadoActual() {
         continue;
       }
       if (fila.requiere_matricula !== true) continue;
-      const urgencia = urgenciaDeVencimiento(fila.dias_para_vencer, diasDePreaviso);
-      if (urgencia !== URGENCIA.NINGUNA) matriculaPorVencer.add(fila.asistente_id);
+      if (urgenciaDeVencimiento(fila.dias_para_vencer, diasDePreaviso) !== URGENCIA.NINGUNA) {
+        matriculaPorVencer.add(fila.asistente_id);
+      }
     }
 
-    setGuardias(filas);
-    setAsistentes(as.data ?? []);
-    setCtxExtra({
-      asistentesConPapelPorVencer: porVencer,
-      asistentesConPapelVencido: vencidos,
-      guardiasSinReporte: sinReporte,
-      diasDePreaviso,
-      asistentesConMatriculaTrabada: matriculaTrabada,
-      asistentesConMatriculaPorVencer: matriculaPorVencer,
+    const servicios = sv.data ?? [];
+    const { contactos, error: errorContactos } = await contactosDeClientes(supabase, servicios);
+    if (errorContactos) {
+      setError(mensajeDeError(errorContactos, t));
+      setEstado('error');
+      return;
+    }
+
+    setDatos({
+      hoy,
+      guardias,
+      servicios,
+      contactos,
+      nombresPaciente,
+      prestacionesQueCorren: lasQueCorrenElDia(pr.data ?? [], hoy).length,
+      asistentesActivos: (as.data ?? []).filter((a) => a.estado === ESTADO_ACTIVO).length,
+      papelesPorVencer: (ds.data ?? []).length,
+      hayPapelVencido,
+      alertasSinResolver: al.count ?? 0,
+      incidenciasAbiertas: incAbiertas.count ?? 0,
+      incidencias: inc.data ?? [],
+      ctxExtra: {
+        asistentesConPapelPorVencer: porVencer,
+        asistentesConPapelVencido: vencidos,
+        guardiasSinReporte: sinReporte,
+        diasDePreaviso,
+        asistentesConMatriculaTrabada: matriculaTrabada,
+        asistentesConMatriculaPorVencer: matriculaPorVencer,
+      },
     });
     setEstado('listo');
-  }, [desde, hasta, t, prestadoraId]);
+  }, [prestadoraId, t]);
 
   useEffect(() => {
     cargar();
   }, [cargar]);
 
-  // El reloj entra en el contexto una sola vez por carga, a propósito: si cada cálculo
-  // preguntara la hora por su cuenta, dos contadores de la misma pantalla podrían estar
-  // mirando momentos distintos y contradecirse. Los umbrales entran por el mismo motivo y con la
-  // misma regla: son los que configuró esta Prestadora, y tienen que ser los mismos que pinta la
-  // grilla de Guardias.
-  const umbrales = useUmbrales();
-  const ctx = useMemo(() => ({ ahora: new Date(), umbrales, ...ctxExtra }), [ctxExtra, umbrales]);
-
-  /* Los nombres de los Pacientes, resumidos en una línea para el chip de la grilla.
-     Se arma acá y no al cargar a propósito: el resumen depende del idioma ("y 3 más"), y
-     cambiar de idioma no tiene por qué obligar a volver a pedirle las guardias a la base. */
-  const guardiasConNombres = useMemo(
-    () =>
-      guardias.map((g) => ({
-        ...g,
-        paciente_nombre: textoDePacientes(g.pacientes_nombres, t.guardias.pacientes_y_mas, null),
-      })),
-    [guardias, t]
+  // El reloj y los umbrales entran una sola vez por carga: todos los contadores miran el mismo
+  // momento y las mismas reglas que la grilla de Guardias.
+  const ctx = useMemo(
+    () => (datos ? { ahora: new Date(), umbrales, ...datos.ctxExtra } : null),
+    [datos, umbrales],
   );
 
-  const guardiasVisibles = useMemo(
-    () => filtrarPorExcepcion(guardiasConNombres, excepcionActiva, ctx),
-    [guardiasConNombres, excepcionActiva, ctx]
-  );
+  const resumen = useMemo(() => (datos && ctx ? resumenDeExcepciones(datos.guardias, ctx) : []), [datos, ctx]);
 
-  const seleccionadasEnteras = useMemo(
-    () => guardias.filter((g) => seleccionadas.has(g.id)),
-    [guardias, seleccionadas]
-  );
-
-  // La grilla manda la guardia entera, no el id: acá se guarda solo el id, porque una guardia
-  // que se recarga desde la base es un objeto nuevo y la selección se perdería sola.
-  function alternarSeleccion(guardia) {
-    const id = guardia?.id ?? guardia;
-    setSeleccionadas((previas) => {
-      const nuevas = new Set(previas);
-      if (nuevas.has(id)) nuevas.delete(id);
-      else nuevas.add(id);
-      return nuevas;
-    });
-  }
-
-  function abrirGuardia(g) {
-    // Un hueco abre el panel para cubrirlo; una guardia que ya tiene Asistente abre su
-    // detalle. Es la misma acción del usuario —tocar una guardia— y el sistema hace lo
-    // único que tiene sentido en cada caso, en vez de pedirle que elija de un menú.
-    if (estaSinCubrir(g)) setHuecoAbierto(g);
-    else setDetalleAbierto(g);
-  }
-
-  // El detalle de una guardia es el mismo cuadro que usa la pantalla de Guardias, no una
-  // copia: registrar la llegada, marcar ausente o cancelar con su motivo se hacen igual desde
-  // los dos lados, y una sola versión de ese cuadro es una sola versión de esas reglas.
-  async function reasignarUna(guardiaId, asistenteId, fecha) {
-    const g = guardias.find((x) => x.id === guardiaId);
-    if (!g) return;
-    const { error: falla } = await reasignarGuardia(g, asistenteId, fecha, t);
-    if (falla) {
-      setError(falla);
-      return;
+  // Cobertura de hoy: sin las canceladas, que ya no van a ocurrir.
+  const cobertura = useMemo(() => {
+    if (!datos || !ctx) return null;
+    const tarde = excepcionPorId(EXCEPCION_TARDE);
+    const deHoy = datos.guardias.filter((g) => g.fecha === datos.hoy && g.estado !== GUARDIA_CANCELADA);
+    let sinCobertura = 0;
+    let enRiesgo = 0;
+    for (const g of deHoy) {
+      if (estaSinCubrir(g)) sinCobertura += 1;
+      else if (tarde?.aplica(g, ctx)) enRiesgo += 1;
     }
-    cargar();
+    const total = deHoy.length;
+    return { total, sinCobertura, enRiesgo, cubiertas: total - sinCobertura - enRiesgo };
+  }, [datos, ctx]);
+
+  // Modalidad de cada Servicio: la de sus guardias. Un Servicio con guardias en dos modalidades
+  // cuenta en las dos.
+  const porModalidad = useMemo(() => {
+    if (!datos) return [];
+    const cuenta = contarPorModalidad(datos.servicios, (s) => [
+      ...new Set((s.guardias ?? []).map((g) => g.canal_modalidad).filter(Boolean)),
+    ]);
+    const habilitadas = new Set(modalidades ?? []);
+    return MODALIDADES_DE_PRESTADORA.filter((m) => habilitadas.has(m) || cuenta[m] > 0).map((m) => ({
+      modalidad: m,
+      cantidad: cuenta[m],
+      color: COLOR_MODALIDAD[m],
+    }));
+  }, [datos, modalidades]);
+
+  const fecha = (iso) =>
+    iso ? new Date(iso).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' }) : '—';
+
+  if (estado === 'cargando') {
+    return (
+      <div>
+        <Cabecera titulo={tx.titulo} />
+        <p className="estado-cargando" role="status">
+          {t.comun.cargando}
+        </p>
+      </div>
+    );
   }
 
-  // Lo que hay que hacer al soltar una guardia en otra celda vive en `lib/moverGuardia.js`, no
-  // acá: la pantalla de Guardias usa la misma grilla y no puede haber dos versiones de esta
-  // operación (regla del punto único de verdad, CeltaTech §8). La vista viaja con el
-  // movimiento y no se lee del estado de esta pantalla, porque la grilla puede estar mostrando
-  // otra cosa de la que esta pantalla cree si nadie la controla.
-  async function alMoverGuardia({ guardiaId, ...movimiento }) {
-    const g = guardias.find((x) => x.id === guardiaId);
-    if (!g) return;
-
-    const { error: falla } = await moverGuardia(g, movimiento, t);
-    if (falla) {
-      setError(falla);
-      return;
-    }
-    cargar();
-  }
-
-  async function aplicarAMuchas({ accion, asistenteId, minutos, semanas, origen, alcance, motivoId, detalle }) {
-    let ok = 0;
-    const total = seleccionadasEnteras.length;
-
-    for (const g of seleccionadasEnteras) {
-      let resultado;
-      if (accion === 'reasignar') {
-        const cambios = { asistente_id: asistenteId };
-        if (g.ofrecida_at) {
-          cambios.ofrecida_at = null;
-          cambios.ofrecida_por = null;
-          cambios.oferta_limite_at = null;
-        }
-        resultado = await supabase.from('guardias').update(cambios).eq('id', g.id);
-      } else if (accion === 'correr') {
-        resultado = await supabase
-          .from('guardias')
-          .update({
-            hora_inicio: correrHora(g.hora_inicio, minutos),
-            hora_fin: correrHora(g.hora_fin, minutos),
-          })
-          .eq('id', g.id);
-      } else if (accion === 'cancelar') {
-        // Cancelar no es pisar el estado: primero se escribe la resolución, con el motivo que se
-        // eligió una sola vez arriba y con la firma que pone la base, y el estado en el que queda
-        // cada Guardia sale de ese motivo. Si la resolución falla, esa Guardia no se toca y se
-        // cuenta como no hecha; las dos columnas de la cancelación se guardan recién después,
-        // porque son datos de la Guardia y no la decisión.
-        const { error: errorResolucion } = await resolver({
-          tabla: TABLA_GUARDIAS,
-          filaId: g.id,
-          motivoId,
-          detalle,
-        });
-        resultado = errorResolucion
-          ? { error: errorResolucion }
-          : await supabase
-              .from('guardias')
-              .update({ cancelacion_origen: origen, cancelacion_alcance: alcance })
-              .eq('id', g.id);
-      } else if (accion === 'duplicar') {
-        // Se copia la guardia sin lo que es propio de ESA guardia y no de su copia: la
-        // identidad, cuándo se creó y los dos nombres que esta pantalla le pegó encima y
-        // que no son columnas de la base.
-        const {
-          id: _id,
-          created_at: _creada,
-          asistente_nombre: _nombreAsistente,
-          paciente_nombre: _nombrePaciente,
-          ...resto
-        } = g;
-        resultado = await supabase.from('guardias').insert({
-          ...resto,
-          fecha: sumarDias(g.fecha, semanas * 7),
-          estado: 'programada',
-          checkin_at: null,
-          checkout_at: null,
-        });
-      }
-      if (!resultado?.error) ok += 1;
-    }
-
-    setSeleccionadas(new Set());
-    cargar();
-    // Se devuelve cuántas salieron de cuántas. Que algunas fallen es un resultado normal
-    // —un Asistente puede estar ocupado en tres de las cuatro fechas— y la barra lo dice
-    // tal cual en vez de mostrar un "listo" que sería mentira.
-    return { ok, total };
-  }
-
-  return (
-    <div>
-      <Cabecera titulo={t.estado_actual.titulo} />
-
-      {error && <Alert variant="error">{error}</Alert>}
-
-      {estado === 'cargando' && <p className="estado-cargando">{t.comun.cargando}</p>}
-
-      {estado === 'error' && (
+  if (estado === 'error' || !datos) {
+    return (
+      <div>
+        <Cabecera titulo={tx.titulo} />
         <Alert variant="error">
           {error || t.comun.error_generico}{' '}
-          <Button variant="secondary" onClick={cargar}>
+          <Button variant="secondary" type="button" onClick={cargar}>
             {t.comun.reintentar}
           </Button>
         </Alert>
-      )}
+      </div>
+    );
+  }
 
-      {estado === 'listo' && (
-        <>
-          <FranjaExcepciones
-            guardias={guardias}
-            ctx={ctx}
-            excepcionActiva={excepcionActiva}
-            onElegir={setExcepcionActiva}
-          />
+  const cantidadDe = (id) => resumen.find((r) => r.id === id)?.cantidad ?? 0;
+  const otrasExcepciones = resumen.filter((r) => !EXCEPCIONES_CON_RENGLON_PROPIO.has(r.id) && r.cantidad > 0);
+  const totalModalidad = porModalidad.reduce((s, x) => s + x.cantidad, 0);
+  const pctCobertura = porcentaje(cobertura.total - cobertura.sinCobertura, cobertura.total);
+  const serviciosVisibles = datos.servicios.slice(0, SERVICIOS_A_LA_VISTA);
 
-          <GrillaGuardias
-            guardias={guardiasVisibles}
-            desde={desde}
-            hasta={hasta}
-            vista={vista}
-            onVista={setVista}
-            zoom={zoom}
-            onZoom={setZoom}
-            diaElegido={diaElegido}
-            onDiaElegido={setDiaElegido}
-            ctx={ctx}
-            seleccionadas={seleccionadas}
-            onAlternarSeleccion={alternarSeleccion}
-            onAbrir={abrirGuardia}
-            onMover={alMoverGuardia}
-          />
+  return (
+    <div>
+      <Cabecera titulo={tx.titulo} />
 
-          <BarraAccionesMasivas
-            seleccionadas={seleccionadasEnteras}
-            asistentes={asistentes}
-            onAplicar={aplicarAMuchas}
-            onLimpiar={() => setSeleccionadas(new Set())}
-          />
+      <div className="panel-grilla panel-kpis">
+        <Kpi
+          icono={<IconoServicios />}
+          etiqueta={tx.kpi_servicios}
+          numero={datos.servicios.length}
+          a="/servicios"
+          textoEnlace={tx.ver_servicios}
+        />
+        <Kpi
+          icono={<IconoPrestaciones />}
+          etiqueta={tx.kpi_prestaciones}
+          numero={datos.prestacionesQueCorren}
+          a="/servicios"
+          textoEnlace={tx.ver_prestaciones}
+        />
+        <Kpi
+          icono={<IconoAsistentes />}
+          etiqueta={tx.kpi_asistentes}
+          numero={datos.asistentesActivos}
+          a="/asistentes"
+          textoEnlace={tx.ver_asistentes}
+        />
+        <Kpi
+          icono={<IconoGuardias />}
+          etiqueta={tx.kpi_guardias_hoy}
+          numero={cobertura.total}
+          a="/guardias"
+          textoEnlace={tx.ver_guardias}
+        />
+        <Kpi
+          icono={<IconoCobertura />}
+          etiqueta={tx.kpi_cobertura}
+          numero={cobertura.total > 0 ? `${pctCobertura}%` : '—'}
+          a="/guardias"
+          textoEnlace={tx.ver_cobertura}
+        />
+      </div>
 
-          {huecoAbierto && (
-            <PanelCobertura
-              guardia={huecoAbierto}
-              asistentes={asistentes}
-              onCerrar={() => setHuecoAbierto(null)}
-              onHecho={() => {
-                setHuecoAbierto(null);
-                cargar();
-              }}
-            />
+      <div className="panel-grilla panel-columnas-2">
+        <Tarjeta
+          titulo={tx.servicios_activos}
+          enlace={
+            <Link className="panel-enlace" to="/servicios">
+              {tx.ver_todos}
+            </Link>
+          }
+        >
+          {serviciosVisibles.length === 0 ? (
+            <Mensaje>{tx.sin_servicios}</Mensaje>
+          ) : (
+            <table className="panel-tabla">
+              <thead>
+                <tr>
+                  <th>{tx.col_servicio}</th>
+                  <th>{tx.col_paciente}</th>
+                  <th>{tx.col_contratante}</th>
+                  <th>{tx.col_prestaciones}</th>
+                  <th>{tx.col_estado}</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {serviciosVisibles.map((s) => {
+                  const idsPaciente = [
+                    ...new Set(
+                      [...(s.prestaciones ?? []), ...(s.guardias ?? [])].map((x) => x.paciente_id).filter(Boolean),
+                    ),
+                  ];
+                  const nombres = idsPaciente.map((id) => datos.nombresPaciente[id]).filter(Boolean);
+                  const contacto = clienteDelServicio(s, datos.contactos).contacto;
+                  return (
+                    <tr key={s.id}>
+                      <td>
+                        <b>{s.etiqueta || '—'}</b>
+                      </td>
+                      <td>{textoDePacientes(nombres, t.guardias.pacientes_y_mas)}</td>
+                      <td>{contacto?.nombre ?? '—'}</td>
+                      <td>{(s.prestaciones ?? []).length}</td>
+                      <td>
+                        <span className={claseBadge(s.estado)}>
+                          {traducirValor(t.servicios, `estado_${s.estado}`)}
+                        </span>
+                      </td>
+                      <td>
+                        <Button variant="secondary" type="button" onClick={() => navigate(`/servicios/${s.id}`)}>
+                          {tx.ver}
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           )}
+        </Tarjeta>
 
-          {detalleAbierto && (
-            <GuardiaAcciones
-              guardia={detalleAbierto}
-              asistentes={asistentes}
-              onReasignar={reasignarUna}
-              onClose={() => setDetalleAbierto(null)}
-              onActualizada={cargar}
+        <Tarjeta
+          titulo={tx.alertas_importantes}
+          enlace={
+            <Link className="panel-enlace" to="/alertas">
+              {tx.ver_todas}
+            </Link>
+          }
+        >
+          <FilaAlerta
+            a="/guardias"
+            titulo={tx.guardias_sin_cobertura}
+            detalle={tx.requieren_asignacion}
+            cantidad={cantidadDe(EXCEPCION_SIN_CUBRIR)}
+            tono={TONO.CRITICO}
+          />
+          <FilaAlerta
+            a="/documentacion"
+            titulo={tx.documentacion_por_vencer}
+            detalle={con(tx.en_los_proximos_dias, { dias: datos.ctxExtra.diasDePreaviso })}
+            cantidad={datos.papelesPorVencer}
+            tono={datos.hayPapelVencido ? TONO.CRITICO : TONO.ATENCION}
+          />
+          <FilaAlerta
+            a="/alertas"
+            titulo={tx.alertas_sin_resolver}
+            detalle={tx.sobre_pacientes}
+            cantidad={datos.alertasSinResolver}
+            tono={TONO.INFO}
+          />
+          <FilaAlerta
+            a="/continuidad"
+            titulo={tx.incidencias_abiertas}
+            detalle={tx.requieren_seguimiento}
+            cantidad={datos.incidenciasAbiertas}
+            tono={TONO.CRITICO}
+          />
+          {otrasExcepciones.map((exc) => (
+            <FilaAlerta
+              key={exc.id}
+              a="/guardias"
+              titulo={con(tx[exc.claveEtiqueta], exc.parametros)}
+              cantidad={exc.cantidad}
+              tono={exc.critica ? TONO.CRITICO : TONO.ATENCION}
             />
+          ))}
+        </Tarjeta>
+      </div>
+
+      <div className="panel-grilla panel-columnas-3">
+        <Tarjeta
+          titulo={tx.servicios_por_modalidad}
+          enlace={
+            <Link className="panel-enlace" to="/servicios">
+              {tx.ver_detalle}
+            </Link>
+          }
+        >
+          {totalModalidad === 0 ? (
+            <Mensaje>{tx.sin_modalidad}</Mensaje>
+          ) : (
+            <div className="panel-grafico">
+              <div className="panel-dona" style={{ background: fondoDeDona(porModalidad) }}>
+                <b>{datos.servicios.length}</b>
+              </div>
+              <div className="panel-leyenda">
+                {porModalidad.map((x) => (
+                  <div key={x.modalidad}>
+                    <i className="panel-punto" style={{ background: x.color }} />
+                    {NOMBRE_MODALIDAD[x.modalidad]?.(t) ?? x.modalidad}
+                    {'  '}
+                    {x.cantidad} ({porcentaje(x.cantidad, totalModalidad)}%)
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
-        </>
-      )}
+        </Tarjeta>
+
+        <Tarjeta
+          titulo={tx.cobertura_guardias}
+          enlace={
+            <Link className="panel-enlace" to="/guardias">
+              {tx.ver_analisis}
+            </Link>
+          }
+        >
+          {cobertura.total === 0 ? (
+            <Mensaje>{tx.sin_guardias_hoy}</Mensaje>
+          ) : (
+            <div className="panel-grafico">
+              <div
+                className="panel-dona"
+                style={{
+                  background: fondoDeDona([
+                    { color: 'var(--verde-exito)', cantidad: cobertura.cubiertas },
+                    { color: 'var(--naranja-alerta)', cantidad: cobertura.enRiesgo },
+                    { color: 'var(--rojo-peligro)', cantidad: cobertura.sinCobertura },
+                  ]),
+                }}
+              >
+                <b>{pctCobertura}%</b>
+              </div>
+              <div className="panel-leyenda">
+                <div>{con(tx.cubiertas, { n: cobertura.cubiertas })}</div>
+                <div>{con(tx.sin_cobertura, { n: cobertura.sinCobertura })}</div>
+                <div>{con(tx.en_riesgo, { n: cobertura.enRiesgo })}</div>
+              </div>
+            </div>
+          )}
+        </Tarjeta>
+
+        <Tarjeta
+          titulo={tx.incidencias_recientes}
+          enlace={
+            <Link className="panel-enlace" to="/continuidad">
+              {tx.ver_todas}
+            </Link>
+          }
+        >
+          {datos.incidencias.length === 0 ? (
+            <Mensaje>{tx.sin_incidencias}</Mensaje>
+          ) : (
+            datos.incidencias.map((i) => {
+              const abierta = !i.resuelto_at;
+              return (
+                <Link key={i.id} className="panel-fila-alerta" to="/continuidad">
+                  <div>
+                    <b>{i.guardia_saliente_id ? tx.incidencia_relevo : tx.incidencia_ausencia}</b>
+                    <span className="panel-mini">{fecha(i.iniciado_at)}</span>
+                  </div>
+                  <span className={claseBadgeTono(abierta ? TONO.CRITICO : TONO.EXITO)}>
+                    {abierta ? tx.abierta : tx.resuelta}
+                  </span>
+                </Link>
+              );
+            })
+          )}
+        </Tarjeta>
+      </div>
     </div>
   );
 }

@@ -6,7 +6,9 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import ActivarCuenta from './pages/ActivarCuenta';
 import ClaveNueva from './pages/ClaveNueva';
+import Inicio from './pages/Inicio';
 import MisGuardias from './pages/MisGuardias';
+import Servicio from './pages/Servicio';
 import OfertasDeGuardia from './pages/OfertasDeGuardia';
 import GuardiaActiva from './pages/GuardiaActiva';
 import ReporteDiario from './pages/ReporteDiario';
@@ -50,7 +52,7 @@ function Rutas() {
     <Routes>
       <Route
         path="/login"
-        element={cargando ? <div className="estado-cargando" role="status">{t.comun.cargando}</div> : session ? <Navigate to="/guardias" replace /> : <Login />}
+        element={cargando ? <div className="estado-cargando" role="status">{t.comun.cargando}</div> : session ? <Navigate to="/inicio" replace /> : <Login />}
       />
       <Route path="/activar-cuenta" element={<ActivarCuenta />} />
       {/* Adonde apunta el enlace del correo de recuperación. Va afuera del guardián de sesión
@@ -64,8 +66,11 @@ function Rutas() {
           </RutaPrivada>
         }
       >
-        <Route index element={<Navigate to="/guardias" replace />} />
+        <Route index element={<Navigate to="/inicio" replace />} />
+        <Route path="inicio" element={<Inicio />} />
         <Route path="guardias" element={<MisGuardias />} />
+        {/* Los Pacientes que atiende, cada uno con su próxima guardia. */}
+        <Route path="servicio" element={<Servicio />} />
         {/* Las guardias que le ofrecieron y todavía no contestó. Es una pantalla aparte de
             "Mis Guardias" a propósito: un turno que le ofrecieron no es un turno suyo. */}
         <Route path="ofertas" element={<OfertasDeGuardia />} />

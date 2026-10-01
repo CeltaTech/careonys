@@ -1,0 +1,5 @@
+/* Importación: las tablas con columnas de la planilla se desplazan a lo ancho. */
+
+.importacion-desplazable {
+  overflow-x: auto;
+}

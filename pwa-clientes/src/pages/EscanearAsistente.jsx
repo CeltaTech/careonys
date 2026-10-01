@@ -82,8 +82,8 @@ export default function EscanearAsistente() {
   }
 
   return (
-    <div>
-      <Link to={`/pacientes/${id}/asistente`} className="btn btn-secondary" style={{ marginBottom: '1rem', fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
+    <>
+      <Link to={`/pacientes/${id}/asistente`} className="btn btn-volver">
         <span aria-hidden="true">←</span> {t.comun.volver}
       </Link>
       <h1>{t.escaneo.titulo}</h1>
@@ -91,25 +91,27 @@ export default function EscanearAsistente() {
       {estado === 'pidiendo_permiso' && <div className="estado-cargando" role="status">{t.escaneo.pidiendo_permiso}</div>}
 
       {(estado === 'pidiendo_permiso' || estado === 'escaneando') && (
-        <>
-          <p className="guardia-card-detalle">{t.escaneo.instrucciones}</p>
-          <div id={LECTOR_ID} style={{ width: '100%', borderRadius: '12px', overflow: 'hidden' }} />
-        </>
+        <section className="pwa-card">
+          <p className="mini">{t.escaneo.instrucciones}</p>
+          <div id={LECTOR_ID} className="foto-ancha mini-abajo lector-de-codigo" />
+        </section>
       )}
 
       {estado === 'verificando' && <div className="estado-cargando" role="status">{t.escaneo.verificando}</div>}
 
       {estado === 'error' && (
-        <div>
+        <section className="pwa-card">
           <div className="alert alert-error" role="alert">{error}</div>
-          <button className="btn btn-primary btn-full" onClick={escanearDeNuevo} style={{ marginTop: '1rem' }}>
-            {t.escaneo.volver_a_escanear}
-          </button>
-        </div>
+          <div className="pwa-acciones">
+            <button className="btn btn-primary btn-full" onClick={escanearDeNuevo}>
+              {t.escaneo.volver_a_escanear}
+            </button>
+          </div>
+        </section>
       )}
 
       {estado === 'resultado' && resultado && (
-        <div>
+        <section className="pwa-card">
           {/* Estos motivos no son errores: llegan en una respuesta correcta y cada uno pinta
               la advertencia de otro color, así que no pasan por lib/errores.js. */}
           {resultado.motivo === 'sin_guardia_hoy' && (
@@ -125,12 +127,12 @@ export default function EscanearAsistente() {
             <div className="alert alert-error" role="alert">{t.escaneo.resultado_no_coincide}</div>
           )}
 
-          <div className="guardia-card" style={{ marginTop: '1rem' }}>
+          <div className="guardia-card">
             {resultado.asistenteEscaneado.foto_url && (
               <img
                 src={resultado.asistenteEscaneado.foto_url}
                 alt={resultado.asistenteEscaneado.nombre}
-                style={{ width: 96, height: 96, objectFit: 'cover', borderRadius: '12px', marginBottom: '0.75rem' }}
+                className="foto-persona-chica"
               />
             )}
             <div className="guardia-card-paciente">{resultado.asistenteEscaneado.nombre}</div>
@@ -144,13 +146,15 @@ export default function EscanearAsistente() {
             </div>
           </div>
 
-          <p className="guardia-card-detalle" style={{ marginTop: '1rem' }}>{t.escaneo.alcance}</p>
+          <p className="mini mini-abajo">{t.escaneo.alcance}</p>
 
-          <button className="btn btn-secondary btn-full" onClick={escanearDeNuevo} style={{ marginTop: '1rem' }}>
-            {t.escaneo.volver_a_escanear}
-          </button>
-        </div>
+          <div className="pwa-acciones">
+            <button className="btn btn-secondary btn-full" onClick={escanearDeNuevo}>
+              {t.escaneo.volver_a_escanear}
+            </button>
+          </div>
+        </section>
       )}
-    </div>
+    </>
   );
 }

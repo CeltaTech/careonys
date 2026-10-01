@@ -95,37 +95,39 @@ export default function AccesoMatch() {
   const qrVencido = qr && !cobrado && new Date(qr.expira_en).getTime() < Date.now();
 
   return (
-    <div>
-      <Link to={`/pacientes/${id}`} className="btn btn-secondary" style={{ marginBottom: '1rem', fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
+    <>
+      <Link to={`/pacientes/${id}`} className="btn btn-volver">
         {t.comun.volver}
       </Link>
 
       <h1>{t.acceso.titulo}</h1>
 
-      {!acceso && <div className="estado-vacio" role="status">{t.acceso.sin_acceso}</div>}
+      {!acceso && <div className="pwa-card estado-vacio" role="status">{t.acceso.sin_acceso}</div>}
 
       {acceso && (
         <>
-          <div className="guardia-card-detalle">
-            {traducirValor(t.acceso, `estado_${acceso.estado}`)}
-          </div>
-          <div className="guardia-card-detalle">
-            {t.acceso.importe}: {formatearImporte(acceso.importe, acceso.moneda, locale)}
-          </div>
-          {acceso.proximo_cobro && (
-            <div className="guardia-card-detalle">
-              {t.acceso.proximo_cobro}: {acceso.proximo_cobro}
+          <section className="pwa-card">
+            <div className="pwa-card-dato">
+              {traducirValor(t.acceso, `estado_${acceso.estado}`)}
             </div>
-          )}
+            <div className="pwa-card-dato">
+              {t.acceso.importe}: {formatearImporte(acceso.importe, acceso.moneda, locale)}
+            </div>
+            {acceso.proximo_cobro && (
+              <div className="pwa-card-dato">
+                {t.acceso.proximo_cobro}: {acceso.proximo_cobro}
+              </div>
+            )}
+          </section>
 
           {acceso.estado === 'vigente' && (
-            <div style={{ marginTop: '1.5rem' }}>
+            <section className="pwa-card">
               <h2>{t.acceso.generar_qr_titulo}</h2>
 
               {cobrado && <div className="alert alert-success" role="status">{t.acceso.qr_cobrado}</div>}
 
               {!cobrado && qr && !qrVencido && qrDataUrl && (
-                <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+                <div className="centrado">
                   <img src={qrDataUrl} alt={t.acceso.generar_qr_titulo} />
                   <p className="mapa-actualizado">{t.acceso.qr_vence_en.replace('{minutos}', minutosRestantes(qr.expira_en))}</p>
                   <p className="mapa-actualizado">{t.acceso.qr_esperando_cobro}</p>
@@ -135,27 +137,27 @@ export default function AccesoMatch() {
               {qrVencido && <div className="alert alert-error" role="alert">{t.acceso.qr_vencido}</div>}
 
               {(!qr || qrVencido || cobrado) && (
-                <button type="button" className="btn btn-primary btn-full" onClick={generarQr} disabled={generando} style={{ marginTop: '1rem' }}>
+                <button type="button" className="btn btn-primary btn-full btn-abajo" onClick={generarQr} disabled={generando}>
                   {generando ? t.acceso.generando_qr : (qr ? t.acceso.qr_generar_otro : t.acceso.generar_qr_boton)}
                 </button>
               )}
-            </div>
+            </section>
           )}
 
           {/* La baja sólo aparece donde hay una renovación que apagar. Una forma que se cobra una
               sola vez no se da de baja: no hay nada que cancelar. */}
           {acceso.renueva_sola && (
-            <div style={{ marginTop: '1.5rem' }}>
+            <section className="pwa-card">
               <h2>{t.acceso.baja_titulo}</h2>
 
               {acceso.cancelada_en || baja ? (
                 <>
                   <div className="alert alert-success" role="status">{t.acceso.baja_hecha}</div>
-                  <p className="guardia-card-detalle">
+                  <p className="pwa-card-dato">
                     {t.acceso.baja_cancelada_el.replace('{fecha}', (baja?.cancelada_en || acceso.cancelada_en).slice(0, 10))}
                   </p>
                   {(baja?.vigente_hasta || acceso.vigente_hasta || acceso.gratis_hasta) && (
-                    <p className="guardia-card-detalle">
+                    <p className="pwa-card-dato">
                       {t.acceso.baja_hasta.replace('{fecha}', baja?.vigente_hasta || acceso.vigente_hasta || acceso.gratis_hasta)}
                     </p>
                   )}
@@ -163,15 +165,15 @@ export default function AccesoMatch() {
               ) : (
                 <>
                   {errorBaja && <div className="alert alert-error" role="alert">{errorBaja}</div>}
-                  <button type="button" className="btn btn-secondary btn-full" onClick={darDeBaja} disabled={dandoDeBaja} style={{ marginTop: '1rem' }}>
+                  <button type="button" className="btn btn-secondary btn-full btn-abajo" onClick={darDeBaja} disabled={dandoDeBaja}>
                     {dandoDeBaja ? t.acceso.dando_de_baja : t.acceso.baja_boton}
                   </button>
                 </>
               )}
-            </div>
+            </section>
           )}
         </>
       )}
-    </div>
+    </>
   );
 }

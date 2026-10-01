@@ -11,6 +11,8 @@ import { mensajeDeError } from '../../lib/errores';
 import { avanceDeIncorporacion } from '../../lib/avanceDeIncorporacion';
 import { FotosDeIdentidad } from './FotosDeIdentidad';
 import { ReferenciasLaborales } from './ReferenciasLaborales';
+import '../../styles/molde-paginas.css';
+import './fichaAsistente.css';
 
 const ESTADOS = ['pendiente', 'aprobada', 'rechazada'];
 
@@ -71,8 +73,11 @@ export function VerificacionTab({ asistente }) {
     : (estadoCarga === 'listo' && yaCargo(estadoEtapas) ? 'listo' : 'cargando');
 
   return (
-    <div>
-      <h2>{t.asistentes.verificacion.titulo}</h2>
+    <div className="molde-pila">
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.asistentes.verificacion.titulo}</h2>
+      </div>
       {(error || errorEtapas) && <Alert variant="error">{error || errorEtapas}</Alert>}
       {estadoCombinado === 'listo' && avance.completo && <Alert variant="info">{t.asistentes.verificacion.proceso_completo}</Alert>}
 
@@ -101,23 +106,16 @@ export function VerificacionTab({ asistente }) {
         </div>
       )}
 
-      {/* Antes de las etapas, y afuera de su lista: las dos fotos son de la persona y no de una
-          etapa, porque las claves de las etapas las inventa cada Prestadora y ninguna se puede
-          nombrar desde acá. Carga sus propios datos, así que trae sus propios cuatro estados. */}
-      <FotosDeIdentidad asistente={asistente} />
-
-      {/* Y por el mismo motivo, las referencias laborales: son de la persona, llegan solas desde
-          su postulación y ninguna clave de etapa las puede nombrar. También trae sus cuatro
-          estados, porque también carga sus propios datos. */}
-      <ReferenciasLaborales asistente={asistente} />
-
       <EstadoLista estado={estadoCombinado} error={error || errorEtapas} vacio={estadoCombinado === 'listo' && verificaciones.length === 0} recargar={recargar}>
+        <div>
         {etapas.map((etapaFila) => {
           const fila = verificaciones.find((v) => v.etapa === etapaFila.clave);
           if (!fila) return null;
           return (
-            <div key={etapaFila.clave} className="panel-card-verificacion">
-              <h3>{etapaFila.nombre}</h3>
+            <div key={etapaFila.clave} className="panel-fila-alerta">
+              <div className="ficha-asistente-renglon">
+              <b>{etapaFila.nombre}</b>
+              <div className="molde-formgrid">
               <FormField
                 label={t.asistentes.verificacion.col_estado}
                 name={`estado-${etapaFila.clave}`}
@@ -130,6 +128,7 @@ export function VerificacionTab({ asistente }) {
                   <option key={estadoOpcion} value={estadoOpcion}>{t.asistentes.verificacion[`estado_${estadoOpcion}`]}</option>
                 ))}
               </FormField>
+              <div className="molde-ancho">
               <FormField
                 label={t.comun.nota_interna}
                 name={`notas-${etapaFila.clave}`}
@@ -139,16 +138,32 @@ export function VerificacionTab({ asistente }) {
                 onBlur={() => actualizarEtapa(fila, { notas: fila.notas || '' })}
                 disabled={guardandoEtapa === etapaFila.clave}
               />
-              {fila.completado_en && (
-                <p className="panel-explicacion">
+              </div>
+              </div>
+              </div>
+              {guardandoEtapa === etapaFila.clave ? (
+                <span className="panel-mini">{t.comun.guardando}</span>
+              ) : fila.completado_en && (
+                <span className="panel-mini">
                   {t.asistentes.verificacion.completado_en} {new Date(fila.completado_en).toLocaleDateString(locale)}
-                </p>
+                </span>
               )}
-              {guardandoEtapa === etapaFila.clave && <p className="panel-explicacion">{t.comun.guardando}</p>}
             </div>
           );
         })}
+        </div>
       </EstadoLista>
+    </section>
+
+      {/* Afuera de la lista de etapas: las dos fotos son de la persona y no de una
+          etapa, porque las claves de las etapas las inventa cada Prestadora y ninguna se puede
+          nombrar desde acá. Carga sus propios datos, así que trae sus propios cuatro estados. */}
+      <FotosDeIdentidad asistente={asistente} />
+
+      {/* Y por el mismo motivo, las referencias laborales: son de la persona, llegan solas desde
+          su postulación y ninguna clave de etapa las puede nombrar. También trae sus cuatro
+          estados, porque también carga sus propios datos. */}
+      <ReferenciasLaborales asistente={asistente} />
     </div>
   );
 }

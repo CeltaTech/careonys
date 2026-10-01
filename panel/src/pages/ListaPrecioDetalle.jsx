@@ -8,6 +8,7 @@ import { Alert } from '../components/ui/Alert';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { useMonedaActual } from '../hooks/useMonedaActual';
+import '../styles/molde-paginas.css';
 
 export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada }) {
   const modal = useModalAccesible(onClose);
@@ -68,57 +69,55 @@ export function ListaPrecioDetalle({ precio, soloLectura, onClose, onActualizada
 
         {error && <Alert variant="error">{error}</Alert>}
 
-        {!esNuevo && (
-          <Alert variant="info">{t.lista_precios.aviso_prestaciones_vinculadas}</Alert>
-        )}
+        <div className="molde-formgrid">
+          <FormField
+            label={t.lista_precios.col_tipo_servicio}
+            name="tipo_servicio"
+            value={tipoServicio}
+            onChange={(e) => setTipoServicio(e.target.value)}
+            disabled={soloLectura}
+            required
+          />
 
-        <FormField
-          label={t.lista_precios.col_tipo_servicio}
-          name="tipo_servicio"
-          value={tipoServicio}
-          onChange={(e) => setTipoServicio(e.target.value)}
-          disabled={soloLectura}
-          required
-        />
+          <FormField
+            label={t.lista_precios.col_modalidad}
+            name="modalidad"
+            value={modalidad}
+            onChange={(e) => setModalidad(e.target.value)}
+            disabled={soloLectura}
+            required
+          />
 
-        <FormField
-          label={t.lista_precios.col_modalidad}
-          name="modalidad"
-          value={modalidad}
-          onChange={(e) => setModalidad(e.target.value)}
-          disabled={soloLectura}
-          required
-        />
+          <FormField
+            label={moneda ? `${t.lista_precios.col_precio} (${moneda})` : t.lista_precios.col_precio}
+            name="precio"
+            type="number"
+            step="0.01"
+            value={valorPrecio}
+            onChange={(e) => setValorPrecio(e.target.value)}
+            disabled={soloLectura}
+            required
+          />
 
-        <FormField
-          label={moneda ? `${t.lista_precios.col_precio} (${moneda})` : t.lista_precios.col_precio}
-          name="precio"
-          type="number"
-          step="0.01"
-          value={valorPrecio}
-          onChange={(e) => setValorPrecio(e.target.value)}
-          disabled={soloLectura}
-          required
-        />
+          <FormField
+            label={t.lista_precios.col_vigente_desde}
+            name="vigente_desde"
+            type="date"
+            value={vigenteDesde}
+            onChange={(e) => setVigenteDesde(e.target.value)}
+            disabled={soloLectura}
+            required
+          />
 
-        <FormField
-          label={t.lista_precios.col_vigente_desde}
-          name="vigente_desde"
-          type="date"
-          value={vigenteDesde}
-          onChange={(e) => setVigenteDesde(e.target.value)}
-          disabled={soloLectura}
-          required
-        />
-
-        <FormField
-          label={t.lista_precios.col_activo}
-          name="activo"
-          type="checkbox"
-          checked={activo}
-          onChange={(e) => setActivo(e.target.checked)}
-          disabled={soloLectura}
-        />
+          <FormField
+            label={t.lista_precios.col_activo}
+            name="activo"
+            type="checkbox"
+            checked={activo}
+            onChange={(e) => setActivo(e.target.checked)}
+            disabled={soloLectura}
+          />
+        </div>
 
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>

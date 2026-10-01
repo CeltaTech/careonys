@@ -71,7 +71,7 @@ export default function EmergenciaEnGuardia({ t, locale, guardiaId, alRegistrar 
   }
 
   return (
-    <div style={{ marginTop: '1.5rem' }}>
+    <div className="pwa-card-bloque">
       {error && <div className="alert alert-error" role="alert">{error}</div>}
 
       {/* Salió: se dice la hora y que el Coordinador ya lo tiene. Quedó en la cola: se dice que
@@ -93,10 +93,10 @@ export default function EmergenciaEnGuardia({ t, locale, guardiaId, alRegistrar 
 
       {abriendo && (
         <div>
-          <h2 style={{ fontSize: '1rem' }}>{tr.titulo}</h2>
+          <h2>{tr.titulo}</h2>
           <p className="guardia-card-detalle">{tr.explicacion}</p>
 
-          <div className="form-field" style={{ marginTop: '0.5rem' }}>
+          <div className="form-field pwa-card-pie">
             <label htmlFor="emergencia-detalle">{tr.detalle}</label>
             <textarea
               id="emergencia-detalle"
@@ -117,13 +117,12 @@ export default function EmergenciaEnGuardia({ t, locale, guardiaId, alRegistrar 
             {enviando ? tr.enviando : tr.confirmar}
           </button>
           <button
-            className="btn btn-secondary btn-full"
+            className="btn btn-secondary btn-full pwa-card-pie"
             onClick={() => {
               setAbriendo(false);
               setError('');
             }}
             disabled={enviando}
-            style={{ marginTop: '0.5rem' }}
           >
             {t.comun.cancelar}
           </button>

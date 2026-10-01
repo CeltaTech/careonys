@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
 import { useEmpresa } from '../../context/EmpresaContext';
@@ -14,60 +14,72 @@ import { SelectoresPreferencias } from './SelectoresPreferencias';
 import { FranjaPuestaEnMarcha } from './FranjaPuestaEnMarcha';
 import { EquipoNuevo } from './EquipoNuevo';
 
-/* Los dibujos del menú, de trazo, en el color del texto que los rodea. */
+/* Los dibujos del menú, de trazo, en el color del texto que los rodea. Son los de la maqueta
+   de la interfaz (carpeta `celtatech/maquetas`); Facturación no tiene entrada allá y conserva
+   el suyo. */
+const PERSONAS = (
+  <>
+    <circle cx="9" cy="8" r="3" />
+    <circle cx="17" cy="9" r="2.5" />
+    <path d="M3.5 20c.5-4 2.3-6 5.5-6s5 2 5.5 6" />
+    <path d="M14 15c2.8-.3 4.9 1.3 5.4 5" />
+  </>
+);
+const SOBRE = (
+  <>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <path d="m4 7 8 6 8-6" />
+  </>
+);
 const ICONOS = {
-  inicio: <path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />,
+  inicio: (
+    <>
+      <path d="m3 10 9-7 9 7" />
+      <path d="M5 9v11h14V9" />
+      <path d="M9 20v-6h6v6" />
+    </>
+  ),
   servicios: (
     <>
       <rect x="4" y="3" width="16" height="18" rx="2" />
-      <path d="M8 8h8M8 12h8M8 16h5" />
+      <path d="M8 7h8M8 11h8M8 15h5" />
     </>
   ),
-  asistentes: (
-    <>
-      <circle cx="9" cy="8" r="3.5" />
-      <path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" />
-      <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.3c2.1.7 3.5 2.8 3.5 5.7" />
-    </>
-  ),
+  asistentes: PERSONAS,
   guardias: (
     <>
-      <rect x="3" y="4.5" width="18" height="16" rx="2" />
-      <path d="M3 9.5h18M8 2.5v4M16 2.5v4M7.5 13.5h3M13.5 13.5h3M7.5 17h3" />
+      <rect x="4" y="5" width="16" height="15" rx="2" />
+      <path d="M8 3v4M16 3v4M4 10h16M8 14h3M8 17h5" />
     </>
   ),
-  clientes: (
-    <>
-      <path d="M4 10.5 12 4l8 6.5V20H4z" />
-      <path d="M12 17.5s-3-1.8-3-3.8a1.6 1.6 0 0 1 3-.8 1.6 1.6 0 0 1 3 .8c0 2-3 3.8-3 3.8z" />
-    </>
-  ),
+  clientes: PERSONAS,
   facturacion: (
     <>
       <path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2z" />
       <path d="M9 8h6M9 12h6M9 16h3" />
     </>
   ),
-  comunicacion: <path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-5 4V6a1 1 0 0 1 1-1z" />,
+  comunicacion: SOBRE,
   configuracion: (
     <>
       <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.8 1.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V20h-2.6v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1-1.8-1.8.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H4v-2.6h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1L7 6.6l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V5h2.6v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 1.8 1.8-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.1v2.6h-.1a1.7 1.7 0 0 0-1.1 1.4Z" />
     </>
   ),
   buscar: (
     <>
       <circle cx="11" cy="11" r="7" />
-      <path d="m20 20-3.5-3.5" />
+      <path d="m20 20-4-4" />
     </>
   ),
   campana: (
     <>
-      <path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-      <path d="M10.3 21a1.9 1.9 0 0 0 3.4 0" />
+      <path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+      <path d="M10 21h4" />
     </>
   ),
-  menu: <path d="M4 6h16M4 12h16M4 18h16" />,
+  mensajes: SOBRE,
+  menu: <path d="M5 8h14M5 12h14M5 16h14" />,
 };
 
 function Icono({ nombre }) {
@@ -78,15 +90,18 @@ function Icono({ nombre }) {
   );
 }
 
-function Contador({ cantidad }) {
+function Contador({ cantidad, clase = 'panel-nav-contador' }) {
   const { t } = useLocale();
   if (!(cantidad > 0)) return null;
   return (
-    <span className="panel-nav-contador" aria-label={t.nav.esperando_cantidad.replace('{cantidad}', cantidad)}>
+    <span className={clase} aria-label={t.nav.esperando_cantidad.replace('{cantidad}', cantidad)}>
       {cantidad}
     </span>
   );
 }
+
+// La barra de la izquierda se oculta del todo en el teléfono; ahí la hamburguesa la abre encima.
+const TELEFONO = '(max-width: 760px)';
 
 function iniciales(nombre) {
   return (nombre ?? '')
@@ -117,6 +132,7 @@ export function Layout() {
   const navegar = useNavigate();
 
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const [barraOculta, setBarraOculta] = useState(false);
   const [perfilAbierto, setPerfilAbierto] = useState(false);
   const [avisosAbiertos, setAvisosAbiertos] = useState(false);
   const [busqueda, setBusqueda] = useState('');
@@ -191,6 +207,7 @@ export function Layout() {
     },
     {
       clave: 'facturacion',
+      grupo: 'gestion',
       texto: t.nav.sec_facturacion,
       enlaces: [
         { a: '/facturacion', texto: t.nav.facturacion, ver: directa },
@@ -201,6 +218,7 @@ export function Layout() {
     },
     {
       clave: 'comunicacion',
+      grupo: 'gestion',
       texto: t.nav.sec_comunicacion,
       enlaces: [
         { a: '/comunicacion', texto: t.nav.comunicacion, ver: true },
@@ -209,6 +227,7 @@ export function Layout() {
     },
     {
       clave: 'configuracion',
+      grupo: 'gestion',
       texto: t.nav.sec_configuracion,
       enlaces: [
         { a: '/configuracion', texto: t.nav.configuracion, ver: esAdmin },
@@ -311,8 +330,26 @@ export function Layout() {
 
   const rolTexto = usuario?.rol ? t.usuarios_panel[`rol_${usuario.rol}`] : '';
 
+  // El rótulo del grupo va una sola vez, antes de la primera sección visible que pertenece a él.
+  const gruposVistos = new Set();
+  const primeraDeGrupo = new Set();
+  for (const seccion of secciones) {
+    if (seccion.grupo && !gruposVistos.has(seccion.grupo)) {
+      gruposVistos.add(seccion.grupo);
+      primeraDeGrupo.add(seccion.clave);
+    }
+  }
+  const rotuloDeGrupo = { gestion: t.nav.grupo_gestion };
+
+  // En el teléfono la hamburguesa abre la barra encima del contenido; en pantalla ancha la oculta
+  // o la vuelve a mostrar.
+  function alTocarHamburguesa() {
+    if (window.matchMedia?.(TELEFONO).matches) setMenuAbierto((abierto) => !abierto);
+    else setBarraOculta((oculta) => !oculta);
+  }
+
   return (
-    <div className={`panel-layout${menuAbierto ? ' menu-abierto' : ''}`}>
+    <div className={`panel-layout${menuAbierto ? ' menu-abierto' : ''}${barraOculta ? ' barra-oculta' : ''}`}>
       <a className="salto-al-contenido" href="#contenido-principal">
         {t.nav.saltar_al_contenido}
       </a>
@@ -320,17 +357,21 @@ export function Layout() {
         <div className="panel-logo">{empresa?.nombre ?? ''}</div>
         <nav aria-label={t.nav.menu_principal}>
           {secciones.map((seccion) => (
-            <NavLink
-              key={seccion.clave}
-              to={seccion.visibles[0].a}
-              end={seccion.visibles[0].end}
-              className={seccion === seccionActual ? 'active' : undefined}
-              aria-current={seccion === seccionActual ? 'page' : undefined}
-            >
-              <Icono nombre={seccion.clave} />
-              <span className="panel-nav-etiqueta">{seccion.texto}</span>
-              <Contador cantidad={seccion.contador} />
-            </NavLink>
+            <Fragment key={seccion.clave}>
+              {primeraDeGrupo.has(seccion.clave) && (
+                <div className="panel-nav-grupo">{rotuloDeGrupo[seccion.grupo]}</div>
+              )}
+              <NavLink
+                to={seccion.visibles[0].a}
+                end={seccion.visibles[0].end}
+                className={seccion === seccionActual ? 'active' : undefined}
+                aria-current={seccion === seccionActual ? 'page' : undefined}
+              >
+                <Icono nombre={seccion.clave} />
+                <span className="panel-nav-etiqueta">{seccion.texto}</span>
+                <Contador cantidad={seccion.contador} />
+              </NavLink>
+            </Fragment>
           ))}
         </nav>
         <div className="panel-perfil" ref={perfilRef}>
@@ -354,7 +395,9 @@ export function Layout() {
             <span className="panel-perfil-datos">
               <span className="panel-perfil-nombre">{usuario?.nombre}</span>
               <span className="panel-perfil-detalle">{rolTexto}</span>
+              <span className="panel-perfil-organizacion">{empresa?.nombre ?? ''}</span>
             </span>
+            <span className="panel-perfil-flecha" aria-hidden="true">⌄</span>
           </button>
         </div>
       </aside>
@@ -365,10 +408,10 @@ export function Layout() {
         <header className="panel-header">
           <button
             type="button"
-            className="panel-header-icono panel-menu-movil"
+            className="panel-header-hamburguesa"
             aria-label={t.nav.abrir_menu}
-            aria-expanded={menuAbierto}
-            onClick={() => setMenuAbierto((abierto) => !abierto)}
+            aria-expanded={menuAbierto || !barraOculta}
+            onClick={alTocarHamburguesa}
           >
             <Icono nombre="menu" />
           </button>
@@ -406,13 +449,13 @@ export function Layout() {
             <div className="panel-notificaciones" ref={avisosRef}>
               <button
                 type="button"
-                className="panel-header-icono"
-                aria-label={t.nav.notificaciones}
+                className="panel-header-enlace"
                 aria-expanded={avisosAbiertos}
                 onClick={() => setAvisosAbiertos((abierto) => !abierto)}
               >
                 <Icono nombre="campana" />
-                <Contador cantidad={totalAvisos} />
+                {t.nav.notificaciones}
+                <Contador cantidad={totalAvisos} clase="panel-header-contador" />
               </button>
               {avisosAbiertos && (
                 <ul className="panel-desplegable">
@@ -431,22 +474,24 @@ export function Layout() {
                 </ul>
               )}
             </div>
-            <NavLink to="/comunicacion" className="panel-header-icono" aria-label={t.nav.mensajes}>
-              <Icono nombre="comunicacion" />
+            {/* Sin contador: el Panel no lleva cuenta de mensajes sin leer. */}
+            <NavLink to="/comunicacion" className="panel-header-enlace">
+              <Icono nombre="mensajes" />
+              {t.nav.mensajes}
             </NavLink>
           </div>
         </header>
-        {seccionActual && seccionActual.visibles.length > 1 && (
-          <nav className="panel-subnav" aria-label={seccionActual.texto}>
-            {seccionActual.visibles.map((enlace) => (
-              <NavLink key={enlace.a} to={enlace.a} end={enlace.end}>
-                {enlace.texto}
-                <Contador cantidad={enlace.contador} />
-              </NavLink>
-            ))}
-          </nav>
-        )}
         <main className="panel-content" id="contenido-principal" tabIndex={-1}>
+          {seccionActual && seccionActual.visibles.length > 1 && (
+            <nav className="panel-subnav" aria-label={seccionActual.texto}>
+              {seccionActual.visibles.map((enlace) => (
+                <NavLink key={enlace.a} to={enlace.a} end={enlace.end}>
+                  {enlace.texto}
+                  <Contador cantidad={enlace.contador} />
+                </NavLink>
+              ))}
+            </nav>
+          )}
           <Outlet />
         </main>
       </div>

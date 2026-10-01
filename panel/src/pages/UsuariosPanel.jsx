@@ -13,6 +13,7 @@ import { ElegirLugares } from '../components/lugares/ElegirLugares';
 import { llamarApiLugaresDeTrabajo } from '../lib/apiLugaresDeTrabajo';
 import { con } from '../lib/textos';
 import { AusenciasDelCoordinador } from './AusenciasDelCoordinador';
+import '../styles/molde-paginas.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -68,36 +69,42 @@ export function UsuariosPanel() {
         </Button>
       </Cabecera>
 
-      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && usuarios.length === 0} recargar={recargar}>
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.usuarios_panel.col_nombre}</th>
-              <th>{t.usuarios_panel.col_rol}</th>
-              <th>{t.usuarios_panel.col_telefono}</th>
-              <th>{t.configuracion.lugares_alcance_titulo}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {usuarios.map((u) => (
-              <tr key={u.id}>
-                <td>{u.nombre}</td>
-                <td>{t.usuarios_panel[`rol_${u.rol}`]}</td>
-                <td>{u.telefono || '—'}</td>
-                {/* Quien administra alcanza a toda la Organización, así que el alcance por lugares
-                    no le dice nada: es la coordinación la que se acota. */}
-                <td>{u.rol === 'coordinador' ? con(t.configuracion.lugares_elegidos, { cantidad: u.lugares ?? 0 }) : '—'}</td>
-                <td>
-                  {puedeEditar(u) && (
-                    <button onClick={() => setEditando(u)}>{t.comun.editar}</button>
-                  )}
-                </td>
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.usuarios_panel.titulo}</h2>
+          {estado === 'listo' && <span className="panel-mini">{usuarios.length}</span>}
+        </div>
+        <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && usuarios.length === 0} recargar={recargar}>
+          <table className="panel-tabla">
+            <thead>
+              <tr>
+                <th>{t.usuarios_panel.col_nombre}</th>
+                <th>{t.usuarios_panel.col_rol}</th>
+                <th>{t.usuarios_panel.col_telefono}</th>
+                <th>{t.configuracion.lugares_alcance_titulo}</th>
+                <th></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </EstadoLista>
+            </thead>
+            <tbody>
+              {usuarios.map((u) => (
+                <tr key={u.id}>
+                  <td><b>{u.nombre}</b></td>
+                  <td><span className="badge badge-neutro">{t.usuarios_panel[`rol_${u.rol}`]}</span></td>
+                  <td>{u.telefono || '—'}</td>
+                  {/* Quien administra alcanza a toda la Organización, así que el alcance por lugares
+                      no le dice nada: es la coordinación la que se acota. */}
+                  <td>{u.rol === 'coordinador' ? con(t.configuracion.lugares_elegidos, { cantidad: u.lugares ?? 0 }) : '—'}</td>
+                  <td>
+                    {puedeEditar(u) && (
+                      <button type="button" className="panel-enlace" onClick={() => setEditando(u)}>{t.comun.editar}</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </EstadoLista>
+      </section>
 
       {creandoNuevo && (
         <NuevoUsuarioPanel
@@ -180,11 +187,15 @@ function NuevoUsuarioPanel({ onClose, onCreado }) {
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
         <h2 id={modal.idTitulo}>{t.usuarios_panel.nuevo_coordinador}</h2>
         {error && <Alert variant="error">{error}</Alert>}
-        <FormField label={t.usuarios_panel.col_nombre} name="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
-        <FormField label={t.usuarios_panel.col_email} name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <FormField label={t.usuarios_panel.col_telefono} name="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
-        <h3>{t.configuracion.lugares_alcance_titulo}</h3>
-        <ElegirLugares valor={lugares} onChange={setLugares} deshabilitado={guardando} />
+        <div className="molde-formgrid">
+          <FormField label={t.usuarios_panel.col_nombre} name="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
+          <FormField label={t.usuarios_panel.col_email} name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <FormField label={t.usuarios_panel.col_telefono} name="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+          <div className="molde-ancho">
+            <h3>{t.configuracion.lugares_alcance_titulo}</h3>
+            <ElegirLugares valor={lugares} onChange={setLugares} deshabilitado={guardando} />
+          </div>
+        </div>
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>{t.comun.cancelar}</Button>
           <Button onClick={handleGuardar} disabled={guardando || !email || !nombre}>
@@ -274,16 +285,20 @@ function EditarUsuarioPanel({ usuario, otrosCoordinadores, onClose, onActualizad
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
         <h2 id={modal.idTitulo}>{usuario.nombre}</h2>
         {error && <Alert variant="error">{error}</Alert>}
-        <FormField label={t.usuarios_panel.col_nombre} name="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
-        <FormField label={t.usuarios_panel.col_telefono} name="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+        <div className="molde-formgrid">
+          <FormField label={t.usuarios_panel.col_nombre} name="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
+          <FormField label={t.usuarios_panel.col_telefono} name="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+          {esCoordinador && (
+            <div className="molde-ancho">
+              <h3>{t.configuracion.lugares_alcance_titulo}</h3>
+              <EstadoLista estado={estadoLugares} error={errorLugares} recargar={cargarLugares}>
+                <ElegirLugares valor={lugares} onChange={setLugares} deshabilitado={guardando || borrando} />
+              </EstadoLista>
+            </div>
+          )}
+        </div>
         {esCoordinador && (
-          <>
-            <h3>{t.configuracion.lugares_alcance_titulo}</h3>
-            <EstadoLista estado={estadoLugares} error={errorLugares} recargar={cargarLugares}>
-              <ElegirLugares valor={lugares} onChange={setLugares} deshabilitado={guardando || borrando} />
-            </EstadoLista>
-            <AusenciasDelCoordinador usuario={usuario} otrosCoordinadores={otrosCoordinadores} />
-          </>
+          <AusenciasDelCoordinador usuario={usuario} otrosCoordinadores={otrosCoordinadores} />
         )}
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={handleDarDeBaja} disabled={guardando || borrando}>

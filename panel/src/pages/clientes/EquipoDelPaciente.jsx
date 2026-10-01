@@ -9,6 +9,8 @@ import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { lugaresDeVarias, personasEnLosLugares } from '../../lib/lugaresDeCadaPersona';
+import '../../styles/molde-paginas.css';
+import '../hojaDeTarjetas.css';
 
 // Quiénes son el equipo de este Paciente.
 //
@@ -232,143 +234,149 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
         {estado === 'error' && <Alert variant="error">{error || t.comun.error_generico}</Alert>}
 
         {estado === 'listo' && datos && (
-          <>
+          <div className="molde-pila">
             {errorFila && <Alert variant="error">{errorFila}</Alert>}
 
-            <h3>{t.equipo_paciente.asistentes_titulo}</h3>
-            {datos.asistentes.length === 0 ? (
-              <p className="estado-vacio">{t.equipo_paciente.sin_asistentes}</p>
-            ) : (
-              <table className="panel-tabla">
-                <thead>
-                  <tr>
-                    <th>{t.equipo_paciente.col_persona}</th>
-                    <th>{t.equipo_paciente.col_por_que}</th>
-                    <th>{t.equipo_paciente.col_turnos}</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {datos.asistentes.map((a) => (
-                    <tr key={a.asistente_id}>
-                      <td>
-                        {datos.nombreDeAsistente(a.asistente_id)}
-                        {a.cubre_francos && <> — {t.equipo_paciente.cubre_francos}</>}
-                      </td>
-                      <td>{explicacionDeOrigen[a.origen]}</td>
-                      <td>{a.turnos}</td>
-                      <td>
-                        {puedeEditar && (
-                          <>
-                            <Button
-                              variant="secondary"
-                              disabled={enCurso === a.asistente_id}
-                              onClick={() => decidir(a, { cubre_francos: !a.cubre_francos })}
-                            >
-                              {a.cubre_francos
-                                ? t.equipo_paciente.no_cubre_francos
-                                : t.equipo_paciente.marcar_cubre_francos}
-                            </Button>{' '}
-                            <Button
-                              variant="secondary"
-                              disabled={enCurso === a.asistente_id}
-                              onClick={() => sacar(a)}
-                            >
-                              {t.equipo_paciente.sacar}
-                            </Button>
-                          </>
-                        )}
-                      </td>
+            <section className="panel-tarjeta hoja-desplazable">
+              <div className="panel-tarjeta-titulo">
+                <h2>{t.equipo_paciente.asistentes_titulo}</h2>
+              </div>
+              {datos.asistentes.length === 0 ? (
+                <p className="molde-vacio">{t.equipo_paciente.sin_asistentes}</p>
+              ) : (
+                <table className="panel-tabla">
+                  <thead>
+                    <tr>
+                      <th>{t.equipo_paciente.col_persona}</th>
+                      <th>{t.equipo_paciente.col_por_que}</th>
+                      <th>{t.equipo_paciente.col_turnos}</th>
+                      <th></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+                  </thead>
+                  <tbody>
+                    {datos.asistentes.map((a) => (
+                      <tr key={a.asistente_id}>
+                        <td>
+                          <b>{datos.nombreDeAsistente(a.asistente_id)}</b>
+                          {a.cubre_francos && <div className="panel-mini">{t.equipo_paciente.cubre_francos}</div>}
+                        </td>
+                        <td>{explicacionDeOrigen[a.origen]}</td>
+                        <td>{a.turnos}</td>
+                        <td>
+                          {puedeEditar && (
+                            <>
+                              <Button
+                                variant="secondary"
+                                disabled={enCurso === a.asistente_id}
+                                onClick={() => decidir(a, { cubre_francos: !a.cubre_francos })}
+                              >
+                                {a.cubre_francos
+                                  ? t.equipo_paciente.no_cubre_francos
+                                  : t.equipo_paciente.marcar_cubre_francos}
+                              </Button>{' '}
+                              <Button
+                                variant="secondary"
+                                disabled={enCurso === a.asistente_id}
+                                onClick={() => sacar(a)}
+                              >
+                                {t.equipo_paciente.sacar}
+                              </Button>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
 
-            {puedeEditar && candidatas.length > 0 && (
-              <p>
-                <label htmlFor="equipo-sumar">{t.equipo_paciente.sumar}</label>{' '}
-                <select id="equipo-sumar" value={aSumar} onChange={(e) => setASumar(e.target.value)}>
-                  <option value="">—</option>
-                  {candidatas.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {`${a.apellido ?? ''} ${a.nombre ?? ''}`.trim()}
-                    </option>
-                  ))}
-                </select>{' '}
-                <Button
-                  variant="secondary"
-                  disabled={!aSumar || enCurso === aSumar}
-                  onClick={() => {
-                    const id = aSumar;
-                    setASumar('');
-                    decidir({ asistente_id: id }, { situacion: 'sumada' });
-                  }}
-                >
-                  {t.equipo_paciente.agregar}
-                </Button>
-              </p>
-            )}
+              {puedeEditar && candidatas.length > 0 && (
+                <>
+                  <div className="molde-campo">
+                    <label htmlFor="equipo-sumar">{t.equipo_paciente.sumar}</label>
+                    <select id="equipo-sumar" value={aSumar} onChange={(e) => setASumar(e.target.value)}>
+                      <option value="">—</option>
+                      {candidatas.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {`${a.apellido ?? ''} ${a.nombre ?? ''}`.trim()}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="molde-acciones">
+                    <Button
+                      variant="secondary"
+                      disabled={!aSumar || enCurso === aSumar}
+                      onClick={() => {
+                        const id = aSumar;
+                        setASumar('');
+                        decidir({ asistente_id: id }, { situacion: 'sumada' });
+                      }}
+                    >
+                      {t.equipo_paciente.agregar}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </section>
 
-            {/* El cartel «Nadie por ahora.» se va por decisión del Desarrollador, y con él sale
-                la sección entera: un título con un cartel debajo diciendo que no hay nada es
-                justamente el lugar vacío que no hace falta ocupar. Y el caso no debería existir:
-                sin coordinador asignado no hay Servicio habilitado. */}
+            {/* Sin coordinador no hay Servicio habilitado: la sección vacía no se muestra. */}
             {datos.coordinadores.length > 0 && (
-              <>
-                <h3>{t.equipo_paciente.coordinacion_titulo}</h3>
-                <ul>
-                  {datos.coordinadores.map((c) => (
-                    <li key={c.usuario_id}>
-                      {datos.nombreDeUsuario(c.usuario_id)} — {explicacionDeOrigen[c.origen]}
-                      {puedeEditar && c.decidido && (
-                        <>
-                          {' '}
-                          <Button
-                            variant="secondary"
-                            disabled={enCurso === c.usuario_id}
-                            onClick={() => volverADeducir(c)}
-                          >
-                            {t.equipo_paciente.volver_a_deducir}
-                          </Button>
-                        </>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </>
+              <section className="panel-tarjeta">
+                <div className="panel-tarjeta-titulo">
+                  <h2>{t.equipo_paciente.coordinacion_titulo}</h2>
+                </div>
+                {datos.coordinadores.map((c) => (
+                  <div className="panel-fila-alerta" key={c.usuario_id}>
+                    <div>
+                      <b>{datos.nombreDeUsuario(c.usuario_id)}</b>{' '}
+                      <span className="panel-mini">{explicacionDeOrigen[c.origen]}</span>
+                    </div>
+                    {puedeEditar && c.decidido && (
+                      <Button
+                        variant="secondary"
+                        disabled={enCurso === c.usuario_id}
+                        onClick={() => volverADeducir(c)}
+                      >
+                        {t.equipo_paciente.volver_a_deducir}
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </section>
             )}
 
             {datos.afuera.length > 0 && (
-              <>
-                <h3>{t.equipo_paciente.afuera_titulo}</h3>
-                <ul>
-                  {datos.afuera.map((a) => (
-                    <li key={a.asistente_id}>
-                      {datos.nombreDeAsistente(a.asistente_id)}
-                      {puedeEditar && (
-                        <>
-                          {' '}
-                          <Button
-                            variant="secondary"
-                            disabled={enCurso === a.asistente_id}
-                            onClick={() => volverADeducir(a)}
-                          >
-                            {t.equipo_paciente.volver_a_deducir}
-                          </Button>
-                        </>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </>
+              <section className="panel-tarjeta">
+                <div className="panel-tarjeta-titulo">
+                  <h2>{t.equipo_paciente.afuera_titulo}</h2>
+                </div>
+                {datos.afuera.map((a) => (
+                  <div className="panel-fila-alerta" key={a.asistente_id}>
+                    <div>
+                      <b>{datos.nombreDeAsistente(a.asistente_id)}</b>
+                    </div>
+                    {puedeEditar && (
+                      <Button
+                        variant="secondary"
+                        disabled={enCurso === a.asistente_id}
+                        onClick={() => volverADeducir(a)}
+                      >
+                        {t.equipo_paciente.volver_a_deducir}
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </section>
             )}
-          </>
+          </div>
         )}
 
-        <Button variant="secondary" onClick={onClose}>
-          {t.comun.cerrar}
-        </Button>
+        <div className="panel-modal-acciones">
+          <Button variant="secondary" onClick={onClose}>
+            {t.comun.cerrar}
+          </Button>
+        </div>
       </div>
     </div>
   );

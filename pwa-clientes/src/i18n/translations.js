@@ -99,6 +99,9 @@ export const T = {
       // El nombre de la zona de navegación de abajo. Sin él un lector de pantalla anuncia
       // "navegación" a secas y la lista de enlaces queda suelta.
       menu_principal: 'Menú principal',
+      inicio: 'Inicio',
+      guardias: 'Guardias',
+      servicio: 'Servicio',
     },
     // EL CHAT CON LA OTRA PUNTA DEL MATCH. Lo dibuja `components/HiloDeMensajes.jsx`, que
     // es el mismo archivo en las dos aplicaciones, así que estas claves tienen que existir en las
@@ -211,7 +214,9 @@ export const T = {
       ubicacion_actualizada: 'Actualizado hace {segundos}s',
       ubicacion_sin_datos: 'Todavía no hay ubicación disponible.',
       alertas_activas_titulo: 'Alertas activas',
-      ver_guardias_de_la_semana: 'Ver las guardias de la semana',
+      ver_guardias_de_la_semana: 'Ver guardias',
+      rotulo: 'Paciente',
+      acciones: 'Acciones',
       ver_reportes: 'Ver Reportes',
       ver_alertas: 'Ver Alertas',
       ver_asistente: 'Ver Asistente Asignado',
@@ -612,6 +617,9 @@ export const T = {
       perfil: 'My Profile',
       cerrar_sesion: 'Log out',
       menu_principal: 'Main menu',
+      inicio: 'Home',
+      guardias: 'Shifts',
+      servicio: 'Service',
     },
     chat: {
       titulo: 'Messages',
@@ -709,7 +717,9 @@ export const T = {
       ubicacion_actualizada: 'Updated {segundos}s ago',
       ubicacion_sin_datos: 'No location available yet.',
       alertas_activas_titulo: 'Active alerts',
-      ver_guardias_de_la_semana: 'View the shifts for the week',
+      ver_guardias_de_la_semana: 'View shifts',
+      rotulo: 'Patient',
+      acciones: 'Actions',
       ver_reportes: 'View Reports',
       ver_alertas: 'View Alerts',
       ver_asistente: 'View Assigned Assistant',
@@ -1062,6 +1072,9 @@ export const T = {
       perfil: 'Meu Perfil',
       cerrar_sesion: 'Sair',
       menu_principal: 'Menu principal',
+      inicio: 'Início',
+      guardias: 'Plantões',
+      servicio: 'Serviço',
     },
     chat: {
       titulo: 'Mensagens',
@@ -1159,7 +1172,9 @@ export const T = {
       ubicacion_actualizada: 'Atualizado há {segundos}s',
       ubicacion_sin_datos: 'Ainda não há localização disponível.',
       alertas_activas_titulo: 'Alertas ativos',
-      ver_guardias_de_la_semana: 'Ver os plantões da semana',
+      ver_guardias_de_la_semana: 'Ver plantões',
+      rotulo: 'Paciente',
+      acciones: 'Ações',
       ver_reportes: 'Ver Relatórios',
       ver_alertas: 'Ver Alertas',
       ver_asistente: 'Ver Assistente Atribuído',

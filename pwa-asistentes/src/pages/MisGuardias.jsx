@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { traducirValor } from '../i18n/valores';
@@ -9,6 +9,7 @@ import { suscribirseASincronizacion } from '../lib/sincronizarCola';
 import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
 import { quedoSinCerrar } from '../lib/guardiaSinCerrar';
+import { nombresDeLaTarjeta } from '../lib/nombresDeLaGuardia';
 import AvisoConsentimientoPendiente from '../components/AvisoConsentimientoPendiente';
 import CoberturasQueCubro from '../components/CoberturasQueCubro';
 import { hayDomicilioTemporal } from '../components/DomicilioTemporal';
@@ -27,19 +28,9 @@ import { hayDomicilioTemporal } from '../components/DomicilioTemporal';
 //
 // La advertencia de consentimiento es su propia zona desde antes y se ocupa de lo suyo.
 
-// En la tarjeta de una guardia no entran diez nombres, así que se muestran los dos primeros y
-// se dice cuántos faltan. La lista completa está adentro, al abrir la guardia.
-function nombresDeLaTarjeta(guardia, t) {
-  const nombres = (guardia.pacientes ?? []).map((p) => p.nombre).filter(Boolean);
-  if (nombres.length === 0) return t.guardias.sin_paciente;
-  const visibles = nombres.slice(0, 2);
-  const restantes = nombres.length - visibles.length;
-  if (restantes > 0) visibles.push(con(t.guardias.y_mas, { n: restantes }));
-  return visibles.join(' · ');
-}
-
 export default function MisGuardias() {
   const { t } = useLocale();
+  const { ofertasAbiertas = 0 } = useOutletContext() ?? {};
 
   // Zona 1: los turnos.
   const [guardias, setGuardias] = useState(null);
@@ -95,6 +86,22 @@ export default function MisGuardias() {
           dónde está. */}
       <h1>{t.guardias.titulo}</h1>
 
+      {/* Las guardias ofrecidas cuelgan de acá: es la pestaña que lleva el número de las que
+          esperan respuesta. */}
+      <section className="pwa-card">
+        <h2>{t.ofertas.titulo}</h2>
+        {ofertasAbiertas > 0 && (
+          <div className="mini">
+            {ofertasAbiertas === 1
+              ? t.nav.ofertas_sin_contestar_una
+              : con(t.nav.ofertas_sin_contestar, { n: ofertasAbiertas })}
+          </div>
+        )}
+        <Link to="/ofertas" className="btn btn-full pwa-card-pie">
+          {t.inicio.ver_ofertas}
+        </Link>
+      </section>
+
       {errorCola && (
         <div className="alert alert-error" role="alert">
           {errorCola}
@@ -125,7 +132,7 @@ export default function MisGuardias() {
       <CoberturasQueCubro />
 
       {(guardias ?? []).map((g) => (
-        <Link key={g.id} to={`/guardias/${g.id}`} className={`guardia-card guardia-${g.estado}`} style={{ display: 'block', textDecoration: 'none' }}>
+        <Link key={g.id} to={`/guardias/${g.id}`} className="guardia-card">
           <div className="guardia-card-paciente">{nombresDeLaTarjeta(g, t)}</div>
           <div className="guardia-card-detalle">
             {g.fecha} · {g.hora_inicio?.slice(0, 5)} - {g.hora_fin?.slice(0, 5)}

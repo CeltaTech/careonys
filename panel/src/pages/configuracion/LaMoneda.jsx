@@ -7,6 +7,7 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
+import '../../styles/molde-paginas.css';
 
 /* En qué moneda trabaja esta Prestadora.
    ==========================================================================
@@ -77,8 +78,10 @@ export function LaMoneda() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.moneda_titulo}</h2>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.moneda_titulo}</h2>
+      </div>
       {error && <Alert variant="error">{error}</Alert>}
       {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
       <EstadoLista
@@ -89,28 +92,32 @@ export function LaMoneda() {
         recargar={recargar}
       >
         <>
-          <FormField
-            label={t.configuracion.moneda_campo}
-            name="moneda"
-            type="select"
-            value={moneda}
-            onChange={(e) => {
-              setMoneda(e.target.value);
-              setGuardado(false);
-            }}
-          >
-            {monedas.map((codigo) => (
-              <option key={codigo} value={codigo}>
-                {comoSeLlama(codigo, locale)}
-              </option>
-            ))}
-          </FormField>
-          <Button onClick={guardar} disabled={guardando || !moneda}>
-            {guardando ? t.comun.guardando : t.comun.guardar}
-          </Button>
+          <div className="molde-formgrid">
+            <FormField
+              label={t.configuracion.moneda_campo}
+              name="moneda"
+              type="select"
+              value={moneda}
+              onChange={(e) => {
+                setMoneda(e.target.value);
+                setGuardado(false);
+              }}
+            >
+              {monedas.map((codigo) => (
+                <option key={codigo} value={codigo}>
+                  {comoSeLlama(codigo, locale)}
+                </option>
+              ))}
+            </FormField>
+          </div>
+          <div className="molde-acciones">
+            <Button onClick={guardar} disabled={guardando || !moneda}>
+              {guardando ? t.comun.guardando : t.comun.guardar}
+            </Button>
+          </div>
         </>
       </EstadoLista>
-    </div>
+    </section>
   );
 }
 

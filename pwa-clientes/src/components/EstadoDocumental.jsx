@@ -14,20 +14,20 @@ export default function EstadoDocumental({ resumen, matricula, alDia, papelesExi
   if (!resumen) return null;
   const hayExigencias = resumen !== 'sin_exigencias';
   return (
-    <>
-      <h2 style={{ marginTop: '1.5rem' }}>{t.asistente.documentacion_titulo}</h2>
-      <p>{t.asistente[`documentacion_${resumen}`]}</p>
+    <section className="pwa-card">
+      <h2>{t.asistente.documentacion_titulo}</h2>
+      <p className="pwa-card-dato">{t.asistente[`documentacion_${resumen}`]}</p>
       {hayExigencias && (
-        <p className="guardia-card-detalle">
+        <p className="pwa-card-dato">
           {t.asistente.documentacion_cuenta
             .replace('{alDia}', alDia)
             .replace('{total}', papelesExigidos)}
         </p>
       )}
       {matricula !== 'no_corresponde' && (
-        <p>{t.asistente[`documentacion_matricula_${matricula}`]}</p>
+        <p className="pwa-card-dato">{t.asistente[`documentacion_matricula_${matricula}`]}</p>
       )}
-      <p className="guardia-card-detalle">{t.asistente.documentacion_que_no_se_verifica}</p>
-    </>
+      <p className="mini mini-abajo">{t.asistente.documentacion_que_no_se_verifica}</p>
+    </section>
   );
 }

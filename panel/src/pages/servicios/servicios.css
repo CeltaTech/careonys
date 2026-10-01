@@ -1,0 +1,61 @@
+/* La lista y la ficha de Servicios, como en la maqueta. */
+
+.servicios-tabla-envoltura {
+  overflow-x: auto;
+}
+
+.servicios-tarjeta .panel-tabla {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.servicios-tarjeta .panel-filtros {
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.servicios-tabla .panel-mini {
+  display: block;
+  margin-top: 2px;
+}
+
+.servicios-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.servicios-badge-violeta {
+  background: var(--tono-violeta-fondo);
+  color: var(--tono-violeta-texto);
+}
+
+.servicios-subtitulo {
+  display: block;
+  margin: -6px 0 14px;
+}
+
+.servicios-tarjeta .panel-tabs {
+  margin-bottom: 16px;
+}
+
+.servicios-dato .panel-mini {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.servicios-dato b {
+  font-size: 14px;
+}
+
+.servicios-resumen {
+  margin-top: 14px;
+}
+
+@media (max-width: 760px) {
+  .servicios-resumen.panel-columnas-2,
+  .servicios-tarjeta .panel-columnas-3 {
+    grid-template-columns: 1fr;
+  }
+}

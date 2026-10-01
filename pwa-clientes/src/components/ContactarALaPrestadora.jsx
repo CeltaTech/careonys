@@ -37,29 +37,31 @@ export default function ContactarALaPrestadora({ t }) {
     : t.contacto.titulo;
 
   return (
-    <div style={{ marginTop: '1.5rem' }}>
-      <h2 style={{ fontSize: '1rem' }}>{titulo}</h2>
+    <section className="pwa-card">
+      <h2>{titulo}</h2>
 
-      {digitos && (
-        <a
-          className="btn btn-primary btn-full"
-          href={`https://wa.me/${digitos}`}
-          target="_blank"
-          rel="noreferrer"
-        >
-          {t.contacto.whatsapp}
-        </a>
-      )}
-      {telefono && (
-        <a className="btn btn-secondary btn-full" href={`tel:${telefono}`} style={{ marginTop: '0.5rem' }}>
-          {con(t.contacto.llamar, { telefono })}
-        </a>
-      )}
-      {email && (
-        <a className="btn btn-secondary btn-full" href={`mailto:${email}`} style={{ marginTop: '0.5rem' }}>
-          {t.contacto.email}
-        </a>
-      )}
-    </div>
+      <div className="pwa-acciones">
+        {digitos && (
+          <a
+            className="btn btn-primary btn-full"
+            href={`https://wa.me/${digitos}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {t.contacto.whatsapp}
+          </a>
+        )}
+        {telefono && (
+          <a className="btn btn-secondary btn-full" href={`tel:${telefono}`}>
+            {con(t.contacto.llamar, { telefono })}
+          </a>
+        )}
+        {email && (
+          <a className="btn btn-secondary btn-full" href={`mailto:${email}`}>
+            {t.contacto.email}
+          </a>
+        )}
+      </div>
+    </section>
   );
 }

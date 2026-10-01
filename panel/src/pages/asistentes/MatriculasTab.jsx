@@ -12,6 +12,7 @@ import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
 import { COLUMNAS_ESTADO_MATRICULA } from '../../lib/matricula';
 import { URGENCIA, diasParaVencer, urgenciaDeVencimiento } from '../../lib/reglaVencimientos';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
+import '../hojaDeTarjetas.css';
 
 /* La solapa de Matrículas de un Asistente.
    ==========================================================================
@@ -223,74 +224,76 @@ export function MatriculasTab({ asistente }) {
 
   return (
     <div>
-      <h2>{tmat.titulo}</h2>
-      {alertaArriba && (
-        <Alert variant={alertaArriba.variant}>
-          <strong>{alertaArriba.titulo}</strong> {alertaArriba.detalle}
-        </Alert>
-      )}
-      {error && <Alert variant="error">{error}</Alert>}
+      <section className="panel-tarjeta hoja-desplazable">
+        <div className="panel-tarjeta-titulo">
+          <h2>{tmat.titulo}</h2>
+          <Button onClick={() => setMostrarNueva(true)} disabled={tiposDeMatricula.length === 0}>
+            {tmat.nueva}
+          </Button>
+        </div>
+        {alertaArriba && (
+          <Alert variant={alertaArriba.variant}>
+            <b>{alertaArriba.titulo}</b> {alertaArriba.detalle}
+          </Alert>
+        )}
+        {error && <Alert variant="error">{error}</Alert>}
 
-      <div className="panel-filtros">
-        <Button onClick={() => setMostrarNueva(true)} disabled={tiposDeMatricula.length === 0}>
-          {tmat.nueva}
-        </Button>
-      </div>
-      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && matriculas.length === 0} recargar={recargar} mensajeVacio={tmat.sin_matriculas}>
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{tmat.col_tipo}</th>
-              <th>{tmat.col_matricula}</th>
-              <th>{tmat.col_desde}</th>
-              <th>{tmat.col_hasta}</th>
-              <th>{tmat.col_estado}</th>
-              <th>{tmat.col_verificacion}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {matriculas.map((fila) => {
-              const vigente = estaVigente(fila);
-              return (
-                <tr key={fila.id}>
-                  <td>{t.tipos_asistente[`matricula_${fila.tipo}`] ?? fila.tipo}</td>
-                  <td>{fila.numero_matricula || '—'}</td>
-                  <td>{fila.vigente_desde}</td>
-                  <td>{fila.vigente_hasta || '—'}</td>
-                  <td>
-                    <span className={claseBadge(vigente ? 'vigente' : 'vencida')}>
-                      {vigente ? tmat.estado_vigente : tmat.estado_historico}
-                    </span>
-                  </td>
-                  <td>
-                    <CeldaVerificacion fila={fila} tm={tm} />
-                  </td>
-                  <td>
-                    {fila.archivo_url && (
-                      <>
-                        <button onClick={() => verArchivo(fila)} disabled={abriendoId === fila.id}>
-                          {tmat.ver_archivo}
-                        </button>{' '}
-                      </>
-                    )}
-                    {vigente && !fila.verificada_at && (
-                      <>
-                        <button onClick={() => setVerificando(fila)}>{tm.verificar}</button>{' '}
-                      </>
-                    )}
-                    {vigente && (
-                      <button onClick={() => revocar(fila)} disabled={revocandoId === fila.id}>
-                        {revocandoId === fila.id ? t.comun.guardando : tmat.revocar}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </EstadoLista>
+        <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && matriculas.length === 0} recargar={recargar} mensajeVacio={tmat.sin_matriculas}>
+          <table className="panel-tabla">
+            <thead>
+              <tr>
+                <th>{tmat.col_tipo}</th>
+                <th>{tmat.col_matricula}</th>
+                <th>{tmat.col_desde}</th>
+                <th>{tmat.col_hasta}</th>
+                <th>{tmat.col_estado}</th>
+                <th>{tmat.col_verificacion}</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {matriculas.map((fila) => {
+                const vigente = estaVigente(fila);
+                return (
+                  <tr key={fila.id}>
+                    <td><b>{t.tipos_asistente[`matricula_${fila.tipo}`] ?? fila.tipo}</b></td>
+                    <td>{fila.numero_matricula || '—'}</td>
+                    <td>{fila.vigente_desde}</td>
+                    <td>{fila.vigente_hasta || '—'}</td>
+                    <td>
+                      <span className={claseBadge(vigente ? 'vigente' : 'vencida')}>
+                        {vigente ? tmat.estado_vigente : tmat.estado_historico}
+                      </span>
+                    </td>
+                    <td>
+                      <CeldaVerificacion fila={fila} tm={tm} />
+                    </td>
+                    <td>
+                      {fila.archivo_url && (
+                        <>
+                          <button type="button" className="panel-enlace" onClick={() => verArchivo(fila)} disabled={abriendoId === fila.id}>
+                            {tmat.ver_archivo}
+                          </button>{' '}
+                        </>
+                      )}
+                      {vigente && !fila.verificada_at && (
+                        <>
+                          <button type="button" className="panel-enlace" onClick={() => setVerificando(fila)}>{tm.verificar}</button>{' '}
+                        </>
+                      )}
+                      {vigente && (
+                        <button type="button" className="panel-enlace" onClick={() => revocar(fila)} disabled={revocandoId === fila.id}>
+                          {revocandoId === fila.id ? t.comun.guardando : tmat.revocar}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </EstadoLista>
+      </section>
 
       {mostrarNueva && (
         <NuevaMatriculaModal

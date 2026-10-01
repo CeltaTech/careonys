@@ -10,6 +10,7 @@ import { Button } from '../components/ui/Button';
 import { Cabecera } from '../components/ui/Cabecera';
 import { formatearImporte } from '../lib/dinero';
 import { ListaPrecioDetalle } from './ListaPrecioDetalle';
+import '../styles/molde-paginas.css';
 
 export function ListaPrecios() {
   const { t, locale } = useLocale();
@@ -34,59 +35,67 @@ export function ListaPrecios() {
       <Cabecera titulo={t.lista_precios.titulo}>
         {esAdmin && <Button onClick={() => setCreandoNuevo(true)}>{t.lista_precios.nuevo}</Button>}
       </Cabecera>
-      <div className="panel-filtros">
-        <input
-          type="text"
-          placeholder={t.lista_precios.buscar}
-          aria-label={t.lista_precios.buscar}
-          value={f.busqueda}
-          onChange={(e) => set('busqueda', e.target.value)}
-        />
-      </div>
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.lista_precios.titulo}</h2>
+          {estado === 'listo' && <span className="panel-mini">{filasFiltradas.length}</span>}
+        </div>
+        <div className="panel-filtros">
+          <input
+            type="text"
+            placeholder={t.lista_precios.buscar}
+            aria-label={t.lista_precios.buscar}
+            value={f.busqueda}
+            onChange={(e) => set('busqueda', e.target.value)}
+          />
+        </div>
 
-      <EstadoLista
-        estado={estado}
-        error={error}
-        vacio={estado === 'listo' && filasFiltradas.length === 0}
-        recargar={recargar}
-        filtrado={hayFiltros}
-        onLimpiarFiltros={limpiar}
-      >
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.lista_precios.col_tipo_servicio}</th>
-              <th>{t.lista_precios.col_modalidad}</th>
-              <th>{t.lista_precios.col_precio}</th>
-              <th>{t.lista_precios.col_vigente_desde}</th>
-              <th>{t.lista_precios.col_activo}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filasFiltradas.map((p) => (
-              <tr key={p.id}>
-                <td>{p.tipo_servicio}</td>
-                <td>{p.modalidad}</td>
-                {/* Cada fila trae su propia moneda (`lista_precios.moneda`, que completa sola
-                    la base): el precio se muestra con ella y no con la que se suponga. */}
-                <td>{formatearImporte(p.precio, p.moneda, locale)}</td>
-                <td>{new Date(p.vigente_desde).toLocaleDateString(locale)}</td>
-                <td>
-                  <span className={claseBadge(p.activo ? 'activo' : 'inactivo')}>
-                    {p.activo ? t.lista_precios.activo_si : t.lista_precios.activo_no}
-                  </span>
-                </td>
-                <td>
-                  <button onClick={() => setSeleccionado(p)}>
-                    {esAdmin ? t.comun.editar : t.comun.ver_detalle}
-                  </button>
-                </td>
+        <EstadoLista
+          estado={estado}
+          error={error}
+          vacio={estado === 'listo' && filasFiltradas.length === 0}
+          recargar={recargar}
+          filtrado={hayFiltros}
+          onLimpiarFiltros={limpiar}
+        >
+          <table className="panel-tabla">
+            <thead>
+              <tr>
+                <th>{t.lista_precios.col_tipo_servicio}</th>
+                <th>{t.lista_precios.col_modalidad}</th>
+                <th>{t.lista_precios.col_precio}</th>
+                <th>{t.lista_precios.col_vigente_desde}</th>
+                <th>{t.lista_precios.col_activo}</th>
+                <th></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </EstadoLista>
+            </thead>
+            <tbody>
+              {filasFiltradas.map((p) => (
+                <tr key={p.id}>
+                  <td>
+                    <b>{p.tipo_servicio}</b>
+                  </td>
+                  <td>{p.modalidad}</td>
+                  {/* Cada fila trae su propia moneda (`lista_precios.moneda`, que completa sola
+                      la base): el precio se muestra con ella y no con la que se suponga. */}
+                  <td>{formatearImporte(p.precio, p.moneda, locale)}</td>
+                  <td>{new Date(p.vigente_desde).toLocaleDateString(locale)}</td>
+                  <td>
+                    <span className={claseBadge(p.activo ? 'activo' : 'inactivo')}>
+                      {p.activo ? t.lista_precios.activo_si : t.lista_precios.activo_no}
+                    </span>
+                  </td>
+                  <td>
+                    <button type="button" className="panel-enlace" onClick={() => setSeleccionado(p)}>
+                      {esAdmin ? t.comun.editar : t.comun.ver_detalle}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </EstadoLista>
+      </section>
 
       {(seleccionado || creandoNuevo) && (
         <ListaPrecioDetalle

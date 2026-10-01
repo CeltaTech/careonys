@@ -68,20 +68,20 @@ export default function Reportes() {
   if (reportes === null) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
 
   return (
-    <div>
-      <Link to={`/pacientes/${id}`} className="btn btn-secondary" style={{ marginBottom: '1rem', fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
+    <>
+      <Link to={`/pacientes/${id}`} className="btn btn-volver">
         <span aria-hidden="true">←</span> {t.comun.volver}
       </Link>
       <h1>{t.reportes.titulo}</h1>
       {reportes.length === 0 ? (
-        <div className="estado-vacio" role="status">{t.reportes.sin_reportes}</div>
+        <div className="pwa-card estado-vacio" role="status">{t.reportes.sin_reportes}</div>
       ) : (
         reportes.map((r) => {
           const cara = caraDelAnimo(r.estado_animo);
           const signos = veLosSignos ? signosDelReporte(r.signos_vitales) : [];
           const huboIncidente = typeof r.incidentes === 'string' && r.incidentes.trim() !== '';
           return (
-            <Link key={r.id} to={`/pacientes/${id}/reportes/${r.id}`} className="guardia-card" style={{ display: 'block', textDecoration: 'none' }}>
+            <Link key={r.id} to={`/pacientes/${id}/reportes/${r.id}`} className="guardia-card">
               <div className="guardia-card-paciente">{r.guardias?.fecha}</div>
               <div className="guardia-card-detalle">{r.guardias?.asistentes?.nombre}</div>
 
@@ -115,6 +115,6 @@ export default function Reportes() {
           );
         })
       )}
-    </div>
+    </>
   );
 }

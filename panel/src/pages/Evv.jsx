@@ -3,13 +3,15 @@ import { useLocale } from '../i18n/LocaleContext';
 import { Cabecera } from '../components/ui/Cabecera';
 import { supabase } from '../lib/supabaseClient';
 import { distanciaKm } from '../lib/distancia';
-import { claseBadge } from '../lib/tonos';
+import { claseBadge, claseBadgeTono, TONO } from '../lib/tonos';
 import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { cargarPacientesDeGuardias, pacientesDeGuardia, textoDePacientes } from '../lib/pacientesDeGuardia';
 import { llegoAlDomicilio } from '../lib/toleranciaCheckin';
 import { domiciliosPorFecha, domicilioDe } from '../lib/domicilioDelDia';
 import { mensajeDeError } from '../lib/errores';
+import './hojaDeTarjetas.css';
+import './seguimientoDeGuardias.css';
 
 /*
  * Esta pantalla existe para auditar los check-in, así que tiene que dar el mismo veredicto que
@@ -174,12 +176,13 @@ export function Evv() {
   return (
     <div>
       <Cabecera titulo={t.evv.titulo} />
-      <div className="panel-filtros">
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+      <section className="panel-tarjeta hoja-desplazable">
+      <div className="panel-filtros seguimiento-filtros">
+        <label>
           {t.guardias.filtro_desde}
           <input type="date" value={f.desde} onChange={(e) => set('desde', e.target.value)} />
         </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <label>
           {t.guardias.filtro_hasta}
           <input type="date" value={f.hasta} onChange={(e) => set('hasta', e.target.value)} />
         </label>
@@ -213,21 +216,24 @@ export function Evv() {
           <tbody>
             {filasFiltradas.map((g) => (
               <tr key={g.id}>
-                <td>{g.fecha} · {g.hora_inicio}–{g.hora_fin}</td>
+                <td>
+                  <b>{g.fecha}</b>
+                  <div className="panel-mini">{g.hora_inicio}–{g.hora_fin}</div>
+                </td>
                 <td>{g.asistente_nombre}</td>
                 <td>{g.paciente_nombre}</td>
                 <td>
                   {g.checkin_at ? (
                     <span className={claseBadge(g.estado_checkin)}>{t.evv[`estado_${g.estado_checkin}`]}</span>
                   ) : (
-                    <span className="badge">{t.evv.sin_checkin}</span>
+                    <span className={claseBadgeTono(TONO.NEUTRO)}>{t.evv.sin_checkin}</span>
                   )}
                 </td>
                 <td>
                   {g.checkout_at ? (
                     <span className={claseBadge(g.estado_checkout)}>{t.evv[`estado_${g.estado_checkout}`]}</span>
                   ) : (
-                    <span className="badge">{t.evv.sin_checkout}</span>
+                    <span className={claseBadgeTono(TONO.NEUTRO)}>{t.evv.sin_checkout}</span>
                   )}
                 </td>
               </tr>
@@ -235,6 +241,7 @@ export function Evv() {
           </tbody>
         </table>
       </EstadoLista>
+      </section>
     </div>
   );
 }

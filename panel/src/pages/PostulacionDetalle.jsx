@@ -18,8 +18,12 @@ import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
-import { useModalAccesible } from '../hooks/useModalAccesible';
+import { Cabecera } from '../components/ui/Cabecera';
+import { claseBadge } from '../lib/tonos';
 import { EntrevistaDePostulacion } from '../components/EntrevistaDePostulacion';
+import '../styles/molde-paginas.css';
+import './hojaDeTarjetas.css';
+import './postulaciones.css';
 
 // Qué se resuelve en esta pantalla. Es el nombre guardado de la tabla, y con él salen los motivos
 // del catálogo de la Prestadora y se escribe la resolución.
@@ -27,7 +31,6 @@ const TABLA = 'postulaciones';
 const API_URL = import.meta.env.VITE_API_URL;
 
 export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
-  const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const { usuario } = useAuth();
   const confirmarDestructivo = useConfirmarDestructivo();
@@ -156,88 +159,138 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
     onActualizada();
   }
 
+  const puedeGuardar = !(guardando || (motivoElegido?.pide_detalle && !detalle.trim()));
+
   return (
-    <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
-        <h2 id={modal.idTitulo}>{postulacion.nombre}</h2>
+    <div>
+      <Cabecera titulo={postulacion.nombre}>
+        <Button variant="secondary" onClick={onClose} disabled={guardando}>
+          {t.comun.cancelar}
+        </Button>
+        <Button onClick={handleGuardar} disabled={!puedeGuardar}>
+          {guardando ? t.comun.guardando : t.comun.guardar}
+        </Button>
+      </Cabecera>
+      <div className="panel-mini hoja-ficha-datos">
+        {t.postulaciones[`estado_${postulacion.estado}`]} · {postulacion.telefono} · {postulacion.email}
+      </div>
 
-        {error && <Alert variant="error">{error}</Alert>}
+      {error && <Alert variant="error">{error}</Alert>}
 
-        <dl className="panel-detalle-lista">
-          <dt>{t.postulaciones.dni}</dt>
-          <dd>{postulacion.dni || '—'}</dd>
-          <dt>{t.postulaciones.telefono}</dt>
-          <dd>{postulacion.telefono}</dd>
-          <dt>{t.postulaciones.email}</dt>
-          <dd>{postulacion.email}</dd>
-          <dt>{t.postulaciones.col_especialidades}</dt>
-          <dd>{traducirCodigos(postulacion.especialidades, especialidadesLabels)}</dd>
-          <dt>{t.postulaciones.col_zonas}</dt>
-          <dd>{traducirCodigos(postulacion.zonas, zonasLabels)}</dd>
-          <dt>{t.postulaciones.disponibilidad}</dt>
-          <dd>{traducirCodigos(postulacion.disponibilidad, laDisponibilidad.textos)}</dd>
-          <dt>{t.postulaciones.anios_experiencia}</dt>
-          <dd>{postulacion.anios_experiencia || '—'}</dd>
-          <dt>{t.postulaciones.col_situacion_fiscal}</dt>
-          <dd>{laSituacionFiscal.textos[postulacion.situacion_fiscal] ?? postulacion.situacion_fiscal}</dd>
-          <dt>{t.postulaciones.como_conocio}</dt>
-          <dd>{postulacion.como_conocio || '—'}</dd>
-          <dt>{t.postulaciones.mensaje}</dt>
-          <dd>{postulacion.mensaje || '—'}</dd>
-          <dt>{t.postulaciones.col_estado}</dt>
-          <dd>{t.postulaciones[`estado_${postulacion.estado}`]}</dd>
-        </dl>
+      <div className="molde-pila">
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.comun.detalle}</h2>
+          </div>
+          <div className="panel-grilla panel-columnas-3">
+            <div className="hoja-dato">
+              <div className="panel-mini">{t.postulaciones.dni}</div>
+              <b>{postulacion.dni || '—'}</b>
+            </div>
+            <div className="hoja-dato">
+              <div className="panel-mini">{t.postulaciones.telefono}</div>
+              <b>{postulacion.telefono}</b>
+            </div>
+            <div className="hoja-dato">
+              <div className="panel-mini">{t.postulaciones.email}</div>
+              <b>{postulacion.email}</b>
+            </div>
+            <div className="hoja-dato">
+              <div className="panel-mini">{t.postulaciones.col_especialidades}</div>
+              <b>{traducirCodigos(postulacion.especialidades, especialidadesLabels)}</b>
+            </div>
+            <div className="hoja-dato">
+              <div className="panel-mini">{t.postulaciones.col_zonas}</div>
+              <b>{traducirCodigos(postulacion.zonas, zonasLabels)}</b>
+            </div>
+            <div className="hoja-dato">
+              <div className="panel-mini">{t.postulaciones.disponibilidad}</div>
+              <b>{traducirCodigos(postulacion.disponibilidad, laDisponibilidad.textos)}</b>
+            </div>
+            <div className="hoja-dato">
+              <div className="panel-mini">{t.postulaciones.anios_experiencia}</div>
+              <b>{postulacion.anios_experiencia || '—'}</b>
+            </div>
+            <div className="hoja-dato">
+              <div className="panel-mini">{t.postulaciones.col_situacion_fiscal}</div>
+              <b>{laSituacionFiscal.textos[postulacion.situacion_fiscal] ?? postulacion.situacion_fiscal}</b>
+            </div>
+            <div className="hoja-dato">
+              <div className="panel-mini">{t.postulaciones.como_conocio}</div>
+              <b>{postulacion.como_conocio || '—'}</b>
+            </div>
+            <div className="hoja-dato postulaciones-dato-ancho">
+              <div className="panel-mini">{t.postulaciones.mensaje}</div>
+              <b>{postulacion.mensaje || '—'}</b>
+            </div>
+          </div>
+        </section>
 
-        {/* Los cuatro estados de lo que carga datos: mientras la lista de motivos viene, se avisa;
-            si falló, se ofrece volver a pedirla; si la Prestadora se quedó sin ninguno encendido,
-            no hay nada que elegir. */}
-        {estadoMotivos === 'cargando' && <p>{t.comun.cargando}</p>}
-        {estadoMotivos === 'error' && (
-          <Alert variant="error">
-            {errorMotivos}{' '}
-            <Button variant="secondary" onClick={recargarMotivos}>{t.comun.reintentar}</Button>
-          </Alert>
-        )}
-        {estadoMotivos === 'vacio' && (
-          <Alert variant="info">{t.comun.vacio}</Alert>
-        )}
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.postulaciones.col_estado}</h2>
+            <span className={claseBadge(postulacion.estado)}>
+              {t.postulaciones[`estado_${postulacion.estado}`]}
+            </span>
+          </div>
 
-        <FormField
-          label={t.comun.motivo}
-          name="motivo"
-          type="select"
-          value={motivoId}
-          onChange={(e) => {
-            setMotivoId(e.target.value);
-            setDetalle('');
-          }}
-          disabled={guardando || estadoMotivos !== 'listo'}
-        >
-          <option value="">{t.comun.motivo_elegir}</option>
-          {motivos.map((motivo) => (
-            <option key={motivo.id} value={motivo.id}>{motivo.nombre}</option>
-          ))}
-        </FormField>
+          {/* Los cuatro estados de lo que carga datos: mientras la lista de motivos viene, se avisa;
+              si falló, se ofrece volver a pedirla; si la Prestadora se quedó sin ninguno encendido,
+              no hay nada que elegir. */}
+          {estadoMotivos === 'cargando' && <p className="panel-mini">{t.comun.cargando}</p>}
+          {estadoMotivos === 'error' && (
+            <Alert variant="error">
+              {errorMotivos}{' '}
+              <Button variant="secondary" onClick={recargarMotivos}>{t.comun.reintentar}</Button>
+            </Alert>
+          )}
+          {estadoMotivos === 'vacio' && (
+            <Alert variant="info">{t.comun.vacio}</Alert>
+          )}
 
-        {motivoElegido?.pide_detalle && (
-          <FormField
-            label={t.comun.detalle}
-            name="detalle"
-            type="textarea"
-            value={detalle}
-            onChange={(e) => setDetalle(e.target.value)}
-            disabled={guardando}
-            required
-          />
-        )}
+          <div className="molde-formgrid">
+            <FormField
+              label={t.comun.motivo}
+              name="motivo"
+              type="select"
+              value={motivoId}
+              onChange={(e) => {
+                setMotivoId(e.target.value);
+                setDetalle('');
+              }}
+              disabled={guardando || estadoMotivos !== 'listo'}
+            >
+              <option value="">{t.comun.motivo_elegir}</option>
+              {motivos.map((motivo) => (
+                <option key={motivo.id} value={motivo.id}>{motivo.nombre}</option>
+              ))}
+            </FormField>
 
-        <FormField
-          label={t.comun.nota_interna}
-          name="nota"
-          type="textarea"
-          value={nota}
-          onChange={(e) => setNota(e.target.value)}
-        />
+            {motivoElegido?.pide_detalle && (
+              <div className="molde-ancho">
+                <FormField
+                  label={t.comun.detalle}
+                  name="detalle"
+                  type="textarea"
+                  value={detalle}
+                  onChange={(e) => setDetalle(e.target.value)}
+                  disabled={guardando}
+                  required
+                />
+              </div>
+            )}
+
+            <div className="molde-ancho">
+              <FormField
+                label={t.comun.nota_interna}
+                name="nota"
+                type="textarea"
+                value={nota}
+                onChange={(e) => setNota(e.target.value)}
+              />
+            </div>
+          </div>
+        </section>
 
         {/* La entrevista va antes del Proceso de Incorporación y no depende del estado: entrevistar
             es lo que se hace para decidir, así que tiene que estar disponible mientras la
@@ -245,50 +298,45 @@ export function PostulacionDetalle({ postulacion, onClose, onActualizada }) {
         <EntrevistaDePostulacion postulacionId={postulacion.id} />
 
         {esAdminOSuperior(usuario?.rol) && postulacion.estado === 'aprobado' && (
-          postulacion.asistente_id ? (
-            <p className="panel-explicacion">{t.postulaciones.ya_iniciada_verificacion}</p>
-          ) : (
-            <div>
-
-              {/* Qué va a ser esta persona en la Prestadora. Se elige acá, mirando la
-                  postulación, y no se copia de lo que la persona escribió en el
-                  formulario público: el tipo decide si se le va a exigir Matrícula
-                  vigente para poder atender, así que es una decisión de quien aprueba. */}
-              <FormField
-                label={t.postulaciones.tipo_asistente}
-                name="tipo_asistente_id"
-                type="select"
-                value={tipoAsistenteId}
-                onChange={(e) => setTipoAsistenteId(e.target.value)}
-              >
-                <option value="">{t.postulaciones.tipo_asistente_elegir}</option>
-                {tiposAsistente.map((tipo) => (
-                  <option key={tipo.id} value={tipo.id}>{nombreTipo(tipo, t)}</option>
-                ))}
-              </FormField>
-
-              <Button
-                variant="secondary"
-                onClick={handleIniciarVerificacion}
-                disabled={iniciandoVerificacion || !tipoAsistenteId}
-              >
-                {iniciandoVerificacion ? t.comun.guardando : t.postulaciones.iniciar_verificacion}
-              </Button>
+          <section className="panel-tarjeta">
+            <div className="panel-tarjeta-titulo">
+              <h2>{t.postulaciones.iniciar_verificacion}</h2>
             </div>
-          )
+            {postulacion.asistente_id ? (
+              <p className="molde-vacio">{t.postulaciones.ya_iniciada_verificacion}</p>
+            ) : (
+              <>
+                {/* Qué va a ser esta persona en la Prestadora. Se elige acá, mirando la
+                    postulación, y no se copia de lo que la persona escribió en el
+                    formulario público: el tipo decide si se le va a exigir Matrícula
+                    vigente para poder atender, así que es una decisión de quien aprueba. */}
+                <div className="molde-formgrid">
+                  <FormField
+                    label={t.postulaciones.tipo_asistente}
+                    name="tipo_asistente_id"
+                    type="select"
+                    value={tipoAsistenteId}
+                    onChange={(e) => setTipoAsistenteId(e.target.value)}
+                  >
+                    <option value="">{t.postulaciones.tipo_asistente_elegir}</option>
+                    {tiposAsistente.map((tipo) => (
+                      <option key={tipo.id} value={tipo.id}>{nombreTipo(tipo, t)}</option>
+                    ))}
+                  </FormField>
+                </div>
+                <div className="molde-acciones">
+                  <Button
+                    variant="secondary"
+                    onClick={handleIniciarVerificacion}
+                    disabled={iniciandoVerificacion || !tipoAsistenteId}
+                  >
+                    {iniciandoVerificacion ? t.comun.guardando : t.postulaciones.iniciar_verificacion}
+                  </Button>
+                </div>
+              </>
+            )}
+          </section>
         )}
-
-        <div className="panel-modal-acciones">
-          <Button variant="secondary" onClick={onClose} disabled={guardando}>
-            {t.comun.cancelar}
-          </Button>
-          <Button
-            onClick={handleGuardar}
-            disabled={guardando || (motivoElegido?.pide_detalle && !detalle.trim())}
-          >
-            {guardando ? t.comun.guardando : t.comun.guardar}
-          </Button>
-        </div>
       </div>
     </div>
   );

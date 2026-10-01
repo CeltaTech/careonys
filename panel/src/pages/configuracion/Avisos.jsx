@@ -18,24 +18,31 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { con } from '../../lib/textos';
 import { REGLA_QUE_SE_PUEDE_TOCAR } from '../../lib/alarmasTomadas';
+import '../../styles/molde-paginas.css';
+import './avisos.css';
 
 /* A quién se le avisa y por dónde: los correos de cada evento, la casilla desde la
    que salen, el aviso de cese, la revisión con inteligencia artificial y todo lo de
    WhatsApp. */
 export function ConfiguracionAvisos() {
-  const { t } = useLocale();
-
   return (
-    <>
-      <h2>{t.configuracion.tab_notificaciones}</h2>
+    <div className="molde-pila">
       <TabNotificaciones />
       <TabAlertasIA />
       <TabWhatsapp />
-    </>
+    </div>
   );
 }
 
 const CATEGORIAS_PLANTILLA = ['utility', 'marketing', 'authentication'];
+
+/* El color del estado de una plantilla. Un estado que no esté acá sale neutro. */
+const BADGE_DEL_ESTADO_DE_PLANTILLA = {
+  borrador: 'badge-neutro',
+  enviada_meta: 'badge-info',
+  aprobada: 'badge-exito',
+  rechazada: 'badge-critico',
+};
 
 /* La lista de mensajes que se pueden prender y apagar.
    ==========================================================================
@@ -112,7 +119,13 @@ function TabNotificaciones() {
 
   return (
     <>
+      <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.tab_notificaciones}</h2>
+      </div>
+      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
       <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && notificaciones.length === 0} recargar={recargar}>
+        <div className="avisos-desborde">
         <table className="panel-tabla">
           <thead>
             <tr>
@@ -133,7 +146,7 @@ function TabNotificaciones() {
               const nombreEvento = t.configuracion[`notificaciones_evento_${fila.evento}`];
               return (
                 <tr key={fila.evento}>
-                  <td>{nombreEvento}</td>
+                  <td><b>{nombreEvento}</b></td>
                   <td>
                     <input
                       type="text"
@@ -147,7 +160,7 @@ function TabNotificaciones() {
                     {/* Un mensaje que la persona está esperando para poder seguir no se apaga, así
                         que no se le dibuja la casilla: ofrecerla sería ofrecer algo que no ocurre. */}
                     {fila.se_puede_apagar === false
-                      ? <span className="panel-dato-vacio" title={t.configuracion.notificaciones_no_se_apaga}>—</span>
+                      ? <span className="panel-dato-vacio">—</span>
                       : (
                         <input
                           type="checkbox"
@@ -167,7 +180,7 @@ function TabNotificaciones() {
                           aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.notificaciones_col_whatsapp_activo, nombre: nombreEvento })}
                         />
                       )
-                      : <span className="panel-dato-vacio" title={t.configuracion.notificaciones_canal_no_disponible}>—</span>}
+                      : <span className="panel-dato-vacio">—</span>}
                   </td>
                   <td>
                     {fila.admite_whatsapp
@@ -183,15 +196,7 @@ function TabNotificaciones() {
                           ))}
                         </select>
                       )
-                      : null}
-                    {/* La casilla encendida sin plantilla elegida no manda nada: se dice acá y no
-                        después, cuando el aviso ya salió por correo sin que nadie entienda por qué. */}
-                    {fila.admite_whatsapp && fila.whatsapp_activo && !fila.plantilla_whatsapp_id
-                      ? <div className="panel-explicacion">{t.configuracion.notificaciones_plantilla_falta}</div>
-                      : null}
-                    {!fila.admite_whatsapp
-                      ? <span className="panel-dato-vacio" title={t.configuracion.notificaciones_canal_no_disponible}>—</span>
-                      : null}
+                      : <span className="panel-dato-vacio">—</span>}
                   </td>
                   <td>
                     {/* La vía existe y sale en la lista aunque no haya proveedor cargado, y entonces
@@ -207,7 +212,7 @@ function TabNotificaciones() {
                           aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.notificaciones_col_mensaje_de_texto, nombre: nombreEvento })}
                         />
                       )
-                      : <span className="panel-dato-vacio" title={t.configuracion.notificaciones_canal_no_disponible}>—</span>}
+                      : <span className="panel-dato-vacio">—</span>}
                   </td>
                   <td>
                     {fila.admite_cliente
@@ -219,7 +224,7 @@ function TabNotificaciones() {
                           aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.notificaciones_col_notificar_cliente, nombre: nombreEvento })}
                         />
                       )
-                      : <span className="panel-dato-vacio" title={t.configuracion.notificaciones_canal_no_disponible}>—</span>}
+                      : <span className="panel-dato-vacio">—</span>}
                   </td>
                   <td>
                     <button onClick={() => guardar(fila)} disabled={guardandoEvento === fila.evento}>
@@ -231,7 +236,9 @@ function TabNotificaciones() {
             })}
           </tbody>
         </table>
+        </div>
       </EstadoLista>
+      </section>
       <TabMensajeDeCese />
       <TabMensajeGuardiaSinCubrir />
       <TabAvisoPrevioGuardia />
@@ -288,23 +295,29 @@ function TabAvisoPrevioGuardia() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.aviso_previo_guardia_titulo}</h2>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.aviso_previo_guardia_titulo}</h2>
+      </div>
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
-        <div>
+        <>
           {error && <Alert variant="error">{error}</Alert>}
           {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
-          <FormField
-            label={t.configuracion.aviso_previo_guardia_minutos}
-            name="minutos_aviso_previo_guardia"
-            type="number"
-            value={minutos}
-            onChange={(e) => { setMinutos(e.target.value); setGuardado(false); }}
-          />
-          <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
-        </div>
+          <div className="molde-formgrid">
+            <FormField
+              label={t.configuracion.aviso_previo_guardia_minutos}
+              name="minutos_aviso_previo_guardia"
+              type="number"
+              value={minutos}
+              onChange={(e) => { setMinutos(e.target.value); setGuardado(false); }}
+            />
+          </div>
+          <div className="molde-acciones">
+            <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+          </div>
+        </>
       </EstadoLista>
-    </div>
+    </section>
   );
 }
 
@@ -371,20 +384,25 @@ function TabAlertasIA() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.alertas_ia_titulo}</h2>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.alertas_ia_titulo}</h2>
+      </div>
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         {form && (
-          <div>
+          <>
             {error && <Alert variant="error">{error}</Alert>}
             {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
-            <FormField
-              label={t.configuracion.alertas_ia_palabras_clave}
-              name="palabras_clave"
-              value={(form.palabras_clave ?? []).join(', ')}
-              placeholder={t.configuracion.alertas_ia_palabras_clave_placeholder}
-              onChange={(e) => set('palabras_clave', e.target.value.split(',').map((p) => p.trim()).filter(Boolean))}
-            />
+            <div className="molde-formgrid">
+            <div className="molde-ancho">
+              <FormField
+                label={t.configuracion.alertas_ia_palabras_clave}
+                name="palabras_clave"
+                value={(form.palabras_clave ?? []).join(', ')}
+                placeholder={t.configuracion.alertas_ia_palabras_clave_placeholder}
+                onChange={(e) => set('palabras_clave', e.target.value.split(',').map((p) => p.trim()).filter(Boolean))}
+              />
+            </div>
             <FormField
               label={t.configuracion.alertas_ia_reportes_a_analizar}
               name="reportes_a_analizar"
@@ -413,11 +431,14 @@ function TabAlertasIA() {
               checked={form.amarilla_avisa_cliente || false}
               onChange={(e) => set('amarilla_avisa_cliente', e.target.checked)}
             />
-            <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
-          </div>
+            </div>
+            <div className="molde-acciones">
+              <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+            </div>
+          </>
         )}
       </EstadoLista>
-    </div>
+    </section>
   );
 }
 
@@ -486,23 +507,27 @@ function TabCorreoDeLaPrestadora() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.correo_titulo}</h2>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.correo_titulo}</h2>
+      </div>
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         {correo && (
-          <div>
+          <>
             {error && <Alert variant="error">{error}</Alert>}
 
-            <FormField
-              label={t.configuracion.correo_respuestas}
-              name="email_respuestas"
-              type="email"
-              value={casilla}
-              onChange={(e) => {
-                setCasilla(e.target.value);
-                setGuardado(false);
-              }}
-            />
+            <div className="molde-formgrid">
+              <FormField
+                label={t.configuracion.correo_respuestas}
+                name="email_respuestas"
+                type="email"
+                value={casilla}
+                onChange={(e) => {
+                  setCasilla(e.target.value);
+                  setGuardado(false);
+                }}
+              />
+            </div>
 
             {!correo.servicio_configurado && (
               <Alert variant="warning">{t.configuracion.correo_servicio_sin_configurar}</Alert>
@@ -518,22 +543,20 @@ function TabCorreoDeLaPrestadora() {
             )}
 
             {guardado && <Alert variant="info">{t.configuracion.correo_guardado}</Alert>}
-            <Button onClick={guardar} disabled={guardando || !casilla.trim()}>
-              {guardando ? t.comun.guardando : t.comun.guardar}
-            </Button>
-          </div>
+            <div className="molde-acciones">
+              <Button onClick={guardar} disabled={guardando || !casilla.trim()}>
+                {guardando ? t.comun.guardando : t.comun.guardar}
+              </Button>
+            </div>
+          </>
         )}
       </EstadoLista>
-    </div>
+    </section>
   );
 }
 
-/* El mensaje de texto: por qué está en la lista y por qué hoy no se puede elegir.
-   ==========================================================================
-
-   Es el único lugar donde se dice que ésta es la vía débil, y está acá y no colgando de la
-   casilla de cada fila. Muestra dos cosas: si esta Prestadora tiene proveedor cargado, y si el
-   producto conoce alguno. No hay nada que guardar: cargar un proveedor es cargar datos. */
+/* El mensaje de texto: si esta Prestadora tiene proveedor cargado. No hay nada que guardar:
+   cargar un proveedor es cargar datos. */
 function TabMensajeDeTexto() {
   const { t } = useLocale();
   const [via, setVia] = useState(null);
@@ -558,19 +581,18 @@ function TabMensajeDeTexto() {
   }, [recargar]);
 
   return (
-    <div>
-      <h2>{t.configuracion.mensaje_de_texto_titulo}</h2>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.mensaje_de_texto_titulo}</h2>
+      </div>
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         {via && (
-          <div>
-            <Alert variant="warning">{t.configuracion.mensaje_de_texto_via_debil}</Alert>
-            {via.hay_proveedor
-              ? <Alert variant="info">{con(t.configuracion.mensaje_de_texto_con_proveedor, { proveedor: via.proveedor })}</Alert>
-              : <Alert variant="warning">{t.configuracion.mensaje_de_texto_sin_proveedor}</Alert>}
-          </div>
+          via.hay_proveedor
+            ? <Alert variant="info">{con(t.configuracion.mensaje_de_texto_con_proveedor, { proveedor: via.proveedor })}</Alert>
+            : <Alert variant="warning">{t.configuracion.mensaje_de_texto_sin_proveedor}</Alert>
         )}
       </EstadoLista>
-    </div>
+    </section>
   );
 }
 
@@ -620,12 +642,15 @@ function TabMensajeDeCese() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.aviso_cese_titulo}</h2>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.aviso_cese_titulo}</h2>
+      </div>
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         {config && (
-          <div>
+          <>
             {error && <Alert variant="error">{error}</Alert>}
+            <div className="molde-formgrid">
             <FormField
               label={t.configuracion.aviso_cese_activo}
               name="aviso_cese_activo"
@@ -640,11 +665,14 @@ function TabMensajeDeCese() {
               value={config.horas_plazo_aviso_verbal}
               onChange={(e) => setConfig((c) => ({ ...c, horas_plazo_aviso_verbal: e.target.value }))}
             />
-            <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
-          </div>
+            </div>
+            <div className="molde-acciones">
+              <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+            </div>
+          </>
         )}
       </EstadoLista>
-    </div>
+    </section>
   );
 }
 
@@ -701,12 +729,15 @@ function TabMensajeGuardiaSinCubrir() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.aviso_guardia_sin_cubrir_titulo}</h2>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.aviso_guardia_sin_cubrir_titulo}</h2>
+      </div>
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         {config && (
-          <div>
+          <>
             {error && <Alert variant="error">{error}</Alert>}
+            <div className="molde-formgrid">
             <FormField
               label={t.configuracion.aviso_guardia_sin_cubrir_activo}
               name="aviso_guardia_sin_cubrir_activo"
@@ -728,11 +759,14 @@ function TabMensajeGuardiaSinCubrir() {
               value={config.horas_entre_avisos}
               onChange={(e) => setConfig((c) => ({ ...c, horas_entre_avisos: e.target.value }))}
             />
-            <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
-          </div>
+            </div>
+            <div className="molde-acciones">
+              <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+            </div>
+          </>
         )}
       </EstadoLista>
-    </div>
+    </section>
   );
 }
 
@@ -755,18 +789,20 @@ function TabWhatsapp() {
   const puedeVerLasCredenciales = esAdminDePrestadora(usuario?.rol);
 
   return (
-    <div>
+    <>
       {puedeVerLasCredenciales ? (
         <TabWhatsappCredenciales />
       ) : (
-        <div>
-          <h2>{t.configuracion.whatsapp_credenciales_titulo}</h2>
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.configuracion.whatsapp_credenciales_titulo}</h2>
+          </div>
           <Alert variant="info">{t.configuracion.whatsapp_credenciales_solo_admin}</Alert>
-        </div>
+        </section>
       )}
       <TabWhatsappPlantillas />
       <TabWhatsappEscaladaCoordinador />
-    </div>
+    </>
   );
 }
 
@@ -845,20 +881,25 @@ function TabWhatsappCredenciales() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.whatsapp_credenciales_titulo}</h2>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.whatsapp_credenciales_titulo}</h2>
+      </div>
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         {form && (
-          <div>
+          <>
             {error && <Alert variant="error">{error}</Alert>}
             {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
-            <FormField
-              label={t.configuracion.whatsapp_activo}
-              name="activo"
-              type="checkbox"
-              checked={form.activo || false}
-              onChange={(e) => set('activo', e.target.checked)}
-            />
+            <div className="molde-formgrid">
+            <div className="molde-ancho">
+              <FormField
+                label={t.configuracion.whatsapp_activo}
+                name="activo"
+                type="checkbox"
+                checked={form.activo || false}
+                onChange={(e) => set('activo', e.target.checked)}
+              />
+            </div>
             <FormField label={t.configuracion.whatsapp_numero} name="numero_telefono" value={form.numero_telefono || ''} onChange={(e) => set('numero_telefono', e.target.value)} />
             <FormField label={t.configuracion.whatsapp_waba_id} name="waba_id" value={form.waba_id || ''} onChange={(e) => set('waba_id', e.target.value)} />
             <FormField label={t.configuracion.whatsapp_phone_number_id} name="phone_number_id" value={form.phone_number_id || ''} onChange={(e) => set('phone_number_id', e.target.value)} />
@@ -887,23 +928,28 @@ function TabWhatsappCredenciales() {
                 Prestadora —el identificador va adentro—, y esa es justamente la razón por la
                 que un aviso de una no puede entrar por la puerta de otra. Se muestra sola, sin
                 poder editarse: no es un dato que se cargue, es uno que se copia. */}
-            <FormField
-              label={t.configuracion.whatsapp_direccion_webhook}
-              name="direccion_webhook"
-              value={`${DIRECCION_DEL_BACKEND}/api/whatsapp-webhook/${form.prestadora_id}`}
-              readOnly
-            />
+            <div className="molde-ancho">
+              <FormField
+                label={t.configuracion.whatsapp_direccion_webhook}
+                name="direccion_webhook"
+                value={`${DIRECCION_DEL_BACKEND}/api/whatsapp-webhook/${form.prestadora_id}`}
+                readOnly
+              />
+            </div>
+            </div>
             {/* Sin los dos secretos cargados, el backend rechaza todo lo que entre por esa
                 dirección. Es el comportamiento correcto, pero desde afuera se ve como que
                 WhatsApp no anda, así que se dice acá antes de que alguien lo averigüe. */}
             {form.activo && !(form.app_secret_cargado && form.verify_token_cargado) && (
               <Alert variant="error">{t.configuracion.whatsapp_entrada_sin_secretos}</Alert>
             )}
-            <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
-          </div>
+            <div className="molde-acciones">
+              <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+            </div>
+          </>
         )}
       </EstadoLista>
-    </div>
+    </section>
   );
 }
 
@@ -1012,15 +1058,17 @@ function TabWhatsappPlantillas() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.whatsapp_plantillas_titulo}</h2>
-      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
-      <div className="panel-filtros">
-        <Button onClick={() => setCreandoNueva(true)}>{t.configuracion.whatsapp_plantillas_nueva}</Button>
-        <Button variant="secondary" onClick={consultarAMeta} disabled={consultando}>
-          {t.configuracion.whatsapp_plantillas_consultar_meta}
-        </Button>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.whatsapp_plantillas_titulo}</h2>
+        <div className="avisos-acciones-fila">
+          <Button variant="secondary" onClick={consultarAMeta} disabled={consultando}>
+            {t.configuracion.whatsapp_plantillas_consultar_meta}
+          </Button>
+          <Button onClick={() => setCreandoNueva(true)}>{t.configuracion.whatsapp_plantillas_nueva}</Button>
+        </div>
       </div>
+      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
       <EstadoLista
         estado={estado}
         error={error}
@@ -1028,6 +1076,7 @@ function TabWhatsappPlantillas() {
         recargar={recargar}
         mensajeVacio={t.configuracion.whatsapp_plantillas_vacio}
       >
+        <div className="avisos-desborde">
         <table className="panel-tabla">
           <thead>
             <tr>
@@ -1041,20 +1090,23 @@ function TabWhatsappPlantillas() {
           <tbody>
             {plantillas.map((p) => (
               <tr key={p.id}>
-                <td>{p.nombre_interno}</td>
+                <td><b>{p.nombre_interno}</b></td>
                 <td>{traducirValor(t.configuracion, `whatsapp_plantillas_categoria_${p.categoria}`)}</td>
                 <td>
-                  {traducirValor(t.configuracion, `whatsapp_plantillas_estado_${p.estado}`)}
+                  <span className={`badge ${BADGE_DEL_ESTADO_DE_PLANTILLA[p.estado] ?? 'badge-neutro'}`}>
+                    {traducirValor(t.configuracion, `whatsapp_plantillas_estado_${p.estado}`)}
+                  </span>
                   {/* Lo que objetó Meta, tal como lo dijo. Sin esto, «rechazada» no dice qué
                       corregir y la plantilla se vuelve a mandar igual. */}
                   {p.motivo_rechazo && (
-                    <div className="panel-explicacion">
+                    <div className="panel-mini">
                       {t.configuracion.whatsapp_plantillas_motivo_rechazo}: {p.motivo_rechazo}
                     </div>
                   )}
                 </td>
                 <td>{p.cuerpo_texto}</td>
                 <td>
+                  <div className="avisos-acciones-fila">
                   {p.estado === 'borrador' && (
                     <button onClick={() => enviarAMeta(p)} disabled={actualizandoId === p.id}>
                       {t.configuracion.whatsapp_plantillas_enviar_meta}
@@ -1066,11 +1118,13 @@ function TabWhatsappPlantillas() {
                     </button>
                   )}
                   <button onClick={() => borrar(p)} disabled={actualizandoId === p.id}>{t.comun.borrar}</button>
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       </EstadoLista>
 
       {creandoNueva && (
@@ -1086,7 +1140,7 @@ function TabWhatsappPlantillas() {
           onClose={() => setCorrigiendo(null)}
         />
       )}
-    </div>
+    </section>
   );
 }
 
@@ -1194,6 +1248,7 @@ function NuevaPlantillaWhatsapp({ onClose, onCreada }) {
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
         <h2 id={modal.idTitulo}>{t.configuracion.whatsapp_plantillas_nueva}</h2>
         {error && <Alert variant="error">{error}</Alert>}
+        <div className="molde-formgrid">
         <FormField label={t.configuracion.whatsapp_plantillas_col_nombre} name="nombre_interno" value={nombreInterno} onChange={(e) => setNombreInterno(e.target.value)} required />
         <FormField label={t.configuracion.whatsapp_plantillas_col_categoria} name="categoria" type="select" value={categoria} onChange={(e) => setCategoria(e.target.value)}>
           {CATEGORIAS_PLANTILLA.map((c) => (
@@ -1203,18 +1258,25 @@ function NuevaPlantillaWhatsapp({ onClose, onCreada }) {
         {/* La IA escribe el texto a partir de para qué es el mensaje. Lo que devuelve entra en el
             cuadro de abajo, que se sigue pudiendo editar: la plantilla sale hacia Meta cuando la
             aprueba quien coordina, nunca sola. */}
-        <FormField
-          label={t.configuracion.whatsapp_plantillas_proposito}
-          name="proposito"
-          type="textarea"
-          value={proposito}
-          onChange={(e) => setProposito(e.target.value)}
-          placeholder={t.configuracion.whatsapp_plantillas_proposito_ejemplo}
-        />
-        <Button variant="secondary" onClick={redactarConIA} disabled={redactando || !proposito.trim()}>
-          {redactando ? t.configuracion.whatsapp_plantillas_redactando : t.configuracion.whatsapp_plantillas_redactar_ia}
-        </Button>
-        <FormField label={t.configuracion.whatsapp_plantillas_col_cuerpo} name="cuerpo_texto" type="textarea" value={cuerpoTexto} onChange={(e) => setCuerpoTexto(e.target.value)} required />
+        <div className="molde-ancho">
+          <FormField
+            label={t.configuracion.whatsapp_plantillas_proposito}
+            name="proposito"
+            type="textarea"
+            value={proposito}
+            onChange={(e) => setProposito(e.target.value)}
+            placeholder={t.configuracion.whatsapp_plantillas_proposito_ejemplo}
+          />
+        </div>
+        <div className="molde-ancho">
+          <Button variant="secondary" onClick={redactarConIA} disabled={redactando || !proposito.trim()}>
+            {redactando ? t.configuracion.whatsapp_plantillas_redactando : t.configuracion.whatsapp_plantillas_redactar_ia}
+          </Button>
+        </div>
+        <div className="molde-ancho">
+          <FormField label={t.configuracion.whatsapp_plantillas_col_cuerpo} name="cuerpo_texto" type="textarea" value={cuerpoTexto} onChange={(e) => setCuerpoTexto(e.target.value)} required />
+        </div>
+        </div>
         <QueDijoLaIA propuesta={propuesta} />
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>{t.comun.cancelar}</Button>
@@ -1291,16 +1353,15 @@ function EscaladaEnOrden({ form }) {
 
   return (
     <div>
-      <h3>{t.configuracion.escalada_orden_titulo}</h3>
-      <ol>
-        {pasos.map((paso) => (
-          <li key={paso.clave}>
-            <strong>{cuando(paso.minuto)}</strong>
-            {' — '}
-            {t.configuracion[`escalada_orden_${paso.clave}`]}
-          </li>
-        ))}
-      </ol>
+      <h3 className="avisos-subtitulo">{t.configuracion.escalada_orden_titulo}</h3>
+      {pasos.map((paso) => (
+        <div className="panel-fila-alerta" key={paso.clave}>
+          <div>
+            <b>{cuando(paso.minuto)}</b>
+            <span className="panel-mini">{t.configuracion[`escalada_orden_${paso.clave}`]}</span>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -1405,13 +1466,17 @@ function TabWhatsappEscaladaCoordinador() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.whatsapp_escalada_titulo}</h2>
+    <>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.whatsapp_escalada_titulo}</h2>
+      </div>
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         {form && (
-          <div>
+          <>
             {error && <Alert variant="error">{error}</Alert>}
             {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
+            <div className="molde-formgrid">
             <FormField
               label={t.configuracion.whatsapp_escalada_backup}
               name="coordinador_backup_id"
@@ -1431,14 +1496,18 @@ function TabWhatsappEscaladaCoordinador() {
               value={form.minutos_antes_backup ?? ''}
               onChange={(e) => set('minutos_antes_backup', e.target.value)}
             />
-            <EditorTramosPremura tramos={form.umbrales_premura ?? []} onCambiar={(tramos) => set('umbrales_premura', tramos)} />
-            <FormField
-              label={t.configuracion.whatsapp_escalada_fase_automatica}
-              name="fase_automatica_activa"
-              type="checkbox"
-              checked={form.fase_automatica_activa || false}
-              onChange={(e) => set('fase_automatica_activa', e.target.checked)}
-            />
+            <div className="molde-ancho">
+              <EditorTramosPremura tramos={form.umbrales_premura ?? []} onCambiar={(tramos) => set('umbrales_premura', tramos)} />
+            </div>
+            <div className="molde-ancho">
+              <FormField
+                label={t.configuracion.whatsapp_escalada_fase_automatica}
+                name="fase_automatica_activa"
+                type="checkbox"
+                checked={form.fase_automatica_activa || false}
+                onChange={(e) => set('fase_automatica_activa', e.target.checked)}
+              />
+            </div>
             <FormField
               label={t.configuracion.whatsapp_escalada_minutos_fase_automatica}
               name="minutos_antes_fase_automatica"
@@ -1460,7 +1529,9 @@ function TabWhatsappEscaladaCoordinador() {
               value={form.minutos_antes_administracion ?? ''}
               onChange={(e) => set('minutos_antes_administracion', e.target.value)}
             />
-            <EscaladaEnOrden form={form} />
+            <div className="molde-ancho">
+              <EscaladaEnOrden form={form} />
+            </div>
             <FormField
               label={t.configuracion.whatsapp_escalada_minutos_guardia_sin_cerrar}
               name="minutos_gracia_cierre_guardia"
@@ -1475,12 +1546,16 @@ function TabWhatsappEscaladaCoordinador() {
               value={form.horas_antes_aviso_grave_sin_cerrar ?? ''}
               onChange={(e) => set('horas_antes_aviso_grave_sin_cerrar', e.target.value)}
             />
-            <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
-          </div>
+            </div>
+            <div className="molde-acciones">
+              <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+            </div>
+          </>
         )}
       </EstadoLista>
-      <CuantoDuraTomarUnaAlarma />
-    </div>
+    </section>
+    <CuantoDuraTomarUnaAlarma />
+    </>
   );
 }
 
@@ -1539,12 +1614,15 @@ function CuantoDuraTomarUnaAlarma() {
   const borde = REGLA_QUE_SE_PUEDE_TOCAR.minutos_que_dura_hacerse_cargo;
 
   return (
-    <div>
-      <h2>{t.configuracion.tomar_alarma_titulo}</h2>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.tomar_alarma_titulo}</h2>
+      </div>
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
-        <div>
+        <>
           {error && <Alert variant="error">{error}</Alert>}
           {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
+          <div className="molde-formgrid">
           <FormField
             label={t.configuracion.tomar_alarma_minutos}
             name="minutos_que_dura_hacerse_cargo"
@@ -1557,10 +1635,13 @@ function CuantoDuraTomarUnaAlarma() {
               setGuardado(false);
             }}
           />
-          <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
-        </div>
+          </div>
+          <div className="molde-acciones">
+            <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+          </div>
+        </>
       </EstadoLista>
-    </div>
+    </section>
   );
 }
 
@@ -1601,7 +1682,7 @@ function EditorTramosPremura({ tramos, onCambiar }) {
 
   return (
     <div>
-      <h3>{t.configuracion.premura_titulo}</h3>
+      <h3 className="avisos-subtitulo">{t.configuracion.premura_titulo}</h3>
       <div className="panel-tramos">
         {lista.map((tramo, indice) => {
           const esUltimo = indice === lista.length - 1;

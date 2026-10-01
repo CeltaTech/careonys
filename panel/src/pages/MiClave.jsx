@@ -10,6 +10,7 @@ import { EstadoLista } from '../components/layout/EstadoLista';
 import { TelefonoDeLaCuenta } from '../components/cuenta/TelefonoDeLaCuenta';
 import { useCuentaSegura } from '../components/cuenta/useCuentaSegura';
 import { MINIMO_DE_CARACTERES, claveAceptable } from '../lib/reglaDeClave';
+import '../styles/molde-paginas.css';
 
 // Donde alguien que ya entró cambia su propia clave.
 //
@@ -88,53 +89,66 @@ export function MiClave() {
     <div>
       <Cabecera titulo={t.auth.mi_clave_titulo} />
 
-      <form onSubmit={handleGuardar}>
-        {error && <Alert variant="error">{error}</Alert>}
-        {cambiada && <Alert variant="success">{t.auth.mi_clave_exito}</Alert>}
+      <div className="molde-pila">
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.auth.mi_clave_titulo}</h2>
+          </div>
+          <form onSubmit={handleGuardar}>
+            {error && <Alert variant="error">{error}</Alert>}
+            {cambiada && <Alert variant="success">{t.auth.mi_clave_exito}</Alert>}
 
-        <FormField
-          label={t.auth.mi_clave_actual}
-          name="actual"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={actual}
-          onChange={(e) => setActual(e.target.value)}
-          error={mensajeDe('actual')}
-        />
+            <div className="molde-formgrid">
+              <div className="molde-ancho">
+                <FormField
+                  label={t.auth.mi_clave_actual}
+                  name="actual"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={actual}
+                  onChange={(e) => setActual(e.target.value)}
+                  error={mensajeDe('actual')}
+                />
+              </div>
 
-        <FormField
-          label={t.auth.activar_password_nueva}
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          error={mensajeDe('password')}
-        />
+              <FormField
+                label={t.auth.activar_password_nueva}
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                error={mensajeDe('password')}
+              />
 
-        <FormField
-          label={t.auth.activar_password_confirmar}
-          name="confirmacion"
-          type="password"
-          autoComplete="new-password"
-          required
-          value={confirmacion}
-          onChange={(e) => setConfirmacion(e.target.value)}
-          error={mensajeDe('confirmacion')}
-        />
+              <FormField
+                label={t.auth.activar_password_confirmar}
+                name="confirmacion"
+                type="password"
+                autoComplete="new-password"
+                required
+                value={confirmacion}
+                onChange={(e) => setConfirmacion(e.target.value)}
+                error={mensajeDe('confirmacion')}
+              />
+            </div>
 
-        <Button type="submit" disabled={guardando}>
-          {guardando ? t.auth.mi_clave_guardando : t.auth.mi_clave_guardar}
-        </Button>
-      </form>
+            <div className="molde-acciones">
+              <Button type="submit" disabled={guardando}>
+                {guardando ? t.auth.mi_clave_guardando : t.auth.mi_clave_guardar}
+              </Button>
+            </div>
+          </form>
+        </section>
 
-      <EstadoLista estado={cuenta.estado} error={cuenta.error} recargar={cuenta.recargar}>
-        {cuenta.datos && (
-          <TelefonoDeLaCuenta datos={cuenta.datos} recargar={cuenta.recargar} />
-        )}
-      </EstadoLista>
+        <EstadoLista estado={cuenta.estado} error={cuenta.error} recargar={cuenta.recargar}>
+          {cuenta.datos && (
+            <TelefonoDeLaCuenta datos={cuenta.datos} recargar={cuenta.recargar} />
+          )}
+        </EstadoLista>
+      </div>
     </div>
   );
 }

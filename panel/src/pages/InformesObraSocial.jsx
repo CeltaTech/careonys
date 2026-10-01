@@ -13,6 +13,8 @@ import { claseBadge } from '../lib/tonos';
 import { con } from '../lib/textos';
 import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
+import '../styles/molde-paginas.css';
+import './informesObraSocial.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -65,7 +67,7 @@ function ContenidoInforme({ contenido, t }) {
 
       <h4>{t.informesObraSocial.totales_titulo}</h4>
       {modalidades.length === 0 ? (
-        <p className="estado-vacio">{t.informesObraSocial.sin_guardias}</p>
+        <p className="molde-vacio">{t.informesObraSocial.sin_guardias}</p>
       ) : (
         <table className="panel-tabla">
           <thead>
@@ -153,14 +155,18 @@ function AnularInformeModal({ onCerrar, onConfirmar, guardando, t }) {
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
         <h2 id={modal.idTitulo}>{t.informesObraSocial.anular}</h2>
         <form onSubmit={handleSubmit}>
-          <FormField
-            label={t.informesObraSocial.motivo_anulacion}
-            name="motivo_anulacion"
-            type="textarea"
-            required
-            value={motivo}
-            onChange={(e) => setMotivo(e.target.value)}
-          />
+          <div className="molde-formgrid">
+            <div className="molde-ancho">
+              <FormField
+                label={t.informesObraSocial.motivo_anulacion}
+                name="motivo_anulacion"
+                type="textarea"
+                required
+                value={motivo}
+                onChange={(e) => setMotivo(e.target.value)}
+              />
+            </div>
+          </div>
           <div className="panel-modal-acciones">
             <Button type="button" variant="secondary" onClick={onCerrar} disabled={guardando}>{t.comun.cancelar}</Button>
             <Button type="submit" disabled={!motivoValido || guardando}>
@@ -325,73 +331,95 @@ export function InformesObraSocial() {
       {error && <Alert variant="error">{error}</Alert>}
       {mensajeValidacion && <Alert variant="success">{mensajeValidacion}</Alert>}
 
-      <form onSubmit={handlePreview} className="panel-filtros">
-        <FormField label={t.informesObraSocial.seleccionar_paciente} name="paciente_id" type="select" required value={pacienteId} onChange={(e) => setPacienteId(e.target.value)}>
-          <option value="">{t.comun.seleccionar}</option>
-          {pacientes.map((p) => (
-            <option key={p.id} value={p.id}>{p.nombre}</option>
-          ))}
-        </FormField>
-        <FormField label={t.informesObraSocial.tipo_informe} name="tipo" type="select" value={tipo} onChange={(e) => setTipo(e.target.value)}>
-          <option value="resumen_mensual">{t.informesObraSocial.tipo_resumen_mensual}</option>
-          <option value="planilla_asistencia">{t.informesObraSocial.tipo_planilla_asistencia}</option>
-        </FormField>
-        <FormField label={t.informesObraSocial.periodo_desde} name="periodo_desde" type="date" required value={periodoDesde} onChange={(e) => setPeriodoDesde(e.target.value)} />
-        <FormField label={t.informesObraSocial.periodo_hasta} name="periodo_hasta" type="date" required value={periodoHasta} onChange={(e) => setPeriodoHasta(e.target.value)} />
-        <Button type="submit" disabled={cargandoPreview || !pacienteSeleccionable}>
-          {cargandoPreview ? t.informesObraSocial.generando_preview : t.informesObraSocial.generar_preview}
-        </Button>
-      </form>
+      <div className="molde-pila">
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.informesObraSocial.generar_preview}</h2>
+          </div>
+          <form onSubmit={handlePreview}>
+            <div className="molde-formgrid">
+              <FormField label={t.informesObraSocial.seleccionar_paciente} name="paciente_id" type="select" required value={pacienteId} onChange={(e) => setPacienteId(e.target.value)}>
+                <option value="">{t.comun.seleccionar}</option>
+                {pacientes.map((p) => (
+                  <option key={p.id} value={p.id}>{p.nombre}</option>
+                ))}
+              </FormField>
+              <FormField label={t.informesObraSocial.tipo_informe} name="tipo" type="select" value={tipo} onChange={(e) => setTipo(e.target.value)}>
+                <option value="resumen_mensual">{t.informesObraSocial.tipo_resumen_mensual}</option>
+                <option value="planilla_asistencia">{t.informesObraSocial.tipo_planilla_asistencia}</option>
+              </FormField>
+              <FormField label={t.informesObraSocial.periodo_desde} name="periodo_desde" type="date" required value={periodoDesde} onChange={(e) => setPeriodoDesde(e.target.value)} />
+              <FormField label={t.informesObraSocial.periodo_hasta} name="periodo_hasta" type="date" required value={periodoHasta} onChange={(e) => setPeriodoHasta(e.target.value)} />
+            </div>
+            {estadoPacientes === 'error' && <Alert variant="error">{t.comun.error_generico}</Alert>}
+            <div className="molde-acciones">
+              <Button type="submit" disabled={cargandoPreview || !pacienteSeleccionable}>
+                {cargandoPreview ? t.informesObraSocial.generando_preview : t.informesObraSocial.generar_preview}
+              </Button>
+            </div>
+          </form>
+        </section>
 
-      {estadoPacientes === 'error' && <Alert variant="error">{t.comun.error_generico}</Alert>}
+        {preview && (
+          <section className="panel-tarjeta">
+            <div className="panel-tarjeta-titulo">
+              <h2>{t.informesObraSocial.vista_previa}</h2>
+            </div>
+            <ContenidoInforme contenido={preview} t={t} />
+            {cargado && puede('validar_informe_obra_social') && (
+              <div className="molde-acciones">
+                <Button onClick={handleValidar} disabled={validando}>
+                  {validando ? t.informesObraSocial.validando : t.informesObraSocial.validar_y_guardar}
+                </Button>
+              </div>
+            )}
+          </section>
+        )}
 
-      {preview && (
-        <div className="informe-obra-social-preview">
-          <ContenidoInforme contenido={preview} t={t} />
-          {cargado && puede('validar_informe_obra_social') ? (
-            <Button onClick={handleValidar} disabled={validando}>
-              {validando ? t.informesObraSocial.validando : t.informesObraSocial.validar_y_guardar}
-            </Button>
-          ) : (
-            cargado && <Alert variant="info">{t.informesObraSocial.sin_permiso_validar}</Alert>
-          )}
-        </div>
-      )}
-
-      <h2>{t.informesObraSocial.historial_titulo}</h2>
-      <EstadoLista estado={estadoHistorial} error={error} vacio={estadoHistorial === 'listo' && historial.length === 0} recargar={recargarHistorial}>
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.informesObraSocial.col_tipo}</th>
-              <th>{t.informesObraSocial.col_periodo}</th>
-              <th>{t.informesObraSocial.col_estado_informe}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {historial.map((informe) => (
-              <tr key={informe.id}>
-                <td>{t.informesObraSocial[`tipo_${informe.tipo}`]}</td>
-                <td>{informe.periodo_desde} — {informe.periodo_hasta}</td>
-                <td>
-                  <span className={claseBadge(informe.estado)}>
-                    {t.informesObraSocial[`estado_${informe.estado}`]}
-                  </span>
-                </td>
-                <td>
-                  <Button variant="secondary" onClick={() => handleAbrirInforme(informe.id)}>{t.informesObraSocial.imprimir}</Button>
-                  {informe.estado === 'validado' && cargado && puede('validar_informe_obra_social') && (
-                    <Button variant="secondary" onClick={() => setInformeAAnular(informe)} disabled={anulandoId === informe.id}>
-                      {anulandoId === informe.id ? t.comun.guardando : t.informesObraSocial.anular}
-                    </Button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </EstadoLista>
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.informesObraSocial.historial_titulo}</h2>
+            {estadoHistorial === 'listo' && <span className="panel-mini">{historial.length}</span>}
+          </div>
+          <EstadoLista estado={estadoHistorial} error={error} vacio={estadoHistorial === 'listo' && historial.length === 0} recargar={recargarHistorial}>
+            <table className="panel-tabla">
+              <thead>
+                <tr>
+                  <th>{t.informesObraSocial.col_tipo}</th>
+                  <th>{t.informesObraSocial.col_periodo}</th>
+                  <th>{t.informesObraSocial.col_estado_informe}</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {historial.map((informe) => (
+                  <tr key={informe.id}>
+                    <td>
+                      <b>{t.informesObraSocial[`tipo_${informe.tipo}`]}</b>
+                    </td>
+                    <td>{informe.periodo_desde} — {informe.periodo_hasta}</td>
+                    <td>
+                      <span className={claseBadge(informe.estado)}>
+                        {t.informesObraSocial[`estado_${informe.estado}`]}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="informes-os-acciones">
+                        <Button variant="secondary" onClick={() => handleAbrirInforme(informe.id)}>{t.informesObraSocial.imprimir}</Button>
+                        {informe.estado === 'validado' && cargado && puede('validar_informe_obra_social') && (
+                          <Button variant="secondary" onClick={() => setInformeAAnular(informe)} disabled={anulandoId === informe.id}>
+                            {anulandoId === informe.id ? t.comun.guardando : t.informesObraSocial.anular}
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </EstadoLista>
+        </section>
+      </div>
 
       {informeAbierto && <VistaImpresion informe={informeAbierto} onCerrar={() => setInformeAbierto(null)} t={t} />}
 

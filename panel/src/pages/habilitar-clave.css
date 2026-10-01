@@ -1,0 +1,18 @@
+/* Habilitar un cambio de clave: la foto al lado del nombre y los botones en fila. */
+
+.habilitar-clave-persona {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.habilitar-clave-persona img {
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.habilitar-clave-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

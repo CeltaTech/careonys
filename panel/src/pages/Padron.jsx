@@ -15,6 +15,8 @@ import { LegajoModal } from './padron/LegajoModal';
 import { mensajeDeError } from '../lib/errores';
 import { palabrasDelDomicilio, partesDesdeFila, renglonDelDomicilio } from '../lib/partesDeDomicilio';
 import { pedirLosTelefonosDelPadron } from '../lib/apiPadronTelefonos';
+import '../styles/molde-paginas.css';
+import './hojaDeTarjetas.css';
 
 /* El Padrón de la Prestadora.
    ==========================================================================
@@ -153,100 +155,108 @@ export function Padron() {
       <Cabecera titulo={t.padron.titulo}>
         {puedeEditar && <Button onClick={() => setEnEdicion('nuevo')}>{t.padron.nuevo_titulo}</Button>}
       </Cabecera>
-      <div className="panel-filtros">
-        <input
-          type="text"
-          placeholder={t.padron.buscar}
-          aria-label={t.padron.buscar}
-          value={f.busqueda}
-          onChange={(e) => set('busqueda', e.target.value)}
-        />
-        <select value={f.clase} onChange={(e) => set('clase', e.target.value)} aria-label={t.padron.clase}>
-          {/* Cada posición dice cuántas hay: así se sabe si vale la pena cambiar de filtro antes
-              de cambiarlo, y que no hay ninguna empresa cargada deja de ser algo que se descubre
-              recién al elegir esa posición y ver la lista vacía. */}
-          <option value="">{t.padron.filtro_clase_todas} ({cuantas.todas})</option>
-          <option value="fisica">{t.padron.clase_fisica} ({cuantas.fisica})</option>
-          <option value="juridica">{t.padron.clase_juridica} ({cuantas.juridica})</option>
-        </select>
-      </div>
+      <section className="panel-tarjeta hoja-desplazable">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.padron.titulo}</h2>
+          {estado === 'listo' && <span className="panel-mini">{filtradas.length}</span>}
+        </div>
+        <div className="panel-filtros">
+          <input
+            type="text"
+            placeholder={t.padron.buscar}
+            aria-label={t.padron.buscar}
+            value={f.busqueda}
+            onChange={(e) => set('busqueda', e.target.value)}
+          />
+          <select value={f.clase} onChange={(e) => set('clase', e.target.value)} aria-label={t.padron.clase}>
+            {/* Cada posición dice cuántas hay: así se sabe si vale la pena cambiar de filtro antes
+                de cambiarlo, y que no hay ninguna empresa cargada deja de ser algo que se descubre
+                recién al elegir esa posición y ver la lista vacía. */}
+            <option value="">{t.padron.filtro_clase_todas} ({cuantas.todas})</option>
+            <option value="fisica">{t.padron.clase_fisica} ({cuantas.fisica})</option>
+            <option value="juridica">{t.padron.clase_juridica} ({cuantas.juridica})</option>
+          </select>
+        </div>
 
-      {enEdicion && (
-        <LegajoModal
-          legajo={enEdicion === 'nuevo' ? null : enEdicion}
-          prestadoraId={prestadoraId}
-          tiposDeDocumento={documentos.porClase}
-          onClose={() => setEnEdicion(null)}
-          onGuardado={() => {
-            setEnEdicion(null);
-            recargar();
-          }}
-        />
-      )}
+        {enEdicion && (
+          <LegajoModal
+            legajo={enEdicion === 'nuevo' ? null : enEdicion}
+            prestadoraId={prestadoraId}
+            tiposDeDocumento={documentos.porClase}
+            onClose={() => setEnEdicion(null)}
+            onGuardado={() => {
+              setEnEdicion(null);
+              recargar();
+            }}
+          />
+        )}
 
-      <EstadoLista
-        estado={estado}
-        error={error}
-        vacio={estado === 'listo' && filtradas.length === 0}
-        recargar={recargar}
-        filtrado={hayFiltros}
-        onLimpiarFiltros={limpiar}
-      >
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.padron.nombre}</th>
-              <th>{t.padron.apoderado}</th>
-              <th>{t.padron.telefono}</th>
-              <th>{t.padron.email}</th>
-              <th>{t.padron.domicilio}</th>
-              {puedeEditar && <th />}
-            </tr>
-          </thead>
-          <tbody>
-            {filtradas.map((fila) => (
-              /* El renglón muestra lo que le corresponde a su clase. Las dos comparten la lista,
-                 porque contratan y pagan igual, pero no son la misma cosa: una entidad tiene razón
-                 social, clave fiscal y alguien que firma por ella; una persona tiene apellido,
-                 nombre y documento, y se representa sola. */
-              <tr key={fila.id}>
-                <td>
-                  <strong>{comoSeLlama(fila)}</strong>
-                  <div className="lista-tarjeta-subtitulo">
-                    {fila.documento_tipo
-                      ? `${siglaDeTipo(fila.documento_tipo)} ${fila.documento_numero}`
-                      : t.padron.sin_documento}
-                  </div>
-                </td>
-                <td>
-                  {fila.clase === 'juridica'
-                    && (nombrePorId.get(fila.apoderado_legajo_id) || t.padron.apoderado_sin_elegir)}
-                </td>
-                <td>
-                  {(telefonosPorLegajo.get(fila.id) ?? []).length === 0
-                    ? '—'
-                    : (telefonosPorLegajo.get(fila.id) ?? []).map((uno, indice) => (
-                      <span key={uno.id}>
-                        {indice > 0 && ' · '}
-                        {uno.telefono}
-                        {uno.preferido && ` (${t.padron.telefonos.preferido})`}
-                      </span>
-                    ))}
-                </td>
-                <td>{fila.email || '—'}</td>
-                <td>
-                  {renglonDelDomicilio(partesDesdeFila(fila), catalogo.lugares, palabrasDelDomicilio(t)) || '—'}
-                </td>
-                {puedeEditar && (
-                  <td>
-                    <Button variant="secondary" onClick={() => setEnEdicion(fila)}>{t.comun.editar}</Button>
-                  </td>
-                )}
+        <EstadoLista
+          estado={estado}
+          error={error}
+          vacio={estado === 'listo' && filtradas.length === 0}
+          recargar={recargar}
+          filtrado={hayFiltros}
+          onLimpiarFiltros={limpiar}
+        >
+          <table className="panel-tabla">
+            <thead>
+              <tr>
+                <th>{t.padron.nombre}</th>
+                <th>{t.padron.apoderado}</th>
+                <th>{t.padron.telefono}</th>
+                <th>{t.padron.email}</th>
+                <th>{t.padron.domicilio}</th>
+                {puedeEditar && <th />}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </EstadoLista>
+            </thead>
+            <tbody>
+              {filtradas.map((fila) => (
+                /* El renglón muestra lo que le corresponde a su clase. Las dos comparten la lista,
+                   porque contratan y pagan igual, pero no son la misma cosa: una entidad tiene razón
+                   social, clave fiscal y alguien que firma por ella; una persona tiene apellido,
+                   nombre y documento, y se representa sola. */
+                <tr key={fila.id}>
+                  <td>
+                    <b>{comoSeLlama(fila)}</b>
+                    <div className="panel-mini">
+                      {fila.documento_tipo
+                        ? `${siglaDeTipo(fila.documento_tipo)} ${fila.documento_numero}`
+                        : t.padron.sin_documento}
+                    </div>
+                  </td>
+                  <td>
+                    {fila.clase === 'juridica'
+                      && (nombrePorId.get(fila.apoderado_legajo_id) || t.padron.apoderado_sin_elegir)}
+                  </td>
+                  <td>
+                    {(telefonosPorLegajo.get(fila.id) ?? []).length === 0
+                      ? '—'
+                      : (telefonosPorLegajo.get(fila.id) ?? []).map((uno, indice) => (
+                        <span key={uno.id}>
+                          {indice > 0 && ' · '}
+                          {uno.telefono}
+                          {uno.preferido && ` (${t.padron.telefonos.preferido})`}
+                        </span>
+                      ))}
+                  </td>
+                  <td>{fila.email || '—'}</td>
+                  <td>
+                    {renglonDelDomicilio(partesDesdeFila(fila), catalogo.lugares, palabrasDelDomicilio(t)) || '—'}
+                  </td>
+                  {puedeEditar && (
+                    <td>
+                      <button type="button" className="panel-enlace" onClick={() => setEnEdicion(fila)}>
+                        {t.comun.editar}
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </EstadoLista>
+      </section>
     </div>
   );
 }

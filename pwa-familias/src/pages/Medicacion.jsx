@@ -125,8 +125,8 @@ export default function Medicacion() {
   }
 
   return (
-    <div>
-      <Link to={`/pacientes/${id}`} className="btn btn-secondary" style={{ marginBottom: '1rem', fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
+    <>
+      <Link to={`/pacientes/${id}`} className="btn btn-volver">
         {t.comun.volver}
       </Link>
 
@@ -138,29 +138,30 @@ export default function Medicacion() {
 
       {indicaciones !== undefined && (
         <>
-          {indicaciones.length === 0 && <div className="estado-vacio" role="status">{t.medicacion.sin_indicaciones}</div>}
+          {indicaciones.length === 0 && <div className="pwa-card estado-vacio" role="status">{t.medicacion.sin_indicaciones}</div>}
           {indicaciones.map((ind) => (
-            <div key={ind.id} className="guardia-card-detalle" style={{ marginBottom: '0.6rem' }}>
-              <div>
-                <strong>{ind.medicamento}</strong> — {ind.dosis} — {ind.frecuencia} ({ind.via_administracion})
+            <section key={ind.id} className="pwa-card">
+              <h2>{ind.medicamento}</h2>
+              <div className="pwa-card-dato">
+                {ind.dosis} — {ind.frecuencia} ({ind.via_administracion})
               </div>
-              <div>
-                <span className={`badge ${ESTADO_CLASE[ind.estado] || ''}`}>{t.medicacion[`estado_${ind.estado}`]}</span>
-              </div>
-              <div>
+              <div className="mini mini-abajo">
                 {t.medicacion.desde}: {ind.fecha_desde} {ind.fecha_hasta ? `— ${t.medicacion.hasta}: ${ind.fecha_hasta}` : ''}
               </div>
               {ind.estado === 'rechazada' && ind.motivo_rechazo && (
-                <div>{t.medicacion.motivo_rechazo}: {ind.motivo_rechazo}</div>
+                <div className="pwa-card-dato">{t.medicacion.motivo_rechazo}: {ind.motivo_rechazo}</div>
               )}
-            </div>
+              <div className="pwa-card-pie">
+                <span className={`badge ${ESTADO_CLASE[ind.estado] || ''}`}>{t.medicacion[`estado_${ind.estado}`]}</span>
+              </div>
+            </section>
           ))}
         </>
       )}
 
       {puedePedirMedicacion && (
-        <>
-          <h2 style={{ marginTop: '1.5rem' }}>{t.medicacion.nueva_titulo}</h2>
+        <section className="pwa-card">
+          <h2>{t.medicacion.nueva_titulo}</h2>
 
           {/* No es un error: nada falló y no hay nada que reintentar. Es una advertencia de por qué el
               formulario no está, y con el dato que hace falta para conseguirlo. */}
@@ -222,13 +223,13 @@ export default function Medicacion() {
 
               {exito && <div className="alert alert-success" role="status">{t.medicacion.enviada_exito}</div>}
 
-              <button type="submit" className="btn btn-primary btn-full" disabled={enviando} style={{ marginTop: '1rem' }}>
+              <button type="submit" className="btn btn-primary btn-full btn-abajo" disabled={enviando}>
                 {enviando ? t.medicacion.enviando : t.medicacion.enviar}
               </button>
             </form>
           )}
-        </>
+        </section>
       )}
-    </div>
+    </>
   );
 }

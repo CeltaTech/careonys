@@ -285,26 +285,30 @@ a {
   background: var(--fondo-app);
 }
 
+/* Copia de `.side` de la maqueta (celtatech/maquetas/Careonys_Mockup_UX_UI_Reformado_ESTETICA.html). */
 .panel-sidebar {
   width: 242px;
-  flex-shrink: 0;
-  position: sticky;
-  top: 0;
-  height: 100vh;
+  position: fixed;
+  inset: 0 auto 0 0;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, var(--barra-fondo), var(--barra-fondo-abajo));
-  color: var(--barra-texto);
+  background: linear-gradient(180deg, var(--barra-fondo) 0%, var(--barra-fondo-abajo) 100%);
+  color: var(--barra-texto-activo);
+  box-shadow: 2px 0 10px color-mix(in oklch, var(--barra-fondo) 6%, transparent);
   z-index: 20;
 }
 
+.panel-layout.barra-oculta .panel-sidebar {
+  display: none;
+}
+
+/* La zona de marca (`.brand`): lleva el nombre de la Prestadora. */
 .panel-logo {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  height: 68px;
-  padding: 0 1.25rem;
-  background: var(--barra-marca);
+  height: 88px;
+  padding: 14px 17px 10px;
+  border-bottom: 1px solid color-mix(in oklch, var(--barra-borde) 50%, transparent);
   color: var(--barra-texto-activo);
   font-family: var(--font-display);
   font-size: 17px;
@@ -318,41 +322,50 @@ a {
 
 .panel-sidebar nav {
   flex: 1;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 1rem 0.75rem;
+  overflow: auto;
+  padding: 9px 10px;
 }
 
 .panel-sidebar nav a {
+  width: 100%;
+  height: 42px;
   display: flex;
   align-items: center;
-  gap: 0.7rem;
-  min-height: 42px;
-  padding: 0 0.75rem;
+  gap: 12px;
+  margin: 2px 0;
+  padding: 0 13px;
   border-radius: 9px;
   color: var(--barra-texto);
   font-size: 13px;
-  font-weight: 550;
+  font-weight: 500;
+  text-align: left;
   text-decoration: none;
 }
 
 .panel-sidebar nav a svg {
   width: 21px;
   height: 21px;
-  flex-shrink: 0;
+  flex: 0 0 21px;
 }
 
 .panel-sidebar nav a:hover {
   background: var(--barra-hover);
-  color: var(--barra-texto-activo);
 }
 
 .panel-sidebar nav a.active {
-  background: var(--barra-activo);
+  background: linear-gradient(90deg, var(--barra-activo), color-mix(in oklch, var(--barra-activo) 94%, var(--barra-fondo)));
   color: var(--barra-texto-activo);
   font-weight: 650;
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--barra-borde) 28%, transparent);
+}
+
+/* El rótulo de grupo (`.nav .section`), como el «Gestión» de la maqueta. */
+.panel-sidebar .panel-nav-grupo {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  opacity: 0.42;
+  padding: 15px 13px 5px;
 }
 
 .panel-nav-etiqueta {
@@ -375,10 +388,12 @@ a {
 }
 
 /* El bloque de la persona, al pie de la barra. */
+/* El bloque de la persona (`.profile`): avatar, nombre, rol, Organización y la flechita. */
 .panel-perfil {
   position: relative;
+  margin-top: auto;
   border-top: 1px solid var(--barra-borde);
-  padding: 0.75rem;
+  background: color-mix(in oklch, var(--barra-hover) 44%, transparent);
   flex-shrink: 0;
 }
 
@@ -386,13 +401,13 @@ a {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 0.7rem;
-  padding: 0.5rem;
+  gap: 10px;
+  padding: 11px 13px 12px;
   border: 0;
-  border-radius: 9px;
   background: transparent;
   color: var(--barra-texto-activo);
   font-family: var(--font-body);
+  font-size: 11px;
   text-align: left;
   cursor: pointer;
 }
@@ -406,13 +421,13 @@ a {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  flex-shrink: 0;
-  display: inline-flex;
+  flex: 0 0 44px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--barra-activo);
-  color: var(--texto-sobre-color);
-  font-weight: 700;
+  background: var(--barra-texto-activo);
+  color: var(--barra-fondo);
+  font-weight: 600;
   font-size: 15px;
 }
 
@@ -423,19 +438,34 @@ a {
 }
 
 .panel-perfil-nombre {
-  font-size: 13px;
-  font-weight: 650;
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel-perfil-detalle,
+.panel-perfil-organizacion {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .panel-perfil-detalle {
-  font-size: 11px;
-  color: var(--barra-texto-tenue);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  opacity: 0.9;
+}
+
+.panel-perfil-organizacion {
+  opacity: 0.72;
+}
+
+.panel-perfil-flecha {
+  margin-left: auto;
+  font-size: 20px;
+  opacity: 0.8;
 }
 
 .panel-perfil-menu {
@@ -493,6 +523,11 @@ a {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  margin-left: 242px;
+}
+
+.panel-layout.barra-oculta .panel-main {
+  margin-left: 0;
 }
 
 /* Lo que a la Prestadora le falta cargar, reclamado arriba de cualquier pantalla.
@@ -529,21 +564,37 @@ a {
   flex-shrink: 0;
 }
 
+/* Copia de `.top` de la maqueta: hamburguesa, buscador y los enlaces con texto a la derecha. */
 .panel-header {
   position: sticky;
   top: 0;
   z-index: 15;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 19px;
   height: 68px;
   padding: 0 26px;
   background: var(--superficie);
   border-bottom: 1px solid var(--borde-card);
 }
 
-.panel-menu-movil {
-  display: none;
+.panel-header-hamburguesa {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--texto-titulo);
+  cursor: pointer;
+}
+
+.panel-header-hamburguesa svg {
+  width: 22px;
+  height: 22px;
 }
 
 .panel-buscador {
@@ -554,11 +605,11 @@ a {
 
 .panel-buscador input {
   width: 100%;
-  height: 40px;
-  padding: 0 0.9rem 0 2.4rem;
+  height: 38px;
+  padding: 0 13px 0 40px;
   border: 1px solid var(--borde-card);
-  border-radius: 9px;
-  background: var(--fondo-app);
+  border-radius: 8px;
+  background: var(--superficie);
   color: var(--texto-principal);
   font-family: var(--font-body);
   font-size: 13px;
@@ -567,16 +618,15 @@ a {
 .panel-buscador input:focus {
   outline: 2px solid var(--azul-medio);
   outline-offset: 0;
-  background: var(--superficie);
 }
 
 .panel-buscador > svg {
   position: absolute;
-  left: 0.8rem;
+  left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  width: 17px;
-  height: 17px;
+  width: 18px;
+  height: 18px;
   color: var(--texto-secundario);
   pointer-events: none;
 }
@@ -625,48 +675,55 @@ a {
   color: var(--texto-secundario);
 }
 
+/* `.toplinks`: cada enlace es dibujo, texto y, si hay, el contador redondo. */
 .panel-header-acciones {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 25px;
+  color: var(--texto-principal);
+  font-size: 12px;
 }
 
-.panel-header-icono {
-  position: relative;
-  width: 40px;
-  height: 40px;
-  display: inline-flex;
+.panel-header-enlace {
+  display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+  padding: 0;
   border: 0;
-  border-radius: 9px;
-  background: transparent;
-  color: var(--texto-secundario);
+  background: none;
+  color: inherit;
+  font-family: var(--font-body);
+  font-size: 12px;
+  text-decoration: none;
   cursor: pointer;
 }
 
-.panel-header-icono:hover,
-.panel-header-icono[aria-expanded='true'],
-.panel-header-icono.active {
-  background: var(--superficie-hover);
+.panel-header-enlace:hover,
+.panel-header-enlace[aria-expanded='true'],
+.panel-header-enlace.active {
   color: var(--texto-titulo);
 }
 
-.panel-header-icono svg {
+.panel-header-enlace svg {
   width: 21px;
   height: 21px;
+  stroke-width: 1.6;
+  color: var(--texto-titulo);
 }
 
-.panel-header-icono .panel-nav-contador {
-  position: absolute;
-  top: 3px;
-  right: 2px;
-  min-width: 17px;
-  height: 17px;
-  font-size: 10px;
-  padding: 0 4px;
+.panel-header-contador {
+  min-width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: var(--contador);
+  color: var(--texto-sobre-color);
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .panel-notificaciones {
@@ -678,21 +735,19 @@ a {
   width: 320px;
 }
 
-/* Las pestañas de la sección abierta, arriba del contenido. */
+/* Las pestañas de la sección abierta, arriba del contenido, con el estilo de `.tabs`. */
 .panel-subnav {
   display: flex;
-  gap: 1.4rem;
+  gap: 4px;
   overflow-x: auto;
-  padding: 0 26px;
-  background: var(--superficie);
   border-bottom: 1px solid var(--borde-card);
+  margin-bottom: 17px;
 }
 
 .panel-subnav a {
-  padding: 0.85rem 0 0.75rem;
+  padding: 10px 13px;
   color: var(--texto-secundario);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
   text-decoration: none;
   white-space: nowrap;
   display: inline-flex;
@@ -708,6 +763,7 @@ a {
 .panel-subnav a.active {
   color: var(--verde-exito-texto);
   border-bottom-color: var(--verde-exito);
+  font-weight: 700;
 }
 
 /* Las tres preferencias personales del encabezado: idioma, tema y densidad. Son elecciones
@@ -769,10 +825,11 @@ a {
 }
 
 .panel-content {
-  padding: 27px 26px;
+  padding: 27px 26px 36px;
   flex: 1;
   width: 100%;
   max-width: 1540px;
+  margin: 0 auto;
 }
 
 /* El velo que cierra la barra en el teléfono. */
@@ -780,9 +837,15 @@ a {
   display: none;
 }
 
+/* Las dos medidas de la maqueta: a 1100 la barra se angosta; a 760 se oculta (la hamburguesa
+   la abre encima) y los enlaces de arriba desaparecen. */
 @media (max-width: 1100px) {
   .panel-sidebar {
     width: 210px;
+  }
+
+  .panel-main {
+    margin-left: 210px;
   }
 }
 
@@ -792,13 +855,16 @@ a {
     overflow-x: auto;
   }
 
-  .panel-sidebar {
-    position: fixed;
-    left: 0;
-    top: 0;
+  .panel-sidebar,
+  .panel-layout.barra-oculta .panel-sidebar {
+    display: flex;
     width: 242px;
     transform: translateX(-100%);
     transition: transform 0.2s ease;
+  }
+
+  .panel-main {
+    margin-left: 0;
   }
 
   .panel-layout.menu-abierto .panel-sidebar {
@@ -813,21 +879,16 @@ a {
     background: var(--velo-modal);
   }
 
-  .panel-menu-movil {
-    display: inline-flex;
-  }
-
   .panel-header {
     padding: 0 16px;
-    gap: 0.5rem;
   }
 
-  .panel-subnav {
-    padding: 0 16px;
+  .panel-header-acciones {
+    display: none;
   }
 
   .panel-content {
-    padding: 20px 16px;
+    padding: 18px;
   }
 }
 
@@ -2709,4 +2770,189 @@ button.panel-kpi-card[aria-pressed='true'] {
   margin: 0;
   color: var(--tono-atencion-texto);
   font-size: 0.82rem;
+}
+
+/* Las piezas de la maqueta: tarjeta con título, recuadros con número, columnas, renglón de
+   alerta y gráfico de dona. Todas las secciones las usan igual. */
+.panel-tarjeta {
+  background: var(--superficie);
+  border: 1px solid var(--borde-card);
+  border-radius: var(--radio-card);
+  box-shadow: var(--sombra-card);
+  padding: 17px;
+  min-width: 0;
+}
+
+.panel-tarjeta-titulo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+
+.panel-tarjeta-titulo h2 {
+  font-size: 15px;
+  margin: 0;
+  font-weight: 700;
+}
+
+.panel-enlace {
+  font-size: 11px;
+  color: var(--azul-medio);
+  text-decoration: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.panel-mini {
+  font-size: 11px;
+  color: var(--texto-secundario);
+}
+
+.panel-grilla {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.panel-kpis {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.panel-columnas-2 {
+  grid-template-columns: 1.55fr 1fr;
+}
+
+.panel-columnas-3 {
+  grid-template-columns: 1.2fr 1fr 1fr;
+}
+
+.panel-kpi {
+  display: block;
+  padding: 17px 18px;
+  min-height: 112px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.panel-kpi-icono {
+  width: 42px;
+  height: 42px;
+  float: left;
+  margin-right: 15px;
+}
+
+.panel-kpi-icono svg {
+  width: 42px;
+  height: 42px;
+  fill: none;
+  stroke-width: 1.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.panel-kpi-etiqueta {
+  font-size: 12px;
+  color: var(--texto-secundario);
+}
+
+.panel-kpi-numero {
+  font-size: 27px;
+  font-weight: 750;
+  margin: 4px 0;
+}
+
+.panel-fila-alerta {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--borde-card);
+  color: inherit;
+  text-decoration: none;
+}
+
+.panel-fila-alerta:last-child {
+  border-bottom: 0;
+}
+
+.panel-fila-alerta b {
+  font-size: 12px;
+}
+
+.panel-fila-alerta span.panel-mini {
+  display: block;
+  margin-top: 3px;
+}
+
+.panel-grafico {
+  height: 170px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.panel-dona {
+  width: 126px;
+  height: 126px;
+  border-radius: 50%;
+  position: relative;
+  flex: 0 0 126px;
+}
+
+.panel-dona::after {
+  content: '';
+  position: absolute;
+  inset: 27px;
+  background: var(--superficie);
+  border-radius: 50%;
+}
+
+.panel-dona b {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 21px;
+}
+
+.panel-leyenda {
+  font-size: 11px;
+  line-height: 2;
+  margin-left: 20px;
+}
+
+.panel-punto {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.panel-tarjeta .panel-tabla {
+  margin: 0;
+}
+
+@media (max-width: 1100px) {
+  .panel-kpis {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .panel-columnas-2,
+  .panel-columnas-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .panel-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

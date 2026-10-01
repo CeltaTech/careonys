@@ -22,10 +22,13 @@ import { AusenciasCoberturaTab } from './AusenciasCoberturaTab';
 import { ComunicacionTab } from './ComunicacionTab';
 import { mensajeDeError } from '../../lib/errores';
 import { Cabecera } from '../../components/ui/Cabecera';
+import { Button } from '../../components/ui/Button';
 import { CAMPOS_PAGO, CAMPOS_RESERVADOS, conDatosAparte } from '../../lib/fichaAsistente';
+import '../../styles/molde-paginas.css';
+import '../hojaDeTarjetas.css';
 
 export function AsistenteDetalle() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { id } = useParams();
   const navigate = useNavigate();
   const { usuario } = useAuth();
@@ -67,28 +70,42 @@ export function AsistenteDetalle() {
   if (estado === 'no_encontrado') return <p className="estado-vacio">{t.comun.no_encontrado}</p>;
   if (estado === 'error') return <p className="estado-vacio">{error || t.comun.error_generico}</p>;
 
+  const datosDeLaFicha = [
+    t.asistentes[`estado_${asistente.estado}`],
+    asistente.telefono,
+    asistente.email,
+    asistente.fecha_alta && `${t.asistentes.fecha_alta} ${new Date(asistente.fecha_alta).toLocaleDateString(locale)}`,
+  ].filter(Boolean);
+
   return (
     <div>
       <Cabecera titulo={asistente.nombre}>
-        <button className="link-volver" onClick={() => navigate('/asistentes')}><span aria-hidden="true">←</span> {t.asistentes.volver_al_plantel}</button>
+        <Button variant="secondary" onClick={() => navigate('/asistentes')}>
+          <span aria-hidden="true">←</span> {t.asistentes.volver_al_plantel}
+        </Button>
       </Cabecera>
+      {datosDeLaFicha.length > 0 && (
+        <div className="panel-mini hoja-ficha-datos">{datosDeLaFicha.join(' · ')}</div>
+      )}
 
-      <div className="panel-tabs" role="tablist">
-        {pestanasDe({ esAdmin, marketplace, puede }).map((tabId) => (
-          <button
-            key={tabId}
-            type="button"
-            role="tab"
-            aria-selected={tab === tabId}
-            className={`panel-tab ${tab === tabId ? 'panel-tab-activo' : ''}`}
-            onClick={() => setTab(tabId)}
-          >
-            {t.asistentes.tabs[tabId]}
-          </button>
-        ))}
-      </div>
+      <section className="panel-tarjeta">
+        <div className="panel-tabs" role="tablist">
+          {pestanasDe({ esAdmin, marketplace, puede }).map((tabId) => (
+            <button
+              key={tabId}
+              type="button"
+              role="tab"
+              aria-selected={tab === tabId}
+              className={`panel-tab ${tab === tabId ? 'panel-tab-activo' : ''}`}
+              onClick={() => setTab(tabId)}
+            >
+              {t.asistentes.tabs[tabId]}
+            </button>
+          ))}
+        </div>
+      </section>
 
-      <div className="panel-tab-contenido">
+      <div className="panel-tab-contenido molde-pila">
         {tab === 'perfil' && <PerfilTab asistente={asistente} onActualizado={recargar} />}
         {tab === 'verificacion' && <VerificacionTab asistente={asistente} />}
         {tab === 'certificado' && <CertificadoTab asistente={asistente} />}

@@ -4,6 +4,7 @@ import { usePuestaEnMarcha } from '../../context/PuestaEnMarchaContext';
 import { Alert } from '../ui/Alert';
 import { Button } from '../ui/Button';
 import { PropuestaDesdePlanilla } from './PropuestaDesdePlanilla';
+import '../../styles/molde-paginas.css';
 
 /* La guía de puesta en marcha de una Prestadora nueva.
    ==========================================================================
@@ -35,17 +36,23 @@ export function GuiaPrimerosPasos() {
   const { estado, pasos, faltan, completos, informativo, recargar } = usePuestaEnMarcha();
 
   if (estado === 'cargando') {
-    return <p className="estado-cargando">{t.comun.cargando}</p>;
+    return (
+      <section className="panel-tarjeta">
+        <p className="estado-cargando">{t.comun.cargando}</p>
+      </section>
+    );
   }
 
   if (estado === 'error') {
     return (
-      <Alert variant="error">
-        {t.comun.error_generico}{' '}
-        <Button variant="secondary" onClick={recargar}>
-          {t.comun.reintentar}
-        </Button>
-      </Alert>
+      <section className="panel-tarjeta">
+        <Alert variant="error">
+          {t.comun.error_generico}{' '}
+          <Button variant="secondary" onClick={recargar}>
+            {t.comun.reintentar}
+          </Button>
+        </Alert>
+      </section>
     );
   }
 
@@ -57,27 +64,27 @@ export function GuiaPrimerosPasos() {
   const porcentaje = Math.round((completados / pasos.length) * 100);
 
   return (
-    <div className="onboarding-checklist">
-      <div className="onboarding-checklist-header">
-        <h2>{informativo ? t.guia_primeros_pasos.titulo_informativo : t.guia_primeros_pasos.titulo}</h2>
-        <span className="onboarding-checklist-fraccion">
-          {t.guia_primeros_pasos.completados.replace('{n}', completados).replace('{total}', pasos.length)}
-        </span>
-      </div>
-      <div className="onboarding-checklist-barra">
-        <div className="onboarding-checklist-barra-relleno" style={{ width: `${porcentaje}%` }} />
-      </div>
-      <ul className="onboarding-checklist-pasos">
+    <div className="molde-pila">
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{informativo ? t.guia_primeros_pasos.titulo_informativo : t.guia_primeros_pasos.titulo}</h2>
+          <span className="panel-mini">
+            {t.guia_primeros_pasos.completados.replace('{n}', completados).replace('{total}', pasos.length)}
+          </span>
+        </div>
+        <div className="onboarding-checklist-barra">
+          <div className="onboarding-checklist-barra-relleno" style={{ width: `${porcentaje}%` }} />
+        </div>
         {pasos.map((paso) => {
           const textos = t.guia_primeros_pasos;
           return (
-            <li key={paso.clave} className={`onboarding-paso${paso.hecho ? ' onboarding-paso-hecho' : ''}`}>
-              <div className="onboarding-paso-info">
-                <span className="onboarding-paso-titulo">{textos[`paso_${paso.clave}_titulo`]}</span>
+            <div key={paso.clave} className="panel-fila-alerta">
+              <div>
+                <b>{textos[`paso_${paso.clave}_titulo`]}</b>
                 {/* La consecuencia sólo se muestra en lo que falta: al lado de un paso ya hecho
                     sería la advertencia de algo que no va a pasar. */}
                 {!paso.hecho && (
-                  <span className="onboarding-paso-consecuencia">{textos[`paso_${paso.clave}_consecuencia`]}</span>
+                  <span className="panel-mini">{textos[`paso_${paso.clave}_consecuencia`]}</span>
                 )}
               </div>
               {paso.hecho ? (
@@ -89,10 +96,10 @@ export function GuiaPrimerosPasos() {
                   </Link>
                 )
               )}
-            </li>
+            </div>
           );
         })}
-      </ul>
+      </section>
       {/* Sólo para quien puede completar los pasos: un Superadmin de visita mira, no trabaja. */}
       {!informativo && <PropuestaDesdePlanilla />}
     </div>

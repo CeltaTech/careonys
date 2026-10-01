@@ -10,6 +10,8 @@ import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
 import { con } from '../lib/textos';
 import { tomarPlanillaAnalizada } from '../lib/planillaAnalizada';
 import { useModalAccesible } from '../hooks/useModalAccesible';
+import '../styles/molde-paginas.css';
+import './importacion.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -58,7 +60,12 @@ export function Importacion() {
   }, []);
 
   if (cargado && !puede('importar_datos_masivos')) {
-    return <Alert variant="error">{t.comun.sin_permiso || t.comun.error_generico}</Alert>;
+    return (
+      <div>
+        <Cabecera titulo={t.importacion.titulo} />
+        <Alert variant="error">{t.comun.sin_permiso || t.comun.error_generico}</Alert>
+      </div>
+    );
   }
 
   async function handleAnalizar(e) {
@@ -173,102 +180,125 @@ export function Importacion() {
       {error && <Alert variant="error">{error}</Alert>}
 
       {paso === 1 && (
-        <form onSubmit={handleAnalizar}>
-          <FormField label={t.importacion.paso1_tipo} name="tipo" type="select" value={tipo} onChange={(e) => setTipo(e.target.value)}>
-            <option value="asistente">{t.importacion.tipo_asistente}</option>
-            <option value="familia">{t.importacion.tipo_familia}</option>
-          </FormField>
-          <FormField
-            label={t.importacion.paso1_archivo}
-            name="archivo"
-            type="file"
-            onChange={(e) => setArchivo(e.target.files?.[0] || null)}
-          />
-          <Button type="submit" disabled={cargando}>
-            {cargando ? t.importacion.analizando : t.importacion.analizar}
-          </Button>
-        </form>
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.importacion.paso1_titulo}</h2>
+          </div>
+          <form onSubmit={handleAnalizar}>
+            <div className="molde-formgrid">
+              <FormField label={t.importacion.paso1_tipo} name="tipo" type="select" value={tipo} onChange={(e) => setTipo(e.target.value)}>
+                <option value="asistente">{t.importacion.tipo_asistente}</option>
+                <option value="familia">{t.importacion.tipo_familia}</option>
+              </FormField>
+              <FormField
+                label={t.importacion.paso1_archivo}
+                name="archivo"
+                type="file"
+                onChange={(e) => setArchivo(e.target.files?.[0] || null)}
+              />
+            </div>
+            <div className="molde-acciones">
+              <Button type="submit" disabled={cargando}>
+                {cargando ? t.importacion.analizando : t.importacion.analizar}
+              </Button>
+            </div>
+          </form>
+        </section>
       )}
 
       {paso === 2 && analisis && (
-        <div>
-          <h2>{t.importacion.paso2_titulo}</h2>
+        <div className="molde-pila">
+          <section className="panel-tarjeta">
+            <div className="panel-tarjeta-titulo">
+              <h2>{t.importacion.paso2_titulo}</h2>
+              <span className="panel-mini">{analisis.headers.length}</span>
+            </div>
 
-          {analisis.advertencias.length > 0 && (
-            <Alert variant="info">
-              <strong>{t.importacion.advertencias_titulo}</strong>
-              <ul>
-                {analisis.advertencias.map((adv, i) => (
-                  <li key={i}>{adv}</li>
-                ))}
-              </ul>
-            </Alert>
-          )}
+            {analisis.advertencias.length > 0 && (
+              <Alert variant="info">
+                <strong>{t.importacion.advertencias_titulo}</strong>
+                <ul>
+                  {analisis.advertencias.map((adv, i) => (
+                    <li key={i}>{adv}</li>
+                  ))}
+                </ul>
+              </Alert>
+            )}
 
-          <table>
-            <thead>
-              <tr>
-                <th>{t.importacion.col_archivo}</th>
-                <th>{t.importacion.col_campo}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {analisis.headers.map((columna) => (
-                <tr key={columna}>
-                  <td>{columna}</td>
-                  <td>
-                    <select
-                      value={mapeo[columna] || ''}
-                      onChange={(e) => setMapeo({ ...mapeo, [columna]: e.target.value || null })}
-                      aria-label={con(t.importacion.campo_de_columna, { columna })}
-                    >
-                      <option value="">{t.importacion.campo_ninguno}</option>
-                      {analisis.camposDisponibles.map((campo) => (
-                        <option key={campo} value={campo}>
-                          {t.importacion[`campo_${campo}`] || campo}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <h3>{t.importacion.vista_previa_titulo}</h3>
-          <div style={{ overflowX: 'auto' }}>
-            <table>
+            <table className="panel-tabla">
               <thead>
                 <tr>
-                  {analisis.headers.map((h) => (
-                    <th key={h}>{h}</th>
-                  ))}
+                  <th>{t.importacion.col_archivo}</th>
+                  <th>{t.importacion.col_campo}</th>
                 </tr>
               </thead>
               <tbody>
-                {analisis.filas.slice(0, 5).map((fila, i) => (
-                  <tr key={i}>
-                    {analisis.headers.map((h) => (
-                      <td key={h}>{String(fila[h])}</td>
-                    ))}
+                {analisis.headers.map((columna) => (
+                  <tr key={columna}>
+                    <td><b>{columna}</b></td>
+                    <td>
+                      <div className="molde-campo">
+                        <select
+                          value={mapeo[columna] || ''}
+                          onChange={(e) => setMapeo({ ...mapeo, [columna]: e.target.value || null })}
+                          aria-label={con(t.importacion.campo_de_columna, { columna })}
+                        >
+                          <option value="">{t.importacion.campo_ninguno}</option>
+                          {analisis.camposDisponibles.map((campo) => (
+                            <option key={campo} value={campo}>
+                              {t.importacion[`campo_${campo}`] || campo}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </section>
 
-          <Button variant="secondary" onClick={handleReiniciar} disabled={cargando}>
-            {t.importacion.volver}
-          </Button>
-          <Button onClick={handleConfirmar} disabled={cargando}>
-            {cargando ? t.importacion.confirmando : t.importacion.confirmar}
-          </Button>
+          <section className="panel-tarjeta">
+            <div className="panel-tarjeta-titulo">
+              <h2>{t.importacion.vista_previa_titulo}</h2>
+            </div>
+            <div className="importacion-desplazable">
+              <table className="panel-tabla">
+                <thead>
+                  <tr>
+                    {analisis.headers.map((h) => (
+                      <th key={h}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {analisis.filas.slice(0, 5).map((fila, i) => (
+                    <tr key={i}>
+                      {analisis.headers.map((h) => (
+                        <td key={h}>{String(fila[h])}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="molde-acciones">
+              <Button variant="secondary" onClick={handleReiniciar} disabled={cargando}>
+                {t.importacion.volver}
+              </Button>
+              <Button onClick={handleConfirmar} disabled={cargando}>
+                {cargando ? t.importacion.confirmando : t.importacion.confirmar}
+              </Button>
+            </div>
+          </section>
         </div>
       )}
 
       {paso === 3 && resultado && (
-        <div>
-          <h2>{t.importacion.paso3_titulo}</h2>
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.importacion.paso3_titulo}</h2>
+          </div>
           <Alert variant={resultado.filasError > 0 ? 'info' : 'success'}>
             {t.importacion.resumen
               .replace('{creadas}', resultado.filasCreadas)
@@ -296,27 +326,31 @@ export function Importacion() {
             </Alert>
           )}
 
-          <Button variant="secondary" onClick={handleReiniciar} disabled={cargando}>
-            {t.importacion.nueva_importacion}
-          </Button>
-          {resultado.filasCreadas > 0 && (
-            <Button onClick={handleVerRevision} disabled={cargando}>
-              {cargando ? t.importacion.cargando_revision : t.importacion.revisar_resultado}
+          <div className="molde-acciones">
+            <Button variant="secondary" onClick={handleReiniciar} disabled={cargando}>
+              {t.importacion.nueva_importacion}
             </Button>
-          )}
-        </div>
+            {resultado.filasCreadas > 0 && (
+              <Button onClick={handleVerRevision} disabled={cargando}>
+                {cargando ? t.importacion.cargando_revision : t.importacion.revisar_resultado}
+              </Button>
+            )}
+          </div>
+        </section>
       )}
 
       {paso === 4 && revision && (
-        <div>
-          <h2>{t.importacion.paso4_titulo}</h2>
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.importacion.paso4_titulo}</h2>
+          </div>
 
           {revisionFinal === 'conformada' && <Alert variant="success">{t.importacion.conformidad_exito}</Alert>}
           {revisionFinal === 'rechazada' && <Alert variant="info">{t.importacion.rechazo_exito}</Alert>}
 
           {!revisionFinal && (
-            <div style={{ overflowX: 'auto' }}>
-              <table>
+            <div className="importacion-desplazable">
+              <table className="panel-tabla">
                 <thead>
                   <tr>
                     {revision.lote.tipo === 'asistente' ? (
@@ -338,7 +372,7 @@ export function Importacion() {
                   {revision.filas.map((fila) => (
                     revision.lote.tipo === 'asistente' ? (
                       <tr key={fila.id}>
-                        <td>{fila.nombre}</td>
+                        <td><b>{fila.nombre}</b></td>
                         <td>{fila.dni}</td>
                         <td>{fila.email}</td>
                         <td>{fila.telefono}</td>
@@ -346,7 +380,7 @@ export function Importacion() {
                     ) : (
                       (fila.pacientes || []).map((paciente) => (
                         <tr key={paciente.id}>
-                          <td>{paciente.nombre}</td>
+                          <td><b>{paciente.nombre}</b></td>
                           <td>{paciente.domicilio}</td>
                         </tr>
                       ))
@@ -357,19 +391,21 @@ export function Importacion() {
             </div>
           )}
 
-          {!revisionFinal && (
-            <>
-              <Button variant="secondary" onClick={() => setConfirmandoRechazo(true)} disabled={cargando}>
-                {cargando ? t.importacion.rechazando : t.importacion.rechazar}
-              </Button>
-              <Button onClick={handleConformar} disabled={cargando}>
-                {cargando ? t.importacion.conformando : t.importacion.conformar}
-              </Button>
-            </>
-          )}
-          {revisionFinal && (
-            <Button onClick={handleReiniciar}>{t.importacion.nueva_importacion}</Button>
-          )}
+          <div className="molde-acciones">
+            {!revisionFinal && (
+              <>
+                <Button variant="secondary" onClick={() => setConfirmandoRechazo(true)} disabled={cargando}>
+                  {cargando ? t.importacion.rechazando : t.importacion.rechazar}
+                </Button>
+                <Button onClick={handleConformar} disabled={cargando}>
+                  {cargando ? t.importacion.conformando : t.importacion.conformar}
+                </Button>
+              </>
+            )}
+            {revisionFinal && (
+              <Button onClick={handleReiniciar}>{t.importacion.nueva_importacion}</Button>
+            )}
+          </div>
 
           {confirmandoRechazo && (
             <div className="panel-modal-fondo" onClick={() => setConfirmandoRechazo(false)}>
@@ -387,7 +423,7 @@ export function Importacion() {
               </div>
             </div>
           )}
-        </div>
+        </section>
       )}
     </div>
   );

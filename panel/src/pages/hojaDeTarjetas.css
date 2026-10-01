@@ -1,0 +1,73 @@
+/* Lo que `styles/molde-paginas.css` no trae: la tabla sin marco propio adentro de su tarjeta,
+   la tarjeta que deja correr una tabla ancha, las pestañas de una ficha, el dato suelto de una
+   ficha y el gráfico de barras. Prefijo `hoja-` para no pisar nada de otra página. */
+
+.panel-tarjeta .panel-tabla {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.hoja-desplazable {
+  overflow-x: auto;
+}
+
+.panel-tarjeta .panel-tabs {
+  gap: 4px;
+  margin-bottom: 17px;
+}
+
+.panel-tarjeta .panel-tab {
+  padding: 10px 13px;
+  font-size: 12px;
+}
+
+/* La línea de datos que va justo debajo de la cabecera de una ficha. */
+.hoja-ficha-datos {
+  margin: -12px 0 16px;
+}
+
+/* El dato suelto de una ficha: el rótulo chico arriba y el valor en negrita abajo. */
+.hoja-dato b {
+  display: block;
+  font-size: 13px;
+  margin-top: 3px;
+}
+
+/* Gráfico de barras: una columna por valor, con su número arriba y su rótulo abajo. */
+.hoja-barras {
+  height: 170px;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding-top: 18px;
+}
+
+.hoja-barra {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+}
+
+.hoja-barra-columna {
+  width: 100%;
+  max-width: 42px;
+  min-height: 2px;
+  border-radius: 5px 5px 0 0;
+  background: var(--verde-exito);
+}
+
+.hoja-barra-rotulo {
+  font-size: 10px;
+  color: var(--texto-secundario);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}

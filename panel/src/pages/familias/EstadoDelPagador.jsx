@@ -6,6 +6,8 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
+import '../../styles/molde-paginas.css';
+import '../hojaDeTarjetas.css';
 
 /* Si el Pagador está definido, ahí donde se lo elige.
    ==========================================================================
@@ -92,8 +94,16 @@ export function EstadoDelPagador({ familiaId, puedeRegistrar }) {
     }
   }
 
-  if (estado === 'cargando') return <p className="panel-explicacion">{t.comun.cargando}</p>;
-  if (estado === 'error') return <Alert variant="error">{error}</Alert>;
+  if (estado === 'cargando' || estado === 'error') {
+    return (
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{textos.titulo}</h2>
+        </div>
+        {estado === 'cargando' ? <p className="molde-vacio">{t.comun.cargando}</p> : <Alert variant="error">{error}</Alert>}
+      </section>
+    );
+  }
 
   const {
     pagador,
@@ -110,103 +120,102 @@ export function EstadoDelPagador({ familiaId, puedeRegistrar }) {
 
   return (
     <>
-      <h3>{textos.titulo}</h3>
-      {error && <Alert variant="error">{error}</Alert>}
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{textos.titulo}</h2>
+        </div>
+        {error && <Alert variant="error">{error}</Alert>}
 
-      {/* Sin Legajo elegido no hay a quién hacerle firmar nada, y decirlo así es más útil que
-          mostrar una lista de papeles que todavía nadie tiene que cargar. */}
-      {!pagador ? (
-        <Alert variant="info">{textos.sin_pagador}</Alert>
-      ) : (
-        <>
-          <Alert variant={definido ? 'success' : 'warning'}>
-            {definido ? textos.definido : textos.sin_firma}
-          </Alert>
+        {/* Sin Legajo elegido no hay a quién hacerle firmar nada. */}
+        {!pagador ? (
+          <Alert variant="info">{textos.sin_pagador}</Alert>
+        ) : (
+          <>
+            <Alert variant={definido ? 'success' : 'warning'}>
+              {definido ? textos.definido : textos.sin_firma}
+            </Alert>
 
-          {firmadoPorOtro && <Alert variant="warning">{textos.firmado_por_otro}</Alert>}
+            {firmadoPorOtro && <Alert variant="warning">{textos.firmado_por_otro}</Alert>}
 
-          {/* Una entidad no firma con la mano: firma por ella su Apoderado. Que no lo tenga
-              configurado no impide armar el documento, pero saldría sin decir qué persona lo firma,
-              y eso se avisa antes y no cuando el papel ya salió. Se arregla en el Legajo de la
-              entidad, que es donde el Apoderado vive. */}
-          {faltaApoderado && <Alert variant="warning">{textos.falta_apoderado}</Alert>}
+            {/* Una entidad firma por su Apoderado; sin él, el documento saldría sin firmante. */}
+            {faltaApoderado && <Alert variant="warning">{textos.falta_apoderado}</Alert>}
 
-          <dl className="panel-detalle-lista">
-            <dt>{textos.quien_paga}</dt>
-            <dd>{pagador.nombre}</dd>
-            {apoderado && (
-              <>
-                <dt>{textos.quien_firma}</dt>
-                <dd>{apoderado.nombre}</dd>
-              </>
-            )}
-            {consentimientoCerrado && (
-              <>
-                <dt>{textos.firmado_el}</dt>
-                <dd>{new Date(consentimientoCerrado.cerrado_en).toLocaleDateString(locale)}</dd>
-              </>
-            )}
-          </dl>
-
-          {consentimientoPendiente ? (
-            <>
-              <Alert variant="info">{textos.pendiente_de_firma}</Alert>
-              <Button
-                variant="secondary"
-                onClick={() => setDocumentoAVer({ texto: consentimientoPendiente.documento_texto })}
-              >
-                {textos.ver_documento}
-              </Button>{' '}
-              {puedeRegistrar && (
-                <>
-                  <Button onClick={() => setFirmaARegistrar(consentimientoPendiente.id)} disabled={trabajando}>
-                    {textos.registrar_firma}
-                  </Button>{' '}
-                  <Button variant="secondary" onClick={() => anular(consentimientoPendiente.id)} disabled={trabajando}>
-                    {textos.anular}
-                  </Button>
-                </>
+            <div className="panel-grilla panel-columnas-3">
+              <div className="hoja-dato"><div className="panel-mini">{textos.quien_paga}</div><b>{pagador.nombre}</b></div>
+              {apoderado && (
+                <div className="hoja-dato"><div className="panel-mini">{textos.quien_firma}</div><b>{apoderado.nombre}</b></div>
               )}
-            </>
-          ) : (
-            <>
               {consentimientoCerrado && (
+                <div className="hoja-dato">
+                  <div className="panel-mini">{textos.firmado_el}</div>
+                  <b>{new Date(consentimientoCerrado.cerrado_en).toLocaleDateString(locale)}</b>
+                </div>
+              )}
+            </div>
+
+            {consentimientoPendiente && <Alert variant="info">{textos.pendiente_de_firma}</Alert>}
+            <div className="molde-acciones">
+              {consentimientoPendiente ? (
                 <>
                   <Button
                     variant="secondary"
-                    onClick={() => setDocumentoAVer({ texto: consentimientoCerrado.documento_texto })}
+                    onClick={() => setDocumentoAVer({ texto: consentimientoPendiente.documento_texto })}
                   >
                     {textos.ver_documento}
-                  </Button>{' '}
-                  {consentimientoCerrado.archivo_firmado_url && (
+                  </Button>
+                  {puedeRegistrar && (
                     <>
-                      <Button
-                        variant="secondary"
-                        onClick={() =>
-                          verArchivo(
-                            `/cuentas/familia/${familiaId}/pagador/consentimiento/${consentimientoCerrado.id}/papel`,
-                          )
-                        }
-                      >
-                        {textos.ver_papel}
-                      </Button>{' '}
+                      <Button variant="secondary" onClick={() => anular(consentimientoPendiente.id)} disabled={trabajando}>
+                        {textos.anular}
+                      </Button>
+                      <Button onClick={() => setFirmaARegistrar(consentimientoPendiente.id)} disabled={trabajando}>
+                        {textos.registrar_firma}
+                      </Button>
                     </>
                   )}
                 </>
+              ) : (
+                <>
+                  {consentimientoCerrado && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => setDocumentoAVer({ texto: consentimientoCerrado.documento_texto })}
+                    >
+                      {textos.ver_documento}
+                    </Button>
+                  )}
+                  {consentimientoCerrado?.archivo_firmado_url && (
+                    <Button
+                      variant="secondary"
+                      onClick={() =>
+                        verArchivo(
+                          `/cuentas/familia/${familiaId}/pagador/consentimiento/${consentimientoCerrado.id}/papel`,
+                        )
+                      }
+                    >
+                      {textos.ver_papel}
+                    </Button>
+                  )}
+                  {puedeRegistrar && (
+                    <Button onClick={generarConsentimiento} disabled={trabajando}>
+                      {trabajando ? t.comun.guardando : textos.generar}
+                    </Button>
+                  )}
+                </>
               )}
-              {puedeRegistrar && (
-                <Button onClick={generarConsentimiento} disabled={trabajando}>
-                  {trabajando ? t.comun.guardando : textos.generar}
-                </Button>
-              )}
-            </>
-          )}
+            </div>
+          </>
+        )}
+      </section>
 
-          {/* Los papeles son aparte de la firma: que falte uno no invalida lo firmado, y que esté
-              la firma no completa los papeles. Por eso se cuentan y se muestran por separado. */}
-          <h3>{textos.papeles_titulo}</h3>
+      {/* Los papeles son aparte de la firma: se cuentan y se muestran por separado. */}
+      {pagador && (
+        <section className="panel-tarjeta hoja-desplazable">
+          <div className="panel-tarjeta-titulo">
+            <h2>{textos.papeles_titulo}</h2>
+          </div>
           {papeles.length === 0 ? (
-            <p className="panel-explicacion">{textos.papeles_sin_catalogo}</p>
+            <p className="molde-vacio">{textos.papeles_sin_catalogo}</p>
           ) : (
             <>
               {(papelesFaltantes > 0 || papelesVencidos > 0) && (
@@ -228,13 +237,15 @@ export function EstadoDelPagador({ familiaId, puedeRegistrar }) {
                 <tbody>
                   {papeles.map((papel) => (
                     <tr key={papel.tipoId}>
-                      <td>{papel.nombre}</td>
+                      <td><b>{papel.nombre}</b></td>
                       <td>
-                        {!papel.cargado
-                          ? textos.papel_falta
-                          : papel.vencido
-                            ? textos.papel_vencido
-                            : textos.papel_cargado}
+                        {!papel.cargado ? (
+                          <span className="badge badge-critico">{textos.papel_falta}</span>
+                        ) : papel.vencido ? (
+                          <span className="badge badge-atencion">{textos.papel_vencido}</span>
+                        ) : (
+                          <span className="badge badge-exito">{textos.papel_cargado}</span>
+                        )}
                       </td>
                       <td>
                         {papel.fechaVencimiento
@@ -268,7 +279,7 @@ export function EstadoDelPagador({ familiaId, puedeRegistrar }) {
               </table>
             </>
           )}
-        </>
+        </section>
       )}
 
       {documentoAVer && (
@@ -434,23 +445,25 @@ function CargarPapelDelPagadorModal({ familiaId, papel, onClose, onCargado }) {
 
         {error && <Alert variant="error">{error}</Alert>}
 
-        <FormField
-          label={textos.papel_archivo}
-          name="papel_del_financiador"
-          type="file"
-          accept="application/pdf,image/jpeg,image/png"
-          onChange={(e) => setArchivo(e.target.files?.[0] || null)}
-        />
-
-        {papel.requiereVencimiento && (
+        <div className="molde-formgrid">
           <FormField
-            label={textos.papel_vencimiento}
-            name="vencimiento_del_papel"
-            type="date"
-            value={vencimiento}
-            onChange={(e) => setVencimiento(e.target.value)}
+            label={textos.papel_archivo}
+            name="papel_del_financiador"
+            type="file"
+            accept="application/pdf,image/jpeg,image/png"
+            onChange={(e) => setArchivo(e.target.files?.[0] || null)}
           />
-        )}
+
+          {papel.requiereVencimiento && (
+            <FormField
+              label={textos.papel_vencimiento}
+              name="vencimiento_del_papel"
+              type="date"
+              value={vencimiento}
+              onChange={(e) => setVencimiento(e.target.value)}
+            />
+          )}
+        </div>
 
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { traducirValor } from '../../i18n/valores';
 import { con } from '../../lib/textos';
@@ -11,6 +11,7 @@ import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
+import '../../styles/molde-paginas.css';
 
 /* Lo que el Pagador firma, y los papeles que se le piden.
    ==========================================================================
@@ -24,14 +25,11 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
    VACIARLO NO LA DEJA SIN TEXTO: vuelve a regir el modelo del producto. Así, el día que el
    modelo mejore, ninguna Prestadora queda con la versión vieja sin haber decidido nada. */
 export function ConsentimientoPagadorTab() {
-  const { t } = useLocale();
-
   return (
-    <div>
-      <h2>{t.configuracion.consentimiento_pagador_titulo}</h2>
+    <>
       <ElTextoQueFirma />
       <LosPapelesQueSePiden />
-    </div>
+    </>
   );
 }
 
@@ -80,56 +78,71 @@ function ElTextoQueFirma() {
   }
 
   return (
-    <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
-      {datos && (
-        <div>
-          {error && <Alert variant="error">{error}</Alert>}
-          {guardado && <Alert variant="info">{t.configuracion.consentimiento_pagador_guardado}</Alert>}
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.consentimiento_pagador_titulo}</h2>
+      </div>
+      <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
+        {datos && (
+          <>
+            {error && <Alert variant="error">{error}</Alert>}
+            {guardado && <Alert variant="info">{t.configuracion.consentimiento_pagador_guardado}</Alert>}
 
-          {/* De dónde salió el texto que se está viendo. Sin esto, quien lo lee no puede saber si
-              está mirando algo que decidió su Prestadora o algo que vino de fábrica. */}
-          <Alert variant="info">
-            {datos.esDelProducto
-              ? t.configuracion.consentimiento_pagador_es_modelo
-              : t.configuracion.consentimiento_pagador_es_propio}
-          </Alert>
+            {/* De dónde salió el texto que se está viendo. Sin esto, quien lo lee no puede saber si
+                está mirando algo que decidió su Prestadora o algo que vino de fábrica. */}
+            <Alert variant="info">
+              {datos.esDelProducto
+                ? t.configuracion.consentimiento_pagador_es_modelo
+                : t.configuracion.consentimiento_pagador_es_propio}
+            </Alert>
 
-          <FormField
-            label={t.configuracion.consentimiento_pagador_cuerpo}
-            name="consentimiento_pagador_cuerpo"
-            type="textarea"
-            rows={20}
-            value={cuerpo}
-            onChange={(e) => {
-              setCuerpo(e.target.value);
-              setGuardado(false);
-            }}
-          />
+            <div className="molde-formgrid">
+              <div className="molde-ancho">
+                <FormField
+                  label={t.configuracion.consentimiento_pagador_cuerpo}
+                  name="consentimiento_pagador_cuerpo"
+                  type="textarea"
+                  rows={20}
+                  value={cuerpo}
+                  onChange={(e) => {
+                    setCuerpo(e.target.value);
+                    setGuardado(false);
+                  }}
+                />
+              </div>
 
-          {/* Los marcadores los manda el backend, del mismo archivo que después los reemplaza: la
-              lista no se puede despegar de lo que de verdad anda. */}
-          <p className="panel-explicacion">
-            {t.configuracion.consentimiento_pagador_marcadores} {datos.marcadores.join('  ')}
-          </p>
+              {/* Los marcadores los manda el backend, del mismo archivo que después los reemplaza: la
+                  lista no se puede despegar de lo que de verdad anda. */}
+              <div className="molde-ancho">
+                {datos.marcadores.map((marcador) => (
+                  <Fragment key={marcador}>
+                    <span className="badge badge-neutro">{marcador}</span>{' '}
+                  </Fragment>
+                ))}
+              </div>
+            </div>
 
-          <Button onClick={guardar} disabled={guardando}>
-            {guardando ? t.comun.guardando : t.comun.guardar}
-          </Button>{' '}
-          {!datos.esDelProducto && (
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setCuerpo('');
-                setGuardado(false);
-              }}
-              disabled={guardando}
-            >
-              {t.configuracion.consentimiento_pagador_volver_al_modelo}
-            </Button>
-          )}
-        </div>
-      )}
-    </EstadoLista>
+            <div className="molde-acciones">
+              {!datos.esDelProducto && (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setCuerpo('');
+                    setGuardado(false);
+                  }}
+                  disabled={guardando}
+                >
+                  {t.configuracion.consentimiento_pagador_volver_al_modelo}
+                </Button>
+              )}
+              <Button onClick={guardar} disabled={guardando}>
+                {guardando ? t.comun.guardando : t.comun.guardar}
+              </Button>
+            </div>
+          </>
+        )}
+      </EstadoLista>
+    </section>
   );
 }
 
@@ -197,13 +210,12 @@ function LosPapelesQueSePiden() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.papeles_pagador_titulo}</h2>
-      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
-
-      <div className="panel-filtros">
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.papeles_pagador_titulo}</h2>
         <Button onClick={() => setCreandoNuevo(true)}>{t.configuracion.papeles_pagador_nuevo}</Button>
       </div>
+      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
 
       <EstadoLista
         estado={estado}
@@ -224,7 +236,7 @@ function LosPapelesQueSePiden() {
           <tbody>
             {tipos.map((tipo) => (
               <tr key={tipo.id}>
-                <td>{tipo.nombre}</td>
+                <td><b>{tipo.nombre}</b></td>
                 <td>
                   {tipo.financiador_tipo
                     ? traducirValor(t.familias, `financiador_${tipo.financiador_tipo}`)
@@ -245,9 +257,9 @@ function LosPapelesQueSePiden() {
                 </td>
                 <td>
                   {tipo.activo && (
-                    <button onClick={() => dejarDePedir(tipo)} disabled={enCurso === tipo.id}>
+                    <Button variant="secondary" onClick={() => dejarDePedir(tipo)} disabled={enCurso === tipo.id}>
                       {t.configuracion.papeles_pagador_dejar_de_pedir}
-                    </button>
+                    </Button>
                   )}
                 </td>
               </tr>
@@ -265,7 +277,7 @@ function LosPapelesQueSePiden() {
           }}
         />
       )}
-    </div>
+    </section>
   );
 }
 
@@ -304,38 +316,40 @@ function NuevoPapelDelPagador({ onClose, onCreado }) {
         <h2 id={modal.idTitulo}>{t.configuracion.papeles_pagador_nuevo}</h2>
         {error && <Alert variant="error">{error}</Alert>}
 
-        <FormField
-          label={t.configuracion.papeles_pagador_col_nombre}
-          name="papel_pagador_nombre"
-          value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
-          required
-        />
+        <div className="molde-formgrid">
+          <FormField
+            label={t.configuracion.papeles_pagador_col_nombre}
+            name="papel_pagador_nombre"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            required
+          />
 
-        {/* Vacío es «a todos los financiadores», y así se guarda. La Familia no aparece en la
-            lista: cuando paga la Familia no hay financiador a quien pedirle papeles. */}
-        <FormField
-          label={t.configuracion.papeles_pagador_col_financiador}
-          name="papel_pagador_financiador"
-          type="select"
-          value={financiador}
-          onChange={(e) => setFinanciador(e.target.value)}
-        >
-          <option value="">{t.configuracion.papeles_pagador_todos_los_financiadores}</option>
-          {FINANCIADORES_POSIBLES.filter((f) => f !== FINANCIADORES.FAMILIA).map((f) => (
-            <option key={f} value={f}>
-              {traducirValor(t.familias, `financiador_${f}`)}
-            </option>
-          ))}
-        </FormField>
+          {/* Vacío es «a todos los financiadores», y así se guarda. La Familia no aparece en la
+              lista: cuando paga la Familia no hay financiador a quien pedirle papeles. */}
+          <FormField
+            label={t.configuracion.papeles_pagador_col_financiador}
+            name="papel_pagador_financiador"
+            type="select"
+            value={financiador}
+            onChange={(e) => setFinanciador(e.target.value)}
+          >
+            <option value="">{t.configuracion.papeles_pagador_todos_los_financiadores}</option>
+            {FINANCIADORES_POSIBLES.filter((f) => f !== FINANCIADORES.FAMILIA).map((f) => (
+              <option key={f} value={f}>
+                {traducirValor(t.familias, `financiador_${f}`)}
+              </option>
+            ))}
+          </FormField>
 
-        <FormField
-          label={t.configuracion.papeles_pagador_col_vencimiento}
-          name="papel_pagador_vencimiento"
-          type="checkbox"
-          checked={requiereVencimiento}
-          onChange={(e) => setRequiereVencimiento(e.target.checked)}
-        />
+          <FormField
+            label={t.configuracion.papeles_pagador_col_vencimiento}
+            name="papel_pagador_vencimiento"
+            type="checkbox"
+            checked={requiereVencimiento}
+            onChange={(e) => setRequiereVencimiento(e.target.checked)}
+          />
+        </div>
 
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>

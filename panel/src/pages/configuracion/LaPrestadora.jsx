@@ -18,28 +18,26 @@ import { ConsentimientoPagadorTab } from './ConsentimientoPagadorTab';
 import { TabLugares } from './LosLugares';
 import { LaMoneda } from './LaMoneda';
 import { ElSoftwareDeAfuera } from './ElSoftwareDeAfuera';
+import '../../styles/molde-paginas.css';
 
 /* Quién es la Prestadora y cómo trabaja: su nombre y sus datos, en qué moneda
    trabaja, las modalidades que tiene contratadas, las zonas donde presta, a qué
    plazo le pagan las Familias y —si vende por marketplace— por dónde cobra. */
 export function ConfiguracionPrestadora() {
-  const { t } = useLocale();
   const { tieneModalidad } = useModalidades();
 
   return (
-    <>
-      <h2>{t.configuracion.tab_empresa}</h2>
+    <div className="molde-pila">
       <TabEmpresa />
       <LaMoneda />
       <TabModalidades />
-      <h2>{t.configuracion.tab_zonas}</h2>
       <TabZonas />
       <TabLugares />
       <FacturacionFamiliasTab />
       <ElSoftwareDeAfuera />
       <ConsentimientoPagadorTab />
       {tieneModalidad('marketplace') && <TabPasarela />}
-    </>
+    </div>
   );
 }
 
@@ -89,21 +87,30 @@ function TabEmpresa() {
   }
 
   return (
-    <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
-      {form && (
-        <div>
-          {error && <Alert variant="error">{error}</Alert>}
-          {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
-          <FormField label={t.configuracion.empresa_nombre} name="nombre" value={form.nombre || ''} onChange={(e) => set('nombre', e.target.value)} />
-          <FormField label={t.configuracion.empresa_telefono} name="telefono" value={form.telefono || ''} onChange={(e) => set('telefono', e.target.value)} />
-          <FormField label={t.configuracion.empresa_whatsapp} name="whatsapp_numero" value={form.whatsapp_numero || ''} onChange={(e) => set('whatsapp_numero', e.target.value)} />
-          <FormField label={t.configuracion.empresa_email} name="email" type="email" value={form.email || ''} onChange={(e) => set('email', e.target.value)} />
-          <FormField label={t.configuracion.empresa_dominio} name="dominio" value={form.dominio || ''} onChange={(e) => set('dominio', e.target.value)} />
-          <FormField label={t.configuracion.empresa_zona_texto} name="zona_cobertura_texto" value={form.zona_cobertura_texto || ''} onChange={(e) => set('zona_cobertura_texto', e.target.value)} />
-          <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
-        </div>
-      )}
-    </EstadoLista>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.tab_empresa}</h2>
+      </div>
+      <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
+        {form && (
+          <>
+            {error && <Alert variant="error">{error}</Alert>}
+            {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
+            <div className="molde-formgrid">
+              <FormField label={t.configuracion.empresa_nombre} name="nombre" value={form.nombre || ''} onChange={(e) => set('nombre', e.target.value)} />
+              <FormField label={t.configuracion.empresa_telefono} name="telefono" value={form.telefono || ''} onChange={(e) => set('telefono', e.target.value)} />
+              <FormField label={t.configuracion.empresa_whatsapp} name="whatsapp_numero" value={form.whatsapp_numero || ''} onChange={(e) => set('whatsapp_numero', e.target.value)} />
+              <FormField label={t.configuracion.empresa_email} name="email" type="email" value={form.email || ''} onChange={(e) => set('email', e.target.value)} />
+              <FormField label={t.configuracion.empresa_dominio} name="dominio" value={form.dominio || ''} onChange={(e) => set('dominio', e.target.value)} />
+              <FormField label={t.configuracion.empresa_zona_texto} name="zona_cobertura_texto" value={form.zona_cobertura_texto || ''} onChange={(e) => set('zona_cobertura_texto', e.target.value)} />
+            </div>
+            <div className="molde-acciones">
+              <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+            </div>
+          </>
+        )}
+      </EstadoLista>
+    </section>
   );
 }
 
@@ -149,8 +156,10 @@ function TabModalidades() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.modalidades_titulo}</h2>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.modalidades_titulo}</h2>
+      </div>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
       <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
         <table className="panel-tabla">
@@ -178,7 +187,7 @@ function TabModalidades() {
           </tbody>
         </table>
       </EstadoLista>
-    </div>
+    </section>
   );
 }
 
@@ -237,11 +246,12 @@ function TabZonas() {
   }
 
   return (
-    <div>
-      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
-      <div className="panel-filtros">
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.tab_zonas}</h2>
         <Button onClick={() => setCreandoNueva(true)}>{t.configuracion.zonas_nueva}</Button>
       </div>
+      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
       <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && zonas.length === 0} recargar={recargar}>
         <table className="panel-tabla">
           <thead>
@@ -257,7 +267,7 @@ function TabZonas() {
             {zonas.map((z) => (
               <tr key={z.id}>
                 <td>{z.codigo}</td>
-                <td>{z.nombre}</td>
+                <td><b>{z.nombre}</b></td>
                 <td>{z.categoria}</td>
                 <td>
                   <input
@@ -269,7 +279,7 @@ function TabZonas() {
                   />
                 </td>
                 <td>
-                  <button onClick={() => borrar(z)} disabled={actualizandoZona === z.id}>{t.comun.borrar}</button>
+                  <Button variant="secondary" onClick={() => borrar(z)} disabled={actualizandoZona === z.id}>{t.comun.borrar}</Button>
                 </td>
               </tr>
             ))}
@@ -280,7 +290,7 @@ function TabZonas() {
       {creandoNueva && (
         <NuevaZona onClose={() => setCreandoNueva(false)} onCreada={() => { setCreandoNueva(false); recargar(); }} />
       )}
-    </div>
+    </section>
   );
 }
 
@@ -311,9 +321,11 @@ function NuevaZona({ onClose, onCreada }) {
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
         <h2 id={modal.idTitulo}>{t.configuracion.zonas_nueva}</h2>
         {error && <Alert variant="error">{error}</Alert>}
-        <FormField label={t.configuracion.zonas_col_codigo} name="codigo" value={codigo} onChange={(e) => setCodigo(e.target.value)} required />
-        <FormField label={t.configuracion.zonas_col_nombre} name="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
-        <FormField label={t.configuracion.zonas_col_categoria} name="categoria" value={categoria} onChange={(e) => setCategoria(e.target.value)} required />
+        <div className="molde-formgrid">
+          <FormField label={t.configuracion.zonas_col_codigo} name="codigo" value={codigo} onChange={(e) => setCodigo(e.target.value)} required />
+          <FormField label={t.configuracion.zonas_col_nombre} name="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
+          <FormField label={t.configuracion.zonas_col_categoria} name="categoria" value={categoria} onChange={(e) => setCategoria(e.target.value)} required />
+        </div>
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>{t.comun.cancelar}</Button>
           <Button onClick={handleGuardar} disabled={guardando || !codigo || !nombre}>
@@ -336,8 +348,7 @@ function NuevaZona({ onClose, onCreada }) {
 
    Quien decide de verdad es el backend (`backend/src/routes/panelMarketplace.js`, el PATCH de la
    pasarela y el PUT del secreto de firma): escribiendo la dirección a mano se llega igual, y ahí
-   se niega. Esto de acá es para no mostrar botones que no van a poder guardar, y para que quien
-   los busca entienda por qué no están. */
+   se niega. Esto de acá es para no mostrar botones que no van a poder guardar. */
 function TabPasarela() {
   const { t } = useLocale();
   const { usuario } = useAuth();
@@ -430,9 +441,10 @@ function TabPasarela() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.pasarela_titulo}</h2>
-      {!puedeTocarLasCredenciales && <Alert variant="info">{t.configuracion.pasarela_credenciales_solo_admin}</Alert>}
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.pasarela_titulo}</h2>
+      </div>
       <EstadoLista estado={estado} error={error} vacio={pasarelas.length === 0} recargar={recargar}>
         {error && <Alert variant="error">{error}</Alert>}
         <table className="panel-tabla">
@@ -451,14 +463,16 @@ function TabPasarela() {
               return (
                 <Fragment key={fila.proveedor}>
                   <tr>
-                    <td>{t.configuracion[`pasarela_${fila.proveedor}`]}</td>
+                    <td><b>{t.configuracion[`pasarela_${fila.proveedor}`]}</b></td>
                     <td>
-                      {fila.activo ? t.configuracion.pasarela_activa : t.configuracion.pasarela_inactiva}
+                      <span className={`badge ${fila.activo ? 'badge-exito' : 'badge-neutro'}`}>
+                        {fila.activo ? t.configuracion.pasarela_activa : t.configuracion.pasarela_inactiva}
+                      </span>
                       {/* Una pasarela conectada pero sin secreto de firma no cobra: los cobros
                           que informa se rechazan por no poder comprobarse. Se dice acá, en la
                           misma fila, y no en un error después de que el cobro no entró. */}
                       {fila.activo && fila.requiere_secreto_firma && !fila.secreto_firma_cargado && (
-                        <div className="panel-explicacion">{t.configuracion.pasarela_secreto_firma_falta}</div>
+                        <div><span className="badge badge-atencion">{t.configuracion.pasarela_secreto_firma_falta}</span></div>
                       )}
                     </td>
                     <td>
@@ -510,46 +524,54 @@ function TabPasarela() {
                   {abierta && requiereCredencial && !fila.activo && (
                     <tr>
                       <td colSpan={3}>
-                        <FormField
-                          label={t.configuracion.pasarela_credencial_cargar}
-                          name={`credencial-${fila.proveedor}`}
-                          type="password"
-                          value={credencial}
-                          onChange={(e) => setCredencial(e.target.value)}
-                        />
-                        {/* Los dos datos salen del mismo panel del proveedor: se copian de una
-                            sola vez y la pasarela queda lista para cobrar sin volver acá. */}
-                        {fila.requiere_secreto_firma && (
+                        <div className="molde-formgrid">
                           <FormField
-                            label={t.configuracion.pasarela_secreto_firma_cargar}
-                            name={`secreto-firma-alta-${fila.proveedor}`}
+                            label={t.configuracion.pasarela_credencial_cargar}
+                            name={`credencial-${fila.proveedor}`}
                             type="password"
-                            value={secretoFirma}
-                            onChange={(e) => setSecretoFirma(e.target.value)}
+                            value={credencial}
+                            onChange={(e) => setCredencial(e.target.value)}
                           />
-                        )}
-                        <Button onClick={() => activar(fila.proveedor)} disabled={accionEnCurso === fila.proveedor}>
-                          {accionEnCurso === fila.proveedor ? t.comun.guardando : t.comun.guardar}
-                        </Button>
+                          {/* Los dos datos salen del mismo panel del proveedor: se copian de una
+                              sola vez y la pasarela queda lista para cobrar sin volver acá. */}
+                          {fila.requiere_secreto_firma && (
+                            <FormField
+                              label={t.configuracion.pasarela_secreto_firma_cargar}
+                              name={`secreto-firma-alta-${fila.proveedor}`}
+                              type="password"
+                              value={secretoFirma}
+                              onChange={(e) => setSecretoFirma(e.target.value)}
+                            />
+                          )}
+                        </div>
+                        <div className="molde-acciones">
+                          <Button onClick={() => activar(fila.proveedor)} disabled={accionEnCurso === fila.proveedor}>
+                            {accionEnCurso === fila.proveedor ? t.comun.guardando : t.comun.guardar}
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   )}
                   {secretoAbiertoAca && fila.activo && fila.requiere_secreto_firma && (
                     <tr>
                       <td colSpan={3}>
-                        <FormField
-                          label={t.configuracion.pasarela_secreto_firma_cargar}
-                          name={`secreto-firma-${fila.proveedor}`}
-                          type="password"
-                          value={secretoFirma}
-                          onChange={(e) => setSecretoFirma(e.target.value)}
-                        />
-                        <Button
-                          onClick={() => guardarSecretoFirma(fila.proveedor)}
-                          disabled={accionEnCurso === fila.proveedor || !secretoFirma.trim()}
-                        >
-                          {accionEnCurso === fila.proveedor ? t.comun.guardando : t.comun.guardar}
-                        </Button>
+                        <div className="molde-formgrid">
+                          <FormField
+                            label={t.configuracion.pasarela_secreto_firma_cargar}
+                            name={`secreto-firma-${fila.proveedor}`}
+                            type="password"
+                            value={secretoFirma}
+                            onChange={(e) => setSecretoFirma(e.target.value)}
+                          />
+                        </div>
+                        <div className="molde-acciones">
+                          <Button
+                            onClick={() => guardarSecretoFirma(fila.proveedor)}
+                            disabled={accionEnCurso === fila.proveedor || !secretoFirma.trim()}
+                          >
+                            {accionEnCurso === fila.proveedor ? t.comun.guardando : t.comun.guardar}
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -559,6 +581,6 @@ function TabPasarela() {
           </tbody>
         </table>
       </EstadoLista>
-    </div>
+    </section>
   );
 }

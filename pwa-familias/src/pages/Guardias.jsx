@@ -53,37 +53,39 @@ export default function Guardias() {
   const vacia = semana.dias.every((d) => d.guardias.length === 0);
 
   return (
-    <div>
-      <Link to={`/pacientes/${id}`} className="btn btn-secondary" style={{ marginBottom: '1rem', fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
+    <>
+      <Link to={`/pacientes/${id}`} className="btn btn-volver">
         <span aria-hidden="true">←</span> {t.comun.volver}
       </Link>
       <h1>{t.guardias.titulo}</h1>
 
-      {/* Los dos botones quedan apagados mientras la semana nueva está viajando: si no, dos
-          toques seguidos piden dos semanas y llega primero la que se pidió después. */}
-      <div className="semana-navegador">
-        <button type="button" className="btn btn-secondary" disabled={cargando} onClick={() => setDia(semana.semanaAnterior)}>
-          <span aria-hidden="true">←</span> {t.guardias.semana_anterior}
-        </button>
-        <span className="semana-rango">{rango}</span>
-        <button type="button" className="btn btn-secondary" disabled={cargando} onClick={() => setDia(semana.semanaSiguiente)}>
-          {t.guardias.semana_siguiente} <span aria-hidden="true">→</span>
-        </button>
-      </div>
+      <section className="pwa-card">
+        {/* Los dos botones quedan apagados mientras la semana nueva está viajando: si no, dos
+            toques seguidos piden dos semanas y llega primero la que se pidió después. */}
+        <div className="semana-navegador">
+          <button type="button" className="btn btn-secondary" disabled={cargando} onClick={() => setDia(semana.semanaAnterior)}>
+            <span aria-hidden="true">←</span> {t.guardias.semana_anterior}
+          </button>
+          <span className="semana-rango">{rango}</span>
+          <button type="button" className="btn btn-secondary" disabled={cargando} onClick={() => setDia(semana.semanaSiguiente)}>
+            {t.guardias.semana_siguiente} <span aria-hidden="true">→</span>
+          </button>
+        </div>
 
-      {/* El atajo de vuelta aparece solo cuando hace falta. Sin él, quien se fue cuatro semanas
-          para atrás tiene que tocar cuatro veces para volver a lo que le importa. */}
-      {!mirandoEstaSemana && (
-        <button type="button" className="btn btn-secondary btn-full" disabled={cargando} onClick={() => setDia(hoy)} style={{ marginBottom: '1rem' }}>
-          {t.guardias.esta_semana}
-        </button>
-      )}
+        {/* El atajo de vuelta aparece solo cuando hace falta. Sin él, quien se fue cuatro semanas
+            para atrás tiene que tocar cuatro veces para volver a lo que le importa. */}
+        {!mirandoEstaSemana && (
+          <button type="button" className="btn btn-secondary btn-full" disabled={cargando} onClick={() => setDia(hoy)}>
+            {t.guardias.esta_semana}
+          </button>
+        )}
+      </section>
 
       {vacia ? (
-        <div className="estado-vacio" role="status">{t.guardias.sin_guardias_en_la_semana}</div>
+        <div className="pwa-card estado-vacio" role="status">{t.guardias.sin_guardias_en_la_semana}</div>
       ) : (
         semana.dias.map((d) => (
-          <div key={d.fecha} className="semana-dia">
+          <section key={d.fecha} className="pwa-card semana-dia">
             <div className="semana-dia-titulo">
               <span className="semana-dia-fecha">
                 {enPalabras(d.fecha, locale, { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -100,7 +102,7 @@ export default function Guardias() {
                   <div className="guardia-card-detalle">
                     {g.hora_inicio?.slice(0, 5)} - {g.hora_fin?.slice(0, 5)}
                   </div>
-                  <div style={{ marginTop: '0.4rem' }}>
+                  <div className="mini-abajo">
                     {/* Quién canceló manda sobre el estado: "cancelada" a secas deja a la
                         Familia sin saber si fue una decisión suya o de la Prestadora. */}
                     <span className="badge">
@@ -120,9 +122,9 @@ export default function Guardias() {
                 </div>
               ))
             )}
-          </div>
+          </section>
         ))
       )}
-    </div>
+    </>
   );
 }

@@ -1,32 +1,54 @@
-import { Outlet, NavLink } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
-import { useMarca, useOfreceMarketplace } from '../context/PerfilContext';
+import { useMarca, useOfreceMarketplace, useSeVe } from '../context/PerfilContext';
+import { useCirculo } from '../context/CirculoContext';
+import { pantallaPermitida } from '../lib/interruptorDeCadaPantalla';
+
+// El Paciente que se está mirando, sacado de la dirección. Las pestañas Guardias y Servicio son
+// de un Paciente, así que necesitan saber de cuál.
+const PACIENTE_EN_LA_DIRECCION = /^\/pacientes\/([^/]+)/;
+// Inicio es la lista y la ficha de un Paciente; las pantallas que cuelgan de él no.
+const ES_INICIO = /^\/pacientes(\/[^/]+)?\/?$/;
+
+const claseDeLaPestana = ({ isActive }) => (isActive ? 'active' : '');
 
 export default function Layout() {
-  const { logout } = useAuth();
+  const { usuario } = useAuth();
   const { t } = useLocale();
   const marca = useMarca();
   const ofreceMarketplace = useOfreceMarketplace();
+  const seVe = useSeVe();
+  const { puedeVer } = useCirculo();
+  const { pathname } = useLocation();
+
+  // Se recuerda el último Paciente abierto, para que Guardias y Servicio sigan apuntando a él
+  // mientras se recorren las pantallas del círculo familiar, que no lo llevan en la dirección.
+  const [pacienteId, setPacienteId] = useState(null);
+  const enLaDireccion = pathname.match(PACIENTE_EN_LA_DIRECCION)?.[1] || null;
+  useEffect(() => {
+    if (enLaDireccion) setPacienteId(enLaDireccion);
+  }, [enLaDireccion]);
+  const paciente = enLaDireccion || pacienteId;
+  const destino = (tramo) => (paciente ? `/pacientes/${paciente}/${tramo}` : '/pacientes');
 
   return (
-    <div className="app-layout">
+    <div className="pwa-shell">
       {/* Arriba va la Prestadora, que es a quien la Familia llamó. Si cargó su logo se
           muestra el logo; si no, su nombre escrito. Mientras el nombre viaja queda el
           espacio vacío: es preferible a mostrar un nombre que después cambia.
           El nombre no va como `h1`: el `h1` es el título de la pantalla que se está mirando,
           y hay uno solo por pantalla. */}
-      <header className="app-header">
+      <header className="pwa-top">
         {marca.logoUrl ? (
           <img className="logo-prestadora" src={marca.logoUrl} alt={marca.nombre || ''} />
         ) : (
           <p className="nombre-prestadora">{marca.nombre || ''}</p>
         )}
-        <button className="btn btn-secondary" onClick={logout} style={{ padding: '0.4rem 1rem', fontSize: '0.8rem' }}>
-          {t.nav.cerrar_sesion}
-        </button>
+        {usuario?.nombre && <div className="mini mini-arriba">{usuario.nombre}</div>}
       </header>
-      <main className="app-content">
+      <main className="pwa-body">
         <Outlet />
         {/* La única mención del producto en toda la aplicación, y al pie. Va siempre: es el
             crédito de quién hizo el software, no una función que se venda. */}
@@ -35,35 +57,27 @@ export default function Layout() {
       {/* La zona de navegación lleva nombre: sin él, un lector de pantalla anuncia "navegación"
           a secas, y si mañana hay dos zonas de navegación en la misma pantalla no hay forma de
           distinguirlas. */}
-      <nav className="app-nav-inferior" aria-label={t.nav.menu_principal}>
-        <NavLink to="/pacientes" className={({ isActive }) => (isActive ? 'active' : '')}>
-          {t.nav.pacientes}
+      <nav className="pwa-nav" aria-label={t.nav.menu_principal}>
+        <NavLink to="/pacientes" end className={() => (ES_INICIO.test(pathname) ? 'active' : '')}>
+          {t.nav.inicio}
         </NavLink>
-        {/* Buscar Asistentes sólo aparece donde la Prestadora ofrece esa modalidad de trabajo.
-            En una que trabaja únicamente en prestación directa no hay a quién buscar: la gente
-            la asigna ella. */}
-        {ofreceMarketplace && (
-          <NavLink to="/buscar" className={({ isActive }) => (isActive ? 'active' : '')}>
-            {t.nav.buscar}
+        {/* La misma pregunta que hace la ruta: si contestaran distinto quedaría una pestaña que
+            rebota. */}
+        {pantallaPermitida('guardias', seVe, puedeVer) && (
+          <NavLink to={destino('guardias')} className={paciente ? claseDeLaPestana : () => ''}>
+            {t.nav.guardias}
           </NavLink>
         )}
+        <NavLink to={destino('asistente')} className={paciente ? claseDeLaPestana : () => ''}>
+          {t.nav.servicio}
+        </NavLink>
         {/* El chat con la gente de la vidriera cuelga de lo mismo que la vidriera: donde la
             Prestadora no ofrece esa modalidad no hay con quién hablar. */}
         {ofreceMarketplace && (
-          <NavLink to="/mensajes" className={({ isActive }) => (isActive ? 'active' : '')}>
+          <NavLink to="/mensajes" className={claseDeLaPestana}>
             {t.nav.mensajes}
           </NavLink>
         )}
-        {/* El código para el Asistente que llega va en el menú de abajo y no adentro de un
-            Paciente: se busca con el timbre sonando y tiene que estar a un toque desde donde
-            sea. Además es del círculo familiar entero, así que colgarlo de un Paciente diría
-            algo que no es cierto. */}
-        <NavLink to="/codigo" className={({ isActive }) => (isActive ? 'active' : '')}>
-          {t.nav.codigo}
-        </NavLink>
-        <NavLink to="/perfil" className={({ isActive }) => (isActive ? 'active' : '')}>
-          {t.nav.perfil}
-        </NavLink>
       </nav>
     </div>
   );

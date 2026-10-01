@@ -11,6 +11,8 @@ import { Alert } from '../../components/ui/Alert';
 import { Cabecera } from '../../components/ui/Cabecera';
 import { mensajeDeError } from '../../lib/errores';
 import { ContenidoDetalle } from './ContenidoDetalle';
+import '../../styles/molde-paginas.css';
+import '../hojaDeTarjetas.css';
 
 /* Contenido para Familias.
    ==========================================================================
@@ -59,43 +61,51 @@ export function ContenidoParaFamilias() {
       </Cabecera>
       {estado === 'error' && error && <Alert variant="error">{error}</Alert>}
 
-      <EstadoLista
-        estado={estado}
-        error={error}
-        vacio={estado === 'listo' && contenidos.length === 0}
-        recargar={recargar}
-      >
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.contenidos.col_orden}</th>
-              <th>{t.contenidos.col_titulo}</th>
-              <th>{t.contenidos.col_enlace}</th>
-              <th>{t.contenidos.col_publicado}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {contenidos.map((contenido) => (
-              <tr key={contenido.id}>
-                <td>{contenido.orden}</td>
-                <td>{contenido.titulo}</td>
-                <td>{contenido.enlace_url ? t.comun.si : '—'}</td>
-                <td>
-                  <span className={claseBadge(contenido.publicado ? 'activo' : 'inactivo')}>
-                    {contenido.publicado ? t.contenidos.publicado_si : t.contenidos.publicado_no}
-                  </span>
-                </td>
-                <td>
-                  <button onClick={() => setSeleccionado(contenido)}>
-                    {puedeEscribir ? t.comun.editar : t.comun.ver_detalle}
-                  </button>
-                </td>
+      <section className="panel-tarjeta hoja-desplazable">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.contenidos.titulo}</h2>
+          {estado === 'listo' && <span className="panel-mini">{contenidos.length}</span>}
+        </div>
+        <EstadoLista
+          estado={estado}
+          error={error}
+          vacio={estado === 'listo' && contenidos.length === 0}
+          recargar={recargar}
+        >
+          <table className="panel-tabla">
+            <thead>
+              <tr>
+                <th>{t.contenidos.col_orden}</th>
+                <th>{t.contenidos.col_titulo}</th>
+                <th>{t.contenidos.col_enlace}</th>
+                <th>{t.contenidos.col_publicado}</th>
+                <th></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </EstadoLista>
+            </thead>
+            <tbody>
+              {contenidos.map((contenido) => (
+                <tr key={contenido.id}>
+                  <td>{contenido.orden}</td>
+                  <td>
+                    <b>{contenido.titulo}</b>
+                  </td>
+                  <td>{contenido.enlace_url ? t.comun.si : '—'}</td>
+                  <td>
+                    <span className={claseBadge(contenido.publicado ? 'activo' : 'inactivo')}>
+                      {contenido.publicado ? t.contenidos.publicado_si : t.contenidos.publicado_no}
+                    </span>
+                  </td>
+                  <td>
+                    <button type="button" className="panel-enlace" onClick={() => setSeleccionado(contenido)}>
+                      {puedeEscribir ? t.comun.editar : t.comun.ver_detalle}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </EstadoLista>
+      </section>
 
       {(seleccionado || creandoNuevo) && (
         <ContenidoDetalle

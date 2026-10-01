@@ -7,6 +7,7 @@ import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { useMonedaActual } from '../../hooks/useMonedaActual';
+import '../../styles/molde-paginas.css';
 
 /* Las piezas de una forma de cobro, para cargarlas o cambiarlas.
    ==========================================================================
@@ -72,89 +73,91 @@ export function FormaDeCobroDetalle({ forma, unidades, soloLectura, onClose, onG
 
         {error && <Alert variant="error">{error}</Alert>}
 
-        <FormField
-          label={t.marketplace.forma_nombre}
-          name="nombre"
-          value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
-          disabled={soloLectura}
-          required
-        />
+        <div className="molde-formgrid">
+          <FormField
+            label={t.marketplace.forma_nombre}
+            name="nombre"
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            disabled={soloLectura}
+            required
+          />
 
-        <FormField
-          label={moneda ? `${t.marketplace.forma_importe} (${moneda})` : t.marketplace.forma_importe}
-          name="importe"
-          type="number"
-          step="0.01"
-          value={importe}
-          onChange={(e) => setImporte(e.target.value)}
-          disabled={soloLectura}
-          required
-        />
+          <FormField
+            label={moneda ? `${t.marketplace.forma_importe} (${moneda})` : t.marketplace.forma_importe}
+            name="importe"
+            type="number"
+            step="0.01"
+            value={importe}
+            onChange={(e) => setImporte(e.target.value)}
+            disabled={soloLectura}
+            required
+          />
 
+          <FormField
+            label={t.marketplace.forma_periodo_cantidad}
+            name="periodo_cantidad"
+            type="number"
+            value={periodoCantidad}
+            onChange={(e) => setPeriodoCantidad(e.target.value)}
+            disabled={soloLectura}
+          />
 
-        <FormField
-          label={t.marketplace.forma_periodo_cantidad}
-          name="periodo_cantidad"
-          type="number"
-          value={periodoCantidad}
-          onChange={(e) => setPeriodoCantidad(e.target.value)}
-          disabled={soloLectura}
-        />
+          <FormField
+            label={t.marketplace.forma_periodo_unidad}
+            name="periodo_unidad"
+            type="select"
+            value={periodoUnidad}
+            onChange={(e) => setPeriodoUnidad(e.target.value)}
+            disabled={soloLectura}
+          >
+            <option value="">{t.marketplace.forma_periodo_sin_unidad}</option>
+            {/* Las unidades vienen del backend, que las lee del catálogo de la base: acá no hay
+                ninguna lista escrita a mano. */}
+            {unidades.map((unidad) => (
+              <option key={unidad} value={unidad}>
+                {t.marketplace[`periodo_${unidad}`] || unidad}
+              </option>
+            ))}
+          </FormField>
 
-        <FormField
-          label={t.marketplace.forma_periodo_unidad}
-          name="periodo_unidad"
-          type="select"
-          value={periodoUnidad}
-          onChange={(e) => setPeriodoUnidad(e.target.value)}
-          disabled={soloLectura}
-        >
-          <option value="">{t.marketplace.forma_periodo_sin_unidad}</option>
-          {/* Las unidades vienen del backend, que las lee del catálogo de la base: acá no hay
-              ninguna lista escrita a mano. */}
-          {unidades.map((unidad) => (
-            <option key={unidad} value={unidad}>
-              {t.marketplace[`periodo_${unidad}`] || unidad}
-            </option>
-          ))}
-        </FormField>
+          <FormField
+            label={t.marketplace.forma_dias_gratis}
+            name="dias_gratis"
+            type="number"
+            value={diasGratis}
+            onChange={(e) => setDiasGratis(e.target.value)}
+            disabled={soloLectura}
+          />
 
-        <FormField
-          label={t.marketplace.forma_dias_gratis}
-          name="dias_gratis"
-          type="number"
-          value={diasGratis}
-          onChange={(e) => setDiasGratis(e.target.value)}
-          disabled={soloLectura}
-        />
+          <FormField
+            label={t.marketplace.forma_contactos_incluidos}
+            name="contactos_incluidos"
+            type="number"
+            value={contactos}
+            onChange={(e) => setContactos(e.target.value)}
+            disabled={soloLectura}
+          />
 
-        <FormField
-          label={t.marketplace.forma_contactos_incluidos}
-          name="contactos_incluidos"
-          type="number"
-          value={contactos}
-          onChange={(e) => setContactos(e.target.value)}
-          disabled={soloLectura}
-        />
+          <FormField
+            label={t.marketplace.forma_renueva_sola}
+            name="renueva_sola"
+            type="checkbox"
+            checked={renuevaSola}
+            onChange={(e) => setRenuevaSola(e.target.checked)}
+            disabled={soloLectura}
+          />
 
-        <FormField
-          label={t.marketplace.forma_renueva_sola}
-          name="renueva_sola"
-          type="checkbox"
-          checked={renuevaSola}
-          onChange={(e) => setRenuevaSola(e.target.checked)}
-          disabled={soloLectura}
-        />
+          <FormField
+            label={t.marketplace.forma_ofrecida}
+            name="ofrecida"
+            type="checkbox"
+            checked={ofrecida}
+            onChange={(e) => setOfrecida(e.target.checked)}
+            disabled={soloLectura}
+          />
+        </div>
 
-        <FormField
-          label={t.marketplace.forma_ofrecida}
-          name="ofrecida"
-          type="checkbox"
-          checked={ofrecida}
-          onChange={(e) => setOfrecida(e.target.checked)}
-          disabled={soloLectura}
-        />
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>
             {soloLectura ? t.comun.cerrar : t.comun.cancelar}

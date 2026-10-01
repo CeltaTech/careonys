@@ -93,7 +93,7 @@ export default function DescansoEnGuardia({ t, locale, guardiaId, descansoAbiert
   }
 
   return (
-    <div style={{ marginTop: '1.5rem' }}>
+    <div className="pwa-card-bloque">
       {error && <div className="alert alert-error" role="alert">{error}</div>}
 
       {abierto && (

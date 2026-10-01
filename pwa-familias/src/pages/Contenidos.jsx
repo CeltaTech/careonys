@@ -35,22 +35,22 @@ export default function Contenidos() {
   if (contenidos === undefined) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
 
   return (
-    <div>
+    <>
       <h1>{t.contenidos.titulo}</h1>
 
       {contenidos.length === 0 ? (
-        <div className="estado-vacio" role="status">{t.contenidos.sin_contenidos}</div>
+        <div className="pwa-card estado-vacio" role="status">{t.contenidos.sin_contenidos}</div>
       ) : (
         contenidos.map((contenido) => (
-          <article key={contenido.id} className="guardia-card">
-            <h2 className="guardia-card-paciente">{contenido.titulo}</h2>
-            <p style={{ whiteSpace: 'pre-wrap' }}>{contenido.cuerpo}</p>
+          <article key={contenido.id} className="pwa-card">
+            <h2>{contenido.titulo}</h2>
+            <div className="texto-con-renglones pwa-card-dato">{contenido.cuerpo}</div>
             {/* El enlace lleva a una página de la Prestadora, fuera de esta aplicación: se abre
                 aparte para no perder dónde estaba quien lo tocó, y sin dejarle a esa página
                 ninguna llave de vuelta hacia acá. */}
             {contenido.enlace_url && (
               <a
-                className="btn btn-secondary btn-full"
+                className="btn btn-secondary btn-full btn-abajo"
                 href={contenido.enlace_url}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -61,6 +61,6 @@ export default function Contenidos() {
           </article>
         ))
       )}
-    </div>
+    </>
   );
 }

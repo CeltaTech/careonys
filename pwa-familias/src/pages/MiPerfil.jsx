@@ -6,6 +6,7 @@ import { traducirValor } from '../i18n/valores';
 import { activarPush, desactivarPush, pushSoportado, suscripcionActual } from '../lib/push';
 import { useSeVe } from '../context/PerfilContext';
 import { useCirculo } from '../context/CirculoContext';
+import { useAuth } from '../context/AuthContext';
 import { pantallaPermitida } from '../lib/interruptorDeCadaPantalla';
 import AvisoInstruccionPendiente from '../components/AvisoInstruccionPendiente';
 import LlavesDeEsteAparato from '../components/LlavesDeEsteAparato';
@@ -16,7 +17,7 @@ import LlavesDeEsteAparato from '../components/LlavesDeEsteAparato';
 function ListaDeAccesos({ titulo, claves, etiquetas, vacio }) {
   return (
     <>
-      <h3 style={{ marginTop: '1.25rem' }}>{titulo}</h3>
+      <h3 className="pwa-card-dato">{titulo}</h3>
       {claves.length === 0 ? (
         <p className="guardia-card-detalle">{vacio}</p>
       ) : (
@@ -34,6 +35,7 @@ export default function MiPerfil() {
   const { t } = useLocale();
   const seVe = useSeVe();
   const { puedeVer } = useCirculo();
+  const { logout } = useAuth();
   const [perfil, setPerfil] = useState(null);
   const [error, setError] = useState('');
   const [notifActivas, setNotifActivas] = useState(false);
@@ -97,58 +99,60 @@ export default function MiPerfil() {
   const loQueNoVe = accesos ? accesos.filter(([, permitido]) => !permitido).map(([clave]) => clave) : [];
 
   return (
-    <div>
+    <>
       <h1>{t.perfil.titulo}</h1>
 
       <AvisoInstruccionPendiente />
-      <div style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '0.5rem 1.5rem' }}>
-        <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.nombre}</div>
-        <div>{perfil.nombre}</div>
-        {/* El correo es con lo que se entra. Está acá para que quien no se acuerda con cuál se
-            anotó lo pueda mirar, que es lo único que hay para «recuperar el usuario». */}
-        <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.email}</div>
-        <div>{perfil.email}</div>
-        <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.telefono}</div>
-        <div>{perfil.telefono || '—'}</div>
-        {/* El plan contratado es una condición comercial, no un dato del cuidado: va con el
-            resto de lo que la Prestadora decide mostrar sobre el dinero. Hay Prestadoras que
-            cobran por fuera de la aplicación y no quieren que aparezca acá. */}
-        {seVe('familia_pagos_y_suscripcion') && (
-          <>
-            <div style={{ fontWeight: 700, color: 'var(--azul-oscuro)', fontSize: '0.85rem' }}>{t.perfil.plan}</div>
-            <div>{perfil.plan || '—'}</div>
-          </>
-        )}
-      </div>
+      <section className="pwa-card">
+        <dl className="pwa-datos">
+          <dt>{t.perfil.nombre}</dt>
+          <dd>{perfil.nombre}</dd>
+          {/* El correo es con lo que se entra. Está acá para que quien no se acuerda con cuál se
+              anotó lo pueda mirar, que es lo único que hay para «recuperar el usuario». */}
+          <dt>{t.perfil.email}</dt>
+          <dd>{perfil.email}</dd>
+          <dt>{t.perfil.telefono}</dt>
+          <dd>{perfil.telefono || '—'}</dd>
+          {/* El plan contratado es una condición comercial, no un dato del cuidado: va con el
+              resto de lo que la Prestadora decide mostrar sobre el dinero. Hay Prestadoras que
+              cobran por fuera de la aplicación y no quieren que aparezca acá. */}
+          {seVe('familia_pagos_y_suscripcion') && (
+            <>
+              <dt>{t.perfil.plan}</dt>
+              <dd>{perfil.plan || '—'}</dd>
+            </>
+          )}
+        </dl>
+      </section>
 
-      {/* Las facturas se entran desde acá y no desde la barra de abajo, que tiene tres lugares y
-          los tres son de todos los días. Lo que se le cobra al círculo familiar no cuelga de
-          ningún Paciente: se factura al círculo entero, y una misma factura puede tener
-          renglones de más de una persona cuidada. El botón se pregunta lo mismo que la ruta, con
-          la misma función, o quedaría un botón que rebota. */}
-      {pantallaPermitida('facturas', seVe, puedeVer) && (
-        <Link to="/facturas" className="btn btn-secondary btn-full" style={{ marginTop: '1.5rem' }}>
-          {t.facturas.titulo}
-        </Link>
-      )}
-
-      {/* La biblioteca de la Prestadora se entra desde acá por el mismo motivo que las facturas:
-          la barra de abajo es para lo de todos los días. No se pregunta nada antes de ofrecerla
-          —no cuelga de un Paciente ni de una modalidad, y no muestra nada de nadie—; donde la
-          Prestadora no escribió nada, la pantalla lo dice. */}
-      <Link to="/contenidos" className="btn btn-secondary btn-full" style={{ marginTop: '0.75rem' }}>
-        {t.contenidos.titulo}
-      </Link>
+      <section className="pwa-card">
+        <div className="pwa-acciones pwa-acciones-sola">
+          {/* Lo que se le cobra al círculo familiar no cuelga de ningún Paciente: se factura al
+              círculo entero, y una misma factura puede tener renglones de más de una persona
+              cuidada. El botón se pregunta lo mismo que la ruta, con la misma función, o quedaría
+              un botón que rebota. */}
+          {pantallaPermitida('facturas', seVe, puedeVer) && (
+            <Link to="/facturas" className="btn">
+              {t.facturas.titulo}
+            </Link>
+          )}
+          {/* La biblioteca de la Prestadora no cuelga de un Paciente ni de una modalidad, y no
+              muestra nada de nadie; donde la Prestadora no escribió nada, la pantalla lo dice. */}
+          <Link to="/contenidos" className="btn">
+            {t.contenidos.titulo}
+          </Link>
+        </div>
+      </section>
 
       {/* Qué ve esta persona y qué no. Al titular se le dice que ve todo y se termina ahí: lo
           suyo no se configura, no hay instrucción que le pueda quitar nada, ni siquiera una
           propia. A quien está en el círculo se le muestran las dos listas enteras, sin nada
           que tocar. */}
       {(perfil.esTitular || accesos) && (
-        <>
-          <h2 style={{ marginTop: '2rem' }}>{t.perfil.acceso_titulo}</h2>
+        <section className="pwa-card">
+          <h2>{t.perfil.acceso_titulo}</h2>
           {perfil.esTitular ? (
-            <p>{t.perfil.acceso_titular}</p>
+            <p className="pwa-card-dato">{t.perfil.acceso_titular}</p>
           ) : (
             <>
               <ListaDeAccesos
@@ -165,33 +169,45 @@ export default function MiPerfil() {
               />
             </>
           )}
-        </>
+        </section>
       )}
 
-      <h2 style={{ marginTop: '2rem' }}>{t.perfil.notificaciones_titulo}</h2>
-      {!pushSoportado() ? (
-        <div className="alert">{t.perfil.notificaciones_no_soportadas}</div>
-      ) : (
-        <>
-          <button type="button" className="btn btn-primary" disabled={notifCargando} onClick={alternarNotificaciones}>
-            {notifCargando
-              ? t.perfil.notificaciones_activando
-              : notifActivas
-              ? t.perfil.notificaciones_desactivar
-              : t.perfil.notificaciones_activar}
+      <section className="pwa-card">
+        <h2>{t.perfil.notificaciones_titulo}</h2>
+        {!pushSoportado() ? (
+          <div className="alert">{t.perfil.notificaciones_no_soportadas}</div>
+        ) : (
+          <div className="pwa-card-pie">
+            <button type="button" className="btn btn-primary" disabled={notifCargando} onClick={alternarNotificaciones}>
+              {notifCargando
+                ? t.perfil.notificaciones_activando
+                : notifActivas
+                ? t.perfil.notificaciones_desactivar
+                : t.perfil.notificaciones_activar}
+            </button>
+            {notifActivas && !notifCargando && <p className="mini mini-abajo">{t.perfil.notificaciones_activas}</p>}
+            {notifError && <div className="alert alert-error" role="alert">{notifError}</div>}
+          </div>
+        )}
+      </section>
+
+      {/* Cómo se entra a esta aplicación y cómo se sale. Va acá abajo, junto con los mensajes al
+          celular: son cosas de este aparato y no del cuidado de nadie. */}
+      {/* Las llaves son una copia compartida con la otra aplicación y no se tocan desde acá: la
+          tarjeta que las envuelve les acomoda el margen del título. */}
+      <section className="pwa-card pwa-card-llaves">
+        <LlavesDeEsteAparato />
+      </section>
+      <section className="pwa-card">
+        <div className="pwa-acciones pwa-acciones-sola">
+          <Link to="/mi-clave" className="btn">
+            {t.auth.mi_clave}
+          </Link>
+          <button type="button" className="btn" onClick={logout}>
+            {t.nav.cerrar_sesion}
           </button>
-          {notifActivas && !notifCargando && <p>{t.perfil.notificaciones_activas}</p>}
-          {notifError && <div className="alert alert-error" role="alert">{notifError}</div>}
-        </>
-      )}
-
-      {/* Cómo se entra a esta aplicación. Va acá abajo, junto con los mensajes al celular: las dos
-          son cosas de este aparato y no del cuidado de nadie. */}
-      <Link to="/mi-clave" className="btn btn-secondary btn-full" style={{ marginTop: '2rem' }}>
-        {t.auth.mi_clave}
-      </Link>
-
-      <LlavesDeEsteAparato />
-    </div>
+        </div>
+      </section>
+    </>
   );
 }

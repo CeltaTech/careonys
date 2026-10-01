@@ -1,0 +1,53 @@
+/* Los listados de Asistentes, Familias y Guardias: una tarjeta con la tabla adentro, como en la
+   maqueta. La tabla ya está dentro de la tarjeta, así que no lleva borde ni sombra propios. */
+
+.listado-maqueta-tabla {
+  overflow-x: auto;
+}
+
+.listado-maqueta .panel-tabla {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.listado-maqueta .panel-filtros {
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.listado-maqueta .panel-filtros input[type='text'] {
+  min-width: 180px;
+}
+
+.listado-maqueta .panel-filtros label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 13px;
+}
+
+.listado-maqueta .panel-mini {
+  display: block;
+  margin-top: 2px;
+}
+
+.listado-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.listado-badge-violeta {
+  background: var(--tono-violeta-fondo);
+  color: var(--tono-violeta-texto);
+}
+
+.listado-fila-abre {
+  cursor: pointer;
+}
+
+.listado-fila-abre:focus-visible {
+  outline: 2px solid var(--azul-medio);
+  outline-offset: -2px;
+}

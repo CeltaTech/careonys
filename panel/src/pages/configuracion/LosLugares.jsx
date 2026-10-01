@@ -10,6 +10,7 @@ import { useCatalogoDeLugares } from '../../hooks/useCatalogoDeLugares';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { mensajeDeError } from '../../lib/errores';
 import { con } from '../../lib/textos';
+import '../../styles/molde-paginas.css';
 
 /* Dónde trabaja la Prestadora: su lista de localidades y barrios, y qué abarca cada zona.
    ==========================================================================
@@ -45,68 +46,68 @@ export function TabLugares() {
   }
 
   return (
-    <div>
-      <h2>{t.configuracion.lugares_titulo}</h2>
-      {errorAccion && <Alert variant="error">{errorAccion}</Alert>}
+    <>
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.configuracion.lugares_titulo}</h2>
+          <Button onClick={() => setAgregando(true)}>{t.configuracion.lugares_agregar}</Button>
+        </div>
+        {errorAccion && <Alert variant="error">{errorAccion}</Alert>}
 
-      <div className="panel-filtros">
-        <Button onClick={() => setAgregando(true)}>{t.configuracion.lugares_agregar}</Button>
-      </div>
-
-      <EstadoLista
-        estado={estado}
-        error={error}
-        vacio={estado === 'listo' && lugares.length === 0}
-        mensajeVacio={t.configuracion.lugares_vacio}
-        recargar={recargar}
-      >
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.configuracion.lugares_col_nombre}</th>
-              <th>{t.configuracion.lugares_col_provincia}</th>
-              <th>{t.configuracion.lugares_col_origen}</th>
-              <th>{t.configuracion.lugares_col_activo}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {lugares.map((lugar) => (
-              <tr key={lugar.id}>
-                <td>{lugar.nombre}</td>
-                <td>{[lugar.provincia, lugar.municipio].filter(Boolean).join(' · ')}</td>
-                <td>
-                  {lugar.fuente === 'oficial'
-                    ? t.configuracion.lugares_origen_oficial
-                    : t.configuracion.lugares_origen_propio}
-                </td>
-                <td>
-                  <input
-                    type="checkbox"
-                    checked={Boolean(lugar.activo)}
-                    onChange={() => alternarActivo(lugar)}
-                    disabled={lugarEnCurso === lugar.id}
-                    aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.lugares_col_activo, nombre: lugar.nombre })}
-                  />
-                </td>
+        <EstadoLista
+          estado={estado}
+          error={error}
+          vacio={estado === 'listo' && lugares.length === 0}
+          mensajeVacio={t.configuracion.lugares_vacio}
+          recargar={recargar}
+        >
+          <table className="panel-tabla">
+            <thead>
+              <tr>
+                <th>{t.configuracion.lugares_col_nombre}</th>
+                <th>{t.configuracion.lugares_col_provincia}</th>
+                <th>{t.configuracion.lugares_col_origen}</th>
+                <th>{t.configuracion.lugares_col_activo}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </EstadoLista>
+            </thead>
+            <tbody>
+              {lugares.map((lugar) => (
+                <tr key={lugar.id}>
+                  <td><b>{lugar.nombre}</b></td>
+                  <td>{[lugar.provincia, lugar.municipio].filter(Boolean).join(' · ')}</td>
+                  <td>
+                    {lugar.fuente === 'oficial'
+                      ? t.configuracion.lugares_origen_oficial
+                      : t.configuracion.lugares_origen_propio}
+                  </td>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(lugar.activo)}
+                      onChange={() => alternarActivo(lugar)}
+                      disabled={lugarEnCurso === lugar.id}
+                      aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.lugares_col_activo, nombre: lugar.nombre })}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </EstadoLista>
 
-      {agregando && (
-        <AgregarLugar
-          lugares={lugares}
-          onClose={() => setAgregando(false)}
-          onAgregado={recargar}
-        />
-      )}
+        {agregando && (
+          <AgregarLugar
+            lugares={lugares}
+            onClose={() => setAgregando(false)}
+            onAgregado={recargar}
+          />
+        )}
+      </section>
 
-      <h2>{t.configuracion.lugares_zonas_titulo}</h2>
       {zonas.map((zona) => (
         <LugaresDeLaZona key={zona.id} zona={zona} lugares={lugares} onGuardado={recargar} />
       ))}
-    </div>
+    </>
   );
 }
 
@@ -185,32 +186,35 @@ function AgregarLugar({ lugares, onClose, onAgregado }) {
         <h2 id={modal.idTitulo}>{t.configuracion.lugares_agregar}</h2>
         {error && <Alert variant="error">{error}</Alert>}
 
-        {provincias.length > 0 && (
+        <div className="molde-formgrid">
+          {provincias.length > 0 && (
+            <FormField
+              label={t.configuracion.lugares_provincia}
+              name="provincia"
+              type="select"
+              value={provincia}
+              onChange={(e) => setProvincia(e.target.value)}
+            >
+              <option value="">{t.configuracion.lugares_provincia_todas}</option>
+              {provincias.map((p) => (
+                <option key={p.idOficial} value={p.nombre}>{p.nombre}</option>
+              ))}
+            </FormField>
+          )}
+
           <FormField
-            label={t.configuracion.lugares_provincia}
-            name="provincia"
-            type="select"
-            value={provincia}
-            onChange={(e) => setProvincia(e.target.value)}
-          >
-            <option value="">{t.configuracion.lugares_provincia_todas}</option>
-            {provincias.map((p) => (
-              <option key={p.idOficial} value={p.nombre}>{p.nombre}</option>
-            ))}
-          </FormField>
-        )}
+            label={t.configuracion.lugares_buscar}
+            name="texto"
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+          />
+        </div>
+        <div className="molde-acciones">
+          <Button onClick={buscar} disabled={buscando || !texto.trim()}>
+            {buscando ? t.comun.cargando : t.configuracion.lugares_buscar_accion}
+          </Button>
+        </div>
 
-        <FormField
-          label={t.configuracion.lugares_buscar}
-          name="texto"
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-        />
-        <Button onClick={buscar} disabled={buscando || !texto.trim()}>
-          {buscando ? t.comun.cargando : t.configuracion.lugares_buscar_accion}
-        </Button>
-
-        {sugerencias === null && <p className="panel-dato-vacio">{t.configuracion.lugares_escriba_para_buscar}</p>}
         {sugerencias?.length === 0 && <p className="panel-dato-vacio">{t.configuracion.lugares_sin_resultados}</p>}
         {sugerencias?.length > 0 && (
           <div className="panel-modulos-lista">
@@ -246,42 +250,46 @@ function AgregarLugar({ lugares, onClose, onAgregado }) {
         )}
 
         <h3>{t.configuracion.lugares_propio_titulo}</h3>
-        <FormField
-          label={t.configuracion.lugares_propio_nombre}
-          name="nombre_propio"
-          value={nombrePropio}
-          onChange={(e) => setNombrePropio(e.target.value)}
-        />
-        <FormField
-          label={t.configuracion.lugares_propio_dentro_de}
-          name="dentro_de"
-          type="select"
-          value={dentroDe}
-          onChange={(e) => setDentroDe(e.target.value)}
-        >
-          <option value=""></option>
-          {lugares.map((lugar) => (
-            <option key={lugar.id} value={lugar.id}>{lugar.nombre}</option>
-          ))}
-        </FormField>
-        <Button
-          variant="secondary"
-          disabled={guardando || !nombrePropio.trim() || !dentroDe}
-          onClick={() => {
-            const contenedor = lugares.find((lugar) => lugar.id === dentroDe);
-            return agregar({
-              nombre: nombrePropio,
-              // La provincia y el municipio son los de la localidad que lo contiene: un barrio no
-              // está en otro lado que su localidad, y pedirlos de nuevo sería dejar que se carguen
-              // distintos. El país lo pone el backend, que lo sabe por la Prestadora.
-              provincia: contenedor?.provincia ?? null,
-              municipio: contenedor?.municipio ?? null,
-              parte_de: dentroDe,
-            });
-          }}
-        >
-          {guardando ? t.comun.guardando : t.configuracion.lugares_agregar}
-        </Button>
+        <div className="molde-formgrid">
+          <FormField
+            label={t.configuracion.lugares_propio_nombre}
+            name="nombre_propio"
+            value={nombrePropio}
+            onChange={(e) => setNombrePropio(e.target.value)}
+          />
+          <FormField
+            label={t.configuracion.lugares_propio_dentro_de}
+            name="dentro_de"
+            type="select"
+            value={dentroDe}
+            onChange={(e) => setDentroDe(e.target.value)}
+          >
+            <option value=""></option>
+            {lugares.map((lugar) => (
+              <option key={lugar.id} value={lugar.id}>{lugar.nombre}</option>
+            ))}
+          </FormField>
+        </div>
+        <div className="molde-acciones">
+          <Button
+            variant="secondary"
+            disabled={guardando || !nombrePropio.trim() || !dentroDe}
+            onClick={() => {
+              const contenedor = lugares.find((lugar) => lugar.id === dentroDe);
+              return agregar({
+                nombre: nombrePropio,
+                // La provincia y el municipio son los de la localidad que lo contiene: un barrio no
+                // está en otro lado que su localidad, y pedirlos de nuevo sería dejar que se carguen
+                // distintos. El país lo pone el backend, que lo sabe por la Prestadora.
+                provincia: contenedor?.provincia ?? null,
+                municipio: contenedor?.municipio ?? null,
+                parte_de: dentroDe,
+              });
+            }}
+          >
+            {guardando ? t.comun.guardando : t.configuracion.lugares_agregar}
+          </Button>
+        </div>
 
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>{t.comun.cancelar}</Button>
@@ -322,8 +330,11 @@ function LugaresDeLaZona({ zona, lugares, onGuardado }) {
   }
 
   return (
-    <div>
-      <h3>{zona.nombre}</h3>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{zona.nombre}</h2>
+        <span className="panel-mini">{t.configuracion.lugares_zonas_titulo}</span>
+      </div>
       {error && <Alert variant="error">{error}</Alert>}
       {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
       <SelectorDeLugares
@@ -334,9 +345,11 @@ function LugaresDeLaZona({ zona, lugares, onGuardado }) {
         onChange={(siguiente) => { setElegidos(siguiente); setGuardado(false); }}
         deshabilitado={guardando}
       />
-      <Button onClick={guardar} disabled={guardando}>
-        {guardando ? t.comun.guardando : t.comun.guardar}
-      </Button>
-    </div>
+      <div className="molde-acciones">
+        <Button onClick={guardar} disabled={guardando}>
+          {guardando ? t.comun.guardando : t.comun.guardar}
+        </Button>
+      </div>
+    </section>
   );
 }

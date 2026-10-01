@@ -10,6 +10,8 @@ import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
 import { mensajeDeError } from '../lib/errores';
 import { sigueSinResolver, sigueSinResolverYEsCritica } from '../lib/alertaSinResolver';
+import '../styles/molde-paginas.css';
+import './hojaDeTarjetas.css';
 
 // Alertas de la IA Nivel 2 (backend/src/utils/revisarAlertasIA.js): la IA lee los últimos
 // reportes de cada Paciente y, si detecta un patrón preocupante, deja una alerta con dos
@@ -104,80 +106,95 @@ export function Alertas() {
   return (
     <div>
       <Cabecera titulo={t.alertas.titulo} />
-      {pendientesRojas > 0 && (
-        <p className="panel-explicacion">
-          <span className="badge badge-critico">
-            {t.alertas.resumen_rojas.replace('{cantidad}', pendientesRojas)}
-          </span>
-        </p>
-      )}
+      <div className="molde-pila">
+        <section className="panel-tarjeta hoja-desplazable">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.alertas.titulo}</h2>
+            {pendientesRojas > 0 && (
+              <span className="badge badge-critico">
+                {t.alertas.resumen_rojas.replace('{cantidad}', pendientesRojas)}
+              </span>
+            )}
+          </div>
 
-      <div className="panel-filtros">
-        <select value={f.estado} onChange={(e) => set('estado', e.target.value)} aria-label={t.comun.filtro_estado}>
-          <option value="pendientes">{t.alertas.filtro_pendientes}</option>
-          <option value="resueltas">{t.alertas.filtro_resueltas}</option>
-          <option value="todas">{t.comun.todos}</option>
-        </select>
-        <select value={f.nivel} onChange={(e) => set('nivel', e.target.value)} aria-label={t.comun.filtro_nivel}>
-          <option value="todos">{t.alertas.filtro_todos_los_niveles}</option>
-          <option value="roja">{t.alertas.nivel_roja}</option>
-          <option value="amarilla">{t.alertas.nivel_amarilla}</option>
-        </select>
+          <div className="panel-filtros">
+            <select value={f.estado} onChange={(e) => set('estado', e.target.value)} aria-label={t.comun.filtro_estado}>
+              <option value="pendientes">{t.alertas.filtro_pendientes}</option>
+              <option value="resueltas">{t.alertas.filtro_resueltas}</option>
+              <option value="todas">{t.comun.todos}</option>
+            </select>
+            <select value={f.nivel} onChange={(e) => set('nivel', e.target.value)} aria-label={t.comun.filtro_nivel}>
+              <option value="todos">{t.alertas.filtro_todos_los_niveles}</option>
+              <option value="roja">{t.alertas.nivel_roja}</option>
+              <option value="amarilla">{t.alertas.nivel_amarilla}</option>
+            </select>
+          </div>
+
+          <EstadoLista
+            estado={estado}
+            error={error}
+            vacio={estado === 'listo' && filasFiltradas.length === 0}
+            recargar={recargar}
+            filtrado={hayFiltros}
+            onLimpiarFiltros={limpiar}
+            mensajeVacio={t.alertas.vacio}
+          >
+            <>
+              <table className="panel-tabla">
+                <thead>
+                  <tr>
+                    <th>{t.alertas.col_fecha}</th>
+                    <th>{t.alertas.col_paciente}</th>
+                    <th>{t.alertas.col_nivel}</th>
+                    <th>{t.alertas.col_descripcion}</th>
+                    <th>{t.alertas.col_estado}</th>
+                    <th>{t.alertas.col_detalle}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filasFiltradas.map((a) => (
+                    <tr key={a.id}>
+                      <td>{a.created_at?.slice(0, 10)}</td>
+                      <td>
+                        <b>{a.paciente_nombre}</b>
+                      </td>
+                      <td>
+                        <span className={claseBadge(a.nivel)}>
+                          {t.alertas[`nivel_${a.nivel}`] ?? a.nivel}
+                        </span>
+                      </td>
+                      <td>{a.descripcion || '—'}</td>
+                      <td>
+                        <span className={claseBadge(sigueSinResolver(a) ? 'pendiente' : 'atendida')}>
+                          {sigueSinResolver(a) ? t.alertas.estado_pendiente : t.alertas.estado_resuelta}
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="panel-enlace"
+                          onClick={() => setAbierta(abierta === a.id ? null : a.id)}
+                        >
+                          {abierta === a.id ? t.alertas.ocultar_detalle : t.alertas.ver_detalle}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          </EstadoLista>
+        </section>
+
+        {estado === 'listo' && abierta && (
+          <DetalleAlerta
+            alerta={filasFiltradas.find((a) => a.id === abierta)}
+            resolviendo={resolviendoId === abierta}
+            onResolver={resolver}
+            onCerrar={() => setAbierta(null)}
+          />
+        )}
       </div>
-
-      <EstadoLista
-        estado={estado}
-        error={error}
-        vacio={estado === 'listo' && filasFiltradas.length === 0}
-        recargar={recargar}
-        filtrado={hayFiltros}
-        onLimpiarFiltros={limpiar}
-        mensajeVacio={t.alertas.vacio}
-      >
-        <>
-          <table className="panel-tabla">
-            <thead>
-              <tr>
-                <th>{t.alertas.col_fecha}</th>
-                <th>{t.alertas.col_paciente}</th>
-                <th>{t.alertas.col_nivel}</th>
-                <th>{t.alertas.col_descripcion}</th>
-                <th>{t.alertas.col_estado}</th>
-                <th>{t.alertas.col_detalle}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filasFiltradas.map((a) => (
-                <tr key={a.id}>
-                  <td>{a.created_at?.slice(0, 10)}</td>
-                  <td>{a.paciente_nombre}</td>
-                  <td>
-                    <span className={claseBadge(a.nivel)}>
-                      {t.alertas[`nivel_${a.nivel}`] ?? a.nivel}
-                    </span>
-                  </td>
-                  <td>{a.descripcion || '—'}</td>
-                  <td>{sigueSinResolver(a) ? t.alertas.estado_pendiente : t.alertas.estado_resuelta}</td>
-                  <td>
-                    <Button variant="secondary" onClick={() => setAbierta(abierta === a.id ? null : a.id)}>
-                      {abierta === a.id ? t.alertas.ocultar_detalle : t.alertas.ver_detalle}
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {abierta && (
-            <DetalleAlerta
-              alerta={filasFiltradas.find((a) => a.id === abierta)}
-              resolviendo={resolviendoId === abierta}
-              onResolver={resolver}
-              onCerrar={() => setAbierta(null)}
-            />
-          )}
-        </>
-      </EstadoLista>
     </div>
   );
 }
@@ -189,43 +206,45 @@ function DetalleAlerta({ alerta, resolviendo, onResolver, onCerrar }) {
   const cantidadReportes = alerta.reportes_relacionados?.length ?? 0;
 
   return (
-    <section className="panel-detalle">
-      <div className="panel-detalle-encabezado">
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
         <h2>{t.alertas.detalle_titulo}</h2>
         <Button variant="secondary" onClick={onCerrar}>
           {t.comun.cerrar}
         </Button>
       </div>
-      <p className="panel-explicacion">
+      <div className="panel-mini hoja-ficha-datos">
         {alerta.created_at?.slice(0, 10)} · {alerta.paciente_nombre}
-      </p>
-
-      <div className="reporte-preview-campo">
-        <label>{t.alertas.campo_detalle_coordinador}</label>
-        <div>{alerta.detalle_coordinador || t.alertas.sin_datos}</div>
       </div>
 
-      <div className="reporte-preview-campo">
-        <label>{t.alertas.campo_descripcion_familia}</label>
-        <div>{alerta.descripcion || t.alertas.sin_datos}</div>
-      </div>
+      <div className="panel-grilla panel-columnas-2">
+        <div className="hoja-dato">
+          <div className="panel-mini">{t.alertas.campo_detalle_coordinador}</div>
+          <b>{alerta.detalle_coordinador || t.alertas.sin_datos}</b>
+        </div>
 
-      <div className="reporte-preview-campo">
-        <label>{t.alertas.campo_campos_preocupantes}</label>
-        {alerta.campos_preocupantes?.length > 0 ? (
-          <div>{alerta.campos_preocupantes.join(' · ')}</div>
-        ) : (
-          <div>{t.alertas.sin_datos}</div>
-        )}
-      </div>
+        <div className="hoja-dato">
+          <div className="panel-mini">{t.alertas.campo_descripcion_familia}</div>
+          <b>{alerta.descripcion || t.alertas.sin_datos}</b>
+        </div>
 
-      <div className="reporte-preview-campo">
-        <label>{t.alertas.campo_reportes_analizados}</label>
-        <div>{t.alertas.reportes_analizados_texto.replace('{cantidad}', cantidadReportes)}</div>
+        <div className="hoja-dato">
+          <div className="panel-mini">{t.alertas.campo_campos_preocupantes}</div>
+          <b>
+            {alerta.campos_preocupantes?.length > 0
+              ? alerta.campos_preocupantes.join(' · ')
+              : t.alertas.sin_datos}
+          </b>
+        </div>
+
+        <div className="hoja-dato">
+          <div className="panel-mini">{t.alertas.campo_reportes_analizados}</div>
+          <b>{t.alertas.reportes_analizados_texto.replace('{cantidad}', cantidadReportes)}</b>
+        </div>
       </div>
 
       {sigueSinResolver(alerta) && (
-        <div className="panel-modal-acciones">
+        <div className="molde-acciones">
           <Button onClick={() => onResolver(alerta)} disabled={resolviendo}>
             {t.alertas.marcar_resuelta}
           </Button>

@@ -9,6 +9,7 @@ import { con } from '../../lib/textos';
 import { Alert } from '../ui/Alert';
 import { Button } from '../ui/Button';
 import { FormField } from '../ui/FormField';
+import '../../styles/molde-paginas.css';
 
 /* Arrancar la configuración inicial desde una planilla que la Prestadora ya tiene.
    ==========================================================================
@@ -92,33 +93,38 @@ export function PropuestaDesdePlanilla() {
   }
 
   return (
-    <div className="onboarding-planilla">
-      <h3>{textos.planilla_titulo}</h3>
-      <p className="onboarding-paso-explicacion">{textos.planilla_explicacion}</p>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{textos.planilla_titulo}</h2>
+      </div>
 
       {estado === 'error' && <Alert variant="error">{error}</Alert>}
 
       {estado !== 'listo' && (
         <form onSubmit={leerPlanilla}>
-          <FormField
-            label={textos.planilla_tipo}
-            name="tipo-planilla"
-            type="select"
-            value={tipo}
-            onChange={(e) => setTipo(e.target.value)}
-          >
-            <option value="asistente">{textos.planilla_tipo_asistente}</option>
-            <option value="familia">{textos.planilla_tipo_familia}</option>
-          </FormField>
-          <FormField
-            label={textos.planilla_archivo}
-            name="archivo-planilla"
-            type="file"
-            onChange={(e) => setArchivo(e.target.files?.[0] || null)}
-          />
-          <Button type="submit" disabled={estado === 'leyendo'}>
-            {estado === 'leyendo' ? textos.planilla_leyendo : textos.planilla_leer}
-          </Button>
+          <div className="molde-formgrid">
+            <FormField
+              label={textos.planilla_tipo}
+              name="tipo-planilla"
+              type="select"
+              value={tipo}
+              onChange={(e) => setTipo(e.target.value)}
+            >
+              <option value="asistente">{textos.planilla_tipo_asistente}</option>
+              <option value="familia">{textos.planilla_tipo_familia}</option>
+            </FormField>
+            <FormField
+              label={textos.planilla_archivo}
+              name="archivo-planilla"
+              type="file"
+              onChange={(e) => setArchivo(e.target.files?.[0] || null)}
+            />
+          </div>
+          <div className="molde-acciones">
+            <Button type="submit" disabled={estado === 'leyendo'}>
+              {estado === 'leyendo' ? textos.planilla_leyendo : textos.planilla_leer}
+            </Button>
+          </div>
         </form>
       )}
 
@@ -164,12 +170,14 @@ export function PropuestaDesdePlanilla() {
             </Alert>
           )}
 
-          <Button variant="secondary" onClick={empezarDeNuevo}>
-            {textos.planilla_otra}
-          </Button>
-          <Button onClick={continuarAImportacion}>{textos.planilla_continuar}</Button>
+          <div className="molde-acciones">
+            <Button variant="secondary" onClick={empezarDeNuevo}>
+              {textos.planilla_otra}
+            </Button>
+            <Button onClick={continuarAImportacion}>{textos.planilla_continuar}</Button>
+          </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }

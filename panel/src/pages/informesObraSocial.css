@@ -1,0 +1,7 @@
+/* Los dos botones de cada informe del historial, uno al lado del otro. */
+.informes-os-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}

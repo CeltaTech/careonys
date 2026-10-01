@@ -41,95 +41,105 @@ export default function ReporteDetalle() {
 
   if (error) return <div className="alert alert-error" role="alert">{error}</div>;
   if (reporte === null) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
-  if (reporte === false) return <div className="estado-vacio" role="status">{t.comun.vacio}</div>;
+  if (reporte === false) return <div className="pwa-card estado-vacio" role="status">{t.comun.vacio}</div>;
 
   return (
-    <div>
-      <Link to={`/pacientes/${id}/reportes`} className="btn btn-secondary" style={{ marginBottom: '1rem', fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
+    <>
+      <Link to={`/pacientes/${id}/reportes`} className="btn btn-volver">
         <span aria-hidden="true">←</span> {t.comun.volver}
       </Link>
       <h1>{t.reporte_detalle.titulo}</h1>
-      <p className="guardia-card-detalle">
-        {reporte.guardias?.fecha} · {t.reporte_detalle.asistente}: {reporte.guardias?.asistentes?.nombre}
-      </p>
 
-      <div className="reporte-preview-campo">
-        <div className="reporte-preview-titulo">{t.reporte_detalle.campo_alimentacion}</div>
-        <div>{reporte.alimentacion?.descripcion || t.reporte_detalle.sin_datos}</div>
-      </div>
+      <section className="pwa-card">
+        <h2>{reporte.guardias?.fecha}</h2>
+        <div className="pwa-card-dato">
+          {t.reporte_detalle.asistente}: {reporte.guardias?.asistentes?.nombre}
+        </div>
+      </section>
+
+      <section className="pwa-card">
+        <h2>{t.reporte_detalle.campo_alimentacion}</h2>
+        <div className="pwa-card-dato">{reporte.alimentacion?.descripcion || t.reporte_detalle.sin_datos}</div>
+      </section>
 
       {/* Mismo motivo que los signos vitales: la Prestadora que no muestra la medicación
           tampoco la muestra adentro del reporte del día. Sin esta condición el backend deja de
           mandarla pero el título queda igual, con un "sin datos" debajo que hace creer que ese
           día no se le dio nada. */}
       {seVe('familia_medicacion_del_paciente') && (
-        <div className="reporte-preview-campo">
-          <div className="reporte-preview-titulo">{t.reporte_detalle.campo_medicacion}</div>
-          {Array.isArray(reporte.medicacion) && reporte.medicacion.length > 0 ? (
-            reporte.medicacion.map((m, i) => (
-              <div key={i}>
-                {[m.nombre, m.hora, m.via].filter(Boolean).join(' · ')}
-              </div>
-            ))
-          ) : (
-            <div>{t.reporte_detalle.sin_datos}</div>
-          )}
-        </div>
+        <section className="pwa-card">
+          <h2>{t.reporte_detalle.campo_medicacion}</h2>
+          <div className="pwa-card-dato">
+            {Array.isArray(reporte.medicacion) && reporte.medicacion.length > 0 ? (
+              reporte.medicacion.map((m, i) => (
+                <div key={i}>
+                  {[m.nombre, m.hora, m.via].filter(Boolean).join(' · ')}
+                </div>
+              ))
+            ) : (
+              <div>{t.reporte_detalle.sin_datos}</div>
+            )}
+          </div>
+        </section>
       )}
 
       {/* La Prestadora que no hace enfermería no toma estos valores. Sin esta condición el
           backend deja de mandarlos pero el título queda igual, con un "sin datos" debajo que
           hace creer que alguien los está controlando y ese día no los cargó. */}
       {seVe('familia_signos_vitales') && (
-        <div className="reporte-preview-campo">
-          <div className="reporte-preview-titulo">{t.reporte_detalle.campo_signos_vitales}</div>
-          {reporte.signos_vitales && SIGNOS_VITALES.some((clave) => reporte.signos_vitales[clave]) ? (
-            SIGNOS_VITALES.filter((clave) => reporte.signos_vitales[clave]).map((clave) => {
-              const color = colorSigno(reporte.signos_vitales[clave], rangosVitales[clave]);
-              return (
-                <div key={clave} className={color ? `signo-vital-${color}` : ''}>
+        <section className="pwa-card">
+          <h2>{t.reporte_detalle.campo_signos_vitales}</h2>
+          <div className="pwa-card-dato">
+            {reporte.signos_vitales && SIGNOS_VITALES.some((clave) => reporte.signos_vitales[clave]) ? (
+              SIGNOS_VITALES.filter((clave) => reporte.signos_vitales[clave]).map((clave) => {
+                const color = colorSigno(reporte.signos_vitales[clave], rangosVitales[clave]);
+                return (
+                  <div key={clave} className={color ? `signo-vital-${color}` : ''}>
+                    {t.reporte_detalle[`signo_${clave}`]}: {reporte.signos_vitales[clave]}
+                    {rangosVitales[clave] ? ` ${rangosVitales[clave].unidad}` : ''}
+                    {color === 'alerta' && <span className="signo-vital-aviso"> — {t.reporte_detalle.signo_fuera_de_rango}</span>}
+                  </div>
+                );
+              })
+            ) : reporte.signos_vitales && SIGNOS_VITALES_LEGADO.some((clave) => reporte.signos_vitales[clave]) ? (
+              SIGNOS_VITALES_LEGADO.filter((clave) => reporte.signos_vitales[clave]).map((clave) => (
+                <div key={clave}>
                   {t.reporte_detalle[`signo_${clave}`]}: {reporte.signos_vitales[clave]}
-                  {rangosVitales[clave] ? ` ${rangosVitales[clave].unidad}` : ''}
-                  {color === 'alerta' && <span className="signo-vital-aviso"> — {t.reporte_detalle.signo_fuera_de_rango}</span>}
                 </div>
-              );
-            })
-          ) : reporte.signos_vitales && SIGNOS_VITALES_LEGADO.some((clave) => reporte.signos_vitales[clave]) ? (
-            SIGNOS_VITALES_LEGADO.filter((clave) => reporte.signos_vitales[clave]).map((clave) => (
-              <div key={clave}>
-                {t.reporte_detalle[`signo_${clave}`]}: {reporte.signos_vitales[clave]}
-              </div>
-            ))
+              ))
+            ) : (
+              <div>{t.reporte_detalle.sin_datos}</div>
+            )}
+          </div>
+        </section>
+      )}
+
+      <section className="pwa-card">
+        <h2>{t.reporte_detalle.campo_estado_animo}</h2>
+        <div className="pwa-card-dato">
+          {reporte.estado_animo && caraDelAnimo(reporte.estado_animo) ? (
+            <div className="escala-animo-lectura">
+              <span aria-hidden="true">{caraDelAnimo(reporte.estado_animo)}</span>
+              <span>{t.reporte_detalle[`animo_${reporte.estado_animo}`]}</span>
+            </div>
           ) : (
             <div>{t.reporte_detalle.sin_datos}</div>
           )}
         </div>
-      )}
-
-      <div className="reporte-preview-campo">
-        <div className="reporte-preview-titulo">{t.reporte_detalle.campo_estado_animo}</div>
-        {reporte.estado_animo && caraDelAnimo(reporte.estado_animo) ? (
-          <div className="escala-animo-lectura">
-            <span aria-hidden="true">{caraDelAnimo(reporte.estado_animo)}</span>
-            <span>{t.reporte_detalle[`animo_${reporte.estado_animo}`]}</span>
-          </div>
-        ) : (
-          <div>{t.reporte_detalle.sin_datos}</div>
-        )}
-      </div>
+      </section>
 
       {CAMPOS_TEXTO.map((campo) => (
-        <div key={campo} className="reporte-preview-campo">
-          <div className="reporte-preview-titulo">{t.reporte_detalle[`campo_${campo}`]}</div>
-          <div>{reporte[campo] || t.reporte_detalle.sin_datos}</div>
-        </div>
+        <section key={campo} className="pwa-card">
+          <h2>{t.reporte_detalle[`campo_${campo}`]}</h2>
+          <div className="pwa-card-dato texto-con-renglones">{reporte[campo] || t.reporte_detalle.sin_datos}</div>
+        </section>
       ))}
 
       {reporte.foto_url && (
-        <div className="reporte-preview-campo">
-          <img src={reporte.foto_url} alt="" style={{ width: '100%', borderRadius: '12px' }} />
-        </div>
+        <section className="pwa-card">
+          <img src={reporte.foto_url} alt="" className="foto-ancha" />
+        </section>
       )}
-    </div>
+    </>
   );
 }

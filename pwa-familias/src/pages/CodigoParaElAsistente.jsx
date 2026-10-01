@@ -24,12 +24,12 @@ export default function CodigoParaElAsistente() {
   const { t } = useLocale();
 
   return (
-    <div>
-      <Link to="/pacientes" className="btn btn-secondary" style={{ marginBottom: '1rem', fontSize: '0.8rem', padding: '0.4rem 1rem' }}>
+    <>
+      <Link to="/pacientes" className="btn btn-volver">
         <span aria-hidden="true">←</span> {t.comun.volver}
       </Link>
       <h1>{t.codigo_para_el_asistente.titulo}</h1>
       <CodigoDePresencia t={t} pedirCodigo={api.codigoDePresencia} />
-    </div>
+    </>
   );
 }

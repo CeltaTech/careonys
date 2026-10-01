@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { useLocale } from '../../i18n/LocaleContext';
 import { Button } from '../../components/ui/Button';
@@ -8,6 +8,9 @@ import { Cabecera } from '../../components/ui/Cabecera';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 import { llamarApiMarketplace as llamarApi } from '../../lib/apiMarketplace';
+import { claseBadge } from '../../lib/tonos';
+import '../../styles/molde-paginas.css';
+import '../hojaDeTarjetas.css';
 
 const LECTOR_ID = 'lector-qr-cobro-efectivo';
 
@@ -185,175 +188,209 @@ export function MarketplaceFamilias() {
       {mensajeCanje && <Alert variant="success">{mensajeCanje}</Alert>}
       {error && <Alert variant="error">{error}</Alert>}
 
-      {escaneando && (
-        <div style={{ marginBottom: '1.5rem' }}>
-          <h2>{t.marketplace.canjear_qr_titulo}</h2>
-          <div>
+      <div className="molde-pila">
+        {escaneando && (
+          <section className="panel-tarjeta">
+            <div className="panel-tarjeta-titulo">
+              <h2>{t.marketplace.canjear_qr_titulo}</h2>
+              <Button variant="secondary" onClick={() => setEscaneando(false)}>{t.comun.cancelar}</Button>
+            </div>
             <div id={LECTOR_ID} style={{ width: '100%', maxWidth: 320, borderRadius: '12px', overflow: 'hidden' }} />
-            <Button variant="secondary" onClick={() => setEscaneando(false)}>{t.comun.cancelar}</Button>
+          </section>
+        )}
+
+        <section className="panel-tarjeta hoja-desplazable">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.marketplace.familias_titulo}</h2>
+            {estado === 'listo' && <span className="panel-mini">{accesos.length}</span>}
           </div>
-        </div>
-      )}
-
-      <EstadoLista estado={estado} error={null} vacio={estado === 'listo' && accesos.length === 0} recargar={recargar}>
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.marketplace.col_familia}</th>
-              <th>{t.marketplace.col_paciente}</th>
-              <th>{t.marketplace.col_asistente}</th>
-              <th>{t.marketplace.col_estado}</th>
-              <th>{t.marketplace.col_monto}</th>
-              <th>{t.marketplace.col_proximo_cobro}</th>
-              <th>{t.marketplace.col_cobro}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {accesos.map((s) => (
-              <Fragment key={s.id}>
+          <EstadoLista estado={estado} error={null} vacio={estado === 'listo' && accesos.length === 0} recargar={recargar}>
+            <table className="panel-tabla">
+              <thead>
                 <tr>
-                  <td>{s.familia_nombre || '—'}</td>
-                  <td>{s.paciente_nombre || '—'}</td>
-                  <td>{s.asistente_nombre || '—'}</td>
-                  <td>{t.marketplace[`estado_${s.estado}`] || s.estado}</td>
-                  <td>{s.importe}</td>
-                  <td>{s.proximo_cobro || '—'}</td>
-                  <td>
-                    {s.alta_en_pasarela
-                      ? t.marketplace[`medio_${s.proveedor}`] || s.proveedor
-                      : t.marketplace.alta_pasarela_pendiente}
-                  </td>
-                  <td>
-                    <Button variant="secondary" onClick={() => verCobros(s.id)}>{t.marketplace.ver_cobros}</Button>
-                  </td>
+                  <th>{t.marketplace.col_familia}</th>
+                  <th>{t.marketplace.col_paciente}</th>
+                  <th>{t.marketplace.col_asistente}</th>
+                  <th>{t.marketplace.col_estado}</th>
+                  <th>{t.marketplace.col_monto}</th>
+                  <th>{t.marketplace.col_proximo_cobro}</th>
+                  <th>{t.marketplace.col_cobro}</th>
+                  <th></th>
                 </tr>
-                {expandida === s.id && (
-                  <tr>
-                    <td colSpan={8}>
-                      <div style={{ marginBottom: '1.5rem' }}>
-                        <h3>{t.marketplace.alta_pasarela_titulo}</h3>
-                        {s.alta_en_pasarela ? (
-                          <p className="panel-explicacion">
-                            {t.marketplace.alta_pasarela_hecha.replace(
-                              '{proveedor}',
-                              t.marketplace[`medio_${s.proveedor}`] || s.proveedor
-                            )}
-                            {s.url_accion && (
-                              <>
-                                {' '}
-                                <a href={s.url_accion} target="_blank" rel="noreferrer">
-                                  {t.marketplace.alta_pasarela_link}
-                                </a>
-                              </>
-                            )}
-                          </p>
-                        ) : (
-                          <>
-                            {rielesConectados.length === 0 ? (
-                              <Alert variant="warning">{t.errores.motivos.sin_pasarela_conectada}</Alert>
-                            ) : (
-                              <>
-                                {rielesConectados.length > 1 && (
-                                  <FormField
-                                    label={t.marketplace.alta_pasarela_riel}
-                                    name={`riel-${s.id}`}
-                                    type="select"
-                                    value={rielElegido[s.id] || ''}
-                                    onChange={(e) => setRielElegido((r) => ({ ...r, [s.id]: e.target.value }))}
-                                  >
-                                    <option value="">{t.comun.seleccionar}</option>
-                                    {rielesConectados.map((riel) => (
-                                      <option key={riel} value={riel}>
-                                        {t.marketplace[`medio_${riel}`] || riel}
-                                      </option>
-                                    ))}
-                                  </FormField>
-                                )}
-                                <Button
-                                  onClick={() => darDeAlta(s.id)}
-                                  disabled={
-                                    dandoAlta === s.id || (rielesConectados.length > 1 && !rielElegido[s.id])
-                                  }
-                                >
-                                  {dandoAlta === s.id ? t.comun.guardando : t.marketplace.alta_pasarela_boton}
-                                </Button>
-                              </>
-                            )}
-                          </>
-                        )}
-                      </div>
-
-                      <h3>{t.marketplace.cobros_titulo}</h3>
-                      <table className="panel-tabla">
-                        <thead>
-                          <tr>
-                            <th>{t.marketplace.cobros_col_periodo}</th>
-                            <th>{t.marketplace.cobros_col_medio}</th>
-                            <th>{t.marketplace.cobros_col_monto}</th>
-                            <th>{t.marketplace.cobros_col_estado}</th>
-                            <th>{t.marketplace.cobros_col_fecha}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(cobrosPorAcceso[s.id] || []).map((c) => (
-                            <tr key={c.id}>
-                              <td>{c.periodo}</td>
-                              <td>{t.marketplace[`medio_${c.medio}`] || c.medio}</td>
-                              <td>{c.monto}</td>
-                              <td>{t.marketplace[`cobro_${c.estado_cobro}`] || c.estado_cobro}</td>
-                              <td>{c.fecha_cobro || '—'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-
-                      {formEfectivo?.accesoId === s.id ? (
-                        <div>
-                          <FormField
-                            label={t.marketplace.registrar_cobro_efectivo_monto}
-                            name="monto"
-                            type="number"
-                            value={formEfectivo.monto}
-                            onChange={(e) => setFormEfectivo((f) => ({ ...f, monto: e.target.value }))}
-                          />
-                          <FormField
-                            label={t.marketplace.registrar_cobro_efectivo_periodo}
-                            name="periodo"
-                            type="month"
-                            value={formEfectivo.periodo}
-                            onChange={(e) => setFormEfectivo((f) => ({ ...f, periodo: e.target.value }))}
-                          />
-                          <FormField
-                            label={t.marketplace.registrar_cobro_efectivo_fecha}
-                            name="fecha_cobro"
-                            type="date"
-                            value={formEfectivo.fechaCobro}
-                            onChange={(e) => setFormEfectivo((f) => ({ ...f, fechaCobro: e.target.value }))}
-                          />
-                          <Button onClick={guardarEfectivo} disabled={guardandoEfectivo}>
-                            {guardandoEfectivo ? t.comun.guardando : t.marketplace.registrar_cobro_efectivo_guardar}
-                          </Button>{' '}
-                          <Button variant="secondary" onClick={() => setFormEfectivo(null)} disabled={guardandoEfectivo}>
-                            {t.comun.cancelar}
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          variant="secondary"
-                          onClick={() => setFormEfectivo({ accesoId: s.id, monto: '', periodo: '', fechaCobro: fechaHoyISO() })}
-                        >
-                          {t.marketplace.registrar_cobro_efectivo}
-                        </Button>
-                      )}
+              </thead>
+              <tbody>
+                {accesos.map((s) => (
+                  <tr key={s.id}>
+                    <td>
+                      <b>{s.familia_nombre || '—'}</b>
+                    </td>
+                    <td>{s.paciente_nombre || '—'}</td>
+                    <td>{s.asistente_nombre || '—'}</td>
+                    <td>
+                      <span className={claseBadge(s.estado)}>{t.marketplace[`estado_${s.estado}`] || s.estado}</span>
+                    </td>
+                    <td>{s.importe}</td>
+                    <td>{s.proximo_cobro || '—'}</td>
+                    <td>
+                      {s.alta_en_pasarela
+                        ? t.marketplace[`medio_${s.proveedor}`] || s.proveedor
+                        : t.marketplace.alta_pasarela_pendiente}
+                    </td>
+                    <td>
+                      <button type="button" className="panel-enlace" onClick={() => verCobros(s.id)}>
+                        {t.marketplace.ver_cobros}
+                      </button>
                     </td>
                   </tr>
-                )}
-              </Fragment>
+                ))}
+              </tbody>
+            </table>
+          </EstadoLista>
+        </section>
+
+        {estado === 'listo' &&
+          accesos
+            .filter((s) => s.id === expandida)
+            .map((s) => (
+              <div key={s.id} className="panel-grilla panel-columnas-2">
+                <section className="panel-tarjeta hoja-desplazable">
+                  <div className="panel-tarjeta-titulo">
+                    <h2>{t.marketplace.cobros_titulo}</h2>
+                    <span className="panel-mini">{s.familia_nombre || '—'}</span>
+                  </div>
+                  <table className="panel-tabla">
+                    <thead>
+                      <tr>
+                        <th>{t.marketplace.cobros_col_periodo}</th>
+                        <th>{t.marketplace.cobros_col_medio}</th>
+                        <th>{t.marketplace.cobros_col_monto}</th>
+                        <th>{t.marketplace.cobros_col_estado}</th>
+                        <th>{t.marketplace.cobros_col_fecha}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(cobrosPorAcceso[s.id] || []).map((c) => (
+                        <tr key={c.id}>
+                          <td>{c.periodo}</td>
+                          <td>{t.marketplace[`medio_${c.medio}`] || c.medio}</td>
+                          <td>{c.monto}</td>
+                          <td>
+                            <span className={claseBadge(c.estado_cobro)}>
+                              {t.marketplace[`cobro_${c.estado_cobro}`] || c.estado_cobro}
+                            </span>
+                          </td>
+                          <td>{c.fecha_cobro || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  {formEfectivo?.accesoId === s.id ? (
+                    <>
+                      <div className="molde-formgrid">
+                        <FormField
+                          label={t.marketplace.registrar_cobro_efectivo_monto}
+                          name="monto"
+                          type="number"
+                          value={formEfectivo.monto}
+                          onChange={(e) => setFormEfectivo((f) => ({ ...f, monto: e.target.value }))}
+                        />
+                        <FormField
+                          label={t.marketplace.registrar_cobro_efectivo_periodo}
+                          name="periodo"
+                          type="month"
+                          value={formEfectivo.periodo}
+                          onChange={(e) => setFormEfectivo((f) => ({ ...f, periodo: e.target.value }))}
+                        />
+                        <FormField
+                          label={t.marketplace.registrar_cobro_efectivo_fecha}
+                          name="fecha_cobro"
+                          type="date"
+                          value={formEfectivo.fechaCobro}
+                          onChange={(e) => setFormEfectivo((f) => ({ ...f, fechaCobro: e.target.value }))}
+                        />
+                      </div>
+                      <div className="molde-acciones">
+                        <Button variant="secondary" onClick={() => setFormEfectivo(null)} disabled={guardandoEfectivo}>
+                          {t.comun.cancelar}
+                        </Button>
+                        <Button onClick={guardarEfectivo} disabled={guardandoEfectivo}>
+                          {guardandoEfectivo ? t.comun.guardando : t.marketplace.registrar_cobro_efectivo_guardar}
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="molde-acciones">
+                      <Button
+                        variant="secondary"
+                        onClick={() => setFormEfectivo({ accesoId: s.id, monto: '', periodo: '', fechaCobro: fechaHoyISO() })}
+                      >
+                        {t.marketplace.registrar_cobro_efectivo}
+                      </Button>
+                    </div>
+                  )}
+                </section>
+
+                <section className="panel-tarjeta">
+                  <div className="panel-tarjeta-titulo">
+                    <h2>{t.marketplace.alta_pasarela_titulo}</h2>
+                  </div>
+                  {s.alta_en_pasarela ? (
+                    <div className="panel-fila-alerta">
+                      <div>
+                        <b>
+                          {t.marketplace.alta_pasarela_hecha.replace(
+                            '{proveedor}',
+                            t.marketplace[`medio_${s.proveedor}`] || s.proveedor
+                          )}
+                        </b>
+                        {s.url_accion && (
+                          <span className="panel-mini">
+                            <a href={s.url_accion} target="_blank" rel="noreferrer">
+                              {t.marketplace.alta_pasarela_link}
+                            </a>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ) : rielesConectados.length === 0 ? (
+                    <Alert variant="warning">{t.errores.motivos.sin_pasarela_conectada}</Alert>
+                  ) : (
+                    <>
+                      {rielesConectados.length > 1 && (
+                        <div className="molde-formgrid">
+                          <div className="molde-ancho">
+                            <FormField
+                              label={t.marketplace.alta_pasarela_riel}
+                              name={`riel-${s.id}`}
+                              type="select"
+                              value={rielElegido[s.id] || ''}
+                              onChange={(e) => setRielElegido((r) => ({ ...r, [s.id]: e.target.value }))}
+                            >
+                              <option value="">{t.comun.seleccionar}</option>
+                              {rielesConectados.map((riel) => (
+                                <option key={riel} value={riel}>
+                                  {t.marketplace[`medio_${riel}`] || riel}
+                                </option>
+                              ))}
+                            </FormField>
+                          </div>
+                        </div>
+                      )}
+                      <div className="molde-acciones">
+                        <Button
+                          onClick={() => darDeAlta(s.id)}
+                          disabled={dandoAlta === s.id || (rielesConectados.length > 1 && !rielElegido[s.id])}
+                        >
+                          {dandoAlta === s.id ? t.comun.guardando : t.marketplace.alta_pasarela_boton}
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </section>
+              </div>
             ))}
-          </tbody>
-        </table>
-      </EstadoLista>
+      </div>
     </div>
   );
 }

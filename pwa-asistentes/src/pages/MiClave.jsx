@@ -79,7 +79,7 @@ export default function MiClave() {
       {error && <div id="mi-clave-error" className="alert alert-error" role="alert">{error}</div>}
       {cambiada && <div className="alert alert-info" role="status">{t.auth.mi_clave_exito}</div>}
 
-      <form onSubmit={alEnviar}>
+      <form className="pwa-card" onSubmit={alEnviar}>
         <div className="form-field">
           <label htmlFor="actual">{t.auth.mi_clave_actual}</label>
           <input

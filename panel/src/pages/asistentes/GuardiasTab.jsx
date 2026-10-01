@@ -13,6 +13,7 @@ import {
 } from '../../lib/pacientesDeGuardia';
 import { situacionDeGuardia, tonoDeGuardia } from '../../lib/semaforoGuardia';
 import { useUmbrales } from '../../context/UmbralesContext';
+import '../hojaDeTarjetas.css';
 
 /* Lo que este Asistente ya trabajó.
    ==========================================================================
@@ -97,6 +98,13 @@ export function GuardiasTab({ asistente }) {
   }, [cargar]);
 
   return (
+    <section className="panel-tarjeta hoja-desplazable">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.asistentes.tabs.guardias}</h2>
+        {datos.tope && (
+          <span className="panel-mini">{con(t.asistentes.historial.tope, { n: TOPE })}</span>
+        )}
+      </div>
     <EstadoLista
       estado={estado}
       error={error}
@@ -104,9 +112,6 @@ export function GuardiasTab({ asistente }) {
       recargar={cargar}
     >
       <>
-        {datos.tope && (
-          <p className="panel-explicacion">{con(t.asistentes.historial.tope, { n: TOPE })}</p>
-        )}
         <table className="panel-tabla">
           <thead>
             <tr>
@@ -120,7 +125,7 @@ export function GuardiasTab({ asistente }) {
           <tbody>
             {datos.filas.map((g) => (
               <tr key={g.id}>
-                <td>{g.fecha}</td>
+                <td><b>{g.fecha}</b></td>
                 <td>
                   {g.hora_inicio} – {g.hora_fin}
                 </td>
@@ -142,5 +147,6 @@ export function GuardiasTab({ asistente }) {
         </table>
       </>
     </EstadoLista>
+    </section>
   );
 }

@@ -8,6 +8,8 @@ import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
+import '../../styles/molde-paginas.css';
+import '../hojaDeTarjetas.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -138,24 +140,25 @@ export function MonitoreoVitalesPaciente({ paciente, onClose }) {
         {estado === 'error' && <Alert variant="error">{error || t.comun.error_generico}</Alert>}
 
         {estado === 'listo' && (
-          <>
+          <div className="molde-pila">
             {autorizacion ? (
-              <div className="panel-resultado-calculo">
-                <Alert variant="info">{t.vitales_autorizacion.vigente}</Alert>
-                <dl className="panel-detalle-lista">
-                  <dt>{t.vitales_autorizacion.col_nombre_avala}</dt>
-                  <dd>{autorizacion.nombre_avala}</dd>
-                  <dt>{t.vitales_autorizacion.col_rol_avala}</dt>
-                  <dd>{t.vitales_autorizacion[`rol_${autorizacion.rol_avala}`]}</dd>
-                  <dt>{t.vitales_autorizacion.col_tipo_firma}</dt>
-                  <dd>{t.vitales_autorizacion[`firma_${autorizacion.tipo_firma}`]}</dd>
-                  <dt>{t.vitales_autorizacion.col_fecha}</dt>
-                  <dd>{autorizacion.fecha_autorizacion}</dd>
-                </dl>
-                <Button variant="secondary" onClick={verArchivo} disabled={cargandoUrl}>
-                  {cargandoUrl ? t.comun.cargando : t.vitales_autorizacion.ver_archivo}
-                </Button>
-              </div>
+              <section className="panel-tarjeta">
+                <div className="panel-tarjeta-titulo">
+                  <h2>{t.vitales_autorizacion.titulo}</h2>
+                  <span className="panel-mini">{t.vitales_autorizacion.vigente}</span>
+                </div>
+                <div className="panel-grilla panel-columnas-2">
+                  <div className="hoja-dato"><div className="panel-mini">{t.vitales_autorizacion.col_nombre_avala}</div><b>{autorizacion.nombre_avala}</b></div>
+                  <div className="hoja-dato"><div className="panel-mini">{t.vitales_autorizacion.col_rol_avala}</div><b>{t.vitales_autorizacion[`rol_${autorizacion.rol_avala}`]}</b></div>
+                  <div className="hoja-dato"><div className="panel-mini">{t.vitales_autorizacion.col_tipo_firma}</div><b>{t.vitales_autorizacion[`firma_${autorizacion.tipo_firma}`]}</b></div>
+                  <div className="hoja-dato"><div className="panel-mini">{t.vitales_autorizacion.col_fecha}</div><b>{autorizacion.fecha_autorizacion}</b></div>
+                </div>
+                <div className="molde-acciones">
+                  <Button variant="secondary" onClick={verArchivo} disabled={cargandoUrl}>
+                    {cargandoUrl ? t.comun.cargando : t.vitales_autorizacion.ver_archivo}
+                  </Button>
+                </div>
+              </section>
             ) : (
               <Alert variant="error">{t.vitales_autorizacion.sin_autorizacion}</Alert>
             )}
@@ -169,9 +172,12 @@ export function MonitoreoVitalesPaciente({ paciente, onClose }) {
             )}
 
             {mostrandoForm && (
-              <div className="panel-resultado-calculo">
-                <h3>{t.vitales_autorizacion.cargar}</h3>
+              <section className="panel-tarjeta">
+                <div className="panel-tarjeta-titulo">
+                  <h2>{t.vitales_autorizacion.cargar}</h2>
+                </div>
                 {errorForm && <Alert variant="error">{errorForm}</Alert>}
+                <div className="molde-formgrid">
                 <FormField label={t.vitales_autorizacion.col_nombre_avala} name="nombre_avala" value={nombreAvala} onChange={(e) => setNombreAvala(e.target.value)} required />
                 <FormField label={t.vitales_autorizacion.col_rol_avala} name="rol_avala" type="select" value={rolAvala} onChange={(e) => setRolAvala(e.target.value)}>
                   <option value="profesional">{t.vitales_autorizacion.rol_profesional}</option>
@@ -182,15 +188,18 @@ export function MonitoreoVitalesPaciente({ paciente, onClose }) {
                   <option value="fisica">{t.vitales_autorizacion.firma_fisica}</option>
                 </FormField>
                 <FormField label={t.vitales_autorizacion.col_fecha} name="fecha_autorizacion" type="date" value={fechaAutorizacion} onChange={(e) => setFechaAutorizacion(e.target.value)} required />
-                <FormField
-                  label={t.vitales_autorizacion.archivo_label}
-                  name="archivo"
-                  type="file"
-                  accept="application/pdf,image/jpeg,image/png"
-                  onChange={(e) => setArchivo(e.target.files?.[0] || null)}
-                  required
-                />
-                <div className="panel-modal-acciones">
+                <div className="molde-ancho">
+                  <FormField
+                    label={t.vitales_autorizacion.archivo_label}
+                    name="archivo"
+                    type="file"
+                    accept="application/pdf,image/jpeg,image/png"
+                    onChange={(e) => setArchivo(e.target.files?.[0] || null)}
+                    required
+                  />
+                </div>
+                </div>
+                <div className="molde-acciones">
                   <Button variant="secondary" onClick={() => setMostrandoForm(false)} disabled={guardando}>
                     {t.comun.cancelar}
                   </Button>
@@ -198,9 +207,9 @@ export function MonitoreoVitalesPaciente({ paciente, onClose }) {
                     {guardando ? t.comun.guardando : t.comun.guardar}
                   </Button>
                 </div>
-              </div>
+              </section>
             )}
-          </>
+          </div>
         )}
 
         <div className="panel-modal-acciones">

@@ -40,6 +40,8 @@ import {
 } from '../../lib/facturacionDeFamilias';
 import { traducirValor } from '../../i18n/valores';
 import { con } from '../../lib/textos';
+import '../../styles/molde-paginas.css';
+import '../hojaDeTarjetas.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -265,45 +267,68 @@ export function FamiliaDetalle() {
     ['alertas', t.familias.alertas_activas],
   ];
 
+  // La línea de datos de la ficha, con lo que ya se muestra en Contacto.
+  const datosDeLaFicha = [
+    familia.solicitudes?.localidad,
+    familia.solicitudes?.telefono,
+    familia.solicitudes?.email,
+    `${t.familias.col_fecha_alta}: ${new Date(familia.created_at).toLocaleDateString(locale)}`,
+  ].filter(Boolean);
+
   return (
     <div>
       <Cabecera titulo={familia.solicitudes?.nombre || '—'}>
-        <button className="link-volver" onClick={() => navigate('/familias')}><span aria-hidden="true">←</span> {t.familias.volver_a_familias}</button>
+        <Button variant="secondary" onClick={() => navigate('/familias')}>
+          <span aria-hidden="true">←</span> {t.familias.volver_a_familias}
+        </Button>
+        {puedeEditarFamilia && (
+          <Button variant="secondary" onClick={() => reenviarInvitacion(familia.id)} disabled={reenviandoUsuarioId === familia.id}>
+            {reenviandoUsuarioId === familia.id ? t.comun.reenviando_invitacion : t.comun.reenviar_invitacion}
+          </Button>
+        )}
       </Cabecera>
+      <div className="panel-mini hoja-ficha-datos">{datosDeLaFicha.join(' · ')}</div>
 
-      <div className="panel-tabs" role="tablist">
-        {pestanas.map(([tabId, titulo]) => (
-          <button
-            key={tabId}
-            type="button"
-            role="tab"
-            aria-selected={tab === tabId}
-            className={`panel-tab ${tab === tabId ? 'panel-tab-activo' : ''}`}
-            onClick={() => setTab(tabId)}
-          >
-            {titulo}
-          </button>
-        ))}
-      </div>
-
-      {/* El aviso del reenvío queda afuera de las pestañas: se reenvía desde Contacto y desde el
-          círculo, y tiene que verse en las dos. */}
+      {/* El aviso del reenvío queda afuera de las pestañas: se reenvía desde la cabecera y desde
+          el círculo, y tiene que verse en las dos. */}
       {mensajeReenvio && <Alert variant={mensajeReenvio.tipo}>{mensajeReenvio.texto}</Alert>}
 
-      <div className="panel-tab-contenido">
+      <div className="molde-pila">
+        <section className="panel-tarjeta">
+          <div className="panel-tabs" role="tablist">
+            {pestanas.map(([tabId, titulo]) => (
+              <button
+                key={tabId}
+                type="button"
+                role="tab"
+                aria-selected={tab === tabId}
+                className={`panel-tab ${tab === tabId ? 'panel-tab-activo' : ''}`}
+                onClick={() => setTab(tabId)}
+              >
+                {titulo}
+              </button>
+            ))}
+          </div>
+        </section>
+
         {tab === 'contacto' && (
           <>
+          <section className="panel-tarjeta">
+            <div className="panel-tarjeta-titulo">
+              <h2>{t.familias.contacto}</h2>
+              {formContacto?.telefono && (
+                <a className="panel-enlace" href={linkWhatsapp(formContacto.telefono)} target="_blank" rel="noreferrer">
+                  {t.familias.abrir_whatsapp}
+                </a>
+              )}
+            </div>
             {errorContacto && <Alert variant="error">{errorContacto}</Alert>}
             {contactoGuardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
             {formContacto && (
               <>
+              <div className="molde-formgrid">
                 <FormField label={t.familias.col_nombre} name="nombre_contacto" value={formContacto.nombre} onChange={(e) => setCampoContacto('nombre', e.target.value)} disabled={!puedeEditarFamilia} />
                 <FormField label={t.familias.col_telefono} name="telefono_contacto" value={formContacto.telefono} onChange={(e) => setCampoContacto('telefono', e.target.value)} disabled={!puedeEditarFamilia} />
-                {formContacto.telefono && (
-                  <p className="panel-explicacion">
-                    <a href={linkWhatsapp(formContacto.telefono)} target="_blank" rel="noreferrer">{t.familias.abrir_whatsapp}</a>
-                  </p>
-                )}
                 <FormField label={t.familias.col_email} name="email_contacto" type="email" value={formContacto.email} onChange={(e) => setCampoContacto('email', e.target.value)} disabled={!puedeEditarFamilia} />
                 <FormField label={t.familias.col_localidad} name="localidad_contacto" value={formContacto.localidad} onChange={(e) => setCampoContacto('localidad', e.target.value)} disabled={!puedeEditarFamilia} />
                 <FormField label={t.familias.plan} name="plan_contacto" value={formContacto.plan} onChange={(e) => setCampoContacto('plan', e.target.value)} disabled={!puedeEditarFamilia} />
@@ -340,41 +365,41 @@ export function FamiliaDetalle() {
 
                     Se elige siempre, también cuando paga la Familia: ahí el Pagador es alguien de la
                     Familia, y cuál es no se adivina. */}
-                <SelectorDeLegajo
-                  name="pagador_legajo_id"
-                  label={t.familias.pagador_legajo}
-                  valor={formContacto.pagador_legajo_id}
-                  alElegir={(legajoId) => setCampoContacto('pagador_legajo_id', legajoId)}
-                  deshabilitado={!puedeEditarFamilia}
-                />
-                {/* Elegir el Legajo no convierte a nadie en Pagador: lo convierte haber firmado la
-                    obligación de pagar. Acá abajo se ve si esa firma está y qué papeles faltan, en el
-                    mismo momento en que se lo elige. Avisa, no bloquea.
-
-                    Aparece junto al selector y siempre, pague quien pague: el Pagador firma en todos los
-                    casos, y quien arma la contratación tiene que ver acá mismo si esa firma está. */}
-                {puedeEditarFamilia && (
-                  <EstadoDelPagador familiaId={familia.id} puedeRegistrar={puedeRegistrarConsentimiento} />
-                )}
-                <dl className="panel-detalle-lista">
-                  <dt>{t.familias.col_fecha_alta}</dt>
-                  <dd>{new Date(familia.created_at).toLocaleDateString(locale)}</dd>
-                </dl>
+                <div className="molde-ancho">
+                  <SelectorDeLegajo
+                    name="pagador_legajo_id"
+                    label={t.familias.pagador_legajo}
+                    valor={formContacto.pagador_legajo_id}
+                    alElegir={(legajoId) => setCampoContacto('pagador_legajo_id', legajoId)}
+                    deshabilitado={!puedeEditarFamilia}
+                  />
+                </div>
+              </div>
+              <div className="molde-acciones">
                 <Button onClick={guardarContacto} disabled={guardandoContacto || !puedeEditarFamilia}>
                   {guardandoContacto ? t.comun.guardando : t.comun.guardar}
-                </Button>{' '}
-                {puedeEditarFamilia && (
-                  <Button variant="secondary" onClick={() => reenviarInvitacion(familia.id)} disabled={reenviandoUsuarioId === familia.id}>
-                    {reenviandoUsuarioId === familia.id ? t.comun.reenviando_invitacion : t.comun.reenviar_invitacion}
-                  </Button>
-                )}
+                </Button>
+              </div>
               </>
             )}
+          </section>
+          {/* Si el Pagador elegido firmó y qué papeles faltan, siempre a la vista. Avisa, no bloquea. */}
+          {formContacto && puedeEditarFamilia && (
+            <EstadoDelPagador familiaId={familia.id} puedeRegistrar={puedeRegistrarConsentimiento} />
+          )}
           </>
         )}
 
         {tab === 'pacientes' && (
-          <>
+          <section className="panel-tarjeta hoja-desplazable">
+            <div className="panel-tarjeta-titulo">
+              <h2>{t.familias.pacientes}</h2>
+              {puedeEditarPaciente && (
+                <Button variant="secondary" onClick={() => setMostrarNuevoPaciente(true)}>
+                  {t.familias.agregar_paciente}
+                </Button>
+              )}
+            </div>
             {familia.pacientes?.length ? (
               <table className="panel-tabla">
                 <thead>
@@ -389,7 +414,7 @@ export function FamiliaDetalle() {
                 <tbody>
                   {familia.pacientes.map((p) => (
                     <tr key={p.id}>
-                      <td>{p.nombre}</td>
+                      <td><b>{p.nombre}</b></td>
                       <td>{p.fecha_nacimiento || '—'}</td>
                       <td>{p.nivel_complejidad || '—'}</td>
                       <td>{p.domicilio || '—'}</td>
@@ -419,14 +444,9 @@ export function FamiliaDetalle() {
                 </tbody>
               </table>
             ) : (
-              <p className="estado-vacio">{t.familias.sin_pacientes}</p>
+              <p className="molde-vacio">{t.familias.sin_pacientes}</p>
             )}
-            {puedeEditarPaciente && (
-              <Button variant="secondary" onClick={() => setMostrarNuevoPaciente(true)}>
-                {t.familias.agregar_paciente}
-              </Button>
-            )}
-          </>
+          </section>
         )}
 
         {tab === 'circulo' && (
@@ -450,18 +470,27 @@ export function FamiliaDetalle() {
                 )}
               </Alert>
             )}
+            <section className="panel-tarjeta hoja-desplazable">
+            <div className="panel-tarjeta-titulo">
+              <h2>{t.familias.circulo.titulo}</h2>
+              {puedeEditarFamilia && (
+                <Button variant="secondary" onClick={() => setMostrarInvitarCirculo(true)}>
+                  {t.familias.circulo.agregar}
+                </Button>
+              )}
+            </div>
             {!instruccionPendiente && ultimaInstruccion && (
-              <p className="panel-explicacion">
+              <div className="panel-mini">
                 {con(t.familias.circulo.ultima_instruccion, {
                   fecha: new Date(ultimaInstruccion.cerrada_en || ultimaInstruccion.created_at).toLocaleDateString(locale),
                   como: t.familias.circulo[`cerrada_${ultimaInstruccion.cerrada_como}`] || '',
                 })}
-              </p>
+              </div>
             )}
 
-            {estadoCirculo === 'cargando' && <p className="estado-cargando">{t.comun.cargando}</p>}
-            {estadoCirculo === 'error' && <p className="estado-vacio">{errorCirculo || t.comun.error_generico}</p>}
-            {estadoCirculo === 'vacio' && <p className="estado-vacio">{t.familias.circulo.sin_miembros}</p>}
+            {estadoCirculo === 'cargando' && <p className="molde-vacio">{t.comun.cargando}</p>}
+            {estadoCirculo === 'error' && <p className="molde-vacio">{errorCirculo || t.comun.error_generico}</p>}
+            {estadoCirculo === 'vacio' && <p className="molde-vacio">{t.familias.circulo.sin_miembros}</p>}
             {estadoCirculo === 'listo' && (
               <table className="panel-tabla">
                 <thead>
@@ -475,7 +504,7 @@ export function FamiliaDetalle() {
                 <tbody>
                   {circulo.map((m) => (
                     <tr key={m.usuarioId}>
-                      <td>{m.nombre || '—'}</td>
+                      <td><b>{m.nombre || '—'}</b></td>
                       <td>{m.email || '—'}</td>
                       <td>{resumenDeAccesos(m.accesos, t)}</td>
                       <td>
@@ -514,11 +543,7 @@ export function FamiliaDetalle() {
               </table>
             )}
             {errorCirculo && estadoCirculo === 'listo' && <Alert variant="error">{errorCirculo}</Alert>}
-            {puedeEditarFamilia && (
-              <Button variant="secondary" onClick={() => setMostrarInvitarCirculo(true)}>
-                {t.familias.circulo.agregar}
-              </Button>
-            )}
+            </section>
           </>
         )}
 

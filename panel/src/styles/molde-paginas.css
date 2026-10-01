@@ -1,0 +1,141 @@
+/* Las piezas de la maqueta que index.css todavía no trae: tarjetas apiladas, formulario en dos
+   columnas, vacío centrado y el molde de lista a la izquierda con detalle a la derecha.
+   Todo con prefijo `molde-` para que no pise nada de otra página. */
+
+.molde-pila {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 14px;
+  min-width: 0;
+}
+
+.molde-pila > .panel-grilla {
+  margin-bottom: 0;
+}
+
+.molde-formgrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+  align-items: start;
+}
+
+.molde-formgrid > .molde-ancho {
+  grid-column: 1 / -1;
+}
+
+.molde-formgrid .form-field {
+  margin-bottom: 0;
+  gap: 5px;
+}
+
+.molde-formgrid .form-field label,
+.molde-formgrid > label,
+.molde-campo > label {
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.molde-formgrid .form-field-checkbox label {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.molde-formgrid .form-field input:not([type='checkbox']):not([type='radio']),
+.molde-formgrid .form-field select,
+.molde-formgrid .form-field textarea,
+.molde-campo input:not([type='checkbox']):not([type='radio']),
+.molde-campo select,
+.molde-campo textarea {
+  width: 100%;
+  border: 1px solid var(--borde-card);
+  border-radius: var(--radio-control);
+  padding: 9px;
+  font-family: inherit;
+  font-size: 12px;
+  background: var(--superficie);
+  color: var(--texto-principal);
+}
+
+.molde-formgrid .form-field textarea,
+.molde-campo textarea {
+  min-height: 85px;
+  resize: vertical;
+}
+
+.molde-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.molde-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.molde-vacio {
+  text-align: center;
+  padding: 42px;
+  color: var(--texto-secundario);
+  margin: 0;
+}
+
+.molde-detalle {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.molde-lista {
+  padding: 8px;
+}
+
+.molde-renglon {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  border: 0;
+  border-radius: var(--radio-control);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.molde-renglon:hover {
+  background: var(--superficie-hover);
+}
+
+.molde-renglon-activo,
+.molde-renglon-activo:hover {
+  background: var(--tono-exito-fondo);
+}
+
+.molde-renglon b {
+  display: block;
+  font-size: 12px;
+}
+
+.molde-renglon .panel-mini {
+  display: block;
+  margin-top: 4px;
+}
+
+@media (max-width: 1100px) {
+  .molde-detalle {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .molde-formgrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,7 +1,8 @@
 :root {
-  font: 16px/145% var(--font-body);
-  color: var(--texto-principal);
-  background: var(--fondo-alt);
+  font: 14px/1.45 var(--font-body);
+  color: var(--tinta);
+  background: var(--fondo-app);
+  -webkit-font-smoothing: antialiased;
 }
 
 * {
@@ -10,12 +11,10 @@
 
 body {
   margin: 0;
+  background: var(--fondo-app);
 }
 
-/* Texto que existe solo para los lectores de pantalla: no se ve, pero se escucha. Lo usan
-   las estrellas dibujadas —que un lector nombraría una por una, o saltearía— y las etiquetas
-   de los campos que en la pantalla se entienden solos. Es la misma definición que en el
-   Panel: si esta clase no existe, el texto aparece escrito en el medio de la pantalla. */
+/* Texto que existe solo para los lectores de pantalla: no se ve, pero se escucha. */
 .solo-lectores-pantalla {
   position: absolute;
   width: 1px;
@@ -30,146 +29,270 @@ body {
 
 h1 {
   font-family: var(--font-display);
-  color: var(--azul-oscuro);
-  font-size: 1.5rem;
-  margin: 0 0 1rem;
+  color: var(--tinta);
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 10px;
 }
 
 h2 {
   font-family: var(--font-display);
-  color: var(--azul-oscuro);
-  font-size: 1.2rem;
-  margin: 0 0 0.75rem;
+  color: var(--tinta);
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 8px;
 }
 
-/* Faltaba, y las listas de "qué ve" y "qué no ve" de Mi Perfil cuelgan de un título de tercer
-   nivel. Sin esta regla salían con la tipografía y el tamaño que trae el navegador, más grandes
-   que el título de la sección que las contiene. */
 h3 {
   font-family: var(--font-display);
-  color: var(--azul-oscuro);
-  font-size: 1rem;
-  margin: 0 0 0.5rem;
+  color: var(--tinta);
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 0 6px;
 }
+
+a {
+  color: var(--info-texto);
+}
+
+/* ---------- La maqueta: barra de arriba, cuerpo, tarjetas y barra de abajo ---------- */
+
+.pwa-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--fondo-app);
+}
+
+.pwa-top {
+  background: var(--blanco);
+  padding: 16px;
+  border-bottom: 1px solid var(--linea);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.pwa-top b {
+  font-size: 16px;
+}
+
+.pwa-body {
+  flex: 1;
+  padding: 14px 14px 80px;
+}
+
+.pwa-card,
+.guardia-card,
+.login-card {
+  display: block;
+  background: var(--blanco);
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 10px;
+  color: var(--tinta);
+  text-decoration: none;
+}
+
+.pwa-card h1,
+.pwa-card h2 {
+  font-size: 14px;
+  margin: 0;
+}
+
+.pwa-card-dato {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.pwa-card-pie {
+  margin-top: 10px;
+}
+
+.pwa-acciones {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.pwa-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  background: var(--blanco);
+  border-top: 1px solid var(--linea);
+  padding: 8px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  gap: 5px;
+  z-index: 5;
+}
+
+.pwa-nav a {
+  flex: 1;
+  border: 0;
+  background: none;
+  font-size: 10px;
+  padding: 8px;
+  text-align: center;
+  text-decoration: none;
+  color: var(--gris-nav);
+}
+
+.pwa-nav a.active {
+  color: var(--verde);
+  font-weight: 700;
+}
+
+.mini {
+  font-size: 11px;
+  color: var(--gris);
+}
+
+.mini-arriba {
+  margin-top: 3px;
+}
+
+.mini-abajo {
+  margin-top: 4px;
+}
+
+/* ---------- Botones ---------- */
 
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  min-width: 44px;
-  padding: 0.75rem 1.5rem;
-  border-radius: 999px;
-  font-weight: 600;
-  font-size: 0.95rem;
-  border: 2px solid transparent;
+  gap: 4px;
+  border: 1px solid var(--borde-boton);
+  background: var(--blanco);
+  color: var(--texto-boton);
+  border-radius: 7px;
+  padding: 9px 13px;
+  font: inherit;
+  font-size: 12px;
+  text-decoration: none;
   cursor: pointer;
-  transition: transform 0.15s ease, background 0.2s ease, color 0.2s ease;
+  transition: 0.15s;
 }
 
 .btn:hover:not(:disabled) {
-  transform: translateY(-2px);
+  background: var(--blanco-hover);
 }
 
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  transform: none;
-}
-
-.btn-primary {
-  background: var(--azul-medio);
-  color: #FFFFFF !important;
 }
 
 .btn-secondary {
-  background: transparent;
-  border-color: var(--azul-medio);
-  color: var(--azul-medio-texto) !important;
+  background: var(--blanco);
+  border-color: var(--borde-boton);
+  color: var(--texto-boton);
 }
 
+.btn-primary,
 .btn-exito {
-  background: var(--verde-exito);
-  color: #FFFFFF !important;
+  background: var(--verde);
+  border-color: var(--verde);
+  color: var(--blanco);
+}
+
+.btn-primary:hover:not(:disabled),
+.btn-exito:hover:not(:disabled) {
+  background: var(--verde);
 }
 
 .btn-full {
-  display: block;
+  display: flex;
   width: 100%;
   text-align: center;
 }
 
+/* Los botones que vuelven a la pantalla anterior van solos, arriba. */
+.btn + h1 {
+  margin-top: 10px;
+}
+
+/* ---------- Formularios ---------- */
+
 .form-field {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  margin-bottom: 1rem;
+  gap: 5px;
+  margin-bottom: 13px;
 }
 
 .form-field label {
-  font-weight: 600;
-  font-size: 0.85rem;
-  color: var(--texto-principal);
+  font-weight: 650;
+  font-size: 11px;
+  color: var(--tinta);
 }
 
 .form-field input,
-.form-field textarea {
+.form-field textarea,
+.form-field select {
   font-family: var(--font-body);
-  font-size: 1rem;
-  padding: 0.65rem 0.8rem;
-  border: 1px solid var(--borde-card);
-  border-radius: 8px;
-  background: #FFFFFF;
-  color: var(--texto-principal);
+  font-size: 16px;
+  padding: 9px;
+  border: 1px solid var(--borde-boton);
+  border-radius: 7px;
+  background: var(--blanco);
+  color: var(--tinta);
 }
 
 .form-field input:focus,
-.form-field textarea:focus {
-  outline: 2px solid var(--azul-medio);
+.form-field textarea:focus,
+.form-field select:focus {
+  outline: 2px solid var(--verde);
   outline-offset: 1px;
 }
 
 .form-field textarea {
-  min-height: 110px;
+  min-height: 85px;
   resize: vertical;
 }
 
 .form-error {
-  color: var(--rojo-peligro);
-  font-size: 0.85rem;
+  color: var(--mal-texto);
+  font-size: 11px;
 }
 
+/* ---------- Avisos ---------- */
+
 .alert {
-  padding: 0.85rem 1.1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-  font-weight: 500;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--linea);
+  background: var(--blanco);
+  margin-bottom: 10px;
+  font-size: 12px;
 }
 
 .alert-error {
-  background: var(--rojo-peligro-bg);
-  border-left: 4px solid var(--rojo-peligro);
-  color: oklch(0.4 0.15 25);
+  background: var(--mal-fondo);
+  border-color: var(--mal-fondo);
+  color: var(--mal-texto);
 }
 
 .alert-info {
-  background: var(--fondo-alt);
-  border-left: 4px solid var(--azul-medio);
-  color: var(--azul-oscuro);
+  background: var(--info-fondo);
+  border-color: var(--info-fondo);
+  color: var(--info-texto);
 }
 
-/* Faltaba, y se usaba igual: los carteles de "salió bien" se venían mostrando sin color, con
-   el mismo aspecto que uno neutro. */
 .alert-success {
-  background: var(--verde-exito-bg);
-  border-left: 4px solid var(--verde-exito);
-  color: var(--verde-exito-texto);
+  background: var(--ok-fondo);
+  border-color: var(--ok-fondo);
+  color: var(--ok-texto);
 }
 
 .alert-alerta {
-  background: oklch(0.62 0.13 70 / 0.12);
-  border-left: 4px solid var(--naranja-alerta);
-  color: oklch(0.4 0.13 70);
+  background: var(--aviso-fondo);
+  border-color: var(--aviso-fondo);
+  color: var(--aviso-texto);
 }
 
 /* ---------- Login ---------- */
@@ -179,43 +302,41 @@ h3 {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--azul-oscuro);
-  padding: 1rem;
+  background: var(--fondo-app);
+  padding: 14px;
 }
 
 .login-card {
-  background: #FFFFFF;
-  padding: 2rem 1.75rem;
-  border-radius: 16px;
   width: 100%;
   max-width: 380px;
+  margin-bottom: 0;
 }
 
 .login-card h1 {
-  margin-bottom: 0.25rem;
+  margin-bottom: 4px;
 }
 
 .login-subtitulo {
-  color: var(--texto-secundario);
-  margin-bottom: 1.5rem;
+  color: var(--gris);
+  font-size: 11px;
+  margin: 0 0 14px;
 }
 
-/* Las dos maneras de entrar se separan con una línea que lleva la palabra «o» en el medio: son
-   alternativas, no pasos, y una lista de botones pegados se lee como si fueran pasos. */
+/* Las dos maneras de entrar se separan con una línea que lleva la palabra «o» en el medio. */
 .login-separador {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin: 1.25rem 0;
-  color: var(--texto-secundario);
-  font-size: 0.875rem;
+  gap: 10px;
+  margin: 14px 0;
+  color: var(--gris);
+  font-size: 11px;
 }
 
 .login-separador::before,
 .login-separador::after {
   content: '';
   flex: 1;
-  border-top: 1px solid var(--borde-card);
+  border-top: 1px solid var(--linea);
 }
 
 /* ---------- Las llaves guardadas en los aparatos ---------- */
@@ -230,9 +351,9 @@ h3 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 0;
-  border-top: 1px solid var(--borde-card);
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--linea-suave);
 }
 
 .llave-item:first-child {
@@ -242,110 +363,65 @@ h3 {
 .llave-fechas {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
-  font-size: 0.875rem;
+  gap: 3px;
+  font-size: 12px;
 }
 
 .llave-fechas span:last-child {
-  color: var(--texto-secundario);
+  color: var(--gris);
+  font-size: 11px;
 }
 
-/* ---------- Layout app móvil ---------- */
+/* ---------- La marca de la Prestadora, arriba ---------- */
 
-.app-layout {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.25rem;
-  background: var(--azul-oscuro);
-  color: #FFFFFF;
-  position: sticky;
-  top: 0;
-  z-index: 5;
-}
-
-/* El nombre de la Prestadora encabeza la aplicación, pero no es el título de la pantalla:
-   ese es el `h1` de cada pantalla. Por eso va como texto y no como encabezado — así queda
-   un solo `h1` por pantalla y el índice de títulos que arma un lector de pantalla no
-   empieza siempre por el mismo nombre repetido. Se ve exactamente igual que antes. */
-.app-header .nombre-prestadora {
+/* El nombre de la Prestadora encabeza la aplicación, pero no es el título de la pantalla: va
+   como texto y no como encabezado, para que quede un solo `h1` por pantalla. */
+.pwa-top .nombre-prestadora {
+  display: block;
   font-family: var(--font-display);
   font-weight: 700;
-  color: #FFFFFF;
-  font-size: 1.1rem;
+  font-size: 16px;
+  color: var(--tinta);
   margin: 0;
 }
 
-/* El logo de la Prestadora, cuando lo cargó. Se limita la altura y no el ancho para que
-   entren tanto un logo cuadrado como uno alargado sin deformarse ni tapar el botón de
-   cerrar sesión. */
 .logo-prestadora {
-  max-height: 2rem;
+  display: block;
+  max-height: 28px;
   max-width: 60%;
   object-fit: contain;
 }
 
-/* La línea del producto al pie: la única mención de Careonys en esta aplicación, y a
-   propósito discreta — quien la lee contrató a su Prestadora, no a nosotros. */
+/* La línea del producto al pie: la única mención de Careonys en esta aplicación. */
 .marca-del-producto {
-  margin: 2rem 0 0;
+  margin: 14px 0 0;
   text-align: center;
-  font-size: 0.72rem;
-  color: var(--texto-secundario);
-}
-
-.app-content {
-  flex: 1;
-  padding: 1rem 1.25rem 5.5rem;
-}
-
-.app-nav-inferior {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  background: #FFFFFF;
-  border-top: 1px solid var(--borde-card);
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-.app-nav-inferior a {
-  flex: 1;
-  min-height: 44px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 0.75rem 0.25rem;
-  color: var(--texto-secundario);
-  text-decoration: none;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.app-nav-inferior a.active {
-  color: var(--azul-medio-texto);
+  font-size: 11px;
+  color: var(--gris);
 }
 
 .estado-cargando,
 .estado-vacio {
-  padding: 2rem 0;
+  padding: 28px 0;
   text-align: center;
-  color: var(--texto-secundario);
+  color: var(--gris);
+  font-size: 12px;
+}
+
+.pwa-card .estado-vacio {
+  padding: 8px 0 0;
+  text-align: left;
+}
+
+.pwa-card.estado-vacio,
+.pwa-card.estado-cargando {
+  padding: 14px;
+  text-align: left;
 }
 
 /* ---------- Qué hace y qué no hace el Asistente ---------- */
 
-/* Las dos listas se ven iguales a propósito: la de "qué no hace" tiene que
-   pesar lo mismo que la otra, que es para lo que existe. */
+/* Las dos listas se ven iguales a propósito: la de "qué no hace" pesa lo mismo que la otra. */
 .lista-tareas {
   list-style: none;
   padding: 0;
@@ -353,107 +429,106 @@ h3 {
 }
 
 .lista-tareas li {
-  background: #FFFFFF;
-  border-radius: 12px;
-  padding: 0.75rem 1.25rem;
-  margin-bottom: 0.5rem;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--linea-suave);
+  font-size: 12px;
   line-height: 1.4;
+}
+
+.lista-tareas li:last-child {
+  border-bottom: 0;
 }
 
 /* ---------- Guardias ---------- */
 
-.guardia-card {
-  background: #FFFFFF;
-  border-radius: 12px;
-  padding: 1rem 1.25rem;
-  margin-bottom: 0.75rem;
-}
-
-.guardia-programada { border-left: 4px solid var(--azul-medio); }
-.guardia-activa     { border-left: 4px solid var(--verde-exito); }
-.guardia-completada { border-left: 4px solid var(--texto-secundario); }
-.guardia-cancelada  { border-left: 4px solid var(--rojo-peligro); }
-.guardia-ausente    { border-left: 4px solid var(--naranja-alerta); }
-/* La guardia queda en pausa cuando la Prestadora pausa el servicio del Paciente. Recién ahora
-   la Familia la ve, con la semana: hasta acá esta aplicación solo mostraba una guardia por vez
-   y esa nunca estaba pausada. Mismo tono de atención que le da el Panel. */
-.guardia-pausada    { border-left: 4px solid var(--naranja-alerta); }
-
 .guardia-card-paciente {
   font-family: var(--font-display);
-  color: var(--azul-oscuro);
+  color: var(--tinta);
   font-weight: 700;
-  margin-bottom: 0.25rem;
+  margin-bottom: 4px;
 }
 
 .guardia-card-detalle {
-  color: var(--texto-secundario);
-  font-size: 0.85rem;
+  color: var(--gris);
+  font-size: 11px;
+  margin: 0;
 }
 
-/* El domicilio que abre el mapa del teléfono. Se subraya para que se vea que se toca: adentro de
-   un renglón de detalle, el solo cambio de color no alcanza para quien distingue mal los colores.
-   El área de toque llega al alto mínimo que se puede acertar con el pulgar parado en la calle. */
+.guardia-card-detalle + .guardia-card-detalle {
+  margin-top: 4px;
+}
+
+/* El domicilio que abre el mapa del teléfono. Se subraya para que se vea que se toca. */
 .enlace-mapa {
-  color: var(--azul-medio-texto);
+  color: var(--info-texto);
   text-decoration: underline;
-  display: inline-block;
-  min-height: 44px;
-  line-height: 44px;
 }
 
 .guardia-timer {
   font-family: var(--font-display);
-  font-size: 2rem;
-  color: var(--azul-oscuro);
+  font-size: 27px;
+  font-weight: 750;
+  color: var(--tinta);
   text-align: center;
-  margin: 1rem 0;
+  margin: 10px 0;
 }
 
-/* ---------- El código de presencia (pendiente #113) ---------- */
+/* ---------- El código de presencia ---------- */
 
-/* La imagen que lee la cámara de quien llega. La genera el navegador con fondo blanco propio,
-   así que acá no se pinta ninguno: sólo se la centra y se le pone un tope de ancho, para que en
-   una pantalla angosta se achique sin deformarse. */
 .codigo-de-presencia-qr {
   display: block;
   width: 220px;
   max-width: 100%;
   height: auto;
-  margin: 0.75rem auto;
+  margin: 10px auto;
 }
 
-/* Los seis dígitos, que son lo que de verdad se compara: sirven cuando la cámara no se puede
-   usar y hay que dictarlos o tipearlos. Van con el cuerpo del reloj de la guardia, que es el
-   otro número que en esta aplicación se mira de lejos, y con las letras separadas porque un
-   número que se lee en voz alta se dicta de a un dígito. */
+/* Los seis dígitos, con las letras separadas porque un número que se lee en voz alta se dicta
+   de a un dígito. */
 .codigo-de-presencia-numero {
   font-family: var(--font-display);
-  font-size: 2rem;
-  letter-spacing: 0.35rem;
+  font-size: 27px;
+  font-weight: 750;
+  letter-spacing: 0.35em;
   text-align: center;
-  color: var(--azul-oscuro);
-  margin: 0 0 0.75rem;
+  color: var(--tinta);
+  margin: 0 0 10px;
 }
+
+/* ---------- Badges ---------- */
 
 .badge {
-  display: inline-block;
-  padding: 0.25rem 0.7rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  background: var(--fondo-alt);
-  color: var(--texto-secundario);
+  display: inline-flex;
+  align-items: center;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+  background: var(--neutro-fondo);
+  color: var(--gris-nav);
 }
 
-/* El mismo cartelito, pero cuando avisa de algo que hay que atender: el Paciente que estos
-   días no está en el domicilio de su ficha. Al lado del cartelito gris tiene que distinguirse
-   solo, sin leerlo. Es el naranja de aviso de la paleta, el mismo de `.alert-alerta`, derivado
-   de la variable para que no haya un color escrito a mano (regla 6). Idéntico al de la
-   aplicación del Asistente, que muestra este mismo aviso. */
-.badge-alerta {
-  background: color-mix(in oklch, var(--naranja-alerta) 12%, transparent);
-  color: var(--naranja-alerta-texto);
+.badge-ok,
+.badge-verde {
+  background: var(--ok-fondo);
+  color: var(--ok-texto);
+}
+
+.badge-alerta,
+.badge-amarilla {
+  background: var(--aviso-fondo);
+  color: var(--aviso-texto);
+}
+
+.badge-roja {
+  background: var(--mal-fondo);
+  color: var(--mal-texto);
+}
+
+.badge-info {
+  background: var(--info-fondo);
+  color: var(--info-texto);
 }
 
 /* ---------- La semana de guardias ---------- */
@@ -466,13 +541,8 @@ h3 {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.semana-navegador .btn {
-  padding: 0.4rem 1rem;
-  font-size: 0.8rem;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
 .semana-rango {
@@ -480,14 +550,14 @@ h3 {
   order: -1;
   text-align: center;
   font-family: var(--font-display);
-  color: var(--azul-oscuro);
+  color: var(--tinta);
   font-weight: 700;
 }
 
 /* Cada día es un bloque, tenga guardias o no: la semana se lee de corrido y el día sin
    nadie también contesta la pregunta. */
 .semana-dia {
-  margin-bottom: 1.25rem;
+  margin-bottom: 10px;
 }
 
 /* El nombre del día lo escribe el teléfono en el idioma elegido, y en castellano y en
@@ -496,11 +566,11 @@ h3 {
 .semana-dia-titulo {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
   font-family: var(--font-display);
-  color: var(--azul-oscuro);
+  color: var(--tinta);
   font-weight: 700;
-  margin-bottom: 0.5rem;
+  margin-bottom: 8px;
 }
 
 /* Va en mayúscula la primera letra y nada más. Poner en mayúscula cada palabra escribiría
@@ -511,25 +581,24 @@ h3 {
 }
 
 .semana-dia-vacio {
-  color: var(--texto-secundario);
-  font-size: 0.85rem;
-  padding-left: 0.25rem;
-  margin-bottom: 0.75rem;
+  color: var(--gris);
+  font-size: 11px;
 }
 
 .reporte-preview-campo {
-  margin-bottom: 0.75rem;
+  margin-bottom: 10px;
+  font-size: 13px;
 }
 
 /* El nombre de cada dato del reporte. Era un `label`, pero un `label` promete un campo que
    se completa y acá no hay ninguno: el reporte se lee, no se escribe. Un lector de pantalla
    anunciaba "etiqueta" y después no encontraba a qué campo pertenecía. Se ve igual. */
 .reporte-preview-titulo {
-  font-weight: 700;
-  color: var(--azul-oscuro);
-  font-size: 0.8rem;
+  font-weight: 650;
+  color: var(--gris);
+  font-size: 11px;
   display: block;
-  margin-bottom: 0.3rem;
+  margin-bottom: 4px;
 }
 
 /* El resumen del día adentro de cada tarjeta de la lista de reportes: el aviso de incidente y los
@@ -540,9 +609,9 @@ h3 {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.3rem 0.75rem;
-  margin-top: 0.4rem;
-  font-size: 0.85rem;
+  gap: 4px 10px;
+  margin-top: 6px;
+  font-size: 11px;
 }
 
 .signo-vital-normal {
@@ -550,8 +619,8 @@ h3 {
 }
 
 .signo-vital-alerta {
-  color: var(--rojo-peligro);
-  font-weight: 600;
+  color: var(--mal-texto);
+  font-weight: 650;
 }
 
 .signo-vital-aviso {
@@ -561,35 +630,18 @@ h3 {
 .escala-animo-lectura {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 1.3rem;
+  gap: 8px;
+  font-size: 18px;
 }
 
 .escala-animo-lectura span:last-child {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--texto-secundario);
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--gris);
 }
 
 /* ---------- Alertas (IA Nivel 2) ---------- */
 
-.alerta-roja    { border-left: 4px solid var(--rojo-peligro); }
-.alerta-amarilla { border-left: 4px solid var(--naranja-alerta); }
-
-.badge-roja {
-  background: var(--rojo-peligro-bg);
-  color: oklch(0.4 0.15 25);
-}
-
-.badge-amarilla {
-  background: oklch(0.62 0.13 70 / 0.12);
-  color: oklch(0.4 0.13 70);
-}
-
-.badge-verde {
-  background: oklch(0.7 0.1 145 / 0.15);
-  color: var(--verde-exito-texto);
-}
 
 /* ---------- Mapa (ubicación en vivo del Asistente) ---------- */
 
@@ -597,24 +649,23 @@ h3 {
   width: 100%;
   height: 220px;
   border: 0;
-  border-radius: 12px;
-  margin-bottom: 1rem;
+  border-radius: 7px;
+  margin-top: 8px;
 }
 
 .mapa-actualizado {
-  color: var(--texto-secundario);
-  font-size: 0.75rem;
-  text-align: center;
-  margin: -0.5rem 0 1rem;
+  color: var(--gris);
+  font-size: 11px;
+  margin: 4px 0 0;
 }
 
 /* ---------- Calificación con estrellas ---------- */
 
 .estrellas {
   display: flex;
-  gap: 0.35rem;
-  font-size: 2rem;
-  margin-bottom: 1rem;
+  gap: 6px;
+  font-size: 27px;
+  margin-bottom: 10px;
 }
 
 .estrellas button {
@@ -623,17 +674,17 @@ h3 {
   cursor: pointer;
   padding: 0;
   line-height: 1;
-  color: var(--borde-card);
+  color: var(--linea);
 }
 
 .estrellas button.activa {
-  color: var(--naranja-alerta-texto);
+  color: var(--naranja-alerta);
 }
 
 /* Estos botones no tienen fondo ni borde, así que sin esto quien se mueve con el teclado no
    ve en cuál está parado. Es el mismo recuadro que marca un campo enfocado. */
 .estrellas button:focus-visible {
-  outline: 2px solid var(--azul-medio);
+  outline: 2px solid var(--verde);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -647,16 +698,16 @@ h3 {
    la que mantiene alineado lo que el backend alineó contando caracteres. */
 .documento-instruccion {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.8rem;
+  font-size: 12px;
   line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  background: #FFFFFF;
-  border: 1px solid var(--borde-card);
-  border-radius: 12px;
-  padding: 1rem;
-  margin: 0 0 1rem;
-  color: var(--azul-oscuro);
+  background: var(--blanco);
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+  padding: 14px;
+  margin: 0 0 10px;
+  color: var(--tinta);
 }
 
 /* El aviso de instrucción pendiente lleva adentro un botón, y en un teléfono el texto y el botón
@@ -666,7 +717,7 @@ h3 {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.75rem;
+  gap: 10px;
 }
 
 /* ---------- El hilo de mensajes del Marketplace ---------- */
@@ -682,17 +733,16 @@ h3 {
 /* El aviso de que los datos de contacto van tapados. No es una alarma —no falló nada— así que no
    usa el color del peligro: dice algo que conviene saber antes de escribir. */
 .aviso-suave {
-  background: var(--fondo-alt);
-  border-left: 4px solid var(--azul-medio);
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  margin-bottom: 1rem;
-  color: var(--texto-secundario);
-  font-size: 0.85rem;
+  background: var(--info-fondo);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  color: var(--info-texto);
+  font-size: 12px;
 }
 
 .hilo-videollamada {
-  margin-bottom: 1rem;
+  margin-bottom: 10px;
 }
 
 .lista-mensajes {
@@ -701,20 +751,22 @@ h3 {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 8px;
 }
 
 .mensaje {
   max-width: 85%;
-  border-radius: 12px;
-  padding: 0.6rem 0.9rem;
-  background: #FFFFFF;
-  border: 1px solid var(--borde-card);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--blanco);
+  border: 1px solid var(--linea);
+  font-size: 13px;
 }
 
 .mensaje-propio {
   align-self: flex-end;
-  background: var(--fondo-alt);
+  background: var(--ok-fondo);
+  border-color: var(--ok-fondo);
 }
 
 .mensaje-ajeno {
@@ -731,25 +783,144 @@ h3 {
 }
 
 .mensaje-cuando {
-  margin: 0.25rem 0 0;
-  color: var(--texto-secundario);
-  font-size: 0.75rem;
+  margin: 4px 0 0;
+  color: var(--gris);
+  font-size: 11px;
 }
 
 .form-mensaje {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  margin-top: 1rem;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .form-mensaje textarea {
   width: 100%;
-  border: 1px solid var(--borde-card);
-  border-radius: 8px;
-  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--borde-boton);
+  border-radius: 7px;
+  padding: 9px;
   font-family: var(--font-body);
-  font-size: 1rem;
+  font-size: 16px;
   color: var(--texto-principal);
   resize: vertical;
+}
+
+/* ---------- Datos de una ficha, renglón por renglón ---------- */
+
+.pwa-datos {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 14px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.pwa-datos dt {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--gris);
+  align-self: center;
+}
+
+.pwa-datos dd {
+  margin: 0;
+  color: var(--tinta);
+  overflow-wrap: anywhere;
+}
+
+/* Una columna de botones que es lo único de su tarjeta no lleva el margen de arriba. */
+.pwa-acciones-sola {
+  margin-top: 0;
+}
+
+/* Las llaves del aparato son una copia compartida entre las dos aplicaciones y traen el margen
+   del título escrito en el componente; adentro de su tarjeta el título va arriba de todo. */
+.pwa-card-llaves > h2:first-child {
+  margin-top: 0 !important;
+}
+
+.pwa-card-llaves > p:last-of-type {
+  margin-bottom: 0;
+}
+
+/* ---------- Piezas comunes de las pantallas ---------- */
+
+/* El botón para volver, arriba de todo, antes del título. */
+.btn-volver {
+  margin-bottom: 10px;
+}
+
+/* Un botón que va debajo de lo que lo precede adentro de la misma tarjeta. */
+.btn-abajo {
+  margin-top: 10px;
+}
+
+/* La foto de una persona: entera, a lo ancho, con el radio de las tarjetas. */
+.foto-persona {
+  display: block;
+  width: 100%;
+  max-width: 200px;
+  border-radius: 7px;
+  margin-bottom: 10px;
+}
+
+.foto-persona-chica {
+  display: block;
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 7px;
+  margin-bottom: 10px;
+}
+
+.foto-ancha {
+  display: block;
+  width: 100%;
+  border-radius: 7px;
+}
+
+/* Texto escrito por alguien, que conserva sus renglones. */
+.texto-con-renglones {
+  white-space: pre-wrap;
+  font-size: 13px;
+}
+
+/* Renglones de enlaces apilados. */
+.lista-enlaces {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+/* Un elemento centrado adentro de su tarjeta, como el código QR. */
+.centrado {
+  text-align: center;
+  margin-top: 10px;
+}
+
+/* Adentro de una tarjeta, otra tarjeta no lleva su propio marco: se separa con una línea. */
+.pwa-card .guardia-card {
+  border: 0;
+  border-top: 1px solid var(--linea-suave);
+  border-radius: 0;
+  padding: 10px 0 0;
+  margin: 10px 0 0;
+}
+
+.pwa-card .semana-navegador:last-child,
+.pwa-card > .alert:last-child {
+  margin-bottom: 0;
+}
+
+/* Un aviso adentro de una tarjeta se separa de lo que tiene arriba. */
+.pwa-card .alert {
+  margin-top: 10px;
+}
+
+/* El video de la cámara se recorta a las esquinas redondeadas. */
+.lector-de-codigo {
+  overflow: hidden;
 }

@@ -9,6 +9,7 @@ import { Alert } from '../components/ui/Alert';
 import { Cabecera } from '../components/ui/Cabecera';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
+import '../styles/molde-paginas.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -109,49 +110,65 @@ export function Medicacion() {
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
 
       <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && pendientes.length === 0} recargar={recargar}>
-        {pendientes.map((fila) => (
-          <div key={fila.id} className="panel-card-verificacion" style={{ marginBottom: '1rem' }}>
-            <p>
-              <strong>{fila.pacientes?.nombre}</strong> — {fila.medicamento} · {fila.dosis} · {fila.frecuencia} ({fila.via_administracion})
-            </p>
-            <p>
-              {t.medicacion.desde}: {fila.fecha_desde} {fila.fecha_hasta ? `— ${t.medicacion.hasta}: ${fila.fecha_hasta}` : ''}
-            </p>
-            {fila.prescripcion_archivo_url && (
-              <p>
-                <button onClick={() => verArchivo(fila.prescripcion_archivo_url)}>{t.medicacion.ver_prescripcion}</button>
-              </p>
-            )}
-            {fila.sinMatricula && <Alert variant="info">{t.medicacion.sin_matricula_aviso}</Alert>}
+        <div className="molde-pila">
+          {pendientes.map((fila) => (
+            <section key={fila.id} className="panel-tarjeta">
+              <div className="panel-tarjeta-titulo">
+                <h2>{fila.pacientes?.nombre}</h2>
+                {fila.prescripcion_archivo_url && (
+                  <button type="button" className="panel-enlace" onClick={() => verArchivo(fila.prescripcion_archivo_url)}>
+                    {t.medicacion.ver_prescripcion}
+                  </button>
+                )}
+              </div>
+              <div className="panel-fila-alerta">
+                <div>
+                  <b>{fila.medicamento}</b>
+                  <span className="panel-mini">
+                    {fila.dosis} · {fila.frecuencia} ({fila.via_administracion})
+                  </span>
+                </div>
+                <span className="panel-mini">
+                  {t.medicacion.desde}: {fila.fecha_desde} {fila.fecha_hasta ? `— ${t.medicacion.hasta}: ${fila.fecha_hasta}` : ''}
+                </span>
+              </div>
+              {fila.sinMatricula && <Alert variant="info">{t.medicacion.sin_matricula_aviso}</Alert>}
 
-            {rechazando === fila.id ? (
-              <div>
-                <FormField
-                  label={t.medicacion.motivo_rechazo}
-                  name={`motivo-${fila.id}`}
-                  value={motivoRechazo}
-                  onChange={(e) => setMotivoRechazo(e.target.value)}
-                  required
-                />
-                <Button variant="secondary" onClick={() => { setRechazando(null); setMotivoRechazo(''); }} disabled={accionEnCurso === fila.id}>
-                  {t.comun.cancelar}
-                </Button>{' '}
-                <Button onClick={() => confirmarRechazo(fila)} disabled={accionEnCurso === fila.id || !motivoRechazo}>
-                  {accionEnCurso === fila.id ? t.comun.guardando : t.medicacion.confirmar_rechazo}
-                </Button>
-              </div>
-            ) : (
-              <div>
-                <Button onClick={() => aceptar(fila)} disabled={accionEnCurso === fila.id}>
-                  {accionEnCurso === fila.id ? t.comun.guardando : t.medicacion.aceptar}
-                </Button>{' '}
-                <Button variant="secondary" onClick={() => setRechazando(fila.id)} disabled={accionEnCurso === fila.id}>
-                  {t.medicacion.rechazar}
-                </Button>
-              </div>
-            )}
-          </div>
-        ))}
+              {rechazando === fila.id ? (
+                <>
+                  <div className="molde-formgrid">
+                    <div className="molde-ancho">
+                      <FormField
+                        label={t.medicacion.motivo_rechazo}
+                        name={`motivo-${fila.id}`}
+                        value={motivoRechazo}
+                        onChange={(e) => setMotivoRechazo(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="molde-acciones">
+                    <Button variant="secondary" onClick={() => { setRechazando(null); setMotivoRechazo(''); }} disabled={accionEnCurso === fila.id}>
+                      {t.comun.cancelar}
+                    </Button>
+                    <Button onClick={() => confirmarRechazo(fila)} disabled={accionEnCurso === fila.id || !motivoRechazo}>
+                      {accionEnCurso === fila.id ? t.comun.guardando : t.medicacion.confirmar_rechazo}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="molde-acciones">
+                  <Button variant="secondary" onClick={() => setRechazando(fila.id)} disabled={accionEnCurso === fila.id}>
+                    {t.medicacion.rechazar}
+                  </Button>
+                  <Button onClick={() => aceptar(fila)} disabled={accionEnCurso === fila.id}>
+                    {accionEnCurso === fila.id ? t.comun.guardando : t.medicacion.aceptar}
+                  </Button>
+                </div>
+              )}
+            </section>
+          ))}
+        </div>
       </EstadoLista>
     </div>
   );

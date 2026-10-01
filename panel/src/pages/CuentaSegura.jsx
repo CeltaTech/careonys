@@ -9,6 +9,7 @@ import { useCuentaSegura } from '../components/cuenta/useCuentaSegura';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
+import '../styles/molde-paginas.css';
 
 /* LA SEGURIDAD DE LA PROPIA CUENTA.
    ==========================================================================
@@ -31,11 +32,11 @@ export function CuentaSegura() {
 
       <EstadoLista estado={estado} error={error} recargar={recargar}>
         {datos && (
-          <>
+          <div className="molde-pila">
             <TelefonoDeLaCuenta datos={datos} recargar={recargar} />
             <Equipos datos={datos} locale={locale} />
             <CerrarSesiones />
-          </>
+          </div>
         )}
       </EstadoLista>
     </div>
@@ -50,8 +51,11 @@ function Equipos({ datos, locale }) {
   const fecha = (valor) => (valor ? new Date(valor).toLocaleString(locale) : '—');
 
   return (
-    <section className="dashboard-seccion">
-      <h2>{t.cuenta_segura.equipos_titulo}</h2>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.cuenta_segura.equipos_titulo}</h2>
+        <span className="panel-mini">{datos.equipos.length}</span>
+      </div>
       <EstadoLista estado="listo" vacio={datos.equipos.length === 0} mensajeVacio={t.cuenta_segura.equipos_vacio}>
         <table className="panel-tabla">
           <thead>
@@ -101,22 +105,28 @@ function CerrarSesiones() {
   }
 
   return (
-    <section className="dashboard-seccion">
-      <h2>{t.cuenta_segura.cerrar_sesiones_titulo}</h2>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.cuenta_segura.cerrar_sesiones_titulo}</h2>
+      </div>
       {error && <Alert variant="error">{error}</Alert>}
       <form onSubmit={cerrar}>
-        <FormField
-          label={t.cuenta_segura.clave_actual}
-          name="claveActualCierre"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={claveActual}
-          onChange={(e) => setClaveActual(e.target.value)}
-        />
-        <Button type="submit" disabled={enviando || !claveActual}>
-          {enviando ? t.comun.guardando : t.cuenta_segura.cerrar_sesiones}
-        </Button>
+        <div className="molde-formgrid">
+          <FormField
+            label={t.cuenta_segura.clave_actual}
+            name="claveActualCierre"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={claveActual}
+            onChange={(e) => setClaveActual(e.target.value)}
+          />
+        </div>
+        <div className="molde-acciones">
+          <Button type="submit" disabled={enviando || !claveActual}>
+            {enviando ? t.comun.guardando : t.cuenta_segura.cerrar_sesiones}
+          </Button>
+        </div>
       </form>
     </section>
   );

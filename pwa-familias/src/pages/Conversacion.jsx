@@ -150,17 +150,19 @@ export default function Conversacion() {
         </div>
       )}
 
-      <HiloDeMensajes
-        key={id}
-        mensajes={datos.mensajes}
-        ladoPropio={ladoPropio}
-        locale={locale}
-        videollamada={datos.videollamada}
-        videollamadaDisponible={datos.videollamada_disponible}
-        alLlamar={llamar}
-        alEnviar={enviar}
-        t={t}
-      />
+      <section className="pwa-card">
+        <HiloDeMensajes
+          key={id}
+          mensajes={datos.mensajes}
+          ladoPropio={ladoPropio}
+          locale={locale}
+          videollamada={datos.videollamada}
+          videollamadaDisponible={datos.videollamada_disponible}
+          alLlamar={llamar}
+          alEnviar={enviar}
+          t={t}
+        />
+      </section>
     </div>
   );
 }

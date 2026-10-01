@@ -12,6 +12,7 @@ import { Cabecera } from '../../components/ui/Cabecera';
 import { mensajeDeError } from '../../lib/errores';
 import { FormaDeCobroDetalle } from './FormaDeCobroDetalle';
 import { PlazosDelCobro } from './PlazosDelCobro';
+import '../../styles/molde-paginas.css';
 
 /* Cómo cobra la Prestadora.
    ==========================================================================
@@ -76,55 +77,65 @@ export function FormasDeCobro() {
       </Cabecera>
       {estado === 'error' && error && <Alert variant="error">{error}</Alert>}
 
-      <EstadoLista
-        estado={estado}
-        error={error}
-        vacio={estado === 'listo' && formas.length === 0}
-        recargar={recargar}
-      >
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.marketplace.forma_nombre}</th>
-              <th>{t.marketplace.forma_importe}</th>
-              <th>{t.marketplace.forma_col_periodo}</th>
-              <th>{t.marketplace.forma_dias_gratis}</th>
-              <th>{t.marketplace.forma_contactos_incluidos}</th>
-              <th>{t.marketplace.forma_renueva_sola}</th>
-              <th>{t.marketplace.forma_ofrecida}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {formas.map((forma) => (
-              <tr key={forma.id}>
-                <td>{forma.nombre}</td>
-                {/* Cada forma trae su moneda, que completó la base con la de la Prestadora. */}
-                <td>{formatearImporte(forma.importe, forma.moneda, locale)}</td>
-                <td>{comoSeCobra(forma)}</td>
-                <td>{forma.dias_gratis ?? '—'}</td>
-                <td>{forma.contactos_incluidos ?? '—'}</td>
-                <td>{forma.renueva_sola ? t.comun.si : t.comun.no}</td>
-                <td>
-                  <span className={claseBadge(forma.ofrecida ? 'activo' : 'inactivo')}>
-                    {forma.ofrecida ? t.marketplace.forma_ofrecida_si : t.marketplace.forma_ofrecida_no}
-                  </span>
-                </td>
-                <td>
-                  <button onClick={() => setSeleccionada(forma)}>
-                    {esAdmin ? t.comun.editar : t.comun.ver_detalle}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </EstadoLista>
+      <div className="molde-pila">
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.marketplace.formas_titulo}</h2>
+            {estado === 'listo' && <span className="panel-mini">{formas.length}</span>}
+          </div>
+          <EstadoLista
+            estado={estado}
+            error={error}
+            vacio={estado === 'listo' && formas.length === 0}
+            recargar={recargar}
+          >
+            <table className="panel-tabla">
+              <thead>
+                <tr>
+                  <th>{t.marketplace.forma_nombre}</th>
+                  <th>{t.marketplace.forma_importe}</th>
+                  <th>{t.marketplace.forma_col_periodo}</th>
+                  <th>{t.marketplace.forma_dias_gratis}</th>
+                  <th>{t.marketplace.forma_contactos_incluidos}</th>
+                  <th>{t.marketplace.forma_renueva_sola}</th>
+                  <th>{t.marketplace.forma_ofrecida}</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {formas.map((forma) => (
+                  <tr key={forma.id}>
+                    <td>
+                      <b>{forma.nombre}</b>
+                    </td>
+                    {/* Cada forma trae su moneda, que completó la base con la de la Prestadora. */}
+                    <td>{formatearImporte(forma.importe, forma.moneda, locale)}</td>
+                    <td>{comoSeCobra(forma)}</td>
+                    <td>{forma.dias_gratis ?? '—'}</td>
+                    <td>{forma.contactos_incluidos ?? '—'}</td>
+                    <td>{forma.renueva_sola ? t.comun.si : t.comun.no}</td>
+                    <td>
+                      <span className={claseBadge(forma.ofrecida ? 'activo' : 'inactivo')}>
+                        {forma.ofrecida ? t.marketplace.forma_ofrecida_si : t.marketplace.forma_ofrecida_no}
+                      </span>
+                    </td>
+                    <td>
+                      <button type="button" className="panel-enlace" onClick={() => setSeleccionada(forma)}>
+                        {esAdmin ? t.comun.editar : t.comun.ver_detalle}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </EstadoLista>
+        </section>
 
-      {/* Los plazos viven acá porque son la otra mitad de cómo cobra la Prestadora: la forma dice
-          cuánto y cada cuánto, y esto dice con cuánta anticipación se avisa, cuánto se espera
-          cuando un cobro no entra y hasta cuándo se puede pagar un cupón. */}
-      <PlazosDelCobro soloLectura={!esAdmin} />
+        {/* Los plazos viven acá porque son la otra mitad de cómo cobra la Prestadora: la forma dice
+            cuánto y cada cuánto, y esto dice con cuánta anticipación se avisa, cuánto se espera
+            cuando un cobro no entra y hasta cuándo se puede pagar un cupón. */}
+        <PlazosDelCobro soloLectura={!esAdmin} />
+      </div>
 
       {(seleccionada || creandoNueva) && (
         <FormaDeCobroDetalle

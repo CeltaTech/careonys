@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
+import '../../styles/molde-paginas.css';
 
 /* Los plazos con los que cobra la Prestadora.
    ==========================================================================
@@ -62,57 +63,68 @@ export function PlazosDelCobro({ soloLectura }) {
     setGuardando(false);
   }
 
-  if (estado === 'cargando') return <p>{t.comun.cargando}</p>;
-  if (estado === 'error') {
-    return (
-      <div>
-        <Alert variant="error">{error}</Alert>
-        <Button onClick={recargar}>{t.comun.reintentar}</Button>
-      </div>
-    );
-  }
-
   return (
-    <section>
-      <h2>{t.marketplace.plazos_titulo}</h2>
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.marketplace.plazos_titulo}</h2>
+      </div>
 
-      {error && <Alert variant="error">{error}</Alert>}
-      {guardados && <Alert variant="success">{t.marketplace.plazos_guardados}</Alert>}
+      {estado === 'cargando' && <p className="molde-vacio">{t.comun.cargando}</p>}
 
-      <FormField
-        label={t.marketplace.plazo_aviso_antes_del_cobro}
-        name="dias_de_aviso_antes_del_cobro"
-        type="number"
-        min="1"
-        value={plazos?.dias_de_aviso_antes_del_cobro ?? ''}
-        onChange={(e) => cambiar('dias_de_aviso_antes_del_cobro', e.target.value)}
-        disabled={soloLectura}
-      />
+      {estado === 'error' && (
+        <>
+          <Alert variant="error">{error}</Alert>
+          <div className="molde-acciones">
+            <Button onClick={recargar}>{t.comun.reintentar}</Button>
+          </div>
+        </>
+      )}
 
-      <FormField
-        label={t.marketplace.plazo_gracia_por_cobro_rechazado}
-        name="dias_de_gracia_por_cobro_rechazado"
-        type="number"
-        min="1"
-        value={plazos?.dias_de_gracia_por_cobro_rechazado ?? ''}
-        onChange={(e) => cambiar('dias_de_gracia_por_cobro_rechazado', e.target.value)}
-        disabled={soloLectura}
-      />
+      {estado !== 'cargando' && estado !== 'error' && (
+        <>
+          {error && <Alert variant="error">{error}</Alert>}
+          {guardados && <Alert variant="success">{t.marketplace.plazos_guardados}</Alert>}
 
-      <FormField
-        label={t.marketplace.plazo_vida_del_cupon}
-        name="dias_de_vida_del_cupon"
-        type="number"
-        min="1"
-        value={plazos?.dias_de_vida_del_cupon ?? ''}
-        onChange={(e) => cambiar('dias_de_vida_del_cupon', e.target.value)}
-        disabled={soloLectura}
-      />
+          <div className="molde-formgrid">
+            <FormField
+              label={t.marketplace.plazo_aviso_antes_del_cobro}
+              name="dias_de_aviso_antes_del_cobro"
+              type="number"
+              min="1"
+              value={plazos?.dias_de_aviso_antes_del_cobro ?? ''}
+              onChange={(e) => cambiar('dias_de_aviso_antes_del_cobro', e.target.value)}
+              disabled={soloLectura}
+            />
 
-      {!soloLectura && (
-        <Button onClick={guardar} disabled={guardando}>
-          {t.comun.guardar}
-        </Button>
+            <FormField
+              label={t.marketplace.plazo_gracia_por_cobro_rechazado}
+              name="dias_de_gracia_por_cobro_rechazado"
+              type="number"
+              min="1"
+              value={plazos?.dias_de_gracia_por_cobro_rechazado ?? ''}
+              onChange={(e) => cambiar('dias_de_gracia_por_cobro_rechazado', e.target.value)}
+              disabled={soloLectura}
+            />
+
+            <FormField
+              label={t.marketplace.plazo_vida_del_cupon}
+              name="dias_de_vida_del_cupon"
+              type="number"
+              min="1"
+              value={plazos?.dias_de_vida_del_cupon ?? ''}
+              onChange={(e) => cambiar('dias_de_vida_del_cupon', e.target.value)}
+              disabled={soloLectura}
+            />
+          </div>
+
+          {!soloLectura && (
+            <div className="molde-acciones">
+              <Button onClick={guardar} disabled={guardando}>
+                {t.comun.guardar}
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </section>
   );

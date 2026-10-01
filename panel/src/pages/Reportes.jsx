@@ -14,6 +14,8 @@ import {
   armarBuscadorDeRangos,
   tieneSignoFueraDeRango,
 } from '../lib/signosVitales';
+import '../styles/molde-paginas.css';
+import './hojaDeTarjetas.css';
 
 // Tope de filas por consulta. Con el rango de fechas por defecto (una semana) no se alcanza
 // nunca; existe para que un rango muy ancho no traiga miles de filas de golpe.
@@ -96,77 +98,91 @@ export function Reportes() {
   return (
     <div>
       <Cabecera titulo={t.reportes.titulo} />
-      <div className="panel-filtros">
-        <label>
-          {t.reportes.desde}{' '}
-          <input type="date" value={f.desde} max={f.hasta} onChange={(e) => set('desde', e.target.value)} />
-        </label>
-        <label>
-          {t.reportes.hasta}{' '}
-          <input type="date" value={f.hasta} min={f.desde} onChange={(e) => set('hasta', e.target.value)} />
-        </label>
-        <select value={f.filtro} onChange={(e) => set('filtro', e.target.value)} aria-label={t.comun.filtrar}>
-          <option value="todos">{t.comun.todos}</option>
-          <option value="incidentes">{t.reportes.filtro_incidentes}</option>
-          <option value="fuera_rango">{t.reportes.filtro_fuera_rango}</option>
-          <option value="sin_confirmar">{t.reportes.filtro_sin_confirmar}</option>
-        </select>
+      <div className="molde-pila">
+        <section className="panel-tarjeta hoja-desplazable">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.reportes.titulo}</h2>
+            {estado === 'listo' && <span className="panel-mini">{filasFiltradas.length}</span>}
+          </div>
+          <div className="panel-filtros">
+            <label>
+              {t.reportes.desde}{' '}
+              <input type="date" value={f.desde} max={f.hasta} onChange={(e) => set('desde', e.target.value)} />
+            </label>
+            <label>
+              {t.reportes.hasta}{' '}
+              <input type="date" value={f.hasta} min={f.desde} onChange={(e) => set('hasta', e.target.value)} />
+            </label>
+            <select value={f.filtro} onChange={(e) => set('filtro', e.target.value)} aria-label={t.comun.filtrar}>
+              <option value="todos">{t.comun.todos}</option>
+              <option value="incidentes">{t.reportes.filtro_incidentes}</option>
+              <option value="fuera_rango">{t.reportes.filtro_fuera_rango}</option>
+              <option value="sin_confirmar">{t.reportes.filtro_sin_confirmar}</option>
+            </select>
+          </div>
+
+          <EstadoLista
+            estado={estado}
+            error={error}
+            vacio={estado === 'listo' && filasFiltradas.length === 0}
+            recargar={recargar}
+            filtrado={hayFiltros}
+            onLimpiarFiltros={limpiar}
+            mensajeVacio={t.reportes.vacio}
+          >
+            <>
+              {filas.length === TOPE_FILAS && <p className="panel-mini">{t.reportes.aviso_tope}</p>}
+              <table className="panel-tabla">
+                <thead>
+                  <tr>
+                    <th>{t.reportes.col_fecha}</th>
+                    <th>{t.reportes.col_paciente}</th>
+                    <th>{t.reportes.col_asistente}</th>
+                    <th>{t.reportes.col_animo}</th>
+                    <th>{t.reportes.col_senales}</th>
+                    <th>{t.reportes.col_detalle}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filasFiltradas.map((r) => (
+                    <tr key={r.id}>
+                      <td>{r.fecha}</td>
+                      <td>
+                        <b>{r.paciente_nombre}</b>
+                      </td>
+                      <td>{r.asistente_nombre}</td>
+                      <td>{r.estado_animo ? t.reportes[`animo_${r.estado_animo}`] : '—'}</td>
+                      <td>
+                        {r.incidentes && <span className="badge badge-critico">{t.reportes.senal_incidente}</span>}
+                        {r.fuera_de_rango && <span className="badge badge-atencion">{t.reportes.senal_fuera_rango}</span>}
+                        {!r.confirmado_asistente && <span className="badge">{t.reportes.senal_sin_confirmar}</span>}
+                        {!r.incidentes && !r.fuera_de_rango && r.confirmado_asistente && t.reportes.sin_novedades}
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="panel-enlace"
+                          onClick={() => setAbierto(abierto === r.id ? null : r.id)}
+                        >
+                          {abierto === r.id ? t.reportes.ocultar_detalle : t.reportes.ver_detalle}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          </EstadoLista>
+        </section>
+
+        {estado === 'listo' && abierto && (
+          <DetalleReporte
+            reporte={filasFiltradas.find((r) => r.id === abierto)}
+            rangoDe={rangoDe}
+            onCerrar={() => setAbierto(null)}
+          />
+        )}
       </div>
-
-      <EstadoLista
-        estado={estado}
-        error={error}
-        vacio={estado === 'listo' && filasFiltradas.length === 0}
-        recargar={recargar}
-        filtrado={hayFiltros}
-        onLimpiarFiltros={limpiar}
-        mensajeVacio={t.reportes.vacio}
-      >
-        <>
-          {filas.length === TOPE_FILAS && <p className="panel-explicacion">{t.reportes.aviso_tope}</p>}
-          <table className="panel-tabla">
-            <thead>
-              <tr>
-                <th>{t.reportes.col_fecha}</th>
-                <th>{t.reportes.col_paciente}</th>
-                <th>{t.reportes.col_asistente}</th>
-                <th>{t.reportes.col_animo}</th>
-                <th>{t.reportes.col_senales}</th>
-                <th>{t.reportes.col_detalle}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filasFiltradas.map((r) => (
-                <tr key={r.id}>
-                  <td>{r.fecha}</td>
-                  <td>{r.paciente_nombre}</td>
-                  <td>{r.asistente_nombre}</td>
-                  <td>{r.estado_animo ? t.reportes[`animo_${r.estado_animo}`] : '—'}</td>
-                  <td>
-                    {r.incidentes && <span className="badge badge-critico">{t.reportes.senal_incidente}</span>}
-                    {r.fuera_de_rango && <span className="badge badge-atencion">{t.reportes.senal_fuera_rango}</span>}
-                    {!r.confirmado_asistente && <span className="badge">{t.reportes.senal_sin_confirmar}</span>}
-                    {!r.incidentes && !r.fuera_de_rango && r.confirmado_asistente && t.reportes.sin_novedades}
-                  </td>
-                  <td>
-                    <Button variant="secondary" onClick={() => setAbierto(abierto === r.id ? null : r.id)}>
-                      {abierto === r.id ? t.reportes.ocultar_detalle : t.reportes.ver_detalle}
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {abierto && (
-            <DetalleReporte
-              reporte={filasFiltradas.find((r) => r.id === abierto)}
-              rangoDe={rangoDe}
-              onCerrar={() => setAbierto(null)}
-            />
-          )}
-        </>
-      </EstadoLista>
     </div>
   );
 }
@@ -179,74 +195,74 @@ function DetalleReporte({ reporte, rangoDe, onCerrar }) {
   const clavesLegado = claves.length === 0 ? SIGNOS_VITALES_LEGADO.filter((c) => reporte.signos_vitales?.[c]) : [];
 
   return (
-    <section className="panel-detalle">
-      <div className="panel-detalle-encabezado">
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
         <h2>{t.reportes.detalle_titulo}</h2>
         <Button variant="secondary" onClick={onCerrar}>
           {t.comun.cerrar}
         </Button>
       </div>
-      <p className="panel-explicacion">
+      <div className="panel-mini hoja-ficha-datos">
         {reporte.fecha} · {reporte.paciente_nombre} · {reporte.asistente_nombre}
-      </p>
-
-      <div className="reporte-preview-campo">
-        <label>{t.reportes.campo_texto_libre}</label>
-        <div>{reporte.texto_libre || t.reportes.sin_datos}</div>
       </div>
 
-      <div className="reporte-preview-campo">
-        <label>{t.reportes.campo_alimentacion}</label>
-        <div>{reporte.alimentacion?.descripcion || t.reportes.sin_datos}</div>
-      </div>
+      <div className="panel-grilla panel-columnas-3">
+        <div className="hoja-dato">
+          <div className="panel-mini">{t.reportes.campo_texto_libre}</div>
+          <b>{reporte.texto_libre || t.reportes.sin_datos}</b>
+        </div>
 
-      <div className="reporte-preview-campo">
-        <label>{t.reportes.campo_medicacion}</label>
-        {Array.isArray(reporte.medicacion) && reporte.medicacion.length > 0 ? (
-          reporte.medicacion.map((m, i) => <div key={i}>{[m.nombre, m.hora, m.via].filter(Boolean).join(' · ')}</div>)
-        ) : (
-          <div>{t.reportes.sin_datos}</div>
-        )}
-      </div>
+        <div className="hoja-dato">
+          <div className="panel-mini">{t.reportes.campo_alimentacion}</div>
+          <b>{reporte.alimentacion?.descripcion || t.reportes.sin_datos}</b>
+        </div>
 
-      <div className="reporte-preview-campo">
-        <label>{t.reportes.campo_signos_vitales}</label>
-        {claves.length > 0 &&
-          claves.map((clave) => {
-            // El rango normal es el de esta persona: la presión alta de uno es la presión de
-            // siempre de otro, y ahora se sabe de quién habla el reporte.
-            const rango = rangoDe(reporte.paciente_id, clave);
-            const color = colorSigno(reporte.signos_vitales[clave], rango);
-            return (
-              <div key={clave} className={color ? `signo-vital-${color}` : ''}>
-                {t.reportes[`signo_${clave}`]}: {reporte.signos_vitales[clave]}
-                {rango?.unidad ? ` ${rango.unidad}` : ''}
-                {color === 'alerta' && <span className="signo-vital-aviso"> — {t.reportes.signo_fuera_de_rango}</span>}
-              </div>
-            );
-          })}
-        {clavesLegado.map((clave) => (
-          <div key={clave}>
-            {t.reportes[`signo_${clave}`]}: {reporte.signos_vitales[clave]}
-          </div>
-        ))}
-        {claves.length === 0 && clavesLegado.length === 0 && <div>{t.reportes.sin_datos}</div>}
-      </div>
+        <div className="hoja-dato">
+          <div className="panel-mini">{t.reportes.campo_medicacion}</div>
+          {Array.isArray(reporte.medicacion) && reporte.medicacion.length > 0 ? (
+            reporte.medicacion.map((m, i) => <b key={i}>{[m.nombre, m.hora, m.via].filter(Boolean).join(' · ')}</b>)
+          ) : (
+            <b>{t.reportes.sin_datos}</b>
+          )}
+        </div>
 
-      <div className="reporte-preview-campo">
-        <label>{t.reportes.campo_incidentes}</label>
-        <div>{reporte.incidentes || t.reportes.sin_datos}</div>
-      </div>
+        <div className="hoja-dato">
+          <div className="panel-mini">{t.reportes.campo_signos_vitales}</div>
+          {claves.length > 0 &&
+            claves.map((clave) => {
+              // El rango normal es el de esta persona: la presión alta de uno es la presión de
+              // siempre de otro, y ahora se sabe de quién habla el reporte.
+              const rango = rangoDe(reporte.paciente_id, clave);
+              const color = colorSigno(reporte.signos_vitales[clave], rango);
+              return (
+                <b key={clave} className={color ? `signo-vital-${color}` : ''}>
+                  {t.reportes[`signo_${clave}`]}: {reporte.signos_vitales[clave]}
+                  {rango?.unidad ? ` ${rango.unidad}` : ''}
+                  {color === 'alerta' && <span className="signo-vital-aviso"> — {t.reportes.signo_fuera_de_rango}</span>}
+                </b>
+              );
+            })}
+          {clavesLegado.map((clave) => (
+            <b key={clave}>
+              {t.reportes[`signo_${clave}`]}: {reporte.signos_vitales[clave]}
+            </b>
+          ))}
+          {claves.length === 0 && clavesLegado.length === 0 && <b>{t.reportes.sin_datos}</b>}
+        </div>
 
-      <div className="reporte-preview-campo">
-        <label>{t.reportes.campo_observaciones}</label>
-        <div>{reporte.observaciones || t.reportes.sin_datos}</div>
+        <div className="hoja-dato">
+          <div className="panel-mini">{t.reportes.campo_incidentes}</div>
+          <b>{reporte.incidentes || t.reportes.sin_datos}</b>
+        </div>
+
+        <div className="hoja-dato">
+          <div className="panel-mini">{t.reportes.campo_observaciones}</div>
+          <b>{reporte.observaciones || t.reportes.sin_datos}</b>
+        </div>
       </div>
 
       {reporte.foto_url && (
-        <div className="reporte-preview-campo">
-          <img src={reporte.foto_url} alt="" style={{ maxWidth: '420px', width: '100%', borderRadius: '8px' }} />
-        </div>
+        <img src={reporte.foto_url} alt="" style={{ maxWidth: '420px', width: '100%', borderRadius: '8px' }} />
       )}
     </section>
   );

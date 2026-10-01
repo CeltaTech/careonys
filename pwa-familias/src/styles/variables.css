@@ -1,23 +1,47 @@
 :root {
-  --azul-oscuro: oklch(0.22 0.02 250);
-  --azul-medio: oklch(0.65 0.13 250);
-  --verde-exito: oklch(0.55 0.13 165);
-  --naranja-alerta: oklch(0.62 0.13 70);
-  --rojo-peligro: oklch(0.58 0.15 25);
+  /* Los tonos de la maqueta de la aplicación de la Familia. Ningún componente escribe un color:
+     todos salen de acá. */
+  --fondo-app: #f3f6f7;
+  --blanco: #ffffff;
+  --blanco-hover: #f7f9fb;
+  --tinta: #111f35;
+  --gris: #71809a;
+  --gris-nav: #68778a;
+  --linea: #dfe6ee;
+  --linea-suave: #edf0f3;
+  --borde-boton: #d4dde7;
+  --texto-boton: #24364b;
+  --verde: #159b83;
 
-  /* Variantes "-texto": mismo tono y saturación, más oscuras para llegar a 4.5:1 sobre fondo
-     blanco (WCAG AA). Usar únicamente cuando el color pinta texto — bordes, fondos de
-     alerta y acentos grandes siguen usando la variable base de arriba. */
-  --azul-medio-texto: oklch(0.567 0.13 250);
-  --verde-exito-texto: oklch(0.548 0.13 165);
-  --naranja-alerta-texto: oklch(0.575 0.13 70);
-  --rojo-peligro-bg: oklch(0.92 0.05 25);
-  --verde-exito-bg: oklch(0.92 0.05 165);
-  --fondo-alt: oklch(0.98 0.004 250);
-  --texto-principal: oklch(0.2 0.01 250);
-  --texto-secundario: oklch(0.5 0.01 250);
-  --borde-card: oklch(0.9 0.005 250);
+  /* Los cinco tonos de estado: lo que está bien, lo que falta mirar, lo que está mal, el dato
+     informativo y el neutro. Cada uno con su fondo y su texto. */
+  --ok-fondo: #e3f6ef;
+  --ok-texto: #08735f;
+  --aviso-fondo: #fff3d9;
+  --aviso-texto: #916600;
+  --mal-fondo: #fde8e8;
+  --mal-texto: #a53131;
+  --info-fondo: #e8f2fb;
+  --info-texto: #1767a8;
+  --neutro-fondo: #f8fafc;
 
-  --font-display: 'Public Sans', sans-serif;
-  --font-body: 'Public Sans', sans-serif;
+  /* Los nombres de antes, apuntando a los tonos de la maqueta, para que lo que ya los usa
+     quede igual a ella sin tocarlo. */
+  --azul-oscuro: var(--tinta);
+  --azul-medio: var(--verde);
+  --azul-medio-texto: var(--ok-texto);
+  --verde-exito: var(--verde);
+  --verde-exito-texto: var(--ok-texto);
+  --verde-exito-bg: var(--ok-fondo);
+  --naranja-alerta: #e0a400;
+  --naranja-alerta-texto: var(--aviso-texto);
+  --rojo-peligro: #e34b4b;
+  --rojo-peligro-bg: var(--mal-fondo);
+  --fondo-alt: var(--fondo-app);
+  --texto-principal: var(--tinta);
+  --texto-secundario: var(--gris);
+  --borde-card: var(--linea);
+
+  --font-display: Inter, 'Segoe UI', Arial, sans-serif;
+  --font-body: Inter, 'Segoe UI', Arial, sans-serif;
 }

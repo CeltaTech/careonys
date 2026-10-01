@@ -4,6 +4,7 @@ import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import DomicilioTemporal from '../components/DomicilioTemporal';
 import AvisoInstruccionPendiente from '../components/AvisoInstruccionPendiente';
+import TarjetaAcciones from '../components/TarjetaAcciones';
 
 export default function MisPacientes() {
   const { t } = useLocale();
@@ -31,27 +32,32 @@ export default function MisPacientes() {
   // pantalla adonde ir, y el titular igual tiene algo que firmar.
   if (pacientes.length === 0) {
     return (
-      <div>
+      <>
         <AvisoInstruccionPendiente />
-        <div className="estado-vacio" role="status">{t.pacientes.sin_pacientes}</div>
-      </div>
+        <div className="pwa-card estado-vacio" role="status">{t.pacientes.sin_pacientes}</div>
+        {/* Sin Paciente no hay ficha, y las acciones del círculo familiar entero tienen que
+            seguir a mano: el código, el perfil, la vidriera. */}
+        <TarjetaAcciones />
+      </>
     );
   }
   if (pacientes.length === 1) return <Navigate to={`/pacientes/${pacientes[0].id}`} replace />;
 
   return (
-    <div>
+    <>
       <h1>{t.pacientes.titulo}</h1>
       <AvisoInstruccionPendiente />
       {pacientes.map((p) => (
-        <Link key={p.id} to={`/pacientes/${p.id}`} className="guardia-card" style={{ display: 'block', textDecoration: 'none' }}>
+        <Link key={p.id} to={`/pacientes/${p.id}`} className="pwa-card">
+          <div className="mini">{t.paciente.rotulo}</div>
           <div className="guardia-card-paciente">{p.nombre}</div>
-          <div className="guardia-card-detalle">{p.domicilio || '—'}</div>
+          <div className="mini mini-abajo">{p.domicilio || '—'}</div>
           {/* Cuando el Paciente está pasando una temporada en otro lado, la dirección de arriba
               es la de ahora y no la habitual. Sin este renglón se leen igual. */}
           <DomicilioTemporal paciente={p} t={t} />
         </Link>
       ))}
-    </div>
+      <TarjetaAcciones />
+    </>
   );
 }

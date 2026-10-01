@@ -1,0 +1,55 @@
+/* Bandeja de Comunicación: filtros arriba de la lista, marcas de cada conversación y el cuadro
+   para escribir con el mismo casillero que el resto de los formularios. */
+
+.comunicacion-filtros {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 4px 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--borde-card);
+  font-size: 12px;
+}
+
+.comunicacion-filtros select {
+  width: 100%;
+  border: 1px solid var(--borde-card);
+  border-radius: var(--radio-control);
+  padding: 8px;
+  font-family: inherit;
+  font-size: 12px;
+  background: var(--superficie);
+  color: var(--texto-principal);
+}
+
+.comunicacion-renglones {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.comunicacion-insignias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.panel-tarjeta-titulo .comunicacion-insignias {
+  margin-top: 0;
+}
+
+.molde-renglon .comunicacion-previa {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.comunicacion-hilo .panel-chat-envio textarea {
+  border: 1px solid var(--borde-card);
+  border-radius: var(--radio-control);
+  padding: 9px;
+  font-family: inherit;
+  font-size: 12px;
+  background: var(--superficie);
+  color: var(--texto-principal);
+}

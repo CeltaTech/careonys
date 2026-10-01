@@ -1,0 +1,29 @@
+/* Lo propio de Configuración › Mensajes que el molde no trae. */
+
+.avisos-desborde {
+  overflow-x: auto;
+}
+
+.avisos-desborde .panel-tabla input[type='text'],
+.avisos-desborde .panel-tabla select {
+  min-width: 160px;
+  border: 1px solid var(--borde-card);
+  border-radius: var(--radio-control);
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 12px;
+  background: var(--superficie);
+  color: var(--texto-principal);
+}
+
+.avisos-subtitulo {
+  font-size: 12px;
+  font-weight: 700;
+  margin: 4px 0 8px;
+}
+
+.avisos-acciones-fila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}

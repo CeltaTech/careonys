@@ -17,6 +17,8 @@ import { hoyISO } from '../../lib/horarios';
 import { situacion } from '../../lib/vigenciaPrestacion';
 import { servicioSirveParaFamilia } from '../../lib/serviciosDelPaciente';
 import { lugaresDe, lugaresDeVarias } from '../../lib/lugaresDeCadaPersona';
+import '../../styles/molde-paginas.css';
+import '../hojaDeTarjetas.css';
 
 function calcularPrecioFinal(precioLista, tipoDescuento, valorDescuento) {
   const base = Number(precioLista) || 0;
@@ -610,110 +612,123 @@ export function PrestacionesPaciente({ paciente, onClose }) {
         {estado === 'error' && <Alert variant="error">{error || t.comun.error_generico}</Alert>}
 
         {estado === 'listo' && (
-          <>
+          <div className="molde-pila">
             {paquetes.length > 0 && (
-              <>
-                <h3>{t.prestaciones.paquetes_titulo}</h3>
-                <ul className="panel-lista-simple">
-                  {paquetes.map((pq) => (
-                    <li key={pq.id}>
-                      {pq.nombre || t.prestaciones.paquete_sin_nombre} — {pq.precio_paquete} ({pq.paquete_prestacion_items.length} {t.prestaciones.prestaciones_incluidas})
-                    </li>
-                  ))}
-                </ul>
-              </>
+              <section className="panel-tarjeta">
+                <div className="panel-tarjeta-titulo">
+                  <h2>{t.prestaciones.paquetes_titulo}</h2>
+                </div>
+                {paquetes.map((pq) => (
+                  <div className="panel-fila-alerta" key={pq.id}>
+                    <div>
+                      <b>{pq.nombre || t.prestaciones.paquete_sin_nombre}</b>{' '}
+                      <span className="panel-mini">
+                        {pq.paquete_prestacion_items.length} {t.prestaciones.prestaciones_incluidas}
+                      </span>
+                    </div>
+                    <b>{pq.precio_paquete}</b>
+                  </div>
+                ))}
+              </section>
             )}
 
-            <h3>{t.prestaciones.vigentes_titulo}</h3>
-            {errorRevision && <Alert variant="error">{errorRevision}</Alert>}
-            {prestaciones.length === 0 ? (
-              <p className="estado-vacio">{t.prestaciones.sin_prestaciones}</p>
-            ) : (
-              <table className="panel-tabla">
-                <thead>
-                  <tr>
-                    <th></th>
-                    <th>{t.prestaciones.col_tipo_servicio}</th>
-                    <th>{t.prestaciones.col_precio_final}</th>
-                    <th>{t.prestaciones.col_vigencia}</th>
-                    <th>{t.prestaciones.col_situacion}</th>
-                    <th>{t.prestaciones.col_revision}</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {prestaciones.map((p) => (
-                    <tr key={p.id}>
-                      <td>
-                        <input
-                          type="checkbox"
-                          checked={seleccionadasParaPaquete.includes(p.id)}
-                          onChange={() => toggleSeleccionParaPaquete(p.id)}
-                          aria-label={con(t.comun.campo_de_fila, { campo: t.comun.seleccionar, nombre: p.tipo_servicio })}
-                        />
-                      </td>
-                      <td>{p.tipo_servicio}</td>
-                      <td>{p.precio_final}</td>
-                      <td>
-                        {p.vigente_desde} →{' '}
-                        {p.vigente_hasta || <span className="panel-dato-vacio">{t.prestaciones.vigencia_sin_fin}</span>}
-                      </td>
-                      <td>
-                        <span className={claseBadge(situacion(p))}>
-                          {t.prestaciones[`situacion_${situacion(p)}`]}
-                        </span>
-                      </td>
-                      <td>
-                        {p.requiere_revision ? (
-                          <span className={claseBadgeTono(TONO.ATENCION)}>{t.prestaciones.a_revisar}</span>
-                        ) : (
-                          <span className={claseBadgeTono(TONO.EXITO)}>{t.prestaciones.al_dia}</span>
-                        )}
-                      </td>
-                      <td>
-                        {p.requiere_revision && (
-                          <Button variant="secondary" onClick={() => handleMarcarRevisado(p.id)} disabled={marcandoRevisado === p.id}>
-                            {t.prestaciones.marcar_revisado}
-                          </Button>
-                        )}
-                      </td>
+            <section className="panel-tarjeta hoja-desplazable">
+              <div className="panel-tarjeta-titulo">
+                <h2>{t.prestaciones.vigentes_titulo}</h2>
+                <div className="molde-acciones">
+                  {seleccionadasParaPaquete.length >= 2 && !mostrandoPaquete && (
+                    <Button variant="secondary" onClick={() => setMostrandoPaquete(true)}>
+                      {t.prestaciones.armar_paquete}
+                    </Button>
+                  )}
+                  {!mostrandoForm && (
+                    <Button variant="secondary" onClick={() => setMostrandoForm(true)}>{t.prestaciones.nueva_prestacion}</Button>
+                  )}
+                </div>
+              </div>
+              {errorRevision && <Alert variant="error">{errorRevision}</Alert>}
+              {prestaciones.length === 0 ? (
+                <p className="molde-vacio">{t.prestaciones.sin_prestaciones}</p>
+              ) : (
+                <table className="panel-tabla">
+                  <thead>
+                    <tr>
+                      <th></th>
+                      <th>{t.prestaciones.col_tipo_servicio}</th>
+                      <th>{t.prestaciones.col_precio_final}</th>
+                      <th>{t.prestaciones.col_vigencia}</th>
+                      <th>{t.prestaciones.col_situacion}</th>
+                      <th>{t.prestaciones.col_revision}</th>
+                      <th></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-
-            <div className="panel-modal-acciones">
-              {seleccionadasParaPaquete.length >= 2 && !mostrandoPaquete && (
-                <Button variant="secondary" onClick={() => setMostrandoPaquete(true)}>
-                  {t.prestaciones.armar_paquete}
-                </Button>
+                  </thead>
+                  <tbody>
+                    {prestaciones.map((p) => (
+                      <tr key={p.id}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={seleccionadasParaPaquete.includes(p.id)}
+                            onChange={() => toggleSeleccionParaPaquete(p.id)}
+                            aria-label={con(t.comun.campo_de_fila, { campo: t.comun.seleccionar, nombre: p.tipo_servicio })}
+                          />
+                        </td>
+                        <td><b>{p.tipo_servicio}</b></td>
+                        <td>{p.precio_final}</td>
+                        <td>
+                          {p.vigente_desde} →{' '}
+                          {p.vigente_hasta || <span className="panel-dato-vacio">{t.prestaciones.vigencia_sin_fin}</span>}
+                        </td>
+                        <td>
+                          <span className={claseBadge(situacion(p))}>
+                            {t.prestaciones[`situacion_${situacion(p)}`]}
+                          </span>
+                        </td>
+                        <td>
+                          {p.requiere_revision ? (
+                            <span className={claseBadgeTono(TONO.ATENCION)}>{t.prestaciones.a_revisar}</span>
+                          ) : (
+                            <span className={claseBadgeTono(TONO.EXITO)}>{t.prestaciones.al_dia}</span>
+                          )}
+                        </td>
+                        <td>
+                          {p.requiere_revision && (
+                            <Button variant="secondary" onClick={() => handleMarcarRevisado(p.id)} disabled={marcandoRevisado === p.id}>
+                              {t.prestaciones.marcar_revisado}
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               )}
-              {!mostrandoForm && (
-                <Button onClick={() => setMostrandoForm(true)}>{t.prestaciones.nueva_prestacion}</Button>
-              )}
-            </div>
+            </section>
 
             {mostrandoPaquete && (
-              <div className="panel-resultado-calculo">
-                <h3>{t.prestaciones.armar_paquete}</h3>
+              <section className="panel-tarjeta">
+                <div className="panel-tarjeta-titulo">
+                  <h2>{t.prestaciones.armar_paquete}</h2>
+                </div>
                 {errorPaquete && <Alert variant="error">{errorPaquete}</Alert>}
-                <FormField
-                  label={t.prestaciones.nombre_paquete}
-                  name="nombre_paquete"
-                  value={nombrePaquete}
-                  onChange={(e) => setNombrePaquete(e.target.value)}
-                />
-                <FormField
-                  label={t.prestaciones.precio_paquete}
-                  name="precio_paquete"
-                  type="number"
-                  step="0.01"
-                  value={precioPaquete}
-                  onChange={(e) => setPrecioPaquete(e.target.value)}
-                  required
-                />
-                <div className="panel-modal-acciones">
+                <div className="molde-formgrid">
+                  <FormField
+                    label={t.prestaciones.nombre_paquete}
+                    name="nombre_paquete"
+                    value={nombrePaquete}
+                    onChange={(e) => setNombrePaquete(e.target.value)}
+                  />
+                  <FormField
+                    label={t.prestaciones.precio_paquete}
+                    name="precio_paquete"
+                    type="number"
+                    step="0.01"
+                    value={precioPaquete}
+                    onChange={(e) => setPrecioPaquete(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="molde-acciones">
                   <Button variant="secondary" onClick={() => setMostrandoPaquete(false)} disabled={guardandoPaquete}>
                     {t.comun.cancelar}
                   </Button>
@@ -721,108 +736,117 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                     {guardandoPaquete ? t.comun.guardando : t.comun.guardar}
                   </Button>
                 </div>
-              </div>
+              </section>
             )}
 
             {mostrandoForm && (
-              <div className="panel-resultado-calculo">
-                <h3>{t.prestaciones.nueva_prestacion}</h3>
+              <section className="panel-tarjeta">
+                <div className="panel-tarjeta-titulo">
+                  <h2>{t.prestaciones.nueva_prestacion}</h2>
+                </div>
                 {errorForm && <Alert variant="error">{errorForm}</Alert>}
                 {serviciosAbiertos.length === 0 && <Alert variant="info">{t.prestaciones.sin_servicio_abierto}</Alert>}
 
-                <FormField
-                  label={t.prestaciones.servicio}
-                  name="servicio_id"
-                  type="select"
-                  value={servicioId}
-                  onChange={(e) => setServicioId(e.target.value)}
-                  required
-                >
-                  <option value="">—</option>
-                  {serviciosAbiertos.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.etiqueta}
-                    </option>
-                  ))}
-                </FormField>
-
-                <FormField
-                  label={t.prestaciones.col_tipo_servicio}
-                  name="precio_lista_id"
-                  type="select"
-                  value={precioListaId}
-                  onChange={(e) => setPrecioListaId(e.target.value)}
-                  required
-                >
-                  <option value="">—</option>
-                  {listaPrecios.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.tipo_servicio} — {p.modalidad} ({p.precio})
-                    </option>
-                  ))}
-                </FormField>
-
-                <FormField label={t.prestaciones.dias} name="dias" value={dias} onChange={(e) => setDias(e.target.value)} />
-                <FormField label={t.prestaciones.horario} name="horario" value={horario} onChange={(e) => setHorario(e.target.value)} />
-                <FormField
-                  label={t.prestaciones.cantidad_guardias}
-                  name="cantidad_guardias"
-                  type="number"
-                  value={cantidadGuardias}
-                  onChange={(e) => setCantidadGuardias(e.target.value)}
-                />
-                <FormField label={t.prestaciones.feriados} name="feriados" type="checkbox" checked={feriados} onChange={(e) => setFeriados(e.target.checked)} />
-                <FormField label={t.prestaciones.viajes} name="viajes" type="checkbox" checked={viajes} onChange={(e) => setViajes(e.target.checked)} />
-                <FormField label={t.prestaciones.hospitalizacion} name="hospitalizacion" type="checkbox" checked={hospitalizacion} onChange={(e) => setHospitalizacion(e.target.checked)} />
-
-                <FormField
-                  label={t.prestaciones.tipo_descuento}
-                  name="tipo_descuento"
-                  type="select"
-                  value={tipoDescuento}
-                  onChange={(e) => setTipoDescuento(e.target.value)}
-                >
-                  <option value="">{t.prestaciones.sin_descuento}</option>
-                  <option value="porcentaje">{t.prestaciones.descuento_porcentaje}</option>
-                  <option value="monto_fijo">{t.prestaciones.descuento_monto_fijo}</option>
-                </FormField>
-
-                {tipoDescuento && (
+                <div className="molde-formgrid">
                   <FormField
-                    label={t.prestaciones.valor_descuento}
-                    name="valor_descuento"
+                    label={t.prestaciones.servicio}
+                    name="servicio_id"
+                    type="select"
+                    value={servicioId}
+                    onChange={(e) => setServicioId(e.target.value)}
+                    required
+                  >
+                    <option value="">—</option>
+                    {serviciosAbiertos.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.etiqueta}
+                      </option>
+                    ))}
+                  </FormField>
+
+                  <FormField
+                    label={t.prestaciones.col_tipo_servicio}
+                    name="precio_lista_id"
+                    type="select"
+                    value={precioListaId}
+                    onChange={(e) => setPrecioListaId(e.target.value)}
+                    required
+                  >
+                    <option value="">—</option>
+                    {listaPrecios.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.tipo_servicio} — {p.modalidad} ({p.precio})
+                      </option>
+                    ))}
+                  </FormField>
+
+                  <FormField label={t.prestaciones.dias} name="dias" value={dias} onChange={(e) => setDias(e.target.value)} />
+                  <FormField label={t.prestaciones.horario} name="horario" value={horario} onChange={(e) => setHorario(e.target.value)} />
+                  <FormField
+                    label={t.prestaciones.cantidad_guardias}
+                    name="cantidad_guardias"
                     type="number"
-                    step="0.01"
-                    value={valorDescuento}
-                    onChange={(e) => setValorDescuento(e.target.value)}
+                    value={cantidadGuardias}
+                    onChange={(e) => setCantidadGuardias(e.target.value)}
                   />
-                )}
+                  <div className="molde-ancho">
+                    <FormField label={t.prestaciones.feriados} name="feriados" type="checkbox" checked={feriados} onChange={(e) => setFeriados(e.target.checked)} />
+                    <FormField label={t.prestaciones.viajes} name="viajes" type="checkbox" checked={viajes} onChange={(e) => setViajes(e.target.checked)} />
+                    <FormField label={t.prestaciones.hospitalizacion} name="hospitalizacion" type="checkbox" checked={hospitalizacion} onChange={(e) => setHospitalizacion(e.target.checked)} />
+                  </div>
 
-                <FormField
-                  label={t.prestaciones.vigente_desde}
-                  name="vigente_desde"
-                  type="date"
-                  value={vigenteDesde}
-                  onChange={(e) => setVigenteDesde(e.target.value)}
-                  required
-                />
-                <FormField
-                  label={t.prestaciones.vigente_hasta}
-                  name="vigente_hasta"
-                  type="date"
-                  value={vigenteHasta}
-                  onChange={(e) => setVigenteHasta(e.target.value)}
-                />
+                  <FormField
+                    label={t.prestaciones.tipo_descuento}
+                    name="tipo_descuento"
+                    type="select"
+                    value={tipoDescuento}
+                    onChange={(e) => setTipoDescuento(e.target.value)}
+                  >
+                    <option value="">{t.prestaciones.sin_descuento}</option>
+                    <option value="porcentaje">{t.prestaciones.descuento_porcentaje}</option>
+                    <option value="monto_fijo">{t.prestaciones.descuento_monto_fijo}</option>
+                  </FormField>
 
-                <FormField label={t.comun.nota_interna} name="nota" type="textarea" value={nota} onChange={(e) => setNota(e.target.value)} />
+                  {tipoDescuento && (
+                    <FormField
+                      label={t.prestaciones.valor_descuento}
+                      name="valor_descuento"
+                      type="number"
+                      step="0.01"
+                      value={valorDescuento}
+                      onChange={(e) => setValorDescuento(e.target.value)}
+                    />
+                  )}
 
-                {precioSeleccionado && (
-                  <p className="panel-explicacion">
-                    {t.prestaciones.precio_final_calculado}: <strong>{precioFinalCalculado}</strong>
-                  </p>
-                )}
+                  <FormField
+                    label={t.prestaciones.vigente_desde}
+                    name="vigente_desde"
+                    type="date"
+                    value={vigenteDesde}
+                    onChange={(e) => setVigenteDesde(e.target.value)}
+                    required
+                  />
+                  <FormField
+                    label={t.prestaciones.vigente_hasta}
+                    name="vigente_hasta"
+                    type="date"
+                    value={vigenteHasta}
+                    onChange={(e) => setVigenteHasta(e.target.value)}
+                  />
 
-                <div className="panel-modal-acciones">
+                  <div className="molde-ancho">
+                    <FormField label={t.comun.nota_interna} name="nota" type="textarea" value={nota} onChange={(e) => setNota(e.target.value)} />
+                  </div>
+
+                  {precioSeleccionado && (
+                    <div className="hoja-dato molde-ancho">
+                      <div className="panel-mini">{t.prestaciones.precio_final_calculado}</div>
+                      <b>{precioFinalCalculado}</b>
+                    </div>
+                  )}
+                </div>
+
+                <div className="molde-acciones">
                   <Button
                     variant="secondary"
                     onClick={() => {
@@ -837,199 +861,216 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                     {guardando ? t.comun.guardando : t.comun.guardar}
                   </Button>
                 </div>
-              </div>
+              </section>
             )}
-          </>
-        )}
 
-        {estado === 'listo' && ['admin_prestadora', 'coordinador'].includes(usuario.rol) && (
-          <div className="panel-resultado-calculo">
-            <h3>{t.prestaciones.hospitalizacion_titulo}</h3>
-            {errorHosp && <Alert variant="error">{errorHosp}</Alert>}
-
-            {alertasContingencia.map((alerta) => (
-              <Alert key={alerta.id} variant="info">
-                {t.prestaciones.hospitalizacion_contingencia_alerta.replace('{paciente}', alerta.pacientes?.nombre ?? '—')}{' '}
-                <Button
-                  variant="secondary"
-                  onClick={() => handleResolverAlertaContingencia(alerta.id)}
-                  disabled={resolviendoAlertaId === alerta.id}
-                >
-                  {t.prestaciones.hospitalizacion_contingencia_marcar_resuelta}
-                </Button>
-              </Alert>
-            ))}
-
-            {hospitalizacionActiva ? (
-              <>
-                <p className="panel-explicacion">
-                  {t.prestaciones.hospitalizacion_activa_desde
-                    .replace('{institucion}', hospitalizacionActiva.institucion)
-                    .replace('{fecha}', hospitalizacionActiva.fecha_inicio)}
-                </p>
-                <Button variant="secondary" onClick={handleCerrarHospitalizacion} disabled={cerrandoHosp}>
-                  {cerrandoHosp ? t.prestaciones.hospitalizacion_cerrando : t.prestaciones.hospitalizacion_cerrar}
-                </Button>
-              </>
-            ) : mostrandoFormHosp ? (
-              <>
-                <FormField
-                  label={t.prestaciones.hospitalizacion_institucion}
-                  name="institucion_hosp"
-                  value={institucionHosp}
-                  onChange={(e) => setInstitucionHosp(e.target.value)}
-                  required
-                />
-                <FormField
-                  label={t.prestaciones.hospitalizacion_motivo}
-                  name="motivo_hosp"
-                  value={motivoHosp}
-                  onChange={(e) => setMotivoHosp(e.target.value)}
-                />
-                <FormField
-                  label={t.prestaciones.hospitalizacion_fecha_inicio}
-                  name="fecha_inicio_hosp"
-                  type="date"
-                  value={fechaInicioHosp}
-                  onChange={(e) => setFechaInicioHosp(e.target.value)}
-                  required
-                />
-                <div className="panel-modal-acciones">
-                  <Button variant="secondary" onClick={() => setMostrandoFormHosp(false)} disabled={guardandoHosp}>
-                    {t.comun.cancelar}
-                  </Button>
-                  <Button onClick={handleRegistrarHospitalizacion} disabled={guardandoHosp || !institucionHosp || !fechaInicioHosp}>
-                    {guardandoHosp ? t.prestaciones.hospitalizacion_registrando : t.prestaciones.hospitalizacion_registrar}
-                  </Button>
+            {['admin_prestadora', 'coordinador'].includes(usuario.rol) && (
+              <section className="panel-tarjeta">
+                <div className="panel-tarjeta-titulo">
+                  <h2>{t.prestaciones.hospitalizacion_titulo}</h2>
+                  {hospitalizacionActiva ? (
+                    <Button variant="secondary" onClick={handleCerrarHospitalizacion} disabled={cerrandoHosp}>
+                      {cerrandoHosp ? t.prestaciones.hospitalizacion_cerrando : t.prestaciones.hospitalizacion_cerrar}
+                    </Button>
+                  ) : (
+                    !mostrandoFormHosp && (
+                      <Button variant="secondary" onClick={() => setMostrandoFormHosp(true)}>
+                        {t.prestaciones.hospitalizacion_registrar}
+                      </Button>
+                    )
+                  )}
                 </div>
-              </>
-            ) : (
-              <Button variant="secondary" onClick={() => setMostrandoFormHosp(true)}>
-                {t.prestaciones.hospitalizacion_registrar}
-              </Button>
-            )}
-          </div>
-        )}
+                {errorHosp && <Alert variant="error">{errorHosp}</Alert>}
 
-        {estado === 'listo' && ['admin_prestadora', 'coordinador'].includes(usuario.rol) && (
-          <div className="panel-resultado-calculo">
-            <h3>{t.prestaciones.cierre_servicio_titulo}</h3>
-            {cierres.length > 0 && (
-              <>
-                <Alert variant="info">
-                  {con(t.prestaciones.servicio_ya_cerrado, { servicios: etiquetasCerradas })}
-                </Alert>
-                {asistentesAviso.length > 0 && (
+                {alertasContingencia.map((alerta) => (
+                  <Alert key={alerta.id} variant="info">
+                    {t.prestaciones.hospitalizacion_contingencia_alerta.replace('{paciente}', alerta.pacientes?.nombre ?? '—')}{' '}
+                    <Button
+                      variant="secondary"
+                      onClick={() => handleResolverAlertaContingencia(alerta.id)}
+                      disabled={resolviendoAlertaId === alerta.id}
+                    >
+                      {t.prestaciones.hospitalizacion_contingencia_marcar_resuelta}
+                    </Button>
+                  </Alert>
+                ))}
+
+                {hospitalizacionActiva ? (
+                  <div className="panel-fila-alerta">
+                    <div className="panel-mini">
+                      {t.prestaciones.hospitalizacion_activa_desde
+                        .replace('{institucion}', hospitalizacionActiva.institucion)
+                        .replace('{fecha}', hospitalizacionActiva.fecha_inicio)}
+                    </div>
+                  </div>
+                ) : (
+                  mostrandoFormHosp && (
+                    <>
+                      <div className="molde-formgrid">
+                        <FormField
+                          label={t.prestaciones.hospitalizacion_institucion}
+                          name="institucion_hosp"
+                          value={institucionHosp}
+                          onChange={(e) => setInstitucionHosp(e.target.value)}
+                          required
+                        />
+                        <FormField
+                          label={t.prestaciones.hospitalizacion_fecha_inicio}
+                          name="fecha_inicio_hosp"
+                          type="date"
+                          value={fechaInicioHosp}
+                          onChange={(e) => setFechaInicioHosp(e.target.value)}
+                          required
+                        />
+                        <div className="molde-ancho">
+                          <FormField
+                            label={t.prestaciones.hospitalizacion_motivo}
+                            name="motivo_hosp"
+                            value={motivoHosp}
+                            onChange={(e) => setMotivoHosp(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div className="molde-acciones">
+                        <Button variant="secondary" onClick={() => setMostrandoFormHosp(false)} disabled={guardandoHosp}>
+                          {t.comun.cancelar}
+                        </Button>
+                        <Button onClick={handleRegistrarHospitalizacion} disabled={guardandoHosp || !institucionHosp || !fechaInicioHosp}>
+                          {guardandoHosp ? t.prestaciones.hospitalizacion_registrando : t.prestaciones.hospitalizacion_registrar}
+                        </Button>
+                      </div>
+                    </>
+                  )
+                )}
+              </section>
+            )}
+
+            {['admin_prestadora', 'coordinador'].includes(usuario.rol) && (
+              <section className="panel-tarjeta">
+                <div className="panel-tarjeta-titulo">
+                  <h2>{t.prestaciones.cierre_servicio_titulo}</h2>
+                </div>
+                {cierres.length > 0 && (
+                  <Alert variant="info">
+                    {con(t.prestaciones.servicio_ya_cerrado, { servicios: etiquetasCerradas })}
+                  </Alert>
+                )}
+
+                {/* Puede quedar otro Servicio abierto aunque ya se haya cerrado uno. */}
+                {serviciosAbiertos.length === 0 ? (
+                  cierres.length === 0 && <p className="molde-vacio">{t.prestaciones.sin_servicio_abierto}</p>
+                ) : (
                   <>
-                    <h3>{t.prestaciones.aviso_asistente_titulo}</h3>
-                    <table className="panel-tabla">
-                      <thead>
-                        <tr>
-                          <th>{t.prestaciones.aviso_asistente_col_asistente}</th>
-                          <th>{t.prestaciones.aviso_asistente_col_estado}</th>
-                          <th></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {asistentesAviso.map((fila) => (
-                          <tr key={fila.id}>
-                            <td>{fila.asistentes?.nombre || '—'}</td>
-                            <td>
-                              {fila.avisado_verbalmente_at ? (
-                                <span className={claseBadgeTono(TONO.EXITO)}>{t.prestaciones.aviso_asistente_avisado_verbalmente}</span>
-                              ) : fila.aviso_automatico_enviado_at ? (
-                                <span className={claseBadgeTono(TONO.INFO)}>{t.prestaciones.aviso_asistente_aviso_automatico_enviado}</span>
-                              ) : (
-                                <span className={claseBadgeTono(TONO.ATENCION)}>{t.prestaciones.aviso_asistente_pendiente}</span>
-                              )}
-                            </td>
-                            <td>
-                              {!fila.avisado_verbalmente_at && (
-                                <Button
-                                  variant="secondary"
-                                  onClick={() => handleMarcarAvisadoVerbalmente(fila.id)}
-                                  disabled={marcandoAvisoId === fila.id}
-                                >
-                                  {t.prestaciones.aviso_asistente_marcar_avisado}
-                                </Button>
-                              )}
-                            </td>
-                          </tr>
+                    {errorCierre && <Alert variant="error">{errorCierre}</Alert>}
+                    {estadoMotivosCierre === 'vacio' && (
+                      <Alert variant="info">{t.prestaciones.cierre_servicio_sin_motivos}</Alert>
+                    )}
+                    {errorMotivosCierre && <Alert variant="error">{errorMotivosCierre}</Alert>}
+                    <div className="molde-formgrid">
+                      <FormField
+                        label={t.prestaciones.servicio}
+                        name="servicio_cierre_id"
+                        type="select"
+                        value={servicioCierreId}
+                        onChange={(e) => setServicioCierreId(e.target.value)}
+                        required
+                      >
+                        <option value="">{t.guardias.nueva_guardia.elegir}</option>
+                        {serviciosAbiertos.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.etiqueta}
+                          </option>
                         ))}
-                      </tbody>
-                    </table>
+                      </FormField>
+                      <FormField
+                        label={t.prestaciones.cierre_servicio_motivo}
+                        name="motivo_cierre"
+                        type="select"
+                        value={motivoCierre}
+                        onChange={(e) => setMotivoCierre(e.target.value)}
+                        disabled={estadoMotivosCierre !== 'listo'}
+                      >
+                        <option value="">{t.guardias.nueva_guardia.elegir}</option>
+                        {motivosCierre.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {nombreMotivo(m, t)}
+                          </option>
+                        ))}
+                      </FormField>
+                      {motivoCierreElegido?.pide_detalle && (
+                        <div className="molde-ancho">
+                          <FormField
+                            label={t.prestaciones.cierre_servicio_motivo_detalle}
+                            name="motivo_detalle_cierre"
+                            type="textarea"
+                            value={motivoDetalleCierre}
+                            onChange={(e) => setMotivoDetalleCierre(e.target.value)}
+                            required
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div className="molde-acciones">
+                      <Button
+                        variant="secondary"
+                        onClick={handleCerrarServicio}
+                        disabled={
+                          cerrandoServicio ||
+                          !servicioCierreId ||
+                          !motivoCierreElegido ||
+                          (motivoCierreElegido.pide_detalle && !motivoDetalleCierre.trim())
+                        }
+                      >
+                        {cerrandoServicio ? t.prestaciones.cerrando_servicio : t.prestaciones.cierre_servicio_titulo}
+                      </Button>
+                    </div>
                   </>
                 )}
-              </>
+              </section>
             )}
 
-            {/* Que ya se haya cerrado uno no quiere decir que no quede otro abierto: el mismo
-                Cliente puede tener varios Servicios corriendo a la vez para este Paciente. */}
-            {serviciosAbiertos.length === 0 ? (
-              cierres.length === 0 && <p className="estado-vacio">{t.prestaciones.sin_servicio_abierto}</p>
-            ) : (
-              <>
-                {errorCierre && <Alert variant="error">{errorCierre}</Alert>}
-                <FormField
-                  label={t.prestaciones.servicio}
-                  name="servicio_cierre_id"
-                  type="select"
-                  value={servicioCierreId}
-                  onChange={(e) => setServicioCierreId(e.target.value)}
-                  required
-                >
-                  <option value="">{t.guardias.nueva_guardia.elegir}</option>
-                  {serviciosAbiertos.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.etiqueta}
-                    </option>
-                  ))}
-                </FormField>
-                {/* La lista sale del catálogo de la Prestadora, que ella arma en Configuración.
-                    Si se quedó sin ninguno encendido no hay nada que elegir, y se lo dice: sin
-                    eso el desplegable aparecería vacío y sin explicación. */}
-                {estadoMotivosCierre === 'vacio' && (
-                  <Alert variant="info">{t.prestaciones.cierre_servicio_sin_motivos}</Alert>
-                )}
-                {errorMotivosCierre && <Alert variant="error">{errorMotivosCierre}</Alert>}
-                <FormField
-                  label={t.prestaciones.cierre_servicio_motivo}
-                  name="motivo_cierre"
-                  type="select"
-                  value={motivoCierre}
-                  onChange={(e) => setMotivoCierre(e.target.value)}
-                  disabled={estadoMotivosCierre !== 'listo'}
-                >
-                  <option value="">{t.guardias.nueva_guardia.elegir}</option>
-                  {motivosCierre.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {nombreMotivo(m, t)}
-                    </option>
-                  ))}
-                </FormField>
-                {motivoCierreElegido?.pide_detalle && (
-                  <FormField
-                    label={t.prestaciones.cierre_servicio_motivo_detalle}
-                    name="motivo_detalle_cierre"
-                    type="textarea"
-                    value={motivoDetalleCierre}
-                    onChange={(e) => setMotivoDetalleCierre(e.target.value)}
-                    required
-                  />
-                )}
-                <Button
-                  variant="secondary"
-                  onClick={handleCerrarServicio}
-                  disabled={
-                    cerrandoServicio ||
-                    !servicioCierreId ||
-                    !motivoCierreElegido ||
-                    (motivoCierreElegido.pide_detalle && !motivoDetalleCierre.trim())
-                  }
-                >
-                  {cerrandoServicio ? t.prestaciones.cerrando_servicio : t.prestaciones.cierre_servicio_titulo}
-                </Button>
-              </>
+            {['admin_prestadora', 'coordinador'].includes(usuario.rol) && cierres.length > 0 && asistentesAviso.length > 0 && (
+              <section className="panel-tarjeta hoja-desplazable">
+                <div className="panel-tarjeta-titulo">
+                  <h2>{t.prestaciones.aviso_asistente_titulo}</h2>
+                </div>
+                <table className="panel-tabla">
+                  <thead>
+                    <tr>
+                      <th>{t.prestaciones.aviso_asistente_col_asistente}</th>
+                      <th>{t.prestaciones.aviso_asistente_col_estado}</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {asistentesAviso.map((fila) => (
+                      <tr key={fila.id}>
+                        <td><b>{fila.asistentes?.nombre || '—'}</b></td>
+                        <td>
+                          {fila.avisado_verbalmente_at ? (
+                            <span className={claseBadgeTono(TONO.EXITO)}>{t.prestaciones.aviso_asistente_avisado_verbalmente}</span>
+                          ) : fila.aviso_automatico_enviado_at ? (
+                            <span className={claseBadgeTono(TONO.INFO)}>{t.prestaciones.aviso_asistente_aviso_automatico_enviado}</span>
+                          ) : (
+                            <span className={claseBadgeTono(TONO.ATENCION)}>{t.prestaciones.aviso_asistente_pendiente}</span>
+                          )}
+                        </td>
+                        <td>
+                          {!fila.avisado_verbalmente_at && (
+                            <Button
+                              variant="secondary"
+                              onClick={() => handleMarcarAvisadoVerbalmente(fila.id)}
+                              disabled={marcandoAvisoId === fila.id}
+                            >
+                              {t.prestaciones.aviso_asistente_marcar_avisado}
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </section>
             )}
           </div>
         )}

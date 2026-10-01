@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { Cabecera } from '../../components/ui/Cabecera';
 import { errorDeLaRespuesta, mensajeDeError } from '../../lib/errores';
+import '../../styles/molde-paginas.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -115,81 +116,91 @@ export function MarketplaceAuditoriaLegal() {
     <div>
       <Cabecera titulo={t.marketplace.auditoria_legal_titulo} />
 
-      <h2>{t.marketplace.funciones_riesgo_titulo}</h2>
+      <div className="molde-pila">
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.marketplace.funciones_riesgo_titulo}</h2>
+            {estadoFunciones === 'listo' && <span className="panel-mini">{funciones.length}</span>}
+          </div>
+          <EstadoLista
+            estado={estadoFunciones}
+            error={errorFunciones}
+            vacio={estadoFunciones === 'listo' && funciones.length === 0}
+            recargar={recargarFunciones}
+          >
+            <table className="panel-tabla">
+              <thead>
+                <tr>
+                  <th>{t.marketplace.funciones_riesgo_col_activa}</th>
+                  <th>{t.marketplace.funciones_riesgo_col_funcion}</th>
+                  <th>{t.marketplace.funciones_riesgo_col_aviso}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {funciones.map((f) => (
+                  <tr key={f.clave}>
+                    <td>
+                      <input
+                        id={`funcion-${f.clave}`}
+                        type="checkbox"
+                        checked={f.activa}
+                        // Se apaga mientras el cambio está en curso, para que no salgan dos
+                        // pedidos por un doble clic; y para el Coordinador queda de sólo lectura,
+                        // igual que el candado del backend y el de la base.
+                        disabled={!esAdmin || cambiando === f.clave}
+                        onChange={(e) => cambiar(f, e.target.checked)}
+                      />
+                    </td>
+                    <td>
+                      <label htmlFor={`funcion-${f.clave}`}>
+                        <b>{t.marketplace[`funcion_${f.clave}`] || f.clave}</b>
+                      </label>
+                    </td>
+                    <td>
+                      {f.advertida_en ? (
+                        <span className="panel-mini">{new Date(f.advertida_en).toLocaleString(locale)}</span>
+                      ) : (
+                        <span className="panel-dato-vacio">
+                          {f.texto_advertencia ? '—' : t.marketplace.funciones_riesgo_sin_documento}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </EstadoLista>
+        </section>
 
-      <EstadoLista
-        estado={estadoFunciones}
-        error={errorFunciones}
-        vacio={estadoFunciones === 'listo' && funciones.length === 0}
-        recargar={recargarFunciones}
-      >
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.marketplace.funciones_riesgo_col_activa}</th>
-              <th>{t.marketplace.funciones_riesgo_col_funcion}</th>
-              <th>{t.marketplace.funciones_riesgo_col_aviso}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {funciones.map((f) => (
-              <tr key={f.clave}>
-                <td>
-                  <input
-                    id={`funcion-${f.clave}`}
-                    type="checkbox"
-                    checked={f.activa}
-                    // Se apaga mientras el cambio está en curso, para que no salgan dos
-                    // pedidos por un doble clic; y para el Coordinador queda de sólo lectura,
-                    // igual que el candado del backend y el de la base.
-                    disabled={!esAdmin || cambiando === f.clave}
-                    onChange={(e) => cambiar(f, e.target.checked)}
-                  />
-                </td>
-                <td>
-                  <label htmlFor={`funcion-${f.clave}`}>
-                    {t.marketplace[`funcion_${f.clave}`] || f.clave}
-                  </label>
-                </td>
-                <td>
-                  {f.advertida_en ? (
-                    new Date(f.advertida_en).toLocaleString(locale)
-                  ) : (
-                    <span className="panel-dato-vacio">
-                      {f.texto_advertencia ? '—' : t.marketplace.funciones_riesgo_sin_documento}
-                    </span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </EstadoLista>
-
-      <h2>{t.marketplace.auditoria_legal_registro_titulo}</h2>
-
-      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && eventos.length === 0} recargar={recargar}>
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.marketplace.col_fecha}</th>
-              <th>{t.marketplace.col_usuario}</th>
-              <th>{t.marketplace.col_funcion}</th>
-              <th>{t.marketplace.col_texto_mostrado}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {eventos.map((e) => (
-              <tr key={e.id}>
-                <td>{new Date(e.created_at).toLocaleString(locale)}</td>
-                <td>{e.usuarios?.nombre || '—'}</td>
-                <td>{t.marketplace[`funcion_${e.funcion_clave}`] || e.funcion_clave}</td>
-                <td>{e.texto_mostrado}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </EstadoLista>
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.marketplace.auditoria_legal_registro_titulo}</h2>
+            {estado === 'listo' && <span className="panel-mini">{eventos.length}</span>}
+          </div>
+          <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && eventos.length === 0} recargar={recargar}>
+            <table className="panel-tabla">
+              <thead>
+                <tr>
+                  <th>{t.marketplace.col_fecha}</th>
+                  <th>{t.marketplace.col_usuario}</th>
+                  <th>{t.marketplace.col_funcion}</th>
+                  <th>{t.marketplace.col_texto_mostrado}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {eventos.map((e) => (
+                  <tr key={e.id}>
+                    <td className="panel-mini">{new Date(e.created_at).toLocaleString(locale)}</td>
+                    <td><b>{e.usuarios?.nombre || '—'}</b></td>
+                    <td>{t.marketplace[`funcion_${e.funcion_clave}`] || e.funcion_clave}</td>
+                    <td>{e.texto_mostrado}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </EstadoLista>
+        </section>
+      </div>
     </div>
   );
 }

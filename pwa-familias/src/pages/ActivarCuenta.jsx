@@ -109,7 +109,6 @@ export default function ActivarCuenta() {
     <div className="login-pantalla">
       <div className="login-card">
         <h1>{t.auth.activar_titulo}</h1>
-        <p className="login-subtitulo">{t.auth.activar_subtitulo}</p>
         {error && <div className="alert alert-error" role="alert">{error}</div>}
         <form onSubmit={alEnviar}>
           <div className="form-field">

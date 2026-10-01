@@ -143,9 +143,8 @@ export default function PacienteDetalle() {
               siempre su casa, y eso no viaja a este teléfono — el backend lo usa para la cuenta y
               manda sólo el resultado.
 
-              Se dice «alrededor de» a propósito, y abajo se aclara que es una estimación: una
-              hora dicha en seco se lee como una promesa, y quien espera a alguien que cuida a su
-              madre la anota en la cabeza como si lo fuera.
+              Se dice «alrededor de» a propósito: una hora dicha en seco se lee como una promesa,
+              y quien espera a alguien que cuida a su madre la anota en la cabeza como si lo fuera.
 
               Sin hora estimada —salida sin ubicación, o domicilio sin coordenadas— no se dibuja
               nada. Inventar una hora es peor que no dar ninguna. */}
@@ -154,7 +153,6 @@ export default function PacienteDetalle() {
               <div className="guardia-card-detalle">
                 {t.paciente.llegada_estimada.replace('{hora}', horaDelMomento(guardia.llegada_estimada_at, locale))}
               </div>
-              <div className="guardia-card-detalle">{t.paciente.llegada_estimada_aclaracion}</div>
             </>
           )}
         </div>

@@ -128,7 +128,6 @@ export default function AntesDeLlegar({ t, locale, guardiaId, guardia, salidaPen
   return (
     <div style={{ marginTop: '1rem' }}>
       <h2 style={{ fontSize: '1rem' }}>{t.antes_de_llegar.titulo}</h2>
-      <p className="guardia-card-detalle">{t.antes_de_llegar.explicacion}</p>
 
       {error && <div className="alert alert-error" role="alert">{error}</div>}
       {advertencia && <div className="alert alert-info" role="status">{advertencia}</div>}
@@ -230,9 +229,6 @@ export default function AntesDeLlegar({ t, locale, guardiaId, guardia, salidaPen
               {t.antes_de_llegar[`motivo_${m}`]}
             </label>
           ))}
-          <p className="guardia-card-detalle" style={{ marginTop: '0.75rem' }}>
-            {t.antes_de_llegar.motivo_para_que_sirve}
-          </p>
           <button
             className="btn btn-primary btn-full"
             onClick={alAvisarDemora}

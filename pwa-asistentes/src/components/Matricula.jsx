@@ -264,7 +264,6 @@ export default function Matricula() {
         </ul>
       )}
 
-      {puedeCargar && <p className="texto-ayuda">{tm.solo_carga}</p>}
     </div>
   );
 }

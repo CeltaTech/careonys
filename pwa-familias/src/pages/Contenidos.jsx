@@ -37,7 +37,6 @@ export default function Contenidos() {
   return (
     <div>
       <h1>{t.contenidos.titulo}</h1>
-      <p className="guardia-card-detalle">{t.contenidos.explicacion}</p>
 
       {contenidos.length === 0 ? (
         <div className="estado-vacio" role="status">{t.contenidos.sin_contenidos}</div>

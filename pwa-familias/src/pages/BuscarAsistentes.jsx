@@ -16,10 +16,6 @@ import { mensajeDeError } from '../lib/errores';
 // LOS FILTROS SALEN DE QUIEN ESTÁ EN LA VIDRIERA. Los lugares y los tipos vienen en la misma
 // respuesta, armados con el pool real: un lugar donde no trabaja nadie no se ofrece, porque
 // elegirla devolvería siempre vacío.
-//
-// EL DATO DE CONTACTO NO ESTÁ ACÁ, Y SE DICE. Llegar a la persona es lo que el Marketplace
-// vende y tiene su propio circuito. Una pantalla que simplemente no lo muestra hace buscarlo;
-// una que avisa dónde está, no.
 
 // El puntaje, dicho de las dos maneras: dibujado para quien mira y escrito para quien escucha.
 function Estrellas({ calificacion, t }) {
@@ -69,7 +65,6 @@ export default function BuscarAsistentes() {
   return (
     <div>
       <h1>{t.vidriera.titulo}</h1>
-      <p className="guardia-card-detalle">{t.vidriera.para_que}</p>
 
       {/* Las dos listas de opciones salen del backend. Cuando hay una sola opción no se dibuja el
           filtro: elegirla no cambia nada y ocupa la pantalla de un teléfono. */}
@@ -122,9 +117,6 @@ export default function BuscarAsistentes() {
         ))
       )}
 
-      <p className="guardia-card-detalle" style={{ marginTop: '1.5rem' }}>
-        {t.vidriera.contacto_aparte}
-      </p>
     </div>
   );
 }

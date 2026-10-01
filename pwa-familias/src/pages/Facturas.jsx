@@ -44,7 +44,6 @@ export default function Facturas() {
   return (
     <div>
       <h1>{t.facturas.titulo}</h1>
-      <p className="guardia-card-detalle">{t.facturas.explicacion}</p>
 
       {facturas.length === 0 ? (
         <div className="estado-vacio" role="status">{t.facturas.sin_facturas}</div>

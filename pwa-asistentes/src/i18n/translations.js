@@ -125,11 +125,6 @@ export const T = {
       // dice nada. Esta frase es la que se escucha.
       sin_leer_uno: '1 mensaje sin leer',
       sin_leer: '{n} mensajes sin leer',
-      // La advertencia del tapado dice las dos cosas que hacen falta para no equivocarse: que el dato
-      // de contacto no pasa, y que lo que el producto no reconoce sí pasa. El producto avisa, no
-      // bloquea.
-      contacto_tapado: 'Los datos de contacto se tapan al enviar el mensaje y no quedan guardados. Lo que no se reconozca como un dato de contacto se ve del otro lado tal como se escribió.',
-      contacto_tapado_ya_paso: 'En esta conversación ya se tapó algo.',
       tapado_en_este_mensaje: 'con datos de contacto tapados',
       escribir: 'Escribir un mensaje',
       enviar: 'Enviar',
@@ -148,14 +143,12 @@ export const T = {
     },
     auth: {
       titulo: '{{producto}} — Asistentes',
-      subtitulo: 'Ingrese con su cuenta para ver sus guardias',
       email: 'Email',
       password: 'Contraseña',
       ingresar: 'Ingresar',
       ingresando: 'Ingresando…',
       error_credenciales: 'Email o contraseña incorrectos.',
       activar_titulo: 'Activar la cuenta',
-      activar_subtitulo: 'Para ingresar desde acá hace falta elegir una contraseña.',
       activar_password_nueva: 'Contraseña nueva',
       activar_password_confirmar: 'Repetir la contraseña',
       activar_password_corta: 'La contraseña tiene que tener al menos {{minimo}} caracteres.',
@@ -168,7 +161,6 @@ export const T = {
       // la activación —el mismo formulario contra otra puerta— y se escribe aparte porque una
       // enciende una cuenta que nunca se usó y ésta reemplaza la clave de una que está en uso.
       clave_nueva_titulo: 'Elegir una contraseña nueva',
-      clave_nueva_subtitulo: 'La contraseña anterior deja de servir.',
       clave_nueva_codigo: 'Código',
       clave_nueva_confirmar: 'Guardar la contraseña',
       clave_nueva_guardando: 'Guardando…',
@@ -190,7 +182,6 @@ export const T = {
     },
     llaves: {
       titulo: 'Entrar con huella o cara',
-      explicacion: 'En un aparato con huella o reconocimiento de cara se puede entrar sin escribir la contraseña. La huella no se guarda en ningún lado: la mira el propio aparato para destrabar una llave que vive adentro de él.',
       no_disponible: 'Este aparato no puede guardar la llave. Se sigue entrando con la contraseña.',
       agregar: 'Guardar la llave en este aparato',
       agregando: 'Esperando el aparato…',
@@ -279,7 +270,6 @@ export const T = {
       // Cuando el que se va es este Asistente, es él quien le muestra el código al relevo.
       mostrar_mi_codigo: 'Mostrar mi código para el relevo',
       ocultar_mi_codigo: 'Ocultar mi código',
-      mi_codigo_explicacion: 'Este código es para que lo lea el Asistente que llega a relevarlo. Se renueva solo cada pocos segundos.',
       // Los dos fallos de ubicación se dicen distinto, y la clave de cada frase es la clave del
       // error. Decirle «active el GPS» a quien lo tiene activado y está adentro de un edificio lo
       // manda a arreglar algo que no está roto.
@@ -312,7 +302,6 @@ export const T = {
     // mañana se agrega uno, se agrega allá y su frase acá, en los tres idiomas.
     antes_de_llegar: {
       titulo: 'Antes de llegar',
-      explicacion: 'Avisar que se sale, y avisar si se va demorado, le da a la Prestadora tiempo para cubrir la guardia. Los dos avisos quedan registrados como avisos dados por esta persona.',
       salgo_ahora: 'Salgo ahora',
       confirmar_salida: 'Registrar la salida',
       registrando_salida: 'Registrando la salida…',
@@ -323,7 +312,6 @@ export const T = {
       salida_sin_ubicacion: 'La salida quedó registrada. Sin ubicación no se puede estimar la hora de llegada, así que la Familia no va a ver ninguna hora estimada.',
       voy_demorado: 'Avisar que voy demorado',
       motivo_pregunta: '¿Cuál es el motivo?',
-      motivo_para_que_sirve: 'El motivo se guarda tal como se elige acá, y así lo lee el Coordinador.',
       confirmar_demora: 'Enviar el aviso',
       avisando_demora: 'Enviando el aviso…',
       aviso_enviado: 'El aviso salió hacia la Prestadora.',
@@ -366,7 +354,6 @@ export const T = {
         sin_novedades: 'Sin novedades por ahora.',
       },
       boton: 'No puedo continuar',
-      explicacion: 'Esto le llega a la Prestadora con la máxima urgencia. No la libera del turno: sirve para que sepan que necesita que la releven ya.',
       detalle: '¿Qué le está pasando? (opcional)',
       detalle_placeholder: 'Si puede, escriba por qué no puede continuar.',
       confirmar: 'Enviar el aviso',
@@ -379,7 +366,6 @@ export const T = {
     descanso: {
       boton_empezar: 'Empezar un descanso',
       boton_terminar: 'Terminé el descanso',
-      explicacion: 'En un turno largo se descansa en el domicilio, sin dejar de estar disponible. No se descuenta de lo que se le paga, no interrumpe el turno y no lo saca de la guardia.',
       en_curso: 'Descansando desde las {hora}. Sigue disponible.',
       terminado: 'Descanso terminado a las {hora}.',
     },
@@ -400,13 +386,11 @@ export const T = {
       cerrar_igual: 'Cerrar igual',
       volver_al_codigo: 'Volver al código',
       // Plan B: el código lo suelta la Prestadora.
-      pedido_explicacion: 'Esto le aparece enseguida a la Prestadora. Quien esté de turno lo va a resolver y le va a dictar un código que sirve unos minutos.',
       pedido_label: 'Qué está pasando, con sus palabras',
       pedido_ejemplo: 'Ej: toqué timbre varias veces y no atiende nadie; el Paciente está solo y no puede levantarse.',
       avisar_a_la_prestadora: 'Avisar a la Prestadora',
       avisando: 'Avisando…',
       esperando: 'Esperando que la Prestadora conteste…',
-      esperando_explicacion: 'Esta pantalla se actualiza sola. Si no contesta nadie, abajo está la opción de entrar igual.',
       codigo_soltado: 'La Prestadora soltó un código. Escríbalo acá abajo.',
       // El piso: la guardia nunca se traba.
       sin_comprobar_titulo: '¿Por qué no se pudo hacer el pase?',
@@ -416,8 +400,6 @@ export const T = {
       motivo_sin_conexion: 'No hay conexión',
       motivo_otro: 'Otro motivo',
       detalle_label: 'Si quiere, agregue un detalle (opcional)',
-      sin_comprobar_aviso: 'La llegada se registra igual y queda sin comprobar. El Coordinador la va a ver en su lista.',
-      sin_comprobar_aviso_cierre: 'El cierre se registra igual y queda sin comprobar. El Coordinador lo va a ver en su lista.',
       sin_comprobar_continuar: 'Continuar sin comprobar',
     },
     // El código que este Asistente muestra en su pantalla cuando el que se va es él y llega el
@@ -428,7 +410,6 @@ export const T = {
       qr_alt: 'Código para leer con la cámara',
       se_renueva: 'Se renueva en {segundos} segundos.',
       renovando: 'Renovando el código…',
-      por_que_cambia: 'Cambia solo cada pocos segundos: una foto de esta pantalla no sirve un minuto después.',
       pedir_otro: 'Pedir otro código',
       pidiendo: 'Pidiendo…',
       reintentar: 'Volver a intentar',
@@ -526,8 +507,6 @@ export const T = {
       // El interruptor de disponibilidad. La explicación dice qué apaga y, sobre todo, qué no
       // apaga: nadie se pone "no disponible" si sospecha que puede perder el trabajo.
       disponibilidad_titulo: 'Mi disponibilidad',
-      disponibilidad_explicacion:
-        'Usted decide cuándo quiere que le ofrezcan guardias nuevas. Ponerse como no disponible no cambia las guardias que ya aceptó ni lo da de baja de la Prestadora, y puede volver atrás cuando quiera.',
       disponibilidad_disponible: 'Hoy está disponible para que le ofrezcan guardias.',
       disponibilidad_no_disponible: 'Hoy figura como no disponible para guardias nuevas.',
       disponibilidad_ponerse_no_disponible: 'Ponerme como no disponible',
@@ -538,8 +517,6 @@ export const T = {
     // que la persona calificada pueda dejar su versión al lado.
     calificaciones: {
       titulo: 'Mis calificaciones',
-      explicacion:
-        'Acá están las calificaciones que le pusieron. Ante cada una se puede dejar un descargo, que queda escrito al lado y se lee junto con ella.',
       sin_calificaciones: 'Todavía no hay ninguna calificación.',
       estrellas: '{n} de 5',
       cuando: 'Del {fecha}',
@@ -550,9 +527,8 @@ export const T = {
       descargo_en: 'Escrito el {fecha}',
       abrir: 'Dejar mi descargo',
       campo: 'Lo que quiera dejar dicho',
-      // Se avisa antes de escribir y se vuelve a avisar antes de guardar. No es una advertencia
-      // de más: es la única oportunidad que va a tener de decir lo suyo sobre esa calificación.
-      una_sola_vez: 'El descargo se escribe una sola vez y después no se puede cambiar.',
+      // Se avisa antes de guardar: es la única oportunidad que va a tener de decir lo suyo sobre
+      // esa calificación.
       confirmar_aviso: 'Va a quedar guardado tal como está escrito, y no se va a poder corregir.',
       confirmar: 'Sí, dejarlo así',
       guardando: 'Guardando…',
@@ -571,7 +547,6 @@ export const T = {
       estado_rechazado: 'No aceptado. Fecha:',
       cambiar_a_acepto: 'Quiero aceptarlo',
       retirar: 'Retirar mi consentimiento',
-      retirar_ayuda: 'Si se retira, dejamos de registrar la ubicación desde ese mismo momento.',
       texto_cambio: 'El texto cambió desde la última vez. Hace falta leerlo de nuevo y volver a decidir.',
       pendiente_aviso: 'Hay algo para leer y decidir en Mi Perfil.',
     },
@@ -611,7 +586,6 @@ export const T = {
       verificada: 'Comprobada por la Prestadora',
       sin_verificar_aun: 'Esperando que la comprueben',
       sin_vencimiento: 'No vence',
-      solo_carga: 'Acá solo se carga. Comprobarla y corregirla es de la Prestadora — si algo quedó mal, hace falta cargar la correcta y avisarles.',
     },
     // Los papeles que la Prestadora exige, y el Certificado de Aptitud. Acá sí se dice el nombre
     // de cada papel: el que mira es el dueño, y decirle "le falta uno" sin decirle cuál sería
@@ -637,7 +611,6 @@ export const T = {
       certificado_estado_vencido: 'El Certificado está vencido.',
       certificado_estado_dado_de_baja: 'La Prestadora dio de baja este Certificado.',
       certificado_emitido_el: 'emitido el {fecha}',
-      los_recibe_la_prestadora: 'Los papeles los recibe y los carga la Prestadora. Si falta alguno o hay que renovarlo, hace falta acercárselo a la oficina.',
     },
   },
   en: {
@@ -718,8 +691,6 @@ export const T = {
       sin_conversaciones: 'There are no conversations yet.',
       sin_leer_uno: '1 unread message',
       sin_leer: '{n} unread messages',
-      contacto_tapado: 'Contact details are hidden when the message is sent and are not stored. Anything not recognised as a contact detail is shown to the other side exactly as written.',
-      contacto_tapado_ya_paso: 'Something has already been hidden in this conversation.',
       tapado_en_este_mensaje: 'contact details hidden',
       escribir: 'Write a message',
       enviar: 'Send',
@@ -736,14 +707,12 @@ export const T = {
     },
     auth: {
       titulo: '{{producto}} — Assistants',
-      subtitulo: 'Sign in to see your shifts',
       email: 'Email',
       password: 'Password',
       ingresar: 'Log in',
       ingresando: 'Logging in…',
       error_credenciales: 'Incorrect email or password.',
       activar_titulo: 'Activate your account',
-      activar_subtitulo: 'Choose a password to sign in from here.',
       activar_password_nueva: 'New password',
       activar_password_confirmar: 'Repeat password',
       activar_password_corta: 'The password must be at least {{minimo}} characters long.',
@@ -753,7 +722,6 @@ export const T = {
       activar_exito: 'Your account is now active. You can sign in with your new password.',
       activar_token_invalido: 'This activation link is invalid or has expired. Ask for a new invitation.',
       clave_nueva_titulo: 'Choose a new password',
-      clave_nueva_subtitulo: 'The previous password stops working.',
       clave_nueva_codigo: 'Code',
       clave_nueva_confirmar: 'Save the password',
       clave_nueva_guardando: 'Saving…',
@@ -773,7 +741,6 @@ export const T = {
     },
     llaves: {
       titulo: 'Sign in with fingerprint or face',
-      explicacion: 'On a device with a fingerprint reader or face recognition you can sign in without typing your password. The fingerprint is never stored anywhere: the device itself checks it to unlock a key that lives inside it.',
       no_disponible: 'This device cannot store the key. You will keep signing in with your password.',
       agregar: 'Store the key on this device',
       agregando: 'Waiting for the device…',
@@ -853,7 +820,6 @@ export const T = {
       sin_conexion_sin_comprobar: 'With no connection the code cannot be checked, so this will be recorded as unverified once the signal is back. The Coordinator will see it on their list.',
       mostrar_mi_codigo: 'Show my code for the handover',
       ocultar_mi_codigo: 'Hide my code',
-      mi_codigo_explicacion: 'This code is for the Assistant arriving to take over to read. It renews itself every few seconds.',
       ubicacion_negada: 'The app does not have permission to use location.',
       ubicacion_no_disponible: 'The location could not be obtained right now.',
       cargar_reporte: 'Fill Daily Report',
@@ -874,7 +840,6 @@ export const T = {
     },
     antes_de_llegar: {
       titulo: 'Before arriving',
-      explicacion: 'Reporting the departure, and reporting a delay, gives the Provider time to cover the shift. Both notices are recorded as notices given by this person.',
       salgo_ahora: 'Leaving now',
       confirmar_salida: 'Record the departure',
       registrando_salida: 'Recording the departure…',
@@ -885,7 +850,6 @@ export const T = {
       salida_sin_ubicacion: 'The departure was recorded. With no location the arrival time cannot be estimated, so the Family will not see an estimated time.',
       voy_demorado: 'Report that I am running late',
       motivo_pregunta: 'What is the reason?',
-      motivo_para_que_sirve: 'The reason is saved exactly as chosen here, and that is how the Coordinator reads it.',
       confirmar_demora: 'Send the notice',
       avisando_demora: 'Sending the notice…',
       aviso_enviado: 'The notice went out to the Provider.',
@@ -923,7 +887,6 @@ export const T = {
         sin_novedades: 'No news so far.',
       },
       boton: 'I cannot continue',
-      explicacion: 'This reaches the Provider with the highest urgency. It does not release you from the shift: it lets them know you need to be relieved now.',
       detalle: 'What is happening to you? (optional)',
       detalle_placeholder: 'If you can, write why you cannot continue.',
       confirmar: 'Send the notice',
@@ -934,7 +897,6 @@ export const T = {
     descanso: {
       boton_empezar: 'Start a rest period',
       boton_terminar: 'Rest period finished',
-      explicacion: 'On a long shift you rest at the home without ceasing to be available. It is not deducted from your pay, it does not interrupt the shift and it does not take you off duty.',
       en_curso: 'Resting since {hora}. Still available.',
       terminado: 'Rest period finished at {hora}.',
     },
@@ -950,13 +912,11 @@ export const T = {
       entrar_igual: 'Go in anyway',
       cerrar_igual: 'Close anyway',
       volver_al_codigo: 'Back to the code',
-      pedido_explicacion: 'This reaches the Provider straight away. Whoever is on duty will sort it out and read you a code that works for a few minutes.',
       pedido_label: 'What is happening, in your own words',
       pedido_ejemplo: 'E.g.: I rang the bell several times and nobody answers; the Patient is alone and cannot get up.',
       avisar_a_la_prestadora: 'Tell the Provider',
       avisando: 'Sending…',
       esperando: 'Waiting for the Provider to answer…',
-      esperando_explicacion: 'This screen updates on its own. If nobody answers, the option to go in anyway is below.',
       codigo_soltado: 'The Provider released a code. Type it in below.',
       sin_comprobar_titulo: 'Why could the handover not be done?',
       motivo_nadie_para_mostrar: 'There is nobody who can show the code',
@@ -965,8 +925,6 @@ export const T = {
       motivo_sin_conexion: 'There is no connection',
       motivo_otro: 'Another reason',
       detalle_label: 'Add a detail if you want (optional)',
-      sin_comprobar_aviso: 'The arrival is recorded anyway and stays unverified. The Coordinator will see it on their list.',
-      sin_comprobar_aviso_cierre: 'The closing is recorded anyway and stays unverified. The Coordinator will see it on their list.',
       sin_comprobar_continuar: 'Continue without verifying',
     },
     codigo_de_presencia: {
@@ -974,7 +932,6 @@ export const T = {
       qr_alt: 'Code to read with the camera',
       se_renueva: 'It renews in {segundos} seconds.',
       renovando: 'Renewing the code…',
-      por_que_cambia: 'It changes on its own every few seconds: a photo of this screen is useless a minute later.',
       pedir_otro: 'Ask for another code',
       pidiendo: 'Asking…',
       reintentar: 'Try again',
@@ -1062,8 +1019,6 @@ export const T = {
       notificaciones_error: 'Could not enable notifications. Please try again.',
       ver_calificaciones: 'See my ratings',
       disponibilidad_titulo: 'My availability',
-      disponibilidad_explicacion:
-        'You decide when you want to be offered new shifts. Marking yourself as unavailable does not change the shifts you already accepted, and it does not remove you from the provider. You can switch back whenever you want.',
       disponibilidad_disponible: 'You are currently available to be offered shifts.',
       disponibilidad_no_disponible: 'You are currently marked as unavailable for new shifts.',
       disponibilidad_ponerse_no_disponible: 'Mark me as unavailable',
@@ -1071,8 +1026,6 @@ export const T = {
     },
     calificaciones: {
       titulo: 'My ratings',
-      explicacion:
-        'These are the ratings you were given. You can leave a reply to each one, which is kept next to it and read together with it.',
       sin_calificaciones: 'There are no ratings yet.',
       estrellas: '{n} out of 5',
       cuando: 'From {fecha}',
@@ -1083,7 +1036,6 @@ export const T = {
       descargo_en: 'Written on {fecha}',
       abrir: 'Leave my reply',
       campo: 'What you want to put on record',
-      una_sola_vez: 'The reply is written once and cannot be changed afterwards.',
       confirmar_aviso: 'It will be saved exactly as written, and it will not be possible to correct it.',
       confirmar: 'Yes, leave it like this',
       guardando: 'Saving…',
@@ -1101,7 +1053,6 @@ export const T = {
       estado_rechazado: 'You did not agree. Date:',
       cambiar_a_acepto: 'I want to agree',
       retirar: 'Withdraw my consent',
-      retirar_ayuda: 'If you withdraw it, we stop recording your location from that moment on.',
       texto_cambio: 'The text changed since last time. Please read it again and decide.',
       pendiente_aviso: 'There is something to read and decide in My Profile.',
     },
@@ -1137,7 +1088,6 @@ export const T = {
       verificada: 'Checked by the provider',
       sin_verificar_aun: 'Waiting to be checked',
       sin_vencimiento: 'Never expires',
-      solo_carga: 'Here you only upload. Checking and correcting is up to the provider — if something is wrong, upload the right one and let them know.',
     },
     papeles: {
       titulo: 'My documents',
@@ -1160,7 +1110,6 @@ export const T = {
       certificado_estado_vencido: 'Your certificate has expired.',
       certificado_estado_dado_de_baja: 'The provider withdrew this certificate.',
       certificado_emitido_el: 'issued on {fecha}',
-      los_recibe_la_prestadora: 'Documents are received and uploaded by the provider. If one is missing or needs renewing, bring it to their office.',
     },
   },
   'pt-BR': {
@@ -1241,8 +1190,6 @@ export const T = {
       sin_conversaciones: 'Ainda não há nenhuma conversa.',
       sin_leer_uno: '1 mensagem não lida',
       sin_leer: '{n} mensagens não lidas',
-      contacto_tapado: 'Os dados de contato ficam ocultos ao enviar a mensagem e não são guardados. O que não for reconhecido como dado de contato aparece do outro lado exatamente como foi escrito.',
-      contacto_tapado_ya_paso: 'Nesta conversa já houve algo oculto.',
       tapado_en_este_mensaje: 'com dados de contato ocultos',
       escribir: 'Escrever uma mensagem',
       enviar: 'Enviar',
@@ -1259,14 +1206,12 @@ export const T = {
     },
     auth: {
       titulo: '{{producto}} — Assistentes',
-      subtitulo: 'Entre com sua conta para ver seus plantões',
       email: 'Email',
       password: 'Senha',
       ingresar: 'Entrar',
       ingresando: 'Entrando…',
       error_credenciales: 'Email ou senha incorretos.',
       activar_titulo: 'Ativar a conta',
-      activar_subtitulo: 'Para entrar por aqui é preciso escolher uma senha.',
       activar_password_nueva: 'Nova senha',
       activar_password_confirmar: 'Repetir a senha',
       activar_password_corta: 'A senha precisa ter pelo menos {{minimo}} caracteres.',
@@ -1276,7 +1221,6 @@ export const T = {
       activar_exito: 'A conta foi ativada. Já é possível entrar com a nova senha.',
       activar_token_invalido: 'Este link de ativação não é válido ou já venceu. É preciso pedir que reenviem o convite.',
       clave_nueva_titulo: 'Escolher uma senha nova',
-      clave_nueva_subtitulo: 'A senha anterior deixa de servir.',
       clave_nueva_codigo: 'Código',
       clave_nueva_confirmar: 'Guardar a senha',
       clave_nueva_guardando: 'Guardando…',
@@ -1296,7 +1240,6 @@ export const T = {
     },
     llaves: {
       titulo: 'Entrar com digital ou rosto',
-      explicacion: 'Em um aparelho com leitor de digital ou reconhecimento facial é possível entrar sem digitar a senha. A digital não fica guardada em lugar nenhum: quem a confere é o próprio aparelho, para destravar uma chave que vive dentro dele.',
       no_disponible: 'Este aparelho não pode guardar a chave. Continua-se entrando com a senha.',
       agregar: 'Guardar a chave neste aparelho',
       agregando: 'Aguardando o aparelho…',
@@ -1376,7 +1319,6 @@ export const T = {
       sin_conexion_sin_comprobar: 'Sem conexão não é possível verificar o código, então isto vai ser registrado sem verificação quando o sinal voltar. O Coordenador vai vê-lo na sua lista.',
       mostrar_mi_codigo: 'Mostrar o meu código para a rendição',
       ocultar_mi_codigo: 'Ocultar o meu código',
-      mi_codigo_explicacion: 'Este código é para o Assistente que chega para rendê-lo ler. Ele se renova sozinho a cada poucos segundos.',
       ubicacion_negada: 'O aplicativo não tem permissão para usar a localização.',
       ubicacion_no_disponible: 'Não foi possível obter a localização neste momento.',
       cargar_reporte: 'Preencher Relatório Diário',
@@ -1397,7 +1339,6 @@ export const T = {
     },
     antes_de_llegar: {
       titulo: 'Antes de chegar',
-      explicacion: 'Avisar que se está saindo, e avisar se há atraso, dá à Prestadora tempo para cobrir o plantão. Os dois avisos ficam registrados como avisos dados por esta pessoa.',
       salgo_ahora: 'Estou saindo agora',
       confirmar_salida: 'Registrar a saída',
       registrando_salida: 'Registrando a saída…',
@@ -1408,7 +1349,6 @@ export const T = {
       salida_sin_ubicacion: 'A saída ficou registrada. Sem localização não é possível estimar a hora de chegada, então a Família não vai ver nenhuma hora estimada.',
       voy_demorado: 'Avisar que estou atrasado',
       motivo_pregunta: 'Qual é o motivo?',
-      motivo_para_que_sirve: 'O motivo é salvo tal como é escolhido aqui, e assim o Coordenador o lê.',
       confirmar_demora: 'Enviar o aviso',
       avisando_demora: 'Enviando o aviso…',
       aviso_enviado: 'O aviso saiu para a Prestadora.',
@@ -1446,7 +1386,6 @@ export const T = {
         sin_novedades: 'Sem novidades por enquanto.',
       },
       boton: 'Não posso continuar',
-      explicacion: 'Isto chega à Prestadora com a máxima urgência. Não a libera do plantão: serve para que saibam que precisa ser rendida já.',
       detalle: 'O que está acontecendo? (opcional)',
       detalle_placeholder: 'Se puder, escreva por que não pode continuar.',
       confirmar: 'Enviar o aviso',
@@ -1457,7 +1396,6 @@ export const T = {
     descanso: {
       boton_empezar: 'Começar um descanso',
       boton_terminar: 'Terminei o descanso',
-      explicacion: 'Em um plantão longo descansa-se no domicílio, sem deixar de estar disponível. Não é descontado do que se paga, não interrompe o plantão e não o tira do plantão.',
       en_curso: 'Descansando desde as {hora}. Continua disponível.',
       terminado: 'Descanso terminado às {hora}.',
     },
@@ -1473,13 +1411,11 @@ export const T = {
       entrar_igual: 'Entrar mesmo assim',
       cerrar_igual: 'Encerrar mesmo assim',
       volver_al_codigo: 'Voltar ao código',
-      pedido_explicacion: 'Isto aparece na hora para a Prestadora. Quem estiver de plantão vai resolver e vai ditar um código que serve por alguns minutos.',
       pedido_label: 'O que está acontecendo, com as suas palavras',
       pedido_ejemplo: 'Ex.: toquei a campainha várias vezes e ninguém atende; o Paciente está sozinho e não consegue se levantar.',
       avisar_a_la_prestadora: 'Avisar a Prestadora',
       avisando: 'Avisando…',
       esperando: 'Aguardando a resposta da Prestadora…',
-      esperando_explicacion: 'Esta tela se atualiza sozinha. Se ninguém responder, abaixo está a opção de entrar mesmo assim.',
       codigo_soltado: 'A Prestadora liberou um código. Escreva-o aqui embaixo.',
       sin_comprobar_titulo: 'Por que não foi possível fazer a passagem?',
       motivo_nadie_para_mostrar: 'Não há ninguém que possa mostrar o código',
@@ -1488,8 +1424,6 @@ export const T = {
       motivo_sin_conexion: 'Não há conexão',
       motivo_otro: 'Outro motivo',
       detalle_label: 'Se quiser, acrescente um detalhe (opcional)',
-      sin_comprobar_aviso: 'A chegada é registrada mesmo assim e fica sem verificação. O Coordenador vai vê-la na sua lista.',
-      sin_comprobar_aviso_cierre: 'O encerramento é registrado mesmo assim e fica sem verificação. O Coordenador vai vê-lo na sua lista.',
       sin_comprobar_continuar: 'Continuar sem verificar',
     },
     codigo_de_presencia: {
@@ -1497,7 +1431,6 @@ export const T = {
       qr_alt: 'Código para ler com a câmera',
       se_renueva: 'Renova-se em {segundos} segundos.',
       renovando: 'Renovando o código…',
-      por_que_cambia: 'Muda sozinho a cada poucos segundos: uma foto desta tela não serve um minuto depois.',
       pedir_otro: 'Pedir outro código',
       pidiendo: 'Pedindo…',
       reintentar: 'Tentar novamente',
@@ -1585,8 +1518,6 @@ export const T = {
       notificaciones_error: 'Não foi possível ativar as notificações. É preciso tentar novamente.',
       ver_calificaciones: 'Ver as minhas avaliações',
       disponibilidad_titulo: 'A minha disponibilidade',
-      disponibilidad_explicacion:
-        'Você decide quando quer que lhe ofereçam plantões novos. Colocar-se como indisponível não altera os plantões que já aceitou nem o retira da Prestadora, e pode voltar atrás quando quiser.',
       disponibilidad_disponible: 'Hoje está disponível para que lhe ofereçam plantões.',
       disponibilidad_no_disponible: 'Hoje consta como indisponível para plantões novos.',
       disponibilidad_ponerse_no_disponible: 'Colocar-me como indisponível',
@@ -1594,8 +1525,6 @@ export const T = {
     },
     calificaciones: {
       titulo: 'Minhas avaliações',
-      explicacion:
-        'Aqui estão as avaliações que lhe deram. Diante de cada uma é possível deixar uma resposta, que fica escrita ao lado e se lê junto com ela.',
       sin_calificaciones: 'Ainda não há nenhuma avaliação.',
       estrellas: '{n} de 5',
       cuando: 'De {fecha}',
@@ -1606,7 +1535,6 @@ export const T = {
       descargo_en: 'Escrita em {fecha}',
       abrir: 'Deixar a minha resposta',
       campo: 'O que quiser deixar dito',
-      una_sola_vez: 'A resposta é escrita uma só vez e depois não pode ser alterada.',
       confirmar_aviso: 'Vai ficar guardada tal como está escrita, e não será possível corrigi-la.',
       confirmar: 'Sim, deixar assim',
       guardando: 'Salvando…',
@@ -1624,7 +1552,6 @@ export const T = {
       estado_rechazado: 'Não aceito. Data:',
       cambiar_a_acepto: 'Quero concordar',
       retirar: 'Retirar meu consentimento',
-      retirar_ayuda: 'Se for retirado, paramos de registrar a localização a partir desse mesmo momento.',
       texto_cambio: 'O texto mudou desde a última vez. É preciso lê-lo de novo e decidir novamente.',
       pendiente_aviso: 'Há algo para ler e decidir em Meu Perfil.',
     },
@@ -1660,7 +1587,6 @@ export const T = {
       verificada: 'Conferido pela Prestadora',
       sin_verificar_aun: 'Esperando ser conferido',
       sin_vencimiento: 'Não vence',
-      solo_carga: 'Aqui só se envia. Conferir e corrigir é da Prestadora — se algo ficou errado, é preciso enviar o correto e avisar.',
     },
     papeles: {
       titulo: 'Meus documentos',
@@ -1683,7 +1609,6 @@ export const T = {
       certificado_estado_vencido: 'O Certificado está vencido.',
       certificado_estado_dado_de_baja: 'A Prestadora deu baixa neste Certificado.',
       certificado_emitido_el: 'emitido em {fecha}',
-      los_recibe_la_prestadora: 'Os documentos são recebidos e enviados pela Prestadora. Se faltar algum ou for preciso renovar, é necessário levá-lo ao escritório.',
     },
   },
 };

@@ -124,7 +124,6 @@ export default function Consentimientos({ onCambio }) {
                 >
                   {guardando === `${item.clave}:retirar` ? t.comun.guardando : t.consentimientos.retirar}
                 </button>
-                <p className="texto-ayuda">{t.consentimientos.retirar_ayuda}</p>
               </>
             ) : rechazado ? (
               <>

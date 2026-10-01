@@ -111,11 +111,6 @@ export const T = {
       sin_leer_uno: '1 mensaje sin leer',
       sin_leer: '{n} mensajes sin leer',
       escribirle: 'Escribirle un mensaje',
-      // La advertencia del tapado dice las dos cosas que hacen falta para no equivocarse: que el dato
-      // de contacto no pasa, y que lo que el producto no reconoce sí pasa. El producto avisa, no
-      // bloquea.
-      contacto_tapado: 'Los datos de contacto se tapan al enviar el mensaje y no quedan guardados. Lo que no se reconozca como un dato de contacto se ve del otro lado tal como se escribió.',
-      contacto_tapado_ya_paso: 'En esta conversación ya se tapó algo.',
       tapado_en_este_mensaje: 'con datos de contacto tapados',
       escribir: 'Escribir un mensaje',
       enviar: 'Enviar',
@@ -134,14 +129,12 @@ export const T = {
     },
     auth: {
       titulo: '{{producto}} — Familias',
-      subtitulo: 'Ingrese con su cuenta para seguir el servicio de su Paciente',
       email: 'Email',
       password: 'Contraseña',
       ingresar: 'Ingresar',
       ingresando: 'Ingresando…',
       error_credenciales: 'Email o contraseña incorrectos.',
       activar_titulo: 'Activar la cuenta',
-      activar_subtitulo: 'Para ingresar desde acá hace falta elegir una contraseña.',
       activar_password_nueva: 'Contraseña nueva',
       activar_password_confirmar: 'Repita la contraseña',
       activar_password_corta: 'La contraseña tiene que tener al menos {{minimo}} caracteres.',
@@ -154,7 +147,6 @@ export const T = {
       // la activación —el mismo formulario contra otra puerta— y se escribe aparte porque una
       // enciende una cuenta que nunca se usó y ésta reemplaza la clave de una que está en uso.
       clave_nueva_titulo: 'Elegir una contraseña nueva',
-      clave_nueva_subtitulo: 'La contraseña anterior deja de servir.',
       clave_nueva_codigo: 'Código',
       clave_nueva_confirmar: 'Guardar la contraseña',
       clave_nueva_guardando: 'Guardando…',
@@ -176,7 +168,6 @@ export const T = {
     },
     llaves: {
       titulo: 'Entrar con huella o cara',
-      explicacion: 'En un aparato con huella o reconocimiento de cara se puede entrar sin escribir la contraseña. La huella no se guarda en ningún lado: la mira el propio aparato para destrabar una llave que vive adentro de él.',
       no_disponible: 'Este aparato no puede guardar la llave. Se sigue entrando con la contraseña.',
       agregar: 'Guardar la llave en este aparato',
       agregando: 'Esperando el aparato…',
@@ -216,7 +207,6 @@ export const T = {
       checkin_pendiente: 'El Asistente todavía no marcó la llegada.',
       en_camino: 'En camino',
       llegada_estimada: 'Llega alrededor de las {hora}.',
-      llegada_estimada_aclaracion: 'Es una hora estimada a partir de la salida y puede cambiar.',
       ubicacion_en_vivo: 'Ubicación en vivo',
       ubicacion_actualizada: 'Actualizado hace {segundos}s',
       ubicacion_sin_datos: 'Todavía no hay ubicación disponible.',
@@ -294,7 +284,6 @@ export const T = {
     contacto: {
       titulo: 'Hablar con la Prestadora',
       titulo_con_nombre: 'Hablar con {prestadora}',
-      explicacion: 'Ante una duda sobre una alerta, se puede consultar por estos medios.',
       whatsapp: 'Escribir por WhatsApp',
       llamar: 'Llamar al {telefono}',
       email: 'Escribir un correo',
@@ -331,7 +320,6 @@ export const T = {
       documentacion_matricula_vigente_verificada: 'Matrícula vigente, comprobada por la Prestadora contra el registro correspondiente.',
       documentacion_matricula_vigente_sin_verificar: 'Matrícula vigente según el papel presentado. La Prestadora todavía no la comprobó contra el registro correspondiente.',
       documentacion_matricula_no_vigente: 'La Matrícula que esta tarea exige no está vigente.',
-      documentacion_sin_nombres: 'De qué papel se trata cada uno no se informa: puede ser información de salud de esa persona.',
       documentacion_que_no_se_verifica: 'Qué no dice esto: no se verifica la identidad de la persona, no se consultan antecedentes penales y no se comprueba que los documentos presentados sean auténticos. Quien controla los papeles de su personal es la Prestadora.',
       evaluaciones_titulo: 'Evaluaciones anteriores',
       sin_evaluaciones: 'Todavía no hay evaluaciones de este Asistente.',
@@ -355,7 +343,6 @@ export const T = {
     // buscando un botón que no está.
     vidriera: {
       titulo: 'Buscar Asistentes',
-      para_que: 'Las personas que esta Prestadora ofrece. Se puede mirar el perfil de cada una antes de decidir.',
       filtro_zona: 'Zona',
       filtro_tipo: 'Tipo de Asistente',
       todas_las_zonas: 'Todas las zonas',
@@ -391,8 +378,6 @@ export const T = {
     // impreso del domicilio, que se podía fotografiar una vez y usar desde cualquier lado.
     codigo_para_el_asistente: {
       titulo: 'Código para el Asistente',
-      para_que_sirve: 'Cuando llegue el Asistente, muéstrele esta pantalla. Con eso queda registrado que llegó al domicilio y que había alguien para recibirlo.',
-      si_no_pueden_mostrarlo: 'Si en la casa no hay nadie que pueda mostrar el código, el Asistente le avisa a la Prestadora desde su teléfono y entra igual. La guardia nunca se traba por esto.',
     },
     // Las frases del componente que dibuja el código. Es el mismo archivo que usa la aplicación
     // del Asistente, así que estas claves existen igual allá.
@@ -401,7 +386,6 @@ export const T = {
       qr_alt: 'Código para leer con la cámara',
       se_renueva: 'Se renueva en {segundos} segundos.',
       renovando: 'Renovando el código…',
-      por_que_cambia: 'Cambia solo cada pocos segundos: una foto de esta pantalla no sirve un minuto después.',
       pedir_otro: 'Pedir otro código',
       pidiendo: 'Pidiendo…',
       reintentar: 'Volver a intentar',
@@ -434,7 +418,6 @@ export const T = {
       importe: 'Importe',
       proximo_cobro: 'Próximo cobro',
       generar_qr_titulo: 'Pagar en efectivo con QR',
-      generar_qr_explicacion: 'Se genera un código QR de un solo uso para mostrarle al cobrador, y el pago queda registrado al instante, sin anotarlo a mano.',
       generar_qr_boton: 'Generar QR',
       generando_qr: 'Generando…',
       qr_vence_en: 'Este código vence en {minutos} minutos.',
@@ -445,7 +428,6 @@ export const T = {
       // La baja se hace en un clic y sin pedírsela a nadie. Lo que hay que leer antes está arriba
       // del botón: qué se apaga y qué se conserva.
       baja_titulo: 'Dar de baja',
-      baja_explicacion: 'Deja de cobrarse desde el próximo período. Lo que ya está pagado se conserva hasta el final de ese período.',
       baja_boton: 'Dar de baja',
       dando_de_baja: 'Dando de baja…',
       baja_hecha: 'La baja quedó registrada. No se vuelve a cobrar.',
@@ -459,13 +441,11 @@ export const T = {
     // escribió una persona de la Prestadora y sale tal cual: acá se traduce el marco y nada más.
     contenidos: {
       titulo: 'Para cuidar en casa',
-      explicacion: 'Lo que esta Prestadora escribió para quienes cuidan en su casa.',
       sin_contenidos: 'Esta Prestadora todavía no publicó nada acá.',
       abrir_enlace: 'Abrir el material',
     },
     facturas: {
       titulo: 'Mis facturas',
-      explicacion: 'Lo facturado en cada período, lo que entró y lo que falta.',
       sin_facturas: 'Todavía no hay ninguna factura.',
       no_encontrada: 'Esa factura no está entre las suyas.',
       col_facturado: 'Facturado',
@@ -503,7 +483,6 @@ export const T = {
       acceso_ve_vacio: 'Por ahora no hay nada incluido.',
       acceso_no_ve: 'Lo que usted no ve',
       acceso_no_ve_vacio: 'No hay nada afuera: usted ve todo lo que la Prestadora ofrece.',
-      acceso_lo_decide_el_titular: 'Esto lo definió el titular de la cuenta por escrito. Acá no hay nada que configurar: cualquier cambio se lo pide él a la Prestadora.',
       notificaciones_titulo: 'Notificaciones',
       notificaciones_activar: 'Activar notificaciones',
       notificaciones_desactivar: 'Desactivar notificaciones',
@@ -563,10 +542,8 @@ export const T = {
     // el de destrabar la aplicación.
     instruccion: {
       titulo: 'Instrucción sobre las personas autorizadas',
-      explicacion: 'Esto es lo que usted le pidió a la Prestadora sobre qué ve cada persona autorizada. Ya está rigiendo: lo que falta es su firma.',
       sin_instruccion: 'No hay ninguna instrucción pendiente de firma.',
       firmar_titulo: 'Firmar',
-      firmar_explicacion: 'Usted ya entró con su contraseña. Para firmar hace falta además un código de seis dígitos, que llega por otro camino.',
       codigo_pedir: 'Recibir el código',
       codigo_pedir_otro: 'Pedir otro código',
       codigo_pidiendo: 'Pidiendo el código…',
@@ -642,8 +619,6 @@ export const T = {
       sin_leer_uno: '1 unread message',
       sin_leer: '{n} unread messages',
       escribirle: 'Send them a message',
-      contacto_tapado: 'Contact details are hidden when the message is sent and are not stored. Anything not recognised as a contact detail is shown to the other side exactly as written.',
-      contacto_tapado_ya_paso: 'Something has already been hidden in this conversation.',
       tapado_en_este_mensaje: 'contact details hidden',
       escribir: 'Write a message',
       enviar: 'Send',
@@ -660,14 +635,12 @@ export const T = {
     },
     auth: {
       titulo: '{{producto}} — Families',
-      subtitulo: 'Sign in to follow your Patient\'s care',
       email: 'Email',
       password: 'Password',
       ingresar: 'Log in',
       ingresando: 'Logging in…',
       error_credenciales: 'Incorrect email or password.',
       activar_titulo: 'Activate your account',
-      activar_subtitulo: 'Choose a password to sign in from here.',
       activar_password_nueva: 'New password',
       activar_password_confirmar: 'Repeat password',
       activar_password_corta: 'The password must be at least {{minimo}} characters long.',
@@ -677,7 +650,6 @@ export const T = {
       activar_exito: 'Your account is now active. You can sign in with your new password.',
       activar_token_invalido: 'This activation link is invalid or has expired. Ask for a new invitation.',
       clave_nueva_titulo: 'Choose a new password',
-      clave_nueva_subtitulo: 'The previous password stops working.',
       clave_nueva_codigo: 'Code',
       clave_nueva_confirmar: 'Save the password',
       clave_nueva_guardando: 'Saving…',
@@ -697,7 +669,6 @@ export const T = {
     },
     llaves: {
       titulo: 'Sign in with fingerprint or face',
-      explicacion: 'On a device with a fingerprint reader or face recognition you can sign in without typing your password. The fingerprint is never stored anywhere: the device itself checks it to unlock a key that lives inside it.',
       no_disponible: 'This device cannot store the key. You will keep signing in with your password.',
       agregar: 'Store the key on this device',
       agregando: 'Waiting for the device…',
@@ -734,7 +705,6 @@ export const T = {
       checkin_pendiente: 'The Assistant has not checked in yet.',
       en_camino: 'On the way',
       llegada_estimada: 'Arriving around {hora}.',
-      llegada_estimada_aclaracion: 'This time is estimated from the departure and may change.',
       ubicacion_en_vivo: 'Live location',
       ubicacion_actualizada: 'Updated {segundos}s ago',
       ubicacion_sin_datos: 'No location available yet.',
@@ -806,7 +776,6 @@ export const T = {
     contacto: {
       titulo: 'Contact the Provider',
       titulo_con_nombre: 'Contact {prestadora}',
-      explicacion: 'If there is any doubt about an alert, these are the ways to ask.',
       whatsapp: 'Message on WhatsApp',
       llamar: 'Call {telefono}',
       email: 'Send an email',
@@ -835,7 +804,6 @@ export const T = {
       documentacion_matricula_vigente_verificada: 'Professional licence valid, checked by the Provider against the relevant register.',
       documentacion_matricula_vigente_sin_verificar: 'Professional licence valid according to the document provided. The Provider has not checked it against the relevant register yet.',
       documentacion_matricula_no_vigente: 'The professional licence this work requires is not valid.',
-      documentacion_sin_nombres: 'Which document each one is is not disclosed: it may be health information about that person.',
       documentacion_que_no_se_verifica: 'What this does not say: identity is not verified, criminal records are not checked, and the documents provided are not confirmed to be authentic. The Provider is the one who controls its staff paperwork.',
       evaluaciones_titulo: 'Previous ratings',
       sin_evaluaciones: 'No ratings yet for this Assistant.',
@@ -850,7 +818,6 @@ export const T = {
     },
     vidriera: {
       titulo: 'Search Assistants',
-      para_que: 'The people this Provider offers. Each profile can be reviewed before deciding.',
       filtro_zona: 'Area',
       filtro_tipo: 'Assistant type',
       todas_las_zonas: 'All areas',
@@ -880,15 +847,12 @@ export const T = {
     },
     codigo_para_el_asistente: {
       titulo: 'Code for the Assistant',
-      para_que_sirve: 'When the Assistant arrives, show them this screen. That records that they reached the address and that somebody was there to let them in.',
-      si_no_pueden_mostrarlo: 'If there is nobody at the house who can show the code, the Assistant tells the Provider from their phone and goes in anyway. The shift is never held up by this.',
     },
     codigo_de_presencia: {
       instrucciones: 'Show this screen to whoever has to read the code.',
       qr_alt: 'Code to read with the camera',
       se_renueva: 'It renews in {segundos} seconds.',
       renovando: 'Renewing the code…',
-      por_que_cambia: 'It changes on its own every few seconds: a photo of this screen is useless a minute later.',
       pedir_otro: 'Ask for another code',
       pidiendo: 'Asking…',
       reintentar: 'Try again',
@@ -919,7 +883,6 @@ export const T = {
       importe: 'Amount',
       proximo_cobro: 'Next charge',
       generar_qr_titulo: 'Pay in cash with QR',
-      generar_qr_explicacion: 'Generate a single-use QR code and show it to the collector so they can register the payment instantly, without writing it down by hand.',
       generar_qr_boton: 'Generate QR',
       generando_qr: 'Generating…',
       qr_vence_en: 'This code expires in {minutos} minutes.',
@@ -928,7 +891,6 @@ export const T = {
       qr_vencido: 'This code expired. Generate a new one.',
       qr_generar_otro: 'Generate another code',
       baja_titulo: 'Cancel',
-      baja_explicacion: 'Charging stops from the next period onwards. What has already been paid for is kept until the end of that period.',
       baja_boton: 'Cancel',
       dando_de_baja: 'Cancelling…',
       baja_hecha: 'The cancellation is on record. There will be no further charges.',
@@ -939,13 +901,11 @@ export const T = {
     // at the provider and shows as written: only the frame around it is translated.
     contenidos: {
       titulo: 'Caring at home',
-      explicacion: 'What this provider wrote for those caring at home.',
       sin_contenidos: 'This provider has not published anything here yet.',
       abrir_enlace: 'Open the material',
     },
     facturas: {
       titulo: 'My invoices',
-      explicacion: 'What was invoiced each period, what came in and what is left.',
       sin_facturas: 'There are no invoices yet.',
       no_encontrada: 'That invoice is not one of yours.',
       col_facturado: 'Invoiced',
@@ -983,7 +943,6 @@ export const T = {
       acceso_ve_vacio: 'Nothing is included for now.',
       acceso_no_ve: 'What you cannot see',
       acceso_no_ve_vacio: 'Nothing is left out: you see everything the Provider offers.',
-      acceso_lo_decide_el_titular: 'The account holder set this out in writing. There is nothing to configure here: any change is requested by them from the Provider.',
       notificaciones_titulo: 'Notifications',
       notificaciones_activar: 'Enable notifications',
       notificaciones_desactivar: 'Disable notifications',
@@ -1033,10 +992,8 @@ export const T = {
     },
     instruccion: {
       titulo: 'Instruction about authorized people',
-      explicacion: 'This is what you asked the Provider regarding what each authorized person can see. It is already in force: what is missing is your signature.',
       sin_instruccion: 'There is no instruction awaiting your signature.',
       firmar_titulo: 'Sign',
-      firmar_explicacion: 'You already signed in with your password. Signing also requires a six-digit code, which arrives by a separate channel.',
       codigo_pedir: 'Receive the code',
       codigo_pedir_otro: 'Request another code',
       codigo_pidiendo: 'Requesting the code…',
@@ -1112,8 +1069,6 @@ export const T = {
       sin_leer_uno: '1 mensagem não lida',
       sin_leer: '{n} mensagens não lidas',
       escribirle: 'Escrever uma mensagem',
-      contacto_tapado: 'Os dados de contato ficam ocultos ao enviar a mensagem e não são guardados. O que não for reconhecido como dado de contato aparece do outro lado exatamente como foi escrito.',
-      contacto_tapado_ya_paso: 'Nesta conversa já houve algo oculto.',
       tapado_en_este_mensaje: 'com dados de contato ocultos',
       escribir: 'Escrever uma mensagem',
       enviar: 'Enviar',
@@ -1130,14 +1085,12 @@ export const T = {
     },
     auth: {
       titulo: '{{producto}} — Famílias',
-      subtitulo: 'Entre com a conta para acompanhar o cuidado do Paciente',
       email: 'Email',
       password: 'Senha',
       ingresar: 'Entrar',
       ingresando: 'Entrando…',
       error_credenciales: 'Email ou senha incorretos.',
       activar_titulo: 'Ativar a conta',
-      activar_subtitulo: 'Para entrar por aqui é preciso escolher uma senha.',
       activar_password_nueva: 'Nova senha',
       activar_password_confirmar: 'Repita a senha',
       activar_password_corta: 'A senha precisa ter pelo menos {{minimo}} caracteres.',
@@ -1147,7 +1100,6 @@ export const T = {
       activar_exito: 'A conta foi ativada. Já é possível entrar com a nova senha.',
       activar_token_invalido: 'Este link de ativação não é válido ou já venceu. É preciso pedir que reenviem o convite.',
       clave_nueva_titulo: 'Escolher uma senha nova',
-      clave_nueva_subtitulo: 'A senha anterior deixa de servir.',
       clave_nueva_codigo: 'Código',
       clave_nueva_confirmar: 'Guardar a senha',
       clave_nueva_guardando: 'Guardando…',
@@ -1167,7 +1119,6 @@ export const T = {
     },
     llaves: {
       titulo: 'Entrar com digital ou rosto',
-      explicacion: 'Em um aparelho com leitor de digital ou reconhecimento facial é possível entrar sem digitar a senha. A digital não fica guardada em lugar nenhum: quem a confere é o próprio aparelho, para destravar uma chave que vive dentro dele.',
       no_disponible: 'Este aparelho não pode guardar a chave. Continua-se entrando com a senha.',
       agregar: 'Guardar a chave neste aparelho',
       agregando: 'Aguardando o aparelho…',
@@ -1204,7 +1155,6 @@ export const T = {
       checkin_pendiente: 'O Assistente ainda não fez check-in.',
       en_camino: 'A caminho',
       llegada_estimada: 'Chega por volta das {hora}.',
-      llegada_estimada_aclaracion: 'É um horário estimado a partir da saída e pode mudar.',
       ubicacion_en_vivo: 'Localização em tempo real',
       ubicacion_actualizada: 'Atualizado há {segundos}s',
       ubicacion_sin_datos: 'Ainda não há localização disponível.',
@@ -1276,7 +1226,6 @@ export const T = {
     contacto: {
       titulo: 'Falar com a Prestadora',
       titulo_con_nombre: 'Falar com {prestadora}',
-      explicacion: 'Havendo alguma dúvida sobre um alerta, é possível consultar por estes meios.',
       whatsapp: 'Escrever pelo WhatsApp',
       llamar: 'Ligar para {telefono}',
       email: 'Enviar um e-mail',
@@ -1305,7 +1254,6 @@ export const T = {
       documentacion_matricula_vigente_verificada: 'Registro profissional válido, conferido pela Prestadora junto ao órgão correspondente.',
       documentacion_matricula_vigente_sin_verificar: 'Registro profissional válido segundo o documento apresentado. A Prestadora ainda não o conferiu junto ao órgão correspondente.',
       documentacion_matricula_no_vigente: 'O registro profissional que esta tarefa exige não está válido.',
-      documentacion_sin_nombres: 'De qual documento se trata cada um não é informado: pode ser informação de saúde dessa pessoa.',
       documentacion_que_no_se_verifica: 'O que isto não diz: não se verifica a identidade da pessoa, não se consultam antecedentes criminais e não se comprova que os documentos apresentados sejam autênticos. Quem controla os documentos do seu pessoal é a Prestadora.',
       evaluaciones_titulo: 'Avaliações anteriores',
       sin_evaluaciones: 'Ainda não há avaliações deste Assistente.',
@@ -1320,7 +1268,6 @@ export const T = {
     },
     vidriera: {
       titulo: 'Buscar Assistentes',
-      para_que: 'As pessoas que esta Prestadora oferece. Dá para ver o perfil de cada uma antes de decidir.',
       filtro_zona: 'Região',
       filtro_tipo: 'Tipo de Assistente',
       todas_las_zonas: 'Todas as regiões',
@@ -1350,15 +1297,12 @@ export const T = {
     },
     codigo_para_el_asistente: {
       titulo: 'Código para o Assistente',
-      para_que_sirve: 'Quando o Assistente chegar, mostre esta tela para ele. Com isso fica registrado que ele chegou ao domicílio e que havia alguém para recebê-lo.',
-      si_no_pueden_mostrarlo: 'Se na casa não houver ninguém que possa mostrar o código, o Assistente avisa a Prestadora pelo telefone dele e entra mesmo assim. O plantão nunca fica travado por isso.',
     },
     codigo_de_presencia: {
       instrucciones: 'Mostre esta tela para quem tem que ler o código.',
       qr_alt: 'Código para ler com a câmera',
       se_renueva: 'Renova-se em {segundos} segundos.',
       renovando: 'Renovando o código…',
-      por_que_cambia: 'Muda sozinho a cada poucos segundos: uma foto desta tela não serve um minuto depois.',
       pedir_otro: 'Pedir outro código',
       pidiendo: 'Pedindo…',
       reintentar: 'Tentar novamente',
@@ -1389,7 +1333,6 @@ export const T = {
       importe: 'Valor',
       proximo_cobro: 'Próxima cobrança',
       generar_qr_titulo: 'Pagar em dinheiro com QR',
-      generar_qr_explicacion: 'Gera-se um código QR de uso único para mostrar ao cobrador, e o pagamento fica registrado na hora, sem anotação manual.',
       generar_qr_boton: 'Gerar QR',
       generando_qr: 'Gerando…',
       qr_vence_en: 'Este código expira em {minutos} minutos.',
@@ -1398,7 +1341,6 @@ export const T = {
       qr_vencido: 'Este código expirou. É preciso gerar um novo.',
       qr_generar_otro: 'Gerar outro código',
       baja_titulo: 'Cancelar',
-      baja_explicacion: 'Deixa de ser cobrado a partir do próximo período. O que já está pago é mantido até o fim desse período.',
       baja_boton: 'Cancelar',
       dando_de_baja: 'Cancelando…',
       baja_hecha: 'O cancelamento ficou registrado. Não se cobra de novo.',
@@ -1409,13 +1351,11 @@ export const T = {
     // alguém da Prestadora e aparece como está: aqui se traduz a moldura e nada mais.
     contenidos: {
       titulo: 'Para cuidar em casa',
-      explicacion: 'O que esta Prestadora escreveu para quem cuida em casa.',
       sin_contenidos: 'Esta Prestadora ainda não publicou nada aqui.',
       abrir_enlace: 'Abrir o material',
     },
     facturas: {
       titulo: 'Minhas faturas',
-      explicacion: 'O que foi faturado em cada período, o que entrou e o que falta.',
       sin_facturas: 'Ainda não há nenhuma fatura.',
       no_encontrada: 'Essa fatura não está entre as suas.',
       col_facturado: 'Faturado',
@@ -1453,7 +1393,6 @@ export const T = {
       acceso_ve_vacio: 'Por enquanto não há nada incluído.',
       acceso_no_ve: 'O que não se vê',
       acceso_no_ve_vacio: 'Não há nada de fora: vê-se tudo o que a Prestadora oferece.',
-      acceso_lo_decide_el_titular: 'Isto foi definido por escrito pelo titular da conta. Aqui não há nada a configurar: qualquer mudança é ele quem pede à Prestadora.',
       notificaciones_titulo: 'Notificações',
       notificaciones_activar: 'Ativar notificações',
       notificaciones_desactivar: 'Desativar notificações',
@@ -1503,10 +1442,8 @@ export const T = {
     },
     instruccion: {
       titulo: 'Instrução sobre as pessoas autorizadas',
-      explicacion: 'Isto é o que foi pedido à Prestadora sobre o que cada pessoa autorizada vê. Já está valendo: o que falta é a assinatura.',
       sin_instruccion: 'Não há nenhuma instrução pendente de assinatura.',
       firmar_titulo: 'Assinar',
-      firmar_explicacion: 'A entrada já foi feita com a senha. Para assinar é preciso ainda um código de seis dígitos, que chega por outro caminho.',
       codigo_pedir: 'Receber o código',
       codigo_pedir_otro: 'Pedir outro código',
       codigo_pidiendo: 'Pedindo o código…',

@@ -638,9 +638,6 @@ export default function GuardiaActiva() {
               <div id="mi-codigo-de-presencia">
                 {mostrandoMiCodigo && (
                   <>
-                    <p className="guardia-card-detalle" style={{ marginTop: '0.75rem' }}>
-                      {t.guardia_activa.mi_codigo_explicacion}
-                    </p>
                     <CodigoDePresencia t={t} pedirCodigo={api.codigoDePresencia} />
                   </>
                 )}

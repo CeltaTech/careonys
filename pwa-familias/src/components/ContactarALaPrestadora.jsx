@@ -39,7 +39,6 @@ export default function ContactarALaPrestadora({ t }) {
   return (
     <div style={{ marginTop: '1.5rem' }}>
       <h2 style={{ fontSize: '1rem' }}>{titulo}</h2>
-      <p className="guardia-card-detalle">{t.contacto.explicacion}</p>
 
       {digitos && (
         <a

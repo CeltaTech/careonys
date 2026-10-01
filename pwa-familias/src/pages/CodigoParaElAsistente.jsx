@@ -7,8 +7,8 @@
 //
 // LA PANTALLA ES CASI TODA EL COMPONENTE. `components/CodigoDePresencia.jsx` es el mismo archivo
 // que usa la aplicación del Asistente —cuando el que se va es él y llega el relevo, es él quien
-// muestra el código—, y ahí adentro están los cuatro estados y la renovación. Acá queda el título,
-// la explicación de para qué sirve y el camino de vuelta.
+// muestra el código—, y ahí adentro están los cuatro estados y la renovación. Acá queda el título
+// y el camino de vuelta.
 //
 // NO LLEVA GUARDIÁN, y es a propósito: el código no revela ningún dato del Paciente ni de la
 // Prestadora, y su único efecto es dejar entrar a quien ya tenía la guardia asignada. Cualquiera
@@ -29,13 +29,7 @@ export default function CodigoParaElAsistente() {
         <span aria-hidden="true">←</span> {t.comun.volver}
       </Link>
       <h1>{t.codigo_para_el_asistente.titulo}</h1>
-      <p className="guardia-card-detalle" style={{ marginBottom: '1rem' }}>
-        {t.codigo_para_el_asistente.para_que_sirve}
-      </p>
       <CodigoDePresencia t={t} pedirCodigo={api.codigoDePresencia} />
-      <p className="guardia-card-detalle" style={{ marginTop: '1rem' }}>
-        {t.codigo_para_el_asistente.si_no_pueden_mostrarlo}
-      </p>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 :root {
-  font: 16px/145% var(--font-body);
+  font: 14px/1.45 var(--font-body);
   color: var(--texto-principal);
   background: var(--fondo-app);
   /* `color-scheme` le avisa al navegador de qué modo está el Panel. Sin esto, las piezas que
@@ -30,15 +30,28 @@ body {
 h1 {
   font-family: var(--font-display);
   color: var(--texto-titulo);
-  font-size: 1.75rem;
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   margin: 0 0 1.25rem;
 }
 
 h2 {
   font-family: var(--font-display);
   color: var(--texto-titulo);
-  font-size: 1.35rem;
-  margin: 0 0 1rem;
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 0.85rem;
+}
+
+h3 {
+  color: var(--texto-titulo);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+a {
+  color: var(--azul-medio-texto);
 }
 
 /* ---------- Botones (mismo patrón que sitio-web) ---------- */
@@ -47,36 +60,45 @@ h2 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  min-width: 44px;
-  padding: 0.65rem 1.5rem;
-  border-radius: 999px;
+  gap: 0.4rem;
+  min-height: 36px;
+  padding: 0.5rem 0.95rem;
+  border-radius: var(--radio-control);
+  font-family: var(--font-body);
   font-weight: 600;
-  font-size: 0.9rem;
-  border: 2px solid transparent;
+  font-size: 12px;
+  border: 1px solid var(--borde-card);
+  background: var(--superficie);
+  color: var(--texto-principal);
+  text-decoration: none;
   cursor: pointer;
-  transition: transform 0.15s ease, background 0.2s ease, color 0.2s ease;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .btn:hover:not(:disabled) {
-  transform: translateY(-2px);
+  background: var(--superficie-hover);
 }
 
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  transform: none;
 }
 
 .btn-primary {
-  background: var(--azul-medio);
+  background: var(--accion);
+  border-color: var(--accion);
   color: var(--texto-sobre-color) !important;
 }
 
+.btn-primary:hover:not(:disabled) {
+  background: var(--accion-hover);
+  border-color: var(--accion-hover);
+}
+
 .btn-secondary {
-  background: transparent;
-  border-color: var(--azul-medio);
-  color: var(--azul-medio-texto) !important;
+  background: var(--superficie);
+  border-color: var(--borde-card);
+  color: var(--texto-principal) !important;
 }
 
 /* ---------- Formularios ---------- */
@@ -90,7 +112,7 @@ h2 {
 
 .form-field label {
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 12px;
   color: var(--texto-principal);
 }
 
@@ -103,10 +125,10 @@ h2 {
 .form-field select,
 .form-field textarea {
   font-family: var(--font-body);
-  font-size: 1rem;
-  padding: 0.6rem 0.8rem;
+  font-size: 13px;
+  padding: 0.55rem 0.75rem;
   border: 1px solid var(--borde-card);
-  border-radius: 8px;
+  border-radius: var(--radio-control);
   background: var(--superficie);
   color: var(--texto-principal);
 }
@@ -115,7 +137,8 @@ h2 {
 .form-field select:focus,
 .form-field textarea:focus {
   outline: 2px solid var(--azul-medio);
-  outline-offset: 1px;
+  outline-offset: 0;
+  border-color: var(--azul-medio);
 }
 
 .form-field textarea {
@@ -149,8 +172,9 @@ h2 {
 /* ---------- Alertas ---------- */
 
 .alert {
-  padding: 0.85rem 1.1rem;
-  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radio-control);
+  font-size: 13px;
   margin-bottom: 1rem;
   font-weight: 500;
 }
@@ -239,47 +263,66 @@ h2 {
 .panel-layout {
   display: flex;
   min-height: 100vh;
+  background: var(--fondo-app);
 }
 
 .panel-sidebar {
-  width: 232px;
-  background: var(--barra-fondo);
-  color: var(--barra-texto);
-  padding: 1.5rem 1rem;
+  width: 242px;
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, var(--barra-fondo), var(--barra-fondo-abajo));
+  color: var(--barra-texto);
+  z-index: 20;
 }
 
 .panel-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  height: 68px;
+  padding: 0 1.25rem;
+  background: var(--barra-marca);
+  color: var(--barra-texto-activo);
   font-family: var(--font-display);
-  font-weight: 700;
-  margin-bottom: 2rem;
+  font-size: 17px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  flex-shrink: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .panel-sidebar nav {
+  flex: 1;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-}
-
-.panel-nav-grupo {
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--barra-texto-tenue);
-  padding: 0.75rem 0.75rem 0.15rem 1.5rem;
-}
-
-.panel-nav-grupo:first-child {
-  padding-top: 0;
+  gap: 2px;
+  padding: 1rem 0.75rem;
 }
 
 .panel-sidebar nav a {
-  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 42px;
+  padding: 0 0.75rem;
+  border-radius: 9px;
   color: var(--barra-texto);
+  font-size: 13px;
+  font-weight: 550;
   text-decoration: none;
-  padding: 0.6rem 0.75rem 0.6rem 1.5rem;
-  border-radius: 8px;
+}
+
+.panel-sidebar nav a svg {
+  width: 21px;
+  height: 21px;
+  flex-shrink: 0;
 }
 
 .panel-sidebar nav a:hover {
@@ -288,20 +331,142 @@ h2 {
 }
 
 .panel-sidebar nav a.active {
+  background: var(--barra-activo);
   color: var(--barra-texto-activo);
-  font-weight: 600;
+  font-weight: 650;
 }
 
-.panel-sidebar nav a.active::before {
-  content: '';
-  position: absolute;
-  left: 0.4rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 6px;
-  height: 6px;
+.panel-nav-etiqueta {
+  flex: 1;
+  min-width: 0;
+}
+
+.panel-nav-contador {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--rojo-peligro);
+  color: var(--texto-sobre-color);
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* El bloque de la persona, al pie de la barra. */
+.panel-perfil {
+  position: relative;
+  border-top: 1px solid var(--barra-borde);
+  padding: 0.75rem;
+  flex-shrink: 0;
+}
+
+.panel-perfil-boton {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--barra-texto-activo);
+  font-family: var(--font-body);
+  text-align: left;
+  cursor: pointer;
+}
+
+.panel-perfil-boton:hover,
+.panel-perfil-boton[aria-expanded='true'] {
+  background: var(--barra-hover);
+}
+
+.panel-avatar {
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background: var(--azul-medio);
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--barra-activo);
+  color: var(--texto-sobre-color);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.panel-perfil-datos {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-perfil-nombre {
+  font-size: 13px;
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel-perfil-detalle {
+  font-size: 11px;
+  color: var(--barra-texto-tenue);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel-perfil-menu {
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: calc(100% - 0.25rem);
+  background: var(--superficie);
+  color: var(--texto-principal);
+  border: 1px solid var(--borde-card);
+  border-radius: var(--radio-card);
+  box-shadow: 0 10px 30px oklch(0.2 0.05 255 / 0.25);
+  padding: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.panel-perfil-menu a,
+.panel-perfil-menu button {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--texto-principal);
+  font-family: var(--font-body);
+  font-size: 13px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.panel-perfil-menu a:hover,
+.panel-perfil-menu button:hover {
+  background: var(--superficie-hover);
+}
+
+.panel-perfil-menu .panel-preferencias {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0.4rem 0.3rem;
+  border-top: 1px solid var(--borde-card);
+  border-bottom: 1px solid var(--borde-card);
+  margin: 0.25rem 0;
+}
+
+.panel-perfil-menu .panel-salir {
+  color: var(--rojo-peligro-texto);
 }
 
 .panel-main {
@@ -337,7 +502,7 @@ h2 {
 .franja-puesta-en-marcha-accion {
   background: var(--azul-medio);
   color: var(--texto-sobre-color);
-  border-radius: 999px;
+  border-radius: var(--radio-control);
   padding: 0.35rem 1rem;
   font-weight: 700;
   text-decoration: none;
@@ -346,19 +511,184 @@ h2 {
 }
 
 .panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 15;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 1rem;
-  padding: 1rem 1.5rem;
+  height: 68px;
+  padding: 0 26px;
   background: var(--superficie);
   border-bottom: 1px solid var(--borde-card);
 }
 
-.panel-usuario {
-  margin-right: auto;
-  font-weight: 600;
+.panel-menu-movil {
+  display: none;
+}
+
+.panel-buscador {
+  position: relative;
+  flex: 1;
+  max-width: 470px;
+}
+
+.panel-buscador input {
+  width: 100%;
+  height: 40px;
+  padding: 0 0.9rem 0 2.4rem;
+  border: 1px solid var(--borde-card);
+  border-radius: 9px;
+  background: var(--fondo-app);
+  color: var(--texto-principal);
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+
+.panel-buscador input:focus {
+  outline: 2px solid var(--azul-medio);
+  outline-offset: 0;
+  background: var(--superficie);
+}
+
+.panel-buscador > svg {
+  position: absolute;
+  left: 0.8rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 17px;
+  height: 17px;
+  color: var(--texto-secundario);
+  pointer-events: none;
+}
+
+.panel-desplegable {
+  position: absolute;
+  top: calc(100% + 6px);
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  background: var(--superficie);
+  border: 1px solid var(--borde-card);
+  border-radius: var(--radio-card);
+  box-shadow: 0 10px 30px oklch(0.2 0.05 255 / 0.15);
+  max-height: 360px;
+  overflow-y: auto;
+  z-index: 30;
+}
+
+.panel-buscador .panel-desplegable {
+  left: 0;
+  right: 0;
+}
+
+.panel-desplegable a,
+.panel-desplegable-nada {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 7px;
+  color: var(--texto-principal);
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.panel-desplegable a:hover,
+.panel-desplegable a:focus {
+  background: var(--superficie-hover);
+  outline: none;
+}
+
+.panel-desplegable small,
+.panel-desplegable-nada {
+  color: var(--texto-secundario);
+}
+
+.panel-header-acciones {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.panel-header-icono {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--texto-secundario);
+  cursor: pointer;
+}
+
+.panel-header-icono:hover,
+.panel-header-icono[aria-expanded='true'],
+.panel-header-icono.active {
+  background: var(--superficie-hover);
   color: var(--texto-titulo);
+}
+
+.panel-header-icono svg {
+  width: 21px;
+  height: 21px;
+}
+
+.panel-header-icono .panel-nav-contador {
+  position: absolute;
+  top: 3px;
+  right: 2px;
+  min-width: 17px;
+  height: 17px;
+  font-size: 10px;
+  padding: 0 4px;
+  background: var(--contador);
+}
+
+.panel-notificaciones {
+  position: relative;
+}
+
+.panel-notificaciones .panel-desplegable {
+  right: 0;
+  width: 320px;
+}
+
+/* Las pestañas de la sección abierta, arriba del contenido. */
+.panel-subnav {
+  display: flex;
+  gap: 1.4rem;
+  overflow-x: auto;
+  padding: 0 26px;
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borde-card);
+}
+
+.panel-subnav a {
+  padding: 0.85rem 0 0.75rem;
+  color: var(--texto-secundario);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-bottom: 2px solid transparent;
+}
+
+.panel-subnav a:hover {
+  color: var(--texto-titulo);
+}
+
+.panel-subnav a.active {
+  color: var(--verde-exito-texto);
+  border-bottom-color: var(--verde-exito);
 }
 
 /* Las tres preferencias personales del encabezado: idioma, tema y densidad. Son elecciones
@@ -419,18 +749,62 @@ h2 {
   border: 0;
 }
 
-.panel-logout {
-  background: transparent;
-  border: 1px solid var(--rojo-peligro);
-  color: var(--rojo-peligro);
-  border-radius: 999px;
-  padding: 0.45rem 1rem;
-  cursor: pointer;
+.panel-content {
+  padding: 27px 26px;
+  flex: 1;
+  width: 100%;
+  max-width: 1540px;
 }
 
-.panel-content {
-  padding: 1.5rem;
-  flex: 1;
+/* El velo que cierra la barra en el teléfono. */
+.panel-velo {
+  display: none;
+}
+
+@media (max-width: 1100px) {
+  .panel-sidebar {
+    width: 210px;
+  }
+}
+
+@media (max-width: 760px) {
+  .panel-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 242px;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+  }
+
+  .panel-layout.menu-abierto .panel-sidebar {
+    transform: none;
+  }
+
+  .panel-layout.menu-abierto .panel-velo {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 19;
+    background: var(--velo-modal);
+  }
+
+  .panel-menu-movil {
+    display: inline-flex;
+  }
+
+  .panel-header {
+    padding: 0 16px;
+    gap: 0.5rem;
+  }
+
+  .panel-subnav {
+    padding: 0 16px;
+  }
+
+  .panel-content {
+    padding: 20px 16px;
+  }
 }
 
 .pantalla-cargando {
@@ -443,7 +817,7 @@ h2 {
 .onboarding-checklist {
   background: var(--superficie);
   border: 1px solid var(--borde-card);
-  border-radius: 12px;
+  border-radius: var(--radio-card);
   padding: 1.25rem 1.5rem;
   margin-bottom: 1.5rem;
 }
@@ -467,7 +841,7 @@ h2 {
 
 .onboarding-checklist-barra {
   background: var(--fondo-alt);
-  border-radius: 999px;
+  border-radius: 4px;
   height: 8px;
   margin: 0.75rem 0 1.1rem;
   overflow: hidden;
@@ -476,7 +850,7 @@ h2 {
 .onboarding-checklist-barra-relleno {
   background: var(--azul-medio);
   height: 100%;
-  border-radius: 999px;
+  border-radius: 4px;
   transition: width 0.3s ease;
 }
 
@@ -553,8 +927,9 @@ h2 {
 .metrica-card {
   background: var(--superficie);
   border: 1px solid var(--borde-card);
-  border-radius: 12px;
-  padding: 1.5rem;
+  border-radius: var(--radio-card);
+  box-shadow: var(--sombra-card);
+  padding: 1.1rem 1.2rem;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
@@ -585,14 +960,14 @@ h2 {
 
 .metrica-valor {
   font-family: var(--font-display);
-  font-size: 2rem;
-  font-weight: 700;
+  font-size: 27px;
+  font-weight: 750;
   color: var(--texto-titulo);
 }
 
 .metrica-label {
   color: var(--texto-secundario);
-  font-size: 0.9rem;
+  font-size: 12px;
 }
 
 /* ---------- Secciones del dashboard ---------- */
@@ -607,7 +982,7 @@ h2 {
 
 .dashboard-seccion-titulo {
   font-family: var(--font-display);
-  font-size: 1.15rem;
+  font-size: 15px;
   color: var(--texto-titulo);
   margin: 0;
 }
@@ -629,7 +1004,8 @@ h2 {
 .lista-tarjeta {
   background: var(--superficie);
   border: 1px solid var(--borde-card);
-  border-radius: 12px;
+  border-radius: var(--radio-card);
+  box-shadow: var(--sombra-card);
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
@@ -694,9 +1070,12 @@ h2 {
 .panel-filtros input,
 .panel-filtros select {
   font-family: var(--font-body);
-  padding: 0.55rem 0.8rem;
+  font-size: 13px;
+  padding: 0.5rem 0.75rem;
   border: 1px solid var(--borde-card);
-  border-radius: 8px;
+  border-radius: var(--radio-control);
+  background: var(--superficie);
+  color: var(--texto-principal);
 }
 
 .panel-filtros input {
@@ -729,7 +1108,7 @@ h2 {
   padding: 1.5rem;
   background: var(--superficie-hundida);
   border: 1px dashed var(--borde-card);
-  border-radius: 12px;
+  border-radius: var(--radio-card);
 }
 
 .estado-vacio-bloque .estado-vacio {
@@ -765,17 +1144,24 @@ h2 {
 
 .panel-tabla {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   background: var(--superficie);
-  border-radius: 12px;
+  border: 1px solid var(--borde-card);
+  border-radius: var(--radio-card);
+  box-shadow: var(--sombra-card);
   overflow: hidden;
+}
+
+.panel-tabla tbody tr:last-child td {
+  border-bottom: 0;
 }
 
 /* El alto y el tamaño de letra de cada renglón salen de la densidad que eligió la persona
    en el encabezado. Ver `src/context/PreferenciasVistaContext.jsx`. */
 .panel-tabla th,
 .panel-tabla td {
-  padding: var(--densidad-fila-y) 1rem;
+  padding: var(--densidad-fila-y) 10px;
   border-bottom: 1px solid var(--borde-card);
   text-align: left;
   font-size: var(--densidad-fila-texto);
@@ -787,7 +1173,11 @@ h2 {
 
 .panel-tabla th {
   background: var(--superficie-hundida);
-  color: var(--texto-titulo);
+  color: var(--texto-secundario);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 /* Los números se leen mucho peor cuando cada dígito tiene un ancho distinto: las columnas
@@ -797,12 +1187,19 @@ h2 {
 }
 
 .panel-tabla button {
-  background: transparent;
-  border: 1px solid var(--azul-medio);
-  color: var(--azul-medio-texto);
-  border-radius: 999px;
-  padding: 0.35rem 0.9rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde-card);
+  color: var(--texto-principal);
+  border-radius: var(--radio-control);
+  padding: 0.3rem 0.7rem;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
+}
+
+.panel-tabla button:hover:not(:disabled) {
+  background: var(--superficie-hover);
 }
 
 /* Las líneas de abajo de la celda de verificación de una Matrícula: quién la verificó, por qué
@@ -844,10 +1241,12 @@ h2 {
 
 .badge {
   display: inline-block;
-  padding: 0.25rem 0.7rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.4;
+  white-space: nowrap;
   background: var(--tono-neutro-fondo);
   color: var(--tono-neutro-texto);
 }
@@ -892,7 +1291,7 @@ h2 {
   align-self: flex-start;
   max-width: 70%;
   background: var(--fondo-alt);
-  border-radius: 12px;
+  border-radius: var(--radio-card);
   padding: 0.6rem 0.9rem;
 }
 
@@ -949,7 +1348,7 @@ h2 {
 
 .panel-comunicacion-lista-wrap {
   border: 1px solid var(--borde-card);
-  border-radius: 12px;
+  border-radius: var(--radio-card);
   overflow: hidden;
 }
 
@@ -1012,7 +1411,7 @@ h2 {
 .panel-comunicacion-hilo {
   background: var(--superficie);
   border: 1px solid var(--borde-card);
-  border-radius: 12px;
+  border-radius: var(--radio-card);
   padding: 1rem 1.25rem;
 }
 
@@ -1020,28 +1419,55 @@ h2 {
 
 .panel-kpis {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 1rem;
   margin-bottom: 1.5rem;
 }
 
 .panel-kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
   background: var(--superficie);
   border: 1px solid var(--borde-card);
-  border-radius: 12px;
-  padding: 1.1rem 1.25rem;
+  border-radius: var(--radio-card);
+  box-shadow: var(--sombra-card);
+  padding: 1rem 1.15rem;
+  color: var(--texto-principal);
+  text-decoration: none;
 }
 
 .panel-kpi-valor {
   font-family: var(--font-display);
   color: var(--texto-titulo);
-  font-size: 1.6rem;
-  font-weight: 700;
+  font-size: 27px;
+  font-weight: 750;
+  line-height: 1.15;
 }
 
 .panel-kpi-etiqueta {
   color: var(--texto-secundario);
-  font-size: 0.85rem;
+  font-size: 12px;
+  font-weight: 550;
+  order: -1;
+}
+
+.panel-kpi-enlace {
+  color: var(--azul-medio-texto);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.panel-kpi-critico .panel-kpi-valor {
+  color: var(--rojo-peligro-texto);
+}
+
+.panel-kpi-atencion .panel-kpi-valor {
+  color: var(--naranja-alerta-texto);
+}
+
+a.panel-kpi-card:hover {
+  border-color: var(--azul-medio);
 }
 
 /* Una tarjeta de total que además filtra. Un botón trae su propia apariencia —centrado, tipografía
@@ -1117,8 +1543,9 @@ button.panel-kpi-card[aria-pressed='true'] {
 
 .panel-modal {
   background: var(--superficie);
-  border-radius: 16px;
-  padding: 2rem;
+  border-radius: var(--radio-card);
+  box-shadow: 0 20px 50px oklch(0.2 0.05 255 / 0.3);
+  padding: 1.6rem;
   width: 100%;
   max-width: 560px;
   max-height: 90vh;
@@ -1313,7 +1740,7 @@ button.panel-kpi-card[aria-pressed='true'] {
 
 .panel-tabs {
   display: flex;
-  gap: 0.5rem;
+  gap: 1.2rem;
   border-bottom: 1px solid var(--borde-card);
   margin-bottom: 1.5rem;
   flex-wrap: wrap;
@@ -1325,24 +1752,26 @@ button.panel-kpi-card[aria-pressed='true'] {
 .panel-tab {
   background: none;
   border: none;
-  border-bottom: 3px solid transparent;
-  padding: 0.6rem 0.9rem;
+  border-bottom: 2px solid transparent;
+  padding: 0.7rem 0 0.65rem;
   cursor: pointer;
   color: var(--texto-secundario);
+  font-family: var(--font-body);
+  font-size: 13px;
   font-weight: 600;
   text-decoration: none;
   display: inline-block;
 }
 
 .panel-tab-activo {
-  color: var(--texto-titulo);
-  border-bottom-color: var(--azul-medio);
+  color: var(--verde-exito-texto);
+  border-bottom-color: var(--verde-exito);
 }
 
 .panel-resultado-calculo {
   background: var(--superficie);
   border: 1px solid var(--borde-card);
-  border-radius: 12px;
+  border-radius: var(--radio-card);
   padding: 1.25rem;
   margin-top: 1rem;
 }
@@ -1351,7 +1780,7 @@ button.panel-kpi-card[aria-pressed='true'] {
 .panel-card-ausencia {
   background: var(--superficie);
   border: 1px solid var(--borde-card);
-  border-radius: 12px;
+  border-radius: var(--radio-card);
   padding: 1.25rem;
   margin-bottom: 1rem;
 }
@@ -1359,7 +1788,7 @@ button.panel-kpi-card[aria-pressed='true'] {
 .panel-card-verificacion {
   background: var(--superficie);
   border: 1px solid var(--borde-card);
-  border-radius: 12px;
+  border-radius: var(--radio-card);
   padding: 1.25rem;
   margin-bottom: 1rem;
 }
@@ -1517,7 +1946,7 @@ button.panel-kpi-card[aria-pressed='true'] {
 
 .panel-guardia-card {
   background: var(--superficie);
-  border-radius: 12px;
+  border-radius: var(--radio-card);
   padding: 1rem 1.25rem;
   margin-bottom: 0.75rem;
   display: flex;
@@ -1566,22 +1995,6 @@ button.panel-kpi-card[aria-pressed='true'] {
   font-weight: 600;
 }
 
-/* Cuántos pedidos hay esperando, al lado de su enlace en el menú. No es un adorno: es lo que
-   hace que quien está de turno se entere sin tener esa pantalla abierta. Se dibuja sólo cuando
-   hay alguno, así que un menú sin nada urgente se ve exactamente como antes. */
-.panel-nav-contador {
-  display: inline-block;
-  min-width: 1.4rem;
-  margin-left: 0.4rem;
-  padding: 0.05rem 0.4rem;
-  border-radius: 999px;
-  background: var(--tono-critico-fondo);
-  color: var(--tono-critico-texto);
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-align: center;
-}
-
 .panel-filtros-tarjeta {
   display: flex;
   flex-wrap: wrap;
@@ -1589,7 +2002,7 @@ button.panel-kpi-card[aria-pressed='true'] {
   align-items: center;
   background: var(--superficie);
   border: 1px solid var(--borde-card);
-  border-radius: 12px;
+  border-radius: var(--radio-card);
   padding: 1rem 1.25rem;
   margin-bottom: 1.5rem;
 }
@@ -1606,7 +2019,7 @@ button.panel-kpi-card[aria-pressed='true'] {
 
 .informe-obra-social-preview {
   border: 1px solid var(--borde-card);
-  border-radius: 12px;
+  border-radius: var(--radio-card);
   padding: 1.5rem;
   margin: 1rem 0;
 }
@@ -1749,76 +2162,6 @@ button.panel-kpi-card[aria-pressed='true'] {
    roto y alguien tiene que actuar— y ese es exactamente el significado del rojo en este
    sistema. Quedan cinco colores, que son los cinco tonos de siempre, y quién cae en cada
    uno lo decide `lib/semaforoGuardia.js` y ninguna pantalla más. */
-
-/* --- La franja de excepciones --- */
-
-.estado-actual-franja {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-}
-
-/* Cada contador es un botón de verdad, no un cartel: al tocarlo filtra la grilla de abajo.
-   Por eso se resetea la apariencia de botón y se arma de cero. */
-.estado-actual-excepcion {
-  font-family: var(--font-body);
-  text-align: left;
-  background: var(--superficie);
-  border: 1px solid var(--borde-card);
-  border-left: 4px solid var(--tono-neutro-texto);
-  border-radius: 12px;
-  padding: 0.85rem 1rem;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-
-.estado-actual-excepcion:hover {
-  background: var(--superficie-hover);
-}
-
-.estado-actual-excepcion:focus-visible {
-  outline: 2px solid var(--azul-medio);
-  outline-offset: 2px;
-}
-
-/* El rojo aparece solo cuando algo está roto. Si todo fuera urgente, nada sería urgente. */
-.estado-actual-excepcion-critica {
-  border-left-color: var(--rojo-peligro);
-}
-
-.estado-actual-excepcion-critica .estado-actual-excepcion-valor {
-  color: var(--rojo-peligro-texto);
-}
-
-/* El contador que está filtrando ahora mismo se marca, para que nadie lea una grilla
-   filtrada creyendo que la está viendo entera. */
-.estado-actual-excepcion-activa {
-  background: var(--superficie-hundida);
-  border-color: var(--azul-medio);
-  box-shadow: inset 0 0 0 1px var(--azul-medio);
-}
-
-.estado-actual-excepcion-valor {
-  font-family: var(--font-display);
-  font-size: 1.9rem;
-  line-height: 1.1;
-  font-weight: 700;
-  color: var(--texto-titulo);
-  font-variant-numeric: tabular-nums;
-}
-
-.estado-actual-excepcion-etiqueta {
-  font-weight: 600;
-  color: var(--texto-principal);
-}
-
-.estado-actual-franja-vacia {
-  color: var(--texto-secundario);
-  margin-bottom: 1.5rem;
-}
 
 .estado-actual-filtro-activo {
   display: flex;
@@ -2048,7 +2391,7 @@ button.panel-kpi-card[aria-pressed='true'] {
   gap: 0.75rem;
   background: var(--superficie);
   border: 1px solid var(--azul-medio);
-  border-radius: 12px;
+  border-radius: var(--radio-card);
   box-shadow: var(--sombra-card);
   padding: 0.75rem 1rem;
   margin-top: 1rem;
@@ -2283,7 +2626,7 @@ button.panel-kpi-card[aria-pressed='true'] {
 .mapa-plantel {
   background: var(--superficie);
   border: 1px solid var(--borde-card);
-  border-radius: 12px;
+  border-radius: var(--radio-card);
   padding: 1rem;
   margin-bottom: 1.25rem;
   display: flex;
@@ -2312,7 +2655,7 @@ button.panel-kpi-card[aria-pressed='true'] {
   background: var(--tono-neutro-fondo);
   color: var(--tono-neutro-texto);
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--radio-control);
   padding: 0.25rem 0.7rem;
   font-family: var(--font-body);
   font-size: 0.8rem;

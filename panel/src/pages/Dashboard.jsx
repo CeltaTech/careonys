@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
+import { Cabecera } from '../components/ui/Cabecera';
 import { useAuth } from '../context/AuthContext';
 import { useModalidades } from '../context/ModalidadesContext';
 import { esAdminOSuperior } from '../lib/roles';
@@ -207,7 +208,7 @@ export function Dashboard() {
 
   return (
     <div>
-      <h1>{t.dashboard.titulo}</h1>
+      <Cabecera titulo={t.dashboard.titulo} />
 
       <div className="dashboard-seccion">
         <div className="dashboard-seccion-header">

@@ -6,6 +6,7 @@ import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { esAdminOSuperior } from '../../lib/roles';
 import { supabase } from '../../lib/supabaseClient';
 import { EstadoLista } from '../../components/layout/EstadoLista';
+import { Cabecera } from '../../components/ui/Cabecera';
 import { errorDeLaRespuesta, mensajeDeError } from '../../lib/errores';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -112,10 +113,9 @@ export function MarketplaceAuditoriaLegal() {
 
   return (
     <div>
-      <h1>{t.marketplace.auditoria_legal_titulo}</h1>
+      <Cabecera titulo={t.marketplace.auditoria_legal_titulo} />
 
       <h2>{t.marketplace.funciones_riesgo_titulo}</h2>
-      {!esAdmin && <p className="panel-explicacion">{t.marketplace.funciones_riesgo_solo_lectura}</p>}
 
       <EstadoLista
         estado={estadoFunciones}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
+import { Cabecera } from '../components/ui/Cabecera';
 import { useAuth } from '../context/AuthContext';
 import { useConfirmarDestructivo } from '../context/ConfirmacionContext';
 import { supabase } from '../lib/supabaseClient';
@@ -102,7 +103,7 @@ export function Alertas() {
 
   return (
     <div>
-      <h1>{t.alertas.titulo}</h1>
+      <Cabecera titulo={t.alertas.titulo} />
       {pendientesRojas > 0 && (
         <p className="panel-explicacion">
           <span className="badge badge-critico">

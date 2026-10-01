@@ -8,6 +8,7 @@ import { llamarApiContenidos } from '../../lib/apiContenidos';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
+import { Cabecera } from '../../components/ui/Cabecera';
 import { mensajeDeError } from '../../lib/errores';
 import { ContenidoDetalle } from './ContenidoDetalle';
 
@@ -53,14 +54,10 @@ export function ContenidoParaFamilias() {
 
   return (
     <div>
-      <h1>{t.contenidos.titulo}</h1>
+      <Cabecera titulo={t.contenidos.titulo}>
+        {puedeEscribir && <Button onClick={() => setCreandoNuevo(true)}>{t.contenidos.nuevo}</Button>}
+      </Cabecera>
       {estado === 'error' && error && <Alert variant="error">{error}</Alert>}
-
-      {puedeEscribir && (
-        <div className="panel-filtros">
-          <Button onClick={() => setCreandoNuevo(true)}>{t.contenidos.nuevo}</Button>
-        </div>
-      )}
 
       <EstadoLista
         estado={estado}

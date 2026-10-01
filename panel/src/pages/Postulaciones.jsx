@@ -7,6 +7,7 @@ import { useZonasCobertura } from '../hooks/useZonasCobertura';
 import { useOpcionesPostulacion } from '../hooks/useOpcionesPostulacion';
 import { useListaDeOpciones } from '../hooks/useListaDeOpciones';
 import { EstadoLista } from '../components/layout/EstadoLista';
+import { Cabecera } from '../components/ui/Cabecera';
 import { MapaDelPlantel } from '../components/mapa/MapaDelPlantel';
 import { usePlantelEnElMapa } from '../hooks/usePlantelEnElMapa';
 import { FiltroDeCatalogo } from '../components/layout/FiltroDeCatalogo';
@@ -68,7 +69,7 @@ export function Postulaciones() {
 
   return (
     <div>
-      <h1>{t.postulaciones.titulo}</h1>
+      <Cabecera titulo={t.postulaciones.titulo} />
 
       {/* Dónde está repartida hoy la gente que ya trabaja en la Prestadora. Es el mismo
           componente que usa la Solicitud, con los mismos números: no hay dos mapas. */}

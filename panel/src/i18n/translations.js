@@ -283,7 +283,6 @@ export const T = {
       telefono_confirmado: 'Se confirmó el teléfono de {{nombre}}.',
       pendientes_titulo: 'Números esperando habilitación',
       pendientes_vacio: 'No hay ningún número esperando.',
-      pendientes_vacio_ayuda: 'Cuando alguien cargue un número nuevo va a aparecer acá.',
     },
     auth: {
       titulo: 'Panel de Administración',
@@ -2021,7 +2020,6 @@ export const T = {
       // Ésta es la lista urgente: hay alguien parado en una puerta esperando una respuesta.
       pedidos_titulo: 'Esperando un código',
       pedidos_vacio: 'No hay nadie esperando un código',
-      pedidos_vacio_ayuda: 'Cuando un Asistente pida uno, va a aparecer acá solo.',
       momento_checkin: 'Llegada',
       momento_checkout: 'Salida',
       pedido_desde: 'Pidió a las',
@@ -2084,8 +2082,6 @@ export const T = {
     },
     facturacion: {
       titulo: 'Saldos pendientes',
-      aviso_titulo: 'El saldo es una resta, y esta pantalla avisa nada más',
-      aviso_texto: 'Lo que se reclama menos lo cobrado. Lo que se reclama es lo que informó el software de facturación de la Prestadora, más y menos las correcciones que se hayan anotado; mientras no se anote ningún comprobante, es lo que se mandó a facturar. Admite cobros parciales, y los cobros pueden anotarse acá o entrar desde afuera: un archivo importado, el sistema contable de la Prestadora, una pasarela de pago. Como un número puede venir de otro sistema, al lado de cada saldo dice de dónde salió y de cuándo es. {{producto}} no emite comprobantes fiscales y no decide nada: si a una Familia se le sigue prestando el Servicio, lo resuelve una persona.',
       col_periodo: 'Período',
       col_familia: 'Familia',
       col_facturado: 'Facturado',
@@ -2153,9 +2149,6 @@ export const T = {
       financiador_familia: 'La Familia',
       financiador_obra_social: 'Obra social',
       financiador_otro: 'Otro',
-      cobranza_externa_titulo: 'La cobranza la lleva otro software',
-      cobranza_externa_texto:
-        'El seguimiento de la cobranza lo hace otro software. Acá se muestra lo que ese software informa. Se cambia en Configuración.',
       restricciones_titulo: 'Familias con restricción',
       restricciones_vacio: 'Ninguna Familia tiene restricción.',
       col_aviso_fecha: 'Fecha',
@@ -2199,8 +2192,6 @@ export const T = {
     },
     pagos_asistentes: {
       titulo: 'Pagos a Asistentes',
-      aviso_titulo: 'Es una cuenta interna, no un comprobante',
-      aviso_texto: '{{producto}} no emite facturas ni recibos con validez impositiva. Cada liquidación queda guardada con los valores del día en que se generó, y desde ese momento no cambia sola aunque después cambien los datos del Asistente o los conceptos.',
       tabs: {
         liquidaciones: 'Liquidaciones',
         conceptos: 'Conceptos',
@@ -2222,7 +2213,6 @@ export const T = {
       generar: 'Generar el mes',
       generando: 'Generando…',
       confirmar_generar: 'Se va a generar la liquidación de cada Asistente con guardias cerradas en el mes elegido. Las liquidaciones pendientes de ese mes se rehacen con los valores de hoy; las que ya figuran pagadas no se tocan.',
-      solo_administracion: 'Generar liquidaciones y registrar pagos es tarea de la administración de la Prestadora.',
       resultado_generadas: 'Liquidaciones generadas: {n}.',
       resultado_rehechas: 'Liquidaciones que ya existían y se rehicieron: {n}.',
       resultado_ya_pagadas: 'No se tocaron por figurar ya pagadas ({n}):',
@@ -2640,7 +2630,6 @@ export const T = {
       rol_admin_prestadora: 'Admin',
       rol_coordinador: 'Coordinador',
       rol_superadmin: 'Superadmin',
-      aviso_password_temporal: 'La cuenta se crea con una contraseña provisoria, que hace falta comunicarle a la persona.',
       cuenta_creada_titulo: 'Cuenta creada',
       password_temporal: 'Contraseña provisoria',
       coordinador_que_cubre: 'Coordinador que lo cubre',
@@ -2778,7 +2767,6 @@ export const T = {
       funciones_riesgo_col_activa: 'Encendida',
       funciones_riesgo_col_aviso: 'Última advertencia',
       funciones_riesgo_sin_documento: 'Este país no tiene advertencia escrita para esta función',
-      funciones_riesgo_solo_lectura: 'Encender o apagar estas funciones es de la administración de la Prestadora.',
       auditoria_legal_registro_titulo: 'Lo que se avisó',
       // Las formas de cobro que arma la Prestadora. No hay una lista de formas para elegir: la
       // forma sale de combinar las piezas, y por eso la pantalla pregunta por las piezas.
@@ -3094,7 +3082,6 @@ export const T = {
       telefono_confirmado: 'The phone of {{nombre}} was confirmed.',
       pendientes_titulo: 'Phone numbers awaiting approval',
       pendientes_vacio: 'No phone number is waiting.',
-      pendientes_vacio_ayuda: 'When someone enters a new number it will appear here.',
     },
     auth: {
       titulo: 'Admin Panel',
@@ -4806,7 +4793,6 @@ export const T = {
       titulo: 'Shift handover',
       pedidos_titulo: 'Waiting for a code',
       pedidos_vacio: 'Nobody is waiting for a code',
-      pedidos_vacio_ayuda: 'When an Assistant asks for one, it will show up here on its own.',
       momento_checkin: 'Arrival',
       momento_checkout: 'Departure',
       pedido_desde: 'Asked at',
@@ -4867,8 +4853,6 @@ export const T = {
     },
     facturacion: {
       titulo: 'Outstanding balances',
-      aviso_titulo: 'The balance is a subtraction, and this screen only reports it',
-      aviso_texto: 'What is claimed minus what was collected. What is claimed is the amount reported by the provider’s own billing software, plus or minus any corrections recorded; until a document is recorded, it is what was sent for billing. Partial payments are supported, and payments may be entered here or arrive from outside: an imported file, the provider’s own accounting system, a payment gateway. Because a figure may come from another system, every balance states where it came from and how recent it is. {{producto}} issues no tax documents and decides nothing: whether a Family keeps receiving the Service is for a person to settle.',
       col_periodo: 'Period',
       col_familia: 'Family',
       col_facturado: 'Billed',
@@ -4936,9 +4920,6 @@ export const T = {
       financiador_familia: 'The Family',
       financiador_obra_social: 'Health insurer',
       financiador_otro: 'Other',
-      cobranza_externa_titulo: 'Collections are handled by other software',
-      cobranza_externa_texto:
-        'Collections are followed by other software. What is shown here is what that software reports. This is changed in Settings.',
       restricciones_titulo: 'Families with a restriction',
       restricciones_vacio: 'No family has a restriction.',
       col_aviso_fecha: 'Date',
@@ -4982,8 +4963,6 @@ export const T = {
     },
     pagos_asistentes: {
       titulo: 'Assistant pay',
-      aviso_titulo: 'This is an internal calculation, not a tax document',
-      aviso_texto: '{{producto}} issues no invoices or tax-valid receipts. Each settlement is stored with the values in force on the day it was generated, and from that moment it does not change by itself even if the Assistant profile or the concepts change later.',
       tabs: {
         liquidaciones: 'Settlements',
         conceptos: 'Concepts',
@@ -5005,7 +4984,6 @@ export const T = {
       generar: 'Generate the month',
       generando: 'Generating…',
       confirmar_generar: 'A settlement will be generated for every Assistant with closed shifts in the chosen month. Settlements of that month still awaiting payment are rebuilt with the values in force today; the ones already marked as paid are left untouched.',
-      solo_administracion: 'Generating settlements and recording payments is a task for the Provider administration.',
       resultado_generadas: 'Settlements generated: {n}.',
       resultado_rehechas: 'Settlements that already existed and were rebuilt: {n}.',
       resultado_ya_pagadas: 'Left untouched because they are already paid ({n}):',
@@ -5423,7 +5401,6 @@ export const T = {
       rol_admin_prestadora: 'Admin',
       rol_coordinador: 'Coordinator',
       rol_superadmin: 'Superadmin',
-      aviso_password_temporal: 'The account is created with a temporary password, which has to be shared with the person directly.',
       cuenta_creada_titulo: 'Account created',
       password_temporal: 'Temporary password',
       coordinador_que_cubre: 'Covering Coordinator',
@@ -5556,7 +5533,6 @@ export const T = {
       funciones_riesgo_col_activa: 'Turned on',
       funciones_riesgo_col_aviso: 'Last warning',
       funciones_riesgo_sin_documento: 'This country has no written warning for this feature',
-      funciones_riesgo_solo_lectura: 'Turning these features on or off belongs to the administration of the Provider.',
       auditoria_legal_registro_titulo: 'What was warned',
       formas_titulo: 'Billing arrangements',
       formas_nueva: 'New billing arrangement',
@@ -5866,7 +5842,6 @@ export const T = {
       telefono_confirmado: 'O telefone de {{nombre}} foi confirmado.',
       pendientes_titulo: 'Números aguardando liberação',
       pendientes_vacio: 'Nenhum número está aguardando.',
-      pendientes_vacio_ayuda: 'Quando alguém cadastrar um número novo ele vai aparecer aqui.',
     },
     auth: {
       titulo: 'Painel de Administração',
@@ -7578,7 +7553,6 @@ export const T = {
       titulo: 'Passagem de plantão',
       pedidos_titulo: 'Aguardando um código',
       pedidos_vacio: 'Não há ninguém aguardando um código',
-      pedidos_vacio_ayuda: 'Quando um Assistente pedir um, ele vai aparecer aqui sozinho.',
       momento_checkin: 'Chegada',
       momento_checkout: 'Saída',
       pedido_desde: 'Pediu às',
@@ -7639,8 +7613,6 @@ export const T = {
     },
     facturacion: {
       titulo: 'Saldos pendentes',
-      aviso_titulo: 'O saldo é uma subtração, e esta tela apenas informa',
-      aviso_texto: 'O que é cobrado menos o que foi recebido. O que é cobrado é o valor informado pelo software de faturamento da Prestadora, mais ou menos as correções anotadas; enquanto nenhum documento for anotado, é o que foi enviado para faturar. Aceita pagamentos parciais, e os recebimentos podem ser anotados aqui ou vir de fora: um arquivo importado, o sistema contábil da prestadora, um meio de pagamento eletrônico. Como um valor pode vir de outro sistema, ao lado de cada saldo consta de onde ele saiu e de quando é. {{producto}} não emite documentos fiscais e não decide nada: se o Serviço continua a ser prestado a uma Família, quem resolve é uma pessoa.',
       col_periodo: 'Período',
       col_familia: 'Família',
       col_facturado: 'Faturado',
@@ -7708,9 +7680,6 @@ export const T = {
       financiador_familia: 'A Família',
       financiador_obra_social: 'Plano de saúde',
       financiador_otro: 'Outro',
-      cobranza_externa_titulo: 'A cobrança é feita por outro software',
-      cobranza_externa_texto:
-        'O acompanhamento da cobrança é feito por outro software. Aqui se mostra o que esse software informa. Isso se altera em Configuração.',
       restricciones_titulo: 'Famílias com restrição',
       restricciones_vacio: 'Nenhuma Família tem restrição.',
       col_aviso_fecha: 'Data',
@@ -7754,8 +7723,6 @@ export const T = {
     },
     pagos_asistentes: {
       titulo: 'Pagamentos aos Assistentes',
-      aviso_titulo: 'É uma conta interna, não um comprovante',
-      aviso_texto: 'A {{producto}} não emite notas fiscais nem recibos com validade fiscal. Cada acerto fica guardado com os valores do dia em que foi gerado e, a partir desse momento, não muda sozinho mesmo que depois mudem os dados do Assistente ou os conceitos.',
       tabs: {
         liquidaciones: 'Acertos',
         conceptos: 'Conceitos',
@@ -7777,7 +7744,6 @@ export const T = {
       generar: 'Gerar o mês',
       generando: 'Gerando…',
       confirmar_generar: 'Será gerado o acerto de cada Assistente com plantões encerrados no mês escolhido. Os acertos desse mês que ainda aguardam pagamento são refeitos com os valores de hoje; os que já constam como pagos não são alterados.',
-      solo_administracion: 'Gerar acertos e registrar pagamentos é tarefa da administração da Prestadora.',
       resultado_generadas: 'Acertos gerados: {n}.',
       resultado_rehechas: 'Acertos que já existiam e foram refeitos: {n}.',
       resultado_ya_pagadas: 'Não foram alterados por já constarem como pagos ({n}):',
@@ -8195,7 +8161,6 @@ export const T = {
       rol_admin_prestadora: 'Admin',
       rol_coordinador: 'Coordenador',
       rol_superadmin: 'Superadmin',
-      aviso_password_temporal: 'A conta é criada com uma senha provisória, que precisa ser informada diretamente à pessoa.',
       cuenta_creada_titulo: 'Conta criada',
       password_temporal: 'Senha provisória',
       coordinador_que_cubre: 'Coordenador que o cobre',
@@ -8328,7 +8293,6 @@ export const T = {
       funciones_riesgo_col_activa: 'Ligada',
       funciones_riesgo_col_aviso: 'Última advertência',
       funciones_riesgo_sin_documento: 'Este país não tem advertência escrita para esta função',
-      funciones_riesgo_solo_lectura: 'Ligar ou desligar estas funções é da administração da Prestadora.',
       auditoria_legal_registro_titulo: 'O que foi advertido',
       formas_titulo: 'Formas de cobrança',
       formas_nueva: 'Nova forma de cobrança',

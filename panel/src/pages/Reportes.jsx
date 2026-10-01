@@ -5,6 +5,7 @@ import { useFiltros } from '../hooks/useFiltros';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
+import { Cabecera } from '../components/ui/Cabecera';
 import { mensajeDeError } from '../lib/errores';
 import {
   SIGNOS_VITALES,
@@ -94,7 +95,7 @@ export function Reportes() {
 
   return (
     <div>
-      <h1>{t.reportes.titulo}</h1>
+      <Cabecera titulo={t.reportes.titulo} />
       <div className="panel-filtros">
         <label>
           {t.reportes.desde}{' '}

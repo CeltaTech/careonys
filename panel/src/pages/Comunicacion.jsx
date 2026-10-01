@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
+import { Cabecera } from '../components/ui/Cabecera';
 import { useAuth } from '../context/AuthContext';
 import { esAdminOSuperior } from '../lib/roles';
 import { supabase } from '../lib/supabaseClient';
@@ -138,7 +139,7 @@ export function Comunicacion() {
 
   return (
     <div>
-      <h1>{t.comunicacion.titulo}</h1>
+      <Cabecera titulo={t.comunicacion.titulo} />
 
       {mensajeWhatsapp && <Alert variant="error">{mensajeWhatsapp}</Alert>}
 

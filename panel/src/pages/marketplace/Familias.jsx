@@ -4,6 +4,7 @@ import { useLocale } from '../../i18n/LocaleContext';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
+import { Cabecera } from '../../components/ui/Cabecera';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 import { llamarApiMarketplace as llamarApi } from '../../lib/apiMarketplace';
@@ -167,13 +168,7 @@ export function MarketplaceFamilias() {
 
   return (
     <div>
-      <h1>{t.marketplace.familias_titulo}</h1>
-
-      {mensajeCanje && <Alert variant="success">{mensajeCanje}</Alert>}
-      {error && <Alert variant="error">{error}</Alert>}
-
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h2>{t.marketplace.canjear_qr_titulo}</h2>
+      <Cabecera titulo={t.marketplace.familias_titulo}>
         {!escaneando && (
           <Button
             onClick={() => {
@@ -185,13 +180,20 @@ export function MarketplaceFamilias() {
             {t.marketplace.canjear_qr_iniciar}
           </Button>
         )}
-        {escaneando && (
+      </Cabecera>
+
+      {mensajeCanje && <Alert variant="success">{mensajeCanje}</Alert>}
+      {error && <Alert variant="error">{error}</Alert>}
+
+      {escaneando && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          <h2>{t.marketplace.canjear_qr_titulo}</h2>
           <div>
             <div id={LECTOR_ID} style={{ width: '100%', maxWidth: 320, borderRadius: '12px', overflow: 'hidden' }} />
             <Button variant="secondary" onClick={() => setEscaneando(false)}>{t.comun.cancelar}</Button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <EstadoLista estado={estado} error={null} vacio={estado === 'listo' && accesos.length === 0} recargar={recargar}>
         <table className="panel-tabla">

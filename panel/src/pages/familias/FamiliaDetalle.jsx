@@ -10,6 +10,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
+import { Cabecera } from '../../components/ui/Cabecera';
 import { PrestacionesPaciente } from './PrestacionesPaciente';
 import { EditarPacienteModal } from './EditarPacienteModal';
 import { NuevoPacienteModal } from './NuevoPacienteModal';
@@ -103,6 +104,7 @@ export function FamiliaDetalle() {
   const [quitandoUsuarioId, setQuitandoUsuarioId] = useState(null);
   const [reenviandoUsuarioId, setReenviandoUsuarioId] = useState(null);
   const [mensajeReenvio, setMensajeReenvio] = useState(null);
+  const [tab, setTab] = useState('contacto');
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -253,245 +255,280 @@ export function FamiliaDetalle() {
   if (estado === 'no_encontrado') return <p className="estado-vacio">{t.comun.no_encontrado}</p>;
   if (estado === 'error') return <p className="estado-vacio">{error || t.comun.error_generico}</p>;
 
+  // Una pestaña por sección, con el mismo texto que antes llevaba el título de cada una.
+  const pestanas = [
+    ['contacto', t.familias.contacto],
+    ['pacientes', t.familias.pacientes],
+    ['circulo', t.familias.circulo.titulo],
+    ['guardias', t.familias.guardias_activas],
+    ['reportes', t.familias.historial_reportes],
+    ['alertas', t.familias.alertas_activas],
+  ];
+
   return (
     <div>
-      <button className="link-volver" onClick={() => navigate('/familias')}><span aria-hidden="true">←</span> {t.familias.volver_a_familias}</button>
-      <h1>{familia.solicitudes?.nombre || '—'}</h1>
+      <Cabecera titulo={familia.solicitudes?.nombre || '—'}>
+        <button className="link-volver" onClick={() => navigate('/familias')}><span aria-hidden="true">←</span> {t.familias.volver_a_familias}</button>
+      </Cabecera>
 
-      <h2>{t.familias.contacto}</h2>
-      {errorContacto && <Alert variant="error">{errorContacto}</Alert>}
-      {contactoGuardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
-      {mensajeReenvio && <Alert variant={mensajeReenvio.tipo}>{mensajeReenvio.texto}</Alert>}
-      {formContacto && (
-        <>
-          <FormField label={t.familias.col_nombre} name="nombre_contacto" value={formContacto.nombre} onChange={(e) => setCampoContacto('nombre', e.target.value)} disabled={!puedeEditarFamilia} />
-          <FormField label={t.familias.col_telefono} name="telefono_contacto" value={formContacto.telefono} onChange={(e) => setCampoContacto('telefono', e.target.value)} disabled={!puedeEditarFamilia} />
-          {formContacto.telefono && (
-            <p className="panel-explicacion">
-              <a href={linkWhatsapp(formContacto.telefono)} target="_blank" rel="noreferrer">{t.familias.abrir_whatsapp}</a>
-            </p>
-          )}
-          <FormField label={t.familias.col_email} name="email_contacto" type="email" value={formContacto.email} onChange={(e) => setCampoContacto('email', e.target.value)} disabled={!puedeEditarFamilia} />
-          <FormField label={t.familias.col_localidad} name="localidad_contacto" value={formContacto.localidad} onChange={(e) => setCampoContacto('localidad', e.target.value)} disabled={!puedeEditarFamilia} />
-          <FormField label={t.familias.plan} name="plan_contacto" value={formContacto.plan} onChange={(e) => setCampoContacto('plan', e.target.value)} disabled={!puedeEditarFamilia} />
-          {/* Lo acordado con esta Familia pisa el plazo general de la Prestadora. Vacío quiere
-              decir que no se acordó nada distinto, no que pague el mismo día. */}
-          <FormField
-            label={t.familias.plazo_de_pago}
-            name="dias_hasta_el_vencimiento"
-            type="number"
-            min="0"
-            max={PLAZO_MAXIMO_EN_DIAS}
-            value={formContacto.dias_hasta_el_vencimiento}
-            onChange={(e) => setCampoContacto('dias_hasta_el_vencimiento', e.target.value)}
-            disabled={!puedeEditarFamilia}
-          />
-          {/* A quién se le reclama lo que se le factura a esta Familia. Vacío es la Familia, que
-              es lo corriente. Cada factura se lleva este dato copiado el día que se genera, así
-              que cambiarlo acá no toca ninguna factura ya emitida. */}
-          <FormField
-            label={t.familias.financiador}
-            name="financiador_tipo"
-            type="select"
-            value={formContacto.financiador_tipo}
-            onChange={(e) => setCampoContacto('financiador_tipo', e.target.value)}
-            disabled={!puedeEditarFamilia}
+      <div className="panel-tabs" role="tablist">
+        {pestanas.map(([tabId, titulo]) => (
+          <button
+            key={tabId}
+            type="button"
+            role="tab"
+            aria-selected={tab === tabId}
+            className={`panel-tab ${tab === tabId ? 'panel-tab-activo' : ''}`}
+            onClick={() => setTab(tabId)}
           >
-            <option value="">{t.familias.financiador_familia}</option>
-            {FINANCIADORES_POSIBLES.filter((f) => f !== FINANCIADORES.FAMILIA).map((f) => (
-              <option key={f} value={f}>{traducirValor(t.familias, `financiador_${f}`)}</option>
-            ))}
-          </FormField>
-          {/* Quién paga se elige del Padrón y no se teclea: un nombre escrito a mano crea un ente
-              nuevo que no existe, y la misma obra social terminaría escrita de cien maneras.
+            {titulo}
+          </button>
+        ))}
+      </div>
 
-              Se elige siempre, también cuando paga la Familia: ahí el Pagador es alguien de la
-              Familia, y cuál es no se adivina. */}
-          <SelectorDeLegajo
-            name="pagador_legajo_id"
-            label={t.familias.pagador_legajo}
-            valor={formContacto.pagador_legajo_id}
-            alElegir={(legajoId) => setCampoContacto('pagador_legajo_id', legajoId)}
-            deshabilitado={!puedeEditarFamilia}
-          />
-          {/* Elegir el Legajo no convierte a nadie en Pagador: lo convierte haber firmado la
-              obligación de pagar. Acá abajo se ve si esa firma está y qué papeles faltan, en el
-              mismo momento en que se lo elige. Avisa, no bloquea.
+      {/* El aviso del reenvío queda afuera de las pestañas: se reenvía desde Contacto y desde el
+          círculo, y tiene que verse en las dos. */}
+      {mensajeReenvio && <Alert variant={mensajeReenvio.tipo}>{mensajeReenvio.texto}</Alert>}
 
-              Aparece junto al selector y siempre, pague quien pague: el Pagador firma en todos los
-              casos, y quien arma la contratación tiene que ver acá mismo si esa firma está. */}
-          {puedeEditarFamilia && (
-            <EstadoDelPagador familiaId={familia.id} puedeRegistrar={puedeRegistrarConsentimiento} />
-          )}
-          <dl className="panel-detalle-lista">
-            <dt>{t.familias.col_fecha_alta}</dt>
-            <dd>{new Date(familia.created_at).toLocaleDateString(locale)}</dd>
-          </dl>
-          <Button onClick={guardarContacto} disabled={guardandoContacto || !puedeEditarFamilia}>
-            {guardandoContacto ? t.comun.guardando : t.comun.guardar}
-          </Button>{' '}
-          {puedeEditarFamilia && (
-            <Button variant="secondary" onClick={() => reenviarInvitacion(familia.id)} disabled={reenviandoUsuarioId === familia.id}>
-              {reenviandoUsuarioId === familia.id ? t.comun.reenviando_invitacion : t.comun.reenviar_invitacion}
-            </Button>
-          )}
-        </>
-      )}
+      <div className="panel-tab-contenido">
+        {tab === 'contacto' && (
+          <>
+            {errorContacto && <Alert variant="error">{errorContacto}</Alert>}
+            {contactoGuardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
+            {formContacto && (
+              <>
+                <FormField label={t.familias.col_nombre} name="nombre_contacto" value={formContacto.nombre} onChange={(e) => setCampoContacto('nombre', e.target.value)} disabled={!puedeEditarFamilia} />
+                <FormField label={t.familias.col_telefono} name="telefono_contacto" value={formContacto.telefono} onChange={(e) => setCampoContacto('telefono', e.target.value)} disabled={!puedeEditarFamilia} />
+                {formContacto.telefono && (
+                  <p className="panel-explicacion">
+                    <a href={linkWhatsapp(formContacto.telefono)} target="_blank" rel="noreferrer">{t.familias.abrir_whatsapp}</a>
+                  </p>
+                )}
+                <FormField label={t.familias.col_email} name="email_contacto" type="email" value={formContacto.email} onChange={(e) => setCampoContacto('email', e.target.value)} disabled={!puedeEditarFamilia} />
+                <FormField label={t.familias.col_localidad} name="localidad_contacto" value={formContacto.localidad} onChange={(e) => setCampoContacto('localidad', e.target.value)} disabled={!puedeEditarFamilia} />
+                <FormField label={t.familias.plan} name="plan_contacto" value={formContacto.plan} onChange={(e) => setCampoContacto('plan', e.target.value)} disabled={!puedeEditarFamilia} />
+                {/* Lo acordado con esta Familia pisa el plazo general de la Prestadora. Vacío quiere
+                    decir que no se acordó nada distinto, no que pague el mismo día. */}
+                <FormField
+                  label={t.familias.plazo_de_pago}
+                  name="dias_hasta_el_vencimiento"
+                  type="number"
+                  min="0"
+                  max={PLAZO_MAXIMO_EN_DIAS}
+                  value={formContacto.dias_hasta_el_vencimiento}
+                  onChange={(e) => setCampoContacto('dias_hasta_el_vencimiento', e.target.value)}
+                  disabled={!puedeEditarFamilia}
+                />
+                {/* A quién se le reclama lo que se le factura a esta Familia. Vacío es la Familia, que
+                    es lo corriente. Cada factura se lleva este dato copiado el día que se genera, así
+                    que cambiarlo acá no toca ninguna factura ya emitida. */}
+                <FormField
+                  label={t.familias.financiador}
+                  name="financiador_tipo"
+                  type="select"
+                  value={formContacto.financiador_tipo}
+                  onChange={(e) => setCampoContacto('financiador_tipo', e.target.value)}
+                  disabled={!puedeEditarFamilia}
+                >
+                  <option value="">{t.familias.financiador_familia}</option>
+                  {FINANCIADORES_POSIBLES.filter((f) => f !== FINANCIADORES.FAMILIA).map((f) => (
+                    <option key={f} value={f}>{traducirValor(t.familias, `financiador_${f}`)}</option>
+                  ))}
+                </FormField>
+                {/* Quién paga se elige del Padrón y no se teclea: un nombre escrito a mano crea un ente
+                    nuevo que no existe, y la misma obra social terminaría escrita de cien maneras.
 
-      <h2>{t.familias.pacientes}</h2>
-      {familia.pacientes?.length ? (
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.familias.col_nombre}</th>
-              <th>{t.familias.fecha_nacimiento}</th>
-              <th>{t.familias.nivel_complejidad}</th>
-              <th>{t.familias.domicilio}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {familia.pacientes.map((p) => (
-              <tr key={p.id}>
-                <td>{p.nombre}</td>
-                <td>{p.fecha_nacimiento || '—'}</td>
-                <td>{p.nivel_complejidad || '—'}</td>
-                <td>{p.domicilio || '—'}</td>
-                <td>
-                  {puedeEditarPaciente && (
-                    <>
-                      <Button variant="secondary" onClick={() => setPacienteAEditar(p)}>
-                        {t.comun.editar}
-                      </Button>{' '}
-                    </>
-                  )}
-                  <Button variant="secondary" onClick={() => setPacienteSeleccionado(p)}>
-                    {t.prestaciones.titulo}
-                  </Button>{' '}
-                  <Button variant="secondary" onClick={() => setPacienteParaVitales(p)}>
-                    {t.vitales_autorizacion.titulo}
-                  </Button>{' '}
-                  <Button variant="secondary" onClick={() => setPacienteParaDomicilios(p)}>
-                    {t.domicilios_temporales.titulo}
-                  </Button>{' '}
-                  <Button variant="secondary" onClick={() => setPacienteParaEquipo(p)}>
-                    {t.equipo_paciente.titulo}
+                    Se elige siempre, también cuando paga la Familia: ahí el Pagador es alguien de la
+                    Familia, y cuál es no se adivina. */}
+                <SelectorDeLegajo
+                  name="pagador_legajo_id"
+                  label={t.familias.pagador_legajo}
+                  valor={formContacto.pagador_legajo_id}
+                  alElegir={(legajoId) => setCampoContacto('pagador_legajo_id', legajoId)}
+                  deshabilitado={!puedeEditarFamilia}
+                />
+                {/* Elegir el Legajo no convierte a nadie en Pagador: lo convierte haber firmado la
+                    obligación de pagar. Acá abajo se ve si esa firma está y qué papeles faltan, en el
+                    mismo momento en que se lo elige. Avisa, no bloquea.
+
+                    Aparece junto al selector y siempre, pague quien pague: el Pagador firma en todos los
+                    casos, y quien arma la contratación tiene que ver acá mismo si esa firma está. */}
+                {puedeEditarFamilia && (
+                  <EstadoDelPagador familiaId={familia.id} puedeRegistrar={puedeRegistrarConsentimiento} />
+                )}
+                <dl className="panel-detalle-lista">
+                  <dt>{t.familias.col_fecha_alta}</dt>
+                  <dd>{new Date(familia.created_at).toLocaleDateString(locale)}</dd>
+                </dl>
+                <Button onClick={guardarContacto} disabled={guardandoContacto || !puedeEditarFamilia}>
+                  {guardandoContacto ? t.comun.guardando : t.comun.guardar}
+                </Button>{' '}
+                {puedeEditarFamilia && (
+                  <Button variant="secondary" onClick={() => reenviarInvitacion(familia.id)} disabled={reenviandoUsuarioId === familia.id}>
+                    {reenviandoUsuarioId === familia.id ? t.comun.reenviando_invitacion : t.comun.reenviar_invitacion}
                   </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <p className="estado-vacio">{t.familias.sin_pacientes}</p>
-      )}
-      {puedeEditarPaciente && (
-        <Button variant="secondary" onClick={() => setMostrarNuevoPaciente(true)}>
-          {t.familias.agregar_paciente}
-        </Button>
-      )}
+                )}
+              </>
+            )}
+          </>
+        )}
 
-      <h2>{t.familias.circulo.titulo}</h2>
-      {/* La instrucción cargada y todavía sin firmar es lo primero que hay que ver: mientras
-          no esté firmada, lo que hay es un pedido anotado, no una autorización. Los dos
-          caminos de cierre están acá al lado —imprimir el papel, o registrar que ya volvió
-          firmado—, porque son lo único que queda por hacer. */}
-      {instruccionPendiente && (
-        <Alert variant="warning">
-          {con(t.familias.circulo.instruccion_pendiente, {
-            fecha: new Date(instruccionPendiente.created_at).toLocaleDateString(locale),
-          })}{' '}
-          <Button variant="secondary" onClick={() => setDocumentoAVer(instruccionPendiente)}>
-            {t.familias.circulo.ver_documento}
-          </Button>{' '}
-          {puedeEditarFamilia && (
-            <Button variant="secondary" onClick={() => setPapelAConfirmar(instruccionPendiente)}>
-              {t.familias.circulo.registrar_papel}
-            </Button>
-          )}
-        </Alert>
-      )}
-      {!instruccionPendiente && ultimaInstruccion && (
-        <p className="panel-explicacion">
-          {con(t.familias.circulo.ultima_instruccion, {
-            fecha: new Date(ultimaInstruccion.cerrada_en || ultimaInstruccion.created_at).toLocaleDateString(locale),
-            como: t.familias.circulo[`cerrada_${ultimaInstruccion.cerrada_como}`] || '',
-          })}
-        </p>
-      )}
+        {tab === 'pacientes' && (
+          <>
+            {familia.pacientes?.length ? (
+              <table className="panel-tabla">
+                <thead>
+                  <tr>
+                    <th>{t.familias.col_nombre}</th>
+                    <th>{t.familias.fecha_nacimiento}</th>
+                    <th>{t.familias.nivel_complejidad}</th>
+                    <th>{t.familias.domicilio}</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {familia.pacientes.map((p) => (
+                    <tr key={p.id}>
+                      <td>{p.nombre}</td>
+                      <td>{p.fecha_nacimiento || '—'}</td>
+                      <td>{p.nivel_complejidad || '—'}</td>
+                      <td>{p.domicilio || '—'}</td>
+                      <td>
+                        {puedeEditarPaciente && (
+                          <>
+                            <Button variant="secondary" onClick={() => setPacienteAEditar(p)}>
+                              {t.comun.editar}
+                            </Button>{' '}
+                          </>
+                        )}
+                        <Button variant="secondary" onClick={() => setPacienteSeleccionado(p)}>
+                          {t.prestaciones.titulo}
+                        </Button>{' '}
+                        <Button variant="secondary" onClick={() => setPacienteParaVitales(p)}>
+                          {t.vitales_autorizacion.titulo}
+                        </Button>{' '}
+                        <Button variant="secondary" onClick={() => setPacienteParaDomicilios(p)}>
+                          {t.domicilios_temporales.titulo}
+                        </Button>{' '}
+                        <Button variant="secondary" onClick={() => setPacienteParaEquipo(p)}>
+                          {t.equipo_paciente.titulo}
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className="estado-vacio">{t.familias.sin_pacientes}</p>
+            )}
+            {puedeEditarPaciente && (
+              <Button variant="secondary" onClick={() => setMostrarNuevoPaciente(true)}>
+                {t.familias.agregar_paciente}
+              </Button>
+            )}
+          </>
+        )}
 
-      {estadoCirculo === 'cargando' && <p className="estado-cargando">{t.comun.cargando}</p>}
-      {estadoCirculo === 'error' && <p className="estado-vacio">{errorCirculo || t.comun.error_generico}</p>}
-      {estadoCirculo === 'vacio' && <p className="estado-vacio">{t.familias.circulo.sin_miembros}</p>}
-      {estadoCirculo === 'listo' && (
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.familias.circulo.col_nombre}</th>
-              <th>{t.familias.circulo.col_email}</th>
-              <th>{t.familias.circulo.col_que_ve}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {circulo.map((m) => (
-              <tr key={m.usuarioId}>
-                <td>{m.nombre || '—'}</td>
-                <td>{m.email || '—'}</td>
-                <td>{resumenDeAccesos(m.accesos, t)}</td>
-                <td>
-                  <Button
-                    variant="secondary"
-                    onClick={() => setAccesosDe(m.usuarioId)}
-                    aria-label={con(t.comun.campo_de_fila, {
-                      campo: t.familias.circulo.accesos_boton,
-                      nombre: m.nombre || m.email || '',
-                    })}
-                  >
-                    {t.familias.circulo.accesos_boton}
-                  </Button>{' '}
-                  {puedeEditarFamilia && (
-                    <>
-                      <Button
-                        variant="secondary"
-                        onClick={() => reenviarInvitacion(m.usuarioId)}
-                        disabled={reenviandoUsuarioId === m.usuarioId}
-                      >
-                        {reenviandoUsuarioId === m.usuarioId ? t.comun.reenviando_invitacion : t.comun.reenviar_invitacion}
-                      </Button>{' '}
-                      <Button
-                        variant="secondary"
-                        onClick={() => quitarMiembroCirculo(m.usuarioId)}
-                        disabled={quitandoUsuarioId === m.usuarioId}
-                      >
-                        {t.familias.circulo.quitar}
-                      </Button>
-                    </>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-      {errorCirculo && estadoCirculo === 'listo' && <Alert variant="error">{errorCirculo}</Alert>}
-      {puedeEditarFamilia && (
-        <Button variant="secondary" onClick={() => setMostrarInvitarCirculo(true)}>
-          {t.familias.circulo.agregar}
-        </Button>
-      )}
+        {tab === 'circulo' && (
+          <>
+            {/* La instrucción cargada y todavía sin firmar es lo primero que hay que ver: mientras
+                no esté firmada, lo que hay es un pedido anotado, no una autorización. Los dos
+                caminos de cierre están acá al lado —imprimir el papel, o registrar que ya volvió
+                firmado—, porque son lo único que queda por hacer. */}
+            {instruccionPendiente && (
+              <Alert variant="warning">
+                {con(t.familias.circulo.instruccion_pendiente, {
+                  fecha: new Date(instruccionPendiente.created_at).toLocaleDateString(locale),
+                })}{' '}
+                <Button variant="secondary" onClick={() => setDocumentoAVer(instruccionPendiente)}>
+                  {t.familias.circulo.ver_documento}
+                </Button>{' '}
+                {puedeEditarFamilia && (
+                  <Button variant="secondary" onClick={() => setPapelAConfirmar(instruccionPendiente)}>
+                    {t.familias.circulo.registrar_papel}
+                  </Button>
+                )}
+              </Alert>
+            )}
+            {!instruccionPendiente && ultimaInstruccion && (
+              <p className="panel-explicacion">
+                {con(t.familias.circulo.ultima_instruccion, {
+                  fecha: new Date(ultimaInstruccion.cerrada_en || ultimaInstruccion.created_at).toLocaleDateString(locale),
+                  como: t.familias.circulo[`cerrada_${ultimaInstruccion.cerrada_como}`] || '',
+                })}
+              </p>
+            )}
 
-      {/* Las tres secciones traen sus propios datos y manejan sus propios cuatro estados; viven
-          en `GuardiasReportesYAlertas.jsx` y hacen las mismas preguntas que las pantallas de
-          Guardias, Reportes y Alertas, acotadas a los Pacientes de esta Familia. */}
-      <h2>{t.familias.guardias_activas}</h2>
-      <GuardiasActivasDeLaFamilia pacientes={familia.pacientes} />
+            {estadoCirculo === 'cargando' && <p className="estado-cargando">{t.comun.cargando}</p>}
+            {estadoCirculo === 'error' && <p className="estado-vacio">{errorCirculo || t.comun.error_generico}</p>}
+            {estadoCirculo === 'vacio' && <p className="estado-vacio">{t.familias.circulo.sin_miembros}</p>}
+            {estadoCirculo === 'listo' && (
+              <table className="panel-tabla">
+                <thead>
+                  <tr>
+                    <th>{t.familias.circulo.col_nombre}</th>
+                    <th>{t.familias.circulo.col_email}</th>
+                    <th>{t.familias.circulo.col_que_ve}</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {circulo.map((m) => (
+                    <tr key={m.usuarioId}>
+                      <td>{m.nombre || '—'}</td>
+                      <td>{m.email || '—'}</td>
+                      <td>{resumenDeAccesos(m.accesos, t)}</td>
+                      <td>
+                        <Button
+                          variant="secondary"
+                          onClick={() => setAccesosDe(m.usuarioId)}
+                          aria-label={con(t.comun.campo_de_fila, {
+                            campo: t.familias.circulo.accesos_boton,
+                            nombre: m.nombre || m.email || '',
+                          })}
+                        >
+                          {t.familias.circulo.accesos_boton}
+                        </Button>{' '}
+                        {puedeEditarFamilia && (
+                          <>
+                            <Button
+                              variant="secondary"
+                              onClick={() => reenviarInvitacion(m.usuarioId)}
+                              disabled={reenviandoUsuarioId === m.usuarioId}
+                            >
+                              {reenviandoUsuarioId === m.usuarioId ? t.comun.reenviando_invitacion : t.comun.reenviar_invitacion}
+                            </Button>{' '}
+                            <Button
+                              variant="secondary"
+                              onClick={() => quitarMiembroCirculo(m.usuarioId)}
+                              disabled={quitandoUsuarioId === m.usuarioId}
+                            >
+                              {t.familias.circulo.quitar}
+                            </Button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {errorCirculo && estadoCirculo === 'listo' && <Alert variant="error">{errorCirculo}</Alert>}
+            {puedeEditarFamilia && (
+              <Button variant="secondary" onClick={() => setMostrarInvitarCirculo(true)}>
+                {t.familias.circulo.agregar}
+              </Button>
+            )}
+          </>
+        )}
 
-      <h2>{t.familias.historial_reportes}</h2>
-      <ReportesDeLaFamilia pacientes={familia.pacientes} />
-
-      <h2>{t.familias.alertas_activas}</h2>
-      <AlertasDeLaFamilia pacientes={familia.pacientes} />
+        {/* Las tres secciones traen sus propios datos y manejan sus propios cuatro estados; viven
+            en `GuardiasReportesYAlertas.jsx` y hacen las mismas preguntas que las pantallas de
+            Guardias, Reportes y Alertas, acotadas a los Pacientes de esta Familia. */}
+        {tab === 'guardias' && <GuardiasActivasDeLaFamilia pacientes={familia.pacientes} />}
+        {tab === 'reportes' && <ReportesDeLaFamilia pacientes={familia.pacientes} />}
+        {tab === 'alertas' && <AlertasDeLaFamilia pacientes={familia.pacientes} />}
+      </div>
 
       {pacienteSeleccionado && (
         <PrestacionesPaciente paciente={pacienteSeleccionado} onClose={() => setPacienteSeleccionado(null)} />

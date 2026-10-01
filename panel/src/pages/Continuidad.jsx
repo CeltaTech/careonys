@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
+import { Cabecera } from '../components/ui/Cabecera';
 import { useAuth } from '../context/AuthContext';
 import { useConfirmarDestructivo } from '../context/ConfirmacionContext';
 import { supabase } from '../lib/supabaseClient';
@@ -280,7 +281,7 @@ export function Continuidad() {
 
   return (
     <div>
-      <h1>{t.continuidad.titulo}</h1>
+      <Cabecera titulo={t.continuidad.titulo} />
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
 
       <EstadoLista

@@ -121,7 +121,6 @@ export default function AccesoMatch() {
           {acceso.estado === 'vigente' && (
             <div style={{ marginTop: '1.5rem' }}>
               <h2>{t.acceso.generar_qr_titulo}</h2>
-              <p className="guardia-card-detalle">{t.acceso.generar_qr_explicacion}</p>
 
               {cobrado && <div className="alert alert-success" role="status">{t.acceso.qr_cobrado}</div>}
 
@@ -163,7 +162,6 @@ export default function AccesoMatch() {
                 </>
               ) : (
                 <>
-                  <p className="guardia-card-detalle">{t.acceso.baja_explicacion}</p>
                   {errorBaja && <div className="alert alert-error" role="alert">{errorBaja}</div>}
                   <button type="button" className="btn btn-secondary btn-full" onClick={darDeBaja} disabled={dandoDeBaja} style={{ marginTop: '1rem' }}>
                     {dandoDeBaja ? t.acceso.dando_de_baja : t.acceso.baja_boton}

@@ -98,7 +98,6 @@ export default function LlavesDeEsteAparato() {
   return (
     <>
       <h2 style={{ marginTop: '2rem' }}>{t.llaves.titulo}</h2>
-      <p className="guardia-card-detalle">{t.llaves.explicacion}</p>
 
       {error && <div className="alert alert-error" role="alert">{error}</div>}
       {!error && llaves === null && <div className="estado-cargando" role="status">{t.comun.cargando}</div>}

@@ -129,13 +129,8 @@ export default function MiPerfil() {
 
       {/* El interruptor de disponibilidad. Va inmediatamente después del estado que decide la
           Prestadora, y con su propio título, para que se vea que son dos cosas distintas: una la
-          decide ella y la otra la decide él.
-
-          El texto de abajo dice qué apaga y qué no, porque es lo que la gente necesita saber
-          antes de tocarlo: que no lo saca de la Prestadora y que no le cancela nada de lo que ya
-          aceptó. Nadie se pone "no disponible" si sospecha que puede perder el trabajo. */}
+          decide ella y la otra la decide él. */}
       <h2 style={{ marginTop: '2rem' }}>{t.perfil.disponibilidad_titulo}</h2>
-      <p className="texto-ayuda">{t.perfil.disponibilidad_explicacion}</p>
       <p>
         {perfil.disponible_para_ofertas !== false
           ? t.perfil.disponibilidad_disponible

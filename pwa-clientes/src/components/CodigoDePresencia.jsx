@@ -112,7 +112,6 @@ export default function CodigoDePresencia({ t, pedirCodigo }) {
       <p className="guardia-card-detalle">
         {restan > 0 ? t.codigo_de_presencia.se_renueva.replace('{segundos}', restan) : t.codigo_de_presencia.renovando}
       </p>
-      <p className="guardia-card-detalle">{t.codigo_de_presencia.por_que_cambia}</p>
       <button type="button" className="btn btn-secondary btn-full" onClick={pedir} disabled={pidiendo}>
         {pidiendo ? t.codigo_de_presencia.pidiendo : t.codigo_de_presencia.pedir_otro}
       </button>

@@ -257,7 +257,6 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
 
       {paso === 'pidiendo' && (
         <>
-          <p className="guardia-card-detalle">{t.pase_de_guardia.pedido_explicacion}</p>
           <div className="form-field">
             <label htmlFor="pase-texto">{t.pase_de_guardia.pedido_label}</label>
             <textarea
@@ -289,7 +288,6 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
           ) : (
             <>
               <div className="estado-cargando" role="status">{t.pase_de_guardia.esperando}</div>
-              <p className="guardia-card-detalle">{t.pase_de_guardia.esperando_explicacion}</p>
             </>
           )}
           {botonEntrarIgual}
@@ -323,9 +321,6 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
               disabled={enviando}
             />
           </div>
-          <p className="guardia-card-detalle">
-            {momento === 'checkin' ? t.pase_de_guardia.sin_comprobar_aviso : t.pase_de_guardia.sin_comprobar_aviso_cierre}
-          </p>
           <button
             type="button"
             className="btn btn-primary btn-full"

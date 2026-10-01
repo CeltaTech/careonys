@@ -138,7 +138,6 @@ export default function FirmarInstruccion() {
     <div>
       {volver}
       <h1>{t.instruccion.titulo}</h1>
-      <p className="guardia-card-detalle">{t.instruccion.explicacion}</p>
 
       {/* El documento, con sus renglones y su sangría. Va en un `pre` para que ni el navegador ni
           esta pantalla le acomoden nada: lo que se lee tiene que ser exactamente lo que se firma. */}
@@ -149,7 +148,6 @@ export default function FirmarInstruccion() {
       ) : (
         <>
           <h2 style={{ marginTop: '1.5rem' }}>{t.instruccion.firmar_titulo}</h2>
-          <p className="guardia-card-detalle">{t.instruccion.firmar_explicacion}</p>
 
           {enviadoA && (
             <div className="alert alert-info" role="status">

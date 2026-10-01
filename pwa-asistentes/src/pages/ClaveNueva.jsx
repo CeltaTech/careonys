@@ -141,7 +141,6 @@ export default function ClaveNueva() {
     <div className="login-pantalla">
       <div className="login-card">
         <h1>{t.auth.clave_nueva_titulo}</h1>
-        <p className="login-subtitulo">{t.auth.clave_nueva_subtitulo}</p>
         {error && <div id="clave-nueva-error" className="alert alert-error" role="alert">{error}</div>}
         <form onSubmit={alEnviar}>
           <div className="form-field">

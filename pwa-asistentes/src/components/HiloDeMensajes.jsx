@@ -74,17 +74,8 @@ export default function HiloDeMensajes({
     }
   }
 
-  const hayAlgoTapado = mensajes.some((m) => m.tapado);
-
   return (
     <div className="hilo-de-mensajes">
-      {/* Se dice siempre, no sólo cuando ya se tapó algo: quien está por escribir su número
-          tiene que enterarse antes y no después. */}
-      <p className="aviso-suave" role="note">
-        {t.chat.contacto_tapado}
-        {hayAlgoTapado ? ` ${t.chat.contacto_tapado_ya_paso}` : ''}
-      </p>
-
       {/* La videollamada sólo aparece donde la Prestadora dijo dónde se hacen las suyas. Sin eso
           no hay proveedor, y un botón que no lleva a ningún lado es peor que no tenerlo. */}
       {videollamadaDisponible && (

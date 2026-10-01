@@ -177,11 +177,6 @@ export default function PerfilPublicoAsistente() {
           </div>
         )}
 
-        {/* Quien no mira la plata llega hasta acá: sabe que el dato existe y que se pide aparte. */}
-        {contacto && !contacto.abierto && !contacto.motivo && !contacto.activacion && (
-          <p className="guardia-card-detalle">{t.vidriera.contacto_aparte}</p>
-        )}
-
         {contacto && !contacto.abierto && contacto.activacion && !confirmando && (
           <button type="button" className="btn btn-secondary" onClick={() => setConfirmando(true)}>
             {t.vidriera.contacto_ver}

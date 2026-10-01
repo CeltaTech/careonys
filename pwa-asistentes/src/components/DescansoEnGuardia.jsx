@@ -116,7 +116,6 @@ export default function DescansoEnGuardia({ t, locale, guardiaId, descansoAbiert
         {abierto ? tr.boton_terminar : tr.boton_empezar}
       </button>
 
-      {!abierto && <p className="guardia-card-detalle">{tr.explicacion}</p>}
     </div>
   );
 }

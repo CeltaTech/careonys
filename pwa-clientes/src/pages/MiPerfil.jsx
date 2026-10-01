@@ -142,9 +142,8 @@ export default function MiPerfil() {
 
       {/* Qué ve esta persona y qué no. Al titular se le dice que ve todo y se termina ahí: lo
           suyo no se configura, no hay instrucción que le pueda quitar nada, ni siquiera una
-          propia. A quien está en las personas autorizadas se le muestran las dos listas enteras, y de dónde
-          salieron: acá no hay nada que tocar, y el cambio se lo pide a la Prestadora quien
-          firmó la prestación. Sin esa aclaración, la pantalla parece un formulario roto. */}
+          propia. A quien está en las personas autorizadas se le muestran las dos listas enteras, sin nada
+          que tocar. */}
       {(perfil.esTitular || accesos) && (
         <>
           <h2 style={{ marginTop: '2rem' }}>{t.perfil.acceso_titulo}</h2>
@@ -164,7 +163,6 @@ export default function MiPerfil() {
                 etiquetas={t.personas autorizadas}
                 vacio={t.perfil.acceso_no_ve_vacio}
               />
-              <p className="guardia-card-detalle" style={{ marginTop: '1rem' }}>{t.perfil.acceso_lo_decide_el_titular}</p>
             </>
           )}
         </>

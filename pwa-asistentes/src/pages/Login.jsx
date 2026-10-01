@@ -56,7 +56,6 @@ export default function Login() {
     <div className="login-pantalla">
       <div className="login-card">
         <h1>{t.auth.titulo}</h1>
-        <p className="login-subtitulo">{t.auth.subtitulo}</p>
         {/* El motivo queda atado a los dos campos y no a uno: no se dice cuál de los dos está
             mal, a propósito, porque decirlo le regalaría a cualquiera la mitad de la
             respuesta. Los dos quedan marcados y los dos leen el mismo motivo. */}

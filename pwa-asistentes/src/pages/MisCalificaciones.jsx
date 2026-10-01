@@ -80,7 +80,6 @@ function Descargo({ calificacion, onGuardado, t, locale }) {
   return (
     <div className="calificacion-descargo">
       <h3>{t.calificaciones.descargo_titulo}</h3>
-      <p className="texto-ayuda">{t.calificaciones.una_sola_vez}</p>
       <div className="form-field">
         <label htmlFor={`descargo-${calificacion.id}`}>{t.calificaciones.campo}</label>
         <textarea
@@ -164,7 +163,6 @@ export default function MisCalificaciones() {
   return (
     <div>
       <h1>{t.calificaciones.titulo}</h1>
-      <p className="texto-ayuda">{t.calificaciones.explicacion}</p>
 
       {error && <div className="alert alert-error" role="alert">{error}</div>}
       {guardado && <div className="alert alert-info" role="status">{t.calificaciones.guardado}</div>}

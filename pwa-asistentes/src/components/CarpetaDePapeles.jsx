@@ -124,7 +124,6 @@ export default function CarpetaDePapeles() {
         </p>
       )}
 
-      <p className="texto-ayuda">{tp.los_recibe_la_prestadora}</p>
     </div>
   );
 }

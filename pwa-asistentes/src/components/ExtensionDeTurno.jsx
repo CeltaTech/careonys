@@ -111,8 +111,6 @@ export default function ExtensionDeTurno({ t, locale, guardiaId, extension, alAv
 
       {abriendo && (
         <div>
-          <p className="guardia-card-detalle">{tr.explicacion}</p>
-
           <div className="form-field" style={{ marginTop: '0.5rem' }}>
             <label htmlFor="extension-detalle">{tr.detalle}</label>
             {/* El detalle no es obligatorio, y eso es la decisión: quien está en el medio de algo

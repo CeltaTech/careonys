@@ -27,7 +27,6 @@ export default function EstadoDocumental({ resumen, matricula, alDia, papelesExi
       {matricula !== 'no_corresponde' && (
         <p>{t.asistente[`documentacion_matricula_${matricula}`]}</p>
       )}
-      {hayExigencias && <p className="guardia-card-detalle">{t.asistente.documentacion_sin_nombres}</p>}
       <p className="guardia-card-detalle">{t.asistente.documentacion_que_no_se_verifica}</p>
     </>
   );

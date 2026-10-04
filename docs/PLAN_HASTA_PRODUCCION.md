@@ -1122,12 +1122,12 @@ comprobar antes abre el agujero sin que nadie se entere.
 - Cada Prestadora arma su lista de emergencias en su configuración: agrega, cambia y quita.
 - Careonys trae una lista de fábrica como propuesta, y cada emergencia de esa lista con un plan de acción sugerido.
 - Cada emergencia puede llevar acciones preparadas de antemano. Para cada acción, la Prestadora elige si se ejecuta sola o la dispara una persona.
+- **El Asistente elige la emergencia de la lista al apretar el botón.** La lista trae además la opción «Otras», donde escribe qué está pasando cuando no figura. Textual: *«El Asistente, cuando dispara la emergencia ademas de la lista con las opciones tendra la opcion de "otras" donde puede escribir la naturaleza de la emergencia no listada»*.
 
-Falta que usted conteste tres cosas:
+Falta que usted conteste dos cosas:
 
 - **Qué emergencias y qué plan de acción trae la lista de fábrica.** Los textos los aprueba usted, uno por uno.
 - **Qué acciones se pueden preparar**: avisar al Cliente, llamar al servicio de emergencias médicas, mandar a otro Asistente, u otras.
-- **Cómo elige el Asistente la emergencia al apretar el botón.** Hoy no elige: escribe qué pasa y lo manda, para no demorar el aviso buscando en una lista. Con lista, hay que decidir si elige antes de mandar, después de mandar, o si la elige quien la toma en la oficina.
 
 **66.** Construirlo según lo contestado. El tablero del Panel cuenta como emergencia sólo lo que avisó una persona con el botón.
 

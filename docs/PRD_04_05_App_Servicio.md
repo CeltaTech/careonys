@@ -71,7 +71,8 @@ mensajes salen de `pwa-asistentes/src/i18n/translations.js` en los tres idiomas,
 Se aprieta desde la Guardia Activa (`pwa-asistentes/src/components/EmergenciaEnGuardia.jsx`).
 **Hoy no tiene lista de tipos para elegir**: se escribe qué está pasando y se manda. **La lista la
 arma cada Prestadora en su configuración**, sobre una propuesta de fábrica de Careonys con un plan
-de acción sugerido y acciones preparadas que corren solas o no, según elija ella. Qué falta
+de acción sugerido y acciones preparadas que corren solas o no, según elija ella. El Asistente
+elige de esa lista al apretar el botón, y si no figura usa «Otras» y escribe qué pasa. Qué falta
 contestar y construir está en `docs/PLAN_HASTA_PRODUCCION.md`, sección «Las dos aplicaciones».
 
 **Sale aunque no haya señal.** Es un tipo más de la cola sin conexión

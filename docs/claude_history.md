@@ -475,3 +475,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** que el estado real se le pregunta a la base y que las migraciones no son el estado, pero como una forma de consultar, no como la regla de toda verificación.
 - **Qué dice ahora:** que todo —cada número, cada renglón citado, cada «ya está»— se verifica contra el código escrito y la base en vivo, nunca contra documentos ni contra migraciones, aunque venga de un inventario anterior o de un resumen de conversación. Quedó escrito en las cuatro capas de reglas: `F:\proyectos\CLAUDE.md`, la regla de la bóveda, `celtatech\CLAUDE.md` y este `CLAUDE.md`.
 - **Motivo:** en el inventario del trabajo sin persona entraron dos datos sin comprobar —un total de tablas equivocado y una búsqueda que se dijo que cruzaba Prestadoras y no la cruza—. El Desarrollador: «Las verificaciones se hacen contra la realidad: El codigo escrito y la base de datos (nunca contra migraciones)».
+
+## La lista de emergencias la arma cada Prestadora
+
+- **Qué decía antes:** que el botón de emergencia no tiene lista de tipos, porque clasificarlas es una decisión de negocio de cada Prestadora que el producto no inventa.
+- **Qué dice ahora:** que cada Prestadora arma su lista de emergencias en su configuración, sobre una propuesta de fábrica de Careonys con un plan de acción sugerido y acciones preparadas que se ejecutan solas o no, según elija ella.
+- **Motivo:** al ordenar el tablero del Panel por gravedad hizo falta decir qué es una emergencia. El Desarrollador: «cada prestadora podra armar su lista de emergencias dentro de la configuracion propia. Desde Careonys podemos proponer algunas».

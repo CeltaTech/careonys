@@ -112,7 +112,6 @@ export function GuardiasSinCerrar({ onCerrada }) {
         {filas.length === 0 ? (
           <div className="estado-vacio-bloque">
             <p className="estado-vacio-titulo">{t.guardias_sin_cerrar.vacio_titulo}</p>
-            <p className="estado-vacio">{t.guardias_sin_cerrar.vacio_ayuda}</p>
           </div>
         ) : (
           <table className="panel-tabla">

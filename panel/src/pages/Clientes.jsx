@@ -8,48 +8,14 @@ import { supabase } from '../lib/supabaseClient';
 import { useFiltros } from '../hooks/useFiltros';
 import { useCatalogoDeLugares } from '../hooks/useCatalogoDeLugares';
 import { clientesConSuLocalidad, filtrarClientes, localidadesConClientes } from '../lib/clientesPorLocalidad';
-import { cargarGuardiasDePacientes, cargarPacientesDeGuardias, textoDePacientes } from '../lib/pacientesDeGuardia';
+import { textoDePacientes } from '../lib/pacientesDeGuardia';
 import { claseBadge } from '../lib/tonos';
-import { hoyISO } from '../lib/horarios';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
 import { Cabecera } from '../components/ui/Cabecera';
 import { NuevaClienteModal } from './clientes/NuevaClienteModal';
 import { mensajeDeError } from '../lib/errores';
 import './listadosMaqueta.css';
-
-/**
- * Las modalidades en que se atiende a cada Cliente: las de las guardias que vienen —de hoy en
- * adelante y sin las canceladas— de cualquiera de sus Pacientes. El Cliente no guarda una
- * modalidad propia; lo que la tiene es cada guardia.
- */
-async function cargarModalidadesPorCliente(clientes) {
-  const clienteDelPaciente = new Map();
-  for (const fam of clientes) {
-    for (const paciente of fam.pacientes ?? []) {
-      if (!paciente.deleted_at) clienteDelPaciente.set(paciente.id, fam.id);
-    }
-  }
-  const guardias = await cargarGuardiasDePacientes(
-    [...clienteDelPaciente.keys()],
-    'id, paciente_id, canal_modalidad',
-    (consulta) => consulta.gte('fecha', hoyISO()).neq('estado', 'cancelada'),
-  );
-  const pacientesPorGuardia = await cargarPacientesDeGuardias(guardias.map((g) => g.id));
-
-  const porCliente = new Map();
-  for (const g of guardias) {
-    if (!g.canal_modalidad) continue;
-    const pacientes = [...(pacientesPorGuardia.get(g.id) ?? []), g.paciente_id];
-    for (const pacienteId of pacientes) {
-      const clienteId = clienteDelPaciente.get(pacienteId);
-      if (!clienteId) continue;
-      if (!porCliente.has(clienteId)) porCliente.set(clienteId, new Set());
-      porCliente.get(clienteId).add(g.canal_modalidad);
-    }
-  }
-  return porCliente;
-}
 
 export function Clientes() {
   const { t } = useLocale();
@@ -60,7 +26,6 @@ export function Clientes() {
   const puedeAltaManual = esAdmin || puede('alta_manual_cliente');
   const [filas, setFilas] = useState([]);
   const [servicios, setServicios] = useState([]);
-  const [modalidades, setModalidades] = useState(new Map());
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '', lugar: '' });
@@ -88,18 +53,8 @@ export function Clientes() {
       return;
     }
 
-    let porCliente;
-    try {
-      porCliente = await cargarModalidadesPorCliente(data ?? []);
-    } catch (errorGuardias) {
-      setError(mensajeDeError(errorGuardias, t));
-      setEstado('error');
-      return;
-    }
-
     setFilas(data ?? []);
     setServicios(serviciosData ?? []);
-    setModalidades(porCliente);
     setEstado('listo');
   }, [t]);
 
@@ -196,7 +151,6 @@ export function Clientes() {
                   <th>{tl.col_cliente}</th>
                   <th>{tl.col_paciente}</th>
                   <th>{tl.col_servicios}</th>
-                  <th>{tl.col_modalidad}</th>
                   <th>{tl.col_estado}</th>
                 </tr>
               </thead>
@@ -205,7 +159,6 @@ export function Clientes() {
                   const nombres = (fam.pacientes ?? []).filter((p) => !p.deleted_at).map((p) => p.nombre);
                   const propios = serviciosPorCliente.get(fam.id) ?? [];
                   const estadoFam = estadoDeCliente(propios);
-                  const deLaCliente = [...(modalidades.get(fam.id) ?? [])];
                   return (
                     <tr
                       key={fam.id}
@@ -219,7 +172,6 @@ export function Clientes() {
                       <td><strong>{fam.solicitudes?.nombre || '—'}</strong></td>
                       <td>{textoDePacientes(nombres, t.guardias.pacientes_y_mas)}</td>
                       <td>{propios.length}</td>
-                      <td>{deLaCliente.map((m) => t.modalidades[m] ?? m).join(' · ') || '—'}</td>
                       <td>{estadoFam ? <span className={estadoFam.clase}>{estadoFam.texto}</span> : '—'}</td>
                     </tr>
                   );

@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
-    "html5-qrcode": "^2.3.8",
     "jspdf": "^4.2.1",
     "leaflet": "^1.9.4",
     "qrcode": "^1.5.4",

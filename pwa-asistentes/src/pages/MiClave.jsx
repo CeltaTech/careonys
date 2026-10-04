@@ -13,7 +13,7 @@ import { MINIMO_DE_CARACTERES, claveAceptable } from '../lib/reglaDeClave';
 //
 // No pasa por el backend: la clave se cambia contra el servicio de acceso, con la sesión de quien
 // está pidiendo el cambio. Nadie puede cambiar así la de otro. Es el mismo camino que ya usa el
-// Panel en `panel/src/pages/MiClave.jsx`.
+// Panel en `panel/src/pages/MiCuenta.jsx`.
 export default function MiClave() {
   const { t } = useLocale();
   const { session } = useAuth();

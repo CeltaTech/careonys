@@ -68,6 +68,7 @@ import { appAsistentesMatriculaRouter } from './routes/appAsistentesMatricula.js
 import { appAsistentesOfertasRouter } from './routes/appAsistentesOfertas.js';
 import { panelMedicacionRouter } from './routes/panelMedicacion.js';
 import { panelMatchRouter } from './routes/panelMatch.js';
+import { panelCalificacionesRouter } from './routes/panelCalificaciones.js';
 import { panelWhatsappRouter } from './routes/panelWhatsapp.js';
 import { panelRespuestasPreparadasRouter } from './routes/panelRespuestasPreparadas.js';
 import { panelGuardiasRouter } from './routes/panelGuardias.js';
@@ -186,6 +187,7 @@ app.use('/api/app-clientes/medicacion', appClientesMedicacionRouter);
 app.use('/api/app-clientes/llaves', requiereRolCliente, routerDeLlavesConSesion('cliente'));
 app.use('/api/panel/medicacion', panelMedicacionRouter);
 app.use('/api/panel/match', panelMatchRouter);
+app.use('/api/panel/calificaciones', panelCalificacionesRouter);
 app.use('/api/panel/whatsapp', panelWhatsappRouter);
 app.use('/api/panel/respuestas-preparadas', panelRespuestasPreparadasRouter);
 app.use('/api/panel/guardias', panelGuardiasRouter);

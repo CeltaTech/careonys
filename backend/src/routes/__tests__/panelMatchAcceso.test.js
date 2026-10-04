@@ -187,14 +187,6 @@ describe('el Coordinador no llega a la plata del Match', () => {
 });
 
 describe('lo que sí es del Coordinador', () => {
-  it('ve las calificaciones', async () => {
-    rolDelUsuario = 'coordinador';
-    respuestas.set('GET /rest/v1/calificaciones_asistente', () => []);
-    const { estado, cuerpo } = await pedir('GET', '/calificaciones');
-    assert.equal(estado, 200);
-    assert.deepEqual(cuerpo.calificaciones, []);
-  });
-
   it('ve la auditoría de advertencias legales', async () => {
     rolDelUsuario = 'coordinador';
     // Cuáles son las funciones de riesgo lo dice la base, no una lista escrita en el backend
@@ -276,7 +268,7 @@ describe('la lista de accesos trae los nombres aunque la ficha esté pendiente d
 describe('sin Prestadora activa no hay Match', () => {
   it('contesta que hay que entrar a una, y no que falta permiso', async () => {
     prestadoraDelUsuario = null;
-    const { estado, cuerpo } = await pedir('GET', '/calificaciones');
+    const { estado, cuerpo } = await pedir('GET', '/auditoria-legal');
     assert.equal(estado, 400);
     assert.match(cuerpo.error, /entrar a una prestadora/);
   });
@@ -295,7 +287,6 @@ describe('sin Prestadora activa no hay Match', () => {
 describe('sin la modalidad Match no se entra', () => {
   const TODAS_LAS_RUTAS = [
     ...RUTAS_DE_PLATA,
-    ['GET', '/calificaciones', undefined],
     ['GET', '/auditoria-legal', undefined],
   ];
 

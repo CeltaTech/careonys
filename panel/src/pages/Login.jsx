@@ -8,6 +8,7 @@ import { segmentoDeLaPuerta, laPuertaEstaReconocida } from '../lib/puertaDeIngre
 import { FormField } from '../components/ui/FormField';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
+import { PantallaDeIngreso } from '../components/layout/PantallaDeIngreso';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -108,40 +109,29 @@ export function Login() {
     }
   }
 
-  const pie = <p className="login-pie">{t.auth.con_tecnologia_de}</p>;
-
   if (estado === 'cargando') {
     return (
-      <div className="login-pantalla">
-        <div className="login-card">
-          <p>{t.comun.cargando}</p>
-          {pie}
-        </div>
-      </div>
+      <PantallaDeIngreso>
+        <p>{t.comun.cargando}</p>
+      </PantallaDeIngreso>
     );
   }
 
   if (estado !== 'listo') {
     return (
-      <div className="login-pantalla">
-        <div className="login-card">
-          <h1>{t.auth.titulo}</h1>
-          <Alert variant="error">
-            {estado === 'desconocida' ? t.auth.puerta_desconocida : t.comun.error_generico}
-          </Alert>
-          {pie}
-        </div>
-      </div>
+      <PantallaDeIngreso>
+        <h1 className="ingreso-titulo">{t.auth.titulo}</h1>
+        <Alert variant="error">
+          {estado === 'desconocida' ? t.auth.puerta_desconocida : t.comun.error_generico}
+        </Alert>
+      </PantallaDeIngreso>
     );
   }
 
   return (
-    <div className="login-pantalla">
-      <form className="login-card" onSubmit={handleSubmit}>
-        {puerta.logoUrl && <img className="login-logo" src={puerta.logoUrl} alt={puerta.nombre ?? ''} />}
-        <h1>{puerta.nombre ?? t.auth.titulo}</h1>
-        <p className="login-subtitulo">{t.auth.titulo}</p>
-
+    <PantallaDeIngreso marca={puerta}>
+      <h1 className="ingreso-titulo">{t.auth.titulo}</h1>
+      <form className="ingreso-tarjeta" onSubmit={handleSubmit}>
         {error && <Alert variant="error">{error}</Alert>}
 
         <FormField
@@ -161,13 +151,12 @@ export function Login() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
+        <Link className="ingreso-recuperar" to="/recuperar-clave">{t.auth.recuperar_link}</Link>
+
         <Button type="submit" disabled={enviando}>
           {enviando ? t.auth.ingresando : t.auth.ingresar}
         </Button>
-
-        <Link to="/recuperar-clave">{t.auth.recuperar_link}</Link>
-        {pie}
       </form>
-    </div>
+    </PantallaDeIngreso>
   );
 }

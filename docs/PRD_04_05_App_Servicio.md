@@ -68,10 +68,11 @@ Botón "Check-out" habilitado recién después de las horas mínimas de la modal
 **La palabra no aparece escrita en ninguna línea de la aplicación.** El botón, el formulario y los
 mensajes salen de `pwa-asistentes/src/i18n/translations.js` en los tres idiomas, como todo el resto.
 
-Se aprieta desde la Guardia Activa (`pwa-asistentes/src/components/EmergenciaEnGuardia.jsx`) y
-**no tiene lista de tipos para elegir**: se escribe qué está pasando y se manda. Quien está en el
-medio de una emergencia no busca su caso en un desplegable, y clasificarlas es una decisión de
-negocio de cada Prestadora que el producto no inventa.
+Se aprieta desde la Guardia Activa (`pwa-asistentes/src/components/EmergenciaEnGuardia.jsx`).
+**Hoy no tiene lista de tipos para elegir**: se escribe qué está pasando y se manda. **La lista la
+arma cada Prestadora en su configuración**, sobre una propuesta de fábrica de Careonys con un plan
+de acción sugerido y acciones preparadas que corren solas o no, según elija ella. Qué falta
+contestar y construir está en `docs/PLAN_HASTA_PRODUCCION.md`, sección «Las dos aplicaciones».
 
 **Sale aunque no haya señal.** Es un tipo más de la cola sin conexión
 (`pwa-asistentes/src/lib/colaOffline.js`), y por eso el backend acepta acá —y sólo acá— el momento

@@ -304,7 +304,6 @@ describe('el mapa habla los tres idiomas', () => {
     'a_distancia',
     'punto_de_la_solicitud',
     'vacio_sin_ubicacion',
-    'vacio_ayuda',
   ];
 
   it.each(IDIOMAS)('%s tiene todos los textos del mapa', (idioma) => {

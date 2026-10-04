@@ -66,7 +66,6 @@ describe('pestanasDelAsistente', () => {
       'titular',
       'actualizado_en',
       'sin_cuenta',
-      'sin_cuenta_ayuda',
     ]) {
       expect(typeof textos[clave], `falta ${clave} en ${idioma}`).toBe('string');
       expect(textos[clave].length).toBeGreaterThan(0);

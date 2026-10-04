@@ -56,6 +56,21 @@ cual. La redacción final la aprueba el Desarrollador cuando se escriba el manua
 | WhatsApp, Estado de la conexión | Última comprobación del webhook de mensajes entrantes. |
 | WhatsApp, Calidad del número | La califica Meta según los reportes de los destinatarios. |
 | WhatsApp, Contactos sin consentimiento | Sin su autorización no se puede iniciar una conversación. |
+| Cálculo de candidatos, Que venga quien ya conoce al Paciente | Haber atendido antes a esa persona pesa más que cualquier otra comodidad de la agenda. Es como viene de fábrica. |
+| Cálculo de candidatos, Que nadie quede al límite | Llegar sin haber descansado lo suficiente o con la semana casi llena resta mucho más, y la continuidad deja de tapar al resto. |
+| Cálculo de candidatos, Que el viaje sea corto | Vivir cerca del domicilio pesa bastante más. La distancia se mide en línea recta, así que es una ayuda para ordenar, no un veredicto. |
+
+## Otras pantallas del Panel
+
+| Pantalla | Texto |
+|---|---|
+| Segundo factor, activación | Hace falta escanear este código con Google Authenticator, Authy u otra app similar, y escribir el código de 6 dígitos que muestra para confirmar. |
+| Segundo factor, recuperar acceso | Enviamos un código de un solo uso al email registrado. Al confirmarlo, se da de baja el dispositivo perdido y se puede configurar uno nuevo. |
+| Primeros pasos, Empezar desde una planilla | Si esta información ya está en una planilla, se puede leer acá y el sistema propone la configuración inicial a partir de ella. No se crea nada hasta confirmarlo. |
+| Postulaciones, Cerrar la entrevista | Cerrarla deja constancia de que ya pasó. No cambia el estado de la postulación: eso se decide aparte. |
+| Asistentes, Datos bancarios | Los informa el Asistente desde su aplicación. |
+| Asistentes, Simulador, Cobertura de sus ausencias | La cobertura no es una estimación: es lo que ya se pagó para reemplazar a esta persona en los últimos {meses} meses, repartido por mes. Sale igual bajo los dos vínculos, porque se le paga a quien la reemplazó. |
+| Mapa del plantel | Las fichas con el domicilio ubicado aparecen acá. |
 
 ## Entrada al Panel
 

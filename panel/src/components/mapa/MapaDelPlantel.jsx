@@ -153,7 +153,6 @@ export function MapaDelPlantel({ datos, origen = null, estado, error, recargar }
         recargar={recargar}
         vacio={estado === 'listo' && (datos?.ubicadas ?? 0) === 0}
         mensajeVacio={(datos?.total ?? 0) === 0 ? undefined : tm.vacio_sin_ubicacion}
-        ayudaVacio={(datos?.total ?? 0) === 0 ? undefined : tm.vacio_ayuda}
       >
         <>
           <p className="mapa-plantel-cuenta">

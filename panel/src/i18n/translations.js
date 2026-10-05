@@ -944,8 +944,7 @@ export const T = {
       alertas_ia_sin_resolver: 'Alertas de IA sin resolver',
       grafico_servicios_titulo: 'Servicios',
       grafico_prestaciones_titulo: 'Prestaciones',
-      ver_por_cantidad: 'Cantidad',
-      ver_por_dinero: 'Dinero',
+      grafico_ventas_titulo: 'Ventas',
     },
     // Guía de primeros pasos de una Prestadora nueva. Vive como sección de Configuración
     // (`pages/configuracion/PuestaEnMarcha.jsx`), y cubre otros cinco pasos que el checklist de arriba (`onboarding`), que sigue
@@ -3686,8 +3685,7 @@ export const T = {
       alertas_ia_sin_resolver: 'Unresolved AI alerts',
       grafico_servicios_titulo: 'Care services',
       grafico_prestaciones_titulo: 'Line items',
-      ver_por_cantidad: 'Count',
-      ver_por_dinero: 'Amount',
+      grafico_ventas_titulo: 'Sales',
     },
     guia_primeros_pasos: {
       titulo: 'Getting started guide',
@@ -6399,8 +6397,7 @@ export const T = {
       alertas_ia_sin_resolver: 'Alertas de IA sem resolver',
       grafico_servicios_titulo: 'Serviços',
       grafico_prestaciones_titulo: 'Prestações',
-      ver_por_cantidad: 'Quantidade',
-      ver_por_dinero: 'Valor',
+      grafico_ventas_titulo: 'Vendas',
     },
     guia_primeros_pasos: {
       titulo: 'Guia de primeiros passos',

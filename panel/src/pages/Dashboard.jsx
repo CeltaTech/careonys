@@ -461,13 +461,13 @@ function tocaElPeriodo(prestacion, desde, hasta) {
   return !prestacion.vigente_hasta || prestacion.vigente_hasta >= desde;
 }
 
-/* Los dos gráficos del Resumen del mes. Salen de las Prestaciones: un Servicio cuenta en un mes
-   si alguna de sus Prestaciones estuvo vigente en ese mes, y la torta pesa las vigentes hoy. */
+/* Los gráficos del Resumen del mes. Salen de las Prestaciones: un Servicio cuenta en un mes si
+   alguna de sus Prestaciones estuvo vigente en ese mes. Las dos tortas miran las vigentes hoy:
+   una las cuenta y la otra las pondera por lo que se vende de cada una. */
 function GraficosDePrestaciones({ esAdmin, prestadoraId }) {
   const { t, locale } = useLocale();
   const [prestaciones, setPrestaciones] = useState(null);
   const [error, setError] = useState(null);
-  const [verDinero, setVerDinero] = useState(false);
 
   const cargar = useCallback(async () => {
     if (!prestadoraId) return;
@@ -500,8 +500,6 @@ function GraficosDePrestaciones({ esAdmin, prestadoraId }) {
 
   const hoy = hoyISO();
   const vigentes = filas.filter((p) => p.estado === 'vigente' && tocaElPeriodo(p, hoy, hoy));
-  // Sólo la administración ve el dinero; para el resto el botón ni aparece.
-  const mostrarDinero = esAdmin && verDinero;
 
   return (
     <div className="panel-grilla panel-columnas-2">
@@ -517,35 +515,36 @@ function GraficosDePrestaciones({ esAdmin, prestadoraId }) {
       <section className="panel-tarjeta">
         <div className="panel-tarjeta-titulo">
           <h2>{t.dashboard.grafico_prestaciones_titulo}</h2>
-          {esAdmin && (
-            <div className="grilla-interruptor">
-              <button type="button" aria-pressed={!verDinero} onClick={() => setVerDinero(false)}>
-                {t.dashboard.ver_por_cantidad}
-              </button>
-              <button type="button" aria-pressed={verDinero} onClick={() => setVerDinero(true)}>
-                {t.dashboard.ver_por_dinero}
-              </button>
-            </div>
-          )}
         </div>
-        {/* Sin Prestaciones vigentes la torta queda vacía, con su cero al medio. */}
         <EstadoLista estado={estado} error={error} vacio={false} recargar={cargar}>
-          {mostrarDinero && vigentes.length > 0
-            ? tortasPorMoneda(vigentes).map(({ moneda, filas: deLaMoneda }) => (
+          <Torta
+            porciones={sumarPorPrestacion(vigentes, () => 1)}
+            formatear={(valor) => valor.toLocaleString(locale)}
+          />
+        </EstadoLista>
+      </section>
+
+      {/* Las ventas las ve sólo la administración, igual que los pagos a los Asistentes. */}
+      {esAdmin && (
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.dashboard.grafico_ventas_titulo}</h2>
+          </div>
+          <EstadoLista estado={estado} error={error} vacio={false} recargar={cargar}>
+            {vigentes.length > 0 ? (
+              tortasPorMoneda(vigentes).map(({ moneda, filas: deLaMoneda }) => (
                 <Torta
                   key={moneda ?? '—'}
                   porciones={sumarPorPrestacion(deLaMoneda, (p) => Number(p.precio_final) || 0)}
                   formatear={(valor) => formatearImporte(valor, moneda, locale)}
                 />
               ))
-            : (
-                <Torta
-                  porciones={sumarPorPrestacion(vigentes, () => 1)}
-                  formatear={(valor) => valor.toLocaleString(locale)}
-                />
-              )}
-        </EstadoLista>
-      </section>
+            ) : (
+              <Torta porciones={[]} formatear={(valor) => valor.toLocaleString(locale)} />
+            )}
+          </EstadoLista>
+        </section>
+      )}
     </div>
   );
 }

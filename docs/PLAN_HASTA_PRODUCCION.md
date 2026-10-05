@@ -1022,8 +1022,8 @@ en la sección «La entrada y la recuperación de la clave».
 **Lo que va al Resumen del mes, en gráficos:**
 
 - **Servicios a lo largo del tiempo**, en una línea mes por mes.
-- **Peso de cada prestación**, en una torta. Un botón cambia entre contarlas por cantidad o por
-  dinero. La vista por dinero la ve sólo la administración, igual que los pagos a los Asistentes.
+- **Prestaciones**, en una torta que las cuenta, y **Ventas**, en otra que las pondera por lo que
+  se vende de cada una. Ventas la ve sólo la administración, igual que los pagos a los Asistentes.
 
 **42.** Las tres etapas comerciales:
 

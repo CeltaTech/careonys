@@ -212,11 +212,6 @@ const DATOS_MINIMOS = {
   },
   estado_postulacion: { empresa: 'Cuidados del Sur', nombre: 'Marta', estado: 'aprobado' },
   nueva_postulacion_asistente: { nombre: 'Marta' },
-  nueva_solicitud_servicio: {
-    nombre: 'Elena', telefono: '1150000000', email: 'elena@ejemplo', localidad: 'Quilmes',
-    tipoServicio: 'Acompañamiento', modalidad: 'Por hora', diasHorario: 'Lunes a viernes',
-    descripcion: 'Dos turnos por semana',
-  },
   mensaje_del_coordinador: {},
   guardia_asignada: { fecha: '2026-10-07', horaInicio: '08:00' },
   recordatorio_de_guardia: { fecha: '2026-10-07', horaInicio: '08:00' },

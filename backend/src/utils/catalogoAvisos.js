@@ -48,7 +48,6 @@
 //   vencimiento_documento_asistente→ utils/vencimientos.js (notificarCoordinador)
 //   aviso_rutina_asistente         → utils/revisarRecordatoriosPush.js:24 (push, con respaldo WhatsApp)
 //   nueva_postulacion_asistente    → routes/postulacionAsistente.js:40 (enviarEmailCoordinador)
-//   nueva_solicitud_servicio       → routes/solicitudServicio.js:32 (enviarEmailCoordinador)
 //   aviso_cese_asistente           → utils/avisoAutomaticoCese.js (push, con respaldo WhatsApp)
 //   codigo_instruccion_personas_autorizadas     → utils/instruccionesPersonasAutorizadas.js (WhatsApp, con caída a correo)
 //   cambio_de_asistente            → utils/avisoCambioDeAsistente.js (notificarCoordinador + push
@@ -175,12 +174,6 @@ export const CATALOGO_MENSAJES = [
   {
     evento: 'nueva_postulacion_asistente',
     descripcion: 'Nueva postulación de Asistente desde el sitio público',
-    admite_whatsapp: false,
-    admite_cliente: false,
-  },
-  {
-    evento: 'nueva_solicitud_servicio',
-    descripcion: 'Nueva solicitud de servicio desde el sitio público',
     admite_whatsapp: false,
     admite_cliente: false,
   },

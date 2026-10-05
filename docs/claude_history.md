@@ -487,3 +487,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** que un número nuevo no servía para recuperar la clave hasta que una persona de la Prestadora llamara a su dueño, lo reconociera y lo habilitara, aunque ya estuviera verificado con su código.
 - **Qué dice ahora:** que el número se cambia como en cualquier software corriente: clave actual, código al número nuevo y aviso al correo. Con eso queda verificado y sirve de llave.
 - **Motivo:** la lista de espera iba a ocupar un renglón del tablero. El Desarrollador: «estamos queriendo inventar la polvora. La industria del software ya encontro soluciones a este problema. Utilicemos la mas sencilla y eficiente».
+
+## Cliente pasa a ser Cliente, y quien firma es el Contratante
+
+- **Qué decía antes:** que el Cliente era el Cliente y que en pantalla se decía «Cliente» a secas para nombrar a quien firmaba, el «Cliente Contratante»; y el glosario de Careonys traía además el Cliente de CeltaTech.
+- **Qué dice ahora:** Cliente es todo lo que la Prestadora atiende en una contratación, y la palabra Cliente deja de usarse en todas partes, también en lo guardado. Quien firma es el Contratante, a secas. El Cliente de CeltaTech sale de este glosario, porque es la Prestadora y vive en el de la empresa.
+- **Motivo:** el Panel hablaba de Clientes en tres lugares y la mezcla confundía. El Desarrollador: «reemplazaremos la palabra cliente por cliente», y sobre lo guardado: «si quedan en la base, o en los codigos, o en alguna etiqueta, o en algun documento […] volvera a difundirse como una pandemia». «Responsable legal» se descartó porque en salud nombra al tutor, al curador o al apoderado.

@@ -481,3 +481,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** que el botón de emergencia no tiene lista de tipos, porque clasificarlas es una decisión de negocio de cada Prestadora que el producto no inventa.
 - **Qué dice ahora:** que cada Prestadora arma su lista de emergencias en su configuración, sobre una propuesta de fábrica de Careonys con un plan de acción sugerido y acciones preparadas que se ejecutan solas o no, según elija ella.
 - **Motivo:** al ordenar el tablero del Panel por gravedad hizo falta decir qué es una emergencia. El Desarrollador: «cada prestadora podra armar su lista de emergencias dentro de la configuracion propia. Desde Careonys podemos proponer algunas».
+
+## Un número nuevo sirve de llave con su código, sin que lo habilite nadie
+
+- **Qué decía antes:** que un número nuevo no servía para recuperar la clave hasta que una persona de la Prestadora llamara a su dueño, lo reconociera y lo habilitara, aunque ya estuviera verificado con su código.
+- **Qué dice ahora:** que el número se cambia como en cualquier software corriente: clave actual, código al número nuevo y aviso al correo. Con eso queda verificado y sirve de llave.
+- **Motivo:** la lista de espera iba a ocupar un renglón del tablero. El Desarrollador: «estamos queriendo inventar la polvora. La industria del software ya encontro soluciones a este problema. Utilicemos la mas sencilla y eficiente».

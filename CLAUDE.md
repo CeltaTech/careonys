@@ -141,9 +141,10 @@ IndexedDB, prefijo de respaldo— usa `IDENTIDAD.codigo`. Ese archivo existe
 cinco veces, una por unidad desplegable, y `scripts/verificar_identidad.mjs` corta el push si las
 cinco no coinciden o si el nombre está escrito a mano.
 
-**El `codigo: 'careonys'` no se toca por ahora.** Es identificador guardado, no marca: con él se
-arman la base local del teléfono y el prefijo de los respaldos. **Cambiarlo se evalúa en el momento de la fusión con Match**, y
-hasta entonces queda como está. Ver la excepción del glosario, §4.
+**El `codigo: 'careonys'` sale.** Es el nombre anterior del producto y con él se arman la base
+local del teléfono y el prefijo de los respaldos. Se cambia junto con el renombre de Cliente a
+Cliente, en `docs/PLAN_HASTA_PRODUCCION.md`, sección «Cliente pasa a ser Cliente», sin que nadie
+pierda lo que tiene guardado en el teléfono.
 
 **Dónde vive la marca de la Prestadora.** En las dos aplicaciones, `src/context/PerfilContext.jsx`
 la pide una vez a `/perfil` y la entrega con `useMarca()` (`nombre`, `logoUrl`,

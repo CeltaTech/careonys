@@ -1008,7 +1008,7 @@ Los renglones, en este orden:
 
 **Salida sin registrar, y lo mismo con la entrada.** Si el turno terminó y la salida no se
 registró, a los 15 minutos aparece el aviso; cada Prestadora cambia ese plazo en su configuración.
-Hoy el sistema espera 2 horas. Si ya entró el Asistente siguiente, el aviso muestra a qué hora
+Si ya entró el Asistente siguiente, el aviso muestra a qué hora
 entró, que es cuándo se fue el anterior. Un Asistente que se queda de más sin que lo releven hace
 saltar la alarma del relevo que no llegó, salvo que sea el último turno de la guardia. La
 coordinación consulta a los Asistentes involucrados: si fue un olvido, cierra el turno a mano; si
@@ -1024,9 +1024,10 @@ en la sección «La entrada y la recuperación de la clave».
 - **Peso de cada prestación**, en una torta. Un botón cambia entre contarlas por cantidad o por
   dinero. La vista por dinero la ve sólo la administración, igual que los pagos a los Asistentes.
 
-**42.** Construirlo: el tablero con estos renglones y estos nombres en los tres idiomas, el plazo
-de 15 minutos configurable para la entrada y la salida sin registrar, y los dos gráficos del
-Resumen del mes.
+**42.** Las etapas Contacto, Prospecto y Cliente no existen todavía: un pedido de servicio hoy
+está nuevo, en gestión o asignado, y el renglón cuenta los nuevos y los que están en gestión.
+Falta que el Desarrollador diga qué es cada etapa y cuándo se pasa de una a otra; con eso se
+construyen y el renglón las muestra.
 
 ---
 

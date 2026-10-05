@@ -58,6 +58,12 @@
 -- ============================================================================
 
 
+-- La siembra da de alta Prestadoras, y el alta sólo la puede dar el trabajo sin persona: la
+-- función que le arma la configuración a una Prestadora nueva rechaza a cualquier otro. Esta
+-- sesión no trae credencial, así que se presenta como ese trabajo. Vale sólo para esta sesión.
+SELECT set_config('request.jwt.claims', '{"role":"service_role"}', false);
+
+
 -- ----------------------------------------------------------------------------
 -- 1. La Prestadora de prueba
 --

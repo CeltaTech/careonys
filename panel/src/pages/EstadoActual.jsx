@@ -1,20 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
-import { traducirValor } from '../i18n/valores';
 import { Cabecera } from '../components/ui/Cabecera';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
+import { useEmergenciasSinTomar } from '../hooks/useEmergenciasSinTomar';
+import { usePedidosDeCodigo } from '../context/PedidosDeCodigoContext';
 import { useUmbrales } from '../context/UmbralesContext';
 import { useModalidades } from '../context/ModalidadesContext';
 import { supabase } from '../lib/supabaseClient';
 import { con } from '../lib/textos';
-import { claseBadge, claseBadgeTono, TONO } from '../lib/tonos';
-import { excepcionPorId, resumenDeExcepciones } from '../lib/excepciones';
-import { estaSinCubrir } from '../lib/cobertura';
+import { claseBadgeTono, TONO } from '../lib/tonos';
+import { excepcionPorId } from '../lib/excepciones';
 import { cargarPacientesDeGuardias, conPacientes, textoDePacientes } from '../lib/pacientesDeGuardia';
-import { hoyISO, sumarDias } from '../lib/horarios';
+import { hoyISO, horaDelMomento, sumarDias } from '../lib/horarios';
 import { COLUMNAS_ESTADO_MATRICULA } from '../lib/matricula';
 import {
   ESTADO_VENCIMIENTO,
@@ -25,190 +25,89 @@ import {
   urgenciaDeVencimiento,
 } from '../lib/reglaVencimientos';
 import { diasDePreavisoDeLaPrestadora } from '../lib/plazoDeAviso';
-import { EN_PIE, lasQueCorrenElDia } from '../lib/vigenciaPrestacion';
 import { ESTADO_ACTIVO } from '../lib/candidatos';
-import { soloSinResolver } from '../lib/alertaSinResolver';
-import { MODALIDAD, MODALIDADES_DE_PRESTADORA, contarPorModalidad } from '../lib/modalidades';
-import { clienteDelServicio, contactosDeClientes } from '../lib/clienteDelServicio';
+import { NIVEL_CRITICO, soloSinResolver } from '../lib/alertaSinResolver';
+import { MODALIDAD } from '../lib/modalidades';
 import { mensajeDeError } from '../lib/errores';
 import './EstadoActual.css';
 
 /* La Situación operativa: la página de entrada del Panel.
    ==========================================================================
 
-   Arriba cinco números, al medio los Servicios activos y las alertas que piden a alguien, abajo
-   dos gráficos y las últimas incidencias. Cada bloque lleva a la sección donde se trabaja: acá
-   se mira, no se opera. La grilla de la semana y la cobertura de huecos viven en Guardias.
+   Un tablero de renglones, ordenados de lo más grave a lo de rutina. Cada renglón cuenta los
+   casos que piden que alguien haga algo, y al abrirlo muestra cuáles son y lleva a la sección
+   donde se resuelven. Lo que no pide hacer nada no está acá: los gráficos viven en el Resumen
+   del mes.
 
-   Todo lo que se cuenta sale de la base en el momento. Lo que la base no guarda no se muestra
-   con un número puesto a mano. */
+   NADA APARECE DOS VECES. Cada caso cae en un solo renglón. El turno del relevo que no llegó
+   está en «Asistente ausente» y por eso no se repite en «Ausencias no programadas».
 
-/* Las excepciones miran dos días hacia atrás —quien no llegó, quien no cerró, el reporte que
-   falta— y la semana hacia adelante. Es la misma ventana que usa la grilla de Guardias. */
+   Todo lo que se cuenta sale de la base en el momento, con las mismas reglas que la grilla de
+   Guardias: las excepciones de `lib/excepciones.js` deciden qué turno cae en qué renglón. */
+
+/* Las excepciones miran dos días hacia atrás —quien no llegó, el informe que falta— y la semana
+   hacia adelante. Es la misma ventana que usa la grilla de Guardias. La salida sin registrar no
+   tiene límite hacia atrás: un turno abierto sigue abierto aunque haya pasado un mes. */
 const DIAS_HACIA_ATRAS = 2;
 const DIAS_HACIA_ADELANTE = 6;
 
-/* Cuántos Servicios entran en la tabla y cuántas incidencias en la lista. */
-const SERVICIOS_A_LA_VISTA = 5;
-const INCIDENCIAS_A_LA_VISTA = 3;
+const ESTADOS_GUARDIA_TERMINADA = '(completada,cancelada)';
+const NIVELES_A_LA_VISTA = ['amarilla', NIVEL_CRITICO];
+const SOLICITUD_NUEVA = 'nueva';
+const ESTADOS_SOLICITUD_ABIERTA = [SOLICITUD_NUEVA, 'en_gestion'];
+const ESTADOS_POSTULACION_ABIERTA = ['pendiente', 'en_revision'];
 
-/* El estado guardado de un Servicio en pie, y el de una Guardia que ya no va a ocurrir. */
-const SERVICIO_EN_PIE = 'vigente';
-const GUARDIA_CANCELADA = 'cancelada';
+const COLUMNAS_GUARDIA = '*';
 
-/* Lo que se le pide a cada Servicio para la tabla y para el gráfico de modalidades. */
-const CONSULTA_SERVICIOS =
-  'id, etiqueta, estado, created_at, tipo_contratante, contratante_id, prestaciones(paciente_id), guardias(paciente_id, canal_modalidad)';
+const fallo = (...respuestas) => respuestas.find((r) => r?.error)?.error ?? null;
 
-/* Las excepciones que tienen renglón fijo en «Alertas importantes». Las demás aparecen sólo
-   cuando tienen algo. */
-const EXCEPCION_SIN_CUBRIR = 'sin_cubrir';
-const EXCEPCION_TARDE = 'tarde';
-const EXCEPCIONES_CON_RENGLON_PROPIO = new Set([EXCEPCION_SIN_CUBRIR, 'documentacion']);
-
-/* El color de cada modalidad en la dona. */
-const COLOR_MODALIDAD = {
-  [MODALIDAD.DIRECTA]: 'var(--verde-exito)',
-  [MODALIDAD.SUBCONTRATACION]: 'var(--azul-medio)',
-  [MODALIDAD.MATCH]: 'var(--violeta)',
-};
-
-const NOMBRE_MODALIDAD = {
-  [MODALIDAD.DIRECTA]: (t) => t.configuracion.modalidades_directa,
-  [MODALIDAD.MATCH]: (t) => t.configuracion.modalidades_match,
-  [MODALIDAD.SUBCONTRATACION]: (t) => t.configuracion.modalidades_subcontratacion,
-};
-
-/** El fondo de una dona a partir de tramos `{color, cantidad}`. */
-function fondoDeDona(tramos) {
-  const total = tramos.reduce((s, x) => s + x.cantidad, 0);
-  if (total === 0) return 'var(--tono-neutro-fondo)';
-  let acumulado = 0;
-  const partes = tramos
-    .filter((x) => x.cantidad > 0)
-    .map((x) => {
-      const desde = (acumulado / total) * 100;
-      acumulado += x.cantidad;
-      const hasta = (acumulado / total) * 100;
-      return `${x.color} ${desde}% ${hasta}%`;
-    });
-  return `conic-gradient(${partes.join(', ')})`;
-}
-
-const porcentaje = (parte, total) => (total > 0 ? Math.round((parte / total) * 100) : 0);
-
-/* ---------- Íconos de trazo de los recuadros de arriba ---------- */
-
-function IconoServicios() {
+function Renglon({ clave, nombre, casos, tono, a, textoEnlace, abierto, alternar }) {
+  const cantidad = casos.length;
+  const idDetalle = `renglon-${clave}`;
   return (
-    <svg viewBox="0 0 24 24" className="estado-actual-trazo-verde" aria-hidden="true">
-      <circle cx="9" cy="8" r="3" />
-      <circle cx="17" cy="9" r="2.5" />
-      <path d="M3.5 20c.5-4 2.3-6 5.5-6s5 2 5.5 6" />
-      <path d="M14 15c2.8-.3 4.9 1.3 5.4 5" />
-    </svg>
-  );
-}
-
-function IconoPrestaciones() {
-  return (
-    <svg viewBox="0 0 24 24" className="estado-actual-trazo-azul" aria-hidden="true">
-      <rect x="4" y="3" width="15" height="17" rx="2" />
-      <path d="M8 7h7M8 11h5M8 15h4" />
-      <circle cx="17" cy="17" r="4" className="estado-actual-icono-relleno" />
-      <path d="M17 15v2l1 1" />
-    </svg>
-  );
-}
-
-function IconoAsistentes() {
-  return (
-    <svg viewBox="0 0 24 24" className="estado-actual-trazo-violeta" aria-hidden="true">
-      <circle cx="10" cy="8" r="3" />
-      <circle cx="17" cy="10" r="2.5" />
-      <path d="M4 20c.5-4 2.4-6 6-6s5.5 2 6 6" />
-      <path d="M15 15c2.7-.1 4.5 1.5 5 5" />
-    </svg>
-  );
-}
-
-function IconoGuardias() {
-  return (
-    <svg viewBox="0 0 24 24" className="estado-actual-trazo-naranja" aria-hidden="true">
-      <rect x="3.5" y="5" width="17" height="15" rx="2" />
-      <path d="M3.5 10h17M8 3v4M16 3v4" />
-      <path d="M8 14h3M8 17h6" />
-    </svg>
-  );
-}
-
-function IconoCobertura() {
-  return (
-    <svg viewBox="0 0 24 24" className="estado-actual-trazo-verde" aria-hidden="true">
-      <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z" />
-      <path d="M9 12l2 2 4-4" />
-    </svg>
-  );
-}
-
-/* ---------- Piezas ---------- */
-
-function Tarjeta({ titulo, enlace, children }) {
-  return (
-    <section className="panel-tarjeta">
-      <div className="panel-tarjeta-titulo">
-        <h2>{titulo}</h2>
-        {enlace}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function Kpi({ icono, etiqueta, numero, a, textoEnlace }) {
-  return (
-    <div className="panel-tarjeta panel-kpi">
-      <div className="panel-kpi-icono">{icono}</div>
-      <div className="panel-kpi-etiqueta">{etiqueta}</div>
-      <div className="panel-kpi-numero">{numero}</div>
-      <Link className="panel-enlace" to={a}>
-        {textoEnlace}
-      </Link>
+    <div className="estado-actual-renglon">
+      <button
+        type="button"
+        className="estado-actual-cabeza"
+        onClick={alternar}
+        disabled={cantidad === 0}
+        aria-expanded={cantidad > 0 ? abierto : undefined}
+        aria-controls={cantidad > 0 ? idDetalle : undefined}
+      >
+        <b>{nombre}</b>
+        <span className={claseBadgeTono(cantidad === 0 ? TONO.NEUTRO : tono)}>{cantidad}</span>
+      </button>
+      {abierto && cantidad > 0 && (
+        <div className="estado-actual-detalle" id={idDetalle}>
+          {casos.map((c) => (
+            <div key={c.id} className="estado-actual-caso">
+              <span>{c.titulo}</span>
+              {c.detalle && <span className="panel-mini">{c.detalle}</span>}
+            </div>
+          ))}
+          <Link className="panel-enlace" to={a}>
+            {textoEnlace}
+          </Link>
+        </div>
+      )}
     </div>
-  );
-}
-
-function FilaAlerta({ a, titulo, detalle, cantidad, tono }) {
-  return (
-    <Link className="panel-fila-alerta" to={a}>
-      <div>
-        <b>{titulo}</b>
-        {detalle && <span className="panel-mini">{detalle}</span>}
-      </div>
-      <span className={claseBadgeTono(tono)}>{cantidad}</span>
-    </Link>
-  );
-}
-
-function Mensaje({ children }) {
-  return (
-    <p className="estado-actual-mensaje" role="status">
-      {children}
-    </p>
   );
 }
 
 export function EstadoActual() {
   const { t, locale } = useLocale();
   const tx = t.estado_actual;
-  const navigate = useNavigate();
   const prestadoraId = usePrestadoraActual();
   const umbrales = useUmbrales();
-  const { modalidades } = useModalidades();
+  const { tieneModalidad } = useModalidades();
+  const hayPlantel = tieneModalidad(MODALIDAD.DIRECTA) || tieneModalidad(MODALIDAD.MATCH);
+  const emergencias = useEmergenciasSinTomar(hayPlantel);
+  const { pedidos } = usePedidosDeCodigo();
 
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [datos, setDatos] = useState(null);
+  const [abiertos, setAbiertos] = useState(() => new Set());
 
   const cargar = useCallback(async () => {
     setEstado('cargando');
@@ -220,56 +119,75 @@ export function EstadoActual() {
     const diasDePreaviso = await diasDePreavisoDeLaPrestadora(prestadoraId);
     const limitePapeles = fechaLimiteDeAviso(diasDePreaviso);
 
-    const [gs, as, ps, ds, em, sv, pr, al, inc, incAbiertas] = await Promise.all([
-      supabase.from('guardias').select('*').gte('fecha', desde).lte('fecha', hasta),
-      supabase.from('asistentes').select('id, estado'),
+    const [gs, abiertasViejas, as, ps, ds, em, al, inc, sol, pos] = await Promise.all([
+      supabase.from('guardias').select(COLUMNAS_GUARDIA).gte('fecha', desde).lte('fecha', hasta),
+      supabase
+        .from('guardias')
+        .select(COLUMNAS_GUARDIA)
+        .lt('fecha', desde)
+        .not('checkin_at', 'is', null)
+        .is('checkout_at', null)
+        .not('estado', 'in', ESTADOS_GUARDIA_TERMINADA),
+      supabase.from('asistentes').select('id, nombre, estado'),
       supabase.from('pacientes').select('id, nombre'),
       supabase
         .from('documentos_asistente')
-        .select('asistente_id, fecha_vencimiento')
+        .select('id, asistente_id, fecha_vencimiento, tipos_documento_asistente(nombre)')
         .not('fecha_vencimiento', 'is', null)
         .lte('fecha_vencimiento', limitePapeles),
       supabase.from('estado_matricula_asistente').select(COLUMNAS_ESTADO_MATRICULA),
-      supabase
-        .from('servicios')
-        .select(CONSULTA_SERVICIOS)
-        .eq('estado', SERVICIO_EN_PIE)
-        .order('created_at', { ascending: false }),
-      supabase.from('prestaciones').select('id, estado, vigente_desde, vigente_hasta').eq('estado', EN_PIE),
-      soloSinResolver(supabase.from('alertas').select('id', { count: 'exact', head: true })),
+      soloSinResolver(
+        supabase.from('alertas').select('id, paciente_id, nivel, created_at').in('nivel', NIVELES_A_LA_VISTA),
+      ).order('created_at', { ascending: false }),
       supabase
         .from('incidentes_relevo')
-        .select('id, guardia_saliente_id, iniciado_at, resuelto_at')
-        .order('iniciado_at', { ascending: false })
-        .limit(INCIDENCIAS_A_LA_VISTA),
-      supabase.from('incidentes_relevo').select('id', { count: 'exact', head: true }).is('resuelto_at', null),
+        .select('id, guardia_saliente_id, guardia_entrante_id, iniciado_at')
+        .is('resuelto_at', null)
+        .not('guardia_saliente_id', 'is', null),
+      supabase
+        .from('solicitudes')
+        .select('id, nombre, nombre_paciente, estado, creado_en')
+        .or(`estado.is.null,estado.in.(${ESTADOS_SOLICITUD_ABIERTA.join(',')})`)
+        .order('creado_en', { ascending: false }),
+      supabase
+        .from('postulaciones')
+        .select('id, nombre, creado_en')
+        .in('estado', ESTADOS_POSTULACION_ABIERTA)
+        .order('creado_en', { ascending: false }),
     ]);
 
     // Un número que no se pudo leer no se muestra como cero: la página entera pasa a error.
-    const fallida = [gs, as, ps, ds, em, sv, pr, al, inc, incAbiertas].find((r) => r.error);
-    if (fallida) {
-      setError(mensajeDeError(fallida.error, t));
+    const primerFallo = fallo(gs, abiertasViejas, as, ps, ds, em, al, inc, sol, pos);
+    if (primerFallo) {
+      setError(mensajeDeError(primerFallo, t));
       setEstado('error');
       return;
     }
 
     const nombresPaciente = Object.fromEntries((ps.data ?? []).map((p) => [p.id, p.nombre]));
-    const pacientesPorGuardia = await cargarPacientesDeGuardias((gs.data ?? []).map((g) => g.id));
-    const guardias = conPacientes(gs.data ?? [], pacientesPorGuardia, nombresPaciente);
+    const brutas = [...(gs.data ?? []), ...(abiertasViejas.data ?? [])];
 
-    // Papeles: vencido es rojo, por vencer es naranja. La regla es la de Documentación.
-    const porVencer = new Set();
-    const vencidos = new Set();
-    let hayPapelVencido = false;
-    for (const d of ds.data ?? []) {
-      const estadoPapel = estadoDeVencimiento(diasParaVencer(d.fecha_vencimiento), diasDePreaviso);
-      if (estadoPapel === ESTADO_VENCIMIENTO.VENCIDO) {
-        vencidos.add(d.asistente_id);
-        hayPapelVencido = true;
-      } else porVencer.add(d.asistente_id);
+    // Los turnos de los incidentes pueden haber quedado fuera de la ventana: se traen aparte.
+    const yaTraidas = new Set(brutas.map((g) => g.id));
+    const faltantes = [
+      ...new Set(
+        (inc.data ?? []).flatMap((i) => [i.guardia_entrante_id, i.guardia_saliente_id]).filter((id) => id && !yaTraidas.has(id)),
+      ),
+    ];
+    if (faltantes.length > 0) {
+      const extra = await supabase.from('guardias').select(COLUMNAS_GUARDIA).in('id', faltantes);
+      if (extra.error) {
+        setError(mensajeDeError(extra.error, t));
+        setEstado('error');
+        return;
+      }
+      brutas.push(...(extra.data ?? []));
     }
 
-    // Reportes que faltan, sólo sobre guardias terminadas.
+    const pacientesPorGuardia = await cargarPacientesDeGuardias(brutas.map((g) => g.id));
+    const guardias = conPacientes(brutas, pacientesPorGuardia, nombresPaciente);
+
+    // Informes que faltan, sólo sobre turnos terminados.
     const completadas = guardias.filter((g) => g.estado === 'completada');
     const sinReporte = new Set();
     if (completadas.length > 0) {
@@ -297,48 +215,73 @@ export function EstadoActual() {
       }
     }
 
-    const matriculaTrabada = new Set();
-    const matriculaPorVencer = new Set();
+    // Para la salida sin registrar: los turnos siguientes que ya registraron la entrada, desde el
+    // más viejo de los abiertos. El aviso muestra a qué hora entró el siguiente.
+    const fechaMasVieja = guardias
+      .filter((g) => g.checkin_at && !g.checkout_at)
+      .reduce((min, g) => (min && min < g.fecha ? min : g.fecha), null);
+    let entradas = [];
+    if (fechaMasVieja) {
+      const r = await supabase
+        .from('guardias')
+        .select('id, servicio_id, paciente_id, fecha, hora_inicio, checkin_at')
+        .gte('fecha', fechaMasVieja)
+        .not('checkin_at', 'is', null);
+      if (r.error) {
+        setError(mensajeDeError(r.error, t));
+        setEstado('error');
+        return;
+      }
+      entradas = r.data ?? [];
+    }
+
+    const activos = new Set((as.data ?? []).filter((a) => a.estado === ESTADO_ACTIVO).map((a) => a.id));
+    const nombresAsistente = Object.fromEntries((as.data ?? []).map((a) => [a.id, a.nombre]));
+
+    // Documentación: un caso por Asistente activo, con la lista de papeles que tienen el problema.
+    const papelesPorAsistente = new Map();
+    const agregarPapel = (asistenteId, texto, grave) => {
+      if (!activos.has(asistenteId)) return;
+      const actual = papelesPorAsistente.get(asistenteId) ?? { textos: [], grave: false };
+      actual.textos.push(texto);
+      actual.grave = actual.grave || grave;
+      papelesPorAsistente.set(asistenteId, actual);
+    };
+    for (const d of ds.data ?? []) {
+      const vencido =
+        estadoDeVencimiento(diasParaVencer(d.fecha_vencimiento), diasDePreaviso) === ESTADO_VENCIMIENTO.VENCIDO;
+      const nombre = d.tipos_documento_asistente?.nombre ?? '—';
+      const situacion = vencido ? t.documentacion.estado_vencido : t.documentacion.estado_por_vencer;
+      agregarPapel(d.asistente_id, `${nombre}: ${situacion}`, vencido);
+    }
     for (const fila of em.data ?? []) {
       if (fila.motivo_bloqueo) {
-        matriculaTrabada.add(fila.asistente_id);
+        agregarPapel(fila.asistente_id, t.matricula[`bloqueo_${fila.motivo_bloqueo}`] ?? t.matricula.bloqueo_titulo, true);
         continue;
       }
       if (fila.requiere_matricula !== true) continue;
-      if (urgenciaDeVencimiento(fila.dias_para_vencer, diasDePreaviso) !== URGENCIA.NINGUNA) {
-        matriculaPorVencer.add(fila.asistente_id);
-      }
-    }
-
-    const servicios = sv.data ?? [];
-    const { contactos, error: errorContactos } = await contactosDeClientes(supabase, servicios);
-    if (errorContactos) {
-      setError(mensajeDeError(errorContactos, t));
-      setEstado('error');
-      return;
+      if (urgenciaDeVencimiento(fila.dias_para_vencer, diasDePreaviso) === URGENCIA.NINGUNA) continue;
+      const dias = fila.dias_para_vencer;
+      const texto =
+        dias === 0
+          ? t.matricula.vence_hoy
+          : dias === 1
+            ? t.matricula.vence_manana
+            : con(t.matricula.vence_en_dias, { dias });
+      agregarPapel(fila.asistente_id, texto, false);
     }
 
     setDatos({
-      hoy,
       guardias,
-      servicios,
-      contactos,
+      entradas,
       nombresPaciente,
-      prestacionesQueCorren: lasQueCorrenElDia(pr.data ?? [], hoy).length,
-      asistentesActivos: (as.data ?? []).filter((a) => a.estado === ESTADO_ACTIVO).length,
-      papelesPorVencer: (ds.data ?? []).length,
-      hayPapelVencido,
-      alertasSinResolver: al.count ?? 0,
-      incidenciasAbiertas: incAbiertas.count ?? 0,
-      incidencias: inc.data ?? [],
-      ctxExtra: {
-        asistentesConPapelPorVencer: porVencer,
-        asistentesConPapelVencido: vencidos,
-        guardiasSinReporte: sinReporte,
-        diasDePreaviso,
-        asistentesConMatriculaTrabada: matriculaTrabada,
-        asistentesConMatriculaPorVencer: matriculaPorVencer,
-      },
+      nombresAsistente,
+      sinReporte,
+      papelesPorAsistente,
+      alertas: al.data ?? [],
+      incidentes: inc.data ?? [],
+      solicitudes: sol.data ?? [],
+      postulaciones: pos.data ?? [],
     });
     setEstado('listo');
   }, [prestadoraId, t]);
@@ -347,47 +290,199 @@ export function EstadoActual() {
     cargar();
   }, [cargar]);
 
-  // El reloj y los umbrales entran una sola vez por carga: todos los contadores miran el mismo
-  // momento y las mismas reglas que la grilla de Guardias.
   const ctx = useMemo(
-    () => (datos ? { ahora: new Date(), umbrales, ...datos.ctxExtra } : null),
+    () => (datos ? { ahora: new Date(), umbrales, guardiasSinReporte: datos.sinReporte } : null),
     [datos, umbrales],
   );
 
-  const resumen = useMemo(() => (datos && ctx ? resumenDeExcepciones(datos.guardias, ctx) : []), [datos, ctx]);
+  const fecha = useCallback(
+    (iso) => (iso ? new Date(iso).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' }) : '—'),
+    [locale],
+  );
 
-  // Cobertura de hoy: sin las canceladas, que ya no van a ocurrir.
-  const cobertura = useMemo(() => {
-    if (!datos || !ctx) return null;
-    const tarde = excepcionPorId(EXCEPCION_TARDE);
-    const deHoy = datos.guardias.filter((g) => g.fecha === datos.hoy && g.estado !== GUARDIA_CANCELADA);
-    let sinCobertura = 0;
-    let enRiesgo = 0;
-    for (const g of deHoy) {
-      if (estaSinCubrir(g)) sinCobertura += 1;
-      else if (tarde?.aplica(g, ctx)) enRiesgo += 1;
-    }
-    const total = deHoy.length;
-    return { total, sinCobertura, enRiesgo, cubiertas: total - sinCobertura - enRiesgo };
-  }, [datos, ctx]);
+  const renglones = useMemo(() => {
+    if (!datos || !ctx) return [];
+    const { guardias, nombresAsistente, nombresPaciente } = datos;
+    const porId = new Map(guardias.map((g) => [g.id, g]));
+    const asistente = (g) => nombresAsistente[g?.asistente_id] || '—';
+    const pacientes = (g) => textoDePacientes(g?.pacientes_nombres ?? [], t.guardias.pacientes_y_mas);
+    const turno = (g) => (g ? `${g.fecha} · ${g.hora_inicio?.slice(0, 5)}–${g.hora_fin?.slice(0, 5)}` : '—');
+    const de = (id) => guardias.filter((g) => excepcionPorId(id)?.aplica(g, ctx));
+    const critica = (id, lista) => Boolean(excepcionPorId(id)?.esCritica(lista, ctx));
 
-  // Modalidad de cada Servicio: la de sus guardias. Un Servicio con guardias en dos modalidades
-  // cuenta en las dos.
-  const porModalidad = useMemo(() => {
-    if (!datos) return [];
-    const cuenta = contarPorModalidad(datos.servicios, (s) => [
-      ...new Set((s.guardias ?? []).map((g) => g.canal_modalidad).filter(Boolean)),
-    ]);
-    const habilitadas = new Set(modalidades ?? []);
-    return MODALIDADES_DE_PRESTADORA.filter((m) => habilitadas.has(m) || cuenta[m] > 0).map((m) => ({
-      modalidad: m,
-      cantidad: cuenta[m],
-      color: COLOR_MODALIDAD[m],
-    }));
-  }, [datos, modalidades]);
+    // El turno del relevo que no llegó va en «Asistente ausente», no en «Ausencias no programadas».
+    const entrantesDeIncidentes = new Set(datos.incidentes.map((i) => i.guardia_entrante_id).filter(Boolean));
 
-  const fecha = (iso) =>
-    iso ? new Date(iso).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' }) : '—';
+    const ausencias = de('tarde').filter((g) => !entrantesDeIncidentes.has(g.id));
+    const sinCubrir = de('sin_cubrir');
+    const ofrecidas = de('ofrecidas_sin_respuesta');
+    const sinCerrar = de('sin_cerrar');
+    const sinInforme = de('reportes');
+
+    // Quién entró después en el mismo Servicio, o con el mismo Paciente si no hay Servicio.
+    const entradaSiguiente = (g) => {
+      const mismo = (e) => (g.servicio_id ? e.servicio_id === g.servicio_id : e.paciente_id === g.paciente_id);
+      const empiezaDespues = (e) => `${e.fecha} ${e.hora_inicio}` > `${g.fecha} ${g.hora_inicio}`;
+      const siguientes = datos.entradas.filter((e) => e.id !== g.id && mismo(e) && empiezaDespues(e));
+      siguientes.sort((a, b) => a.checkin_at.localeCompare(b.checkin_at));
+      return siguientes[0]?.checkin_at ?? null;
+    };
+
+    const lista = [
+      {
+        clave: 'emergencia',
+        ver: hayPlantel,
+        nombre: tx.fila_emergencia,
+        a: '/emergencias',
+        enlace: t.nav.emergencias,
+        tono: TONO.CRITICO,
+        casos: emergencias.map((e) => ({
+          id: e.id,
+          titulo: [e.guardia?.paciente, e.guardia?.asistente].filter(Boolean).join(' — ') || '—',
+          detalle: `${e.reportado_at?.slice(0, 10) ?? ''} ${horaDelMomento(e.reportado_at, locale)}`,
+        })),
+      },
+      {
+        clave: 'ausencias',
+        ver: true,
+        nombre: tx.fila_ausencias,
+        a: '/guardias',
+        enlace: t.nav.guardias,
+        tono: TONO.CRITICO,
+        casos: ausencias.map((g) => ({ id: g.id, titulo: `${asistente(g)} — ${pacientes(g)}`, detalle: turno(g) })),
+      },
+      {
+        clave: 'ingreso_egreso',
+        ver: hayPlantel,
+        nombre: tx.fila_ingreso_egreso,
+        a: '/pase-de-guardia',
+        enlace: t.nav.pase_de_guardia,
+        tono: TONO.CRITICO,
+        casos: pedidos.map((p) => ({
+          id: p.id,
+          titulo: `${p.asistente || '—'} — ${t.pase_de_guardia[`momento_${p.momento}`] ?? p.momento}`,
+          detalle: fecha(p.pedidoEn),
+        })),
+      },
+      {
+        clave: 'sin_asignacion',
+        ver: true,
+        nombre: tx.fila_sin_asignacion,
+        a: '/guardias',
+        enlace: t.nav.guardias,
+        tono: critica('sin_cubrir', sinCubrir) || critica('ofrecidas_sin_respuesta', ofrecidas) ? TONO.CRITICO : TONO.ATENCION,
+        casos: [
+          ...sinCubrir.map((g) => ({ id: g.id, titulo: pacientes(g), detalle: turno(g) })),
+          ...ofrecidas.map((g) => ({
+            id: g.id,
+            titulo: pacientes(g),
+            detalle: `${turno(g)} · ${tx.exc_ofrecidas_sin_respuesta}`,
+          })),
+        ],
+      },
+      {
+        clave: 'asistente_ausente',
+        ver: hayPlantel,
+        nombre: tx.fila_asistente_ausente,
+        a: '/continuidad',
+        enlace: t.nav.continuidad,
+        tono: TONO.CRITICO,
+        casos: datos.incidentes.map((i) => {
+          const entrante = porId.get(i.guardia_entrante_id);
+          const saliente = porId.get(i.guardia_saliente_id);
+          return {
+            id: i.id,
+            titulo: `${entrante ? asistente(entrante) : '—'} — ${pacientes(entrante ?? saliente)}`,
+            detalle: entrante ? turno(entrante) : fecha(i.iniciado_at),
+          };
+        }),
+      },
+      {
+        clave: 'salida_sin_registrar',
+        ver: true,
+        nombre: tx.fila_salida_sin_registrar,
+        a: '/guardias',
+        enlace: t.nav.guardias,
+        tono: critica('sin_cerrar', sinCerrar) ? TONO.CRITICO : TONO.ATENCION,
+        casos: sinCerrar.map((g) => {
+          const siguiente = entradaSiguiente(g);
+          return {
+            id: g.id,
+            titulo: `${asistente(g)} — ${pacientes(g)}`,
+            detalle: siguiente
+              ? `${turno(g)} · ${con(tx.entro_el_siguiente, { hora: fecha(siguiente) })}`
+              : turno(g),
+          };
+        }),
+      },
+      {
+        clave: 'estado_paciente',
+        ver: true,
+        nombre: tx.fila_estado_paciente,
+        a: '/alertas',
+        enlace: t.nav.alertas,
+        tono: datos.alertas.some((x) => x.nivel === NIVEL_CRITICO) ? TONO.CRITICO : TONO.ATENCION,
+        casos: datos.alertas.map((x) => ({
+          id: x.id,
+          titulo: `${nombresPaciente[x.paciente_id] || '—'} — ${t.alertas[`nivel_${x.nivel}`] ?? x.nivel}`,
+          detalle: fecha(x.created_at),
+        })),
+      },
+      {
+        clave: 'documentacion',
+        ver: hayPlantel,
+        nombre: tx.fila_documentacion,
+        a: '/documentacion',
+        enlace: t.nav.documentacion,
+        tono: [...datos.papelesPorAsistente.values()].some((p) => p.grave) ? TONO.CRITICO : TONO.ATENCION,
+        casos: [...datos.papelesPorAsistente.entries()].map(([id, p]) => ({
+          id,
+          titulo: nombresAsistente[id] || '—',
+          detalle: p.textos.join(' · '),
+        })),
+      },
+      {
+        clave: 'informes',
+        ver: true,
+        nombre: tx.fila_informes,
+        a: '/guardias',
+        enlace: t.nav.guardias,
+        tono: TONO.INFO,
+        casos: sinInforme.map((g) => ({ id: g.id, titulo: `${asistente(g)} — ${pacientes(g)}`, detalle: turno(g) })),
+      },
+      {
+        clave: 'contacto',
+        ver: true,
+        nombre: tx.fila_contacto,
+        a: '/solicitudes',
+        enlace: t.nav.solicitudes,
+        tono: TONO.INFO,
+        casos: datos.solicitudes.map((s) => ({
+          id: s.id,
+          titulo: s.nombre || s.nombre_paciente || '—',
+          detalle: `${t.solicitudes[`estado_${s.estado ?? SOLICITUD_NUEVA}`] ?? s.estado} · ${fecha(s.creado_en)}`,
+        })),
+      },
+      {
+        clave: 'postulante',
+        ver: true,
+        nombre: tx.fila_postulante,
+        a: '/postulaciones',
+        enlace: t.nav.postulaciones,
+        tono: TONO.INFO,
+        casos: datos.postulaciones.map((p) => ({ id: p.id, titulo: p.nombre || '—', detalle: fecha(p.creado_en) })),
+      },
+    ];
+    return lista.filter((r) => r.ver);
+  }, [datos, ctx, emergencias, pedidos, hayPlantel, t, tx, locale, fecha]);
+
+  const alternar = (clave) =>
+    setAbiertos((previos) => {
+      const nuevos = new Set(previos);
+      if (nuevos.has(clave)) nuevos.delete(clave);
+      else nuevos.add(clave);
+      return nuevos;
+    });
 
   if (estado === 'cargando') {
     return (
@@ -414,251 +509,24 @@ export function EstadoActual() {
     );
   }
 
-  const cantidadDe = (id) => resumen.find((r) => r.id === id)?.cantidad ?? 0;
-  const otrasExcepciones = resumen.filter((r) => !EXCEPCIONES_CON_RENGLON_PROPIO.has(r.id) && r.cantidad > 0);
-  const totalModalidad = porModalidad.reduce((s, x) => s + x.cantidad, 0);
-  const pctCobertura = porcentaje(cobertura.total - cobertura.sinCobertura, cobertura.total);
-  const serviciosVisibles = datos.servicios.slice(0, SERVICIOS_A_LA_VISTA);
-
   return (
     <div>
       <Cabecera titulo={tx.titulo} />
-
-      <div className="panel-grilla panel-kpis">
-        <Kpi
-          icono={<IconoServicios />}
-          etiqueta={tx.kpi_servicios}
-          numero={datos.servicios.length}
-          a="/servicios"
-          textoEnlace={tx.ver_servicios}
-        />
-        <Kpi
-          icono={<IconoPrestaciones />}
-          etiqueta={tx.kpi_prestaciones}
-          numero={datos.prestacionesQueCorren}
-          a="/servicios"
-          textoEnlace={tx.ver_prestaciones}
-        />
-        <Kpi
-          icono={<IconoAsistentes />}
-          etiqueta={tx.kpi_asistentes}
-          numero={datos.asistentesActivos}
-          a="/asistentes"
-          textoEnlace={tx.ver_asistentes}
-        />
-        <Kpi
-          icono={<IconoGuardias />}
-          etiqueta={tx.kpi_guardias_hoy}
-          numero={cobertura.total}
-          a="/guardias"
-          textoEnlace={tx.ver_guardias}
-        />
-        <Kpi
-          icono={<IconoCobertura />}
-          etiqueta={tx.kpi_cobertura}
-          numero={cobertura.total > 0 ? `${pctCobertura}%` : '—'}
-          a="/guardias"
-          textoEnlace={tx.ver_cobertura}
-        />
-      </div>
-
-      <div className="panel-grilla panel-columnas-2">
-        <Tarjeta
-          titulo={tx.servicios_activos}
-          enlace={
-            <Link className="panel-enlace" to="/servicios">
-              {tx.ver_todos}
-            </Link>
-          }
-        >
-          {serviciosVisibles.length === 0 ? (
-            <Mensaje>{tx.sin_servicios}</Mensaje>
-          ) : (
-            <table className="panel-tabla">
-              <thead>
-                <tr>
-                  <th>{tx.col_servicio}</th>
-                  <th>{tx.col_paciente}</th>
-                  <th>{tx.col_contratante}</th>
-                  <th>{tx.col_prestaciones}</th>
-                  <th>{tx.col_estado}</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {serviciosVisibles.map((s) => {
-                  const idsPaciente = [
-                    ...new Set(
-                      [...(s.prestaciones ?? []), ...(s.guardias ?? [])].map((x) => x.paciente_id).filter(Boolean),
-                    ),
-                  ];
-                  const nombres = idsPaciente.map((id) => datos.nombresPaciente[id]).filter(Boolean);
-                  const contacto = clienteDelServicio(s, datos.contactos).contacto;
-                  return (
-                    <tr key={s.id}>
-                      <td>
-                        <b>{s.etiqueta || '—'}</b>
-                      </td>
-                      <td>{textoDePacientes(nombres, t.guardias.pacientes_y_mas)}</td>
-                      <td>{contacto?.nombre ?? '—'}</td>
-                      <td>{(s.prestaciones ?? []).length}</td>
-                      <td>
-                        <span className={claseBadge(s.estado)}>
-                          {traducirValor(t.servicios, `estado_${s.estado}`)}
-                        </span>
-                      </td>
-                      <td>
-                        <Button variant="secondary" type="button" onClick={() => navigate(`/servicios/${s.id}`)}>
-                          {tx.ver}
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </Tarjeta>
-
-        <Tarjeta
-          titulo={tx.alertas_importantes}
-          enlace={
-            <Link className="panel-enlace" to="/alertas">
-              {tx.ver_todas}
-            </Link>
-          }
-        >
-          <FilaAlerta
-            a="/guardias"
-            titulo={tx.guardias_sin_cobertura}
-            detalle={tx.requieren_asignacion}
-            cantidad={cantidadDe(EXCEPCION_SIN_CUBRIR)}
-            tono={TONO.CRITICO}
+      <section className="panel-tarjeta estado-actual-tablero">
+        {renglones.map((r) => (
+          <Renglon
+            key={r.clave}
+            clave={r.clave}
+            nombre={r.nombre}
+            casos={r.casos}
+            tono={r.tono}
+            a={r.a}
+            textoEnlace={r.enlace}
+            abierto={abiertos.has(r.clave)}
+            alternar={() => alternar(r.clave)}
           />
-          <FilaAlerta
-            a="/documentacion"
-            titulo={tx.documentacion_por_vencer}
-            detalle={con(tx.en_los_proximos_dias, { dias: datos.ctxExtra.diasDePreaviso })}
-            cantidad={datos.papelesPorVencer}
-            tono={datos.hayPapelVencido ? TONO.CRITICO : TONO.ATENCION}
-          />
-          <FilaAlerta
-            a="/alertas"
-            titulo={tx.alertas_sin_resolver}
-            detalle={tx.sobre_pacientes}
-            cantidad={datos.alertasSinResolver}
-            tono={TONO.INFO}
-          />
-          <FilaAlerta
-            a="/continuidad"
-            titulo={tx.incidencias_abiertas}
-            detalle={tx.requieren_seguimiento}
-            cantidad={datos.incidenciasAbiertas}
-            tono={TONO.CRITICO}
-          />
-          {otrasExcepciones.map((exc) => (
-            <FilaAlerta
-              key={exc.id}
-              a="/guardias"
-              titulo={con(tx[exc.claveEtiqueta], exc.parametros)}
-              cantidad={exc.cantidad}
-              tono={exc.critica ? TONO.CRITICO : TONO.ATENCION}
-            />
-          ))}
-        </Tarjeta>
-      </div>
-
-      <div className="panel-grilla panel-columnas-3">
-        <Tarjeta
-          titulo={tx.servicios_por_modalidad}
-          enlace={
-            <Link className="panel-enlace" to="/servicios">
-              {tx.ver_detalle}
-            </Link>
-          }
-        >
-          {totalModalidad === 0 ? (
-            <Mensaje>{tx.sin_modalidad}</Mensaje>
-          ) : (
-            <div className="panel-grafico">
-              <div className="panel-dona" style={{ background: fondoDeDona(porModalidad) }}>
-                <b>{datos.servicios.length}</b>
-              </div>
-              <div className="panel-leyenda">
-                {porModalidad.map((x) => (
-                  <div key={x.modalidad}>
-                    <i className="panel-punto" style={{ background: x.color }} />
-                    {NOMBRE_MODALIDAD[x.modalidad]?.(t) ?? x.modalidad}
-                    {'  '}
-                    {x.cantidad} ({porcentaje(x.cantidad, totalModalidad)}%)
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </Tarjeta>
-
-        <Tarjeta
-          titulo={tx.cobertura_guardias}
-          enlace={
-            <Link className="panel-enlace" to="/guardias">
-              {tx.ver_analisis}
-            </Link>
-          }
-        >
-          {cobertura.total === 0 ? (
-            <Mensaje>{tx.sin_guardias_hoy}</Mensaje>
-          ) : (
-            <div className="panel-grafico">
-              <div
-                className="panel-dona"
-                style={{
-                  background: fondoDeDona([
-                    { color: 'var(--verde-exito)', cantidad: cobertura.cubiertas },
-                    { color: 'var(--naranja-alerta)', cantidad: cobertura.enRiesgo },
-                    { color: 'var(--rojo-peligro)', cantidad: cobertura.sinCobertura },
-                  ]),
-                }}
-              >
-                <b>{pctCobertura}%</b>
-              </div>
-              <div className="panel-leyenda">
-                <div>{con(tx.cubiertas, { n: cobertura.cubiertas })}</div>
-                <div>{con(tx.sin_cobertura, { n: cobertura.sinCobertura })}</div>
-                <div>{con(tx.en_riesgo, { n: cobertura.enRiesgo })}</div>
-              </div>
-            </div>
-          )}
-        </Tarjeta>
-
-        <Tarjeta
-          titulo={tx.incidencias_recientes}
-          enlace={
-            <Link className="panel-enlace" to="/continuidad">
-              {tx.ver_todas}
-            </Link>
-          }
-        >
-          {datos.incidencias.length === 0 ? (
-            <Mensaje>{tx.sin_incidencias}</Mensaje>
-          ) : (
-            datos.incidencias.map((i) => {
-              const abierta = !i.resuelto_at;
-              return (
-                <Link key={i.id} className="panel-fila-alerta" to="/continuidad">
-                  <div>
-                    <b>{i.guardia_saliente_id ? tx.incidencia_relevo : tx.incidencia_ausencia}</b>
-                    <span className="panel-mini">{fecha(i.iniciado_at)}</span>
-                  </div>
-                  <span className={claseBadgeTono(abierta ? TONO.CRITICO : TONO.EXITO)}>
-                    {abierta ? tx.abierta : tx.resuelta}
-                  </span>
-                </Link>
-              );
-            })
-          )}
-        </Tarjeta>
-      </div>
+        ))}
+      </section>
     </div>
   );
 }

@@ -18,6 +18,7 @@ import { contarPorModalidad, MODALIDADES_DE_ASISTENTE, modalidadesDelAsistente }
 import { ESTADO_ACTIVO, estaEnElPlantel } from '../lib/candidatos';
 import { claseBadgeTono, TONO } from '../lib/tonos';
 import { ESTADOS_DE_SOLICITUD } from '../lib/estadosDeSolicitud';
+import { formatearImporte } from '../lib/dinero';
 import './hojaDeTarjetas.css';
 
 // Los nombres de las modalidades salen de un solo lado: los mismos textos que usa la
@@ -340,6 +341,8 @@ export function Dashboard() {
         </section>
       </div>
 
+      <GraficosDePrestaciones esAdmin={esAdmin} prestadoraId={prestadoraId} />
+
       {/* El desglose aparece solamente cuando la Prestadora trabaja de más de una manera: con
           una sola, cada dona repetiría el número de arriba. Los vínculos no muestran la
           subcontratación, porque esa gente es de otra empresa. */}
@@ -414,4 +417,233 @@ function DonaPorModalidad({ titulo, cuentas, modalidades, nombreDeModalidad }) {
 
 function colorDeModalidad(modalidad) {
   return COLOR_MODALIDAD[modalidad] ?? 'var(--texto-secundario)';
+}
+
+// Cuántos meses mira hacia atrás la línea de Servicios, contando el actual.
+const MESES_DE_LA_LINEA = 12;
+
+// Los tonos de la torta, en el orden en que se reparten. Pasada la sexta prestación se repiten
+// aclarados, para que dos porciones vecinas no queden iguales.
+const COLORES_DE_LA_TORTA = [
+  'var(--azul-medio)',
+  'var(--verde-exito)',
+  'var(--violeta)',
+  'var(--naranja-alerta)',
+  'var(--azul-oscuro)',
+  'var(--rojo-peligro)',
+];
+
+function colorDePorcion(indice) {
+  const base = COLORES_DE_LA_TORTA[indice % COLORES_DE_LA_TORTA.length];
+  return indice < COLORES_DE_LA_TORTA.length ? base : `color-mix(in oklch, ${base} 55%, var(--superficie))`;
+}
+
+function fechaISO(fecha) {
+  const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+  const dia = String(fecha.getDate()).padStart(2, '0');
+  return `${fecha.getFullYear()}-${mes}-${dia}`;
+}
+
+/* Los meses de la línea: primer y último día de cada uno, del más viejo al actual. */
+function mesesHastaHoy(cantidad) {
+  const hoy = new Date();
+  return Array.from({ length: cantidad }, (_, i) => {
+    const inicio = new Date(hoy.getFullYear(), hoy.getMonth() - (cantidad - 1 - i), 1);
+    const fin = new Date(inicio.getFullYear(), inicio.getMonth() + 1, 0);
+    return { inicio, desde: fechaISO(inicio), hasta: fechaISO(fin) };
+  });
+}
+
+/* Una prestación toca un período si empezó antes de que termine y no terminó antes de que
+   empiece. Las fechas son AAAA-MM-DD, así que se comparan como texto. */
+function tocaElPeriodo(prestacion, desde, hasta) {
+  if (!prestacion.vigente_desde || prestacion.vigente_desde > hasta) return false;
+  return !prestacion.vigente_hasta || prestacion.vigente_hasta >= desde;
+}
+
+/* Los dos gráficos del Resumen del mes. Salen de las Prestaciones: un Servicio cuenta en un mes
+   si alguna de sus Prestaciones estuvo vigente en ese mes, y la torta pesa las vigentes hoy. */
+function GraficosDePrestaciones({ esAdmin, prestadoraId }) {
+  const { t, locale } = useLocale();
+  const [prestaciones, setPrestaciones] = useState(null);
+  const [error, setError] = useState(null);
+  const [verDinero, setVerDinero] = useState(false);
+
+  const cargar = useCallback(async () => {
+    if (!prestadoraId) return;
+    setError(null);
+    setPrestaciones(null);
+    const { data, error: errorConsulta } = await supabase
+      .from('prestaciones')
+      .select('servicio_id, tipo_servicio, precio_final, moneda, estado, vigente_desde, vigente_hasta')
+      .eq('prestadora_id', prestadoraId);
+    if (errorConsulta) {
+      setError(errorConsulta);
+      return;
+    }
+    setPrestaciones(data ?? []);
+  }, [prestadoraId]);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
+
+  const estado = error ? 'error' : prestaciones === null ? 'cargando' : 'listo';
+  const filas = prestaciones ?? [];
+
+  const meses = mesesHastaHoy(MESES_DE_LA_LINEA).map((mes) => ({
+    ...mes,
+    cantidad: new Set(
+      filas.filter((p) => p.servicio_id && tocaElPeriodo(p, mes.desde, mes.hasta)).map((p) => p.servicio_id)
+    ).size,
+  }));
+
+  const hoy = hoyISO();
+  const vigentes = filas.filter((p) => p.estado === 'vigente' && tocaElPeriodo(p, hoy, hoy));
+  // Sólo la administración ve el dinero; para el resto el botón ni aparece.
+  const mostrarDinero = esAdmin && verDinero;
+
+  return (
+    <div className="panel-grilla panel-columnas-2">
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.dashboard.grafico_servicios_titulo}</h2>
+        </div>
+        <EstadoLista estado={estado} error={error} vacio={false} recargar={cargar}>
+          <LineaPorMes meses={meses} locale={locale} />
+        </EstadoLista>
+      </section>
+
+      <section className="panel-tarjeta">
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.dashboard.grafico_prestaciones_titulo}</h2>
+          {esAdmin && (
+            <div className="grilla-interruptor">
+              <button type="button" aria-pressed={!verDinero} onClick={() => setVerDinero(false)}>
+                {t.dashboard.ver_por_cantidad}
+              </button>
+              <button type="button" aria-pressed={verDinero} onClick={() => setVerDinero(true)}>
+                {t.dashboard.ver_por_dinero}
+              </button>
+            </div>
+          )}
+        </div>
+        <EstadoLista
+          estado={estado}
+          error={error}
+          vacio={vigentes.length === 0}
+          mensajeVacio={t.dashboard.grafico_sin_prestaciones}
+          recargar={cargar}
+        >
+          {mostrarDinero
+            ? tortasPorMoneda(vigentes).map(({ moneda, filas: deLaMoneda }) => (
+                <Torta
+                  key={moneda ?? '—'}
+                  porciones={sumarPorPrestacion(deLaMoneda, (p) => Number(p.precio_final) || 0)}
+                  formatear={(valor) => formatearImporte(valor, moneda, locale)}
+                />
+              ))
+            : (
+                <Torta
+                  porciones={sumarPorPrestacion(vigentes, () => 1)}
+                  formatear={(valor) => valor.toLocaleString(locale)}
+                />
+              )}
+        </EstadoLista>
+      </section>
+    </div>
+  );
+}
+
+/* Los importes no se suman entre monedas: hay una torta por cada una. */
+function tortasPorMoneda(prestaciones) {
+  const porMoneda = new Map();
+  prestaciones.forEach((p) => {
+    const clave = p.moneda ?? null;
+    porMoneda.set(clave, [...(porMoneda.get(clave) ?? []), p]);
+  });
+  return [...porMoneda.entries()].map(([moneda, filas]) => ({ moneda, filas }));
+}
+
+function sumarPorPrestacion(prestaciones, valorDe) {
+  const sumas = new Map();
+  prestaciones.forEach((p) => {
+    const nombre = p.tipo_servicio?.trim() || '—';
+    sumas.set(nombre, (sumas.get(nombre) ?? 0) + valorDe(p));
+  });
+  return [...sumas.entries()]
+    .map(([nombre, valor]) => ({ nombre, valor }))
+    .sort((a, b) => b.valor - a.valor);
+}
+
+/* Una torta con su leyenda: el total al medio y, al lado, cuánto pesa cada porción. */
+function Torta({ porciones, formatear }) {
+  const total = porciones.reduce((suma, porcion) => suma + porcion.valor, 0);
+  let acumulado = 0;
+  const tramos = porciones.map((porcion, i) => {
+    const desde = total > 0 ? (acumulado / total) * 100 : 0;
+    acumulado += porcion.valor;
+    const hasta = total > 0 ? (acumulado / total) * 100 : 0;
+    return `${colorDePorcion(i)} ${desde}% ${hasta}%`;
+  });
+  const fondo = total > 0 ? `conic-gradient(${tramos.join(', ')})` : 'var(--borde-card)';
+
+  return (
+    <div className="panel-grafico">
+      <div className="panel-dona" style={{ background: fondo }}>
+        <b>{formatear(total)}</b>
+      </div>
+      <div className="panel-leyenda">
+        {porciones.map((porcion, i) => (
+          <div key={porcion.nombre}>
+            <i className="panel-punto" style={{ background: colorDePorcion(i) }} />
+            {porcion.nombre} {formatear(porcion.valor)}
+            {total > 0 && ` (${Math.round((porcion.valor / total) * 100)}%)`}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* La línea de Servicios: un punto por mes con su número encima y el mes abajo. */
+function LineaPorMes({ meses, locale }) {
+  const maximo = Math.max(1, ...meses.map((mes) => mes.cantidad));
+  const ancho = 100 / meses.length;
+  const puntos = meses.map((mes, i) => ({
+    x: ancho * i + ancho / 2,
+    y: 95 - (mes.cantidad / maximo) * 85,
+  }));
+
+  return (
+    <div className="hoja-linea">
+      <div className="hoja-linea-lienzo">
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <polyline
+            points={puntos.map((p) => `${p.x},${p.y}`).join(' ')}
+            fill="none"
+            stroke="var(--azul-medio)"
+            strokeWidth="2"
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+        {meses.map((mes, i) => (
+          <span
+            key={mes.desde}
+            className="hoja-linea-punto"
+            style={{ left: `${puntos[i].x}%`, top: `${puntos[i].y}%` }}
+          >
+            <b>{mes.cantidad}</b>
+          </span>
+        ))}
+      </div>
+      <div className="hoja-linea-meses">
+        {meses.map((mes) => (
+          <span key={mes.desde} className="hoja-barra-rotulo">
+            {mes.inicio.toLocaleDateString(locale, { month: 'short' })}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
 }

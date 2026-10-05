@@ -62,7 +62,7 @@ const AHORA = new Date(2026, 8, 15, 12, 0, 0);
 const HOY = '2026-09-15';
 
 describe('el umbral configurado cambia lo que se ve', () => {
-  it('una guardia terminada hace media hora y sin salida marcada: sin cerrar para quien puso quince minutos, en curso para quien no configuró nada', () => {
+  it('una guardia terminada hace media hora y sin salida marcada: sin cerrar con los quince minutos de fábrica, en curso para quien puso una hora', () => {
     const guardia = {
       estado: 'activa',
       asistente_id: 'asis-1',
@@ -74,12 +74,12 @@ describe('el umbral configurado cambia lo que se ve', () => {
     };
 
     const conLosDeFabrica = umbralesDeLaPrestadora();
-    const conQuinceMinutos = umbralesDeLaPrestadora({
-      escaladaCoordinador: { minutos_gracia_cierre_guardia: 15 },
+    const conUnaHora = umbralesDeLaPrestadora({
+      escaladaCoordinador: { minutos_gracia_cierre_guardia: 60 },
     });
 
-    expect(situacionDeGuardia(guardia, { ahora: AHORA, umbrales: conLosDeFabrica })).toBe(SITUACION.EN_CURSO);
-    expect(situacionDeGuardia(guardia, { ahora: AHORA, umbrales: conQuinceMinutos })).toBe(SITUACION.SIN_CERRAR);
+    expect(situacionDeGuardia(guardia, { ahora: AHORA, umbrales: conLosDeFabrica })).toBe(SITUACION.SIN_CERRAR);
+    expect(situacionDeGuardia(guardia, { ahora: AHORA, umbrales: conUnaHora })).toBe(SITUACION.EN_CURSO);
   });
 
   it('un hueco de pasado mañana: urgente para quien avisa con cuarenta y ocho horas, todavía no para quien avisa con veinticuatro', () => {

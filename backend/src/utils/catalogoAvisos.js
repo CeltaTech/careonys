@@ -47,7 +47,6 @@
 //   alerta_ia_nivel2               → utils/revisarAlertasIA.js:114 (notificarCoordinador)
 //   vencimiento_documento_asistente→ utils/vencimientos.js (notificarCoordinador)
 //   aviso_rutina_asistente         → utils/revisarRecordatoriosPush.js:24 (push, con respaldo WhatsApp)
-//   nueva_postulacion_asistente    → routes/postulacionAsistente.js:40 (enviarEmailCoordinador)
 //   aviso_cese_asistente           → utils/avisoAutomaticoCese.js (push, con respaldo WhatsApp)
 //   codigo_instruccion_personas_autorizadas     → utils/instruccionesPersonasAutorizadas.js (WhatsApp, con caída a correo)
 //   cambio_de_asistente            → utils/avisoCambioDeAsistente.js (notificarCoordinador + push
@@ -169,12 +168,6 @@ export const CATALOGO_MENSAJES = [
     evento: 'aviso_rutina_asistente',
     descripcion: 'Mensajes de rutina al Asistente: guardia asignada, mensaje del Coordinador, recordatorio de guardia próxima',
     admite_whatsapp: true,
-    admite_cliente: false,
-  },
-  {
-    evento: 'nueva_postulacion_asistente',
-    descripcion: 'Nueva postulación de Asistente desde el sitio público',
-    admite_whatsapp: false,
     admite_cliente: false,
   },
   {

@@ -300,9 +300,8 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
 
     // Las referencias que la persona escribió en el formulario pasan a ser una fila cada una, para
     // que se las pueda llamar y quede constancia de qué contestaron. Se copian acá y no se vuelven
-    // a tipear. Las que vengan mal formadas se descartan en silencio: la postulación ya las
-    // comprobó al entrar (`utils/postulacionCompleta.js`), y una fila sin teléfono no se puede
-    // llamar, así que no hay nada que avisar.
+    // a tipear. Las que vengan sin nombre o sin teléfono se descartan en silencio: una fila
+    // sin teléfono no se puede llamar, así que no hay nada que avisar.
     const referenciasDeLaPostulacion = (postulacion.referencias_laborales ?? [])
       .filter((una) => una?.nombre && una?.telefono)
       .map((una) => ({

@@ -129,7 +129,6 @@ const DATOS = {
   estado_postulacion: { empresa: 'Cuidados del Sur', nombre: 'Marta', estado: 'aprobado' },
   // El mensaje no lleva el documento, el teléfono, el correo ni la situación fiscal de quien se
   // postula: eso se mira entrando al Panel, igual que el detalle de una emergencia.
-  nueva_postulacion_asistente: { nombre: 'Marta' },
   mensaje_del_coordinador: {},
   guardia_asignada: { fecha: '2026-10-07', horaInicio: '08:00' },
   recordatorio_de_guardia: { fecha: '2026-10-07', horaInicio: '08:00' },

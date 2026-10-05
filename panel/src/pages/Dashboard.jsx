@@ -528,14 +528,9 @@ function GraficosDePrestaciones({ esAdmin, prestadoraId }) {
             </div>
           )}
         </div>
-        <EstadoLista
-          estado={estado}
-          error={error}
-          vacio={vigentes.length === 0}
-          mensajeVacio={t.dashboard.grafico_sin_prestaciones}
-          recargar={cargar}
-        >
-          {mostrarDinero
+        {/* Sin Prestaciones vigentes la torta queda vacía, con su cero al medio. */}
+        <EstadoLista estado={estado} error={error} vacio={false} recargar={cargar}>
+          {mostrarDinero && vigentes.length > 0
             ? tortasPorMoneda(vigentes).map(({ moneda, filas: deLaMoneda }) => (
                 <Torta
                   key={moneda ?? '—'}

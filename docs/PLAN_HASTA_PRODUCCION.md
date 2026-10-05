@@ -1280,9 +1280,27 @@ reconstruir la base los reescribe sin mudanza. Lo que cuesta igual, se haga cuan
 cinco nombres de afuera: el nombre del proyecto local, el servicio donde corre el backend con su
 dirección, y los dos depósitos de respaldo. El repositorio ya se llama `careonys`.
 
-**88. Usted** — ¿Dónde corre un módulo y contra qué base? Hoy `Modulos\` está vacía. **Facturación y créditos y cobranzas ya están decididas como software aparte del que Careonys se sirve**, así que esto no decide si salen, sino dónde corren el día que existan. También decide si con eso se cierran sin construir los adaptadores de pasarela.
+**88. Usted** — ¿Dónde corre un módulo y contra qué base? Hoy `Modulos\` está vacía. **Facturación y créditos y cobranzas ya están decididas como software aparte del que Careonys se sirve**, así que esto no decide si salen, sino dónde corren el día que existan.
 
-**89.** Sacar la facturación y la cobranza a un módulo, cuando haya dónde correrlo.
+**89.** Sacar la facturación y la cobranza a un módulo, cuando haya dónde correrlo. **Y que Match
+cobre igual que la prestación directa**, sin que ninguna de las dos pierda nada. Hoy Match lleva
+la cuenta del Cliente por su cuenta —arma cada período, cuenta los días gratis y la gracia, y corta
+el acceso solo—, y eso es créditos y cobranzas, que no le toca a Careonys. Se separan tres
+trabajos, iguales para las dos modalidades:
+
+- **Llevar la cuenta del Cliente** —cuánto debe, si está atrasado, si hay que restringirle algo—
+  es de la Prestadora. Con software de cobranzas conectado lo lleva ese software y Careonys muestra
+  lo que recibe; sin ninguno, Careonys guarda lo que la Prestadora registra.
+- **Las plataformas de pago quedan como una forma más de pagar**, para las dos modalidades y
+  optativa. El Cliente paga desde su aplicación y el dinero va directo a la cuenta de la
+  Prestadora. En Match el acceso se abre apenas la plataforma confirma, y el saldo de contactos se
+  carga en ese momento, como hoy.
+- **El pago que confirma la plataforma se anota** con su origen y, si hay software conectado, se
+  le pasa, para que la cuenta del Cliente quede entera en un solo lugar.
+
+**Sin software conectado, el corte de Match por falta de pago lo configura la Prestadora**:
+cuántos días de gracia da y qué pasa después, y Careonys ejecuta lo que ella configuró. Con
+software conectado, el corte lo ordena ese software.
 
 ---
 

@@ -40,13 +40,18 @@ import { Button } from '../ui/Button';
    El vacío llega de dos maneras y las dos valen. La pantalla que hace una cuenta propia —porque
    filtró, o porque junta varias listas— lo dice con `vacio`. La que carga su lista con
    `useCatalogo` no cuenta nada: ahí el vacío es un estado del catálogo y viene adentro de
-   `estado`, igual que «cargando» y «error». */
+   `estado`, igual que «cargando» y «error».
+
+   `ayudaVacio` también es opcional, y es el segundo renglón del cartel. No tiene valor por
+   defecto: sin él, el cartel es una sola frase. Como siempre, el texto sale de las
+   traducciones, no de acá. */
 export function EstadoLista({
   estado,
   error,
   vacio,
   recargar,
   mensajeVacio,
+  ayudaVacio,
   accionVacio,
   filtrado = false,
   onLimpiarFiltros,
@@ -77,6 +82,7 @@ export function EstadoLista({
       return (
         <div className="estado-vacio-bloque" role="status">
           <p className="estado-vacio-titulo">{t.comun.sin_resultados_titulo}</p>
+          <p className="estado-vacio">{t.comun.sin_resultados_ayuda}</p>
           {onLimpiarFiltros && (
             <Button variant="secondary" onClick={onLimpiarFiltros}>
               {t.comun.limpiar_filtros}
@@ -94,6 +100,7 @@ export function EstadoLista({
     return (
       <div className="estado-vacio-bloque" role="status">
         {mensajeVacio && <p className="estado-vacio-titulo">{mensajeVacio}</p>}
+        {ayudaVacio && <p className="estado-vacio">{ayudaVacio}</p>}
         {accionVacio}
       </div>
     );

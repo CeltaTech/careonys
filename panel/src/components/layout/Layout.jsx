@@ -7,22 +7,100 @@ import { usePermisos } from '../../context/PermisosContext';
 import { useModalidades } from '../../context/ModalidadesContext';
 import { usePedidosDeCodigo } from '../../context/PedidosDeCodigoContext';
 import { useTelefonosEsperando } from '../../context/TelefonosEsperandoContext';
-import { useEmergenciasSinTomar } from '../../hooks/useEmergenciasSinTomar';
 import { esAdminOSuperior } from '../../lib/roles';
 import { MODALIDAD } from '../../lib/modalidades';
 import { supabase } from '../../lib/supabaseClient';
 import { SelectoresPreferencias } from './SelectoresPreferencias';
 import { EquipoNuevo } from './EquipoNuevo';
 
-function Contador({ cantidad }) {
+/* Los dibujos del menú, de trazo, en el color del texto que los rodea. Son los de la maqueta
+   de la interfaz (carpeta `celtatech/maquetas`); Facturación no tiene entrada allá y conserva
+   el suyo. */
+const PERSONAS = (
+  <>
+    <circle cx="9" cy="8" r="3" />
+    <circle cx="17" cy="9" r="2.5" />
+    <path d="M3.5 20c.5-4 2.3-6 5.5-6s5 2 5.5 6" />
+    <path d="M14 15c2.8-.3 4.9 1.3 5.4 5" />
+  </>
+);
+const SOBRE = (
+  <>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <path d="m4 7 8 6 8-6" />
+  </>
+);
+const ICONOS = {
+  inicio: (
+    <>
+      <path d="m3 10 9-7 9 7" />
+      <path d="M5 9v11h14V9" />
+      <path d="M9 20v-6h6v6" />
+    </>
+  ),
+  servicios: (
+    <>
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <path d="M8 7h8M8 11h8M8 15h5" />
+    </>
+  ),
+  asistentes: PERSONAS,
+  guardias: (
+    <>
+      <rect x="4" y="5" width="16" height="15" rx="2" />
+      <path d="M8 3v4M16 3v4M4 10h16M8 14h3M8 17h5" />
+    </>
+  ),
+  clientes: PERSONAS,
+  facturacion: (
+    <>
+      <path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2z" />
+      <path d="M9 8h6M9 12h6M9 16h3" />
+    </>
+  ),
+  comunicacion: SOBRE,
+  configuracion: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.8 1.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V20h-2.6v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1-1.8-1.8.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H4v-2.6h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1L7 6.6l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V5h2.6v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 1.8 1.8-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.1v2.6h-.1a1.7 1.7 0 0 0-1.1 1.4Z" />
+    </>
+  ),
+  buscar: (
+    <>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-4-4" />
+    </>
+  ),
+  campana: (
+    <>
+      <path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+      <path d="M10 21h4" />
+    </>
+  ),
+  mensajes: SOBRE,
+  menu: <path d="M5 8h14M5 12h14M5 16h14" />,
+};
+
+function Icono({ nombre }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {ICONOS[nombre]}
+    </svg>
+  );
+}
+
+function Contador({ cantidad, clase = 'panel-nav-contador' }) {
   const { t } = useLocale();
   if (!(cantidad > 0)) return null;
   return (
-    <span className="panel-nav-contador" aria-label={t.nav.esperando_cantidad.replace('{cantidad}', cantidad)}>
+    <span className={clase} aria-label={t.nav.esperando_cantidad.replace('{cantidad}', cantidad)}>
       {cantidad}
     </span>
   );
 }
+
+// La barra de la izquierda se oculta del todo en el teléfono; ahí la hamburguesa la abre encima.
+const TELEFONO = '(max-width: 760px)';
 
 function iniciales(nombre) {
   return (nombre ?? '')
@@ -45,19 +123,22 @@ export function Layout() {
   const { empresa } = useEmpresa();
   const { puede } = usePermisos();
   const { tieneModalidad } = useModalidades();
-  // Los contadores se preguntan solos cada tanto: del otro lado hay alguien esperando, y no puede
-  // depender de que a alguien se le ocurra abrir esa sección.
+  // Los dos contadores se preguntan solos cada pocos segundos: del otro lado hay alguien
+  // esperando, y no puede depender de que a alguien se le ocurra abrir esa sección.
   const { pedidos: pedidosDeCodigo } = usePedidosDeCodigo();
   const { cuentas: telefonosEsperando } = useTelefonosEsperando();
   const ubicacion = useLocation();
   const navegar = useNavigate();
 
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const [barraOculta, setBarraOculta] = useState(false);
   const [perfilAbierto, setPerfilAbierto] = useState(false);
+  const [avisosAbiertos, setAvisosAbiertos] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const [asistentesEncontrados, setAsistentesEncontrados] = useState([]);
   const [busquedaAbierta, setBusquedaAbierta] = useState(false);
   const perfilRef = useRef(null);
+  const avisosRef = useRef(null);
   const buscadorRef = useRef(null);
 
   const esAdmin = esAdminOSuperior(usuario?.rol);
@@ -66,37 +147,24 @@ export function Layout() {
   const directa = tieneModalidad(MODALIDAD.DIRECTA);
   const match = tieneModalidad(MODALIDAD.MATCH);
   const hayPlantel = directa || match;
-  const emergencias = useEmergenciasSinTomar(hayPlantel);
 
   /* El menú, como lista de datos. El candado de cada enlace (`ver`) está escrito una sola vez,
      al lado del enlace, y es el mismo que aplica la dirección en App.jsx. */
   const secciones = [
     {
-      clave: 'panel',
-      texto: t.nav.sec_panel,
-      enlaces: [{ a: '/', texto: t.nav.sec_panel, ver: true, end: true }],
-    },
-    {
-      clave: 'comunicaciones',
-      texto: t.nav.sec_comunicaciones,
+      clave: 'inicio',
+      texto: t.nav.sec_inicio,
       enlaces: [
-        { a: '/comunicacion', texto: t.nav.comunicacion, ver: true },
-        { a: '/emergencias', texto: t.nav.emergencias, ver: hayPlantel, contador: emergencias.length },
-        { a: '/alertas', texto: t.nav.alertas, ver: directa },
+        { a: '/', texto: t.nav.estado_actual, ver: true, end: true },
+        { a: '/resumen-del-mes', texto: t.nav.resumen_del_mes, ver: true },
       ],
     },
     {
       clave: 'servicios',
-      texto: t.nav.servicios,
-      enlaces: [{ a: '/servicios', texto: t.nav.servicios, ver: true }],
-    },
-    {
-      clave: 'guardias',
-      texto: t.nav.sec_guardias,
+      texto: t.nav.sec_servicios,
       enlaces: [
-        { a: '/guardias', texto: t.nav.guardias, ver: directa },
-        { a: '/pase-de-guardia', texto: t.nav.pase_de_guardia, ver: hayPlantel, contador: pedidosDeCodigo.length },
-        { a: '/continuidad', texto: t.nav.continuidad, ver: hayPlantel },
+        { a: '/servicios', texto: t.nav.servicios, ver: true },
+        { a: '/solicitudes', texto: t.nav.solicitudes, ver: hayPlantel },
       ],
     },
     {
@@ -105,34 +173,36 @@ export function Layout() {
       enlaces: [
         { a: '/asistentes', texto: t.nav.asistentes, ver: hayPlantel },
         { a: '/documentacion', texto: t.nav.documentacion, ver: hayPlantel },
-        { a: '/calificaciones', texto: t.nav.calificaciones, ver: hayPlantel },
+        { a: '/postulaciones', texto: t.nav.postulaciones, ver: hayPlantel },
+        { a: '/match/calificaciones', texto: t.nav.match_calificaciones, ver: match },
+        // Una remuneración es dato sensible: el Admin la ve siempre, el Coordinador sólo si su
+        // Prestadora se lo habilitó.
+        { a: '/pagos-asistentes', texto: t.nav.pagos_asistentes, ver: hayPlantel && (esAdmin || puede('ver_pagos_asistente')) },
       ],
     },
     {
-      clave: 'capacitacion',
-      texto: t.nav.sec_capacitacion,
-      enlaces: [{ a: '/contenidos', texto: t.nav.sec_capacitacion, ver: true }],
+      clave: 'guardias',
+      texto: t.nav.sec_guardias,
+      enlaces: [
+        { a: '/guardias', texto: t.nav.guardias, ver: directa },
+        { a: '/emergencias', texto: t.nav.emergencias, ver: hayPlantel },
+        { a: '/pase-de-guardia', texto: t.nav.pase_de_guardia, ver: hayPlantel, contador: pedidosDeCodigo.length },
+        { a: '/continuidad', texto: t.nav.continuidad, ver: hayPlantel },
+        { a: '/verificacion-guardias', texto: t.nav.verificacion_guardias, ver: hayPlantel },
+        { a: '/reportes', texto: t.nav.reportes, ver: directa },
+        { a: '/medicacion', texto: t.nav.medicacion, ver: directa },
+        { a: '/alertas', texto: t.nav.alertas, ver: directa },
+      ],
     },
     {
       clave: 'clientes',
       texto: t.nav.sec_clientes,
       enlaces: [
-        { a: '/solicitudes', texto: t.nav.solicitudes, ver: hayPlantel },
         { a: '/padron', texto: t.nav.padron, ver: esAdmin || puede('ver_padron') },
-        { a: '/clientes', texto: t.nav.contratacion_directa, ver: directa },
+        { a: '/clientes', texto: t.nav.clientes, ver: directa },
+        { a: '/match/clientes', texto: t.nav.match_clientes, ver: match && esAdmin },
+        { a: '/contenidos', texto: t.nav.contenidos, ver: true },
       ],
-    },
-    {
-      clave: 'tareas',
-      grupo: 'gestion',
-      texto: t.nav.sec_tareas,
-      enlaces: [{ a: '/medicacion', texto: t.nav.medicacion, ver: directa }],
-    },
-    {
-      clave: 'reclutamiento',
-      grupo: 'gestion',
-      texto: t.nav.sec_reclutamiento,
-      enlaces: [{ a: '/postulaciones', texto: t.nav.postulaciones, ver: hayPlantel }],
     },
     {
       clave: 'facturacion',
@@ -141,21 +211,17 @@ export function Layout() {
       enlaces: [
         { a: '/facturacion', texto: t.nav.facturacion, ver: directa },
         { a: '/lista-precios', texto: t.nav.lista_precios, ver: directa },
-        // Una remuneración es dato sensible: el Admin la ve siempre, el Coordinador sólo si su
-        // Prestadora se lo habilitó.
-        { a: '/pagos-asistentes', texto: t.nav.pagos_asistentes, ver: hayPlantel && (esAdmin || puede('ver_pagos_asistente')) },
+        { a: '/match/formas-de-cobro', texto: t.nav.match_formas_de_cobro, ver: match && esAdmin },
+        { a: '/informes-obra-social', texto: t.nav.informes_obra_social, ver: directa },
       ],
     },
     {
-      clave: 'reportes',
+      clave: 'comunicacion',
       grupo: 'gestion',
-      texto: t.nav.sec_reportes,
+      texto: t.nav.sec_comunicacion,
       enlaces: [
-        { a: '/reportes', texto: t.nav.reportes, ver: directa },
-        { a: '/resumen-del-mes', texto: t.nav.resumen_del_mes, ver: true },
-        { a: '/verificacion-guardias', texto: t.nav.verificacion_guardias, ver: hayPlantel },
-        { a: '/informes-obra-social', texto: t.nav.informes_obra_social, ver: directa },
-        { a: '/auditoria', texto: t.nav.auditoria, ver: esAdmin },
+        { a: '/comunicacion', texto: t.nav.comunicacion, ver: true },
+        { a: '/respuestas-preparadas', texto: t.nav.respuestas_preparadas, ver: esAdmin },
       ],
     },
     {
@@ -164,10 +230,11 @@ export function Layout() {
       texto: t.nav.sec_configuracion,
       enlaces: [
         { a: '/configuracion', texto: t.nav.configuracion, ver: esAdmin },
-        { a: '/respuestas-preparadas', texto: t.nav.plantillas, ver: esAdmin },
         { a: '/usuarios-panel', texto: t.nav.usuarios_panel, ver: esAdmin },
         { a: '/importacion', texto: t.nav.importacion, ver: esAdmin || puede('importar_datos_masivos') },
         { a: '/habilitar-clave', texto: t.nav.habilitar_clave, ver: esAdmin || puede('habilitar_cambio_de_clave'), contador: telefonosEsperando.length },
+        { a: '/auditoria', texto: t.nav.auditoria, ver: esAdmin },
+        { a: '/match/auditoria-legal', texto: t.nav.match_auditoria_legal, ver: match },
       ],
     },
   ]
@@ -184,10 +251,16 @@ export function Layout() {
   const ruta = ubicacion.pathname;
   const seccionActual = secciones.find((seccion) => seccion.visibles.some((enlace) => coincide(ruta, enlace)));
 
+  const avisos = secciones
+    .flatMap((seccion) => seccion.visibles)
+    .filter((enlace) => enlace.contador > 0);
+  const totalAvisos = avisos.reduce((suma, enlace) => suma + enlace.contador, 0);
+
   // Al cambiar de dirección se cierra todo lo desplegado.
   useEffect(() => {
     setMenuAbierto(false);
     setPerfilAbierto(false);
+    setAvisosAbiertos(false);
     setBusquedaAbierta(false);
   }, [ruta]);
 
@@ -195,6 +268,7 @@ export function Layout() {
   useEffect(() => {
     function alHacerClic(evento) {
       if (perfilRef.current && !perfilRef.current.contains(evento.target)) setPerfilAbierto(false);
+      if (avisosRef.current && !avisosRef.current.contains(evento.target)) setAvisosAbiertos(false);
       if (buscadorRef.current && !buscadorRef.current.contains(evento.target)) setBusquedaAbierta(false);
     }
     document.addEventListener('mousedown', alHacerClic);
@@ -266,45 +340,20 @@ export function Layout() {
   }
   const rotuloDeGrupo = { gestion: t.nav.grupo_gestion };
 
+  // En el teléfono la hamburguesa abre la barra encima del contenido; en pantalla ancha la oculta
+  // o la vuelve a mostrar.
+  function alTocarHamburguesa() {
+    if (window.matchMedia?.(TELEFONO).matches) setMenuAbierto((abierto) => !abierto);
+    else setBarraOculta((oculta) => !oculta);
+  }
+
   return (
-    <div className={`panel-layout${menuAbierto ? ' menu-abierto' : ''}`}>
+    <div className={`panel-layout${menuAbierto ? ' menu-abierto' : ''}${barraOculta ? ' barra-oculta' : ''}`}>
       <a className="salto-al-contenido" href="#contenido-principal">
         {t.nav.saltar_al_contenido}
       </a>
       <aside className="panel-sidebar">
-        <div className="panel-logo">
-          <div className="panel-logo-nombre">{empresa?.nombre ?? ''}</div>
-          <div className="panel-logo-producto">{t.auth.con_tecnologia_de}</div>
-        </div>
-        <form className="panel-buscador" role="search" ref={buscadorRef} onSubmit={alBuscar}>
-          <input
-            type="search"
-            value={busqueda}
-            placeholder={t.nav.buscar}
-            aria-label={t.nav.buscar}
-            onChange={(evento) => {
-              setBusqueda(evento.target.value);
-              setBusquedaAbierta(true);
-            }}
-            onFocus={() => setBusquedaAbierta(true)}
-          />
-          {busquedaAbierta && texto.length >= 2 && (
-            <ul className="panel-desplegable">
-              {resultados.length === 0 ? (
-                <li className="panel-desplegable-nada">{t.nav.sin_resultados}</li>
-              ) : (
-                resultados.map((resultado) => (
-                  <li key={resultado.a}>
-                    <NavLink to={resultado.a} onClick={() => setBusqueda('')}>
-                      {resultado.texto}
-                      <small>{resultado.detalle}</small>
-                    </NavLink>
-                  </li>
-                ))
-              )}
-            </ul>
-          )}
-        </form>
+        <div className="panel-logo">{empresa?.nombre ?? ''}</div>
         <nav aria-label={t.nav.menu_principal}>
           {secciones.map((seccion) => (
             <Fragment key={seccion.clave}>
@@ -317,6 +366,7 @@ export function Layout() {
                 className={seccion === seccionActual ? 'active' : undefined}
                 aria-current={seccion === seccionActual ? 'page' : undefined}
               >
+                <Icono nombre={seccion.clave} />
                 <span className="panel-nav-etiqueta">{seccion.texto}</span>
                 <Contador cantidad={seccion.contador} />
               </NavLink>
@@ -326,7 +376,8 @@ export function Layout() {
         <div className="panel-perfil" ref={perfilRef}>
           {perfilAbierto && (
             <div className="panel-perfil-menu">
-              <NavLink to="/mi-cuenta">{t.nav.mi_cuenta}</NavLink>
+              <NavLink to="/mi-clave">{t.nav.mi_clave}</NavLink>
+              <NavLink to="/cuenta-segura">{t.nav.cuenta_segura}</NavLink>
               <SelectoresPreferencias />
               <button type="button" className="panel-salir" onClick={logout}>
                 {t.nav.cerrar_sesion}
@@ -343,37 +394,91 @@ export function Layout() {
             <span className="panel-perfil-datos">
               <span className="panel-perfil-nombre">{usuario?.nombre}</span>
               <span className="panel-perfil-detalle">{rolTexto}</span>
+              <span className="panel-perfil-organizacion">{empresa?.nombre ?? ''}</span>
             </span>
+            <span className="panel-perfil-flecha" aria-hidden="true">⌄</span>
           </button>
         </div>
       </aside>
       <div className="panel-velo" onClick={() => setMenuAbierto(false)} aria-hidden="true" />
       <div className="panel-main">
         <EquipoNuevo />
-        {/* Sólo en el teléfono: ahí la barra de la izquierda no entra y se abre encima. */}
-        <div className="panel-telefono">
+        <header className="panel-header">
           <button
             type="button"
-            className="panel-hamburguesa"
+            className="panel-header-hamburguesa"
             aria-label={t.nav.abrir_menu}
-            aria-expanded={menuAbierto}
-            onClick={() => setMenuAbierto((abierto) => !abierto)}
+            aria-expanded={menuAbierto || !barraOculta}
+            onClick={alTocarHamburguesa}
           >
-            <span aria-hidden="true">☰</span>
+            <Icono nombre="menu" />
           </button>
-          <span className="panel-telefono-nombre">{empresa?.nombre ?? ''}</span>
-        </div>
-        {/* Mientras haya una emergencia que nadie tomó, la franja queda arriba en todas las páginas.
-            Cuando alguien la toma sale de acá y sigue en Comunicaciones. */}
-        {emergencias.length > 0 && (
-          <div className="panel-franja-emergencia" role="alert">
-            <span>{t.nav.emergencias}</span>
-            <span className="panel-franja-cantidad">{emergencias.length}</span>
-            <NavLink to="/emergencias" className="panel-franja-enlace">
-              {t.comun.ver_detalle}
+          <form className="panel-buscador" role="search" ref={buscadorRef} onSubmit={alBuscar}>
+            <Icono nombre="buscar" />
+            <input
+              type="search"
+              value={busqueda}
+              placeholder={t.nav.buscar}
+              aria-label={t.nav.buscar}
+              onChange={(evento) => {
+                setBusqueda(evento.target.value);
+                setBusquedaAbierta(true);
+              }}
+              onFocus={() => setBusquedaAbierta(true)}
+            />
+            {busquedaAbierta && texto.length >= 2 && (
+              <ul className="panel-desplegable">
+                {resultados.length === 0 ? (
+                  <li className="panel-desplegable-nada">{t.nav.sin_resultados}</li>
+                ) : (
+                  resultados.map((resultado) => (
+                    <li key={resultado.a}>
+                      <NavLink to={resultado.a} onClick={() => setBusqueda('')}>
+                        {resultado.texto}
+                        <small>{resultado.detalle}</small>
+                      </NavLink>
+                    </li>
+                  ))
+                )}
+              </ul>
+            )}
+          </form>
+          <div className="panel-header-acciones">
+            <div className="panel-notificaciones" ref={avisosRef}>
+              <button
+                type="button"
+                className="panel-header-enlace"
+                aria-expanded={avisosAbiertos}
+                onClick={() => setAvisosAbiertos((abierto) => !abierto)}
+              >
+                <Icono nombre="campana" />
+                {t.nav.notificaciones}
+                <Contador cantidad={totalAvisos} clase="panel-header-contador" />
+              </button>
+              {avisosAbiertos && (
+                <ul className="panel-desplegable">
+                  {avisos.length === 0 ? (
+                    <li className="panel-desplegable-nada">{t.nav.sin_notificaciones}</li>
+                  ) : (
+                    avisos.map((aviso) => (
+                      <li key={aviso.a}>
+                        <NavLink to={aviso.a}>
+                          {aviso.texto}
+                          <Contador cantidad={aviso.contador} />
+                        </NavLink>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              )}
+            </div>
+            {/* Sin contador: el Panel no lleva cuenta de mensajes sin leer. */}
+            <NavLink to="/comunicacion" className="panel-header-enlace">
+              <Icono nombre="mensajes" />
+              {t.nav.mensajes}
             </NavLink>
           </div>
-        )}
+        </header>
         <main className="panel-content" id="contenido-principal" tabIndex={-1}>
           {seccionActual && seccionActual.visibles.length > 1 && (
             <nav className="panel-subnav" aria-label={seccionActual.texto}>

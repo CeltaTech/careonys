@@ -234,7 +234,7 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--fondo-app);
+  background: var(--barra-fondo);
 }
 
 .login-card {
@@ -268,248 +268,84 @@ a {
   margin-bottom: 1rem;
 }
 
-/* La entrada del diseño «Careonys v2»: la marca de la Prestadora a la izquierda sobre el fondo
-   oscuro, y el formulario a la derecha. En el teléfono la marca queda arriba. */
-.ingreso {
-  min-height: 100vh;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-}
-
-.ingreso-marca {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-  padding: 32px 40px;
-  background: var(--azul-oscuro);
-  color: var(--texto-sobre-color);
-}
-
-.ingreso-logo {
-  display: block;
-  max-height: 64px;
-  max-width: 100%;
-  margin-bottom: 12px;
-}
-
-.ingreso-nombre {
-  font-family: var(--font-display);
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  overflow-wrap: anywhere;
-}
-
-/* El crédito de quién hizo el software. Va siempre, y discreto, porque la marca principal de esta
-   página es la de la Prestadora. */
-.ingreso-credito {
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  opacity: 0.6;
-}
-
-.ingreso-lado {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
-  padding: 44px 30px;
-  background: var(--fondo-app);
-}
-
-.ingreso-contenido {
-  width: 100%;
-  max-width: 372px;
-}
-
-.ingreso-titulo {
-  font-size: 21px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  margin-bottom: 20px;
-}
-
-.ingreso-tarjeta {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 22px 22px 24px;
-  background: var(--superficie);
-  border: 1px solid var(--borde-card);
-  border-radius: 12px;
-}
-
-.ingreso-tarjeta input {
-  height: 42px;
-  border-radius: 9px;
-}
-
-.ingreso-recuperar {
-  align-self: flex-end;
-  font-size: 11.5px;
-  font-weight: 700;
-}
-
-.ingreso-tarjeta .btn {
-  width: 100%;
-  height: 44px;
-  margin-top: 16px;
-  border-radius: 9px;
-  font-weight: 700;
-}
-
-@media (max-width: 760px) {
-  .ingreso {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
-  }
-
-  .ingreso-marca {
-    padding: 24px 16px;
-  }
-
-  .ingreso-lado {
-    align-items: flex-start;
-    padding: 28px 16px;
-  }
+/* La línea al pie de la pantalla de ingreso: el crédito de quién hizo el software. Va siempre, y
+   discreta, porque la marca principal de esa pantalla es la de la Prestadora. */
+.login-pie {
+  margin-top: 1.5rem;
+  color: var(--texto-secundario);
+  font-size: 0.8rem;
+  text-align: center;
 }
 
 /* ---------- Layout general del panel ---------- */
 
-/* El diseño «Careonys v2» (celtatech/maquetas/Panel de clientes careonys/Careonys v2.dc.html):
-   barra blanca a la izquierda con el buscador adentro, y el contenido sin encabezado arriba. */
 .panel-layout {
   display: flex;
   min-height: 100vh;
   background: var(--fondo-app);
 }
 
+/* Copia de `.side` de la maqueta (celtatech/maquetas/Careonys_Mockup_UX_UI_Reformado_ESTETICA.html). */
 .panel-sidebar {
-  width: 232px;
-  flex: 0 0 232px;
-  position: sticky;
-  top: 0;
-  height: 100vh;
+  width: 242px;
+  position: fixed;
+  inset: 0 auto 0 0;
   display: flex;
   flex-direction: column;
-  background: var(--barra-fondo);
-  border-right: 1px solid var(--barra-borde);
-  color: var(--barra-texto);
+  background: linear-gradient(180deg, var(--barra-fondo) 0%, var(--barra-fondo-abajo) 100%);
+  color: var(--barra-texto-activo);
+  box-shadow: 2px 0 10px color-mix(in oklch, var(--barra-fondo) 6%, transparent);
   z-index: 20;
 }
 
-/* La marca: el nombre de la Prestadora y, debajo, el crédito del producto. */
-.panel-logo {
-  padding: 18px 18px 12px;
-  flex-shrink: 0;
-  min-width: 0;
+.panel-layout.barra-oculta .panel-sidebar {
+  display: none;
 }
 
-.panel-logo-nombre {
+/* La zona de marca (`.brand`): lleva el nombre de la Prestadora. */
+.panel-logo {
+  display: flex;
+  align-items: center;
+  height: 88px;
+  padding: 14px 17px 10px;
+  border-bottom: 1px solid color-mix(in oklch, var(--barra-borde) 50%, transparent);
   color: var(--barra-texto-activo);
   font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 17px;
+  font-weight: 750;
   letter-spacing: -0.01em;
+  flex-shrink: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.panel-logo-producto {
-  margin-top: 2px;
-  color: var(--barra-texto-tenue);
-  font-size: 9.5px;
-}
-
-.panel-buscador {
-  position: relative;
-  margin: 0 12px 6px;
-  flex-shrink: 0;
-}
-
-.panel-buscador input {
-  width: 100%;
-  height: 34px;
-  padding: 0 11px;
-  border: 1px solid var(--barra-borde);
-  border-radius: 8px;
-  background: var(--barra-campo);
-  color: var(--texto-principal);
-  font-family: var(--font-body);
-  font-size: 12px;
-}
-
-.panel-buscador input:focus {
-  outline: 2px solid var(--azul-medio);
-  outline-offset: 0;
-}
-
-.panel-desplegable {
-  position: absolute;
-  top: calc(100% + 6px);
-  margin: 0;
-  padding: 0.35rem;
-  list-style: none;
-  background: var(--superficie);
-  border: 1px solid var(--borde-card);
-  border-radius: var(--radio-card);
-  box-shadow: var(--sombra-card);
-  max-height: 360px;
-  overflow-y: auto;
-  z-index: 30;
-}
-
-.panel-buscador .panel-desplegable {
-  left: 0;
-  width: 300px;
-}
-
-.panel-desplegable a,
-.panel-desplegable-nada {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.55rem 0.7rem;
-  border-radius: var(--radio-control);
-  color: var(--texto-principal);
-  text-decoration: none;
-  font-size: 13px;
-}
-
-.panel-desplegable a:hover,
-.panel-desplegable a:focus {
-  background: var(--superficie-hover);
-  outline: none;
-}
-
-.panel-desplegable small,
-.panel-desplegable-nada {
-  color: var(--texto-secundario);
-}
-
 .panel-sidebar nav {
   flex: 1;
   overflow: auto;
-  padding: 4px 10px 10px;
+  padding: 9px 10px;
 }
 
 .panel-sidebar nav a {
   width: 100%;
-  height: 36px;
+  height: 42px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 1px 0;
-  padding: 0 12px;
-  border-radius: 8px;
+  gap: 12px;
+  margin: 2px 0;
+  padding: 0 13px;
+  border-radius: 9px;
   color: var(--barra-texto);
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 500;
   text-align: left;
   text-decoration: none;
+}
+
+.panel-sidebar nav a svg {
+  width: 21px;
+  height: 21px;
+  flex: 0 0 21px;
 }
 
 .panel-sidebar nav a:hover {
@@ -517,44 +353,47 @@ a {
 }
 
 .panel-sidebar nav a.active {
-  background: var(--barra-activo);
+  background: linear-gradient(90deg, var(--barra-activo), color-mix(in oklch, var(--barra-activo) 94%, var(--barra-fondo)));
   color: var(--barra-texto-activo);
-  font-weight: 700;
+  font-weight: 650;
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--barra-borde) 28%, transparent);
 }
 
-/* El rótulo de grupo, como el «Gestión» del diseño. */
+/* El rótulo de grupo (`.nav .section`), como el «Gestión» de la maqueta. */
 .panel-sidebar .panel-nav-grupo {
-  color: var(--barra-texto-tenue);
-  font-size: 9.5px;
-  font-weight: 700;
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  padding: 15px 12px 6px;
+  opacity: 0.42;
+  padding: 15px 13px 5px;
 }
 
 .panel-nav-etiqueta {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .panel-nav-contador {
-  padding: 2px 6px;
-  border-radius: 9px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
   background: var(--rojo-peligro);
   color: var(--texto-sobre-color);
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 700;
-  line-height: 1.3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* La persona, al pie de la barra. */
+/* El bloque de la persona, al pie de la barra. */
+/* El bloque de la persona (`.profile`): avatar, nombre, rol, Organización y la flechita. */
 .panel-perfil {
   position: relative;
   margin-top: auto;
   border-top: 1px solid var(--barra-borde);
+  background: color-mix(in oklch, var(--barra-hover) 44%, transparent);
   flex-shrink: 0;
 }
 
@@ -563,11 +402,12 @@ a {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 16px;
+  padding: 11px 13px 12px;
   border: 0;
   background: transparent;
   color: var(--barra-texto-activo);
   font-family: var(--font-body);
+  font-size: 11px;
   text-align: left;
   cursor: pointer;
 }
@@ -578,17 +418,17 @@ a {
 }
 
 .panel-avatar {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  flex: 0 0 36px;
+  flex: 0 0 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--barra-avatar-fondo);
-  color: var(--barra-avatar-texto);
-  font-weight: 700;
-  font-size: 13px;
+  background: var(--barra-texto-activo);
+  color: var(--barra-fondo);
+  font-weight: 600;
+  font-size: 15px;
 }
 
 .panel-perfil-datos {
@@ -598,19 +438,34 @@ a {
 }
 
 .panel-perfil-nombre {
+  display: block;
   font-size: 12px;
   font-weight: 700;
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel-perfil-detalle,
+.panel-perfil-organizacion {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .panel-perfil-detalle {
-  color: var(--barra-texto-tenue);
-  font-size: 11px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  opacity: 0.9;
+}
+
+.panel-perfil-organizacion {
+  opacity: 0.72;
+}
+
+.panel-perfil-flecha {
+  margin-left: auto;
+  font-size: 20px;
+  opacity: 0.8;
 }
 
 .panel-perfil-menu {
@@ -622,7 +477,7 @@ a {
   color: var(--texto-principal);
   border: 1px solid var(--borde-card);
   border-radius: var(--radio-card);
-  box-shadow: var(--sombra-card);
+  box-shadow: 0 10px 30px oklch(0.2 0.05 255 / 0.25);
   padding: 0.4rem;
   display: flex;
   flex-direction: column;
@@ -635,7 +490,7 @@ a {
   width: 100%;
   padding: 0.55rem 0.7rem;
   border: 0;
-  border-radius: var(--radio-control);
+  border-radius: 7px;
   background: transparent;
   color: var(--texto-principal);
   font-family: var(--font-body);
@@ -668,44 +523,185 @@ a {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  margin-left: 242px;
 }
 
-/* La fila de arriba del teléfono: ahí la barra no entra y se abre encima con la hamburguesa. */
-.panel-telefono {
-  display: none;
+.panel-layout.barra-oculta .panel-main {
+  margin-left: 0;
 }
 
-/* La franja de Emergencias: queda arriba en todas las páginas mientras haya una sin tomar. */
-.panel-franja-emergencia {
+/* Copia de `.top` de la maqueta: hamburguesa, buscador y los enlaces con texto a la derecha. */
+.panel-header {
   position: sticky;
   top: 0;
   z-index: 15;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 26px;
-  background: var(--rojo-peligro);
-  color: var(--texto-sobre-color);
+  gap: 19px;
+  height: 68px;
+  padding: 0 26px;
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borde-card);
+}
+
+.panel-header-hamburguesa {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--texto-titulo);
+  cursor: pointer;
+}
+
+.panel-header-hamburguesa svg {
+  width: 22px;
+  height: 22px;
+}
+
+.panel-buscador {
+  position: relative;
+  flex: 1;
+  max-width: 470px;
+}
+
+.panel-buscador input {
+  width: 100%;
+  height: 38px;
+  padding: 0 13px 0 40px;
+  border: 1px solid var(--borde-card);
+  border-radius: 8px;
+  background: var(--superficie);
+  color: var(--texto-principal);
+  font-family: var(--font-body);
   font-size: 13px;
+}
+
+.panel-buscador input:focus {
+  outline: 2px solid var(--azul-medio);
+  outline-offset: 0;
+}
+
+.panel-buscador > svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  color: var(--texto-secundario);
+  pointer-events: none;
+}
+
+.panel-desplegable {
+  position: absolute;
+  top: calc(100% + 6px);
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  background: var(--superficie);
+  border: 1px solid var(--borde-card);
+  border-radius: var(--radio-card);
+  box-shadow: 0 10px 30px oklch(0.2 0.05 255 / 0.15);
+  max-height: 360px;
+  overflow-y: auto;
+  z-index: 30;
+}
+
+.panel-buscador .panel-desplegable {
+  left: 0;
+  right: 0;
+}
+
+.panel-desplegable a,
+.panel-desplegable-nada {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 7px;
+  color: var(--texto-principal);
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.panel-desplegable a:hover,
+.panel-desplegable a:focus {
+  background: var(--superficie-hover);
+  outline: none;
+}
+
+.panel-desplegable small,
+.panel-desplegable-nada {
+  color: var(--texto-secundario);
+}
+
+/* `.toplinks`: cada enlace es dibujo, texto y, si hay, el contador redondo. */
+.panel-header-acciones {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  color: var(--texto-principal);
+  font-size: 12px;
+}
+
+.panel-header-enlace {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-family: var(--font-body);
+  font-size: 12px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.panel-header-enlace:hover,
+.panel-header-enlace[aria-expanded='true'],
+.panel-header-enlace.active {
+  color: var(--texto-titulo);
+}
+
+.panel-header-enlace svg {
+  width: 21px;
+  height: 21px;
+  stroke-width: 1.6;
+  color: var(--texto-titulo);
+}
+
+.panel-header-contador {
+  min-width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--contador);
+  color: var(--texto-sobre-color);
+  font-size: 10px;
   font-weight: 700;
 }
 
-.panel-franja-cantidad {
-  padding: 1px 8px;
-  border-radius: 9px;
-  background: var(--texto-sobre-color);
-  color: var(--rojo-peligro-texto);
-  font-size: 11px;
+.panel-notificaciones {
+  position: relative;
 }
 
-.panel-franja-enlace {
-  margin-left: auto;
-  color: var(--texto-sobre-color);
-  font-weight: 600;
-  text-decoration: underline;
+.panel-notificaciones .panel-desplegable {
+  right: 0;
+  width: 320px;
 }
 
-/* Las pestañas de la sección abierta, arriba del contenido. */
+/* Las pestañas de la sección abierta, arriba del contenido, con el estilo de `.tabs`. */
 .panel-subnav {
   display: flex;
   gap: 4px;
@@ -731,13 +727,13 @@ a {
 }
 
 .panel-subnav a.active {
-  color: var(--barra-texto-activo);
-  border-bottom-color: var(--azul-medio);
+  color: var(--verde-exito-texto);
+  border-bottom-color: var(--verde-exito);
   font-weight: 700;
 }
 
-/* Las tres preferencias personales: idioma, tema y densidad. Son elecciones de quien mira la
-   pantalla, no datos de la Prestadora, así que van juntas y discretas. */
+/* Las tres preferencias personales del encabezado: idioma, tema y densidad. Son elecciones
+   de quien mira la pantalla, no datos de la Prestadora, así que van juntas y discretas. */
 .panel-preferencias {
   display: flex;
   align-items: center;
@@ -795,7 +791,7 @@ a {
 }
 
 .panel-content {
-  padding: 22px 26px 40px;
+  padding: 27px 26px 36px;
   flex: 1;
   width: 100%;
   max-width: 1540px;
@@ -807,18 +803,34 @@ a {
   display: none;
 }
 
-/* En el teléfono la barra se oculta y la hamburguesa la abre encima. */
+/* Las dos medidas de la maqueta: a 1100 la barra se angosta; a 760 se oculta (la hamburguesa
+   la abre encima) y los enlaces de arriba desaparecen. */
+@media (max-width: 1100px) {
+  .panel-sidebar {
+    width: 210px;
+  }
+
+  .panel-main {
+    margin-left: 210px;
+  }
+}
+
 @media (max-width: 760px) {
   .panel-tabla {
     display: block;
     overflow-x: auto;
   }
 
-  .panel-sidebar {
-    position: fixed;
-    inset: 0 auto 0 0;
+  .panel-sidebar,
+  .panel-layout.barra-oculta .panel-sidebar {
+    display: flex;
+    width: 242px;
     transform: translateX(-100%);
     transition: transform 0.2s ease;
+  }
+
+  .panel-main {
+    margin-left: 0;
   }
 
   .panel-layout.menu-abierto .panel-sidebar {
@@ -833,41 +845,16 @@ a {
     background: var(--velo-modal);
   }
 
-  .panel-telefono {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 16px;
-    background: var(--barra-fondo);
-    border-bottom: 1px solid var(--barra-borde);
+  .panel-header {
+    padding: 0 16px;
   }
 
-  .panel-hamburguesa {
-    width: 34px;
-    height: 34px;
-    padding: 0;
-    border: 1px solid var(--barra-borde);
-    border-radius: 8px;
-    background: var(--barra-campo);
-    color: var(--barra-texto-activo);
-    font-size: 18px;
-    cursor: pointer;
-  }
-
-  .panel-telefono-nombre {
-    color: var(--barra-texto-activo);
-    font-weight: 700;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .panel-franja-emergencia {
-    padding: 10px 16px;
+  .panel-header-acciones {
+    display: none;
   }
 
   .panel-content {
-    padding: 18px 16px 32px;
+    padding: 18px;
   }
 }
 
@@ -877,6 +864,31 @@ a {
 }
 
 /* ---------- Checklist de configuración inicial (onboarding) ---------- */
+
+.onboarding-checklist {
+  background: var(--superficie);
+  border: 1px solid var(--borde-card);
+  border-radius: var(--radio-card);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.onboarding-checklist-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.onboarding-checklist-header h2 {
+  margin: 0;
+}
+
+.onboarding-checklist-fraccion {
+  color: var(--texto-secundario);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
 
 .onboarding-checklist-barra {
   background: var(--fondo-alt);
@@ -891,6 +903,68 @@ a {
   height: 100%;
   border-radius: 4px;
   transition: width 0.3s ease;
+}
+
+.onboarding-checklist-pasos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.onboarding-paso {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem 0.9rem;
+  background: var(--fondo-alt);
+  border-radius: 8px;
+}
+
+.onboarding-paso-hecho {
+  opacity: 0.7;
+}
+
+.onboarding-paso-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.onboarding-paso-titulo {
+  font-weight: 600;
+  color: var(--texto-principal);
+}
+
+.onboarding-paso-explicacion {
+  color: var(--texto-secundario);
+  font-size: 0.85rem;
+}
+
+/* Qué deja de funcionar mientras ese paso falte. Sólo aparece en los pendientes, y se distingue
+   de la explicación de arriba por el canto naranja: la de arriba dice qué hacer, ésta por qué. */
+.onboarding-paso-consecuencia {
+  color: var(--texto-secundario);
+  font-size: 0.85rem;
+  border-left: 3px solid var(--naranja-alerta);
+  padding-left: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+/* Arrancar la configuración inicial desde una planilla que la Prestadora ya tiene. Cuelga
+   debajo de los pasos, separada por una línea, para que se lea como otro camino hacia lo
+   mismo y no como un paso más de la lista. */
+.onboarding-planilla {
+  border-top: 1px solid var(--borde-card);
+  margin-top: 1.1rem;
+  padding-top: 1.1rem;
+}
+
+.onboarding-planilla h3 {
+  margin: 0 0 0.2rem;
 }
 
 /* ---------- Métricas del dashboard ---------- */

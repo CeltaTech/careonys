@@ -13,6 +13,7 @@ import { TelefonosEsperandoProvider } from './context/TelefonosEsperandoContext'
 import { PuestaEnMarchaProvider } from './context/PuestaEnMarchaContext';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { ROLES_ADMINISTRACION, ROLES_PANEL } from './lib/roles';
+import { MODALIDAD } from './lib/modalidades';
 import { Layout } from './components/layout/Layout';
 import { Login } from './pages/Login';
 import { Mfa } from './pages/Mfa';
@@ -20,7 +21,8 @@ import { EntrevistaPublica } from './pages/EntrevistaPublica';
 import { ActivarCuenta } from './pages/ActivarCuenta';
 import { RecuperarClave } from './pages/RecuperarClave';
 import { ClaveNueva } from './pages/ClaveNueva';
-import { MiCuenta } from './pages/MiCuenta';
+import { MiClave } from './pages/MiClave';
+import { CuentaSegura } from './pages/CuentaSegura';
 import { HabilitarClave } from './pages/HabilitarClave';
 import { Muestra } from './pages/Muestra';
 import { MuestraEstadoActual } from './pages/MuestraEstadoActual';
@@ -63,7 +65,10 @@ import { Importacion } from './pages/Importacion';
 import { InformesObraSocial } from './pages/InformesObraSocial';
 import { Auditoria } from './pages/Auditoria';
 import { ContenidoParaClientes } from './pages/contenidos/ContenidoParaClientes';
-import { Calificaciones } from './pages/Calificaciones';
+import { MatchClientes } from './pages/match/Clientes';
+import { FormasDeCobro } from './pages/match/FormasDeCobro';
+import { MatchCalificaciones } from './pages/match/Calificaciones';
+import { MatchAuditoriaLegal } from './pages/match/AuditoriaLegal';
 
 function App() {
   return (
@@ -196,12 +201,10 @@ function App() {
                       <Route path="accesos" element={<ConfiguracionAccesos />} />
                       <Route path="puesta-en-marcha" element={<ConfiguracionPuestaEnMarcha />} />
                     </Route>
-                    {/* La propia cuenta la tiene cualquiera que entre al Panel: no lleva permiso,
-                        porque no se está tocando la cuenta de nadie más. Las dos direcciones
-                        anteriores siguen llevando ahí, por los enlaces guardados. */}
-                    <Route path="mi-cuenta" element={<MiCuenta />} />
-                    <Route path="mi-clave" element={<Navigate to="/mi-cuenta" replace />} />
-                    <Route path="cuenta-segura" element={<Navigate to="/mi-cuenta" replace />} />
+                    <Route path="mi-clave" element={<MiClave />} />
+                    {/* La seguridad de la propia cuenta la tiene cualquiera que entre al Panel:
+                        no lleva permiso, porque no se está tocando la cuenta de nadie más. */}
+                    <Route path="cuenta-segura" element={<CuentaSegura />} />
                     <Route
                       path="habilitar-clave"
                       element={
@@ -211,13 +214,49 @@ function App() {
                       }
                     />
                     <Route path="auditoria" element={<ProtectedRoute roles={ROLES_ADMINISTRACION}><Auditoria /></ProtectedRoute>} />
-                    {/* Las calificaciones de los Asistentes valen para las dos modalidades: la
-                        Cliente califica a quien la atendió, sea de prestación directa o de Match. */}
+                    {/* Las pantallas del Match llevan dos candados y no uno: el rol,
+                        que dice quién de la Prestadora entra, y la modalidad, que dice si esa
+                        Prestadora tiene Match. Hasta ahora sólo tenían el primero, así que
+                        una Prestadora de prestación directa entraba escribiendo la dirección a
+                        mano. El de acá es para no mostrar lo que no corresponde; el que niega de
+                        verdad es el del backend (backend/src/middleware/exigirModalidad.js). */}
                     <Route
-                      path="calificaciones"
+                      path="match/clientes"
                       element={
-                        <ProtectedRoute roles={ROLES_PANEL}>
-                          <Calificaciones />
+                        /* La pantalla de Clientes del Match es la de la plata: importes de
+                           suscripción, historial de cobros, carga de efectivo en mano y canje del
+                           QR. Va con el mismo candado que Configuración y Auditoría, no con el de
+                           las pantallas operativas (Desarrollador, 2026-09-04). */
+                        <ProtectedRoute roles={ROLES_ADMINISTRACION} modalidad={MODALIDAD.MATCH}>
+                          <MatchClientes />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="match/formas-de-cobro"
+                      element={
+                        /* Con qué números cobra la Prestadora. Mismo candado que la pantalla de
+                           la plata: es configuración de dinero, no operación. El Superadmin entra
+                           y mira, para poder dar soporte, pero no cambia nada: eso lo niega el
+                           backend, que es donde el permiso niega de verdad. */
+                        <ProtectedRoute roles={ROLES_ADMINISTRACION} modalidad={MODALIDAD.MATCH}>
+                          <FormasDeCobro />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="match/calificaciones"
+                      element={
+                        <ProtectedRoute roles={ROLES_PANEL} modalidad={MODALIDAD.MATCH}>
+                          <MatchCalificaciones />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="match/auditoria-legal"
+                      element={
+                        <ProtectedRoute roles={ROLES_PANEL} modalidad={MODALIDAD.MATCH}>
+                          <MatchAuditoriaLegal />
                         </ProtectedRoute>
                       }
                     />

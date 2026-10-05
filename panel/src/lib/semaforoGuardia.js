@@ -49,8 +49,8 @@ export const UMBRALES = {
   horas_hueco_urgente: 48,
   /** Minutos de tolerancia desde la hora de inicio antes de decir que el Asistente llegó tarde. */
   minutos_tolerancia_llegada: 15,
-  /** Horas después del fin sin registrar la salida antes de avisar: 15 minutos. */
-  horas_para_cerrar: 15 / 60,
+  /** Horas después del fin sin cerrar la guardia antes de considerarla un problema. */
+  horas_para_cerrar: 2,
 };
 
 const MINUTOS_POR_HORA = 60;

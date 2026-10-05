@@ -1,6 +1,6 @@
 // Pendiente #85 (docs/PLAN_HASTA_PRODUCCION.md), Grupo 3 Match — rutas del Panel: pasarela de
-// pago por Prestadora, accesos y cobros, y la auditoría de advertencias legales de match.
-// Las calificaciones valen para las dos modalidades y viven en panelCalificaciones.js.
+// pago por Prestadora, accesos y cobros, calificaciones con descargo, y la auditoría de
+// advertencias legales de match.
 //
 // CON LA CREDENCIAL DE QUIEN PIDE. Cada manejador entra a la base con `clienteDelPedido(req)`, y
 // qué filas ve lo decide la RLS por la membresía de esa persona: no hay filtro por Prestadora
@@ -45,7 +45,7 @@ panelMatchRouter.use(exigirModalidad('match'));
 // conectar y desconectar pasarelas de pago —que es cargar credenciales de cobro—, y todo lo
 // que sea un cobro: la lista de accesos con sus importes, el historial de cobros, la
 // carga de efectivo en mano y el canje del QR. Lo que sí queda para el Coordinador es lo que
-// no es plata: la auditoría de advertencias legales.
+// no es plata: las calificaciones y la auditoría de advertencias legales.
 //
 // Hasta el 2026-09-04 este archivo tenía una función llamada `requiereAdminOSuperior` que
 // dejaba pasar al Coordinador; las otras dos del backend, con el mismo nombre, no. Ahora el
@@ -729,6 +729,60 @@ panelMatchRouter.post('/accesos/:id/alta-en-pasarela', soloAdministracion, async
   }
 
   res.json({ ok: true, ya_estaba: Boolean(resultado.yaEstaba), alta: resultado.alta });
+});
+
+// ============================================================================
+// Calificaciones y descargos — visibilidad pública queda como único campo editable por la
+// Prestadora (schema_calificaciones_asistente.sql), el contenido (incluido el descargo del
+// Asistente) nunca se edita desde acá.
+// ============================================================================
+
+panelMatchRouter.get('/calificaciones', async (req, res) => {
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
+    .from('calificaciones_asistente')
+    .select('id, asistente_id, paciente_id, cliente_id, estrellas, comentario, visible_publica, descargo_asistente, descargo_en, created_at')
+    .order('created_at', { ascending: false });
+  if (error) return responderError(res, error);
+
+  const asistenteIds = [...new Set(data.map((c) => c.asistente_id).filter(Boolean))];
+  // Los nombres, con la llave maestra: el Coordinador sólo alcanza los Asistentes de su zona, y
+  // una calificación de un Asistente de otra zona quedaría sin nombre en la lista.
+  const { data: asistentes } = asistenteIds.length
+    ? await supabase
+        .from('asistentes')
+        .select('id, nombre')
+        .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+        .in('id', asistenteIds)
+    : { data: [] };
+  const nombreAsistente = new Map((asistentes || []).map((a) => [a.id, a.nombre]));
+
+  const calificaciones = data.map((c) => ({ ...c, asistente_nombre: nombreAsistente.get(c.asistente_id) || null }));
+
+  res.json({ calificaciones });
+});
+
+panelMatchRouter.patch('/calificaciones/:id/visibilidad', async (req, res) => {
+  const { visible_publica: visiblePublica } = req.body || {};
+  if (typeof visiblePublica !== 'boolean') {
+    return res.status(400).json({ error: 'Falta visible_publica (booleano)' });
+  }
+  // La escritura devuelve la fila tocada: sin esto la base contesta que salió bien aunque no
+  // haya encontrado ninguna, y la pantalla muestra un cambio de visibilidad que no ocurrió.
+  // Con la llave maestra: la política de modificación de `calificaciones_asistente` no incluye a
+  // Superadmin. Por eso el filtro por Prestadora sigue escrito acá.
+  const { data: modificada, error } = await supabase
+    .from('calificaciones_asistente')
+    .update({ visible_publica: visiblePublica })
+    .eq('id', req.params.id)
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .select('id');
+  if (error) return responderError(res, error);
+  if (!modificada?.length) {
+    // No existe, o es de otra Prestadora. Se contesta lo mismo en los dos casos.
+    return res.status(404).json({ error: 'No se encontró esa calificación' });
+  }
+  res.json({ ok: true });
 });
 
 // ============================================================================

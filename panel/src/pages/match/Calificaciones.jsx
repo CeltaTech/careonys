@@ -1,19 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useLocale } from '../i18n/LocaleContext';
-import { supabase } from '../lib/supabaseClient';
-import { Button } from '../components/ui/Button';
-import { Alert } from '../components/ui/Alert';
-import { Cabecera } from '../components/ui/Cabecera';
-import { Estrellas } from '../components/ui/Estrellas';
-import { EstadoLista } from '../components/layout/EstadoLista';
-import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
-import './hojaDeTarjetas.css';
+import { useLocale } from '../../i18n/LocaleContext';
+import { supabase } from '../../lib/supabaseClient';
+import { Button } from '../../components/ui/Button';
+import { Alert } from '../../components/ui/Alert';
+import { Cabecera } from '../../components/ui/Cabecera';
+import { Estrellas } from '../../components/ui/Estrellas';
+import { EstadoLista } from '../../components/layout/EstadoLista';
+import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
+import '../hojaDeTarjetas.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 async function llamarApi(path, opciones = {}) {
   const { data } = await supabase.auth.getSession();
-  const respuesta = await fetch(`${API_URL}/api/panel/calificaciones${path}`, {
+  const respuesta = await fetch(`${API_URL}/api/panel/match${path}`, {
     ...opciones,
     headers: {
       'Content-Type': 'application/json',
@@ -26,7 +26,7 @@ async function llamarApi(path, opciones = {}) {
   return resultado;
 }
 
-export function Calificaciones() {
+export function MatchCalificaciones() {
   const { t } = useLocale();
   const [calificaciones, setCalificaciones] = useState([]);
   const [estado, setEstado] = useState('cargando');
@@ -37,7 +37,7 @@ export function Calificaciones() {
     setEstado('cargando');
     setError(null);
     try {
-      const { calificaciones: filas } = await llamarApi('/');
+      const { calificaciones: filas } = await llamarApi('/calificaciones');
       setCalificaciones(filas);
       setEstado('listo');
     } catch (err) {
@@ -54,7 +54,7 @@ export function Calificaciones() {
     setCambiandoId(calificacion.id);
     setError(null);
     try {
-      await llamarApi(`/${calificacion.id}/visibilidad`, {
+      await llamarApi(`/calificaciones/${calificacion.id}/visibilidad`, {
         method: 'PATCH',
         body: JSON.stringify({ visible_publica: !calificacion.visible_publica }),
       });

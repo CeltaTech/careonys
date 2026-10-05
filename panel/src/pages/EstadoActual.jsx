@@ -83,6 +83,7 @@ function Renglon({ clave, nombre, casos, tono, a, textoEnlace, abierto, alternar
             <div key={c.id} className="estado-actual-caso">
               <span>{c.titulo}</span>
               {c.detalle && <span className="panel-mini">{c.detalle}</span>}
+              {c.turnos && <HorasDeLosTurnos turnos={c.turnos} />}
             </div>
           ))}
           <Link className="panel-enlace" to={a}>
@@ -91,6 +92,32 @@ function Renglon({ clave, nombre, casos, tono, a, textoEnlace, abierto, alternar
         </div>
       )}
     </div>
+  );
+}
+
+function HorasDeLosTurnos({ turnos }) {
+  const { t } = useLocale();
+  return (
+    <table className="panel-tabla estado-actual-horas">
+      <thead>
+        <tr>
+          <th>{t.evv.col_asistente}</th>
+          <th>{t.evv.col_fecha}</th>
+          <th>{t.evv.col_checkin}</th>
+          <th>{t.evv.col_checkout}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {turnos.map((x) => (
+          <tr key={x.id}>
+            <td>{x.quien}</td>
+            <td>{x.turno}</td>
+            <td>{x.llegada}</td>
+            <td>{x.salida}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
@@ -216,7 +243,7 @@ export function EstadoActual() {
     }
 
     // Para la salida sin registrar: los turnos siguientes que ya registraron la entrada, desde el
-    // más viejo de los abiertos. El aviso muestra a qué hora entró el siguiente.
+    // más viejo de los abiertos. El detalle muestra sus horas al lado de las del turno abierto.
     const fechaMasVieja = guardias
       .filter((g) => g.checkin_at && !g.checkout_at)
       .reduce((min, g) => (min && min < g.fecha ? min : g.fecha), null);
@@ -224,7 +251,7 @@ export function EstadoActual() {
     if (fechaMasVieja) {
       const r = await supabase
         .from('guardias')
-        .select('id, servicio_id, paciente_id, fecha, hora_inicio, checkin_at')
+        .select('id, servicio_id, paciente_id, asistente_id, fecha, hora_inicio, hora_fin, checkin_at, checkout_at')
         .gte('fecha', fechaMasVieja)
         .not('checkin_at', 'is', null);
       if (r.error) {
@@ -325,7 +352,7 @@ export function EstadoActual() {
       const empiezaDespues = (e) => `${e.fecha} ${e.hora_inicio}` > `${g.fecha} ${g.hora_inicio}`;
       const siguientes = datos.entradas.filter((e) => e.id !== g.id && mismo(e) && empiezaDespues(e));
       siguientes.sort((a, b) => a.checkin_at.localeCompare(b.checkin_at));
-      return siguientes[0]?.checkin_at ?? null;
+      return siguientes[0] ?? null;
     };
 
     const lista = [
@@ -404,14 +431,21 @@ export function EstadoActual() {
         a: '/guardias',
         enlace: t.nav.guardias,
         tono: critica('sin_cerrar', sinCerrar) ? TONO.CRITICO : TONO.ATENCION,
+        // Se muestran las horas, registradas o no, del turno abierto y del que lo siguió; qué
+        // hacer con eso lo decide la coordinación.
         casos: sinCerrar.map((g) => {
           const siguiente = entradaSiguiente(g);
+          const horas = (x) => ({
+            id: x.id,
+            quien: asistente(x),
+            turno: turno(x),
+            llegada: x.checkin_at ? fecha(x.checkin_at) : t.evv.sin_checkin,
+            salida: x.checkout_at ? fecha(x.checkout_at) : t.evv.sin_checkout,
+          });
           return {
             id: g.id,
-            titulo: `${asistente(g)} — ${pacientes(g)}`,
-            detalle: siguiente
-              ? `${turno(g)} · ${con(tx.entro_el_siguiente, { hora: fecha(siguiente) })}`
-              : turno(g),
+            titulo: pacientes(g),
+            turnos: [horas(g), ...(siguiente ? [horas(siguiente)] : [])],
           };
         }),
       },

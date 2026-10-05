@@ -1003,13 +1003,14 @@ Los renglones, en este orden:
   se ve qué papel tiene el problema. El mismo aviso le aparece al Asistente en su aplicación.
 - **Informes.** Turnos terminados sin informe. Al hacer clic, quien coordina o administra ve de qué
   se trata.
-- **Contacto, Prospecto o Cliente**, según la etapa en que esté el Cliente que pidió un servicio.
+- **Contacto, Prospecto o Cliente**, según la etapa comercial en que esté cada uno.
 - **Postulante.** Personas que se postularon para trabajar. Es parte de Reclutamiento.
 
 **Salida sin registrar, y lo mismo con la entrada.** Si el turno terminó y la salida no se
 registró, a los 15 minutos aparece el aviso; cada Prestadora cambia ese plazo en su configuración.
-Si ya entró el Asistente siguiente, el aviso muestra a qué hora
-entró, que es cuándo se fue el anterior. Un Asistente que se queda de más sin que lo releven hace
+El renglón dice sólo «Salida sin registrar»; al hacer clic
+muestra las horas de entrada y salida registradas y las que faltan, del turno y del siguiente, sin
+ninguna frase que las interprete. Un Asistente que se queda de más sin que lo releven hace
 saltar la alarma del relevo que no llegó, salvo que sea el último turno de la guardia. La
 coordinación consulta a los Asistentes involucrados: si fue un olvido, cierra el turno a mano; si
 fue otra cosa, busca la solución; si no puede resolverlo, lo pasa al escalón de arriba.
@@ -1024,10 +1025,19 @@ en la sección «La entrada y la recuperación de la clave».
 - **Peso de cada prestación**, en una torta. Un botón cambia entre contarlas por cantidad o por
   dinero. La vista por dinero la ve sólo la administración, igual que los pagos a los Asistentes.
 
-**42.** Las etapas Contacto, Prospecto y Cliente no existen todavía: un pedido de servicio hoy
-está nuevo, en gestión o asignado, y el renglón cuenta los nuevos y los que están en gestión.
-Falta que el Desarrollador diga qué es cada etapa y cuándo se pasa de una a otra; con eso se
-construyen y el renglón las muestra.
+**42.** Las tres etapas comerciales:
+
+- **Contacto:** alguien de afuera de los clientes que mostró interés en los servicios de la
+  Prestadora, porque se comunicó o porque la Prestadora lo contactó.
+- **Prospecto:** se están negociando las condiciones del servicio y las económicas.
+- **Cliente:** desde que se cierra el trato y se empieza a preparar el servicio, mientras dure
+  —pueden ser años— y también después de terminado, aunque esté inactivo.
+
+Contactos y Prospectos son asunto de la comercialización, que es la administración. Los Clientes
+les importan a la administración y a la coordinación, y a los Asistentes involucrados en lo suyo.
+Hoy un pedido de servicio está nuevo, en gestión o asignado, y el renglón cuenta los nuevos y los
+que están en gestión. Falta que el Desarrollador diga si la etapa se marca a mano o se deduce, y
+qué muestra el tablero de los Clientes; con eso se construyen y el renglón las muestra.
 
 ---
 

@@ -217,7 +217,7 @@ nada. Un número que llega de afuera y otro calculado acá son dos verdades para
 peor que no tener ninguna. Textual del Desarrollador: *«cada prestadora elige como hacerlo»*.
 
 **El estado de cuenta lo ve solamente la administración de la Prestadora.** Cuánto debe un Cliente
-y si está atrasada no es información de quien coordina turnos ni de nadie más: entra por el
+y si está atrasado no es información de quien coordina turnos ni de nadie más: entra por el
 catálogo de permisos, con el mismo molde que `ver_pagos_asistente`, que nace reservada a
 administración.
 
@@ -225,8 +225,8 @@ administración.
 cobranzas es de una Prestadora, con su propia credencial, y nunca alcanza los datos de otra.
 
 **Toda la información de los Clientes de la Prestadora vive en un solo lugar —el Padrón— y de ahí
-se nutre todo el que la consuma.** Un Cliente puede ser un Cliente, una obra social, una prepaga o
-lo que sea, y en los cuatro casos se guarda una sola vez, con todo lo que se sabe de él: quién es, cómo se
+se nutre todo el que la consuma.** Quien contrata o paga puede ser una persona, una obra social, una prepaga o
+lo que sea, y en todos los casos se guarda una sola vez, con todo lo que se sabe de él: quién es, cómo se
 lo ubica, qué servicio recibe y cómo figura ante el organismo fiscal. Nada de eso se guarda por
 segunda vez en otra pantalla, en otra tabla ni en el software de otro.
 
@@ -250,7 +250,7 @@ cambiar el nombre o el domicilio de su cliente y eso no se puede impedir desde a
 corresponde es que la Prestadora vea que se despegaron, no que el producto intente imponer nada.
 
 **Una contratación tiene tres roles, y siempre son tres.** Quien contrata el Servicio es el
-Cliente Contratante; para quién se contrata es el Paciente; y quien asume la obligación de pagar es
+Contratante; para quién se contrata es el Paciente; y quien asume la obligación de pagar es
 el Pagador. Cada rol lo pueden tener una o más personas, físicas o jurídicas, y **una misma
 persona puede tener varios roles**. Los tres pueden ser la misma persona, y eso es lo corriente,
 pero **se anotan aparte igual**: coincidir hoy no es coincidir siempre. Textual del Desarrollador:
@@ -261,8 +261,8 @@ en un papel.
 
 **El Pagador firma su consentimiento a la obligación de pagar, y sin esa firma no hay Pagador
 definido.** Se establece al contratar, con todos sus datos y con la documentación que ese
-financiador exija, completa y firmada. Eso tiene que estar listo el día que se firma con la
-Cliente; de ahí en más el cobro es asunto de créditos y cobranzas, que **sólo le informa a Careonys
+financiador exija, completa y firmada. Eso tiene que estar listo el día que se firma con el
+Contratante; de ahí en más el cobro es asunto de créditos y cobranzas, que **sólo le informa a Careonys
 en qué situación están los pagos** —al día, vencido hace tantos días— y nada más.
 
 **Cada persona ve lo que firmó, y lo que firmó otro no, salvo que sea parte firmante.** Vale para
@@ -308,7 +308,7 @@ menos todavía como etiqueta de anuncio.
 
 **El nombre visible del Cliente se calcula al mostrarlo, y no se guarda.** Se arma con el
 apellido y los nombres del Paciente; cuando hay más de uno, **queda el más antiguo al que se le
-esté brindando servicio**. Si aparece otra Cliente con ese mismo apellido y nombres, se le agrega
+esté brindando servicio**. Si aparece otro Cliente con ese mismo apellido y nombres, se le agrega
 la localidad o el barrio. Si aun así siguen siendo dos, se le antepone el número de cliente. **El
 número de cliente es otra cosa**: es único, no se reasigna nunca a nadie más, y es lo que usan el
 sistema y los documentos. El nombre visible es para la pantalla.

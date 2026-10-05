@@ -71,3 +71,54 @@
   text-overflow: ellipsis;
   max-width: 100%;
 }
+
+/* Gráfico de línea: un punto por período, con su número encima y su rótulo abajo. Usa la misma
+   altura que el de barras para que las dos tarjetas queden parejas. */
+.hoja-linea {
+  height: 170px;
+  display: flex;
+  flex-direction: column;
+  padding-top: 18px;
+}
+
+.hoja-linea-lienzo {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.hoja-linea-lienzo svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.hoja-linea-punto {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: var(--azul-medio);
+}
+
+.hoja-linea-punto b {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.hoja-linea-meses {
+  display: flex;
+  margin-top: 6px;
+}
+
+.hoja-linea-meses span {
+  flex: 1;
+  text-align: center;
+}

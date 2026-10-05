@@ -7,7 +7,6 @@ import cors from 'cors';
 // no capturada en cualquiera de las rutas tumba el proceso entero (pendiente #91, causa
 // raíz del crash de QR_COBRO_SECRET, pendiente #90). Debe importarse antes de definir rutas.
 import 'express-async-errors';
-import { postulacionAsistenteRouter } from './routes/postulacionAsistente.js';
 import { panelNotificacionesRouter } from './routes/panelNotificaciones.js';
 import { panelCuentasRouter } from './routes/panelCuentas.js';
 import { panelUsuariosRouter } from './routes/panelUsuarios.js';
@@ -127,14 +126,13 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', version: versionEnElAire, ia: Boolean(process.env.ANTHROPIC_API_KEY) });
 });
 
-// Los dos caminos que se atienden sin sesión llevan a la Prestadora en la propia dirección: el
-// formulario de postulación del sitio público de una Prestadora y los datos de contacto que ese
-// sitio muestra. `:prestadora` es el dominio configurado de ese sitio; antes se deducía de un
-// encabezado, que quien manda el pedido escribe a mano. El porqué completo está en
+// El camino que se atiende sin sesión lleva a la Prestadora en la propia dirección: los datos de
+// contacto que muestra el sitio público de una Prestadora. `:prestadora` es el dominio
+// configurado de ese sitio; antes se deducía de un encabezado, que quien manda el pedido escribe
+// a mano. El porqué completo está en
 // backend/src/middleware/resolverPrestadoraPublica.js.
-app.use('/api/publico/:prestadora/postulacion-asistente', postulacionAsistenteRouter);
 app.use('/api/publico/:prestadora/configuracion', configuracionPublicaRouter);
-// Y el tercero: con qué marca se presenta la puerta por donde se está entrando, que es lo que la
+// Y el segundo: con qué marca se presenta la puerta por donde se está entrando, que es lo que la
 // pantalla de ingreso del Panel necesita saber antes de que nadie escriba una clave.
 app.use('/api/publico/:prestadora/marca', marcaDeLaPuertaRouter);
 app.use('/api/panel/notificar', panelNotificacionesRouter);

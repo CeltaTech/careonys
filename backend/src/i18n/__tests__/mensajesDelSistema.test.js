@@ -211,7 +211,6 @@ const DATOS_MINIMOS = {
     empresa: 'Cuidados del Sur', producto: 'un producto',
   },
   estado_postulacion: { empresa: 'Cuidados del Sur', nombre: 'Marta', estado: 'aprobado' },
-  nueva_postulacion_asistente: { nombre: 'Marta' },
   mensaje_del_coordinador: {},
   guardia_asignada: { fecha: '2026-10-07', horaInicio: '08:00' },
   recordatorio_de_guardia: { fecha: '2026-10-07', horaInicio: '08:00' },

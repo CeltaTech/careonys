@@ -582,10 +582,6 @@ const ARMADORES = {
 
   // Los datos de quien se postula no salen en el cuerpo del correo, igual que en
   // `emergencia_en_guardia`: se leen entrando al Panel, que es donde el permiso se comprueba.
-  nueva_postulacion_asistente: (t, d) => ({
-    asunto: t('nueva_postulacion_asistente.asunto', { nombre: d.nombre }),
-    texto: t('nueva_postulacion_asistente.texto', { nombre: d.nombre }),
-  }),
 
 
   mensaje_del_coordinador: (t) => ({ titulo: t('mensaje_del_coordinador.titulo') }),

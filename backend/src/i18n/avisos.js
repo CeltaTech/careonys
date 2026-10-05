@@ -587,19 +587,6 @@ const ARMADORES = {
     texto: t('nueva_postulacion_asistente.texto', { nombre: d.nombre }),
   }),
 
-  nueva_solicitud_servicio: (t, d) => ({
-    asunto: t('nueva_solicitud_servicio.asunto', { nombre: d.nombre }),
-    texto: t('nueva_solicitud_servicio.texto', {
-      nombre: d.nombre,
-      telefono: d.telefono,
-      email: d.email,
-      localidad: d.localidad,
-      tipoServicio: d.tipoServicio,
-      modalidad: d.modalidad,
-      diasHorario: d.diasHorario,
-      descripcion: d.descripcion ?? '—',
-    }),
-  }),
 
   mensaje_del_coordinador: (t) => ({ titulo: t('mensaje_del_coordinador.titulo') }),
 

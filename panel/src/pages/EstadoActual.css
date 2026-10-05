@@ -1,56 +1,29 @@
 /* Situación operativa: lo único que esta página agrega a las clases `.panel-*` de index.css.
    Los colores salen todos de las variables del producto. */
 
-.estado-actual-tablero {
-  padding-top: 4px;
-  padding-bottom: 4px;
+.estado-actual-trazo-verde {
+  stroke: var(--verde-exito);
 }
 
-.estado-actual-renglon {
-  border-bottom: 1px solid var(--borde-card);
+.estado-actual-trazo-azul {
+  stroke: var(--azul-medio);
 }
 
-.estado-actual-renglon:last-child {
-  border-bottom: 0;
+.estado-actual-trazo-violeta {
+  stroke: var(--violeta);
 }
 
-.estado-actual-cabeza {
-  display: flex;
-  width: 100%;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
+.estado-actual-trazo-naranja {
+  stroke: var(--naranja-alerta);
+}
+
+.estado-actual-icono-relleno {
+  fill: var(--superficie);
+}
+
+.estado-actual-mensaje {
+  margin: 0;
   padding: 12px 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.estado-actual-cabeza:disabled {
-  cursor: default;
-}
-
-.estado-actual-cabeza b {
-  font-size: 13px;
-}
-
-.estado-actual-detalle {
-  padding: 0 0 12px 12px;
-}
-
-.estado-actual-caso {
-  padding: 6px 0;
   font-size: 12px;
-}
-
-.estado-actual-caso span.panel-mini {
-  display: block;
-  margin-top: 2px;
-}
-
-.estado-actual-horas {
-  margin-top: 6px;
+  color: var(--texto-secundario);
 }

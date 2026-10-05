@@ -39,12 +39,13 @@
   --rojo-peligro: oklch(0.625 0.189 24);
   --violeta: oklch(0.562 0.167 298);
 
-  /* La acción principal de cada página es azul, como en el diseño «Careonys v2». */
-  --accion: oklch(0.467 0.129 252);
-  --accion-hover: oklch(0.407 0.114 253);
+  /* La acción principal de cada pantalla es verde, y el contador de la barra de arriba, petróleo. */
+  --accion: oklch(0.618 0.112 176);
+  --accion-hover: oklch(0.523 0.093 180);
+  --contador: oklch(0.549 0.089 205);
 
   /* ================= 2. LOS TOKENS ================= */
-  --fondo-app: oklch(0.97 0.006 255);
+  --fondo-app: oklch(0.981 0.005 258);
   --superficie: oklch(1 0 0);
   --superficie-hundida: oklch(0.984 0.003 248);
   --superficie-hover: oklch(0.962 0.009 248);
@@ -56,16 +57,15 @@
   --texto-secundario: oklch(0.597 0.044 261);
   --texto-titulo: oklch(0.239 0.047 259);
 
-  --barra-fondo: oklch(1 0 0);
-  --barra-activo: oklch(0.955 0.015 250);
-  --barra-texto: oklch(0.46 0.04 258);
-  --barra-texto-activo: oklch(0.29 0.075 252);
-  --barra-texto-tenue: oklch(0.52 0.035 260);
-  --barra-hover: oklch(0.97 0.008 250);
-  --barra-borde: oklch(0.93 0.01 255);
-  --barra-campo: oklch(0.985 0.004 255);
-  --barra-avatar-fondo: oklch(0.95 0.013 250);
-  --barra-avatar-texto: oklch(0.43 0.06 252);
+  --barra-fondo: oklch(0.257 0.069 251);
+  --barra-fondo-abajo: oklch(0.294 0.081 252);
+  --barra-marca: oklch(0.238 0.065 253);
+  --barra-activo: oklch(0.472 0.126 252);
+  --barra-texto: oklch(1 0 0 / 0.86);
+  --barra-texto-activo: oklch(1 0 0);
+  --barra-texto-tenue: oklch(1 0 0 / 0.42);
+  --barra-hover: oklch(1 0 0 / 0.08);
+  --barra-borde: oklch(1 0 0 / 0.09);
 
   --azul-medio-texto: oklch(0.52 0.161 253);
   --verde-exito-texto: oklch(0.523 0.093 180);
@@ -112,16 +112,15 @@
     --texto-secundario: oklch(0.72 0.03 258);
     --texto-titulo: oklch(0.96 0.01 255);
 
-    --barra-fondo: oklch(0.215 0.03 255);
-    --barra-activo: oklch(0.3 0.05 252);
-    --barra-texto: oklch(0.78 0.03 258);
-    --barra-texto-activo: oklch(0.96 0.01 255);
-    --barra-texto-tenue: oklch(0.62 0.03 258);
-    --barra-hover: oklch(0.26 0.034 255);
-    --barra-borde: oklch(0.32 0.03 255);
-    --barra-campo: oklch(0.245 0.032 255);
-    --barra-avatar-fondo: oklch(0.3 0.04 252);
-    --barra-avatar-texto: oklch(0.85 0.05 252);
+    --barra-fondo: oklch(0.17 0.04 253);
+    --barra-fondo-abajo: oklch(0.2 0.05 253);
+    --barra-marca: oklch(0.15 0.035 253);
+    --barra-activo: oklch(0.42 0.11 252);
+    --barra-texto: oklch(1 0 0 / 0.8);
+    --barra-texto-activo: oklch(1 0 0);
+    --barra-texto-tenue: oklch(1 0 0 / 0.4);
+    --barra-hover: oklch(1 0 0 / 0.08);
+    --barra-borde: oklch(1 0 0 / 0.08);
 
     --azul-medio-texto: oklch(0.76 0.12 253);
     --verde-exito-texto: oklch(0.76 0.1 176);
@@ -144,7 +143,7 @@
 }
 
 :root[data-tema='claro'] {
-  --fondo-app: oklch(0.97 0.006 255);
+  --fondo-app: oklch(0.981 0.005 258);
   --superficie: oklch(1 0 0);
   --superficie-hundida: oklch(0.984 0.003 248);
   --superficie-hover: oklch(0.962 0.009 248);
@@ -156,16 +155,15 @@
   --texto-secundario: oklch(0.597 0.044 261);
   --texto-titulo: oklch(0.239 0.047 259);
 
-  --barra-fondo: oklch(1 0 0);
-  --barra-activo: oklch(0.955 0.015 250);
-  --barra-texto: oklch(0.46 0.04 258);
-  --barra-texto-activo: oklch(0.29 0.075 252);
-  --barra-texto-tenue: oklch(0.52 0.035 260);
-  --barra-hover: oklch(0.97 0.008 250);
-  --barra-borde: oklch(0.93 0.01 255);
-  --barra-campo: oklch(0.985 0.004 255);
-  --barra-avatar-fondo: oklch(0.95 0.013 250);
-  --barra-avatar-texto: oklch(0.43 0.06 252);
+  --barra-fondo: oklch(0.257 0.069 251);
+  --barra-fondo-abajo: oklch(0.294 0.081 252);
+  --barra-marca: oklch(0.238 0.065 253);
+  --barra-activo: oklch(0.472 0.126 252);
+  --barra-texto: oklch(1 0 0 / 0.86);
+  --barra-texto-activo: oklch(1 0 0);
+  --barra-texto-tenue: oklch(1 0 0 / 0.42);
+  --barra-hover: oklch(1 0 0 / 0.08);
+  --barra-borde: oklch(1 0 0 / 0.09);
 
   --azul-medio-texto: oklch(0.52 0.161 253);
   --verde-exito-texto: oklch(0.523 0.093 180);
@@ -199,16 +197,15 @@
   --texto-secundario: oklch(0.72 0.03 258);
   --texto-titulo: oklch(0.96 0.01 255);
 
-  --barra-fondo: oklch(0.215 0.03 255);
-  --barra-activo: oklch(0.3 0.05 252);
-  --barra-texto: oklch(0.78 0.03 258);
-  --barra-texto-activo: oklch(0.96 0.01 255);
-  --barra-texto-tenue: oklch(0.62 0.03 258);
-  --barra-hover: oklch(0.26 0.034 255);
-  --barra-borde: oklch(0.32 0.03 255);
-  --barra-campo: oklch(0.245 0.032 255);
-  --barra-avatar-fondo: oklch(0.3 0.04 252);
-  --barra-avatar-texto: oklch(0.85 0.05 252);
+  --barra-fondo: oklch(0.17 0.04 253);
+  --barra-fondo-abajo: oklch(0.2 0.05 253);
+  --barra-marca: oklch(0.15 0.035 253);
+  --barra-activo: oklch(0.42 0.11 252);
+  --barra-texto: oklch(1 0 0 / 0.8);
+  --barra-texto-activo: oklch(1 0 0);
+  --barra-texto-tenue: oklch(1 0 0 / 0.4);
+  --barra-hover: oklch(1 0 0 / 0.08);
+  --barra-borde: oklch(1 0 0 / 0.08);
 
   --azul-medio-texto: oklch(0.76 0.12 253);
   --verde-exito-texto: oklch(0.76 0.1 176);

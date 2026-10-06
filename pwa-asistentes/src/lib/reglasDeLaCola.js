@@ -34,6 +34,23 @@ export function seAgoto(item) {
   return intentosDe(item) >= TOPE_DE_INTENTOS;
 }
 
+/**
+ * ¿Este fallo se reintenta sin gastar un intento?
+ *
+ * Sólo una emergencia que chocó con una falla del servidor. El tope existe para no repetir un
+ * rechazo que no va a cambiar, pero una falla del servidor no es un rechazo de la emergencia: el
+ * servidor no llegó a decidir nada. Y una emergencia no se da por perdida nunca: se sigue
+ * mandando hasta que llegue.
+ */
+export function seReintentaSinContar(item, situacion) {
+  return item?.tipo === 'emergencia' && situacion === 'falla_del_sistema';
+}
+
+/** ¿Queda alguna emergencia sin mandar? Mientras quede, el teléfono vuelve a probar solo. */
+export function hayEmergenciaPendiente(cola) {
+  return (cola ?? []).some((item) => item?.tipo === 'emergencia');
+}
+
 /** ¿Este ítem lo anotó quien tiene la sesión abierta ahora mismo? */
 export function esDeLaSesion(item, duenoId) {
   if (!duenoId) return false;

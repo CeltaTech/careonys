@@ -358,6 +358,7 @@ export const T = {
       enviando: 'Enviando el aviso…',
       reportada: 'Aviso enviado a las {hora}. La Prestadora ya lo tiene.',
       sin_conexion: 'Sin conexión: el aviso quedó guardado en el teléfono y todavía no lo recibió nadie. Se envía solo cuando vuelva la señal. Mientras tanto, avise por otro medio.',
+      llamar_a_la_prestadora: 'Llamar a {{prestadora}}',
     },
     // El rato de más: terminó el turno y el relevo no llegó. Los pasos de la búsqueda se cuentan
     // sin ningún nombre, a propósito: lo que se contesta acá es «¿me están dejando sola?», y para
@@ -915,6 +916,7 @@ export const T = {
       enviando: 'Sending the notice…',
       reportada: 'Notice sent at {hora}. The Provider already has it.',
       sin_conexion: 'No connection: the notice is saved on the phone and nobody has received it yet. It will be sent on its own once the signal is back. In the meantime, report it by another means.',
+      llamar_a_la_prestadora: 'Call {{prestadora}}',
     },
     extension: {
       titulo: 'The relief has not arrived yet',
@@ -1435,6 +1437,7 @@ export const T = {
       enviando: 'Enviando o aviso…',
       reportada: 'Aviso enviado às {hora}. A Prestadora já o tem.',
       sin_conexion: 'Sem conexão: o aviso ficou salvo no telefone e ninguém o recebeu ainda. É enviado sozinho quando o sinal voltar. Enquanto isso, avise por outro meio.',
+      llamar_a_la_prestadora: 'Ligar para {{prestadora}}',
     },
     extension: {
       titulo: 'A rendição ainda não chegou',

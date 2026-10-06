@@ -15,6 +15,7 @@ import {
 import { conDomicilioDelDia, pacientesConDomicilioDelDia } from '../utils/domicilioDelDia.js';
 import { llegoAlDomicilio } from '../utils/toleranciaCheckin.js';
 import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
+import { telefonoParaEmergencias } from '../utils/contactoDeLaPrestadora.js';
 import { visibilidadDelPedido, exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
 import { tipoConSusTareas } from '../utils/tareasDelTipo.js';
@@ -273,7 +274,12 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
   const lugares = await lugaresDe(db, 'asistente_lugares', 'asistente_id', perfil.id, req.usuarioAsistente.prestadoraId);
   const zonas = await nombresDeLugares(db, lugares, req.usuarioAsistente.prestadoraId);
 
-  res.json({ perfil: { ...perfil, zonas }, certificado: certificado || null, marca, visibilidad, intermediacion });
+  // El teléfono para emergencias viaja con el perfil para que el teléfono lo tenga guardado antes
+  // de necesitarlo: el botón que lo usa aparece cuando una emergencia no salió, y ahí puede no
+  // haber internet para pedirlo.
+  const emergencias = { telefono: await telefonoParaEmergencias(req.usuarioAsistente.prestadoraId) };
+
+  res.json({ perfil: { ...perfil, zonas }, certificado: certificado || null, marca, visibilidad, intermediacion, emergencias });
 });
 
 // Su carpeta de papeles, y su Certificado de Aptitud.

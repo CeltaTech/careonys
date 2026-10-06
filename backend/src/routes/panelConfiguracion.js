@@ -127,7 +127,7 @@ panelConfiguracionRouter.patch('/empresa', async (req, res) => {
   // Prestadora, se le asigna sola al darla de alta y no cambia nunca
   // (`utils/direccionDeLaPrestadora.js`). Cambiarla dejaría afuera a toda su gente, que la tiene
   // anotada en el navegador. La base lo impide igual, con un disparador.
-  const { nombre, telefono, whatsapp_numero, email, zona_cobertura_texto } = req.body;
+  const { nombre, telefono, telefono_emergencias, whatsapp_numero, email, zona_cobertura_texto } = req.body;
   // A diferencia de los datos que viven en `prestadoras`, esta fila puede no existir: se crea
   // en el alta y una Prestadora dada de alta a mano puede quedarse sin ella. Sin esta
   // comprobación, la pantalla de Configuración guarda, dice que guardó, y al recargar está todo
@@ -139,7 +139,7 @@ panelConfiguracionRouter.patch('/empresa', async (req, res) => {
   // quien pide lo decide ella.
   const { data, error } = await db
     .from('configuracion_prestadora')
-    .update({ nombre, telefono, whatsapp_numero, email, zona_cobertura_texto, updated_at: new Date().toISOString() })
+    .update({ nombre, telefono, telefono_emergencias, whatsapp_numero, email, zona_cobertura_texto, updated_at: new Date().toISOString() })
     .eq('prestadora_id', prestadoraId)
     .select('prestadora_id');
   if (error) return responderError(res, error);

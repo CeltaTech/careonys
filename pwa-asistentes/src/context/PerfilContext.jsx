@@ -35,15 +35,41 @@ const MARCA_VACIA = { nombre: null, logoUrl: null };
 const CONTACTO_VACIO = { telefono: null, whatsapp: null, email: null };
 const PERFIL_VACIO = { marca: MARCA_VACIA, contacto: CONTACTO_VACIO, visibilidad: null, intermediacion: false };
 
+// El teléfono para emergencias se guarda en el teléfono, no sólo en memoria: el botón que lo usa
+// aparece cuando una emergencia no pudo salir, y si la aplicación se abrió sin internet `/perfil`
+// no contesta. Lo que se guarda es lo último que mandó la Prestadora de la sesión abierta.
+const CLAVE_TELEFONO_EMERGENCIAS = 'telefono-para-emergencias';
+
+function leerTelefonoEmergencias() {
+  try {
+    return localStorage.getItem(CLAVE_TELEFONO_EMERGENCIAS) || null;
+  } catch {
+    return null;
+  }
+}
+
+function anotarTelefonoEmergencias(telefono) {
+  try {
+    if (telefono) localStorage.setItem(CLAVE_TELEFONO_EMERGENCIAS, telefono);
+    else localStorage.removeItem(CLAVE_TELEFONO_EMERGENCIAS);
+  } catch {
+    // Sin depósito el botón igual aparece mientras la aplicación siga abierta.
+  }
+}
+
 const PerfilContext = createContext(PERFIL_VACIO);
 
 export function PerfilProvider({ children }) {
   const { session } = useAuth();
   const [perfil, setPerfil] = useState(PERFIL_VACIO);
+  const [telefonoEmergencias, setTelefonoEmergencias] = useState(leerTelefonoEmergencias);
 
   useEffect(() => {
     if (!session) {
       setPerfil(PERFIL_VACIO);
+      // El número de una Prestadora no puede quedar en el teléfono de quien entre después.
+      anotarTelefonoEmergencias(null);
+      setTelefonoEmergencias(null);
       // Sin sesión no se sabe de qué Prestadora se trata, y el nombre de la anterior no puede
       // quedar colgado en el texto de la pantalla de ingreso de la siguiente.
       anotarNombreDeLaPrestadora(null);
@@ -62,6 +88,12 @@ export function PerfilProvider({ children }) {
           intermediacion: datos.intermediacion === true,
         });
         if (datos.marca) guardarMarca(datos.marca);
+        // Sólo la aplicación del Asistente lo recibe; la otra no toca lo guardado.
+        if (datos.emergencias) {
+          const telefono = datos.emergencias.telefono ?? null;
+          anotarTelefonoEmergencias(telefono);
+          setTelefonoEmergencias(telefono);
+        }
         // Y el nombre queda anotado para las frases que la nombran con el marcador
         // {{prestadora}} (i18n/marcaEnElTexto.js).
         anotarNombreDeLaPrestadora(datos.marca?.nombre);
@@ -77,7 +109,7 @@ export function PerfilProvider({ children }) {
     };
   }, [session]);
 
-  return <PerfilContext.Provider value={perfil}>{children}</PerfilContext.Provider>;
+  return <PerfilContext.Provider value={{ ...perfil, telefonoEmergencias }}>{children}</PerfilContext.Provider>;
 }
 
 export function useMarca() {
@@ -92,6 +124,12 @@ export function useMarca() {
 // no lo manda recibe los tres en `null`: sin canal no hay botón, que es la respuesta segura.
 export function useContactoDeLaPrestadora() {
   return useContext(PerfilContext).contacto ?? CONTACTO_VACIO;
+}
+
+// El teléfono para emergencias que cargó la Prestadora, o `null`. Sin número no hay botón: no se
+// completa con el teléfono general.
+export function useTelefonoParaEmergencias() {
+  return useContext(PerfilContext).telefonoEmergencias ?? null;
 }
 
 // Devuelve la pregunta, no la lista: `seVe('cliente_signos_vitales')`.

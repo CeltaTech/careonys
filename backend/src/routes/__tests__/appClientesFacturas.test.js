@@ -6,8 +6,8 @@
  * ACÁ SE PRUEBA UNA PANTALLA QUE MUESTRA PLATA DE OTROS, así que los casos están escritos por el
  * error que evitan, y son cinco:
  *
- *   1. QUE UNA CLIENTE VEA LA FACTURA DE OTRA. Estas consultas entran a la base con la credencial
- *      de la persona, y es la protección por fila la que separa a un Cliente de otra. Si una
+ *   1. QUE UN CLIENTE VEA LA FACTURA DE OTRA. Estas consultas entran a la base con la credencial
+ *      de la persona, y es la protección por fila la que separa a un Cliente de otro. Si una
  *      volviera a la llave maestra, se saltearía esa protección sin que nada fallara: por eso se
  *      comprueba con qué credencial sale cada una.
  *   2. QUE EL TOTAL LLEGUE SIN DECIR DE QUÉ ES. Un importe sin desglose no se puede comprobar ni
@@ -94,11 +94,11 @@ async function pedir(ruta) {
 }
 
 /**
- * La sesión de alguien de las personas autorizadas: quién es, qué muestra la Prestadora y qué le dieron.
+ * La sesión de una persona autorizada: quién es, qué muestra la Prestadora y qué le dieron.
  *
  * Se prepara como titular por defecto —que ve todo— y cada prueba cambia lo suyo.
  */
-function sesionDeLaCliente({
+function sesionDelCliente({
   visibilidad = null,
   accesos = null,
   titular = true,
@@ -108,7 +108,7 @@ function sesionDeLaCliente({
   respuestas.set('GET /auth/v1/user', { id: USUARIO });
   respuestas.set('GET /rest/v1/usuarios', [{ rol: 'cliente', prestadora_id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/clientes', titular ? [{ id: CLIENTE }] : []);
-  respuestas.set('GET /rest/v1/miembros_cliente', titular ? [] : [{ cliente_id: CLIENTE }]);
+  respuestas.set('GET /rest/v1/personas_autorizadas', titular ? [] : [{ cliente_id: CLIENTE }]);
   respuestas.set('GET /rest/v1/configuracion_visibilidad_app', visibilidad ?? []);
   respuestas.set('GET /rest/v1/permisos_personas_autorizadas', accesos ?? []);
   // Quién lleva la cobranza y quién reparte la factura. Sin fila configurada las lleva este
@@ -139,7 +139,7 @@ const SALDO = {
 beforeEach(() => {
   respuestas.clear();
   llamadas = [];
-  sesionDeLaCliente();
+  sesionDelCliente();
 });
 
 /** Todas las direcciones con las que se consultó esa tabla en este pedido. */
@@ -223,7 +223,7 @@ describe('el desglose de una factura', () => {
     assert.ok(!select.includes('observaciones'), select);
   });
 
-  it('la factura de otra Cliente no se encuentra', async () => {
+  it('la factura de otro Cliente no se encuentra', async () => {
     // La base falsa contesta vacío justamente porque el filtro va puesto. Si el filtro faltara,
     // la consulta traería la factura ajena y esta prueba fallaría con un 200.
     respuestas.set('GET /rest/v1/saldos_cliente', []);
@@ -255,7 +255,7 @@ describe('cuando la cobranza la lleva otro software', () => {
    * no debe nada, y eso es una afirmación que este sistema ya no puede hacer.
    */
   beforeEach(() => {
-    sesionDeLaCliente({ sigueLaCobranza: false });
+    sesionDelCliente({ sigueLaCobranza: false });
   });
 
   it('la lista no trae ni el saldo, ni lo cobrado, ni el estado', async () => {
@@ -293,7 +293,7 @@ describe('cuando la cobranza la lleva otro software', () => {
   });
 
   it('y con el seguimiento acá los tres llegan, que es como se venía trabajando', async () => {
-    sesionDeLaCliente({ sigueLaCobranza: true });
+    sesionDelCliente({ sigueLaCobranza: true });
     respuestas.set('GET /rest/v1/saldos_cliente', [SALDO]);
 
     const { cuerpo } = await pedir('/facturas');
@@ -314,7 +314,7 @@ describe('cuando la cobranza la lleva otro software', () => {
 
 describe('la factura en papel que baja el Cliente', () => {
   /**
-   * Lo que se cuida acá es que el papel de un Cliente no quede al alcance de otra, y que con el
+   * Lo que se cuida acá es que el papel de un Cliente no quede al alcance de otro, y que con el
    * interruptor apagado no se diga ni que existe. Contar que hay un archivo que no se puede bajar
    * es peor que no decir nada.
    */
@@ -339,7 +339,7 @@ describe('la factura en papel que baja el Cliente', () => {
   });
 
   it('con la entrega apagada no se dice ni que el papel existe', async () => {
-    sesionDeLaCliente({ entregaLaFactura: false });
+    sesionDelCliente({ entregaLaFactura: false });
     respuestas.set('GET /rest/v1/saldos_cliente', [SALDO]);
     respuestas.set('GET /rest/v1/facturas_cliente', [{ id: FACTURA }]);
 
@@ -359,7 +359,7 @@ describe('la factura en papel que baja el Cliente', () => {
   });
 
   it('con la entrega apagada, bajarlo tampoco se puede', async () => {
-    sesionDeLaCliente({ entregaLaFactura: false });
+    sesionDelCliente({ entregaLaFactura: false });
     const { estado } = await pedir(`/facturas/${FACTURA}/comprobante`);
     assert.equal(estado, 404);
     assert.equal(consultasA('facturas_cliente').length, 0);
@@ -368,14 +368,14 @@ describe('la factura en papel que baja el Cliente', () => {
 
 describe('quién entra', () => {
   it('la Prestadora que apagó la función corta el pedido, aunque la persona lo tenga', async () => {
-    sesionDeLaCliente({ visibilidad: [{ clave: 'cliente_pagos_y_suscripcion', visible: false }] });
+    sesionDelCliente({ visibilidad: [{ clave: 'cliente_pagos_y_suscripcion', visible: false }] });
     const { estado, cuerpo } = await pedir('/facturas');
     assert.equal(estado, 403);
     assert.equal(cuerpo.motivo, 'no_disponible');
   });
 
   it('a quien el titular no le dio el dinero, tampoco', async () => {
-    sesionDeLaCliente({
+    sesionDelCliente({
       titular: false,
       accesos: [{ clave: 'persona_autorizada_dinero', permitido: false }],
     });
@@ -385,7 +385,7 @@ describe('quién entra', () => {
   });
 
   it('y quien sí lo tiene entra, sin ser el titular', async () => {
-    sesionDeLaCliente({
+    sesionDelCliente({
       titular: false,
       accesos: [{ clave: 'persona_autorizada_dinero', permitido: true }],
     });

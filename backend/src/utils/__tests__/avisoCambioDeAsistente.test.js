@@ -52,7 +52,7 @@ test('cada Cliente ve solamente sus turnos y sus Pacientes', () => {
   assert.deepEqual(porCliente.get('f-2')[0].pacientes, ['Aníbal']);
 });
 
-test('un turno que cubre a dos Pacientes de la misma Cliente se cuenta una sola vez', () => {
+test('un turno que cubre a dos Pacientes del mismo Cliente se cuenta una sola vez', () => {
   const pacientes = new Map([['g-1', [
     { id: 'p-1', nombre: 'Elena', cliente_id: 'f-1' },
     { id: 'p-3', nombre: 'Rosa', cliente_id: 'f-1' },
@@ -63,7 +63,7 @@ test('un turno que cubre a dos Pacientes de la misma Cliente se cuenta una sola 
   assert.deepEqual(turnos[0].pacientes, ['Elena', 'Rosa']);
 });
 
-test('un Paciente sin Cliente cargada no arma un destinatario vacío', () => {
+test('un Paciente sin Cliente cargado no arma un destinatario vacío', () => {
   const pacientes = new Map([['g-1', [{ id: 'p-4', nombre: 'Sin cliente', cliente_id: null }]]]);
   assert.equal(turnosPorCliente([GUARDIAS[1]], pacientes).size, 0);
 });

@@ -145,7 +145,7 @@ async function armarUnCobro(acceso, credenciales, plazos) {
     credencial,
     monto: Number(acceso.importe),
     // La referencia que se le da al proveedor identifica el período, no el acceso: es lo que
-    // permite que dos períodos de la misma Cliente no se confundan cuando vuelve la respuesta.
+    // permite que dos períodos del mismo Cliente no se confundan cuando vuelve la respuesta.
     referencia: `${acceso.id}:${periodo}`,
     vencimiento: sumarDias(periodo, plazosDeEsta.dias_de_vida_del_cupon),
   });

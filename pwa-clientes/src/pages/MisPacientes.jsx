@@ -35,7 +35,7 @@ export default function MisPacientes() {
       <>
         <AvisoInstruccionPendiente />
         <div className="pwa-card estado-vacio" role="status">{t.pacientes.sin_pacientes}</div>
-        {/* Sin Paciente no hay ficha, y las acciones de las personas autorizadas entero tienen que
+        {/* Sin Paciente no hay ficha, y las acciones del Cliente entero tienen que
             seguir a mano: el código, el perfil, la vidriera. */}
         <TarjetaAcciones />
       </>

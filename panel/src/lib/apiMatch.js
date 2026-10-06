@@ -1,6 +1,6 @@
 import { llamadorDe } from './apiPanel';
 
-/* Las rutas del match, desde el Panel.
+/* Las rutas del Match, desde el Panel.
    ==========================================================================
 
    Lo que va después de `/api/panel/match`. Existía escrito dos veces —una copia adentro de

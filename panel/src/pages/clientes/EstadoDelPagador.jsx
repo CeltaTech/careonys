@@ -352,7 +352,7 @@ function DocumentoDelConsentimiento({ texto, recienGuardado = false, onCerrar })
 
 /* Registrar que llegó la hoja firmada.
 
-   El archivo es opcional a propósito, igual que en la instrucción de las personas autorizadas: lo que cierra esto
+   El archivo es opcional a propósito, igual que en la instrucción de Personas autorizadas: lo que cierra esto
    es que la Prestadora declare que se firmó, y hay Prestadoras que archivan el papel afuera del
    sistema. */
 function RegistrarFirmaDelPagadorModal({ clienteId, consentimientoId, onClose, onRegistrado }) {

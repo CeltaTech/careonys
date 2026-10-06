@@ -11,7 +11,7 @@ import { DOMICILIO_VACIO, partesParaGuardar } from '../../lib/partesDeDomicilio'
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-export function NuevaClienteModal({ onClose, onCreada }) {
+export function NuevoClienteModal({ onClose, onCreada }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const [nombreContacto, setNombreContacto] = useState('');

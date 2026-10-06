@@ -19,7 +19,7 @@ import { horaEstimadaDeLlegada } from './llegadaEstimada.js';
 // de «llega a horario». Una hora inventada parece confiable y nadie la vuelve a mirar.
 //
 // LAS COORDENADAS NO SALEN DE ACÁ. Lo que devuelve es una hora, nunca un punto. El lugar del que
-// salió el Asistente es casi siempre su casa, y eso no viaja a ninguna pantalla: ni a la de la
+// salió el Asistente es casi siempre su casa, y eso no viaja a ninguna pantalla: ni a la del
 // Cliente, ni a la del Coordinador.
 
 /**

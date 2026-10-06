@@ -7,8 +7,8 @@
 
 ## Modelo de negocio (lo mínimo que el código necesita saber)
 
-- Clientes solicitan un servicio → la prestadora asigna un Asistente Integral (empresa directa,
-  fase actual) → evoluciona a Match (cliente elige directamente) y B2B (obras
+- Los Clientes solicitan un servicio → la prestadora asigna un Asistente Integral (empresa directa,
+  fase actual) → evoluciona a Match (el Cliente elige directamente) y B2B (obras
   sociales / prepagas, y coordinación de prestadoras terceras).
 - Precio de referencia de lanzamiento: **nunca hardcodear** — se carga desde configuración
   (la lista de precios del Panel), no desde una constante en el código. Mientras no haya
@@ -184,7 +184,7 @@ export const T = {
 **El lema "Cuida tus afectos" no es del producto y no va en ninguna pantalla de Careonys.**
 Es el lema de la empresa de cuidados original, de cuando el proyecto era el sitio de una sola
 empresa del rubro. Careonys no cuida a nadie: le vende el software a las empresas que cuidan
-(`CLAUDE.md` §1), así que un lema que le habla a un cliente está fuera de lugar tanto en el
+(`CLAUDE.md` §1), así que un lema que le habla a un Cliente está fuera de lugar tanto en el
 producto como en `careonys.com` (ver `docs/PRD_01_Sitio_Web.md` §0). La regla de las dos
 formas —"Cuida" para hablarle a quien mira, "Cuidamos" para hablar de sí misma— era de esa
 empresa y se fue con ella; los archivos que citaba (`sitio-web/src/i18n/translations.js`,
@@ -219,13 +219,13 @@ Ver `celtatech/CLAUDE.md` §7 y `celtatech/docs/REGLAS_PRODUCTOS_CAREONYS.md` §
 ## Cómo la Prestadora le cobra a los Clientes
 
 Ningún documento original lo especificó: el «Modelo UPE» cubre la facturación al financiador vía
-Planillas 3, pero no el cobro directo a clientes particulares. Se construyó después, y hoy los dos
+Planillas 3, pero no el cobro directo a Clientes particulares. Se construyó después, y hoy los dos
 caminos están hechos.
 
 **En prestación directa**, la factura del Cliente vive en `facturas_cliente`, la maneja
 `backend/src/routes/panelCobros.js`, se sigue desde `panel/src/pages/Facturacion.jsx`, y
 el Cliente la ve en su aplicación (`facturas()` / `factura(id)` en `pwa-clientes/src/lib/api.js`).
-Una factura no cuelga de ningún Paciente: se le factura a las personas autorizadas entero, y un mismo comprobante
+Una factura no cuelga de ningún Paciente: se le factura al Cliente entero, y un mismo comprobante
 puede llevar renglones de más de una persona cuidada. Qué se cobra y cada cuánto lo decide la
 Prestadora; el producto no fija precio ni período.
 
@@ -261,12 +261,12 @@ avisado se muestra y no decide nada**: quien decide es una persona. La puerta es
 saldos con `GET /api/panel/cobros/configuracion`, que devuelve el interruptor y nunca el secreto.
 
 **El estado de cuenta lo ve solamente la administración de la Prestadora.** Cuánto debe cada
-Cliente y si está atrasada no es información de quien coordina turnos: entra por la acción
+Cliente y si está atrasado no es información de quien coordina turnos: entra por la acción
 `ver_estado_de_cuenta_cliente` del catálogo de permisos, que nace reservada a la administración y
 que cada Prestadora abre o cierra desde su Panel, con el mismo molde que `ver_pagos_asistente`.
 Lleva ese portero todo lo que entrega o mueve el estado de cuenta —los saldos, el que llegó de
 afuera, el detalle de una factura, anotar un cobro, anularlo y la entrada de lotes—; no lo lleva
-lo que sirve para facturar, ni que un Cliente quedó restringida, que no dice cuánto
+lo que sirve para facturar, ni que un Cliente quedó restringido, que no dice cuánto
 debe y que quien coordina necesita ver para trabajar. Sin la acción, la pantalla de Facturación no
 muestra saldos ni estados de cuenta y tampoco los pide. El detalle está en `docs/SECURITY.md`.
 
@@ -294,9 +294,9 @@ datos lleva cada pedido y qué contesta— está en `docs/CONEXION_CON_SOFTWARE_
 alguien que no conoce Careonys por dentro.
 
 **A quién se le reclama no es siempre el Cliente.** Puede ser una obra social o un tercero, y eso
-vive en la ficha del Cliente (`financiador_tipo`, `financiador_nombre`); vacío quiere decir la
+vive en la ficha del Cliente (`financiador_tipo`, `financiador_nombre`); vacío quiere decir el
 Cliente, que es lo corriente. Cada factura se lleva ese dato **copiado el día que se genera**,
-porque una factura emitida no cambia: si mañana esa Cliente pasa a pagar por sí misma, las viejas
+porque una factura emitida no cambia: si mañana ese Cliente pasa a pagar por sí misma, las viejas
 tienen que seguir diciendo a quién se le reclamaron. El nombre es texto y no se interpreta — el
 padrón de obras sociales cambia de país en país y el producto no conoce ninguno.
 
@@ -342,7 +342,7 @@ cosa que se agregue acá:
   puede pedirle que se quede. Que igual termine quedándose puede pasar, y cuando pasa es porque la
   ausencia de la Asistente no se resolvió a tiempo: entonces **se registra como un defecto grave
   del servicio que no se pudo solucionar**, nunca como un turno cubierto y nunca como un pedido con
-  respuesta. Se registra porque esa falla puede costar el servicio si el cliente se enoja.
+  respuesta. Se registra porque esa falla puede costar el servicio si el Cliente se enoja.
 - **La lista de finales posibles no se cierra**, porque la destreza del Coordinador no entra en
   ninguna lista. «Se resolvió de otra manera», con texto libre, está siempre.
 - Todo valor de esta parte nace de fábrica, lo cambia la Prestadora en su configuración, **y

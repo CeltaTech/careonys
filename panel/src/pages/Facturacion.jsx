@@ -533,10 +533,10 @@ function DetalleDeSaldo({ facturaId, onCerrar, onCambio }) {
   // El mensaje de que falta el motivo aparece recién cuando alguien escribió y borró, no apenas
   // se abre el formulario: un campo en rojo antes de tocarlo se lee como un error propio.
   const [motivoTocado, setMotivoTocado] = useState(false);
-  // Con qué pagó el Cliente sale de la base, de la lista `medios_de_pago_de_la_cliente`: las que
+  // Con qué pagó el Cliente sale de la base, de la lista `medios_de_pago_del_cliente`: las que
   // trae el producto y las que agregó esta Prestadora. El pago al Asistente elige de otra lista,
   // porque no son los mismos medios.
-  const mediosDePago = useListaDeOpciones('medios_de_pago_de_la_cliente');
+  const mediosDePago = useListaDeOpciones('medios_de_pago_del_cliente');
   const [cobro, setCobro] = useState({
     monto: '',
     fecha_cobro: hoyISO(),

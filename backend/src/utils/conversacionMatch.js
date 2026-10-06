@@ -32,7 +32,7 @@ import {
 } from './videollamada.js';
 
 /** Los dos lados de un hilo. No se deducen del autor: del lado del Cliente puede escribir
- *  cualquiera de su personas autorizadas, así que el lado es un dato y no una cuenta. */
+ *  cualquiera de sus personas autorizadas, así que el lado es un dato y no una cuenta. */
 export const LADO = { CLIENTE: 'cliente', ASISTENTE: 'asistente' };
 
 /** El cuerpo de los mensajes que escribe el producto. Son claves de traducción, no texto
@@ -43,9 +43,9 @@ export const MENSAJE_AUTOMATICO = { VIDEOLLAMADA: 'videollamada_empezo' };
  *  pasan antes de contratar a alguien, y pone un techo a lo que viaja en un pedido. */
 const TOPE_DE_MENSAJES = 200;
 
-/* SI ESA CLIENTE YA ABRIÓ EL CONTACTO DE ESE ASISTENTE NO SE PREGUNTA ACÁ, Y YA NO CAMBIA NADA
+/* SI ESE CLIENTE YA ABRIÓ EL CONTACTO DE ESE ASISTENTE NO SE PREGUNTA ACÁ, Y YA NO CAMBIA NADA
    DEL HILO. Lo tapado en un mensaje no se destapa nunca, porque no quedó guardado. El dato de
-   contacto que esa Cliente paga sale por su propio circuito, y esa pregunta vive una sola vez, en
+   contacto que ese Cliente paga sale por su propio circuito, y esa pregunta vive una sola vez, en
    `contactoDelAsistente.js`. */
 
 /**

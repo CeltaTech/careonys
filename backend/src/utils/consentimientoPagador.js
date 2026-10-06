@@ -51,7 +51,7 @@ async function clienteConSuPagador({ clienteId, prestadoraId }) {
     .maybeSingle();
 
   if (!cliente || cliente.prestadora_id !== prestadoraId) {
-    throw new ErrorConMotivo('no_encontrado', 'Cliente no encontrada');
+    throw new ErrorConMotivo('no_encontrado', 'Cliente no encontrado');
   }
   return cliente;
 }
@@ -108,7 +108,7 @@ export async function crearConsentimiento({ clienteId, prestadoraId, cargadoPor 
     throw new ErrorConMotivo('no_encontrado', 'El Legajo del Pagador no existe');
   }
 
-  const [{ cuerpo, idioma }, { data: prestadora }, cliente, apoderado] = await Promise.all([
+  const [{ cuerpo, idioma }, { data: prestadora }, nombreDelCliente, apoderado] = await Promise.all([
     cuerpoVigente({ prestadoraId }),
     supabase.from('prestadoras').select('nombre_fantasia').eq('id', prestadoraId).maybeSingle(),
     nombreDeLaContratacion({ clienteId, prestadoraId }),
@@ -119,7 +119,7 @@ export async function crearConsentimiento({ clienteId, prestadoraId, cargadoPor 
     cuerpo,
     prestadora: { nombre: prestadora?.nombre_fantasia },
     pagador,
-    cliente: { nombre: cliente },
+    cliente: { nombre: nombreDelCliente },
     apoderado,
   });
 

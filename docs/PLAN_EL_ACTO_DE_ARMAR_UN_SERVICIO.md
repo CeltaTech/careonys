@@ -146,7 +146,7 @@ de suspender una sola serie, ni uno de los horarios pactados, ni de decir hasta 
   → `coordinadoresDelEquipo()`: si nadie fijó a alguien a mano, son todos los que alcanzan por sus
   zonas. Pero la lista de zonas sale del equipo, y el equipo sale de los turnos. Sin turnos no hay
   equipo, sin equipo no hay zona que cruzar, y sin zona no sale ningún coordinador. **Un Cliente
-  recién firmada no muestra a nadie coordinando, teniendo el lugar del Paciente cargado.** Y el
+  recién firmado no muestra a nadie coordinando, teniendo el lugar del Paciente cargado.** Y el
   casillero que fija a alguien a mano nunca se puebla: nada escribe esa anotación.
 - **El cálculo de candidatas no tiene el criterio de la zona.** `panel/src/lib/candidatos.js` no
   contiene ni la palabra «zonas» ni la palabra «lugares» (grep vacío). La ubicación entra sólo como
@@ -261,7 +261,7 @@ tramo»— y el período liquidado, que por dentro es `col_tramo`.
 **Y lo pactado no se carga con la forma de un turno.** Son cuatro niveles y cada renglón vive en el
 suyo:
 
-| | Qué es | Ejemplo del caso del cliente «XX» |
+| | Qué es | Ejemplo del caso del Cliente «XX» |
 |---|---|---|
 | **Servicio** | el acuerdo entero | cuidado domiciliario, por tiempo indeterminado |
 | **Prestación** | cada cosa del acuerdo, con su precio y sus propios días y horarios | el cuidado por horas; aparte, la kinesiología |
@@ -350,7 +350,7 @@ reusa esa palabra y no se inventa otra.
 ### Paso 6. La zona entra en las dos decisiones que hoy la ignoran
 
 - **Quién coordina** sale de lo asignado en el paso 4, y deja de deducirse desde las Asistentes. Con
-  eso, un Cliente recién firmada muestra a quien la coordina el mismo día que se firma.
+  eso, un Cliente recién firmado muestra a quien lo coordina el mismo día que se firma.
 - **El cálculo de candidatas** suma el criterio que le falta: acepta trabajar en el lugar del
   Paciente. La distancia en línea recta se queda como está —incluida la decisión de callarse si falta
   una de las dos puntas—, pero deja de ser lo único.

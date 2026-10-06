@@ -99,7 +99,7 @@ const MOTIVOS_DE_LA_BASE = ['correo_de_esta_prestadora', 'faltan_datos'];
 // Prestadora sale de la credencial de este trabajo, nunca de lo que venga en el pedido. Una cuenta
 // de ingreso que quedó sola de un alta anterior la borra la misma base antes de seguir.
 //
-// Sólo la gente de la Prestadora: coordinación, Asistentes, Clientes y su personas autorizadas. La cuenta del
+// Sólo la gente de la Prestadora: coordinación, Asistentes, Clientes y sus personas autorizadas. La cuenta del
 // Administrador y la del equipo técnico son de CeltaTech, y la base se niega a crearlas.
 //
 // Para la coordinación, `passwordTemporal` vuelve al Panel para que se la comuniquen. Para
@@ -186,7 +186,7 @@ export async function deshacerAlta(db, userId, { prestadoraId, filas = [] } = {}
   // abajo recibe el nombre de la tabla y la columna desde afuera y no puede defenderse solo, así
   // que la pertenencia se comprueba una vez acá, antes de tocar nada. Se comprueba sobre la
   // cuenta y no tabla por tabla porque dos de las tablas de la lista no tienen columna de
-  // Prestadora (`verificaciones_asistente`, `miembros_cliente`) y cuelgan de esta misma
+  // Prestadora (`verificaciones_asistente`, `personas_autorizadas`) y cuelgan de esta misma
   // cuenta — filtrar solo las que sí la tienen dejaría a las otras sin red y, encima, se
   // borran primero. Si la cuenta no es de esta Prestadora, no se limpia nada.
   if (userId) {
@@ -281,9 +281,9 @@ export const filasDeUnAsistente = (asistenteId) =>
 export const filasDeUnaCliente = (clienteId) =>
   clienteId ? FILAS_DE_UNA_CLIENTE.map((fila) => ({ ...fila, valor: clienteId })) : [];
 
-const FILAS_DE_UN_MIEMBRO_PERSONAS_AUTORIZADAS = [
+const FILAS_DE_UNA_PERSONA_AUTORIZADA = [
   { tabla: 'permisos_personas_autorizadas', columna: 'usuario_id', sinPrestadora: true },
-  { tabla: 'miembros_cliente', columna: 'usuario_id', sinPrestadora: true },
+  { tabla: 'personas_autorizadas', columna: 'usuario_id', sinPrestadora: true },
 ];
 
 // Lógica de alta manual de un Asistente, extraída de panelCuentas.js (ruta /asistente-directo)
@@ -443,16 +443,16 @@ export async function revertirClienteImportada(db, clienteId, prestadoraId) {
   return deshacerAlta(db, cuentaId, { prestadoraId, filas: filasDeUnaCliente(clienteId) });
 }
 
-// Invita a una persona a las personas autorizadas de un Cliente ya existente: crea su cuenta con
+// Suma una persona autorizada a un Cliente ya existente: crea su cuenta con
 // `crearCuentaConPerfil` igual que cualquier otro rol de login propio, y en vez de una fila en
-// `clientes` (eso es solo para el titular) crea la fila en `miembros_cliente` que la vincula.
+// `clientes` (eso es solo para el titular) crea la fila en `personas_autorizadas` que la vincula.
 //
 // Y le deja escritos los once accesos en su valor de fábrica, que es lo mismo que veía el
 // personas autorizadas antes de que esto existiera: todo menos calificar al Asistente y pedir medicación.
 // No es un adorno — la función de la base niega cuando no encuentra fila, así que una persona
 // recién anotada y sin filas no vería absolutamente nada y nadie sabría por qué. Después, si el
 // titular quiere darle menos, lo pide por escrito y se carga la instrucción.
-export async function invitarMiembroPersonasAutorizadas({ db, email, nombre, telefono, clienteId, prestadoraId, invitadoPor }) {
+export async function invitarPersonaAutorizada({ db, email, nombre, telefono, clienteId, prestadoraId, invitadoPor }) {
   if (!nombre || !email || !clienteId) {
     throw new ErrorConMotivo('faltan_datos', 'Faltan datos obligatorios (nombre, email, clienteId)');
   }
@@ -472,7 +472,7 @@ export async function invitarMiembroPersonasAutorizadas({ db, email, nombre, tel
     }));
 
     const { error: errorMiembro } = await db
-      .from('miembros_cliente')
+      .from('personas_autorizadas')
       .insert({ usuario_id: miembroId, cliente_id: clienteId, email, creado_por: invitadoPor });
     if (errorMiembro) throw new Error(errorMiembro.message);
 
@@ -488,26 +488,26 @@ export async function invitarMiembroPersonasAutorizadas({ db, email, nombre, tel
 
     return { miembroId };
   } catch (error) {
-    await deshacerAlta(db, miembroId, { prestadoraId, filas: FILAS_DE_UN_MIEMBRO_PERSONAS_AUTORIZADAS });
+    await deshacerAlta(db, miembroId, { prestadoraId, filas: FILAS_DE_UNA_PERSONA_AUTORIZADA });
     throw error;
   }
 }
 
 // Revoca el acceso de un miembro invitado de las personas autorizadas — borra su fila en
-// `miembros_cliente` (RLS/`ON DELETE CASCADE` no alcanza porque el borrado real es la
+// `personas_autorizadas` (RLS/`ON DELETE CASCADE` no alcanza porque el borrado real es la
 // cuenta completa, no la fila) y su cuenta, reutilizando `borrarCuenta` para no duplicar la
 // validación de tenant que ya hace esa función.
-export async function revocarMiembroPersonasAutorizadas(db, usuarioId, { prestadoraId, clienteId }) {
+export async function revocarPersonaAutorizada(db, usuarioId, { prestadoraId, clienteId }) {
   // La misma comprobación que al invitar, y por un motivo más fuerte: acá se borra. Los dos
   // borrados de abajo van por número de cuenta, sin Prestadora, y corren ANTES de `borrarCuenta`,
   // que es la que valida. Sin esto, un número de Cliente ajeno alcanza para dejar sin accesos a
-  // alguien de las personas autorizadas de otra Prestadora, y la validación llega tarde.
+  // una persona autorizada de otra Prestadora, y la validación llega tarde.
   if (!prestadoraId || !clienteId || !(await cuentaDeLaFicha('clientes', clienteId, prestadoraId))) {
     throw new ErrorConMotivo('cliente_de_otra_prestadora', `cliente ${clienteId} fuera de la Prestadora`);
   }
 
   const { data: miembro, error: errorMiembro } = await db
-    .from('miembros_cliente')
+    .from('personas_autorizadas')
     .select('cliente_id')
     .eq('usuario_id', usuarioId)
     .single();
@@ -522,7 +522,7 @@ export async function revocarMiembroPersonasAutorizadas(db, usuarioId, { prestad
   }
 
   await db.from('permisos_personas_autorizadas').delete().eq('usuario_id', usuarioId);
-  await db.from('miembros_cliente').delete().eq('usuario_id', usuarioId);
+  await db.from('personas_autorizadas').delete().eq('usuario_id', usuarioId);
   await borrarCuenta(usuarioId, { prestadoraId });
 }
 

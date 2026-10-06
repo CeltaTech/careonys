@@ -7,8 +7,8 @@ import {
   crearCuentaConPerfil,
   crearAsistenteDirecto,
   crearClienteDirecta,
-  invitarMiembroPersonasAutorizadas,
-  revocarMiembroPersonasAutorizadas,
+  invitarPersonaAutorizada,
+  revocarPersonaAutorizada,
   validarTipoAsistente,
   deshacerAlta,
   filasDeUnAsistente,
@@ -24,7 +24,7 @@ import { requierePermiso, permisosEfectivos } from '../utils/permisos.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 import { extensionDeArchivo } from '../utils/archivosSubidos.js';
 import {
-  personas autorizadasConSusAccesos,
+  personasAutorizadasConSusAccesos,
   crearInstruccion,
   instruccionPendiente,
   ultimaInstruccionCerrada,
@@ -51,7 +51,7 @@ export const panelCuentasRouter = Router();
 // La hoja firmada de las personas autorizadas. Mismo trato que el resto de los archivos del producto:
 // depósito privado, tope de tamaño comprobado acá y no sólo en el depósito, y sólo los tres tipos
 // que sirven para una hoja firmada.
-const DEPOSITO_INSTRUCCIONES = 'instrucciones-acceso-personas autorizadas';
+const DEPOSITO_INSTRUCCIONES = 'instrucciones-acceso-personas-autorizadas';
 const TIPOS_DE_PAPEL_FIRMADO = ['application/pdf', 'image/jpeg', 'image/png'];
 
 const subirPapelFirmado = multer({
@@ -78,7 +78,7 @@ const soloAdministracion = exigirAdministracion('Solo Admin puede crear cuentas'
 // aprobado) solo cubre el alta manual (/cliente-directa y /asistente-directo), que es lo
 // que el plan pidió hacer configurable para Coordinador.
 
-// Usado por el frontend (botones "Nuevo Asistente"/"Nueva Cliente", campos de edición de
+// Usado por el frontend (botones "Nuevo Asistente"/"Nuevo Cliente", campos de edición de
 // Fase 1) para saber qué mostrar sin duplicar la lógica de permisos en el cliente — la
 // única fuente de verdad sigue siendo este chequeo del lado del servidor.
 panelCuentasRouter.get('/permisos-efectivos', requiereRolPanel, async (req, res) => {
@@ -125,7 +125,7 @@ panelCuentasRouter.post('/cliente', requiereRolPanel, exigirOrganizacionActiva, 
     return res.status(404).json({ error: 'Solicitud no encontrada' });
   }
   if (solicitud.cliente_id) {
-    return res.status(409).json({ error: 'Esta solicitud ya tiene un Cliente asociada' });
+    return res.status(409).json({ error: 'Esta solicitud ya tiene un Cliente asociado' });
   }
 
   // La Prestadora es la de la solicitud que la base dejó ver, no un dato de la sesión.
@@ -207,7 +207,7 @@ panelCuentasRouter.post('/cliente', requiereRolPanel, exigirOrganizacionActiva, 
 // Prestadora que llega a Careonys con una cartera de clientes ya en atención.
 // Se crea igual una fila de `solicitudes` (canal 'alta_manual') para que el contacto
 // del Cliente siga viviendo en un único lugar (evita reproducir el bug de contacto
-// en blanco que tenían los Clientes sembradas sin solicitud vinculada).
+// en blanco que tenían los Clientes sembrados sin solicitud vinculada).
 panelCuentasRouter.post('/cliente-directa', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('alta_manual_cliente'), async (req, res) => {
   const { nombreContacto, telefono, email, localidad, nombrePaciente, domicilioPaciente, domicilioDelPacientePartido } = req.body;
   try {
@@ -363,36 +363,36 @@ panelCuentasRouter.post('/asistente-directo', requiereRolPanel, exigirOrganizaci
 // ============================================================================
 // Personas autorizadas
 //
-// Quién entra a las personas autorizadas y quién sale sigue siendo del permiso 'editar_datos_cliente': es
-// parte de administrar los datos de esa Cliente, como siempre.
+// Quién entra como persona autorizada y quién sale sigue siendo del permiso 'editar_datos_cliente': es
+// parte de administrar los datos de ese Cliente, como siempre.
 //
-// Qué ve cada uno es otra cosa, y tiene permiso propio —'configurar_accesos_del_personas_autorizadas'—
+// Qué ve cada uno es otra cosa, y tiene permiso propio —'configurar_accesos_de_personas_autorizadas'—
 // porque no es un dato que se corrige: es una instrucción que el titular dio y firmó, y cada
 // Prestadora decide quién de los suyos la puede cargar. De fábrica, sólo el Admin.
 // ============================================================================
 
-// El Cliente de este pedido, acotada a la Prestadora de quien pregunta. Si es de otra, para él no
+// El Cliente de este pedido, acotado a la Prestadora de quien pregunta. Si es de otra, para él no
 // existe.
 // Con la llave maestra: la política restrictiva `oculta_pendientes_de_conformidad` de `clientes`
 // (NOT pendiente_conformidad) le esconde a Admin, a Superadmin y al Coordinador el Cliente
 // pendiente de conformidad, y la ruta contestaría «no encontrada» donde antes respondía. Se decide
 // aparte.
-async function clienteDelPedido(req) {
+async function clienteContratanteDelPedido(req) {
   let query = supabase.from('clientes').select('id, prestadora_id').eq('id', req.params.clienteId);
   query = acotarAPrestadora(query, req.usuarioPanel);
   const { data } = await query.maybeSingle();
   return data ?? null;
 }
 
-panelCuentasRouter.get('/cliente/:clienteId/personas autorizadas', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
-  const cliente = await clienteDelPedido(req);
+panelCuentasRouter.get('/cliente/:clienteId/personas_autorizadas', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
+  const cliente = await clienteContratanteDelPedido(req);
   if (!cliente) {
-    return res.status(404).json({ error: 'Cliente no encontrada' });
+    return res.status(404).json({ error: 'Cliente no encontrado' });
   }
 
   try {
     const [miembros, pendiente, ultima] = await Promise.all([
-      personas autorizadasConSusAccesos({ clienteId: cliente.id, prestadoraId: cliente.prestadora_id }),
+      personasAutorizadasConSusAccesos({ clienteId: cliente.id, prestadoraId: cliente.prestadora_id }),
       instruccionPendiente(cliente.id, cliente.prestadora_id),
       ultimaInstruccionCerrada(cliente.id, cliente.prestadora_id),
     ]);
@@ -407,10 +407,10 @@ panelCuentasRouter.get('/cliente/:clienteId/personas autorizadas', requiereRolPa
 
 // Carga la instrucción que el titular pidió. Los accesos rigen desde acá; la firma viene después,
 // por la aplicación o en papel.
-panelCuentasRouter.post('/cliente/:clienteId/personas autorizadas/instruccion', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('configurar_accesos_del_personas_autorizadas'), async (req, res) => {
-  const cliente = await clienteDelPedido(req);
+panelCuentasRouter.post('/cliente/:clienteId/personas_autorizadas/instruccion', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('configurar_accesos_de_personas_autorizadas'), async (req, res) => {
+  const cliente = await clienteContratanteDelPedido(req);
   if (!cliente) {
-    return res.status(404).json({ error: 'Cliente no encontrada' });
+    return res.status(404).json({ error: 'Cliente no encontrado' });
   }
 
   try {
@@ -429,10 +429,10 @@ panelCuentasRouter.post('/cliente/:clienteId/personas autorizadas/instruccion', 
 // El camino de siempre: el titular firmó la hoja en papel y la Prestadora la guarda. El archivo
 // va a un depósito privado y la ruta empieza por la Prestadora, que es lo que exige su política.
 panelCuentasRouter.post(
-  '/cliente/:clienteId/personas autorizadas/instruccion/:instruccionId/papel',
+  '/cliente/:clienteId/personas_autorizadas/instruccion/:instruccionId/papel',
   requiereRolPanel,
   exigirOrganizacionActiva,
-  requierePermiso('configurar_accesos_del_personas_autorizadas'),
+  requierePermiso('configurar_accesos_de_personas_autorizadas'),
   subirPapelFirmado.single('archivo'),
   manejarErrorDeArchivo,
   async (req, res) => {
@@ -440,13 +440,13 @@ panelCuentasRouter.post(
       return res.status(400).json({ error: 'Archivo faltante o de tipo no permitido (solo PDF, JPG o PNG, hasta 10 MB)' });
     }
 
-    const cliente = await clienteDelPedido(req);
+    const cliente = await clienteContratanteDelPedido(req);
     if (!cliente) {
-      return res.status(404).json({ error: 'Cliente no encontrada' });
+      return res.status(404).json({ error: 'Cliente no encontrado' });
     }
 
     // Con la llave maestra: la subida pisa la hoja si ya había una (`upsert`), y el depósito no
-    // tiene política para modificar un archivo, sólo para crearlo y leerlo. La ruta sale de la
+    // tiene política para modificar un archivo, sólo para crearlo y leerlo. La ruta sale del
     // Cliente que la base ya dejó ver.
     const ruta = `${cliente.prestadora_id}/${cliente.id}/${req.params.instruccionId}.${extensionDeArchivo(req.file.mimetype)}`;
     const { error: errorSubida } = await supabase.storage
@@ -471,14 +471,14 @@ panelCuentasRouter.post(
 
 // La hoja firmada, para volver a verla desde el Panel. Nunca dirección pública: se firma por un
 // minuto, igual que el resto de los archivos del producto.
-panelCuentasRouter.get('/cliente/:clienteId/personas autorizadas/instruccion/:instruccionId/papel', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
-  const cliente = await clienteDelPedido(req);
+panelCuentasRouter.get('/cliente/:clienteId/personas_autorizadas/instruccion/:instruccionId/papel', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
+  const cliente = await clienteContratanteDelPedido(req);
   if (!cliente) {
-    return res.status(404).json({ error: 'Cliente no encontrada' });
+    return res.status(404).json({ error: 'Cliente no encontrado' });
   }
 
   // Con la llave maestra, filtrada por el Cliente que la base ya dejó ver: la tabla y el depósito
-  // de la hoja firmada piden 'configurar_accesos_del_personas_autorizadas', y esta ruta se abre con
+  // de la hoja firmada piden 'configurar_accesos_de_personas_autorizadas', y esta ruta se abre con
   // 'editar_datos_cliente'. Con la credencial de quien pide, quien edita el Cliente sin cargar
   // instrucciones dejaría de ver la hoja.
   const { data: instruccion } = await supabase
@@ -517,8 +517,8 @@ panelCuentasRouter.get('/cliente/:clienteId/personas autorizadas/instruccion/:in
 const DEPOSITO_DEL_PAGADOR = DEPOSITO_PAGADOR;
 
 panelCuentasRouter.get('/cliente/:clienteId/pagador', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
-  const cliente = await clienteDelPedido(req);
-  if (!cliente) return res.status(404).json({ error: 'Cliente no encontrada' });
+  const cliente = await clienteContratanteDelPedido(req);
+  if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
 
   try {
     res.json(await estadoDelPagador({ clienteId: cliente.id, prestadoraId: cliente.prestadora_id }));
@@ -530,8 +530,8 @@ panelCuentasRouter.get('/cliente/:clienteId/pagador', requiereRolPanel, exigirOr
 // Arma el documento y lo deja esperando firma. El texto es el que la Prestadora configuró, o el
 // modelo que trae el producto si no configuró ninguno.
 panelCuentasRouter.post('/cliente/:clienteId/pagador/consentimiento', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('registrar_consentimiento_pagador'), async (req, res) => {
-  const cliente = await clienteDelPedido(req);
-  if (!cliente) return res.status(404).json({ error: 'Cliente no encontrada' });
+  const cliente = await clienteContratanteDelPedido(req);
+  if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
 
   try {
     const consentimiento = await crearConsentimiento({
@@ -548,8 +548,8 @@ panelCuentasRouter.post('/cliente/:clienteId/pagador/consentimiento', requiereRo
 // Se cargó por error, o cambió el Pagador y todavía no se sabe cuál es el nuevo. Lo cerrado no se
 // anula nunca: ya lo firmó alguien.
 panelCuentasRouter.post('/cliente/:clienteId/pagador/consentimiento/:consentimientoId/anular', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('registrar_consentimiento_pagador'), async (req, res) => {
-  const cliente = await clienteDelPedido(req);
-  if (!cliente) return res.status(404).json({ error: 'Cliente no encontrada' });
+  const cliente = await clienteContratanteDelPedido(req);
+  if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
 
   try {
     await anularPendiente({
@@ -573,8 +573,8 @@ panelCuentasRouter.post(
   manejarErrorDeArchivo,
   async (req, res) => {
     const db = clienteDelPedido(req);
-    const cliente = await clienteDelPedido(req);
-    if (!cliente) return res.status(404).json({ error: 'Cliente no encontrada' });
+    const cliente = await clienteContratanteDelPedido(req);
+    if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
 
     // El archivo es opcional, igual que en la instrucción de las personas autorizadas: lo que cierra esto es que
     // la Prestadora declare que se firmó, y hay Prestadoras que archivan el papel afuera del
@@ -610,8 +610,8 @@ panelCuentasRouter.post(
 // de los archivos del producto.
 panelCuentasRouter.get('/cliente/:clienteId/pagador/consentimiento/:consentimientoId/papel', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
   const db = clienteDelPedido(req);
-  const cliente = await clienteDelPedido(req);
-  if (!cliente) return res.status(404).json({ error: 'Cliente no encontrada' });
+  const cliente = await clienteContratanteDelPedido(req);
+  if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
 
   const { data: consentimiento } = await db
     .from('consentimientos_pagador')
@@ -650,8 +650,8 @@ panelCuentasRouter.post(
     }
 
     const db = clienteDelPedido(req);
-    const cliente = await clienteDelPedido(req);
-    if (!cliente) return res.status(404).json({ error: 'Cliente no encontrada' });
+    const cliente = await clienteContratanteDelPedido(req);
+    if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
 
     const ruta = rutaDelArchivo({
       prestadoraId: cliente.prestadora_id,
@@ -682,8 +682,8 @@ panelCuentasRouter.post(
 
 panelCuentasRouter.get('/cliente/:clienteId/pagador/papel/:documentoId/archivo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
   const db = clienteDelPedido(req);
-  const cliente = await clienteDelPedido(req);
-  if (!cliente) return res.status(404).json({ error: 'Cliente no encontrada' });
+  const cliente = await clienteContratanteDelPedido(req);
+  if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
 
   const { data: documento } = await db
     .from('documentos_pagador')
@@ -705,18 +705,18 @@ panelCuentasRouter.get('/cliente/:clienteId/pagador/papel/:documentoId/archivo',
   res.json({ url: data.signedUrl });
 });
 
-panelCuentasRouter.post('/cliente/:clienteId/personas autorizadas', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
+panelCuentasRouter.post('/cliente/:clienteId/personas_autorizadas', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
   const { nombre, email, telefono } = req.body || {};
 
-  const cliente = await clienteDelPedido(req);
+  const cliente = await clienteContratanteDelPedido(req);
   if (!cliente) {
-    return res.status(404).json({ error: 'Cliente no encontrada' });
+    return res.status(404).json({ error: 'Cliente no encontrado' });
   }
 
   try {
     // Con la llave maestra: la ruta pide 'editar_datos_cliente', y `permisos_personas_autorizadas`
-    // sólo deja escribir a quien tiene 'configurar_accesos_del_personas_autorizadas'.
-    const { miembroId } = await invitarMiembroPersonasAutorizadas({
+    // sólo deja escribir a quien tiene 'configurar_accesos_de_personas_autorizadas'.
+    const { miembroId } = await invitarPersonaAutorizada({
       db: supabase,
       email,
       nombre,
@@ -731,15 +731,15 @@ panelCuentasRouter.post('/cliente/:clienteId/personas autorizadas', requiereRolP
   }
 });
 
-panelCuentasRouter.delete('/cliente/:clienteId/personas autorizadas/:usuarioId', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
-  const cliente = await clienteDelPedido(req);
+panelCuentasRouter.delete('/cliente/:clienteId/personas_autorizadas/:usuarioId', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
+  const cliente = await clienteContratanteDelPedido(req);
   if (!cliente) {
-    return res.status(404).json({ error: 'Cliente no encontrada' });
+    return res.status(404).json({ error: 'Cliente no encontrado' });
   }
 
   try {
     // Con la llave maestra, por lo mismo que al invitar.
-    await revocarMiembroPersonasAutorizadas(supabase, req.params.usuarioId, { prestadoraId: cliente.prestadora_id, clienteId: cliente.id });
+    await revocarPersonaAutorizada(supabase, req.params.usuarioId, { prestadoraId: cliente.prestadora_id, clienteId: cliente.id });
     res.json({ ok: true });
   } catch (error) {
     responderError(res, error, 400);

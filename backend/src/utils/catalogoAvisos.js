@@ -24,7 +24,7 @@
 //                     casilla no alcanza: el mensaje lo empieza la Prestadora, y Meta esos mensajes
 //                     los entrega solamente con una plantilla aprobada, la que la Prestadora le
 //                     elija en `plantilla_whatsapp_id`. El mensaje sale al número de WhatsApp de
-//                     contacto de la Prestadora, salvo que quien avisa tenga uno propio —el de la
+//                     contacto de la Prestadora, salvo que quien avisa tenga uno propio —el del
 //                     Cliente, el del respaldo— (`utils/whatsapp.js`).
 //   admite_cliente  — si el mensaje, además de al Coordinador, le puede llegar al Cliente.
 //
@@ -33,7 +33,7 @@
 // utils/viaMensajeDeTexto.js, que es su punto único de verdad.
 //   se_puede_apagar — si la Prestadora puede decidir que este mensaje no se mande. Casi todos sí.
 //                     Los que no son los que la persona está esperando en ese mismo momento para
-//                     poder seguir —hoy, el código de un solo uso de las Personas autorizadas—: ahí la
+//                     poder seguir —hoy, el código de un solo uso de las personas autorizadas—: ahí la
 //                     configuración elige por qué canal sale, nunca si sale. Dibujarles la casilla
 //                     de encendido sería ofrecer un apagado que el código no obedece.
 //
@@ -193,7 +193,7 @@ export const CATALOGO_MENSAJES = [
     // exactamente lo que un Cliente quiere saber, pero quién se lo dice y con qué palabras es una
     // decisión de la Prestadora, no una consecuencia automática de que alguien apretó un botón.
     admite_cliente: false,
-    // No se puede apagar, por lo mismo que el código de las Personas autorizadas: hay una persona esperando del
+    // No se puede apagar, por lo mismo que el código de las personas autorizadas: hay una persona esperando del
     // otro lado. La configuración elige por qué canal sale y a qué dirección, nunca si sale.
     se_puede_apagar: false,
   },
@@ -210,7 +210,7 @@ export const CATALOGO_MENSAJES = [
   },
   {
     evento: 'codigo_instruccion_personas_autorizadas',
-    descripcion: 'El código de un solo uso con el que el Cliente firma una instrucción de acceso a las Personas autorizadas',
+    descripcion: 'El código de un solo uso con el que el Cliente firma una instrucción de acceso a las personas autorizadas',
     admite_whatsapp: true,
     admite_cliente: false,
     // El Cliente lo está esperando en la pantalla para poder seguir. Acá se elige por qué canal

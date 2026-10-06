@@ -10,7 +10,7 @@
 // escuchó ese nombre. Por eso el encabezado y los avisos llevan el nombre (o el logo) de la
 // Prestadora, y el producto aparece solamente en una línea chica al pie (regla 1).
 //
-// EN QUÉ MODALIDAD TRABAJA LA PRESTADORA. Ofrecer match no es una función que se
+// EN QUÉ MODALIDAD TRABAJA LA PRESTADORA. Ofrecer Match no es una función que se
 // encienda desde las aplicaciones: es la forma de trabajar que eligió la Prestadora, y vive en
 // `prestadora_modalidades`. Llega en la misma respuesta porque decide pantallas enteras —una
 // Prestadora que no lo ofrece no tiene vidriera— y no un dato adentro de una pantalla. La
@@ -109,7 +109,7 @@ export function useSeVe() {
   return (clave) => (visibilidad ? visibilidad[clave] !== false : true);
 }
 
-// Si la Prestadora ofrece la modalidad match.
+// Si la Prestadora ofrece la modalidad Match.
 //
 // Al revés que `useSeVe()`, mientras la respuesta no llegó contesta que no. Acá la respuesta
 // segura es la contraria: lo que cuelga de esto son pantallas enteras, y prometer una vidriera

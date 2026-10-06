@@ -4,7 +4,7 @@
    QUÉ ES ESTO. El dato de contacto —teléfono, correo, domicilio— es justamente lo que el
    Match vende (`docs/PRD_07_Modalidad_Match.md:70`). Hasta acá estaban las dos
    puntas y faltaba el medio: el descuento del saldo vivía en la base y en
-   `contactosMatch.js` sin que lo llamara nadie, y el contacto no se le abría a ninguna
+   `contactosMatch.js` sin que lo llamara nadie, y el contacto no se le abría a ningún
    Cliente por ningún camino. Este archivo es ese medio.
 
    DOS PREGUNTAS DISTINTAS, Y POR ESO DOS FUNCIONES. Una pantalla necesita saber **qué va a
@@ -18,7 +18,7 @@
    toque el botón.
 
    CUÁL ACCESO PAGA. Un Cliente puede tener un acceso por Paciente, y el contacto de un
-   Asistente es del Cliente entera —así lo dice el candado de `contactos_vistos_match`,
+   Asistente es del Cliente entero —así lo dice el candado de `contactos_vistos_match`,
    que es (cliente, asistente) y no lleva Paciente—. Paga el acceso vigente más antiguo que
    pueda pagarlo: primero los que tienen saldo, y recién después los que se sostienen por fecha.
    Gastar primero lo que ya se compró es lo que evita dejar paquetes con saldo colgado.
@@ -51,7 +51,7 @@ export const COLUMNAS_DE_CONTACTO = 'id, nombre, telefono, email, domicilio';
 /** Por qué no se pudo ver un contacto. Códigos, no frases: la frase vive en las traducciones de
  *  la aplicación, en los tres idiomas (`celtatech\CLAUDE.md` §8). */
 export const MOTIVO_VER_CONTACTO = {
-  /** Esta Cliente no tiene ningún acceso al Match. Lo da de alta la Prestadora. */
+  /** Este Cliente no tiene ningún acceso al Match. Lo da de alta la Prestadora. */
   SIN_ACCESO: 'sin_acceso_de_match',
   /** Tiene acceso, pero ninguno vigente: vencido o dado de baja. */
   ACCESO_NO_VIGENTE: MOTIVO_CONTACTO.ACCESO_NO_VIGENTE,
@@ -77,7 +77,7 @@ function puedePagar(acceso) {
 }
 
 /**
- * El acceso con el que esta Cliente paga el próximo contacto, y nada más que eso.
+ * El acceso con el que este Cliente paga el próximo contacto, y nada más que eso.
  *
  * Gasta primero lo comprado: entre varios vigentes elige el más antiguo con saldo, y sólo si no
  * hay ninguno con saldo toma uno que se sostenga por fecha. Si ninguno puede pagar devuelve igual
@@ -148,7 +148,7 @@ function advertenciaDeLaActivacion(acceso) {
 }
 
 /**
- * Cómo está el contacto de un Asistente para esta Cliente. **No toca nada.**
+ * Cómo está el contacto de un Asistente para este Cliente. **No toca nada.**
  *
  * @param {object} argumentos
  * @param {boolean} argumentos.mira_el_dinero  Si quien pregunta tiene el acceso de las personas autorizadas que

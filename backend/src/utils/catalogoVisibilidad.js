@@ -65,7 +65,7 @@ export const CATALOGO_VISIBILIDAD = [
     clave: 'cliente_alertas_de_la_revision',
     app: 'clientes',
     descripcion: 'Ver las alertas que deja la revisión automática de los reportes',
-    ayuda: 'Apagada, las alertas se siguen generando y le llegan al Coordinador igual: lo que cambia es que el Cliente no las lee sola, sin nadie que se las explique.',
+    ayuda: 'Apagada, las alertas se siguen generando y le llegan al Coordinador igual: lo que cambia es que el Cliente no las lee solo, sin nadie que se las explique.',
     de_fabrica: true,
   },
   {

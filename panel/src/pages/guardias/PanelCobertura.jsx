@@ -25,7 +25,7 @@ import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 
    LA DECISIÓN DE FONDO: EL PUNTAJE NO DECIDE. Los Asistentes vienen ordenados por un
    puntaje, pero lo que se muestra son LOS MOTIVOS, a favor y en contra, con el mismo peso
-   visual. Quien coordina sabe cosas que el sistema no sabe —que esa cliente no quiere que
+   visual. Quien coordina sabe cosas que el sistema no sabe —que ese Cliente no quiere que
    vuelva tal persona, que aquella está con un tema personal—, así que el sistema propone
    un orden y explica su razonamiento; elegir sigue siendo de la Coordinadora. Un panel que
    dijera "asignale a este" y escondiera el porqué sería más rápido y peor.

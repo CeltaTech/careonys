@@ -303,7 +303,7 @@ alguien para una casa lejos).
 pendiente, en revisión, aprobada o rechazada.
 
 Mapa geolocalizado del plantel activo agrupado por municipio — al llegar una solicitud de
-cliente, filtra automáticamente las Asistentes disponibles más cercanas (mismo componente
+un Cliente, filtra automáticamente las Asistentes disponibles más cercanas (mismo componente
 de mapa que `PRD_02_Panel_Admin.md` Módulo 2/3, no duplicar implementación).
 
 ### La entrevista al postulante — cómo quedó construida

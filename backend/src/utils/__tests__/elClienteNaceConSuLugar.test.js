@@ -1,10 +1,10 @@
 /**
- * Un Cliente recién creada nace con su localidad puesta, por los dos caminos que la crean.
+ * Un Cliente recién creado nace con su localidad puesta, por los dos caminos que la crean.
  *
  *   npm test --prefix backend
  *
  * POR QUÉ EXISTE ESTA PRUEBA. El Panel busca Clientes por localidad, y un Cliente está donde
- * viven sus Pacientes. Si el Paciente nace sin lugar, el Cliente recién creada no la encuentra
+ * viven sus Pacientes. Si el Paciente nace sin lugar, al Cliente recién creado no lo encuentra
  * ninguna búsqueda y nadie se entera: la pantalla no falla, contesta vacío. Es el defecto más
  * caro de los dos, porque parece que funciona.
  *
@@ -32,7 +32,7 @@ import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const QUIEN_LLAMA = '22222222-2222-2222-2222-222222222222';
 const NUEVA_CUENTA = '33333333-3333-3333-3333-333333333333';
-// El Legajo que la base le da al Cliente nueva. Es a propósito otro número que el de la cuenta:
+// El Legajo que la base le da al Cliente nuevo. Es a propósito otro número que el de la cuenta:
 // la misma persona puede tener otro Legajo en otra Prestadora, colgando de esta misma cuenta.
 const NUEVO_LEGAJO = '66666666-6666-6666-6666-666666666666';
 const SOLICITUD = '44444444-4444-4444-4444-444444444444';

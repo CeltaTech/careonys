@@ -30,7 +30,7 @@ function prestadoraDelPedido(req) {
 // veces (para cortar el acceso y después para armar la consulta) y no tiene sentido volver a
 // preguntarle a la base en el mismo pedido.
 //
-// Con la credencial de quien pide: el Cliente, su personas autorizadas y el Asistente leen la configuración de
+// Con la credencial de quien pide: el Cliente, sus personas autorizadas y el Asistente leen la configuración de
 // su propia Prestadora.
 export async function visibilidadDelPedido(req) {
   if (!req.visibilidadApp) {

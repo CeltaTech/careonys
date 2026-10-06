@@ -22,7 +22,7 @@ import '../../styles/molde-paginas.css';
 
 /* Quién es la Prestadora y cómo trabaja: su nombre y sus datos, en qué moneda
    trabaja, las modalidades que tiene contratadas, las zonas donde presta, a qué
-   plazo le pagan los Clientes y —si vende por match— por dónde cobra. */
+   plazo le pagan los Clientes y —si vende por Match— por dónde cobra. */
 export function ConfiguracionPrestadora() {
   const { tieneModalidad } = useModalidades();
 

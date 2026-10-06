@@ -15,7 +15,7 @@ entran las etiquetas de los casilleros, ni los títulos de pantalla, ni los dato
 
 **Qué NO está en este documento.** Los textos al pie de los casilleros cuando un dato está mal
 cargado, los mensajes de «se guardó» y las ventanas de confirmar. Esos no están puestos esperando:
-aparecen cuando alguien aprieta algo y se van solos. Y las dos aplicaciones de teléfono —la de las
+aparecen cuando alguien aprieta algo y se van solos. Y las dos aplicaciones de teléfono —la de los
 Clientes y la de los Asistentes— van en documento aparte. **Eso lo decidí yo y se puede rechazar:
 si tienen que entrar, entran.**
 
@@ -161,7 +161,7 @@ es una, porque su filtro de arranque no cuenta como filtro y la manda siempre al
 tabla y se ve ni bien se entra, sin apretar nada, mientras no haya ni un Legajo.
 
 **Qué es esa pantalla y para qué se usa.** El Padrón es el único lugar donde vive la información de
-los Clientes de la Prestadora. Un Cliente, una obra social, una prepaga o quien sea se carga ahí
+los Clientes de la Prestadora. Una persona, una obra social, una prepaga o quien sea se carga ahí
 una sola vez, con todo lo que se sabe de esa persona o entidad, y desde cualquier otra pantalla se
 la nombra citándola, nunca copiando sus datos. Es también el único lugar donde se da de alta: los
 casilleros que eligen del Padrón sólo eligen.
@@ -349,9 +349,9 @@ Un solo renglón: «Esta Prestadora todavía no cargó qué documentación pide.
 Configuración.»
 
 **Cuándo aparece.** Cuando la lista de papeles exigibles vuelve vacía, es decir, cuando nadie dejó
-escrito en ningún lado qué documentación hay que pedirle a quien paga. No depende de esta Cliente ni
+escrito en ningún lado qué documentación hay que pedirle a quien paga. No depende de este Cliente ni
 de este Pagador: es una definición que se hace una sola vez para toda la empresa, y mientras no se
-haga, este cartel va a estar en todas los Clientes por igual.
+haga, este cartel va a estar en todos los Clientes por igual.
 
 **Qué desaparece mientras el cartel está puesto.** La tabla entera de papeles, con sus cuatro
 columnas —«Documento», «Situación», «Vence» y «Acciones»—, con el estado de cada renglón, que puede
@@ -387,7 +387,7 @@ en cinco palabras, y aun así no dice en qué parte de esa pantalla hay que busc
 hasta la sección **«Guardias activas»**, que está después de «Personas autorizadas».
 
 **Qué es eso y para qué se usa.** Es la parte de la ficha donde se ven los turnos que vienen para
-los Pacientes de esa Cliente. La lista descarta lo cancelado y lo ya terminado, y muestra hasta
+los Pacientes de ese Cliente. La lista descarta lo cancelado y lo ya terminado, y muestra hasta
 cincuenta turnos.
 
 **Qué se ve en pantalla, de arriba abajo.**
@@ -398,10 +398,10 @@ cincuenta turnos.
 
 **El cartel, textual.**
 Primer renglón: «No hay guardias por delante»
-Segundo renglón: «Las guardias que se programen para los Pacientes de esta Cliente van a aparecer
+Segundo renglón: «Las guardias que se programen para los Pacientes de este Cliente van a aparecer
 acá.»
 
-**Cuándo aparece.** Cuando ningún Paciente de esa Cliente tiene un turno que no esté cancelado ni
+**Cuándo aparece.** Cuando ningún Paciente de ese Cliente tiene un turno que no esté cancelado ni
 terminado.
 
 **Qué desaparece mientras el cartel está puesto.** La tabla de turnos, con la fecha, el horario, el
@@ -437,7 +437,7 @@ aparecer acá, y la lista muestra hasta cincuenta y descarta lo cancelado y lo t
 **«Historial de reportes»**, que está justo debajo de las guardias activas.
 
 **Qué es eso y para qué se usa.** Cada guardia deja un reporte al terminar, escrito por quien la
-trabajó. Esta sección junta los de los Pacientes de esa Cliente, hasta treinta, sin rango de fechas
+trabajó. Esta sección junta los de los Pacientes de ese Cliente, hasta treinta, sin rango de fechas
 para elegir.
 
 **Qué se ve en pantalla, de arriba abajo.**
@@ -449,9 +449,9 @@ para elegir.
 **El cartel, textual.**
 Primer renglón: «Todavía no hay reportes»
 Segundo renglón: «Cada guardia deja su reporte al terminar, y acá se ven los de los Pacientes de
-esta Cliente.»
+este Cliente.»
 
-**Cuándo aparece.** Cuando ningún Paciente de esa Cliente tiene ni un reporte cargado.
+**Cuándo aparece.** Cuando ningún Paciente de ese Cliente tiene ni un reporte cargado.
 
 **Qué desaparece mientras el cartel está puesto.** La tabla de reportes, con la fecha, el Paciente,
 quién lo escribió, y la señal que dice si quedó «Sin confirmar».
@@ -488,7 +488,7 @@ resuelve lo que quedó sin confirmar.
 **Cómo llegar.** El mismo camino: **Clientes → Clientes → un Cliente**, y bajar del todo, hasta la
 sección **«Alertas activas»**, que es la última de la ficha.
 
-**Qué es eso y para qué se usa.** Es donde se ven las alertas abiertas de los Pacientes de esa
+**Qué es eso y para qué se usa.** Es donde se ven las alertas abiertas de los Pacientes de ese
 Cliente. No tiene tope ni filtros, a propósito: una alerta abierta no se esconde detrás de una
 paginación.
 
@@ -499,10 +499,10 @@ paginación.
 
 **El cartel, textual.**
 Primer renglón: «No hay alertas sin resolver»
-Segundo renglón: «Acá aparecen las alertas abiertas de los Pacientes de esta Cliente. Las ya
+Segundo renglón: «Acá aparecen las alertas abiertas de los Pacientes de este Cliente. Las ya
 resueltas se ven en la pantalla de Alertas.»
 
-**Cuándo aparece.** Cuando ningún Paciente de esa Cliente tiene una alerta abierta.
+**Cuándo aparece.** Cuando ningún Paciente de ese Cliente tiene una alerta abierta.
 
 **Qué desaparece mientras el cartel está puesto.** La lista de alertas, con qué pasó, sobre qué
 Paciente, cuándo y en qué situación quedó cada una.
@@ -666,7 +666,7 @@ grupo en una residencia.
 Un solo renglón: «No hay Pacientes cargados todavía.»
 
 **Cuándo aparece.** Cuando no figura ni una persona a atender en toda la empresa. No es que estén
-filtradas ni escondidas: la ventana pide la lista completa, sin ningún recorte por zona, por cliente
+filtradas ni escondidas: la ventana pide la lista completa, sin ningún recorte por zona, por Cliente
 ni por nada, y vuelve vacía.
 
 **Qué desaparece mientras el cartel está puesto.** La lista para marcar entera. Cada renglón de esa
@@ -837,7 +837,7 @@ prácticamente toda la pantalla: se ve ni bien se entra, sin apretar nada. Este 
 aparece con la modalidad de prestación directa.
 
 **Qué es esa pantalla y para qué se usa.** Es donde se revisan, una por una, las indicaciones de
-medicación que pidieron los clientes. De cada una se ve la persona a la que corresponde, el
+medicación que pidieron los Clientes. De cada una se ve la persona a la que corresponde, el
 medicamento, la dosis, la frecuencia, por qué vía se administra, desde y hasta cuándo rige, y —si la
 adjuntaron— la receta, que se abre aparte. Sobre cada indicación se toman dos decisiones posibles:
 aceptarla, o rechazarla escribiendo el motivo. Cuando ninguna de las personas asignadas a ese
@@ -876,7 +876,7 @@ prácticamente en blanco.
 
 **Problemas que se ven acá.** Dos, y los dos vienen del segundo renglón heredado. Uno es que cuenta
 mal el hecho: dice que va a aparecer algo cuando «se cargue el primer registro», y acá nadie carga
-nada desde adentro; lo que hace aparecer una fila es que un cliente pida una indicación desde su
+nada desde adentro; lo que hace aparecer una fila es que un Cliente pida una indicación desde su
 aplicación, que es algo que pasa afuera de esta pantalla y no se nombra. El otro es que ese renglón
 está escrito para listas donde el vacío significa que falta empezar a cargar cosas, y acá el vacío
 significa justamente lo contrario: que no quedó nada por revisar, que es la buena noticia. Además
@@ -1424,7 +1424,7 @@ no hay ninguna prohibición.
 **Cómo llegar.** Menú lateral → grupo **Ajustes** → **Configuración** → solapa **«La Prestadora»** →
 bajar hasta la sección **«Pasarela de pago»**. El aviso está adentro de la tabla, en la columna
 «Estado», justo debajo de la palabra «Activo», en el renglón del proveedor al que le falta la clave.
-Este bloque sólo existe si esta Prestadora tiene contratada la modalidad de match.
+Este bloque sólo existe si esta Prestadora tiene contratada la modalidad Match.
 
 **Qué es ese texto.** No es un cartel de lista vacía ni el valor de un campo: es un aviso de que falta
 terminar de configurar algo, y de que mientras tanto ese medio de cobro no funciona. Está puesto en
@@ -1440,7 +1440,7 @@ técnico ve cuáles están conectados y nada más.
 **Qué se ve en pantalla, de arriba abajo.**
 - Título de la pantalla: «Configuración», con la solapa «La Prestadora».
 - Título de sección: «Pasarela de pago»
-- Explicación de la sección: «Se puede elegir uno o varios medios de cobro para la suscripción de las
+- Explicación de la sección: «Se puede elegir uno o varios medios de cobro para la suscripción de los
   Clientes a Match. La credencial de cada uno se guarda cifrada y no vuelve a mostrarse una vez
   cargada.»
 - Cuando quien mira no es el administrador de la Prestadora, un aviso: «Acá se ve qué pasarelas están

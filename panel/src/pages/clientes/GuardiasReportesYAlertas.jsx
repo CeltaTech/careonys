@@ -23,7 +23,7 @@ import { soloSinResolver } from '../../lib/alertaSinResolver';
 
    Los tres datos ya existen y ya se muestran en otras pantallas del Panel —Guardias, Reportes
    y Alertas—. Acá no se inventa ninguna consulta nueva: se hacen las mismas preguntas,
-   acotadas a los Pacientes de esta Cliente, y se muestran con los mismos encabezados y los
+   acotadas a los Pacientes de este Cliente, y se muestran con los mismos encabezados y los
    mismos carteles de estado. Si mañana cambia cómo se lee una alerta, cambia en un solo lugar
    y esta ficha cambia con ella.
 
@@ -109,7 +109,7 @@ function nombresDe(pacientes) {
    Se piden desde hoy en adelante y se descartan las que ya no esperan nada. La situación de
    cada una sale del semáforo (`lib/semaforoGuardia.js`), el mismo que pinta la grilla de
    Guardias: no se vuelve a decidir acá qué significa cada estado. */
-export function GuardiasActivasDeLaCliente({ pacientes }) {
+export function GuardiasActivasDelCliente({ pacientes }) {
   const { t } = useLocale();
   /* Los mismos umbrales que pinta la grilla de Guardias, que son los que configuró esta
      Prestadora. Sin esto la ficha del Cliente diría «sin cerrar» a las dos horas mientras la
@@ -137,7 +137,7 @@ export function GuardiasActivasDeLaCliente({ pacientes }) {
       .sort((a, b) => `${a.fecha} ${a.hora_inicio}`.localeCompare(`${b.fecha} ${b.hora_inicio}`))
       .slice(0, TOPE_GUARDIAS);
 
-    // A quiénes atiende cada guardia. Sólo se ponen los nombres de esta Cliente: si un turno
+    // A quiénes atiende cada guardia. Sólo se ponen los nombres de este Cliente: si un turno
     // cubre además a alguien de otra casa, esa persona no es asunto de esta ficha.
     const porGuardia = await cargarPacientesDeGuardias(activas.map((g) => g.id));
     const filas = conPacientes(activas, porGuardia, nombresDe(pacientes)).map((g) => ({
@@ -201,7 +201,7 @@ export function GuardiasActivasDeLaCliente({ pacientes }) {
    acá lo que se busca es el historial, no un período. Los rangos de referencia de signos
    vitales se piden igual que allá, porque "fuera de rango" depende de cuál es el rango normal
    de esa persona y no de un número general. */
-export function ReportesDeLaCliente({ pacientes }) {
+export function ReportesDelCliente({ pacientes }) {
   const { t } = useLocale();
   const prestadoraId = usePrestadoraActual();
 
@@ -295,7 +295,7 @@ export function ReportesDeLaCliente({ pacientes }) {
    puede pasar. Y se ordenan por fecha y no por gravedad, para no escribir por segunda vez el
    orden de gravedad que ya vive en la pantalla de Alertas; el color de cada nivel sale del
    mismo lugar de siempre. */
-export function AlertasDeLaCliente({ pacientes }) {
+export function AlertasDelCliente({ pacientes }) {
   const { t } = useLocale();
 
   const cargar = useCallback(async () => {

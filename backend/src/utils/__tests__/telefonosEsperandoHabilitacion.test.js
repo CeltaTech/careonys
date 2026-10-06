@@ -108,7 +108,7 @@ const EL_ASISTENTE = {
   id: UN_ASISTENTE, nombre: 'Rosa Giménez', email: 'rosa@ejemplo.test',
   rol: 'asistente', telefono: CELULAR, telefono_verificado_en: null,
 };
-const LA_CLIENTE = {
+const EL_CLIENTE = {
   id: UNA_CLIENTE, nombre: 'Marta Ibáñez', email: 'marta@ejemplo.test',
   rol: 'cliente', telefono: OTRO_CELULAR, telefono_verificado_en: null,
 };
@@ -128,7 +128,7 @@ beforeEach(() => {
 
 describe('los números que esperan habilitación', () => {
   it('la coordinación ve al Asistente y al Cliente que están esperando', async () => {
-    cuentasConNumeroCargado([EL_ASISTENTE, LA_CLIENTE]);
+    cuentasConNumeroCargado([EL_ASISTENTE, EL_CLIENTE]);
     yaHabilitados([]);
 
     const lista = await telefonosEsperandoHabilitacion(laCoordinacion());
@@ -206,7 +206,7 @@ describe('los números que esperan habilitación', () => {
   });
 
   it('no devuelve ningún número de teléfono, y ninguno viaja en la dirección', async () => {
-    cuentasConNumeroCargado([EL_ASISTENTE, LA_CLIENTE]);
+    cuentasConNumeroCargado([EL_ASISTENTE, EL_CLIENTE]);
     yaHabilitados([]);
 
     const lista = await telefonosEsperandoHabilitacion(laCoordinacion());
@@ -248,7 +248,7 @@ describe('los números que esperan habilitación', () => {
   });
 
   it('quien tiene un rol que no se entiende no ve a nadie', async () => {
-    cuentasConNumeroCargado([EL_ASISTENTE, LA_CLIENTE]);
+    cuentasConNumeroCargado([EL_ASISTENTE, EL_CLIENTE]);
     yaHabilitados([]);
 
     const lista = await telefonosEsperandoHabilitacion(laCoordinacion({ rol: 'lo_que_sea' }));

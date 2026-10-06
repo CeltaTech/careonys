@@ -14,7 +14,7 @@ import { hoyISO } from '../lib/horarios';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
 import { Cabecera } from '../components/ui/Cabecera';
-import { NuevaClienteModal } from './clientes/NuevaClienteModal';
+import { NuevoClienteModal } from './clientes/NuevoClienteModal';
 import { mensajeDeError } from '../lib/errores';
 import './listadosMaqueta.css';
 
@@ -75,7 +75,7 @@ export function Clientes() {
     const [{ data, error: errorConsulta }, { data: serviciosData, error: errorServicios }] = await Promise.all([
       supabase
         .from('clientes')
-        .select('id, created_at, solicitudes!clientes_solicitud_id_fkey(nombre, telefono, email, localidad), pacientes(id, nombre, lugar_id, deleted_at)')
+        .select('id, created_at, solicitudes!solicitud_id(nombre, telefono, email, localidad), pacientes(id, nombre, lugar_id, deleted_at)')
         .is('deleted_at', null)
         .order('created_at', { ascending: false }),
       supabase.from('servicios').select('id, estado, contratante_id').eq('tipo_contratante', 'cliente'),
@@ -151,7 +151,7 @@ export function Clientes() {
       </Cabecera>
 
       {mostrarNueva && (
-        <NuevaClienteModal
+        <NuevoClienteModal
           onClose={() => setMostrarNueva(false)}
           onCreada={() => {
             setMostrarNueva(false);
@@ -205,7 +205,7 @@ export function Clientes() {
                   const nombres = (fam.pacientes ?? []).filter((p) => !p.deleted_at).map((p) => p.nombre);
                   const propios = serviciosPorCliente.get(fam.id) ?? [];
                   const estadoFam = estadoDeCliente(propios);
-                  const deLaCliente = [...(modalidades.get(fam.id) ?? [])];
+                  const delCliente = [...(modalidades.get(fam.id) ?? [])];
                   return (
                     <tr
                       key={fam.id}
@@ -219,7 +219,7 @@ export function Clientes() {
                       <td><strong>{fam.solicitudes?.nombre || '—'}</strong></td>
                       <td>{textoDePacientes(nombres, t.guardias.pacientes_y_mas)}</td>
                       <td>{propios.length}</td>
-                      <td>{deLaCliente.map((m) => t.modalidades[m] ?? m).join(' · ') || '—'}</td>
+                      <td>{delCliente.map((m) => t.modalidades[m] ?? m).join(' · ') || '—'}</td>
                       <td>{estadoFam ? <span className={estadoFam.clase}>{estadoFam.texto}</span> : '—'}</td>
                     </tr>
                   );

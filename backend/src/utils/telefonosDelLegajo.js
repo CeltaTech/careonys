@@ -12,7 +12,7 @@ import { huellaComparable } from './celularDeUnaSolaPersona.js';
 // preferido un número al que ya no atiende. Se deduce cada vez que se lee, y por eso se deduce en
 // un solo lugar, que es este archivo.
 //
-// SIN CUENTA NO HAY PREFERIDO. Una obra social no tiene cuenta; un Cliente recién cargada
+// SIN CUENTA NO HAY PREFERIDO. Una obra social no tiene cuenta; un Cliente recién cargado
 // tampoco. No se inventa ninguno: la lista sale entera y sin nada señalado, que es exactamente lo
 // que se sabe.
 //

@@ -19,7 +19,7 @@
 // alguna se despegó.
 // ---------------------------------------------------------------------------
 
-// Con qué medio se pagó ya no se escribe acá. Sale de la lista `medios_de_pago_de_la_cliente` del
+// Con qué medio se pagó ya no se escribe acá. Sale de la lista `medios_de_pago_del_cliente` del
 // registro de dos pisos —las que trae el producto y las que agregó cada Prestadora—, que es otra
 // que la del pago al Asistente porque no son los mismos medios. Quien llama trae esa lista y se la
 // pasa a la comprobación de abajo.
@@ -36,7 +36,7 @@ export const TOPE_DEL_LOTE = 500;
 
 /* Lo que está mal en un cobro que entra, dicho en una frase, o null si está bien.
  *
- * `mediosAdmitidos` son las claves de la lista `medios_de_pago_de_la_cliente` que alcanzan a esta
+ * `mediosAdmitidos` son las claves de la lista `medios_de_pago_del_cliente` que alcanzan a esta
  * Prestadora.
  * Sin esa lista no se admite ningún medio: un control que no pudo resolver contra qué comparar
  * tiene que negar, nunca dejar pasar. */

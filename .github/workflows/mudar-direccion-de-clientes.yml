@@ -1,0 +1,51 @@
+name: Mudar la dirección de la aplicación de Clientes al proyecto nuevo
+
+# Se corre una sola vez, a mano, después de que la aplicación de Clientes se publicó en
+# `careonys-clientes`. Cloudflare Pages no deja renombrar un proyecto: la dirección propia se
+# saca del proyecto viejo, se agrega al nuevo y el nombre del dominio pasa a apuntar al nuevo.
+# Hecha la mudanza, este archivo se borra.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  mudar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mudar cada dirección propia
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          VIEJO: careonys-clientes
+          NUEVO: careonys-clientes
+        run: |
+          set -euo pipefail
+          API=https://api.cloudflare.com/client/v4
+          AUTH="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+          PAGES="$API/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects"
+          ok() { node -e "let e='';process.stdin.on('data',d=>e+=d).on('end',()=>{const r=JSON.parse(e);if(!r.success){console.error(JSON.stringify(r.errors));process.exit(1)}})"; }
+
+          curl -sS -H "$AUTH" "$PAGES/$NUEVO" | ok
+
+          DIRECCIONES=$(curl -sS -H "$AUTH" "$PAGES/$VIEJO/domains" \
+            | node -e "let e='';process.stdin.on('data',d=>e+=d).on('end',()=>{const r=JSON.parse(e);console.log((r.result||[]).map(d=>d.name).join(' '))})")
+          test -n "$DIRECCIONES" || { echo "El proyecto viejo no tiene direcciones propias."; exit 0; }
+
+          for D in $DIRECCIONES; do
+            echo "Mudando $D."
+            curl -sS -X DELETE -H "$AUTH" "$PAGES/$VIEJO/domains/$D" | ok
+            curl -sS -X POST -H "$AUTH" -H 'Content-Type: application/json' \
+              "$PAGES/$NUEVO/domains" --data "{\"name\":\"$D\"}" | ok
+            REGISTRO=$(curl -sS -H "$AUTH" "$API/zones/${CLOUDFLARE_ZONE_ID}/dns_records?name=$D&type=CNAME" \
+              | node -e "let e='';process.stdin.on('data',d=>e+=d).on('end',()=>{const r=JSON.parse(e);console.log((r.result||[])[0]?.id||'')})")
+            if [ -n "$REGISTRO" ]; then
+              curl -sS -X PATCH -H "$AUTH" -H 'Content-Type: application/json' \
+                "$API/zones/${CLOUDFLARE_ZONE_ID}/dns_records/$REGISTRO" \
+                --data "{\"content\":\"$NUEVO.pages.dev\"}" | ok
+              echo "El nombre de $D apunta ahora a $NUEVO."
+            else
+              echo "No hay nombre CNAME para $D en la zona: hay que revisarlo a mano."
+              exit 1
+            fi
+          done

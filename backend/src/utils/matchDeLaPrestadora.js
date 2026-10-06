@@ -2,7 +2,7 @@
 // matchDeLaPrestadora.js — dos preguntas que se hacen desde varios lados y
 // que tienen que contestarse igual siempre.
 //
-//   1. ¿Esta Prestadora ofrece la modalidad match?
+//   1. ¿Esta Prestadora ofrece la modalidad Match?
 //   2. ¿Tiene encendida una de las cinco funciones de riesgo legal?
 //
 // La primera la hace el perfil —para saber si dibujar la vidriera en el menú— y
@@ -31,7 +31,7 @@ export async function modalidadesDeLaPrestadora(prestadoraId) {
   return modalidadesHabilitadas((data || []).map((f) => f.modalidad));
 }
 
-/** Si esta Prestadora ofrece match. Es la puerta de toda la vidriera. */
+/** Si esta Prestadora ofrece Match. Es la puerta de toda la vidriera. */
 export async function ofreceMatch(prestadoraId) {
   const modalidades = await modalidadesDeLaPrestadora(prestadoraId);
   return modalidades.includes(MODALIDAD.MATCH);

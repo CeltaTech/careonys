@@ -246,7 +246,7 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
 
   // La marca de su Prestadora viaja con el perfil, no en una dirección aparte:
   // el encabezado la necesita ni bien la persona entra, que es cuando la
-  // aplicación ya pide esto. Y para el Asistente de match es lo que hace
+  // aplicación ya pide esto. Y para el Asistente de Match es lo que hace
   // que una sola aplicación sirva para varias Prestadoras: cambia la marca de
   // arriba según dónde esté parado.
   const marca = await marcaDeLaPrestadora(req.usuarioAsistente.prestadoraId);
@@ -257,10 +257,10 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
   // apagado; que el dato apagado no salga de la base lo resuelve cada consulta por su cuenta.
   const visibilidad = await visibilidadDelPedido(req);
 
-  // Si esta persona trabaja en match, su aplicación tiene una pantalla más: los hilos con
+  // Si esta persona trabaja en Match, su aplicación tiene una pantalla más: los hilos con
   // los Clientes que le escribieron. Son dos condiciones y las dos tienen que dar que sí —que la
   // Prestadora ofrezca esa modalidad, y que esta persona trabaje en ella—, porque un Asistente
-  // de prestación directa adentro de una Prestadora que además hace match no recibe
+  // de prestación directa adentro de una Prestadora que además hace Match no recibe
   // mensajes de nadie. Viaja con el perfil por el mismo motivo que la marca: la aplicación lo
   // necesita antes de dibujar el menú.
   const match =
@@ -871,14 +871,14 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
 
   // UN SOLO MENSAJE, Y LO DISPARA FICHAR LA ENTRADA. Antes salían dos que decían casi lo mismo: éste
   // sin ninguna condición, y otro —«la guardia quedó cubierta»— sólo cuando el Cliente no había
-  // participado de la comprobación. Con un relevo salían los dos juntos. El Asistente fichó: la
+  // participado de la comprobación. Con un relevo salían los dos juntos. El Asistente fichó: el
   // Cliente se entera, y con el nombre de quién llegó. Cómo se comprobó no se le cuenta, porque es
   // funcionamiento interno; lo que quedó sin comprobar lo ve la coordinación en su lista.
   //
   // Un mensaje por Paciente, no uno por turno: el Cliente de cada uno tiene que enterarse de que
   // llegaron a atender al suyo, y con el nombre del suyo. Dos hermanos que viven juntos pero
-  // avisan a clientes distintas reciben cada uno el suyo. Si las dos personas son de la misma
-  // Cliente, esa Cliente recibe los dos mensajes, uno por nombre — es lo correcto: son dos
+  // avisan a clientes distintos reciben cada uno el suyo. Si las dos personas son del mismo
+  // Cliente, ese Cliente recibe los dos mensajes, uno por nombre — es lo correcto: son dos
   // Pacientes distintos, y uno solo obligaría a adivinar a cuál se refiere.
   //
   // Se envía una sola vez porque checkin_at ya se validó arriba como no seteado antes de este
@@ -1619,7 +1619,7 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
     return responderError(res, errorGuardia);
   }
 
-  // El mensaje va al Cliente de este Paciente y a ninguna otra: el reporte habla de él. Si el
+  // El mensaje va al Cliente de este Paciente y a ningún otro: el reporte habla de él. Si el
   // turno cubre a dos hermanos, cada Cliente recibe el suyo cuando le toca, no el del otro.
   //
   // SIGUE CON LA LLAVE MAESTRA: la función de la base que dice qué Pacientes le tocan a un
@@ -1964,7 +1964,7 @@ appAsistentesRouter.delete('/push/suscribir', requiereRolAsistente, async (req, 
 
 // ============================================================================
 // Descargo del Asistente ante una calificación (pendiente #85, mitigante de diseño no
-// opcional del riesgo legal invertido en match — docs/PRD_07_Modalidad_Match.md
+// opcional del riesgo legal invertido en Match — docs/PRD_07_Modalidad_Match.md
 // §5). Se carga una sola vez, nunca editable después (misma inmutabilidad que la propia
 // calificación) — la policy `asistente_carga_su_descargo` ya bloquea un segundo intento por
 // RLS, acá se valida antes también para devolver un mensaje legible.
@@ -2030,14 +2030,14 @@ appAsistentesRouter.patch('/calificaciones/:id/descargo', requiereRolAsistente, 
 });
 
 // ============================================================================
-// EL CHAT CON UNA CLIENTE DE LA VIDRIERA
+// EL CHAT CON UN CLIENTE DE LA VIDRIERA
 //
 // LA OTRA PUNTA DEL MISMO HILO. Lo que el Cliente ve en su aplicación y lo que el Asistente ve
 // en la suya es la misma conversación, y las dos entran por `utils/conversacionMatch.js`.
 // Ahí vive el tapado del dato de contacto, una vez y para los dos lados: tapando nada más lo que
 // escribe el Asistente, el Cliente pondría su propio número y la llamada saldría igual.
 //
-// EL HILO LO ABRE LA CLIENTE. Acá no hay ninguna ruta que cree una conversación: el Asistente
+// EL HILO LO ABRE EL CLIENTE. Acá no hay ninguna ruta que cree una conversación: el Asistente
 // contesta las que le llegaron. Es la vidriera la que va en un solo sentido —el Cliente elige—,
 // y una ruta para escribirle primero sería una puerta para escribirle a cualquiera.
 // ============================================================================
@@ -2065,7 +2065,7 @@ async function exigeMatch(req) {
 
 /** Cómo se llama el Cliente del otro lado. El nombre es de la persona, así que sale de la cuenta
  *  de la que cuelga ese Legajo. */
-async function nombreDeLaCliente(clienteId, prestadoraId) {
+async function nombreDelCliente(clienteId, prestadoraId) {
   const cuentas = await cuentasDeLasFichas('clientes', [clienteId], 'nombre', prestadoraId);
   return cuentas.get(clienteId)?.nombre || '';
 }
@@ -2123,7 +2123,7 @@ appAsistentesRouter.get('/match/conversaciones/:id', requiereRolAsistente, async
 
     const [mensajes, nombre, enCurso, base] = await Promise.all([
       mensajesDeLaConversacion({ conversacion, desde }),
-      nombreDeLaCliente(conversacion.cliente_id, conversacion.prestadora_id),
+      nombreDelCliente(conversacion.cliente_id, conversacion.prestadora_id),
       videollamadaEnCurso(conversacion),
       direccionDeVideollamada(conversacion.prestadora_id),
     ]);

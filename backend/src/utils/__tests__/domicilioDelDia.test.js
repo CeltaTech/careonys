@@ -326,7 +326,7 @@ describe('lo que ve el Cliente, que mira hoy y no un turno', () => {
     assert.equal(paciente.domicilio_motivo, 'Pasa el verano en la casa de su hijo');
   });
 
-  it('varios Pacientes de la misma Cliente se resuelven con una sola pregunta', async () => {
+  it('varios Pacientes del mismo Cliente se resuelven con una sola pregunta', async () => {
     temporales = [{ ...EL_VERANO_EN_LA_CASA_DEL_HIJO, fecha_inicio: hoy(), fecha_fin: null }];
 
     const pacientes = await pacientesConDomicilioDeHoy([

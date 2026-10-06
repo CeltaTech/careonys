@@ -21,7 +21,7 @@ Lo que hay que resolver antes de construirlo, porque cambia qué producto es:
 - **Filmar a quien trabaja es otra cosa que filmar la casa.** Una cámara que muestra al Paciente
   muestra al Asistente ocho horas seguidas. Eso entra por el marco normativo de cada país, que
   acá se carga por país y nunca se deduce por parecido con otro.
-- **Quién pone la cámara y de quién es.** Si la pone el Cliente en su casa, es de ella y Careonys
+- **Quién pone la cámara y de quién es.** Si la pone el Cliente en su casa, es de él y Careonys
   se conecta. Si la pone la Prestadora, la Prestadora está filmando a su propio personal.
 - **Qué se guarda y por cuánto.** Ver en vivo y guardar lo grabado son dos productos distintos,
   con dos riesgos distintos. Lo grabado en una casa donde se cuida a alguien es dato de salud.

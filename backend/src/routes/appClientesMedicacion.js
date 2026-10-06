@@ -14,11 +14,11 @@ import { responderError } from '../utils/errorConMotivo.js';
 // esto, la indicación queda en 'pendiente' y no llega a las órdenes del Asistente.
 //
 // CON LA CREDENCIAL DE QUIEN PIDE. La lectura entra a la base con `clienteDelPedido(req)`, no con
-// la llave maestra: la base le contesta al Cliente sólo lo de su Prestadora y sólo si su personas autorizadas
-// la deja ver la medicación. Por eso no lleva el filtro de la Prestadora de la sesión.
+// la llave maestra: la base le contesta al Cliente sólo lo de su Prestadora y sólo si el permiso de sus personas autorizadas
+// les deja ver la medicación. Por eso no lleva el filtro de la Prestadora de la sesión.
 //
 // EL ALTA SIGUE CON LA MAESTRA. El alta devuelve la fila recién creada, y la base sólo devuelve
-// lo que quien pide puede leer: una persona de las personas autorizadas a la que se le dejó pedir medicación pero
+// lo que quien pide puede leer: una persona autorizada a la que se le dejó pedir medicación pero
 // no verla recibiría un rechazo en vez del alta (políticas `cliente_carga_indicaciones_de_sus_pacientes`
 // y `cliente_lee_indicaciones_de_sus_pacientes`). Hasta que eso se resuelva, el alta y el archivo
 // van como estaban; el Paciente, en cambio, se lee con la credencial de quien pide.
@@ -44,7 +44,7 @@ function manejarErrorMulter(err, req, res, next) {
   next();
 }
 
-async function pacienteDeLaCliente(db, pacienteId, usuarioCliente) {
+async function pacienteDelCliente(db, pacienteId, usuarioCliente) {
   const { data } = await db
     .from('pacientes')
     .select('id, prestadora_id, cliente_id')
@@ -56,11 +56,11 @@ async function pacienteDeLaCliente(db, pacienteId, usuarioCliente) {
 
 // Ver la medicación y pedir una son dos decisiones distintas de la Prestadora: hay quien
 // muestra la lista pero no deja que el Cliente cargue nada. Y adentro de cada una hay una segunda
-// decisión, la del titular sobre cada persona de su personas autorizadas. Van en este orden: primero si la
+// decisión, la del titular sobre cada una de sus personas autorizadas. Van en este orden: primero si la
 // función existe en esta aplicación, después si a esta persona se la dieron.
 appClientesMedicacionRouter.get('/:pacienteId', requiereRolCliente, exigeVisible('cliente_medicacion_del_paciente'), exigeDePersonasAutorizadas('persona_autorizada_medicacion'), async (req, res) => {
   const db = clienteDelPedido(req);
-  const paciente = await pacienteDeLaCliente(db, req.params.pacienteId, req.usuarioCliente);
+  const paciente = await pacienteDelCliente(db, req.params.pacienteId, req.usuarioCliente);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
@@ -101,7 +101,7 @@ appClientesMedicacionRouter.post(
   async (req, res) => {
     // El Paciente se lee con la credencial de quien pide: la Prestadora con la que se arma la
     // ruta y se da el alta es la de la fila que la base ya le dejó ver.
-    const paciente = await pacienteDeLaCliente(clienteDelPedido(req), req.params.pacienteId, req.usuarioCliente);
+    const paciente = await pacienteDelCliente(clienteDelPedido(req), req.params.pacienteId, req.usuarioCliente);
     if (!paciente) {
       return res.status(404).json({ error: 'Paciente no encontrado' });
     }

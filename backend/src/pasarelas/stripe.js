@@ -57,7 +57,7 @@ export async function crearSuscripcion({
   // Ver la nota de mercadopago.js: la moneda viene del acceso, sin valor por descarte.
   if (!moneda) throw new Error('Falta la moneda del acceso');
   const recurrencia = recurrenciaStripe(periodo);
-  // Stripe crea igual un cliente sin correo, pero entonces no le manda ningún comprobante a la
+  // Stripe crea igual un cliente sin correo, pero entonces no le manda ningún comprobante al
   // Cliente y el cobro le aparece en el resumen sin haber recibido nada. Se corta acá, con el
   // mismo criterio que la moneda: falta un dato del que depende el cobro.
   if (!emailPagador) throw new Error('Falta el correo del Cliente que va a pagar');

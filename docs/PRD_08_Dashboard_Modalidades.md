@@ -34,7 +34,7 @@
   `datos_reservados_asistente.motivo_exclusion_directo` /
   `.motivo_exclusion_match` — esa tabla es aparte porque su lectura exige el permiso
   `ver_datos_reservados_asistente` (ver `docs/SECURITY.md`).
-- `calificaciones_asistente` (`docs/DATA_MODEL.md:589-612`) es la calificación de la
+- `calificaciones_asistente` (`docs/DATA_MODEL.md:589-612`) es la calificación del
   Cliente sobre el Asistente, puramente informativa — la Prestadora solo decide
   `visible_publica`, nunca edita el contenido ni dispara acción automática.
 - Cooperativas está confirmada como **post-MVP**, todavía sin motor de liquidación propio
@@ -43,7 +43,7 @@
   Este documento la incluye en el esquema de
   navegación (para que el hueco no se olvide) pero no diseña su funcionalidad interna.
 - Glosario obligatorio de `CLAUDE.md` §4: usar siempre "Cliente", "Asistente", "Guardia",
-  "Prestadora", "Vínculo/Cese" — nunca "cliente", "empleado", "turno". Este documento y la
+  "Prestadora", "Vínculo/Cese" — nunca "empleado", "turno". Este documento y la
   nomenclatura de menú que propone respetan ese glosario en todos los casos, con una
   excepción señalada explícitamente en §4 más abajo.
 - Menú actual del Panel, plano, sin agrupar (`panel/src/components/layout/Layout.jsx:81-103`):
@@ -167,15 +167,10 @@ antes de programar:
    (pendiente #80) suma un paso explícito previo — "elegí con qué modalidad(es) empezás" —
    antes de mostrar el resto del checklist actual (cargar Asistente/Cliente), que hoy asume
    implícitamente prestación directa y deja de ser el primer paso.
-3. **El nombre comercial "Clientes/pacientes/clientes"** que el Desarrollador dejó abierto
-   en la propuesta cruda (`docs/PRD_07_Modalidad_Match.md:176`, "nombre comercial
-   todavía por definir") **entra en conflicto directo con el glosario obligatorio de
-   `CLAUDE.md` §4**, que ya fija "Cliente" como término único aprobado y prohíbe
-   explícitamente "cliente" y "usuario" fuera de sentido técnico. Cualquier nombre
-   comercial nuevo que se elija para este menú tiene que pasar primero por la verificación
-   del glosario (`CLAUDE.md` §4, "antes de usar un término de negocio nuevo: verificarlo...
-   si no está, proponerlo para aprobación") — este documento no propone un nombre nuevo, deja
-   señalado el conflicto para que se resuelva antes de nombrar cualquier pantalla.
+3. **Resuelto — el nombre comercial** que el Desarrollador dejó abierto en la propuesta
+   cruda (`docs/PRD_07_Modalidad_Match.md:176`, "nombre comercial todavía por definir")
+   **es "Cliente"**, el término aprobado del glosario de `CLAUDE.md` §4: la persona o
+   entidad a la que la Prestadora le presta el servicio. Este menú se llama "Clientes".
 4. **¿Un Asistente puede participar de cooperativa además de directo/Match?** El
    campo `canales` hoy solo admite `'directo'`/`'match'`
    (`docs/DATA_MODEL.md:226-227`, `CHECK (canales <@ ARRAY['directo','match']::TEXT[])`)
@@ -204,9 +199,9 @@ antes de programar:
 - No se diseñaron las pantallas nuevas de Match (cobro, calificaciones, auditoría de
   advertencias) más allá de nombrarlas como necesarias en el Grupo 3.
 - No se tocó ningún archivo de `panel/src`, `backend/src` ni ninguna migración de Supabase.
-- No se definió el nombre comercial de "Clientes" en contexto de Match (pregunta 3 de
-  §3) — se mantiene "Cliente" por ser el término ya aprobado del glosario, salvo que el
-  Desarrollador decida abrir una excepción explícita.
+- No se definió un nombre comercial propio para los Clientes en contexto de Match
+  (pregunta 3 de §3) — se usa "Cliente", el término aprobado del glosario, igual que en
+  prestación directa.
 
 ## 5. Estado de este documento
 
@@ -219,7 +214,7 @@ prestación directa; Informes de obra social y Lista de precios confirmados excl
 prestación directa (Grupo 2); Verificación de Guardias/Continuidad confirmadas como
 infraestructura compartida real (Grupo 1, verificado leyendo el código); Cooperativa
 (Grupo 4) no se muestra en el menú hasta tener diseño completo, sin placeholder; nombre
-"Cliente" se mantiene sin excepción (glosario `CLAUDE.md` §4). Queda pendiente, para cuando
+"Cliente" sin excepción (glosario `CLAUDE.md` §4). Queda pendiente, para cuando
 se diseñe cooperativa en profundidad, revisar el `CHECK` de `asistentes.canales` (punto 4).
 
 **Próximo paso**: abrir el control de características de `CLAUDE.md` §12 (✅/⚠️/❌ por

@@ -18,14 +18,14 @@ import EnlaceAlMapa from '../components/EnlaceAlMapa';
 // LAS OPINIONES VAN SIN QUIÉN LAS ESCRIBIÓ. Quien calificó es un Cliente, y su nombre no es
 // parte de lo que se publica. El backend ya no lo manda; acá no habría de dónde sacarlo.
 //
-// CÓMO LLEGAR A LA PERSONA SE PIDE APARTE, Y CON SU PROPIO BOTÓN. Eso es lo que el Match
+// CÓMO LLEGAR A LA PERSONA SE PIDE APARTE, Y CON SU PROPIO BOTÓN. Eso es lo que Match
 // vende, así que verlo cuesta. Mirar este perfil no abre nada: la pantalla pregunta qué pasaría
 // —con qué forma se cobra, cuánto sale, si termina el período de prueba— y lo muestra en una
 // confirmación. Recién cuando alguien toca «sí» sale el pedido que cobra. Abrir un contacto no
 // puede ser nunca el efecto de haber entrado a una pantalla.
 //
 // Y QUIEN NO MIRA LA PLATA NO VE NINGUNA DE ESAS FRASES. El backend le contesta si el contacto ya
-// está abierto y nada más: cuánto sale y cuánto saldo queda es plata, y en las personas autorizadas no
+// está abierto y nada más: cuánto sale y cuánto saldo queda es plata, y entre las personas autorizadas no
 // la mira cualquiera.
 export default function PerfilPublicoAsistente() {
   const { id } = useParams();
@@ -131,7 +131,7 @@ export default function PerfilPublicoAsistente() {
         )}
 
         {/* Escribirle es libre: lo que se cobra es el dato de contacto, y adentro del chat sale
-            tapado hasta que esta Cliente lo abra. El botón se apaga mientras el hilo se abre, y si
+            tapado hasta que este Cliente lo abra. El botón se apaga mientras el hilo se abre, y si
             ya existía uno con esta persona lleva a ese mismo: no hay dos hilos por pareja. */}
         <div className="pwa-card-pie">
           <button type="button" className="btn btn-primary btn-full" onClick={escribirle} disabled={abriendo}>

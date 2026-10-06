@@ -5,7 +5,7 @@ y cobranzas de una Prestadora, y tiene que avisarle a Careonys lo que pasó de s
 falta saber nada de Careonys por dentro.
 
 **Qué se necesita antes de empezar.** Dos datos que entrega la Prestadora, y que ella misma saca
-de la pantalla de Configuración → Facturación de Clientes:
+de la pantalla de Configuración → Facturación:
 
 1. **La dirección**, que ya viene armada con el identificador de esa Prestadora adentro.
 2. **El secreto**, que ella escribe en esa misma pantalla. Es el único que lo conoce: Careonys lo
@@ -186,7 +186,7 @@ menos una**:
 | `restringida` | si no va `estado_de_cuenta` | `true` cuando empieza la restricción, `false` cuando se levanta |
 | `motivo` | no | Hasta 500 caracteres |
 | `numero_del_aviso` | no | El número con el que lo numeró quien lo manda. **Repetir el mismo número no anota dos veces** |
-| `estado_de_cuenta` | si no va `restringida` | Cómo está la cuenta de esa Cliente |
+| `estado_de_cuenta` | si no va `restringida` | Cómo está la cuenta de ese Cliente |
 
 Y adentro de `estado_de_cuenta`:
 
@@ -202,7 +202,7 @@ Y adentro de `estado_de_cuenta`:
 **Lo que no se informa queda vacío, y Careonys no lo completa.** No se deducen los días de atraso
 de ninguna fecha, no se suma nada y no se compara contra lo que este sistema tenga anotado: lo que
 entra se guarda y se muestra tal como llegó. Careonys **no decide nada sobre estos datos ni los
-discute**. Qué se hace con un Cliente restringida o atrasada lo decide la Prestadora.
+discute**. Qué se hace con un Cliente restringido o atrasado lo decide la Prestadora.
 
 **Careonys no pide ningún dato fiscal de quien paga, y no lo va a guardar.** Con qué número está
 inscripta esa persona y bajo qué condición es asunto de quien factura.
@@ -216,7 +216,7 @@ inscripta esa persona y bajo qué condición es asunto de quien factura.
 | `200` | El pedido entró. Mirar los renglones de la respuesta | Nada |
 | `400` | El pedido estaba firmado bien, pero algún dato está mal. La respuesta dice cuál | Corregir el dato y reenviar |
 | `401` | No se pudo probar que el pedido sea auténtico | Ver más abajo |
-| `404` | Sólo en la puerta de cobranza: esa Cliente no es de esta Prestadora | Revisar el identificador |
+| `404` | Sólo en la puerta de cobranza: ese Cliente no es de esta Prestadora | Revisar el identificador |
 
 En la puerta de facturación no hay `404`: una factura que no es de esta Prestadora se contesta
 adentro de la respuesta, en su renglón, igual que si no existiera. Decir cuál identificador cae

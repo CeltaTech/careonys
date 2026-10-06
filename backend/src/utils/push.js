@@ -52,7 +52,7 @@ async function comoSeVeEnElCelular(prestadoraId, titulo, cuerpo) {
 //
 // `prestadoraId` es obligatorio y no tiene valor por defecto: el backend entra con la llave de
 // servicio, que se saltea la protección por fila, así que lo único que impide mandarle la
-// notificación de una Prestadora al aparato de otra es este filtro. Colgar del identificador del Asistente o de la
+// notificación de una Prestadora al aparato de otra es este filtro. Colgar del identificador del Asistente o del
 // Cliente no alcanza, porque acá no se lee ninguna de esas dos tablas.
 async function enviarPush(prestadoraId, columna, id, { titulo, cuerpo, url }) {
   // Sin destinatario no hay push. Pasa cuando la guardia está sin cubrir: no hay Asistente

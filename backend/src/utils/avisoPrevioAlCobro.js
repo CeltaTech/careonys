@@ -29,7 +29,7 @@
    mientras la ventana dure, en vez de quedar anotado un mensaje que nadie recibió.
 
    UN MENSAJE QUE FALLA NO FRENA A LOS DEMÁS. Es el mismo criterio de `revisarVencimientos` y de
-   `cortarLosAccesosDadosDeBaja`: lo de un Cliente no puede dejar sin avisar a las otras. */
+   `cortarLosAccesosDadosDeBaja`: lo de un Cliente no puede dejar sin avisar a los otros. */
 
 import { supabase } from '../db/connection.js';
 import { enviarPushCliente } from './push.js';

@@ -51,7 +51,7 @@ function RutaPrivada({ children }) {
 // tiene que terminar en el mismo lugar que quien no encuentra el botón.
 //
 // Son dos decisiones distintas y las dos tienen que decir que sí: qué ofrece la Prestadora en
-// toda su aplicación, y qué instruyó el titular de la cuenta para cada persona de su personas autorizadas.
+// toda su aplicación, y qué instruyó el titular de la cuenta para cada una de sus personas autorizadas.
 // Una pantalla puede no tener ninguna de las dos, o tener una sola; lo que no está declarado no
 // restringe nada, y las dos claves salen del mismo archivo.
 //
@@ -101,7 +101,7 @@ function Rutas() {
         <Route path="pacientes/:id" element={<PacienteDetalle />} />
         {/* La semana de guardias no va detrás de un interruptor de la Prestadora: saber quién
             viene y cuándo es para qué existe la aplicación del Cliente, no una función que una
-            Prestadora elija ofrecer o no. El titular sí le puede negar la agenda a alguien de su
+            Prestadora elija ofrecer o no. El titular sí le puede negar la agenda a una de sus
             personas autorizadas, que es otra decisión y de otro. */}
         <Route
           path="pacientes/:id/guardias"
@@ -163,10 +163,10 @@ function Rutas() {
           }
         />
         {/* El código que se le muestra al Asistente que llega (pendiente #113). No va colgado de
-            un Paciente porque el código es de las personas autorizadas entero, y no lleva guardián
-            porque cualquiera de las personas autorizadas puede ser quien esté en la casa cuando toquen el
+            un Paciente porque el código es del Cliente entero, y no lleva guardián
+            porque cualquiera de sus personas autorizadas puede ser quien esté en la casa cuando toquen el
             timbre. El backend pide lo mismo: tener sesión de Cliente y nada más. */}
-        {/* Las facturas no cuelgan de un Paciente: se le factura a las personas autorizadas entero, y
+        {/* Las facturas no cuelgan de un Paciente: se le factura al Cliente entero, y
             una misma factura puede tener renglones de más de una persona cuidada. El detalle va
             detrás del mismo par de decisiones que la lista, o quien no tiene el dinero no ve la
             lista pero abre una factura escribiendo la dirección. */}
@@ -186,8 +186,8 @@ function Rutas() {
             </PantallaPermitida>
           }
         />
-        {/* La vidriera del Match. No cuelga de un Paciente: se busca un Asistente antes
-            de decidir para quién, y la misma búsqueda sirve para todo las personas autorizadas. */}
+        {/* La vidriera de Match. No cuelga de un Paciente: se busca un Asistente antes
+            de decidir para quién, y la misma búsqueda sirve para todas las personas autorizadas. */}
         <Route
           path="buscar"
           element={

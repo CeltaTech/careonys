@@ -41,6 +41,9 @@ const LA_COORDINACION_HABILITA = migracion(
   '20261004130000_la_coordinacion_habilita_el_cambio_de_clave_de_fabrica.sql',
 );
 
+// El renombre del rol de quien recibe el servicio reescribió la escalera: la vigente es ésa.
+const LA_ESCALERA_VIGENTE = migracion('20261015000000_renombre_palabras_retiradas.sql');
+
 const LOS_CINCO_ROLES = ['superadmin', 'admin_prestadora', 'coordinador', 'asistente', 'cliente'];
 
 describe('el backend: un rol que no se entiende no habilita a nadie', () => {
@@ -77,7 +80,7 @@ describe('la base dice lo mismo que el backend', () => {
   it('los cinco escalones son los mismos de los dos lados', () => {
     for (const rol of LOS_CINCO_ROLES) {
       const renglon = new RegExp(`WHEN '${rol}' THEN (\\d+)::smallint`).exec(
-        EL_ROL_QUE_NO_SE_ENTIENDE,
+        LA_ESCALERA_VIGENTE,
       );
       assert.ok(renglon, `la migración no define el escalón de ${rol}`);
       assert.equal(Number(renglon[1]), escalonDelRol(rol), `el escalón de ${rol} no coincide`);

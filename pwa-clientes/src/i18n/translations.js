@@ -103,7 +103,7 @@ export const T = {
       guardias: 'Guardias',
       servicio: 'Servicio',
     },
-    // EL CHAT CON LA OTRA PUNTA DEL MATCH. Lo dibuja `components/HiloDeMensajes.jsx`, que
+    // EL CHAT CON LA OTRA PUNTA DE MATCH. Lo dibuja `components/HiloDeMensajes.jsx`, que
     // es el mismo archivo en las dos aplicaciones, así que estas claves tienen que existir en las
     // dos y decir lo mismo.
     chat: {
@@ -339,7 +339,7 @@ export const T = {
       calificacion_enviada: '¡Gracias! La calificación fue enviada.',
       escanear_boton: 'Escanear Asistente',
     },
-    // La vidriera del Match: buscar Asistentes y ver su perfil público.
+    // La vidriera de Match: buscar Asistentes y ver su perfil público.
     //
     // Dos frases de acá no son de estilo. La del orden, porque quien mira una lista de personas
     // da por sentado que el de arriba es el mejor, y mientras la Prestadora no encienda esa
@@ -359,8 +359,8 @@ export const T = {
       orden_por_calificacion: 'Esta lista está ordenada por calificación, de mayor a menor. Quien todavía no tiene ninguna aparece al final.',
       sin_calificaciones: 'Todavía no tiene calificaciones.',
       calificacion_cuenta: '{promedio} de 5, sobre {cuantas} calificaciones.',
-      opiniones_titulo: 'Qué dijeron otras Clientes',
-      sin_opiniones: 'Todavía no hay comentarios de otras Clientes.',
+      opiniones_titulo: 'Qué dijeron otros Clientes',
+      sin_opiniones: 'Todavía no hay comentarios de otros Clientes.',
       contacto_aparte: 'Los datos para comunicarse con la persona no se muestran acá: se piden cuando se decide avanzar.',
       // Ver cómo llegar a la persona por afuera de la aplicación. La confirmación se arma con
       // varias frases sueltas y no con una sola: qué se cobra, si se renueva, si termina la
@@ -439,7 +439,7 @@ export const T = {
       baja_hasta: 'El acceso sigue disponible hasta el {fecha}.',
       baja_cancelada_el: 'Dada de baja el {fecha}.',
     },
-    // Lo que se le cobra a las personas autorizadas, período por período, y de qué está hecho cada
+    // Lo que se le cobra al Cliente, período por período, y de qué está hecho cada
     // importe. Los estados y los medios se guardan como clave en la base y el nombre visible
     // sale de acá, así que las claves llevan el prefijo de lo que nombran.
     // LO QUE LA PRESTADORA ESCRIBIÓ PARA QUIEN CUIDA EN SU CASA. El texto de cada pieza lo
@@ -522,14 +522,14 @@ export const T = {
       desde: 'Desde',
       hasta: 'Hasta',
     },
-    // Los once accesos de las personas autorizadas, dichos como los lee quien está anotado en uno. En el
-    // orden del catálogo del backend, que es el orden en el que llegan: dos personas del mismo
-    // personas autorizadas comparan sus listas renglón por renglón.
+    // Los once accesos de las personas autorizadas, dichos como los lee cada una. En el
+    // orden del catálogo del backend, que es el orden en el que llegan: dos personas autorizadas del
+    // mismo Cliente comparan sus listas renglón por renglón.
     //
     // Son frases cortas y en sustantivo porque la misma lista se usa para las dos columnas, la de
     // lo que se ve y la de lo que no. Una frase escrita como acción —"puede leer los reportes"—
     // se lee al revés en la segunda columna.
-    personas autorizadas: {
+    personas_autorizadas: {
       persona_autorizada_reportes: 'Los reportes de cada guardia',
       persona_autorizada_ficha_del_paciente: 'Los datos del Paciente',
       persona_autorizada_medicacion: 'La medicación vigente',
@@ -642,7 +642,7 @@ export const T = {
       con_tecnologia_de: 'powered by {{producto}}',
     },
     auth: {
-      titulo: '{{producto}} — Families',
+      titulo: '{{producto}} — Clients',
       email: 'Email',
       password: 'Password',
       ingresar: 'Log in',
@@ -740,7 +740,7 @@ export const T = {
       estado_cancelada: 'Cancelled',
       estado_ausente: 'The Assistant did not show up',
       estado_pausada: 'Paused',
-      cancelo_cliente: 'Cancelled by the Family',
+      cancelo_cliente: 'Cancelled by the Client',
       cancelo_prestadora: 'Cancelled by the Provider',
       llegada: 'Arrived at {hora}',
       salida: 'Left at {hora}',
@@ -839,8 +839,8 @@ export const T = {
       orden_por_calificacion: 'This list is sorted by rating, highest first. Anyone without ratings yet appears at the end.',
       sin_calificaciones: 'No ratings yet.',
       calificacion_cuenta: '{promedio} out of 5, from {cuantas} ratings.',
-      opiniones_titulo: 'What other Families said',
-      sin_opiniones: 'No comments from other Families yet.',
+      opiniones_titulo: 'What other Clients said',
+      sin_opiniones: 'No comments from other Clients yet.',
       contacto_aparte: 'Contact details are not shown here: they are requested when moving forward.',
       contacto_titulo: 'How to reach this person',
       contacto_ver: 'See the contact details',
@@ -987,7 +987,7 @@ export const T = {
       desde: 'From',
       hasta: 'Until',
     },
-    personas autorizadas: {
+    personas_autorizadas: {
       persona_autorizada_reportes: 'The report from each shift',
       persona_autorizada_ficha_del_paciente: 'The Patient\'s record',
       persona_autorizada_medicacion: 'Current medication',
@@ -1097,7 +1097,7 @@ export const T = {
       con_tecnologia_de: 'com a tecnologia de {{producto}}',
     },
     auth: {
-      titulo: '{{producto}} — Famílias',
+      titulo: '{{producto}} — Clientes',
       email: 'Email',
       password: 'Senha',
       ingresar: 'Entrar',
@@ -1195,7 +1195,7 @@ export const T = {
       estado_cancelada: 'Cancelado',
       estado_ausente: 'O Assistente não compareceu',
       estado_pausada: 'Pausado',
-      cancelo_cliente: 'Cancelado pela Família',
+      cancelo_cliente: 'Cancelado pelo Cliente',
       cancelo_prestadora: 'Cancelado pela Prestadora',
       llegada: 'Chegou às {hora}',
       salida: 'Saiu às {hora}',
@@ -1294,8 +1294,8 @@ export const T = {
       orden_por_calificacion: 'Esta lista está ordenada por avaliação, da maior para a menor. Quem ainda não tem nenhuma aparece no final.',
       sin_calificaciones: 'Ainda não tem avaliações.',
       calificacion_cuenta: '{promedio} de 5, com base em {cuantas} avaliações.',
-      opiniones_titulo: 'O que outras Famílias disseram',
-      sin_opiniones: 'Ainda não há comentários de outras Famílias.',
+      opiniones_titulo: 'O que outros Clientes disseram',
+      sin_opiniones: 'Ainda não há comentários de outros Clientes.',
       contacto_aparte: 'Os dados para entrar em contato com a pessoa não aparecem aqui: são solicitados quando se decide avançar.',
       contacto_titulo: 'Como chegar a esta pessoa',
       contacto_ver: 'Ver os dados de contato',
@@ -1442,7 +1442,7 @@ export const T = {
       desde: 'Desde',
       hasta: 'Até',
     },
-    personas autorizadas: {
+    personas_autorizadas: {
       persona_autorizada_reportes: 'Os relatórios de cada plantão',
       persona_autorizada_ficha_del_paciente: 'Os dados do Paciente',
       persona_autorizada_medicacion: 'A medicação vigente',

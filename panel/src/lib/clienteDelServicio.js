@@ -63,7 +63,7 @@ export async function contactosDeClientes(supabase, servicios) {
 
   const { data, error } = await supabase
     .from('clientes')
-    .select('id, solicitudes!clientes_solicitud_id_fkey(nombre, telefono, email, localidad)')
+    .select('id, solicitudes!solicitud_id(nombre, telefono, email, localidad)')
     .in('id', idsCliente);
 
   if (error) return { contactos: new Map(), error };

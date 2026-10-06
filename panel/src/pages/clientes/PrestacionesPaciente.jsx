@@ -472,7 +472,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
       supabase.from('series_guardias').update({ estado: 'pausada' }).eq('paciente_id', paciente.id).eq('estado', 'activa'),
     ]);
 
-    // Contingencia: otros Pacientes de la misma Cliente (conviven bajo el mismo grupo familiar,
+    // Contingencia: otros Pacientes del mismo Cliente (conviven bajo el mismo grupo familiar,
     // no necesariamente el mismo domicilio) que no tengan a su vez una hospitalización activa.
     const { data: otrosPacientes } = await supabase
       .from('pacientes')

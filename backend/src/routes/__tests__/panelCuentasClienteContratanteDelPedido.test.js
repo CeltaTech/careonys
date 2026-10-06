@@ -1,7 +1,7 @@
 /**
  * Con qué se busca el Cliente de un pedido en las rutas de las personas autorizadas y del Pagador.
  *
- *   node --test src/routes/__tests__/panelCuentasClienteDelPedido.test.js
+ *   node --test src/routes/__tests__/panelCuentasClienteContratanteDelPedido.test.js
  *
  * POR QUÉ EXISTE ESTA PRUEBA. El Cliente se busca con la llave maestra y acotada a la Prestadora de
  * la sesión. Con la credencial de la persona, la política restrictiva
@@ -93,18 +93,18 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/configuracion_plataforma', () => [{ mfa_admin_obligatorio: false }]);
   respuestas.set('GET /rest/v1/permisos_de_acceso', () => []);
   respuestas.set('POST /rest/v1/rpc/tiene_permiso_de', () => true);
-  // El Cliente no aparece: la ruta contesta 404 y lo que se mira es cómo se la buscó.
+  // El Cliente no aparece: la ruta contesta 404 y lo que se mira es cómo se lo buscó.
   respuestas.set('GET /rest/v1/clientes', () => []);
 });
 
-const RUTAS_QUE_BUSCAN_LA_CLIENTE = [
-  ['GET', `/cliente/${CLIENTE}/personas autorizadas`],
+const RUTAS_QUE_BUSCAN_EL_CLIENTE = [
+  ['GET', `/cliente/${CLIENTE}/personas_autorizadas`],
   ['GET', `/cliente/${CLIENTE}/pagador`],
 ];
 
 describe('el Cliente del pedido se busca con la llave maestra y acotada a la Prestadora', () => {
   for (const rol of ['admin_prestadora', 'coordinador']) {
-    for (const [metodo, ruta] of RUTAS_QUE_BUSCAN_LA_CLIENTE) {
+    for (const [metodo, ruta] of RUTAS_QUE_BUSCAN_EL_CLIENTE) {
       it(`${rol}: ${metodo} ${ruta}`, async () => {
         rolDelUsuario = rol;
         const { estado } = await pedir(metodo, ruta);

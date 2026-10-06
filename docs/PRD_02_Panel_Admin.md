@@ -26,7 +26,7 @@ MySQL se descartó antes de escribir código (ver `docs/claude_history.md`).
 
 ### Módulo 1 — Dashboard
 Métricas en tiempo real: postulaciones recibidas hoy/semana, solicitudes pendientes,
-guardias activas ahora, Asistentes disponibles, clientes activas, alertas de IA sin
+guardias activas ahora, Asistentes disponibles, Clientes activos, alertas de IA sin
 resolver.
 
 ### Módulo 2 — Postulaciones de Asistentes
@@ -56,7 +56,7 @@ el vínculo laboral dual-track (monotributo/dependencia), el simulador de costos
 motor de cese viven dentro de este mismo módulo.
 
 ### Módulo 5 — Clientes y Pacientes
-Lista de clientes activas; por cliente: contacto, pacientes, guardias activas, historial
+Lista de Clientes activos; por Cliente: contacto, pacientes, guardias activas, historial
 de reportes, alertas activas.
 
 ### Módulo 6 — Guardias

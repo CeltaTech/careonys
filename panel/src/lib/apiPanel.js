@@ -18,7 +18,7 @@ import { errorDeLaRespuesta } from './errores';
    copiarlas, y una ya distinta de las otras dos.
 
    Ahora se escribe una sola vez, acá, con la versión que aguanta las dos formas de fallar. Cada
-   cliente de rutas se queda con su nombre propio —`llamarApiCobros` y compañía— porque la
+   grupo de rutas se queda con su nombre propio —`llamarApiCobros` y compañía— porque la
    pantalla no tiene por qué saber el camino entero; lo que ya no tiene es su propia copia del
    `fetch`. */
 
@@ -61,10 +61,10 @@ export async function llamarApiPanel(path, opciones = {}) {
 }
 
 /**
- * El mismo camino, atado a un cliente de rutas.
+ * El mismo camino, atado a un grupo de rutas.
  *
  * `llamadorDe('/cobros')` devuelve una función que recibe lo que va después de
- * `/api/panel/cobros`. Sirve para que una pantalla que usa cinco rutas de la misma cliente no
+ * `/api/panel/cobros`. Sirve para que una pantalla que usa cinco rutas del mismo grupo no
  * repita el prefijo cinco veces y no pueda equivocarse en una.
  */
 export function llamadorDe(prefijo) {

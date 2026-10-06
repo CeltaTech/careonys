@@ -17,7 +17,7 @@ disciplinaria, penalización de incumplimientos al estilo de un régimen discipl
 laboral).
 
 Este riesgo aplica a la relación entre la Prestadora y sus Asistentes cuando estos operan
-bajo la modalidad de autonomía/match (ver `CLAUDE.md` §3) — no aplica cuando el
+bajo la modalidad de autonomía/Match (ver `CLAUDE.md` §3) — no aplica cuando el
 Vínculo ya es un contrato de trabajo en relación de dependencia reconocido como tal.
 
 ## Tabla de advertencias (jurisdicción → función → texto)
@@ -44,7 +44,7 @@ Vínculo ya es un contrato de trabajo en relación de dependencia reconocido com
   evaluar si aplica el mismo riesgo del art. 23 LCT y sumar su fila a esta tabla antes de
   activarla para una Prestadora real de Argentina.
 
-## Modalidad match — riesgo invertido
+## Modalidad Match — riesgo invertido
 
 > Diseño completo en `docs/PRD_07_Modalidad_Match.md` (2026-07-24). Acá solo la
 > tabla de advertencias que corresponde a esta jurisdicción — pendiente de revisión por un
@@ -52,26 +52,26 @@ Vínculo ya es un contrato de trabajo en relación de dependencia reconocido com
 > este documento (ver nota al inicio).
 
 En prestación directa el riesgo es que la Prestadora controle tanto al Asistente que
-parezca su empleadora. En match el riesgo es el mismo principio del art. 23 LCT
+parezca su empleadora. En Match el riesgo es el mismo principio del art. 23 LCT
 aplicado al revés: que sea **la plataforma**, no el Cliente, quien ejerza ese control de
-forma agregada entre todas los Clientes — mismo patrón que llevó a fallar en contra de
+forma agregada entre todos los Clientes — mismo patrón que llevó a fallar en contra de
 Uber en el Reino Unido (Uber BV vs Aslam, 2021).
 
 Herramientas que el Cliente opera sobre **su propio** Asistente contratado (horario,
 penalización, calificación) no generan este riesgo — es el Cliente ejerciendo su rol de
-empleadora doméstica ya reconocido por la Ley de Personal de Casas Particulares (26.844),
+empleador doméstico ya reconocido por la Ley de Personal de Casas Particulares (26.844),
 no la plataforma. El riesgo aparece solo cuando la decisión es de la plataforma, agregada
-entre todas los Clientes:
+entre todos los Clientes:
 
 | Función | Texto de advertencia mostrado al activar |
 |---|---|
 | Ranking o puntaje calculado por la plataforma que decide si un Asistente sigue apareciendo ante cualquier Cliente | Un ranking calculado por la plataforma que condiciona si el Asistente sigue visible para cualquier Cliente puede interpretarse como la plataforma decidiendo su acceso al trabajo en general, un indicio de subordinación bajo el art. 23 de la LCT — mismo hecho que pesó en contra de Uber en el caso Aslam (Reino Unido, 2021). |
 | Consecuencia automática atada a la calificación agregada (ej. exclusión por debajo de un puntaje) | Atar una exclusión automática a la calificación agregada convierte la opinión de los Clientes en una decisión algorítmica de la plataforma sobre el Asistente, un indicio de subordinación bajo el art. 23 de la LCT. |
-| Precio u horario fijado por la plataforma para todas los Clientes por igual | Fijar precio u horario de forma centralizada, en vez de que cada Cliente lo acuerde con su Asistente, es un indicio fuerte de subordinación bajo el art. 23 de la LCT. |
+| Precio u horario fijado por la plataforma para todos los Clientes por igual | Fijar precio u horario de forma centralizada, en vez de que cada Cliente lo acuerde con su Asistente, es un indicio fuerte de subordinación bajo el art. 23 de la LCT. |
 | Exclusividad exigida por la plataforma | Exigir exclusividad reduce la libertad real del Asistente de trabajar para otros, elemento central para sostener autonomía y no dependencia (art. 23 LCT). |
 | Mediación de conflictos por la plataforma | Mediar activamente en conflictos entre Cliente y Asistente puede interpretarse como dirección del vínculo, un indicio de subordinación bajo el art. 23 de la LCT. |
 
-No generan advertencia en match (bajo riesgo): calificación por estrellas visible
+No generan advertencia en Match (bajo riesgo): calificación por estrellas visible
 como opinión sin consecuencia automática, verificación de identidad/antecedentes, toggle de
 disponibilidad del Asistente, y las herramientas de horario/penalización/calificación
 cuando las opera el Cliente sobre su propio vínculo.
@@ -148,7 +148,7 @@ Composición por causal (Argentina):
   indemnización, pero exige revisión de abogado obligatoria antes de cerrar el registro.
 - **Muerte del trabajador** (art. 248 LCT) / **muerte del empleador** (art. 249 LCT): la
   mitad de la indemnización por antigüedad; exige revisión de abogado en ambos casos. Muerte
-  del empleador solo aplica cuando el vínculo es de dependencia directa con el cliente, no
+  del empleador solo aplica cuando el vínculo es de dependencia directa con el Cliente, no
   con la Prestadora — el sistema lo advierte si no es así.
 
 Quedan fuera de este cálculo automático, en cualquier jurisdicción (no dependen de la ley de

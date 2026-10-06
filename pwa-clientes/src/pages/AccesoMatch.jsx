@@ -29,7 +29,7 @@ export default function AccesoMatch() {
     api
       .accesoMatch(id)
       .then((data) => setAcceso(data.acceso))
-      .catch((e) => setError(mensajeDeError(e, t, 'acceso del match')));
+      .catch((e) => setError(mensajeDeError(e, t, 'acceso de Match')));
   }, [id]);
 
   useEffect(() => {

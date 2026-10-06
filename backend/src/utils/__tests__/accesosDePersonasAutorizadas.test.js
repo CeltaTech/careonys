@@ -26,7 +26,7 @@ const { exigeDePersonasAutorizadas, soloElTitular, visibilidadDeLaPersona } = aw
 
 function unPedido({ esTitular = false, accesos = accesosDeFabrica(), visibilidad = visibilidadDeFabrica() } = {}) {
   return {
-    usuarioCliente: { id: 'quien-sea', clienteId: 'la-cliente', prestadoraId: 'la-prestadora', esTitular },
+    usuarioCliente: { id: 'quien-sea', clienteId: 'el-cliente', prestadoraId: 'la-prestadora', esTitular },
     visibilidadApp: visibilidad,
     accesosDePersonasAutorizadas: accesos,
   };
@@ -147,7 +147,7 @@ describe('visibilidadDeLaPersona', () => {
   });
 
   it('nunca enciende lo que la Prestadora apagó', async () => {
-    // El recorte va en un solo sentido: quita, no agrega. Si esto fallara, una instrucción de una
+    // El recorte va en un solo sentido: quita, no agrega. Si esto fallara, una instrucción de un
     // Cliente estaría levantando la decisión de quien presta el servicio.
     const visibilidad = { ...visibilidadDeFabrica(), cliente_medicacion_del_paciente: false };
     const pedido = unPedido({ visibilidad, accesos: { ...accesosDeFabrica(), persona_autorizada_medicacion: true } });

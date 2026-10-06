@@ -21,20 +21,20 @@ export const INTERRUPTOR_DE_LA_PANTALLA = {
 // de la otra decisión, y las dos tienen que decir que sí para que la pantalla se dibuje.
 //
 // SON DOS DECISIONES DISTINTAS Y NO SE MEZCLAN. El de arriba es lo que la Prestadora ofrece en
-// toda su aplicación: si apagó la medicación, no la ve ninguna Cliente suya. Éste es lo que el
-// titular de la cuenta le pidió a la Prestadora para cada persona anotada en su personas autorizadas: si le
+// toda su aplicación: si apagó la medicación, no la ve ningún Cliente suyo. Éste es lo que el
+// titular de la cuenta le pidió a la Prestadora para cada una de sus personas autorizadas: si le
 // negó los reportes a un hermano, ese hermano no los ve, aunque la Prestadora los ofrezca.
 //
 // El titular ve todo, siempre: el backend le contesta las once claves en verdadero, así que no hay
 // ningún caso especial escrito acá.
 //
 // Hay más pantallas acá que arriba porque hay cosas que la Prestadora no puede apagar —los
-// reportes, la agenda de guardias— y el titular sí le puede negar a alguien de su personas autorizadas.
+// reportes, la agenda de guardias— y el titular sí le puede negar a una de sus personas autorizadas.
 //
 // Y como allá, acá van solamente las pantallas enteras. Lo que se apaga adentro de una pantalla
 // —el mapa en vivo, el botón de calificar, el de pedir medicación— se pregunta en el único lugar
 // donde se dibuja.
-export const ACCESO_DEL_PERSONAS_AUTORIZADAS_DE_LA_PANTALLA = {
+export const ACCESO_DE_PERSONAS_AUTORIZADAS_DE_LA_PANTALLA = {
   alertas: 'persona_autorizada_alertas',
   escanearAsistente: 'persona_autorizada_verifica_con_codigo',
   acceso: 'persona_autorizada_dinero',
@@ -58,7 +58,7 @@ export const ACCESO_DEL_PERSONAS_AUTORIZADAS_DE_LA_PANTALLA = {
  */
 export function pantallaPermitida(pantalla, seVe, puedeVer) {
   const interruptor = INTERRUPTOR_DE_LA_PANTALLA[pantalla];
-  const acceso = ACCESO_DEL_PERSONAS_AUTORIZADAS_DE_LA_PANTALLA[pantalla];
+  const acceso = ACCESO_DE_PERSONAS_AUTORIZADAS_DE_LA_PANTALLA[pantalla];
 
   if (interruptor && !seVe(interruptor)) return false;
   if (acceso && !puedeVer(acceso)) return false;

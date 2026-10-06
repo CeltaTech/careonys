@@ -15,8 +15,8 @@ cual. La redacción final la aprueba el Desarrollador cuando se escriba el manua
 | Guardias | Programación de la semana, asignaciones y reemplazos. La medición está en Reportes. |
 | Guardias, vista por Asistente | Vista de carga horaria: muestra qué hace cada asistente en la semana. Los turnos se crean y se editan en la vista por servicio. |
 | Asistentes | Reclutamiento, cualificación, documentación, disponibilidad y asignaciones. |
-| Clientes | Quien contrata y paga el servicio: el cliente del paciente o un financiador. |
-| Clientes, Contratación directa | El cliente del paciente contrata y paga el servicio directamente. |
+| Clientes | Quien contrata y paga el servicio: los familiares del paciente o un financiador. |
+| Clientes, Contratación directa | Los familiares del paciente contratan y pagan el servicio directamente. |
 | Clientes, Financiadores | Obra social, prepaga o empresa que contrata y paga el servicio de sus afiliados. |
 | Empresas tercerizadas | Proveedores que ejecutan prestaciones y administran su propio personal. |
 | Facturación y pagos | Se cobra al cliente o al financiador por las horas prestadas, y se liquida a cada asistente por las que trabajó. |

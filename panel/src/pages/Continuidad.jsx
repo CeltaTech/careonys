@@ -490,7 +490,7 @@ export function Continuidad() {
       </section>
 
       {/* Va debajo y aparte: son dos hechos distintos. Arriba, las casas donde quedó cuidando
-          alguien del cliente; acá, aquellas en las que el cliente aceptó que la persona
+          un familiar; acá, aquellas en las que el Cliente aceptó que la persona
           atendida quedara sola. Un mismo turno puede tener los dos, y ninguno explica al otro. */}
       <ConsentimientosVigentes />
       </div>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-// EL HILO DE MENSAJES DEL MATCH, DIBUJADO UNA SOLA VEZ.
+// EL HILO DE MENSAJES DE MATCH, DIBUJADO UNA SOLA VEZ.
 //
 // Vive acá y no adentro de una pantalla porque lo dibujan dos aplicaciones: la del Cliente y
 // la del Asistente. Es la misma conversación mirada desde las dos puntas, y si cada una la

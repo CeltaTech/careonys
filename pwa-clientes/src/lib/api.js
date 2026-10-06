@@ -58,8 +58,8 @@ export const api = {
   pedirCodigoDeInstruccion: (id) => pedido(`/instruccion/${id}/codigo`, { method: 'POST' }),
   confirmarInstruccion: (id, codigo) => pedido(`/instruccion/${id}/confirmar`, { method: 'POST', body: JSON.stringify({ codigo }) }),
   // El pase de guardia (pendiente #113): el código que se le muestra al Asistente que llega. No
-  // lleva el Paciente adentro porque el código es de las personas autorizadas entero, y quién es ese
-  // personas autorizadas lo resuelve el backend con la sesión de quien pide, nunca con un dato de este teléfono.
+  // lleva el Paciente adentro porque el código es del Cliente entero, y quiénes son sus personas
+  // autorizadas lo resuelve el backend con la sesión de quien pide, nunca con un dato de este teléfono.
   codigoDePresencia: () => pedido('/codigo-de-presencia'),
   // Las facturas del Cliente. La lista trae la resta ya hecha —lo facturado, lo cobrado y lo
   // que falta— porque esa resta la hace la base en un solo lugar y no se vuelve a hacer acá; el
@@ -73,7 +73,7 @@ export const api = {
   // derecho de ahí. Se pide recién cuando alguien toca el botón, porque una dirección preparada
   // de antemano se vence antes de que la usen.
   direccionDelComprobante: (facturaId) => pedido(`/facturas/${facturaId}/comprobante`),
-  // La vidriera del Match. Los filtros van vacíos cuando no se eligió ninguno, y las
+  // La vidriera de Match. Los filtros van vacíos cuando no se eligió ninguno, y las
   // opciones para elegir vuelven en la misma respuesta: las arma el backend con quien está
   // realmente en la vidriera, así que un lugar sin nadie no se ofrece. Lo que viaja es cuál lugar
   // y no cómo se llama: dos localidades de provincias distintas pueden llamarse igual, y filtrar
@@ -86,7 +86,7 @@ export const api = {
     return pedido(`/match/asistentes${cola ? `?${cola}` : ''}`);
   },
   // El perfil público de una persona de la vidriera. De acá no sale ningún dato de contacto:
-  // llegar a la persona es lo que el Match vende y tiene su propio circuito.
+  // llegar a la persona es lo que Match vende y tiene su propio circuito.
   asistenteDelMatch: (id) => pedido(`/match/asistentes/${id}`),
   // VER CÓMO LLEGAR A UNA PERSONA. Son dos direcciones y no una a propósito: preguntar no cobra
   // nada y contesta qué pasaría —con qué forma, cuánto sale, si eso termina el período gratuito—,
@@ -113,7 +113,7 @@ export const api = {
   // y la pantalla no ofrece el botón.
   abrirVideollamada: (id) => pedido(`/match/conversaciones/${id}/videollamada`, { method: 'POST' }),
   // Lo que la Prestadora escribió para quien cuida en su casa. Vuelve sólo lo publicado, y no
-  // lleva el Paciente adentro: es material de la Prestadora para todo su personas autorizadas.
+  // lleva el Paciente adentro: es material de la Prestadora para todos sus Clientes.
   contenidos: () => pedido('/contenidos'),
   // LAS LLAVES QUE ESTA PERSONA GUARDA EN SUS APARATOS. Entrar con la huella no está acá: eso pasa
   // antes de tener sesión y va por su propia puerta (`lib/llaveDelDispositivo.js`). Acá está lo que

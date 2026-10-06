@@ -12,7 +12,7 @@
  *      anotada como SIN COMPROBAR para que el Coordinador la mire después.
  *   2. UN CÓDIGO EQUIVOCADO NO MARCA NADA. Es lo único que se rechaza, porque darlo por bueno
  *      sería no comprobar y decir que sí.
- *   3. A LA CLIENTE SE LE AVISA QUE LLEGÓ, Y LO DISPARA FICHAR LA ENTRADA. Un solo mensaje, con el
+ *   3. Al CLIENTE SE LE AVISA QUE LLEGÓ, Y LO DISPARA FICHAR LA ENTRADA. Un solo mensaje, con el
  *      nombre de quién llegó, sale con la llegada marcada por cualquiera de los caminos, también
  *      cuando quedó sin comprobar. Y no sale cuando la llegada no se marcó.
  *   4. EL CÓDIGO NUNCA SE GUARDA EN CLARO. De la base sale la huella y nada más.
@@ -40,7 +40,7 @@ const COMPROBACION = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
 // haciendo. Es quien puede mostrar el código cuando el Cliente no está.
 const GUARDIA_SALIENTE = '11111111-1111-1111-1111-111111111111';
 const ASISTENTE_SALIENTE = '22222222-2222-2222-2222-222222222222';
-const OTRA_CLIENTE = '33333333-3333-3333-3333-333333333333';
+const OTRO_CLIENTE = '33333333-3333-3333-3333-333333333333';
 const LAT = -34.6;
 const LNG = -58.4;
 
@@ -422,7 +422,7 @@ describe('check-in — Plan A: el código lo muestra una persona', () => {
 
   it('un código vigente de otra casa no marca nada: se compara sólo contra quien podría estar en ésta', async () => {
     codigosEnPantalla = [
-      { sujeto_tipo: 'cliente', sujeto_id: OTRA_CLIENTE, codigo_huella: huellaDelCodigo('999999'), expira_en: enUnRato(1) },
+      { sujeto_tipo: 'cliente', sujeto_id: OTRO_CLIENTE, codigo_huella: huellaDelCodigo('999999'), expira_en: enUnRato(1) },
     ];
 
     const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {

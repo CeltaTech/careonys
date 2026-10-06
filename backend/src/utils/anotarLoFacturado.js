@@ -12,7 +12,7 @@
    texto que se guarda y no se interpreta: cambia de país en país y el producto no conoce ninguno.
 
    EL VENCIMIENTO SÓLO SI VIENE. Si quien emitió no informa uno, queda el que la factura ya tenía,
-   que es el acordado con esa Cliente y calculado al generar. Pisarlo con un vacío movería una
+   que es el acordado con ese Cliente y calculado al generar. Pisarlo con un vacío movería una
    fecha que nadie decidió cambiar.
 
    LO QUE NO HACE: decidir. Si ese renglón se anota, se saltea o se rechaza lo resuelve

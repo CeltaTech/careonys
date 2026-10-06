@@ -39,7 +39,8 @@ Por quién lee. Tres partes:
 
 - **Parte I — La aplicación de los Asistentes** (33 textos). Los lee la persona que hace las
   guardias.
-- **Parte II — La aplicación de los Clientes** (34 textos). Los lee el Cliente y su personas autorizadas.
+- **Parte II — La aplicación de los Clientes** (34 textos). Los lee el Cliente y sus personas
+  autorizadas.
 - **Parte III — El Panel** (101 textos). Los lee la propia empresa, por dentro.
 
 ---
@@ -720,7 +721,8 @@ estado del certificado.
 
 # PARTE II — La aplicación de los Clientes
 
-Los lee el Cliente: el titular de la cuenta y las personas que él anotó en su personas autorizadas. **Son 34.**
+Los lee el Cliente: el titular de la cuenta y las personas que él anotó como personas
+autorizadas. **Son 34.**
 
 ---
 
@@ -773,11 +775,11 @@ llega escribiendo la dirección.
 > la Prestadora.
 
 **Dónde se ve:** en cualquier pantalla o acción que el titular no le haya dado a esa persona
-de las personas autorizadas —guardias, reportes, alertas, facturas, medicación—.
+autorizada —guardias, reportes, alertas, facturas, medicación—.
 
 **Qué lo dispara:** el servidor rechaza el pedido por falta de acceso.
 
-**Quién lo lee:** una persona de las personas autorizadas, nunca el titular.
+**Quién lo lee:** una persona autorizada, nunca el titular.
 
 **Archivo:** `pwa-clientes/src/lib/errores.js:156`
 
@@ -1117,7 +1119,7 @@ lugar del formulario de estrellas.
 **Qué lo dispara:** se llega desde una guardia concreta y esa persona no tiene permiso para
 calificar.
 
-**Quién lo lee:** una persona de las personas autorizadas.
+**Quién lo lee:** una persona autorizada.
 
 **Archivo:** `pwa-clientes/src/pages/AsistenteAsignado.jsx:155`
 
@@ -1292,7 +1294,7 @@ lista de Facturas, a la que se entra desde Mi Perfil.
 
 **Texto de hoy:**
 > Usted es el titular de la cuenta: ve todo lo que la Prestadora ofrece, y es quien decide qué
-> ve cada persona anotada en su personas autorizadas.
+> ve cada persona autorizada.
 
 **Dónde se ve:** Mi Perfil (`/perfil`), sección «Qué ve usted».
 
@@ -1319,7 +1321,7 @@ que usted no ve».
 
 **Qué lo dispara:** quien mira no es el titular, y el titular le dio acceso a todo.
 
-**Quién lo lee:** una persona de las personas autorizadas.
+**Quién lo lee:** una persona autorizada.
 
 **Archivo:** `pwa-clientes/src/pages/MiPerfil.jsx:165`
 
@@ -1339,7 +1341,7 @@ que usted no ve».
 
 **Qué lo dispara:** quien mira no es el titular. Aclara que la pantalla no es un formulario.
 
-**Quién lo lee:** una persona de las personas autorizadas.
+**Quién lo lee:** una persona autorizada.
 
 **Archivo:** `pwa-clientes/src/pages/MiPerfil.jsx:167`
 
@@ -1380,7 +1382,7 @@ nueva indicación», arriba del botón Enviar.
 
 **Qué lo dispara:** esa persona puede ver la medicación pero no pedir cambios.
 
-**Quién lo lee:** una persona de las personas autorizadas.
+**Quién lo lee:** una persona autorizada.
 
 **Archivo:** `pwa-clientes/src/pages/Medicacion.jsx:167`
 
@@ -1393,8 +1395,8 @@ nueva indicación», arriba del botón Enviar.
 **Ruta:** `instruccion.explicacion`
 
 **Texto de hoy:**
-> Esto es lo que usted le pidió a la Prestadora sobre qué ve cada persona anotada en su personas autorizadas
-> familiar. Ya está rigiendo: lo que falta es su firma.
+> Esto es lo que usted le pidió a la Prestadora sobre qué ve cada persona autorizada. Ya está
+> rigiendo: lo que falta es su firma.
 
 **Dónde se ve:** Firmar instrucción (`/instruccion`), entre el título y el texto del documento.
 
@@ -1433,7 +1435,7 @@ una opinión:
 > crear una nueva.
 
 **Dónde se ve:** cartel de error del formulario, al guardar un alta de cuenta —Usuario del
-Panel, Asistente, Cliente, personas autorizadas— o una importación masiva.
+Panel, Asistente, Cliente, persona autorizada— o una importación masiva.
 
 **Qué lo dispara:** el correo escrito ya tiene cuenta de acceso en esta misma empresa.
 
@@ -2739,7 +2741,7 @@ irían los papeles exigidos.
 
 ## 132. Esta función no se ofrece
 
-**Ruta:** `clientes.personas autorizadas.accesos_topado`
+**Ruta:** `clientes.personas_autorizadas.accesos_topado`
 
 **Texto de hoy:**
 > Esta Prestadora no ofrece esta función en su aplicación, así que no hay nada que dar. No es

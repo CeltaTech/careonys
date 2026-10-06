@@ -113,6 +113,22 @@ jobs:
           # rota en vivo. Mejor frenar acá.
           test -f dist/index.html || { echo "No hay dist/index.html: no se sube nada."; exit 1; }
 
+      # Subir a un proyecto que no existe falla. Se crea si falta y, si ya está, no se toca.
+      - name: Que el proyecto exista
+        if: steps.cambios.outputs.hay == 'si'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          ESTADO=$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${{ matrix.proyecto }}")
+          if [ "$ESTADO" = "404" ]; then
+            echo "Creando el proyecto ${{ matrix.proyecto }}."
+            npx wrangler@4 pages project create ${{ matrix.proyecto }} --production-branch=main
+          else
+            echo "El proyecto ${{ matrix.proyecto }} ya existe."
+          fi
+
       - name: Subir a Cloudflare Pages
         if: steps.cambios.outputs.hay == 'si'
         working-directory: ${{ matrix.carpeta }}

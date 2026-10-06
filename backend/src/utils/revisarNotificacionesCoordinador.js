@@ -629,7 +629,7 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
 // alarmarla si el incidente se resuelve internamente sin que llegue a necesitar su
 // intervención) — CLAUDE.md §2, "configuración sobre programación".
 //
-// SIRVE A MÁS DE UN EVENTO. La jornada que quedó abierta y la salida sin entrada le importan a la
+// SIRVE A MÁS DE UN EVENTO. La jornada que quedó abierta y la salida sin entrada le importan al
 // Cliente por el mismo motivo que el relevo que no llegó: es su Paciente el que quedó del otro
 // lado. Lo que cambia entre un evento y otro es el texto y qué guardia se mira; a quién se le
 // avisa, por qué canales y con qué condición se decide una sola vez, acá.
@@ -646,8 +646,8 @@ async function notificarClienteSiCorresponde({ evento, prestadoraId, guardiaId, 
     .single();
   if (!guardia) return;
 
-  // Un turno puede cubrir a más de un Paciente, y cada uno tiene su propia Cliente esperando.
-  // Se avisa a todas: el Cliente del segundo Paciente se quedó igual de sin cuidado que la del
+  // Un turno puede cubrir a más de un Paciente, y cada uno tiene su propio Cliente esperando.
+  // Se avisa a todos: el Cliente del segundo Paciente se quedó igual de sin cuidado que el del
   // primero, y no enterarse es exactamente lo que este mensaje existe para evitar.
   let clienteIds;
   try {

@@ -209,7 +209,7 @@ describe('qué dice el aviso', () => {
 
 describe('cuando el aviso no llega', () => {
   it('no lo anota si no había dispositivo al que mandarlo', async () => {
-    // Anotarlo sería dar por avisada a un Cliente que no recibió nada, y el mensaje no volvería a
+    // Anotarlo sería dar por avisado a un Cliente que no recibió nada, y el mensaje no volvería a
     // salir nunca. Sin anotarlo, mañana se vuelve a intentar mientras la ventana dure.
     respuestas.set('GET /rest/v1/accesos_match', [accesoPorCobrarse()]);
     elEnvioSale = false;

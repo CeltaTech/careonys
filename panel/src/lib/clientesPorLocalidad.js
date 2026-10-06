@@ -1,8 +1,8 @@
 // Dónde está cada Cliente, y cuáles quedan cuando se busca por una localidad.
 //
-// DÓNDE ESTÁ UNA CLIENTE. En sus Pacientes, que son quienes tienen domicilio: el Cliente no tiene
+// DÓNDE ESTÁ UN CLIENTE. En sus Pacientes, que son quienes tienen domicilio: el Cliente no tiene
 // uno propio. Por eso lo que se junta es un conjunto de lugares y no uno solo —dos Pacientes de la
-// misma Cliente pueden vivir en localidades distintas— y por eso el Paciente dado de baja no
+// mismo Cliente pueden vivir en localidades distintas— y por eso el Paciente dado de baja no
 // cuenta: el Cliente ya no está donde vivía quien se fue.
 //
 // SE COMPARAN IDENTIFICADORES, NUNCA NOMBRES. Lo guardado en la ficha del Paciente es cuál lugar.

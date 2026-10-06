@@ -12,7 +12,7 @@
 // no. Lo operativo lo ve todo: la protección por fila de su zona ya decide qué filas alcanza.
 //
 // Y hay una segunda pregunta, que no es quién mira sino cómo trabaja la Prestadora. Una
-// Prestadora que no trabaja en modalidad match no tiene Clientes evaluando Asistentes:
+// Prestadora que no trabaja en modalidad Match no tiene Clientes evaluando Asistentes:
 // esa pestaña no le mostraría poco, le mostraría siempre nada. Es el mismo recorte que ya hace
 // la pantalla de Calificaciones, que existe sólo en esa modalidad.
 // ---------------------------------------------------------------------------
@@ -44,7 +44,7 @@ export const PESTANAS_COORDINADOR = [
 ];
 
 /**
- * Las que dependen de que la Prestadora trabaje en modalidad match. Se nombran acá, y no
+ * Las que dependen de que la Prestadora trabaje en modalidad Match. Se nombran acá, y no
  * con un `if` adentro de la ficha, porque el día que haya una segunda el `if` se convierte en
  * dos lugares donde recordar lo mismo.
  */

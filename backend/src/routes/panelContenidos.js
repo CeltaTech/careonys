@@ -11,8 +11,8 @@
 // Prestadora reparte como quiera desde Configuración › Accesos. El producto no elige el reparto de
 // trabajo de adentro de una Prestadora.
 //
-// NO LLEVA CANDADO DE MODALIDAD. Un Cliente de prestación directa cuida en su casa igual que una
-// de match. Por eso este riel no cuelga de `panelMatch.js`.
+// NO LLEVA CANDADO DE MODALIDAD. Un Cliente de prestación directa cuida en su casa igual que uno
+// de Match. Por eso este riel no cuelga de `panelMatch.js`.
 //
 // CON QUÉ CREDENCIAL. Leer va con la de quien pide (`clienteDelPedido(req)`): la base le contesta
 // sólo lo de su Prestadora, y por eso esa consulta no lleva el filtro de la sesión. Escribir sigue

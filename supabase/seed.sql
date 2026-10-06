@@ -162,7 +162,7 @@ JOIN public.zonas_cobertura z
 
 -- ----------------------------------------------------------------------------
 -- 2. Las once cuentas: tres del Panel, cuatro Asistentes, tres Clientes y una
---    persona de las personas autorizadas
+--    persona autorizada
 --
 --    Una cuenta vive en dos lugares. En `auth.users` está el correo de acceso y
 --    la contraseña, que es lo que mira el sistema de ingreso; en
@@ -471,7 +471,7 @@ UPDATE public.clientes f
 -- Estar anotado dice quién entra, no qué ve. Qué ve cada persona sale de
 -- `permisos_personas_autorizadas`, más abajo, y para el titular no sale de ningún lado: ve todo
 -- siempre, y eso no se configura.
-INSERT INTO public.miembros_cliente (usuario_id, cliente_id, email) VALUES
+INSERT INTO public.personas_autorizadas (usuario_id, cliente_id, email) VALUES
   ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001', 'cliente.gomez@sandbox.local'),
   ('40000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002', 'cliente.lopez@sandbox.local'),
   ('40000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000003', 'cliente.morales@sandbox.local'),
@@ -518,7 +518,7 @@ INSERT INTO public.pacientes (
    ARRAY['Demencia senil', 'Movilidad reducida'], 'III',
    'Pasaje Inventado 55, Zona Sur', -34.7200, -58.3900, NULL, NULL),
 
-  -- El marido de Elena: misma Cliente, MISMO DOMICILIO, escrito igual letra por letra.
+  -- El marido de Elena: mismo Cliente, MISMO DOMICILIO, escrito igual letra por letra.
   -- Está acá para que el domicilio compartido se pueda probar de verdad (pendiente #94):
   -- el Asistente va una sola vez a esa casa y los atiende a los dos, y eso es UNA guardia
   -- sola que cubre a dos Pacientes. Sin este cuarto Paciente, los tres domicilios de la

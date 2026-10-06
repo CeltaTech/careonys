@@ -2,7 +2,7 @@ import { clienteDelPedido } from '../db/connection.js';
 import { CATALOGO_PERSONAS_AUTORIZADAS, accesosEfectivos } from './catalogoPersonasAutorizadas.js';
 import { visibilidadDelPedido } from './visibilidadPrestadora.js';
 
-// Qué le dejaron ver a esta persona de las personas autorizadas. Es la única lectura de
+// Qué le dejaron ver a esta persona autorizada. Es la única lectura de
 // `permisos_personas_autorizadas` que hace la aplicación de los Clientes, y devuelve siempre las once
 // claves resueltas —no las filas crudas—, para que ninguna ruta tenga que acordarse por su cuenta
 // del valor de fábrica ni del tope de la Prestadora.
@@ -17,9 +17,9 @@ export async function accesosDeLaPersona({ db, usuarioId, clienteId, esTitular, 
   }
 
   // Se pide por el Cliente y por la persona, que es la clave entera de la tabla. Hoy nadie está
-  // anotado en dos personas autorizadass —cada persona tiene una sola fila de membresía—, pero preguntar por
+  // anotado en dos personas autorizadas —cada persona tiene una sola fila de membresía—, pero preguntar por
   // media clave es de esas cosas que funcionan hasta el día que dejan de funcionar, y ese día
-  // devolvería los accesos que otro titular le dio en otra Cliente.
+  // devolvería los accesos que otro titular le dio en otro Cliente.
   const { data } = await db
     .from('permisos_personas_autorizadas')
     .select('clave, permitido')
@@ -33,7 +33,7 @@ export async function accesosDeLaPersona({ db, usuarioId, clienteId, esTitular, 
 // cortar el acceso y después para armar la respuesta) y no tiene sentido volver a preguntarle a la
 // base en el mismo pedido. Mismo patrón que `visibilidadDelPedido`.
 //
-// Con la credencial de quien pide: cada persona de las personas autorizadas lee sus propios accesos.
+// Con la credencial de quien pide: cada persona autorizada lee sus propios accesos.
 export async function accesosDelPedido(req) {
   if (!req.accesosDePersonasAutorizadas) {
     const visibilidad = await visibilidadDelPedido(req);
@@ -71,11 +71,11 @@ export function exigeDePersonasAutorizadas(clave) {
 }
 
 // Deja pasar solamente al titular. Lo usan las tres rutas de la firma: la hoja dice, persona por
-// persona, qué se le dio y qué se le negó a cada uno de las personas autorizadas, y eso es del titular. Además es
+// persona, qué se le dio y qué se le negó a cada persona autorizada, y eso es del titular. Además es
 // él quien firma, así que nadie más tiene por qué pedir el código ni confirmarlo.
 //
 // Va acá y no repetido ruta por ruta porque es la misma decisión: escrita tres veces, alcanza con
-// que alguien agregue una cuarta ruta y se olvide para que un miembro de las personas autorizadas pueda firmar la
+// que alguien agregue una cuarta ruta y se olvide para que una persona autorizada pueda firmar la
 // instrucción que le recorta los accesos a él mismo.
 export function soloElTitular(req, res, next) {
   if (req.usuarioCliente?.esTitular !== true) {

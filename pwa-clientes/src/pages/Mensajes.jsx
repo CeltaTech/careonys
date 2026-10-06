@@ -4,7 +4,7 @@ import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { mensajeDeError } from '../lib/errores';
 
-// LA LISTA DE CONVERSACIONES DEL MATCH.
+// LA LISTA DE CONVERSACIONES DE MATCH.
 //
 // Es el mismo archivo en las dos aplicaciones, y por eso tiene original y copia: la lista que ve
 // el Cliente y la que ve el Asistente son la misma lista mirada desde cada punta, y lo único que

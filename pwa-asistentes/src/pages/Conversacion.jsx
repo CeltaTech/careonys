@@ -5,14 +5,14 @@ import { useLocale } from '../i18n/LocaleContext';
 import { mensajeDeError } from '../lib/errores';
 import HiloDeMensajes from '../components/HiloDeMensajes';
 
-// UNA CONVERSACIÓN DEL MATCH, DESDE CUALQUIERA DE LAS DOS PUNTAS.
+// UNA CONVERSACIÓN DE MATCH, DESDE CUALQUIERA DE LAS DOS PUNTAS.
 //
 // Es el mismo archivo en las dos aplicaciones —original y copia, que genera
 // `scripts/sincronizar_copias.mjs`—, porque es la misma conversación. El hilo lo dibuja
 // `components/HiloDeMensajes.jsx`, que también es uno solo.
 //
 // QUIÉN ES «YO». El backend manda `asistente` cuando quien mira es el Cliente y `cliente` cuando
-// quien mira es el Asistente: quien ve el nombre de un Asistente del otro lado es, justamente, la
+// quien mira es el Asistente: quien ve el nombre de un Asistente del otro lado es, justamente, el
 // Cliente. Así la pantalla no necesita saber en cuál de las dos aplicaciones está corriendo.
 //
 // EL TAPADO NO SE DECIDE ACÁ, NI SIQUIERA EN EL BACKEND. Lo tapa la base antes de guardar el

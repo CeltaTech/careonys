@@ -29,7 +29,7 @@ function fechaLegible(fecha) {
 
 // `personas` es una lista de `{ nombre, email, accesos }`, donde `accesos` es el objeto plano
 // clave → permitido que ya pasó por el tope de la Prestadora. El orden de las personas y el de los
-// accesos es el que se ve: el del catálogo, siempre igual, para que dos documentos de la misma
+// accesos es el que se ve: el del catálogo, siempre igual, para que dos documentos del mismo
 // Cliente se puedan comparar renglón por renglón.
 export function textoDeLaInstruccion({ prestadora, titular, personas, cargadaPor, fecha }) {
   const cuando = fecha ?? new Date();

@@ -73,7 +73,7 @@ Se evalúa:
 Se responde SOLO con JSON:
 {
   "nivel": "verde"|"amarilla"|"roja",
-  "descripcion": string (max 150 chars, en español, para mostrar al cliente),
+  "descripcion": string (max 150 chars, en español, para mostrar al Cliente),
   "detalle_coordinador": string (más técnico, para el coordinador),
   "campos_preocupantes": [string]
 }

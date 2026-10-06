@@ -46,11 +46,11 @@ export const LISTAS_DE_OPCIONES_DE_FABRICA = {
       },
     ],
   },
-  medios_de_pago_de_la_cliente: {
+  medios_de_pago_del_cliente: {
     i18n: {
       'es-AR': 'Medios de pago del Cliente',
-      en: 'Family payment methods',
-      'pt-BR': 'Meios de pagamento da Família',
+      en: 'Client payment methods',
+      'pt-BR': 'Meios de pagamento do Cliente',
     },
     admite_opciones_propias: true,
     opciones: [

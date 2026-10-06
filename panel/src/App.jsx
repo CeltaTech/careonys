@@ -150,7 +150,7 @@ function App() {
                     <Route path="servicios" element={<Servicios />} />
                     {/* La biblioteca que la Prestadora escribe para quien cuida en su casa. Sin
                         candado de modalidad: un Cliente de prestación directa cuida en su casa
-                        igual que una de match. Verla la ve cualquiera del Panel —un
+                        igual que uno de Match. Verla la ve cualquiera del Panel —un
                         borrador hay que poder revisarlo—; escribirla es un permiso, y quien lo
                         niega de verdad es el backend. */}
                     <Route path="contenidos" element={<ContenidoParaClientes />} />

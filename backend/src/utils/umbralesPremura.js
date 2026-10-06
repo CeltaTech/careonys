@@ -23,6 +23,34 @@ export function intervaloParaPremura(umbrales, minutosPremura) {
   return 60;
 }
 
+// LA EMERGENCIA NO ESPERA LOS TRAMOS. Un aviso de emergencia que llega tarde puede costar una
+// vida, así que no comparte el ritmo de una llegada demorada: tiene su propio intervalo, uno
+// solo, en `configuracion_escalada_coordinador.minutos_insistencia_emergencia`. Cada Prestadora lo
+// cambia, y la columna nace en un minuto.
+//
+// El tope de una hora no es una regla del producto sino el borde de lo razonable: más que eso ya
+// no es insistir. Lo mismo dice la restricción de la columna en la base.
+export const MINUTOS_INSISTENCIA_EMERGENCIA = { minimo: 1, maximo: 60 };
+
+function minutosDeEmergenciaValidos(valor) {
+  const { minimo, maximo } = MINUTOS_INSISTENCIA_EMERGENCIA;
+  return Number.isInteger(valor) && valor >= minimo && valor <= maximo;
+}
+
+// Si el número no se pudo leer, se insiste con los tramos generales y no con un número inventado
+// acá: la base no deja guardar uno fuera de borde, así que esto sólo pasa si la columna no llegó.
+export function intervaloDeEmergencia(config, minutosPremura) {
+  const minutos = config?.minutos_insistencia_emergencia;
+  if (minutosDeEmergenciaValidos(minutos)) return minutos;
+  return intervaloParaPremura(config?.umbrales_premura, minutosPremura);
+}
+
+export function validarMinutosEmergencia(valor) {
+  if (typeof valor !== 'boolean' && minutosDeEmergenciaValidos(Number(valor))) return null;
+  const { minimo, maximo } = MINUTOS_INSISTENCIA_EMERGENCIA;
+  return `Cada cuántos minutos se insiste con una emergencia tiene que ser un número entero entre ${minimo} y ${maximo}.`;
+}
+
 // Devuelve null si la lista está bien armada, o el motivo en castellano si no.
 //
 // El motivo se le muestra a una persona que administra una Prestadora, así que no nombra

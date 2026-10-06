@@ -8,7 +8,7 @@ import { escalonesYaAvisados, escalarSiCorresponde } from './avisosDeEscalon.js'
 import { necesitaNotificar } from './insistencia.js';
 import { correrFaseAutomatica } from './faseAutomaticaRelevo.js';
 import { pacientesDeGuardia, pacientesDeGuardias } from './pacientesDeGuardia.js';
-import { intervaloParaPremura } from './umbralesPremura.js';
+import { intervaloParaPremura, intervaloDeEmergencia } from './umbralesPremura.js';
 import { reglaDeLaToma, tomadasAhora } from './tomasDeAlarma.js';
 import { TIPOS_DE_ALARMA } from './alarmasTomadas.js';
 import { horasEntre } from './horasDeGuardia.js';
@@ -421,12 +421,13 @@ async function revisarAlertas(config, ahora, idioma, reglaDeLasTomas) {
   }
 }
 
-// La emergencia que nadie atendió entra en la misma escalera que las demás alarmas: insiste a quien
+// La emergencia que nadie atendió insiste a su propio ritmo, más corto que el de las demás alarmas,
+// y sube por la misma escalera que ellas: insiste a quien
 // coordina y, si nadie la toma, sube a todos los Coordinadores y después a la administración. El
 // mensaje es el mismo que salió cuando el Asistente la avisó, y dice de qué guardia se trata y nada
 // más: lo que escribió el Asistente se lee en el Panel.
 async function revisarEmergencias(config, ahora, idioma, reglaDeLasTomas) {
-  const { prestadora_id: prestadoraId, umbrales_premura: umbrales } = config;
+  const { prestadora_id: prestadoraId } = config;
 
   const { data: emergencias, error } = await supabase
     .from('emergencias_guardia')
@@ -463,7 +464,8 @@ async function revisarEmergencias(config, ahora, idioma, reglaDeLasTomas) {
       horaInicio: guardia.horaInicio,
     });
     const minutosPremura = (ahora.getTime() - new Date(emergencia.reportado_at).getTime()) / 60_000;
-    const intervalo = intervaloParaPremura(umbrales, minutosPremura);
+    // Con su propio ritmo, no con los tramos de las demás alarmas: ver `intervaloDeEmergencia`.
+    const intervalo = intervaloDeEmergencia(config, minutosPremura);
 
     if (necesitaNotificar({ ultimaNotificacionAt: emergencia.ultima_notificacion_at, intervaloMinutos: intervalo, ahora })) {
       await notificarCoordinador({ evento: 'emergencia_en_guardia', prestadoraId, ...mensaje });

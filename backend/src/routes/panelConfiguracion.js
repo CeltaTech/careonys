@@ -17,7 +17,7 @@ import { cosaDelCatalogo, mezclarVisibilidadConCatalogo } from '../utils/catalog
 import { mensajeDeTextoQueSeGuarda } from '../utils/viaMensajeDeTexto.js';
 import { hayProveedorDeMensajeDeTexto, proveedorDeMensajeDeTexto } from '../utils/mensajeDeTexto.js';
 import { LIMITES_ALERTAS_IA, VALORES_POR_DEFECTO_ALERTAS_IA } from '../utils/revisarAlertasIA.js';
-import { validarUmbralesPremura } from '../utils/umbralesPremura.js';
+import { validarUmbralesPremura, validarMinutosEmergencia } from '../utils/umbralesPremura.js';
 import { MINUTOS_QUE_SE_PUEDEN_TOCAR } from '../utils/ordenDeLaEscalada.js';
 import {
   PERFIL_POR_DEFECTO,
@@ -2456,7 +2456,15 @@ panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
     fase_automatica_activa, minutos_antes_fase_automatica,
     minutos_gracia_cierre_guardia, horas_antes_aviso_grave_sin_cerrar,
     minutos_antes_todos_los_coordinadores, minutos_antes_administracion,
+    minutos_insistencia_emergencia,
   } = req.body;
+
+  // Lo mismo que los minutos de abajo: la base rechazaría el valor fuera de borde con un error
+  // suyo, y esto contesta uno que se entiende.
+  if (minutos_insistencia_emergencia !== undefined) {
+    const problemaEmergencia = validarMinutosEmergencia(minutos_insistencia_emergencia);
+    if (problemaEmergencia) return res.status(400).json({ error: problemaEmergencia });
+  }
 
   // Los tramos deciden cada cuánto se le vuelve a insistir al Coordinador. Antes se guardaban
   // sin mirarlos, y una lista mal armada no rompía nada acá: rompía después, callada, en
@@ -2529,6 +2537,9 @@ panelConfiguracionRouter.patch('/escalada-coordinador', async (req, res) => {
       ...(horas_antes_aviso_grave_sin_cerrar === undefined
         ? {}
         : { horas_antes_aviso_grave_sin_cerrar }),
+      ...(minutos_insistencia_emergencia === undefined
+        ? {}
+        : { minutos_insistencia_emergencia: Number(minutos_insistencia_emergencia) }),
       minutos_antes_todos_los_coordinadores: enMinutosOApagado(minutos_antes_todos_los_coordinadores),
       minutos_antes_administracion: enMinutosOApagado(minutos_antes_administracion),
       updated_at: new Date().toISOString(),

@@ -9,7 +9,12 @@
 import { strict as assert } from 'node:assert';
 import { describe, it } from 'node:test';
 
-import { intervaloParaPremura, validarUmbralesPremura } from '../umbralesPremura.js';
+import {
+  intervaloParaPremura,
+  validarUmbralesPremura,
+  intervaloDeEmergencia,
+  validarMinutosEmergencia,
+} from '../umbralesPremura.js';
 
 const DE_FABRICA = [
   { maximo_minutos: 60, intervalo_minutos: 10 },
@@ -80,5 +85,36 @@ describe('validarUmbralesPremura', () => {
 
   it('un tramo que no es un tramo', () => {
     assert.ok(validarUmbralesPremura(['diez minutos']));
+  });
+});
+
+describe('intervaloDeEmergencia', () => {
+  it('insiste con su propio número, no con los tramos', () => {
+    const config = { minutos_insistencia_emergencia: 1, umbrales_premura: DE_FABRICA };
+    assert.equal(intervaloDeEmergencia(config, 5), 1);
+    assert.equal(intervaloDeEmergencia(config, 300), 1);
+  });
+
+  it('respeta el número que puso la Prestadora', () => {
+    assert.equal(intervaloDeEmergencia({ minutos_insistencia_emergencia: 3, umbrales_premura: DE_FABRICA }, 5), 3);
+  });
+
+  it('sin el número, cae a los tramos generales y no a uno inventado', () => {
+    assert.equal(intervaloDeEmergencia({ umbrales_premura: DE_FABRICA }, 5), 10);
+    assert.equal(intervaloDeEmergencia({ minutos_insistencia_emergencia: 0, umbrales_premura: DE_FABRICA }, 5), 10);
+  });
+});
+
+describe('validarMinutosEmergencia', () => {
+  it('acepta de uno a sesenta, también escrito como texto', () => {
+    assert.equal(validarMinutosEmergencia(1), null);
+    assert.equal(validarMinutosEmergencia(60), null);
+    assert.equal(validarMinutosEmergencia('5'), null);
+  });
+
+  it('rechaza lo que está fuera de borde o no es un entero', () => {
+    for (const valor of [0, 61, -1, 1.5, '', null, 'abc', true]) {
+      assert.notEqual(validarMinutosEmergencia(valor), null, `debería rechazar ${JSON.stringify(valor)}`);
+    }
   });
 });

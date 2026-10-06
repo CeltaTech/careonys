@@ -91,7 +91,7 @@ bien —su acto ya está guardado— y la fila queda sin marca de notificada.
 
 **El detalle no viaja por el canal público.** El mensaje inmediato dice que hay una emergencia, de
 qué guardia y de cuándo; el texto que escribió el Asistente es información sensible
-(`celtatech/CLAUDE.md` §6) y se lee entrando al Panel, en «Emergencias avisadas»
+(`celtatech/CLAUDE.md` §6) y se lee entrando al Panel, en «Emergencias»
 (`panel/src/pages/EmergenciasEnGuardia.jsx`, `backend/src/routes/panelEmergencias.js`). Ahí se
 marca atendida con una nota de qué se hizo, y queda con nombre y hora.
 

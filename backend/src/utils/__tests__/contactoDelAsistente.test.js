@@ -3,7 +3,7 @@
  *
  *   npm test --prefix backend
  *
- * QUÉ SE PRUEBA ACÁ. Lo que decide plata y no está en la base: con cuál de los accesos de la
+ * QUÉ SE PRUEBA ACÁ. Lo que decide plata y no está en la base: con cuál de los accesos del
  * Cliente se paga, qué se le muestra a quien no mira el dinero, y que el período gratuito termine
  * exactamente cuando se abrió un contacto nuevo y en ningún otro caso. El descuento del saldo es
  * de la base y está probado en `contactosMatch.test.js`.

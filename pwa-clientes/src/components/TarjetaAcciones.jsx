@@ -8,7 +8,7 @@ import { pantallaPermitida } from '../lib/interruptorDeCadaPantalla';
  * La tarjeta «Acciones» de la maqueta: la columna de botones blancos que lleva a cada pantalla.
  *
  * Con un Paciente abierto van primero las que cuelgan de él; después, siempre, las que son del
- * personas autorizadas entero y que no entraron en los cuatro botones de la barra de abajo.
+ * Cliente entero y que no entraron en los cuatro botones de la barra de abajo.
  *
  * Cada botón pregunta lo mismo que pregunta la ruta que abre, con la misma función: si
  * contestaran distinto quedaría un botón que rebota, o una pantalla sin puerta de entrada.
@@ -67,7 +67,7 @@ export default function TarjetaAcciones({ pacienteId }) {
             {t.nav.buscar}
           </Link>
         )}
-        {/* El código para el Asistente que llega es de las personas autorizadas entero: va en todas
+        {/* El código para el Asistente que llega es del Cliente entero: va en todas
             las tarjetas de acciones, con o sin Paciente abierto. */}
         <Link to="/codigo" className="btn">
           {t.nav.codigo}

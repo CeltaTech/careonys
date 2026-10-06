@@ -57,7 +57,7 @@ para mantener esa salida siempre abierta:
 
 Ninguna de estas reglas frena el desarrollo actual — son restricciones de diseño, no
 trabajo extra significativo. El backup propio es la única tarea pendiente concreta, a
-implementar antes de que haya datos reales de pacientes/Asistentes/clientes en producción
+implementar antes de que haya datos reales de pacientes/Asistentes/Clientes en producción
 (no es urgente mientras solo haya datos de prueba).
 
 ## RBAC — roles del sistema
@@ -71,7 +71,7 @@ de este proyecto, con alcance distinto, no el que traía Money Suite):
 |---|---|
 | `superadmin` | Técnico (código/infra/base de datos), sin carácter administrativo de negocio. Su acceso ordinario de Panel es únicamente la prestadora de prueba fija (Sandbox). Para entrar a una prestadora real hace falta un **permiso de acceso**, que abre CeltaTech desde su lado: una prestadora por vez, acotado en el tiempo y auditado — ver abajo. Login propio, MFA obligatorio |
 | `admin_prestadora` | Todo el negocio de su propia prestadora (cero visibilidad de otras prestadoras) |
-| `coordinador` | Su zona asignada (clientes, pacientes, guardias, Asistentes de esa zona), dentro de su propia prestadora |
+| `coordinador` | Su zona asignada (Clientes, pacientes, guardias, Asistentes de esa zona), dentro de su propia prestadora |
 | `asistente` | Sus propias guardias, su perfil, su certificado |
 | `cliente` | Sus pacientes, reportes y alertas de sus pacientes |
 
@@ -209,7 +209,7 @@ Cada tabla nueva necesita RLS antes de mergear el PR que la crea. Ejemplos ofici
 CREATE POLICY "asistente_ve_sus_guardias" ON guardias
   FOR SELECT USING (asistente_id = auth.uid() AND prestadora_id = current_tenant());
 
--- Clientes solo ven los reportes de sus pacientes
+-- Los Clientes solo ven los reportes de sus pacientes
 CREATE POLICY "cliente_ve_sus_reportes" ON reportes
   FOR SELECT USING (
     guardia_id IN (
@@ -291,9 +291,8 @@ ficha completa del Asistente asignado. La aplicación de Clientes nunca consulta
 —pide todo por el backend—, así que era una puerta abierta sin uso.
 
 **El estado de cuenta del Cliente lo ve la administración.** Cuánto debe cada Cliente y si está
-atrasada se veía con el solo hecho de tener un rol de Panel, o sea también desde la coordinación
-de turnos, que arma las guardias y no interviene en el trato económico. Desde
-`20260920100000_el_estado_de_cuenta_de_la_cliente_lo_ve_la_administracion.sql` eso entra por la
+atrasado se veía con el solo hecho de tener un rol de Panel, o sea también desde la coordinación
+de turnos, que arma las guardias y no interviene en el trato económico. Ahora eso entra por la
 acción `ver_estado_de_cuenta_cliente` del catálogo `catalogo_acciones_permisos`, que nace
 reservada a la administración y que cada Prestadora abre o cierra desde su Panel.
 
@@ -301,7 +300,7 @@ Donde manda es en el backend, porque entra a la base con la llave de servicio: e
 `requierePermiso('ver_estado_de_cuenta_cliente')` cierra en `backend/src/routes/panelCobros.js`
 las seis rutas que entregan o mueven el estado de cuenta —los saldos, el que llegó de afuera, el
 detalle de una factura, anotar un cobro, anularlo y la entrada de lotes—. Lo que sirve para
-facturar no lo lleva, y que un Cliente quedó restringida tampoco: no dice cuánto
+facturar no lo lleva, y que un Cliente quedó restringido tampoco: no dice cuánto
 debe, y quien coordina necesita verlo para trabajar. La política de lectura de
 `estados_de_cuenta_externos` pide además esa acción, como segunda red para el día en que esa
 tabla se lea con la credencial de una persona. `saldos_cliente` no se tocó: su política alcanza también
@@ -337,7 +336,7 @@ para trabajar, y la lista de omisiones de esa vista nunca fue un criterio pensad
 de lo sensible se escribió de nuevo acá, no se heredó de la vista.
 
 Para `coordinador`, la policy de "su zona" debe filtrar por el campo `zonas` del
-Coordinador contra la zona de la `cliente`/`asistente` — no dar acceso total a
+Coordinador contra la zona del `cliente`/`asistente` — no dar acceso total a
 `coordinador` salvo en las tablas donde el PRD lo indica explícitamente.
 
 **Estado real (actualizado 2026-07-09):** implementado y aplicado contra Supabase real
@@ -377,8 +376,8 @@ CREATE POLICY prestadora_administra_sus_formas_de_cobro ON formas_de_cobro_match
 CREATE POLICY cliente_ve_las_formas_ofrecidas ON formas_de_cobro_match
   FOR SELECT USING (
     ofrecida
-    AND prestadora_id = (SELECT f.prestadora_id FROM clientes f
-                         WHERE f.id = interno.cliente_id_de_usuario(auth.uid()))
+    AND prestadora_id = (SELECT c.prestadora_id FROM clientes c
+                         WHERE c.id = interno.cliente_id_de_usuario(auth.uid()))
   );
 ```
 
@@ -388,7 +387,7 @@ adhirieron a ella siguen apuntando a su fila. Las demás tablas de la modalidad 
 reparto de siempre —`cliente_ve_su_acceso_match` / `prestadora_ve_accesos_match`,
 `cliente_ve_los_cobros_de_su_acceso` / `prestadora_ve_cobros_match` /
 `panel_registra_cobro_efectivo_manual`, y las tres de `qr_cobro_efectivo`—, renombradas al pasar
-de suscripción a acceso. Ninguna Cliente ve el acceso ni el cobro de otra, y ninguna Prestadora
+de suscripción a acceso. Ningún Cliente ve el acceso ni el cobro de otro, y ninguna Prestadora
 ve nada de otra Prestadora.
 
 **Y las unidades de tiempo salen de una tabla del producto, no de cada Prestadora.**

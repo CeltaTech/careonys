@@ -3,7 +3,7 @@
  *
  * Lo que se cuida acá es lo que convierte una instrucción firmada en una decoración: que una clave
  * se renombre —y con eso se pierda lo que el titular ya pidió—, que un acceso nuevo arranque
- * apagado sin que nadie lo haya decidido, que el tope de la Prestadora se pueda levantar desde una
+ * apagado sin que nadie lo haya decidido, que el tope de la Prestadora se pueda levantar desde un
  * Cliente, y que un formulario incompleto termine negando lo que nadie negó.
  *
  *   npm test --prefix backend
@@ -13,7 +13,7 @@ import { describe, it } from 'node:test';
 
 import {
   CATALOGO_PERSONAS_AUTORIZADAS,
-  CLAVES_DEL_PERSONAS_AUTORIZADAS,
+  CLAVES_DE_PERSONAS_AUTORIZADAS,
   cosaDelCatalogo,
   accesosDeFabrica,
   accesosDelTitular,
@@ -29,7 +29,7 @@ const LAS_DOS_DE_ESCRITURA = ['persona_autorizada_califica_al_asistente', 'perso
 
 describe('catálogo de las personas autorizadas', () => {
   it('no hay dos accesos con la misma clave', () => {
-    assert.equal(new Set(CLAVES_DEL_PERSONAS_AUTORIZADAS).size, CLAVES_DEL_PERSONAS_AUTORIZADAS.length);
+    assert.equal(new Set(CLAVES_DE_PERSONAS_AUTORIZADAS).size, CLAVES_DE_PERSONAS_AUTORIZADAS.length);
   });
 
   it('cada acceso tiene sus cinco datos', () => {
@@ -52,7 +52,7 @@ describe('catálogo de las personas autorizadas', () => {
 
   it('todo interruptor nombrado existe de verdad en el catálogo de la Prestadora', () => {
     // Es la prueba que atrapa el error más silencioso de los dos catálogos: un interruptor mal
-    // escrito no rompe nada, simplemente deja de topar. La Prestadora apagaría el mapa y la
+    // escrito no rompe nada, simplemente deja de topar. La Prestadora apagaría el mapa y el
     // Cliente lo seguiría viendo, sin ningún error en ningún lado.
     const deLaPrestadora = visibilidadDeFabrica();
     for (const cosa of CATALOGO_PERSONAS_AUTORIZADAS) {
@@ -64,7 +64,7 @@ describe('catálogo de las personas autorizadas', () => {
     }
   });
 
-  it('de fábrica las personas autorizadas ve todo, y las dos acciones de escritura vienen negadas', () => {
+  it('de fábrica las personas autorizadas ven todo, y las dos acciones de escritura vienen negadas', () => {
     // Es exactamente lo que el producto hacía antes de esta función: quien no pida ningún cambio
     // no tiene que notar ninguno.
     for (const cosa of CATALOGO_PERSONAS_AUTORIZADAS) {
@@ -121,7 +121,7 @@ describe('accesosEfectivos', () => {
     assert.ok(Object.values(efectivos).every((valor) => typeof valor === 'boolean'));
   });
 
-  it('el tope de la Prestadora manda: ninguna Cliente puede encender lo que ella apagó', () => {
+  it('el tope de la Prestadora manda: ningún Cliente puede encender lo que ella apagó', () => {
     const visibilidad = { ...visibilidadDeFabrica(), cliente_ubicacion_en_vivo: false };
     const efectivos = accesosEfectivos({
       esTitular: false,
@@ -192,7 +192,7 @@ describe('accesosParaGuardar', () => {
     // solamente lo que vino negaría accesos que nadie negó.
     const paraGuardar = accesosParaGuardar({ pedido: { persona_autorizada_dinero: false } });
     assert.equal(paraGuardar.length, CATALOGO_PERSONAS_AUTORIZADAS.length);
-    assert.deepEqual(paraGuardar.map((fila) => fila.clave), CLAVES_DEL_PERSONAS_AUTORIZADAS);
+    assert.deepEqual(paraGuardar.map((fila) => fila.clave), CLAVES_DE_PERSONAS_AUTORIZADAS);
   });
 
   it('lo que no vino en el pedido se guarda con su valor de fábrica', () => {

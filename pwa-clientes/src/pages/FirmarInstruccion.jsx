@@ -1,4 +1,4 @@
-// La hoja que firma el titular de la cuenta: qué puede ver cada persona de su personas autorizadas.
+// La hoja que firma el titular de la cuenta: qué puede ver cada una de sus personas autorizadas.
 //
 // CÓMO SE FIRMA, Y POR QUÉ ASÍ. El titular le dice a la Prestadora qué quiere, la Prestadora lo
 // carga, el sistema arma el documento y acá se lo muestra tal cual quedó guardado. Firmar es

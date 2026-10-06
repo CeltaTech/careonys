@@ -15,12 +15,12 @@
  *      Escribir sigue con la llave de servicio, que se saltea la protección por fila, así que ahí
  *      lo único que separa a una de otra son los filtros escritos en cada consulta. Si falta uno,
  *      no falla nada: contesta de más.
- *   2. QUE UN BORRADOR LLEGUE A UNA CLIENTE. Publicar es una decisión de quien escribe, y hasta
+ *   2. QUE UN BORRADOR LLEGUE A UN CLIENTE. Publicar es una decisión de quien escribe, y hasta
  *      que la toma lo escrito existe sólo del lado del Panel.
  *   3. QUE ESCRIBA QUIEN LA PRESTADORA NO HABILITÓ. Leer la biblioteca es de cualquiera del
  *      Panel —un borrador hay que poder revisarlo—; escribirla es una acción del catálogo de
  *      permisos, y quien niega de verdad es el backend.
- *   4. QUE UN ENLACE LLEVE A CUALQUIER LADO. Lo que se guarda termina en un enlace que toca una
+ *   4. QUE UN ENLACE LLEVE A CUALQUIER LADO. Lo que se guarda termina en un enlace que toca un
  *      Cliente, así que se admite una dirección cifrada y nada más.
  *
  * Los datos son inventados.
@@ -112,7 +112,7 @@ async function pedir(metodo, ruta, cuerpo) {
 }
 
 const enElPanel = (ruta, metodo = 'GET', cuerpo) => pedir(metodo, `/api/panel/contenidos${ruta}`, cuerpo);
-const enLaCliente = (ruta) => pedir('GET', `/api/app-clientes${ruta}`);
+const enElCliente = (ruta) => pedir('GET', `/api/app-clientes${ruta}`);
 
 const CONTENIDO_EN_LA_BASE = {
   id: CONTENIDO,
@@ -133,11 +133,11 @@ function sesionDelPanel() {
 }
 
 /** La sesión de la titular de un Cliente. */
-function sesionDeLaCliente() {
+function sesionDelCliente() {
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'cliente', prestadora_id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE }]);
-  respuestas.set('GET /rest/v1/miembros_cliente', () => []);
+  respuestas.set('GET /rest/v1/personas_autorizadas', () => []);
 }
 
 beforeEach(() => {
@@ -326,7 +326,7 @@ describe('la biblioteca del lado del Cliente', () => {
   beforeEach(() => {
     respuestas.clear();
     llamadas = [];
-    sesionDeLaCliente();
+    sesionDelCliente();
   });
 
   it('sale lo publicado de su Prestadora, y nada más', async () => {
@@ -334,7 +334,7 @@ describe('la biblioteca del lado del Cliente', () => {
       { id: CONTENIDO, titulo: 'Algo', cuerpo: 'Texto', enlace_url: null, updated_at: '2026-09-01T10:00:00Z' },
     ]);
 
-    const { estado, cuerpo } = await enLaCliente('/contenidos');
+    const { estado, cuerpo } = await enElCliente('/contenidos');
     assert.equal(estado, 200);
     assert.equal(cuerpo.contenidos.length, 1);
 
@@ -350,7 +350,7 @@ describe('la biblioteca del lado del Cliente', () => {
       { id: CONTENIDO, titulo: 'Algo', cuerpo: 'Texto', enlace_url: null, updated_at: '2026-09-01T10:00:00Z' },
     ]);
 
-    await enLaCliente('/contenidos');
+    await enElCliente('/contenidos');
 
     const consulta = consultasALaBiblioteca()[0];
     const pedido = new URL(consulta.url, 'http://interno').searchParams.get('select');
@@ -361,7 +361,7 @@ describe('la biblioteca del lado del Cliente', () => {
 
   it('quien no es de un Cliente no entra', async () => {
     respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'coordinador', prestadora_id: PRESTADORA }]);
-    const { estado } = await enLaCliente('/contenidos');
+    const { estado } = await enElCliente('/contenidos');
     assert.equal(estado, 403);
   });
 });

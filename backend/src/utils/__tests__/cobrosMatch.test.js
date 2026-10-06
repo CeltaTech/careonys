@@ -492,7 +492,7 @@ describe('el trabajo diario que arma los cobros del período', () => {
   });
 
   it('la referencia que se le da al proveedor identifica el período, no el acceso', async () => {
-    // Es lo que permite que dos períodos de la misma Cliente no se confundan cuando vuelve la
+    // Es lo que permite que dos períodos del mismo Cliente no se confundan cuando vuelve la
     // respuesta del proveedor: con la referencia del acceso, el cobro del segundo período pisaría
     // al del primero.
     base();

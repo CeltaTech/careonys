@@ -20,7 +20,7 @@
    en vez de inventarle un período.
 
    NO SE DA DE ALTA DOS VECES. `alta_en_pasarela` es la marca: con esa fecha puesta, el acceso ya
-   existe en el proveedor y volver a crearlo dejaría dos cobros recurrentes vivos por la misma
+   existe en el proveedor y volver a crearlo dejaría dos cobros recurrentes vivos por el mismo
    Cliente. Se contesta lo que ya está guardado y no se llama a nadie.
 
    ACÁ EMPIEZA EL PERÍODO GRATUITO, Y POR ESO ACÁ SE ESCRIBE. `formas_de_cobro_match.dias_gratis`
@@ -146,9 +146,9 @@ export async function darDeAltaEnPasarela({ accesoId, prestadoraId, proveedor = 
     credencial = data;
   }
 
-  const emailPagador = await correoDeLaCliente(acceso.cliente_id, prestadoraId);
+  const emailPagador = await correoDelCliente(acceso.cliente_id, prestadoraId);
   // Dos rieles lo exigen y los demás lo ignoran, pero el corte se hace acá para todos: un acceso
-  // cuya Cliente no tiene correo no se puede cobrar en ninguno, porque tampoco hay adónde mandarle
+  // cuyo Cliente no tiene correo no se puede cobrar en ninguno, porque tampoco hay adónde mandarle
   // el comprobante ni el preaviso.
   if (!emailPagador) {
     return { ok: false, motivo: MOTIVO_ALTA.SIN_CORREO_DE_CLIENTE };
@@ -264,7 +264,7 @@ async function resolverRiel({ prestadoraId, proveedor }) {
  *  Dos pasos, y los dos hacen falta: `clientes.id` es el Legajo, no la cuenta —dejaron de ser el
  *  mismo número—, así que primero se busca de qué cuenta cuelga ese Legajo y recién ahí el correo,
  *  que vive en `usuarios`. */
-async function correoDeLaCliente(clienteId, prestadoraId) {
+async function correoDelCliente(clienteId, prestadoraId) {
   if (!clienteId || !prestadoraId) return null;
   return correoDe({
     prestadoraId,

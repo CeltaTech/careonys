@@ -103,7 +103,7 @@ export default function Guardias() {
                     {g.hora_inicio?.slice(0, 5)} - {g.hora_fin?.slice(0, 5)}
                   </div>
                   <div className="mini-abajo">
-                    {/* Quién canceló manda sobre el estado: "cancelada" a secas deja a la
+                    {/* Quién canceló manda sobre el estado: "cancelada" a secas deja al
                         Cliente sin saber si fue una decisión suya o de la Prestadora. */}
                     <span className="badge">
                       {g.cancelacion_origen

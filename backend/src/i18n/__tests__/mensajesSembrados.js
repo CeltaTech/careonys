@@ -27,15 +27,28 @@ export const RUTAS_DE_LAS_MIGRACIONES = MIGRACIONES_CON_FRASES.map((archivo) => 
 
 const FILA = /^\s*\('([a-z_.]+)',\s*(true|false),\s*'(\{.*\})'\),?\r?$/gm;
 
+// El renombre de las palabras retiradas cambió claves ya sembradas: se aplica encima de la siembra.
+const RENOMBRE = fileURLToPath(new URL(
+  '../../../../supabase/migrations/20261015000000_renombre_palabras_retiradas.sql', import.meta.url
+));
+const CLAVE_RENOMBRADA = /^update public\.mensajes_del_sistema set clave = \$r\$([^$]+)\$r\$::text where clave = \$r\$([^$]+)\$r\$::text;\r?$/gm;
+
+function clavesRenombradas() {
+  const nuevas = new Map();
+  for (const [, nueva, vieja] of readFileSync(RENOMBRE, 'utf8').matchAll(CLAVE_RENOMBRADA)) nuevas.set(vieja, nueva);
+  return nuevas;
+}
+
 /** Las filas sembradas por las migraciones, en la forma en que las devuelve la base. */
 export function filasSembradas() {
+  const renombradas = clavesRenombradas();
   const filas = [];
   for (const ruta of RUTAS_DE_LAS_MIGRACIONES) {
     // Se juntan en un renglón la clave y el texto que la migración escribió en dos.
     const sql = readFileSync(ruta, 'utf8').replace(/,\s*(true|false),\r?\n\s*'/g, ", $1, '");
     for (const [, clave, admite, json] of sql.matchAll(FILA)) {
       filas.push({
-        clave,
+        clave: renombradas.get(clave) ?? clave,
         prestadora_id: null,
         activo: true,
         admite_texto_propio: admite === 'true',

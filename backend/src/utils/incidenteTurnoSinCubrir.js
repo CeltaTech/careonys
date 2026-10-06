@@ -18,7 +18,7 @@
 // por qué. Como todo número de este producto, cada Prestadora lo corre si su realidad es otra.
 //
 // EL CIERRE NO ES UN TRÁMITE. Que nadie haya ido no es un turno cubierto: es un defecto grave que
-// no se pudo solucionar, y así queda escrito. El cliente contrató para no tener que quedarse; que
+// no se pudo solucionar, y así queda escrito. El Cliente contrató para no tener que quedarse; que
 // se haya quedado igual puede costar el servicio. Por eso lo que se elige al cerrar cambia lo que
 // el incidente significa.
 //
@@ -75,7 +75,7 @@ export const CIERRES = {
   LO_CUBRIO_LA_COORDINADORA: 'lo_cubrio_la_coordinadora',
   /** Siguió quien ya estaba adentro. */
   SE_EXTENDIO_EL_TURNO: 'se_extendio_el_turno',
-  /** El cliente aceptó que la persona atendida quedara sola. */
+  /** El Cliente aceptó que la persona atendida quedara sola. */
   QUEDO_SOLO_CON_CONSENTIMIENTO: 'quedo_solo_con_consentimiento',
   /** No fue nadie. */
   NO_FUE_NADIE: 'no_fue_nadie',

@@ -136,7 +136,7 @@ export const T = {
       sin_proxima: 'Sin guardias programadas',
       ver_guardia: 'Ver la guardia',
     },
-    // EL CHAT CON LA OTRA PUNTA DEL MATCH. Lo dibuja `components/HiloDeMensajes.jsx`, que
+    // EL CHAT CON LA OTRA PUNTA DE MATCH. Lo dibuja `components/HiloDeMensajes.jsx`, que
     // es el mismo archivo en las dos aplicaciones, así que estas claves tienen que existir en las
     // dos y decir lo mismo.
     chat: {
@@ -889,7 +889,7 @@ export const T = {
       medio_transporte_placeholder: 'E.g.: bus, own car, on foot',
       salida_registrada: 'Departure recorded at {hora}.',
       salida_medio: 'Means of transport: {medio}.',
-      salida_sin_ubicacion: 'The departure was recorded. With no location the arrival time cannot be estimated, so the Family will not see an estimated time.',
+      salida_sin_ubicacion: 'The departure was recorded. With no location the arrival time cannot be estimated, so the Client will not see an estimated time.',
       voy_demorado: 'Report that I am running late',
       motivo_pregunta: 'What is the reason?',
       confirmar_demora: 'Send the notice',
@@ -945,7 +945,7 @@ export const T = {
     pase_de_guardia: {
       titulo_checkin: 'Shift handover',
       titulo_checkout: 'Shift handover to close',
-      instrucciones: 'Ask to be shown the code on the phone screen and point the camera at it. It can be shown by the Family, or by the Assistant who is leaving if there is a handover.',
+      instrucciones: 'Ask to be shown the code on the phone screen and point the camera at it. It can be shown by the Client, or by the Assistant who is leaving if there is a handover.',
       o_tipear: 'The code can also be typed in by hand.',
       codigo_label: 'Code',
       confirmar_codigo: 'Confirm',
@@ -1050,7 +1050,7 @@ export const T = {
       vinculo: 'Contract type',
       vinculo_monotributo: 'Independent contractor',
       vinculo_dependencia: 'Employee',
-      foto_alt: 'Your photo, the one families see',
+      foto_alt: 'Your photo, the one Clients see',
       notificaciones_titulo: 'Notifications',
       notificaciones_activar: 'Enable notifications',
       notificaciones_desactivar: 'Disable notifications',
@@ -1409,7 +1409,7 @@ export const T = {
       medio_transporte_placeholder: 'Ex: ônibus, carro próprio, a pé',
       salida_registrada: 'Saída registrada às {hora}.',
       salida_medio: 'Meio de transporte: {medio}.',
-      salida_sin_ubicacion: 'A saída ficou registrada. Sem localização não é possível estimar a hora de chegada, então a Família não vai ver nenhuma hora estimada.',
+      salida_sin_ubicacion: 'A saída ficou registrada. Sem localização não é possível estimar a hora de chegada, então o Cliente não vai ver nenhuma hora estimada.',
       voy_demorado: 'Avisar que estou atrasado',
       motivo_pregunta: 'Qual é o motivo?',
       confirmar_demora: 'Enviar o aviso',
@@ -1465,7 +1465,7 @@ export const T = {
     pase_de_guardia: {
       titulo_checkin: 'Passagem de plantão',
       titulo_checkout: 'Passagem de plantão para encerrar',
-      instrucciones: 'Peça que mostrem o código na tela do telefone e aponte a câmera. Pode mostrá-lo a Família, ou o Assistente que está saindo se houver rendição.',
+      instrucciones: 'Peça que mostrem o código na tela do telefone e aponte a câmera. Pode mostrá-lo o Cliente, ou o Assistente que está saindo se houver rendição.',
       o_tipear: 'Também é possível digitar o código à mão.',
       codigo_label: 'Código',
       confirmar_codigo: 'Confirmar',
@@ -1570,7 +1570,7 @@ export const T = {
       vinculo: 'Tipo de vínculo',
       vinculo_monotributo: 'Autônomo (contratante independente)',
       vinculo_dependencia: 'Funcionário',
-      foto_alt: 'Sua foto, a que as Famílias veem',
+      foto_alt: 'Sua foto, a que os Clientes veem',
       notificaciones_titulo: 'Notificações',
       notificaciones_activar: 'Ativar notificações',
       notificaciones_desactivar: 'Desativar notificações',

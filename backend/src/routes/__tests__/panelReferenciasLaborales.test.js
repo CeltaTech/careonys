@@ -254,7 +254,7 @@ describe('ver las referencias laborales', () => {
 // ---------------------------------------------------------------------------------------
 
 describe('cargar una referencia a mano', () => {
-  const nueva = { nombre: 'Rubén Paz', telefono: '+54 9 351 555 0100', vinculo: 'Cliente a la que cuidó' };
+  const nueva = { nombre: 'Rubén Paz', telefono: '+54 9 351 555 0100', vinculo: 'Cliente al que cuidó' };
 
   it('se guarda con la Prestadora del Asistente, no con la que venga en el pedido', async () => {
     respuestas.set('GET /rest/v1/referencias_laborales_asistente', () => []);

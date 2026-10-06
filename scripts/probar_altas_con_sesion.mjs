@@ -56,7 +56,7 @@
 //
 //   · `fn_completar_moneda_desde_cliente`, de `qr_cobro_efectivo`, que escribe
 //     un Cliente y no el Panel, y cuya política exige además una suscripción
-//     del Match y el permiso de dinero adentro de las Personas autorizadas.
+//     del Match y el permiso de dinero adentro de las personas autorizadas.
 //   · `fn_modalidades_de_asistente_nuevo`, que corre sólo al insertar un
 //     Asistente, y un Asistente lo da de alta el backend: su identificador es el
 //     de la persona, que tiene que existir antes.

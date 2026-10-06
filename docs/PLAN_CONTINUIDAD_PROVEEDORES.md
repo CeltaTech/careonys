@@ -16,8 +16,7 @@ archivo subía y existía en los dos buckets.
 
 **Procedimiento ejecutado:**
 
-1. Se bajó el backup más reciente (`careonys_backup_2026-07-13T09-23-51-351Z.sql.gz`,
-   generado ese mismo día a las 09:23 UTC) directamente del bucket R2 de producción.
+1. Se bajó el backup más reciente (generado ese mismo día a las 09:23 UTC) directamente del bucket R2 de producción.
 2. Se levantó un contenedor Postgres 16 efímero con Docker (`postgres:16-alpine`), sin
    ninguna relación con la infraestructura real — solo para esta prueba.
 3. Se restauró el dump completo (`psql -f backup.sql`) dentro de ese contenedor.
@@ -183,7 +182,7 @@ mientras el backend corra en Railway.**
 2. **El camino por SMTP sigue escrito, y es para la máquina de desarrollo.** Mientras no haya
    credencial del despachante, `crearTransporterPara` arma un transporte de Nodemailer contra
    `smtp.gmail.com` con `SMTP_USER` y `SMTP_PASSWORD`, resolviendo a mano una IPv4 porque la
-   salida IPv6 de Railway da `ENETUNREACH` y Nodemailer elige entre las dos clientes al azar.
+   salida IPv6 de Railway da `ENETUNREACH` y Nodemailer elige al azar entre IPv4 e IPv6.
    **Y no hay un tercer camino.** Cada Prestadora tuvo alguna vez su propio servidor de correo
    con su contraseña; se retiró junto con la pantalla que lo pedía, porque sale por SMTP y esos
    puertos están bloqueados: no podía andar en producción para ninguna.

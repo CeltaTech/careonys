@@ -51,7 +51,7 @@ export function correEnElPeriodo(prestacion, periodo) {
  * @param {object} argumentos
  * @param {string} argumentos.periodo        El primer día del mes, `2026-08-01`.
  * @param {Map<string, string>} argumentos.nombresDePacientes
- * @param {Array} argumentos.prestaciones    Las del acuerdo, ya acotadas a esta Cliente.
+ * @param {Array} argumentos.prestaciones    Las del acuerdo, ya acotadas a este Cliente.
  * @param {Array} argumentos.paquetes        Los paquetes de esos Pacientes.
  * @param {Array} argumentos.itemsDePaquete  Qué prestación está en qué paquete.
  * @returns {Array<{paciente_id: string, servicio_id: string|null, descripcion: string, monto: number}>}

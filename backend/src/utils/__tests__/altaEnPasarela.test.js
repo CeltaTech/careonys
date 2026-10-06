@@ -30,8 +30,8 @@ const ACCESO = '33333333-3333-3333-3333-333333333333';
 const CLIENTE = '44444444-4444-4444-4444-444444444444';
 /** La cuenta de la que cuelga ese Legajo de Cliente. Desde que una misma persona puede estar en
  *  varias Prestadoras, el número del Legajo y el de la cuenta ya no son el mismo. */
-const CUENTA_DE_LA_CLIENTE = '55555555-5555-5555-5555-555555555555';
-const CORREO_DE_LA_CLIENTE = 'cliente@sandbox.local';
+const CUENTA_DEL_CLIENTE = '55555555-5555-5555-5555-555555555555';
+const CORREO_DEL_CLIENTE = 'cliente@sandbox.local';
 const CREDENCIAL = 'credencial-de-mentira-que-no-tiene-que-salir';
 const REFERENCIA_DE_STRIPE = 'sub_de_mentira';
 /** La forma de cobro que armó la Prestadora: cada un mes. Es un dato de ella, no del código. */
@@ -152,9 +152,9 @@ beforeEach(() => {
   respuestas.set('POST /rest/v1/rpc/leer_credencial_pasarela_pago', () => CREDENCIAL);
   // El correo real de la persona vive en `usuarios`, y el Legajo de Cliente dice de qué cuenta
   // cuelga. Son dos consultas, y las dos hacen falta.
-  respuestas.set('GET /rest/v1/clientes', () => [{ usuario_id: CUENTA_DE_LA_CLIENTE }]);
+  respuestas.set('GET /rest/v1/clientes', () => [{ usuario_id: CUENTA_DEL_CLIENTE }]);
   respuestas.set('GET /rest/v1/usuarios', () => [
-    { id: CUENTA_DE_LA_CLIENTE, email: CORREO_DE_LA_CLIENTE },
+    { id: CUENTA_DEL_CLIENTE, email: CORREO_DEL_CLIENTE },
   ]);
 });
 
@@ -250,7 +250,7 @@ describe('el alta que sale bien', () => {
   });
 
   it('le dice al proveedor hasta cuándo no cobrar, no sólo lo guarda de este lado', async () => {
-    // Guardarlo acá y no decírselo al riel que cobra solo sería el cobro silencioso del §3.2: la
+    // Guardarlo acá y no decírselo al riel que cobra solo sería el cobro silencioso del §3.2: el
     // Cliente leería «gratis hasta el 30» en la pantalla y Stripe le cobraría hoy.
     respuestas.set('GET /rest/v1/accesos_match', () =>
       accesoSinAlta({ formas_de_cobro_match: { ...CADA_MES, dias_gratis: 14 } })
@@ -308,7 +308,7 @@ describe('el acceso que no se puede dar de alta', () => {
   });
 
   it('el que ya estaba dado de alta se contesta con lo guardado y no se vuelve a crear', async () => {
-    // Volver a crearla dejaría dos cobros recurrentes vivos por la misma Cliente, y del segundo
+    // Volver a crearla dejaría dos cobros recurrentes vivos por el mismo Cliente, y del segundo
     // no se enteraría nadie hasta que llegue el resumen.
     respuestas.set('GET /rest/v1/accesos_match', () =>
       accesoSinAlta({
@@ -401,7 +401,7 @@ describe('lo que falta antes de poder cobrar', () => {
   });
 
   it('sin correo del Cliente tampoco: no hay adónde mandarle el comprobante', async () => {
-    respuestas.set('GET /rest/v1/usuarios', () => [{ id: CUENTA_DE_LA_CLIENTE, email: null }]);
+    respuestas.set('GET /rest/v1/usuarios', () => [{ id: CUENTA_DEL_CLIENTE, email: null }]);
     const resultado = await darDeAlta();
     assert.equal(resultado.motivo, MOTIVO_ALTA.SIN_CORREO_DE_CLIENTE);
     assert.equal(llamadasAStripe.length, 0);
@@ -425,7 +425,7 @@ describe('lo que falta antes de poder cobrar', () => {
     assert.ok(legajo.url.includes(CLIENTE));
 
     const cuenta = llamadas.find((l) => l.clave === 'GET /rest/v1/usuarios');
-    assert.ok(cuenta.url.includes(CUENTA_DE_LA_CLIENTE));
+    assert.ok(cuenta.url.includes(CUENTA_DEL_CLIENTE));
   });
 });
 

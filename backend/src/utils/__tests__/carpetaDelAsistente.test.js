@@ -19,7 +19,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { ESTADO_PAPEL, carpetaDelAsistente, estadoDelCertificado } from '../carpetaDelAsistente.js';
-import { RESUMEN_DOCUMENTAL, estadoDocumentalParaLaCliente } from '../estadoDocumentalParaLaCliente.js';
+import { RESUMEN_DOCUMENTAL, estadoDocumentalParaElCliente } from '../estadoDocumentalParaElCliente.js';
 
 const HOY = new Date('2026-09-15T10:00:00');
 
@@ -104,13 +104,13 @@ describe('la carpeta de papeles del Asistente', () => {
       ],
     };
     const carpeta = armar(datos);
-    const paraLaCliente = estadoDocumentalParaLaCliente({ diasAviso: 30, ahora: HOY, ...datos });
-    assert.equal(carpeta.resumen, paraLaCliente.resumen);
-    assert.equal(carpeta.papelesExigidos, paraLaCliente.papelesExigidos);
-    assert.equal(carpeta.alDia, paraLaCliente.alDia);
-    assert.equal(carpeta.porVencer, paraLaCliente.porVencer);
-    assert.equal(carpeta.vencidos, paraLaCliente.vencidos);
-    assert.equal(carpeta.sinCargar, paraLaCliente.sinCargar);
+    const paraElCliente = estadoDocumentalParaElCliente({ diasAviso: 30, ahora: HOY, ...datos });
+    assert.equal(carpeta.resumen, paraElCliente.resumen);
+    assert.equal(carpeta.papelesExigidos, paraElCliente.papelesExigidos);
+    assert.equal(carpeta.alDia, paraElCliente.alDia);
+    assert.equal(carpeta.porVencer, paraElCliente.porVencer);
+    assert.equal(carpeta.vencidos, paraElCliente.vencidos);
+    assert.equal(carpeta.sinCargar, paraElCliente.sinCargar);
   });
 });
 

@@ -45,7 +45,7 @@ ya tenía escrita.
 
 ## 3. Los dos sentidos, y en cuál estamos
 
-**De Careonys hacia el software de facturación** —«cobrale tanto a esta Cliente»—. Es la mitad que
+**De Careonys hacia el software de facturación** —«cobrale tanto a este Cliente»—. Es la mitad que
 falta, y es la que hay que escribir una vez por software. Hoy ese mismo pedido sale en un archivo
 que alguien baja y entrega.
 
@@ -87,7 +87,7 @@ comprobante corresponde viven del otro lado, que es donde se factura.
 
 ## 5. Qué se hace, entonces
 
-1. **Resolver cómo se corresponde cada Cliente con el cliente del otro lado.** Es lo único que la
+1. **Resolver cómo se corresponde cada Cliente de Careonys con el cliente del otro lado.** Es lo único que la
    conexión directa necesita y hoy no existe.
 2. **Esperar a la primera Prestadora** para escribir la pieza de su software. Antes de eso, escribir
    una es elegir a ciegas entre cinco y acertar con suerte.

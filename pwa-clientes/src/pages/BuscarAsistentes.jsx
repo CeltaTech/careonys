@@ -5,7 +5,7 @@ import { useLocale } from '../i18n/LocaleContext';
 import { nombreTipo } from '../lib/tipoDeAsistente';
 import { mensajeDeError } from '../lib/errores';
 
-// La vidriera del Match: la gente que esta Prestadora ofrece, para elegir.
+// La vidriera de Match: la gente que esta Prestadora ofrece, para elegir.
 //
 // EL ORDEN SE DICE, NO SE SUPONE. Mientras la Prestadora no encienda `ranking_plataforma`, la
 // lista sale mezclada parejo y cambia todos los días. Eso se escribe arriba de la lista: quien

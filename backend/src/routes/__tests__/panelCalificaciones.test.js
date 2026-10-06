@@ -3,7 +3,7 @@
  *
  *   npm test --prefix backend
  *
- * El Cliente califica al Asistente que la atendió, sea de prestación directa o de Match. Hasta que
+ * El Cliente califica al Asistente que lo atendió, sea de prestación directa o de Match. Hasta que
  * las calificaciones salieron del router de Match, una Prestadora que trabaja sólo en
  * prestación directa no podía verlas. Se prueba el camino entero contra una base de mentira, y que
  * el backend no le pregunte a la base por la modalidad: si lo hiciera, el candado habría vuelto.

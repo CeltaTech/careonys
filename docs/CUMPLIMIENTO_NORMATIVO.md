@@ -314,7 +314,7 @@ salud todavía no está escrita ahí. **En obra** — tramo 11.
   tramo 1.
 - **Chile: la situación socioeconómica pasa a ser dato sensible.** El art. 2 lit. g) del texto que
   entra en vigor la pone junto a la salud. Es el segundo país que lo hace, después de Perú. Y el
-  matiz importa: lo que el Cliente paga por el servicio se trata por la ejecución del contrato (art.
+  matiz importa: lo que el Cliente de la Prestadora paga por el servicio se trata por la ejecución del contrato (art.
   13 lit. c), pero una evaluación socioeconómica para asignar escalas de precio o subsidios es dato
   sensible y necesita base propia.
 - **Ecuador: seudonimizar sí, anonimizar no.** El art. 31 numeral 2 manda seudonimizar o anonimizar
@@ -369,7 +369,7 @@ salud todavía no está escrita ahí. **En obra** — tramo 11.
   falta gravísima. **En obra** — tramo 8.
 - **Costa Rica: la condición socioeconómica es dato sensible.** El art. 3.e de la Ley 8968 la
   incluye en la definición, y el art. 31.a convierte en **falta gravísima** tratar datos sensibles
-  fuera de la ley. Lo que el Cliente paga y su capacidad de pago entran por ahí. El art. 9.4, sobre
+  fuera de la ley. Lo que el Cliente de la Prestadora paga y su capacidad de pago entran por ahí. El art. 9.4, sobre
   comportamiento crediticio, es categoría aparte y rige para el Sistema Financiero Nacional: no
   aplica. Es el tercer país que protege el dato económico, con Perú y Chile. **En obra** — tramos
   4, 8 y 11.
@@ -490,7 +490,7 @@ salud todavía no está escrita ahí. **En obra** — tramo 11.
   entero del art. 52: multa, suspensión de la base hasta seis meses y prohibición de tratar. Es, con
   el art. 11(4) argentino, la razón legal del plan de aislamiento. **En obra** — plan de
   aislamiento.
-- **Perú: los ingresos económicos del cliente son dato sensible.** El art. 2.5 de la Ley 29733
+- **Perú: los ingresos económicos del Cliente de la Prestadora son dato sensible.** El art. 2.5 de la Ley 29733
   pone «ingresos económicos» en la misma categoría que la salud. Es el único de los diez que lo
   hace, y significa que en Perú la facturación entra en la categoría más protegida: consentimiento
   **por escrito con firma** —manuscrita, digital o electrónica—, y las mismas medidas que el dato

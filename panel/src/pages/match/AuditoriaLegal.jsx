@@ -28,7 +28,7 @@ async function llamarApi(path, opciones = {}) {
 }
 
 // Pendiente #85, Grupo 3 Match — las cinco funciones de riesgo legal conocido de la
-// modalidad match (backend/src/routes/panelMatch.js), en la misma pantalla que la
+// modalidad Match (backend/src/routes/panelMatch.js), en la misma pantalla que la
 // auditoría de lo que se avisó. Están juntas a propósito: quien enciende una de estas ve, ahí
 // mismo y sin cambiar de pantalla, qué se avisó, cuándo y a quién.
 //

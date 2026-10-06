@@ -43,9 +43,9 @@ export function turnosDelMensaje(guardias, pacientesPorGuardia) {
   }));
 }
 
-// Los mismos turnos, pero repartidos por Cliente: a cada una le toca ver sólo los suyos.
+// Los mismos turnos, pero repartidos por Cliente: a cada uno le toca ver sólo los suyos.
 //
-// Un turno que cubre a dos Pacientes de la misma Cliente aparece una vez y no dos: es un solo
+// Un turno que cubre a dos Pacientes del mismo Cliente aparece una vez y no dos: es un solo
 // turno, y contarlo dos veces le diría «2 guardias» a quien tiene una.
 export function turnosPorCliente(guardias, pacientesPorGuardia) {
   const porCliente = new Map();

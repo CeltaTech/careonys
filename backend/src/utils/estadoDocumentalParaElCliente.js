@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// estadoDocumentalParaLaCliente.js — qué se le puede contar al Cliente sobre
+// estadoDocumentalParaElCliente.js — qué se le puede contar al Cliente sobre
 // los papeles del Asistente que tiene en su casa, y qué no.
 //
 // POR QUÉ EXISTE, Y POR QUÉ DEVUELVE NÚMEROS Y NO NOMBRES
@@ -71,7 +71,7 @@ export const ESTADO_MATRICULA = {
  * @param diasAviso       la ventana de preaviso de la Prestadora.
  * @param ahora           desde cuándo se cuenta (la prueba manda una fecha fija).
  */
-export function estadoDocumentalParaLaCliente({
+export function estadoDocumentalParaElCliente({
   tiposExigidos = [],
   documentos = [],
   matricula = null,

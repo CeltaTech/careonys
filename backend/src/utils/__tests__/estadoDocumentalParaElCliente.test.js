@@ -17,8 +17,8 @@ import assert from 'node:assert/strict';
 import {
   ESTADO_MATRICULA,
   RESUMEN_DOCUMENTAL,
-  estadoDocumentalParaLaCliente,
-} from '../estadoDocumentalParaLaCliente.js';
+  estadoDocumentalParaElCliente,
+} from '../estadoDocumentalParaElCliente.js';
 
 const HOY = new Date('2026-09-15T10:00:00');
 
@@ -28,7 +28,7 @@ const TIPO_B = { id: 't-2', requiere_vencimiento: true };
 const TIPO_SIN_VENCIMIENTO = { id: 't-3', requiere_vencimiento: false };
 
 const armar = (extra) =>
-  estadoDocumentalParaLaCliente({ diasAviso: 30, ahora: HOY, ...extra });
+  estadoDocumentalParaElCliente({ diasAviso: 30, ahora: HOY, ...extra });
 
 describe('el estado documental agregado que ve el Cliente', () => {
   it('sin exigencias no informa nada: la Prestadora no pide papeles', () => {

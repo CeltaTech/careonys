@@ -37,14 +37,14 @@ import {
 // mecanismo que usan la recuperación de acceso y el pase de guardia.
 const VIGENCIA_DEL_CODIGO_MINUTOS = 10;
 
-// Quiénes son las personas de las personas autorizadas de esta Cliente, sin el titular. El titular también tiene
+// Quiénes son las personas autorizadas de este Cliente, sin el titular. El titular también tiene
 // fila —apuntando a sí mismo, que es lo que deja resolver de una consulta a qué Cliente pertenece
 // alguien—, pero él no entra en esta cuenta: ve todo siempre, y ninguna instrucción le puede
 // quitar nada, ni siquiera una suya.
-async function personasDePersonasAutorizadas(clienteId, prestadoraId) {
+async function personasAutorizadasDelCliente(clienteId, prestadoraId) {
   const { data, error } = await supabase
-    .from('miembros_cliente')
-    .select('usuario_id, email, created_at, usuarios!miembros_cliente_usuario_id_fkey(nombre)')
+    .from('personas_autorizadas')
+    .select('usuario_id, email, created_at, usuarios!personas_autorizadas_usuario_id_fkey(nombre)')
     .eq('cliente_id', clienteId)
     .order('created_at', { ascending: true });
   if (error) throw new Error(error.message);
@@ -83,7 +83,7 @@ async function nombreDe(usuarioId, prestadoraId) {
 export async function crearInstruccion({ clienteId, prestadoraId, cargadaPor, accesosPedidos }) {
   if (!prestadoraId) throw new ErrorConMotivo('faltan_datos', 'Falta la Prestadora');
 
-  // La Prestadora se nombra en la consulta y no se comprueba después sobre la fila leída: una
+  // La Prestadora se nombra en la consulta y no se comprueba después sobre la fila leída: un
   // Cliente de otra Organización no se encuentra, en vez de encontrarse y descartarse.
   const { data: cliente } = await supabase
     .from('clientes')
@@ -92,12 +92,12 @@ export async function crearInstruccion({ clienteId, prestadoraId, cargadaPor, ac
     .eq('id', clienteId)
     .maybeSingle();
   if (!cliente) {
-    throw new ErrorConMotivo('no_encontrado', 'Cliente no encontrada');
+    throw new ErrorConMotivo('no_encontrado', 'Cliente no encontrado');
   }
 
-  const personas = await personasDePersonasAutorizadas(clienteId, prestadoraId);
+  const personas = await personasAutorizadasDelCliente(clienteId, prestadoraId);
   if (personas.length === 0) {
-    throw new ErrorConMotivo('persona_autorizada_vacio', 'Esta Cliente no tiene a nadie anotado en su personas autorizadas');
+    throw new ErrorConMotivo('persona_autorizada_vacio', 'Este Cliente no tiene ninguna persona autorizada anotada');
   }
 
   // Con la maestra, como todo este archivo: lo llama el Panel, y la base no le deja leer a
@@ -377,10 +377,10 @@ export async function cerrarConPapelFirmado({ instruccionId, prestadoraId, archi
   if (error) throw new Error(error.message);
 }
 
-// Las once claves con lo decidido para cada persona de las personas autorizadas, que es lo que dibuja la pantalla
+// Las once claves con lo decidido para cada persona autorizada, que es lo que dibuja la pantalla
 // del Panel. Se devuelve siempre el catálogo entero, tenga o no fila guardada cada clave.
-export async function personas autorizadasConSusAccesos({ clienteId, prestadoraId }) {
-  const personas = await personasDePersonasAutorizadas(clienteId, prestadoraId);
+export async function personasAutorizadasConSusAccesos({ clienteId, prestadoraId }) {
+  const personas = await personasAutorizadasDelCliente(clienteId, prestadoraId);
   if (personas.length === 0) return [];
 
   const { data: filas } = await supabase

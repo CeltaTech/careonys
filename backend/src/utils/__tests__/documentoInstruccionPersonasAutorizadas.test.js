@@ -2,7 +2,7 @@
  * Pruebas de la hoja que firma el titular.
  *
  * Es el documento que queda como constancia el día que alguien diga «yo nunca autoricé eso», así
- * que lo que se cuida acá no es la estética: que cada persona de las personas autorizadas aparezca con nombre, que
+ * que lo que se cuida acá no es la estética: que cada persona autorizada aparezca con nombre, que
  * cada acceso caiga del lado correcto —lo que puede y lo que no—, que el texto no se contradiga con
  * lo que rige, y que la huella cambie ante cualquier retoque del texto.
  *
@@ -59,7 +59,7 @@ describe('textoDeLaInstruccion', () => {
     assert.match(texto, /08\/09\/2026/);
   });
 
-  it('cada persona de las personas autorizadas aparece con su nombre y su correo', () => {
+  it('cada persona autorizada aparece con su nombre y su correo', () => {
     const texto = unaHoja([
       { nombre: 'Marcela Gómez', email: 'marcela@ejemplo.local', accesos: accesosDeFabrica() },
       { nombre: 'Jorge Gómez', email: 'jorge@ejemplo.local', accesos: accesosDeFabrica() },
@@ -106,7 +106,7 @@ describe('textoDeLaInstruccion', () => {
     assert.deepEqual(bloque(texto, 'No puede:'), ['    - Nada: tiene todos los accesos.']);
   });
 
-  it('un personas autorizadas vacío no produce una hoja en blanco', () => {
+  it('unas personas autorizadas vacío no produce una hoja en blanco', () => {
     const texto = unaHoja([]);
     assert.match(texto, /No hay ninguna persona autorizada\./);
   });

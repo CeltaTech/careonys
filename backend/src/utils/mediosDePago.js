@@ -27,11 +27,11 @@ import { supabase } from '../db/connection.js';
 import { laOpcionAlcanzaLasModalidades } from './modalidades.js';
 
 /** Las claves de las dos listas. Escritas una vez, porque las nombran el backend y el Panel. */
-export const LISTA_DE_MEDIOS_DE_PAGO_DE_LA_CLIENTE = 'medios_de_pago_de_la_cliente';
+export const LISTA_DE_MEDIOS_DE_PAGO_DEL_CLIENTE = 'medios_de_pago_del_cliente';
 export const LISTA_DE_MEDIOS_DE_PAGO_AL_ASISTENTE = 'medios_de_pago_al_asistente';
 
 const LAS_LISTAS_QUE_EXISTEN = [
-  LISTA_DE_MEDIOS_DE_PAGO_DE_LA_CLIENTE,
+  LISTA_DE_MEDIOS_DE_PAGO_DEL_CLIENTE,
   LISTA_DE_MEDIOS_DE_PAGO_AL_ASISTENTE,
 ];
 

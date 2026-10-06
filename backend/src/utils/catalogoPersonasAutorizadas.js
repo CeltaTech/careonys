@@ -2,7 +2,7 @@
 // personas autorizadas de un Cliente.
 //
 // CÓMO SE DECIDE, QUE NO ES UN DETALLE. El titular no configura nada por su cuenta: le dice a la
-// Prestadora quién entra a su personas autorizadas y qué puede ver cada uno, la Prestadora lo carga, el sistema
+// Prestadora quiénes son sus personas autorizadas y qué puede ver cada una, la Prestadora lo carga, el sistema
 // arma el documento con eso escrito en castellano y el titular lo firma. Así, el día que alguien
 // diga «yo nunca autoricé eso», está la instrucción con nombre, fecha y firma. La constancia y el
 // estado vigente viven en la base; ver la migración
@@ -26,14 +26,14 @@
 // LA CLAVE NO SE RENOMBRA NUNCA. Queda escrita adentro de filas que ya existen y adentro del texto
 // de documentos que alguien firmó: cambiarla es perder la instrucción que el titular ya dio.
 //
-// EL VALOR DE FÁBRICA. Las personas autorizadas ve todo, y las dos acciones de escritura —calificar y pedir
+// EL VALOR DE FÁBRICA. Las personas autorizadas ven todo, y las dos acciones de escritura —calificar y pedir
 // medicación— vienen apagadas. El Cliente que no pida ningún cambio no nota ninguno.
 //
 // EL TITULAR NO ENTRA EN ESTA CUENTA. Firmó la prestación y ve todo, siempre. No hay instrucción
 // que le pueda quitar nada, ni siquiera una suya. Por eso `accesosDelTitular()` no consulta filas.
 //
 // QUÉ NO ESTÁ ACÁ, A PROPÓSITO:
-//   - Invitar o sacar gente de las personas autorizadas. Eso lo hace la Prestadora desde el Panel. Estos accesos
+//   - Sumar o quitar personas autorizadas. Eso lo hace la Prestadora desde el Panel. Estos accesos
 //     dicen qué ve quien ya está anotado, no quién está anotado.
 //   - Los mensajes al teléfono. A quién le llega cada uno se decide en Configuración › Avisos
 //     (`catalogoAvisos.js`), y poner acá otra casilla dejaría la misma regla en dos lugares.
@@ -121,13 +121,13 @@ export const CATALOGO_PERSONAS_AUTORIZADAS = [
   },
 ];
 
-export const CLAVES_DEL_PERSONAS_AUTORIZADAS = CATALOGO_PERSONAS_AUTORIZADAS.map((cosa) => cosa.clave);
+export const CLAVES_DE_PERSONAS_AUTORIZADAS = CATALOGO_PERSONAS_AUTORIZADAS.map((cosa) => cosa.clave);
 
 export function cosaDelCatalogo(clave) {
   return CATALOGO_PERSONAS_AUTORIZADAS.find((cosa) => cosa.clave === clave) ?? null;
 }
 
-// Lo que rige mientras nadie haya pedido ningún cambio: las personas autorizadas ve todo, y las dos acciones de
+// Lo que rige mientras nadie haya pedido ningún cambio: las personas autorizadas ven todo, y las dos acciones de
 // escritura vienen apagadas.
 export function accesosDeFabrica() {
   return Object.fromEntries(CATALOGO_PERSONAS_AUTORIZADAS.map((cosa) => [cosa.clave, cosa.de_fabrica]));
@@ -141,7 +141,7 @@ export function accesosDelTitular() {
 
 // El techo: el titular puede quitar, nunca agregar.
 //
-// Si la Prestadora apagó el mapa para toda su aplicación, ninguna Cliente lo puede encender para
+// Si la Prestadora apagó el mapa para toda su aplicación, ningún Cliente lo puede encender para
 // nadie. Este tope se aplica siempre, incluso al titular, y va después de todo lo demás: es la
 // decisión de quien presta el servicio, y ninguna instrucción de un Cliente la puede levantar.
 function conElTopeDeLaPrestadora(accesos, visibilidad) {

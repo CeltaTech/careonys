@@ -139,7 +139,7 @@ describe('pestanasDelAsistente', () => {
     }
   });
 
-  // Sin match no hay Clientes evaluando: la pestaña mostraría siempre nada.
+  // Sin Match no hay Clientes evaluando: la pestaña mostraría siempre nada.
   it('sin match no ofrece las pestañas que dependen de esa modalidad', () => {
     for (const esAdmin of [true, false]) {
       const ofrecidas = pestanasDe({ esAdmin, match: false, puede: TODO_HABILITADO });

@@ -2,7 +2,7 @@
 
 > Fuente: documento único original de especificación (histórico) Parte O. Etapas 3 (PWA Asistentes) y 4 (PWA
 > Clientes) del build order. Se construye **después** de que el sitio (Etapa 1) y el panel
-> de admin (Etapa 2) estén en producción con clientes reales — no antes.
+> de admin (Etapa 2) estén en producción con Clientes reales — no antes.
 
 ## Objetivo
 
@@ -223,7 +223,7 @@ estructurados completos + foto si la hay. Botón "Exportar PDF" → Planilla 3 I
 
 ### Asistente Asignado
 Foto, nombre, especialidades. Botón "Escanear Asistente" → pantalla de verificación (ver
-abajo). Evaluaciones anteriores con esta cliente. Botón de contacto (WhatsApp o chat
+abajo). Evaluaciones anteriores con este Cliente. Botón de contacto (WhatsApp o chat
 interno).
 
 ### Escanear Asistente — verificación de identidad y asignación (Etapa 6, rediseñada

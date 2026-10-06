@@ -4,7 +4,7 @@
  *   npm test --prefix backend
  *
  * POR QUÉ EXISTE ESTA PRUEBA. `docs/legal/argentina.md` describe cinco funciones de la
- * modalidad match que en Argentina acercan el vínculo con el Asistente a una relación de
+ * modalidad Match que en Argentina acercan el vínculo con el Asistente a una relación de
  * dependencia, y para cada una tiene escrito el texto que hay que mostrar antes de encenderla.
  * El producto no bloquea ninguna: avisa, y queda registrado que avisó (CLAUDE.md §7).
  *

@@ -2,7 +2,7 @@
 // perfilPublicoDeAsistente.js — qué se ve de un Asistente en la vidriera del
 // Match, en qué orden aparece la lista, y qué no sale nunca.
 //
-// QUÉ ES UN PERFIL PÚBLICO ACÁ. El Cliente que entra a la modalidad match
+// QUÉ ES UN PERFIL PÚBLICO ACÁ. El Cliente que entra a la modalidad Match
 // mira gente que todavía no contrató. Lo que ve tiene que alcanzar para elegir
 // —qué es esa persona, en qué zonas trabaja, desde cuándo, cómo está su carpeta
 // de papeles y qué dijeron los Clientes anteriores— y no tiene que alcanzar para
@@ -80,7 +80,7 @@ export const FUNCION_QUE_HABILITA_EL_ORDEN = 'ranking_plataforma';
  *
  * @param asistente     la ficha, ya leída con `COLUMNAS_PERFIL_PUBLICO`.
  * @param tipo          el tipo de Asistente, como lo devuelve `tareasDelTipo.js`, o `null`.
- * @param documentacion lo que devolvió `estadoDocumentalParaLaCliente`, o `null` si no se informa.
+ * @param documentacion lo que devolvió `estadoDocumentalParaElCliente`, o `null` si no se informa.
  * @param calificacion  `{ promedio, cuantas }`, o `null` si esta Prestadora no muestra calificaciones.
  * @param ahora         desde cuándo se cuenta la antigüedad (la prueba manda una fecha fija).
  */
@@ -113,7 +113,7 @@ export function perfilPublicoDeAsistente({
     antiguedad_meses: mesesDesde(asistente.fecha_alta, ahora),
     // La insignia de verificación es exactamente lo que ya se le cuenta al Cliente que
     // contrató: cuentas y palabras de estado, nunca el nombre de un papel
-    // (`estadoDocumentalParaLaCliente.js`).
+    // (`estadoDocumentalParaElCliente.js`).
     verificacion: documentacion
       ? {
           documentacion: documentacion.resumen,

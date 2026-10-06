@@ -49,26 +49,33 @@ describe('con qué se admite que pagó el Cliente', () => {
 });
 
 describe('el catálogo guardado dice lo mismo que siembra la migración', () => {
-  const migracion = readFileSync(
-    fileURLToPath(
-      new URL(
-        '../../../../supabase/migrations/20261003120000_el_medio_de_pago_sale_del_catalogo.sql',
-        import.meta.url,
-      ),
+  const leer = (archivo) =>
+    readFileSync(
+      fileURLToPath(new URL(`../../../../supabase/migrations/${archivo}`, import.meta.url)),
+      'utf8',
+    );
+
+  /* El renombre de las palabras retiradas cambió después el nombre de la lista y el de la tabla de
+     cobros: se aplica encima de lo que siembran las migraciones anteriores. */
+  const renombre = leer('20261015000000_renombre_palabras_retiradas.sql');
+  const nombresNuevos = [
+    ...renombre.matchAll(
+      /^update public\.listas_de_opciones set clave = \$r\$([a-z_]+)\$r\$::text where clave = \$r\$([a-z_]+)\$r\$::text;\r?$/gm,
     ),
-    'utf8',
-  );
+    ...renombre.matchAll(/^alter table public\.([a-z_]+) rename to ([a-z_]+);\r?$/gm),
+  ].map((m) => (m[0].startsWith('update') ? [m[2], m[1]] : [m[1], m[2]]));
+  const conElRenombre = (texto) =>
+    nombresNuevos.reduce(
+      (t, [viejo, nuevo]) => t.replace(new RegExp(`\\b${viejo}\\b`, 'g'), nuevo),
+      texto,
+    );
+
+  const migracion = conElRenombre(leer('20261003120000_el_medio_de_pago_sale_del_catalogo.sql'));
 
   /* Y la que agrega el medio que recibe en bloque y reparte, que entra sólo en prestación
      directa. Son dos migraciones y una sola lista: el archivo guardado dice el total. */
-  const migracionEnBloque = readFileSync(
-    fileURLToPath(
-      new URL(
-        '../../../../supabase/migrations/20261004150000_el_medio_que_reparte_en_bloque_entra_solo_en_prestacion_directa.sql',
-        import.meta.url,
-      ),
-    ),
-    'utf8',
+  const migracionEnBloque = conElRenombre(
+    leer('20261004150000_el_medio_que_reparte_en_bloque_entra_solo_en_prestacion_directa.sql'),
   );
 
   /* Las claves que siembra la migración para una lista, en el orden en que las siembra. Lo que se
@@ -91,7 +98,7 @@ describe('el catálogo guardado dice lo mismo que siembra la migración', () => 
     return [...deLaPrimera, ...deLaSegunda];
   };
 
-  for (const lista of ['medios_de_pago_de_la_cliente', 'medios_de_pago_al_asistente']) {
+  for (const lista of ['medios_de_pago_del_cliente', 'medios_de_pago_al_asistente']) {
     it(`las claves sembradas de ${lista} son las mismas, y en el mismo orden`, () => {
       const guardadas = LISTAS_DE_OPCIONES_DE_FABRICA[lista].opciones.map((o) => o.clave);
       expect(sembradasDe(lista)).toEqual(guardadas);
@@ -116,7 +123,7 @@ describe('el catálogo guardado dice lo mismo que siembra la migración', () => 
      decir con qué se pagó. La tercera forma del lado del Asistente —la que se pacte— es la puerta
      de las opciones propias, no una opción más. */
   it('la cobranza ofrece las seis y el pago al Asistente tres', () => {
-    expect(LISTAS_DE_OPCIONES_DE_FABRICA.medios_de_pago_de_la_cliente.opciones.map((o) => o.clave)).toEqual([
+    expect(LISTAS_DE_OPCIONES_DE_FABRICA.medios_de_pago_del_cliente.opciones.map((o) => o.clave)).toEqual([
       'transferencia',
       'efectivo',
       'tarjeta',
@@ -180,7 +187,7 @@ describe('el catálogo guardado dice lo mismo que siembra la migración', () => 
      Asistente con tarjeta, que es justo lo que esta separación impide. */
   it('cada disparador mira la lista de su lado del dinero', () => {
     expect(migracion).toMatch(
-      /ON public\.cobros_cliente\s*\n\s*FOR EACH ROW EXECUTE FUNCTION interno\.el_medio_de_pago_sale_del_catalogo\('medio', 'medios_de_pago_de_la_cliente'\)/,
+      /ON public\.cobros_cliente\s*\n\s*FOR EACH ROW EXECUTE FUNCTION interno\.el_medio_de_pago_sale_del_catalogo\('medio', 'medios_de_pago_del_cliente'\)/,
     );
     expect(migracion).toMatch(
       /ON public\.liquidaciones_asistente\s*\n\s*FOR EACH ROW EXECUTE FUNCTION interno\.el_medio_de_pago_sale_del_catalogo\('forma_pago', 'medios_de_pago_al_asistente'\)/,

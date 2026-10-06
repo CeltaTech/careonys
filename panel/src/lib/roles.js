@@ -13,7 +13,7 @@
 // current_tenant() se encarga de que sin sesión abierta no vea más que su propia Organización.
 // El backend usa este mismo archivo, copiado por máquina (scripts/copias_entre_apps.mjs). Hasta
 // el 2026-09-04 la lista estaba escrita a mano en cinco rutas del backend y no todas decían lo
-// mismo: tres funciones llamadas `requiereAdminOSuperior`, y la de match dejaba pasar al
+// mismo: tres funciones llamadas `requiereAdminOSuperior`, y la de Match dejaba pasar al
 // Coordinador donde las otras dos no. Buscar el nombre daba tres resultados que parecían la
 // misma función. El texto de cada error se queda en su ruta —no es lo mismo negar la
 // configuración que negar una acción sobre remuneraciones—; lo que no puede diferir es quién

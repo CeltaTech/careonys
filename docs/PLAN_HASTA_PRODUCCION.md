@@ -136,7 +136,6 @@ tres o no vale ninguna.
 - `docs/claude_history.md:324` — **[ya construido]** que una guardia pueda tener más de un Paciente. Sigue en pie con la escala que ahora tiene el glosario: vale para la guardia y también para cada turno adentro de ella, y no traba nada de lo que sigue.
 - `docs/claude_history.md:225` y `:226` — **[ya construido]** que se descarte la pantalla de obra social con reglas escritas en el código, y que el informe de obra social sea sólo del Panel.
 - `docs/claude_history.md:417` — **[ya construido]** que el tipo de cambio quede afuera de la regla de la moneda.
-- `CLAUDE.md:137` y `docs/claude_history.md:423` — **[ya construido]** que el nombre interno viejo no se toque por ahora. **Queda sin efecto si el paso de más abajo lo saca**, que es lo que hoy dice el plan: si se saca, esta atribución se borra sola.
 
 **3.** La segunda etapa: los otros dos grupos de la misma revisión. Veinticuatro renglones que sí
 traen una cita suya —hay que comprobar que la cita sostenga lo que cuelga de ella— y trece donde
@@ -220,7 +219,7 @@ gente de la Prestadora no se cierran. **El segundo factor está construido y apa
 `configuracion_plataforma.mfa_admin_obligatorio`, que hoy vale `false`.
 
 **La estructura de configuración por país está hecha y vacía.** `advertencias_legales` tiene 13
-filas, todas de jurisdicción `AR`, y las trece son de materia laboral o del Match: ninguna es
+filas, todas de jurisdicción `AR`, y las trece son de materia laboral o de Match: ninguna es
 de protección de datos. `escalas_legales` también es sólo `AR`.
 
 **Los datos están en São Paulo** (`sa-east-1`). Para Brasil es tratamiento local; para todos los
@@ -432,10 +431,10 @@ escrito encima por qué. Lo que queda, agrupado por lo que hay que hacer:
   `reportes` pide un Servicio vigente, y `guardias.servicio_id` puede quedar vacío.
 - **Políticas más estrechas que lo que hace el Panel**: dejan afuera al coordinador con permiso o al
   Superadmin (`contenidos_para_clientes`, `indicaciones_medicacion`, `prestadoras`, varias de
-  cobros y del Match), y `usuarios` sólo deja leer la fila propia, así que toda lista de
+  cobros y de Match), y `usuarios` sólo deja leer la fila propia, así que toda lista de
   cuentas sigue con la maestra. Donde el comportamiento cambiaba, esas rutas volvieron a la
   maestra: primero se alinean las políticas y después se migran. Dos de esas políticas dicen algo
-  distinto de lo que hace el Panel, y antes de alinearlas se decide cuál de los dos tiene razón: las
+  distinto de lo que hace el Panel, y antes de alinearlas se decide cuál de los dos tiene razón: los
   Clientes y los Asistentes pendientes de conformidad, que la base oculta y el Panel factura y
   liquida; y la invitación a una guardia, que la base sólo deja ver si la guardia está marcada como
   ofrecida.
@@ -464,7 +463,7 @@ escrito encima por qué. Lo que queda, agrupado por lo que hay que hacer:
   Asistentes y Clientes se revisan con el mismo criterio al alinearlas.
 - **Las funciones de `utils/` que ya reciben la conexión todavía reciben la maestra en muchos
   llamadores**, cada uno con el motivo escrito encima: las altas y bajas de cuentas del Panel y de
-  la importación, las personas autorizadas desde el Panel, los teléfonos preferidos, las guardias al marcar
+  la importación, las Personas autorizadas desde el Panel, los teléfonos preferidos, las guardias al marcar
   ausente y al cubrir, la medicación del Asistente y el aviso de matrícula. Pasan a la conexión de
   la ruta cuando se alineen las políticas del renglón de arriba. Las de WhatsApp,
   `registroDeActividad` y `auditoria_de_accesos` se quedan con la maestra.
@@ -472,7 +471,7 @@ escrito encima por qué. Lo que queda, agrupado por lo que hay que hacer:
   `pacientesDeGuardia.js`, `cuentaDeLaFicha.js` y la lectura de zonas de
   `propuestaConfiguracionInicial.js`: tienen que recibir `db` como las demás.
 
-**Y la autorización de monitoreo de los signos vitales pasa a verla sólo quien la firmó.** Hoy la
+**Y la autorización de monitoreo de los signos vitales pasa a verla sólo quien la firmó.** Hoy el
 Cliente y el Asistente de ese Paciente leen el renglón entero —quién la firmó, en qué carácter,
 cuándo—, aunque no el archivo (políticas `cliente_lee_autorizaciones_de_sus_pacientes` y
 `asistente_lee_autorizaciones_de_sus_pacientes`). El Asistente no es parte: sale. El Cliente la ve
@@ -489,7 +488,7 @@ Cuando la Prestadora lo cambia, deja de poder ver lo que firmó.
 **Y el consentimiento del Pagador lo lee cualquiera con sesión en la Prestadora.** Las políticas
 `consentimientos_pagador_los_lee_su_organizacion` y `documentos_pagador_los_lee_su_organizacion`
 sólo miran la Prestadora, así que un Cliente o un Asistente con su credencial leen el texto armado
-con los datos del Pagador de cualquier otra Cliente. Se acota al personal de la Prestadora y a
+con los datos del Pagador de cualquier otro Cliente. Se acota al personal de la Prestadora y a
 quien firmó.
 
 **Qué ve cada rol sale de qué necesita para cumplir su función.** En la ficha del Cliente, el
@@ -629,32 +628,13 @@ puede filtrar datos de otra Prestadora.
 
 ---
 
-## Cliente pasa a ser Cliente
+## La maestra de migraciones se vuelve a fundir
 
-**Va antes de la mudanza desde Match** porque lo que viene de allá trae la palabra en cada tabla y
-cada pantalla: mudado con el nombre nuevo, no hay que renombrarlo dos veces.
+**20.** Se vuelve a fundir la maestra de migraciones, para que ninguna migración guarde una palabra
+que el glosario retiró.
 
-**La palabra sale de todos lados**: la base, el backend, el Panel, las dos aplicaciones, la carpeta
-`pwa-clientes` y su publicación, las traducciones y los documentos. Lo que queda escrito con el
-nombre viejo vuelve a usarse. Sólo se queda «familiar», cuando nombra al pariente.
-
-**Y en el mismo renombre sale «careonys»**, el nombre anterior del producto, que todavía es el
-código interno con el que se arman la base local del teléfono y el prefijo de los respaldos. Lo
-que cada persona tiene guardado en el teléfono pasa al nombre nuevo sin perderse.
-
-**Y sale «match», que pasa a «match»**, también como valor guardado de la modalidad.
-
-**17.** El inventario: dónde aparece la palabra, en la base en vivo y en el código, y qué pide
-cambiar cada lugar.
-
-**18. Usted** — Aprobar el plan del renombre y, una por una, las frases visibles que cambian.
-
-**19.** El renombre, en el orden del plan aprobado.
-
-**20.** Se vuelve a fundir la maestra de migraciones, para que ninguna migración guarde la palabra.
-
-**Comprobación:** buscar «famil», «careonys» y «match» en la base en vivo, en el código y en los documentos da
-cero, salvo «familiar» cuando nombra al pariente y las citas textuales del Desarrollador.
+**Comprobación:** buscar en las migraciones cada palabra que el glosario retiró da cero, salvo
+cuando nombra al pariente.
 
 ---
 
@@ -809,7 +789,7 @@ guardado:
 
 **26. Usted** — Y una que aparece al cruzar el acto con la regla del producto: **el Pagador.** La
 regla dice que quien asume la obligación de pagar queda definido recién cuando firma, y que eso
-tiene que estar listo **el día que se firma con el Cliente** — que es exactamente este acto. Pero
+tiene que estar listo **el día que se firma con el Contratante** — que es exactamente este acto. Pero
 la firma vive hoy en otra pantalla, dentro de la ficha del Cliente, con su propio estado y sus
 botones de armar el consentimiento y registrar la firma; y el único requisito que este acto pone
 para habilitar un Servicio es el coordinador asignado. ¿Son dos requisitos, y un Servicio sin
@@ -921,7 +901,7 @@ anotado. Falta la pantalla donde lo hace, en la aplicación del Asistente.
 
 Existe el andamiaje —base, disparadores, cobros, consentimiento—, el Cliente ya puede buscar un Asistente, ver su perfil público, escribirle por adentro de la aplicación y, activando el cobro, ver cómo llegar a él por afuera. **Todavía no puede contratarlo.**
 
-**Cobrarle un contacto a un Cliente y facturarle el servicio a un Cliente son dos formas de cobro
+**Cobrarle un contacto a un Cliente y facturarle el servicio son dos formas de cobro
 de la misma Prestadora**, y cada Prestadora elige cómo cobra.
 
 **Hay una sola venta de contactos construida, y es de la Prestadora al Cliente.** Un importe, sin
@@ -944,26 +924,7 @@ paquetes de contactos son de CeltaTech. Nació de leer «la decisión comercial 
 como «lo vende CeltaTech», que es otra cosa: la decide cada Prestadora. Ese repositorio está en
 sólo lectura, así que el renglón se saca cuando se lo toque.
 
-**Y la modalidad se llama Match, no Match.** El nombre viejo sigue escrito en unos ciento
-cuarenta archivos de este producto. Se saca en tres tandas, y no son la misma cosa:
-
-- **Lo visible y lo escrito** —pantallas, traducciones y documentos, incluido el nombre del
-  documento de la modalidad—. Eso se cambia entero, porque es marca.
-- **Lo guardado** —tablas, columnas, restricciones, reglas de la base—. Unas veinte cosas llevan el
-  nombre adentro. **Eso no se renombra**, porque lo que se guarda se nombra por lo que hace y
-  renombrarlo convierte un cambio de marca en una mudanza de datos. Queda como está.
-- **Los nombres de archivo y de función del código.** No son marca ni son dato guardado, así que
-  acá sí hay una decisión: se dejan o se cambian con la tanda visible.
-
-**35. Usted** — La tercera tanda: ¿los archivos y funciones que llevan el nombre viejo se cambian
-o se dejan?
-
-**36.** Sacar el nombre viejo de lo visible y de lo escrito, y aplicar lo contestado sobre el
-código. Lo guardado no se toca. **Va en una sola pasada con el barrido de tuteo y voseo** de la
-sección de los carteles, más abajo: los dos reescriben las traducciones del Panel en los tres
-idiomas, y hacerlo dos veces es tocar el mismo archivo dos veces.
-
-**37. Usted** — Prioridad de acceso al plantel ante una baja: el PRD la define en una línea (`docs/PRD_07_Modalidad_Match.md:225`) y de ahí salen dos productos distintos. ¿Es que el contacto del reemplazo no vuelva a costar durante una ventana —ni descuenta saldo ni pide un acceso nuevo—, o es que a esa Cliente se le avise primero cuando alguien del plantel vuelve a estar disponible? ¿O las dos? Y antes que eso: hoy el Cliente no contrata por Match, así que no hay baja que detectar. ¿Qué cuenta como baja — que el Asistente se saque de los disponibles, que el Cliente cierre el Servicio, o hay que construir antes el vínculo?
+**37. Usted** — Prioridad de acceso al plantel ante una baja: el PRD la define en una línea (`docs/PRD_07_Modalidad_Match.md:225`) y de ahí salen dos productos distintos. ¿Es que el contacto del reemplazo no vuelva a costar durante una ventana —ni descuenta saldo ni pide un acceso nuevo—, o es que a ese Cliente se le avise primero cuando alguien del plantel vuelve a estar disponible? ¿O las dos? Y antes que eso: hoy el Cliente no contrata por Match, así que no hay baja que detectar. ¿Qué cuenta como baja — que el Asistente se saque de los disponibles, que el Cliente cierre el Servicio, o hay que construir antes el vínculo?
 
 **38.** Construirla según lo contestado.
 
@@ -984,7 +945,7 @@ idiomas, y hacerlo dos veces es tocar el mismo archivo dos veces.
 
 **40. Usted** — De la Solicitud: ¿cómo se le presenta la Asistente nueva al Cliente — mensaje sin respuesta, aceptación explícita, o fuera del sistema? **Cuelga del acto de armar el Servicio**, más arriba en esta lista: sin Servicio armado no hay a qué Cliente presentarle a nadie.
 
-**41. Usted** — Las dos observaciones de apariencia que quedan, porque las dos son decisiones de diseño: ¿con qué pantalla abre la aplicación de Cliente cuando hay más de un Paciente — hoy abre en la lista, y con uno solo ya se saltea al detalle? ¿Y cuál es la identidad visual de las dos aplicaciones, que nunca pasaron por su etapa de diseño?
+**41. Usted** — Las dos observaciones de apariencia que quedan, porque las dos son decisiones de diseño: ¿con qué pantalla abre la aplicación del Cliente cuando hay más de un Paciente — hoy abre en la lista, y con uno solo ya se saltea al detalle? ¿Y cuál es la identidad visual de las dos aplicaciones, que nunca pasaron por su etapa de diseño?
 
 El Desarrollador está preparando una maqueta orientativa de cómo tienen que verse y cómo se recorren. **La maqueta mejora lo que ya está construido: no es condición para construirlo.** Las pantallas que faltan se hacen ahora, con la apariencia que el producto ya tiene, y cuando la maqueta llegue se acomoda lo que haya que acomodar. Ningún paso de esta lista espera por ella.
 
@@ -1077,9 +1038,7 @@ relevamiento completo está en `docs/CARTELES_DEL_PANEL.md`, cartel por cartel y
 donde se ve cada uno; sus decisiones ya tomadas están en `docs/CARTELES_DEL_PANEL.docx`, que es
 fuente y no se modifica.
 
-**Va acá, pegada a los huecos del Panel, porque es el mismo ámbito**, y sobre todo porque **comparte
-pasada con el paso que saca el nombre viejo de lo visible**, más arriba: los dos reescriben las
-traducciones del Panel en los tres idiomas, y eso se hace una vez, no dos.
+**Va acá, pegada a los huecos del Panel, porque es el mismo ámbito.**
 
 **Y va antes del paso que decide si los idiomas pasan a la base**, más abajo, por un motivo de
 orden: los mensajes que manda el producto ya viven en la base, con su texto en los tres idiomas y
@@ -1094,7 +1053,7 @@ diciendo nada.
 trabajo:
 
 - **El del proveedor de cobro no se puede decidir todavía.** Vive en un bloque que existe sólo con
-  la modalidad de match y habla de la suscripción de los Clientes, así que depende del grupo
+  la modalidad Match y habla de la suscripción de los Clientes, así que depende del grupo
   del dinero, más arriba y sin contestar: puede que el bloque entero no vaya.
 - **La advertencia legal del código no la contesta usted.** Por regla el aviso sale del documento
   legal de ese país, y ese documento no existe. Espera a lo del abogado, más abajo, no a una
@@ -1141,7 +1100,7 @@ país.
 **54.** Aplicar todo lo contestado.
 
 **55.** Lo que no espera ninguna respuesta porque ya es regla escrita: sacar el tuteo y el voseo de
-todo el Panel y de las dos aplicaciones, sin excepción —va en la misma pasada que el nombre viejo—;
+todo el Panel y de las dos aplicaciones, sin excepción;
 quitar los textos que no se alcanzan desde ninguna pantalla; y escribir la regla de que cuando un
 texto sale sale el cartel entero, donde vive la regla del casillero.
 
@@ -1302,12 +1261,9 @@ una copia de trabajo**, que no es un archivo del repositorio y por eso el barrid
 
 ## Módulos
 
-**91.** Sacar el nombre viejo `careonys` de adentro del producto. **Se decide y se hace con la
-mudanza ya encima**, que es cuando hay que tocar la base de todos modos. Está medido y no se
-pierde: nadie usó nunca la aplicación y todos los datos cargados son inventados, así que
-reconstruir la base los reescribe sin mudanza. Lo que cuesta igual, se haga cuando se haga, son
-cinco nombres de afuera: el nombre del proyecto local, el servicio donde corre el backend con su
-dirección, y los dos depósitos de respaldo. El repositorio ya se llama `careonys`.
+**91.** Pasar a `careonys` los cinco nombres de afuera que todavía no lo llevan: el nombre del
+proyecto local, el servicio donde corre el backend con su dirección, y los dos depósitos de
+respaldo. El repositorio ya se llama `careonys`.
 
 **92. Usted** — ¿Dónde corre un módulo y contra qué base? Hoy `Modulos\` está vacía. **Facturación y créditos y cobranzas ya están decididas como software aparte del que Careonys se sirve**, así que esto no decide si salen, sino dónde corren el día que existan.
 
@@ -1339,7 +1295,7 @@ software conectado, el corte lo ordena ese software.
 
 **95. Usted** — Un tercero que sólo mira: ¿cómo entra un financiador que sólo consulta? Un cuarto rol, un Coordinador de sólo lectura desde el catálogo de permisos, o no se hace.
 
-**96. Usted** — ¿Careonys va a atender establecimientos donde conviven Pacientes de Clientes distintas — una residencia, un geriátrico? Si es más adelante, alcanza con dejarlo dicho.
+**96. Usted** — ¿Careonys va a atender establecimientos donde conviven Pacientes de Clientes distintos — una residencia, un geriátrico? Si es más adelante, alcanza con dejarlo dicho.
 
 **97. Usted** — ¿Diez pedidos por minuto y por persona es el número? El contador compartido hace falta el día que el backend se reparta en varios servicios; hoy corre en uno solo.
 
@@ -1416,7 +1372,7 @@ segundo es que ese acto cambia el modelo: **una sola persona coordina todo el Se
 al acordarlo, y sin ella el Servicio no se habilita.** Con eso construido, la pregunta es si hace
 falta alguien más además de esa persona, que es otra pregunta.
 
-**106. Usted** — Cursos para clientes: ¿va o no va?
+**106. Usted** — Cursos para Clientes: ¿va o no va?
 
 **107. Usted** — La regla de los archivos dice «nunca público» y hay un depósito público construido (`marca-prestadoras`); los otros cinco son privados. ¿La regla admite la excepción, o se cierra el depósito?
 

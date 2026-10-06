@@ -86,7 +86,7 @@ const cruzado = await avisar(PRESTADORA_A, ajena, firmar(ajena, SECRETO));
 comprobar('contesta 404', cruzado.estado === 404, `contesto ${cruzado.estado}`);
 const { data: nada } = await supabase
   .from('restricciones_de_cobranza').select('id').eq('cliente_id', CLIENTE_DE_B);
-comprobar('no se escribio nada sobre el Cliente ajena', (nada || []).length === 0, `quedaron ${(nada || []).length}`);
+comprobar('no se escribio nada sobre el Cliente ajeno', (nada || []).length === 0, `quedaron ${(nada || []).length}`);
 
 console.log('6. Una Prestadora sin secreto cargado no recibe avisos');
 const deB = JSON.stringify({ cliente_id: CLIENTE_DE_B, restringida: true, numero_del_aviso: `${numero}-b` });

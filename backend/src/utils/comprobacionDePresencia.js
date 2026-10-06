@@ -87,7 +87,7 @@ export async function configuracionDeComprobacion(prestadoraId) {
  * uno nuevo y el anterior deja de valer: eso es lo que quiere decir que se renueva solo. La
  * pantalla lo vuelve a pedir cada `segundos`.
  *
- * `sujetoTipo` es 'cliente' (las personas autorizadas entero) o 'asistente' (el que se va).
+ * `sujetoTipo` es 'cliente' (todas las personas autorizadas) o 'asistente' (el que se va).
  */
 export async function codigoParaMostrar({ prestadoraId, sujetoTipo, sujetoId }) {
   if (!prestadoraId || !sujetoId || !['cliente', 'asistente'].includes(sujetoTipo)) {
@@ -120,7 +120,7 @@ export async function codigoParaMostrar({ prestadoraId, sujetoTipo, sujetoId }) 
  * backend y nunca con un dato que venga en el pedido: si el teléfono pudiera decir a quién
  * comparar, podría decir cualquiera.
  *
- * Son dos: los personas autorizadas de los Pacientes de esta guardia, y el Asistente que todavía
+ * Son dos: las personas autorizadas de los Pacientes de esta guardia, y el Asistente que todavía
  * está adentro —el que tiene una guardia abierta sobre alguno de esos mismos Pacientes—, que es
  * la definición operativa de «hay relevo».
  */

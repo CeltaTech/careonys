@@ -150,7 +150,7 @@ const FORMULAS_FIXTURE = [
         { id: 'mitad', tipo: 'mitad_de_componente', parametros: { referencia: 'antiguedad' } },
       ],
       combinar: { operacion: 'usar_paso', paso: 'mitad' },
-      advertencia_si_no_dependencia: 'Esta causal solo aplica cuando el empleador es el cliente directamente (vínculo por dependencia), no a la prestadora.',
+      advertencia_si_no_dependencia: 'Esta causal solo aplica cuando el empleador es el Cliente directamente (vínculo por dependencia), no a la prestadora.',
       requiere_revision_abogado: true,
     },
   },

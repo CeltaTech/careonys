@@ -1,6 +1,6 @@
 // Pendiente #85 (docs/PLAN_HASTA_PRODUCCION.md), Grupo 3 Match — rutas del Panel: pasarela de
 // pago por Prestadora, accesos y cobros, calificaciones con descargo, y la auditoría de
-// advertencias legales de match.
+// advertencias legales de Match.
 //
 // CON LA CREDENCIAL DE QUIEN PIDE. Cada manejador entra a la base con `clienteDelPedido(req)`, y
 // qué filas ve lo decide la RLS por la membresía de esa persona: no hay filtro por Prestadora
@@ -28,7 +28,7 @@ export const panelMatchRouter = Router();
 
 panelMatchRouter.use(requiereRolPanel);
 
-// Todo lo de match pasa adentro de una Prestadora. Superadmin sin permiso de acceso
+// Todo lo de Match pasa adentro de una Prestadora. Superadmin sin permiso de acceso
 // abierta no está parado en ninguna, y entonces no hay sobre qué operar. El corte lo pone el
 // middleware compartido con el resto de los routers: hasta hoy este archivo tenía su propia
 // copia de la misma condición, con otro texto (CLAUDE.md §8, «ningún patrón repetido sin punto
@@ -786,9 +786,9 @@ panelMatchRouter.patch('/calificaciones/:id/visibilidad', async (req, res) => {
 });
 
 // ============================================================================
-// Las cinco funciones de riesgo legal de match
+// Las cinco funciones de riesgo legal de Match
 //
-// QUÉ SON. `docs/legal/argentina.md` describe cinco funciones de la modalidad match
+// QUÉ SON. `docs/legal/argentina.md` describe cinco funciones de la modalidad Match
 // que, en Argentina, acercan el vínculo con el Asistente a una relación de dependencia:
 // el ranking calculado por la plataforma, la consecuencia automática atada a la calificación,
 // el precio u horario fijado por la plataforma, la exclusividad y la mediación de conflictos.

@@ -24,7 +24,7 @@ export default function Layout() {
   const { pathname } = useLocation();
 
   // Se recuerda el último Paciente abierto, para que Guardias y Servicio sigan apuntando a él
-  // mientras se recorren las pantallas de las personas autorizadas, que no lo llevan en la dirección.
+  // mientras se recorren las pantallas del Cliente entero, que no lo llevan en la dirección.
   const [pacienteId, setPacienteId] = useState(null);
   const enLaDireccion = pathname.match(PACIENTE_EN_LA_DIRECCION)?.[1] || null;
   useEffect(() => {

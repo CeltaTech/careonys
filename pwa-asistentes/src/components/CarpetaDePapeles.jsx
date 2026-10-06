@@ -12,7 +12,7 @@ import { con } from '../lib/textos';
 // Prestadora, qué tiene, qué le falta y qué está por caerse, con tiempo de ir a
 // buscarlo.
 //
-// ACÁ SÍ VAN LOS NOMBRES, Y ES LO QUE LA DIFERENCIA DE LA VISTA DE LA CLIENTE
+// ACÁ SÍ VAN LOS NOMBRES, Y ES LO QUE LA DIFERENCIA DE LA VISTA DEL CLIENTE
 // Al Cliente se le cuentan cuentas y nunca cuál papel es cuál, porque el
 // nombre de un tipo de documento puede ser dato de salud. Acá el que mira es el
 // dueño de esos papeles: decirle «le falta uno» sin decirle cuál sería pedirle

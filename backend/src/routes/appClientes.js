@@ -19,7 +19,7 @@ import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
 import { llegadaEstimadaDeGuardia } from '../utils/estimarLlegadaDeGuardia.js';
 import { darDeBajaElAcceso } from '../utils/bajaDelAcceso.js';
-import { estadoDocumentalParaLaCliente } from '../utils/estadoDocumentalParaLaCliente.js';
+import { estadoDocumentalParaElCliente } from '../utils/estadoDocumentalParaElCliente.js';
 import { laCobranzaLaLlevaOtroSoftware, sinLoQueSeCalculaAca } from '../utils/seguimientoDeLaCobranza.js';
 import {
   direccionParaBajarElComprobante,
@@ -60,8 +60,8 @@ export const appClientesRouter = Router();
 //
 // LO QUE SIGUE CON LA LLAVE MAESTRA, Y POR QUÉ. Cada consulta que queda con `supabase` lo dice en
 // su renglón. Son de dos clases: lo que la base no le deja ver a un Cliente y la pantalla sí
-// muestra —la vidriera del Match, que es gente que todavía no la atendió, y el estado
-// documental agregado—, y lo que hoy se contesta a alguien de las personas autorizadas sin el acceso que la base
+// muestra —la vidriera del Match, que es gente que todavía no lo atendió, y el estado
+// documental agregado—, y lo que hoy se contesta a una persona autorizada sin el acceso que la base
 // pide para esa tabla —las guardias en la pantalla del Paciente—. Pasarlas a la credencial
 // cambiaría lo que ve la persona, y eso no se decide acá.
 
@@ -76,7 +76,7 @@ export const appClientesRouter = Router();
 // Prestadora y qué le dieron a esta persona— y las dos ya vienen contestadas y guardadas en el
 // pedido. Pasándolas por parámetro, una ruta nueva que se olvide de una le mandaría a alguien la
 // ficha que el titular le negó, y nadie se enteraría.
-async function pacienteDeLaCliente(db, pacienteId, req) {
+async function pacienteDelCliente(db, pacienteId, req) {
   const usuarioCliente = req.usuarioCliente;
   const visibilidad = await visibilidadDeLaPersona(req);
   const accesos = await accesosDelPedido(req);
@@ -169,12 +169,12 @@ appClientesRouter.get('/perfil', requiereRolCliente, async (req, res) => {
   }
 
   // Y si hay una instrucción esperando su firma, se la ofrece. Sólo al titular: la instrucción
-  // dice qué se le dio y qué se le negó a cada uno de las personas autorizadas, y eso es del titular.
+  // dice qué se le dio y qué se le negó a cada persona autorizada, y eso es del titular.
   const pendiente = req.usuarioCliente.esTitular
     ? await instruccionPendiente(req.usuarioCliente.clienteId, req.usuarioCliente.prestadoraId)
     : null;
 
-  // Si esta Prestadora ofrece match, la aplicación tiene una pantalla más —la vidriera de
+  // Si esta Prestadora ofrece Match, la aplicación tiene una pantalla más —la vidriera de
   // Asistentes— y el menú la dibuja. Va acá por el mismo motivo que la marca y la visibilidad:
   // el menú se arma apenas la persona entra, que es cuando ya se está pidiendo el perfil. El
   // candado sigue estando en cada ruta de la vidriera, que no contesta nada sin volver a
@@ -199,7 +199,7 @@ appClientesRouter.get('/perfil', requiereRolCliente, async (req, res) => {
 // ============================================================================
 // La instrucción sobre los accesos de las personas autorizadas, del lado del titular
 //
-// Acá el titular no configura nada: lee lo que pidió y lo confirma. Quién entra a las personas autorizadas y qué
+// Acá el titular no configura nada: lee lo que pidió y lo confirma. Quién entra como persona autorizada y qué
 // ve cada uno lo carga la Prestadora, como siempre. Esta es la firma, y nada más.
 //
 // Y firma esta hoja y ninguna otra. Careonys no es un sistema para firmar documentos.
@@ -266,7 +266,7 @@ appClientesRouter.get('/pacientes', requiereRolCliente, async (req, res) => {
   }
   // Si al Paciente lo están atendiendo estos días en otro lado, el Cliente ve esa dirección y no
   // la de la ficha — es la misma respuesta que ve el Asistente en su teléfono, escrita una sola
-  // vez en la base (regla 12). Sin esto, el Cliente y quien la cuida leerían direcciones
+  // vez en la base (regla 12). Sin esto, el Cliente y quien cuida al Paciente leerían direcciones
   // distintas para la misma persona el mismo día.
   res.json({ pacientes: await pacientesConDomicilioDeHoy(data) });
 });
@@ -280,7 +280,7 @@ appClientesRouter.get('/pacientes', requiereRolCliente, async (req, res) => {
 appClientesRouter.get('/pacientes/:id', requiereRolCliente, async (req, res) => {
   const db = clienteDelPedido(req);
   const visibilidad = await visibilidadDeLaPersona(req);
-  const paciente = await pacienteDeLaCliente(db, req.params.id, req);
+  const paciente = await pacienteDelCliente(db, req.params.id, req);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
@@ -297,7 +297,7 @@ appClientesRouter.get('/pacientes/:id', requiereRolCliente, async (req, res) => 
   ], visibilidad);
 
   // Las guardias de esta pantalla siguen con la llave maestra: la ruta no pide `persona_autorizada_guardias`
-  // y la base sí, así que con la credencial de la persona, alguien de las personas autorizadas sin ese acceso
+  // y la base sí, así que con la credencial de la persona, una persona autorizada sin ese acceso
   // dejaría de ver quién está en la casa. El Paciente ya salió comprobado contra el Cliente.
   const { data: guardiaActiva } = await supabase
     .from('guardias')
@@ -378,7 +378,7 @@ appClientesRouter.get('/pacientes/:id', requiereRolCliente, async (req, res) => 
     }
   }
 
-  // Acá no viaja la medicación vigente del Paciente. No la muestra ninguna pantalla de la
+  // Acá no viaja la medicación vigente del Paciente. No la muestra ninguna pantalla del
   // Cliente: la lista de indicaciones tiene su propia dirección, con su propio candado. Sería
   // dato de salud saliendo al teléfono para que nadie lo leyera.
   res.json({
@@ -407,7 +407,7 @@ appClientesRouter.get('/pacientes/:id', requiereRolCliente, async (req, res) => 
 appClientesRouter.get('/pacientes/:id/guardias', requiereRolCliente, exigeDePersonasAutorizadas('persona_autorizada_guardias'), async (req, res) => {
   const db = clienteDelPedido(req);
   const visibilidad = await visibilidadDeLaPersona(req);
-  const paciente = await pacienteDeLaCliente(db, req.params.id, req);
+  const paciente = await pacienteDelCliente(db, req.params.id, req);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
@@ -421,11 +421,11 @@ appClientesRouter.get('/pacientes/:id/guardias', requiereRolCliente, exigeDePers
   // Se pregunta por `guardia_pacientes` y no por `guardias.paciente_id`: la tabla del medio es
   // la que dice a quiénes cubre cada guardia, y una guardia puede cubrir a más de una persona
   // —el matrimonio que vive en la misma casa— (ver utils/pacientesDeGuardia.js). Buscando por
-  // la columna vieja, esa Cliente vería media semana.
+  // la columna vieja, ese Cliente vería media semana.
   //
   // Entra con la credencial de la persona: la base deja ver sólo las guardias de los Pacientes de
-  // esta Cliente y de su Prestadora, y la tabla del medio sólo donde la guardia se ve. `paciente_id`
-  // ya salió comprobado contra el Cliente por `pacienteDeLaCliente`.
+  // este Cliente y de su Prestadora, y la tabla del medio sólo donde la guardia se ve. `paciente_id`
+  // ya salió comprobado contra el Cliente por `pacienteDelCliente`.
   const { data: filas, error } = await db
     .from('guardia_pacientes')
     .select(`
@@ -516,7 +516,7 @@ function categoriasDelReporte(vitales) {
 appClientesRouter.get('/pacientes/:id/reportes', requiereRolCliente, exigeDePersonasAutorizadas('persona_autorizada_reportes'), async (req, res) => {
   const db = clienteDelPedido(req);
   const visibilidad = await visibilidadDeLaPersona(req);
-  const paciente = await pacienteDeLaCliente(db, req.params.id, req);
+  const paciente = await pacienteDelCliente(db, req.params.id, req);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
@@ -527,8 +527,8 @@ appClientesRouter.get('/pacientes/:id/reportes', requiereRolCliente, exigeDePers
   // cuarto.
   //
   // Sigue con la llave maestra: cada reporte trae su guardia pegada (`guardias!inner`), y la base
-  // sólo muestra guardias a quien tiene `persona_autorizada_guardias`. Con la credencial de la persona, alguien
-  // de las personas autorizadas con los reportes y sin las guardias vería la lista vacía.
+  // sólo muestra guardias a quien tiene `persona_autorizada_guardias`. Con la credencial de la persona, una
+  // persona autorizada con los reportes y sin las guardias vería la lista vacía.
   const columnas = columnasDelReporte(visibilidad);
 
   const { data, error } = await supabase
@@ -569,7 +569,7 @@ appClientesRouter.get('/pacientes/:id/reportes', requiereRolCliente, exigeDePers
 appClientesRouter.get('/pacientes/:id/reportes/:reporteId', requiereRolCliente, exigeDePersonasAutorizadas('persona_autorizada_reportes'), async (req, res) => {
   const db = clienteDelPedido(req);
   const visibilidad = await visibilidadDeLaPersona(req);
-  const paciente = await pacienteDeLaCliente(db, req.params.id, req);
+  const paciente = await pacienteDelCliente(db, req.params.id, req);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
@@ -614,7 +614,7 @@ appClientesRouter.get('/pacientes/:id/reportes/:reporteId', requiereRolCliente, 
 
 appClientesRouter.get('/pacientes/:id/alertas', requiereRolCliente, exigeVisible('cliente_alertas_de_la_revision'), exigeDePersonasAutorizadas('persona_autorizada_alertas'), async (req, res) => {
   const db = clienteDelPedido(req);
-  const paciente = await pacienteDeLaCliente(db, req.params.id, req);
+  const paciente = await pacienteDelCliente(db, req.params.id, req);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
@@ -656,7 +656,7 @@ appClientesRouter.get('/pacientes/:id/alertas', requiereRolCliente, exigeVisible
 // corresponde hacer y qué no. Es el motivo por el que existe el catálogo de
 // tipos: que el Cliente lo lea antes y no lo discuta en la puerta.
 //
-// Y el estado documental agregado, que arma `utils/estadoDocumentalParaLaCliente.js`: cuántos
+// Y el estado documental agregado, que arma `utils/estadoDocumentalParaElCliente.js`: cuántos
 // papeles exige esta Prestadora y cuántos están al día, más cómo está la Matrícula. Cuentas y
 // nada más: de acá no sale el nombre de ningún tipo de documento ni el número de una Matrícula.
 // ============================================================================
@@ -664,13 +664,13 @@ appClientesRouter.get('/pacientes/:id/alertas', requiereRolCliente, exigeVisible
 appClientesRouter.get('/pacientes/:id/asistente', requiereRolCliente, async (req, res) => {
   const db = clienteDelPedido(req);
   const visibilidad = await visibilidadDeLaPersona(req);
-  const paciente = await pacienteDeLaCliente(db, req.params.id, req);
+  const paciente = await pacienteDelCliente(db, req.params.id, req);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
 
   // La última guardia sigue con la llave maestra: esta ruta no pide `persona_autorizada_guardias` y la base
-  // sí, así que con la credencial de la persona alguien de las personas autorizadas sin ese acceso se quedaría sin
+  // sí, así que con la credencial de la persona una persona autorizada sin ese acceso se quedaría sin
   // saber quién lo atiende.
   const { data: guardia } = await supabase
     .from('guardias')
@@ -702,7 +702,7 @@ appClientesRouter.get('/pacientes/:id/asistente', requiereRolCliente, async (req
   );
 
   // El certificado, con la credencial de la persona: la base sólo muestra el del Asistente que
-  // atiende a esta Cliente.
+  // atiende a este Cliente.
   const { data: certificado } = await db
     .from('certificados')
     .select('activo, fecha_vencimiento')
@@ -744,7 +744,7 @@ appClientesRouter.get('/pacientes/:id/asistente', requiereRolCliente, async (req
         .maybeSingle(),
     ]);
 
-  const documentacion = estadoDocumentalParaLaCliente({
+  const documentacion = estadoDocumentalParaElCliente({
     tiposExigidos: tiposExigidos || [],
     documentos: documentos || [],
     matricula: matricula || null,
@@ -782,14 +782,14 @@ appClientesRouter.get('/pacientes/:id/asistente', requiereRolCliente, async (req
 // ============================================================================
 
 appClientesRouter.get('/pacientes/:id/verificar-asistente/:qrToken', requiereRolCliente, exigeVisible('cliente_verifica_con_codigo'), exigeDePersonasAutorizadas('persona_autorizada_verifica_con_codigo'), async (req, res) => {
-  const paciente = await pacienteDeLaCliente(clienteDelPedido(req), req.params.id, req);
+  const paciente = await pacienteDelCliente(clienteDelPedido(req), req.params.id, req);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
 
   // Desde acá sigue con la llave maestra, y el filtro de la Prestadora es lo que aísla. Quien se
   // escanea puede no ser el Asistente asignado —es justamente lo que se quiere averiguar—, y la
-  // base sólo le deja ver al Cliente el que la atiende: con la credencial de la persona, el QR
+  // base sólo le deja ver al Cliente el que lo atiende: con la credencial de la persona, el QR
   // de alguien que no corresponde contestaría «no reconocido» en vez de «no asignado». Y la
   // guardia de hoy, porque esta ruta no pide `persona_autorizada_guardias` y la base sí.
   const { data: asistenteEscaneado } = await supabase
@@ -887,7 +887,7 @@ appClientesRouter.get('/pacientes/:id/verificar-asistente/:qrToken', requiereRol
 // ============================================================================
 
 // Calificar es una de las dos acciones de escritura que tiene el Cliente, y viene negada de
-// fábrica para todo las personas autorizadas: poner estrellas y un comentario sobre el trabajo de alguien es un
+// fábrica para todas las personas autorizadas: poner estrellas y un comentario sobre el trabajo de alguien es un
 // acto del titular. Lo decide la instrucción que el titular firmó, y no la columna `rol` del
 // miembro: «solo lectura o no» no distingue entre las dos acciones de escritura ni permite dar
 // una sin la otra.
@@ -905,7 +905,7 @@ appClientesRouter.post('/guardias/:guardiaId/calificar', requiereRolCliente, exi
   //
   // Esta búsqueda sigue con la llave maestra: trae la guardia pegada, y la base sólo muestra
   // guardias a quien tiene `persona_autorizada_guardias`, que esta ruta no pide. Con la credencial de la
-  // persona, alguien de las personas autorizadas que puede calificar y no ver la agenda no encontraría el turno.
+  // persona, una persona autorizada que puede calificar y no ver la agenda no encontraría el turno.
   const { data: filas } = await supabase
     .from('guardia_pacientes')
     .select('paciente_id, pacientes!inner(nombre, cliente_id), guardias!inner(id, asistente_id, prestadora_id)')
@@ -970,7 +970,7 @@ appClientesRouter.post('/push/suscribir', requiereRolCliente, async (req, res) =
   // La suscripción se guarda a nombre del Cliente, no de quien la registró. Los mensajes se
   // mandan con `enviarPushCliente(cliente.id)`, así que una fila guardada con el identificador
   // propio de la persona no la encuentra nadie: para el titular daba igual —su identificador y
-  // el de su Cliente son el mismo—, pero quien está en las personas autorizadas y no es el titular se
+  // el de su Cliente son el mismo—, pero quien es persona autorizada y no es el titular se
   // suscribía y no recibía nunca ninguno.
   const { error } = await guardarSuscripcionPush({
     prestadoraId: req.usuarioCliente.prestadoraId,
@@ -1115,7 +1115,7 @@ appClientesRouter.get('/qr-cobro/:id', requiereRolCliente, exigeVisible('cliente
 // LA CUENTA YA ESTABA HECHA Y NO SE VOLVIÓ A HACER ACÁ. Lo facturado menos lo cobrado lo resuelve
 // la vista `saldos_cliente`, que es el único lugar donde vive esa resta, y el estado de hoy lo
 // calcula la base con la fecha de vencimiento. Repetir la resta del lado del backend daría dos
-// respuestas posibles para la misma pregunta, y una de las dos la veríal Cliente.
+// respuestas posibles para la misma pregunta, y una de las dos la vería el Cliente.
 //
 // LO QUE SE MUESTRA ES EL DESGLOSE, no un total suelto. Un importe sin decir de qué es no se
 // puede comprobar ni discutir: cada renglón dice a qué Paciente y a qué Servicio corresponde.
@@ -1130,7 +1130,7 @@ appClientesRouter.get('/qr-cobro/:id', requiereRolCliente, exigeVisible('cliente
 // permiso nuevo: quien ya podía ver la cuota del Match es quien puede ver esto.
 //
 // Y CON UN SOFTWARE DE COBRANZAS CONECTADO, ESA RESTA NO SALE DE ACÁ. Si la Prestadora eligió que
-// el seguimiento de la cobranza es de otro software, el que sabe cuánto debe esta Cliente es él, y
+// el seguimiento de la cobranza es de otro software, el que sabe cuánto debe este Cliente es él, y
 // este sistema deja de calcular: lo que se entrega es el período y lo que se facturó —que son
 // datos guardados—, sin el saldo, sin lo cobrado y sin el estado. **No se manda un cero ni un
 // vacío en su lugar**: un cero dice que no debe nada, y eso es una afirmación que acá ya no se
@@ -1145,9 +1145,9 @@ appClientesRouter.get('/qr-cobro/:id', requiereRolCliente, exigeVisible('cliente
 const COLUMNAS_DE_LA_FACTURA =
   'factura_id, periodo, moneda, monto_total, cobrado, saldo, estado, fecha_emision, fecha_vencimiento';
 
-/** El saldo de una factura de esta Cliente, o null. Nunca se busca una factura sin decir de quién es.
+/** El saldo de una factura de este Cliente, o null. Nunca se busca una factura sin decir de quién es.
  *  La vista se lee con los permisos de quien pide, así que la base sólo deja ver las de su Cliente. */
-async function saldoDeLaCliente(db, req, facturaId) {
+async function saldoDelCliente(db, req, facturaId) {
   const { data, error } = await db
     .from('saldos_cliente')
     .select(COLUMNAS_DE_LA_FACTURA)
@@ -1222,7 +1222,7 @@ appClientesRouter.get('/facturas/:facturaId', requiereRolCliente, exigeVisible('
   try {
     laLlevaOtro = await laCobranzaLaLlevaOtroSoftware(req.usuarioCliente.prestadoraId);
     entrega = await laPrestadoraEntregaLaFactura(req.usuarioCliente.prestadoraId);
-    factura = await saldoDeLaCliente(db, req, req.params.facturaId);
+    factura = await saldoDelCliente(db, req, req.params.facturaId);
     conPapel = entrega && factura ? await facturasConComprobante(db, req, [factura.factura_id]) : new Set();
   } catch (e) {
     return responderError(res, e);
@@ -1303,7 +1303,7 @@ appClientesRouter.get('/facturas/:facturaId/comprobante', requiereRolCliente, ex
 //
 // Lo muestra cualquiera de las personas autorizadas, sin acceso especial: no revela ningún dato del
 // Paciente ni de la Prestadora, y su único efecto es dejar entrar a quien ya tenía la guardia
-// asignada. El código vale para las personas autorizadas entero —sujeto_tipo 'cliente'—, así que da lo mismo
+// asignada. El código vale para todas las personas autorizadas —sujeto_tipo 'cliente'—, así que da lo mismo
 // cuál de sus miembros esté en la casa ese día.
 // ============================================================================
 
@@ -1323,7 +1323,7 @@ appClientesRouter.get('/codigo-de-presencia', requiereRolCliente, async (req, re
 // ============================================================================
 // La vidriera del Match: buscar Asistentes y ver su perfil público
 //
-// QUÉ RESUELVE. Hasta acá, en la modalidad match existía todo el andamiaje —la base, los
+// QUÉ RESUELVE. Hasta acá, en la modalidad Match existía todo el andamiaje —la base, los
 // disparadores, los cobros, el consentimiento— y no existía la modalidad: el Cliente no podía
 // buscar un Asistente ni verlo. Estas dos direcciones son eso, y nada más que eso.
 //
@@ -1333,7 +1333,7 @@ appClientesRouter.get('/codigo-de-presencia', requiereRolCliente, async (req, re
 // por ningún camino: la consulta no pide esas columnas (`perfilPublicoDeAsistente.js`).
 //
 // LA PUERTA ES LA MODALIDAD, Y NO UN INTERRUPTOR NUEVO. La Prestadora que no ofrece
-// match no tiene vidriera, y eso ya está dicho en `prestadora_modalidades`. Un
+// Match no tiene vidriera, y eso ya está dicho en `prestadora_modalidades`. Un
 // interruptor aparte para lo mismo sería la misma decisión escrita en dos lugares.
 //
 // EL ORDEN LO DECIDE UNA FUNCIÓN DE RIESGO, NO EL GUSTO DE LA PANTALLA. Con
@@ -1345,7 +1345,7 @@ appClientesRouter.get('/codigo-de-presencia', requiereRolCliente, async (req, re
 const TOPE_DE_LA_VIDRIERA = 60;
 const TOPE_DE_OPINIONES = 30;
 
-/** Quién entra en la vidriera: de esta Prestadora, activo, en match y tomando trabajo.
+/** Quién entra en la vidriera: de esta Prestadora, activo, en Match y tomando trabajo.
  *  Con la llave maestra: la base sólo le deja ver al Cliente los Asistentes que ya la atienden,
  *  y la vidriera muestra justamente a los que todavía no. Lo mismo vale para su documentación y
  *  sus calificaciones públicas, más abajo. */
@@ -1406,7 +1406,7 @@ async function documentacionDeVarios(prestadoraId, asistenteIds) {
   for (const id of asistenteIds) {
     porAsistente.set(
       id,
-      estadoDocumentalParaLaCliente({
+      estadoDocumentalParaElCliente({
         tiposExigidos: tiposExigidos || [],
         documentos: (documentos || []).filter((d) => d.asistente_id === id),
         matricula: matriculaDe.get(id) || null,
@@ -1420,7 +1420,7 @@ async function documentacionDeVarios(prestadoraId, asistenteIds) {
 /** Las calificaciones públicas de varios Asistentes, o un mapa vacío si acá no se califica. */
 async function calificacionesDeVarios(prestadoraId, asistenteIds, visibilidad) {
   if (!visibilidad.cliente_califica_al_asistente || !asistenteIds.length) return new Map();
-  // Con la llave maestra: son las calificaciones que dejaron otras Clientes, y la base sólo le
+  // Con la llave maestra: son las calificaciones que dejaron otros Clientes, y la base sólo le
   // deja ver a cada una las suyas.
   const { data } = await supabase
     .from('calificaciones_asistente')
@@ -1540,7 +1540,7 @@ appClientesRouter.get('/match/asistentes/:id', requiereRolCliente, async (req, r
     // nombre no es parte de lo que se publica. Van sólo las que la Prestadora dejó públicas.
     let opiniones = [];
     if (visibilidad.cliente_califica_al_asistente) {
-      // Con la llave maestra: son opiniones de otras Clientes, que la base no le deja ver a ésta.
+      // Con la llave maestra: son opiniones de otros Clientes, que la base no le deja ver a ésta.
       const { data } = await supabase
         .from('calificaciones_asistente')
         .select('id, estrellas, comentario, created_at')
@@ -1577,7 +1577,7 @@ appClientesRouter.get('/match/asistentes/:id', requiereRolCliente, async (req, r
 // VER CÓMO LLEGAR A UN ASISTENTE: LA ACTIVACIÓN AL INTENTAR VER EL CONTACTO
 //
 // QUÉ RESUELVE. El dato de contacto es lo que el Match vende, y hasta acá no se le abría a
-// ninguna Cliente por ningún camino: el descuento del saldo estaba escrito en la base y en
+// ningún Cliente por ningún camino: el descuento del saldo estaba escrito en la base y en
 // `utils/contactosMatch.js`, y no lo llamaba nadie. Estas dos direcciones son el botón que
 // faltaba, y todo lo que deciden vive en `utils/contactoDelAsistente.js`.
 //
@@ -1586,7 +1586,7 @@ appClientesRouter.get('/match/asistentes/:id', requiereRolCliente, async (req, r
 // una pantalla: hace falta un pedido aparte, que ninguna aplicación manda sin que alguien toque
 // el botón y confirme.
 //
-// LA PLATA NO LA MIRA CUALQUIERA DEL PERSONAS_AUTORIZADAS. Activar un cobro es plata, así que el botón lleva
+// LA PLATA NO LA MIRA CUALQUIERA DE LAS PERSONAS AUTORIZADAS. Activar un cobro es plata, así que el botón lleva
 // los mismos dos candados que el acceso —lo que la Prestadora muestra
 // (`cliente_pagos_y_suscripcion`) y lo que el titular repartió (`persona_autorizada_dinero`)—. Preguntar
 // cómo está el contacto no los lleva: quien no mira la plata puede ver el dato ya abierto, y no
@@ -1665,12 +1665,12 @@ appClientesRouter.post(
 // pregunta una sola cosa —si está abierto— y tapa `contactoTapado.js`.
 //
 // LA PUERTA SIGUE SIENDO LA MODALIDAD. Igual que la vidriera: donde la Prestadora no ofrece
-// match no hay a quién escribirle, y el backend lo contesta con todas las letras.
+// Match no hay a quién escribirle, y el backend lo contesta con todas las letras.
 // ============================================================================
 
-/** El hilo que se pide, comprobando que sea de esta Cliente y de esta Prestadora. El que no
+/** El hilo que se pide, comprobando que sea de este Cliente y de esta Prestadora. El que no
  *  existe y el ajeno contestan lo mismo: desde afuera se tienen que ver iguales. */
-async function conversacionDeLaCliente(req) {
+async function conversacionDelCliente(req) {
   const { data } = await clienteDelPedido(req)
     .from('conversaciones_match')
     .select('id, prestadora_id, cliente_id, asistente_id, ultimo_mensaje_at, sala_videollamada, sala_abierta_at')
@@ -1686,7 +1686,7 @@ appClientesRouter.get('/match/conversaciones', requiereRolCliente, async (req, r
   try {
     await exigeVidriera(req);
     // Con la llave maestra: el hilo trae el nombre y la foto del Asistente, y la base no le deja
-    // ver al Cliente un Asistente que todavía no la atiende, que es el caso de la vidriera.
+    // ver al Cliente un Asistente que todavía no lo atiende, que es el caso de la vidriera.
     const { data, error } = await supabase
       .from('conversaciones_match')
       .select('id, asistente_id, ultimo_mensaje_at, asistentes(id, nombre, foto_url)')
@@ -1752,7 +1752,7 @@ appClientesRouter.post('/match/asistentes/:id/conversacion', requiereRolCliente,
 appClientesRouter.get('/match/conversaciones/:id', requiereRolCliente, async (req, res) => {
   try {
     await exigeVidriera(req);
-    const conversacion = await conversacionDeLaCliente(req);
+    const conversacion = await conversacionDelCliente(req);
 
     // El refresco del hilo abierto pide nada más lo posterior a lo que ya tiene. Sin `desde` sale
     // el hilo entero, que es lo que hace falta al abrirlo.
@@ -1789,7 +1789,7 @@ appClientesRouter.get('/match/conversaciones/:id', requiereRolCliente, async (re
 appClientesRouter.post('/match/conversaciones/:id/mensajes', requiereRolCliente, async (req, res) => {
   try {
     await exigeVidriera(req);
-    const conversacion = await conversacionDeLaCliente(req);
+    const conversacion = await conversacionDelCliente(req);
 
     const cuerpo = String(req.body?.cuerpo ?? '').trim();
     if (!cuerpo) throw new ErrorConMotivo('faltan_datos');
@@ -1812,7 +1812,7 @@ appClientesRouter.post('/match/conversaciones/:id/mensajes', requiereRolCliente,
 appClientesRouter.post('/match/conversaciones/:id/videollamada', requiereRolCliente, async (req, res) => {
   try {
     await exigeVidriera(req);
-    const conversacion = await conversacionDeLaCliente(req);
+    const conversacion = await conversacionDelCliente(req);
     const sala = await abrirVideollamada({
       conversacion,
       lado: LADO.CLIENTE,
@@ -1830,7 +1830,7 @@ appClientesRouter.post('/match/conversaciones/:id/videollamada', requiereRolClie
 // ============================================================================
 
 // Lo que la Prestadora escribió para quien cuida en su casa
-// (`routes/panelContenidos.js`). Sale solamente lo publicado y solamente de la Prestadora de esta
+// (`routes/panelContenidos.js`). Sale solamente lo publicado y solamente de la Prestadora de este
 // Cliente: un borrador es un texto a medio escribir y no sale de adentro del Panel.
 //
 // No pide modalidad ni acceso abierto: leer no cuesta nada y no es lo que el Match vende.

@@ -1,15 +1,15 @@
 // ---------------------------------------------------------------------------
 // carpetaDelAsistente.js — sus propios papeles, vistos por él.
 //
-// LA DIFERENCIA CON LO QUE VE LA CLIENTE ES EL NOMBRE DEL PAPEL, Y NO ES UN DETALLE.
+// LA DIFERENCIA CON LO QUE VE EL CLIENTE ES EL NOMBRE DEL PAPEL, Y NO ES UN DETALLE.
 // Al Cliente se le cuentan cuentas y una palabra de resumen, nunca cuál papel
 // es cuál, porque el nombre de un tipo de documento puede ser dato de salud y
-// ella no contrató eso (`estadoDocumentalParaLaCliente.js`). Acá el que mira es
+// ella no contrató eso (`estadoDocumentalParaElCliente.js`). Acá el que mira es
 // el dueño de esos papeles: decirle «le falta uno» sin decirle cuál sería
 // pedirle que adivine qué tiene que ir a buscar.
 //
 // EL RESUMEN NO SE VUELVE A CALCULAR ACÁ. Si esta carpeta está al día, está
-// incompleta o está vencida lo decide `estadoDocumentalParaLaCliente`, que ya
+// incompleta o está vencida lo decide `estadoDocumentalParaElCliente`, que ya
 // contesta esa pregunta para el otro lado del producto. Dos cuentas para lo
 // mismo terminan siempre igual: el teléfono del Asistente diciendo que está todo
 // bien y el Panel de la Prestadora diciendo que falta un papel.
@@ -20,7 +20,7 @@
 // que la Prestadora exige, y lo cargado se le engancha al lado.
 // ---------------------------------------------------------------------------
 
-import { estadoDocumentalParaLaCliente } from './estadoDocumentalParaLaCliente.js';
+import { estadoDocumentalParaElCliente } from './estadoDocumentalParaElCliente.js';
 import {
   DIAS_AVISO_POR_DEFECTO,
   ESTADO_VENCIMIENTO,
@@ -78,7 +78,7 @@ export function carpetaDelAsistente({
   // El resumen sale de la misma función que usa el otro lado del producto, con los mismos
   // datos. No se recalcula acá ni se deduce de la lista de arriba.
   const { resumen, papelesExigidos, alDia, porVencer, vencidos, sinCargar } =
-    estadoDocumentalParaLaCliente({
+    estadoDocumentalParaElCliente({
       tiposExigidos,
       documentos,
       matricula: null,
@@ -93,7 +93,7 @@ export function carpetaDelAsistente({
  * Cómo está el papel de un tipo, mirando primero si está y después hasta cuándo.
  *
  * Un tipo que no exige vencimiento está vigente con sólo estar cargado, y uno que sí lo exige
- * pero llegó sin fecha no se da por vigente: eso es lo mismo que decide la carpeta de la
+ * pero llegó sin fecha no se da por vigente: eso es lo mismo que decide la carpeta del
  * Cliente, dicho acá con la palabra que le sirve al dueño para saber qué le falta.
  */
 function estadoDelPapel(tipo, doc, diasAviso, ahora) {

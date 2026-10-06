@@ -237,17 +237,17 @@ const PACIENTES_DEL_ASISTENTE = `
 // de Asistentes porque hay una política restrictiva que esconde a quien todavía
 // no dio su conformidad. Hoy no hay ninguno en ese estado; la condición está
 // para que la prueba siga siendo cierta el día que lo haya.
-const PACIENTES_DE_LA_CLIENTE = `
+const PACIENTES_DEL_CLIENTE = `
   SELECT p.id FROM pacientes p WHERE p.cliente_id = '{p}' AND NOT p.pendiente_conformidad`;
 
 // El Servicio no guarda a quién se lo contrató en una columna «cliente»: guarda de qué clase es
 // el Cliente y cuál, porque puede no ser un Cliente. Acá se pide el conjunto por esas dos
 // columnas, que es lo que la base tiene, y no por la vieja `cliente_id`: si la política mirara
 // una y la prueba la otra, las dos podrían estar mal a la vez y darse verde.
-const SERVICIOS_DE_LA_CLIENTE = `
+const SERVICIOS_DEL_CLIENTE = `
   SELECT id FROM servicios WHERE tipo_contratante = 'cliente' AND contratante_id = '{p}'`;
 
-const ASISTENTES_DE_LA_CLIENTE = `
+const ASISTENTES_DEL_CLIENTE = `
   SELECT DISTINCT g.asistente_id
     FROM guardia_pacientes gp
     JOIN guardias g ON g.id = gp.guardia_id
@@ -282,23 +282,23 @@ const POR_PRESTADORA = (tabla) => `
 const LO_QUE_VE_CADA_UNO = [
   ['asistentes', `SELECT id FROM asistentes WHERE id = '{p}' AND NOT pendiente_conformidad`,
     `SELECT id FROM asistentes
-      WHERE id IN (${ASISTENTES_DE_LA_CLIENTE}) AND NOT pendiente_conformidad`],
+      WHERE id IN (${ASISTENTES_DEL_CLIENTE}) AND NOT pendiente_conformidad`],
 
   ['pacientes',
     `SELECT id FROM pacientes
       WHERE id IN (${PACIENTES_DEL_ASISTENTE}) AND NOT pendiente_conformidad`,
-    PACIENTES_DE_LA_CLIENTE],
+    PACIENTES_DEL_CLIENTE],
 
   ['prestadoras', SU_PRESTADORA('prestadoras'), SU_PRESTADORA('prestadoras')],
 
   // El Asistente no ve ningún Servicio: no hay política que se lo permita, y no la tiene que
-  // haber. El Cliente ve los suyos y ninguno más — en la base hay otras Clientes de su misma
+  // haber. El Cliente ve los suyos y ninguno más — en la base hay otros Clientes de su misma
   // Prestadora con Servicio propio, así que una política que sólo mirara la Prestadora daría
   // de más acá y la prueba lo diría.
-  ['servicios', NADA, SERVICIOS_DE_LA_CLIENTE],
+  ['servicios', NADA, SERVICIOS_DEL_CLIENTE],
 
   ['certificados', `SELECT id FROM certificados WHERE asistente_id = '{p}'`,
-    `SELECT id FROM certificados WHERE asistente_id IN (${ASISTENTES_DE_LA_CLIENTE})`],
+    `SELECT id FROM certificados WHERE asistente_id IN (${ASISTENTES_DEL_CLIENTE})`],
 
   ['matriculas_asistente', `SELECT id FROM matriculas_asistente WHERE asistente_id = '{p}'`, NADA],
 
@@ -308,19 +308,19 @@ const LO_QUE_VE_CADA_UNO = [
 
   ['calificaciones_asistente', `SELECT id FROM calificaciones_asistente WHERE asistente_id = '{p}'`,
     `SELECT id FROM calificaciones_asistente
-      WHERE cliente_id = '{p}' OR paciente_id IN (${PACIENTES_DE_LA_CLIENTE})`],
+      WHERE cliente_id = '{p}' OR paciente_id IN (${PACIENTES_DEL_CLIENTE})`],
 
   ['autorizaciones_monitoreo_paciente',
     `SELECT id FROM autorizaciones_monitoreo_paciente WHERE paciente_id IN (${PACIENTES_DEL_ASISTENTE})`,
-    `SELECT id FROM autorizaciones_monitoreo_paciente WHERE paciente_id IN (${PACIENTES_DE_LA_CLIENTE})`],
+    `SELECT id FROM autorizaciones_monitoreo_paciente WHERE paciente_id IN (${PACIENTES_DEL_CLIENTE})`],
 
   ['rangos_referencia_vitales',
     `SELECT id FROM rangos_referencia_vitales WHERE paciente_id IN (${PACIENTES_DEL_ASISTENTE})`,
-    `SELECT id FROM rangos_referencia_vitales WHERE paciente_id IN (${PACIENTES_DE_LA_CLIENTE})`],
+    `SELECT id FROM rangos_referencia_vitales WHERE paciente_id IN (${PACIENTES_DEL_CLIENTE})`],
 
   ['indicaciones_medicacion',
     `SELECT id FROM indicaciones_medicacion WHERE paciente_id IN (${PACIENTES_DEL_ASISTENTE})`,
-    `SELECT id FROM indicaciones_medicacion WHERE paciente_id IN (${PACIENTES_DE_LA_CLIENTE})`],
+    `SELECT id FROM indicaciones_medicacion WHERE paciente_id IN (${PACIENTES_DEL_CLIENTE})`],
 
   ['configuracion_alertas_ia', POR_PRESTADORA('configuracion_alertas_ia'), NADA],
 

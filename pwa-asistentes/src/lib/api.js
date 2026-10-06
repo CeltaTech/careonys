@@ -144,7 +144,7 @@ export const api = {
     pedido(`/calificaciones/${id}/descargo`, { method: 'PATCH', body: JSON.stringify({ descargo }) }),
   suscribirPush: (suscripcion) => pedido('/push/suscribir', { method: 'POST', body: JSON.stringify(suscripcion) }),
   desuscribirPush: (endpoint) => pedido('/push/suscribir', { method: 'DELETE', body: JSON.stringify({ endpoint }) }),
-  // EL CHAT CON UNA CLIENTE DE LA VIDRIERA. Es el mismo hilo que ve el Cliente, mirado desde la
+  // EL CHAT CON UN CLIENTE DE LA VIDRIERA. Es el mismo hilo que ve el Cliente, mirado desde la
   // otra punta. El dato de contacto sale tapado para los dos lados hasta que esa pareja lo abra:
   // tapar de un solo lado no taparía nada, porque alcanza con que lo escriba el otro.
   conversacionesDelMatch: () => pedido('/match/conversaciones'),

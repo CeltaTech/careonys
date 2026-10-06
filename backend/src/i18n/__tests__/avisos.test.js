@@ -204,7 +204,7 @@ test('una clave que no existe se avisa, no se devuelve vacía', () => {
 });
 
 // Los tres mensajes de guardia que le llegan al Cliente, probados rompiéndolos a propósito.
-const MENSAJES_DE_GUARDIA_PARA_LA_CLIENTE = [
+const MENSAJES_DE_GUARDIA_PARA_EL_CLIENTE = [
   'guardia_sin_cerrar_cliente',
   'guardia_sin_cerrar_grave_cliente',
   'alerta_temprana_guardia_cliente',
@@ -212,7 +212,7 @@ const MENSAJES_DE_GUARDIA_PARA_LA_CLIENTE = [
 
 test('una guardia sin Pacientes cargados se nombra igual, sin dejar el renglón cortado', () => {
   for (const idioma of IDIOMAS_DEL_CATALOGO) {
-    for (const clave of MENSAJES_DE_GUARDIA_PARA_LA_CLIENTE) {
+    for (const clave of MENSAJES_DE_GUARDIA_PARA_EL_CLIENTE) {
       const { cuerpo } = mensajeDelSistema(clave, idioma, { ...DATOS[clave], pacientes: [] });
       assert.equal(cuerpo.includes('undefined'), false, `${clave} en ${idioma} deja un hueco`);
       assert.equal(/\s,/.test(cuerpo), false, `${clave} en ${idioma} deja una coma suelta`);
@@ -237,7 +237,7 @@ test('nada de adentro entra en el texto del Cliente', () => {
     motivo: 'sin marcar salida',
   };
   for (const idioma of IDIOMAS_DEL_CATALOGO) {
-    for (const clave of MENSAJES_DE_GUARDIA_PARA_LA_CLIENTE) {
+    for (const clave of MENSAJES_DE_GUARDIA_PARA_EL_CLIENTE) {
       const { titulo, cuerpo } = mensajeDelSistema(clave, idioma, deAdentro);
       assert.ok(cuerpo.includes('Marta Giménez'), `${clave} en ${idioma} no nombra al Paciente`);
       const texto = `${titulo} ${cuerpo}`;

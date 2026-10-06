@@ -4,7 +4,7 @@
 // lo cargó: lo que falta es la constancia firmada. Un cartel que tape la pantalla, o que obligue a
 // firmar para seguir, estaría mintiendo sobre qué pasa si no se firma.
 //
-// SÓLO LO VE EL TITULAR, y sólo cuando hay algo pendiente. Para el resto de las personas autorizadas no existe: la
+// SÓLO LO VE EL TITULAR, y sólo cuando hay algo pendiente. Para las personas autorizadas no existe: la
 // instrucción no es suya y no hay nada que puedan hacer con ella.
 //
 // Se dibuja en la pantalla principal y en Mi Perfil. La lista de Pacientes se saltea sola cuando

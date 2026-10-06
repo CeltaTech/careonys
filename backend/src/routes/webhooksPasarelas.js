@@ -195,7 +195,7 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', enLaPrestadoraDeLaDire
     // más cada mes, y el 31 de enero más un mes daba 3 de marzo.
     await registrarCobroExitoso({ prestadoraId, accesoId, periodo });
   } else if (estadoFinal === 'fallido') {
-    // Un cobro que no entra no suspende nada hoy: abre el período de gracia, se le avisa a la
+    // Un cobro que no entra no suspende nada hoy: abre el período de gracia, se le avisa al
     // Cliente y se sigue reintentando hasta que se termine (`utils/periodoDeGracia.js`). Es el
     // resguardo del §3.2 del PRD del Match, y acá se suspendía el mismo día.
     await abrirElPeriodoDeGracia({ prestadoraId, accesoId });

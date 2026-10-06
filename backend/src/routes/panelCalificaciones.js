@@ -1,5 +1,5 @@
-// Calificaciones y descargos de los Asistentes, en el Panel. Valen para las dos modalidades: la
-// Cliente califica al Asistente que la atendió, sea de prestación directa o de Match, así que acá
+// Calificaciones y descargos de los Asistentes, en el Panel. Valen para las dos modalidades: el
+// Cliente califica al Asistente que lo atendió, sea de prestación directa o de Match, así que acá
 // no hay candado de modalidad. Si la Prestadora deja calificar o no lo decide su configuración.
 //
 // La visibilidad pública es el único campo que la Prestadora edita (schema_calificaciones_asistente.sql);

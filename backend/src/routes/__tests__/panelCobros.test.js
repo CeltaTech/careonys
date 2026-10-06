@@ -167,10 +167,10 @@ beforeEach(() => {
   // De fábrica la cobranza la sigue este sistema, que es lo que hace la mayoría. Las pruebas del
   // caso conectado pisan esta respuesta.
   respuestas.set('GET /rest/v1/configuracion_facturacion_clientes', () => [{ regla: {} }]);
-  // La factura como está guardada. Se consulta para saber si ya tiene el papel que baja la
+  // La factura como está guardada. Se consulta para saber si ya tiene el papel que baja el
   // Cliente; las pruebas que la cambian pisan esta respuesta.
   respuestas.set('GET /rest/v1/facturas_cliente', () => [FACTURA_EN_LA_BASE]);
-  // Los medios de pago salen de la lista `medios_de_pago_de_la_cliente` de la base. Acá contesta
+  // Los medios de pago salen de la lista `medios_de_pago_del_cliente` de la base. Acá contesta
   // las seis que siembra la migración, más una propia de esta Prestadora, que es el caso que antes
   // no existía.
   respuestas.set('GET /rest/v1/opciones_de_lista', () =>
@@ -199,8 +199,8 @@ const CON_LA_MAESTRA = [
   '/configuracion_facturacion_clientes',
   '/opciones_de_lista',
   '/legajos',
-  // Los nombres de los Clientes y los Clientes que se facturan: la base esconde las pendientes de
-  // conformidad a todos los roles, y esta ruta las mostraba y las facturaba.
+  // Los nombres de los Clientes y los Clientes que se facturan: la base esconde los pendientes de
+  // conformidad a todos los roles, y esta ruta los mostraba y los facturaba.
   '/clientes',
 ];
 
@@ -228,8 +228,8 @@ function todoConLaCredencialDeQuienPide(minimo) {
 }
 
 /**
- * Los Clientes se leen con la llave maestra y atadas a la Prestadora de la sesión: así aparecen
- * también las pendientes de conformidad, que la base esconde a todos los roles.
+ * Los Clientes se leen con la llave maestra y atados a la Prestadora de la sesión: así aparecen
+ * también los pendientes de conformidad, que la base esconde a todos los roles.
  */
 function clientesConLaMaestraYLaPrestadora() {
   const lecturas = llamadas.filter((l) => l.clave === 'GET /rest/v1/clientes');
@@ -245,7 +245,7 @@ function clientesConLaMaestraYLaPrestadora() {
 // ---------------------------------------------------------------------------------------
 
 describe('qué cobro se admite', () => {
-  // Los medios ya no se escriben en el código: salen de la lista `medios_de_pago_de_la_cliente` de
+  // Los medios ya no se escriben en el código: salen de la lista `medios_de_pago_del_cliente` de
   // la base y quien comprueba los recibe. Acá se le pasan a mano los que sembró la migración.
   const ADMITIDOS = ['transferencia', 'efectivo', 'tarjeta', 'debito_automatico', 'cheque', 'otro'];
 
@@ -642,7 +642,7 @@ describe('anotar lo que se emitió por una factura', () => {
     assert.equal(llamadas.some((l) => l.clave === 'PATCH /rest/v1/facturas_cliente'), false);
   });
 
-  it('si no viene vencimiento queda el que ya tenía, acordado con esa Cliente', async () => {
+  it('si no viene vencimiento queda el que ya tenía, acordado con ese Cliente', async () => {
     respuestas.set('GET /rest/v1/facturas_cliente', () => [FACTURA_EN_LA_BASE]);
     respuestas.set('PATCH /rest/v1/facturas_cliente', () => []);
     respuestas.set('GET /rest/v1/saldos_cliente', () => [saldoConCobrado(0, 'pendiente', [], 121000)]);
@@ -832,7 +832,7 @@ describe('anotar un cobro desde el Panel', () => {
 
     const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/opciones_de_lista');
     assert.ok(consulta, 'no le preguntó a la base por el catálogo de medios');
-    assert.ok(consulta.url.includes('medios_de_pago_de_la_cliente'));
+    assert.ok(consulta.url.includes('medios_de_pago_del_cliente'));
     assert.ok(!consulta.url.includes('medios_de_pago_al_asistente'));
   });
 
@@ -1069,13 +1069,13 @@ describe('la puerta de entrada para lo que viene de afuera', () => {
 const PACIENTE = '55555555-5555-5555-5555-555555555555';
 
 /** La base contesta con un Cliente, un Paciente y lo que cada prueba le ponga encima. */
-function baseConUnaCliente({
+function baseConUnCliente({
   prestaciones = [],
   paquetes = [],
   items = [],
   yaFacturadas = [],
   plazoDeLaPrestadora = null,
-  plazoDeLaCliente = null,
+  plazoDelCliente = null,
 } = {}) {
   respuestas.set('GET /rest/v1/configuracion_facturacion_clientes', () =>
     plazoDeLaPrestadora === null ? [] : [{ regla: { dias_hasta_el_vencimiento: plazoDeLaPrestadora } }]
@@ -1084,7 +1084,7 @@ function baseConUnaCliente({
     {
       id: CLIENTE,
       prestadora_id: PRESTADORA,
-      dias_hasta_el_vencimiento: plazoDeLaCliente,
+      dias_hasta_el_vencimiento: plazoDelCliente,
       pacientes: [{ id: PACIENTE, nombre: 'Juana Pérez' }],
     },
   ]);
@@ -1115,8 +1115,8 @@ describe('generar las facturas de un período', () => {
     assert.equal(estado, 400);
   });
 
-  it('sin fecha escrita y sin plazo acordado, esa Cliente no se factura: no se le inventa un vencimiento', async () => {
-    baseConUnaCliente({ prestaciones: [unaPrestacion()] });
+  it('sin fecha escrita y sin plazo acordado, ese Cliente no se factura: no se le inventa un vencimiento', async () => {
+    baseConUnCliente({ prestaciones: [unaPrestacion()] });
 
     const { estado, cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08' });
     assert.equal(estado, 200);
@@ -1125,7 +1125,7 @@ describe('generar las facturas de un período', () => {
   });
 
   it('con el plazo que configuró la Prestadora, la factura vence sola', async () => {
-    baseConUnaCliente({ prestaciones: [unaPrestacion()], plazoDeLaPrestadora: 10 });
+    baseConUnCliente({ prestaciones: [unaPrestacion()], plazoDeLaPrestadora: 10 });
 
     const { cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08' });
     assert.deepEqual(cuerpo, { generadas: 1, sinPrestaciones: 0, sinVencimiento: 0 });
@@ -1138,7 +1138,7 @@ describe('generar las facturas de un período', () => {
   });
 
   it('lo acordado con el Cliente gana sobre lo que configuró la Prestadora', async () => {
-    baseConUnaCliente({ prestaciones: [unaPrestacion()], plazoDeLaPrestadora: 10, plazoDeLaCliente: 30 });
+    baseConUnCliente({ prestaciones: [unaPrestacion()], plazoDeLaPrestadora: 10, plazoDelCliente: 30 });
 
     await pedir('POST', '/facturas/generar', { periodo: '2026-08' });
 
@@ -1149,7 +1149,7 @@ describe('generar las facturas de un período', () => {
   });
 
   it('la fecha escrita para la tanda pisa cualquier plazo acordado', async () => {
-    baseConUnaCliente({ prestaciones: [unaPrestacion()], plazoDeLaPrestadora: 10, plazoDeLaCliente: 30 });
+    baseConUnCliente({ prestaciones: [unaPrestacion()], plazoDeLaPrestadora: 10, plazoDelCliente: 30 });
 
     await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
 
@@ -1158,7 +1158,7 @@ describe('generar las facturas de un período', () => {
   });
 
   it('un plazo fuera de borde se ignora y manda la capa de arriba, en vez de dejar sin factura', async () => {
-    baseConUnaCliente({ prestaciones: [unaPrestacion()], plazoDeLaPrestadora: 10, plazoDeLaCliente: 4000 });
+    baseConUnCliente({ prestaciones: [unaPrestacion()], plazoDeLaPrestadora: 10, plazoDelCliente: 4000 });
 
     const { cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08' });
     assert.equal(cuerpo.generadas, 1);
@@ -1170,7 +1170,7 @@ describe('generar las facturas de un período', () => {
   });
 
   it('la factura lleva lo que corre ese mes, y no lo que dejó de correr', async () => {
-    baseConUnaCliente({
+    baseConUnCliente({
       prestaciones: [
         unaPrestacion({ id: 1, precio_final: '10000.00' }),
         unaPrestacion({ id: 2, tipo_servicio: 'Enfermería', precio_final: '8000.00', vigente_hasta: '2026-06-30' }),
@@ -1189,7 +1189,7 @@ describe('generar las facturas de un período', () => {
   });
 
   it('un paquete vigente se cobra a su precio pactado, no a la suma de los suyos', async () => {
-    baseConUnaCliente({
+    baseConUnCliente({
       prestaciones: [
         unaPrestacion({ id: 1, precio_final: '10000.00' }),
         unaPrestacion({ id: 2, tipo_servicio: 'Enfermería', precio_final: '8000.00' }),
@@ -1211,15 +1211,15 @@ describe('generar las facturas de un período', () => {
   });
 
   it('el Cliente que ya tiene la factura del período no recibe otra', async () => {
-    baseConUnaCliente({ prestaciones: [unaPrestacion()], yaFacturadas: [{ cliente_id: CLIENTE }] });
+    baseConUnCliente({ prestaciones: [unaPrestacion()], yaFacturadas: [{ cliente_id: CLIENTE }] });
 
     const { cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
     assert.deepEqual(cuerpo, { generadas: 0, sinPrestaciones: 0, sinVencimiento: 0 });
     assert.equal(llamadas.some((l) => l.clave === 'POST /rest/v1/facturas_cliente'), false);
   });
 
-  it('el Cliente a la que no le corre nada se cuenta aparte, y no se le factura', async () => {
-    baseConUnaCliente({ prestaciones: [unaPrestacion({ vigente_hasta: '2026-06-30' })] });
+  it('el Cliente al que no le corre nada se cuenta aparte, y no se le factura', async () => {
+    baseConUnCliente({ prestaciones: [unaPrestacion({ vigente_hasta: '2026-06-30' })] });
 
     const { cuerpo } = await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
     assert.deepEqual(cuerpo, { generadas: 0, sinPrestaciones: 1, sinVencimiento: 0 });
@@ -1227,7 +1227,7 @@ describe('generar las facturas de un período', () => {
   });
 
   it('si los renglones no entran, la factura no queda sin detalle', async () => {
-    baseConUnaCliente({ prestaciones: [unaPrestacion()] });
+    baseConUnCliente({ prestaciones: [unaPrestacion()] });
     respuestas.set('POST /rest/v1/facturas_cliente_items', () => ({ __estado: 400, __cuerpo: { message: 'no entró' } }));
     respuestas.set('DELETE /rest/v1/facturas_cliente', () => []);
 
@@ -1240,7 +1240,7 @@ describe('generar las facturas de un período', () => {
   });
 
   it('todo se pide con la credencial de quien llama, y la factura nace con la Prestadora de su Cliente', async () => {
-    baseConUnaCliente({
+    baseConUnCliente({
       prestaciones: [unaPrestacion()],
       paquetes: [{ id: 9, paciente_id: PACIENTE, nombre: null, precio_paquete: '1.00', estado: 'de_baja' }],
       items: [{ paquete_id: 9, prestacion_id: 1 }],

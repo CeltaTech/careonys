@@ -50,18 +50,18 @@ export function plazoQueSePuedeGuardar(dias) {
 }
 
 /**
- * El plazo que rige para esta Cliente, en días, o `null` si no se acordó ninguno.
+ * El plazo que rige para este Cliente, en días, o `null` si no se acordó ninguno.
  *
  * Dos capas, de la más general a la más particular: lo que configuró la Prestadora y lo que se
- * acordó con esta Cliente. No hay capa de fábrica, porque un plazo inventado por el sistema
+ * acordó con este Cliente. No hay capa de fábrica, porque un plazo inventado por el sistema
  * pondría facturas en mora sin que nadie lo haya decidido.
  *
  * Un valor fuera de borde se ignora en vez de romper, igual que en el pago a los Asistentes: una
  * factura que no se puede generar es peor que una que sale con el plazo de la capa de arriba.
  */
-export function plazoDePagoDe(deLaPrestadora, deLaCliente) {
+export function plazoDePagoDe(deLaPrestadora, delCliente) {
   let plazo = null;
-  for (const capa of [deLaPrestadora, deLaCliente]) {
+  for (const capa of [deLaPrestadora, delCliente]) {
     const revisado = plazoQueSePuedeGuardar(capa);
     if (revisado.ok && revisado.valor !== null) plazo = revisado.valor;
   }

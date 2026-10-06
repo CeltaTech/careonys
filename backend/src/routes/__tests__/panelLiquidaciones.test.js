@@ -750,7 +750,7 @@ describe('generar el mes', () => {
 // ---------------------------------------------------------------------------------------
 
 /* Antes era texto libre: cada quien lo escribía a su manera y después no se podía contar.
-   Ahora es una opción de la lista `medios_de_pago_al_asistente`, que no es la del cobro de la
+   Ahora es una opción de la lista `medios_de_pago_al_asistente`, que no es la del cobro del
    Cliente —a una persona no se le paga con tarjeta ni con débito automático—, y el backend la
    comprueba contra la base antes de escribir. */
 describe('con qué se le pagó al Asistente', () => {
@@ -840,7 +840,7 @@ describe('con qué se le pagó al Asistente', () => {
     const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/opciones_de_lista');
     assert.ok(consulta, 'no le preguntó a la base por el catálogo de medios');
     assert.ok(consulta.url.includes('medios_de_pago_al_asistente'));
-    assert.ok(!consulta.url.includes('medios_de_pago_de_la_cliente'));
+    assert.ok(!consulta.url.includes('medios_de_pago_del_cliente'));
   });
 
   it('si la base no contesta el catálogo, no se escribe nada', async () => {

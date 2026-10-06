@@ -60,7 +60,7 @@ const ESTADO_POR_MOTIVO = {
   // Dos motivos que antes viajaban como frase adentro del `Error` y que, al dejar de mandarse el
   // texto crudo, se habrían perdido: quien mira leería "algo falló de nuestro lado" cuando en
   // realidad no falló nada, sólo que lo que pidió no corresponde. El de la persona es 409 —el
-  // pedido está bien armado, lo que pasa es que esa persona no es de las personas autorizadas de esa Cliente—;
+  // pedido está bien armado, lo que pasa es que esa persona no es de las personas autorizadas de ese Cliente—;
   // el del Paciente es 404, y contesta lo mismo cuando el Paciente no existe y cuando es de otra
   // Prestadora, que desde afuera se tienen que ver iguales.
   persona_fuera_del_personas_autorizadas: 409,
@@ -77,7 +77,7 @@ const ESTADO_POR_MOTIVO = {
   dias_gratis_invalido: 400,
   contactos_incluidos_invalido: 400,
   renovacion_sin_periodo: 400,
-  // La baja en un clic de un acceso del Match. El acceso que no existe y el que es de otra
+  // La baja en un clic de un acceso del Match. El acceso que no existe y el que es de otro
   // Cliente contestan lo mismo: desde afuera se tienen que ver iguales. La forma que no se renueva
   // es 409 por lo mismo que el correo ya tomado —el pedido está bien armado y choca con lo que esa
   // forma es—, y no nombra ninguna columna. Los demás motivos de la baja no están acá a propósito:

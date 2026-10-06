@@ -1,4 +1,4 @@
-/* Los plazos del cobro de match, tal como los eligió cada Prestadora.
+/* Los plazos del cobro de Match, tal como los eligió cada Prestadora.
    ========================================================================
 
    QUÉ RESUELVE. Tres plazos comerciales estaban escritos en el backend: con cuántos días se avisa un

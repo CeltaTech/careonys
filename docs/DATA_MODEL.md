@@ -288,7 +288,7 @@ CREATE TABLE datos_reservados_asistente (
     CHECK (score_riesgo_reclasificacion >= 0 AND score_riesgo_reclasificacion <= 100),
   indicadores_riesgo            JSONB NOT NULL DEFAULT '{}'::jsonb,
   motivo_exclusion_directo      TEXT,      -- NULL mientras la modalidad esté activa en `canales`
-  motivo_exclusion_match  TEXT,      -- ídem
+  motivo_exclusion_match        TEXT,      -- ídem
   created_at                    TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at                    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -527,7 +527,7 @@ dato histórico ya cargado en esta columna no se borró, solo dejó de ser la fu
 DDL completo, RLS y seed de advertencia legal en `supabase/migrations/`. Resumen de las 3
 tablas nuevas:
 
-- **`indicaciones_medicacion`** — una fila por indicación de medicación solicitada por la
+- **`indicaciones_medicacion`** — una fila por indicación de medicación solicitada por el
   Cliente (medicamento/dosis/frecuencia/vía de administración/prescripción opcional/vigencia
   desde-hasta), con `estado` (`pendiente`/`aceptada`/`rechazada`/`finalizada`) revisado por el
   Panel. `via_administracion` es catálogo abierto (TEXT, sin CHECK) — Regla 1, `CLAUDE.md` §7.
@@ -568,8 +568,8 @@ RLS). Resumen de las tablas:
   Paciente no pueden compartir ni un día (restricción `domicilios_temp_sin_superposicion`),
   para que "¿dónde se lo atiende hoy?" tenga siempre una sola respuesta. Quién contesta esa
   pregunta está escrito una sola vez (regla 12), en la función
-  `public.domicilios_de_pacientes_en`: la usan el check-in, la aplicación del Asistente, la de
-  el Cliente y el Panel.
+  `public.domicilios_de_pacientes_en`: la usan el check-in, la aplicación del Asistente, la
+  del Cliente y el Panel.
 - **`personal_emergencia`** — contacto de emergencia asociado a una guardia/Paciente.
 - **`incidentes_relevo`** — registra un Asistente ausente a una guardia. `guardia_saliente_id`
   es **nullable**: el caso `NULL` es "Ausente sin relevo previo" (ver glosario en

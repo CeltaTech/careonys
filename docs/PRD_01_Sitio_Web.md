@@ -18,10 +18,10 @@ cuidado"* — es la herramienta con la que las empresas del rubro administran su
 
 De ahí salen las dos frases que ordenan todo el resto:
 
-- **Un cliente que entra buscando un cuidador se va sin lo que buscaba, y está bien.** No es
+- **Una persona que entra buscando un cuidador se va sin lo que buscaba, y está bien.** No es
   nuestra clienta: es clienta de nuestras clientas. Lo único que le debemos es una salida
   clara y rápida, no una página entera (§1).
-- **Ofrecerle cuidado a esa cliente sería competirle a nuestros propios clientes.** Es la
+- **Ofrecerle cuidado a esa persona sería competirle a nuestros propios clientes.** Es la
   razón de fondo, y no depende de cómo esté escrita la página.
 
 ### Dos direcciones, dos temas distintos
@@ -49,7 +49,7 @@ Dos personas deciden juntas, y la página tiene que servirles a las dos:
 
 Y dos que llegan por error, buscando lo que no vendemos:
 
-- **Un cliente buscando un cuidador.**
+- **Alguien buscando un cuidador.**
 - **Alguien buscando trabajo de cuidador.**
 
 A estos dos la página les debe **una sola línea visible**, no una explicación larga: que
@@ -77,7 +77,7 @@ navegador de quien mira.
 Son límites duros, no preferencias.
 
 1. **No ofrece cuidado ni recibe pedidos de cuidado.** Ni un formulario, ni un teléfono para
-   clientes, ni una lista de servicios de cuidado con precios.
+   quien busca cuidado, ni una lista de servicios de cuidado con precios.
 2. **No recibe postulaciones de Asistentes.** Quien quiere trabajar cuidando se postula en la
    empresa que lo va a contratar, no acá.
 3. **Ningún dato real de nadie.** Ni el nombre de una Prestadora, ni un caso de éxito con
@@ -93,7 +93,7 @@ Son límites duros, no preferencias.
    Brasil, siempre juntos (`CLAUDE.md` §7 regla 2). No se publica una página en un idioma
    "para traducirla después".
 6. **No se promete lo que el producto no hace.** A la fecha de hoy no existen: el cobro
-   automático a los Clientes, la aplicación instalable desde las tiendas de Android y Apple, y
+   automático a los Clientes de la Prestadora, la aplicación instalable desde las tiendas de Android y Apple, y
    los niveles de inteligencia artificial 3 a 5 (`PLAN_HASTA_PRODUCCION.md`). Lo que está a medias se
    cuenta como lo que es o no se cuenta.
 
@@ -104,7 +104,7 @@ Cinco, y ninguna de más. Cada una tiene un trabajo; si no se le encuentra el tr
 ### 1. Portada (`/`)
 Arriba de todo, en una sola frase, qué es y para quién. Debajo, el problema concreto que
 resuelve, dicho como lo diría quien lo sufre: la grilla de guardias en una planilla, el
-teléfono que suena porque nadie sabe si el asistente llegó, el cliente que pregunta cómo pasó
+teléfono que suena porque nadie sabe si el asistente llegó, el hijo que pregunta cómo pasó
 la noche su madre. Y el botón que lleva a pedir una demostración.
 
 Acá va también la línea para quien llegó por error (§1).
@@ -188,7 +188,7 @@ sacarle el `noindex` (§6).
 
 ## 8. La otra pregunta del pendiente #104: ¿y el sitio de cada Prestadora?
 
-El pendiente pedía decidir si el sitio que **sí** le habla a los clientes —el de cada empresa
+El pendiente pedía decidir si el sitio que **sí** le habla a quien busca cuidado —el de cada empresa
 de cuidados, con sus servicios y su teléfono— es una función de Careonys, algo que cada
 empresa se arregla por su cuenta, o nada.
 

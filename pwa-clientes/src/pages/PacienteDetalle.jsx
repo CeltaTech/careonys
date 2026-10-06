@@ -30,7 +30,7 @@ export default function PacienteDetalle() {
   //
   // Son las dos decisiones de siempre, y acá no pasan por el mapa de pantallas porque esto no
   // es una pantalla: es un bloque adentro de ésta. La Prestadora puede no ofrecer el
-  // seguimiento en vivo, y el titular puede habérselo negado a alguien de su personas autorizadas.
+  // seguimiento en vivo, y el titular puede habérselo negado a una de sus personas autorizadas.
   const veUbicacionEnVivo = seVe('cliente_ubicacion_en_vivo') && puedeVer('persona_autorizada_ubicacion_en_vivo');
   const veAlertas = seEntraA('alertas');
   const [datos, setDatos] = useState(null);
@@ -101,7 +101,7 @@ export default function PacienteDetalle() {
 
   return (
     <>
-      {/* Con un solo Paciente la lista se saltea sola y ésta es la primera pantalla que ve la
+      {/* Con un solo Paciente la lista se saltea sola y ésta es la primera pantalla que ve el
           Cliente, así que la advertencia de la instrucción sin firmar tiene que estar acá también. */}
       <AvisoInstruccionPendiente />
 

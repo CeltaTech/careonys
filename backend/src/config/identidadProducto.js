@@ -112,7 +112,7 @@ export const IDENTIDAD = {
   // Dirección técnica a la que escribe quien opera la infraestructura, no una
   // casilla de atención al público. Hoy la usa el "subject" VAPID de las
   // notificaciones push (backend/src/utils/push.js): es adonde el servicio de
-  // push del navegador avisa si hay un problema con los envíos, y ninguna
+  // push del navegador avisa si hay un problema con los envíos, y ningún
   // Cliente ni ningún Asistente la ve nunca.
   //
   // Va sobre celtatech.com y no sobre el dominio del producto, por una razón

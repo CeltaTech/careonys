@@ -1,5 +1,5 @@
 // Adaptador de red de cobranza extrabancaria (Rapipago/Pago Fácil/Cobro Express) — clave
-// manual de la cuenta de cobranza de la Prestadora. Genera un cupón/código de pago que la
+// manual de la cuenta de cobranza de la Prestadora. Genera un cupón/código de pago que el
 // Cliente paga en cualquier boca de la red; no hay suscripción recurrente del lado del
 // proveedor, cada período genera su propio cupón, confirmado por webhook cuando se abona.
 

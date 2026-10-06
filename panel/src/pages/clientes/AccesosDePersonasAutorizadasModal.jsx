@@ -7,14 +7,14 @@ import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 
-/* Qué ve cada persona de las personas autorizadas.
+/* Qué ve cada Persona autorizada.
    ==========================================================================
 
-   POR QUÉ EXISTE ESTA PANTALLA. Cada persona anotada en las personas autorizadas ve lo suyo, y no
+   POR QUÉ EXISTE ESTA PANTALLA. Cada persona autorizada ve lo suyo, y no
    todos lo mismo que el titular: acá es donde la Prestadora carga qué puede ver cada una.
 
    QUIÉN DECIDE, QUE NO ES UN DETALLE. El titular no configura nada por su cuenta: le dice a la
-   Prestadora qué puede ver cada persona de su personas autorizadas, la Prestadora lo carga acá, y al guardar
+   Prestadora qué puede ver cada una de sus Personas autorizadas, la Prestadora lo carga acá, y al guardar
    el backend arma el documento en castellano con eso escrito. El titular lo firma —en papel o
    confirmándolo desde su aplicación—, y así, el día que alguien diga «yo nunca autoricé eso»,
    está la instrucción con nombre, fecha y firma. Por eso el documento aparece DESPUÉS de
@@ -26,11 +26,11 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
    aparece sola, sin tocar este archivo.
 
    SE MANDA UNA SOLA INSTRUCCIÓN CON TODO. No una por persona ni una por casilla: lo que el
-   titular firma es el estado completo de su personas autorizadas en una fecha. Guardar de a pedacitos
+   titular firma es el estado completo de sus Personas autorizadas en una fecha. Guardar de a pedacitos
    dejaría al titular firmando algo distinto de lo que rige. */
 
 /* Las dos casillas que «Sólo mirar» apaga: son las únicas del catálogo con las que alguien
-   de las personas autorizadas ESCRIBE algo —calificar al trabajador, pedir un cambio de medicación—; el resto
+   de las Personas autorizadas ESCRIBE algo —calificar al trabajador, pedir un cambio de medicación—; el resto
    sólo deja leer. Están escritas acá y en ningún otro lado de esta pantalla. El día que el
    catálogo sume una tercera acción de escritura, el backend tendría que decir cuáles son en vez
    de que el Panel las conozca de memoria; mientras sean estas dos, la lista alcanza. */
@@ -69,7 +69,7 @@ export function AccesosDePersonasAutorizadasModal({ clienteId, miembros, puedeEd
   const modal = useModalAccesible(cerrar);
 
   /* La persona desde cuyo renglón se abrió la ventana queda a la vista sola. Sin esto, en un
-     personas autorizadas de cinco personas hay que buscarla a mano en una lista larga. */
+     grupo de cinco Personas autorizadas hay que buscarla a mano en una lista larga. */
   const seccionInicial = useCallback((nodo) => {
     nodo?.scrollIntoView?.({ block: 'start' });
   }, []);
@@ -99,7 +99,7 @@ export function AccesosDePersonasAutorizadasModal({ clienteId, miembros, puedeEd
     setGuardando(true);
     setError(null);
     try {
-      const resultado = await llamarApiPanel(`/cuentas/cliente/${clienteId}/personas autorizadas/instruccion`, {
+      const resultado = await llamarApiPanel(`/cuentas/cliente/${clienteId}/personas_autorizadas/instruccion`, {
         method: 'POST',
         body: JSON.stringify({ accesos: elegido }),
       });
@@ -118,26 +118,26 @@ export function AccesosDePersonasAutorizadasModal({ clienteId, miembros, puedeEd
   return (
     <div className="panel-modal-fondo" onClick={cerrar}>
       <div className="panel-modal panel-modal-ancho" onClick={(e) => e.stopPropagation()} {...modal.props}>
-        <h2 id={modal.idTitulo}>{t.clientes.personas autorizadas.accesos_titulo}</h2>
+        <h2 id={modal.idTitulo}>{t.clientes.personas_autorizadas.accesos_titulo}</h2>
 
         {error && <Alert variant="error">{error}</Alert>}
 
         {(miembros ?? []).map((miembro) => (
           <div
             key={miembro.usuarioId}
-            className="personas autorizadas-persona"
+            className="persona-autorizada"
             ref={miembro.usuarioId === usuarioIdInicial ? seccionInicial : undefined}
           >
             <h3>{miembro.nombre || miembro.email || '—'}</h3>
             <p className="panel-explicacion">{miembro.email || '—'}</p>
 
             {puedeEditar && (
-              <div className="personas autorizadas-atajos">
+              <div className="personas-autorizadas-atajos">
                 <Button variant="secondary" onClick={() => aplicarAtajo(miembro, 'todo')} disabled={guardando}>
-                  {t.clientes.personas autorizadas.accesos_darle_todo}
+                  {t.clientes.personas_autorizadas.accesos_darle_todo}
                 </Button>
                 <Button variant="secondary" onClick={() => aplicarAtajo(miembro, 'solo_mirar')} disabled={guardando}>
-                  {t.clientes.personas autorizadas.accesos_solo_mirar}
+                  {t.clientes.personas_autorizadas.accesos_solo_mirar}
                 </Button>
               </div>
             )}
@@ -165,7 +165,7 @@ export function AccesosDePersonasAutorizadasModal({ clienteId, miembros, puedeEd
           </Button>
           {puedeEditar && (
             <Button onClick={guardar} disabled={guardando}>
-              {guardando ? t.comun.guardando : t.clientes.personas autorizadas.accesos_guardar}
+              {guardando ? t.comun.guardando : t.clientes.personas_autorizadas.accesos_guardar}
             </Button>
           )}
         </div>
@@ -191,11 +191,11 @@ export function DocumentoDeLaInstruccion({ texto, fecha, recienGuardado = false,
     <div className="panel-modal-fondo" onClick={onCerrar}>
       <div className="panel-modal panel-modal-ancho" onClick={(e) => e.stopPropagation()} {...modal.props}>
         <div className="no-imprimir">
-          <h2 id={modal.idTitulo}>{t.clientes.personas autorizadas.documento_titulo}</h2>
-          {recienGuardado && <Alert variant="success">{t.clientes.personas autorizadas.documento_guardado}</Alert>}
+          <h2 id={modal.idTitulo}>{t.clientes.personas_autorizadas.documento_titulo}</h2>
+          {recienGuardado && <Alert variant="success">{t.clientes.personas_autorizadas.documento_guardado}</Alert>}
           {fecha && (
             <dl className="panel-detalle-lista">
-              <dt>{t.clientes.personas autorizadas.documento_fecha}</dt>
+              <dt>{t.clientes.personas_autorizadas.documento_fecha}</dt>
               <dd>{new Date(fecha).toLocaleDateString(locale)}</dd>
             </dl>
           )}
@@ -209,7 +209,7 @@ export function DocumentoDeLaInstruccion({ texto, fecha, recienGuardado = false,
           <Button variant="secondary" onClick={onCerrar}>
             {t.comun.cerrar}
           </Button>
-          <Button onClick={() => window.print()}>{t.clientes.personas autorizadas.documento_imprimir}</Button>
+          <Button onClick={() => window.print()}>{t.clientes.personas_autorizadas.documento_imprimir}</Button>
         </div>
       </div>
     </div>
@@ -236,7 +236,7 @@ export function RegistrarPapelFirmadoModal({ clienteId, instruccionId, onClose, 
     try {
       const cuerpo = new FormData();
       if (archivo) cuerpo.append('archivo', archivo);
-      await llamarApiPanel(`/cuentas/cliente/${clienteId}/personas autorizadas/instruccion/${instruccionId}/papel`, {
+      await llamarApiPanel(`/cuentas/cliente/${clienteId}/personas_autorizadas/instruccion/${instruccionId}/papel`, {
         method: 'POST',
         body: cuerpo,
       });
@@ -251,11 +251,11 @@ export function RegistrarPapelFirmadoModal({ clienteId, instruccionId, onClose, 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
-        <h2 id={modal.idTitulo}>{t.clientes.personas autorizadas.papel_titulo}</h2>
+        <h2 id={modal.idTitulo}>{t.clientes.personas_autorizadas.papel_titulo}</h2>
         {error && <Alert variant="error">{error}</Alert>}
 
         <FormField
-          label={t.clientes.personas autorizadas.papel_archivo}
+          label={t.clientes.personas_autorizadas.papel_archivo}
           name="papel_firmado"
           type="file"
           accept="application/pdf,image/jpeg,image/png"
@@ -267,7 +267,7 @@ export function RegistrarPapelFirmadoModal({ clienteId, instruccionId, onClose, 
             {t.comun.cancelar}
           </Button>
           <Button onClick={registrar} disabled={guardando}>
-            {guardando ? t.clientes.personas autorizadas.papel_registrando : t.clientes.personas autorizadas.papel_confirmar}
+            {guardando ? t.clientes.personas_autorizadas.papel_registrando : t.clientes.personas_autorizadas.papel_confirmar}
           </Button>
         </div>
       </div>

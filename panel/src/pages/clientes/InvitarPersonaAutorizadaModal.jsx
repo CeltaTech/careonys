@@ -9,7 +9,7 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-export function InvitarPersonasAutorizadasModal({ clienteId, onClose, onInvitado }) {
+export function InvitarPersonaAutorizadaModal({ clienteId, onClose, onInvitado }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const [nombre, setNombre] = useState('');
@@ -24,7 +24,7 @@ export function InvitarPersonasAutorizadasModal({ clienteId, onClose, onInvitado
     setGuardando(true);
     try {
       const { data } = await supabase.auth.getSession();
-      const respuesta = await fetch(`${API_URL}/api/panel/cuentas/cliente/${clienteId}/personas autorizadas`, {
+      const respuesta = await fetch(`${API_URL}/api/panel/cuentas/cliente/${clienteId}/personas_autorizadas`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -45,21 +45,21 @@ export function InvitarPersonasAutorizadasModal({ clienteId, onClose, onInvitado
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
-        <h2 id={modal.idTitulo}>{t.clientes.personas autorizadas.invitar_titulo}</h2>
+        <h2 id={modal.idTitulo}>{t.clientes.personas_autorizadas.invitar_titulo}</h2>
 
         {error && <Alert variant="error">{error}</Alert>}
 
         <form onSubmit={handleSubmit}>
-          <FormField label={t.clientes.personas autorizadas.invitar_nombre} name="nombre" required value={nombre} onChange={(e) => setNombre(e.target.value)} />
-          <FormField label={t.clientes.personas autorizadas.invitar_email} name="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-          <FormField label={t.clientes.personas autorizadas.invitar_telefono} name="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+          <FormField label={t.clientes.personas_autorizadas.invitar_nombre} name="nombre" required value={nombre} onChange={(e) => setNombre(e.target.value)} />
+          <FormField label={t.clientes.personas_autorizadas.invitar_email} name="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          <FormField label={t.clientes.personas_autorizadas.invitar_telefono} name="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
 
           <div className="panel-modal-acciones">
             <Button variant="secondary" type="button" onClick={onClose} disabled={guardando}>
               {t.comun.cancelar}
             </Button>
             <Button type="submit" disabled={guardando}>
-              {guardando ? t.clientes.personas autorizadas.invitando : t.comun.guardar}
+              {guardando ? t.clientes.personas_autorizadas.invitando : t.comun.guardar}
             </Button>
           </div>
         </form>

@@ -12,7 +12,7 @@ import AvisoInstruccionPendiente from '../components/AvisoInstruccionPendiente';
 import LlavesDeEsteAparato from '../components/LlavesDeEsteAparato';
 
 // Una de las dos listas: qué ve esta persona y qué no. La de «qué no ve» pesa lo mismo que la
-// otra a propósito. Quien está anotado en un personas autorizadas tiene que poder saber qué le
+// otra a propósito. Quien es persona autorizada tiene que poder saber qué le
 // falta sin tener que descubrirlo a los tropezones, buscando un botón que no está.
 function ListaDeAccesos({ titulo, claves, etiquetas, vacio }) {
   return (
@@ -92,7 +92,7 @@ export default function MiPerfil() {
   if (error) return <div className="alert alert-error" role="alert">{error}</div>;
   if (!perfil) return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
 
-  // El orden es el que mandó el backend, que es el del catálogo: dos personas del mismo personas autorizadas
+  // El orden es el que mandó el backend, que es el del catálogo: dos personas autorizadas del mismo Cliente
   // leen su lista en el mismo orden y se pueden comparar renglón por renglón.
   const accesos = perfil.accesos ? Object.entries(perfil.accesos) : null;
   const loQueVe = accesos ? accesos.filter(([, permitido]) => permitido).map(([clave]) => clave) : [];
@@ -127,8 +127,8 @@ export default function MiPerfil() {
 
       <section className="pwa-card">
         <div className="pwa-acciones pwa-acciones-sola">
-          {/* Lo que se le cobra a las personas autorizadas no cuelga de ningún Paciente: se factura al
-              personas autorizadas entero, y una misma factura puede tener renglones de más de una persona
+          {/* Lo que se le cobra al Cliente no cuelga de ningún Paciente: se factura al
+              Cliente entero, y una misma factura puede tener renglones de más de una persona
               cuidada. El botón se pregunta lo mismo que la ruta, con la misma función, o quedaría
               un botón que rebota. */}
           {pantallaPermitida('facturas', seVe, puedeVer) && (
@@ -146,7 +146,7 @@ export default function MiPerfil() {
 
       {/* Qué ve esta persona y qué no. Al titular se le dice que ve todo y se termina ahí: lo
           suyo no se configura, no hay instrucción que le pueda quitar nada, ni siquiera una
-          propia. A quien está en las personas autorizadas se le muestran las dos listas enteras, sin nada
+          propia. A cada persona autorizada se le muestran las dos listas enteras, sin nada
           que tocar. */}
       {(perfil.esTitular || accesos) && (
         <section className="pwa-card">
@@ -158,13 +158,13 @@ export default function MiPerfil() {
               <ListaDeAccesos
                 titulo={t.perfil.acceso_ve}
                 claves={loQueVe}
-                etiquetas={t.personas autorizadas}
+                etiquetas={t.personas_autorizadas}
                 vacio={t.perfil.acceso_ve_vacio}
               />
               <ListaDeAccesos
                 titulo={t.perfil.acceso_no_ve}
                 claves={loQueNoVe}
-                etiquetas={t.personas autorizadas}
+                etiquetas={t.personas_autorizadas}
                 vacio={t.perfil.acceso_no_ve_vacio}
               />
             </>

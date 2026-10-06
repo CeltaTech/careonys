@@ -8,7 +8,7 @@
 //   * `match`  — el Asistente elige qué toma y mantiene su independencia
 //                      operativa (CLAUDE.md §3).
 // No es un detalle administrativo: es la línea que separa dos regímenes de
-// trabajo. Ofrecerle una guardia de match a alguien contratado en directa
+// trabajo. Ofrecerle una guardia de Match a alguien contratado en directa
 // —o al revés— es cruzar esa línea.
 //
 // Es la misma palabra que ya usa la Prestadora para decir cómo trabaja ella

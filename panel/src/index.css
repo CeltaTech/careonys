@@ -2152,7 +2152,7 @@ button.panel-kpi-card[aria-pressed='true'] {
   }
 }
 
-/* ---------- Los accesos de las personas autorizadas ---------- */
+/* ---------- Los accesos de las Personas autorizadas ---------- */
 
 /* Once casillas por persona no entran cómodas en el ancho de un modal común, y son de leer:
    cada una tiene su explicación abajo. */
@@ -2160,23 +2160,23 @@ button.panel-kpi-card[aria-pressed='true'] {
   max-width: 720px;
 }
 
-/* Cada persona de las personas autorizadas es un bloque cerrado. Sin la línea que las separa, treinta y tres
+/* Cada Persona autorizada es un bloque cerrado. Sin la línea que las separa, treinta y tres
    casillas seguidas se leen como una sola lista y se pierde de quién es cada tramo. */
-.personas autorizadas-persona {
+.persona-autorizada {
   border-top: 1px solid var(--borde-card);
   padding-top: 1rem;
   margin-top: 1.5rem;
 }
 
-.personas autorizadas-persona h3 {
+.persona-autorizada h3 {
   margin: 0;
 }
 
-.personas autorizadas-persona .panel-explicacion {
+.persona-autorizada .panel-explicacion {
   margin-top: 0.15rem;
 }
 
-.personas autorizadas-atajos {
+.personas-autorizadas-atajos {
   display: flex;
   gap: 0.5rem;
   margin-bottom: 1rem;

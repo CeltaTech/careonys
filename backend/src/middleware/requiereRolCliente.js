@@ -26,7 +26,7 @@ export async function requiereRolCliente(req, res, next) {
   }
 
   // El usuario logueado puede ser el titular de la cuenta (fila propia en `clientes`) o
-  // alguien invitado a las personas autorizadas (fila en `miembros_cliente`, Fase 5) — se
+  // alguien invitado como persona autorizada (fila en `personas_autorizadas`, Fase 5) — se
   // resuelve acá una sola vez, no en cada ruta de appClientes.js.
   //
   // Y se busca por la cuenta y acotado a la Prestadora de la sesión, porque la misma persona
@@ -42,7 +42,7 @@ export async function requiereRolCliente(req, res, next) {
 
   if (!clienteId) {
     const { data: miembro } = await db
-      .from('miembros_cliente')
+      .from('personas_autorizadas')
       .select('cliente_id, clientes!inner(prestadora_id)')
       .eq('usuario_id', sesion.id)
       .eq('clientes.prestadora_id', perfil.prestadora_id)
@@ -56,7 +56,7 @@ export async function requiereRolCliente(req, res, next) {
   }
 
   // Acá se deja solamente si es el titular o no, que es un hecho —tiene fila propia en
-  // `clientes`— y no una decisión. Qué ve cada persona de las personas autorizadas ya no es un rol con nombre:
+  // `clientes`— y no una decisión. Qué ve cada persona autorizada ya no es un rol con nombre:
   // son once accesos que el titular pidió por escrito, y los resuelve `accesosDelPedido` en las
   // rutas que los necesitan, para no consultarlos en los pedidos que no los miran.
   req.usuarioCliente = {

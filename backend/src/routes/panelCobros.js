@@ -9,7 +9,7 @@ import {
   primerDiaDelPeriodo,
 } from '../utils/cobrosDeCliente.js';
 import {
-  LISTA_DE_MEDIOS_DE_PAGO_DE_LA_CLIENTE,
+  LISTA_DE_MEDIOS_DE_PAGO_DEL_CLIENTE,
   mediosDePagoDeLaPrestadora,
 } from '../utils/mediosDePago.js';
 import {
@@ -108,7 +108,7 @@ export {
 } from '../utils/cobrosDeCliente.js';
 
 /**
- * Los nombres de estas Clientes, para las listas que se muestran en pantalla.
+ * Los nombres de estos Clientes, para las listas que se muestran en pantalla.
  *
  * Se buscan aparte en vez de traerlos colgados de la factura, y siempre dentro de la Prestadora
  * de quien pide.
@@ -159,7 +159,7 @@ async function saldoDeLaFactura(db, facturaId) {
 // Las restricciones que avisó el software de créditos y cobranzas
 //
 // Sólo se leen. El sistema no las decide, no las cambia y no hace nada con ellas: las muestra
-// para que una persona de la Prestadora sepa que a esa Cliente le pusieron una restricción y
+// para que una persona de la Prestadora sepa que a ese Cliente le pusieron una restricción y
 // resuelva qué hacer. Ningún Servicio se corta ni ninguna Guardia se cancela por esto.
 //
 // De cada Cliente vale la fila más nueva: las anteriores quedan guardadas, pero lo que rige hoy
@@ -170,7 +170,7 @@ async function saldoDeLaFactura(db, facturaId) {
 /**
  * El portero del estado de cuenta.
  *
- * Cuánto debe un Cliente y si está atrasada es del trato económico entre la Prestadora y esa
+ * Cuánto debe un Cliente y si está atrasado es del trato económico entre la Prestadora y ese
  * Cliente, no del armado de las guardias. La acción nace reservada a la administración y cada
  * Prestadora decide si se la abre a quien coordina, como con cualquier otra del catálogo.
  */
@@ -205,7 +205,7 @@ panelCobrosRouter.get('/restricciones', requiereRolPanel, async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
 
   // Con la maestra: la base le abre `restricciones_de_cobranza` sólo a la administración, y quien
-  // coordina necesita saber qué Cliente quedó restringida para trabajar.
+  // coordina necesita saber qué Cliente quedó restringido para trabajar.
   const { data, error } = await supabase
     .from('restricciones_de_cobranza')
     .select('id, cliente_id, restringida, motivo, origen, created_at')
@@ -236,7 +236,7 @@ panelCobrosRouter.get('/restricciones', requiereRolPanel, async (req, res) => {
 // ---------------------------------------------------------------------------------------
 // El estado de cuenta que avisó el software de créditos y cobranzas
 //
-// ACÁ NO SE CALCULA NADA. Cuánto debe cada Cliente, en qué moneda, si está atrasada y desde
+// ACÁ NO SE CALCULA NADA. Cuánto debe cada Cliente, en qué moneda, si está atrasado y desde
 // cuándo llegó de afuera y se entrega tal como llegó. No se completa lo que no vino, no se suma
 // ningún cobro anotado de este lado y no se compara contra la resta de `saldos_cliente`: son dos
 // respuestas posibles para la misma pregunta, y con un software conectado la que vale es la de él.
@@ -381,9 +381,9 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
   if (!periodo) return res.status(400).json({ error: 'Falta el período, en formato AAAA-MM' });
 
   // La fecha puede venir escrita para toda la tanda —es lo que se hacía hasta ahora—, y en ese
-  // caso pisa cualquier plazo acordado. Si no viene, cada factura vence según el plazo de esa
+  // caso pisa cualquier plazo acordado. Si no viene, cada factura vence según el plazo de ese
   // Cliente. Una factura sin vencimiento no se puede reclamar ni mostrar como vencida, así que
-  // sin ninguna de las dos cosas esa Cliente no se factura: no se le inventa una fecha.
+  // sin ninguna de las dos cosas ese Cliente no se factura: no se le inventa una fecha.
   const vencimientoDeLaTanda = String(req.body?.fecha_vencimiento ?? '').slice(0, 10);
   const vencimientoEscrito = /^\d{4}-\d{2}-\d{2}$/.test(vencimientoDeLaTanda);
 
@@ -524,7 +524,7 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
         fecha_emision: hoy,
         fecha_vencimiento: vencimiento,
         // A quién se le reclama se copia de la ficha del Cliente el día que se genera, y no se
-        // mira más: una factura emitida no cambia, así que si mañana esa Cliente pasa a pagar por
+        // mira más: una factura emitida no cambia, así que si mañana ese Cliente pasa a pagar por
         // sí misma, las viejas tienen que seguir diciendo a quién se le reclamaron. Vacío en la
         // ficha se guarda vacío, que quiere decir el Cliente.
         financiador_tipo: cliente.financiador_tipo ?? null,
@@ -836,7 +836,7 @@ panelCobrosRouter.post('/facturas/:facturaId/cobros', requiereRolPanel, veElEsta
 
   let mediosAdmitidos;
   try {
-    mediosAdmitidos = await mediosDePagoDeLaPrestadora(prestadoraId, LISTA_DE_MEDIOS_DE_PAGO_DE_LA_CLIENTE);
+    mediosAdmitidos = await mediosDePagoDeLaPrestadora(prestadoraId, LISTA_DE_MEDIOS_DE_PAGO_DEL_CLIENTE);
   } catch (e) {
     return responderError(res, e);
   }
@@ -952,7 +952,7 @@ async function ubicarFactura(db, cobro) {
     .eq('periodo', periodo)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return { factura: data ?? null, motivo: data ? null : 'Esa Cliente no tiene factura en ese período' };
+  return { factura: data ?? null, motivo: data ? null : 'Ese Cliente no tiene factura en ese período' };
 }
 
 /**
@@ -1001,7 +1001,7 @@ panelCobrosRouter.post('/entrada', requiereRolPanel, veElEstadoDeCuenta, async (
   // que las referencias de arriba.
   let mediosAdmitidos;
   try {
-    mediosAdmitidos = await mediosDePagoDeLaPrestadora(prestadoraId, LISTA_DE_MEDIOS_DE_PAGO_DE_LA_CLIENTE);
+    mediosAdmitidos = await mediosDePagoDeLaPrestadora(prestadoraId, LISTA_DE_MEDIOS_DE_PAGO_DEL_CLIENTE);
   } catch (e) {
     return responderError(res, e);
   }

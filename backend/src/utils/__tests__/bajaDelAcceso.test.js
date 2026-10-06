@@ -165,7 +165,7 @@ describe('la baja que sale bien', () => {
     assert.equal(resultado.baja.vigente_hasta, '2026-09-20');
   });
 
-  it('lo busca acotado al Cliente, así nadie da de baja el acceso de otra', async () => {
+  it('lo busca acotado al Cliente, así nadie da de baja el acceso de otro', async () => {
     await darDeBaja();
     const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_match');
     assert.ok(busqueda.url.includes(`cliente_id=eq.${CLIENTE}`));
@@ -210,7 +210,7 @@ describe('la baja que sale bien', () => {
 });
 
 describe('el acceso que no se da de baja', () => {
-  it('el que no existe —o es de otra Cliente— se contesta y no se llama a nadie', async () => {
+  it('el que no existe —o es de otro Cliente— se contesta y no se llama a nadie', async () => {
     respuestas.set('GET /rest/v1/accesos_match', () => []);
     const resultado = await darDeBaja();
     assert.equal(resultado.ok, false);

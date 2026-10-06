@@ -1,7 +1,7 @@
 /* Las salas de videollamada del producto.
    =======================================
 
-   QUÉ ES. El producto hace videollamadas en dos lugares: el chat del Match, donde una
+   QUÉ ES. El producto hace videollamadas en dos lugares: el chat del Match, donde un
    Cliente y un Asistente se hablan antes de contratarlo, y la entrevista de reclutamiento, donde
    la Prestadora entrevista a un postulante. Son dos situaciones distintas y una sola forma de
    armar la sala, así que la forma vive acá y no adentro de ninguna de las dos.

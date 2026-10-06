@@ -120,7 +120,7 @@ cobranzaExternaRouter.post('/:prestadoraId', enLaPrestadoraDeLaDireccion('Aviso 
   const traeEstado = cuerpo.estado_de_cuenta !== undefined && cuerpo.estado_de_cuenta !== null;
 
   // El Cliente tiene que ser de esta Prestadora. El disparador de la base resuelve la Prestadora a
-  // partir del Cliente, así que una entrada de un Cliente ajena caería en la Prestadora de ella:
+  // partir del Cliente, así que una entrada de un Cliente ajeno caería en la Prestadora de él:
   // sin este control, quien tiene el secreto de una podría escribir sobre cualquier otra.
   const { data: cliente } = await supabase
     .from('clientes')

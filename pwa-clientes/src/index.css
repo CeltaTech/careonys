@@ -720,7 +720,7 @@ a {
   gap: 10px;
 }
 
-/* ---------- El hilo de mensajes del Match ---------- */
+/* ---------- El hilo de mensajes de Match ---------- */
 
 /* Los dos lados se distinguen por el lado en el que están y por el fondo, no por el color solo:
    quien no distingue colores tiene que poder seguir la conversación igual. */

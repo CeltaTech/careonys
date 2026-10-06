@@ -11,15 +11,15 @@
 |---|---|---|
 | **CeltaTech** | La empresa dueña del software | Nadie, dentro del producto |
 | **Careonys** | El producto | Quien trabaja **en** la Prestadora (Admin_prestadora, Coordinador) y sabe qué software usa |
-| **La Prestadora** | La empresa que presta el cuidado | La **Cliente** y el **Asistente** |
+| **La Prestadora** | La empresa que presta el cuidado | El **Cliente** y el **Asistente** |
 
 Todo este documento habla de la segunda. **No confundirla con la tercera.**
 
 Un Cliente contrató a la Prestadora, no a CeltaTech, y probablemente no sepa que Careonys
 existe. Un Asistente trabaja para la Prestadora. Para los dos, la marca que tiene sentido es
 la de la Prestadora — `prestadoras.nombre_fantasia`, que existe en la base desde el diseño
-inicial y que el diseño multi-tenant definió textualmente como *"marca que ve la
-cliente/paciente final"*.
+inicial y que el diseño multi-tenant definió como la marca que ven el Cliente y el
+Paciente.
 
 **La regla:** en toda pantalla, email o notificación dirigida a un Cliente o a un Asistente,
 la marca **principal** la pone la Prestadora, nunca `identidadProducto.js`.

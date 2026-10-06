@@ -568,7 +568,7 @@ function evaluarAsistente(asistente, ctx) {
   }
 
   // --- 2 bis. La modalidad de trabajo. Bloquea igual que estar ocupado, y por un motivo
-  //        parecido: en prestación directa la Prestadora dirige el trabajo y en match el
+  //        parecido: en prestación directa la Prestadora dirige el trabajo y en Match el
   //        Asistente elige qué toma (CLAUDE.md §3). Quien no trabaja en la modalidad de esta
   //        guardia no es que esté peor puesto que otro: es que esa guardia no es para él.
   //

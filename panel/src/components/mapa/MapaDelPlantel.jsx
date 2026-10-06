@@ -17,9 +17,9 @@ import { SIN_ZONA, puntosDeLaZona } from '../../lib/mapaDelPlantel';
    usa una sola pantalla de cada dos. Pedida al abrir el Panel, la pagaría también quien nunca
    abre el mapa.
 
-   POR QUÉ LOS PUNTOS SON PERSONAS_AUTORIZADASS Y NO CHINCHETAS. La chincheta de la librería es una imagen
+   POR QUÉ LOS PUNTOS SON REDONDOS Y NO CHINCHETAS. La chincheta de la librería es una imagen
    suelta que hay que ir a buscar a otra dirección, y con la compilación de por medio termina
-   pidiéndola donde no está: el mapa se dibuja y no aparece ni un punto. Un personas autorizadas lo dibuja el
+   pidiéndola donde no está: el mapa se dibuja y no aparece ni un punto. Una marca redonda la dibuja el
    navegador solo, con los colores del sistema de diseño.
 
    EL VACÍO ACÁ ES IMPORTANTE. Si nadie del plantel tiene su ubicación cargada, no se muestra un
@@ -91,7 +91,7 @@ export function MapaDelPlantel({ datos, origen = null, estado, error, recargar }
     const color = colorDelSistema(COLOR_PUNTO);
     const apagado = colorDelSistema(COLOR_APAGADO);
     for (const punto of visibles) {
-      const personas autorizadas = leaflet.circleMarker([punto.lat, punto.lng], {
+      const marca = leaflet.circleMarker([punto.lat, punto.lng], {
         radius: 7,
         color: punto.disponible ? color : apagado,
         fillColor: punto.disponible ? color : apagado,
@@ -105,8 +105,8 @@ export function MapaDelPlantel({ datos, origen = null, estado, error, recargar }
       if (Number.isFinite(punto.km)) {
         renglones.push(tm.a_distancia.replace('{km}', Math.round(punto.km * 10) / 10));
       }
-      personas autorizadas.bindPopup(renglones.join('<br>'));
-      personas autorizadas.addTo(capaDePuntos.current);
+      marca.bindPopup(renglones.join('<br>'));
+      marca.addTo(capaDePuntos.current);
     }
 
     if (origen) {

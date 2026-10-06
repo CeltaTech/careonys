@@ -48,7 +48,7 @@ export const MEDIOS_POSIBLES = Object.values(MEDIOS);
  * Son tres y no uno porque el hecho es el mismo y el camino cambia: el relevo que no llegó abre un
  * incidente de relevo, el turno que nunca tuvo a quién asignarle abre el suyo, y la que quedó de
  * más y no puede continuar no abre ninguno. Guardar el camino es lo que después permite contar
- * cuántas veces terminó cuidando el cliente por cada uno.
+ * cuántas veces terminó cuidando un familiar por cada uno.
  */
 export const ORIGENES = {
   RELEVO: 'relevo',

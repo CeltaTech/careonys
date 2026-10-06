@@ -214,7 +214,7 @@ export function Dashboard() {
   const postulacionesSemana = postulaciones.filas.filter((p) => esEstaSemana(p.creado_en)).length;
   const solicitudesPendientes = solicitudes.filas.filter((s) => s.estado === 'nueva').length;
   const asistentesDisponibles = asistentes.filas.filter(estaEnElPlantel).length;
-  const clientesActivas = clientes.filas.filter((f) => !f.deleted_at).length;
+  const clientesActivos = clientes.filas.filter((f) => !f.deleted_at).length;
 
   const solicitudesPorEstado = ESTADOS_DE_SOLICITUD.map((e) => ({
     estado: e,
@@ -272,8 +272,8 @@ export function Dashboard() {
             <div className="panel-kpi-numero">{asistentesDisponibles}</div>
           </div>
           <div className="panel-tarjeta panel-kpi">
-            <div className="panel-kpi-etiqueta">{t.dashboard.clientes_activas}</div>
-            <div className="panel-kpi-numero">{clientesActivas}</div>
+            <div className="panel-kpi-etiqueta">{t.dashboard.clientes_activos}</div>
+            <div className="panel-kpi-numero">{clientesActivos}</div>
           </div>
         </div>
       </EstadoLista>

@@ -34,10 +34,10 @@ decisión la toma la plataforma sobre todo el sistema, o la toma el Cliente sobr
 vínculo?**
 
 - Si el Cliente decide horario, penaliza inasistencias, o califica **a su propio
-  Asistente**, está ejerciendo el rol de empleadora doméstica que ya le reconoce la Ley de
+  Asistente**, está ejerciendo el rol de empleador doméstico que ya le reconoce la Ley de
   Personal de Casas Particulares (26.844) — con o sin plataforma de por medio. La
-  plataforma solo le da la herramienta, no decide por ella.
-- Si la **plataforma** agrega esas decisiones entre todas los Clientes y las usa para
+  plataforma solo le da la herramienta, no decide por él.
+- Si la **plataforma** agrega esas decisiones entre todos los Clientes y las usa para
   decidir el futuro laboral del Asistente en general (ej. excluirlo de aparecer para
   cualquier Cliente, fijarle precio u horario de forma uniforme), ahí sí se parece a un
   empleador — es el mismo patrón que llevó a fallar en contra de Uber en el Reino Unido
@@ -124,8 +124,8 @@ compra anterior sigue estando; escribir el total nuevo encima sería vencerlo.
 
 **Se gasta de a un Asistente, no de a una mirada.** Abierto el contacto de alguien, volver a
 mirarlo no descuenta otro: queda anotado a quién se le abrió, y eso es lo que hace que cinco
-contactos alcancen para cinco personas y no para tres miradas dos veces. La anotación vale para la
-Cliente entera, así que tampoco se paga dos veces por haber comprado dos paquetes.
+contactos alcancen para cinco personas y no para tres miradas dos veces. La anotación vale para el
+Cliente entero, así que tampoco se paga dos veces por haber comprado dos paquetes.
 
 **No abre nada un acceso que no está vigente**, aunque le haya quedado saldo, y un acceso que se
 sostiene por fecha y no por saldo lo dice con sus propias palabras: comprar un paquete no es lo
@@ -239,17 +239,17 @@ intervención en el vínculo:
 En prestación directa, el riesgo es que la Prestadora controle tanto al Asistente que
 parezca su empleadora (art. 23 LCT, ver `docs/legal/argentina.md`). En Match el
 riesgo es el mismo principio aplicado al revés: que la **plataforma** (no el Cliente)
-ejerza ese control de forma agregada entre todas los Clientes.
+ejerza ese control de forma agregada entre todos los Clientes.
 
 | Función | Riesgo | Motivo |
 |---|---|---|
 | Calificación por estrellas visible, como opinión del Cliente, **sin consecuencia automática decidida por la plataforma** | Bajo | Es información al consumidor, equivalente a una reseña de Google/MercadoLibre. La "autoexclusión" (nadie la elige por su nota baja) es el Cliente decidiendo, no la plataforma. |
 | Verificación de identidad / antecedentes penales | Bajo | Función de seguridad, no de dirección del trabajo — describir con exactitud literal qué se verificó y qué no (caso California vs. Care.com: sancionados por afirmar una verificación que no hacían). |
 | Toggle de disponibilidad del Asistente (activar/desactivar) | Bajo | El Asistente decide sobre sí misma; ya reconocido en `CLAUDE.md` §3 como autonomía del Asistente en modalidad Match. |
-| Herramientas de horario/penalización/calificación **operadas por el Cliente sobre su propio Asistente** | Bajo | Es el Cliente ejerciendo su rol de empleadora doméstica (Ley 26.844), no la plataforma. |
+| Herramientas de horario/penalización/calificación **operadas por el Cliente sobre su propio Asistente** | Bajo | Es el Cliente ejerciendo su rol de empleador doméstico (Ley 26.844), no la plataforma. |
 | Ranking o puntaje que la **plataforma** calcula y usa para decidir si el Asistente sigue apareciendo ante *cualquier* Cliente | Alto | La plataforma decide el futuro laboral del Asistente en general — mismo hecho citado en Uber BV vs Aslam (Reino Unido, 2021). |
 | Consecuencia automática atada a la nota agregada (ej. "por debajo de X estrellas dejás de aparecer") | Alto | Convierte la opinión del consumidor en una decisión algorítmica de la plataforma sobre el Asistente. |
-| Precio u horario fijado por la plataforma para todas los Clientes por igual | Alto | Control económico/temporal centralizado, indicio clásico de subordinación. |
+| Precio u horario fijado por la plataforma para todos los Clientes por igual | Alto | Control económico/temporal centralizado, indicio clásico de subordinación. |
 | Exclusividad exigida por la plataforma | Alto | Restringe la libertad de trabajar para otros, elemento central de la autonomía real. |
 | Mediación de conflictos por la plataforma | Alto (por eso se descartó, §4) | Se parece a dirigir el vínculo. |
 
@@ -312,7 +312,7 @@ corrección de arquitectura de 3 niveles (`ARQUITECTURA_NIVELES.md`) y luego a r
 textual, para no perderla:
 
 **a) Prestación directa** (la modalidad más común hoy en Argentina):
-- **Clientes/pacientes/clientes** (nombre comercial todavía por definir) — todo lo
+- **Clientes/pacientes** (nombre comercial todavía por definir) — todo lo
   referente a captación y configuración del Cliente, más los planes que contrató y los
   acuerdos de aceptación de esos planes. Distinguir si el servicio es contratado en forma
   directa o es derivación de obra social u otro sistema todavía no considerado.

@@ -33,7 +33,7 @@ números hardcodeados — ver regla 10 de `CLAUDE.md`.
 
 | Término | Definición |
 |---|---|
-| Vínculo | La relación contractual vigente entre la prestadora/el cliente y el Asistente (monotributo o dependencia) |
+| Vínculo | La relación contractual vigente entre la prestadora/el Cliente y el Asistente (monotributo o dependencia) |
 | Cese | Fin del vínculo, con una causal específica y (cuando aplica) un cálculo de liquidación |
 | Causal de cese | Una de las 13 razones tipificadas de fin de vínculo — ver enum `causal_cese` en `DATA_MODEL.md` |
 | Escala legal | Un valor normativo versionado (tope indemnizatorio, valor hora CCT, etc.), nunca hardcodeado |
@@ -103,7 +103,7 @@ y el Simulador de Vínculo (sección siguiente) — **no reimplementar la lógic
 | `despido_sin_causa` | Indemnización completa: antigüedad + preaviso + integración mes despido, con tope art. 245 vía `escalas_legales` |
 | `abandono_de_trabajo` | Similar a justa causa — requiere revisión de abogado |
 | `muerte_del_trabajador` | Indemnización reducida a favor de derechohabientes — cálculo especial, marcar `requiereRevisionAbogado: true` |
-| `muerte_del_empleador` | Indemnización reducida — solo aplica si el empleador es el cliente directamente (dependencia), no si es la prestadora |
+| `muerte_del_empleador` | Indemnización reducida — solo aplica si el empleador es el Cliente directamente (dependencia), no si es la prestadora |
 | `muerte_persona_cuidada` | Causal específica del sector — tratamiento similar a fuerza mayor, **no calcula automático**, deriva a abogado |
 | `periodo_de_prueba` | Sin indemnización si está dentro del período de prueba vigente (`escalas_legales` define la duración) |
 | `incapacidad_absoluta` | **No calcula automático** — fuera de alcance (ver sección "Fuera de alcance"), `montoTotal: null` |

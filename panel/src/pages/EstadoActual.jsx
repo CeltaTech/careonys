@@ -435,7 +435,7 @@ export function EstadoActual() {
           icono={<IconoEmergencias hay={datos.emergenciasSinAtender > 0} />}
           etiqueta={tx.kpi_emergencias}
           numero={datos.emergenciasSinAtender}
-          a="/guardias/emergencias"
+          a="/emergencias"
           textoEnlace={tx.ver_emergencias}
           resaltada={datos.emergenciasSinAtender > 0}
         />

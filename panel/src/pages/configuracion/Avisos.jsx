@@ -1324,6 +1324,20 @@ const minutosDeEscalonValidos = (valor, campo) => {
   return Number.isInteger(minutos) && minutos >= minimo && minutos <= maximo;
 };
 
+/* Cada cuánto se repite el aviso de una emergencia que nadie tomó. Los bordes son los de la
+   columna en la base y los de `MINUTOS_INSISTENCIA_EMERGENCIA` en el backend. */
+const MINUTOS_REPETIR_EMERGENCIA = { minimo: 1, maximo: 60 };
+
+const minutosRepetirEmergenciaValidos = (valor) => {
+  const minutos = Number(valor);
+  return (
+    valor !== '' &&
+    Number.isInteger(minutos) &&
+    minutos >= MINUTOS_REPETIR_EMERGENCIA.minimo &&
+    minutos <= MINUTOS_REPETIR_EMERGENCIA.maximo
+  );
+};
+
 const enNumeroOApagado = (valor) =>
   valor === null || valor === undefined || valor === '' ? null : Number(valor);
 
@@ -1433,6 +1447,11 @@ function TabWhatsappEscaladaCoordinador() {
       );
       return;
     }
+    if (!minutosRepetirEmergenciaValidos(form.minutos_insistencia_emergencia)) {
+      setGuardado(false);
+      setError(con(t.configuracion.escalada_repetir_emergencia_invalido, MINUTOS_REPETIR_EMERGENCIA));
+      return;
+    }
     setGuardando(true);
     setError(null);
     // Se ordenan antes de mandarlos: el backend lee la lista de arriba hacia abajo y se
@@ -1452,6 +1471,7 @@ function TabWhatsappEscaladaCoordinador() {
           horas_antes_aviso_grave_sin_cerrar: Number(form.horas_antes_aviso_grave_sin_cerrar),
           minutos_antes_todos_los_coordinadores: enNumeroOApagado(form.minutos_antes_todos_los_coordinadores),
           minutos_antes_administracion: enNumeroOApagado(form.minutos_antes_administracion),
+          minutos_insistencia_emergencia: Number(form.minutos_insistencia_emergencia),
         }),
       });
       // La pantalla se queda con la lista tal como quedó guardada, no como se tipeó: si
@@ -1477,6 +1497,18 @@ function TabWhatsappEscaladaCoordinador() {
             {error && <Alert variant="error">{error}</Alert>}
             {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
             <div className="molde-formgrid">
+            <div className="molde-ancho">
+              <FormField
+                label={t.configuracion.escalada_repetir_emergencia}
+                unidad={t.configuracion.escalada_repetir_emergencia_unidad}
+                name="minutos_insistencia_emergencia"
+                type="number"
+                min={MINUTOS_REPETIR_EMERGENCIA.minimo}
+                max={MINUTOS_REPETIR_EMERGENCIA.maximo}
+                value={form.minutos_insistencia_emergencia ?? ''}
+                onChange={(e) => set('minutos_insistencia_emergencia', e.target.value)}
+              />
+            </div>
             <FormField
               label={t.configuracion.whatsapp_escalada_backup}
               name="coordinador_backup_id"

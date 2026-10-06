@@ -57,6 +57,18 @@
   color: var(--texto-principal);
 }
 
+.form-field-en-linea {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--texto-principal);
+}
+
+.molde-formgrid .form-field .form-field-en-linea input:not([type='checkbox']):not([type='radio']) {
+  width: 5em;
+}
+
 .molde-formgrid .form-field textarea,
 .molde-campo textarea {
   min-height: 85px;

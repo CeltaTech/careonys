@@ -1,6 +1,6 @@
 // Un casillero se explica solo: lleva su etiqueta y nada más. Debajo no va ninguna línea de
 // explicación — quien trabaja no necesita que le cuenten qué hace el sistema.
-export function FormField({ label, name, type = 'text', required, children, error, ...rest }) {
+export function FormField({ label, name, type = 'text', required, children, error, unidad, ...rest }) {
   const fieldId = `field-${name}`;
   // El error se cuelga del campo con `aria-describedby`, y el campo que falló se marca con
   // `aria-invalid`. Sin eso, quien no ve la pantalla escucha la caja y su etiqueta y nada más: el
@@ -40,6 +40,21 @@ export function FormField({ label, name, type = 'text', required, children, erro
           <input id={fieldId} name={name} type="checkbox" required={required} {...accesibilidad} {...rest} />
           {label}{required && <span className="required">*</span>}
         </label>
+        {error && <span className="form-error" id={errorId}>{error}</span>}
+      </div>
+    );
+  }
+
+  // Con unidad, el casillero se lee como una frase en un solo renglón: «Repetir emergencia cada
+  // [1] min». La unidad es parte de la etiqueta, no una explicación.
+  if (unidad) {
+    return (
+      <div className="form-field">
+        <div className="form-field-en-linea">
+          <label htmlFor={fieldId}>{label}{required && <span className="required">*</span>}</label>
+          <input id={fieldId} name={name} type={type} required={required} {...accesibilidad} {...rest} />
+          <span>{unidad}</span>
+        </div>
         {error && <span className="form-error" id={errorId}>{error}</span>}
       </div>
     );

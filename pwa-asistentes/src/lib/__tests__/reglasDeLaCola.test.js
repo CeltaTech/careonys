@@ -16,6 +16,8 @@ import {
   loQueSeDescarta,
   conIntentoFallido,
   motivoQueSeMuestra,
+  seReintentaSinContar,
+  hayEmergenciaPendiente,
 } from '../reglasDeLaCola.js';
 
 const ANA = 'ana-uuid';
@@ -129,4 +131,27 @@ test('el motivo que se guarda es una situación del catálogo, nunca el texto de
 test('sin rechazo no hay motivo que mostrar', () => {
   assert.equal(motivoQueSeMuestra(item()), '');
   assert.equal(motivoQueSeMuestra(undefined), '');
+});
+
+// ---------------------------------------------------------------------------
+// Una emergencia no se da por perdida
+// ---------------------------------------------------------------------------
+
+test('una emergencia que chocó con una falla del servidor se reintenta sin gastar un intento', () => {
+  assert.equal(seReintentaSinContar(item({ tipo: 'emergencia' }), 'falla_del_sistema'), true);
+});
+
+test('una emergencia rechazada con motivo sí gasta su intento', () => {
+  assert.equal(seReintentaSinContar(item({ tipo: 'emergencia' }), 'dato_invalido'), false);
+  assert.equal(seReintentaSinContar(item({ tipo: 'emergencia' }), 'sesion_vencida'), false);
+});
+
+test('lo que no es emergencia gasta su intento aunque falle el servidor', () => {
+  assert.equal(seReintentaSinContar(item({ tipo: 'checkin' }), 'falla_del_sistema'), false);
+});
+
+test('el teléfono vuelve a probar solo mientras quede una emergencia en la cola', () => {
+  assert.equal(hayEmergenciaPendiente([item(), item({ id: 'e', tipo: 'emergencia' })]), true);
+  assert.equal(hayEmergenciaPendiente([item()]), false);
+  assert.equal(hayEmergenciaPendiente([]), false);
 });

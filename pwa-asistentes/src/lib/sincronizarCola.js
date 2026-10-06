@@ -23,7 +23,12 @@ import {
   marcarIntentoFallido,
   descartarLoDeOtrasSesiones,
 } from './colaOffline';
-import { seAgoto } from './reglasDeLaCola';
+import { seAgoto, seReintentaSinContar, hayEmergenciaPendiente } from './reglasDeLaCola';
+
+// Cada cuánto se vuelve a probar mientras quede una emergencia sin mandar. Con señal no llega
+// ningún aviso de «volvió la conexión», así que sin esto una emergencia que chocó con una falla
+// del servidor esperaría a que alguien cierre y abra la aplicación.
+const REINTENTO_DE_EMERGENCIA_MS = 30 * 1000;
 
 function esErrorDeRed(error) {
   // fetch rechaza con TypeError cuando no hay red (a diferencia de una respuesta HTTP de error).
@@ -98,9 +103,13 @@ export async function sincronizarCola() {
           avisar();
           continue;
         }
+        const situacion = situacionDelError(error);
+        // Una emergencia que chocó con una falla del servidor queda en la cola tal como estaba, y
+        // no traba lo demás de su guardia: nada de lo que viene detrás depende de ella.
+        if (seReintentaSinContar(item, situacion)) continue;
         // El motivo que se guarda es una de las ocho situaciones del catálogo, nunca el texto
         // crudo del backend: eso describe tablas y columnas y no puede llegar a una pantalla.
-        await marcarIntentoFallido(item.id, situacionDelError(error));
+        await marcarIntentoFallido(item.id, situacion);
         trabadas.add(item.guardiaId);
         avisar();
       }
@@ -118,5 +127,10 @@ export function iniciarSincronizacionAutomatica() {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') sincronizarCola();
   });
+  // Sólo mientras haya una emergencia pendiente: sin ella, un rechazo real del resto de la cola no
+  // mejora por repetirse cada treinta segundos, y gastaría sus intentos de a uno por vuelta.
+  setInterval(async () => {
+    if (hayEmergenciaPendiente(await colaParaMandar())) sincronizarCola();
+  }, REINTENTO_DE_EMERGENCIA_MS);
   sincronizarCola();
 }

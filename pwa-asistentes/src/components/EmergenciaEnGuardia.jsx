@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { api } from '../lib/api';
 import { con } from '../lib/textos';
-import { mensajeDeError } from '../lib/errores';
+import { mensajeDeError, situacionDelError } from '../lib/errores';
 import { horaDelMomento } from '../lib/horarios';
 import { agregarACola, nuevoId } from '../lib/colaOffline';
 import { sincronizarCola } from '../lib/sincronizarCola';
@@ -54,7 +54,9 @@ export default function EmergenciaEnGuardia({ t, locale, guardiaId, alRegistrar 
       setDetalle('');
       alRegistrar?.();
     } catch (e) {
-      if (!(e instanceof TypeError)) {
+      // Sin señal o con el servidor caído, el aviso no llegó a nadie y se guarda para reintentar.
+      // Un rechazo con motivo —un dato mal cargado, la sesión vencida— se muestra y no se guarda.
+      if (!(e instanceof TypeError) && situacionDelError(e) !== 'falla_del_sistema') {
         setError(mensajeDeError(e, t, 'reportar la emergencia'));
         setEnviando(false);
         return;

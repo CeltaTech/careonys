@@ -106,14 +106,14 @@ describe('intervaloDeEmergencia', () => {
 });
 
 describe('validarMinutosEmergencia', () => {
-  it('acepta de uno a sesenta, también escrito como texto', () => {
+  it('acepta de uno a diez, también escrito como texto', () => {
     assert.equal(validarMinutosEmergencia(1), null);
-    assert.equal(validarMinutosEmergencia(60), null);
+    assert.equal(validarMinutosEmergencia(10), null);
     assert.equal(validarMinutosEmergencia('5'), null);
   });
 
   it('rechaza lo que está fuera de borde o no es un entero', () => {
-    for (const valor of [0, 61, -1, 1.5, '', null, 'abc', true]) {
+    for (const valor of [0, 11, 60, -1, 1.5, '', null, 'abc', true]) {
       assert.notEqual(validarMinutosEmergencia(valor), null, `debería rechazar ${JSON.stringify(valor)}`);
     }
   });

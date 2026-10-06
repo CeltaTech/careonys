@@ -1326,7 +1326,7 @@ const minutosDeEscalonValidos = (valor, campo) => {
 
 /* Cada cuánto se repite el aviso de una emergencia que nadie tomó. Los bordes son los de la
    columna en la base y los de `MINUTOS_INSISTENCIA_EMERGENCIA` en el backend. */
-const MINUTOS_REPETIR_EMERGENCIA = { minimo: 1, maximo: 60 };
+const MINUTOS_REPETIR_EMERGENCIA = { minimo: 1, maximo: 10 };
 
 const minutosRepetirEmergenciaValidos = (valor) => {
   const minutos = Number(valor);

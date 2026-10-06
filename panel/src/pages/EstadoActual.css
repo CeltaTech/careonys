@@ -17,8 +17,18 @@
   stroke: var(--naranja-alerta);
 }
 
-.estado-actual-icono-relleno {
-  fill: var(--superficie);
+.estado-actual-trazo-critico {
+  stroke: var(--tono-critico-texto);
+}
+
+/* La tarjeta de emergencias, mientras haya alguna sin atender. En cero es una tarjeta más. */
+.estado-actual-kpi-resaltada {
+  background: var(--tono-critico-fondo);
+  border-color: var(--tono-critico-texto);
+}
+
+.estado-actual-kpi-resaltada .panel-kpi-numero {
+  color: var(--tono-critico-texto);
 }
 
 .estado-actual-mensaje {

@@ -2741,6 +2741,11 @@ export const T = {
     },
     // Lo que un Asistente avisó apretando el botón de emergencia de su guardia. El aviso
     // inmediato sale por WhatsApp o por correo y no lleva el texto; acá se lee.
+    pagina_no_encontrada: {
+      titulo: 'Página no encontrada',
+      frase: 'La dirección no existe. Revise que esté bien escrita.',
+      ir_a_la_portada: 'Ir a la portada',
+    },
     emergencias: {
       titulo: 'Emergencias',
       filtro_sin_atender: 'Sin atender',
@@ -5592,6 +5597,11 @@ export const T = {
       accion_cambio_de_moneda: 'Changed the currency of the provider',
       accion_desconocida: 'Unnamed action',
     },
+    pagina_no_encontrada: {
+      titulo: 'Page not found',
+      frase: 'This address does not exist. Check that it is spelled correctly.',
+      ir_a_la_portada: 'Go to the home page',
+    },
     emergencias: {
       titulo: 'Emergencies',
       filtro_sin_atender: 'Unattended',
@@ -8433,6 +8443,11 @@ export const T = {
       accion_modificacion_critica: 'Fez uma modificação crítica',
       accion_cambio_de_moneda: 'Mudou a moeda da Prestadora',
       accion_desconocida: 'Ação sem nome',
+    },
+    pagina_no_encontrada: {
+      titulo: 'Página não encontrada',
+      frase: 'O endereço não existe. Verifique se está escrito corretamente.',
+      ir_a_la_portada: 'Ir para a página inicial',
     },
     emergencias: {
       titulo: 'Emergências',

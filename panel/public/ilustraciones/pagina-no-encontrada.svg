@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 140" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Una hoja en blanco con una lupa encima. Mismo trazo que los íconos del Panel. Se reemplaza
+       cambiando este archivo, o apuntando a otro desde pages/PaginaNoEncontrada.jsx. -->
+  <g stroke="oklch(0.597 0.044 261)" stroke-width="3">
+    <path d="M38 14h52l22 22v86a6 6 0 0 1-6 6H38a6 6 0 0 1-6-6V20a6 6 0 0 1 6-6z" />
+    <path d="M90 14v22h22" />
+    <path d="M48 52h40M48 64h28" opacity="0.5" />
+  </g>
+  <g stroke="oklch(0.566 0.161 253)" stroke-width="4">
+    <circle cx="96" cy="88" r="20" />
+    <path d="M110.5 102.5 132 124" />
+    <path d="M90 82l12 12M102 82 90 94" stroke-width="3" />
+  </g>
+</svg>

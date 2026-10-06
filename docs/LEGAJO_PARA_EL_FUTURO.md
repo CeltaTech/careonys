@@ -39,3 +39,18 @@ Hay configuraciones que hoy existen sólo en la base y que ninguna pantalla mues
 cuáles personas de la Prestadora ven la HCE de un Paciente. En ese repaso se decide, una por una,
 si la Prestadora tiene que verla o manejarla, y con qué palabras. La redacción de lo que se muestre la aprueba el
 Desarrollador.
+
+## Las aplicaciones en las tiendas
+
+Que las aplicaciones de teléfono —la del Cliente, la del Asistente y el Panel instalado— se
+descarguen de las tiendas de Apple y de Google. Se considera cuando todo esté terminado y ajustado
+y haya pasado la etapa de prueba.
+
+Lo que hay que resolver antes:
+
+- **A nombre de quién se publica.** En el teléfono cada aplicación muestra la marca de la
+  Prestadora. En la tienda hay un solo nombre y un solo ícono por aplicación: o se publica una
+  sola, con el nombre del producto, o una por Prestadora.
+- **Cada versión pasa por la revisión de la tienda.** Hoy un cambio llega al teléfono apenas se
+  publica; desde la tienda, recién cuando la tienda lo aprueba.
+- **Las cuentas de publicación en cada tienda**, y de quién son.

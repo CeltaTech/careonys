@@ -1193,6 +1193,8 @@ Falta que usted conteste dos cosas:
 
 **72.** Construirlo según lo contestado. El tablero del Panel cuenta como emergencia sólo lo que avisó una persona con el botón.
 
+**73.** El Panel se instala también en el teléfono, sin dejar de ser lo que es. En la computadora sigue igual. En el teléfono se instala desde el navegador, recibe avisos aunque no esté abierto y abre primero lo urgente del día —quién no llegó, qué guardia quedó sin cubrir, a quién mandar de reemplazo—, sin perder el resto. Es el mismo programa, con la misma dirección, la misma cuenta y los mismos permisos: no es una tercera aplicación. En el iPhone los avisos llegan sólo con el Panel instalado en la pantalla de inicio, igual que en las dos aplicaciones.
+
 ---
 
 ## Configuración que todavía está escrita en el código

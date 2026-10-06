@@ -25,7 +25,6 @@ import {
   urgenciaDeVencimiento,
 } from '../lib/reglaVencimientos';
 import { diasDePreavisoDeLaPrestadora } from '../lib/plazoDeAviso';
-import { EN_PIE, lasQueCorrenElDia } from '../lib/vigenciaPrestacion';
 import { ESTADO_ACTIVO } from '../lib/candidatos';
 import { soloSinResolver } from '../lib/alertaSinResolver';
 import { MODALIDAD, MODALIDADES, contarPorModalidad } from '../lib/modalidades';
@@ -108,13 +107,15 @@ function IconoServicios() {
   );
 }
 
-function IconoPrestaciones() {
+function IconoEmergencias({ hay }) {
   return (
-    <svg viewBox="0 0 24 24" className="estado-actual-trazo-azul" aria-hidden="true">
-      <rect x="4" y="3" width="15" height="17" rx="2" />
-      <path d="M8 7h7M8 11h5M8 15h4" />
-      <circle cx="17" cy="17" r="4" className="estado-actual-icono-relleno" />
-      <path d="M17 15v2l1 1" />
+    <svg
+      viewBox="0 0 24 24"
+      className={hay ? 'estado-actual-trazo-critico' : 'estado-actual-trazo-azul'}
+      aria-hidden="true"
+    >
+      <path d="M12 3.5 21 19.5H3z" />
+      <path d="M12 10v4.5M12 17v.01" />
     </svg>
   );
 }
@@ -163,9 +164,9 @@ function Tarjeta({ titulo, enlace, children }) {
   );
 }
 
-function Kpi({ icono, etiqueta, numero, a, textoEnlace }) {
+function Kpi({ icono, etiqueta, numero, a, textoEnlace, resaltada = false }) {
   return (
-    <div className="panel-tarjeta panel-kpi">
+    <div className={resaltada ? 'panel-tarjeta panel-kpi estado-actual-kpi-resaltada' : 'panel-tarjeta panel-kpi'}>
       <div className="panel-kpi-icono">{icono}</div>
       <div className="panel-kpi-etiqueta">{etiqueta}</div>
       <div className="panel-kpi-numero">{numero}</div>
@@ -218,7 +219,7 @@ export function EstadoActual() {
     const diasDePreaviso = await diasDePreavisoDeLaPrestadora(prestadoraId);
     const limitePapeles = fechaLimiteDeAviso(diasDePreaviso);
 
-    const [gs, as, ps, ds, em, sv, pr, al, inc, incAbiertas] = await Promise.all([
+    const [gs, as, ps, ds, em, sv, emg, al, inc, incAbiertas] = await Promise.all([
       supabase.from('guardias').select('*').gte('fecha', desde).lte('fecha', hasta),
       supabase.from('asistentes').select('id, estado'),
       supabase.from('pacientes').select('id, nombre'),
@@ -233,7 +234,7 @@ export function EstadoActual() {
         .select(CONSULTA_SERVICIOS)
         .eq('estado', SERVICIO_EN_PIE)
         .order('created_at', { ascending: false }),
-      supabase.from('prestaciones').select('id, estado, vigente_desde, vigente_hasta').eq('estado', EN_PIE),
+      supabase.from('emergencias_guardia').select('id', { count: 'exact', head: true }).is('atendida_at', null),
       soloSinResolver(supabase.from('alertas').select('id', { count: 'exact', head: true })),
       supabase
         .from('incidentes_relevo')
@@ -244,7 +245,7 @@ export function EstadoActual() {
     ]);
 
     // Un número que no se pudo leer no se muestra como cero: la página entera pasa a error.
-    const fallida = [gs, as, ps, ds, em, sv, pr, al, inc, incAbiertas].find((r) => r.error);
+    const fallida = [gs, as, ps, ds, em, sv, emg, al, inc, incAbiertas].find((r) => r.error);
     if (fallida) {
       setError(mensajeDeError(fallida.error, t));
       setEstado('error');
@@ -322,7 +323,7 @@ export function EstadoActual() {
       servicios,
       contactos,
       nombresPaciente,
-      prestacionesQueCorren: lasQueCorrenElDia(pr.data ?? [], hoy).length,
+      emergenciasSinAtender: emg.count ?? 0,
       asistentesActivos: (as.data ?? []).filter((a) => a.estado === ESTADO_ACTIVO).length,
       papelesPorVencer: (ds.data ?? []).length,
       hayPapelVencido,
@@ -431,11 +432,12 @@ export function EstadoActual() {
           textoEnlace={tx.ver_servicios}
         />
         <Kpi
-          icono={<IconoPrestaciones />}
-          etiqueta={tx.kpi_prestaciones}
-          numero={datos.prestacionesQueCorren}
-          a="/servicios"
-          textoEnlace={tx.ver_prestaciones}
+          icono={<IconoEmergencias hay={datos.emergenciasSinAtender > 0} />}
+          etiqueta={tx.kpi_emergencias}
+          numero={datos.emergenciasSinAtender}
+          a="/guardias/emergencias"
+          textoEnlace={tx.ver_emergencias}
+          resaltada={datos.emergenciasSinAtender > 0}
         />
         <Kpi
           icono={<IconoAsistentes />}

@@ -467,3 +467,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 
 - **Qué dice:** Cliente es todo lo que la Prestadora atiende en una contratación, en todas partes, también en lo guardado. Quien firma es el Contratante, a secas. El Cliente de CeltaTech no está en este glosario, porque es la Prestadora y vive en el de la empresa.
 - **Motivo:** dos palabras para lo mismo confundían en el Panel. El Desarrollador fijó que la palabra es cliente, y que una palabra retirada que quede guardada —«en la base, o en los codigos, o en alguna etiqueta, o en algun documento»— «volvera a difundirse como una pandemia». «Responsable legal» se descartó para quien firma porque en salud nombra al tutor, al curador o al apoderado.
+
+## La subcontratación no es modalidad
+
+- **Qué decía antes:** que una Prestadora tenía tres modalidades de trabajo —prestación directa, Match y subcontratación—, y la base admitía `subcontratacion` como tercer valor.
+- **Qué dice ahora:** que las modalidades son dos, prestación directa e intermediación, cuyo nombre comercial es Match. Trabajar con una empresa subcontratada o tercerizada —las dos palabras valen— es un recurso dentro de la prestación directa, como el plantel propio. La base ya no admite el tercer valor.
+- **Motivo:** el Desarrollador definió la modalidad de trabajo como la forma en que una Prestadora estructura su negocio: en la directa se ocupa de la gestión integral del cuidado; en la intermediación sirve de puente entre quien contrata y la Asistente que brinda el servicio. Encargarle una prestación a otra empresa no cambia esa estructura.

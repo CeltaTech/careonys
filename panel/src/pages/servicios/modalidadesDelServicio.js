@@ -2,14 +2,14 @@
 //
 // La modalidad no está guardada en el Servicio ni en la prestación: la lleva cada guardia, en la
 // columna `canal_modalidad` (nombre guardado, no se renombra). Las del Servicio son las que
-// aparecen en sus guardias, en el orden fijo de `MODALIDADES_DE_PRESTADORA`.
+// aparecen en sus guardias, en el orden fijo de `MODALIDADES`.
 
-import { MODALIDAD, MODALIDADES_DE_PRESTADORA } from '../../lib/modalidades';
+import { MODALIDAD, MODALIDADES } from '../../lib/modalidades';
 
 /** Las modalidades distintas que aparecen en una lista de guardias. */
 export function modalidadesDeGuardias(guardias) {
   const presentes = new Set((guardias ?? []).map((g) => g?.canal_modalidad).filter(Boolean));
-  return MODALIDADES_DE_PRESTADORA.filter((m) => presentes.has(m));
+  return MODALIDADES.filter((m) => presentes.has(m));
 }
 
 /** El nombre visible de una modalidad. Sale de los textos de Configuración, que ya la nombran. */

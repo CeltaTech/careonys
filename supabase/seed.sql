@@ -110,9 +110,7 @@ ON CONFLICT (prestadora_id) DO UPDATE SET
   dominio              = EXCLUDED.dominio,
   zona_cobertura_texto = EXCLUDED.zona_cobertura_texto;
 
--- Las dos formas de trabajar que la Prestadora tiene encendidas. Queda apagada
--- a propósito la tercera (`subcontratacion`), que está en pleno rediseño — ver
--- el pendiente #115.
+-- Las dos modalidades de trabajo, encendidas.
 INSERT INTO public.prestadora_modalidades (prestadora_id, modalidad, activa) VALUES
   ('11111111-1111-4111-8111-111111111111', 'directa',     true),
   ('11111111-1111-4111-8111-111111111111', 'match', true);

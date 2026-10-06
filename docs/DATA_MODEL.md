@@ -232,11 +232,9 @@ ALTER TABLE asistentes ADD COLUMN fecha_baja DATE;         -- null mientras est�
 ALTER TABLE asistentes ADD COLUMN horas_semanales NUMERIC(5,2);
 
 -- En qué modalidad de trabajo está el Asistente: 'directa' (la Prestadora le asigna las
--- guardias) y/o 'match' (el Asistente elige qué toma). Nunca 'subcontratacion': ese
--- trabajo lo cubre otra empresa con su propio plantel, que no está en esta base.
+-- guardias) y/o 'match' (el Asistente elige qué toma). No hay tercera modalidad.
 --
--- La columna se llama `canales` porque así se creó, y un nombre guardado no se renombra
--- (regla 13 de CLAUDE.md §7). La palabra del producto es **modalidad de trabajo**.
+-- La columna se llama `canales` porque así se creó, y lo guardado no se renombra. La palabra del producto es **modalidad de trabajo**.
 --
 -- Quién decide: la Prestadora pone el techo con las modalidades que tenga activas y, dentro
 -- de ese techo, decide la ficha de cada Asistente. Lo hacen cumplir los disparadores

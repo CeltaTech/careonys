@@ -1197,10 +1197,6 @@ Falta que usted conteste dos cosas:
 
 ## Configuración que todavía está escrita en el código
 
-**73. Usted** — ¿Cooperativa como tercera modalidad de vínculo?
-
-**74.** Construirla: migración que abra tres CHECK, filas de conceptos y fórmulas de cese.
-
 **75. Usted** — Nivel de complejidad: ¿qué significa cada uno de los tres? ¿Condiciona qué tipo de Asistente se admite? Hoy se carga y se edita, y el cálculo de candidatos no lo mira.
 
 **76.** Que el cálculo de candidatos lo use.
@@ -1291,7 +1287,7 @@ software conectado, el corte lo ordena ese software.
 
 ## Decisiones que no traban nada empezado
 
-**94. Usted** — Subcontratación: no existe ninguna tabla de Empresa subcontratada y el Panel no la ofrece a propósito. La precondición era no abrirla hasta que una Prestadora real lo pida. ¿Sigue valiendo?
+**94. Usted** — Empresas subcontratadas o tercerizadas: son un recurso dentro de la prestación directa, como el plantel propio, y no una modalidad. Todavía no hay dónde cargarlas ni cómo encargarles una prestación. La precondición era no construirlo hasta que una Prestadora real lo pida. ¿Sigue valiendo?
 
 **95. Usted** — Un tercero que sólo mira: ¿cómo entra un financiador que sólo consulta? Un cuarto rol, un Coordinador de sólo lectura desde el catálogo de permisos, o no se hace.
 

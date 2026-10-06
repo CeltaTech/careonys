@@ -6,7 +6,7 @@ import { useEmpresa } from '../../context/EmpresaContext';
 import { useModalidades } from '../../context/ModalidadesContext';
 import { esAdminOSuperior } from '../../lib/roles';
 import {
-  MODALIDADES_DE_ASISTENTE,
+  MODALIDADES,
   modalidadesDelAsistente,
   modalidadesHabilitadas,
   mensajeDeModalidad,
@@ -65,7 +65,7 @@ export function PerfilTab({ asistente, onActualizado }) {
   const modalidadesPosibles = useMemo(() => {
     const habilitadas = modalidadesHabilitadas(modalidades);
     const puestas = modalidadesDelAsistente(asistente);
-    return MODALIDADES_DE_ASISTENTE.filter((m) => habilitadas.includes(m) || puestas.includes(m));
+    return MODALIDADES.filter((m) => habilitadas.includes(m) || puestas.includes(m));
   }, [modalidades, asistente]);
 
   const [form, setForm] = useState({

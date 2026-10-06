@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   MODALIDAD,
-  MODALIDADES_DE_PRESTADORA,
+  MODALIDADES,
   contarPorModalidad,
   modalidadesHabilitadas,
   modalidadesDelAsistente,
@@ -15,6 +15,15 @@ import { opcionesDeFabrica } from '../../datos/listasDeOpciones';
 
 const IDIOMAS = ['es-AR', 'en', 'pt-BR'];
 
+describe('las modalidades de trabajo', () => {
+  // Son dos: prestación directa e intermediación (Match). Trabajar con una empresa subcontratada
+  // o tercerizada es un recurso dentro de la prestación directa, no una tercera modalidad.
+  it('son dos, y no hay tercera', () => {
+    expect(MODALIDADES).toEqual(['directa', 'match']);
+    expect(Object.values(MODALIDAD)).toEqual(MODALIDADES);
+  });
+});
+
 describe('modalidadesHabilitadas', () => {
   it('deja pasar solo las modalidades que la Prestadora tiene activas', () => {
     expect(modalidadesHabilitadas(['directa'])).toEqual(['directa']);
@@ -22,10 +31,9 @@ describe('modalidadesHabilitadas', () => {
     expect(modalidadesHabilitadas(['directa', 'match'])).toEqual(['directa', 'match']);
   });
 
-  it('la subcontratación no es una modalidad de una persona', () => {
-    // Es trabajo de otra empresa, con su propio plantel: nadie de nuestra base lo cubre.
+  it('descarta lo que no es una modalidad de trabajo', () => {
     expect(modalidadesHabilitadas(['subcontratacion'])).toEqual(['directa']);
-    expect(modalidadesHabilitadas(['directa', 'subcontratacion'])).toEqual(['directa']);
+    expect(modalidadesHabilitadas(['match', 'subcontratacion'])).toEqual(['match']);
   });
 
   it('una Prestadora recién creada trabaja en directa', () => {
@@ -41,8 +49,7 @@ describe('modalidadesHabilitadas', () => {
 
 describe('modalidadesDelAsistente', () => {
   it('lee la columna vieja y devuelve la lista', () => {
-    // La columna se sigue llamando `canales` porque un nombre guardado no se renombra
-    // (regla 13). Este es el único lugar de la aplicación que la nombra.
+    // La columna se sigue llamando `canales` porque lo guardado no se renombra. Este es el único lugar de la aplicación que la nombra.
     expect(modalidadesDelAsistente({ canales: ['directa'] })).toEqual(['directa']);
   });
 
@@ -73,10 +80,6 @@ describe('trabajaEnModalidad', () => {
     expect(trabajaEnModalidad({}, MODALIDAD.DIRECTA)).toBe(false);
     expect(trabajaEnModalidad({ canales: null }, MODALIDAD.DIRECTA)).toBe(false);
     expect(trabajaEnModalidad(null, MODALIDAD.DIRECTA)).toBe(false);
-  });
-
-  it('la subcontratación no la cubre nadie del plantel propio', () => {
-    expect(trabajaEnModalidad(lasDos, 'subcontratacion')).toBe(false);
   });
 });
 
@@ -177,7 +180,6 @@ describe('los textos existen en los tres idiomas', () => {
     for (const clave of [
       'motivo_modalidad_directa',
       'motivo_modalidad_match',
-      'motivo_modalidad_subcontratacion',
     ]) {
       expect(typeof motivos[clave], `falta ${clave} en ${idioma}`).toBe('string');
     }
@@ -189,18 +191,17 @@ describe('contarPorModalidad', () => {
     const guardias = [
       { canal_modalidad: MODALIDAD.DIRECTA },
       { canal_modalidad: MODALIDAD.DIRECTA },
-      { canal_modalidad: MODALIDAD.SUBCONTRATACION },
+      { canal_modalidad: MODALIDAD.MATCH },
     ];
     expect(contarPorModalidad(guardias, (g) => g.canal_modalidad)).toEqual({
       directa: 2,
-      match: 0,
-      subcontratacion: 1,
+      match: 1,
     });
   });
 
   // Un renglón que falta se lee como "acá no se miró"; lo que se quiere decir es "acá no hay nada".
-  it('devuelve las tres modalidades aunque no haya ninguna fila', () => {
-    expect(Object.keys(contarPorModalidad([], () => null))).toEqual(MODALIDADES_DE_PRESTADORA);
+  it('devuelve las dos modalidades aunque no haya ninguna fila', () => {
+    expect(Object.keys(contarPorModalidad([], () => null))).toEqual(MODALIDADES);
   });
 
   it('cuenta dos veces a quien trabaja en las dos modalidades', () => {
@@ -208,18 +209,16 @@ describe('contarPorModalidad', () => {
     expect(contarPorModalidad(asistentes, modalidadesDelAsistente)).toEqual({
       directa: 1,
       match: 1,
-      subcontratacion: 0,
     });
   });
 
   // Preferible que la suma de los renglones quede por debajo del total antes que inventarle un
   // renglón a un valor que este archivo no conoce.
   it('no cuenta en ningún lado lo que viene con una modalidad desconocida o sin ninguna', () => {
-    const filas = [{ m: 'lo_que_sea' }, { m: null }, {}];
+    const filas = [{ m: 'lo_que_sea' }, { m: 'subcontratacion' }, { m: null }, {}];
     expect(contarPorModalidad(filas, (f) => f.m)).toEqual({
       directa: 0,
       match: 0,
-      subcontratacion: 0,
     });
   });
 

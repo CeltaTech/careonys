@@ -101,7 +101,6 @@ export const MOTIVO = {
    */
   MODALIDAD_DIRECTA: 'motivo_modalidad_directa',
   MODALIDAD_MATCH: 'motivo_modalidad_match',
-  MODALIDAD_SUBCONTRATACION: 'motivo_modalidad_subcontratacion',
   /**
    * Lo dijo el propio Asistente desde su aplicación. El texto no inventa un motivo —no se sabe
    * por qué, y no hace falta saberlo— ni sugiere qué hacer: sólo lo pone donde se ve.
@@ -117,18 +116,10 @@ export const MOTIVO = {
   DESCANSO_CORTO: 'motivo_descanso_corto',
 };
 
-/**
- * Qué motivo le corresponde a cada modalidad de guardia.
- *
- * La subcontratación tiene el suyo porque ninguna persona nuestra puede estar en esa modalidad
- * —la regla de la columna solo admite las otras dos—, así que una guardia subcontratada bloquea a
- * todo el plantel. Decirlo con las palabras del caso evita que quien mira crea que se trata de
- * un error de carga: esa guardia la cubre la otra empresa, y su gente no está en esta base.
- */
+/** Qué motivo le corresponde a cada modalidad de guardia. */
 const MOTIVO_POR_MODALIDAD = {
   directa: MOTIVO.MODALIDAD_DIRECTA,
   match: MOTIVO.MODALIDAD_MATCH,
-  subcontratacion: MOTIVO.MODALIDAD_SUBCONTRATACION,
 };
 
 // ============================================================================

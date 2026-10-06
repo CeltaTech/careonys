@@ -203,9 +203,7 @@ function TabPermisos() {
 // Modalidades de negocio activas (PRD_08_Dashboard_Modalidades.md, aprobado 2026-07-24,
 // primer corte "Base: tabla + menú + onboarding"). Punto único de verdad: tabla dedicada
 // prestadora_modalidades, no el motor de permisos (ver
-// schema_prestadora_modalidades.sql). 'subcontratacion' no se ofrece todavía: no tiene menú
-// ni pantallas (PRD_08 §3.8). Hasta el 2026-08-07 ese valor se llamaba 'cooperativa', que
-// nombraba otra cosa (pendiente #115).
+// schema_prestadora_modalidades.sql). Son dos: directa y match.
 
 function TabSeguridad() {
   const modal = useModalAccesible(() => setConfirmandoActivacion(false));

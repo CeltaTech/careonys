@@ -41,6 +41,7 @@ import { Guardias } from './pages/Guardias';
 import { Reportes } from './pages/Reportes';
 import { Alertas } from './pages/Alertas';
 import { EmergenciasEnGuardia } from './pages/EmergenciasEnGuardia';
+import { PaginaNoEncontrada } from './pages/PaginaNoEncontrada';
 import { Comunicacion } from './pages/Comunicacion';
 import { Evv } from './pages/Evv';
 import { PaseDeGuardia } from './pages/PaseDeGuardia';
@@ -260,6 +261,9 @@ function App() {
                         </ProtectedRoute>
                       }
                     />
+                    {/* Cualquier dirección que no sea ninguna de las de arriba. Adentro del marco,
+                        para que el menú siga a la vista. */}
+                    <Route path="*" element={<PaginaNoEncontrada />} />
                   </Route>
                 </Routes>
               </BrowserRouter>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import { useAuth } from '../../context/AuthContext';
@@ -20,6 +20,7 @@ import { con } from '../../lib/textos';
 import { REGLA_QUE_SE_PUEDE_TOCAR } from '../../lib/alarmasTomadas';
 import '../../styles/molde-paginas.css';
 import './avisos.css';
+import { MINUTOS_REPETIR_EMERGENCIA, minutosRepetirEmergenciaAjustados } from '../../lib/minutosRepetirEmergencia';
 
 /* A quién se le avisa y por dónde: los correos de cada evento, la casilla desde la
    que salen, el aviso de cese, la revisión con inteligencia artificial y todo lo de
@@ -1324,19 +1325,6 @@ const minutosDeEscalonValidos = (valor, campo) => {
   return Number.isInteger(minutos) && minutos >= minimo && minutos <= maximo;
 };
 
-/* Cada cuánto se repite el aviso de una emergencia que nadie tomó. Los bordes son los de la
-   columna en la base y los de `MINUTOS_INSISTENCIA_EMERGENCIA` en el backend. */
-const MINUTOS_REPETIR_EMERGENCIA = { minimo: 1, maximo: 10 };
-
-const minutosRepetirEmergenciaValidos = (valor) => {
-  const minutos = Number(valor);
-  return (
-    valor !== '' &&
-    Number.isInteger(minutos) &&
-    minutos >= MINUTOS_REPETIR_EMERGENCIA.minimo &&
-    minutos <= MINUTOS_REPETIR_EMERGENCIA.maximo
-  );
-};
 
 const enNumeroOApagado = (valor) =>
   valor === null || valor === undefined || valor === '' ? null : Number(valor);
@@ -1388,6 +1376,7 @@ function TabWhatsappEscaladaCoordinador() {
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [guardado, setGuardado] = useState(false);
+  const emergenciaAnterior = useRef(null);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -1447,11 +1436,6 @@ function TabWhatsappEscaladaCoordinador() {
       );
       return;
     }
-    if (!minutosRepetirEmergenciaValidos(form.minutos_insistencia_emergencia)) {
-      setGuardado(false);
-      setError(con(t.configuracion.escalada_repetir_emergencia_invalido, MINUTOS_REPETIR_EMERGENCIA));
-      return;
-    }
     setGuardando(true);
     setError(null);
     // Se ordenan antes de mandarlos: el backend lee la lista de arriba hacia abajo y se
@@ -1506,7 +1490,23 @@ function TabWhatsappEscaladaCoordinador() {
                 min={MINUTOS_REPETIR_EMERGENCIA.minimo}
                 max={MINUTOS_REPETIR_EMERGENCIA.maximo}
                 value={form.minutos_insistencia_emergencia ?? ''}
-                onChange={(e) => set('minutos_insistencia_emergencia', e.target.value)}
+                onChange={(e) => {
+                  // Vacío se deja mientras se escribe; al salir vuelve el número que había.
+                  if (e.target.value === '') {
+                    if (form.minutos_insistencia_emergencia !== '') emergenciaAnterior.current = form.minutos_insistencia_emergencia;
+                    set('minutos_insistencia_emergencia', '');
+                    return;
+                  }
+                  set(
+                    'minutos_insistencia_emergencia',
+                    minutosRepetirEmergenciaAjustados(e.target.value, form.minutos_insistencia_emergencia)
+                  );
+                }}
+                onBlur={() => {
+                  if (form.minutos_insistencia_emergencia === '') {
+                    set('minutos_insistencia_emergencia', emergenciaAnterior.current ?? MINUTOS_REPETIR_EMERGENCIA.minimo);
+                  }
+                }}
               />
             </div>
             <FormField

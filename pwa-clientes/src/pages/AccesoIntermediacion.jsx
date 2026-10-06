@@ -11,7 +11,7 @@ function minutosRestantes(fecha) {
   return Math.max(0, Math.ceil((new Date(fecha).getTime() - Date.now()) / 60000));
 }
 
-export default function AccesoMatch() {
+export default function AccesoIntermediacion() {
   const { id } = useParams();
   const { t, locale } = useLocale();
   const [acceso, setAcceso] = useState(undefined);
@@ -27,7 +27,7 @@ export default function AccesoMatch() {
 
   const cargar = useCallback(() => {
     api
-      .accesoMatch(id)
+      .accesoIntermediacion(id)
       .then((data) => setAcceso(data.acceso))
       .catch((e) => setError(mensajeDeError(e, t, 'acceso de Match')));
   }, [id]);

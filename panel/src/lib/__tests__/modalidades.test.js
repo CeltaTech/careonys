@@ -19,7 +19,7 @@ describe('las modalidades de trabajo', () => {
   // Son dos: prestación directa e intermediación (Match). Trabajar con una empresa subcontratada
   // o tercerizada es un recurso dentro de la prestación directa, no una tercera modalidad.
   it('son dos, y no hay tercera', () => {
-    expect(MODALIDADES).toEqual(['directa', 'match']);
+    expect(MODALIDADES).toEqual(['directa', 'intermediacion']);
     expect(Object.values(MODALIDAD)).toEqual(MODALIDADES);
   });
 });
@@ -27,13 +27,13 @@ describe('las modalidades de trabajo', () => {
 describe('modalidadesHabilitadas', () => {
   it('deja pasar solo las modalidades que la Prestadora tiene activas', () => {
     expect(modalidadesHabilitadas(['directa'])).toEqual(['directa']);
-    expect(modalidadesHabilitadas(['match'])).toEqual(['match']);
-    expect(modalidadesHabilitadas(['directa', 'match'])).toEqual(['directa', 'match']);
+    expect(modalidadesHabilitadas(['intermediacion'])).toEqual(['intermediacion']);
+    expect(modalidadesHabilitadas(['directa', 'intermediacion'])).toEqual(['directa', 'intermediacion']);
   });
 
   it('descarta lo que no es una modalidad de trabajo', () => {
     expect(modalidadesHabilitadas(['subcontratacion'])).toEqual(['directa']);
-    expect(modalidadesHabilitadas(['match', 'subcontratacion'])).toEqual(['match']);
+    expect(modalidadesHabilitadas(['intermediacion', 'subcontratacion'])).toEqual(['intermediacion']);
   });
 
   it('una Prestadora recién creada trabaja en directa', () => {
@@ -43,7 +43,7 @@ describe('modalidadesHabilitadas', () => {
   });
 
   it('devuelve siempre el mismo orden, no el de las modalidades', () => {
-    expect(modalidadesHabilitadas(['match', 'directa'])).toEqual(['directa', 'match']);
+    expect(modalidadesHabilitadas(['intermediacion', 'directa'])).toEqual(['directa', 'intermediacion']);
   });
 });
 
@@ -62,12 +62,12 @@ describe('modalidadesDelAsistente', () => {
 
 describe('trabajaEnModalidad', () => {
   const soloDirecta = { canales: ['directa'] };
-  const lasDos = { canales: ['directa', 'match'] };
+  const lasDos = { canales: ['directa', 'intermediacion'] };
 
   it('cruza la modalidad de la guardia contra la ficha del Asistente', () => {
     expect(trabajaEnModalidad(soloDirecta, MODALIDAD.DIRECTA)).toBe(true);
-    expect(trabajaEnModalidad(soloDirecta, MODALIDAD.MATCH)).toBe(false);
-    expect(trabajaEnModalidad(lasDos, MODALIDAD.MATCH)).toBe(true);
+    expect(trabajaEnModalidad(soloDirecta, MODALIDAD.INTERMEDIACION)).toBe(false);
+    expect(trabajaEnModalidad(lasDos, MODALIDAD.INTERMEDIACION)).toBe(true);
   });
 
   it('una guardia sin modalidad no cruza nada', () => {
@@ -85,16 +85,16 @@ describe('trabajaEnModalidad', () => {
 
 describe('motivoDeModalidadDelError', () => {
   it('abre el rechazo que levanta la base al asignar una guardia', () => {
-    expect(motivoDeModalidadDelError({ message: 'modalidad_bloquea:match:' })).toEqual({
+    expect(motivoDeModalidadDelError({ message: 'modalidad_bloquea:intermediacion:' })).toEqual({
       motivo: 'bloquea',
-      modalidad: 'match',
+      modalidad: 'intermediacion',
     });
   });
 
   it('abre el rechazo de guardar una modalidad que la Prestadora no tiene habilitada', () => {
-    expect(motivoDeModalidadDelError({ message: 'modalidad_no_habilitada:match:' })).toEqual({
+    expect(motivoDeModalidadDelError({ message: 'modalidad_no_habilitada:intermediacion:' })).toEqual({
       motivo: 'no_habilitada',
-      modalidad: 'match',
+      modalidad: 'intermediacion',
     });
   });
 
@@ -117,7 +117,7 @@ describe('motivoDeModalidadDelError', () => {
   it('no confunde la palabra vieja con la nueva', () => {
     // "canal" se retiró: en este producto un canal es por dónde sale un mensaje, no cómo
     // trabaja un Asistente. Si un rechazo viejo llegara igual, no se lo interpreta.
-    expect(motivoDeModalidadDelError({ message: 'canal_bloquea:match:' })).toBeNull();
+    expect(motivoDeModalidadDelError({ message: 'canal_bloquea:intermediacion:' })).toBeNull();
   });
 
   it('descarta una modalidad que no existe', () => {
@@ -129,8 +129,8 @@ describe('mensajeDeModalidad', () => {
   it('arma la frase con el nombre de la modalidad en el idioma de quien mira', () => {
     for (const idioma of IDIOMAS) {
       const tm = T[idioma].modalidades;
-      const frase = mensajeDeModalidad({ message: 'modalidad_bloquea:match:' }, tm);
-      expect(frase).toContain(tm.match);
+      const frase = mensajeDeModalidad({ message: 'modalidad_bloquea:intermediacion:' }, tm);
+      expect(frase).toContain(tm.intermediacion);
       expect(frase).not.toContain('{modalidad}');
       expect(frase).not.toContain('modalidad_bloquea');
     }
@@ -156,7 +156,7 @@ describe('los textos existen en los tres idiomas', () => {
   const CLAVES = [
     'etiqueta',
     'directa',
-    'match',
+    'intermediacion',
     'falta_elegir',
     'error_bloquea',
     'error_no_habilitada',
@@ -179,7 +179,7 @@ describe('los textos existen en los tres idiomas', () => {
     const motivos = T[idioma].guardias.cobertura_panel;
     for (const clave of [
       'motivo_modalidad_directa',
-      'motivo_modalidad_match',
+      'motivo_modalidad_intermediacion',
     ]) {
       expect(typeof motivos[clave], `falta ${clave} en ${idioma}`).toBe('string');
     }
@@ -191,11 +191,11 @@ describe('contarPorModalidad', () => {
     const guardias = [
       { canal_modalidad: MODALIDAD.DIRECTA },
       { canal_modalidad: MODALIDAD.DIRECTA },
-      { canal_modalidad: MODALIDAD.MATCH },
+      { canal_modalidad: MODALIDAD.INTERMEDIACION },
     ];
     expect(contarPorModalidad(guardias, (g) => g.canal_modalidad)).toEqual({
       directa: 2,
-      match: 1,
+      intermediacion: 1,
     });
   });
 
@@ -205,10 +205,10 @@ describe('contarPorModalidad', () => {
   });
 
   it('cuenta dos veces a quien trabaja en las dos modalidades', () => {
-    const asistentes = [{ canales: [MODALIDAD.DIRECTA, MODALIDAD.MATCH] }];
+    const asistentes = [{ canales: [MODALIDAD.DIRECTA, MODALIDAD.INTERMEDIACION] }];
     expect(contarPorModalidad(asistentes, modalidadesDelAsistente)).toEqual({
       directa: 1,
-      match: 1,
+      intermediacion: 1,
     });
   });
 
@@ -218,7 +218,7 @@ describe('contarPorModalidad', () => {
     const filas = [{ m: 'lo_que_sea' }, { m: 'subcontratacion' }, { m: null }, {}];
     expect(contarPorModalidad(filas, (f) => f.m)).toEqual({
       directa: 0,
-      match: 0,
+      intermediacion: 0,
     });
   });
 
@@ -234,23 +234,23 @@ describe('contarPorModalidad', () => {
    la pantalla, para no ofrecer algo que va a volver rechazado. */
 describe('laOpcionAlcanzaLasModalidades', () => {
   it('una opción sin marca alcanza a todas, que es lo que valía antes de que la marca existiera', () => {
-    expect(laOpcionAlcanzaLasModalidades({ clave: 'transferencia' }, ['match'])).toBe(true);
-    expect(laOpcionAlcanzaLasModalidades({ clave: 'efectivo', modalidades: null }, ['match'])).toBe(
+    expect(laOpcionAlcanzaLasModalidades({ clave: 'transferencia' }, ['intermediacion'])).toBe(true);
+    expect(laOpcionAlcanzaLasModalidades({ clave: 'efectivo', modalidades: null }, ['intermediacion'])).toBe(
       true,
     );
-    expect(laOpcionAlcanzaLasModalidades({ modalidades: [] }, ['match'])).toBe(true);
+    expect(laOpcionAlcanzaLasModalidades({ modalidades: [] }, ['intermediacion'])).toBe(true);
   });
 
   it('una opción marcada alcanza sólo a las modalidades que nombra', () => {
     const opcion = { clave: 'pago_en_bloque', modalidades: ['directa'] };
     expect(laOpcionAlcanzaLasModalidades(opcion, ['directa'])).toBe(true);
-    expect(laOpcionAlcanzaLasModalidades(opcion, ['match'])).toBe(false);
+    expect(laOpcionAlcanzaLasModalidades(opcion, ['intermediacion'])).toBe(false);
   });
 
   // Lo que se paga no se puede partir en dos: la mitad que vino de Match no la centraliza nadie.
   it('una sola modalidad que quede afuera alcanza para que la opción no sirva', () => {
     const opcion = { clave: 'pago_en_bloque', modalidades: ['directa'] };
-    expect(laOpcionAlcanzaLasModalidades(opcion, ['directa', 'match'])).toBe(false);
+    expect(laOpcionAlcanzaLasModalidades(opcion, ['directa', 'intermediacion'])).toBe(false);
   });
 
   it('sin ninguna modalidad en juego no hay nada que deje afuera', () => {

@@ -7,7 +7,7 @@ import { Alert } from '../../components/ui/Alert';
 import { Cabecera } from '../../components/ui/Cabecera';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
-import { llamarApiMatch as llamarApi } from '../../lib/apiMatch';
+import { llamarApiIntermediacion as llamarApi } from '../../lib/apiIntermediacion';
 import { claseBadge } from '../../lib/tonos';
 import '../../styles/molde-paginas.css';
 import '../hojaDeTarjetas.css';
@@ -18,7 +18,7 @@ function fechaHoyISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-export function MatchClientes() {
+export function IntermediacionClientes() {
   const { t } = useLocale();
   const [accesos, setAccesos] = useState([]);
   const [estado, setEstado] = useState('cargando');
@@ -110,7 +110,7 @@ export function MatchClientes() {
         method: 'POST',
         body: JSON.stringify(elegido ? { proveedor: elegido } : {}),
       });
-      setMensajeCanje(t.match.alta_pasarela_exitosa);
+      setMensajeCanje(t.intermediacion.alta_pasarela_exitosa);
       await recargar();
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -148,7 +148,7 @@ export function MatchClientes() {
               method: 'POST',
               body: JSON.stringify({ token }),
             });
-            setMensajeCanje(t.match.canjear_qr_exitoso.replace('{monto}', monto));
+            setMensajeCanje(t.intermediacion.canjear_qr_exitoso.replace('{monto}', monto));
             setExpandida(null);
             recargar();
           } catch (err) {
@@ -171,7 +171,7 @@ export function MatchClientes() {
 
   return (
     <div>
-      <Cabecera titulo={t.match.clientes_titulo}>
+      <Cabecera titulo={t.intermediacion.clientes_titulo}>
         {!escaneando && (
           <Button
             onClick={() => {
@@ -180,7 +180,7 @@ export function MatchClientes() {
               setEscaneando(true);
             }}
           >
-            {t.match.canjear_qr_iniciar}
+            {t.intermediacion.canjear_qr_iniciar}
           </Button>
         )}
       </Cabecera>
@@ -192,7 +192,7 @@ export function MatchClientes() {
         {escaneando && (
           <section className="panel-tarjeta">
             <div className="panel-tarjeta-titulo">
-              <h2>{t.match.canjear_qr_titulo}</h2>
+              <h2>{t.intermediacion.canjear_qr_titulo}</h2>
               <Button variant="secondary" onClick={() => setEscaneando(false)}>{t.comun.cancelar}</Button>
             </div>
             <div id={LECTOR_ID} style={{ width: '100%', maxWidth: 320, borderRadius: '12px', overflow: 'hidden' }} />
@@ -201,20 +201,20 @@ export function MatchClientes() {
 
         <section className="panel-tarjeta hoja-desplazable">
           <div className="panel-tarjeta-titulo">
-            <h2>{t.match.clientes_titulo}</h2>
+            <h2>{t.intermediacion.clientes_titulo}</h2>
             {estado === 'listo' && <span className="panel-mini">{accesos.length}</span>}
           </div>
           <EstadoLista estado={estado} error={null} vacio={estado === 'listo' && accesos.length === 0} recargar={recargar}>
             <table className="panel-tabla">
               <thead>
                 <tr>
-                  <th>{t.match.col_cliente}</th>
-                  <th>{t.match.col_paciente}</th>
-                  <th>{t.match.col_asistente}</th>
-                  <th>{t.match.col_estado}</th>
-                  <th>{t.match.col_monto}</th>
-                  <th>{t.match.col_proximo_cobro}</th>
-                  <th>{t.match.col_cobro}</th>
+                  <th>{t.intermediacion.col_cliente}</th>
+                  <th>{t.intermediacion.col_paciente}</th>
+                  <th>{t.intermediacion.col_asistente}</th>
+                  <th>{t.intermediacion.col_estado}</th>
+                  <th>{t.intermediacion.col_monto}</th>
+                  <th>{t.intermediacion.col_proximo_cobro}</th>
+                  <th>{t.intermediacion.col_cobro}</th>
                   <th></th>
                 </tr>
               </thead>
@@ -227,18 +227,18 @@ export function MatchClientes() {
                     <td>{s.paciente_nombre || '—'}</td>
                     <td>{s.asistente_nombre || '—'}</td>
                     <td>
-                      <span className={claseBadge(s.estado)}>{t.match[`estado_${s.estado}`] || s.estado}</span>
+                      <span className={claseBadge(s.estado)}>{t.intermediacion[`estado_${s.estado}`] || s.estado}</span>
                     </td>
                     <td>{s.importe}</td>
                     <td>{s.proximo_cobro || '—'}</td>
                     <td>
                       {s.alta_en_pasarela
-                        ? t.match[`medio_${s.proveedor}`] || s.proveedor
-                        : t.match.alta_pasarela_pendiente}
+                        ? t.intermediacion[`medio_${s.proveedor}`] || s.proveedor
+                        : t.intermediacion.alta_pasarela_pendiente}
                     </td>
                     <td>
                       <button type="button" className="panel-enlace" onClick={() => verCobros(s.id)}>
-                        {t.match.ver_cobros}
+                        {t.intermediacion.ver_cobros}
                       </button>
                     </td>
                   </tr>
@@ -255,28 +255,28 @@ export function MatchClientes() {
               <div key={s.id} className="panel-grilla panel-columnas-2">
                 <section className="panel-tarjeta hoja-desplazable">
                   <div className="panel-tarjeta-titulo">
-                    <h2>{t.match.cobros_titulo}</h2>
+                    <h2>{t.intermediacion.cobros_titulo}</h2>
                     <span className="panel-mini">{s.cliente_nombre || '—'}</span>
                   </div>
                   <table className="panel-tabla">
                     <thead>
                       <tr>
-                        <th>{t.match.cobros_col_periodo}</th>
-                        <th>{t.match.cobros_col_medio}</th>
-                        <th>{t.match.cobros_col_monto}</th>
-                        <th>{t.match.cobros_col_estado}</th>
-                        <th>{t.match.cobros_col_fecha}</th>
+                        <th>{t.intermediacion.cobros_col_periodo}</th>
+                        <th>{t.intermediacion.cobros_col_medio}</th>
+                        <th>{t.intermediacion.cobros_col_monto}</th>
+                        <th>{t.intermediacion.cobros_col_estado}</th>
+                        <th>{t.intermediacion.cobros_col_fecha}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {(cobrosPorAcceso[s.id] || []).map((c) => (
                         <tr key={c.id}>
                           <td>{c.periodo}</td>
-                          <td>{t.match[`medio_${c.medio}`] || c.medio}</td>
+                          <td>{t.intermediacion[`medio_${c.medio}`] || c.medio}</td>
                           <td>{c.monto}</td>
                           <td>
                             <span className={claseBadge(c.estado_cobro)}>
-                              {t.match[`cobro_${c.estado_cobro}`] || c.estado_cobro}
+                              {t.intermediacion[`cobro_${c.estado_cobro}`] || c.estado_cobro}
                             </span>
                           </td>
                           <td>{c.fecha_cobro || '—'}</td>
@@ -289,21 +289,21 @@ export function MatchClientes() {
                     <>
                       <div className="molde-formgrid">
                         <FormField
-                          label={t.match.registrar_cobro_efectivo_monto}
+                          label={t.intermediacion.registrar_cobro_efectivo_monto}
                           name="monto"
                           type="number"
                           value={formEfectivo.monto}
                           onChange={(e) => setFormEfectivo((f) => ({ ...f, monto: e.target.value }))}
                         />
                         <FormField
-                          label={t.match.registrar_cobro_efectivo_periodo}
+                          label={t.intermediacion.registrar_cobro_efectivo_periodo}
                           name="periodo"
                           type="month"
                           value={formEfectivo.periodo}
                           onChange={(e) => setFormEfectivo((f) => ({ ...f, periodo: e.target.value }))}
                         />
                         <FormField
-                          label={t.match.registrar_cobro_efectivo_fecha}
+                          label={t.intermediacion.registrar_cobro_efectivo_fecha}
                           name="fecha_cobro"
                           type="date"
                           value={formEfectivo.fechaCobro}
@@ -315,7 +315,7 @@ export function MatchClientes() {
                           {t.comun.cancelar}
                         </Button>
                         <Button onClick={guardarEfectivo} disabled={guardandoEfectivo}>
-                          {guardandoEfectivo ? t.comun.guardando : t.match.registrar_cobro_efectivo_guardar}
+                          {guardandoEfectivo ? t.comun.guardando : t.intermediacion.registrar_cobro_efectivo_guardar}
                         </Button>
                       </div>
                     </>
@@ -325,7 +325,7 @@ export function MatchClientes() {
                         variant="secondary"
                         onClick={() => setFormEfectivo({ accesoId: s.id, monto: '', periodo: '', fechaCobro: fechaHoyISO() })}
                       >
-                        {t.match.registrar_cobro_efectivo}
+                        {t.intermediacion.registrar_cobro_efectivo}
                       </Button>
                     </div>
                   )}
@@ -333,21 +333,21 @@ export function MatchClientes() {
 
                 <section className="panel-tarjeta">
                   <div className="panel-tarjeta-titulo">
-                    <h2>{t.match.alta_pasarela_titulo}</h2>
+                    <h2>{t.intermediacion.alta_pasarela_titulo}</h2>
                   </div>
                   {s.alta_en_pasarela ? (
                     <div className="panel-fila-alerta">
                       <div>
                         <b>
-                          {t.match.alta_pasarela_hecha.replace(
+                          {t.intermediacion.alta_pasarela_hecha.replace(
                             '{proveedor}',
-                            t.match[`medio_${s.proveedor}`] || s.proveedor
+                            t.intermediacion[`medio_${s.proveedor}`] || s.proveedor
                           )}
                         </b>
                         {s.url_accion && (
                           <span className="panel-mini">
                             <a href={s.url_accion} target="_blank" rel="noreferrer">
-                              {t.match.alta_pasarela_link}
+                              {t.intermediacion.alta_pasarela_link}
                             </a>
                           </span>
                         )}
@@ -361,7 +361,7 @@ export function MatchClientes() {
                         <div className="molde-formgrid">
                           <div className="molde-ancho">
                             <FormField
-                              label={t.match.alta_pasarela_riel}
+                              label={t.intermediacion.alta_pasarela_riel}
                               name={`riel-${s.id}`}
                               type="select"
                               value={rielElegido[s.id] || ''}
@@ -370,7 +370,7 @@ export function MatchClientes() {
                               <option value="">{t.comun.seleccionar}</option>
                               {rielesConectados.map((riel) => (
                                 <option key={riel} value={riel}>
-                                  {t.match[`medio_${riel}`] || riel}
+                                  {t.intermediacion[`medio_${riel}`] || riel}
                                 </option>
                               ))}
                             </FormField>
@@ -382,7 +382,7 @@ export function MatchClientes() {
                           onClick={() => darDeAlta(s.id)}
                           disabled={dandoAlta === s.id || (rielesConectados.length > 1 && !rielElegido[s.id])}
                         >
-                          {dandoAlta === s.id ? t.comun.guardando : t.match.alta_pasarela_boton}
+                          {dandoAlta === s.id ? t.comun.guardando : t.intermediacion.alta_pasarela_boton}
                         </Button>
                       </div>
                     </>

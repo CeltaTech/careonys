@@ -2,15 +2,15 @@
    =====================================================================
 
    QUÉ RESUELVE. Los tres trabajos diarios del Match —armar los cobros del período, cortar los
-   accesos dados de baja y suspender los que agotaron la gracia— barrían `accesos_match` con
+   accesos dados de baja y suspender los que agotaron la gracia— barrían `accesos_intermediacion` con
    una sola consulta que mezclaba todas las Prestadoras. Cada Prestadora es un cajón cerrado
    (`celtatech\CLAUDE.md` §5): una consulta que alcanza a dos ya abrió el cajón, aunque después el
    código las separe en la memoria. Desde acá salen los identificadores, y cada trabajo consulta de
    a una Prestadora por vez, nombrándola.
 
-   DE DÓNDE SALE LA LISTA. De `configuracion_cobro_match`, que tiene una fila por Prestadora
+   DE DÓNDE SALE LA LISTA. De `configuracion_cobro_intermediacion`, que tiene una fila por Prestadora
    —la escribe el alta— y es la misma tabla de la que los tres trabajos ya leen sus plazos
-   (`plazosDeCobroMatch.js`). No se lee de `prestadora_modalidades`: una Prestadora que apagó
+   (`plazosDeCobroIntermediacion.js`). No se lee de `prestadora_modalidades`: una Prestadora que apagó
    la modalidad puede conservar accesos que todavía hay que cortar o suspender, y dejarlos afuera los
    dejaría vigentes para siempre.
 
@@ -31,14 +31,14 @@ import { supabase } from '../db/connection.js';
  *
  * @returns {Promise<string[]>}
  */
-export async function prestadorasDelMatch() {
+export async function prestadorasDeLaIntermediacion() {
   // SIN PRESTADORA A PROPÓSITO
   // Es el arranque de los trabajos de fondo del Match, que no tienen sesión de nadie. No trae
   // dato de ninguna Prestadora: trae nada más que sus identificadores, y a partir de ahí cada
   // trabajo recorre de a una, nombrándola en cada consulta de adentro. Pedirle el filtro a ésta
   // sería pedirle que ya sepa la lista que viene a buscar.
   const { data, error } = await supabase
-    .from('configuracion_cobro_match')
+    .from('configuracion_cobro_intermediacion')
     .select('prestadora_id');
 
   if (error) {

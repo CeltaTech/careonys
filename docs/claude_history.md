@@ -2,6 +2,12 @@
 
 > Registra por qué cambió una regla vigente de `CLAUDE.md`. La regla vigente en sí vive solo en `CLAUDE.md` (§10) — este archivo guarda el "antes" y el motivo, no vuelve a describir el estado actual en detalle.
 
+## La intermediación se guarda como `intermediacion` (2026-10-06)
+
+- **Decía antes:** la base y el código guardaban la intermediación con su nombre comercial, `match`: el valor de la modalidad, nueve tablas, sus índices, restricciones y políticas, una columna, funciones y dos claves del catálogo de funciones de riesgo.
+- **Dice ahora:** lo guardado lleva el nombre funcional de las dos modalidades, `directa` e `intermediacion`, y «Match» queda sólo como nombre comercial en el texto visible.
+- **Motivo:** el Desarrollador pidió aunar criterios para todas las modalidades: la directa ya se guardaba por su función y la intermediación no. Lo guardado se nombra por lo que hace (`celtatech/CLAUDE.md` §8).
+
 ## Careonys no tiene ningún sistema de límites comerciales, y la línea del producto va siempre (2026-09-18)
 
 - **Decía antes:** la regla de la marca hacía depender la línea del pie —*«con la tecnología de Careonys»*— de que la Prestadora tuviera contratada la función que la apaga. Una función de la base contestaba esa pregunta, el motor la consultaba, el dato viajaba a las dos aplicaciones y el correo de activación lo miraba. Además, la documentación hablaba de un límite de Pacientes activos, de un tope de créditos de inteligencia artificial y de un interruptor de Match **como si estuvieran construidos**: nombrados en once lugares, incluidos los archivos de identidad del producto y las reglas. Y un documento de diseño citaba una tabla de planes que nunca se creó.

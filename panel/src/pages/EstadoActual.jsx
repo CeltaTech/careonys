@@ -69,12 +69,12 @@ const EXCEPCIONES_CON_RENGLON_PROPIO = new Set([EXCEPCION_SIN_CUBRIR, 'documenta
 /* El color de cada modalidad en la dona. */
 const COLOR_MODALIDAD = {
   [MODALIDAD.DIRECTA]: 'var(--verde-exito)',
-  [MODALIDAD.MATCH]: 'var(--violeta)',
+  [MODALIDAD.INTERMEDIACION]: 'var(--violeta)',
 };
 
 const NOMBRE_MODALIDAD = {
   [MODALIDAD.DIRECTA]: (t) => t.configuracion.modalidades_directa,
-  [MODALIDAD.MATCH]: (t) => t.configuracion.modalidades_match,
+  [MODALIDAD.INTERMEDIACION]: (t) => t.configuracion.modalidades_intermediacion,
 };
 
 /** El fondo de una dona a partir de tramos `{color, cantidad}`. */

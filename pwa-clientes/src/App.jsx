@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { PerfilProvider, useOfreceMatch, useSeVe } from './context/PerfilContext';
+import { PerfilProvider, useOfreceIntermediacion, useSeVe } from './context/PerfilContext';
 import { PersonasAutorizadasProvider, usePersonasAutorizadas } from './context/PersonasAutorizadasContext';
 import { LocaleProvider, useLocale } from './i18n/LocaleContext';
 import { pantallaPermitida } from './lib/interruptorDeCadaPantalla';
@@ -16,7 +16,7 @@ import ReporteDetalle from './pages/ReporteDetalle';
 import Alertas from './pages/Alertas';
 import AsistenteAsignado from './pages/AsistenteAsignado';
 import EscanearAsistente from './pages/EscanearAsistente';
-import AccesoMatch from './pages/AccesoMatch';
+import AccesoIntermediacion from './pages/AccesoIntermediacion';
 import Facturas from './pages/Facturas';
 import FacturaDetalle from './pages/FacturaDetalle';
 import Medicacion from './pages/Medicacion';
@@ -69,8 +69,8 @@ function PantallaPermitida({ pantalla, children }) {
 // la modalidad en la que trabaja, que es otra cosa y ya está decidida en otro lado. El candado
 // de verdad está en el backend, que contesta que no ofrece esa modalidad; esto es para que no
 // quede una dirección que lleve a una pantalla de error.
-function SoloConMatch({ children }) {
-  if (!useOfreceMatch()) return <Navigate to="/pacientes" replace />;
+function SoloConIntermediacion({ children }) {
+  if (!useOfreceIntermediacion()) return <Navigate to="/pacientes" replace />;
   return children;
 }
 
@@ -150,7 +150,7 @@ function Rutas() {
           path="pacientes/:id/acceso"
           element={
             <PantallaPermitida pantalla="acceso">
-              <AccesoMatch />
+              <AccesoIntermediacion />
             </PantallaPermitida>
           }
         />
@@ -191,17 +191,17 @@ function Rutas() {
         <Route
           path="buscar"
           element={
-            <SoloConMatch>
+            <SoloConIntermediacion>
               <BuscarAsistentes />
-            </SoloConMatch>
+            </SoloConIntermediacion>
           }
         />
         <Route
           path="buscar/:id"
           element={
-            <SoloConMatch>
+            <SoloConIntermediacion>
               <PerfilPublicoAsistente />
-            </SoloConMatch>
+            </SoloConIntermediacion>
           }
         />
         {/* El chat con la gente de la vidriera. Cuelga de la misma modalidad que la vidriera:
@@ -209,17 +209,17 @@ function Rutas() {
         <Route
           path="mensajes"
           element={
-            <SoloConMatch>
+            <SoloConIntermediacion>
               <Mensajes />
-            </SoloConMatch>
+            </SoloConIntermediacion>
           }
         />
         <Route
           path="mensajes/:id"
           element={
-            <SoloConMatch>
+            <SoloConIntermediacion>
               <Conversacion />
-            </SoloConMatch>
+            </SoloConIntermediacion>
           }
         />
         {/* Lo que la Prestadora escribió para quien cuida en su casa. No lleva guardián: no

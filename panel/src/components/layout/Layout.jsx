@@ -145,8 +145,8 @@ export function Layout() {
   // El nombre de cada modalidad sale de lib/modalidades.js, el mismo lugar del que lo toma el
   // candado de la dirección (App.jsx).
   const directa = tieneModalidad(MODALIDAD.DIRECTA);
-  const match = tieneModalidad(MODALIDAD.MATCH);
-  const hayPlantel = directa || match;
+  const intermediacion = tieneModalidad(MODALIDAD.INTERMEDIACION);
+  const hayPlantel = directa || intermediacion;
 
   /* El menú, como lista de datos. El candado de cada enlace (`ver`) está escrito una sola vez,
      al lado del enlace, y es el mismo que aplica la dirección en App.jsx. */
@@ -174,7 +174,7 @@ export function Layout() {
         { a: '/asistentes', texto: t.nav.asistentes, ver: hayPlantel },
         { a: '/documentacion', texto: t.nav.documentacion, ver: hayPlantel },
         { a: '/postulaciones', texto: t.nav.postulaciones, ver: hayPlantel },
-        { a: '/match/calificaciones', texto: t.nav.match_calificaciones, ver: match },
+        { a: '/intermediacion/calificaciones', texto: t.nav.intermediacion_calificaciones, ver: intermediacion },
         // Una remuneración es dato sensible: el Admin la ve siempre, el Coordinador sólo si su
         // Prestadora se lo habilitó.
         { a: '/pagos-asistentes', texto: t.nav.pagos_asistentes, ver: hayPlantel && (esAdmin || puede('ver_pagos_asistente')) },
@@ -200,7 +200,7 @@ export function Layout() {
       enlaces: [
         { a: '/padron', texto: t.nav.padron, ver: esAdmin || puede('ver_padron') },
         { a: '/clientes', texto: t.nav.clientes, ver: directa },
-        { a: '/match/clientes', texto: t.nav.match_clientes, ver: match && esAdmin },
+        { a: '/intermediacion/clientes', texto: t.nav.intermediacion_clientes, ver: intermediacion && esAdmin },
         { a: '/contenidos', texto: t.nav.contenidos, ver: true },
       ],
     },
@@ -211,7 +211,7 @@ export function Layout() {
       enlaces: [
         { a: '/facturacion', texto: t.nav.facturacion, ver: directa },
         { a: '/lista-precios', texto: t.nav.lista_precios, ver: directa },
-        { a: '/match/formas-de-cobro', texto: t.nav.match_formas_de_cobro, ver: match && esAdmin },
+        { a: '/intermediacion/formas-de-cobro', texto: t.nav.intermediacion_formas_de_cobro, ver: intermediacion && esAdmin },
         { a: '/informes-obra-social', texto: t.nav.informes_obra_social, ver: directa },
       ],
     },
@@ -234,7 +234,7 @@ export function Layout() {
         { a: '/importacion', texto: t.nav.importacion, ver: esAdmin || puede('importar_datos_masivos') },
         { a: '/habilitar-clave', texto: t.nav.habilitar_clave, ver: esAdmin || puede('habilitar_cambio_de_clave'), contador: telefonosEsperando.length },
         { a: '/auditoria', texto: t.nav.auditoria, ver: esAdmin },
-        { a: '/match/auditoria-legal', texto: t.nav.match_auditoria_legal, ver: match },
+        { a: '/intermediacion/auditoria-legal', texto: t.nav.intermediacion_auditoria_legal, ver: intermediacion },
       ],
     },
   ]

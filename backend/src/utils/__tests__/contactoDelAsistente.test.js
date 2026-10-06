@@ -6,7 +6,7 @@
  * QUÉ SE PRUEBA ACÁ. Lo que decide plata y no está en la base: con cuál de los accesos del
  * Cliente se paga, qué se le muestra a quien no mira el dinero, y que el período gratuito termine
  * exactamente cuando se abrió un contacto nuevo y en ningún otro caso. El descuento del saldo es
- * de la base y está probado en `contactosMatch.test.js`.
+ * de la base y está probado en `contactosIntermediacion.test.js`.
  *
  * CÓMO PUEDE FALLAR. La base falsa no responde nada que la prueba no haya preparado, así que una
  * consulta de más —o una que se dejó de hacer— cambia el resultado. Las tres que costarían plata
@@ -78,11 +78,11 @@ beforeEach(() => {
   respuestas.clear();
 });
 
-const ACCESOS = 'GET /rest/v1/accesos_match';
-const VISTOS = 'GET /rest/v1/contactos_vistos_match';
+const ACCESOS = 'GET /rest/v1/accesos_intermediacion';
+const VISTOS = 'GET /rest/v1/contactos_vistos_intermediacion';
 const ASISTENTES = 'GET /rest/v1/asistentes';
-const CONSUMIR = 'POST /rest/v1/rpc/consumir_contacto_match';
-const ESCRIBIR_ACCESO = 'PATCH /rest/v1/accesos_match';
+const CONSUMIR = 'POST /rest/v1/rpc/consumir_contacto_intermediacion';
+const ESCRIBIR_ACCESO = 'PATCH /rest/v1/accesos_intermediacion';
 
 /** Un acceso como lo devuelve la base, con la forma de cobro anidada. */
 const acceso = (cambios = {}) => ({
@@ -94,7 +94,7 @@ const acceso = (cambios = {}) => ({
   proximo_cobro: null,
   saldo_contactos: null,
   created_at: '2026-01-01T00:00:00.000Z',
-  formas_de_cobro_match: {
+  formas_de_cobro_intermediacion: {
     nombre: 'Suscripción mensual',
     renueva_sola: true,
     periodo_cantidad: 1,

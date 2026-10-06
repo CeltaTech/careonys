@@ -6,7 +6,7 @@ import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import { useAuth } from '../../context/AuthContext';
 import { esAdminDePrestadora } from '../../lib/roles';
 import { llamarApiConfiguracion as llamarApi } from '../../lib/apiConfiguracion';
-import { llamarApiMatch } from '../../lib/apiMatch';
+import { llamarApiIntermediacion } from '../../lib/apiIntermediacion';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
@@ -36,7 +36,7 @@ export function ConfiguracionPrestadora() {
       <FacturacionClientesTab />
       <ElSoftwareDeAfuera />
       <ConsentimientoPagadorTab />
-      {tieneModalidad('match') && <TabPasarela />}
+      {tieneModalidad('intermediacion') && <TabPasarela />}
     </div>
   );
 }
@@ -346,7 +346,7 @@ function NuevaZona({ onClose, onCreada }) {
    igual que el token de WhatsApp y que la contraseña del correo saliente, y Superadmin es un rol
    técnico de CeltaTech. El permiso de acceso tampoco lo habilita.
 
-   Quien decide de verdad es el backend (`backend/src/routes/panelMatch.js`, el PATCH de la
+   Quien decide de verdad es el backend (`backend/src/routes/panelIntermediacion.js`, el PATCH de la
    pasarela y el PUT del secreto de firma): escribiendo la dirección a mano se llega igual, y ahí
    se niega. Esto de acá es para no mostrar botones que no van a poder guardar. */
 function TabPasarela() {
@@ -369,7 +369,7 @@ function TabPasarela() {
     setEstado('cargando');
     setError(null);
     try {
-      const { pasarelas: filas } = await llamarApiMatch('/pasarela');
+      const { pasarelas: filas } = await llamarApiIntermediacion('/pasarela');
       setPasarelas(filas);
       setEstado('listo');
     } catch (err) {
@@ -387,7 +387,7 @@ function TabPasarela() {
     setError(null);
     try {
       const requiereCredencial = !PROVEEDORES_SIN_CREDENCIAL.includes(proveedor);
-      await llamarApiMatch(`/pasarela/${proveedor}`, {
+      await llamarApiIntermediacion(`/pasarela/${proveedor}`, {
         method: 'PATCH',
         body: JSON.stringify({
           activo: true,
@@ -410,7 +410,7 @@ function TabPasarela() {
     setAccionEnCurso(proveedor);
     setError(null);
     try {
-      await llamarApiMatch(`/pasarela/${proveedor}`, {
+      await llamarApiIntermediacion(`/pasarela/${proveedor}`, {
         method: 'PATCH',
         body: JSON.stringify({ activo: false }),
       });
@@ -426,7 +426,7 @@ function TabPasarela() {
     setAccionEnCurso(proveedor);
     setError(null);
     try {
-      await llamarApiMatch(`/pasarela/${proveedor}/secreto-firma`, {
+      await llamarApiIntermediacion(`/pasarela/${proveedor}/secreto-firma`, {
         method: 'PUT',
         body: JSON.stringify({ secretoFirma }),
       });

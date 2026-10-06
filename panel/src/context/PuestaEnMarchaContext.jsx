@@ -66,7 +66,7 @@ function armarPasos({ modalidades, empresa, zonas, precios, gente, clientes, hay
   return [
     {
       clave: 'modalidad',
-      hecho: modalidades.includes('directa') || modalidades.includes('match'),
+      hecho: modalidades.includes('directa') || modalidades.includes('intermediacion'),
       ruta: '/configuracion',
     },
     {

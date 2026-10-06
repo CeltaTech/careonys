@@ -15,7 +15,7 @@
 //     recurrente queda andando del lado del proveedor y sin decírselo arrancaría hoy: Stripe lo
 //     manda como `trial_end` y Mercado Pago como `auto_recurring.start_date`. Los demás lo ignoran
 //     a propósito —no dejan nada recurrente—, y ahí el período gratuito lo sostiene
-//     `accesos_match.proximo_cobro`, que es lo único que mira `armarCobrosDelPeriodo`.
+//     `accesos_intermediacion.proximo_cobro`, que es lo único que mira `armarCobrosDelPeriodo`.
 //     `emailPagador` es el correo real del Cliente. Lo resuelve quien llama —hoy
 //     `backend/src/utils/altaEnPasarela.js`, que es el único punto por donde se da de alta un
 //     acceso—, porque el adaptador no consulta la base. Los rieles que no se lo piden al

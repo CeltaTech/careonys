@@ -10,7 +10,7 @@
  *
  * DÓNDE SE TAPA, Y POR QUÉ LA PRUEBA VA CONTRA LA BASE. El tapado dejó de vivir en el backend: lo
  * hacen el cuerpo de reglas de `public.reglas_de_los_mensajes` y el disparador de
- * `mensajes_match`, antes de escribir. Probar el backend no probaría nada, porque el backend ya
+ * `mensajes_intermediacion`, antes de escribir. Probar el backend no probaría nada, porque el backend ya
  * no tapa. Así que lo que estas pruebas hacen es **guardar un mensaje de verdad y leer lo que
  * quedó guardado**: si el dato sigue ahí, la prueba falla.
  *
@@ -84,11 +84,11 @@ CREATE TEMP TABLE hilo_de_prueba ON COMMIT DROP AS
    WHERE f.prestadora_id = '11111111-1111-4111-8111-111111111111'
    LIMIT 1;
 
-INSERT INTO public.conversaciones_match (id, prestadora_id, cliente_id, asistente_id)
+INSERT INTO public.conversaciones_intermediacion (id, prestadora_id, cliente_id, asistente_id)
   SELECT '99999999-9999-4999-8999-999999999999', prestadora_id, cliente_id, asistente_id
     FROM hilo_de_prueba;
 
-INSERT INTO public.mensajes_match
+INSERT INTO public.mensajes_intermediacion
   (id, prestadora_id, conversacion_id, lado, autor_usuario_id, cuerpo, automatico)
   SELECT '99999999-9999-4999-8999-999999999998', prestadora_id,
          '99999999-9999-4999-8999-999999999999', 'asistente',
@@ -96,7 +96,7 @@ INSERT INTO public.mensajes_match
     FROM hilo_de_prueba;
 
 SELECT coalesce(regla_tapada, '') || '${SEPARADOR}' || cuerpo
-  FROM public.mensajes_match
+  FROM public.mensajes_intermediacion
  WHERE id = '99999999-9999-4999-8999-999999999998';
 ROLLBACK;
 `);

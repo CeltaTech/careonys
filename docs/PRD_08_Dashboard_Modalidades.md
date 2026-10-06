@@ -28,10 +28,10 @@
   una sola base de Asistentes certificados, sea cual sea el canal por el que después
   trabajen" (`docs/PRD_07_Modalidad_Match.md:191`).
 - El campo técnico que ya soporta esto es `asistentes.canales TEXT[]` (default
-  `['directo','match']`, `docs/DATA_MODEL.md:219-227`) — un Asistente puede estar en
+  `['directo','intermediacion']`, `docs/DATA_MODEL.md:219-227`) — un Asistente puede estar en
   uno, otro o ambos canales. Por qué no está en uno de ellos se registra en
   `datos_reservados_asistente.motivo_exclusion_directo` /
-  `.motivo_exclusion_match` — esa tabla es aparte porque su lectura exige el permiso
+  `.motivo_exclusion_intermediacion` — esa tabla es aparte porque su lectura exige el permiso
   `ver_datos_reservados_asistente` (ver `docs/SECURITY.md`).
 - `calificaciones_asistente` (`docs/DATA_MODEL.md:589-612`) es la calificación del
   Cliente sobre el Asistente, puramente informativa — la Prestadora solo decide
@@ -171,8 +171,8 @@ antes de programar:
    **es "Cliente"**, el término aprobado del glosario de `CLAUDE.md` §4: la persona o
    entidad a la que la Prestadora le presta el servicio. Este menú se llama "Clientes".
 4. **¿Un Asistente puede participar de cooperativa además de directo/Match?** El
-   campo `canales` hoy solo admite `'directo'`/`'match'`
-   (`docs/DATA_MODEL.md:226-227`, `CHECK (canales <@ ARRAY['directo','match']::TEXT[])`)
+   campo `canales` hoy solo admite `'directo'`/`'intermediacion'`
+   (`docs/DATA_MODEL.md:226-227`, `CHECK (canales <@ ARRAY['directo','intermediacion']::TEXT[])`)
    — no contempla un tercer valor `'cooperativa'`. Si cooperativa también comparte el mismo
    plantel de Asistentes (Grupo 1), ese `CHECK` constraint necesita revisión el día que se
    diseñe cooperativa en profundidad, no alcanza con agregarla a la UI del menú.

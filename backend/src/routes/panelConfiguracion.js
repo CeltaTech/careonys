@@ -2266,9 +2266,9 @@ panelConfiguracionRouter.patch('/politica-verificacion', async (req, res) => {
 //     primer corte "Base: tabla + menú + onboarding"). Activar/desactivar es exclusivo de
 //     admin_prestadora (este router ya lo exige vía soloAdministracion más arriba); la
 //     lectura para armar el menú de cualquier rol vive en panelCuentas.js /modalidades-activas
-//     (misma tabla, misma fuente única de verdad). Son dos: directa y match.
-const MODALIDAD_MATCH = 'match';
-const MODALIDADES_DISPONIBLES = ['directa', MODALIDAD_MATCH];
+//     (misma tabla, misma fuente única de verdad). Son dos: directa y intermediacion.
+const MODALIDAD_INTERMEDIACION = 'intermediacion';
+const MODALIDADES_DISPONIBLES = ['directa', MODALIDAD_INTERMEDIACION];
 
 // Un acceso del Match sigue en curso mientras esté vigente. Vencido o cancelado ya no ata
 // nada: se apagó solo.
@@ -2310,13 +2310,13 @@ async function loQueImpideApagar(prestadoraId, modalidad) {
       .is('deleted_at', null)
       .contains('canales', [modalidad])
       .limit(1),
-    modalidad === MODALIDAD_MATCH
+    modalidad === MODALIDAD_INTERMEDIACION
       // Queda con la llave maestra y el filtro de la Prestadora: la única política de lectura
-      // del Panel sobre `accesos_match`, `prestadora_ve_accesos_match`, exige rol
+      // del Panel sobre `accesos_intermediacion`, `prestadora_ve_accesos_intermediacion`, exige rol
       // admin_prestadora o coordinador; para superadmin no habría accesos vigentes y podría
       // apagar el Match con accesos en curso. Se decide aparte.
       ? supabase
-          .from('accesos_match')
+          .from('accesos_intermediacion')
           .select('id')
           .eq('prestadora_id', prestadoraId)
           .eq('estado', ACCESO_EN_CURSO)

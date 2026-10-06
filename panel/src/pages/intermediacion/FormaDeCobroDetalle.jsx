@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
-import { llamarApiMatch } from '../../lib/apiMatch';
+import { llamarApiIntermediacion } from '../../lib/apiIntermediacion';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
@@ -55,7 +55,7 @@ export function FormaDeCobroDetalle({ forma, unidades, soloLectura, onClose, onG
       ofrecida,
     };
     try {
-      await llamarApiMatch(esNueva ? '/formas-de-cobro' : `/formas-de-cobro/${forma.id}`, {
+      await llamarApiIntermediacion(esNueva ? '/formas-de-cobro' : `/formas-de-cobro/${forma.id}`, {
         method: esNueva ? 'POST' : 'PATCH',
         body: JSON.stringify(cuerpo),
       });
@@ -69,13 +69,13 @@ export function FormaDeCobroDetalle({ forma, unidades, soloLectura, onClose, onG
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
-        <h2 id={modal.idTitulo}>{esNueva ? t.match.formas_nueva : forma.nombre}</h2>
+        <h2 id={modal.idTitulo}>{esNueva ? t.intermediacion.formas_nueva : forma.nombre}</h2>
 
         {error && <Alert variant="error">{error}</Alert>}
 
         <div className="molde-formgrid">
           <FormField
-            label={t.match.forma_nombre}
+            label={t.intermediacion.forma_nombre}
             name="nombre"
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
@@ -84,7 +84,7 @@ export function FormaDeCobroDetalle({ forma, unidades, soloLectura, onClose, onG
           />
 
           <FormField
-            label={moneda ? `${t.match.forma_importe} (${moneda})` : t.match.forma_importe}
+            label={moneda ? `${t.intermediacion.forma_importe} (${moneda})` : t.intermediacion.forma_importe}
             name="importe"
             type="number"
             step="0.01"
@@ -95,7 +95,7 @@ export function FormaDeCobroDetalle({ forma, unidades, soloLectura, onClose, onG
           />
 
           <FormField
-            label={t.match.forma_periodo_cantidad}
+            label={t.intermediacion.forma_periodo_cantidad}
             name="periodo_cantidad"
             type="number"
             value={periodoCantidad}
@@ -104,25 +104,25 @@ export function FormaDeCobroDetalle({ forma, unidades, soloLectura, onClose, onG
           />
 
           <FormField
-            label={t.match.forma_periodo_unidad}
+            label={t.intermediacion.forma_periodo_unidad}
             name="periodo_unidad"
             type="select"
             value={periodoUnidad}
             onChange={(e) => setPeriodoUnidad(e.target.value)}
             disabled={soloLectura}
           >
-            <option value="">{t.match.forma_periodo_sin_unidad}</option>
+            <option value="">{t.intermediacion.forma_periodo_sin_unidad}</option>
             {/* Las unidades vienen del backend, que las lee del catálogo de la base: acá no hay
                 ninguna lista escrita a mano. */}
             {unidades.map((unidad) => (
               <option key={unidad} value={unidad}>
-                {t.match[`periodo_${unidad}`] || unidad}
+                {t.intermediacion[`periodo_${unidad}`] || unidad}
               </option>
             ))}
           </FormField>
 
           <FormField
-            label={t.match.forma_dias_gratis}
+            label={t.intermediacion.forma_dias_gratis}
             name="dias_gratis"
             type="number"
             value={diasGratis}
@@ -131,7 +131,7 @@ export function FormaDeCobroDetalle({ forma, unidades, soloLectura, onClose, onG
           />
 
           <FormField
-            label={t.match.forma_contactos_incluidos}
+            label={t.intermediacion.forma_contactos_incluidos}
             name="contactos_incluidos"
             type="number"
             value={contactos}
@@ -140,7 +140,7 @@ export function FormaDeCobroDetalle({ forma, unidades, soloLectura, onClose, onG
           />
 
           <FormField
-            label={t.match.forma_renueva_sola}
+            label={t.intermediacion.forma_renueva_sola}
             name="renueva_sola"
             type="checkbox"
             checked={renuevaSola}
@@ -149,7 +149,7 @@ export function FormaDeCobroDetalle({ forma, unidades, soloLectura, onClose, onG
           />
 
           <FormField
-            label={t.match.forma_ofrecida}
+            label={t.intermediacion.forma_ofrecida}
             name="ofrecida"
             type="checkbox"
             checked={ofrecida}

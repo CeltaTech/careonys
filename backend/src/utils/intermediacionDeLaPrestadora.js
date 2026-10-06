@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// matchDeLaPrestadora.js — dos preguntas que se hacen desde varios lados y
+// intermediacionDeLaPrestadora.js — dos preguntas que se hacen desde varios lados y
 // que tienen que contestarse igual siempre.
 //
 //   1. ¿Esta Prestadora ofrece la modalidad Match?
@@ -12,7 +12,7 @@
 // mostrando su gente.
 //
 // La segunda decide el orden de la lista, y no se responde con una lista escrita
-// en el código: sale de `configuracion_funciones_match`, donde **sin fila
+// en el código: sale de `configuracion_funciones_intermediacion`, donde **sin fila
 // guardada la función está apagada** — una Prestadora recién creada no necesita
 // que nadie le siembre cinco filas para estar en el estado en el que ya está.
 // ---------------------------------------------------------------------------
@@ -32,9 +32,9 @@ export async function modalidadesDeLaPrestadora(prestadoraId) {
 }
 
 /** Si esta Prestadora ofrece Match. Es la puerta de toda la vidriera. */
-export async function ofreceMatch(prestadoraId) {
+export async function ofreceIntermediacion(prestadoraId) {
   const modalidades = await modalidadesDeLaPrestadora(prestadoraId);
-  return modalidades.includes(MODALIDAD.MATCH);
+  return modalidades.includes(MODALIDAD.INTERMEDIACION);
 }
 
 /**
@@ -48,7 +48,7 @@ export async function ofreceMatch(prestadoraId) {
 export async function funcionDeRiesgoEncendida(prestadoraId, clave) {
   if (!prestadoraId || !clave) return false;
   const { data, error } = await supabase
-    .from('configuracion_funciones_match')
+    .from('configuracion_funciones_intermediacion')
     .select('activa')
     .eq('prestadora_id', prestadoraId)
     .eq('funcion_clave', clave)

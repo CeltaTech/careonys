@@ -3,9 +3,9 @@
 
    QUÉ RESUELVE. El §3.2 del `docs/PRD_07_Modalidad_Match.md` pide avisar antes de cualquier
    cobro por vencimiento del período gratuito: nunca un cobro silencioso. Hasta acá no había
-   ninguno, y tampoco había período gratuito: `formas_de_cobro_match.dias_gratis` era un dato
+   ninguno, y tampoco había período gratuito: `formas_de_cobro_intermediacion.dias_gratis` era un dato
    que la Prestadora cargaba y que no leía nadie. Ahora el alta lo escribe en
-   `accesos_match.gratis_hasta` (`altaEnPasarela.js`) y este trabajo es el que avisa.
+   `accesos_intermediacion.gratis_hasta` (`altaEnPasarela.js`) y este trabajo es el que avisa.
 
    POR QUÉ NO PASA POR EL CATÁLOGO DE MENSAJES. `catalogoAvisos.js` junta los mensajes que la
    Prestadora enciende y apaga según cómo trabaja. Éste no es de ésos: lo exige el §3.2 y es lo que
@@ -18,7 +18,7 @@
 
    LA ANTICIPACIÓN ES DE CADA PRESTADORA, y por eso la consulta se abre por la más larga que haya
    configurada y después cada acceso se mide contra el plazo de la suya
-   (`plazosDeCobroMatch.js`). Una sola consulta para todas, como antes.
+   (`plazosDeCobroIntermediacion.js`). Una sola consulta para todas, como antes.
 
    A QUIÉN NO LE AVISA. A quien ya se dio de baja durante el período gratuito. Ahí no viene ningún
    cobro, que es justamente lo que la baja consigue, y avisarle uno lo asustaría sin motivo.
@@ -37,7 +37,7 @@ import { sumarDias } from './fechas.js';
 import { enDia, importeConMoneda } from './comoSeDiceEnUnAviso.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
-import { memoriaDePlazos, plazosDeLaPrestadora, elPlazoDePreavisoMasLargo } from './plazosDeCobroMatch.js';
+import { memoriaDePlazos, plazosDeLaPrestadora, elPlazoDePreavisoMasLargo } from './plazosDeCobroIntermediacion.js';
 
 /**
  * Avisa a los Clientes cuyo período gratuito está por terminar. Corre una vez por día
@@ -65,7 +65,7 @@ export async function avisarElPrimerCobroQueViene({ avisar = enviarPushCliente }
   // trae su `prestadora_id`, y con ese dato se resuelven el plazo, el idioma y el aviso de cada
   // una, una por vez.
   const { data: accesos, error } = await supabase
-    .from('accesos_match')
+    .from('accesos_intermediacion')
     .select('id, cliente_id, paciente_id, prestadora_id, importe, moneda, gratis_hasta')
     .eq('estado', 'vigente')
     .is('cancelada_en', null)
@@ -98,7 +98,7 @@ export async function avisarElPrimerCobroQueViene({ avisar = enviarPushCliente }
     if (!salio) continue;
 
     const { error: errorAnotar } = await supabase
-      .from('accesos_match')
+      .from('accesos_intermediacion')
       .update({ aviso_previo_en: new Date().toISOString(), updated_at: new Date().toISOString() })
       .eq('id', acceso.id)
       // La Prestadora se nombra igual, aunque el identificador ya sea único: es la fila leída

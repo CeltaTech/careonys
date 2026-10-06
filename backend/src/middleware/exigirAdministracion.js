@@ -6,7 +6,7 @@ import { esAdminOSuperior, esAdminDePrestadora } from '../utils/roles.js';
    Hasta el 2026-09-04 este mismo control estaba escrito cinco veces, una por ruta, y con
    tres nombres distintos —dos `requiereAdminOSuperior`, un `requiereAdmin`, un
    `soloAdministracion`—. Buscar cualquiera de esos nombres devolvía varios resultados que
-   parecían la misma función y no lo eran: la de match dejaba pasar al Coordinador y
+   parecían la misma función y no lo eran: la de intermediacion dejaba pasar al Coordinador y
    las otras no.
 
    Ahora quién entra sale de un solo lugar (utils/roles.js, copia de panel/src/lib/roles.js)

@@ -911,7 +911,7 @@ describe('el medio de pago y la modalidad de trabajo', () => {
 
   it('si el período tiene una guardia de Match, ese medio no entra', async () => {
     elCatalogoContesta();
-    laLiquidacionEstaPendiente([{ canal_modalidad: 'directa' }, { canal_modalidad: 'match' }]);
+    laLiquidacionEstaPendiente([{ canal_modalidad: 'directa' }, { canal_modalidad: 'intermediacion' }]);
 
     const { estado, cuerpo } = await pedir('POST', `/${LIQUIDACION}/pagar`, {
       fecha_pago: '2026-09-05',
@@ -927,7 +927,7 @@ describe('el medio de pago y la modalidad de trabajo', () => {
      dos, y la mitad que vino de Match no la puede centralizar nadie. */
   it('con todas las guardias en Match tampoco', async () => {
     elCatalogoContesta();
-    laLiquidacionEstaPendiente([{ canal_modalidad: 'match' }]);
+    laLiquidacionEstaPendiente([{ canal_modalidad: 'intermediacion' }]);
 
     const { estado, cuerpo } = await pedir('POST', `/${LIQUIDACION}/pagar`, {
       fecha_pago: '2026-09-05',
@@ -943,7 +943,7 @@ describe('el medio de pago y la modalidad de trabajo', () => {
      silencio lo que ya se podía elegir. */
   it('la transferencia sigue valiendo en Match, como antes', async () => {
     elCatalogoContesta();
-    laLiquidacionEstaPendiente([{ canal_modalidad: 'match' }]);
+    laLiquidacionEstaPendiente([{ canal_modalidad: 'intermediacion' }]);
 
     const { estado } = await pedir('POST', `/${LIQUIDACION}/pagar`, {
       fecha_pago: '2026-09-05',
@@ -987,14 +987,14 @@ describe('el medio de pago y la modalidad de trabajo', () => {
   /* Y el detalle dice qué modalidades paga, que es lo que necesita la pantalla para no ofrecer
      un medio que va a volver rechazado. */
   it('el detalle de la liquidación dice qué modalidades paga', async () => {
-    laLiquidacionEstaPendiente([{ canal_modalidad: 'match' }, { canal_modalidad: 'match' }]);
+    laLiquidacionEstaPendiente([{ canal_modalidad: 'intermediacion' }, { canal_modalidad: 'intermediacion' }]);
     respuestas.set('GET /rest/v1/liquidaciones_asistente_items', () => []);
     respuestas.set('GET /rest/v1/asistentes', () => [{ id: ASISTENTE, nombre: 'Asistente de prueba' }]);
 
     const { estado, cuerpo } = await pedir('GET', `/${LIQUIDACION}`);
 
     assert.equal(estado, 200);
-    assert.deepEqual(cuerpo.modalidades_del_periodo, ['match']);
+    assert.deepEqual(cuerpo.modalidades_del_periodo, ['intermediacion']);
   });
 });
 

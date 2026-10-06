@@ -33,7 +33,7 @@ import { useAuth } from './AuthContext';
 
 const MARCA_VACIA = { nombre: null, logoUrl: null };
 const CONTACTO_VACIO = { telefono: null, whatsapp: null, email: null };
-const PERFIL_VACIO = { marca: MARCA_VACIA, contacto: CONTACTO_VACIO, visibilidad: null, match: false };
+const PERFIL_VACIO = { marca: MARCA_VACIA, contacto: CONTACTO_VACIO, visibilidad: null, intermediacion: false };
 
 const PerfilContext = createContext(PERFIL_VACIO);
 
@@ -59,7 +59,7 @@ export function PerfilProvider({ children }) {
           marca: datos.marca ?? MARCA_VACIA,
           contacto: datos.contacto ?? CONTACTO_VACIO,
           visibilidad: datos.visibilidad ?? null,
-          match: datos.match === true,
+          intermediacion: datos.intermediacion === true,
         });
         if (datos.marca) guardarMarca(datos.marca);
         // Y el nombre queda anotado para las frases que la nombran con el marcador
@@ -114,6 +114,6 @@ export function useSeVe() {
 // Al revés que `useSeVe()`, mientras la respuesta no llegó contesta que no. Acá la respuesta
 // segura es la contraria: lo que cuelga de esto son pantallas enteras, y prometer una vidriera
 // que después desaparece es peor que dibujarla un instante más tarde.
-export function useOfreceMatch() {
-  return useContext(PerfilContext).match === true;
+export function useOfreceIntermediacion() {
+  return useContext(PerfilContext).intermediacion === true;
 }

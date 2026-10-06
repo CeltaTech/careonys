@@ -56,11 +56,11 @@ export const MOTIVO_BAJA = {
  */
 export async function darDeBajaElAcceso({ accesoId, clienteId = null, prestadoraId = null }) {
   let consulta = supabase
-    .from('accesos_match')
+    .from('accesos_intermediacion')
     .select(
       'id, prestadora_id, cliente_id, estado, proveedor, referencia_externa, alta_en_pasarela, ' +
         'cancelada_en, vigente_hasta, proximo_cobro, gratis_hasta, ' +
-        'formas_de_cobro_match(renueva_sola)'
+        'formas_de_cobro_intermediacion(renueva_sola)'
     )
     .eq('id', accesoId);
 
@@ -88,7 +88,7 @@ export async function darDeBajaElAcceso({ accesoId, clienteId = null, prestadora
   }
 
   // Una forma que no se renueva sola no tiene renovación que apagar.
-  if (!acceso.formas_de_cobro_match?.renueva_sola) {
+  if (!acceso.formas_de_cobro_intermediacion?.renueva_sola) {
     return { ok: false, motivo: MOTIVO_BAJA.FORMA_QUE_NO_SE_RENUEVA };
   }
 
@@ -103,7 +103,7 @@ export async function darDeBajaElAcceso({ accesoId, clienteId = null, prestadora
   }
 
   const { error: errorGuardar } = await supabase
-    .from('accesos_match')
+    .from('accesos_intermediacion')
     .update({
       cancelada_en: new Date().toISOString(),
       // Lo único que apaga la baja: no vuelve a cobrarse. El estado y la fecha hasta la que

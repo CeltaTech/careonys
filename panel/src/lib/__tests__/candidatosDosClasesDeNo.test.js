@@ -45,7 +45,7 @@ const activo = (id, nombre, canales = ['directa']) => ({
 const LIBRE = activo('a-libre', 'Ana Prueba');
 const OCUPADA = activo('a-ocupada', 'Beatriz Prueba');
 const DE_LICENCIA = activo('a-licencia', 'Carla Prueba');
-const DE_OTRA_MODALIDAD = activo('a-modalidad', 'Delia Prueba', ['match']);
+const DE_OTRA_MODALIDAD = activo('a-modalidad', 'Delia Prueba', ['intermediacion']);
 
 /** La otra guardia de Beatriz, el mismo día y a la misma hora que el hueco. */
 const GUARDIA_QUE_SE_PISA = {

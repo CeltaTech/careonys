@@ -27,13 +27,13 @@ import './hojaDeTarjetas.css';
 // préstamo dejó de tener sentido.
 const NOMBRE_MODALIDAD = {
   directa: (t) => t.configuracion.modalidades_directa,
-  match: (t) => t.configuracion.modalidades_match,
+  intermediacion: (t) => t.configuracion.modalidades_intermediacion,
 };
 
 // El tono de cada modalidad en las donas, sacado de los tonos del producto.
 const COLOR_MODALIDAD = {
   directa: 'var(--verde-exito)',
-  match: 'var(--violeta)',
+  intermediacion: 'var(--violeta)',
 };
 
 function esHoy(fechaIso) {

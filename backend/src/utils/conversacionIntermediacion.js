@@ -55,7 +55,7 @@ const TOPE_DE_MENSAJES = 200;
  */
 export async function conversacionDeLaPareja({ prestadoraId, clienteId, asistenteId, crear = false }) {
   const { data } = await supabase
-    .from('conversaciones_match')
+    .from('conversaciones_intermediacion')
     .select('id, prestadora_id, cliente_id, asistente_id, ultimo_mensaje_at, sala_videollamada, sala_abierta_at')
     .eq('prestadora_id', prestadoraId)
     .eq('cliente_id', clienteId)
@@ -65,7 +65,7 @@ export async function conversacionDeLaPareja({ prestadoraId, clienteId, asistent
   if (data || !crear) return data || null;
 
   const { data: creada, error } = await supabase
-    .from('conversaciones_match')
+    .from('conversaciones_intermediacion')
     .insert({ prestadora_id: prestadoraId, cliente_id: clienteId, asistente_id: asistenteId })
     .select('id, prestadora_id, cliente_id, asistente_id, ultimo_mensaje_at, sala_videollamada, sala_abierta_at')
     .single();
@@ -74,7 +74,7 @@ export async function conversacionDeLaPareja({ prestadoraId, clienteId, asistent
   // pasar una sola. La que perdió no falló: la conversación existe, y es la que buscaba.
   if (error) {
     const { data: ajena } = await supabase
-      .from('conversaciones_match')
+      .from('conversaciones_intermediacion')
       .select('id, prestadora_id, cliente_id, asistente_id, ultimo_mensaje_at, sala_videollamada, sala_abierta_at')
       .eq('prestadora_id', prestadoraId)
       .eq('cliente_id', clienteId)
@@ -129,7 +129,7 @@ async function motivosDelCatalogo(prestadoraId) {
 /**
  * Los mensajes de un hilo, listos para salir hacia una pantalla.
  *
- * Es la única puerta: nadie más consulta `mensajes_match` para mostrarlos. Salen tal como
+ * Es la única puerta: nadie más consulta `mensajes_intermediacion` para mostrarlos. Salen tal como
  * están guardados, que es ya tapados, con el motivo al lado de los que la base tapó.
  *
  * Con `desde` salen solamente los posteriores a ese momento. Es lo que usa el refresco del hilo
@@ -137,7 +137,7 @@ async function motivosDelCatalogo(prestadoraId) {
  */
 export async function mensajesDeLaConversacion({ conversacion, desde = null }) {
   let consulta = supabase
-    .from('mensajes_match')
+    .from('mensajes_intermediacion')
     .select('id, lado, cuerpo, automatico, created_at, leido_at, regla_tapada')
     .eq('prestadora_id', conversacion.prestadora_id)
     .eq('conversacion_id', conversacion.id);
@@ -161,7 +161,7 @@ export async function mensajesDeLaConversacion({ conversacion, desde = null }) {
 export async function marcarLeido({ conversacion, lado }) {
   const delOtro = lado === LADO.CLIENTE ? LADO.ASISTENTE : LADO.CLIENTE;
   await supabase
-    .from('mensajes_match')
+    .from('mensajes_intermediacion')
     .update({ leido_at: new Date().toISOString() })
     .eq('prestadora_id', conversacion.prestadora_id)
     .eq('conversacion_id', conversacion.id)
@@ -172,12 +172,12 @@ export async function marcarLeido({ conversacion, lado }) {
 /**
  * Guarda un mensaje y avisa al otro lado.
  *
- * Lo que la base tapa no llega a guardarse: el disparador de `mensajes_match` tapa el texto
+ * Lo que la base tapa no llega a guardarse: el disparador de `mensajes_intermediacion` tapa el texto
  * antes de escribirlo, así que lo que vuelve de la base ya viene tapado, y es lo que hay.
  */
 export async function escribirMensaje({ conversacion, lado, autorUsuarioId, cuerpo, automatico = false }) {
   const { data, error } = await supabase
-    .from('mensajes_match')
+    .from('mensajes_intermediacion')
     .insert({
       prestadora_id: conversacion.prestadora_id,
       conversacion_id: conversacion.id,
@@ -192,7 +192,7 @@ export async function escribirMensaje({ conversacion, lado, autorUsuarioId, cuer
   if (error) throw error;
 
   await supabase
-    .from('conversaciones_match')
+    .from('conversaciones_intermediacion')
     .update({ ultimo_mensaje_at: data.created_at })
     .eq('prestadora_id', conversacion.prestadora_id)
     .eq('id', conversacion.id);
@@ -259,7 +259,7 @@ export async function abrirVideollamada({ conversacion, lado, autorUsuarioId }) 
   const abiertaAt = new Date().toISOString();
 
   const { error } = await supabase
-    .from('conversaciones_match')
+    .from('conversaciones_intermediacion')
     .update({ sala_videollamada: sala, sala_abierta_at: abiertaAt })
     .eq('prestadora_id', conversacion.prestadora_id)
     .eq('id', conversacion.id);

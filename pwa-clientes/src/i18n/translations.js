@@ -50,11 +50,11 @@ export const T = {
         // La vidriera de Match pedida en una Prestadora que no trabaja de esa manera. No
         // es una función apagada: es que esa Prestadora asigna ella a su gente, y decirlo así
         // evita que alguien le reclame que le "active" algo que no ofrece.
-        match_no_habilitado: 'Esta Prestadora asigna ella misma a sus Asistentes, así que no hay una lista para elegir.',
+        intermediacion_no_habilitado: 'Esta Prestadora asigna ella misma a sus Asistentes, así que no hay una lista para elegir.',
         // Los tres de ver cómo llegar a una persona. Ninguno es una falla, y cada uno se sale de
         // una manera distinta: el primero contratando, el segundo renovando y el tercero pidiendo
         // otro paquete. Los tres nombran a la Prestadora, que es con quien se resuelve.
-        sin_acceso_de_match: 'Para ver cómo llegar a esta persona hace falta tener contratado el servicio con la Prestadora.',
+        sin_acceso_de_intermediacion: 'Para ver cómo llegar a esta persona hace falta tener contratado el servicio con la Prestadora.',
         acceso_no_vigente: 'El servicio contratado no está vigente. Para ver estos datos hace falta renovarlo con la Prestadora.',
         saldo_agotado: 'Ya se usaron todos los contactos incluidos. Para ver uno más hace falta pedirle otro paquete a la Prestadora.',
         // Los de la activación de la cuenta. Son cinco frases distintas porque son cinco
@@ -588,8 +588,8 @@ export const T = {
         no_encontrado: 'That instruction could not be found. Please open the screen again.',
         acceso_inexistente: 'That access could not be found. Please open the screen again.',
         forma_que_no_se_renueva: 'That access does not renew on its own, so there is nothing to cancel.',
-        match_no_habilitado: 'This Provider assigns its own Assistants, so there is no list to choose from.',
-        sin_acceso_de_match: 'To see how to reach this person, the service has to be arranged with the Provider first.',
+        intermediacion_no_habilitado: 'This Provider assigns its own Assistants, so there is no list to choose from.',
+        sin_acceso_de_intermediacion: 'To see how to reach this person, the service has to be arranged with the Provider first.',
         acceso_no_vigente: 'The arranged service is not active. To see these details it has to be renewed with the Provider.',
         saldo_agotado: 'All the included contacts have already been used. To see one more, another pack has to be requested from the Provider.',
         faltan_datos: 'Some information is missing. Please open the link from the email again and enter the password once more.',
@@ -1043,8 +1043,8 @@ export const T = {
         no_encontrado: 'Não foi encontrada essa instrução. Convém abrir a tela de novo.',
         acceso_inexistente: 'Não foi encontrado esse acesso. Convém abrir a tela de novo.',
         forma_que_no_se_renueva: 'Esse acesso não se renova sozinho, portanto não há nada a cancelar.',
-        match_no_habilitado: 'Esta Prestadora designa ela mesma os seus Assistentes, portanto não há uma lista para escolher.',
-        sin_acceso_de_match: 'Para ver como chegar a esta pessoa é preciso ter o serviço contratado com a Prestadora.',
+        intermediacion_no_habilitado: 'Esta Prestadora designa ela mesma os seus Assistentes, portanto não há uma lista para escolher.',
+        sin_acceso_de_intermediacion: 'Para ver como chegar a esta pessoa é preciso ter o serviço contratado com a Prestadora.',
         acceso_no_vigente: 'O serviço contratado não está vigente. Para ver estes dados é preciso renová-lo com a Prestadora.',
         saldo_agotado: 'Todos os contatos incluídos já foram usados. Para ver mais um é preciso pedir outro pacote à Prestadora.',
         faltan_datos: 'Faltam dados para ativar a conta. É preciso abrir novamente o link do email e digitar a senha de novo.',

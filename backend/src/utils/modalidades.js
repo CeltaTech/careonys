@@ -5,7 +5,7 @@
 // QUÉ ES UNA MODALIDAD DE TRABAJO
 // Cómo el Asistente recibe el trabajo, y son dos cosas distintas:
 //   * `directa`      — la Prestadora le dirige el trabajo y le asigna las guardias.
-//   * `match`  — el Asistente elige qué toma y mantiene su independencia
+//   * `intermediacion`  — el Asistente elige qué toma y mantiene su independencia
 //                      operativa (CLAUDE.md §3).
 // No es un detalle administrativo: es la línea que separa dos regímenes de
 // trabajo. Ofrecerle una guardia de Match a alguien contratado en directa
@@ -41,11 +41,11 @@
 /** Las dos modalidades de trabajo. */
 export const MODALIDAD = {
   DIRECTA: 'directa',
-  MATCH: 'match',
+  INTERMEDIACION: 'intermediacion',
 };
 
 /** Las mismas dos para la Prestadora, para el Asistente y para la guardia, en este orden. */
-export const MODALIDADES = [MODALIDAD.DIRECTA, MODALIDAD.MATCH];
+export const MODALIDADES = [MODALIDAD.DIRECTA, MODALIDAD.INTERMEDIACION];
 
 const lista = (x) => (Array.isArray(x) ? x : []);
 
@@ -127,8 +127,8 @@ export function laOpcionAlcanzaLasModalidades(opcion, modalidadesEnJuego) {
  *
  * Los disparadores levantan un mensaje con esta forma exacta:
  *
- *     modalidad_bloquea:match:
- *     modalidad_no_habilitada:match:
+ *     modalidad_bloquea:intermediacion:
+ *     modalidad_no_habilitada:intermediacion:
  *
  * Ese texto no puede llegar nunca a la pantalla: no está traducido y para quien lo
  * lee es un error de sistema, no una explicación. Acá se lo abre y la pantalla arma

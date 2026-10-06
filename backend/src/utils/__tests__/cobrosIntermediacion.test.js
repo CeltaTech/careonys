@@ -105,7 +105,7 @@ process.env.COBRANZA_EFECTIVO_API_BASE = `http://127.0.0.1:${proveedorFalso.addr
 // El import va después de las variables de entorno: la conexión a la base y la dirección de cada
 // proveedor se arman en el momento en que se importa el archivo.
 const { armarCobrosDelPeriodo, registrarCobroExitoso, proximaFecha, sumarPeriodo } =
-  await import('../cobrosMatch.js');
+  await import('../cobrosIntermediacion.js');
 
 const avisarDeVerdad = console.error;
 console.error = (...partes) => anotados.push(partes.join(' '));
@@ -122,7 +122,7 @@ beforeEach(() => {
   pedidosAlProveedor = [];
   rechazaElProveedor = false;
   respuestas.clear();
-  respuestas.set('GET /rest/v1/configuracion_cobro_match', configuracionDeCobro);
+  respuestas.set('GET /rest/v1/configuracion_cobro_intermediacion', configuracionDeCobro);
 });
 
 /** Los plazos con los que nace la configuración de una Prestadora. Diez días de cupón es el valor
@@ -137,9 +137,9 @@ const PLAZOS = {
 const LAS_PRESTADORAS = [PRESTADORA, OTRA_PRESTADORA];
 
 /**
- * `configuracion_cobro_match` contesta dos cosas distintas, y lo único que las separa es el
+ * `configuracion_cobro_intermediacion` contesta dos cosas distintas, y lo único que las separa es el
  * filtro: pedida entera es la lista de Prestadoras que hay que recorrer
- * (`prestadorasDelMatch.js`); nombrando una, son sus plazos.
+ * (`prestadorasDeLaIntermediacion.js`); nombrando una, son sus plazos.
  */
 function configuracionDeCobro(url) {
   if (url.includes('prestadora_id=eq.')) return [PLAZOS];
@@ -156,7 +156,7 @@ function accesoPorCobrar(cambios = {}) {
     importe: 12500,
     moneda: 'ARS',
     proximo_cobro: PERIODO,
-    formas_de_cobro_match: CADA_MES,
+    formas_de_cobro_intermediacion: CADA_MES,
     ...cambios,
   };
 }
@@ -167,15 +167,15 @@ function accesoPorCobrar(cambios = {}) {
  *  accesos de la que nombró la consulta. Contestarle todos sería una base que no puede aislar, y
  *  entonces la prueba de que cada consulta nombra su Prestadora no podría fallar. */
 function base({ accesos = [accesoPorCobrar()], cobrosExistentes = [] } = {}) {
-  respuestas.set('GET /rest/v1/accesos_match', (url) =>
+  respuestas.set('GET /rest/v1/accesos_intermediacion', (url) =>
     accesos.filter((a) => url.includes(`prestadora_id=eq.${a.prestadora_id}`))
   );
-  respuestas.set('GET /rest/v1/cobros_match', () => cobrosExistentes);
-  respuestas.set('POST /rest/v1/cobros_match', () => []);
+  respuestas.set('GET /rest/v1/cobros_intermediacion', () => cobrosExistentes);
+  respuestas.set('POST /rest/v1/cobros_intermediacion', () => []);
   respuestas.set('POST /rest/v1/rpc/leer_credencial_pasarela_pago', () => 'credencial-de-mentira');
 }
 
-const inserciones = () => llamadas.filter((l) => l.clave === 'POST /rest/v1/cobros_match');
+const inserciones = () => llamadas.filter((l) => l.clave === 'POST /rest/v1/cobros_intermediacion');
 const lecturasDeCredencial = () =>
   llamadas.filter((l) => l.clave === 'POST /rest/v1/rpc/leer_credencial_pasarela_pago');
 
@@ -258,13 +258,13 @@ describe('cada cuánto vuelve a cobrarse una forma de cobro', () => {
 
 describe('cuando un período se cobra', () => {
   beforeEach(() => {
-    respuestas.set('GET /rest/v1/accesos_match', () => [
-      { id: ACCESO, proximo_cobro: PERIODO, formas_de_cobro_match: CADA_MES },
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () => [
+      { id: ACCESO, proximo_cobro: PERIODO, formas_de_cobro_intermediacion: CADA_MES },
     ]);
-    respuestas.set('PATCH /rest/v1/accesos_match', () => []);
+    respuestas.set('PATCH /rest/v1/accesos_intermediacion', () => []);
   });
 
-  const guardado = () => llamadas.find((l) => l.clave === 'PATCH /rest/v1/accesos_match');
+  const guardado = () => llamadas.find((l) => l.clave === 'PATCH /rest/v1/accesos_intermediacion');
 
   it('el acceso queda vigente y esperando el período siguiente al cobrado', async () => {
     const resultado = await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: PERIODO });
@@ -274,7 +274,7 @@ describe('cuando un período se cobra', () => {
     assert.equal(guardado().cuerpo.proximo_cobro, '2026-09-01');
     // Y el acceso se lee y se escribe nombrando la Prestadora: un identificador de acceso probado a
     // mano no puede alcanzar el cajón de otra.
-    const leido = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_match');
+    const leido = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_intermediacion');
     assert.ok(leido.url.includes(`prestadora_id=eq.${PRESTADORA}`));
     assert.ok(guardado().url.includes(`prestadora_id=eq.${PRESTADORA}`));
   });
@@ -296,11 +296,11 @@ describe('cuando un período se cobra', () => {
   it('una forma que se cobra una sola vez queda sin próximo cobro', async () => {
     // El paquete de contactos: se paga, y lo que lo sostiene de ahí en más es el saldo. Poner una
     // fecha siguiente lo volvería a cobrar solo.
-    respuestas.set('GET /rest/v1/accesos_match', () => [
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () => [
       {
         id: ACCESO,
         proximo_cobro: PERIODO,
-        formas_de_cobro_match: { periodo_cantidad: null, periodo_unidad: null },
+        formas_de_cobro_intermediacion: { periodo_cantidad: null, periodo_unidad: null },
       },
     ]);
     const resultado = await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: PERIODO });
@@ -315,11 +315,11 @@ describe('cuando un período se cobra', () => {
 
   /** Un acceso cuya forma de cobro es un paquete: un importe, sin período, con tantos contactos. */
   function paquete(contactos = 5) {
-    respuestas.set('GET /rest/v1/accesos_match', () => [
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () => [
       {
         id: ACCESO,
         proximo_cobro: PERIODO,
-        formas_de_cobro_match: {
+        formas_de_cobro_intermediacion: {
           periodo_cantidad: null,
           periodo_unidad: null,
           contactos_incluidos: contactos,
@@ -354,11 +354,11 @@ describe('cuando un período se cobra', () => {
   it('una forma sin contactos no le carga saldo a nadie', async () => {
     // Una suscripción por mes no es un paquete. Si igual pasara por acá, un acceso que se sostiene
     // por fecha terminaría con un saldo que nadie le vendió.
-    respuestas.set('GET /rest/v1/accesos_match', () => [
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () => [
       {
         id: ACCESO,
         proximo_cobro: PERIODO,
-        formas_de_cobro_match: { ...CADA_MES, contactos_incluidos: 0 },
+        formas_de_cobro_intermediacion: { ...CADA_MES, contactos_incluidos: 0 },
       },
     ]);
     const resultado = await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: PERIODO });
@@ -381,11 +381,11 @@ describe('cuando un período se cobra', () => {
   });
 
   it('una forma por semanas se mueve por semanas, no por meses', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', () => [
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () => [
       {
         id: ACCESO,
         proximo_cobro: '2026-08-01',
-        formas_de_cobro_match: { periodo_cantidad: 2, periodo_unidad: 'semana' },
+        formas_de_cobro_intermediacion: { periodo_cantidad: 2, periodo_unidad: 'semana' },
       },
     ]);
     const resultado = await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: '2026-08-01' });
@@ -395,8 +395,8 @@ describe('cuando un período se cobra', () => {
   it('el período siguiente se cuenta desde el cobrado, no desde hoy', async () => {
     // Un cobro de mayo que entra hoy deja el acceso esperando junio, no el mes que viene:
     // si no, cada demora se come un mes y a fin de año se cobraron once.
-    respuestas.set('GET /rest/v1/accesos_match', () => [
-      { id: ACCESO, proximo_cobro: '2026-05-10', formas_de_cobro_match: CADA_MES },
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () => [
+      { id: ACCESO, proximo_cobro: '2026-05-10', formas_de_cobro_intermediacion: CADA_MES },
     ]);
     const resultado = await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: '2026-05-10' });
     assert.equal(resultado.proximo_cobro, '2026-06-10');
@@ -405,23 +405,23 @@ describe('cuando un período se cobra', () => {
   it('un cobro de un período anterior al esperado no mueve la fecha hacia atrás', async () => {
     // Pasa cuando se carga a mano un pago viejo. Correr la fecha hacia atrás le regalaría un
     // período a quien pagó tarde.
-    respuestas.set('GET /rest/v1/accesos_match', () => [
-      { id: ACCESO, proximo_cobro: '2026-09-01', formas_de_cobro_match: CADA_MES },
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () => [
+      { id: ACCESO, proximo_cobro: '2026-09-01', formas_de_cobro_intermediacion: CADA_MES },
     ]);
     const resultado = await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: '2026-07-01' });
     assert.equal(resultado.proximo_cobro, '2026-10-01');
   });
 
   it('un acceso sin fecha esperada arranca desde el período cobrado', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', () => [
-      { id: ACCESO, proximo_cobro: null, formas_de_cobro_match: CADA_MES },
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () => [
+      { id: ACCESO, proximo_cobro: null, formas_de_cobro_intermediacion: CADA_MES },
     ]);
     const resultado = await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: '2026-03-31' });
     assert.equal(resultado.proximo_cobro, '2026-04-30');
   });
 
   it('si el acceso no está, se avisa y no se escribe nada', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', () => []);
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () => []);
     const resultado = await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: PERIODO });
 
     assert.deepEqual(resultado, { ok: false });
@@ -430,7 +430,7 @@ describe('cuando un período se cobra', () => {
   });
 
   it('si la escritura falla, se avisa y se contesta que no se pudo', async () => {
-    respuestas.delete('PATCH /rest/v1/accesos_match');
+    respuestas.delete('PATCH /rest/v1/accesos_intermediacion');
     const resultado = await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: PERIODO });
 
     assert.deepEqual(resultado, { ok: false });
@@ -447,7 +447,7 @@ describe('el trabajo diario que arma los cobros del período', () => {
     base();
     await armarCobrosDelPeriodo();
 
-    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_match');
+    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_intermediacion');
     const hoy = new Date().toISOString().slice(0, 10);
     assert.ok(consulta.url.includes('estado=eq.vigente'), 'sólo los accesos vigentes');
     assert.ok(consulta.url.includes('proveedor=not.is.null'), 'sólo los que tienen riel');
@@ -465,8 +465,8 @@ describe('el trabajo diario que arma los cobros del período', () => {
     base();
     await armarCobrosDelPeriodo();
 
-    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_match');
-    assert.ok(consulta.url.includes('formas_de_cobro_match'));
+    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_intermediacion');
+    assert.ok(consulta.url.includes('formas_de_cobro_intermediacion'));
   });
 
   it('le pide el QR al riel y guarda el cobro del período pendiente', async () => {
@@ -555,7 +555,7 @@ describe('el trabajo diario que arma los cobros del período', () => {
     base();
     await armarCobrosDelPeriodo();
 
-    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/cobros_match');
+    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/cobros_intermediacion');
     assert.ok(consulta.url.includes(`acceso_id=eq.${ACCESO}`));
     assert.ok(consulta.url.includes(`periodo=eq.${PERIODO}`));
     assert.ok(consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`));
@@ -626,7 +626,7 @@ describe('el trabajo diario que arma los cobros del período', () => {
       ],
     });
     let primera = true;
-    respuestas.set('POST /rest/v1/cobros_match', () => {
+    respuestas.set('POST /rest/v1/cobros_intermediacion', () => {
       if (primera) {
         primera = false;
         return undefined;
@@ -641,7 +641,7 @@ describe('el trabajo diario que arma los cobros del período', () => {
   });
 
   it('si la lista no se puede leer, se avisa y no se llama a ningún proveedor', async () => {
-    respuestas.set('GET /rest/v1/cobros_match', () => []);
+    respuestas.set('GET /rest/v1/cobros_intermediacion', () => []);
     await armarCobrosDelPeriodo();
 
     assert.deepEqual(pedidosAlProveedor, []);

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
 import { iniciarSincronizacionAutomatica } from '../lib/sincronizarCola';
-import { useMarca, useOfreceMatch } from '../context/PerfilContext';
+import { useMarca, useOfreceIntermediacion } from '../context/PerfilContext';
 import { con } from '../lib/textos';
 import { api } from '../lib/api';
 
@@ -15,7 +15,7 @@ export default function Layout() {
   const { pathname } = useLocation();
   const { t } = useLocale();
   const marca = useMarca();
-  const ofreceMatch = useOfreceMatch();
+  const ofreceIntermediacion = useOfreceIntermediacion();
 
   // Cuántas guardias le ofrecieron y todavía no contestó. El número va en la pestaña de abajo
   // porque una oferta con fecha límite que nadie mira es una oferta perdida: si hubiera que
@@ -94,7 +94,7 @@ export default function Layout() {
         </NavLink>
         {/* El chat con los Clientes de la vidriera. Sólo aparece donde la Prestadora trabaja
             de esa manera: en una que asigna ella a su gente no hay ninguna conversación. */}
-        {ofreceMatch && (
+        {ofreceIntermediacion && (
           <NavLink to="/mensajes" className={claseDeLaPestana}>
             {t.nav.mensajes}
           </NavLink>

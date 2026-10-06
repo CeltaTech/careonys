@@ -8,7 +8,7 @@
 
 ## 1. Qué ya existe en el código (punto de partida)
 
-- `asistentes.canales TEXT[]` (default `['directo','match']`) — un Asistente puede
+- `asistentes.canales TEXT[]` (default `['directo','intermediacion']`) — un Asistente puede
   estar en uno, otro o ambos canales a la vez (`docs/DATA_MODEL.md:222-230`, y el esquema
   vigente en `supabase/migrations/`). Pendiente de aplicar contra Supabase real (ver
   `docs/PLAN_HASTA_PRODUCCION.md`).
@@ -57,9 +57,9 @@ De ahí se sigue que **la política de comercialización es un dato de la Presta
 se cobra, cada cuánto, con qué período gratuito, con qué saldo de contactos, si se renueva sola— y
 la forma sale de cómo se combinen: una suscripción mensual es importe + cada 1 mes + renueva sola,
 y un paquete de cinco contactos es importe + una sola vez + saldo 5. Cada Prestadora arma las suyas
-en `formas_de_cobro_match`, y cualquier combinación que ella elija entra sin migración.
+en `formas_de_cobro_intermediacion`, y cualquier combinación que ella elija entra sin migración.
 
-Lo que cada Cliente tiene habilitado se guarda en `accesos_match`: a qué forma se adhirió, con
+Lo que cada Cliente tiene habilitado se guarda en `accesos_intermediacion`: a qué forma se adhirió, con
 qué importe —congelado el día del alta, para que un cambio de precio no le mueva lo pactado—, hasta
 qué fecha y con cuántos contactos.
 
@@ -342,7 +342,7 @@ resueltas y no van a hacer cambiar la respuesta.
 > listaba, tres ya estaban construidos y solo seguían escritos acá.
 
 - **La columna `asistentes.canales` existe pero no la lee nadie.** Está creada en la base,
-  con su regla (`directo`, `match`, al menos uno) y su valor de arranque, y ninguna
+  con su regla (`directo`, `intermediacion`, al menos uno) y su valor de arranque, y ninguna
   pantalla ni ruta del backend la consulta: hoy nada impide ofrecerle una guardia de
   Match a un Asistente que solo trabaja en prestación directa. Tiene fila propia,
   la `#154`, en `docs/PLAN_HASTA_PRODUCCION.md`.

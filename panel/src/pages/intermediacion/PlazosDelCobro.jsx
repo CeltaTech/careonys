@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
-import { llamarApiMatch } from '../../lib/apiMatch';
+import { llamarApiIntermediacion } from '../../lib/apiIntermediacion';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
@@ -29,7 +29,7 @@ export function PlazosDelCobro({ soloLectura }) {
     setEstado('cargando');
     setError(null);
     try {
-      const { plazos: filas } = await llamarApiMatch('/plazos-de-cobro');
+      const { plazos: filas } = await llamarApiIntermediacion('/plazos-de-cobro');
       setPlazos(filas);
       setEstado('listo');
     } catch (err) {
@@ -51,7 +51,7 @@ export function PlazosDelCobro({ soloLectura }) {
     setGuardando(true);
     setError(null);
     try {
-      const { plazos: guardadosEnLaBase } = await llamarApiMatch('/plazos-de-cobro', {
+      const { plazos: guardadosEnLaBase } = await llamarApiIntermediacion('/plazos-de-cobro', {
         method: 'PATCH',
         body: JSON.stringify(plazos),
       });
@@ -66,7 +66,7 @@ export function PlazosDelCobro({ soloLectura }) {
   return (
     <section className="panel-tarjeta">
       <div className="panel-tarjeta-titulo">
-        <h2>{t.match.plazos_titulo}</h2>
+        <h2>{t.intermediacion.plazos_titulo}</h2>
       </div>
 
       {estado === 'cargando' && <p className="molde-vacio">{t.comun.cargando}</p>}
@@ -83,11 +83,11 @@ export function PlazosDelCobro({ soloLectura }) {
       {estado !== 'cargando' && estado !== 'error' && (
         <>
           {error && <Alert variant="error">{error}</Alert>}
-          {guardados && <Alert variant="success">{t.match.plazos_guardados}</Alert>}
+          {guardados && <Alert variant="success">{t.intermediacion.plazos_guardados}</Alert>}
 
           <div className="molde-formgrid">
             <FormField
-              label={t.match.plazo_aviso_antes_del_cobro}
+              label={t.intermediacion.plazo_aviso_antes_del_cobro}
               name="dias_de_aviso_antes_del_cobro"
               type="number"
               min="1"
@@ -97,7 +97,7 @@ export function PlazosDelCobro({ soloLectura }) {
             />
 
             <FormField
-              label={t.match.plazo_gracia_por_cobro_rechazado}
+              label={t.intermediacion.plazo_gracia_por_cobro_rechazado}
               name="dias_de_gracia_por_cobro_rechazado"
               type="number"
               min="1"
@@ -107,7 +107,7 @@ export function PlazosDelCobro({ soloLectura }) {
             />
 
             <FormField
-              label={t.match.plazo_vida_del_cupon}
+              label={t.intermediacion.plazo_vida_del_cupon}
               name="dias_de_vida_del_cupon"
               type="number"
               min="1"

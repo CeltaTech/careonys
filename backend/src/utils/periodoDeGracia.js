@@ -17,7 +17,7 @@
 
      * Los rieles que cobran solos reintentan de su lado e informan cada intento nuevo.
      * Los que hay que armarles el cobro de cada período lo vuelven a armar todos los días mientras
-       el cobro de ese período esté fallido y el acceso siga `vigente` (`cobrosMatch.js`).
+       el cobro de ese período esté fallido y el acceso siga `vigente` (`cobrosIntermediacion.js`).
 
    Y por eso la gracia no se estira con cada falla informada: se abre una vez, con la primera falla, y la
    fecha no se mueve. Estirarla a cada reintento sería el «reintentos indefinidos» que el §3.2
@@ -29,7 +29,7 @@
    gracia abierta.
 
    LA GRACIA SE CIERRA CUANDO ENTRA LA PLATA, y eso lo hace `registrarCobroExitoso`, que es el único
-   lugar que decide qué le pasa a un acceso cuando se cobra (`cobrosMatch.js`).
+   lugar que decide qué le pasa a un acceso cuando se cobra (`cobrosIntermediacion.js`).
 
    Y UNA SUSPENSIÓN QUE FALLA NO SUSPENDE A LAS DEMÁS. Mismo criterio que el corte y que el
    preaviso: se anota y se sigue; lo que no se suspendió hoy se suspende mañana. */
@@ -40,8 +40,8 @@ import { sumarDias } from './fechas.js';
 import { enDia, importeConMoneda } from './comoSeDiceEnUnAviso.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
-import { plazosDeLaPrestadora } from './plazosDeCobroMatch.js';
-import { prestadorasDelMatch } from './prestadorasDelMatch.js';
+import { plazosDeLaPrestadora } from './plazosDeCobroIntermediacion.js';
+import { prestadorasDeLaIntermediacion } from './prestadorasDeLaIntermediacion.js';
 
 /**
  * Un cobro no entró. Abre la gracia si no había ninguna abierta, y le avisa al Cliente. No
@@ -59,7 +59,7 @@ import { prestadorasDelMatch } from './prestadorasDelMatch.js';
  */
 export async function abrirElPeriodoDeGracia({ prestadoraId, accesoId, avisar = enviarPushCliente }) {
   const { data: acceso, error } = await supabase
-    .from('accesos_match')
+    .from('accesos_intermediacion')
     .select('id, estado, cliente_id, paciente_id, prestadora_id, importe, moneda, gracia_hasta')
     .eq('prestadora_id', prestadoraId)
     .eq('id', accesoId)
@@ -87,7 +87,7 @@ export async function abrirElPeriodoDeGracia({ prestadoraId, accesoId, avisar = 
   );
 
   const { data: guardados, error: errorGuardar } = await supabase
-    .from('accesos_match')
+    .from('accesos_intermediacion')
     .update({ gracia_hasta: graciaHasta, updated_at: new Date().toISOString() })
     .eq('prestadora_id', prestadoraId)
     .eq('id', accesoId)
@@ -128,7 +128,7 @@ export async function suspenderLosQueAgotaronLaGracia() {
   const hoy = new Date().toISOString().slice(0, 10);
 
   let suspendidos = 0;
-  for (const prestadoraId of await prestadorasDelMatch()) {
+  for (const prestadoraId of await prestadorasDeLaIntermediacion()) {
     suspendidos += await suspenderLosDeUnaPrestadora(prestadoraId, hoy);
   }
 
@@ -139,7 +139,7 @@ export async function suspenderLosQueAgotaronLaGracia() {
  *  demás. */
 async function suspenderLosDeUnaPrestadora(prestadoraId, hoy) {
   const { data: accesos, error } = await supabase
-    .from('accesos_match')
+    .from('accesos_intermediacion')
     .select('id')
     .eq('prestadora_id', prestadoraId)
     .eq('estado', 'vigente')
@@ -157,7 +157,7 @@ async function suspenderLosDeUnaPrestadora(prestadoraId, hoy) {
   let suspendidos = 0;
   for (const acceso of accesos ?? []) {
     const { error: errorSuspender } = await supabase
-      .from('accesos_match')
+      .from('accesos_intermediacion')
       .update({ estado: 'vencida', updated_at: new Date().toISOString() })
       .eq('prestadora_id', prestadoraId)
       .eq('id', acceso.id)

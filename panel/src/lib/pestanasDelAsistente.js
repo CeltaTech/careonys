@@ -48,7 +48,7 @@ export const PESTANAS_COORDINADOR = [
  * con un `if` adentro de la ficha, porque el día que haya una segunda el `if` se convierte en
  * dos lugares donde recordar lo mismo.
  */
-export const PESTANAS_SOLO_MATCH = ['evaluaciones'];
+export const PESTANAS_SOLO_INTERMEDIACION = ['evaluaciones'];
 
 /**
  * Las que además dependen de una acción que la Prestadora puede reservar. Dónde cobra un
@@ -69,10 +69,10 @@ export const PESTANAS_POR_PERMISO = {
  * `puede` es la de los permisos efectivos de la sesión. Si no viene ninguna, se contesta que no:
  * un permiso que no se pudo resolver no es un permiso concedido.
  */
-export function pestanasDe({ esAdmin, match, puede = () => false }) {
+export function pestanasDe({ esAdmin, intermediacion, puede = () => false }) {
   const todas = esAdmin ? PESTANAS : PESTANAS_COORDINADOR;
   return todas.filter((pestana) => {
-    if (!match && PESTANAS_SOLO_MATCH.includes(pestana)) return false;
+    if (!intermediacion && PESTANAS_SOLO_INTERMEDIACION.includes(pestana)) return false;
     const permiso = PESTANAS_POR_PERMISO[pestana];
     if (permiso) return esAdmin || puede(permiso);
     return true;

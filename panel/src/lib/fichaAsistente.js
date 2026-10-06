@@ -21,7 +21,7 @@
 export const CAMPOS_PAGO = 'remuneraciones_asistente(unidad_medicion, valor_hora, sueldo_basico, valor_guardia, valor_semana, valor_hora_extra, categoria_cct, frecuencia_pago)';
 
 /** Lo que hay que agregar al `select` para que la base traiga también lo reservado. */
-export const CAMPOS_RESERVADOS = 'datos_reservados_asistente(causal_baja, score_riesgo_reclasificacion, indicadores_riesgo, motivo_exclusion_directo, motivo_exclusion_match)';
+export const CAMPOS_RESERVADOS = 'datos_reservados_asistente(causal_baja, score_riesgo_reclasificacion, indicadores_riesgo, motivo_exclusion_directo, motivo_exclusion_intermediacion)';
 
 /** Una tabla adjunta llega como objeto o como arreglo de un solo elemento, según la consulta. */
 function primero(adjunto) {
@@ -54,6 +54,6 @@ export function conDatosAparte(asistente) {
     score_riesgo_reclasificacion: reservado?.score_riesgo_reclasificacion ?? null,
     indicadores_riesgo: reservado?.indicadores_riesgo ?? null,
     motivo_exclusion_directo: reservado?.motivo_exclusion_directo ?? null,
-    motivo_exclusion_match: reservado?.motivo_exclusion_match ?? null,
+    motivo_exclusion_intermediacion: reservado?.motivo_exclusion_intermediacion ?? null,
   };
 }

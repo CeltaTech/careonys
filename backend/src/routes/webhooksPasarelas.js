@@ -23,7 +23,7 @@ import { supabase } from '../db/connection.js';
 import { enLaPrestadoraDeLaDireccion } from '../middleware/enLaPrestadoraDeLaDireccion.js';
 import { obtenerAdaptador, confirmaConsultando } from '../pasarelas/index.js';
 import { esRechazoDeAutenticidad, MOTIVO } from '../pasarelas/firmaWebhook.js';
-import { registrarCobroExitoso } from '../utils/cobrosMatch.js';
+import { registrarCobroExitoso } from '../utils/cobrosIntermediacion.js';
 import { abrirElPeriodoDeGracia } from '../utils/periodoDeGracia.js';
 
 export const webhooksPasarelasRouter = Router();
@@ -117,7 +117,7 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', enLaPrestadoraDeLaDire
   // nunca nada: se contestaba 200 y se seguía de largo, así que el acceso cobraba todos los
   // períodos del lado del proveedor y en esta base no figuraba ninguno.
   const { data: cobro } = await supabase
-    .from('cobros_match')
+    .from('cobros_intermediacion')
     .select('id, acceso_id, periodo')
     .eq('prestadora_id', prestadoraId)
     .eq('referencia_externa', referenciaExterna)
@@ -126,7 +126,7 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', enLaPrestadoraDeLaDire
   const { data: accesoDelCobro } = cobro
     ? { data: null }
     : await supabase
-        .from('accesos_match')
+        .from('accesos_intermediacion')
         .select('id, importe, proximo_cobro')
         .eq('prestadora_id', prestadoraId)
         .eq('referencia_externa', referenciaExterna)
@@ -162,7 +162,7 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', enLaPrestadoraDeLaDire
     // la escritura dice por sí sola para qué Organización trabaja, sin colgar de la lectura de
     // más arriba.
     await supabase
-      .from('cobros_match')
+      .from('cobros_intermediacion')
       .update({ estado_cobro: estadoFinal })
       .eq('prestadora_id', prestadoraId)
       .eq('id', cobro.id);
@@ -174,7 +174,7 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', enLaPrestadoraDeLaDire
     // Sin `referencia_externa`, a propósito: la que trajo la pasarela es la del acceso, no la de
     // este período. Guardarla acá haría que el cobro del período siguiente encontrara esta misma
     // fila y pisara el cobro anterior en vez de anotar uno nuevo.
-    const { error: errorInsertar } = await supabase.from('cobros_match').insert({
+    const { error: errorInsertar } = await supabase.from('cobros_intermediacion').insert({
       acceso_id: accesoId,
       prestadora_id: prestadoraId,
       medio: proveedor,
@@ -190,7 +190,7 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', enLaPrestadoraDeLaDire
 
   if (estadoFinal === 'exitoso') {
     // Quién mueve el acceso cuando entra la plata es uno solo, y es el mismo que usan las
-    // dos cargas a mano del Panel (`utils/cobrosMatch.js`). Acá se contaba el mes siguiente
+    // dos cargas a mano del Panel (`utils/cobrosIntermediacion.js`). Acá se contaba el mes siguiente
     // desde la fecha de hoy: con eso, un cobro que entraba tarde corría la fecha de cobro un poco
     // más cada mes, y el 31 de enero más un mes daba 3 de marzo.
     await registrarCobroExitoso({ prestadoraId, accesoId, periodo });

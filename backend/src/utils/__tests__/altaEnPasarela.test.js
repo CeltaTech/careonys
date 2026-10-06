@@ -132,7 +132,7 @@ function accesoSinAlta(cambios = {}) {
       referencia_externa: null,
       url_accion: null,
       alta_en_pasarela: null,
-      formas_de_cobro_match: CADA_MES,
+      formas_de_cobro_intermediacion: CADA_MES,
       ...cambios,
     },
   ];
@@ -146,8 +146,8 @@ beforeEach(() => {
   cuerposAStripe = new Map();
   stripeRechaza = false;
   respuestas.clear();
-  respuestas.set('GET /rest/v1/accesos_match', () => accesoSinAlta());
-  respuestas.set('PATCH /rest/v1/accesos_match', () => []);
+  respuestas.set('GET /rest/v1/accesos_intermediacion', () => accesoSinAlta());
+  respuestas.set('PATCH /rest/v1/accesos_intermediacion', () => []);
   respuestas.set('GET /rest/v1/prestadora_pasarela_pago', () => [{ proveedor: 'stripe' }]);
   respuestas.set('POST /rest/v1/rpc/leer_credencial_pasarela_pago', () => CREDENCIAL);
   // El correo real de la persona vive en `usuarios`, y el Legajo de Cliente dice de qué cuenta
@@ -162,7 +162,7 @@ const darDeAlta = (extra = {}) =>
   darDeAltaEnPasarela({ accesoId: ACCESO, prestadoraId: PRESTADORA, ...extra });
 
 function guardado() {
-  return llamadas.find((l) => l.clave === 'PATCH /rest/v1/accesos_match');
+  return llamadas.find((l) => l.clave === 'PATCH /rest/v1/accesos_intermediacion');
 }
 
 /** Un día contado desde hoy, en el formato que guarda la base. */
@@ -209,15 +209,15 @@ describe('el alta que sale bien', () => {
 
   it('lo busca acotado a la Prestadora, así nadie da de alta el acceso de otra', async () => {
     await darDeAlta();
-    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_match');
+    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_intermediacion');
     assert.ok(busqueda.url.includes(`prestadora_id=eq.${PRESTADORA}`));
   });
 
   it('le pasa al proveedor cada cuánto cobra, y eso sale de la forma de la Prestadora', async () => {
     // Es lo que hace que la recurrencia sea un dato y no una línea escrita en el adaptador. Con
     // una forma de dos semanas, a Stripe le tiene que llegar «cada 2 semanas» y no «cada 1 mes».
-    respuestas.set('GET /rest/v1/accesos_match', () =>
-      accesoSinAlta({ formas_de_cobro_match: { periodo_cantidad: 2, periodo_unidad: 'semana' } })
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () =>
+      accesoSinAlta({ formas_de_cobro_intermediacion: { periodo_cantidad: 2, periodo_unidad: 'semana' } })
     );
 
     await darDeAlta();
@@ -232,8 +232,8 @@ describe('el alta que sale bien', () => {
     // `dias_gratis` era un dato que la Prestadora cargaba y que no leía nadie: el período
     // gratuito no existía. Las dos fechas se escriben acá porque acá empieza, y para que la
     // activación del lado del Cliente no tenga que volver a contarlos por su cuenta.
-    respuestas.set('GET /rest/v1/accesos_match', () =>
-      accesoSinAlta({ formas_de_cobro_match: { ...CADA_MES, dias_gratis: 14 } })
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () =>
+      accesoSinAlta({ formas_de_cobro_intermediacion: { ...CADA_MES, dias_gratis: 14 } })
     );
 
     await darDeAlta();
@@ -252,8 +252,8 @@ describe('el alta que sale bien', () => {
   it('le dice al proveedor hasta cuándo no cobrar, no sólo lo guarda de este lado', async () => {
     // Guardarlo acá y no decírselo al riel que cobra solo sería el cobro silencioso del §3.2: el
     // Cliente leería «gratis hasta el 30» en la pantalla y Stripe le cobraría hoy.
-    respuestas.set('GET /rest/v1/accesos_match', () =>
-      accesoSinAlta({ formas_de_cobro_match: { ...CADA_MES, dias_gratis: 14 } })
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () =>
+      accesoSinAlta({ formas_de_cobro_intermediacion: { ...CADA_MES, dias_gratis: 14 } })
     );
 
     await darDeAlta();
@@ -265,20 +265,20 @@ describe('el alta que sale bien', () => {
 
   it('pide los días gratis junto con el acceso, en la misma consulta', async () => {
     await darDeAlta();
-    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_match');
+    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_intermediacion');
     assert.ok(busqueda.url.includes('dias_gratis'));
   });
 
   it('pide la forma de cobro junto con el acceso, en la misma consulta', async () => {
     await darDeAlta();
-    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_match');
-    assert.ok(busqueda.url.includes('formas_de_cobro_match'));
+    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_intermediacion');
+    assert.ok(busqueda.url.includes('formas_de_cobro_intermediacion'));
   });
 });
 
 describe('el acceso que no se puede dar de alta', () => {
   it('la que no existe —o es de otra Prestadora— se contesta y no se llama a nadie', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', () => []);
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () => []);
     const resultado = await darDeAlta();
     assert.equal(resultado.ok, false);
     assert.equal(resultado.motivo, MOTIVO_ALTA.ACCESO_INEXISTENTE);
@@ -287,7 +287,7 @@ describe('el acceso que no se puede dar de alta', () => {
   });
 
   it('el cancelado no se da de alta: sería empezar a cobrarle a quien se dio de baja', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', () => accesoSinAlta({ estado: 'cancelada' }));
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () => accesoSinAlta({ estado: 'cancelada' }));
     const resultado = await darDeAlta();
     assert.equal(resultado.motivo, MOTIVO_ALTA.ACCESO_CANCELADO);
     assert.equal(llamadasAStripe.length, 0);
@@ -297,8 +297,8 @@ describe('el acceso que no se puede dar de alta', () => {
   it('el de una forma que se cobra una sola vez no se da de alta en un cobro recurrente', async () => {
     // Dejar andando la recurrencia por una forma sin período le cobraría todos los períodos a
     // quien pagó uno. Lo que sostiene ese acceso es un saldo o una fecha, no la pasarela.
-    respuestas.set('GET /rest/v1/accesos_match', () =>
-      accesoSinAlta({ formas_de_cobro_match: { periodo_cantidad: null, periodo_unidad: null } })
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () =>
+      accesoSinAlta({ formas_de_cobro_intermediacion: { periodo_cantidad: null, periodo_unidad: null } })
     );
     const resultado = await darDeAlta();
     assert.equal(resultado.ok, false);
@@ -310,7 +310,7 @@ describe('el acceso que no se puede dar de alta', () => {
   it('el que ya estaba dado de alta se contesta con lo guardado y no se vuelve a crear', async () => {
     // Volver a crearla dejaría dos cobros recurrentes vivos por el mismo Cliente, y del segundo
     // no se enteraría nadie hasta que llegue el resumen.
-    respuestas.set('GET /rest/v1/accesos_match', () =>
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () =>
       accesoSinAlta({
         proveedor: 'stripe',
         referencia_externa: 'sub_de_la_vez_anterior',
@@ -452,7 +452,7 @@ describe('cuando el proveedor rechaza', () => {
   it('si el alta se creó y no se pudo guardar, queda avisado y sin la marca', async () => {
     // Acá el acceso existe en el proveedor y no de este lado. Lo que corresponde es que se pueda
     // volver a intentar, y que quede registrado porque es plata.
-    respuestas.delete('PATCH /rest/v1/accesos_match');
+    respuestas.delete('PATCH /rest/v1/accesos_intermediacion');
     const resultado = await darDeAlta();
 
     assert.equal(resultado.ok, false);

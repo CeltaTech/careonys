@@ -54,7 +54,7 @@ poder leerse:
 - Lo que cobra —`valor_hora`, `sueldo_basico`, `categoria_cct`— está en
   `remuneraciones_asistente`, detrás de `ver_pagos_asistente`.
 - Lo reservado —`causal_baja`, `score_riesgo_reclasificacion`, `indicadores_riesgo`,
-  `motivo_exclusion_directo`, `motivo_exclusion_match`— está en
+  `motivo_exclusion_directo`, `motivo_exclusion_intermediacion`— está en
   `datos_reservados_asistente`, detrás de `ver_datos_reservados_asistente`.
 
 Están separadas porque las reglas de acceso de la base filtran filas y no columnas: dentro de

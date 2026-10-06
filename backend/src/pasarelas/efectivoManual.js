@@ -2,7 +2,7 @@
 // por medio. No requiere credencial (no hay fila en credenciales_pasarela_pago para este
 // proveedor). El registro del cobro lo hace el Coordinador/Admin_prestadora desde el Panel
 // (carga manual) o se genera automáticamente al canjear un qr_cobro_efectivo escaneado —
-// ambos casos insertan directo en `cobros_match` con `estado_cobro = 'exitoso'` desde
+// ambos casos insertan directo en `cobros_intermediacion` con `estado_cobro = 'exitoso'` desde
 // la ruta que llama, este adaptador no tiene nada que confirmar de forma asíncrona.
 
 export async function crearSuscripcion({ accesoId }) {

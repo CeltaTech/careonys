@@ -28,7 +28,7 @@ const CADA_MES = { periodo_cantidad: 1, periodo_unidad: 'mes' };
 const SECRETO = 'whsec_un_secreto_de_mentira_para_la_prueba';
 const SECRETO_DE_AMBIENTE = 'un_secreto_de_ambiente_de_mentira';
 /** El período que el acceso está esperando cobrar. Es una fecha guardada, no la de hoy: de ella
- *  sale el mes siguiente cuando la plata entra (`utils/cobrosMatch.js`). */
+ *  sale el mes siguiente cuando la plata entra (`utils/cobrosIntermediacion.js`). */
 const PERIODO = '2026-09-01';
 const MONTO_MENSUAL = 12500;
 
@@ -157,22 +157,22 @@ beforeEach(() => {
   ]);
   respuestas.set('POST /rest/v1/rpc/leer_credencial_pasarela_pago', () => 'sk_de_mentira');
   respuestas.set('POST /rest/v1/rpc/leer_secreto_firma_pasarela_pago', () => SECRETO);
-  respuestas.set('GET /rest/v1/cobros_match', () => [{ id: COBRO, acceso_id: ACCESO, periodo: PERIODO }]);
-  respuestas.set('PATCH /rest/v1/cobros_match', () => []);
-  respuestas.set('POST /rest/v1/cobros_match', () => []);
-  respuestas.set('PATCH /rest/v1/accesos_match', () => []);
+  respuestas.set('GET /rest/v1/cobros_intermediacion', () => [{ id: COBRO, acceso_id: ACCESO, periodo: PERIODO }]);
+  respuestas.set('PATCH /rest/v1/cobros_intermediacion', () => []);
+  respuestas.set('POST /rest/v1/cobros_intermediacion', () => []);
+  respuestas.set('PATCH /rest/v1/accesos_intermediacion', () => []);
   // Dos consultas distintas caen acá y se distinguen por el filtro: la ruta busca el acceso
   // **por la referencia que llegó** —y de fábrica no la encuentra, porque la de fábrica es la de
   // un cobro—, y `registrarCobroExitoso` la lee **por su identificador** antes de moverla. Por ese
   // mismo identificador la lee `abrirElPeriodoDeGracia` cuando el cobro no entra, y de ahí salen el
   // estado y la gracia: un acceso vigente al que todavía no se le abrió ninguna.
-  respuestas.set('GET /rest/v1/accesos_match', (_cuerpo, url) =>
+  respuestas.set('GET /rest/v1/accesos_intermediacion', (_cuerpo, url) =>
     url.includes('referencia_externa=eq.')
       ? []
-      : [{ id: ACCESO, prestadora_id: PRESTADORA, estado: 'vigente', gracia_hasta: null, proximo_cobro: PERIODO, formas_de_cobro_match: CADA_MES }]
+      : [{ id: ACCESO, prestadora_id: PRESTADORA, estado: 'vigente', gracia_hasta: null, proximo_cobro: PERIODO, formas_de_cobro_intermediacion: CADA_MES }]
   );
   // Cuántos días dura la gracia lo elige la Prestadora, así que abrirla se lo pregunta a la base.
-  respuestas.set('GET /rest/v1/configuracion_cobro_match', () => [
+  respuestas.set('GET /rest/v1/configuracion_cobro_intermediacion', () => [
     { dias_de_aviso_antes_del_cobro: 3, dias_de_gracia_por_cobro_rechazado: 7, dias_de_vida_del_cupon: 10 },
   ]);
   respuestas.set('GET /rest/v1/prestadoras', () => [{ pais: 'AR' }]);
@@ -189,7 +189,7 @@ function escrituras() {
 /** Las filas nuevas. Se miran aparte de las escrituras porque son otra cosa: una modifica un cobro
  *  que ya existía y la otra anota un mes que de este lado no estaba anotado. */
 function inserciones() {
-  return llamadas.filter((l) => l.clave === 'POST /rest/v1/cobros_match');
+  return llamadas.filter((l) => l.clave === 'POST /rest/v1/cobros_intermediacion');
 }
 
 describe('el aviso de cobro auténtico', () => {
@@ -198,9 +198,9 @@ describe('el aviso de cobro auténtico', () => {
     assert.equal(estado, 200);
     assert.deepEqual(cuerpo, { ok: true });
 
-    const cobro = escrituras().find((l) => l.clave.endsWith('/cobros_match'));
+    const cobro = escrituras().find((l) => l.clave.endsWith('/cobros_intermediacion'));
     assert.equal(cobro.cuerpo.estado_cobro, 'exitoso');
-    const acceso = escrituras().find((l) => l.clave.endsWith('/accesos_match'));
+    const acceso = escrituras().find((l) => l.clave.endsWith('/accesos_intermediacion'));
     assert.equal(acceso.cuerpo.estado, 'vigente');
   });
 
@@ -208,13 +208,13 @@ describe('el aviso de cobro auténtico', () => {
     // Es la diferencia que se ve el día que un cobro entra tarde: contando desde hoy, cada demora
     // corre la fecha y la Prestadora termina cobrando once meses por año en vez de doce.
     await avisar();
-    const acceso = escrituras().find((l) => l.clave.endsWith('/accesos_match'));
+    const acceso = escrituras().find((l) => l.clave.endsWith('/accesos_intermediacion'));
     assert.equal(acceso.cuerpo.proximo_cobro, '2026-10-01');
   });
 
   it('la búsqueda del cobro va acotada a la Prestadora de la dirección', async () => {
     await avisar();
-    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/cobros_match');
+    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/cobros_intermediacion');
     assert.ok(busqueda.url.includes(`prestadora_id=eq.${PRESTADORA}`));
   });
 });
@@ -350,9 +350,9 @@ describe('el aviso de Mercado Pago, que no dice si la plata entró', () => {
     assert.equal(consultasAlProveedor.length, 1);
     assert.ok(consultasAlProveedor[0].includes('PAGO-123'), 'se pregunta por el mismo cobro que venía firmado');
 
-    const cobro = escrituras().find((l) => l.clave.endsWith('/cobros_match'));
+    const cobro = escrituras().find((l) => l.clave.endsWith('/cobros_intermediacion'));
     assert.equal(cobro.cuerpo.estado_cobro, 'exitoso');
-    const acceso = escrituras().find((l) => l.clave.endsWith('/accesos_match'));
+    const acceso = escrituras().find((l) => l.clave.endsWith('/accesos_intermediacion'));
     assert.equal(acceso.cuerpo.estado, 'vigente');
   });
 
@@ -361,18 +361,18 @@ describe('el aviso de Mercado Pago, que no dice si la plata entró', () => {
     const { estado } = await avisarMercadoPago();
     assert.equal(estado, 200);
 
-    const cobro = escrituras().find((l) => l.clave.endsWith('/cobros_match'));
+    const cobro = escrituras().find((l) => l.clave.endsWith('/cobros_intermediacion'));
     assert.equal(cobro.cuerpo.estado_cobro, 'pendiente');
-    assert.equal(escrituras().some((l) => l.clave.endsWith('/accesos_match')), false);
+    assert.equal(escrituras().some((l) => l.clave.endsWith('/accesos_intermediacion')), false);
   });
 
   it('si el proveedor dice que se canceló, el cobro queda fallido y el acceso entra en gracia', async () => {
     respuestaDelProveedor = { status: 'cancelled' };
     await avisarMercadoPago();
 
-    const cobro = escrituras().find((l) => l.clave.endsWith('/cobros_match'));
+    const cobro = escrituras().find((l) => l.clave.endsWith('/cobros_intermediacion'));
     assert.equal(cobro.cuerpo.estado_cobro, 'fallido');
-    const acceso = escrituras().find((l) => l.clave.endsWith('/accesos_match'));
+    const acceso = escrituras().find((l) => l.clave.endsWith('/accesos_intermediacion'));
     // Acá se suspendía el mismo día. Ahora se le abre la gracia y el acceso queda como estaba
     // (`utils/periodoDeGracia.js`).
     assert.ok(acceso.cuerpo.gracia_hasta);
@@ -505,9 +505,9 @@ for (const { proveedor, variable, evento } of RIELES_SIN_ESQUEMA) {
       assert.equal(estado, 200);
       assert.deepEqual(cuerpo, { ok: true });
 
-      const cobro = escrituras().find((l) => l.clave.endsWith('/cobros_match'));
+      const cobro = escrituras().find((l) => l.clave.endsWith('/cobros_intermediacion'));
       assert.equal(cobro.cuerpo.estado_cobro, 'exitoso');
-      const acceso = escrituras().find((l) => l.clave.endsWith('/accesos_match'));
+      const acceso = escrituras().find((l) => l.clave.endsWith('/accesos_intermediacion'));
       assert.equal(acceso.cuerpo.estado, 'vigente');
     });
 
@@ -515,7 +515,7 @@ for (const { proveedor, variable, evento } of RIELES_SIN_ESQUEMA) {
       // La otra mitad de la prueba de arriba: que el 401 no sea solo un código, sino que la
       // fila del cobro no se haya mirado siquiera.
       await avisarRiel(proveedor, CRUDO_RIEL, { firma: `ts=1,v1=${'b'.repeat(64)}` });
-      assert.equal(llamadas.filter((l) => l.clave === 'GET /rest/v1/cobros_match').length, 0);
+      assert.equal(llamadas.filter((l) => l.clave === 'GET /rest/v1/cobros_intermediacion').length, 0);
       assert.equal(escrituras().length, 0);
     });
 
@@ -560,11 +560,11 @@ function eventoStripe(tipo, objeto = { id: 'sub_1234567890' }) {
 
 /** La base sin ningún cobro con esa referencia, y un acceso que sí la tiene. */
 function sinCobroYConAcceso({ proximoCobro = PERIODO } = {}) {
-  respuestas.set('GET /rest/v1/cobros_match', () => []);
-  respuestas.set('GET /rest/v1/accesos_match', (_cuerpo, url) =>
+  respuestas.set('GET /rest/v1/cobros_intermediacion', () => []);
+  respuestas.set('GET /rest/v1/accesos_intermediacion', (_cuerpo, url) =>
     url.includes('referencia_externa=eq.')
       ? [{ id: ACCESO, importe: MONTO_MENSUAL, proximo_cobro: proximoCobro }]
-      : [{ id: ACCESO, prestadora_id: PRESTADORA, estado: 'vigente', gracia_hasta: null, proximo_cobro: proximoCobro, formas_de_cobro_match: CADA_MES }]
+      : [{ id: ACCESO, prestadora_id: PRESTADORA, estado: 'vigente', gracia_hasta: null, proximo_cobro: proximoCobro, formas_de_cobro_intermediacion: CADA_MES }]
   );
 }
 
@@ -597,7 +597,7 @@ describe('el aviso de un riel que cobra solo, con la referencia del acceso', () 
     await avisar();
 
     assert.equal(inserciones()[0].cuerpo.periodo, '2026-01-31');
-    const acceso = escrituras().find((l) => l.clave.endsWith('/accesos_match'));
+    const acceso = escrituras().find((l) => l.clave.endsWith('/accesos_intermediacion'));
     assert.equal(acceso.cuerpo.estado, 'vigente');
     // El 31 de enero más un mes con `setMonth(+1)` da 3 de marzo, y a partir de ahí el acceso
     // cobra el 3 de cada mes en vez del 31. Acá tiene que dar el último día de febrero.
@@ -619,7 +619,7 @@ describe('el aviso de un riel que cobra solo, con la referencia del acceso', () 
     await avisar({ cuerpo: eventoStripe('invoice.payment_failed') });
 
     assert.equal(inserciones()[0].cuerpo.estado_cobro, 'fallido');
-    const acceso = escrituras().find((l) => l.clave.endsWith('/accesos_match'));
+    const acceso = escrituras().find((l) => l.clave.endsWith('/accesos_intermediacion'));
     assert.ok(acceso.cuerpo.gracia_hasta);
     assert.equal(acceso.cuerpo.estado, undefined);
   });
@@ -627,8 +627,8 @@ describe('el aviso de un riel que cobra solo, con la referencia del acceso', () 
   it('sin cobro y sin acceso con esa referencia se contesta 200 y no se escribe nada', async () => {
     // Lo que llegó vino firmado pero habla de algo que acá no existe. Se contesta 200 para que el
     // proveedor no lo repita para siempre.
-    respuestas.set('GET /rest/v1/cobros_match', () => []);
-    respuestas.set('GET /rest/v1/accesos_match', () => []);
+    respuestas.set('GET /rest/v1/cobros_intermediacion', () => []);
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () => []);
     const { estado, cuerpo } = await avisar();
     assert.equal(estado, 200);
     assert.deepEqual(cuerpo, { ok: true });
@@ -640,7 +640,7 @@ describe('el aviso de un riel que cobra solo, con la referencia del acceso', () 
     sinCobroYConAcceso();
     await avisar();
     const busqueda = llamadas.find(
-      (l) => l.clave === 'GET /rest/v1/accesos_match' && l.url.includes('referencia_externa=eq.')
+      (l) => l.clave === 'GET /rest/v1/accesos_intermediacion' && l.url.includes('referencia_externa=eq.')
     );
     assert.ok(busqueda.url.includes(`prestadora_id=eq.${PRESTADORA}`));
   });
@@ -650,7 +650,7 @@ describe('el aviso de un riel que cobra solo, con la referencia del acceso', () 
     // la segunda consulta sería trabajo al pedo contra la base.
     await avisar();
     const porReferencia = llamadas.filter(
-      (l) => l.clave === 'GET /rest/v1/accesos_match' && l.url.includes('referencia_externa=eq.')
+      (l) => l.clave === 'GET /rest/v1/accesos_intermediacion' && l.url.includes('referencia_externa=eq.')
     );
     assert.equal(porReferencia.length, 0);
     assert.equal(inserciones().length, 0);
@@ -663,7 +663,7 @@ describe('el aviso de una factura de Stripe', () => {
     // lado de Stripe y acá no existe: buscar por su identificador equivale a no encontrar nunca
     // nada, y hasta el paso 5 ningún evento de Stripe imputaba un solo cobro.
     await avisar({ cuerpo: eventoStripe('invoice.paid', { id: 'in_de_una_factura', subscription: 'sub_1234567890' }) });
-    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/cobros_match');
+    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/cobros_intermediacion');
     assert.ok(busqueda.url.includes('sub_1234567890'), 'se busca por la suscripción');
     assert.equal(busqueda.url.includes('in_de_una_factura'), false, 'no se busca por la factura');
   });
@@ -671,13 +671,13 @@ describe('el aviso de una factura de Stripe', () => {
   it('también cuando Stripe lo pone en el lugar nuevo de su API', async () => {
     const objeto = { id: 'in_de_una_factura', parent: { subscription_details: { subscription: 'sub_1234567890' } } };
     await avisar({ cuerpo: eventoStripe('invoice.paid', objeto) });
-    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/cobros_match');
+    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/cobros_intermediacion');
     assert.ok(busqueda.url.includes('sub_1234567890'));
   });
 
   it('y en la baja de la suscripción, donde el objeto es la suscripción, se usa su identificador', async () => {
     await avisar({ cuerpo: eventoStripe('customer.subscription.deleted') });
-    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/cobros_match');
+    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/cobros_intermediacion');
     assert.ok(busqueda.url.includes('sub_1234567890'));
   });
 });
@@ -685,7 +685,7 @@ describe('el aviso de una factura de Stripe', () => {
 describe('los tres rieles sin esquema publicado piden secreto de firma', () => {
   it('el Panel se entera de que se lo tiene que pedir a la Prestadora', async () => {
     // Sin esto, la pantalla de pasarelas no le pide el secreto a nadie y los tres rieles quedan
-    // rechazando todo sin que se entienda por qué (`panelMatch.js`, `requiere_secreto_firma`).
+    // rechazando todo sin que se entienda por qué (`panelIntermediacion.js`, `requiere_secreto_firma`).
     const { requiereSecretoFirma } = await import('../../pasarelas/index.js');
     for (const { proveedor } of RIELES_SIN_ESQUEMA) {
       assert.equal(requiereSecretoFirma(proveedor), true, `${proveedor} tiene que pedir secreto de firma`);

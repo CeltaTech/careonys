@@ -25,6 +25,21 @@ import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 // insistencia más corto). Mientras no pase ultima_notificacion_at + intervalo_actual, el
 // cron no vuelve a avisar — evita mandar el mismo mensaje en cada corrida de 5 minutos.
 export async function revisarNotificacionesCoordinador() {
+  await recorrerLasConfiguraciones(async (config, ahora, idioma, reglaDeLasTomas) => {
+    await revisarAlertas(config, ahora, idioma, reglaDeLasTomas);
+    await revisarIncidentes(config, ahora, idioma, reglaDeLasTomas);
+    await revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas);
+  });
+}
+
+// Las emergencias no van en la vuelta de cinco minutos: tienen la suya, cada minuto
+// (`server.js`). Con la de cinco, una emergencia que la Prestadora pidió repetir cada minuto se
+// repetía igual cada cinco.
+export async function revisarEmergenciasSinTomar() {
+  await recorrerLasConfiguraciones(revisarEmergencias);
+}
+
+async function recorrerLasConfiguraciones(revisar) {
   // SIN PRESTADORA A PROPÓSITO
   // Es el arranque de un trabajo de fondo, que no tiene sesión de nadie. No trae dato de ninguna
   // Prestadora: trae la configuración de cada una con su identificador, y a partir de ahí el
@@ -49,10 +64,7 @@ export async function revisarNotificacionesCoordinador() {
     // Cuánto dura hacerse cargo de una alarma también se pregunta una vez por Prestadora: es el
     // mismo número para todas las clases de alarma que siguen.
     const reglaDeLasTomas = await reglaDeLaToma(config.prestadora_id);
-    await revisarAlertas(config, ahora, idioma, reglaDeLasTomas);
-    await revisarEmergencias(config, ahora, idioma, reglaDeLasTomas);
-    await revisarIncidentes(config, ahora, idioma, reglaDeLasTomas);
-    await revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas);
+    await revisar(config, ahora, idioma, reglaDeLasTomas);
   }
 }
 

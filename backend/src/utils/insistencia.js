@@ -10,10 +10,16 @@
 // guardia sin cubrir hubiera quedado copiada en dos lugares, así que se mudó a este archivo
 // y los dos la importan.
 
+// Unos segundos de tolerancia. La revisión que corre cada minuto no arranca justo a los sesenta
+// segundos de la anterior: a veces arranca apenas antes, y sin margen el aviso que tocaba se
+// saltearía hasta la vuelta siguiente — una emergencia avisada cada dos minutos en vez de cada uno.
+const MARGEN_MS = 5_000;
+
 /**
  * ¿Corresponde avisar ahora?
  *
- * Sin un mensaje anterior, siempre sí. Con uno anterior, solo cuando ya pasó el intervalo.
+ * Sin un mensaje anterior, siempre sí. Con uno anterior, solo cuando ya pasó el intervalo, con
+ * unos segundos de tolerancia.
  *
  * @param {string|null} ultimaNotificacionAt fecha del último mensaje, o null si nunca se avisó
  * @param {number} intervaloMinutos cuánto hay que esperar entre un mensaje y el siguiente
@@ -22,5 +28,5 @@
 export function necesitaNotificar({ ultimaNotificacionAt, intervaloMinutos, ahora }) {
   if (!ultimaNotificacionAt) return true;
   const proxima = new Date(ultimaNotificacionAt).getTime() + intervaloMinutos * 60_000;
-  return ahora.getTime() >= proxima;
+  return ahora.getTime() >= proxima - MARGEN_MS;
 }

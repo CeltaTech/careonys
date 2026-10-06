@@ -473,3 +473,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** que una Prestadora tenía tres modalidades de trabajo —prestación directa, Match y subcontratación—, y la base admitía `subcontratacion` como tercer valor.
 - **Qué dice ahora:** que las modalidades son dos, prestación directa e intermediación, cuyo nombre comercial es Match. Trabajar con una empresa subcontratada o tercerizada —las dos palabras valen— es un recurso dentro de la prestación directa, como el plantel propio. La base ya no admite el tercer valor.
 - **Motivo:** el Desarrollador definió la modalidad de trabajo como la forma en que una Prestadora estructura su negocio: en la directa se ocupa de la gestión integral del cuidado; en la intermediación sirve de puente entre quien contrata y la Asistente que brinda el servicio. Encargarle una prestación a otra empresa no cambia esa estructura.
+
+## Dónde va el nombre funcional y dónde el comercial
+
+- **Qué decía antes:** cada modalidad tenía un solo nombre, y no estaba dicho cuál se usaba en cada lugar.
+- **Qué dice ahora:** cada modalidad tiene un nombre funcional —prestación directa, intermediación— y uno comercial —Gestión de Cuidados, Match—. En el Panel va el comercial, que llega como dato informado por CeltaTech y no se escribe en el código; en lo que guarda el sistema y en el código, el funcional; en las aplicaciones del Cliente y del Asistente las modalidades no se nombran.
+- **Motivo:** la Prestadora compra el producto conociendo las modalidades por su nombre comercial, y ése es el que tiene que reconocer en el Panel. Al Cliente y al Asistente nombrarles la modalidad no les sirve para nada y sólo los confunde.

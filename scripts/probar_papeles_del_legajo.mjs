@@ -21,7 +21,7 @@
 //   1. Cada administradora sube un papel a la carpeta de su propia Prestadora: tiene que entrar.
 //   2. Cada una intenta subir a la carpeta de la otra: tiene que rebotar, en las dos direcciones.
 //   3. Cada una lista el depósito: ve el suyo y ninguno del otro, en las dos direcciones.
-//   4. Cada una pide un enlace temporal del papel de la otra: tiene que rebotar.
+//   4. Cada una pide un enlace temporal al papel de la otra: tiene que rebotar.
 //   5. Una Asistente con sesión no alcanza ninguno: no hay política que la alcance.
 //
 // Una consulta que devuelve vacío no prueba nada, y por eso cada comprobación de «no ve» corre
@@ -134,7 +134,7 @@ async function borrar({ base, llavePublica, pase, ruta }) {
   });
 }
 
-async function firmar({ base, llavePublica, pase, ruta }) {
+async function pedirEnlaceTemporal({ base, llavePublica, pase, ruta }) {
   const r = await fetch(`${base}/storage/v1/object/sign/${DEPOSITO}/${ruta}`, {
     method: 'POST',
     headers: { apikey: llavePublica, Authorization: `Bearer ${pase}`, 'Content-Type': 'application/json' },
@@ -208,20 +208,20 @@ async function principal() {
     comprobar(`${quien.prestadoraId.slice(0, 8)} no ve ninguno de ${ajena.prestadoraId.slice(0, 8)}`, ajenos.length === 0, `vio ${ajenos.length}`);
   }
 
-  console.log('\nLa enlace temporal del papel ajeno');
+  console.log('\nEl enlace temporal al papel ajeno');
   for (const [quien, ajena] of [[una, otra], [otra, una]]) {
-    const propia = await firmar({ base, llavePublica, pase: quien.pase, ruta: quien.ruta });
-    const impropia = await firmar({ base, llavePublica, pase: quien.pase, ruta: ajena.ruta });
-    comprobar(`${quien.prestadoraId.slice(0, 8)} firma el suyo`, propia === 200, `estado ${propia}`);
-    comprobar(`${quien.prestadoraId.slice(0, 8)} no firma el de ${ajena.prestadoraId.slice(0, 8)}`, impropia !== 200, `estado ${impropia}`);
+    const propia = await pedirEnlaceTemporal({ base, llavePublica, pase: quien.pase, ruta: quien.ruta });
+    const impropia = await pedirEnlaceTemporal({ base, llavePublica, pase: quien.pase, ruta: ajena.ruta });
+    comprobar(`${quien.prestadoraId.slice(0, 8)} obtiene el enlace al suyo`, propia === 200, `estado ${propia}`);
+    comprobar(`${quien.prestadoraId.slice(0, 8)} no obtiene el enlace al de ${ajena.prestadoraId.slice(0, 8)}`, impropia !== 200, `estado ${impropia}`);
   }
 
   console.log('\nUna Asistente con sesión');
   for (const lado of [una, otra]) {
     const vistos = await listar({ base, llavePublica, pase: lado.paseAsistente, carpeta: `${lado.prestadoraId}/${lado.asistente.id}` });
-    const firmado = await firmar({ base, llavePublica, pase: lado.paseAsistente, ruta: lado.ruta });
+    const enlace = await pedirEnlaceTemporal({ base, llavePublica, pase: lado.paseAsistente, ruta: lado.ruta });
     comprobar('no alcanza el depósito por listado', vistos.length === 0, `vio ${vistos.length}`);
-    comprobar('no alcanza el depósito por enlace temporal', firmado !== 200, `estado ${firmado}`);
+    comprobar('no alcanza el depósito por enlace temporal', enlace !== 200, `estado ${enlace}`);
   }
 
   // Lo subido se borra por la API de archivos, que es el único camino: la base rechaza el borrado

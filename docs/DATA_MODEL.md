@@ -37,7 +37,7 @@ CREATE TABLE prestadoras (
 );
 ```
 
-**Agregado el 2026-08-08 (pendiente `#95`, migración `20260808200000`):** la columna
+**Agregado el 2026-08-08 (pendiente `#95`):** la columna
 `logo_url TEXT`, opcional. Es la marca que ven el Cliente y el Asistente. Si está vacía, las
 pantallas muestran el nombre de la Prestadora escrito. Los archivos viven en el depósito
 `marca-prestadoras`, público para leer y cerrado para escribir, con una carpeta por
@@ -396,8 +396,7 @@ CREATE INDEX idx_verif_etapa ON verificaciones_asistente (etapa);
 ## Tablas: referencias_laborales_asistente / configuracion_referencias_laborales
 
 Las referencias laborales de un Asistente, una por una, para poder llamarlas y dejar constancia de
-qué contestó cada una. Creadas por
-`supabase/migrations/20260915220000_las_referencias_laborales_se_verifican_una_por_una.sql`.
+qué contestó cada una.
 
 ```sql
 CREATE TABLE referencias_laborales_asistente (
@@ -444,8 +443,7 @@ CREATE TABLE configuracion_referencias_laborales (
 ## Depósito: fotos-identidad
 
 Las dos fotos con las que se verifica la identidad de un Asistente: la del documento y la de la
-cara. Creado por
-`supabase/migrations/20260915210000_las_dos_fotos_de_la_verificacion_de_identidad_tienen_donde_vivir.sql`.
+cara.
 
 - Privado y sin ninguna política: lo escribe y lo lee el backend con la llave de servicio, después
   de comprobar de qué Prestadora es el Asistente. Mismo patrón que `documentos-cese`.

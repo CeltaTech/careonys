@@ -2,9 +2,9 @@ import { supabase } from '../db/connection.js';
 
 // EL PUNTO UNICO DE VERDAD PARA ESCRIBIR EL REGISTRO DE ACTIVIDAD.
 //
-// Que hace la gente de una Prestadora: quien, cuando, sobre que y que cambio. La tabla y el
-// porque de su forma estan en
-// `supabase/migrations/20261001110000_registro_de_actividad.sql`.
+// Que hace la gente de una Prestadora: quien, cuando, sobre que y que cambio. La tabla es
+// `public.registro_actividad`, y su forma la sostienen los disparadores
+// `trg_registro_actividad_solo_lo_permitido` y `trg_registro_actividad_no_se_toca`.
 //
 // Se escribe desde acá y desde ningun otro lado. Cada ruta que registra algo llama a una de
 // estas funciones: si la misma decision se copiara ruta por ruta, el dia que cambie el nombre de

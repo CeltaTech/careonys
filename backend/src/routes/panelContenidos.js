@@ -1,6 +1,5 @@
 // La biblioteca que cada Prestadora escribe para los Clientes de su Organización: contenido y
-// recursos para quien cuida en su casa
-// (`supabase/migrations/20260915170000_cada_prestadora_escribe_su_contenido_para_las_clientes.sql`).
+// recursos para quien cuida en su casa.
 //
 // QUÉ SE GUARDA. Un título, un texto y, si la Prestadora ya publica material en otro lado, un
 // enlace. No se suben archivos: eso es un depósito con sus propias políticas y es una decisión

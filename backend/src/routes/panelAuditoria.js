@@ -29,8 +29,8 @@ panelAuditoriaRouter.get('/', requiereRolPanel, async (req, res) => {
   // POR QUÉ ESTE ES EL ALCANCE, Y NO EL REGISTRO ENTERO.
   //
   // Hasta el 2026-09-08 esta ruta le entregaba al Superadmin el registro de todas las
-  // Prestadoras, y la base decía otra cosa: desde la migración
-  // `20260822180000` la política `superadmin_lee_auditoria_de_su_sesion_activa` compara
+  // Prestadoras, y la base decía otra cosa: la política
+  // `superadmin_lee_auditoria_de_su_permiso_vigente` compara
   // `prestadora_id` contra `interno.current_tenant()`, o sea que sólo deja leer el registro de
   // la Prestadora donde haya un permiso de acceso abierto. Los dos lados decían cosas
   // distintas; era el pendiente #158. **Manda el alcance de la base** (Desarrollador,
@@ -74,8 +74,8 @@ panelAuditoriaRouter.get('/', requiereRolPanel, async (req, res) => {
 
 // El registro de lo que hace la gente de la Prestadora, que es la otra pregunta y por eso es la
 // otra tabla: aquella contesta qué hizo CeltaTech adentro de una Prestadora ajena, y ésta qué
-// hizo la Prestadora en su propia Organización. El porqué de que sean dos está escrito en
-// `supabase/migrations/20261001110000_registro_de_actividad.sql`.
+// hizo la Prestadora en su propia Organización. Aquélla es `auditoria_de_accesos` y ésta,
+// `registro_actividad`.
 //
 // El alcance es el mismo de siempre y por el mismo motivo: la Prestadora sobre la que la persona
 // está parada, y ninguna otra. `prestadoraId` sale de `requiereRolPanel`, que resuelve la

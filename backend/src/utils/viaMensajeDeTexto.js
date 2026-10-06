@@ -38,7 +38,7 @@ export function sePuedeElegirMensajeDeTexto({ mensaje, hayProveedor }) {
  *
  * Sin proveedor cargado se guarda apagado aunque el pedido diga encendido: dejarlo prendido haría
  * creer que el mensaje sale por ahí, y no sale. La restricción de la base sostiene lo mismo un piso
- * más abajo (supabase/migrations/20261004090000_...).
+ * más abajo (`sin_proveedor_el_mensaje_de_texto_no_se_enciende`).
  */
 export function mensajeDeTextoQueSeGuarda({ mensaje, hayProveedor, pedido }) {
   return sePuedeElegirMensajeDeTexto({ mensaje, hayProveedor }) ? Boolean(pedido) : false;

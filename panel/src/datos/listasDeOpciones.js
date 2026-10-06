@@ -8,11 +8,8 @@
  * después y es de ella. Y no tiene identificadores, porque los pone la base: quien lo consume
  * junta por la clave de la lista.
  *
- * Lo que dice este archivo es exactamente lo que siembran las migraciones
- * `20261001150000_las_listas_de_opciones.sql`,
- * `20261003120000_el_medio_de_pago_sale_del_catalogo.sql` y
- * `20261004150000_el_medio_que_reparte_en_bloque_entra_solo_en_prestacion_directa.sql`. Si una
- * de ellas cambia, cambia este archivo.
+ * Lo que dice este archivo es exactamente lo que la base trae sembrado sin Prestadora en
+ * `listas_de_opciones` y `opciones_de_lista`. Si eso cambia, cambia este archivo.
  *
  * `modalidades` ausente quiere decir lo mismo que en la base: esta opción alcanza a todas las
  * modalidades de trabajo. */

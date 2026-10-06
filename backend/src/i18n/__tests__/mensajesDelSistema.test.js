@@ -17,10 +17,10 @@ const FILAS = filasSembradas();
 const UNA_PRESTADORA = '00000000-0000-4000-8000-000000000001';
 const OTRA_PRESTADORA = '00000000-0000-4000-8000-000000000002';
 
-test('la migración siembra todas las piezas, y el renglón sigue teniendo la forma que la prueba lee', () => {
-  // Si alguien parte un renglón en dos o cambia la forma del INSERT, esto se cae y hay que
-  // arreglarlo a propósito: es justamente lo que impide que la prueba quede leyendo nada.
-  assert.ok(FILAS.length > 100, `se leyeron ${FILAS.length} filas de la migración`);
+test('la base siembra todas las piezas, y la siembra sigue teniendo la forma que la prueba lee', () => {
+  // Si alguien cambia la forma de la siembra, esto se cae y hay que arreglarlo a propósito: es
+  // justamente lo que impide que la prueba quede leyendo nada.
+  assert.ok(FILAS.length > 100, `se leyeron ${FILAS.length} filas de la foto de la base`);
   assert.equal(new Set(FILAS.map((f) => f.clave)).size, FILAS.length, 'hay claves repetidas');
 });
 

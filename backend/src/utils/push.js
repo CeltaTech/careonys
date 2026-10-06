@@ -42,7 +42,7 @@ async function comoSeVeEnElCelular(prestadoraId, titulo, cuerpo) {
 }
 
 // Envía un push a todas las suscripciones activas de una audiencia (Asistente o Cliente,
-// nunca ambas — ver CHECK push_subscriptions_una_audiencia en schema_pwa_clientes_01.sql).
+// nunca ambas — lo exige la restricción push_subscriptions_una_audiencia de la base).
 // Si una suscripción devuelve 404/410 (dispositivo desinstaló la app o revocó el permiso),
 // se borra en el momento — mismo criterio que el resto del proyecto de no dejar basura de
 // estado que ya no es válido.

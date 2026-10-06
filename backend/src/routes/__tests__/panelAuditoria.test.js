@@ -4,8 +4,8 @@
  *   npm test --prefix backend
  *
  * POR QUÉ EXISTE ESTA PRUEBA. Hasta el 2026-09-08 esta ruta le entregaba al Superadmin el
- * registro de auditoría de todas las Prestadoras a la vez, mientras que la base —desde la
- * migración `20260822180000`, política `superadmin_lee_auditoria_de_su_sesion_activa`— sólo le
+ * registro de auditoría de todas las Prestadoras a la vez, mientras que la base —con la
+ * política `superadmin_lee_auditoria_de_su_permiso_vigente`— sólo le
  * dejaba leer el de la Prestadora con el permiso de acceso abierto. Los dos lados decían cosas
  * distintas; era el pendiente #158. El Desarrollador resolvió que manda el alcance de la base:
  * una Prestadora por vez, la del permiso de acceso, y para mirar otra se abre uno sobre

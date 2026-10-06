@@ -43,8 +43,8 @@ export async function laPrestadoraEntregaLaFactura(prestadoraId) {
   return entregaLaFactura(data?.regla);
 }
 
-/** Cuánto dura el enlace temporal con la que se baja un comprobante. Lo que dura una descarga. */
-export const SEGUNDOS_DE_LA_DIRECCION_FIRMADA = 60;
+/** Cuánto dura el enlace temporal con el que se baja un comprobante. Lo que dura una descarga. */
+export const SEGUNDOS_DEL_ENLACE_TEMPORAL = 60;
 
 /** Los cinco bytes con los que empieza todo PDF. No hay PDF que no los tenga. */
 const FIRMA_DEL_PDF = Buffer.from('%PDF-', 'ascii');
@@ -88,13 +88,13 @@ export async function guardarComprobante({ prestadoraId, facturaId, clienteId, b
 /**
  * Un enlace temporal para bajar el comprobante, o `null` si no se pudo.
  *
- * El depósito es privado: no hay dirección pública, y la firmada vence. Una dirección que no
- * venciera, reenviada una vez, sería el comprobante abierto para siempre.
+ * El depósito es privado: no hay dirección pública, y el enlace vence. Un enlace que no
+ * venciera, reenviado una vez, sería el comprobante abierto para siempre.
  */
 export async function direccionParaBajarElComprobante(ruta) {
   if (!ruta) return null;
   const { data, error } = await supabase.storage
     .from(DEPOSITO_DE_COMPROBANTES)
-    .createSignedUrl(ruta, SEGUNDOS_DE_LA_DIRECCION_FIRMADA, { download: true });
+    .createSignedUrl(ruta, SEGUNDOS_DEL_ENLACE_TEMPORAL, { download: true });
   return error ? null : data.signedUrl;
 }

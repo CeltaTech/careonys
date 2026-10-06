@@ -11,7 +11,7 @@
 // está en retiro: guarda a uno solo de los Pacientes y sigue existiendo únicamente como red
 // de seguridad. Este archivo y el del Panel son los dos únicos lugares que la nombran.
 //
-// Ver la migración 20260807190000_una_guardia_puede_cubrir_varios_pacientes.sql.
+// Ver el disparador `sincronizar_paciente_principal` de `guardias`.
 
 import { supabase } from '../db/connection.js';
 

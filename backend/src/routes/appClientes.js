@@ -648,8 +648,7 @@ appClientesRouter.get('/pacientes/:id/alertas', requiereRolCliente, exigeVisible
 
 // ============================================================================
 // Asistente Asignado — datos del Asistente que tuvo o tiene alguna guardia con este
-// Paciente (RLS de asistentes/certificados ya lo acota a eso, ver schema_pwa_clientes_01.sql
-// §3-4), estado del Certificado de Aptitud, evaluaciones anteriores, y el id de la guardia
+// Paciente (las políticas de asistentes y certificados ya lo acotan a eso), estado del Certificado de Aptitud, evaluaciones anteriores, y el id de la guardia
 // activa/última (para el botón de calificar).
 //
 // Además devuelve el tipo del Asistente con sus dos listas de tareas: qué le
@@ -1257,7 +1256,7 @@ appClientesRouter.get('/facturas/:facturaId', requiereRolCliente, exigeVisible('
 /**
  * Bajar el comprobante de una factura.
  *
- * QUÉ SE ENTREGA. Un enlace temporal que vence, no el archivo: el depósito es privado y así el
+ * QUÉ SE ENTREGA. Un enlace temporal, no el archivo: el depósito es privado y así el
  * teléfono lo baja derecho de ahí sin que el backend tenga que pasar los bytes por el medio.
  *
  * CON LA ENTREGA APAGADA NO HAY PAPEL ACÁ. La Prestadora eligió hacer llegar la factura por su

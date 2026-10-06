@@ -10,8 +10,7 @@
 //
 // LA REGLA NO VIVE ACÁ, Y ES A PROPÓSITO (regla 12 de CLAUDE.md §7). Cuál dirección gana un día
 // dado —la temporal vigente, o la de la ficha si no hay ninguna— lo decide una sola vez la
-// función `public.domicilios_de_pacientes_en`, escrita en la migración
-// 20260821220000_donde_se_atiende_al_paciente_este_dia.sql. Este archivo no vuelve a comparar
+// función `public.domicilios_de_pacientes_en` de la base. Este archivo no vuelve a comparar
 // fechas ni a elegir: pregunta y aplica lo que le contestan. Si mañana el criterio cambia
 // —porque una internación deja de contar, por ejemplo—, cambia en la base y llega solo a las
 // dos aplicaciones y al Panel.

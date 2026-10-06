@@ -572,7 +572,7 @@ appAsistentesRouter.delete('/perfil/datos-bancarios/:clase', requiereRolAsistent
 // El interruptor de disponibilidad, y lo mueve el Asistente.
 //
 // `asistentes.estado` lo decide la Prestadora; esto lo decide él, y son dos cosas distintas a
-// propósito (ver la migración `20260915120000_el_asistente_dice_cuando_no_esta_disponible.sql`).
+// propósito (ver la columna `asistentes.disponible_para_ofertas`).
 // Apagarlo lo saca de lo que sale a buscarlo solo —la fase automática de la escalada de relevo—
 // y no toca ninguna guardia ya asignada: lo que ya se comprometió sigue siendo suyo.
 //

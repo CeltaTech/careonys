@@ -181,7 +181,7 @@ export function NuevaGuardiaModal({ onClose, onCreada, inicial = {} }) {
     // La columna `paciente_id` está en retiro pero todavía la leen muchas pantallas, así que
     // se le escribe el primero de la lista. Un disparador de la base se encarga de que ese
     // Paciente quede también en `guardia_pacientes`; acá se agregan los demás.
-    // Ver la migración 20260807190000_una_guardia_puede_cubrir_varios_pacientes.sql.
+    // Ver el disparador `sincronizar_paciente_principal` de `guardias`.
     const [primero, ...resto] = pacienteIds;
 
     if (!esSerie) {
@@ -268,8 +268,7 @@ export function NuevaGuardiaModal({ onClose, onCreada, inicial = {} }) {
 
     // El Servicio no se repite acá: lo copia la base desde la serie, para que las guardias que
     // genera esta pantalla y las que genera el backend de noche salgan iguales sin que la regla
-    // esté escrita dos veces. Ver la migración
-    // 20260910200000_la_guardia_hereda_el_servicio_de_su_serie.sql.
+    // esté escrita dos veces. Ver el disparador `trg_servicio_de_la_serie` de `guardias`.
     const fechas = generarFechasSerie(vigenteDesde, vigenteHasta, diasSemana);
     const filasGuardias = fechas.map((f) => ({
       prestadora_id: prestadoraId,

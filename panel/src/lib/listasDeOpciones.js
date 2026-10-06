@@ -3,8 +3,8 @@
  * Las dos estaban resueltas, pero adentro del archivo de una pantalla, así que sólo valían
  * mientras la carga pasara por ahí: una segunda pantalla que cargara opciones las volvía a
  * inventar, y probablemente distinto. Acá quedan en un solo lugar, y su versión que no se puede
- * esquivar vive en la base —restricciones y disparadores de la migración
- * `20261001150000_las_listas_de_opciones.sql`—. Lo de este archivo es lo que la pantalla necesita
+ * esquivar vive en la base —las restricciones `la_opcion_propia_va_detras_del_catalogo_general`
+ * y `el_texto_de_la_opcion_esta_en_los_idiomas_que_le_tocan` de `opciones_de_lista`—. Lo de este archivo es lo que la pantalla necesita
  * para mostrar y para anticipar, nunca la garantía.
  *
  * REGLA 1 — DESDE QUÉ NÚMERO SE ORDENAN LAS OPCIONES PROPIAS. Lo que agrega una Prestadora va

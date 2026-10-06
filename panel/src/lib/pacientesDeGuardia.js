@@ -12,7 +12,7 @@
 // sabe que esa columna existe, y la usa nada más que como red de seguridad — cuando ese
 // respaldo deje de hacer falta, se saca de acá y de ningún otro lado.
 //
-// Ver la migración 20260807190000_una_guardia_puede_cubrir_varios_pacientes.sql.
+// Ver el disparador `sincronizar_paciente_principal` de `guardias`.
 
 import { supabase } from './supabaseClient';
 import { con } from './textos';

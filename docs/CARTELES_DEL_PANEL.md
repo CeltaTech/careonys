@@ -544,7 +544,7 @@ lista está vacía, en `panel/src/pages/clientes/EquipoDelPaciente.jsx:316`.
 > 1 sola persona coordina todo el servicio, si interviene otra persona en la coordinación es eventual
 > seguramente debido a alguna emergencia.
 >
-> Por otro lado, cuando ingresa un cliente (cliente) nueva, y se acuerda el servicio, inmediatamente
+> Por otro lado, cuando ingresa un cliente nuevo, y se acuerda el servicio, inmediatamente
 > se asigna quien ha de coordinar para que esta persona comience a armar el equipo que brindara el
 > servicio.
 >

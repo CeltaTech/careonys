@@ -40,7 +40,7 @@
 
    Y NO SE ARMA DOS VECES EL MISMO PERÍODO. El candado de verdad está en la base: un índice único
    parcial deja un solo cobro `pendiente` por acceso y período
-   (`supabase/migrations/20260911100000_…`). Acá igual se pregunta antes, para no pedirle al
+   (`uq_cobros_match_periodo_pendiente`). Acá igual se pregunta antes, para no pedirle al
    proveedor un QR que después habría que tirar. */
 
 import { supabase } from '../db/connection.js';

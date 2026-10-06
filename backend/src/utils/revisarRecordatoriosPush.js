@@ -17,7 +17,7 @@ import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 // tocó el número se comporta igual que una que guardó el de fábrica.
 export const MINUTOS_ANTES_RECORDATORIO = 60;
 
-// Los mismos topes que la regla de la base (migración 20260811150000). Se exponen para que el
+// Los mismos topes que la regla de la base (`prestadoras_minutos_aviso_previo_guardia_check`). Se exponen para que el
 // backend rechace el número antes que la base, y el Panel reciba un mensaje en castellano en
 // vez del error crudo de Postgres.
 export const LIMITES_PREAVISO_GUARDIA = { minimo: 5, maximo: 1440 };

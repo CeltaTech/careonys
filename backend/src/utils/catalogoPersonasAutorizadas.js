@@ -5,8 +5,7 @@
 // Prestadora quiénes son sus personas autorizadas y qué puede ver cada una, la Prestadora lo carga, el sistema
 // arma el documento con eso escrito en castellano y el titular lo firma. Así, el día que alguien
 // diga «yo nunca autoricé eso», está la instrucción con nombre, fecha y firma. La constancia y el
-// estado vigente viven en la base; ver la migración
-// `20260908120000_los_accesos_del_personas_autorizadas_los_pide_el_titular_por_escrito.sql`.
+// estado vigente viven en la base.
 //
 // ESTE ES EL ÚNICO LUGAR DONDE SE AGREGA UN ACCESO NUEVO. La tabla `permisos_personas_autorizadas`
 // guarda solamente lo decidido para cada persona; la lista de qué se puede decidir vive acá,

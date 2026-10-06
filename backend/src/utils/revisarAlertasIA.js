@@ -19,7 +19,7 @@ export const VALORES_POR_DEFECTO_ALERTAS_IA = {
   amarilla_avisa_coordinador: true,
 };
 
-// Los mismos topes que la regla de la base (migración 20260811150000). Se exponen para que el
+// Los mismos topes que la regla de la base (`configuracion_alertas_ia_reportes_a_analizar_check`). Se exponen para que el
 // backend rechace el valor antes de que la base lo rechace: así el Panel recibe un mensaje en
 // castellano y no el error crudo de Postgres.
 export const LIMITES_ALERTAS_IA = {

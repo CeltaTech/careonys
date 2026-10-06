@@ -99,7 +99,7 @@ export const CIERRES_QUE_ESCRIBE_EL_SISTEMA = [CIERRES.LLEGO_UN_RELEVO, CIERRES.
  * No se vuelven a escribir y no se reescriben los expedientes viejos: están acá para poder
  * leerlos, porque su texto sigue en las traducciones.
  */
-export const CIERRES_HISTORICOS = ['cubierto', 'quedo_en_la_cliente'];
+export const CIERRES_HISTORICOS = ['cubierto', 'quedo_un_familiar'];
 
 /**
  * Cuáles de los que trae el producto nacen marcados como defecto grave.
@@ -113,7 +113,7 @@ export const CIERRES_QUE_SON_DEFECTO_GRAVE = [
   CIERRES.NO_FUE_NADIE,
   // De los viejos, el único que lo era. Se deja para que un expediente cerrado antes del catálogo
   // se siga leyendo como lo que fue.
-  'quedo_en_la_cliente',
+  'quedo_un_familiar',
 ];
 
 /** Si un final que trae el producto nace marcado como defecto grave. */

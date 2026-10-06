@@ -10,39 +10,24 @@
  * otra quede contestando otra cosa: eso es exactamente lo que había pasado.
  *
  * QUÉ SE PRUEBA ACÁ Y QUÉ NO. Sin base levantada nada de este archivo puede ejecutar una función de
- * Postgres ni un disparador. Lo que sí se puede comprobar es que la migración diga lo que tiene que
- * decir y que los escalones de los dos lados coincidan uno por uno. Que la migración corra bien se
- * comprueba al aplicarla: termina con su propio bloque de comprobación, que prueba los dos sentidos
- * —que el rol desconocido no habilite, y que los conocidos sigan habilitando—.
+ * Postgres ni un disparador. Lo que sí se puede comprobar es que la foto de la base diga lo que tiene
+ * que decir y que los escalones de los dos lados coincidan uno por uno. Que el disparador ataje de
+ * verdad no está probado acá: hace falta la base levantada.
  *
  * Los datos son inventados.
  */
 import { strict as assert } from 'node:assert';
 import { describe, it } from 'node:test';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { definicionDeFuncion, filasDeFabrica, laFoto, permisosDeFuncion } from '../../__tests__/laFotoDeLaBase.js';
 
 process.env.SUPABASE_URL ||= 'http://127.0.0.1:1';
 process.env.SUPABASE_SERVICE_ROLE_KEY ||= 'clave-de-mentira';
 
 const { escalonDelRol, puedeHabilitar } = await import('../habilitarCambioDeClave.js');
 
-function migracion(nombre) {
-  return readFileSync(
-    fileURLToPath(new URL(`../../../../supabase/migrations/${nombre}`, import.meta.url)),
-    'utf8',
-  );
-}
-
-const EL_ROL_QUE_NO_SE_ENTIENDE = migracion(
-  '20261004120000_un_rol_que_no_se_entiende_no_habilita_a_nadie.sql',
-);
-const LA_COORDINACION_HABILITA = migracion(
-  '20261004130000_la_coordinacion_habilita_el_cambio_de_clave_de_fabrica.sql',
-);
-
-// El renombre del rol de quien recibe el servicio reescribió la escalera: la vigente es ésa.
-const LA_ESCALERA_VIGENTE = migracion('20261015000000_renombre_palabras_retiradas.sql');
+const EL_ESCALON = definicionDeFuncion('interno.escalon_del_rol');
+const PUEDE_HABILITAR = definicionDeFuncion('interno.puede_habilitar');
+const EL_DISPARADOR = definicionDeFuncion('interno.se_habilita_hacia_abajo_y_nunca_a_uno_mismo');
 
 const LOS_CINCO_ROLES = ['superadmin', 'admin_prestadora', 'coordinador', 'asistente', 'cliente'];
 
@@ -71,95 +56,62 @@ describe('el backend: un rol que no se entiende no habilita a nadie', () => {
 });
 
 describe('la base dice lo mismo que el backend', () => {
+  it('la foto trae las tres funciones', () => {
+    for (const definicion of [EL_ESCALON, PUEDE_HABILITAR, EL_DISPARADOR]) {
+      assert.notEqual(definicion, '', 'la foto de la base no trae una de las funciones de la regla');
+    }
+  });
+
   it('el rol que no se entiende no tiene escalón: la base devuelve nulo, no un número', () => {
-    assert.match(EL_ROL_QUE_NO_SE_ENTIENDE, /ELSE NULL::smallint/);
-    const conNumero = /ELSE\s+\d+::smallint/.exec(EL_ROL_QUE_NO_SE_ENTIENDE);
+    assert.match(EL_ESCALON, /ELSE NULL::smallint/);
+    const conNumero = /ELSE\s+\d+::smallint/.exec(EL_ESCALON);
     assert.equal(conNumero, null, 'el rol desconocido volvió a tener un número de escalón');
   });
 
   it('los cinco escalones son los mismos de los dos lados', () => {
     for (const rol of LOS_CINCO_ROLES) {
-      const renglon = new RegExp(`WHEN '${rol}' THEN (\\d+)::smallint`).exec(
-        LA_ESCALERA_VIGENTE,
-      );
-      assert.ok(renglon, `la migración no define el escalón de ${rol}`);
+      const renglon = new RegExp(`WHEN '${rol}' THEN (\\d+)::smallint`).exec(EL_ESCALON);
+      assert.ok(renglon, `la base no define el escalón de ${rol}`);
       assert.equal(Number(renglon[1]), escalonDelRol(rol), `el escalón de ${rol} no coincide`);
     }
   });
 
   it('la comparación falla cerrada: el nulo se resuelve negando, no comparando', () => {
-    assert.match(
-      EL_ROL_QUE_NO_SE_ENTIENDE,
-      /CREATE OR REPLACE FUNCTION interno\.puede_habilitar\(/,
-    );
-    assert.match(EL_ROL_QUE_NO_SE_ENTIENDE, /COALESCE\(\s*\n?\s*interno\.escalon_del_rol/);
-    assert.match(EL_ROL_QUE_NO_SE_ENTIENDE, /false\s*\n?\s*\)/);
+    assert.match(PUEDE_HABILITAR, /COALESCE\(\s*interno\.escalon_del_rol/);
+    assert.match(PUEDE_HABILITAR, /false\s*\)/);
   });
 
-  it('el disparador ya no compara escalones por su cuenta', () => {
+  it('el disparador no compara escalones por su cuenta', () => {
     assert.match(
-      EL_ROL_QUE_NO_SE_ENTIENDE,
+      EL_DISPARADOR,
       /IF NOT interno\.puede_habilitar\(v_quien\.rol, v_destinatario\.rol\) THEN/,
     );
     assert.ok(
-      !/escalon_del_rol\(v_quien\.rol\)\s*<=/.test(EL_ROL_QUE_NO_SE_ENTIENDE),
+      !/escalon_del_rol\(v_quien\.rol\)\s*<=/.test(EL_DISPARADOR),
       'el disparador volvió a comparar los escalones por su cuenta',
     );
   });
 
-  it('las funciones viven en el esquema de adentro y pierden el alcance anónimo', () => {
-    assert.ok(!/CREATE OR REPLACE FUNCTION public\./.test(EL_ROL_QUE_NO_SE_ENTIENDE));
-    assert.match(
-      EL_ROL_QUE_NO_SE_ENTIENDE,
-      /REVOKE ALL ON FUNCTION interno\.puede_habilitar\(text, text\) FROM PUBLIC;/,
-    );
-    assert.match(
-      EL_ROL_QUE_NO_SE_ENTIENDE,
-      /REVOKE ALL ON FUNCTION interno\.puede_habilitar\(text, text\) FROM anon;/,
-    );
+  it('las funciones viven en el esquema de adentro y no las alcanza nadie sin sesión', () => {
+    assert.ok(!/CREATE FUNCTION public\.(puede_habilitar|escalon_del_rol)\(/.test(laFoto()));
+    const permisos = permisosDeFuncion('interno.puede_habilitar');
+    assert.ok(permisos.some((p) => /^REVOKE ALL .* FROM PUBLIC;$/.test(p)));
+    assert.ok(!permisos.some((p) => /^GRANT .* TO anon;$/.test(p)), 'puede_habilitar quedó al alcance anónimo');
   });
 
-  it('ningún disparador se saltea la protección por fila', () => {
-    const declarada = EL_ROL_QUE_NO_SE_ENTIENDE
-      .split('\n')
-      .filter((linea) => /^\s*SECURITY\s+DEFINER\s*$/i.test(linea));
-    assert.deepEqual(declarada, []);
+  it('ninguna de las tres se saltea la protección por fila', () => {
+    for (const definicion of [EL_ESCALON, PUEDE_HABILITAR, EL_DISPARADOR]) {
+      assert.ok(!/SECURITY DEFINER/.test(definicion.split('AS $$')[0]));
+    }
   });
 });
 
 describe('la coordinación habilita el cambio de clave de fábrica', () => {
-  it('el valor de fábrica deja de estar reservado a la administración', () => {
-    assert.match(
-      LA_COORDINACION_HABILITA,
-      /UPDATE public\.catalogo_acciones_permisos\s*\n\s*SET default_solo_admin = false\s*\n\s*WHERE accion = 'habilitar_cambio_de_clave';/,
+  it('el valor de fábrica no está reservado a la administración', () => {
+    const accion = filasDeFabrica('catalogo_acciones_permisos').find(
+      (fila) => fila.accion === 'habilitar_cambio_de_clave',
     );
+    assert.ok(accion, 'la foto de la base no siembra la acción');
+    assert.equal(accion.default_solo_admin, false);
   });
-
-  it('lo que cada Prestadora ya configuró no se toca', () => {
-    assert.ok(
-      !/UPDATE public\.permisos_prestadora|INSERT INTO public\.permisos_prestadora|DELETE FROM public\.permisos_prestadora/
-        .test(LA_COORDINACION_HABILITA),
-      'la migración le pisó a alguna Prestadora lo que había elegido',
-    );
-  });
-
-  it('el escalón no se toca: sigue viviendo donde vivía', () => {
-    assert.ok(!/escalon_del_rol|se_habilita_hacia_abajo_y_nunca_a_uno_mismo\(\)\s*\nRETURNS/
-      .test(LA_COORDINACION_HABILITA));
-  });
-});
-
-describe('las dos migraciones cierran como corresponde', () => {
-  for (const [nombre, texto] of [
-    ['el rol que no se entiende', EL_ROL_QUE_NO_SE_ENTIENDE],
-    ['la coordinación habilita', LA_COORDINACION_HABILITA],
-  ]) {
-    it(`${nombre}: corre entera o no corre, y avisa del cambio de esquema`, () => {
-      assert.match(texto, /^BEGIN;$/m);
-      assert.match(texto, /^COMMIT;$/m);
-      assert.match(texto, /NOTIFY pgrst, 'reload schema';\s*$/);
-      // El bloque de comprobación es lo que hace que la migración falle si no quedó completa.
-      assert.match(texto, /RAISE EXCEPTION/);
-    });
-  }
 });

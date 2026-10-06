@@ -11,7 +11,7 @@
    que cinco contactos alcancen para cinco Asistentes y no para tres mirados dos veces.
 
    LAS CUENTAS NO SE HACEN ACÁ. Sumar al saldo y restarle uno son dos funciones de la base
-   (`supabase/migrations/20260912100000_…`), y este archivo no hace más que llamarlas. No es una
+   (`sumar_contactos_al_saldo` y `consumir_contacto_match`), y este archivo no hace más que llamarlas. No es una
    preferencia de estilo: leer el saldo, restarle uno y volver a escribirlo son dos viajes, y dos
    ventanas abiertas a la vez descuentan una sola vez. Del lado de la base el descuento y la
    anotación pasan juntos, con la fila del acceso tomada.

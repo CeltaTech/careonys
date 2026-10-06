@@ -8,8 +8,8 @@ import { ErrorConMotivo } from './errorConMotivo.js';
 // cuando es un celular: un celular identifica a una persona, y dos cuentas con el mismo celular son
 // dos cuentas que se recuperan con el mismo teléfono. Hasta acá la base aceptaba las dos cosas.
 //
-// QUIÉN LO IMPIDE DE VERDAD. La base, con un índice único
-// (`supabase/migrations/20261004100000_un_celular_es_de_una_sola_persona.sql`). Esto es la segunda
+// QUIÉN LO IMPIDE DE VERDAD. La base, con el índice único
+// `un_celular_es_de_una_sola_persona` sobre `usuarios`. Esto es la segunda
 // red, y existe por una sola razón: para que quien está cargando el dato lea una frase entendible
 // en su idioma en lugar de un choque de base clasificado como «ya existe un registro con esos
 // datos». Si este archivo no existiera, el número repetido se rechazaría igual.

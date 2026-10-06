@@ -469,8 +469,8 @@ panelCuentasRouter.post(
   },
 );
 
-// La hoja firmada, para volver a verla desde el Panel. Nunca dirección pública: se firma por un
-// minuto, igual que el resto de los archivos del producto.
+// La hoja firmada, para volver a verla desde el Panel. Nunca dirección pública: un enlace temporal
+// que dura un minuto, igual que el resto de los archivos del producto.
 panelCuentasRouter.get('/cliente/:clienteId/personas_autorizadas/instruccion/:instruccionId/papel', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
   const cliente = await clienteContratanteDelPedido(req);
   if (!cliente) {
@@ -606,8 +606,8 @@ panelCuentasRouter.post(
   },
 );
 
-// Volver a ver la hoja firmada. Nunca dirección pública: se firma por un minuto, igual que el resto
-// de los archivos del producto.
+// Volver a ver la hoja firmada. Nunca dirección pública: un enlace temporal que dura un minuto,
+// igual que el resto de los archivos del producto.
 panelCuentasRouter.get('/cliente/:clienteId/pagador/consentimiento/:consentimientoId/papel', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('editar_datos_cliente'), async (req, res) => {
   const db = clienteDelPedido(req);
   const cliente = await clienteContratanteDelPedido(req);

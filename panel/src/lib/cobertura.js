@@ -11,8 +11,9 @@
 // `asistente_id` y `ofrecida_at`, que son los datos reales, y este archivo es el único
 // lugar donde esa derivación está escrita.
 //
-// Ver la migración 20260731170000_guardia_sin_cubrir_y_ofrecida.sql, que sostiene la misma
-// regla del lado de la base con restricciones CHECK.
+// Ver las restricciones CHECK `guardias_sin_cubrir_estado_check`,
+// `guardias_sin_cubrir_sin_marcas_check` y `guardias_ofrecida_solo_sin_cubrir_check`, que
+// sostienen la misma regla del lado de la base.
 
 /** Los tres valores posibles. No hay un cuarto. */
 export const COBERTURA = {

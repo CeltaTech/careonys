@@ -105,8 +105,8 @@ export function codigoNuevoParaGuardar(expiraEn) {
 //
 // Acá la suma la hace la base adentro de una sola sentencia (`codigo_intentos + 1` con
 // `RETURNING`), que es atómica: cada llamada devuelve su propio número y ninguna pisa a la otra.
-// La función SQL vive en `public` porque el backend la llama por API, y sólo la puede ejecutar la
-// llave de servicio — ver la función
+// La función SQL vive en `public` porque el backend la llama por API, y sólo la pueden ejecutar la
+// llave de servicio y el trabajo sin persona (`trabajo_sin_persona`) — ver la función
 // `public.sumar_intento_de_codigo`.
 //
 // La lista de tablas está acá además de en la base para que un nombre de tabla no llegue nunca

@@ -36,16 +36,11 @@ vigente es:
 supabase/migrations/20261016000000_foto_de_la_base.sql
 ```
 
-95 tablas, 946 columnas, 207 políticas de seguridad, 40 funciones, 51 disparadores, 207 índices,
-más las filas del catálogo que el producto trae de fábrica. No es lo que alguien quiso hacer: es
-lo que hay.
-
-**Se comprobó de verdad, no se supuso.** Se levantó un Supabase vacío en la máquina, se corrió
-solo esa foto y se comparó contra el esquema anterior en nueve dimensiones: tablas, columnas,
-políticas de seguridad, funciones (firma y cuerpo), disparadores, restricciones, índices,
-**permisos de tabla** y valores de los enumerados. Las nueve dieron idénticas, y las filas del
-catálogo también. Los permisos de tabla se verifican a propósito: es la clase de defecto que
-rompió el panel de CeltaTech el 2026-07-27.
+Es el único archivo de la carpeta. La base en vivo tiene 189 tablas en `public`, con 1849
+columnas; 522 políticas de seguridad sobre esas tablas y 27 sobre los depósitos de archivos; 172
+funciones propias, 68 en `public` y 104 en `interno`; 153 disparadores; y 550 índices, todos en
+`public`. La foto trae además las filas de los catálogos que el producto trae de fábrica y los
+once depósitos de archivos. No es lo que alguien quiso hacer: es lo que hay.
 
 ### Cuándo se saca una foto nueva
 
@@ -53,7 +48,6 @@ Cuando la carpeta se llenó de archivos ya aplicados en producción y estorba m�
 documenta. **No se borran de a uno**: la carpeta entera es la receta para armar la base desde
 cero y, si falta una hoja, la receta no se puede seguir. Se saca una foto del resultado
 (`supabase migration squash`), esa foto queda como único archivo y los viejos se borran juntos.
-Se hizo así el 2026-07-28 y otra vez el 2026-08-19.
 
 Tres cosas que hay que saber antes de hacerlo:
 

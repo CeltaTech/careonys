@@ -356,7 +356,7 @@ nombra qué habilita el alojamiento y con qué instrumento. Sin eso, el alta no 
 **6.** **Lo que queda del segundo nivel de aislamiento, el que Chile exige.** La regla ya está
 escrita en la base (la política `la_informacion_de_salud_la_ve_quien_atiende` y la función
 `interno.alcanza_la_informacion_de_salud`),
-y aplicada. Con la restricción de HCE encendida, la información de salud de un paciente la lee
+y aplicada: la política es restrictiva, de lectura, y está en nueve tablas. Con la restricción de HCE encendida, la información de salud de un paciente la lee
 sólo quien lo atiende y el Administrador de su Prestadora; donde la tabla de requerimientos legales de HCE por país la pide, como en
 Chile, la restricción queda fija y no se apaga. Lo que falta:
 

@@ -642,6 +642,8 @@ nombre viejo vuelve a usarse. Sólo se queda «familiar», cuando nombra al pari
 código interno con el que se arman la base local del teléfono y el prefijo de los respaldos. Lo
 que cada persona tiene guardado en el teléfono pasa al nombre nuevo sin perderse.
 
+**Y sale «match», que pasa a «match»**, también como valor guardado de la modalidad.
+
 **17.** El inventario: dónde aparece la palabra, en la base en vivo y en el código, y qué pide
 cambiar cada lugar.
 
@@ -651,7 +653,7 @@ cambiar cada lugar.
 
 **20.** Se vuelve a fundir la maestra de migraciones, para que ninguna migración guarde la palabra.
 
-**Comprobación:** buscar «famil» y «careonys» en la base en vivo, en el código y en los documentos da
+**Comprobación:** buscar «famil», «careonys» y «match» en la base en vivo, en el código y en los documentos da
 cero, salvo «familiar» cuando nombra al pariente y las citas textuales del Desarrollador.
 
 ---

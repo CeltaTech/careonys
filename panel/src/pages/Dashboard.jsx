@@ -14,7 +14,7 @@ import { diasDePreavisoDeLaPrestadora } from '../lib/plazoDeAviso';
 import { ESTADO_EN_CURSO } from '../lib/guardiaSinCerrar';
 import { hoyISO } from '../lib/horarios';
 import { soloSinResolver } from '../lib/alertaSinResolver';
-import { contarPorModalidad, MODALIDADES_DE_ASISTENTE, modalidadesDelAsistente } from '../lib/modalidades';
+import { contarPorModalidad, MODALIDADES, modalidadesDelAsistente } from '../lib/modalidades';
 import { ESTADO_ACTIVO, estaEnElPlantel } from '../lib/candidatos';
 import { claseBadgeTono, TONO } from '../lib/tonos';
 import { ESTADOS_DE_SOLICITUD } from '../lib/estadosDeSolicitud';
@@ -28,14 +28,12 @@ import './hojaDeTarjetas.css';
 const NOMBRE_MODALIDAD = {
   directa: (t) => t.configuracion.modalidades_directa,
   match: (t) => t.configuracion.modalidades_match,
-  subcontratacion: (t) => t.configuracion.modalidades_subcontratacion,
 };
 
 // El tono de cada modalidad en las donas, sacado de los tonos del producto.
 const COLOR_MODALIDAD = {
   directa: 'var(--verde-exito)',
   match: 'var(--violeta)',
-  subcontratacion: 'var(--azul-medio)',
 };
 
 function esHoy(fechaIso) {
@@ -121,8 +119,7 @@ export function Dashboard() {
   // ficha, sale un número por renglón.
   //
   // Quien trabaja en las dos modalidades cuenta en las dos, así que los renglones suman más que
-  // el plantel —lo dice la etiqueta: son vínculos, no personas—. Y la subcontratación nunca tiene
-  // ninguno, porque esa gente es de otra empresa: su renglón no se muestra.
+  // el plantel —lo dice la etiqueta: son vínculos, no personas—.
   //
   // La consulta sale sola de esta pantalla, en vez de reusar el plantel que ya se carga arriba,
   // porque ese plantel le llega al Coordinador por una vista que no trae la modalidad. Es la
@@ -222,7 +219,7 @@ export function Dashboard() {
   }));
   const maximoPorEstado = Math.max(1, ...solicitudesPorEstado.map((fila) => fila.cantidad));
   const nombreDeModalidad = (modalidad) => NOMBRE_MODALIDAD[modalidad]?.(t) ?? modalidad;
-  const modalidadesDeAsistente = modalidades.filter((modalidad) => MODALIDADES_DE_ASISTENTE.includes(modalidad));
+  const modalidadesDeAsistente = modalidades.filter((modalidad) => MODALIDADES.includes(modalidad));
 
   return (
     <div>
@@ -341,8 +338,7 @@ export function Dashboard() {
       </div>
 
       {/* El desglose aparece solamente cuando la Prestadora trabaja de más de una manera: con
-          una sola, cada dona repetiría el número de arriba. Los vínculos no muestran la
-          subcontratación, porque esa gente es de otra empresa. */}
+          una sola, cada dona repetiría el número de arriba. */}
       {desgloseModalidadHabilitado && (
         <div className="panel-grilla panel-columnas-3">
           {guardiasPorModalidad && (

@@ -1,12 +1,11 @@
 # Rediseño del dashboard de Admin_prestadora en grupos por modalidad — PROPUESTA
 
-> **Advertencia de nombre (2026-08-07).** Este documento fue aprobado el 2026-07-24 y se conserva
-> tal como se aprobó, así que adentro la tercera modalidad todavía se llama **"cooperativa"**.
-> Desde el 2026-08-07 esa modalidad se llama **Subcontratación**, y el valor guardado en la
-> base es `subcontratacion`. El cambio de nombre y el porqué están en `docs/PLAN_HASTA_PRODUCCION.md`
-> (pendiente #115) y en `docs/claude_history.md`. Donde este documento dice "cooperativa" o
-> "Grupo 4 — Cooperativas", léase "Subcontratación". No se reescribe el texto aprobado porque
-> es el registro de lo que se decidió ese día (`CLAUDE.md` §10).
+> **Lo que ya no rige.** Este documento se conserva tal como se aprobó, y adentro habla de una
+> tercera modalidad —«cooperativa», «Grupo 4 — Cooperativas»—. **Esa tercera modalidad no
+> existe:** las modalidades de trabajo son dos, prestación directa e intermediación (Match), y
+> trabajar con una empresa subcontratada o tercerizada es un recurso dentro de la prestación
+> directa (`celtatech/docs/GLOSARIO_PRODUCTOS_CAREONYS.md`). Todo lo que este documento dice
+> del Grupo 4 queda sin efecto.
 
 > Estado: **PROPUESTA sin aprobar**, pendiente de revisión del Desarrollador. No se tocó
 > ningún archivo de `panel/src` ni ninguna otra parte del código para escribir este

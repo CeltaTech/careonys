@@ -18,14 +18,13 @@
   `supabase/migrations/`). Este diseño ya anticipaba correctamente el principio del §4 de
   este documento, antes de que se discutiera en detalle.
 
-Las 3 modalidades de trabajo de una Prestadora (directa / Match / subcontratación) son
-**combinables entre sí**, no mutuamente excluyentes — una Prestadora puede operar varias a
-la vez.
+Las 2 modalidades de trabajo de una Prestadora —prestación directa e intermediación, cuyo
+nombre comercial es Match— son **combinables entre sí**, no mutuamente excluyentes: una
+Prestadora puede operar las dos a la vez.
 
-> La tercera se llamó **"cooperativa"** hasta el 2026-08-07, y con ese nombre aparece más
-> abajo en la propuesta cruda del §8, que se conserva textual porque es lo que el
-> Desarrollador escribió ese día. El nombre cambió porque nombraba otra cosa: ver
-> `docs/claude_history.md`.
+> La propuesta cruda del §8 nombra unas «Cooperativas» como si fueran una tercera modalidad.
+> No lo son: trabajar con una empresa subcontratada o tercerizada es un recurso dentro de la
+> prestación directa (`celtatech/docs/GLOSARIO_PRODUCTOS_CAREONYS.md`).
 
 ## 2. Principio central: quién ejerce el control
 
@@ -330,9 +329,7 @@ textual, para no perderla:
   toda implicancia de la Prestadora en el vínculo contractual entre ambas partes.
 
 **c) Cooperativas**: mostrar las herramientas necesarias para administrarlas dentro de lo
-ya hablado (sin mayor detalle todavía — ver también, en `docs/PLAN_HASTA_PRODUCCION.md`, la
-Cooperativa como tercera modalidad de vínculo, dentro de «Configuración que todavía está escrita
-en el código»; post-MVP).
+ya hablado (sin mayor detalle todavía).
 
 **Todavía pendiente**: el "rearme del esquema" en sí (cómo quedan agrupados estos bloques
 en la UI del dashboard, qué falta considerar) — es el próximo paso de diseño antes de tocar

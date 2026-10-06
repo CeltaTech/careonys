@@ -28,7 +28,7 @@ import { diasDePreavisoDeLaPrestadora } from '../lib/plazoDeAviso';
 import { EN_PIE, lasQueCorrenElDia } from '../lib/vigenciaPrestacion';
 import { ESTADO_ACTIVO } from '../lib/candidatos';
 import { soloSinResolver } from '../lib/alertaSinResolver';
-import { MODALIDAD, MODALIDADES_DE_PRESTADORA, contarPorModalidad } from '../lib/modalidades';
+import { MODALIDAD, MODALIDADES, contarPorModalidad } from '../lib/modalidades';
 import { clienteDelServicio, contactosDeClientes } from '../lib/clienteDelServicio';
 import { mensajeDeError } from '../lib/errores';
 import './EstadoActual.css';
@@ -69,14 +69,12 @@ const EXCEPCIONES_CON_RENGLON_PROPIO = new Set([EXCEPCION_SIN_CUBRIR, 'documenta
 /* El color de cada modalidad en la dona. */
 const COLOR_MODALIDAD = {
   [MODALIDAD.DIRECTA]: 'var(--verde-exito)',
-  [MODALIDAD.SUBCONTRATACION]: 'var(--azul-medio)',
   [MODALIDAD.MATCH]: 'var(--violeta)',
 };
 
 const NOMBRE_MODALIDAD = {
   [MODALIDAD.DIRECTA]: (t) => t.configuracion.modalidades_directa,
   [MODALIDAD.MATCH]: (t) => t.configuracion.modalidades_match,
-  [MODALIDAD.SUBCONTRATACION]: (t) => t.configuracion.modalidades_subcontratacion,
 };
 
 /** El fondo de una dona a partir de tramos `{color, cantidad}`. */
@@ -379,7 +377,7 @@ export function EstadoActual() {
       ...new Set((s.guardias ?? []).map((g) => g.canal_modalidad).filter(Boolean)),
     ]);
     const habilitadas = new Set(modalidades ?? []);
-    return MODALIDADES_DE_PRESTADORA.filter((m) => habilitadas.has(m) || cuenta[m] > 0).map((m) => ({
+    return MODALIDADES.filter((m) => habilitadas.has(m) || cuenta[m] > 0).map((m) => ({
       modalidad: m,
       cantidad: cuenta[m],
       color: COLOR_MODALIDAD[m],

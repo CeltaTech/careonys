@@ -11,16 +11,16 @@
 // trabajo. Ofrecerle una guardia de Match a alguien contratado en directa
 // —o al revés— es cruzar esa línea.
 //
-// Es la misma palabra que ya usa la Prestadora para decir cómo trabaja ella
-// (glosario, §4: *"la tercera modalidad de trabajo de una Prestadora, junto con
-// prestación directa y match"*). Una cosa, un nombre. **No se dice "canal"**:
-// en este producto un canal es por dónde sale un aviso —WhatsApp, correo,
+// Es la misma palabra que usa la Prestadora para decir cómo estructura su negocio
+// (glosario, «Modalidad de trabajo»): prestación directa o intermediación, que
+// comercialmente se llama Match. Una cosa, un nombre. **No se dice "canal"**: en
+// este producto un canal es por dónde sale un aviso —WhatsApp, correo,
 // notificación— y usar la misma palabra para las dos cosas obliga a adivinar cuál
 // de las dos se está nombrando.
 //
-// Nunca existe una tercera modalidad para una persona. La subcontratación es
-// trabajo de otra empresa, y su gente no está en nuestra base ni la contratamos
-// nosotros (decisión del Desarrollador, 2026-08-19).
+// Son dos y no hay tercera. Encargarle una prestación a una empresa subcontratada
+// o tercerizada es un recurso dentro de la prestación directa, como el plantel
+// propio, y no otra modalidad.
 //
 // QUIÉN DECIDE
 // Las dos partes, una arriba de la otra:
@@ -34,30 +34,18 @@
 // rechazo de la base a una frase que se pueda leer.
 //
 // LA COLUMNA SE SIGUE LLAMANDO `canales`
-// Es un nombre guardado, y un nombre guardado no se renombra (regla 13). Se lee
+// Es un nombre guardado, y lo guardado no se renombra. Se lee
 // acá, en un solo lugar, y de este archivo para afuera la cosa se llama modalidad.
 // ---------------------------------------------------------------------------
 
-/** Las dos modalidades en que puede trabajar una persona. */
+/** Las dos modalidades de trabajo. */
 export const MODALIDAD = {
   DIRECTA: 'directa',
   MATCH: 'match',
-  SUBCONTRATACION: 'subcontratacion',
 };
 
-export const MODALIDADES_DE_ASISTENTE = [MODALIDAD.DIRECTA, MODALIDAD.MATCH];
-
-/**
- * Las tres en que puede trabajar una Prestadora. Es una más que las de una persona, y la que
- * sobra es justamente la que ninguna persona puede tener: en la subcontratación el trabajo lo
- * cubre otra empresa con su propio plantel, así que hay guardias de esa modalidad y nunca hay
- * Asistentes nuestros en ella.
- */
-export const MODALIDADES_DE_PRESTADORA = [
-  MODALIDAD.DIRECTA,
-  MODALIDAD.MATCH,
-  MODALIDAD.SUBCONTRATACION,
-];
+/** Las mismas dos para la Prestadora, para el Asistente y para la guardia, en este orden. */
+export const MODALIDADES = [MODALIDAD.DIRECTA, MODALIDAD.MATCH];
 
 const lista = (x) => (Array.isArray(x) ? x : []);
 
@@ -76,12 +64,12 @@ export function modalidadesDelAsistente(asistente) {
  * cambia, cambia en los dos lados.
  */
 export function modalidadesHabilitadas(modalidades) {
-  const habilitadas = MODALIDADES_DE_ASISTENTE.filter((m) => lista(modalidades).includes(m));
+  const habilitadas = MODALIDADES.filter((m) => lista(modalidades).includes(m));
   return habilitadas.length ? habilitadas : [MODALIDAD.DIRECTA];
 }
 
 /**
- * Cuántas filas hay en cada modalidad. Devuelve siempre las tres, en cero las que no tengan
+ * Cuántas filas hay en cada modalidad. Devuelve siempre las dos, en cero las que no tengan
  * ninguna: un desglose al que le falta un renglón se lee como que ahí no se miró, y lo que se
  * quiere decir es que ahí no hay nada.
  *
@@ -94,7 +82,7 @@ export function modalidadesHabilitadas(modalidades) {
  * @param {(fila: any) => string | string[] | null | undefined} modalidadDeLaFila
  */
 export function contarPorModalidad(filas, modalidadDeLaFila) {
-  const cuenta = Object.fromEntries(MODALIDADES_DE_PRESTADORA.map((m) => [m, 0]));
+  const cuenta = Object.fromEntries(MODALIDADES.map((m) => [m, 0]));
   for (const fila of lista(filas)) {
     const suyas = modalidadDeLaFila(fila);
     for (const modalidad of Array.isArray(suyas) ? suyas : [suyas]) {
@@ -157,7 +145,7 @@ export function motivoDeModalidadDelError(error) {
   if (!encontrado) return null;
 
   const [, motivo, modalidad] = encontrado;
-  return MODALIDADES_DE_ASISTENTE.includes(modalidad) ? { motivo, modalidad } : null;
+  return MODALIDADES.includes(modalidad) ? { motivo, modalidad } : null;
 }
 
 /**
@@ -166,7 +154,7 @@ export function motivoDeModalidadDelError(error) {
  *
  * Está acá y no en cada pantalla porque son varias las que pueden chocarse con la
  * misma pared —cubrir una vacante, invitar, reasignar, editar la ficha— y el texto
- * tiene que ser el mismo en todas (regla 12 de CLAUDE.md §7).
+ * tiene que ser el mismo en todas (ningún patrón repetido sin punto único de verdad).
  *
  * @param error  lo que devolvió la base.
  * @param tm     el bloque de textos ya traducido: `t.modalidades`.

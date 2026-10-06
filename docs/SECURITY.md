@@ -419,9 +419,10 @@ escribirlo son dos viajes, y dos ventanas abiertas a la vez descuentan una sola 
 base el descuento y la anotación pasan juntos, con la fila del acceso tomada.
 
 Ninguna de las dos funciones es `SECURITY DEFINER` —entra el backend con la llave de servicio, y el
-esquema `interno` es para las que usan las políticas—, y las dos revocan `PUBLIC`, `anon` y
-`authenticated` en la misma migración que las crea: quedan al alcance de `service_role` y de nadie
-más. Sin eso serían dos direcciones web, y una de ellas gasta plata ajena.
+esquema `interno` es para las que usan las políticas—, y ninguna de las dos se puede ejecutar como
+`PUBLIC`, `anon` ni `authenticated`. `consumir_contacto_match` queda al alcance de `service_role` y
+de nadie más; `sumar_contactos_al_saldo`, de `service_role` y del trabajo sin persona
+(`trabajo_sin_persona`). Sin eso serían dos direcciones web, y una de ellas gasta plata ajena.
 
 La tabla lleva RLS y sólo políticas de lectura, porque desde una pantalla no se escribe: la fila
 la escribe el descuento, en la misma transacción.
@@ -490,13 +491,16 @@ negocio y de presupuesto, no bloquea el desarrollo de las etapas 1-2.
 Las dos fotos con las que se verifica la identidad —la del documento y la de la cara— viven en el
 depósito `fotos-identidad`.
 
-- **Es privado y hoy no tiene ninguna política.** Nadie lo alcanza con su propia sesión: lo escribe y
-  lo lee el backend con la llave de servicio, después de comprobar de qué Prestadora es el Asistente
-  (`backend/src/routes/panelVerificacionIdentidad.js`). Con RLS encendida y ninguna política, la
-  base niega sola. Es la misma forma de `certificados-medicos`, `autorizaciones-monitoreo` y
-  `documentos-cese`, y **los cuatro reciben política** en el paso de los archivos de la sección
-  «Los cimientos» de `docs/PLAN_HASTA_PRODUCCION.md`: el aislamiento de un archivo no puede depender de que el
-  backend compare bien el comienzo de una ruta.
+- **Es privado y tiene una sola política**, `fotos_identidad_las_alcanza_quien_administra_o_coordina`,
+  para quien tiene sesión y para todas las operaciones —leer, subir, reemplazar y borrar—. Exige
+  que la primera carpeta de la ruta sea la Prestadora de la sesión (`interno.current_tenant()`), y
+  adentro de ella alcanza al Administrador y al Superadmin con cualquier foto, y al Coordinador sólo
+  con las de un Asistente a su alcance (`interno.coordinador_alcanza_asistente`, con la segunda
+  carpeta de la ruta, que tiene que ser un identificador válido; si no lo es, niega). Hoy el backend
+  todavía lo escribe y lo lee con la llave de servicio, que se saltea esa política, después de
+  comprobar de qué Prestadora es el Asistente (`backend/src/routes/panelVerificacionIdentidad.js`).
+  `certificados-medicos`, `autorizaciones-monitoreo` y `documentos-cese` también tienen sus
+  políticas.
 - **La ruta empieza por la Prestadora** y se arma siempre con los mismos tres datos —Prestadora,
   Asistente y cuál de las dos fotos es—, nunca con algo que venga en el pedido. Va sin extensión:
   el formato viaja en el tipo de contenido.

@@ -334,9 +334,9 @@ variables de la paleta funcional, no colores nuevos:
 .guardia-ausente    { border-left: 4px solid var(--naranja-alerta); }
 ```
 
-`ausente` se agregó como quinto valor de `guardias.estado` al diseñar el esquema real
-(ver `supabase/migrations/`) — distinto de `cancelada`, esta sección había
-quedado con solo 4 reglas. Corregido al implementar Módulo 6 Parte 1 (2026-07-10).
+`guardias.estado` admite seis valores (`guardias_estado_check`): `programada`, `activa`,
+`completada`, `cancelada`, `ausente` y `pausada`. `ausente` es distinto de `cancelada`. `pausada`
+todavía no tiene regla de acento.
 
 **Falta cubrir dos estados nuevos.** La guardia sin cubrir (`guardias_sin_cubrir_estado_check`) y
 el marcador de guardia ofrecida (`guardias.ofrecida_at`) todavía no tienen regla de acento

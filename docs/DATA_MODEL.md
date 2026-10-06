@@ -445,8 +445,12 @@ CREATE TABLE configuracion_referencias_laborales (
 Las dos fotos con las que se verifica la identidad de un Asistente: la del documento y la de la
 cara.
 
-- Privado y sin ninguna política: lo escribe y lo lee el backend con la llave de servicio, después
-  de comprobar de qué Prestadora es el Asistente. Mismo patrón que `documentos-cese`.
+- Privado, con una política para quien tiene sesión y todas las operaciones,
+  `fotos_identidad_las_alcanza_quien_administra_o_coordina`: la primera carpeta de la ruta tiene que
+  ser la Prestadora de la sesión, y adentro de ella alcanza al Administrador y al Superadmin con
+  cualquier foto, y al Coordinador sólo con las de un Asistente a su alcance. Hoy el backend lo
+  escribe y lo lee con la llave de servicio, que se saltea la política, después de comprobar de qué
+  Prestadora es el Asistente.
 - La ruta es `<prestadora_id>/<asistente_id>/<documento|perfil>`, sin extensión, y se vuelve a
   armar con esos tres datos cada vez que hay que buscar una foto.
 - **No hay ninguna columna que diga si una foto está cargada.** Como la ruta se deduce, el archivo

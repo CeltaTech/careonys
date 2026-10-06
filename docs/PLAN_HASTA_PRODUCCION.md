@@ -1109,6 +1109,12 @@ texto sale sale el cartel entero, donde vive la regla del casillero.
 pie de los casilleros, los avisos de que algo se guardó, las ventanas de confirmar, los carteles de
 las dos aplicaciones y los de Habilitar clave.
 
+**57.** Que el Panel nombre la modalidad sólo cuando la Prestadora tiene las dos habilitadas, y
+con el nombre comercial que informa CeltaTech como dato. Hoy la nombra en tres lugares —el
+recuadro de Servicios por modalidad de Estado actual, el Resumen del mes y el motivo por el que un
+Asistente no puede tomar una guardia—, con «Prestación directa» y «Match» escritos en los textos
+del Panel, y lo hace aunque tenga una sola.
+
 ---
 
 ## Reclutamiento

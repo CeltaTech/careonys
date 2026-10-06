@@ -28,9 +28,9 @@ export function intervaloParaPremura(umbrales, minutosPremura) {
 // solo, en `configuracion_escalada_coordinador.minutos_insistencia_emergencia`. Cada Prestadora lo
 // cambia, y la columna nace en un minuto.
 //
-// El tope de una hora no es una regla del producto sino el borde de lo razonable: más que eso ya
-// no es insistir. Lo mismo dice la restricción de la columna en la base.
-export const MINUTOS_INSISTENCIA_EMERGENCIA = { minimo: 1, maximo: 60 };
+// Va de uno a diez minutos, y no acepta otro número: más que eso ya no es insistir con una
+// emergencia. Lo mismo dice la restricción de la columna en la base.
+export const MINUTOS_INSISTENCIA_EMERGENCIA = { minimo: 1, maximo: 10 };
 
 function minutosDeEmergenciaValidos(valor) {
   const { minimo, maximo } = MINUTOS_INSISTENCIA_EMERGENCIA;

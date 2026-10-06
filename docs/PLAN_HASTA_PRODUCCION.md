@@ -354,7 +354,8 @@ Lo que obliga cada lado, que es lo que sostiene todo lo anterior:
 nombra qué habilita el alojamiento y con qué instrumento. Sin eso, el alta no se aprueba.
 
 **6.** **Lo que queda del segundo nivel de aislamiento, el que Chile exige.** La regla ya está
-escrita en la base (`supabase/migrations/20261010700000_la_informacion_de_salud_la_ve_quien_atiende.sql`),
+escrita en la base (la política `la_informacion_de_salud_la_ve_quien_atiende` y la función
+`interno.alcanza_la_informacion_de_salud`),
 y aplicada. Con la restricción de HCE encendida, la información de salud de un paciente la lee
 sólo quien lo atiende y el Administrador de su Prestadora; donde la tabla de requerimientos legales de HCE por país la pide, como en
 Chile, la restricción queda fija y no se apaga. Lo que falta:
@@ -444,11 +445,11 @@ escrito encima por qué. Lo que queda, agrupado por lo que hay que hacer:
   cualquiera, pero primero tiene que hacerse cargo, y la base admite **una sola toma por alarma**:
   los demás ven quién la tiene y no pueden resolverla mientras esté tomada. Las emergencias entran
   en la misma escalera. Eso ya lo hace cumplir la base
-  (`supabase/migrations/20261011000000_una_sola_toma_por_alarma.sql`) y la emergencia insiste y
+  (el disparador `una_sola_toma_por_alarma` de `alarmas_tomadas`) y la emergencia insiste y
   escala (`backend/src/utils/revisarNotificacionesCoordinador.js`, `revisarEmergencias`). Mientras
   una emergencia está en el escalón de todos, cualquier Coordinador la lee entera, y quien la toma
   atiende esa guardia con toda su información mientras la tenga
-  (`supabase/migrations/20261012000000_quien_toma_una_alarma_atiende_la_guardia.sql`). La lista de
+  (la función `interno.guardias_a_la_vista_por_una_alarma`). La lista de
   emergencias del Panel ya lee con la credencial de quien pide (`backend/src/routes/panelEmergencias.js`);
   los nombres y marcarla atendida siguen con la maestra.
 - **Funciones de la base que `authenticated` no puede ejecutar**: las de guardar los secretos de
@@ -1115,9 +1116,9 @@ las dos aplicaciones y los de Habilitar clave.
 **Esta sección esperaba la fusión, y ya no.** El reclutamiento es un módulo común a las dos
 modalidades y la base de Asistentes de cada Prestadora es una sola para las dos; lo que faltaba
 para poder construirlo son las listas de opciones por Prestadora y los formularios declarados, y **las
-dos ya están construidas** —`supabase/migrations/20261001150000_las_listas_de_opciones.sql` con su
+dos ya están construidas** —`listas_de_opciones` y `opciones_de_lista`, con su
 pantalla en `panel/src/pages/configuracion/LasListasDeOpciones.jsx`, y
-`supabase/migrations/20261001170000_los_formularios_se_declaran.sql`—. Sigue trabada por la pregunta **«¿dónde corre un módulo y contra
+`formularios_declarados`, `formulario_secciones` y `formulario_campos`—. Sigue trabada por la pregunta **«¿dónde corre un módulo y contra
 qué base?»**, más abajo.
 
 Los tres arreglos, para que estén escritos:
@@ -1213,8 +1214,7 @@ Falta que usted conteste dos cosas:
 **80. Usted** — El Certificado de Aptitud impreso: ¿qué lleva? Hoy la pantalla genera el código de barras y ahí termina.
 
 **81.** Armarlo. La subida del certificado a un depósito de archivos **ya está resuelta**: el
-depósito de los papeles del legajo del Asistente está construido, en
-`supabase/migrations/20260929100000_los_papeles_del_legajo_del_asistente_tienen_donde_vivir.sql`.
+depósito de los papeles del legajo del Asistente está construido: es `documentos-asistente`.
 Hoy sólo se guardan fechas.
 
 ---

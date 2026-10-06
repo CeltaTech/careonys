@@ -11,8 +11,8 @@ import { supabase } from './supabaseClient';
  * El renglón de `documentos_asistente` apunta al último con su columna `ruta_archivo`; adivinando
  * el nombre no se llega a ninguno.
  *
- * LA DIRECCIÓN PARA MIRARLO SE FIRMA Y VENCE. El depósito es privado: no hay dirección pública, y
- * la firmada dura lo que dura una mirada.
+ * PARA MIRARLO SE GENERA UN ENLACE TEMPORAL. El depósito es privado: no hay dirección pública, y
+ * el enlace dura lo que dura una mirada.
  */
 
 export const DEPOSITO = 'documentos-asistente';
@@ -22,7 +22,7 @@ export const DEPOSITO = 'documentos-asistente';
 export const TIPOS_ACEPTADOS = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic'];
 export const TAMANO_MAXIMO = 10 * 1024 * 1024;
 
-const SEGUNDOS_DE_LA_DIRECCION_FIRMADA = 60;
+const SEGUNDOS_DEL_ENLACE_TEMPORAL = 60;
 
 function extensionDe(nombre) {
   const punto = String(nombre ?? '').lastIndexOf('.');
@@ -50,6 +50,6 @@ export async function direccionParaMirar(ruta) {
   if (!ruta) return null;
   const { data, error } = await supabase.storage
     .from(DEPOSITO)
-    .createSignedUrl(ruta, SEGUNDOS_DE_LA_DIRECCION_FIRMADA);
+    .createSignedUrl(ruta, SEGUNDOS_DEL_ENLACE_TEMPORAL);
   return error ? null : data.signedUrl;
 }

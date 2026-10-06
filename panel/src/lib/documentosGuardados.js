@@ -39,7 +39,7 @@ export async function bajarYGuardarDocumentoDeCese(doc, { ceseId, tipo, persona,
   return llamarApiCeses(`/${ceseId}/documento`, { method: 'POST', body: cuerpo });
 }
 
-/** El enlace temporal, con vencimiento, para volver a ver el documento que quedó guardado. */
+/** El enlace temporal para volver a ver el documento que quedó guardado. */
 export async function verDocumentoGuardado(ceseId, tipo) {
   const { url } = await llamarApiCeses(`/${ceseId}/documento-url?tipo=${encodeURIComponent(tipo)}`);
   return url;

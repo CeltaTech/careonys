@@ -60,7 +60,7 @@ const baseFalsa = createServer((req, res) => {
       credencial: req.headers.authorization,
     });
 
-    // El depósito de archivos: subir y firmar. No se guarda nada, alcanza con contestar como
+    // El depósito de archivos: subir y dar enlaces temporales. No se guarda nada, alcanza con contestar como
     // contesta el de verdad y dejar anotado qué ruta se tocó.
     if (ruta.startsWith('/storage/v1/')) {
       if (errorDelDeposito) {
@@ -69,7 +69,7 @@ const baseFalsa = createServer((req, res) => {
         return;
       }
       const cuerpo = ruta.includes('/object/sign/')
-        ? { signedURL: `${ruta.replace('/storage/v1', '')}?token=firma-de-mentira` }
+        ? { signedURL: `${ruta.replace('/storage/v1', '')}?token=enlace-de-mentira` }
         : { Key: ruta };
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(cuerpo));
@@ -315,7 +315,7 @@ describe('guardar un documento de cese', () => {
 // ---------------------------------------------------------------------------------------
 
 describe('el enlace temporal del documento guardado', () => {
-  it('se firma la ruta armada con los datos del cese, y vence', async () => {
+  it('el enlace sale de la ruta armada con los datos del cese, y vence', async () => {
     respuestas.set('GET /rest/v1/ceses', () => [unCese({
       documentos_generados: { [TIPO_LIQUIDACION]: { ruta: 'da-lo-mismo-lo-que-diga-acá', generado_en: '2026-09-01T10:00:00.000Z' } },
     })]);
@@ -325,13 +325,13 @@ describe('el enlace temporal del documento guardado', () => {
     assert.equal(estado, 200);
     assert.ok(cuerpo.url.includes(`/object/sign/documentos-cese/${PRESTADORA}/${CESE}/${TIPO_LIQUIDACION}.pdf`));
 
-    const firma = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/sign/'));
+    const pedidoDeEnlace = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/sign/'));
     // La ruta se arma acá, no se lee la que quedó guardada: lo guardado sólo dice si existe.
-    assert.equal(firma.clave, `POST /storage/v1/object/sign/documentos-cese/${PRESTADORA}/${CESE}/${TIPO_LIQUIDACION}.pdf`);
-    assert.equal(firma.cuerpo.expiresIn, 60);
+    assert.equal(pedidoDeEnlace.clave, `POST /storage/v1/object/sign/documentos-cese/${PRESTADORA}/${CESE}/${TIPO_LIQUIDACION}.pdf`);
+    assert.equal(pedidoDeEnlace.cuerpo.expiresIn, 60);
   });
 
-  it('la ruta que venga en el pedido no se usa para firmar nada', async () => {
+  it('la ruta que venga en el pedido no se usa para pedir ningún enlace', async () => {
     respuestas.set('GET /rest/v1/ceses', () => [unCese({
       documentos_generados: { [TIPO_LIQUIDACION]: { ruta: `${OTRA_PRESTADORA}/otro-cese/${TIPO_LIQUIDACION}.pdf` } },
     })]);
@@ -354,7 +354,7 @@ describe('el enlace temporal del documento guardado', () => {
     assert.equal(llamadas.some((l) => l.clave.startsWith('POST /storage/v1/')), false);
   });
 
-  it('un tipo inventado no se firma', async () => {
+  it('un tipo inventado no recibe enlace', async () => {
     const { estado, cuerpo } = await pedirDireccion(`/${CESE}/documento-url?tipo=certificado_trabajo`);
 
     assert.equal(estado, 400);
@@ -362,7 +362,7 @@ describe('el enlace temporal del documento guardado', () => {
     assert.equal(consultasDeCeses().length, 0);
   });
 
-  it('el cese de otra Prestadora no se firma', async () => {
+  it('el cese de otra Prestadora no recibe enlace', async () => {
     cesesEnLaBase(unCese({
       prestadora_id: OTRA_PRESTADORA,
       documentos_generados: { [TIPO_LIQUIDACION]: { ruta: 'x', generado_en: '2026-09-01T10:00:00.000Z' } },
@@ -395,8 +395,8 @@ describe('el enlace temporal del documento guardado', () => {
     const { estado } = await pedirDireccion(`/${CESE}/documento-url?tipo=${TIPO_LIQUIDACION}`);
 
     assert.equal(estado, 200);
-    const firma = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/sign/'));
-    assert.equal(firma.credencial, LLAVE_MAESTRA);
+    const pedidoDeEnlace = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/sign/'));
+    assert.equal(pedidoDeEnlace.credencial, LLAVE_MAESTRA);
   });
 
   it('quien no es del Panel no pide enlaces temporales', async () => {

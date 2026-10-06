@@ -413,7 +413,7 @@ vez y se gasta de a un Asistente: `accesos_match.saldo_contactos` dice cuántos 
 `contactos_vistos_match` dice a quiénes ya se les abrió el contacto, con un único por
 (`cliente_id`, `asistente_id`) que es lo que hace que volver a mirar al mismo no cueste otro. Las
 dos cuentas —sumarle al saldo cuando entra la plata y restarle uno al abrir— viven en dos
-funciones de la base (`supabase/migrations/20260912100000_el_paquete_de_contactos.sql`), y lo que
+funciones de la base (`sumar_contactos_al_saldo` y `consumir_contacto_match`), y lo que
 las obliga a estar ahí es la seguridad, no la comodidad: leer el saldo, restarle uno y volver a
 escribirlo son dos viajes, y dos ventanas abiertas a la vez descuentan una sola vez. Adentro de la
 base el descuento y la anotación pasan juntos, con la fila del acceso tomada.
@@ -488,8 +488,7 @@ negocio y de presupuesto, no bloquea el desarrollo de las etapas 1-2.
 ## Verificación de identidad (etapa del Proceso de Incorporación de Asistentes)
 
 Las dos fotos con las que se verifica la identidad —la del documento y la de la cara— viven en el
-depósito `fotos-identidad`, creado por
-`supabase/migrations/20260915210000_las_dos_fotos_de_la_verificacion_de_identidad_tienen_donde_vivir.sql`.
+depósito `fotos-identidad`.
 
 - **Es privado y hoy no tiene ninguna política.** Nadie lo alcanza con su propia sesión: lo escribe y
   lo lee el backend con la llave de servicio, después de comprobar de qué Prestadora es el Asistente

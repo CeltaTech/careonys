@@ -74,7 +74,7 @@ const soloAdminArmaLaFormaDeCobro = exigirAdminDePrestadora(
 
 // ============================================================================
 // Pasarela de pago — la Prestadora activa uno o varios de los 6 rieles, cada uno con su
-// propia credencial (Supabase Vault, ver schema_match_pasarelas_01.sql). El secreto
+// propia credencial (guardada en Supabase Vault). El secreto
 // nunca se vuelve a mostrar una vez guardado, mismo criterio que WhatsApp.
 // ============================================================================
 
@@ -222,7 +222,7 @@ panelMatchRouter.patch('/pasarela/:proveedor', soloAdministracion, soloAdminDePr
 //
 // QUÉ SON. Las piezas con las que cada Prestadora arma cómo le cobra a sus Clientes: qué se
 // cobra, cada cuánto, con cuántos días gratis, con qué saldo de contactos y si se renueva sola
-// (`supabase/migrations/20260911160000_la_prestadora_arma_su_forma_de_cobro.sql`). No hay una
+// (la tabla `formas_de_cobro_match`). No hay una
 // columna que diga «esto es una suscripción»: la forma sale de cómo se combinen las piezas, y
 // una combinación nueva no necesita migración.
 //
@@ -792,8 +792,8 @@ panelMatchRouter.patch('/calificaciones/:id/visibilidad', async (req, res) => {
 // que, en Argentina, acercan el vínculo con el Asistente a una relación de dependencia:
 // el ranking calculado por la plataforma, la consecuencia automática atada a la calificación,
 // el precio u horario fijado por la plataforma, la exclusividad y la mediación de conflictos.
-// Cada una tiene su texto de advertencia escrito en ese documento, y desde la migración
-// 20260910140000 esos cinco textos están cargados en `advertencias_legales`.
+// Cada una tiene su texto de advertencia escrito en ese documento, y esos cinco textos están
+// cargados en `advertencias_legales`.
 //
 // CUÁL ES LA LISTA. Sale de la base, de `catalogo_funciones_match`, y no de una lista
 // escrita acá: los catálogos salen de la base (CLAUDE.md §8). Hasta el 2026-09-10 estaba

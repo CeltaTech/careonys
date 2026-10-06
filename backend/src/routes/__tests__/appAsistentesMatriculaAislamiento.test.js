@@ -5,8 +5,8 @@
  *
  * POR QUÉ EXISTE ESTA PRUEBA. `matriculas_asistente` era la única tabla de las que consultan las
  * dos aplicaciones de teléfono sin columna de Organización: colgaba del Asistente y nada más. La
- * migración `20260916040000_la_matricula_del_asistente_dice_de_que_prestadora_es.sql` le puso la
- * columna. La ruta entra a la base con la credencial de quien pide, y lo que separa una Prestadora
+ * columna llegó después, atada a la del Asistente por la clave foránea
+ * `matriculas_asistente_asistente_de_su_prestadora`. La ruta entra a la base con la credencial de quien pide, y lo que separa una Prestadora
  * de otra es la protección por fila: lo que se sostiene acá es que cada consulta vaya de verdad con
  * esa credencial. Si volviera a la llave de servicio no se vería en la pantalla, que anda igual de
  * bien.
@@ -145,10 +145,10 @@ describe('la Matrícula que el Asistente ve de sí mismo', () => {
     assert.equal(prestadora.credencial, credencialEnviada);
   });
 
-  // La firma sigue con la llave maestra: la política del depósito mira la cuenta y la carpeta es
+  // El enlace temporal sigue con la llave maestra: la política del depósito mira la cuenta y la carpeta es
   // la ficha, así que con la credencial de la persona el Asistente no abriría su propio archivo.
   // Lo que la acota es la comprobación de la ruta contra la sesión.
-  it('la firma de su propio archivo sale, y va con la llave maestra', async () => {
+  it('el enlace a su propio archivo sale, y va con la llave maestra', async () => {
     respuestas.set(
       `POST /storage/v1/object/sign/prescripciones-medicacion/${PRESTADORA}/matriculas/${LEGAJO}/m.pdf`,
       { signedURL: '/object/sign/x?token=y' },
@@ -157,12 +157,12 @@ describe('la Matrícula que el Asistente ve de sí mismo', () => {
     const respuesta = await pedir(`/archivo-url?ruta=${PRESTADORA}/matriculas/${LEGAJO}/m.pdf`);
     assert.equal(respuesta.status, 200);
 
-    const firma = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/sign/'));
-    assert.ok(firma, 'no se pidió la firma');
-    assert.notEqual(firma.credencial, credencialEnviada, 'la firma fue con la credencial de quien pide');
+    const pedidoDeEnlace = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/sign/'));
+    assert.ok(pedidoDeEnlace, 'no se pidió el enlace');
+    assert.notEqual(pedidoDeEnlace.credencial, credencialEnviada, 'el enlace se pidió con la credencial de quien pide');
   });
 
-  it('un archivo de otra Prestadora o de otro Asistente no se firma', async () => {
+  it('un archivo de otra Prestadora o de otro Asistente no recibe enlace', async () => {
     for (const ruta of [
       `${OTRA_PRESTADORA}/matriculas/${LEGAJO}/m.pdf`,
       `${PRESTADORA}/matriculas/${USUARIO}/m.pdf`,
@@ -171,7 +171,7 @@ describe('la Matrícula que el Asistente ve de sí mismo', () => {
       llamadas = [];
       const respuesta = await pedir(`/archivo-url?ruta=${encodeURIComponent(ruta)}`);
       assert.equal(respuesta.status, 400, ruta);
-      assert.ok(!llamadas.some((l) => l.clave.startsWith('POST /storage/')), `se pidió la firma de ${ruta}`);
+      assert.ok(!llamadas.some((l) => l.clave.startsWith('POST /storage/')), `se pidió el enlace a ${ruta}`);
     }
   });
 });

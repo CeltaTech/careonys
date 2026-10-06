@@ -69,7 +69,7 @@ function obtenerCliente() {
  *
  * Los de baja quedan afuera: el catálogo de hoy es el que está activo hoy, y los avisos viejos
  * que nombran un motivo retirado siguen diciendo lo que decían porque lo que se guarda es el
- * texto (ver `20260910230000_los_motivos_de_cierre_los_arma_cada_prestadora.sql`).
+ * texto (ver la columna `alertas_tempranas_guardia.motivo`).
  */
 export function nombresElegibles(motivos) {
   return (Array.isArray(motivos) ? motivos : [])

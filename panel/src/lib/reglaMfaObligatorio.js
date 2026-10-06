@@ -12,8 +12,7 @@
 // Y había algo peor que la repetición. Los dos leían la fila única de
 // `configuracion_plataforma` y tiraban el error a la basura: si la lectura
 // fallaba —o si la fila no existía, que es lo que pasaba en toda base armada
-// desde cero, ver la migración
-// `supabase/migrations/20260815202500_la_fila_de_configuracion_de_plataforma_siempre_existe.sql`—
+// desde cero antes de que la fila viniera sembrada—
 // el resultado era "no hace falta segundo factor", en silencio y sin registro.
 // Una protección que se apaga sola y no avisa es peor que no tenerla, porque
 // nadie la va a extrañar.

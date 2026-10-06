@@ -311,7 +311,7 @@ de mapa que `PRD_02_Panel_Admin.md` Módulo 2/3, no duplicar implementación).
 Desde la ficha de una postulación se agenda la entrevista, se la mueve de horario, se la cancela y
 se la cierra diciendo si la persona se presentó o no
 (`panel/src/components/EntrevistaDePostulacion.jsx`, `backend/src/routes/panelEntrevistas.js`,
-migración `20260916000000_la_entrevista_al_postulante_pasa_adentro_del_producto.sql`). Antes se
+tabla `entrevistas_postulacion`). Antes se
 acordaba por fuera —un correo escrito a mano, un teléfono— y de vuelta no quedaba constancia de
 cuándo fue, de si la persona vino ni de quién había quedado en llamarla.
 

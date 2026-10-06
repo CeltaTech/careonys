@@ -20,8 +20,8 @@ import { mensajeDeError } from './errores';
    distingue el caso: si el que se mueve es justo el de la columna vieja, se cambia la columna y
    el disparador hace el resto; si es cualquier otro, se toca la lista y la columna no.
 
-   Ver `lib/pacientesDeGuardia.js` y la migración
-   20260807190000_una_guardia_puede_cubrir_varios_pacientes.sql. */
+   Ver `lib/pacientesDeGuardia.js` y el disparador
+   `sincronizar_paciente_principal` de `guardias`. */
 
 /**
  * @param {object} guardia  La guardia entera, ya enriquecida por `conPacientes` — hacen falta

@@ -37,7 +37,7 @@ export function rutaDeMatriculaNueva(prestadoraId, asistenteId, extension) {
 /**
  * ¿Esta ruta es la de una Matrícula de este Asistente, de esta Prestadora?
  *
- * Es lo que decide si se firma o no el enlace para ver el archivo, así que **falla cerrado**: si
+ * Es lo que decide si se genera o no el enlace temporal para ver el archivo, así que **falla cerrado**: si
  * falta cualquiera de los dos identificadores, la respuesta es que no. Sin ese corte, un
  * identificador vacío arma la carpeta `undefined/matriculas/undefined/` y la comparación pasaría
  * a depender de que nadie guarde nunca un archivo con ese nombre.

@@ -8,7 +8,7 @@
 // de papeles y qué dijeron los Clientes anteriores— y no tiene que alcanzar para
 // ir a buscarla por fuera del producto. Eso segundo es justamente lo que el
 // Match vende, y se cobra aparte
-// (`supabase/migrations/20260912100000_el_paquete_de_contactos.sql`).
+// (`accesos_match.saldo_contactos`).
 //
 // POR ESO EL DATO DE CONTACTO NO SALE DE ACÁ, NI TAPADO NI A MEDIAS. Teléfono,
 // correo, documento, domicilio y cualquier otro medio por el que se pueda llegar

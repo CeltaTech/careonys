@@ -4,7 +4,7 @@
  *   node --test "src/**\/__tests__/*.test.js"   (desde backend/)
  *
  * QUÉ SE PRUEBA ACÁ Y QUÉ NO. La unicidad la impone la base con un índice único
- * (`supabase/migrations/20261004100000_un_celular_es_de_una_sola_persona.sql`), y eso no se prueba
+ * `un_celular_es_de_una_sola_persona`, sobre `usuarios`, y eso no se prueba
  * desde acá: sin base levantada, nada de lo que hay en este archivo puede comprobar un índice. Lo
  * que se prueba es la segunda red del backend, que es la que contesta con una frase entendible, y cada
  * caso está por el error que evita:
@@ -35,6 +35,7 @@ import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { laFoto } from '../../__tests__/laFotoDeLaBase.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const OTRA_PRESTADORA = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
@@ -302,38 +303,18 @@ describe('cómo se reconoce un celular sale de la base', () => {
 });
 
 // La unicidad de verdad la impone la base, y sin base levantada no se la puede ejercitar desde acá.
-// Lo que sí se puede comprobar es que la migración que la impone siga diciendo lo que dice: que el
-// índice es único y parcial —si dejara de ser parcial, dos personas no podrían compartir la línea
-// fija de la casa—, que la comparación es por la huella y no por el número, y que ninguna función
-// nueva se saltea la protección por fila. Que la migración corre bien se comprueba al aplicarla:
-// termina con su propio bloque de comprobación.
+// Lo que sí se puede comprobar es que la foto de la base siga diciendo lo que dice: que el índice es
+// único y parcial —si dejara de ser parcial, dos personas no podrían compartir la línea fija de la
+// casa— y que la comparación es por la huella y no por el número.
 describe('la unicidad la impone la base', () => {
-  const migracion = readFileSync(
-    fileURLToPath(new URL(
-      '../../../../supabase/migrations/20261004100000_un_celular_es_de_una_sola_persona.sql',
-      import.meta.url,
-    )),
-    'utf8',
-  );
+  const indice = laFoto()
+    .split('\n')
+    .find((renglon) => renglon.startsWith('CREATE UNIQUE INDEX un_celular_es_de_una_sola_persona '));
 
   it('el índice es único, es parcial y compara la huella', () => {
-    assert.match(migracion, /CREATE UNIQUE INDEX IF NOT EXISTS un_celular_es_de_una_sola_persona/);
-    assert.match(migracion, /WHERE telefono_es_celular;/);
-    assert.match(migracion, /telefono_comparable\s*\n\s*\)\s*\n\s*WHERE telefono_es_celular;/);
-  });
-
-  it('ninguna función nueva se saltea la protección por fila', () => {
-    // Como atributo de una función va en su propio renglón; lo que aparece adentro de un comentario
-    // o de un texto cualquiera no declara nada.
-    const declarada = migracion
-      .split('\n')
-      .filter((linea) => /^\s*SECURITY\s+DEFINER\s*$/i.test(linea));
-    assert.deepEqual(declarada, []);
-    assert.match(migracion, /p\.prosecdef/);
-  });
-
-  it('termina como termina todo cambio de esquema', () => {
-    assert.match(migracion, /COMMIT;\s*\n\s*NOTIFY pgrst, 'reload schema';\s*$/);
+    assert.ok(indice, 'la foto de la base no trae el índice');
+    assert.match(indice, / ON public\.usuarios /);
+    assert.match(indice, /telefono_comparable\) WHERE telefono_es_celular;$/);
   });
 });
 

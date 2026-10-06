@@ -139,7 +139,7 @@ panelCesesRouter.get('/:id/documento-url', requiereRolPanel, exigirOrganizacionA
   }
 
   // La ruta se arma acá con los datos del cese, no se lee la que vino en el pedido: así no hay
-  // forma de pedir la firma de un archivo de otra Prestadora. Lo guardado sólo dice si ese
+  // forma de pedir un enlace temporal a un archivo de otra Prestadora. Lo guardado sólo dice si ese
   // documento existe.
   const guardado = cese.documentos_generados?.[tipo];
   if (!guardado) {
@@ -147,7 +147,7 @@ panelCesesRouter.get('/:id/documento-url', requiereRolPanel, exigirOrganizacionA
   }
 
   // Con la llave maestra, por la misma política del depósito
-  // (`documentos_cese_los_alcanza_quien_ve_el_cese`), que a quien coordina le niega la firma. Se
+  // (`documentos_cese_los_alcanza_quien_ve_el_cese`), que a quien coordina le niega el enlace. Se
   // decide aparte.
   const { data, error } = await supabase.storage
     .from(BUCKET)

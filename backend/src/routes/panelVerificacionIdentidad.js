@@ -32,7 +32,7 @@ import { responderError } from '../utils/errorConMotivo.js';
 export const panelVerificacionIdentidadRouter = Router();
 
 const BUCKET = 'fotos-identidad';
-const SEGUNDOS_DE_LA_FIRMA = 60;
+const SEGUNDOS_DEL_ENLACE_TEMPORAL = 60;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -112,7 +112,7 @@ panelVerificacionIdentidadRouter.get(
     }
 
     // Las rutas se arman acá con los datos del Asistente, no se lee ninguna que venga en el
-    // pedido: así no hay forma de pedir la firma de un archivo de otra Prestadora.
+    // pedido: así no hay forma de pedir un enlace temporal a un archivo de otra Prestadora.
     //
     // Y cuáles están cargadas lo contesta el depósito, no una columna aparte: la ruta se deduce
     // de la Prestadora, el Asistente y el tipo, así que el archivo es la única verdad posible.
@@ -120,13 +120,13 @@ panelVerificacionIdentidadRouter.get(
     // está, y entonces la pantalla mostraría un hueco sin explicar por qué.
     //
     // Con la llave maestra, por la misma política del depósito que al subir.
-    const firmadas = await Promise.all(FOTOS_DE_IDENTIDAD.map(async (tipo) => {
+    const enlaces = await Promise.all(FOTOS_DE_IDENTIDAD.map(async (tipo) => {
       const { data } = await supabase.storage
         .from(BUCKET)
-        .createSignedUrl(rutaEnElDeposito(asistente.prestadora_id, asistente.id, tipo), SEGUNDOS_DE_LA_FIRMA);
+        .createSignedUrl(rutaEnElDeposito(asistente.prestadora_id, asistente.id, tipo), SEGUNDOS_DEL_ENLACE_TEMPORAL);
       return [tipo, data?.signedUrl ?? null];
     }));
 
-    res.json({ fotos: Object.fromEntries(firmadas) });
+    res.json({ fotos: Object.fromEntries(enlaces) });
   },
 );

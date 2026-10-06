@@ -325,8 +325,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
 
     // La consulta de los Asistentes involucrados corre recién acá, después de insertar el
     // cierre: la política "coordinador_cierra_servicio_*" que le da visibilidad a un Coordinador
-    // fuera de zona depende de que ese registro ya exista, y desde
-    // 20260910220000_el_precio_el_calendario_y_el_cierre_cuelgan_del_servicio.sql pregunta por el
+    // fuera de zona depende de que ese registro ya exista, y pregunta por el
     // Servicio del cierre y no por el Paciente. Si esta consulta corriera antes del insert (como
     // en una versión anterior), un Coordinador fuera de zona no vería ninguna fila y la alerta
     // cruzada nunca se dispararía. Y todavía tiene que ir antes de la baja de más abajo, porque

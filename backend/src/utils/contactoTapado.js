@@ -9,8 +9,8 @@
    cualquier otra vía —otra ruta del backend, una consulta directa, un respaldo— lo veía completo.
 
    DÓNDE SE TAPA AHORA. En la base, antes de escribir, con el cuerpo de reglas de
-   `public.reglas_de_los_mensajes` y el disparador de
-   `supabase/migrations/20261001120000_reglas_de_los_mensajes.sql`. Lo que llega acá ya viene
+   `public.reglas_de_los_mensajes` y el disparador
+   `el_mensaje_se_guarda_ya_tapado` de `mensajes_match`. Lo que llega acá ya viene
    tapado, venga por donde venga.
 
    QUÉ QUEDA ACÁ. Lo único que nunca fue del tapado: darle forma a la fila para la pantalla, y

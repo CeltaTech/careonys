@@ -29,13 +29,7 @@ const DB_NOMBRE = `${IDENTIDAD.codigo}-offline`;
 const DB_VERSION = 2;
 const ALMACEN = 'cola';
 
-// El nombre que tenía esta base antes de que cambiara el código técnico del producto. Se escribe
-// una sola vez, acá, y existe sólo para mudar lo que quedó esperando señal en los teléfonos que ya
-// tenían la aplicación: sin esto, esos check-ins y Reportes quedarían en una base que nadie abre.
-// Se puede borrar cuando ya no quede ningún teléfono con la base vieja.
-const DB_NOMBRE_ANTERIOR = 'careonys-offline';
-
-function abrirBaseNueva() {
+function abrirDB() {
   return new Promise((resolve, reject) => {
     const pedido = indexedDB.open(DB_NOMBRE, DB_VERSION);
     pedido.onupgradeneeded = () => {
@@ -47,94 +41,6 @@ function abrirBaseNueva() {
     pedido.onsuccess = () => resolve(pedido.result);
     pedido.onerror = () => reject(pedido.error);
   });
-}
-
-// La base anterior, si existe en este teléfono; si no, `null`. Abrirla sin más la crearía vacía,
-// así que primero se pregunta por la lista de bases. Donde el navegador no da esa lista, se abre
-// sin versión: si no existía, el navegador pide crearla y ese pedido se aborta, con lo que no
-// queda nada creado.
-async function abrirBaseAnterior() {
-  if (typeof indexedDB.databases === 'function') {
-    const bases = await indexedDB.databases();
-    if (!bases.some((b) => b.name === DB_NOMBRE_ANTERIOR)) return null;
-  }
-  return new Promise((resolve) => {
-    let noExistia = false;
-    const pedido = indexedDB.open(DB_NOMBRE_ANTERIOR);
-    pedido.onupgradeneeded = () => {
-      noExistia = true;
-      pedido.transaction.abort();
-    };
-    pedido.onsuccess = () => {
-      if (noExistia) {
-        pedido.result.close();
-        resolve(null);
-      } else {
-        resolve(pedido.result);
-      }
-    };
-    pedido.onerror = (evento) => {
-      evento.preventDefault();
-      resolve(null);
-    };
-  });
-}
-
-function borrarBase(nombre) {
-  return new Promise((resolve) => {
-    const pedido = indexedDB.deleteDatabase(nombre);
-    pedido.onsuccess = () => resolve();
-    pedido.onerror = () => resolve();
-    pedido.onblocked = () => resolve();
-  });
-}
-
-// Pasa a la base nueva todo lo que quedó en la anterior y recién después borra la anterior. Si la
-// copia falla, la anterior queda como estaba y se vuelve a intentar la próxima vez que se abra la
-// aplicación: lo que la persona anotó no se pierde en ningún caso.
-async function mudarLaBaseAnterior() {
-  const anterior = await abrirBaseAnterior();
-  if (!anterior) return;
-
-  if (!anterior.objectStoreNames.contains(ALMACEN)) {
-    anterior.close();
-    await borrarBase(DB_NOMBRE_ANTERIOR);
-    return;
-  }
-
-  const items = await new Promise((resolve, reject) => {
-    const pedido = anterior.transaction(ALMACEN, 'readonly').objectStore(ALMACEN).getAll();
-    pedido.onsuccess = () => resolve(pedido.result || []);
-    pedido.onerror = () => reject(pedido.error);
-  });
-  anterior.close();
-
-  if (items.length > 0) {
-    const nueva = await abrirBaseNueva();
-    try {
-      await new Promise((resolve, reject) => {
-        const tx = nueva.transaction(ALMACEN, 'readwrite');
-        const almacen = tx.objectStore(ALMACEN);
-        for (const item of items) almacen.put(item);
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-        tx.onabort = () => reject(tx.error);
-      });
-    } finally {
-      nueva.close();
-    }
-  }
-
-  await borrarBase(DB_NOMBRE_ANTERIOR);
-}
-
-// La mudanza corre una sola vez por arranque de la aplicación, antes de la primera apertura.
-let mudanza = null;
-
-async function abrirDB() {
-  if (!mudanza) mudanza = mudarLaBaseAnterior().catch(() => {});
-  await mudanza;
-  return abrirBaseNueva();
 }
 
 async function transaccion(modo, ejecutar) {

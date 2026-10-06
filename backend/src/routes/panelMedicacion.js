@@ -21,9 +21,9 @@ import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsulta
 // autorizaciones_monitoreo_paciente/rangos_referencia_vitales — RLS ya lo permite a
 // admin_prestadora). Esta ruta solo resuelve el archivo de evidencia de matrícula.
 //
-// CON LA CREDENCIAL DE QUIEN PIDE. La firma del archivo entra a la base con
-// `clienteDelPedido(req)`, no con la llave maestra: el depósito sólo firma archivos cuya ruta
-// empieza por la Prestadora de quien pide, así que la firma no compara la ruta a mano. La bandeja
+// CON LA CREDENCIAL DE QUIEN PIDE. El enlace temporal al archivo se pide a la base con
+// `clienteDelPedido(req)`, no con la llave maestra: el depósito sólo da enlaces a archivos cuya
+// ruta empieza por la Prestadora de quien pide, así que no hace falta comparar la ruta a mano. La bandeja
 // es información de salud: antes de entregarla queda anotado, con esa misma credencial, quién la
 // vio, paciente por paciente.
 //
@@ -228,7 +228,7 @@ panelMedicacionRouter.get('/archivo-url', requiereRolPanel, async (req, res) => 
   }
 
   // La política del depósito exige que la ruta empiece por la Prestadora de quien pide: un archivo
-  // de otra no se firma.
+  // de otra no recibe enlace.
   const { data, error } = await clienteDelPedido(req).storage.from(BUCKET).createSignedUrl(ruta, 60);
   if (error) return responderError(res, error);
 

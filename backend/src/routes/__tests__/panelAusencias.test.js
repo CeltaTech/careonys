@@ -48,7 +48,7 @@ const baseFalsa = createServer((req, res) => {
 
     if (ruta.startsWith('/storage/v1/')) {
       const cuerpo = ruta.includes('/object/sign/')
-        ? { signedURL: `${ruta.replace('/storage/v1', '')}?token=firma-de-mentira` }
+        ? { signedURL: `${ruta.replace('/storage/v1', '')}?token=enlace-de-mentira` }
         : { Key: ruta };
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(cuerpo));
@@ -200,14 +200,14 @@ describe('el enlace temporal del certificado', () => {
 
     assert.equal(estado, 200);
     assert.ok(cuerpo.url.includes(`/object/sign/certificados-medicos/${PRESTADORA}/${AUSENCIA}/certificado.pdf`));
-    const firma = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/sign/'));
-    assert.equal(firma.credencial, LLAVE_MAESTRA);
+    const pedidoDeEnlace = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/sign/'));
+    assert.equal(pedidoDeEnlace.credencial, LLAVE_MAESTRA);
     for (const consulta of consultasDeAusencias()) {
       assert.ok(consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`), consulta.url);
     }
   });
 
-  it('la ausencia de otra Prestadora no se firma', async () => {
+  it('la ausencia de otra Prestadora no recibe enlace', async () => {
     ausenciasEnLaBase(unaAusencia({ prestadora_id: OTRA_PRESTADORA }));
 
     const { estado } = await pedirDireccion(AUSENCIA);

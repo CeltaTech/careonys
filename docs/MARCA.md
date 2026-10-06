@@ -117,7 +117,7 @@ Todos van en `public/marca/` de cada app que los use (`panel/`, `pwa-asistentes/
 | Archivo | Para qué | Por qué ese formato |
 |---|---|---|
 | `isotipo.svg` | Todo uso en pantalla | Escala sin pixelarse a cualquier tamaño |
-| `isotipo-512-maskable.png` | Ícono de la PWA instalada en Android | Android recorta el ícono con la forma que elija el fabricante (personas autorizadas, cuadrado redondeado, gota). "Maskable" significa que el dibujo tiene margen suficiente para que ningún recorte le coma un pedazo |
+| `isotipo-512-maskable.png` | Ícono de la PWA instalada en Android | Android recorta el ícono con la forma que elija el fabricante (forma redonda, cuadrado redondeado, gota). "Maskable" significa que el dibujo tiene margen suficiente para que ningún recorte le coma un pedazo |
 | `isotipo-512.png` | Ícono de la PWA, uso general | |
 | `isotipo-192.png` | Ícono de la PWA, pantallas chicas | |
 | `isotipo-180.png` | Ícono en iPhone/iPad (`apple-touch-icon`) | iOS no usa el manifiesto para esto, pide su propio archivo |

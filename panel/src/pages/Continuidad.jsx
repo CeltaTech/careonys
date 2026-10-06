@@ -34,8 +34,7 @@ const TIPOS_RESOLUCION = ['suplente', 'franquero', 'emergencia', 'familiar'];
    más, la del nombre de quien cerró. Ese nombre no se puede pedir consultando `usuarios`: esa
    tabla deja que cada persona lea su propia fila y ninguna otra, así que la consulta vuelve
    vacía y acá se dibuja un guión. La vista lo resuelve adentro de la base sin abrir nada de
-   `usuarios` — ver
-   `supabase/migrations/20260909120000_la_pantalla_de_continuidad_dice_quien_cerro_el_servicio.sql`.
+   `usuarios` — ver la vista `notificaciones_cierre_servicio_quien_cerro`.
    Para marcar un mensaje como visto se sigue escribiendo en la tabla, que es lo único que se
    puede escribir. */
 const VISTA_MENSAJES_DE_CIERRE = 'notificaciones_cierre_servicio_quien_cerro';

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { T, LOCALES } from './translations';
-import { sustituirIdentidadProfundo } from '../config/identidadProducto.js';
+import { IDENTIDAD, sustituirIdentidadProfundo } from '../config/identidadProducto.js';
 import { idiomaInicial, loQueDiceElNavegador } from './idiomaInicial.js';
 import {
   alCambiarElNombre,
@@ -11,7 +11,7 @@ import { avisandoLoQueFalta } from './faltaLaFrase.js';
 
 const LocaleContext = createContext(null);
 
-const CLAVE_GUARDADA = 'plm-panel-locale';
+const CLAVE_GUARDADA = `${IDENTIDAD.codigo}-panel-locale`;
 
 // En qué idioma se abre la pantalla. Lo elegido a mano manda; si nadie eligió nunca, lo deciden
 // la dirección por la que se entró y después el navegador. La regla entera, con el porqué de ese

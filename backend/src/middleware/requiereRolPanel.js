@@ -171,8 +171,8 @@ export async function requiereRolPanel(req, res, next) {
   // pedido, y de no interrumpir el trabajo si la escritura falla.
   //
   // Esto es del registro de la Prestadora, no de la auditoría de los accesos: son dos
-  // preguntas distintas y viven en dos tablas distintas, por el motivo escrito en la migración
-  // `20261001110000_registro_de_actividad.sql`.
+  // preguntas distintas y viven en dos tablas distintas, `auditoria_de_accesos` y
+  // `registro_actividad`.
   registrarEntradaAlPanel(req.usuarioPanel).catch((error) => {
     console.error('Error registrando la entrada al Panel:', error.message);
   });

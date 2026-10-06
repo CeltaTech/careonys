@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { T, LOCALES } from './translations';
-import { sustituirIdentidadProfundo } from '../config/identidadProducto.js';
+import { IDENTIDAD, sustituirIdentidadProfundo } from '../config/identidadProducto.js';
 import { idiomaInicial, loQueDiceElNavegador } from './idiomaInicial.js';
 import {
   alCambiarElNombre,
@@ -11,25 +11,12 @@ import { avisandoLoQueFalta } from './faltaLaFrase.js';
 
 const LocaleContext = createContext(null);
 
-const CLAVE_GUARDADA = 'plm-pwa-clientes-locale';
+const CLAVE_GUARDADA = `${IDENTIDAD.codigo}-pwa-clientes-locale`;
 
-// La clave con la que esta aplicación guardaba el idioma antes de cambiarle el nombre. Se escribe
-// una sola vez, acá, y existe sólo para mudar lo que eligió quien ya la tenía instalada: sin esto,
-// esa persona vería la pantalla en otro idioma del que eligió. Se puede borrar cuando ya no quede
-// ningún teléfono con la clave vieja.
-const CLAVE_GUARDADA_ANTERIOR = 'plm-pwa-clientes-locale';
-
-// Lo elegido a mano, mudado de la clave anterior si hace falta. La mudanza pasa una sola vez: la
-// clave vieja se borra al copiarla.
+// Lo elegido a mano, si alguien lo eligió.
 function idiomaGuardado() {
   try {
-    const guardado = localStorage.getItem(CLAVE_GUARDADA);
-    if (guardado !== null) return guardado;
-    const anterior = localStorage.getItem(CLAVE_GUARDADA_ANTERIOR);
-    if (anterior === null) return null;
-    localStorage.setItem(CLAVE_GUARDADA, anterior);
-    localStorage.removeItem(CLAVE_GUARDADA_ANTERIOR);
-    return anterior;
+    return localStorage.getItem(CLAVE_GUARDADA);
   } catch {
     return null;
   }

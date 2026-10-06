@@ -130,7 +130,7 @@ describe('cómo puede terminar', () => {
   });
 
   it('los finales viejos se siguen leyendo como lo que fueron', () => {
-    expect(esDefectoGraveDeFabrica('quedo_en_la_cliente')).toBe(true);
+    expect(esDefectoGraveDeFabrica('quedo_un_familiar')).toBe(true);
     expect(esDefectoGraveDeFabrica('cubierto')).toBe(false);
     expect(CIERRES_HISTORICOS).not.toContain(CIERRES.LLEGO_UN_RELEVO);
   });

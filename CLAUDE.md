@@ -321,18 +321,15 @@ identificador que la apunte a otra Prestadora** — hoy la única es `ausencias_
 dos fechas y resuelve la Prestadora adentro con `current_tenant()`. Toda función nueva de política
 nace en `interno`, y cualquiera que se quede en `public` y llame a una de ahí lleva `interno` en su
 `search_path`. El reparto de permisos —cuáles pierden el alcance anónimo y cuáles conservan
-`authenticated`— está en
-`supabase/migrations/20260823010000_las_funciones_internas_de_la_base_no_se_llaman_desde_afuera.sql`,
-y la mudanza en
-`supabase/migrations/20260904090000_las_funciones_internas_salen_del_esquema_publicado.sql`.
+`authenticated`— lo guarda la base en los permisos de cada función y en los permisos por defecto
+(`ALTER DEFAULT PRIVILEGES`) de los esquemas `public` e `interno`.
 
 **Y lo que llama un disparador tiene que estar del lado de adentro.** Un disparador que no es
 `SECURITY DEFINER` corre con el rol de quien está escribiendo, así que lo que llama por dentro se
 comprueba contra ese rol y no contra su dueño. Si la función que llama está cerrada a
 `authenticated`, ninguna persona con sesión puede escribir en esa tabla: el síntoma es
-`42501 permission denied for function`, y así estuvieron catorce tablas hasta la migración
-`20260910190000_lo_que_llama_un_disparador_no_se_lo_pide_prestado_a_quien_inserta.sql`. La salida
-no es abrirle la función a `authenticated` en `public` —eso la convierte en dirección web— sino
+`42501 permission denied for function`, y así estuvieron catorce tablas hasta que las funciones
+que llaman sus disparadores se mudaron a `interno`. La salida no es abrirle la función a `authenticated` en `public` —eso la convierte en dirección web— sino
 mudarla a `interno` y darle el permiso ahí. **No se convierte el disparador en `SECURITY
 DEFINER`**: sumaría código corriendo con privilegio de dueño y le sacaría la protección por fila a
 las consultas que hace por dentro. El Desarrollador la adoptó como propia, textual: *«no era mia,

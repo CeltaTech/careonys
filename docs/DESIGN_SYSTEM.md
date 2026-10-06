@@ -275,7 +275,7 @@ Cargada vía `<link>` de Google Fonts en `panel/index.html` (pesos 400;500;600;7
 ## Layout general del Panel (vigente desde 2026-07-18)
 
 - **Sidebar**: 232px de ancho, fondo `--azul-oscuro`. El link de navegación activo se marca
-  con un punto (`::before`, personas autorizadas de 6px, color `--azul-medio`) a la izquierda del texto,
+  con un punto (`::before`, redondel de 6px, color `--azul-medio`) a la izquierda del texto,
   no con un fondo resaltado.
 - **Tarjetas**: fondo blanco, `border: 1px solid var(--borde-card)`, `border-radius: 12px` —
   nunca `border-left` grueso de acento (ver nota en la sección de paleta).
@@ -338,8 +338,8 @@ variables de la paleta funcional, no colores nuevos:
 (ver `supabase/migrations/`) — distinto de `cancelada`, esta sección había
 quedado con solo 4 reglas. Corregido al implementar Módulo 6 Parte 1 (2026-07-10).
 
-**Falta cubrir dos estados nuevos.** La migración `20260731170000_guardia_sin_cubrir_y_ofrecida.sql`
-agregó `sin_cubrir` y el marcador de guardia `ofrecida`, y todavía no tienen regla de acento
+**Falta cubrir dos estados nuevos.** La guardia sin cubrir (`guardias_sin_cubrir_estado_check`) y
+el marcador de guardia ofrecida (`guardias.ofrecida_at`) todavía no tienen regla de acento
 lateral. Se resuelven junto con la grilla nueva de guardias (tarea #61), no antes: el acento
 lateral tiene sentido en la lista actual, y la grilla puede necesitar otra forma de marcarlos.
 Mientras tanto, en cualquier badge de esos dos estados se usa `claseBadge()` como en el resto

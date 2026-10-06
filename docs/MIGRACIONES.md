@@ -33,7 +33,7 @@ fiel al esquema real de producción** y esa foto pasó a ser la migración inici
 vigente es:
 
 ```
-supabase/migrations/20260819160000_foto_de_la_base.sql
+supabase/migrations/20261016000000_foto_de_la_base.sql
 ```
 
 95 tablas, 946 columnas, 207 políticas de seguridad, 40 funciones, 51 disparadores, 207 índices,
@@ -101,7 +101,7 @@ tabla es una libreta de apuntes, no la base.
 supabase/migrations/AAAAMMDDHHMMSS_descripcion_en_snake_case.sql
 ```
 
-Ejemplo: `20260728170000_quitar_plan_licencia.sql`
+Ejemplo: `20261020093000_el_paciente_guarda_su_grupo_sanguineo.sql`
 
 Los 14 dígitos son fecha y hora en UTC. Es el formato que espera la herramienta de línea de
 comandos de Supabase.

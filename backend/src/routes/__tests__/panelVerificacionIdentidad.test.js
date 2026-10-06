@@ -9,7 +9,7 @@
  * maestra (`../panelVerificacionIdentidad.js`). O sea que lo único que separa una Prestadora de
  * otra son los filtros escritos en esta ruta, y dos decisiones más: que el tipo de foto salga de
  * una lista cerrada —si no, quien manda el pedido elige el nombre del archivo adentro del
- * depósito— y que la ruta que se firma se arme con los datos del Asistente y no con nada que venga
+ * depósito— y que la ruta del enlace temporal se arme con los datos del Asistente y no con nada que venga
  * de afuera.
  *
  * Por eso la base es de mentira y contesta por HTTP como la de verdad: además del resultado se
@@ -38,7 +38,7 @@ let llamadas = [];
 let rolDelUsuario = 'admin_prestadora';
 /** Qué contesta el depósito de archivos. `null` es «salió bien». */
 let errorDelDeposito = null;
-/** Qué rutas tienen foto subida. La firma de las demás vuelve sin dirección. */
+/** Qué rutas tienen foto subida. Para las demás, el enlace vuelve vacío. */
 let rutasConFoto = null;
 
 const baseFalsa = createServer((req, res) => {
@@ -51,7 +51,7 @@ const baseFalsa = createServer((req, res) => {
     const clave = `${req.method} ${ruta}`;
     llamadas.push({ clave, url: req.url, cuerpo: crudo && req.headers['content-type']?.includes('json') ? JSON.parse(crudo) : crudo, credencial: req.headers.authorization });
 
-    // El depósito de archivos: subir y firmar. No se guarda nada, alcanza con contestar como
+    // El depósito de archivos: subir y dar enlaces temporales. No se guarda nada, alcanza con contestar como
     // contesta el de verdad y dejar anotado qué ruta se tocó.
     if (ruta.startsWith('/storage/v1/')) {
       if (errorDelDeposito) {
@@ -68,7 +68,7 @@ const baseFalsa = createServer((req, res) => {
           return;
         }
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ signedURL: `${ruta.replace('/storage/v1', '')}?token=firma-de-mentira` }));
+        res.end(JSON.stringify({ signedURL: `${ruta.replace('/storage/v1', '')}?token=enlace-de-mentira` }));
         return;
       }
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -261,7 +261,7 @@ describe('guardar una foto de identidad', () => {
 // ---------------------------------------------------------------------------------------
 
 describe('los enlaces temporales de las dos fotos', () => {
-  it('se firman las dos rutas armadas con los datos del Asistente, y vencen', async () => {
+  it('los dos enlaces salen de rutas armadas con los datos del Asistente, y vencen', async () => {
     respuestas.set('GET /rest/v1/asistentes', () => [unAsistente()]);
 
     const { estado, cuerpo } = await pedirLasFotos(ASISTENTE);
@@ -272,9 +272,9 @@ describe('los enlaces temporales de las dos fotos', () => {
       assert.ok(cuerpo.fotos[tipo].includes(`/object/sign/fotos-identidad/${rutaEnElDeposito(PRESTADORA, ASISTENTE, tipo)}`));
     }
 
-    const firmas = llamadas.filter((l) => l.clave.startsWith('POST /storage/v1/object/sign/'));
-    assert.equal(firmas.length, 2);
-    for (const firma of firmas) assert.equal(firma.cuerpo.expiresIn, 60);
+    const pedidosDeEnlace = llamadas.filter((l) => l.clave.startsWith('POST /storage/v1/object/sign/'));
+    assert.equal(pedidosDeEnlace.length, 2);
+    for (const pedidoDeEnlace of pedidosDeEnlace) assert.equal(pedidoDeEnlace.cuerpo.expiresIn, 60);
   });
 
   it('la foto que todavía no se subió vuelve vacía, y la otra igual se muestra', async () => {
@@ -287,7 +287,7 @@ describe('los enlaces temporales de las dos fotos', () => {
     assert.ok(cuerpo.fotos[TIPO_DOCUMENTO]);
   });
 
-  it('el Asistente de otra Prestadora no se firma', async () => {
+  it('el Asistente de otra Prestadora no recibe enlace', async () => {
     respuestas.set('GET /rest/v1/asistentes', () => []);
 
     const { estado, cuerpo } = await pedirLasFotos(ASISTENTE);
@@ -299,11 +299,11 @@ describe('los enlaces temporales de las dos fotos', () => {
     assert.ok(lectura.url.includes(`prestadora_id=eq.${PRESTADORA}`), lectura.url);
   });
 
-  // El Asistente, la subida y las firmas siguen con la llave maestra: con la credencial de quien
+  // El Asistente, la subida y los enlaces siguen con la llave maestra: con la credencial de quien
   // pide, la base le deja al Coordinador sólo los Asistentes de su zona y le esconde a todos los
   // roles el pendiente de conformidad, y el depósito le exige lo mismo. Lo que separa las
   // Prestadoras es el filtro escrito en la consulta del Asistente.
-  it('el Asistente, la subida y las dos firmas van con la llave maestra', async () => {
+  it('el Asistente, la subida y los dos enlaces van con la llave maestra', async () => {
     respuestas.set('GET /rest/v1/asistentes', () => [unAsistente()]);
 
     const credencialDeQuienPide = sesionDePrueba(USUARIO);
@@ -321,7 +321,7 @@ describe('los enlaces temporales de las dos fotos', () => {
     }
   });
 
-  it('la Prestadora que venga en el pedido no se usa para firmar nada', async () => {
+  it('la Prestadora que venga en el pedido no se usa para pedir ningún enlace', async () => {
     // El Asistente es de esta Prestadora; lo que llega de afuera dice otra cosa y no se mira.
     respuestas.set('GET /rest/v1/asistentes', () => [unAsistente()]);
 

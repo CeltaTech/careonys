@@ -52,11 +52,10 @@ De ahí salen tres consecuencias que se aplican en todo este plan:
   «días» y «horario» escritos a mano y proponer su versión en forma de dato. **No se construye:** no
   hay nada real que convertir. Los casilleros se cambian y la siembra se vuelve a hacer con la forma
   nueva.
-- **La migración que creó los Servicios no valida el modelo.**
-  `supabase/migrations/20260910220000_el_precio_el_calendario_y_el_cierre_cuelgan_del_servicio.sql`
-  comprueba con rigor que no perdió ninguna fila —hay un bloque que hace fracasar la migración
-  entera si algo quedó colgado de un Servicio que no le corresponde a su Paciente, o si algo quedó
-  sin Servicio—, pero lo que no perdió era siembra.
+- **La migración que creó la tabla `servicios` no valida el modelo.** Comprobaba con rigor que no
+  perdió ninguna fila —tenía un bloque que hacía fracasar la migración entera si algo quedaba
+  colgado de un Servicio que no le correspondía a su Paciente, o si algo quedaba sin Servicio—,
+  pero lo que no perdió era siembra.
 
 ---
 
@@ -87,8 +86,8 @@ una guardia de cobertura arranque sin sustituto asignado.
 
 **La estructura de zonas, completa y cargada en las dos puntas.** `lugares`, `zona_lugares`,
 `asistente_lugares` y `usuario_lugares`. Lo guardado son siempre lugares, nunca zonas: la zona es
-atajo para cargar y forma de hablar en pantalla. El Paciente tiene su lugar desde
-`20260921110000_el_domicilio_deja_de_estar_todo_junto.sql`, y el alcance de cada coordinadora se
+atajo para cargar y forma de hablar en pantalla. El Paciente tiene su lugar en
+`pacientes.lugar_id`, y el alcance de cada coordinadora se
 guarda también en lugares, para que las dos puntas de la comparación sean la misma cosa.
 
 **El Servicio como envase.** Guarda poco de sí mismo, pero es el punto al que apunta todo lo
@@ -284,7 +283,7 @@ Asistentes del paso 8 no tiene contra qué comparar la capacidad.
 **Y hay un desajuste de nombre guardado que decide el Desarrollador, porque tocarlo no es gratis.**
 Lo que la base llama `guardias` es el turno: cada fila lleva una Asistente, un día, una hora de
 inicio y una de fin, con su check-in y su check-out
-—`supabase/migrations/20260819160000_foto_de_la_base.sql:2043-2062`—. El nivel de la guardia
+—la tabla `guardias`—. El nivel de la guardia
 completa, el período repartido entre varias, **no tiene tabla**. Las dos salidas son quedarse con el
 nombre como está y entender que una fila es un turno, o renombrar lo guardado, que es una migración
 de datos sobre `guardias`, `series_guardias` y todo lo que las nombra.
@@ -363,7 +362,7 @@ Textuales:
 > 1 sola persona coordina todo el servicio, si interviene otra persona en la coordinación es eventual
 > seguramente debido a alguna emergencia.
 >
-> Por otro lado, cuando ingresa un cliente (cliente) nueva, y se acuerda el servicio, inmediatamente
+> Por otro lado, cuando ingresa un cliente nuevo, y se acuerda el servicio, inmediatamente
 > se asigna quien ha de coordinar para que esta persona comience a armar el equipo que brindara el
 > servicio.
 >
@@ -371,7 +370,7 @@ Textuales:
 > Seria como decir que se hara "tal cosa", pero sin asignar un responsable de que eso se haga
 
 Y de antes, la regla de fondo y los tres estados: «Si no hay nadie coordinando, no hay operacion con
-esa cliente», y **sin asignar / asignado, y ahí va el nombre / vacante, y ahí aparece la
+ese cliente», y **sin asignar / asignado, y ahí va el nombre / vacante, y ahí aparece la
 administración.**
 
 **Qué tiene el código hoy, y no es esto.** La coordinación de un Paciente es **una lista**, y el

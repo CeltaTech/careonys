@@ -11,15 +11,13 @@ import { supabase } from '../db/connection.js';
 // navegador es única: quien la mande con sus propias claves se queda con la fila, y el aparato de
 // la otra persona deja de mostrar sus notificaciones. No se prohíbe porque el caso legítimo es
 // idéntico: cuando dos personas comparten un teléfono, la dirección es la misma y pisarla es lo
-// correcto. Lo que se hace es anotarlo, para poder explicar después por qué alguien dejó de
-// recibir notificaciones. El
-// porqué completo está en la migración
-// supabase/migrations/20260823020000_un_cambio_de_dueno_de_una_suscripcion_de_avisos_queda_anotado.sql
+// correcto. Lo que se hace es anotarlo en `auditoria_cambio_dueno_push`, para poder explicar
+// después por qué alguien dejó de recibir notificaciones.
 //
 // **Y el mismo aparato en dos Prestadoras no es el mismo caso.** Un Asistente que trabaja en dos y
 // usa un solo teléfono queda anotado dos veces, una por cada una, y cada Prestadora le manda lo
-// suyo. Lo hace cumplir el único `(prestadora_id, endpoint)` de la migración
-// supabase/migrations/20261006090000_un_aparato_se_anota_una_vez_por_cada_prestadora.sql
+// suyo. Lo hace cumplir la restricción `push_subscriptions_prestadora_endpoint_key`, única
+// sobre `(prestadora_id, endpoint)`.
 //
 // `rol` es 'asistente' o 'cliente'. Devuelve `{ error }`: el llamador decide qué contestar.
 export async function guardarSuscripcionPush({ prestadoraId, rol, usuarioId, endpoint, keys, userAgent }) {

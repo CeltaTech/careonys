@@ -8,7 +8,7 @@
  *
  * ACÁ NO SE PRUEBA EL CRITERIO, SE PRUEBA QUIÉN PREGUNTA Y CÓMO APLICA LA RESPUESTA. Cuál
  * dirección gana un día dado lo decide la función `domicilios_de_pacientes_en` de la base
- * (migración 20260821220000_donde_se_atiende_al_paciente_este_dia.sql) y no este archivo. Lo
+ * y no este archivo. Lo
  * que el backend tiene que hacer bien es otra cosa: preguntar por la fecha de cada guardia y no
  * por la de hoy, preguntar una vez por día y no una vez por Paciente, y pisar solamente los
  * campos que la consulta pidió.

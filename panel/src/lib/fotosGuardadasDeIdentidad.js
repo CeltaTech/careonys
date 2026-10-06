@@ -23,7 +23,7 @@ export async function subirFotoDeIdentidad(asistenteId, tipo, archivo) {
 }
 
 /**
- * Los enlaces temporales, con vencimiento, para ver las fotos que haya cargadas.
+ * Los enlaces temporales para ver las fotos que haya cargadas.
  *
  * Devuelve las dos claves siempre, con `null` en la que todavía no se subió: así la pantalla
  * distingue «no hay foto» de «no se pudo pedir», que no se muestran igual.

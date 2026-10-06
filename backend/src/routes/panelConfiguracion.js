@@ -151,7 +151,7 @@ panelConfiguracionRouter.patch('/empresa', async (req, res) => {
 //
 // El dato vive en `prestadoras.moneda` y nace del país que se eligió al darla de alta. Desde
 // acá se cambia, que es lo que la columna venía prometiendo desde que se escribió
-// (`supabase/migrations/20260820140000_todo_importe_con_su_moneda.sql`) y todavía no tenía
+// (lo dice el comentario de `prestadoras.moneda` en la base) y todavía no tenía
 // pantalla.
 //
 // QUÉ ALCANZA EL CAMBIO. Sólo a lo que se cargue de acá en adelante: cada importe ya guardado
@@ -1872,7 +1872,7 @@ panelConfiguracionRouter.patch('/documentos-tipo/plazo-aviso', async (req, res) 
 //     que por RLS solo superadmin puede modificar. El navegador no la puede escribir ni aunque
 //     lo intente; el backend sí, porque usa la service role key y acota siempre a la prestadora
 //     de quien pide. Los dos valores posibles los fija una restricción de la base
-//     supabase/migrations/20260801180000_regla_matricula_vigente.sql) — acá se repiten como
+//     (`prestadoras_modo_control_matricula_check`) — acá se repiten como
 //     validación de entrada, no como fuente de verdad. ---
 const MODOS_DE_CONTROL_MATRICULA = ['flexible', 'estricto'];
 
@@ -2431,8 +2431,8 @@ panelConfiguracionRouter.get('/escalada-coordinador', async (req, res) => {
   if (error) return responderError(res, error);
   if (errorCoordinadores) return responderError(res, errorCoordinadores);
 
-  // Toda Prestadora nace con esta fila: la crea un disparador del alta, y las que existían
-  // antes quedaron completadas (`20260819183000_prestadora_nueva_nace_configurada.sql`). Si
+  // Toda Prestadora nace con esta fila: la crea el disparador del alta
+  // (`trg_sembrar_configuracion_prestadora`), y las que existían antes quedaron completadas. Si
   // igual faltara, se la pide a la misma función que usa el alta y se vuelve a leer. Así lo
   // que el formulario muestra es lo que la base va a usar de verdad, y no una copia.
   let escalada = data;

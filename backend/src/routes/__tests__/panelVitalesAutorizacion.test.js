@@ -52,7 +52,7 @@ const baseFalsa = createServer((req, res) => {
         return;
       }
       const cuerpo = ruta.includes('/object/sign/')
-        ? { signedURL: `${ruta.replace('/storage/v1', '')}?token=firma-de-mentira` }
+        ? { signedURL: `${ruta.replace('/storage/v1', '')}?token=enlace-de-mentira` }
         : { Key: ruta };
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(cuerpo));
@@ -199,11 +199,11 @@ describe('el enlace temporal de la autorización', () => {
 
     assert.equal(estado, 200);
     assert.ok(cuerpo.url.includes(`/object/sign/autorizaciones-monitoreo/${PRESTADORA}/${PACIENTE}/`));
-    const firma = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/sign/'));
-    assert.equal(firma.credencial, LLAVE_MAESTRA);
+    const pedidoDeEnlace = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/sign/'));
+    assert.equal(pedidoDeEnlace.credencial, LLAVE_MAESTRA);
   });
 
-  it('una ruta que no es la del Paciente se rechaza sin firmar nada', async () => {
+  it('una ruta que no es la del Paciente se rechaza sin dar ningún enlace', async () => {
     pacientesEnLaBase(unPaciente());
 
     const { estado } = await pedirDireccion(PACIENTE, `${OTRA_PRESTADORA}/${PACIENTE}/autorizacion-1.pdf`);

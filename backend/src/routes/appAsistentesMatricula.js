@@ -38,7 +38,7 @@ import { responderError } from '../utils/errorConMotivo.js';
 // ellas lleva el filtro de la Prestadora de la sesión.
 //
 // EL DEPÓSITO SIGUE CON LA LLAVE MAESTRA
-// Subir el archivo y firmar el enlace van con la llave maestra, y la ruta se
+// Subir el archivo y generar el enlace temporal van con la llave maestra, y la ruta se
 // comprueba a mano con `utils/archivosSubidos.js`: las políticas del depósito
 // piden que la carpeta sea el usuario de la sesión, y la ruta la arma la ficha
 // del Asistente (ver el comentario de cada llamada).
@@ -202,7 +202,7 @@ appAsistentesMatriculaRouter.post(
 appAsistentesMatriculaRouter.get('/archivo-url', requiereRolAsistente, async (req, res) => {
   // Quién puede ver qué archivo lo decide `utils/archivosSubidos.js`, que es el mismo archivo
   // que arma la ruta al subirlo. Separadas, la comprobación y la construcción se despegan sin
-  // que nadie lo note, y lo que queda abierto es un enlace firmado a un archivo ajeno.
+  // que nadie lo note, y lo que queda abierto es un enlace temporal a un archivo ajeno.
   const ruta = req.query.ruta;
   if (!esRutaDeMatriculaDe(ruta, req.usuarioAsistente.prestadoraId, req.usuarioAsistente.asistenteId)) {
     return res.status(400).json({ error: 'Ruta de archivo inválida' });

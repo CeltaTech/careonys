@@ -5,7 +5,7 @@
  * código. La lista sale de la base, quien comprueba la recibe, y sin ella no se admite nada.
  *
  * Y una segunda, que es la que se rompe sola con el tiempo: que el catálogo guardado en el Panel
- * para cuando no hay con quién hablar diga exactamente lo mismo que siembra la migración. Si una
+ * para cuando no hay con quién hablar diga exactamente lo mismo que siembra la base. Si una
  * de las dos cambia y la otra no, esta prueba lo dice.
  */
 import { readFileSync } from 'node:fs';
@@ -48,65 +48,45 @@ describe('con qué se admite que pagó el Cliente', () => {
   });
 });
 
-describe('el catálogo guardado dice lo mismo que siembra la migración', () => {
-  const leer = (archivo) =>
-    readFileSync(
-      fileURLToPath(new URL(`../../../../supabase/migrations/${archivo}`, import.meta.url)),
-      'utf8',
-    );
-
-  /* El renombre de las palabras retiradas cambió después el nombre de la lista y el de la tabla de
-     cobros: se aplica encima de lo que siembran las migraciones anteriores. */
-  const renombre = leer('20261015000000_renombre_palabras_retiradas.sql');
-  const nombresNuevos = [
-    ...renombre.matchAll(
-      /^update public\.listas_de_opciones set clave = \$r\$([a-z_]+)\$r\$::text where clave = \$r\$([a-z_]+)\$r\$::text;\r?$/gm,
+describe('el catálogo guardado dice lo mismo que siembra la base', () => {
+  /* La foto de la base es la migración que arma la base entera. Las filas de fábrica van ahí como un
+     arreglo JSON entre `jsonb_populate_recordset(NULL::public.<tabla>, $fila$[` y `]$fila$`. */
+  const foto = readFileSync(
+    fileURLToPath(
+      new URL('../../../../supabase/migrations/20261016000000_foto_de_la_base.sql', import.meta.url),
     ),
-    ...renombre.matchAll(/^alter table public\.([a-z_]+) rename to ([a-z_]+);\r?$/gm),
-  ].map((m) => (m[0].startsWith('update') ? [m[2], m[1]] : [m[1], m[2]]));
-  const conElRenombre = (texto) =>
-    nombresNuevos.reduce(
-      (t, [viejo, nuevo]) => t.replace(new RegExp(`\\b${viejo}\\b`, 'g'), nuevo),
-      texto,
-    );
-
-  const migracion = conElRenombre(leer('20261003120000_el_medio_de_pago_sale_del_catalogo.sql'));
-
-  /* Y la que agrega el medio que recibe en bloque y reparte, que entra sólo en prestación
-     directa. Son dos migraciones y una sola lista: el archivo guardado dice el total. */
-  const migracionEnBloque = conElRenombre(
-    leer('20261004150000_el_medio_que_reparte_en_bloque_entra_solo_en_prestacion_directa.sql'),
+    'utf8',
   );
-
-  /* Las claves que siembra la migración para una lista, en el orden en que las siembra. Lo que se
-     busca es el renglón de la siembra —clave, y en seguida el texto en los tres idiomas—, y no
-     cualquier aparición del nombre de la lista: más abajo la migración se nombra a sí misma para
-     comprobarse, y eso no es una opción. */
-  const sembradasDe = (lista) => {
-    const deLaPrimera = [
-      ...migracion.matchAll(new RegExp(`\\('${lista}', '([a-z_]+)',\\s*'\\{`, 'g')),
-    ].map((m) => m[1]);
-    // La segunda siembra una sola opción y dice de qué lista es en su filtro, no en el renglón.
-    const deLaSegunda =
-      lista === 'medios_de_pago_al_asistente'
-        ? [
-            ...migracionEnBloque.matchAll(
-              /INSERT INTO public\.opciones_de_lista[\s\S]*?SELECT NULL, l\.id, '([a-z_]+)'/g,
-            ),
-          ].map((m) => m[1])
-        : [];
-    return [...deLaPrimera, ...deLaSegunda];
+  const filasDeFabrica = (tabla) => {
+    const inicio = `jsonb_populate_recordset(NULL::public.${tabla}, $fila$[`;
+    const desde = foto.indexOf(inicio);
+    if (desde === -1) return [];
+    return JSON.parse(foto.slice(desde + inicio.length - 1, foto.indexOf(']$fila$', desde) + 1));
   };
+  const listas = filasDeFabrica('listas_de_opciones');
+  const opciones = filasDeFabrica('opciones_de_lista');
+  const listaDeFabrica = (clave) => listas.find((l) => l.clave === clave && l.prestadora_id === null);
+
+  /* Las opciones que siembra la base para una lista, en su orden. */
+  const sembradasDe = (lista) =>
+    opciones
+      .filter((o) => o.lista_id === listaDeFabrica(lista)?.id && o.prestadora_id === null)
+      .sort((a, b) => a.orden - b.orden);
+
+  it('la foto trae las dos listas, y la siembra sigue teniendo la forma que la prueba lee', () => {
+    expect(listaDeFabrica('medios_de_pago_del_cliente')).toBeTruthy();
+    expect(listaDeFabrica('medios_de_pago_al_asistente')).toBeTruthy();
+  });
 
   for (const lista of ['medios_de_pago_del_cliente', 'medios_de_pago_al_asistente']) {
     it(`las claves sembradas de ${lista} son las mismas, y en el mismo orden`, () => {
       const guardadas = LISTAS_DE_OPCIONES_DE_FABRICA[lista].opciones.map((o) => o.clave);
-      expect(sembradasDe(lista)).toEqual(guardadas);
+      expect(sembradasDe(lista).map((o) => o.clave)).toEqual(guardadas);
     });
 
     it(`${lista} admite opciones propias de cada Prestadora`, () => {
       expect(LISTAS_DE_OPCIONES_DE_FABRICA[lista].admite_opciones_propias).toBe(true);
-      expect(migracion).toContain(`(NULL, '${lista}',`);
+      expect(listaDeFabrica(lista).admite_opciones_propias).toBe(true);
     });
 
     it(`cada opción guardada de ${lista} trae los tres idiomas`, () => {
@@ -146,22 +126,16 @@ describe('el catálogo guardado dice lo mismo que siembra la migración', () => 
       (o) => o.clave === 'pago_en_bloque',
     );
     expect(enBloque.modalidades).toEqual(['directa']);
-    // La marca tiene que estar en el renglón que siembra la opción, no en cualquier otro lugar de
-    // la migración: más abajo ella misma se comprueba, y eso comprobaría contra nada.
-    expect(migracionEnBloque).toMatch(
-      /SELECT NULL, l\.id, 'pago_en_bloque',[\s\S]{0,400}?ARRAY\['directa'\]::text\[\][\s\S]{0,200}?FROM public\.listas_de_opciones/,
+    // La marca tiene que estar en la opción que siembra la base, no sólo en el archivo guardado.
+    const sembrada = sembradasDe('medios_de_pago_al_asistente').find((o) => o.clave === 'pago_en_bloque');
+    expect(sembrada.modalidades).toEqual(['directa']);
+    // Y lo hace cumplir un disparador sobre las liquidaciones.
+    expect(foto).toMatch(
+      /ON public\.liquidaciones_asistente FOR EACH ROW EXECUTE FUNCTION interno\.el_medio_de_pago_alcanza_la_modalidad\(\);/,
     );
-    // Y lo hace cumplir un disparador, que además no puede saltearse las reglas de acceso.
-    expect(migracionEnBloque).toMatch(
-      /ON public\.liquidaciones_asistente\s*\n\s*FOR EACH ROW EXECUTE FUNCTION interno\.el_medio_de_pago_alcanza_la_modalidad\(\)/,
-    );
-    // Se miran los renglones de verdad, no los comentarios: el encabezado la nombra para decir
-    // justamente que ninguna función de acá lo es.
-    const sinComentarios = migracionEnBloque.replace(/^\s*--.*$/gm, '');
-    expect(sinComentarios).not.toMatch(/^\s*SECURITY DEFINER\b/m);
-    expect(sinComentarios).not.toMatch(/LANGUAGE \w+ SECURITY DEFINER/);
-    // Y la migración se lo comprueba a sí misma antes de darse por buena.
-    expect(migracionEnBloque).toContain('p.prosecdef');
+    // Que además no puede saltearse las reglas de acceso.
+    const funcion = foto.slice(foto.indexOf('\nCREATE FUNCTION interno.el_medio_de_pago_alcanza_la_modalidad('));
+    expect(funcion.slice(0, funcion.indexOf('AS $$'))).not.toMatch(/SECURITY DEFINER/);
   });
 
   /* Lo que ya estaba no cambia de alcance: sin marca, una opción vale en todas las modalidades. */
@@ -176,7 +150,7 @@ describe('el catálogo guardado dice lo mismo que siembra la migración', () => 
 
   it('del lado del Asistente no hay tarjeta, ni débito automático, ni cheque, ni «otro»', () => {
     const guardadas = LISTAS_DE_OPCIONES_DE_FABRICA.medios_de_pago_al_asistente.opciones.map((o) => o.clave);
-    const sembradas = sembradasDe('medios_de_pago_al_asistente');
+    const sembradas = sembradasDe('medios_de_pago_al_asistente').map((o) => o.clave);
     for (const laQueNoVa of ['tarjeta', 'debito_automatico', 'cheque', 'otro']) {
       expect(sembradas).not.toContain(laQueNoVa);
       expect(guardadas).not.toContain(laQueNoVa);
@@ -186,19 +160,11 @@ describe('el catálogo guardado dice lo mismo que siembra la migración', () => 
   /* Y que cada disparador mire la lista de su lado. Cruzados, la base admitiría pagarle a un
      Asistente con tarjeta, que es justo lo que esta separación impide. */
   it('cada disparador mira la lista de su lado del dinero', () => {
-    expect(migracion).toMatch(
-      /ON public\.cobros_cliente\s*\n\s*FOR EACH ROW EXECUTE FUNCTION interno\.el_medio_de_pago_sale_del_catalogo\('medio', 'medios_de_pago_del_cliente'\)/,
+    expect(foto).toMatch(
+      /ON public\.cobros_cliente FOR EACH ROW EXECUTE FUNCTION interno\.el_medio_de_pago_sale_del_catalogo\('medio', 'medios_de_pago_del_cliente'\);/,
     );
-    expect(migracion).toMatch(
-      /ON public\.liquidaciones_asistente\s*\n\s*FOR EACH ROW EXECUTE FUNCTION interno\.el_medio_de_pago_sale_del_catalogo\('forma_pago', 'medios_de_pago_al_asistente'\)/,
+    expect(foto).toMatch(
+      /ON public\.liquidaciones_asistente FOR EACH ROW EXECUTE FUNCTION interno\.el_medio_de_pago_sale_del_catalogo\('forma_pago', 'medios_de_pago_al_asistente'\);/,
     );
-  });
-
-  /* Lo que ya estaba escrito a mano en una liquidación no se pierde: se conserva como opción de
-     esa Prestadora, con el texto tal cual. La migración lo comprueba ella misma; acá se comprueba
-     que siga haciéndolo. */
-  it('la migración no deja ninguna liquidación con un medio que el catálogo no nombre', () => {
-    expect(migracion).toContain('lo_que_habia_escrito');
-    expect(migracion).toContain('quedaron liquidaciones con un medio que el catalogo no nombra');
   });
 });

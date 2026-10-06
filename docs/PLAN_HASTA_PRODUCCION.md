@@ -710,10 +710,11 @@ lo de acá es mejor salvo el motivo de la falla, que ya está resuelto. **Se ret
 ninguna pantalla, de ninguno de los dos lados. Y los textos legales de allá no sirven: son de una
 sola Prestadora, sin versión y sin dónde queden guardados.
 
-**22. Usted** — Decidir cómo se maneja Match en el Panel. Las tres secciones que tenía —el
-listado de Clientes, las formas de cobro y la auditoría legal— salieron del Panel con el diseño
-«Careonys v2» y están guardadas en `Codigos-utiles`, tal como estaban. Lo que quedó: Calificaciones,
-en Asistentes, para las dos modalidades, y la pasarela de cobro, en Configuración › La Prestadora.
+**22. Usted** — Decidir qué secciones de Match quedan en el Panel. Match no tiene panel aparte:
+sus secciones están en el mismo Panel y aparecen sólo si la Prestadora tiene habilitada la
+intermediación. Son cuatro: Calificaciones, Clientes, Formas de cobro —con su detalle y los
+plazos del cobro— y Auditoría legal. Clientes y Formas de cobro las ve además sólo la
+administración. En la ficha del Asistente, la pestaña de evaluaciones sigue la misma regla.
 
 ---
 

@@ -45,7 +45,7 @@ process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 
 // Después de las variables de entorno: la conexión a la base se arma al importar.
-const { contactoDeLaPrestadora, hayPorDondeLlamar } = await import('../contactoDeLaPrestadora.js');
+const { contactoDeLaPrestadora, hayPorDondeLlamar, telefonoParaEmergencias } = await import('../contactoDeLaPrestadora.js');
 
 after(() => baseFalsa.close());
 
@@ -54,7 +54,9 @@ beforeEach(() => {
   respuestas.clear();
 });
 
-const PRESTADORAS = 'GET /rest/v1/prestadoras';
+// La tabla que carga Configuración › La Prestadora. Antes se preguntaba a `prestadoras`, que no
+// tiene esas columnas: la consulta fallaba y el botón no aparecía nunca.
+const PRESTADORAS = 'GET /rest/v1/configuracion_prestadora';
 
 describe('el contacto de la Prestadora', () => {
   it('devuelve los tres canales que ella cargó', async () => {
@@ -84,7 +86,7 @@ describe('el contacto de la Prestadora', () => {
     const consulta = llamadas.find((l) => l.clave === PRESTADORAS);
     assert.ok(consulta, 'no se consultó la tabla de Prestadoras');
     assert.ok(
-      consulta.busqueda.includes(`id=eq.${PRESTADORA}`),
+      consulta.busqueda.includes(`prestadora_id=eq.${PRESTADORA}`),
       `la consulta salió sin el filtro por Prestadora: ${consulta.busqueda}`
     );
   });
@@ -120,6 +122,31 @@ describe('el contacto de la Prestadora', () => {
 
     assert.deepEqual(contacto, { telefono: null, whatsapp: null, email: null });
     assert.equal(hayPorDondeLlamar(contacto), false);
+  });
+});
+
+describe('el teléfono para emergencias', () => {
+  it('devuelve el que cargó la Prestadora, preguntando sólo por ella', async () => {
+    respuestas.set(PRESTADORAS, [{ telefono_emergencias: ' +54 11 5555 0911 ' }]);
+
+    assert.equal(await telefonoParaEmergencias(PRESTADORA), '+54 11 5555 0911');
+    const consulta = llamadas.find((l) => l.clave === PRESTADORAS);
+    assert.ok(consulta.busqueda.includes(`prestadora_id=eq.${PRESTADORA}`));
+  });
+
+  it('sin cargar no se completa con el teléfono general', async () => {
+    respuestas.set(PRESTADORAS, [{ telefono_emergencias: null, telefono: '+54 11 5555 0000' }]);
+
+    assert.equal(await telefonoParaEmergencias(PRESTADORA), null);
+  });
+
+  it('una consulta que falla no inventa un número', async () => {
+    assert.equal(await telefonoParaEmergencias(PRESTADORA), null);
+  });
+
+  it('sin Prestadora no consulta nada', async () => {
+    assert.equal(await telefonoParaEmergencias(undefined), null);
+    assert.equal(llamadas.length, 0);
   });
 });
 

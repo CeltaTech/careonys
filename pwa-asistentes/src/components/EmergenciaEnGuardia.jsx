@@ -5,6 +5,7 @@ import { mensajeDeError, situacionDelError } from '../lib/errores';
 import { horaDelMomento } from '../lib/horarios';
 import { agregarACola, nuevoId } from '../lib/colaOffline';
 import { sincronizarCola } from '../lib/sincronizarCola';
+import { useTelefonoParaEmergencias } from '../context/PerfilContext';
 
 /**
  * El botón de emergencia de la guardia en curso.
@@ -28,6 +29,10 @@ import { sincronizarCola } from '../lib/sincronizarCola';
  * vuelva la conexión, igual que el check-in, pero acá eso no se muestra con el mismo cartelito
  * gris de «pendiente de enviar»: mientras la cola no salga **no se enteró nadie**, y quien reportó
  * tiene que saberlo para poder llamar por otro medio.
+ *
+ * Y EL OTRO MEDIO ESTÁ AHÍ MISMO. Si la Prestadora cargó un teléfono para emergencias, el cartel
+ * lleva el botón que lo marca: una llamada no necesita internet. Sin número cargado no hay botón,
+ * y no se reemplaza por el teléfono general.
  */
 export default function EmergenciaEnGuardia({ t, locale, guardiaId, alRegistrar }) {
   const tr = t.emergencia;
@@ -37,6 +42,7 @@ export default function EmergenciaEnGuardia({ t, locale, guardiaId, alRegistrar 
   const [error, setError] = useState('');
   // Lo que pasó con este aviso, en este teléfono: o salió y a qué hora, o quedó esperando señal.
   const [reportado, setReportado] = useState(null);
+  const telefonoEmergencias = useTelefonoParaEmergencias();
 
   async function alReportar() {
     setError('');
@@ -85,6 +91,11 @@ export default function EmergenciaEnGuardia({ t, locale, guardiaId, alRegistrar 
             ? con(tr.reportada, { hora: horaDelMomento(reportado.at, locale) })
             : tr.sin_conexion}
         </div>
+      )}
+      {reportado && !reportado.enviado && telefonoEmergencias && (
+        <a className="btn btn-primary btn-full" href={`tel:${telefonoEmergencias.replace(/[^\d+]/g, '')}`}>
+          {tr.llamar_a_la_prestadora}
+        </a>
       )}
 
       {!abriendo && (

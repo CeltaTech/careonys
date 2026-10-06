@@ -1,0 +1,38 @@
+name: Borrar el proyecto viejo de la aplicación de Clientes
+
+# De una sola vez: se corre a mano, se comprueba y se borra este archivo.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  borrar:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      VIEJO: careonys-clientes
+      NUEVO: careonys-clientes
+    steps:
+      - name: El nuevo responde
+        run: |
+          test "$(curl -s -o /dev/null -w '%{http_code}' "https://$NUEVO.pages.dev")" = 200
+
+      - name: El viejo no tiene ninguna dirección propia enganchada
+        run: |
+          r=$(curl -sf -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$VIEJO/domains")
+          n=$(echo "$r" | jq '.result | length')
+          echo "direcciones propias: $n"
+          test "$n" = 0
+
+      - name: Se borra el viejo
+        run: npx wrangler@4 pages project delete "$VIEJO" --yes
+
+      - name: El viejo ya no existe y el nuevo sigue respondiendo
+        run: |
+          c=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/$VIEJO")
+          echo "consulta del viejo: $c"
+          test "$c" = 404
+          test "$(curl -s -o /dev/null -w '%{http_code}' "https://$NUEVO.pages.dev")" = 200

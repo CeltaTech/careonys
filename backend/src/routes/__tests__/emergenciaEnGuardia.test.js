@@ -144,8 +144,9 @@ function guardiaDePrueba(extra = {}) {
     fecha: '2026-09-15',
     hora_inicio: '14:00',
     hora_fin: '20:00',
-    estado: 'programada',
-    checkin_at: null,
+    // En curso: el botón existe sólo ahí, y el backend lo exige.
+    estado: 'activa',
+    checkin_at: '2026-09-15T14:02:00Z',
     checkout_at: null,
     ...extra,
   };
@@ -339,6 +340,46 @@ describe('avisar una emergencia desde la guardia', () => {
     const { estado } = await desdeElTelefono(GUARDIA_DE_OTRO_ASISTENTE, { detalle: DETALLE });
     assert.equal(estado, 404);
     assert.equal(emergenciasAnotadas().length, 0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sólo la guardia en curso
+// ---------------------------------------------------------------------------
+//
+// La aplicación ofrece el botón únicamente durante la guardia en curso; el backend lo hace cumplir.
+// Lo que no está en curso contesta lo mismo que la guardia que no existe.
+
+describe('la emergencia es sólo de la guardia en curso', () => {
+  it('la guardia que todavía no empezó no recibe emergencias', async () => {
+    guardiasEnLaBase = [guardiaDePrueba({ estado: 'programada', checkin_at: null })];
+    const { estado, cuerpo } = await desdeElTelefono(GUARDIA, { detalle: DETALLE });
+    assert.equal(estado, 404);
+    assert.equal(cuerpo.motivo, 'no_encontrado');
+    assert.equal(emergenciasAnotadas().length, 0);
+  });
+
+  it('la guardia ya cerrada, la de otro día, tampoco', async () => {
+    guardiasEnLaBase = [guardiaDePrueba({ estado: 'completada', checkout_at: '2026-09-15T20:03:00Z' })];
+    const { estado } = await desdeElTelefono(GUARDIA, { detalle: DETALLE });
+    assert.equal(estado, 404);
+    assert.equal(emergenciasAnotadas().length, 0);
+  });
+
+  it('la que pasó antes de cerrar entra aunque llegue después: estuvo en la cola sin señal', async () => {
+    guardiasEnLaBase = [guardiaDePrueba({ estado: 'completada', checkout_at: '2026-09-15T20:03:00Z' })];
+    const { estado } = await desdeElTelefono(GUARDIA, { detalle: DETALLE, ocurrido_at: '2026-09-15T19:40:00Z' });
+    assert.equal(estado, 200);
+    assert.equal(emergenciasAnotadas()[0].reportado_at, '2026-09-15T19:40:00.000Z');
+  });
+
+  it('la llegada se exige pero su hora no se compara: puede haber llegado al servidor después', async () => {
+    // Llegada y emergencia guardadas sin señal: la llegada se anota con la hora en que llegó al
+    // servidor, que es posterior a la emergencia. Igual estaba adentro.
+    guardiasEnLaBase = [guardiaDePrueba({ checkin_at: new Date().toISOString() })];
+    const antes = new Date(Date.now() - 20 * 60 * 1000).toISOString();
+    const { estado } = await desdeElTelefono(GUARDIA, { detalle: DETALLE, ocurrido_at: antes });
+    assert.equal(estado, 200);
   });
 });
 

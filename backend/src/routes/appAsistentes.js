@@ -1124,6 +1124,21 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
      dato. El criterio es uno solo para todas las rutas y vive en `utils/horaDelHecho.js`. */
   const reportadoAt = horaDelHecho(req.body?.ocurrido_at);
 
+  /* SÓLO DE LA GUARDIA EN CURSO. La aplicación ofrece el botón únicamente ahí, y esto es el candado
+     de atrás: sin él entraba la emergencia de cualquier guardia de esta persona, aunque fuera de
+     otro día. En curso es que la llegada ya está marcada y la salida todavía no lo estaba cuando
+     pasó la cosa.
+     La llegada se exige y no se compara su hora: `checkin_at` es cuándo llegó el aviso al servidor,
+     no cuándo se marcó, y con las dos cosas guardadas sin señal la emergencia podría parecer
+     anterior a una llegada que en el teléfono fue antes. El orden lo garantiza la cola, que manda
+     la llegada primero. La salida sí se compara, por lo mismo al revés: lo guardado es igual o
+     posterior a la salida real, así que una emergencia de adentro de la guardia nunca queda
+     después. Lo que no está en curso contesta lo mismo que la guardia que no existe. */
+  const enCurso = guardia.checkin_at && (!guardia.checkout_at || new Date(reportadoAt) <= new Date(guardia.checkout_at));
+  if (!enCurso) {
+    return responderError(res, new ErrorConMotivo('no_encontrado', 'emergencia fuera de la guardia en curso'));
+  }
+
   /* Y si este mismo aviso ya llegó, no se escribe una segunda emergencia. Una emergencia puede
      pasar dos veces en la misma guardia, así que acá el estado no alcanza para reconocer un
      reenvío: lo reconoce el identificador que el teléfono puso antes del primer intento. */

@@ -43,7 +43,7 @@ import { requiereRolCliente } from './middleware/requiereRolCliente.js';
 import { paraCadaPrestadora } from './db/connection.js';
 import { revisarVencimientos } from './utils/vencimientos.js';
 import { revisarAusenciasAutomaticas } from './utils/ausenciaAutomatica.js';
-import { revisarNotificacionesCoordinador } from './utils/revisarNotificacionesCoordinador.js';
+import { revisarNotificacionesCoordinador, revisarEmergenciasSinTomar } from './utils/revisarNotificacionesCoordinador.js';
 import { extenderSeriesGuardiaAbiertas } from './utils/generacionSeriesGuardia.js';
 import { revisarRecordatoriosPush } from './utils/revisarRecordatoriosPush.js';
 import { revisarGuardiasSinCubrir } from './utils/revisarGuardiasSinCubrir.js';
@@ -196,9 +196,18 @@ app.use('/api/panel/avisos-en-vivo', panelAvisosEnVivoRouter);
 // sola Prestadora (db/connection.js): lo que la tarea consulta, la base se lo recorta a esa
 // Prestadora, y lo que falla en una no frena a las demás. Arranca apenas se levanta el backend y
 // después se repite con su cadencia.
+//
+// Si una vuelta todavía no terminó cuando toca la siguiente, la siguiente no arranca: dos vueltas
+// encimadas leerían los mismos pendientes y mandarían el mismo aviso dos veces.
 function programar(tarea, cadaMs) {
-  const correr = () => paraCadaPrestadora(tarea.name, () => tarea())
-    .catch((err) => console.error(`${tarea.name}:`, err?.message ?? err));
+  let corriendo = false;
+  const correr = () => {
+    if (corriendo) return;
+    corriendo = true;
+    paraCadaPrestadora(tarea.name, () => tarea())
+      .catch((err) => console.error(`${tarea.name}:`, err?.message ?? err))
+      .finally(() => { corriendo = false; });
+  };
   correr();
   setInterval(correr, cadaMs);
 }
@@ -214,6 +223,11 @@ programar(revisarAusenciasAutomaticas, CINCO_MINUTOS_MS);
 // Insistencia de Coordinador (punto 5, docs/PRD_06_WhatsApp_IA.md) — corre con la misma
 // cadencia que revisarAusenciasAutomaticas porque también se mide en minutos, no en días.
 programar(revisarNotificacionesCoordinador, CINCO_MINUTOS_MS);
+
+// Las emergencias, cada minuto: es el mínimo con que una Prestadora puede pedir que se repitan, y
+// una emergencia avisada tarde puede costar una vida.
+const UN_MINUTO_MS = 60 * 1000;
+programar(revisarEmergenciasSinTomar, UN_MINUTO_MS);
 
 // Renovación automática del horizonte de guardias de series abiertas (pendiente #18 punto 2,
 // docs/PLAN_HASTA_PRODUCCION.md) — se mide en días, misma cadencia que revisarVencimientos.

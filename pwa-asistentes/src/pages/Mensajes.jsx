@@ -22,7 +22,7 @@ export default function Mensajes() {
   useEffect(() => {
     let activo = true;
     api
-      .conversacionesDelMatch()
+      .conversacionesDeLaIntermediacion()
       .then((data) => {
         if (activo) setConversaciones(data.conversaciones || []);
       })

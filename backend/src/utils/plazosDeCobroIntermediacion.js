@@ -4,10 +4,10 @@
    QUÉ RESUELVE. Tres plazos comerciales estaban escritos en el backend: con cuántos días se avisa un
    cobro que viene, cuántos dura la gracia cuando un cobro no entra, y cuántos vive el cupón de la
    red de cobranza. Los tres miran al Cliente, así que los elige la Prestadora
-   (`configuracion_cobro_match`).
+   (`configuracion_cobro_intermediacion`).
 
    ES LA ÚNICA PUERTA. Los tres trabajos que los usan —`avisoPrevioAlCobro.js`,
-   `periodoDeGracia.js` y `cobrosMatch.js`— preguntan acá y ninguno guarda un número propio
+   `periodoDeGracia.js` y `cobrosIntermediacion.js`— preguntan acá y ninguno guarda un número propio
    (`celtatech\CLAUDE.md` §8, ningún patrón repetido sin punto único de verdad).
 
    NINGÚN VALOR DE ARRANQUE SE ESCRIBE ACÁ. Los que valen mientras la Prestadora no tocó nada son
@@ -23,7 +23,7 @@
 
 import { supabase } from '../db/connection.js';
 
-const TABLA = 'configuracion_cobro_match';
+const TABLA = 'configuracion_cobro_intermediacion';
 const COLUMNAS = 'dias_de_aviso_antes_del_cobro, dias_de_gracia_por_cobro_rechazado, dias_de_vida_del_cupon';
 
 /** La memoria de una vuelta. Se crea al empezar el trabajo y se pasa a cada lectura. */

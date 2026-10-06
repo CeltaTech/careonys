@@ -106,7 +106,7 @@ function accesoVivo(cambios = {}) {
       vigente_hasta: '2026-10-01',
       proximo_cobro: '2026-10-01',
       gratis_hasta: null,
-      formas_de_cobro_match: { renueva_sola: true },
+      formas_de_cobro_intermediacion: { renueva_sola: true },
       ...cambios,
     },
   ];
@@ -118,15 +118,15 @@ beforeEach(() => {
   llamadasAStripe = [];
   stripeRechaza = false;
   respuestas.clear();
-  respuestas.set('GET /rest/v1/accesos_match', () => accesoVivo());
-  respuestas.set('PATCH /rest/v1/accesos_match', () => []);
+  respuestas.set('GET /rest/v1/accesos_intermediacion', () => accesoVivo());
+  respuestas.set('PATCH /rest/v1/accesos_intermediacion', () => []);
   respuestas.set('POST /rest/v1/rpc/leer_credencial_pasarela_pago', () => CREDENCIAL);
 });
 
 const darDeBaja = (extra = {}) => darDeBajaElAcceso({ accesoId: ACCESO, clienteId: CLIENTE, ...extra });
 
 function guardado() {
-  return llamadas.find((l) => l.clave === 'PATCH /rest/v1/accesos_match');
+  return llamadas.find((l) => l.clave === 'PATCH /rest/v1/accesos_intermediacion');
 }
 
 describe('la baja que sale bien', () => {
@@ -158,7 +158,7 @@ describe('la baja que sale bien', () => {
   });
 
   it('sin período cobrado todavía, lo que se muestra es hasta cuándo dura lo gratis', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', () =>
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () =>
       accesoVivo({ vigente_hasta: null, gratis_hasta: '2026-09-20' })
     );
     const resultado = await darDeBaja();
@@ -167,7 +167,7 @@ describe('la baja que sale bien', () => {
 
   it('lo busca acotado al Cliente, así nadie da de baja el acceso de otro', async () => {
     await darDeBaja();
-    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_match');
+    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_intermediacion');
     assert.ok(busqueda.url.includes(`cliente_id=eq.${CLIENTE}`));
   });
 
@@ -177,7 +177,7 @@ describe('la baja que sale bien', () => {
   });
 
   it('el acceso que nunca llegó a la pasarela se da de baja igual, sin llamar a nadie', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', () =>
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () =>
       accesoVivo({ proveedor: null, referencia_externa: null, alta_en_pasarela: null })
     );
     const resultado = await darDeBaja();
@@ -187,7 +187,7 @@ describe('la baja que sale bien', () => {
   });
 
   it('el que se cobra en mano no le pide ninguna credencial a la caja fuerte', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', () =>
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () =>
       accesoVivo({ proveedor: 'efectivo_manual', referencia_externa: 'anotado-a-mano' })
     );
     const resultado = await darDeBaja();
@@ -197,7 +197,7 @@ describe('la baja que sale bien', () => {
   });
 
   it('la que ya estaba dada de baja se contesta guardada y no vuelve a salir hacia afuera', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', () =>
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () =>
       accesoVivo({ cancelada_en: '2026-09-01T12:00:00.000Z' })
     );
     const resultado = await darDeBaja();
@@ -211,7 +211,7 @@ describe('la baja que sale bien', () => {
 
 describe('el acceso que no se da de baja', () => {
   it('el que no existe —o es de otro Cliente— se contesta y no se llama a nadie', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', () => []);
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () => []);
     const resultado = await darDeBaja();
     assert.equal(resultado.ok, false);
     assert.equal(resultado.motivo, MOTIVO_BAJA.ACCESO_INEXISTENTE);
@@ -228,8 +228,8 @@ describe('el acceso que no se da de baja', () => {
   });
 
   it('una forma que no se renueva sola no tiene nada que apagar', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', () =>
-      accesoVivo({ formas_de_cobro_match: { renueva_sola: false } })
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () =>
+      accesoVivo({ formas_de_cobro_intermediacion: { renueva_sola: false } })
     );
     const resultado = await darDeBaja();
     assert.equal(resultado.motivo, MOTIVO_BAJA.FORMA_QUE_NO_SE_RENUEVA);
@@ -264,7 +264,7 @@ describe('cuando la baja falla en el medio', () => {
   });
 
   it('un riel que el código ya no conoce corta antes de pedir la credencial', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', () =>
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () =>
       accesoVivo({ proveedor: 'una_pasarela_que_no_existe' })
     );
     const resultado = await darDeBaja();

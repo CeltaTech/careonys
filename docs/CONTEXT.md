@@ -303,8 +303,8 @@ padrón de obras sociales cambia de país en país y el producto no conoce ningu
 **En la modalidad Match** (`docs/PRD_07_Modalidad_Match.md`), el Cliente le paga a la Prestadora por una pasarela,
 y **cada Prestadora arma su propia forma de cobrar** con las piezas que el producto le da
 —importe, cada cuánto, período gratuito, saldo de contactos, si se renueva sola— en
-`formas_de_cobro_match`. Lo que cada Cliente tiene habilitado vive en
-`accesos_match`. El producto no elige por ella ni le fija precio ni duración: la política
+`formas_de_cobro_intermediacion`. Lo que cada Cliente tiene habilitado vive en
+`accesos_intermediacion`. El producto no elige por ella ni le fija precio ni duración: la política
 de comercialización es un dato de la Prestadora, no código. El saldo de contactos de un paquete
 se carga cuando entra la plata y se gasta de a un Asistente, con la cuenta hecha adentro de la
 base; el detalle está en `docs/PRD_07_Modalidad_Match.md` §3.5. Y una forma que se renueva

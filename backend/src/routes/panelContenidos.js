@@ -11,7 +11,7 @@
 // trabajo de adentro de una Prestadora.
 //
 // NO LLEVA CANDADO DE MODALIDAD. Un Cliente de prestación directa cuida en su casa igual que uno
-// de Match. Por eso este riel no cuelga de `panelMatch.js`.
+// de Match. Por eso este riel no cuelga de `panelIntermediacion.js`.
 //
 // CON QUÉ CREDENCIAL. Leer va con la de quien pide (`clienteDelPedido(req)`): la base le contesta
 // sólo lo de su Prestadora, y por eso esa consulta no lleva el filtro de la sesión. Escribir sigue

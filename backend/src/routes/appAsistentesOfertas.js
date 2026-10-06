@@ -79,7 +79,7 @@ const CAMPOS_DE_GUARDIA =
  * mensaje con esta forma exacta:
  *
  *     matricula_bloquea:vencida:
- *     modalidad_bloquea:match:
+ *     modalidad_bloquea:intermediacion:
  *
  * Ese texto no puede llegar nunca a la pantalla: no está traducido y para quien lo lee es un
  * error de sistema. Acá se lo abre y se devuelve el código que las traducciones convierten en

@@ -232,7 +232,7 @@ ALTER TABLE asistentes ADD COLUMN fecha_baja DATE;         -- null mientras est�
 ALTER TABLE asistentes ADD COLUMN horas_semanales NUMERIC(5,2);
 
 -- En qué modalidad de trabajo está el Asistente: 'directa' (la Prestadora le asigna las
--- guardias) y/o 'match' (el Asistente elige qué toma). No hay tercera modalidad.
+-- guardias) y/o 'intermediacion' (el Asistente elige qué toma). No hay tercera modalidad.
 --
 -- La columna se llama `canales` porque así se creó, y lo guardado no se renombra. La palabra del producto es **modalidad de trabajo**.
 --
@@ -241,9 +241,9 @@ ALTER TABLE asistentes ADD COLUMN horas_semanales NUMERIC(5,2);
 -- `trg_modalidades_*` sobre esta tabla y `trg_modalidad_en_*` sobre guardias, series y
 -- ofertas. Si una modalidad no está habilitada, el motivo de la exclusión vive en
 -- `datos_reservados_asistente`, no acá.
-ALTER TABLE asistentes ADD COLUMN canales TEXT[] NOT NULL DEFAULT ARRAY['directa','match'];
+ALTER TABLE asistentes ADD COLUMN canales TEXT[] NOT NULL DEFAULT ARRAY['directa','intermediacion'];
 ALTER TABLE asistentes ADD CONSTRAINT asistentes_canales_valido
-  CHECK (canales <@ ARRAY['directa','match']::TEXT[] AND array_length(canales, 1) > 0);
+  CHECK (canales <@ ARRAY['directa','intermediacion']::TEXT[] AND array_length(canales, 1) > 0);
 ```
 
 ### remuneraciones_asistente — lo que cobra el Asistente
@@ -286,7 +286,7 @@ CREATE TABLE datos_reservados_asistente (
     CHECK (score_riesgo_reclasificacion >= 0 AND score_riesgo_reclasificacion <= 100),
   indicadores_riesgo            JSONB NOT NULL DEFAULT '{}'::jsonb,
   motivo_exclusion_directo      TEXT,      -- NULL mientras la modalidad esté activa en `canales`
-  motivo_exclusion_match        TEXT,      -- ídem
+  motivo_exclusion_intermediacion        TEXT,      -- ídem
   created_at                    TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at                    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -949,8 +949,8 @@ Ningún PRD original define esas tablas (ver `CONTEXT.md`, sección de gap). **E
 directa** requiere decisión de negocio antes de implementarse.
 
 En la modalidad Match el cobro sí está definido y aplicado, y su schema no vive acá sino
-en `docs/PRD_07_Modalidad_Match.md`: `formas_de_cobro_match` (las piezas con las que
-cada Prestadora arma su forma de cobrar) y `accesos_match` (qué tiene habilitado cada
-Cliente), más `cobros_match`, `prestadora_pasarela_pago`, `credenciales_pasarela_pago` y
+en `docs/PRD_07_Modalidad_Match.md`: `formas_de_cobro_intermediacion` (las piezas con las que
+cada Prestadora arma su forma de cobrar) y `accesos_intermediacion` (qué tiene habilitado cada
+Cliente), más `cobros_intermediacion`, `prestadora_pasarela_pago`, `credenciales_pasarela_pago` y
 `qr_cobro_efectivo`. Este documento
 junta las tablas de los documentos originales de Careonys, que son anteriores a esa modalidad.

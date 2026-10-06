@@ -31,7 +31,7 @@ import {
 import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
 import { lugaresDe } from '../utils/lugaresDeCadaPersona.js';
 import { nombresDeLugares } from '../utils/catalogoDeLugares.js';
-import { ofreceMatch } from '../utils/matchDeLaPrestadora.js';
+import { ofreceIntermediacion } from '../utils/intermediacionDeLaPrestadora.js';
 import { MODALIDAD } from '../utils/modalidades.js';
 import {
   LADO,
@@ -41,7 +41,7 @@ import {
   marcarLeido,
   mensajesDeLaConversacion,
   videollamadaEnCurso,
-} from '../utils/conversacionMatch.js';
+} from '../utils/conversacionIntermediacion.js';
 import { direccionDeVideollamada } from '../utils/videollamada.js';
 import { puedeRegistrarUbicacion } from '../utils/consentimientoUbicacion.js';
 import { faltaElSustituto, MOTIVO_SIN_SUSTITUTO } from '../utils/guardiaSinSustituto.js';
@@ -263,9 +263,9 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
   // de prestación directa adentro de una Prestadora que además hace Match no recibe
   // mensajes de nadie. Viaja con el perfil por el mismo motivo que la marca: la aplicación lo
   // necesita antes de dibujar el menú.
-  const match =
-    (perfil.canales || []).includes(MODALIDAD.MATCH) &&
-    (await ofreceMatch(req.usuarioAsistente.prestadoraId));
+  const intermediacion =
+    (perfil.canales || []).includes(MODALIDAD.INTERMEDIACION) &&
+    (await ofreceIntermediacion(req.usuarioAsistente.prestadoraId));
 
   // Dónde acepta trabajar, con los nombres puestos. Está guardado en la tabla que la cruza con cada
   // lugar, no en su ficha: una persona puede cubrir dos localidades de una zona y una de otra, y la
@@ -273,7 +273,7 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
   const lugares = await lugaresDe(db, 'asistente_lugares', 'asistente_id', perfil.id, req.usuarioAsistente.prestadoraId);
   const zonas = await nombresDeLugares(db, lugares, req.usuarioAsistente.prestadoraId);
 
-  res.json({ perfil: { ...perfil, zonas }, certificado: certificado || null, marca, visibilidad, match });
+  res.json({ perfil: { ...perfil, zonas }, certificado: certificado || null, marca, visibilidad, intermediacion });
 });
 
 // Su carpeta de papeles, y su Certificado de Aptitud.
@@ -2033,7 +2033,7 @@ appAsistentesRouter.patch('/calificaciones/:id/descargo', requiereRolAsistente, 
 // EL CHAT CON UN CLIENTE DE LA VIDRIERA
 //
 // LA OTRA PUNTA DEL MISMO HILO. Lo que el Cliente ve en su aplicación y lo que el Asistente ve
-// en la suya es la misma conversación, y las dos entran por `utils/conversacionMatch.js`.
+// en la suya es la misma conversación, y las dos entran por `utils/conversacionIntermediacion.js`.
 // Ahí vive el tapado del dato de contacto, una vez y para los dos lados: tapando nada más lo que
 // escribe el Asistente, el Cliente pondría su propio número y la llamada saldría igual.
 //
@@ -2046,7 +2046,7 @@ appAsistentesRouter.patch('/calificaciones/:id/descargo', requiereRolAsistente, 
  *  ajeno contestan lo mismo. */
 async function conversacionDelAsistente(db, req) {
   const { data } = await db
-    .from('conversaciones_match')
+    .from('conversaciones_intermediacion')
     .select('id, prestadora_id, cliente_id, asistente_id, ultimo_mensaje_at, sala_videollamada, sala_abierta_at')
     .eq('id', req.params.id)
     .eq('asistente_id', req.usuarioAsistente.asistenteId)
@@ -2057,9 +2057,9 @@ async function conversacionDelAsistente(db, req) {
 }
 
 /** Corta el paso donde la Prestadora no ofrece la modalidad. */
-async function exigeMatch(req) {
-  if (!(await ofreceMatch(req.usuarioAsistente.prestadoraId))) {
-    throw new ErrorConMotivo('match_no_habilitado');
+async function exigeIntermediacion(req) {
+  if (!(await ofreceIntermediacion(req.usuarioAsistente.prestadoraId))) {
+    throw new ErrorConMotivo('intermediacion_no_habilitado');
   }
 }
 
@@ -2070,12 +2070,12 @@ async function nombreDelCliente(clienteId, prestadoraId) {
   return cuentas.get(clienteId)?.nombre || '';
 }
 
-appAsistentesRouter.get('/match/conversaciones', requiereRolAsistente, async (req, res) => {
+appAsistentesRouter.get('/intermediacion/conversaciones', requiereRolAsistente, async (req, res) => {
   try {
-    await exigeMatch(req);
+    await exigeIntermediacion(req);
     const db = clienteDelPedido(req);
     const { data, error } = await db
-      .from('conversaciones_match')
+      .from('conversaciones_intermediacion')
       .select('id, cliente_id, ultimo_mensaje_at')
       .eq('asistente_id', req.usuarioAsistente.asistenteId)
       .order('ultimo_mensaje_at', { ascending: false, nullsFirst: false });
@@ -2087,7 +2087,7 @@ appAsistentesRouter.get('/match/conversaciones', requiereRolAsistente, async (re
       cuentasDeLasFichas('clientes', hilos.map((c) => c.cliente_id), 'nombre', req.usuarioAsistente.prestadoraId),
       hilos.length
         ? db
-            .from('mensajes_match')
+            .from('mensajes_intermediacion')
             .select('conversacion_id')
             .in('conversacion_id', hilos.map((c) => c.id))
             .eq('lado', 'cliente')
@@ -2112,9 +2112,9 @@ appAsistentesRouter.get('/match/conversaciones', requiereRolAsistente, async (re
   }
 });
 
-appAsistentesRouter.get('/match/conversaciones/:id', requiereRolAsistente, async (req, res) => {
+appAsistentesRouter.get('/intermediacion/conversaciones/:id', requiereRolAsistente, async (req, res) => {
   try {
-    await exigeMatch(req);
+    await exigeIntermediacion(req);
     const conversacion = await conversacionDelAsistente(clienteDelPedido(req), req);
 
     // El refresco del hilo abierto pide nada más lo posterior a lo que ya tiene. Sin `desde` sale
@@ -2144,9 +2144,9 @@ appAsistentesRouter.get('/match/conversaciones/:id', requiereRolAsistente, async
   }
 });
 
-appAsistentesRouter.post('/match/conversaciones/:id/mensajes', requiereRolAsistente, async (req, res) => {
+appAsistentesRouter.post('/intermediacion/conversaciones/:id/mensajes', requiereRolAsistente, async (req, res) => {
   try {
-    await exigeMatch(req);
+    await exigeIntermediacion(req);
     const conversacion = await conversacionDelAsistente(clienteDelPedido(req), req);
 
     const cuerpo = String(req.body?.cuerpo ?? '').trim();
@@ -2167,9 +2167,9 @@ appAsistentesRouter.post('/match/conversaciones/:id/mensajes', requiereRolAsiste
   }
 });
 
-appAsistentesRouter.post('/match/conversaciones/:id/videollamada', requiereRolAsistente, async (req, res) => {
+appAsistentesRouter.post('/intermediacion/conversaciones/:id/videollamada', requiereRolAsistente, async (req, res) => {
   try {
-    await exigeMatch(req);
+    await exigeIntermediacion(req);
     const conversacion = await conversacionDelAsistente(clienteDelPedido(req), req);
     const sala = await abrirVideollamada({
       conversacion,

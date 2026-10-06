@@ -96,7 +96,7 @@ function accesoApagado(cambios = {}) {
 
 /** Lo que la base recibió para guardar, o `undefined` si no se guardó nada. */
 function loGuardado() {
-  return llamadas.find((l) => l.clave === 'PATCH /rest/v1/accesos_match');
+  return llamadas.find((l) => l.clave === 'PATCH /rest/v1/accesos_intermediacion');
 }
 
 beforeEach(() => {
@@ -104,15 +104,15 @@ beforeEach(() => {
   anotados = [];
   respuestas.clear();
   // El corte recorre las Prestadoras de a una, y la lista sale de la tabla de configuración de
-  // cobro, que tiene una fila por Prestadora (`prestadorasDelMatch.js`). Sin esta respuesta
+  // cobro, que tiene una fila por Prestadora (`prestadorasDeLaIntermediacion.js`). Sin esta respuesta
   // no hay a quién recorrer y el trabajo no consulta ningún acceso.
-  respuestas.set('GET /rest/v1/configuracion_cobro_match', [{ prestadora_id: PRESTADORA }]);
-  respuestas.set('PATCH /rest/v1/accesos_match', []);
+  respuestas.set('GET /rest/v1/configuracion_cobro_intermediacion', [{ prestadora_id: PRESTADORA }]);
+  respuestas.set('PATCH /rest/v1/accesos_intermediacion', []);
 });
 
 describe('el acceso que se corta', () => {
   it('apaga el que se dio de baja y ya se le terminó lo pagado', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', [accesoApagado()]);
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [accesoApagado()]);
 
     const { cortados } = await cortarLosAccesosDadosDeBaja();
 
@@ -124,7 +124,7 @@ describe('el acceso que se corta', () => {
   it('corta el mismo día en que vence, no al siguiente', async () => {
     // `vigente_hasta` es la fecha del cobro que no se va a hacer: el primer día que ya no está
     // pagado. Esperar un día más regalaría un período.
-    respuestas.set('GET /rest/v1/accesos_match', [accesoApagado({ vigente_hasta: HOY })]);
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [accesoApagado({ vigente_hasta: HOY })]);
 
     const { cortados } = await cortarLosAccesosDadosDeBaja();
 
@@ -132,13 +132,13 @@ describe('el acceso que se corta', () => {
   });
 
   it('corta en el acto al que se dio de baja sin haber pagado ningún período', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', [accesoApagado({ vigente_hasta: null })]);
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [accesoApagado({ vigente_hasta: null })]);
 
     assert.equal((await cortarLosAccesosDadosDeBaja()).cortados, 1);
   });
 
   it('mira el fin del período gratis cuando no hay período pagado', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', [
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [
       accesoApagado({ vigente_hasta: null, gratis_hasta: AYER }),
     ]);
 
@@ -147,7 +147,7 @@ describe('el acceso que se corta', () => {
 
   it('no toca ni la fecha de la baja ni hasta cuándo llegaba lo pagado', async () => {
     // El corte no reescribe la historia del acceso: dice que se apagó y nada más.
-    respuestas.set('GET /rest/v1/accesos_match', [accesoApagado()]);
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [accesoApagado()]);
 
     await cortarLosAccesosDadosDeBaja();
 
@@ -160,7 +160,7 @@ describe('el acceso que se corta', () => {
   it('vuelve a exigir al guardar que siga vigente y dado de baja', async () => {
     // Entre la consulta y el guardado puede haber entrado un cobro, y entonces el acceso volvió a
     // estar pago: cortarlo ahí le sacaría un período a alguien que lo abonó.
-    respuestas.set('GET /rest/v1/accesos_match', [accesoApagado()]);
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [accesoApagado()]);
 
     await cortarLosAccesosDadosDeBaja();
 
@@ -172,7 +172,7 @@ describe('el acceso que se corta', () => {
 
 describe('el acceso que no se corta', () => {
   it('no toca al que todavía tiene período pagado por delante', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', [accesoApagado({ vigente_hasta: MANANA })]);
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [accesoApagado({ vigente_hasta: MANANA })]);
 
     const { cortados } = await cortarLosAccesosDadosDeBaja();
 
@@ -183,11 +183,11 @@ describe('el acceso que no se corta', () => {
   it('sólo le pregunta a la base por los vigentes que se dieron de baja', async () => {
     // Lo que no se dio de baja y se le pasó la fecha está esperando un cobro, no terminado:
     // suspenderlo es el período de gracia, que es otro paso del plan.
-    respuestas.set('GET /rest/v1/accesos_match', []);
+    respuestas.set('GET /rest/v1/accesos_intermediacion', []);
 
     await cortarLosAccesosDadosDeBaja();
 
-    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_match').url;
+    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_intermediacion').url;
     assert.match(consulta, /estado=eq\.vigente/);
     assert.match(consulta, /cancelada_en=not\.is\.null/);
     // Y de una sola Prestadora. Una consulta que no la nombra alcanza dos cajones a la vez.
@@ -195,7 +195,7 @@ describe('el acceso que no se corta', () => {
   });
 
   it('no escribe nada si la consulta falla', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', { __falla: { message: 'la base no contesta' } });
+    respuestas.set('GET /rest/v1/accesos_intermediacion', { __falla: { message: 'la base no contesta' } });
 
     const { cortados } = await cortarLosAccesosDadosDeBaja();
 
@@ -207,12 +207,12 @@ describe('el acceso que no se corta', () => {
 
 describe('cuando un corte no se puede guardar', () => {
   it('sigue con los demás y anota el que falló', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', [
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [
       accesoApagado(),
       accesoApagado({ id: OTRO_ACCESO }),
     ]);
     let vez = 0;
-    respuestas.set('PATCH /rest/v1/accesos_match', () => {
+    respuestas.set('PATCH /rest/v1/accesos_intermediacion', () => {
       vez += 1;
       return vez === 1 ? { __falla: { message: 'la base no contesta' } } : [];
     });
@@ -220,7 +220,7 @@ describe('cuando un corte no se puede guardar', () => {
     const { cortados } = await cortarLosAccesosDadosDeBaja();
 
     assert.equal(cortados, 1);
-    assert.equal(llamadas.filter((l) => l.clave === 'PATCH /rest/v1/accesos_match').length, 2);
+    assert.equal(llamadas.filter((l) => l.clave === 'PATCH /rest/v1/accesos_intermediacion').length, 2);
     assert.equal(anotados.length, 1);
   });
 });

@@ -19,14 +19,14 @@
    Y NO TODO LO QUE SE COBRA ES UN PERÍODO. Una forma de cobro puede traer contactos incluidos —un
    paquete se paga una vez y lo que lo sostiene es el saldo, no una fecha—, y el único momento en
    que ese saldo existe es cuando entra la plata. Por eso la carga también sale de acá
-   (`contactosMatch.js`): es el mismo punto único por donde pasan los tres caminos del cobro.
+   (`contactosIntermediacion.js`): es el mismo punto único por donde pasan los tres caminos del cobro.
 
    CUÁNTO DURA EL PERÍODO LO DICE LA PRESTADORA, NO ESTE ARCHIVO. Cada acceso cuelga de la forma de
    cobro que el Cliente eligió, y esa forma guarda cada cuánto se cobra: tantos días, semanas, meses
-   o años (`formas_de_cobro_match.periodo_cantidad` y `periodo_unidad`). Una forma sin período
+   o años (`formas_de_cobro_intermediacion.periodo_cantidad` y `periodo_unidad`). Una forma sin período
    se cobra una sola vez y no tiene siguiente.
 
-   Y EL PERÍODO ES UNA FECHA GUARDADA, NO UNA CUENTA AL VUELO. `accesos_match.proximo_cobro`
+   Y EL PERÍODO ES UNA FECHA GUARDADA, NO UNA CUENTA AL VUELO. `accesos_intermediacion.proximo_cobro`
    dice cuál toca, y el siguiente sale de ése y no de la fecha de hoy. Es lo que pide
    `docs/PRD_07_Modalidad_Match.md:72-73`, y la diferencia se ve el día que un cobro entra
    tarde: contando desde hoy, cada demora corre la fecha y la Prestadora termina cobrando once
@@ -40,15 +40,15 @@
 
    Y NO SE ARMA DOS VECES EL MISMO PERÍODO. El candado de verdad está en la base: un índice único
    parcial deja un solo cobro `pendiente` por acceso y período
-   (`uq_cobros_match_periodo_pendiente`). Acá igual se pregunta antes, para no pedirle al
+   (`uq_cobros_intermediacion_periodo_pendiente`). Acá igual se pregunta antes, para no pedirle al
    proveedor un QR que después habría que tirar. */
 
 import { supabase } from '../db/connection.js';
 import { obtenerAdaptador, armaCobroPorPeriodo } from '../pasarelas/index.js';
-import { cargarContactosEnElSaldo } from './contactosMatch.js';
+import { cargarContactosEnElSaldo } from './contactosIntermediacion.js';
 import { sumarDias } from './fechas.js';
-import { memoriaDePlazos, plazosDeLaPrestadora } from './plazosDeCobroMatch.js';
-import { prestadorasDelMatch } from './prestadorasDelMatch.js';
+import { memoriaDePlazos, plazosDeLaPrestadora } from './plazosDeCobroIntermediacion.js';
+import { prestadorasDeLaIntermediacion } from './prestadorasDeLaIntermediacion.js';
 
 /**
  * Le pide a cada riel de período el cobro de los períodos que ya vencieron. Corre una vez por día
@@ -68,7 +68,7 @@ export async function armarCobrosDelPeriodo() {
   // y no una por acceso, como la credencial.
   const plazos = memoriaDePlazos();
 
-  for (const prestadoraId of await prestadorasDelMatch()) {
+  for (const prestadoraId of await prestadorasDeLaIntermediacion()) {
     await armarLosCobrosDeUnaPrestadora(prestadoraId, hoy, credenciales, plazos);
   }
 }
@@ -76,10 +76,10 @@ export async function armarCobrosDelPeriodo() {
 /** La vuelta de una sola Prestadora. Una falla suya se anota acá y no toca a las demás. */
 async function armarLosCobrosDeUnaPrestadora(prestadoraId, hoy, credenciales, plazos) {
   const { data: accesos, error } = await supabase
-    .from('accesos_match')
+    .from('accesos_intermediacion')
     .select(
       'id, prestadora_id, cliente_id, proveedor, importe, moneda, proximo_cobro, ' +
-        'formas_de_cobro_match(periodo_cantidad, periodo_unidad)'
+        'formas_de_cobro_intermediacion(periodo_cantidad, periodo_unidad)'
     )
     .eq('prestadora_id', prestadoraId)
     .eq('estado', 'vigente')
@@ -117,7 +117,7 @@ async function armarUnCobro(acceso, credenciales, plazos) {
   // ¿Ya tiene un cobro de este período que no está fallido? Entonces no hay nada que armar: o
   // está esperando que el Cliente pague, o ya se pagó y lo que quedó atrasado es la fecha.
   const { data: existentes, error: errorExistentes } = await supabase
-    .from('cobros_match')
+    .from('cobros_intermediacion')
     .select('id, estado_cobro')
     .eq('prestadora_id', acceso.prestadora_id)
     .eq('acceso_id', acceso.id)
@@ -150,7 +150,7 @@ async function armarUnCobro(acceso, credenciales, plazos) {
     vencimiento: sumarDias(periodo, plazosDeEsta.dias_de_vida_del_cupon),
   });
 
-  const { error: errorInsertar } = await supabase.from('cobros_match').insert({
+  const { error: errorInsertar } = await supabase.from('cobros_intermediacion').insert({
     acceso_id: acceso.id,
     prestadora_id: acceso.prestadora_id,
     medio: acceso.proveedor,
@@ -188,7 +188,7 @@ async function credencialDe(prestadoraId, proveedor, credenciales) {
  *
  * Lo llaman los tres caminos por los que entra la plata: lo que manda el proveedor
  * (`routes/webhooksPasarelas.js`), la carga de efectivo en mano y el canje del QR
- * (`routes/panelMatch.js`).
+ * (`routes/panelIntermediacion.js`).
  *
  * @param {object} argumentos
  * @param {string} argumentos.prestadoraId  De qué Prestadora es el acceso. Obligatorio y sin valor
@@ -199,10 +199,10 @@ async function credencialDe(prestadoraId, proveedor, credenciales) {
  */
 export async function registrarCobroExitoso({ prestadoraId, accesoId, periodo }) {
   const { data: acceso, error } = await supabase
-    .from('accesos_match')
+    .from('accesos_intermediacion')
     .select(
       'id, proximo_cobro, ' +
-        'formas_de_cobro_match(periodo_cantidad, periodo_unidad, contactos_incluidos)'
+        'formas_de_cobro_intermediacion(periodo_cantidad, periodo_unidad, contactos_incluidos)'
     )
     .eq('prestadora_id', prestadoraId)
     .eq('id', accesoId)
@@ -222,10 +222,10 @@ export async function registrarCobroExitoso({ prestadoraId, accesoId, periodo })
 
   // Una forma que se cobra una sola vez no tiene período siguiente: queda pago y no vuelve a
   // cobrarse. Lo que la sostenga a partir de acá —una fecha o un saldo— ya está guardado.
-  const proximoCobro = proximaFecha(base, acceso.formas_de_cobro_match);
+  const proximoCobro = proximaFecha(base, acceso.formas_de_cobro_intermediacion);
 
   const { error: errorActualizar } = await supabase
-    .from('accesos_match')
+    .from('accesos_intermediacion')
     .update({
       estado: 'vigente',
       proximo_cobro: proximoCobro,
@@ -251,7 +251,7 @@ export async function registrarCobroExitoso({ prestadoraId, accesoId, periodo })
   // sin abrir de una compra anterior sigue estando. Va después de mover el acceso a propósito: el
   // período es lo que no puede quedar sin anotar, y una carga de saldo que falle se ve en el
   // registro sin dejar un cobro a medio aplicar.
-  const contactos = acceso.formas_de_cobro_match?.contactos_incluidos;
+  const contactos = acceso.formas_de_cobro_intermediacion?.contactos_incluidos;
   let saldoContactos;
   if (contactos > 0) {
     const carga = await cargarContactosEnElSaldo({ accesoId, cuantos: contactos });
@@ -278,7 +278,7 @@ export function proximaFecha(fechaISO, forma) {
 
 /**
  * Tantos días, semanas, meses o años después. Las cuatro unidades son las que la Prestadora
- * puede elegir al armar su forma de cobro (`formas_de_cobro_match.periodo_unidad`).
+ * puede elegir al armar su forma de cobro (`formas_de_cobro_intermediacion.periodo_unidad`).
  *
  * Por meses y años no se escribe con `setMonth(+1)` a secas, que es lo que hacía la entrada de
  * la pasarela: el 31 de enero más un mes da 3 de marzo, y a partir de ahí el cobro cae el 3 de cada mes

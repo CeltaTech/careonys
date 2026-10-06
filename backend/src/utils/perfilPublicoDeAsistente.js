@@ -8,7 +8,7 @@
 // de papeles y qué dijeron los Clientes anteriores— y no tiene que alcanzar para
 // ir a buscarla por fuera del producto. Eso segundo es justamente lo que el
 // Match vende, y se cobra aparte
-// (`accesos_match.saldo_contactos`).
+// (`accesos_intermediacion.saldo_contactos`).
 //
 // POR ESO EL DATO DE CONTACTO NO SALE DE ACÁ, NI TAPADO NI A MEDIAS. Teléfono,
 // correo, documento, domicilio y cualquier otro medio por el que se pueda llegar
@@ -20,7 +20,7 @@
 // `ranking_plataforma` es una de las cinco funciones de riesgo catalogadas: en
 // Argentina, que la plataforma ordene a quién se le ofrece trabajo primero es uno
 // de los indicios de dirección del trabajo (`docs/legal/argentina.md`, y el
-// catálogo en `catalogo_funciones_match`). Nace apagada, y mientras esté
+// catálogo en `catalogo_funciones_intermediacion`). Nace apagada, y mientras esté
 // apagada el orden **no puede premiar ni castigar a nadie**. Tampoco puede ser
 // alfabético: quien se llama Acosta quedaría primero todos los días del año, que
 // es una ventaja permanente repartida por la plataforma. Así que se mezcla, de

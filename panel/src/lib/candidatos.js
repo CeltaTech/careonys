@@ -96,11 +96,11 @@ export const MOTIVO = {
   /**
    * Uno por modalidad, en vez de uno solo con la modalidad adentro. La frase la arma la
    * pantalla reemplazando valores a secas, así que un `{modalidad}` le llegaría en crudo
-   * —"match", en minúscula y sin traducir— justo en el motivo que explica por qué
+   * —"intermediacion", en minúscula y sin traducir— justo en el motivo que explica por qué
    * alguien no puede tomar la guardia.
    */
   MODALIDAD_DIRECTA: 'motivo_modalidad_directa',
-  MODALIDAD_MATCH: 'motivo_modalidad_match',
+  MODALIDAD_INTERMEDIACION: 'motivo_modalidad_intermediacion',
   /**
    * Lo dijo el propio Asistente desde su aplicación. El texto no inventa un motivo —no se sabe
    * por qué, y no hace falta saberlo— ni sugiere qué hacer: sólo lo pone donde se ve.
@@ -119,7 +119,7 @@ export const MOTIVO = {
 /** Qué motivo le corresponde a cada modalidad de guardia. */
 const MOTIVO_POR_MODALIDAD = {
   directa: MOTIVO.MODALIDAD_DIRECTA,
-  match: MOTIVO.MODALIDAD_MATCH,
+  intermediacion: MOTIVO.MODALIDAD_INTERMEDIACION,
 };
 
 // ============================================================================

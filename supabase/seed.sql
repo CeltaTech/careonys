@@ -113,7 +113,7 @@ ON CONFLICT (prestadora_id) DO UPDATE SET
 -- Las dos modalidades de trabajo, encendidas.
 INSERT INTO public.prestadora_modalidades (prestadora_id, modalidad, activa) VALUES
   ('11111111-1111-4111-8111-111111111111', 'directa',     true),
-  ('11111111-1111-4111-8111-111111111111', 'match', true);
+  ('11111111-1111-4111-8111-111111111111', 'intermediacion', true);
 
 INSERT INTO public.zonas_cobertura (prestadora_id, codigo, nombre, categoria, orden) VALUES
   ('11111111-1111-4111-8111-111111111111', 'caba',       'Ciudad de Buenos Aires', 'ciudad',  10),
@@ -309,14 +309,14 @@ INSERT INTO public.asistentes (
    'Bruno Bianchi', '+54 11 4001-0002', 'bruno.asistente@sandbox.local',
    ARRAY['Acompañamiento terapéutico'],
    'activo', 'dependencia', CURRENT_DATE - 220, NULL,
-   40, '20000002', ARRAY['directa', 'match']),
+   40, '20000002', ARRAY['directa', 'intermediacion']),
 
   ('30000000-0000-4000-8000-000000000003', '30000000-0000-4000-8000-000000000003',
    '11111111-1111-4111-8111-111111111111',
    'Clara Cabrera', '+54 11 4001-0003', 'clara.asistente@sandbox.local',
    NULL,
    'activo', 'monotributo', CURRENT_DATE - 90, NULL,
-   24, '20000003', ARRAY['match']),
+   24, '20000003', ARRAY['intermediacion']),
 
   ('30000000-0000-4000-8000-000000000004', '30000000-0000-4000-8000-000000000004',
    '11111111-1111-4111-8111-111111111111',
@@ -419,7 +419,7 @@ INSERT INTO public.clientes (id, usuario_id, prestadora_id, plan, financiador_ti
   ('40000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002',
    '11111111-1111-4111-8111-111111111111', 'directo', 'obra_social', 'c0000000-0000-4000-8000-000000000003'),
   ('40000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000003',
-   '11111111-1111-4111-8111-111111111111', 'match', 'otro', 'c0000000-0000-4000-8000-000000000001');
+   '11111111-1111-4111-8111-111111111111', 'intermediacion', 'otro', 'c0000000-0000-4000-8000-000000000001');
 
 -- El nombre, el teléfono y la localidad de un Cliente NO están en `clientes`:
 -- están en la Solicitud con la que entró, y `clientes.solicitud_id` es el que la
@@ -645,7 +645,7 @@ INSERT INTO public.guardias (
   ('70000000-0000-4000-8000-000000000005', '11111111-1111-4111-8111-111111111111',
    '60000000-0000-4000-8000-000000000003', '30000000-0000-4000-8000-000000000003',
    '50000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000003',
-   CURRENT_DATE, '16:00', '22:00', 'presencial', 'programada', 'match',
+   CURRENT_DATE, '16:00', '22:00', 'presencial', 'programada', 'intermediacion',
    NULL, NULL),
 
   -- Hoy a la noche: SIN CUBRIR. Nadie tiene asignada esta guardia todavía.
@@ -654,7 +654,7 @@ INSERT INTO public.guardias (
   ('70000000-0000-4000-8000-000000000006', '11111111-1111-4111-8111-111111111111',
    '60000000-0000-4000-8000-000000000003', NULL,
    '50000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000003',
-   CURRENT_DATE, '22:00', '06:00', 'presencial', 'programada', 'match',
+   CURRENT_DATE, '22:00', '06:00', 'presencial', 'programada', 'intermediacion',
    NULL, NULL),
 
   -- Mañana: dos programadas, para que la vista de la semana no quede vacía.

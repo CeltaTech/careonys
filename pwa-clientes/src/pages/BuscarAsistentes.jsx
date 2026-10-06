@@ -45,7 +45,7 @@ export default function BuscarAsistentes() {
     let activo = true;
     setError('');
     api
-      .asistentesDelMatch({ zona, tipo })
+      .asistentesDeLaIntermediacion({ zona, tipo })
       .then((data) => {
         if (activo) setDatos(data);
       })

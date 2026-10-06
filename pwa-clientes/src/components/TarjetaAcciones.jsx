@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
-import { useOfreceMatch, useSeVe } from '../context/PerfilContext';
+import { useOfreceIntermediacion, useSeVe } from '../context/PerfilContext';
 import { usePersonasAutorizadas } from '../context/PersonasAutorizadasContext';
 import { pantallaPermitida } from '../lib/interruptorDeCadaPantalla';
 
@@ -17,7 +17,7 @@ export default function TarjetaAcciones({ pacienteId }) {
   const { t } = useLocale();
   const seVe = useSeVe();
   const { puedeVer } = usePersonasAutorizadas();
-  const ofreceMatch = useOfreceMatch();
+  const ofreceIntermediacion = useOfreceIntermediacion();
   const seEntraA = (pantalla) => pantallaPermitida(pantalla, seVe, puedeVer);
   const base = pacienteId ? `/pacientes/${pacienteId}` : null;
 
@@ -32,7 +32,7 @@ export default function TarjetaAcciones({ pacienteId }) {
         )}
         {/* El chat y la vidriera cuelgan de la modalidad: donde la Prestadora no ofrece
             Match no hay con quién hablar ni a quién buscar. */}
-        {ofreceMatch && (
+        {ofreceIntermediacion && (
           <Link to="/mensajes" className="btn">
             {t.nav.mensajes}
           </Link>
@@ -62,7 +62,7 @@ export default function TarjetaAcciones({ pacienteId }) {
             {t.paciente.ver_medicacion}
           </Link>
         )}
-        {ofreceMatch && (
+        {ofreceIntermediacion && (
           <Link to="/buscar" className="btn">
             {t.nav.buscar}
           </Link>

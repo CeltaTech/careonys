@@ -32,7 +32,7 @@
    condición que lo elige no se apaga sola. */
 
 import { supabase } from '../db/connection.js';
-import { prestadorasDelMatch } from './prestadorasDelMatch.js';
+import { prestadorasDeLaIntermediacion } from './prestadorasDeLaIntermediacion.js';
 
 /**
  * Apaga los accesos dados de baja a los que ya se les terminó el período pagado. Corre una vez por
@@ -48,7 +48,7 @@ export async function cortarLosAccesosDadosDeBaja() {
   const hoy = new Date().toISOString().slice(0, 10);
 
   let cortados = 0;
-  for (const prestadoraId of await prestadorasDelMatch()) {
+  for (const prestadoraId of await prestadorasDeLaIntermediacion()) {
     cortados += await cortarLosDeUnaPrestadora(prestadoraId, hoy);
   }
 
@@ -58,7 +58,7 @@ export async function cortarLosAccesosDadosDeBaja() {
 /** El corte de una sola Prestadora. Una falla suya se anota acá y no deja sin cortar a las demás. */
 async function cortarLosDeUnaPrestadora(prestadoraId, hoy) {
   const { data: accesos, error } = await supabase
-    .from('accesos_match')
+    .from('accesos_intermediacion')
     .select('id, vigente_hasta, gratis_hasta')
     .eq('prestadora_id', prestadoraId)
     .eq('estado', 'vigente')
@@ -80,7 +80,7 @@ async function cortarLosDeUnaPrestadora(prestadoraId, hoy) {
   let cortados = 0;
   for (const acceso of vencidos) {
     const { error: errorCorte } = await supabase
-      .from('accesos_match')
+      .from('accesos_intermediacion')
       .update({ estado: 'cancelada', updated_at: new Date().toISOString() })
       .eq('prestadora_id', prestadoraId)
       .eq('id', acceso.id)

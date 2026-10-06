@@ -42,7 +42,7 @@ export const api = {
   calificar: (guardiaId, datos) => pedido(`/guardias/${guardiaId}/calificar`, { method: 'POST', body: JSON.stringify(datos) }),
   suscribirPush: (suscripcion) => pedido('/push/suscribir', { method: 'POST', body: JSON.stringify(suscripcion) }),
   desuscribirPush: (endpoint) => pedido('/push/suscribir', { method: 'DELETE', body: JSON.stringify({ endpoint }) }),
-  accesoMatch: (pacienteId) => pedido(`/acceso/${pacienteId}`),
+  accesoIntermediacion: (pacienteId) => pedido(`/acceso/${pacienteId}`),
   generarQrCobro: (datos) => pedido('/qr-cobro', { method: 'POST', body: JSON.stringify(datos) }),
   estadoQrCobro: (id) => pedido(`/qr-cobro/${id}`),
   // La baja en un clic. Apaga la renovación y no corta nada de lo que ya está pagado: hasta
@@ -78,40 +78,40 @@ export const api = {
   // realmente en la vidriera, así que un lugar sin nadie no se ofrece. Lo que viaja es cuál lugar
   // y no cómo se llama: dos localidades de provincias distintas pueden llamarse igual, y filtrar
   // por el nombre traería las dos.
-  asistentesDelMatch: ({ zona, tipo } = {}) => {
+  asistentesDeLaIntermediacion: ({ zona, tipo } = {}) => {
     const filtros = new URLSearchParams();
     if (zona) filtros.set('zona', zona);
     if (tipo) filtros.set('tipo', tipo);
     const cola = filtros.toString();
-    return pedido(`/match/asistentes${cola ? `?${cola}` : ''}`);
+    return pedido(`/intermediacion/asistentes${cola ? `?${cola}` : ''}`);
   },
   // El perfil público de una persona de la vidriera. De acá no sale ningún dato de contacto:
   // llegar a la persona es lo que Match vende y tiene su propio circuito.
-  asistenteDelMatch: (id) => pedido(`/match/asistentes/${id}`),
+  asistenteDeLaIntermediacion: (id) => pedido(`/intermediacion/asistentes/${id}`),
   // VER CÓMO LLEGAR A UNA PERSONA. Son dos direcciones y no una a propósito: preguntar no cobra
   // nada y contesta qué pasaría —con qué forma, cuánto sale, si eso termina el período gratuito—,
   // y abrir es un pedido aparte que sale únicamente cuando alguien toca el botón. Así ver el dato
   // de contacto nunca es el efecto de haber mirado una pantalla.
-  comoEstaElContactoDelAsistente: (asistenteId) => pedido(`/match/asistentes/${asistenteId}/contacto`),
+  comoEstaElContactoDelAsistente: (asistenteId) => pedido(`/intermediacion/asistentes/${asistenteId}/contacto`),
   verElContactoDelAsistente: (asistenteId) =>
-    pedido(`/match/asistentes/${asistenteId}/contacto`, { method: 'POST' }),
+    pedido(`/intermediacion/asistentes/${asistenteId}/contacto`, { method: 'POST' }),
   // EL CHAT CON UN ASISTENTE DE LA VIDRIERA. El chat no se cobra: lo que se cobra es el dato de
   // contacto, y por eso sale tapado de acá hasta que esa pareja lo abra. Quien tapa es el backend,
   // una sola vez para las dos puntas.
-  conversacionesDelMatch: () => pedido('/match/conversaciones'),
+  conversacionesDeLaIntermediacion: () => pedido('/intermediacion/conversaciones'),
   // Con `desde`, el backend contesta nada más lo posterior a ese momento: es el refresco del hilo
   // abierto, que pide lo que le falta y no vuelve a bajar lo que ya está en pantalla.
-  conversacionDelMatch: (id, desde = null) =>
-    pedido(`/match/conversaciones/${id}${desde ? `?desde=${encodeURIComponent(desde)}` : ''}`),
+  conversacionDeLaIntermediacion: (id, desde = null) =>
+    pedido(`/intermediacion/conversaciones/${id}${desde ? `?desde=${encodeURIComponent(desde)}` : ''}`),
   // La conversación la abre siempre el Cliente, desde el perfil público de la persona. Si ya
   // existía, devuelve la misma: no hay dos hilos para la misma pareja.
   abrirConversacionConAsistente: (asistenteId) =>
-    pedido(`/match/asistentes/${asistenteId}/conversacion`, { method: 'POST' }),
+    pedido(`/intermediacion/asistentes/${asistenteId}/conversacion`, { method: 'POST' }),
   escribirEnConversacion: (id, cuerpo) =>
-    pedido(`/match/conversaciones/${id}/mensajes`, { method: 'POST', body: JSON.stringify({ cuerpo }) }),
+    pedido(`/intermediacion/conversaciones/${id}/mensajes`, { method: 'POST', body: JSON.stringify({ cuerpo }) }),
   // La videollamada de esta Prestadora. Donde no configuró ninguna, el backend contesta que no hay
   // y la pantalla no ofrece el botón.
-  abrirVideollamada: (id) => pedido(`/match/conversaciones/${id}/videollamada`, { method: 'POST' }),
+  abrirVideollamada: (id) => pedido(`/intermediacion/conversaciones/${id}/videollamada`, { method: 'POST' }),
   // Lo que la Prestadora escribió para quien cuida en su casa. Vuelve sólo lo publicado, y no
   // lleva el Paciente adentro: es material de la Prestadora para todos sus Clientes.
   contenidos: () => pedido('/contenidos'),

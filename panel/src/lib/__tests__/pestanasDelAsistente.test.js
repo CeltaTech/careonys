@@ -3,7 +3,7 @@ import {
   PESTANAS,
   PESTANAS_COORDINADOR,
   PESTANAS_POR_PERMISO,
-  PESTANAS_SOLO_MATCH,
+  PESTANAS_SOLO_INTERMEDIACION,
   pestanasDe,
 } from '../pestanasDelAsistente';
 import { T } from '../../i18n/translations';
@@ -93,8 +93,8 @@ describe('pestanasDelAsistente', () => {
   const TODO_HABILITADO = () => true;
 
   it('entrega una lista u otra según quién mira', () => {
-    expect(pestanasDe({ esAdmin: true, match: true, puede: TODO_HABILITADO })).toEqual(PESTANAS);
-    expect(pestanasDe({ esAdmin: false, match: true, puede: TODO_HABILITADO })).toEqual(
+    expect(pestanasDe({ esAdmin: true, intermediacion: true, puede: TODO_HABILITADO })).toEqual(PESTANAS);
+    expect(pestanasDe({ esAdmin: false, intermediacion: true, puede: TODO_HABILITADO })).toEqual(
       PESTANAS_COORDINADOR,
     );
   });
@@ -102,7 +102,7 @@ describe('pestanasDelAsistente', () => {
   // Dónde cobra un Asistente no lo ve cualquiera: entra por una acción que la Prestadora puede
   // reservar. Sin ella la pestaña no se ofrece, aunque esté en la lista.
   it('sin el permiso no se ofrece la pestaña que depende de él', () => {
-    const ofrecidas = pestanasDe({ esAdmin: false, match: true, puede: () => false });
+    const ofrecidas = pestanasDe({ esAdmin: false, intermediacion: true, puede: () => false });
     for (const pestana of Object.keys(PESTANAS_POR_PERMISO)) {
       expect(ofrecidas, `${pestana} se ofrece sin el permiso`).not.toContain(pestana);
     }
@@ -113,7 +113,7 @@ describe('pestanasDelAsistente', () => {
       if (!PESTANAS_COORDINADOR.includes(pestana)) continue;
       const ofrecidas = pestanasDe({
         esAdmin: false,
-        match: true,
+        intermediacion: true,
         puede: (accion) => accion === permiso,
       });
       expect(ofrecidas).toContain(pestana);
@@ -123,7 +123,7 @@ describe('pestanasDelAsistente', () => {
   // Un permiso que no se pudo resolver no es un permiso concedido: sin nadie que conteste, la
   // pestaña no se ofrece.
   it('sin quien conteste por los permisos, la pestaña no se ofrece', () => {
-    const ofrecidas = pestanasDe({ esAdmin: false, match: true });
+    const ofrecidas = pestanasDe({ esAdmin: false, intermediacion: true });
     for (const pestana of Object.keys(PESTANAS_POR_PERMISO)) {
       expect(ofrecidas).not.toContain(pestana);
     }
@@ -140,22 +140,22 @@ describe('pestanasDelAsistente', () => {
   });
 
   // Sin Match no hay Clientes evaluando: la pestaña mostraría siempre nada.
-  it('sin match no ofrece las pestañas que dependen de esa modalidad', () => {
+  it('sin intermediacion no ofrece las pestañas que dependen de esa modalidad', () => {
     for (const esAdmin of [true, false]) {
-      const ofrecidas = pestanasDe({ esAdmin, match: false, puede: TODO_HABILITADO });
-      for (const pestana of PESTANAS_SOLO_MATCH) {
-        expect(ofrecidas, `${pestana} se ofrece sin match`).not.toContain(pestana);
+      const ofrecidas = pestanasDe({ esAdmin, intermediacion: false, puede: TODO_HABILITADO });
+      for (const pestana of PESTANAS_SOLO_INTERMEDIACION) {
+        expect(ofrecidas, `${pestana} se ofrece sin intermediacion`).not.toContain(pestana);
       }
       // Y no se lleva puesta ninguna otra al filtrar.
       const esperadas = (esAdmin ? PESTANAS : PESTANAS_COORDINADOR).filter(
-        (p) => !PESTANAS_SOLO_MATCH.includes(p),
+        (p) => !PESTANAS_SOLO_INTERMEDIACION.includes(p),
       );
       expect(ofrecidas).toEqual(esperadas);
     }
   });
 
-  it('toda pestaña de match está en la lista completa', () => {
-    for (const pestana of PESTANAS_SOLO_MATCH) {
+  it('toda pestaña de intermediacion está en la lista completa', () => {
+    for (const pestana of PESTANAS_SOLO_INTERMEDIACION) {
       expect(PESTANAS, `${pestana} no está en la lista completa`).toContain(pestana);
     }
   });

@@ -809,7 +809,7 @@ autorizada —guardias, reportes, alertas, facturas, medicación—.
 
 ## 38. Acá no hay lista para elegir
 
-**Ruta:** `errores.motivos.match_no_habilitado`
+**Ruta:** `errores.motivos.intermediacion_no_habilitado`
 
 **Texto de hoy:**
 > Esta Prestadora asigna ella misma a sus Asistentes, así que no hay una lista para elegir.
@@ -828,7 +828,7 @@ autorizada —guardias, reportes, alertas, facturas, medicación—.
 
 ## 39. Para ver el contacto hace falta contratar
 
-**Ruta:** `errores.motivos.sin_acceso_de_match`
+**Ruta:** `errores.motivos.sin_acceso_de_intermediacion`
 
 **Texto de hoy:**
 > Para ver cómo llegar a esta persona hace falta tener contratado el servicio con la Prestadora.
@@ -3421,7 +3421,7 @@ Match.
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/pages/match/Calificaciones.jsx:70`
+**Archivo:** `panel/src/pages/intermediacion/Calificaciones.jsx:70`
 
 **DECISIÓN:**
 
@@ -3443,7 +3443,7 @@ riesgo. Sólo con la modalidad Match.
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/pages/match/AuditoriaLegal.jsx:118`
+**Archivo:** `panel/src/pages/intermediacion/AuditoriaLegal.jsx:118`
 
 **DECISIÓN:**
 
@@ -3462,7 +3462,7 @@ riesgo. Sólo con la modalidad Match.
 
 **Quién lo lee:** alguien de la empresa que no es su Administrador.
 
-**Archivo:** `panel/src/pages/match/AuditoriaLegal.jsx:119`
+**Archivo:** `panel/src/pages/intermediacion/AuditoriaLegal.jsx:119`
 
 **DECISIÓN:**
 
@@ -3484,6 +3484,6 @@ Match, y sólo Admin.
 
 **Quién lo lee:** la empresa.
 
-**Archivo:** `panel/src/pages/match/FormasDeCobro.jsx:74`
+**Archivo:** `panel/src/pages/intermediacion/FormasDeCobro.jsx:74`
 
 **DECISIÓN:**

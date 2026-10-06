@@ -124,7 +124,7 @@ function accesoConCobroFallido(cambios = {}) {
 
 /** Lo que la base recibió para guardar, o `undefined` si no se guardó nada. */
 function loGuardado() {
-  return llamadas.find((l) => l.clave === 'PATCH /rest/v1/accesos_match');
+  return llamadas.find((l) => l.clave === 'PATCH /rest/v1/accesos_intermediacion');
 }
 
 beforeEach(() => {
@@ -136,8 +136,8 @@ beforeEach(() => {
   // contestarlo. Siete es el valor con el que nace su configuración.
   // La misma tabla contesta dos cosas: los plazos de una Prestadora nombrada, y —cuando se la pide
   // entera— la lista de Prestadoras que recorre la suspensión diaria
-  // (`prestadorasDelMatch.js`). Por eso la fila lleva también su identificador.
-  respuestas.set('GET /rest/v1/configuracion_cobro_match', [
+  // (`prestadorasDeLaIntermediacion.js`). Por eso la fila lleva también su identificador.
+  respuestas.set('GET /rest/v1/configuracion_cobro_intermediacion', [
     {
       prestadora_id: PRESTADORA,
       dias_de_aviso_antes_del_cobro: 3,
@@ -150,8 +150,8 @@ beforeEach(() => {
 
 describe('cuando un cobro no entra', () => {
   it('abre la gracia, no suspende y le avisa al Cliente', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', [accesoConCobroFallido()]);
-    respuestas.set('PATCH /rest/v1/accesos_match', [{ id: ACCESO }]);
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [accesoConCobroFallido()]);
+    respuestas.set('PATCH /rest/v1/accesos_intermediacion', [{ id: ACCESO }]);
 
     const { abierta, gracia_hasta } = await abrirElPeriodoDeGracia({
       prestadoraId: PRESTADORA,
@@ -170,8 +170,8 @@ describe('cuando un cobro no entra', () => {
   });
 
   it('exige al guardar que siga vigente y que nadie haya abierto una gracia en el medio', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', [accesoConCobroFallido()]);
-    respuestas.set('PATCH /rest/v1/accesos_match', [{ id: ACCESO }]);
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [accesoConCobroFallido()]);
+    respuestas.set('PATCH /rest/v1/accesos_intermediacion', [{ id: ACCESO }]);
 
     await abrirElPeriodoDeGracia({
       prestadoraId: PRESTADORA,
@@ -190,7 +190,7 @@ describe('cuando un cobro no entra', () => {
   it('no mueve la fecha ni vuelve a avisar cuando el proveedor reintenta', async () => {
     // Es la mitad «ni reintentos indefinidos» del §3.2: si cada falla informada corriera la fecha
     // siete días más, un proveedor que reintenta cada tres no suspendería nunca.
-    respuestas.set('GET /rest/v1/accesos_match', [
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [
       accesoConCobroFallido({ gracia_hasta: corrido(4) }),
     ]);
 
@@ -207,7 +207,7 @@ describe('cuando un cobro no entra', () => {
   });
 
   it('no le abre gracia a un acceso que ya estaba suspendido o dado de baja', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', [
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [
       accesoConCobroFallido({ estado: 'cancelada' }),
     ]);
 
@@ -223,8 +223,8 @@ describe('cuando un cobro no entra', () => {
   });
 
   it('no da por abierta una gracia que la base no guardó', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', [accesoConCobroFallido()]);
-    respuestas.set('PATCH /rest/v1/accesos_match', { __falla: { message: 'la base no contesta' } });
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [accesoConCobroFallido()]);
+    respuestas.set('PATCH /rest/v1/accesos_intermediacion', { __falla: { message: 'la base no contesta' } });
 
     const { abierta } = await abrirElPeriodoDeGracia({
       prestadoraId: PRESTADORA,
@@ -239,8 +239,8 @@ describe('cuando un cobro no entra', () => {
 
   it('deja la gracia abierta aunque el aviso no haya podido salir', async () => {
     // Deshacerla porque el push falló suspendería antes de tiempo a quien nunca se enteró.
-    respuestas.set('GET /rest/v1/accesos_match', [accesoConCobroFallido()]);
-    respuestas.set('PATCH /rest/v1/accesos_match', [{ id: ACCESO }]);
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [accesoConCobroFallido()]);
+    respuestas.set('PATCH /rest/v1/accesos_intermediacion', [{ id: ACCESO }]);
 
     const { abierta } = await abrirElPeriodoDeGracia({
       prestadoraId: PRESTADORA,
@@ -273,11 +273,11 @@ describe('qué dice el aviso del cobro que no entró', () => {
 
 describe('cuando se termina la gracia', () => {
   it('le pide a la base sólo los vigentes con la gracia cumplida', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', []);
+    respuestas.set('GET /rest/v1/accesos_intermediacion', []);
 
     await suspenderLosQueAgotaronLaGracia();
 
-    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_match').url;
+    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_intermediacion').url;
     assert.match(consulta, /estado=eq\.vigente/);
     assert.match(consulta, /gracia_hasta=not\.is\.null/);
     assert.match(consulta, new RegExp(`gracia_hasta=lte\\.${HOY}`));
@@ -288,8 +288,8 @@ describe('cuando se termina la gracia', () => {
   it('suspende el acceso y vuelve a exigir las mismas condiciones al guardar', async () => {
     // Si entre la consulta y el guardado entró la plata, `registrarCobroExitoso` cerró la gracia:
     // sin volver a exigirla, este guardado apagaría un acceso recién pagado.
-    respuestas.set('GET /rest/v1/accesos_match', [{ id: ACCESO }]);
-    respuestas.set('PATCH /rest/v1/accesos_match', []);
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [{ id: ACCESO }]);
+    respuestas.set('PATCH /rest/v1/accesos_intermediacion', []);
 
     const { suspendidos } = await suspenderLosQueAgotaronLaGracia();
 
@@ -301,9 +301,9 @@ describe('cuando se termina la gracia', () => {
   });
 
   it('sigue con los demás accesos cuando una suspensión falla', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', [{ id: ACCESO }, { id: OTRO_ACCESO }]);
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [{ id: ACCESO }, { id: OTRO_ACCESO }]);
     let vez = 0;
-    respuestas.set('PATCH /rest/v1/accesos_match', () => {
+    respuestas.set('PATCH /rest/v1/accesos_intermediacion', () => {
       vez += 1;
       return vez === 1 ? { __falla: { message: 'la base no contesta' } } : [];
     });
@@ -315,7 +315,7 @@ describe('cuando se termina la gracia', () => {
   });
 
   it('no suspende nada si la consulta falla', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', { __falla: { message: 'la base no contesta' } });
+    respuestas.set('GET /rest/v1/accesos_intermediacion', { __falla: { message: 'la base no contesta' } });
 
     const { suspendidos } = await suspenderLosQueAgotaronLaGracia();
 

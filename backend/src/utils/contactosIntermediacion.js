@@ -7,17 +7,17 @@
    baja de a un Asistente.
 
    DE A UN ASISTENTE, NO DE A UNA MIRADA. Abierto el contacto de alguien, volver a mirarlo no
-   descuenta otro. Quién ya está abierto lo dice `contactos_vistos_match`, y es lo que hace
+   descuenta otro. Quién ya está abierto lo dice `contactos_vistos_intermediacion`, y es lo que hace
    que cinco contactos alcancen para cinco Asistentes y no para tres mirados dos veces.
 
    LAS CUENTAS NO SE HACEN ACÁ. Sumar al saldo y restarle uno son dos funciones de la base
-   (`sumar_contactos_al_saldo` y `consumir_contacto_match`), y este archivo no hace más que llamarlas. No es una
+   (`sumar_contactos_al_saldo` y `consumir_contacto_intermediacion`), y este archivo no hace más que llamarlas. No es una
    preferencia de estilo: leer el saldo, restarle uno y volver a escribirlo son dos viajes, y dos
    ventanas abiertas a la vez descuentan una sola vez. Del lado de la base el descuento y la
    anotación pasan juntos, con la fila del acceso tomada.
 
    QUIÉN LLAMA A CADA UNA. La carga del saldo la llama el cobro, que es el único lugar por donde
-   entra la plata (`cobrosMatch.js`). El descuento lo va a llamar la pantalla que le abre el
+   entra la plata (`cobrosIntermediacion.js`). El descuento lo va a llamar la pantalla que le abre el
    contacto al Cliente —el paso «La activación al intentar ver el contacto» del plan—, que
    todavía no existe: hasta entonces el Panel puede ver el saldo y nadie lo gasta. */
 
@@ -81,7 +81,7 @@ export async function cargarContactosEnElSaldo({ accesoId, cuantos }) {
  * @returns {Promise<{ok: boolean, ya_estaba?: boolean, saldo_contactos?: number, motivo?: string, detalle?: string}>}
  */
 export async function abrirElContacto({ accesoId, asistenteId }) {
-  const { data, error } = await supabase.rpc('consumir_contacto_match', {
+  const { data, error } = await supabase.rpc('consumir_contacto_intermediacion', {
     p_acceso_id: accesoId,
     p_asistente_id: asistenteId,
   });

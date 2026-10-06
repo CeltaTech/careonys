@@ -16,7 +16,7 @@ export const REQUIERE_SECRETO_FIRMA = true;
 
 /** En la red de cobranza no queda nada recurrente: cada período hay que pedirle su propio cupón.
  *  Con esta marca, el trabajo diario que arma los cobros
- *  (`backend/src/utils/cobrosMatch.js`) sabe que a este riel le toca pasar todos los meses. */
+ *  (`backend/src/utils/cobrosIntermediacion.js`) sabe que a este riel le toca pasar todos los meses. */
 export const ARMA_COBRO_POR_PERIODO = true;
 
 export async function crearSuscripcion({ accesoId }) {

@@ -40,7 +40,7 @@ export function AsistenteDetalle() {
   const [tab, setTab] = useState('perfil');
 
   const esAdmin = esAdminOSuperior(usuario?.rol);
-  const match = tieneModalidad(MODALIDAD.MATCH);
+  const intermediacion = tieneModalidad(MODALIDAD.INTERMEDIACION);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -90,7 +90,7 @@ export function AsistenteDetalle() {
 
       <section className="panel-tarjeta">
         <div className="panel-tabs" role="tablist">
-          {pestanasDe({ esAdmin, match, puede }).map((tabId) => (
+          {pestanasDe({ esAdmin, intermediacion, puede }).map((tabId) => (
             <button
               key={tabId}
               type="button"
@@ -117,7 +117,7 @@ export function AsistenteDetalle() {
           <DatosBancariosTab asistente={asistente} />
         )}
         {tab === 'guardias' && <GuardiasTab asistente={asistente} />}
-        {tab === 'evaluaciones' && match && <EvaluacionesTab asistente={asistente} />}
+        {tab === 'evaluaciones' && intermediacion && <EvaluacionesTab asistente={asistente} />}
         {tab === 'ausencias' && <AusenciasCoberturaTab asistente={asistente} />}
         {tab === 'comunicacion' && <ComunicacionTab asistente={asistente} />}
       </div>

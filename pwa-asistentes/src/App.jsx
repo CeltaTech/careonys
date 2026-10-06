@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { PerfilProvider, useOfreceMatch } from './context/PerfilContext';
+import { PerfilProvider, useOfreceIntermediacion } from './context/PerfilContext';
 import { LocaleProvider, useLocale } from './i18n/LocaleContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
@@ -39,8 +39,8 @@ function RutaPrivada({ children }) {
 // Prestadora, no de un interruptor que ella encienda: donde no hay Match no hay con quién
 // hablar. El candado de verdad está en el backend, que contesta que no ofrece esa modalidad; esto
 // es para que no quede una dirección que lleve a una pantalla de error.
-function SoloConMatch({ children }) {
-  if (!useOfreceMatch()) return <Navigate to="/guardias" replace />;
+function SoloConIntermediacion({ children }) {
+  if (!useOfreceIntermediacion()) return <Navigate to="/guardias" replace />;
   return children;
 }
 
@@ -83,17 +83,17 @@ function Rutas() {
         <Route
           path="mensajes"
           element={
-            <SoloConMatch>
+            <SoloConIntermediacion>
               <Mensajes />
-            </SoloConMatch>
+            </SoloConIntermediacion>
           }
         />
         <Route
           path="mensajes/:id"
           element={
-            <SoloConMatch>
+            <SoloConIntermediacion>
               <Conversacion />
-            </SoloConMatch>
+            </SoloConIntermediacion>
           }
         />
         <Route path="perfil" element={<MiPerfil />} />

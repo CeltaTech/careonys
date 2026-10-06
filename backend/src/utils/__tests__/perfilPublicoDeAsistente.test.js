@@ -45,7 +45,7 @@ const FICHA_COMPLETA = {
   disponibilidad: { lunes: true },
   horas_semanales: 40,
   tipo_vinculo: 'monotributo',
-  canales: ['match'],
+  canales: ['intermediacion'],
   estado: 'activo',
   qr_token: 'tok-123',
   prestadora_id: 'p-1',

@@ -20,6 +20,6 @@ export function nombreDeModalidad(modalidad, t) {
 /** El cartel de quién administra la operación en esa modalidad, con el tono de la maqueta. */
 export function claseDeResponsable(modalidad) {
   if (modalidad === MODALIDAD.DIRECTA) return 'badge badge-exito';
-  if (modalidad === MODALIDAD.MATCH) return 'badge servicios-badge-violeta';
+  if (modalidad === MODALIDAD.INTERMEDIACION) return 'badge servicios-badge-violeta';
   return 'badge badge-info';
 }

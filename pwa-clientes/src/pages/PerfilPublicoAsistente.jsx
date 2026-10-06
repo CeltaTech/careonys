@@ -73,7 +73,7 @@ export default function PerfilPublicoAsistente() {
   useEffect(() => {
     let activo = true;
     api
-      .asistenteDelMatch(id)
+      .asistenteDeLaIntermediacion(id)
       .then((data) => {
         if (activo) setDatos(data);
       })

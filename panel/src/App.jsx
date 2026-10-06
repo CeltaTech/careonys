@@ -65,10 +65,10 @@ import { Importacion } from './pages/Importacion';
 import { InformesObraSocial } from './pages/InformesObraSocial';
 import { Auditoria } from './pages/Auditoria';
 import { ContenidoParaClientes } from './pages/contenidos/ContenidoParaClientes';
-import { MatchClientes } from './pages/match/Clientes';
-import { FormasDeCobro } from './pages/match/FormasDeCobro';
-import { MatchCalificaciones } from './pages/match/Calificaciones';
-import { MatchAuditoriaLegal } from './pages/match/AuditoriaLegal';
+import { IntermediacionClientes } from './pages/intermediacion/Clientes';
+import { FormasDeCobro } from './pages/intermediacion/FormasDeCobro';
+import { IntermediacionCalificaciones } from './pages/intermediacion/Calificaciones';
+import { IntermediacionAuditoriaLegal } from './pages/intermediacion/AuditoriaLegal';
 
 function App() {
   return (
@@ -221,42 +221,42 @@ function App() {
                         mano. El de acá es para no mostrar lo que no corresponde; el que niega de
                         verdad es el del backend (backend/src/middleware/exigirModalidad.js). */}
                     <Route
-                      path="match/clientes"
+                      path="intermediacion/clientes"
                       element={
                         /* La pantalla de Clientes del Match es la de la plata: importes de
                            suscripción, historial de cobros, carga de efectivo en mano y canje del
                            QR. Va con el mismo candado que Configuración y Auditoría, no con el de
                            las pantallas operativas (Desarrollador, 2026-09-04). */
-                        <ProtectedRoute roles={ROLES_ADMINISTRACION} modalidad={MODALIDAD.MATCH}>
-                          <MatchClientes />
+                        <ProtectedRoute roles={ROLES_ADMINISTRACION} modalidad={MODALIDAD.INTERMEDIACION}>
+                          <IntermediacionClientes />
                         </ProtectedRoute>
                       }
                     />
                     <Route
-                      path="match/formas-de-cobro"
+                      path="intermediacion/formas-de-cobro"
                       element={
                         /* Con qué números cobra la Prestadora. Mismo candado que la pantalla de
                            la plata: es configuración de dinero, no operación. El Superadmin entra
                            y mira, para poder dar soporte, pero no cambia nada: eso lo niega el
                            backend, que es donde el permiso niega de verdad. */
-                        <ProtectedRoute roles={ROLES_ADMINISTRACION} modalidad={MODALIDAD.MATCH}>
+                        <ProtectedRoute roles={ROLES_ADMINISTRACION} modalidad={MODALIDAD.INTERMEDIACION}>
                           <FormasDeCobro />
                         </ProtectedRoute>
                       }
                     />
                     <Route
-                      path="match/calificaciones"
+                      path="intermediacion/calificaciones"
                       element={
-                        <ProtectedRoute roles={ROLES_PANEL} modalidad={MODALIDAD.MATCH}>
-                          <MatchCalificaciones />
+                        <ProtectedRoute roles={ROLES_PANEL} modalidad={MODALIDAD.INTERMEDIACION}>
+                          <IntermediacionCalificaciones />
                         </ProtectedRoute>
                       }
                     />
                     <Route
-                      path="match/auditoria-legal"
+                      path="intermediacion/auditoria-legal"
                       element={
-                        <ProtectedRoute roles={ROLES_PANEL} modalidad={MODALIDAD.MATCH}>
-                          <MatchAuditoriaLegal />
+                        <ProtectedRoute roles={ROLES_PANEL} modalidad={MODALIDAD.INTERMEDIACION}>
+                          <IntermediacionAuditoriaLegal />
                         </ProtectedRoute>
                       }
                     />

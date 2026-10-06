@@ -26,7 +26,7 @@ const ESTADOS = ['activo', 'inactivo', 'cesado'];
 // El cartel de cada modalidad: la directa en verde y la de Match en violeta, como en la maqueta.
 const CLASE_MODALIDAD = {
   [MODALIDAD.DIRECTA]: claseBadgeTono(TONO.EXITO),
-  [MODALIDAD.MATCH]: 'badge listado-badge-violeta',
+  [MODALIDAD.INTERMEDIACION]: 'badge listado-badge-violeta',
 };
 
 export function Asistentes() {

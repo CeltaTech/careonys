@@ -88,13 +88,13 @@ const ESTADO_POR_MOTIVO = {
   // dirección existe y el pedido está bien armado: lo que pasa es que esta Prestadora no ofrece
   // esa modalidad de trabajo, y eso la pantalla lo puede decir con todas las letras en vez de
   // mostrar una pantalla vacía sin explicación.
-  match_no_habilitado: 409,
+  intermediacion_no_habilitado: 409,
   // Ver cómo llegar a un Asistente por afuera de la aplicación. Los tres son 409 porque el pedido
   // está bien armado y choca con el estado de las cosas, y los tres se arreglan de manera distinta:
   // el primero contratando, el segundo renovando y el tercero comprando otro paquete. Ninguno es
   // una falla de este lado, y por eso ninguno puede caer en 500, que la pantalla muestra como
   // "algo falló" y deja al Cliente sin saber qué hacer.
-  sin_acceso_de_match: 409,
+  sin_acceso_de_intermediacion: 409,
   acceso_no_vigente: 409,
   saldo_agotado: 409,
   // Esta Prestadora no configuró dónde se hacen sus videollamadas, así que no hay ninguna que

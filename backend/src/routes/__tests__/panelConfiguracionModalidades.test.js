@@ -100,7 +100,7 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'admin_prestadora', prestadora_id: PRESTADORA }]);
   // Por omisión no hay nada colgando de ninguna modalidad, y guardar sale bien.
   respuestas.set('GET /rest/v1/asistentes', () => []);
-  respuestas.set('GET /rest/v1/accesos_match', () => []);
+  respuestas.set('GET /rest/v1/accesos_intermediacion', () => []);
   respuestas.set('POST /rest/v1/prestadora_modalidades', () => []);
 });
 
@@ -118,7 +118,7 @@ function noFiltraLaBase(cuerpo) {
   const texto = String(cuerpo?.error ?? '');
   assert.doesNotMatch(
     texto,
-    /accesos_match|prestadora_modalidades|deleted_at|canales|select|column|relation|PGRST/i,
+    /accesos_intermediacion|prestadora_modalidades|deleted_at|canales|select|column|relation|PGRST/i,
     `el mensaje nombra algo de la base: ${texto}`
   );
 }
@@ -128,7 +128,7 @@ function noFiltraLaBase(cuerpo) {
 describe('no se apaga una modalidad que todavía tiene gente adentro', () => {
   it('con Asistentes que trabajan de esa forma', async () => {
     respuestas.set('GET /rest/v1/asistentes', () => UN_ASISTENTE);
-    const { estado, cuerpo } = await apagar('match');
+    const { estado, cuerpo } = await apagar('intermediacion');
     assert.equal(estado, 409);
     assert.equal(cuerpo.motivo, 'modalidad_con_asistentes');
     noApago();
@@ -136,8 +136,8 @@ describe('no se apaga una modalidad que todavía tiene gente adentro', () => {
   });
 
   it('con Clientes con el acceso vigente', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', () => UN_ACCESO);
-    const { estado, cuerpo } = await apagar('match');
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () => UN_ACCESO);
+    const { estado, cuerpo } = await apagar('intermediacion');
     assert.equal(estado, 409);
     assert.equal(cuerpo.motivo, 'modalidad_con_accesos');
     noApago();
@@ -148,8 +148,8 @@ describe('no se apaga una modalidad que todavía tiene gente adentro', () => {
     // Si contestara sólo una, quien apaga resolvería eso, volvería a intentar y se encontraría
     // con el otro rechazo. Se dicen las dos juntas.
     respuestas.set('GET /rest/v1/asistentes', () => UN_ASISTENTE);
-    respuestas.set('GET /rest/v1/accesos_match', () => UN_ACCESO);
-    const { estado, cuerpo } = await apagar('match');
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () => UN_ACCESO);
+    const { estado, cuerpo } = await apagar('intermediacion');
     assert.equal(estado, 409);
     assert.equal(cuerpo.motivo, 'modalidad_con_asistentes_y_accesos');
     noApago();
@@ -167,13 +167,13 @@ describe('no se apaga una modalidad que todavía tiene gente adentro', () => {
   it('y en prestación directa no se pregunta por accesos, que no existen ahí', async () => {
     await apagar('directa');
     const preguntas = llamadas.map((l) => l.clave);
-    assert.ok(!preguntas.includes('GET /rest/v1/accesos_match'));
+    assert.ok(!preguntas.includes('GET /rest/v1/accesos_intermediacion'));
   });
 });
 
 describe('cuando no hay nada colgando, se apaga', () => {
   it('contesta que sí y lo guarda', async () => {
-    const { estado, cuerpo } = await apagar('match');
+    const { estado, cuerpo } = await apagar('intermediacion');
     assert.equal(estado, 200);
     assert.equal(cuerpo.ok, true);
     const escritura = llamadas.find((l) => l.clave === 'POST /rest/v1/prestadora_modalidades');
@@ -184,11 +184,11 @@ describe('cuando no hay nada colgando, se apaga', () => {
 
   it('pregunta acotando a la Prestadora de quien pide, con la llave maestra', async () => {
     // Con la credencial de la persona, la política restrictiva de `asistentes` esconde a los
-    // importados que esperan conformidad, y la de `accesos_match` no alcanza a superadmin:
+    // importados que esperan conformidad, y la de `accesos_intermediacion` no alcanza a superadmin:
     // la comprobación dejaría de ver lo que ata la modalidad. Por eso pregunta con la maestra y
     // el filtro de la Prestadora escrito en la consulta.
-    await apagar('match');
-    for (const tabla of ['asistentes', 'accesos_match']) {
+    await apagar('intermediacion');
+    for (const tabla of ['asistentes', 'accesos_intermediacion']) {
       const pregunta = llamadas.find((l) => l.clave === `GET /rest/v1/${tabla}`);
       assert.ok(pregunta, `apagó sin mirar ${tabla}`);
       assert.equal(pregunta.credencial, 'Bearer clave-de-mentira');
@@ -207,7 +207,7 @@ describe('superadmin también enciende y apaga', () => {
   it('guarda en la Prestadora sobre la que trabaja', async () => {
     // La política de escritura de `prestadora_modalidades` sólo deja a admin_prestadora; la ruta
     // escribe con la maestra para que superadmin conserve lo que podía hacer.
-    const { estado, cuerpo } = await apagar('match');
+    const { estado, cuerpo } = await apagar('intermediacion');
     assert.equal(estado, 200);
     assert.equal(cuerpo.ok, true);
     const escritura = llamadas.find((l) => l.clave === 'POST /rest/v1/prestadora_modalidades');
@@ -218,8 +218,8 @@ describe('superadmin también enciende y apaga', () => {
   });
 
   it('y ve los accesos vigentes que impiden apagar el Match', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', () => UN_ACCESO);
-    const { estado, cuerpo } = await apagar('match');
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () => UN_ACCESO);
+    const { estado, cuerpo } = await apagar('intermediacion');
     assert.equal(estado, 409);
     assert.equal(cuerpo.motivo, 'modalidad_con_accesos');
     noApago();
@@ -231,8 +231,8 @@ describe('encender no comprueba nada', () => {
     // Y si se comprobara, se estaría trabando justo el camino de salida de una Prestadora que
     // quedó con la modalidad apagada y gente adentro.
     respuestas.set('GET /rest/v1/asistentes', () => UN_ASISTENTE);
-    respuestas.set('GET /rest/v1/accesos_match', () => UN_ACCESO);
-    const { estado, cuerpo } = await apagar('match', true);
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () => UN_ACCESO);
+    const { estado, cuerpo } = await apagar('intermediacion', true);
     assert.equal(estado, 200);
     assert.equal(cuerpo.ok, true);
     const preguntas = llamadas.map((l) => l.clave);
@@ -245,7 +245,7 @@ describe('si no se pudo comprobar, no se apaga', () => {
     // Falla cerrado (CLAUDE.md §5): apagarla sin haber mirado es justamente lo que esta
     // comprobación vino a impedir. La respuesta sin preparar hace que la base conteste error.
     respuestas.delete('GET /rest/v1/asistentes');
-    const { estado, cuerpo } = await apagar('match');
+    const { estado, cuerpo } = await apagar('intermediacion');
     assert.equal(estado, 500);
     noApago();
     noFiltraLaBase(cuerpo);

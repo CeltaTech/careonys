@@ -23,7 +23,7 @@
    existe en el proveedor y volver a crearlo dejaría dos cobros recurrentes vivos por el mismo
    Cliente. Se contesta lo que ya está guardado y no se llama a nadie.
 
-   ACÁ EMPIEZA EL PERÍODO GRATUITO, Y POR ESO ACÁ SE ESCRIBE. `formas_de_cobro_match.dias_gratis`
+   ACÁ EMPIEZA EL PERÍODO GRATUITO, Y POR ESO ACÁ SE ESCRIBE. `formas_de_cobro_intermediacion.dias_gratis`
    era hasta ahora un dato que la Prestadora cargaba y que no leía nadie: el período gratuito no
    existía. El primer día que se cobra sale de ese número contado desde el alta, y se guarda dos
    veces porque son dos preguntas distintas: `gratis_hasta` dice hasta cuándo no se cobra —es lo que
@@ -42,7 +42,7 @@
 
    NO CAMBIA EL ESTADO DEL ACCESO. Dar de alta no es cobrar. El acceso queda `vigente` cuando entra
    la plata del primer período, y eso lo decide `registrarCobroExitoso`
-   (`cobrosMatch.js`), que es adonde llegan tanto el cobro que informa el proveedor como la carga a mano
+   (`cobrosIntermediacion.js`), que es adonde llegan tanto el cobro que informa el proveedor como la carga a mano
    del Panel. Acá se guarda dónde quedó dada de alta y nada más.
 
    FALLA CERRADO. Sin riel conectado, sin credencial, sin período, sin correo del Cliente o con
@@ -88,11 +88,11 @@ export const MOTIVO_ALTA = {
  */
 export async function darDeAltaEnPasarela({ accesoId, prestadoraId, proveedor = null }) {
   const { data: acceso, error: errorAcceso } = await supabase
-    .from('accesos_match')
+    .from('accesos_intermediacion')
     .select(
       'id, prestadora_id, cliente_id, estado, importe, moneda, proveedor, referencia_externa, ' +
         'url_accion, alta_en_pasarela, ' +
-        'formas_de_cobro_match(periodo_cantidad, periodo_unidad, dias_gratis)'
+        'formas_de_cobro_intermediacion(periodo_cantidad, periodo_unidad, dias_gratis)'
     )
     .eq('id', accesoId)
     .eq('prestadora_id', prestadoraId)
@@ -117,7 +117,7 @@ export async function darDeAltaEnPasarela({ accesoId, prestadoraId, proveedor = 
 
   // Cada cuánto se cobra. Sin período no hay cobro recurrente que dar de alta: esa forma se cobra
   // una sola vez, y lo que sostiene el acceso después es un saldo o una fecha, no la pasarela.
-  const forma = acceso.formas_de_cobro_match;
+  const forma = acceso.formas_de_cobro_intermediacion;
   if (!forma?.periodo_cantidad || !forma?.periodo_unidad) {
     return { ok: false, motivo: MOTIVO_ALTA.FORMA_SIN_PERIODO };
   }
@@ -183,7 +183,7 @@ export async function darDeAltaEnPasarela({ accesoId, prestadoraId, proveedor = 
   }
 
   const { error: errorGuardar } = await supabase
-    .from('accesos_match')
+    .from('accesos_intermediacion')
     .update({
       proveedor: riel.proveedor,
       referencia_externa: respuesta.referenciaExterna ?? null,

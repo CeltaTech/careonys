@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
-import { useMarca, useOfreceMatch, useSeVe } from '../context/PerfilContext';
+import { useMarca, useOfreceIntermediacion, useSeVe } from '../context/PerfilContext';
 import { usePersonasAutorizadas } from '../context/PersonasAutorizadasContext';
 import { pantallaPermitida } from '../lib/interruptorDeCadaPantalla';
 
@@ -18,7 +18,7 @@ export default function Layout() {
   const { usuario } = useAuth();
   const { t } = useLocale();
   const marca = useMarca();
-  const ofreceMatch = useOfreceMatch();
+  const ofreceIntermediacion = useOfreceIntermediacion();
   const seVe = useSeVe();
   const { puedeVer } = usePersonasAutorizadas();
   const { pathname } = useLocation();
@@ -73,7 +73,7 @@ export default function Layout() {
         </NavLink>
         {/* El chat con la gente de la vidriera cuelga de lo mismo que la vidriera: donde la
             Prestadora no ofrece esa modalidad no hay con quién hablar. */}
-        {ofreceMatch && (
+        {ofreceIntermediacion && (
           <NavLink to="/mensajes" className={claseDeLaPestana}>
             {t.nav.mensajes}
           </NavLink>

@@ -17,7 +17,7 @@ const API_BASE = process.env.MODO_API_BASE || 'https://api.modo.com.ar';
 export const REQUIERE_SECRETO_FIRMA = true;
 
 /** En Modo no queda nada recurrente: cada período hay que pedirle su propio QR. Con esta marca,
- *  el trabajo diario que arma los cobros (`backend/src/utils/cobrosMatch.js`) sabe que a
+ *  el trabajo diario que arma los cobros (`backend/src/utils/cobrosIntermediacion.js`) sabe que a
  *  este riel le toca pasar todos los meses, y que a los que cobran solos no. */
 export const ARMA_COBRO_POR_PERIODO = true;
 
@@ -50,7 +50,7 @@ export async function generarCobroQr({ credencial, monto, referencia }) {
 
 /** El nombre común con el que el trabajo diario le pide a cualquier riel de período el cobro de
  *  un mes. Cada riel devuelve lo suyo con su propio nombre —acá un QR, en la red de cobranza un
- *  cupón—; esto lo traduce a la forma única que guarda `cobros_match`, para que el trabajo
+ *  cupón—; esto lo traduce a la forma única que guarda `cobros_intermediacion`, para que el trabajo
  *  no tenga que saber con qué riel está hablando (`celtatech\CLAUDE.md` §8, punto único de
  *  verdad). Modo no recibe fecha de vencimiento: el QR vive lo que Modo decide. */
 export async function armarCobroDelPeriodo({ credencial, monto, referencia }) {

@@ -61,14 +61,14 @@ export default function Conversacion() {
   }, [id]);
 
   const traer = useCallback(async () => {
-    const data = await api.conversacionDelMatch(id);
+    const data = await api.conversacionDeLaIntermediacion(id);
     anotarHastaDonde(data.mensajes);
     setDatos(data);
     setErrorDelRefresco('');
   }, [id]);
 
   const refrescar = useCallback(async () => {
-    const data = await api.conversacionDelMatch(id, traidoHasta.current);
+    const data = await api.conversacionDeLaIntermediacion(id, traidoHasta.current);
     anotarHastaDonde(data.mensajes);
     setDatos((previo) => {
       if (!previo) return data;

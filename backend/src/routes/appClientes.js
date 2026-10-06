@@ -35,7 +35,7 @@ import {
 } from '../utils/perfilPublicoDeAsistente.js';
 import { lugaresDe, lugaresDeVarias } from '../utils/lugaresDeCadaPersona.js';
 import { nombresDeLugares, lugaresPorNombre } from '../utils/catalogoDeLugares.js';
-import { funcionDeRiesgoEncendida, ofreceMatch } from '../utils/matchDeLaPrestadora.js';
+import { funcionDeRiesgoEncendida, ofreceIntermediacion } from '../utils/intermediacionDeLaPrestadora.js';
 import {
   LADO,
   abrirVideollamada,
@@ -45,7 +45,7 @@ import {
   marcarLeido,
   mensajesDeLaConversacion,
   videollamadaEnCurso,
-} from '../utils/conversacionMatch.js';
+} from '../utils/conversacionIntermediacion.js';
 import { direccionDeVideollamada } from '../utils/videollamada.js';
 import { abrirElContactoDeUnAsistente, comoEstaElContacto } from '../utils/contactoDelAsistente.js';
 import { MODALIDAD } from '../utils/modalidades.js';
@@ -179,7 +179,7 @@ appClientesRouter.get('/perfil', requiereRolCliente, async (req, res) => {
   // el menú se arma apenas la persona entra, que es cuando ya se está pidiendo el perfil. El
   // candado sigue estando en cada ruta de la vidriera, que no contesta nada sin volver a
   // preguntarlo.
-  const match = await ofreceMatch(req.usuarioCliente.prestadoraId);
+  const intermediacion = await ofreceIntermediacion(req.usuarioCliente.prestadoraId);
 
   res.json({
     perfil: {
@@ -191,7 +191,7 @@ appClientesRouter.get('/perfil', requiereRolCliente, async (req, res) => {
     contacto,
     visibilidad,
     accesos,
-    match,
+    intermediacion,
     instruccionPendiente: pendiente,
   });
 });
@@ -1016,12 +1016,12 @@ appClientesRouter.get('/acceso/:pacienteId', requiereRolCliente, exigeVisible('c
   // las formas que la Prestadora ofrece hoy, y un acceso contratado con una que ya no se ofrece
   // perdería el dato de si se renueva solo.
   const { data, error } = await supabase
-    .from('accesos_match')
+    .from('accesos_intermediacion')
     .select(
       // La moneda viaja con el importe y no se deduce: un importe suelto se lee en la moneda de
       // quien mira, y la Prestadora puede estar en otro país.
       'id, estado, importe, moneda, gratis_hasta, proximo_cobro, cancelada_en, vigente_hasta, ' +
-        'formas_de_cobro_match(renueva_sola)'
+        'formas_de_cobro_intermediacion(renueva_sola)'
     )
     .eq('prestadora_id', req.usuarioCliente.prestadoraId)
     .eq('cliente_id', req.usuarioCliente.clienteId)
@@ -1033,13 +1033,13 @@ appClientesRouter.get('/acceso/:pacienteId', requiereRolCliente, exigeVisible('c
   const acceso = data
     ? {
         ...sinLaFormaDeCobro(data),
-        renueva_sola: Boolean(data.formas_de_cobro_match?.renueva_sola),
+        renueva_sola: Boolean(data.formas_de_cobro_intermediacion?.renueva_sola),
       }
     : data;
   res.json({ acceso });
 });
 
-function sinLaFormaDeCobro({ formas_de_cobro_match: _forma, ...resto }) {
+function sinLaFormaDeCobro({ formas_de_cobro_intermediacion: _forma, ...resto }) {
   return resto;
 }
 
@@ -1069,7 +1069,7 @@ appClientesRouter.post('/qr-cobro', requiereRolCliente, exigeVisible('cliente_pa
 
   const db = clienteDelPedido(req);
   const { data: acceso } = await db
-    .from('accesos_match')
+    .from('accesos_intermediacion')
     .select('id, cliente_id, importe, proximo_cobro')
     .eq('id', accesoId)
     .eq('cliente_id', req.usuarioCliente.clienteId)
@@ -1328,7 +1328,7 @@ appClientesRouter.get('/codigo-de-presencia', requiereRolCliente, async (req, re
 //
 // LO QUE NO ESTÁ ACÁ, A PROPÓSITO: el dato de contacto. Llegar a la persona es justamente lo
 // que el Match vende, se descuenta de un paquete y tiene su propio circuito
-// (`contactos_vistos_match`). De estas dos direcciones no sale un teléfono ni un correo
+// (`contactos_vistos_intermediacion`). De estas dos direcciones no sale un teléfono ni un correo
 // por ningún camino: la consulta no pide esas columnas (`perfilPublicoDeAsistente.js`).
 //
 // LA PUERTA ES LA MODALIDAD, Y NO UN INTERRUPTOR NUEVO. La Prestadora que no ofrece
@@ -1356,13 +1356,13 @@ function poolDeLaPrestadora(prestadoraId) {
     .eq('estado', 'activo')
     .eq('disponible_para_ofertas', true)
     .is('deleted_at', null)
-    .contains('canales', [MODALIDAD.MATCH]);
+    .contains('canales', [MODALIDAD.INTERMEDIACION]);
 }
 
 /** Corta el paso donde la Prestadora no ofrece la modalidad. Mismo motivo en las dos rutas. */
 async function exigeVidriera(req) {
-  if (!(await ofreceMatch(req.usuarioCliente.prestadoraId))) {
-    throw new ErrorConMotivo('match_no_habilitado');
+  if (!(await ofreceIntermediacion(req.usuarioCliente.prestadoraId))) {
+    throw new ErrorConMotivo('intermediacion_no_habilitado');
   }
 }
 
@@ -1446,7 +1446,7 @@ async function tiposDeLaVidriera(db, tipoIds) {
   return new Map((data || []).map((t) => [t.id, t]));
 }
 
-appClientesRouter.get('/match/asistentes', requiereRolCliente, async (req, res) => {
+appClientesRouter.get('/intermediacion/asistentes', requiereRolCliente, async (req, res) => {
   try {
     await exigeVidriera(req);
     const prestadoraId = req.usuarioCliente.prestadoraId;
@@ -1514,7 +1514,7 @@ appClientesRouter.get('/match/asistentes', requiereRolCliente, async (req, res) 
   }
 });
 
-appClientesRouter.get('/match/asistentes/:id', requiereRolCliente, async (req, res) => {
+appClientesRouter.get('/intermediacion/asistentes/:id', requiereRolCliente, async (req, res) => {
   try {
     await exigeVidriera(req);
     const prestadoraId = req.usuarioCliente.prestadoraId;
@@ -1577,7 +1577,7 @@ appClientesRouter.get('/match/asistentes/:id', requiereRolCliente, async (req, r
 //
 // QUÉ RESUELVE. El dato de contacto es lo que el Match vende, y hasta acá no se le abría a
 // ningún Cliente por ningún camino: el descuento del saldo estaba escrito en la base y en
-// `utils/contactosMatch.js`, y no lo llamaba nadie. Estas dos direcciones son el botón que
+// `utils/contactosIntermediacion.js`, y no lo llamaba nadie. Estas dos direcciones son el botón que
 // faltaba, y todo lo que deciden vive en `utils/contactoDelAsistente.js`.
 //
 // DOS DIRECCIONES Y NO UNA, A PROPÓSITO. La primera dice qué va a pasar y no toca nada; la
@@ -1602,7 +1602,7 @@ async function asistenteDeLaVidriera(req) {
   return data;
 }
 
-appClientesRouter.get('/match/asistentes/:id/contacto', requiereRolCliente, async (req, res) => {
+appClientesRouter.get('/intermediacion/asistentes/:id/contacto', requiereRolCliente, async (req, res) => {
   try {
     await exigeVidriera(req);
     const asistente = await asistenteDeLaVidriera(req);
@@ -1624,7 +1624,7 @@ appClientesRouter.get('/match/asistentes/:id/contacto', requiereRolCliente, asyn
 });
 
 appClientesRouter.post(
-  '/match/asistentes/:id/contacto',
+  '/intermediacion/asistentes/:id/contacto',
   requiereRolCliente,
   exigeVisible('cliente_pagos_y_suscripcion'),
   exigeDePersonasAutorizadas('persona_autorizada_dinero'),
@@ -1655,7 +1655,7 @@ appClientesRouter.post(
 //
 // QUÉ RESUELVE. El Cliente ya podía mirar un perfil y no tenía forma de hablarle a la persona.
 // Estas rutas son el hilo, y el de la aplicación del Asistente es el mismo: las dos puntas
-// entran por `utils/conversacionMatch.js`, que es donde vive el tapado.
+// entran por `utils/conversacionIntermediacion.js`, que es donde vive el tapado.
 //
 // EL CHAT NO SE COBRA. Lo dice el documento del producto: la búsqueda, los perfiles, el chat y
 // la videollamada son libres (`docs/PRD_07_Modalidad_Match.md:69`). Lo que se vende es
@@ -1671,7 +1671,7 @@ appClientesRouter.post(
  *  existe y el ajeno contestan lo mismo: desde afuera se tienen que ver iguales. */
 async function conversacionDelCliente(req) {
   const { data } = await clienteDelPedido(req)
-    .from('conversaciones_match')
+    .from('conversaciones_intermediacion')
     .select('id, prestadora_id, cliente_id, asistente_id, ultimo_mensaje_at, sala_videollamada, sala_abierta_at')
     .eq('id', req.params.id)
     .eq('cliente_id', req.usuarioCliente.clienteId)
@@ -1681,13 +1681,13 @@ async function conversacionDelCliente(req) {
   return data;
 }
 
-appClientesRouter.get('/match/conversaciones', requiereRolCliente, async (req, res) => {
+appClientesRouter.get('/intermediacion/conversaciones', requiereRolCliente, async (req, res) => {
   try {
     await exigeVidriera(req);
     // Con la llave maestra: el hilo trae el nombre y la foto del Asistente, y la base no le deja
     // ver al Cliente un Asistente que todavía no lo atiende, que es el caso de la vidriera.
     const { data, error } = await supabase
-      .from('conversaciones_match')
+      .from('conversaciones_intermediacion')
       .select('id, asistente_id, ultimo_mensaje_at, asistentes(id, nombre, foto_url)')
       .eq('prestadora_id', req.usuarioCliente.prestadoraId)
       .eq('cliente_id', req.usuarioCliente.clienteId)
@@ -1699,7 +1699,7 @@ appClientesRouter.get('/match/conversaciones', requiereRolCliente, async (req, r
     // cuentan los del otro lado: lo propio ya lo leyó quien lo escribió.
     const { data: sinLeer } = hilos.length
       ? await clienteDelPedido(req)
-          .from('mensajes_match')
+          .from('mensajes_intermediacion')
           .select('conversacion_id')
           .in('conversacion_id', hilos.map((c) => c.id))
           .eq('lado', 'asistente')
@@ -1728,7 +1728,7 @@ appClientesRouter.get('/match/conversaciones', requiereRolCliente, async (req, r
 
 /** Abrir el hilo con alguien de la vidriera. Se busca adentro del pool y no en la tabla entera:
  *  a quien no está en la vidriera no se le escribe, aunque se pruebe su identificador. */
-appClientesRouter.post('/match/asistentes/:id/conversacion', requiereRolCliente, async (req, res) => {
+appClientesRouter.post('/intermediacion/asistentes/:id/conversacion', requiereRolCliente, async (req, res) => {
   try {
     await exigeVidriera(req);
     const { data: asistente } = await poolDeLaPrestadora(req.usuarioCliente.prestadoraId)
@@ -1748,7 +1748,7 @@ appClientesRouter.post('/match/asistentes/:id/conversacion', requiereRolCliente,
   }
 });
 
-appClientesRouter.get('/match/conversaciones/:id', requiereRolCliente, async (req, res) => {
+appClientesRouter.get('/intermediacion/conversaciones/:id', requiereRolCliente, async (req, res) => {
   try {
     await exigeVidriera(req);
     const conversacion = await conversacionDelCliente(req);
@@ -1785,7 +1785,7 @@ appClientesRouter.get('/match/conversaciones/:id', requiereRolCliente, async (re
   }
 });
 
-appClientesRouter.post('/match/conversaciones/:id/mensajes', requiereRolCliente, async (req, res) => {
+appClientesRouter.post('/intermediacion/conversaciones/:id/mensajes', requiereRolCliente, async (req, res) => {
   try {
     await exigeVidriera(req);
     const conversacion = await conversacionDelCliente(req);
@@ -1808,7 +1808,7 @@ appClientesRouter.post('/match/conversaciones/:id/mensajes', requiereRolCliente,
   }
 });
 
-appClientesRouter.post('/match/conversaciones/:id/videollamada', requiereRolCliente, async (req, res) => {
+appClientesRouter.post('/intermediacion/conversaciones/:id/videollamada', requiereRolCliente, async (req, res) => {
   try {
     await exigeVidriera(req);
     const conversacion = await conversacionDelCliente(req);

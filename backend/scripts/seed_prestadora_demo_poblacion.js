@@ -42,7 +42,7 @@ const NOMBRES_ASISTENTES = [
 function construirAsistente(nombre, idx) {
   const esDependencia = idx % 5 === 2 || idx % 5 === 4; // ~40% dependencia
   const zonas = [ZONAS[idx % 10], ZONAS[(idx + 4) % 10]];
-  const canalesOpciones = [['directo', 'match'], ['directo'], ['match'], ['directo', 'match']];
+  const canalesOpciones = [['directo', 'intermediacion'], ['directo'], ['intermediacion'], ['directo', 'intermediacion']];
   const canales = canalesOpciones[idx % 4];
 
   let estado = 'activo';

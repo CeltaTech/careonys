@@ -4,7 +4,7 @@
    QUÉ ES ESTO. El dato de contacto —teléfono, correo, domicilio— es justamente lo que el
    Match vende (`docs/PRD_07_Modalidad_Match.md:70`). Hasta acá estaban las dos
    puntas y faltaba el medio: el descuento del saldo vivía en la base y en
-   `contactosMatch.js` sin que lo llamara nadie, y el contacto no se le abría a ningún
+   `contactosIntermediacion.js` sin que lo llamara nadie, y el contacto no se le abría a ningún
    Cliente por ningún camino. Este archivo es ese medio.
 
    DOS PREGUNTAS DISTINTAS, Y POR ESO DOS FUNCIONES. Una pantalla necesita saber **qué va a
@@ -18,7 +18,7 @@
    toque el botón.
 
    CUÁL ACCESO PAGA. Un Cliente puede tener un acceso por Paciente, y el contacto de un
-   Asistente es del Cliente entero —así lo dice el candado de `contactos_vistos_match`,
+   Asistente es del Cliente entero —así lo dice el candado de `contactos_vistos_intermediacion`,
    que es (cliente, asistente) y no lleva Paciente—. Paga el acceso vigente más antiguo que
    pueda pagarlo: primero los que tienen saldo, y recién después los que se sostienen por fecha.
    Gastar primero lo que ya se compró es lo que evita dejar paquetes con saldo colgado.
@@ -41,7 +41,7 @@
    nada y se devuelve el motivo. Nunca se muestra un contacto que no se pudo descontar. */
 
 import { supabase } from '../db/connection.js';
-import { abrirElContacto, MOTIVO_CONTACTO } from './contactosMatch.js';
+import { abrirElContacto, MOTIVO_CONTACTO } from './contactosIntermediacion.js';
 
 /** Las columnas de la ficha del Asistente que son el dato que se vende. Están acá, en una sola
  *  lista, por el mismo motivo que `COLUMNAS_PERFIL_PUBLICO` tiene la suya: para que ninguna ruta
@@ -52,7 +52,7 @@ export const COLUMNAS_DE_CONTACTO = 'id, nombre, telefono, email, domicilio';
  *  la aplicación, en los tres idiomas (`celtatech\CLAUDE.md` §8). */
 export const MOTIVO_VER_CONTACTO = {
   /** Este Cliente no tiene ningún acceso al Match. Lo da de alta la Prestadora. */
-  SIN_ACCESO: 'sin_acceso_de_match',
+  SIN_ACCESO: 'sin_acceso_de_intermediacion',
   /** Tiene acceso, pero ninguno vigente: vencido o dado de baja. */
   ACCESO_NO_VIGENTE: MOTIVO_CONTACTO.ACCESO_NO_VIGENTE,
   /** Tenía paquete y se le acabaron los contactos. */
@@ -62,7 +62,7 @@ export const MOTIVO_VER_CONTACTO = {
 
 const COLUMNAS_DEL_ACCESO =
   'id, prestadora_id, estado, importe, moneda, gratis_hasta, proximo_cobro, saldo_contactos, created_at, ' +
-  'formas_de_cobro_match(nombre, renueva_sola, periodo_cantidad, periodo_unidad, contactos_incluidos)';
+  'formas_de_cobro_intermediacion(nombre, renueva_sola, periodo_cantidad, periodo_unidad, contactos_incluidos)';
 
 /** ¿Este acceso está todavía en período gratuito? Se compara por día, que es como está guardado:
  *  el último día del período gratuito todavía es gratis. */
@@ -91,7 +91,7 @@ function puedePagar(acceso) {
  */
 export async function accesoQuePagaElContacto({ prestadoraId, clienteId }) {
   const { data, error } = await supabase
-    .from('accesos_match')
+    .from('accesos_intermediacion')
     .select(COLUMNAS_DEL_ACCESO)
     .eq('prestadora_id', prestadoraId)
     .eq('cliente_id', clienteId)
@@ -134,7 +134,7 @@ export async function datosDeContacto({ prestadoraId, asistenteId }) {
  *  confirmación, y por eso sale armado de un solo lugar. */
 function advertenciaDeLaActivacion(acceso) {
   if (!acceso) return null;
-  const forma = acceso.formas_de_cobro_match || {};
+  const forma = acceso.formas_de_cobro_intermediacion || {};
   return {
     forma: forma.nombre || '',
     importe: acceso.importe,
@@ -158,7 +158,7 @@ function advertenciaDeLaActivacion(acceso) {
  */
 export async function comoEstaElContacto({ prestadoraId, clienteId, asistenteId, mira_el_dinero = false }) {
   const { data: yaVisto, error } = await supabase
-    .from('contactos_vistos_match')
+    .from('contactos_vistos_intermediacion')
     .select('id')
     .eq('prestadora_id', prestadoraId)
     .eq('cliente_id', clienteId)
@@ -168,7 +168,7 @@ export async function comoEstaElContacto({ prestadoraId, clienteId, asistenteId,
   // Falla cerrado: ante un error se contesta que no está abierto. Contestar que sí destaparía un
   // dato que quizá nadie pagó.
   if (error) {
-    console.error('Error consultando contactos_vistos_match:', error.message);
+    console.error('Error consultando contactos_vistos_intermediacion:', error.message);
     return { abierto: false, contacto: null, activacion: null, motivo: MOTIVO_VER_CONTACTO.NO_SE_PUDO_GUARDAR };
   }
 
@@ -251,7 +251,7 @@ async function terminarElPeriodoGratuito(acceso) {
   // La Prestadora sale de la misma fila que se leyó para elegir el acceso: se nombra igual, porque
   // guardar por el identificador solo dejaría el cajón abierto (`celtatech\CLAUDE.md` §5).
   const { error } = await supabase
-    .from('accesos_match')
+    .from('accesos_intermediacion')
     .update(cambios)
     .eq('prestadora_id', acceso.prestadora_id)
     .eq('id', acceso.id);

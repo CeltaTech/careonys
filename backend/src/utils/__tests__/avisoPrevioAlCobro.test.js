@@ -121,7 +121,7 @@ function accesoPorCobrarse(cambios = {}) {
 
 /** Lo que la base recibió para guardar, o `undefined` si no se guardó nada. */
 function loAnotado() {
-  return llamadas.find((l) => l.clave === 'PATCH /rest/v1/accesos_match');
+  return llamadas.find((l) => l.clave === 'PATCH /rest/v1/accesos_intermediacion');
 }
 
 beforeEach(() => {
@@ -130,10 +130,10 @@ beforeEach(() => {
   elEnvioSale = true;
   anotados = [];
   respuestas.clear();
-  respuestas.set('PATCH /rest/v1/accesos_match', []);
+  respuestas.set('PATCH /rest/v1/accesos_intermediacion', []);
   // Con cuántos días de anticipación se avisa lo elige la Prestadora: la ventana de la consulta
   // sale de la más larga que haya configurada, y después cada acceso se mide contra la suya.
-  respuestas.set('GET /rest/v1/configuracion_cobro_match', [
+  respuestas.set('GET /rest/v1/configuracion_cobro_intermediacion', [
     { dias_de_aviso_antes_del_cobro: 3, dias_de_gracia_por_cobro_rechazado: 7, dias_de_vida_del_cupon: 10 },
   ]);
   respuestas.set('GET /rest/v1/prestadoras', [{ pais: 'AR' }]);
@@ -141,7 +141,7 @@ beforeEach(() => {
 
 describe('a quién se le avisa', () => {
   it('le avisa al Cliente y anota cuándo', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', [accesoPorCobrarse()]);
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [accesoPorCobrarse()]);
 
     const { avisados } = await avisarElPrimerCobroQueViene({ avisar: avisarDeMentira });
 
@@ -154,7 +154,7 @@ describe('a quién se le avisa', () => {
   it('avisa también el mismo día del primer cobro', async () => {
     // Es el último momento en que el mensaje todavía es previo. Si el trabajo no corrió antes —el
     // backend estuvo caído, el Cliente no tenía dispositivo—, éste es el día que queda.
-    respuestas.set('GET /rest/v1/accesos_match', [accesoPorCobrarse({ gratis_hasta: HOY })]);
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [accesoPorCobrarse({ gratis_hasta: HOY })]);
 
     assert.equal((await avisarElPrimerCobroQueViene({ avisar: avisarDeMentira })).avisados, 1);
     assert.equal(empujados.length, 1);
@@ -164,11 +164,11 @@ describe('a quién se le avisa', () => {
     // Lo que decide a quién se le avisa es la consulta, y por eso se comprueba la consulta: el que
     // ya se dio de baja no espera ningún cobro, el que ya fue avisado no se avisa dos veces, y el
     // que tiene la fecha lejos todavía no tiene nada que saber.
-    respuestas.set('GET /rest/v1/accesos_match', []);
+    respuestas.set('GET /rest/v1/accesos_intermediacion', []);
 
     await avisarElPrimerCobroQueViene({ avisar: avisarDeMentira });
 
-    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_match').url;
+    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_intermediacion').url;
     assert.match(consulta, /estado=eq\.vigente/);
     assert.match(consulta, /cancelada_en=is\.null/);
     assert.match(consulta, /aviso_previo_en=is\.null/);
@@ -178,7 +178,7 @@ describe('a quién se le avisa', () => {
   });
 
   it('no avisa ni escribe nada si la consulta falla', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', { __falla: { message: 'la base no contesta' } });
+    respuestas.set('GET /rest/v1/accesos_intermediacion', { __falla: { message: 'la base no contesta' } });
 
     const { avisados } = await avisarElPrimerCobroQueViene({ avisar: avisarDeMentira });
 
@@ -211,7 +211,7 @@ describe('cuando el aviso no llega', () => {
   it('no lo anota si no había dispositivo al que mandarlo', async () => {
     // Anotarlo sería dar por avisado a un Cliente que no recibió nada, y el mensaje no volvería a
     // salir nunca. Sin anotarlo, mañana se vuelve a intentar mientras la ventana dure.
-    respuestas.set('GET /rest/v1/accesos_match', [accesoPorCobrarse()]);
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [accesoPorCobrarse()]);
     elEnvioSale = false;
 
     const { avisados } = await avisarElPrimerCobroQueViene({ avisar: avisarDeMentira });
@@ -221,12 +221,12 @@ describe('cuando el aviso no llega', () => {
   });
 
   it('sigue con las demás Clientes cuando una anotación falla', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', [
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [
       accesoPorCobrarse(),
       accesoPorCobrarse({ id: OTRO_ACCESO }),
     ]);
     let vez = 0;
-    respuestas.set('PATCH /rest/v1/accesos_match', () => {
+    respuestas.set('PATCH /rest/v1/accesos_intermediacion', () => {
       vez += 1;
       return vez === 1 ? { __falla: { message: 'la base no contesta' } } : [];
     });
@@ -239,7 +239,7 @@ describe('cuando el aviso no llega', () => {
   });
 
   it('vuelve a exigir al anotar que nadie haya avisado en el medio', async () => {
-    respuestas.set('GET /rest/v1/accesos_match', [accesoPorCobrarse()]);
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [accesoPorCobrarse()]);
 
     await avisarElPrimerCobroQueViene({ avisar: avisarDeMentira });
 

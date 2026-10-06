@@ -34,7 +34,7 @@ let llamadas = [];
 let rolDelUsuario = 'admin_prestadora';
 let prestadoraDelUsuario = PRESTADORA;
 /** Qué contesta la base cuando se le pregunta si esta Prestadora tiene la modalidad encendida. */
-let modalidadMatch = true;
+let modalidadIntermediacion = true;
 /** Con permiso de acceso abierto, un Superadmin queda parado adentro de esta Prestadora. */
 let sesionDeSoporteAbierta = false;
 
@@ -75,14 +75,14 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 // en el momento en que se importa, y con la dirección que haya en ese instante.
 const { default: express } = await import('express');
 await import('express-async-errors');
-const { panelMatchRouter } = await import('../panelMatch.js');
+const { panelIntermediacionRouter } = await import('../panelIntermediacion.js');
 
 const app = express();
 app.use(express.json());
-app.use('/api/panel/match', panelMatchRouter);
+app.use('/api/panel/intermediacion', panelIntermediacionRouter);
 const backend = app.listen(0, '127.0.0.1');
 await new Promise((listo) => backend.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/match`;
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/intermediacion`;
 
 after(() => {
   backend.close();
@@ -108,12 +108,12 @@ beforeEach(() => {
   llamadas = [];
   rolDelUsuario = 'admin_prestadora';
   prestadoraDelUsuario = PRESTADORA;
-  modalidadMatch = true;
+  modalidadIntermediacion = true;
   sesionDeSoporteAbierta = false;
   respuestas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: rolDelUsuario, prestadora_id: prestadoraDelUsuario }]);
-  respuestas.set('POST /rest/v1/rpc/prestadora_tiene_modalidad_activa', () => modalidadMatch);
+  respuestas.set('POST /rest/v1/rpc/prestadora_tiene_modalidad_activa', () => modalidadIntermediacion);
   // El segundo factor no es lo que se prueba acá: se lo deja apagado para que el camino llegue
   // hasta el candado del rol.
   respuestas.set('GET /rest/v1/configuracion_plataforma', () => [{ mfa_admin_obligatorio: false }]);
@@ -139,9 +139,9 @@ beforeEach(() => {
 const TABLAS_DE_PLATA = [
   'prestadora_pasarela_pago',
   'credenciales_pasarela_pago',
-  'accesos_match',
-  'cobros_match',
-  'formas_de_cobro_match',
+  'accesos_intermediacion',
+  'cobros_intermediacion',
+  'formas_de_cobro_intermediacion',
   'qr_cobro_efectivo',
   'rpc/guardar_credencial_pasarela_pago',
   'rpc/guardar_secreto_firma_pasarela_pago',
@@ -199,7 +199,7 @@ describe('lo que sí es del Coordinador', () => {
     rolDelUsuario = 'coordinador';
     // Cuáles son las funciones de riesgo lo dice la base, no una lista escrita en el backend
     // (CLAUDE.md §8): la ruta lee el catálogo antes de filtrar la auditoría.
-    respuestas.set('GET /rest/v1/catalogo_funciones_match', () => [
+    respuestas.set('GET /rest/v1/catalogo_funciones_intermediacion', () => [
       { clave: 'ranking_plataforma', orden: 1 },
     ]);
     respuestas.set('GET /rest/v1/auditoria_advertencias_legales', () => []);
@@ -209,10 +209,10 @@ describe('lo que sí es del Coordinador', () => {
 
   it('ve las funciones de riesgo legal, y no las puede encender', async () => {
     rolDelUsuario = 'coordinador';
-    respuestas.set('GET /rest/v1/catalogo_funciones_match', () => [
+    respuestas.set('GET /rest/v1/catalogo_funciones_intermediacion', () => [
       { clave: 'ranking_plataforma', orden: 1 },
     ]);
-    respuestas.set('GET /rest/v1/configuracion_funciones_match', () => []);
+    respuestas.set('GET /rest/v1/configuracion_funciones_intermediacion', () => []);
     respuestas.set('GET /rest/v1/prestadoras', () => [{ pais: 'AR' }]);
     respuestas.set('GET /rest/v1/advertencias_legales', () => []);
 
@@ -222,7 +222,7 @@ describe('lo que sí es del Coordinador', () => {
 
     const escritura = await pedir('PUT', '/funciones-riesgo/ranking_plataforma', { activa: true });
     assert.equal(escritura.estado, 403);
-    const escrituras = llamadas.filter((l) => l.clave === 'POST /rest/v1/configuracion_funciones_match');
+    const escrituras = llamadas.filter((l) => l.clave === 'POST /rest/v1/configuracion_funciones_intermediacion');
     assert.deepEqual(escrituras, [], 'el backend guardó el encendido antes de negarlo');
   });
 });
@@ -253,7 +253,7 @@ describe('la lista de accesos trae los nombres aunque la ficha esté pendiente d
   it('pide los nombres con la llave maestra y con el filtro de la Prestadora', async () => {
     const PACIENTE = '66666666-6666-6666-6666-666666666666';
     const ASISTENTE = '77777777-7777-7777-7777-777777777777';
-    respuestas.set('GET /rest/v1/accesos_match', () => [
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () => [
       { id: ACCESO, cliente_id: null, paciente_id: PACIENTE, asistente_id: ASISTENTE, estado: 'activo' },
     ]);
     respuestas.set('GET /rest/v1/pacientes', () => [{ id: PACIENTE, nombre: 'Paciente inventado' }]);
@@ -301,7 +301,7 @@ describe('sin la modalidad Match no se entra', () => {
 
   for (const [metodo, ruta, cuerpo] of TODAS_LAS_RUTAS) {
     it(`${metodo} ${ruta}`, async () => {
-      modalidadMatch = false;
+      modalidadIntermediacion = false;
       const { estado, cuerpo: respuesta } = await pedir(metodo, ruta, cuerpo);
       assert.equal(estado, 403);
       // El motivo es lo que le permite al Panel mostrar la frase traducida en el idioma de
@@ -327,7 +327,7 @@ describe('sin la modalidad Match no se entra', () => {
   it('niega igual si la respuesta viene vacía', async () => {
     // El caso que rompe los candados escritos a la ligera: `null` no es `false`, y una
     // comparación floja lo dejaría pasar.
-    modalidadMatch = null;
+    modalidadIntermediacion = null;
     const { estado, cuerpo } = await pedir('GET', '/accesos');
     assert.equal(estado, 403);
     assert.equal(cuerpo.motivo, 'modalidad_no_activa');
@@ -337,11 +337,11 @@ describe('sin la modalidad Match no se entra', () => {
   it('le pregunta a la base por esta Prestadora y por esta modalidad', async () => {
     // Que la pregunta se arme con la Prestadora de la sesión —y no con una que venga en el
     // pedido— es lo que impide que alguien conteste por otra.
-    modalidadMatch = false;
+    modalidadIntermediacion = false;
     await pedir('GET', '/accesos');
     const pregunta = llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/prestadora_tiene_modalidad_activa');
     assert.ok(pregunta, 'el backend no le preguntó a la base si la modalidad está activa');
-    assert.deepEqual(pregunta.cuerpo, { p_prestadora_id: PRESTADORA, p_modalidad: 'match' });
+    assert.deepEqual(pregunta.cuerpo, { p_prestadora_id: PRESTADORA, p_modalidad: 'intermediacion' });
   });
 });
 
@@ -399,7 +399,7 @@ describe('Superadmin no llega a las credenciales de cobro de una Prestadora', ()
     rolDelUsuario = 'superadmin';
     prestadoraDelUsuario = null;
     sesionDeSoporteAbierta = true;
-    respuestas.set('GET /rest/v1/formas_de_cobro_match', () => []);
+    respuestas.set('GET /rest/v1/formas_de_cobro_intermediacion', () => []);
     respuestas.set('GET /rest/v1/catalogo_periodos_cobro', () => [{ clave: 'mes', orden: 3 }]);
 
     const { estado, cuerpo } = await pedir('GET', '/formas-de-cobro');
@@ -456,7 +456,7 @@ function catalogoDePeriodos() {
 
 function noEscribioLaForma() {
   const escrituras = llamadas.filter(
-    (l) => l.clave.includes('formas_de_cobro_match') && l.clave.startsWith('GET') === false
+    (l) => l.clave.includes('formas_de_cobro_intermediacion') && l.clave.startsWith('GET') === false
   );
   assert.deepEqual(escrituras, [], 'el backend escribió la forma de cobro antes de rechazarla');
 }
@@ -464,7 +464,7 @@ function noEscribioLaForma() {
 describe('la Prestadora arma su forma de cobro', () => {
   it('guarda las piezas tal como vinieron, y no manda la moneda', async () => {
     catalogoDePeriodos();
-    respuestas.set('POST /rest/v1/formas_de_cobro_match', () => [FORMA_GUARDADA]);
+    respuestas.set('POST /rest/v1/formas_de_cobro_intermediacion', () => [FORMA_GUARDADA]);
 
     const { estado, cuerpo } = await pedir('POST', '/formas-de-cobro', {
       nombre: '  Mensual  ',
@@ -478,7 +478,7 @@ describe('la Prestadora arma su forma de cobro', () => {
     assert.equal(estado, 200);
     assert.equal(cuerpo.forma.id, FORMA);
 
-    const escritura = llamadas.find((l) => l.clave === 'POST /rest/v1/formas_de_cobro_match');
+    const escritura = llamadas.find((l) => l.clave === 'POST /rest/v1/formas_de_cobro_intermediacion');
     assert.deepEqual(escritura.cuerpo, {
       nombre: 'Mensual',
       importe: 12000,
@@ -542,7 +542,7 @@ describe('la Prestadora arma su forma de cobro', () => {
     // Sacarle el período a una forma que se renueva sola la deja en un estado imposible, y eso
     // no se ve mirando sólo lo que vino: hay que mirarla entera.
     catalogoDePeriodos();
-    respuestas.set('GET /rest/v1/formas_de_cobro_match', () => [FORMA_GUARDADA]);
+    respuestas.set('GET /rest/v1/formas_de_cobro_intermediacion', () => [FORMA_GUARDADA]);
 
     const { estado, cuerpo } = await pedir('PATCH', `/formas-de-cobro/${FORMA}`, {
       periodo_cantidad: null,
@@ -555,7 +555,7 @@ describe('la Prestadora arma su forma de cobro', () => {
 
   it('una forma de otra Prestadora se contesta como si no existiera', async () => {
     catalogoDePeriodos();
-    respuestas.set('GET /rest/v1/formas_de_cobro_match', () => []);
+    respuestas.set('GET /rest/v1/formas_de_cobro_intermediacion', () => []);
 
     const { estado, cuerpo } = await pedir('PATCH', `/formas-de-cobro/${FORMA}`, { importe: 99 });
     assert.equal(estado, 404);

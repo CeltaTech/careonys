@@ -308,7 +308,7 @@ a quien manda a facturar, que sí es trabajo de la coordinación.
 
 **Lo reservado de la ficha también vive aparte (2026-08-19).** El mismo agujero seguía abierto
 en otras cinco columnas de `asistentes`: `causal_baja`, `score_riesgo_reclasificacion`,
-`indicadores_riesgo`, `motivo_exclusion_directo` y `motivo_exclusion_match` — por qué se
+`indicadores_riesgo`, `motivo_exclusion_directo` y `motivo_exclusion_intermediacion` — por qué se
 lo dio de baja, su puntaje de riesgo con los motivos que lo forman, y por qué quedó excluido de
 recibir trabajo. La vista `asistentes_coordinador` las omite, pero una vista solo describe lo
 que consulta la pantalla: la tabla seguía contestando esas columnas a cualquiera que preguntara
@@ -360,20 +360,20 @@ real (15 policies, incluyendo el patrón OR-de-dos-EXISTS de
 que consuma estas tablas.
 
 **Match — cómo cobra la Prestadora y qué tiene habilitado el Cliente.** Son dos tablas y
-se leen juntas. `formas_de_cobro_match` guarda las piezas con las que cada Prestadora arma
+se leen juntas. `formas_de_cobro_intermediacion` guarda las piezas con las que cada Prestadora arma
 su forma de cobrar —qué importe, cada cuánto, con qué período gratuito, con qué saldo de
-contactos, si se renueva sola—; `accesos_match`, a qué forma se adhirió cada Cliente, con
+contactos, si se renueva sola—; `accesos_intermediacion`, a qué forma se adhirió cada Cliente, con
 qué importe congelado, hasta qué fecha y con cuántos contactos. La primera la administra
 únicamente la Admin de esa Prestadora, y el Cliente alcanza sólo las que están ofrecidas:
 
 ```sql
-CREATE POLICY prestadora_administra_sus_formas_de_cobro ON formas_de_cobro_match
+CREATE POLICY prestadora_administra_sus_formas_de_cobro ON formas_de_cobro_intermediacion
   FOR ALL USING (
     prestadora_id = interno.current_tenant()
     AND EXISTS (SELECT 1 FROM usuarios u WHERE u.id = auth.uid() AND u.rol = 'admin_prestadora')
   );
 
-CREATE POLICY cliente_ve_las_formas_ofrecidas ON formas_de_cobro_match
+CREATE POLICY cliente_ve_las_formas_ofrecidas ON formas_de_cobro_intermediacion
   FOR SELECT USING (
     ofrecida
     AND prestadora_id = (SELECT c.prestadora_id FROM clientes c
@@ -384,15 +384,15 @@ CREATE POLICY cliente_ve_las_formas_ofrecidas ON formas_de_cobro_match
 La columna `ofrecida` es parte del control de acceso, no una preferencia de pantalla: una forma
 que la Prestadora dejó de ofrecer desaparece de la vista del Cliente, y los accesos que ya se
 adhirieron a ella siguen apuntando a su fila. Las demás tablas de la modalidad conservan el mismo
-reparto de siempre —`cliente_ve_su_acceso_match` / `prestadora_ve_accesos_match`,
-`cliente_ve_los_cobros_de_su_acceso` / `prestadora_ve_cobros_match` /
+reparto de siempre —`cliente_ve_su_acceso_intermediacion` / `prestadora_ve_accesos_intermediacion`,
+`cliente_ve_los_cobros_de_su_acceso` / `prestadora_ve_cobros_intermediacion` /
 `panel_registra_cobro_efectivo_manual`, y las tres de `qr_cobro_efectivo`—, renombradas al pasar
 de suscripción a acceso. Ningún Cliente ve el acceso ni el cobro de otro, y ninguna Prestadora
 ve nada de otra Prestadora.
 
 **Y las unidades de tiempo salen de una tabla del producto, no de cada Prestadora.**
 `catalogo_periodos_cobro` dice cada cuánto se puede cobrar —`dia`, `semana`, `mes`, `anio`—, y
-`formas_de_cobro_match.periodo_unidad` la apunta con clave foránea. No lleva columna de
+`formas_de_cobro_intermediacion.periodo_unidad` la apunta con clave foránea. No lleva columna de
 Prestadora porque no tiene ninguna adentro: es una lista de unidades de tiempo, igual para todas.
 De ahí sale su reparto, que es el de un catálogo del producto y no el de un dato de nadie:
 
@@ -409,18 +409,18 @@ su Prestadora le ofrece y cada una dice cada cuánto se cobra. Escribirlo es cam
 así que queda del lado del Superadmin.
 
 **Y el saldo de un paquete de contactos no lo mueve ninguna pantalla.** Un paquete se paga una
-vez y se gasta de a un Asistente: `accesos_match.saldo_contactos` dice cuántos quedan y
-`contactos_vistos_match` dice a quiénes ya se les abrió el contacto, con un único por
+vez y se gasta de a un Asistente: `accesos_intermediacion.saldo_contactos` dice cuántos quedan y
+`contactos_vistos_intermediacion` dice a quiénes ya se les abrió el contacto, con un único por
 (`cliente_id`, `asistente_id`) que es lo que hace que volver a mirar al mismo no cueste otro. Las
 dos cuentas —sumarle al saldo cuando entra la plata y restarle uno al abrir— viven en dos
-funciones de la base (`sumar_contactos_al_saldo` y `consumir_contacto_match`), y lo que
+funciones de la base (`sumar_contactos_al_saldo` y `consumir_contacto_intermediacion`), y lo que
 las obliga a estar ahí es la seguridad, no la comodidad: leer el saldo, restarle uno y volver a
 escribirlo son dos viajes, y dos ventanas abiertas a la vez descuentan una sola vez. Adentro de la
 base el descuento y la anotación pasan juntos, con la fila del acceso tomada.
 
 Ninguna de las dos funciones es `SECURITY DEFINER` —entra el backend con la llave de servicio, y el
 esquema `interno` es para las que usan las políticas—, y ninguna de las dos se puede ejecutar como
-`PUBLIC`, `anon` ni `authenticated`. `consumir_contacto_match` queda al alcance de `service_role` y
+`PUBLIC`, `anon` ni `authenticated`. `consumir_contacto_intermediacion` queda al alcance de `service_role` y
 de nadie más; `sumar_contactos_al_saldo`, de `service_role` y del trabajo sin persona
 (`trabajo_sin_persona`). Sin eso serían dos direcciones web, y una de ellas gasta plata ajena.
 
@@ -428,13 +428,13 @@ La tabla lleva RLS y sólo políticas de lectura, porque desde una pantalla no s
 la escribe el descuento, en la misma transacción.
 
 ```sql
-CREATE POLICY cliente_ve_los_contactos_que_abrio ON contactos_vistos_match
+CREATE POLICY cliente_ve_los_contactos_que_abrio ON contactos_vistos_intermediacion
   FOR SELECT USING (
     cliente_id = interno.cliente_id_de_usuario(auth.uid())
     AND interno.persona_autorizada_puede(auth.uid(), 'persona_autorizada_dinero')
   );
 
-CREATE POLICY prestadora_ve_los_contactos_vistos ON contactos_vistos_match
+CREATE POLICY prestadora_ve_los_contactos_vistos ON contactos_vistos_intermediacion
   FOR SELECT USING (
     prestadora_id = interno.current_tenant()
     AND EXISTS (SELECT 1 FROM usuarios u WHERE u.id = auth.uid()

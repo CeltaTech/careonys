@@ -147,14 +147,14 @@ export const api = {
   // EL CHAT CON UN CLIENTE DE LA VIDRIERA. Es el mismo hilo que ve el Cliente, mirado desde la
   // otra punta. El dato de contacto sale tapado para los dos lados hasta que esa pareja lo abra:
   // tapar de un solo lado no taparía nada, porque alcanza con que lo escriba el otro.
-  conversacionesDelMatch: () => pedido('/match/conversaciones'),
+  conversacionesDeLaIntermediacion: () => pedido('/intermediacion/conversaciones'),
   // Con `desde`, el backend contesta nada más lo posterior a ese momento: es el refresco del hilo
   // abierto, que pide lo que le falta y no vuelve a bajar lo que ya está en pantalla.
-  conversacionDelMatch: (id, desde = null) =>
-    pedido(`/match/conversaciones/${id}${desde ? `?desde=${encodeURIComponent(desde)}` : ''}`),
+  conversacionDeLaIntermediacion: (id, desde = null) =>
+    pedido(`/intermediacion/conversaciones/${id}${desde ? `?desde=${encodeURIComponent(desde)}` : ''}`),
   escribirEnConversacion: (id, cuerpo) =>
-    pedido(`/match/conversaciones/${id}/mensajes`, { method: 'POST', body: JSON.stringify({ cuerpo }) }),
-  abrirVideollamada: (id) => pedido(`/match/conversaciones/${id}/videollamada`, { method: 'POST' }),
+    pedido(`/intermediacion/conversaciones/${id}/mensajes`, { method: 'POST', body: JSON.stringify({ cuerpo }) }),
+  abrirVideollamada: (id) => pedido(`/intermediacion/conversaciones/${id}/videollamada`, { method: 'POST' }),
   // LAS LLAVES QUE ESTA PERSONA GUARDA EN SUS APARATOS. Entrar con la huella no está acá: eso pasa
   // antes de tener sesión y va por su propia puerta (`lib/llaveDelDispositivo.js`). Acá está lo que
   // se hace desde adentro: ver cuáles tiene, agregar una en este aparato y sacar la de uno que ya

@@ -29,7 +29,7 @@ import { supabase } from '../db/connection.js';
 
      router.use(requiereRolPanel);
      router.use(exigirOrganizacionActiva);
-     router.use(exigirModalidad('match'));
+     router.use(exigirModalidad('intermediacion'));
 
    El texto del error no es el que lee la persona: la frase vive en las traducciones, en los
    tres idiomas, y se busca por el `motivo` (`panel/src/lib/errores.js`). */

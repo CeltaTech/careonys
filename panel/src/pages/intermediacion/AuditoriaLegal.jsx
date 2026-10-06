@@ -14,7 +14,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 async function llamarApi(path, opciones = {}) {
   const { data } = await supabase.auth.getSession();
-  const respuesta = await fetch(`${API_URL}/api/panel/match${path}`, {
+  const respuesta = await fetch(`${API_URL}/api/panel/intermediacion${path}`, {
     ...opciones,
     headers: {
       'Content-Type': 'application/json',
@@ -28,7 +28,7 @@ async function llamarApi(path, opciones = {}) {
 }
 
 // Pendiente #85, Grupo 3 Match — las cinco funciones de riesgo legal conocido de la
-// modalidad Match (backend/src/routes/panelMatch.js), en la misma pantalla que la
+// modalidad Match (backend/src/routes/panelIntermediacion.js), en la misma pantalla que la
 // auditoría de lo que se avisó. Están juntas a propósito: quien enciende una de estas ve, ahí
 // mismo y sin cambiar de pantalla, qué se avisó, cuándo y a quién.
 //
@@ -36,7 +36,7 @@ async function llamarApi(path, opciones = {}) {
 // pantalla al encender una es mostrar antes la advertencia escrita para el país de esa
 // Prestadora; si ese país no tiene documento, no se muestra nada y se enciende igual. Apagar
 // no muestra ninguna: lo que el documento legal advierte es de usar la función.
-export function MatchAuditoriaLegal() {
+export function IntermediacionAuditoriaLegal() {
   const { t, locale } = useLocale();
   const { usuario } = useAuth();
   const prestadoraId = usePrestadoraActual();
@@ -114,12 +114,12 @@ export function MatchAuditoriaLegal() {
 
   return (
     <div>
-      <Cabecera titulo={t.match.auditoria_legal_titulo} />
+      <Cabecera titulo={t.intermediacion.auditoria_legal_titulo} />
 
       <div className="molde-pila">
         <section className="panel-tarjeta">
           <div className="panel-tarjeta-titulo">
-            <h2>{t.match.funciones_riesgo_titulo}</h2>
+            <h2>{t.intermediacion.funciones_riesgo_titulo}</h2>
             {estadoFunciones === 'listo' && <span className="panel-mini">{funciones.length}</span>}
           </div>
           <EstadoLista
@@ -131,9 +131,9 @@ export function MatchAuditoriaLegal() {
             <table className="panel-tabla">
               <thead>
                 <tr>
-                  <th>{t.match.funciones_riesgo_col_activa}</th>
-                  <th>{t.match.funciones_riesgo_col_funcion}</th>
-                  <th>{t.match.funciones_riesgo_col_aviso}</th>
+                  <th>{t.intermediacion.funciones_riesgo_col_activa}</th>
+                  <th>{t.intermediacion.funciones_riesgo_col_funcion}</th>
+                  <th>{t.intermediacion.funciones_riesgo_col_aviso}</th>
                 </tr>
               </thead>
               <tbody>
@@ -153,7 +153,7 @@ export function MatchAuditoriaLegal() {
                     </td>
                     <td>
                       <label htmlFor={`funcion-${f.clave}`}>
-                        <b>{t.match[`funcion_${f.clave}`] || f.clave}</b>
+                        <b>{t.intermediacion[`funcion_${f.clave}`] || f.clave}</b>
                       </label>
                     </td>
                     <td>
@@ -161,7 +161,7 @@ export function MatchAuditoriaLegal() {
                         <span className="panel-mini">{new Date(f.advertida_en).toLocaleString(locale)}</span>
                       ) : (
                         <span className="panel-dato-vacio">
-                          {f.texto_advertencia ? '—' : t.match.funciones_riesgo_sin_documento}
+                          {f.texto_advertencia ? '—' : t.intermediacion.funciones_riesgo_sin_documento}
                         </span>
                       )}
                     </td>
@@ -174,17 +174,17 @@ export function MatchAuditoriaLegal() {
 
         <section className="panel-tarjeta">
           <div className="panel-tarjeta-titulo">
-            <h2>{t.match.auditoria_legal_registro_titulo}</h2>
+            <h2>{t.intermediacion.auditoria_legal_registro_titulo}</h2>
             {estado === 'listo' && <span className="panel-mini">{eventos.length}</span>}
           </div>
           <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && eventos.length === 0} recargar={recargar}>
             <table className="panel-tabla">
               <thead>
                 <tr>
-                  <th>{t.match.col_fecha}</th>
-                  <th>{t.match.col_usuario}</th>
-                  <th>{t.match.col_funcion}</th>
-                  <th>{t.match.col_texto_mostrado}</th>
+                  <th>{t.intermediacion.col_fecha}</th>
+                  <th>{t.intermediacion.col_usuario}</th>
+                  <th>{t.intermediacion.col_funcion}</th>
+                  <th>{t.intermediacion.col_texto_mostrado}</th>
                 </tr>
               </thead>
               <tbody>
@@ -192,7 +192,7 @@ export function MatchAuditoriaLegal() {
                   <tr key={e.id}>
                     <td className="panel-mini">{new Date(e.created_at).toLocaleString(locale)}</td>
                     <td><b>{e.usuarios?.nombre || '—'}</b></td>
-                    <td>{t.match[`funcion_${e.funcion_clave}`] || e.funcion_clave}</td>
+                    <td>{t.intermediacion[`funcion_${e.funcion_clave}`] || e.funcion_clave}</td>
                     <td>{e.texto_mostrado}</td>
                   </tr>
                 ))}

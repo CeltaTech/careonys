@@ -46,7 +46,7 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 
 // Después de las variables de entorno: la conexión a la base se arma al importar.
 const { cargarContactosEnElSaldo, abrirElContacto, MOTIVO_CONTACTO } = await import(
-  '../contactosMatch.js'
+  '../contactosIntermediacion.js'
 );
 
 after(() => baseFalsa.close());
@@ -96,7 +96,7 @@ describe('cargarle contactos al saldo', () => {
 
 describe('abrir el contacto de un Asistente', () => {
   it('descuenta uno y dice cuánto quedó', async () => {
-    respuestas.set('POST /rest/v1/rpc/consumir_contacto_match', () => ({
+    respuestas.set('POST /rest/v1/rpc/consumir_contacto_intermediacion', () => ({
       ok: true,
       ya_estaba: false,
       saldo_contactos: 4,
@@ -110,7 +110,7 @@ describe('abrir el contacto de un Asistente', () => {
   it('el que ya estaba abierto se abre otra vez sin descontar', async () => {
     // El contacto de cada persona se paga una sola vez: volver a mirarlo no puede costar otro.
     // `ya_estaba` es lo que después permite avisar que se gastó un contacto sólo cuando se gastó.
-    respuestas.set('POST /rest/v1/rpc/consumir_contacto_match', () => ({
+    respuestas.set('POST /rest/v1/rpc/consumir_contacto_intermediacion', () => ({
       ok: true,
       ya_estaba: true,
       saldo_contactos: 4,
@@ -122,7 +122,7 @@ describe('abrir el contacto de un Asistente', () => {
   it('sin saldo no se abre, y el motivo dice cuál de los dos casos es', async () => {
     // «Se acabó» y «este acceso no se sostiene por saldo» se arreglan de maneras distintas: uno
     // comprando otro paquete y el otro no.
-    respuestas.set('POST /rest/v1/rpc/consumir_contacto_match', () => ({
+    respuestas.set('POST /rest/v1/rpc/consumir_contacto_intermediacion', () => ({
       ok: false,
       motivo: 'saldo_agotado',
       saldo_contactos: 0,
@@ -133,7 +133,7 @@ describe('abrir el contacto de un Asistente', () => {
       saldo_contactos: 0,
     });
 
-    respuestas.set('POST /rest/v1/rpc/consumir_contacto_match', () => ({
+    respuestas.set('POST /rest/v1/rpc/consumir_contacto_intermediacion', () => ({
       ok: false,
       motivo: 'acceso_sin_saldo',
     }));
@@ -145,7 +145,7 @@ describe('abrir el contacto de un Asistente', () => {
     // Falla cerrado. Contestar que sí acá sería entregar el dato de contacto sin haberlo
     // descontado, y sin que quede anotado a quién se abrió.
     for (const respuesta of [null, '', 'listo', 0]) {
-      respuestas.set('POST /rest/v1/rpc/consumir_contacto_match', () => respuesta);
+      respuestas.set('POST /rest/v1/rpc/consumir_contacto_intermediacion', () => respuesta);
       const resultado = await abrirElContacto({ accesoId: ACCESO, asistenteId: ASISTENTE });
       assert.equal(resultado.ok, false, `respuesta: ${JSON.stringify(respuesta)}`);
       assert.equal(resultado.motivo, MOTIVO_CONTACTO.NO_SE_PUDO_GUARDAR);

@@ -10,7 +10,7 @@
 
    DÓNDE SE TAPA AHORA. En la base, antes de escribir, con el cuerpo de reglas de
    `public.reglas_de_los_mensajes` y el disparador
-   `el_mensaje_se_guarda_ya_tapado` de `mensajes_match`. Lo que llega acá ya viene
+   `el_mensaje_se_guarda_ya_tapado` de `mensajes_intermediacion`. Lo que llega acá ya viene
    tapado, venga por donde venga.
 
    QUÉ QUEDA ACÁ. Lo único que nunca fue del tapado: darle forma a la fila para la pantalla, y

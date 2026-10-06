@@ -77,14 +77,14 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 // en el momento en que se importa, y con la dirección que haya en ese instante.
 const { default: express } = await import('express');
 await import('express-async-errors');
-const { panelMatchRouter } = await import('../panelMatch.js');
+const { panelIntermediacionRouter } = await import('../panelIntermediacion.js');
 
 const app = express();
 app.use(express.json());
-app.use('/api/panel/match', panelMatchRouter);
+app.use('/api/panel/intermediacion', panelIntermediacionRouter);
 const backend = app.listen(0, '127.0.0.1');
 await new Promise((listo) => backend.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/match`;
+const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/intermediacion`;
 
 after(() => {
   backend.close();
@@ -120,9 +120,9 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: rolDelUsuario, prestadora_id: PRESTADORA }]);
   respuestas.set('POST /rest/v1/rpc/prestadora_tiene_modalidad_activa', () => true);
   // El catálogo de las cinco funciones sale de la base, no de una lista escrita en el backend.
-  respuestas.set('GET /rest/v1/catalogo_funciones_match', () => [{ clave: FUNCION, orden: 1 }]);
-  respuestas.set('GET /rest/v1/configuracion_funciones_match', () => []);
-  respuestas.set('POST /rest/v1/configuracion_funciones_match', () => []);
+  respuestas.set('GET /rest/v1/catalogo_funciones_intermediacion', () => [{ clave: FUNCION, orden: 1 }]);
+  respuestas.set('GET /rest/v1/configuracion_funciones_intermediacion', () => []);
+  respuestas.set('POST /rest/v1/configuracion_funciones_intermediacion', () => []);
   // La misma fila sirve para las dos preguntas: qué Prestadora deja ver la base a quien pide, y
   // de qué país es.
   respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA, pais: paisDeLaPrestadora }]);
@@ -140,13 +140,13 @@ describe('encender una función de riesgo legal', () => {
     assert.equal(cuerpo.activa, true);
     assert.equal(cuerpo.advertencia.texto, TEXTO_ARGENTINO);
 
-    const encendida = escrituras('configuracion_funciones_match');
+    const encendida = escrituras('configuracion_funciones_intermediacion');
     assert.equal(encendida.length, 1, 'la función no se encendió');
     assert.equal(encendida[0].prestadora_id, PRESTADORA);
     assert.equal(encendida[0].funcion_clave, FUNCION);
     assert.equal(encendida[0].activa, true);
     // El encendido va con la credencial de quien pide, no con la llave maestra.
-    const encendido = llamadas.find((l) => l.clave === 'POST /rest/v1/configuracion_funciones_match');
+    const encendido = llamadas.find((l) => l.clave === 'POST /rest/v1/configuracion_funciones_intermediacion');
     assert.equal(encendido.credencial, credencialEnviada);
 
     const registro = escrituras('auditoria_advertencias_legales');
@@ -173,7 +173,7 @@ describe('apagarla no avisa nada', () => {
   it('no registra: lo que se advierte es de usar la función, no de dejar de usarla', async () => {
     const { estado } = await pedir('PUT', `/funciones-riesgo/${FUNCION}`, { activa: false });
     assert.equal(estado, 200);
-    assert.equal(escrituras('configuracion_funciones_match').length, 1);
+    assert.equal(escrituras('configuracion_funciones_intermediacion').length, 1);
     assert.deepEqual(escrituras('auditoria_advertencias_legales'), []);
   });
 });
@@ -187,7 +187,7 @@ describe('un país sin documento legal escrito', () => {
     assert.equal(estado, 200);
     assert.equal(cuerpo.activa, true);
     assert.equal(cuerpo.advertencia, null);
-    assert.equal(escrituras('configuracion_funciones_match').length, 1, 'no la encendió');
+    assert.equal(escrituras('configuracion_funciones_intermediacion').length, 1, 'no la encendió');
     assert.deepEqual(escrituras('auditoria_advertencias_legales'), []);
   });
 });
@@ -198,25 +198,25 @@ describe('el aviso avisa, no bloquea', () => {
     const { estado, cuerpo } = await pedir('PUT', `/funciones-riesgo/${FUNCION}`, { activa: true });
     assert.equal(estado, 200);
     assert.equal(cuerpo.activa, true);
-    assert.equal(escrituras('configuracion_funciones_match').length, 1);
+    assert.equal(escrituras('configuracion_funciones_intermediacion').length, 1);
   });
 
   it('una función que no está en el catálogo no se enciende', async () => {
     const { estado } = await pedir('PUT', '/funciones-riesgo/inventada', { activa: true });
     assert.equal(estado, 404);
-    assert.deepEqual(escrituras('configuracion_funciones_match'), []);
+    assert.deepEqual(escrituras('configuracion_funciones_intermediacion'), []);
   });
 
   it('sin decir si se enciende o se apaga, no se hace nada', async () => {
     const { estado } = await pedir('PUT', `/funciones-riesgo/${FUNCION}`, {});
     assert.equal(estado, 400);
-    assert.deepEqual(escrituras('configuracion_funciones_match'), []);
+    assert.deepEqual(escrituras('configuracion_funciones_intermediacion'), []);
   });
 });
 
 describe('la pantalla recibe qué está encendido y qué texto se va a mostrar', () => {
   it('lista las cinco con su estado y su advertencia', async () => {
-    respuestas.set('GET /rest/v1/configuracion_funciones_match', () => [
+    respuestas.set('GET /rest/v1/configuracion_funciones_intermediacion', () => [
       { funcion_clave: FUNCION, activa: true, advertida_en: '2026-09-10T12:00:00.000Z' },
     ]);
     const { estado, cuerpo } = await pedir('GET', '/funciones-riesgo');

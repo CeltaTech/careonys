@@ -129,7 +129,7 @@ function inicioDe(guardia) {
 let guardiasEnLaBase;
 let alertasEnLaBase;
 let nivelesDeEscalada;
-/** Dónde se atiende al Paciente el día de la guardia, que puede no ser el de la ficha. */
+/** Dónde se atiende al Paciente el día de la guardia, que puede no ser el del Legajo del Paciente. */
 let domicilioDelDia;
 
 function filaQuePasaLosFiltros(url, filas) {
@@ -245,7 +245,7 @@ describe('cálculo de llegada tardía — los minutos de aviso', () => {
     assert.equal(alertasAnotadas().length, 0);
   });
 
-  it('la cuenta se hace contra el domicilio que rige ese día, no contra el de la ficha', async () => {
+  it('la cuenta se hace contra el domicilio que rige ese día, no contra el del Legajo del Paciente', async () => {
     // Mismo viaje corto, pero ese día se lo atiende en otro lado, a sesenta kilómetros.
     domicilioDelDia = { ...DOMICILIO_TEMPORAL, es_temporal: true, motivo: 'temporada en casa de un familiar' };
     guardiasEnLaBase = [

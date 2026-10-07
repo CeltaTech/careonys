@@ -123,8 +123,8 @@ INSERT INTO public.zonas_cobertura (prestadora_id, codigo, nombre, categoria, or
 -- Los lugares donde esta Prestadora trabaja.
 --
 -- LA ZONA ES EL ATAJO Y EL LUGAR ES EL DATO. En pantalla se marca una zona entera y después se
--- desmarca lo que no; lo que queda guardado en cada ficha es cuál lugar. Por eso la zona no
--- alcanza para sembrar: sin lugares cargados, ninguna ficha tendría dónde trabajar y quien
+-- desmarca lo que no; lo que queda guardado en cada Legajo del Asistente es cuál lugar. Por eso la zona no
+-- alcanza para sembrar: sin lugares cargados, ningún Legajo tendría dónde trabajar y quien
 -- coordina no alcanzaría a nadie.
 --
 -- DOS SE LLAMAN IGUAL A PROPÓSITO. Hay un Belgrano en la Ciudad y otro en San Isidro. Mientras
@@ -281,12 +281,12 @@ INSERT INTO public.usuario_lugares (usuario_id, lugar_id, prestadora_id) VALUES
 --    viejos al catálogo. Delia tampoco tiene tipo y no tiene texto viejo: es el
 --    otro caso que esa pantalla tiene que saber mostrar.
 --
---    Dos partes de la ficha no están en esta tabla: lo que cobra cada uno, en
+--    Dos partes del Legajo del Asistente no están en esta tabla: lo que cobra cada uno, en
 --    `remuneraciones_asistente`, y lo reservado —por qué se lo dio de baja, su
 --    puntaje de riesgo, por qué quedó excluido de recibir trabajo—, en
 --    `datos_reservados_asistente`. Las dos, más abajo. Viven aparte porque las
 --    reglas de acceso de la base filtran filas y no columnas, así que mientras
---    esos datos estaban acá cualquiera que podía ver la ficha podía leerlos.
+--    esos datos estaban acá cualquiera que podía ver el Legajo podía leerlos.
 -- ----------------------------------------------------------------------------
 
 -- El Legajo tiene número propio y `usuario_id` dice de qué cuenta cuelga. Acá los dos coinciden
@@ -328,7 +328,7 @@ INSERT INTO public.asistentes (
 -- Dónde acepta trabajar cada una. Ana en un solo lugar —el caso que mira el indicador de
 -- exclusividad—; Bruno en cuatro, cruzando dos zonas; Clara sólo en la Zona Sur, que es la que
 -- Carla Coordinadora no alcanza; Delia en uno de la Zona Norte aunque esté dada de baja, porque
--- una ficha cesada conserva lo que tenía cargado.
+-- un Legajo cesado conserva lo que tenía cargado.
 INSERT INTO public.asistente_lugares (asistente_id, lugar_id, prestadora_id) VALUES
   ('30000000-0000-4000-8000-000000000001', 'a1000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111'),
   ('30000000-0000-4000-8000-000000000002', 'a1000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111'),
@@ -353,7 +353,7 @@ INSERT INTO public.remuneraciones_asistente (
   ('30000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 5200.00, NULL),
   ('30000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111', 4200.00, NULL);
 
--- Lo reservado de la ficha. Solo se carga donde hay algo que decir: la causa de
+-- Lo reservado del Legajo del Asistente. Solo se carga donde hay algo que decir: la causa de
 -- la baja de Delia, que es la única dada de baja, y un puntaje de riesgo en Ana,
 -- que está por monotributo y trabaja 40 horas para una sola Prestadora — el caso
 -- que la pantalla de Score de Riesgo existe para mostrar. Los otros dos no tienen
@@ -392,7 +392,7 @@ VALUES
   ('c0000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'juridica', 'Mutual del Ejemplo', NULL, 'cuit', '30-99999999-7',
    'Avenida Ficticia', '1200', 'a1000000-0000-4000-8000-000000000003', 'contacto@mutual.invalido');
 
--- Los teléfonos de contacto del Padrón. Una ficha puede tener varios, y el primero tiene dos a
+-- Los teléfonos de contacto del Padrón. Un Legajo puede tener varios, y el primero tiene dos a
 -- propósito: así la base de pruebas ejercita el caso de varios y no sólo el de uno.
 INSERT INTO public.telefonos_del_legajo (prestadora_id, legajo_id, telefono)
 VALUES

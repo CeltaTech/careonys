@@ -1,8 +1,8 @@
 import { huellaComparable } from './celularDeUnaSolaPersona.js';
 
-// CUÁL DE LOS TELÉFONOS DE UNA FICHA ES EL PREFERIDO PARA LLAMAR.
+// CUÁL DE LOS TELÉFONOS DE UN LEGAJO ES EL PREFERIDO PARA LLAMAR.
 //
-// LA REGLA. Una ficha del Padrón puede tener varios teléfonos de contacto, y todos sirven. El
+// LA REGLA. Un Legajo del Padrón puede tener varios teléfonos de contacto, y todos sirven. El
 // preferido es **el que esa Persona usa en su cuenta**, porque es el que atiende: es el que eligió
 // para que el producto la encuentre. Ser el preferido no apaga a ninguno de los demás.
 //
@@ -60,8 +60,8 @@ async function huellasQueSonDeUnaCuenta(db, huellas, prestadoraId) {
  * `telefonos` son las filas tal como salen de la base, ya acotadas a la Prestadora por quien
  * consulta. Vuelven en el mismo orden y con una sola cosa agregada.
  *
- * ES UNO SOLO POR FICHA. Si una Persona tuviera dos cuentas con dos números distintos y los dos
- * estuvieran cargados en su ficha, queda señalado el más antiguo de los dos. «El de preferencia»
+ * ES UNO SOLO POR LEGAJO. Si una Persona tuviera dos cuentas con dos números distintos y los dos
+ * estuvieran cargados en su Legajo, queda señalado el más antiguo de los dos. «El de preferencia»
  * es uno, y elegirlo por antigüedad hace que la pantalla muestre siempre lo mismo.
  */
 export async function conElPreferidoMarcado(db, telefonos, prestadoraId) {
@@ -71,7 +71,7 @@ export async function conElPreferidoMarcado(db, telefonos, prestadoraId) {
   const huellaDe = new Map(filas.map((fila) => [fila.id, huellaComparable(fila.telefono)]));
   const deUnaCuenta = await huellasQueSonDeUnaCuenta(db, [...huellaDe.values()], prestadoraId);
 
-  // Uno por ficha, y el más antiguo cuando hay más de uno que coincide.
+  // Uno por Legajo, y el más antiguo cuando hay más de uno que coincide.
   const elegido = new Map();
   for (const fila of filas) {
     const huella = huellaDe.get(fila.id);

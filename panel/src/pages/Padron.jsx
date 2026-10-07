@@ -45,7 +45,7 @@ export function Padron() {
   const puedeEditar = esAdmin || puede('editar_padron');
 
   const [filas, setFilas] = useState([]);
-  // Los teléfonos vienen del backend, en un solo pedido para todo el Padrón: pedirlos ficha por ficha
+  // Los teléfonos vienen del backend, en un solo pedido para todo el Padrón: pedirlos Legajo por Legajo
   // sería un pedido por renglón. Vienen con el preferido ya resuelto.
   const [telefonos, setTelefonos] = useState([]);
   const [estado, setEstado] = useState('cargando');
@@ -104,19 +104,19 @@ export function Padron() {
     [],
   );
 
-  // Los teléfonos de cada ficha, con el preferido adelante: si hay que llamar, ése es el que
+  // Los teléfonos de cada Legajo, con el preferido adelante: si hay que llamar, ése es el que
   // atiende. Los demás siguen ahí y siguen sirviendo.
   const telefonosPorLegajo = useMemo(() => {
-    const porFicha = new Map();
+    const porLegajo = new Map();
     for (const uno of telefonos) {
-      const suyos = porFicha.get(uno.legajo_id) ?? [];
+      const suyos = porLegajo.get(uno.legajo_id) ?? [];
       suyos.push(uno);
-      porFicha.set(uno.legajo_id, suyos);
+      porLegajo.set(uno.legajo_id, suyos);
     }
-    for (const suyos of porFicha.values()) {
+    for (const suyos of porLegajo.values()) {
       suyos.sort((a, b) => Number(Boolean(b.preferido)) - Number(Boolean(a.preferido)));
     }
-    return porFicha;
+    return porLegajo;
   }, [telefonos]);
 
   // El Apoderado es otro Legajo de este mismo Padrón, así que su nombre ya está cargado y no hace

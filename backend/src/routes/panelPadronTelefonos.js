@@ -6,9 +6,9 @@ import { clienteDelPedido, supabase } from '../db/connection.js';
 import { responderError } from '../utils/errorConMotivo.js';
 import { conElPreferidoMarcado, telefonoLimpio } from '../utils/telefonosDelLegajo.js';
 
-// Los teléfonos de contacto de una ficha del Padrón.
+// Los teléfonos de contacto de un Legajo del Padrón.
 //
-// QUÉ RESUELVE. La ficha guardaba un teléfono solo. Un Cliente tiene el fijo de la casa y los
+// QUÉ RESUELVE. El Legajo guardaba un teléfono solo. Un Cliente tiene el fijo de la casa y los
 // celulares de los dos o tres que atienden; un Asistente tiene el suyo y el de la casa. Ahora se
 // cargan todos, y todos quedan habilitados.
 //
@@ -45,20 +45,20 @@ const COLUMNAS = 'id, legajo_id, telefono, created_at, updated_at';
 const veElPadron = requierePermiso('ver_padron');
 const escribeElPadron = requierePermiso('editar_padron');
 
-/** La ficha, si la base la deja ver a quien pide. Si no, nada, y desde afuera se ve igual. */
+/** El Legajo, si la base lo deja ver a quien pide. Si no, nada, y desde afuera se ve igual. */
 async function legajoVisible(db, legajoId) {
   if (!legajoId) return null;
   const { data } = await db.from('legajos').select('id, prestadora_id').eq('id', legajoId).maybeSingle();
   return data ?? null;
 }
 
-/** La ficha, si es de la Organización de esta sesión. Si no, nada, y desde afuera se ve igual.
+/** El Legajo, si es de la Organización de esta sesión. Si no, nada, y desde afuera se ve igual.
     La usan las escrituras, que siguen con la llave maestra (ver el encabezado). */
 async function legajoDeLaPrestadora(legajoId, usuarioPanel) {
   if (!legajoId) return null;
   // Con la llave maestra: las políticas de escritura (`los_telefonos_los_carga_quien_puede`,
   // `los_telefonos_los_corrige_quien_puede`, `los_telefonos_los_saca_quien_puede`) piden
-  // `editar_padron`, pero la ficha (`legajos_los_lee_su_organizacion`) y el renglón que la
+  // `editar_padron`, pero el Legajo (`legajos_los_lee_su_organizacion`) y el renglón que la
   // escritura devuelve (`los_telefonos_los_lee_su_organizacion`) piden además `ver_padron`. Son
   // dos permisos que cada Prestadora configura por separado, y un Coordinador con el primero y
   // sin el segundo recibiría 404. Si escribir exige también ver se decide aparte.
@@ -73,7 +73,7 @@ function noEncontrado(res) {
 }
 
 // Todos los teléfonos del Padrón de esta Organización, de una sola vez. La pantalla muestra una
-// lista de fichas y cada una con los suyos: pedirlos ficha por ficha sería un pedido por renglón.
+// lista de Legajos y cada uno con los suyos: pedirlos Legajo por Legajo sería un pedido por renglón.
 panelPadronTelefonosRouter.get(
   '/',
   requiereRolPanel,
@@ -88,7 +88,7 @@ panelPadronTelefonosRouter.get(
   },
 );
 
-// Los de una ficha sola, para cuando se está mirando esa.
+// Los de un Legajo solo, para cuando se está mirando ese.
 panelPadronTelefonosRouter.get(
   '/:legajoId',
   requiereRolPanel,
@@ -123,11 +123,11 @@ panelPadronTelefonosRouter.post(
     const legajo = await legajoDeLaPrestadora(req.params.legajoId, req.usuarioPanel);
     if (!legajo) return noEncontrado(res);
 
-    // Acá no se comprueba si el número ya está cargado en otra ficha, y es a propósito: se puede
+    // Acá no se comprueba si el número ya está cargado en otro Legajo, y es a propósito: se puede
     // repetir. Ver el encabezado.
     // Con la llave maestra: las políticas de escritura (`los_telefonos_los_carga_quien_puede`,
     // `los_telefonos_los_corrige_quien_puede`, `los_telefonos_los_saca_quien_puede`) piden
-    // `editar_padron`, pero la ficha (`legajos_los_lee_su_organizacion`) y el renglón que la
+    // `editar_padron`, pero el Legajo (`legajos_los_lee_su_organizacion`) y el renglón que la
     // escritura devuelve (`los_telefonos_los_lee_su_organizacion`) piden además `ver_padron`. Son
     // dos permisos que cada Prestadora configura por separado, y un Coordinador con el primero y
     // sin el segundo recibiría 404. Si escribir exige también ver se decide aparte.
@@ -157,10 +157,10 @@ panelPadronTelefonosRouter.patch(
     if (!legajo) return noEncontrado(res);
 
     // Los tres filtros van juntos. El de la Organización es el que impide corregir el teléfono de
-    // una ficha ajena aunque alguien conozca su identificador.
+    // un Legajo ajeno aunque alguien conozca su identificador.
     // Con la llave maestra: las políticas de escritura (`los_telefonos_los_carga_quien_puede`,
     // `los_telefonos_los_corrige_quien_puede`, `los_telefonos_los_saca_quien_puede`) piden
-    // `editar_padron`, pero la ficha (`legajos_los_lee_su_organizacion`) y el renglón que la
+    // `editar_padron`, pero el Legajo (`legajos_los_lee_su_organizacion`) y el renglón que la
     // escritura devuelve (`los_telefonos_los_lee_su_organizacion`) piden además `ver_padron`. Son
     // dos permisos que cada Prestadora configura por separado, y un Coordinador con el primero y
     // sin el segundo recibiría 404. Si escribir exige también ver se decide aparte.
@@ -195,7 +195,7 @@ panelPadronTelefonosRouter.delete(
 
     // Con la llave maestra: las políticas de escritura (`los_telefonos_los_carga_quien_puede`,
     // `los_telefonos_los_corrige_quien_puede`, `los_telefonos_los_saca_quien_puede`) piden
-    // `editar_padron`, pero la ficha (`legajos_los_lee_su_organizacion`) y el renglón que la
+    // `editar_padron`, pero el Legajo (`legajos_los_lee_su_organizacion`) y el renglón que la
     // escritura devuelve (`los_telefonos_los_lee_su_organizacion`) piden además `ver_padron`. Son
     // dos permisos que cada Prestadora configura por separado, y un Coordinador con el primero y
     // sin el segundo recibiría 404. Si escribir exige también ver se decide aparte.

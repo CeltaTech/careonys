@@ -29,9 +29,9 @@ import '../../styles/molde-paginas.css';
    que usa el backend.
 
    Y ABAJO, LA OTRA PREGUNTA DEL DINERO, QUE NO ES LA MISMA. Con qué se mide el trabajo —hora,
-   guardia, semana o mes— se elige en la ficha de cada persona. Cada cuánto cobra se elige acá, y
+   guardia, semana o mes— se elige en el Legajo de cada Asistente. Cada cuánto cobra se elige acá, y
    son independientes: se le puede pagar por hora y cobrar por mes. Esto es lo que rige para toda
-   la Prestadora; con cada persona se puede arreglar distinto desde su ficha. No cambia ningún
+   la Prestadora; con cada persona se puede arreglar distinto desde el Legajo del Asistente. No cambia ningún
    importe: sólo desde qué día hasta qué día va cada período. Vive en `lib/frecuenciaDePago.js`,
    que también es el mismo archivo que usa el backend. */
 export function PagoAsistentesTab() {

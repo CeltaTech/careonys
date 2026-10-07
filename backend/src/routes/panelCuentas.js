@@ -133,7 +133,7 @@ panelCuentasRouter.post('/cliente', requiereRolPanel, exigirOrganizacionActiva, 
 
   // El lugar que quien atendió señaló en la lista, si lo señaló. Es lo que hace que el Cliente
   // recién creada se pueda encontrar por su localidad: el texto de la solicitud lo escribió quien
-  // llamó y no es ninguna de las fichas de la Prestadora. Va filtrado por Prestadora, como
+  // llamó y no es ninguno de los lugares de la Prestadora. Va filtrado por Prestadora, como
   // cualquier lectura de un lugar, para que un identificador ajeno no conteste nada.
   const nombreDeSuLugar = await nombreDelLugar(db, solicitud.lugar_id, prestadoraId);
 
@@ -147,7 +147,7 @@ panelCuentasRouter.post('/cliente', requiereRolPanel, exigirOrganizacionActiva, 
     localidad: nombreDeSuLugar || solicitud.localidad,
   });
 
-  // La cuenta es la persona; la ficha es su Legajo en esta Prestadora, y la numera la base.
+  // La cuenta es la persona; la Ficha del cliente es lo suyo en esta Prestadora, y la numera la base.
   let cuentaId;
   let clienteId;
   try {
@@ -164,15 +164,15 @@ panelCuentasRouter.post('/cliente', requiereRolPanel, exigirOrganizacionActiva, 
     // `interno.asignar_numero_de_cliente`, que no es SECURITY DEFINER) corre con los permisos de quien
     // inserta y numera con el máximo de `clientes` que ve, y la política restrictiva
     // `oculta_pendientes_de_conformidad` (NOT pendiente_conformidad) le esconde a Admin y a
-    // Superadmin las fichas pendientes. Si la de número más alto estuviera pendiente, el número
+    // Superadmin las Fichas del cliente pendientes. Si la de número más alto estuviera pendiente, el número
     // saldría repetido y el alta fallaría, cosa que antes no pasaba. Se decide aparte.
-    const { data: fichaNueva, error: errorCliente } = await supabase
+    const { data: clienteNuevo, error: errorCliente } = await supabase
       .from('clientes')
       .insert({ usuario_id: cuentaId, solicitud_id: solicitudId, prestadora_id: prestadoraId })
       .select('id')
       .single();
     if (errorCliente) throw new Error(errorCliente.message);
-    clienteId = fichaNueva.id;
+    clienteId = clienteNuevo.id;
 
     const { data: paciente, error: errorPaciente } = await db
       .from('pacientes')
@@ -260,7 +260,7 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
   // La Prestadora es la de la postulación que la base dejó ver, no un dato de la sesión.
   const prestadoraId = postulacion.prestadora_id;
 
-  // La cuenta es la persona; la ficha es lo suyo en esta Prestadora, y la numera la base.
+  // La cuenta es la persona; el Legajo del Asistente es lo suyo en esta Prestadora, y la numera la base.
   let cuentaId;
   let asistenteId;
   try {
@@ -275,7 +275,7 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
       enviarActivacion: true,
     }));
 
-    const { data: fichaNueva, error: errorAsistente } = await db.from('asistentes').insert({
+    const { data: asistenteNuevo, error: errorAsistente } = await db.from('asistentes').insert({
       usuario_id: cuentaId,
       nombre: postulacion.nombre,
       dni: postulacion.dni,
@@ -284,12 +284,12 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
       tipo_asistente_id: tipoAsistenteId,
       // Dónde acepta trabajar no se copia de la postulación. Ahí la persona escribió sus zonas a
       // mano, y lo escrito a mano no es ninguno de los lugares de la Prestadora: casarlos por
-      // parecido crearía una coincidencia que nadie decidió. Se eligen en su ficha, de la lista.
+      // parecido crearía una coincidencia que nadie decidió. Se eligen en su Legajo, de la lista.
       estado: 'inactivo',
       prestadora_id: prestadoraId,
     }).select('id').single();
     if (errorAsistente) throw new Error(errorAsistente.message);
-    asistenteId = fichaNueva.id;
+    asistenteId = asistenteNuevo.id;
 
     const filasVerificacion = await filasDeIncorporacion(asistenteId, prestadoraId, {
       aprobadas: APROBADAS.LA_PRIMERA,

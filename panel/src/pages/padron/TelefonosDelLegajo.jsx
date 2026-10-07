@@ -9,11 +9,11 @@ import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import {
   cargarUnTelefono,
   corregirUnTelefono,
-  pedirLosTelefonosDeLaFicha,
+  pedirLosTelefonosDelLegajo,
   sacarUnTelefono,
 } from '../../lib/apiPadronTelefonos';
 
-/* Los teléfonos de contacto de una ficha del Padrón.
+/* Los teléfonos de contacto de un Legajo del Padrón.
    ==========================================================================
 
    PARA QUÉ. Un Cliente tiene el fijo de la casa, el celular de quien contrató y el de la hija que
@@ -24,7 +24,7 @@ import {
    casillero para marcarlo: lo resuelve el backend al entregar la lista. Quien no tiene cuenta no
    tiene preferido, y la lista sale igual de completa.
 
-   SE PUEDEN REPETIR. El mismo número en dos fichas es lo normal cuando viven juntos, y no se
+   SE PUEDEN REPETIR. El mismo número en dos Legajos es lo normal cuando viven juntos, y no se
    rechaza ni se avisa.
 
    EL NÚMERO NO VIAJA EN NINGUNA DIRECCIÓN: entra y sale en el cuerpo del pedido. */
@@ -49,7 +49,7 @@ export function TelefonosDelLegajo({ legajoId, puedeEditar }) {
     setEstado('cargando');
     setError(null);
     try {
-      const datos = await pedirLosTelefonosDeLaFicha(legajoId);
+      const datos = await pedirLosTelefonosDelLegajo(legajoId);
       setFilas(datos?.telefonos ?? []);
       setEstado('listo');
     } catch (e) {

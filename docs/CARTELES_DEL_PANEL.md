@@ -52,8 +52,8 @@ porque son los que más veces se ven.
 **Cómo llegar.** No tiene un camino propio: aparece en cualquier lista del Panel que no traiga un
 cartel escrito para ella. Los lugares donde hoy se lo ve sin hacer nada especial son **Clientes →
 Solicitudes de Servicio**, **Plantel → Postulaciones**, **Cumplimiento → Verificación de
-Guardias**, **Plantel → Documentación**, y la solapa **«Proceso de Incorporación»** dentro de la
-ficha de un Asistente.
+Guardias**, **Plantel → Documentación**, y la solapa **«Proceso de Incorporación»** dentro del
+Legajo del Asistente.
 
 **Qué es esa pantalla y para qué se usa.** No es una pantalla, es el texto de fábrica. Todas las
 listas del Panel las dibuja una misma pieza, que sabe mostrar cuatro situaciones: que está
@@ -213,7 +213,7 @@ el lugar donde está escrita es el que no corresponde.
 
 **Cómo llegar.** En cualquier pantalla que tenga un casillero que elige del Padrón, con el Padrón
 sin ningún Legajo. Los casilleros donde se lo ve son **«Apoderado»**, **«Obra Social»**, **«Quién
-paga»** y **«Quién se quedó cuidando»**, que aparecen en la ficha de un Cliente y en las ventanas
+paga»** y **«Quién se quedó cuidando»**, que aparecen en la Ficha del cliente y en las ventanas
 de contratación. El texto está debajo del desplegable.
 
 **Qué es eso y para qué se usa.** No es un cartel de lista vacía: es un renglón de explicación
@@ -266,7 +266,7 @@ Y en la columna del problema dejó escrita esta pregunta, que sigue sin contesta
 
 ---
 
-## 5. Los teléfonos de la ficha de un Legajo
+## 5. Los teléfonos de un Legajo
 
 **Cómo llegar.** Menú lateral → grupo **Clientes** → **Padrón** → clic en un Legajo para corregirlo
 → bajar hasta el bloque de **teléfonos**. Este bloque sólo existe al corregir un Legajo ya cargado;
@@ -316,10 +316,10 @@ lee este cartel ya cargó a esa persona entera y no es su primera vez en la pant
 ## 6. Cuando el financiador no tiene cargada ninguna documentación exigible
 
 **Cómo llegar.** Menú lateral → grupo **Clientes** → **Clientes** → clic en un Cliente de la lista.
-Dentro de la ficha, bajar hasta la subsección **«Documentación que pide el financiador»**, que está
+Dentro de la Ficha del cliente, bajar hasta la subsección **«Documentación que pide el financiador»**, que está
 debajo de todo lo de la firma del Pagador.
 
-**Qué es esa pantalla y para qué se usa.** Es la parte de la ficha de un Cliente donde se responde
+**Qué es esa pantalla y para qué se usa.** Es la parte de la Ficha del cliente donde se responde
 una sola pregunta: quién paga esto y si eso ya está cerrado. Elegir a alguien del Padrón no alcanza:
 queda definido como Pagador recién cuando firmó que asume la obligación de pagar. Ahí mismo se ve si
 esa firma está, se arma el documento para que la firme, se registra que llegó firmado, y —abajo de
@@ -386,7 +386,7 @@ en cinco palabras, y aun así no dice en qué parte de esa pantalla hay que busc
 **Cómo llegar.** Menú lateral → grupo **Clientes** → **Clientes** → clic en un Cliente → bajar
 hasta la sección **«Guardias activas»**, que está después de «Personas autorizadas».
 
-**Qué es eso y para qué se usa.** Es la parte de la ficha donde se ven los turnos que vienen para
+**Qué es eso y para qué se usa.** Es la parte de la Ficha del cliente donde se ven los turnos que vienen para
 los Pacientes de ese Cliente. La lista descarta lo cancelado y lo ya terminado, y muestra hasta
 cincuenta turnos.
 
@@ -486,7 +486,7 @@ resuelve lo que quedó sin confirmar.
 ## 9. Cuando el Cliente no tiene alertas sin resolver
 
 **Cómo llegar.** El mismo camino: **Clientes → Clientes → un Cliente**, y bajar del todo, hasta la
-sección **«Alertas activas»**, que es la última de la ficha.
+sección **«Alertas activas»**, que es la última de la Ficha del cliente.
 
 **Qué es eso y para qué se usa.** Es donde se ven las alertas abiertas de los Pacientes de ese
 Cliente. No tiene tope ni filtros, a propósito: una alerta abierta no se esconde detrás de una
@@ -508,7 +508,7 @@ resueltas se ven en la pantalla de Alertas.»
 Paciente, cuándo y en qué situación quedó cada una.
 
 **Qué queda alrededor si el cartel se saca.** El título «Alertas activas» y un blanco al pie de la
-ficha.
+Ficha del cliente.
 
 **Problemas que se ven acá.** Tres. **Es, de los veinticinco, el mejor escrito: el único que nombra
 adónde ir a ver lo que no se muestra acá.**
@@ -898,12 +898,12 @@ hubiera muchas y ya estén todas resueltas.
 **Cómo llegar.** Menú lateral → grupo **Plantel** → **Plantel de Asistentes** → clic en una persona
 → solapa **«Guardias trabajadas»**.
 
-**Qué es esa pantalla y para qué se usa.** Es la solapa de la ficha donde se ve el historial de
+**Qué es esa pantalla y para qué se usa.** Es la solapa del Legajo del Asistente donde se ve el historial de
 turnos de esa persona: hasta cincuenta, con la fecha, el horario, a quién atendió, su llegada y su
 salida, y en qué situación quedó cada turno.
 
 **Qué se ve en pantalla, de arriba abajo.**
-- El nombre de la persona, arriba, y la fila de solapas de su ficha.
+- El nombre de la persona, arriba, y la fila de solapas de su Legajo.
 - La solapa «Guardias trabajadas» abierta.
 - La tabla de turnos, con las columnas «Fecha», «Horario», «Paciente», «Llegada y salida» y
   «Situación», o el cartel cuando no hay ninguno.
@@ -1063,7 +1063,7 @@ En los dos lugares es exactamente el mismo mapa y el mismo cartel.
 trabajando en la Prestadora, agrupada por zona de cobertura. Se usa en dos lugares: en la pantalla de
 postulaciones, para mirar cómo está repartido el plantel antes de sumar gente nueva, y adentro de la
 ventana de una Solicitud de Servicio, para ver quién queda cerca del lugar que pidió el servicio. Cada
-persona aparece como un puntito; el punto se dibuja únicamente si esa ficha tiene una ubicación
+persona aparece como un puntito; el punto se dibuja únicamente si ese Legajo tiene una ubicación
 cargada. Nunca se muestra ninguna dirección escrita, sólo el punto.
 
 **Qué se ve en pantalla, de arriba abajo.**
@@ -1089,7 +1089,7 @@ Prestadora que recién empieza, o de una que dio de baja a todo el mundo.
 que dice cuántas personas se pudieron ubicar sobre el total, los botones para elegir zona —el de
 «Todos», con la cantidad entre paréntesis, y uno por cada zona de cobertura, también con su
 cantidad—, el dibujo del mapa con sus puntos, la lista escrita con el nombre de cada persona y sus
-zonas, y el renglón final que avisa cuántas fichas quedaron sin ubicación cargada.
+zonas, y el renglón final que avisa cuántos Legajos quedaron sin ubicación cargada.
 
 **Qué queda alrededor si el cartel se saca.** El título de la pantalla o de la sección que
 corresponda, el título «Mapa del plantel por zona», y debajo un blanco. En la ventana de una

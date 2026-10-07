@@ -175,7 +175,7 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
 
   const esAdmin = esAdminOSuperior(usuario?.rol);
   const estadoDeLaSolicitud = solicitud.estado || 'nueva';
-  const datosDeLaFicha = [
+  const datosDeLaSolicitud = [
     solicitud.telefono,
     solicitud.localidad,
     solicitud.tipo_servicio,
@@ -205,8 +205,8 @@ export function SolicitudDetalle({ solicitud, onClose, onActualizada }) {
           {guardando ? t.comun.guardando : t.comun.guardar}
         </Button>
       </Cabecera>
-      {datosDeLaFicha.length > 0 && (
-        <div className="panel-mini hoja-ficha-datos">{datosDeLaFicha.join(' · ')}</div>
+      {datosDeLaSolicitud.length > 0 && (
+        <div className="panel-mini hoja-ficha-datos">{datosDeLaSolicitud.join(' · ')}</div>
       )}
 
       {error && <Alert variant="error">{error}</Alert>}

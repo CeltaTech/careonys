@@ -8,9 +8,9 @@
 // el código, iguales para todas.
 //
 // EL DAÑO NO ERA TEÓRICO. Una Prestadora que sacó «capacitación» de su proceso igual la veía
-// aparecer en la ficha de cada Asistente que diera de alta a mano, sin ninguna forma de cerrarla;
+// aparecer en el Legajo de cada Asistente que diera de alta a mano, sin ninguna forma de cerrarla;
 // y una que agregó una etapa propia no la veía nunca. Peor todavía: las claves escritas acá no
-// tenían por qué existir en la tabla de esa Prestadora, así que la ficha mostraba una etapa que
+// tenían por qué existir en la tabla de esa Prestadora, así que el Legajo del Asistente mostraba una etapa que
 // la pantalla de configuración no podía nombrar.
 //
 // UNA SOLA PUERTA. Las dos maneras entran ahora por este archivo, que es el único lugar del backend

@@ -6,7 +6,7 @@
 // que las cierra es que una persona haya hecho algo al respecto.
 //
 // La regla está escrita una sola vez porque la preguntan tres pantallas —la lista de Alertas, la
-// ficha de un Cliente y el resumen del mes— y de dos maneras distintas: dos filtran filas que ya
+// Ficha del cliente y el resumen del mes— y de dos maneras distintas: dos filtran filas que ya
 // tienen en la mano y la otra se lo pide a la base, que es la que no trae ninguna fila. Si cada
 // una escribiera su versión, el día que "sin resolver" signifique algo más que esta columna las
 // tres dirían cosas distintas sobre la misma alerta (`celtatech/CLAUDE.md` §8, «ningún patrón

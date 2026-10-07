@@ -51,7 +51,7 @@ export function domicilioEscrito({ calle, numero, piso, unidad, lugar } = {}, te
   return partes.filter(Boolean).join(', ');
 }
 
-/** Si esa ficha tiene algo cargado en el domicilio. Un domicilio sin calle no se puede ubicar. */
+/** Si esas partes tienen algo cargado en el domicilio. Un domicilio sin calle no se puede ubicar. */
 export function hayDomicilio(partes) {
   return Boolean(domicilioEscrito(partes));
 }
@@ -59,7 +59,7 @@ export function hayDomicilio(partes) {
 /**
  * Las cuatro partes y el lugar, tal como se escriben en las columnas de la base.
  *
- * Lo vacío vuelve a ser nulo. Guardar cadena vacía y nulo mezclados haría que dos fichas sin piso
+ * Lo vacío vuelve a ser nulo. Guardar cadena vacía y nulo mezclados haría que dos domicilios sin piso
  * se vieran distintas al compararlas, y la clave foránea del lugar rechaza una cadena que no apunta
  * a ninguno. Toma solamente estos cinco campos: lo demás que venga en el pedido no se escribe.
  */

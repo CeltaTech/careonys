@@ -9,7 +9,7 @@ import { mensajeDeError } from '../../lib/errores';
    ==========================================================================
 
    Donde antes se tecleaba un nombre, se elige un Legajo. Un nombre tecleado crea un ente nuevo que
-   no existe: la misma obra social escrita en cien fichas son cien financiadores distintos, y uno
+   no existe: la misma obra social escrita en el Legajo de cien Pacientes son cien financiadores distintos, y uno
    mal tipeado no se cruza nunca con el bueno.
 
    ACÁ SE ELIGE Y NADA MÁS. Un Legajo nuevo se carga desde el Padrón, con el botón que lo dice.

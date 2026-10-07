@@ -31,7 +31,7 @@ import '../hojaDeTarjetas.css';
    único lugar que sabe que hay dos maneras de tener un Paciente cargado. */
 
 /* Cuántas filas como mucho. Un Asistente con dos años de antigüedad tiene cientos de guardias
-   atrás: esto es una ficha, no la pantalla de Guardias. Cuando se llega al tope se dice, que es
+   atrás: esto es el Legajo del Asistente, no la pantalla de Guardias. Cuando se llega al tope se dice, que es
    lo que evita que alguien crea que está viendo toda la historia. */
 const TOPE = 50;
 

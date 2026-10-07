@@ -13,7 +13,7 @@ export async function requiereRolAsistente(req, res, next) {
 
   // SIN FILTRO DE PRESTADORA, Y NO LE HACE FALTA
   // Es el paso anterior a todo lo demás: de acá sale la Prestadora de esta sesión, y la consulta
-  // que viene abajo —la ficha del Asistente— ya la usa. Pedirle a esta que la sepa de antemano
+  // que viene abajo —el Legajo del Asistente— ya la usa. Pedirle a esta que la sepa de antemano
   // sería circular: no hay de dónde sacarla salvo de esta misma fila, que la base le devuelve a
   // su dueño y a nadie más.
   const { data: perfil, error: errorPerfil } = await db
@@ -30,20 +30,20 @@ export async function requiereRolAsistente(req, res, next) {
   // cómo se llama—; `asistenteId` es lo suyo en esta Prestadora, con su antigüedad, sus lugares y
   // sus matrículas. La misma persona puede tener otro en otra Prestadora, y por eso se busca
   // acotado a la Prestadora de esta sesión.
-  const { data: ficha, error: errorFicha } = await db
+  const { data: asistente, error: errorAsistente } = await db
     .from('asistentes')
     .select('id')
     .eq('usuario_id', sesion.id)
     .eq('prestadora_id', perfil.prestadora_id)
     .maybeSingle();
 
-  if (errorFicha || !ficha) {
+  if (errorAsistente || !asistente) {
     return res.status(403).json({ error: 'Rol sin permiso' });
   }
 
   req.usuarioAsistente = {
     id: sesion.id,
-    asistenteId: ficha.id,
+    asistenteId: asistente.id,
     prestadoraId: perfil.prestadora_id,
   };
   next();

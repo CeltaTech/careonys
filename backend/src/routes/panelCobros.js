@@ -523,10 +523,10 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
         // un cambio de día entre los dos daría un vencimiento corrido.
         fecha_emision: hoy,
         fecha_vencimiento: vencimiento,
-        // A quién se le reclama se copia de la ficha del Cliente el día que se genera, y no se
+        // A quién se le reclama se copia de la Ficha del cliente el día que se genera, y no se
         // mira más: una factura emitida no cambia, así que si mañana ese Cliente pasa a pagar por
         // sí misma, las viejas tienen que seguir diciendo a quién se le reclamaron. Vacío en la
-        // ficha se guarda vacío, que quiere decir el Cliente.
+        // Ficha del cliente se guarda vacío, que quiere decir el Cliente.
         financiador_tipo: cliente.financiador_tipo ?? null,
         financiador_nombre: nombresDePagadores.get(cliente.pagador_legajo_id) ?? null,
       })

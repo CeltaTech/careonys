@@ -2,7 +2,7 @@
    ==========================================================================
 
    QUÉ RESUELVE. Hasta hoy el respaldo diario subía el volcado de la base y nada más. Con eso,
-   el día que hubiera que restaurar, volvían las filas y no volvían los archivos: la ficha del
+   el día que hubiera que restaurar, volvían las filas y no volvían los archivos: el Legajo del
    Asistente diría que tiene su certificado cargado y el certificado no estaría; el reporte
    nombraría una foto que ya no existe; la prescripción quedaría en un renglón sin la receta.
    Una base restaurada que miente sobre lo que tiene es peor que no tener respaldo, porque nadie

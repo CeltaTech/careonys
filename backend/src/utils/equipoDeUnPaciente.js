@@ -66,12 +66,12 @@ export async function equipoDeUnPaciente({ pacienteId, prestadoraId, regla = nul
     });
 
   const armado = armar([]);
-  const fichas = await fichasDeAsistentes(
+  const asistentesPorId = await asistentesDelEquipo(
     [...new Set(armado.asistentes.map((a) => a.asistente_id))],
     prestadoraId
   );
 
-  const lugares = await lugaresDelEquipo([...fichas.keys()], prestadoraId);
+  const lugares = await lugaresDelEquipo([...asistentesPorId.keys()], prestadoraId);
   const alcanzan = await coordinadoresDeLosLugares({ lugares, prestadoraId });
   const conCoordinadores = armar(alcanzan.map((u) => u.id));
 
@@ -83,7 +83,7 @@ export async function equipoDeUnPaciente({ pacienteId, prestadoraId, regla = nul
 
   const asistentes = conCoordinadores.asistentes.map((a) => ({
     ...a,
-    nombre: fichas.get(a.asistente_id)?.nombre ?? null,
+    nombre: asistentesPorId.get(a.asistente_id)?.nombre ?? null,
   }));
 
   const coordinadores = await Promise.all(
@@ -219,20 +219,20 @@ async function decisionesDelEquipo({ pacienteId, prestadoraId }) {
   return data ?? [];
 }
 
-async function fichasDeAsistentes(ids, prestadoraId) {
-  const fichas = new Map();
-  if (!ids.length) return fichas;
+async function asistentesDelEquipo(ids, prestadoraId) {
+  const porId = new Map();
+  if (!ids.length) return porId;
   const { data, error } = await supabase
     .from('asistentes')
     .select('id, nombre')
     .eq('prestadora_id', prestadoraId)
     .in('id', ids);
   if (error) {
-    console.error(`Error leyendo las fichas del equipo (prestadora ${prestadoraId}):`, error.message);
-    return fichas;
+    console.error(`Error leyendo los Asistentes del equipo (prestadora ${prestadoraId}):`, error.message);
+    return porId;
   }
-  for (const fila of data ?? []) fichas.set(fila.id, fila);
-  return fichas;
+  for (const fila of data ?? []) porId.set(fila.id, fila);
+  return porId;
 }
 
 /** Dónde acepta trabajar cada Asistente del equipo, para saber después quién los coordina. */
@@ -250,7 +250,7 @@ async function lugaresDelEquipo(ids, prestadoraId) {
  * Quiénes coordinan esos lugares.
  *
  * Antes esto comparaba el texto que había tecleado la coordinadora contra el que habían tecleado en
- * la ficha de la Asistente. Una palabra escrita distinta no encontraba a nadie, y nadie se
+ * el Legajo de la Asistente. Una palabra escrita distinta no encontraba a nadie, y nadie se
  * enteraba. Hoy las dos puntas guardan el mismo lugar elegido de una lista.
  */
 async function coordinadoresDeLosLugares({ lugares, prestadoraId }) {

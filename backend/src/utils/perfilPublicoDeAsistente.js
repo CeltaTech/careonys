@@ -40,9 +40,9 @@
 export const COLUMNAS_PERFIL_PUBLICO = 'id, nombre, foto_url, tipo_asistente_id, fecha_alta';
 
 /**
- * Lo que la ficha del Asistente tiene y esta vidriera no muestra jamás. Están
- * escritas para poder probarlas: la prueba arma un perfil a partir de una ficha
- * completa y comprueba que ninguna de estas palabras aparezca en la salida.
+ * Lo que el Legajo del Asistente tiene y esta vidriera no muestra jamás. Están
+ * escritas para poder probarlas: la prueba arma un perfil a partir de un Legajo
+ * completo y comprueba que ninguna de estas palabras aparezca en la salida.
  */
 export const NUNCA_SALEN = [
   'telefono',
@@ -78,7 +78,7 @@ export const FUNCION_QUE_HABILITA_EL_ORDEN = 'ranking_plataforma';
 /**
  * Arma el perfil que se le muestra al Cliente.
  *
- * @param asistente     la ficha, ya leída con `COLUMNAS_PERFIL_PUBLICO`.
+ * @param asistente     su Legajo, ya leído con `COLUMNAS_PERFIL_PUBLICO`.
  * @param tipo          el tipo de Asistente, como lo devuelve `tareasDelTipo.js`, o `null`.
  * @param documentacion lo que devolvió `estadoDocumentalParaElCliente`, o `null` si no se informa.
  * @param calificacion  `{ promedio, cuantas }`, o `null` si esta Prestadora no muestra calificaciones.
@@ -102,7 +102,7 @@ export function perfilPublicoDeAsistente({
     // ni en la consulta.
     //
     // Son los nombres de los lugares que tiene guardados, y llegan armados desde afuera: no están
-    // en su ficha sino en la tabla que la cruza con cada lugar.
+    // en su Legajo sino en la tabla que la cruza con cada lugar.
     zonas: Array.isArray(asistente.zonas) ? asistente.zonas : [],
     // El tipo viaja armado y no como identificador suelto: el nombre visible de un tipo
     // general sale de las traducciones y el de uno propio de la Prestadora es un dato suyo,

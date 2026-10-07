@@ -570,10 +570,10 @@ describe('la baja', () => {
   });
 });
 
-describe('el alta de una llave lee la ficha propia con la credencial de la persona', () => {
+describe('el alta de una llave lee la fila propia con la credencial de la persona', () => {
   const pedirAlta = (ruta = '/api/app-asistentes/llaves/desafio', usuario = USUARIO) =>
     pedir('POST', ruta, {}, { usuario });
-  const lecturaDeLaFicha = () =>
+  const lecturaDeLaFilaPropia = () =>
     llamadas.find((l) => l.clave === 'GET /rest/v1/usuarios' && l.url.includes('email'));
 
   beforeEach(() => olvidarPedidos());
@@ -584,11 +584,11 @@ describe('el alta de una llave lee la ficha propia con la credencial de la perso
     assert.equal(cuerpo.user.name, 'ana@ejemplo.com');
     assert.equal(cuerpo.user.displayName, 'Ana Prueba');
 
-    const ficha = lecturaDeLaFicha();
-    assert.ok(ficha, 'no se leyó la ficha propia');
-    assert.equal(ficha.autorizacion, sesionDePrueba(USUARIO));
-    assert.equal(ficha.credencial.maestra, false);
-    assert.ok(ficha.url.includes(`id=eq.${USUARIO}`));
+    const fila = lecturaDeLaFilaPropia();
+    assert.ok(fila, 'no se leyó la fila propia');
+    assert.equal(fila.autorizacion, sesionDePrueba(USUARIO));
+    assert.equal(fila.credencial.maestra, false);
+    assert.ok(fila.url.includes(`id=eq.${USUARIO}`));
   });
 
   it('ninguna lectura de `usuarios` va con la maestra', async () => {
@@ -602,9 +602,9 @@ describe('el alta de una llave lee la ficha propia con la credencial de la perso
     assert.equal(estado, 200);
     assert.equal(cuerpo.user.name, 'carla@ejemplo.com');
 
-    const ficha = lecturaDeLaFicha();
-    assert.equal(ficha.autorizacion, sesionDePrueba(FAMILIAR));
-    assert.ok(ficha.url.includes(`id=eq.${FAMILIAR}`));
+    const fila = lecturaDeLaFilaPropia();
+    assert.equal(fila.autorizacion, sesionDePrueba(FAMILIAR));
+    assert.ok(fila.url.includes(`id=eq.${FAMILIAR}`));
 
     const guardado = llamadas.find((l) => l.clave === 'POST /rest/v1/desafios_de_llave');
     assert.equal(guardado.cuerpo.rol, 'cliente');
@@ -612,7 +612,7 @@ describe('el alta de una llave lee la ficha propia con la credencial de la perso
     assert.equal(guardado.cuerpo.prestadora_id, PRESTADORA);
   });
 
-  it('si la base no le devuelve la ficha propia, no se emite ningún desafío', async () => {
+  it('si la base no le devuelve la fila propia, no se emite ningún desafío', async () => {
     respuestas.set('GET /rest/v1/usuarios', ({ url }) =>
       url.includes('email') ? [] : filasQuePasanLosFiltros(url, [
         { id: USUARIO, rol: 'asistente', prestadora_id: PRESTADORA },

@@ -23,7 +23,7 @@ import { ComunicacionTab } from './ComunicacionTab';
 import { mensajeDeError } from '../../lib/errores';
 import { Cabecera } from '../../components/ui/Cabecera';
 import { Button } from '../../components/ui/Button';
-import { CAMPOS_PAGO, CAMPOS_RESERVADOS, conDatosAparte } from '../../lib/fichaAsistente';
+import { CAMPOS_PAGO, CAMPOS_RESERVADOS, conDatosAparte } from '../../lib/datosAparteDelAsistente';
 import '../../styles/molde-paginas.css';
 import '../hojaDeTarjetas.css';
 
@@ -70,7 +70,7 @@ export function AsistenteDetalle() {
   if (estado === 'no_encontrado') return <p className="estado-vacio">{t.comun.no_encontrado}</p>;
   if (estado === 'error') return <p className="estado-vacio">{error || t.comun.error_generico}</p>;
 
-  const datosDeLaFicha = [
+  const datosDelAsistente = [
     t.asistentes[`estado_${asistente.estado}`],
     asistente.telefono,
     asistente.email,
@@ -84,8 +84,8 @@ export function AsistenteDetalle() {
           <span aria-hidden="true">←</span> {t.asistentes.volver_al_plantel}
         </Button>
       </Cabecera>
-      {datosDeLaFicha.length > 0 && (
-        <div className="panel-mini hoja-ficha-datos">{datosDeLaFicha.join(' · ')}</div>
+      {datosDelAsistente.length > 0 && (
+        <div className="panel-mini hoja-ficha-datos">{datosDelAsistente.join(' · ')}</div>
       )}
 
       <section className="panel-tarjeta">

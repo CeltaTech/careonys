@@ -6,12 +6,12 @@ import { useCatalogoDeLugares } from './useCatalogoDeLugares';
 
    POR QUÉ ES UN HOOK Y NO DOS CONSULTAS EN CADA PANTALLA. Tres pantallas muestran la misma cosa:
    la lista del plantel, la sugerencia de una Solicitud y el equipo de un Paciente. Las tres
-   necesitan lo mismo —qué lugares tiene cada ficha y cómo se llaman—, y escribirlo tres veces
+   necesitan lo mismo —qué lugares tiene el Legajo de cada Asistente y cómo se llaman—, y escribirlo tres veces
    terminaría con una mostrando los nombres del catálogo y otra mostrando identificadores.
 
-   POR QUÉ LOS NOMBRES SALEN DEL CATÁLOGO. Lo guardado en la ficha es cuál lugar, no cómo se
+   POR QUÉ LOS NOMBRES SALEN DEL CATÁLOGO. Lo guardado en el Legajo del Asistente es cuál lugar, no cómo se
    llama. El nombre se busca al mostrarlo: así, corregir una vez el nombre de una localidad lo
-   corrige en todas las fichas que la nombran.
+   corrige en el Legajo de cada Asistente que la nombra.
 
    La lista de personas se compara por su contenido y no por su identidad: una pantalla que arma
    el array en cada dibujo no debe volver a consultar por eso. */

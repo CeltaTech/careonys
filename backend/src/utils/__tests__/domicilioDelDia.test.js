@@ -28,7 +28,7 @@ const PACIENTE_DOS = '50000000-0000-4000-8000-000000000002';
 
 // La casa de siempre de cada uno. Es lo que devuelve la función cuando no hay ninguna
 // dirección temporal vigente ese día.
-const FICHAS = new Map([
+const DOMICILIOS_DE_SIEMPRE = new Map([
   [PACIENTE_UNO, { domicilio: 'Av. Siempreviva 742', lat: -34.6037, lng: -58.3816 }],
   [PACIENTE_DOS, { domicilio: 'Calle Falsa 123', lat: -34.5, lng: -58.52 }],
 ]);
@@ -38,7 +38,7 @@ let temporales = [];
 /** Todo lo que el backend le preguntó a la base, para poder contar las preguntas. */
 let preguntas = [];
 
-// Copia exacta del criterio de la migración: la temporal vigente ese día, y si no la ficha.
+// Copia exacta del criterio de la migración: la temporal vigente ese día, y si no la del Legajo del Paciente.
 // Las fechas se comparan como texto porque `2026-01-05` ordena igual escrito que como fecha.
 function resolver(pacienteId, fecha) {
   const vigente = temporales.find(
@@ -47,12 +47,12 @@ function resolver(pacienteId, fecha) {
       t.fecha_inicio <= fecha &&
       (t.fecha_fin == null || t.fecha_fin >= fecha)
   );
-  const ficha = FICHAS.get(pacienteId) ?? { domicilio: null, lat: null, lng: null };
+  const deSiempre = DOMICILIOS_DE_SIEMPRE.get(pacienteId) ?? { domicilio: null, lat: null, lng: null };
   if (!vigente) {
     return {
       paciente_id: pacienteId,
       domicilio_temporal_id: null,
-      ...ficha,
+      ...deSiempre,
       es_temporal: false,
       motivo: null,
       desde: null,
@@ -113,7 +113,7 @@ beforeEach(() => {
 
 /** Un Paciente como lo deja `pacientesDeGuardia.js` cuando la Prestadora muestra la dirección. */
 function conDireccion(id) {
-  return { id, nombre: 'Quien sea', ...FICHAS.get(id) };
+  return { id, nombre: 'Quien sea', ...DOMICILIOS_DE_SIEMPRE.get(id) };
 }
 
 /** Una guardia como la deja `conPacientes()`. */

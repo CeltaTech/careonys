@@ -3,8 +3,8 @@
 //
 // QUÉ PROBLEMA RESUELVE
 // Para saber si un Asistente tiene los papeles al día o cuántos turnos le quedan por delante
-// había que entrar a su ficha, de a uno. Con un plantel de decenas de personas, eso es abrir y
-// cerrar decenas de fichas para contestar una pregunta que la lista puede contestar sola.
+// había que entrar a su Legajo del Asistente, de a uno. Con un plantel de decenas de personas, eso es abrir y
+// cerrar decenas de Legajos del Asistente para contestar una pregunta que la lista puede contestar sola.
 //
 // POR QUÉ NO SE CUENTA ADENTRO DE LA PANTALLA
 // Son dos cuentas, no dos consultas: la de guardias se apoya en el semáforo
@@ -110,7 +110,7 @@ export function documentacionPorAsistente(
 /**
  * Las opciones de un filtro, sacadas de lo que el plantel tiene cargado.
  *
- * Las especialidades las escribió a mano quien cargó cada ficha, así que la misma aparece escrita
+ * Las especialidades las escribió a mano quien cargó el Legajo de cada Asistente, así que la misma aparece escrita
  * de varias maneras. Se agrupan con `comparable` (`textoComparable.js`), que es el mismo criterio
  * con el que la sugerencia de la Solicitud acerca las dos puntas, y se muestra la primera forma
  * que apareció.
@@ -137,7 +137,7 @@ export function opcionesDelPlantel(filas, campo) {
 }
 
 /**
- * ¿Esta ficha tiene el valor elegido en el filtro?
+ * ¿Este Legajo del Asistente tiene el valor elegido en el filtro?
  *
  * Compara con el mismo criterio con el que se armaron las opciones: si no, elegir `San Isidro`
  * dejaría afuera a quien escribió `san isidro`, que es la persona que se estaba buscando.

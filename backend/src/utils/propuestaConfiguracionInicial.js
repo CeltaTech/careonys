@@ -11,7 +11,7 @@ import { CAMPOS_LISTA, valorDesdeFila } from './importacionIA.js';
 
    Y CONTESTA ALGO MÁS, QUE ES EL MOTIVO REAL. La importación no crea zonas de cobertura ni
    tipos de Asistente: una zona que la planilla nombra y la Prestadora no configuró entra como
-   texto suelto en la ficha de la persona, y un tipo que no calza con el catálogo deja al
+   texto suelto en el Legajo del Asistente, y un tipo que no calza con el catálogo deja al
    Asistente sin tipo —y el tipo es lo que decide si a esa persona se le va a exigir Matrícula
    (ver `resolverTipoAsistentePorNombre`)—. Eso se descubría después, revisando de a uno. Acá se
    dice antes de importar, para que la configuración se cargue primero y el archivo entre entero.

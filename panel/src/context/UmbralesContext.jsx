@@ -7,7 +7,7 @@
 // `lib/semaforoGuardia.js` y acá sólo se consulta.
 //
 // POR QUÉ UNA SOLA CONSULTA PARA TODO EL PANEL. Los mismos tres números los necesitan la grilla,
-// el Estado actual, la ficha de un Cliente y la de un Asistente. Preguntarlos pantalla por
+// el Estado actual, la Ficha del cliente y el Legajo del Asistente. Preguntarlos pantalla por
 // pantalla serían cuatro consultas para el mismo dato y cuatro lugares donde arreglarlo el día que
 // cambie, que es justamente el patrón repetido sin punto único de verdad.
 //

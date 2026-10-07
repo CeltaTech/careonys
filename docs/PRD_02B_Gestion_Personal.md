@@ -48,7 +48,7 @@ extendidas: `tipo_vinculo`, `fecha_alta`, `fecha_baja`, `horas_semanales`),
 `guardias_cobertura`, `ceses`. Esas tablas ya están escritas ahí con el SQL exacto — no
 reproducir aquí para evitar que las dos fuentes diverjan.
 
-Dos partes de la ficha no están en `asistentes`, y cada una exige un permiso configurable para
+Dos partes del Legajo del Asistente no están en `asistentes`, y cada una exige un permiso configurable para
 poder leerse:
 
 - Lo que cobra —`valor_hora`, `sueldo_basico`, `categoria_cct`— está en
@@ -57,8 +57,8 @@ poder leerse:
   `motivo_exclusion_directo`, `motivo_exclusion_intermediacion`— está en
   `datos_reservados_asistente`, detrás de `ver_datos_reservados_asistente`.
 
-Están separadas porque las reglas de acceso de la base filtran filas y no columnas: dentro de
-la ficha no hay forma de exigir un permiso para un dato y no para el resto.
+Están separadas porque las reglas de acceso de la base filtran filas y no columnas: dentro del
+Legajo del Asistente no hay forma de exigir un permiso para un dato y no para el resto.
 
 Los vencimientos de documentación del Asistente (Monotributo, ART, Seguro, Certificado de
 Antecedentes Penales u otros que agregue cada prestadora) ya no viven como columnas de
@@ -78,7 +78,7 @@ un array de fixtures de `escalas_legales` congelado:
 
 ```
 calcularCese({
-  asistente,          // fecha_alta, tipo_vinculo y horas_semanales de su ficha, más sueldo_basico y valor_hora de remuneraciones_asistente
+  asistente,          // fecha_alta, tipo_vinculo y horas_semanales de su Legajo, más sueldo_basico y valor_hora de remuneraciones_asistente
   fechaCese,          // fecha del hecho — clave para toda lectura de escalas_legales
   causal,             // uno de los 13 valores de causal_cese
   escalasLegales       // valores ya resueltos para fechaCese (no se consulta la DB dentro de la función)
@@ -138,7 +138,7 @@ guarda en `datos_reservados_asistente.score_riesgo_reclasificacion` y se recalcu
 acumula histórico (si se necesita histórico, agregar tabla aparte cuando haya ese
 requerimiento).
 
-**Tres de los siete se deducen de la ficha y no se cargan a mano** — antigüedad del vínculo,
+**Tres de los siete se deducen del Legajo del Asistente y no se cargan a mano** — antigüedad del vínculo,
 horas semanales y exclusividad de zona salen de `asistentes.fecha_alta`,
 `asistentes.horas_semanales` y `asistentes.zonas`. Se calculan cada vez que el puntaje se
 muestra, así que «recalculado cuando cambian sus datos» es literal y no hace falta ningún job.

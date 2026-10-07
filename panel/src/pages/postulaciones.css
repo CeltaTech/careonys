@@ -14,7 +14,7 @@
   box-shadow: inset 0 0 0 1px var(--azul-medio);
 }
 
-/* El dato de la ficha que es un texto largo ocupa la fila entera. */
+/* El dato de la Postulación que es un texto largo ocupa la fila entera. */
 .postulaciones-dato-ancho {
   grid-column: 1 / -1;
 }

@@ -53,14 +53,14 @@ export function PerfilTab({ asistente, onActualizado }) {
   const { paraElegir: tiposAsistente, porId: tiposPorId } = useTiposAsistente();
   const { modalidades } = useModalidades();
   /* La lista de lugares de la Prestadora, pedida una sola vez para las tres cosas que la usan en
-     esta ficha: el lugar del domicilio, dónde acepta trabajar y el nombre del lugar con el que se
+     el Legajo del Asistente: el lugar del domicilio, dónde acepta trabajar y el nombre del lugar con el que se
      arma el renglón del domicilio. */
   const catalogoDeLugares = useCatalogoDeLugares();
 
-  /* Las formas de recibir trabajo que se pueden marcar en esta ficha. El techo lo pone la
+  /* Las formas de recibir trabajo que se pueden marcar en el Legajo del Asistente. El techo lo pone la
      Prestadora con las modalidades que tenga activas. Se suma a la lista la que el Asistente
      ya tenga puesta aunque la Prestadora la haya apagado después: si no se mostrara, quedaría
-     escrita en la ficha sin que nadie la vea, y el primer cambio de modalidad lo rechazaría la
+     escrita en el Legajo del Asistente sin que nadie la vea, y el primer cambio de modalidad lo rechazaría la
      base sin explicación. Mismo criterio que el tipo de Asistente, más abajo. */
   const modalidadesPosibles = useMemo(() => {
     const habilitadas = modalidadesHabilitadas(modalidades);
@@ -78,7 +78,7 @@ export function PerfilTab({ asistente, onActualizado }) {
     estado: asistente.estado,
     tipo_vinculo: asistente.tipo_vinculo,
     categoria_cct: asistente.categoria_cct || '',
-    // Con qué se mide el trabajo de esta persona. Una ficha vieja no eligió ninguna, y lo que
+    // Con qué se mide el trabajo de esta persona. Un Legajo del Asistente cargado antes no eligió ninguna, y lo que
     // le corresponde es exactamente lo que el código deducía antes de su vínculo: así nadie
     // cambia de forma de pago sin que alguien lo haya decidido.
     unidad_medicion: unidadDeMedicionDe(asistente),
@@ -102,7 +102,7 @@ export function PerfilTab({ asistente, onActualizado }) {
   const [reenviando, setReenviando] = useState(false);
   const [mensajeReenvio, setMensajeReenvio] = useState(null);
 
-  /* Dónde acepta trabajar esta persona. No está en la ficha: está en una tabla que la cruza con
+  /* Dónde acepta trabajar esta persona. No está en el Legajo del Asistente: está en una tabla que la cruza con
      cada lugar, y por eso se lee y se escribe por el backend, que deja guardados exactamente los que
      quedaron tildados. Mientras no se pudo leer, no se manda nada al guardar: escribir una lista
      que no se llegó a cargar borraría los lugares que la persona ya tenía. */
@@ -335,7 +335,7 @@ export function PerfilTab({ asistente, onActualizado }) {
 
           {/* Lo que estaba escrito a mano antes de que existiera el catálogo. Se
               muestra solo mientras este Asistente no tenga tipo, para que quien
-              mira sepa qué decía la ficha y pueda elegir el que corresponde. */}
+              mira sepa qué decía el Legajo del Asistente y pueda elegir el que corresponde. */}
           {!form.tipo_asistente_id && (asistente.especialidades || []).length > 0 && (
             <div className="molde-ancho panel-mini">
               {t.asistentes.tipo_antes_decia}: {asistente.especialidades.join(', ')}
@@ -375,9 +375,9 @@ export function PerfilTab({ asistente, onActualizado }) {
             )}
 
             {/* Con qué se mide el trabajo ya no lo deduce el código del vínculo: lo elige quien
-                carga la ficha. Se muestra el valor de la unidad elegida y no los cuatro, porque
+                carga el Legajo del Asistente. Se muestra el valor de la unidad elegida y no los cuatro, porque
                 cuatro casillas de importe al lado invitan a llenar la que no se usa, y un valor
-                cargado que no se paga es una pregunta cada vez que alguien abre la ficha. */}
+                cargado que no se paga es una pregunta cada vez que alguien abre el Legajo del Asistente. */}
             <FormField label={t.asistentes.unidad_medicion} name="unidad_medicion" type="select" value={form.unidad_medicion} onChange={(e) => set('unidad_medicion', e.target.value)}>
               {UNIDADES_POSIBLES.map((unidad) => (
                 <option key={unidad} value={unidad}>{t.asistentes[`unidad_${unidad}`]}</option>

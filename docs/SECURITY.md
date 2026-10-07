@@ -286,8 +286,8 @@ así una Coordinadora con el permiso abierto ve los pagos de los Asistentes de s
 ningún otro. `es_admin_prestadora()` se creó en esa misma migración como punto único de verdad
 de una condición que hasta entonces estaba escrita a mano en cada policy.
 
-En la misma migración se eliminó `cliente_ve_asistente_asignado`, que le daba al Cliente la
-ficha completa del Asistente asignado. La aplicación de Clientes nunca consulta `asistentes`
+En la misma migración se eliminó `cliente_ve_asistente_asignado`, que le daba al Cliente el
+Legajo completo del Asistente asignado. La aplicación de Clientes nunca consulta `asistentes`
 —pide todo por el backend—, así que era una puerta abierta sin uso.
 
 **El estado de cuenta del Cliente lo ve la administración.** Cuánto debe cada Cliente y si está
@@ -306,7 +306,7 @@ debe, y quien coordina necesita verlo para trabajar. La política de lectura de
 tabla se lea con la credencial de una persona. `saldos_cliente` no se tocó: su política alcanza también
 a quien manda a facturar, que sí es trabajo de la coordinación.
 
-**Lo reservado de la ficha también vive aparte (2026-08-19).** El mismo agujero seguía abierto
+**Lo reservado del Legajo del Asistente también vive aparte (2026-08-19).** El mismo agujero seguía abierto
 en otras cinco columnas de `asistentes`: `causal_baja`, `score_riesgo_reclasificacion`,
 `indicadores_riesgo`, `motivo_exclusion_directo` y `motivo_exclusion_intermediacion` — por qué se
 lo dio de baja, su puntaje de riesgo con los motivos que lo forman, y por qué quedó excluido de
@@ -331,7 +331,7 @@ permiso habilita a mirar, nunca a cambiar la causa de una baja ni un puntaje de 
 **Qué quedó afuera a propósito.** Los otros siete datos que `asistentes_coordinador` omite
 —`tipo_vinculo`, `fecha_baja`, `canales`, `horas_semanales`, `importacion_id`,
 `pendiente_conformidad`, `prestadora_id`— siguen siendo columnas de `asistentes` y los lee
-cualquiera que pueda ver la ficha. Es una decisión, no un olvido: la Coordinadora los necesita
+cualquiera que pueda ver el Legajo del Asistente. Es una decisión, no un olvido: la Coordinadora los necesita
 para trabajar, y la lista de omisiones de esa vista nunca fue un criterio pensado. La frontera
 de lo sensible se escribió de nuevo acá, no se heredó de la vista.
 

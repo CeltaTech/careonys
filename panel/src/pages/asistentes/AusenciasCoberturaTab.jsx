@@ -19,7 +19,7 @@ import { useMotivosSustitucionGuardia } from '../../hooks/useMotivosSustitucionG
 import { nombreMotivoSustitucion, valorGuardado } from '../../lib/motivoDeSustitucion';
 import { hoyISO, sumarDias } from '../../lib/horarios';
 import '../../styles/molde-paginas.css';
-import './fichaAsistente.css';
+import './renglonDelAsistente.css';
 
 const TIPOS =['enfermedad_inculpable', 'accidente_inculpable', 'otra_licencia', 'ausencia_no_justificada'];
 
@@ -377,7 +377,7 @@ export function AusenciasCoberturaTab({ asistente }) {
             const sinCubrir = afectadas === null ? null : guardiasSinCubrir(afectadas, coberturas[a.id]);
             return (
             <div key={a.id} className="panel-fila-alerta">
-              <div className="ficha-asistente-renglon">
+              <div className="renglon-del-asistente">
                 <b>
                   {t.asistentes.ausencias[`tipo_${a.tipo}`]} — {fechaVisible(a.fecha_inicio)}
                   {a.fecha_vuelta_real

@@ -166,7 +166,7 @@ async function aQuienLeToca({ prestadoraId, escalon }) {
     return [];
   }
 
-  // El correo no está en la ficha: vive en la tabla de cuentas (`correoDeUnaPersona.js`).
+  // El correo no está en `usuarios`: vive en la tabla de cuentas (`correoDeUnaPersona.js`).
   return correosDe({ prestadoraId, usuarioIds: (data ?? []).map((u) => u.id) });
 }
 

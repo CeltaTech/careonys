@@ -3,7 +3,7 @@
 //
 // POR QUÉ EXISTE. El puntaje de riesgo de reclasificación se arma con siete indicadores, y
 // hasta hoy los siete se tildaban a mano, uno por uno, Asistente por Asistente. Tres de ellos
-// no hacen falta preguntarlos: la ficha ya dice hace cuánto entró la persona, cuántas horas
+// no hacen falta preguntarlos: el Legajo del Asistente ya dice hace cuánto entró la persona, cuántas horas
 // hace por semana y en cuántas zonas trabaja. `docs/PRD_02B_Gestion_Personal.md:130` pide que
 // el puntaje se recalcule cuando cambian esos datos; deducirlos en el momento en que se
 // muestran hace que eso sea literal: cambian las horas y el número cambia, sin que nadie
@@ -22,7 +22,7 @@
 // ---------------------------------------------------------------------------
 import { obtenerValorEscala } from './escalasLegales';
 
-// Los tres que salen de la ficha. El resto de `INDICADORES_RIESGO` se carga a mano.
+// Los tres que salen del Legajo del Asistente. El resto de `INDICADORES_RIESGO` se carga a mano.
 export const INDICADORES_DEDUCIDOS = [
   'antiguedad_vinculo',
   'horas_semanales_promedio',
@@ -46,12 +46,12 @@ function proporcion(valor, umbral) {
 }
 
 /**
- * Qué indicadores se deducen de la ficha, y cuáles no se pudieron deducir.
+ * Qué indicadores se deducen del Legajo del Asistente, y cuáles no se pudieron deducir.
  *
  * Devuelve `{ valores, sinDeducir }`. En `valores` va cada indicador deducido con su número
- * 0-1 y con qué dato de la ficha salió, para que la pantalla lo explique en vez de mostrar un
+ * 0-1 y con qué dato del Legajo del Asistente salió, para que la pantalla lo explique en vez de mostrar un
  * número que aparece solo. En `sinDeducir` va cada indicador que quedó afuera con el motivo:
- * `sin_dato` si la ficha no lo tiene cargado, `sin_umbral` si falta el valor legal vigente.
+ * `sin_dato` si el Legajo del Asistente no lo tiene cargado, `sin_umbral` si falta el valor legal vigente.
  */
 export function deducirIndicadores(asistente, escalasResueltas, hoy) {
   const valores = {};
@@ -85,7 +85,7 @@ export function deducirIndicadores(asistente, escalasResueltas, hoy) {
   // Exclusividad de zona. No lleva umbral: aceptar trabajo en un solo lugar es el indicio, y eso
   // no depende de ningún número. Con varios lugares el indicio no está, y eso es un dato.
   //
-  // Se cuentan los lugares guardados de la ficha, que es lo que la pantalla le adjunta. Una ficha
+  // Se cuentan los lugares guardados del Legajo del Asistente, que es lo que la pantalla le adjunta. Uno
   // que todavía no los trajo no cuenta cero: cuenta sin dato, porque cero diría que esa persona
   // no acepta trabajar en ninguna parte.
   const lugares = Array.isArray(asistente?.lugares) ? asistente.lugares : null;
@@ -102,7 +102,7 @@ export function deducirIndicadores(asistente, escalasResueltas, hoy) {
  * Los siete indicadores listos para el cálculo: lo deducido pisa lo guardado, y lo que no se
  * pudo deducir queda como esté cargado a mano.
  *
- * Lo deducido pisa y no al revés porque la ficha es la verdad: si alguien tildó «trabaja en una
+ * Lo deducido pisa y no al revés porque el Legajo del Asistente es la verdad: si alguien tildó «trabaja en una
  * sola zona» y después se le asignaron tres, el tilde viejo no puede seguir mandando.
  */
 export function indicadoresParaElPuntaje(guardados, deducidos) {

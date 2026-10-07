@@ -73,7 +73,7 @@ describe('situacion', () => {
     expect(situacion({ ...abierta, estado: 'de_baja' }, DIA)).toBe('de_baja');
   });
 
-  // Cumplir lo pactado y que se lo corten no son lo mismo, y en la ficha se leen distinto.
+  // Cumplir lo pactado y que se lo corten no son lo mismo, y en la Ficha del cliente se leen distinto.
   it('la que llegó a su fin en pie está terminada, no dada de baja', () => {
     expect(situacion({ ...cerrada, vigente_hasta: '2026-05-31' }, DIA)).not.toBe('de_baja');
   });

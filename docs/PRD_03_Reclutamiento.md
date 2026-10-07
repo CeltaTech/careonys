@@ -59,7 +59,7 @@ Estas 5 etapas post-postulación son exactamente `etapa_filtro` en `verificacion
 
 ### Verificación de identidad — cómo quedó construido
 
-Las dos fotos se cargan y se ven juntas desde la ficha del Asistente, en la pestaña de
+Las dos fotos se cargan y se ven juntas desde el Legajo del Asistente, en la pestaña de
 verificación (`panel/src/pages/asistentes/FotosDeIdentidad.jsx`). Quedan guardadas en el depósito
 `fotos-identidad` (`DATA_MODEL.md`), que sube y firma el backend
 (`backend/src/routes/panelVerificacionIdentidad.js`).
@@ -77,7 +77,7 @@ advertencia al Asistente, y falta elegir proveedor (`SECURITY.md`, decisiones pe
 
 ### Referencias laborales — cómo quedó construido
 
-Las referencias que la persona cargó en su postulación pasan a la ficha del Asistente cuando se le
+Las referencias que la persona cargó en su postulación pasan al Legajo del Asistente cuando se le
 crea la cuenta, una fila cada una y todas sin llamar. Desde la pestaña de verificación
 (`panel/src/pages/asistentes/ReferenciasLaborales.jsx`) se llama a cada una y queda anotado qué
 contestó: verificada, no responde o rechazada, con una nota interna. También se pueden cargar a

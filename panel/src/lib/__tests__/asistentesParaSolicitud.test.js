@@ -64,9 +64,9 @@ describe('asistentesParaSolicitud', () => {
     ]);
   });
 
-  // Que la ficha no tenga el dato y que la ficha diga otra cosa son dos cosas distintas, y
+  // Que el Legajo del Asistente no tenga el dato y que diga otra cosa son dos cosas distintas, y
   // contarlas como una sería afirmar algo que nadie cargó.
-  it('distingue la ficha sin datos cargados de la ficha que dice otra cosa', () => {
+  it('distingue el Legajo del Asistente sin datos cargados del que dice otra cosa', () => {
     const [sinNada] = asistentesParaSolicitud(SOLICITUD, [
       asistente({ zonas: [], especialidades: null }),
     ]);
@@ -83,7 +83,7 @@ describe('asistentesParaSolicitud', () => {
     expect(fila.puntaje).toBe(PESOS_SOLICITUD.zona + PESOS_SOLICITUD.especialidad);
   });
 
-  // La columna llegó después: una ficha vieja, o una consulta que no la pidió, no significa que
+  // La columna llegó después: un Legajo del Asistente cargado antes, o una consulta que no la pidió, no significa que
   // esa persona se haya puesto no disponible.
   it('no da por apagado a quien llegó sin esa columna', () => {
     const [fila] = asistentesParaSolicitud(SOLICITUD, [asistente({})]);

@@ -19,7 +19,7 @@ import '../hojaDeTarjetas.css';
    escrita.
 
    EL NÚMERO NO SE PIDE POR LA DIRECCIÓN NI SE ESCRIBE EN NINGÚN LADO: llega en la respuesta y se
-   muestra. Lo que viaja en la dirección es de quién es la ficha que se está mirando. */
+   muestra. Lo que viaja en la dirección es de qué Asistente es el Legajo que se está mirando. */
 
 export function DatosBancariosTab({ asistente }) {
   const { t, locale } = useLocale();

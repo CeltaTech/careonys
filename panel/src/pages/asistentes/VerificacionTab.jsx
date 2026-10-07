@@ -12,7 +12,7 @@ import { avanceDeIncorporacion } from '../../lib/avanceDeIncorporacion';
 import { FotosDeIdentidad } from './FotosDeIdentidad';
 import { ReferenciasLaborales } from './ReferenciasLaborales';
 import '../../styles/molde-paginas.css';
-import './fichaAsistente.css';
+import './renglonDelAsistente.css';
 
 const ESTADOS = ['pendiente', 'aprobada', 'rechazada'];
 
@@ -113,7 +113,7 @@ export function VerificacionTab({ asistente }) {
           if (!fila) return null;
           return (
             <div key={etapaFila.clave} className="panel-fila-alerta">
-              <div className="ficha-asistente-renglon">
+              <div className="renglon-del-asistente">
               <b>{etapaFila.nombre}</b>
               <div className="molde-formgrid">
               <FormField

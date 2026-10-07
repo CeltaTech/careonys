@@ -246,7 +246,7 @@ describe('las otras dos unidades de medición: la guardia y la semana', () => {
     assert.equal(liquidacion.bruto, 310000);
   });
 
-  it('la unidad elegida en la ficha manda sobre la que se deduciría del vínculo', () => {
+  it('la unidad elegida en el Legajo del Asistente manda sobre la que se deduciría del vínculo', () => {
     const { liquidacion } = liquidar(
       { ...ASISTENTE_EN_DEPENDENCIA, unidad_medicion: 'hora', valor_hora: 1500 },
       { guardias: 10, horas: 80 }

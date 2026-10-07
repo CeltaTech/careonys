@@ -70,7 +70,7 @@ export function Postulaciones() {
   // filtros: contados sobre lo filtrado, elegir una situación dejaría las otras cuatro en cero.
   const totales = useMemo(() => totalesDePostulaciones(filas, ESTADOS), [filas]);
 
-  // La Postulación abierta es una ficha: ocupa la página entera en lugar de la lista.
+  // La Postulación abierta ocupa la página entera en lugar de la lista.
   if (seleccionada) {
     return (
       <PostulacionDetalle

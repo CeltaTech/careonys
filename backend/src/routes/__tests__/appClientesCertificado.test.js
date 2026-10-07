@@ -4,7 +4,7 @@
  *
  *   npm test --prefix backend
  *
- * POR QUÉ EXISTE ESTA PRUEBA. Una misma persona tiene una ficha por cada Prestadora donde
+ * POR QUÉ EXISTE ESTA PRUEBA. Una misma persona tiene un Legajo de Asistente por cada Prestadora donde
  * trabaja: si el identificador del Asistente se repitiera, el Cliente vería el Certificado de
  * otra Prestadora y la pantalla se vería igual de bien. No lo encuentra nadie mirando.
  *

@@ -24,7 +24,7 @@ const ASISTENTE = {
 };
 
 describe('deducirIndicadores', () => {
-  it('deduce los tres indicadores que salen de la ficha', () => {
+  it('deduce los tres indicadores que salen del Legajo del Asistente', () => {
     const { valores, sinDeducir } = deducirIndicadores(ASISTENTE, escalas, HOY);
     expect(Object.keys(valores).sort()).toEqual(['antiguedad_vinculo', 'exclusividad_zona', 'horas_semanales_promedio']);
     expect(sinDeducir).toEqual([]);
@@ -77,7 +77,7 @@ describe('deducirIndicadores', () => {
     expect(valores.exclusividad_zona.dato).toBe(2);
   });
 
-  it('sin el dato en la ficha el indicador no se deduce: se avisa', () => {
+  it('sin el dato en el Legajo del Asistente el indicador no se deduce: se avisa', () => {
     const { valores, sinDeducir } = deducirIndicadores({ fecha_alta: null, horas_semanales: null, lugares: [] }, escalas, HOY);
     expect(valores).toEqual({});
     expect(sinDeducir.map((s) => s.motivo)).toEqual(['sin_dato', 'sin_dato', 'sin_dato']);
@@ -94,7 +94,7 @@ describe('deducirIndicadores', () => {
 });
 
 describe('indicadoresParaElPuntaje', () => {
-  it('lo deducido pisa lo tildado a mano, porque la ficha es la verdad', () => {
+  it('lo deducido pisa lo tildado a mano, porque el Legajo del Asistente es la verdad', () => {
     const { valores } = deducirIndicadores(
       { ...ASISTENTE, lugares: ['a1000000-0000-4000-8000-000000000001', 'a1000000-0000-4000-8000-000000000005'] },
       escalas,

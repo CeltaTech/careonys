@@ -1,6 +1,6 @@
 import { llamadorDe } from './apiPanel';
 
-/* Los teléfonos de contacto de una ficha del Padrón.
+/* Los teléfonos de contacto de un Legajo del Padrón.
    ==========================================================================
 
    Lo que va después de `/api/panel/padron/telefonos`. El `fetch`, la sesión, los encabezados y el
@@ -13,13 +13,13 @@ import { llamadorDe } from './apiPanel';
    @param {object} opciones  Lo mismo que acepta `fetch`. */
 export const llamarApiPadronTelefonos = llamadorDe('/padron/telefonos');
 
-/** Todos los teléfonos del Padrón, para agruparlos por ficha en la lista. */
+/** Todos los teléfonos del Padrón, para agruparlos por Legajo en la lista. */
 export function pedirLosTelefonosDelPadron() {
   return llamarApiPadronTelefonos('/');
 }
 
-/** Los de una ficha sola. */
-export function pedirLosTelefonosDeLaFicha(legajoId) {
+/** Los de un Legajo solo. */
+export function pedirLosTelefonosDelLegajo(legajoId) {
   return llamarApiPadronTelefonos(`/${legajoId}`);
 }
 

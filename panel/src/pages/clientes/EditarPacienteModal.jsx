@@ -65,7 +65,7 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
           </FormField>
           <FormField label={t.clientes.editar_paciente.patologias} name="patologias" value={patologias} onChange={(e) => setPatologias(e.target.value)} />
           {/* La obra social se elige del Padrón, donde es una Persona jurídica. Escrita a mano,
-              la misma obra social en cien fichas serían cien financiadores distintos. */}
+              la misma obra social en el Legajo de cien Pacientes serían cien financiadores distintos. */}
           <SelectorDeLegajo
             name="obra_social_legajo_id"
             label={t.clientes.editar_paciente.obra_social}

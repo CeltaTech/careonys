@@ -6,9 +6,9 @@
  * QUÉ SE PRUEBA ACÁ, Y POR QUÉ ESTO. Dos cosas, y las dos son las que hacen daño si se rompen.
  *
  * La primera es el dato de contacto. El Match vende justamente eso —llegar a la persona—
- * y una ficha de Asistente lo tiene todo adentro: teléfono, correo, documento. Alcanza con que
+ * y un Legajo de Asistente lo tiene todo adentro: teléfono, correo, documento. Alcanza con que
  * una ruta nueva pida una columna de más para que la vidriera lo regale. La prueba arma el
- * perfil a partir de una ficha completa y comprueba que nada de eso salga.
+ * perfil a partir de un Legajo completo y comprueba que nada de eso salga.
  *
  * La segunda es el orden. Con `ranking_plataforma` apagada, la lista no puede premiar a nadie:
  * si alguien la ordenara por calificación "porque queda mejor", la Prestadora estaría usando
@@ -31,8 +31,8 @@ import {
 
 const HOY = new Date('2026-09-15T10:00:00');
 
-/** Una ficha entera, como la que tiene la base. Datos inventados. */
-const FICHA_COMPLETA = {
+/** Un Legajo del Asistente entero, como el que tiene la base. Datos inventados. */
+const ASISTENTE_COMPLETO = {
   id: 'a-1',
   nombre: 'Rosa Giménez',
   foto_url: 'https://ejemplo/foto.jpg',
@@ -52,8 +52,8 @@ const FICHA_COMPLETA = {
 };
 
 describe('qué se ve y qué no se ve de un Asistente en la vidriera', () => {
-  it('el dato de contacto no sale, aunque la ficha lo traiga entero', () => {
-    const perfil = perfilPublicoDeAsistente({ asistente: FICHA_COMPLETA, ahora: HOY });
+  it('el dato de contacto no sale, aunque el Legajo lo traiga entero', () => {
+    const perfil = perfilPublicoDeAsistente({ asistente: ASISTENTE_COMPLETO, ahora: HOY });
     const salida = JSON.stringify(perfil);
 
     for (const campo of NUNCA_SALEN) {
@@ -74,7 +74,7 @@ describe('qué se ve y qué no se ve de un Asistente en la vidriera', () => {
 
   it('sale lo que hace falta para elegir: qué es, dónde trabaja y desde cuándo', () => {
     const perfil = perfilPublicoDeAsistente({
-      asistente: FICHA_COMPLETA,
+      asistente: ASISTENTE_COMPLETO,
       tipo: { id: 't-1', clave: 'enfermero', nombre: null, prestadora_id: null },
       ahora: HOY,
     });
@@ -86,7 +86,7 @@ describe('qué se ve y qué no se ve de un Asistente en la vidriera', () => {
 
   it('la insignia de verificación repite lo que ya se le cuenta al Cliente, sin nombrar papeles', () => {
     const perfil = perfilPublicoDeAsistente({
-      asistente: FICHA_COMPLETA,
+      asistente: ASISTENTE_COMPLETO,
       documentacion: {
         resumen: 'al_dia',
         matricula: 'vigente_verificada',
@@ -101,7 +101,7 @@ describe('qué se ve y qué no se ve de un Asistente en la vidriera', () => {
   });
 
   it('sin estado documental no se inventa ninguna insignia', () => {
-    const perfil = perfilPublicoDeAsistente({ asistente: FICHA_COMPLETA, ahora: HOY });
+    const perfil = perfilPublicoDeAsistente({ asistente: ASISTENTE_COMPLETO, ahora: HOY });
     assert.equal(perfil.verificacion, null);
   });
 });

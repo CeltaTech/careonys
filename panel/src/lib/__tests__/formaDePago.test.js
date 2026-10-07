@@ -26,11 +26,11 @@ import {
 } from '../formaDePago';
 
 describe('con qué se le mide el trabajo a cada persona', () => {
-  it('usa la unidad que se eligió en la ficha', () => {
+  it('usa la unidad que se eligió en el Legajo del Asistente', () => {
     expect(unidadDeMedicionDe({ unidad_medicion: 'guardia', tipo_vinculo: 'dependencia' })).toBe(UNIDADES.GUARDIA);
   });
 
-  it('a una ficha vieja le deduce la unidad del vínculo, como hacía el sistema antes', () => {
+  it('a un Legajo del Asistente cargado antes le deduce la unidad del vínculo, como hacía el sistema antes', () => {
     expect(unidadDeMedicionDe({ tipo_vinculo: 'dependencia' })).toBe(UNIDADES.MES);
     expect(unidadDeMedicionDe({ tipo_vinculo: 'monotributo' })).toBe(UNIDADES.HORA);
   });

@@ -128,7 +128,7 @@ Etapa 2 — Panel de administración
   - **Plantel y gestión del personal** — vínculo dual monotributo/dependencia, ceses con las
     trece causales, simulador de vínculo, score de riesgo de reclasificación, ausencias y
     cobertura, liquidaciones y pagos a Asistentes.
-  - **Clientes, Pacientes y Servicios** — ficha, personas autorizadas con qué ve cada una,
+  - **Clientes, Pacientes y Servicios** — Ficha del cliente, personas autorizadas con qué ve cada una,
     instrucciones que firma el titular, y el Servicio contratado con su continuidad.
   - **Guardias** — series y guardias, ofertas, cobertura, grilla, acciones masivas, guardias sin
     cerrar, pase de guardia con código de presencia, emergencias en guardia, domicilios
@@ -294,7 +294,7 @@ datos lleva cada pedido y qué contesta— está en `docs/CONEXION_CON_SOFTWARE_
 alguien que no conoce Careonys por dentro.
 
 **A quién se le reclama no es siempre el Cliente.** Puede ser una obra social o un tercero, y eso
-vive en la ficha del Cliente (`financiador_tipo`, `financiador_nombre`); vacío quiere decir el
+vive en la Ficha del cliente (`financiador_tipo`, `financiador_nombre`); vacío quiere decir el
 Cliente, que es lo corriente. Cada factura se lleva ese dato **copiado el día que se genera**,
 porque una factura emitida no cambia: si mañana ese Cliente pasa a pagar por sí misma, las viejas
 tienen que seguir diciendo a quién se le reclamaron. El nombre es texto y no se interpreta — el

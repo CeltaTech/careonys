@@ -369,7 +369,7 @@ Chile, la restricción queda fija y no se apaga. Lo que falta:
   paciente recibe un rechazo; el Administrador sí lee la información de salud de todos los
   Pacientes de su Prestadora. Cierre: al llegar el paso 9, revisar cada pantalla que escribe en
   esas tablas.
-- **Las columnas de salud de la ficha del paciente** —patologías, medicación habitual, nivel de
+- **Las columnas de salud del Legajo del Paciente** —patologías, medicación habitual, nivel de
   complejidad— quedan afuera: RLS filtra filas, no columnas. Cierre: se mudan a una tabla propia
   que siga la misma regla, o se decide que no son historia clínica.
 - **Una persona sacada a mano del equipo sigue atendiendo al paciente** para la base si tiene
@@ -492,7 +492,7 @@ sólo miran la Prestadora, así que un Cliente o un Asistente con su credencial 
 con los datos del Pagador de cualquier otro Cliente. Se acota al personal de la Prestadora y a
 quien firmó.
 
-**Qué ve cada rol sale de qué necesita para cumplir su función.** En la ficha del Cliente, el
+**Qué ve cada rol sale de qué necesita para cumplir su función.** En la Ficha del cliente, el
 coordinador:
 
 - **Ve y usa entero:** Contacto (nombre, teléfono, correo, localidad), Pacientes, Personas
@@ -505,7 +505,7 @@ coordinador:
 - **Un permiso por parte, para ver y para cargar.** No hay uno para mirar y otro para cargar.
 - El backend y la base aplican el mismo corte que la pantalla.
 
-Después, lo mismo con la ficha del Asistente y la del Paciente.
+Después, lo mismo con el Legajo del Asistente y el del Paciente.
 
 **El registro de accesos va acá y no en un paso aparte**, porque es el mismo archivo reescrito una
 sola vez en vez de dos barridos por los mismos 135. Es un registro separado del de actividad,
@@ -714,7 +714,7 @@ sola Prestadora, sin versión y sin dónde queden guardados.
 sus secciones están en el mismo Panel y aparecen sólo si la Prestadora tiene habilitada la
 intermediación. Son cuatro: Calificaciones, Clientes, Formas de cobro —con su detalle y los
 plazos del cobro— y Auditoría legal. Clientes y Formas de cobro las ve además sólo la
-administración. En la ficha del Asistente, la pestaña de evaluaciones sigue la misma regla.
+administración. En el Legajo del Asistente, la pestaña de evaluaciones sigue la misma regla.
 
 ---
 
@@ -784,7 +784,7 @@ guardado:
   lo que las nombra, así que lo decide usted.
 - **De qué es una guardia no está guardado en ninguna parte.** Un Servicio incluye varias —de
   cuidados, de enfermería, de lo que se haya acordado—, y el tipo hoy lo lleva únicamente la persona
-  que la cubre, en su ficha. Así que la guardia se deduce de quién la cubre, **y mientras no haya
+  que la cubre, en su Legajo. Así que la guardia se deduce de quién la cubre, **y mientras no haya
   nadie asignado no dice qué hace falta ahí**. Sin eso, el aviso del hueco puede decir que falta
   cubrir un horario pero no de qué, y la sugerencia de Asistentes no tiene contra qué comparar. ¿El
   tipo pasa a la guardia?
@@ -792,7 +792,7 @@ guardado:
 **26. Usted** — Y una que aparece al cruzar el acto con la regla del producto: **el Pagador.** La
 regla dice que quien asume la obligación de pagar queda definido recién cuando firma, y que eso
 tiene que estar listo **el día que se firma con el Contratante** — que es exactamente este acto. Pero
-la firma vive hoy en otra pantalla, dentro de la ficha del Cliente, con su propio estado y sus
+la firma vive hoy en otra pantalla, dentro de la Ficha del cliente, con su propio estado y sus
 botones de armar el consentimiento y registrar la firma; y el único requisito que este acto pone
 para habilitar un Servicio es el coordinador asignado. ¿Son dos requisitos, y un Servicio sin
 Pagador firmado tampoco se habilita? ¿O el acto muestra cómo está esa firma y deja seguir?
@@ -1140,7 +1140,7 @@ Los tres arreglos, para que estén escritos:
 
 1. **No existe el formulario público de postulación.** Hay una ruta de backend que acepta doce campos y ninguna pantalla que la use.
 2. **Las listas de opciones nacen vacías.** Género, nacionalidad, tipo de registro ante AFIP y los cinco subgrupos de experiencia clínica se cargan por Prestadora. **La pantalla donde se cargan ya está construida** —`panel/src/pages/configuracion/LasListasDeOpciones.jsx`—, así que lo que queda es sembrar las listas de cada Prestadora: mientras estén vacías el formulario no tiene nada que ofrecer.
-3. **Al incorporar un aspirante se pierden quince datos.** Lo que cargó en la postulación no llega entero a su ficha de Asistente.
+3. **Al incorporar un aspirante se pierden quince datos.** Lo que cargó en la postulación no llega entero al Legajo del Asistente.
 
 **57. Usted** — ¿Dónde vive el formulario público de postulación? No va en `careonys.com`, que le vende software a las Prestadoras: quien busca trabajo de cuidador se postula en la empresa que lo va a contratar. ¿En el sitio de cada Prestadora, con dirección propia?
 
@@ -1345,7 +1345,7 @@ quién, cuánto y con qué condiciones lo decide ella sola.
 
 - **Lo que CeltaTech le habilita**, según el plan que contrató. **No existe.**
 - **Lo que la Prestadora decide usar**, adentro de eso, desde su Configuración. Existe.
-- **Lo que la ficha de cada Asistente permite**, adentro de lo que la Prestadora usa. Existe.
+- **Lo que el Legajo de cada Asistente permite**, adentro de lo que la Prestadora usa. Existe.
 
 Como falta el primero, el de la Prestadora quedó siendo el único, y por eso hoy se habilita Match
 sola. Del lado de CeltaTech el mecanismo ya está construido —un catálogo de capacidades que cada
@@ -1391,7 +1391,7 @@ falta alguien más además de esa persona, que es otra pregunta.
 
 **108. Usted** — La categoría de convenio del Asistente se teclea a mano, y de ella depende su
 remuneración básica. El convenio tiene sus categorías definidas y no las inventa la Prestadora,
-así que tecleadas quedan escritas distinto en cada ficha: no se puede saber cuántos Asistentes hay
+así que tecleadas quedan escritas distinto en cada Legajo: no se puede saber cuántos Asistentes hay
 en cada una, ni aplicarle un cambio de escala a todos los de una categoría de una sola vez, y un
 error de tipeo sale impreso en el documento de cese. El campo viene de la aplicación vieja y nunca
 se discutió. **Qué hay que analizar:** si pasa a ser una lista que la Prestadora carga —porque las
@@ -1459,7 +1459,7 @@ Lo que la tabla tiene que poder expresar, porque hay un país que obliga a cada 
 - **Un vencimiento independiente del clínico** (Costa Rica, art. 11 del reglamento: diez años desde
   que terminó el objeto del tratamiento).
 - Un plazo que corre **desde el último ingreso de información** (Chile, 15 años, art. 11 del
-  Decreto 41/2012). Cualquier anotación posterior reinicia el reloj de toda la ficha.
+  Decreto 41/2012). Cualquier anotación posterior reinicia el reloj de toda la historia clínica.
 - **Dos plazos encadenados** (Colombia: 5 de gestión más 10 de archivo central, 15 en total desde la
   última atención; 30 si el paciente fue víctima de violaciones a los derechos humanos, y guarda
   permanente si la historia integra un proceso por delitos de lesa humanidad).
@@ -1554,7 +1554,7 @@ pantalla del Panel.
 
 **116.** **Respaldos que se probaron.** El 164.308(a)(7)(ii)(A), (B) y (C) son «Required»: copia
 exacta y recuperable, restauración y modo de emergencia. El Decreto 41/2012 chileno lo escribe como
-requisito de la ficha clínica, y en Francia la copia de respaldo es una de las actividades
+requisito de la historia clínica, y en Francia la copia de respaldo es una de las actividades
 certificables del référentiel HDS.
 
 **Y hay un país que fija frecuencia:** el art. 51 del DS 016-2024-JUS peruano exige copias

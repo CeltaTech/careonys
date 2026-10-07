@@ -53,7 +53,7 @@ describe('modalidadesDelAsistente', () => {
     expect(modalidadesDelAsistente({ canales: ['directa'] })).toEqual(['directa']);
   });
 
-  it('una ficha sin nada cargado no tiene ninguna modalidad', () => {
+  it('un Legajo del Asistente sin nada cargado no tiene ninguna modalidad', () => {
     expect(modalidadesDelAsistente({})).toEqual([]);
     expect(modalidadesDelAsistente({ canales: null })).toEqual([]);
     expect(modalidadesDelAsistente(null)).toEqual([]);
@@ -64,7 +64,7 @@ describe('trabajaEnModalidad', () => {
   const soloDirecta = { canales: ['directa'] };
   const lasDos = { canales: ['directa', 'intermediacion'] };
 
-  it('cruza la modalidad de la guardia contra la ficha del Asistente', () => {
+  it('cruza la modalidad de la guardia contra el Legajo del Asistente', () => {
     expect(trabajaEnModalidad(soloDirecta, MODALIDAD.DIRECTA)).toBe(true);
     expect(trabajaEnModalidad(soloDirecta, MODALIDAD.INTERMEDIACION)).toBe(false);
     expect(trabajaEnModalidad(lasDos, MODALIDAD.INTERMEDIACION)).toBe(true);

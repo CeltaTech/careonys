@@ -92,10 +92,10 @@ panelHabilitarClaveRouter.post(
   },
 );
 
-// La foto de la ficha, cuando la hay. Es lo que le permite a quien atiende reconocer a quien llama,
-// y sale de la ficha del Asistente, que es donde vive: el Legajo no guarda ninguna.
+// La foto del Legajo del Asistente, cuando la hay. Es lo que le permite a quien atiende reconocer a quien llama,
+// y sale del Legajo del Asistente, que es donde vive: el Legajo del Padrón no guarda ninguna.
 // La Organización va escrita en la consulta y no se deduce de que la cuenta ya haya salido
-// filtrada: la ficha del Asistente es de una Prestadora, y se la pide nombrándola.
+// filtrada: el Legajo del Asistente es de una Prestadora, y se lo pide nombrándola.
 async function conFoto(cuenta, prestadoraId) {
   const { data } = await supabase
     .from('asistentes')

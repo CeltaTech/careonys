@@ -245,9 +245,9 @@ describe('la administración sí pasa el candado', () => {
   });
 });
 
-describe('la lista de accesos trae los nombres aunque la ficha esté pendiente de conformidad', () => {
+describe('la lista de accesos trae los nombres aunque el Legajo esté pendiente de conformidad', () => {
   // La política restrictiva `oculta_pendientes_de_conformidad` de `pacientes` y de `asistentes`
-  // esconde las fichas pendientes a quien pide. Antes de pasar a la credencial de la persona, el
+  // esconde los Legajos pendientes a quien pide. Antes de pasar a la credencial de la persona, el
   // nombre salía igual, y así tiene que seguir: los nombres se leen con la llave maestra,
   // acotados a la Prestadora de la sesión.
   it('pide los nombres con la llave maestra y con el filtro de la Prestadora', async () => {

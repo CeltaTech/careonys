@@ -13,7 +13,7 @@ import { DOMICILIO_VACIO } from '../../lib/partesDeDomicilio';
 
    POR QUÉ PARTIDO. Un domicilio en un solo renglón no se puede buscar ni comparar: «Av. Siempreviva
    742, Belgrano» y «Siempreviva 742 - Belgrano» son la misma casa y para el sistema son dos textos
-   sin nada en común. Partido, la localidad es una ficha y se puede preguntar quién trabaja ahí.
+   sin nada en común. Partido, la localidad es un lugar del catálogo y se puede preguntar quién trabaja ahí.
 
    «UNIDAD» Y NO «DEPARTAMENTO», porque el departamento de un edificio y el de una provincia se
    escriben igual y no son lo mismo.

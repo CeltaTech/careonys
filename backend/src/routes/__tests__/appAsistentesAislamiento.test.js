@@ -4,7 +4,7 @@
  *
  *   npm test --prefix backend
  *
- * POR QUÉ EXISTE ESTA PRUEBA. Una misma persona tiene una ficha por cada Prestadora donde
+ * POR QUÉ EXISTE ESTA PRUEBA. Una misma persona tiene un Legajo de Asistente por cada Prestadora donde
  * trabaja. Lo que separa una Prestadora de otra es que estas consultas vayan con la credencial de
  * quien pide, para que la base le conteste sólo lo de la suya: con la llave maestra la aplicación
  * mostraría lo de otra Prestadora y la pantalla se vería igual de bien. No lo encuentra nadie
@@ -141,7 +141,7 @@ describe('la baja del aviso al celular', () => {
 });
 
 // El consentimiento ya no entra con la llave maestra: se lee con la credencial de quien pide, y la
-// base sólo le deja ver las decisiones de su propia ficha. Lo que se comprueba es que la lectura
+// base sólo le deja ver las decisiones de su propio Legajo. Lo que se comprueba es que la lectura
 // vaya de verdad con esa credencial y por el Legajo, no por la cuenta. Con la llave maestra y sin
 // filtro de Prestadora, esta comprobación falla.
 describe('la decisión de consentimiento que ya tomó', () => {

@@ -20,8 +20,8 @@ import { normalizarIdioma } from '../i18n/idiomas.js';
 //
 // Con la credencial de quien pide: todo entra a la base con `clienteDelPedido(req)`, no
 // con la llave maestra. La base sabe qué Asistente pide y le deja ver y escribir sólo
-// lo de su propia ficha, así que ninguna consulta lleva el filtro de la Prestadora de
-// la sesión. La Prestadora que se escribe es la de la ficha que la base ya dejó ver.
+// lo de su propio Legajo, así que ninguna consulta lleva el filtro de la Prestadora de
+// la sesión. La Prestadora que se escribe es la del Legajo que la base ya dejó ver.
 // ============================================================================
 
 export const appAsistentesConsentimientosRouter = Router();
@@ -74,7 +74,7 @@ async function textoVigente(db, { jurisdiccion, clave, modalidad, idioma }) {
 }
 
 // Es la puerta de entrada de todo lo demás: lo que se actualiza o se borra después va por el
-// identificador que sale de acá, y la base sólo deja ver las decisiones de la propia ficha.
+// identificador que sale de acá, y la base sólo deja ver las decisiones del propio Legajo.
 async function decisionViva(db, asistenteId, clave) {
   const { data } = await db
     .from('consentimientos_asistente')

@@ -237,7 +237,7 @@ ALTER TABLE asistentes ADD COLUMN horas_semanales NUMERIC(5,2);
 -- La columna se llama `canales` porque así se creó, y lo guardado no se renombra. La palabra del producto es **modalidad de trabajo**.
 --
 -- Quién decide: la Prestadora pone el techo con las modalidades que tenga activas y, dentro
--- de ese techo, decide la ficha de cada Asistente. Lo hacen cumplir los disparadores
+-- de ese techo, decide el Legajo de cada Asistente. Lo hacen cumplir los disparadores
 -- `trg_modalidades_*` sobre esta tabla y `trg_modalidad_en_*` sobre guardias, series y
 -- ofertas. Si una modalidad no está habilitada, el motivo de la exclusión vive en
 -- `datos_reservados_asistente`, no acá.
@@ -249,7 +249,7 @@ ALTER TABLE asistentes ADD CONSTRAINT asistentes_canales_valido
 ### remuneraciones_asistente — lo que cobra el Asistente
 
 Vive separado de `asistentes` a propósito. Las reglas de acceso de la base filtran filas, no
-columnas: mientras los importes estaban dentro de la ficha, cualquiera que podía ver al
+columnas: mientras los importes estaban dentro del Legajo del Asistente, cualquiera que podía ver al
 Asistente podía leerlos —una Coordinadora con el permiso cerrado, y también el Cliente—. En su
 propia tabla la base exige `tiene_permiso('ver_pagos_asistente')` antes de contestar, y escribir
 queda reservado a la administración de la Prestadora. Contra `asistentes` es uno a uno: la
@@ -267,12 +267,12 @@ CREATE TABLE remuneraciones_asistente (
 );
 ```
 
-### datos_reservados_asistente — lo reservado de la ficha
+### datos_reservados_asistente — lo reservado del Legajo del Asistente
 
 Por qué se lo dio de baja, su puntaje de riesgo con los motivos que lo forman, y por qué quedó
 excluido de recibir trabajo. Vive separado de `asistentes` por la misma razón que los importes:
-las reglas de acceso de la base filtran filas, no columnas, así que mientras estaban dentro de
-la ficha cualquiera que podía ver al Asistente podía leerlos, aunque su pantalla no se los
+las reglas de acceso de la base filtran filas, no columnas, así que mientras estaban dentro del
+Legajo del Asistente cualquiera que podía ver al Asistente podía leerlos, aunque su pantalla no se los
 mostrara. En su propia tabla la base exige `tiene_permiso('ver_datos_reservados_asistente')`
 antes de contestar, y escribir queda reservado a la administración de la Prestadora. Contra
 `asistentes` es uno a uno, y la fila existe solo si hay algo cargado.
@@ -563,7 +563,7 @@ RLS). Resumen de las tablas:
   `prestadora_id` (FK compuesta tenant-segura contra `pacientes`/`asistentes`).
 - **`domicilios_temporales_paciente`** — dónde se atiende al Paciente durante una temporada en
   que no está en su casa: el verano en la casa de un hijo, una internación, una mudanza
-  mientras arreglan el departamento. Mientras dura, **reemplaza** a la dirección de la ficha;
+  mientras arreglan el departamento. Mientras dura, **reemplaza** a la dirección del Legajo del Paciente;
   no conviven. La carga y la da de baja el Panel, no el Cliente. Dos períodos del mismo
   Paciente no pueden compartir ni un día (restricción `domicilios_temp_sin_superposicion`),
   para que "¿dónde se lo atiende hoy?" tenga siempre una sola respuesta. Quién contesta esa

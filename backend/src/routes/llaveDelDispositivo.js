@@ -265,7 +265,7 @@ async function quienAbreConEstaLlave({ prestadoraId, rol, respuesta }) {
     .eq('id', llave.id)
     .eq('prestadora_id', prestadoraId);
 
-  // El rol sale de la ficha y el correo de la cuenta: son dos tablas distintas, porque
+  // El rol sale de `usuarios` y el correo de la cuenta: son dos tablas distintas, porque
   // `usuarios` no guarda el correo (ver `correoDeUnaPersona.js`).
   const { data: persona } = await supabase
     .from('usuarios')
@@ -304,7 +304,7 @@ function leerDesafio(respuesta) {
  * cambia es de qué propiedad sale la persona, porque cada middleware de rol deja la suya.
  *
  * CON QUÉ CREDENCIAL. Todo corre con la de la persona (`clienteDelPedido(req)`): la base le deja
- * ver su propia ficha, ver y agregar sus propias llaves y darlas de baja, y pedir y gastar sus
+ * ver su propia fila de `usuarios`, ver y agregar sus propias llaves y darlas de baja, y pedir y gastar sus
  * propios desafíos de alta, siempre adentro de la Prestadora de su sesión. Los filtros por la
  * persona y por la Prestadora quedan escritos igual, porque dicen qué se busca.
  */

@@ -284,7 +284,7 @@ Cargada vía `<link>` de Google Fonts en `panel/index.html` (pesos 400;500;600;7
   por día. Cada guardia es un chip que reutiliza las clases de estado ya existentes
   (`.guardia-programada`, etc.). No existe columna "sin asignar": `guardias.asistente_id` es
   `NOT NULL` en el schema, ese estado no tiene equivalente real.
-- **Comunicación**: además del hilo por Asistente (dentro de su ficha), existe una bandeja
+- **Comunicación**: además del hilo por Asistente (dentro del Legajo del Asistente), existe una bandeja
   global en `/comunicacion` con lista de Asistentes ordenada por último mensaje a la
   izquierda y el hilo activo a la derecha. Ambas vistas comparten el mismo componente
   (`HiloComunicacion`), no hay lógica de chat duplicada.
@@ -349,7 +349,7 @@ del Panel, que sí los resuelve.
 ## solo se toman estas dos prácticas puntuales, ver justificación en memoria de sesión)
 
 - **Teléfono siempre como link, nunca texto plano.** Cualquier campo de teléfono/WhatsApp
-  visible en UI (ficha de Cliente, ficha de Asistente, tabla de postulantes) se renderiza
+  visible en UI (Ficha del cliente, Legajo del Asistente, tabla de postulantes) se renderiza
   como `wa.me/{telefono}`, no como texto estático — reduce fricción de contacto en un solo
   clic, consistente con el botón de WhatsApp flotante que ya define `PRD_01_Sitio_Web.md`.
 - **Listas largas de opciones se agrupan por categoría, nunca scroll vertical infinito.**

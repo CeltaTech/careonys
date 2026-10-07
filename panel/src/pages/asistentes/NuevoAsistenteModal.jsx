@@ -27,14 +27,14 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
   const [tipoAsistenteId, setTipoAsistenteId] = useState('');
   /* Dónde acepta trabajar. Se guarda cuál de los lugares de la Prestadora, nunca el nombre
      tecleado: escrito a mano, «Villa Urquiza» y «villa urquiza» son dos lugares distintos y
-     ninguna búsqueda los junta. Puede quedar vacío en el alta y cargarse después en la ficha. */
+     ninguna búsqueda los junta. Puede quedar vacío en el alta y cargarse después en el Legajo del Asistente. */
   const [lugares, setLugares] = useState([]);
   const { paraElegir: tiposAsistente } = useTiposAsistente();
   const { modalidades } = useModalidades();
 
   /* Las formas de recibir trabajo que la Prestadora tiene activas. Arrancan todas marcadas:
      es lo mismo que haría la base si el alta no dijera nada, y así queda a la vista antes de
-     crear a la persona, en vez de descubrirlo después en la ficha. */
+     crear a la persona, en vez de descubrirlo después en el Legajo del Asistente. */
   const modalidadesPosibles = useMemo(() => modalidadesHabilitadas(modalidades), [modalidades]);
   const [elegidas, setElegidas] = useState(null);
   const modalidadesMarcadas = elegidas ?? modalidadesPosibles;

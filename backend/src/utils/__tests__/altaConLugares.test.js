@@ -10,7 +10,7 @@
  *
  *  1. Que el alta escriba los lugares que le mandaron, y en la Organización de quien la hizo.
  *  2. Que un alta de Asistente cuyos lugares no se pudieron escribir se deshaga entera, sin dejar
- *     una ficha sin lugares que nadie va a volver a mirar.
+ *     un Legajo de Asistente sin lugares que nadie va a volver a mirar.
  *  3. Que una cuenta de Panel cuyo alcance no se pudo escribir se borre: una cuenta con acceso que
  *     nadie decidió es peor que un alta que no ocurrió.
  *
@@ -25,7 +25,7 @@ import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const QUIEN_LLAMA = '22222222-2222-2222-2222-222222222222';
 const NUEVA_CUENTA = '33333333-3333-3333-3333-333333333333';
-// El Legajo que la base le da a la ficha nueva. Es a propósito otro número que el de la cuenta: la
+// El número que la base le da al Legajo del Asistente nuevo. Es a propósito otro número que el de la cuenta: la
 // misma persona puede tener otro Legajo en otra Prestadora, colgando de esta misma cuenta.
 const NUEVO_LEGAJO = '44444444-4444-4444-4444-444444444444';
 const LUGAR = '55555555-5555-5555-5555-555555555555';
@@ -166,7 +166,7 @@ describe('el alta de una Asistente', () => {
       db: supabase,
     }));
 
-    // La ficha se borra y la cuenta de acceso también: no queda nadie a medias.
+    // El Legajo del Asistente se borra y la cuenta de acceso también: no queda nadie a medias.
     assert.equal(hubo('DELETE /rest/v1/asistentes'), true);
     assert.equal(hubo('POST /rest/v1/rpc/dar_de_baja_la_cuenta'), true);
   });

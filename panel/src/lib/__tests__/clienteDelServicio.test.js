@@ -12,6 +12,14 @@ const CONTACTO = {
   email: 'contacto.inventado@ejemplo.test',
 };
 
+// Cómo llega ese mismo contacto desde el Padrón: el Legajo del Cliente, su lugar y sus teléfonos.
+const LEGAJO = {
+  nombre_visible: 'Cliente Gómez',
+  email: 'contacto.inventado@ejemplo.test',
+  lugares: { nombre: 'Vicente López' },
+  telefonos_del_legajo: [{ telefono: '+54 11 5555-0000' }],
+};
+
 const SERVICIO_DE_UN_CLIENTE = {
   id: 's1',
   tipo_contratante: TIPO_CLIENTE,
@@ -70,7 +78,7 @@ function baseFalsa(respuesta) {
 describe('contactosDeClientes', () => {
   it('trae una sola vez cada Cliente, aunque tenga varios Servicios', async () => {
     const { supabase, enIn } = baseFalsa({
-      data: [{ id: CLIENTE, solicitudes: CONTACTO }],
+      data: [{ id: CLIENTE, legajos: LEGAJO }],
       error: null,
     });
 
@@ -104,13 +112,13 @@ describe('contactosDeClientes', () => {
     expect(contactos.size).toBe(0);
   });
 
-  // Un Cliente que entró sin solicitud no tiene de dónde sacar el contacto, y eso no puede
-  // dejar un renglón indefinido adentro del mapa: la pantalla muestra un guion.
-  it('deja afuera al Cliente que no tiene solicitud', async () => {
+  // Un Legajo que la base no devuelve —la protección por fila no lo deja ver— no puede dejar un
+  // renglón indefinido adentro del mapa: la pantalla muestra un guion.
+  it('deja afuera al Cliente cuyo Legajo no llegó', async () => {
     const { supabase } = baseFalsa({
       data: [
-        { id: CLIENTE, solicitudes: CONTACTO },
-        { id: OTRO_CLIENTE, solicitudes: null },
+        { id: CLIENTE, legajos: LEGAJO },
+        { id: OTRO_CLIENTE, legajos: null },
       ],
       error: null,
     });

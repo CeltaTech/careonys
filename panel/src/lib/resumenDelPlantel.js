@@ -111,9 +111,8 @@ export function documentacionPorAsistente(
  * Las opciones de un filtro, sacadas de lo que el plantel tiene cargado.
  *
  * Las especialidades las escribió a mano quien cargó el Legajo de cada Asistente, así que la misma aparece escrita
- * de varias maneras. Se agrupan con `comparable` (`textoComparable.js`), que es el mismo criterio
- * con el que la sugerencia de la Solicitud acerca las dos puntas, y se muestra la primera forma
- * que apareció.
+ * de varias maneras. Se agrupan con `comparable` (`textoComparable.js`), y se muestra la primera
+ * forma que apareció.
  *
  * **Las opciones salen del plantel y no de un catálogo** a propósito: dejaría afuera lo que
  * alguien escribió sin que estuviera en la lista, que es justo lo que hay que poder encontrar.

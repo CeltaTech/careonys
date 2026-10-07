@@ -2,9 +2,8 @@
 // textoComparable.js — dejar dos textos escritos a mano en condiciones de compararse
 //
 // Hay datos que en una punta los escribe una persona y en la otra los escribió otra, en otro
-// momento y sin ninguna lista de la cual elegir: la localidad de una Solicitud contra las zonas
-// del Legajo del Asistente, el tipo de servicio pedido contra sus especialidades, el tipo de
-// Asistente cargado a mano antes de que existiera el catálogo. "Enfermería", "ENFERMERIA" y
+// momento y sin ninguna lista de la cual elegir: las especialidades del Legajo del Asistente, el
+// tipo de Asistente cargado a mano antes de que existiera el catálogo. "Enfermería", "ENFERMERIA" y
 // "Enfermeria " son la misma cosa para cualquiera que las lea, y tres cosas distintas para una
 // comparación de cadenas.
 //
@@ -28,19 +27,4 @@ export function comparable(texto) {
     .normalize('NFD')
     .toLowerCase()
     .replace(/[^a-z]/g, '');
-}
-
-/**
- * Si dos textos escritos por separado nombran lo mismo.
- *
- * Además de la igualdad vale que uno contenga al otro, porque una punta suele escribir de más:
- * el Legajo del Asistente dice "Zona Norte" y la Solicitud "Norte", el Legajo del Asistente dice "Cuidado domiciliario
- * nocturno" y la Solicitud "Cuidado domiciliario". Un texto vacío no coincide con nada: sin dato
- * no hay coincidencia que afirmar.
- */
-export function nombranLoMismo(uno, otro) {
-  const a = comparable(uno);
-  const b = comparable(otro);
-  if (!a || !b) return false;
-  return a === b || a.includes(b) || b.includes(a);
 }

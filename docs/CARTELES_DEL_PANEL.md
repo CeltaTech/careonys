@@ -50,10 +50,9 @@ porque son los que más veces se ven.
 ## 1. El cartel genérico de lista vacía
 
 **Cómo llegar.** No tiene un camino propio: aparece en cualquier lista del Panel que no traiga un
-cartel escrito para ella. Los lugares donde hoy se lo ve sin hacer nada especial son **Clientes →
-Solicitudes de Servicio**, **Plantel → Postulaciones**, **Cumplimiento → Verificación de
-Guardias**, **Plantel → Documentación**, y la solapa **«Proceso de Incorporación»** dentro del
-Legajo del Asistente.
+cartel escrito para ella. Los lugares donde hoy se lo ve sin hacer nada especial son **Plantel →
+Postulaciones**, **Cumplimiento → Verificación de Guardias**, **Plantel → Documentación**, y la
+solapa **«Proceso de Incorporación»** dentro del Legajo del Asistente.
 
 **Qué es esa pantalla y para qué se usa.** No es una pantalla, es el texto de fábrica. Todas las
 listas del Panel las dibuja una misma pieza, que sabe mostrar cuatro situaciones: que está
@@ -79,11 +78,10 @@ un blanco donde iría la tabla.
 
 **Problemas que se ven acá.** Cuatro.
 
-El primero es que en tres de los cinco lugares donde se lo ve, el texto cuenta mal el hecho: dice
-«cuando se cargue el primer registro», y en **Solicitudes de Servicio**, **Postulaciones** y
-**Verificación de Guardias** nadie carga nada desde el Panel. Lo que hace aparecer una fila ahí es
-algo que pasa afuera —un Cliente que pide un servicio, una persona que se postula, una guardia que
-se cumple—, y eso el cartel no lo nombra.
+El primero es que en dos de los cuatro lugares donde se lo ve, el texto cuenta mal el hecho: dice
+«cuando se cargue el primer registro», y en **Postulaciones** y **Verificación de Guardias** nadie
+carga nada desde el Panel. Lo que hace aparecer una fila ahí es algo que pasa afuera —una persona
+que se postula, una guardia que se cumple—, y eso el cartel no lo nombra.
 
 El segundo es **Documentación**, y es el más serio de los cuatro: esa pantalla abre ya filtrada a
 «Vencidos y por vencer», y ese valor de arranque no cuenta como filtro puesto. Entonces, cuando no
@@ -638,8 +636,7 @@ normalmente va qué hacer o qué va a hacer aparecer algo acá, y acá se usa pa
 
 **Cómo llegar.** Menú lateral → grupo **Cobertura** → **Guardias** → botón para crear una guardia
 nueva. Se abre una ventana encima de la pantalla. El cartel está en el medio de esa ventana, en el
-lugar donde iría la lista de personas para marcar. También se llega a la misma ventana desde
-**Clientes → Solicitudes de Servicio → abrir una Solicitud**.
+lugar donde iría la lista de personas para marcar.
 
 **Qué es esa pantalla y para qué se usa.** Es la ventana donde se crea un turno de trabajo. Ahí se
 define todo: si es un turno suelto o uno que se repite semana a semana, quién lo toma —se puede
@@ -1045,33 +1042,24 @@ del Panel no llevan punto.
 
 ---
 
-# Plantel → Postulaciones (y Clientes → Solicitudes de Servicio)
+# Plantel → Postulaciones
 
-Los dos carteles que siguen son del mismo mapa, que se ve en dos lugares distintos del Panel.
+Los dos carteles que siguen son del mismo mapa.
 
 ## 19. Mapa del plantel — cuando no hay nadie en el plantel
 
-**Cómo llegar.** Por cualquiera de estos dos caminos:
-- Menú lateral → grupo **Plantel** → **Postulaciones**, y bajar hasta la sección **«Mapa del plantel
-  por zona»**.
-- Menú lateral → grupo **Clientes** → **Solicitudes de Servicio** → abrir una Solicitud, y bajar
-  hasta la misma sección dentro de esa ventana.
-
-En los dos lugares es exactamente el mismo mapa y el mismo cartel.
+**Cómo llegar.** Menú lateral → grupo **Plantel** → **Postulaciones**, y bajar hasta la sección
+**«Mapa del plantel por zona»**.
 
 **Qué es esa pantalla y para qué se usa.** Es un mapa que muestra dónde vive la gente que hoy está
-trabajando en la Prestadora, agrupada por zona de cobertura. Se usa en dos lugares: en la pantalla de
-postulaciones, para mirar cómo está repartido el plantel antes de sumar gente nueva, y adentro de la
-ventana de una Solicitud de Servicio, para ver quién queda cerca del lugar que pidió el servicio. Cada
-persona aparece como un puntito; el punto se dibuja únicamente si ese Legajo tiene una ubicación
-cargada. Nunca se muestra ninguna dirección escrita, sólo el punto.
+trabajando en la Prestadora, agrupada por zona de cobertura, para mirar cómo está repartido el
+plantel antes de sumar gente nueva. Cada persona aparece como un puntito; el punto se dibuja
+únicamente si ese Legajo tiene una ubicación cargada. Nunca se muestra ninguna dirección escrita,
+sólo el punto.
 
 **Qué se ve en pantalla, de arriba abajo.**
-- En la pantalla de postulaciones: título de la pantalla, «Postulaciones de Asistentes».
-- En la ventana de una Solicitud: título de sección, «Asistentes sugeridos», y debajo su explicación,
-  «Ordenados por zona, especialidad y disponibilidad, cruzando lo que dice esta Solicitud con lo
-  cargado de cada Asistente. Es una sugerencia: la elección es de quien atiende la Solicitud.»
-- Título de sección del mapa, en los dos casos: «Mapa del plantel por zona»
+- Título de la pantalla, «Postulaciones de Asistentes».
+- Título de sección del mapa: «Mapa del plantel por zona»
 - Debajo va todo el mapa —la cuenta, los botones de zona, el dibujo y la lista de nombres—, o el
   cartel cuando no hay nada que dibujar.
 
@@ -1091,10 +1079,8 @@ que dice cuántas personas se pudieron ubicar sobre el total, los botones para e
 cantidad—, el dibujo del mapa con sus puntos, la lista escrita con el nombre de cada persona y sus
 zonas, y el renglón final que avisa cuántos Legajos quedaron sin ubicación cargada.
 
-**Qué queda alrededor si el cartel se saca.** El título de la pantalla o de la sección que
-corresponda, el título «Mapa del plantel por zona», y debajo un blanco. En la ventana de una
-Solicitud, más abajo sigue estando la lista de Asistentes sugeridos, que es otra lista aparte y tiene
-su propio cartel.
+**Qué queda alrededor si el cartel se saca.** El título de la pantalla, el título «Mapa del plantel
+por zona», y debajo un blanco.
 
 **Problemas que se ven acá.** El texto está repetido: se lee dos veces seguidas la misma frase, una
 como título del cartel y otra como renglón de ayuda. Y donde tendría que estar el segundo renglón —el
@@ -1111,9 +1097,9 @@ domicilio ubicado aparecen acá.», nunca se llega a mostrar en esta situación.
 
 ## 20. Mapa del plantel — cuando hay plantel pero ninguna ubicación cargada
 
-**Cómo llegar.** El mismo camino que el cartel anterior: **Plantel → Postulaciones**, o **Clientes →
-Solicitudes de Servicio → abrir una Solicitud**, y bajar hasta **«Mapa del plantel por zona»**. La
-diferencia con el caso anterior no es el camino sino la situación: acá sí hay gente trabajando.
+**Cómo llegar.** El mismo camino que el cartel anterior: **Plantel → Postulaciones**, y bajar hasta
+**«Mapa del plantel por zona»**. La diferencia con el caso anterior no es el camino sino la
+situación: acá sí hay gente trabajando.
 
 **Qué es esa pantalla y para qué se usa.** Es el mismo mapa descrito arriba: dónde vive la gente del
 plantel activo, agrupada por zona. La diferencia con el caso anterior es la situación: acá sí hay
@@ -1122,10 +1108,7 @@ que dibujar. La decisión deliberada es no mostrar un mapa mudo, porque un mapa 
 mapa roto.
 
 **Qué se ve en pantalla, de arriba abajo.**
-- En la pantalla de postulaciones: título de la pantalla, «Postulaciones de Asistentes».
-- En la ventana de una Solicitud: título de sección, «Asistentes sugeridos», y su explicación,
-  «Ordenados por zona, especialidad y disponibilidad, cruzando lo que dice esta Solicitud con lo
-  cargado de cada Asistente. Es una sugerencia: la elección es de quien atiende la Solicitud.»
+- Título de la pantalla, «Postulaciones de Asistentes».
 - Título de sección del mapa: «Mapa del plantel por zona»
 - Debajo, el cartel, en el lugar donde iría el mapa.
 
@@ -1142,9 +1125,8 @@ casilla que quedó vacía, se descartan y no cuentan como ubicación.
 cuántos se pudieron ubicar sobre el total, los botones de zona con sus cantidades, el dibujo del
 mapa, la lista escrita de nombres y el renglón que avisa cuántos quedaron sin ubicar.
 
-**Qué queda alrededor si el cartel se saca.** El título de la pantalla o de la sección, el título
-«Mapa del plantel por zona», y debajo un blanco. En la ventana de una Solicitud, más abajo sigue la
-lista de Asistentes sugeridos.
+**Qué queda alrededor si el cartel se saca.** El título de la pantalla, el título «Mapa del plantel
+por zona», y debajo un blanco.
 
 **Problemas que se ven acá.** El cartel esconde justamente el dato que más falta hace: cuántas
 personas hay en el plantel. Se sabe que no hay ubicaciones, pero no se sabe si son tres personas sin

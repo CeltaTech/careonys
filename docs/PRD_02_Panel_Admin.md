@@ -25,8 +25,7 @@ MySQL se descartó antes de escribir código (ver `docs/claude_history.md`).
 ## Módulos
 
 ### Módulo 1 — Dashboard
-Métricas en tiempo real: postulaciones recibidas hoy/semana, solicitudes pendientes,
-guardias activas ahora, Asistentes disponibles, Clientes activos, alertas de IA sin
+Métricas en tiempo real: postulaciones recibidas hoy/semana, guardias activas ahora, Asistentes disponibles, Clientes activos, alertas de IA sin
 resolver.
 
 ### Módulo 2 — Postulaciones de Asistentes
@@ -34,13 +33,13 @@ Lista (nombre, especialidad, zona, fecha, situación fiscal, estado) + filtros (
 especialidad, zona, estado, disponibilidad urgencias). Acciones: ver perfil, cambiar
 estado (con nota), email automático al Asistente, iniciar verificación (avanza las 5
 etapas — tabla `verificaciones_asistente` en `DATA_MODEL.md`). Vista mapa con Asistentes
-del plantel activo agrupados por zona; al llegar una solicitud, filtra automáticamente los
-más cercanos.
+del plantel activo agrupados por zona.
 
-### Módulo 3 — Solicitudes de Servicio (Clientes)
-Lista (nombre, teléfono, localidad, tipo de servicio, modalidad, fecha, estado) + filtros.
-Acciones: ver detalle, asignar Asistente (por zona + especialidad + disponibilidad),
-cambiar estado, click-to-call, nota interna.
+### Módulo 3 — Cómo se llega a Cliente
+El Cliente es una persona del Padrón. Entra como contacto, recibe un presupuesto, y pasa a
+Cliente sólo cuando el presupuesto se aprueba (OctoCRM, no construido). No hay alta manual de
+Cliente desde el Panel. La cartera que una Prestadora ya tenía entra por la importación, que
+crea el Legajo de cada persona.
 
 ### Módulo 4 — Plantel de Asistentes
 
@@ -122,20 +121,18 @@ componente. Evaluar solo si surge ese escenario de negocio, no diseñar para él
 
 ## Flujo de asignación de guardia
 
-1. Llega solicitud → aparece en Módulo 3 como "Nueva".
-2. Coordinador abre la solicitud.
-3. Sistema sugiere Asistentes por zona + especialidad + disponibilidad.
-4. Coordinador selecciona Asistente.
-5. Notificación al Asistente (email; push cuando la PWA esté lista).
-6. Asistente confirma → guardia "Programada".
-7. Check-in GPS en fecha/hora acordada → "Activa".
-8. Reporte diario + check-out → "Completada".
+1. El Coordinador abre la Prestación de un Cliente.
+2. Sistema sugiere Asistentes por zona + especialidad + disponibilidad.
+3. Coordinador selecciona Asistente.
+4. Notificación al Asistente (email; push cuando la PWA esté lista).
+5. Asistente confirma → guardia "Programada".
+6. Check-in GPS en fecha/hora acordada → "Activa".
+7. Reporte diario + check-out → "Completada".
 
 ## Notificaciones automáticas
 
 | Evento | Notifica a |
 |---|---|
-| Nueva solicitud de servicio | Admin_prestadora + Coordinador de turno |
 | Nueva postulación de Asistente | Admin_prestadora |
 | Asistente no hizo check-in en horario | Coordinador + Admin_prestadora |
 | Guardia activa sin check-out +2hs del horario pactado | Coordinador + Admin_prestadora |

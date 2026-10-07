@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
-import { useAuth } from '../context/AuthContext';
-import { usePermisos } from '../context/PermisosContext';
-import { esAdminOSuperior } from '../lib/roles';
 import { supabase } from '../lib/supabaseClient';
 import { useFiltros } from '../hooks/useFiltros';
 import { useCatalogoDeLugares } from '../hooks/useCatalogoDeLugares';
@@ -12,9 +9,7 @@ import { cargarGuardiasDePacientes, cargarPacientesDeGuardias, textoDePacientes 
 import { claseBadge } from '../lib/tonos';
 import { hoyISO } from '../lib/horarios';
 import { EstadoLista } from '../components/layout/EstadoLista';
-import { Button } from '../components/ui/Button';
 import { Cabecera } from '../components/ui/Cabecera';
-import { NuevoClienteModal } from './clientes/NuevoClienteModal';
 import { mensajeDeError } from '../lib/errores';
 import './listadosMaqueta.css';
 
@@ -54,17 +49,12 @@ async function cargarModalidadesPorCliente(clientes) {
 export function Clientes() {
   const { t } = useLocale();
   const navigate = useNavigate();
-  const { usuario } = useAuth();
-  const esAdmin = esAdminOSuperior(usuario?.rol);
-  const { puede } = usePermisos();
-  const puedeAltaManual = esAdmin || puede('alta_manual_cliente');
   const [filas, setFilas] = useState([]);
   const [servicios, setServicios] = useState([]);
   const [modalidades, setModalidades] = useState(new Map());
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '', lugar: '' });
-  const [mostrarNueva, setMostrarNueva] = useState(false);
   // Los nombres de las localidades salen del catálogo y no del Legajo del Paciente: lo guardado
   // es cuál lugar, y corregir una vez cómo se llama lo corrige en el Legajo de cada Paciente que lo nombra.
   const catalogo = useCatalogoDeLugares();
@@ -75,7 +65,11 @@ export function Clientes() {
     const [{ data, error: errorConsulta }, { data: serviciosData, error: errorServicios }] = await Promise.all([
       supabase
         .from('clientes')
-        .select('id, created_at, solicitudes!solicitud_id(nombre, telefono, email, localidad), pacientes(id, nombre, lugar_id, deleted_at)')
+        .select(
+          'id, created_at, pacientes(id, nombre, lugar_id, deleted_at), ' +
+            'legajos!clientes_legajo_de_la_misma_prestadora(nombre_visible, email, ' +
+            'telefonos_del_legajo!el_telefono_es_de_un_legajo_de_esta_prestadora(telefono))',
+        )
         .is('deleted_at', null)
         .order('created_at', { ascending: false }),
       supabase.from('servicios').select('id, estado, contratante_id').eq('tipo_contratante', 'cliente'),
@@ -132,7 +126,6 @@ export function Clientes() {
   }, [servicios]);
 
   const tl = t.clientes.listado;
-  const abrirAlta = () => setMostrarNueva(true);
   const abrirFichaDelCliente = (fam) => navigate(`/clientes/${fam.id}`);
 
   // Activa mientras tenga algún Servicio vigente; con Servicios y ninguno vigente, cerrada.
@@ -146,19 +139,7 @@ export function Clientes() {
 
   return (
     <div className="listado-maqueta">
-      <Cabecera titulo={t.clientes.titulo}>
-        {puedeAltaManual && <Button onClick={abrirAlta}>{tl.nueva}</Button>}
-      </Cabecera>
-
-      {mostrarNueva && (
-        <NuevoClienteModal
-          onClose={() => setMostrarNueva(false)}
-          onCreada={() => {
-            setMostrarNueva(false);
-            recargar();
-          }}
-        />
-      )}
+      <Cabecera titulo={t.clientes.titulo} />
 
       <section className="panel-tarjeta">
         <div className="panel-filtros">
@@ -187,7 +168,6 @@ export function Clientes() {
           filtrado={hayFiltros}
           onLimpiarFiltros={limpiar}
           mensajeVacio={filas.length === 0 ? t.clientes.vacio_texto : undefined}
-          accionVacio={filas.length === 0 && puedeAltaManual ? <Button onClick={abrirAlta}>{tl.nueva}</Button> : undefined}
         >
           <div className="listado-maqueta-tabla">
             <table className="panel-tabla">
@@ -216,7 +196,7 @@ export function Clientes() {
                         if (e.key === 'Enter') abrirFichaDelCliente(fam);
                       }}
                     >
-                      <td><strong>{fam.solicitudes?.nombre || '—'}</strong></td>
+                      <td><strong>{fam.legajos?.nombre_visible || '—'}</strong></td>
                       <td>{textoDePacientes(nombres, t.guardias.pacientes_y_mas)}</td>
                       <td>{propios.length}</td>
                       <td>{delCliente.map((m) => t.modalidades[m] ?? m).join(' · ') || '—'}</td>

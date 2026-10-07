@@ -39,7 +39,6 @@ export function ServicioDetalle() {
   const [contactos, setContactos] = useState(new Map());
   // Cómo se llama quien firmó la contratación. `null` es que el Servicio viene de antes del Padrón
   // y no lo dice.
-  const [contratante, setContratante] = useState(null);
   const [prestaciones, setPrestaciones] = useState([]);
   const [guardias, setGuardias] = useState([]);
   const [reportes, setReportes] = useState([]);
@@ -59,7 +58,7 @@ export function ServicioDetalle() {
       // Quién contrató sale de `tipo_contratante` y `contratante_id`; sus datos de contacto vienen
       // en una consulta aparte, porque esas dos columnas no apuntan siempre a la misma tabla y sin
       // clave foránea la base no sabe anidarlos. De dónde salen lo decide `contactosDeClientes`.
-      .select('id, etiqueta, estado, created_at, tipo_contratante, contratante_id, contratante_legajo_id')
+      .select('id, etiqueta, estado, created_at, tipo_contratante, contratante_id')
       .eq('id', id)
       .single();
 
@@ -111,7 +110,7 @@ export function ServicioDetalle() {
     const vacio = Promise.resolve({ data: [], error: null });
     const listaIds = idsGuardia.join(',');
 
-    const [pacientes, asistentes, { contactos: mapaContactos, error: fallaContactos }, relevos, sinCubrir, legajo] =
+    const [pacientes, asistentes, { contactos: mapaContactos, error: fallaContactos }, relevos, sinCubrir] =
       await Promise.all([
         idsPaciente.length ? supabase.from('pacientes').select('id, nombre').in('id', idsPaciente) : vacio,
         idsAsistente.length ? supabase.from('asistentes').select('id, nombre').in('id', idsAsistente) : vacio,
@@ -128,9 +127,6 @@ export function ServicioDetalle() {
               .select('id, guardia_id, abierto_at, resuelto_at')
               .in('guardia_id', idsGuardia)
           : vacio,
-        s.contratante_legajo_id
-          ? supabase.from('legajos').select('nombre_visible').eq('id', s.contratante_legajo_id).maybeSingle()
-          : Promise.resolve({ data: null, error: null }),
       ]);
 
     const fallaSegunda = pacientes.error ?? asistentes.error ?? fallaContactos ?? relevos.error ?? sinCubrir.error;
@@ -145,7 +141,6 @@ export function ServicioDetalle() {
 
     setServicio(s);
     setContactos(mapaContactos);
-    setContratante(legajo.data?.nombre_visible ?? null);
     setPrestaciones(pr.data ?? []);
     setGuardias(listaGuardias);
     setReportes(
@@ -218,7 +213,7 @@ export function ServicioDetalle() {
   const cliente = clienteDelServicio(servicio, contactos);
   const contacto = cliente.contacto;
   const nombrePacientes = pacientesDelServicio.length ? pacientesDelServicio.join(', ') : '—';
-  const nombreCliente = contacto?.nombre || contratante || '—';
+  const nombreCliente = contacto?.nombre || '—';
   const puedeAgregarPrestacion = servicio.estado === ESTADO_ACTIVO && Boolean(cliente.ruta);
   const guardiasVisibles = guardias.slice(0, GUARDIAS_A_MOSTRAR);
 
@@ -278,9 +273,6 @@ export function ServicioDetalle() {
                 <span className="panel-mini">
                   {[contacto.telefono, contacto.email, contacto.localidad].filter(Boolean).join(' · ')}
                 </span>
-              )}
-              {contratante && contratante !== nombreCliente && (
-                <span className="panel-mini">{d.contratado_por}: {contratante}</span>
               )}
             </div>
           </div>

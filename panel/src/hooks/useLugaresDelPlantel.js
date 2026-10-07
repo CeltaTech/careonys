@@ -4,10 +4,10 @@ import { useCatalogoDeLugares } from './useCatalogoDeLugares';
 
 /* Dónde acepta trabajar cada una de las personas de una lista, con el nombre de cada lugar.
 
-   POR QUÉ ES UN HOOK Y NO DOS CONSULTAS EN CADA PANTALLA. Tres pantallas muestran la misma cosa:
-   la lista del plantel, la sugerencia de una Solicitud y el equipo de un Paciente. Las tres
-   necesitan lo mismo —qué lugares tiene el Legajo de cada Asistente y cómo se llaman—, y escribirlo tres veces
-   terminaría con una mostrando los nombres del catálogo y otra mostrando identificadores.
+   POR QUÉ ES UN HOOK Y NO DOS CONSULTAS EN CADA PANTALLA. La lista del plantel y el mapa del
+   plantel necesitan lo mismo —qué lugares tiene el Legajo de cada Asistente y cómo se llaman—, y
+   escribirlo dos veces terminaría con una mostrando los nombres del catálogo y otra mostrando
+   identificadores.
 
    POR QUÉ LOS NOMBRES SALEN DEL CATÁLOGO. Lo guardado en el Legajo del Asistente es cuál lugar, no cómo se
    llama. El nombre se busca al mostrarlo: así, corregir una vez el nombre de una localidad lo

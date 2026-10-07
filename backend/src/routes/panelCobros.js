@@ -121,11 +121,11 @@ async function nombresDeClientes(prestadoraId, ids) {
   // conformidad, y sus facturas y saldos se mostraban con el nombre. Se decide aparte.
   const { data, error } = await supabase
     .from('clientes')
-    .select('id, solicitudes!clientes_solicitud_id_fkey(nombre)')
+    .select('id, legajos!clientes_legajo_de_la_misma_prestadora(nombre_visible)')
     .eq('prestadora_id', prestadoraId)
     .in('id', unicos);
   if (error) throw new Error(error.message);
-  return new Map((data || []).map((f) => [f.id, f.solicitudes?.nombre ?? null]));
+  return new Map((data || []).map((f) => [f.id, f.legajos?.nombre_visible ?? null]));
 }
 
 /**

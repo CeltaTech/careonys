@@ -6,19 +6,15 @@ import { clienteDelPedido, supabase } from '../db/connection.js';
 import {
   crearCuentaConPerfil,
   crearAsistenteDirecto,
-  crearClienteDirecta,
   invitarPersonaAutorizada,
   revocarPersonaAutorizada,
   validarTipoAsistente,
   deshacerAlta,
   filasDeUnAsistente,
-  filasDeUnaCliente,
 } from '../utils/cuentasPanel.js';
 import { responderError } from '../utils/errorConMotivo.js';
 import { APROBADAS, filasDeIncorporacion } from '../utils/etapasDeIncorporacion.js';
 import { RESULTADO_PENDIENTE } from '../utils/referenciasLaborales.js';
-import { coordenadasDeDomicilio } from '../geocodificacion/index.js';
-import { nombreDelLugar } from '../utils/catalogoDeLugares.js';
 import { reenviarActivacionCuenta } from '../utils/activacionCuenta.js';
 import { requierePermiso, permisosEfectivos } from '../utils/permisos.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
@@ -43,7 +39,7 @@ import {
 // CON LA CREDENCIAL DE QUIEN PIDE. Lo que estas rutas leen y escriben en tablas entra con
 // `clienteDelPedido(req)`: la base sabe quién pide y le contesta sólo lo de su Prestadora, así que
 // ninguna consulta lleva el filtro de la Prestadora de la sesión. Cuando una fila nueva nombra a la
-// Prestadora, la toma de la fila que la base ya dejó ver —la solicitud, la postulación, el Cliente—.
+// Prestadora, la toma de la fila que la base ya dejó ver —la postulación, el Cliente—.
 // Las pocas que siguen con la llave maestra dicen por qué, cada una en su lugar.
 
 export const panelCuentasRouter = Router();
@@ -73,12 +69,11 @@ function manejarErrorDeArchivo(err, req, res, next) {
 // se restringe a Admin/Superadmin, a diferencia del resto del panel que también admite Coordinador.
 const soloAdministracion = exigirAdministracion('Solo Admin puede crear cuentas');
 
-// Alta desde Postulación/Solicitud (rutas /cliente y /asistente, más abajo) se queda
-// admin-only sin cambios — el motor de permisos de la Fase 2 (docs/PLAN_HASTA_PRODUCCION.md, plan
-// aprobado) solo cubre el alta manual (/cliente-directa y /asistente-directo), que es lo
-// que el plan pidió hacer configurable para Coordinador.
+// Alta desde Postulación (ruta /asistente, más abajo) se queda admin-only sin cambios — el motor
+// de permisos de la Fase 2 (docs/PLAN_HASTA_PRODUCCION.md, plan aprobado) solo cubre el alta
+// manual (/asistente-directo), que es lo que el plan pidió hacer configurable para Coordinador.
 
-// Usado por el frontend (botones "Nuevo Asistente"/"Nuevo Cliente", campos de edición de
+// Usado por el frontend (botón "Nuevo Asistente", campos de edición de
 // Fase 1) para saber qué mostrar sin duplicar la lógica de permisos en el cliente — la
 // única fuente de verdad sigue siendo este chequeo del lado del servidor.
 panelCuentasRouter.get('/permisos-efectivos', requiereRolPanel, async (req, res) => {
@@ -106,122 +101,6 @@ panelCuentasRouter.get('/modalidades-activas', requiereRolPanel, async (req, res
     .eq('activa', true);
   if (error) return responderError(res, error);
   res.json({ modalidades: (data || []).map((f) => f.modalidad) });
-});
-
-panelCuentasRouter.post('/cliente', requiereRolPanel, exigirOrganizacionActiva, soloAdministracion, async (req, res) => {
-  const { solicitudId } = req.body;
-  if (!solicitudId) {
-    return res.status(400).json({ error: 'Falta solicitudId' });
-  }
-
-  const db = clienteDelPedido(req);
-  const { data: solicitud, error: errorSolicitud } = await db
-    .from('solicitudes')
-    .select('*')
-    .eq('id', solicitudId)
-    .single();
-
-  if (errorSolicitud || !solicitud) {
-    return res.status(404).json({ error: 'Solicitud no encontrada' });
-  }
-  if (solicitud.cliente_id) {
-    return res.status(409).json({ error: 'Esta solicitud ya tiene un Cliente asociado' });
-  }
-
-  // La Prestadora es la de la solicitud que la base dejó ver, no un dato de la sesión.
-  const prestadoraId = solicitud.prestadora_id;
-
-  // El lugar que quien atendió señaló en la lista, si lo señaló. Es lo que hace que el Cliente
-  // recién creada se pueda encontrar por su localidad: el texto de la solicitud lo escribió quien
-  // llamó y no es ninguno de los lugares de la Prestadora. Va filtrado por Prestadora, como
-  // cualquier lectura de un lugar, para que un identificador ajeno no conteste nada.
-  const nombreDeSuLugar = await nombreDelLugar(db, solicitud.lugar_id, prestadoraId);
-
-  // La solicitud trae una localidad y no una dirección con altura, así que casi siempre esto
-  // vuelve sin coordenadas — y está bien: lo que se guarda en `pacientes.domicilio` es ese
-  // texto, y lo que se manda a ubicar es exactamente lo que se guarda. El día que la solicitud
-  // pida la dirección completa, esto ya funciona sin tocar nada (ver `geocodificacion/`).
-  const ubicacion = await coordenadasDeDomicilio({
-    prestadoraId,
-    direccion: solicitud.localidad,
-    localidad: nombreDeSuLugar || solicitud.localidad,
-  });
-
-  // La cuenta es la persona; la Ficha del cliente es lo suyo en esta Prestadora, y la numera la base.
-  let cuentaId;
-  let clienteId;
-  try {
-    ({ userId: cuentaId } = await crearCuentaConPerfil({
-      email: solicitud.email,
-      nombre: solicitud.nombre,
-      telefono: solicitud.telefono,
-      rol: 'cliente',
-      prestadoraId,
-      enviarActivacion: true,
-    }));
-
-    // Con la llave maestra: el disparador `asignar_numero_clientes` (función
-    // `interno.asignar_numero_de_cliente`, que no es SECURITY DEFINER) corre con los permisos de quien
-    // inserta y numera con el máximo de `clientes` que ve, y la política restrictiva
-    // `oculta_pendientes_de_conformidad` (NOT pendiente_conformidad) le esconde a Admin y a
-    // Superadmin las Fichas del cliente pendientes. Si la de número más alto estuviera pendiente, el número
-    // saldría repetido y el alta fallaría, cosa que antes no pasaba. Se decide aparte.
-    const { data: clienteNuevo, error: errorCliente } = await supabase
-      .from('clientes')
-      .insert({ usuario_id: cuentaId, solicitud_id: solicitudId, prestadora_id: prestadoraId })
-      .select('id')
-      .single();
-    if (errorCliente) throw new Error(errorCliente.message);
-    clienteId = clienteNuevo.id;
-
-    const { data: paciente, error: errorPaciente } = await db
-      .from('pacientes')
-      .insert({
-        cliente_id: clienteId,
-        nombre: solicitud.nombre_paciente || solicitud.nombre,
-        domicilio: solicitud.localidad,
-        lugar_id: solicitud.lugar_id || null,
-        ...ubicacion,
-        prestadora_id: prestadoraId,
-      })
-      .select()
-      .single();
-    if (errorPaciente) throw new Error(errorPaciente.message);
-
-    const { error: errorUpdate } = await db
-      .from('solicitudes')
-      .update({ cliente_id: clienteId })
-      .eq('id', solicitudId);
-    if (errorUpdate) throw new Error(errorUpdate.message);
-
-    res.json({ ok: true, clienteId, pacienteId: paciente.id });
-  } catch (error) {
-    // Con la llave maestra: deshacer lee la fila de `usuarios` de la cuenta recién creada, y la
-    // política de `usuarios` sólo le deja ver a cada persona la suya.
-    await deshacerAlta(supabase, cuentaId, { prestadoraId, filas: filasDeUnaCliente(clienteId) });
-    responderError(res, error);
-  }
-});
-
-// Alta manual de Cliente+Paciente (sin Solicitud previa) — cubre el caso de una
-// Prestadora que llega a Careonys con una cartera de clientes ya en atención.
-// Se crea igual una fila de `solicitudes` (canal 'alta_manual') para que el contacto
-// del Cliente siga viviendo en un único lugar (evita reproducir el bug de contacto
-// en blanco que tenían los Clientes sembrados sin solicitud vinculada).
-panelCuentasRouter.post('/cliente-directa', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('alta_manual_cliente'), async (req, res) => {
-  const { nombreContacto, telefono, email, localidad, nombrePaciente, domicilioPaciente, domicilioDelPacientePartido } = req.body;
-  try {
-    // Con la llave maestra: `solicitudes` no tiene política de alta para personas, y la
-    // numeración de `clientes` saldría repetida por lo mismo que en el alta de arriba.
-    const { clienteId, pacienteId } = await crearClienteDirecta({
-      nombreContacto, telefono, email, localidad, nombrePaciente, domicilioPaciente, domicilioDelPacientePartido,
-      prestadoraId: req.usuarioPanel.prestadoraId,
-      db: supabase,
-    });
-    res.json({ ok: true, clienteId, pacienteId });
-  } catch (error) {
-    responderError(res, error);
-  }
 });
 
 // Inicia el Proceso de Incorporación de Asistentes (uso interno del Panel, ver glosario

@@ -4,7 +4,7 @@ import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { supabase } from '../db/connection.js';
 import { requierePermiso } from '../utils/permisos.js';
 import {
-  crearAsistenteDirecto, crearClienteDirecta,
+  crearAsistenteDirecto, crearClienteImportado,
   activarVerificacionAltaAsistente, revertirAsistenteImportado, revertirClienteImportada,
 } from '../utils/cuentasPanel.js';
 import {
@@ -182,7 +182,7 @@ panelImportacionRouter.post(
 );
 
 // Confirma la importación: recorre cada fila del archivo (ya con el mapeo corregido por el
-// Admin_prestadora) y reutiliza exactamente crearAsistenteDirecto/crearClienteDirecta — el
+// Admin_prestadora) y reutiliza exactamente crearAsistenteDirecto/crearClienteImportado — el
 // mismo camino de creación que el alta manual de la Fase 1 (ver alcance de la Fase 3: "no se
 // construye un camino de creación de datos paralelo"). Un error en una fila no aborta el
 // resto del lote; se acumula en el resumen y queda en el registro de auditoría.
@@ -239,7 +239,7 @@ panelImportacionRouter.post(
           for (const campo of CAMPOS_IMPORTACION.cliente) {
             datos[campo] = valorDesdeFila(fila, mapeo, campo, CAMPOS_LISTA.cliente.has(campo));
           }
-          await crearClienteDirecta(datos);
+          await crearClienteImportado(datos);
         }
         creadas += 1;
       } catch (error) {

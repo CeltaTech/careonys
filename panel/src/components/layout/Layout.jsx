@@ -168,7 +168,7 @@ export function Layout() {
       texto: t.nav.sec_servicios,
       enlaces: [
         { a: '/servicios', texto: t.nav.servicios, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
-        { a: '/solicitudes', texto: t.nav.solicitudes, ver: hayPlantel },
+        { a: '/solicitudes', texto: t.nav.solicitudes, ver: hayPlantel && verDirecta, modalidad: MODALIDAD.DIRECTA },
       ],
     },
     {

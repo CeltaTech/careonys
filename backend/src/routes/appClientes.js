@@ -35,7 +35,7 @@ import {
 } from '../utils/perfilPublicoDeAsistente.js';
 import { lugaresDe, lugaresDeVarias } from '../utils/lugaresDeCadaPersona.js';
 import { nombresDeLugares, lugaresPorNombre } from '../utils/catalogoDeLugares.js';
-import { funcionDeRiesgoEncendida, ofreceIntermediacion } from '../utils/intermediacionDeLaPrestadora.js';
+import { elClienteEntraAMatch, funcionDeRiesgoEncendida } from '../utils/intermediacionDeLaPrestadora.js';
 import {
   LADO,
   abrirVideollamada,
@@ -179,7 +179,7 @@ appClientesRouter.get('/perfil', requiereRolCliente, async (req, res) => {
   // el menú se arma apenas la persona entra, que es cuando ya se está pidiendo el perfil. El
   // candado sigue estando en cada ruta de la vidriera, que no contesta nada sin volver a
   // preguntarlo.
-  const intermediacion = await ofreceIntermediacion(req.usuarioCliente.prestadoraId);
+  const intermediacion = elClienteEntraAMatch();
 
   res.json({
     perfil: {
@@ -1012,6 +1012,7 @@ appClientesRouter.delete('/push/suscribir', requiereRolCliente, async (req, res)
 // ============================================================================
 
 appClientesRouter.get('/acceso/:pacienteId', requiereRolCliente, exigeVisible('cliente_pagos_y_suscripcion'), exigeDePersonasAutorizadas('persona_autorizada_dinero'), async (req, res) => {
+  if (!elClienteEntraAMatch()) return responderError(res, new ErrorConMotivo('intermediacion_no_habilitado'));
   // Sigue con la llave maestra por la forma de cobro pegada: la base sólo le deja ver al Cliente
   // las formas que la Prestadora ofrece hoy, y un acceso contratado con una que ya no se ofrece
   // perdería el dato de si se renueva solo.
@@ -1047,6 +1048,7 @@ function sinLaFormaDeCobro({ formas_de_cobro_intermediacion: _forma, ...resto })
 // pedírselo a nadie. Qué apaga y qué conserva lo decide `utils/bajaDelAcceso.js`, que es el único
 // lugar por donde un acceso se da de baja; acá sólo se comprueba quién llama.
 appClientesRouter.post('/acceso/:accesoId/baja', requiereRolCliente, exigeVisible('cliente_pagos_y_suscripcion'), exigeDePersonasAutorizadas('persona_autorizada_dinero'), async (req, res) => {
+  if (!elClienteEntraAMatch()) return responderError(res, new ErrorConMotivo('intermediacion_no_habilitado'));
   const resultado = await darDeBajaElAcceso({
     accesoId: req.params.accesoId,
     clienteId: req.usuarioCliente.clienteId,
@@ -1062,6 +1064,7 @@ appClientesRouter.post('/acceso/:accesoId/baja', requiereRolCliente, exigeVisibl
 });
 
 appClientesRouter.post('/qr-cobro', requiereRolCliente, exigeVisible('cliente_pagos_y_suscripcion'), exigeDePersonasAutorizadas('persona_autorizada_dinero'), async (req, res) => {
+  if (!elClienteEntraAMatch()) return responderError(res, new ErrorConMotivo('intermediacion_no_habilitado'));
   const { acceso_id: accesoId } = req.body || {};
   if (!accesoId) {
     return res.status(400).json({ error: 'Falta acceso_id' });
@@ -1097,6 +1100,7 @@ appClientesRouter.post('/qr-cobro', requiereRolCliente, exigeVisible('cliente_pa
 });
 
 appClientesRouter.get('/qr-cobro/:id', requiereRolCliente, exigeVisible('cliente_pagos_y_suscripcion'), exigeDePersonasAutorizadas('persona_autorizada_dinero'), async (req, res) => {
+  if (!elClienteEntraAMatch()) return responderError(res, new ErrorConMotivo('intermediacion_no_habilitado'));
   const { data, error } = await clienteDelPedido(req)
     .from('qr_cobro_efectivo')
     .select('id, expira_en, usado_en, cobro_id')
@@ -1360,8 +1364,8 @@ function poolDeLaPrestadora(prestadoraId) {
 }
 
 /** Corta el paso donde la Prestadora no ofrece la modalidad. Mismo motivo en las dos rutas. */
-async function exigeVidriera(req) {
-  if (!(await ofreceIntermediacion(req.usuarioCliente.prestadoraId))) {
+async function exigeVidriera() {
+  if (!elClienteEntraAMatch()) {
     throw new ErrorConMotivo('intermediacion_no_habilitado');
   }
 }
@@ -1448,7 +1452,7 @@ async function tiposDeLaVidriera(db, tipoIds) {
 
 appClientesRouter.get('/intermediacion/asistentes', requiereRolCliente, async (req, res) => {
   try {
-    await exigeVidriera(req);
+    await exigeVidriera();
     const prestadoraId = req.usuarioCliente.prestadoraId;
     const visibilidad = await visibilidadDelPedido(req);
 
@@ -1516,7 +1520,7 @@ appClientesRouter.get('/intermediacion/asistentes', requiereRolCliente, async (r
 
 appClientesRouter.get('/intermediacion/asistentes/:id', requiereRolCliente, async (req, res) => {
   try {
-    await exigeVidriera(req);
+    await exigeVidriera();
     const prestadoraId = req.usuarioCliente.prestadoraId;
     const visibilidad = await visibilidadDelPedido(req);
 
@@ -1604,7 +1608,7 @@ async function asistenteDeLaVidriera(req) {
 
 appClientesRouter.get('/intermediacion/asistentes/:id/contacto', requiereRolCliente, async (req, res) => {
   try {
-    await exigeVidriera(req);
+    await exigeVidriera();
     const asistente = await asistenteDeLaVidriera(req);
 
     const visibilidad = await visibilidadDelPedido(req);
@@ -1630,7 +1634,7 @@ appClientesRouter.post(
   exigeDePersonasAutorizadas('persona_autorizada_dinero'),
   async (req, res) => {
     try {
-      await exigeVidriera(req);
+      await exigeVidriera();
       const asistente = await asistenteDeLaVidriera(req);
 
       const abierto = await abrirElContactoDeUnAsistente({
@@ -1683,7 +1687,7 @@ async function conversacionDelCliente(req) {
 
 appClientesRouter.get('/intermediacion/conversaciones', requiereRolCliente, async (req, res) => {
   try {
-    await exigeVidriera(req);
+    await exigeVidriera();
     // Con la llave maestra: el hilo trae el nombre y la foto del Asistente, y la base no le deja
     // ver al Cliente un Asistente que todavía no lo atiende, que es el caso de la vidriera.
     const { data, error } = await supabase
@@ -1730,7 +1734,7 @@ appClientesRouter.get('/intermediacion/conversaciones', requiereRolCliente, asyn
  *  a quien no está en la vidriera no se le escribe, aunque se pruebe su identificador. */
 appClientesRouter.post('/intermediacion/asistentes/:id/conversacion', requiereRolCliente, async (req, res) => {
   try {
-    await exigeVidriera(req);
+    await exigeVidriera();
     const { data: asistente } = await poolDeLaPrestadora(req.usuarioCliente.prestadoraId)
       .eq('id', req.params.id)
       .maybeSingle();
@@ -1750,7 +1754,7 @@ appClientesRouter.post('/intermediacion/asistentes/:id/conversacion', requiereRo
 
 appClientesRouter.get('/intermediacion/conversaciones/:id', requiereRolCliente, async (req, res) => {
   try {
-    await exigeVidriera(req);
+    await exigeVidriera();
     const conversacion = await conversacionDelCliente(req);
 
     // El refresco del hilo abierto pide nada más lo posterior a lo que ya tiene. Sin `desde` sale
@@ -1787,7 +1791,7 @@ appClientesRouter.get('/intermediacion/conversaciones/:id', requiereRolCliente, 
 
 appClientesRouter.post('/intermediacion/conversaciones/:id/mensajes', requiereRolCliente, async (req, res) => {
   try {
-    await exigeVidriera(req);
+    await exigeVidriera();
     const conversacion = await conversacionDelCliente(req);
 
     const cuerpo = String(req.body?.cuerpo ?? '').trim();
@@ -1810,7 +1814,7 @@ appClientesRouter.post('/intermediacion/conversaciones/:id/mensajes', requiereRo
 
 appClientesRouter.post('/intermediacion/conversaciones/:id/videollamada', requiereRolCliente, async (req, res) => {
   try {
-    await exigeVidriera(req);
+    await exigeVidriera();
     const conversacion = await conversacionDelCliente(req);
     const sala = await abrirVideollamada({
       conversacion,

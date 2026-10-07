@@ -231,7 +231,7 @@ export function Asistentes() {
                       </td>
                       <td>
                         <Button variant="secondary" onClick={() => navigate(`/asistentes/${a.id}`)}>
-                          {tl.ver_ficha}
+                          {tl.ver_legajo}
                         </Button>
                       </td>
                     </tr>

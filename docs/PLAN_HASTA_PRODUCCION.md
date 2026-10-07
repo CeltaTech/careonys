@@ -804,6 +804,14 @@ modelo que este plan reemplaza. Va junto con el paso del coordinador asignado, n
 pueden importar. Va después de que el acto exista: importar un Servicio sin coordinador asignado
 sería dar de alta algo que el producto no habilita.
 
+En el mismo paso, el resto de la migración. Una Prestadora que ya trabajaba migra lo que tiene
+—Clientes, Asistentes, historias clínicas y lo demás— y cada dato entra por planilla o cargado a
+mano de a uno: es una sola migración, con dos formas de cargarla, y no pasa por el circuito
+comercial del que llega nuevo. Hoy la importación sólo admite Clientes y Asistentes, y la carga a
+mano no existe para ninguno. Falta decidir cómo se llaman, en pantalla, la carga a mano y la
+sección, cuyo título habla sólo de archivos. Cierre: cada cosa que se migra entra por las dos
+formas, por el mismo lote y la misma revisión.
+
 ---
 
 ## La entrada y la recuperación de la clave
@@ -1027,7 +1035,7 @@ en la sección «La entrada y la recuperación de la clave».
 en Prospecto; cerrar la negociación de forma positiva lo convierte en Cliente; si la negociación
 fracasa, vuelve a ser Contacto con todo su historial. Es la misma persona del Padrón en las tres
 etapas, nunca una tabla aparte. Sin presupuesto aprobado no hay Cliente, y no hay alta manual de
-Cliente desde el Panel; la cartera que una Prestadora ya tenía entra por la importación.
+Cliente desde el Panel; la cartera que una Prestadora ya tenía se migra aparte (paso 29).
 
 Contactos y Prospectos son asunto de la comercialización, que es la administración. Los Clientes
 les importan a la administración y a la coordinación, y a los Asistentes involucrados en lo suyo.

@@ -227,6 +227,7 @@ export const T = {
       // y el segundo lo lee únicamente el lector de pantalla.
       saltar_al_contenido: 'Ir directamente al contenido',
       menu_principal: 'Menú principal',
+      modalidad_en_vista: 'Modalidad',
       sec_inicio: 'Inicio',
       sec_servicios: 'Servicios',
       sec_asistentes: 'Asistentes',
@@ -3102,6 +3103,7 @@ export const T = {
       mi_clave: 'My password',
       saltar_al_contenido: 'Skip to main content',
       menu_principal: 'Main menu',
+      modalidad_en_vista: 'Service model',
       sec_inicio: 'Home',
       sec_servicios: 'Services',
       sec_asistentes: 'Integral Assistants',
@@ -5943,6 +5945,7 @@ export const T = {
       mi_clave: 'Minha senha',
       saltar_al_contenido: 'Ir direto para o conteúdo',
       menu_principal: 'Menu principal',
+      modalidad_en_vista: 'Modalidade',
       sec_inicio: 'Início',
       sec_servicios: 'Serviços',
       sec_asistentes: 'Assistentes',

@@ -320,6 +320,43 @@ a {
   text-overflow: ellipsis;
 }
 
+/* Qué modalidad se está mirando, cuando la Prestadora tiene las dos. */
+.panel-modalidad {
+  display: flex;
+  gap: 4px;
+  margin: 10px 12px 2px;
+  padding: 3px;
+  border: 1px solid color-mix(in oklch, var(--barra-borde) 60%, transparent);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.panel-modalidad button {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--barra-texto);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel-modalidad button:hover {
+  background: var(--barra-hover);
+}
+
+.panel-modalidad button.activa {
+  background: var(--barra-activo);
+  color: var(--barra-texto-activo);
+  font-weight: 600;
+}
+
 .panel-sidebar nav {
   flex: 1;
   overflow: auto;

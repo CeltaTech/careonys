@@ -122,7 +122,7 @@ export function Layout() {
   const { usuario, logout } = useAuth();
   const { empresa } = useEmpresa();
   const { puede } = usePermisos();
-  const { tieneModalidad } = useModalidades();
+  const { tieneModalidad, ambas, vista, elegirVista, enVista } = useModalidades();
   // Los dos contadores se preguntan solos cada pocos segundos: del otro lado hay alguien
   // esperando, y no puede depender de que a alguien se le ocurra abrir esa sección.
   const { pedidos: pedidosDeCodigo } = usePedidosDeCodigo();
@@ -147,6 +147,10 @@ export function Layout() {
   const directa = tieneModalidad(MODALIDAD.DIRECTA);
   const intermediacion = tieneModalidad(MODALIDAD.INTERMEDIACION);
   const hayPlantel = directa || intermediacion;
+  // Con las dos habilitadas se mira una por vez: lo propio de cada modalidad aparece sólo cuando
+  // es la que está en vista. Lo común, las emergencias y las alertas se ven siempre.
+  const verDirecta = directa && enVista(MODALIDAD.DIRECTA);
+  const verMatch = intermediacion && enVista(MODALIDAD.INTERMEDIACION);
 
   /* El menú, como lista de datos. El candado de cada enlace (`ver`) está escrito una sola vez,
      al lado del enlace, y es el mismo que aplica la dirección en App.jsx. */
@@ -174,7 +178,7 @@ export function Layout() {
         { a: '/asistentes', texto: t.nav.asistentes, ver: hayPlantel },
         { a: '/documentacion', texto: t.nav.documentacion, ver: hayPlantel },
         { a: '/postulaciones', texto: t.nav.postulaciones, ver: hayPlantel },
-        { a: '/intermediacion/calificaciones', texto: t.nav.intermediacion_calificaciones, ver: intermediacion },
+        { a: '/intermediacion/calificaciones', texto: t.nav.intermediacion_calificaciones, ver: verMatch, modalidad: MODALIDAD.INTERMEDIACION },
         // Una remuneración es dato sensible: el Admin la ve siempre, el Coordinador sólo si su
         // Prestadora se lo habilitó.
         { a: '/pagos-asistentes', texto: t.nav.pagos_asistentes, ver: hayPlantel && (esAdmin || puede('ver_pagos_asistente')) },
@@ -184,13 +188,13 @@ export function Layout() {
       clave: 'guardias',
       texto: t.nav.sec_guardias,
       enlaces: [
-        { a: '/guardias', texto: t.nav.guardias, ver: directa },
+        { a: '/guardias', texto: t.nav.guardias, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
         { a: '/emergencias', texto: t.nav.emergencias, ver: hayPlantel },
         { a: '/pase-de-guardia', texto: t.nav.pase_de_guardia, ver: hayPlantel, contador: pedidosDeCodigo.length },
         { a: '/continuidad', texto: t.nav.continuidad, ver: hayPlantel },
         { a: '/verificacion-guardias', texto: t.nav.verificacion_guardias, ver: hayPlantel },
-        { a: '/reportes', texto: t.nav.reportes, ver: directa },
-        { a: '/medicacion', texto: t.nav.medicacion, ver: directa },
+        { a: '/reportes', texto: t.nav.reportes, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
+        { a: '/medicacion', texto: t.nav.medicacion, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
         { a: '/alertas', texto: t.nav.alertas, ver: directa },
       ],
     },
@@ -199,8 +203,8 @@ export function Layout() {
       texto: t.nav.sec_clientes,
       enlaces: [
         { a: '/padron', texto: t.nav.padron, ver: esAdmin || puede('ver_padron') },
-        { a: '/clientes', texto: t.nav.clientes, ver: directa },
-        { a: '/intermediacion/clientes', texto: t.nav.intermediacion_clientes, ver: intermediacion && esAdmin },
+        { a: '/clientes', texto: t.nav.clientes, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
+        { a: '/intermediacion/clientes', texto: t.nav.intermediacion_clientes, ver: verMatch, modalidad: MODALIDAD.INTERMEDIACION && esAdmin },
         { a: '/contenidos', texto: t.nav.contenidos, ver: true },
       ],
     },
@@ -209,10 +213,10 @@ export function Layout() {
       grupo: 'gestion',
       texto: t.nav.sec_facturacion,
       enlaces: [
-        { a: '/facturacion', texto: t.nav.facturacion, ver: directa },
-        { a: '/lista-precios', texto: t.nav.lista_precios, ver: directa },
-        { a: '/intermediacion/formas-de-cobro', texto: t.nav.intermediacion_formas_de_cobro, ver: intermediacion && esAdmin },
-        { a: '/informes-obra-social', texto: t.nav.informes_obra_social, ver: directa },
+        { a: '/facturacion', texto: t.nav.facturacion, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
+        { a: '/lista-precios', texto: t.nav.lista_precios, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
+        { a: '/intermediacion/formas-de-cobro', texto: t.nav.intermediacion_formas_de_cobro, ver: verMatch, modalidad: MODALIDAD.INTERMEDIACION && esAdmin },
+        { a: '/informes-obra-social', texto: t.nav.informes_obra_social, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
       ],
     },
     {
@@ -234,7 +238,7 @@ export function Layout() {
         { a: '/importacion', texto: t.nav.importacion, ver: esAdmin || puede('importar_datos_masivos') },
         { a: '/habilitar-clave', texto: t.nav.habilitar_clave, ver: esAdmin || puede('habilitar_cambio_de_clave'), contador: telefonosEsperando.length },
         { a: '/auditoria', texto: t.nav.auditoria, ver: esAdmin },
-        { a: '/intermediacion/auditoria-legal', texto: t.nav.intermediacion_auditoria_legal, ver: intermediacion },
+        { a: '/intermediacion/auditoria-legal', texto: t.nav.intermediacion_auditoria_legal, ver: verMatch, modalidad: MODALIDAD.INTERMEDIACION },
       ],
     },
   ]
@@ -327,6 +331,16 @@ export function Layout() {
     if (resultados.length > 0) navegar(resultados[0].a);
   }
 
+  // Al cambiar de modalidad, si lo abierto era de la otra, se vuelve al inicio.
+  function alElegirModalidad(modalidad) {
+    if (modalidad === vista) return;
+    const deLaOtra = secciones
+      .flatMap((seccion) => seccion.enlaces)
+      .some((enlace) => enlace.modalidad && enlace.modalidad !== modalidad && coincide(ruta, enlace));
+    elegirVista(modalidad);
+    if (deLaOtra) navegar('/');
+  }
+
   const rolTexto = usuario?.rol ? t.usuarios_panel[`rol_${usuario.rol}`] : '';
 
   // El rótulo del grupo va una sola vez, antes de la primera sección visible que pertenece a él.
@@ -354,6 +368,24 @@ export function Layout() {
       </a>
       <aside className="panel-sidebar">
         <div className="panel-logo">{empresa?.nombre ?? ''}</div>
+        {ambas && (
+          <div className="panel-modalidad" role="group" aria-label={t.nav.modalidad_en_vista}>
+            {[
+              [MODALIDAD.DIRECTA, t.configuracion.modalidades_directa],
+              [MODALIDAD.INTERMEDIACION, t.configuracion.modalidades_intermediacion],
+            ].map(([modalidad, nombre]) => (
+              <button
+                key={modalidad}
+                type="button"
+                className={vista === modalidad ? 'activa' : undefined}
+                aria-pressed={vista === modalidad}
+                onClick={() => alElegirModalidad(modalidad)}
+              >
+                {nombre}
+              </button>
+            ))}
+          </div>
+        )}
         <nav aria-label={t.nav.menu_principal}>
           {secciones.map((seccion) => (
             <Fragment key={seccion.clave}>

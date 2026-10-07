@@ -186,8 +186,8 @@ describe('coincideConElFiltro', () => {
     expect(coincideConElFiltro({ zonas: ['san isidro '] }, 'zonas', 'San Isidro')).toBe(true);
   });
 
-  // Acá la igualdad es exacta, y no como en `nombranLoMismo`: dos zonas distintas que comparten
-  // una palabra son dos zonas distintas, y quien elige una no quiere ver las otras.
+  // Acá la igualdad es exacta, sin aceptar que un texto contenga al otro: dos zonas distintas que
+  // comparten una palabra son dos zonas distintas, y quien elige una no quiere ver las otras.
   it('no junta dos cosas distintas', () => {
     expect(coincideConElFiltro(asistente, 'zonas', 'Morón')).toBe(false);
     expect(coincideConElFiltro({ zonas: ['Zona Norte'] }, 'zonas', 'Norte')).toBe(false);

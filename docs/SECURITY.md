@@ -345,12 +345,11 @@ real o un join directo a `asistentes.zonas`: `asistentes` (lectura y edición),
 `verificaciones_asistente`, `ausencias`, `guardias_cobertura`, `certificados` — vía
 `usuarios.zonas && tabla.zonas` (operador de overlap de arrays) en policies separadas de
 `admin_*` (sin filtro) y `coordinador_*_de_su_zona` (filtradas), que Postgres combina con OR
-al ser ambas permisivas. **Pendiente, no resuelto**: `solicitudes`/`clientes`/`pacientes`/
-`prestaciones` no tienen zona modelada como código real (`solicitudes.localidad` es texto
-libre sin FK a `zonas_cobertura`) — Coordinador sigue viendo todas las filas de estas 4
-tablas, igual que Admin, hasta que exista una decisión de producto sobre cómo derivar la
-zona de un Cliente/Solicitud (agregar un `select` de zona al formulario público, inferir
-por `localidad`, u otra opción). No adivinar esa semántica sin confirmarla primero.
+al ser ambas permisivas. **Pendiente, no resuelto**: `clientes`/`pacientes`/`prestaciones` no
+filtran por zona — Coordinador sigue viendo todas las filas de estas 3 tablas, igual que Admin,
+hasta que exista una decisión de producto sobre cómo derivar la zona de un Cliente. El dato
+disponible es el lugar del Legajo del Cliente (`legajos.lugar_id`). No adivinar esa semántica
+sin confirmarla primero.
 
 **Módulo 6 (Guardias), estado 2026-07-10:** las 8 tablas del Módulo 6, definidas en
 `supabase/migrations/`, tienen RLS multi-tenant aplicada y verificada contra Supabase

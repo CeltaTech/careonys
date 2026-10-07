@@ -27,7 +27,7 @@ export function nombreDelMotivo(motivo, locale) {
 }
 
 // Resuelve una fila. `tabla` es el nombre guardado de la tabla cuya fila se resuelve
-// —`postulaciones`, `solicitudes`—, y `filaId` su llave, que va como texto porque unas tablas la
+// —`postulaciones`, `guardias`—, y `filaId` su llave, que va como texto porque unas tablas la
 // tienen `uuid` y otras `bigint`.
 //
 // El estado en el que queda no se manda: lo dice el motivo elegido. Así la misma decisión no

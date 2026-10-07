@@ -21,12 +21,12 @@ const nombreDeLugar = (id) => CATALOGO.find((lugar) => lugar.id === id)?.nombre 
 const FILAS = [
   {
     id: 'f1',
-    solicitudes: { nombre: 'Alba Ferreyra', email: 'alba@ejemplo.test', telefono: '11 5555 0001', localidad: 'belgrano' },
+    legajos: { nombre_visible: 'Ferreyra, Alba', email: 'alba@ejemplo.test', telefonos_del_legajo: [{ telefono: '11 5555 0001' }] },
     pacientes: [{ id: 'p1', lugar_id: BELGRANO_CIUDAD, deleted_at: null }],
   },
   {
     id: 'f2',
-    solicitudes: { nombre: 'Bruno Salas', email: 'bruno@ejemplo.test', telefono: '11 5555 0002', localidad: 'san isidro' },
+    legajos: { nombre_visible: 'Salas, Bruno', email: 'bruno@ejemplo.test', telefonos_del_legajo: [{ telefono: '11 5555 0002' }] },
     pacientes: [
       { id: 'p2', lugar_id: BELGRANO_SAN_ISIDRO, deleted_at: null },
       { id: 'p3', lugar_id: AVELLANEDA, deleted_at: null },
@@ -34,12 +34,12 @@ const FILAS = [
   },
   {
     id: 'f3',
-    solicitudes: { nombre: 'Celia Ortiz', email: 'celia@ejemplo.test', telefono: '11 5555 0003', localidad: 'avellaneda' },
+    legajos: { nombre_visible: 'Ortiz, Celia', email: 'celia@ejemplo.test', telefonos_del_legajo: [{ telefono: '11 5555 0003' }] },
     pacientes: [{ id: 'p4', lugar_id: AVELLANEDA, deleted_at: '2026-09-01T00:00:00Z' }],
   },
   {
     id: 'f4',
-    solicitudes: { nombre: 'Delia Roca', email: 'delia@ejemplo.test', telefono: '11 5555 0004', localidad: 'vicente lopez' },
+    legajos: { nombre_visible: 'Roca, Delia', email: 'delia@ejemplo.test', telefonos_del_legajo: [{ telefono: '11 5555 0004' }] },
     pacientes: [{ id: 'p5', lugar_id: null, deleted_at: null }],
   },
 ];
@@ -82,11 +82,12 @@ describe('buscar por localidad', () => {
   });
 
   it('el texto libre busca el contacto y no la localidad', () => {
-    // «belgrano» es la localidad que escribió quien llamó, y aun así el buscador de texto no la
-    // mira: la localidad se elige de la lista. Si esto trajera a f1, las dos maneras de buscar se
-    // habrían mezclado.
+    // «belgrano» es la localidad del Paciente de f1, y aun así el buscador de texto no la mira: la
+    // localidad se elige de la lista. Si esto trajera a f1, las dos maneras de buscar se habrían
+    // mezclado.
     expect(cuales(filtrarClientes(CLIENTES, { busqueda: 'belgrano' }))).toEqual([]);
     expect(cuales(filtrarClientes(CLIENTES, { busqueda: 'salas' }))).toEqual(['f2']);
+    expect(cuales(filtrarClientes(CLIENTES, { busqueda: '5555 0003' }))).toEqual(['f3']);
   });
 
   it('los dos filtros se cumplen a la vez', () => {

@@ -46,7 +46,7 @@
   nomenclatura de menú que propone respetan ese glosario en todos los casos, con una
   excepción señalada explícitamente en §4 más abajo.
 - Menú actual del Panel, plano, sin agrupar (`panel/src/components/layout/Layout.jsx:81-103`):
-  Dashboard, Postulaciones, Solicitudes, Asistentes, Clientes, Guardias, Comunicación,
+  Dashboard, Postulaciones, Asistentes, Clientes, Guardias, Comunicación,
   Verificación de Guardias, Facturación, Documentación, Continuidad, Lista de precios,
   Importación, Informes de obra social, Usuarios del Panel, Prestadoras (solo
   admin_plataforma/superadmin), Admin_plataforma (solo admin_plataforma), Configuración,
@@ -81,7 +81,7 @@ Resultado: **4 grupos**, no 3.
 Visible siempre que **alguna** modalidad basada en Asistentes esté activa (directa o
 Match — cooperativa también los necesita en algún momento, ver §3 pregunta 4):
 
-- Proceso de Incorporación de Asistentes (hoy "Postulaciones" + "Solicitudes")
+- Proceso de Incorporación de Asistentes (hoy "Postulaciones")
 - Asistentes (Legajo, plantel, `canales` para saber en qué modalidad participa cada uno)
 - Documentación (vencimientos documentales, común a cualquier canal)
 - Verificación de Guardias

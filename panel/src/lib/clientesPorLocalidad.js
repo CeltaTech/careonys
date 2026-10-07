@@ -49,8 +49,9 @@ export function filtrarClientes(clientes, f = {}) {
   return (Array.isArray(clientes) ? clientes : []).filter((fam) => {
     if (f.lugar && !(fam.lugares ?? []).includes(f.lugar)) return false;
     if (!buscado) return true;
-    return ['nombre', 'email', 'telefono'].some(
-      (campo) => fam.solicitudes?.[campo]?.toLowerCase().includes(buscado),
+    const legajo = fam.legajos;
+    return [legajo?.nombre_visible, legajo?.email, ...(legajo?.telefonos_del_legajo ?? []).map((t) => t.telefono)].some(
+      (texto) => texto?.toLowerCase().includes(buscado),
     );
   });
 }

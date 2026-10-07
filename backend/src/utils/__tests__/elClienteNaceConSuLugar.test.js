@@ -1,5 +1,5 @@
 /**
- * Un Cliente recién creado nace con su localidad puesta, por los dos caminos que la crean.
+ * Un Cliente recién creado nace en el Padrón y con su localidad puesta.
  *
  *   npm test --prefix backend
  *
@@ -8,12 +8,9 @@
  * ninguna búsqueda y nadie se entera: la pantalla no falla, contesta vacío. Es el defecto más
  * caro de los dos, porque parece que funciona.
  *
- * Hay dos caminos hacia un Cliente, y los dos tienen que dejarla igual:
- *
- *  1. Convertir una Solicitud: el Paciente nace con el lugar que quien atendió señaló en la lista.
- *  2. El alta manual: el lugar elegido para el Paciente queda también en la Solicitud que se crea
- *     junto con él, que es de donde sale el contacto del Cliente. Dos filas que nacen juntas no
- *     pueden decir cosas distintas sobre dónde está la persona.
+ * El Cliente que llega en una planilla importada nace con su Legajo en el Padrón, y el lugar
+ * elegido para el Paciente queda también en ese Legajo. Dos filas que nacen juntas no pueden decir
+ * cosas distintas sobre dónde está la persona.
  *
  * SE MIRA EL IDENTIFICADOR Y NO EL NOMBRE. Lo que se guarda es cuál lugar. Dos localidades que se
  * llaman igual en partidos distintos son dos, y el nombre se busca recién al mostrarlo.
@@ -21,21 +18,19 @@
  * LA PRESTADORA DE LA PRUEBA NO TIENE SERVICIO DE MAPAS. Así la prueba no sale a preguntarle a un
  * tercero por una dirección: acá se comprueba la localidad, no las coordenadas.
  *
- * Se levanta el router de verdad contra una base de mentira y se mira qué escribió.
+ * Se llama al alta de verdad contra una base de mentira y se mira qué escribió.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import crypto from 'node:crypto';
-import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
-const QUIEN_LLAMA = '22222222-2222-2222-2222-222222222222';
 const NUEVA_CUENTA = '33333333-3333-3333-3333-333333333333';
-// El Legajo que la base le da al Cliente nuevo. Es a propósito otro número que el de la cuenta:
-// la misma persona puede tener otro Legajo en otra Prestadora, colgando de esta misma cuenta.
+// El Legajo que la base le da a la persona en el Padrón. Es a propósito otro número que el de la
+// cuenta: la misma persona puede tener otro Legajo en otra Prestadora, colgando de esta misma cuenta.
 const NUEVO_LEGAJO = '66666666-6666-6666-6666-666666666666';
-const SOLICITUD = '44444444-4444-4444-4444-444444444444';
+const NUEVO_CLIENTE = '44444444-4444-4444-4444-444444444444';
 const PACIENTE = '77777777-7777-7777-7777-777777777777';
 const LUGAR = '55555555-5555-5555-5555-555555555555';
 
@@ -78,33 +73,12 @@ process.env.CLAVE_DEL_TRABAJO_SIN_PERSONA = JSON.stringify({ ...privateKey.expor
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se lee en
 // el momento del import.
-const { default: express } = await import('express');
-await import('express-async-errors');
-const { panelCuentasRouter } = await import('../../routes/panelCuentas.js');
-const { crearClienteDirecta } = await import('../cuentasPanel.js');
-// El alta entra con la conexión que le pasa quien llama; las rutas del Panel le pasan la maestra.
+const { crearClienteImportado } = await import('../cuentasPanel.js');
 const { supabase } = await import('../../db/connection.js');
 
-const app = express();
-app.use(express.json());
-app.use('/api/panel/cuentas', panelCuentasRouter);
-const backend = app.listen(0, '127.0.0.1');
-await new Promise((listo) => backend.on('listening', listo));
-const RAIZ = `http://127.0.0.1:${backend.address().port}/api/panel/cuentas`;
-
 after(() => {
-  backend.close();
   baseFalsa.close();
 });
-
-async function pedir(metodo, ruta, cuerpo) {
-  const respuesta = await fetch(`${RAIZ}${ruta}`, {
-    method: metodo,
-    headers: { Authorization: sesionDePrueba(QUIEN_LLAMA), 'Content-Type': 'application/json' },
-    body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
-  });
-  return { estado: respuesta.status, cuerpo: await respuesta.json() };
-}
 
 /** Lo que el backend escribió en esa tabla, o `undefined` si no escribió nada. */
 function loEscritoEn(tabla) {
@@ -115,41 +89,40 @@ function loLeidoDe(tabla) {
   return llamadas.find((l) => l.clave === `GET /rest/v1/${tabla}`);
 }
 
-/** La Solicitud que se está convirtiendo. Datos inventados. */
-let solicitudGuardada;
+/** Lo que trae la planilla, con datos inventados. */
+let fila;
+
+function darDeAlta() {
+  return crearClienteImportado({ ...fila, prestadoraId: PRESTADORA, db: supabase });
+}
 
 beforeEach(() => {
   llamadas = [];
   respuestas.clear();
-  solicitudGuardada = {
-    id: SOLICITUD,
-    prestadora_id: PRESTADORA,
-    nombre: 'Alba Ferreyra',
-    nombre_paciente: 'Bruno Ferreyra',
+  fila = {
+    nombreContacto: 'Alba',
+    apellidoContacto: 'Ferreyra',
     email: 'alba@ejemplo.invalido',
     telefono: '11 5555 0001',
+    nombrePaciente: 'Bruno Ferreyra',
     localidad: 'belgrano',
-    lugar_id: LUGAR,
-    cliente_id: null,
+    domicilioDelPacientePartido: { calle: 'Calle Inventada', numero: '100', lugar_id: LUGAR },
   };
 
-  respuestas.set('GET /auth/v1/user', () => ({ id: QUIEN_LLAMA, aud: 'authenticated' }));
-  respuestas.set('GET /rest/v1/usuarios', () => [{ id: QUIEN_LLAMA, rol: 'admin_prestadora', prestadora_id: PRESTADORA }]);
   respuestas.set('POST /rest/v1/usuarios', () => []);
   // Sin ningún prefijo de celular cargado. Acá se prueba dónde nace el Cliente, no la regla de que
   // un celular es de una sola persona, que tiene sus propias pruebas: con el catálogo vacío ningún
   // número se reconoce como celular, que es como se comporta un país que todavía no cargó el suyo.
   respuestas.set('GET /rest/v1/catalogo_prefijos_de_celular', () => []);
   respuestas.set('POST /rest/v1/membresias', () => []);
+  respuestas.set('GET /rest/v1/usuarios', () => [{ id: NUEVA_CUENTA, prestadora_id: PRESTADORA }]);
   respuestas.set('DELETE /rest/v1/usuarios', () => []);
   // El alta y la baja de la cuenta las hace la base, cada una en un solo procedimiento.
   respuestas.set('POST /rest/v1/rpc/dar_de_alta_la_cuenta', () => NUEVA_CUENTA);
   respuestas.set('POST /rest/v1/rpc/dar_de_baja_la_cuenta', () => true);
-  respuestas.set('GET /rest/v1/solicitudes', () => [solicitudGuardada]);
-  respuestas.set('POST /rest/v1/solicitudes', () => [{ ...solicitudGuardada, id: SOLICITUD }]);
-  respuestas.set('PATCH /rest/v1/solicitudes', () => []);
-  respuestas.set('DELETE /rest/v1/solicitudes', () => []);
-  respuestas.set('POST /rest/v1/clientes', () => [{ id: NUEVO_LEGAJO }]);
+  respuestas.set('POST /rest/v1/legajos', () => [{ id: NUEVO_LEGAJO }]);
+  respuestas.set('POST /rest/v1/telefonos_del_legajo', () => []);
+  respuestas.set('POST /rest/v1/clientes', () => [{ id: NUEVO_CLIENTE }]);
   respuestas.set('DELETE /rest/v1/clientes', () => []);
   respuestas.set('POST /rest/v1/pacientes', () => [{ id: PACIENTE }]);
   respuestas.set('DELETE /rest/v1/pacientes', () => []);
@@ -162,16 +135,30 @@ beforeEach(() => {
 
 // ---------------------------------------------------------------------------------------
 
-describe('el Cliente que nace de una Solicitud', () => {
-  it('su Paciente nace con el lugar que se señaló en la lista', async () => {
-    const { estado } = await pedir('POST', '/cliente', { solicitudId: SOLICITUD });
+describe('el Cliente que llega en una planilla importada', () => {
+  it('nace en el Padrón, con su nombre, su apellido, su correo y su teléfono', async () => {
+    await darDeAlta();
 
-    assert.equal(estado, 200);
+    const legajo = loEscritoEn('legajos');
+    assert.equal(legajo.clase, 'fisica');
+    assert.equal(legajo.nombre, 'Alba');
+    assert.equal(legajo.apellido, 'Ferreyra');
+    assert.equal(legajo.email, 'alba@ejemplo.invalido');
+    assert.deepEqual(loEscritoEn('telefonos_del_legajo'), {
+      prestadora_id: PRESTADORA, legajo_id: NUEVO_LEGAJO, telefono: '11 5555 0001',
+    });
+    assert.equal(loEscritoEn('clientes').legajo_id, NUEVO_LEGAJO);
+  });
+
+  it('deja el mismo lugar en el Paciente y en el Legajo', async () => {
+    await darDeAlta();
+
     assert.equal(loEscritoEn('pacientes').lugar_id, LUGAR);
+    assert.equal(loEscritoEn('legajos').lugar_id, LUGAR);
   });
 
   it('el nombre del lugar se pregunta dentro de la Prestadora y no entre los lugares de todas', async () => {
-    await pedir('POST', '/cliente', { solicitudId: SOLICITUD });
+    await darDeAlta();
 
     const lectura = loLeidoDe('lugares');
     assert.equal(lectura.filtros.get('id'), `eq.${LUGAR}`);
@@ -179,31 +166,19 @@ describe('el Cliente que nace de una Solicitud', () => {
   });
 
   it('si nadie señaló ningún lugar, no se inventa ninguno', async () => {
-    solicitudGuardada.lugar_id = null;
+    fila.domicilioDelPacientePartido = undefined;
 
-    const { estado } = await pedir('POST', '/cliente', { solicitudId: SOLICITUD });
+    await darDeAlta();
 
-    assert.equal(estado, 200);
-    assert.equal(loEscritoEn('pacientes').lugar_id, null);
+    assert.equal(loEscritoEn('pacientes').lugar_id ?? null, null);
+    assert.equal(loEscritoEn('legajos').lugar_id, null);
     assert.equal(loLeidoDe('lugares'), undefined);
   });
-});
 
-describe('el alta manual de un Cliente', () => {
-  it('deja el mismo lugar en el Paciente y en la Solicitud que crea', async () => {
-    await crearClienteDirecta({
-      nombreContacto: 'Alba Ferreyra',
-      email: 'alba@ejemplo.invalido',
-      nombrePaciente: 'Bruno Ferreyra',
-      localidad: 'belgrano',
-      domicilioDelPacientePartido: { calle: 'Calle Inventada', numero: '100', lugar_id: LUGAR },
-      prestadoraId: PRESTADORA,
-      db: supabase,
-    });
+  it('sin apellido no se da de alta, y no se escribe nada', async () => {
+    fila.apellidoContacto = undefined;
 
-    // Las dos filas nacen juntas: si sólo una llevara el lugar, dirían cosas distintas sobre
-    // dónde está la misma persona.
-    assert.equal(loEscritoEn('pacientes').lugar_id, LUGAR);
-    assert.equal(loEscritoEn('solicitudes').lugar_id, LUGAR);
+    await assert.rejects(darDeAlta(), (e) => e.motivo === 'faltan_datos');
+    assert.equal(llamadas.length, 0);
   });
 });

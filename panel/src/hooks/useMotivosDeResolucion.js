@@ -7,7 +7,7 @@ import { nombreDelMotivo } from '../lib/resoluciones';
 // y a partir de ahí la lista es de ella, igual que los motivos de cierre de servicio y los finales
 // de un turno que quedó sin nadie.
 //
-// Se piden los encendidos de una sola cosa —`postulaciones`, `solicitudes`, `guardias`—, porque un
+// Se piden los encendidos de una sola cosa —`postulaciones`, `guardias`—, porque un
 // motivo vale para lo que se resuelve con él y no para todo. Cada motivo trae también en qué estado
 // deja lo resuelto y si además obliga a escribir qué pasó.
 //

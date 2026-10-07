@@ -70,12 +70,12 @@ tablas relacionadas; no se retrofitea salvo que se decida explícitamente.
 
 **Deuda técnica — cerrada:**
 `schema_multitenant_02.sql` había agregado un `DEFAULT '874f54d7-...'` (prestadora_id de
-la Prestadora Demo) en `prestadora_id` de las 15 tablas de los Bloques 1-3 (`usuarios`, `asistentes`,
+la Prestadora Demo) en `prestadora_id` de las 14 tablas de los Bloques 1-3 (`usuarios`, `asistentes`,
 `ausencias`, `guardias_cobertura`, `ceses`, `clientes`, `pacientes`, `lista_precios`,
 `prestaciones`, `paquetes_prestaciones`, `paquete_prestacion_items`, `certificados`,
-`zonas_cobertura`, `solicitudes`, `postulaciones`) como parche temporal, mientras el Bloque 3
-completaba el filtrado real de tenant. 7 de esas 15 (`usuarios`, `asistentes`, `clientes`,
-`pacientes`, `zonas_cobertura`, `solicitudes`, `postulaciones`) se cerraron el 2026-07-10
+`zonas_cobertura`, `postulaciones`) como parche temporal, mientras el Bloque 3
+completaba el filtrado real de tenant. 6 de esas 14 (`usuarios`, `asistentes`, `clientes`,
+`pacientes`, `zonas_cobertura`, `postulaciones`) se cerraron el 2026-07-10
 directo contra Supabase (sin migración versionada en el repo — deuda de trazabilidad, no de
 funcionalidad). Las 8 restantes (`ausencias`, `guardias_cobertura`, `ceses`,
 `lista_precios`, `prestaciones`, `paquetes_prestaciones`, `paquete_prestacion_items`,
@@ -83,7 +83,7 @@ funcionalidad). Las 8 restantes (`ausencias`, `guardias_cobertura`, `ceses`,
 —eliminado del repositorio el 2026-08-18 junto con todos los demás—,
 aplicado contra Supabase real vía MCP y verificado con un insert real sin `prestadora_id`
 contra `certificados` que falló como se esperaba (`ERROR 23502: null value in column
-"prestadora_id" ... violates not-null constraint`). Las 15 tablas ya no tienen `DEFAULT`:
+"prestadora_id" ... violates not-null constraint`). Las 14 tablas ya no tienen `DEFAULT`:
 todo insert nuevo debe declarar `prestadora_id` explícito. `guardias`/`series_guardias`
 (Módulo 6) nunca tuvieron este `DEFAULT` — nacieron `NOT NULL` sin default desde
 `schema_modulo6_guardias.sql`.
@@ -488,13 +488,35 @@ campo `booking_id`/`guardia_id` salvo que el negocio decida extender la biometr�
 
 ```sql
 CREATE TABLE clientes (
-  id UUID REFERENCES usuarios(id) PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  prestadora_id UUID NOT NULL REFERENCES prestadoras(id),
+  usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  legajo_id UUID NOT NULL,              -- el Cliente en el Padrón
+  numero_cliente BIGINT NOT NULL,       -- único por Prestadora
   plan TEXT DEFAULT 'directo',
+  financiador_tipo TEXT,                -- 'cliente' | 'obra_social' | 'otro'
+  pagador_legajo_id UUID,
+  importacion_id UUID REFERENCES importaciones_prestadora(id),
+  pendiente_conformidad BOOLEAN NOT NULL DEFAULT FALSE,
+  dias_hasta_el_vencimiento SMALLINT,   -- 0 a 365
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  deleted_at TIMESTAMPTZ
+  deleted_at TIMESTAMPTZ,
+  UNIQUE (usuario_id, prestadora_id),
+  FOREIGN KEY (legajo_id, prestadora_id) REFERENCES legajos (id, prestadora_id),
+  FOREIGN KEY (pagador_legajo_id, prestadora_id) REFERENCES legajos (id, prestadora_id)
 );
 ```
+
+**El Cliente es un Legajo del Padrón.** Su nombre, su correo, su domicilio y su localidad están
+en `legajos`, y sus teléfonos en `telefonos_del_legajo (prestadora_id, legajo_id, telefono)`;
+`clientes` no los repite. El Contratante, el Paciente y el Pagador son partes del Cliente.
+
+**Cómo se llega a Cliente.** El contacto se carga en el Padrón como un Legajo más, se le
+presupuesta, y pasa a Cliente cuando el Prospecto aprueba el presupuesto; ese paso es de OctoCRM,
+que todavía no está construido. La cartera que una Prestadora ya tenía entra por la importación,
+que crea el Legajo de cada Cliente —persona física, con nombre y apellido— y su fila en
+`clientes`. No hay alta manual de Cliente desde el Panel.
 
 ## Tabla: pacientes
 
@@ -828,21 +850,6 @@ momento con el flujo real que se vaya a implementar, no reintroducir esta versi�
 ## Etapa 1 (Supabase/Postgres desde el día uno — sin paso intermedio por MySQL)
 
 ```sql
-CREATE TABLE solicitudes (
-  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  nombre VARCHAR(100) NOT NULL,
-  telefono VARCHAR(30) NOT NULL,
-  email VARCHAR(100) NOT NULL,
-  nombre_paciente VARCHAR(100),
-  localidad VARCHAR(100) NOT NULL,
-  tipo_servicio VARCHAR(100) NOT NULL,
-  modalidad VARCHAR(50) NOT NULL,
-  dias_horario VARCHAR(200) NOT NULL,
-  descripcion TEXT,
-  canal VARCHAR(50) DEFAULT 'web',
-  creado_en TIMESTAMPTZ DEFAULT now()
-);
-
 CREATE TABLE postulaciones (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   nombre VARCHAR(100) NOT NULL,
@@ -908,7 +915,7 @@ clínica ofrece su formulario lo carga cada Prestadora. El formulario público n
 —se las pide al backend, que resuelve la Prestadora por el dominio del sitio—, así que la tabla no
 tiene política para quien no inició sesión.
 
-RLS activada desde la creación de ambas tablas (regla 8 de `CLAUDE.md`); el backend Express
+RLS activada desde la creación de las dos tablas (regla 8 de `CLAUDE.md`); el backend Express
 escribe con la Service Role Key (bypassea RLS por ser server-only), sin policies públicas de
 lectura/escritura. En Etapa 2, `postulaciones` sigue siendo la tabla de entrada cruda del
 formulario público; cuando un Coordinador la aprueba, se crea directamente el registro de
@@ -921,12 +928,13 @@ base de datos de por medio.
 prestadoras (tenant — hoy solo datos de prueba, Prestadora Demo, sin contrato firmado)
   └── prestadora_id NOT NULL en: usuarios, asistentes, ausencias, guardias_cobertura, ceses,
       clientes, pacientes, lista_precios, prestaciones, paquetes_prestaciones,
-      paquete_prestacion_items, certificados, zonas_cobertura, solicitudes, postulaciones
-      (DEFAULT temporal a la Prestadora Demo todavía activo en estas 14 — ver deuda técnica arriba)
+      paquete_prestacion_items, certificados, zonas_cobertura, postulaciones, legajos,
+      telefonos_del_legajo
 
 usuarios (superadmin, admin_prestadora, coordinador)
   ├── asistentes ── verificaciones_asistente, validaciones_faciales, certificados
   ├── clientes ── pacientes
+  │       └── (legajo_id) → legajos ── telefonos_del_legajo
   ├── guardias (Módulo 6, ver sección propia arriba) ── series_guardias,
   │       domicilios_temporales_paciente, personal_emergencia, incidentes_relevo,
   │       configuracion_escalada_relevo, excepciones_familiar_relevo, guardias_tracking_gps

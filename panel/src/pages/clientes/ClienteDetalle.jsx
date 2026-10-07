@@ -113,7 +113,12 @@ export function ClienteDetalle() {
     setError(null);
     const { data, error: errorConsulta } = await supabase
       .from('clientes')
-      .select('id, plan, dias_hasta_el_vencimiento, financiador_tipo, pagador_legajo_id, prestadora_id, solicitud_id, created_at, solicitudes!solicitud_id(nombre, telefono, email, localidad), pacientes(*)')
+      .select(
+        'id, plan, dias_hasta_el_vencimiento, financiador_tipo, pagador_legajo_id, prestadora_id, created_at, pacientes(*), ' +
+          // Quién es el Cliente se lee de su Legajo en el Padrón, y se corrige allá.
+          'legajos!clientes_legajo_de_la_misma_prestadora(nombre_visible, email, lugares!legajos_lugar_fkey(nombre), ' +
+          'telefonos_del_legajo!el_telefono_es_de_un_legajo_de_esta_prestadora(telefono))',
+      )
       .eq('id', id)
       .single();
 
@@ -125,10 +130,6 @@ export function ClienteDetalle() {
 
     setCliente(data);
     setFormContacto({
-      nombre: data.solicitudes?.nombre || '',
-      telefono: data.solicitudes?.telefono || '',
-      email: data.solicitudes?.email || '',
-      localidad: data.solicitudes?.localidad || '',
       plan: data.plan || '',
       dias_hasta_el_vencimiento:
         data.dias_hasta_el_vencimiento === null || data.dias_hasta_el_vencimiento === undefined
@@ -213,7 +214,7 @@ export function ClienteDetalle() {
     setGuardandoContacto(true);
     setErrorContacto(null);
     const {
-      nombre, telefono, email, localidad, plan,
+      plan,
       dias_hasta_el_vencimiento: dias,
       financiador_tipo: financiadorTipo,
       pagador_legajo_id: pagadorLegajoId,
@@ -226,26 +227,21 @@ export function ClienteDetalle() {
       setErrorContacto(t.clientes.plazo_fuera_de_borde);
       return;
     }
-    const [{ error: errorSolicitud }, { error: errorCliente }] = await Promise.all([
-      cliente.solicitud_id
-        ? supabase.from('solicitudes').update({ nombre, telefono, email, localidad }).eq('id', cliente.solicitud_id)
-        : Promise.resolve({ error: null }),
-      // El financiador vacío se guarda vacío y no como «cliente»: los dos quieren decir lo mismo,
-      // y guardar uno de los dos sería inventar una decisión que nadie tomó.
-      //
-      // El Legajo del Pagador se guarda siempre, pague quien pague. Cuando paga el Cliente, el
-      // Pagador es alguien del Cliente, y hay que saber cuál: alguien firma la obligación de
-      // pagar y esa persona tiene nombre. Borrarlo por pagar el Cliente dejaba a esa contratación
-      // sin nadie a quien hacerle firmar nada.
-      supabase.from('clientes').update({
-        plan,
-        dias_hasta_el_vencimiento: plazo.valor,
-        financiador_tipo: financiadorTipo || null,
-        pagador_legajo_id: pagadorLegajoId || null,
-      }).eq('id', cliente.id),
-    ]);
+    // El financiador vacío se guarda vacío y no como «cliente»: los dos quieren decir lo mismo,
+    // y guardar uno de los dos sería inventar una decisión que nadie tomó.
+    //
+    // El Legajo del Pagador se guarda siempre, pague quien pague. Cuando paga el Cliente, el
+    // Pagador es alguien del Cliente, y hay que saber cuál: alguien firma la obligación de
+    // pagar y esa persona tiene nombre. Borrarlo por pagar el Cliente dejaba a esa contratación
+    // sin nadie a quien hacerle firmar nada.
+    const { error: errorCliente } = await supabase.from('clientes').update({
+      plan,
+      dias_hasta_el_vencimiento: plazo.valor,
+      financiador_tipo: financiadorTipo || null,
+      pagador_legajo_id: pagadorLegajoId || null,
+    }).eq('id', cliente.id);
     setGuardandoContacto(false);
-    if (errorSolicitud || errorCliente) {
+    if (errorCliente) {
       setErrorContacto(t.comun.error_generico);
       return;
     }
@@ -267,17 +263,19 @@ export function ClienteDetalle() {
     ['alertas', t.clientes.alertas_activas],
   ];
 
-  // La línea de datos de la Ficha del cliente, con lo que ya se muestra en Contacto.
+  // La línea de datos de la Ficha del cliente, con lo que dice su Legajo en el Padrón.
+  const legajo = cliente.legajos;
+  const telefono = legajo?.telefonos_del_legajo?.[0]?.telefono;
   const datosDeLaFichaDelCliente = [
-    cliente.solicitudes?.localidad,
-    cliente.solicitudes?.telefono,
-    cliente.solicitudes?.email,
+    legajo?.lugares?.nombre,
+    telefono,
+    legajo?.email,
     `${t.clientes.col_fecha_alta}: ${new Date(cliente.created_at).toLocaleDateString(locale)}`,
   ].filter(Boolean);
 
   return (
     <div>
-      <Cabecera titulo={cliente.solicitudes?.nombre || '—'}>
+      <Cabecera titulo={legajo?.nombre_visible || '—'}>
         <Button variant="secondary" onClick={() => navigate('/clientes')}>
           <span aria-hidden="true">←</span> {t.clientes.volver_a_clientes}
         </Button>
@@ -316,8 +314,8 @@ export function ClienteDetalle() {
           <section className="panel-tarjeta">
             <div className="panel-tarjeta-titulo">
               <h2>{t.clientes.contacto}</h2>
-              {formContacto?.telefono && (
-                <a className="panel-enlace" href={linkWhatsapp(formContacto.telefono)} target="_blank" rel="noreferrer">
+              {telefono && (
+                <a className="panel-enlace" href={linkWhatsapp(telefono)} target="_blank" rel="noreferrer">
                   {t.clientes.abrir_whatsapp}
                 </a>
               )}
@@ -327,10 +325,6 @@ export function ClienteDetalle() {
             {formContacto && (
               <>
               <div className="molde-formgrid">
-                <FormField label={t.clientes.col_nombre} name="nombre_contacto" value={formContacto.nombre} onChange={(e) => setCampoContacto('nombre', e.target.value)} disabled={!puedeEditarCliente} />
-                <FormField label={t.clientes.col_telefono} name="telefono_contacto" value={formContacto.telefono} onChange={(e) => setCampoContacto('telefono', e.target.value)} disabled={!puedeEditarCliente} />
-                <FormField label={t.clientes.col_email} name="email_contacto" type="email" value={formContacto.email} onChange={(e) => setCampoContacto('email', e.target.value)} disabled={!puedeEditarCliente} />
-                <FormField label={t.clientes.col_localidad} name="localidad_contacto" value={formContacto.localidad} onChange={(e) => setCampoContacto('localidad', e.target.value)} disabled={!puedeEditarCliente} />
                 <FormField label={t.clientes.plan} name="plan_contacto" value={formContacto.plan} onChange={(e) => setCampoContacto('plan', e.target.value)} disabled={!puedeEditarCliente} />
                 {/* Lo acordado con este Cliente pisa el plazo general de la Prestadora. Vacío quiere
                     decir que no se acordó nada distinto, no que pague el mismo día. */}

@@ -748,11 +748,9 @@ títulos:
   escala—. Así que contestar qué dice el aviso no alcanza: **mientras eso siga abierto, el hueco
   puede quedar siendo de los que se apagan**, y lo que usted fijó es que un hueco invisible no
   existe. Se contesta aquello antes.
-- **La sugerencia de Asistentes ya promete por escrito lo que no hace.** La ventana de una
-  Solicitud dice «Ordenados por zona, especialidad y disponibilidad», y el cálculo
-  —`panel/src/lib/candidatos.js`— no nombra zonas ni lugares en ninguna línea. Sumarle la zona no
-  es agregar una función: es cumplir lo que la pantalla afirma. **Y más abajo hay otro paso sobre
-  ese mismo archivo**, el del nivel de complejidad. Los dos se hacen en una sola pasada.
+- **La sugerencia de Asistentes no mira la zona.** El cálculo —`panel/src/lib/candidatos.js`— no
+  nombra zonas ni lugares en ninguna línea. **Y más abajo hay otro paso sobre ese mismo archivo**,
+  el del nivel de complejidad. Los dos se hacen en una sola pasada.
 - **El acuerdo económico como criterio de sugerencia toca el dinero**, que es el grupo de arriba
   sin contestar: para que la sugerencia mire si la Asistente está de acuerdo con los montos y los
   plazos, esos montos tienen que estar guardados en algún lado.
@@ -761,8 +759,7 @@ títulos:
   Quien tiene el Servicio asignado arma el equipo: si esa salida se elige, tiene que decir que ese
   rol nunca queda como responsable de un Servicio.
 - **La ventana de crear un turno hoy no sabe que existe un Servicio.** Pide la lista completa de
-  Pacientes de la empresa, sin recorte de ninguna clase, y se llega a ella también desde una
-  Solicitud. Cuando el turno cuelgue del Servicio esa ventana cambia de raíz, **y es la misma
+  Pacientes de la empresa, sin recorte de ninguna clase. Cuando el turno cuelgue del Servicio esa ventana cambia de raíz, **y es la misma
   ventana que toca la sección de carteles**, más abajo. Una sola pasada.
 
 **23. Usted** — Aprobar ese plan, que todavía no está aprobado. Hasta que lo esté no se escribe
@@ -945,7 +942,7 @@ sólo lectura, así que el renglón se saca cuando se lo toque.
 
 ## Los huecos del Panel
 
-**40. Usted** — De la Solicitud: ¿cómo se le presenta la Asistente nueva al Cliente — mensaje sin respuesta, aceptación explícita, o fuera del sistema? **Cuelga del acto de armar el Servicio**, más arriba en esta lista: sin Servicio armado no hay a qué Cliente presentarle a nadie.
+**40. Usted** — ¿Cómo se le presenta la Asistente nueva al Cliente — mensaje sin respuesta, aceptación explícita, o fuera del sistema? **Cuelga del acto de armar el Servicio**, más arriba en esta lista: sin Servicio armado no hay a qué Cliente presentarle a nadie.
 
 **41. Usted** — Las dos observaciones de apariencia que quedan, porque las dos son decisiones de diseño: ¿con qué pantalla abre la aplicación del Cliente cuando hay más de un Paciente — hoy abre en la lista, y con uno solo ya se saltea al detalle? ¿Y cuál es la identidad visual de las dos aplicaciones, que nunca pasaron por su etapa de diseño?
 
@@ -1029,7 +1026,8 @@ en la sección «La entrada y la recuperación de la clave».
 **La etapa no la marca nadie: sale de lo que pasa.** Cargar un presupuesto convierte al Contacto
 en Prospecto; cerrar la negociación de forma positiva lo convierte en Cliente; si la negociación
 fracasa, vuelve a ser Contacto con todo su historial. Es la misma persona del Padrón en las tres
-etapas, nunca una tabla aparte, y por eso las Solicitudes desaparecen.
+etapas, nunca una tabla aparte. Sin presupuesto aprobado no hay Cliente, y no hay alta manual de
+Cliente desde el Panel; la cartera que una Prestadora ya tenía entra por la importación.
 
 Contactos y Prospectos son asunto de la comercialización, que es la administración. Los Clientes
 les importan a la administración y a la coordinación, y a los Asistentes involucrados en lo suyo.

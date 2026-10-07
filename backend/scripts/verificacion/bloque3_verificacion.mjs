@@ -6,11 +6,11 @@
 // Cubre dos tipos de chequeo:
 //   1. Lectura simple (GET) comparada contra ground truth vía Service Role Key.
 //   2. Aislamiento cross-tenant activo: fabrica una segunda prestadora + fila real de
-//      usuario/solicitud/postulación, e intenta operar sobre ellas desde la sesión del
-//      admin de la prestadora real — debe fallar en los 3 puntos que en algún
+//      usuario/postulación, e intenta operar sobre ellas desde la sesión del
+//      admin de la prestadora real — debe fallar en los 2 puntos que en algún
 //      momento no tuvieron verificación de tenant propia: DELETE de usuarios
-//      (`cuentasPanel.js` `borrarCuenta`), y las altas de cuenta cliente/asistente que
-//      resuelven `solicitudId`/`postulacionId` (`panelCuentas.js`).
+//      (`cuentasPanel.js` `borrarCuenta`), y el alta de cuenta de asistente que
+//      resuelve `postulacionId` (`panelCuentas.js`).
 //
 // Requiere el backend corriendo localmente (BACKEND_URL, default http://localhost:4502) y las
 // siguientes variables de entorno (no hardcodeadas — este script se commitea al repo):
@@ -77,7 +77,7 @@ async function checkLecturaSimple(admin, headers, prestadoraId) {
 }
 
 async function checkAislamientoCrossTenant(admin, headers) {
-  // Fabrica una segunda prestadora real + un usuario, una solicitud y una postulación reales
+  // Fabrica una segunda prestadora real + un usuario y una postulación reales
   // que pertenecen a ella — para poder intentar operar sobre ellas desde la sesión de la prestadora real.
   const { data: prestadora, error: errP } = await admin.from('prestadoras').insert({
     razon_social: 'TEST BLOQUE3 SA',
@@ -102,12 +102,6 @@ async function checkAislamientoCrossTenant(admin, headers) {
   });
   if (errPerfil) throw errPerfil;
 
-  const { data: solicitud, error: errSol } = await admin.from('solicitudes').insert({
-    nombre: 'TEST', telefono: 'T', email: 't@t.com', localidad: 'T',
-    tipo_servicio: 'T', modalidad: 'T', dias_horario: 'T', prestadora_id: prestadora.id,
-  }).select().single();
-  if (errSol) throw errSol;
-
   const { data: postulacion, error: errPost } = await admin.from('postulaciones').insert({
     nombre: 'TEST', dni: '12345678', telefono: 'T', email: 't@t.com',
     especialidades: 'T', zonas: 'T', disponibilidad: 'T', situacion_fiscal: 'T',
@@ -127,15 +121,7 @@ async function checkAislamientoCrossTenant(admin, headers) {
     resultados.push(['DELETE /panel/usuarios/:id cross-tenant', okDelete]);
     console.log(`DELETE /panel/usuarios/:id cross-tenant -> ${resDelete.status}`, okDelete ? '— OK, rechazado y no borrado' : '— ¡FALLA, borró o no rechazó!');
 
-    // 2. Alta de cliente contra una solicitud de otra prestadora (panelCuentas.js)
-    const resCliente = await fetch(`${BACKEND_URL}/api/panel/cuentas/cliente`, {
-      method: 'POST', headers, body: JSON.stringify({ solicitudId: solicitud.id }),
-    });
-    const okCliente = resCliente.status === 404;
-    resultados.push(['POST /panel/cuentas/cliente cross-tenant', okCliente]);
-    console.log(`POST /panel/cuentas/cliente cross-tenant -> ${resCliente.status}`, okCliente ? '— OK, no encontrada' : '— ¡FALLA, no rechazó la solicitud de otra prestadora!');
-
-    // 3. Alta de asistente contra una postulación de otra prestadora (panelCuentas.js)
+    // 2. Alta de asistente contra una postulación de otra prestadora (panelCuentas.js)
     const resAsistente = await fetch(`${BACKEND_URL}/api/panel/cuentas/asistente`, {
       method: 'POST', headers, body: JSON.stringify({ postulacionId: postulacion.id }),
     });
@@ -144,7 +130,6 @@ async function checkAislamientoCrossTenant(admin, headers) {
     console.log(`POST /panel/cuentas/asistente cross-tenant -> ${resAsistente.status}`, okAsistente ? '— OK, no encontrada' : '— ¡FALLA, no rechazó la postulación de otra prestadora!');
   } finally {
     // Limpieza completa, corra como corra el bloque try.
-    await admin.from('solicitudes').delete().eq('id', solicitud.id);
     await admin.from('postulaciones').delete().eq('id', postulacion.id);
     await admin.from('usuarios').delete().eq('id', authData.user.id);
     await admin.auth.admin.deleteUser(authData.user.id);

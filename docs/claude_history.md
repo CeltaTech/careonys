@@ -485,3 +485,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** cada modalidad tenía un solo nombre, y no estaba dicho cuál se usaba en cada lugar.
 - **Qué dice ahora:** cada modalidad tiene un nombre funcional —prestación directa, intermediación— y uno comercial —Gestión de Cuidados, Match—. En el Panel va el comercial, que llega como dato informado por CeltaTech y no se escribe en el código; en lo que guarda el sistema y en el código, el funcional; en las aplicaciones del Cliente y del Asistente las modalidades no se nombran.
 - **Motivo:** la Prestadora compra el producto conociendo las modalidades por su nombre comercial, y ése es el que tiene que reconocer en el Panel. Al Cliente y al Asistente nombrarles la modalidad no les sirve para nada y sólo los confunde.
+
+## El Cliente está en el Padrón y no hay Solicitudes
+
+- **Qué decía antes:** el pedido de servicio entraba como Solicitud, en una tabla aparte, y desde ahí se lo convertía en Cliente; el Cliente apuntaba a esa Solicitud y existía el Legajo del Contratante.
+- **Qué dice ahora:** el Cliente es una persona del Padrón, y el Contratante, el Paciente y el Pagador son partes del Cliente. Se entra como contacto, se recibe un presupuesto y se pasa a Cliente sólo con el presupuesto aprobado (OctoCRM). No hay alta manual de Cliente ni «convertir en Cliente»: la cartera previa entra por la importación, que crea el Legajo.
+- **Motivo:** el Desarrollador: «al fin y al cabo son datos que no sirven». Sin presupuesto aprobado no hay Cliente, como en cualquier CRM.

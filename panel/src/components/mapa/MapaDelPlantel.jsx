@@ -5,16 +5,14 @@ import { EstadoLista } from '../layout/EstadoLista';
 import { MAPA_DE_FONDO } from '../../config/mapaDeFondo';
 import { SIN_ZONA, puntosDeLaZona } from '../../lib/mapaDelPlantel';
 
-/* El mapa del plantel activo, agrupado por zona. Un solo componente para las dos pantallas que
-   lo muestran: la del plantel y la de una Solicitud (`PRD_02_Panel_Admin.md` Módulo 2 y
-   `PRD_03_Reclutamiento.md`, que piden expresamente que no se duplique).
+/* El mapa del plantel activo, agrupado por zona (`PRD_02_Panel_Admin.md` Módulo 2).
 
    QUÉ DECIDE ESTE ARCHIVO: nada. Los números, los grupos y el encuadre llegan armados de
    `lib/mapaDelPlantel.js`; la dirección del fondo y la atribución, de `config/mapaDeFondo.js`;
    las palabras, de las traducciones. Acá sólo se dibuja.
 
    POR QUÉ LA LIBRERÍA DE MAPAS SE PIDE RECIÉN AL DIBUJAR. Es la pieza más pesada del Panel y la
-   usa una sola pantalla de cada dos. Pedida al abrir el Panel, la pagaría también quien nunca
+   usa una sola pantalla. Pedida al abrir el Panel, la pagaría también quien nunca
    abre el mapa.
 
    POR QUÉ LOS PUNTOS SON REDONDOS Y NO CHINCHETAS. La chincheta de la librería es una imagen
@@ -29,14 +27,13 @@ import { SIN_ZONA, puntosDeLaZona } from '../../lib/mapaDelPlantel';
 // escritos acá: la librería de mapas necesita un color concreto y los toma de la hoja de estilos.
 const COLOR_PUNTO = '--azul-medio';
 const COLOR_APAGADO = '--texto-secundario';
-const COLOR_ORIGEN = '--verde-exito';
 
 function colorDelSistema(nombre) {
   if (typeof window === 'undefined') return '';
   return getComputedStyle(document.documentElement).getPropertyValue(nombre).trim();
 }
 
-export function MapaDelPlantel({ datos, origen = null, estado, error, recargar }) {
+export function MapaDelPlantel({ datos, estado, error, recargar }) {
   const { t } = useLocale();
   const tm = t.mapa_del_plantel;
   const contenedor = useRef(null);
@@ -98,40 +95,23 @@ export function MapaDelPlantel({ datos, origen = null, estado, error, recargar }
         fillOpacity: 0.65,
         weight: 2,
       });
-      // Lo que se lee al tocar un punto: quién es, en qué zonas trabaja y, cuando hay desde dónde
-      // medir, a cuántos kilómetros queda en línea recta. Ninguna dirección (CLAUDE.md §6).
+      // Lo que se lee al tocar un punto: quién es y en qué zonas trabaja. Ninguna dirección
+      // (CLAUDE.md §6).
       const renglones = [punto.nombre];
       if (punto.nombresDeZonas.length > 0) renglones.push(punto.nombresDeZonas.join(' · '));
-      if (Number.isFinite(punto.km)) {
-        renglones.push(tm.a_distancia.replace('{km}', Math.round(punto.km * 10) / 10));
-      }
       marca.bindPopup(renglones.join('<br>'));
       marca.addTo(capaDePuntos.current);
     }
 
-    if (origen) {
-      leaflet
-        .circleMarker([origen.lat, origen.lng], {
-          radius: 9,
-          color: colorDelSistema(COLOR_ORIGEN),
-          fillColor: colorDelSistema(COLOR_ORIGEN),
-          fillOpacity: 0.35,
-          weight: 3,
-        })
-        .bindPopup(tm.punto_de_la_solicitud)
-        .addTo(capaDePuntos.current);
-    }
-
-    const aEncuadrar = origen ? [...visibles, origen] : visibles;
-    if (aEncuadrar.length === 1) {
-      mapa.current.setView([aEncuadrar[0].lat, aEncuadrar[0].lng], MAPA_DE_FONDO.zoomDeUnPunto);
-    } else if (aEncuadrar.length > 1) {
+    if (visibles.length === 1) {
+      mapa.current.setView([visibles[0].lat, visibles[0].lng], MAPA_DE_FONDO.zoomDeUnPunto);
+    } else if (visibles.length > 1) {
       mapa.current.fitBounds(
-        aEncuadrar.map((punto) => [punto.lat, punto.lng]),
+        visibles.map((punto) => [punto.lat, punto.lng]),
         { padding: [MAPA_DE_FONDO.margenDelEncuadre, MAPA_DE_FONDO.margenDelEncuadre] },
       );
     }
-  }, [leaflet, datos, visibles, origen, tm]);
+  }, [leaflet, datos, visibles]);
 
   useEffect(
     () => () => {
@@ -200,8 +180,6 @@ export function MapaDelPlantel({ datos, origen = null, estado, error, recargar }
               <li key={punto.id}>
                 {punto.nombre}
                 {punto.nombresDeZonas.length > 0 && ` — ${punto.nombresDeZonas.join(' · ')}`}
-                {Number.isFinite(punto.km) &&
-                  ` — ${tm.a_distancia.replace('{km}', Math.round(punto.km * 10) / 10)}`}
               </li>
             ))}
           </ul>

@@ -4,9 +4,9 @@
 //
 // En la base son dos columnas: `tipo_contratante`, de qué clase es el Cliente, y `contratante_id`,
 // cuál. Hoy el único tipo que la base acepta es `cliente` —no existe todavía ninguna otra entidad
-// que pueda contratar—, y de ahí que los datos de contacto salgan de la solicitud con la que esa
-// Cliente entró. El día que haya otro tipo se le agrega una rama acá, y las dos pantallas lo
-// muestran sin que haya que tocarlas.
+// que pueda contratar—, y de ahí que los datos de contacto salgan del Legajo de ese Cliente en el
+// Padrón. El día que haya otro tipo se le agrega una rama acá, y las dos pantallas lo muestran sin
+// que haya que tocarlas.
 //
 // El contacto llega aparte, en un mapa, y no anidado adentro del Servicio: `contratante_id` no
 // apunta siempre a la misma tabla, así que no puede haber una clave foránea que lo ate a ninguna,
@@ -63,13 +63,27 @@ export async function contactosDeClientes(supabase, servicios) {
 
   const { data, error } = await supabase
     .from('clientes')
-    .select('id, solicitudes!solicitud_id(nombre, telefono, email, localidad)')
+    .select(
+      'id, legajos!clientes_legajo_de_la_misma_prestadora(nombre_visible, email, ' +
+        'lugares!legajos_lugar_fkey(nombre), ' +
+        'telefonos_del_legajo!el_telefono_es_de_un_legajo_de_esta_prestadora(telefono))',
+    )
     .in('id', idsCliente);
 
   if (error) return { contactos: new Map(), error };
 
   return {
-    contactos: new Map((data ?? []).filter((f) => f.solicitudes).map((f) => [f.id, f.solicitudes])),
+    contactos: new Map((data ?? []).filter((f) => f.legajos).map((f) => [f.id, contactoDelLegajo(f.legajos)])),
     error: null,
+  };
+}
+
+/** Lo que se muestra de un Legajo del Padrón como contacto del Cliente. */
+function contactoDelLegajo(legajo) {
+  return {
+    nombre: legajo.nombre_visible ?? null,
+    email: legajo.email ?? null,
+    localidad: legajo.lugares?.nombre ?? null,
+    telefono: legajo.telefonos_del_legajo?.[0]?.telefono ?? null,
   };
 }

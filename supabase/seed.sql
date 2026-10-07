@@ -371,8 +371,7 @@ INSERT INTO public.datos_reservados_asistente (
 -- 3.b El Padrón de la Prestadora de prueba
 --
 --     Personas inventadas, como todo lo de acá. Va antes que los Clientes porque
---     la contratación las cita: un Servicio no se da de alta sin decir cuál
---     Legajo lo contrató.
+--     cada Cliente es un Legajo del Padrón, y quien paga también.
 --
 --     EL NÚMERO DE LEGAJO NO SE SIEMBRA: lo pone la base sola, en orden, y
 --     rechaza que alguien lo elija. Cada Prestadora empieza por el uno.
@@ -390,7 +389,14 @@ VALUES
   ('c0000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'fisica', 'Teresa', 'Ibáñez', 'dni', '5333444',
    'Pasaje Imaginario', '18', 'a1000000-0000-4000-8000-000000000002', NULL),
   ('c0000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'juridica', 'Mutual del Ejemplo', NULL, 'cuit', '30-99999999-7',
-   'Avenida Ficticia', '1200', 'a1000000-0000-4000-8000-000000000003', 'contacto@mutual.invalido');
+   'Avenida Ficticia', '1200', 'a1000000-0000-4000-8000-000000000003', 'contacto@mutual.invalido'),
+  -- Las tres personas detrás de los tres Clientes de más abajo.
+  ('c0000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111', 'fisica', 'Silvia', 'Gómez', NULL, NULL,
+   NULL, NULL, 'a1000000-0000-4000-8000-000000000001', 'cliente.gomez@sandbox.local'),
+  ('c0000000-0000-4000-8000-000000000005', '11111111-1111-4111-8111-111111111111', 'fisica', 'Jorge', 'López', NULL, NULL,
+   NULL, NULL, 'a1000000-0000-4000-8000-000000000003', 'cliente.lopez@sandbox.local'),
+  ('c0000000-0000-4000-8000-000000000006', '11111111-1111-4111-8111-111111111111', 'fisica', 'Claudia', 'Morales', NULL, NULL,
+   NULL, NULL, 'a1000000-0000-4000-8000-000000000005', 'cliente.morales@sandbox.local');
 
 -- Los teléfonos de contacto del Padrón. Un Legajo puede tener varios, y el primero tiene dos a
 -- propósito: así la base de pruebas ejercita el caso de varios y no sólo el de uno.
@@ -399,7 +405,10 @@ VALUES
   ('11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000001', '+54 11 4000-0101'),
   ('11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000001', '+54 9 11 5000-0101'),
   ('11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000002', '+54 11 4000-0102'),
-  ('11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000003', '+54 11 4000-0103');
+  ('11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000003', '+54 11 4000-0103'),
+  ('11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000004', '+54 11 5001-0001'),
+  ('11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000005', '+54 11 5001-0002'),
+  ('11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000006', '+54 11 5001-0003');
 
 
 -- ----------------------------------------------------------------------------
@@ -409,58 +418,19 @@ VALUES
 --    Cliente sin Servicio no tendría de dónde colgarlas.
 -- ----------------------------------------------------------------------------
 
--- Quién paga es un Legajo del Padrón, y `financiador_tipo` dice de qué clase es.
--- Vacío en los dos quiere decir que paga el Cliente por sí misma, que es el caso
--- de la primera. La tercera muestra el caso que da sentido al Padrón: Ramiro
--- Pérez contrató para un Cliente y además paga por otra, y es un solo Legajo.
-INSERT INTO public.clientes (id, usuario_id, prestadora_id, plan, financiador_tipo, pagador_legajo_id) VALUES
+-- Cada Cliente es un Legajo del Padrón (`legajo_id`): ahí están su nombre, su correo, su
+-- localidad y sus teléfonos, y `clientes` no los repite. Quién paga es otro Legajo, y
+-- `financiador_tipo` dice de qué clase es. Vacío en los dos quiere decir que paga el Cliente por
+-- sí mismo, que es el caso del primero. El tercero muestra el caso que da sentido al Padrón:
+-- paga Ramiro Pérez, que es un Legajo más y no un nombre tecleado. Teresa Ibáñez queda en el
+-- Padrón sin ser Cliente de nadie: es un contacto todavía sin presupuesto aprobado.
+INSERT INTO public.clientes (id, usuario_id, prestadora_id, legajo_id, plan, financiador_tipo, pagador_legajo_id) VALUES
   ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001',
-   '11111111-1111-4111-8111-111111111111', 'directo', NULL, NULL),
+   '11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000004', 'directo', NULL, NULL),
   ('40000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002',
-   '11111111-1111-4111-8111-111111111111', 'directo', 'obra_social', 'c0000000-0000-4000-8000-000000000003'),
+   '11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000005', 'directo', 'obra_social', 'c0000000-0000-4000-8000-000000000003'),
   ('40000000-0000-4000-8000-000000000003', '40000000-0000-4000-8000-000000000003',
-   '11111111-1111-4111-8111-111111111111', 'intermediacion', 'otro', 'c0000000-0000-4000-8000-000000000001');
-
--- El nombre, el teléfono y la localidad de un Cliente NO están en `clientes`:
--- están en la Solicitud con la que entró, y `clientes.solicitud_id` es el que la
--- señala. Sin esta parte, todas las pantallas que muestran un Cliente la
--- muestran como "—". Por eso van las tres Solicitudes ya convertidas en Cliente,
--- y dos más todavía sin contestar para que la pantalla de Solicitudes no esté
--- vacía.
---
--- El id de `solicitudes` lo genera la base sola, así que no se puede fijar acá:
--- primero se insertan y después se le avisa a cada Cliente cuál es la suya.
-INSERT INTO public.solicitudes (
-  prestadora_id, nombre, telefono, email, nombre_paciente, localidad,
-  tipo_servicio, modalidad, dias_horario, estado, cliente_id
-) VALUES
-  ('11111111-1111-4111-8111-111111111111', 'Cliente Gómez', '+54 11 5001-0001',
-   'cliente.gomez@sandbox.local', 'Elena Gómez', 'CABA',
-   'Cuidado de adultos mayores', 'Por horas', 'Lunes a viernes de 8 a 20', 'convertida',
-   '40000000-0000-4000-8000-000000000001'),
-
-  ('11111111-1111-4111-8111-111111111111', 'Cliente López', '+54 11 5001-0002',
-   'cliente.lopez@sandbox.local', 'Héctor López', 'Zona Norte',
-   'Cuidado de adultos mayores', 'Por horas', 'Lunes a sábado de 8 a 14', 'convertida',
-   '40000000-0000-4000-8000-000000000002'),
-
-  ('11111111-1111-4111-8111-111111111111', 'Cliente Morales', '+54 11 5001-0003',
-   'cliente.morales@sandbox.local', 'Rosa Morales', 'Zona Sur',
-   'Cuidado de adultos mayores', 'Permanente', 'Todos los días, las 24 horas', 'convertida',
-   '40000000-0000-4000-8000-000000000003'),
-
-  ('11111111-1111-4111-8111-111111111111', 'Cliente Ibarra', '+54 11 5001-0004',
-   'cliente.ibarra@sandbox.local', 'Nélida Ibarra', 'CABA',
-   'Acompañamiento', 'Por horas', 'Martes y jueves a la tarde', 'nueva', NULL),
-
-  ('11111111-1111-4111-8111-111111111111', 'Cliente Sosa', '+54 11 5001-0005',
-   'cliente.sosa@sandbox.local', 'Aníbal Sosa', 'Zona Oeste',
-   'Enfermería domiciliaria', 'Por horas', 'Lunes, miércoles y viernes a la mañana', 'nueva', NULL);
-
-UPDATE public.clientes f
-   SET solicitud_id = s.id
-  FROM public.solicitudes s
- WHERE s.cliente_id = f.id;
+   '11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000006', 'intermediacion', 'otro', 'c0000000-0000-4000-8000-000000000001');
 
 -- Quién está anotado en las personas autorizadas de cada Cliente. El titular figura acá también, con su fila
 -- apuntando a sí mismo: es lo que deja resolver de una sola consulta a qué Cliente pertenece
@@ -529,12 +499,11 @@ INSERT INTO public.pacientes (
 -- Para quién se contrata el Servicio son dos columnas y no una: `tipo_contratante` dice de qué
 -- clase es el Cliente y `contratante_id` cuál. Hoy el único tipo que la base acepta es `cliente`,
 -- pero se nombra igual, porque el día que haya otro estos datos de ejemplo no van a tener que
--- cambiar. Y `contratante_legajo_id` dice quién firmó: un Legajo del Padrón, que es sobre quien
--- pesan la responsabilidad legal y comercial.
-INSERT INTO public.servicios (id, prestadora_id, tipo_contratante, contratante_id, contratante_legajo_id, etiqueta, estado) VALUES
-  ('60000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'cliente', '40000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000001', 'Acompañamiento diurno de Elena',   'vigente'),
-  ('60000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'cliente', '40000000-0000-4000-8000-000000000002', 'c0000000-0000-4000-8000-000000000002', 'Cuidado de mañana de Héctor',      'vigente'),
-  ('60000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'cliente', '40000000-0000-4000-8000-000000000003', 'c0000000-0000-4000-8000-000000000002', 'Cuidado permanente de Rosa',       'vigente');
+-- cambiar.
+INSERT INTO public.servicios (id, prestadora_id, tipo_contratante, contratante_id, etiqueta, estado) VALUES
+  ('60000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'cliente', '40000000-0000-4000-8000-000000000001', 'Acompañamiento diurno de Elena',   'vigente'),
+  ('60000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'cliente', '40000000-0000-4000-8000-000000000002', 'Cuidado de mañana de Héctor',      'vigente'),
+  ('60000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'cliente', '40000000-0000-4000-8000-000000000003', 'Cuidado permanente de Rosa',       'vigente');
 
 -- La Lista de Precios es el catálogo: lo que la Prestadora ofrece y a cuánto.
 -- No es lo vendido. Lo vendido son las prestaciones de más abajo, que guardan el
@@ -1061,8 +1030,8 @@ INSERT INTO public.asistente_lugares (asistente_id, lugar_id, prestadora_id) VAL
 INSERT INTO public.usuario_lugares (usuario_id, lugar_id, prestadora_id) VALUES
   ('50000000-0000-4000-8000-000000000002', 'a2000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222');
 
--- El Padrón de esta Prestadora. Va antes que su Cliente y su Servicio, por el mismo
--- motivo que en la otra: la contratación cita un Legajo.
+-- El Padrón de esta Prestadora. Va antes que su Cliente, por el mismo motivo que en la
+-- otra: el Cliente es un Legajo. El suyo es el de Olga Salvatierra.
 INSERT INTO public.legajos
   (id, prestadora_id, clase, nombre, apellido, documento_tipo, documento_numero, calle, numero, lugar_id, email)
 VALUES
@@ -1076,9 +1045,9 @@ VALUES
   ('22222222-2222-4222-8222-222222222222', 'c0000000-0000-4000-8000-000000000011', '+54 221 400-0101'),
   ('22222222-2222-4222-8222-222222222222', 'c0000000-0000-4000-8000-000000000012', '+54 221 400-0102');
 
-INSERT INTO public.clientes (id, usuario_id, prestadora_id)
+INSERT INTO public.clientes (id, usuario_id, prestadora_id, legajo_id)
 VALUES ('50000000-0000-4000-8000-000000000004', '50000000-0000-4000-8000-000000000004',
-        '22222222-2222-4222-8222-222222222222');
+        '22222222-2222-4222-8222-222222222222', 'c0000000-0000-4000-8000-000000000012');
 
 -- Con cliente, porque sin ella la aplicación de Cliente de esta Prestadora no tiene
 -- nada que leer y la prueba de aislamiento de ese lado no puede fallar.
@@ -1086,10 +1055,9 @@ INSERT INTO public.pacientes (id, nombre, prestadora_id, cliente_id)
 VALUES ('60000000-0000-4000-8000-000000000001', 'Rosa Ríos', '22222222-2222-4222-8222-222222222222',
         '50000000-0000-4000-8000-000000000004');
 
-INSERT INTO public.servicios (id, prestadora_id, tipo_contratante, contratante_id, contratante_legajo_id, etiqueta)
+INSERT INTO public.servicios (id, prestadora_id, tipo_contratante, contratante_id, etiqueta)
 VALUES ('70000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222',
-        'cliente', '50000000-0000-4000-8000-000000000004',
-        'c0000000-0000-4000-8000-000000000012', 'Cuidado diurno Ríos');
+        'cliente', '50000000-0000-4000-8000-000000000004', 'Cuidado diurno Ríos');
 
 -- Con Asistente asignado, por el mismo motivo que el Paciente lleva Cliente: un
 -- Asistente sin Guardias no ve nada, y una prueba contra la nada no prueba nada.

@@ -17,7 +17,6 @@ import { soloSinResolver } from '../lib/alertaSinResolver';
 import { contarPorModalidad, MODALIDADES, modalidadesDelAsistente } from '../lib/modalidades';
 import { ESTADO_ACTIVO, estaEnElPlantel } from '../lib/candidatos';
 import { claseBadgeTono, TONO } from '../lib/tonos';
-import { ESTADOS_DE_SOLICITUD } from '../lib/estadosDeSolicitud';
 import './hojaDeTarjetas.css';
 
 // Los nombres de las modalidades salen de un solo lado: los mismos textos que usa la
@@ -67,7 +66,6 @@ export function Dashboard() {
   // Prestadora según en qué pantalla estuviera. Quedó una sola, en la pantalla de entrada —
   // `components/estado-actual/GuiaPrimerosPasos.jsx` (pendiente #139).
   const postulaciones = useSupabaseTable('postulaciones');
-  const solicitudes = useSupabaseTable('solicitudes');
   // Coordinador consulta la vista sin vínculo laboral/score de riesgo — ver schema_etapa2i.sql.
   const asistentes = useSupabaseTable(esAdmin ? 'asistentes' : 'asistentes_coordinador', { orderBy: 'created_at' });
   const clientes = useSupabaseTable('clientes', { orderBy: 'created_at' });
@@ -197,7 +195,7 @@ export function Dashboard() {
     cargarAlertas();
   }, [cargarAlertas]);
 
-  const estados = [postulaciones.estado, solicitudes.estado, asistentes.estado, clientes.estado];
+  const estados = [postulaciones.estado, asistentes.estado, clientes.estado];
   // El desglose de vínculos no entra en la espera si la Prestadora tiene una sola modalidad: en
   // ese caso ni se consulta, y quedaría esperando algo que nunca va a llegar.
   const faltaElDesgloseDeVinculos = desgloseModalidadHabilitado && vinculosPorModalidad === null;
@@ -209,15 +207,9 @@ export function Dashboard() {
 
   const postulacionesHoy = postulaciones.filas.filter((p) => esHoy(p.creado_en)).length;
   const postulacionesSemana = postulaciones.filas.filter((p) => esEstaSemana(p.creado_en)).length;
-  const solicitudesPendientes = solicitudes.filas.filter((s) => s.estado === 'nueva').length;
   const asistentesDisponibles = asistentes.filas.filter(estaEnElPlantel).length;
   const clientesActivos = clientes.filas.filter((f) => !f.deleted_at).length;
 
-  const solicitudesPorEstado = ESTADOS_DE_SOLICITUD.map((e) => ({
-    estado: e,
-    cantidad: solicitudes.filas.filter((s) => (s.estado || 'nueva') === e).length,
-  }));
-  const maximoPorEstado = Math.max(1, ...solicitudesPorEstado.map((fila) => fila.cantidad));
   const nombreDeModalidad = (modalidad) => NOMBRE_MODALIDAD[modalidad]?.(t) ?? modalidad;
   const modalidadesDeAsistente = modalidades.filter((modalidad) => MODALIDADES.includes(modalidad));
 
@@ -229,7 +221,6 @@ export function Dashboard() {
         estado={estadoGeneral}
         error={
           postulaciones.error ||
-          solicitudes.error ||
           asistentes.error ||
           clientes.error ||
           errorGuardias ||
@@ -238,7 +229,6 @@ export function Dashboard() {
         vacio={false}
         recargar={() => {
           postulaciones.recargar();
-          solicitudes.recargar();
           asistentes.recargar();
           clientes.recargar();
           cargarGuardiasEnCurso();
@@ -261,10 +251,6 @@ export function Dashboard() {
             <div className="panel-kpi-numero">{postulacionesSemana}</div>
           </div>
           <div className="panel-tarjeta panel-kpi">
-            <div className="panel-kpi-etiqueta">{t.dashboard.solicitudes_pendientes}</div>
-            <div className="panel-kpi-numero">{solicitudesPendientes}</div>
-          </div>
-          <div className="panel-tarjeta panel-kpi">
             <div className="panel-kpi-etiqueta">{t.dashboard.asistentes_disponibles}</div>
             <div className="panel-kpi-numero">{asistentesDisponibles}</div>
           </div>
@@ -276,32 +262,6 @@ export function Dashboard() {
       </EstadoLista>
 
       <div className="panel-grilla panel-columnas-2">
-        <section className="panel-tarjeta">
-          <div className="panel-tarjeta-titulo">
-            <h2>{t.solicitudes.titulo}</h2>
-            <Link to="/solicitudes" className="panel-enlace">{t.comun.ver_detalle}</Link>
-          </div>
-          <EstadoLista
-            estado={solicitudes.estado}
-            error={solicitudes.error}
-            vacio={false}
-            recargar={solicitudes.recargar}
-          >
-            <div className="hoja-barras">
-              {solicitudesPorEstado.map((fila) => (
-                <div key={fila.estado} className="hoja-barra">
-                  <span>{fila.cantidad}</span>
-                  <div
-                    className="hoja-barra-columna"
-                    style={{ height: `${(fila.cantidad / maximoPorEstado) * 100}%` }}
-                  />
-                  <span className="hoja-barra-rotulo">{t.solicitudes[`estado_${fila.estado}`]}</span>
-                </div>
-              ))}
-            </div>
-          </EstadoLista>
-        </section>
-
         <section className="panel-tarjeta">
           <div className="panel-tarjeta-titulo">
             <h2>{t.dashboard.seccion_alertas_titulo}</h2>

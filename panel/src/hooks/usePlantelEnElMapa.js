@@ -3,23 +3,22 @@ import { useLocale } from '../i18n/LocaleContext';
 import { supabase } from '../lib/supabaseClient';
 import { mensajeDeError } from '../lib/errores';
 import { useLugaresDelPlantel } from './useLugaresDelPlantel';
-import { mapaDelPlantel, puntoDeLaSolicitud } from '../lib/mapaDelPlantel';
+import { mapaDelPlantel } from '../lib/mapaDelPlantel';
 
 /* El plantel de este momento, listo para dibujar en el mapa.
    -----------------------------------------------------------------------------------------
-   POR QUÉ ES UN HOOK Y NO UNA CONSULTA EN CADA PANTALLA. Las dos pantallas que muestran el mapa
-   necesitan lo mismo: el plantel, dónde acepta trabajar cada uno y cómo están armadas las zonas.
-   Escrito dos veces, una traería a los cesados y la otra no.
+   POR QUÉ ES UN HOOK Y NO UNA CONSULTA EN LA PANTALLA. El mapa necesita tres cosas juntas: el
+   plantel, dónde acepta trabajar cada uno y cómo están armadas las zonas. Acá se piden y se
+   esperan las tres, y la pantalla recibe el mapa armado.
 
    SE MIRA EN VIVO Y NO SE GUARDA NADA. El mapa se arma con el plantel del momento en que se abre
    la pantalla. No hay ninguna tabla con puntos calculados: una foto guardada quedaría vieja el
    día que alguien cargue el Legajo de un Asistente nuevo, y nadie se enteraría.
 
-   QUÉ COLUMNAS VIAJAN Y CUÁLES NO. Las justas para dibujar el punto y para ordenar la lista de
-   sugeridos. La dirección escrita no se pide: no hace falta para dibujar un punto, y es dato
+   QUÉ COLUMNAS VIAJAN Y CUÁLES NO. Las justas para dibujar el punto y agruparlo. La dirección escrita no se pide: no hace falta para dibujar un punto, y es dato
    sensible (CLAUDE.md §6). Tampoco se escribe en ningún lado ni aparece en un mensaje de error,
    ni viaja por la dirección de la pantalla. */
-export function usePlantelEnElMapa({ solicitud = null } = {}) {
+export function usePlantelEnElMapa() {
   const { t } = useLocale();
   const [filas, setFilas] = useState([]);
   const [estado, setEstado] = useState('cargando');
@@ -49,35 +48,20 @@ export function usePlantelEnElMapa({ solicitud = null } = {}) {
 
   const lugaresDelPlantel = useLugaresDelPlantel(filas.map((fila) => fila.id));
 
-  // Desde dónde se mide la cercanía cuando el mapa se abre adentro de una Solicitud. Sale del
-  // mismo catálogo que ya se trajo, y queda en nulo mientras esa Solicitud no tenga lugar: ahí el
-  // mapa se muestra igual, sin decir nada de distancias.
-  const origen = useMemo(
-    () => (solicitud ? puntoDeLaSolicitud(solicitud, lugaresDelPlantel.catalogo) : null),
-    [solicitud, lugaresDelPlantel.catalogo],
-  );
-
   const datos = useMemo(
     () =>
       mapaDelPlantel(filas, {
         lugaresDe: lugaresDelPlantel.lugaresDe,
         zonas: lugaresDelPlantel.zonas,
-        origen,
       }),
-    [filas, lugaresDelPlantel, origen],
+    [filas, lugaresDelPlantel],
   );
 
-  // Memorizado porque quien lo llama lo usa adentro de otros cálculos: un objeto nuevo en cada
-  // dibujo volvería a ordenar el plantel entero sin que haya cambiado nada.
+  // Memorizado para que un objeto nuevo en cada dibujo no le haga creer al mapa que el plantel
+  // cambió cuando no cambió nada.
   return useMemo(
     () => ({
       datos,
-      origen,
-      // El plantel en crudo y dónde trabaja cada uno, para la pantalla que además arma con eso la
-      // lista de sugeridos: pedirlo de nuevo por su cuenta sería la misma consulta dos veces.
-      plantel: filas,
-      nombresDeZonasDe: lugaresDelPlantel.nombresDe,
-      lugares: lugaresDelPlantel.catalogo,
       // Un solo estado para las dos cargas: mientras falte cualquiera, el mapa no está.
       estado:
         estado === 'error' || lugaresDelPlantel.estado === 'error'
@@ -88,6 +72,6 @@ export function usePlantelEnElMapa({ solicitud = null } = {}) {
       error: error ?? lugaresDelPlantel.error,
       recargar: cargar,
     }),
-    [datos, origen, filas, lugaresDelPlantel, estado, error, cargar],
+    [datos, lugaresDelPlantel, estado, error, cargar],
   );
 }

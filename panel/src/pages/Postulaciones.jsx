@@ -89,8 +89,7 @@ export function Postulaciones() {
       <Cabecera titulo={t.postulaciones.titulo} />
 
       <div className="molde-pila">
-        {/* Dónde está repartida hoy la gente que ya trabaja en la Prestadora. Es el mismo
-            componente que usa la Solicitud, con los mismos números: no hay dos mapas. */}
+        {/* Dónde está repartida hoy la gente que ya trabaja en la Prestadora. */}
         <MapaDelPlantel
           datos={elMapa.datos}
           estado={elMapa.estado}

@@ -139,9 +139,9 @@ visible de que están en revisión.
 Acá hay una trampa que conviene ver antes de construir nada.
 
 **La página no guarda nada.** Ofrece correo y WhatsApp, con un botón flotante como el que ya
-usa el resto del producto para cualquier teléfono visible (`DESIGN_SYSTEM.md`). La tabla
-`solicitudes` no sirve: es el pedido que le entra **a una Prestadora** y tiene la empresa dueña
-como dato obligatorio (`prestadora_id NOT NULL`, comprobado contra la base el 2026-08-13).
+usa el resto del producto para cualquier teléfono visible (`DESIGN_SYSTEM.md`). Quien pide una
+demostración no es persona del Padrón de ninguna Prestadora: el Padrón es de cada una y todo
+lo que se guarda ahí lleva la Prestadora como dato obligatorio.
 
 ## 6. Idiomas y direcciones
 

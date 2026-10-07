@@ -2,11 +2,9 @@
 // único de verdad).
 // ============================================================================================
 //
-// La pregunta que contesta. Dos pantallas muestran el mismo mapa: la del plantel, donde se mira
-// cómo está repartida la gente por zona, y la de una Solicitud, donde se mira quién queda cerca
-// del lugar pedido. Las dos necesitan exactamente lo mismo —qué Legajos del Asistente tienen ubicación, en qué
-// zona cae cada una, cómo encuadrar el mapa y, cuando hay un punto de referencia, a qué distancia
-// queda cada una—. Escrito dos veces, un día una pantalla contaría a los inactivos y la otra no.
+// La pregunta que contesta: cómo está repartido el plantel por zona —qué Legajos del Asistente
+// tienen ubicación, en qué zona cae cada una y cómo encuadrar el mapa—. Escrito en la pantalla,
+// un día el mapa contaría a los inactivos y la lista de al lado no.
 //
 // Acá no hay nada de dibujo: ninguna librería de mapas, ningún color, ningún texto. Este archivo
 // devuelve números y claves; el componente dibuja y las traducciones ponen las palabras.
@@ -18,16 +16,13 @@
 //   · No arma ni devuelve ninguna dirección escrita. Al mapa llegan un par de números y nada
 //     más: la dirección es dato sensible y no tiene por qué viajar hasta la pantalla
 //     (CLAUDE.md §6).
-//   · No calcula tiempo de viaje. La distancia es en línea recta, como en el resto del producto.
 //
 // LA ZONA, ACÁ, ES UNA FORMA DE AGRUPAR. Lo que el Legajo del Asistente guarda son lugares, no
 // zonas; la zona de cobertura es el conjunto de lugares que la Prestadora armó. Entonces un
 // Asistente pertenece a toda zona que contenga alguno de sus lugares, y puede pertenecer a
 // varias, o a ninguna. Agrupar para mostrar es distinto de guardar.
 
-import { distanciaKm } from './distancia';
 import { estaEnElPlantel, estaDisponibleParaOfertas } from './candidatos';
-import { nombranLoMismo } from './textoComparable';
 
 /**
  * El grupo de los que están en el plantel y no caen en ninguna zona de cobertura.
@@ -111,33 +106,6 @@ export function encuadre(puntos) {
 }
 
 /**
- * Desde qué punto se mide la cercanía para una Solicitud, o `null` si no se puede saber.
- *
- * Se mira primero el lugar que alguien reconoció al leerla, que es lo que quedó guardado. Si no
- * hay ninguno, se prueba con la localidad que se escuchó por teléfono contra los nombres del
- * catálogo — y sólo vale si hay **un solo** lugar que la nombre: con dos, no se sabe cuál es, y
- * elegir la primera sería ordenar el plantel alrededor de un punto equivocado sin avisarlo.
- *
- * Devolver `null` no es un fallo: es que esta Solicitud todavía no tiene lugar. El mapa se
- * muestra igual, sin cercanía.
- */
-export function puntoDeLaSolicitud(solicitud, lugares) {
-  if (!solicitud) return null;
-  const catalogo = lugares ?? [];
-
-  if (solicitud.lugar_id) {
-    const reconocido = catalogo.find((lugar) => lugar?.id === solicitud.lugar_id);
-    const punto = coordenadasDe(reconocido);
-    if (punto) return punto;
-  }
-
-  const parecidos = catalogo.filter(
-    (lugar) => nombranLoMismo(lugar?.nombre, solicitud.localidad) && coordenadasDe(lugar),
-  );
-  return parecidos.length === 1 ? coordenadasDe(parecidos[0]) : null;
-}
-
-/**
  * Todo lo que necesita el mapa del plantel activo.
  *
  * @param asistentes  el plantel entero tal como viene de la base. Quién sigue estando se decide
@@ -145,7 +113,6 @@ export function puntoDeLaSolicitud(solicitud, lugares) {
  *                    de cada pantalla.
  * @param opciones    lugaresDe(id) → los lugares del Legajo de ese Asistente
  *                    zonas         → las zonas de cobertura con sus lugares
- *                    origen        → `{ lat, lng }` desde donde medir la cercanía, u `null`
  *
  * @returns { total, ubicadas, sinUbicar, puntos, grupos, encuadre }
  *
@@ -155,9 +122,8 @@ export function puntoDeLaSolicitud(solicitud, lugares) {
  * distinguirlo sin ir a contar a otra pantalla.
  */
 export function mapaDelPlantel(asistentes, opciones = {}) {
-  const { lugaresDe = () => [], zonas = [], origen = null } = opciones;
+  const { lugaresDe = () => [], zonas = [] } = opciones;
   const plantel = (asistentes ?? []).filter(estaEnElPlantel);
-  const puntoOrigen = coordenadasDe(origen);
 
   const grupos = new Map();
   const anotar = (id, nombre, ubicada) => {
@@ -187,15 +153,11 @@ export function mapaDelPlantel(asistentes, opciones = {}) {
       disponible: estaDisponibleParaOfertas(asistente),
       zonas: susZonas.map((zona) => zona.id),
       nombresDeZonas: susZonas.map((zona) => zona.nombre),
-      km: puntoOrigen ? distanciaKm(punto.lat, punto.lng, puntoOrigen.lat, puntoOrigen.lng) : null,
     });
   }
 
-  // Con un punto de referencia, primero el más cerca. Sin él, por nombre: un orden estable es lo
-  // que hace que la lista no baile entre dos recargas.
-  puntos.sort((uno, otro) =>
-    puntoOrigen ? uno.km - otro.km : String(uno.nombre).localeCompare(String(otro.nombre)),
-  );
+  // Por nombre: un orden estable es lo que hace que la lista no baile entre dos recargas.
+  puntos.sort((uno, otro) => String(uno.nombre).localeCompare(String(otro.nombre)));
 
   // Las zonas, por nombre, y las que no caen en ninguna al final: es un grupo aparte y no una
   // zona más, así que no compite por el orden alfabético.
@@ -220,16 +182,4 @@ export function puntosDeLaZona(puntos, zonaId) {
   if (!zonaId) return puntos ?? [];
   if (zonaId === SIN_ZONA) return (puntos ?? []).filter((punto) => punto.zonas.length === 0);
   return (puntos ?? []).filter((punto) => punto.zonas.includes(zonaId));
-}
-
-/**
- * Las que quedan más cerca del punto de referencia, de la más cerca a la más lejos.
- *
- * Sólo las que tienen distancia medida: sin las dos puntas ubicadas no hay distancia, y ordenar
- * por una distancia inventada es peor que no ordenar.
- */
-export function cercanasA(puntos, cuantas) {
-  const medidas = (puntos ?? []).filter((punto) => Number.isFinite(punto?.km));
-  const ordenadas = [...medidas].sort((uno, otro) => uno.km - otro.km);
-  return Number.isFinite(cuantas) ? ordenadas.slice(0, cuantas) : ordenadas;
 }

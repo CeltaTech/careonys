@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   SIN_ZONA,
-  cercanasA,
   coordenadasDe,
   encuadre,
   mapaDelPlantel,
-  puntoDeLaSolicitud,
   puntosDeLaZona,
   zonasDeUnAsistente,
 } from '../mapaDelPlantel';
@@ -15,9 +13,6 @@ const IDIOMAS = ['es-AR', 'en', 'pt-BR'];
 
 // Datos inventados, como manda CLAUDE.md §6: ninguna persona real y ninguna dirección real entran
 // en una prueba. Los puntos son de lugares públicos del conurbano, redondeados.
-const NORTE = { id: 'lugar-norte', nombre: 'San Isidro', lat: -34.47, lng: -58.51 };
-const OESTE = { id: 'lugar-oeste', nombre: 'Morón', lat: -34.65, lng: -58.62 };
-const SIN_PUNTO = { id: 'lugar-sin-punto', nombre: 'Luján', lat: null, lng: null };
 
 const ZONAS = [
   { id: 'zona-norte', codigo: 'norte', nombre: 'Zona Norte', lugares: ['lugar-norte'] },
@@ -173,36 +168,12 @@ describe('mapaDelPlantel', () => {
     expect(resultado.grupos.at(-1).id).toBe(SIN_ZONA);
   });
 
-  it('sin punto de referencia ordena por nombre y no dice ninguna distancia', () => {
+  it('ordena por nombre', () => {
     const resultado = mapaDelPlantel(
       [asistente({ id: 'oeste', nombre: 'Zzz' }), asistente({ id: 'norte', nombre: 'Aaa' })],
       { lugaresDe, zonas: ZONAS },
     );
     expect(resultado.puntos.map((p) => p.nombre)).toEqual(['Aaa', 'Zzz']);
-    expect(resultado.puntos.every((p) => p.km === null)).toBe(true);
-  });
-
-  it('con punto de referencia pone primero al más cerca y mide la distancia', () => {
-    const resultado = mapaDelPlantel(
-      [
-        asistente({ id: 'oeste', nombre: 'Zzz', lat: -34.65, lng: -58.62 }),
-        asistente({ id: 'norte', nombre: 'Aaa', lat: -34.47, lng: -58.51 }),
-      ],
-      { lugaresDe, zonas: ZONAS, origen: { lat: -34.47, lng: -58.51 } },
-    );
-    expect(resultado.puntos.map((p) => p.id)).toEqual(['norte', 'oeste']);
-    expect(resultado.puntos[0].km).toBeCloseTo(0, 3);
-    expect(resultado.puntos[1].km).toBeGreaterThan(15);
-    expect(resultado.puntos[1].km).toBeLessThan(30);
-  });
-
-  it('no dice ninguna distancia cuando el punto de referencia no sirve', () => {
-    const resultado = mapaDelPlantel([asistente({ id: 'norte' })], {
-      lugaresDe,
-      zonas: ZONAS,
-      origen: { lat: null, lng: null },
-    });
-    expect(resultado.puntos[0].km).toBeNull();
   });
 
   it('respeta el interruptor que movió la propia persona', () => {
@@ -242,67 +213,12 @@ describe('puntosDeLaZona', () => {
   });
 });
 
-describe('puntoDeLaSolicitud', () => {
-  const LUGARES = [NORTE, OESTE, SIN_PUNTO];
-
-  it('usa el lugar que alguien reconoció al leer la Solicitud', () => {
-    expect(puntoDeLaSolicitud({ lugar_id: 'lugar-oeste', localidad: 'San Isidro' }, LUGARES)).toEqual(
-      { lat: OESTE.lat, lng: OESTE.lng },
-    );
-  });
-
-  it('sin lugar reconocido, prueba con la localidad que se escuchó', () => {
-    expect(puntoDeLaSolicitud({ localidad: 'san isidro' }, LUGARES)).toEqual({
-      lat: NORTE.lat,
-      lng: NORTE.lng,
-    });
-  });
-
-  // Dos lugares que se llaman igual es no saber cuál: elegir el primero ordenaría el plantel
-  // alrededor de un punto equivocado sin que nadie se entere.
-  it('se calla cuando la localidad puede ser dos lugares distintos', () => {
-    const repetidos = [NORTE, { ...NORTE, id: 'otro-norte' }];
-    expect(puntoDeLaSolicitud({ localidad: 'San Isidro' }, repetidos)).toBeNull();
-  });
-
-  it('se calla cuando el lugar existe pero nadie lo ubicó', () => {
-    expect(puntoDeLaSolicitud({ lugar_id: 'lugar-sin-punto' }, LUGARES)).toBeNull();
-  });
-
-  it('se calla sin Solicitud y sin catálogo', () => {
-    expect(puntoDeLaSolicitud(null, LUGARES)).toBeNull();
-    expect(puntoDeLaSolicitud({ localidad: 'San Isidro' }, null)).toBeNull();
-  });
-});
-
-describe('cercanasA', () => {
-  const puntos = [
-    { id: 'lejos', km: 20 },
-    { id: 'cerca', km: 2 },
-    { id: 'sin medir', km: null },
-  ];
-
-  it('ordena de la más cerca a la más lejos', () => {
-    expect(cercanasA(puntos).map((p) => p.id)).toEqual(['cerca', 'lejos']);
-  });
-
-  it('deja afuera a quien no tiene distancia medida', () => {
-    expect(cercanasA(puntos).some((p) => p.id === 'sin medir')).toBe(false);
-  });
-
-  it('devuelve cuántas se le pidan', () => {
-    expect(cercanasA(puntos, 1).map((p) => p.id)).toEqual(['cerca']);
-  });
-});
-
 describe('el mapa habla los tres idiomas', () => {
   const CLAVES = [
     'titulo',
     'cuantas',
     'sin_zona',
     'sin_ubicacion',
-    'a_distancia',
-    'punto_de_la_solicitud',
     'vacio_sin_ubicacion',
     'vacio_ayuda',
   ];
@@ -323,6 +239,5 @@ describe('el mapa habla los tres idiomas', () => {
     expect(textos.cuantas).toContain('{ubicadas}');
     expect(textos.cuantas).toContain('{total}');
     expect(textos.sin_ubicacion).toContain('{n}');
-    expect(textos.a_distancia).toContain('{km}');
   });
 });

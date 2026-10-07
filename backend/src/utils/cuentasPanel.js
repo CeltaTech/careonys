@@ -426,7 +426,7 @@ export async function activarVerificacionAltaAsistente(db, asistenteId, prestado
 }
 
 // Revierte un lote importado y rechazado por la Prestadora (panelImportacion.js /rechazar):
-// mismo desarmado que el catch de crearAsistenteDirecto/crearClienteDirecta, aplicado a
+// mismo desarmado que el catch de crearAsistenteDirecto/crearClienteImportado, aplicado a
 // todas las filas que compartan `importacionId` en vez de a una sola fila recién creada.
 // Devuelven `false` si algo quedó sin limpiar, para que la pantalla pueda contar bien
 // cuántas filas se revirtieron de verdad.
@@ -527,22 +527,26 @@ export async function revocarPersonaAutorizada(db, usuarioId, { prestadoraId, cl
   await borrarCuenta(usuarioId, { prestadoraId });
 }
 
-// Lógica de alta manual de Cliente+Paciente, extraída de panelCuentas.js (ruta
-// /cliente-directa) por el mismo motivo que crearAsistenteDirecto de arriba.
-export async function crearClienteDirecta({
-  nombreContacto, telefono, email, localidad, plan,
+// Da de alta un Cliente que llega en una planilla importada: es la cartera que la Prestadora ya
+// atendía antes de usar Careonys.
+//
+// El Cliente está en el Padrón: su nombre, su correo y su teléfono se guardan en su Legajo, y la
+// Ficha del cliente lo apunta. Un Legajo no se borra nunca, así que si el alta se corta después
+// de crearlo, la persona queda en el Padrón como contacto.
+export async function crearClienteImportado({
+  nombreContacto, apellidoContacto, telefono, email, localidad, plan,
   nombrePaciente, domicilioPaciente, domicilioDelPacientePartido,
   fechaNacimientoPaciente, nivelComplejidadPaciente, patologiasPaciente,
   prestadoraId, importacionId, db,
 }) {
-  if (!nombreContacto || !email || !nombrePaciente) {
-    throw new ErrorConMotivo('faltan_datos', 'Faltan datos obligatorios (nombreContacto, email, nombrePaciente)');
+  if (!nombreContacto || !apellidoContacto || !email || !nombrePaciente) {
+    throw new ErrorConMotivo('faltan_datos', 'Faltan datos obligatorios (nombreContacto, apellidoContacto, email, nombrePaciente)');
   }
 
-  // El domicilio llega partido desde el Panel, y como un renglón suelto desde una planilla
-  // importada, que es lo que la planilla trae. En los dos casos se guardan las partes que haya y
-  // el renglón se arma con `domicilioEscrito`, que es el único lugar donde se decide dónde va cada
-  // coma. El nombre del lugar se busca acá porque vive en otra tabla.
+  // El domicilio llega como un renglón suelto, que es lo que la planilla trae, o partido si
+  // alguien lo partió. En los dos casos se guardan las partes que haya y el renglón se arma con
+  // `domicilioEscrito`, que es el único lugar donde se decide dónde va cada coma. El nombre del
+  // lugar se busca acá porque vive en otra tabla.
   const partes = partesDelDomicilio(domicilioDelPacientePartido);
   const nombreDeSuLugar = await nombreDelLugar(db, partes.lugar_id, prestadoraId);
   const renglonPartido = domicilioEscrito({ ...partes, lugar: nombreDeSuLugar });
@@ -562,41 +566,37 @@ export async function crearClienteDirecta({
   // esta Prestadora. La misma persona puede ser Cliente en otra sin volver a darse de alta.
   let cuentaId;
   let clienteId;
-  let solicitudId;
   try {
-    const { data: solicitud, error: errorSolicitud } = await db
-      .from('solicitudes')
+    ({ userId: cuentaId } = await crearCuentaConPerfil({
+      email, nombre: `${nombreContacto} ${apellidoContacto}`, telefono, rol: 'cliente', prestadoraId, enviarActivacion: true,
+    }));
+
+    const { data: legajo, error: errorLegajo } = await db
+      .from('legajos')
       .insert({
         prestadora_id: prestadoraId,
+        clase: 'fisica',
         nombre: nombreContacto,
-        telefono: telefono || '',
+        apellido: apellidoContacto,
         email,
-        nombre_paciente: nombrePaciente,
-        localidad: localidad || '',
-        // El lugar elegido para el Paciente también queda anotado en la Solicitud, que es de donde
-        // sale el contacto del Cliente. Si no quedara, dos filas que nacen juntas dirían cosas
-        // distintas sobre dónde está la persona.
         lugar_id: partes.lugar_id || null,
-        canal: 'alta_manual',
-        estado: 'asignada',
-        tipo_servicio: 'Cuidado domiciliario',
-        modalidad: 'presencial',
-        dias_horario: 'A definir',
       })
-      .select()
+      .select('id')
       .single();
-    if (errorSolicitud) throw new Error(errorSolicitud.message);
-    solicitudId = solicitud.id;
+    if (errorLegajo) throw new Error(errorLegajo.message);
 
-    ({ userId: cuentaId } = await crearCuentaConPerfil({
-      email, nombre: nombreContacto, telefono, rol: 'cliente', prestadoraId, enviarActivacion: true,
-    }));
+    if (telefono) {
+      const { error: errorTelefono } = await db
+        .from('telefonos_del_legajo')
+        .insert({ prestadora_id: prestadoraId, legajo_id: legajo.id, telefono });
+      if (errorTelefono) throw new Error(errorTelefono.message);
+    }
 
     const { data: clienteNuevo, error: errorCliente } = await db
       .from('clientes')
       .insert({
         usuario_id: cuentaId,
-        solicitud_id: solicitudId,
+        legajo_id: legajo.id,
         prestadora_id: prestadoraId,
         plan: plan || null,
         importacion_id: importacionId || null,
@@ -626,21 +626,9 @@ export async function crearClienteDirecta({
       .single();
     if (errorPaciente) throw new Error(errorPaciente.message);
 
-    const { error: errorUpdate } = await db
-      .from('solicitudes')
-      .update({ cliente_id: clienteId })
-      .eq('prestadora_id', prestadoraId)
-      .eq('id', solicitudId);
-    if (errorUpdate) throw new Error(errorUpdate.message);
-
     return { clienteId, pacienteId: paciente.id };
   } catch (error) {
-    await deshacerAlta(db, cuentaId, {
-      prestadoraId,
-      // La solicitud se creó antes que la cuenta y no cuelga de ella, así que se limpia por
-      // su propio identificador. Va última porque los clientes la apuntan.
-      filas: [...filasDeUnaCliente(clienteId), { tabla: 'solicitudes', valor: solicitudId }],
-    });
+    await deshacerAlta(db, cuentaId, { prestadoraId, filas: filasDeUnaCliente(clienteId) });
     throw error;
   }
 }

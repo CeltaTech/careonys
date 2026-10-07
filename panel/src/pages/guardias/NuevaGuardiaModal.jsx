@@ -19,13 +19,7 @@ const DIAS_SEMANA = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabad
  *  los dos números se separan, manda el de la base. */
 const DIAS_GENERACION_SIN_VIGENCIA_HASTA_DE_RESGUARDO = 90;
 
-/**
- * @param inicial  qué viene ya elegido cuando la ventana no se abre desde cero: `asistenteId` y
- *                 `pacienteIds`. Lo usa la Solicitud, donde a esta altura ya se eligió a quién
- *                 proponerle el caso y a quién hay que atender, y volver a pedirlos sería hacer
- *                 elegir dos veces lo mismo. Todo lo demás se completa acá igual que siempre.
- */
-export function NuevaGuardiaModal({ onClose, onCreada, inicial = {} }) {
+export function NuevaGuardiaModal({ onClose, onCreada }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const prestadoraId = usePrestadoraActual();
@@ -33,10 +27,10 @@ export function NuevaGuardiaModal({ onClose, onCreada, inicial = {} }) {
   const [asistentes, setAsistentes] = useState([]);
   const [pacientes, setPacientes] = useState([]);
   const [diasGeneracion, setDiasGeneracion] = useState(DIAS_GENERACION_SIN_VIGENCIA_HASTA_DE_RESGUARDO);
-  const [asistenteId, setAsistenteId] = useState(inicial.asistenteId ?? '');
+  const [asistenteId, setAsistenteId] = useState('');
   // A quiénes atiende el turno. Es una lista y no un valor suelto porque una guardia puede
   // cubrir a más de una persona: un matrimonio en su casa, o un grupo en un asilo.
-  const [pacienteIds, setPacienteIds] = useState(inicial.pacienteIds ?? []);
+  const [pacienteIds, setPacienteIds] = useState([]);
   // De qué Servicio es el turno. Es lo que hace que después se pueda facturar y que la pantalla
   // del Servicio muestre sus guardias: sin esto la guardia nace suelta.
   const [servicios, setServicios] = useState([]);

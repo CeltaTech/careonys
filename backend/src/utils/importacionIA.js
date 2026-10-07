@@ -15,7 +15,7 @@ import { MODELO_IA } from '../config/modeloIA.js';
 
 // Campos destino disponibles para el mapeo, por tipo — reflejan exactamente lo que
 // panel/src/pages/clientes/NuevoPacienteModal.jsx, EditarPacienteModal.jsx y
-// crearAsistenteDirecto()/crearClienteDirecta() (backend/src/utils/cuentasPanel.js) aceptan.
+// crearAsistenteDirecto()/crearClienteImportado() (backend/src/utils/cuentasPanel.js) aceptan.
 // Se excluye `medicacion_habitual` de Paciente: es un array de objetos {nombre, dosis,
 // frecuencia} que no mapea a una sola columna de planilla — queda para cargar después
 // desde la historia clínica del Paciente, no como parte de este import (ver docs/PLAN_HASTA_PRODUCCION.md).
@@ -25,7 +25,7 @@ export const CAMPOS_IMPORTACION = {
     'tipo_vinculo', 'categoria_cct', 'valor_hora', 'sueldo_basico', 'horas_semanales',
   ],
   cliente: [
-    'nombreContacto', 'telefono', 'email', 'localidad', 'plan',
+    'nombreContacto', 'apellidoContacto', 'telefono', 'email', 'localidad', 'plan',
     'nombrePaciente', 'domicilioPaciente', 'fechaNacimientoPaciente',
     'nivelComplejidadPaciente', 'patologiasPaciente',
   ],

@@ -1021,15 +1021,20 @@ en la sección «La entrada y la recuperación de la clave».
 
 - **Contacto:** alguien de afuera de los clientes que mostró interés en los servicios de la
   Prestadora, porque se comunicó o porque la Prestadora lo contactó.
-- **Prospecto:** se están negociando las condiciones del servicio y las económicas.
+- **Prospecto:** tiene un presupuesto de un servicio que se está negociando, con las condiciones
+  cargadas y sin firmar.
 - **Cliente:** desde que se cierra el trato y se empieza a preparar el servicio, mientras dure
   —pueden ser años— y también después de terminado, aunque esté inactivo.
 
+**La etapa no la marca nadie: sale de lo que pasa.** Cargar un presupuesto convierte al Contacto
+en Prospecto; cerrar la negociación de forma positiva lo convierte en Cliente; si la negociación
+fracasa, vuelve a ser Contacto con todo su historial. Es la misma persona del Padrón en las tres
+etapas, nunca una tabla aparte, y por eso las Solicitudes desaparecen.
+
 Contactos y Prospectos son asunto de la comercialización, que es la administración. Los Clientes
 les importan a la administración y a la coordinación, y a los Asistentes involucrados en lo suyo.
-Hoy un pedido de servicio está nuevo, en gestión o asignado, y el renglón cuenta los nuevos y los
-que están en gestión. Falta que el Desarrollador diga si la etapa se marca a mano o se deduce, y
-qué muestra el tablero de los Clientes; con eso se construyen y el renglón las muestra.
+En definitiva es un CRM, con todo lo que eso trae. Falta decidir qué muestra el tablero de los
+Clientes, y dónde vive el CRM.
 
 ---
 

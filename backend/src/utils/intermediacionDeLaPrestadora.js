@@ -38,6 +38,18 @@ export async function ofreceIntermediacion(prestadoraId) {
 }
 
 /**
+ * Si el Cliente puede entrar a Match desde su aplicación. Hoy no, en ninguna Prestadora: Match no
+ * está terminado, y hasta entonces el Cliente no ve la vidriera, ni conversa, ni abre contactos,
+ * ni ve un acceso. Se reabre cuando Match esté terminado, y es el único lugar que lo decide.
+ *
+ * Y al reabrirse, entra sólo el Cliente que es de Match. Un Cliente de prestación directa no ve
+ * nunca la vidriera de Asistentes: no es suficiente que su Prestadora ofrezca Match.
+ */
+export function elClienteEntraAMatch() {
+  return false;
+}
+
+/**
  * Si una de las cinco funciones de riesgo está encendida.
  *
  * Falla cerrado a propósito: si la consulta no contesta, la función se da por apagada. Con una

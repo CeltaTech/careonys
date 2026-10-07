@@ -149,9 +149,11 @@ function Rutas() {
         <Route
           path="pacientes/:id/acceso"
           element={
-            <PantallaPermitida pantalla="acceso">
-              <AccesoIntermediacion />
-            </PantallaPermitida>
+            <SoloConIntermediacion>
+              <PantallaPermitida pantalla="acceso">
+                <AccesoIntermediacion />
+              </PantallaPermitida>
+            </SoloConIntermediacion>
           }
         />
         <Route

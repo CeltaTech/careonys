@@ -52,7 +52,7 @@ export default function TarjetaAcciones({ pacienteId }) {
             {t.paciente.ver_asistente}
           </Link>
         )}
-        {base && seEntraA('acceso') && (
+        {base && ofreceIntermediacion && seEntraA('acceso') && (
           <Link to={`${base}/acceso`} className="btn">
             {t.paciente.ver_acceso}
           </Link>

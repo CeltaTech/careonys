@@ -96,7 +96,7 @@ export function TelefonosDelLegajo({ legajoId, puedeEditar }) {
   }
 
   async function sacar(fila) {
-    if (!(await confirmarDestructivo(tr.confirmar_sacar))) return;
+    if (!(await confirmarDestructivo(tr.confirmar_borrar))) return;
     setOperando(fila.id);
     setError(null);
     try {
@@ -168,7 +168,7 @@ export function TelefonosDelLegajo({ legajoId, puedeEditar }) {
                         onClick={() => sacar(fila)}
                         disabled={operando !== null}
                       >
-                        {operando === fila.id ? tr.sacando : tr.sacar}
+                        {operando === fila.id ? tr.borrando : tr.borrar}
                       </Button>
                     </>
                   )}

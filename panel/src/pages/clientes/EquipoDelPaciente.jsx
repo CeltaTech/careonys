@@ -209,7 +209,7 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
   }
 
   async function sacar(fila) {
-    if (!(await confirmarDestructivo(t.equipo_paciente.confirmar_sacar))) return;
+    if (!(await confirmarDestructivo(t.equipo_paciente.confirmar_retirar))) return;
     decidir(fila, { situacion: 'sacada', cubre_francos: false });
   }
 
@@ -279,7 +279,7 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
                                 disabled={enCurso === a.asistente_id}
                                 onClick={() => sacar(a)}
                               >
-                                {t.equipo_paciente.sacar}
+                                {t.equipo_paciente.retirar}
                               </Button>
                             </>
                           )}

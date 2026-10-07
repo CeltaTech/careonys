@@ -167,7 +167,7 @@ export function Layout() {
       clave: 'servicios',
       texto: t.nav.sec_servicios,
       enlaces: [
-        { a: '/servicios', texto: t.nav.servicios, ver: true },
+        { a: '/servicios', texto: t.nav.servicios, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
         { a: '/solicitudes', texto: t.nav.solicitudes, ver: hayPlantel },
       ],
     },
@@ -331,14 +331,11 @@ export function Layout() {
     if (resultados.length > 0) navegar(resultados[0].a);
   }
 
-  // Al cambiar de modalidad, si lo abierto era de la otra, se vuelve al inicio.
+  // Al cambiar de modalidad se vuelve al inicio, que muestra lo de la modalidad elegida.
   function alElegirModalidad(modalidad) {
     if (modalidad === vista) return;
-    const deLaOtra = secciones
-      .flatMap((seccion) => seccion.enlaces)
-      .some((enlace) => enlace.modalidad && enlace.modalidad !== modalidad && coincide(ruta, enlace));
     elegirVista(modalidad);
-    if (deLaOtra) navegar('/');
+    navegar('/');
   }
 
   const rolTexto = usuario?.rol ? t.usuarios_panel[`rol_${usuario.rol}`] : '';

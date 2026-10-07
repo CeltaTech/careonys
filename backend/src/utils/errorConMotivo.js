@@ -51,12 +51,6 @@ const ESTADO_POR_MOTIVO = {
   codigo_incorrecto: 400,
   codigo_vencido: 400,
   demasiados_intentos: 429,
-  // Apagar una modalidad de negocio que todavía tiene algo colgando. Es 409 por lo mismo que
-  // un correo ya tomado: el pedido está bien armado, lo que pasa es que choca con algo que ya
-  // existe y que hay que resolver antes.
-  modalidad_con_asistentes: 409,
-  modalidad_con_accesos: 409,
-  modalidad_con_asistentes_y_accesos: 409,
   // Dos motivos que antes viajaban como frase adentro del `Error` y que, al dejar de mandarse el
   // texto crudo, se habrían perdido: quien mira leería "algo falló de nuestro lado" cuando en
   // realidad no falló nada, sólo que lo que pidió no corresponde. El de la persona es 409 —el

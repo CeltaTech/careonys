@@ -114,13 +114,13 @@ describe('del backend a la pantalla', () => {
 
   it('el mismo motivo se explica en los tres idiomas', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    const error = errorDeLaRespuesta(respuestaConNumero(409), { motivo: 'modalidad_con_asistentes' });
+    const error = errorDeLaRespuesta(respuestaConNumero(409), { motivo: 'plantilla_ya_enviada' });
 
     for (const idioma of Object.keys(T)) {
       const textos = T[idioma];
       const texto = mensajeDeError(error, textos);
-      expect(texto, `${idioma}.errores.motivos.modalidad_con_asistentes`).toBe(
-        textos.errores.motivos.modalidad_con_asistentes,
+      expect(texto, `${idioma}.errores.motivos.plantilla_ya_enviada`).toBe(
+        textos.errores.motivos.plantilla_ya_enviada,
       );
       expect(texto).not.toBe(textos.errores.duplicado);
     }

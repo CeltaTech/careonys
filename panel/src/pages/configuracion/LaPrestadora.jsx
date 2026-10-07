@@ -21,8 +21,8 @@ import { ElSoftwareDeAfuera } from './ElSoftwareDeAfuera';
 import '../../styles/molde-paginas.css';
 
 /* Quién es la Prestadora y cómo trabaja: su nombre y sus datos, en qué moneda
-   trabaja, las modalidades que tiene contratadas, las zonas donde presta, a qué
-   plazo le pagan los Clientes y —si vende por Match— por dónde cobra. */
+   trabaja, las zonas donde presta, a qué plazo le pagan los Clientes y —si
+   vende por Match— por dónde cobra. */
 export function ConfiguracionPrestadora() {
   const { tieneModalidad } = useModalidades();
 
@@ -30,7 +30,6 @@ export function ConfiguracionPrestadora() {
     <div className="molde-pila">
       <TabEmpresa />
       <LaMoneda />
-      <TabModalidades />
       <TabZonas />
       <TabLugares />
       <FacturacionClientesTab />
@@ -110,83 +109,6 @@ function TabEmpresa() {
             </div>
           </>
         )}
-      </EstadoLista>
-    </section>
-  );
-}
-
-function TabModalidades() {
-  const { t } = useLocale();
-  const { recargar: recargarMenu } = useModalidades();
-  const [modalidades, setModalidades] = useState([]);
-  const [estado, setEstado] = useState('cargando');
-  const [error, setError] = useState(null);
-  const [actualizandoModalidad, setActualizandoModalidad] = useState(null);
-
-  const recargar = useCallback(async () => {
-    setEstado('cargando');
-    setError(null);
-    try {
-      const { modalidades: filas } = await llamarApi('/modalidades');
-      setModalidades(filas);
-      setEstado('listo');
-    } catch (err) {
-      setError(mensajeDeError(err, t));
-      setEstado('error');
-    }
-  }, [t]);
-
-  useEffect(() => {
-    recargar();
-  }, [recargar]);
-
-  async function toggleActiva(fila) {
-    setActualizandoModalidad(fila.modalidad);
-    setError(null);
-    try {
-      await llamarApi(`/modalidades/${fila.modalidad}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ activa: !fila.activa }),
-      });
-      await Promise.all([recargar(), recargarMenu()]);
-    } catch (err) {
-      setError(mensajeDeError(err, t));
-    } finally {
-      setActualizandoModalidad(null);
-    }
-  }
-
-  return (
-    <section className="panel-tarjeta">
-      <div className="panel-tarjeta-titulo">
-        <h2>{t.configuracion.modalidades_titulo}</h2>
-      </div>
-      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
-      <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.configuracion.modalidades_col_modalidad}</th>
-              <th>{t.configuracion.modalidades_col_activa}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {modalidades.map((fila) => (
-              <tr key={fila.modalidad}>
-                <td>{t.configuracion[`modalidades_${fila.modalidad}`]}</td>
-                <td>
-                  <input
-                    type="checkbox"
-                    checked={fila.activa}
-                    onChange={() => toggleActiva(fila)}
-                    disabled={actualizandoModalidad === fila.modalidad}
-                    aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.modalidades_col_activa, nombre: t.configuracion[`modalidades_${fila.modalidad}`] })}
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </EstadoLista>
     </section>
   );

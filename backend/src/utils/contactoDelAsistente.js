@@ -43,7 +43,7 @@
 import { supabase } from '../db/connection.js';
 import { abrirElContacto, MOTIVO_CONTACTO } from './contactosIntermediacion.js';
 
-/** Las columnas de la ficha del Asistente que son el dato que se vende. Están acá, en una sola
+/** Las columnas del Legajo del Asistente que son el dato que se vende. Están acá, en una sola
  *  lista, por el mismo motivo que `COLUMNAS_PERFIL_PUBLICO` tiene la suya: para que ninguna ruta
  *  nueva arme la propia y termine mostrando de más. */
 export const COLUMNAS_DE_CONTACTO = 'id, nombre, telefono, email, domicilio';
@@ -113,7 +113,7 @@ export async function accesoQuePagaElContacto({ prestadoraId, clienteId }) {
 }
 
 /** El dato de contacto de un Asistente. Se pide con el identificador de la Prestadora además del
- *  de la persona: un identificador probado a mano no alcanza una ficha de otra Organización. */
+ *  de la persona: un identificador probado a mano no alcanza un Legajo de otra Organización. */
 export async function datosDeContacto({ prestadoraId, asistenteId }) {
   const { data, error } = await supabase
     .from('asistentes')

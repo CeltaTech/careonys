@@ -266,7 +266,7 @@ describe('a quiénes sale a buscar la fase automática', () => {
   });
 
   it('quien se fue de la Prestadora no es un candidato, aunque siga anotado en el roster', async () => {
-    // El roster de emergencia no se limpia cuando alguien se va: la ficha sigue ahí, con el
+    // El roster de emergencia no se limpia cuando alguien se va: el renglón sigue ahí, con el
     // Asistente dado de baja. Ese no es un candidato peor puesto; no es un candidato.
     respuestas.set('GET /rest/v1/personal_emergencia', () => [
       { asistente_id: FRANQUERO, tipo: 'franquero', asistentes: { estado: 'baja' } },

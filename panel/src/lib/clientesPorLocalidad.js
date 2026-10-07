@@ -5,10 +5,10 @@
 // mismo Cliente pueden vivir en localidades distintas— y por eso el Paciente dado de baja no
 // cuenta: el Cliente ya no está donde vivía quien se fue.
 //
-// SE COMPARAN IDENTIFICADORES, NUNCA NOMBRES. Lo guardado en la ficha del Paciente es cuál lugar.
+// SE COMPARAN IDENTIFICADORES, NUNCA NOMBRES. Lo guardado en el Legajo del Paciente es cuál lugar.
 // Buscar por el nombre traería juntas dos localidades que se llaman igual en provincias distintas,
 // y dejaría afuera a la que alguien escribió con una tilde de más. El nombre se busca recién al
-// mostrarlo, en el catálogo, así que corregirlo una vez lo corrige en todas las fichas.
+// mostrarlo, en el catálogo, así que corregirlo una vez lo corrige en el Legajo de cada Paciente.
 //
 // ESTÁ ACÁ Y NO ADENTRO DE LA PANTALLA porque son decisiones, no dibujo: qué Paciente cuenta, qué
 // pasa con el que todavía no tiene localidad elegida y qué localidades vale la pena ofrecer. Eso

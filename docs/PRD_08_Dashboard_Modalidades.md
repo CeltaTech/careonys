@@ -82,7 +82,7 @@ Visible siempre que **alguna** modalidad basada en Asistentes esté activa (dire
 Match — cooperativa también los necesita en algún momento, ver §3 pregunta 4):
 
 - Proceso de Incorporación de Asistentes (hoy "Postulaciones" + "Solicitudes")
-- Asistentes (ficha, plantel, `canales` para saber en qué modalidad participa cada uno)
+- Asistentes (Legajo, plantel, `canales` para saber en qué modalidad participa cada uno)
 - Documentación (vencimientos documentales, común a cualquier canal)
 - Verificación de Guardias
 

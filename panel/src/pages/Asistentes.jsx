@@ -6,7 +6,7 @@ import { usePermisos } from '../context/PermisosContext';
 import { esAdminOSuperior } from '../lib/roles';
 import { claseBadge, claseBadgeTono, TONO } from '../lib/tonos';
 import { nombreTipo } from '../lib/tiposAsistente';
-import { conDatosAparte } from '../lib/fichaAsistente';
+import { conDatosAparte } from '../lib/datosAparteDelAsistente';
 import { MODALIDAD, modalidadesDelAsistente } from '../lib/modalidades';
 import { coincideConElFiltro, opcionesDelPlantel } from '../lib/resumenDelPlantel';
 import { useSupabaseTable } from '../hooks/useSupabaseTable';

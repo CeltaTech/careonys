@@ -5,7 +5,7 @@ import { useCatalogo } from './useCatalogo';
  * fecha de creación, que es lo que pide una lista de registros en vez de un catálogo.
  *
  * `select` sirve para traer también una tabla adjunta —por ejemplo los datos que viven aparte
- * de la ficha del Asistente—. Por defecto trae las columnas de la tabla y nada más.
+ * del Legajo del Asistente—. Por defecto trae las columnas de la tabla y nada más.
  */
 export function useSupabaseTable(tabla, { orderBy = 'creado_en', ascending = false, select = '*' } = {}) {
   return useCatalogo(tabla, {

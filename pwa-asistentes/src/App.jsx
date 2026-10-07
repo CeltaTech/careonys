@@ -22,7 +22,7 @@ function RutaPrivada({ children }) {
   const { session, estado } = useAuth();
   const { t } = useLocale();
   if (estado === 'cargando') return <div className="pantalla-cargando estado-cargando">{t.comun.cargando}</div>;
-  // No se pudo averiguar quién entró. Se lo dice, en vez de dejarla pasar sin ficha y mostrarle
+  // No se pudo averiguar quién entró. Se lo dice, en vez de dejarla pasar sin su usuario y mostrarle
   // una aplicación vacía como si no tuviera nada.
   if (estado === 'error') {
     return (

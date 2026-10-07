@@ -5,7 +5,7 @@ import { textoDeLaInstruccion, huellaDelDocumento, IDIOMA_DEL_DOCUMENTO } from '
 import { avisarPorWhatsapp } from './whatsapp.js';
 import { enviarEmail, configuracionEvento } from './email.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
-import { cuentaDeLaFicha, cuentasDeLasFichas } from './cuentaDeLaFicha.js';
+import { cuentaDeLaFila, cuentasDeLasFilas } from './cuentaDeLaFila.js';
 import { correoDe } from './correoDeUnaPersona.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
@@ -51,7 +51,7 @@ async function personasAutorizadasDelCliente(clienteId, prestadoraId) {
 
   // La fila del titular guarda su cuenta, y `clienteId` es el Legajo: para reconocerla hay que
   // pedir de qué cuenta cuelga ese Legajo.
-  const cuentaDelTitular = await cuentaDeLaFicha('clientes', clienteId, prestadoraId);
+  const cuentaDelTitular = await cuentaDeLaFila('clientes', clienteId, prestadoraId);
 
   return (data ?? [])
     .filter((fila) => fila.usuario_id !== cuentaDelTitular)
@@ -118,7 +118,7 @@ export async function crearInstruccion({ clienteId, prestadoraId, cargadaPor, ac
   const texto = textoDeLaInstruccion({
     prestadora: { nombre: prestadora?.nombre_fantasia },
     titular: {
-      nombre: await nombreDe(await cuentaDeLaFicha('clientes', clienteId, prestadoraId), prestadoraId),
+      nombre: await nombreDe(await cuentaDeLaFila('clientes', clienteId, prestadoraId), prestadoraId),
     },
     cargadaPor: { nombre: await nombreDe(cargadaPor, prestadoraId) },
     personas: decidido.map((persona) => ({
@@ -244,7 +244,7 @@ export async function pedirCodigo({ instruccionId, clienteId, prestadoraId }) {
     .maybeSingle();
 
   // `clienteId` es el Legajo; el teléfono es de la persona y vive en la cuenta de la que cuelga.
-  const cuentasTitular = await cuentasDeLasFichas('clientes', [clienteId], 'telefono', prestadoraId);
+  const cuentasTitular = await cuentasDeLasFilas('clientes', [clienteId], 'telefono', prestadoraId);
   const titular = cuentasTitular.get(clienteId) ?? null;
 
   const remite = prestadora?.nombre_fantasia ?? '';
@@ -277,7 +277,7 @@ export async function pedirCodigo({ instruccionId, clienteId, prestadoraId }) {
   // `clienteId` es el Legajo; el correo es de la persona y vive en la cuenta de la que cuelga.
   const correoTitular = await correoDe({
     prestadoraId,
-    usuarioId: await cuentaDeLaFicha('clientes', clienteId, prestadoraId),
+    usuarioId: await cuentaDeLaFila('clientes', clienteId, prestadoraId),
   });
   if (!correoTitular) {
     throw new ErrorConMotivo('sin_canal', 'No hay a dónde mandar el código');

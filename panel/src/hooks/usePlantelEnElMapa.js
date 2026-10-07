@@ -13,7 +13,7 @@ import { mapaDelPlantel, puntoDeLaSolicitud } from '../lib/mapaDelPlantel';
 
    SE MIRA EN VIVO Y NO SE GUARDA NADA. El mapa se arma con el plantel del momento en que se abre
    la pantalla. No hay ninguna tabla con puntos calculados: una foto guardada quedaría vieja el
-   día que alguien cargue una ficha nueva, y nadie se enteraría.
+   día que alguien cargue el Legajo de un Asistente nuevo, y nadie se enteraría.
 
    QUÉ COLUMNAS VIAJAN Y CUÁLES NO. Las justas para dibujar el punto y para ordenar la lista de
    sugeridos. La dirección escrita no se pide: no hace falta para dibujar un punto, y es dato

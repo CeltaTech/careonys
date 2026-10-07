@@ -1,7 +1,7 @@
 // La lista de lugares de una Prestadora, leída una sola vez y desde un solo lado.
 //
 // **Por qué no vive adentro de una ruta.** La misma lista la necesitan tres pantallas: la de
-// Configuración, que la carga; la ficha de la Asistente, donde se marca dónde acepta trabajar; y
+// Configuración, que la carga; el Legajo de la Asistente, donde se marca dónde acepta trabajar; y
 // la de Usuarios, donde se fija hasta dónde llega una coordinadora. Las dos últimas las abre gente
 // que no entra a Configuración, así que la lectura no puede quedar del lado de la configuración.
 // Escrita tres veces, terminaría ordenando distinto o mostrando los apagados en una y no en otra.
@@ -62,8 +62,8 @@ export async function nombreDelLugar(db, lugarId, prestadoraId) {
 /** Cómo se llaman esos lugares, ordenados por nombre.
  *
  *  Es lo que ven las pantallas de teléfono donde antes había palabras tecleadas: la lista que sale
- *  hacia afuera sigue siendo de nombres, pero ahora los nombres salen de las fichas de los lugares
- *  y no de lo que alguien escribió a mano en cada ficha de Asistente.
+ *  hacia afuera sigue siendo de nombres, pero ahora los nombres salen de la tabla de lugares
+ *  y no de lo que alguien escribió a mano en cada Legajo de Asistente.
  *
  *  Filtrado por Prestadora, por el mismo motivo que `nombreDelLugar`. */
 export async function nombresDeLugares(db, lugarIds, prestadoraId) {

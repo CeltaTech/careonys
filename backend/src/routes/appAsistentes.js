@@ -56,7 +56,7 @@ import { devolverAlTitular } from '../utils/coberturaDeAusencia.js';
 import { hoyISO } from '../utils/horarios.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
-import { cuentasDeLasFichas } from '../utils/cuentaDeLaFicha.js';
+import { cuentasDeLasFilas } from '../utils/cuentaDeLaFila.js';
 import {
   ACCION_CAMBIO_DE_DATOS_BANCARIOS,
   camposQueCambiaron,
@@ -269,7 +269,7 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
     (await ofreceIntermediacion(req.usuarioAsistente.prestadoraId));
 
   // Dónde acepta trabajar, con los nombres puestos. Está guardado en la tabla que la cruza con cada
-  // lugar, no en su ficha: una persona puede cubrir dos localidades de una zona y una de otra, y la
+  // lugar, no en su Legajo: una persona puede cubrir dos localidades de una zona y una de otra, y la
   // zona diría de más. La pantalla recibe una lista de nombres, igual que siempre.
   const lugares = await lugaresDe(db, 'asistente_lugares', 'asistente_id', perfil.id, req.usuarioAsistente.prestadoraId);
   const zonas = await nombresDeLugares(db, lugares, req.usuarioAsistente.prestadoraId);
@@ -346,7 +346,7 @@ appAsistentesRouter.get('/perfil/papeles', requiereRolAsistente, async (req, res
 //
 // DE QUIÉN SON LOS DATOS LO DECIDE LA SESIÓN: no hay ningún identificador en el pedido, así que no
 // hay nada que falsificar. Y la base, que recibe la credencial de quien pide, contesta sólo las
-// filas de su ficha en la Prestadora donde entró.
+// filas de su Legajo en la Prestadora donde entró.
 //
 // ACÁ SE MIRA, Y AL LADO SE CORRIGE. El dato lo informa su dueño, así que él lo carga y él lo
 // corrige, por `/perfil/datos-bancarios/:clase`, que está unos renglones más abajo. Por esta
@@ -594,7 +594,7 @@ appAsistentesRouter.patch('/perfil/disponibilidad', requiereRolAsistente, async 
   // encontrado ninguna, y acá lo que se muestra después es justamente el estado del interruptor.
   //
   // SIGUE CON LA LLAVE MAESTRA: la base no tiene ninguna política que le deje al Asistente
-  // corregir su propia ficha, así que con su credencial la escritura no alcanzaría ninguna fila.
+  // corregir su propio Legajo, así que con su credencial la escritura no alcanzaría ninguna fila.
   const { data: guardada, error } = await supabase
     .from('asistentes')
     .update({ disponible_para_ofertas: disponible, disponibilidad_cambiada_en: new Date().toISOString() })
@@ -620,7 +620,7 @@ appAsistentesRouter.patch('/perfil/disponibilidad', requiereRolAsistente, async 
 // Paciente (ver `utils/pacientesDeGuardia.js`). La lista ya no la engancha PostgREST por la
 // columna vieja `guardias.paciente_id` — sale de la tabla `guardia_pacientes`.
 //
-// Y la dirección de cada Paciente es la que rige **el día de esa guardia**, no la de la ficha:
+// Y la dirección de cada Paciente es la que rige **el día de esa guardia**, no la del Legajo del Paciente:
 // un turno de enero puede caer en la temporada en que el Paciente está en la casa de un hijo
 // (`utils/domicilioDelDia.js`).
 appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
@@ -808,7 +808,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
   // Un solo check-in para todo el turno, aunque el turno cubra a varias personas: el Asistente
   // llega una vez a la casa y marca una vez.
   //
-  // Las coordenadas contra las que se mide son las del DÍA DE ESTA GUARDIA, no las de la ficha:
+  // Las coordenadas contra las que se mide son las del DÍA DE ESTA GUARDIA, no las del Legajo del Paciente:
   // si el Paciente está pasando una temporada en otro lado, el Asistente fue a donde le
   // dijeron, y medir contra la casa de siempre lo daba fuera de rango y le mandaba al
   // Coordinador una alerta que era un falso positivo (pendiente #153).
@@ -1364,13 +1364,13 @@ appAsistentesRouter.post('/coberturas/:id/objecion', requiereRolAsistente, async
 
   // Guardado primero, avisado después: si el envío falla, la objeción ya quedó.
   try {
-    const { data: ficha } = await supabase
+    const { data: asistente } = await supabase
       .from('asistentes').select('nombre').eq('id', asistenteId).eq('prestadora_id', prestadoraId).maybeSingle();
     const idioma = await idiomaDeLaPrestadora(clienteDelPedido(req), prestadoraId);
     await notificarCoordinador({
       evento: 'cobertura_objetada',
       prestadoraId,
-      ...mensajeDelSistema('cobertura_objetada', idioma, { nombre: ficha?.nombre }),
+      ...mensajeDelSistema('cobertura_objetada', idioma, { nombre: asistente?.nombre }),
     });
   } catch (e) {
     console.error('Error avisando al Coordinador de una cobertura objetada:', e.message);
@@ -1970,7 +1970,7 @@ appAsistentesRouter.delete('/push/suscribir', requiereRolAsistente, async (req, 
   }
 
   // Va con la credencial de quien pide: la base sólo deja borrar las suscripciones de su propia
-  // ficha en la Prestadora donde entró.
+  // Legajo en la Prestadora donde entró.
   const { error } = await clienteDelPedido(req)
     .from('push_subscriptions')
     .delete()
@@ -2087,7 +2087,7 @@ async function exigeIntermediacion(req) {
 /** Cómo se llama el Cliente del otro lado. El nombre es de la persona, así que sale de la cuenta
  *  de la que cuelga ese Legajo. */
 async function nombreDelCliente(clienteId, prestadoraId) {
-  const cuentas = await cuentasDeLasFichas('clientes', [clienteId], 'nombre', prestadoraId);
+  const cuentas = await cuentasDeLasFilas('clientes', [clienteId], 'nombre', prestadoraId);
   return cuentas.get(clienteId)?.nombre || '';
 }
 
@@ -2105,7 +2105,7 @@ appAsistentesRouter.get('/intermediacion/conversaciones', requiereRolAsistente, 
     const hilos = data || [];
     // Los nombres y los mensajes sin leer, en una consulta cada cosa para toda la lista.
     const [personas, { data: sinLeer }] = await Promise.all([
-      cuentasDeLasFichas('clientes', hilos.map((c) => c.cliente_id), 'nombre', req.usuarioAsistente.prestadoraId),
+      cuentasDeLasFilas('clientes', hilos.map((c) => c.cliente_id), 'nombre', req.usuarioAsistente.prestadoraId),
       hilos.length
         ? db
             .from('mensajes_intermediacion')
@@ -2116,7 +2116,7 @@ appAsistentesRouter.get('/intermediacion/conversaciones', requiereRolAsistente, 
         : Promise.resolve({ data: [] }),
     ]);
 
-    const nombres = new Map([...personas].map(([fichaId, datos]) => [fichaId, datos?.nombre || '']));
+    const nombres = new Map([...personas].map(([clienteId, datos]) => [clienteId, datos?.nombre || '']));
     const cuenta = new Map();
     for (const m of sinLeer || []) cuenta.set(m.conversacion_id, (cuenta.get(m.conversacion_id) || 0) + 1);
 

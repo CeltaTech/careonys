@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 //   'cargando' — todavía no se sabe quién entró;
 //   'error'    — no se pudo averiguar, y la pantalla lo dice en vez de mostrarse vacía;
 //   'listo'    — se averiguó, haya sesión o no la haya.
-// Antes, una lectura fallida dejaba la ficha en nulo y quien la recibía no podía distinguir
+// Antes, una lectura fallida dejaba el usuario en nulo y quien lo recibía no podía distinguir
 // «todavía no llegó» de «falló», así que mostraba un vacío tranquilizador.
 const AuthContext = createContext(null);
 

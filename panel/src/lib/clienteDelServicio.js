@@ -1,5 +1,5 @@
 // Cómo se lee el Cliente que contrató un Servicio. Escrito una sola vez porque lo necesitan la
-// lista de Servicios y la ficha de cada uno, y si la decisión vive en las dos, el día que aparezca
+// lista de Servicios y el Detalle del servicio, y si la decisión vive en las dos, el día que aparezca
 // un Cliente que no sea un Cliente una de las dos se va a olvidar.
 //
 // En la base son dos columnas: `tipo_contratante`, de qué clase es el Cliente, y `contratante_id`,
@@ -21,8 +21,8 @@ export const TIPO_CLIENTE = 'cliente';
  * @param {Map<string, object>} [contactos] Mapa de identificador de Cliente a sus datos de
  *   contacto —nombre, localidad, teléfono, correo—. Puede venir vacío mientras se carga.
  * @returns {{tipo: string|null, id: string|null, contacto: object|null, ruta: string|null}}
- *   `contacto` es lo que se muestra, y `ruta` adónde lleva el botón que abre su ficha. Los dos
- *   vienen en `null` cuando el Cliente no tiene ficha propia.
+ *   `contacto` es lo que se muestra, y `ruta` adónde lleva el botón que abre la Ficha del cliente. Los dos
+ *   vienen en `null` cuando el Cliente no tiene Ficha del cliente propia.
  */
 export function clienteDelServicio(servicio, contactos) {
   const tipo = servicio?.tipo_contratante ?? null;

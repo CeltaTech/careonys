@@ -53,7 +53,7 @@
 import { supabase } from '../db/connection.js';
 import { obtenerAdaptador, proveedoresDisponibles } from '../pasarelas/index.js';
 import { sumarDias } from './fechas.js';
-import { cuentaDeLaFicha } from './cuentaDeLaFicha.js';
+import { cuentaDeLaFila } from './cuentaDeLaFila.js';
 import { correoDe } from './correoDeUnaPersona.js';
 
 /** Los motivos por los que un alta no se puede hacer. Son códigos, no frases: la frase que lee la
@@ -268,7 +268,7 @@ async function correoDelCliente(clienteId, prestadoraId) {
   if (!clienteId || !prestadoraId) return null;
   return correoDe({
     prestadoraId,
-    usuarioId: await cuentaDeLaFicha('clientes', clienteId, prestadoraId),
+    usuarioId: await cuentaDeLaFila('clientes', clienteId, prestadoraId),
   });
 }
 

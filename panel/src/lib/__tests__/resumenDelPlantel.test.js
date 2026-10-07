@@ -138,7 +138,7 @@ describe('documentacionPorAsistente', () => {
 });
 
 describe('opcionesDelPlantel', () => {
-  // Cada ficha la cargó otra persona, en otro momento y sin lista de la cual elegir: la misma
+  // Cada Legajo del Asistente lo cargó otra persona, en otro momento y sin lista de la cual elegir: la misma
   // zona termina escrita de tres maneras. Si el filtro las ofrece por separado, elegir una deja
   // afuera a los otros dos.
   it('junta en una sola opción lo que está escrito distinto', () => {
@@ -168,17 +168,17 @@ describe('opcionesDelPlantel', () => {
     expect(opcionesDelPlantel(filas, 'especialidades')).toEqual(['Enfermería']);
   });
 
-  it('no se cae sin plantel ni con fichas sin el campo', () => {
+  it('no se cae sin plantel ni con Legajos del Asistente sin el campo', () => {
     expect(opcionesDelPlantel(undefined, 'zonas')).toEqual([]);
     expect(opcionesDelPlantel([{}, null, { zonas: null }], 'zonas')).toEqual([]);
   });
 });
 
 describe('coincideConElFiltro', () => {
-  const ficha = { zonas: ['San Isidro', 'Vicente López'], especialidades: ['Enfermería'] };
+  const asistente = { zonas: ['San Isidro', 'Vicente López'], especialidades: ['Enfermería'] };
 
   it('sin nada elegido no filtra nada', () => {
-    expect(coincideConElFiltro(ficha, 'zonas', '')).toBe(true);
+    expect(coincideConElFiltro(asistente, 'zonas', '')).toBe(true);
     expect(coincideConElFiltro({}, 'zonas', undefined)).toBe(true);
   });
 
@@ -189,16 +189,16 @@ describe('coincideConElFiltro', () => {
   // Acá la igualdad es exacta, y no como en `nombranLoMismo`: dos zonas distintas que comparten
   // una palabra son dos zonas distintas, y quien elige una no quiere ver las otras.
   it('no junta dos cosas distintas', () => {
-    expect(coincideConElFiltro(ficha, 'zonas', 'Morón')).toBe(false);
+    expect(coincideConElFiltro(asistente, 'zonas', 'Morón')).toBe(false);
     expect(coincideConElFiltro({ zonas: ['Zona Norte'] }, 'zonas', 'Norte')).toBe(false);
   });
 
   it('busca en el campo que se le pide', () => {
-    expect(coincideConElFiltro(ficha, 'especialidades', 'San Isidro')).toBe(false);
-    expect(coincideConElFiltro(ficha, 'especialidades', 'enfermeria')).toBe(true);
+    expect(coincideConElFiltro(asistente, 'especialidades', 'San Isidro')).toBe(false);
+    expect(coincideConElFiltro(asistente, 'especialidades', 'enfermeria')).toBe(true);
   });
 
-  it('una ficha sin ese campo no coincide con nada elegido', () => {
+  it('un Legajo del Asistente sin ese campo no coincide con nada elegido', () => {
     expect(coincideConElFiltro({}, 'zonas', 'San Isidro')).toBe(false);
     expect(coincideConElFiltro(null, 'zonas', 'San Isidro')).toBe(false);
   });

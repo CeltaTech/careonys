@@ -267,8 +267,8 @@ export function ClienteDetalle() {
     ['alertas', t.clientes.alertas_activas],
   ];
 
-  // La línea de datos de la ficha, con lo que ya se muestra en Contacto.
-  const datosDeLaFicha = [
+  // La línea de datos de la Ficha del cliente, con lo que ya se muestra en Contacto.
+  const datosDeLaFichaDelCliente = [
     cliente.solicitudes?.localidad,
     cliente.solicitudes?.telefono,
     cliente.solicitudes?.email,
@@ -287,7 +287,7 @@ export function ClienteDetalle() {
           </Button>
         )}
       </Cabecera>
-      <div className="panel-mini hoja-ficha-datos">{datosDeLaFicha.join(' · ')}</div>
+      <div className="panel-mini hoja-ficha-datos">{datosDeLaFichaDelCliente.join(' · ')}</div>
 
       {/* El aviso del reenvío queda afuera de las pestañas: se reenvía desde la cabecera y desde
           las Personas autorizadas, y tiene que verse en las dos. */}

@@ -6,7 +6,7 @@ import { hoyISO } from './horarios';
  * Existe porque la respuesta sale de dos cosas a la vez y no de una: `estado`, que dice si se
  * dio de baja, y el par `vigente_desde` / `vigente_hasta`, que dice qué período se pactó.
  * Escrita en cada pantalla que la necesita, tarde o temprano una mira una sola de las dos y la
- * misma prestación queda cobrada en la factura y dada de baja en la ficha.
+ * misma prestación queda cobrada en la factura y dada de baja en la Ficha del cliente.
  *
  * `vigente_hasta` es el último día que corre, incluido, y vacío quiere decir que sigue abierta.
  * Es la misma forma que ya usan las matrículas, las series de guardias y las indicaciones de
@@ -46,7 +46,7 @@ export function lasQueCorrenElDia(prestaciones, dia = hoyISO()) {
 /**
  * En qué situación está una prestación, para mostrarla. Cuatro respuestas y no dos, porque una
  * prestación en pie que arranca la semana que viene no es lo mismo que una corriendo, y quien
- * mira la ficha necesita distinguirlas:
+ * mira la Ficha del cliente necesita distinguirlas:
  *
  *   `corriendo`   — en pie y dentro de su período.
  *   `por_empezar` — en pie, pero arranca más adelante.

@@ -27,7 +27,7 @@ import '../../styles/molde-paginas.css';
    Y VACÍO NO ES CERO. Cero quiere decir «paga el mismo día», que es un acuerdo posible.
 
    Lo de acá rige para toda la Prestadora; con un Cliente en particular se puede acordar otro
-   plazo desde su ficha, y ese gana. La cuenta vive en `lib/facturacionDeClientes.js`, que es el
+   plazo desde la Ficha del cliente, y ese gana. La cuenta vive en `lib/facturacionDeClientes.js`, que es el
    mismo archivo que usa el backend. */
 export function FacturacionClientesTab() {
   const { t } = useLocale();

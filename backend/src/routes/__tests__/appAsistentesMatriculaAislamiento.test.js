@@ -146,7 +146,7 @@ describe('la Matrícula que el Asistente ve de sí mismo', () => {
   });
 
   // El enlace temporal sigue con la llave maestra: la política del depósito mira la cuenta y la carpeta es
-  // la ficha, así que con la credencial de la persona el Asistente no abriría su propio archivo.
+  // el Legajo del Asistente, así que con la credencial de la persona el Asistente no abriría su propio archivo.
   // Lo que la acota es la comprobación de la ruta contra la sesión.
   it('el enlace a su propio archivo sale, y va con la llave maestra', async () => {
     respuestas.set(

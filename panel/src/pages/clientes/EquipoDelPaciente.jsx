@@ -98,11 +98,11 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
       const armado = armar([]);
 
       // Los nombres. Los lugares del equipo —que son los que dicen quién lo coordina— se piden
-      // aparte, porque viven en su propia tabla y no en un renglón de la ficha.
+      // aparte, porque viven en su propia tabla y no en el Legajo del Asistente.
       const idsAsistentes = [
         ...new Set([...armado.asistentes, ...armado.afuera].map((a) => a.asistente_id)),
       ];
-      const [fichas, todas] = await Promise.all([
+      const [delEquipo, todas] = await Promise.all([
         idsAsistentes.length
           ? supabase.from('asistentes').select('id, nombre, apellido').in('id', idsAsistentes)
           : Promise.resolve({ data: [], error: null }),
@@ -110,9 +110,9 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
         // ver de una Asistente; acá alcanza con el nombre.
         supabase.from('asistentes').select('id, nombre, apellido').order('apellido'),
       ]);
-      if (fichas.error) throw fichas.error;
+      if (delEquipo.error) throw delEquipo.error;
       if (todas.error) throw todas.error;
-      const porId = new Map((fichas.data ?? []).map((a) => [a.id, a]));
+      const porId = new Map((delEquipo.data ?? []).map((a) => [a.id, a]));
       const lugaresPorAsistente = await lugaresDeVarias('asistente_lugares', 'asistente_id', idsAsistentes);
 
       // Quién alcanza a este Paciente se resuelve cruzando lugares con lugares: el mismo
@@ -146,8 +146,8 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
       setDatos({
         ...conCoordinadores,
         nombreDeAsistente: (id) => {
-          const ficha = porId.get(id) ?? (todas.data ?? []).find((a) => a.id === id);
-          return ficha ? `${ficha.apellido ?? ''} ${ficha.nombre ?? ''}`.trim() : id;
+          const asistente = porId.get(id) ?? (todas.data ?? []).find((a) => a.id === id);
+          return asistente ? `${asistente.apellido ?? ''} ${asistente.nombre ?? ''}`.trim() : id;
         },
         nombreDeUsuario: (id) => nombresDeUsuario.get(id) || id,
       });

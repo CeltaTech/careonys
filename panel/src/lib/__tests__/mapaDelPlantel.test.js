@@ -39,7 +39,7 @@ const asistente = (extra) => ({
   ...extra,
 });
 
-const lugaresPorFicha = (mapa) => (id) => mapa[id] ?? [];
+const lugaresPorAsistente = (mapa) => (id) => mapa[id] ?? [];
 
 describe('coordenadasDe', () => {
   it('devuelve el punto cuando los dos números están', () => {
@@ -104,7 +104,7 @@ describe('encuadre', () => {
 });
 
 describe('mapaDelPlantel', () => {
-  const lugaresDe = lugaresPorFicha({
+  const lugaresDe = lugaresPorAsistente({
     norte: ['lugar-norte'],
     oeste: ['lugar-oeste'],
     ambas: ['lugar-norte', 'lugar-oeste'],
@@ -258,7 +258,7 @@ describe('puntoDeLaSolicitud', () => {
     });
   });
 
-  // Dos fichas que se llaman igual es no saber cuál: elegir la primera ordenaría el plantel
+  // Dos lugares que se llaman igual es no saber cuál: elegir el primero ordenaría el plantel
   // alrededor de un punto equivocado sin que nadie se entere.
   it('se calla cuando la localidad puede ser dos lugares distintos', () => {
     const repetidos = [NORTE, { ...NORTE, id: 'otro-norte' }];

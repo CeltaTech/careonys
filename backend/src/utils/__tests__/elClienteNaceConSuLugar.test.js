@@ -170,7 +170,7 @@ describe('el Cliente que nace de una Solicitud', () => {
     assert.equal(loEscritoEn('pacientes').lugar_id, LUGAR);
   });
 
-  it('el nombre del lugar se pregunta dentro de la Prestadora y no en cualquier ficha', async () => {
+  it('el nombre del lugar se pregunta dentro de la Prestadora y no entre los lugares de todas', async () => {
     await pedir('POST', '/cliente', { solicitudId: SOLICITUD });
 
     const lectura = loLeidoDe('lugares');

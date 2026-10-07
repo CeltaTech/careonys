@@ -302,7 +302,7 @@ queda guardado es cuál, no cómo se llama.
 Padrón sólo elige: no da de alta. Y el botón que guarda una corrección dice guardar, porque ahí se
 están cambiando datos de algo que ya existe; agregar es otra cosa y tiene su propio botón.
 
-**El número de Legajo no se muestra en las fichas.** No es dato que sirva para reconocer a nadie, y
+**El número de Legajo no se muestra, ni en el Legajo ni en la Ficha del cliente.** No es dato que sirva para reconocer a nadie, y
 menos todavía como etiqueta de anuncio.
 
 **El nombre visible del Cliente se calcula al mostrarlo, y no se guarda.** Se arma con el

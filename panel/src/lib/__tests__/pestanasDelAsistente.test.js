@@ -12,7 +12,7 @@ const IDIOMAS = ['es-AR', 'en', 'pt-BR'];
 
 describe('pestanasDelAsistente', () => {
   // Éste es el error que la prueba tiene que encontrar: agregar una pestaña y traducirla
-  // después. La ficha mostraría un botón en blanco, y sólo en dos de los tres idiomas.
+  // después. El Legajo del Asistente mostraría un botón en blanco, y sólo en dos de los tres idiomas.
   it.each(IDIOMAS)('%s nombra todas las pestañas', (idioma) => {
     for (const pestana of PESTANAS) {
       const nombre = T[idioma].asistentes.tabs[pestana];

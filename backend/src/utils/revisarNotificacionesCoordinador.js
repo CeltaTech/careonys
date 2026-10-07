@@ -3,7 +3,7 @@ import { notificarCoordinador, avisarPorWhatsapp } from './whatsapp.js';
 import { enviarPushCliente } from './push.js';
 import { configuracionEvento, enviarEmail } from './email.js';
 import { correoDe } from './correoDeUnaPersona.js';
-import { cuentasDeLasFichas } from './cuentaDeLaFicha.js';
+import { cuentasDeLasFilas } from './cuentaDeLaFila.js';
 import { escalonesYaAvisados, escalarSiCorresponde } from './avisosDeEscalon.js';
 import { necesitaNotificar } from './insistencia.js';
 import { correrFaseAutomatica } from './faseAutomaticaRelevo.js';
@@ -674,7 +674,7 @@ async function notificarClienteSiCorresponde({ evento, prestadoraId, guardiaId, 
   if (clienteIds.length === 0) return;
 
   // Los identificadores son de Legajo; el teléfono es de la persona y vive en su cuenta.
-  const cuentas = await cuentasDeLasFichas('clientes', clienteIds, 'telefono', prestadoraId);
+  const cuentas = await cuentasDeLasFilas('clientes', clienteIds, 'telefono', prestadoraId);
   const telefonoPorCliente = new Map([...cuentas].map(([id, datos]) => [id, datos?.telefono ?? null]));
 
   // El mensaje del Cliente es suyo: dice cuál es la guardia y qué pasó, y nada más. Ni el nivel
@@ -700,7 +700,7 @@ async function notificarClienteSiCorresponde({ evento, prestadoraId, guardiaId, 
 // El correo no se pide acá: `usuarios` no tiene esa columna —vive en la tabla de cuentas—, y
 // pedírsela hacía que la consulta entera fallara con un error de columna desconocida. El código lo
 // leía como «ese Coordinador no existe» y salía sin avisar: el escalón al respaldo no llegaba
-// nunca, en silencio. Ahora el teléfono sale de la ficha y el correo de donde está
+// nunca, en silencio. Ahora el teléfono sale de `usuarios` y el correo de donde está
 // (`correoDeUnaPersona.js`).
 async function notificarCoordinadorBackup({ backupId, prestadoraId, texto, idioma }) {
   const { data: usuario } = await supabase

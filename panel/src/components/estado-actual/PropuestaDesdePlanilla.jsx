@@ -27,9 +27,9 @@ import '../../styles/molde-paginas.css';
 
    QUÉ MUESTRA Y POR QUÉ ESO. Cuántas filas trae, y —para una planilla de Asistentes— las zonas
    de cobertura y los tipos de Asistente que nombra y no existen. Eso importa antes de importar:
-   la importación no los crea, así que una zona desconocida entra como texto suelto en la ficha
+   la importación no los crea, así que una zona desconocida entra como texto suelto en el Legajo del Asistente
    y un tipo desconocido deja al Asistente sin tipo, que es lo que decide si se le va a exigir
-   Matrícula. Después se descubre de a una ficha.
+   Matrícula. Después se descubre abriendo de a un Legajo del Asistente.
 
    NO CREA NADA. Al continuar se sigue a la pantalla de importación, que es donde están los dos
    frenos humanos: revisar el mapeo y conformar el resultado real. Lo leído viaja en memoria

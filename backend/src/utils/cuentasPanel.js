@@ -10,7 +10,7 @@ import { APROBADAS, filasDeIncorporacion } from './etapasDeIncorporacion.js';
 import { guardarLugaresDe } from './lugaresDeCadaPersona.js';
 import { nombreDelLugar } from './catalogoDeLugares.js';
 import { domicilioEscrito, partesDelDomicilio } from './domicilioEscrito.js';
-import { cuentaDeLaFicha } from './cuentaDeLaFicha.js';
+import { cuentaDeLaFila } from './cuentaDeLaFila.js';
 
 // Comprueba que un tipo de Asistente exista y sea de los que esta Prestadora puede usar:
 // los generales de CeltaTech (`prestadora_id` vacío) o los que creó ella misma. Devuelve el
@@ -254,7 +254,7 @@ export async function deshacerAlta(db, userId, { prestadoraId, filas = [] } = {}
 // una de las dos (regla 12 de CLAUDE.md §7).
 //
 // `sinPrestadora: true` marca las tablas que no tienen columna de Organización: se borran
-// colgando de la ficha o de la cuenta, cuya pertenencia el deshacer comprueba antes de tocar
+// colgando del Legajo del Asistente o de la cuenta, cuya pertenencia el deshacer comprueba antes de tocar
 // nada. Todas las demás se borran nombrando la Prestadora.
 export const FILAS_DE_UN_ASISTENTE = [
   { tabla: 'asistente_lugares', columna: 'asistente_id' },
@@ -268,12 +268,12 @@ export const FILAS_DE_UNA_CLIENTE = [
   { tabla: 'clientes' },
 ];
 
-// Las cuatro tablas de arriba cuelgan de la FICHA, no de la cuenta, y desde que la ficha tiene
+// Las cuatro tablas de arriba cuelgan del LEGAJO DEL ASISTENTE, no de la cuenta, y desde que el Legajo tiene
 // identificador propio esos dos números dejaron de ser el mismo. Por eso el valor con el que se
 // busca se dice acá y no se deja librado al valor por omisión del deshacer, que es el de la
 // cuenta: sin esto la limpieza pasaría por encima sin borrar nada y no se notaría.
 //
-// Sin ficha no hay nada que limpiar de ese lado: el alta se cortó antes de crearla, y lo único
+// Sin Legajo del Asistente no hay nada que limpiar de ese lado: el alta se cortó antes de crearla, y lo único
 // que queda es la cuenta, que el deshacer borra igual.
 export const filasDeUnAsistente = (asistenteId) =>
   asistenteId ? FILAS_DE_UN_ASISTENTE.map((fila) => ({ ...fila, valor: asistenteId })) : [];
@@ -331,8 +331,8 @@ export async function crearAsistenteDirecto({
   const ubicacion = await coordenadasDeDomicilio({ prestadoraId, direccion: domicilioDelAsistente });
 
   // Dos identificadores, y ya no son el mismo número. `cuentaId` es la persona —con qué entra,
-  // cómo se llama, qué teléfono tiene—; `asistenteId` es su ficha en esta Prestadora, que la base
-  // numera sola. La misma persona puede tener otra ficha en otra Prestadora, con su propia
+  // cómo se llama, qué teléfono tiene—; `asistenteId` es su Legajo en esta Prestadora, que la base
+  // numera sola. La misma persona puede tener otro Legajo de Asistente en otra Prestadora, con su propia
   // antigüedad y sus propias matrículas, colgando de esta misma cuenta.
   let cuentaId;
   let asistenteId;
@@ -341,7 +341,7 @@ export async function crearAsistenteDirecto({
       email, nombre, telefono, rol: 'asistente', prestadoraId, enviarActivacion: true,
     }));
 
-    const { data: fichaNueva, error: errorAsistente } = await db.from('asistentes').insert({
+    const { data: asistenteNuevo, error: errorAsistente } = await db.from('asistentes').insert({
       usuario_id: cuentaId,
       nombre,
       dni: dni || null,
@@ -361,15 +361,15 @@ export async function crearAsistenteDirecto({
       pendiente_conformidad: Boolean(importacionId),
     }).select('id').single();
     if (errorAsistente) throw new Error(errorAsistente.message);
-    asistenteId = fichaNueva.id;
+    asistenteId = asistenteNuevo.id;
 
-    // Dónde acepta trabajar esta persona. Se guarda por la misma función que usa la ficha, para
+    // Dónde acepta trabajar esta persona. Se guarda por la misma función que usa su Legajo, para
     // que el alta y la corrección dejen la lista igual. Si alguno de los lugares no es de esta
     // Organización, la clave foránea compuesta rechaza la escritura entera, el alta se deshace
-    // como cualquier otro tropiezo y no queda una ficha a medias.
+    // como cualquier otro tropiezo y no queda un Legajo a medias.
     await guardarLugaresDe(db, 'asistente_lugares', 'asistente_id', asistenteId, prestadoraId, lugares);
 
-    // Lo que cobra el Asistente va a su propia tabla, no a la ficha: ahí la base exige el
+    // Lo que cobra el Asistente va a su propia tabla, no a su Legajo: ahí la base exige el
     // permiso `ver_pagos_asistente` antes de mostrarlo. Si el alta no trae ningún importe no
     // se crea la fila — una fila vacía no dice nada distinto de que no haya fila.
     if (categoria_cct || valor_hora || sueldo_basico) {
@@ -431,15 +431,16 @@ export async function activarVerificacionAltaAsistente(db, asistenteId, prestado
 // Devuelven `false` si algo quedó sin limpiar, para que la pantalla pueda contar bien
 // cuántas filas se revirtieron de verdad.
 //
-// Reciben el identificador de la FICHA, que es lo que guarda el lote importado, y buscan de qué
-// cuenta cuelga: son dos números distintos desde que la ficha dejó de ser la cuenta.
+// Reciben el identificador del Legajo del Asistente o de la Ficha del cliente, que es lo que guarda
+// el lote importado, y buscan de qué cuenta cuelga: son dos números distintos desde que ese
+// renglón dejó de ser la cuenta.
 export async function revertirAsistenteImportado(db, asistenteId, prestadoraId) {
-  const cuentaId = await cuentaDeLaFicha('asistentes', asistenteId, prestadoraId);
+  const cuentaId = await cuentaDeLaFila('asistentes', asistenteId, prestadoraId);
   return deshacerAlta(db, cuentaId, { prestadoraId, filas: filasDeUnAsistente(asistenteId) });
 }
 
 export async function revertirClienteImportada(db, clienteId, prestadoraId) {
-  const cuentaId = await cuentaDeLaFicha('clientes', clienteId, prestadoraId);
+  const cuentaId = await cuentaDeLaFila('clientes', clienteId, prestadoraId);
   return deshacerAlta(db, cuentaId, { prestadoraId, filas: filasDeUnaCliente(clienteId) });
 }
 
@@ -461,7 +462,7 @@ export async function invitarPersonaAutorizada({ db, email, nombre, telefono, cl
   // para meterle a alguien adentro de las personas autorizadas de un Paciente ajeno, con acceso a sus
   // datos. Que hoy lo tape la pantalla que llama no es aislamiento: es que nadie probó otra puerta.
   // Falla cerrada — sin Prestadora, o si el Cliente no es suya, no se crea nada.
-  if (!prestadoraId || !(await cuentaDeLaFicha('clientes', clienteId, prestadoraId))) {
+  if (!prestadoraId || !(await cuentaDeLaFila('clientes', clienteId, prestadoraId))) {
     throw new ErrorConMotivo('cliente_de_otra_prestadora', `cliente ${clienteId} fuera de la Prestadora`);
   }
 
@@ -502,7 +503,7 @@ export async function revocarPersonaAutorizada(db, usuarioId, { prestadoraId, cl
   // borrados de abajo van por número de cuenta, sin Prestadora, y corren ANTES de `borrarCuenta`,
   // que es la que valida. Sin esto, un número de Cliente ajeno alcanza para dejar sin accesos a
   // una persona autorizada de otra Prestadora, y la validación llega tarde.
-  if (!prestadoraId || !clienteId || !(await cuentaDeLaFicha('clientes', clienteId, prestadoraId))) {
+  if (!prestadoraId || !clienteId || !(await cuentaDeLaFila('clientes', clienteId, prestadoraId))) {
     throw new ErrorConMotivo('cliente_de_otra_prestadora', `cliente ${clienteId} fuera de la Prestadora`);
   }
 
@@ -557,8 +558,8 @@ export async function crearClienteDirecta({
     localidad: nombreDeSuLugar || localidad,
   });
 
-  // Igual que en el alta de Asistente: la cuenta es la persona y la ficha es su Legajo en esta
-  // Prestadora. La misma persona puede ser Cliente en otra sin volver a darse de alta.
+  // Igual que en el alta de Asistente: la cuenta es la persona y la Ficha del cliente es lo suyo en
+  // esta Prestadora. La misma persona puede ser Cliente en otra sin volver a darse de alta.
   let cuentaId;
   let clienteId;
   let solicitudId;
@@ -591,7 +592,7 @@ export async function crearClienteDirecta({
       email, nombre: nombreContacto, telefono, rol: 'cliente', prestadoraId, enviarActivacion: true,
     }));
 
-    const { data: fichaNueva, error: errorCliente } = await db
+    const { data: clienteNuevo, error: errorCliente } = await db
       .from('clientes')
       .insert({
         usuario_id: cuentaId,
@@ -604,7 +605,7 @@ export async function crearClienteDirecta({
       .select('id')
       .single();
     if (errorCliente) throw new Error(errorCliente.message);
-    clienteId = fichaNueva.id;
+    clienteId = clienteNuevo.id;
 
     const { data: paciente, error: errorPaciente } = await db
       .from('pacientes')

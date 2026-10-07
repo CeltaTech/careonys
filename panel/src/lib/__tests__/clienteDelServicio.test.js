@@ -21,7 +21,7 @@ const SERVICIO_DE_UN_CLIENTE = {
 const CONTACTOS = new Map([[CLIENTE, CONTACTO]]);
 
 describe('clienteDelServicio', () => {
-  it('cuando el Cliente es un Cliente, devuelve su contacto y el camino a su ficha', () => {
+  it('cuando el Cliente es un Cliente, devuelve su contacto y el camino a la Ficha del cliente', () => {
     expect(clienteDelServicio(SERVICIO_DE_UN_CLIENTE, CONTACTOS)).toEqual({
       tipo: TIPO_CLIENTE,
       id: CLIENTE,
@@ -31,9 +31,9 @@ describe('clienteDelServicio', () => {
   });
 
   // La prueba que hace que este archivo sirva de algo: el día que un Servicio lo contrate algo
-  // que no es un Cliente, la pantalla no puede mandar a nadie a la ficha de un Cliente que no
+  // que no es un Cliente, la pantalla no puede mandar a nadie a la Ficha del cliente de uno que no
   // existe. Sin `ruta`, el botón no se dibuja.
-  it('cuando el Cliente no es un Cliente, no ofrece ninguna ficha', () => {
+  it('cuando el Cliente no es un Cliente, no ofrece ninguna Ficha del cliente', () => {
     const otro = { ...SERVICIO_DE_UN_CLIENTE, tipo_contratante: 'obra_social' };
     expect(clienteDelServicio(otro, CONTACTOS)).toEqual({
       tipo: 'obra_social',
@@ -43,7 +43,7 @@ describe('clienteDelServicio', () => {
     });
   });
 
-  it('no ofrece ficha si el identificador del Cliente falta', () => {
+  it('no ofrece Ficha del cliente si el identificador del Cliente falta', () => {
     const sinCliente = { ...SERVICIO_DE_UN_CLIENTE, contratante_id: null };
     expect(clienteDelServicio(sinCliente, CONTACTOS).ruta).toBeNull();
   });

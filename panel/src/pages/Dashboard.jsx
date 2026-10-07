@@ -115,8 +115,8 @@ export function Dashboard() {
   }, [t]);
 
   // Cuántas personas tienen hoy vínculo activo con la Prestadora, y en qué modalidad trabaja cada
-  // una. Se pide una sola columna, la modalidad, y ni siquiera el nombre: de acá no sale ninguna
-  // ficha, sale un número por renglón.
+  // una. Se pide una sola columna, la modalidad, y ni siquiera el nombre: de acá no sale ningún
+  // Legajo del Asistente, sale un número por renglón.
   //
   // Quien trabaja en las dos modalidades cuenta en las dos, así que los renglones suman más que
   // el plantel —lo dice la etiqueta: son vínculos, no personas—.
@@ -175,7 +175,7 @@ export function Dashboard() {
 
     // Las que la IA dejó escritas y todavía no miró nadie. Qué significa «sin resolver» no se
     // escribe acá: lo dice `lib/alertaSinResolver.js`, el mismo archivo que consultan la lista de
-    // Alertas y la ficha del Cliente. Se cuentan sin traer las filas porque de este número no se
+    // Alertas y la Ficha del cliente. Se cuentan sin traer las filas porque de este número no se
     // muestra ninguna alerta, y cada una nombra a un Paciente y describe lo que le está pasando.
     // Van todos los niveles juntos: separar lo que urge de lo que no es trabajo de la pantalla de
     // Alertas, que las tiene delante; acá el número dice cuánto quedó sin mirar.

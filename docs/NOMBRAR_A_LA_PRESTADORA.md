@@ -2399,7 +2399,7 @@ postulante con la llave que le llegó por correo. Es el título de la página.
 > habilitadas.
 
 **Dónde se ve:** Plantel > Plantel de Asistentes: en la ventana de alta de un Asistente nuevo y
-en la solapa Perfil de su ficha, junto a las casillas de modalidad.
+en la solapa Perfil del Legajo del Asistente, junto a las casillas de modalidad.
 
 **Qué lo dispara:** está siempre.
 
@@ -2419,8 +2419,8 @@ en la solapa Perfil de su ficha, junto a las casillas de modalidad.
 **Texto de hoy:**
 > La Prestadora no tiene habilitada la modalidad {modalidad}. Se habilita en Configuración.
 
-**Dónde se ve:** cartel de error al guardar, en el alta de un Asistente y en la solapa Perfil de
-su ficha (Plantel > Plantel de Asistentes).
+**Dónde se ve:** cartel de error al guardar, en el alta de un Asistente y en la solapa Perfil del
+Legajo del Asistente (Plantel > Plantel de Asistentes).
 
 **Qué lo dispara:** se marcó una modalidad que la empresa no tiene contratada.
 
@@ -2439,7 +2439,7 @@ su ficha (Plantel > Plantel de Asistentes).
 **Texto de hoy:**
 > Alguien de la Prestadora tiene que ver la matrícula y marcarla como verificada.
 
-**Dónde se ve:** en dos lados. Plantel > Plantel de Asistentes > ficha del Asistente > solapa
+**Dónde se ve:** en dos lados. Plantel > Plantel de Asistentes > Legajo del Asistente > solapa
 Matrículas, como detalle del aviso de bloqueo; y Cobertura > Guardias, panel de cobertura, al
 intentar asignar un Asistente cuya matrícula está sin verificar.
 
@@ -2460,7 +2460,7 @@ intentar asignar un Asistente cuya matrícula está sin verificar.
 **Texto de hoy:**
 > El colegio emitió una constancia a nombre de la Prestadora
 
-**Dónde se ve:** Plantel > Plantel de Asistentes > ficha del Asistente > solapa Matrículas. Es
+**Dónde se ve:** Plantel > Plantel de Asistentes > Legajo del Asistente > solapa Matrículas. Es
 una opción del desplegable «con qué método se verificó», y también lo que muestra la columna de
 método de cada matrícula verificada así.
 
@@ -2543,7 +2543,7 @@ opción del desplegable de modo.
 > La prestadora todavía no configuró ningún documento a seguir (Configuración > Documentos de
 > Asistentes).
 
-**Dónde se ve:** Plantel > Plantel de Asistentes > ficha del Asistente > solapa Perfil, lista de
+**Dónde se ve:** Plantel > Plantel de Asistentes > Legajo del Asistente > solapa Perfil, lista de
 vencimientos de documentación.
 
 **Qué lo dispara:** no hay tipos de documento configurados.
@@ -2564,7 +2564,7 @@ vencimientos de documentación.
 > Historial de mensajes del equipo de la Prestadora sobre este Asistente. No es un chat con el
 > Asistente ni con el Cliente.
 
-**Dónde se ve:** Plantel > Plantel de Asistentes > ficha del Asistente > solapa Comunicación, y
+**Dónde se ve:** Plantel > Plantel de Asistentes > Legajo del Asistente > solapa Comunicación, y
 el mismo hilo en la bandeja de Comunicación.
 
 **Qué lo dispara:** está siempre.
@@ -2584,7 +2584,7 @@ el mismo hilo en la bandeja de Comunicación.
 **Texto de hoy:**
 > Se alcanzó el mínimo de referencias verificadas de esta Prestadora.
 
-**Dónde se ve:** Plantel > Plantel de Asistentes > ficha del Asistente > solapa Verificación,
+**Dónde se ve:** Plantel > Plantel de Asistentes > Legajo del Asistente > solapa Verificación,
 bloque de referencias laborales.
 
 **Qué lo dispara:** ya se llegó al mínimo exigido.
@@ -2626,7 +2626,7 @@ bloque de referencias laborales.
 > que sale de la Prestadora: lo que se le descuenta a la persona se paga igual, sólo que a
 > otro, así que no se resta.
 
-**Dónde se ve:** Plantel > Plantel de Asistentes > ficha del Asistente > solapa del simulador de
+**Dónde se ve:** Plantel > Plantel de Asistentes > Legajo del Asistente > solapa del simulador de
 vínculo, junto al costo mensual calculado.
 
 **Qué lo dispara:** está siempre.
@@ -2666,7 +2666,7 @@ vínculo, junto al costo mensual calculado.
 **Texto de hoy:**
 > Exclusividad de facturación a la prestadora
 
-**Dónde se ve:** Plantel > Plantel de Asistentes > ficha del Asistente > solapa del score de
+**Dónde se ve:** Plantel > Plantel de Asistentes > Legajo del Asistente > solapa del score de
 riesgo, en la lista de indicadores y en la etiqueta de su casilla.
 
 **Qué lo dispara:** está siempre.
@@ -2726,7 +2726,7 @@ riesgo, en la lista de indicadores y en la etiqueta de su casilla.
 **Texto de hoy:**
 > Esta Prestadora todavía no cargó qué documentación pide. Se configura en Configuración.
 
-**Dónde se ve:** Clientes > Clientes > ficha del Cliente, bloque del estado del Pagador, donde
+**Dónde se ve:** Clientes > Clientes > Ficha del cliente, bloque del estado del Pagador, donde
 irían los papeles exigidos.
 
 **Qué lo dispara:** el catálogo de documentación está vacío.

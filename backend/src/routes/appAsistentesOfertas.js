@@ -151,7 +151,7 @@ appAsistentesOfertasRouter.get('/', requiereRolAsistente, async (req, res) => {
 
   try {
     const visibilidad = await visibilidadDelPedido(req);
-    // La dirección que se muestra es la del día del turno ofrecido, no la de la ficha. Acá
+    // La dirección que se muestra es la del día del turno ofrecido, no la del Legajo del Paciente. Acá
     // pesa más que en ningún otro lado: es con ese dato que se decide si se toma el turno, y
     // aceptar creyendo que queda a diez cuadras para después enterarse de que ese mes se lo
     // atiende en otro barrio es exactamente lo que hace que alguien no vuelva a aceptar

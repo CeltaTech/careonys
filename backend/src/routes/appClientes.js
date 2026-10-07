@@ -106,7 +106,7 @@ async function pacienteDelCliente(db, pacienteId, req) {
     .maybeSingle();
   if (!data) return data;
 
-  // La dirección que se muestra es la de hoy, no la de la ficha, y la decide la base. Va acá
+  // La dirección que se muestra es la de hoy, no la del Legajo del Paciente, y la decide la base. Va acá
   // adentro y no en cada pantalla para que ninguna se olvide: todas las pantallas del Cliente
   // que muestran un Paciente pasan por esta función.
   const [conDomicilio] = await pacientesConDomicilioDeHoy([data]);
@@ -265,7 +265,7 @@ appClientesRouter.get('/pacientes', requiereRolCliente, async (req, res) => {
     return responderError(res, error);
   }
   // Si al Paciente lo están atendiendo estos días en otro lado, el Cliente ve esa dirección y no
-  // la de la ficha — es la misma respuesta que ve el Asistente en su teléfono, escrita una sola
+  // la del Legajo del Paciente — es la misma respuesta que ve el Asistente en su teléfono, escrita una sola
   // vez en la base (regla 12). Sin esto, el Cliente y quien cuida al Paciente leerían direcciones
   // distintas para la misma persona el mismo día.
   res.json({ pacientes: await pacientesConDomicilioDeHoy(data) });
@@ -855,7 +855,7 @@ appClientesRouter.get('/pacientes/:id/verificar-asistente/:qrToken', requiereRol
   const coincide = guardiaHoy.asistente_id === asistenteEscaneado.id;
 
   // Con la llave maestra, el filtro de Prestadora es lo que aísla, no el identificador del
-  // Asistente: una misma persona tiene una ficha por cada Prestadora donde trabaja.
+  // Asistente: una misma persona tiene un Legajo de Asistente por cada Prestadora donde trabaja.
   const { data: certificado } = await supabase
     .from('certificados')
     .select('activo, fecha_vencimiento')
@@ -1462,7 +1462,7 @@ appClientesRouter.get('/intermediacion/asistentes', requiereRolCliente, async (r
     const tiposOfrecidos = [...new Set((todos || []).map((a) => a.tipo_asistente_id).filter(Boolean))];
 
     // Dónde trabaja cada uno. Está en la tabla que cruza a la persona con cada lugar, así que el
-    // filtro se resuelve acá y no en la consulta de fichas: se piden los lugares de todo el pool
+    // filtro se resuelve acá y no en la consulta de Asistentes: se piden los lugares de todo el pool
     // una sola vez, y con eso se arma tanto la lista de opciones como el recorte. Con la
     // credencial del Cliente: los lugares y quién trabaja en cada uno los lee toda la Prestadora.
     const lugaresPorAsistente = await lugaresDeVarias(
@@ -1478,9 +1478,9 @@ appClientesRouter.get('/intermediacion/asistentes', requiereRolCliente, async (r
     let consulta = poolDeLaPrestadora(prestadoraId).limit(TOPE_DE_LA_VIDRIERA);
     if (req.query.tipo) consulta = consulta.eq('tipo_asistente_id', String(req.query.tipo));
 
-    const { data: todasLasFichas, error } = await consulta;
+    const { data: todosLosAsistentes, error } = await consulta;
     if (error) return responderError(res, error);
-    const asistentes = (todasLasFichas || []).filter((a) => delLugar(a.id));
+    const asistentes = (todosLosAsistentes || []).filter((a) => delLugar(a.id));
 
     const ids = asistentes.map((a) => a.id);
     const [documentacion, calificaciones, tipos] = await Promise.all([

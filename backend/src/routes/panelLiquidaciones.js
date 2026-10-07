@@ -24,7 +24,7 @@ export { bordesDelPeriodo, calcularLiquidacion, esPeriodoValido, primerDia, ulti
    ==========================================================================
 
    POR QUÉ EXISTE ESTE ARCHIVO (pendiente #126). La pantalla de pagos hacía la cuenta en el
-   momento, cada vez que se abría, con el valor hora que la ficha tuviera ESE día. O sea que
+   momento, cada vez que se abría, con el valor hora que el Legajo del Asistente tuviera ESE día. O sea que
    corregir hoy el valor hora de alguien reescribía lo que se le pagó en marzo, y no había
    dónde anotar "este mes ya se pagó". Acá la cuenta se hace UNA vez y queda escrita.
 
@@ -58,7 +58,7 @@ export const panelLiquidacionesRouter = Router();
 // cancelada no se hizo. Es el mismo criterio que usa la pantalla de pagos.
 const ESTADO_HECHA = 'completada';
 
-// Leer remuneraciones exige el mismo permiso con el que ya se leen los importes de la ficha
+// Leer remuneraciones exige el mismo permiso con el que ya se leen los importes del Legajo
 // del Asistente; escribir, además, ser de la administración. Es la misma pareja de
 // condiciones que las reglas de acceso de la base aplican a estas tres tablas.
 const PERMISO_LECTURA = 'ver_pagos_asistente';
@@ -381,8 +381,8 @@ panelLiquidacionesRouter.get('/', requiereRolPanel, requierePermiso(PERMISO_LECT
 
 // CON LA LLAVE MAESTRA, Y CON LA PRESTADORA EN CADA CONSULTA. Con la credencial de quien pide,
 // la política restrictiva `oculta_pendientes_de_conformidad` de `asistentes` le esconde a todos
-// los roles la ficha importada que espera conformidad, y `lee_remuneraciones_quien_tiene_el_permiso`
-// pide que esa ficha se vea: el Asistente importado y todavía sin conformar quedaría afuera de la
+// los roles el Legajo importado que espera conformidad, y `lee_remuneraciones_quien_tiene_el_permiso`
+// pide que ese Legajo se vea: el Asistente importado y todavía sin conformar quedaría afuera de la
 // liquidación, y hoy entra. Si eso cambia se decide aparte.
 panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERMISO_LECTURA), soloAdministracion, async (req, res) => {
   const { periodo } = req.body || {};
@@ -426,9 +426,9 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
       .order('nombre', { ascending: true })
   );
 
-  // Lo que cobra cada uno vive en su propia tabla, separada de la ficha justamente porque las
+  // Lo que cobra cada uno vive en su propia tabla, separada del Legajo del Asistente justamente porque las
   // reglas de acceso de la base filtran filas y no columnas. Se pide aparte y filtrando por
-  // Prestadora, en vez de colgada de la ficha, por lo mismo que los nombres de más arriba.
+  // Prestadora, en vez de colgada del Legajo, por lo mismo que los nombres de más arriba.
   const { data: remuneraciones, error: errorRemuneraciones } = await supabase
     .from('remuneraciones_asistente')
     .select('asistente_id, unidad_medicion, valor_hora, sueldo_basico, valor_guardia, valor_semana, valor_hora_extra, frecuencia_pago')
@@ -584,7 +584,7 @@ panelLiquidacionesRouter.post('/generar', requiereRolPanel, requierePermiso(PERM
 
 panelLiquidacionesRouter.get('/:id', requiereRolPanel, requierePermiso(PERMISO_LECTURA), async (req, res) => {
   // Con la llave maestra y nombrando a la Prestadora en cada consulta, por lo mismo que la lista:
-  // un Coordinador con el permiso de ver pagos no alcanza con su credencial la ficha ni las
+  // un Coordinador con el permiso de ver pagos no alcanza con su credencial el Legajo ni las
   // guardias de un Asistente de fuera de su zona.
   const { data: liquidacion, error } = await supabase
     .from('liquidaciones_asistente')

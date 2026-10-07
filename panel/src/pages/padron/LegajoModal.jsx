@@ -47,7 +47,7 @@ export function LegajoModal({ legajo, prestadoraId, tiposDeDocumento, onClose, o
   const [apellido, setApellido] = useState(legajo?.apellido ?? '');
   const [documentoTipo, setDocumentoTipo] = useState(legajo?.documento_tipo ?? '');
   const [documentoNumero, setDocumentoNumero] = useState(legajo?.documento_numero ?? '');
-  // Sólo sirve en el alta. La ficha ya cargada no trae ningún teléfono adentro: los tiene aparte,
+  // Sólo sirve en el alta. El Legajo ya cargado no trae ningún teléfono adentro: los tiene aparte,
   // porque son varios.
   const [telefono, setTelefono] = useState('');
   const [email, setEmail] = useState(legajo?.email ?? '');
@@ -100,7 +100,7 @@ export function LegajoModal({ legajo, prestadoraId, tiposDeDocumento, onClose, o
         : await supabase.from('legajos').insert({ ...fila, prestadora_id: prestadoraId }).select('id, nombre_visible').single();
       if (errorGuardar) throw errorGuardar;
 
-      // El teléfono del alta se carga recién con la ficha creada, porque cuelga de ella. En la
+      // El teléfono del alta se carga recién con el Legajo creado, porque cuelga de él. En la
       // corrección no pasa por acá: ahí está la lista entera, que se maneja sola.
       if (!corrigiendo && telefono.trim()) {
         await cargarUnTelefono(guardado.id, telefono.trim());
@@ -200,7 +200,7 @@ export function LegajoModal({ legajo, prestadoraId, tiposDeDocumento, onClose, o
           <CamposDeDomicilio valor={domicilio} alCambiar={setDomicilio} deshabilitado={guardando} />
 
           {/* En el alta, un casillero: es el teléfono que se tiene a mano en ese momento. Los
-              demás se agregan después, con la ficha ya creada. */}
+              demás se agregan después, con el Legajo ya creado. */}
           {!corrigiendo && (
             <FormField
               label={t.padron.telefono}
@@ -239,7 +239,7 @@ export function LegajoModal({ legajo, prestadoraId, tiposDeDocumento, onClose, o
         </form>
 
         {/* Afuera del formulario a propósito: cada teléfono se carga, se corrige y se saca solo, y
-            no espera al botón de guardar de la ficha. */}
+            no espera al botón de guardar del Legajo. */}
         {corrigiendo && <TelefonosDelLegajo legajoId={legajo.id} puedeEditar />}
       </div>
     </div>

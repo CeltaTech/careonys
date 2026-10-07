@@ -25,7 +25,7 @@
 // QUIÉN DECIDE
 // Las dos partes, una arriba de la otra:
 //   * la Prestadora pone el techo con las modalidades que tenga activas;
-//   * dentro de ese techo, la ficha de cada Asistente.
+//   * dentro de ese techo, el Legajo de cada Asistente.
 //
 // DÓNDE SE HACE CUMPLIR
 // En la base, que es la única que no se puede saltear: frena la asignación, la
@@ -153,7 +153,7 @@ export function motivoDeModalidadDelError(error) {
  * modalidad, o `null` si el error era otra cosa y la pantalla lo trata como siempre.
  *
  * Está acá y no en cada pantalla porque son varias las que pueden chocarse con la
- * misma pared —cubrir una vacante, invitar, reasignar, editar la ficha— y el texto
+ * misma pared —cubrir una vacante, invitar, reasignar, editar el Legajo del Asistente— y el texto
  * tiene que ser el mismo en todas (ningún patrón repetido sin punto único de verdad).
  *
  * @param error  lo que devolvió la base.

@@ -196,8 +196,8 @@ aplicaciones.**
 | Pantalla | Qué hace hoy | Qué le pasa con este plan |
 |---|---|---|
 | **Clientes › Servicios** | Lista los Servicios con su Cliente, estado, cuántos Pacientes, cuántas prestaciones y cuántos turnos. Dice en pantalla que es de sólo lectura | **Deja de ser de sólo lectura:** es la pantalla donde el Servicio se arma y se mantiene |
-| **Clientes › Servicios › ficha del Servicio** | Cliente, Pacientes deducidos, tabla de prestaciones y las últimas 20 guardias. También de sólo lectura | Recibe lo que hoy no tiene: los períodos que cubre, la zona, quién realiza, quién coordina, y la cuenta de lo pactado contra lo cubierto |
-| **Clientes › Clientes › ficha › Prestaciones del Paciente** | Es un modal, y hoy es el único lugar donde se pacta, se hospitaliza, se pausa, se reactiva y se cierra el Servicio | Los dos casilleros de texto libre pasan a ser días marcados y horarios. La pausa y la reactivación dejan de ser en bloque |
+| **Clientes › Servicios › Detalle del servicio** | Cliente, Pacientes deducidos, tabla de prestaciones y las últimas 20 guardias. También de sólo lectura | Recibe lo que hoy no tiene: los períodos que cubre, la zona, quién realiza, quién coordina, y la cuenta de lo pactado contra lo cubierto |
+| **Clientes › Clientes › Ficha del cliente › Prestaciones del Paciente** | Es un modal, y hoy es el único lugar donde se pacta, se hospitaliza, se pausa, se reactiva y se cierra el Servicio | Los dos casilleros de texto libre pasan a ser días marcados y horarios. La pausa y la reactivación dejan de ser en bloque |
 | **Cobertura › Guardias › guardia nueva** | Crea la guardia suelta o la serie | Sigue creando, y además queda alcanzada por la cuenta: al crear o cambiar una serie, la cuenta se rehace |
 | **Cobertura › Guardias** | Grilla, filtros, reasignar y mover | Sin cambios de fondo |
 | **Estado actual** | Siete contadores de excepciones sobre el calendario ya generado | Recibe el hueco pactado y no cubierto como una excepción más |
@@ -206,9 +206,9 @@ aplicaciones.**
 
 ### 5.4. Ninguna pantalla compara hoy lo pactado contra lo cubierto
 
-Verificado archivo por archivo. **Clientes › Servicios** y su ficha muestran prestaciones y turnos en
-dos tablas separadas, sin ninguna cuenta que las cruce —y la ficha trae sólo los 20 turnos más
-próximos, así que ni tiene los datos—. **Clientes › Clientes › ficha › Prestaciones del Paciente**
+Verificado archivo por archivo. **Clientes › Servicios** y su Detalle del servicio muestran prestaciones y turnos en
+dos tablas separadas, sin ninguna cuenta que las cruce —y el Detalle del servicio trae sólo los 20 turnos más
+próximos, así que ni tiene los datos—. **Clientes › Clientes › Ficha del cliente › Prestaciones del Paciente**
 guarda los días, el horario y la cantidad de turnos pactados, y **nunca los lee contra los turnos
 reales**. **Estado actual**, **Cobertura › Guardias**, el panel de cobertura y **Cobertura ›
 Continuidad** miran huecos contra el calendario ya generado —turnos que existen y no tienen
@@ -239,7 +239,7 @@ esté hecho.
 
 ### Paso 1. Lo pactado deja de ser una frase
 
-Reemplazar en **Clientes › Clientes › ficha › Prestaciones del Paciente** los dos casilleros de texto
+Reemplazar en **Clientes › Clientes › Ficha del cliente › Prestaciones del Paciente** los dos casilleros de texto
 libre por la misma forma que ya tiene la serie: días de la semana marcados, hora de inicio y hora de
 fin, y la posibilidad de cargar más de un renglón.
 

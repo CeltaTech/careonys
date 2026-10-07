@@ -4,7 +4,7 @@
 //
 // La pregunta que contesta. Dos pantallas muestran el mismo mapa: la del plantel, donde se mira
 // cómo está repartida la gente por zona, y la de una Solicitud, donde se mira quién queda cerca
-// del lugar pedido. Las dos necesitan exactamente lo mismo —qué fichas tienen ubicación, en qué
+// del lugar pedido. Las dos necesitan exactamente lo mismo —qué Legajos del Asistente tienen ubicación, en qué
 // zona cae cada una, cómo encuadrar el mapa y, cuando hay un punto de referencia, a qué distancia
 // queda cada una—. Escrito dos veces, un día una pantalla contaría a los inactivos y la otra no.
 //
@@ -13,14 +13,14 @@
 //
 // LO QUE ESTE ARCHIVO NO HACE, Y NO ES UN OLVIDO:
 //
-//   · No inventa una ubicación. Una ficha sin coordenadas se cuenta aparte y no se dibuja.
+//   · No inventa una ubicación. Un Legajo del Asistente sin coordenadas se cuenta aparte y no se dibuja.
 //     Ponerla en el centro de su localidad sería mostrar en un mapa algo que nadie ubicó.
 //   · No arma ni devuelve ninguna dirección escrita. Al mapa llegan un par de números y nada
 //     más: la dirección es dato sensible y no tiene por qué viajar hasta la pantalla
 //     (CLAUDE.md §6).
 //   · No calcula tiempo de viaje. La distancia es en línea recta, como en el resto del producto.
 //
-// LA ZONA, ACÁ, ES UNA FORMA DE AGRUPAR. Lo que la ficha del Asistente guarda son lugares, no
+// LA ZONA, ACÁ, ES UNA FORMA DE AGRUPAR. Lo que el Legajo del Asistente guarda son lugares, no
 // zonas; la zona de cobertura es el conjunto de lugares que la Prestadora armó. Entonces un
 // Asistente pertenece a toda zona que contenga alguno de sus lugares, y puede pertenecer a
 // varias, o a ninguna. Agrupar para mostrar es distinto de guardar.
@@ -115,7 +115,7 @@ export function encuadre(puntos) {
  *
  * Se mira primero el lugar que alguien reconoció al leerla, que es lo que quedó guardado. Si no
  * hay ninguno, se prueba con la localidad que se escuchó por teléfono contra los nombres del
- * catálogo — y sólo vale si hay **una sola** ficha que la nombre: con dos, no se sabe cuál es, y
+ * catálogo — y sólo vale si hay **un solo** lugar que la nombre: con dos, no se sabe cuál es, y
  * elegir la primera sería ordenar el plantel alrededor de un punto equivocado sin avisarlo.
  *
  * Devolver `null` no es un fallo: es que esta Solicitud todavía no tiene lugar. El mapa se
@@ -123,15 +123,15 @@ export function encuadre(puntos) {
  */
 export function puntoDeLaSolicitud(solicitud, lugares) {
   if (!solicitud) return null;
-  const fichas = lugares ?? [];
+  const catalogo = lugares ?? [];
 
   if (solicitud.lugar_id) {
-    const reconocido = fichas.find((lugar) => lugar?.id === solicitud.lugar_id);
+    const reconocido = catalogo.find((lugar) => lugar?.id === solicitud.lugar_id);
     const punto = coordenadasDe(reconocido);
     if (punto) return punto;
   }
 
-  const parecidos = fichas.filter(
+  const parecidos = catalogo.filter(
     (lugar) => nombranLoMismo(lugar?.nombre, solicitud.localidad) && coordenadasDe(lugar),
   );
   return parecidos.length === 1 ? coordenadasDe(parecidos[0]) : null;
@@ -143,7 +143,7 @@ export function puntoDeLaSolicitud(solicitud, lugares) {
  * @param asistentes  el plantel entero tal como viene de la base. Quién sigue estando se decide
  *                    acá, con la misma regla que usa la lista de candidatos, y no en la consulta
  *                    de cada pantalla.
- * @param opciones    lugaresDe(id) → los lugares de esa ficha
+ * @param opciones    lugaresDe(id) → los lugares del Legajo de ese Asistente
  *                    zonas         → las zonas de cobertura con sus lugares
  *                    origen        → `{ lat, lng }` desde donde medir la cercanía, u `null`
  *

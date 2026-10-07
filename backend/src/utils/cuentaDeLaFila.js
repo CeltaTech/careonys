@@ -1,6 +1,6 @@
 import { supabase } from '../db/connection.js';
 
-// De qué cuenta cuelga una ficha, escrito una sola vez.
+// De qué cuenta cuelga un Legajo de Asistente o una Ficha del cliente, escrito una sola vez.
 //
 // Desde que una misma persona puede estar en varias Prestadoras, el Legajo de Asistente y el de
 // Cliente tienen identificador propio, y ese número ya no es el de la cuenta. Todo lo que cuelga
@@ -11,27 +11,27 @@ import { supabase } from '../db/connection.js';
 // pantalla muestra un nombre vacío y nadie sabe por qué. Por eso el paso de uno al otro se hace
 // acá y en ningún otro lado.
 
-/** La cuenta de una sola ficha. Devuelve el identificador de la cuenta, o `null`. */
-export async function cuentaDeLaFicha(tabla, fichaId, prestadoraId) {
-  if (!fichaId || !prestadoraId) return null;
+/** La cuenta de un solo renglón. Devuelve el identificador de la cuenta, o `null`. */
+export async function cuentaDeLaFila(tabla, filaId, prestadoraId) {
+  if (!filaId || !prestadoraId) return null;
   const { data } = await supabase
     .from(tabla)
     .select('usuario_id')
-    .eq('id', fichaId)
+    .eq('id', filaId)
     .eq('prestadora_id', prestadoraId)
     .maybeSingle();
   return data?.usuario_id || null;
 }
 
 /**
- * Datos de la cuenta de varias fichas de una vez, en un mapa de ficha a datos.
+ * Datos de la cuenta de varios renglones de una vez, en un mapa de renglón a datos.
  *
  * `columnas` son las de `usuarios` que hacen falta —`nombre`, `telefono`—, y nunca todas: lo que
  * no se pide no viaja.
  */
-export async function cuentasDeLasFichas(tabla, fichaIds, columnas, prestadoraId) {
+export async function cuentasDeLasFilas(tabla, filaIds, columnas, prestadoraId) {
   const mapa = new Map();
-  const unicos = [...new Set((fichaIds ?? []).filter(Boolean))];
+  const unicos = [...new Set((filaIds ?? []).filter(Boolean))];
   if (unicos.length === 0 || !prestadoraId) return mapa;
 
   const { data, error } = await supabase

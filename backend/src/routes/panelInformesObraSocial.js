@@ -4,7 +4,7 @@ import { supabase, clienteDelPedido } from '../db/connection.js';
 import { requierePermiso } from '../utils/permisos.js';
 import { horasEntre, horasImputadasAlPaciente } from '../utils/horasDeGuardia.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
-import { cuentasDeLasFichas } from '../utils/cuentaDeLaFicha.js';
+import { cuentasDeLasFilas } from '../utils/cuentaDeLaFila.js';
 import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
 
 export const panelInformesObraSocialRouter = Router();
@@ -122,8 +122,8 @@ async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde
   // `guardias.asistente_id` es el Legajo, no la cuenta, y el nombre es de la persona: sale de la
   // cuenta de la que ese Legajo cuelga.
   const nombresAsistente = {};
-  const cuentas = await cuentasDeLasFichas('asistentes', asistenteIds, 'nombre', prestadoraId);
-  for (const [fichaId, datos] of cuentas) nombresAsistente[fichaId] = datos?.nombre ?? '';
+  const cuentas = await cuentasDeLasFilas('asistentes', asistenteIds, 'nombre', prestadoraId);
+  for (const [asistenteId, datos] of cuentas) nombresAsistente[asistenteId] = datos?.nombre ?? '';
 
   // Cada renglón lleva escrito a cuánta gente cubrió ese turno y cuántas horas le tocan a
   // este Paciente. Se muestran las dos cosas juntas a propósito: si el informe dijera

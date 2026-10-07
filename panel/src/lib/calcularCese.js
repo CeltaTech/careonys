@@ -59,7 +59,7 @@ function mejorRemuneracion(asistente) {
   if (unidad === UNIDADES.HORA && asistente.horas_semanales) {
     return valor * Number(asistente.horas_semanales) * SEMANAS_POR_MES;
   }
-  // Por guardia no hay cómo llegar a un mes: la ficha no dice cuántas guardias hace por semana,
+  // Por guardia no hay cómo llegar a un mes: el Legajo del Asistente no dice cuántas guardias hace por semana,
   // y suponerlo pondría un número inventado adentro de una indemnización.
   return 0;
 }

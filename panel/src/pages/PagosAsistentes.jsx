@@ -37,8 +37,8 @@ import './hojaDeTarjetas.css';
 /* Lo que la Prestadora le paga al Asistente, guardado.
    ==========================================================================
 
-   LA CUENTA YA ESTÁ HECHA. La liquidación se calcula una sola vez, con el valor hora que la
-   ficha tenga ESE día, queda escrita, y esta pantalla la lee. Hacer la cuenta en el momento,
+   LA CUENTA YA ESTÁ HECHA. La liquidación se calcula una sola vez, con el valor hora que el
+   Legajo del Asistente tenga ESE día, queda escrita, y esta pantalla la lee. Hacer la cuenta en el momento,
    cada vez que se abre la pantalla, haría que corregir hoy el valor hora de alguien reescribiera
    lo que se le pagó en marzo, y no dejaría dónde anotar "este mes ya se pagó".
 
@@ -324,7 +324,7 @@ function LiquidacionesTab({ esAdmin }) {
  *
  * Un "listo" solo no sirve: lo que hace falta saber es a quién le quedó liquidación y a quién
  * no, y por qué. Las cuatro cosas que pueden haber quedado afuera se dicen con nombre y
- * apellido, porque cada una tiene un arreglo distinto —cargar el valor en la ficha, cargar la
+ * apellido, porque cada una tiene un arreglo distinto —cargar el valor en el Legajo del Asistente, cargar la
  * escala— y sin el nombre hay que salir a buscarlo.
  */
 function ResultadoGeneracion({ resultado }) {
@@ -475,7 +475,7 @@ function DetalleLiquidacion({ id, esAdmin, onCerrar, onCambio }) {
                 </dd>
               </dl>
 
-              {/* Horas anotadas que no se pagaron porque la ficha no tiene cargado cuánto vale
+              {/* Horas anotadas que no se pagaron porque el Legajo del Asistente no tiene cargado cuánto vale
                   la hora extra. Sin esta advertencia, el recibo sale más chico de lo que corresponde y
                   nadie tiene por dónde enterarse. */}
               {liquidacion.horas_extra > 0 && liquidacion.valor_hora_extra === null && (

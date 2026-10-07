@@ -25,18 +25,18 @@ import { soloSinResolver } from '../../lib/alertaSinResolver';
    y Alertas—. Acá no se inventa ninguna consulta nueva: se hacen las mismas preguntas,
    acotadas a los Pacientes de este Cliente, y se muestran con los mismos encabezados y los
    mismos carteles de estado. Si mañana cambia cómo se lee una alerta, cambia en un solo lugar
-   y esta ficha cambia con ella.
+   y la Ficha del cliente cambia con ella.
 
    Las tres secciones viven en este archivo y no adentro de `ClienteDetalle.jsx` porque cada
-   una trae sus propios datos y tiene sus propios cuatro estados: metidas en la ficha serían
+   una trae sus propios datos y tiene sus propios cuatro estados: metidas en la Ficha del cliente serían
    nueve variables de estado más en un componente que ya es largo.
 
-   Por qué reciben los Pacientes por parámetro y no el id del Cliente: la ficha ya los tiene
+   Por qué reciben los Pacientes por parámetro y no el id del Cliente: la Ficha del cliente ya los tiene
    cargados, con nombre y todo. Volver a pedirlos sería una consulta de más y, peor, abriría la
    posibilidad de que las dos listas no coincidan. */
 
 /* Cuántas filas como mucho. Un Cliente con guardias generadas por serie puede tener cientos
-   programadas por delante, y un año de guardias son cientos de reportes: esto es una ficha, no
+   programadas por delante, y un año de guardias son cientos de reportes: esto es la Ficha del cliente, no
    la pantalla de Guardias ni la de Reportes. Cuando se llega al tope se avisa, que es lo que
    evita que alguien crea que está viendo todo. */
 const TOPE_GUARDIAS = 50;
@@ -112,7 +112,7 @@ function nombresDe(pacientes) {
 export function GuardiasActivasDelCliente({ pacientes }) {
   const { t } = useLocale();
   /* Los mismos umbrales que pinta la grilla de Guardias, que son los que configuró esta
-     Prestadora. Sin esto la ficha del Cliente diría «sin cerrar» a las dos horas mientras la
+     Prestadora. Sin esto la Ficha del cliente diría «sin cerrar» a las dos horas mientras la
      grilla lo dice a los quince minutos, con los mismos datos delante. */
   const umbrales = useUmbrales();
 
@@ -138,7 +138,7 @@ export function GuardiasActivasDelCliente({ pacientes }) {
       .slice(0, TOPE_GUARDIAS);
 
     // A quiénes atiende cada guardia. Sólo se ponen los nombres de este Cliente: si un turno
-    // cubre además a alguien de otra casa, esa persona no es asunto de esta ficha.
+    // cubre además a alguien de otra casa, esa persona no es asunto de la Ficha del cliente.
     const porGuardia = await cargarPacientesDeGuardias(activas.map((g) => g.id));
     const filas = conPacientes(activas, porGuardia, nombresDe(pacientes)).map((g) => ({
       ...g,

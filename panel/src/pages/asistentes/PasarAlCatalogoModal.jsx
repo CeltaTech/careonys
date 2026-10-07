@@ -14,11 +14,11 @@ import { con } from '../../lib/textos';
 // Antes el tipo de un Asistente era una casilla de texto libre: cada quien
 // escribía lo que le parecía. Ahora se elige de una lista. Los que ya estaban
 // cargados no se convierten solos: esta pantalla los pone uno debajo del otro,
-// muestra qué decía la ficha vieja y propone el tipo que más se le parece —
+// muestra qué decía antes el Legajo del Asistente y propone el tipo que más se le parece —
 // pero la propone, no la aplica. La confirma una persona.
 //
 // También caen acá los que entraron por una planilla importada donde el tipo no
-// se pudo reconocer. Esos no tienen ficha vieja que mostrar: la columna del
+// se pudo reconocer. Esos no tienen un texto viejo que mostrar: la columna del
 // medio queda con un guion y el tipo se elige a mano, que es lo mismo que hace
 // quien pasa los viejos.
 //

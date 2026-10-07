@@ -221,7 +221,7 @@ describe('el Certificado que viaja con el perfil', () => {
         tipo_vinculo: 'monotributo', qr_token: 'x', canales: [],
         disponible_para_ofertas: true, disponibilidad_cambiada_en: null, tipos_asistente: null },
     ]);
-    // Dónde acepta trabajar sale de sus lugares y del catálogo, no de un renglón de la ficha.
+    // Dónde acepta trabajar sale de sus lugares y del catálogo, no de un renglón de su Legajo.
     respuestas.set('GET /rest/v1/asistente_lugares', () => []);
     respuestas.set('GET /rest/v1/lugares', () => []);
   });

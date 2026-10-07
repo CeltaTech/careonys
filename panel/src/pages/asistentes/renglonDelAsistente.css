@@ -1,0 +1,10 @@
+/* El renglón del Legajo del Asistente que lleva un formulario adentro: ocupa todo el ancho. */
+.renglon-del-asistente {
+  flex: 1;
+  min-width: 0;
+}
+
+.renglon-del-asistente .molde-formgrid,
+.renglon-del-asistente .molde-acciones {
+  margin-top: 10px;
+}

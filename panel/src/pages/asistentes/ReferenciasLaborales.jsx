@@ -12,7 +12,7 @@ import {
   verReferenciasLaborales,
 } from '../../lib/referenciasGuardadasDeAsistente';
 import '../../styles/molde-paginas.css';
-import './fichaAsistente.css';
+import './renglonDelAsistente.css';
 
 /* Las referencias laborales de un Asistente, una por una.
    ==========================================================================
@@ -123,7 +123,7 @@ export function ReferenciasLaborales({ asistente }) {
         <div>
         {referencias.map((referencia) => (
           <article key={referencia.id} className="panel-fila-alerta">
-            <div className="ficha-asistente-renglon">
+            <div className="renglon-del-asistente">
             <b>{referencia.nombre}</b>
             <span className="panel-mini">
               {referencia.telefono}{referencia.vinculo ? ` · ${referencia.vinculo}` : ''}
@@ -160,7 +160,7 @@ export function ReferenciasLaborales({ asistente }) {
             </div>
             </div>
             {/* Quién la verificó no se muestra acá: adentro de una Prestadora el equipo es chico y
-                el nombre no agrega nada a quien mira la ficha. Queda guardado, y sale en la
+                el nombre no agrega nada a quien mira el Legajo del Asistente. Queda guardado, y sale en la
                 auditoría, que es donde se pregunta quién hizo qué. */}
             {guardando === referencia.id ? (
               <span className="panel-mini">{t.comun.guardando}</span>

@@ -40,7 +40,7 @@
 //      dos cosas distintas del lado de la base, y no de la pantalla: el
 //      catálogo lo lee cualquiera de la Prestadora, lo escribe el personal, la
 //      configuración de la empresa la escribe la administración, y lo de cada
-//      Asistente lo escribe además el dueño de su propia ficha. Cada negativa
+//      Asistente lo escribe además el dueño de su propio Legajo del Asistente. Cada negativa
 //      va con su afirmativa sobre la misma tabla, cambiando nada más que quién
 //      tiene la sesión: sola, la negativa la daría igual una política que niega
 //      todo, que además rompe el Panel.
@@ -102,7 +102,7 @@ if (!CONTRASENA) {
 const ADMINISTRADORA = 'admin@sandbox.local';
 // El pase más angosto del Panel: lo que alcanza se decide por el Asistente de cada fila.
 const COORDINADORA = 'coordinadora@sandbox.local';
-// Y alguien que no es del Panel: tiene sesión en la Prestadora y su propia ficha, nada más.
+// Y alguien que no es del Panel: tiene sesión en la Prestadora y su propio Legajo del Asistente, nada más.
 const ASISTENTE = 'ana.asistente@sandbox.local';
 
 const verde = (t) => `\x1b[32m${t}\x1b[0m`;
@@ -481,7 +481,7 @@ async function probarQuienEscribeLaConfiguracion(entorno, d) {
      LIMIT 1;
   `);
   if (!asistenteDeLaSesion) {
-    throw new Error(`No encontré la ficha de ${ASISTENTE} en la Prestadora de pruebas.`);
+    throw new Error(`No encontré el Legajo del Asistente de ${ASISTENTE} en la Prestadora de pruebas.`);
   }
 
   const problemas = [];
@@ -539,7 +539,7 @@ async function probarQuienEscribeLaConfiguracion(entorno, d) {
   });
   if (referenciaDelAsistente.ok) {
     consultarBase("DELETE FROM public.referencias_laborales_asistente WHERE nombre = 'Referencia de la prueba de escritura';");
-    mal('el Asistente NO carga referencias laborales', 'la base lo dejó cargar una referencia de su propia ficha');
+    mal('el Asistente NO carga referencias laborales', 'la base lo dejó cargar una referencia de su propio Legajo del Asistente');
   } else {
     bien('el Asistente NO carga referencias laborales', `rebotó con ${referenciaDelAsistente.estado}`);
   }
@@ -592,10 +592,10 @@ async function probarQuienEscribeLaConfiguracion(entorno, d) {
     `UPDATE public.configuracion_ausencias SET updated_at = '${comoEstaba}' WHERE prestadora_id = '${d.prestadora}';`,
   );
 
-  // ---- Y lo de cada Asistente lo escribe el dueño de su ficha, y nadie más --
+  // ---- Y lo de cada Asistente lo escribe el dueño de su Legajo del Asistente, y nadie más --
   const hoy = new Date().toISOString().slice(0, 10);
-  const matricula = (ficha) => ({
-    prestadora_id: d.prestadora, asistente_id: ficha, tipo: 'enfermeria',
+  const matricula = (asistente) => ({
+    prestadora_id: d.prestadora, asistente_id: asistente, tipo: 'enfermeria',
     numero_matricula: 'PRUEBA-ESCRITURA', vigente_desde: hoy,
     registrado_por: usuarioDelAsistente, cargada_por_el_asistente: true,
   });
@@ -603,31 +603,31 @@ async function probarQuienEscribeLaConfiguracion(entorno, d) {
   const matriculaPropia = await pedir(entorno, delAsistente, 'POST', 'matriculas_asistente', matricula(asistenteDeLaSesion));
   if (matriculaPropia.ok) {
     consultarBase("DELETE FROM public.matriculas_asistente WHERE numero_matricula = 'PRUEBA-ESCRITURA';");
-    bien('el Asistente SÍ carga la Matrícula de su propia ficha', 'asistente_carga_su_matricula');
+    bien('el Asistente SÍ carga la Matrícula de su propio Legajo del Asistente', 'asistente_carga_su_matricula');
   } else {
     const c = matriculaPropia.cuerpo || {};
-    mal('el Asistente SÍ carga la Matrícula de su propia ficha',
+    mal('el Asistente SÍ carga la Matrícula de su propio Legajo del Asistente',
         `${matriculaPropia.estado} ${c.code || ''} ${c.message || ''}`.trim());
   }
 
-  const [[otraFicha]] = consultarBase(`
+  const [[otroAsistente]] = consultarBase(`
     SELECT a.id FROM public.asistentes a
      WHERE a.prestadora_id = '${d.prestadora}' AND a.id <> '${asistenteDeLaSesion}'
      ORDER BY a.id LIMIT 1;
   `);
-  if (otraFicha) {
-    const matriculaAjena = await pedir(entorno, delAsistente, 'POST', 'matriculas_asistente', matricula(otraFicha));
+  if (otroAsistente) {
+    const matriculaAjena = await pedir(entorno, delAsistente, 'POST', 'matriculas_asistente', matricula(otroAsistente));
     if (matriculaAjena.ok) {
       consultarBase("DELETE FROM public.matriculas_asistente WHERE numero_matricula = 'PRUEBA-ESCRITURA';");
-      mal('el Asistente NO carga la Matrícula de otra ficha', 'la base lo dejó escribir en la ficha de otro');
+      mal('el Asistente NO carga la Matrícula de otro Asistente', 'la base lo dejó escribir en el Legajo del Asistente de otro');
     } else {
-      bien('el Asistente NO carga la Matrícula de otra ficha', `rebotó con ${matriculaAjena.estado}`);
+      bien('el Asistente NO carga la Matrícula de otro Asistente', `rebotó con ${matriculaAjena.estado}`);
     }
   }
 
   // ---- Y adónde se le paga lo informa él: lo carga, lo corrige y lo saca ----
   // Mismo molde que la Matrícula, que es el precedente de lo que el Asistente
-  // escribe en su propia ficha. La cuenta es inventada, como todo lo que se
+  // escribe en su propio Legajo del Asistente. La cuenta es inventada, como todo lo que se
   // siembra acá, y se borra al terminar.
   const [[paisDeLaPrestadora]] = consultarBase(
     `SELECT pais FROM public.prestadoras WHERE id = '${d.prestadora}';`,
@@ -637,8 +637,8 @@ async function probarQuienEscribeLaConfiguracion(entorno, d) {
   const borrarLaCuentaSembrada = () => consultarBase(
     `DELETE FROM public.datos_bancarios_asistente WHERE identificador IN ('${CUENTA_DE_PRUEBA}', '${CUENTA_CORREGIDA}');`,
   );
-  const cuenta = (ficha) => ({
-    prestadora_id: d.prestadora, asistente_id: ficha,
+  const cuenta = (asistente) => ({
+    prestadora_id: d.prestadora, asistente_id: asistente,
     pais: paisDeLaPrestadora || 'AR', identificador_clase: 'cbu',
     identificador: CUENTA_DE_PRUEBA,
   });
@@ -686,48 +686,48 @@ async function probarQuienEscribeLaConfiguracion(entorno, d) {
 
   // ESTO ES LO QUE SE ESTÁ PROBANDO DE VERDAD. Cobrar en la cuenta de otro no
   // es ver un dato de más: es que la plata salga hacia otro lado.
-  if (otraFicha) {
-    const cuentaAjena = await pedir(entorno, delAsistente, 'POST', 'datos_bancarios_asistente', cuenta(otraFicha));
+  if (otroAsistente) {
+    const cuentaAjena = await pedir(entorno, delAsistente, 'POST', 'datos_bancarios_asistente', cuenta(otroAsistente));
     if (cuentaAjena.ok) {
       borrarLaCuentaSembrada();
-      mal('el Asistente NO carga los datos bancarios de otra ficha', 'la base lo dejó escribir en la ficha de otro');
+      mal('el Asistente NO carga los datos bancarios de otro Asistente', 'la base lo dejó escribir en el Legajo del Asistente de otro');
     } else {
-      bien('el Asistente NO carga los datos bancarios de otra ficha', `rebotó con ${cuentaAjena.estado}`);
+      bien('el Asistente NO carga los datos bancarios de otro Asistente', `rebotó con ${cuentaAjena.estado}`);
     }
 
     // Y tampoco corrige la de otro: se le siembra una con la llave del dueño de
     // la base —que se saltea las políticas— y se intenta cambiarla con su sesión.
     const [[cuentaDelOtro]] = consultarBase(`
       INSERT INTO public.datos_bancarios_asistente (prestadora_id, asistente_id, pais, identificador_clase, identificador)
-      VALUES ('${d.prestadora}', '${otraFicha}', '${paisDeLaPrestadora || 'AR'}', 'cbu', '${CUENTA_DE_PRUEBA}')
+      VALUES ('${d.prestadora}', '${otroAsistente}', '${paisDeLaPrestadora || 'AR'}', 'cbu', '${CUENTA_DE_PRUEBA}')
       RETURNING id;
     `);
     const corrigeLaDeOtro = await pedir(
       entorno, delAsistente, 'PATCH',
-      `datos_bancarios_asistente?asistente_id=eq.${otraFicha}&identificador_clase=eq.cbu`,
+      `datos_bancarios_asistente?asistente_id=eq.${otroAsistente}&identificador_clase=eq.cbu`,
       { identificador: CUENTA_CORREGIDA },
     );
     const [[comoQuedo]] = consultarBase(
       `SELECT identificador FROM public.datos_bancarios_asistente WHERE id = '${cuentaDelOtro}';`,
     );
     if (comoQuedo === CUENTA_DE_PRUEBA) {
-      bien('el Asistente NO corrige los datos bancarios de otra ficha', 'no tocó ninguna fila');
+      bien('el Asistente NO corrige los datos bancarios de otro Asistente', 'no tocó ninguna fila');
     } else {
-      mal('el Asistente NO corrige los datos bancarios de otra ficha',
+      mal('el Asistente NO corrige los datos bancarios de otro Asistente',
           `la base lo dejó cambiar la cuenta de otro (${corrigeLaDeOtro.estado})`);
     }
 
     const sacaLaDeOtro = await pedir(
       entorno, delAsistente, 'DELETE',
-      `datos_bancarios_asistente?asistente_id=eq.${otraFicha}&identificador_clase=eq.cbu`,
+      `datos_bancarios_asistente?asistente_id=eq.${otroAsistente}&identificador_clase=eq.cbu`,
     );
     const [[sigueAhi]] = consultarBase(
       `SELECT count(*) FROM public.datos_bancarios_asistente WHERE id = '${cuentaDelOtro}';`,
     );
     if (String(sigueAhi) === '1') {
-      bien('el Asistente NO saca los datos bancarios de otra ficha', 'no tocó ninguna fila');
+      bien('el Asistente NO saca los datos bancarios de otro Asistente', 'no tocó ninguna fila');
     } else {
-      mal('el Asistente NO saca los datos bancarios de otra ficha',
+      mal('el Asistente NO saca los datos bancarios de otro Asistente',
           `la base lo dejó borrar la cuenta de otro (${sacaLaDeOtro.estado})`);
     }
 

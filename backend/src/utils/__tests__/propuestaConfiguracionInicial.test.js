@@ -7,7 +7,7 @@
  * todavía no está configurado. Esa alerta vale sólo si dice **lo mismo que va a hacer la
  * importación**: si la guía dice «ese tipo ya existe» y la importación después no lo reconoce, el
  * Asistente entra sin tipo —y el tipo es lo que decide si se le va a exigir Matrícula—, sin que
- * nadie se entere hasta revisar la ficha de a una. Lo mismo con una zona: la importación no la
+ * nadie se entere hasta revisar los Legajos de a uno. Lo mismo con una zona: la importación no la
  * crea, la deja como texto suelto.
  *
  * Entonces lo que se cuida acá es que la comparación no se despegue: que las zonas se reconozcan

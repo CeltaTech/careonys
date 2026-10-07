@@ -9,7 +9,7 @@ import { useLocale } from '../../i18n/LocaleContext';
    trabajar una Asistente, qué abarca una zona, hasta dónde llega quien coordina. Éste elige uno
    solo, porque una persona vive en un lugar.
 
-   ES UNA LISTA Y NUNCA TEXTO LIBRE. La localidad ya tiene ficha en la Prestadora: lo que queda
+   ES UNA LISTA Y NUNCA TEXTO LIBRE. La localidad ya está en el catálogo de la Prestadora: lo que queda
    guardado es cuál, no cómo se llama. Tecleada a mano, «Vicente López» y «Vicente Lopez» son dos
    lugares distintos para el sistema, la Asistente que cubre uno no aparece para el otro, y nadie
    se entera (CLAUDE.md del producto, §6).

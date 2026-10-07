@@ -34,7 +34,7 @@ describe('asistenteBajoVinculo', () => {
     expect(r.sueldo_basico).toBeCloseTo(BRUTO_MONOTRIBUTO, 2);
   });
 
-  it('bajo monotributo apaga el sueldo aunque la ficha lo tenga cargado', () => {
+  it('bajo monotributo apaga el sueldo aunque el Legajo del Asistente lo tenga cargado', () => {
     const r = asistenteBajoVinculo({ ...ASISTENTE, sueldo_basico: '900000' }, 'monotributo');
     expect(r.sueldo_basico).toBeNull();
     expect(r.valor_hora).toBe(2000);

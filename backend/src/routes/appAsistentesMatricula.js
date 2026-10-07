@@ -40,7 +40,7 @@ import { responderError } from '../utils/errorConMotivo.js';
 // EL DEPÓSITO SIGUE CON LA LLAVE MAESTRA
 // Subir el archivo y generar el enlace temporal van con la llave maestra, y la ruta se
 // comprueba a mano con `utils/archivosSubidos.js`: las políticas del depósito
-// piden que la carpeta sea el usuario de la sesión, y la ruta la arma la ficha
+// piden que la carpeta sea el usuario de la sesión, y la ruta la arma el Legajo
 // del Asistente (ver el comentario de cada llamada).
 // ============================================================================
 
@@ -148,7 +148,7 @@ appAsistentesMatriculaRouter.post(
       return res.status(400).json({ error: 'Falta la fecha desde la que vale la matrícula' });
     }
 
-    // La Prestadora con la que se arma la ruta y se da el alta es la de la ficha que la base ya
+    // La Prestadora con la que se arma la ruta y se da el alta es la del Legajo que la base ya
     // le dejó ver, no un dato del pedido.
     const { data: asistente } = await db
       .from('asistentes')
@@ -162,9 +162,9 @@ appAsistentesMatriculaRouter.post(
       const ruta = rutaDeMatriculaNueva(asistente.prestadora_id, asistente.id, extensionDeArchivo(req.file.mimetype));
       // Con la llave maestra: `prescripciones_asistente_sube_su_matricula` exige
       // (storage.foldername(name))[3] = auth.uid(), y la ruta lleva el identificador de la
-      // ficha del Asistente, que para toda ficha nueva es distinto del de su usuario; con la
+      // Legajo del Asistente, que para todo Legajo nuevo es distinto del de su usuario; con la
       // credencial de la persona la subida se rechaza. Si se cambia la ruta o la política se
-      // decide aparte. La ruta la arma `rutaDeMatriculaNueva` con la Prestadora de la ficha.
+      // decide aparte. La ruta la arma `rutaDeMatriculaNueva` con la Prestadora del Legajo.
       const { error: errorSubida } = await supabase.storage
         .from(BUCKET)
         .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
@@ -209,7 +209,7 @@ appAsistentesMatriculaRouter.get('/archivo-url', requiereRolAsistente, async (re
   }
 
   // Con la llave maestra: `prescripciones_asistente_lee_su_matricula` exige
-  // (storage.foldername(name))[3] = auth.uid(), y la carpeta es el identificador de la ficha,
+  // (storage.foldername(name))[3] = auth.uid(), y la carpeta es el identificador del Legajo,
   // no el del usuario; con la credencial de la persona el Asistente no podría abrir su propio
   // archivo. Si se cambia la ruta o la política se decide aparte.
   const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(ruta, 60);

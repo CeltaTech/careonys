@@ -1,4 +1,4 @@
-// En qué modalidades trabaja un Servicio y quién administra cada una. Lo usan la lista y la ficha.
+// En qué modalidades trabaja un Servicio y quién administra cada una. Lo usan la lista y el Detalle del servicio.
 //
 // La modalidad no está guardada en el Servicio ni en la prestación: la lleva cada guardia, en la
 // columna `canal_modalidad` (nombre guardado, no se renombra). Las del Servicio son las que

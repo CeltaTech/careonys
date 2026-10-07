@@ -134,7 +134,7 @@ panelImportacionRouter.post(
 // Lee el archivo con la misma cadena de arriba y contesta qué configuración inicial traería:
 // cuántas filas, y —para una planilla de Asistentes— qué zonas de cobertura y qué tipos de
 // Asistente nombra que todavía no estén configurados. Eso último es lo que la importación no
-// crea sola, y descubrirlo antes evita tener que corregir ficha por ficha después.
+// crea sola, y descubrirlo antes evita tener que corregir Legajo por Legajo después.
 //
 // No crea nada. Devuelve además el análisis entero para que la pantalla de importación siga
 // desde donde quedó, sin volver a leer el archivo.
@@ -221,7 +221,7 @@ panelImportacionRouter.post(
     const errores = [];
     let creadas = 0;
 
-    // Las altas entran con la llave maestra, como el resto de esta ruta: las fichas nacen
+    // Las altas entran con la llave maestra, como el resto de esta ruta: nacen
     // pendientes de conformidad, y la política restrictiva `oculta_pendientes_de_conformidad` se
     // las esconde a quien importa en cuanto las escribe.
 

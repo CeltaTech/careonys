@@ -22,7 +22,7 @@ import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { prestadoraVisible } from '../utils/prestadoraVisible.js';
 import { darDeAltaEnPasarela, MOTIVO_ALTA } from '../utils/altaEnPasarela.js';
 import { registrarCobroExitoso } from '../utils/cobrosIntermediacion.js';
-import { cuentasDeLasFichas } from '../utils/cuentaDeLaFicha.js';
+import { cuentasDeLasFilas } from '../utils/cuentaDeLaFila.js';
 
 export const panelIntermediacionRouter = Router();
 
@@ -539,12 +539,12 @@ panelIntermediacionRouter.get('/accesos', soloAdministracion, async (req, res) =
   const asistenteIds = [...new Set(data.map((s) => s.asistente_id).filter(Boolean))];
 
   const [cuentasCliente, { data: pacientes }, { data: asistentes }] = await Promise.all([
-    cuentasDeLasFichas('clientes', clienteIds, 'nombre', req.usuarioPanel.prestadoraId),
+    cuentasDeLasFilas('clientes', clienteIds, 'nombre', req.usuarioPanel.prestadoraId),
     pacienteIds.length
       // Los nombres de Pacientes y Asistentes, con la llave maestra: la política restrictiva
       // `oculta_pendientes_de_conformidad` de `pacientes` y de `asistentes` (NOT
-      // pendiente_conformidad) esconde a Admin y a Superadmin las fichas pendientes de
-      // conformidad, y el acceso de una de ellas llegaría sin nombre, cosa que antes no pasaba.
+      // pendiente_conformidad) esconde a Admin y a Superadmin los Legajos pendientes de
+      // conformidad, y el acceso de uno de ellos llegaría sin nombre, cosa que antes no pasaba.
       // Se decide aparte.
       ? supabase.from('pacientes').select('id, nombre').eq('prestadora_id', req.usuarioPanel.prestadoraId).in('id', pacienteIds)
       : { data: [] },

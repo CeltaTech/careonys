@@ -47,7 +47,7 @@ async function pacienteDeLaPrestadora(pacienteId, usuarioPanel) {
 // Solo sube el archivo y devuelve la ruta de storage — el registro en
 // autorizaciones_monitoreo_paciente (nombre de quien avala, rol, tipo de firma, fecha) lo
 // inserta el Panel directamente vía supabase-js (RLS ya lo permite a admin_prestadora,
-// mismo criterio que el resto de la ficha del Paciente). Acá solo se resuelve el archivo.
+// mismo criterio que el resto de la historia clínica del Paciente). Acá solo se resuelve el archivo.
 panelVitalesAutorizacionRouter.post(
   '/:pacienteId/archivo',
   requiereRolPanel,

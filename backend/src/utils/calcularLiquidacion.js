@@ -97,7 +97,7 @@ export function redondear(numero) {
 /**
  * La liquidación de un Asistente en un período, con sus renglones.
  *
- * Devuelve `{ faltaBase: true }` cuando la ficha no tiene el valor con el que se paga. No se
+ * Devuelve `{ faltaBase: true }` cuando el Legajo del Asistente no tiene el valor con el que se paga. No se
  * estima, no se completa con el de otro, no se pone cero: un cero se lee como "no se le paga
  * nada", que es una afirmación distinta de "no sabemos cuánto".
  *
@@ -245,7 +245,7 @@ export function calcularLiquidacion({ asistente, acumulado, conceptos, escalasPo
       guardias_contadas: acumulado.guardias,
       horas_extra: horasExtra,
       // El valor con el que se pagaron va en la foto: sin él, el importe no se puede volver a
-      // explicar. Sin horas extra no hay valor que guardar, y guardar el de la ficha diría que
+      // explicar. Sin horas extra no hay valor que guardar, y guardar el del Legajo del Asistente diría que
       // se pagó algo que no se pagó.
       valor_hora_extra: importeHorasExtra > 0 ? valorHoraExtra : null,
       importe_horas_extra: importeHorasExtra,

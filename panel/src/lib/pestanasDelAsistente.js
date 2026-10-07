@@ -1,8 +1,8 @@
 // ---------------------------------------------------------------------------
-// pestanasDelAsistente.js — qué pestañas tiene la ficha de un Asistente, y quién ve cuáles
+// pestanasDelAsistente.js — qué pestañas tiene el Legajo del Asistente, y quién ve cuáles
 //
 // Está afuera de la pantalla por dos motivos. Uno: son datos, no dibujo — la lista de qué se
-// muestra y el orden en que se muestra no cambia según cómo esté hecha la ficha. El otro: acá
+// muestra y el orden en que se muestra no cambia según cómo esté hecho el Legajo del Asistente. El otro: acá
 // se puede comprobar que ninguna pestaña quedó sin nombre en alguno de los tres idiomas, que es
 // el error que aparece cuando se agrega una y se traduce después.
 //
@@ -45,7 +45,7 @@ export const PESTANAS_COORDINADOR = [
 
 /**
  * Las que dependen de que la Prestadora trabaje en modalidad Match. Se nombran acá, y no
- * con un `if` adentro de la ficha, porque el día que haya una segunda el `if` se convierte en
+ * con un `if` adentro del Legajo del Asistente, porque el día que haya una segunda el `if` se convierte en
  * dos lugares donde recordar lo mismo.
  */
 export const PESTANAS_SOLO_INTERMEDIACION = ['evaluaciones'];

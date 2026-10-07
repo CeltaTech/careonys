@@ -1,8 +1,8 @@
 /**
- * Dos partes de la ficha del Asistente viven en tablas aparte, no en `asistentes`.
+ * Dos partes del Legajo del Asistente viven en tablas aparte, no en `asistentes`.
  *
  * Están separadas a propósito: las reglas de acceso de la base filtran filas, no columnas, así
- * que mientras esos datos estaban dentro de `asistentes` cualquiera que podía ver la ficha
+ * que mientras esos datos estaban dentro de `asistentes` cualquiera que podía ver el Legajo del Asistente
  * podía leerlos. En su propia tabla, la base exige un permiso antes de contestar:
  *
  *   - `remuneraciones_asistente` — lo que cobra. Permiso `ver_pagos_asistente`.
@@ -11,7 +11,7 @@
  *     `ver_datos_reservados_asistente`.
  *
  * Para las pantallas eso es un detalle de dónde está guardado el dato, no una forma nueva de
- * leerlo: se piden junto con la ficha y `conDatosAparte` los vuelve a dejar donde el resto del
+ * leerlo: se piden junto con el Legajo del Asistente y `conDatosAparte` los vuelve a dejar donde el resto del
  * código los espera, en `asistente.valor_hora`, `asistente.causal_baja` y demás. Quien no tenga
  * el permiso recibe esos campos en `null`, que es lo mismo que recibía cuando el dato no estaba
  * cargado.
@@ -28,18 +28,18 @@ function primero(adjunto) {
   return (Array.isArray(adjunto) ? adjunto[0] : adjunto) ?? null;
 }
 
-/** Deja los datos de las tablas aparte al mismo nivel que el resto de la ficha. */
+/** Deja los datos de las tablas aparte al mismo nivel que el resto del Legajo del Asistente. */
 export function conDatosAparte(asistente) {
   if (!asistente) return asistente;
   const {
     remuneraciones_asistente: adjuntoPago,
     datos_reservados_asistente: adjuntoReservado,
-    ...ficha
+    ...columnas
   } = asistente;
   const pago = primero(adjuntoPago);
   const reservado = primero(adjuntoReservado);
   return {
-    ...ficha,
+    ...columnas,
     unidad_medicion: pago?.unidad_medicion ?? null,
     valor_hora: pago?.valor_hora ?? null,
     sueldo_basico: pago?.sueldo_basico ?? null,

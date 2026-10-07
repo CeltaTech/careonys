@@ -15,7 +15,7 @@ import { useCatalogoDeLugares } from '../../hooks/useCatalogoDeLugares';
    Lo que queda guardado siguen siendo los lugares.
 
    `catalogo` es para la pantalla que ya lo tiene cargado para otra cosa: se lo pasa y no se lo
-   vuelve a pedir. Sin eso, una ficha que elige lugares y además muestra un domicilio pediría la
+   vuelve a pedir. Sin eso, el Legajo del Asistente, que elige lugares y además muestra un domicilio, pediría la
    misma lista dos veces. */
 export function ElegirLugares({ valor, onChange, catalogo, deshabilitado = false }) {
   const { t } = useLocale();

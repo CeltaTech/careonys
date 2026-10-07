@@ -186,7 +186,7 @@ describe('el Cliente', () => {
 });
 
 describe('el Asistente', () => {
-  it('lee la cuenta y su ficha con la credencial de la persona', async () => {
+  it('lee la cuenta y su Legajo con la credencial de la persona', async () => {
     usuarioDeLaBase = { rol: 'asistente', prestadora_id: PRESTADORA };
     filas.asistentes = { id: 'asistente-1' };
     const credencial = sesionDePrueba(PERSONA);
@@ -200,7 +200,7 @@ describe('el Asistente', () => {
     }
   });
 
-  it('sin ficha que la base le muestre, contesta 403', async () => {
+  it('sin Legajo que la base le muestre, contesta 403', async () => {
     usuarioDeLaBase = { rol: 'asistente', prestadora_id: PRESTADORA };
 
     assert.equal((await pasarPor(requiereRolAsistente, sesionDePrueba(PERSONA))).estado, 403);

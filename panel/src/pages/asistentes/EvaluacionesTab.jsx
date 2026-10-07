@@ -15,8 +15,8 @@ import '../hojaDeTarjetas.css';
    decidir algo sobre ella —renovarle el vínculo, ofrecerle un Paciente, atender un reclamo—.
 
    SE MIRA, NO SE TOCA. Que una evaluación se vea o no en el perfil público es una decisión de
-   la Prestadora sobre su vidriera, y se toma mirándolas todas: esconder una desde la ficha de
-   quien la recibió es decidir sobre el perfil público sin ver el perfil público. Esa acción se
+   la Prestadora sobre su vidriera, y se toma mirándolas todas: esconder una desde el Legajo del
+   Asistente que la recibió es decidir sobre el perfil público sin ver el perfil público. Esa acción se
    queda donde está, y acá se dice dónde.
 
    NO SE MUESTRA NINGÚN PROMEDIO, a propósito. El promedio que existe es el del perfil público,
@@ -28,7 +28,7 @@ import '../hojaDeTarjetas.css';
    dijo, no quién lo dijo, y una queja con nombre y apellido al lado cambia lo que pasa después.
    Es el mismo criterio con el que la evaluación le llega al Asistente en su propia aplicación. */
 
-/* Cuántas filas como mucho. Igual que en el historial de guardias: esto es una ficha, y cuando
+/* Cuántas filas como mucho. Igual que en el historial de guardias: esto es el Legajo del Asistente, y cuando
    se llega al tope se avisa, para que nadie crea que está viendo todo lo que se dijo. */
 const TOPE = 50;
 

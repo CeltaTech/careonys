@@ -36,7 +36,7 @@ export function ScoreRiesgoTab({ asistente, onActualizado }) {
   // deja un cero que se lee como «no hay riesgo».
   const { filas: escalasCrudas, estado, error: errorEscalas } = useEscalasLegales(asistente.prestadora_id);
   // Sólo los que se cargan a mano viven en el estado de la pantalla: los otros tres no se
-  // tocan acá, salen de la ficha cada vez que se muestra.
+  // tocan acá, salen del Legajo del Asistente cada vez que se muestra.
   const [indicadores, setIndicadores] = useState(asistente.indicadores_riesgo ?? {});
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
@@ -44,7 +44,7 @@ export function ScoreRiesgoTab({ asistente, onActualizado }) {
   const hoy = new Date().toISOString().slice(0, 10);
   const escalasResueltas = yaCargo(estado) ? resolverEscalasVigentes(escalasCrudas, hoy) : null;
 
-  // Tres de los siete indicadores salen de datos que la ficha ya tiene, así que se deducen acá
+  // Tres de los siete indicadores salen de datos que el Legajo del Asistente ya tiene, así que se deducen acá
   // y no se preguntan. Eso es lo que hace que el puntaje se recalcule solo: cambian las horas
   // del Asistente y el número cambia, sin que nadie vuelva a entrar a tildar nada.
   const { valores: deducidos, sinDeducir } = useMemo(

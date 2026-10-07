@@ -65,8 +65,8 @@ export function Clientes() {
   const [error, setError] = useState(null);
   const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '', lugar: '' });
   const [mostrarNueva, setMostrarNueva] = useState(false);
-  // Los nombres de las localidades salen del catálogo y no de la ficha del Paciente: lo guardado
-  // es cuál lugar, y corregir una vez cómo se llama lo corrige en todas las fichas que lo nombran.
+  // Los nombres de las localidades salen del catálogo y no del Legajo del Paciente: lo guardado
+  // es cuál lugar, y corregir una vez cómo se llama lo corrige en el Legajo de cada Paciente que lo nombra.
   const catalogo = useCatalogoDeLugares();
 
   const recargar = useCallback(async () => {
@@ -133,7 +133,7 @@ export function Clientes() {
 
   const tl = t.clientes.listado;
   const abrirAlta = () => setMostrarNueva(true);
-  const abrirFicha = (fam) => navigate(`/clientes/${fam.id}`);
+  const abrirFichaDelCliente = (fam) => navigate(`/clientes/${fam.id}`);
 
   // Activa mientras tenga algún Servicio vigente; con Servicios y ninguno vigente, cerrada.
   function estadoDeCliente(propios) {
@@ -211,9 +211,9 @@ export function Clientes() {
                       key={fam.id}
                       className="listado-fila-abre"
                       tabIndex={0}
-                      onClick={() => abrirFicha(fam)}
+                      onClick={() => abrirFichaDelCliente(fam)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') abrirFicha(fam);
+                        if (e.key === 'Enter') abrirFichaDelCliente(fam);
                       }}
                     >
                       <td><strong>{fam.solicitudes?.nombre || '—'}</strong></td>

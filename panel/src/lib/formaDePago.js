@@ -36,7 +36,7 @@ export const UNIDADES = {
 
 export const UNIDADES_POSIBLES = Object.values(UNIDADES);
 
-/** En qué columna de la ficha de remuneración vive el valor de cada unidad. */
+/** En qué columna de la remuneración del Asistente vive el valor de cada unidad. */
 export const COLUMNA_DEL_VALOR = {
   [UNIDADES.HORA]: 'valor_hora',
   [UNIDADES.GUARDIA]: 'valor_guardia',
@@ -45,11 +45,11 @@ export const COLUMNA_DEL_VALOR = {
 };
 
 /**
- * Qué unidad le corresponde a una ficha que todavía no eligió ninguna.
+ * Qué unidad le corresponde a un Legajo del Asistente que todavía no eligió ninguna.
  *
  * Es exactamente lo que hacía el código antes de que la forma de pago se pudiera elegir, y
- * está acá para que una ficha vieja siga liquidando igual que el mes pasado. Ninguna ficha
- * nueva pasa por esto: la unidad se elige al cargarla.
+ * está acá para que un Legajo del Asistente cargado antes siga liquidando igual que el mes pasado. Ningún
+ * Legajo del Asistente nuevo pasa por esto: la unidad se elige al cargarlo.
  */
 export const UNIDAD_POR_VINCULO = {
   dependencia: UNIDADES.MES,
@@ -117,19 +117,19 @@ export function esMontoFijo(unidad) {
 /**
  * Con qué se le mide el trabajo a esta persona.
  *
- * Recibe la ficha entera —lo que cobra y su vínculo vienen juntos en la mano de quien liquida—
- * porque una ficha que todavía no eligió unidad se resuelve mirando el vínculo.
+ * Recibe el Legajo del Asistente entero —lo que cobra y su vínculo vienen juntos en la mano de quien liquida—
+ * porque un Legajo del Asistente que todavía no eligió unidad se resuelve mirando el vínculo.
  */
-export function unidadDeMedicionDe(ficha) {
-  const elegida = ficha?.unidad_medicion;
+export function unidadDeMedicionDe(asistente) {
+  const elegida = asistente?.unidad_medicion;
   if (UNIDADES_POSIBLES.includes(elegida)) return elegida;
-  return UNIDAD_POR_VINCULO[ficha?.tipo_vinculo] ?? UNIDADES.HORA;
+  return UNIDAD_POR_VINCULO[asistente?.tipo_vinculo] ?? UNIDADES.HORA;
 }
 
 /**
  * Cuánto vale una unidad para esta persona.
  *
- * Devuelve `null` cuando la ficha no lo tiene cargado, y no cero: un cero se lee como «no se
+ * Devuelve `null` cuando el Legajo del Asistente no lo tiene cargado, y no cero: un cero se lee como «no se
  * le paga nada», que es una afirmación distinta de «no sabemos cuánto».
  */
 export function valorDeLaUnidad(pago, unidad) {

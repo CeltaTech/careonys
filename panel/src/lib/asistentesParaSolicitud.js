@@ -94,8 +94,8 @@ function evaluar(asistente, solicitud, pesos) {
   const enContra = [];
   let puntaje = 0;
 
-  // Dónde trabaja. Llegan los nombres de sus lugares, que la pantalla arma con el catálogo. Una
-  // ficha sin ninguno no es una ficha que trabaje en cualquier lado: es una ficha a la que le
+  // Dónde trabaja. Llegan los nombres de sus lugares, que la pantalla arma con el catálogo. Un
+  // Legajo del Asistente sin ninguno no es uno que trabaje en cualquier lado: es uno al que le
   // falta el dato, y eso se dice con esas palabras en vez de contarlo como que no cubre la zona,
   // que sería afirmar algo que nadie cargó.
   const zonas = lista(asistente?.zonas);

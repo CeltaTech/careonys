@@ -37,6 +37,15 @@ export function corregirUnTelefono(legajoId, telefonoId, telefono) {
   });
 }
 
-export function sacarUnTelefono(legajoId, telefonoId) {
+/** Queda en el Legajo y deja de ser el preferido para llamar. */
+export function ponerFueraDeUso(legajoId, telefonoId) {
+  return llamarApiPadronTelefonos(`/${legajoId}/${telefonoId}/fuera-de-uso`, { method: 'POST' });
+}
+
+export function restaurarUnTelefono(legajoId, telefonoId) {
+  return llamarApiPadronTelefonos(`/${legajoId}/${telefonoId}/restaurar`, { method: 'POST' });
+}
+
+export function borrarUnTelefono(legajoId, telefonoId) {
   return llamarApiPadronTelefonos(`/${legajoId}/${telefonoId}`, { method: 'DELETE' });
 }

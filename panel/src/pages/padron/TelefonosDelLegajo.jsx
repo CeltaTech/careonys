@@ -10,7 +10,9 @@ import {
   cargarUnTelefono,
   corregirUnTelefono,
   pedirLosTelefonosDelLegajo,
-  sacarUnTelefono,
+  ponerFueraDeUso,
+  restaurarUnTelefono,
+  borrarUnTelefono,
 } from '../../lib/apiPadronTelefonos';
 
 /* Los teléfonos de contacto de un Legajo del Padrón.
@@ -40,6 +42,8 @@ export function TelefonosDelLegajo({ legajoId, puedeEditar }) {
   // Qué operación está corriendo: `'nuevo'`, o el identificador del teléfono que se está tocando.
   // Con eso se apaga el botón que la disparó y nada más.
   const [operando, setOperando] = useState(null);
+  // Si lo que corre sobre ese teléfono es borrarlo: sólo ese botón dice «Borrando…».
+  const [borrando, setBorrando] = useState(false);
   const [nuevo, setNuevo] = useState('');
   // Cuál se está corrigiendo, y con qué texto.
   const [corrigiendo, setCorrigiendo] = useState(null);
@@ -95,18 +99,26 @@ export function TelefonosDelLegajo({ legajoId, puedeEditar }) {
     }
   }
 
-  async function sacar(fila) {
-    if (!(await confirmarDestructivo(tr.confirmar_borrar))) return;
+  // Lo mismo para las tres operaciones sobre un teléfono: apagar los botones, llamar y recargar.
+  async function operarSobre(fila, operacion) {
     setOperando(fila.id);
+    setBorrando(operacion === borrarUnTelefono);
     setError(null);
     try {
-      await sacarUnTelefono(legajoId, fila.id);
+      await operacion(legajoId, fila.id);
       await recargar();
     } catch (e) {
       setError(mensajeDeError(e, t));
     } finally {
       setOperando(null);
     }
+  }
+
+  // El que no atiende no se borra: queda fuera de uso. Borrar es sólo para cuando hay certeza de
+  // que el número está mal, y por eso es lo único que pide confirmación.
+  async function borrar(fila) {
+    if (!(await confirmarDestructivo(tr.confirmar_borrar))) return;
+    await operarSobre(fila, borrarUnTelefono);
   }
 
   return (
@@ -151,6 +163,9 @@ export function TelefonosDelLegajo({ legajoId, puedeEditar }) {
                 <>
                   <span className="panel-telefono-numero">{fila.telefono}</span>
                   {fila.preferido && <span className="panel-telefono-preferido">{tr.preferido}</span>}
+                  {fila.fuera_de_uso_at && (
+                    <span className="panel-telefono-fuera-de-uso">{tr.marca_fuera_de_uso}</span>
+                  )}
                   {puedeEditar && (
                     <>
                       <Button
@@ -163,12 +178,29 @@ export function TelefonosDelLegajo({ legajoId, puedeEditar }) {
                       >
                         {t.comun.editar}
                       </Button>
+                      {fila.fuera_de_uso_at ? (
+                        <Button
+                          variant="secondary"
+                          onClick={() => operarSobre(fila, restaurarUnTelefono)}
+                          disabled={operando !== null}
+                        >
+                          {tr.restaurar}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="secondary"
+                          onClick={() => operarSobre(fila, ponerFueraDeUso)}
+                          disabled={operando !== null}
+                        >
+                          {tr.fuera_de_uso}
+                        </Button>
+                      )}
                       <Button
                         variant="secondary"
-                        onClick={() => sacar(fila)}
+                        onClick={() => borrar(fila)}
                         disabled={operando !== null}
                       >
-                        {operando === fila.id ? tr.borrando : tr.borrar}
+                        {operando === fila.id && borrando ? tr.borrando : tr.borrar}
                       </Button>
                     </>
                   )}

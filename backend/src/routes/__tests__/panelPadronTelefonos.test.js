@@ -230,6 +230,14 @@ describe('cuál es el preferido para llamar', () => {
     assert.ok(consulta.url.includes(huellaComparable(CELULAR)), 'lo que viaja es la huella');
   });
 
+  it('uno fuera de uso no es el preferido aunque sea el de la cuenta', async () => {
+    lasCuentasLlevan(CELULAR);
+    const filas = [{ ...filaTelefono('a', LEGAJO, CELULAR), fuera_de_uso_at: '2026-10-01T10:00:00Z' }];
+    const marcados = await conElPreferidoMarcado(supabase, filas, PRESTADORA);
+    assert.equal(marcados[0].preferido, false);
+    assert.equal(marcados.length, 1, 'sigue en el Legajo');
+  });
+
   it('no poder comprobarlo deja la lista sin nada señalado, nunca con una señal inventada', async () => {
     respuestas.set('GET /rest/v1/usuarios', () => ({ __estado: 500, __cuerpo: { message: 'caída' } }));
     const marcados = await conElPreferidoMarcado(supabase, [filaTelefono('a', LEGAJO, CELULAR)], PRESTADORA);
@@ -453,6 +461,32 @@ describe('cargar, corregir y sacar', () => {
     const { estado, cuerpo } = await pedir('DELETE', `/${LEGAJO}/${TELEFONO_ID}`);
     assert.equal(estado, 404);
     assert.equal(cuerpo.motivo, 'telefono_no_encontrado');
+  });
+
+  it('fuera de uso pone la fecha y no borra; restaurar la quita', async () => {
+    respuestas.set('PATCH /rest/v1/telefonos_del_legajo', (cuerpo) => [
+      { ...filaTelefono(TELEFONO_ID, LEGAJO, CASA), fuera_de_uso_at: cuerpo.fuera_de_uso_at },
+    ]);
+
+    const fuera = await pedir('POST', `/${LEGAJO}/${TELEFONO_ID}/fuera-de-uso`);
+    assert.equal(fuera.estado, 200);
+    assert.ok(fuera.cuerpo.telefono.fuera_de_uso_at);
+
+    const vuelta = await pedir('POST', `/${LEGAJO}/${TELEFONO_ID}/restaurar`);
+    assert.equal(vuelta.estado, 200);
+    assert.equal(vuelta.cuerpo.telefono.fuera_de_uso_at, null);
+
+    assert.ok(!llamadas.some((l) => l.clave === 'DELETE /rest/v1/telefonos_del_legajo'), 'no se borró nada');
+    for (const consulta of consultasDeDatos()) {
+      assert.ok(consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`), consulta.url);
+      assert.ok(consulta.url.includes(`legajo_id=eq.${LEGAJO}`), consulta.url);
+    }
+  });
+
+  it('a un Legajo de otra Prestadora no se le pone ninguno fuera de uso', async () => {
+    const { estado } = await pedir('POST', `/${LEGAJO_AJENO}/${TELEFONO_ID}/fuera-de-uso`);
+    assert.equal(estado, 404);
+    assert.equal(consultasDeDatos().length, 0);
   });
 
   it('sacar uno deja los demás en su lugar', async () => {

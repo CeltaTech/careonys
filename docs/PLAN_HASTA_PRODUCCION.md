@@ -1034,7 +1034,10 @@ etapas, nunca una tabla aparte, y por eso las Solicitudes desaparecen.
 Contactos y Prospectos son asunto de la comercialización, que es la administración. Los Clientes
 les importan a la administración y a la coordinación, y a los Asistentes involucrados en lo suyo.
 En definitiva es un CRM, con todo lo que eso trae, y es OctoCRM: Careonys lo usa a través de su
-API, pero los datos viven en Careonys. Falta decidir qué muestra el tablero de los Clientes.
+API, pero los datos viven en Careonys: la persona, los presupuestos, la etapa y el historial.
+OctoCRM no guarda ningún dato de ningún otro producto en sus bases, porque se vende solo y además
+lo usan otros productos de CeltaTech; Careonys lo usa como si fuera propio. Falta decidir qué
+muestra el tablero de los Clientes.
 
 ---
 

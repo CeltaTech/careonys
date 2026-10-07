@@ -74,6 +74,8 @@ export async function conElPreferidoMarcado(db, telefonos, prestadoraId) {
   // Uno por Legajo, y el más antiguo cuando hay más de uno que coincide.
   const elegido = new Map();
   for (const fila of filas) {
+    // Uno fuera de uso no es preferido aunque coincida con el de la cuenta.
+    if (fila.fuera_de_uso_at) continue;
     const huella = huellaDe.get(fila.id);
     if (!huella || !deUnaCuenta.has(huella)) continue;
     const anterior = elegido.get(fila.legajo_id);

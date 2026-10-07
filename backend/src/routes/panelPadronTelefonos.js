@@ -40,7 +40,7 @@ import { conElPreferidoMarcado, telefonoLimpio } from '../utils/telefonosDelLega
 
 export const panelPadronTelefonosRouter = Router();
 
-const COLUMNAS = 'id, legajo_id, telefono, created_at, updated_at';
+const COLUMNAS = 'id, legajo_id, telefono, fuera_de_uso_at, created_at, updated_at';
 
 const veElPadron = requierePermiso('ver_padron');
 const escribeElPadron = requierePermiso('editar_padron');
@@ -182,8 +182,51 @@ panelPadronTelefonosRouter.patch(
   },
 );
 
-// Sacar uno. El Legajo no se borra nunca; un teléfono al que ya no atiende nadie sí, porque dejarlo
-// puesto hace que alguien lo llame.
+// Ponerlo fuera de uso, o restaurarlo. Que no atiendan no prueba que el número esté mal: queda en el
+// Legajo, deja de ser el preferido y se lo puede restaurar.
+function marcarElUso(fueraDeUso) {
+  return async (req, res) => {
+    const legajo = await legajoDeLaPrestadora(req.params.legajoId, req.usuarioPanel);
+    if (!legajo) return noEncontrado(res);
+
+    // Con la llave maestra, por lo mismo que corregir (ver el comentario de esa consulta).
+    const ahora = new Date().toISOString();
+    const { data, error } = await supabase
+      .from('telefonos_del_legajo')
+      .update({ fuera_de_uso_at: fueraDeUso ? ahora : null, updated_at: ahora })
+      .eq('id', req.params.telefonoId)
+      .eq('prestadora_id', legajo.prestadora_id)
+      .eq('legajo_id', legajo.id)
+      .select(COLUMNAS)
+      .maybeSingle();
+    if (error) return responderError(res, error);
+    if (!data) {
+      return res.status(404).json({ error: 'telefono_no_encontrado', motivo: 'telefono_no_encontrado' });
+    }
+
+    const [conPreferido] = await conElPreferidoMarcado(supabase, [data], legajo.prestadora_id);
+    res.json({ ok: true, telefono: conPreferido });
+  };
+}
+
+panelPadronTelefonosRouter.post(
+  '/:legajoId/:telefonoId/fuera-de-uso',
+  requiereRolPanel,
+  exigirOrganizacionActiva,
+  escribeElPadron,
+  marcarElUso(true),
+);
+
+panelPadronTelefonosRouter.post(
+  '/:legajoId/:telefonoId/restaurar',
+  requiereRolPanel,
+  exigirOrganizacionActiva,
+  escribeElPadron,
+  marcarElUso(false),
+);
+
+// Borrar uno. El Legajo no se borra nunca. Un teléfono sí, a mano y sólo cuando hay certeza de que
+// el número está mal; el que no atiende queda fuera de uso.
 panelPadronTelefonosRouter.delete(
   '/:legajoId/:telefonoId',
   requiereRolPanel,

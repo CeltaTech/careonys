@@ -1592,6 +1592,9 @@ export const T = {
         borrar: 'Borrar',
         borrando: 'Borrando…',
         confirmar_borrar: '¿Borrar este teléfono del Legajo?',
+        fuera_de_uso: 'Fuera de uso',
+        marca_fuera_de_uso: 'Fuera de uso',
+        restaurar: 'Restaurar',
       },
     },
     clientes: {
@@ -4454,6 +4457,9 @@ export const T = {
         borrar: 'Delete',
         borrando: 'Deleting…',
         confirmar_borrar: 'Delete this phone number from the record?',
+        fuera_de_uso: 'Out of use',
+        marca_fuera_de_uso: 'Out of use',
+        restaurar: 'Restore',
       },
     },
     clientes: {
@@ -7296,6 +7302,9 @@ export const T = {
         borrar: 'Excluir',
         borrando: 'Excluindo…',
         confirmar_borrar: 'Excluir este telefone do Legajo?',
+        fuera_de_uso: 'Fora de uso',
+        marca_fuera_de_uso: 'Fora de uso',
+        restaurar: 'Restaurar',
       },
     },
     clientes: {

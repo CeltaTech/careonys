@@ -849,10 +849,6 @@ mano no existe para ninguno. Falta decidir cómo se llaman, en pantalla, la carg
 sección, cuyo título habla sólo de archivos. Cierre: cada cosa que se migra entra por las dos
 formas, por el mismo lote y la misma revisión.
 
-**29b. Usted** — El texto del aviso para el género de una planilla que no se entiende: hoy dice
-«Género no reconocido.», que no está aprobado; la propuesta es «El género escrito no se entiende.»
-(en «The gender entered cannot be read.», pt «O gênero informado não pode ser lido.»).
-
 ---
 
 ## La entrada y la recuperación de la clave

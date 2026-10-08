@@ -11,6 +11,8 @@ import { con } from '../lib/textos';
 import { numeroConGuiones } from '../lib/documentoDeIdentidad';
 import { tomarPlanillaAnalizada } from '../lib/planillaAnalizada';
 import { useModalAccesible } from '../hooks/useModalAccesible';
+import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
+import { useGeneros } from '../hooks/useGeneros';
 import { bajarArchivo } from '../lib/exportarCsv';
 import '../styles/molde-paginas.css';
 import './importacion.css';
@@ -51,6 +53,7 @@ export function Importacion() {
   const modal = useModalAccesible(() => setConfirmandoRechazo(false));
   const { t, locale } = useLocale();
   const { puede, cargado } = usePermisos();
+  const { generos } = useGeneros(usePrestadoraActual());
 
   const [tipo, setTipo] = useState('asistente');
   const [archivo, setArchivo] = useState(null);
@@ -173,6 +176,18 @@ export function Importacion() {
         ...Object.fromEntries(columnasQueFaltan.map((columna) => [columna, ''])),
         [columnaMotivo]: motivoDe(e),
       }));
+      // La columna del género vuelve con la lista de los aceptados, para elegir y no escribir.
+      const columnaDe = (campo) => Object.keys(mapeo).find((columna) => mapeo[columna] === campo)
+        ?? t.importacion[`campo_${campo}`];
+      const opcionesDeGenero = generos.map((uno) => t.generos[uno.codigo] ?? uno.codigo);
+      const listas = opcionesDeGenero.length
+        ? Object.fromEntries(
+          ['genero', 'generoContacto', 'generoPaciente']
+            .map(columnaDe)
+            .filter((columna) => columna && encabezados.includes(columna))
+            .map((columna) => [columna, opcionesDeGenero]),
+        )
+        : {};
 
       const { data } = await supabase.auth.getSession();
       const respuesta = await fetch(`${API_URL}/api/panel/importacion/filas-no-cargadas`, {
@@ -181,7 +196,7 @@ export function Importacion() {
           Authorization: `Bearer ${data.session?.access_token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ archivoNombre: analisis.archivoNombre, encabezados, filas }),
+        body: JSON.stringify({ archivoNombre: analisis.archivoNombre, encabezados, filas, listas }),
       });
       if (!respuesta.ok) {
         throw errorDeLaRespuesta(respuesta, await respuesta.json().catch(() => ({})));

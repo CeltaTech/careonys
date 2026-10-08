@@ -76,6 +76,36 @@ describe('el informe de las filas que no se cargaron', () => {
     assert.deepEqual(leer(informe.contenido)[0], encabezados);
   });
 
+  it('en Excel, la columna con lista se elige de las opciones y los datos no cambian', () => {
+    const conGenero = ['Nombre', 'Género', 'Motivo'];
+    const filasConGenero = [
+      { Nombre: 'Íñigo Peña', Género: 'Fmenino', Motivo: 'Texto no reconocido.' },
+      { Nombre: 'Zoe Ruiz', Género: '', Motivo: 'Faltan datos.' },
+    ];
+    const informe = informeDeFilasNoCargadas({
+      archivoNombre: 'cartera.xlsx', encabezados: conGenero, filas: filasConGenero,
+      listas: { Género: ['Femenino', 'Masculino', 'X'] },
+    });
+
+    const zip = XLSX.CFB.read(informe.contenido, { type: 'buffer' });
+    const xml = Buffer.from(XLSX.CFB.find(zip, '/xl/worksheets/sheet1.xml').content).toString('utf8');
+    assert.match(xml, /<dataValidations count="1"><dataValidation type="list"[^>]*sqref="B2:B3"><formula1>&quot;Femenino,Masculino,X&quot;<\/formula1>/);
+    assert.ok(xml.indexOf('</sheetData>') < xml.indexOf('<dataValidations'));
+    assert.deepEqual(leer(informe.contenido), [
+      conGenero,
+      ['Íñigo Peña', 'Fmenino', 'Texto no reconocido.'],
+      ['Zoe Ruiz', '', 'Faltan datos.'],
+    ]);
+  });
+
+  it('en CSV no hay dónde poner la lista, y sale igual', () => {
+    const informe = informeDeFilasNoCargadas({
+      archivoNombre: 'cartera.csv', encabezados, filas, listas: { Nombre: ['A', 'B'] },
+    });
+    assert.doesNotMatch(informe.contenido.toString('utf8'), /dataValidation/);
+    assert.match(informe.contenido.toString('utf8'), /Íñigo Peña/);
+  });
+
   it('sin nombre de archivo, igual sale con uno', () => {
     const informe = informeDeFilasNoCargadas({ archivoNombre: undefined, encabezados, filas });
 

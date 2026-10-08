@@ -378,8 +378,17 @@ panelImportacionRouter.post(
     if (!Array.isArray(encabezados) || !encabezados.length || !Array.isArray(filas) || !filas.length) {
       return res.status(400).json({ error: 'Faltan las filas del informe' });
     }
+    // Las listas se aceptan sólo sobre columnas del informe y con opciones cortas: Excel no admite
+    // más de 255 caracteres en una lista escrita adentro de la hoja.
+    const listas = Object.fromEntries(
+      Object.entries(req.body.listas && typeof req.body.listas === 'object' ? req.body.listas : {})
+        .filter(([columna, opciones]) => encabezados.includes(columna)
+          && Array.isArray(opciones)
+          && opciones.every((opcion) => typeof opcion === 'string' && opcion && !opcion.includes(','))
+          && opciones.join(',').length <= 255),
+    );
 
-    const { contenido, tipo, nombre } = informeDeFilasNoCargadas({ archivoNombre, encabezados, filas });
+    const { contenido, tipo, nombre } = informeDeFilasNoCargadas({ archivoNombre, encabezados, filas, listas });
     res.set('Content-Type', tipo);
     res.set('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(nombre)}`);
     res.set('Access-Control-Expose-Headers', 'Content-Disposition');

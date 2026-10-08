@@ -74,6 +74,8 @@ const IGUALES_A_PROPOSITO = new Map([
   // Nombres propios de países, que no cambian en estos tres idiomas.
   ['Argentina', 'nombre propio de país'],
   ['Chile', 'nombre propio de país'],
+  // Nombres de los números del organismo fiscal argentino: se llaman así en todo idioma.
+  ['CUIT / CUIL', 'nombre propio de un documento argentino'],
   // Palabras que se escriben igual en castellano, inglés y portugués.
   ['Email', 'se escribe igual en los tres idiomas'],
   ['Normal', 'se escribe igual en los tres idiomas'],

@@ -22,7 +22,7 @@ import './seguimientoDeGuardias.css';
  *     Antes acá había un número fijo de trescientos metros, más del doble de lo que tolera el
  *     backend por omisión: el mismo check-in podía estar bien para uno y mal para la otra.
  *   - **Contra qué dirección se mide** es la del día de ese turno, no la que figura hoy en el
- *     Legajo del Paciente. Si el Paciente pasó una temporada en otra casa, el Asistente fue ahí.
+ *     Paciente. Si el Paciente pasó una temporada en otra casa, el Asistente fue ahí.
  */
 
 function hoyISO() {
@@ -96,7 +96,7 @@ export function Evv() {
         .order('hora_inicio', { ascending: true }),
       supabase.from('asistentes').select('id, nombre'),
       // Del Paciente alcanza con el nombre: las coordenadas contra las que se mide no son las
-      // del Legajo del Paciente sino las del día de cada turno, y esas las contesta la base más abajo.
+      // del Paciente sino las del día de cada turno, y esas las contesta la base más abajo.
       supabase.from('pacientes').select('id, nombre'),
       // Los metros que tolera esta Prestadora. No lleva filtro por Prestadora porque la regla
       // de acceso de la base ya deja ver una sola fila, la del tenant de esta sesión.

@@ -8,60 +8,63 @@ import { supabase } from '../lib/supabaseClient';
 import { useFiltros } from '../hooks/useFiltros';
 import { useCatalogoDeLugares } from '../hooks/useCatalogoDeLugares';
 import { useTiposDeDocumento } from '../hooks/useTiposDeDocumento';
+import { usePaises } from '../hooks/usePaises';
+import { nombreDelTipo } from '../lib/documentoDeIdentidad';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
 import { Cabecera } from '../components/ui/Cabecera';
-import { LegajoModal } from './padron/LegajoModal';
+import { PersonaModal } from './personas/PersonaModal';
 import { mensajeDeError } from '../lib/errores';
 import { palabrasDelDomicilio, partesDesdeFila, renglonDelDomicilio } from '../lib/partesDeDomicilio';
-import { pedirLosTelefonosDelPadron } from '../lib/apiPadronTelefonos';
+import { pedirLosTelefonosDelDirectorio } from '../lib/apiPersonasTelefonos';
 import '../styles/molde-paginas.css';
 import './hojaDeTarjetas.css';
 
-/* El Padrón de la Prestadora.
+/* El Directorio de Personas de la Prestadora.
    ==========================================================================
 
-   La lista de todas las Personas con las que la Prestadora tiene algo que ver: quien contrata,
-   quien paga, quien recibe el cuidado, quien acompaña, y también su propia gente. Una Persona, un
-   Legajo, aunque con el tiempo le toquen varios roles.
+   La lista de todas las Personas de los Clientes de la Prestadora: quien contrata, quien paga,
+   quien recibe el cuidado, quien acompaña. Una Persona, una Ficha, aunque con el tiempo le toquen
+   varios roles. Los Asistentes no están acá: son del Padrón, cada uno con su Legajo.
 
-   EL LEGAJO NO GUARDA NINGÚN ROL. Guarda quién es esa Persona y nada más. Qué rol le toca se
+   LA FICHA NO GUARDA NINGÚN ROL. Guarda quién es esa Persona y nada más. Qué rol le toca se
    resuelve donde ocurre —la contratación, el Servicio, el Cliente— y desde ahí se señala cuál
-   Legajo es. Así, la misma Persona que hoy contrata para un Cliente y mañana necesita cuidados
-   sigue siendo un solo Legajo, con todo su historial junto.
+   Ficha es. Así, la misma Persona que hoy contrata para un Cliente y mañana necesita cuidados
+   sigue siendo una sola Ficha, con todo su historial junto.
 
-   NADIE BORRA UN LEGAJO, y por eso esta pantalla no ofrece hacerlo. Lo que se pierde el día que
+   NADIE BORRA UNA FICHA, y por eso esta pantalla no ofrece hacerlo. Lo que se pierde el día que
    alguien borra «porque ya no está activa» es justamente el historial de cómo se comportó esa
    Persona en cada rol.
 
    LA LISTA ES DE LA PRESTADORA. Quién ve cada fila lo decide la base con la política, no esta
    pantalla: acá el candado sirve para no mostrar un renglón de menú que después va a fallar. */
-export function Padron() {
+export function Personas() {
   const { t } = useLocale();
   const { usuario } = useAuth();
   const prestadoraId = usePrestadoraActual();
   const esAdmin = esAdminOSuperior(usuario?.rol);
   const { puede } = usePermisos();
-  const puedeEditar = esAdmin || puede('editar_padron');
+  const puedeEditar = esAdmin || puede('editar_personas');
 
   const [filas, setFilas] = useState([]);
-  // Los teléfonos vienen del backend, en un solo pedido para todo el Padrón: pedirlos Legajo por Legajo
+  // Los teléfonos vienen del backend, en un solo pedido para todo el Directorio: pedirlos Ficha por Ficha
   // sería un pedido por renglón. Vienen con el preferido ya resuelto.
   const [telefonos, setTelefonos] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '', clase: '' });
-  // `null` es «cerrado»; `'nuevo'` es un alta; una fila es la corrección de ese Legajo.
+  // `null` es «cerrado»; `'nuevo'` es un alta; una fila es la corrección de esa Ficha.
   const [enEdicion, setEnEdicion] = useState(null);
 
   const catalogo = useCatalogoDeLugares();
   const documentos = useTiposDeDocumento(prestadoraId);
+  const { nombreDe: nombreDelPais } = usePaises();
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
     setError(null);
     const { data, error: errorConsulta } = await supabase
-      .from('legajos')
+      .from('personas')
       .select('*')
       .order('apellido', { ascending: true })
       .order('nombre', { ascending: true });
@@ -75,7 +78,7 @@ export function Padron() {
     setFilas(data ?? []);
 
     try {
-      const respuesta = await pedirLosTelefonosDelPadron();
+      const respuesta = await pedirLosTelefonosDelDirectorio();
       setTelefonos(respuesta?.telefonos ?? []);
     } catch (errorTelefonos) {
       setError(mensajeDeError(errorTelefonos, t));
@@ -90,11 +93,16 @@ export function Padron() {
     recargar();
   }, [recargar]);
 
-  const siglaDeTipo = useMemo(() => {
+  // Cómo se lee el documento en el renglón: el tipo, el número y, si lo emitió otro país, cuál.
+  const documentoDe = useMemo(() => {
     const todos = [...(documentos.porClase.fisica ?? []), ...(documentos.porClase.juridica ?? [])];
-    const porCodigo = new Map(todos.map((uno) => [uno.codigo, uno.sigla]));
-    return (codigo) => porCodigo.get(codigo) ?? '';
-  }, [documentos.porClase]);
+    const porCodigo = new Map(todos.map((uno) => [uno.codigo, uno]));
+    return (fila) => {
+      const tipo = nombreDelTipo(porCodigo.get(fila.documento_tipo), t.personas.tipos_de_documento);
+      const pais = fila.documento_pais ? ` (${nombreDelPais(fila.documento_pais)})` : '';
+      return `${tipo} ${fila.documento_numero ?? ''}${pais}`.trim();
+    };
+  }, [documentos.porClase, nombreDelPais, t]);
 
   // Cómo se nombra cada renglón. La persona física por apellido y nombre; la jurídica por su razón
   // social entera, que no se parte en dos. Está acá, en un solo lugar, porque lo usan el título de
@@ -104,22 +112,22 @@ export function Padron() {
     [],
   );
 
-  // Los teléfonos de cada Legajo, con el preferido adelante: si hay que llamar, ése es el que
+  // Los teléfonos de cada Ficha, con el preferido adelante: si hay que llamar, ése es el que
   // atiende. Los demás siguen ahí y siguen sirviendo.
-  const telefonosPorLegajo = useMemo(() => {
-    const porLegajo = new Map();
+  const telefonosPorPersona = useMemo(() => {
+    const porPersona = new Map();
     for (const uno of telefonos) {
-      const suyos = porLegajo.get(uno.legajo_id) ?? [];
+      const suyos = porPersona.get(uno.persona_id) ?? [];
       suyos.push(uno);
-      porLegajo.set(uno.legajo_id, suyos);
+      porPersona.set(uno.persona_id, suyos);
     }
-    for (const suyos of porLegajo.values()) {
+    for (const suyos of porPersona.values()) {
       suyos.sort((a, b) => Number(Boolean(b.preferido)) - Number(Boolean(a.preferido)));
     }
-    return porLegajo;
+    return porPersona;
   }, [telefonos]);
 
-  // El Apoderado es otro Legajo de este mismo Padrón, así que su nombre ya está cargado y no hace
+  // El Apoderado es otra Ficha de este mismo Directorio, así que su nombre ya está cargado y no hace
   // falta volver a pedirlo.
   const nombrePorId = useMemo(
     () => new Map(filas.map((fila) => [fila.id, comoSeLlama(fila)])),
@@ -151,35 +159,35 @@ export function Padron() {
 
   return (
     <div>
-      <Cabecera titulo={t.padron.titulo}>
-        {puedeEditar && <Button onClick={() => setEnEdicion('nuevo')}>{t.padron.nuevo_titulo}</Button>}
+      <Cabecera titulo={t.personas.titulo}>
+        {puedeEditar && <Button onClick={() => setEnEdicion('nuevo')}>{t.personas.nuevo_titulo}</Button>}
       </Cabecera>
       <section className="panel-tarjeta hoja-desplazable">
         <div className="panel-tarjeta-titulo">
-          <h2>{t.padron.titulo}</h2>
+          <h2>{t.personas.titulo}</h2>
           {estado === 'listo' && <span className="panel-mini">{filtradas.length}</span>}
         </div>
         <div className="panel-filtros">
           <input
             type="text"
-            placeholder={t.padron.buscar}
-            aria-label={t.padron.buscar}
+            placeholder={t.personas.buscar}
+            aria-label={t.personas.buscar}
             value={f.busqueda}
             onChange={(e) => set('busqueda', e.target.value)}
           />
-          <select value={f.clase} onChange={(e) => set('clase', e.target.value)} aria-label={t.padron.clase}>
+          <select value={f.clase} onChange={(e) => set('clase', e.target.value)} aria-label={t.personas.clase}>
             {/* Cada posición dice cuántas hay: así se sabe si vale la pena cambiar de filtro antes
                 de cambiarlo, y que no hay ninguna empresa cargada deja de ser algo que se descubre
                 recién al elegir esa posición y ver la lista vacía. */}
-            <option value="">{t.padron.filtro_clase_todas} ({cuantas.todas})</option>
-            <option value="fisica">{t.padron.clase_fisica} ({cuantas.fisica})</option>
-            <option value="juridica">{t.padron.clase_juridica} ({cuantas.juridica})</option>
+            <option value="">{t.personas.filtro_clase_todas} ({cuantas.todas})</option>
+            <option value="fisica">{t.personas.clase_fisica} ({cuantas.fisica})</option>
+            <option value="juridica">{t.personas.clase_juridica} ({cuantas.juridica})</option>
           </select>
         </div>
 
         {enEdicion && (
-          <LegajoModal
-            legajo={enEdicion === 'nuevo' ? null : enEdicion}
+          <PersonaModal
+            persona={enEdicion === 'nuevo' ? null : enEdicion}
             prestadoraId={prestadoraId}
             tiposDeDocumento={documentos.porClase}
             onClose={() => setEnEdicion(null)}
@@ -201,11 +209,11 @@ export function Padron() {
           <table className="panel-tabla">
             <thead>
               <tr>
-                <th>{t.padron.nombre}</th>
-                <th>{t.padron.apoderado}</th>
-                <th>{t.padron.telefono}</th>
-                <th>{t.padron.email}</th>
-                <th>{t.padron.domicilio}</th>
+                <th>{t.personas.nombre}</th>
+                <th>{t.personas.apoderado}</th>
+                <th>{t.personas.telefono}</th>
+                <th>{t.personas.email}</th>
+                <th>{t.personas.domicilio}</th>
                 {puedeEditar && <th />}
               </tr>
             </thead>
@@ -219,23 +227,21 @@ export function Padron() {
                   <td>
                     <b>{comoSeLlama(fila)}</b>
                     <div className="panel-mini">
-                      {fila.documento_tipo
-                        ? `${siglaDeTipo(fila.documento_tipo)} ${fila.documento_numero}`
-                        : t.padron.sin_documento}
+                      {documentoDe(fila)}
                     </div>
                   </td>
                   <td>
                     {fila.clase === 'juridica'
-                      && (nombrePorId.get(fila.apoderado_legajo_id) || t.padron.apoderado_sin_elegir)}
+                      && (nombrePorId.get(fila.apoderado_persona_id) || t.personas.apoderado_sin_elegir)}
                   </td>
                   <td>
-                    {(telefonosPorLegajo.get(fila.id) ?? []).length === 0
+                    {(telefonosPorPersona.get(fila.id) ?? []).length === 0
                       ? '—'
-                      : (telefonosPorLegajo.get(fila.id) ?? []).map((uno, indice) => (
+                      : (telefonosPorPersona.get(fila.id) ?? []).map((uno, indice) => (
                         <span key={uno.id}>
                           {indice > 0 && ' · '}
                           {uno.telefono}
-                          {uno.preferido && ` (${t.padron.telefonos.preferido})`}
+                          {uno.preferido && ` (${t.personas.telefonos.preferido})`}
                         </span>
                       ))}
                   </td>

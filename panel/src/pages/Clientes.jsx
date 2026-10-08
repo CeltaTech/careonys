@@ -55,8 +55,8 @@ export function Clientes() {
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const { f, set, limpiar, hayFiltros } = useFiltros({ busqueda: '', lugar: '' });
-  // Los nombres de las localidades salen del catálogo y no del Legajo del Paciente: lo guardado
-  // es cuál lugar, y corregir una vez cómo se llama lo corrige en el Legajo de cada Paciente que lo nombra.
+  // Los nombres de las localidades salen del catálogo y no del Paciente: lo guardado es cuál
+  // lugar, y corregir una vez cómo se llama lo corrige en cada Paciente que lo nombra.
   const catalogo = useCatalogoDeLugares();
 
   const recargar = useCallback(async () => {
@@ -67,8 +67,8 @@ export function Clientes() {
         .from('clientes')
         .select(
           'id, created_at, pacientes(id, nombre, lugar_id, deleted_at), ' +
-            'legajos!clientes_legajo_de_la_misma_prestadora(nombre_visible, email, ' +
-            'telefonos_del_legajo!el_telefono_es_de_un_legajo_de_esta_prestadora(telefono))',
+            'personas!clientes_contratante_de_la_misma_prestadora(nombre_visible, email, ' +
+            'telefonos_de_la_persona!el_telefono_es_de_una_persona_de_esta_prestadora(telefono))',
         )
         .is('deleted_at', null)
         .order('created_at', { ascending: false }),
@@ -196,7 +196,7 @@ export function Clientes() {
                         if (e.key === 'Enter') abrirFichaDelCliente(fam);
                       }}
                     >
-                      <td><strong>{fam.legajos?.nombre_visible || '—'}</strong></td>
+                      <td><strong>{fam.personas?.nombre_visible || '—'}</strong></td>
                       <td>{textoDePacientes(nombres, t.guardias.pacientes_y_mas)}</td>
                       <td>{propios.length}</td>
                       <td>{delCliente.map((m) => t.modalidades[m] ?? m).join(' · ') || '—'}</td>

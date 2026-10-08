@@ -25,7 +25,7 @@ export const CAMPOS_IMPORTACION = {
     'tipo_vinculo', 'categoria_cct', 'valor_hora', 'sueldo_basico', 'horas_semanales',
   ],
   cliente: [
-    'nombreContacto', 'apellidoContacto', 'telefono', 'email', 'localidad', 'plan',
+    'nombreContacto', 'apellidoContacto', 'documentoContacto', 'telefono', 'email', 'localidad', 'plan',
     'nombrePaciente', 'domicilioPaciente', 'fechaNacimientoPaciente',
     'nivelComplejidadPaciente', 'patologiasPaciente',
   ],

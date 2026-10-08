@@ -5,18 +5,19 @@ import { FormField } from '../ui/FormField';
 import { Alert } from '../ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
 
-/* El casillero que nombra a una Persona del Padrón.
+/* El casillero que nombra a una Persona del Directorio de Personas.
    ==========================================================================
 
-   Donde antes se tecleaba un nombre, se elige un Legajo. Un nombre tecleado crea un ente nuevo que
-   no existe: la misma obra social escrita en el Legajo de cien Pacientes son cien financiadores distintos, y uno
-   mal tipeado no se cruza nunca con el bueno.
+   Donde antes se tecleaba un nombre, se elige una Ficha de Persona. Un nombre tecleado crea un ente
+   nuevo que no existe: la misma obra social escrita en la Ficha de cien Pacientes son cien entidades
+   distintas, y una mal tipeada no se cruza nunca con la buena.
 
-   ACÁ SE ELIGE Y NADA MÁS. Un Legajo nuevo se carga desde el Padrón, con el botón que lo dice.
+   ACÁ SE ELIGE Y NADA MÁS. Una Ficha nueva se carga desde el Directorio de Personas, con el botón que
+   lo dice.
 
    CÓMO SE LLAMA CADA PERSONA LO DICE LA BASE, en una sola columna calculada, para que todas las
    pantallas digan lo mismo. */
-export function SelectorDeLegajo({
+export function SelectorDePersona({
   valor,
   alElegir,
   label,
@@ -38,7 +39,7 @@ export function SelectorDeLegajo({
     // rechaza. Sin `clase` se ofrecen las dos, que es lo corriente, porque contrata y paga
     // cualquiera de las dos.
     let consulta = supabase
-      .from('legajos')
+      .from('personas')
       .select('id, nombre_visible, documento_numero')
       .order('nombre_visible', { ascending: true });
     if (clase) consulta = consulta.eq('clase', clase);
@@ -77,7 +78,7 @@ export function SelectorDeLegajo({
 
       {estado === 'listo' && filas.length > 10 && (
         <FormField
-          label={t.padron.selector_buscar}
+          label={t.personas.selector_buscar}
           name={`${name}_busqueda`}
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
@@ -94,7 +95,7 @@ export function SelectorDeLegajo({
         disabled={deshabilitado || estado === 'cargando' || estado === 'error'}
       >
         <option value="">
-          {estado === 'cargando' ? t.padron.selector_cargando : t.padron.selector_sin_elegir}
+          {estado === 'cargando' ? t.personas.selector_cargando : t.personas.selector_sin_elegir}
         </option>
         {listadas.map((fila) => (
           <option key={fila.id} value={fila.id}>

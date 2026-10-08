@@ -7,7 +7,7 @@ import { Alert } from '../../components/ui/Alert';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { CamposDeDomicilio } from '../../components/domicilio/CamposDeDomicilio';
 import { partesDesdeFila, partesParaGuardar } from '../../lib/partesDeDomicilio';
-import { SelectorDeLegajo } from '../../components/padron/SelectorDeLegajo';
+import { SelectorDePersona } from '../../components/personas/SelectorDePersona';
 
 export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
   const modal = useModalAccesible(onClose);
@@ -17,7 +17,7 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
   const [domicilio, setDomicilio] = useState(partesDesdeFila(paciente));
   const [nivelComplejidad, setNivelComplejidad] = useState(paciente.nivel_complejidad || '');
   const [patologias, setPatologias] = useState((paciente.patologias || []).join(', '));
-  const [obraSocialLegajoId, setObraSocialLegajoId] = useState(paciente.obra_social_legajo_id || null);
+  const [obraSocialPersonaId, setObraSocialPersonaId] = useState(paciente.obra_social_persona_id || null);
   const [numeroAfiliado, setNumeroAfiliado] = useState(paciente.numero_afiliado || '');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
@@ -34,7 +34,7 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
         ...partesParaGuardar(domicilio),
         nivel_complejidad: nivelComplejidad || null,
         patologias: patologias.split(',').map((p) => p.trim()).filter(Boolean),
-        obra_social_legajo_id: obraSocialLegajoId || null,
+        obra_social_persona_id: obraSocialPersonaId || null,
         numero_afiliado: numeroAfiliado || null,
       })
       .eq('id', paciente.id);
@@ -64,13 +64,14 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
             <option value="III">III</option>
           </FormField>
           <FormField label={t.clientes.editar_paciente.patologias} name="patologias" value={patologias} onChange={(e) => setPatologias(e.target.value)} />
-          {/* La obra social se elige del Padrón, donde es una Persona jurídica. Escrita a mano,
-              la misma obra social en el Legajo de cien Pacientes serían cien financiadores distintos. */}
-          <SelectorDeLegajo
-            name="obra_social_legajo_id"
+          {/* La obra social se elige del Directorio de Personas, donde es una Persona jurídica.
+              Escrita a mano, la misma obra social en la Ficha de cien Pacientes serían cien
+              financiadores distintos. */}
+          <SelectorDePersona
+            name="obra_social_persona_id"
             label={t.clientes.editar_paciente.obra_social}
-            valor={obraSocialLegajoId}
-            alElegir={setObraSocialLegajoId}
+            valor={obraSocialPersonaId}
+            alElegir={setObraSocialPersonaId}
             clase="juridica"
             deshabilitado={guardando}
           />

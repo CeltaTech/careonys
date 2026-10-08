@@ -18,7 +18,7 @@ import { MonitoreoVitalesPaciente } from './MonitoreoVitalesPaciente';
 import { DomiciliosTemporalesPaciente } from './DomiciliosTemporalesPaciente';
 import { EquipoDelPaciente } from './EquipoDelPaciente';
 import { InvitarPersonaAutorizadaModal } from './InvitarPersonaAutorizadaModal';
-import { SelectorDeLegajo } from '../../components/padron/SelectorDeLegajo';
+import { SelectorDePersona } from '../../components/personas/SelectorDePersona';
 import { EstadoDelPagador } from './EstadoDelPagador';
 import {
   AlertasDelCliente,
@@ -114,10 +114,11 @@ export function ClienteDetalle() {
     const { data, error: errorConsulta } = await supabase
       .from('clientes')
       .select(
-        'id, plan, dias_hasta_el_vencimiento, financiador_tipo, pagador_legajo_id, prestadora_id, created_at, pacientes(*), ' +
-          // Quién es el Cliente se lee de su Legajo en el Padrón, y se corrige allá.
-          'legajos!clientes_legajo_de_la_misma_prestadora(nombre_visible, email, lugares!legajos_lugar_fkey(nombre), ' +
-          'telefonos_del_legajo!el_telefono_es_de_un_legajo_de_esta_prestadora(telefono))',
+        'id, plan, dias_hasta_el_vencimiento, financiador_tipo, pagador_persona_id, prestadora_id, created_at, pacientes(*), ' +
+          // Quién es el Cliente se lee de la Ficha de Persona de quien contrata, en el Directorio de
+          // Personas, y se corrige allá.
+          'personas!clientes_contratante_de_la_misma_prestadora(nombre_visible, email, lugares!personas_lugar_fkey(nombre), ' +
+          'telefonos_de_la_persona!el_telefono_es_de_una_persona_de_esta_prestadora(telefono))',
       )
       .eq('id', id)
       .single();
@@ -136,7 +137,7 @@ export function ClienteDetalle() {
           ? ''
           : String(data.dias_hasta_el_vencimiento),
       financiador_tipo: data.financiador_tipo || '',
-      pagador_legajo_id: data.pagador_legajo_id || null,
+      pagador_persona_id: data.pagador_persona_id || null,
     });
     setEstado('listo');
   }, [id, t]);
@@ -217,7 +218,7 @@ export function ClienteDetalle() {
       plan,
       dias_hasta_el_vencimiento: dias,
       financiador_tipo: financiadorTipo,
-      pagador_legajo_id: pagadorLegajoId,
+      pagador_persona_id: pagadorPersonaId,
     } = formContacto;
     // Vacío es «no se acordó nada distinto», y entonces rige el plazo de la Prestadora. No es
     // cero, que sería «paga el mismo día»: por eso se guarda vacío y no un número.
@@ -230,15 +231,15 @@ export function ClienteDetalle() {
     // El financiador vacío se guarda vacío y no como «cliente»: los dos quieren decir lo mismo,
     // y guardar uno de los dos sería inventar una decisión que nadie tomó.
     //
-    // El Legajo del Pagador se guarda siempre, pague quien pague. Cuando paga el Cliente, el
-    // Pagador es alguien del Cliente, y hay que saber cuál: alguien firma la obligación de
-    // pagar y esa persona tiene nombre. Borrarlo por pagar el Cliente dejaba a esa contratación
-    // sin nadie a quien hacerle firmar nada.
+    // La Ficha de Persona del Pagador se guarda siempre, pague quien pague. Cuando paga el
+    // Cliente, el Pagador es alguien del Cliente, y hay que saber cuál: alguien firma la
+    // obligación de pagar y esa persona tiene nombre. Borrarla por pagar el Cliente dejaba a esa
+    // contratación sin nadie a quien hacerle firmar nada.
     const { error: errorCliente } = await supabase.from('clientes').update({
       plan,
       dias_hasta_el_vencimiento: plazo.valor,
       financiador_tipo: financiadorTipo || null,
-      pagador_legajo_id: pagadorLegajoId || null,
+      pagador_persona_id: pagadorPersonaId || null,
     }).eq('id', cliente.id);
     setGuardandoContacto(false);
     if (errorCliente) {
@@ -263,19 +264,19 @@ export function ClienteDetalle() {
     ['alertas', t.clientes.alertas_activas],
   ];
 
-  // La línea de datos de la Ficha del cliente, con lo que dice su Legajo en el Padrón.
-  const legajo = cliente.legajos;
-  const telefono = legajo?.telefonos_del_legajo?.[0]?.telefono;
+  // La línea de datos de la Ficha del cliente, con lo que dice la Ficha de Persona de quien contrata.
+  const persona = cliente.personas;
+  const telefono = persona?.telefonos_de_la_persona?.[0]?.telefono;
   const datosDeLaFichaDelCliente = [
-    legajo?.lugares?.nombre,
+    persona?.lugares?.nombre,
     telefono,
-    legajo?.email,
+    persona?.email,
     `${t.clientes.col_fecha_alta}: ${new Date(cliente.created_at).toLocaleDateString(locale)}`,
   ].filter(Boolean);
 
   return (
     <div>
-      <Cabecera titulo={legajo?.nombre_visible || '—'}>
+      <Cabecera titulo={persona?.nombre_visible || '—'}>
         <Button variant="secondary" onClick={() => navigate('/clientes')}>
           <span aria-hidden="true">←</span> {t.clientes.volver_a_clientes}
         </Button>
@@ -354,17 +355,18 @@ export function ClienteDetalle() {
                     <option key={f} value={f}>{traducirValor(t.clientes, `financiador_${f}`)}</option>
                   ))}
                 </FormField>
-                {/* Quién paga se elige del Padrón y no se teclea: un nombre escrito a mano crea un ente
-                    nuevo que no existe, y la misma obra social terminaría escrita de cien maneras.
+                {/* Quién paga se elige del Directorio de Personas y no se teclea: un nombre escrito a
+                    mano crea un ente nuevo que no existe, y la misma obra social terminaría escrita de
+                    cien maneras.
 
                     Se elige siempre, también cuando paga el Cliente: ahí el Pagador es alguien de la
                     Cliente, y cuál es no se adivina. */}
                 <div className="molde-ancho">
-                  <SelectorDeLegajo
-                    name="pagador_legajo_id"
+                  <SelectorDePersona
+                    name="pagador_persona_id"
                     label={t.clientes.pagador_legajo}
-                    valor={formContacto.pagador_legajo_id}
-                    alElegir={(legajoId) => setCampoContacto('pagador_legajo_id', legajoId)}
+                    valor={formContacto.pagador_persona_id}
+                    alElegir={(personaId) => setCampoContacto('pagador_persona_id', personaId)}
                     deshabilitado={!puedeEditarCliente}
                   />
                 </div>

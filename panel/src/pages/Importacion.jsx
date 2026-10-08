@@ -8,6 +8,7 @@ import { Alert } from '../components/ui/Alert';
 import { Cabecera } from '../components/ui/Cabecera';
 import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
 import { con } from '../lib/textos';
+import { numeroConGuiones } from '../lib/documentoDeIdentidad';
 import { tomarPlanillaAnalizada } from '../lib/planillaAnalizada';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 import '../styles/molde-paginas.css';
@@ -304,6 +305,20 @@ export function Importacion() {
               .replace('{creadas}', resultado.filasCreadas)
               .replace('{total}', resultado.filasTotales)}
           </Alert>
+
+          {resultado.vinculadas?.length > 0 && (
+            <Alert variant="info">
+              <ul>
+                {resultado.vinculadas.map((v) => (
+                  <li key={v.fila}>
+                    {t.importacion.vinculada
+                      .replace('{documento}', numeroConGuiones(v.documento))
+                      .replace('{numero}', v.numeroCliente)}
+                  </li>
+                ))}
+              </ul>
+            </Alert>
+          )}
 
           {resultado.errores.length > 0 && (
             <Alert variant="error">

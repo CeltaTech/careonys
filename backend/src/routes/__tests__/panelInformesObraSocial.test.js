@@ -5,15 +5,15 @@
  *   node --test backend/src/routes/__tests__/panelInformesObraSocial.test.js
  *
  * POR QUÉ EXISTE ESTA PRUEBA. La ruta (`../panelInformesObraSocial.js`) lee con la llave maestra,
- * todavía, porque la base es más estrecha que lo que la ruta hace: `legajos_los_lee_su_organizacion`
- * pide el permiso `ver_padron`, y sin él el informe saldría con la obra social vacía; las políticas
+ * todavía, porque la base es más estrecha que lo que la ruta hace: `personas_las_lee_su_organizacion`
+ * pide el permiso `ver_personas`, y sin él el informe saldría con la obra social vacía; las políticas
  * de zona le recortarían a quien coordina los turnos de Asistentes de otras zonas; y
  * `oculta_pendientes_de_conformidad` escondería al Paciente importado que espera conformidad.
  * Entonces lo que separa una Prestadora de otra es el filtro escrito en cada consulta, y eso es lo
  * que se sostiene acá. La anotación de quién vio el informe sí va con la credencial de quien pide.
  *
  * La base es de mentira y contesta por HTTP como la de verdad. Con la llave maestra contesta lo que
- * pide el filtro de la Prestadora; con la credencial de quien pide imita las políticas: sin Legajo
+ * pide el filtro de la Prestadora; con la credencial de quien pide imita las políticas: sin Ficha
  * de la obra social, sin Paciente pendiente y, para quien coordina, sin guardias. Con el sistema
  * roto —una consulta sin filtro, o de vuelta con la credencial de quien pide— dan al revés la prueba
  * del nombre de la obra social, la del Paciente pendiente, la de quien coordina o la del filtro.
@@ -97,7 +97,7 @@ function segunElFiltro(filas, url) {
 
 function prepararLaBase({ paciente = {} } = {}) {
   const pacientes = [{
-    id: PACIENTE, prestadora_id: PRESTADORA, nombre: 'Paciente de prueba', obra_social_legajo_id: OBRA_SOCIAL,
+    id: PACIENTE, prestadora_id: PRESTADORA, nombre: 'Paciente de prueba', obra_social_persona_id: OBRA_SOCIAL,
     numero_afiliado: 'A-0001', cliente_id: null, pendiente_conformidad: false, ...paciente,
   }];
   respuestas.set('GET /rest/v1/pacientes', (credencial, url) => (credencial === LLAVE_MAESTRA
@@ -105,10 +105,10 @@ function prepararLaBase({ paciente = {} } = {}) {
     // `oculta_pendientes_de_conformidad`, restrictiva, para todos los roles.
     : pacientes.filter((p) => p.prestadora_id === PRESTADORA && !p.pendiente_conformidad)));
 
-  const legajos = [{ id: OBRA_SOCIAL, prestadora_id: PRESTADORA, nombre_visible: 'Obra social inventada' }];
-  respuestas.set('GET /rest/v1/legajos', (credencial, url) => (credencial === LLAVE_MAESTRA
-    ? segunElFiltro(legajos, url)
-    // `legajos_los_lee_su_organizacion` pide `ver_padron`, que quien pide en esta prueba no tiene.
+  const personas = [{ id: OBRA_SOCIAL, prestadora_id: PRESTADORA, nombre_visible: 'Obra social inventada' }];
+  respuestas.set('GET /rest/v1/personas', (credencial, url) => (credencial === LLAVE_MAESTRA
+    ? segunElFiltro(personas, url)
+    // `personas_las_lee_su_organizacion` pide `ver_personas`, que quien pide en esta prueba no tiene.
     : []));
 
   const enLista = [{ guardia_id: GUARDIA, paciente_id: PACIENTE, prestadora_id: PRESTADORA }];
@@ -138,7 +138,7 @@ beforeEach(() => {
 });
 
 describe('la vista previa del informe para la obra social', () => {
-  it('sale con el nombre de la obra social, aunque quien pide no tenga el permiso del Padrón', async () => {
+  it('sale con el nombre de la obra social, aunque quien pide no tenga el permiso del Directorio', async () => {
     prepararLaBase();
 
     const { estado, cuerpo } = await pedirVistaPrevia();
@@ -152,7 +152,7 @@ describe('la vista previa del informe para la obra social', () => {
 
     await pedirVistaPrevia();
 
-    const tablas = ['pacientes', 'legajos', 'guardia_pacientes', 'guardias'];
+    const tablas = ['pacientes', 'personas', 'guardia_pacientes', 'guardias'];
     for (const tabla of tablas) {
       const lecturas = llamadas.filter((l) => l.clave === `GET /rest/v1/${tabla}`);
       assert.ok(lecturas.length > 0, `no se leyó ${tabla}`);

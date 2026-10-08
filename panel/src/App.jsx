@@ -32,7 +32,7 @@ import { Postulaciones } from './pages/Postulaciones';
 import { Asistentes } from './pages/Asistentes';
 import { AsistenteDetalle } from './pages/asistentes/AsistenteDetalle';
 import { Clientes } from './pages/Clientes';
-import { Padron } from './pages/Padron';
+import { Personas } from './pages/Personas';
 import { ClienteDetalle } from './pages/clientes/ClienteDetalle';
 import { Servicios } from './pages/Servicios';
 import { ServicioDetalle } from './pages/servicios/ServicioDetalle';
@@ -139,11 +139,11 @@ function App() {
                     <Route path="postulaciones" element={<Postulaciones />} />
                     <Route path="asistentes" element={<Asistentes />} />
                     <Route path="asistentes/:id" element={<AsistenteDetalle />} />
-                    {/* El Padrón de la Prestadora. Sin candado de modalidad: con las dos hay
-                        personas que contratan, que pagan y que reciben el cuidado, y todas se
-                        cargan una sola vez acá. Quién lo ve y quién lo escribe lo decide la
+                    {/* El Directorio de Personas de la Prestadora. Sin candado de modalidad: con
+                        las dos hay personas que contratan, que pagan y que reciben el cuidado, y
+                        todas se cargan una sola vez acá. Quién lo ve y quién lo escribe lo decide la
                         base con sus políticas. */}
-                    <Route path="padron" element={<Padron />} />
+                    <Route path="personas" element={<Personas />} />
                     <Route path="clientes" element={<Clientes />} />
                     <Route path="clientes/:id" element={<ClienteDetalle />} />
                     <Route path="servicios" element={<Servicios />} />

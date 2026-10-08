@@ -13,9 +13,11 @@ import { usePaisDeLaPrestadora } from './usePaisDeLaPrestadora';
    pide lo mismo, y el formulario cambia la lista cuando cambia la clase sin salir a preguntar de
    nuevo.
 
-   SI EL PAÍS NO TIENE NINGUNO CARGADO, DEVUELVE VACÍO Y NO SE INVENTA NADA. La pantalla entonces
-   no pide el documento: dejarlo como casillero libre haría que cada quien escriba lo que le
-   parezca, y un documento tipeado mal crea una persona que no existe. */
+   SI EL PAÍS NO TIENE NINGUNO CARGADO, DEVUELVE VACÍO Y NO SE INVENTA NADA. Dejar el documento
+   como casillero libre haría que cada quien escriba lo que le parezca, y un documento tipeado mal
+   crea una persona que no existe. Sin catálogo no hay qué elegir, y la base rechaza la Ficha.
+
+   CADA TIPO DICE SI PIDE EL PAÍS QUE LO EMITIÓ y si su número lleva dígito verificador. */
 export function useTiposDeDocumento(prestadoraId) {
   const {
     pais,
@@ -30,7 +32,7 @@ export function useTiposDeDocumento(prestadoraId) {
     error: errorCatalogo,
     recargar: recargarCatalogo,
   } = useCatalogo('catalogo_documentos_de_identidad', {
-    columnas: 'clase, codigo, sigla',
+    columnas: 'clase, codigo, sigla, lleva_pais, verifica_modulo_11',
     filtros: { pais, activo: true },
     requiere: [pais],
   });

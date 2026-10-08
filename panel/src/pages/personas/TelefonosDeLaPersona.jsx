@@ -9,13 +9,13 @@ import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import {
   cargarUnTelefono,
   corregirUnTelefono,
-  pedirLosTelefonosDelLegajo,
+  pedirLosTelefonosDeLaPersona,
   ponerFueraDeUso,
   restaurarUnTelefono,
   borrarUnTelefono,
-} from '../../lib/apiPadronTelefonos';
+} from '../../lib/apiPersonasTelefonos';
 
-/* Los teléfonos de contacto de un Legajo del Padrón.
+/* Los teléfonos de contacto de una Ficha de Persona.
    ==========================================================================
 
    PARA QUÉ. Un Cliente tiene el fijo de la casa, el celular de quien contrató y el de la hija que
@@ -26,14 +26,14 @@ import {
    casillero para marcarlo: lo resuelve el backend al entregar la lista. Quien no tiene cuenta no
    tiene preferido, y la lista sale igual de completa.
 
-   SE PUEDEN REPETIR. El mismo número en dos Legajos es lo normal cuando viven juntos, y no se
+   SE PUEDEN REPETIR. El mismo número en dos Fichas es lo normal cuando viven juntos, y no se
    rechaza ni se avisa.
 
    EL NÚMERO NO VIAJA EN NINGUNA DIRECCIÓN: entra y sale en el cuerpo del pedido. */
 
-export function TelefonosDelLegajo({ legajoId, puedeEditar }) {
+export function TelefonosDeLaPersona({ personaId, puedeEditar }) {
   const { t } = useLocale();
-  const tr = t.padron.telefonos;
+  const tr = t.personas.telefonos;
   const confirmarDestructivo = useConfirmarDestructivo();
 
   const [filas, setFilas] = useState([]);
@@ -53,14 +53,14 @@ export function TelefonosDelLegajo({ legajoId, puedeEditar }) {
     setEstado('cargando');
     setError(null);
     try {
-      const datos = await pedirLosTelefonosDelLegajo(legajoId);
+      const datos = await pedirLosTelefonosDeLaPersona(personaId);
       setFilas(datos?.telefonos ?? []);
       setEstado('listo');
     } catch (e) {
       setError(mensajeDeError(e, t));
       setEstado('error');
     }
-  }, [legajoId, t]);
+  }, [personaId, t]);
 
   useEffect(() => {
     recargar();
@@ -72,7 +72,7 @@ export function TelefonosDelLegajo({ legajoId, puedeEditar }) {
     setOperando('nuevo');
     setError(null);
     try {
-      await cargarUnTelefono(legajoId, nuevo.trim());
+      await cargarUnTelefono(personaId, nuevo.trim());
       setNuevo('');
       await recargar();
     } catch (e) {
@@ -88,7 +88,7 @@ export function TelefonosDelLegajo({ legajoId, puedeEditar }) {
     setOperando(corrigiendo);
     setError(null);
     try {
-      await corregirUnTelefono(legajoId, corrigiendo, textoCorregido.trim());
+      await corregirUnTelefono(personaId, corrigiendo, textoCorregido.trim());
       setCorrigiendo(null);
       setTextoCorregido('');
       await recargar();
@@ -105,7 +105,7 @@ export function TelefonosDelLegajo({ legajoId, puedeEditar }) {
     setBorrando(operacion === borrarUnTelefono);
     setError(null);
     try {
-      await operacion(legajoId, fila.id);
+      await operacion(personaId, fila.id);
       await recargar();
     } catch (e) {
       setError(mensajeDeError(e, t));
@@ -122,7 +122,7 @@ export function TelefonosDelLegajo({ legajoId, puedeEditar }) {
   }
 
   return (
-    <section className="panel-telefonos-del-legajo">
+    <section className="panel-telefonos-de-la-persona">
       <h3>{tr.titulo}</h3>
       {/* Sólo con la carga hecha: si el estado es de error, el cartel con su botón de reintentar lo
           pone `EstadoLista`, y los dos juntos dirían lo mismo dos veces. */}

@@ -201,7 +201,7 @@ export function Layout() {
       clave: 'clientes',
       texto: t.nav.sec_clientes,
       enlaces: [
-        { a: '/padron', texto: t.nav.padron, ver: esAdmin || puede('ver_padron') },
+        { a: '/personas', texto: t.nav.personas, ver: esAdmin || puede('ver_personas') },
         { a: '/clientes', texto: t.nav.clientes, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
         { a: '/intermediacion/clientes', texto: t.nav.intermediacion_clientes, ver: verMatch, modalidad: MODALIDAD.INTERMEDIACION && esAdmin },
         { a: '/contenidos', texto: t.nav.contenidos, ver: true },

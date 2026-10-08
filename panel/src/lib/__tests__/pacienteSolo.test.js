@@ -38,7 +38,7 @@ function consentimiento(resto = {}) {
 /** Un familiar que se quedó, bien cargado. */
 function familiar(resto = {}) {
   return {
-    familiar_legajo_id: '11111111-2222-3333-4444-555555555555',
+    familiar_persona_id: '11111111-2222-3333-4444-555555555555',
     origen: ORIGENES.TURNO_SIN_CUBRIR,
     desde_at: '2026-03-10T20:00:00',
     ...resto,
@@ -129,15 +129,15 @@ describe('revisarFamiliarQueSeQuedo', () => {
       .toEqual({ ok: false, campo: 'origen' });
   });
 
-  it('exige cuál Legajo del Padrón se quedó', () => {
-    expect(revisarFamiliarQueSeQuedo(familiar({ familiar_legajo_id: null })))
-      .toEqual({ ok: false, campo: 'familiar_legajo_id' });
+  it('exige cuál Ficha de Persona del Directorio se quedó', () => {
+    expect(revisarFamiliarQueSeQuedo(familiar({ familiar_persona_id: null })))
+      .toEqual({ ok: false, campo: 'familiar_persona_id' });
   });
 
-  // Un nombre tecleado ya no sirve: lo que se guarda es cuál Legajo, no cómo se llama.
-  it('no acepta un nombre escrito en lugar del Legajo', () => {
-    expect(revisarFamiliarQueSeQuedo(familiar({ familiar_legajo_id: 'Sobrino del Paciente' })))
-      .toEqual({ ok: false, campo: 'familiar_legajo_id' });
+  // Un nombre tecleado ya no sirve: lo que se guarda es cuál Ficha de Persona, no cómo se llama.
+  it('no acepta un nombre escrito en lugar de la Ficha de Persona', () => {
+    expect(revisarFamiliarQueSeQuedo(familiar({ familiar_persona_id: 'Sobrino del Paciente' })))
+      .toEqual({ ok: false, campo: 'familiar_persona_id' });
   });
 });
 

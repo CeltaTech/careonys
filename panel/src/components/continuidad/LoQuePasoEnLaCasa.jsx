@@ -8,7 +8,7 @@ import { Alert } from '../ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
-import { SelectorDeLegajo } from '../padron/SelectorDeLegajo';
+import { SelectorDePersona } from '../personas/SelectorDePersona';
 import {
   MEDIOS_POSIBLES,
   revisarConsentimiento,
@@ -237,14 +237,14 @@ function RegistrarFamiliarQueSeQuedo({ guardiaId, origen, incidenteId, onClose, 
   const { t } = useLocale();
   const { usuario } = useAuth();
   const prestadoraId = usePrestadoraActual();
-  const [familiarLegajoId, setFamiliarLegajoId] = useState(null);
+  const [familiarPersonaId, setFamiliarPersonaId] = useState(null);
   const [desde, setDesde] = useState(() => ahoraParaElCampo());
   const [motivo, setMotivo] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
 
   const revision = revisarFamiliarQueSeQuedo({
-    familiar_legajo_id: familiarLegajoId,
+    familiar_persona_id: familiarPersonaId,
     origen,
     desde_at: desde,
     motivo,
@@ -259,7 +259,7 @@ function RegistrarFamiliarQueSeQuedo({ guardiaId, origen, incidenteId, onClose, 
         guardia_id: guardiaId,
         origen,
         incidente_id: incidenteId ?? null,
-        familiar_legajo_id: familiarLegajoId,
+        familiar_persona_id: familiarPersonaId,
         // Quien firma deja escrito el hecho. No autorizó nada: a un familiar no se le pide que
         // se quede, y una columna que dijera lo contrario mentiría sobre lo que pasó.
         registrado_por: usuario?.id ?? null,
@@ -282,13 +282,14 @@ function RegistrarFamiliarQueSeQuedo({ guardiaId, origen, incidenteId, onClose, 
         {/* Se dice antes de cargarlo, mientras todavía se puede elegir otra cosa. */}
         <Alert variant="error">{t.continuidad.resolver_familiar_es_defecto_grave}</Alert>
 
-        {/* Quién se quedó se elige del Padrón: es una Persona con la que la Prestadora se vuelve
-            a cruzar, y un nombre tecleado la convertiría cada vez en alguien distinto. */}
-        <SelectorDeLegajo
-          name="familiar_legajo_id"
+        {/* Quién se quedó se elige del Directorio de Personas: es una Persona con la que la
+            Prestadora se vuelve a cruzar, y un nombre tecleado la convertiría cada vez en alguien
+            distinto. */}
+        <SelectorDePersona
+          name="familiar_persona_id"
           label={t.continuidad.resolver_familiar_legajo}
-          valor={familiarLegajoId}
-          alElegir={setFamiliarLegajoId}
+          valor={familiarPersonaId}
+          alElegir={setFamiliarPersonaId}
           clase="fisica"
         />
         <FormField

@@ -219,6 +219,9 @@ panelImportacionRouter.post(
     }
 
     const errores = [];
+    // Las filas cuya persona ya estaba en el Directorio: no se creó otra Ficha, se usó la que
+    // había. Viaja sólo el documento y el número de cliente, que la pantalla arma en una frase.
+    const vinculadas = [];
     let creadas = 0;
 
     // Las altas entran con la llave maestra, como el resto de esta ruta: nacen
@@ -239,7 +242,14 @@ panelImportacionRouter.post(
           for (const campo of CAMPOS_IMPORTACION.cliente) {
             datos[campo] = valorDesdeFila(fila, mapeo, campo, CAMPOS_LISTA.cliente.has(campo));
           }
-          await crearClienteImportado(datos);
+          const alta = await crearClienteImportado(datos);
+          if (alta.fichaQueYaExistia) {
+            vinculadas.push({
+              fila: i + 1,
+              documento: String(datos.documentoContacto ?? '').replace(/[\s.-]/g, ''),
+              numeroCliente: alta.numeroCliente,
+            });
+          }
         }
         creadas += 1;
       } catch (error) {
@@ -269,6 +279,7 @@ panelImportacionRouter.post(
       filasCreadas: creadas,
       filasError: errores.length,
       errores,
+      vinculadas,
     });
   }
 );

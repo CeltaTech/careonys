@@ -368,39 +368,40 @@ INSERT INTO public.datos_reservados_asistente (
 
 
 -- ----------------------------------------------------------------------------
--- 3.b El Padrón de la Prestadora de prueba
+-- 3.b El Directorio de Personas de la Prestadora de prueba
 --
 --     Personas inventadas, como todo lo de acá. Va antes que los Clientes porque
---     cada Cliente es un Legajo del Padrón, y quien paga también.
+--     quien contrata es una Ficha del Directorio, y quien paga también.
 --
---     EL NÚMERO DE LEGAJO NO SE SIEMBRA: lo pone la base sola, en orden, y
---     rechaza que alguien lo elija. Cada Prestadora empieza por el uno.
+--     TODAS CON DOCUMENTO, y válido: la base lo exige y controla el dígito
+--     verificador del CUIL y del CUIT. Los números son inventados y cierran la
+--     cuenta, nada más.
 --
 --     LA MISMA PERSONA EN LAS DOS PRESTADORAS. Ramiro Pérez también está en el
---     Padrón de la segunda, con el mismo documento, porque nada lo impide: cada
---     Padrón es de su Prestadora.
+--     Directorio de la segunda, con el mismo documento, porque nada lo impide:
+--     cada Directorio es de su Prestadora.
 -- ----------------------------------------------------------------------------
 
-INSERT INTO public.legajos
+INSERT INTO public.personas
   (id, prestadora_id, clase, nombre, apellido, documento_tipo, documento_numero, calle, numero, lugar_id, email)
 VALUES
-  ('c0000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'fisica', 'Ramiro', 'Pérez', 'dni', '20111222',
+  ('c0000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'fisica', 'Ramiro', 'Pérez', 'cuil', '20201112223',
    'Calle Inventada', '742', 'a1000000-0000-4000-8000-000000000001', 'ramiro.perez@ejemplo.invalido'),
-  ('c0000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'fisica', 'Teresa', 'Ibáñez', 'dni', '5333444',
+  ('c0000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'fisica', 'Teresa', 'Ibáñez', 'cuil', '27053334445',
    'Pasaje Imaginario', '18', 'a1000000-0000-4000-8000-000000000002', NULL),
-  ('c0000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'juridica', 'Mutual del Ejemplo', NULL, 'cuit', '30-99999999-7',
+  ('c0000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'juridica', 'Mutual del Ejemplo', NULL, 'cuit', '30999999995',
    'Avenida Ficticia', '1200', 'a1000000-0000-4000-8000-000000000003', 'contacto@mutual.invalido'),
   -- Las tres personas detrás de los tres Clientes de más abajo.
-  ('c0000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111', 'fisica', 'Silvia', 'Gómez', NULL, NULL,
+  ('c0000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111', 'fisica', 'Silvia', 'Gómez', 'cuil', '27251001001',
    NULL, NULL, 'a1000000-0000-4000-8000-000000000001', 'cliente.gomez@sandbox.local'),
-  ('c0000000-0000-4000-8000-000000000005', '11111111-1111-4111-8111-111111111111', 'fisica', 'Jorge', 'López', NULL, NULL,
+  ('c0000000-0000-4000-8000-000000000005', '11111111-1111-4111-8111-111111111111', 'fisica', 'Jorge', 'López', 'cuil', '20222002002',
    NULL, NULL, 'a1000000-0000-4000-8000-000000000003', 'cliente.lopez@sandbox.local'),
-  ('c0000000-0000-4000-8000-000000000006', '11111111-1111-4111-8111-111111111111', 'fisica', 'Claudia', 'Morales', NULL, NULL,
+  ('c0000000-0000-4000-8000-000000000006', '11111111-1111-4111-8111-111111111111', 'fisica', 'Claudia', 'Morales', 'cuil', '27263003018',
    NULL, NULL, 'a1000000-0000-4000-8000-000000000005', 'cliente.morales@sandbox.local');
 
--- Los teléfonos de contacto del Padrón. Un Legajo puede tener varios, y el primero tiene dos a
+-- Los teléfonos de contacto del Directorio. Una Ficha puede tener varios, y el primero tiene dos a
 -- propósito: así la base de pruebas ejercita el caso de varios y no sólo el de uno.
-INSERT INTO public.telefonos_del_legajo (prestadora_id, legajo_id, telefono)
+INSERT INTO public.telefonos_de_la_persona (prestadora_id, persona_id, telefono)
 VALUES
   ('11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000001', '+54 11 4000-0101'),
   ('11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000001', '+54 9 11 5000-0101'),
@@ -418,13 +419,13 @@ VALUES
 --    Cliente sin Servicio no tendría de dónde colgarlas.
 -- ----------------------------------------------------------------------------
 
--- Cada Cliente es un Legajo del Padrón (`legajo_id`): ahí están su nombre, su correo, su
--- localidad y sus teléfonos, y `clientes` no los repite. Quién paga es otro Legajo, y
+-- Quien contrata es una Ficha del Directorio (`contratante_persona_id`): ahí están su nombre, su
+-- correo, su localidad y sus teléfonos, y `clientes` no los repite. Quién paga es otra Ficha, y
 -- `financiador_tipo` dice de qué clase es. Vacío en los dos quiere decir que paga el Cliente por
--- sí mismo, que es el caso del primero. El tercero muestra el caso que da sentido al Padrón:
--- paga Ramiro Pérez, que es un Legajo más y no un nombre tecleado. Teresa Ibáñez queda en el
--- Padrón sin ser Cliente de nadie: es un contacto todavía sin presupuesto aprobado.
-INSERT INTO public.clientes (id, usuario_id, prestadora_id, legajo_id, plan, financiador_tipo, pagador_legajo_id) VALUES
+-- sí mismo, que es el caso del primero. El tercero muestra el caso que da sentido al Directorio:
+-- paga Ramiro Pérez, que es una Ficha más y no un nombre tecleado. Teresa Ibáñez queda en el
+-- Directorio sin ser Cliente de nadie: es un contacto todavía sin presupuesto aprobado.
+INSERT INTO public.clientes (id, usuario_id, prestadora_id, contratante_persona_id, plan, financiador_tipo, pagador_persona_id) VALUES
   ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001',
    '11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000004', 'directo', NULL, NULL),
   ('40000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002',
@@ -467,13 +468,13 @@ INSERT INTO public.permisos_personas_autorizadas (cliente_id, usuario_id, clave,
 
 INSERT INTO public.pacientes (
   id, prestadora_id, cliente_id, nombre, fecha_nacimiento, patologias,
-  nivel_complejidad, domicilio, lat, lng, obra_social_legajo_id, numero_afiliado
+  nivel_complejidad, domicilio, lat, lng, obra_social_persona_id, numero_afiliado
 ) VALUES
   ('50000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
    '40000000-0000-4000-8000-000000000001', 'Elena Gómez', '1938-04-12',
    ARRAY['Hipertensión', 'Artrosis'], 'II',
-   -- La obra social no se teclea: se cita el Legajo de la Mutual del Ejemplo, que ya está en el
-   -- Padrón de arriba. El número de afiliado sí es un dato de esta persona en esa obra social.
+   -- La obra social no se teclea: se cita la Ficha de la Mutual del Ejemplo, que ya está en el
+   -- Directorio de arriba. El número de afiliado sí es un dato de esta persona en esa obra social.
    'Av. Siempreviva 742, CABA', -34.6037, -58.3816, 'c0000000-0000-4000-8000-000000000003', 'OSP-0001'),
 
   ('50000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111',
@@ -1030,22 +1031,22 @@ INSERT INTO public.asistente_lugares (asistente_id, lugar_id, prestadora_id) VAL
 INSERT INTO public.usuario_lugares (usuario_id, lugar_id, prestadora_id) VALUES
   ('50000000-0000-4000-8000-000000000002', 'a2000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222');
 
--- El Padrón de esta Prestadora. Va antes que su Cliente, por el mismo motivo que en la
--- otra: el Cliente es un Legajo. El suyo es el de Olga Salvatierra.
-INSERT INTO public.legajos
+-- El Directorio de esta Prestadora. Va antes que su Cliente, por el mismo motivo que en la
+-- otra: quien contrata es una Ficha. La suya es la de Olga Salvatierra.
+INSERT INTO public.personas
   (id, prestadora_id, clase, nombre, apellido, documento_tipo, documento_numero, calle, numero, lugar_id, email)
 VALUES
-  ('c0000000-0000-4000-8000-000000000011', '22222222-2222-4222-8222-222222222222', 'fisica', 'Ramiro', 'Pérez', 'dni', '20111222',
+  ('c0000000-0000-4000-8000-000000000011', '22222222-2222-4222-8222-222222222222', 'fisica', 'Ramiro', 'Pérez', 'cuil', '20201112223',
    'Diagonal Supuesta', '55', 'a2000000-0000-4000-8000-000000000001', NULL),
-  ('c0000000-0000-4000-8000-000000000012', '22222222-2222-4222-8222-222222222222', 'fisica', 'Olga', 'Salvatierra', 'le', '2777888',
+  ('c0000000-0000-4000-8000-000000000012', '22222222-2222-4222-8222-222222222222', 'fisica', 'Olga', 'Salvatierra', 'cuil', '27027778882',
    'Calle Figurada', '900', 'a2000000-0000-4000-8000-000000000001', NULL);
 
-INSERT INTO public.telefonos_del_legajo (prestadora_id, legajo_id, telefono)
+INSERT INTO public.telefonos_de_la_persona (prestadora_id, persona_id, telefono)
 VALUES
   ('22222222-2222-4222-8222-222222222222', 'c0000000-0000-4000-8000-000000000011', '+54 221 400-0101'),
   ('22222222-2222-4222-8222-222222222222', 'c0000000-0000-4000-8000-000000000012', '+54 221 400-0102');
 
-INSERT INTO public.clientes (id, usuario_id, prestadora_id, legajo_id)
+INSERT INTO public.clientes (id, usuario_id, prestadora_id, contratante_persona_id)
 VALUES ('50000000-0000-4000-8000-000000000004', '50000000-0000-4000-8000-000000000004',
         '22222222-2222-4222-8222-222222222222', 'c0000000-0000-4000-8000-000000000012');
 

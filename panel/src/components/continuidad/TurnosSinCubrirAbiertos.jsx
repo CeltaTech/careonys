@@ -26,6 +26,7 @@ import { TIPOS_DE_ALARMA } from '../../lib/alarmasTomadas';
 import { ORIGENES } from '../../lib/pacienteSolo';
 import { LoQuePasoEnLaCasa } from './LoQuePasoEnLaCasa';
 import '../../pages/seguimientoDeGuardias.css';
+import { FICHA_NOMBRE, conSusFichas } from '../../lib/fichaDelPaciente';
 
 /* LOS TURNOS QUE QUEDARON SIN NADIE, Y POR QUÉ NO SE VAN SOLOS DE ACÁ
 
@@ -87,10 +88,10 @@ export function TurnosSinCubrirAbiertos() {
         ...new Set((guardias ?? []).flatMap((g) => pacientesDeGuardia(g, mapaPacientes))),
       ];
       const { data: nombres, error: errorPacientes } = idsPacientes.length
-        ? await supabase.from('pacientes').select('id, nombre').in('id', idsPacientes)
+        ? await supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`).in('id', idsPacientes)
         : { data: [], error: null };
       if (errorPacientes) throw errorPacientes;
-      const nombresPorId = Object.fromEntries((nombres ?? []).map((p) => [p.id, p.nombre]));
+      const nombresPorId = Object.fromEntries(conSusFichas(nombres).map((p) => [p.id, p.nombre]));
 
       // Un turno puede atender a más de un Paciente; se nombran todos.
       const porId = new Map(

@@ -14,6 +14,7 @@ import { armarCsv, bajarCsv } from '../lib/exportarCsv';
 import { clienteDelServicio, contactosDeClientes } from '../lib/clienteDelServicio';
 import { modalidadesDeGuardias, nombreDeModalidad } from './servicios/modalidadesDelServicio';
 import './servicios/servicios.css';
+import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
 
 // De las prestaciones salen qué incluye el Servicio y a quién cuida; de las guardias, a quién cuida
 // también y en qué modalidades trabaja, porque la modalidad la lleva cada guardia.
@@ -64,7 +65,7 @@ export function Servicios() {
     const [{ contactos: mapa, error: errorContactos }, pacientes] = await Promise.all([
       contactosDeClientes(supabase, data),
       idsPaciente.length
-        ? supabase.from('pacientes').select('id, nombre').in('id', idsPaciente)
+        ? supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`).in('id', idsPaciente)
         : Promise.resolve({ data: [], error: null }),
     ]);
 
@@ -76,7 +77,7 @@ export function Servicios() {
 
     setFilas(data ?? []);
     setContactos(mapa);
-    setNombresPaciente(Object.fromEntries((pacientes.data ?? []).map((p) => [p.id, p.nombre])));
+    setNombresPaciente(Object.fromEntries(conSusFichas(pacientes.data).map((p) => [p.id, p.nombre])));
     setEstado('listo');
   }, [t]);
 

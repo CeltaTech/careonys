@@ -24,6 +24,8 @@ export function SelectorDePersona({
   name,
   deshabilitado = false,
   clase = null,
+  required = false,
+  error: errorDelCasillero = null,
 }) {
   const { t } = useLocale();
   const [filas, setFilas] = useState([]);
@@ -90,6 +92,8 @@ export function SelectorDePersona({
         label={label}
         name={name}
         type="select"
+        required={required}
+        error={errorDelCasillero}
         value={valor ?? ''}
         onChange={(e) => alElegir(e.target.value || null)}
         disabled={deshabilitado || estado === 'cargando' || estado === 'error'}

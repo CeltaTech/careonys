@@ -191,11 +191,24 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/guardia_pacientes', ({ url }) =>
     idsPedidos(url, 'guardia_id').map((guardiaId) => ({
       guardia_id: guardiaId,
-      pacientes: { id: PACIENTE, ...DOMICILIO },
+      // Las coordenadas viven en la Ficha de Persona del Paciente, no en su fila.
+      pacientes: { id: PACIENTE, persona: { nombre_visible: 'Paciente de prueba', ...DOMICILIO } },
     }))
   );
+  // La base devuelve el domicilio en partes, y no el renglón armado.
   respuestas.set('POST /rest/v1/rpc/domicilios_de_pacientes_en', () => [
-    { paciente_id: PACIENTE, ...domicilioDelDia },
+    {
+      paciente_id: PACIENTE,
+      domicilio_temporal_id: domicilioDelDia.es_temporal ? 'una-temporal' : null,
+      calle: null,
+      numero: null,
+      piso: null,
+      unidad: null,
+      lugar: null,
+      desde: null,
+      hasta: null,
+      ...domicilioDelDia,
+    },
   ]);
 });
 

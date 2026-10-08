@@ -6,16 +6,14 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
-import { CamposDeDomicilio } from '../../components/domicilio/CamposDeDomicilio';
-import { DOMICILIO_VACIO, partesParaGuardar } from '../../lib/partesDeDomicilio';
+import { SelectorDePersona } from '../../components/personas/SelectorDePersona';
 
 export function NuevoPacienteModal({ clienteId, onClose, onCreado }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const prestadoraId = usePrestadoraActual();
-  const [nombre, setNombre] = useState('');
-  const [fechaNacimiento, setFechaNacimiento] = useState('');
-  const [domicilio, setDomicilio] = useState(DOMICILIO_VACIO);
+  const [personaId, setPersonaId] = useState(null);
+  const [faltaLaPersona, setFaltaLaPersona] = useState(false);
   const [nivelComplejidad, setNivelComplejidad] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
@@ -23,12 +21,14 @@ export function NuevoPacienteModal({ clienteId, onClose, onCreado }) {
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
+    if (!personaId) {
+      setFaltaLaPersona(true);
+      return;
+    }
     setGuardando(true);
     const { error: errorInsert } = await supabase.from('pacientes').insert({
       cliente_id: clienteId,
-      nombre,
-      fecha_nacimiento: fechaNacimiento || null,
-      ...partesParaGuardar(domicilio),
+      persona_id: personaId,
       nivel_complejidad: nivelComplejidad || null,
       prestadora_id: prestadoraId,
     });
@@ -47,10 +47,17 @@ export function NuevoPacienteModal({ clienteId, onClose, onCreado }) {
 
         {error && <Alert variant="error">{error}</Alert>}
 
-        <form onSubmit={handleSubmit}>
-          <FormField label={t.clientes.col_nombre} name="nombre" required value={nombre} onChange={(e) => setNombre(e.target.value)} />
-          <FormField label={t.clientes.fecha_nacimiento} name="fecha_nacimiento" type="date" value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} />
-          <CamposDeDomicilio valor={domicilio} alCambiar={setDomicilio} deshabilitado={guardando} />
+        <form onSubmit={handleSubmit} noValidate>
+          <SelectorDePersona
+            name="persona_id"
+            label={t.clientes.listado.col_paciente}
+            valor={personaId}
+            alElegir={(id) => { setPersonaId(id); if (id) setFaltaLaPersona(false); }}
+            clase="fisica"
+            required
+            error={faltaLaPersona ? t.formularios.falta_un_dato_obligatorio : null}
+            deshabilitado={guardando}
+          />
           <FormField label={t.clientes.nivel_complejidad} name="nivel_complejidad" type="select" value={nivelComplejidad} onChange={(e) => setNivelComplejidad(e.target.value)}>
             <option value="">{t.comun.todos}</option>
             <option value="I">I</option>

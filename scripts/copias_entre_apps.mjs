@@ -103,6 +103,11 @@ export const GRUPOS = [
     copias: ['panel/src/lib/domicilioEscrito.js'],
   },
   {
+    que: 'quién es el Paciente, leído de su Ficha de Persona',
+    original: 'backend/src/utils/fichaDelPaciente.js',
+    copias: ['panel/src/lib/fichaDelPaciente.js'],
+  },
+  {
     que: 'con qué se mide el trabajo de cada Asistente, y qué es una hora extra',
     original: 'panel/src/lib/formaDePago.js',
     copias: ['backend/src/utils/formaDePago.js'],

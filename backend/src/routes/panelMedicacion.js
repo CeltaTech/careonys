@@ -7,6 +7,7 @@ import { extensionDeArchivo, rutaDeMatriculaNueva } from '../utils/archivosSubid
 import { registrarAdvertenciaAlActivar } from '../utils/advertenciaLegal.js';
 import { responderError } from '../utils/errorConMotivo.js';
 import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
+import { FICHA_NOMBRE, conSuFicha } from '../utils/fichaDelPaciente.js';
 
 // Cierra pendiente #62 (docs/PLAN_HASTA_PRODUCCION.md): cola de revisión de indicaciones de
 // medicación solicitadas por el Cliente (appClientesMedicacion.js). Aceptar/rechazar nunca
@@ -67,7 +68,7 @@ panelMedicacionRouter.get('/pendientes', requiereRolPanel, async (req, res) => {
   // se decide aparte.
   const { data, error } = await supabase
     .from('indicaciones_medicacion')
-    .select('id, medicamento, dosis, frecuencia, via_administracion, prescripcion_archivo_url, fecha_desde, fecha_hasta, created_at, pacientes(id, nombre), clientes(id)')
+    .select(`id, medicamento, dosis, frecuencia, via_administracion, prescripcion_archivo_url, fecha_desde, fecha_hasta, created_at, pacientes(id, ${FICHA_NOMBRE}), clientes(id)`)
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .eq('estado', 'pendiente')
     .order('created_at', { ascending: true });
@@ -101,7 +102,7 @@ panelMedicacionRouter.get('/pendientes', requiereRolPanel, async (req, res) => {
             tipoRequerido
           ))
         : false;
-      return { ...indicacion, tipoMatriculaRequerida: tipoRequerido, sinMatricula };
+      return { ...indicacion, pacientes: conSuFicha(indicacion.pacientes), tipoMatriculaRequerida: tipoRequerido, sinMatricula };
     })
   );
 

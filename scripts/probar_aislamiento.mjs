@@ -289,6 +289,13 @@ const LO_QUE_VE_CADA_UNO = [
       WHERE id IN (${PACIENTES_DEL_ASISTENTE}) AND NOT pendiente_conformidad`,
     PACIENTES_DEL_CLIENTE],
 
+  // La Ficha del Paciente se lee con el Paciente, y ninguna otra Ficha del Directorio: ni la de
+  // quien contrata, ni la de la obra social, ni la de un Paciente que no le toca.
+  ['personas',
+    `SELECT persona_id FROM pacientes
+      WHERE id IN (${PACIENTES_DEL_ASISTENTE}) AND NOT pendiente_conformidad`,
+    `SELECT persona_id FROM pacientes WHERE id IN (${PACIENTES_DEL_CLIENTE})`],
+
   ['prestadoras', SU_PRESTADORA('prestadoras'), SU_PRESTADORA('prestadoras')],
 
   // El Asistente no ve ningún Servicio: no hay política que se lo permita, y no la tiene que

@@ -97,7 +97,7 @@ function segunElFiltro(filas, url) {
 
 function prepararLaBase({ paciente = {} } = {}) {
   const pacientes = [{
-    id: PACIENTE, prestadora_id: PRESTADORA, nombre: 'Paciente de prueba', obra_social_persona_id: OBRA_SOCIAL,
+    id: PACIENTE, prestadora_id: PRESTADORA, persona: { nombre_visible: 'Paciente de prueba' }, obra_social_persona_id: OBRA_SOCIAL,
     numero_afiliado: 'A-0001', cliente_id: null, pendiente_conformidad: false, ...paciente,
   }];
   respuestas.set('GET /rest/v1/pacientes', (credencial, url) => (credencial === LLAVE_MAESTRA
@@ -145,6 +145,8 @@ describe('la vista previa del informe para la obra social', () => {
 
     assert.equal(estado, 200, JSON.stringify(cuerpo));
     assert.equal(cuerpo.contenido.paciente.obra_social, 'Obra social inventada');
+    // Y con el nombre del Paciente, que sale de su Ficha de Persona.
+    assert.equal(cuerpo.contenido.paciente.nombre, 'Paciente de prueba');
   });
 
   it('cada lectura va con la llave maestra y atada a la Prestadora de quien pide', async () => {

@@ -5,16 +5,11 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
-import { CamposDeDomicilio } from '../../components/domicilio/CamposDeDomicilio';
-import { partesDesdeFila, partesParaGuardar } from '../../lib/partesDeDomicilio';
 import { SelectorDePersona } from '../../components/personas/SelectorDePersona';
 
 export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
-  const [nombre, setNombre] = useState(paciente.nombre || '');
-  const [fechaNacimiento, setFechaNacimiento] = useState(paciente.fecha_nacimiento || '');
-  const [domicilio, setDomicilio] = useState(partesDesdeFila(paciente));
   const [nivelComplejidad, setNivelComplejidad] = useState(paciente.nivel_complejidad || '');
   const [patologias, setPatologias] = useState((paciente.patologias || []).join(', '));
   const [obraSocialPersonaId, setObraSocialPersonaId] = useState(paciente.obra_social_persona_id || null);
@@ -29,9 +24,6 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
     const { error: errorUpdate } = await supabase
       .from('pacientes')
       .update({
-        nombre,
-        fecha_nacimiento: fechaNacimiento || null,
-        ...partesParaGuardar(domicilio),
         nivel_complejidad: nivelComplejidad || null,
         patologias: patologias.split(',').map((p) => p.trim()).filter(Boolean),
         obra_social_persona_id: obraSocialPersonaId || null,
@@ -54,9 +46,9 @@ export function EditarPacienteModal({ paciente, onClose, onGuardado }) {
         {error && <Alert variant="error">{error}</Alert>}
 
         <form onSubmit={handleSubmit}>
-          <FormField label={t.clientes.col_nombre} name="nombre" required value={nombre} onChange={(e) => setNombre(e.target.value)} />
-          <FormField label={t.clientes.fecha_nacimiento} name="fecha_nacimiento" type="date" value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)} />
-          <CamposDeDomicilio valor={domicilio} alCambiar={setDomicilio} deshabilitado={guardando} />
+          {/* Quién es el Paciente —nombre, fecha de nacimiento, domicilio— está en su Ficha de
+              Persona y se corrige en el Directorio de Personas. Acá queda lo que es propio de
+              recibir el cuidado. */}
           <FormField label={t.clientes.nivel_complejidad} name="nivel_complejidad" type="select" value={nivelComplejidad} onChange={(e) => setNivelComplejidad(e.target.value)}>
             <option value="">{t.comun.todos}</option>
             <option value="I">I</option>

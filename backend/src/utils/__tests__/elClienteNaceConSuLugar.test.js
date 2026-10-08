@@ -1,5 +1,6 @@
 /**
- * Un Cliente recién creado nace en el Directorio de Personas y con su localidad puesta.
+ * Un Cliente que llega en una planilla importada nace en el Directorio de Personas, con su Paciente
+ * reconocido y con el lugar puesto en la Ficha del Paciente.
  *
  *   npm test --prefix backend
  *
@@ -8,9 +9,9 @@
  * ninguna búsqueda y nadie se entera: la pantalla no falla, contesta vacío. Es el defecto más
  * caro de los dos, porque parece que funciona.
  *
- * El Cliente que llega en una planilla importada nace con su Ficha en el Directorio de Personas,
- * y el lugar elegido para el Paciente queda también en esa Ficha. Dos filas que nacen juntas no pueden decir
- * cosas distintas sobre dónde está la persona.
+ * EL PACIENTE ESTÁ EN EL DIRECTORIO. Su nombre, su domicilio y su lugar se escriben en su Ficha de
+ * Persona, y el Paciente sólo la apunta. Se lo reconoce por su CUIL; si la fila no lo trae, es la
+ * misma persona que contrata sólo cuando el nombre es el mismo, y si no, la fila no se carga.
  *
  * SE MIRA EL IDENTIFICADOR Y NO EL NOMBRE. Lo que se guarda es cuál lugar. Dos localidades que se
  * llaman igual en partidos distintos son dos, y el nombre se busca recién al mostrarlo.
@@ -19,7 +20,10 @@
  * tercero por una dirección: acá se comprueba la localidad, no las coordenadas.
  *
  * LA PERSONA SE BUSCA POR SU DOCUMENTO ANTES DE CREARLA. Si ya está en el Directorio, se usa su
- * Ficha tal como está y sólo se le suma el teléfono que no tenía: una persona, una Ficha.
+ * Ficha tal como está y sólo se le suma lo que no tenía: una persona, una Ficha.
+ *
+ * UNA FILA QUE YA ENTRÓ NO ENTRA DOS VECES. Así la planilla corregida se puede volver a importar
+ * sin duplicar lo que ya se había cargado.
  *
  * Se llama al alta de verdad contra una base de mentira y se mira qué escribió.
  */
@@ -34,12 +38,15 @@ const NUEVA_CUENTA = '33333333-3333-3333-3333-333333333333';
 // la cuenta: la misma persona puede tener otra Ficha en otra Prestadora, colgando de esta misma
 // cuenta.
 const NUEVA_PERSONA = '66666666-6666-6666-6666-666666666666';
+const PERSONA_DEL_PACIENTE = '99999999-9999-9999-9999-999999999999';
 const NUEVO_CLIENTE = '44444444-4444-4444-4444-444444444444';
 const PACIENTE = '77777777-7777-7777-7777-777777777777';
 const LUGAR = '55555555-5555-5555-5555-555555555555';
 const PERSONA_QUE_YA_ESTABA = '88888888-8888-8888-8888-888888888888';
-// Un CUIL inventado que cierra la cuenta del dígito verificador, y nada más.
+const CLIENTE_QUE_YA_ESTABA = '22222222-2222-2222-2222-222222222222';
+// CUIL inventados. La base de mentira no revisa el dígito verificador: eso lo hace la base de verdad.
 const CUIL = '20201112223';
+const CUIL_DEL_PACIENTE = '20301112224';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
@@ -54,13 +61,14 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const direccion = new URL(req.url, 'http://interno');
     const clave = `${req.method} ${direccion.pathname}`;
-    llamadas.push({ clave, ruta: direccion.pathname, filtros: direccion.searchParams, cuerpo: crudo ? JSON.parse(crudo) : null });
+    const cuerpo = crudo ? JSON.parse(crudo) : null;
+    llamadas.push({ clave, ruta: direccion.pathname, filtros: direccion.searchParams, cuerpo });
 
     const preparada = respuestas.get(clave);
-    const valor = typeof preparada === 'function' ? preparada(direccion.searchParams) : preparada;
-    if (valor === undefined) {
+    const valor = typeof preparada === 'function' ? preparada(direccion.searchParams, cuerpo) : preparada;
+    if (valor === undefined || valor?.error) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ message: `la prueba no preparó respuesta para ${clave}` }));
+      res.end(JSON.stringify(valor?.error ?? { message: `la prueba no preparó respuesta para ${clave}` }));
       return;
     }
 
@@ -92,12 +100,29 @@ function loEscritoEn(tabla) {
   return llamadas.find((l) => l.clave === `POST /rest/v1/${tabla}`)?.cuerpo;
 }
 
+function todoLoEscritoEn(tabla) {
+  return llamadas.filter((l) => l.clave === `POST /rest/v1/${tabla}`).map((l) => l.cuerpo);
+}
+
+/** El cambio que el backend le hizo a una fila de esa tabla, con los filtros que la eligieron. */
+function loCambiadoEn(tabla) {
+  return llamadas.find((l) => l.clave === `PATCH /rest/v1/${tabla}`);
+}
+
 function loLeidoDe(tabla) {
   return llamadas.find((l) => l.clave === `GET /rest/v1/${tabla}`);
 }
 
+function seLlamo(clave) {
+  return llamadas.some((l) => l.clave === clave);
+}
+
 /** Lo que trae la planilla, con datos inventados. */
 let fila;
+/** Las Fichas que ya están en el Directorio, por documento. */
+let enElDirectorio;
+/** Lo que ya tiene escrito la Ficha a la que se le completan datos. */
+let loQueYaTieneLaFicha;
 
 function darDeAlta() {
   return crearClienteImportado({ ...fila, prestadoraId: PRESTADORA, db: supabase });
@@ -106,6 +131,8 @@ function darDeAlta() {
 beforeEach(() => {
   llamadas = [];
   respuestas.clear();
+  enElDirectorio = {};
+  loQueYaTieneLaFicha = {};
   fila = {
     nombreContacto: 'Alba',
     apellidoContacto: 'Ferreyra',
@@ -113,6 +140,7 @@ beforeEach(() => {
     email: 'alba@ejemplo.invalido',
     telefono: '11 5555 0001',
     nombrePaciente: 'Bruno Ferreyra',
+    documentoPaciente: '20-30111222-4',
     localidad: 'belgrano',
     domicilioDelPacientePartido: { calle: 'Calle Inventada', numero: '100', lugar_id: LUGAR },
   };
@@ -128,13 +156,26 @@ beforeEach(() => {
   // El alta y la baja de la cuenta las hace la base, cada una en un solo procedimiento.
   respuestas.set('POST /rest/v1/rpc/dar_de_alta_la_cuenta', () => NUEVA_CUENTA);
   respuestas.set('POST /rest/v1/rpc/dar_de_baja_la_cuenta', () => true);
-  respuestas.set('POST /rest/v1/personas', () => [{ id: NUEVA_PERSONA }]);
+  // Cada documento nuevo, su Ficha.
+  respuestas.set('POST /rest/v1/personas', (_, cuerpo) => [
+    { id: cuerpo.documento_numero === CUIL_DEL_PACIENTE ? PERSONA_DEL_PACIENTE : NUEVA_PERSONA },
+  ]);
+  // La misma tabla se lee para buscar por documento y para ver qué tiene escrito una Ficha.
+  respuestas.set('GET /rest/v1/personas', (filtros) => {
+    if (filtros.has('documento_numero')) {
+      const id = enElDirectorio[filtros.get('documento_numero').replace(/^eq\./, '')];
+      return id ? [{ id }] : [];
+    }
+    return [loQueYaTieneLaFicha];
+  });
+  respuestas.set('PATCH /rest/v1/personas', () => []);
   respuestas.set('POST /rest/v1/telefonos_de_la_persona', () => []);
   respuestas.set('GET /rest/v1/telefonos_de_la_persona', () => []);
   // Los tipos de documento del país que llevan dígito verificador, en el orden del catálogo.
   respuestas.set('GET /rest/v1/catalogo_documentos_de_identidad', () => [{ codigo: 'cuil' }, { codigo: 'cuit' }]);
-  // Nadie con ese documento en el Directorio, salvo que la prueba diga otra cosa.
-  respuestas.set('GET /rest/v1/personas', () => []);
+  // Ningún Paciente cargado todavía, salvo que la prueba diga otra cosa.
+  respuestas.set('GET /rest/v1/pacientes', () => []);
+  respuestas.set('GET /rest/v1/clientes', () => []);
   respuestas.set('POST /rest/v1/clientes', () => [{ id: NUEVO_CLIENTE, numero_cliente: 7 }]);
   respuestas.set('DELETE /rest/v1/clientes', () => []);
   respuestas.set('POST /rest/v1/pacientes', () => [{ id: PACIENTE }]);
@@ -149,7 +190,7 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------------------
 
 describe('el Cliente que llega en una planilla importada', () => {
-  it('nace en el Directorio de Personas, con su nombre, su apellido, su correo y su teléfono', async () => {
+  it('quien contrata nace en el Directorio de Personas, con su nombre, su apellido, su correo y su teléfono', async () => {
     await darDeAlta();
 
     const persona = loEscritoEn('personas');
@@ -163,11 +204,21 @@ describe('el Cliente que llega en una planilla importada', () => {
     assert.equal(loEscritoEn('clientes').contratante_persona_id, NUEVA_PERSONA);
   });
 
-  it('deja el mismo lugar en el Paciente y en la Ficha', async () => {
+  it('el lugar queda en la Ficha del Paciente, y el Paciente sólo la apunta', async () => {
     await darDeAlta();
 
-    assert.equal(loEscritoEn('pacientes').lugar_id, LUGAR);
-    assert.equal(loEscritoEn('personas').lugar_id, LUGAR);
+    const cambio = loCambiadoEn('personas');
+    assert.equal(cambio.filtros.get('id'), `eq.${PERSONA_DEL_PACIENTE}`);
+    assert.equal(cambio.filtros.get('prestadora_id'), `eq.${PRESTADORA}`);
+    assert.equal(cambio.cuerpo.lugar_id, LUGAR);
+    assert.equal(cambio.cuerpo.calle, 'Calle Inventada');
+    assert.equal(cambio.cuerpo.numero, '100');
+
+    const paciente = loEscritoEn('pacientes');
+    assert.equal(paciente.persona_id, PERSONA_DEL_PACIENTE);
+    for (const columna of ['lugar_id', 'nombre', 'domicilio', 'lat', 'lng', 'fecha_nacimiento']) {
+      assert.equal(Object.hasOwn(paciente, columna), false, `el Paciente no lleva ${columna}`);
+    }
   });
 
   it('el nombre del lugar se pregunta dentro de la Prestadora y no entre los lugares de todas', async () => {
@@ -183,9 +234,30 @@ describe('el Cliente que llega en una planilla importada', () => {
 
     await darDeAlta();
 
-    assert.equal(loEscritoEn('pacientes').lugar_id ?? null, null);
-    assert.equal(loEscritoEn('personas').lugar_id, null);
+    assert.equal(loCambiadoEn('personas')?.cuerpo.lugar_id ?? null, null);
     assert.equal(loLeidoDe('lugares'), undefined);
+  });
+
+  it('el domicilio en un renglón suelto se parte en calle y número', async () => {
+    fila.domicilioDelPacientePartido = undefined;
+    fila.domicilioPaciente = 'Av. Siempre Viva 742, Springfield';
+
+    await darDeAlta();
+
+    const cambio = loCambiadoEn('personas').cuerpo;
+    assert.equal(cambio.calle, 'Av. Siempre Viva');
+    assert.equal(cambio.numero, '742');
+  });
+
+  it('lo que la Ficha ya tenía escrito no se pisa', async () => {
+    loQueYaTieneLaFicha = { calle: 'Calle Corregida', numero: null, lugar_id: null };
+
+    await darDeAlta();
+
+    const cambio = loCambiadoEn('personas').cuerpo;
+    assert.equal(Object.hasOwn(cambio, 'calle'), false);
+    assert.equal(cambio.numero, '100');
+    assert.equal(cambio.lugar_id, LUGAR);
   });
 
   it('sin apellido no se da de alta, y no se escribe nada', async () => {
@@ -220,18 +292,18 @@ describe('el Cliente que llega en una planilla importada', () => {
   });
 
   it('si la persona ya está en el Directorio, se usa su Ficha y no se crea otra', async () => {
-    respuestas.set('GET /rest/v1/personas', () => [{ id: PERSONA_QUE_YA_ESTABA }]);
+    enElDirectorio[CUIL] = PERSONA_QUE_YA_ESTABA;
 
     const alta = await darDeAlta();
 
-    assert.equal(loEscritoEn('personas'), undefined);
+    assert.equal(todoLoEscritoEn('personas').some((p) => p.documento_numero === CUIL), false);
     assert.equal(loEscritoEn('clientes').contratante_persona_id, PERSONA_QUE_YA_ESTABA);
     assert.equal(alta.fichaQueYaExistia, true);
     assert.equal(alta.numeroCliente, 7);
   });
 
   it('a la Ficha que ya estaba se le suma el teléfono que no tenía', async () => {
-    respuestas.set('GET /rest/v1/personas', () => [{ id: PERSONA_QUE_YA_ESTABA }]);
+    enElDirectorio[CUIL] = PERSONA_QUE_YA_ESTABA;
 
     await darDeAlta();
 
@@ -241,7 +313,7 @@ describe('el Cliente que llega en una planilla importada', () => {
   });
 
   it('el teléfono que la Ficha ya tenía no se escribe dos veces', async () => {
-    respuestas.set('GET /rest/v1/personas', () => [{ id: PERSONA_QUE_YA_ESTABA }]);
+    enElDirectorio[CUIL] = PERSONA_QUE_YA_ESTABA;
     respuestas.set('GET /rest/v1/telefonos_de_la_persona', () => [{ id: 'uno' }]);
 
     await darDeAlta();
@@ -254,6 +326,102 @@ describe('el Cliente que llega en una planilla importada', () => {
     respuestas.delete('POST /rest/v1/personas');
 
     await assert.rejects(darDeAlta());
-    assert.equal(llamadas.some((l) => l.clave === 'POST /rest/v1/rpc/dar_de_alta_la_cuenta'), false);
+    assert.equal(seLlamo('POST /rest/v1/rpc/dar_de_alta_la_cuenta'), false);
+  });
+});
+
+describe('quién es el Paciente', () => {
+  it('con otro CUIL, el Paciente tiene su propia Ficha, con su nombre y sin el correo de quien contrata', async () => {
+    await darDeAlta();
+
+    const delPaciente = todoLoEscritoEn('personas').find((p) => p.documento_numero === CUIL_DEL_PACIENTE);
+    assert.equal(delPaciente.nombre, 'Bruno');
+    assert.equal(delPaciente.apellido, 'Ferreyra');
+    assert.equal(delPaciente.email, null);
+    assert.equal(loEscritoEn('pacientes').persona_id, PERSONA_DEL_PACIENTE);
+    assert.equal(loEscritoEn('clientes').contratante_persona_id, NUEVA_PERSONA);
+  });
+
+  it('con el mismo CUIL que quien contrata, es la misma Ficha', async () => {
+    fila.documentoPaciente = '20201112223';
+
+    await darDeAlta();
+
+    assert.equal(todoLoEscritoEn('personas').length, 1);
+    assert.equal(loEscritoEn('pacientes').persona_id, NUEVA_PERSONA);
+  });
+
+  it('sin CUIL y con el mismo nombre, en otro orden y sin tildes, es la misma Ficha', async () => {
+    fila.nombreContacto = 'Álba';
+    fila.documentoPaciente = '';
+    fila.nombrePaciente = 'FERREYRA Alba';
+
+    await darDeAlta();
+
+    assert.equal(todoLoEscritoEn('personas').length, 1);
+    assert.equal(loEscritoEn('pacientes').persona_id, NUEVA_PERSONA);
+  });
+
+  it('sin CUIL y con otro nombre, la fila no se carga y no se escribe nada', async () => {
+    fila.documentoPaciente = undefined;
+
+    await assert.rejects(darDeAlta(), (e) => e.motivo === 'falta_el_documento_del_paciente');
+    assert.equal(llamadas.length, 0);
+  });
+
+  it('si la base rechaza el CUIL del Paciente, el motivo dice que es el del Paciente', async () => {
+    respuestas.set('POST /rest/v1/personas', (_, cuerpo) => (
+      cuerpo.documento_numero === CUIL_DEL_PACIENTE
+        ? { error: { message: 'numero_no_valido' } }
+        : [{ id: NUEVA_PERSONA }]
+    ));
+
+    await assert.rejects(darDeAlta(), (e) => e.motivo === 'documento_del_paciente_no_valido');
+    assert.equal(seLlamo('POST /rest/v1/rpc/dar_de_alta_la_cuenta'), false);
+  });
+
+  it('si la base rechaza el CUIL de quien contrata, el motivo es el de siempre', async () => {
+    respuestas.set('POST /rest/v1/personas', () => ({ error: { message: 'numero_no_valido' } }));
+
+    await assert.rejects(darDeAlta(), (e) => e.motivo === 'numero_no_valido');
+  });
+});
+
+describe('una fila que ya entró', () => {
+  beforeEach(() => {
+    enElDirectorio[CUIL] = PERSONA_QUE_YA_ESTABA;
+    enElDirectorio[CUIL_DEL_PACIENTE] = PERSONA_DEL_PACIENTE;
+    respuestas.set('GET /rest/v1/pacientes', () => [{ cliente_id: CLIENTE_QUE_YA_ESTABA }]);
+    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE_QUE_YA_ESTABA, numero_cliente: 3 }]);
+  });
+
+  it('no crea ni cuenta, ni Ficha del cliente, ni Paciente, y dice en qué Ficha del cliente está', async () => {
+    const alta = await darDeAlta();
+
+    assert.deepEqual(alta, { yaEstaba: true, numeroCliente: 3 });
+    assert.equal(seLlamo('POST /rest/v1/rpc/dar_de_alta_la_cuenta'), false);
+    assert.equal(loEscritoEn('clientes'), undefined);
+    assert.equal(loEscritoEn('pacientes'), undefined);
+  });
+
+  it('se busca en esta Prestadora, con ese Paciente y esa persona contratando', async () => {
+    await darDeAlta();
+
+    const pacientes = loLeidoDe('pacientes').filtros;
+    assert.equal(pacientes.get('prestadora_id'), `eq.${PRESTADORA}`);
+    assert.equal(pacientes.get('persona_id'), `eq.${PERSONA_DEL_PACIENTE}`);
+    const clientes = loLeidoDe('clientes').filtros;
+    assert.equal(clientes.get('prestadora_id'), `eq.${PRESTADORA}`);
+    assert.equal(clientes.get('contratante_persona_id'), `eq.${PERSONA_QUE_YA_ESTABA}`);
+    assert.equal(clientes.get('id'), `in.(${CLIENTE_QUE_YA_ESTABA})`);
+  });
+
+  it('si esa persona contrata para otro Paciente, es una Ficha del cliente nueva', async () => {
+    respuestas.set('GET /rest/v1/clientes', () => []);
+
+    const alta = await darDeAlta();
+
+    assert.equal(alta.yaEstaba, undefined);
+    assert.equal(loEscritoEn('clientes').contratante_persona_id, PERSONA_QUE_YA_ESTABA);
   });
 });

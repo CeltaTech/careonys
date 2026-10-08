@@ -6,6 +6,7 @@ import { diaDelMomento, horaDelMomento } from '../../lib/horarios';
 import { con } from '../../lib/textos';
 import { mensajeDeError } from '../../lib/errores';
 import '../../pages/seguimientoDeGuardias.css';
+import { FICHA_NOMBRE, conSusFichas } from '../../lib/fichaDelPaciente';
 
 /* LOS CONSENTIMIENTOS QUE TODAVÍA VALEN
 
@@ -45,10 +46,10 @@ export function ConsentimientosVigentes() {
       // El nombre se pide aparte porque la fila guarda el identificador. Uno que no vuelva no se
       // inventa: se dibuja un guión.
       const { data: pacientes, error: errorPacientes } = ids.length
-        ? await supabase.from('pacientes').select('id, nombre').in('id', ids)
+        ? await supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`).in('id', ids)
         : { data: [], error: null };
       if (errorPacientes) throw errorPacientes;
-      const nombresPorId = Object.fromEntries((pacientes ?? []).map((p) => [p.id, p.nombre]));
+      const nombresPorId = Object.fromEntries(conSusFichas(pacientes).map((p) => [p.id, p.nombre]));
 
       setFilas(registros.map((c) => ({ ...c, paciente_nombre: nombresPorId[c.paciente_id] || '—' })));
       setEstado('listo');

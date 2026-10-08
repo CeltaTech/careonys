@@ -11,7 +11,8 @@ import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { CamposDeDomicilio } from '../../components/domicilio/CamposDeDomicilio';
-import { DOMICILIO_VACIO, partesParaGuardar, renglonDelDomicilio } from '../../lib/partesDeDomicilio';
+import { DOMICILIO_VACIO, palabrasDelDomicilio, partesParaGuardar, renglonDelDomicilio } from '../../lib/partesDeDomicilio';
+import { domicilioEscrito } from '../../lib/domicilioEscrito';
 import { useCatalogoDeLugares } from '../../hooks/useCatalogoDeLugares';
 import '../../styles/molde-paginas.css';
 import '../hojaDeTarjetas.css';
@@ -199,7 +200,7 @@ export function DomiciliosTemporalesPaciente({ paciente, puedeEditar, onClose })
                   </span>
                 </div>
                 <div className="panel-grilla panel-columnas-3">
-                  <div className="hoja-dato"><div className="panel-mini">{t.domicilios_temporales.col_domicilio}</div><b>{dondeHoy.domicilio || '—'}</b></div>
+                  <div className="hoja-dato"><div className="panel-mini">{t.domicilios_temporales.col_domicilio}</div><b>{domicilioEscrito(dondeHoy, palabrasDelDomicilio(t)) || '—'}</b></div>
                   <div className="hoja-dato"><div className="panel-mini">{t.domicilios_temporales.col_coordenadas}</div><b>{dondeHoy.lat ?? '—'}, {dondeHoy.lng ?? '—'}</b></div>
                   {dondeHoy.es_temporal && (
                     <>

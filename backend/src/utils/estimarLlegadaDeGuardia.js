@@ -2,6 +2,7 @@ import { distanciaMetros } from './reporteIA.js';
 import { conPacientes } from './pacientesDeGuardia.js';
 import { conDomicilioDelDia } from './domicilioDelDia.js';
 import { horaEstimadaDeLlegada } from './llegadaEstimada.js';
+import { FICHA_UBICACION } from './fichaDelPaciente.js';
 
 // A qué hora se estima que llega quien ya marcó la salida (pendiente #101).
 //
@@ -9,7 +10,7 @@ import { horaEstimadaDeLlegada } from './llegadaEstimada.js';
 // también del lado del Panel. Este archivo es lo que le falta a esa cuenta para poder hacerse
 // contra la base: de dónde salió la persona, a qué domicilio va, y qué domicilio rige ese día.
 //
-// CONTRA QUÉ DOMICILIO SE MIDE. Contra el que rige la fecha de esa guardia, no el del Legajo del Paciente —el
+// CONTRA QUÉ DOMICILIO SE MIDE. Contra el que rige la fecha de esa guardia, no el de su Ficha de Persona —el
 // mismo criterio que ya usa el check-in—: quien está pasando una temporada en la casa de un hijo
 // se atiende ahí, y medir contra la casa de siempre daría una estimación falsa. Con varios
 // Pacientes se mide contra el más cercano, por el mismo motivo que en el check-in.
@@ -49,7 +50,7 @@ export async function llegadaEstimadaDeGuardias(prestadoraId, guardias) {
   // Acá no se pide `domicilio` a propósito, igual que en el check-in: esto mide una distancia,
   // no muestra una dirección.
   const conSuGente = await conDomicilioDelDia(
-    await conPacientes(prestadoraId, conSalida, 'id, lat, lng')
+    await conPacientes(prestadoraId, conSalida, `id, ${FICHA_UBICACION}`)
   );
 
   for (const guardia of conSuGente) {

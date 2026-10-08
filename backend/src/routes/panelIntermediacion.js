@@ -23,6 +23,7 @@ import { prestadoraVisible } from '../utils/prestadoraVisible.js';
 import { darDeAltaEnPasarela, MOTIVO_ALTA } from '../utils/altaEnPasarela.js';
 import { registrarCobroExitoso } from '../utils/cobrosIntermediacion.js';
 import { cuentasDeLasFilas } from '../utils/cuentaDeLaFila.js';
+import { FICHA_NOMBRE, conSusFichas } from '../utils/fichaDelPaciente.js';
 
 export const panelIntermediacionRouter = Router();
 
@@ -546,7 +547,7 @@ panelIntermediacionRouter.get('/accesos', soloAdministracion, async (req, res) =
       // pendiente_conformidad) esconde a Admin y a Superadmin los Legajos pendientes de
       // conformidad, y el acceso de uno de ellos llegaría sin nombre, cosa que antes no pasaba.
       // Se decide aparte.
-      ? supabase.from('pacientes').select('id, nombre').eq('prestadora_id', req.usuarioPanel.prestadoraId).in('id', pacienteIds)
+      ? supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`).eq('prestadora_id', req.usuarioPanel.prestadoraId).in('id', pacienteIds)
       : { data: [] },
     asistenteIds.length
       // Misma política restrictiva que la de arriba, en `asistentes`.
@@ -555,7 +556,7 @@ panelIntermediacionRouter.get('/accesos', soloAdministracion, async (req, res) =
   ]);
 
   const nombreCliente = new Map([...cuentasCliente].map(([id, datos]) => [id, datos?.nombre ?? null]));
-  const nombrePaciente = new Map((pacientes || []).map((p) => [p.id, p.nombre]));
+  const nombrePaciente = new Map(conSusFichas(pacientes).map((p) => [p.id, p.nombre]));
   const nombreAsistente = new Map((asistentes || []).map((a) => [a.id, a.nombre]));
 
   const accesos = data.map((s) => ({

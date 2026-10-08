@@ -10,6 +10,8 @@ import { mensajeDeError } from '../../lib/errores';
 import { horasDeGuardia } from '../../lib/horarios';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
+import { FICHA_DOMICILIO, conSusFichas } from '../../lib/fichaDelPaciente';
+import { palabrasDelDomicilio } from '../../lib/partesDeDomicilio';
 
 const DIAS_SEMANA = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
 /** Hasta dónde se generan las guardias de una serie que no tiene fecha de fin, mientras la consulta
@@ -83,9 +85,8 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
         // turno: un Servicio sólo factura Pacientes de quien lo contrató.
         supabase
           .from('pacientes')
-          .select('id, nombre, domicilio, cliente_id')
-          .is('deleted_at', null)
-          .order('nombre'),
+          .select(`id, cliente_id, ${FICHA_DOMICILIO}`)
+          .is('deleted_at', null),
         supabase.from('prestadoras').select('dias_generacion_series_guardia').eq('id', prestadoraId).single(),
         supabase
           .from('servicios')
@@ -94,14 +95,19 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
           .order('etiqueta'),
       ]);
       setAsistentes(asistentesData ?? []);
-      setPacientes(pacientesData ?? []);
+      // El nombre está en la Ficha de Persona, así que el orden se pone acá y no en la consulta.
+      setPacientes(
+        conSusFichas(pacientesData, palabrasDelDomicilio(t)).sort((a, b) =>
+          (a.nombre ?? '').localeCompare(b.nombre ?? ''),
+        ),
+      );
       setServicios(serviciosData ?? []);
       if (prestadoraData?.dias_generacion_series_guardia) {
         setDiasGeneracion(prestadoraData.dias_generacion_series_guardia);
       }
     }
     cargarListas();
-  }, [prestadoraId]);
+  }, [prestadoraId, t]);
 
   // Qué Servicios se le pueden ofrecer a este turno. La regla es la de la base y sale del mismo
   // archivo que usa el alta de Prestaciones, para que no haya dos versiones de lo mismo: se

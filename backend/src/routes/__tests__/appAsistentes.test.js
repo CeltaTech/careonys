@@ -130,7 +130,11 @@ function guardiaPacientesRespuesta({ url }) {
 
   // `pacientesDeGuardias`: a quién atiende este turno.
   if (select.includes('pacientes(')) {
-    return [{ guardia_id: GUARDIA, pacientes: { id: PACIENTE, nombre: 'Paciente de prueba', lat: LAT, lng: LNG, cliente_id: CLIENTE } }];
+    // El nombre y las coordenadas viven en la Ficha de Persona, no en la fila del Paciente.
+    return [{
+      guardia_id: GUARDIA,
+      pacientes: { id: PACIENTE, cliente_id: CLIENTE, persona: { nombre_visible: 'Paciente de prueba', lat: LAT, lng: LNG } },
+    }];
   }
 
   // `sujetosQuePuedenMostrar`, segunda consulta: el Asistente que todavía no cerró.
@@ -283,6 +287,8 @@ describe('check-in — el piso, que no se negocia: la guardia nunca se traba', (
       assert.equal(cuerpo.ok, true);
       assert.equal(cuerpo.comprobacion, 'sin_comprobar');
       assert.equal(guardiaMarcada(), true);
+      // Se midió contra las coordenadas de la Ficha del Paciente: llegó justo a la puerta.
+      assert.equal(cuerpo.distanciaMetros, 0);
 
       const [fila] = comprobacionesGuardadas();
       assert.equal(fila.guardia_id, GUARDIA);

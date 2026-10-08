@@ -10,6 +10,7 @@ import {
   comoLlegoLaAusencia,
   reglaDeAvisoDe,
 } from './avisoDeAusencia.js';
+import { FICHA_NOMBRE } from './fichaDelPaciente.js';
 
 // Mensaje a la Coordinadora cuando falta un Asistente, y distinto según cómo llegó la falta.
 //
@@ -135,7 +136,7 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
   // de ese tamaño depende con qué urgencia sale la Coordinadora a taparlo.
   let pacientesPorGuardia;
   try {
-    pacientesPorGuardia = await pacientesDeGuardias(prestadoraId, guardias ?? [], 'id, nombre');
+    pacientesPorGuardia = await pacientesDeGuardias(prestadoraId, guardias ?? [], `id, ${FICHA_NOMBRE}`);
   } catch (e) {
     console.error(`Error leyendo los Pacientes de las guardias de los ausentes (prestadora ${prestadoraId}):`, e.message);
     return;

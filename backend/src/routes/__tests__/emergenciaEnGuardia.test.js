@@ -220,7 +220,7 @@ beforeEach(() => {
     filasQuePasanLosFiltros(url, [{ id: USUARIO, prestadora_id: PRESTADORA, nombre: 'Marta Ledesma' }])
   );
   respuestas.set('GET /rest/v1/pacientes', ({ url }) =>
-    filasQuePasanLosFiltros(url, [{ id: PACIENTE, prestadora_id: PRESTADORA, nombre: 'Elsa Puig' }])
+    filasQuePasanLosFiltros(url, [{ id: PACIENTE, prestadora_id: PRESTADORA, persona: { nombre_visible: 'Elsa Puig' } }])
   );
   respuestas.set('GET /rest/v1/guardia_pacientes', ({ url }) =>
     filasQuePasanLosFiltros(url, [{ guardia_id: GUARDIA, paciente_id: PACIENTE, prestadora_id: PRESTADORA }])

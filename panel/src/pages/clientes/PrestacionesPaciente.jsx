@@ -19,6 +19,7 @@ import { servicioSirveParaCliente } from '../../lib/serviciosDelPaciente';
 import { lugaresDe, lugaresDeVarias } from '../../lib/lugaresDeCadaPersona';
 import '../../styles/molde-paginas.css';
 import '../hojaDeTarjetas.css';
+import { FICHA_NOMBRE, conSuFicha } from '../../lib/fichaDelPaciente';
 
 function calcularPrecioFinal(precioLista, tipoDescuento, valorDescuento) {
   const base = Number(precioLista) || 0;
@@ -118,7 +119,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
       supabase.from('hospitalizaciones_paciente').select('*').eq('paciente_id', paciente.id).is('fecha_fin', null).maybeSingle(),
       supabase
         .from('alertas_contingencia_hospitalizacion')
-        .select('*, pacientes:pacientes!alertas_contingencia_hosp_hospitalizado_tenant_fk(nombre)')
+        .select(`*, pacientes:pacientes!alertas_contingencia_hosp_hospitalizado_tenant_fk(${FICHA_NOMBRE})`)
         .eq('paciente_conviviente_id', paciente.id)
         .is('resuelto_at', null),
       // Los Servicios vigentes que alcanza esta sesión. La protección por fila ya los acota a la
@@ -883,7 +884,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
 
                 {alertasContingencia.map((alerta) => (
                   <Alert key={alerta.id} variant="info">
-                    {t.prestaciones.hospitalizacion_contingencia_alerta.replace('{paciente}', alerta.pacientes?.nombre ?? '—')}{' '}
+                    {t.prestaciones.hospitalizacion_contingencia_alerta.replace('{paciente}', conSuFicha(alerta.pacientes)?.nombre ?? '—')}{' '}
                     <Button
                       variant="secondary"
                       onClick={() => handleResolverAlertaContingencia(alerta.id)}

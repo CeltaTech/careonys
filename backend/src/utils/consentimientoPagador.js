@@ -6,6 +6,7 @@ import {
   huellaDelDocumento,
   textoDelConsentimiento,
 } from './documentoConsentimientoPagador.js';
+import { FICHA_NOMBRE } from './fichaDelPaciente.js';
 
 // Todo lo que le pasa al consentimiento del Pagador: se carga, se cierra con la hoja firmada, o se
 // anula porque se cargó otro.
@@ -163,7 +164,7 @@ export async function crearConsentimiento({ clienteId, prestadoraId, cargadoPor 
 async function nombreDeLaContratacion({ clienteId, prestadoraId }) {
   const { data } = await supabase
     .from('pacientes')
-    .select('nombre, created_at')
+    .select(`created_at, ${FICHA_NOMBRE}`)
     .eq('prestadora_id', prestadoraId)
     .eq('cliente_id', clienteId)
     .is('deleted_at', null)
@@ -171,7 +172,7 @@ async function nombreDeLaContratacion({ clienteId, prestadoraId }) {
     .limit(1)
     .maybeSingle();
 
-  return data?.nombre ?? null;
+  return data?.persona?.nombre_visible ?? null;
 }
 
 // El camino de siempre: quien paga firmó la hoja y la Prestadora la guarda. La ruta que sube el

@@ -27,6 +27,7 @@ import { LoQuePasoEnLaCasa } from '../components/continuidad/LoQuePasoEnLaCasa';
 import { SelectorDePersona } from '../components/personas/SelectorDePersona';
 import '../styles/molde-paginas.css';
 import './seguimientoDeGuardias.css';
+import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
 
 const TIPOS_RESOLUCION = ['suplente', 'franquero', 'emergencia', 'familiar'];
 
@@ -128,7 +129,7 @@ export function Continuidad() {
       );
 
       const [{ data: pacientesData }, { data: asistentesData }, { data: personasData }] = await Promise.all([
-        idsPacientes.length ? supabase.from('pacientes').select('id, nombre').in('id', idsPacientes) : Promise.resolve({ data: [] }),
+        idsPacientes.length ? supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`).in('id', idsPacientes) : Promise.resolve({ data: [] }),
         // El plantel entero, con su estado. Sin filtrar acá porque esta misma lista le pone el
         // nombre al Asistente que faltó en cada incidente y en cada alerta, y quien después se
         // fue de la Prestadora tiene que seguir teniendo nombre en un incidente de la semana
@@ -139,7 +140,7 @@ export function Continuidad() {
           : Promise.resolve({ data: [] }),
       ]);
 
-      const pacientesPorId = Object.fromEntries((pacientesData ?? []).map((p) => [p.id, p.nombre]));
+      const pacientesPorId = Object.fromEntries(conSusFichas(pacientesData).map((p) => [p.id, p.nombre]));
       const guardiasPorId = Object.fromEntries(
         conPacientes(guardiasData ?? [], pacientesPorGuardia, pacientesPorId).map((g) => [g.id, g]),
       );

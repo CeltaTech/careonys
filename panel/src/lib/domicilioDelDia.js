@@ -19,7 +19,7 @@ const CONSULTAS_A_LA_VEZ = 8;
 /**
  * @param {Record<string, string[]>} pacientesPorFecha  qué Pacientes preguntar en cada fecha.
  * @returns {Promise<Record<string, Record<string, object>>>} fecha → Paciente → su domicilio
- *   de ese día, con `lat`, `lng`, `domicilio`, `es_temporal` y el motivo cuando lo hay.
+ *   de ese día, con `lat`, `lng`, las partes del domicilio, `es_temporal` y el motivo cuando lo hay.
  */
 export async function domiciliosPorFecha(pacientesPorFecha) {
   const fechas = Object.keys(pacientesPorFecha).filter((f) => pacientesPorFecha[f]?.length);

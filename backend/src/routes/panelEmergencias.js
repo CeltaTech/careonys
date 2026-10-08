@@ -4,6 +4,7 @@ import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcan
 import { clienteDelPedido, supabase } from '../db/connection.js';
 import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
 import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
+import { FICHA_NOMBRE, conSusFichas } from '../utils/fichaDelPaciente.js';
 
 /* Las emergencias avisadas desde una guardia, del lado del Panel.
    ==============================================================
@@ -62,12 +63,12 @@ async function conNombres(emergencias, usuarioPanel) {
       ? acotarAPrestadora(supabase.from('asistentes').select('id, nombre').in('id', asistenteIds), usuarioPanel)
       : Promise.resolve({ data: [] }),
     pacienteIds.length
-      ? acotarAPrestadora(supabase.from('pacientes').select('id, nombre').in('id', pacienteIds), usuarioPanel)
+      ? acotarAPrestadora(supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`).in('id', pacienteIds), usuarioPanel)
       : Promise.resolve({ data: [] }),
   ]);
 
   const nombreAsistente = new Map((asistentes ?? []).map((a) => [a.id, a.nombre]));
-  const nombrePaciente = new Map((pacientes ?? []).map((p) => [p.id, p.nombre]));
+  const nombrePaciente = new Map(conSusFichas(pacientes).map((p) => [p.id, p.nombre]));
 
   return emergencias.map((emergencia) => {
     const guardia = porGuardia.get(emergencia.guardia_id) ?? null;

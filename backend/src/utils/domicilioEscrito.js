@@ -73,3 +73,17 @@ export function partesDelDomicilio(partes) {
     lugar_id: oNulo(partes?.lugar_id ?? partes?.lugarId),
   };
 }
+
+/**
+ * La calle y el número de un domicilio que llega en un renglón suelto, como lo trae una planilla.
+ *
+ * Lo que va antes de la primera coma es la calle, y la cifra del final es el número. Lo que sigue a
+ * la coma —la localidad, casi siempre— no se adivina: el lugar se elige de la lista. Sin cifra al
+ * final, todo es calle y el número queda vacío.
+ */
+export function partesDeUnRenglon(renglon) {
+  const antesDeLaComa = limpio(String(renglon ?? '').split(',')[0]);
+  const conNumero = antesDeLaComa.match(/^(.*\S)\s(\d+\S*)$/);
+  if (conNumero) return { calle: conNumero[1].trim(), numero: conNumero[2] };
+  return { calle: antesDeLaComa || null, numero: null };
+}

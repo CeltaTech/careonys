@@ -106,6 +106,7 @@ export {
   primerDiaDelPeriodo,
   aDosDecimales,
 } from '../utils/cobrosDeCliente.js';
+import { FICHA_NOMBRE, conSusFichas } from '../utils/fichaDelPaciente.js';
 
 /**
  * Los nombres de estos Clientes, para las listas que se muestran en pantalla.
@@ -407,7 +408,7 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
   // Clientes y los Pacientes pendientes de conformidad, que esta tanda facturaba. Se decide aparte.
   const { data: clientes, error: errorClientes } = await supabase
     .from('clientes')
-    .select('id, prestadora_id, dias_hasta_el_vencimiento, financiador_tipo, pagador_persona_id, pacientes(id, nombre)')
+    .select(`id, prestadora_id, dias_hasta_el_vencimiento, financiador_tipo, pagador_persona_id, pacientes(id, ${FICHA_NOMBRE})`)
     .eq('prestadora_id', prestadoraId)
     .is('deleted_at', null);
   if (errorClientes) return responderError(res, errorClientes);
@@ -427,7 +428,7 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
     for (const p of pagadores || []) nombresDePagadores.set(p.id, p.nombre_visible);
   }
 
-  const pacientes = (clientes || []).flatMap((f) => f.pacientes || []);
+  const pacientes = conSusFichas((clientes || []).flatMap((f) => f.pacientes || []));
   const pacienteIds = pacientes.map((p) => p.id);
   const nombresDePacientes = new Map(pacientes.map((p) => [p.id, p.nombre]));
 

@@ -3,6 +3,7 @@ import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
 import { supabase } from '../db/connection.js';
 import { conPacientes } from '../utils/pacientesDeGuardia.js';
 import { conDomicilioDelDia } from '../utils/domicilioDelDia.js';
+import { FICHA_DOMICILIO, FICHA_NOMBRE } from '../utils/fichaDelPaciente.js';
 import { visibilidadDelPedido } from '../utils/visibilidadPrestadora.js';
 import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
 import { responderError } from '../utils/errorConMotivo.js';
@@ -56,16 +57,8 @@ const LARGO_MAXIMO_MOTIVO = 500;
 // Las patologías no van ni aunque estén prendidas: para decidir si toma el turno alcanza con
 // saber a quién, dónde y a qué hora.
 function camposDePacienteEnLaOferta(visibilidad) {
-  return columnasSegunVisibilidad(
-    [
-      'id',
-      'nombre',
-      ['domicilio', 'asistente_domicilio_del_paciente'],
-      ['lat', 'asistente_domicilio_del_paciente'],
-      ['lng', 'asistente_domicilio_del_paciente'],
-    ],
-    visibilidad
-  );
+  const ficha = visibilidad.asistente_domicilio_del_paciente !== false ? FICHA_DOMICILIO : FICHA_NOMBRE;
+  return columnasSegunVisibilidad(['id', ficha], visibilidad);
 }
 
 // Los datos de la guardia que necesita quien está decidiendo si la toma.

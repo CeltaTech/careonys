@@ -14,9 +14,10 @@
 // Ver el disparador `sincronizar_paciente_principal` de `guardias`.
 
 import { supabase } from '../db/connection.js';
+import { FICHA_DOMICILIO, conSuFicha } from './fichaDelPaciente.js';
 
 /** Lo mínimo que necesita una pantalla para nombrar y ubicar a un Paciente. */
-export const CAMPOS_BASICOS = 'id, nombre, domicilio, lat, lng';
+export const CAMPOS_BASICOS = `id, ${FICHA_DOMICILIO}`;
 
 /**
  * A quiénes atiende cada una de estas guardias.
@@ -49,7 +50,7 @@ export async function pacientesDeGuardias(prestadoraId, guardias, campos = CAMPO
   for (const fila of data ?? []) {
     if (!fila.pacientes) continue;
     if (!mapa.has(fila.guardia_id)) mapa.set(fila.guardia_id, []);
-    mapa.get(fila.guardia_id).push(fila.pacientes);
+    mapa.get(fila.guardia_id).push(conSuFicha(fila.pacientes));
   }
 
   // Red de seguridad: una guardia que no tenga ninguna fila en la lista se atiende con el
@@ -64,7 +65,7 @@ export async function pacientesDeGuardias(prestadoraId, guardias, campos = CAMPO
       .in('id', [...new Set(sinLista.map((g) => g.paciente_id))]);
     if (errorSueltos) throw new Error(errorSueltos.message);
 
-    const porId = new Map((sueltos ?? []).map((p) => [p.id, p]));
+    const porId = new Map((sueltos ?? []).map((p) => [p.id, conSuFicha(p)]));
     for (const g of sinLista) {
       const paciente = porId.get(g.paciente_id);
       if (paciente) mapa.set(g.id, [paciente]);

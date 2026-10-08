@@ -9,7 +9,8 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePaises } from '../../hooks/usePaises';
 import { CamposDeDomicilio } from '../../components/domicilio/CamposDeDomicilio';
 import { DOMICILIO_VACIO, partesDesdeFila, partesParaGuardar } from '../../lib/partesDeDomicilio';
-import { avisosDelDocumento, nombreDelTipo, normalizarNumero } from '../../lib/documentoDeIdentidad';
+import { avisosDelDocumento, nombreDelTipo, normalizarDni, normalizarNumero } from '../../lib/documentoDeIdentidad';
+import { useGeneros } from '../../hooks/useGeneros';
 import { SelectorDePersona } from '../../components/personas/SelectorDePersona';
 import { TelefonosDeLaPersona } from './TelefonosDeLaPersona';
 import { cargarUnTelefono } from '../../lib/apiPersonasTelefonos';
@@ -48,11 +49,15 @@ const AVISO_DE_LA_BASE = {
   falta_el_documento: ['documento_tipo', 'falta_el_documento'],
   numero_no_valido: ['documento_numero', 'numero_no_valido'],
   falta_el_pais_del_documento: ['documento_pais', 'falta_el_pais'],
+  falta_el_dni: ['dni', 'falta_el_dni'],
+  dni_no_coincide: ['dni', 'dni_no_coincide'],
+  falta_el_genero: ['genero', 'falta_el_genero'],
+  genero_no_corresponde: ['genero', 'genero_no_reconocido'],
   23505: ['documento_numero', 'documento_repetido'],
 };
 
 // En el orden en que aparecen, para saltar al primero que tenga aviso.
-const ORDEN_DE_LOS_CASILLEROS = ['nombre', 'apellido', 'documento_tipo', 'documento_numero', 'documento_pais'];
+const ORDEN_DE_LOS_CASILLEROS = ['nombre', 'apellido', 'genero', 'documento_tipo', 'documento_numero', 'dni', 'documento_pais'];
 
 export function PersonaModal({ persona, prestadoraId, tiposDeDocumento, onClose, onGuardado }) {
   const modal = useModalAccesible(onClose);
@@ -67,6 +72,9 @@ export function PersonaModal({ persona, prestadoraId, tiposDeDocumento, onClose,
   const [documentoTipo, setDocumentoTipo] = useState(persona?.documento_tipo ?? '');
   const [documentoNumero, setDocumentoNumero] = useState(persona?.documento_numero ?? '');
   const [documentoPais, setDocumentoPais] = useState(persona?.documento_pais ?? '');
+  const [dni, setDni] = useState(persona?.dni ?? '');
+  const [genero, setGenero] = useState(persona?.genero ?? '');
+  const { generos } = useGeneros(prestadoraId);
   // Sólo sirve en el alta. La Ficha ya cargada no trae ningún teléfono adentro: los tiene aparte,
   // porque son varios.
   const [telefono, setTelefono] = useState('');
@@ -91,7 +99,10 @@ export function PersonaModal({ persona, prestadoraId, tiposDeDocumento, onClose,
     const avisos = {};
     if (!nombre.trim()) avisos.nombre = 'falta_el_dato';
     if (!esJuridica && !apellido.trim()) avisos.apellido = 'falta_el_dato';
-    return Object.assign(avisos, avisosDelDocumento({ tipo, numero: documentoNumero, pais: documentoPais }));
+    return Object.assign(
+      avisos,
+      avisosDelDocumento({ tipo, numero: documentoNumero, pais: documentoPais, dni, genero, pideGenero: !esJuridica }),
+    );
   }
 
   const avisos = intentado ? avisosEnPantalla() : {};
@@ -102,6 +113,10 @@ export function PersonaModal({ persona, prestadoraId, tiposDeDocumento, onClose,
     falta_el_documento: t.personas.falta_el_documento,
     numero_no_valido: t.personas.numero_no_valido,
     documento_repetido: t.personas.documento_repetido,
+    falta_el_dni: t.personas.falta_el_dni,
+    dni_no_coincide: t.personas.dni_no_coincide,
+    falta_el_genero: t.personas.falta_el_genero,
+    genero_no_reconocido: t.personas.genero_no_reconocido,
   };
   const avisoDe = (casillero) => (avisos[casillero] ? TEXTO_DEL_AVISO[avisos[casillero]] : undefined);
 
@@ -125,9 +140,12 @@ export function PersonaModal({ persona, prestadoraId, tiposDeDocumento, onClose,
     setDocumentoPais('');
     setAvisoDeLaBase(null);
     // Una entidad no nace: la base rechaza la fecha en una jurídica.
+    // El DNI y el género son de la persona física.
     if (nueva === 'juridica') {
       setApellido('');
       setFechaNacimiento('');
+      setDni('');
+      setGenero('');
     }
     // Una persona física se representa sola, así que el Apoderado que hubiera quedado elegido no
     // le corresponde. La base lo rechaza igual, pero enterarse al guardar sería enterarse tarde.
@@ -157,6 +175,8 @@ export function PersonaModal({ persona, prestadoraId, tiposDeDocumento, onClose,
         documento_tipo: documentoTipo,
         documento_numero: normalizarNumero(documentoNumero, tipo.verifica_modulo_11),
         documento_pais: tipo.lleva_pais ? documentoPais : null,
+        dni: tipo.contiene_dni ? normalizarDni(dni) : null,
+        genero: esJuridica ? null : genero,
         email: email.trim() || null,
         notas: notas.trim() || null,
         apoderado_persona_id: esJuridica ? apoderado || null : null,
@@ -247,6 +267,23 @@ export function PersonaModal({ persona, prestadoraId, tiposDeDocumento, onClose,
               disabled={guardando}
             />
           )}
+          {!esJuridica && (
+            <FormField
+              label={t.personas.genero}
+              name="genero"
+              type="select"
+              required
+              value={genero}
+              onChange={(e) => cambiarDocumento(setGenero)(e.target.value)}
+              disabled={guardando}
+              error={avisoDe('genero')}
+            >
+              <option value="">{t.personas.selector_sin_elegir}</option>
+              {generos.map((uno) => (
+                <option key={uno.codigo} value={uno.codigo}>{t.generos[uno.codigo] ?? uno.codigo}</option>
+              ))}
+            </FormField>
+          )}
 
           <FormField
             label={t.personas.documento_tipo}
@@ -272,6 +309,18 @@ export function PersonaModal({ persona, prestadoraId, tiposDeDocumento, onClose,
             disabled={guardando}
             error={avisoDe('documento_numero')}
           />
+          {tipo?.contiene_dni && (
+            <FormField
+              label={t.personas.dni}
+              name="dni"
+              required
+              inputMode="numeric"
+              value={dni}
+              onChange={(e) => cambiarDocumento(setDni)(e.target.value)}
+              disabled={guardando}
+              error={avisoDe('dni')}
+            />
+          )}
           {tipo?.lleva_pais && (
             <FormField
               label={t.personas.documento_pais}

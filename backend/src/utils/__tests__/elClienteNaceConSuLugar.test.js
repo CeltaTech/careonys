@@ -137,10 +137,14 @@ beforeEach(() => {
     nombreContacto: 'Alba',
     apellidoContacto: 'Ferreyra',
     documentoContacto: '20-20111222-3',
+    dniContacto: '20111222',
+    generoContacto: 'femenino',
     email: 'alba@ejemplo.invalido',
     telefono: '11 5555 0001',
     nombrePaciente: 'Bruno Ferreyra',
     documentoPaciente: '20-30111222-4',
+    dniPaciente: '30111222',
+    generoPaciente: 'masculino',
     localidad: 'belgrano',
     domicilioDelPacientePartido: { calle: 'Calle Inventada', numero: '100', lugar_id: LUGAR },
   };
@@ -172,7 +176,10 @@ beforeEach(() => {
   respuestas.set('POST /rest/v1/telefonos_de_la_persona', () => []);
   respuestas.set('GET /rest/v1/telefonos_de_la_persona', () => []);
   // Los tipos de documento del país que llevan dígito verificador, en el orden del catálogo.
-  respuestas.set('GET /rest/v1/catalogo_documentos_de_identidad', () => [{ codigo: 'cuil' }, { codigo: 'cuit' }]);
+  respuestas.set('GET /rest/v1/catalogo_documentos_de_identidad', () => [
+    { codigo: 'cuil', contiene_dni: true, verifica_modulo_11: true },
+    { codigo: 'cuit', contiene_dni: true, verifica_modulo_11: true },
+  ]);
   // Ningún Paciente cargado todavía, salvo que la prueba diga otra cosa.
   respuestas.set('GET /rest/v1/pacientes', () => []);
   respuestas.set('GET /rest/v1/clientes', () => []);

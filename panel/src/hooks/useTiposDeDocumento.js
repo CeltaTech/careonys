@@ -17,7 +17,8 @@ import { usePaisDeLaPrestadora } from './usePaisDeLaPrestadora';
    como casillero libre haría que cada quien escriba lo que le parezca, y un documento tipeado mal
    crea una persona que no existe. Sin catálogo no hay qué elegir, y la base rechaza la Ficha.
 
-   CADA TIPO DICE SI PIDE EL PAÍS QUE LO EMITIÓ y si su número lleva dígito verificador. */
+   CADA TIPO DICE SI PIDE EL PAÍS QUE LO EMITIÓ, si su número lleva dígito verificador y si lleva
+   el DNI adentro, que entonces también se pide. */
 export function useTiposDeDocumento(prestadoraId) {
   const {
     pais,
@@ -32,7 +33,7 @@ export function useTiposDeDocumento(prestadoraId) {
     error: errorCatalogo,
     recargar: recargarCatalogo,
   } = useCatalogo('catalogo_documentos_de_identidad', {
-    columnas: 'clase, codigo, sigla, lleva_pais, verifica_modulo_11',
+    columnas: 'clase, codigo, sigla, lleva_pais, verifica_modulo_11, contiene_dni',
     filtros: { pais, activo: true },
     requiere: [pais],
   });

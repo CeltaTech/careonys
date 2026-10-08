@@ -295,35 +295,35 @@ INSERT INTO public.usuario_lugares (usuario_id, lugar_id, prestadora_id) VALUES
 INSERT INTO public.asistentes (
   id, usuario_id, prestadora_id, nombre, telefono, email, especialidades,
   estado, tipo_vinculo, fecha_alta, fecha_baja,
-  horas_semanales, dni, canales
+  horas_semanales, dni, canales, documento_tipo, documento_numero, genero
 ) VALUES
   ('30000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001',
    '11111111-1111-4111-8111-111111111111',
    'Ana Álvarez', '+54 11 4001-0001', 'ana.asistente@sandbox.local',
    NULL,
    'activo', 'monotributo', CURRENT_DATE - 300, NULL,
-   40, '20000001', ARRAY['directa']),
+   40, '20000001', ARRAY['directa'], 'cuil', '27200000019', 'femenino'),
 
   ('30000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000002',
    '11111111-1111-4111-8111-111111111111',
    'Bruno Bianchi', '+54 11 4001-0002', 'bruno.asistente@sandbox.local',
    ARRAY['Acompañamiento terapéutico'],
    'activo', 'dependencia', CURRENT_DATE - 220, NULL,
-   40, '20000002', ARRAY['directa', 'intermediacion']),
+   40, '20000002', ARRAY['directa', 'intermediacion'], 'cuil', '20200000022', 'masculino'),
 
   ('30000000-0000-4000-8000-000000000003', '30000000-0000-4000-8000-000000000003',
    '11111111-1111-4111-8111-111111111111',
    'Clara Cabrera', '+54 11 4001-0003', 'clara.asistente@sandbox.local',
    NULL,
    'activo', 'monotributo', CURRENT_DATE - 90, NULL,
-   24, '20000003', ARRAY['intermediacion']),
+   24, '20000003', ARRAY['intermediacion'], 'cuil', '27200000035', 'femenino'),
 
   ('30000000-0000-4000-8000-000000000004', '30000000-0000-4000-8000-000000000004',
    '11111111-1111-4111-8111-111111111111',
    'Delia Duarte', '+54 11 4001-0004', 'delia.asistente@sandbox.local',
    NULL,
    'cesado', 'monotributo', CURRENT_DATE - 500, CURRENT_DATE - 40,
-   40, '20000004', ARRAY['directa']);
+   40, '20000004', ARRAY['directa'], 'cuil', '27200000043', 'femenino');
 
 -- Dónde acepta trabajar cada una. Ana en un solo lugar —el caso que mira el indicador de
 -- exclusividad—; Bruno en cuatro, cruzando dos zonas; Clara sólo en la Zona Sur, que es la que
@@ -383,20 +383,20 @@ INSERT INTO public.datos_reservados_asistente (
 -- ----------------------------------------------------------------------------
 
 INSERT INTO public.personas
-  (id, prestadora_id, clase, nombre, apellido, documento_tipo, documento_numero, calle, numero, lugar_id, email)
+  (id, prestadora_id, clase, nombre, apellido, documento_tipo, documento_numero, dni, genero, calle, numero, lugar_id, email)
 VALUES
-  ('c0000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'fisica', 'Ramiro', 'Pérez', 'cuil', '20201112223',
+  ('c0000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'fisica', 'Ramiro', 'Pérez', 'cuil', '20201112223', '20111222', 'masculino',
    'Calle Inventada', '742', 'a1000000-0000-4000-8000-000000000001', 'ramiro.perez@ejemplo.invalido'),
-  ('c0000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'fisica', 'Teresa', 'Ibáñez', 'cuil', '27053334445',
+  ('c0000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'fisica', 'Teresa', 'Ibáñez', 'cuil', '27053334445', '5333444', 'femenino',
    'Pasaje Imaginario', '18', 'a1000000-0000-4000-8000-000000000002', NULL),
-  ('c0000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'juridica', 'Mutual del Ejemplo', NULL, 'cuit', '30999999995',
+  ('c0000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'juridica', 'Mutual del Ejemplo', NULL, 'cuit', '30999999995', NULL, NULL,
    'Avenida Ficticia', '1200', 'a1000000-0000-4000-8000-000000000003', 'contacto@mutual.invalido'),
   -- Las tres personas detrás de los tres Clientes de más abajo.
-  ('c0000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111', 'fisica', 'Silvia', 'Gómez', 'cuil', '27251001001',
+  ('c0000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111', 'fisica', 'Silvia', 'Gómez', 'cuil', '27251001001', '25100100', 'femenino',
    NULL, NULL, 'a1000000-0000-4000-8000-000000000001', 'cliente.gomez@sandbox.local'),
-  ('c0000000-0000-4000-8000-000000000005', '11111111-1111-4111-8111-111111111111', 'fisica', 'Jorge', 'López', 'cuil', '20222002002',
+  ('c0000000-0000-4000-8000-000000000005', '11111111-1111-4111-8111-111111111111', 'fisica', 'Jorge', 'López', 'cuil', '20222002002', '22200200', 'masculino',
    NULL, NULL, 'a1000000-0000-4000-8000-000000000003', 'cliente.lopez@sandbox.local'),
-  ('c0000000-0000-4000-8000-000000000006', '11111111-1111-4111-8111-111111111111', 'fisica', 'Claudia', 'Morales', 'cuil', '27263003018',
+  ('c0000000-0000-4000-8000-000000000006', '11111111-1111-4111-8111-111111111111', 'fisica', 'Claudia', 'Morales', 'cuil', '27263003018', '26300301', 'femenino',
    NULL, NULL, 'a1000000-0000-4000-8000-000000000005', 'cliente.morales@sandbox.local');
 
 -- Los teléfonos de contacto del Directorio. Una Ficha puede tener varios, y el primero tiene dos a
@@ -469,19 +469,19 @@ INSERT INTO public.permisos_personas_autorizadas (cliente_id, usuario_id, clave,
 -- Quiénes son los Pacientes: su Ficha de Persona, con su nombre, su documento, cuándo nació y dónde
 -- vive. En el Paciente queda sólo lo de recibir el cuidado.
 INSERT INTO public.personas
-  (id, prestadora_id, clase, nombre, apellido, documento_tipo, documento_numero, fecha_nacimiento,
+  (id, prestadora_id, clase, nombre, apellido, documento_tipo, documento_numero, dni, genero, fecha_nacimiento,
    calle, numero, lugar_id, lat, lng)
 VALUES
-  ('c0000000-0000-4000-8000-000000000021', '11111111-1111-4111-8111-111111111111', 'fisica', 'Elena', 'Gómez', 'cuil', '27310000014', '1938-04-12',
+  ('c0000000-0000-4000-8000-000000000021', '11111111-1111-4111-8111-111111111111', 'fisica', 'Elena', 'Gómez', 'cuil', '27310000014', '31000001', 'femenino', '1938-04-12',
    'Av. Siempreviva', '742', 'a1000000-0000-4000-8000-000000000001', -34.6037, -58.3816),
-  ('c0000000-0000-4000-8000-000000000022', '11111111-1111-4111-8111-111111111111', 'fisica', 'Héctor', 'López', 'cuil', '20310000028', '1942-11-03',
+  ('c0000000-0000-4000-8000-000000000022', '11111111-1111-4111-8111-111111111111', 'fisica', 'Héctor', 'López', 'cuil', '20310000028', '31000002', 'masculino', '1942-11-03',
    'Calle Falsa', '123', 'a1000000-0000-4000-8000-000000000003', -34.5000, -58.5200),
-  ('c0000000-0000-4000-8000-000000000023', '11111111-1111-4111-8111-111111111111', 'fisica', 'Rosa', 'Morales', 'cuil', '27310000030', '1935-07-25',
+  ('c0000000-0000-4000-8000-000000000023', '11111111-1111-4111-8111-111111111111', 'fisica', 'Rosa', 'Morales', 'cuil', '27310000030', '31000003', 'femenino', '1935-07-25',
    'Pasaje Inventado', '55', 'a1000000-0000-4000-8000-000000000005', -34.7200, -58.3900),
   -- El marido de Elena: MISMO DOMICILIO, escrito igual letra por letra. Está para que el
   -- domicilio compartido se pueda probar de verdad: el Asistente va una sola vez a esa casa y los
   -- atiende a los dos, y eso es UNA guardia sola que cubre a dos Pacientes.
-  ('c0000000-0000-4000-8000-000000000024', '11111111-1111-4111-8111-111111111111', 'fisica', 'Alberto', 'Gómez', 'cuil', '20310000044', '1936-09-30',
+  ('c0000000-0000-4000-8000-000000000024', '11111111-1111-4111-8111-111111111111', 'fisica', 'Alberto', 'Gómez', 'cuil', '20310000044', '31000004', 'masculino', '1936-09-30',
    'Av. Siempreviva', '742', 'a1000000-0000-4000-8000-000000000001', -34.6037, -58.3816);
 
 INSERT INTO public.pacientes (
@@ -1024,9 +1024,10 @@ INSERT INTO public.usuarios (id, rol, nombre, telefono, email, prestadora_id)
 SELECT p.id, p.rol, p.nombre, p.telefono, p.email, '22222222-2222-4222-8222-222222222222'
 FROM personas p;
 
-INSERT INTO public.asistentes (id, usuario_id, nombre, prestadora_id)
+INSERT INTO public.asistentes (id, usuario_id, nombre, prestadora_id, dni, documento_tipo, documento_numero, genero)
 VALUES ('50000000-0000-4000-8000-000000000003', '50000000-0000-4000-8000-000000000003',
-        'Elena Escobar', '22222222-2222-4222-8222-222222222222');
+        'Elena Escobar', '22222222-2222-4222-8222-222222222222',
+        '20000005', 'cuil', '27200000051', 'femenino');
 
 -- Con lugar cargado de los dos lados, porque el alcance de quien coordina se resuelve cruzándolos:
 -- sin ninguno cargado la respuesta sería «no alcanza» por falta de dato, y una prueba de
@@ -1040,11 +1041,11 @@ INSERT INTO public.usuario_lugares (usuario_id, lugar_id, prestadora_id) VALUES
 -- El Directorio de esta Prestadora. Va antes que su Cliente, por el mismo motivo que en la
 -- otra: quien contrata es una Ficha. La suya es la de Olga Salvatierra.
 INSERT INTO public.personas
-  (id, prestadora_id, clase, nombre, apellido, documento_tipo, documento_numero, calle, numero, lugar_id, email)
+  (id, prestadora_id, clase, nombre, apellido, documento_tipo, documento_numero, dni, genero, calle, numero, lugar_id, email)
 VALUES
-  ('c0000000-0000-4000-8000-000000000011', '22222222-2222-4222-8222-222222222222', 'fisica', 'Ramiro', 'Pérez', 'cuil', '20201112223',
+  ('c0000000-0000-4000-8000-000000000011', '22222222-2222-4222-8222-222222222222', 'fisica', 'Ramiro', 'Pérez', 'cuil', '20201112223', '20111222', 'masculino',
    'Diagonal Supuesta', '55', 'a2000000-0000-4000-8000-000000000001', NULL),
-  ('c0000000-0000-4000-8000-000000000012', '22222222-2222-4222-8222-222222222222', 'fisica', 'Olga', 'Salvatierra', 'cuil', '27027778882',
+  ('c0000000-0000-4000-8000-000000000012', '22222222-2222-4222-8222-222222222222', 'fisica', 'Olga', 'Salvatierra', 'cuil', '27027778882', '2777888', 'femenino',
    'Calle Figurada', '900', 'a2000000-0000-4000-8000-000000000001', NULL);
 
 INSERT INTO public.telefonos_de_la_persona (prestadora_id, persona_id, telefono)
@@ -1058,8 +1059,8 @@ VALUES ('50000000-0000-4000-8000-000000000004', '50000000-0000-4000-8000-0000000
 
 -- Con cliente, porque sin ella la aplicación de Cliente de esta Prestadora no tiene
 -- nada que leer y la prueba de aislamiento de ese lado no puede fallar.
-INSERT INTO public.personas (id, prestadora_id, clase, nombre, apellido, documento_tipo, documento_numero, lugar_id)
-VALUES ('c0000000-0000-4000-8000-000000000013', '22222222-2222-4222-8222-222222222222', 'fisica', 'Rosa', 'Ríos', 'cuil', '27310000057',
+INSERT INTO public.personas (id, prestadora_id, clase, nombre, apellido, documento_tipo, documento_numero, dni, genero, lugar_id)
+VALUES ('c0000000-0000-4000-8000-000000000013', '22222222-2222-4222-8222-222222222222', 'fisica', 'Rosa', 'Ríos', 'cuil', '27310000057', '31000005', 'femenino',
         'a2000000-0000-4000-8000-000000000001');
 
 INSERT INTO public.pacientes (id, persona_id, prestadora_id, cliente_id)

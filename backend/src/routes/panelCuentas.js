@@ -11,6 +11,8 @@ import {
   validarTipoAsistente,
   deshacerAlta,
   filasDeUnAsistente,
+  identidadDelAsistente,
+  errorDeLaIdentidad,
 } from '../utils/cuentasPanel.js';
 import { responderError } from '../utils/errorConMotivo.js';
 import { APROBADAS, filasDeIncorporacion } from '../utils/etapasDeIncorporacion.js';
@@ -144,6 +146,12 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
   let asistenteId;
   try {
     const tipoAsistenteId = await validarTipoAsistente(db, tipo_asistente_id, prestadoraId);
+    const identidad = await identidadDelAsistente(db, {
+      prestadoraId,
+      documento: postulacion.cuil,
+      dni: postulacion.dni,
+      genero: postulacion.genero,
+    });
 
     ({ userId: cuentaId } = await crearCuentaConPerfil({
       email: postulacion.email,
@@ -157,7 +165,7 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
     const { data: asistenteNuevo, error: errorAsistente } = await db.from('asistentes').insert({
       usuario_id: cuentaId,
       nombre: postulacion.nombre,
-      dni: postulacion.dni,
+      ...identidad,
       telefono: postulacion.telefono,
       email: postulacion.email,
       tipo_asistente_id: tipoAsistenteId,
@@ -167,7 +175,7 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
       estado: 'inactivo',
       prestadora_id: prestadoraId,
     }).select('id').single();
-    if (errorAsistente) throw new Error(errorAsistente.message);
+    if (errorAsistente) throw errorDeLaIdentidad(errorAsistente, 'asistente');
     asistenteId = asistenteNuevo.id;
 
     const filasVerificacion = await filasDeIncorporacion(asistenteId, prestadoraId, {
@@ -222,12 +230,12 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
 // (equivalente al default 'omitir' del pendiente #18 — política de verificación por
 // prestadora; la Fase 2 de este trabajo suma la configuración para cambiar este comportamiento).
 panelCuentasRouter.post('/asistente-directo', requiereRolPanel, exigirOrganizacionActiva, requierePermiso('alta_manual_asistente'), async (req, res) => {
-  const { nombre, telefono, email, dni, domicilio, domicilioPartido, tipo_asistente_id, lugares, estado, tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales, modalidades } = req.body;
+  const { nombre, telefono, email, documento_tipo, documento_numero, documento_pais, dni, genero, domicilio, domicilioPartido, tipo_asistente_id, lugares, estado, tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales, modalidades } = req.body;
   try {
     // Con la llave maestra: el permiso se le puede dar a quien coordina, y `asistentes` y
     // `remuneraciones_asistente` sólo aceptan altas de la administración.
     const { asistenteId } = await crearAsistenteDirecto({
-      nombre, telefono, email, dni, domicilio, domicilioPartido, tipo_asistente_id, lugares, estado,
+      nombre, telefono, email, documento_tipo, documento_numero, documento_pais, dni, genero, domicilio, domicilioPartido, tipo_asistente_id, lugares, estado,
       tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales, modalidades,
       prestadoraId: req.usuarioPanel.prestadoraId,
       usuarioPanelId: req.usuarioPanel.id,

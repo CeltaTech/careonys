@@ -192,6 +192,7 @@ export function Asistentes() {
             <table className="panel-tabla">
               <thead>
                 <tr>
+                  <th>{t.asistentes.numero_legajo}</th>
                   <th>{tl.col_asistente}</th>
                   <th>{tl.col_especialidad}</th>
                   <th>{t.asistentes.col_estado}</th>
@@ -204,6 +205,7 @@ export function Asistentes() {
                   const modalidades = esAdmin ? modalidadesDelAsistente(a) : [];
                   return (
                     <tr key={a.id}>
+                      <td>{a.numero_legajo}</td>
                       <td>
                         <strong>{a.nombre}</strong>
                         <span className="panel-mini">

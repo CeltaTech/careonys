@@ -849,6 +849,13 @@ mano no existe para ninguno. Falta decidir cómo se llaman, en pantalla, la carg
 sección, cuyo título habla sólo de archivos. Cierre: cada cosa que se migra entra por las dos
 formas, por el mismo lote y la misma revisión.
 
+**29b. Usted** — El género que llega en una planilla lo lee una lista fija de equivalencias, y lo
+que no está en ella —un error de tipeo como «Femenio»— hace volver la fila. ¿Se suma la IA, como
+con las localidades, para proponer a qué género corresponde, con lo propuesto pasado otra vez por
+la lista y lo dudoso devuelto igual? Y el texto del aviso para lo que no se entiende: hoy dice
+«Género no reconocido.», que no está aprobado; la propuesta es «El género escrito no se entiende.»
+(en «The gender entered cannot be read.», pt «O gênero informado não pode ser lido.»).
+
 ---
 
 ## La entrada y la recuperación de la clave
@@ -1154,8 +1161,11 @@ país.
 
 **55.** Lo que no espera ninguna respuesta porque ya es regla escrita: sacar el tuteo y el voseo de
 todo el Panel y de las dos aplicaciones, sin excepción;
-quitar los textos que no se alcanzan desde ninguna pantalla; y escribir la regla de que cuando un
-texto sale sale el cartel entero, donde vive la regla del casillero.
+quitar los textos que no se alcanzan desde ninguna pantalla; escribir la regla de que cuando un
+texto sale sale el cartel entero, donde vive la regla del casillero; y pasar a las traducciones el
+texto del documento de cese, que está escrito en castellano adentro de
+`panel/src/lib/generarDocumentoCese.js` —incluida la línea del DNI— y sale igual en los tres
+idiomas.
 
 **56.** Relevar lo que todavía no está relevado y el propio relevamiento manda mirar: los textos al
 pie de los casilleros, los avisos de que algo se guardó, las ventanas de confirmar, los carteles de
@@ -1181,7 +1191,7 @@ qué base?»**, más abajo.
 
 Los tres arreglos, para que estén escritos:
 
-1. **No existe el formulario público de postulación.** Hay una ruta de backend que acepta doce campos y ninguna pantalla que la use.
+1. **No existe el formulario público de postulación.** Hay una ruta de backend que acepta doce campos y ninguna pantalla que la use, y en la base no hay ninguna postulación. Cuando se dibuje, pide lo mismo que el alta de un Legajo: tipo y número de documento, DNI donde el documento lo contiene, y género, todos obligatorios.
 2. **Las listas de opciones nacen vacías.** Género, nacionalidad, tipo de registro ante AFIP y los cinco subgrupos de experiencia clínica se cargan por Prestadora. **La pantalla donde se cargan ya está construida** —`panel/src/pages/configuracion/LasListasDeOpciones.jsx`—, así que lo que queda es sembrar las listas de cada Prestadora: mientras estén vacías el formulario no tiene nada que ofrecer.
 3. **Al incorporar un aspirante se pierden quince datos.** Lo que cargó en la postulación no llega entero al Legajo del Asistente.
 

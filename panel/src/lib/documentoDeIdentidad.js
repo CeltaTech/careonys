@@ -37,15 +37,34 @@ export function numeroConGuiones(numero) {
   return `${texto.slice(0, 2)}-${texto.slice(2, 10)}-${texto.slice(10)}`;
 }
 
+/** El DNI sin espacios, puntos ni guiones. */
+export function normalizarDni(dni) {
+  return String(dni ?? '').replace(/[\s.-]/g, '');
+}
+
+/** El DNI tiene que ser el que lleva adentro el número fiscal: los ocho dígitos del medio. */
+export function dniCoincide(dni, numero) {
+  const limpio = normalizarDni(dni);
+  if (!/^\d{1,8}$/.test(limpio)) return false;
+  return limpio.replace(/^0+/, '') === String(numero ?? '').slice(2, 10).replace(/^0+/, '');
+}
+
 /** Qué le falta o qué tiene mal el documento, casillero por casillero. Vacío si está bien.
-    `tipo` es la fila del catálogo elegida, o `null` si no se eligió ninguna. */
-export function avisosDelDocumento({ tipo, numero, pais }) {
-  if (!tipo) return { documento_tipo: 'falta_el_documento' };
+    `tipo` es la fila del catálogo elegida, o `null` si no se eligió ninguna. El DNI se controla
+    sólo si el tipo lo lleva adentro, y el género sólo si se pide (`pideGenero`). */
+export function avisosDelDocumento({ tipo, numero, pais, dni, genero, pideGenero = false }) {
   const avisos = {};
+  if (pideGenero && !genero) avisos.genero = 'falta_el_genero';
+  if (!tipo) return { documento_tipo: 'falta_el_documento', ...avisos };
   const normalizado = normalizarNumero(numero, tipo.verifica_modulo_11);
+  const numeroValido = Boolean(normalizado) && (!tipo.verifica_modulo_11 || cumpleModulo11(normalizado));
   if (!normalizado) avisos.documento_numero = 'falta_el_documento';
-  else if (tipo.verifica_modulo_11 && !cumpleModulo11(normalizado)) avisos.documento_numero = 'numero_no_valido';
+  else if (!numeroValido) avisos.documento_numero = 'numero_no_valido';
   if (tipo.lleva_pais && !pais) avisos.documento_pais = 'falta_el_pais';
+  if (tipo.contiene_dni) {
+    if (!normalizarDni(dni)) avisos.dni = 'falta_el_dni';
+    else if (numeroValido && !dniCoincide(dni, normalizado)) avisos.dni = 'dni_no_coincide';
+  }
   return avisos;
 }
 

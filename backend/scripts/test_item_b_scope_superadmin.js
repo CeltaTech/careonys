@@ -7,6 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import { readFileSync } from 'fs';
 import { randomUUID } from 'crypto';
+import { identidadInventada } from './identidadInventada.js';
 dotenv.config();
 
 const admin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -68,6 +69,7 @@ async function main() {
   const { data: aSandbox, error: errASandbox } = await admin.from('asistentes').insert({
     id: usuarioAsistenteSandboxId, nombre: 'PRUEBA temporal — Asistente sandbox', estado: 'activo', tipo_vinculo: 'monotributo',
     fecha_alta: '2026-07-14', prestadora_id: SANDBOX_ID, canales: ['directo'],
+    ...identidadInventada(30497001, 'femenino'),
   }).select('id').single();
   if (errASandbox) throw errASandbox;
   asistenteSandboxId = aSandbox.id;
@@ -75,6 +77,7 @@ async function main() {
   const { data: aPrestadora, error: errAPrestadora } = await admin.from('asistentes').insert({
     id: usuarioAsistentePrestadoraId, nombre: 'PRUEBA temporal — Asistente prestadora real', estado: 'activo', tipo_vinculo: 'monotributo',
     fecha_alta: '2026-07-14', prestadora_id: PRESTADORA_DEMO_ID, canales: ['directo'],
+    ...identidadInventada(30497002, 'femenino'),
   }).select('id').single();
   if (errAPrestadora) throw errAPrestadora;
   asistentePrestadoraId = aPrestadora.id;

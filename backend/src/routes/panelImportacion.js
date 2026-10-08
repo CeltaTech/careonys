@@ -9,7 +9,7 @@ import {
 } from '../utils/cuentasPanel.js';
 import {
   parsearArchivo, intentarParsearSQL, evaluarViabilidadIA, proponerMapeoIA,
-  CAMPOS_IMPORTACION, CAMPOS_LISTA, CAMPOS_DOMICILIO, valorDesdeFila, domicilioDesdeFila,
+  CAMPOS_IMPORTACION, CAMPOS_OBLIGATORIOS, CAMPOS_LISTA, CAMPOS_DOMICILIO, valorDesdeFila, domicilioDesdeFila,
   reescritorDeLocalidades,
 } from '../utils/importacionIA.js';
 import { catalogoDeLugares, paisDeLaPrestadora, agregarLugar } from '../utils/catalogoDeLugares.js';
@@ -94,6 +94,7 @@ async function analizarPlanillaSubida({ tipo, archivo, prestadoraId }) {
       mapeoPropuesto: mapeo,
       advertencias: lectura.viaIA ? [ADVERTENCIA_ESTRUCTURA_VIA_IA, ...advertencias] : advertencias,
       camposDisponibles: CAMPOS_IMPORTACION[tipo],
+      camposObligatorios: CAMPOS_OBLIGATORIOS[tipo],
       archivoNombre: archivo.originalname,
     },
   };

@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import { identidadInventada } from './identidadInventada.js';
 dotenv.config();
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -63,7 +64,8 @@ function construirAsistente(nombre, idx) {
     nombre: `DEMO — ${nombre}`,
     telefono: `+549 11 ${4000 + idx}-${1000 + idx * 7 % 9000}`,
     email: `alas.para.escribir.2026+asistente.demo.${slug(nombre)}@gmail.com`,
-    dni: String(30500000 + idx),
+    // Los primeros dieciocho nombres de la lista son de mujer.
+    ...identidadInventada(30500000 + idx, idx < 18 ? 'femenino' : 'masculino'),
     tipo_vinculo: esDependencia ? 'dependencia' : 'monotributo',
     categoria_cct: esDependencia ? CATEGORIAS_CCT[idx % 2] : null,
     valor_hora: esDependencia ? null : 3500 + (idx % 6) * 450,
@@ -161,6 +163,9 @@ async function main() {
       telefono: perfil.telefono,
       email: perfil.email,
       dni: perfil.dni,
+      documento_tipo: perfil.documento_tipo,
+      documento_numero: perfil.documento_numero,
+      genero: perfil.genero,
       tipo_asistente_id: tipoPorClave[perfil.claveTipo] || null,
       zonas: perfil.zonas,
       canales: perfil.canales,
@@ -196,12 +201,12 @@ async function main() {
   await supabase.from('asistentes').update({
     tipo_asistente_id: tipoPorClave.cuidador || null,
     zonas: ['CABA', 'San Isidro'],
-    dni: '30499001',
+    ...identidadInventada(30499001, 'femenino'),
   }).eq('id', 'f93e3e6e-286b-45bc-a101-37b93f7f95ff').throwOnError();
   await supabase.from('asistentes').update({
     tipo_asistente_id: tipoPorClave.enfermero || null,
     zonas: ['CABA', 'Vicente López'],
-    dni: '30499002',
+    ...identidadInventada(30499002, 'femenino'),
   }).eq('id', '152c76f6-c94f-49fa-8715-07b0c502e64d').throwOnError();
 
   console.log('RESUMEN', JSON.stringify({ clientes: resumen.clientes.length, pacientes: resumen.pacientes.length, asistentes: resumen.asistentes.length }, null, 2));

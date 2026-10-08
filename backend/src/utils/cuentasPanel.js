@@ -11,6 +11,7 @@ import { guardarLugaresDe } from './lugaresDeCadaPersona.js';
 import { nombreDelLugar } from './catalogoDeLugares.js';
 import { domicilioEscrito, partesDelDomicilio, partesDeUnRenglon } from './domicilioEscrito.js';
 import { cuentaDeLaFila } from './cuentaDeLaFila.js';
+import { generoEscrito } from './generoEscrito.js';
 
 // Comprueba que un tipo de Asistente exista y sea de los que esta Prestadora puede usar:
 // los generales de CeltaTech (`prestadora_id` vacío) o los que creó ella misma. Devuelve el
@@ -292,13 +293,21 @@ const FILAS_DE_UNA_PERSONA_AUTORIZADA = [
 // manual de la Fase 1, en vez de duplicar la lógica (ver alcance de la Fase 3 en el plan
 // aprobado: "no se construye un camino de creación de datos paralelo y distinto").
 export async function crearAsistenteDirecto({
-  nombre, telefono, email, dni, domicilio, domicilioPartido, tipo_asistente_id, tipo_asistente, lugares, estado,
+  nombre, telefono, email, documento, documento_tipo, documento_numero, documento_pais, dni, genero,
+  domicilio, domicilioPartido, tipo_asistente_id, tipo_asistente, lugares, estado,
   tipo_vinculo, categoria_cct, valor_hora, sueldo_basico, horas_semanales, modalidades,
   prestadoraId, usuarioPanelId, importacionId, db,
 }) {
   if (!nombre || !email) {
     throw new ErrorConMotivo('faltan_datos', 'Faltan datos obligatorios (nombre, email)');
   }
+
+  // Cómo figura ante el organismo fiscal. El Panel manda el tipo elegido de la lista; una planilla
+  // manda sólo el número, y entonces el tipo es el primero del país que lleva dígito verificador,
+  // igual que en las Fichas importadas. La base valida el número, el DNI y el género.
+  const identidad = await identidadDelAsistente(db, {
+    prestadoraId, documento, documento_tipo, documento_numero, documento_pais, dni, genero,
+  });
 
   // En qué modalidad de trabajo va a estar esta persona. Si el alta no lo dice —una planilla
   // importada, por ejemplo—, no se manda nada y la base lo completa con las modalidades que la
@@ -344,7 +353,7 @@ export async function crearAsistenteDirecto({
     const { data: asistenteNuevo, error: errorAsistente } = await db.from('asistentes').insert({
       usuario_id: cuentaId,
       nombre,
-      dni: dni || null,
+      ...identidad,
       telefono: telefono || null,
       email,
       domicilio: domicilioDelAsistente,
@@ -360,7 +369,7 @@ export async function crearAsistenteDirecto({
       importacion_id: importacionId || null,
       pendiente_conformidad: Boolean(importacionId),
     }).select('id').single();
-    if (errorAsistente) throw new Error(errorAsistente.message);
+    if (errorAsistente) throw errorDeLaIdentidad(errorAsistente, 'asistente');
     asistenteId = asistenteNuevo.id;
 
     // Dónde acepta trabajar esta persona. Se guarda por la misma función que usa su Legajo, para
@@ -543,8 +552,8 @@ export async function revocarPersonaAutorizada(db, usuarioId, { prestadoraId, cl
 // Ficha del cliente con ese mismo Paciente, la fila se cuenta como que ya estaba y no se crea nada:
 // así la Prestadora puede volver a importar la planilla corregida sin duplicar lo que sí se cargó.
 export async function crearClienteImportado({
-  nombreContacto, apellidoContacto, documentoContacto, telefono, email, plan,
-  nombrePaciente, documentoPaciente, domicilioPaciente, domicilioDelPacientePartido,
+  nombreContacto, apellidoContacto, documentoContacto, dniContacto, generoContacto, telefono, email, plan,
+  nombrePaciente, documentoPaciente, dniPaciente, generoPaciente, domicilioPaciente, domicilioDelPacientePartido,
   fechaNacimientoPaciente, nivelComplejidadPaciente, patologiasPaciente,
   prestadoraId, importacionId, db,
 }) {
@@ -588,12 +597,14 @@ export async function crearClienteImportado({
   // Las Fichas van antes que la cuenta: un documento mal escrito rechaza la fila sin dejar una
   // cuenta de acceso a medio hacer.
   const persona = await fichaPorDocumento(db, {
-    prestadoraId, documento, nombre: nombreContacto, apellido: apellidoContacto, email, telefono,
+    prestadoraId, documento, dni: dniContacto, genero: generoContacto,
+    nombre: nombreContacto, apellido: apellidoContacto, email, telefono,
   });
   const fichaDelPaciente = elPacienteEsQuienContrata
     ? persona
     : await fichaPorDocumento(db, {
-      prestadoraId, documento: documentoDelPaciente, ...nombreYApellido(nombrePaciente), deQuien: 'paciente',
+      prestadoraId, documento: documentoDelPaciente, dni: dniPaciente, genero: generoPaciente,
+      ...nombreYApellido(nombrePaciente), deQuien: 'paciente',
     });
   await completarFicha(db, {
     prestadoraId,
@@ -684,13 +695,105 @@ function nombreYApellido(texto) {
   return { nombre: palabras.slice(0, -1).join(' '), apellido: palabras[palabras.length - 1] };
 }
 
-// Lo que la base contesta cuando el documento no sirve. Viajan como motivo: son códigos, y la frase
-// está en las traducciones. Los del Paciente tienen su propio código, porque en la fila hay dos
-// documentos y la frase tiene que decir cuál es.
+// Lo que la base contesta cuando el documento, el DNI o el género no sirven. Viajan como motivo: son
+// códigos, y la frase está en las traducciones. Los del Paciente tienen su propio código, porque en
+// la fila hay dos personas y la frase tiene que decir cuál es. El documento repetido de un
+// Asistente dice Legajo, y el de una Ficha dice Ficha.
 const MOTIVOS_DEL_DOCUMENTO = {
-  contratante: { falta_el_documento: 'falta_el_documento', numero_no_valido: 'numero_no_valido' },
-  paciente: { falta_el_documento: 'falta_el_documento_del_paciente', numero_no_valido: 'documento_del_paciente_no_valido' },
+  contratante: {
+    falta_el_documento: 'falta_el_documento',
+    numero_no_valido: 'numero_no_valido',
+    falta_el_dni: 'falta_el_dni',
+    dni_no_coincide: 'dni_no_coincide',
+    falta_el_genero: 'falta_el_genero',
+    genero_no_corresponde: 'genero_no_reconocido',
+    23505: 'documento_repetido',
+  },
+  paciente: {
+    falta_el_documento: 'falta_el_documento_del_paciente',
+    numero_no_valido: 'documento_del_paciente_no_valido',
+    falta_el_dni: 'falta_el_dni_del_paciente',
+    dni_no_coincide: 'dni_del_paciente_no_coincide',
+    falta_el_genero: 'falta_el_genero_del_paciente',
+    genero_no_corresponde: 'genero_no_reconocido',
+    23505: 'documento_repetido',
+  },
+  asistente: {
+    falta_el_documento: 'falta_el_documento',
+    numero_no_valido: 'numero_no_valido',
+    falta_el_dni: 'falta_el_dni',
+    dni_no_coincide: 'dni_no_coincide',
+    falta_el_genero: 'falta_el_genero',
+    genero_no_corresponde: 'genero_no_reconocido',
+    23505: 'legajo_repetido',
+  },
 };
+
+// El error de la base, convertido en el motivo que corresponde a quién era. Lo que no es de la
+// identidad sigue como error común, con el texto crudo sólo para el registro del servidor.
+export function errorDeLaIdentidad(error, deQuien) {
+  const motivos = MOTIVOS_DEL_DOCUMENTO[deQuien];
+  const motivo = error.code === '23505'
+    ? (/documento/.test(error.message) ? motivos[23505] : null)
+    : motivos[error.message];
+  return motivo ? new ErrorConMotivo(motivo, error.message) : new Error(error.message);
+}
+
+// Los tipos de documento de persona física del país de la Prestadora que llevan dígito verificador,
+// en el orden del catálogo. Es lo que se busca y se pone cuando el número llega sin decir de qué
+// tipo es, que es lo que pasa con una planilla.
+async function tiposFiscalesDelPais(db, prestadoraId) {
+  return (await documentosDePersonaFisica(db, prestadoraId)).filter((tipo) => tipo.verifica_modulo_11);
+}
+
+async function documentosDePersonaFisica(db, prestadoraId) {
+  const { data: prestadora } = await db
+    .from('prestadoras')
+    .select('pais')
+    .eq('id', prestadoraId)
+    .single();
+  const { data: tipos, error } = await db
+    .from('catalogo_documentos_de_identidad')
+    .select('codigo, contiene_dni, verifica_modulo_11')
+    .eq('pais', prestadora?.pais)
+    .eq('clase', 'fisica')
+    .eq('activo', true)
+    .order('orden');
+  if (error) throw new Error(error.message);
+  return tipos ?? [];
+}
+
+// Lo que se puede saber antes de ir a la base: que el dato está y que el género se entiende. Que el
+// número sea válido y que el DNI coincida lo dice la base, que es una sola regla para todos.
+function exigirDniYGenero({ contieneDni, dni, genero, deQuien }) {
+  const motivos = MOTIVOS_DEL_DOCUMENTO[deQuien];
+  const dniLimpio = soloElNumero(dni);
+  if (contieneDni && !dniLimpio) throw new ErrorConMotivo(motivos.falta_el_dni, 'Falta el DNI');
+  const leido = generoEscrito(genero);
+  if (leido.falta) throw new ErrorConMotivo(motivos.falta_el_genero, 'Falta el género');
+  if (leido.desconocido) throw new ErrorConMotivo('genero_no_reconocido', 'Género no reconocido');
+  return { dni: contieneDni ? dniLimpio : null, genero: leido.codigo };
+}
+
+export async function identidadDelAsistente(db, {
+  prestadoraId, documento, documento_tipo, documento_numero, documento_pais, dni, genero,
+}) {
+  const numero = soloElNumero(documento_numero ?? documento);
+  if (!numero) throw new ErrorConMotivo('falta_el_documento', 'Falta el documento');
+
+  const tipos = await documentosDePersonaFisica(db, prestadoraId);
+  const tipo = documento_tipo
+    ? tipos.find((uno) => uno.codigo === documento_tipo)
+    : tipos.find((uno) => uno.verifica_modulo_11);
+
+  return {
+    // Un tipo que no está en el catálogo del país viaja igual, y la base lo rechaza con su motivo.
+    documento_tipo: tipo?.codigo ?? documento_tipo ?? null,
+    documento_numero: numero,
+    documento_pais: documento_pais || null,
+    ...exigirDniYGenero({ contieneDni: Boolean(tipo?.contiene_dni), dni, genero, deQuien: 'asistente' }),
+  };
+}
 
 // La Ficha de una persona, buscada por su documento. Una persona se guarda una sola vez: si ya está
 // en el Directorio, se usa esa Ficha tal como está —nombre, apellido y correo quedan los que
@@ -699,27 +802,21 @@ const MOTIVOS_DEL_DOCUMENTO = {
 // Se busca entre los tipos del país que llevan dígito verificador, porque el mismo número puede
 // estar cargado como CUIL o como CUIT. Cuál se pone a una Ficha nueva es el primero de esos tipos
 // en el orden del catálogo: qué número se pide en cada país lo dice el catálogo, no el código.
-async function fichaPorDocumento(db, { prestadoraId, documento, nombre, apellido, email, telefono, deQuien = 'contratante' }) {
-  const { data: prestadora } = await db
-    .from('prestadoras')
-    .select('pais')
-    .eq('id', prestadoraId)
-    .single();
-  const { data: tipos, error: errorTipos } = await db
-    .from('catalogo_documentos_de_identidad')
-    .select('codigo')
-    .eq('pais', prestadora?.pais)
-    .eq('clase', 'fisica')
-    .eq('activo', true)
-    .eq('verifica_modulo_11', true)
-    .order('orden');
-  if (errorTipos) throw new Error(errorTipos.message);
-  const codigos = (tipos ?? []).map((tipo) => tipo.codigo);
+//
+// El DNI y el género se piden siempre, también cuando la Ficha ya existe: una fila que llega sin
+// ellos vuelve con su motivo, como cualquier otro dato que falte. Si la Ficha ya está, el DNI de
+// la fila tiene que ser el que la Ficha tiene, que la base ya comparó con su número fiscal.
+async function fichaPorDocumento(db, {
+  prestadoraId, documento, dni, genero, nombre, apellido, email, telefono, deQuien = 'contratante',
+}) {
+  const tipos = await tiposFiscalesDelPais(db, prestadoraId);
+  const codigos = tipos.map((tipo) => tipo.codigo);
+  const identidad = exigirDniYGenero({ contieneDni: Boolean(tipos[0]?.contiene_dni), dni, genero, deQuien });
 
   if (codigos.length) {
     const { data: existente, error: errorExistente } = await db
       .from('personas')
-      .select('id')
+      .select('id, dni')
       .eq('prestadora_id', prestadoraId)
       .eq('clase', 'fisica')
       .eq('documento_numero', documento)
@@ -729,6 +826,9 @@ async function fichaPorDocumento(db, { prestadoraId, documento, nombre, apellido
     if (errorExistente) throw new Error(errorExistente.message);
 
     if (existente) {
+      if (existente.dni && identidad.dni && existente.dni !== identidad.dni.replace(/^0+/, '')) {
+        throw new ErrorConMotivo(MOTIVOS_DEL_DOCUMENTO[deQuien].dni_no_coincide, 'El DNI no coincide');
+      }
       if (telefono) await sumarTelefono(db, { prestadoraId, personaId: existente.id, telefono });
       return { id: existente.id, yaExistia: true };
     }
@@ -743,18 +843,12 @@ async function fichaPorDocumento(db, { prestadoraId, documento, nombre, apellido
       apellido,
       documento_tipo: codigos[0] ?? null,
       documento_numero: documento,
+      ...identidad,
       email: email || null,
     })
     .select('id')
     .single();
-  if (errorPersona) {
-    const motivo = MOTIVOS_DEL_DOCUMENTO[deQuien][errorPersona.message];
-    if (motivo) throw new ErrorConMotivo(motivo, 'El documento de la fila no sirve');
-    if (errorPersona.code === '23505') {
-      throw new ErrorConMotivo('documento_repetido', 'Ya hay una Ficha con ese documento');
-    }
-    throw new Error(errorPersona.message);
-  }
+  if (errorPersona) throw errorDeLaIdentidad(errorPersona, deQuien);
 
   if (telefono) await sumarTelefono(db, { prestadoraId, personaId: persona.id, telefono });
   return { id: persona.id, yaExistia: false };

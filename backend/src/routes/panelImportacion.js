@@ -10,8 +10,9 @@ import {
 import {
   parsearArchivo, intentarParsearSQL, evaluarViabilidadIA, proponerMapeoIA,
   CAMPOS_IMPORTACION, CAMPOS_OBLIGATORIOS, CAMPOS_LISTA, CAMPOS_DOMICILIO, valorDesdeFila, domicilioDesdeFila,
-  reescritorDeLocalidades,
+  reescritorDeLocalidades, lectorDeGeneros,
 } from '../utils/importacionIA.js';
+import { resolverGeneros } from '../utils/generosDeLaImportacion.js';
 import { catalogoDeLugares, paisDeLaPrestadora, agregarLugar } from '../utils/catalogoDeLugares.js';
 import { obtenerGeocodificador } from '../geocodificacion/index.js';
 import { resolverLocalidades } from '../utils/localidadesDeLaImportacion.js';
@@ -278,6 +279,21 @@ panelImportacionRouter.post(
     const camposDelDomicilio = new Set(CAMPOS_IMPORTACION[tipo].filter((campo) => campo.startsWith(base)));
     camposDelDomicilio.add('dondeAceptaTrabajar');
 
+    // El género mal escrito se corrige antes de crear a nadie y todo junto: cada forma distinta una
+    // sola vez. Lo que no se resuelve con certeza queda como estaba y vuelve con su motivo.
+    const camposDeGenero = tipo === 'asistente' ? ['genero'] : ['generoContacto', 'generoPaciente'];
+    const generos = await resolverGeneros({
+      valores: filas.flatMap((fila) => camposDeGenero.map((campo) => valorDesdeFila(fila, mapeo, campo, false))),
+      proponer: lectorDeGeneros({ prestadoraId }),
+    });
+    const conGeneroLeido = (datos) => {
+      for (const campo of camposDeGenero) {
+        const leido = generos.get(String(datos[campo] ?? ''));
+        if (leido) datos[campo] = leido;
+      }
+      return datos;
+    };
+
     for (let i = 0; i < filas.length; i += 1) {
       const fila = filas[i];
       const { partes, lugares: lugaresDeTrabajo, motivo } = localidades[i];
@@ -294,7 +310,7 @@ panelImportacionRouter.post(
           }
           datos.domicilioPartido = partes;
           datos.lugares = lugaresDeTrabajo;
-          await crearAsistenteDirecto(datos);
+          await crearAsistenteDirecto(conGeneroLeido(datos));
         } else {
           const datos = { prestadoraId, importacionId: lote.id, db: supabase };
           for (const campo of CAMPOS_IMPORTACION.cliente) {
@@ -303,7 +319,7 @@ panelImportacionRouter.post(
           }
           datos.domicilioDelPacientePartido = partes;
           datos.domicilioPaciente = valorDesdeFila(fila, mapeo, 'domicilioPaciente', false);
-          const alta = await crearClienteImportado(datos);
+          const alta = await crearClienteImportado(conGeneroLeido(datos));
           if (alta.yaEstaba) {
             yaEstaban.push({ fila: i + 1, numeroCliente: alta.numeroCliente });
             continue;

@@ -849,10 +849,7 @@ mano no existe para ninguno. Falta decidir cómo se llaman, en pantalla, la carg
 sección, cuyo título habla sólo de archivos. Cierre: cada cosa que se migra entra por las dos
 formas, por el mismo lote y la misma revisión.
 
-**29b. Usted** — El género que llega en una planilla lo lee una lista fija de equivalencias, y lo
-que no está en ella —un error de tipeo como «Femenio»— hace volver la fila. ¿Se suma la IA, como
-con las localidades, para proponer a qué género corresponde, con lo propuesto pasado otra vez por
-la lista y lo dudoso devuelto igual? Y el texto del aviso para lo que no se entiende: hoy dice
+**29b. Usted** — El texto del aviso para el género de una planilla que no se entiende: hoy dice
 «Género no reconocido.», que no está aprobado; la propuesta es «El género escrito no se entiende.»
 (en «The gender entered cannot be read.», pt «O gênero informado não pode ser lido.»).
 

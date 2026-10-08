@@ -115,7 +115,7 @@ La pantalla de verificación muestra, arriba de todo, cuánto lleva hecho el asp
 | Rol | Quién | Acceso |
 |---|---|---|
 | Aspirante | Postulante sin verificar | Formulario público + estado de su postulación |
-| Asistente | Verificada e incorporada al plantel | App + panel propio |
+| Asistente | Verificada e incorporada al Padrón | App + panel propio |
 | Admin_prestadora | Gestión de negocio de la prestadora (rol técnico — distinto del Inversor como persona, ver glosario de `CLAUDE.md`) | Panel de administración completo |
 | Cliente | Contrata el servicio | Portal de seguimiento |
 | Coordinador | Rol operativo | Gestión de su zona |
@@ -134,7 +134,7 @@ especialidades vinculadas al cuidado de personas — mismo catálogo que `especi
 `asistentes` (`DATA_MODEL.md`), no crear una lista paralela.
 
 **Beneficios que comunica el sitio**: trabajo registrado; honorarios acordados según
-especialidad y experiencia (sin publicar montos — ver regla abajo); Certificado de Aptitud
+tipo de Asistente y experiencia (sin publicar montos — ver regla abajo); Certificado de Aptitud
 con QR verificable; respaldo operativo permanente; aplicación propia de gestión de guardias;
 capacitación continua.
 
@@ -302,7 +302,7 @@ alguien para una casa lejos).
 **El filtro por «Suspendida» no existe porque esa situación no existe**: una postulación está
 pendiente, en revisión, aprobada o rechazada.
 
-Mapa geolocalizado del plantel activo agrupado por municipio (mismo componente de mapa que
+Mapa geolocalizado de los Asistentes activos del Padrón agrupado por municipio (mismo componente de mapa que
 `PRD_02_Panel_Admin.md` Módulo 2, no duplicar implementación).
 
 ### La entrevista al postulante — cómo quedó construida
@@ -346,7 +346,7 @@ cuándo fue, de si la persona vino ni de quién había quedado en llamarla.
 Seguridad y prevención, 4) El rol del Asistente (incluye uso de la app: check-in/out, reporte
 diario, registro de medicación, código de conducta). Evaluación: 20 preguntas de opción
 múltiple, aprobación mínima 80% (16 correctas). Emite Certificado de Aptitud digital (nombre,
-especialidad, fecha, QR verificable) — mismo `qr_token` que ya existe en `asistentes`
+tipo de Asistente, fecha, QR verificable) — mismo `qr_token` que ya existe en `asistentes`
 (`DATA_MODEL.md`), no crear un segundo mecanismo de certificado.
 
 ## Fuera de alcance de este documento

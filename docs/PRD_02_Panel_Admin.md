@@ -29,21 +29,21 @@ Métricas en tiempo real: postulaciones recibidas hoy/semana, guardias activas a
 resolver.
 
 ### Módulo 2 — Postulaciones de Asistentes
-Lista (nombre, especialidad, zona, fecha, situación fiscal, estado) + filtros (texto,
-especialidad, zona, estado, disponibilidad urgencias). Acciones: ver perfil, cambiar
+Lista (nombre, tipo de Asistente, zona, fecha, situación fiscal, estado) + filtros (texto,
+Rama, tipo de Asistente, zona, estado, disponibilidad urgencias). Acciones: ver perfil, cambiar
 estado (con nota), email automático al Asistente, iniciar verificación (avanza las 5
-etapas — tabla `verificaciones_asistente` en `DATA_MODEL.md`). Vista mapa con Asistentes
-del plantel activo agrupados por zona.
+etapas — tabla `verificaciones_asistente` en `DATA_MODEL.md`). Vista mapa con los Asistentes
+activos del Padrón agrupados por zona.
 
 ### Módulo 3 — Cómo se llega a Cliente
-El Cliente es una persona del Padrón. Entra como contacto, recibe un presupuesto, y pasa a
-Cliente sólo cuando el presupuesto se aprueba (OctoCRM, no construido). No hay alta manual de
-Cliente desde el Panel. La cartera que una Prestadora ya tenía entra por la importación, que
-crea el Legajo de cada persona.
+Cada persona del Cliente tiene su Ficha de Persona en el Directorio de Personas. Entra como
+contacto, recibe un presupuesto, y pasa a Cliente sólo cuando el presupuesto se aprueba
+(OctoCRM, no construido). No hay alta manual de Cliente desde el Panel. La cartera que una
+Prestadora ya tenía entra por la importación, que crea la Ficha de Persona de cada una.
 
-### Módulo 4 — Plantel de Asistentes
+### Módulo 4 — Padrón de Asistentes
 
-Lista de Asistentes verificados y activos (nombre, especialidades, zonas, estado,
+Lista de Asistentes verificados y activos (nombre, tipos de Asistente, zonas, estado,
 monotributo activo, seguro vencimiento, guardias activas) + filtros.
 
 Perfil individual: datos personales, etapas de verificación con fechas, guardias
@@ -122,7 +122,7 @@ componente. Evaluar solo si surge ese escenario de negocio, no diseñar para él
 ## Flujo de asignación de guardia
 
 1. El Coordinador abre la Prestación de un Cliente.
-2. Sistema sugiere Asistentes por zona + especialidad + disponibilidad.
+2. Sistema sugiere Asistentes por zona + tipo de Asistente + disponibilidad.
 3. Coordinador selecciona Asistente.
 4. Notificación al Asistente (email; push cuando la PWA esté lista).
 5. Asistente confirma → guardia "Programada".

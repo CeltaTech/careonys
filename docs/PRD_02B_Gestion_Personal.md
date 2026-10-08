@@ -1,7 +1,7 @@
 # PRD_02B — Gestión de Personal (Vínculo, Cese, Riesgo, Cobertura)
 
 > Fuente: documento original de Gestión de Personal (histórico, 431 líneas).
-> Este PRD **extiende el Módulo 4 (Plantel de Asistentes) de `PRD_02_Panel_Admin.md`,
+> Este PRD **extiende el Módulo 4 (Padrón de Asistentes) de `PRD_02_Panel_Admin.md`,
 > no es un módulo separado** — vive en la misma navegación, mismo rol de acceso
 > (Admin_prestadora; Coordinador solo lectura de su zona, sin acceso a montos — ver
 > `SECURITY.md`).
@@ -177,7 +177,7 @@ rutas) dentro de `ceses`.
 
 ## Navegación
 
-Dentro del Módulo 4 (Plantel de Asistentes) del panel: pestañas o sub-secciones "Vínculo y
+Dentro del Módulo 4 (Padrón de Asistentes) del panel: pestañas o sub-secciones "Vínculo y
 Cese", "Simulador de Vínculo", "Ausencias y Cobertura", "Score de Riesgo" — no crear un ítem
 de navegación de primer nivel separado.
 

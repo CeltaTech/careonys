@@ -30,7 +30,7 @@ Antes de dar de alta la primera Prestadora real de Uruguay, completar:
 
 ## Disparador para completar este documento
 
-En el momento en que se detecte la primera Prestadora licenciataria real con jurisdicción
+En el momento en que se detecte la primera Prestadora real con jurisdicción
 Uruguay (no Sandbox, no datos de prueba), este documento deja de ser opcional — hay que
 completarlo antes de habilitar esa Prestadora, según la condición de proceso de
 `CLAUDE.md` §3.

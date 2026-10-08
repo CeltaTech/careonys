@@ -23,11 +23,11 @@ consultar el historial de la conversación si hace falta el detalle de precios/t
 ## Decisiones ya tomadas (no rediscutir sin motivo nuevo)
 
 1. **Integración directa con Meta Cloud API**, no con un BSP intermediario.
-2. **El número de WhatsApp Business y la cuenta de Meta deben ser de cada prestadora
-   licenciataria, nunca de CeltaTech como plataforma central.** Dos motivos,
+2. **El número de WhatsApp Business y la cuenta de Meta deben ser de cada
+   Prestadora, nunca de CeltaTech como plataforma central.** Dos motivos,
    ambos explícitos del Desarrollador (2026-07-11):
    - Operativo: quien manda y recibe respuestas tiene que ser la propia prestadora, no un
-     número compartido entre licenciatarias.
+     número compartido entre Prestadoras.
    - Legal: cualquier decisión tomada en esa conversación (con un suplente, un franquero, un
      familiar) es responsabilidad exclusiva de la prestadora — **CeltaTech no debe tener
      ninguna responsabilidad legal sobre el contenido de esas conversaciones**, consistente
@@ -38,20 +38,20 @@ consultar el historial de la conversación si hace falta el detalle de precios/t
      de cuidado por tratarse de credenciales de una cuenta externa de terceros con costo real
      asociado (Regla 7/8 de `CLAUDE.md` aplican con el mismo peso que a datos sensibles).
    - **Costo del envío de mensajes lo paga la prestadora**, no CeltaTech como
-     plataforma — cada licenciataria factura directo con Meta desde su propia cuenta.
+     plataforma — cada Prestadora factura directo con Meta desde su propia cuenta.
 3. **La configuración vive dentro de la pestaña "Servicios" del Módulo 8 (Configuración),
    extendiendo la tabla/pestaña "Notificaciones" ya existente** (patrón evento → canal →
    destinatarios que ya usa `configuracion_notificaciones` para email) — no una sección nueva
    separada. Cada prestadora define, por evento, si además de (o en vez de) email quiere
    WhatsApp saliente.
-4. **El agente de IA asiste, pero la decisión final siempre queda en manos del
-   licenciatario** — no actúa de forma autónoma en un canal con peso legal. El Desarrollador
+4. **El agente de IA asiste, pero la decisión final siempre queda en manos de la
+   Prestadora** — no actúa de forma autónoma en un canal con peso legal. El Desarrollador
    pidió expresamente (2026-07-11) que el agente ayude en las tres tareas siguientes,
    "salvaguardando siempre las decisiones del licenciatario/prestador de servicios":
    - Redactar/proponer el texto de las plantillas de mensaje.
    - Gestionar (o guiar paso a paso) el trámite de aprobación de esas plantillas ante Meta.
    - Participar en las respuestas de conversaciones entrantes (del suplente, franquero,
-     personal de emergencia, familiar) — siempre con el licenciatario en control de qué se
+     personal de emergencia, familiar) — siempre con la Prestadora en control de qué se
      manda finalmente.
 
 ## Puntos A-E — decididos 2026-07-13
@@ -68,7 +68,7 @@ texto 100% libre generado en el momento. Un mensaje de escalada de relevo es, ca
 un mensaje que inicia el negocio (nadie del lado del suplente/franquero escribió primero).
 
 **Decisión (2026-07-13):**
-- La IA arma el borrador de la plantilla (texto + variables); el licenciatario lo revisa/
+- La IA arma el borrador de la plantilla (texto + variables); la Prestadora lo revisa/
   edita y confirma; recién ahí se envía a Meta para aprobación. Estado visible en el Panel
   (pestaña Servicios → Notificaciones) por plantilla: Borrador → Enviada a Meta → Aprobada /
   Rechazada. Si Meta rechaza, la IA propone una corrección según el motivo del rechazo.

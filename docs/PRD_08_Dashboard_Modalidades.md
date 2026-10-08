@@ -22,9 +22,9 @@
 - Las 3 modalidades de trabajo de una Prestadora — **prestación directa**, **Match**
   y **cooperativa** — son combinables entre sí, no mutuamente excluyentes
   (`docs/PRD_07_Modalidad_Match.md:22-24`).
-- El plantel de Asistentes, el Proceso de Incorporación de Asistentes y el control de
+- El Padrón de Asistentes, el Proceso de Incorporación de Asistentes y el control de
   personal (vínculo/cese/score de riesgo/ausencias) son **infraestructura común** a
-  prestación directa y Match — "un solo plantel, un solo proceso de verificación,
+  prestación directa y Match — "un solo Padrón, un solo proceso de verificación,
   una sola base de Asistentes certificados, sea cual sea el canal por el que después
   trabajen" (`docs/PRD_07_Modalidad_Match.md:191`).
 - El campo técnico que ya soporta esto es `asistentes.canales TEXT[]` (default
@@ -62,7 +62,7 @@ La propuesta cruda original del Desarrollador (`docs/PRD_07_Modalidad_Match.md:1
 tenía 3 bloques (directa / Match / cooperativa) más una infraestructura común
 mencionada al pasar dentro del bloque Match. El rearme más importante es **sacar esa
 infraestructura común de adentro de un bloque y ponerla primera, arriba de los 3**, porque
-hoy son Asistentes en un mismo plantel — meterla dentro de "Match" en el menú
+hoy son Asistentes en un mismo Padrón — meterla dentro de "Match" en el menú
 insinuaría que es exclusiva de esa modalidad, cuando el pendiente #13 dice lo contrario.
 
 Resultado: **4 grupos**, no 3.
@@ -76,13 +76,13 @@ Resultado: **4 grupos**, no 3.
   bajo cada una) — sin tabla nueva, derivado en vivo del mismo patrón que ya usa el
   checklist de onboarding (pendiente #80, "derivado en vivo sin tabla nueva").
 
-### Grupo 1 — Plantel de Asistentes (infraestructura compartida, pendiente #13)
+### Grupo 1 — Padrón de Asistentes (infraestructura compartida, pendiente #13)
 
 Visible siempre que **alguna** modalidad basada en Asistentes esté activa (directa o
 Match — cooperativa también los necesita en algún momento, ver §3 pregunta 4):
 
 - Proceso de Incorporación de Asistentes (hoy "Postulaciones")
-- Asistentes (Legajo, plantel, `canales` para saber en qué modalidad participa cada uno)
+- Asistentes (Legajo, Padrón, `canales` para saber en qué modalidad participa cada uno)
 - Documentación (vencimientos documentales, común a cualquier canal)
 - Verificación de Guardias
 
@@ -174,7 +174,7 @@ antes de programar:
    campo `canales` hoy solo admite `'directo'`/`'intermediacion'`
    (`docs/DATA_MODEL.md:226-227`, `CHECK (canales <@ ARRAY['directo','intermediacion']::TEXT[])`)
    — no contempla un tercer valor `'cooperativa'`. Si cooperativa también comparte el mismo
-   plantel de Asistentes (Grupo 1), ese `CHECK` constraint necesita revisión el día que se
+   Padrón de Asistentes (Grupo 1), ese `CHECK` constraint necesita revisión el día que se
    diseñe cooperativa en profundidad, no alcanza con agregarla a la UI del menú.
 5. **Resuelto (2026-07-24)**: pantalla propia en el Grupo 3 para el cobro mensual que el Cliente
    de Match le paga a la Prestadora, separada de "Facturación, pagos y cobranzas" de

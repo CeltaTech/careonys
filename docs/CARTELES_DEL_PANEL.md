@@ -50,8 +50,8 @@ porque son los que más veces se ven.
 ## 1. El cartel genérico de lista vacía
 
 **Cómo llegar.** No tiene un camino propio: aparece en cualquier lista del Panel que no traiga un
-cartel escrito para ella. Los lugares donde hoy se lo ve sin hacer nada especial son **Plantel →
-Postulaciones**, **Cumplimiento → Verificación de Guardias**, **Plantel → Documentación**, y la
+cartel escrito para ella. Los lugares donde hoy se lo ve sin hacer nada especial son **Asistentes →
+Postulaciones**, **Cumplimiento → Verificación de Guardias**, **Asistentes → Documentación**, y la
 solapa **«Proceso de Incorporación»** dentro del Legajo del Asistente.
 
 **Qué es esa pantalla y para qué se usa.** No es una pantalla, es el texto de fábrica. Todas las
@@ -130,8 +130,8 @@ blanco. El botón de sacar los filtros se iría con el cartel, que es el único 
 **Problemas que se ven acá.** Tres.
 
 El primero es que afirma un hecho que no comprobó. Dice «Hay registros cargados», y eso no se
-miró: lo único que se sabe es que la consulta con filtro volvió vacía. En el Padrón sin ni un
-Legajo, basta teclear una letra en el buscador para que la pantalla diga que hay registros
+miró: lo único que se sabe es que la consulta con filtro volvió vacía. En el Directorio de Personas sin ni una
+Ficha de Persona, basta teclear una letra en el buscador para que la pantalla diga que hay registros
 cargados, que es exactamente lo contrario de la verdad.
 
 El segundo es que «lo que se buscó» nombra solamente al buscador, y la mayoría de estas pantallas
@@ -153,22 +153,22 @@ es una, porque su filtro de arranque no cuenta como filtro y la manda siempre al
 
 # Clientes → Padrón
 
-## 3. Cuando no hay ningún Legajo cargado
+## 3. Cuando no hay ninguna Ficha de Persona cargada
 
 **Cómo llegar.** Menú lateral → grupo **Clientes** → **Padrón**. El cartel ocupa el lugar de la
-tabla y se ve ni bien se entra, sin apretar nada, mientras no haya ni un Legajo.
+tabla y se ve ni bien se entra, sin apretar nada, mientras no haya ni una Ficha de Persona.
 
-**Qué es esa pantalla y para qué se usa.** El Padrón es el único lugar donde vive la información de
-los Clientes de la Prestadora. Una persona, una obra social, una prepaga o quien sea se carga ahí
-una sola vez, con todo lo que se sabe de esa persona o entidad, y desde cualquier otra pantalla se
+**Qué es esa pantalla y para qué se usa.** Es el Directorio de Personas, el único lugar donde vive la
+información de las personas de los Clientes de la Prestadora. Una persona, una obra social, una prepaga o quien sea se carga ahí
+una sola vez, en su Ficha de Persona, con todo lo que se sabe de ella, y desde cualquier otra pantalla se
 la nombra citándola, nunca copiando sus datos. Es también el único lugar donde se da de alta: los
-casilleros que eligen del Padrón sólo eligen.
+casilleros que eligen del Directorio de Personas sólo eligen.
 
 **Qué se ve en pantalla, de arriba abajo.**
 - Título de la pantalla: «Padrón»
 - La tarjeta de filtros, con el buscador y los desplegables.
 - El botón «Nuevo Legajo», cuando quien mira tiene permiso de editar.
-- Y ahí abajo la tabla de Legajos, o el cartel cuando no hay ninguno.
+- Y ahí abajo la tabla de Fichas de Persona, o el cartel cuando no hay ninguna.
 
 **El cartel, textual.**
 Primer renglón: «Todavía no hay ningún Legajo cargado»
@@ -176,10 +176,10 @@ Segundo renglón: «Cada persona o entidad se carga una sola vez, y después se 
 haga falta.»
 Y debajo, el botón «Nuevo Legajo».
 
-**Cuándo aparece.** Cuando no hay ni un Legajo cargado y no hay ningún filtro puesto. Es el estado
+**Cuándo aparece.** Cuando no hay ni una Ficha de Persona cargada y no hay ningún filtro puesto. Es el estado
 de una Prestadora que recién empieza.
 
-**Qué desaparece mientras el cartel está puesto.** La tabla de Legajos entera, con sus columnas y
+**Qué desaparece mientras el cartel está puesto.** La tabla de Fichas de Persona entera, con sus columnas y
 con los botones de cada fila.
 
 **Qué queda alrededor si el cartel se saca.** El título, la tarjeta de filtros —vacía y sin nada que
@@ -195,7 +195,7 @@ decir la verdad a decir lo contrario con una tecla.
 El segundo es que cuando quien mira no tiene permiso de editar, el cartel queda sin botón: dice que
 no hay nada, no ofrece cargar nada, y no dice a quién pedírselo.
 
-El tercero es que el segundo renglón explica la regla del Padrón —que cada uno se carga una sola vez
+El tercero es que el segundo renglón explica la regla del Directorio de Personas —que cada una se carga una sola vez
 y después se lo cita— en vez de decir qué hacer ahora. Es una buena regla y está bien que exista;
 el lugar donde está escrita es el que no corresponde.
 
@@ -207,44 +207,44 @@ el lugar donde está escrita es el que no corresponde.
 
 ---
 
-## 4. El casillero que elige del Padrón, cuando el Padrón está vacío
+## 4. El casillero que elige del Directorio de Personas, cuando el Directorio está vacío
 
-**Cómo llegar.** En cualquier pantalla que tenga un casillero que elige del Padrón, con el Padrón
-sin ningún Legajo. Los casilleros donde se lo ve son **«Apoderado»**, **«Obra Social»**, **«Quién
+**Cómo llegar.** En cualquier pantalla que tenga un casillero que elige del Directorio de Personas, con
+el Directorio sin ninguna Ficha de Persona. Los casilleros donde se lo ve son **«Apoderado»**, **«Obra Social»**, **«Quién
 paga»** y **«Quién se quedó cuidando»**, que aparecen en la Ficha del cliente y en las ventanas
 de contratación. El texto está debajo del desplegable.
 
 **Qué es eso y para qué se usa.** No es un cartel de lista vacía: es un renglón de explicación
-puesto debajo de un casillero. El casillero es un desplegable con buscador que ofrece los Legajos
-del Padrón para elegir uno.
+puesto debajo de un casillero. El casillero es un desplegable con buscador que ofrece las Fichas
+de Persona del Directorio para elegir una.
 
 **Qué se ve en pantalla, de arriba abajo.**
 - La etiqueta del casillero —«Apoderado», «Obra Social», «Quién paga» o «Quién se quedó cuidando»—.
-- El desplegable, que con el Padrón vacío muestra «Sin elegir» y se abre sin ninguna opción adentro.
+- El desplegable, que con el Directorio de Personas vacío muestra «Sin elegir» y se abre sin ninguna opción adentro.
 - Debajo, este renglón.
 
 **El texto, textual.**
 Un solo renglón: «Todavía no hay ningún Legajo cargado. Se puede agregar el primero desde acá.»
 
-**Cuándo aparece.** Cuando la lista de Legajos que ese casillero ofrece vuelve vacía. En los
+**Cuándo aparece.** Cuando la lista de Fichas de Persona que ese casillero ofrece vuelve vacía. En los
 casilleros que están acotados a una clase —el que pide una obra social, por ejemplo— vuelve vacía
-también cuando hay Legajos cargados pero ninguno de esa clase.
+también cuando hay Fichas de Persona cargadas pero ninguna de esa clase.
 
 **Qué desaparece mientras el texto está puesto.** Nada. Este renglón no reemplaza a la lista: el
 desplegable sigue ahí, con el mismo aspecto de siempre, mostrando «Sin elegir».
 
 **Qué queda alrededor si el texto se saca.** La etiqueta y el desplegable, tal cual, vacío.
 
-**Problemas que se ven acá.** Cuatro, y el primero es el más grave de los seis carteles del Padrón y
-sus casilleros.
+**Problemas que se ven acá.** Cuatro, y el primero es el más grave de los seis carteles del Directorio de
+Personas y sus casilleros.
 
 El primero es que **promete algo que no puede cumplir**. Dice «Se puede agregar el primero desde
-acá», y desde ahí no se agrega nada: un casillero que elige del Padrón sólo elige, y el alta se hace
-en el Padrón con el botón que lo dice. Quien lea esa frase va a buscar en ese desplegable una forma
-de cargar un Legajo que no existe.
+acá», y desde ahí no se agrega nada: un casillero que elige del Directorio de Personas sólo elige, y el
+alta se hace en el Directorio con el botón que lo dice. Quien lea esa frase va a buscar en ese desplegable una forma
+de cargar una Ficha de Persona que no existe.
 
 El segundo es que cuenta mal el hecho en los casilleros acotados a una clase: en el que pide una
-obra social dice que no hay ningún Legajo cargado, cuando puede haber doscientos y lo que falta es
+obra social dice que no hay ninguna Ficha de Persona cargada, cuando puede haber doscientas y lo que falta es
 una obra social entre ellos.
 
 El tercero es que es una explicación debajo de un casillero, que es justo lo que no se pone.
@@ -264,13 +264,13 @@ Y en la columna del problema dejó escrita esta pregunta, que sigue sin contesta
 
 ---
 
-## 5. Los teléfonos de un Legajo
+## 5. Los teléfonos de una Ficha de Persona
 
-**Cómo llegar.** Menú lateral → grupo **Clientes** → **Padrón** → clic en un Legajo para corregirlo
-→ bajar hasta el bloque de **teléfonos**. Este bloque sólo existe al corregir un Legajo ya cargado;
-al dar de alta uno nuevo no está.
+**Cómo llegar.** Menú lateral → grupo **Clientes** → **Padrón** → clic en una Ficha de Persona para
+corregirla → bajar hasta el bloque de **teléfonos**. Este bloque sólo existe al corregir una Ficha
+de Persona ya cargada; al dar de alta una nueva no está.
 
-**Qué es eso y para qué se usa.** Es el bloque donde se cargan los teléfonos de ese Legajo. Son
+**Qué es eso y para qué se usa.** Es el bloque donde se cargan los teléfonos de esa persona. Son
 varios a propósito: el fijo de la casa y los celulares de quienes atienden.
 
 **Qué se ve en pantalla, de arriba abajo.**
@@ -283,7 +283,7 @@ Primer renglón: «Todavía no hay ningún teléfono cargado»
 Segundo renglón: «Se pueden cargar todos los que haga falta: el fijo de la casa y los celulares de
 quienes atienden.»
 
-**Cuándo aparece.** Cuando ese Legajo no tiene ni un teléfono cargado.
+**Cuándo aparece.** Cuando esa Ficha de Persona no tiene ni un teléfono cargado.
 
 **Qué desaparece mientras el cartel está puesto.** La lista de teléfonos, con cada número y los
 botones de cada renglón.
@@ -298,7 +298,7 @@ El primero es que es una explicación debajo de un control que explica lo obvio:
 llama «Teléfono» y el botón dice «Agregar teléfono». Nadie necesita que le cuenten que se pueden
 cargar varios; el botón lo demuestra apretándolo.
 
-El segundo es que el bloque sólo existe al corregir un Legajo, nunca al darlo de alta, así que quien
+El segundo es que el bloque sólo existe al corregir una Ficha de Persona, nunca al darla de alta, así que quien
 lee este cartel ya cargó a esa persona entera y no es su primera vez en la pantalla.
 
 
@@ -311,27 +311,27 @@ lee este cartel ya cargó a esa persona entera y no es su primera vez en la pant
 
 # Clientes → Clientes → un Cliente
 
-## 6. Cuando el financiador no tiene cargada ninguna documentación exigible
+## 6. Cuando el Pagador no tiene cargada ninguna documentación exigible
 
 **Cómo llegar.** Menú lateral → grupo **Clientes** → **Clientes** → clic en un Cliente de la lista.
 Dentro de la Ficha del cliente, bajar hasta la subsección **«Documentación que pide el financiador»**, que está
 debajo de todo lo de la firma del Pagador.
 
 **Qué es esa pantalla y para qué se usa.** Es la parte de la Ficha del cliente donde se responde
-una sola pregunta: quién paga esto y si eso ya está cerrado. Elegir a alguien del Padrón no alcanza:
+una sola pregunta: quién paga esto y si eso ya está cerrado. Elegir a alguien del Directorio de Personas no alcanza:
 queda definido como Pagador recién cuando firmó que asume la obligación de pagar. Ahí mismo se ve si
 esa firma está, se arma el documento para que la firme, se registra que llegó firmado, y —abajo de
-todo eso— se lleva la cuenta de los papeles que exige quien financia el servicio: cuáles están,
+todo eso— se lleva la cuenta de los papeles que exige quien paga el servicio: cuáles están,
 cuáles faltan, cuáles se vencieron. Nada de eso frena la contratación; avisa nada más, en el momento
 en que se elige a la persona y no el día que hay que cobrarle.
 
 **Qué se ve en pantalla, de arriba abajo.**
 - Título de la pantalla: el nombre del Cliente.
 - Título de sección: «Contacto», con los casilleros de nombre, teléfono, correo, localidad y plan.
-- El casillero donde se elige del Padrón, rotulado «Quién paga».
+- El casillero donde se elige del Directorio de Personas, rotulado «Quién paga».
 - Título de la subsección: «Quién paga».
 - Debajo, la explicación: «Elegir el Legajo no alcanza: el Pagador queda definido cuando firma que
-  asume la obligación de pagar. Acá se ve si esa firma está y qué documentación pide el financiador.
+  asume la obligación de pagar. Acá se ve si esa firma está y qué documentación pide el Pagador.
   Nada de esto frena la contratación.»
 - Un cartel de estado, que dice «El Pagador está definido: firmó que asume la obligación de pagar.»
   o «El Pagador todavía no firmó que asume la obligación de pagar.»
@@ -888,11 +888,11 @@ hubiera muchas y ya estén todas resueltas.
 
 ---
 
-# Plantel → Plantel de Asistentes → una persona
+# Asistentes → Plantel de Asistentes → una persona
 
 ## 16. Cuando esa persona no tiene guardias trabajadas
 
-**Cómo llegar.** Menú lateral → grupo **Plantel** → **Plantel de Asistentes** → clic en una persona
+**Cómo llegar.** Menú lateral → grupo **Asistentes** → **Plantel de Asistentes** → clic en una persona
 → solapa **«Guardias trabajadas»**.
 
 **Qué es esa pantalla y para qué se usa.** Es la solapa del Legajo del Asistente donde se ve el historial de
@@ -942,7 +942,7 @@ exactamente la que no recibe la indicación de adónde ir a asignarle una.
 
 ## 17. Cuando ningún tipo de Asistente exige matrícula
 
-**Cómo llegar.** Menú lateral → grupo **Plantel** → **Plantel de Asistentes** → clic en una persona
+**Cómo llegar.** Menú lateral → grupo **Asistentes** → **Plantel de Asistentes** → clic en una persona
 → solapa **«Matrículas»**. El texto está en el lugar de la lista de matrículas.
 
 **Qué es esa pantalla y para qué se usa.** Es la solapa donde se cargan las matrículas de esa
@@ -995,7 +995,7 @@ El cuarto es que es una explicación puesta debajo de un control, en el lugar de
 
 ## 18. Cuando esa persona no recibió ninguna evaluación
 
-**Cómo llegar.** Menú lateral → grupo **Plantel** → **Plantel de Asistentes** → clic en una persona
+**Cómo llegar.** Menú lateral → grupo **Asistentes** → **Plantel de Asistentes** → clic en una persona
 → solapa **«Evaluaciones recibidas»**. Esta solapa sólo existe con la modalidad de Match.
 
 **Qué es esa pantalla y para qué se usa.** Es donde se ven las evaluaciones que los Clientes
@@ -1042,19 +1042,19 @@ del Panel no llevan punto.
 
 ---
 
-# Plantel → Postulaciones
+# Asistentes → Postulaciones
 
 Los dos carteles que siguen son del mismo mapa.
 
-## 19. Mapa del plantel — cuando no hay nadie en el plantel
+## 19. Mapa de los Asistentes — cuando no hay nadie en el Padrón
 
-**Cómo llegar.** Menú lateral → grupo **Plantel** → **Postulaciones**, y bajar hasta la sección
+**Cómo llegar.** Menú lateral → grupo **Asistentes** → **Postulaciones**, y bajar hasta la sección
 **«Mapa del plantel por zona»**.
 
 **Qué es esa pantalla y para qué se usa.** Es un mapa que muestra dónde vive la gente que hoy está
-trabajando en la Prestadora, agrupada por zona de cobertura, para mirar cómo está repartido el
-plantel antes de sumar gente nueva. Cada persona aparece como un puntito; el punto se dibuja
-únicamente si ese Legajo tiene una ubicación cargada. Nunca se muestra ninguna dirección escrita,
+trabajando en la Prestadora, agrupada por zona de cobertura, para mirar cómo están repartidos los
+Asistentes del Padrón antes de sumar gente nueva. Cada persona aparece como un puntito; el punto se dibuja
+únicamente si el Legajo de ese Asistente tiene una ubicación cargada. Nunca se muestra ninguna dirección escrita,
 sólo el punto.
 
 **Qué se ve en pantalla, de arriba abajo.**
@@ -1070,7 +1070,7 @@ Segundo renglón: «No hay nadie en el plantel activo.»
 Los dos renglones dicen lo mismo, palabra por palabra. No es un error de transcripción: la pantalla
 está pidiendo el mismo texto para el título del cartel y para el renglón de ayuda.
 
-**Cuándo aparece.** Cuando no hay ni una sola persona en el plantel activo. Es el estado de una
+**Cuándo aparece.** Cuando no hay ni un solo Asistente activo en el Padrón. Es el estado de una
 Prestadora que recién empieza, o de una que dio de baja a todo el mundo.
 
 **Qué desaparece mientras el cartel está puesto.** El mapa entero y todo lo que lo rodea: el renglón
@@ -1095,14 +1095,14 @@ domicilio ubicado aparecen acá.», nunca se llega a mostrar en esta situación.
 
 ---
 
-## 20. Mapa del plantel — cuando hay plantel pero ninguna ubicación cargada
+## 20. Mapa de los Asistentes — cuando hay Asistentes pero ninguna ubicación cargada
 
-**Cómo llegar.** El mismo camino que el cartel anterior: **Plantel → Postulaciones**, y bajar hasta
+**Cómo llegar.** El mismo camino que el cartel anterior: **Asistentes → Postulaciones**, y bajar hasta
 **«Mapa del plantel por zona»**. La diferencia con el caso anterior no es el camino sino la
 situación: acá sí hay gente trabajando.
 
-**Qué es esa pantalla y para qué se usa.** Es el mismo mapa descrito arriba: dónde vive la gente del
-plantel activo, agrupada por zona. La diferencia con el caso anterior es la situación: acá sí hay
+**Qué es esa pantalla y para qué se usa.** Es el mismo mapa descrito arriba: dónde viven los
+Asistentes activos del Padrón, agrupados por zona. La diferencia con el caso anterior es la situación: acá sí hay
 gente trabajando, pero de ninguna de esas personas se cargó una ubicación, así que no hay ni un punto
 que dibujar. La decisión deliberada es no mostrar un mapa mudo, porque un mapa vacío se lee como un
 mapa roto.
@@ -1116,7 +1116,7 @@ mapa roto.
 Primer renglón: «Todavía no hay ninguna ubicación para mostrar.»
 Segundo renglón: «Las fichas con el domicilio ubicado aparecen acá.»
 
-**Cuándo aparece.** Cuando hay al menos una persona en el plantel activo y ninguna de ellas tiene
+**Cuándo aparece.** Cuando hay al menos un Asistente activo en el Padrón y ninguno de ellas tiene
 ubicación cargada. También aparece cuando las ubicaciones que hay cargadas no sirven: un par de
 números fuera del rango posible, o el punto exacto cero-cero, que no es una ubicación sino una
 casilla que quedó vacía, se descartan y no cuentan como ubicación.
@@ -1128,14 +1128,14 @@ mapa, la lista escrita de nombres y el renglón que avisa cuántos quedaron sin 
 **Qué queda alrededor si el cartel se saca.** El título de la pantalla, el título «Mapa del plantel
 por zona», y debajo un blanco.
 
-**Problemas que se ven acá.** El cartel esconde justamente el dato que más falta hace: cuántas
-personas hay en el plantel. Se sabe que no hay ubicaciones, pero no se sabe si son tres personas sin
+**Problemas que se ven acá.** El cartel esconde justamente el dato que más falta hace: cuántos
+Asistentes hay en el Padrón. Se sabe que no hay ubicaciones, pero no se sabe si son tres personas sin
 ubicar o cuarenta, porque el renglón que dice esa cuenta desaparece junto con el mapa. El texto del
 segundo renglón habla de «fichas» y de «domicilio ubicado», dos palabras que no aparecen en ningún
 otro lado de esta pantalla —el resto habla de personas y de zonas—, y no dice dónde se carga esa
 ubicación, así que leído solo no se sabe adónde ir a resolverlo. Y hay una situación parecida que no
 muestra ningún cartel: si se elige una zona que no tiene a nadie ubicado, el dibujo del mapa queda
-sin puntos y no aparece ninguna explicación, porque el cartel sólo mira el total del plantel y no la
+sin puntos y no aparece ninguna explicación, porque el cartel sólo mira el total del Padrón y no la
 zona elegida.
 
 

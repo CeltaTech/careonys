@@ -1869,7 +1869,7 @@ quedan mandando a un lugar que ya no se llama así.
 
 ---
 
-## 90. Qué papeles exige el financiador
+## 90. Qué papeles exige el Pagador
 
 **Ruta:** `configuracion.papeles_pagador_explicacion`
 
@@ -1878,7 +1878,7 @@ quedan mandando a un lugar que ya no se llama así.
 > viene nada cargado. Sin ninguno cargado no se pide ninguno, y eso también es una respuesta
 > válida.
 
-**Dónde se ve:** Ajustes > Configuración > La Prestadora, bloque de papeles del financiador,
+**Dónde se ve:** Ajustes > Configuración > La Prestadora, bloque de papeles del Pagador,
 debajo del consentimiento.
 
 **Qué lo dispara:** está siempre.

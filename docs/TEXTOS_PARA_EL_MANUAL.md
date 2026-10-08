@@ -11,20 +11,20 @@ cual. La redacción final la aprueba el Desarrollador cuando se escriba el manua
 
 | Sección | Texto |
 |---|---|
-| Servicios | Un servicio agrupa una o varias prestaciones para un paciente y su financiador. |
+| Servicios | Un servicio agrupa una o varias prestaciones para un paciente y su Pagador. |
 | Guardias | Programación de la semana, asignaciones y reemplazos. La medición está en Reportes. |
 | Guardias, vista por Asistente | Vista de carga horaria: muestra qué hace cada asistente en la semana. Los turnos se crean y se editan en la vista por servicio. |
 | Asistentes | Reclutamiento, cualificación, documentación, disponibilidad y asignaciones. |
-| Clientes | Quien contrata y paga el servicio: los familiares del paciente o un financiador. |
+| Clientes | Quien contrata y paga el servicio: los familiares del paciente o un Pagador. |
 | Clientes, Contratación directa | Los familiares del paciente contratan y pagan el servicio directamente. |
 | Clientes, Financiadores | Obra social, prepaga o empresa que contrata y paga el servicio de sus afiliados. |
 | Empresas tercerizadas | Proveedores que ejecutan prestaciones y administran su propio personal. |
-| Facturación y pagos | Se cobra al cliente o al financiador por las horas prestadas, y se liquida a cada asistente por las que trabajó. |
+| Facturación y pagos | Se cobra al cliente o al Pagador por las horas prestadas, y se liquida a cada asistente por las que trabajó. |
 | Facturación y pagos, Cobranza | Las horas se cuentan de la programación de la semana, sin las que quedaron sin cubrir. |
 | Facturación y pagos, Liquidación | Se liquidan sólo las horas con entrada y salida cerradas. Las guardias programadas o en curso se suman al cerrarse. |
 | Facturación y pagos, A liquidar | Sobre horas con fichaje cerrado |
 | Comunicaciones | Lo que ocurre y lo que queda pendiente: lo detecta el sistema, lo informan las aplicaciones o llega por WhatsApp o correo. |
-| Capacitación | Catálogo de cursos, inscripción del plantel, dictado y contenido. |
+| Capacitación | Catálogo de cursos, inscripción de los Asistentes del Padrón, dictado y contenido. |
 | Tareas pendientes | Seguimiento de lo que quedó pendiente de resolución |
 | Reclutamiento | El proceso avanza en forma automática. La coordinación interviene sólo ante alarma o excepción. |
 | Reportes | Indicadores de operación, presentismo, cumplimiento y facturación. |
@@ -70,7 +70,7 @@ cual. La redacción final la aprueba el Desarrollador cuando se escriba el manua
 | Postulaciones, Cerrar la entrevista | Cerrarla deja constancia de que ya pasó. No cambia el estado de la postulación: eso se decide aparte. |
 | Asistentes, Datos bancarios | Los informa el Asistente desde su aplicación. |
 | Asistentes, Simulador, Cobertura de sus ausencias | La cobertura no es una estimación: es lo que ya se pagó para reemplazar a esta persona en los últimos {meses} meses, repartido por mes. Sale igual bajo los dos vínculos, porque se le paga a quien la reemplazó. |
-| Mapa del plantel | Las fichas con el domicilio ubicado aparecen acá. |
+| Mapa del Padrón | Los Asistentes con el domicilio ubicado aparecen acá. |
 
 ## Entrada al Panel
 

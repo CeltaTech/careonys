@@ -348,7 +348,7 @@ real o un join directo a `asistentes.zonas`: `asistentes` (lectura y edición),
 al ser ambas permisivas. **Pendiente, no resuelto**: `clientes`/`pacientes`/`prestaciones` no
 filtran por zona — Coordinador sigue viendo todas las filas de estas 3 tablas, igual que Admin,
 hasta que exista una decisión de producto sobre cómo derivar la zona de un Cliente. El dato
-disponible es el lugar del Legajo del Cliente (`legajos.lugar_id`). No adivinar esa semántica
+disponible es el lugar de la Ficha de Persona del Cliente (`legajos.lugar_id`). No adivinar esa semántica
 sin confirmarla primero.
 
 **Módulo 6 (Guardias), estado 2026-07-10:** las 8 tablas del Módulo 6, definidas en

@@ -121,11 +121,11 @@ async function nombresDeClientes(prestadoraId, ids) {
   // conformidad, y sus facturas y saldos se mostraban con el nombre. Se decide aparte.
   const { data, error } = await supabase
     .from('clientes')
-    .select('id, legajos!clientes_legajo_de_la_misma_prestadora(nombre_visible)')
+    .select('id, personas!clientes_contratante_de_la_misma_prestadora(nombre_visible)')
     .eq('prestadora_id', prestadoraId)
     .in('id', unicos);
   if (error) throw new Error(error.message);
-  return new Map((data || []).map((f) => [f.id, f.legajos?.nombre_visible ?? null]));
+  return new Map((data || []).map((f) => [f.id, f.personas?.nombre_visible ?? null]));
 }
 
 /**
@@ -407,19 +407,19 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
   // Clientes y los Pacientes pendientes de conformidad, que esta tanda facturaba. Se decide aparte.
   const { data: clientes, error: errorClientes } = await supabase
     .from('clientes')
-    .select('id, prestadora_id, dias_hasta_el_vencimiento, financiador_tipo, pagador_legajo_id, pacientes(id, nombre)')
+    .select('id, prestadora_id, dias_hasta_el_vencimiento, financiador_tipo, pagador_persona_id, pacientes(id, nombre)')
     .eq('prestadora_id', prestadoraId)
     .is('deleted_at', null);
   if (errorClientes) return responderError(res, errorClientes);
 
-  // Quién paga es un Legajo del Padrón. Su nombre se busca acá una sola vez, y de acá sale la
-  // copia que se lleva cada factura. Con la maestra: la base abre `legajos` a quien tiene la acción
-  // de ver el Padrón, y generar las facturas no la pide.
-  const pagadorIds = [...new Set((clientes || []).map((f) => f.pagador_legajo_id).filter(Boolean))];
+  // Quién paga es una Ficha del Directorio de Personas. Su nombre se busca acá una sola vez, y de
+  // acá sale la copia que se lleva cada factura. Con la maestra: la base abre `personas` a quien
+  // tiene la acción de ver el Directorio, y generar las facturas no la pide.
+  const pagadorIds = [...new Set((clientes || []).map((f) => f.pagador_persona_id).filter(Boolean))];
   const nombresDePagadores = new Map();
   if (pagadorIds.length > 0) {
     const { data: pagadores, error: errorPagadores } = await supabase
-      .from('legajos')
+      .from('personas')
       .select('id, nombre_visible')
       .eq('prestadora_id', prestadoraId)
       .in('id', pagadorIds);
@@ -528,7 +528,7 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
         // sí misma, las viejas tienen que seguir diciendo a quién se le reclamaron. Vacío en la
         // Ficha del cliente se guarda vacío, que quiere decir el Cliente.
         financiador_tipo: cliente.financiador_tipo ?? null,
-        financiador_nombre: nombresDePagadores.get(cliente.pagador_legajo_id) ?? null,
+        financiador_nombre: nombresDePagadores.get(cliente.pagador_persona_id) ?? null,
       })
       .select('id, prestadora_id')
       .single();

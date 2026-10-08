@@ -14,7 +14,7 @@
 // correo junto con la Prestadora, no el correo. Dos ventajas: el formato siempre es válido,
 // venga el correo que venga; y el correo de una persona —que es dato personal— no queda escrito
 // del lado del acceso, donde el aislamiento entre Prestadoras no se puede imponer. El correo de
-// verdad vive en el Padrón, que sí está aislado.
+// verdad vive en la cuenta de la persona, que sí está aislada.
 //
 // SE CALCULA SIEMPRE IGUAL Y SIN SECRETO. Un secreto acá no protegería nada que no esté ya
 // protegido —para leer del lado del acceso hace falta la llave maestra— y el día que se perdiera

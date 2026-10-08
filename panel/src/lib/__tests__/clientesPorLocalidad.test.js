@@ -21,12 +21,12 @@ const nombreDeLugar = (id) => CATALOGO.find((lugar) => lugar.id === id)?.nombre 
 const FILAS = [
   {
     id: 'f1',
-    legajos: { nombre_visible: 'Ferreyra, Alba', email: 'alba@ejemplo.test', telefonos_del_legajo: [{ telefono: '11 5555 0001' }] },
+    personas: { nombre_visible: 'Ferreyra, Alba', email: 'alba@ejemplo.test', telefonos_de_la_persona: [{ telefono: '11 5555 0001' }] },
     pacientes: [{ id: 'p1', lugar_id: BELGRANO_CIUDAD, deleted_at: null }],
   },
   {
     id: 'f2',
-    legajos: { nombre_visible: 'Salas, Bruno', email: 'bruno@ejemplo.test', telefonos_del_legajo: [{ telefono: '11 5555 0002' }] },
+    personas: { nombre_visible: 'Salas, Bruno', email: 'bruno@ejemplo.test', telefonos_de_la_persona: [{ telefono: '11 5555 0002' }] },
     pacientes: [
       { id: 'p2', lugar_id: BELGRANO_SAN_ISIDRO, deleted_at: null },
       { id: 'p3', lugar_id: AVELLANEDA, deleted_at: null },
@@ -34,12 +34,12 @@ const FILAS = [
   },
   {
     id: 'f3',
-    legajos: { nombre_visible: 'Ortiz, Celia', email: 'celia@ejemplo.test', telefonos_del_legajo: [{ telefono: '11 5555 0003' }] },
+    personas: { nombre_visible: 'Ortiz, Celia', email: 'celia@ejemplo.test', telefonos_de_la_persona: [{ telefono: '11 5555 0003' }] },
     pacientes: [{ id: 'p4', lugar_id: AVELLANEDA, deleted_at: '2026-09-01T00:00:00Z' }],
   },
   {
     id: 'f4',
-    legajos: { nombre_visible: 'Roca, Delia', email: 'delia@ejemplo.test', telefonos_del_legajo: [{ telefono: '11 5555 0004' }] },
+    personas: { nombre_visible: 'Roca, Delia', email: 'delia@ejemplo.test', telefonos_de_la_persona: [{ telefono: '11 5555 0004' }] },
     pacientes: [{ id: 'p5', lugar_id: null, deleted_at: null }],
   },
 ];

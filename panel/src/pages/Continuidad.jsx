@@ -24,7 +24,7 @@ import { useAlarmasTomadas } from '../hooks/useAlarmasTomadas';
 import { TIPOS_DE_ALARMA } from '../lib/alarmasTomadas';
 import { ORIGENES } from '../lib/pacienteSolo';
 import { LoQuePasoEnLaCasa } from '../components/continuidad/LoQuePasoEnLaCasa';
-import { SelectorDeLegajo } from '../components/padron/SelectorDeLegajo';
+import { SelectorDePersona } from '../components/personas/SelectorDePersona';
 import '../styles/molde-paginas.css';
 import './seguimientoDeGuardias.css';
 
@@ -120,22 +120,22 @@ export function Continuidad() {
       const idsPacientesNotificaciones = (notificacionesData ?? []).map((n) => n.paciente_id);
       const idsPacientes = Array.from(new Set([...idsPacientesGuardias, ...idsPacientesNotificaciones]));
 
-      // El familiar que se quedó es un Legajo del Padrón, y el nombre no está copiado en la fila:
-      // se lo busca cada vez, que es lo que permite que cambiarlo en el Padrón se vea en todos
-      // lados. `nombre_visible` lo arma la base.
-      const idsLegajosFamiliares = Array.from(
-        new Set((excepcionesData ?? []).map((e) => e.familiar_legajo_id).filter(Boolean)),
+      // El familiar que se quedó es una Ficha de Persona del Directorio, y el nombre no está
+      // copiado en la fila: se lo busca cada vez, que es lo que permite que cambiarlo en el
+      // Directorio de Personas se vea en todos lados. `nombre_visible` lo arma la base.
+      const idsPersonasFamiliares = Array.from(
+        new Set((excepcionesData ?? []).map((e) => e.familiar_persona_id).filter(Boolean)),
       );
 
-      const [{ data: pacientesData }, { data: asistentesData }, { data: legajosData }] = await Promise.all([
+      const [{ data: pacientesData }, { data: asistentesData }, { data: personasData }] = await Promise.all([
         idsPacientes.length ? supabase.from('pacientes').select('id, nombre').in('id', idsPacientes) : Promise.resolve({ data: [] }),
         // El plantel entero, con su estado. Sin filtrar acá porque esta misma lista le pone el
         // nombre al Asistente que faltó en cada incidente y en cada alerta, y quien después se
         // fue de la Prestadora tiene que seguir teniendo nombre en un incidente de la semana
         // pasada. Quién puede tomar el reemplazo lo decide `ResolverIncidente`, más abajo.
         supabase.from('asistentes').select('id, nombre, estado').order('nombre'),
-        idsLegajosFamiliares.length
-          ? supabase.from('legajos').select('id, nombre_visible').in('id', idsLegajosFamiliares)
+        idsPersonasFamiliares.length
+          ? supabase.from('personas').select('id, nombre_visible').in('id', idsPersonasFamiliares)
           : Promise.resolve({ data: [] }),
       ]);
 
@@ -154,8 +154,8 @@ export function Continuidad() {
         cerrado_por_nombre: n.cerrado_por_nombre || '—',
       }));
 
-      const nombresDeLegajos = Object.fromEntries(
-        (legajosData ?? []).map((l) => [l.id, l.nombre_visible]),
+      const nombresDePersonas = Object.fromEntries(
+        (personasData ?? []).map((p) => [p.id, p.nombre_visible]),
       );
 
       const filasExcepciones = (excepcionesData ?? []).map((e) => {
@@ -163,7 +163,7 @@ export function Continuidad() {
         return {
           ...e,
           paciente_nombre: nombresDelTurno(g),
-          familiar_nombre_visible: nombresDeLegajos[e.familiar_legajo_id] ?? null,
+          familiar_nombre_visible: nombresDePersonas[e.familiar_persona_id] ?? null,
           dias_abierta: diasDeEspera(e.desde_at),
         };
       });
@@ -514,7 +514,7 @@ function ResolverIncidente({ incidente, asistentes, usuario, onClose, onResuelto
   const confirmarDestructivo = useConfirmarDestructivo();
   const [tipo, setTipo] = useState('suplente');
   const [asistenteId, setAsistenteId] = useState('');
-  const [familiarLegajoId, setFamiliarLegajoId] = useState(null);
+  const [familiarPersonaId, setFamiliarPersonaId] = useState(null);
   const [motivo, setMotivo] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
@@ -548,7 +548,7 @@ function ResolverIncidente({ incidente, asistentes, usuario, onClose, onResuelto
           guardia_id: incidente.guardia_entrante_id,
           origen: ORIGENES.RELEVO,
           incidente_id: incidente.id,
-          familiar_legajo_id: familiarLegajoId,
+          familiar_persona_id: familiarPersonaId,
           registrado_por: usuario.id,
           motivo: motivo.trim() || null,
           desde_at: ahora,
@@ -588,7 +588,7 @@ function ResolverIncidente({ incidente, asistentes, usuario, onClose, onResuelto
 
   // El motivo dejó de ser obligatorio: era la justificación de una excepción autorizada, y esto
   // no es una excepción autorizada. El familiar no tiene que justificar nada.
-  const puedeGuardar = esFamiliar ? Boolean(familiarLegajoId) : Boolean(asistenteId);
+  const puedeGuardar = esFamiliar ? Boolean(familiarPersonaId) : Boolean(asistenteId);
 
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
@@ -607,13 +607,13 @@ function ResolverIncidente({ incidente, asistentes, usuario, onClose, onResuelto
             {/* Se dice en la cara de quien lo está cargando, antes de que lo cargue: esto no es
                 una forma de cubrir el turno. El Cliente contrató para no tener que quedarse. */}
             <Alert variant="error">{t.continuidad.resolver_familiar_es_defecto_grave}</Alert>
-            {/* Del Padrón, y Persona física: quien se quedó cuidando es alguien con quien la
-                Prestadora se vuelve a cruzar, y tecleado sería cada vez alguien distinto. */}
-            <SelectorDeLegajo
-              name="familiar_legajo_id"
+            {/* Del Directorio de Personas, y Persona física: quien se quedó cuidando es alguien con
+                quien la Prestadora se vuelve a cruzar, y tecleado sería cada vez alguien distinto. */}
+            <SelectorDePersona
+              name="familiar_persona_id"
               label={t.continuidad.resolver_familiar_legajo}
-              valor={familiarLegajoId}
-              alElegir={setFamiliarLegajoId}
+              valor={familiarPersonaId}
+              alElegir={setFamiliarPersonaId}
               clase="fisica"
             />
             <FormField label={t.continuidad.resolver_familiar_motivo} name="motivo" type="textarea" value={motivo} onChange={(e) => setMotivo(e.target.value)} />

@@ -73,7 +73,7 @@ function textoUsable(valor, maximo) {
 
 const FORMA_DE_IDENTIFICADOR = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Falla cerrado: lo que no tiene forma de identificador no señala ningún Legajo.
+// Falla cerrado: lo que no tiene forma de identificador no señala ninguna Ficha de Persona.
 function identificadorUsable(valor) {
   return typeof valor === 'string' && FORMA_DE_IDENTIFICADOR.test(valor.trim());
 }
@@ -115,12 +115,12 @@ export function revisarConsentimiento(datos) {
  * El motivo no se pide. El familiar no tiene que justificar por qué se quedó en su propia casa; si
  * hay algo que dejar escrito, se escribe, y si no, no.
  *
- * Quién se quedó se elige del Padrón y se guarda cuál Legajo es, nunca su nombre tecleado. Que sea
- * una Persona física lo comprueba además la base, al dar de alta.
+ * Quién se quedó se elige del Directorio de Personas y se guarda cuál Ficha de Persona es, nunca su
+ * nombre tecleado. Que sea una Persona física lo comprueba además la base, al dar de alta.
  */
 export function revisarFamiliarQueSeQuedo(datos) {
-  if (!identificadorUsable(datos?.familiar_legajo_id)) {
-    return { ok: false, campo: 'familiar_legajo_id' };
+  if (!identificadorUsable(datos?.familiar_persona_id)) {
+    return { ok: false, campo: 'familiar_persona_id' };
   }
   if (!ORIGENES_POSIBLES.includes(datos?.origen)) return { ok: false, campo: 'origen' };
 

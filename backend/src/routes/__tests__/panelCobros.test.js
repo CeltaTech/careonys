@@ -198,7 +198,7 @@ const CON_LA_MAESTRA = [
   '/registro_actividad',
   '/configuracion_facturacion_clientes',
   '/opciones_de_lista',
-  '/legajos',
+  '/personas',
   // Los nombres de los Clientes y los Clientes que se facturan: la base esconde los pendientes de
   // conformidad a todos los roles, y esta ruta los mostraba y los facturaba.
   '/clientes',
@@ -331,7 +331,7 @@ describe('con un software de cobranzas conectado, acá no se calcula', () => {
 
   it('sin nada conectado no cambia nada: el saldo calculado sigue saliendo', async () => {
     respuestas.set('GET /rest/v1/saldos_cliente', () => [saldoConCobrado(40000)]);
-    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, legajos: { nombre_visible: 'Prueba, Ana' } }]);
+    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, personas: { nombre_visible: 'Prueba, Ana' } }]);
 
     const { estado, cuerpo } = await pedir('GET', '/saldos?periodo=2026-08');
     assert.equal(estado, 200);
@@ -353,7 +353,7 @@ describe('el estado de cuenta que llegó de afuera', () => {
 
   it('se entrega tal como llegó, con el nombre del Cliente al lado', async () => {
     respuestas.set('GET /rest/v1/estado_de_cuenta_externo_vigente', () => [ESTADO_QUE_LLEGO]);
-    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, legajos: { nombre_visible: 'Prueba, Ana' } }]);
+    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, personas: { nombre_visible: 'Prueba, Ana' } }]);
 
     const { estado, cuerpo } = await pedir('GET', '/estados-de-cuenta');
     assert.equal(estado, 200);
@@ -367,7 +367,7 @@ describe('el estado de cuenta que llegó de afuera', () => {
 
   it('no se mezcla con la resta de este sistema: esa vista no se consulta', async () => {
     respuestas.set('GET /rest/v1/estado_de_cuenta_externo_vigente', () => [ESTADO_QUE_LLEGO]);
-    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, legajos: { nombre_visible: 'Prueba, Ana' } }]);
+    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, personas: { nombre_visible: 'Prueba, Ana' } }]);
 
     await pedir('GET', '/estados-de-cuenta');
 
@@ -388,7 +388,7 @@ describe('el estado de cuenta que llegó de afuera', () => {
         informado_at: '2026-09-17T10:00:00Z',
       },
     ]);
-    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, legajos: { nombre_visible: 'Prueba, Ana' } }]);
+    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, personas: { nombre_visible: 'Prueba, Ana' } }]);
 
     const { cuerpo } = await pedir('GET', '/estados-de-cuenta');
     assert.equal(cuerpo[0].dias_de_atraso, null);
@@ -400,7 +400,7 @@ describe('el estado de cuenta que llegó de afuera', () => {
 
   it('todo se pide con la credencial de quien llama, y nada con la llave maestra', async () => {
     respuestas.set('GET /rest/v1/estado_de_cuenta_externo_vigente', () => [ESTADO_QUE_LLEGO]);
-    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, legajos: { nombre_visible: 'Prueba, Ana' } }]);
+    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, personas: { nombre_visible: 'Prueba, Ana' } }]);
 
     await pedir('GET', '/estados-de-cuenta');
 
@@ -482,7 +482,7 @@ describe('el estado de cuenta lo ve solamente quien tiene la acción habilitada'
 
   it('con la acción habilitada, se entrega como siempre', async () => {
     respuestas.set('GET /rest/v1/saldos_cliente', () => [saldoConCobrado(40000)]);
-    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, legajos: { nombre_visible: 'Prueba, Ana' } }]);
+    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, personas: { nombre_visible: 'Prueba, Ana' } }]);
 
     const { estado, cuerpo } = await pedir('GET', '/saldos?periodo=2026-08');
     assert.equal(estado, 200);
@@ -498,7 +498,7 @@ describe('la lista de saldos', () => {
 
   it('trae la resta ya hecha, y de qué orígenes salió', async () => {
     respuestas.set('GET /rest/v1/saldos_cliente', () => [saldoConCobrado(40000, 'pendiente', ['api'])]);
-    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, legajos: { nombre_visible: 'Prueba, Ana' } }]);
+    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, personas: { nombre_visible: 'Prueba, Ana' } }]);
 
     const { estado, cuerpo } = await pedir('GET', '/saldos?periodo=2026-08');
     assert.equal(estado, 200);
@@ -511,7 +511,7 @@ describe('la lista de saldos', () => {
 
   it('todo se pide con la credencial de quien llama, y nada con la llave maestra', async () => {
     respuestas.set('GET /rest/v1/saldos_cliente', () => [saldoConCobrado(40000)]);
-    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, legajos: { nombre_visible: 'Prueba, Ana' } }]);
+    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, personas: { nombre_visible: 'Prueba, Ana' } }]);
 
     await pedir('GET', '/saldos?periodo=2026-08');
 
@@ -535,7 +535,7 @@ describe('el detalle de una factura', () => {
 
   it('trae los cobros, incluidos los anulados: anular no es borrar', async () => {
     respuestas.set('GET /rest/v1/saldos_cliente', () => [saldoConCobrado(40000)]);
-    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, legajos: { nombre_visible: 'Prueba, Ana' } }]);
+    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, personas: { nombre_visible: 'Prueba, Ana' } }]);
     respuestas.set('GET /rest/v1/correcciones_factura_cliente', () => []);
     respuestas.set('GET /rest/v1/cobros_cliente', () => [
       { id: 'c-1', monto: '40000.00', estado: 'registrado', origen: 'panel' },
@@ -551,7 +551,7 @@ describe('el detalle de una factura', () => {
 
   it('trae también las correcciones, que no son cobros y van aparte', async () => {
     respuestas.set('GET /rest/v1/saldos_cliente', () => [saldoConCobrado(0)]);
-    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, legajos: { nombre_visible: 'Prueba, Ana' } }]);
+    respuestas.set('GET /rest/v1/clientes', () => [{ id: CLIENTE, personas: { nombre_visible: 'Prueba, Ana' } }]);
     respuestas.set('GET /rest/v1/cobros_cliente', () => []);
     respuestas.set('GET /rest/v1/correcciones_factura_cliente', () => [
       { id: 'k-1', sentido: 'resta', monto: '6050.00', comprobante_tipo: 'Nota de crédito A', motivo: 'se facturaron cuatro horas de más' },

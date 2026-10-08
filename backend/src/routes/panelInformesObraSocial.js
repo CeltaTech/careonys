@@ -12,7 +12,7 @@ export const panelInformesObraSocialRouter = Router();
 // CON LA LLAVE MAESTRA, Y FILTRADO A MANO POR LA PRESTADORA. Esta ruta no pasa todavía a la
 // credencial de quien pide porque la base es más estrecha que lo que la ruta hace hoy, y cambiar
 // qué ve cada rol se decide aparte:
-// - `legajos_los_lee_su_organizacion` pide el permiso `ver_padron`: sin él, el informe saldría con
+// - `personas_las_lee_su_organizacion` pide el permiso `ver_personas`: sin él, el informe saldría con
 //   el nombre de la obra social vacío.
 // - `coordinador_gestiona_guardias_de_su_zona` (guardias) y
 //   `coordinador_gestiona_informes_obra_social_de_su_zona` le muestran al coordinador sólo lo de
@@ -63,7 +63,7 @@ async function cuantosPacientesPorGuardia(guardiaIds, prestadoraId) {
 async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde, periodoHasta }) {
   const { data: paciente, error: errorPaciente } = await supabase
     .from('pacientes')
-    .select('id, nombre, obra_social_legajo_id, numero_afiliado, cliente_id')
+    .select('id, nombre, obra_social_persona_id, numero_afiliado, cliente_id')
     .eq('id', pacienteId)
     .eq('prestadora_id', prestadoraId)
     .maybeSingle();
@@ -73,19 +73,19 @@ async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde
   // El motivo contesta lo mismo en los dos casos.
   if (!paciente) throw new ErrorConMotivo('paciente_no_encontrado', `paciente ${pacienteId}`);
 
-  // Cómo se llama la obra social no está copiado en el Paciente: el Paciente guarda cuál Legajo
-  // del Padrón es, y el nombre se busca acá, al armar el informe. Si el Paciente no tiene
+  // Cómo se llama la obra social no está copiado en el Paciente: el Paciente guarda cuál Ficha
+  // del Directorio de Personas es, y el nombre se busca acá, al armar el informe. Si el Paciente no tiene
   // ninguna, no hay nada que buscar y el informe sale con el renglón vacío, como antes.
   let obraSocialNombre = null;
-  if (paciente.obra_social_legajo_id) {
-    const { data: legajo, error: errorLegajo } = await supabase
-      .from('legajos')
+  if (paciente.obra_social_persona_id) {
+    const { data: persona, error: errorPersona } = await supabase
+      .from('personas')
       .select('nombre_visible')
-      .eq('id', paciente.obra_social_legajo_id)
+      .eq('id', paciente.obra_social_persona_id)
       .eq('prestadora_id', prestadoraId)
       .maybeSingle();
-    if (errorLegajo) throw new Error(errorLegajo.message);
-    obraSocialNombre = legajo?.nombre_visible ?? null;
+    if (errorPersona) throw new Error(errorPersona.message);
+    obraSocialNombre = persona?.nombre_visible ?? null;
   }
 
   // Las guardias de este Paciente salen de la lista de Pacientes de cada guardia, no de la

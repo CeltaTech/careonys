@@ -93,7 +93,7 @@ panelHabilitarClaveRouter.post(
 );
 
 // La foto del Legajo del Asistente, cuando la hay. Es lo que le permite a quien atiende reconocer a quien llama,
-// y sale del Legajo del Asistente, que es donde vive: el Legajo del Padrón no guarda ninguna.
+// y sale del Legajo del Asistente, que es donde vive: la Ficha de Persona no guarda ninguna.
 // La Organización va escrita en la consulta y no se deduce de que la cuenta ya haya salido
 // filtrada: el Legajo del Asistente es de una Prestadora, y se lo pide nombrándola.
 async function conFoto(cuenta, prestadoraId) {

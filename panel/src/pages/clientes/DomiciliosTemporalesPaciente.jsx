@@ -16,7 +16,7 @@ import { useCatalogoDeLugares } from '../../hooks/useCatalogoDeLugares';
 import '../../styles/molde-paginas.css';
 import '../hojaDeTarjetas.css';
 
-// Dónde se atiende al Paciente cuando no está en el domicilio de su Legajo del Paciente.
+// Dónde se atiende al Paciente cuando no está en su domicilio de siempre.
 //
 // Cuál domicilio rige hoy NO se calcula acá: se le pregunta a la base con
 // `domicilio_del_paciente_en`, que es el único lugar donde vive ese criterio y el mismo que

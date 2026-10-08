@@ -6,7 +6,7 @@
 // pregunta, y acomoda la respuesta para que la pantalla la pueda buscar por fecha y Paciente.
 //
 // Por qué hace falta acá: una pantalla que revisa turnos de días pasados no puede medir contra
-// la dirección que figura hoy en el Legajo del Paciente. Si el Paciente pasó marzo en la casa de una hija, el
+// la dirección que figura hoy en el Paciente. Si el Paciente pasó marzo en la casa de una hija, el
 // Asistente fue ahí, y medir contra la casa de siempre lo daría lejos cuando llegó bien.
 
 import { supabase } from './supabaseClient';

@@ -530,17 +530,22 @@ export async function revocarPersonaAutorizada(db, usuarioId, { prestadoraId, cl
 // Da de alta un Cliente que llega en una planilla importada: es la cartera que la Prestadora ya
 // atendía antes de usar Careonys.
 //
-// El Cliente está en el Padrón: su nombre, su correo y su teléfono se guardan en su Legajo, y la
-// Ficha del cliente lo apunta. Un Legajo no se borra nunca, así que si el alta se corta después
-// de crearlo, la persona queda en el Padrón como contacto.
+// El Cliente está en el Directorio de Personas: su nombre, su correo y su teléfono se guardan en su
+// Ficha de Persona, y la Ficha del cliente la apunta. Una Ficha de Persona no se borra nunca, así
+// que si el alta se corta después de crearla, la persona queda en el Directorio como contacto, y
+// la próxima vez que llegue esa fila se la encuentra por su documento.
 export async function crearClienteImportado({
-  nombreContacto, apellidoContacto, telefono, email, localidad, plan,
+  nombreContacto, apellidoContacto, documentoContacto, telefono, email, localidad, plan,
   nombrePaciente, domicilioPaciente, domicilioDelPacientePartido,
   fechaNacimientoPaciente, nivelComplejidadPaciente, patologiasPaciente,
   prestadoraId, importacionId, db,
 }) {
   if (!nombreContacto || !apellidoContacto || !email || !nombrePaciente) {
     throw new ErrorConMotivo('faltan_datos', 'Faltan datos obligatorios (nombreContacto, apellidoContacto, email, nombrePaciente)');
+  }
+  const documento = String(documentoContacto ?? '').replace(/[\s.-]/g, '');
+  if (!documento) {
+    throw new ErrorConMotivo('falta_el_documento', 'La fila no trae el documento de quien contrata');
   }
 
   // El domicilio llega como un renglón suelto, que es lo que la planilla trae, o partido si
@@ -562,6 +567,12 @@ export async function crearClienteImportado({
     localidad: nombreDeSuLugar || localidad,
   });
 
+  // La Ficha va antes que la cuenta: un documento mal escrito rechaza la fila sin dejar una cuenta
+  // de acceso a medio hacer.
+  const persona = await fichaDelContacto(db, {
+    prestadoraId, documento, nombreContacto, apellidoContacto, email, telefono, lugarId: partes.lugar_id,
+  });
+
   // Igual que en el alta de Asistente: la cuenta es la persona y la Ficha del cliente es lo suyo en
   // esta Prestadora. La misma persona puede ser Cliente en otra sin volver a darse de alta.
   let cuentaId;
@@ -571,38 +582,17 @@ export async function crearClienteImportado({
       email, nombre: `${nombreContacto} ${apellidoContacto}`, telefono, rol: 'cliente', prestadoraId, enviarActivacion: true,
     }));
 
-    const { data: legajo, error: errorLegajo } = await db
-      .from('legajos')
-      .insert({
-        prestadora_id: prestadoraId,
-        clase: 'fisica',
-        nombre: nombreContacto,
-        apellido: apellidoContacto,
-        email,
-        lugar_id: partes.lugar_id || null,
-      })
-      .select('id')
-      .single();
-    if (errorLegajo) throw new Error(errorLegajo.message);
-
-    if (telefono) {
-      const { error: errorTelefono } = await db
-        .from('telefonos_del_legajo')
-        .insert({ prestadora_id: prestadoraId, legajo_id: legajo.id, telefono });
-      if (errorTelefono) throw new Error(errorTelefono.message);
-    }
-
     const { data: clienteNuevo, error: errorCliente } = await db
       .from('clientes')
       .insert({
         usuario_id: cuentaId,
-        legajo_id: legajo.id,
+        contratante_persona_id: persona.id,
         prestadora_id: prestadoraId,
         plan: plan || null,
         importacion_id: importacionId || null,
         pendiente_conformidad: Boolean(importacionId),
       })
-      .select('id')
+      .select('id, numero_cliente')
       .single();
     if (errorCliente) throw new Error(errorCliente.message);
     clienteId = clienteNuevo.id;
@@ -626,9 +616,105 @@ export async function crearClienteImportado({
       .single();
     if (errorPaciente) throw new Error(errorPaciente.message);
 
-    return { clienteId, pacienteId: paciente.id };
+    return {
+      clienteId,
+      pacienteId: paciente.id,
+      numeroCliente: clienteNuevo.numero_cliente,
+      fichaQueYaExistia: persona.yaExistia,
+    };
   } catch (error) {
     await deshacerAlta(db, cuentaId, { prestadoraId, filas: filasDeUnaCliente(clienteId) });
     throw error;
   }
+}
+
+// Lo que la base contesta cuando el documento no sirve. Viajan tal cual como motivo: son códigos,
+// y la frase está en las traducciones.
+const MOTIVOS_DEL_DOCUMENTO = ['falta_el_documento', 'numero_no_valido'];
+
+// La Ficha de quien contrata, buscada por su documento. Una persona se guarda una sola vez: si ya
+// está en el Directorio, se usa esa Ficha tal como está —nombre, apellido y correo quedan los que
+// tenía— y lo único que se le suma es el teléfono, si no lo tenía. Si no está, se crea.
+//
+// Se busca entre los tipos del país que llevan dígito verificador, porque el mismo número puede
+// estar cargado como CUIL o como CUIT. Cuál se pone a una Ficha nueva es el primero de esos tipos
+// en el orden del catálogo: qué número se pide en cada país lo dice el catálogo, no el código.
+async function fichaDelContacto(db, { prestadoraId, documento, nombreContacto, apellidoContacto, email, telefono, lugarId }) {
+  const { data: prestadora } = await db
+    .from('prestadoras')
+    .select('pais')
+    .eq('id', prestadoraId)
+    .single();
+  const { data: tipos, error: errorTipos } = await db
+    .from('catalogo_documentos_de_identidad')
+    .select('codigo')
+    .eq('pais', prestadora?.pais)
+    .eq('clase', 'fisica')
+    .eq('activo', true)
+    .eq('verifica_modulo_11', true)
+    .order('orden');
+  if (errorTipos) throw new Error(errorTipos.message);
+  const codigos = (tipos ?? []).map((tipo) => tipo.codigo);
+
+  if (codigos.length) {
+    const { data: existente, error: errorExistente } = await db
+      .from('personas')
+      .select('id')
+      .eq('prestadora_id', prestadoraId)
+      .eq('clase', 'fisica')
+      .eq('documento_numero', documento)
+      .in('documento_tipo', codigos)
+      .limit(1)
+      .maybeSingle();
+    if (errorExistente) throw new Error(errorExistente.message);
+
+    if (existente) {
+      if (telefono) await sumarTelefono(db, { prestadoraId, personaId: existente.id, telefono });
+      return { id: existente.id, yaExistia: true };
+    }
+  }
+
+  const { data: persona, error: errorPersona } = await db
+    .from('personas')
+    .insert({
+      prestadora_id: prestadoraId,
+      clase: 'fisica',
+      nombre: nombreContacto,
+      apellido: apellidoContacto,
+      documento_tipo: codigos[0] ?? null,
+      documento_numero: documento,
+      email,
+      lugar_id: lugarId || null,
+    })
+    .select('id')
+    .single();
+  if (errorPersona) {
+    if (MOTIVOS_DEL_DOCUMENTO.includes(errorPersona.message)) {
+      throw new ErrorConMotivo(errorPersona.message, 'El documento de quien contrata no sirve');
+    }
+    if (errorPersona.code === '23505') {
+      throw new ErrorConMotivo('documento_repetido', 'Ya hay una Ficha con ese documento');
+    }
+    throw new Error(errorPersona.message);
+  }
+
+  if (telefono) await sumarTelefono(db, { prestadoraId, personaId: persona.id, telefono });
+  return { id: persona.id, yaExistia: false };
+}
+
+// Un teléfono más en la Ficha, salvo que ya lo tenga escrito igual.
+async function sumarTelefono(db, { prestadoraId, personaId, telefono }) {
+  const { data: yaEsta } = await db
+    .from('telefonos_de_la_persona')
+    .select('id')
+    .eq('prestadora_id', prestadoraId)
+    .eq('persona_id', personaId)
+    .eq('telefono', telefono)
+    .limit(1)
+    .maybeSingle();
+  if (yaEsta) return;
+  const { error } = await db
+    .from('telefonos_de_la_persona')
+    .insert({ prestadora_id: prestadoraId, persona_id: personaId, telefono });
+  if (error) throw new Error(error.message);
 }

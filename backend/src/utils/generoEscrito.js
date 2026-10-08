@@ -3,8 +3,14 @@
 // la Prestadora haya escrito, y puede llamar a la columna «sexo». Qué códigos acepta cada país lo
 // decide el catálogo de la base, que es quien rechaza lo que no esté.
 const EQUIVALENCIAS = {
-  femenino: ['f', 'fem', 'femenino', 'femenina', 'mujer', 'female', 'woman', 'feminino'],
-  masculino: ['m', 'masc', 'masculino', 'masculina', 'varon', 'hombre', 'male', 'man'],
+  femenino: [
+    'f', 'fem', 'femenino', 'femenina', 'mujer', 'hembra', 'femina', 'dama',
+    'female', 'woman', 'feminino', 'mulher', 'femea',
+  ],
+  masculino: [
+    'm', 'masc', 'masculino', 'masculina', 'varon', 'hombre', 'macho', 'caballero',
+    'male', 'man', 'homem',
+  ],
   x: ['x', 'no binario', 'no binaria', 'nobinario', 'non binary', 'non-binary', 'nao binario'],
 };
 

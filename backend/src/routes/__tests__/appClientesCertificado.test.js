@@ -98,7 +98,7 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/usuarios', [{ rol: 'cliente', prestadora_id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/clientes', [{ id: CLIENTE }]);
   respuestas.set('GET /rest/v1/pacientes', [
-    { id: PACIENTE, nombre: 'Persona Inventada', cliente_id: CLIENTE, prestadora_id: PRESTADORA },
+    { id: PACIENTE, cliente_id: CLIENTE, prestadora_id: PRESTADORA, persona: { nombre_visible: 'Persona Inventada' } },
   ]);
   respuestas.set('GET /rest/v1/asistentes', [
     { id: ASISTENTE, nombre: 'Asistente Inventado', foto_url: null, tipo_asistente_id: null },

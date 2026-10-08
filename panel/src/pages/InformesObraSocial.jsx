@@ -15,6 +15,7 @@ import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 import '../styles/molde-paginas.css';
 import './informesObraSocial.css';
+import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -226,14 +227,13 @@ export function InformesObraSocial() {
       setEstadoPacientes('cargando');
       const { data, error: errorConsulta } = await supabase
         .from('pacientes')
-        .select('id, nombre, cliente_id')
-        .is('deleted_at', null)
-        .order('nombre');
+        .select(`id, cliente_id, ${FICHA_NOMBRE}`)
+        .is('deleted_at', null);
       if (errorConsulta) {
         setEstadoPacientes('error');
         return;
       }
-      setPacientes(data ?? []);
+      setPacientes(conSusFichas(data).sort((a, b) => (a.nombre ?? '').localeCompare(b.nombre ?? '')));
       setEstadoPacientes('listo');
     }
     cargarPacientes();

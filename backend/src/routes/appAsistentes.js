@@ -13,6 +13,7 @@ import {
   asistenteAtiendeAlPaciente,
 } from '../utils/pacientesDeGuardia.js';
 import { conDomicilioDelDia, pacientesConDomicilioDelDia } from '../utils/domicilioDelDia.js';
+import { FICHA_DOMICILIO, FICHA_NOMBRE, FICHA_UBICACION } from '../utils/fichaDelPaciente.js';
 import { llegoAlDomicilio } from '../utils/toleranciaCheckin.js';
 import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
 import { telefonoParaEmergencias } from '../utils/contactoDeLaPrestadora.js';
@@ -83,12 +84,12 @@ export const appAsistentesRouter = Router();
 // las necesita para trabajar. En la lista de sus turnos no van ni aunque estén prendidas: ahí
 // alcanza con saber a quién y a qué hora.
 function camposDePacienteParaElAsistente(visibilidad, { conPatologias = false } = {}) {
+  // El nombre y el domicilio están en la Ficha de Persona: si la Prestadora no deja ver el
+  // domicilio, de la Ficha se pide sólo el nombre.
+  const ficha = visibilidad.asistente_domicilio_del_paciente !== false ? FICHA_DOMICILIO : FICHA_NOMBRE;
   return columnasSegunVisibilidad([
     'id',
-    'nombre',
-    ['domicilio', 'asistente_domicilio_del_paciente'],
-    ['lat', 'asistente_domicilio_del_paciente'],
-    ['lng', 'asistente_domicilio_del_paciente'],
+    ficha,
     ...(conPatologias ? [['patologias', 'asistente_patologias_del_paciente']] : []),
   ], visibilidad);
 }
@@ -214,7 +215,7 @@ async function reportesDeLaGuardia(guardiaId, prestadoraId) {
 // cerrar, y lo que la pantalla del Asistente muestra como lo que le queda por hacer.
 async function pacientesSinReporte(guardia) {
   const [pacientes, reportes] = await Promise.all([
-    pacientesDeGuardia(guardia.prestadora_id, guardia, 'id, nombre'),
+    pacientesDeGuardia(guardia.prestadora_id, guardia, `id, ${FICHA_NOMBRE}`),
     reportesDeLaGuardia(guardia.id, guardia.prestadora_id),
   ]);
   const conReporte = new Set(reportes.map((r) => r.paciente_id));
@@ -818,7 +819,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
   // ve el Asistente en el teléfono, no contra qué mide el backend de este lado.
   let pacientes;
   try {
-    pacientes = await pacientesDeGuardia(guardia.prestadora_id, guardia, 'id, nombre, lat, lng, cliente_id');
+    pacientes = await pacientesDeGuardia(guardia.prestadora_id, guardia, `id, cliente_id, ${FICHA_UBICACION}`);
     pacientes = await pacientesConDomicilioDelDia(guardia, pacientes);
   } catch (e) {
     return responderError(res, e);
@@ -1579,7 +1580,7 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
   // la hoja de la persona equivocada es un daño que después nadie encuentra.
   let pacientes;
   try {
-    pacientes = await pacientesDeGuardia(guardia.prestadora_id, guardia, 'id, nombre');
+    pacientes = await pacientesDeGuardia(guardia.prestadora_id, guardia, `id, ${FICHA_NOMBRE}`);
   } catch (e) {
     return responderError(res, e);
   }

@@ -31,6 +31,7 @@ import { MODALIDAD, MODALIDADES, contarPorModalidad } from '../lib/modalidades';
 import { clienteDelServicio, contactosDeClientes } from '../lib/clienteDelServicio';
 import { mensajeDeError } from '../lib/errores';
 import './EstadoActual.css';
+import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
 
 /* La Situación operativa: la página de entrada del Panel.
    ==========================================================================
@@ -222,7 +223,7 @@ export function EstadoActual() {
     const [gs, as, ps, ds, em, sv, emg, al, inc, incAbiertas] = await Promise.all([
       supabase.from('guardias').select('*').gte('fecha', desde).lte('fecha', hasta),
       supabase.from('asistentes').select('id, estado'),
-      supabase.from('pacientes').select('id, nombre'),
+      supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`),
       supabase
         .from('documentos_asistente')
         .select('asistente_id, fecha_vencimiento')
@@ -252,7 +253,7 @@ export function EstadoActual() {
       return;
     }
 
-    const nombresPaciente = Object.fromEntries((ps.data ?? []).map((p) => [p.id, p.nombre]));
+    const nombresPaciente = Object.fromEntries(conSusFichas(ps.data).map((p) => [p.id, p.nombre]));
     const pacientesPorGuardia = await cargarPacientesDeGuardias((gs.data ?? []).map((g) => g.id));
     const guardias = conPacientes(gs.data ?? [], pacientesPorGuardia, nombresPaciente);
 

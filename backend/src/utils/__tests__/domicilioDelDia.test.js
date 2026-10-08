@@ -38,6 +38,15 @@ let temporales = [];
 /** Todo lo que el backend le preguntó a la base, para poder contar las preguntas. */
 let preguntas = [];
 
+// La función devuelve las partes del domicilio y el nombre del lugar, no el renglón: el renglón lo
+// arma el backend. Para no escribir cada dirección dos veces, las de abajo se parten acá: lo de antes
+// de la coma va como calle y lo de después como lugar, que es como `domicilioEscrito` las vuelve a
+// juntar.
+function comoPartes({ domicilio, ...resto }) {
+  const [calle, ...lugar] = String(domicilio ?? '').split(', ');
+  return { ...resto, calle: calle || null, numero: null, piso: null, unidad: null, lugar: lugar.join(', ') || null };
+}
+
 // Copia exacta del criterio de la migración: la temporal vigente ese día, y si no la del Legajo del Paciente.
 // Las fechas se comparan como texto porque `2026-01-05` ordena igual escrito que como fecha.
 function resolver(pacienteId, fecha) {
@@ -52,7 +61,7 @@ function resolver(pacienteId, fecha) {
     return {
       paciente_id: pacienteId,
       domicilio_temporal_id: null,
-      ...deSiempre,
+      ...comoPartes(deSiempre),
       es_temporal: false,
       motivo: null,
       desde: null,
@@ -62,9 +71,7 @@ function resolver(pacienteId, fecha) {
   return {
     paciente_id: pacienteId,
     domicilio_temporal_id: 'una-temporal',
-    domicilio: vigente.domicilio,
-    lat: vigente.lat,
-    lng: vigente.lng,
+    ...comoPartes({ domicilio: vigente.domicilio, lat: vigente.lat, lng: vigente.lng }),
     es_temporal: true,
     motivo: vigente.motivo,
     desde: vigente.fecha_inicio,

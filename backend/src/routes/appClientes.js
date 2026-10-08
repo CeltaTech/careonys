@@ -11,6 +11,7 @@ import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
 import { tipoDelAsistente, tipoConSusTareas } from '../utils/tareasDelTipo.js';
 import { esFechaISO, semanaQueContiene } from '../utils/fechas.js';
 import { pacientesConDomicilioDeHoy } from '../utils/domicilioDelDia.js';
+import { FICHA_NOMBRE, PARTES_DEL_DOMICILIO, fichaCon, conSuFicha, conSusFichas } from '../utils/fichaDelPaciente.js';
 import { guardarSuscripcionPush } from '../utils/suscripcionesPush.js';
 import { accesosDelPedido, exigeDePersonasAutorizadas, soloElTitular, visibilidadDeLaPersona } from '../utils/accesosDePersonasAutorizadas.js';
 import { instruccionPendiente, pedirCodigo, confirmarConCodigo } from '../utils/instruccionesPersonasAutorizadas.js';
@@ -85,18 +86,22 @@ async function pacienteDelCliente(db, pacienteId, req) {
   // sin patologías y sin coordenadas. No se lo saca de la lista —dejaría esa aplicación vacía y sin
   // explicación, y quien tenga la agenda o los reportes los sigue necesitando—, y los datos de la
   // persona cuidada directamente no salen de la base.
+  // El nombre y el domicilio están en la Ficha de Persona; las coordenadas, también, y van sólo
+  // si la Prestadora muestra la ubicación.
+  const ficha = fichaCon([
+    'nombre_visible',
+    ...PARTES_DEL_DOMICILIO,
+    ...(visibilidad.cliente_ubicacion_en_vivo !== false ? ['lat', 'lng'] : []),
+  ]);
   const columnas = accesos.persona_autorizada_ficha_del_paciente
     ? columnasSegunVisibilidad([
       'id',
-      'nombre',
-      'domicilio',
-      ['lat', 'cliente_ubicacion_en_vivo'],
-      ['lng', 'cliente_ubicacion_en_vivo'],
+      ficha,
       ['patologias', 'cliente_patologias_del_paciente'],
       'cliente_id',
       'prestadora_id',
     ], visibilidad)
-    : 'id, nombre, cliente_id, prestadora_id';
+    : `id, ${FICHA_NOMBRE}, cliente_id, prestadora_id`;
 
   const { data } = await db
     .from('pacientes')
@@ -106,10 +111,10 @@ async function pacienteDelCliente(db, pacienteId, req) {
     .maybeSingle();
   if (!data) return data;
 
-  // La dirección que se muestra es la de hoy, no la del Legajo del Paciente, y la decide la base. Va acá
+  // La dirección que se muestra es la de hoy, no la de la Ficha del Paciente, y la decide la base. Va acá
   // adentro y no en cada pantalla para que ninguna se olvide: todas las pantallas del Cliente
   // que muestran un Paciente pasan por esta función.
-  const [conDomicilio] = await pacientesConDomicilioDeHoy([data]);
+  const [conDomicilio] = await pacientesConDomicilioDeHoy([conSuFicha(data)]);
   return conDomicilio;
 }
 
@@ -258,17 +263,17 @@ appClientesRouter.post('/instruccion/:instruccionId/confirmar', requiereRolClien
 appClientesRouter.get('/pacientes', requiereRolCliente, async (req, res) => {
   const { data, error } = await clienteDelPedido(req)
     .from('pacientes')
-    .select('id, nombre, domicilio')
-    .eq('cliente_id', req.usuarioCliente.clienteId)
-    .order('nombre');
+    .select(`id, ${fichaCon(['nombre_visible', ...PARTES_DEL_DOMICILIO])}`)
+    .eq('cliente_id', req.usuarioCliente.clienteId);
   if (error) {
     return responderError(res, error);
   }
   // Si al Paciente lo están atendiendo estos días en otro lado, el Cliente ve esa dirección y no
-  // la del Legajo del Paciente — es la misma respuesta que ve el Asistente en su teléfono, escrita una sola
+  // la de su Ficha de Persona — es la misma respuesta que ve el Asistente en su teléfono, escrita una sola
   // vez en la base (regla 12). Sin esto, el Cliente y quien cuida al Paciente leerían direcciones
   // distintas para la misma persona el mismo día.
-  res.json({ pacientes: await pacientesConDomicilioDeHoy(data) });
+  const pacientes = conSusFichas(data).sort((a, b) => (a.nombre ?? '').localeCompare(b.nombre ?? ''));
+  res.json({ pacientes: await pacientesConDomicilioDeHoy(pacientes) });
 });
 
 // ============================================================================
@@ -907,13 +912,13 @@ appClientesRouter.post('/guardias/:guardiaId/calificar', requiereRolCliente, exi
   // persona, una persona autorizada que puede calificar y no ver la agenda no encontraría el turno.
   const { data: filas } = await supabase
     .from('guardia_pacientes')
-    .select('paciente_id, pacientes!inner(nombre, cliente_id), guardias!inner(id, asistente_id, prestadora_id)')
+    .select(`paciente_id, pacientes!inner(cliente_id, ${FICHA_NOMBRE}), guardias!inner(id, asistente_id, prestadora_id)`)
     .eq('prestadora_id', req.usuarioCliente.prestadoraId)
     .eq('guardia_id', req.params.guardiaId)
     .eq('pacientes.cliente_id', req.usuarioCliente.clienteId);
   const fila = (filas ?? [])
     .slice()
-    .sort((a, b) => (a.pacientes?.nombre ?? '').localeCompare(b.pacientes?.nombre ?? ''))[0];
+    .sort((a, b) => (a.pacientes?.persona?.nombre_visible ?? '').localeCompare(b.pacientes?.persona?.nombre_visible ?? ''))[0];
   if (!fila) {
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }

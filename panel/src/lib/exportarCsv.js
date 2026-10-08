@@ -20,9 +20,8 @@ export function armarCsv(encabezados, filas) {
 }
 
 /** Deja el archivo en la carpeta de descargas de quien está mirando. */
-export function bajarCsv(nombre, contenido) {
-  // La marca del principio hace que las planillas lean bien los acentos.
-  const direccion = URL.createObjectURL(new Blob(['﻿', contenido], { type: 'text/csv;charset=utf-8' }));
+export function bajarArchivo(nombre, archivo) {
+  const direccion = URL.createObjectURL(archivo);
   const enlace = document.createElement('a');
   enlace.href = direccion;
   enlace.download = nombre;
@@ -30,4 +29,9 @@ export function bajarCsv(nombre, contenido) {
   enlace.click();
   document.body.removeChild(enlace);
   URL.revokeObjectURL(direccion);
+}
+
+export function bajarCsv(nombre, contenido) {
+  // La marca del principio hace que las planillas lean bien los acentos.
+  bajarArchivo(nombre, new Blob(['\uFEFF', contenido], { type: 'text/csv;charset=utf-8' }));
 }

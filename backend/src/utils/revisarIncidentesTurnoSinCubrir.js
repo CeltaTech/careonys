@@ -15,6 +15,7 @@ import {
 import { reglaDeLaToma, tomadasAhora } from './tomasDeAlarma.js';
 import { TIPOS_DE_ALARMA } from './alarmasTomadas.js';
 import { escalonesYaAvisados, escalarSiCorresponde, minutosDesde } from './avisosDeEscalon.js';
+import { FICHA_NOMBRE } from './fichaDelPaciente.js';
 
 // El turno que llega sin nadie abre un incidente, y el incidente no se va solo.
 // ============================================================================
@@ -293,7 +294,7 @@ async function abrirIncidente({ guardia, prestadoraId }) {
 async function armarElRecordatorio({ guardia, prestadoraId, idioma, horas, veces, ahora }) {
   let pacientes = [];
   try {
-    pacientes = (await pacientesDeGuardias(prestadoraId, [guardia], 'id, nombre')).get(guardia.id) ?? [];
+    pacientes = (await pacientesDeGuardias(prestadoraId, [guardia], `id, ${FICHA_NOMBRE}`)).get(guardia.id) ?? [];
   } catch (e) {
     console.error(`Error leyendo los Pacientes del turno ${guardia.id}:`, e.message);
   }

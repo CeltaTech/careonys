@@ -16,6 +16,8 @@ import { clienteDelServicio, contactosDeClientes } from '../../lib/clienteDelSer
 import { claseDeResponsable, modalidadesDeGuardias, nombreDeModalidad } from './modalidadesDelServicio';
 import './servicios.css';
 
+import { FICHA_NOMBRE, conSuFicha, conSusFichas } from '../../lib/fichaDelPaciente';
+
 // Cuántas guardias se listan en la pestaña. Un Servicio de meses puede tener cientos, y esta
 // pantalla no es la grilla de guardias: quien quiera verlas todas va a Guardias. Las modalidades y
 // las incidencias sí se calculan sobre todas.
@@ -85,7 +87,7 @@ export function ServicioDetalle() {
       supabase
         .from('reportes')
         .select(
-          'id, created_at, estado_animo, incidentes, signos_vitales, confirmado_asistente, pacientes!inner(id, nombre), guardias!inner(fecha, servicio_id, asistentes(nombre))',
+          `id, created_at, estado_animo, incidentes, signos_vitales, confirmado_asistente, pacientes!inner(id, ${FICHA_NOMBRE}), guardias!inner(fecha, servicio_id, asistentes(nombre))`,
         )
         .eq('guardias.servicio_id', id)
         .order('created_at', { ascending: false })
@@ -112,7 +114,7 @@ export function ServicioDetalle() {
 
     const [pacientes, asistentes, { contactos: mapaContactos, error: fallaContactos }, relevos, sinCubrir] =
       await Promise.all([
-        idsPaciente.length ? supabase.from('pacientes').select('id, nombre').in('id', idsPaciente) : vacio,
+        idsPaciente.length ? supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`).in('id', idsPaciente) : vacio,
         idsAsistente.length ? supabase.from('asistentes').select('id, nombre').in('id', idsAsistente) : vacio,
         contactosDeClientes(supabase, [s]),
         idsGuardia.length
@@ -167,7 +169,7 @@ export function ServicioDetalle() {
         })),
       ].sort((a, b) => String(b.inicio).localeCompare(String(a.inicio))),
     );
-    setNombresPaciente(Object.fromEntries((pacientes.data ?? []).map((p) => [p.id, p.nombre])));
+    setNombresPaciente(Object.fromEntries(conSusFichas(pacientes.data).map((p) => [p.id, p.nombre])));
     setNombresAsistente(Object.fromEntries((asistentes.data ?? []).map((a) => [a.id, a.nombre])));
     setEstado('listo');
   }, [id, prestadoraId, t]);
@@ -370,7 +372,7 @@ export function ServicioDetalle() {
                   {reportes.map((r) => (
                     <tr key={r.id}>
                       <td>{r.guardias?.fecha ?? fecha(r.created_at, locale)}</td>
-                      <td>{r.pacientes?.nombre || '—'}</td>
+                      <td>{conSuFicha(r.pacientes)?.nombre || '—'}</td>
                       <td>{r.guardias?.asistentes?.nombre || '—'}</td>
                       <td>{r.estado_animo ? t.reportes[`animo_${r.estado_animo}`] ?? r.estado_animo : '—'}</td>
                       <td>

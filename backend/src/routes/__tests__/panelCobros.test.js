@@ -1085,7 +1085,7 @@ function baseConUnCliente({
       id: CLIENTE,
       prestadora_id: PRESTADORA,
       dias_hasta_el_vencimiento: plazoDelCliente,
-      pacientes: [{ id: PACIENTE, nombre: 'Juana Pérez' }],
+      pacientes: [{ id: PACIENTE, persona: { nombre_visible: 'Juana Pérez' } }],
     },
   ]);
   respuestas.set('GET /rest/v1/prestaciones', () => prestaciones);

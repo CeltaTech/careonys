@@ -16,6 +16,8 @@ import { useAlarmasTomadas } from '../../hooks/useAlarmasTomadas';
 import { LaTomoYo } from '../../components/continuidad/LaTomoYo';
 import { TIPOS_DE_ALARMA } from '../../lib/alarmasTomadas';
 
+import { FICHA_NOMBRE, conSusFichas } from '../../lib/fichaDelPaciente';
+
 // Las guardias que nadie cerró: el Coordinador (y el Admin de la Prestadora) las ve acá y las
 // cierra él.
 //
@@ -65,7 +67,7 @@ export function GuardiasSinCerrar({ onCerrada }) {
           .order('fecha', { ascending: true })
           .order('hora_inicio', { ascending: true }),
         supabase.from('asistentes').select('id, nombre'),
-        supabase.from('pacientes').select('id, nombre'),
+        supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`),
       ]);
 
     if (errorGuardias) {
@@ -75,7 +77,7 @@ export function GuardiasSinCerrar({ onCerrada }) {
     }
 
     const asistentesPorId = Object.fromEntries((asistentesData ?? []).map((a) => [a.id, a.nombre]));
-    const pacientesPorId = Object.fromEntries((pacientesData ?? []).map((p) => [p.id, p.nombre]));
+    const pacientesPorId = Object.fromEntries(conSusFichas(pacientesData).map((p) => [p.id, p.nombre]));
     const pacientesPorGuardia = await cargarPacientesDeGuardias((guardiasData ?? []).map((g) => g.id));
 
     const sinCerrar = guardiasSinCerrar(guardiasData ?? [], hoy);

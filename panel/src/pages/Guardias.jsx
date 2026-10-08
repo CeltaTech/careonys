@@ -24,6 +24,7 @@ import { useUmbrales } from '../context/UmbralesContext';
 // cortar, y es la que usa todo el resto del Panel.
 import { hoyISO, sumarDias } from '../lib/horarios';
 import './listadosMaqueta.css';
+import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
 
 const ESTADOS = ['programada', 'activa', 'completada', 'cancelada', 'ausente', 'pausada'];
 
@@ -94,7 +95,7 @@ export function Guardias() {
       // que dejar afuera a quien ya no trabaja acá. Por eso el estado viaja: el filtro lo aplica
       // la puerta que reparte trabajo (`estaEnElPlantel` en GuardiaAcciones.jsx), no la consulta.
       supabase.from('asistentes').select('id, nombre, estado'),
-      supabase.from('pacientes').select('id, nombre'),
+      supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`),
       supabase.from('servicios').select('id, etiqueta'),
     ]);
 
@@ -106,7 +107,7 @@ export function Guardias() {
 
     setAsistentes(asistentesData ?? []);
     const asistentesPorId = Object.fromEntries((asistentesData ?? []).map((a) => [a.id, a.nombre]));
-    const pacientesPorId = Object.fromEntries((pacientesData ?? []).map((p) => [p.id, p.nombre]));
+    const pacientesPorId = Object.fromEntries(conSusFichas(pacientesData).map((p) => [p.id, p.nombre]));
     const serviciosPorId = Object.fromEntries((serviciosData ?? []).map((s) => [s.id, s.etiqueta]));
 
     // A quiénes atiende cada guardia: un turno puede cubrir a más de una persona, y esa lista

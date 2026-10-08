@@ -5,6 +5,7 @@ import { configuracionEvento } from './email.js';
 import { pacientesDeGuardias } from './pacientesDeGuardia.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
+import { FICHA_NOMBRE } from './fichaDelPaciente.js';
 
 // Mensaje del sistema que anuncia que una o varias guardias pasaron a manos de otro Asistente.
 //
@@ -92,7 +93,7 @@ export async function avisarCambioDeAsistente({ guardias, prestadoraId, asistent
 
   let pacientesPorGuardia = new Map();
   try {
-    pacientesPorGuardia = await pacientesDeGuardias(prestadoraId, guardias, 'id, nombre, cliente_id');
+    pacientesPorGuardia = await pacientesDeGuardias(prestadoraId, guardias, `id, cliente_id, ${FICHA_NOMBRE}`);
   } catch (e) {
     console.error(`Error leyendo los Pacientes de las guardias que cambiaron de Asistente (prestadora ${prestadoraId}):`, e.message);
   }

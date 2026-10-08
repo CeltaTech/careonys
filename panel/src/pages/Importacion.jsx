@@ -11,6 +11,7 @@ import { con } from '../lib/textos';
 import { numeroConGuiones } from '../lib/documentoDeIdentidad';
 import { tomarPlanillaAnalizada } from '../lib/planillaAnalizada';
 import { useModalAccesible } from '../hooks/useModalAccesible';
+import { bajarArchivo } from '../lib/exportarCsv';
 import '../styles/molde-paginas.css';
 import './importacion.css';
 
@@ -47,6 +48,7 @@ export function Importacion() {
   const [revision, setRevision] = useState(null);
   const [revisionFinal, setRevisionFinal] = useState(null);
   const [confirmandoRechazo, setConfirmandoRechazo] = useState(false);
+  const [descargando, setDescargando] = useState(false);
 
   // Si se llegó desde la guía de primeros pasos, la planilla ya fue leída allá: se arranca en
   // el paso de revisar el mapeo, sin volver a pedir el archivo ni a preguntarle a la IA por el
@@ -119,6 +121,50 @@ export function Importacion() {
       setError(mensajeDeError(err, t));
     } finally {
       setCargando(false);
+    }
+  }
+
+  // Las filas que no se cargaron vuelven en el mismo formato que el archivo original, con sus
+  // columnas tal cual y una más con el motivo, para completarlas y volver a importarlas.
+  async function handleDescargarNoCargadas() {
+    setDescargando(true);
+    setError(null);
+    try {
+      const columnaMotivo = t.importacion.col_motivo;
+      const columnaDocumento = t.importacion.campo_documentoPaciente;
+      const faltaElDocumento =
+        tipo === 'cliente' && !Object.values(mapeo).includes('documentoPaciente');
+      const encabezados = [
+        ...analisis.headers,
+        ...(faltaElDocumento ? [columnaDocumento] : []),
+        columnaMotivo,
+      ];
+      const filas = resultado.errores.map((e) => ({
+        ...analisis.filas[e.fila - 1],
+        ...(faltaElDocumento ? { [columnaDocumento]: '' } : {}),
+        [columnaMotivo]: mensajeDeError({ motivo: e.motivo, status: 500 }, t, 'importación'),
+      }));
+
+      const { data } = await supabase.auth.getSession();
+      const respuesta = await fetch(`${API_URL}/api/panel/importacion/filas-no-cargadas`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${data.session?.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ archivoNombre: analisis.archivoNombre, encabezados, filas }),
+      });
+      if (!respuesta.ok) {
+        throw errorDeLaRespuesta(respuesta, await respuesta.json().catch(() => ({})));
+      }
+      const nombre = decodeURIComponent(
+        respuesta.headers.get('Content-Disposition')?.match(/filename\*=UTF-8''(.+)$/)?.[1] ?? '',
+      );
+      bajarArchivo(con(t.importacion.nombre_filas_no_cargadas, { archivo: nombre }), await respuesta.blob());
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+    } finally {
+      setDescargando(false);
     }
   }
 
@@ -320,6 +366,20 @@ export function Importacion() {
             </Alert>
           )}
 
+          {resultado.yaEstaban?.length > 0 && (
+            <Alert variant="info">
+              <ul>
+                {resultado.yaEstaban.map((y) => (
+                  <li key={y.fila}>
+                    {t.importacion.ya_estaba
+                      .replace('{n}', y.fila)
+                      .replace('{numero}', y.numeroCliente)}
+                  </li>
+                ))}
+              </ul>
+            </Alert>
+          )}
+
           {resultado.errores.length > 0 && (
             <Alert variant="error">
               <strong>{t.importacion.filas_error_titulo}</strong>
@@ -345,6 +405,11 @@ export function Importacion() {
             <Button variant="secondary" onClick={handleReiniciar} disabled={cargando}>
               {t.importacion.nueva_importacion}
             </Button>
+            {resultado.errores.length > 0 && (
+              <Button variant="secondary" onClick={handleDescargarNoCargadas} disabled={descargando}>
+                {descargando ? t.importacion.descargando : t.importacion.descargar_filas_no_cargadas}
+              </Button>
+            )}
             {resultado.filasCreadas > 0 && (
               <Button onClick={handleVerRevision} disabled={cargando}>
                 {cargando ? t.importacion.cargando_revision : t.importacion.revisar_resultado}

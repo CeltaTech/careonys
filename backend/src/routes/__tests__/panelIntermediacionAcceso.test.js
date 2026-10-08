@@ -256,7 +256,7 @@ describe('la lista de accesos trae los nombres aunque el Legajo esté pendiente 
     respuestas.set('GET /rest/v1/accesos_intermediacion', () => [
       { id: ACCESO, cliente_id: null, paciente_id: PACIENTE, asistente_id: ASISTENTE, estado: 'activo' },
     ]);
-    respuestas.set('GET /rest/v1/pacientes', () => [{ id: PACIENTE, nombre: 'Paciente inventado' }]);
+    respuestas.set('GET /rest/v1/pacientes', () => [{ id: PACIENTE, persona: { nombre_visible: 'Paciente inventado' } }]);
     respuestas.set('GET /rest/v1/asistentes', () => [{ id: ASISTENTE, nombre: 'Asistente inventada' }]);
 
     const { estado, cuerpo } = await pedir('GET', '/accesos');

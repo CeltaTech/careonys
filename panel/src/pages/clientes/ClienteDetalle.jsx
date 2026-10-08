@@ -40,6 +40,8 @@ import {
 } from '../../lib/facturacionDeClientes';
 import { traducirValor } from '../../i18n/valores';
 import { con } from '../../lib/textos';
+import { FICHA_COMPLETA, conSusFichas } from '../../lib/fichaDelPaciente';
+import { palabrasDelDomicilio } from '../../lib/partesDeDomicilio';
 import '../../styles/molde-paginas.css';
 import '../hojaDeTarjetas.css';
 
@@ -114,7 +116,7 @@ export function ClienteDetalle() {
     const { data, error: errorConsulta } = await supabase
       .from('clientes')
       .select(
-        'id, plan, dias_hasta_el_vencimiento, financiador_tipo, pagador_persona_id, prestadora_id, created_at, pacientes(*), ' +
+        `id, plan, dias_hasta_el_vencimiento, financiador_tipo, pagador_persona_id, prestadora_id, created_at, pacientes(*, ${FICHA_COMPLETA}), ` +
           // Quién es el Cliente se lee de la Ficha de Persona de quien contrata, en el Directorio de
           // Personas, y se corrige allá.
           'personas!clientes_contratante_de_la_misma_prestadora(nombre_visible, email, lugares!personas_lugar_fkey(nombre), ' +
@@ -129,7 +131,7 @@ export function ClienteDetalle() {
       return;
     }
 
-    setCliente(data);
+    setCliente({ ...data, pacientes: conSusFichas(data.pacientes, palabrasDelDomicilio(t)) });
     setFormContacto({
       plan: data.plan || '',
       dias_hasta_el_vencimiento:

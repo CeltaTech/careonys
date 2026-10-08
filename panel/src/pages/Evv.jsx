@@ -12,6 +12,7 @@ import { domiciliosPorFecha, domicilioDe } from '../lib/domicilioDelDia';
 import { mensajeDeError } from '../lib/errores';
 import './hojaDeTarjetas.css';
 import './seguimientoDeGuardias.css';
+import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
 
 /*
  * Esta pantalla existe para auditar los check-in, así que tiene que dar el mismo veredicto que
@@ -97,7 +98,7 @@ export function Evv() {
       supabase.from('asistentes').select('id, nombre'),
       // Del Paciente alcanza con el nombre: las coordenadas contra las que se mide no son las
       // del Paciente sino las del día de cada turno, y esas las contesta la base más abajo.
-      supabase.from('pacientes').select('id, nombre'),
+      supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`),
       // Los metros que tolera esta Prestadora. No lleva filtro por Prestadora porque la regla
       // de acceso de la base ya deja ver una sola fila, la del tenant de esta sesión.
       supabase.from('configuracion_ausencia_automatica').select('metros_tolerancia_checkin').maybeSingle(),
@@ -110,7 +111,7 @@ export function Evv() {
     }
 
     const asistentesPorId = Object.fromEntries((asistentesData ?? []).map((a) => [a.id, a.nombre]));
-    const pacientesPorId = Object.fromEntries((pacientesData ?? []).map((p) => [p.id, p]));
+    const pacientesPorId = Object.fromEntries(conSusFichas(pacientesData).map((p) => [p.id, p]));
 
     let pacientesPorGuardia;
     try {

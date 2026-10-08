@@ -14,6 +14,7 @@ import {
 import { situacionDeGuardia, tonoDeGuardia } from '../../lib/semaforoGuardia';
 import { useUmbrales } from '../../context/UmbralesContext';
 import '../hojaDeTarjetas.css';
+import { FICHA_NOMBRE, conSusFichas } from '../../lib/fichaDelPaciente';
 
 /* Lo que este Asistente ya trabajó.
    ==========================================================================
@@ -73,11 +74,11 @@ export function GuardiasTab({ asistente }) {
         ...new Set([...porGuardia.values()].flat().concat(guardias.map((g) => g.paciente_id))),
       ].filter(Boolean);
       const { data: pacientes, error: errorPacientes } = idsPacientes.length
-        ? await supabase.from('pacientes').select('id, nombre').in('id', idsPacientes)
+        ? await supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`).in('id', idsPacientes)
         : { data: [], error: null };
       if (errorPacientes) throw errorPacientes;
 
-      const nombres = Object.fromEntries((pacientes ?? []).map((p) => [p.id, p.nombre]));
+      const nombres = Object.fromEntries(conSusFichas(pacientes).map((p) => [p.id, p.nombre]));
       const ctx = { umbrales };
       const filas = conPacientes(guardias, porGuardia, nombres).map((g) => ({
         ...g,

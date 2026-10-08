@@ -12,6 +12,7 @@ import { mensajeDeError } from '../lib/errores';
 import { sigueSinResolver, sigueSinResolverYEsCritica } from '../lib/alertaSinResolver';
 import '../styles/molde-paginas.css';
 import './hojaDeTarjetas.css';
+import { FICHA_NOMBRE, conSuFicha } from '../lib/fichaDelPaciente';
 
 // Alertas de la IA Nivel 2 (backend/src/utils/revisarAlertasIA.js): la IA lee los últimos
 // reportes de cada Paciente y, si detecta un patrón preocupante, deja una alerta con dos
@@ -42,7 +43,7 @@ export function Alertas() {
     const { data, error: errorConsulta } = await supabase
       .from('alertas')
       .select(
-        'id, created_at, nivel, descripcion, detalle_coordinador, campos_preocupantes, reportes_relacionados, resuelta, resuelta_at, paciente_id, pacientes(nombre)',
+        `id, created_at, nivel, descripcion, detalle_coordinador, campos_preocupantes, reportes_relacionados, resuelta, resuelta_at, paciente_id, pacientes(${FICHA_NOMBRE})`,
       )
       .order('created_at', { ascending: false });
 
@@ -55,7 +56,7 @@ export function Alertas() {
     setFilas(
       (data ?? []).map((a) => ({
         ...a,
-        paciente_nombre: a.pacientes?.nombre || '—',
+        paciente_nombre: conSuFicha(a.pacientes)?.nombre || '—',
       })),
     );
     setEstado('listo');

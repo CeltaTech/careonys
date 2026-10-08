@@ -63,6 +63,7 @@ export function PersonaModal({ persona, prestadoraId, tiposDeDocumento, onClose,
   const [clase, setClase] = useState(persona?.clase ?? 'fisica');
   const [nombre, setNombre] = useState(persona?.nombre ?? '');
   const [apellido, setApellido] = useState(persona?.apellido ?? '');
+  const [fechaNacimiento, setFechaNacimiento] = useState(persona?.fecha_nacimiento ?? '');
   const [documentoTipo, setDocumentoTipo] = useState(persona?.documento_tipo ?? '');
   const [documentoNumero, setDocumentoNumero] = useState(persona?.documento_numero ?? '');
   const [documentoPais, setDocumentoPais] = useState(persona?.documento_pais ?? '');
@@ -123,7 +124,11 @@ export function PersonaModal({ persona, prestadoraId, tiposDeDocumento, onClose,
     setDocumentoTipo('');
     setDocumentoPais('');
     setAvisoDeLaBase(null);
-    if (nueva === 'juridica') setApellido('');
+    // Una entidad no nace: la base rechaza la fecha en una jurídica.
+    if (nueva === 'juridica') {
+      setApellido('');
+      setFechaNacimiento('');
+    }
     // Una persona física se representa sola, así que el Apoderado que hubiera quedado elegido no
     // le corresponde. La base lo rechaza igual, pero enterarse al guardar sería enterarse tarde.
     if (nueva !== 'juridica') setApoderado(null);
@@ -148,6 +153,7 @@ export function PersonaModal({ persona, prestadoraId, tiposDeDocumento, onClose,
         clase,
         nombre: nombre.trim(),
         apellido: esJuridica ? null : apellido.trim(),
+        fecha_nacimiento: esJuridica ? null : fechaNacimiento || null,
         documento_tipo: documentoTipo,
         documento_numero: normalizarNumero(documentoNumero, tipo.verifica_modulo_11),
         documento_pais: tipo.lleva_pais ? documentoPais : null,
@@ -229,6 +235,16 @@ export function PersonaModal({ persona, prestadoraId, tiposDeDocumento, onClose,
               onChange={(e) => setApellido(e.target.value)}
               disabled={guardando}
               error={avisoDe('apellido')}
+            />
+          )}
+          {!esJuridica && (
+            <FormField
+              label={t.clientes.fecha_nacimiento}
+              name="fecha_nacimiento"
+              type="date"
+              value={fechaNacimiento}
+              onChange={(e) => setFechaNacimiento(e.target.value)}
+              disabled={guardando}
             />
           )}
 

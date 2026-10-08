@@ -14,6 +14,7 @@ import { TIPOS_DE_ALARMA } from './alarmasTomadas.js';
 import { horasEntre } from './horasDeGuardia.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
+import { FICHA_NOMBRE } from './fichaDelPaciente.js';
 
 // Insistencia al Coordinador según premura, con coordinador de respaldo si no hay
 // reacción, parametrizado por prestadora
@@ -120,7 +121,7 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
   // de lo que quedó sin confirmar.
   let pacientesPorGuardia;
   try {
-    pacientesPorGuardia = await pacientesDeGuardias(prestadoraId, guardias, 'id, nombre');
+    pacientesPorGuardia = await pacientesDeGuardias(prestadoraId, guardias, `id, ${FICHA_NOMBRE}`);
   } catch (e) {
     console.error(`Error leyendo los Pacientes de las guardias sin cerrar (prestadora ${prestadoraId}):`, e.message);
     return;
@@ -313,7 +314,7 @@ async function datosDeLasGuardias(prestadoraId, guardiaIds) {
 
   let pacientesPorGuardia = new Map();
   try {
-    pacientesPorGuardia = await pacientesDeGuardias(prestadoraId, guardias ?? [], 'id, nombre');
+    pacientesPorGuardia = await pacientesDeGuardias(prestadoraId, guardias ?? [], `id, ${FICHA_NOMBRE}`);
   } catch (err) {
     console.error('Error leyendo los Pacientes de las guardias de los avisos:', err.message);
   }

@@ -13,6 +13,8 @@ import {
 } from '../utils/importacionIA.js';
 import { proponerConfiguracionInicial } from '../utils/propuestaConfiguracionInicial.js';
 import { responderError } from '../utils/errorConMotivo.js';
+import { FICHA_DOMICILIO, conSusFichas } from '../utils/fichaDelPaciente.js';
+import { informeDeFilasNoCargadas } from '../utils/informeDeFilasNoCargadas.js';
 
 export const panelImportacionRouter = Router();
 
@@ -222,6 +224,9 @@ panelImportacionRouter.post(
     // Las filas cuya persona ya estaba en el Directorio: no se creó otra Ficha, se usó la que
     // había. Viaja sólo el documento y el número de cliente, que la pantalla arma en una frase.
     const vinculadas = [];
+    // Las filas que ya habían entrado en una importación anterior: no se volvieron a crear. Es lo
+    // que deja volver a importar la planilla corregida sin duplicar lo que sí se cargó.
+    const yaEstaban = [];
     let creadas = 0;
 
     // Las altas entran con la llave maestra, como el resto de esta ruta: nacen
@@ -243,6 +248,10 @@ panelImportacionRouter.post(
             datos[campo] = valorDesdeFila(fila, mapeo, campo, CAMPOS_LISTA.cliente.has(campo));
           }
           const alta = await crearClienteImportado(datos);
+          if (alta.yaEstaba) {
+            yaEstaban.push({ fila: i + 1, numeroCliente: alta.numeroCliente });
+            continue;
+          }
           if (alta.fichaQueYaExistia) {
             vinculadas.push({
               fila: i + 1,
@@ -280,7 +289,29 @@ panelImportacionRouter.post(
       filasError: errores.length,
       errores,
       vinculadas,
+      yaEstaban,
     });
+  }
+);
+
+// Las filas que no se cargaron, de vuelta en un archivo para completarlas y volver a importarlas.
+// El nombre viaja en el encabezado, y se deja leer desde la pantalla, porque la extensión la decide
+// `informeDeFilasNoCargadas`.
+panelImportacionRouter.post(
+  '/filas-no-cargadas',
+  requiereRolPanel,
+  requierePermiso('importar_datos_masivos'),
+  (req, res) => {
+    const { archivoNombre, encabezados, filas } = req.body ?? {};
+    if (!Array.isArray(encabezados) || !encabezados.length || !Array.isArray(filas) || !filas.length) {
+      return res.status(400).json({ error: 'Faltan las filas del informe' });
+    }
+
+    const { contenido, tipo, nombre } = informeDeFilasNoCargadas({ archivoNombre, encabezados, filas });
+    res.set('Content-Type', tipo);
+    res.set('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(nombre)}`);
+    res.set('Access-Control-Expose-Headers', 'Content-Disposition');
+    res.send(contenido);
   }
 );
 
@@ -307,14 +338,19 @@ panelImportacionRouter.get(
       .from(tabla)
       .select(lote.tipo === 'asistente'
         ? 'id, nombre, dni, email, telefono'
-        : 'id, plan, pacientes(id, nombre, domicilio)')
+        : `id, plan, pacientes(id, ${FICHA_DOMICILIO})`)
       .eq('importacion_id', lote.id)
       .eq('prestadora_id', prestadoraId);
     if (errorFilas) {
       return res.status(500).json({ error: 'No se pudieron leer las filas del lote' });
     }
 
-    res.json({ lote, filas });
+    res.json({
+      lote,
+      filas: lote.tipo === 'asistente'
+        ? filas
+        : (filas ?? []).map((fila) => ({ ...fila, pacientes: conSusFichas(fila.pacientes) })),
+    });
   }
 );
 

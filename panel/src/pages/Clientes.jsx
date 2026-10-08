@@ -12,6 +12,7 @@ import { EstadoLista } from '../components/layout/EstadoLista';
 import { Cabecera } from '../components/ui/Cabecera';
 import { mensajeDeError } from '../lib/errores';
 import './listadosMaqueta.css';
+import { conSusFichas, fichaCon } from '../lib/fichaDelPaciente';
 
 /**
  * Las modalidades en que se atiende a cada Cliente: las de las guardias que vienen —de hoy en
@@ -66,7 +67,7 @@ export function Clientes() {
       supabase
         .from('clientes')
         .select(
-          'id, created_at, pacientes(id, nombre, lugar_id, deleted_at), ' +
+          `id, created_at, pacientes(id, deleted_at, ${fichaCon(['nombre_visible', 'lugar_id'])}), ` +
             'personas!clientes_contratante_de_la_misma_prestadora(nombre_visible, email, ' +
             'telefonos_de_la_persona!el_telefono_es_de_una_persona_de_esta_prestadora(telefono))',
         )
@@ -82,16 +83,18 @@ export function Clientes() {
       return;
     }
 
+    const clientes = (data ?? []).map((cliente) => ({ ...cliente, pacientes: conSusFichas(cliente.pacientes) }));
+
     let porCliente;
     try {
-      porCliente = await cargarModalidadesPorCliente(data ?? []);
+      porCliente = await cargarModalidadesPorCliente(clientes);
     } catch (errorGuardias) {
       setError(mensajeDeError(errorGuardias, t));
       setEstado('error');
       return;
     }
 
-    setFilas(data ?? []);
+    setFilas(clientes);
     setServicios(serviciosData ?? []);
     setModalidades(porCliente);
     setEstado('listo');

@@ -466,36 +466,42 @@ INSERT INTO public.permisos_personas_autorizadas (cliente_id, usuario_id, clave,
   ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_califica_al_asistente', false),
   ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_pide_medicacion',       false);
 
+-- Quiénes son los Pacientes: su Ficha de Persona, con su nombre, su documento, cuándo nació y dónde
+-- vive. En el Paciente queda sólo lo de recibir el cuidado.
+INSERT INTO public.personas
+  (id, prestadora_id, clase, nombre, apellido, documento_tipo, documento_numero, fecha_nacimiento,
+   calle, numero, lugar_id, lat, lng)
+VALUES
+  ('c0000000-0000-4000-8000-000000000021', '11111111-1111-4111-8111-111111111111', 'fisica', 'Elena', 'Gómez', 'cuil', '27310000014', '1938-04-12',
+   'Av. Siempreviva', '742', 'a1000000-0000-4000-8000-000000000001', -34.6037, -58.3816),
+  ('c0000000-0000-4000-8000-000000000022', '11111111-1111-4111-8111-111111111111', 'fisica', 'Héctor', 'López', 'cuil', '20310000028', '1942-11-03',
+   'Calle Falsa', '123', 'a1000000-0000-4000-8000-000000000003', -34.5000, -58.5200),
+  ('c0000000-0000-4000-8000-000000000023', '11111111-1111-4111-8111-111111111111', 'fisica', 'Rosa', 'Morales', 'cuil', '27310000030', '1935-07-25',
+   'Pasaje Inventado', '55', 'a1000000-0000-4000-8000-000000000005', -34.7200, -58.3900),
+  -- El marido de Elena: MISMO DOMICILIO, escrito igual letra por letra. Está para que el
+  -- domicilio compartido se pueda probar de verdad: el Asistente va una sola vez a esa casa y los
+  -- atiende a los dos, y eso es UNA guardia sola que cubre a dos Pacientes.
+  ('c0000000-0000-4000-8000-000000000024', '11111111-1111-4111-8111-111111111111', 'fisica', 'Alberto', 'Gómez', 'cuil', '20310000044', '1936-09-30',
+   'Av. Siempreviva', '742', 'a1000000-0000-4000-8000-000000000001', -34.6037, -58.3816);
+
 INSERT INTO public.pacientes (
-  id, prestadora_id, cliente_id, nombre, fecha_nacimiento, patologias,
-  nivel_complejidad, domicilio, lat, lng, obra_social_persona_id, numero_afiliado
+  id, prestadora_id, cliente_id, persona_id, patologias,
+  nivel_complejidad, obra_social_persona_id, numero_afiliado
 ) VALUES
+  -- La obra social no se teclea: se cita la Ficha de la Mutual del Ejemplo, que ya está en el
+  -- Directorio de arriba. El número de afiliado sí es un dato de esta persona en esa obra social.
   ('50000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
-   '40000000-0000-4000-8000-000000000001', 'Elena Gómez', '1938-04-12',
-   ARRAY['Hipertensión', 'Artrosis'], 'II',
-   -- La obra social no se teclea: se cita la Ficha de la Mutual del Ejemplo, que ya está en el
-   -- Directorio de arriba. El número de afiliado sí es un dato de esta persona en esa obra social.
-   'Av. Siempreviva 742, CABA', -34.6037, -58.3816, 'c0000000-0000-4000-8000-000000000003', 'OSP-0001'),
-
+   '40000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000021',
+   ARRAY['Hipertensión', 'Artrosis'], 'II', 'c0000000-0000-4000-8000-000000000003', 'OSP-0001'),
   ('50000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111',
-   '40000000-0000-4000-8000-000000000002', 'Héctor López', '1942-11-03',
-   ARRAY['Diabetes tipo 2'], 'I',
-   'Calle Falsa 123, Zona Norte', -34.5000, -58.5200, 'c0000000-0000-4000-8000-000000000003', 'OSP-0002'),
-
+   '40000000-0000-4000-8000-000000000002', 'c0000000-0000-4000-8000-000000000022',
+   ARRAY['Diabetes tipo 2'], 'I', 'c0000000-0000-4000-8000-000000000003', 'OSP-0002'),
   ('50000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111',
-   '40000000-0000-4000-8000-000000000003', 'Rosa Morales', '1935-07-25',
-   ARRAY['Demencia senil', 'Movilidad reducida'], 'III',
-   'Pasaje Inventado 55, Zona Sur', -34.7200, -58.3900, NULL, NULL),
-
-  -- El marido de Elena: mismo Cliente, MISMO DOMICILIO, escrito igual letra por letra.
-  -- Está acá para que el domicilio compartido se pueda probar de verdad (pendiente #94):
-  -- el Asistente va una sola vez a esa casa y los atiende a los dos, y eso es UNA guardia
-  -- sola que cubre a dos Pacientes. Sin este cuarto Paciente, los tres domicilios de la
-  -- siembra eran todos distintos y el caso no se podía reproducir sin tocar la base a mano.
+   '40000000-0000-4000-8000-000000000003', 'c0000000-0000-4000-8000-000000000023',
+   ARRAY['Demencia senil', 'Movilidad reducida'], 'III', NULL, NULL),
   ('50000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111',
-   '40000000-0000-4000-8000-000000000001', 'Alberto Gómez', '1936-09-30',
-   ARRAY['EPOC'], 'II',
-   'Av. Siempreviva 742, CABA', -34.6037, -58.3816, 'c0000000-0000-4000-8000-000000000003', 'OSP-0004');
+   '40000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000024',
+   ARRAY['EPOC'], 'II', 'c0000000-0000-4000-8000-000000000003', 'OSP-0004');
 
 -- Para quién se contrata el Servicio son dos columnas y no una: `tipo_contratante` dice de qué
 -- clase es el Cliente y `contratante_id` cuál. Hoy el único tipo que la base acepta es `cliente`,
@@ -1052,8 +1058,12 @@ VALUES ('50000000-0000-4000-8000-000000000004', '50000000-0000-4000-8000-0000000
 
 -- Con cliente, porque sin ella la aplicación de Cliente de esta Prestadora no tiene
 -- nada que leer y la prueba de aislamiento de ese lado no puede fallar.
-INSERT INTO public.pacientes (id, nombre, prestadora_id, cliente_id)
-VALUES ('60000000-0000-4000-8000-000000000001', 'Rosa Ríos', '22222222-2222-4222-8222-222222222222',
+INSERT INTO public.personas (id, prestadora_id, clase, nombre, apellido, documento_tipo, documento_numero, lugar_id)
+VALUES ('c0000000-0000-4000-8000-000000000013', '22222222-2222-4222-8222-222222222222', 'fisica', 'Rosa', 'Ríos', 'cuil', '27310000057',
+        'a2000000-0000-4000-8000-000000000001');
+
+INSERT INTO public.pacientes (id, persona_id, prestadora_id, cliente_id)
+VALUES ('60000000-0000-4000-8000-000000000001', 'c0000000-0000-4000-8000-000000000013', '22222222-2222-4222-8222-222222222222',
         '50000000-0000-4000-8000-000000000004');
 
 INSERT INTO public.servicios (id, prestadora_id, tipo_contratante, contratante_id, etiqueta)

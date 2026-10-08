@@ -6,6 +6,7 @@ import { horasEntre, horasImputadasAlPaciente } from '../utils/horasDeGuardia.js
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { cuentasDeLasFilas } from '../utils/cuentaDeLaFila.js';
 import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
+import { FICHA_NOMBRE, conSuFicha } from '../utils/fichaDelPaciente.js';
 
 export const panelInformesObraSocialRouter = Router();
 
@@ -63,7 +64,7 @@ async function cuantosPacientesPorGuardia(guardiaIds, prestadoraId) {
 async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde, periodoHasta }) {
   const { data: paciente, error: errorPaciente } = await supabase
     .from('pacientes')
-    .select('id, nombre, obra_social_persona_id, numero_afiliado, cliente_id')
+    .select(`id, obra_social_persona_id, numero_afiliado, cliente_id, ${FICHA_NOMBRE}`)
     .eq('id', pacienteId)
     .eq('prestadora_id', prestadoraId)
     .maybeSingle();
@@ -160,7 +161,7 @@ async function construirContenido({ prestadoraId, pacienteId, tipo, periodoDesde
   }
 
   return {
-    paciente: { nombre: paciente.nombre, obra_social: obraSocialNombre, numero_afiliado: paciente.numero_afiliado },
+    paciente: { nombre: conSuFicha(paciente).nombre, obra_social: obraSocialNombre, numero_afiliado: paciente.numero_afiliado },
     cliente_id: paciente.cliente_id,
     tipo,
     periodo_desde: periodoDesde,

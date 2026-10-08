@@ -14,6 +14,7 @@ import { cargarPacientesDeGuardias, pacientesDeGuardia } from '../../lib/pacient
 import { mensajeDeError } from '../../lib/errores';
 import { hoyISO } from '../../lib/horarios';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
+import { FICHA_UBICACION, conSusFichas } from '../../lib/fichaDelPaciente';
 
 /* El panel lateral para cubrir una vacante.
    ==========================================================================
@@ -171,9 +172,9 @@ export function PanelCobertura({ guardia, asistentes, onCerrar, onHecho }) {
     if (idsDelHueco.length) {
       const { data } = await supabase
         .from('pacientes')
-        .select('id, lat, lng')
+        .select(`id, ${FICHA_UBICACION}`)
         .in('id', idsDelHueco);
-      pacientes = data ?? [];
+      pacientes = conSusFichas(data);
     }
 
     // Cómo ordena esta Prestadora la lista. Es una fila —el perfil que eligió y lo que corrió

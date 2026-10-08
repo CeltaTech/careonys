@@ -26,7 +26,7 @@ export const CAMPOS_IMPORTACION = {
   ],
   cliente: [
     'nombreContacto', 'apellidoContacto', 'documentoContacto', 'telefono', 'email', 'localidad', 'plan',
-    'nombrePaciente', 'domicilioPaciente', 'fechaNacimientoPaciente',
+    'nombrePaciente', 'documentoPaciente', 'domicilioPaciente', 'fechaNacimientoPaciente',
     'nivelComplejidadPaciente', 'patologiasPaciente',
   ],
 };

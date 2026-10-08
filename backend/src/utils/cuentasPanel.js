@@ -9,7 +9,7 @@ import { acotarAUsuariosDelPanel, laCuentaDelPanelEstaAlAlcance } from '../middl
 import { APROBADAS, filasDeIncorporacion } from './etapasDeIncorporacion.js';
 import { guardarLugaresDe } from './lugaresDeCadaPersona.js';
 import { nombreDelLugar } from './catalogoDeLugares.js';
-import { domicilioEscrito, partesDelDomicilio } from './domicilioEscrito.js';
+import { domicilioEscrito, partesDelDomicilio, partesDeUnRenglon } from './domicilioEscrito.js';
 import { cuentaDeLaFila } from './cuentaDeLaFila.js';
 
 // Comprueba que un tipo de Asistente exista y sea de los que esta Prestadora puede usar:
@@ -530,48 +530,76 @@ export async function revocarPersonaAutorizada(db, usuarioId, { prestadoraId, cl
 // Da de alta un Cliente que llega en una planilla importada: es la cartera que la Prestadora ya
 // atendía antes de usar Careonys.
 //
-// El Cliente está en el Directorio de Personas: su nombre, su correo y su teléfono se guardan en su
-// Ficha de Persona, y la Ficha del cliente la apunta. Una Ficha de Persona no se borra nunca, así
-// que si el alta se corta después de crearla, la persona queda en el Directorio como contacto, y
-// la próxima vez que llegue esa fila se la encuentra por su documento.
+// Quien contrata y el Paciente están en el Directorio de Personas: cada uno tiene su Ficha de
+// Persona, buscada por su documento, y la Ficha del cliente y el Paciente las apuntan. Una Ficha de
+// Persona no se borra nunca, así que si el alta se corta después de crearlas, las personas quedan
+// en el Directorio, y la próxima vez que llegue esa fila se las encuentra por su documento.
+//
+// El Paciente se reconoce por su documento. Si la fila no lo trae, se lo da por la misma persona
+// que contrata solamente cuando el nombre es el mismo; si no, la fila no se carga: adivinar quién
+// es abriría una Ficha sin documento, que es una persona que después nadie puede encontrar.
+//
+// Y una fila que ya entró no entra dos veces. Si quien contrata ya tiene en esta Prestadora una
+// Ficha del cliente con ese mismo Paciente, la fila se cuenta como que ya estaba y no se crea nada:
+// así la Prestadora puede volver a importar la planilla corregida sin duplicar lo que sí se cargó.
 export async function crearClienteImportado({
   nombreContacto, apellidoContacto, documentoContacto, telefono, email, localidad, plan,
-  nombrePaciente, domicilioPaciente, domicilioDelPacientePartido,
+  nombrePaciente, documentoPaciente, domicilioPaciente, domicilioDelPacientePartido,
   fechaNacimientoPaciente, nivelComplejidadPaciente, patologiasPaciente,
   prestadoraId, importacionId, db,
 }) {
   if (!nombreContacto || !apellidoContacto || !email || !nombrePaciente) {
     throw new ErrorConMotivo('faltan_datos', 'Faltan datos obligatorios (nombreContacto, apellidoContacto, email, nombrePaciente)');
   }
-  const documento = String(documentoContacto ?? '').replace(/[\s.-]/g, '');
+  const documento = soloElNumero(documentoContacto);
   if (!documento) {
     throw new ErrorConMotivo('falta_el_documento', 'La fila no trae el documento de quien contrata');
   }
+  const documentoDelPaciente = soloElNumero(documentoPaciente);
+  const elPacienteEsQuienContrata = documentoDelPaciente
+    ? documentoDelPaciente === documento
+    : mismoNombre(nombrePaciente, `${nombreContacto} ${apellidoContacto}`);
+  if (!documentoDelPaciente && !elPacienteEsQuienContrata) {
+    throw new ErrorConMotivo('falta_el_documento_del_paciente', 'La fila no trae el documento del Paciente');
+  }
 
-  // El domicilio llega como un renglón suelto, que es lo que la planilla trae, o partido si
-  // alguien lo partió. En los dos casos se guardan las partes que haya y el renglón se arma con
-  // `domicilioEscrito`, que es el único lugar donde se decide dónde va cada coma. El nombre del
-  // lugar se busca acá porque vive en otra tabla.
+  // El domicilio llega partido si alguien lo partió, o en un renglón suelto, que es lo que trae la
+  // planilla: de ese renglón se toman la calle y el número. El renglón para ubicarlo en el mapa se
+  // arma con `domicilioEscrito`, que es el único lugar donde se decide dónde va cada coma; el
+  // nombre del lugar se busca acá porque vive en otra tabla.
   const partes = partesDelDomicilio(domicilioDelPacientePartido);
+  if (!partes.calle && domicilioPaciente) Object.assign(partes, partesDeUnRenglon(domicilioPaciente));
   const nombreDeSuLugar = await nombreDelLugar(db, partes.lugar_id, prestadoraId);
-  const renglonPartido = domicilioEscrito({ ...partes, lugar: nombreDeSuLugar });
 
-  // Lo que va a quedar escrito en `pacientes.domicilio`, y su punto en el mapa si se lo puede
-  // ubicar. La localidad viaja aparte porque desempata: la misma calle con el mismo número
-  // existe en decenas de partidos. Si no se puede ubicar, el Paciente se da de alta igual con
-  // las coordenadas en nulo (ver `geocodificacion/index.js`).
-  const domicilioDelPaciente = renglonPartido || domicilioPaciente || localidad || null;
+  // Su punto en el mapa, si se lo puede ubicar. La localidad viaja aparte porque desempata: la misma
+  // calle con el mismo número existe en decenas de partidos. Si no se puede ubicar, el Paciente se
+  // da de alta igual con las coordenadas en nulo (ver `geocodificacion/index.js`).
   const ubicacion = await coordenadasDeDomicilio({
     prestadoraId,
-    direccion: domicilioDelPaciente,
+    direccion: domicilioEscrito({ ...partes, lugar: nombreDeSuLugar }) || domicilioPaciente || null,
     localidad: nombreDeSuLugar || localidad,
   });
 
-  // La Ficha va antes que la cuenta: un documento mal escrito rechaza la fila sin dejar una cuenta
-  // de acceso a medio hacer.
-  const persona = await fichaDelContacto(db, {
-    prestadoraId, documento, nombreContacto, apellidoContacto, email, telefono, lugarId: partes.lugar_id,
+  // Las Fichas van antes que la cuenta: un documento mal escrito rechaza la fila sin dejar una
+  // cuenta de acceso a medio hacer.
+  const persona = await fichaPorDocumento(db, {
+    prestadoraId, documento, nombre: nombreContacto, apellido: apellidoContacto, email, telefono,
   });
+  const fichaDelPaciente = elPacienteEsQuienContrata
+    ? persona
+    : await fichaPorDocumento(db, {
+      prestadoraId, documento: documentoDelPaciente, ...nombreYApellido(nombrePaciente), deQuien: 'paciente',
+    });
+  await completarFicha(db, {
+    prestadoraId,
+    personaId: fichaDelPaciente.id,
+    datos: { ...partes, ...ubicacion, fecha_nacimiento: fechaNacimientoPaciente || null },
+  });
+
+  const yaEstaba = await clienteQueYaEstaba(db, {
+    prestadoraId, contratanteId: persona.id, pacientePersonaId: fichaDelPaciente.id,
+  });
+  if (yaEstaba) return { yaEstaba: true, numeroCliente: yaEstaba.numero_cliente };
 
   // Igual que en el alta de Asistente: la cuenta es la persona y la Ficha del cliente es lo suyo en
   // esta Prestadora. La misma persona puede ser Cliente en otra sin volver a darse de alta.
@@ -601,18 +629,14 @@ export async function crearClienteImportado({
       .from('pacientes')
       .insert({
         cliente_id: clienteId,
-        nombre: nombrePaciente,
-        domicilio: domicilioDelPaciente,
-        ...partes,
-        ...ubicacion,
-        fecha_nacimiento: fechaNacimientoPaciente || null,
+        persona_id: fichaDelPaciente.id,
         nivel_complejidad: nivelComplejidadPaciente || null,
         patologias: patologiasPaciente || [],
         prestadora_id: prestadoraId,
         importacion_id: importacionId || null,
         pendiente_conformidad: Boolean(importacionId),
       })
-      .select()
+      .select('id')
       .single();
     if (errorPaciente) throw new Error(errorPaciente.message);
 
@@ -628,18 +652,49 @@ export async function crearClienteImportado({
   }
 }
 
-// Lo que la base contesta cuando el documento no sirve. Viajan tal cual como motivo: son códigos,
-// y la frase está en las traducciones.
-const MOTIVOS_DEL_DOCUMENTO = ['falta_el_documento', 'numero_no_valido'];
+// El documento sin puntos, guiones ni espacios, que es como se guarda.
+function soloElNumero(valor) {
+  return String(valor ?? '').replace(/[\s.-]/g, '');
+}
 
-// La Ficha de quien contrata, buscada por su documento. Una persona se guarda una sola vez: si ya
-// está en el Directorio, se usa esa Ficha tal como está —nombre, apellido y correo quedan los que
+// Las palabras de un nombre, sin mayúsculas ni tildes y en orden, para comparar dos nombres sin que
+// importe si uno empieza por el apellido.
+function palabrasDelNombre(texto) {
+  return String(texto ?? '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().split(/[\s,]+/).filter(Boolean).sort();
+}
+
+function mismoNombre(uno, otro) {
+  const a = palabrasDelNombre(uno);
+  const b = palabrasDelNombre(otro);
+  return a.length > 0 && a.length === b.length && a.every((palabra, i) => palabra === b[i]);
+}
+
+// Un nombre que llega entero, partido como lo partió el pase de los Pacientes al Directorio: la
+// última palabra es el apellido y lo anterior son los nombres.
+function nombreYApellido(texto) {
+  const palabras = String(texto ?? '').trim().split(/\s+/).filter(Boolean);
+  if (palabras.length < 2) return { nombre: palabras[0] ?? '', apellido: null };
+  return { nombre: palabras.slice(0, -1).join(' '), apellido: palabras[palabras.length - 1] };
+}
+
+// Lo que la base contesta cuando el documento no sirve. Viajan como motivo: son códigos, y la frase
+// está en las traducciones. Los del Paciente tienen su propio código, porque en la fila hay dos
+// documentos y la frase tiene que decir cuál es.
+const MOTIVOS_DEL_DOCUMENTO = {
+  contratante: { falta_el_documento: 'falta_el_documento', numero_no_valido: 'numero_no_valido' },
+  paciente: { falta_el_documento: 'falta_el_documento_del_paciente', numero_no_valido: 'documento_del_paciente_no_valido' },
+};
+
+// La Ficha de una persona, buscada por su documento. Una persona se guarda una sola vez: si ya está
+// en el Directorio, se usa esa Ficha tal como está —nombre, apellido y correo quedan los que
 // tenía— y lo único que se le suma es el teléfono, si no lo tenía. Si no está, se crea.
 //
 // Se busca entre los tipos del país que llevan dígito verificador, porque el mismo número puede
 // estar cargado como CUIL o como CUIT. Cuál se pone a una Ficha nueva es el primero de esos tipos
 // en el orden del catálogo: qué número se pide en cada país lo dice el catálogo, no el código.
-async function fichaDelContacto(db, { prestadoraId, documento, nombreContacto, apellidoContacto, email, telefono, lugarId }) {
+async function fichaPorDocumento(db, { prestadoraId, documento, nombre, apellido, email, telefono, deQuien = 'contratante' }) {
   const { data: prestadora } = await db
     .from('prestadoras')
     .select('pais')
@@ -679,19 +734,17 @@ async function fichaDelContacto(db, { prestadoraId, documento, nombreContacto, a
     .insert({
       prestadora_id: prestadoraId,
       clase: 'fisica',
-      nombre: nombreContacto,
-      apellido: apellidoContacto,
+      nombre,
+      apellido,
       documento_tipo: codigos[0] ?? null,
       documento_numero: documento,
-      email,
-      lugar_id: lugarId || null,
+      email: email || null,
     })
     .select('id')
     .single();
   if (errorPersona) {
-    if (MOTIVOS_DEL_DOCUMENTO.includes(errorPersona.message)) {
-      throw new ErrorConMotivo(errorPersona.message, 'El documento de quien contrata no sirve');
-    }
+    const motivo = MOTIVOS_DEL_DOCUMENTO[deQuien][errorPersona.message];
+    if (motivo) throw new ErrorConMotivo(motivo, 'El documento de la fila no sirve');
     if (errorPersona.code === '23505') {
       throw new ErrorConMotivo('documento_repetido', 'Ya hay una Ficha con ese documento');
     }
@@ -700,6 +753,61 @@ async function fichaDelContacto(db, { prestadoraId, documento, nombreContacto, a
 
   if (telefono) await sumarTelefono(db, { prestadoraId, personaId: persona.id, telefono });
   return { id: persona.id, yaExistia: false };
+}
+
+// Le escribe a una Ficha lo que la fila trae y la Ficha todavía no tiene. Lo que ya estaba cargado
+// no se pisa: la Ficha puede haberse corregido a mano después de la primera importación, y la
+// planilla vieja no sabe nada de eso. La ubicación en el mapa va entera o no va.
+async function completarFicha(db, { prestadoraId, personaId, datos }) {
+  const columnas = Object.keys(datos);
+  const { data: ficha, error: errorFicha } = await db
+    .from('personas')
+    .select(columnas.join(', '))
+    .eq('id', personaId)
+    .eq('prestadora_id', prestadoraId)
+    .single();
+  if (errorFicha) throw new Error(errorFicha.message);
+
+  const faltan = {};
+  for (const columna of columnas) {
+    if (datos[columna] != null && ficha?.[columna] == null) faltan[columna] = datos[columna];
+  }
+  if (ficha?.lat != null || faltan.lat == null || faltan.lng == null) {
+    delete faltan.lat;
+    delete faltan.lng;
+  }
+  if (!Object.keys(faltan).length) return;
+
+  const { error } = await db
+    .from('personas')
+    .update(faltan)
+    .eq('id', personaId)
+    .eq('prestadora_id', prestadoraId);
+  if (error) throw new Error(error.message);
+}
+
+// La Ficha del cliente de esta Prestadora en la que esa persona contrata para ese Paciente, si ya
+// existe. Cuenta también la que está esperando conformidad: es la que dejó la importación anterior.
+async function clienteQueYaEstaba(db, { prestadoraId, contratanteId, pacientePersonaId }) {
+  const { data: pacientes, error: errorPacientes } = await db
+    .from('pacientes')
+    .select('cliente_id')
+    .eq('prestadora_id', prestadoraId)
+    .eq('persona_id', pacientePersonaId);
+  if (errorPacientes) throw new Error(errorPacientes.message);
+  const clientes = [...new Set((pacientes ?? []).map((fila) => fila.cliente_id).filter(Boolean))];
+  if (!clientes.length) return null;
+
+  const { data: cliente, error: errorCliente } = await db
+    .from('clientes')
+    .select('id, numero_cliente')
+    .eq('prestadora_id', prestadoraId)
+    .eq('contratante_persona_id', contratanteId)
+    .in('id', clientes)
+    .limit(1)
+    .maybeSingle();
+  if (errorCliente) throw new Error(errorCliente.message);
+  return cliente ?? null;
 }
 
 // Un teléfono más en la Ficha, salvo que ya lo tenga escrito igual.

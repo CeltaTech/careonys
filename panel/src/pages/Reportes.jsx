@@ -16,6 +16,7 @@ import {
 } from '../lib/signosVitales';
 import '../styles/molde-paginas.css';
 import './hojaDeTarjetas.css';
+import { FICHA_NOMBRE, conSuFicha } from '../lib/fichaDelPaciente';
 
 // Tope de filas por consulta. Con el rango de fechas por defecto (una semana) no se alcanza
 // nunca; existe para que un rango muy ancho no traiga miles de filas de golpe.
@@ -48,7 +49,7 @@ export function Reportes() {
         // El reporte dice de qué Paciente habla, así que se pide directo. Antes había que
         // traer la lista entera del turno y mostrar todos los nombres juntos en la misma fila.
         .select(
-          'id, created_at, texto_libre, alimentacion, medicacion, signos_vitales, estado_animo, incidentes, observaciones, foto_url, confirmado_asistente, pacientes!inner(id, nombre), guardias!inner(fecha, hora_inicio, hora_fin, asistentes(nombre))',
+          `id, created_at, texto_libre, alimentacion, medicacion, signos_vitales, estado_animo, incidentes, observaciones, foto_url, confirmado_asistente, pacientes!inner(id, ${FICHA_NOMBRE}), guardias!inner(fecha, hora_inicio, hora_fin, asistentes(nombre))`,
         )
         .gte('guardias.fecha', f.desde)
         .lte('guardias.fecha', f.hasta)
@@ -73,7 +74,7 @@ export function Reportes() {
       (reportesData ?? []).map((r) => ({
         ...r,
         paciente_id: r.pacientes?.id ?? null,
-        paciente_nombre: r.pacientes?.nombre || '—',
+        paciente_nombre: conSuFicha(r.pacientes)?.nombre || '—',
         asistente_nombre: r.guardias?.asistentes?.nombre || '—',
         fecha: r.guardias?.fecha ?? null,
         fuera_de_rango: tieneSignoFueraDeRango(r.signos_vitales, r.pacientes?.id ?? null, buscador),

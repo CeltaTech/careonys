@@ -17,7 +17,7 @@ cual. La redacción final la aprueba el Desarrollador cuando se escriba el manua
 | Asistentes | Reclutamiento, cualificación, documentación, disponibilidad y asignaciones. |
 | Clientes | Quien contrata y paga el servicio: los familiares del paciente o un Pagador. |
 | Clientes, Contratación directa | Los familiares del paciente contratan y pagan el servicio directamente. |
-| Clientes, Financiadores | Obra social, prepaga o empresa que contrata y paga el servicio de sus afiliados. |
+| Clientes, Pagadores | Obra social, prepaga o empresa que contrata y paga el servicio de sus afiliados. |
 | Empresas tercerizadas | Proveedores que ejecutan prestaciones y administran su propio personal. |
 | Facturación y pagos | Se cobra al cliente o al Pagador por las horas prestadas, y se liquida a cada asistente por las que trabajó. |
 | Facturación y pagos, Cobranza | Las horas se cuentan de la programación de la semana, sin las que quedaron sin cubrir. |

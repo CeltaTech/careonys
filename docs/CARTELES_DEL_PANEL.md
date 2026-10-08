@@ -314,7 +314,7 @@ lee este cartel ya cargó a esa persona entera y no es su primera vez en la pant
 ## 6. Cuando el Pagador no tiene cargada ninguna documentación exigible
 
 **Cómo llegar.** Menú lateral → grupo **Clientes** → **Clientes** → clic en un Cliente de la lista.
-Dentro de la Ficha del cliente, bajar hasta la subsección **«Documentación que pide el financiador»**, que está
+Dentro de la Ficha del cliente, bajar hasta la subsección **«Documentación que pide el Pagador»**, que está
 debajo de todo lo de la firma del Pagador.
 
 **Qué es esa pantalla y para qué se usa.** Es la parte de la Ficha del cliente donde se responde
@@ -339,7 +339,7 @@ en que se elige a la persona y no el día que hay que cobrarle.
   nombre de quien firma, si lo hay.
 - Los botones de «Armar el consentimiento», «Ver el documento», «Registrar la firma» y «Anular»,
   según en qué punto esté la firma.
-- Título de la subsección siguiente: «Documentación que pide el financiador».
+- Título de la subsección siguiente: «Documentación que pide el Pagador».
 - Y ahí abajo va la tabla de papeles, o el cartel cuando no hay nada.
 
 **El cartel, textual.**
@@ -359,11 +359,11 @@ documentos.» y «Hay tantos documentos vencidos.»
 
 **Qué queda alrededor si el cartel se saca.** Todo lo de la firma queda intacto: el estado del
 Pagador, quién paga, quién firma en su representación, la fecha en que se firmó y los botones de
-armar, ver y registrar. Lo único que queda es el título «Documentación que pide el financiador» con
+armar, ver y registrar. Lo único que queda es el título «Documentación que pide el Pagador» con
 un blanco debajo, y el botón de guardar los datos de contacto más abajo.
 
 **Problemas que se ven acá.** Son tres. El primero es que el título y el cartel se contradicen sobre
-quién exige los papeles: el título dice que la documentación la pide el financiador, y el cartel dice
+quién exige los papeles: el título dice que la documentación la pide el Pagador, y el cartel dice
 que la Prestadora «todavía no cargó qué documentación pide», como si fuera ella la que exige. Leídos
 uno atrás del otro, no se entiende de quién es la exigencia. El segundo es que en esta misma pantalla
 la frase «Quién paga» aparece tres veces seguidas y con tres significados distintos: es el rótulo del
@@ -888,11 +888,11 @@ hubiera muchas y ya estén todas resueltas.
 
 ---
 
-# Asistentes → Plantel de Asistentes → una persona
+# Asistentes → Padrón de Asistentes → una persona
 
 ## 16. Cuando esa persona no tiene guardias trabajadas
 
-**Cómo llegar.** Menú lateral → grupo **Asistentes** → **Plantel de Asistentes** → clic en una persona
+**Cómo llegar.** Menú lateral → grupo **Asistentes** → **Padrón de Asistentes** → clic en una persona
 → solapa **«Guardias trabajadas»**.
 
 **Qué es esa pantalla y para qué se usa.** Es la solapa del Legajo del Asistente donde se ve el historial de
@@ -942,7 +942,7 @@ exactamente la que no recibe la indicación de adónde ir a asignarle una.
 
 ## 17. Cuando ningún tipo de Asistente exige matrícula
 
-**Cómo llegar.** Menú lateral → grupo **Asistentes** → **Plantel de Asistentes** → clic en una persona
+**Cómo llegar.** Menú lateral → grupo **Asistentes** → **Padrón de Asistentes** → clic en una persona
 → solapa **«Matrículas»**. El texto está en el lugar de la lista de matrículas.
 
 **Qué es esa pantalla y para qué se usa.** Es la solapa donde se cargan las matrículas de esa
@@ -995,7 +995,7 @@ El cuarto es que es una explicación puesta debajo de un control, en el lugar de
 
 ## 18. Cuando esa persona no recibió ninguna evaluación
 
-**Cómo llegar.** Menú lateral → grupo **Asistentes** → **Plantel de Asistentes** → clic en una persona
+**Cómo llegar.** Menú lateral → grupo **Asistentes** → **Padrón de Asistentes** → clic en una persona
 → solapa **«Evaluaciones recibidas»**. Esta solapa sólo existe con la modalidad de Match.
 
 **Qué es esa pantalla y para qué se usa.** Es donde se ven las evaluaciones que los Clientes
@@ -1049,7 +1049,7 @@ Los dos carteles que siguen son del mismo mapa.
 ## 19. Mapa de los Asistentes — cuando no hay nadie en el Padrón
 
 **Cómo llegar.** Menú lateral → grupo **Asistentes** → **Postulaciones**, y bajar hasta la sección
-**«Mapa del plantel por zona»**.
+**«Mapa del Padrón por zona»**.
 
 **Qué es esa pantalla y para qué se usa.** Es un mapa que muestra dónde vive la gente que hoy está
 trabajando en la Prestadora, agrupada por zona de cobertura, para mirar cómo están repartidos los
@@ -1059,7 +1059,7 @@ sólo el punto.
 
 **Qué se ve en pantalla, de arriba abajo.**
 - Título de la pantalla, «Postulaciones de Asistentes».
-- Título de sección del mapa: «Mapa del plantel por zona»
+- Título de sección del mapa: «Mapa del Padrón por zona»
 - Debajo va todo el mapa —la cuenta, los botones de zona, el dibujo y la lista de nombres—, o el
   cartel cuando no hay nada que dibujar.
 
@@ -1079,7 +1079,7 @@ que dice cuántas personas se pudieron ubicar sobre el total, los botones para e
 cantidad—, el dibujo del mapa con sus puntos, la lista escrita con el nombre de cada persona y sus
 zonas, y el renglón final que avisa cuántos Legajos quedaron sin ubicación cargada.
 
-**Qué queda alrededor si el cartel se saca.** El título de la pantalla, el título «Mapa del plantel
+**Qué queda alrededor si el cartel se saca.** El título de la pantalla, el título «Mapa del Padrón
 por zona», y debajo un blanco.
 
 **Problemas que se ven acá.** El texto está repetido: se lee dos veces seguidas la misma frase, una
@@ -1098,7 +1098,7 @@ domicilio ubicado aparecen acá.», nunca se llega a mostrar en esta situación.
 ## 20. Mapa de los Asistentes — cuando hay Asistentes pero ninguna ubicación cargada
 
 **Cómo llegar.** El mismo camino que el cartel anterior: **Asistentes → Postulaciones**, y bajar hasta
-**«Mapa del plantel por zona»**. La diferencia con el caso anterior no es el camino sino la
+**«Mapa del Padrón por zona»**. La diferencia con el caso anterior no es el camino sino la
 situación: acá sí hay gente trabajando.
 
 **Qué es esa pantalla y para qué se usa.** Es el mismo mapa descrito arriba: dónde viven los
@@ -1109,12 +1109,12 @@ mapa roto.
 
 **Qué se ve en pantalla, de arriba abajo.**
 - Título de la pantalla, «Postulaciones de Asistentes».
-- Título de sección del mapa: «Mapa del plantel por zona»
+- Título de sección del mapa: «Mapa del Padrón por zona»
 - Debajo, el cartel, en el lugar donde iría el mapa.
 
 **El cartel, textual.**
 Primer renglón: «Todavía no hay ninguna ubicación para mostrar.»
-Segundo renglón: «Las fichas con el domicilio ubicado aparecen acá.»
+Segundo renglón: «Los Legajos con el domicilio ubicado aparecen acá.»
 
 **Cuándo aparece.** Cuando hay al menos un Asistente activo en el Padrón y ninguno de ellas tiene
 ubicación cargada. También aparece cuando las ubicaciones que hay cargadas no sirven: un par de
@@ -1125,13 +1125,13 @@ casilla que quedó vacía, se descartan y no cuentan como ubicación.
 cuántos se pudieron ubicar sobre el total, los botones de zona con sus cantidades, el dibujo del
 mapa, la lista escrita de nombres y el renglón que avisa cuántos quedaron sin ubicar.
 
-**Qué queda alrededor si el cartel se saca.** El título de la pantalla, el título «Mapa del plantel
+**Qué queda alrededor si el cartel se saca.** El título de la pantalla, el título «Mapa del Padrón
 por zona», y debajo un blanco.
 
 **Problemas que se ven acá.** El cartel esconde justamente el dato que más falta hace: cuántos
 Asistentes hay en el Padrón. Se sabe que no hay ubicaciones, pero no se sabe si son tres personas sin
 ubicar o cuarenta, porque el renglón que dice esa cuenta desaparece junto con el mapa. El texto del
-segundo renglón habla de «fichas» y de «domicilio ubicado», dos palabras que no aparecen en ningún
+segundo renglón habla de «Legajos» y de «domicilio ubicado», dos palabras que no aparecen en ningún
 otro lado de esta pantalla —el resto habla de personas y de zonas—, y no dice dónde se carga esa
 ubicación, así que leído solo no se sabe adónde ir a resolverlo. Y hay una situación parecida que no
 muestra ningún cartel: si se elige una zona que no tiene a nadie ubicado, el dibujo del mapa queda

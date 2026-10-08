@@ -13,13 +13,40 @@ import { useTiposAsistente } from '../../hooks/useTiposAsistente';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { CamposDeDomicilio } from '../../components/domicilio/CamposDeDomicilio';
 import { DOMICILIO_VACIO, partesParaGuardar } from '../../lib/partesDeDomicilio';
+import { avisosDelDocumento, nombreDelTipo, normalizarDni, normalizarNumero } from '../../lib/documentoDeIdentidad';
+import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
+import { useTiposDeDocumento } from '../../hooks/useTiposDeDocumento';
+import { useGeneros } from '../../hooks/useGeneros';
+import { usePaises } from '../../hooks/usePaises';
 
 const API_URL = import.meta.env.VITE_API_URL;
+
+// Lo que el backend rechaza y tiene casillero propio: el aviso va al pie de ese casillero.
+const CASILLERO_DEL_MOTIVO = {
+  falta_el_documento: 'documento_numero',
+  numero_no_valido: 'documento_numero',
+  legajo_repetido: 'documento_numero',
+  falta_el_dni: 'dni',
+  dni_no_coincide: 'dni',
+  falta_el_genero: 'genero',
+  genero_no_reconocido: 'genero',
+};
+
+// En el orden en que aparecen, para saltar al primero que tenga aviso.
+const ORDEN_DE_LOS_CASILLEROS = ['nombre', 'genero', 'documento_tipo', 'documento_numero', 'dni', 'documento_pais', 'email'];
 
 export function NuevoAsistenteModal({ onClose, onCreado }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
+  const prestadoraId = usePrestadoraActual();
+  const { porClase } = useTiposDeDocumento(prestadoraId);
+  const { generos } = useGeneros(prestadoraId);
+  const { paises } = usePaises();
   const [nombre, setNombre] = useState('');
+  const [genero, setGenero] = useState('');
+  const [documentoTipo, setDocumentoTipo] = useState('');
+  const [documentoNumero, setDocumentoNumero] = useState('');
+  const [documentoPais, setDocumentoPais] = useState('');
   const [dni, setDni] = useState('');
   const [telefono, setTelefono] = useState('');
   const [email, setEmail] = useState('');
@@ -41,6 +68,50 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
 
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
+  // Hasta que se aprieta Guardar no se avisa nada; después los avisos se recalculan solos.
+  const [intentado, setIntentado] = useState(false);
+  // Lo que rechazó el backend: [casillero, motivo]. Se olvida en cuanto se toca la identidad.
+  const [avisoDelBackend, setAvisoDelBackend] = useState(null);
+
+  const tipos = porClase.fisica;
+  const tipo = tipos.find((uno) => uno.codigo === documentoTipo) ?? null;
+
+  function avisosEnPantalla() {
+    const avisos = {};
+    if (!nombre.trim()) avisos.nombre = 'falta_el_dato';
+    if (!email.trim()) avisos.email = 'falta_el_dato';
+    return Object.assign(
+      avisos,
+      avisosDelDocumento({ tipo, numero: documentoNumero, pais: documentoPais, dni, genero, pideGenero: true }),
+    );
+  }
+
+  const avisos = intentado ? avisosEnPantalla() : {};
+  if (avisoDelBackend && !avisos[avisoDelBackend[0]]) avisos[avisoDelBackend[0]] = avisoDelBackend[1];
+  const TEXTO_DEL_AVISO = {
+    falta_el_dato: t.formularios.falta_un_dato_obligatorio,
+    falta_el_pais: t.formularios.falta_un_dato_obligatorio,
+    falta_el_documento: t.personas.falta_el_documento,
+    numero_no_valido: t.personas.numero_no_valido,
+    falta_el_dni: t.personas.falta_el_dni,
+    dni_no_coincide: t.personas.dni_no_coincide,
+    falta_el_genero: t.personas.falta_el_genero,
+    genero_no_reconocido: t.personas.genero_no_reconocido,
+    legajo_repetido: t.errores.motivos.legajo_repetido,
+  };
+  const avisoDe = (casillero) => (avisos[casillero] ? TEXTO_DEL_AVISO[avisos[casillero]] : undefined);
+
+  function saltarAlPrimero(conAviso) {
+    const primero = ORDEN_DE_LOS_CASILLEROS.find((casillero) => conAviso[casillero]);
+    if (primero) document.getElementById(`field-${primero}`)?.focus();
+  }
+
+  function cambiarIdentidad(cambiar) {
+    return (e) => {
+      cambiar(e.target.value);
+      setAvisoDelBackend(null);
+    };
+  }
 
   function alternarModalidad(modalidad) {
     setElegidas(
@@ -52,6 +123,14 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setIntentado(true);
+    setAvisoDelBackend(null);
+    const enPantalla = avisosEnPantalla();
+    if (Object.keys(enPantalla).length > 0) {
+      setError(null);
+      saltarAlPrimero(enPantalla);
+      return;
+    }
     if (modalidadesMarcadas.length === 0) {
       setError(t.modalidades.falta_elegir);
       return;
@@ -68,7 +147,11 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
         },
         body: JSON.stringify({
           nombre,
-          dni,
+          documento_tipo: documentoTipo,
+          documento_numero: normalizarNumero(documentoNumero, tipo.verifica_modulo_11),
+          documento_pais: tipo.lleva_pais ? documentoPais : null,
+          dni: tipo.contiene_dni ? normalizarDni(dni) : null,
+          genero,
           telefono,
           email,
           domicilioPartido: partesParaGuardar(domicilio),
@@ -83,6 +166,12 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
       }
       onCreado();
     } catch (err) {
+      const casillero = CASILLERO_DEL_MOTIVO[err.motivo];
+      if (casillero) {
+        setAvisoDelBackend([casillero, err.motivo]);
+        saltarAlPrimero({ [casillero]: true });
+        return;
+      }
       setError(mensajeDeModalidad(err, t.modalidades) ?? mensajeDeError(err, t));
     } finally {
       setGuardando(false);
@@ -96,11 +185,95 @@ export function NuevoAsistenteModal({ onClose, onCreado }) {
 
         {error && <Alert variant="error">{error}</Alert>}
 
-        <form onSubmit={handleSubmit}>
-          <FormField label={t.asistentes.col_nombre} name="nombre" required value={nombre} onChange={(e) => setNombre(e.target.value)} />
-          <FormField label={t.asistentes.dni} name="dni" value={dni} onChange={(e) => setDni(e.target.value)} />
-          <FormField label={t.asistentes.telefono} name="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
-          <FormField label={t.asistentes.email} name="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+        <form onSubmit={handleSubmit} noValidate>
+          <FormField
+            label={t.asistentes.col_nombre}
+            name="nombre"
+            required
+            value={nombre}
+            onChange={(e) => setNombre(e.target.value)}
+            disabled={guardando}
+            error={avisoDe('nombre')}
+          />
+          <FormField
+            label={t.asistentes.genero}
+            name="genero"
+            type="select"
+            required
+            value={genero}
+            onChange={cambiarIdentidad(setGenero)}
+            disabled={guardando}
+            error={avisoDe('genero')}
+          >
+            <option value="">{t.personas.selector_sin_elegir}</option>
+            {generos.map((uno) => (
+              <option key={uno.codigo} value={uno.codigo}>{t.generos[uno.codigo] ?? uno.codigo}</option>
+            ))}
+          </FormField>
+          <FormField
+            label={t.personas.documento_tipo}
+            name="documento_tipo"
+            type="select"
+            required
+            value={documentoTipo}
+            onChange={cambiarIdentidad(setDocumentoTipo)}
+            disabled={guardando}
+            error={avisoDe('documento_tipo')}
+          >
+            <option value="">{t.personas.selector_sin_elegir}</option>
+            {tipos.map((uno) => (
+              <option key={uno.codigo} value={uno.codigo}>{nombreDelTipo(uno, t.personas.tipos_de_documento)}</option>
+            ))}
+          </FormField>
+          <FormField
+            label={t.personas.documento_numero}
+            name="documento_numero"
+            required
+            value={documentoNumero}
+            onChange={cambiarIdentidad(setDocumentoNumero)}
+            disabled={guardando}
+            error={avisoDe('documento_numero')}
+          />
+          {tipo?.contiene_dni && (
+            <FormField
+              label={t.asistentes.dni}
+              name="dni"
+              required
+              inputMode="numeric"
+              value={dni}
+              onChange={cambiarIdentidad(setDni)}
+              disabled={guardando}
+              error={avisoDe('dni')}
+            />
+          )}
+          {tipo?.lleva_pais && (
+            <FormField
+              label={t.personas.documento_pais}
+              name="documento_pais"
+              type="select"
+              required
+              value={documentoPais}
+              onChange={cambiarIdentidad(setDocumentoPais)}
+              disabled={guardando}
+              error={avisoDe('documento_pais')}
+            >
+              <option value="">{t.personas.selector_sin_elegir}</option>
+              {paises.map((pais) => (
+                <option key={pais.codigo} value={pais.codigo}>{pais.nombre}</option>
+              ))}
+            </FormField>
+          )}
+          <FormField label={t.asistentes.telefono} name="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} disabled={guardando} />
+          <FormField
+            label={t.asistentes.email}
+            name="email"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={guardando}
+            error={avisoDe('email')}
+          />
           {/* Opcional: si no se sabe al dar de alta, se carga después desde el legajo. */}
           <CamposDeDomicilio valor={domicilio} alCambiar={setDomicilio} deshabilitado={guardando} />
           <FormField label={t.asistentes.col_tipo} name="tipo_asistente_id" type="select" value={tipoAsistenteId} onChange={(e) => setTipoAsistenteId(e.target.value)}>

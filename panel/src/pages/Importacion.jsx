@@ -161,18 +161,16 @@ export function Importacion() {
     setDescargando(true);
     setError(null);
     try {
+      // Cada dato obligatorio que la planilla no traía vuelve como columna vacía, para completarlo.
       const columnaMotivo = t.importacion.col_motivo;
-      const columnaDocumento = t.importacion.campo_documentoPaciente;
-      const faltaElDocumento =
-        tipo === 'cliente' && !Object.values(mapeo).includes('documentoPaciente');
-      const encabezados = [
-        ...analisis.headers,
-        ...(faltaElDocumento ? [columnaDocumento] : []),
-        columnaMotivo,
-      ];
+      const mapeados = Object.values(mapeo);
+      const columnasQueFaltan = (analisis.camposObligatorios ?? [])
+        .filter((campo) => !mapeados.includes(campo))
+        .map((campo) => t.importacion[`campo_${campo}`]);
+      const encabezados = [...analisis.headers, ...columnasQueFaltan, columnaMotivo];
       const filas = resultado.errores.map((e) => ({
         ...analisis.filas[e.fila - 1],
-        ...(faltaElDocumento ? { [columnaDocumento]: '' } : {}),
+        ...Object.fromEntries(columnasQueFaltan.map((columna) => [columna, ''])),
         [columnaMotivo]: motivoDe(e),
       }));
 

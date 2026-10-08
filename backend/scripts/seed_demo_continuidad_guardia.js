@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import { identidadInventada } from './identidadInventada.js';
 dotenv.config();
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -57,6 +58,7 @@ async function main() {
     prestadora_id: PRESTADORA_ID,
     nombre: 'DEMO — Marta Gómez',
     telefono: '+5491122334455',
+    ...identidadInventada(30499001, 'femenino'),
     estado: 'activo',
     tipo_vinculo: 'monotributo',
   }).throwOnError();
@@ -74,6 +76,7 @@ async function main() {
     prestadora_id: PRESTADORA_ID,
     nombre: 'DEMO — Lucía Paredes',
     telefono: '+5491133445566',
+    ...identidadInventada(30499002, 'femenino'),
     estado: 'activo',
     tipo_vinculo: 'monotributo',
   }).throwOnError();

@@ -135,7 +135,14 @@ beforeEach(() => {
   respuestas.set('POST /rest/v1/verificaciones_asistente', () => []);
   // El país decide con qué servicio se ubica un domicilio; la política, si el alta nace verificada.
   respuestas.set('GET /rest/v1/prestadoras', () => [{ pais: 'AR', politica_verificacion_alta_manual: 'ninguna' }]);
+  // Qué documentos se piden en el país, y cuáles contienen el DNI.
+  respuestas.set('GET /rest/v1/catalogo_documentos_de_identidad', () => [
+    { codigo: 'cuil', contiene_dni: true, verifica_modulo_11: true },
+  ]);
 });
+
+// Una identidad inventada y coherente: el DNI es el que lleva adentro el CUIL.
+const IDENTIDAD = { documento_tipo: 'cuil', documento_numero: '20123456786', dni: '12345678', genero: 'femenino' };
 
 // ---------------------------------------------------------------------------------------
 
@@ -144,6 +151,7 @@ describe('el alta de una Asistente', () => {
     await crearAsistenteDirecto({
       nombre: 'Persona De Prueba',
       email: 'persona@ejemplo.invalido',
+      ...IDENTIDAD,
       lugares: [LUGAR, OTRO_LUGAR],
       prestadoraId: PRESTADORA,
       db: supabase,
@@ -161,6 +169,7 @@ describe('el alta de una Asistente', () => {
     await assert.rejects(() => crearAsistenteDirecto({
       nombre: 'Persona De Prueba',
       email: 'persona@ejemplo.invalido',
+      ...IDENTIDAD,
       lugares: [LUGAR],
       prestadoraId: PRESTADORA,
       db: supabase,

@@ -6,6 +6,7 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import { readFileSync } from 'fs';
+import { identidadInventada } from './identidadInventada.js';
 dotenv.config();
 
 const API = 'http://localhost:4000/api/app-clientes';
@@ -39,7 +40,10 @@ async function crearAsistente(nombre) {
   if (errorUsuario) throw errorUsuario;
   const { data: asistente, error: errorAsistente } = await admin
     .from('asistentes')
-    .insert({ id: auth.user.id, prestadora_id: SANDBOX_ID, nombre: `PRUEBA temporal — ${nombre}` })
+    .insert({
+      id: auth.user.id, prestadora_id: SANDBOX_ID, nombre: `PRUEBA temporal — ${nombre}`,
+      ...identidadInventada(30496000 + creados.asistenteIds.length, 'femenino'),
+    })
     .select('id, qr_token')
     .single();
   if (errorAsistente) throw errorAsistente;

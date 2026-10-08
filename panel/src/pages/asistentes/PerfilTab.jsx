@@ -37,10 +37,30 @@ import { llamarApiLugaresDeTrabajo } from '../../lib/apiLugaresDeTrabajo';
 import { generarCertificadoTrabajo, generarCertificadoRemuneracionesServicios, descargarPDF } from '../../lib/generarDocumentoCese';
 import { con } from '../../lib/textos';
 import { errorDeLaRespuesta, mensajeDeError } from '../../lib/errores';
+import { avisosDelDocumento, nombreDelTipo, normalizarDni, normalizarNumero } from '../../lib/documentoDeIdentidad';
+import { useTiposDeDocumento } from '../../hooks/useTiposDeDocumento';
+import { useGeneros } from '../../hooks/useGeneros';
+import { usePaises } from '../../hooks/usePaises';
 import '../../styles/molde-paginas.css';
 import '../hojaDeTarjetas.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
+
+// Lo que la base rechaza al guardar la identidad, y al pie de qué casillero va.
+// `23505` es el documento repetido, que sólo la base puede saber.
+const AVISO_DE_LA_BASE = {
+  falta_el_documento: ['documento_tipo', 'falta_el_documento'],
+  documento_no_corresponde: ['documento_tipo', 'falta_el_documento'],
+  numero_no_valido: ['documento_numero', 'numero_no_valido'],
+  falta_el_pais_del_documento: ['documento_pais', 'falta_el_pais'],
+  falta_el_dni: ['dni', 'falta_el_dni'],
+  dni_no_coincide: ['dni', 'dni_no_coincide'],
+  falta_el_genero: ['genero', 'falta_el_genero'],
+  genero_no_corresponde: ['genero', 'genero_no_reconocido'],
+  23505: ['documento_numero', 'legajo_repetido'],
+};
+
+const ORDEN_DE_LOS_CASILLEROS = ['nombre', 'genero', 'documento_tipo', 'documento_numero', 'dni', 'documento_pais'];
 
 export function PerfilTab({ asistente, onActualizado }) {
   const { t, locale } = useLocale();
@@ -56,6 +76,10 @@ export function PerfilTab({ asistente, onActualizado }) {
      el Legajo del Asistente: el lugar del domicilio, dónde acepta trabajar y el nombre del lugar con el que se
      arma el renglón del domicilio. */
   const catalogoDeLugares = useCatalogoDeLugares();
+  const prestadoraId = usePrestadoraActual();
+  const { porClase } = useTiposDeDocumento(prestadoraId);
+  const { generos } = useGeneros(prestadoraId);
+  const { paises } = usePaises();
 
   /* Las formas de recibir trabajo que se pueden marcar en el Legajo del Asistente. El techo lo pone la
      Prestadora con las modalidades que tenga activas. Se suma a la lista la que el Asistente
@@ -70,6 +94,10 @@ export function PerfilTab({ asistente, onActualizado }) {
 
   const [form, setForm] = useState({
     nombre: asistente.nombre || '',
+    genero: asistente.genero || '',
+    documento_tipo: asistente.documento_tipo || '',
+    documento_numero: asistente.documento_numero || '',
+    documento_pais: asistente.documento_pais || '',
     dni: asistente.dni || '',
     telefono: asistente.telefono || '',
     email: asistente.email || '',
@@ -101,6 +129,54 @@ export function PerfilTab({ asistente, onActualizado }) {
   const [guardado, setGuardado] = useState(false);
   const [reenviando, setReenviando] = useState(false);
   const [mensajeReenvio, setMensajeReenvio] = useState(null);
+  // Hasta que se aprieta Guardar no se avisa nada; después los avisos se recalculan solos.
+  const [intentado, setIntentado] = useState(false);
+  // Lo que rechazó la base: [casillero, motivo]. Se olvida en cuanto se toca la identidad.
+  const [avisoDeLaBase, setAvisoDeLaBase] = useState(null);
+
+  const tiposDeDocumento = porClase.fisica;
+  const tipoDeDocumento = tiposDeDocumento.find((uno) => uno.codigo === form.documento_tipo) ?? null;
+
+  function avisosEnPantalla() {
+    const avisos = {};
+    if (!form.nombre.trim()) avisos.nombre = 'falta_el_dato';
+    return Object.assign(
+      avisos,
+      avisosDelDocumento({
+        tipo: tipoDeDocumento,
+        numero: form.documento_numero,
+        pais: form.documento_pais,
+        dni: form.dni,
+        genero: form.genero,
+        pideGenero: true,
+      }),
+    );
+  }
+
+  const avisos = intentado ? avisosEnPantalla() : {};
+  if (avisoDeLaBase && !avisos[avisoDeLaBase[0]]) avisos[avisoDeLaBase[0]] = avisoDeLaBase[1];
+  const TEXTO_DEL_AVISO = {
+    falta_el_dato: t.formularios.falta_un_dato_obligatorio,
+    falta_el_pais: t.formularios.falta_un_dato_obligatorio,
+    falta_el_documento: t.personas.falta_el_documento,
+    numero_no_valido: t.personas.numero_no_valido,
+    falta_el_dni: t.personas.falta_el_dni,
+    dni_no_coincide: t.personas.dni_no_coincide,
+    falta_el_genero: t.personas.falta_el_genero,
+    genero_no_reconocido: t.personas.genero_no_reconocido,
+    legajo_repetido: t.errores.motivos.legajo_repetido,
+  };
+  const avisoDe = (casillero) => (avisos[casillero] ? TEXTO_DEL_AVISO[avisos[casillero]] : undefined);
+
+  function saltarAlPrimero(conAviso) {
+    const primero = ORDEN_DE_LOS_CASILLEROS.find((casillero) => conAviso[casillero]);
+    if (primero) document.getElementById(`field-${primero}`)?.focus();
+  }
+
+  function setIdentidad(campo, valor) {
+    set(campo, valor);
+    setAvisoDeLaBase(null);
+  }
 
   /* Dónde acepta trabajar esta persona. No está en el Legajo del Asistente: está en una tabla que la cruza con
      cada lugar, y por eso se lee y se escribe por el backend, que deja guardados exactamente los que
@@ -148,6 +224,14 @@ export function PerfilTab({ asistente, onActualizado }) {
   }
 
   async function guardar() {
+    setIntentado(true);
+    setAvisoDeLaBase(null);
+    const enPantalla = avisosEnPantalla();
+    if (Object.keys(enPantalla).length > 0) {
+      setError(null);
+      saltarAlPrimero(enPantalla);
+      return;
+    }
     /* Sin ninguna forma de recibir trabajo, este Asistente no puede recibir una sola guardia.
        La base lo dejaría guardar así, y el problema recién aparecería el día que se le quiera
        asignar algo, lejos de la pantalla donde se produjo. */
@@ -159,7 +243,11 @@ export function PerfilTab({ asistente, onActualizado }) {
     setError(null);
     const payload = {
       nombre: form.nombre.trim(),
-      dni: form.dni.trim() || null,
+      genero: form.genero,
+      documento_tipo: form.documento_tipo,
+      documento_numero: normalizarNumero(form.documento_numero, tipoDeDocumento.verifica_modulo_11),
+      documento_pais: tipoDeDocumento.lleva_pais ? form.documento_pais : null,
+      dni: tipoDeDocumento.contiene_dni ? normalizarDni(form.dni) : null,
       telefono: form.telefono.trim() || null,
       email: form.email.trim() || null,
       tipo_asistente_id: form.tipo_asistente_id || null,
@@ -186,6 +274,12 @@ export function PerfilTab({ asistente, onActualizado }) {
     const { error: errorUpdate } = await supabase.from('asistentes').update(payload).eq('id', asistente.id);
     if (errorUpdate) {
       setGuardando(false);
+      const deLaBase = AVISO_DE_LA_BASE[errorUpdate.code === '23505' ? '23505' : errorUpdate.message];
+      if (deLaBase) {
+        setAvisoDeLaBase(deLaBase);
+        saltarAlPrimero({ [deLaBase[0]]: true });
+        return;
+      }
       // La base tiene la última palabra sobre la modalidad: puede rechazar una que la
       // Prestadora apagó mientras esta pantalla estaba abierta. Ese rechazo se traduce a una
       // frase que dice qué pasó y dónde se arregla, nunca el texto crudo del error.
@@ -281,8 +375,87 @@ export function PerfilTab({ asistente, onActualizado }) {
           <h2>{t.asistentes.tabs.perfil}</h2>
         </div>
         <div className="molde-formgrid">
-          <FormField label={t.asistentes.col_nombre} name="nombre" value={form.nombre} onChange={(e) => set('nombre', e.target.value)} disabled={!puedeEditarIdentidad} />
-          <FormField label={t.asistentes.dni} name="dni" value={form.dni} onChange={(e) => set('dni', e.target.value)} disabled={!puedeEditarIdentidad} />
+          <div className="hoja-dato">
+            <div className="panel-mini">{t.asistentes.numero_legajo}</div>
+            <b>{asistente.numero_legajo}</b>
+          </div>
+          <FormField
+            label={t.asistentes.col_nombre}
+            name="nombre"
+            required
+            value={form.nombre}
+            onChange={(e) => set('nombre', e.target.value)}
+            disabled={!puedeEditarIdentidad}
+            error={avisoDe('nombre')}
+          />
+          <FormField
+            label={t.asistentes.genero}
+            name="genero"
+            type="select"
+            required
+            value={form.genero}
+            onChange={(e) => setIdentidad('genero', e.target.value)}
+            disabled={!puedeEditarIdentidad}
+            error={avisoDe('genero')}
+          >
+            <option value="">{t.personas.selector_sin_elegir}</option>
+            {generos.map((uno) => (
+              <option key={uno.codigo} value={uno.codigo}>{t.generos[uno.codigo] ?? uno.codigo}</option>
+            ))}
+          </FormField>
+          <FormField
+            label={t.personas.documento_tipo}
+            name="documento_tipo"
+            type="select"
+            required
+            value={form.documento_tipo}
+            onChange={(e) => setIdentidad('documento_tipo', e.target.value)}
+            disabled={!puedeEditarIdentidad}
+            error={avisoDe('documento_tipo')}
+          >
+            <option value="">{t.personas.selector_sin_elegir}</option>
+            {tiposDeDocumento.map((uno) => (
+              <option key={uno.codigo} value={uno.codigo}>{nombreDelTipo(uno, t.personas.tipos_de_documento)}</option>
+            ))}
+          </FormField>
+          <FormField
+            label={t.personas.documento_numero}
+            name="documento_numero"
+            required
+            value={form.documento_numero}
+            onChange={(e) => setIdentidad('documento_numero', e.target.value)}
+            disabled={!puedeEditarIdentidad}
+            error={avisoDe('documento_numero')}
+          />
+          {tipoDeDocumento?.contiene_dni && (
+            <FormField
+              label={t.asistentes.dni}
+              name="dni"
+              required
+              inputMode="numeric"
+              value={form.dni}
+              onChange={(e) => setIdentidad('dni', e.target.value)}
+              disabled={!puedeEditarIdentidad}
+              error={avisoDe('dni')}
+            />
+          )}
+          {tipoDeDocumento?.lleva_pais && (
+            <FormField
+              label={t.personas.documento_pais}
+              name="documento_pais"
+              type="select"
+              required
+              value={form.documento_pais}
+              onChange={(e) => setIdentidad('documento_pais', e.target.value)}
+              disabled={!puedeEditarIdentidad}
+              error={avisoDe('documento_pais')}
+            >
+              <option value="">{t.personas.selector_sin_elegir}</option>
+              {paises.map((pais) => (
+                <option key={pais.codigo} value={pais.codigo}>{pais.nombre}</option>
+              ))}
+            </FormField>
+          )}
           <FormField label={t.asistentes.telefono} name="telefono" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} disabled={!puedeEditarIdentidad} />
           <FormField label={t.asistentes.email} name="email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} disabled={!puedeEditarIdentidad} />
           {/* El domicilio solo lo ve la administración: la vista del Coordinador no trae esa

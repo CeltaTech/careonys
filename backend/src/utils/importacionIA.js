@@ -32,16 +32,27 @@ export const CAMPOS_DOMICILIO = {
 
 export const CAMPOS_IMPORTACION = {
   asistente: [
-    'nombre', 'telefono', 'email', 'dni', 'tipo_asistente',
+    'nombre', 'telefono', 'email', 'documento', 'dni', 'genero', 'tipo_asistente',
     'domicilio', ...PARTES_DEL_DOMICILIO.map((parte) => `domicilio${parte}`),
     'dondeAceptaTrabajar',
     'tipo_vinculo', 'categoria_cct', 'valor_hora', 'sueldo_basico', 'horas_semanales',
   ],
   cliente: [
-    'nombreContacto', 'apellidoContacto', 'documentoContacto', 'telefono', 'email', 'plan',
-    'nombrePaciente', 'documentoPaciente',
+    'nombreContacto', 'apellidoContacto', 'documentoContacto', 'dniContacto', 'generoContacto',
+    'telefono', 'email', 'plan',
+    'nombrePaciente', 'documentoPaciente', 'dniPaciente', 'generoPaciente',
     'domicilioPaciente', ...PARTES_DEL_DOMICILIO.map((parte) => `domicilioPaciente${parte}`),
     'fechaNacimientoPaciente', 'nivelComplejidadPaciente', 'patologiasPaciente',
+  ],
+};
+
+// Los campos sin los cuales una fila no se carga. Si la planilla no trae la columna, el archivo de
+// no cargados la suma vacía, para que se complete ahí y se vuelva a importar.
+export const CAMPOS_OBLIGATORIOS = {
+  asistente: ['documento', 'dni', 'genero'],
+  cliente: [
+    'documentoContacto', 'dniContacto', 'generoContacto',
+    'documentoPaciente', 'dniPaciente', 'generoPaciente',
   ],
 };
 

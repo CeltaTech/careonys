@@ -134,7 +134,6 @@ export function Padron() {
     if (!buscado) return filas;
     return filas.filter((fila) => (
       `${fila.apellido ?? ''} ${fila.nombre ?? ''}`.toLowerCase().includes(buscado)
-      || String(fila.numero_legajo).includes(buscado)
       || (fila.documento_numero ?? '').toLowerCase().includes(buscado)
     ));
   }, [filas, f.busqueda]);

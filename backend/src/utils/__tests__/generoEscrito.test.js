@@ -9,10 +9,10 @@ import { generoEscrito } from '../generoEscrito.js';
 
 describe('el género escrito', () => {
   it('reconoce la letra, la palabra entera y los tres idiomas', () => {
-    for (const valor of ['F', 'f.', 'Femenino', 'MUJER', 'female', 'Feminino']) {
+    for (const valor of ['F', 'f.', 'Femenino', 'MUJER', 'Hembra', 'Fémina', 'female', 'Feminino', 'Fêmea']) {
       assert.deepEqual(generoEscrito(valor), { codigo: 'femenino' }, valor);
     }
-    for (const valor of ['M', 'Masculino', 'Varón', 'male']) {
+    for (const valor of ['M', 'Masculino', 'Varón', 'Macho', 'male', 'Homem']) {
       assert.deepEqual(generoEscrito(valor), { codigo: 'masculino' }, valor);
     }
     for (const valor of ['X', 'No binario', '  no   binaria ', 'non-binary', 'Não binário']) {

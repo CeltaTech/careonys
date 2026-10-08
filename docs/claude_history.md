@@ -491,3 +491,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** el pedido de servicio entraba como Solicitud, en una tabla aparte, y desde ahí se lo convertía en Cliente; el Cliente apuntaba a esa Solicitud y existía el Legajo del Contratante.
 - **Qué dice ahora:** el Cliente es una persona del Padrón, y el Contratante, el Paciente y el Pagador son partes del Cliente. Se entra como contacto, se recibe un presupuesto y se pasa a Cliente sólo con el presupuesto aprobado (OctoCRM). No hay alta manual de Cliente ni «convertir en Cliente»: la cartera previa entra por la importación, que crea el Legajo.
 - **Motivo:** el Desarrollador: «al fin y al cabo son datos que no sirven». Sin presupuesto aprobado no hay Cliente, como en cualquier CRM.
+
+## La asignación recorta lo que ve cada Coordinadora
+
+- **Qué decía antes:** asignar quién coordina un Servicio decía quién responde, y no podía filtrar lo que cada Coordinadora ve.
+- **Qué dice ahora:** cada Coordinadora ve sólo los Clientes y Servicios que tiene asignados. Una emergencia habilita a todas a ver lo necesario para resolverla, hasta que la asignada retoma el problema. El Pagador, la facturación y la lista de precios quedan fuera de su rol y se habilitan con un permiso.
+- **Motivo:** el Desarrollador pidió que cada rol vea sólo la información mínima para hacer su trabajo: «una coordinadora no necesita ver nada de los clientes que no le fueron asignados».

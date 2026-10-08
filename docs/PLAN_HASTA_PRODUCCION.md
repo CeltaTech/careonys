@@ -800,6 +800,28 @@ Pagador firmado tampoco se habilita? ¿O el acto muestra cómo está esa firma y
 Paciente, que dice que mientras nadie esté fijado son todos los que trabajan en la zona. Describe el
 modelo que este plan reemplaza. Va junto con el paso del coordinador asignado, no antes.
 
+En la misma pasada, **lo que ve cada uno se recorta a lo que necesita para trabajar**, y se cumple
+en la base y en el backend, que hoy filtra sólo por Prestadora:
+
+- **La Coordinadora ve sólo los Clientes y Servicios que tiene asignados**: sus Pacientes, su
+  historia clínica, sus reportes y alertas, sus personas autorizadas y las Personas del Directorio
+  vinculadas a ellos. Los Asistentes, las matrículas y las calificaciones, los de su zona; de cada
+  Asistente, la distancia al domicilio y no el domicilio. Hoy patologías, medicación habitual y
+  complejidad le llegan de todos los Pacientes por fuera de la restricción de historia clínica.
+- **Una emergencia habilita a todas las Coordinadoras** a ver lo necesario para resolverla, hasta
+  que la asignada retoma el problema. La que cubre una ausencia ve lo de la ausente mientras dure.
+- **El Pagador, la facturación y la lista de precios quedan fuera del rol de la Coordinadora**, y
+  se habilitan con un permiso.
+- **El Asistente, en una oferta, ve barrio, distancia, horario y complejidad.** El nombre del
+  Paciente y el domicilio exacto, recién al aceptar. De las guardias pasadas no recibe el
+  domicilio. Los reportes de otros Asistentes, sólo del Servicio en curso, mientras tenga una
+  guardia vigente ahí y en cantidad acotada. Deja de recibir la credencial interna de su perfil.
+- **Durante la guardia, el Asistente recibe el contacto de emergencia, la obra social y el número
+  de afiliado del Paciente**, que hoy no recibe.
+
+Cierre: la prueba con dos Coordinadoras de Servicios distintos y datos cargados, donde cada una ve
+lo suyo y nada de la otra, salvo durante una emergencia abierta.
+
 **29.** Agregar el tipo «Servicio» a Ajustes › Importación, que hoy no está entre los tipos que se
 pueden importar. Va después de que el acto exista: importar un Servicio sin coordinador asignado
 sería dar de alta algo que el producto no habilita.

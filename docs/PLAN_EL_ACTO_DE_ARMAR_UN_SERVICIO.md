@@ -392,15 +392,20 @@ Lo precisó el Desarrollador, textual:
 > problema nunca puede quedar si resolver a causa de que, por alguna causa, la persona asignada no
 > este disponible para resolverla
 
-Entonces **«una sola persona» es la responsabilidad, no la visibilidad.** Lo asignado es quién
-responde por ese Servicio y quién arma su equipo. Una emergencia la ve cualquiera que pueda
-resolverla, y eso no depende de quién esté asignado: **ningún problema queda sin resolver porque la
-persona asignada no esté disponible.**
+Y lo precisó después, también textual:
 
-**Esto ya funciona así, y no se toca.** La bandeja de emergencias del Panel acota los avisos **a la
-Prestadora y a nada más** —`backend/src/routes/panelEmergencias.js`, con `acotarAPrestadora`—: no
-filtra por lugar, ni por zona, ni por quién coordina. Verificado: en ese archivo no aparece ninguna
-mención de lugares ni de coordinador. Quien tiene el permiso las ve, y así queda.
+> la emergencia habilita a todos los coordinadores a ver la info necesaria para solucionarla hasta
+> tanto el coordinador asignado retome el problema
+
+Entonces **la asignación sí recorta lo que cada Coordinadora ve: los Clientes y Servicios que tiene
+asignados.** La emergencia es la excepción: mientras está abierta y la asignada no la retomó,
+cualquier Coordinadora ve lo necesario para resolverla, y nada más. **Ningún problema queda sin
+resolver porque la persona asignada no esté disponible.**
+
+**La bandeja de emergencias del Panel ya muestra todas las de la Prestadora**
+—`backend/src/routes/panelEmergencias.js`, con `acotarAPrestadora`—, sin filtrar por lugar, por zona
+ni por quién coordina. Eso queda. Lo que cambia es el resto: la Ficha, la historia clínica y los
+reportes de ese Paciente se le abren a quien no es la asignada sólo durante la emergencia.
 
 **Y hay un mecanismo más, que también queda como está.** Cuando un aviso lleva demasiado tiempo sin
 respuesta, pasa al coordinador de respaldo de la Prestadora, configurado a mano en
@@ -409,8 +414,8 @@ respuesta, pasa al coordinador de respaldo de la Prestadora, configurado a mano 
 una cantidad de minutos y avisa a una persona concreta— y las dos conviven.
 
 **La consecuencia para este paso es una sola, y es lo que hay que cuidar al construirlo:** la
-asignación no puede convertirse en un filtro de visibilidad. Asignar a una persona dice quién
-responde; **no le saca la emergencia de la vista a nadie.**
+asignación filtra lo de todos los días, **pero no le saca la emergencia de la vista a nadie** hasta
+que la asignada la retoma.
 
 **Lo que esto obliga en el paso 4.** La asignación de quién coordina es una de las cuatro cosas que
 se dicen al armar el Servicio, y **es requisito para habilitarlo**: sin ella el Servicio queda sin

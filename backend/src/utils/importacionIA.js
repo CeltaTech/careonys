@@ -256,6 +256,38 @@ export function reescritorDeLocalidades({ pais, prestadoraId }) {
   };
 }
 
+const SYSTEM_PROMPT_GENEROS = `Este asistente lee el género de personas tal como una
+Prestadora de cuidado domiciliario lo escribió a mano en una planilla, y que no se reconoció como
+estaba escrito: errores de tipeo, palabras pegadas, abreviaturas, otro idioma.
+
+Por cada pedido se devuelve uno de estos códigos: "femenino", "masculino" o "x" (no binario).
+Se devuelve un código sólo cuando lo escrito no puede querer decir otra cosa. Si puede ser más de
+uno, si no dice un género («otro», «no informa», «-», un nombre, un número), o si no se sabe, el
+código queda vacío. Nunca se deduce el género de otra cosa que lo escrito, y nunca se completa con
+el más probable: un código equivocado queda guardado en la ficha de una persona.
+
+Se responde únicamente con un JSON de esta forma, sin texto adicional:
+{"resultados": [{"clave": "la misma del pedido", "codigo": ""}]}`;
+
+// Lo que la importación no reconoció del género, leído por la IA. Propone y nunca confirma:
+// `generosDeLaImportacion.js` sólo acepta un código exacto del catálogo. Sin clave de la IA
+// devuelve null, y lo no reconocido vuelve con su motivo.
+export function lectorDeGeneros({ prestadoraId }) {
+  const anthropic = obtenerCliente();
+  if (!anthropic) return null;
+  return async (pedidos) => {
+    const respuesta = await anthropic.messages.create({
+      model: MODELO_IA,
+      max_tokens: Math.min(8000, 200 + pedidos.length * 30),
+      system: SYSTEM_PROMPT_GENEROS,
+      messages: [{ role: 'user', content: JSON.stringify({ pedidos }) }],
+    });
+    registrarUsoIA({ prestadoraId, modulo: 'importacion_generos', modelo: MODELO_IA, respuestaAnthropic: respuesta });
+    const parseado = jsonDeRespuestaIA(respuesta);
+    return Array.isArray(parseado?.resultados) ? parseado.resultados : [];
+  };
+}
+
 let cliente = null;
 function obtenerCliente() {
   if (!process.env.ANTHROPIC_API_KEY) return null;

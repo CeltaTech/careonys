@@ -751,7 +751,7 @@ function TabServiciosPersonalEmergencia() {
            otras puertas, porque esta lista no se usa para mostrar a nadie —los nombres de la
            tabla de arriba salen de `/personal-emergencia`, no de esto—, así que no hay ningún
            nombre que se pueda quedar sin dueño. El valor sale de `ESTADO_ACTIVO` y no escrito a
-           mano: es la misma regla que contesta `estaEnElPlantel`, y una consulta a la base no
+           mano: es la misma regla que contesta `estaEnElPadron`, y una consulta a la base no
            puede llamar a una función de JavaScript (regla 12 de CLAUDE.md §7). */
         supabase.from('asistentes').select('id, nombre').eq('estado', ESTADO_ACTIVO).order('nombre'),
       ]);

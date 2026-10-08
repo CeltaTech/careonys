@@ -3,10 +3,10 @@ import {
   SIN_ZONA,
   coordenadasDe,
   encuadre,
-  mapaDelPlantel,
+  mapaDelPadron,
   puntosDeLaZona,
   zonasDeUnAsistente,
-} from '../mapaDelPlantel';
+} from '../mapaDelPadron';
 import { T } from '../../i18n/translations';
 
 const IDIOMAS = ['es-AR', 'en', 'pt-BR'];
@@ -54,7 +54,7 @@ describe('coordenadasDe', () => {
   });
 
   // Una columna que quedó en cero no es una ubicación cargada, y dibujarla mandaría el mapa al
-  // Golfo de Guinea con todo el plantel adentro del encuadre.
+  // Golfo de Guinea con todo el Padrón adentro del encuadre.
   it('no toma el cero de las dos columnas como una ubicación', () => {
     expect(coordenadasDe({ lat: 0, lng: 0 })).toBeNull();
   });
@@ -98,7 +98,7 @@ describe('encuadre', () => {
   });
 });
 
-describe('mapaDelPlantel', () => {
+describe('mapaDelPadron', () => {
   const lugaresDe = lugaresPorAsistente({
     norte: ['lugar-norte'],
     oeste: ['lugar-oeste'],
@@ -107,7 +107,7 @@ describe('mapaDelPlantel', () => {
   });
 
   it('deja afuera a quien ya no trabaja en la Prestadora', () => {
-    const resultado = mapaDelPlantel(
+    const resultado = mapaDelPadron(
       [
         asistente({ id: 'norte', nombre: 'Aaa' }),
         asistente({ id: 'oeste', nombre: 'Bbb', estado: 'cesado' }),
@@ -119,9 +119,9 @@ describe('mapaDelPlantel', () => {
     expect(resultado.puntos.map((p) => p.id)).toEqual(['norte']);
   });
 
-  // El número de gente ubicada no dice lo mismo solo que acompañado del tamaño del plantel.
+  // El número de gente ubicada no dice lo mismo solo que acompañado del tamaño del Padrón.
   it('cuenta aparte a quien no tiene ubicación cargada, y no lo dibuja', () => {
-    const resultado = mapaDelPlantel(
+    const resultado = mapaDelPadron(
       [
         asistente({ id: 'norte', nombre: 'Aaa' }),
         asistente({ id: 'oeste', nombre: 'Bbb', lat: null, lng: null }),
@@ -135,7 +135,7 @@ describe('mapaDelPlantel', () => {
   });
 
   it('dibuja una sola vez a quien cae en dos zonas, y las nombra a las dos', () => {
-    const resultado = mapaDelPlantel([asistente({ id: 'ambas' })], {
+    const resultado = mapaDelPadron([asistente({ id: 'ambas' })], {
       lugaresDe,
       zonas: ZONAS,
     });
@@ -144,7 +144,7 @@ describe('mapaDelPlantel', () => {
   });
 
   it('agrupa por zona y cuenta cada grupo', () => {
-    const resultado = mapaDelPlantel(
+    const resultado = mapaDelPadron(
       [
         asistente({ id: 'norte', nombre: 'Aaa' }),
         asistente({ id: 'oeste', nombre: 'Bbb', lat: -34.65, lng: -58.62 }),
@@ -159,9 +159,9 @@ describe('mapaDelPlantel', () => {
   });
 
   // Esconder a los que no caen en ninguna zona haría que los números del mapa no cierren con el
-  // tamaño del plantel, y nadie podría saber por qué falta gente.
+  // tamaño del Padrón, y nadie podría saber por qué falta gente.
   it('deja último al grupo de los que no caen en ninguna zona', () => {
-    const resultado = mapaDelPlantel(
+    const resultado = mapaDelPadron(
       [asistente({ id: 'suelta', nombre: 'Aaa' }), asistente({ id: 'oeste', nombre: 'Bbb' })],
       { lugaresDe, zonas: ZONAS },
     );
@@ -169,7 +169,7 @@ describe('mapaDelPlantel', () => {
   });
 
   it('ordena por nombre', () => {
-    const resultado = mapaDelPlantel(
+    const resultado = mapaDelPadron(
       [asistente({ id: 'oeste', nombre: 'Zzz' }), asistente({ id: 'norte', nombre: 'Aaa' })],
       { lugaresDe, zonas: ZONAS },
     );
@@ -177,7 +177,7 @@ describe('mapaDelPlantel', () => {
   });
 
   it('respeta el interruptor que movió la propia persona', () => {
-    const resultado = mapaDelPlantel(
+    const resultado = mapaDelPadron(
       [
         asistente({ id: 'norte', nombre: 'Aaa', disponible_para_ofertas: false }),
         asistente({ id: 'oeste', nombre: 'Bbb' }),
@@ -187,9 +187,9 @@ describe('mapaDelPlantel', () => {
     expect(resultado.puntos.map((p) => p.disponible)).toEqual([false, true]);
   });
 
-  it('no se cae sin plantel ni sin catálogo', () => {
-    expect(mapaDelPlantel(null).puntos).toEqual([]);
-    expect(mapaDelPlantel([asistente({})]).grupos.map((g) => g.id)).toEqual([SIN_ZONA]);
+  it('no se cae sin Padrón ni sin catálogo', () => {
+    expect(mapaDelPadron(null).puntos).toEqual([]);
+    expect(mapaDelPadron([asistente({})]).grupos.map((g) => g.id)).toEqual([SIN_ZONA]);
   });
 });
 
@@ -224,7 +224,7 @@ describe('el mapa habla los tres idiomas', () => {
   ];
 
   it.each(IDIOMAS)('%s tiene todos los textos del mapa', (idioma) => {
-    const textos = T[idioma].mapa_del_plantel;
+    const textos = T[idioma].mapa_del_padron;
     expect(textos).toBeTruthy();
     for (const clave of CLAVES) {
       expect(typeof textos[clave], `falta ${clave} en ${idioma}`).toBe('string');
@@ -235,7 +235,7 @@ describe('el mapa habla los tres idiomas', () => {
   // Los números se reemplazan al mostrarlos: una traducción sin el marcador dejaría el cartel
   // diciendo una frase sin ningún número adentro.
   it.each(IDIOMAS)('%s conserva los marcadores que se reemplazan', (idioma) => {
-    const textos = T[idioma].mapa_del_plantel;
+    const textos = T[idioma].mapa_del_padron;
     expect(textos.cuantas).toContain('{ubicadas}');
     expect(textos.cuantas).toContain('{total}');
     expect(textos.sin_ubicacion).toContain('{n}');

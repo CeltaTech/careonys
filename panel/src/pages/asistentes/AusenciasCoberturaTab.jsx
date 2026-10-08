@@ -85,9 +85,9 @@ export function AusenciasCoberturaTab({ asistente }) {
     ] = await Promise.all([
       supabase.from('ausencias').select('*').eq('asistente_id', asistente.id).order('fecha_inicio', { ascending: false }),
       // Quién puede cubrir esta ausencia. Es repartir trabajo, así que solo entra quien sigue en
-      // el plantel; y se filtra en la consulta porque esta lista no muestra a nadie, solo llena
+      // el Padrón; y se filtra en la consulta porque esta lista no muestra a nadie, solo llena
       // el desplegable del sustituto. El valor sale de `ESTADO_ACTIVO`, la misma constante que
-      // contesta `estaEnElPlantel`, para que la regla quede escrita en un solo lugar
+      // contesta `estaEnElPadron`, para que la regla quede escrita en un solo lugar
       // (regla 12 de CLAUDE.md §7).
       supabase.from('asistentes').select('id, nombre').eq('estado', ESTADO_ACTIVO).neq('id', asistente.id),
       // Los turnos fijos de esta persona, para elegir cuál se cubre.

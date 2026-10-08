@@ -1267,7 +1267,7 @@ export const T = {
       estado_cesado: 'Cesado',
       vinculo_monotributo: 'Monotributo',
       vinculo_dependencia: 'Dependencia',
-      volver_al_plantel: 'Volver al Padrón',
+      volver_al_padron: 'Volver al Padrón',
       dni: 'DNI',
       telefono: 'Teléfono',
       email: 'Email',
@@ -2892,7 +2892,7 @@ export const T = {
       quitar_renglon: 'Quitar',
       vigente_hasta: 'Vigente hasta',
     },
-    mapa_del_plantel: {
+    mapa_del_padron: {
       titulo: 'Mapa del Padrón por zona',
       cuantas: '{ubicadas} de {total} con ubicación en el mapa',
       sin_zona: 'Sin zona',
@@ -4120,7 +4120,7 @@ export const T = {
       estado_cesado: 'Terminated',
       vinculo_monotributo: 'Independent contractor',
       vinculo_dependencia: 'Employee',
-      volver_al_plantel: 'Back to the Register',
+      volver_al_padron: 'Back to the Register',
       dni: 'National ID (DNI)',
       telefono: 'Phone',
       email: 'Email',
@@ -5723,7 +5723,7 @@ export const T = {
       quitar_renglon: 'Remove',
       vigente_hasta: 'Valid until',
     },
-    mapa_del_plantel: {
+    mapa_del_padron: {
       titulo: 'Register map by area',
       cuantas: '{ubicadas} of {total} placed on the map',
       sin_zona: 'No area',
@@ -6951,7 +6951,7 @@ export const T = {
       estado_cesado: 'Desligado',
       vinculo_monotributo: 'Autônomo (contratante independente)',
       vinculo_dependencia: 'Funcionário',
-      volver_al_plantel: 'Voltar ao Cadastro',
+      volver_al_padron: 'Voltar ao Cadastro',
       dni: 'DNI',
       telefono: 'Telefone',
       email: 'Email',
@@ -8554,7 +8554,7 @@ export const T = {
       quitar_renglon: 'Remover',
       vigente_hasta: 'Válido até',
     },
-    mapa_del_plantel: {
+    mapa_del_padron: {
       titulo: 'Mapa do Cadastro por zona',
       cuantas: '{ubicadas} de {total} com localização no mapa',
       sin_zona: 'Sem zona',

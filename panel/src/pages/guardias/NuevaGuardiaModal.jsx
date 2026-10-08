@@ -72,11 +72,11 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
         { data: prestadoraData },
         { data: serviciosData },
       ] = await Promise.all([
-        // Una guardia nueva solo se le puede dar a quien sigue en el plantel. Esta lista no
+        // Una guardia nueva solo se le puede dar a quien sigue en el Padrón. Esta lista no
         // muestra a nadie, solo llena el desplegable de quién la toma, así que se filtra en la
         // consulta. El valor sale de `ESTADO_ACTIVO`, la misma constante que contesta
-        // `estaEnElPlantel`, y no escrito a mano acá: si mañana la Prestadora suma otra forma de
-        // seguir en el plantel, esta puerta no puede quedarse con la regla vieja
+        // `estaEnElPadron`, y no escrito a mano acá: si mañana la Prestadora suma otra forma de
+        // seguir en el Padrón, esta puerta no puede quedarse con la regla vieja
         // (regla 12 de CLAUDE.md §7).
         supabase.from('asistentes').select('id, nombre').eq('estado', ESTADO_ACTIVO).order('nombre'),
         // Se pide también el domicilio: cuando dos personas viven en la misma casa, verlo al

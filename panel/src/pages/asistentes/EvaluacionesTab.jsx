@@ -24,7 +24,7 @@ import '../hojaDeTarjetas.css';
    escondidas— sería otro número, distinto del que ve el Cliente, y quedarían dos puntajes de la
    misma persona sin ninguna forma de saber cuál es cuál.
 
-   El nombre de quien evaluó no se muestra. Quien decide sobre el plantel necesita saber qué se
+   El nombre de quien evaluó no se muestra. Quien decide sobre el Padrón necesita saber qué se
    dijo, no quién lo dijo, y una queja con nombre y apellido al lado cambia lo que pasa después.
    Es el mismo criterio con el que la evaluación le llega al Asistente en su propia aplicación. */
 

@@ -1,8 +1,8 @@
-// Punto único de verdad de QUÉ SE DIBUJA EN EL MAPA DEL PLANTEL (CLAUDE.md §8, regla del punto
+// Punto único de verdad de QUÉ SE DIBUJA EN EL MAPA DEL PADRÓN (CLAUDE.md §8, regla del punto
 // único de verdad).
 // ============================================================================================
 //
-// La pregunta que contesta: cómo está repartido el plantel por zona —qué Legajos del Asistente
+// La pregunta que contesta: cómo está repartido el Padrón por zona —qué Legajos del Asistente
 // tienen ubicación, en qué zona cae cada una y cómo encuadrar el mapa—. Escrito en la pantalla,
 // un día el mapa contaría a los inactivos y la lista de al lado no.
 //
@@ -22,13 +22,13 @@
 // Asistente pertenece a toda zona que contenga alguno de sus lugares, y puede pertenecer a
 // varias, o a ninguna. Agrupar para mostrar es distinto de guardar.
 
-import { estaEnElPlantel, estaDisponibleParaOfertas } from './candidatos';
+import { estaEnElPadron, estaDisponibleParaOfertas } from './candidatos';
 
 /**
- * El grupo de los que están en el plantel y no caen en ninguna zona de cobertura.
+ * El grupo de los que están en el Padrón y no caen en ninguna zona de cobertura.
  *
  * Es una clave, no un texto: el nombre que se muestra sale de las traducciones. Existe porque
- * esconderlos haría que los números del mapa no cierren con el tamaño del plantel, y quien mire
+ * esconderlos haría que los números del mapa no cierren con el tamaño del Padrón, y quien mire
  * no tendría forma de saber por qué faltan personas.
  */
 export const SIN_ZONA = 'sin_zona';
@@ -39,7 +39,7 @@ export const SIN_ZONA = 'sin_zona';
  *
  * Se descarta lo que no es un par de números válido, lo que cae fuera del rango que existe sobre
  * la Tierra, y el punto exacto (0, 0): ese par no es una ubicación cargada sino una columna que
- * quedó en cero, y queda en el Golfo de Guinea, a miles de kilómetros de cualquier plantel.
+ * quedó en cero, y queda en el Golfo de Guinea, a miles de kilómetros de cualquier Padrón.
  */
 // `Number(null)` da cero, y cero es un número perfectamente válido: una columna vacía se
 // convertiría sola en una ubicación en el Golfo de Guinea. Lo que no es un número se descarta
@@ -106,9 +106,9 @@ export function encuadre(puntos) {
 }
 
 /**
- * Todo lo que necesita el mapa del plantel activo.
+ * Todo lo que necesita el mapa del Padrón activo.
  *
- * @param asistentes  el plantel entero tal como viene de la base. Quién sigue estando se decide
+ * @param asistentes  el Padrón entero tal como viene de la base. Quién sigue estando se decide
  *                    acá, con la misma regla que usa la lista de candidatos, y no en la consulta
  *                    de cada pantalla.
  * @param opciones    lugaresDe(id) → los lugares del Legajo de ese Asistente
@@ -116,14 +116,14 @@ export function encuadre(puntos) {
  *
  * @returns { total, ubicadas, sinUbicar, puntos, grupos, encuadre }
  *
- * `total` es el plantel activo entero y `ubicadas` los que se pueden dibujar. Los dos números se
- * devuelven a propósito: un mapa con tres puntos sobre un plantel de cuarenta personas no dice lo
- * mismo que un mapa con tres puntos sobre un plantel de tres, y quien mira tiene que poder
+ * `total` es el Padrón activo entero y `ubicadas` los que se pueden dibujar. Los dos números se
+ * devuelven a propósito: un mapa con tres puntos sobre un Padrón de cuarenta personas no dice lo
+ * mismo que un mapa con tres puntos sobre un Padrón de tres, y quien mira tiene que poder
  * distinguirlo sin ir a contar a otra pantalla.
  */
-export function mapaDelPlantel(asistentes, opciones = {}) {
+export function mapaDelPadron(asistentes, opciones = {}) {
   const { lugaresDe = () => [], zonas = [] } = opciones;
-  const plantel = (asistentes ?? []).filter(estaEnElPlantel);
+  const padron = (asistentes ?? []).filter(estaEnElPadron);
 
   const grupos = new Map();
   const anotar = (id, nombre, ubicada) => {
@@ -134,7 +134,7 @@ export function mapaDelPlantel(asistentes, opciones = {}) {
   };
 
   const puntos = [];
-  for (const asistente of plantel) {
+  for (const asistente of padron) {
     const susZonas = zonasDeUnAsistente(lugaresDe(asistente.id), zonas);
     const punto = coordenadasDe(asistente);
 
@@ -168,9 +168,9 @@ export function mapaDelPlantel(asistentes, opciones = {}) {
   });
 
   return {
-    total: plantel.length,
+    total: padron.length,
     ubicadas: puntos.length,
-    sinUbicar: plantel.length - puntos.length,
+    sinUbicar: padron.length - puntos.length,
     puntos,
     grupos: ordenados,
     encuadre: encuadre(puntos),

@@ -4,8 +4,8 @@ import {
   coincideConElFiltro,
   documentacionPorAsistente,
   guardiasActivasPorAsistente,
-  opcionesDelPlantel,
-} from '../resumenDelPlantel';
+  opcionesDelPadron,
+} from '../resumenDelPadron';
 import { ESTADO_VENCIMIENTO } from '../reglaVencimientos';
 import { T } from '../../i18n/translations';
 
@@ -137,12 +137,12 @@ describe('documentacionPorAsistente', () => {
   });
 });
 
-describe('opcionesDelPlantel', () => {
+describe('opcionesDelPadron', () => {
   // Cada Legajo del Asistente lo cargó otra persona, en otro momento y sin lista de la cual elegir: la misma
   // zona termina escrita de tres maneras. Si el filtro las ofrece por separado, elegir una deja
   // afuera a los otros dos.
   it('junta en una sola opción lo que está escrito distinto', () => {
-    const opciones = opcionesDelPlantel(
+    const opciones = opcionesDelPadron(
       [{ zonas: ['San Isidro'] }, { zonas: ['san isidro'] }, { zonas: ['SAN ISIDRO '] }],
       'zonas',
     );
@@ -150,7 +150,7 @@ describe('opcionesDelPlantel', () => {
   });
 
   it('ordena alfabéticamente y no repite', () => {
-    const opciones = opcionesDelPlantel(
+    const opciones = opcionesDelPadron(
       [{ zonas: ['Vicente López', 'Avellaneda'] }, { zonas: ['Morón', 'Avellaneda'] }],
       'zonas',
     );
@@ -158,19 +158,19 @@ describe('opcionesDelPlantel', () => {
   });
 
   it('ignora lo vacío, que no es una opción que alguien pueda elegir', () => {
-    expect(opcionesDelPlantel([{ zonas: ['', '   ', null, 'Quilmes'] }], 'zonas')).toEqual([
+    expect(opcionesDelPadron([{ zonas: ['', '   ', null, 'Quilmes'] }], 'zonas')).toEqual([
       'Quilmes',
     ]);
   });
 
   it('lee el campo que se le pide y no otro', () => {
     const filas = [{ zonas: ['Quilmes'], especialidades: ['Enfermería'] }];
-    expect(opcionesDelPlantel(filas, 'especialidades')).toEqual(['Enfermería']);
+    expect(opcionesDelPadron(filas, 'especialidades')).toEqual(['Enfermería']);
   });
 
-  it('no se cae sin plantel ni con Legajos del Asistente sin el campo', () => {
-    expect(opcionesDelPlantel(undefined, 'zonas')).toEqual([]);
-    expect(opcionesDelPlantel([{}, null, { zonas: null }], 'zonas')).toEqual([]);
+  it('no se cae sin Padrón ni con Legajos del Asistente sin el campo', () => {
+    expect(opcionesDelPadron(undefined, 'zonas')).toEqual([]);
+    expect(opcionesDelPadron([{}, null, { zonas: null }], 'zonas')).toEqual([]);
   });
 });
 

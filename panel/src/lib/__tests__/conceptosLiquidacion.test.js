@@ -133,7 +133,7 @@ describe('los valores tienen su texto en los tres idiomas', () => {
     ['signo_', SIGNOS],
     ['unidad_', UNIDADES],
     ['origen_', ORIGENES],
-    // El alcance no reusa los nombres de vínculo del plantel: ahí "monotributo" nombra un
+    // El alcance no reusa los nombres de vínculo del Padrón: ahí "monotributo" nombra un
     // vínculo y acá nombra a quiénes les toca el concepto, que es una frase distinta.
     ['alcance_', ALCANCES],
   ];

@@ -9,7 +9,7 @@ import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
 import { Alert } from '../components/ui/Alert';
 import { cargarPacientesDeGuardias, conPacientes, pacientesDeGuardia, textoDePacientes } from '../lib/pacientesDeGuardia';
-import { estaEnElPlantel } from '../lib/candidatos';
+import { estaEnElPadron } from '../lib/candidatos';
 import { laDioUnaPersona } from '../lib/fuentesAlertaTemprana';
 import { diaDelMomento, diasDeEspera, horaDelMomento } from '../lib/horarios';
 import { nombreMotivoGuardado } from '../lib/motivoDeCierre';
@@ -130,7 +130,7 @@ export function Continuidad() {
 
       const [{ data: pacientesData }, { data: asistentesData }, { data: personasData }] = await Promise.all([
         idsPacientes.length ? supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`).in('id', idsPacientes) : Promise.resolve({ data: [] }),
-        // El plantel entero, con su estado. Sin filtrar acá porque esta misma lista le pone el
+        // El Padrón entero, con su estado. Sin filtrar acá porque esta misma lista le pone el
         // nombre al Asistente que faltó en cada incidente y en cada alerta, y quien después se
         // fue de la Prestadora tiene que seguir teniendo nombre en un incidente de la semana
         // pasada. Quién puede tomar el reemplazo lo decide `ResolverIncidente`, más abajo.
@@ -522,13 +522,13 @@ function ResolverIncidente({ incidente, asistentes, usuario, onClose, onResuelto
 
   const esFamiliar = tipo === 'familiar';
 
-  /* Quién puede cubrir el hueco que dejó la ausencia: solo quien sigue en el plantel. Resolver
+  /* Quién puede cubrir el hueco que dejó la ausencia: solo quien sigue en el Padrón. Resolver
      un incidente de continuidad es mandar a alguien a una casa, o sea repartir trabajo nuevo, y
      ahí quien ya se fue de la Prestadora no es un candidato peor puesto: no es un candidato.
-     Se pregunta con `estaEnElPlantel`, la misma función que usa el panel de cobertura, y no con
+     Se pregunta con `estaEnElPadron`, la misma función que usa el panel de cobertura, y no con
      una condición escrita de nuevo acá (regla 12 de CLAUDE.md §7). */
   const asistentesAsignables = useMemo(
-    () => (asistentes ?? []).filter(estaEnElPlantel),
+    () => (asistentes ?? []).filter(estaEnElPadron),
     [asistentes]
   );
 

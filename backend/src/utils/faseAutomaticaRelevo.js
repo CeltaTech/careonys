@@ -28,7 +28,7 @@ import { mensajeDelSistema } from '../i18n/avisos.js';
  * contacta una sola vez.
  *
  * EL FAMILIAR NO ENTRA ACÁ. Que un familiar cubra una guardia no es asignarle trabajo a alguien
- * del plantel: es una excepción que una persona de la Prestadora autoriza y firma
+ * del Padrón: es una excepción que una persona de la Prestadora autoriza y firma
  * (`excepciones_familiar_relevo`, con quién la autorizó y por qué motivo). El sistema no la puede
  * tomar por su cuenta. Si el orden de la Prestadora llega a ese rol, se le dice a quien coordina
  * que ese escalón le queda a él.
@@ -77,7 +77,7 @@ async function personalDeEmergencia(prestadoraId) {
   const porTipo = new Map();
   for (const fila of data ?? []) {
     // Quien se fue de la Prestadora sigue anotado en el roster y no es un candidato peor puesto:
-    // no es un candidato. Mismo criterio que `estaEnElPlantel` en el panel de cobertura.
+    // no es un candidato. Mismo criterio que `estaEnElPadron` en el panel de cobertura.
     if (fila.asistentes?.estado !== 'activo') continue;
     // Y quien dijo que no está disponible tampoco. Estar anotado en el roster de emergencia no
     // convierte a nadie en alguien a quien se le escribe igual: el interruptor lo mueve el
@@ -90,14 +90,14 @@ async function personalDeEmergencia(prestadoraId) {
 }
 
 /**
- * Los suplentes: el plantel activo, sin el que faltó y sin los que ya están en otra guardia a esa
+ * Los suplentes: el Padrón activo, sin el que faltó y sin los que ya están en otra guardia a esa
  * misma hora.
  *
  * Que dos guardias se pisen no se decide restando horas acá: lo dice `seSuperponen()`, que sabe que
  * la guardia de noche termina al día siguiente (`utils/horarios.js`).
  */
 async function suplentesDisponibles(prestadoraId, guardia) {
-  const { data: plantel, error } = await supabase
+  const { data: padron, error } = await supabase
     .from('asistentes')
     .select('id')
     .eq('prestadora_id', prestadoraId)
@@ -125,7 +125,7 @@ async function suplentesDisponibles(prestadoraId, guardia) {
       .map((otra) => otra.asistente_id),
   );
 
-  return (plantel ?? [])
+  return (padron ?? [])
     .map((a) => a.id)
     .filter((id) => id !== guardia.asistente_id && !ocupados.has(id));
 }

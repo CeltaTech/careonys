@@ -1,10 +1,10 @@
 // ---------------------------------------------------------------------------
-// usePanoramaDelPlantel.js — las guardias y los papeles de todo el plantel, en dos consultas
+// usePanoramaDelPadron.js — las guardias y los papeles de todo el Padrón, en dos consultas
 //
 // POR QUÉ DOS CONSULTAS Y NO UNA POR PERSONA
 // La lista de Asistentes muestra decenas de tarjetas. Preguntar por cada una sería preguntar
 // decenas de veces lo mismo: se piden las guardias del próximo mes y los papeles con
-// vencimiento de una sola vez, y las cuentas se hacen en `lib/resumenDelPlantel.js`.
+// vencimiento de una sola vez, y las cuentas se hacen en `lib/resumenDelPadron.js`.
 //
 // POR QUÉ NO VOLTEA LA PANTALLA CUANDO FALLA
 // Esto es un agregado a una lista que ya funciona sin él. Si la consulta no vuelve —sin
@@ -26,7 +26,7 @@ import {
   DIAS_DE_HORIZONTE,
   documentacionPorAsistente,
   guardiasActivasPorAsistente,
-} from '../lib/resumenDelPlantel';
+} from '../lib/resumenDelPadron';
 
 /* Las columnas que pide el semáforo para decidir en qué situación está una guardia. Ninguna se
    muestra: si faltara alguna, una guardia en curso se leería como programada y el conteo saldría
@@ -34,7 +34,7 @@ import {
 const COLUMNAS_GUARDIA =
   'asistente_id, fecha, hora_inicio, hora_fin, estado, ofrecida_at, oferta_limite_at, checkin_at, checkout_at';
 
-export function usePanoramaDelPlantel() {
+export function usePanoramaDelPadron() {
   const prestadoraId = usePrestadoraActual();
   /* Los umbrales de esta Prestadora. Hoy el conteo sólo descarta lo cancelado y lo completado,
      que salen de una columna; van igual para que el día que «activa» pase a depender del reloj

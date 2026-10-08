@@ -83,7 +83,7 @@ panelReferenciasLaboralesRouter.get(
 );
 
 // Una referencia cargada a mano. Hace falta para quien entró sin postulación —una Prestadora que
-// llega con su plantel armado, un alta manual— y para la que la persona recuerda después.
+// llega con su Padrón armado, un alta manual— y para la que la persona recuerda después.
 panelReferenciasLaboralesRouter.post(
   '/:asistenteId',
   requiereRolPanel,

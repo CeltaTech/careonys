@@ -88,12 +88,12 @@ export function Guardias() {
         .lte('fecha', f.hasta)
         .order('fecha', { ascending: true })
         .order('hora_inicio', { ascending: true }),
-      // Se pide el plantel entero, sin filtrar por estado, y se pide también el estado. Las dos
+      // Se pide el Padrón entero, sin filtrar por estado, y se pide también el estado. Las dos
       // cosas son a propósito: la lista se usa para ponerle el nombre a cada guardia ya asignada
       // —y una guardia que cubrió alguien que después se fue tiene que seguir mostrando ese
       // nombre, no un guión— y también para llenar el desplegable de reasignación, que sí tiene
       // que dejar afuera a quien ya no trabaja acá. Por eso el estado viaja: el filtro lo aplica
-      // la puerta que reparte trabajo (`estaEnElPlantel` en GuardiaAcciones.jsx), no la consulta.
+      // la puerta que reparte trabajo (`estaEnElPadron` en GuardiaAcciones.jsx), no la consulta.
       supabase.from('asistentes').select('id, nombre, estado'),
       supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`),
       supabase.from('servicios').select('id, etiqueta'),

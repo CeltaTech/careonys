@@ -13,7 +13,7 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { con } from '../../lib/textos';
 import '../../styles/molde-paginas.css';
 
-/* Cómo es el plantel: qué tipos de Asistente existen —con sus tareas y su
+/* Cómo es el Padrón: qué tipos de Asistente existen —con sus tareas y su
    matrícula—, qué documentación se les exige, con cuánta anticipación una falta se
    considera avisada con tiempo y cómo se le paga el período a quien cobra un monto fijo. */
 export function ConfiguracionAsistentes() {

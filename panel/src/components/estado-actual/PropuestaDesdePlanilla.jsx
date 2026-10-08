@@ -25,11 +25,11 @@ import '../../styles/molde-paginas.css';
    pregunta que la importación no hacía: qué de lo que nombra la planilla todavía no está
    configurado.
 
-   QUÉ MUESTRA Y POR QUÉ ESO. Cuántas filas trae, y —para una planilla de Asistentes— las zonas
-   de cobertura y los tipos de Asistente que nombra y no existen. Eso importa antes de importar:
-   la importación no los crea, así que una zona desconocida entra como texto suelto en el Legajo del Asistente
-   y un tipo desconocido deja al Asistente sin tipo, que es lo que decide si se le va a exigir
-   Matrícula. Después se descubre abriendo de a un Legajo del Asistente.
+   QUÉ MUESTRA Y POR QUÉ ESO. Cuántas filas trae, y —para una planilla de Asistentes— los tipos
+   de Asistente que nombra y no existen. Eso importa antes de importar: la importación no los
+   crea, y un tipo desconocido deja al Asistente sin tipo, que es lo que decide si se le va a
+   exigir Matrícula. Después se descubre abriendo de a un Legajo del Asistente. Las localidades
+   no se proponen: la importación las reconoce sola.
 
    NO CREA NADA. Al continuar se sigue a la pantalla de importación, que es donde están los dos
    frenos humanos: revisar el mapeo y conformar el resultado real. Lo leído viaja en memoria
@@ -38,7 +38,6 @@ import '../../styles/molde-paginas.css';
    QUIÉN LO VE. Sólo quien puede importar (`importar_datos_masivos`), y nunca un Superadmin de
    visita: la guía es de la Prestadora, no un trabajo para él. */
 
-const RUTA_ZONAS = '/configuracion/prestadora';
 const RUTA_TIPOS = '/configuracion/asistentes';
 
 export function PropuestaDesdePlanilla() {
@@ -137,15 +136,6 @@ export function PropuestaDesdePlanilla() {
             )}
           </Alert>
 
-          {propuesta.zonasNuevas.length > 0 && (
-            <Alert variant="info">
-              {con(textos.planilla_zonas_nuevas, { lista: propuesta.zonasNuevas.join(', ') })}{' '}
-              <Link to={RUTA_ZONAS} className="btn btn-secondary">
-                {textos.planilla_zonas_cta}
-              </Link>
-            </Alert>
-          )}
-
           {propuesta.tiposNuevos.length > 0 && (
             <Alert variant="info">
               {con(textos.planilla_tipos_nuevos, { lista: propuesta.tiposNuevos.join(', ') })}{' '}
@@ -155,7 +145,7 @@ export function PropuestaDesdePlanilla() {
             </Alert>
           )}
 
-          {propuesta.zonasNuevas.length === 0 && propuesta.tiposNuevos.length === 0 && (
+          {propuesta.tiposNuevos.length === 0 && (
             <Alert variant="success">{textos.planilla_nada_para_configurar}</Alert>
           )}
 

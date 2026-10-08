@@ -10,7 +10,7 @@
 import { domicilioEscrito, partesDelDomicilio } from './domicilioEscrito';
 
 /** Un domicilio sin nada cargado. Existe para que ninguna pantalla lo escriba por su cuenta. */
-export const DOMICILIO_VACIO = { calle: '', numero: '', piso: '', unidad: '', lugar_id: '' };
+export const DOMICILIO_VACIO = { calle: '', numero: '', piso: '', unidad: '', lugar_id: '', codigo_postal: '' };
 
 /**
  * Las partes tal como salen de una fila de la base, listas para el componente.
@@ -25,6 +25,7 @@ export function partesDesdeFila(fila) {
     piso: fila?.piso ?? '',
     unidad: fila?.unidad ?? '',
     lugar_id: fila?.lugar_id ?? '',
+    codigo_postal: fila?.codigo_postal ?? '',
   };
 }
 

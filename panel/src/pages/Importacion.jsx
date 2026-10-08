@@ -31,9 +31,25 @@ async function llamarApi(path, opciones = {}) {
   return resultado;
 }
 
+// Qué dice una fila del archivo en el campo que se le pide, con el mapeo ya revisado. Es la misma
+// lectura que hace el backend (`valorDesdeFila`), para nombrar a la persona que no se cargó.
+function valorDeLaFila(fila, mapeo, campo) {
+  const columna = Object.keys(mapeo).find((col) => mapeo[col] === campo);
+  const valor = columna ? fila?.[columna] : undefined;
+  return valor === '' || valor == null ? '' : String(valor).trim();
+}
+
+function nombreDeLaFila(fila, mapeo, tipo) {
+  if (tipo === 'asistente') return valorDeLaFila(fila, mapeo, 'nombre');
+  const contacto = [valorDeLaFila(fila, mapeo, 'nombreContacto'), valorDeLaFila(fila, mapeo, 'apellidoContacto')]
+    .filter(Boolean)
+    .join(' ');
+  return contacto || valorDeLaFila(fila, mapeo, 'nombrePaciente');
+}
+
 export function Importacion() {
   const modal = useModalAccesible(() => setConfirmandoRechazo(false));
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const { puede, cargado } = usePermisos();
 
   const [tipo, setTipo] = useState('asistente');
@@ -124,6 +140,21 @@ export function Importacion() {
     }
   }
 
+  // Cada fila que no se cargó llega con un motivo, que es un código, y no con el texto del error:
+  // ese texto lo escribe la base y nombra tablas y columnas (`celtatech/CLAUDE.md` §6). La frase
+  // la arma `mensajeDeError`, el mismo punto único que usa el resto del Panel, y cae en la frase
+  // genérica si el motivo no tuviera traducción; el estado 500 es lo que hace de respaldo esa
+  // caída. Una localidad ambigua trae además sus opciones, que se enumeran en el idioma de quien
+  // mira, con «…» si había más de las que se mandaron.
+  function motivoDe(e) {
+    const frase = mensajeDeError({ motivo: e.motivo, status: 500 }, t, 'importación');
+    if (!e.opciones?.length) return frase;
+    const opciones = new Intl.ListFormat(locale, { type: 'disjunction' }).format(e.opciones);
+    return con(frase, { opciones: e.hayMas ? `${opciones}…` : opciones });
+  }
+
+  const noCargados = tipo === 'asistente' ? 'asistente' : 'cliente';
+
   // Las filas que no se cargaron vuelven en el mismo formato que el archivo original, con sus
   // columnas tal cual y una más con el motivo, para completarlas y volver a importarlas.
   async function handleDescargarNoCargadas() {
@@ -142,7 +173,7 @@ export function Importacion() {
       const filas = resultado.errores.map((e) => ({
         ...analisis.filas[e.fila - 1],
         ...(faltaElDocumento ? { [columnaDocumento]: '' } : {}),
-        [columnaMotivo]: mensajeDeError({ motivo: e.motivo, status: 500 }, t, 'importación'),
+        [columnaMotivo]: motivoDe(e),
       }));
 
       const { data } = await supabase.auth.getSession();
@@ -157,10 +188,12 @@ export function Importacion() {
       if (!respuesta.ok) {
         throw errorDeLaRespuesta(respuesta, await respuesta.json().catch(() => ({})));
       }
+      // El formato lo decide el backend, y la extensión llega en el nombre que manda.
       const nombre = decodeURIComponent(
         respuesta.headers.get('Content-Disposition')?.match(/filename\*=UTF-8''(.+)$/)?.[1] ?? '',
       );
-      bajarArchivo(con(t.importacion.nombre_filas_no_cargadas, { archivo: nombre }), await respuesta.blob());
+      const extension = nombre.match(/\.([a-z0-9]+)$/i)?.[1] ?? 'xlsx';
+      bajarArchivo(`${t.importacion[`no_cargados_${noCargados}`]}.${extension}`, await respuesta.blob());
     } catch (err) {
       setError(mensajeDeError(err, t));
     } finally {
@@ -347,9 +380,10 @@ export function Importacion() {
             <h2>{t.importacion.paso3_titulo}</h2>
           </div>
           <Alert variant={resultado.filasError > 0 ? 'info' : 'success'}>
-            {t.importacion.resumen
-              .replace('{creadas}', resultado.filasCreadas)
-              .replace('{total}', resultado.filasTotales)}
+            {con(t.importacion[`resumen_${noCargados}`], {
+              creadas: resultado.filasCreadas,
+              total: resultado.filasTotales,
+            })}
           </Alert>
 
           {resultado.vinculadas?.length > 0 && (
@@ -368,35 +402,22 @@ export function Importacion() {
 
           {resultado.yaEstaban?.length > 0 && (
             <Alert variant="info">
-              <ul>
-                {resultado.yaEstaban.map((y) => (
-                  <li key={y.fila}>
-                    {t.importacion.ya_estaba
-                      .replace('{n}', y.fila)
-                      .replace('{numero}', y.numeroCliente)}
-                  </li>
-                ))}
-              </ul>
+              {con(t.importacion.ya_estaban, { n: resultado.yaEstaban.length })}
             </Alert>
           )}
 
           {resultado.errores.length > 0 && (
             <Alert variant="error">
-              <strong>{t.importacion.filas_error_titulo}</strong>
+              <strong>{t.importacion[`no_cargados_${noCargados}`]}</strong>
               <ul>
-                {/* Cada fila fallada llega con un motivo, que es un código, y no con el texto
-                    del error: ese texto lo escribe la base y nombra tablas y columnas
-                    (`celtatech/CLAUDE.md` §6). La frase la arma acá `mensajeDeError`, que es el
-                    mismo punto único que usa el resto del Panel, así que sale en el idioma que
-                    está mirando la persona y cae en la frase genérica si el motivo no tuviera
-                    traducción. El estado 500 es lo que hace de respaldo esa caída. */}
-                {resultado.errores.map((e) => (
-                  <li key={e.fila}>
-                    {t.importacion.fila_error
-                      .replace('{n}', e.fila)
-                      .replace('{error}', mensajeDeError({ motivo: e.motivo, status: 500 }, t, 'importación'))}
-                  </li>
-                ))}
+                {resultado.errores.map((e) => {
+                  const nombre = nombreDeLaFila(analisis.filas[e.fila - 1], mapeo, tipo);
+                  return (
+                    <li key={e.fila}>
+                      {nombre ? con(t.importacion.no_cargado, { nombre, error: motivoDe(e) }) : motivoDe(e)}
+                    </li>
+                  );
+                })}
               </ul>
             </Alert>
           )}
@@ -407,7 +428,7 @@ export function Importacion() {
             </Button>
             {resultado.errores.length > 0 && (
               <Button variant="secondary" onClick={handleDescargarNoCargadas} disabled={descargando}>
-                {descargando ? t.importacion.descargando : t.importacion.descargar_filas_no_cargadas}
+                {descargando ? t.importacion.descargando : t.importacion[`descargar_no_cargados_${noCargados}`]}
               </Button>
             )}
             {resultado.filasCreadas > 0 && (

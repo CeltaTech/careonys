@@ -51,7 +51,7 @@ import {
 import { darDeAltaEnMeta, traerEstadosDeMeta } from '../utils/plantillasWhatsapp.js';
 import { redactarPlantillaWhatsapp, corregirPlantillaWhatsapp } from '../utils/iaPlantillasWhatsapp.js';
 import { buscarLugares, listarProvincias } from '../geocodificacion/index.js';
-import { lugaresDeLaPrestadora, paisDeLaPrestadora } from '../utils/catalogoDeLugares.js';
+import { agregarLugar, lugaresDeLaPrestadora, paisDeLaPrestadora } from '../utils/catalogoDeLugares.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import { direccionDeEnvioDe, esDireccionDeCorreo } from '../utils/email.js';
 import {
@@ -331,7 +331,7 @@ panelConfiguracionRouter.get('/lugares/provincias', async (req, res) => {
 });
 
 panelConfiguracionRouter.post('/lugares', async (req, res) => {
-  const { nombre, provincia, municipio, id_oficial, parte_de, lat, lng } = req.body;
+  const { nombre, provincia, municipio, id_oficial, localidad_censal, parte_de, lat, lng } = req.body;
   if (!String(nombre ?? '').trim()) {
     return res.status(400).json({ error: 'Falta el nombre del lugar' });
   }
@@ -348,27 +348,15 @@ panelConfiguracionRouter.post('/lugares', async (req, res) => {
   }
   if (!pais) return res.status(400).json({ error: 'La Prestadora todavía no tiene país configurado' });
 
-  // De dónde salió no lo dice quien llama: lo dice si trajo o no el identificador del organismo.
-  // Así nadie puede marcar como oficial algo que escribió a mano.
-  const fuente = String(id_oficial ?? '').trim() ? 'oficial' : 'propio';
-  const { data, error } = await db
-    .from('lugares')
-    .insert({
-      prestadora_id: prestadoraId,
-      nombre: String(nombre).trim(),
-      pais,
-      provincia: provincia ?? null,
-      municipio: municipio ?? null,
-      id_oficial: fuente === 'oficial' ? String(id_oficial).trim() : null,
-      fuente,
-      parte_de: parte_de ?? null,
-      lat: Number.isFinite(lat) ? lat : null,
-      lng: Number.isFinite(lng) ? lng : null,
-    })
-    .select('id')
-    .maybeSingle();
-  if (error) return responderError(res, error);
-  res.json({ ok: true, id: data?.id });
+  try {
+    const id = await agregarLugar(db, {
+      prestadoraId, pais, nombre, provincia, municipio,
+      idOficial: id_oficial, localidadCensal: localidad_censal, parteDe: parte_de, lat, lng,
+    });
+    res.json({ ok: true, id });
+  } catch (error) {
+    responderError(res, error);
+  }
 });
 
 // Un lugar donde se dejó de trabajar se apaga y no se borra: hay fichas, domicilios y zonas que lo

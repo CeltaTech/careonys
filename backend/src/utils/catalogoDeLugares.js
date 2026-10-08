@@ -104,6 +104,37 @@ export async function zonasConSusLugares(db, prestadoraId) {
   return (zonas ?? []).map((zona) => ({ ...zona, lugares: porZona.get(zona.id) ?? [] }));
 }
 
+/** Agrega un lugar a la lista de esa Organización y devuelve su identificador.
+ *
+ *  Lo usan la pantalla de Configuración y la importación, que agrega sola la localidad reconocida
+ *  sin duda que todavía no estaba: escrito dos veces, una marcaría oficial algo que la otra no.
+ *
+ *  El país lo pone quien llama, leído de la Prestadora, nunca del pedido. De dónde salió no lo dice
+ *  nadie: lo dice si trae o no el identificador del organismo, así nadie puede marcar como oficial
+ *  algo que escribió a mano. */
+export async function agregarLugar(db, { prestadoraId, pais, nombre, provincia, municipio, idOficial, localidadCensal, parteDe, lat, lng }) {
+  const fuente = String(idOficial ?? '').trim() ? 'oficial' : 'propio';
+  const { data, error } = await db
+    .from('lugares')
+    .insert({
+      prestadora_id: prestadoraId,
+      nombre: String(nombre).trim(),
+      pais,
+      provincia: provincia ?? null,
+      municipio: municipio ?? null,
+      id_oficial: fuente === 'oficial' ? String(idOficial).trim() : null,
+      localidad_censal: fuente === 'oficial' ? (String(localidadCensal ?? '').trim() || null) : null,
+      fuente,
+      parte_de: parteDe ?? null,
+      lat: Number.isFinite(lat) ? lat : null,
+      lng: Number.isFinite(lng) ? lng : null,
+    })
+    .select('id')
+    .maybeSingle();
+  if (error) throw error;
+  return data?.id ?? null;
+}
+
 /** Lo que necesita cualquier pantalla donde se eligen lugares: la lista y el atajo por zona. */
 export async function catalogoDeLugares(db, prestadoraId) {
   const [lugares, zonas] = await Promise.all([

@@ -126,6 +126,7 @@ export async function buscarLugares({ texto, provincia } = {}) {
         nombre: String(lugar.nombre),
         provincia: lugar?.provincia?.nombre ?? null,
         municipio: lugar?.municipio?.nombre ?? null,
+        localidadCensal: lugar?.localidad_censal?.id ? String(lugar.localidad_censal.id) : null,
         lat: tienePunto ? lat : null,
         lng: tienePunto ? lng : null,
         fuente: FUENTE,
@@ -141,4 +142,155 @@ export async function listarProvincias() {
   return encontradas
     .filter((provincia) => provincia?.id && provincia?.nombre)
     .map((provincia) => ({ idOficial: String(provincia.id), nombre: String(provincia.nombre) }));
+}
+
+// --- Lo que usa la importación masiva ---
+//
+// Una importación trae cientos de domicilios, y preguntarlos de a uno tarda y le pesa al servicio.
+// Georef acepta las mismas consultas por lotes: hasta mil por pedido, siempre que la suma de los
+// resultados pedidos no pase de cinco mil.
+
+const CONSULTAS_POR_LOTE = 1000;
+const RESULTADOS_POR_LOTE = 5000;
+
+/** Un lote tarda más que una consulta suelta, y del otro lado no hay nadie mirando una ruedita
+ *  por cada domicilio: hay una importación entera esperando. */
+const ESPERA_LOTE_MS = 30000;
+
+/** Manda las consultas en los lotes que haga falta y devuelve los resultados en el mismo orden.
+ *  Si el servicio no contesta, lanza, igual que `preguntarle`, y sin la consulta adentro. */
+async function preguntarleEnLote(recurso, consultas, maxPorConsulta) {
+  const porLote = Math.max(1, Math.min(CONSULTAS_POR_LOTE, Math.floor(RESULTADOS_POR_LOTE / maxPorConsulta)));
+  const resultados = [];
+  for (let desde = 0; desde < consultas.length; desde += porLote) {
+    const lote = consultas.slice(desde, desde + porLote);
+    let respuesta;
+    try {
+      respuesta = await fetch(`${API_BASE}/${recurso}`, {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [recurso]: lote }),
+        signal: AbortSignal.timeout(ESPERA_LOTE_MS),
+      });
+    } catch {
+      throw new Error('No se pudo consultar el servicio de direcciones');
+    }
+    if (!respuesta.ok) {
+      throw new Error(`El servicio de direcciones contestó ${respuesta.status}`);
+    }
+    const datos = (await respuesta.json().catch(() => null)) ?? {};
+    const contestados = Array.isArray(datos?.resultados) ? datos.resultados : [];
+    // Un lote que vuelve con otra cantidad de respuestas no se puede emparejar con lo preguntado,
+    // y emparejarlo mal pondría a una persona en la localidad de otra.
+    if (contestados.length !== lote.length) {
+      throw new Error('El servicio de direcciones contestó un lote incompleto');
+    }
+    resultados.push(...contestados);
+  }
+  return resultados;
+}
+
+/** Cada localidad como la usa el producto, con lo que hace falta para guardarla y para desempatar. */
+function localidadDeGeoref(lugar) {
+  const lat = lugar?.centroide?.lat;
+  const lng = lugar?.centroide?.lon;
+  const tienePunto = Number.isFinite(lat) && Number.isFinite(lng);
+  return {
+    idOficial: String(lugar.id),
+    nombre: String(lugar.nombre),
+    provincia: lugar?.provincia?.nombre ?? null,
+    municipio: lugar?.municipio?.nombre ?? null,
+    departamento: lugar?.departamento?.nombre ?? null,
+    localidadCensal: lugar?.localidad_censal?.id ? String(lugar.localidad_censal.id) : null,
+    lat: tienePunto ? lat : null,
+    lng: tienePunto ? lng : null,
+    fuente: FUENTE,
+  };
+}
+
+/** Cuántas localidades del mismo nombre se traen. Alcanza para ver que hay más de una: no es una
+ *  lista para elegir. */
+const LOCALIDADES_DEL_MISMO_NOMBRE = 10;
+
+/**
+ * Las localidades que se llaman exactamente así, para cada consulta.
+ *
+ * Exactamente, sin contar mayúsculas ni acentos: «Belgrano» no trae «Villa Belgrano». Una sola es
+ * un nombre reconocido; más de una es un nombre que existe en varios lados.
+ *
+ * El partido no se manda: la búsqueda exacta también lo exigiría exacto, y «San Martín» no es
+ * «General San Martín». Desempata quien llama, con lo que vuelve en `departamento`.
+ *
+ * @param {{ nombre: string, provincia?: string }[]} consultas
+ * @returns {Promise<object[][]>} Una lista por consulta, en el mismo orden.
+ */
+export async function localidadesLlamadas(consultas) {
+  if (!consultas.length) return [];
+  const preguntas = consultas.map(({ nombre, provincia }) => {
+    const pregunta = { nombre: String(nombre), exacto: true, max: LOCALIDADES_DEL_MISMO_NOMBRE };
+    if (String(provincia ?? '').trim()) pregunta.provincia = String(provincia).trim();
+    return pregunta;
+  });
+  const resultados = await preguntarleEnLote('localidades', preguntas, LOCALIDADES_DEL_MISMO_NOMBRE);
+  return resultados.map((resultado) => (Array.isArray(resultado?.localidades) ? resultado.localidades : [])
+    .filter((lugar) => lugar?.id && lugar?.nombre)
+    .map(localidadDeGeoref));
+}
+
+/**
+ * La localidad censal de cada dirección.
+ *
+ * Se mira `total` y no el primer resultado: la misma calle con el mismo número existe en cientos de
+ * lugares, y con un solo resultado pedido el servicio contesta uno cualquiera. Sólo un total de uno
+ * es una dirección reconocida; con cualquier otro, la localidad censal vuelve en nulo.
+ *
+ * @param {{ direccion: string, provincia?: string, departamento?: string, localidad?: string }[]} consultas
+ * @returns {Promise<{ total: number, localidadCensal: string|null }[]>}
+ */
+export async function localidadCensalDeDirecciones(consultas) {
+  if (!consultas.length) return [];
+  const preguntas = consultas.map(({ direccion, provincia, departamento, localidad }) => {
+    const pregunta = { direccion: String(direccion), max: 1, campos: 'localidad_censal' };
+    if (String(provincia ?? '').trim()) pregunta.provincia = String(provincia).trim();
+    if (String(departamento ?? '').trim()) pregunta.departamento = String(departamento).trim();
+    if (String(localidad ?? '').trim()) pregunta.localidad = String(localidad).trim();
+    return pregunta;
+  });
+  const resultados = await preguntarleEnLote('direcciones', preguntas, 1);
+  return resultados.map((resultado) => {
+    const total = Number.isInteger(resultado?.total) ? resultado.total : 0;
+    const censal = resultado?.direcciones?.[0]?.localidad_censal?.id;
+    return { total, localidadCensal: total === 1 && censal ? String(censal) : null };
+  });
+}
+
+/** Cuántas localidades se traen de una localidad censal. La de la Ciudad de Buenos Aires abarca
+ *  todos sus barrios, que son menos de cien. */
+const LOCALIDADES_POR_CENSAL = 100;
+
+/** Las localidades que abarca cada localidad censal, en el mismo orden. */
+export async function localidadesDeLaCensal(censales) {
+  if (!censales.length) return [];
+  const preguntas = censales.map((censal) => ({ localidad_censal: String(censal), max: LOCALIDADES_POR_CENSAL }));
+  const resultados = await preguntarleEnLote('localidades', preguntas, LOCALIDADES_POR_CENSAL);
+  return resultados.map((resultado) => (Array.isArray(resultado?.localidades) ? resultado.localidades : [])
+    .filter((lugar) => lugar?.id && lugar?.nombre)
+    .map(localidadDeGeoref));
+}
+
+/**
+ * La provincia que dice la letra del código postal argentino (CPA), con el identificador que usa
+ * Georef. La letra es la del código de provincia ISO 3166-2:AR. El código viejo, de cuatro cifras,
+ * no dice la provincia y devuelve nulo.
+ */
+const PROVINCIA_DE_LA_LETRA = {
+  A: '66', B: '06', C: '02', D: '74', E: '30', F: '46', G: '86', H: '22', J: '70', K: '10', L: '42',
+  M: '50', N: '54', P: '34', Q: '58', R: '62', S: '82', T: '90', U: '26', V: '94', W: '18', X: '14',
+  Y: '38', Z: '78',
+};
+
+export function provinciaDelCodigoPostal(codigoPostal) {
+  const cpa = String(codigoPostal ?? '').replace(/\s+/g, '').toUpperCase();
+  const encontrado = cpa.match(/^([A-Z])\d{4}[A-Z]{3}$/);
+  return encontrado ? PROVINCIA_DE_LA_LETRA[encontrado[1]] ?? null : null;
 }

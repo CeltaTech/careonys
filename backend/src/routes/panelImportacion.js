@@ -9,8 +9,12 @@ import {
 } from '../utils/cuentasPanel.js';
 import {
   parsearArchivo, intentarParsearSQL, evaluarViabilidadIA, proponerMapeoIA,
-  CAMPOS_IMPORTACION, CAMPOS_LISTA, valorDesdeFila,
+  CAMPOS_IMPORTACION, CAMPOS_LISTA, CAMPOS_DOMICILIO, valorDesdeFila, domicilioDesdeFila,
+  reescritorDeLocalidades,
 } from '../utils/importacionIA.js';
+import { catalogoDeLugares, paisDeLaPrestadora, agregarLugar } from '../utils/catalogoDeLugares.js';
+import { obtenerGeocodificador } from '../geocodificacion/index.js';
+import { resolverLocalidades } from '../utils/localidadesDeLaImportacion.js';
 import { proponerConfiguracionInicial } from '../utils/propuestaConfiguracionInicial.js';
 import { responderError } from '../utils/errorConMotivo.js';
 import { FICHA_DOMICILIO, conSusFichas } from '../utils/fichaDelPaciente.js';
@@ -233,20 +237,71 @@ panelImportacionRouter.post(
     // pendientes de conformidad, y la política restrictiva `oculta_pendientes_de_conformidad` se
     // las esconde a quien importa en cuanto las escribe.
 
+    // Las localidades se resuelven antes de crear a nadie y todas juntas, para consultar el
+    // servicio de direcciones por tandas y no fila por fila. Lo que no se reconoce sin duda vuelve
+    // con su motivo en el archivo de no cargados: nadie elige a ojo cuál de dos localidades era.
+    let localidades;
+    try {
+      const [{ lugares, zonas }, pais] = await Promise.all([
+        catalogoDeLugares(supabase, prestadoraId),
+        paisDeLaPrestadora(supabase, prestadoraId),
+      ]);
+      localidades = await resolverLocalidades({
+        filas: filas.map((fila) => ({
+          domicilio: domicilioDesdeFila(fila, mapeo, tipo),
+          lugaresDeTrabajo: tipo === 'asistente' ? valorDesdeFila(fila, mapeo, 'dondeAceptaTrabajar', true) : [],
+        })),
+        lugares,
+        zonas,
+        herramientas: obtenerGeocodificador(pais),
+        proponer: reescritorDeLocalidades({ pais, prestadoraId }),
+        agregar: (lugar) => agregarLugar(supabase, {
+          prestadoraId,
+          pais,
+          nombre: lugar.nombre,
+          provincia: lugar.provincia,
+          municipio: lugar.municipio ?? lugar.departamento,
+          idOficial: lugar.idOficial,
+          localidadCensal: lugar.localidadCensal,
+          lat: lugar.lat,
+          lng: lugar.lng,
+        }),
+      });
+    } catch (error) {
+      console.error(`Importación ${lote.id}, localidades:`, error?.message ?? error);
+      localidades = filas.map(() => ({ partes: null, lugares: [], motivo: { codigo: 'falla_del_sistema' } }));
+    }
+
+    // Lo que ya resolvió la lectura de localidades no se vuelve a pasar como texto suelto.
+    const base = CAMPOS_DOMICILIO[tipo];
+    const camposDelDomicilio = new Set(CAMPOS_IMPORTACION[tipo].filter((campo) => campo.startsWith(base)));
+    camposDelDomicilio.add('dondeAceptaTrabajar');
+
     for (let i = 0; i < filas.length; i += 1) {
       const fila = filas[i];
+      const { partes, lugares: lugaresDeTrabajo, motivo } = localidades[i];
+      if (motivo) {
+        errores.push({ fila: i + 1, motivo: motivo.codigo, opciones: motivo.opciones, hayMas: motivo.hayMas });
+        continue;
+      }
       try {
         if (tipo === 'asistente') {
           const datos = { prestadoraId, usuarioPanelId: req.usuarioPanel.id, importacionId: lote.id, db: supabase };
           for (const campo of CAMPOS_IMPORTACION.asistente) {
+            if (camposDelDomicilio.has(campo)) continue;
             datos[campo] = valorDesdeFila(fila, mapeo, campo, CAMPOS_LISTA.asistente.has(campo));
           }
+          datos.domicilioPartido = partes;
+          datos.lugares = lugaresDeTrabajo;
           await crearAsistenteDirecto(datos);
         } else {
           const datos = { prestadoraId, importacionId: lote.id, db: supabase };
           for (const campo of CAMPOS_IMPORTACION.cliente) {
+            if (camposDelDomicilio.has(campo)) continue;
             datos[campo] = valorDesdeFila(fila, mapeo, campo, CAMPOS_LISTA.cliente.has(campo));
           }
+          datos.domicilioDelPacientePartido = partes;
+          datos.domicilioPaciente = valorDesdeFila(fila, mapeo, 'domicilioPaciente', false);
           const alta = await crearClienteImportado(datos);
           if (alta.yaEstaba) {
             yaEstaban.push({ fila: i + 1, numeroCliente: alta.numeroCliente });

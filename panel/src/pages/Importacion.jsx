@@ -158,8 +158,9 @@ export function Importacion() {
 
   const noCargados = tipo === 'asistente' ? 'asistente' : 'cliente';
 
-  // Las filas que no se cargaron vuelven en el mismo formato que el archivo original, con sus
-  // columnas tal cual y una más con el motivo, para completarlas y volver a importarlas.
+  // Las filas que no se cargaron vuelven en el mismo formato que el archivo original, y además en
+  // Excel moderno si el original era otro, con sus columnas tal cual y una más con el motivo, para
+  // completarlas y volver a importarlas.
   async function handleDescargarNoCargadas() {
     setDescargando(true);
     setError(null);
@@ -190,23 +191,35 @@ export function Importacion() {
         : {};
 
       const { data } = await supabase.auth.getSession();
-      const respuesta = await fetch(`${API_URL}/api/panel/importacion/filas-no-cargadas`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${data.session?.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ archivoNombre: analisis.archivoNombre, encabezados, filas, listas }),
-      });
-      if (!respuesta.ok) {
-        throw errorDeLaRespuesta(respuesta, await respuesta.json().catch(() => ({})));
+      async function pedir(archivoNombre) {
+        const respuesta = await fetch(`${API_URL}/api/panel/importacion/filas-no-cargadas`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${data.session?.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ archivoNombre, encabezados, filas, listas }),
+        });
+        if (!respuesta.ok) {
+          throw errorDeLaRespuesta(respuesta, await respuesta.json().catch(() => ({})));
+        }
+        // El formato lo decide el backend, y la extensión llega en el nombre que manda.
+        const nombre = decodeURIComponent(
+          respuesta.headers.get('Content-Disposition')?.match(/filename\*=UTF-8''(.+)$/)?.[1] ?? '',
+        );
+        return { extension: nombre.match(/\.([a-z0-9]+)$/i)?.[1] ?? 'xlsx', contenido: await respuesta.blob() };
       }
-      // El formato lo decide el backend, y la extensión llega en el nombre que manda.
-      const nombre = decodeURIComponent(
-        respuesta.headers.get('Content-Disposition')?.match(/filename\*=UTF-8''(.+)$/)?.[1] ?? '',
-      );
-      const extension = nombre.match(/\.([a-z0-9]+)$/i)?.[1] ?? 'xlsx';
-      bajarArchivo(`${t.importacion[`no_cargados_${noCargados}`]}.${extension}`, await respuesta.blob());
+      // Sale en el formato en que llegó y, si ése no es Excel moderno, también en Excel moderno,
+      // que es el que lleva las listas para elegir.
+      const original = await pedir(analisis.archivoNombre);
+      const archivos = [original];
+      if (!['xlsx', 'xlsm'].includes(original.extension.toLowerCase())) {
+        const sinExtension = String(analisis.archivoNombre ?? '').replace(/\.[a-z0-9]+$/i, '') || 'importacion';
+        archivos.push(await pedir(`${sinExtension}.xlsx`));
+      }
+      for (const { extension, contenido } of archivos) {
+        bajarArchivo(`${t.importacion[`no_cargados_${noCargados}`]}.${extension}`, contenido);
+      }
     } catch (err) {
       setError(mensajeDeError(err, t));
     } finally {

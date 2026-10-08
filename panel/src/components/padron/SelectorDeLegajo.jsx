@@ -39,7 +39,7 @@ export function SelectorDeLegajo({
     // cualquiera de las dos.
     let consulta = supabase
       .from('legajos')
-      .select('id, numero_legajo, nombre_visible, documento_numero')
+      .select('id, nombre_visible, documento_numero')
       .order('nombre_visible', { ascending: true });
     if (clase) consulta = consulta.eq('clase', clase);
 
@@ -67,7 +67,6 @@ export function SelectorDeLegajo({
     return filas.filter((fila) => (
       fila.id === valor
       || (fila.nombre_visible ?? '').toLowerCase().includes(buscado)
-      || String(fila.numero_legajo).includes(buscado)
       || (fila.documento_numero ?? '').toLowerCase().includes(buscado)
     ));
   }, [filas, busqueda, valor]);
@@ -99,7 +98,7 @@ export function SelectorDeLegajo({
         </option>
         {listadas.map((fila) => (
           <option key={fila.id} value={fila.id}>
-            {fila.nombre_visible} · {t.padron.numero} {fila.numero_legajo}
+            {fila.nombre_visible}{fila.documento_numero ? ` · ${fila.documento_numero}` : ''}
           </option>
         ))}
       </FormField>

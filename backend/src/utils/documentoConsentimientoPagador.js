@@ -55,7 +55,7 @@ export const MODELO_DE_FABRICA = [
   'a {{prestadora}}, en las condiciones y con la periodicidad que se hayan acordado.',
   '',
   'Esta obligación es propia y no depende de que un tercero —una obra social, una prepaga u',
-  'otro financiador— reconozca, autorice o pague la prestación.',
+  'otra entidad— reconozca, autorice o pague la prestación.',
   '',
   'Quien firma puede dejar de estar obligado para adelante avisándolo por escrito a la',
   'Prestadora. Lo que ya se prestó hasta ese aviso queda alcanzado por esta obligación.',

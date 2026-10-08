@@ -15,7 +15,7 @@ import { ESTADO_EN_CURSO } from '../lib/guardiaSinCerrar';
 import { hoyISO } from '../lib/horarios';
 import { soloSinResolver } from '../lib/alertaSinResolver';
 import { contarPorModalidad, MODALIDADES, modalidadesDelAsistente } from '../lib/modalidades';
-import { ESTADO_ACTIVO, estaEnElPlantel } from '../lib/candidatos';
+import { ESTADO_ACTIVO, estaEnElPadron } from '../lib/candidatos';
 import { claseBadgeTono, TONO } from '../lib/tonos';
 import './hojaDeTarjetas.css';
 
@@ -117,10 +117,10 @@ export function Dashboard() {
   // Legajo del Asistente, sale un número por renglón.
   //
   // Quien trabaja en las dos modalidades cuenta en las dos, así que los renglones suman más que
-  // el plantel —lo dice la etiqueta: son vínculos, no personas—.
+  // el Padrón —lo dice la etiqueta: son vínculos, no personas—.
   //
-  // La consulta sale sola de esta pantalla, en vez de reusar el plantel que ya se carga arriba,
-  // porque ese plantel le llega al Coordinador por una vista que no trae la modalidad. Es la
+  // La consulta sale sola de esta pantalla, en vez de reusar el Padrón que ya se carga arriba,
+  // porque ese Padrón le llega al Coordinador por una vista que no trae la modalidad. Es la
   // misma tabla y la misma columna que ya consulta el Estado actual para armar sus candidatos.
   const cargarVinculosPorModalidad = useCallback(async () => {
     if (!desgloseModalidadHabilitado) return;
@@ -207,7 +207,7 @@ export function Dashboard() {
 
   const postulacionesHoy = postulaciones.filas.filter((p) => esHoy(p.creado_en)).length;
   const postulacionesSemana = postulaciones.filas.filter((p) => esEstaSemana(p.creado_en)).length;
-  const asistentesDisponibles = asistentes.filas.filter(estaEnElPlantel).length;
+  const asistentesDisponibles = asistentes.filas.filter(estaEnElPadron).length;
   const clientesActivos = clientes.filas.filter((f) => !f.deleted_at).length;
 
   const nombreDeModalidad = (modalidad) => NOMBRE_MODALIDAD[modalidad]?.(t) ?? modalidad;

@@ -8,8 +8,8 @@ import { useOpcionesPostulacion } from '../hooks/useOpcionesPostulacion';
 import { useListaDeOpciones } from '../hooks/useListaDeOpciones';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Cabecera } from '../components/ui/Cabecera';
-import { MapaDelPlantel } from '../components/mapa/MapaDelPlantel';
-import { usePlantelEnElMapa } from '../hooks/usePlantelEnElMapa';
+import { MapaDelPadron } from '../components/mapa/MapaDelPadron';
+import { usePadronEnElMapa } from '../hooks/usePadronEnElMapa';
 import { FiltroDeCatalogo } from '../components/layout/FiltroDeCatalogo';
 import { PostulacionDetalle } from './PostulacionDetalle';
 import { traducirCodigos } from '../lib/postulacionCodigos';
@@ -60,9 +60,9 @@ export function Postulaciones() {
   const laSituacionFiscal = useListaDeOpciones('situacion_fiscal');
   const { f, set, limpiar, hayFiltros } = useFiltros(FILTROS_INICIALES);
   const [seleccionada, setSeleccionada] = useState(null);
-  // El plantel que hay en este momento, para el mapa. Se arma cada vez que se abre la pantalla:
+  // El Padrón que hay en este momento, para el mapa. Se arma cada vez que se abre la pantalla:
   // no hay ninguna foto guardada que pueda quedar vieja.
-  const elMapa = usePlantelEnElMapa();
+  const elMapa = usePadronEnElMapa();
 
   const filasFiltradas = useMemo(() => filtrarPostulaciones(filas, f), [filas, f]);
 
@@ -90,7 +90,7 @@ export function Postulaciones() {
 
       <div className="molde-pila">
         {/* Dónde está repartida hoy la gente que ya trabaja en la Prestadora. */}
-        <MapaDelPlantel
+        <MapaDelPadron
           datos={elMapa.datos}
           estado={elMapa.estado}
           error={elMapa.error}

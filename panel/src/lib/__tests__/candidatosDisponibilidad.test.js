@@ -9,7 +9,7 @@
  * marcara como bloqueado, pasaría cualquier prueba que sólo mirara "aparece el motivo".
  *
  * Qué daría con el sistema roto: si alguien cambiara el `suma(...)` por un `bloqueado = true`,
- * la tercera prueba falla; si filtrara la lista como se filtra a quien ya no está en el plantel,
+ * la tercera prueba falla; si filtrara la lista como se filtra a quien ya no está en el Padrón,
  * falla la primera.
  */
 import { describe, expect, it } from 'vitest';

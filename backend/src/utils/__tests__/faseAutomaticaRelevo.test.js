@@ -43,8 +43,8 @@ const GUARDIA_ENTRANTE = {
 
 const respuestas = new Map();
 let consultas = [];
-/** Quiénes figuran hoy como plantel activo de la Prestadora. */
-let plantelActivo = [];
+/** Quiénes figuran hoy como Padrón activo de la Prestadora. */
+let padronActivo = [];
 /** Quiénes movieron su interruptor a "no disponible" desde su aplicación. */
 let noDisponibles = new Set();
 
@@ -119,13 +119,13 @@ beforeEach(() => {
           { id: 'otra', asistente_id: SUPLENTE_OCUPADO, fecha: '2026-09-15', hora_inicio: '18:00', hora_fin: '02:00' },
         ],
   );
-  plantelActivo = [AUSENTE, SUPLENTE_LIBRE, SUPLENTE_OCUPADO, FRANQUERO];
+  padronActivo = [AUSENTE, SUPLENTE_LIBRE, SUPLENTE_OCUPADO, FRANQUERO];
   noDisponibles = new Set();
   // La base falsa filtra de verdad por `disponible_para_ofertas`: si alguien sacara ese filtro
   // de la consulta, acá volverían todos y la prueba lo vería.
   respuestas.set('GET /rest/v1/asistentes', (busqueda) =>
     busqueda.has('estado')
-      ? plantelActivo
+      ? padronActivo
           .filter((id) => busqueda.get('disponible_para_ofertas') !== 'eq.true' || !noDisponibles.has(id))
           .map((id) => ({ id }))
       : [{ telefono: TELEFONOS[valorDe(busqueda, 'id')] ?? null }],
@@ -271,7 +271,7 @@ describe('a quiénes sale a buscar la fase automática', () => {
     respuestas.set('GET /rest/v1/personal_emergencia', () => [
       { asistente_id: FRANQUERO, tipo: 'franquero', asistentes: { estado: 'baja' } },
     ]);
-    plantelActivo = plantelActivo.filter((id) => id !== FRANQUERO);
+    padronActivo = padronActivo.filter((id) => id !== FRANQUERO);
 
     const hecho = await correr();
 

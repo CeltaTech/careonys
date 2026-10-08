@@ -81,7 +81,7 @@ export function AsistenteDetalle() {
     <div>
       <Cabecera titulo={asistente.nombre}>
         <Button variant="secondary" onClick={() => navigate('/asistentes')}>
-          <span aria-hidden="true">←</span> {t.asistentes.volver_al_plantel}
+          <span aria-hidden="true">←</span> {t.asistentes.volver_al_padron}
         </Button>
       </Cabecera>
       {datosDelAsistente.length > 0 && (

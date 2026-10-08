@@ -1814,7 +1814,7 @@ button.panel-kpi-card[aria-pressed='true'] {
   font-size: 0.85em;
 }
 
-/* ---------- Módulo 4: Plantel de Asistentes ---------- */
+/* ---------- Módulo 4: Padrón de Asistentes ---------- */
 
 .link-volver {
   background: none;
@@ -2701,11 +2701,11 @@ button.panel-kpi-card[aria-pressed='true'] {
   margin-top: 0.15rem;
 }
 
-/* --- El mapa del plantel por zona --- */
+/* --- El mapa del Padrón por zona --- */
 
 /* Un bloque más de la pantalla, con el mismo fondo y el mismo borde que el resto de las tarjetas.
    El recuadro del mapa lleva su alto desde la configuración, porque un mapa sin alto no se ve. */
-.mapa-plantel {
+.mapa-padron {
   background: var(--superficie);
   border: 1px solid var(--borde-card);
   border-radius: var(--radio-card);
@@ -2716,24 +2716,24 @@ button.panel-kpi-card[aria-pressed='true'] {
   gap: 0.6rem;
 }
 
-.mapa-plantel h3 {
+.mapa-padron h3 {
   margin: 0;
 }
 
-.mapa-plantel-cuenta {
+.mapa-padron-cuenta {
   margin: 0;
   color: var(--texto-secundario);
   font-size: 0.85rem;
 }
 
 /* Las zonas, a lo ancho y envolviéndose: una Prestadora puede tener muchas. */
-.mapa-plantel-zonas {
+.mapa-padron-zonas {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
 }
 
-.mapa-plantel-zona {
+.mapa-padron-zona {
   background: var(--tono-neutro-fondo);
   color: var(--tono-neutro-texto);
   border: 1px solid transparent;
@@ -2744,21 +2744,21 @@ button.panel-kpi-card[aria-pressed='true'] {
   cursor: pointer;
 }
 
-.mapa-plantel-zona[aria-pressed='true'] {
+.mapa-padron-zona[aria-pressed='true'] {
   background: var(--tono-info-fondo);
   color: var(--tono-info-texto);
   border-color: var(--azul-medio);
 }
 
-.mapa-plantel-lienzo {
+.mapa-padron-lienzo {
   border-radius: 10px;
   border: 1px solid var(--borde-card);
   overflow: hidden;
 }
 
-/* La misma información del mapa, en texto. Se desplaza sola cuando el plantel es grande, para que
+/* La misma información del mapa, en texto. Se desplaza sola cuando el Padrón es grande, para que
    no empuje al resto de la pantalla hacia abajo. */
-.mapa-plantel-lista {
+.mapa-padron-lista {
   margin: 0;
   padding-left: 1.1rem;
   display: grid;
@@ -2769,7 +2769,7 @@ button.panel-kpi-card[aria-pressed='true'] {
   color: var(--texto-secundario);
 }
 
-.mapa-plantel-sin-ubicar {
+.mapa-padron-sin-ubicar {
   margin: 0;
   color: var(--tono-atencion-texto);
   font-size: 0.82rem;

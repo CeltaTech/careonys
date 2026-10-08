@@ -8,7 +8,7 @@
 // ser el escritorio del Coordinador de turno, la guardia, o una central.
 //
 // LO QUE ACÁ NO PUEDE APARECER NUNCA es el teléfono ni el correo de un Asistente. Cómo llegar a
-// una persona del plantel es justamente lo que la modalidad Match abre a pedido y con el
+// una persona del Padrón es justamente lo que la modalidad Match abre a pedido y con el
 // contacto tapado hasta entonces (`utils/contactoTapado.js`); que otra pantalla lo regale por
 // atrás dejaría sin sentido esa puerta y publicaría el dato personal de quien trabaja.
 //

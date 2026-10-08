@@ -24,7 +24,7 @@ import { FICHA_NOMBRE, conSusFichas } from '../../lib/fichaDelPaciente';
    desde la persona.
 
    SE MUESTRA LO QUE YA PASÓ, Y SÓLO ESO. Lo que tiene por delante ya se ve en la grilla de
-   Guardias y, contado, en la lista del plantel. Mezclar las dos cosas en una sola tabla haría
+   Guardias y, contado, en la lista del Padrón. Mezclar las dos cosas en una sola tabla haría
    que un turno todavía no trabajado se lea como un antecedente.
 
    No se decide nada acá: la situación de cada guardia sale del semáforo

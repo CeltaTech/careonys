@@ -3,12 +3,12 @@ import 'leaflet/dist/leaflet.css';
 import { useLocale } from '../../i18n/LocaleContext';
 import { EstadoLista } from '../layout/EstadoLista';
 import { MAPA_DE_FONDO } from '../../config/mapaDeFondo';
-import { SIN_ZONA, puntosDeLaZona } from '../../lib/mapaDelPlantel';
+import { SIN_ZONA, puntosDeLaZona } from '../../lib/mapaDelPadron';
 
-/* El mapa del plantel activo, agrupado por zona (`PRD_02_Panel_Admin.md` Módulo 2).
+/* El mapa del Padrón activo, agrupado por zona (`PRD_02_Panel_Admin.md` Módulo 2).
 
    QUÉ DECIDE ESTE ARCHIVO: nada. Los números, los grupos y el encuadre llegan armados de
-   `lib/mapaDelPlantel.js`; la dirección del fondo y la atribución, de `config/mapaDeFondo.js`;
+   `lib/mapaDelPadron.js`; la dirección del fondo y la atribución, de `config/mapaDeFondo.js`;
    las palabras, de las traducciones. Acá sólo se dibuja.
 
    POR QUÉ LA LIBRERÍA DE MAPAS SE PIDE RECIÉN AL DIBUJAR. Es la pieza más pesada del Panel y la
@@ -20,7 +20,7 @@ import { SIN_ZONA, puntosDeLaZona } from '../../lib/mapaDelPlantel';
    pidiéndola donde no está: el mapa se dibuja y no aparece ni un punto. Una marca redonda la dibuja el
    navegador solo, con los colores del sistema de diseño.
 
-   EL VACÍO ACÁ ES IMPORTANTE. Si nadie del plantel tiene su ubicación cargada, no se muestra un
+   EL VACÍO ACÁ ES IMPORTANTE. Si nadie del Padrón tiene su ubicación cargada, no se muestra un
    mapa mudo: se dice que todavía no hay nada que ubicar. Un mapa vacío parece un mapa roto. */
 
 // De dónde salen los colores de los puntos. Son tokens del sistema de diseño, no colores
@@ -33,9 +33,9 @@ function colorDelSistema(nombre) {
   return getComputedStyle(document.documentElement).getPropertyValue(nombre).trim();
 }
 
-export function MapaDelPlantel({ datos, estado, error, recargar }) {
+export function MapaDelPadron({ datos, estado, error, recargar }) {
   const { t } = useLocale();
-  const tm = t.mapa_del_plantel;
+  const tm = t.mapa_del_padron;
   const contenedor = useRef(null);
   const mapa = useRef(null);
   const capaDePuntos = useRef(null);
@@ -62,7 +62,7 @@ export function MapaDelPlantel({ datos, estado, error, recargar }) {
     [datos, zonaElegida],
   );
 
-  // Una zona que se dejó de mostrar —porque se recargó el plantel y ya no está— dejaría la
+  // Una zona que se dejó de mostrar —porque se recargó el Padrón y ya no está— dejaría la
   // pantalla filtrada por algo que no existe, y sin forma de darse cuenta.
   useEffect(() => {
     const sigue = (datos?.grupos ?? []).some((grupo) => grupo.id === zonaElegida);
@@ -124,7 +124,7 @@ export function MapaDelPlantel({ datos, estado, error, recargar }) {
   );
 
   return (
-    <section className="mapa-plantel">
+    <section className="mapa-padron">
       <h3>{tm.titulo}</h3>
 
       <EstadoLista
@@ -136,7 +136,7 @@ export function MapaDelPlantel({ datos, estado, error, recargar }) {
         ayudaVacio={(datos?.total ?? 0) === 0 ? undefined : tm.vacio_ayuda}
       >
         <>
-          <p className="mapa-plantel-cuenta">
+          <p className="mapa-padron-cuenta">
             {tm.cuantas
               .replace('{ubicadas}', datos?.ubicadas ?? 0)
               .replace('{total}', datos?.total ?? 0)}
@@ -144,10 +144,10 @@ export function MapaDelPlantel({ datos, estado, error, recargar }) {
 
           {/* Las zonas, con cuántos hay en cada una. Se elige una y el mapa muestra sólo esa:
               es la forma de agrupar sin repartir colores que nadie definió. */}
-          <div className="mapa-plantel-zonas">
+          <div className="mapa-padron-zonas">
             <button
               type="button"
-              className="mapa-plantel-zona"
+              className="mapa-padron-zona"
               onClick={() => setZonaElegida('')}
               aria-pressed={zonaElegida === ''}
             >
@@ -157,7 +157,7 @@ export function MapaDelPlantel({ datos, estado, error, recargar }) {
               <button
                 key={grupo.id}
                 type="button"
-                className="mapa-plantel-zona"
+                className="mapa-padron-zona"
                 onClick={() => setZonaElegida(grupo.id)}
                 aria-pressed={zonaElegida === grupo.id}
               >
@@ -168,14 +168,14 @@ export function MapaDelPlantel({ datos, estado, error, recargar }) {
 
           <div
             ref={contenedor}
-            className="mapa-plantel-lienzo"
+            className="mapa-padron-lienzo"
             style={{ height: MAPA_DE_FONDO.alto }}
             role="application"
             aria-label={tm.titulo}
           />
 
           {/* Quien no ve el mapa tiene que poder leer lo mismo que muestra. */}
-          <ul className="mapa-plantel-lista">
+          <ul className="mapa-padron-lista">
             {visibles.map((punto) => (
               <li key={punto.id}>
                 {punto.nombre}
@@ -185,7 +185,7 @@ export function MapaDelPlantel({ datos, estado, error, recargar }) {
           </ul>
 
           {(datos?.sinUbicar ?? 0) > 0 && (
-            <p className="mapa-plantel-sin-ubicar">
+            <p className="mapa-padron-sin-ubicar">
               {tm.sin_ubicacion.replace('{n}', datos.sinUbicar)}
             </p>
           )}

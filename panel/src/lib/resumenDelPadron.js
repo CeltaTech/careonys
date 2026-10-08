@@ -1,9 +1,9 @@
 // ---------------------------------------------------------------------------
-// resumenDelPlantel.js — las dos cuentas que la lista de Asistentes hace de un vistazo
+// resumenDelPadron.js — las dos cuentas que la lista de Asistentes hace de un vistazo
 //
 // QUÉ PROBLEMA RESUELVE
 // Para saber si un Asistente tiene los papeles al día o cuántos turnos le quedan por delante
-// había que entrar a su Legajo del Asistente, de a uno. Con un plantel de decenas de personas, eso es abrir y
+// había que entrar a su Legajo del Asistente, de a uno. Con un Padrón de decenas de personas, eso es abrir y
 // cerrar decenas de Legajos del Asistente para contestar una pregunta que la lista puede contestar sola.
 //
 // POR QUÉ NO SE CUENTA ADENTRO DE LA PANTALLA
@@ -35,7 +35,7 @@ const lista = (x) => (Array.isArray(x) ? x : []);
  *
  * Una Prestadora que genera guardias por serie tiene turnos cargados hasta fin de año: traerlos
  * todos para poner un número al lado de cada nombre sería pedir miles de filas para mostrar
- * decenas. Un mes es lo que alguien tiene delante cuando mira el plantel, y el número de días
+ * decenas. Un mes es lo que alguien tiene delante cuando mira el Padrón, y el número de días
  * aparece escrito en la pantalla para que nadie crea que está viendo el total.
  */
 export const DIAS_DE_HORIZONTE = 30;
@@ -108,22 +108,22 @@ export function documentacionPorAsistente(
 }
 
 /**
- * Las opciones de un filtro, sacadas de lo que el plantel tiene cargado.
+ * Las opciones de un filtro, sacadas de lo que el Padrón tiene cargado.
  *
  * Las especialidades las escribió a mano quien cargó el Legajo de cada Asistente, así que la misma aparece escrita
  * de varias maneras. Se agrupan con `comparable` (`textoComparable.js`), y se muestra la primera
  * forma que apareció.
  *
- * **Las opciones salen del plantel y no de un catálogo** a propósito: dejaría afuera lo que
+ * **Las opciones salen del Padrón y no de un catálogo** a propósito: dejaría afuera lo que
  * alguien escribió sin que estuviera en la lista, que es justo lo que hay que poder encontrar.
  * Dónde trabaja cada persona ya no entra por acá: eso sale del catálogo de lugares, donde no hay
  * nada escrito a mano que acercar.
  *
- * @param filas   el plantel.
+ * @param filas   el Padrón.
  * @param campo   `'especialidades'`.
  * @returns array de textos, ordenado alfabéticamente, sin repetidos.
  */
-export function opcionesDelPlantel(filas, campo) {
+export function opcionesDelPadron(filas, campo) {
   const vistas = new Map();
   for (const fila of lista(filas)) {
     for (const texto of lista(fila?.[campo])) {

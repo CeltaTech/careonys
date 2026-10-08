@@ -1,4 +1,4 @@
-/* Los documentos que genera el módulo de Plantel: cómo se llaman y dónde se guardan.
+/* Los documentos que genera el módulo del Padrón: cómo se llaman y dónde se guardan.
    ==========================================================================
 
    POR QUÉ EXISTE ESTE ARCHIVO. El nombre de archivo de cada documento estaba escrito a mano en
@@ -18,7 +18,7 @@
    los que la columna `ceses.documentos_generados` puede apuntar. Los otros tres —los dos
    certificados del legajo y la constancia de ausencia— se siguen bajando y nada más: no hay
    ninguna fila de la que colgarlos, y el certificado de trabajo se emite también con el Asistente
-   todavía en el plantel. Acá están los seis porque el nombre de archivo lo necesitan los seis; la
+   todavía en el Padrón. Acá están los seis porque el nombre de archivo lo necesitan los seis; la
    lista de los que se guardan es aparte. */
 
 /* Los tres que cuelgan de un cese y quedan guardados en el depósito. Se nombran de a uno y no

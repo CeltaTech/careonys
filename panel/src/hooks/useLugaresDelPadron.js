@@ -4,8 +4,8 @@ import { useCatalogoDeLugares } from './useCatalogoDeLugares';
 
 /* Dónde acepta trabajar cada una de las personas de una lista, con el nombre de cada lugar.
 
-   POR QUÉ ES UN HOOK Y NO DOS CONSULTAS EN CADA PANTALLA. La lista del plantel y el mapa del
-   plantel necesitan lo mismo —qué lugares tiene el Legajo de cada Asistente y cómo se llaman—, y
+   POR QUÉ ES UN HOOK Y NO DOS CONSULTAS EN CADA PANTALLA. La lista del Padrón y el mapa del
+   Padrón necesitan lo mismo —qué lugares tiene el Legajo de cada Asistente y cómo se llaman—, y
    escribirlo dos veces terminaría con una mostrando los nombres del catálogo y otra mostrando
    identificadores.
 
@@ -15,7 +15,7 @@ import { useCatalogoDeLugares } from './useCatalogoDeLugares';
 
    La lista de personas se compara por su contenido y no por su identidad: una pantalla que arma
    el array en cada dibujo no debe volver a consultar por eso. */
-export function useLugaresDelPlantel(ids) {
+export function useLugaresDelPadron(ids) {
   const clave = [...new Set((ids ?? []).filter(Boolean))].sort().join(',');
   const {
     lugares: catalogo,
@@ -61,7 +61,7 @@ export function useLugaresDelPlantel(ids) {
       nombreDeLugar,
       catalogo: catalogo ?? [],
       // Las zonas salen del mismo catálogo que ya se trajo. Pedirlas aparte sería la misma
-      // consulta dos veces, y el mapa del plantel agrupa justamente por zona.
+      // consulta dos veces, y el mapa del Padrón agrupa justamente por zona.
       zonas: zonas ?? [],
       estado:
         estado === 'error' || estadoCatalogo === 'error'

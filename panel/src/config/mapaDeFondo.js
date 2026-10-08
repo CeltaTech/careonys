@@ -13,7 +13,7 @@
 //
 // POR QUÉ ESTE PROVEEDOR. No pide cuenta, ni credencial, ni pago. Y sobre todo: los cuadraditos
 // se piden por pedazo de territorio, nunca por persona. El servidor de mapas ve que alguien miró
-// el norte del conurbano; no ve —ni puede ver— dónde vive nadie del plantel. Los puntos se
+// el norte del conurbano; no ve —ni puede ver— dónde vive nadie del Padrón. Los puntos se
 // dibujan encima, ya en el navegador, y no salen del producto (CLAUDE.md §6).
 //
 // LA ATRIBUCIÓN NO ES OPCIONAL. Es la condición de uso de los datos del mapa, y el componente la

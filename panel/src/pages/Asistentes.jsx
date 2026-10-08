@@ -8,11 +8,11 @@ import { claseBadge, claseBadgeTono, TONO } from '../lib/tonos';
 import { nombreTipo } from '../lib/tiposAsistente';
 import { conDatosAparte } from '../lib/datosAparteDelAsistente';
 import { MODALIDAD, modalidadesDelAsistente } from '../lib/modalidades';
-import { coincideConElFiltro, opcionesDelPlantel } from '../lib/resumenDelPlantel';
+import { coincideConElFiltro, opcionesDelPadron } from '../lib/resumenDelPadron';
 import { useSupabaseTable } from '../hooks/useSupabaseTable';
 import { useFiltros } from '../hooks/useFiltros';
 import { useTiposAsistente } from '../hooks/useTiposAsistente';
-import { useLugaresDelPlantel } from '../hooks/useLugaresDelPlantel';
+import { useLugaresDelPadron } from '../hooks/useLugaresDelPadron';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Alert } from '../components/ui/Alert';
 import { Button } from '../components/ui/Button';
@@ -51,14 +51,14 @@ export function Asistentes() {
   });
   const { paraElegir: tiposAsistente, porId: tiposPorId } = useTiposAsistente();
   // Dónde acepta trabajar cada una. Vive en su propia tabla y llega aparte; sólo alimenta el filtro.
-  const lugaresDelPlantel = useLugaresDelPlantel(filas.map((a) => a.id));
+  const lugaresDelPadron = useLugaresDelPadron(filas.map((a) => a.id));
 
   const [mostrarNuevo, setMostrarNuevo] = useState(false);
   const [mostrarPasarAlCatalogo, setMostrarPasarAlCatalogo] = useState(false);
 
   const conLugares = useCallback(
-    (a) => ({ ...conDatosAparte(a), lugares: lugaresDelPlantel.lugaresDe(a.id) }),
-    [lugaresDelPlantel],
+    (a) => ({ ...conDatosAparte(a), lugares: lugaresDelPadron.lugaresDe(a.id) }),
+    [lugaresDelPadron],
   );
 
   const filasFiltradas = useMemo(() => {
@@ -76,14 +76,14 @@ export function Asistentes() {
     });
   }, [filas, f, conLugares]);
 
-  // El filtro de lugar ofrece los lugares que el plantel tiene cargados, no el catálogo entero.
+  // El filtro de lugar ofrece los lugares que el Padrón tiene cargados, no el catálogo entero.
   const lugares = useMemo(() => {
-    const puestos = new Set(filas.flatMap((a) => lugaresDelPlantel.lugaresDe(a.id)));
-    return lugaresDelPlantel.catalogo
+    const puestos = new Set(filas.flatMap((a) => lugaresDelPadron.lugaresDe(a.id)));
+    return lugaresDelPadron.catalogo
       .filter((lugar) => puestos.has(lugar.id))
       .map((lugar) => ({ id: lugar.id, nombre: lugar.nombre }));
-  }, [filas, lugaresDelPlantel]);
-  const especialidades = useMemo(() => opcionesDelPlantel(filas, 'especialidades'), [filas]);
+  }, [filas, lugaresDelPadron]);
+  const especialidades = useMemo(() => opcionesDelPadron(filas, 'especialidades'), [filas]);
 
   // Los que todavía no tienen tipo del catálogo. Mientras haya uno se ofrece pasarlos.
   const sinTipo = useMemo(() => filas.filter((a) => !a.tipo_asistente_id), [filas]);

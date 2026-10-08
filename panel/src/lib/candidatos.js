@@ -173,10 +173,10 @@ const lista = (x) => (Array.isArray(x) ? x : []);
 export const ESTADO_ACTIVO = 'activo';
 
 /**
- * ¿Sigue en el plantel? Es lo único que este archivo le pregunta al estado del Asistente, y
+ * ¿Sigue en el Padrón? Es lo único que este archivo le pregunta al estado del Asistente, y
  * está escrito una sola vez para que la respuesta no se bifurque (regla 12 de CLAUDE.md §7).
  */
-export function estaEnElPlantel(asistente) {
+export function estaEnElPadron(asistente) {
   return asistente?.estado === ESTADO_ACTIVO;
 }
 
@@ -385,9 +385,9 @@ const MOTIVO_DE_BLOQUEO = {
  *
  * @param hueco     la fila de `guardias` sin Asistente que hay que tapar.
  * @param datos     lo que la pantalla ya cargó:
- *                    asistentes     → el plantel de la Prestadora, entero. Quién sigue estando
+ *                    asistentes     → el Padrón de la Prestadora, entero. Quién sigue estando
  *                                     se decide acá adentro, no en la consulta de la pantalla
- *                                     (ver `estaEnElPlantel` y el porqué unas líneas más abajo)
+ *                                     (ver `estaEnElPadron` y el porqué unas líneas más abajo)
  *                    guardias       → todas las del rango, para ver ocupación y carga semanal
  *                    ausencias      → filas de `ausencias` que se pisan con el rango cargado,
  *                                     con `asistente_id`, `fecha_inicio` y `fecha_fin` y nada
@@ -429,7 +429,7 @@ export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
   /* Quien ya no trabaja en la Prestadora se va de la lista.
      ------------------------------------------------------------------------------------------
      POR QUÉ EL FILTRO VIVE ACÁ Y NO EN LA CONSULTA DE LA PANTALLA. La pantalla que abre el panel
-     de cobertura pide el plantel una sola vez y lo usa para tres cosas distintas: poner el
+     de cobertura pide el Padrón una sola vez y lo usa para tres cosas distintas: poner el
      nombre del Asistente en cada guardia ya asignada de la grilla, llenar los desplegables de
      reasignación, y alimentar esta lista. Filtrar en esa consulta arreglaría esta lista y
      rompería la primera: una guardia de la semana pasada que cubrió alguien que después fue
@@ -439,11 +439,11 @@ export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
      que arme una lista de candidatos es garantizar que la próxima pantalla se la olvide.
 
      POR QUÉ SE VAN Y NO QUEDAN AL FONDO CON SU MOTIVO, que es lo que hace todo el resto de este
-     archivo. La diferencia es real: los bloqueados de más abajo son gente del plantel que no
+     archivo. La diferencia es real: los bloqueados de más abajo son gente del Padrón que no
      puede tomar ESTA guardia, y verlos ahí cierra la pregunta "¿por qué no aparece fulana?".
      Quien ya no trabaja en la Prestadora no es un candidato bloqueado: no es un candidato.
      Arrastrarlo por el fondo de todos los huecos, para siempre, sería ruido. */
-  const asistentes = lista(datos.asistentes).filter(estaEnElPlantel);
+  const asistentes = lista(datos.asistentes).filter(estaEnElPadron);
   const guardias = lista(datos.guardias);
   const ausencias = lista(datos.ausencias);
   const matriculas = lista(datos.matriculas);
@@ -453,7 +453,7 @@ export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
 
   // Los Pacientes de este hueco, una sola vez para toda la lista: la distancia se mide contra
   // los mismos puntos para cada Asistente, y volver a filtrarlos por candidato sería recorrer
-  // la lista entera de Pacientes tantas veces como plantel tenga la Prestadora.
+  // la lista entera de Pacientes tantas veces como Asistentes tenga el Padrón.
   const buscados = new Set(idsDePacientes(hueco).filter(Boolean));
   const pacientesDelHueco = lista(datos.pacientes).filter((p) => buscados.has(p?.id));
 

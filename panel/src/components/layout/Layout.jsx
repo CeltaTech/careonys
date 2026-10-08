@@ -146,7 +146,7 @@ export function Layout() {
   // candado de la dirección (App.jsx).
   const directa = tieneModalidad(MODALIDAD.DIRECTA);
   const intermediacion = tieneModalidad(MODALIDAD.INTERMEDIACION);
-  const hayPlantel = directa || intermediacion;
+  const hayPadron = directa || intermediacion;
   // Con las dos habilitadas se mira una por vez: lo propio de cada modalidad aparece sólo cuando
   // es la que está en vista. Lo común, las emergencias y las alertas se ven siempre.
   const verDirecta = directa && enVista(MODALIDAD.DIRECTA);
@@ -174,13 +174,13 @@ export function Layout() {
       clave: 'asistentes',
       texto: t.nav.sec_asistentes,
       enlaces: [
-        { a: '/asistentes', texto: t.nav.asistentes, ver: hayPlantel },
-        { a: '/documentacion', texto: t.nav.documentacion, ver: hayPlantel },
-        { a: '/postulaciones', texto: t.nav.postulaciones, ver: hayPlantel },
+        { a: '/asistentes', texto: t.nav.asistentes, ver: hayPadron },
+        { a: '/documentacion', texto: t.nav.documentacion, ver: hayPadron },
+        { a: '/postulaciones', texto: t.nav.postulaciones, ver: hayPadron },
         { a: '/intermediacion/calificaciones', texto: t.nav.intermediacion_calificaciones, ver: verMatch, modalidad: MODALIDAD.INTERMEDIACION },
         // Una remuneración es dato sensible: el Admin la ve siempre, el Coordinador sólo si su
         // Prestadora se lo habilitó.
-        { a: '/pagos-asistentes', texto: t.nav.pagos_asistentes, ver: hayPlantel && (esAdmin || puede('ver_pagos_asistente')) },
+        { a: '/pagos-asistentes', texto: t.nav.pagos_asistentes, ver: hayPadron && (esAdmin || puede('ver_pagos_asistente')) },
       ],
     },
     {
@@ -188,10 +188,10 @@ export function Layout() {
       texto: t.nav.sec_guardias,
       enlaces: [
         { a: '/guardias', texto: t.nav.guardias, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
-        { a: '/emergencias', texto: t.nav.emergencias, ver: hayPlantel },
-        { a: '/pase-de-guardia', texto: t.nav.pase_de_guardia, ver: hayPlantel, contador: pedidosDeCodigo.length },
-        { a: '/continuidad', texto: t.nav.continuidad, ver: hayPlantel },
-        { a: '/verificacion-guardias', texto: t.nav.verificacion_guardias, ver: hayPlantel },
+        { a: '/emergencias', texto: t.nav.emergencias, ver: hayPadron },
+        { a: '/pase-de-guardia', texto: t.nav.pase_de_guardia, ver: hayPadron, contador: pedidosDeCodigo.length },
+        { a: '/continuidad', texto: t.nav.continuidad, ver: hayPadron },
+        { a: '/verificacion-guardias', texto: t.nav.verificacion_guardias, ver: hayPadron },
         { a: '/reportes', texto: t.nav.reportes, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
         { a: '/medicacion', texto: t.nav.medicacion, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
         { a: '/alertas', texto: t.nav.alertas, ver: directa },
@@ -281,7 +281,7 @@ export function Layout() {
   // El buscador encuentra Asistentes por nombre. La base sólo devuelve los de la Prestadora.
   const texto = busqueda.trim();
   useEffect(() => {
-    if (!hayPlantel || texto.length < 2) {
+    if (!hayPadron || texto.length < 2) {
       setAsistentesEncontrados([]);
       return undefined;
     }
@@ -306,7 +306,7 @@ export function Layout() {
       vigente = false;
       clearTimeout(espera);
     };
-  }, [texto, hayPlantel]);
+  }, [texto, hayPadron]);
 
   const normalizar = (valor) => valor.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   const paginasEncontradas =

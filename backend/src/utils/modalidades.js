@@ -19,7 +19,7 @@
 // de las dos se está nombrando.
 //
 // Son dos y no hay tercera. Encargarle una prestación a una empresa subcontratada
-// o tercerizada es un recurso dentro de la prestación directa, como el plantel
+// o tercerizada es un recurso dentro de la prestación directa, como el Padrón
 // propio, y no otra modalidad.
 //
 // QUIÉN DECIDE

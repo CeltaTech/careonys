@@ -215,7 +215,7 @@ export const SITUACIONES_CERRADAS = new Set([SITUACION.COMPLETADA, SITUACION.CAN
 
 /**
  * ¿Esta guardia todavía espera algo? Es lo que cualquier pantalla quiere decir cuando habla de
- * "guardias activas": la Ficha del cliente, el conteo del plantel y las que vengan.
+ * "guardias activas": la Ficha del cliente, el conteo del Padrón y las que vengan.
  *
  * Está acá y no en cada pantalla porque es la misma pregunta: el día que se decida que una
  * ausente tampoco espera nada, tiene que cambiar en un solo lugar.

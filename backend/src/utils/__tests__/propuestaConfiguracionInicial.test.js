@@ -7,14 +7,12 @@
  * todavía no está configurado. Esa alerta vale sólo si dice **lo mismo que va a hacer la
  * importación**: si la guía dice «ese tipo ya existe» y la importación después no lo reconoce, el
  * Asistente entra sin tipo —y el tipo es lo que decide si se le va a exigir Matrícula—, sin que
- * nadie se entere hasta revisar los Legajos de a uno. Lo mismo con una zona: la importación no la
- * crea, la deja como texto suelto.
+ * nadie se entere hasta revisar los Legajos de a uno.
  *
- * Entonces lo que se cuida acá es que la comparación no se despegue: que las zonas se reconozcan
- * por código o por nombre pero sin perder los números —"AMBA 1" no es "AMBA 2"—, que un tipo
- * ambiguo se avise en vez de darse por resuelto, y que las dos consultas lleven escrito el filtro
- * por Prestadora, que es lo único que separa una de otra cuando el backend entra con la llave
- * maestra (celtatech/CLAUDE.md §5).
+ * Entonces lo que se cuida acá es que la comparación no se despegue: que un tipo ambiguo se avise
+ * en vez de darse por resuelto, y que la consulta lleve escrito el filtro por Prestadora, que es lo
+ * único que separa una de otra cuando el backend entra con la llave maestra (celtatech/CLAUDE.md
+ * §5). Las localidades no se proponen: la importación las reconoce sola.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
@@ -56,12 +54,12 @@ after(() => baseFalsa.close());
 /** El mapeo ya revisado: qué columna de la planilla es qué campo del producto. */
 const MAPEO = {
   Nombre: 'nombre',
-  Zonas: 'zonas',
+  Lugares: 'dondeAceptaTrabajar',
   Tipo: 'tipo_asistente',
 };
 
-function fila(nombre, zonas, tipo) {
-  return { Nombre: nombre, Zonas: zonas, Tipo: tipo };
+function fila(nombre, lugares, tipo) {
+  return { Nombre: nombre, Lugares: lugares, Tipo: tipo };
 }
 
 /** Un tipo de Asistente del catálogo. Sin Prestadora es uno de fábrica. */
@@ -73,7 +71,6 @@ beforeEach(() => {
   pedidos = [];
   respuestas.clear();
   // Por omisión, una Prestadora sin nada configurado.
-  respuestas.set('GET /rest/v1/zonas_cobertura', () => []);
   respuestas.set('GET /rest/v1/tipos_asistente', () => []);
 });
 
@@ -88,44 +85,8 @@ describe('la planilla de Clientes no propone configuración', () => {
       prestadoraId: PRESTADORA,
     });
 
-    assert.deepEqual(propuesta, { filasTotales: 2, zonasNuevas: [], tiposNuevos: [] });
+    assert.deepEqual(propuesta, { filasTotales: 2, tiposNuevos: [] });
     assert.deepEqual(pedidos, [], 'preguntó por configuración que ese archivo no trae');
-  });
-});
-
-describe('las zonas de cobertura que la planilla nombra', () => {
-  it('sólo se proponen las que no están, por código o por nombre', async () => {
-    respuestas.set('GET /rest/v1/zonas_cobertura', () => [{ codigo: 'NOR', nombre: 'Zona Norte' }]);
-
-    const propuesta = await proponerConfiguracionInicial({
-      tipo: 'asistente',
-      // Varias zonas en una sola celda, que es como vienen en una planilla de verdad.
-      filas: [
-        fila('Una', 'zona norte, Zona Sur', ''),
-        fila('Otra', 'NOR', ''),
-        fila('Tercera', 'zona sur', ''),
-      ],
-      mapeo: MAPEO,
-      prestadoraId: PRESTADORA,
-    });
-
-    assert.equal(propuesta.filasTotales, 3);
-    assert.deepEqual(propuesta.zonasNuevas, ['Zona Sur'], 'la zona ya configurada no es novedad');
-  });
-
-  it('no se pierden los números: "AMBA 1" no configura "AMBA 2"', async () => {
-    // Es el motivo por el que esto no reutiliza el normalizador de los tipos de Asistente, que
-    // borra todo lo que no sea letra: con aquél, las dos zonas serían la misma.
-    respuestas.set('GET /rest/v1/zonas_cobertura', () => [{ codigo: 'AMBA1', nombre: 'AMBA 1' }]);
-
-    const propuesta = await proponerConfiguracionInicial({
-      tipo: 'asistente',
-      filas: [fila('Una', 'AMBA 1', ''), fila('Otra', 'AMBA 2', '')],
-      mapeo: MAPEO,
-      prestadoraId: PRESTADORA,
-    });
-
-    assert.deepEqual(propuesta.zonasNuevas, ['AMBA 2']);
   });
 });
 
@@ -163,7 +124,7 @@ describe('los tipos de Asistente que la planilla nombra', () => {
 });
 
 describe('el aislamiento entre Prestadoras', () => {
-  it('las dos consultas llevan escrito el filtro por Prestadora', async () => {
+  it('la consulta lleva escrito el filtro por Prestadora', async () => {
     await proponerConfiguracionInicial({
       tipo: 'asistente',
       filas: [fila('Una', 'Zona Norte', 'Cuidador')],
@@ -171,20 +132,16 @@ describe('el aislamiento entre Prestadoras', () => {
       prestadoraId: PRESTADORA,
     });
 
-    const zonas = pedidos.find((p) => p.clave === 'GET /rest/v1/zonas_cobertura');
     const tipos = pedidos.find((p) => p.clave === 'GET /rest/v1/tipos_asistente');
 
-    assert.ok(zonas, 'no consultó las zonas configuradas');
     assert.ok(tipos, 'no consultó el catálogo de tipos');
-    assert.match(decodeURIComponent(zonas.url), new RegExp(`prestadora_id=eq\\.${PRESTADORA}`));
     assert.match(decodeURIComponent(tipos.url), new RegExp(`prestadora_id\\.eq\\.${PRESTADORA}`));
   });
 });
 
 describe('lo que la planilla no trae', () => {
   it('una columna sin mapear no propone nada', async () => {
-    // Con el mapeo sin la columna de zonas, no hay de dónde sacarlas: no se inventa una lista
-    // vacía de novedades ni se propone la columna entera como zona.
+    // Con el mapeo sin la columna de tipos, no hay de dónde sacarlos.
     const propuesta = await proponerConfiguracionInicial({
       tipo: 'asistente',
       filas: [fila('Una', 'Zona Norte', 'Cuidador')],
@@ -192,19 +149,18 @@ describe('lo que la planilla no trae', () => {
       prestadoraId: PRESTADORA,
     });
 
-    assert.deepEqual(propuesta.zonasNuevas, []);
     assert.deepEqual(propuesta.tiposNuevos, []);
   });
 
-  it('las celdas vacías no entran como una zona sin nombre', async () => {
+  it('las celdas vacías no entran como un tipo sin nombre', async () => {
     const propuesta = await proponerConfiguracionInicial({
       tipo: 'asistente',
-      filas: [fila('Una', '', ''), fila('Otra', '  ,  ', null), fila('Tercera', 'Zona Sur', '')],
+      filas: [fila('Una', '', ''), fila('Otra', 'Zona Sur', null), fila('Tercera', '', 'Enfermero')],
       mapeo: MAPEO,
       prestadoraId: PRESTADORA,
     });
 
-    assert.deepEqual(propuesta.zonasNuevas, ['Zona Sur']);
-    assert.deepEqual(propuesta.tiposNuevos, []);
+    assert.deepEqual(propuesta.tiposNuevos, ['Enfermero']);
+    assert.ok(!('zonasNuevas' in propuesta), 'las localidades no se proponen');
   });
 });

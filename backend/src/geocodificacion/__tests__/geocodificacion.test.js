@@ -287,6 +287,7 @@ describe('los lugares que se traen para cargar la lista', () => {
       nombre: 'Villa Urquiza',
       provincia: 'Entre Ríos',
       municipio: 'Villa Urquiza',
+      localidadCensal: null,
       lat: -31.6495,
       lng: -60.3768,
       fuente: 'georef_ar',

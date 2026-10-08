@@ -543,7 +543,7 @@ export async function revocarPersonaAutorizada(db, usuarioId, { prestadoraId, cl
 // Ficha del cliente con ese mismo Paciente, la fila se cuenta como que ya estaba y no se crea nada:
 // así la Prestadora puede volver a importar la planilla corregida sin duplicar lo que sí se cargó.
 export async function crearClienteImportado({
-  nombreContacto, apellidoContacto, documentoContacto, telefono, email, localidad, plan,
+  nombreContacto, apellidoContacto, documentoContacto, telefono, email, plan,
   nombrePaciente, documentoPaciente, domicilioPaciente, domicilioDelPacientePartido,
   fechaNacimientoPaciente, nivelComplejidadPaciente, patologiasPaciente,
   prestadoraId, importacionId, db,
@@ -568,7 +568,12 @@ export async function crearClienteImportado({
   // arma con `domicilioEscrito`, que es el único lugar donde se decide dónde va cada coma; el
   // nombre del lugar se busca acá porque vive en otra tabla.
   const partes = partesDelDomicilio(domicilioDelPacientePartido);
-  if (!partes.calle && domicilioPaciente) Object.assign(partes, partesDeUnRenglon(domicilioPaciente));
+  if (!partes.calle && domicilioPaciente) {
+    // Del renglón se toman sólo las partes que tienen columna: el resto —localidad, partido— no
+    // se guarda como texto, lo resuelve la importación contra la lista de lugares.
+    const { calle, numero, piso } = partesDeUnRenglon(domicilioPaciente);
+    Object.assign(partes, { calle, numero, piso });
+  }
   const nombreDeSuLugar = await nombreDelLugar(db, partes.lugar_id, prestadoraId);
 
   // Su punto en el mapa, si se lo puede ubicar. La localidad viaja aparte porque desempata: la misma
@@ -577,7 +582,7 @@ export async function crearClienteImportado({
   const ubicacion = await coordenadasDeDomicilio({
     prestadoraId,
     direccion: domicilioEscrito({ ...partes, lugar: nombreDeSuLugar }) || domicilioPaciente || null,
-    localidad: nombreDeSuLugar || localidad,
+    localidad: nombreDeSuLugar || undefined,
   });
 
   // Las Fichas van antes que la cuenta: un documento mal escrito rechaza la fila sin dejar una

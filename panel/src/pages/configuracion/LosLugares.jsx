@@ -237,6 +237,7 @@ function AgregarLugar({ lugares, onClose, onAgregado }) {
                       provincia: sugerencia.provincia ?? null,
                       municipio: sugerencia.municipio ?? null,
                       id_oficial: sugerencia.idOficial,
+                      localidad_censal: sugerencia.localidadCensal ?? null,
                       lat: sugerencia.lat,
                       lng: sugerencia.lng,
                     })}

@@ -61,7 +61,7 @@ export function hayDomicilio(partes) {
  *
  * Lo vacío vuelve a ser nulo. Guardar cadena vacía y nulo mezclados haría que dos domicilios sin piso
  * se vieran distintas al compararlas, y la clave foránea del lugar rechaza una cadena que no apunta
- * a ninguno. Toma solamente estos cinco campos: lo demás que venga en el pedido no se escribe.
+ * a ninguno. Toma solamente estos seis campos: lo demás que venga en el pedido no se escribe.
  */
 export function partesDelDomicilio(partes) {
   const oNulo = (valor) => limpio(valor) || null;
@@ -71,19 +71,30 @@ export function partesDelDomicilio(partes) {
     piso: oNulo(partes?.piso),
     unidad: oNulo(partes?.unidad),
     lugar_id: oNulo(partes?.lugar_id ?? partes?.lugarId),
+    codigo_postal: oNulo(partes?.codigo_postal ?? partes?.codigoPostal),
   };
 }
 
 /**
- * La calle y el número de un domicilio que llega en un renglón suelto, como lo trae una planilla.
+ * Las partes de un domicilio que llega en un renglón suelto, como lo trae una planilla.
  *
- * Lo que va antes de la primera coma es la calle, y la cifra del final es el número. Lo que sigue a
- * la coma —la localidad, casi siempre— no se adivina: el lugar se elige de la lista. Sin cifra al
- * final, todo es calle y el número queda vacío.
+ * Lo que va antes de la primera coma es la calle, y la cifra del final es el número. Un tramo que
+ * empieza con «piso» es el piso. Los demás tramos —la localidad, el partido, la provincia, casi
+ * siempre— vuelven en `resto`, en el orden en que venían: acá no se adivina cuál es cuál, eso lo
+ * decide quien los compara contra la lista de lugares. Sin cifra al final, todo es calle y el
+ * número queda vacío.
  */
 export function partesDeUnRenglon(renglon) {
-  const antesDeLaComa = limpio(String(renglon ?? '').split(',')[0]);
+  const tramos = String(renglon ?? '').split(',').map(limpio).filter(Boolean);
+  const antesDeLaComa = tramos.shift() ?? '';
+  let piso = null;
+  const resto = [];
+  for (const tramo of tramos) {
+    const conPiso = !piso && tramo.match(/^piso\s+(.+)$/i);
+    if (conPiso) piso = conPiso[1].trim();
+    else resto.push(tramo);
+  }
   const conNumero = antesDeLaComa.match(/^(.*\S)\s(\d+\S*)$/);
-  if (conNumero) return { calle: conNumero[1].trim(), numero: conNumero[2] };
-  return { calle: antesDeLaComa || null, numero: null };
+  if (conNumero) return { calle: conNumero[1].trim(), numero: conNumero[2], piso, resto };
+  return { calle: antesDeLaComa || null, numero: null, piso, resto };
 }

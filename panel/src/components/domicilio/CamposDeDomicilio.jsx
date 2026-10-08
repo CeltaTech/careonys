@@ -74,6 +74,13 @@ export function CamposDeDomicilio({ valor, alCambiar, catalogo, deshabilitado = 
         requerido={requerido}
         deshabilitado={deshabilitado}
       />
+      <FormField
+        label={t.comun.domicilio_codigo_postal}
+        name={campo('codigo_postal')}
+        value={partes.codigo_postal ?? ''}
+        onChange={cambiar('codigo_postal')}
+        disabled={deshabilitado}
+      />
     </>
   );
 }

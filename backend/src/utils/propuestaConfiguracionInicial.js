@@ -9,26 +9,25 @@ import { CAMPOS_LISTA, valorDesdeFila } from './importacionIA.js';
    todas ya están escritas en la planilla con la que venía trabajando. Esto lee esa planilla
    —con la misma lectura que ya usa la importación, no una nueva— y contesta qué traería.
 
-   Y CONTESTA ALGO MÁS, QUE ES EL MOTIVO REAL. La importación no crea zonas de cobertura ni
-   tipos de Asistente: una zona que la planilla nombra y la Prestadora no configuró entra como
-   texto suelto en el Legajo del Asistente, y un tipo que no calza con el catálogo deja al
-   Asistente sin tipo —y el tipo es lo que decide si a esa persona se le va a exigir Matrícula
-   (ver `resolverTipoAsistentePorNombre`)—. Eso se descubría después, revisando de a uno. Acá se
-   dice antes de importar, para que la configuración se cargue primero y el archivo entre entero.
+   Y CONTESTA ALGO MÁS, QUE ES EL MOTIVO REAL. La importación no crea tipos de Asistente: un tipo
+   que no calza con el catálogo deja al Asistente sin tipo —y el tipo es lo que decide si a esa
+   persona se le va a exigir Matrícula (ver `resolverTipoAsistentePorNombre`)—. Eso se descubría
+   después, revisando de a uno. Acá se dice antes de importar, para que la configuración se cargue
+   primero y el archivo entre entero.
+
+   Las localidades no se proponen: la importación las reconoce sola y agrega a la lista las que
+   falten (`localidadesDeLaImportacion.js`).
 
    NO CREA NADA. Es una lectura y una comparación. Quien confirma sigue siendo la persona, en la
    pantalla de importación, que es donde están los dos frenos: revisar el mapeo y conformar el
    resultado real. */
 
 /* Cuántos valores distintos se miran de una columna. Una planilla de Asistentes tiene un
-   puñado de zonas y de tipos; un archivo con cientos de valores distintos en esas columnas ya
-   no es un catálogo, es otra cosa, y listar todo eso no ayudaría a nadie a decidir. */
+   puñado de tipos; un archivo con cientos de valores distintos en esa columna ya no es un
+   catálogo, es otra cosa, y listar todo eso no ayudaría a nadie a decidir. */
 const TOPE_VALORES_DISTINTOS = 50;
 
-/* Deja un texto comparable conservando los números.
-   No reutiliza el normalizador de los tipos de Asistente —que borra todo lo que no sea
-   letra— porque un código de zona los lleva adentro: con ese normalizador, "AMBA 1" y
-   "AMBA 2" serían la misma zona. */
+/* Deja un texto comparable conservando los números. */
 function comparable(texto) {
   return String(texto ?? '')
     .normalize('NFD')
@@ -57,39 +56,23 @@ function valoresDistintos(filas, mapeo, tipo, campo) {
 }
 
 /**
- * @returns {Promise<{filasTotales:number, zonasNuevas:string[], tiposNuevos:string[]}>}
- *   `zonasNuevas` y `tiposNuevos` son lo que la planilla nombra y la configuración de esa
- *   Prestadora todavía no tiene. Para una planilla de Clientes las dos van vacías: ese archivo
- *   no trae configuración, trae Clientes.
+ * @returns {Promise<{filasTotales:number, tiposNuevos:string[]}>}
+ *   `tiposNuevos` es lo que la planilla nombra y la configuración de esa Prestadora todavía no
+ *   tiene. Para una planilla de Clientes va vacía: ese archivo no trae configuración, trae
+ *   Clientes.
  */
 export async function proponerConfiguracionInicial({ tipo, filas, mapeo, prestadoraId }) {
   const filasTotales = filas.length;
-  if (tipo !== 'asistente') return { filasTotales, zonasNuevas: [], tiposNuevos: [] };
+  if (tipo !== 'asistente') return { filasTotales, tiposNuevos: [] };
 
-  const zonasDeLaPlanilla = valoresDistintos(filas, mapeo, tipo, 'zonas');
   const tiposDeLaPlanilla = valoresDistintos(filas, mapeo, tipo, 'tipo_asistente');
 
-  // El backend entra a la base con la llave maestra: el filtro por Prestadora se escribe acá a
-  // mano o no existe (celtatech/CLAUDE.md §5).
-  const { data: zonas, error } = await supabase
-    .from('zonas_cobertura')
-    .select('codigo, nombre')
-    .eq('prestadora_id', prestadoraId);
-  if (error) throw new Error(error.message);
-
-  // Una zona se reconoce por su código o por su nombre: la planilla puede traer cualquiera
-  // de los dos, y las dos formas son la misma zona.
-  const yaConfiguradas = new Set();
-  for (const zona of zonas || []) {
-    yaConfiguradas.add(comparable(zona.codigo));
-    yaConfiguradas.add(comparable(zona.nombre));
-  }
-
+  // El backend entra a la base con la llave maestra: el filtro por Prestadora va adentro de
+  // `catalogoDeTiposAsistente` (celtatech/CLAUDE.md §5).
   const catalogo = await catalogoDeTiposAsistente(supabase, prestadoraId);
 
   return {
     filasTotales,
-    zonasNuevas: zonasDeLaPlanilla.filter((nombre) => !yaConfiguradas.has(comparable(nombre))),
     tiposNuevos: tiposDeLaPlanilla.filter((nombre) => resolverTipoAsistenteEnCatalogo(nombre, catalogo) === null),
   };
 }

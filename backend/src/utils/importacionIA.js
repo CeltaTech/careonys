@@ -19,17 +19,48 @@ import { MODELO_IA } from '../config/modeloIA.js';
 // Se excluye `medicacion_habitual` de Paciente: es un array de objetos {nombre, dosis,
 // frecuencia} que no mapea a una sola columna de planilla — queda para cargar después
 // desde la historia clínica del Paciente, no como parte de este import (ver docs/PLAN_HASTA_PRODUCCION.md).
+//
+// El domicilio se acepta de las dos formas en que llega: partido en columnas, o entero en una sola
+// celda, que la importación separa. La localidad no se guarda como texto: la resuelve
+// `localidadesDeLaImportacion.js` contra la lista de lugares de la Prestadora.
+const PARTES_DEL_DOMICILIO = ['Calle', 'Numero', 'Piso', 'Unidad', 'Localidad', 'Municipio', 'Provincia', 'CodigoPostal'];
+
+export const CAMPOS_DOMICILIO = {
+  asistente: 'domicilio',
+  cliente: 'domicilioPaciente',
+};
+
 export const CAMPOS_IMPORTACION = {
   asistente: [
-    'nombre', 'telefono', 'email', 'dni', 'tipo_asistente', 'zonas',
+    'nombre', 'telefono', 'email', 'dni', 'tipo_asistente',
+    'domicilio', ...PARTES_DEL_DOMICILIO.map((parte) => `domicilio${parte}`),
+    'dondeAceptaTrabajar',
     'tipo_vinculo', 'categoria_cct', 'valor_hora', 'sueldo_basico', 'horas_semanales',
   ],
   cliente: [
-    'nombreContacto', 'apellidoContacto', 'documentoContacto', 'telefono', 'email', 'localidad', 'plan',
-    'nombrePaciente', 'documentoPaciente', 'domicilioPaciente', 'fechaNacimientoPaciente',
-    'nivelComplejidadPaciente', 'patologiasPaciente',
+    'nombreContacto', 'apellidoContacto', 'documentoContacto', 'telefono', 'email', 'plan',
+    'nombrePaciente', 'documentoPaciente',
+    'domicilioPaciente', ...PARTES_DEL_DOMICILIO.map((parte) => `domicilioPaciente${parte}`),
+    'fechaNacimientoPaciente', 'nivelComplejidadPaciente', 'patologiasPaciente',
   ],
 };
+
+/** Lo que dice la fila sobre el domicilio, como lo recibe `resolverLocalidades`. */
+export function domicilioDesdeFila(fila, mapeo, tipo) {
+  const base = CAMPOS_DOMICILIO[tipo];
+  const parte = (nombre) => valorDesdeFila(fila, mapeo, `${base}${nombre}`, false) ?? null;
+  return {
+    renglon: valorDesdeFila(fila, mapeo, base, false) ?? null,
+    calle: parte('Calle'),
+    numero: parte('Numero'),
+    piso: parte('Piso'),
+    unidad: parte('Unidad'),
+    localidad: parte('Localidad'),
+    partido: parte('Municipio'),
+    provincia: parte('Provincia'),
+    codigo_postal: parte('CodigoPostal'),
+  };
+}
 
 // Qué campos de cada tipo llegan como una lista adentro de una sola celda ("Norte, Sur"), y
 // cómo se saca de una fila el valor de un campo interno con el mapeo ya corregido. Vive acá,
@@ -37,7 +68,7 @@ export const CAMPOS_IMPORTACION = {
 // importada— y la hacen dos lugares distintos: la ruta que confirma la importación y la que
 // propone la configuración inicial a partir del archivo.
 export const CAMPOS_LISTA = {
-  asistente: new Set(['zonas']),
+  asistente: new Set(['dondeAceptaTrabajar']),
   cliente: new Set(['patologiasPaciente']),
 };
 
@@ -177,6 +208,42 @@ Alcanza a "advertencias", que se muestran en pantalla a quien subió la planilla
 
 Se responde únicamente con un JSON de esta forma, sin texto adicional:
 {"mapeo": {"columna_del_archivo": "campo_interno_o_null", ...}, "advertencias": ["texto breve", ...]}`;
+
+const SYSTEM_PROMPT_LOCALIDADES = `Este asistente reescribe localidades de {{pais}} que una
+Prestadora de cuidado domiciliario cargó a mano en una planilla y que el servicio oficial de
+direcciones no reconoció tal como estaban escritas: abreviaturas ("Cap. Fed.", "V. Ballester",
+"Gral. San Martín"), errores de tipeo, el domicilio entero en un solo casillero, o el nombre
+coloquial de una zona.
+
+Por cada pedido se devuelve el nombre oficial completo de la localidad o del barrio, del partido o
+departamento y de la provincia, sin abreviaturas. Se reescribe sólo lo que está escrito: si un
+pedido no dice qué localidad es, o lo escrito puede ser más de una, o no se sabe, el campo queda
+vacío. Nunca se completa con una localidad probable. Lo que se devuelve se vuelve a comprobar
+contra el servicio oficial, así que un nombre inventado no ayuda: hace volver la fila.
+
+Se responde únicamente con un JSON de esta forma, sin texto adicional:
+{"resultados": [{"clave": "la misma del pedido", "localidad": "", "partido": "", "provincia": "", "lugarDeTrabajo": ""}]}
+"lugarDeTrabajo" se completa sólo en los pedidos que lo traen, con el nombre oficial de esa
+localidad o barrio.`;
+
+// Lo que la importación no reconoció de las localidades, reescrito por la IA. Propone y nunca
+// confirma: `localidadesDeLaImportacion.js` vuelve a pasar todo por la lista y el servicio de
+// direcciones. Sin clave de la IA devuelve null, y lo no reconocido vuelve con su motivo.
+export function reescritorDeLocalidades({ pais, prestadoraId }) {
+  const anthropic = obtenerCliente();
+  if (!anthropic) return null;
+  return async (pedidos) => {
+    const respuesta = await anthropic.messages.create({
+      model: MODELO_IA,
+      max_tokens: Math.min(8000, 200 + pedidos.length * 80),
+      system: SYSTEM_PROMPT_LOCALIDADES.replace('{{pais}}', pais || 'cualquier país'),
+      messages: [{ role: 'user', content: JSON.stringify({ pedidos }) }],
+    });
+    registrarUsoIA({ prestadoraId, modulo: 'importacion_localidades', modelo: MODELO_IA, respuestaAnthropic: respuesta });
+    const parseado = jsonDeRespuestaIA(respuesta);
+    return Array.isArray(parseado?.resultados) ? parseado.resultados : [];
+  };
+}
 
 let cliente = null;
 function obtenerCliente() {

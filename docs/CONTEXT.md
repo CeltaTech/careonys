@@ -22,8 +22,8 @@
   niveles de IA que `PLAN_HASTA_PRODUCCION.md` marca hoy como "Diferida" — a revisar caso por caso
   cuando se llegue a esa etapa, no se re-prioriza automáticamente sin evaluar cada nivel.
 - **Cambio societario (2026-07-09): el software pasa a ser propiedad de CeltaTech**, que
-  lo licencia como SaaS a cualquier prestadora de cuidado domiciliario. Cada prestadora
-  licenciataria sigue con su propio negocio de cuidado domiciliario, y puede sumar un
+  lo licencia como SaaS a cualquier prestadora de cuidado domiciliario. Cada
+  Prestadora sigue con su propio negocio de cuidado domiciliario, y puede sumar un
   servicio B2B de auditoría/certificación a otras prestadoras. La arquitectura multi-prestadora
   exige entidad `prestadoras`, aislamiento multi-tenant, roles nuevos, facturación dual
   CeltaTech/prestadora, i18n y multi-moneda desde el arranque y residencia de datos a futuro:
@@ -74,7 +74,7 @@ Ningún rol de Asistente/Cliente debe tener acceso, ni siquiera de solo lectura,
 `admin` a `admin_prestadora` (Bloque 2 del pasaje a multi-prestadora), con acceso
 acotado a los datos de su propia prestadora y cero visibilidad de otras, verificado contra
 Supabase real. Lo único que sigue siendo futuro, no implementado, es un rol de solo lectura
-agregada para financiadores (obras sociales/prepagas) — no diseñar código para ese rol sin
+agregada para Pagadores (obras sociales/prepagas) — no diseñar código para ese rol sin
 que se apruebe explícitamente.
 
 ## Stack por etapa
@@ -125,7 +125,7 @@ Etapa 2 — Panel de administración
   - **Reclutamiento e incorporación** — postulaciones, entrevistas, verificación de identidad
     con las dos fotos, referencias laborales, documentación y Matrícula.
     Falta únicamente la pantalla pública del formulario de postulación.
-  - **Plantel y gestión del personal** — vínculo dual monotributo/dependencia, ceses con las
+  - **Padrón y gestión del personal** — vínculo dual monotributo/dependencia, ceses con las
     trece causales, simulador de vínculo, score de riesgo de reclasificación, ausencias y
     cobertura, liquidaciones y pagos a Asistentes.
   - **Clientes, Pacientes y Servicios** — Ficha del cliente, personas autorizadas con qué ve cada una,
@@ -218,7 +218,7 @@ Ver `celtatech/CLAUDE.md` §7 y `celtatech/docs/REGLAS_PRODUCTOS_CAREONYS.md` §
 
 ## Cómo la Prestadora le cobra a los Clientes
 
-Ningún documento original lo especificó: el «Modelo UPE» cubre la facturación al financiador vía
+Ningún documento original lo especificó: el «Modelo UPE» cubre la facturación al Pagador vía
 Planillas 3, pero no el cobro directo a Clientes particulares. Se construyó después, y hoy los dos
 caminos están hechos.
 

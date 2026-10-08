@@ -221,7 +221,7 @@ historial—, la misma que en prestación directa, pero acá la administra y la 
 sobre su propio Asistente (§2). Alrededor de eso, todo información o herramienta, nada de
 intervención en el vínculo:
 
-1. **Prioridad de acceso al plantel disponible** ante una baja — no es garantía de reemplazo;
+1. **Prioridad de acceso a los Asistentes disponibles del Padrón** ante una baja — no es garantía de reemplazo;
    conseguirlo y acordar con él sigue siendo del Cliente.
 2. **Historial documental acumulado** (reportes, check-in/check-out, incidentes).
 3. **Vigilancia de vencimiento de documentación** del Asistente contratado (antecedentes,
@@ -323,7 +323,7 @@ textual, para no perderla:
 - Los Clientes tratan a través del sistema la contratación de Asistentes, con todo el
   soporte y coberturas adicionales que se ofrezcan.
 - Los Asistentes comparten con la modalidad directa todo lo referente a reclutamiento,
-  calificación y capacitación — un solo plantel, un solo proceso de verificación (ya
+  calificación y capacitación — un solo Padrón, un solo proceso de verificación (ya
   confirmado como infraestructura común a ambos modelos en `docs/PLAN_HASTA_PRODUCCION.md`) —
   pudiendo ofrecerse a ambas partes el uso de PWA adaptadas a ese uso limitado, excluyendo
   toda implicancia de la Prestadora en el vínculo contractual entre ambas partes.

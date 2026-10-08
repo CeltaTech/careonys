@@ -43,7 +43,7 @@ pantallas muestran el nombre de la Prestadora escrito. Los archivos viven en el 
 `marca-prestadoras`, público para leer y cerrado para escribir, con una carpeta por
 Prestadora llamada como su identificador. Contrato completo en `docs/MARCA.md` §0.
 
-Cada prestadora licenciataria del software es un tenant aislado. La única fila real hoy es
+Cada Prestadora es un tenant aislado. La única fila real hoy es
 datos de prueba/desarrollo con id `874f54d7-4383-4d54-8b9f-f51d02f0dd11` (nombre `Prestadora
 Demo`, caso de uso de desarrollo, sin contrato firmado — no tiene estatus de "primera
 prestadora" ni ningún otro privilegio de diseño). Ver `supabase/migrations/` para el DDL real
@@ -491,7 +491,7 @@ CREATE TABLE clientes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   prestadora_id UUID NOT NULL REFERENCES prestadoras(id),
   usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-  legajo_id UUID NOT NULL,              -- el Cliente en el Padrón
+  legajo_id UUID NOT NULL,              -- la Ficha de Persona de quien encabeza el Cliente
   numero_cliente BIGINT NOT NULL,       -- único por Prestadora
   plan TEXT DEFAULT 'directo',
   financiador_tipo TEXT,                -- 'cliente' | 'obra_social' | 'otro'
@@ -508,15 +508,17 @@ CREATE TABLE clientes (
 );
 ```
 
-**El Cliente es un Legajo del Padrón.** Su nombre, su correo, su domicilio y su localidad están
-en `legajos`, y sus teléfonos en `telefonos_del_legajo (prestadora_id, legajo_id, telefono)`;
-`clientes` no los repite. El Contratante, el Paciente y el Pagador son partes del Cliente.
+**Las personas del Cliente están en el Directorio de Personas.** El nombre, el correo, el
+domicilio y la localidad de cada una están en su Ficha de Persona, que en la base es una fila de
+`legajos`, y sus teléfonos en `telefonos_del_legajo (prestadora_id, legajo_id, telefono)`;
+`clientes` no los repite. El Contratante, el Paciente y el Pagador son roles del Cliente, y cada
+uno cita una Ficha de Persona (`pagador_legajo_id` cita la del Pagador).
 
-**Cómo se llega a Cliente.** El contacto se carga en el Padrón como un Legajo más, se le
-presupuesta, y pasa a Cliente cuando el Prospecto aprueba el presupuesto; ese paso es de OctoCRM,
-que todavía no está construido. La cartera que una Prestadora ya tenía entra por la importación,
-que crea el Legajo de cada Cliente —persona física, con nombre y apellido— y su fila en
-`clientes`. No hay alta manual de Cliente desde el Panel.
+**Cómo se llega a Cliente.** El contacto se carga en el Directorio de Personas con su Ficha de
+Persona, se le presupuesta, y pasa a Cliente cuando el Prospecto aprueba el presupuesto; ese paso
+es de OctoCRM, que todavía no está construido. La cartera que una Prestadora ya tenía entra por la
+importación, que crea la Ficha de Persona de cada Cliente —persona física, con nombre y apellido—
+y su fila en `clientes`. No hay alta manual de Cliente desde el Panel.
 
 ## Tabla: pacientes
 
@@ -585,7 +587,7 @@ RLS). Resumen de las tablas:
   `prestadora_id` (FK compuesta tenant-segura contra `pacientes`/`asistentes`).
 - **`domicilios_temporales_paciente`** — dónde se atiende al Paciente durante una temporada en
   que no está en su casa: el verano en la casa de un hijo, una internación, una mudanza
-  mientras arreglan el departamento. Mientras dura, **reemplaza** a la dirección del Legajo del Paciente;
+  mientras arreglan el departamento. Mientras dura, **reemplaza** a la dirección de la Ficha de Persona del Paciente;
   no conviven. La carga y la da de baja el Panel, no el Cliente. Dos períodos del mismo
   Paciente no pueden compartir ni un día (restricción `domicilios_temp_sin_superposicion`),
   para que "¿dónde se lo atiende hoy?" tenga siempre una sola respuesta. Quién contesta esa
@@ -815,7 +817,7 @@ CREATE TABLE calificaciones_asistente (
 Ver `supabase/migrations/` para el DDL de esta tabla, con su RLS completa. Si hace falta saber
 si está efectivamente aplicada, se consulta la base real, no este documento. No confundir con
 `vínculo`/`cese` (arriba) — son conceptos independientes: vínculo/cese es "¿sigue siendo
-parte del plantel certificado de la prestadora?", esta tabla es "¿qué opinaron los Clientes
+parte del Padrón de la Prestadora?", esta tabla es "¿qué opinaron los Clientes
 de su trabajo?", y una calificación mala nunca afecta al primero de forma automática.
 
 **Nota de alcance jurisdiccional (ver pendiente #30):** el razonamiento de riesgo legal

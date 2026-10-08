@@ -132,7 +132,7 @@ la prestadora lo reconfigura segun sus criterios y necesidades»*.
 Lo común a todos los productos —no hardcodear, multiidioma, cuatro estados, apagar el botón,
 sistema de diseño, RLS, auditoría, operaciones destructivas, importe con moneda, punto único de
 verdad, módulos, commit y push— está en `..\..\CLAUDE.md` y **no se repite acá**. Lo del cuidado
-de personas —glosario, riesgo legal, marca de la Prestadora, datos sensibles, financiador— está en
+de personas —glosario, riesgo legal, marca de la Prestadora, datos sensibles, Pagador— está en
 `..\..\docs\REGLAS_PRODUCTOS_CAREONYS.md`. Acá queda **cómo se cumple en este producto**.
 
 **La identidad del producto sale de `src/config/identidadProducto.js`.** Marcador `{{producto}}` /
@@ -223,14 +223,19 @@ administración.
 **Cada Prestadora con lo suyo, sin mezclar.** Una conexión con un software de facturación o de
 cobranzas es de una Prestadora, con su propia credencial, y nunca alcanza los datos de otra.
 
-**Toda la información de los Clientes de la Prestadora vive en un solo lugar —el Padrón— y de ahí
-se nutre todo el que la consuma.** Quien contrata o paga puede ser una persona, una obra social, una prepaga o
-lo que sea, y en todos los casos se guarda una sola vez, con todo lo que se sabe de él: quién es, cómo se
-lo ubica, qué servicio recibe y cómo figura ante el organismo fiscal. Nada de eso se guarda por
-segunda vez en otra pantalla, en otra tabla ni en el software de otro.
+**Toda persona de los Clientes de la Prestadora vive en un solo lugar —el Directorio de Personas— y
+de ahí se nutre todo el que la consuma.** Quien contrata, recibe el cuidado o paga puede ser una
+persona, una obra social, una prepaga o lo que sea, y en todos los casos se guarda una sola vez, en
+su Ficha de Persona, con todo lo que se sabe de ella: quién es, cómo se la ubica y cómo figura ante
+el organismo fiscal. Nada de eso se guarda por segunda vez en otra pantalla, en otra tabla ni en el
+software de otro. **El Padrón es otra cosa: es sólo de Asistentes**, y cada uno tiene su Legajo.
 
-**Se lo consulta todas las veces que haga falta; se lo copia ninguna.** Una obra social puede estar
-nombrada en cien Legajos, y en los cien es la misma: lo que cada uno guarda es cuál, no cómo se
+**Se la identifica por su número ante el organismo fiscal de su país, y es obligatorio.** En
+Argentina, CUIL la persona física y CUIT la jurídica: todas tienen uno. Se la busca por ese número o
+por su nombre. Qué número se pide en cada país es configuración del país, no del código.
+
+**Se la consulta todas las veces que haga falta; se la copia ninguna.** Una obra social puede estar
+citada en cien Fichas del Cliente, y en las cien es la misma: lo que cada uno guarda es cuál, no cómo se
 llama. El nombre escrito a mano en cada lugar termina siempre en datos que se contradicen entre
 sí, y entonces no hay forma de saber cuál vale. **Y no hay excepción.** Que un comprobante emitido
 conserve los datos del día que se emitió es asunto de quien lo emite —el software de facturación o
@@ -260,7 +265,7 @@ en un papel.
 
 **El Pagador firma su consentimiento a la obligación de pagar, y sin esa firma no hay Pagador
 definido.** Se establece al contratar, con todos sus datos y con la documentación que ese
-financiador exija, completa y firmada. Eso tiene que estar listo el día que se firma con el
+Pagador exija, completa y firmada. Eso tiene que estar listo el día que se firma con el
 Contratante; de ahí en más el cobro es asunto de créditos y cobranzas, que **sólo le informa a Careonys
 en qué situación están los pagos** —al día, vencido hace tantos días— y nada más.
 
@@ -271,18 +276,20 @@ siga su ubicación tiene derecho a ver ese documento; el Cliente podrá ver o no
 se configure su aplicación, pero el documento no lo ve nunca. Textual del Desarrollador: *«cada
 persona tiene acceso a ver lo que firma, no asi a lo que firma otra persona, salvo que sea parte
 involucrada»*. **Es el piso:** la norma de cada país sobre seguridad y confidencialidad se revisa,
-y si pide más, manda la norma. Para que se pueda cumplir, **quien firma queda guardado como un
-Legajo**, nunca como un nombre tecleado.
+y si pide más, manda la norma. Para que se pueda cumplir, **quien firma queda guardado como una
+Ficha de Persona** —o como un Legajo, si es un Asistente—, nunca como un nombre tecleado.
 
-**La Persona se guarda una sola vez, y los roles la citan.** El rol es una anotación que apunta a
-un Legajo, nunca una copia de sus datos ni un Legajo nuevo. Si la misma Persona contrata, recibe el
-cuidado y paga, hay un Legajo y tres anotaciones.
+**La persona se guarda una sola vez, y los roles la citan.** El rol es una anotación de la Ficha
+del Cliente que apunta a una Ficha de Persona, nunca una copia de sus datos ni una Ficha nueva. Si
+la misma persona contrata, recibe el cuidado y paga, hay una Ficha de Persona y tres anotaciones.
+**El Paciente también está en el Directorio de Personas, y su historia clínica cuelga de su
+Ficha de Persona.**
 
-**Un Legajo no se borra nunca.** Que termine el Servicio a un Paciente da de baja el Servicio, no
-el Legajo. El Legajo queda, con el historial de cómo se comportó esa Persona en cada rol que
-desempeñó. Con quien dejó de ser Cliente se vuelve a cruzar: como Pagador de otra contratación,
-como familiar de otro Paciente, como financiador. Ese historial es justamente lo que se pierde el
-día que alguien borra el Legajo «porque ya no está activa».
+**Una Ficha de Persona no se borra nunca, y un Legajo tampoco.** Que termine el Servicio a un
+Paciente da de baja el Servicio, no la Ficha. La Ficha queda, con el historial de cada rol que esa
+persona tuvo. Con quien dejó de ser Cliente se vuelve a cruzar: como Pagador de otra contratación,
+como familiar de otro Paciente o como Paciente. Ese historial es justamente lo que se pierde el
+día que alguien borra la Ficha «porque ya no está activa».
 
 **Y la cuenta de una persona tampoco se borra, por la misma razón que no se borra una HCE.** Se
 puede desactivar, suspender, bloquear o marcar con la advertencia que haga falta; borrar, nunca.
@@ -295,15 +302,16 @@ puede ver o hacer qué cosa es otra cosa, se llama de otra manera y se guarda en
 que se escribe ahí es el nombre de una Persona, de una obra social o de una localidad que ya está
 cargada, el casillero ofrece esa lista y se elige una. **Un nombre tecleado crea una entidad que no
 existe**: se parece a la de al lado, no es la misma para el sistema, y nadie se entera. La lista
-puede tener buscador y puede permitir dar de alta un Legajo nuevo desde ahí mismo, pero lo que
-queda guardado es cuál, no cómo se llama.
+puede tener buscador, pero lo que queda guardado es cuál, no cómo se llama.
 
-**Un Legajo nuevo se carga desde el Padrón, con el botón que lo dice.** Un casillero que elige del
-Padrón sólo elige: no da de alta. Y el botón que guarda una corrección dice guardar, porque ahí se
-están cambiando datos de algo que ya existe; agregar es otra cosa y tiene su propio botón.
+**Una Ficha de Persona nueva se carga desde el Directorio de Personas, y un Legajo nuevo desde el
+Padrón, cada uno con el botón que lo dice.** Un casillero que elige de una de esas listas sólo
+elige: no da de alta. Y el botón que guarda una corrección dice guardar, porque ahí se están
+cambiando datos de algo que ya existe; agregar es otra cosa y tiene su propio botón.
 
-**El número de Legajo no se muestra, ni en el Legajo ni en la Ficha del cliente.** No es dato que sirva para reconocer a nadie, y
-menos todavía como etiqueta de anuncio.
+**El número interno de una Ficha de Persona no se muestra en ningún lado.** A la persona se la
+reconoce por su nombre y su número fiscal. **El Número de Legajo sí es del Asistente**: se asigna
+solo, arranca en uno en cada Prestadora, no cambia y no se reasigna.
 
 **El nombre visible del Cliente se calcula al mostrarlo, y no se guarda.** Se arma con el
 apellido y los nombres del Paciente; cuando hay más de uno, **queda el más antiguo al que se le

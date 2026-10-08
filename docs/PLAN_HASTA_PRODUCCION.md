@@ -75,7 +75,7 @@ apagar, y por dónde sale el mensaje.
     referencia y el Coordinador los ve juntos.
   - **Orden de llamado, configurable por Prestadora:** personal de emergencia, si lo tiene; si
     no, el franquero; después quienes cubren la misma guardia en otros días u horarios. Hoy ese
-    último grupo no se puede elegir aparte: está mezclado con todo el plantel libre, en el grupo
+    último grupo no se puede elegir aparte: está mezclado con todos los Asistentes libres del Padrón, en el grupo
     guardado como `suplente` (`backend/src/utils/faseAutomaticaRelevo.js:38`). El nombre guardado
     queda; el visible no: hoy la configuración del orden lo muestra como «Suplente» en los tres
     idiomas (`panel/src/i18n/translations.js:638`, `:3526`, `:6375`), palabra que el glosario no
@@ -369,7 +369,7 @@ Chile, la restricción queda fija y no se apaga. Lo que falta:
   paciente recibe un rechazo; el Administrador sí lee la información de salud de todos los
   Pacientes de su Prestadora. Cierre: al llegar el paso 9, revisar cada pantalla que escribe en
   esas tablas.
-- **Las columnas de salud del Legajo del Paciente** —patologías, medicación habitual, nivel de
+- **Las columnas de salud del Paciente** —patologías, medicación habitual, nivel de
   complejidad— quedan afuera: RLS filtra filas, no columnas. Cierre: se mudan a una tabla propia
   que siga la misma regla, o se decide que no son historia clínica.
 - **Una persona sacada a mano del equipo sigue atendiendo al paciente** para la base si tiene
@@ -383,13 +383,13 @@ Chile, la restricción queda fija y no se apaga. Lo que falta:
   `interno.encadenar_acceso_a_datos_de_salud`, los disparadores `…_interruptor_de_salud…` y el
   mensaje «No tiene permiso para verificar el registro de accesos». Cierre: una migración nueva los
   renombra y el mensaje sale del catálogo aprobado.
-- **La baja de una cuenta desde el Panel la borra**, y una cuenta tiene un Legajo, que no se borra
-  nunca (`CLAUDE.md:282`). `panelUsuarios.js:198` llama a `borrarCuenta`, y `dar_de_baja_la_cuenta`
+- **La baja de una cuenta desde el Panel la borra**, y una cuenta es de una persona con su Legajo o su Ficha de
+  Persona, que no se borran nunca (`CLAUDE.md:288`, `:294`). `panelUsuarios.js:198` llama a `borrarCuenta`, y `dar_de_baja_la_cuenta`
   borra la fila de `usuarios`; con actividad anotada, además, la base lo rechaza. Cierre: el
   Administrador desactiva la cuenta con una nota obligatoria que diga por qué, la persona se queda
   sin entrada y no se borra nada, y las dos cuentas «Prueba Inventada» de la
   Prestadora de pruebas, hoy bloqueadas, se dan de baja así. Deshacer un alta cortada por la mitad
-  (`deshacerAlta`) no entra: ahí todavía no hay Legajo.
+  (`deshacerAlta`) no entra: ahí todavía no hay Legajo ni Ficha de Persona.
 
 **9.** **La credencial de la persona en el backend, y el registro de lecturas en la misma pasada.**
 
@@ -477,8 +477,8 @@ Cliente y el Asistente de ese Paciente leen el renglón entero —quién la firm
 cuándo—, aunque no el archivo (políticas `cliente_lee_autorizaciones_de_sus_pacientes` y
 `asistente_lee_autorizaciones_de_sus_pacientes`). El Asistente no es parte: sale. El Cliente la ve
 sólo si quien entra es quien la firmó, y hoy eso no se puede saber, porque el firmante está
-guardado como texto tecleado (`nombre_avala`, `rol_avala`) y no como un Legajo. **Pasa a ser un
-Legajo elegido del Padrón**, igual que el firmante del consentimiento del Pagador. Lo que las
+guardado como texto tecleado (`nombre_avala`, `rol_avala`) y no como una Ficha de Persona. **Pasa a ser
+una Ficha de Persona elegida del Directorio de Personas**, igual que el firmante del consentimiento del Pagador. Lo que las
 aplicaciones necesitan saber es si hay autorización vigente, no quién firmó: eso lo contesta una
 función de `interno` que devuelve sí o no (`utils/vitalesReferencia.js:9` hoy lo lee con la llave
 maestra). **Antes de construirlo se revisa la norma de cada país** sobre quién puede ver un
@@ -505,7 +505,7 @@ coordinador:
 - **Un permiso por parte, para ver y para cargar.** No hay uno para mirar y otro para cargar.
 - El backend y la base aplican el mismo corte que la pantalla.
 
-Después, lo mismo con el Legajo del Asistente y el del Paciente.
+Después, lo mismo con el Legajo del Asistente y la Ficha de Persona del Paciente.
 
 **El registro de accesos va acá y no en un paso aparte**, porque es el mismo archivo reescrito una
 sola vez en vez de dos barridos por los mismos 135. Es un registro separado del de actividad,
@@ -755,7 +755,7 @@ títulos:
   sin contestar: para que la sugerencia mire si la Asistente está de acuerdo con los montos y los
   plazos, esos montos tienen que estar guardados en algún lado.
 - **Un coordinador de sólo lectura no puede ser el asignado.** Más abajo se pregunta cómo entra un
-  financiador que sólo consulta, y una de las salidas propuestas es un Coordinador de sólo lectura.
+  Pagador que sólo consulta, y una de las salidas propuestas es un Coordinador de sólo lectura.
   Quien tiene el Servicio asignado arma el equipo: si esa salida se elige, tiene que decir que ese
   rol nunca queda como responsable de un Servicio.
 - **La ventana de crear un turno hoy no sabe que existe un Servicio.** Pide la lista completa de
@@ -931,7 +931,7 @@ paquetes de contactos son de CeltaTech. Nació de leer «la decisión comercial 
 como «lo vende CeltaTech», que es otra cosa: la decide cada Prestadora. Ese repositorio está en
 sólo lectura, así que el renglón se saca cuando se lo toque.
 
-**37. Usted** — Prioridad de acceso al plantel ante una baja: el PRD la define en una línea (`docs/PRD_07_Modalidad_Match.md:225`) y de ahí salen dos productos distintos. ¿Es que el contacto del reemplazo no vuelva a costar durante una ventana —ni descuenta saldo ni pide un acceso nuevo—, o es que a ese Cliente se le avise primero cuando alguien del plantel vuelve a estar disponible? ¿O las dos? Y antes que eso: hoy el Cliente no contrata por Match, así que no hay baja que detectar. ¿Qué cuenta como baja — que el Asistente se saque de los disponibles, que el Cliente cierre el Servicio, o hay que construir antes el vínculo?
+**37. Usted** — Prioridad de acceso al Padrón ante una baja: el PRD la define en una línea (`docs/PRD_07_Modalidad_Match.md:225`) y de ahí salen dos productos distintos. ¿Es que el contacto del reemplazo no vuelva a costar durante una ventana —ni descuenta saldo ni pide un acceso nuevo—, o es que a ese Cliente se le avise primero cuando algún Asistente del Padrón vuelve a estar disponible? ¿O las dos? Y antes que eso: hoy el Cliente no contrata por Match, así que no hay baja que detectar. ¿Qué cuenta como baja — que el Asistente se saque de los disponibles, que el Cliente cierre el Servicio, o hay que construir antes el vínculo?
 
 **38.** Construirla según lo contestado.
 
@@ -964,7 +964,7 @@ El Desarrollador está preparando una maqueta orientativa de cómo tienen que ve
 
 - **Unas cuarenta consultas no llevan ningún filtro propio.** Si una política se afloja, o entra
   una tabla nueva sin la suya, esas pantallas muestran listas y números mezclados y nada en el
-  código lo frena. Lo más visible serían los números del tablero y el mapa del plantel.
+  código lo frena. Lo más visible serían los números del tablero y el mapa de los Asistentes.
 - **Cinco pantallas guardan con la Prestadora que traía la fila que estaba en pantalla**, no con
   la de la sesión. Hoy coincide. Es un dato de aislamiento viajando por un camino que la sesión no
   controla.
@@ -1033,8 +1033,8 @@ en la sección «La entrada y la recuperación de la clave».
 
 **La etapa no la marca nadie: sale de lo que pasa.** Cargar un presupuesto convierte al Contacto
 en Prospecto; cerrar la negociación de forma positiva lo convierte en Cliente; si la negociación
-fracasa, vuelve a ser Contacto con todo su historial. Es la misma persona del Padrón en las tres
-etapas, nunca una tabla aparte. Sin presupuesto aprobado no hay Cliente, y no hay alta manual de
+fracasa, vuelve a ser Contacto con todo su historial. Es la misma Ficha de Persona del Directorio de Personas en
+las tres etapas, nunca una tabla aparte. Sin presupuesto aprobado no hay Cliente, y no hay alta manual de
 Cliente desde el Panel; la cartera que una Prestadora ya tenía se migra aparte (paso 29).
 
 Contactos y Prospectos son asunto de la comercialización, que es la administración. Los Clientes
@@ -1310,9 +1310,9 @@ software conectado, el corte lo ordena ese software.
 
 ## Decisiones que no traban nada empezado
 
-**94. Usted** — Empresas subcontratadas o tercerizadas: son un recurso dentro de la prestación directa, como el plantel propio, y no una modalidad. Todavía no hay dónde cargarlas ni cómo encargarles una prestación. La precondición era no construirlo hasta que una Prestadora real lo pida. ¿Sigue valiendo?
+**94. Usted** — Empresas subcontratadas o tercerizadas: son un recurso dentro de la prestación directa, como el Padrón propio, y no una modalidad. Todavía no hay dónde cargarlas ni cómo encargarles una prestación. La precondición era no construirlo hasta que una Prestadora real lo pida. ¿Sigue valiendo?
 
-**95. Usted** — Un tercero que sólo mira: ¿cómo entra un financiador que sólo consulta? Un cuarto rol, un Coordinador de sólo lectura desde el catálogo de permisos, o no se hace.
+**95. Usted** — Un tercero que sólo mira: ¿cómo entra un Pagador que sólo consulta? Un cuarto rol, un Coordinador de sólo lectura desde el catálogo de permisos, o no se hace.
 
 **96. Usted** — ¿Careonys va a atender establecimientos donde conviven Pacientes de Clientes distintos — una residencia, un geriátrico? Si es más adelante, alcanza con dejarlo dicho.
 
@@ -1446,7 +1446,7 @@ los cimientos; acá se carga y se construye lo que decide.
 
 **Antes de construirlo se contesta:** qué clases de registro existen, porque la tabla las guarda
 como texto libre; quién carga las reglas, que hoy sólo entran por migración; si la fecha de
-fallecimiento se muda al Legajo cuando el Paciente pase a citar uno; si su cambio se audita; cómo se
+fallecimiento se muda a la Ficha de Persona cuando el Paciente pase a citar una; si su cambio se audita; cómo se
 borra lo vencido del historial del registro clínico, que hoy no lo puede borrar nadie; y qué otras
 tablas son clínicas y se versionan, además de las dos que ya lo hacen.
 

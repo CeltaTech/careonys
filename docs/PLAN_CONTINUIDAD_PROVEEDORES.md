@@ -94,7 +94,7 @@ falta, para no empezar de cero en el peor momento posible.
 
 No se recomienda decidir esto ahora — la decisión correcta depende de por qué se está
 migrando (¿solo Auth, o toda la base también?) y de la escala del proyecto en ese momento
-(cuántas Prestadoras licenciatarias hay para entonces). Este documento
+(cuántas Prestadoras hay para entonces). Este documento
 existe para que, llegado el caso, no haya que investigar las opciones desde cero bajo
 presión.
 

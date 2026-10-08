@@ -818,6 +818,19 @@ en la base y en el backend, que hoy filtra sólo por Prestadora:
   guardia vigente ahí y en cantidad acotada. Deja de recibir la credencial interna de su perfil.
 - **Durante la guardia, el Asistente recibe el contacto de emergencia, la obra social y el número
   de afiliado del Paciente**, que hoy no recibe.
+- **El Cliente ve del Asistente nombre, foto, tipo y certificado vigente, y sólo del que tiene una
+  guardia en curso o próxima.** Nunca su teléfono: se comunica con la Prestadora. Hoy lee directo de
+  la base todas las columnas de cualquier Asistente que lo atendió alguna vez, sin límite de
+  tiempo, porque la regla que lo habilita alcanza con una guardia de cualquier fecha. El código QR
+  verifica sólo contra el Asistente con guardia hoy con ese Paciente, y hoy responde con cualquiera
+  de la Prestadora.
+- **El Cliente ve la ubicación del Asistente sólo en vivo y con el permiso**, y la ubicación se
+  borra al cerrar la guardia. Hoy lee las de salida, llegada y cierre de todas las guardias, sin el
+  permiso. Del Paciente deja de recibir lo que ninguna pantalla usa —patologías, ubicación de la
+  casa—, y el domicilio y su motivo respetan el permiso de la ficha.
+- **Los permisos de las personas autorizadas niegan ante la duda:** sin permisos cargados, el
+  backend hoy deja pasar y la base niega; mientras cargan, la pantalla muestra todo; y la consulta
+  que los decide no mira de qué Cliente es la persona.
 
 Cierre: la prueba con dos Coordinadoras de Servicios distintos y datos cargados, donde cada una ve
 lo suyo y nada de la otra, salvo durante una emergencia abierta.

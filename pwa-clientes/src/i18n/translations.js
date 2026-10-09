@@ -22,6 +22,7 @@ export const T = {
         videollamada_no_configurada: 'Esta Prestadora todavía no configuró las videollamadas, así que por ahora la conversación sigue por escrito.',
         no_disponible: 'Esta función no está activada en esta Prestadora.',
         falta_la_firma: 'Falta la firma.',
+        firma_no_sirve: 'No se pudo realizar la confirmación biométrica. Vuelva a intentarlo.',
         // No es lo mismo que el de arriba y no se dicen igual. Arriba: la Prestadora no ofrece
         // esto. Acá: existe, pero el titular de la cuenta no se lo dio a esta persona. Quien lee
         // "no está activada" cuando en realidad no se lo dieron va a reclamarle a la Prestadora
@@ -601,6 +602,7 @@ export const T = {
         videollamada_no_configurada: 'This provider has not set up video calls yet, so for now the conversation continues in writing.',
         no_disponible: 'This feature is not switched on at this Provider.',
         falta_la_firma: 'Signature pending.',
+        firma_no_sirve: 'The biometric confirmation could not be completed. Please try again.',
         sin_acceso: 'The account holder did not include this in what you can see. Any change is requested by them from the Provider.',
         codigo_incorrecto: 'That code is not correct. Please check it and type it again.',
         vencido: 'That code has expired. Please request a new one.',
@@ -1078,6 +1080,7 @@ export const T = {
         videollamada_no_configurada: 'Esta Prestadora ainda não configurou as videochamadas, então por enquanto a conversa segue por escrito.',
         no_disponible: 'Esta função não está ativada nesta Prestadora.',
         falta_la_firma: 'Falta a assinatura.',
+        firma_no_sirve: 'Não foi possível realizar a confirmação biométrica. Tente novamente.',
         sin_acceso: 'O titular da conta não incluiu isto no que foi concedido. A mudança é ele quem pede à Prestadora.',
         codigo_incorrecto: 'Esse código não está correto. Convém revisá-lo e digitá-lo de novo.',
         vencido: 'Esse código venceu. É preciso pedir um novo.',

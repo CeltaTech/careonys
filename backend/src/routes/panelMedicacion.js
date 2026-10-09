@@ -2,7 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { clienteDelPedido, supabase } from '../db/connection.js';
-import { tipoMatriculaRequerida, hayAsistenteAsignadoConMatricula } from '../utils/medicacionIndicaciones.js';
+import { hayAsistenteAsignadoQuePuedeDarLaVia } from '../utils/medicacionIndicaciones.js';
 import { extensionDeArchivo, rutaDeMatriculaNueva } from '../utils/archivosSubidos.js';
 import { registrarAdvertenciaAlActivar } from '../utils/advertenciaLegal.js';
 import { responderError } from '../utils/errorConMotivo.js';
@@ -10,15 +10,16 @@ import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsulta
 import { FICHA_NOMBRE, conSuFicha } from '../utils/fichaDelPaciente.js';
 
 // Cierra pendiente #62 (docs/PLAN_HASTA_PRODUCCION.md): cola de revisión de indicaciones de
-// medicación solicitadas por el Cliente (appClientesMedicacion.js). Aceptar/rechazar nunca
-// bloquea por falta de matrícula del Asistente (CLAUDE.md §3) — solo informa mediante
-// el flag `sinMatricula`, que el Panel usa para mostrar la advertencia legal
+// medicación solicitadas por el Cliente (appClientesMedicacion.js). Que ningún Asistente
+// asignado pueda dar esa vía no bloquea la aceptación (CLAUDE.md §3) — solo informa mediante
+// el flag `nadiePuedeDarla`, que el Panel usa para mostrar la advertencia legal
 // (AdvertenciaLegalContext, funcion_clave 'medicacion_via_sin_matricula') antes de confirmar
 // la aceptación. Mostrarla es de la pantalla; dejar registrado que se avisó es de acá, en el
-// mismo pedido que acepta la indicación (utils/advertenciaLegal.js).
+// mismo pedido que acepta la indicación (utils/advertenciaLegal.js). Qué vía puede dar cada
+// tipo de Asistente sale de sus prohibiciones (utils/medicacionIndicaciones.js).
 //
-// matriculas_asistente y configuracion_matricula_via_medicacion no tienen rutas CRUD
-// acá: el Panel las gestiona directo vía supabase-js bajo RLS (mismo criterio que
+// matriculas_asistente no tiene rutas CRUD
+// acá: el Panel la gestiona directo vía supabase-js bajo RLS (mismo criterio que
 // autorizaciones_monitoreo_paciente/rangos_referencia_vitales — RLS ya lo permite a
 // admin_prestadora). Esta ruta solo resuelve el archivo de evidencia de matrícula.
 //
@@ -68,7 +69,7 @@ panelMedicacionRouter.get('/pendientes', requiereRolPanel, async (req, res) => {
   // se decide aparte.
   const { data, error } = await supabase
     .from('indicaciones_medicacion')
-    .select(`id, medicamento, dosis, frecuencia, via_administracion, prescripcion_archivo_url, fecha_desde, fecha_hasta, created_at, pacientes(id, ${FICHA_NOMBRE}), clientes(id)`)
+    .select(`id, medicamento, dosis, frecuencia, via_administracion, via_administracion_id, prescripcion_archivo_url, fecha_desde, fecha_hasta, created_at, pacientes(id, ${FICHA_NOMBRE}), clientes(id)`)
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .eq('estado', 'pendiente')
     .order('created_at', { ascending: true });
@@ -89,20 +90,17 @@ panelMedicacionRouter.get('/pendientes', requiereRolPanel, async (req, res) => {
     return responderError(res, errorAnotacion);
   }
 
-  // La vía la lee quien pide con su credencial. Quién tiene guardia con el Paciente, con la llave
-  // maestra: quien coordina sólo ve las guardias de su zona, y el aviso tiene que mirar todas.
+  // Quién tiene guardia con el Paciente, con la llave maestra: quien coordina sólo ve las guardias
+  // de su zona, y el aviso tiene que mirar todas.
   const pendientes = await Promise.all(
     (data || []).map(async (indicacion) => {
-      const tipoRequerido = await tipoMatriculaRequerida(db, req.usuarioPanel.prestadoraId, indicacion.via_administracion);
-      const sinMatricula = tipoRequerido
-        ? !(await hayAsistenteAsignadoConMatricula(
-            supabase,
-            req.usuarioPanel.prestadoraId,
-            indicacion.pacientes.id,
-            tipoRequerido
-          ))
-        : false;
-      return { ...indicacion, pacientes: conSuFicha(indicacion.pacientes), tipoMatriculaRequerida: tipoRequerido, sinMatricula };
+      const nadiePuedeDarla = !(await hayAsistenteAsignadoQuePuedeDarLaVia(
+        supabase,
+        req.usuarioPanel.prestadoraId,
+        indicacion.pacientes.id,
+        indicacion.via_administracion_id
+      ));
+      return { ...indicacion, pacientes: conSuFicha(indicacion.pacientes), nadiePuedeDarla };
     })
   );
 
@@ -113,7 +111,7 @@ panelMedicacionRouter.get('/pendientes', requiereRolPanel, async (req, res) => {
 panelMedicacionRouter.post('/:id/aceptar', requiereRolPanel, async (req, res) => {
   const { data: indicacion } = await supabase
     .from('indicaciones_medicacion')
-    .select('id, estado, paciente_id, via_administracion')
+    .select('id, estado, paciente_id, via_administracion_id')
     .eq('id', req.params.id)
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .eq('estado', 'pendiente')
@@ -138,17 +136,14 @@ panelMedicacionRouter.post('/:id/aceptar', requiereRolPanel, async (req, res) =>
   // recibe del navegador: quien manda el pedido podría decir que no había nada que advertir.
   // Si la jurisdicción de esta Prestadora no tiene texto escrito para esta función, no hay
   // advertencia y no se anota nada — y la indicación queda aceptada igual (CLAUDE.md §7).
-  // Igual que en la bandeja: la vía con la credencial de quien pide, las guardias con la maestra.
-  const tipoRequerido = await tipoMatriculaRequerida(clienteDelPedido(req), req.usuarioPanel.prestadoraId, indicacion.via_administracion);
-  const sinMatricula = tipoRequerido
-    ? !(await hayAsistenteAsignadoConMatricula(
-        supabase,
-        req.usuarioPanel.prestadoraId,
-        indicacion.paciente_id,
-        tipoRequerido
-      ))
-    : false;
-  if (sinMatricula) {
+  // Igual que en la bandeja: las guardias con la llave maestra.
+  const nadiePuedeDarla = !(await hayAsistenteAsignadoQuePuedeDarLaVia(
+    supabase,
+    req.usuarioPanel.prestadoraId,
+    indicacion.paciente_id,
+    indicacion.via_administracion_id
+  ));
+  if (nadiePuedeDarla) {
     await registrarAdvertenciaAlActivar({
       prestadoraId: req.usuarioPanel.prestadoraId,
       usuarioId: req.usuarioPanel.id,

@@ -11,7 +11,7 @@ export async function medicacionVigenteDelPaciente(db, prestadoraId, pacienteId)
   const hoyISO = new Date().toISOString().slice(0, 10);
   const { data } = await db
     .from('indicaciones_medicacion')
-    .select('id, medicamento, dosis, frecuencia, via_administracion, fecha_desde, fecha_hasta')
+    .select('id, medicamento, dosis, frecuencia, via_administracion, via_administracion_id, fecha_desde, fecha_hasta')
     .eq('prestadora_id', prestadoraId)
     .eq('paciente_id', pacienteId)
     .eq('estado', 'aceptada')
@@ -21,33 +21,44 @@ export async function medicacionVigenteDelPaciente(db, prestadoraId, pacienteId)
   return data || [];
 }
 
-export async function tipoMatriculaRequerida(db, prestadoraId, viaAdministracion) {
-  const { data } = await db
-    .from('configuracion_matricula_via_medicacion')
-    .select('tipo_matricula_requerida')
-    .eq('prestadora_id', prestadoraId)
-    .eq('via_administracion', viaAdministracion)
-    .maybeSingle();
-  return data?.tipo_matricula_requerida ?? null;
+// Qué vías de administración le están prohibidas a un tipo de Asistente: las que alcanzan las
+// prohibiciones de ese tipo, sean de fábrica para el país de la Prestadora o propias de ella.
+// Con la llave maestra la base no recorta nada, así que el país y la Prestadora se filtran acá.
+async function viasProhibidasAlTipo(db, prestadoraId, tipoAsistenteId) {
+  const { data: prestadora } = await db.from('prestadoras').select('pais').eq('id', prestadoraId).maybeSingle();
+  if (!prestadora?.pais) return null;
+  const { data: prohibiciones, error } = await db
+    .from('tareas_tipo_asistente')
+    .select('id')
+    .eq('tipo_asistente_id', tipoAsistenteId)
+    .eq('clase', 'prohibida')
+    .or(`prestadora_id.eq.${prestadoraId},and(prestadora_id.is.null,pais.eq.${prestadora.pais})`);
+  if (error) return null;
+  if (!prohibiciones?.length) return new Set();
+  const { data: vias, error: errorVias } = await db
+    .from('vias_que_alcanza_la_prohibicion')
+    .select('via_administracion_id')
+    .in('prohibicion_id', prohibiciones.map((p) => p.id))
+    .or(`prestadora_id.is.null,prestadora_id.eq.${prestadoraId}`);
+  if (errorVias) return null;
+  return new Set((vias || []).map((v) => v.via_administracion_id));
 }
 
-// El filtro por Prestadora va aunque el identificador del Asistente ya sea de una sola: quien llama
-// puede pasar la llave maestra, que se saltea la protección por fila, y ahí lo único que separa
-// una Prestadora de otra son estos filtros. Y de acá cuelga si se puede dar una medicación.
-export async function asistenteTieneMatriculaVigente(db, prestadoraId, asistenteId, tipoRequerido) {
-  if (!tipoRequerido) return true;
-  const hoyISO = new Date().toISOString().slice(0, 10);
-  const { data } = await db
-    .from('matriculas_asistente')
-    .select('id')
+// ¿Puede este Asistente dar una medicación por esta vía? Falla cerrado: sin vía elegida, sin tipo
+// de Asistente o sin poder leer las prohibiciones, la respuesta es no. Que tenga la matrícula de su
+// tipo se controla al asignarle la guardia.
+export async function asistentePuedeDarLaVia(db, prestadoraId, asistenteId, viaAdministracionId) {
+  if (!viaAdministracionId) return false;
+  const { data: asistente } = await db
+    .from('asistentes')
+    .select('tipo_asistente_id')
+    .eq('id', asistenteId)
     .eq('prestadora_id', prestadoraId)
-    .eq('asistente_id', asistenteId)
-    .eq('tipo', tipoRequerido)
-    .lte('vigente_desde', hoyISO)
-    .or(`vigente_hasta.is.null,vigente_hasta.gte.${hoyISO}`)
-    .limit(1)
     .maybeSingle();
-  return Boolean(data);
+  if (!asistente?.tipo_asistente_id) return false;
+  const prohibidas = await viasProhibidasAlTipo(db, prestadoraId, asistente.tipo_asistente_id);
+  if (!prohibidas) return false;
+  return !prohibidas.has(viaAdministracionId);
 }
 
 // Asistentes con alguna Guardia futura o de hoy para ese Paciente — no hace falta un vínculo
@@ -56,8 +67,8 @@ export async function asistenteTieneMatriculaVigente(db, prestadoraId, asistente
 //
 // Se pregunta por la lista de la guardia y no por la columna vieja: si un turno cubre a dos
 // personas de la misma casa, el Asistente atiende a las dos, y para la segunda no aparecía
-// nadie. De acá cuelga si se puede aceptar una indicación de medicación que requiere
-// matrícula, así que quedarse corto significa rechazar un pedido que sí se podía cumplir.
+// nadie. De acá cuelga el aviso de que nadie asignado puede dar esa vía, así que quedarse corto
+// significa avisar de más sobre un pedido que sí se podía cumplir.
 export async function asistentesAsignadosAlPaciente(db, prestadoraId, pacienteId) {
   const hoyISO = new Date().toISOString().slice(0, 10);
   const { data } = await db
@@ -70,11 +81,10 @@ export async function asistentesAsignadosAlPaciente(db, prestadoraId, pacienteId
   return [...new Set((data || []).map((f) => f.guardias?.asistente_id).filter(Boolean))];
 }
 
-export async function hayAsistenteAsignadoConMatricula(db, prestadoraId, pacienteId, tipoRequerido) {
-  if (!tipoRequerido) return true;
+export async function hayAsistenteAsignadoQuePuedeDarLaVia(db, prestadoraId, pacienteId, viaAdministracionId) {
   const asignados = await asistentesAsignadosAlPaciente(db, prestadoraId, pacienteId);
   for (const asistenteId of asignados) {
-    if (await asistenteTieneMatriculaVigente(db, prestadoraId, asistenteId, tipoRequerido)) return true;
+    if (await asistentePuedeDarLaVia(db, prestadoraId, asistenteId, viaAdministracionId)) return true;
   }
   return false;
 }

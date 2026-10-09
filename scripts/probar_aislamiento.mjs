@@ -333,10 +333,6 @@ const LO_QUE_VE_CADA_UNO = [
 
   ['configuracion_ausencia_automatica', POR_PRESTADORA('configuracion_ausencia_automatica'), NADA],
 
-  ['configuracion_matricula_via_medicacion',
-    DE_SU_PRESTADORA('configuracion_matricula_via_medicacion'),
-    DE_SU_PRESTADORA('configuracion_matricula_via_medicacion')],
-
   ['configuracion_visibilidad_app',
     `SELECT prestadora_id || '~' || clave FROM configuracion_visibilidad_app
       WHERE prestadora_id = (SELECT prestadora_id FROM usuarios WHERE id = '{p}')`,

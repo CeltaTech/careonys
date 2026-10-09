@@ -57,7 +57,7 @@ export function Medicacion() {
   }, [recargar]);
 
   async function aceptar(fila) {
-    if (fila.sinMatricula) {
+    if (fila.nadiePuedeDarla) {
       const respuesta = await verificarAntesDeActivar(prestadoraId, 'medicacion_via_sin_matricula');
       // No se pudo consultar si hay advertencia que mostrar: se lo dice y no se acepta nada. La
       // alternativa —seguir como si no hubiera nada que advertir— es la que se corrigió.
@@ -132,7 +132,7 @@ export function Medicacion() {
                   {t.medicacion.desde}: {fila.fecha_desde} {fila.fecha_hasta ? `— ${t.medicacion.hasta}: ${fila.fecha_hasta}` : ''}
                 </span>
               </div>
-              {fila.sinMatricula && <Alert variant="info">{t.medicacion.sin_matricula_aviso}</Alert>}
+              {fila.nadiePuedeDarla && <Alert variant="info">{t.medicacion.nadie_puede_darla_aviso}</Alert>}
 
               {rechazando === fila.id ? (
                 <>

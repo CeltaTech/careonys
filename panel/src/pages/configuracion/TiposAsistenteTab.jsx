@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
-import { esTipoGeneral, nombreTipo, nombreMatricula, viasVedadasPorMatricula } from '../../lib/tiposAsistente';
+import { esTipoGeneral, nombreTipo, nombreMatricula } from '../../lib/tiposAsistente';
 import { MODOS_DE_CONTROL_MATRICULA } from '../../lib/matricula';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
@@ -30,7 +30,6 @@ export function TiposAsistenteTab() {
   const prestadoraId = usePrestadoraActual();
   const confirmarDestructivo = useConfirmarDestructivo();
   const [tipos, setTipos] = useState([]);
-  const [vias, setVias] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [creando, setCreando] = useState(false);
@@ -78,25 +77,20 @@ export function TiposAsistenteTab() {
   const recargar = useCallback(async () => {
     setEstado('cargando');
     setError(null);
-    // El modo va en el mismo viaje que las dos consultas, pero no en el mismo resultado: se
+    // El modo va en el mismo viaje que la consulta, pero no en el mismo resultado: se
     // resuelve solo y no arrastra a la lista si falla, ni la lista lo arrastra a él.
-    const [resTipos, resVias] = await Promise.all([
+    const [resTipos] = await Promise.all([
       supabase.from('tipos_asistente').select('*').order('orden'),
-      supabase
-        .from('configuracion_matricula_via_medicacion')
-        .select('via_administracion, tipo_matricula_requerida')
-        .eq('prestadora_id', prestadoraId),
       cargarModo(),
     ]);
-    if (resTipos.error || resVias.error) {
-      setError(mensajeDeError(resTipos.error || resVias.error, t));
+    if (resTipos.error) {
+      setError(mensajeDeError(resTipos.error, t));
       setEstado('error');
       return;
     }
     setTipos(resTipos.data ?? []);
-    setVias(resVias.data ?? []);
     setEstado('listo');
-  }, [prestadoraId, t, cargarModo]);
+  }, [t, cargarModo]);
 
   useEffect(() => {
     recargar();
@@ -272,7 +266,6 @@ export function TiposAsistenteTab() {
       {tipoAbierto && (
         <TareasDelTipo
           tipo={tipos.find((x) => x.id === tipoAbierto)}
-          vias={vias}
           prestadoraId={prestadoraId}
         />
       )}
@@ -294,7 +287,7 @@ export function TiposAsistenteTab() {
 /* Las dos listas de tareas de un tipo. Son dos y no una a propósito: la de "no
    corresponde" es la que evita que el Cliente le pida al Asistente cosas que no
    son suyas, y si va mezclada con la otra se lee y no se entiende cuál era cuál. */
-function TareasDelTipo({ tipo, vias, prestadoraId }) {
+function TareasDelTipo({ tipo, prestadoraId }) {
   const { t } = useLocale();
   const confirmarDestructivo = useConfirmarDestructivo();
   const [tareas, setTareas] = useState([]);
@@ -339,8 +332,6 @@ function TareasDelTipo({ tipo, vias, prestadoraId }) {
 
   if (!tipo) return null;
 
-  const vedadas = viasVedadasPorMatricula(tipo, vias);
-
   return (
     <>
       {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
@@ -372,19 +363,6 @@ function TareasDelTipo({ tipo, vias, prestadoraId }) {
         </div>
       </EstadoLista>
 
-      {vedadas.length > 0 && (
-        <section className="panel-tarjeta">
-          <div className="panel-tarjeta-titulo">
-            <h2>{t.configuracion.tareas_vedadas_titulo}</h2>
-            <span className="panel-mini">{nombreTipo(tipo, t)}</span>
-          </div>
-          {vedadas.map((via) => (
-            <div key={via} className="panel-fila-alerta">
-              <div><b>{via}</b></div>
-            </div>
-          ))}
-        </section>
-      )}
     </>
   );
 }

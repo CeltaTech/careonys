@@ -22,24 +22,6 @@ export function nombreMatricula(tipoMatricula, t) {
   return t.tipos_asistente?.[`matricula_${tipoMatricula}`] || tipoMatricula;
 }
 
-// Las vías de medicación que este tipo NO puede administrar, según la
-// configuración de la Prestadora.
-//
-// Esto no se guarda en ningún lado: se calcula cada vez que hace falta
-// mostrarlo. Si se guardara como una tarea más, el día que la Prestadora
-// cambie qué matrícula pide cada vía, la fila guardada seguiría diciendo lo de
-// antes y la pantalla mostraría lo viejo sin que nadie se entere.
-//
-// `configuracionVias` son las filas de `configuracion_matricula_via_medicacion`
-// de esa Prestadora.
-export function viasVedadasPorMatricula(tipo, configuracionVias) {
-  if (!tipo || !Array.isArray(configuracionVias)) return [];
-  return configuracionVias
-    .filter((via) => via.tipo_matricula_requerida)
-    .filter((via) => via.tipo_matricula_requerida !== tipo.tipo_matricula)
-    .map((via) => via.via_administracion);
-}
-
 // ---------------------------------------------------------------------------
 // La correspondencia con lo que estaba escrito a mano
 //

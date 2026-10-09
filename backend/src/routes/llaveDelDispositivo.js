@@ -1,5 +1,5 @@
 /**
- * Entrar con huella o con cara, y administrar las llaves del propio teléfono.
+ * Entrar con huella o con el rostro, y administrar las llaves del propio teléfono.
  * ==========================================================================
  *
  * Lo que decide está en `../utils/llaveDelDispositivo.js`, con sus pruebas. Acá está lo que
@@ -292,6 +292,81 @@ function leerDesafio(respuesta) {
   }
 }
 
+/**
+ * Paso 2 de una firma: ¿la firmó con su llave quien tiene la sesión? Lo usa la ruta que guarda lo
+ * firmado, antes de guardar nada. Falla con `firma_no_sirve` y nunca dice por qué.
+ *
+ * Corre con la credencial de la persona (`db`): la llave, el desafío y el contador son suyos.
+ */
+export async function comprobarFirma({ db, rol, persona, respuesta }) {
+  if (!rolValido(rol) || !respuesta?.id || !persona?.id || !persona?.prestadoraId) {
+    throw new ErrorConMotivo('firma_no_sirve');
+  }
+  const { origen, parteConfiable } = dondeViveLaApp(rol);
+
+  const { data: llave } = await db
+    .from('llaves_de_dispositivo')
+    .select('id, usuario_id, prestadora_id, rol, credencial_id, clave_publica, contador, transportes, revocada_en')
+    .eq('credencial_id', respuesta.id)
+    .eq('rol', rol)
+    .eq('usuario_id', persona.id)
+    .eq('prestadora_id', persona.prestadoraId)
+    .maybeSingle();
+  const motivo = porQueNoAbre(llave);
+  if (motivo) {
+    console.warn(`Firma con llave rechazada (${motivo})`);
+    throw new ErrorConMotivo('firma_no_sirve');
+  }
+
+  let desafio;
+  try {
+    desafio = leerDesafio(respuesta);
+    const fila = await gastarDesafio(db, desafio, { para: 'firma', rol, prestadoraId: persona.prestadoraId });
+    if (fila.usuario_id !== persona.id) throw new ErrorConMotivo('firma_no_sirve');
+  } catch {
+    throw new ErrorConMotivo('firma_no_sirve');
+  }
+
+  let verificacion;
+  try {
+    verificacion = await verifyAuthenticationResponse({
+      response: respuesta,
+      expectedChallenge: desafio,
+      expectedOrigin: origen,
+      expectedRPID: parteConfiable,
+      requireUserVerification: true,
+      credential: {
+        id: llave.credencial_id,
+        publicKey: isoBase64URL.toBuffer(llave.clave_publica),
+        counter: Number(llave.contador),
+        transports: llave.transportes ?? undefined,
+      },
+    });
+  } catch {
+    throw new ErrorConMotivo('firma_no_sirve');
+  }
+  if (!verificacion.verified) throw new ErrorConMotivo('firma_no_sirve');
+
+  const contadorNuevo = verificacion.authenticationInfo?.newCounter ?? 0;
+  if (elContadorRetrocedio(Number(llave.contador), contadorNuevo)) {
+    // Igual que en la entrada: dos aparatos con la misma llave. La baja la hace la persona, que es
+    // la única que puede marcar su propia llave.
+    console.warn('Firma con llave rechazada (contador hacia atras): llave revocada');
+    await db
+      .from('llaves_de_dispositivo')
+      .update({ revocada_en: new Date().toISOString() })
+      .eq('id', llave.id)
+      .eq('prestadora_id', persona.prestadoraId);
+    throw new ErrorConMotivo('firma_no_sirve');
+  }
+
+  await db
+    .from('llaves_de_dispositivo')
+    .update({ contador: contadorNuevo, ultimo_uso_en: new Date().toISOString() })
+    .eq('id', llave.id)
+    .eq('prestadora_id', persona.prestadoraId);
+}
+
 // ────────────────────────────────────────────────────────────────────────────────────────────
 // ADENTRO DE CADA APLICACIÓN: agregar, ver y sacar llaves propias
 // ────────────────────────────────────────────────────────────────────────────────────────────
@@ -372,7 +447,7 @@ export function routerDeLlavesConSesion(rol) {
         })),
         authenticatorSelection: {
           // Detectable, para que después se pueda entrar sin escribir el correo. Y con
-          // verificación del dueño, que es lo que hace que la llave se abra con huella o con cara
+          // verificación del dueño, que es lo que hace que la llave se abra con huella o con el rostro
           // y no con sólo tener el aparato en la mano.
           residentKey: 'required',
           userVerification: 'required',
@@ -444,6 +519,47 @@ export function routerDeLlavesConSesion(rol) {
     } catch (err) {
       if (err instanceof ErrorConMotivo) return responderError(res, err);
       console.error('Error al guardar una llave de dispositivo:', err.message);
+      res.status(500).json({ error: 'error_interno' });
+    }
+  });
+
+  /**
+   * Paso 1 de una firma: el número que el teléfono va a firmar con una llave ya guardada.
+   *
+   * A diferencia de la entrada, acá sí se sabe quién es, así que la lista de llaves va llena: el
+   * teléfono sólo ofrece las de esta persona. Sin ninguna, la pantalla ofrece guardar una.
+   */
+  router.post('/firma/desafio', topeDePedidos({ nombre: 'firma_llave_dispositivo' }), async (req, res) => {
+    try {
+      const persona = quienEs(req);
+      const { parteConfiable } = dondeViveLaApp(rol);
+      const db = clienteDelPedido(req);
+
+      const { data: llaves, error } = await db
+        .from('llaves_de_dispositivo')
+        .select('credencial_id, transportes')
+        .eq('prestadora_id', persona.prestadoraId)
+        .eq('usuario_id', persona.id)
+        .is('revocada_en', null);
+      if (error) throw new Error(error.message);
+      if (!llaves?.length) throw new ErrorConMotivo('sin_llave');
+
+      const opciones = await generateAuthenticationOptions({
+        rpID: parteConfiable,
+        userVerification: 'required',
+        allowCredentials: llaves.map((l) => ({ id: l.credencial_id, transports: l.transportes ?? undefined })),
+      });
+
+      await guardarDesafio(db, opciones.challenge, {
+        para: 'firma',
+        rol,
+        usuarioId: persona.id,
+        prestadoraId: persona.prestadoraId,
+      });
+      res.json(opciones);
+    } catch (err) {
+      if (err instanceof ErrorConMotivo) return responderError(res, err);
+      console.error('Error al preparar una firma con llave:', err.message);
       res.status(500).json({ error: 'error_interno' });
     }
   });

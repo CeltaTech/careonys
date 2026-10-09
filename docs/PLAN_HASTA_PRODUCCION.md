@@ -555,7 +555,7 @@ el sistema lo dice.
 entorno. Se borra `acotarAPrestadora`. Los 17 casos que confiaban en un identificador de afuera
 dejan de ser un riesgo porque la base ya no les cree.
 
-**Entrar con la huella o con la cara sigue usando la llave maestra, y queda así por ahora.** La
+**Entrar con la huella o con el rostro sigue usando la llave maestra, y queda así por ahora.** La
 huella la comprueba el propio teléfono; después el producto le pide a Supabase una credencial de
 entrada para esa persona, y ese pedido va con la llave maestra
 (`routes/llaveDelDispositivo.js:191`). Supabase ofrece hacerlo por su cuenta, pero todavía como
@@ -867,7 +867,7 @@ clave para las tres, esa puerta daba también a las otras dos y esto no se podí
   Para todos — administración, coordinación, Asistentes y Clientes.
 - **Equipo nuevo quiere decir un aparato que no tiene llave guardada y desde el que nunca se
   entró.** Nada más que eso. No hace falta reconocer el navegador ni mirar desde dónde se conecta.
-- **La huella y la cara quedan afuera de la recuperación.** Son para el día a día, en el teléfono, y
+- **La huella y el rostro quedan afuera de la recuperación.** Son para el día a día, en el teléfono, y
   sólo donde el aparato las tiene — la aplicación ya pregunta si puede y ante la duda contesta que
   no. En el Panel no están construidas. No pueden ser requisito de nada.
 - **No hay aplicación de códigos para nadie más que el rol técnico**, que ya la tiene. Obliga a

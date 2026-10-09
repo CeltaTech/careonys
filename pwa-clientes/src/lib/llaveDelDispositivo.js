@@ -7,7 +7,7 @@
  * dos aplicaciones: el rol y la puerta los pone quien llama.
  *
  * QUÉ HACE Y QUÉ NO. Pide el desafío, se lo da al navegador para que el teléfono lo firme con la
- * llave que guarda adentro, y devuelve la firma. La huella y la cara no pasan por acá ni por
+ * llave que guarda adentro, y devuelve la firma. La huella y el rostro no pasan por acá ni por
  * ningún otro lado del producto: las mira el propio aparato para destrabar su llave, y lo único
  * que sale es la firma.
  *
@@ -93,4 +93,14 @@ export async function guardarLaLlaveEnEsteAparato(puerta) {
   const opciones = await puerta.desafio();
   const firma = await startRegistration({ optionsJSON: opciones });
   return puerta.guardar(firma);
+}
+
+/**
+ * Firmar con la llave ya guardada. `pedirDesafio()` trae el número a firmar desde la aplicación de
+ * quien llama; lo que vuelve es la firma, que se manda junto con lo firmado y la comprueba el
+ * backend antes de guardar nada.
+ */
+export async function firmarConLaLlaveDelAparato(pedirDesafio) {
+  const opciones = await pedirDesafio();
+  return startAuthentication({ optionsJSON: opciones });
 }

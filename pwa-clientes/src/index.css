@@ -255,6 +255,35 @@ a {
   resize: vertical;
 }
 
+/* El texto que se acepta y la casilla con que se acepta. */
+.texto-a-aceptar {
+  white-space: pre-wrap;
+  font-size: 12px;
+  padding: 10px;
+  border: 1px solid var(--linea);
+  border-radius: 7px;
+  background: var(--blanco);
+  margin-bottom: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.casilla {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--tinta);
+  margin-bottom: 10px;
+}
+
+.casilla input {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  accent-color: var(--verde);
+}
+
 .form-error {
   color: var(--mal-texto);
   font-size: 11px;

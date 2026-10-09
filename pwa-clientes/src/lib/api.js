@@ -50,6 +50,10 @@ export const api = {
   darDeBajaAcceso: (accesoId) => pedido(`/acceso/${accesoId}/baja`, { method: 'POST' }),
   indicacionesMedicacion: (pacienteId) => pedido(`/medicacion/${pacienteId}`),
   crearIndicacionMedicacion: (pacienteId, formData) => pedido(`/medicacion/${pacienteId}`, { method: 'POST', body: formData }),
+  viasDeMedicacion: () => pedido('/medicacion/vias'),
+  tiposQuePuedenDarLaVia: (viaId) => pedido(`/medicacion/vias/${viaId}/tipos`),
+  consentimientoDeMedicacion: (idioma) => pedido(`/medicacion/consentimiento?idioma=${encodeURIComponent(idioma)}`),
+  papelFirmadoDeMedicacion: (indicacionId) => pedido(`/medicacion/indicacion/${indicacionId}/papel-firmado`),
   // La instrucción de las personas autorizadas que el titular todavía no firmó. El perfil ya avisa que
   // hay una; esto trae el texto entero, que es lo único que no conviene mandar en cada pedido.
   instruccionPendiente: () => pedido('/instruccion-pendiente'),
@@ -124,4 +128,5 @@ export const api = {
   desafioDeLlave: () => pedido('/llaves/desafio', { method: 'POST' }),
   guardarLlave: (respuesta) => pedido('/llaves', { method: 'POST', body: JSON.stringify({ respuesta }) }),
   sacarLlave: (id) => pedido(`/llaves/${id}`, { method: 'DELETE' }),
+  desafioDeFirma: () => pedido('/llaves/firma/desafio', { method: 'POST' }),
 };

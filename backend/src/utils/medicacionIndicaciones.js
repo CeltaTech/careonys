@@ -11,14 +11,14 @@ export async function medicacionVigenteDelPaciente(db, prestadoraId, pacienteId)
   const hoyISO = new Date().toISOString().slice(0, 10);
   const { data } = await db
     .from('indicaciones_medicacion')
-    .select('id, medicamento, dosis, frecuencia, via_administracion, via_administracion_id, fecha_desde, fecha_hasta')
+    .select('id, medicamento, dosis, frecuencia, via_administracion_id, via:vias_administracion(clave), fecha_desde, fecha_hasta')
     .eq('prestadora_id', prestadoraId)
     .eq('paciente_id', pacienteId)
     .eq('estado', 'aceptada')
     .lte('fecha_desde', hoyISO)
     .or(`fecha_hasta.is.null,fecha_hasta.gte.${hoyISO}`)
     .order('created_at', { ascending: false });
-  return data || [];
+  return (data || []).map(({ via, ...indicacion }) => ({ ...indicacion, via_clave: via?.clave ?? null }));
 }
 
 // Qué vías de administración le están prohibidas a un tipo de Asistente: las que alcanzan las
@@ -81,10 +81,38 @@ export async function asistentesAsignadosAlPaciente(db, prestadoraId, pacienteId
   return [...new Set((data || []).map((f) => f.guardias?.asistente_id).filter(Boolean))];
 }
 
-export async function hayAsistenteAsignadoQuePuedeDarLaVia(db, prestadoraId, pacienteId, viaAdministracionId) {
+// ¿Hay Asistentes asignados, y alguno puede dar esta vía? Son dos preguntas y no una: sin nadie
+// asignado la indicación se acepta igual; con asignados y ninguno que pueda, sólo se rechaza.
+export async function laViaFrenteALosAsignados(db, prestadoraId, pacienteId, viaAdministracionId) {
   const asignados = await asistentesAsignadosAlPaciente(db, prestadoraId, pacienteId);
   for (const asistenteId of asignados) {
-    if (await asistentePuedeDarLaVia(db, prestadoraId, asistenteId, viaAdministracionId)) return true;
+    if (await asistentePuedeDarLaVia(db, prestadoraId, asistenteId, viaAdministracionId)) {
+      return { hayAsignados: true, alguienPuede: true };
+    }
   }
-  return false;
+  return { hayAsignados: asignados.length > 0, alguienPuede: false };
+}
+
+// Sólo se rechaza cuando hay asignados y ninguno puede. Sin asignados todavía no hay a quién culpar.
+export function laViaBloquea({ hayAsignados, alguienPuede }) {
+  return hayAsignados && !alguienPuede;
+}
+
+// Qué tipos de Asistente pueden dar esta vía en esta Prestadora: los activos —generales o
+// propios— a los que ninguna prohibición les alcanza esa vía. Sin vía, ninguno.
+export async function tiposQuePuedenDarLaVia(db, prestadoraId, viaAdministracionId) {
+  if (!viaAdministracionId) return [];
+  const { data: tipos, error } = await db
+    .from('tipos_asistente')
+    .select('id, clave, nombre, prestadora_id, orden')
+    .eq('activo', true)
+    .or(`prestadora_id.is.null,prestadora_id.eq.${prestadoraId}`)
+    .order('orden');
+  if (error || !tipos) return [];
+  const pueden = [];
+  for (const tipo of tipos) {
+    const prohibidas = await viasProhibidasAlTipo(db, prestadoraId, tipo.id);
+    if (prohibidas && !prohibidas.has(viaAdministracionId)) pueden.push(tipo);
+  }
+  return pueden;
 }

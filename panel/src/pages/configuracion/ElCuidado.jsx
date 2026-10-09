@@ -20,7 +20,7 @@ import '../../styles/molde-paginas.css';
 import './elcuidado.css';
 
 /* Las reglas del cuidado en sí: cómo se arman los Servicios y sus guardias, qué
-   signos vitales se toman, y qué matrícula hace falta para cada vía de medicación. */
+   signos vitales se toman. */
 export function ConfiguracionCuidado() {
   return (
     <div className="molde-pila">
@@ -28,7 +28,6 @@ export function ConfiguracionCuidado() {
       <ElCalculoDeCandidatos />
       <TurnosSinCubrirTab />
       <TabVitales />
-      <TabMatriculaMedicacion />
     </div>
   );
 }
@@ -1125,162 +1124,5 @@ function TabVitales() {
         </table>
       </EstadoLista>
     </section>
-  );
-}
-
-function TabMatriculaMedicacion() {
-  const { t } = useLocale();
-  const prestadoraId = usePrestadoraActual();
-  const confirmarDestructivo = useConfirmarDestructivo();
-  const [filas, setFilas] = useState([]);
-  const [estado, setEstado] = useState('cargando');
-  const [error, setError] = useState(null);
-  const [guardandoId, setGuardandoId] = useState(null);
-  const [nuevaVia, setNuevaVia] = useState('');
-  const [nuevoTipo, setNuevoTipo] = useState('');
-  const [agregando, setAgregando] = useState(false);
-
-  const recargar = useCallback(async () => {
-    setEstado('cargando');
-    setError(null);
-    const { data, error: errorConsulta } = await supabase
-      .from('configuracion_matricula_via_medicacion')
-      .select('*')
-      .eq('prestadora_id', prestadoraId)
-      .order('via_administracion');
-    if (errorConsulta) {
-      setError(mensajeDeError(errorConsulta, t));
-      setEstado('error');
-      return;
-    }
-    setFilas(data ?? []);
-    setEstado('listo');
-  }, [prestadoraId, t]);
-
-  useEffect(() => {
-    recargar();
-  }, [recargar]);
-
-  function set(id, valor) {
-    setFilas((fs) => fs.map((f) => (f.id === id ? { ...f, tipo_matricula_requerida: valor } : f)));
-  }
-
-  async function guardar(fila) {
-    setGuardandoId(fila.id);
-    setError(null);
-    const { error: errorUpdate } = await supabase
-      .from('configuracion_matricula_via_medicacion')
-      .update({ tipo_matricula_requerida: fila.tipo_matricula_requerida || null, updated_at: new Date().toISOString() })
-      .eq('id', fila.id);
-    setGuardandoId(null);
-    if (errorUpdate) {
-      setError(t.comun.error_generico);
-      return;
-    }
-    recargar();
-  }
-
-  async function agregar() {
-    setAgregando(true);
-    setError(null);
-    const { error: errorInsert } = await supabase.from('configuracion_matricula_via_medicacion').insert({
-      prestadora_id: prestadoraId,
-      via_administracion: nuevaVia,
-      tipo_matricula_requerida: nuevoTipo || null,
-    });
-    setAgregando(false);
-    if (errorInsert) {
-      setError(t.comun.error_generico);
-      return;
-    }
-    setNuevaVia('');
-    setNuevoTipo('');
-    recargar();
-  }
-
-  async function borrar(fila) {
-    if (!(await confirmarDestructivo(t.configuracion.matricula_medicacion_confirmar_borrar))) return;
-    setGuardandoId(fila.id);
-    setError(null);
-    const { error: errorDelete } = await supabase.from('configuracion_matricula_via_medicacion').delete().eq('id', fila.id);
-    setGuardandoId(null);
-    if (errorDelete) {
-      setError(t.comun.error_generico);
-      return;
-    }
-    recargar();
-  }
-
-  return (
-    <>
-    <section className="panel-tarjeta">
-      <div className="panel-tarjeta-titulo">
-        <h2>{t.configuracion.matricula_medicacion_titulo}</h2>
-      </div>
-      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
-      <EstadoLista estado={estado} error={error} vacio={estado === 'listo' && filas.length === 0} recargar={recargar} mensajeVacio={t.configuracion.matricula_medicacion_vacio}>
-        <table className="panel-tabla">
-          <thead>
-            <tr>
-              <th>{t.configuracion.matricula_medicacion_col_via}</th>
-              <th>{t.configuracion.matricula_medicacion_col_tipo}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filas.map((fila) => (
-              <tr key={fila.id}>
-                <td>{fila.via_administracion}</td>
-                <td>
-                  <input
-                    type="text"
-                    value={fila.tipo_matricula_requerida || ''}
-                    placeholder={t.configuracion.matricula_medicacion_sin_requisito}
-                    onChange={(e) => set(fila.id, e.target.value)}
-                    aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.matricula_medicacion_col_tipo, nombre: fila.via_administracion })}
-                  />
-                </td>
-                <td>
-                  <div className="cuidado-acciones-fila">
-                    <Button variant="secondary" onClick={() => guardar(fila)} disabled={guardandoId === fila.id}>
-                      {guardandoId === fila.id ? t.comun.guardando : t.comun.guardar}
-                    </Button>
-                    <Button variant="secondary" onClick={() => borrar(fila)} disabled={guardandoId === fila.id}>{t.comun.borrar}</Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </EstadoLista>
-    </section>
-
-    <section className="panel-tarjeta">
-      <div className="panel-tarjeta-titulo">
-        <h2>{t.configuracion.matricula_medicacion_nueva}</h2>
-      </div>
-      <div className="molde-formgrid">
-        <FormField
-          label={t.configuracion.matricula_medicacion_col_via}
-          name="nueva_via"
-          value={nuevaVia}
-          onChange={(e) => setNuevaVia(e.target.value)}
-          placeholder={t.configuracion.matricula_medicacion_via_placeholder}
-        />
-        <FormField
-          label={t.configuracion.matricula_medicacion_col_tipo}
-          name="nuevo_tipo"
-          value={nuevoTipo}
-          onChange={(e) => setNuevoTipo(e.target.value)}
-          placeholder={t.configuracion.matricula_medicacion_sin_requisito}
-        />
-      </div>
-      <div className="molde-acciones">
-        <Button onClick={agregar} disabled={agregando || !nuevaVia}>
-          {agregando ? t.comun.guardando : t.configuracion.matricula_medicacion_agregar}
-        </Button>
-      </div>
-    </section>
-    </>
   );
 }

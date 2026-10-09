@@ -1173,14 +1173,14 @@ VALUES ('9e000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-0000000
 -- que atiende a ese Paciente.
 INSERT INTO public.indicaciones_medicacion
   (id, prestadora_id, paciente_id, cliente_id, medicamento, dosis, frecuencia,
-   via_administracion, fecha_desde, estado, solicitado_por)
+   via_administracion, via_administracion_id, fecha_desde, estado, solicitado_por)
 VALUES ('9f000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
         '50000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001',
-        'Enalapril', '10 mg', 'cada 12 horas', 'oral', current_date - 30, 'aceptada',
+        'Enalapril', '10 mg', 'cada 12 horas', 'oral', (SELECT id FROM public.vias_administracion WHERE clave = 'oral'), current_date - 30, 'aceptada',
         '40000000-0000-4000-8000-000000000001'),
        ('9f000000-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222',
         '60000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000004',
-        'Metformina', '850 mg', 'cada 24 horas', 'oral', current_date - 15, 'aceptada',
+        'Metformina', '850 mg', 'cada 24 horas', 'oral', (SELECT id FROM public.vias_administracion WHERE clave = 'oral'), current_date - 15, 'aceptada',
         '50000000-0000-4000-8000-000000000004');
 
 -- Rangos de referencia de los signos vitales, por Paciente.
@@ -1213,13 +1213,6 @@ INSERT INTO public.configuracion_visibilidad_app (prestadora_id, clave, visible)
 VALUES ('11111111-1111-4111-8111-111111111111', 'cliente_ubicacion_en_vivo', true),
        ('22222222-2222-4222-8222-222222222222', 'cliente_ubicacion_en_vivo', false);
 
--- Qué matrícula exige cada vía de administración.
-INSERT INTO public.configuracion_matricula_via_medicacion
-  (id, prestadora_id, via_administracion, tipo_matricula_requerida)
-VALUES ('a3000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
-        'intravenosa', 'enfermeria'),
-       ('a3000000-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222',
-        'intravenosa', 'enfermeria');
 
 
 -- ----------------------------------------------------------------------------

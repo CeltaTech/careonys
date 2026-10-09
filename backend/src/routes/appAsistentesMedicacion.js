@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
 import { clienteDelPedido, supabase } from '../db/connection.js';
-import { medicacionVigenteDelPaciente, tipoMatriculaRequerida, asistenteTieneMatriculaVigente } from '../utils/medicacionIndicaciones.js';
+import { medicacionVigenteDelPaciente, asistentePuedeDarLaVia } from '../utils/medicacionIndicaciones.js';
 import { asistenteAtiendeAlPaciente } from '../utils/pacientesDeGuardia.js';
 import { exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
@@ -31,16 +31,15 @@ appAsistentesMedicacionRouter.get('/:pacienteId', requiereRolAsistente, exigeVis
     req.params.pacienteId,
   );
 
-  // La vía y las matrículas propias las lee el Asistente con su credencial.
+  // Las prohibiciones de su tipo las lee el Asistente con su credencial.
   const db = clienteDelPedido(req);
   const ordenes = [];
   for (const indicacion of indicaciones) {
-    const tipoRequerido = await tipoMatriculaRequerida(db, req.usuarioAsistente.prestadoraId, indicacion.via_administracion);
-    const habilitado = await asistenteTieneMatriculaVigente(
+    const habilitado = await asistentePuedeDarLaVia(
       db,
       req.usuarioAsistente.prestadoraId,
       req.usuarioAsistente.asistenteId,
-      tipoRequerido
+      indicacion.via_administracion_id
     );
     if (habilitado) ordenes.push(indicacion);
   }

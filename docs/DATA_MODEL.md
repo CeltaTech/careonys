@@ -548,21 +548,20 @@ dato histórico ya cargado en esta columna no se borró, solo dejó de ser la fu
 
 ## Módulo: Indicaciones de medicación y habilitaciones (pendiente #62, cerrado 2026-07-25)
 
-DDL completo, RLS y seed de advertencia legal en `supabase/migrations/`. Resumen de las 3
-tablas nuevas:
+DDL completo, RLS y seed de advertencia legal en `supabase/migrations/`. Resumen:
 
 - **`indicaciones_medicacion`** — una fila por indicación de medicación solicitada por el
   Cliente (medicamento/dosis/frecuencia/vía de administración/prescripción opcional/vigencia
   desde-hasta), con `estado` (`pendiente`/`aceptada`/`rechazada`/`finalizada`) revisado por el
-  Panel. `via_administracion` es catálogo abierto (TEXT, sin CHECK) — Regla 1, `CLAUDE.md` §7.
+  Panel. La vía es `via_administracion_id`, una fila de `vias_administracion`.
 - **`habilitaciones_asistente`** — matrícula o título profesional vigente de un Asistente
   (`tipo` catálogo abierto, ej. `enfermero_matriculado`), con vigencia desde-hasta y archivo
   de evidencia opcional. Revocar no borra la fila: cierra `vigente_hasta` (mismo patrón que
   `autorizaciones_monitoreo_paciente.vigente`).
-- **`configuracion_habilitacion_via_medicacion`** — mapeo por Prestadora de
-  vía de administración → tipo de habilitación requerida (nullable = sin requisito),
-  configurable libremente desde el Panel (Configuración → Habilitación de medicación), nunca
-  hardcodeado.
+- **Qué vía puede dar cada tipo de Asistente** sale de sus prohibiciones:
+  `tareas_tipo_asistente` con clase `prohibida` y las vías que alcanza cada una en
+  `vias_que_alcanza_la_prohibicion`. Una vía que ninguna prohibición del tipo alcanza, la
+  puede dar.
 
 Bucket privado `prescripciones-medicacion` (sin políticas de storage para roles no
 service_role, mismo patrón que `autorizaciones-monitoreo`). Advertencia legal asociada:

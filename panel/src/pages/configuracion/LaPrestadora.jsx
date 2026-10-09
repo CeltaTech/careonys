@@ -15,6 +15,7 @@ import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { FacturacionClientesTab } from './FacturacionClientesTab';
 import { ConsentimientoPagadorTab } from './ConsentimientoPagadorTab';
+import { ConsentimientoMedicacionTab } from './ConsentimientoMedicacionTab';
 import { TabLugares } from './LosLugares';
 import { LaMoneda } from './LaMoneda';
 import { ElSoftwareDeAfuera } from './ElSoftwareDeAfuera';
@@ -35,6 +36,7 @@ export function ConfiguracionPrestadora() {
       <FacturacionClientesTab />
       <ElSoftwareDeAfuera />
       <ConsentimientoPagadorTab />
+      <ConsentimientoMedicacionTab />
       {tieneModalidad('intermediacion') && <TabPasarela />}
     </div>
   );

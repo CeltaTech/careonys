@@ -2232,6 +2232,36 @@ button.panel-kpi-card[aria-pressed='true'] {
   line-height: 1.6;
 }
 
+/* La indicación de medicación que se imprime para firmar: los datos debajo del texto y, al pie,
+   tres renglones en blanco para firma, aclaración y fecha. */
+.documento-datos {
+  margin: 1.5rem 0 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1rem;
+  color: var(--texto-principal);
+  font-size: 0.9rem;
+}
+.documento-datos dt {
+  font-weight: 600;
+}
+.documento-datos dd {
+  margin: 0;
+}
+.documento-firmas {
+  margin-top: 4rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+  color: var(--texto-principal);
+  font-size: 0.85rem;
+  text-align: center;
+}
+.documento-firmas div {
+  border-top: 1px solid var(--texto-principal);
+  padding-top: 0.35rem;
+}
+
 /* ---------- Etapa 4: el Estado actual, la grilla nueva y el panel de cobertura ----------
 
    Todo lo de acá abajo usa únicamente tokens de `styles/variables.css` (regla 6 de

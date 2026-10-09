@@ -185,6 +185,14 @@ const ESTADO_POR_MOTIVO = {
   via_de_telefono_no_disponible: 409,
   clave_actual_incorrecta: 400,
   no_puede_habilitar: 403,
+  // La medicación que carga el Cliente. Firmar sin una llave guardada en el teléfono es 409: se
+  // arregla guardándola, y la pantalla lo ofrece. La firma que no cierra es 401, igual que la
+  // entrada. Aceptar sin la firma, o con nadie asignado que pueda dar esa vía, es 409: el pedido
+  // está bien armado y choca con el estado de las cosas.
+  sin_llave: 409,
+  firma_no_sirve: 401,
+  falta_la_firma: 409,
+  ningun_asignado_puede_dar_la_via: 409,
   // Y el postulante que llega a deshora no recibe ningún error: llegar temprano no es equivocarse.
   // La puerta pública le contesta bien, con el cuándo y con en qué momento está, y la pantalla le
   // dice si tiene que volver más tarde o si la entrevista ya pasó.

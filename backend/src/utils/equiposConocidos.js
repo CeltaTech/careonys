@@ -7,7 +7,7 @@ import { cerrarTodasLasSesionesDe } from './claveActual.js';
 // ningún dato del aparato. Lo único que hay es una marca al azar que emite el backend, que el
 // navegador conserva, y de la que acá queda la huella.
 //
-// POR QUÉ NO ALCANZA `llaves_de_dispositivo`. Ésa es la llave de huella o cara de las dos
+// POR QUÉ NO ALCANZA `llaves_de_dispositivo`. Ésa es la llave de huella o rostro de las dos
 // aplicaciones de teléfono, y el Panel no la tiene. Además prueba quién es; ésta sólo contesta si
 // desde este aparato ya se entró antes.
 //

@@ -87,6 +87,13 @@ import {
   MARCADORES,
   MODELO_DE_FABRICA,
 } from '../utils/documentoConsentimientoPagador.js';
+import {
+  IDIOMAS_DEL_TEXTO as IDIOMAS_DEL_TEXTO_DE_MEDICACION,
+  MARCADORES as MARCADORES_DE_MEDICACION,
+  MODELO_DE_FABRICA as MODELO_DE_MEDICACION,
+  cuerpoVigente as cuerpoDeMedicacionVigente,
+  pideLaFirma as pideLaFirmaDeLaMedicacion,
+} from '../utils/consentimientoMedicacion.js';
 
 export const panelConfiguracionRouter = Router();
 
@@ -2449,6 +2456,82 @@ panelConfiguracionRouter.put('/consentimiento-pagador', async (req, res) => {
     }, { onConflict: 'prestadora_id,idioma' });
   if (error) return responderError(res, error);
   res.json({ ok: true, esDelProducto: false });
+});
+
+// ============================================================================
+// La medicación que carga el Cliente: si se le pide la firma, y el texto que acepta
+// ============================================================================
+//
+// Mismo criterio que el texto del Pagador: el producto trae un modelo y la Prestadora lo adopta,
+// lo cambia o vuelve a él. Acá hay un texto por idioma, porque lo lee el Cliente en el suyo.
+
+panelConfiguracionRouter.get('/consentimiento-medicacion', async (req, res) => {
+  try {
+    const db = clienteDelPedido(req);
+    const prestadoraId = await prestadoraVisible(db);
+    const [pideFirma, ...vigentes] = await Promise.all([
+      pideLaFirmaDeLaMedicacion({ prestadoraId, db }),
+      ...IDIOMAS_DEL_TEXTO_DE_MEDICACION.map((idioma) => cuerpoDeMedicacionVigente({ prestadoraId, idioma, db })),
+    ]);
+    res.json({
+      pideFirma,
+      textos: Object.fromEntries(vigentes.map((v) => [v.idioma, v])),
+      marcadores: MARCADORES_DE_MEDICACION,
+      modeloDelProducto: MODELO_DE_MEDICACION,
+    });
+  } catch (error) {
+    responderError(res, error);
+  }
+});
+
+panelConfiguracionRouter.put('/consentimiento-medicacion', async (req, res) => {
+  const { cuerpo, idioma } = req.body || {};
+  if (!IDIOMAS_DEL_TEXTO_DE_MEDICACION.includes(idioma)) return responderError(res, new ErrorConMotivo('faltan_datos'));
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+
+  // Vaciarlo es volver al modelo del producto, igual que el del Pagador.
+  if (!String(cuerpo ?? '').trim()) {
+    const { error } = await db
+      .from('textos_consentimiento_medicacion')
+      .delete()
+      .eq('prestadora_id', prestadoraId)
+      .eq('idioma', idioma);
+    if (error) return responderError(res, error);
+    return res.json({ ok: true, esDelProducto: true });
+  }
+
+  const { error } = await db
+    .from('textos_consentimiento_medicacion')
+    .upsert({
+      prestadora_id: prestadoraId,
+      idioma,
+      cuerpo,
+      actualizado_por: req.usuarioPanel.id,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'prestadora_id,idioma' });
+  if (error) return responderError(res, error);
+  res.json({ ok: true, esDelProducto: false });
+});
+
+panelConfiguracionRouter.put('/consentimiento-medicacion/pide-firma', async (req, res) => {
+  const { pideFirma } = req.body || {};
+  if (typeof pideFirma !== 'boolean') return responderError(res, new ErrorConMotivo('faltan_datos'));
+  const db = clienteDelPedido(req);
+  const prestadoraId = await prestadoraVisibleOContestar(db, res);
+  if (!prestadoraId) return;
+
+  const { error } = await db
+    .from('configuracion_medicacion')
+    .upsert({
+      prestadora_id: prestadoraId,
+      pide_firma_del_cliente: pideFirma,
+      actualizado_por: req.usuarioPanel.id,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'prestadora_id' });
+  if (error) return responderError(res, error);
+  res.json({ ok: true });
 });
 
 // Qué papeles exige cada financiador. El producto no siembra ninguno: eso lo sabe la Prestadora

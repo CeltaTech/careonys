@@ -61,7 +61,22 @@ function DatosDelPaciente({ paciente, mostrarNombre, t }) {
   const [reportes, setReportes] = useState(null);
   const [mostrandoReportes, setMostrandoReportes] = useState(false);
   const [ordenesMedicacion, setOrdenesMedicacion] = useState(null);
+  const [abriendoReceta, setAbriendoReceta] = useState(null);
+  const [errorReceta, setErrorReceta] = useState('');
   const seVe = useSeVe();
+
+  async function verReceta(indicacionId) {
+    setErrorReceta('');
+    setAbriendoReceta(indicacionId);
+    try {
+      const { url } = await api.recetaDeLaOrden(paciente.id, indicacionId);
+      window.open(url, '_blank', 'noopener');
+    } catch (fallo) {
+      setErrorReceta(mensajeDeError(fallo, t, 'receta'));
+    } finally {
+      setAbriendoReceta(null);
+    }
+  }
 
   async function verReportesAnteriores() {
     if (mostrandoReportes) {
@@ -116,6 +131,7 @@ function DatosDelPaciente({ paciente, mostrarNombre, t }) {
       {veMedicacion && (
         <div>
           <h3>{t.medicacion.titulo}</h3>
+          {errorReceta && <div className="alert alert-error" role="alert">{errorReceta}</div>}
           {ordenesMedicacion === null && <div className="estado-cargando" role="status">{t.comun.cargando}</div>}
           {ordenesMedicacion?.length === 0 && (
             <div className="estado-vacio" role="status">{t.medicacion.sin_ordenes}</div>
@@ -123,11 +139,17 @@ function DatosDelPaciente({ paciente, mostrarNombre, t }) {
           {ordenesMedicacion?.map((o) => (
             <div key={o.id} className="guardia-card">
               <div className="guardia-card-detalle">
-                <strong>{o.medicamento}</strong> · {o.dosis} · {o.frecuencia} ({o.via_administracion})
+                <strong>{o.medicamento}</strong> · {o.dosis} · {o.frecuencia}
+                {o.via_clave ? ` (${t.medicacion.vias[o.via_clave]})` : ''}
               </div>
               <div className="guardia-card-detalle">
                 {t.medicacion.desde}: {o.fecha_desde} {o.fecha_hasta ? `— ${t.medicacion.hasta}: ${o.fecha_hasta}` : ''}
               </div>
+              {o.tiene_receta && (
+                <button type="button" className="btn" onClick={() => verReceta(o.id)} disabled={abriendoReceta === o.id}>
+                  {t.medicacion.ver_receta}
+                </button>
+              )}
             </div>
           ))}
         </div>

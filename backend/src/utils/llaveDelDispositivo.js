@@ -1,5 +1,5 @@
 /**
- * La llave que guarda el propio teléfono, y que se abre con huella o con cara.
+ * La llave que guarda el propio teléfono, y que se abre con huella o con el rostro.
  * =========================================================================
  *
  * QUÉ RESUELVE. Hoy para entrar a cualquiera de las dos aplicaciones hay que escribir el correo y
@@ -7,11 +7,11 @@
  * eso molesta es conocido: contraseñas cortas, contraseñas repetidas, y la sesión que nunca se
  * cierra para no tener que volver a escribirla. La llave del dispositivo saca el teclado del medio.
  *
- * NINGUNA HUELLA NI NINGUNA CARA ENTRA AL PRODUCTO, Y ESO NO ES UN DETALLE. El teléfono guarda una
+ * NINGUNA HUELLA NI NINGÚN ROSTRO ENTRA AL PRODUCTO, Y ESO NO ES UN DETALLE. El teléfono guarda una
  * llave privada adentro de su propio hardware y la destraba mirando a quien la usa. Lo que llega
  * acá es la mitad pública de esa llave y una firma hecha con la otra mitad: nunca la huella, nunca
- * la cara, nunca nada que pueda reconstruirlas. Por eso esto **no es tratamiento de dato
- * biométrico** y no arrastra la decisión legal que sí arrastra comparar dos fotos de una cara
+ * el rostro, nunca nada que pueda reconstruirlas. Por eso esto **no es tratamiento de dato
+ * biométrico** y no arrastra la decisión legal que sí arrastra comparar dos fotos de un rostro
  * (`docs/PLAN_HASTA_PRODUCCION.md`, sección «Reclutamiento»). El nombre de lo que se guarda dice
  * eso mismo: es la llave de un dispositivo, y la huella es apenas cómo el dueño la abre.
  *

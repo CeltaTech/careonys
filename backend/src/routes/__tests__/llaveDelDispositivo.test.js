@@ -129,7 +129,10 @@ process.env.PWA_CLIENTES_URL = 'https://clientes.ejemplo.com';
 // en el momento en que se importa, y con la dirección que haya en ese instante.
 const { default: express } = await import('express');
 await import('express-async-errors');
-const { llaveDelDispositivoRouter, routerDeLlavesConSesion } = await import('../llaveDelDispositivo.js');
+const { llaveDelDispositivoRouter, routerDeLlavesConSesion, comprobarFirma } = await import(
+  '../llaveDelDispositivo.js'
+);
+const { supabase } = await import('../../db/connection.js');
 const { requiereRolAsistente } = await import('../../middleware/requiereRolAsistente.js');
 const { requiereRolCliente } = await import('../../middleware/requiereRolCliente.js');
 const { olvidarPedidos } = await import('../../middleware/topeDePedidos.js');
@@ -661,5 +664,87 @@ describe('sin sesión no se administra nada', () => {
     respuestas.set('GET /rest/v1/usuarios', [{ rol: 'cliente', prestadora_id: PRESTADORA }]);
     const { estado } = await misLlaves();
     assert.equal(estado, 403);
+  });
+});
+
+describe('firmar con la llave del teléfono', () => {
+  const pedirDesafioDeFirma = () => pedir('POST', '/api/app-asistentes/llaves/firma/desafio', {});
+
+  it('sin ninguna llave viva contesta sin_llave y no guarda ningún desafío', async () => {
+    llavesEnLaBase = llavesEnLaBase.filter((l) => l.usuario_id !== USUARIO || l.revocada_en);
+    const { estado, cuerpo } = await pedirDesafioDeFirma();
+    assert.equal(estado, 409);
+    assert.equal(cuerpo.motivo, 'sin_llave');
+    assert.equal(llamadas.filter((l) => l.clave === 'POST /rest/v1/desafios_de_llave').length, 0);
+  });
+
+  it('con llave pide la huella o el rostro y ofrece sólo la llave viva de esa persona', async () => {
+    const { estado, cuerpo } = await pedirDesafioDeFirma();
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.userVerification, 'required');
+    assert.deepEqual(cuerpo.allowCredentials.map((c) => c.id), [CREDENCIAL_VIVA]);
+
+    const guardado = llamadas.find((l) => l.clave === 'POST /rest/v1/desafios_de_llave');
+    assert.equal(guardado.cuerpo.para, 'firma');
+    assert.equal(guardado.cuerpo.usuario_id, USUARIO);
+    assert.equal(guardado.cuerpo.prestadora_id, PRESTADORA);
+  });
+
+  describe('la comprobación antes de guardar lo firmado', () => {
+    const persona = { id: USUARIO, prestadoraId: PRESTADORA };
+    let firmante;
+
+    beforeEach(() => {
+      firmante = llaveQueFirma();
+      llavesEnLaBase[0] = llaveDePrueba({ clave_publica: firmante.clavePublica });
+      desafiosEnLaBase = [
+        desafioDePrueba({ desafio: 'firma-propia', para: 'firma', usuario_id: USUARIO }),
+        desafioDePrueba({ desafio: 'firma-ajena', para: 'firma', usuario_id: OTRA_PERSONA }),
+        desafioDePrueba({ desafio: 'de-entrada', para: 'entrada' }),
+      ];
+      respuestas.set('GET /rest/v1/desafios_de_llave', ({ url }) =>
+        filasQuePasanLosFiltros(url, desafiosEnLaBase)
+      );
+      respuestas.set('PATCH /rest/v1/desafios_de_llave', ({ url }) =>
+        filasQuePasanLosFiltros(url, desafiosEnLaBase).map((fila) => ({ id: fila.id }))
+      );
+      respuestas.set('PATCH /rest/v1/llaves_de_dispositivo', ({ url }) =>
+        filasQuePasanLosFiltros(url, llavesEnLaBase).map((fila) => ({ id: fila.id }))
+      );
+    });
+
+    const comprobar = (respuesta, quien = persona) =>
+      comprobarFirma({ db: supabase, rol: 'asistente', persona: quien, respuesta });
+    const rechaza = (promesa) =>
+      assert.rejects(promesa, (err) => err.motivo === 'firma_no_sirve');
+
+    it('acepta una firma de verdad sobre un desafío de firma de esa persona', async () => {
+      await comprobar(firmante.firmar('firma-propia'));
+      const contador = llamadas.find(
+        (l) => l.clave === 'PATCH /rest/v1/llaves_de_dispositivo' && l.cuerpo?.contador !== undefined
+      );
+      assert.equal(contador.cuerpo.contador, 4);
+    });
+
+    it('sin respuesta del teléfono no hay firma', async () => {
+      await rechaza(comprobar(undefined));
+    });
+
+    it('la llave de otra persona no firma por esta', async () => {
+      await rechaza(comprobar(firmante.firmar('firma-propia'), { id: OTRA_PERSONA, prestadoraId: PRESTADORA }));
+    });
+
+    it('una llave revocada no firma', async () => {
+      llavesEnLaBase[0] = llaveDePrueba({ clave_publica: firmante.clavePublica, revocada_en: '2026-09-10T10:00:00Z' });
+      await rechaza(comprobar(firmante.firmar('firma-propia')));
+    });
+
+    it('el desafío pedido por otra persona no sirve', async () => {
+      await rechaza(comprobar(firmante.firmar('firma-ajena')));
+    });
+
+    it('un desafío de entrada no sirve para firmar', async () => {
+      await rechaza(comprobar(firmante.firmar('de-entrada')));
+    });
   });
 });

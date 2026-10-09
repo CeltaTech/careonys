@@ -90,16 +90,3 @@ export async function registrarAdvertencia({ prestadoraId, usuarioId, funcionCla
 
   return advertencia;
 }
-
-/**
- * Resuelve la advertencia que corresponde y la deja registrada, todo junto.
- *
- * Se llama en el mismo pedido que activa la función. Si la jurisdicción no tiene documento
- * para esa función no registra nada y devuelve `null`: no hubo advertencia que dar.
- *
- * @returns `{ jurisdiccion, texto }` si se avisó, `null` si no había nada que avisar.
- */
-export async function registrarAdvertenciaAlActivar({ prestadoraId, usuarioId, funcionClave }) {
-  const advertencia = await advertenciaVigente(prestadoraId, funcionClave);
-  return registrarAdvertencia({ prestadoraId, usuarioId, funcionClave, advertencia });
-}

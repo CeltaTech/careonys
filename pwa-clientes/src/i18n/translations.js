@@ -525,7 +525,7 @@ export const T = {
       aceptar_con_firma_holografa: 'Aceptar con firma hológrafa',
       aviso_firma_holografa: 'La conformidad con esta indicación se prestará mediante firma hológrafa (manuscrita) en soporte papel.',
       falta_la_firma: 'Falta la firma',
-      ver_papel_firmado: 'Ver el papel firmado',
+      ver_papel_firmado: 'Ver documento firmado',
       quienes_pueden_dar_la_via: 'Esta medicación, por vía {via}, la puede administrar: {tipos}.',
       motivo_ningun_asignado_puede_dar_la_via: 'No hay un Asistente asignado habilitado para administrar medicación por esta vía.',
       vias: {
@@ -1012,7 +1012,7 @@ export const T = {
       aceptar_con_firma_holografa: 'Accept with handwritten signature',
       aviso_firma_holografa: 'Consent to this instruction will be given by handwritten signature on paper.',
       falta_la_firma: 'Signature pending',
-      ver_papel_firmado: 'View the signed paper',
+      ver_papel_firmado: 'View signed document',
       quienes_pueden_dar_la_via: 'This medication, by the {via} route, can be administered by: {tipos}.',
       motivo_ningun_asignado_puede_dar_la_via: 'No assigned Assistant is authorized to administer medication via this route.',
       vias: {
@@ -1489,7 +1489,7 @@ export const T = {
       aceptar_con_firma_holografa: 'Aceitar com assinatura hológrafa',
       aviso_firma_holografa: 'A concordância com esta indicação será prestada mediante assinatura hológrafa (manuscrita) em suporte papel.',
       falta_la_firma: 'Falta a assinatura',
-      ver_papel_firmado: 'Ver o papel assinado',
+      ver_papel_firmado: 'Ver documento assinado',
       quienes_pueden_dar_la_via: 'Esta medicação, por via {via}, pode ser administrada por: {tipos}.',
       motivo_ningun_asignado_puede_dar_la_via: 'Não há um Assistente designado habilitado para administrar medicação por esta via.',
       vias: {

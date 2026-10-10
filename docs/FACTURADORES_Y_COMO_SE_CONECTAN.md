@@ -70,8 +70,7 @@ resto del producto no se entera de por cuál entró.
 ## 4. Lo que falta, y no depende de cuál se elija
 
 **Falta que los dos lados sepan que están hablando de la misma persona.** Hoy, lo que sale hacia el
-software de facturación es: de quién es la factura, a quién se le reclama por nombre, de qué
-período, en qué moneda, por cuánto y para cuándo
+software de facturación es: de qué Cliente es la factura, de qué período, en qué moneda, por cuánto y para cuándo
 (`panel/src/lib/intercambioDeFacturacion.js`, `COLUMNAS_QUE_SALEN`).
 
 Con el archivo a mano eso alcanza, porque quien lo carga reconoce a sus clientes por el nombre.

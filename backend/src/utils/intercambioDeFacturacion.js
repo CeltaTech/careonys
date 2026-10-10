@@ -8,8 +8,8 @@
 // escrito una sola vez cuáles son, así las tres vías entran por la misma puerta y agregar la
 // tercera no obliga a rehacer las otras dos.
 //
-// QUÉ SALE. Por cada factura que todavía no tiene comprobante anotado: de quién es, a quién se le
-// reclama, de qué período, en qué moneda, por cuánto y para cuándo.
+// QUÉ SALE. Por cada factura que todavía no tiene comprobante anotado: de quién es, de qué
+// período, en qué moneda, por cuánto y para cuándo.
 //
 // QUÉ VUELVE. Los tres datos de siempre —cómo se llama el comprobante, qué número tiene y cuánto
 // quedó adeudando el Cliente— más el vencimiento, si quien emitió informa uno distinto del
@@ -31,8 +31,6 @@ import { loQueEstaMalEnLoFacturado } from './facturacionDeClientes.js';
 export const COLUMNAS_QUE_SALEN = [
   'factura_id',
   'cliente',
-  'pagador_tipo',
-  'pagador_nombre',
   'periodo',
   'moneda',
   'monto_a_facturar',

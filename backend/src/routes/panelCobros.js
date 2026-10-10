@@ -408,25 +408,10 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
   // Clientes y los Pacientes pendientes de conformidad, que esta tanda facturaba. Se decide aparte.
   const { data: clientes, error: errorClientes } = await supabase
     .from('clientes')
-    .select(`id, prestadora_id, dias_hasta_el_vencimiento, pagador_tipo, pagador_persona_id, pacientes(id, ${FICHA_NOMBRE})`)
+    .select(`id, prestadora_id, dias_hasta_el_vencimiento, pacientes(id, ${FICHA_NOMBRE})`)
     .eq('prestadora_id', prestadoraId)
     .is('deleted_at', null);
   if (errorClientes) return responderError(res, errorClientes);
-
-  // Quién paga es una Ficha del Directorio de Personas. Su nombre se busca acá una sola vez, y de
-  // acá sale la copia que se lleva cada factura. Con la maestra: la base abre `personas` a quien
-  // tiene la acción de ver el Directorio, y generar las facturas no la pide.
-  const pagadorIds = [...new Set((clientes || []).map((f) => f.pagador_persona_id).filter(Boolean))];
-  const nombresDePagadores = new Map();
-  if (pagadorIds.length > 0) {
-    const { data: pagadores, error: errorPagadores } = await supabase
-      .from('personas')
-      .select('id, nombre_visible')
-      .eq('prestadora_id', prestadoraId)
-      .in('id', pagadorIds);
-    if (errorPagadores) return responderError(res, errorPagadores);
-    for (const p of pagadores || []) nombresDePagadores.set(p.id, p.nombre_visible);
-  }
 
   const pacientes = conSusFichas((clientes || []).flatMap((f) => f.pacientes || []));
   const pacienteIds = pacientes.map((p) => p.id);
@@ -524,12 +509,6 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
         // un cambio de día entre los dos daría un vencimiento corrido.
         fecha_emision: hoy,
         fecha_vencimiento: vencimiento,
-        // A quién se le reclama se copia de la Ficha del cliente el día que se genera, y no se
-        // mira más: una factura emitida no cambia, así que si mañana ese Cliente pasa a pagar por
-        // sí misma, las viejas tienen que seguir diciendo a quién se le reclamaron. Vacío en la
-        // Ficha del cliente se guarda vacío, que quiere decir el Cliente.
-        pagador_tipo: cliente.pagador_tipo ?? null,
-        pagador_nombre: nombresDePagadores.get(cliente.pagador_persona_id) ?? null,
       })
       .select('id, prestadora_id')
       .single();
@@ -684,8 +663,6 @@ panelCobrosRouter.get('/para-facturar', requiereRolPanel, async (req, res) => {
   res.json((data || []).map((s) => ({
     factura_id: s.factura_id,
     cliente: nombres.get(s.cliente_id) ?? '',
-    pagador_tipo: s.pagador_tipo ?? '',
-    pagador_nombre: s.pagador_nombre ?? '',
     periodo: String(s.periodo).slice(0, 7),
     moneda: s.moneda,
     monto_a_facturar: s.monto_total,

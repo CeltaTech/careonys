@@ -21,7 +21,7 @@ import { FICHA_NOMBRE } from './fichaDelPaciente.js';
 // único, así que esto no es la única defensa.
 //
 // LOS PAPELES SON APARTE DE LA FIRMA. El consentimiento lo firma quien paga; los papeles los exige
-// el financiador, y qué papeles son lo sabe cada Prestadora. Que falte uno no invalida la firma, y
+// el Pagador, y qué papeles son lo sabe cada Prestadora. Que falte uno no invalida la firma, y
 // que esté la firma no completa los papeles: son dos cosas y la pantalla muestra las dos.
 
 const DEPOSITO = 'documentos-pagador';
@@ -46,7 +46,7 @@ export async function cuerpoVigente({ prestadoraId, idioma = IDIOMA_DEL_DOCUMENT
 async function clienteConSuPagador({ clienteId, prestadoraId }) {
   const { data: cliente } = await supabase
     .from('clientes')
-    .select('id, prestadora_id, pagador_persona_id, financiador_tipo')
+    .select('id, prestadora_id, pagador_persona_id, pagador_tipo')
     .eq('prestadora_id', prestadoraId)
     .eq('id', clienteId)
     .maybeSingle();
@@ -243,7 +243,7 @@ export async function estadoDelPagador({ clienteId, prestadoraId }) {
       .eq('cliente_id', clienteId)
       .in('estado', ['pendiente_firma', 'cerrado'])
       .order('created_at', { ascending: false }),
-    papelesDelPagador({ clienteId, prestadoraId, financiadorTipo: cliente.financiador_tipo }),
+    papelesDelPagador({ clienteId, prestadoraId, pagadorTipo: cliente.pagador_tipo }),
   ]);
 
   const pendiente = (consentimientos ?? []).find((fila) => fila.estado === 'pendiente_firma') ?? null;
@@ -278,12 +278,12 @@ export async function estadoDelPagador({ clienteId, prestadoraId }) {
   };
 }
 
-// Qué papeles exige este financiador y cuáles están. Se devuelve el catálogo entero, tenga o no
+// Qué papeles exige este Pagador y cuáles están. Se devuelve el catálogo entero, tenga o no
 // archivo cargado cada uno: lo que falta sólo se ve si el renglón aparece igual.
-export async function papelesDelPagador({ clienteId, prestadoraId, financiadorTipo }) {
+export async function papelesDelPagador({ clienteId, prestadoraId, pagadorTipo }) {
   let query = supabase
     .from('tipos_documento_pagador')
-    .select('id, nombre, financiador_tipo, requiere_vencimiento')
+    .select('id, nombre, pagador_tipo, requiere_vencimiento')
     .eq('prestadora_id', prestadoraId)
     .eq('activo', true)
     .order('nombre', { ascending: true });
@@ -291,9 +291,9 @@ export async function papelesDelPagador({ clienteId, prestadoraId, financiadorTi
   // Nulo en el catálogo quiere decir «a todos». Cuando la contratación todavía no dice quién
   // financia, se muestran nada más que esos: exigir los de una obra social sin saber si la hay
   // sería inventar un requisito.
-  query = financiadorTipo
-    ? query.or(`financiador_tipo.is.null,financiador_tipo.eq.${financiadorTipo}`)
-    : query.is('financiador_tipo', null);
+  query = pagadorTipo
+    ? query.or(`pagador_tipo.is.null,pagador_tipo.eq.${pagadorTipo}`)
+    : query.is('pagador_tipo', null);
 
   const { data: tipos, error } = await query;
   if (error) throw new Error(error.message);
@@ -312,7 +312,7 @@ export async function papelesDelPagador({ clienteId, prestadoraId, financiadorTi
     return {
       tipoId: tipo.id,
       nombre: tipo.nombre,
-      financiadorTipo: tipo.financiador_tipo,
+      pagadorTipo: tipo.pagador_tipo,
       requiereVencimiento: tipo.requiere_vencimiento,
       cargado: Boolean(cargado?.archivo_url),
       documentoId: cargado?.id ?? null,

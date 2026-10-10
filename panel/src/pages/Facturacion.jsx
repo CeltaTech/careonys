@@ -10,7 +10,7 @@ import { formatearImporte } from '../lib/dinero';
 import { hoyISO } from '../lib/horarios';
 import { loQueEstaMalEnElCobro } from '../lib/cobrosDeCliente';
 import {
-  FINANCIADORES,
+  TIPOS_DE_PAGADOR,
   SENTIDOS_POSIBLES,
   loQueEstaMalEnLaCorreccion,
   loQueEstaMalEnLoFacturado,
@@ -112,10 +112,10 @@ function textoDeComprobante(saldo) {
 
 /* A quién se le reclama esta factura. Vacío quiere decir el Cliente, que es lo corriente; cuando
    paga otro, lo que sirve saber es su nombre, y el tipo queda de respaldo si no se cargó. */
-function textoDeFinanciador(saldo, t) {
-  const tipo = saldo.financiador_tipo || FINANCIADORES.CLIENTE;
-  if (tipo === FINANCIADORES.CLIENTE) return t.facturacion.financiador_cliente;
-  return saldo.financiador_nombre || traducirValor(t.facturacion, `financiador_${tipo}`);
+function textoDePagador(saldo, t) {
+  const tipo = saldo.pagador_tipo || TIPOS_DE_PAGADOR.CLIENTE;
+  if (tipo === TIPOS_DE_PAGADOR.CLIENTE) return t.facturacion.pagador_tipo_cliente;
+  return saldo.pagador_nombre || traducirValor(t.facturacion, `pagador_tipo_${tipo}`);
 }
 
 /** Un momento guardado, mostrado como fecha nada más: la hora no agrega nada acá. */
@@ -457,7 +457,7 @@ export function Facturacion() {
           <thead>
             <tr>
               <th>{t.facturacion.col_cliente}</th>
-              <th>{t.facturacion.col_financiador}</th>
+              <th>{t.facturacion.col_pagador}</th>
               <th>{t.facturacion.col_a_cobrar}</th>
               <th>{t.facturacion.col_comprobante}</th>
               <th>{t.facturacion.col_cobrado}</th>
@@ -474,7 +474,7 @@ export function Facturacion() {
             {saldos.map((s) => (
               <tr key={s.factura_id}>
                 <td>{s.cliente_nombre || '—'}</td>
-                <td>{textoDeFinanciador(s, t)}</td>
+                <td>{textoDePagador(s, t)}</td>
                 <td>{formatearImporte(s.monto_a_cobrar, s.moneda, locale)}</td>
                 <td>{textoDeComprobante(s)}</td>
                 <td>{formatearImporte(s.cobrado, s.moneda, locale)}</td>

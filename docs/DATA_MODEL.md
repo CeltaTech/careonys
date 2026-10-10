@@ -494,7 +494,7 @@ CREATE TABLE clientes (
   legajo_id UUID NOT NULL,              -- la Ficha de Persona de quien encabeza el Cliente
   numero_cliente BIGINT NOT NULL,       -- único por Prestadora
   plan TEXT DEFAULT 'directo',
-  financiador_tipo TEXT,                -- 'cliente' | 'obra_social' | 'otro'
+  pagador_tipo TEXT,                   -- 'cliente' | 'obra_social' | 'otro'
   pagador_legajo_id UUID,
   importacion_id UUID REFERENCES importaciones_prestadora(id),
   pendiente_conformidad BOOLEAN NOT NULL DEFAULT FALSE,

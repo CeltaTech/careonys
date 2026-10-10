@@ -522,7 +522,7 @@ panelCuentasRouter.get('/cliente/:clienteId/pagador/consentimiento/:consentimien
   res.json({ url: data.signedUrl });
 });
 
-// Los papeles que exige el financiador. Son aparte de la firma: que falte uno no invalida lo
+// Los papeles que exige el Pagador. Son aparte de la firma: que falte uno no invalida lo
 // firmado, y que esté la firma no completa los papeles.
 panelCuentasRouter.post(
   '/cliente/:clienteId/pagador/papel/:tipoDocumentoId',

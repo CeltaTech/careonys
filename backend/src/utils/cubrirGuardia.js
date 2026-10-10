@@ -17,7 +17,7 @@
    POR QUÉ ESTO DEJA BIEN LO QUE SE PAGA. La liquidación agrupa por Asistente y paga con el valor
    de cada uno —`routes/panelLiquidaciones.js`—. Con la guardia a nombre del sustituto, la cobra
    él, con su propio valor, que puede no ser el del titular; y al titular ese turno no le suma
-   nada. Lo que se informa al financiador tampoco cambia: sigue siendo un turno, contado una vez.
+   nada. Lo que se informa al Pagador tampoco cambia: sigue siendo un turno, contado una vez.
 
    POR QUÉ ESTO NO ABRE UN INCIDENTE DE RELEVO, y `marcarAusente.js` sí. Ese incidente existe para
    avisar que alguien quedó esperando que lo releven. Acá no quedó nadie esperando: la guardia se

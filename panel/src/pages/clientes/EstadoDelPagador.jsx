@@ -408,7 +408,7 @@ function RegistrarFirmaDelPagadorModal({ clienteId, consentimientoId, onClose, o
   );
 }
 
-/* Cargar uno de los papeles que exige el financiador. Acá el archivo sí es obligatorio: el papel
+/* Cargar uno de los papeles que exige el Pagador. Acá el archivo sí es obligatorio: el papel
    es justamente el archivo, y anotar que existe sin tenerlo no documenta nada. */
 function CargarPapelDelPagadorModal({ clienteId, papel, onClose, onCargado }) {
   const { t } = useLocale();
@@ -448,7 +448,7 @@ function CargarPapelDelPagadorModal({ clienteId, papel, onClose, onCargado }) {
         <div className="molde-formgrid">
           <FormField
             label={textos.papel_archivo}
-            name="papel_del_financiador"
+            name="papel_del_pagador"
             type="file"
             accept="application/pdf,image/jpeg,image/png"
             onChange={(e) => setArchivo(e.target.files?.[0] || null)}

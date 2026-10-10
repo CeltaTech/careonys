@@ -128,13 +128,13 @@ export function rutaDelComprobante({ prestadoraId, clienteId }) {
 }
 
 /** A quién se le puede reclamar una factura. Son identificadores guardados: no se renombran. */
-export const FINANCIADORES = {
+export const TIPOS_DE_PAGADOR = {
   CLIENTE: 'cliente',
   OBRA_SOCIAL: 'obra_social',
   OTRO: 'otro',
 };
 
-export const FINANCIADORES_POSIBLES = Object.values(FINANCIADORES);
+export const TIPOS_DE_PAGADOR_POSIBLES = Object.values(TIPOS_DE_PAGADOR);
 
 /**
  * Lo más corto que puede medir el secreto con el que ese otro software firma sus avisos.

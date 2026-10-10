@@ -10,6 +10,7 @@ import { Alert } from '../components/ui/Alert';
 import { HiloComunicacion } from '../components/comunicacion/HiloComunicacion';
 import { HiloWhatsapp } from '../components/comunicacion/HiloWhatsapp';
 import { mensajeDeError } from '../lib/errores';
+import { RenglonesDeEmergencias } from '../components/emergencias/RenglonesDeEmergencias';
 import '../styles/molde-paginas.css';
 import './comunicacion.css';
 
@@ -147,6 +148,7 @@ export function Comunicacion() {
 
       <div className="molde-detalle">
         <section className="panel-tarjeta molde-lista">
+          <RenglonesDeEmergencias />
           <div className="comunicacion-filtros">
             <select value={f.canal} onChange={(e) => set('canal', e.target.value)} aria-label={t.comun.filtro_canal}>
               <option value="todos">{t.comunicacion.filtro_todos_los_canales}</option>

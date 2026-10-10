@@ -30,6 +30,7 @@ import { soloSinResolver } from '../lib/alertaSinResolver';
 import { MODALIDAD, MODALIDADES, contarPorModalidad } from '../lib/modalidades';
 import { clienteDelServicio, contactosDeClientes } from '../lib/clienteDelServicio';
 import { mensajeDeError } from '../lib/errores';
+import { RenglonesDeEmergencias } from '../components/emergencias/RenglonesDeEmergencias';
 import './EstadoActual.css';
 import { FICHA_NOMBRE, conSusFichas } from '../lib/fichaDelPaciente';
 
@@ -529,6 +530,7 @@ export function EstadoActual() {
             </Link>
           }
         >
+          <RenglonesDeEmergencias />
           <FilaAlerta
             a="/guardias"
             titulo={tx.guardias_sin_cobertura}

@@ -12,6 +12,7 @@ import { mensajeDeError } from '../lib/errores';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 import { useAlarmasTomadas } from '../hooks/useAlarmasTomadas';
 import { LaTomoYo } from '../components/continuidad/LaTomoYo';
+import { useEmergenciasSinAtender } from '../context/EmergenciasSinAtenderContext';
 import { TIPOS_DE_ALARMA } from '../lib/alarmasTomadas';
 import './hojaDeTarjetas.css';
 import './seguimientoDeGuardias.css';
@@ -40,6 +41,7 @@ export function EmergenciasEnGuardia() {
   const [soloSinAtender, setSoloSinAtender] = useState(true);
   const [seleccionada, setSeleccionada] = useState(null);
   const tomas = useAlarmasTomadas();
+  const { recargar: recargarSinAtender } = useEmergenciasSinAtender();
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -144,6 +146,7 @@ export function EmergenciasEnGuardia() {
             setSeleccionada(null);
             recargar();
             tomas.recargar();
+            recargarSinAtender();
           }}
         />
       )}

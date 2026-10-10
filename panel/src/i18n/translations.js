@@ -2893,6 +2893,7 @@ export const T = {
       campo_nota: 'Qué se hizo (opcional)',
       marcar_atendida: 'Marcar atendida',
       atendida_el: 'Atendida el',
+      nadie_la_atiende: 'Nadie la está atendiendo',
     },
     contenidos: {
       titulo: 'Contenido para Clientes',
@@ -5885,6 +5886,7 @@ export const T = {
       campo_nota: 'What was done (optional)',
       marcar_atendida: 'Mark as attended',
       atendida_el: 'Attended on',
+      nadie_la_atiende: 'No one is handling it',
     },
     contenidos: {
       titulo: 'Content for Clients',
@@ -8868,6 +8870,7 @@ export const T = {
       campo_nota: 'O que foi feito (opcional)',
       marcar_atendida: 'Marcar como atendida',
       atendida_el: 'Atendida em',
+      nadie_la_atiende: 'Ninguém está atendendo',
     },
     contenidos: {
       titulo: 'Conteúdo para Clientes',

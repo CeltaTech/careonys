@@ -7,6 +7,7 @@ import { usePermisos } from '../../context/PermisosContext';
 import { useModalidades } from '../../context/ModalidadesContext';
 import { usePedidosDeCodigo } from '../../context/PedidosDeCodigoContext';
 import { useTelefonosEsperando } from '../../context/TelefonosEsperandoContext';
+import { useEmergenciasSinAtender } from '../../context/EmergenciasSinAtenderContext';
 import { esAdminOSuperior } from '../../lib/roles';
 import { MODALIDAD } from '../../lib/modalidades';
 import { supabase } from '../../lib/supabaseClient';
@@ -127,6 +128,7 @@ export function Layout() {
   // esperando, y no puede depender de que a alguien se le ocurra abrir esa sección.
   const { pedidos: pedidosDeCodigo } = usePedidosDeCodigo();
   const { cuentas: telefonosEsperando } = useTelefonosEsperando();
+  const { emergencias: emergenciasSinAtender } = useEmergenciasSinAtender();
   const ubicacion = useLocation();
   const navegar = useNavigate();
 
@@ -188,7 +190,7 @@ export function Layout() {
       texto: t.nav.sec_guardias,
       enlaces: [
         { a: '/guardias', texto: t.nav.guardias, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
-        { a: '/emergencias', texto: t.nav.emergencias, ver: hayPadron },
+        { a: '/emergencias', texto: t.nav.emergencias, ver: hayPadron, contador: emergenciasSinAtender.length },
         { a: '/pase-de-guardia', texto: t.nav.pase_de_guardia, ver: hayPadron, contador: pedidosDeCodigo.length },
         { a: '/continuidad', texto: t.nav.continuidad, ver: hayPadron },
         { a: '/verificacion-guardias', texto: t.nav.verificacion_guardias, ver: hayPadron },

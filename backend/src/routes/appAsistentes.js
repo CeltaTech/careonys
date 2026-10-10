@@ -56,6 +56,7 @@ import { notificarCoordinador } from '../utils/whatsapp.js';
 import { devolverAlTitular } from '../utils/coberturaDeAusencia.js';
 import { hoyISO } from '../utils/horarios.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
+import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import { cuentasDeLasFilas } from '../utils/cuentaDeLaFila.js';
 import {
@@ -1181,6 +1182,10 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
   if (error) {
     return responderError(res, error);
   }
+
+  // El Panel la cuenta en el menú y la muestra en Situación operativa y en Comunicación: que
+  // aparezca en el momento, sin esperar a que la pantalla vuelva a preguntar.
+  empujar(guardia.prestadora_id, ASUNTOS.EMERGENCIAS_SIN_ATENDER);
 
   // Igual que el aviso de demora: se guarda primero y se avisa después, adentro de un `try`. Si el
   // envío falla, la fila queda con `ultima_notificacion_at` en blanco y nunca se le devuelve un

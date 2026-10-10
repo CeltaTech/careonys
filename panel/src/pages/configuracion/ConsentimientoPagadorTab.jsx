@@ -298,7 +298,7 @@ function NuevoPapelDelPagador({ onClose, onCreado }) {
         method: 'POST',
         body: JSON.stringify({
           nombre,
-          pagador_tipo: Pagador || null,
+          pagador_tipo: tipoDePagador || null,
           requiere_vencimiento: requiereVencimiento,
         }),
       });

@@ -19,4 +19,7 @@ export const ASUNTOS = {
 
   /** Cambió la lista de números cargados que esperan que alguien los habilite. */
   TELEFONOS_ESPERANDO_HABILITACION: 'telefonos_esperando_habilitacion',
+
+  /** Entró una emergencia desde una guardia, o se marcó atendida una que estaba esperando. */
+  EMERGENCIAS_SIN_ATENDER: 'emergencias_sin_atender',
 };

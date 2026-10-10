@@ -5,6 +5,7 @@ import { clienteDelPedido, supabase } from '../db/connection.js';
 import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
 import { anotarConsultaAHce, origenDelPedido } from '../utils/registroDeConsultas.js';
 import { FICHA_NOMBRE, conSusFichas } from '../utils/fichaDelPaciente.js';
+import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
 
 /* Las emergencias avisadas desde una guardia, del lado del Panel.
    ==============================================================
@@ -183,5 +184,6 @@ panelEmergenciasRouter.post('/:id/atencion', requiereRolPanel, exigirOrganizacio
     return responderError(res, error, error.code === '42501' ? 403 : 500);
   }
 
+  empujar(req.usuarioPanel.prestadoraId, ASUNTOS.EMERGENCIAS_SIN_ATENDER);
   res.json({ ok: true });
 });

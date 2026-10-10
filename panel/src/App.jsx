@@ -10,6 +10,7 @@ import { ConfirmacionProvider } from './context/ConfirmacionContext';
 import { AdvertenciaLegalProvider } from './context/AdvertenciaLegalContext';
 import { PedidosDeCodigoProvider } from './context/PedidosDeCodigoContext';
 import { TelefonosEsperandoProvider } from './context/TelefonosEsperandoContext';
+import { EmergenciasSinAtenderProvider } from './context/EmergenciasSinAtenderContext';
 import { PuestaEnMarchaProvider } from './context/PuestaEnMarchaContext';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
 import { ROLES_ADMINISTRACION, ROLES_PANEL } from './lib/roles';
@@ -90,6 +91,9 @@ function App() {
                 motivo: es una tarea pendiente de la Prestadora que se está mirando ahora, y el
                 contador del menú la consulta desde cualquier pantalla. */}
             <TelefonosEsperandoProvider>
+            {/* Las emergencias sin atender. Va acá por el mismo motivo: el menú las cuenta desde
+                cualquier pantalla, y Situación operativa y Comunicación las muestran. */}
+            <EmergenciasSinAtenderProvider>
             {/* Los umbrales del semáforo de guardia. Van acá por el mismo motivo que los pedidos:
                 son los de la Prestadora en la que se está trabajando ahora. */}
             <UmbralesProvider>
@@ -268,6 +272,7 @@ function App() {
             </AdvertenciaLegalProvider>
             </PuestaEnMarchaProvider>
             </UmbralesProvider>
+            </EmergenciasSinAtenderProvider>
             </TelefonosEsperandoProvider>
             </PedidosDeCodigoProvider>
           </ConfirmacionProvider>

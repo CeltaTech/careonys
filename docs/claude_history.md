@@ -497,3 +497,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** asignar quién coordina un Servicio decía quién responde, y no podía filtrar lo que cada Coordinadora ve.
 - **Qué dice ahora:** cada Coordinadora ve sólo los Clientes y Servicios que tiene asignados. Una emergencia habilita a todas a ver lo necesario para resolverla, hasta que la asignada retoma el problema. El Pagador, la facturación y la lista de precios quedan fuera de su rol y se habilitan con un permiso.
 - **Motivo:** el Desarrollador pidió que cada rol vea sólo la información mínima para hacer su trabajo: «una coordinadora no necesita ver nada de los clientes que no le fueron asignados».
+
+## La factura nombra al Cliente y deja de copiar al Pagador
+
+- **Qué decía antes:** cada factura se llevaba copiado a quién se le reclamaba —tipo y nombre del Pagador— el día que se generaba.
+- **Qué dice ahora:** la factura nombra al Cliente. A quién se le reclama vive en la Ficha del cliente y se lo consulta ahí; la factura no lo copia, y el archivo que sale hacia el software de facturación tampoco lo lleva.
+- **Motivo:** el Desarrollador fijó que «las facturas deben nombrar al cliente, no al pagador». Además, la copia era un nombre guardado dos veces, y conservar los datos del día de la emisión es asunto de quien emite el comprobante, no de Careonys.

@@ -408,7 +408,7 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
   // Clientes y los Pacientes pendientes de conformidad, que esta tanda facturaba. Se decide aparte.
   const { data: clientes, error: errorClientes } = await supabase
     .from('clientes')
-    .select(`id, prestadora_id, dias_hasta_el_vencimiento, financiador_tipo, pagador_persona_id, pacientes(id, ${FICHA_NOMBRE})`)
+    .select(`id, prestadora_id, dias_hasta_el_vencimiento, pagador_tipo, pagador_persona_id, pacientes(id, ${FICHA_NOMBRE})`)
     .eq('prestadora_id', prestadoraId)
     .is('deleted_at', null);
   if (errorClientes) return responderError(res, errorClientes);
@@ -528,8 +528,8 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
         // mira más: una factura emitida no cambia, así que si mañana ese Cliente pasa a pagar por
         // sí misma, las viejas tienen que seguir diciendo a quién se le reclamaron. Vacío en la
         // Ficha del cliente se guarda vacío, que quiere decir el Cliente.
-        financiador_tipo: cliente.financiador_tipo ?? null,
-        financiador_nombre: nombresDePagadores.get(cliente.pagador_persona_id) ?? null,
+        pagador_tipo: cliente.pagador_tipo ?? null,
+        pagador_nombre: nombresDePagadores.get(cliente.pagador_persona_id) ?? null,
       })
       .select('id, prestadora_id')
       .single();
@@ -684,8 +684,8 @@ panelCobrosRouter.get('/para-facturar', requiereRolPanel, async (req, res) => {
   res.json((data || []).map((s) => ({
     factura_id: s.factura_id,
     cliente: nombres.get(s.cliente_id) ?? '',
-    financiador_tipo: s.financiador_tipo ?? '',
-    financiador_nombre: s.financiador_nombre ?? '',
+    pagador_tipo: s.pagador_tipo ?? '',
+    pagador_nombre: s.pagador_nombre ?? '',
     periodo: String(s.periodo).slice(0, 7),
     moneda: s.moneda,
     monto_a_facturar: s.monto_total,

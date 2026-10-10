@@ -33,8 +33,8 @@ import {
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
 import { llamarApiPanel } from '../../lib/apiPanel';
 import {
-  FINANCIADORES,
-  FINANCIADORES_POSIBLES,
+  TIPOS_DE_PAGADOR,
+  TIPOS_DE_PAGADOR_POSIBLES,
   PLAZO_MAXIMO_EN_DIAS,
   plazoQueSePuedeGuardar,
 } from '../../lib/facturacionDeClientes';
@@ -116,7 +116,7 @@ export function ClienteDetalle() {
     const { data, error: errorConsulta } = await supabase
       .from('clientes')
       .select(
-        `id, plan, dias_hasta_el_vencimiento, financiador_tipo, pagador_persona_id, prestadora_id, created_at, pacientes(*, ${FICHA_COMPLETA}), ` +
+        `id, plan, dias_hasta_el_vencimiento, pagador_tipo, pagador_persona_id, prestadora_id, created_at, pacientes(*, ${FICHA_COMPLETA}), ` +
           // Quién es el Cliente se lee de la Ficha de Persona de quien contrata, en el Directorio de
           // Personas, y se corrige allá.
           'personas!clientes_contratante_de_la_misma_prestadora(nombre_visible, email, lugares!personas_lugar_fkey(nombre), ' +
@@ -138,7 +138,7 @@ export function ClienteDetalle() {
         data.dias_hasta_el_vencimiento === null || data.dias_hasta_el_vencimiento === undefined
           ? ''
           : String(data.dias_hasta_el_vencimiento),
-      financiador_tipo: data.financiador_tipo || '',
+      pagador_tipo: data.pagador_tipo || '',
       pagador_persona_id: data.pagador_persona_id || null,
     });
     setEstado('listo');
@@ -219,7 +219,7 @@ export function ClienteDetalle() {
     const {
       plan,
       dias_hasta_el_vencimiento: dias,
-      financiador_tipo: financiadorTipo,
+      pagador_tipo: pagadorTipo,
       pagador_persona_id: pagadorPersonaId,
     } = formContacto;
     // Vacío es «no se acordó nada distinto», y entonces rige el plazo de la Prestadora. No es
@@ -230,7 +230,7 @@ export function ClienteDetalle() {
       setErrorContacto(t.clientes.plazo_fuera_de_borde);
       return;
     }
-    // El financiador vacío se guarda vacío y no como «cliente»: los dos quieren decir lo mismo,
+    // El Pagador vacío se guarda vacío y no como «cliente»: los dos quieren decir lo mismo,
     // y guardar uno de los dos sería inventar una decisión que nadie tomó.
     //
     // La Ficha de Persona del Pagador se guarda siempre, pague quien pague. Cuando paga el
@@ -240,7 +240,7 @@ export function ClienteDetalle() {
     const { error: errorCliente } = await supabase.from('clientes').update({
       plan,
       dias_hasta_el_vencimiento: plazo.valor,
-      financiador_tipo: financiadorTipo || null,
+      pagador_tipo: pagadorTipo || null,
       pagador_persona_id: pagadorPersonaId || null,
     }).eq('id', cliente.id);
     setGuardandoContacto(false);
@@ -345,16 +345,16 @@ export function ClienteDetalle() {
                     es lo corriente. Cada factura se lleva este dato copiado el día que se genera, así
                     que cambiarlo acá no toca ninguna factura ya emitida. */}
                 <FormField
-                  label={t.clientes.financiador}
-                  name="financiador_tipo"
+                  label={t.clientes.pagador_tipo}
+                  name="pagador_tipo"
                   type="select"
-                  value={formContacto.financiador_tipo}
-                  onChange={(e) => setCampoContacto('financiador_tipo', e.target.value)}
+                  value={formContacto.pagador_tipo}
+                  onChange={(e) => setCampoContacto('pagador_tipo', e.target.value)}
                   disabled={!puedeEditarCliente}
                 >
-                  <option value="">{t.clientes.financiador_cliente}</option>
-                  {FINANCIADORES_POSIBLES.filter((f) => f !== FINANCIADORES.CLIENTE).map((f) => (
-                    <option key={f} value={f}>{traducirValor(t.clientes, `financiador_${f}`)}</option>
+                  <option value="">{t.clientes.pagador_tipo_cliente}</option>
+                  {TIPOS_DE_PAGADOR_POSIBLES.filter((f) => f !== TIPOS_DE_PAGADOR.CLIENTE).map((f) => (
+                    <option key={f} value={f}>{traducirValor(t.clientes, `pagador_tipo_${f}`)}</option>
                   ))}
                 </FormField>
                 {/* Quién paga se elige del Directorio de Personas y no se teclea: un nombre escrito a

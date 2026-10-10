@@ -414,11 +414,11 @@ VALUES
 
 -- Quien contrata es una Ficha del Directorio (`contratante_persona_id`): ahí están su nombre, su
 -- correo, su localidad y sus teléfonos, y `clientes` no los repite. Quién paga es otra Ficha, y
--- `financiador_tipo` dice de qué clase es. Vacío en los dos quiere decir que paga el Cliente por
+-- `pagador_tipo` dice de qué clase es. Vacío en los dos quiere decir que paga el Cliente por
 -- sí mismo, que es el caso del primero. El tercero muestra el caso que da sentido al Directorio:
 -- paga Ramiro Pérez, que es una Ficha más y no un nombre tecleado. Teresa Ibáñez queda en el
 -- Directorio sin ser Cliente de nadie: es un contacto todavía sin presupuesto aprobado.
-INSERT INTO public.clientes (id, usuario_id, prestadora_id, contratante_persona_id, plan, financiador_tipo, pagador_persona_id) VALUES
+INSERT INTO public.clientes (id, usuario_id, prestadora_id, contratante_persona_id, plan, pagador_tipo, pagador_persona_id) VALUES
   ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001',
    '11111111-1111-4111-8111-111111111111', 'c0000000-0000-4000-8000-000000000004', 'directo', NULL, NULL),
   ('40000000-0000-4000-8000-000000000002', '40000000-0000-4000-8000-000000000002',

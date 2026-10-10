@@ -4,7 +4,7 @@ import { traducirValor } from '../../i18n/valores';
 import { con } from '../../lib/textos';
 import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import { llamarApiConfiguracion as llamarApi } from '../../lib/apiConfiguracion';
-import { FINANCIADORES, FINANCIADORES_POSIBLES } from '../../lib/facturacionDeClientes';
+import { TIPOS_DE_PAGADOR, TIPOS_DE_PAGADOR_POSIBLES } from '../../lib/facturacionDeClientes';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
@@ -146,9 +146,9 @@ function ElTextoQueFirma() {
   );
 }
 
-/* Qué papeles exige cada financiador.
+/* Qué papeles exige cada Pagador.
 
-   El producto no siembra ninguno: eso lo sabe la Prestadora que trabaja con ese financiador, y
+   El producto no siembra ninguno: eso lo sabe la Prestadora que trabaja con ese Pagador, y
    adivinarlo desde acá sería inventar un requisito que nadie pidió. Vacío quiere decir «no se
    exige ninguno», y es una respuesta válida. */
 function LosPapelesQueSePiden() {
@@ -227,7 +227,7 @@ function LosPapelesQueSePiden() {
           <thead>
             <tr>
               <th>{t.configuracion.papeles_pagador_col_nombre}</th>
-              <th>{t.configuracion.papeles_pagador_col_financiador}</th>
+              <th>{t.configuracion.papeles_pagador_col_pagador}</th>
               <th>{t.configuracion.papeles_pagador_col_vencimiento}</th>
               <th>{t.configuracion.papeles_pagador_col_activo}</th>
               <th></th>
@@ -238,9 +238,9 @@ function LosPapelesQueSePiden() {
               <tr key={tipo.id}>
                 <td><b>{tipo.nombre}</b></td>
                 <td>
-                  {tipo.financiador_tipo
-                    ? traducirValor(t.clientes, `financiador_${tipo.financiador_tipo}`)
-                    : t.configuracion.papeles_pagador_todos_los_financiadores}
+                  {tipo.pagador_tipo
+                    ? traducirValor(t.clientes, `pagador_tipo_${tipo.pagador_tipo}`)
+                    : t.configuracion.papeles_pagador_todos}
                 </td>
                 <td>{tipo.requiere_vencimiento ? t.comun.si : t.comun.no}</td>
                 <td>
@@ -285,7 +285,7 @@ function NuevoPapelDelPagador({ onClose, onCreado }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
   const [nombre, setNombre] = useState('');
-  const [financiador, setFinanciador] = useState('');
+  const [tipoDePagador, setTipoDePagador] = useState('');
   const [requiereVencimiento, setRequiereVencimiento] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
@@ -298,7 +298,7 @@ function NuevoPapelDelPagador({ onClose, onCreado }) {
         method: 'POST',
         body: JSON.stringify({
           nombre,
-          financiador_tipo: financiador || null,
+          pagador_tipo: Pagador || null,
           requiere_vencimiento: requiereVencimiento,
         }),
       });
@@ -325,19 +325,19 @@ function NuevoPapelDelPagador({ onClose, onCreado }) {
             required
           />
 
-          {/* Vacío es «a todos los financiadores», y así se guarda. El Cliente no aparece en la
-              lista: cuando paga el Cliente no hay financiador a quien pedirle papeles. */}
+          {/* Vacío es «a todos los Pagadores», y así se guarda. El Cliente no aparece en la
+              lista: cuando paga el Cliente no hay Pagador a quien pedirle papeles. */}
           <FormField
-            label={t.configuracion.papeles_pagador_col_financiador}
-            name="papel_pagador_financiador"
+            label={t.configuracion.papeles_pagador_col_pagador}
+            name="papel_pagador_tipo"
             type="select"
-            value={financiador}
-            onChange={(e) => setFinanciador(e.target.value)}
+            value={tipoDePagador}
+            onChange={(e) => setTipoDePagador(e.target.value)}
           >
-            <option value="">{t.configuracion.papeles_pagador_todos_los_financiadores}</option>
-            {FINANCIADORES_POSIBLES.filter((f) => f !== FINANCIADORES.CLIENTE).map((f) => (
+            <option value="">{t.configuracion.papeles_pagador_todos}</option>
+            {TIPOS_DE_PAGADOR_POSIBLES.filter((f) => f !== TIPOS_DE_PAGADOR.CLIENTE).map((f) => (
               <option key={f} value={f}>
-                {traducirValor(t.clientes, `financiador_${f}`)}
+                {traducirValor(t.clientes, `pagador_tipo_${f}`)}
               </option>
             ))}
           </FormField>

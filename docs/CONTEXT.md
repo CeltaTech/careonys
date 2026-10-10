@@ -294,7 +294,7 @@ datos lleva cada pedido y qué contesta— está en `docs/CONEXION_CON_SOFTWARE_
 alguien que no conoce Careonys por dentro.
 
 **A quién se le reclama no es siempre el Cliente.** Puede ser una obra social o un tercero, y eso
-vive en la Ficha del cliente (`financiador_tipo`, `financiador_nombre`); vacío quiere decir el
+vive en la Ficha del cliente (`pagador_tipo` y la Ficha de Persona del Pagador); vacío quiere decir el
 Cliente, que es lo corriente. Cada factura se lleva ese dato **copiado el día que se genera**,
 porque una factura emitida no cambia: si mañana ese Cliente pasa a pagar por sí misma, las viejas
 tienen que seguir diciendo a quién se le reclamaron. El nombre es texto y no se interpreta — el

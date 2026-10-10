@@ -31,8 +31,8 @@ import { loQueEstaMalEnLoFacturado } from './facturacionDeClientes.js';
 export const COLUMNAS_QUE_SALEN = [
   'factura_id',
   'cliente',
-  'financiador_tipo',
-  'financiador_nombre',
+  'pagador_tipo',
+  'pagador_nombre',
   'periodo',
   'moneda',
   'monto_a_facturar',

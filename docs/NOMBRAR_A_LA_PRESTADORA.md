@@ -1874,7 +1874,7 @@ quedan mandando a un lugar que ya no se llama así.
 **Ruta:** `configuracion.papeles_pagador_explicacion`
 
 **Texto de hoy:**
-> Qué papeles exige cada financiador. Lo sabe esta Prestadora, que trabaja con él, así que no
+> Qué papeles exige cada Pagador. Lo sabe esta Prestadora, que trabaja con él, así que no
 > viene nada cargado. Sin ninguno cargado no se pide ninguno, y eso también es una respuesta
 > válida.
 

@@ -2534,20 +2534,20 @@ panelConfiguracionRouter.put('/consentimiento-medicacion/pide-firma', async (req
   res.json({ ok: true });
 });
 
-// Qué papeles exige cada financiador. El producto no siembra ninguno: eso lo sabe la Prestadora
-// que trabaja con ese financiador, y adivinarlo desde acá sería inventar un requisito que nadie
+// Qué papeles exige cada Pagador. El producto no siembra ninguno: eso lo sabe la Prestadora
+// que trabaja con ese Pagador, y adivinarlo desde acá sería inventar un requisito que nadie
 // pidió. Vacío quiere decir «no se exige ninguno», y es una respuesta válida.
 panelConfiguracionRouter.get('/documentos-pagador', async (req, res) => {
   const { data, error } = await clienteDelPedido(req)
     .from('tipos_documento_pagador')
-    .select('id, nombre, financiador_tipo, requiere_vencimiento, activo')
+    .select('id, nombre, pagador_tipo, requiere_vencimiento, activo')
     .order('nombre');
   if (error) return responderError(res, error);
   res.json({ tipos: data ?? [] });
 });
 
 panelConfiguracionRouter.post('/documentos-pagador', async (req, res) => {
-  const { nombre, financiador_tipo, requiere_vencimiento } = req.body || {};
+  const { nombre, pagador_tipo, requiere_vencimiento } = req.body || {};
   if (!String(nombre ?? '').trim()) {
     return res.status(400).json({ error: 'Falta el nombre del documento' });
   }
@@ -2560,8 +2560,8 @@ panelConfiguracionRouter.post('/documentos-pagador', async (req, res) => {
     .insert({
       prestadora_id: prestadoraId,
       nombre: String(nombre).trim(),
-      // Vacío es «a todos los financiadores», y así se guarda: nulo.
-      financiador_tipo: financiador_tipo || null,
+      // Vacío es «a todos los Pagadores», y así se guarda: nulo.
+      pagador_tipo: pagador_tipo || null,
       requiere_vencimiento: Boolean(requiere_vencimiento),
     })
     .select('id')
@@ -2571,11 +2571,11 @@ panelConfiguracionRouter.post('/documentos-pagador', async (req, res) => {
 });
 
 panelConfiguracionRouter.patch('/documentos-pagador/:id', async (req, res) => {
-  const { nombre, financiador_tipo, requiere_vencimiento, activo } = req.body || {};
+  const { nombre, pagador_tipo, requiere_vencimiento, activo } = req.body || {};
 
   const cambios = {};
   if (nombre !== undefined) cambios.nombre = String(nombre).trim();
-  if (financiador_tipo !== undefined) cambios.financiador_tipo = financiador_tipo || null;
+  if (pagador_tipo !== undefined) cambios.pagador_tipo = pagador_tipo || null;
   if (requiere_vencimiento !== undefined) cambios.requiere_vencimiento = Boolean(requiere_vencimiento);
   if (activo !== undefined) cambios.activo = Boolean(activo);
 

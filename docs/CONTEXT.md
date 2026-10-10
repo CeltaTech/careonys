@@ -293,12 +293,10 @@ que se le entrega a quien programa del otro lado** —las dos direcciones, cómo
 datos lleva cada pedido y qué contesta— está en `docs/CONEXION_CON_SOFTWARE_EXTERNO.md`, escrito para
 alguien que no conoce Careonys por dentro.
 
-**A quién se le reclama no es siempre el Cliente.** Puede ser una obra social o un tercero, y eso
-vive en la Ficha del cliente (`pagador_tipo` y la Ficha de Persona del Pagador); vacío quiere decir el
-Cliente, que es lo corriente. Cada factura se lleva ese dato **copiado el día que se genera**,
-porque una factura emitida no cambia: si mañana ese Cliente pasa a pagar por sí misma, las viejas
-tienen que seguir diciendo a quién se le reclamaron. El nombre es texto y no se interpreta — el
-padrón de obras sociales cambia de país en país y el producto no conoce ninguno.
+**La factura nombra al Cliente.** A quién se le reclama no es siempre el Cliente —puede ser una
+obra social o un tercero—, y eso vive en la Ficha del cliente (`pagador_tipo` y la Ficha de Persona
+del Pagador); vacío quiere decir el Cliente, que es lo corriente. La factura no lo copia: se lo
+consulta en la Ficha.
 
 **En la modalidad Match** (`docs/PRD_07_Modalidad_Match.md`), el Cliente le paga a la Prestadora por una pasarela,
 y **cada Prestadora arma su propia forma de cobrar** con las piezas que el producto le da

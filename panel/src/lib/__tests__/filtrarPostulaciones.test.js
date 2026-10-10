@@ -70,9 +70,8 @@ describe('qué postulaciones quedan después de los filtros', () => {
   });
 
   it('las listas de códigos se buscan por código entero, no por pedazo', () => {
-    expect(nombres(filtrarPostulaciones(TODAS, { especialidad: 'enfermeria' }))).toEqual(['Ada Ponce', 'Carla Vidal']);
-    expect(filtrarPostulaciones(TODAS, { especialidad: 'enfer' })).toHaveLength(0);
     expect(nombres(filtrarPostulaciones(TODAS, { zona: 'sur' }))).toEqual(['Bruno Salas']);
+    expect(filtrarPostulaciones(TODAS, { zona: 'su' })).toHaveLength(0);
     expect(nombres(filtrarPostulaciones(TODAS, { disponibilidad: 'tarde' }))).toEqual(['Ada Ponce']);
   });
 
@@ -119,7 +118,6 @@ describe('qué postulaciones quedan después de los filtros', () => {
   it('los filtros se suman entre sí', () => {
     const quedan = filtrarPostulaciones(TODAS, {
       estado: 'pendiente',
-      especialidad: 'enfermeria',
       zona: 'norte',
       situacion_fiscal: 'monotributo',
       urgencias: 'si',

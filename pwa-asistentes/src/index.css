@@ -538,9 +538,9 @@ p {
   text-align: left;
 }
 
-/* ---------- Qué hace y qué no hace el Asistente ---------- */
+/* ---------- Las tareas del tipo de Asistente ---------- */
 
-/* Las dos listas se ven iguales a propósito: la de "qué no hace" pesa lo mismo que la otra. */
+/* Las tres clases se ven iguales a propósito: las no incluidas y las prohibidas pesan lo mismo que las habilitadas. */
 .lista-tareas {
   list-style: none;
   padding: 0;
@@ -556,6 +556,19 @@ p {
 
 .lista-tareas li:last-child {
   border-bottom: 0;
+}
+
+.tareas-de-una-clase + .tareas-de-una-clase {
+  margin-top: 16px;
+}
+
+.tarea-con-detalle summary {
+  cursor: pointer;
+}
+
+.tarea-con-detalle p {
+  margin: 6px 0 0;
+  color: var(--gris);
 }
 
 /* ---------- Guardias ---------- */

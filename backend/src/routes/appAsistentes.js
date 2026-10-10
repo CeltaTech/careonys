@@ -687,9 +687,9 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
     }
   }
 
-  // Qué le corresponde hacer en este turno, y qué no. Las dos listas salen del mismo
-  // catálogo que ve el Cliente, así que las dos partes leen lo mismo y nadie discute en la
-  // puerta con una lista distinta en la mano.
+  // Qué le toca hacer en este turno, qué no le toca y qué tiene prohibido. Las tres listas
+  // salen del mismo catálogo que ve el Cliente, así que las dos partes leen lo mismo y nadie
+  // discute en la puerta con una lista distinta en la mano.
   //
   // El tipo se pide acá y no se guarda con la guardia: si la Prestadora corrige el catálogo,
   // el cambio tiene que llegar al próximo turno sin arrastrar la copia vieja.

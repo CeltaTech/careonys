@@ -6,6 +6,7 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { TiposAsistenteTab } from './TiposAsistenteTab';
+import { ControlDeMatricula } from './ControlDeMatricula';
 import { AusenciasTab } from './AusenciasTab';
 import { PagoAsistentesTab } from './PagoAsistentesTab';
 import { mensajeDeError } from '../../lib/errores';
@@ -13,14 +14,16 @@ import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { con } from '../../lib/textos';
 import '../../styles/molde-paginas.css';
 
-/* Cómo es el Padrón: qué tipos de Asistente existen —con sus tareas y su
-   matrícula—, qué documentación se les exige, con cuánta anticipación una falta se
+/* Cómo es el Padrón: qué tipos de Asistente existen —con sus Ramas, sus tareas y su
+   matrícula—, qué documentación se les exige y qué tan estricto es el control de la
+   matrícula, con cuánta anticipación una falta se
    considera avisada con tiempo y cómo se le paga el período a quien cobra un monto fijo. */
 export function ConfiguracionAsistentes() {
   return (
     <div className="molde-pila">
       <TiposAsistenteTab />
       <TabDocumentos />
+      <ControlDeMatricula />
       <AusenciasTab />
       <PagoAsistentesTab />
     </div>

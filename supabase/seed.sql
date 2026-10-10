@@ -274,12 +274,9 @@ INSERT INTO public.usuario_lugares (usuario_id, lugar_id, prestadora_id) VALUES
 --    Tres en actividad y una dada de baja, para que las pantallas que filtran
 --    por estado tengan algo distinto que mostrar en cada solapa.
 --
---    Qué es cada uno sale del catálogo de tipos, más abajo. La columna vieja
---    `especialidades` —la casilla de texto libre de antes— quedó retirada y no
---    se escribe más; acá se carga a propósito en un solo Asistente, Bruno, que
---    además no tiene tipo, para poder ver funcionando la pantalla que pasa los
---    viejos al catálogo. Delia tampoco tiene tipo y no tiene texto viejo: es el
---    otro caso que esa pantalla tiene que saber mostrar.
+--    Qué es cada uno sale del catálogo de tipos, más abajo. Bruno y Delia
+--    quedan sin tipo a propósito, para poder ver funcionando la pantalla que
+--    se lo pone a los que entraron sin él.
 --
 --    Dos partes del Legajo del Asistente no están en esta tabla: lo que cobra cada uno, en
 --    `remuneraciones_asistente`, y lo reservado —por qué se lo dio de baja, su
@@ -293,35 +290,31 @@ INSERT INTO public.usuario_lugares (usuario_id, lugar_id, prestadora_id) VALUES
 -- porque cada una de estas personas está en una sola Prestadora; en cuanto una esté en dos, la
 -- cuenta sigue siendo una y los Legajos son dos.
 INSERT INTO public.asistentes (
-  id, usuario_id, prestadora_id, nombre, telefono, email, especialidades,
+  id, usuario_id, prestadora_id, nombre, telefono, email,
   estado, tipo_vinculo, fecha_alta, fecha_baja,
   horas_semanales, dni, canales, documento_tipo, documento_numero, genero
 ) VALUES
   ('30000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-000000000001',
    '11111111-1111-4111-8111-111111111111',
    'Ana Álvarez', '+54 11 4001-0001', 'ana.asistente@sandbox.local',
-   NULL,
    'activo', 'monotributo', CURRENT_DATE - 300, NULL,
    40, '20000001', ARRAY['directa'], 'cuil', '27200000019', 'femenino'),
 
   ('30000000-0000-4000-8000-000000000002', '30000000-0000-4000-8000-000000000002',
    '11111111-1111-4111-8111-111111111111',
    'Bruno Bianchi', '+54 11 4001-0002', 'bruno.asistente@sandbox.local',
-   ARRAY['Acompañamiento terapéutico'],
    'activo', 'dependencia', CURRENT_DATE - 220, NULL,
    40, '20000002', ARRAY['directa', 'intermediacion'], 'cuil', '20200000022', 'masculino'),
 
   ('30000000-0000-4000-8000-000000000003', '30000000-0000-4000-8000-000000000003',
    '11111111-1111-4111-8111-111111111111',
    'Clara Cabrera', '+54 11 4001-0003', 'clara.asistente@sandbox.local',
-   NULL,
    'activo', 'monotributo', CURRENT_DATE - 90, NULL,
    24, '20000003', ARRAY['intermediacion'], 'cuil', '27200000035', 'femenino'),
 
   ('30000000-0000-4000-8000-000000000004', '30000000-0000-4000-8000-000000000004',
    '11111111-1111-4111-8111-111111111111',
    'Delia Duarte', '+54 11 4001-0004', 'delia.asistente@sandbox.local',
-   NULL,
    'cesado', 'monotributo', CURRENT_DATE - 500, CURRENT_DATE - 40,
    40, '20000004', ARRAY['directa'], 'cuil', '27200000043', 'femenino');
 
@@ -780,38 +773,65 @@ ON CONFLICT (prestadora_id) DO UPDATE SET
 -- ----------------------------------------------------------------------------
 -- 6 bis. Qué hace y qué no hace cada Asistente
 -- ----------------------------------------------------------------------------
--- El catálogo de tipos viene con cuatro tipos de fábrica que trae el producto.
+-- El catálogo de tipos viene con los tipos de fábrica que trae el producto.
 -- Acá se le da uno a cada Asistente y se arma un tipo propio de la Prestadora
--- con sus dos listas, para poder ver en pantalla los dos casos: el nombre que
--- se traduce y el nombre que escribió la Prestadora.
+-- con sus listas, para poder ver en pantalla los dos casos: el nombre que se
+-- traduce y el nombre que escribió la Prestadora.
 --
--- Las dos listas están cargadas a propósito con las cosas que en la vida real
+-- Las listas están cargadas a propósito con las cosas que en la vida real
 -- generan la discusión en la puerta: limpiar toda la casa, cocinar para la
--- cliente, dar una inyección.
+-- familia, dar una inyección.
+--
+-- Las Ramas son de cada Prestadora; Sandbox lleva las cinco de siempre y agrupa
+-- con ellas sus tipos, los de fábrica y el propio.
 
 INSERT INTO public.tipos_asistente (id, prestadora_id, clave, nombre, descripcion, requiere_matricula, tipo_matricula, activo, orden)
 VALUES
   ('3a000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
-   NULL, 'Acompañante terapéutico', 'Tipo propio de la Prestadora Sandbox.', false, NULL, true, 50);
+   NULL, 'Asistente de compañía', 'Tipo propio de la Prestadora Sandbox.', false, NULL, true, 70);
 
-INSERT INTO public.tareas_tipo_asistente (tipo_asistente_id, prestadora_id, clase, clave, texto, orden)
+INSERT INTO public.tareas_tipo_asistente (tipo_asistente_id, prestadora_id, clase, clave, texto, descripcion, orden)
 VALUES
   ('3a000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
-   'corresponde', NULL, 'Acompañar al Paciente en sus actividades diarias', 10),
+   'habilitada', NULL, 'Acompañar al Paciente en sus actividades diarias', 'Paseos, trámites cercanos, juegos y conversación.', 10),
   ('3a000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
-   'corresponde', NULL, 'Ayudarlo a higienizarse y a vestirse', 20),
+   'habilitada', NULL, 'Ayudarlo a higienizarse y a vestirse', NULL, 20),
   ('3a000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
-   'corresponde', NULL, 'Prepararle la comida y acompañarlo a comer', 30),
+   'habilitada', NULL, 'Prepararle la comida y acompañarlo a comer', 'Sólo la comida del Paciente.', 30),
   ('3a000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
-   'corresponde', NULL, 'Dejar por escrito cómo pasó el día', 40),
+   'habilitada', NULL, 'Dejar por escrito cómo pasó el día', NULL, 40),
   ('3a000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
-   'no_corresponde', NULL, 'Limpiar la casa o hacer las tareas del hogar del cliente', 10),
+   'no_incluida', NULL, 'Limpiar la casa o hacer las tareas del hogar del cliente', NULL, 10),
   ('3a000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
-   'no_corresponde', NULL, 'Cocinar para el resto del cliente', 20),
+   'no_incluida', NULL, 'Cocinar para el resto de la familia', NULL, 20),
   ('3a000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
-   'no_corresponde', NULL, 'Dar inyecciones o curar heridas', 30),
+   'no_incluida', NULL, 'Dar inyecciones o curar heridas', NULL, 30),
   ('3a000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
-   'no_corresponde', NULL, 'Cambiar la dosis de un remedio por su cuenta', 40);
+   'no_incluida', NULL, 'Cambiar la dosis de un remedio por su cuenta', NULL, 40);
+
+INSERT INTO public.agrupaciones_tipos_asistente (id, prestadora_id, nombre, orden)
+VALUES
+  ('3b000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'Cuidados', 10),
+  ('3b000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'Enfermería', 20),
+  ('3b000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'Rehabilitación', 30),
+  ('3b000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111', 'Medicina', 40),
+  ('3b000000-0000-4000-8000-000000000005', '11111111-1111-4111-8111-111111111111', 'Salud mental', 50);
+
+INSERT INTO public.tipos_asistente_agrupados (prestadora_id, tipo_asistente_id, agrupacion_id)
+SELECT '11111111-1111-4111-8111-111111111111', t.id, a.agrupacion
+FROM (VALUES
+  ('cuidador',                        '3b000000-0000-4000-8000-000000000001'::uuid),
+  ('asistente_personal_discapacidad', '3b000000-0000-4000-8000-000000000001'::uuid),
+  ('enfermero',                       '3b000000-0000-4000-8000-000000000002'::uuid),
+  ('kinesiologo',                     '3b000000-0000-4000-8000-000000000003'::uuid),
+  ('medico',                          '3b000000-0000-4000-8000-000000000004'::uuid),
+  ('acompanante_terapeutico',         '3b000000-0000-4000-8000-000000000005'::uuid)
+) AS a(clave, agrupacion)
+JOIN public.tipos_asistente t ON t.clave = a.clave AND t.prestadora_id IS NULL;
+
+INSERT INTO public.tipos_asistente_agrupados (prestadora_id, tipo_asistente_id, agrupacion_id)
+VALUES ('11111111-1111-4111-8111-111111111111', '3a000000-0000-4000-8000-000000000001',
+        '3b000000-0000-4000-8000-000000000001');
 
 -- Ana lleva el tipo propio de la Prestadora; Clara, uno de fábrica, que se
 -- traduce al idioma de quien mira.
@@ -1173,14 +1193,14 @@ VALUES ('9e000000-0000-4000-8000-000000000001', '30000000-0000-4000-8000-0000000
 -- que atiende a ese Paciente.
 INSERT INTO public.indicaciones_medicacion
   (id, prestadora_id, paciente_id, cliente_id, medicamento, dosis, frecuencia,
-   via_administracion, via_administracion_id, fecha_desde, estado, solicitado_por)
+   via_administracion_id, fecha_desde, estado, solicitado_por)
 VALUES ('9f000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
         '50000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000001',
-        'Enalapril', '10 mg', 'cada 12 horas', 'oral', (SELECT id FROM public.vias_administracion WHERE clave = 'oral'), current_date - 30, 'aceptada',
+        'Enalapril', '10 mg', 'cada 12 horas', (SELECT id FROM public.vias_administracion WHERE clave = 'oral'), current_date - 30, 'aceptada',
         '40000000-0000-4000-8000-000000000001'),
        ('9f000000-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222',
         '60000000-0000-4000-8000-000000000001', '50000000-0000-4000-8000-000000000004',
-        'Metformina', '850 mg', 'cada 24 horas', 'oral', (SELECT id FROM public.vias_administracion WHERE clave = 'oral'), current_date - 15, 'aceptada',
+        'Metformina', '850 mg', 'cada 24 horas', (SELECT id FROM public.vias_administracion WHERE clave = 'oral'), current_date - 15, 'aceptada',
         '50000000-0000-4000-8000-000000000004');
 
 -- Rangos de referencia de los signos vitales, por Paciente.

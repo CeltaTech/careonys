@@ -8,25 +8,7 @@ import { usePersonasAutorizadas } from '../context/PersonasAutorizadasContext';
 import { pantallaPermitida } from '../lib/interruptorDeCadaPantalla';
 import { mensajeDeError } from '../lib/errores';
 import EstadoDocumental from '../components/EstadoDocumental';
-
-// Una de las dos listas. La de "qué no hace" pesa lo mismo que la otra a
-// propósito: es la que evita la discusión en la puerta.
-function ListaDeTareas({ titulo, tareas, vacio }) {
-  return (
-    <section className="pwa-card">
-      <h2>{titulo}</h2>
-      {tareas.length === 0 ? (
-        <div className="estado-vacio" role="status">{vacio}</div>
-      ) : (
-        <ul className="lista-tareas">
-          {tareas.map((tarea) => (
-            <li key={tarea.id}>{tarea.texto || tarea.clave}</li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
+import TareasDelTipo from '../components/TareasDelTipo';
 
 export default function AsistenteAsignado() {
   const { id } = useParams();
@@ -112,18 +94,9 @@ export default function AsistenteAsignado() {
       )}
 
       {tipo && (
-        <>
-          <ListaDeTareas
-            titulo={t.asistente.tareas_corresponde}
-            tareas={tareas?.corresponde || []}
-            vacio={t.asistente.tareas_vacio}
-          />
-          <ListaDeTareas
-            titulo={t.asistente.tareas_no_corresponde}
-            tareas={tareas?.no_corresponde || []}
-            vacio={t.asistente.tareas_vacio}
-          />
-        </>
+        <section className="pwa-card">
+          <TareasDelTipo tareas={tareas} vacio={t.asistente.tareas_vacio} t={t} />
+        </section>
       )}
 
       {pantallaPermitida('escanearAsistente', seVe, puedeVer) && (

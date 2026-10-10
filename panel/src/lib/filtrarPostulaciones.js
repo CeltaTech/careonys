@@ -51,7 +51,6 @@ export function filtrarPostulaciones(filas, f = {}) {
   return lista.filter((p) => {
     if (!coincideBusqueda(p, f.busqueda)) return false;
     if (f.estado && p.estado !== f.estado) return false;
-    if (!contieneCodigo(p.especialidades, f.especialidad)) return false;
     if (!contieneCodigo(p.zonas, f.zona)) return false;
     if (!contieneCodigo(p.disponibilidad, f.disponibilidad)) return false;
     if (f.situacion_fiscal && p.situacion_fiscal !== f.situacion_fiscal) return false;

@@ -2,122 +2,69 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useConfirmarDestructivo } from '../../context/ConfirmacionContext';
 import { supabase } from '../../lib/supabaseClient';
-import { llamarApiConfiguracion } from '../../lib/apiConfiguracion';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
+import { Candado } from '../../components/ui/Candado';
 import { EstadoLista } from '../../components/layout/EstadoLista';
-import { esTipoGeneral, nombreTipo, nombreMatricula } from '../../lib/tiposAsistente';
-import { MODOS_DE_CONTROL_MATRICULA } from '../../lib/matricula';
+import { CLASES_TAREA, esTipoGeneral, nombreTipo, nombreMatricula } from '../../lib/tiposAsistente';
+import { TareaConDetalle } from '../../components/ui/TareaConDetalle';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { con } from '../../lib/textos';
 import '../../styles/molde-paginas.css';
 
-/* Los tipos de Asistente y sus tareas.
-   Tres cosas conviven en esta pantalla y conviene no confundirlas:
+/* Las Ramas, los tipos de Asistente, sus especialidades y sus tareas.
 
-     Tipo      → qué ES el Asistente (cuidador/a, enfermero/a…)
-     Tareas    → qué HACE y qué NO HACE
-     Matrícula → qué lo AUTORIZA a ejercer
+     Rama         → cómo agrupa la Prestadora sus tipos (Cuidados, Enfermería…)
+     Tipo         → qué ES el Asistente (cuidador/a, enfermero/a…)
+     Especialidad → en qué se especializa adentro de su tipo
+     Tareas       → qué hace, qué no le toca y qué tiene prohibido
+     Matrícula    → qué lo autoriza a ejercer
 
-   Los cuatro tipos de fábrica los trae CeltaTech: la Prestadora no los puede
-   renombrar ni cambiarles la exigencia de matrícula, pero sí puede agregarles
-   tareas propias. Los tipos que crea ella son suyos por completo. */
+   Los tipos de fábrica y sus tareas los trae el producto y llevan candado: ninguna Prestadora
+   los renombra ni los borra, porque son la definición del oficio. Lo demás es de cada
+   Prestadora: sus Ramas, sus tipos, las especialidades y las tareas que les agrega.
+
+   Qué tareas del producto ve cada Prestadora —las de su país— lo decide la base, no esta
+   pantalla. */
 export function TiposAsistenteTab() {
   const { t } = useLocale();
   const prestadoraId = usePrestadoraActual();
   const confirmarDestructivo = useConfirmarDestructivo();
   const [tipos, setTipos] = useState([]);
+  const [ramas, setRamas] = useState([]);
+  const [ramaDeCadaTipo, setRamaDeCadaTipo] = useState({});
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
-  const [creando, setCreando] = useState(false);
+  const [tipoEnModal, setTipoEnModal] = useState(null);
   const [ocupadoId, setOcupadoId] = useState(null);
   const [tipoAbierto, setTipoAbierto] = useState(null);
-  const [modoControl, setModoControl] = useState(null);
-  const [estadoModo, setEstadoModo] = useState('cargando');
-  const [errorModo, setErrorModo] = useState(null);
-  const [guardandoModo, setGuardandoModo] = useState(false);
-
-  /* Qué tan estricta es la Prestadora se lee aparte del resto de la pantalla, y tiene sus propios
-     cuatro estados, porque es lo único de acá que se puede contestar mal sin que se note.
-
-     Antes, si esta lectura fallaba, la pantalla mostraba "flexible" —el primer valor de la
-     lista— como si eso fuera lo configurado. Una Prestadora estricta veía la política equivocada,
-     y con sólo tocar cualquier otra cosa del selector se guardaba esa mentira encima de la
-     verdadera. El backend, con el mismo dato ausente, supone lo contrario
-     (`lib/matricula.js`, MODO_CONTROL_MATRICULA_SUPUESTO): ante la duda exige más, que es lo que
-     manda la regla de que todo control de acceso falla cerrado.
-
-     Acá no hace falta suponer nada, y por eso no se supone: esta pantalla puede volver a
-     preguntar. Si no se pudo leer, no se muestra ninguna política, no se deja guardar ninguna, se
-     dice qué pasó y se ofrece reintentar. Mostrar la estricta sin haberla leído sería igual de
-     falso que mostrar la flexible; lo único honesto es no mostrar ninguna. */
-  const cargarModo = useCallback(async () => {
-    setEstadoModo('cargando');
-    setErrorModo(null);
-    try {
-      const respuesta = await llamarApiConfiguracion('/modo-control-matricula');
-      // Una respuesta que llegó pero no trae un modo conocido es una lectura fallida igual que
-      // una caída: sin este control, un cuerpo vacío volvería a dejar el selector en cualquier
-      // valor sin que nadie se entere.
-      if (!MODOS_DE_CONTROL_MATRICULA.includes(respuesta?.modo)) {
-        throw new Error('modo_control_matricula_desconocido');
-      }
-      setModoControl(respuesta.modo);
-      setEstadoModo('listo');
-    } catch (fallo) {
-      setModoControl(null);
-      setErrorModo(mensajeDeError(fallo, t));
-      setEstadoModo('error');
-    }
-  }, [t]);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
     setError(null);
-    // El modo va en el mismo viaje que la consulta, pero no en el mismo resultado: se
-    // resuelve solo y no arrastra a la lista si falla, ni la lista lo arrastra a él.
-    const [resTipos] = await Promise.all([
+    const [resTipos, resRamas, resAgrupados] = await Promise.all([
       supabase.from('tipos_asistente').select('*').order('orden'),
-      cargarModo(),
+      supabase.from('agrupaciones_tipos_asistente').select('id, nombre, orden').order('orden').order('nombre'),
+      supabase.from('tipos_asistente_agrupados').select('tipo_asistente_id, agrupacion_id'),
     ]);
-    if (resTipos.error) {
-      setError(mensajeDeError(resTipos.error, t));
+    const fallo = resTipos.error || resRamas.error || resAgrupados.error;
+    if (fallo) {
+      setError(mensajeDeError(fallo, t));
       setEstado('error');
       return;
     }
     setTipos(resTipos.data ?? []);
+    setRamas(resRamas.data ?? []);
+    setRamaDeCadaTipo(Object.fromEntries((resAgrupados.data ?? []).map((f) => [f.tipo_asistente_id, f.agrupacion_id])));
     setEstado('listo');
-  }, [t, cargarModo]);
+  }, [t]);
 
   useEffect(() => {
     recargar();
   }, [recargar]);
-
-  /* El interruptor vive acá y no en otra solapa porque la exigencia de matrícula la declara cada
-     tipo de Asistente, y esto es lo que decide qué tan estricta es esa exigencia. Separarlas
-     obligaría a ir y volver entre dos pantallas para entender una sola regla. */
-  async function cambiarModo(nuevo) {
-    // Sin haber leído la política actual no se guarda ninguna. El selector ni siquiera se dibuja
-    // fuera del estado "listo", así que esto no debería alcanzarse nunca; está igual porque el
-    // día que alguien mueva el dibujo, la regla tiene que seguir puesta.
-    if (estadoModo !== 'listo') return;
-    setGuardandoModo(true);
-    setError(null);
-    try {
-      await llamarApiConfiguracion('/modo-control-matricula', {
-        method: 'PATCH',
-        body: JSON.stringify({ modo: nuevo }),
-      });
-      setModoControl(nuevo);
-    } catch {
-      setError(t.comun.error_generico);
-    } finally {
-      setGuardandoModo(false);
-    }
-  }
 
   async function alternarActivo(tipo) {
     setOcupadoId(tipo.id);
@@ -128,10 +75,35 @@ export function TiposAsistenteTab() {
       .eq('id', tipo.id);
     setOcupadoId(null);
     if (errorUpdate) {
-      setError(t.comun.error_generico);
+      setError(mensajeDeError(errorUpdate, t));
       return;
     }
     recargar();
+  }
+
+  // La Rama de un tipo es de la Prestadora, también para los tipos de fábrica: por eso no es
+  // una columna del tipo sino un renglón aparte, uno por Prestadora y por tipo.
+  async function cambiarRama(tipo, agrupacionId) {
+    setOcupadoId(tipo.id);
+    setError(null);
+    const { error: errorRama } = agrupacionId
+      ? await supabase
+          .from('tipos_asistente_agrupados')
+          .upsert(
+            { prestadora_id: prestadoraId, tipo_asistente_id: tipo.id, agrupacion_id: agrupacionId },
+            { onConflict: 'prestadora_id,tipo_asistente_id' },
+          )
+      : await supabase
+          .from('tipos_asistente_agrupados')
+          .delete()
+          .eq('prestadora_id', prestadoraId)
+          .eq('tipo_asistente_id', tipo.id);
+    setOcupadoId(null);
+    if (errorRama) {
+      setError(mensajeDeError(errorRama, t));
+      return;
+    }
+    setRamaDeCadaTipo((antes) => ({ ...antes, [tipo.id]: agrupacionId || undefined }));
   }
 
   async function borrar(tipo) {
@@ -141,7 +113,7 @@ export function TiposAsistenteTab() {
     const { error: errorDelete } = await supabase.from('tipos_asistente').delete().eq('id', tipo.id);
     setOcupadoId(null);
     if (errorDelete) {
-      setError(t.comun.error_generico);
+      setError(mensajeDeError(errorDelete, t));
       return;
     }
     if (tipoAbierto === tipo.id) setTipoAbierto(null);
@@ -150,50 +122,12 @@ export function TiposAsistenteTab() {
 
   return (
     <>
-      <section className="panel-tarjeta">
-        <div className="panel-tarjeta-titulo">
-          <h2>{t.matricula.modo_titulo}</h2>
-        </div>
-        {estadoModo === 'cargando' && (
-          <p className="estado-cargando" role="status">
-            {t.comun.cargando}
-          </p>
-        )}
-
-        {estadoModo === 'error' && (
-          <Alert variant="error">
-            {t.matricula.modo_no_se_pudo_leer} {errorModo}{' '}
-            <Button variant="secondary" onClick={cargarModo} disabled={guardandoModo}>
-              {t.comun.reintentar}
-            </Button>
-          </Alert>
-        )}
-
-        {estadoModo === 'listo' && (
-          <div className="molde-formgrid">
-            <div className="molde-campo">
-              <select
-                id="modo_control_matricula"
-                aria-label={t.matricula.modo_titulo}
-                value={modoControl}
-                disabled={guardandoModo}
-                onChange={(e) => cambiarModo(e.target.value)}
-              >
-                {MODOS_DE_CONTROL_MATRICULA.map((opcion) => (
-                  <option key={opcion} value={opcion}>
-                    {t.matricula[`modo_${opcion}`]}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
-      </section>
+      <RamasDeLaPrestadora ramas={ramas} prestadoraId={prestadoraId} estado={estado} onCambio={recargar} />
 
       <section className="panel-tarjeta">
         <div className="panel-tarjeta-titulo">
           <h2>{t.configuracion.tipos_titulo}</h2>
-          <Button onClick={() => setCreando(true)}>{t.configuracion.tipos_nuevo}</Button>
+          <Button onClick={() => setTipoEnModal({})}>{t.configuracion.tipos_nuevo}</Button>
         </div>
         {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
 
@@ -208,7 +142,7 @@ export function TiposAsistenteTab() {
             <thead>
               <tr>
                 <th>{t.configuracion.tipos_col_nombre}</th>
-                <th>{t.configuracion.tipos_col_origen}</th>
+                <th>{t.configuracion.tipos_col_rama}</th>
                 <th>{t.configuracion.tipos_col_matricula}</th>
                 <th>{t.configuracion.tipos_col_activo}</th>
                 <th></th>
@@ -219,12 +153,23 @@ export function TiposAsistenteTab() {
                 <tr key={tipo.id}>
                   <td>
                     <b>{nombreTipo(tipo, t)}</b>
+                    {esTipoGeneral(tipo) && <Candado etiqueta={t.configuracion.candado} />}
                     {tipo.descripcion && <div className="panel-mini">{tipo.descripcion}</div>}
                   </td>
                   <td>
-                    {esTipoGeneral(tipo)
-                      ? t.configuracion.tipos_origen_celtatech
-                      : t.configuracion.tipos_origen_propia}
+                    <select
+                      value={ramaDeCadaTipo[tipo.id] || ''}
+                      onChange={(e) => cambiarRama(tipo, e.target.value)}
+                      disabled={ocupadoId === tipo.id}
+                      aria-label={con(t.comun.campo_de_fila, { campo: t.configuracion.tipos_col_rama, nombre: nombreTipo(tipo, t) })}
+                    >
+                      <option value="">{t.configuracion.tipos_sin_rama}</option>
+                      {ramas.map((rama) => (
+                        <option key={rama.id} value={rama.id}>
+                          {rama.nombre}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td>
                     {tipo.requiere_matricula
@@ -251,9 +196,14 @@ export function TiposAsistenteTab() {
                         : t.configuracion.tipos_ver_tareas}
                     </Button>{' '}
                     {!esTipoGeneral(tipo) && (
-                      <Button variant="secondary" onClick={() => borrar(tipo)} disabled={ocupadoId === tipo.id}>
-                        {t.comun.borrar}
-                      </Button>
+                      <>
+                        <Button variant="secondary" onClick={() => setTipoEnModal(tipo)} disabled={ocupadoId === tipo.id}>
+                          {t.comun.editar}
+                        </Button>{' '}
+                        <Button variant="secondary" onClick={() => borrar(tipo)} disabled={ocupadoId === tipo.id}>
+                          {t.comun.borrar}
+                        </Button>
+                      </>
                     )}
                   </td>
                 </tr>
@@ -264,18 +214,25 @@ export function TiposAsistenteTab() {
       </section>
 
       {tipoAbierto && (
-        <TareasDelTipo
-          tipo={tipos.find((x) => x.id === tipoAbierto)}
-          prestadoraId={prestadoraId}
-        />
+        <>
+          <EspecialidadesDelTipo
+            tipo={tipos.find((x) => x.id === tipoAbierto)}
+            prestadoraId={prestadoraId}
+          />
+          <TareasDelTipo
+            tipo={tipos.find((x) => x.id === tipoAbierto)}
+            prestadoraId={prestadoraId}
+          />
+        </>
       )}
 
-      {creando && (
-        <NuevoTipoModal
+      {tipoEnModal && (
+        <TipoModal
+          tipo={tipoEnModal}
           prestadoraId={prestadoraId}
-          onClose={() => setCreando(false)}
-          onCreado={() => {
-            setCreando(false);
+          onClose={() => setTipoEnModal(null)}
+          onGuardado={() => {
+            setTipoEnModal(null);
             recargar();
           }}
         />
@@ -284,16 +241,311 @@ export function TiposAsistenteTab() {
   );
 }
 
-/* Las dos listas de tareas de un tipo. Son dos y no una a propósito: la de "no
-   corresponde" es la que evita que el Cliente le pida al Asistente cosas que no
-   son suyas, y si va mezclada con la otra se lee y no se entiende cuál era cuál. */
-function TareasDelTipo({ tipo, prestadoraId }) {
+/* Las Ramas son de cada Prestadora: las agrega, las renombra y las borra. Borrar una Rama no
+   borra sus tipos: quedan sin Rama. */
+function RamasDeLaPrestadora({ ramas, prestadoraId, estado, onCambio }) {
   const { t } = useLocale();
   const confirmarDestructivo = useConfirmarDestructivo();
+  const [nueva, setNueva] = useState('');
+  const [editandoId, setEditandoId] = useState(null);
+  const [nombreEditado, setNombreEditado] = useState('');
+  const [ocupado, setOcupado] = useState(false);
+  const [error, setError] = useState(null);
+
+  async function correr(operacion) {
+    setOcupado(true);
+    setError(null);
+    const { error: fallo } = await operacion;
+    setOcupado(false);
+    if (fallo) {
+      setError(mensajeDeError(fallo, t));
+      return false;
+    }
+    onCambio();
+    return true;
+  }
+
+  async function agregar() {
+    const listo = await correr(
+      supabase.from('agrupaciones_tipos_asistente').insert({
+        prestadora_id: prestadoraId,
+        nombre: nueva.trim(),
+        orden: (ramas.length + 1) * 10,
+      }),
+    );
+    if (listo) setNueva('');
+  }
+
+  async function guardarEdicion(rama) {
+    const listo = await correr(
+      supabase
+        .from('agrupaciones_tipos_asistente')
+        .update({ nombre: nombreEditado.trim(), updated_at: new Date().toISOString() })
+        .eq('id', rama.id),
+    );
+    if (listo) setEditandoId(null);
+  }
+
+  async function borrar(rama) {
+    if (!(await confirmarDestructivo(t.configuracion.ramas_confirmar_borrar))) return;
+    await correr(supabase.from('agrupaciones_tipos_asistente').delete().eq('id', rama.id));
+  }
+
+  if (estado !== 'listo') return null;
+
+  return (
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.ramas_titulo}</h2>
+      </div>
+      {error && <Alert variant="error">{error}</Alert>}
+      {ramas.length === 0 ? (
+        <p className="molde-vacio">{t.configuracion.ramas_vacio}</p>
+      ) : (
+        ramas.map((rama) =>
+          editandoId === rama.id ? (
+            <div key={rama.id} className="panel-fila-alerta">
+              <FormField
+                label={t.configuracion.ramas_nombre}
+                name={`rama_${rama.id}`}
+                value={nombreEditado}
+                onChange={(e) => setNombreEditado(e.target.value)}
+                required
+              />
+              <div className="panel-fila-acciones">
+                <Button variant="secondary" onClick={() => setEditandoId(null)} disabled={ocupado}>
+                  {t.comun.cancelar}
+                </Button>
+                <Button onClick={() => guardarEdicion(rama)} disabled={ocupado || !nombreEditado.trim()}>
+                  {ocupado ? t.comun.guardando : t.comun.guardar}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div key={rama.id} className="panel-fila-alerta">
+              <div><b>{rama.nombre}</b></div>
+              <div className="panel-fila-acciones">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setEditandoId(rama.id);
+                    setNombreEditado(rama.nombre);
+                  }}
+                  disabled={ocupado}
+                >
+                  {t.comun.editar}
+                </Button>
+                <Button variant="secondary" onClick={() => borrar(rama)} disabled={ocupado}>
+                  {t.comun.borrar}
+                </Button>
+              </div>
+            </div>
+          ),
+        )
+      )}
+      <div className="molde-formgrid">
+        <div className="molde-ancho">
+          <FormField
+            label={t.configuracion.ramas_nombre}
+            name="rama_nueva"
+            value={nueva}
+            onChange={(e) => setNueva(e.target.value)}
+          />
+        </div>
+      </div>
+      <div className="molde-acciones">
+        <Button onClick={agregar} disabled={ocupado || !nueva.trim()}>
+          {ocupado ? t.comun.guardando : t.configuracion.ramas_agregar}
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+/* Las especialidades de un tipo son de cada Prestadora, también las de los tipos de fábrica:
+   ella las agrega, las renombra y las borra. Una especialidad puede pedir su propia matrícula.
+   Borrarla se la quita a los Asistentes que la tenían. */
+function EspecialidadesDelTipo({ tipo, prestadoraId }) {
+  const { t } = useLocale();
+  const confirmarDestructivo = useConfirmarDestructivo();
+  const [especialidades, setEspecialidades] = useState([]);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [editandoId, setEditandoId] = useState(null);
+  const [ocupado, setOcupado] = useState(false);
+
+  const recargar = useCallback(async () => {
+    if (!tipo) return;
+    setEstado('cargando');
+    setError(null);
+    const { data, error: errorConsulta } = await supabase
+      .from('especialidades')
+      .select('id, nombre, tipo_matricula, orden')
+      .eq('tipo_asistente_id', tipo.id)
+      .order('orden')
+      .order('nombre');
+    if (errorConsulta) {
+      setError(mensajeDeError(errorConsulta, t));
+      setEstado('error');
+      return;
+    }
+    setEspecialidades(data ?? []);
+    setEstado('listo');
+  }, [tipo, t]);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  async function correr(operacion) {
+    setOcupado(true);
+    setError(null);
+    const { error: fallo } = await operacion;
+    setOcupado(false);
+    if (fallo) {
+      setError(mensajeDeError(fallo, t));
+      return false;
+    }
+    recargar();
+    return true;
+  }
+
+  function agregar(datos) {
+    return correr(
+      supabase.from('especialidades').insert({
+        ...datos,
+        prestadora_id: prestadoraId,
+        tipo_asistente_id: tipo.id,
+        orden: (especialidades.length + 1) * 10,
+      }),
+    );
+  }
+
+  async function guardarEdicion(especialidad, datos) {
+    const listo = await correr(
+      supabase
+        .from('especialidades')
+        .update({ ...datos, updated_at: new Date().toISOString() })
+        .eq('id', especialidad.id),
+    );
+    if (listo) setEditandoId(null);
+    return listo;
+  }
+
+  async function borrar(especialidad) {
+    if (!(await confirmarDestructivo(t.configuracion.especialidades_confirmar_borrar))) return;
+    await correr(supabase.from('especialidades').delete().eq('id', especialidad.id));
+  }
+
+  if (!tipo) return null;
+
+  return (
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.especialidades_titulo}</h2>
+        <span className="panel-mini">{nombreTipo(tipo, t)}</span>
+      </div>
+      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
+      <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
+        {especialidades.length === 0 ? (
+          <p className="molde-vacio">{t.configuracion.especialidades_vacio}</p>
+        ) : (
+          especialidades.map((especialidad) =>
+            editandoId === especialidad.id ? (
+              <FormularioDeEspecialidad
+                key={especialidad.id}
+                nombre={`especialidad_${especialidad.id}`}
+                inicial={especialidad}
+                ocupado={ocupado}
+                etiquetaBoton={t.comun.guardar}
+                onGuardar={(datos) => guardarEdicion(especialidad, datos)}
+                onCancelar={() => setEditandoId(null)}
+              />
+            ) : (
+              <div key={especialidad.id} className="panel-fila-alerta">
+                <div>
+                  <b>{especialidad.nombre}</b>
+                  {especialidad.tipo_matricula && (
+                    <div className="panel-mini">
+                      {t.configuracion.tipos_col_matricula}: {nombreMatricula(especialidad.tipo_matricula, t)}
+                    </div>
+                  )}
+                </div>
+                <div className="panel-fila-acciones">
+                  <Button variant="secondary" onClick={() => setEditandoId(especialidad.id)} disabled={ocupado}>
+                    {t.comun.editar}
+                  </Button>
+                  <Button variant="secondary" onClick={() => borrar(especialidad)} disabled={ocupado}>
+                    {t.comun.borrar}
+                  </Button>
+                </div>
+              </div>
+            ),
+          )
+        )}
+        <FormularioDeEspecialidad
+          nombre="especialidad_nueva"
+          ocupado={ocupado}
+          etiquetaBoton={t.configuracion.especialidades_agregar}
+          onGuardar={agregar}
+        />
+      </EstadoLista>
+    </section>
+  );
+}
+
+function FormularioDeEspecialidad({ nombre, inicial, ocupado, etiquetaBoton, onGuardar, onCancelar }) {
+  const { t } = useLocale();
+  const [texto, setTexto] = useState(inicial?.nombre ?? '');
+  const [matricula, setMatricula] = useState(inicial?.tipo_matricula ?? '');
+
+  async function guardar() {
+    const listo = await onGuardar({ nombre: texto.trim(), tipo_matricula: matricula.trim() || null });
+    if (listo && !inicial) {
+      setTexto('');
+      setMatricula('');
+    }
+  }
+
+  return (
+    <>
+      <div className="molde-formgrid">
+        <FormField
+          label={t.configuracion.especialidades_nombre}
+          name={`${nombre}_nombre`}
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          required
+        />
+        <FormField
+          label={t.configuracion.especialidades_matricula}
+          name={`${nombre}_matricula`}
+          value={matricula}
+          onChange={(e) => setMatricula(e.target.value)}
+        />
+      </div>
+      <div className="molde-acciones">
+        {onCancelar && (
+          <Button variant="secondary" onClick={onCancelar} disabled={ocupado}>
+            {t.comun.cancelar}
+          </Button>
+        )}
+        <Button onClick={guardar} disabled={ocupado || !texto.trim()}>
+          {ocupado ? t.comun.guardando : etiquetaBoton}
+        </Button>
+      </div>
+    </>
+  );
+}
+
+/* Las tres listas de tareas de un tipo: habilitadas, no incluidas y prohibidas. Van separadas
+   porque son tres cosas distintas: lo que es su trabajo, lo que no le toca pero se le puede
+   acordar aparte, y lo que no se le puede asignar. */
+function TareasDelTipo({ tipo, prestadoraId }) {
+  const { t } = useLocale();
   const [tareas, setTareas] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
-  const [ocupadoId, setOcupadoId] = useState(null);
 
   const recargar = useCallback(async () => {
     if (!tipo) return;
@@ -317,206 +569,119 @@ function TareasDelTipo({ tipo, prestadoraId }) {
     recargar();
   }, [recargar]);
 
-  async function borrar(tarea) {
-    if (!(await confirmarDestructivo(t.configuracion.tareas_confirmar_borrar))) return;
-    setOcupadoId(tarea.id);
-    setError(null);
-    const { error: errorDelete } = await supabase.from('tareas_tipo_asistente').delete().eq('id', tarea.id);
-    setOcupadoId(null);
-    if (errorDelete) {
-      setError(t.comun.error_generico);
-      return;
-    }
-    recargar();
-  }
-
   if (!tipo) return null;
 
   return (
-    <>
-      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
-
-      <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
-        <div className="panel-grilla panel-columnas-2">
-          <ListaDeClase
-            clase="corresponde"
-            titulo={t.configuracion.tareas_corresponde}
-            vacio={t.configuracion.tareas_vacio_corresponde}
-            tareas={tareas.filter((x) => x.clase === 'corresponde')}
-            tipo={tipo}
-            prestadoraId={prestadoraId}
-            ocupadoId={ocupadoId}
-            onBorrar={borrar}
-            onCambio={recargar}
-          />
-          <ListaDeClase
-            clase="no_corresponde"
-            titulo={t.configuracion.tareas_no_corresponde}
-            vacio={t.configuracion.tareas_vacio_no_corresponde}
-            tareas={tareas.filter((x) => x.clase === 'no_corresponde')}
-            tipo={tipo}
-            prestadoraId={prestadoraId}
-            ocupadoId={ocupadoId}
-            onBorrar={borrar}
-            onCambio={recargar}
-          />
-        </div>
-      </EstadoLista>
-
-    </>
+    <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
+      {CLASES_TAREA.map((clase) => (
+        <ListaDeClase
+          key={clase}
+          clase={clase}
+          tareas={tareas.filter((x) => x.clase === clase)}
+          tipo={tipo}
+          prestadoraId={prestadoraId}
+          onCambio={recargar}
+        />
+      ))}
+    </EstadoLista>
   );
 }
 
-function ListaDeClase({ clase, titulo, vacio, tareas, tipo, prestadoraId, ocupadoId, onBorrar, onCambio }) {
+function ListaDeClase({ clase, tareas, tipo, prestadoraId, onCambio }) {
   const { t } = useLocale();
-  const [texto, setTexto] = useState('');
-  const [agregando, setAgregando] = useState(false);
+  const confirmarDestructivo = useConfirmarDestructivo();
+  const [editandoId, setEditandoId] = useState(null);
+  const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState(null);
 
-  async function agregar() {
-    setAgregando(true);
+  async function correr(operacion) {
+    setOcupado(true);
     setError(null);
-    const { error: errorInsert } = await supabase.from('tareas_tipo_asistente').insert({
-      tipo_asistente_id: tipo.id,
-      prestadora_id: prestadoraId,
-      clase,
-      texto: texto.trim(),
-      orden: (tareas.length + 1) * 10,
-    });
-    setAgregando(false);
-    if (errorInsert) {
-      setError(t.comun.error_generico);
-      return;
+    const { error: fallo } = await operacion;
+    setOcupado(false);
+    if (fallo) {
+      setError(mensajeDeError(fallo, t));
+      return false;
     }
-    setTexto('');
     onCambio();
+    return true;
+  }
+
+  function agregar({ texto, descripcion }) {
+    return correr(
+      supabase.from('tareas_tipo_asistente').insert({
+        tipo_asistente_id: tipo.id,
+        prestadora_id: prestadoraId,
+        clase,
+        texto,
+        descripcion,
+        orden: (tareas.length + 1) * 10,
+      }),
+    );
+  }
+
+  async function guardarEdicion(tarea, { texto, descripcion }) {
+    const listo = await correr(
+      supabase
+        .from('tareas_tipo_asistente')
+        .update({ texto, descripcion, updated_at: new Date().toISOString() })
+        .eq('id', tarea.id),
+    );
+    if (listo) setEditandoId(null);
+    return listo;
+  }
+
+  async function borrar(tarea) {
+    if (!(await confirmarDestructivo(t.configuracion.tareas_confirmar_borrar))) return;
+    await correr(supabase.from('tareas_tipo_asistente').delete().eq('id', tarea.id));
   }
 
   return (
     <section className="panel-tarjeta">
       <div className="panel-tarjeta-titulo">
-        <h2>{titulo}</h2>
+        <h2>{t.tareas_asistente[`clase_${clase}`]}</h2>
         <span className="panel-mini">{t.configuracion.tareas_titulo} · {nombreTipo(tipo, t)}</span>
       </div>
       {error && <Alert variant="error">{error}</Alert>}
       {tareas.length === 0 ? (
-        <p className="molde-vacio">{vacio}</p>
+        <p className="molde-vacio">{t.configuracion.tareas_vacio_clase}</p>
       ) : (
-        tareas.map((tarea) => (
-          <div key={tarea.id} className="panel-fila-alerta">
-            <div><b>{tarea.texto || tarea.clave}</b></div>
-            {!tarea.prestadora_id ? (
-              <span className="badge badge-neutro">{t.configuracion.tipos_origen_celtatech}</span>
-            ) : (
-              <Button variant="secondary" onClick={() => onBorrar(tarea)} disabled={ocupadoId === tarea.id}>
-                {t.comun.borrar}
-              </Button>
-            )}
-          </div>
-        ))
+        tareas.map((tarea) =>
+          editandoId === tarea.id ? (
+            <FormularioDeTarea
+              key={tarea.id}
+              nombre={`tarea_${tarea.id}`}
+              inicial={tarea}
+              ocupado={ocupado}
+              etiquetaBoton={t.comun.guardar}
+              onGuardar={(datos) => guardarEdicion(tarea, datos)}
+              onCancelar={() => setEditandoId(null)}
+            />
+          ) : (
+            <div key={tarea.id} className="panel-fila-alerta">
+              <TareaConDetalle tarea={tarea} t={t} />
+              {!tarea.prestadora_id ? (
+                <Candado etiqueta={t.configuracion.candado} />
+              ) : (
+                <div className="panel-fila-acciones">
+                  <Button variant="secondary" onClick={() => setEditandoId(tarea.id)} disabled={ocupado}>
+                    {t.comun.editar}
+                  </Button>
+                  <Button variant="secondary" onClick={() => borrar(tarea)} disabled={ocupado}>
+                    {t.comun.borrar}
+                  </Button>
+                </div>
+              )}
+            </div>
+          ),
+        )
       )}
-      <div className="molde-formgrid">
-        <div className="molde-ancho">
-          <FormField
-            label={t.configuracion.tareas_agregar}
-            name={`nueva_tarea_${clase}`}
-            value={texto}
-            onChange={(e) => setTexto(e.target.value)}
-            placeholder={t.configuracion.tareas_nueva_placeholder}
-          />
-        </div>
-      </div>
-      <div className="molde-acciones">
-        <Button onClick={agregar} disabled={agregando || !texto.trim()}>
-          {agregando ? t.comun.guardando : t.configuracion.tareas_agregar}
-        </Button>
-      </div>
+      <FormularioDeTarea
+        nombre={`nueva_tarea_${clase}`}
+        ocupado={ocupado}
+        etiquetaBoton={t.configuracion.tareas_agregar}
+        onGuardar={agregar}
+      />
     </section>
-  );
-}
-
-function NuevoTipoModal({ prestadoraId, onClose, onCreado }) {
-  const modal = useModalAccesible(onClose);
-  const { t } = useLocale();
-  const [nombre, setNombre] = useState('');
-  const [descripcion, setDescripcion] = useState('');
-  const [requiereMatricula, setRequiereMatricula] = useState(false);
-  const [tipoMatricula, setTipoMatricula] = useState('');
-  const [guardando, setGuardando] = useState(false);
-  const [error, setError] = useState(null);
-
-  // La base no acepta "pide matrícula pero no sabemos de cuál": sin ese dato no
-  // hay contra qué comparar y el Asistente quedaría bloqueado sin salida.
-  const faltaAlgo = !nombre.trim() || (requiereMatricula && !tipoMatricula.trim());
-
-  async function guardar() {
-    setGuardando(true);
-    setError(null);
-    const { error: errorInsert } = await supabase.from('tipos_asistente').insert({
-      prestadora_id: prestadoraId,
-      nombre: nombre.trim(),
-      descripcion: descripcion.trim() || null,
-      requiere_matricula: requiereMatricula,
-      tipo_matricula: requiereMatricula ? tipoMatricula.trim() : null,
-    });
-    setGuardando(false);
-    if (errorInsert) {
-      setError(t.comun.error_generico);
-      return;
-    }
-    onCreado();
-  }
-
-  return (
-    <div className="panel-modal-fondo" onClick={onClose}>
-      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
-        <h2 id={modal.idTitulo}>{t.configuracion.tipos_nuevo}</h2>
-        {error && <Alert variant="error">{error}</Alert>}
-        <div className="molde-formgrid">
-          <div className="molde-ancho">
-            <FormField
-              label={t.configuracion.tipos_nombre_label}
-              name="tipo_nombre"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              required
-            />
-          </div>
-          <div className="molde-ancho">
-            <FormField
-              label={t.configuracion.tipos_descripcion_label}
-              name="tipo_descripcion"
-              type="textarea"
-              value={descripcion}
-              onChange={(e) => setDescripcion(e.target.value)}
-            />
-          </div>
-          <FormField
-            label={t.configuracion.tipos_requiere_matricula_label}
-            name="tipo_requiere_matricula"
-            type="checkbox"
-            checked={requiereMatricula}
-            onChange={(e) => setRequiereMatricula(e.target.checked)}
-          />
-          {requiereMatricula && (
-            <FormField
-              label={t.configuracion.tipos_tipo_matricula_label}
-              name="tipo_tipo_matricula"
-              value={tipoMatricula}
-              onChange={(e) => setTipoMatricula(e.target.value)}
-              required
-            />
-          )}
-        </div>
-        <div className="panel-modal-acciones">
-          <Button variant="secondary" onClick={onClose} disabled={guardando}>
-            {t.comun.cancelar}
-          </Button>
-          <Button onClick={guardar} disabled={guardando || faltaAlgo}>
-            {guardando ? t.comun.guardando : t.comun.guardar}
-          </Button>
-        </div>
-      </div>
-    </div>
   );
 }

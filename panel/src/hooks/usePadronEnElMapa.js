@@ -29,7 +29,7 @@ export function usePadronEnElMapa() {
     setError(null);
     const { data, error: fallo } = await supabase
       .from('asistentes')
-      .select('id, nombre, estado, especialidades, disponible_para_ofertas, lat, lng')
+      .select('id, nombre, estado, disponible_para_ofertas, lat, lng')
       .is('deleted_at', null);
 
     if (fallo) {

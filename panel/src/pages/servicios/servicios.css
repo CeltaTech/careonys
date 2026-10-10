@@ -53,6 +53,11 @@
   margin-top: 14px;
 }
 
+.servicios-tareas-alta {
+  margin-top: 14px;
+  align-items: end;
+}
+
 @media (max-width: 760px) {
   .servicios-resumen.panel-columnas-2,
   .servicios-tarjeta .panel-columnas-3 {

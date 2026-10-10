@@ -248,7 +248,6 @@ appClientesMedicacionRouter.post(
           medicamento,
           dosis,
           frecuencia,
-          via_administracion: via.clave,
           via_administracion_id: via.id,
           prescripcion_archivo_url: prescripcionArchivoUrl,
           fecha_desde: fechaDesde,

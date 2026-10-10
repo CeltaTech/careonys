@@ -2,13 +2,9 @@
 // textoComparable.js — dejar dos textos escritos a mano en condiciones de compararse
 //
 // Hay datos que en una punta los escribe una persona y en la otra los escribió otra, en otro
-// momento y sin ninguna lista de la cual elegir: las especialidades del Legajo del Asistente, el
-// tipo de Asistente cargado a mano antes de que existiera el catálogo. "Enfermería", "ENFERMERIA" y
-// "Enfermeria " son la misma cosa para cualquiera que las lea, y tres cosas distintas para una
-// comparación de cadenas.
-//
-// Está acá y no adentro del archivo que lo necesitó primero porque ya lo preguntan dos
-// (regla «ningún patrón repetido sin punto único de verdad», CLAUDE.md §8).
+// momento y sin ninguna lista de la cual elegir. "Enfermería", "ENFERMERIA" y "Enfermeria " son
+// la misma cosa para cualquiera que las lea, y tres cosas distintas para una comparación de
+// cadenas.
 //
 // **Esto no adivina ni corrige**: acerca dos textos lo justo para poder compararlos. Cuando de
 // la comparación depende una decisión que no se puede deshacer sola, lo que sale de acá es una

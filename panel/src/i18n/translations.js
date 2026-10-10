@@ -213,7 +213,7 @@ export const T = {
       postulaciones: 'Postulaciones',
       servicios: 'Servicios',
       asistentes: 'Padrón de Asistentes',
-      clientes: 'Clientes',
+      clientes: 'Directorio de Clientes',
       personas: 'Directorio de Personas',
       medicacion: 'Medicación',
       guardias: 'Guardias',
@@ -1717,7 +1717,7 @@ export const T = {
       },
     },
     clientes: {
-      titulo: 'Clientes',
+      titulo: 'Directorio de Clientes',
       listado: {
         col_cliente: 'Cliente',
         col_paciente: 'Paciente',
@@ -3233,7 +3233,7 @@ export const T = {
       postulaciones: 'Applications',
       servicios: 'Services',
       asistentes: 'Assistant Register',
-      clientes: 'Clients',
+      clientes: 'Client Directory',
       personas: 'People Directory',
       medicacion: 'Medication',
       guardias: 'Shifts',
@@ -4720,7 +4720,7 @@ export const T = {
       },
     },
     clientes: {
-      titulo: 'Clients',
+      titulo: 'Client Directory',
       listado: {
         col_cliente: 'Client',
         col_paciente: 'Patient',
@@ -6216,7 +6216,7 @@ export const T = {
       postulaciones: 'Candidaturas',
       servicios: 'Serviços',
       asistentes: 'Cadastro de Assistentes',
-      clientes: 'Clientes',
+      clientes: 'Diretório de Clientes',
       personas: 'Diretório de Pessoas',
       medicacion: 'Medicação',
       guardias: 'Plantões',
@@ -7703,7 +7703,7 @@ export const T = {
       },
     },
     clientes: {
-      titulo: 'Clientes',
+      titulo: 'Diretório de Clientes',
       listado: {
         col_cliente: 'Cliente',
         col_paciente: 'Paciente',

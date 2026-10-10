@@ -203,6 +203,80 @@ export function PerfilTab({ asistente, onActualizado }) {
     cargarLugares();
   }, [cargarLugares]);
 
+  /* Sus Especialidades, elegidas del catálogo del tipo que tiene. La base sólo acepta las del tipo
+     ya guardado en el Legajo, así que se escriben después del Legajo, y al cambiar de tipo se
+     quedan afuera las del anterior. Mientras no se pudo leer, no se escribe nada. */
+  const [catalogoEspecialidades, setCatalogoEspecialidades] = useState([]);
+  const [especialidadesGuardadas, setEspecialidadesGuardadas] = useState([]);
+  const [especialidadesElegidas, setEspecialidadesElegidas] = useState([]);
+  const [estadoEspecialidades, setEstadoEspecialidades] = useState('cargando');
+  const [errorEspecialidades, setErrorEspecialidades] = useState(null);
+
+  const cargarEspecialidades = useCallback(async () => {
+    setEstadoEspecialidades('cargando');
+    setErrorEspecialidades(null);
+    const [catalogo, propias] = await Promise.all([
+      supabase.from('especialidades').select('id, nombre, tipo_asistente_id, activo').order('orden').order('nombre'),
+      supabase.from('especialidades_asistente').select('especialidad_id').eq('asistente_id', asistente.id),
+    ]);
+    if (catalogo.error || propias.error) {
+      setErrorEspecialidades(mensajeDeError(catalogo.error ?? propias.error, t));
+      setEstadoEspecialidades('error');
+      return;
+    }
+    const ids = propias.data.map((fila) => fila.especialidad_id);
+    setCatalogoEspecialidades(catalogo.data);
+    setEspecialidadesGuardadas(ids);
+    setEspecialidadesElegidas(ids);
+    setEstadoEspecialidades('listo');
+  }, [asistente.id, t]);
+
+  useEffect(() => {
+    cargarEspecialidades();
+  }, [cargarEspecialidades]);
+
+  // Las del tipo elegido: las activas, más la que ya tenga aunque después se haya apagado.
+  const especialidadesDelTipo = catalogoEspecialidades.filter(
+    (especialidad) =>
+      especialidad.tipo_asistente_id === form.tipo_asistente_id &&
+      (especialidad.activo || especialidadesGuardadas.includes(especialidad.id)),
+  );
+
+  function alternarEspecialidad(id) {
+    setEspecialidadesElegidas((elegidas) =>
+      elegidas.includes(id) ? elegidas.filter((uno) => uno !== id) : [...elegidas, id],
+    );
+    setGuardado(false);
+  }
+
+  async function guardarEspecialidades() {
+    const delTipo = new Set(especialidadesDelTipo.map((especialidad) => especialidad.id));
+    const deseadas = especialidadesElegidas.filter((id) => delTipo.has(id));
+    const sobran = especialidadesGuardadas.filter((id) => !deseadas.includes(id));
+    const faltan = deseadas.filter((id) => !especialidadesGuardadas.includes(id));
+    if (sobran.length > 0) {
+      const { error: errorBorrar } = await supabase
+        .from('especialidades_asistente')
+        .delete()
+        .eq('asistente_id', asistente.id)
+        .in('especialidad_id', sobran);
+      if (errorBorrar) return errorBorrar;
+    }
+    if (faltan.length > 0) {
+      const { error: errorAgregar } = await supabase.from('especialidades_asistente').insert(
+        faltan.map((especialidad_id) => ({
+          prestadora_id: asistente.prestadora_id,
+          asistente_id: asistente.id,
+          especialidad_id,
+        })),
+      );
+      if (errorAgregar) return errorAgregar;
+    }
+    setEspecialidadesGuardadas(deseadas);
+    setEspecialidadesElegidas(deseadas);
+    return null;
+  }
+
   function set(campo, valor) {
     setForm((f) => ({ ...f, [campo]: valor }));
     setGuardado(false);
@@ -315,6 +389,15 @@ export function PerfilTab({ asistente, onActualizado }) {
       if (errorRemuneracion) {
         setGuardando(false);
         setError(t.comun.error_generico);
+        return;
+      }
+    }
+
+    if (estadoEspecialidades === 'listo') {
+      const errorEspecialidad = await guardarEspecialidades();
+      if (errorEspecialidad) {
+        setGuardando(false);
+        setError(mensajeDeError(errorEspecialidad, t));
         return;
       }
     }
@@ -505,18 +588,32 @@ export function PerfilTab({ asistente, onActualizado }) {
             <div className="panel-mini">{t.asistentes.fecha_alta}</div>
             <b>{new Date(asistente.fecha_alta).toLocaleDateString(locale)}</b>
           </div>
-
-          {/* Lo que estaba escrito a mano antes de que existiera el catálogo. Se
-              muestra solo mientras este Asistente no tenga tipo, para que quien
-              mira sepa qué decía el Legajo del Asistente y pueda elegir el que corresponde. */}
-          {!form.tipo_asistente_id && (asistente.especialidades || []).length > 0 && (
-            <div className="molde-ancho panel-mini">
-              {t.asistentes.tipo_antes_decia}: {asistente.especialidades.join(', ')}
-            </div>
-          )}
         </div>
         {asistente.estado === 'cesado' && <Alert variant="info">{t.asistentes.cese.ya_cesado}</Alert>}
       </section>
+
+      {(estadoEspecialidades !== 'listo' || especialidadesDelTipo.length > 0) && form.tipo_asistente_id && (
+        <section className="panel-tarjeta">
+          <div className="panel-tarjeta-titulo">
+            <h2>{t.configuracion.especialidades_titulo}</h2>
+          </div>
+          <EstadoLista estado={estadoEspecialidades} error={errorEspecialidades} recargar={cargarEspecialidades}>
+            <div className="molde-formgrid">
+              {especialidadesDelTipo.map((especialidad) => (
+                <FormField
+                  key={especialidad.id}
+                  label={especialidad.nombre}
+                  name={`especialidad_${especialidad.id}`}
+                  type="checkbox"
+                  checked={especialidadesElegidas.includes(especialidad.id)}
+                  onChange={() => alternarEspecialidad(especialidad.id)}
+                  disabled={guardando || !puedeEditarIdentidad}
+                />
+              ))}
+            </div>
+          </EstadoLista>
+        </section>
+      )}
 
       <section className="panel-tarjeta">
         <div className="panel-tarjeta-titulo">

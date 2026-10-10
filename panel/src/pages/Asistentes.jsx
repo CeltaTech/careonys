@@ -8,10 +8,10 @@ import { claseBadge, claseBadgeTono, TONO } from '../lib/tonos';
 import { nombreTipo } from '../lib/tiposAsistente';
 import { conDatosAparte } from '../lib/datosAparteDelAsistente';
 import { MODALIDAD, modalidadesDelAsistente } from '../lib/modalidades';
-import { coincideConElFiltro, opcionesDelPadron } from '../lib/resumenDelPadron';
 import { useSupabaseTable } from '../hooks/useSupabaseTable';
 import { useFiltros } from '../hooks/useFiltros';
 import { useTiposAsistente } from '../hooks/useTiposAsistente';
+import { useRamas } from '../hooks/useRamas';
 import { useLugaresDelPadron } from '../hooks/useLugaresDelPadron';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Alert } from '../components/ui/Alert';
@@ -47,9 +47,11 @@ export function Asistentes() {
     estado: '',
     tipo: '',
     zona: '',
-    especialidad: '',
+    rama: '',
   });
   const { paraElegir: tiposAsistente, porId: tiposPorId } = useTiposAsistente();
+  // La Rama sale del tipo de cada Asistente, no de algo cargado en su Legajo.
+  const { ramas, ramaDelTipo } = useRamas();
   // Dónde acepta trabajar cada una. Vive en su propia tabla y llega aparte; sólo alimenta el filtro.
   const lugaresDelPadron = useLugaresDelPadron(filas.map((a) => a.id));
 
@@ -71,10 +73,10 @@ export function Asistentes() {
         (!f.estado || a.estado === f.estado) &&
         (!f.tipo || a.tipo_asistente_id === f.tipo) &&
         (!f.zona || a.lugares.includes(f.zona)) &&
-        coincideConElFiltro(a, 'especialidades', f.especialidad)
+        (!f.rama || ramaDelTipo(a.tipo_asistente_id)?.id === f.rama)
       );
     });
-  }, [filas, f, conLugares]);
+  }, [filas, f, conLugares, ramaDelTipo]);
 
   // El filtro de lugar ofrece los lugares que el Padrón tiene cargados, no el catálogo entero.
   const lugares = useMemo(() => {
@@ -83,7 +85,6 @@ export function Asistentes() {
       .filter((lugar) => puestos.has(lugar.id))
       .map((lugar) => ({ id: lugar.id, nombre: lugar.nombre }));
   }, [filas, lugaresDelPadron]);
-  const especialidades = useMemo(() => opcionesDelPadron(filas, 'especialidades'), [filas]);
 
   // Los que todavía no tienen tipo del catálogo. Mientras haya uno se ofrece pasarlos.
   const sinTipo = useMemo(() => filas.filter((a) => !a.tipo_asistente_id), [filas]);
@@ -162,15 +163,11 @@ export function Asistentes() {
               ))}
             </select>
           )}
-          {especialidades.length > 1 && (
-            <select
-              value={f.especialidad}
-              onChange={(e) => set('especialidad', e.target.value)}
-              aria-label={t.asistentes.col_especialidades}
-            >
-              <option value="">{t.asistentes.filtro_especialidad_todas}</option>
-              {especialidades.map((especialidad) => (
-                <option key={especialidad} value={especialidad}>{especialidad}</option>
+          {ramas.length > 1 && (
+            <select value={f.rama} onChange={(e) => set('rama', e.target.value)} aria-label={t.configuracion.tipos_col_rama}>
+              <option value="">{t.asistentes.filtro_rama_todas}</option>
+              {ramas.map((rama) => (
+                <option key={rama.id} value={rama.id}>{rama.nombre}</option>
               ))}
             </select>
           )}
@@ -194,7 +191,7 @@ export function Asistentes() {
                 <tr>
                   <th>{t.asistentes.numero_legajo}</th>
                   <th>{tl.col_asistente}</th>
-                  <th>{tl.col_especialidad}</th>
+                  <th>{t.configuracion.tipos_col_rama}</th>
                   <th>{t.asistentes.col_estado}</th>
                   <th>{tl.col_modalidad_utilizada}</th>
                   <th><span className="solo-lectores-pantalla">{t.comun.detalle}</span></th>
@@ -214,7 +211,7 @@ export function Asistentes() {
                             : t.asistentes.tipo_sin_asignar}
                         </span>
                       </td>
-                      <td>{(a.especialidades || []).join(', ') || '—'}</td>
+                      <td>{ramaDelTipo(a.tipo_asistente_id)?.nombre ?? '—'}</td>
                       <td>
                         <span className={claseBadge(a.estado)}>{t.asistentes[`estado_${a.estado}`]}</span>
                       </td>

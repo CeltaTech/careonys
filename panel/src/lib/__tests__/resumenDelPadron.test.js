@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   DIAS_DE_HORIZONTE,
-  coincideConElFiltro,
   documentacionPorAsistente,
   guardiasActivasPorAsistente,
-  opcionesDelPadron,
 } from '../resumenDelPadron';
 import { ESTADO_VENCIMIENTO } from '../reglaVencimientos';
 import { T } from '../../i18n/translations';
@@ -137,83 +135,15 @@ describe('documentacionPorAsistente', () => {
   });
 });
 
-describe('opcionesDelPadron', () => {
-  // Cada Legajo del Asistente lo cargó otra persona, en otro momento y sin lista de la cual elegir: la misma
-  // zona termina escrita de tres maneras. Si el filtro las ofrece por separado, elegir una deja
-  // afuera a los otros dos.
-  it('junta en una sola opción lo que está escrito distinto', () => {
-    const opciones = opcionesDelPadron(
-      [{ zonas: ['San Isidro'] }, { zonas: ['san isidro'] }, { zonas: ['SAN ISIDRO '] }],
-      'zonas',
-    );
-    expect(opciones).toEqual(['San Isidro']);
-  });
-
-  it('ordena alfabéticamente y no repite', () => {
-    const opciones = opcionesDelPadron(
-      [{ zonas: ['Vicente López', 'Avellaneda'] }, { zonas: ['Morón', 'Avellaneda'] }],
-      'zonas',
-    );
-    expect(opciones).toEqual(['Avellaneda', 'Morón', 'Vicente López']);
-  });
-
-  it('ignora lo vacío, que no es una opción que alguien pueda elegir', () => {
-    expect(opcionesDelPadron([{ zonas: ['', '   ', null, 'Quilmes'] }], 'zonas')).toEqual([
-      'Quilmes',
-    ]);
-  });
-
-  it('lee el campo que se le pide y no otro', () => {
-    const filas = [{ zonas: ['Quilmes'], especialidades: ['Enfermería'] }];
-    expect(opcionesDelPadron(filas, 'especialidades')).toEqual(['Enfermería']);
-  });
-
-  it('no se cae sin Padrón ni con Legajos del Asistente sin el campo', () => {
-    expect(opcionesDelPadron(undefined, 'zonas')).toEqual([]);
-    expect(opcionesDelPadron([{}, null, { zonas: null }], 'zonas')).toEqual([]);
-  });
-});
-
-describe('coincideConElFiltro', () => {
-  const asistente = { zonas: ['San Isidro', 'Vicente López'], especialidades: ['Enfermería'] };
-
-  it('sin nada elegido no filtra nada', () => {
-    expect(coincideConElFiltro(asistente, 'zonas', '')).toBe(true);
-    expect(coincideConElFiltro({}, 'zonas', undefined)).toBe(true);
-  });
-
-  it('encuentra a quien escribió lo mismo de otra manera', () => {
-    expect(coincideConElFiltro({ zonas: ['san isidro '] }, 'zonas', 'San Isidro')).toBe(true);
-  });
-
-  // Acá la igualdad es exacta, sin aceptar que un texto contenga al otro: dos zonas distintas que
-  // comparten una palabra son dos zonas distintas, y quien elige una no quiere ver las otras.
-  it('no junta dos cosas distintas', () => {
-    expect(coincideConElFiltro(asistente, 'zonas', 'Morón')).toBe(false);
-    expect(coincideConElFiltro({ zonas: ['Zona Norte'] }, 'zonas', 'Norte')).toBe(false);
-  });
-
-  it('busca en el campo que se le pide', () => {
-    expect(coincideConElFiltro(asistente, 'especialidades', 'San Isidro')).toBe(false);
-    expect(coincideConElFiltro(asistente, 'especialidades', 'enfermeria')).toBe(true);
-  });
-
-  it('un Legajo del Asistente sin ese campo no coincide con nada elegido', () => {
-    expect(coincideConElFiltro({}, 'zonas', 'San Isidro')).toBe(false);
-    expect(coincideConElFiltro(null, 'zonas', 'San Isidro')).toBe(false);
-  });
-});
-
 describe('los textos de la lista existen en los tres idiomas', () => {
   it.each(IDIOMAS)('%s nombra las columnas nuevas y los tres estados', (idioma) => {
     const textos = T[idioma].asistentes;
     for (const clave of [
-      'col_especialidades',
       'col_guardias_activas',
       'col_documentacion',
       'documentacion_sin_papeles',
       'filtro_zona_todas',
-      'filtro_especialidad_todas',
+      'filtro_rama_todas',
     ]) {
       expect(typeof textos[clave], `falta ${clave} en ${idioma}`).toBe('string');
       expect(textos[clave].length).toBeGreaterThan(0);

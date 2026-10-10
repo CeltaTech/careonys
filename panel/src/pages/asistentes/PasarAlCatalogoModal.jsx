@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { supabase } from '../../lib/supabaseClient';
-import { nombreTipo, sugerirTipo } from '../../lib/tiposAsistente';
+import { nombreTipo } from '../../lib/tiposAsistente';
 import { useTiposAsistente } from '../../hooks/useTiposAsistente';
 import { mensajeDeError } from '../../lib/errores';
 import { Button } from '../../components/ui/Button';
@@ -9,24 +9,10 @@ import { Alert } from '../../components/ui/Alert';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { con } from '../../lib/textos';
 
-// La pantalla donde se le pone tipo a los Asistentes que todavía no lo tienen.
-//
-// Antes el tipo de un Asistente era una casilla de texto libre: cada quien
-// escribía lo que le parecía. Ahora se elige de una lista. Los que ya estaban
-// cargados no se convierten solos: esta pantalla los pone uno debajo del otro,
-// muestra qué decía antes el Legajo del Asistente y propone el tipo que más se le parece —
-// pero la propone, no la aplica. La confirma una persona.
-//
-// También caen acá los que entraron por una planilla importada donde el tipo no
-// se pudo reconocer. Esos no tienen un texto viejo que mostrar: la columna del
-// medio queda con un guion y el tipo se elige a mano, que es lo mismo que hace
-// quien pasa los viejos.
-//
-// Por qué no se convierte solo: el tipo es lo que decide si a esa persona se le
-// exige matrícula para poder atender. Adivinar mal ahí no es un renglón feo en
-// una pantalla, es dejar trabajar a alguien que no debería, o frenar a alguien
-// que sí puede. Cuando la sugerencia duda, no sugiere nada y la casilla queda
-// vacía a propósito.
+// La pantalla donde se le pone tipo a los Asistentes que todavía no lo tienen:
+// los que entraron por una planilla importada donde el tipo no se pudo
+// reconocer. Los pone uno debajo del otro y el tipo se elige a mano, porque el
+// tipo es lo que decide si a esa persona se le exige matrícula para atender.
 //
 // El día que no quede ningún Asistente sin tipo, la alerta de la lista deja de
 // aparecer y esta pantalla no se abre más.
@@ -38,18 +24,8 @@ export function PasarAlCatalogoModal({ asistentes, onClose, onGuardado }) {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
 
-  // La sugerencia se calcula una vez por Asistente, cuando ya llegó el
-  // catálogo. Lo que la persona toca a mano manda siempre sobre la sugerencia.
-  const sugerencias = useMemo(() => {
-    const porAsistente = {};
-    for (const asistente of asistentes) {
-      porAsistente[asistente.id] = sugerirTipo(asistente.especialidades, tipos, t);
-    }
-    return porAsistente;
-  }, [asistentes, tipos, t]);
-
   function valorDe(asistenteId) {
-    return elegidos[asistenteId] ?? sugerencias[asistenteId] ?? '';
+    return elegidos[asistenteId] ?? '';
   }
 
   const cuantosTienenTipo = asistentes.filter((a) => valorDe(a.id)).length;
@@ -87,7 +63,6 @@ export function PasarAlCatalogoModal({ asistentes, onClose, onGuardado }) {
           <thead>
             <tr>
               <th>{t.asistentes.col_nombre}</th>
-              <th>{t.asistentes.pasar_al_catalogo.col_antes_decia}</th>
               <th>{t.asistentes.col_tipo}</th>
             </tr>
           </thead>
@@ -95,7 +70,6 @@ export function PasarAlCatalogoModal({ asistentes, onClose, onGuardado }) {
             {asistentes.map((asistente) => (
               <tr key={asistente.id}>
                 <td>{asistente.nombre}</td>
-                <td>{(asistente.especialidades || []).join(', ') || '—'}</td>
                 <td>
                   <select
                     value={valorDe(asistente.id)}

@@ -4,7 +4,6 @@ import { useSupabaseTable } from '../hooks/useSupabaseTable';
 import { usePrestadoraActual } from '../hooks/usePrestadoraActual';
 import { useFiltros } from '../hooks/useFiltros';
 import { useZonasCobertura } from '../hooks/useZonasCobertura';
-import { useOpcionesPostulacion } from '../hooks/useOpcionesPostulacion';
 import { useListaDeOpciones } from '../hooks/useListaDeOpciones';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Cabecera } from '../components/ui/Cabecera';
@@ -27,7 +26,6 @@ const TIPOS_DE_SERVICIO = ['con_retiro', 'sin_retiro'];
 const FILTROS_INICIALES = {
   busqueda: '',
   estado: '',
-  especialidad: '',
   zona: '',
   disponibilidad: '',
   situacion_fiscal: '',
@@ -50,9 +48,6 @@ export function Postulaciones() {
     () => Object.fromEntries(zonas.map((z) => [z.codigo, z.nombre])),
     [zonas],
   );
-  // Las especialidades son las que cargó esta Prestadora, no dos escritas en las traducciones.
-  const lasEspecialidades = useOpcionesPostulacion(prestadoraId, 'especialidad');
-  const especialidadesLabels = lasEspecialidades.labels;
   // La disponibilidad y la situación fiscal salían del archivo de traducciones, recorridas con un
   // bucle. Ahora son dos listas del registro de opciones, así que cada Prestadora puede agregar
   // sus turnos sin que haga falta publicar una versión nueva del Panel.
@@ -147,15 +142,6 @@ export function Postulaciones() {
               ))}
             </select>
             <FiltroDeCatalogo
-              etiqueta={t.postulaciones.filtro_especialidad}
-              valor={f.especialidad}
-              onCambiar={(v) => set('especialidad', v)}
-              opciones={lasEspecialidades.filas.map((e) => ({ valor: e.clave, texto: e.etiqueta }))}
-              estado={lasEspecialidades.estado}
-              error={lasEspecialidades.error}
-              recargar={lasEspecialidades.recargar}
-            />
-            <FiltroDeCatalogo
               etiqueta={t.postulaciones.filtro_zona}
               valor={f.zona}
               onCambiar={(v) => set('zona', v)}
@@ -226,7 +212,6 @@ export function Postulaciones() {
               <thead>
                 <tr>
                   <th>{t.postulaciones.col_nombre}</th>
-                  <th>{t.postulaciones.col_especialidades}</th>
                   <th>{t.postulaciones.col_zonas}</th>
                   <th>{t.postulaciones.col_fecha}</th>
                   <th>{t.postulaciones.col_honorario_pretendido}</th>
@@ -244,7 +229,6 @@ export function Postulaciones() {
                     <td>
                       <b>{p.nombre}</b>
                     </td>
-                    <td>{traducirCodigos(p.especialidades, especialidadesLabels)}</td>
                     <td>{traducirCodigos(p.zonas, zonasLabels)}</td>
                     <td>{new Date(p.creado_en).toLocaleDateString(locale)}</td>
                     {/* La moneda sale de la fila, no de la Prestadora de quien mira: el importe está

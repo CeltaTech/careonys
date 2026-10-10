@@ -656,9 +656,10 @@ appClientesRouter.get('/pacientes/:id/alertas', requiereRolCliente, exigeVisible
 // Paciente (las políticas de asistentes y certificados ya lo acotan a eso), estado del Certificado de Aptitud, evaluaciones anteriores, y el id de la guardia
 // activa/última (para el botón de calificar).
 //
-// Además devuelve el tipo del Asistente con sus dos listas de tareas: qué le
-// corresponde hacer y qué no. Es el motivo por el que existe el catálogo de
-// tipos: que el Cliente lo lea antes y no lo discuta en la puerta.
+// Además devuelve el tipo del Asistente con sus tres listas de tareas: qué le
+// toca hacer, qué no le toca y qué tiene prohibido. Es el motivo por el que
+// existe el catálogo de tipos: que el Cliente lo lea antes y no lo discuta en
+// la puerta.
 //
 // Y el estado documental agregado, que arma `utils/estadoDocumentalParaElCliente.js`: cuántos
 // papeles exige esta Prestadora y cuántos están al día, más cómo está la Matrícula. Cuentas y

@@ -14,6 +14,7 @@ import { Cabecera } from '../../components/ui/Cabecera';
 import { mensajeDeError } from '../../lib/errores';
 import { clienteDelServicio, contactosDeClientes } from '../../lib/clienteDelServicio';
 import { claseDeResponsable, modalidadesDeGuardias, nombreDeModalidad } from './modalidadesDelServicio';
+import { TareasDelServicio } from './TareasDelServicio';
 import './servicios.css';
 
 import { FICHA_NOMBRE, conSuFicha, conSusFichas } from '../../lib/fichaDelPaciente';
@@ -222,6 +223,7 @@ export function ServicioDetalle() {
   const pestanas = [
     ['resumen', d.tab_resumen],
     ['prestaciones', d.tab_prestaciones],
+    ['tareas', d.tab_tareas],
     ['guardias', d.tab_guardias],
     ['seguimiento', d.tab_seguimiento],
     ['incidencias', d.tab_incidencias],
@@ -311,6 +313,14 @@ export function ServicioDetalle() {
               </table>
             </div>
           ))}
+
+        {tab === 'tareas' && (
+          <TareasDelServicio
+            servicioId={servicio.id}
+            prestadoraId={prestadoraId}
+            editable={servicio.estado === ESTADO_ACTIVO}
+          />
+        )}
 
         {tab === 'guardias' &&
           (guardias.length === 0 ? (

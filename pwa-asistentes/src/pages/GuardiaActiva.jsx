@@ -19,26 +19,7 @@ import ExtensionDeTurno from '../components/ExtensionDeTurno';
 import EnlaceAlMapa from '../components/EnlaceAlMapa';
 import PaseDeGuardia from '../components/PaseDeGuardia';
 import CodigoDePresencia from '../components/CodigoDePresencia';
-
-// Una de las dos listas del tipo de Asistente. La de "qué no hace" se muestra igual de
-// grande que la otra a propósito: es la que evita la discusión en la puerta. Se dibuja
-// idéntica a la que ve el Cliente, para que las dos partes miren lo mismo.
-function ListaDeTareas({ titulo, tareas, vacio }) {
-  return (
-    <>
-      <h3>{titulo}</h3>
-      {tareas.length === 0 ? (
-        <div className="estado-vacio" role="status">{vacio}</div>
-      ) : (
-        <ul className="lista-tareas">
-          {tareas.map((tarea) => (
-            <li key={tarea.id}>{tarea.texto || tarea.clave}</li>
-          ))}
-        </ul>
-      )}
-    </>
-  );
-}
+import TareasDelTipo from '../components/TareasDelTipo';
 
 /**
  * Lo que se puede consultar de UN Paciente durante el turno: sus órdenes de medicación y sus
@@ -714,16 +695,7 @@ export default function GuardiaActiva() {
           <div className="mini">
             {t.guardia_activa.tipo}: {nombreTipo(tipo, t)}
           </div>
-          <ListaDeTareas
-            titulo={t.guardia_activa.tareas_corresponde}
-            tareas={tareas?.corresponde || []}
-            vacio={t.guardia_activa.tareas_vacio}
-          />
-          <ListaDeTareas
-            titulo={t.guardia_activa.tareas_no_corresponde}
-            tareas={tareas?.no_corresponde || []}
-            vacio={t.guardia_activa.tareas_vacio}
-          />
+          <TareasDelTipo tareas={tareas} vacio={t.guardia_activa.tareas_vacio} t={t} />
         </section>
       )}
 

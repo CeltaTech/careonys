@@ -2922,6 +2922,32 @@ button.panel-kpi-card[aria-pressed='true'] {
   margin-top: 3px;
 }
 
+/* El candado de lo que trae el producto y no se edita ni se borra (components/ui/Candado.jsx). */
+.panel-candado {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 6px;
+  color: var(--texto-secundario);
+}
+
+/* Una tarea con su detalle: el nombre se toca y el detalle se abre debajo. */
+.panel-tarea-con-detalle summary {
+  cursor: pointer;
+}
+
+.panel-tarea-con-detalle p {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--texto-secundario);
+}
+
+.panel-fila-acciones {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 .panel-grafico {
   height: 170px;
   display: flex;

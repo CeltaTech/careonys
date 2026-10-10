@@ -31,3 +31,18 @@ export function nombreTipo(tipo, t) {
   if (esTipoGeneral(tipo)) return traducirValor(t.tipos_asistente, `tipo_${tipo.clave}`);
   return tipo.nombre || '—';
 }
+
+// Las tareas siguen la misma división. Una tarea del producto guarda una clave y
+// su nombre y su detalle salen de las traducciones; una propia de la Prestadora
+// guarda el texto que ella escribió.
+export function nombreTarea(tarea, t) {
+  if (!tarea) return '—';
+  if (!tarea.prestadora_id && tarea.clave) return traducirValor(t.tareas_asistente, `tarea_${tarea.clave}`);
+  return tarea.texto || '—';
+}
+
+export function detalleTarea(tarea, t) {
+  if (!tarea) return '';
+  if (!tarea.prestadora_id && tarea.clave) return traducirValor(t.tareas_asistente, `detalle_${tarea.clave}`);
+  return tarea.descripcion || '';
+}

@@ -247,6 +247,11 @@ export const GRUPOS = [
     copias: ['pwa-clientes/src/components/DomicilioTemporal.jsx'],
   },
   {
+    que: 'las tareas del tipo de Asistente, en sus tres clases',
+    original: 'pwa-asistentes/src/components/TareasDelTipo.jsx',
+    copias: ['pwa-clientes/src/components/TareasDelTipo.jsx'],
+  },
+  {
     que: 'cómo se le entrega una dirección al mapa del teléfono',
     original: 'pwa-asistentes/src/lib/enlaceAlMapa.js',
     copias: ['pwa-clientes/src/lib/enlaceAlMapa.js'],

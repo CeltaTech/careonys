@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { llamarApiContenidos } from '../../lib/apiContenidos';
 import { DESTINATARIOS_DE_CONTENIDOS } from '../../lib/destinatariosDeContenidos';
+import { ENLACE_DE_CONTENIDO_ACEPTADO } from '../../lib/enlaceDeContenidos';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
@@ -110,13 +111,28 @@ export function ContenidoDetalle({ contenido, soloLectura, onClose, onGuardado }
             />
           </div>
 
-          <FormField
-            label={t.contenidos.campo_enlace}
-            name="enlace_url"
-            value={enlace}
-            onChange={(e) => setEnlace(e.target.value)}
-            disabled={soloLectura}
-          />
+          {/* «Abrir» lleva lo que se pegó a otra pestaña, para ver que lleva a donde se quería. Se
+              apaga mientras lo escrito no sea una dirección que el backend aceptaría. */}
+          <div className="molde-ancho">
+            <FormField
+              label={t.contenidos.campo_enlace}
+              name="enlace_url"
+              value={enlace}
+              onChange={(e) => setEnlace(e.target.value)}
+              disabled={soloLectura}
+            />
+            {!soloLectura && (
+              <div className="molde-acciones">
+                <Button
+                  variant="secondary"
+                  onClick={() => window.open(enlace.trim(), '_blank', 'noopener,noreferrer')}
+                  disabled={!ENLACE_DE_CONTENIDO_ACEPTADO.test(enlace.trim())}
+                >
+                  {t.contenidos.abrir_enlace}
+                </Button>
+              </div>
+            )}
+          </div>
 
           <FormField
             label={t.contenidos.campo_orden}

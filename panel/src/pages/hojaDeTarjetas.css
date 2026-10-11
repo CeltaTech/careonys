@@ -33,3 +33,10 @@
   font-size: 13px;
   margin-top: 3px;
 }
+
+/* Texto escrito por una persona, que conserva sus renglones. */
+.hoja-texto-con-renglones {
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}

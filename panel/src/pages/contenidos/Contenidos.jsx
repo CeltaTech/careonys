@@ -55,6 +55,10 @@ export function Contenidos() {
     recargar();
   }, [recargar]);
 
+  // Lo que el personal lee: lo publicado para él, en el orden de la lista. Quien no escribe recibe
+  // ya sólo esto; quien escribe recibe todo, y lo ve además en la tabla de abajo.
+  const paraLeer = contenidos.filter((c) => c.publicado && c.destinatarios?.includes('personal'));
+
   // En el orden de la lista, que es el mismo en que el backend los guarda.
   const nombrarDestinatarios = (destinatarios) =>
     DESTINATARIOS_DE_CONTENIDOS.filter((d) => destinatarios?.includes(d))
@@ -68,6 +72,34 @@ export function Contenidos() {
       </Cabecera>
       {estado === 'error' && error && <Alert variant="error">{error}</Alert>}
 
+      {/* El enlace lleva fuera del Panel: se abre aparte y sin dejarle a esa página ninguna vía de
+          vuelta hacia acá. */}
+      {estado === 'listo' && paraLeer.length > 0 && (
+        <div className="molde-pila">
+          {paraLeer.map((contenido) => (
+            <article key={contenido.id} className="panel-tarjeta">
+              <div className="panel-tarjeta-titulo">
+                <h2>{contenido.titulo}</h2>
+              </div>
+              <p className="hoja-texto-con-renglones">{contenido.cuerpo}</p>
+              {contenido.enlace_url && (
+                <div className="molde-acciones">
+                  <a
+                    className="btn btn-secondary"
+                    href={contenido.enlace_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {t.contenidos.abrir_enlace}
+                  </a>
+                </div>
+              )}
+            </article>
+          ))}
+        </div>
+      )}
+
+      {puedeEscribir && (
       <section className="panel-tarjeta hoja-desplazable">
         <div className="panel-tarjeta-titulo">
           <h2>{t.contenidos.titulo}</h2>
@@ -115,6 +147,11 @@ export function Contenidos() {
           </table>
         </EstadoLista>
       </section>
+      )}
+
+      {!puedeEscribir && estado !== 'listo' && (
+        <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar} />
+      )}
 
       {(seleccionado || creandoNuevo) && (
         <ContenidoDetalle

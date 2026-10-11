@@ -23,6 +23,7 @@ import { requierePermiso } from '../utils/permisos.js';
 import { clienteDelPedido } from '../db/connection.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { DESTINATARIOS_DE_CONTENIDOS } from '../config/destinatariosDeContenidos.js';
+import { ENLACE_DE_CONTENIDO_ACEPTADO } from '../config/enlaceDeContenidos.js';
 
 export const panelContenidosRouter = Router();
 
@@ -47,11 +48,10 @@ function contenidoValidado(cuerpoDelPedido) {
   const cuerpo = typeof cuerpoDelPedido.cuerpo === 'string' ? cuerpoDelPedido.cuerpo.trim() : '';
   if (!cuerpo) throw new ErrorConMotivo('faltan_datos', 'El contenido necesita un texto');
 
-  // El enlace es opcional; si viene, tiene que ser una página web cifrada. Lo que no se admite es
-  // un `javascript:` ni un `http://` suelto: esto termina en un enlace que toca un Cliente.
+  // El enlace es opcional; si viene, lo decide `config/enlaceDeContenidos.js`.
   const enlaceCrudo = typeof cuerpoDelPedido.enlace_url === 'string' ? cuerpoDelPedido.enlace_url.trim() : '';
   const enlace = enlaceCrudo === '' ? null : enlaceCrudo;
-  if (enlace !== null && !/^https:\/\/\S+$/.test(enlace)) {
+  if (enlace !== null && !ENLACE_DE_CONTENIDO_ACEPTADO.test(enlace)) {
     throw new ErrorConMotivo('enlace_invalido', `Enlace que no es una dirección https: ${enlace}`);
   }
 

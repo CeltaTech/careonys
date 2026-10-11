@@ -231,6 +231,8 @@ export function Layout() {
       texto: t.nav.sec_informes,
       enlaces: [
         { a: '/informes-obra-social', texto: t.nav.informes_obra_social, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
+        { a: '/auditoria', texto: t.nav.auditoria, ver: esAdmin },
+        { a: '/intermediacion/auditoria-legal', texto: t.nav.intermediacion_auditoria_legal, ver: verMatch && esAdmin, modalidad: MODALIDAD.INTERMEDIACION },
       ],
     },
     {
@@ -251,8 +253,7 @@ export function Layout() {
         { a: '/usuarios-panel', texto: t.nav.usuarios_panel, ver: esAdmin },
         { a: '/importacion', texto: t.nav.importacion, ver: esAdmin || puede('importar_datos_masivos') },
         { a: '/habilitar-clave', texto: t.nav.habilitar_clave, ver: esAdmin || puede('habilitar_cambio_de_clave'), contador: telefonosEsperando.length },
-        { a: '/auditoria', texto: t.nav.auditoria, ver: esAdmin },
-        { a: '/intermediacion/auditoria-legal', texto: t.nav.intermediacion_auditoria_legal, ver: verMatch, modalidad: MODALIDAD.INTERMEDIACION },
+        { a: '/intermediacion/funciones-con-riesgo-legal', texto: t.nav.intermediacion_funciones_riesgo, ver: verMatch, modalidad: MODALIDAD.INTERMEDIACION },
       ],
     },
   ]

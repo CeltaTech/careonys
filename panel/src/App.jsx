@@ -70,6 +70,7 @@ import { IntermediacionClientes } from './pages/intermediacion/Clientes';
 import { FormasDeCobro } from './pages/intermediacion/FormasDeCobro';
 import { IntermediacionCalificaciones } from './pages/intermediacion/Calificaciones';
 import { IntermediacionAuditoriaLegal } from './pages/intermediacion/AuditoriaLegal';
+import { IntermediacionFuncionesConRiesgoLegal } from './pages/intermediacion/FuncionesConRiesgoLegal';
 
 function App() {
   return (
@@ -256,9 +257,19 @@ function App() {
                       }
                     />
                     <Route
-                      path="intermediacion/auditoria-legal"
+                      path="intermediacion/funciones-con-riesgo-legal"
                       element={
                         <ProtectedRoute roles={ROLES_PANEL} modalidad={MODALIDAD.INTERMEDIACION}>
+                          <IntermediacionFuncionesConRiesgoLegal />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="intermediacion/auditoria-legal"
+                      element={
+                        /* Es un informe de la administración, igual que la Auditoría: el
+                           Coordinador no lo ve. */
+                        <ProtectedRoute roles={ROLES_ADMINISTRACION} modalidad={MODALIDAD.INTERMEDIACION}>
                           <IntermediacionAuditoriaLegal />
                         </ProtectedRoute>
                       }

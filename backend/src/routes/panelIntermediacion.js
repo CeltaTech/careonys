@@ -928,14 +928,15 @@ panelIntermediacionRouter.put('/funciones-riesgo/:clave', soloAdministracion, as
 // La auditoría: qué se avisó, cuándo y a quién
 // ----------------------------------------------------------------------------
 
-panelIntermediacionRouter.get('/auditoria-legal', async (req, res) => {
+// Es un informe de la administración, igual que la auditoría de la Prestadora: el Coordinador no
+// lo ve.
+panelIntermediacionRouter.get('/auditoria-legal', soloAdministracion, async (req, res) => {
   const { data: catalogo, error: errorCatalogo } = await catalogoDeFuncionesDeRiesgo(clienteDelPedido(req));
   if (errorCatalogo) return fallaDelSistema(res, 'catálogo de funciones de riesgo', errorCatalogo);
 
-  // Con la llave maestra: la política de lectura de `auditoria_advertencias_legales` deja afuera
-  // al Coordinador, que esta ruta deja pasar, y la de `usuarios` sólo le muestra su propia fila,
-  // así que el nombre de quien encendió cada función llegaría vacío. Por eso el filtro por
-  // Prestadora sigue escrito acá.
+  // Con la llave maestra: la política de lectura de `usuarios` sólo le muestra a cada persona su
+  // propia fila, así que el nombre de quien encendió cada función llegaría vacío. Por eso el
+  // filtro por Prestadora sigue escrito acá.
   const { data, error } = await supabase
     .from('auditoria_advertencias_legales')
     .select('id, usuario_id, funcion_clave, jurisdiccion, texto_mostrado, created_at, usuarios(nombre)')

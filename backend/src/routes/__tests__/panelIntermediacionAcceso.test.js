@@ -195,16 +195,16 @@ describe('lo que sí es del Coordinador', () => {
     assert.deepEqual(cuerpo.calificaciones, []);
   });
 
-  it('ve la auditoría de advertencias legales', async () => {
+  it('no ve la auditoría de advertencias legales, que es de la administración', async () => {
     rolDelUsuario = 'coordinador';
-    // Cuáles son las funciones de riesgo lo dice la base, no una lista escrita en el backend
-    // (CLAUDE.md §8): la ruta lee el catálogo antes de filtrar la auditoría.
     respuestas.set('GET /rest/v1/catalogo_funciones_intermediacion', () => [
       { clave: 'ranking_plataforma', orden: 1 },
     ]);
     respuestas.set('GET /rest/v1/auditoria_advertencias_legales', () => []);
     const { estado } = await pedir('GET', '/auditoria-legal');
-    assert.equal(estado, 200);
+    assert.equal(estado, 403);
+    const lecturas = llamadas.filter((l) => l.clave === 'GET /rest/v1/auditoria_advertencias_legales');
+    assert.deepEqual(lecturas, [], 'el backend leyó la auditoría antes de negarla');
   });
 
   it('ve las funciones de riesgo legal, y no las puede encender', async () => {
@@ -234,6 +234,18 @@ describe('la administración sí pasa el candado', () => {
     const { estado, cuerpo } = await pedir('POST', '/cobros/efectivo-manual', {});
     assert.equal(estado, 400);
     assert.match(cuerpo.error, /Faltan/);
+  });
+
+  it('a la auditoría de advertencias legales', async () => {
+    // Cuáles son las funciones de riesgo lo dice la base, no una lista escrita en el backend
+    // (CLAUDE.md §8): la ruta lee el catálogo antes de filtrar la auditoría.
+    respuestas.set('GET /rest/v1/catalogo_funciones_intermediacion', () => [
+      { clave: 'ranking_plataforma', orden: 1 },
+    ]);
+    respuestas.set('GET /rest/v1/auditoria_advertencias_legales', () => []);
+    const { estado, cuerpo } = await pedir('GET', '/auditoria-legal');
+    assert.equal(estado, 200);
+    assert.deepEqual(cuerpo.auditoria, []);
   });
 
   it('a la lista de pasarelas', async () => {

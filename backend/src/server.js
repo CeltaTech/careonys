@@ -34,6 +34,7 @@ import { configuracionPublicaRouter } from './routes/configuracionPublica.js';
 import { marcaDeLaPuertaRouter } from './routes/marcaDeLaPuerta.js';
 import { activarCuentaRouter } from './routes/activarCuenta.js';
 import { recuperarClaveRouter } from './routes/recuperarClave.js';
+import { ingresoAlPanelRouter } from './routes/ingresoAlPanel.js';
 import { panelEntrevistasRouter } from './routes/panelEntrevistas.js';
 import { entrevistaPublicaRouter } from './routes/entrevistaPublica.js';
 import { panelEmergenciasRouter } from './routes/panelEmergencias.js';
@@ -162,6 +163,8 @@ app.use('/api/panel/cuenta-segura', panelCuentaSeguraRouter);
 app.use('/api/panel/habilitar-clave', panelHabilitarClaveRouter);
 app.use('/api/activar-cuenta', activarCuentaRouter);
 app.use('/api/recuperar-clave', recuperarClaveRouter);
+// Sin sesión: con qué correo se entra al Panel. La Prestadora sale del correo de la cuenta.
+app.use('/api/ingreso-al-panel', ingresoAlPanelRouter);
 // Sin sesión, como la activación de cuenta: quien llega trae la llave que le llegó por correo, y
 // no tiene ninguna cuenta con la que entrar. La Prestadora sale de la dirección, y la llave se busca
 // sólo adentro de ella.

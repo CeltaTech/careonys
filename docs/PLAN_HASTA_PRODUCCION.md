@@ -431,7 +431,7 @@ escrito encima por qué. Lo que queda, agrupado por lo que hay que hacer:
 - **Un defecto de la base**, que hoy tapa la maestra: la política `atiende_al_paciente` de
   `reportes` pide un Servicio vigente, y `guardias.servicio_id` puede quedar vacío.
 - **Políticas más estrechas que lo que hace el Panel**: dejan afuera al coordinador con permiso o al
-  Superadmin (`contenidos_para_clientes`, `indicaciones_medicacion`, `prestadoras`, varias de
+  Superadmin (`indicaciones_medicacion`, `prestadoras`, varias de
   cobros y de Match), y `usuarios` sólo deja leer la fila propia, así que toda lista de
   cuentas sigue con la maestra. Donde el comportamiento cambiaba, esas rutas volvieron a la
   maestra: primero se alinean las políticas y después se migran. Dos de esas políticas dicen algo

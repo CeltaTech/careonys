@@ -1835,19 +1835,21 @@ appClientesRouter.post('/intermediacion/conversaciones/:id/videollamada', requie
 });
 
 // ============================================================================
-// Contenido y recursos para cuidadores familiares
+// Contenidos
 // ============================================================================
 
-// Lo que la Prestadora escribió para quien cuida en su casa
-// (`routes/panelContenidos.js`). Sale solamente lo publicado y solamente de la Prestadora de este
-// Cliente: un borrador es un texto a medio escribir y no sale de adentro del Panel.
+// Lo que la Prestadora publicó para sus Clientes (`routes/panelContenidos.js`). Sale solamente lo
+// publicado, solamente lo marcado para Clientes y solamente de la Prestadora de este Cliente: un
+// borrador es un texto a medio escribir y no sale de adentro del Panel. La aplicación muestra el
+// botón sólo si esta lista trae algo.
 //
 // No pide modalidad ni acceso abierto: leer no cuesta nada y no es lo que el Match vende.
 appClientesRouter.get('/contenidos', requiereRolCliente, async (req, res) => {
   const { data, error } = await clienteDelPedido(req)
-    .from('contenidos_para_clientes')
+    .from('contenidos')
     .select('id, titulo, cuerpo, enlace_url, updated_at')
     .eq('publicado', true)
+    .contains('destinatarios', ['clientes'])
     .order('orden', { ascending: true })
     .order('created_at', { ascending: true });
   if (error) return responderError(res, error);

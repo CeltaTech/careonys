@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { llamarApiContenidos } from '../../lib/apiContenidos';
+import { DESTINATARIOS_DE_CONTENIDOS } from '../../lib/destinatariosDeContenidos';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
@@ -12,12 +13,13 @@ import '../../styles/molde-paginas.css';
    ==========================================================================
 
    El texto se guarda tal como lo escribe la Prestadora y no se traduce: lo escribió una persona,
-   en su idioma, para los Clientes que ella atiende. Lo traducido es el marco de esta pantalla.
+   en su idioma, para la gente que ella atiende. Lo traducido es el marco de esta pantalla.
 
    El enlace es opcional y tiene que empezar con `https://`. Acá no se suben archivos.
 
-   Lo que se escribe no se publica solo: el interruptor de abajo es lo que decide si el Cliente lo
-   ve, y una pieza nueva nace sin publicar. */
+   Lo que se escribe no se publica solo: el interruptor de abajo es lo que decide si los
+   destinatarios lo ven, y una pieza nueva nace sin publicar. Publicada sin destinatarios no se
+   guarda. */
 export function ContenidoDetalle({ contenido, soloLectura, onClose, onGuardado }) {
   const modal = useModalAccesible(onClose);
   const { t } = useLocale();
@@ -27,11 +29,18 @@ export function ContenidoDetalle({ contenido, soloLectura, onClose, onGuardado }
   const [cuerpo, setCuerpo] = useState(contenido?.cuerpo || '');
   const [enlace, setEnlace] = useState(contenido?.enlace_url || '');
   const [orden, setOrden] = useState(contenido?.orden ?? 0);
+  const [destinatarios, setDestinatarios] = useState(contenido?.destinatarios ?? []);
   const [publicado, setPublicado] = useState(contenido?.publicado ?? false);
   const [guardando, setGuardando] = useState(false);
   const [borrando, setBorrando] = useState(false);
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
   const [error, setError] = useState(null);
+
+  function marcarDestinatario(destinatario, marcado) {
+    setDestinatarios((actuales) =>
+      marcado ? [...actuales, destinatario] : actuales.filter((d) => d !== destinatario),
+    );
+  }
 
   async function guardar() {
     setGuardando(true);
@@ -44,6 +53,7 @@ export function ContenidoDetalle({ contenido, soloLectura, onClose, onGuardado }
           cuerpo,
           enlace_url: enlace,
           orden,
+          destinatarios,
           publicado,
         }),
       });
@@ -116,6 +126,21 @@ export function ContenidoDetalle({ contenido, soloLectura, onClose, onGuardado }
             onChange={(e) => setOrden(e.target.value)}
             disabled={soloLectura}
           />
+
+          <fieldset className="molde-ancho">
+            <legend>{t.contenidos.campo_destinatarios}</legend>
+            {DESTINATARIOS_DE_CONTENIDOS.map((destinatario) => (
+              <FormField
+                key={destinatario}
+                label={t.contenidos[`destinatario_${destinatario}`]}
+                name={`destinatario_${destinatario}`}
+                type="checkbox"
+                checked={destinatarios.includes(destinatario)}
+                onChange={(e) => marcarDestinatario(destinatario, e.target.checked)}
+                disabled={soloLectura}
+              />
+            ))}
+          </fieldset>
 
           <div className="molde-ancho">
             <FormField

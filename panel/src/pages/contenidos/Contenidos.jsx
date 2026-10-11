@@ -5,6 +5,7 @@ import { usePermisos } from '../../context/PermisosContext';
 import { esAdminOSuperior } from '../../lib/roles';
 import { claseBadge } from '../../lib/tonos';
 import { llamarApiContenidos } from '../../lib/apiContenidos';
+import { DESTINATARIOS_DE_CONTENIDOS } from '../../lib/destinatariosDeContenidos';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
@@ -14,18 +15,18 @@ import { ContenidoDetalle } from './ContenidoDetalle';
 import '../../styles/molde-paginas.css';
 import '../hojaDeTarjetas.css';
 
-/* Contenido para Clientes.
+/* Contenidos.
    ==========================================================================
 
-   La biblioteca que la Prestadora escribe para quien cuida en su casa: un título, un texto y, si
-   ya publica material en otro lado, un enlace. CeltaTech no escribe nada de esto ni trae nada de
-   fábrica — no es su oficio y no responde por él—, así que una Prestadora nueva arranca con la
-   lista vacía.
+   La biblioteca que la Prestadora escribe para su gente: un título, un texto y, si ya publica
+   material en otro lado, un enlace. Cada pieza dice para quién es —Clientes, Asistentes, personal—
+   y la ven sólo ellos, y sólo publicada. CeltaTech no escribe nada de esto ni trae nada de
+   fábrica, así que una Prestadora nueva arranca con la lista vacía.
 
-   Quién la escribe lo decide cada Prestadora en Configuración › Accesos. Verla la ve cualquiera
-   del Panel: un borrador hay que poder revisarlo. Sin el permiso, la pantalla es de sólo lectura,
-   y quien niega de verdad es el backend. */
-export function ContenidoParaClientes() {
+   Quién la escribe lo decide cada Prestadora en Configuración › Accesos (`publicar_contenidos`).
+   Quien puede ve todo, borradores incluidos; el resto del Panel ve sólo lo publicado para el
+   personal. Las dos cosas las decide la base, no esta pantalla. */
+export function Contenidos() {
   const { t } = useLocale();
   const { usuario } = useAuth();
   const { puede } = usePermisos();
@@ -35,7 +36,7 @@ export function ContenidoParaClientes() {
   const [seleccionado, setSeleccionado] = useState(null);
   const [creandoNuevo, setCreandoNuevo] = useState(false);
 
-  const puedeEscribir = esAdminOSuperior(usuario?.rol) || puede('escribir_contenido_para_clientes');
+  const puedeEscribir = esAdminOSuperior(usuario?.rol) || puede('publicar_contenidos');
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -53,6 +54,12 @@ export function ContenidoParaClientes() {
   useEffect(() => {
     recargar();
   }, [recargar]);
+
+  // En el orden de la lista, que es el mismo en que el backend los guarda.
+  const nombrarDestinatarios = (destinatarios) =>
+    DESTINATARIOS_DE_CONTENIDOS.filter((d) => destinatarios?.includes(d))
+      .map((d) => t.contenidos[`destinatario_${d}`])
+      .join(', ') || '—';
 
   return (
     <div>
@@ -77,6 +84,7 @@ export function ContenidoParaClientes() {
               <tr>
                 <th>{t.contenidos.col_orden}</th>
                 <th>{t.contenidos.col_titulo}</th>
+                <th>{t.contenidos.col_destinatarios}</th>
                 <th>{t.contenidos.col_enlace}</th>
                 <th>{t.contenidos.col_publicado}</th>
                 <th></th>
@@ -89,6 +97,7 @@ export function ContenidoParaClientes() {
                   <td>
                     <b>{contenido.titulo}</b>
                   </td>
+                  <td>{nombrarDestinatarios(contenido.destinatarios)}</td>
                   <td>{contenido.enlace_url ? t.comun.si : '—'}</td>
                   <td>
                     <span className={claseBadge(contenido.publicado ? 'activo' : 'inactivo')}>

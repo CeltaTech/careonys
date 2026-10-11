@@ -64,7 +64,7 @@ import { Medicacion } from './pages/Medicacion';
 import { Importacion } from './pages/Importacion';
 import { InformesObraSocial } from './pages/InformesObraSocial';
 import { Auditoria } from './pages/Auditoria';
-import { ContenidoParaClientes } from './pages/contenidos/ContenidoParaClientes';
+import { Contenidos } from './pages/contenidos/Contenidos';
 import { IntermediacionClientes } from './pages/intermediacion/Clientes';
 import { FormasDeCobro } from './pages/intermediacion/FormasDeCobro';
 import { IntermediacionCalificaciones } from './pages/intermediacion/Calificaciones';
@@ -156,7 +156,7 @@ function App() {
                         igual que uno de Match. Verla la ve cualquiera del Panel —un
                         borrador hay que poder revisarlo—; escribirla es un permiso, y quien lo
                         niega de verdad es el backend. */}
-                    <Route path="contenidos" element={<ContenidoParaClientes />} />
+                    <Route path="contenidos" element={<Contenidos />} />
                     <Route path="servicios/:id" element={<ServicioDetalle />} />
                     <Route path="medicacion" element={<Medicacion />} />
                     <Route path="guardias" element={<Guardias />} />

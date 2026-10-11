@@ -420,8 +420,7 @@ export function Layout() {
         <div className="panel-perfil" ref={perfilRef}>
           {perfilAbierto && (
             <div className="panel-perfil-menu">
-              <NavLink to="/mi-clave">{t.nav.mi_clave}</NavLink>
-              <NavLink to="/cuenta-segura">{t.nav.cuenta_segura}</NavLink>
+              <NavLink to="/seguridad">{t.nav.seguridad}</NavLink>
               <SelectoresPreferencias />
               <button type="button" className="panel-salir" onClick={logout}>
                 {t.nav.cerrar_sesion}

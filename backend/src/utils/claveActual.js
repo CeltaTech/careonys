@@ -8,10 +8,8 @@ import { correoDeAcceso } from '../config/correoDeAcceso.js';
 // equipos, son dos cosas que no puede hacer quien se sienta un minuto en una máquina abierta. Tener
 // la sesión adelante no alcanza: hay que saber la clave.
 //
-// POR QUÉ NO SE HACE EN LA PANTALLA. `MiClave.jsx` la comprueba del lado del navegador para cambiar
-// la clave propia, y ahí alcanza porque el servicio de acceso vuelve a pedirla igual al escribir la
-// nueva. Acá no: lo que sigue lo escribe el backend con la llave maestra, así que si la comprobación
-// viviera en la pantalla, quien llame a la dirección directamente se la saltea.
+// POR QUÉ NO SE HACE EN LA PANTALLA. Si la comprobación viviera en la pantalla, quien llame a la
+// dirección directamente se la saltea.
 //
 // SE USA LA LLAVE PÚBLICA Y NO LA MAESTRA. La maestra cambia la clave de cualquiera sin conocer la
 // anterior, que es justo lo contrario de lo que hay que averiguar. Con la pública se intenta entrar
@@ -84,6 +82,45 @@ export async function cerrarTodasLasSesionesDe(token) {
   const { error } = await publico.auth.admin.signOut(token, 'global');
   if (error) console.error('claveActual: no se pudieron cerrar las sesiones:', error.message);
   return !error;
+}
+
+/**
+ * Cambia la clave propia: entra con la actual y, con esa misma sesión, escribe la nueva.
+ *
+ * TAMPOCO HACE FALTA LA LLAVE MAESTRA. El servicio de acceso deja que cada cual cambie la suya
+ * desde su propia sesión, así que se usa la que abre la clave actual y no ninguna otra.
+ *
+ * UN CLIENTE POR PEDIDO, NO EL COMPARTIDO. Entre entrar y escribir la nueva hay una espera, y en
+ * ese rato el cliente compartido podría quedar con la sesión de otro pedido: la clave nueva se
+ * escribiría en la cuenta equivocada.
+ *
+ * Lanza `clave_actual_incorrecta` si la actual no entra; cualquier otra falla sube como error.
+ */
+export async function cambiarLaClave({ email, prestadoraId, claveActual, claveNueva }) {
+  const url = process.env.SUPABASE_URL;
+  const llave = process.env.SUPABASE_ANON_KEY;
+  if (!url || !llave) {
+    console.error('claveActual: falta SUPABASE_ANON_KEY; no se puede cambiar la clave');
+    throw new Error('falta la llave pública');
+  }
+  if (!email || !prestadoraId || !claveActual) throw new ErrorConMotivo('clave_actual_incorrecta');
+
+  const propio = createClient(url, llave, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const { data, error } = await propio.auth.signInWithPassword({
+    email: await correoDeAcceso(email, prestadoraId),
+    password: claveActual,
+  });
+  if (error || !data?.user) throw new ErrorConMotivo('clave_actual_incorrecta');
+
+  try {
+    const { error: errorCambio } = await propio.auth.updateUser({ password: claveNueva });
+    if (errorCambio) throw new Error(errorCambio.message);
+  } finally {
+    await propio.auth.signOut({ scope: 'local' }).catch(() => {});
+  }
 }
 
 /** Lo mismo, pero lanzando el motivo que la pantalla traduce. */

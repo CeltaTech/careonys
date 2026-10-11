@@ -9,9 +9,7 @@ import '../../styles/molde-paginas.css';
 
 /* EL TELÉFONO DE LA PROPIA CUENTA: verificarlo si ya está cargado, o cambiarlo por otro.
 
-   Está acá y no adentro de una pantalla porque se ofrece desde dos —la seguridad de la cuenta y
-   la propia contraseña—, y una segunda copia sería un segundo mecanismo: dos formas de pedir el
-   código, y el arreglo hecho en una sola.
+   Es el bloque «Verificación de identidad» de la página de Seguridad (`pages/Seguridad.jsx`).
 
    Cambiarlo pide la contraseña actual, el número nuevo nace sin verificar y el código sale hacia
    él, que es lo que hace que verificar signifique algo.
@@ -38,7 +36,7 @@ export function TelefonoDeLaCuenta({ datos, recargar }) {
       setHayCodigo(true);
       setMensaje(t.cuenta_segura.codigo_enviado);
     } catch (err) {
-      setErrorCaja(mensajeDeError(err, t, 'CuentaSegura'));
+      setErrorCaja(mensajeDeError(err, t, 'Seguridad'));
     } finally {
       setPidiendo(false);
     }
@@ -58,7 +56,7 @@ export function TelefonoDeLaCuenta({ datos, recargar }) {
       setHayCodigo(false);
       await recargar();
     } catch (err) {
-      setErrorCaja(mensajeDeError(err, t, 'CuentaSegura'));
+      setErrorCaja(mensajeDeError(err, t, 'Seguridad'));
     } finally {
       setEnviando(false);
     }
@@ -80,7 +78,7 @@ export function TelefonoDeLaCuenta({ datos, recargar }) {
       setMensaje(t.cuenta_segura.codigo_enviado);
       await recargar();
     } catch (err) {
-      setErrorCaja(mensajeDeError(err, t, 'CuentaSegura'));
+      setErrorCaja(mensajeDeError(err, t, 'Seguridad'));
     } finally {
       setEnviando(false);
     }
@@ -95,7 +93,7 @@ export function TelefonoDeLaCuenta({ datos, recargar }) {
   return (
     <section className="panel-tarjeta">
       <div className="panel-tarjeta-titulo">
-        <h2>{t.cuenta_segura.telefono_titulo}</h2>
+        <h2>{t.cuenta_segura.verificacion_titulo}</h2>
         <span className={`badge ${estadoDelNumero.clase}`}>{estadoDelNumero.texto}</span>
       </div>
 

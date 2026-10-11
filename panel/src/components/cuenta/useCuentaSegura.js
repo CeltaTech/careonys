@@ -27,7 +27,7 @@ export function useCuentaSegura() {
       setDatos(await llamarApiPanel('/cuenta-segura'));
       setEstado('listo');
     } catch (err) {
-      setError(mensajeDeError(err, t, 'CuentaSegura'));
+      setError(mensajeDeError(err, t, 'Seguridad'));
       setEstado('error');
     }
   }, [t]);

@@ -58,6 +58,11 @@ export const GRUPOS = [
     copias: ['panel/src/lib/destinatariosDeContenidos.js'],
   },
   {
+    que: 'qué enlace admite una pieza de Contenidos',
+    original: 'backend/src/config/enlaceDeContenidos.js',
+    copias: ['panel/src/lib/enlaceDeContenidos.js'],
+  },
+  {
     que: 'de qué avisa el canal en vivo',
     original: 'backend/src/avisosEnVivo/asuntos.js',
     copias: ['panel/src/lib/asuntosEnVivo.js'],

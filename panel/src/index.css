@@ -227,6 +227,20 @@ a {
   color: var(--tono-atencion-texto);
 }
 
+/* La franja del último minuto antes del cierre por inactividad: queda pegada debajo del
+   encabezado mientras se desplaza la página. */
+.panel-franja-inactividad {
+  position: sticky;
+  top: 68px;
+  z-index: 14;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0;
+  border-radius: 0;
+}
+
 /* ---------- Login ---------- */
 
 .login-pantalla {

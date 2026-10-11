@@ -83,6 +83,13 @@ export function Contenidos() {
               </div>
               <p className="hoja-texto-con-renglones">{contenido.cuerpo}</p>
               {contenido.enlace_url && (
+                <p className="hoja-enlace-del-contenido">
+                  <a href={contenido.enlace_url} target="_blank" rel="noopener noreferrer">
+                    {contenido.enlace_url}
+                  </a>
+                </p>
+              )}
+              {contenido.enlace_url && (
                 <div className="molde-acciones">
                   <a
                     className="btn btn-secondary"
@@ -130,7 +137,15 @@ export function Contenidos() {
                     <b>{contenido.titulo}</b>
                   </td>
                   <td>{nombrarDestinatarios(contenido.destinatarios)}</td>
-                  <td>{contenido.enlace_url ? t.comun.si : '—'}</td>
+                  <td className="hoja-enlace-del-contenido">
+                    {contenido.enlace_url ? (
+                      <a href={contenido.enlace_url} target="_blank" rel="noopener noreferrer">
+                        {contenido.enlace_url}
+                      </a>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
                   <td>
                     <span className={claseBadge(contenido.publicado ? 'activo' : 'inactivo')}>
                       {contenido.publicado ? t.contenidos.publicado_si : t.contenidos.publicado_no}

@@ -49,6 +49,13 @@ export default function Contenidos() {
                 aparte para no perder dónde estaba quien lo tocó, y sin dejarle a esa página
                 ninguna llave de vuelta hacia acá. */}
             {contenido.enlace_url && (
+              <p className="enlace-del-contenido">
+                <a href={contenido.enlace_url} target="_blank" rel="noopener noreferrer">
+                  {contenido.enlace_url}
+                </a>
+              </p>
+            )}
+            {contenido.enlace_url && (
               <a
                 className="btn btn-secondary btn-full btn-abajo"
                 href={contenido.enlace_url}

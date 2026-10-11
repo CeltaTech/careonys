@@ -63,7 +63,17 @@ if (CLAVE.includes(ETIQUETA)) {
 
 // Se cuentan las filas con `RETURNING`, y no leyendo el renglón que imprime
 // `psql`, porque ese renglón cambia según cómo esté configurada la salida.
+//
+// Las cuentas de administración piden antes un permiso de un solo uso
+// (`interno.autorizar_cambio_de_clave`): sin él, la base rechaza el cambio de
+// su contraseña, también acá.
 const ORDEN = `
+SELECT count(interno.autorizar_cambio_de_clave(u.id, 'poner_la_clave_de_la_siembra', 5))
+  FROM auth.users u
+  JOIN public.usuarios p ON p.id = u.id
+ WHERE u.email LIKE '%${DOMINIO_DE_ACCESO}'
+   AND interno.es_cuenta_de_administracion(u.id);
+
 WITH cambiadas AS (
   UPDATE auth.users u
      SET encrypted_password = extensions.crypt($${ETIQUETA}$${CLAVE}$${ETIQUETA}$, extensions.gen_salt('bf')),

@@ -966,3 +966,14 @@ a {
 .lector-de-codigo {
   overflow: hidden;
 }
+
+/* La dirección de un enlace escrita entera: subrayada como cualquier enlace, y cortada donde
+   haga falta para que una dirección larga no se salga de su tarjeta. */
+.enlace-del-contenido {
+  overflow-wrap: anywhere;
+  margin: 8px 0 0;
+}
+
+.enlace-del-contenido a {
+  text-decoration: underline;
+}

@@ -40,3 +40,14 @@
   word-break: break-word;
   margin: 0;
 }
+
+/* La dirección de un enlace escrita entera: subrayada como cualquier enlace, y cortada donde
+   haga falta para que una dirección larga no se salga de su recuadro. */
+.hoja-enlace-del-contenido {
+  overflow-wrap: anywhere;
+  margin: 8px 0 0;
+}
+
+.hoja-enlace-del-contenido a {
+  text-decoration: underline;
+}

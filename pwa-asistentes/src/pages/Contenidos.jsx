@@ -48,6 +48,13 @@ export default function Contenidos() {
             {/* El enlace lleva a una página de la Prestadora, fuera de esta aplicación: se abre
                 aparte, y sin dejarle a esa página ninguna llave de vuelta hacia acá. */}
             {contenido.enlace_url && (
+              <p className="enlace-del-contenido">
+                <a href={contenido.enlace_url} target="_blank" rel="noopener noreferrer">
+                  {contenido.enlace_url}
+                </a>
+              </p>
+            )}
+            {contenido.enlace_url && (
               <a
                 className="btn btn-secondary btn-full pwa-card-pie"
                 href={contenido.enlace_url}

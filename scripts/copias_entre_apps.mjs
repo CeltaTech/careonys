@@ -177,6 +177,11 @@ export const GRUPOS = [
     copias: ['backend/src/utils/avisoDeAusencia.js'],
   },
   {
+    que: 'los bordes del cierre del Panel por inactividad',
+    original: 'panel/src/lib/cierrePorInactividad.js',
+    copias: ['backend/src/utils/cierrePorInactividad.js'],
+  },
+  {
     que: 'cuándo un turno vacío se vuelve un incidente grave y cómo puede cerrarse',
     original: 'panel/src/lib/incidenteTurnoSinCubrir.js',
     copias: ['backend/src/utils/incidenteTurnoSinCubrir.js'],

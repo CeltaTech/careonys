@@ -19,6 +19,7 @@ import { hayProveedorDeMensajeDeTexto, proveedorDeMensajeDeTexto } from '../util
 import { LIMITES_ALERTAS_IA, VALORES_POR_DEFECTO_ALERTAS_IA } from '../utils/revisarAlertasIA.js';
 import { validarUmbralesPremura, validarMinutosEmergencia } from '../utils/umbralesPremura.js';
 import { MINUTOS_QUE_SE_PUEDEN_TOCAR } from '../utils/ordenDeLaEscalada.js';
+import { MINUTOS_DE_INACTIVIDAD, minutosValidos } from '../utils/cierrePorInactividad.js';
 import {
   PERFIL_POR_DEFECTO,
   pesosYTopesDe,
@@ -2254,6 +2255,43 @@ panelConfiguracionRouter.patch('/politica-verificacion', async (req, res) => {
     .update({ politica_verificacion_alta_manual: politica })
     .eq('id', prestadoraId);
   if (error) return responderError(res, error);
+  res.json({ ok: true });
+});
+
+// --- Cierre del Panel por inactividad (lib/cierrePorInactividad.js) ---
+
+panelConfiguracionRouter.get('/cierre-por-inactividad', async (req, res) => {
+  const { data, error } = await clienteDelPedido(req)
+    .from('prestadoras')
+    .select('cierre_por_inactividad_activo, cierre_por_inactividad_minutos')
+    .single();
+  if (error) return responderError(res, error);
+  res.json({
+    activo: data.cierre_por_inactividad_activo,
+    minutos: data.cierre_por_inactividad_minutos,
+    bordes: MINUTOS_DE_INACTIVIDAD,
+  });
+});
+
+panelConfiguracionRouter.patch('/cierre-por-inactividad', async (req, res) => {
+  const { activo, minutos } = req.body ?? {};
+  if (typeof activo !== 'boolean' || !minutosValidos(minutos)) {
+    return res.status(400).json({ error: 'Cierre por inactividad inválido' });
+  }
+  const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
+  if (!prestadoraId) return;
+  // CON LA MAESTRA: la fila de la Prestadora sólo la modifica superadmin por RLS.
+  const { error } = await supabase
+    .from('prestadoras')
+    .update({ cierre_por_inactividad_activo: activo, cierre_por_inactividad_minutos: minutos })
+    .eq('id', prestadoraId);
+  if (error) return responderError(res, error);
+  // Cambia cuánto queda abierta una sesión sin nadie delante: es una modificación crítica.
+  await registrarActividad(req.usuarioPanel, ACCION_MODIFICACION_CRITICA, {
+    tablaAfectada: 'prestadoras',
+    registroId: prestadoraId,
+    camposCambiados: ['cierre_por_inactividad_activo', 'cierre_por_inactividad_minutos'],
+  });
   res.json({ ok: true });
 });
 

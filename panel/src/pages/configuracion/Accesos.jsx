@@ -10,6 +10,7 @@ import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { con } from '../../lib/textos';
+import { MINUTOS_DE_INACTIVIDAD } from '../../lib/cierrePorInactividad';
 import '../../styles/molde-paginas.css';
 
 /* Quién puede hacer qué: los permisos de cada rol y, para el rol técnico de
@@ -20,8 +21,100 @@ export function ConfiguracionAccesos() {
   return (
     <div className="molde-pila">
       <TabPermisos />
+      <CierrePorInactividad />
       {usuario?.rol === 'superadmin' && <TabSeguridad />}
     </div>
+  );
+}
+
+// Cuánto queda abierta una sesión del Panel sin nadie delante (lib/cierrePorInactividad.js).
+function CierrePorInactividad() {
+  const { t } = useLocale();
+  const { refrescarUsuario } = useAuth();
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [activo, setActivo] = useState(true);
+  const [minutos, setMinutos] = useState('');
+  const [bordes, setBordes] = useState(MINUTOS_DE_INACTIVIDAD);
+  const [guardando, setGuardando] = useState(false);
+  const [guardado, setGuardado] = useState(false);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const resultado = await llamarApi('/cierre-por-inactividad');
+      setActivo(resultado.activo);
+      setMinutos(String(resultado.minutos));
+      if (resultado.bordes) setBordes(resultado.bordes);
+      setEstado('listo');
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+      setEstado('error');
+    }
+  }, [t]);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  async function guardar() {
+    setGuardando(true);
+    setError(null);
+    setGuardado(false);
+    try {
+      await llamarApi('/cierre-por-inactividad', {
+        method: 'PATCH',
+        body: JSON.stringify({ activo, minutos: Number(minutos) }),
+      });
+      // La configuración viaja pegada al usuario: sin releerlo, esta misma sesión seguiría
+      // contando con la de antes hasta la próxima entrada.
+      await refrescarUsuario();
+      setGuardado(true);
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.inactividad_titulo}</h2>
+      </div>
+      {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
+      {guardado && <Alert variant="info">{t.comun.guardar} <span aria-hidden="true">✓</span></Alert>}
+      <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
+        <label className="panel-checkbox">
+          <input
+            type="checkbox"
+            checked={activo}
+            onChange={(e) => { setActivo(e.target.checked); setGuardado(false); }}
+          />
+          {t.configuracion.inactividad_activo}
+        </label>
+        {activo && (
+          <div className="molde-formgrid">
+            <FormField
+              label={t.configuracion.inactividad_minutos}
+              name="cierre_por_inactividad_minutos"
+              type="number"
+              min={bordes.minimo}
+              max={bordes.maximo}
+              step={1}
+              value={minutos}
+              onChange={(e) => { setMinutos(e.target.value); setGuardado(false); }}
+            />
+          </div>
+        )}
+        <div className="molde-acciones">
+          <Button onClick={guardar} disabled={guardando}>
+            {guardando ? t.comun.guardando : t.comun.guardar}
+          </Button>
+        </div>
+      </EstadoLista>
+    </section>
   );
 }
 

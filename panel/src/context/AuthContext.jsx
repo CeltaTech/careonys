@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { elRolUsaSegundoFactor, elSegundoFactorEsObligatorio } from '../lib/reglaMfaObligatorio';
+import { anotarActividad } from '../lib/ultimaActividad';
 
 const AuthContext = createContext(null);
 
@@ -20,11 +21,23 @@ const AuthContext = createContext(null);
 async function traerUsuario(userId) {
   const { data, error } = await supabase
     .from('usuarios')
-    .select('id, rol, nombre, prestadora_id, prestadoras(moneda)')
+    .select('id, rol, nombre, prestadora_id, prestadoras(moneda, cierre_por_inactividad_activo, cierre_por_inactividad_minutos)')
     .eq('id', userId)
     .maybeSingle();
   if (error) return { usuario: null, fallo: true };
-  return { usuario: data ? { ...data, moneda: data.prestadoras?.moneda ?? null } : null, fallo: false };
+  if (!data) return { usuario: null, fallo: false };
+  const prestadora = data.prestadoras;
+  return {
+    usuario: {
+      ...data,
+      moneda: prestadora?.moneda ?? null,
+      // Sin fila de Prestadora no hay configuración que leer, y el cierre no corre.
+      cierrePorInactividad: prestadora
+        ? { activo: prestadora.cierre_por_inactividad_activo, minutos: prestadora.cierre_por_inactividad_minutos }
+        : null,
+    },
+    fallo: false,
+  };
 }
 
 export function AuthProvider({ children }) {
@@ -132,6 +145,9 @@ export function AuthProvider({ children }) {
 
   async function login(email, password) {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+    // Una entrada nueva empieza a contar de cero: si no, la quietud de la sesión anterior la
+    // cerraría apenas abierta.
+    if (!error) anotarActividad();
     return { error };
   }
 

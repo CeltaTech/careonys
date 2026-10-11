@@ -13,6 +13,7 @@ import { MODALIDAD } from '../../lib/modalidades';
 import { supabase } from '../../lib/supabaseClient';
 import { SelectoresPreferencias } from './SelectoresPreferencias';
 import { EquipoNuevo } from './EquipoNuevo';
+import { AvisoDeInactividad } from './AvisoDeInactividad';
 
 /* Los dibujos del menú, de trazo, en el color del texto que los rodea. Son los de la maqueta
    de la interfaz (carpeta `celtatech/maquetas`); Facturación no tiene entrada allá y conserva
@@ -522,6 +523,7 @@ export function Layout() {
             </NavLink>
           </div>
         </header>
+        <AvisoDeInactividad />
         <main className="panel-content" id="contenido-principal" tabIndex={-1}>
           {seccionActual && seccionActual.visibles.length > 1 && (
             <nav className="panel-subnav" aria-label={seccionActual.texto}>

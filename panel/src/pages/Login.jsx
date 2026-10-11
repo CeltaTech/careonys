@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { anotarNombreDeLaPrestadora } from '../i18n/marcaEnElTexto';
 import { correoDeAcceso } from '../lib/correoDeAcceso';
 import { segmentoDeLaPuerta, laPuertaEstaReconocida } from '../lib/puertaDeIngreso';
+import { huboCierrePorInactividad, olvidarCierrePorInactividad } from '../lib/ultimaActividad';
 import { FormField } from '../components/ui/FormField';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
@@ -42,6 +43,7 @@ export function Login() {
   // la dirección no es de ninguna Prestadora, y cuando se supo de quién es.
   const [estado, setEstado] = useState('cargando');
   const [puerta, setPuerta] = useState(null);
+  const [cerradaPorInactividad] = useState(huboCierrePorInactividad);
 
   useEffect(() => {
     let vigente = true;
@@ -96,6 +98,7 @@ export function Login() {
       // puerta. Nunca el que la persona escribió: ése es el mismo en todas.
       const correo = await correoDeAcceso(email, puerta.prestadoraId);
       const { error: errorLogin } = await login(correo, password);
+      if (!errorLogin) olvidarCierrePorInactividad();
       if (errorLogin) {
         setError(t.auth.error_credenciales);
         setEnviando(false);
@@ -143,6 +146,7 @@ export function Login() {
         <p className="login-subtitulo">{t.auth.titulo}</p>
 
         {error && <Alert variant="error">{error}</Alert>}
+        {!error && cerradaPorInactividad && <Alert variant="info">{t.auth.cerrada_por_inactividad}</Alert>}
 
         <FormField
           label={t.auth.email}

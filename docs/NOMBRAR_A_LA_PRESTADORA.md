@@ -3384,27 +3384,6 @@ administrador.
 
 ---
 
-## 164. Qué es el Contenido para Clientes
-
-**Ruta:** `contenidos.explicacion`
-
-**Texto de hoy:**
-> La biblioteca que esta Prestadora escribe para quien cuida en su casa: un título, un texto y,
-> si ya publica material en otro lado, un enlace. El Cliente lo ve en su aplicación recién
-> cuando está publicado.
-
-**Dónde se ve:** Clientes > Contenido para Clientes, debajo del título.
-
-**Qué lo dispara:** está siempre.
-
-**Quién lo lee:** la empresa.
-
-**Archivo:** `panel/src/pages/contenidos/ContenidoParaClientes.jsx:57`
-
-**DECISIÓN:**
-
----
-
 ## 165. Qué son las calificaciones
 
 **Ruta:** `match.calificaciones_explicacion`

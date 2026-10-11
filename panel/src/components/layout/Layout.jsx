@@ -11,6 +11,7 @@ import { useEmergenciasSinAtender } from '../../context/EmergenciasSinAtenderCon
 import { esAdminOSuperior } from '../../lib/roles';
 import { MODALIDAD } from '../../lib/modalidades';
 import { supabase } from '../../lib/supabaseClient';
+import { llamarApiContenidos } from '../../lib/apiContenidos';
 import { SelectoresPreferencias } from './SelectoresPreferencias';
 import { EquipoNuevo } from './EquipoNuevo';
 import { AvisoDeInactividad } from './AvisoDeInactividad';
@@ -151,6 +152,24 @@ export function Layout() {
   const buscadorRef = useRef(null);
 
   const esAdmin = esAdminOSuperior(usuario?.rol);
+  const puedePublicarContenidos = esAdmin || puede('publicar_contenidos');
+
+  // Contenidos aparece para quien publica, y para el resto sólo cuando hay algo publicado para el
+  // personal. Si la pregunta falla, la sección no se muestra.
+  const [hayContenidos, setHayContenidos] = useState(false);
+  useEffect(() => {
+    if (!usuario || puedePublicarContenidos) return undefined;
+    let vigente = true;
+    llamarApiContenidos('/hay')
+      .then(({ hay }) => vigente && setHayContenidos(!!hay))
+      .catch((err) => {
+        console.error(err);
+        if (vigente) setHayContenidos(false);
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [usuario, puedePublicarContenidos]);
   // El nombre de cada modalidad sale de lib/modalidades.js, el mismo lugar del que lo toma el
   // candado de la dirección (App.jsx).
   const directa = tieneModalidad(MODALIDAD.DIRECTA);
@@ -213,7 +232,6 @@ export function Layout() {
         { a: '/personas', texto: t.nav.personas, ver: esAdmin || puede('ver_personas') },
         { a: '/clientes', texto: t.nav.clientes, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
         { a: '/intermediacion/clientes', texto: t.nav.intermediacion_clientes, ver: verMatch, modalidad: MODALIDAD.INTERMEDIACION && esAdmin },
-        { a: '/contenidos', texto: t.nav.contenidos, ver: true },
       ],
     },
     {
@@ -243,6 +261,7 @@ export function Layout() {
       enlaces: [
         { a: '/comunicacion', texto: t.nav.comunicacion, ver: true },
         { a: '/respuestas-preparadas', texto: t.nav.respuestas_preparadas, ver: esAdmin },
+        { a: '/contenidos', texto: t.nav.contenidos, ver: puedePublicarContenidos || hayContenidos },
       ],
     },
     {

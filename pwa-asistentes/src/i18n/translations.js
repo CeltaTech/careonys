@@ -605,6 +605,11 @@ export const T = {
       tarea_acompanamiento_terapeutico_de_patologias_graves: 'Acompañamiento terapéutico de patologías psiquiátricas graves',
       detalle_acompanamiento_terapeutico_de_patologias_graves: 'Acompañamiento terapéutico de patologías psiquiátricas graves sin el título de Acompañante terapéutico.',
     },
+    contenidos: {
+      titulo: 'Contenidos',
+      sin_contenidos: 'Esta Prestadora todavía no publicó nada acá.',
+      abrir_enlace: 'Abrir el material',
+    },
     perfil: {
       titulo: 'Perfil',
       nombre: 'Nombre',
@@ -1256,6 +1261,11 @@ export const T = {
       tarea_acompanamiento_terapeutico_de_patologias_graves: 'Therapeutic support for severe psychiatric conditions',
       detalle_acompanamiento_terapeutico_de_patologias_graves: 'Therapeutic support for severe psychiatric conditions without the Therapeutic companion qualification.',
     },
+    contenidos: {
+      titulo: 'Content',
+      sin_contenidos: 'This provider has not published anything here yet.',
+      abrir_enlace: 'Open the material',
+    },
     perfil: {
       titulo: 'Profile',
       nombre: 'Name',
@@ -1885,6 +1895,11 @@ export const T = {
       detalle_practicas_clinicas: 'Práticas clínicas ou procedimentos médicos.',
       tarea_acompanamiento_terapeutico_de_patologias_graves: 'Acompanhamento terapêutico de patologias psiquiátricas graves',
       detalle_acompanamiento_terapeutico_de_patologias_graves: 'Acompanhamento terapêutico de patologias psiquiátricas graves sem a titulação de Acompanhante terapêutico.',
+    },
+    contenidos: {
+      titulo: 'Conteúdos',
+      sin_contenidos: 'Esta Prestadora ainda não publicou nada aqui.',
+      abrir_enlace: 'Abrir o material',
     },
     perfil: {
       titulo: 'Perfil',

@@ -15,6 +15,7 @@ import ReporteDiario from './pages/ReporteDiario';
 import MiPerfil from './pages/MiPerfil';
 import MiClave from './pages/MiClave';
 import MisCalificaciones from './pages/MisCalificaciones';
+import Contenidos from './pages/Contenidos';
 import Mensajes from './pages/Mensajes';
 import Conversacion from './pages/Conversacion';
 
@@ -104,6 +105,7 @@ function Rutas() {
             (pendiente #85). Cuelga de Mi Perfil y no de la barra de abajo: la barra es para el
             trabajo del día, y esto se mira cada tanto. */}
         <Route path="calificaciones" element={<MisCalificaciones />} />
+        <Route path="contenidos" element={<Contenidos />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

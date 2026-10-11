@@ -22,6 +22,7 @@ export default function MiPerfil() {
   const [notifError, setNotifError] = useState('');
   const [dispCargando, setDispCargando] = useState(false);
   const [dispError, setDispError] = useState('');
+  const [hayContenidos, setHayContenidos] = useState(false);
 
   useEffect(() => {
     let activo = true;
@@ -33,6 +34,13 @@ export default function MiPerfil() {
       .catch(() => {
         if (activo) setError(t.comun.error_generico);
       });
+    // Si la pregunta falla, el botón no se muestra: no hay nada que ofrecer que no se pueda abrir.
+    api
+      .contenidos()
+      .then(({ contenidos }) => {
+        if (activo) setHayContenidos(contenidos.length > 0);
+      })
+      .catch(() => {});
     if (pushSoportado()) {
       suscripcionActual().then((suscripcion) => {
         if (activo) setNotifActivas(!!suscripcion);
@@ -162,6 +170,13 @@ export default function MiPerfil() {
         <Link to="/calificaciones" className="btn btn-full pwa-card-pie">
           {t.perfil.ver_calificaciones}
         </Link>
+        {/* Lo que la Prestadora publicó para los Asistentes. El botón aparece sólo cuando hay
+            algo publicado. */}
+        {hayContenidos && (
+          <Link to="/contenidos" className="btn btn-full pwa-card-pie">
+            {t.contenidos.titulo}
+          </Link>
+        )}
       </section>
 
       {/* La Matrícula va antes que las notificaciones porque es lo único de esta

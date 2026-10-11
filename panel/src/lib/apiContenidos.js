@@ -1,6 +1,6 @@
 import { llamadorDe } from './apiPanel';
 
-/* La biblioteca que la Prestadora escribe para sus Clientes.
+/* La biblioteca que la Prestadora escribe para su gente.
    ==========================================================================
 
    Lo que va después de `/api/panel/contenidos`. El `fetch`, la sesión, los encabezados y el

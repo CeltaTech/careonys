@@ -68,6 +68,8 @@ export const api = {
   // en quién se escribe, y lo que vuelve es lo que quedó guardado, no lo que se mandó.
   cambiarDisponibilidad: (disponible) =>
     pedido('/perfil/disponibilidad', { method: 'PATCH', body: JSON.stringify({ disponible }) }),
+  // Lo que la Prestadora publicó para los Asistentes. Sólo lo publicado: lo decide la base.
+  contenidos: () => pedido('/contenidos'),
   misGuardias: () => pedido('/guardias'),
   misCoberturas: () => pedido('/coberturas'),
   objetarCobertura: (id) => pedido(`/coberturas/${id}/objecion`, { method: 'POST' }),

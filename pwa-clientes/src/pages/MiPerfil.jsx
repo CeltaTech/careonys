@@ -41,6 +41,7 @@ export default function MiPerfil() {
   const [notifActivas, setNotifActivas] = useState(false);
   const [notifCargando, setNotifCargando] = useState(false);
   const [notifError, setNotifError] = useState('');
+  const [hayContenidos, setHayContenidos] = useState(false);
 
   useEffect(() => {
     let activo = true;
@@ -52,6 +53,13 @@ export default function MiPerfil() {
       .catch(() => {
         if (activo) setError(t.comun.error_generico);
       });
+    // Si la pregunta falla, el botón no se muestra: no hay nada que ofrecer que no se pueda abrir.
+    api
+      .contenidos()
+      .then(({ contenidos }) => {
+        if (activo) setHayContenidos(contenidos.length > 0);
+      })
+      .catch(() => {});
     if (pushSoportado()) {
       suscripcionActual().then((suscripcion) => {
         if (activo) setNotifActivas(!!suscripcion);
@@ -137,10 +145,13 @@ export default function MiPerfil() {
             </Link>
           )}
           {/* La biblioteca de la Prestadora no cuelga de un Paciente ni de una modalidad, y no
-              muestra nada de nadie; donde la Prestadora no escribió nada, la pantalla lo dice. */}
-          <Link to="/contenidos" className="btn">
-            {t.contenidos.titulo}
-          </Link>
+              muestra nada de nadie. El botón aparece sólo cuando hay algo publicado para los
+              Clientes. */}
+          {hayContenidos && (
+            <Link to="/contenidos" className="btn">
+              {t.contenidos.titulo}
+            </Link>
+          )}
         </div>
       </section>
 

@@ -618,6 +618,22 @@ appAsistentesRouter.patch('/perfil/disponibilidad', requiereRolAsistente, async 
 // Mis Guardias
 // ============================================================================
 
+// Lo que la Prestadora publicó para sus Asistentes (`routes/panelContenidos.js`). Sale solamente
+// lo publicado, solamente lo marcado para Asistentes y solamente de su Prestadora: la base lo hace
+// cumplir, y el filtro de acá lo repite. La aplicación muestra el botón sólo si esta lista trae
+// algo.
+appAsistentesRouter.get('/contenidos', requiereRolAsistente, async (req, res) => {
+  const { data, error } = await clienteDelPedido(req)
+    .from('contenidos')
+    .select('id, titulo, cuerpo, enlace_url, updated_at')
+    .eq('publicado', true)
+    .contains('destinatarios', ['asistentes'])
+    .order('orden', { ascending: true })
+    .order('created_at', { ascending: true });
+  if (error) return responderError(res, error);
+  res.json({ contenidos: data });
+});
+
 // `guardia.pacientes` es una LISTA, no una persona: un mismo turno puede cubrir a más de un
 // Paciente (ver `utils/pacientesDeGuardia.js`). La lista ya no la engancha PostgREST por la
 // columna vieja `guardias.paciente_id` — sale de la tabla `guardia_pacientes`.

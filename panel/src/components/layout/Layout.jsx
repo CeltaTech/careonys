@@ -59,6 +59,12 @@ const ICONOS = {
       <path d="M9 8h6M9 12h6M9 16h3" />
     </>
   ),
+  informes: (
+    <>
+      <path d="M4 20h16" />
+      <path d="M7 16v-5M12 16V6M17 16v-8" />
+    </>
+  ),
   comunicacion: SOBRE,
   configuracion: (
     <>
@@ -217,6 +223,13 @@ export function Layout() {
         { a: '/facturacion', texto: t.nav.facturacion, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
         { a: '/lista-precios', texto: t.nav.lista_precios, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
         { a: '/intermediacion/formas-de-cobro', texto: t.nav.intermediacion_formas_de_cobro, ver: verMatch, modalidad: MODALIDAD.INTERMEDIACION && esAdmin },
+      ],
+    },
+    {
+      clave: 'informes',
+      grupo: 'gestion',
+      texto: t.nav.sec_informes,
+      enlaces: [
         { a: '/informes-obra-social', texto: t.nav.informes_obra_social, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
       ],
     },

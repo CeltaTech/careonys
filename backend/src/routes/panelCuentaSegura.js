@@ -3,7 +3,9 @@ import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
 import { supabase, clienteDelPedido } from '../db/connection.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
-import { exigirLaClaveActual } from '../utils/claveActual.js';
+import { exigirLaClaveActual, cambiarLaClave } from '../utils/claveActual.js';
+import { claveAceptable } from '../config/reglaDeClave.js';
+import { esAdminOSuperior } from '../utils/roles.js';
 import { exigirQueElCelularSeaDeUnaSolaPersona } from '../utils/celularDeUnaSolaPersona.js';
 import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
 import {
@@ -52,6 +54,18 @@ export const panelCuentaSeguraRouter = Router();
 const ACCION_CAMBIO_DE_TELEFONO = 'cambio_de_telefono';
 const ACCION_EQUIPO_NUEVO = 'entrada_desde_un_equipo_nuevo';
 const ACCION_CERRAR_TODO = 'cierre_de_sesion_de_todos_los_equipos';
+const ACCION_CAMBIO_DE_CLAVE = 'cambio_de_clave_propia';
+
+// LA CUENTA DEL ADMINISTRADOR ES DE CELTATECH. Su contraseña y el teléfono con que verifica su
+// identidad los da y los cambia CeltaTech (`CLAUDE.md` de Careonys §5), así que acá esas dos
+// puertas se le cierran. Ve sus dispositivos y puede cerrar todas sus sesiones, nada más.
+// Quién es quién sale de `utils/roles.js`, copia del original del Panel.
+function noParaLaAdministracion(req, res, next) {
+  if (esAdminOSuperior(req.usuarioPanel?.rol)) {
+    return res.status(403).json({ error: 'sin_permiso' });
+  }
+  next();
+}
 
 // La propia cuenta se lee con la credencial de quien pide (`clienteDelPedido(req)`), no con la llave
 // maestra: la base le deja ver a cada persona su propia fila y ninguna otra, así que no hace falta
@@ -115,6 +129,7 @@ panelCuentaSeguraRouter.get('/', requiereRolPanel, async (req, res) => {
 panelCuentaSeguraRouter.post(
   '/telefono/codigo',
   requiereRolPanel,
+  noParaLaAdministracion,
   topeDePedidos({ nombre: 'codigo_al_telefono' }),
   async (req, res) => {
     try {
@@ -134,6 +149,7 @@ panelCuentaSeguraRouter.post(
 panelCuentaSeguraRouter.post(
   '/telefono/confirmar',
   requiereRolPanel,
+  noParaLaAdministracion,
   topeDePedidos({ nombre: 'codigo_al_telefono' }),
   async (req, res) => {
     try {
@@ -191,6 +207,7 @@ panelCuentaSeguraRouter.post(
 panelCuentaSeguraRouter.post(
   '/telefono/cambiar',
   requiereRolPanel,
+  noParaLaAdministracion,
   topeDePedidos({ nombre: 'codigo_al_telefono' }),
   async (req, res) => {
     try {
@@ -259,6 +276,39 @@ panelCuentaSeguraRouter.post(
     }
   },
 );
+
+// Cambiar la contraseña propia.
+//
+// PASA POR ACÁ Y NO DIRECTO AL SERVICIO DE ACCESO para que el rol se mire antes: la del
+// Administrador no se cambia desde Careonys. Se pide la actual y se entra con ella; con esa misma
+// sesión se escribe la nueva, sin llave maestra.
+panelCuentaSeguraRouter.post('/clave', requiereRolPanel, noParaLaAdministracion, async (req, res) => {
+  try {
+    const { claveActual, claveNueva } = req.body ?? {};
+    if (!claveActual || !claveNueva) throw new ErrorConMotivo('faltan_datos');
+    if (!claveAceptable(claveNueva)) throw new ErrorConMotivo('password_debil');
+
+    const cuenta = await miCuenta(clienteDelPedido(req), req.usuarioPanel);
+    if (!cuenta) throw new ErrorConMotivo('no_encontrado');
+
+    await cambiarLaClave({
+      email: cuenta.email,
+      prestadoraId: cuenta.prestadora_id,
+      claveActual,
+      claveNueva,
+    });
+
+    await registrarActividad(req.usuarioPanel, ACCION_CAMBIO_DE_CLAVE, {
+      tablaAfectada: 'usuarios',
+      registroId: cuenta.id,
+    });
+    yaQuedoRegistrado(res);
+
+    res.json({ ok: true });
+  } catch (err) {
+    responderError(res, err);
+  }
+});
 
 // ¿Desde este aparato se entró antes?
 //

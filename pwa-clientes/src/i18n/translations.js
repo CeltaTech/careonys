@@ -90,13 +90,13 @@ export const T = {
       // El chat con la otra punta de Match. Sólo aparece donde la Prestadora ofrece esa
       // modalidad de trabajo.
       mensajes: 'Mensajes',
-      pacientes: 'Mis Pacientes',
+      pacientes: 'Pacientes',
       // El código para el Asistente que llega. Va en el menú de abajo porque se busca con el
       // timbre sonando: tiene que estar a un toque desde cualquier pantalla.
       codigo: 'Código',
       // La vidriera de Match. Sólo aparece donde la Prestadora ofrece esa modalidad.
       buscar: 'Buscar',
-      perfil: 'Mi Perfil',
+      perfil: 'Perfil',
       cerrar_sesion: 'Cerrar sesión',
       // El nombre de la zona de navegación de abajo. Sin él un lector de pantalla anuncia
       // "navegación" a secas y la lista de enlaces queda suelta.
@@ -157,7 +157,7 @@ export const T = {
       clave_nueva_guardando: 'Guardando…',
       clave_nueva_exito: 'La contraseña quedó cambiada. Ya se puede entrar con la nueva.',
       clave_nueva_token_invalido: 'Este enlace no sirve o ya venció. Hace falta pedir uno nuevo.',
-      mi_clave: 'Mi contraseña',
+      mi_clave: 'Contraseña',
       mi_clave_titulo: 'Cambiar la contraseña',
       mi_clave_actual: 'Contraseña actual',
       mi_clave_actual_mal: 'La contraseña actual no es correcta.',
@@ -190,7 +190,7 @@ export const T = {
       error_baja: 'No se pudo revocar la credencial.',
     },
     pacientes: {
-      titulo: 'Mis Pacientes',
+      titulo: 'Pacientes',
       sin_pacientes: 'Todavía no hay Pacientes vinculados a esta cuenta.',
     },
     // La advertencia de que el Paciente estos días no está en su domicilio habitual. Lo dibuja
@@ -545,7 +545,7 @@ export const T = {
       abrir_enlace: 'Abrir el material',
     },
     facturas: {
-      titulo: 'Mis facturas',
+      titulo: 'Facturas',
       sin_facturas: 'Todavía no hay ninguna factura.',
       no_encontrada: 'Esa factura no está entre las suyas.',
       col_facturado: 'Facturado',
@@ -572,7 +572,7 @@ export const T = {
       no_es_comprobante: 'Esta pantalla muestra lo que la Prestadora facturó y lo que registró como cobrado. No es un comprobante fiscal.',
     },
     perfil: {
-      titulo: 'Mi Perfil',
+      titulo: 'Perfil',
       nombre: 'Nombre',
       email: 'Email',
       telefono: 'Teléfono',
@@ -729,10 +729,10 @@ export const T = {
     },
     nav: {
       mensajes: 'Messages',
-      pacientes: 'My Patients',
+      pacientes: 'Patients',
       codigo: 'Code',
       buscar: 'Search',
-      perfil: 'My Profile',
+      perfil: 'Profile',
       cerrar_sesion: 'Log out',
       menu_principal: 'Main menu',
       inicio: 'Home',
@@ -781,7 +781,7 @@ export const T = {
       clave_nueva_guardando: 'Saving…',
       clave_nueva_exito: 'The password has been changed. You can now sign in with the new one.',
       clave_nueva_token_invalido: 'This link is not valid or has expired. Ask for a new one.',
-      mi_clave: 'My password',
+      mi_clave: 'Password',
       mi_clave_titulo: 'Change your password',
       mi_clave_actual: 'Current password',
       mi_clave_actual_mal: 'The current password is not correct.',
@@ -812,7 +812,7 @@ export const T = {
       error_baja: 'The credential could not be revoked.',
     },
     pacientes: {
-      titulo: 'My Patients',
+      titulo: 'Patients',
       sin_pacientes: 'There are no Patients linked to your account yet.',
     },
     domicilio: {
@@ -1126,7 +1126,7 @@ export const T = {
       abrir_enlace: 'Open the material',
     },
     facturas: {
-      titulo: 'My invoices',
+      titulo: 'Invoices',
       sin_facturas: 'There are no invoices yet.',
       no_encontrada: 'That invoice is not one of yours.',
       col_facturado: 'Invoiced',
@@ -1153,7 +1153,7 @@ export const T = {
       no_es_comprobante: 'This screen shows what the Provider invoiced and what they recorded as paid. It is not a tax receipt.',
     },
     perfil: {
-      titulo: 'My Profile',
+      titulo: 'Profile',
       nombre: 'Name',
       email: 'Email',
       telefono: 'Phone',
@@ -1300,10 +1300,10 @@ export const T = {
     },
     nav: {
       mensajes: 'Mensagens',
-      pacientes: 'Meus Pacientes',
+      pacientes: 'Pacientes',
       codigo: 'Código',
       buscar: 'Buscar',
-      perfil: 'Meu Perfil',
+      perfil: 'Perfil',
       cerrar_sesion: 'Sair',
       menu_principal: 'Menu principal',
       inicio: 'Início',
@@ -1352,7 +1352,7 @@ export const T = {
       clave_nueva_guardando: 'Guardando…',
       clave_nueva_exito: 'A senha foi alterada. Já é possível entrar com a nova.',
       clave_nueva_token_invalido: 'Este link não serve ou já venceu. É preciso pedir um novo.',
-      mi_clave: 'Minha senha',
+      mi_clave: 'Senha',
       mi_clave_titulo: 'Alterar a senha',
       mi_clave_actual: 'Senha atual',
       mi_clave_actual_mal: 'A senha atual não está correta.',
@@ -1383,7 +1383,7 @@ export const T = {
       error_baja: 'Não foi possível revogar a credencial.',
     },
     pacientes: {
-      titulo: 'Meus Pacientes',
+      titulo: 'Pacientes',
       sin_pacientes: 'Ainda não há Pacientes vinculados a esta conta.',
     },
     domicilio: {
@@ -1697,7 +1697,7 @@ export const T = {
       abrir_enlace: 'Abrir o material',
     },
     facturas: {
-      titulo: 'Minhas faturas',
+      titulo: 'Faturas',
       sin_facturas: 'Ainda não há nenhuma fatura.',
       no_encontrada: 'Essa fatura não está entre as suas.',
       col_facturado: 'Faturado',
@@ -1724,7 +1724,7 @@ export const T = {
       no_es_comprobante: 'Esta tela mostra o que a Prestadora faturou e o que registrou como pago. Não é um comprovante fiscal.',
     },
     perfil: {
-      titulo: 'Meu Perfil',
+      titulo: 'Perfil',
       nombre: 'Nome',
       email: 'Email',
       telefono: 'Telefone',

@@ -22,8 +22,7 @@ import { EntrevistaPublica } from './pages/EntrevistaPublica';
 import { ActivarCuenta } from './pages/ActivarCuenta';
 import { RecuperarClave } from './pages/RecuperarClave';
 import { ClaveNueva } from './pages/ClaveNueva';
-import { MiClave } from './pages/MiClave';
-import { CuentaSegura } from './pages/CuentaSegura';
+import { Seguridad } from './pages/Seguridad';
 import { HabilitarClave } from './pages/HabilitarClave';
 import { Muestra } from './pages/Muestra';
 import { MuestraEstadoActual } from './pages/MuestraEstadoActual';
@@ -205,10 +204,12 @@ function App() {
                       <Route path="accesos" element={<ConfiguracionAccesos />} />
                       <Route path="puesta-en-marcha" element={<ConfiguracionPuestaEnMarcha />} />
                     </Route>
-                    <Route path="mi-clave" element={<MiClave />} />
                     {/* La seguridad de la propia cuenta la tiene cualquiera que entre al Panel:
-                        no lleva permiso, porque no se está tocando la cuenta de nadie más. */}
-                    <Route path="cuenta-segura" element={<CuentaSegura />} />
+                        no lleva permiso, porque no se está tocando la cuenta de nadie más. Las dos
+                        direcciones de antes llevan acá, para que ningún enlace guardado se rompa. */}
+                    <Route path="seguridad" element={<Seguridad />} />
+                    <Route path="mi-clave" element={<Navigate to="/seguridad" replace />} />
+                    <Route path="cuenta-segura" element={<Navigate to="/seguridad" replace />} />
                     <Route
                       path="habilitar-clave"
                       element={

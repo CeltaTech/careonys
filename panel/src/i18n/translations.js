@@ -3057,7 +3057,7 @@ export const T = {
     preferencias: {
       idioma: 'Language',
       tema: 'Screen colours',
-      tema_automatico: 'Match my computer',
+      tema_automatico: 'Match the computer',
       tema_claro: 'Light',
       tema_oscuro: 'Dark',
       densidad: 'Row spacing',

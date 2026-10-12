@@ -17,6 +17,7 @@ import { accesosDelPedido, exigeDePersonasAutorizadas, soloElTitular, visibilida
 import { instruccionPendiente, pedirCodigo, confirmarConCodigo } from '../utils/instruccionesPersonasAutorizadas.js';
 import { codigoParaMostrar } from '../utils/comprobacionDePresencia.js';
 import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
+import { ARCHIVOS_DE_LA_PIEZA, conArchivosEnOrden, enlaceDelArchivo } from '../utils/archivosDeContenidos.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
 import { llegadaEstimadaDeGuardia } from '../utils/estimarLlegadaDeGuardia.js';
 import { darDeBajaElAcceso } from '../utils/bajaDelAcceso.js';
@@ -1847,11 +1848,20 @@ appClientesRouter.post('/intermediacion/conversaciones/:id/videollamada', requie
 appClientesRouter.get('/contenidos', requiereRolCliente, async (req, res) => {
   const { data, error } = await clienteDelPedido(req)
     .from('contenidos')
-    .select('id, titulo, cuerpo, enlace_url, updated_at')
+    .select(`id, titulo, cuerpo, enlace_url, updated_at, ${ARCHIVOS_DE_LA_PIEZA}`)
     .eq('publicado', true)
     .contains('destinatarios', ['clientes'])
     .order('orden', { ascending: true })
     .order('created_at', { ascending: true });
   if (error) return responderError(res, error);
-  res.json({ contenidos: data });
+  res.json({ contenidos: conArchivosEnOrden(data) });
+});
+
+// Abrir un archivo de una pieza: un enlace temporal, sólo si la pieza está publicada para Clientes.
+appClientesRouter.get('/contenidos/archivos/:id/enlace', requiereRolCliente, async (req, res) => {
+  try {
+    res.json({ url: await enlaceDelArchivo(clienteDelPedido(req), req.params.id, { destinatario: 'clientes' }) });
+  } catch (error) {
+    responderError(res, error);
+  }
 });

@@ -50,10 +50,16 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null, credencial: req.headers.authorization });
+    const esJson = (req.headers['content-type'] || '').includes('json');
+    const cuerpoLeido = crudo && esJson ? JSON.parse(crudo) : crudo || null;
+    llamadas.push({ clave, url: req.url, cuerpo: cuerpoLeido, credencial: req.headers.authorization });
 
-    const preparada = respuestas.get(clave);
-    const valor = typeof preparada === 'function' ? preparada({ url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null }) : preparada;
+    // Una clave que termina en `*` vale para todo lo que empiece igual: la ruta de un archivo
+    // subido lleva un nombre que se inventa en el momento.
+    const preparada = respuestas.has(clave)
+      ? respuestas.get(clave)
+      : [...respuestas].find(([k]) => k.endsWith('*') && clave.startsWith(k.slice(0, -1)))?.[1];
+    const valor = typeof preparada === 'function' ? preparada({ url: req.url, cuerpo: cuerpoLeido }) : preparada;
     if (valor === undefined) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: `la prueba no preparó respuesta para ${clave}` }));
@@ -108,6 +114,19 @@ async function pedir(metodo, ruta, cuerpo) {
     method: metodo,
     headers: { Authorization: credencialEnviada, 'Content-Type': 'application/json' },
     body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
+  });
+  return { estado: respuesta.status, cuerpo: await respuesta.json() };
+}
+
+/** Sube un archivo como lo manda la pantalla: un formulario con el campo `archivo`. */
+async function subir(ruta, archivo) {
+  credencialEnviada = sesionDePrueba(USUARIO);
+  const formulario = new FormData();
+  if (archivo) formulario.append('archivo', new Blob([archivo.contenido], { type: archivo.tipo }), archivo.nombre);
+  const respuesta = await fetch(`${RAIZ}/api/panel/contenidos${ruta}`, {
+    method: 'POST',
+    headers: { Authorization: credencialEnviada },
+    body: formulario,
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
@@ -320,6 +339,7 @@ describe('el contenido de una Prestadora no se ve ni se toca desde otra', () => 
     respuestas.set('POST /rest/v1/contenidos', ({ cuerpo }) => [{ ...CONTENIDO_EN_LA_BASE, ...cuerpo }]);
     respuestas.set('PATCH /rest/v1/contenidos', () => [CONTENIDO_EN_LA_BASE]);
     respuestas.set('DELETE /rest/v1/contenidos', () => [{ id: CONTENIDO }]);
+    respuestas.set('GET /rest/v1/contenidos_archivos', () => []);
 
     const credenciales = [];
     for (const [metodo, ruta, cuerpo] of [
@@ -343,6 +363,7 @@ describe('el contenido de una Prestadora no se ve ni se toca desde otra', () => 
   it('una pieza de otra Prestadora no existe para ésta, y se contesta lo mismo que si no existiera', async () => {
     respuestas.set('GET /rest/v1/contenidos', () => []);
     respuestas.set('DELETE /rest/v1/contenidos', () => []);
+    respuestas.set('GET /rest/v1/contenidos_archivos', () => []);
 
     const cambio = await enElPanel(`/${CONTENIDO}`, 'PATCH', { publicado: true });
     assert.equal(cambio.estado, 404);
@@ -414,9 +435,51 @@ for (const [quien, preparar, pedirLa, destinatario, rolAjeno] of [
 
       const consulta = consultasALaBiblioteca()[0];
       const pedido = new URL(consulta.url, 'http://interno').searchParams.get('select');
-      for (const columna of ['creado_por', 'publicado', 'orden', 'destinatarios']) {
+      for (const columna of ['creado_por', 'publicado', 'orden', 'destinatarios', 'ruta', 'subido_por']) {
         assert.ok(!pedido.includes(columna), `esta columna no tiene por qué viajar: ${columna}`);
       }
+    });
+
+    it('los archivos de cada pieza llegan en el orden en que se subieron', async () => {
+      respuestas.set('GET /rest/v1/contenidos', () => [
+        {
+          ...PIEZA_PUBLICADA,
+          archivos: [
+            { id: 'b', nombre: 'segundo.pdf', tipo: 'application/pdf', tamano: 10, created_at: '2026-09-02T10:00:00Z' },
+            { id: 'a', nombre: 'primero.pdf', tipo: 'application/pdf', tamano: 10, created_at: '2026-09-01T10:00:00Z' },
+          ],
+        },
+      ]);
+
+      const { cuerpo } = await pedirLa('/contenidos');
+      assert.deepEqual(cuerpo.contenidos[0].archivos.map((a) => a.id), ['a', 'b']);
+    });
+
+    it('un archivo se abre sólo si su pieza está publicada para él, y con su credencial', async () => {
+      respuestas.set('GET /rest/v1/contenidos_archivos', () => [
+        { ruta: `${PRESTADORA}/${CONTENIDO}/x.pdf`, nombre: 'guia.pdf', tipo: 'application/pdf' },
+      ]);
+      respuestas.set('POST /storage/v1/object/sign/contenidos-archivos/*', () => ({ signedURL: '/object/sign/firmado?token=t' }));
+
+      const { estado, cuerpo } = await pedirLa('/contenidos/archivos/a/enlace');
+      assert.equal(estado, 200);
+      assert.ok(cuerpo.url.includes('token=t'));
+
+      const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/contenidos_archivos');
+      assert.equal(consulta.credencial, credencialEnviada);
+      const filtros = new URL(consulta.url, 'http://interno').searchParams;
+      assert.equal(filtros.get('contenidos.publicado'), 'eq.true');
+      assert.equal(filtros.get('contenidos.destinatarios'), `cs.{${destinatario}}`);
+      const firma = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/sign/'));
+      assert.equal(firma.credencial, credencialEnviada, 'el enlace no salió con la credencial de la persona');
+    });
+
+    it('un archivo que no puede ver no existe para él', async () => {
+      respuestas.set('GET /rest/v1/contenidos_archivos', () => []);
+      const { estado, cuerpo } = await pedirLa('/contenidos/archivos/a/enlace');
+      assert.equal(estado, 404);
+      assert.equal(cuerpo.motivo, 'no_encontrado');
+      assert.ok(!llamadas.some((l) => l.clave.startsWith('POST /storage/')));
     });
 
     it('quien no es de los suyos no entra', async () => {
@@ -426,3 +489,122 @@ for (const [quien, preparar, pedirLa, destinatario, rolAjeno] of [
     });
   });
 }
+
+// ---------------------------------------------------------------------------------------
+// Los archivos de una pieza, del lado del Panel
+// ---------------------------------------------------------------------------------------
+
+describe('los archivos de una pieza', () => {
+  const PDF = { contenido: '%PDF-1.4 de mentira', tipo: 'application/pdf', nombre: 'guía.pdf' };
+
+  function preparaSubida() {
+    respuestas.set('GET /rest/v1/contenidos', () => [{ id: CONTENIDO }]);
+    respuestas.set('POST /storage/v1/object/contenidos-archivos/*', () => ({ Key: 'x' }));
+    respuestas.set('POST /rest/v1/contenidos_archivos', ({ cuerpo }) => [
+      { id: 'f', nombre: cuerpo.nombre, tipo: cuerpo.tipo, tamano: cuerpo.tamano, created_at: '2026-09-01T10:00:00Z' },
+    ]);
+  }
+
+  it('se sube a la carpeta de la Prestadora y de la pieza, con la credencial de quien pide', async () => {
+    preparaSubida();
+    const { estado, cuerpo } = await subir(`/${CONTENIDO}/archivos`, PDF);
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.archivo.nombre, 'guía.pdf');
+
+    const subida = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/contenidos-archivos/'));
+    assert.ok(subida.clave.startsWith(`POST /storage/v1/object/contenidos-archivos/${PRESTADORA}/${CONTENIDO}/`));
+    assert.ok(subida.clave.endsWith('.pdf'));
+    assert.equal(subida.credencial, credencialEnviada);
+
+    const fila = llamadas.find((l) => l.clave === 'POST /rest/v1/contenidos_archivos');
+    assert.equal(fila.credencial, credencialEnviada);
+    assert.equal(fila.cuerpo.prestadora_id, PRESTADORA);
+    assert.equal(fila.cuerpo.contenido_id, CONTENIDO);
+    assert.equal(fila.cuerpo.subido_por, USUARIO);
+    assert.equal(fila.cuerpo.tamano, Buffer.byteLength(PDF.contenido));
+  });
+
+  it('un tipo que no se admite no llega al depósito', async () => {
+    preparaSubida();
+    const { estado, cuerpo } = await subir(`/${CONTENIDO}/archivos`, { contenido: 'x', tipo: 'video/mp4', nombre: 'v.mp4' });
+    assert.equal(estado, 400);
+    assert.equal(cuerpo.motivo, 'archivo_de_contenido_invalido');
+    assert.ok(!llamadas.some((l) => l.clave.startsWith('POST /storage/')));
+  });
+
+  it('un archivo de más de 10 MB no llega al depósito', async () => {
+    preparaSubida();
+    const pesado = { contenido: new Uint8Array(10 * 1024 * 1024 + 1), tipo: 'application/pdf', nombre: 'pesado.pdf' };
+    const { estado, cuerpo } = await subir(`/${CONTENIDO}/archivos`, pesado);
+    assert.equal(estado, 400);
+    assert.equal(cuerpo.motivo, 'archivo_de_contenido_invalido');
+    assert.ok(!llamadas.some((l) => l.clave.startsWith('POST /storage/')));
+  });
+
+  it('sin archivo no hay nada que subir', async () => {
+    preparaSubida();
+    const { estado, cuerpo } = await subir(`/${CONTENIDO}/archivos`);
+    assert.equal(estado, 400);
+    assert.equal(cuerpo.motivo, 'archivo_de_contenido_invalido');
+  });
+
+  it('a una pieza de otra Prestadora no se le sube nada', async () => {
+    preparaSubida();
+    respuestas.set('GET /rest/v1/contenidos', () => []);
+    const { estado } = await subir(`/${CONTENIDO}/archivos`, PDF);
+    assert.equal(estado, 404);
+    assert.ok(!llamadas.some((l) => l.clave.startsWith('POST /storage/')));
+  });
+
+  it('si la fila no se pudo escribir, el archivo subido se saca', async () => {
+    preparaSubida();
+    respuestas.set('POST /rest/v1/contenidos_archivos', () => ({ __estado: 400, __cuerpo: { message: 'falla' } }));
+    respuestas.set('DELETE /storage/v1/object/contenidos-archivos', () => []);
+    const { estado } = await subir(`/${CONTENIDO}/archivos`, PDF);
+    assert.notEqual(estado, 200);
+    assert.ok(llamadas.some((l) => l.clave === 'DELETE /storage/v1/object/contenidos-archivos'));
+  });
+
+  it('sin el permiso no se sube ni se borra', async () => {
+    permisoOtorgado = false;
+    rolDelUsuario = 'coordinador';
+    preparaSubida();
+    assert.equal((await subir(`/${CONTENIDO}/archivos`, PDF)).estado, 403);
+    assert.equal((await enElPanel('/archivos/f', 'DELETE')).estado, 403);
+    assert.ok(!llamadas.some((l) => l.clave.startsWith('POST /storage/') || l.clave.includes('contenidos_archivos')));
+  });
+
+  it('borrar un archivo saca la fila y el archivo del depósito', async () => {
+    respuestas.set('DELETE /rest/v1/contenidos_archivos', () => [{ ruta: `${PRESTADORA}/${CONTENIDO}/x.pdf` }]);
+    respuestas.set('DELETE /storage/v1/object/contenidos-archivos', () => []);
+    const { estado } = await enElPanel('/archivos/f', 'DELETE');
+    assert.equal(estado, 200);
+
+    const fila = llamadas.find((l) => l.clave === 'DELETE /rest/v1/contenidos_archivos');
+    assert.equal(new URL(fila.url, 'http://interno').searchParams.get('prestadora_id'), `eq.${PRESTADORA}`);
+    const deposito = llamadas.find((l) => l.clave === 'DELETE /storage/v1/object/contenidos-archivos');
+    assert.deepEqual(deposito.cuerpo.prefixes, [`${PRESTADORA}/${CONTENIDO}/x.pdf`]);
+  });
+
+  it('borrar la pieza se lleva sus archivos del depósito', async () => {
+    respuestas.set('GET /rest/v1/contenidos_archivos', () => [{ ruta: `${PRESTADORA}/${CONTENIDO}/x.pdf` }]);
+    respuestas.set('DELETE /rest/v1/contenidos', () => [{ id: CONTENIDO }]);
+    respuestas.set('DELETE /storage/v1/object/contenidos-archivos', () => []);
+    const { estado } = await enElPanel(`/${CONTENIDO}`, 'DELETE');
+    assert.equal(estado, 200);
+    const deposito = llamadas.find((l) => l.clave === 'DELETE /storage/v1/object/contenidos-archivos');
+    assert.deepEqual(deposito.cuerpo.prefixes, [`${PRESTADORA}/${CONTENIDO}/x.pdf`]);
+  });
+
+  it('en el Panel, Word y Excel se descargan y el PDF se abre adentro', async () => {
+    respuestas.set('POST /storage/v1/object/sign/contenidos-archivos/*', () => ({ signedURL: '/object/sign/f?token=t' }));
+
+    respuestas.set('GET /rest/v1/contenidos_archivos', () => [{ ruta: 'r.docx', nombre: 'planilla.docx', tipo: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }]);
+    const word = await enElPanel('/archivos/f/enlace');
+    assert.ok(word.cuerpo.url.includes('download='), 'el Word tenía que salir para descargar');
+
+    respuestas.set('GET /rest/v1/contenidos_archivos', () => [{ ruta: 'r.pdf', nombre: 'guia.pdf', tipo: 'application/pdf' }]);
+    const pdf = await enElPanel('/archivos/f/enlace');
+    assert.ok(!pdf.cuerpo.url.includes('download='), 'el PDF se abre adentro');
+  });
+});

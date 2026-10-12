@@ -609,6 +609,7 @@ export const T = {
       titulo: 'Contenidos',
       sin_contenidos: 'Esta Prestadora todavía no publicó nada acá.',
       abrir_enlace: 'Abrir',
+      descargar: 'Descargar',
     },
     perfil: {
       titulo: 'Perfil',
@@ -1265,6 +1266,7 @@ export const T = {
       titulo: 'Content',
       sin_contenidos: 'This provider has not published anything here yet.',
       abrir_enlace: 'Open',
+      descargar: 'Download',
     },
     perfil: {
       titulo: 'Profile',
@@ -1900,6 +1902,7 @@ export const T = {
       titulo: 'Conteúdos',
       sin_contenidos: 'Esta Prestadora ainda não publicou nada aqui.',
       abrir_enlace: 'Abrir',
+      descargar: 'Baixar',
     },
     perfil: {
       titulo: 'Perfil',

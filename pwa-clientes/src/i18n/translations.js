@@ -543,6 +543,7 @@ export const T = {
       titulo: 'Para cuidar en casa',
       sin_contenidos: 'Esta Prestadora todavía no publicó nada acá.',
       abrir_enlace: 'Abrir',
+      descargar: 'Descargar',
     },
     facturas: {
       titulo: 'Facturas',
@@ -1124,6 +1125,7 @@ export const T = {
       titulo: 'Caring at home',
       sin_contenidos: 'This provider has not published anything here yet.',
       abrir_enlace: 'Open',
+      descargar: 'Download',
     },
     facturas: {
       titulo: 'Invoices',
@@ -1695,6 +1697,7 @@ export const T = {
       titulo: 'Para cuidar em casa',
       sin_contenidos: 'Esta Prestadora ainda não publicou nada aqui.',
       abrir_enlace: 'Abrir',
+      descargar: 'Baixar',
     },
     facturas: {
       titulo: 'Faturas',

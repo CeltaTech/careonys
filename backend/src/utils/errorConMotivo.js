@@ -120,6 +120,8 @@ const ESTADO_POR_MOTIVO = {
   titulo_de_contenido_repetido: 409,
   enlace_invalido: 400,
   orden_invalido: 400,
+  // Un archivo de otro tipo, más pesado que el tope, o un pedido sin archivo.
+  archivo_de_contenido_invalido: 400,
   // La entrevista de una postulación. Los dos primeros son 400 porque el dato vino mal cargado, y
   // los otros dos son 409 porque el pedido está bien armado y choca con el estado de las cosas: la
   // entrevista ya se cerró, o ya hay una agendada y lo que corresponde es moverla y no agendar una

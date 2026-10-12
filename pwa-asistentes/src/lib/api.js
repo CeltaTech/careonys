@@ -70,6 +70,7 @@ export const api = {
     pedido('/perfil/disponibilidad', { method: 'PATCH', body: JSON.stringify({ disponible }) }),
   // Lo que la Prestadora publicó para los Asistentes. Sólo lo publicado: lo decide la base.
   contenidos: () => pedido('/contenidos'),
+  enlaceDeArchivoDeContenido: (id) => pedido(`/contenidos/archivos/${encodeURIComponent(id)}/enlace`),
   misGuardias: () => pedido('/guardias'),
   misCoberturas: () => pedido('/coberturas'),
   objetarCobertura: (id) => pedido(`/coberturas/${id}/objecion`, { method: 'POST' }),

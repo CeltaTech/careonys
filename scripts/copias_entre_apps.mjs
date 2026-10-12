@@ -63,6 +63,25 @@ export const GRUPOS = [
     copias: ['panel/src/lib/enlaceDeContenidos.js'],
   },
   {
+    que: 'qué archivo admite una pieza de Contenidos',
+    original: 'backend/src/config/archivosDeContenidos.js',
+    copias: [
+      'panel/src/lib/archivosDeContenidos.js',
+      'pwa-asistentes/src/lib/archivosDeContenidos.js',
+      'pwa-clientes/src/lib/archivosDeContenidos.js',
+    ],
+  },
+  {
+    que: 'cómo se muestra el material de una pieza de Contenidos',
+    original: 'panel/src/lib/vistaDelMaterial.js',
+    copias: ['pwa-asistentes/src/lib/vistaDelMaterial.js', 'pwa-clientes/src/lib/vistaDelMaterial.js'],
+  },
+  {
+    que: 'el material de una pieza de Contenidos, en las aplicaciones',
+    original: 'pwa-asistentes/src/components/MaterialDelContenido.jsx',
+    copias: ['pwa-clientes/src/components/MaterialDelContenido.jsx'],
+  },
+  {
     que: 'de qué avisa el canal en vivo',
     original: 'backend/src/avisosEnVivo/asuntos.js',
     copias: ['panel/src/lib/asuntosEnVivo.js'],

@@ -31,6 +31,7 @@ import {
   registrarComprobacion,
 } from '../utils/comprobacionDePresencia.js';
 import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
+import { ARCHIVOS_DE_LA_PIEZA, conArchivosEnOrden, enlaceDelArchivo } from '../utils/archivosDeContenidos.js';
 import { lugaresDe } from '../utils/lugaresDeCadaPersona.js';
 import { nombresDeLugares } from '../utils/catalogoDeLugares.js';
 import { ofreceIntermediacion } from '../utils/intermediacionDeLaPrestadora.js';
@@ -625,13 +626,22 @@ appAsistentesRouter.patch('/perfil/disponibilidad', requiereRolAsistente, async 
 appAsistentesRouter.get('/contenidos', requiereRolAsistente, async (req, res) => {
   const { data, error } = await clienteDelPedido(req)
     .from('contenidos')
-    .select('id, titulo, cuerpo, enlace_url, updated_at')
+    .select(`id, titulo, cuerpo, enlace_url, updated_at, ${ARCHIVOS_DE_LA_PIEZA}`)
     .eq('publicado', true)
     .contains('destinatarios', ['asistentes'])
     .order('orden', { ascending: true })
     .order('created_at', { ascending: true });
   if (error) return responderError(res, error);
-  res.json({ contenidos: data });
+  res.json({ contenidos: conArchivosEnOrden(data) });
+});
+
+// Abrir un archivo de una pieza: un enlace temporal, sólo si la pieza está publicada para Asistentes.
+appAsistentesRouter.get('/contenidos/archivos/:id/enlace', requiereRolAsistente, async (req, res) => {
+  try {
+    res.json({ url: await enlaceDelArchivo(clienteDelPedido(req), req.params.id, { destinatario: 'asistentes' }) });
+  } catch (error) {
+    responderError(res, error);
+  }
 });
 
 // `guardia.pacientes` es una LISTA, no una persona: un mismo turno puede cubrir a más de un

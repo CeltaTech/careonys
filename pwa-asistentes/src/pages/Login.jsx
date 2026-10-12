@@ -1,35 +1,108 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
-import { entrarConLaLlaveDelAparato, esteAparatoGuardaLlaves, loCancelaronAMano, rotuloGuardado } from '../lib/llaveDelDispositivo';
+import { errorDeLaRespuesta, mensajeDeError } from '../lib/errores';
+import { guardarMarca, leerMarcaGuardada, olvidarMarca } from '../lib/marcaGuardada';
+import { entrarConLaLlaveDelAparato, esteAparatoGuardaLlaves, loCancelaronAMano } from '../lib/llaveDelDispositivo';
 
-export default function Login() {
+// ORIGINAL. La copia de `pwa-asistentes/` se regenera con `scripts/sincronizar_copias.mjs` y nunca
+// se edita a mano. Lo único que cambia entre las dos aplicaciones es el rol, que lo pone quien la
+// monta.
+//
+// PRIMERO LA PRESTADORA, DESPUÉS LA CUENTA. Con el mismo correo, cada Prestadora tiene su propia
+// cuenta (`lib/correoDeAcceso.js`), así que antes del correo hace falta saber de cuál se trata. El
+// código queda anotado en el teléfono junto con la marca, y mientras esté ahí no se vuelve a pedir.
+
+const API_URL = import.meta.env.VITE_API_URL;
+
+async function prestadoraDelCodigo(codigo) {
+  const respuesta = await fetch(`${API_URL}/api/publico/${encodeURIComponent(codigo)}/marca`);
+  const datos = await respuesta.json().catch(() => ({}));
+  if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, datos);
+  return datos;
+}
+
+export default function Login({ rol }) {
   const { login } = useAuth();
   const { t } = useLocale();
+  const [searchParams] = useSearchParams();
+  const [estado, setEstado] = useState('cargando');
+  const [prestadora, setPrestadora] = useState(null);
+  const [codigo, setCodigo] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [errorCodigo, setErrorCodigo] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [hayLlave, setHayLlave] = useState(false);
   const [entrandoConLlave, setEntrandoConLlave] = useState(false);
 
-  // Se pregunta una sola vez, al abrir: ofrecer una puerta que este aparato no puede abrir es peor
-  // que no ofrecerla. Mientras no conteste, el botón no está.
+  // Si se llega desde el enlace de un correo, la Prestadora viene en la dirección. Si no, se usa la
+  // que el teléfono tenga anotada. En los dos casos se pasa directo al correo. La huella se ofrece
+  // sólo para la Prestadora anotada: es la de quien ya entró en este aparato.
   useEffect(() => {
     let vigente = true;
-    Promise.all([esteAparatoGuardaLlaves(), rotuloGuardado()]).then(([puede, rotulo]) => {
-      if (vigente) setHayLlave(puede && Boolean(rotulo));
-    });
+    (async () => {
+      const pedida = (searchParams.get('prestadora') || '').trim();
+      const guardada = await leerMarcaGuardada();
+      const rotulo = pedida || guardada?.rotulo;
+      if (!rotulo) {
+        if (vigente) setEstado('listo');
+        return;
+      }
+      try {
+        const datos = await prestadoraDelCodigo(rotulo);
+        if (pedida) await guardarMarca({ nombre: datos.nombre, logoUrl: datos.logoUrl, rotulo: datos.rotulo });
+        const puede = await esteAparatoGuardaLlaves();
+        if (!vigente) return;
+        setPrestadora(datos);
+        setHayLlave(puede && guardada?.rotulo === datos.rotulo);
+      } catch (err) {
+        // Un código anotado que ya no existe se olvida. Lo demás queda escrito en el casillero,
+        // para no tener que tipearlo de nuevo.
+        if (err?.status === 404 && !pedida) await olvidarMarca();
+        else if (vigente) setCodigo(rotulo);
+      } finally {
+        if (vigente) setEstado('listo');
+      }
+    })();
     return () => {
       vigente = false;
     };
+    // Sólo al abrir la pantalla.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function alBuscarPrestadora(evento) {
+    evento.preventDefault();
+    setErrorCodigo('');
+    setEnviando(true);
+    try {
+      const datos = await prestadoraDelCodigo(codigo.trim());
+      await guardarMarca({ nombre: datos.nombre, logoUrl: datos.logoUrl, rotulo: datos.rotulo });
+      setPrestadora(datos);
+    } catch (err) {
+      setErrorCodigo(err?.status === 404 ? t.auth.codigo_desconocido : mensajeDeError(err, t, 'buscar la Prestadora'));
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  async function alCambiarPrestadora() {
+    await olvidarMarca();
+    setPrestadora(null);
+    setHayLlave(false);
+    setCodigo('');
+    setPassword('');
+    setError('');
+  }
 
   async function alEnviar(evento) {
     evento.preventDefault();
     setError('');
     setEnviando(true);
-    const { error: errorLogin } = await login(email, password);
+    const { error: errorLogin } = await login(prestadora.prestadoraId, email, password);
     setEnviando(false);
     if (errorLogin) {
       setError(t.auth.error_credenciales);
@@ -42,7 +115,7 @@ export default function Login() {
     try {
       // Si sale bien no hay nada que hacer acá: la sesión queda abierta y quien escucha los
       // cambios de sesión cambia de pantalla solo.
-      await entrarConLaLlaveDelAparato('asistente');
+      await entrarConLaLlaveDelAparato(rol);
     } catch (errorLlave) {
       // Cancelar no es fallar. Quien cierra el pedido del aparato a propósito no necesita que le
       // avisen nada: la contraseña sigue estando ahí abajo.
@@ -52,9 +125,56 @@ export default function Login() {
     }
   }
 
+  if (estado === 'cargando') {
+    return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
+  }
+
+  if (!prestadora) {
+    return (
+      <div className="login-pantalla">
+        <div className="login-card">
+          <h1>{t.auth.titulo}</h1>
+          <form onSubmit={alBuscarPrestadora}>
+            <div className="form-field">
+              <label htmlFor="codigo">{t.auth.codigo_prestadora}</label>
+              <input
+                id="codigo"
+                type="text"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                value={codigo}
+                onChange={(e) => {
+                  setCodigo(e.target.value);
+                  if (errorCodigo) setErrorCodigo('');
+                }}
+                required
+                aria-invalid={errorCodigo ? true : undefined}
+                aria-describedby={errorCodigo ? 'codigo-error' : undefined}
+              />
+              {errorCodigo && (
+                <span className="form-error" id="codigo-error" role="alert">{errorCodigo}</span>
+              )}
+            </div>
+            <button type="submit" className="btn btn-primary btn-full" disabled={enviando}>
+              {enviando ? t.auth.buscando : t.auth.continuar}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="login-pantalla">
       <div className="login-card">
+        {/* La Prestadora va arriba, igual que adentro de la aplicación: es con quien se está
+            entrando. */}
+        {prestadora.logoUrl ? (
+          <img className="logo-prestadora" src={prestadora.logoUrl} alt={prestadora.nombre || ''} />
+        ) : (
+          <p className="nombre-prestadora">{prestadora.nombre || ''}</p>
+        )}
         <h1>{t.auth.titulo}</h1>
         {/* El motivo queda atado a los dos campos y no a uno: no se dice cuál de los dos está
             mal, a propósito, porque decirlo le regalaría a cualquiera la mitad de la
@@ -93,7 +213,7 @@ export default function Login() {
               aria-describedby={error ? 'login-error' : undefined}
             />
           </div>
-          <button type="submit" className="btn btn-primary btn-full" disabled={enviando}>
+          <button type="submit" className="btn btn-primary btn-full" disabled={enviando || entrandoConLlave}>
             {enviando ? t.auth.ingresando : t.auth.ingresar}
           </button>
         </form>
@@ -110,6 +230,14 @@ export default function Login() {
             </button>
           </>
         )}
+        <button
+          type="button"
+          className="btn btn-secondary btn-full login-otra-prestadora"
+          onClick={alCambiarPrestadora}
+          disabled={enviando || entrandoConLlave}
+        >
+          {t.auth.cambiar_prestadora}
+        </button>
       </div>
     </div>
   );

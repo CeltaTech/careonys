@@ -13,9 +13,10 @@ export const marcaDeLaPuertaRouter = Router({ mergeParams: true });
 // que tiene que ver ahí es el nombre de ella. La línea al pie —«con la tecnología de …»— va igual,
 // siempre, y la pone la pantalla.
 //
-// QUÉ SALE Y QUÉ NO. El nombre visible, el logotipo y el identificador de la Prestadora, que es lo
-// que hace falta para armar la cuenta de acceso de esta puerta. Nada más: el teléfono, el correo y
-// las zonas son del sitio público de la Prestadora y tienen su propia dirección.
+// QUÉ SALE Y QUÉ NO. El nombre visible, el logotipo, el identificador de la Prestadora, que es lo
+// que hace falta para armar la cuenta de acceso de esta puerta, y su código tal como está guardado,
+// que las aplicaciones anotan en el teléfono para no volver a pedirlo. Nada más: el teléfono, el
+// correo y las zonas son del sitio público de la Prestadora y tienen su propia dirección.
 //
 // NO DICE QUIÉNES EXISTEN. Una dirección que no resuelve contesta lo mismo que cualquier otra que
 // no resuelve, y no ofrece ninguna lista.
@@ -25,5 +26,6 @@ marcaDeLaPuertaRouter.get('/', resolverPrestadoraPublica, async (req, res) => {
     prestadoraId: req.prestadoraPublica.prestadora_id,
     nombre: marca.nombre || req.prestadoraPublica.nombre || null,
     logoUrl: marca.logoUrl,
+    rotulo: req.prestadoraPublica.dominio,
   });
 });

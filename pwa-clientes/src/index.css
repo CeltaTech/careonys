@@ -390,6 +390,11 @@ a {
   border-top: 1px solid var(--linea);
 }
 
+/* Volver a elegir la Prestadora queda al final, separado de las maneras de entrar. */
+.login-otra-prestadora {
+  margin-top: 14px;
+}
+
 /* ---------- Las llaves guardadas en los aparatos ---------- */
 
 .llaves-lista {

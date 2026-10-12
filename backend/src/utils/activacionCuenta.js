@@ -93,8 +93,8 @@ export async function reenviarActivacionCuenta(usuarioId, prestadoraId) {
     .single();
   if (errorUsuario || !usuario) throw new Error('Cuenta no encontrada');
 
-  // El correo no está en `usuarios` — ver `correoDeUnaPersona.js`. Sin él no hay a dónde mandar
-  // la invitación, y decirlo así es distinto de decir que la cuenta no existe.
+  // El correo real se lee con `correoDeUnaPersona.js`. Sin él no hay a dónde mandar la invitación,
+  // y decirlo así es distinto de decir que la cuenta no existe.
   const email = await correoDe({ prestadoraId: usuario.prestadora_id, usuarioId });
   if (!email) throw new Error('La cuenta no tiene correo');
 

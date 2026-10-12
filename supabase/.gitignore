@@ -6,3 +6,6 @@
 .env.keys
 .env.local
 .env.*.local
+
+# La clave de firma de la base local (scripts/clave_de_firma_local.mjs)
+signing_keys.json

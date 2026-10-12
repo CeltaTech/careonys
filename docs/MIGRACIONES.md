@@ -144,18 +144,28 @@ volver a cero y aplicar todo de nuevo:
 supabase db reset
 ```
 
-Los puertos locales de Careonys son los `546xx` (API en 54621, base en 54622, Studio en 54623),
+Los puertos locales de Careonys son los `446xx` (API en 44621, base en 44622, Studio en 44623),
 distintos a propósito de los del panel de CeltaTech, para que los dos puedan estar levantados al
 mismo tiempo sin pisarse. Están fijados en `supabase/config.toml`.
 
-**Por qué `546xx` y no `544xx`, que es lo que decía antes.** Windows se reserva para sí el tramo
-que va del 54345 al 54544, y ahí adentro caían todos los puertos viejos: la base local no levantaba
-y el mensaje culpaba a otra cosa. Liberar ese tramo pide permisos de administrador. Antes de elegir
-un tramo nuevo conviene mirar cuáles están tomados:
+**Quedan debajo del 49152 a propósito.** Del 49152 para arriba Windows aparta tramos enteros para
+sí, y cuáles aparta cambia de un arranque a otro: un puerto de ahí que hoy anda mañana deja la
+base sin levantar, con un mensaje que culpa a otra cosa. Debajo de ese número no aparta nada. Para
+ver qué tiene apartado:
 
 ```bash
 netsh interface ipv4 show excludedportrange protocol=tcp
 ```
+
+**La primera vez en cada máquina, la base local necesita su clave de firma.** Sin ella el backend
+no puede entrar con la credencial de las tareas, y no corre ninguna. La genera:
+
+```bash
+node scripts/clave_de_firma_local.mjs
+```
+
+Deja la misma clave en `supabase/signing_keys.json` y en `backend/.env`, los dos ignorados por el
+repositorio, y no la muestra. Después hay que bajar y volver a levantar la base.
 
 **Contra producción.** Desde la misma carpeta:
 

@@ -1310,14 +1310,13 @@ una copia de trabajo**, que no es un archivo del repositorio y por eso el barrid
 
 **89. Usted** — Los dominios se renovaron en julio de 2026 y vencen en julio de 2027, y esa fecha hoy no está en ningún calendario: `celtatech.com` y `careonys.com` en Cloudflare, y `celtatech.com.ar` y `celtatech.net.ar` en NIC Argentina. Poner un recordatorio un mes antes de cada uno y, donde el registrador lo permita, dejar la renovación automática encendida — NIC Argentina no la tiene, así que ésos son los dos que de verdad dependen del recordatorio. Un dominio vencido no se cae despacio: deja de resolver, y con él se van las pantallas, el correo de la empresa y la entrada a las cuentas que se registraron con ese correo.
 
-**La base local no tiene la clave con la que se firman las credenciales de las tareas.** La base
-local no carga ninguna clave de firma —en `supabase/config.toml` el renglón `signing_keys_path`
-está comentado— y el entorno local del backend no tiene `CLAVE_DEL_TRABAJO_SIN_PERSONA`. Sin eso,
-en la máquina de trabajo no corre ninguna tarea programada y **el Panel local ni siquiera muestra la
-entrada**: para saber de qué Prestadora es la dirección, el backend usa esa misma credencial, y
-contesta 500. Se cierra cuando un programa genera el par de claves de la base local, deja la
-pública en la configuración de la base y la privada en el entorno local del backend, y con la base
-reconstruida el Panel local muestra la entrada de Sandbox.
+**Dos tareas programadas no corren, ni en local ni en producción, por falta de permiso.** Con la
+credencial del trabajo sin persona, `utils/revisarNotificacionesCoordinador.js` no puede leer las
+emergencias de las guardias —le falta ejecutar `interno.alcanza_la_informacion_de_salud`— y
+`utils/ausenciaAutomatica.js` no puede marcar ausente a nadie —le falta el esquema `auth`—. Así,
+una emergencia que nadie tomó no le llega al Coordinador, y una guardia sin fichada no se marca
+sola. Se cierra cuando las dos tareas corren contra la base local sin esos dos errores, sin darle
+al trabajo sin persona más alcance que el que cada una necesita.
 
 ---
 

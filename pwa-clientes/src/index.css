@@ -77,6 +77,28 @@ a {
   font-size: 16px;
 }
 
+/* Arriba, la marca de la Prestadora a la izquierda y el Perfil a la derecha. */
+.pwa-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pwa-top-marca {
+  min-width: 0;
+  flex: 1;
+}
+
+.pwa-top-perfil {
+  flex-shrink: 0;
+}
+
+.pwa-top-perfil.active {
+  border-color: var(--tinta);
+  font-weight: 700;
+}
+
 .pwa-body {
   flex: 1;
   padding: 14px 14px 80px;

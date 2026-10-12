@@ -41,12 +41,18 @@ export default function Layout() {
           El nombre no va como `h1`: el `h1` es el título de la pantalla que se está mirando,
           y hay uno solo por pantalla. */}
       <header className="pwa-top">
-        {marca.logoUrl ? (
-          <img className="logo-prestadora" src={marca.logoUrl} alt={marca.nombre || ''} />
-        ) : (
-          <p className="nombre-prestadora">{marca.nombre || ''}</p>
-        )}
-        {usuario?.nombre && <div className="mini mini-arriba">{usuario.nombre}</div>}
+        <div className="pwa-top-marca">
+          {marca.logoUrl ? (
+            <img className="logo-prestadora" src={marca.logoUrl} alt={marca.nombre || ''} />
+          ) : (
+            <p className="nombre-prestadora">{marca.nombre || ''}</p>
+          )}
+          {usuario?.nombre && <div className="mini mini-arriba">{usuario.nombre}</div>}
+        </div>
+        {/* El Perfil queda a la vista en todas las pantallas: ahí se cierra la sesión. */}
+        <NavLink to="/perfil" className={({ isActive }) => `btn pwa-top-perfil${isActive ? ' active' : ''}`}>
+          {t.nav.perfil}
+        </NavLink>
       </header>
       <main className="pwa-body">
         <Outlet />

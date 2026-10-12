@@ -54,12 +54,18 @@ export default function Layout() {
           El nombre no es un encabezado: el único título de la pantalla es el de la pantalla
           que se está mirando. */}
       <header className="pwa-top">
-        {marca.logoUrl ? (
-          <img className="logo-prestadora" src={marca.logoUrl} alt={marca.nombre || ''} />
-        ) : (
-          <p className="nombre-prestadora">{marca.nombre || ''}</p>
-        )}
-        <div className="mini mini-arriba">{t.barra.rol}</div>
+        <div className="pwa-top-marca">
+          {marca.logoUrl ? (
+            <img className="logo-prestadora" src={marca.logoUrl} alt={marca.nombre || ''} />
+          ) : (
+            <p className="nombre-prestadora">{marca.nombre || ''}</p>
+          )}
+          <div className="mini mini-arriba">{t.barra.rol}</div>
+        </div>
+        {/* El Perfil queda a la vista en todas las pantallas: ahí se cierra la sesión. */}
+        <NavLink to="/perfil" className={({ isActive }) => `btn pwa-top-perfil${isActive ? ' active' : ''}`}>
+          {t.nav.perfil}
+        </NavLink>
       </header>
       <main className="pwa-body">
         <Outlet context={{ avisarOfertas: setOfertasAbiertas, ofertasAbiertas }} />

@@ -84,6 +84,28 @@ p {
   font-size: 16px;
 }
 
+/* Arriba, la marca de la Prestadora a la izquierda y el Perfil a la derecha. */
+.pwa-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pwa-top-marca {
+  min-width: 0;
+  flex: 1;
+}
+
+.pwa-top-perfil {
+  flex-shrink: 0;
+}
+
+.pwa-top-perfil.active {
+  border-color: var(--tinta);
+  font-weight: 700;
+}
+
 /* El nombre de la Prestadora encabeza la aplicación, pero no es el título de la pantalla: va
    como texto y no como encabezado, para que quede un solo `h1` por pantalla. */
 .pwa-top .nombre-prestadora {

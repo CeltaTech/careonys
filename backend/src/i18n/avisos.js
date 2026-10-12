@@ -68,10 +68,11 @@ function comoTextoHTML(valor) {
 
    Quien lea el correo en un programa que no muestra formato recibe igual la versión en texto, que
    sí lleva la dirección escrita entera. */
-function correoConBoton({ saludo, cuerpo, boton, link, pieDelMensaje, marca }) {
+function correoConBoton({ saludo, cuerpo, dato = null, boton, link, pieDelMensaje, marca }) {
   const partes = [
     `<p>${comoTextoHTML(saludo)}</p>`,
     `<p>${comoTextoHTML(cuerpo)}</p>`,
+    ...(dato ? [`<p>${comoTextoHTML(dato)}</p>`] : []),
     `<p><a href="${comoTextoHTML(link)}">${comoTextoHTML(boton)}</a></p>`,
     `<p>${comoTextoHTML(pieDelMensaje)}</p>`,
   ];
@@ -523,16 +524,21 @@ const ARMADORES = {
     const cuerpo = t('activacion_cuenta.cuerpo', { empresa: d.empresa });
     const pieDelMensaje = t('activacion_cuenta.pie_de_aviso', { dias: d.dias });
     const marca = t('comun.marca', { producto: d.producto });
+    // El código lo pide la pantalla de ingreso de las aplicaciones, no la del Panel: sólo viene
+    // cuando la cuenta es de Cliente o de Asistente.
+    const codigo = d.codigo ? t('activacion_cuenta.codigo_prestadora', { codigo: d.codigo }) : null;
     return {
       asunto: t('activacion_cuenta.asunto', { empresa: d.empresa }),
       texto: [
         saludo, '', cuerpo, '',
+        ...(codigo ? [codigo, ''] : []),
         t('activacion_cuenta.invitacion_al_enlace'), d.link, '',
         pieDelMensaje, '', '—', marca,
       ].join('\n'),
       html: correoConBoton({
         saludo,
         cuerpo,
+        dato: codigo,
         boton: t('activacion_cuenta.boton'),
         link: d.link,
         pieDelMensaje,

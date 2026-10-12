@@ -111,7 +111,7 @@ Y toda migración que crea una tabla, en el mismo archivo:
 
 - activa RLS (`ALTER TABLE ... ENABLE ROW LEVEL SECURITY`) — regla 8 de `CLAUDE.md`;
 - crea sus políticas;
-- otorga los permisos de tabla que hagan falta (ver §7);
+- otorga a `authenticated` los permisos de tabla que sus políticas usan, y ninguno más (ver §7);
 - deja `NOTIFY pgrst, 'reload schema';` al final si se aplicó directo contra Supabase, porque
   sin eso la API puede devolver 404 en tablas que sí existen.
 
@@ -127,6 +127,25 @@ Postgres decide en **dos pasos** si alguien puede tocar una fila:
 La RLS es la cerradura; el `GRANT` es la puerta. **Una cerradura perfecta en una puerta tapiada
 no deja pasar a nadie**, y el error que devuelve no habla de RLS: dice `42501 permission denied
 for table X`. Si aparece eso, no se toquen las políticas — falta el paso 1.
+
+**Todo lo nuevo nace cerrado.** Los permisos por defecto de la base no le dan nada a
+`authenticated` ni a `anon`: ni sobre tablas, vistas y contadores de `public`, ni sobre
+funciones, de ningún esquema. Así que cada migración dice a quién le abre lo que crea:
+
+- **Una tabla:** `GRANT SELECT, INSERT, UPDATE, DELETE` a `authenticated` sólo de lo que tiene
+  política que lo respalde. Una escritura sin política no lleva permiso: así la base contesta
+  `42501` en vez de negar en silencio. `TRUNCATE`, `TRIGGER` y `REFERENCES` no se dan nunca —
+  `TRUNCATE` vacía la tabla entera sin pasar por la RLS.
+- **Una vista:** `GRANT SELECT` y nada más.
+- **Una tabla que guarda secretos** —códigos, credenciales, contraseñas de terceros—: ningún
+  permiso. La lee y la escribe sólo el backend.
+- **Una función que usa una política o un disparador sin privilegio de dueño:** `GRANT EXECUTE` a
+  `authenticated`, y vive en `interno`. Sin eso, la tabla que la llama falla con
+  `42501 permission denied for function`.
+- **Una función que necesita el trabajo sin persona:** `GRANT EXECUTE` a `trabajo_sin_persona`.
+
+Qué tiene cada rol se mira en la base, no acá: `information_schema.role_table_grants` para las
+tablas, y `has_function_privilege` para las funciones.
 
 ## 8. Cómo se aplican
 

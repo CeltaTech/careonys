@@ -363,6 +363,11 @@ export const GRUPOS = [
     copias: ['pwa-asistentes/src/context/AuthContext.jsx'],
   },
   {
+    que: 'la pantalla de ingreso: primero la Prestadora, después la cuenta',
+    original: 'pwa-clientes/src/pages/Login.jsx',
+    copias: ['pwa-asistentes/src/pages/Login.jsx'],
+  },
+  {
     que: 'el permiso y el alta para recibir avisos en el celular',
     original: 'pwa-clientes/src/lib/push.js',
     copias: ['pwa-asistentes/src/lib/push.js'],

@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { correoDeAcceso } from '../lib/correoDeAcceso';
+import { olvidarMarca } from '../lib/marcaGuardada';
 
 // Este proveedor contesta tres cosas distintas, y nunca las confunde entre sí:
 //   'cargando' — todavía no se sabe quién entró;
@@ -86,13 +88,21 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  async function login(email, password) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error };
+  // La cuenta es de una Prestadora: con el mismo correo, cada una tiene la suya
+  // (`lib/correoDeAcceso.js`). Por eso se entra nombrando primero la Prestadora.
+  async function login(prestadoraId, email, password) {
+    try {
+      const acceso = await correoDeAcceso(email, prestadoraId);
+      const { error } = await supabase.auth.signInWithPassword({ email: acceso, password });
+      return { error };
+    } catch (error) {
+      return { error };
+    }
   }
 
   async function logout() {
     await supabase.auth.signOut();
+    await olvidarMarca();
   }
 
   return (

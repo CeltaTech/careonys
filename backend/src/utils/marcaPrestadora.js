@@ -34,9 +34,10 @@ export async function marcaDeLaPrestadora(prestadoraId) {
     supabase.from('configuracion_prestadora').select('dominio').eq('prestadora_id', prestadoraId).maybeSingle(),
   ]);
 
-  // El rótulo de la puerta viaja con la marca porque el teléfono la guarda y la conserva después de
-  // cerrar la sesión: la entrada con huella lo necesita para saber en qué Prestadora buscar la
-  // llave, y en ese momento todavía no hay sesión a quién preguntárselo.
+  // El rótulo de la puerta viaja con la marca porque el teléfono la guarda hasta que la persona
+  // cierra la sesión: es el código de Prestadora que la pantalla de ingreso ya no vuelve a pedir, y
+  // la entrada con huella lo necesita para saber en qué Prestadora buscar la llave, cuando todavía
+  // no hay sesión a quién preguntárselo.
   return {
     nombre: prestadora?.nombre_fantasia ?? null,
     logoUrl: prestadora?.logo_url ?? null,

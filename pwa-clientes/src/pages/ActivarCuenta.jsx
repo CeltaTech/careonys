@@ -16,6 +16,8 @@ export default function ActivarCuenta() {
   const [searchParams] = useSearchParams();
   // El enlace sirve sólo si trae las dos cosas: la Prestadora dice en cuál se busca el código.
   const prestadora = searchParams.get('prestadora');
+  // Al volver a la entrada, el código de la Prestadora ya va escrito.
+  const alIngreso = prestadora ? `/login?prestadora=${encodeURIComponent(prestadora)}` : '/login';
   const token = prestadora ? searchParams.get('token') : null;
   const [password, setPassword] = useState('');
   const [confirmacion, setConfirmacion] = useState('');
@@ -85,7 +87,7 @@ export default function ActivarCuenta() {
         <div className="login-card">
           <h1>{t.auth.activar_titulo}</h1>
           <div className="alert alert-info" role="status">{t.auth.activar_exito}</div>
-          <Link to="/login" className="btn btn-primary btn-full">{t.auth.ingresar}</Link>
+          <Link to={alIngreso} className="btn btn-primary btn-full">{t.auth.ingresar}</Link>
         </div>
       </div>
     );
@@ -98,7 +100,7 @@ export default function ActivarCuenta() {
           <h1>{t.auth.activar_titulo}</h1>
           <div className="alert alert-error" role="alert">{error}</div>
           {motivoSinReintento === 'token_ya_usado' && (
-            <Link to="/login" className="btn btn-primary btn-full">{t.auth.ingresar}</Link>
+            <Link to={alIngreso} className="btn btn-primary btn-full">{t.auth.ingresar}</Link>
           )}
         </div>
       </div>

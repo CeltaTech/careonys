@@ -44,6 +44,7 @@ import { isoBase64URL } from '@simplewebauthn/server/helpers';
 
 import { clienteDelPedido, supabase } from '../db/connection.js';
 import { correoDe } from '../utils/correoDeUnaPersona.js';
+import { correoDeAcceso } from '../config/correoDeAcceso.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
@@ -265,8 +266,7 @@ async function quienAbreConEstaLlave({ prestadoraId, rol, respuesta }) {
     .eq('id', llave.id)
     .eq('prestadora_id', prestadoraId);
 
-  // El rol sale de `usuarios` y el correo de la cuenta: son dos tablas distintas, porque
-  // `usuarios` no guarda el correo (ver `correoDeUnaPersona.js`).
+  // El rol y el correo de la persona salen de `usuarios` (ver `correoDeUnaPersona.js`).
   const { data: persona } = await supabase
     .from('usuarios')
     .select('rol')
@@ -276,7 +276,9 @@ async function quienAbreConEstaLlave({ prestadoraId, rol, respuesta }) {
   const email = await correoDe({ prestadoraId, usuarioId: llave.usuario_id });
   if (!email || persona?.rol !== rol) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
 
-  return email;
+  // El pase se pide con el correo de acceso, que es el que conoce el servicio de acceso: con el
+  // correo de la persona no encuentra a nadie.
+  return correoDeAcceso(email, prestadoraId);
 }
 
 /** El desafío viaja adentro de lo que el navegador firmó, en base64url. */

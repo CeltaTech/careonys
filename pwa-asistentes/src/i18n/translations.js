@@ -200,6 +200,11 @@ export const T = {
       // el backend tampoco dice cuál de las cosas falló, y no hay nada que agregar acá.
       llave_error: 'No se pudo entrar con este aparato. Puede ingresar con su contraseña.',
       llave_o: 'o',
+      codigo_prestadora: 'Código de Prestadora',
+      continuar: 'Continuar',
+      buscando: 'Buscando…',
+      codigo_desconocido: 'No hay ninguna Prestadora con ese código.',
+      cambiar_prestadora: 'Cambiar de Prestadora',
     },
     llaves: {
       titulo: 'Entrar con huella o rostro',
@@ -896,6 +901,11 @@ export const T = {
       llave_esperando: 'Waiting for the device…',
       llave_error: 'This device could not sign you in. You can log in with your password.',
       llave_o: 'or',
+      codigo_prestadora: 'Provider Code',
+      continuar: 'Continue',
+      buscando: 'Searching…',
+      codigo_desconocido: 'No Provider found with that code.',
+      cambiar_prestadora: 'Change Provider',
     },
     llaves: {
       titulo: 'Sign in with fingerprint or face',
@@ -1532,6 +1542,11 @@ export const T = {
       llave_esperando: 'Aguardando o aparelho…',
       llave_error: 'Não foi possível entrar com este aparelho. Pode entrar com a sua senha.',
       llave_o: 'ou',
+      codigo_prestadora: 'Código da Prestadora',
+      continuar: 'Continuar',
+      buscando: 'Buscando…',
+      codigo_desconocido: 'Nenhuma Prestadora tem esse código.',
+      cambiar_prestadora: 'Trocar de Prestadora',
     },
     llaves: {
       titulo: 'Entrar com digital ou rosto',

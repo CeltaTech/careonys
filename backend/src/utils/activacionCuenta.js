@@ -8,7 +8,7 @@ import { marcaDeLaPrestadora } from './marcaPrestadora.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDelDestinatario } from '../i18n/idiomas.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
-import { enlaceConCodigo } from './direccionDeLaPrestadora.js';
+import { enlaceConCodigo, rotuloDeLaPrestadora } from './direccionDeLaPrestadora.js';
 
 const DIAS_VALIDEZ_TOKEN = 7;
 
@@ -66,9 +66,11 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, p
   // Si la marca llegara vacía se usa el nombre del producto: es preferible un correo que dice
   // Careonys a uno que dice «Activación de la cuenta en undefined».
   const marca = await marcaDeLaPrestadora(prestadoraId);
+  const codigo = ROLES_DE_PANEL.includes(rol) ? null : await rotuloDeLaPrestadora(prestadoraId);
   const textos = mensajeDelSistema('activacion_cuenta', idiomaDelDestinatario(idioma, await idiomaDeLaPrestadora(supabase, prestadoraId)), {
     nombre,
     link,
+    codigo,
     dias: DIAS_VALIDEZ_TOKEN,
     empresa: marca?.nombre || IDENTIDAD.nombre,
     producto: IDENTIDAD.nombre,

@@ -119,6 +119,7 @@ export const api = {
   // Lo que la Prestadora escribió para quien cuida en su casa. Vuelve sólo lo publicado, y no
   // lleva el Paciente adentro: es material de la Prestadora para todos sus Clientes.
   contenidos: () => pedido('/contenidos'),
+  enlaceDeArchivoDeContenido: (id) => pedido(`/contenidos/archivos/${encodeURIComponent(id)}/enlace`),
   // LAS LLAVES QUE ESTA PERSONA GUARDA EN SUS APARATOS. Entrar con la huella no está acá: eso pasa
   // antes de tener sesión y va por su propia puerta (`lib/llaveDelDispositivo.js`). Acá está lo que
   // se hace desde adentro: ver cuáles tiene, agregar una en este aparato y sacar la de uno que ya

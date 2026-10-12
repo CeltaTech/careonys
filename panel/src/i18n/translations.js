@@ -113,6 +113,7 @@ export const T = {
         plantilla_sin_rechazo: 'Meta no objetó nada de esta plantilla, así que no hay qué corregir.',
         ia_sin_propuesta: 'No se pudo escribir el texto en este momento. Conviene volver a intentar.',
         titulo_de_contenido_repetido: 'Ya hay otra pieza de contenido con ese título. Conviene ponerle uno que se distinga.',
+        archivo_de_contenido_invalido: 'Formato permitido: PDF, imagen, Word o Excel (máx. 10 MB).',
         enlace_invalido: 'El enlace tiene que ser una dirección web que empiece con https://, o quedar vacío.',
         orden_invalido: 'El orden tiene que ser un número entero.',
         // Los documentos del cese que quedan guardados. Ninguna frase nombra el depósito ni la
@@ -2923,6 +2924,9 @@ export const T = {
       borrar: 'Borrar',
       borrar_confirmar: 'Se va a borrar esta pieza de contenido, y no se puede deshacer. Sus destinatarios dejan de verla. Para dejarla como está, conviene cancelar.',
       borrar_si: 'Borrar de todos modos',
+      archivos: 'Archivos',
+      subir_archivo: 'Subir archivo',
+      archivo_borrar_confirmar: 'Se borrará "{{nombre}}". Presione Cancelar para conservar el archivo.',
     },
     intermediacion: {
       clientes_titulo: 'Clientes — Match',
@@ -3154,6 +3158,7 @@ export const T = {
         plantilla_sin_rechazo: 'Meta did not object to anything in this template, so there is nothing to correct.',
         ia_sin_propuesta: 'The text could not be written right now. It is worth trying again.',
         titulo_de_contenido_repetido: 'Another piece of content already has that title. It is worth choosing a different one.',
+        archivo_de_contenido_invalido: 'Allowed formats: PDF, image, Word, or Excel (max 10 MB).',
         enlace_invalido: 'The link must be a web address starting with https://, or be left empty.',
         orden_invalido: 'The order must be a whole number.',
         documento_invalido: 'That document could not be saved. Please generate it again and retry.',
@@ -5926,6 +5931,9 @@ export const T = {
       borrar: 'Delete',
       borrar_confirmar: 'This piece of content will be deleted, and it cannot be undone. Its recipients will stop seeing it. To leave it as it is, cancel.',
       borrar_si: 'Delete anyway',
+      archivos: 'Files',
+      subir_archivo: 'Upload file',
+      archivo_borrar_confirmar: '"{{nombre}}" will be deleted. Press Cancel to keep the file.',
     },
     intermediacion: {
       clientes_titulo: 'Clients — Match',
@@ -6148,6 +6156,7 @@ export const T = {
         plantilla_sin_rechazo: 'A Meta não objetou nada neste modelo, portanto não há o que corrigir.',
         ia_sin_propuesta: 'Não foi possível escrever o texto neste momento. Convém tentar novamente.',
         titulo_de_contenido_repetido: 'Já existe outro conteúdo com esse título. Convém escolher um que se distinga.',
+        archivo_de_contenido_invalido: 'Formato permitido: PDF, imagem, Word ou Excel (máx. 10 MB).',
         enlace_invalido: 'O link precisa ser um endereço web que comece com https://, ou ficar vazio.',
         orden_invalido: 'A ordem precisa ser um número inteiro.',
         documento_invalido: 'Esse documento não pôde ser guardado. Convém gerá-lo novamente e tentar de novo.',
@@ -8920,6 +8929,9 @@ export const T = {
       borrar: 'Excluir',
       borrar_confirmar: 'Este conteúdo será excluído, e não é possível desfazer. Seus destinatários deixam de vê-lo. Para mantê-lo como está, convém cancelar.',
       borrar_si: 'Excluir mesmo assim',
+      archivos: 'Arquivos',
+      subir_archivo: 'Enviar arquivo',
+      archivo_borrar_confirmar: '"{{nombre}}" será excluído. Pressione Cancelar para manter o arquivo.',
     },
     intermediacion: {
       clientes_titulo: 'Clientes — Match',

@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 /* Cómo se nombra y dónde se guarda un archivo que sube alguien.
    ==========================================================================
 
@@ -34,6 +36,12 @@ export function carpetaDeMatriculas(prestadoraId, asistenteId) {
 // que el depósito le deja leer al Asistente.
 export function rutaDelPapelFirmado(prestadoraId, pacienteId, consentimientoId, extension) {
   return `${prestadoraId}/firmas-medicacion/${pacienteId}/firma-${consentimientoId}.${extension}`;
+}
+
+// Un archivo de una pieza de Contenidos. El nombre lo pone el sistema, nunca quien sube: el nombre
+// original se guarda aparte, en la tabla, para mostrarlo.
+export function rutaDeArchivoDeContenido(prestadoraId, contenidoId, extension) {
+  return `${prestadoraId}/${contenidoId}/${randomUUID()}${extension}`;
 }
 
 export function rutaDeMatriculaNueva(prestadoraId, asistenteId, extension) {

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { mensajeDeError } from '../lib/errores';
+import MaterialDelContenido from '../components/MaterialDelContenido';
 
 // Lo que la Prestadora escribió para quien cuida en su casa.
 //
@@ -45,26 +46,7 @@ export default function Contenidos() {
           <article key={contenido.id} className="pwa-card">
             <h2>{contenido.titulo}</h2>
             <div className="texto-con-renglones pwa-card-dato">{contenido.cuerpo}</div>
-            {/* El enlace lleva a una página de la Prestadora, fuera de esta aplicación: se abre
-                aparte para no perder dónde estaba quien lo tocó, y sin dejarle a esa página
-                ninguna llave de vuelta hacia acá. */}
-            {contenido.enlace_url && (
-              <p className="enlace-del-contenido">
-                <a href={contenido.enlace_url} target="_blank" rel="noopener noreferrer">
-                  {contenido.enlace_url}
-                </a>
-              </p>
-            )}
-            {contenido.enlace_url && (
-              <a
-                className="btn btn-secondary btn-full btn-abajo"
-                href={contenido.enlace_url}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {t.contenidos.abrir_enlace}
-              </a>
-            )}
+            <MaterialDelContenido contenido={contenido} />
           </article>
         ))
       )}

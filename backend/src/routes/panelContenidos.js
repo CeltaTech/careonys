@@ -1,9 +1,9 @@
 // Contenidos: la biblioteca que cada Prestadora escribe para su gente. Cada pieza dice para quién
 // es —Clientes, Asistentes, su propio personal, uno o más— y la ven sólo ellos, y sólo publicada.
 //
-// QUÉ SE GUARDA. Un título, un texto y, si la Prestadora ya publica material en otro lado, un
-// enlace. No se suben archivos: eso es un depósito con sus propias políticas y es una decisión
-// aparte.
+// QUÉ SE GUARDA. Un título, un texto, un enlace si la Prestadora ya publica material en otro lado,
+// y los archivos que suba: lo que no quiere dejar publicado en otro lado. Los archivos van al
+// depósito privado `contenidos-archivos`, y los ve quien ve la pieza.
 //
 // QUIÉN. Escribir y publicar es una acción del catálogo de permisos, `publicar_contenidos`, que
 // nace reservada a la administración y cada Prestadora reparte como quiera desde Configuración ›
@@ -17,6 +17,7 @@
 // tabla deja escribir a quien tiene el permiso, y leer a cada uno lo que le toca.
 
 import { Router } from 'express';
+import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { requierePermiso } from '../utils/permisos.js';
@@ -24,6 +25,18 @@ import { clienteDelPedido } from '../db/connection.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { DESTINATARIOS_DE_CONTENIDOS } from '../config/destinatariosDeContenidos.js';
 import { ENLACE_DE_CONTENIDO_ACEPTADO } from '../config/enlaceDeContenidos.js';
+import {
+  TAMANO_MAXIMO_DE_ARCHIVO_DE_CONTENIDO,
+  TIPOS_DE_ARCHIVO_DE_CONTENIDO,
+  esArchivoDeContenidoAceptado,
+} from '../config/archivosDeContenidos.js';
+import {
+  ARCHIVOS_DE_LA_PIEZA,
+  DEPOSITO_DE_CONTENIDOS,
+  conArchivosEnOrden,
+  enlaceDelArchivo,
+} from '../utils/archivosDeContenidos.js';
+import { rutaDeArchivoDeContenido } from '../utils/archivosSubidos.js';
 
 export const panelContenidosRouter = Router();
 
@@ -32,6 +45,27 @@ panelContenidosRouter.use(requiereRolPanel, exigirOrganizacionActiva);
 const puedePublicar = requierePermiso('publicar_contenidos');
 
 const CAMPOS = 'id, titulo, cuerpo, enlace_url, orden, destinatarios, publicado, created_at, updated_at';
+
+// El archivo se recibe en memoria y se mira antes de guardarlo: el tope del depósito actúa recién
+// después de que el archivo ya ocupó la memoria del servidor (`celtatech/CLAUDE.md` §6).
+const recibirArchivo = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: TAMANO_MAXIMO_DE_ARCHIVO_DE_CONTENIDO, files: 1 },
+  fileFilter(req, file, cb) {
+    cb(null, esArchivoDeContenidoAceptado(file.mimetype));
+  },
+});
+
+function archivoRechazado(err, req, res, next) {
+  if (err) return responderError(res, new ErrorConMotivo('archivo_de_contenido_invalido', err.message));
+  next();
+}
+
+/** El nombre con que llegó. El navegador lo manda en UTF-8 y la librería lo lee como Latin-1. */
+function nombreOriginal(file) {
+  const nombre = Buffer.from(file.originalname ?? '', 'latin1').toString('utf8').trim();
+  return nombre || 'archivo';
+}
 
 /**
  * Lo que se va a guardar, o un error con motivo.
@@ -98,11 +132,11 @@ panelContenidosRouter.get('/', async (req, res) => {
   const db = clienteDelPedido(req);
   const { data, error } = await db
     .from('contenidos')
-    .select(CAMPOS)
+    .select(`${CAMPOS}, ${ARCHIVOS_DE_LA_PIEZA}`)
     .order('orden', { ascending: true })
     .order('created_at', { ascending: true });
   if (error) return responderError(res, error);
-  res.json({ contenidos: data });
+  res.json({ contenidos: conArchivosEnOrden(data) });
 });
 
 // Si hay algo para mostrar. El menú del Panel lo pregunta para quien no publica, y esconde la
@@ -176,7 +210,17 @@ panelContenidosRouter.patch('/:id', puedePublicar, async (req, res) => {
 // borrador equivocado tiene que poder sacarse —si no, el título que eligió mal le queda ocupado
 // para siempre—. La confirmación la pide la pantalla.
 panelContenidosRouter.delete('/:id', puedePublicar, async (req, res) => {
-  const { data: borrado, error } = await clienteDelPedido(req)
+  const db = clienteDelPedido(req);
+  // Los archivos se van con la pieza. La fila se borra sola con ella; el archivo del depósito no,
+  // así que antes se anota dónde está cada uno.
+  const { data: archivos, error: errorArchivos } = await db
+    .from('contenidos_archivos')
+    .select('ruta')
+    .eq('contenido_id', req.params.id)
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  if (errorArchivos) return responderError(res, errorArchivos);
+
+  const { data: borrado, error } = await db
     .from('contenidos')
     .delete()
     .eq('id', req.params.id)
@@ -186,5 +230,96 @@ panelContenidosRouter.delete('/:id', puedePublicar, async (req, res) => {
   if (!borrado?.length) {
     return responderError(res, new ErrorConMotivo('no_encontrado', 'Contenido de otra Prestadora o inexistente'));
   }
+
+  // La pieza ya no está, que es lo que se pidió. Un archivo que no se pudo sacar del depósito queda
+  // sin fila que lo apunte y nadie lo puede ver: se anota para limpiarlo.
+  if (archivos?.length) {
+    const { error: errorDeposito } = await db.storage.from(DEPOSITO_DE_CONTENIDOS).remove(archivos.map((a) => a.ruta));
+    if (errorDeposito) console.error('Archivos de contenido sin borrar del depósito:', errorDeposito.message);
+  }
+  res.json({ ok: true });
+});
+
+// ---------------------------------------------------------------------------------------
+// Los archivos de una pieza
+// ---------------------------------------------------------------------------------------
+
+// Uno por pedido. La pieza tiene que existir antes: el archivo se cuelga de ella.
+panelContenidosRouter.post(
+  '/:id/archivos',
+  puedePublicar,
+  recibirArchivo.single('archivo'),
+  archivoRechazado,
+  async (req, res) => {
+    if (!req.file) {
+      return responderError(res, new ErrorConMotivo('archivo_de_contenido_invalido', 'Pedido sin archivo, o de un tipo que no se admite'));
+    }
+    const db = clienteDelPedido(req);
+    const prestadoraId = req.usuarioPanel.prestadoraId;
+
+    const { data: pieza, error: errorPieza } = await db
+      .from('contenidos')
+      .select('id')
+      .eq('id', req.params.id)
+      .eq('prestadora_id', prestadoraId)
+      .maybeSingle();
+    if (errorPieza) return responderError(res, errorPieza);
+    if (!pieza) {
+      return responderError(res, new ErrorConMotivo('no_encontrado', 'Contenido de otra Prestadora o inexistente'));
+    }
+
+    const ruta = rutaDeArchivoDeContenido(prestadoraId, pieza.id, TIPOS_DE_ARCHIVO_DE_CONTENIDO[req.file.mimetype]);
+    const { error: errorSubida } = await db.storage
+      .from(DEPOSITO_DE_CONTENIDOS)
+      .upload(ruta, req.file.buffer, { contentType: req.file.mimetype });
+    if (errorSubida) return responderError(res, errorSubida);
+
+    const { data: archivo, error } = await db
+      .from('contenidos_archivos')
+      .insert({
+        prestadora_id: prestadoraId,
+        contenido_id: pieza.id,
+        ruta,
+        nombre: nombreOriginal(req.file),
+        tipo: req.file.mimetype,
+        tamano: req.file.size,
+        subido_por: req.usuarioPanel.id,
+      })
+      .select('id, nombre, tipo, tamano, created_at')
+      .single();
+    if (error) {
+      // Sin fila, el archivo no lo apunta nadie: se saca para que no quede ocupando lugar.
+      await db.storage.from(DEPOSITO_DE_CONTENIDOS).remove([ruta]);
+      return responderError(res, error);
+    }
+
+    res.json({ archivo });
+  },
+);
+
+// Abrir un archivo: un enlace temporal. Lo pide cualquiera del Panel que vea la pieza.
+panelContenidosRouter.get('/archivos/:archivoId/enlace', async (req, res) => {
+  try {
+    res.json({ url: await enlaceDelArchivo(clienteDelPedido(req), req.params.archivoId) });
+  } catch (error) {
+    responderError(res, error);
+  }
+});
+
+panelContenidosRouter.delete('/archivos/:archivoId', puedePublicar, async (req, res) => {
+  const db = clienteDelPedido(req);
+  const { data: borrado, error } = await db
+    .from('contenidos_archivos')
+    .delete()
+    .eq('id', req.params.archivoId)
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .select('ruta');
+  if (error) return responderError(res, error);
+  if (!borrado?.length) {
+    return responderError(res, new ErrorConMotivo('no_encontrado', 'Archivo de contenido inexistente o ajeno'));
+  }
+
+  const { error: errorDeposito } = await db.storage.from(DEPOSITO_DE_CONTENIDOS).remove([borrado[0].ruta]);
+  if (errorDeposito) console.error('Archivo de contenido sin borrar del depósito:', errorDeposito.message);
   res.json({ ok: true });
 });

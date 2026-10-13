@@ -58,6 +58,7 @@ import { cortarLosAccesosDadosDeBaja } from './utils/corteDelAcceso.js';
 import { avisarElPrimerCobroQueViene } from './utils/avisoPrevioAlCobro.js';
 import { suspenderLosQueAgotaronLaGracia } from './utils/periodoDeGracia.js';
 import { whatsappWebhookRouter } from './routes/whatsappWebhook.js';
+import { secretoDeLosCodigos } from './utils/codigoDeUnSoloUso.js';
 import { appAsistentesRouter } from './routes/appAsistentes.js';
 import { appClientesRouter } from './routes/appClientes.js';
 import { appClientesMedicacionRouter } from './routes/appClientesMedicacion.js';
@@ -319,6 +320,11 @@ app.use((err, req, res, next) => {
   console.error('Error no manejado en', req.method, req.originalUrl, ':', err);
   responderError(res, err, err?.status || 500);
 });
+
+// Sin el secreto de los códigos de verificación el backend no arranca. Arrancar sin él dejaría
+// andar todo lo demás y fallar recién cuando alguien pide un código, que es justo cuando nadie está
+// mirando el registro.
+secretoDeLosCodigos();
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

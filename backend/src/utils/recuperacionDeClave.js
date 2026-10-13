@@ -21,6 +21,7 @@ import {
 } from './habilitarCambioDeClave.js';
 import { seAgotaronLosPedidosDeClave, anotarPedidoDeClave } from './topeDePedidosDeClave.js';
 import { enlaceConCodigo } from './direccionDeLaPrestadora.js';
+import { huellaDelEnlace } from './huellaDelEnlace.js';
 
 // EL ENLACE DURA POCO, y menos que el de activación.
 //
@@ -127,7 +128,7 @@ async function emitirElEnlaceYAvisar(usuario, email) {
 
   const { error } = await supabase
     .from('tokens_recuperacion_clave')
-    .insert({ usuario_id: usuario.id, token, expira_en: expiraEn });
+    .insert({ usuario_id: usuario.id, token: huellaDelEnlace(token), expira_en: expiraEn });
   if (error) throw new Error(error.message);
 
   const marca = await marcaDeLaPrestadora(usuario.prestadora_id);
@@ -153,7 +154,7 @@ async function filaDelEnlace(token) {
   const { data: fila, error } = await supabase
     .from('tokens_recuperacion_clave')
     .select('id, usuario_id, expira_en, usado_en')
-    .eq('token', token)
+    .eq('token', huellaDelEnlace(token))
     .maybeSingle();
 
   if (error || !fila) throw new ErrorConMotivo('token_invalido');

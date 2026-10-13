@@ -452,6 +452,14 @@ escrito encima por qué. Lo que queda, agrupado por lo que hay que hacer:
   (la función `interno.guardias_a_la_vista_por_una_alarma`). La lista de
   emergencias del Panel ya lee con la credencial de quien pide (`backend/src/routes/panelEmergencias.js`);
   los nombres y marcarla atendida siguen con la maestra.
+- **Las dos tablas sin política se escriben acá, no antes.** `codigos_de_presencia` (el QR de la
+  llegada y del pase de guardia, `utils/comprobacionDePresencia.js`) y `mfa_codigos_recuperacion`
+  (el código por correo de quien perdió su segundo factor, `utils/mfaRecuperacionEmail.js`) sólo
+  tienen permiso para la maestra: hoy nadie más las alcanza, y el día que la maestra salga dejan
+  de andar. Llevan su política y su permiso en la misma migración que retira la maestra de esas
+  rutas, porque sólo ahí se pueden probar. `mfa_codigos_recuperacion` no tiene la columna de la
+  Prestadora: la usa también el soporte técnico, que no pertenece a ninguna, y cómo se la
+  acota se decide al escribir esa política.
 - **Funciones de la base que `authenticated` no puede ejecutar**: las de guardar los secretos de
   WhatsApp, de la conexión con software externo y de los avisos de cobranza y facturación,
   `intercambiar_orden_etapas_incorporacion` y `sembrar_configuracion_prestadora`. La de la conexión

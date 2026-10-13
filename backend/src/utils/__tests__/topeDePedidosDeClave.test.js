@@ -65,7 +65,7 @@ const {
   seAgotaronLosPedidosDeClave,
   anotarPedidoDeClave,
   topeDePedidosDeClavePorHora,
-  huellaDelCorreo,
+  verificadorDelCorreo,
 } = await import('../topeDePedidosDeClave.js');
 
 after(() => baseFalsa.close());
@@ -118,9 +118,9 @@ describe('el tope por hora', () => {
     await seAgotaronLosPedidosDeClave(PRESTADORA, CORREO);
     const pedido = llamadas.find((l) => l.clave === 'HEAD /rest/v1/pedidos_de_clave_nueva');
     assert.ok(pedido.url.includes(`prestadora_id=eq.${PRESTADORA}`));
-    assert.ok(pedido.url.includes(`correo_huella=eq.${huellaDelCorreo(CORREO)}`));
+    assert.ok(pedido.url.includes(`correo_verificador=eq.${verificadorDelCorreo(CORREO)}`));
     assert.ok(pedido.url.includes('pedido_en=gte.'));
-    // El correo, nunca. Lo que viaja es la huella.
+    // El correo, nunca. Lo que viaja es el identificador de verificación.
     assert.ok(!pedido.url.includes('marta'));
   });
 
@@ -138,28 +138,28 @@ describe('el tope por hora', () => {
   });
 });
 
-describe('la huella del correo', () => {
+describe('el identificador de verificación del correo', () => {
   it('el mismo correo escrito distinto cuenta como uno solo', () => {
-    assert.equal(huellaDelCorreo(`  ${CORREO.toUpperCase()} `), huellaDelCorreo(CORREO));
+    assert.equal(verificadorDelCorreo(`  ${CORREO.toUpperCase()} `), verificadorDelCorreo(CORREO));
   });
 
   it('dos correos distintos no se cruzan', () => {
-    assert.notEqual(huellaDelCorreo('otra@ejemplo.test'), huellaDelCorreo(CORREO));
+    assert.notEqual(verificadorDelCorreo('otra@ejemplo.test'), verificadorDelCorreo(CORREO));
   });
 
   it('no contiene el correo', () => {
-    assert.ok(!huellaDelCorreo(CORREO).includes('marta'));
+    assert.ok(!verificadorDelCorreo(CORREO).includes('marta'));
   });
 });
 
 describe('el pedido anotado', () => {
-  it('guarda la Prestadora y la huella, y nunca el correo', async () => {
+  it('guarda la Prestadora y el identificador de verificación, y nunca el correo', async () => {
     respuestas.set('POST /rest/v1/pedidos_de_clave_nueva', { __estado: 201, __cuerpo: null });
     await anotarPedidoDeClave(PRESTADORA, CORREO);
     const anotado = llamadas.find((l) => l.clave === 'POST /rest/v1/pedidos_de_clave_nueva');
     assert.deepEqual(anotado.cuerpo, {
       prestadora_id: PRESTADORA,
-      correo_huella: huellaDelCorreo(CORREO),
+      correo_verificador: verificadorDelCorreo(CORREO),
     });
   });
 

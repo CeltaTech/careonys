@@ -84,7 +84,7 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 const { default: express } = await import('express');
 await import('express-async-errors');
 const { panelPersonasTelefonosRouter } = await import('../panelPersonasTelefonos.js');
-const { huellaComparable } = await import('../../utils/celularDeUnaSolaPersona.js');
+const { verificadorComparable } = await import('../../utils/celularDeUnaSolaPersona.js');
 const { conElPreferidoMarcado, telefonoLimpio } = await import('../../utils/telefonosDeLaPersona.js');
 const { supabase } = await import('../../db/connection.js');
 
@@ -130,12 +130,12 @@ function filaTelefono(id, personaId, telefono, creado = '2026-09-01T10:00:00Z') 
 
 /** Las cuentas de la Prestadora cuyo teléfono se va a reconocer como preferido. */
 function lasCuentasLlevan(...telefonos) {
-  const huellas = telefonos.map((t) => huellaComparable(t));
+  const verificadores = telefonos.map((t) => verificadorComparable(t));
   respuestas.set('GET /rest/v1/usuarios', (_cuerpo, url) => {
     // La misma tabla contesta dos preguntas distintas: quién es quien pide, y qué números son de
     // alguna cuenta. Se distinguen por las columnas que pide cada una.
     if (url.includes('telefono_comparable')) {
-      return huellas.filter((h) => url.includes(h)).map((h) => ({ telefono_comparable: h }));
+      return verificadores.filter((h) => url.includes(h)).map((h) => ({ telefono_comparable: h }));
     }
     return [{ rol: rolDelUsuario, prestadora_id: PRESTADORA }];
   });
@@ -221,13 +221,13 @@ describe('cuál es el preferido para llamar', () => {
     assert.equal(marcados.length, 2, 'los demás siguen habilitados igual');
   });
 
-  it('el número no viaja en la consulta que resuelve el preferido: viaja su huella', async () => {
+  it('el número no viaja en la consulta que resuelve el preferido: viaja su identificador de verificación', async () => {
     lasCuentasLlevan(CELULAR);
     await conElPreferidoMarcado(supabase, [filaTelefono('a', PERSONA, CELULAR)], PRESTADORA);
     const consulta = llamadas.find((l) => l.url.includes('telefono_comparable'));
     assert.ok(consulta, 'se preguntó por las cuentas');
     assert.ok(!consulta.url.includes(digitos(CELULAR)), 'el número no está escrito en la dirección');
-    assert.ok(consulta.url.includes(huellaComparable(CELULAR)), 'lo que viaja es la huella');
+    assert.ok(consulta.url.includes(verificadorComparable(CELULAR)), 'lo que viaja es el identificador de verificación');
   });
 
   it('uno fuera de uso no es el preferido aunque sea el de la cuenta', async () => {

@@ -3,7 +3,7 @@ import { ErrorConMotivo } from './errorConMotivo.js';
 import {
   IDIOMA_DEL_DOCUMENTO,
   MODELO_DE_FABRICA,
-  huellaDelDocumento,
+  verificadorDelDocumento,
   textoDelConsentimiento,
 } from './documentoConsentimientoPagador.js';
 import { FICHA_NOMBRE } from './fichaDelPaciente.js';
@@ -146,11 +146,11 @@ export async function crearConsentimiento({ clienteId, prestadoraId, cargadoPor 
       firmante_persona_id: apoderado?.id ?? null,
       firmante_nombre: apoderado?.nombre ?? null,
       documento_texto: texto,
-      documento_huella: huellaDelDocumento(texto),
+      documento_verificador: verificadorDelDocumento(texto),
       documento_idioma: idioma,
       cargado_por: cargadoPor,
     })
-    .select('id, estado, documento_texto, documento_huella, documento_idioma, pagador_nombre, firmante_nombre, created_at')
+    .select('id, estado, documento_texto, documento_verificador, documento_idioma, pagador_nombre, firmante_nombre, created_at')
     .single();
   if (error) throw new Error(error.message);
 

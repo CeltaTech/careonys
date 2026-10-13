@@ -20,7 +20,7 @@
  *      verificación no decide nada, y por eso una de hace un año da lo mismo que una de recién.
  *   5. QUE SE PREGUNTE POR LA CUENTA SIN NÚMERO. Sin número no hay nada que preguntar.
  *   6. QUE SE OFREZCA LA VÍA QUE LA PRESTADORA NO TIENE.
- *   7. QUE SE HABILITE UN NÚMERO Y VALGA PARA OTRO. Se pregunta por la huella del que la cuenta
+ *   7. QUE SE HABILITE UN NÚMERO Y VALGA PARA OTRO. Se pregunta por el identificador de verificación del que la cuenta
  *      tiene hoy.
  *   8. QUE EL NÚMERO VIAJE EN ALGUNA DIRECCIÓN. Es dato sensible.
  *   9. QUE QUEDE VIVA LA ESPERA VIEJA. El módulo no expone nada más que la pregunta.
@@ -67,7 +67,7 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 // El import va después de las variables de entorno: la conexión se arma al importar.
 const segundoFactor = await import('../segundoFactorDelTelefono.js');
 const { elTelefonoSirveDeSegundoFactor } = segundoFactor;
-const { huellaDelTelefono } = await import('../codigoAlTelefono.js');
+const { verificadorDelTelefono } = await import('../codigoAlTelefono.js');
 
 after(() => {
   baseFalsa.close();
@@ -181,7 +181,7 @@ describe('el número sirve de llave cuando una persona lo habilitó', () => {
     assert.equal(await elTelefonoSirveDeSegundoFactor(laCuenta()), false);
   });
 
-  it('pregunta por la huella del número que la cuenta tiene hoy, y no por otra', async () => {
+  it('pregunta por el identificador de verificación del número que la cuenta tiene hoy, y no por otro', async () => {
     viaDeTelefono(true);
     habilitadoPorUnaPersona(true);
 
@@ -190,8 +190,8 @@ describe('el número sirve de llave cuando una persona lo habilitó', () => {
     const consulta = llamadas.find(
       (l) => l.clave === 'GET /rest/v1/telefonos_confirmados_por_la_prestadora',
     );
-    assert.ok(consulta.url.includes(huellaDelTelefono(CELULAR)));
-    assert.ok(!consulta.url.includes(huellaDelTelefono(OTRO_CELULAR)));
+    assert.ok(consulta.url.includes(verificadorDelTelefono(CELULAR)));
+    assert.ok(!consulta.url.includes(verificadorDelTelefono(OTRO_CELULAR)));
   });
 
   it('el número no viaja en ninguna dirección', async () => {

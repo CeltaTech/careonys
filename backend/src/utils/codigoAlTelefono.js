@@ -96,7 +96,7 @@ function enteroDelEntorno(crudo, porOmision, nombre) {
  * adorno de quien lo escribe, y se conserva el `+` inicial, que sí cambia a qué número se llama.
  *
  * Hace falta para dos cosas: para que el tope cuente el mismo número como el mismo aunque se haya
- * tecleado distinto, y para que la huella de un número sea siempre la misma.
+ * tecleado distinto, y para que el identificador de verificación de un número sea siempre el mismo.
  */
 export function normalizarTelefono(telefono) {
   const texto = String(telefono ?? '').trim();
@@ -114,13 +114,13 @@ export function telefonoAceptable(telefono) {
 }
 
 /**
- * La huella del número.
+ * El identificador de verificación del número.
  *
  * Donde hay que poder contestar «¿es el mismo número?» y no «¿cuál es?», se guarda esto. Vale para
  * el tope de pedidos y para lo que la Prestadora confirma por teléfono: en los dos casos alcanza
  * con reconocerlo, y así el renglón que queda no dice a quién se le mandó nada.
  */
-export function huellaDelTelefono(telefono) {
+export function verificadorDelTelefono(telefono) {
   return crypto.createHash('sha256').update(normalizarTelefono(telefono)).digest('hex');
 }
 
@@ -153,13 +153,13 @@ async function plantillaDelCodigo(prestadoraId) {
   return data ?? null;
 }
 
-async function pedidosEnLaUltimaHora({ prestadoraId, huella }) {
+async function pedidosEnLaUltimaHora({ prestadoraId, verificador }) {
   const desde = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   const { count, error } = await supabase
     .from('pedidos_de_codigo_al_telefono')
     .select('id', { count: 'exact', head: true })
     .eq('prestadora_id', prestadoraId)
-    .eq('telefono_huella', huella)
+    .eq('telefono_verificador', verificador)
     .gte('pedido_en', desde);
 
   if (error) {
@@ -192,8 +192,8 @@ export async function mandarCodigoAlTelefono({ usuario, uso, telefono }) {
   const plantilla = await plantillaDelCodigo(usuario.prestadora_id);
   if (!plantilla) throw new ErrorConMotivo('via_de_telefono_no_disponible');
 
-  const huella = huellaDelTelefono(numero);
-  if ((await pedidosEnLaUltimaHora({ prestadoraId: usuario.prestadora_id, huella })) >= topeDeCodigosPorHora()) {
+  const verificador = verificadorDelTelefono(numero);
+  if ((await pedidosEnLaUltimaHora({ prestadoraId: usuario.prestadora_id, verificador })) >= topeDeCodigosPorHora()) {
     throw new ErrorConMotivo('demasiados_pedidos', 'Se alcanzó el tope de códigos por hora para ese número');
   }
 
@@ -229,7 +229,7 @@ export async function mandarCodigoAlTelefono({ usuario, uso, telefono }) {
   // cuenta son los pedidos, y un envío que falló ya costó el intento contra el proveedor.
   await supabase
     .from('pedidos_de_codigo_al_telefono')
-    .insert({ prestadora_id: usuario.prestadora_id, telefono_huella: huella });
+    .insert({ prestadora_id: usuario.prestadora_id, telefono_verificador: verificador });
 
   try {
     await enviarWhatsAppPorPlantilla({
@@ -268,7 +268,7 @@ export async function comprobarCodigoDelTelefono({ prestadoraId, usuarioId, uso,
 
   const { data: fila, error } = await supabase
     .from('codigos_al_telefono')
-    .select('id, telefono, codigo_huella, codigo_expira_en, verificado_en, anulado_en')
+    .select('id, telefono, codigo_verificador, codigo_expira_en, verificado_en, anulado_en')
     .eq('prestadora_id', prestadoraId)
     .eq('usuario_id', usuarioId)
     .eq('uso', uso)
@@ -288,7 +288,7 @@ export async function comprobarCodigoDelTelefono({ prestadoraId, usuarioId, uso,
   const intentos = await sumarIntento({ tabla: 'codigos_al_telefono', id: fila.id, prestadoraId });
   if (seAgotaronLosIntentos(intentos)) throw new ErrorConMotivo('demasiados_intentos');
 
-  if (!codigoCoincide(codigo, fila.codigo_huella)) throw new ErrorConMotivo('codigo_incorrecto');
+  if (!codigoCoincide(codigo, fila.codigo_verificador)) throw new ErrorConMotivo('codigo_incorrecto');
 
   // Se toma condicionado a que siga libre: dos pedidos simultáneos con el mismo código no pasan los
   // dos, y un código de un solo uso no queda sirviendo de nuevo.

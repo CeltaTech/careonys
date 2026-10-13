@@ -81,12 +81,12 @@ const {
   mandarCodigoAlTelefono,
   topeDeCodigosPorHora,
   minutosDeVidaDelCodigo,
-  huellaDelTelefono,
+  verificadorDelTelefono,
   normalizarTelefono,
   telefonoAceptable,
   USO_VERIFICAR,
 } = await import('../codigoAlTelefono.js');
-const { huellaDelCodigo, INTENTOS_MAXIMOS } = await import('../codigoDeUnSoloUso.js');
+const { verificadorDelCodigo, INTENTOS_MAXIMOS } = await import('../codigoDeUnSoloUso.js');
 
 after(() => {
   baseFalsa.close();
@@ -103,7 +103,7 @@ function filaDelCodigo(extra = {}) {
   return {
     id: CODIGO_ID,
     telefono: TELEFONO,
-    codigo_huella: huellaDelCodigo(EL_CODIGO),
+    codigo_verificador: verificadorDelCodigo(EL_CODIGO),
     codigo_expira_en: enMinutos(10),
     verificado_en: null,
     anulado_en: null,
@@ -150,8 +150,8 @@ describe('el número, escrito siempre igual', () => {
     assert.equal(normalizarTelefono('(011) 2233 4455'), '01122334455');
   });
 
-  it('el mismo número escrito de dos maneras tiene una sola huella', () => {
-    assert.equal(huellaDelTelefono('+54 9 11 2233 4455'), huellaDelTelefono('+5491122334455'));
+  it('el mismo número escrito de dos maneras tiene un solo identificador de verificación', () => {
+    assert.equal(verificadorDelTelefono('+54 9 11 2233 4455'), verificadorDelTelefono('+5491122334455'));
   });
 
   it('lo que no puede ser un teléfono no pasa', () => {

@@ -2,12 +2,12 @@ import { supabase } from '../db/connection.js';
 import { enviarEmail } from './email.js';
 import { correoDe } from './correoDeUnaPersona.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
-import { codigoNuevo, huellaDelCodigo, estaVencido, vencimientoEnMinutos } from './codigoDeUnSoloUso.js';
+import { codigoNuevo, verificadorDelCodigo, estaVencido, vencimientoEnMinutos } from './codigoDeUnSoloUso.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 
 // Pendiente #37 — recuperación de acceso por email cuando se pierde el dispositivo TOTP.
-// Cómo se arma el código de seis dígitos y cómo se guarda su huella está en
+// Cómo se arma el código de seis dígitos y cómo se guarda su identificador de verificación está en
 // `codigoDeUnSoloUso.js`, que es el mismo mecanismo que usan la firma de la instrucción del
 // personas autorizadas y el pase de guardia.
 const VIGENCIA_MINUTOS = 10;
@@ -45,7 +45,7 @@ export async function solicitarCodigoRecuperacion(usuarioId) {
   const codigo = codigoNuevo();
   const { error: errorInsert } = await supabase.from('mfa_codigos_recuperacion').insert({
     usuario_id: usuarioId,
-    codigo_hash: huellaDelCodigo(codigo),
+    codigo_verificador: verificadorDelCodigo(codigo),
     expira_at: vencimientoEnMinutos(VIGENCIA_MINUTOS),
   });
   if (errorInsert) throw new Error(errorInsert.message);
@@ -65,13 +65,13 @@ export async function solicitarCodigoRecuperacion(usuarioId) {
 // autoservicio. El usuario vuelve a entrar sin MFA y queda en estado "requiere
 // enrolamiento" para configurar un dispositivo nuevo en el momento.
 export async function confirmarCodigoRecuperacion(usuarioId, codigo) {
-  const hash = huellaDelCodigo(String(codigo || '').trim());
+  const verificador = verificadorDelCodigo(String(codigo || '').trim());
 
   const { data: fila } = await supabase
     .from('mfa_codigos_recuperacion')
     .select('id, expira_at')
     .eq('usuario_id', usuarioId)
-    .eq('codigo_hash', hash)
+    .eq('codigo_verificador', verificador)
     .eq('usado', false)
     .order('created_at', { ascending: false })
     .limit(1)

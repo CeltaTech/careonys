@@ -9,7 +9,7 @@ import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDelDestinatario } from '../i18n/idiomas.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import { enlaceConCodigo, rotuloDeLaPrestadora } from './direccionDeLaPrestadora.js';
-import { huellaDelEnlace } from './huellaDelEnlace.js';
+import { verificadorDelEnlace } from './verificadorDelEnlace.js';
 
 const DIAS_VALIDEZ_TOKEN = 7;
 
@@ -56,7 +56,7 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, p
 
   const { error } = await supabase
     .from('tokens_activacion_cuenta')
-    .insert({ usuario_id: usuarioId, token: huellaDelEnlace(token), expira_en: expiraEn });
+    .insert({ usuario_id: usuarioId, token: verificadorDelEnlace(token), expira_en: expiraEn });
   if (error) throw new Error(error.message);
 
   // Este correo lo recibe un Cliente o un Asistente, y para ellos la empresa es la Prestadora: es
@@ -118,7 +118,7 @@ export async function activarCuentaConToken(token, passwordNueva) {
   const { data: fila, error: errorFila } = await supabase
     .from('tokens_activacion_cuenta')
     .select('id, usuario_id, expira_en, usado_en')
-    .eq('token', huellaDelEnlace(token))
+    .eq('token', verificadorDelEnlace(token))
     .maybeSingle();
 
   // Los tres motivos viajan tal cual hasta la pantalla, que los explica en el idioma de
@@ -135,7 +135,7 @@ export async function activarCuentaConToken(token, passwordNueva) {
   // (`poner_clave_con_codigo`): o pasan las dos o no pasa ninguna. Dos pedidos con el mismo código
   // al mismo tiempo no pasan los dos, porque el segundo ya no lo encuentra libre y se va por donde
   // se va un enlace ya usado. Y el código se busca sólo adentro de la Prestadora de la dirección:
-  // el de otra no existe desde acá. Viaja el enlace tal como llegó: la huella la calcula la base.
+  // el de otra no existe desde acá. Viaja el enlace tal como llegó: el identificador de verificación lo calcula la base.
   const { data: usuarioId, error: errorClave } = await supabase.rpc('poner_clave_con_codigo', {
     p_uso: 'activacion',
     p_codigo: token,
@@ -164,7 +164,7 @@ export async function cuentaQueActivoConEsteToken(token) {
   const { data: fila, error } = await supabase
     .from('tokens_activacion_cuenta')
     .select('usuario_id, usado_en')
-    .eq('token', huellaDelEnlace(token))
+    .eq('token', verificadorDelEnlace(token))
     .maybeSingle();
 
   if (error || !fila || !fila.usado_en) throw new ErrorConMotivo('token_invalido');

@@ -18,7 +18,7 @@ import {
   MARCADORES,
   MODELO_DE_FABRICA,
   textoDelConsentimiento,
-  huellaDelDocumento,
+  verificadorDelDocumento,
 } from '../documentoConsentimientoPagador.js';
 
 const PRESTADORA = { nombre: 'Cuidados del Sur' };
@@ -109,16 +109,16 @@ describe('El consentimiento de quien paga', () => {
     });
   });
 
-  describe('La huella del documento', () => {
+  describe('El identificador de verificación del documento', () => {
     it('cambia cuando cambia quién firmó', () => {
-      const uno = huellaDelDocumento(unPapel({ pagador: UNA_ENTIDAD, apoderado: SU_APODERADA }));
-      const otro = huellaDelDocumento(unPapel({ pagador: UNA_ENTIDAD, apoderado: { nombre: 'Otra, Persona' } }));
+      const uno = verificadorDelDocumento(unPapel({ pagador: UNA_ENTIDAD, apoderado: SU_APODERADA }));
+      const otro = verificadorDelDocumento(unPapel({ pagador: UNA_ENTIDAD, apoderado: { nombre: 'Otra, Persona' } }));
       assert.notEqual(uno, otro);
     });
 
     it('y también cuando la entidad se queda sin apoderado', () => {
-      const con = huellaDelDocumento(unPapel({ pagador: UNA_ENTIDAD, apoderado: SU_APODERADA }));
-      const sin = huellaDelDocumento(unPapel({ pagador: UNA_ENTIDAD, apoderado: null }));
+      const con = verificadorDelDocumento(unPapel({ pagador: UNA_ENTIDAD, apoderado: SU_APODERADA }));
+      const sin = verificadorDelDocumento(unPapel({ pagador: UNA_ENTIDAD, apoderado: null }));
       assert.notEqual(con, sin);
     });
   });

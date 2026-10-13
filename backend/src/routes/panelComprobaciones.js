@@ -46,7 +46,7 @@ panelComprobacionesRouter.get('/pedidos', requiereRolPanel, exigirOrganizacionAc
 });
 
 /* Suelta el código para ese pedido. Es la única vez que el código viaja en claro: de acá en más
- * queda solamente su huella, así que la pantalla lo tiene que mostrar en el momento y quien
+ * queda solamente su identificador de verificación, así que la pantalla lo tiene que mostrar en el momento y quien
  * atiende dictárselo al Asistente. Quién lo soltó y cuándo queda escrito en la misma fila.
  *
  * LLEVA TOPE DE PEDIDOS POR MINUTO (pendiente #177). Acá el que suelta el código es alguien de la

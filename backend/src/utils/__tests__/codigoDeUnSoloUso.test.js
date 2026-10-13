@@ -6,7 +6,7 @@
  * LAS TRES COSAS QUE SE PRUEBAN ACÁ, y qué pasaría si alguna se rompiera:
  *
  *   1. EMITIR UN CÓDIGO NUEVO NO DEVUELVE INTENTOS. Si volviera a escribirse `codigo_intentos: 0`
- *      junto con la huella nueva, la prueba «lo que se guarda al emitir» fallaría: alcanzaría con
+ *      junto con el identificador de verificación nuevo, la prueba «lo que se guarda al emitir» fallaría: alcanzaría con
  *      pedir otro código para tener cinco intentos más, y así hasta acertar los seis dígitos.
  *   2. EL INTENTO LO SUMA LA BASE, EN UN SOLO PASO. Si el backend volviera a leer y escribir por
  *      separado, la prueba «no lee para escribir» fallaría, porque aparecería una consulta de
@@ -29,11 +29,11 @@ import {
   codigoNuevoParaGuardar,
   estaVencido,
   VARIABLE_DEL_SECRETO,
-  huellaDelCodigo,
+  verificadorDelCodigo,
   seAgotaronLosIntentos,
   sumarIntento,
 } from '../codigoDeUnSoloUso.js';
-import { huellaDelEnlace } from '../huellaDelEnlace.js';
+import { verificadorDelEnlace } from '../verificadorDelEnlace.js';
 
 const INSTRUCCION = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const PRESTADORA = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
@@ -76,12 +76,12 @@ beforeEach(() => {
 });
 
 describe('lo que se guarda al emitir un código nuevo', () => {
-  it('son la huella y el vencimiento, y nunca la cuenta de intentos', () => {
+  it('son el identificador de verificación y el vencimiento, y nunca la cuenta de intentos', () => {
     const vence = new Date(Date.now() + 60_000).toISOString();
     const { codigo, campos } = codigoNuevoParaGuardar(vence);
 
     assert.match(codigo, /^\d{6}$/);
-    assert.equal(campos.codigo_huella, huellaDelCodigo(codigo));
+    assert.equal(campos.codigo_verificador, verificadorDelCodigo(codigo));
     assert.equal(campos.codigo_expira_en, vence);
 
     // Ésta es la prueba del defecto: si alguien vuelve a poner `codigo_intentos: 0` acá, el tope
@@ -91,7 +91,7 @@ describe('lo que se guarda al emitir un código nuevo', () => {
       false,
       'emitir un código nuevo no puede devolver intentos',
     );
-    assert.deepEqual(Object.keys(campos).sort(), ['codigo_expira_en', 'codigo_huella']);
+    assert.deepEqual(Object.keys(campos).sort(), ['codigo_expira_en', 'codigo_verificador']);
   });
 
   it('el código en claro sale una sola vez y no queda adentro de lo que se guarda', () => {
@@ -194,17 +194,17 @@ describe('cuándo se considera agotado el tope', () => {
 });
 
 describe('lo que ya hacía el código de un solo uso y no se tocó', () => {
-  it('la huella no es el código, y comparar huella con huella funciona', () => {
+  it('el identificador de verificación no es el código, y comparar dos identificadores funciona', () => {
     const codigo = codigoNuevo();
-    assert.notEqual(huellaDelCodigo(codigo), codigo);
-    assert.equal(codigoCoincide(codigo, huellaDelCodigo(codigo)), true);
-    assert.equal(codigoCoincide('000000', huellaDelCodigo(codigo)), false);
+    assert.notEqual(verificadorDelCodigo(codigo), codigo);
+    assert.equal(codigoCoincide(codigo, verificadorDelCodigo(codigo)), true);
+    assert.equal(codigoCoincide('000000', verificadorDelCodigo(codigo)), false);
   });
 
-  it('sin huella guardada o con el código vacío, no coincide nada', () => {
+  it('sin identificador de verificación guardado o con el código vacío, no coincide nada', () => {
     assert.equal(codigoCoincide('123456', null), false);
-    assert.equal(codigoCoincide('', huellaDelCodigo('123456')), false);
-    assert.equal(codigoCoincide('   ', huellaDelCodigo('123456')), false);
+    assert.equal(codigoCoincide('', verificadorDelCodigo('123456')), false);
+    assert.equal(codigoCoincide('   ', verificadorDelCodigo('123456')), false);
   });
 
   it('sin vencimiento guardado se trata como vencido', () => {
@@ -214,7 +214,7 @@ describe('lo que ya hacía el código de un solo uso y no se tocó', () => {
   });
 });
 
-describe('la huella del código lleva el secreto del servidor', () => {
+describe('el identificador de verificación del código lleva el secreto del servidor', () => {
   // Cada prueba deja el secreto como lo encontró: las demás de este archivo lo necesitan puesto.
   function conSecreto(valor, prueba) {
     const antes = process.env[VARIABLE_DEL_SECRETO];
@@ -227,34 +227,34 @@ describe('la huella del código lleva el secreto del servidor', () => {
     }
   }
 
-  it('sin secreto no se calcula ninguna huella', () => {
-    conSecreto(undefined, () => assert.throws(() => huellaDelCodigo('123456')));
-    conSecreto('', () => assert.throws(() => huellaDelCodigo('123456')));
-    conSecreto('corto', () => assert.throws(() => huellaDelCodigo('123456')));
+  it('sin secreto no se calcula ningún identificador de verificación', () => {
+    conSecreto(undefined, () => assert.throws(() => verificadorDelCodigo('123456')));
+    conSecreto('', () => assert.throws(() => verificadorDelCodigo('123456')));
+    conSecreto('corto', () => assert.throws(() => verificadorDelCodigo('123456')));
   });
 
   it('sin secreto tampoco coincide nada: falla cerrado', () => {
-    const guardada = huellaDelCodigo('123456');
-    conSecreto(undefined, () => assert.throws(() => codigoCoincide('123456', guardada)));
+    const guardado = verificadorDelCodigo('123456');
+    conSecreto(undefined, () => assert.throws(() => codigoCoincide('123456', guardado)));
   });
 
-  it('la huella no es el sha256 del código solo', () => {
+  it('el identificador de verificación no es el sha256 del código solo', () => {
     const sinSecreto = crypto.createHash('sha256').update('123456').digest('hex');
-    assert.notEqual(huellaDelCodigo('123456'), sinSecreto);
+    assert.notEqual(verificadorDelCodigo('123456'), sinSecreto);
   });
 
-  it('con otro secreto la misma huella deja de servir', () => {
-    const guardada = huellaDelCodigo('123456');
-    conSecreto('b'.repeat(64), () => assert.equal(codigoCoincide('123456', guardada), false));
+  it('con otro secreto el mismo identificador de verificación deja de servir', () => {
+    const guardado = verificadorDelCodigo('123456');
+    conSecreto('b'.repeat(64), () => assert.equal(codigoCoincide('123456', guardado), false));
   });
 });
 
-describe('la huella del enlace', () => {
+describe('el identificador de verificación del enlace', () => {
   it('es sha256 en hexadecimal, que es la forma que la base exige y la cuenta que hace', () => {
     const enlace = crypto.randomBytes(32).toString('hex');
-    const huella = huellaDelEnlace(enlace);
-    assert.match(huella, /^[0-9a-f]{64}$/);
-    assert.equal(huella, crypto.createHash('sha256').update(enlace, 'utf8').digest('hex'));
-    assert.notEqual(huella, enlace);
+    const verificador = verificadorDelEnlace(enlace);
+    assert.match(verificador, /^[0-9a-f]{64}$/);
+    assert.equal(verificador, crypto.createHash('sha256').update(enlace, 'utf8').digest('hex'));
+    assert.notEqual(verificador, enlace);
   });
 });

@@ -15,7 +15,7 @@
  *   3. Al CLIENTE SE LE AVISA QUE LLEGÓ, Y LO DISPARA FICHAR LA ENTRADA. Un solo mensaje, con el
  *      nombre de quién llegó, sale con la llegada marcada por cualquiera de los caminos, también
  *      cuando quedó sin comprobar. Y no sale cuando la llegada no se marcó.
- *   4. EL CÓDIGO NUNCA SE GUARDA EN CLARO. De la base sale la huella y nada más.
+ *   4. EL CÓDIGO NUNCA SE GUARDA EN CLARO. De la base sale el identificador de verificación y nada más.
  *
  * Y que nada de esto debilitó lo que ya existía: ni el bloqueo por Reporte Diario faltante, ni el
  * protocolo de continuidad de guardia.
@@ -24,7 +24,7 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
-import { huellaDelCodigo } from '../../utils/codigoDeUnSoloUso.js';
+import { verificadorDelCodigo } from '../../utils/codigoDeUnSoloUso.js';
 import { olvidarPedidos } from '../../middleware/topeDePedidos.js';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 
@@ -359,7 +359,7 @@ describe('check-in — el piso, que no se negocia: la guardia nunca se traba', (
 describe('check-in — Plan A: el código lo muestra una persona', () => {
   it('el código que muestra el Cliente marca la llegada, y al Cliente no se le avisa nada', async () => {
     codigosEnPantalla = [
-      { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_huella: huellaDelCodigo('123456'), expira_en: enUnRato(1) },
+      { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_verificador: verificadorDelCodigo('123456'), expira_en: enUnRato(1) },
     ];
 
     const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
@@ -387,7 +387,7 @@ describe('check-in — Plan A: el código lo muestra una persona', () => {
   it('el código que muestra el Asistente que se va marca la llegada, y al Cliente sí se le avisa', async () => {
     hayRelevo = true;
     codigosEnPantalla = [
-      { sujeto_tipo: 'asistente', sujeto_id: ASISTENTE_SALIENTE, codigo_huella: huellaDelCodigo('654321'), expira_en: enUnRato(1) },
+      { sujeto_tipo: 'asistente', sujeto_id: ASISTENTE_SALIENTE, codigo_verificador: verificadorDelCodigo('654321'), expira_en: enUnRato(1) },
     ];
 
     const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
@@ -410,7 +410,7 @@ describe('check-in — Plan A: el código lo muestra una persona', () => {
 
   it('un código vencido no marca nada, aunque sea el que esa persona mostró hace un minuto', async () => {
     codigosEnPantalla = [
-      { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_huella: huellaDelCodigo('123456'), expira_en: haceUnRato(1) },
+      { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_verificador: verificadorDelCodigo('123456'), expira_en: haceUnRato(1) },
     ];
 
     const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
@@ -428,7 +428,7 @@ describe('check-in — Plan A: el código lo muestra una persona', () => {
 
   it('un código vigente de otra casa no marca nada: se compara sólo contra quien podría estar en ésta', async () => {
     codigosEnPantalla = [
-      { sujeto_tipo: 'cliente', sujeto_id: OTRO_CLIENTE, codigo_huella: huellaDelCodigo('999999'), expira_en: enUnRato(1) },
+      { sujeto_tipo: 'cliente', sujeto_id: OTRO_CLIENTE, codigo_verificador: verificadorDelCodigo('999999'), expira_en: enUnRato(1) },
     ];
 
     const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
@@ -443,7 +443,7 @@ describe('check-in — Plan A: el código lo muestra una persona', () => {
 
   it('un código equivocado no marca la llegada, y eso no traba nada: el motivo sigue disponible', async () => {
     codigosEnPantalla = [
-      { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_huella: huellaDelCodigo('123456'), expira_en: enUnRato(1) },
+      { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_verificador: verificadorDelCodigo('123456'), expira_en: enUnRato(1) },
     ];
 
     const primero = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
@@ -468,7 +468,7 @@ describe('check-in — Plan A: el código lo muestra una persona', () => {
 });
 
 describe('el código que se muestra en pantalla', () => {
-  it('sale de seis dígitos, con los segundos que la Prestadora configuró, y en la base queda sólo la huella', async () => {
+  it('sale de seis dígitos, con los segundos que la Prestadora configuró, y en la base queda sólo el identificador de verificación', async () => {
     respuestas.set('GET /rest/v1/configuracion_ausencia_automatica', () => [{ segundos_codigo_en_pantalla: 45, minutos_codigo_de_la_prestadora: 10 }]);
 
     const { estado, cuerpo } = await pedir('GET', '/codigo-de-presencia');
@@ -482,7 +482,7 @@ describe('el código que se muestra en pantalla', () => {
     assert.equal(fila.sujeto_tipo, 'asistente');
     assert.equal(fila.sujeto_id, LEGAJO);
     assert.equal(fila.prestadora_id, PRESTADORA);
-    assert.equal(fila.codigo_huella, huellaDelCodigo(cuerpo.codigo));
+    assert.equal(fila.codigo_verificador, verificadorDelCodigo(cuerpo.codigo));
     assert.equal(JSON.stringify(fila).includes(cuerpo.codigo), false, 'el código nunca se guarda en claro');
   });
 
@@ -518,7 +518,7 @@ describe('Plan B — «no hay nadie que me pueda mostrar el código»', () => {
     assert.equal(fila.estado, 'pendiente_de_codigo');
     assert.equal(fila.momento, 'checkin');
     assert.equal(fila.pedido_texto, 'La puerta está cerrada y no atiende nadie');
-    assert.equal(fila.codigo_huella, null);
+    assert.equal(fila.codigo_verificador, null);
     // Y el pedido NO toca la cuenta de intentos (pendiente #177). Antes escribía un cero acá, y
     // como este pedido lo abre el mismo Asistente que después prueba los códigos, eso le daba su
     // propio botón para volver a empezar. En un alta la base pone el cero sola; sobre una fila que
@@ -539,19 +539,19 @@ describe('Plan B — «no hay nadie que me pueda mostrar el código»', () => {
   });
 
   it('no se pide un código para algo que ya quedó comprobado', async () => {
-    comprobacionGuardada = { id: COMPROBACION, estado: 'comprobada', momento: 'checkin', codigo_huella: null };
+    comprobacionGuardada = { id: COMPROBACION, estado: 'comprobada', momento: 'checkin', codigo_verificador: null };
     const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/comprobacion/pedido`, { momento: 'checkin', texto: 'x' });
     assert.equal(estado, 409);
     assert.equal(cuerpo.motivo, 'ya_comprobada');
     assert.equal(comprobacionesGuardadas().length, 0);
   });
 
-  it('mientras espera, la pantalla pregunta cómo viene y nunca recibe el código ni su huella', async () => {
+  it('mientras espera, la pantalla pregunta cómo viene y nunca recibe el código ni su identificador de verificación', async () => {
     comprobacionGuardada = {
       id: COMPROBACION,
       estado: 'pendiente_de_codigo',
       momento: 'checkin',
-      codigo_huella: huellaDelCodigo('321321'),
+      codigo_verificador: verificadorDelCodigo('321321'),
       codigo_expira_en: enUnRato(10),
     };
     const { estado, cuerpo } = await pedir('GET', `/guardias/${GUARDIA}/comprobacion/checkin`);
@@ -562,7 +562,7 @@ describe('Plan B — «no hay nadie que me pueda mostrar el código»', () => {
 
     const texto = JSON.stringify(cuerpo);
     assert.equal(texto.includes('321321'), false);
-    assert.equal(texto.includes(huellaDelCodigo('321321')), false);
+    assert.equal(texto.includes(verificadorDelCodigo('321321')), false);
   });
 
   it('sin pedido abierto, la pantalla no ve nada y no se inventa un estado', async () => {
@@ -577,7 +577,7 @@ describe('Plan B — «no hay nadie que me pueda mostrar el código»', () => {
       id: COMPROBACION,
       estado: 'pendiente_de_codigo',
       momento: 'checkin',
-      codigo_huella: huellaDelCodigo('321321'),
+      codigo_verificador: verificadorDelCodigo('321321'),
       codigo_expira_en: enUnRato(10),
       codigo_intentos: 0,
     };
@@ -594,8 +594,8 @@ describe('Plan B — «no hay nadie que me pueda mostrar el código»', () => {
     assert.equal(fila.estado, 'comprobada');
     assert.equal(fila.medio, 'codigo_prestadora');
     assert.equal(fila.sujeto_tipo, null);
-    // El código de un solo uso ya cumplió: no queda viva su huella.
-    assert.equal(fila.codigo_huella, null);
+    // El código de un solo uso ya cumplió: no queda vivo su identificador de verificación.
+    assert.equal(fila.codigo_verificador, null);
     assert.equal(fila.codigo_expira_en, null);
 
     assert.equal(mensajeDeLlegadaArmado(), true);
@@ -606,7 +606,7 @@ describe('Plan B — «no hay nadie que me pueda mostrar el código»', () => {
       id: COMPROBACION,
       estado: 'pendiente_de_codigo',
       momento: 'checkin',
-      codigo_huella: huellaDelCodigo('321321'),
+      codigo_verificador: verificadorDelCodigo('321321'),
       codigo_expira_en: haceUnRato(1),
       codigo_intentos: 0,
     };
@@ -626,7 +626,7 @@ describe('Plan B — «no hay nadie que me pueda mostrar el código»', () => {
       id: COMPROBACION,
       estado: 'pendiente_de_codigo',
       momento: 'checkin',
-      codigo_huella: huellaDelCodigo('321321'),
+      codigo_verificador: verificadorDelCodigo('321321'),
       codigo_expira_en: enUnRato(10),
       codigo_intentos: 2,
     };
@@ -657,7 +657,7 @@ describe('Plan B — «no hay nadie que me pueda mostrar el código»', () => {
       id: COMPROBACION,
       estado: 'pendiente_de_codigo',
       momento: 'checkin',
-      codigo_huella: huellaDelCodigo('321321'),
+      codigo_verificador: verificadorDelCodigo('321321'),
       codigo_expira_en: enUnRato(10),
       codigo_intentos: 5,
     };
@@ -680,7 +680,7 @@ describe('Plan B — «no hay nadie que me pueda mostrar el código»', () => {
       id: COMPROBACION,
       estado: 'pendiente_de_codigo',
       momento: 'checkin',
-      codigo_huella: huellaDelCodigo('321321'),
+      codigo_verificador: verificadorDelCodigo('321321'),
       codigo_expira_en: enUnRato(10),
       codigo_intentos: 5,
     };
@@ -706,7 +706,7 @@ describe('Plan B — «no hay nadie que me pueda mostrar el código»', () => {
     // 3. La Prestadora suelta un código nuevo. Se escriben acá exactamente las columnas que
     //    escribe el Panel; que en esa lista no esté la cuenta de intentos lo prueba
     //    `utils/__tests__/codigoDeUnSoloUso.test.js`.
-    comprobacionGuardada.codigo_huella = huellaDelCodigo('987654');
+    comprobacionGuardada.codigo_verificador = verificadorDelCodigo('987654');
     comprobacionGuardada.codigo_expira_en = enUnRato(10);
 
     // 4. Y el código nuevo, aun siendo el correcto, ya no sirve: el tope siguió siendo un tope.
@@ -735,7 +735,7 @@ describe('Plan B — «no hay nadie que me pueda mostrar el código»', () => {
       id: COMPROBACION,
       estado: 'pendiente_de_codigo',
       momento: 'checkin',
-      codigo_huella: huellaDelCodigo('321321'),
+      codigo_verificador: verificadorDelCodigo('321321'),
       codigo_expira_en: haceUnRato(1),
       codigo_intentos: 0,
     };
@@ -765,7 +765,7 @@ describe('el tope de pedidos por minuto en la llegada y la salida', () => {
     // no estuviera, las once respuestas serían iguales y esta prueba fallaría.
     process.env.TOPE_PEDIDOS_POR_MINUTO = '3';
     codigosEnPantalla = [
-      { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_huella: huellaDelCodigo('123456'), expira_en: enUnRato(1) },
+      { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_verificador: verificadorDelCodigo('123456'), expira_en: enUnRato(1) },
     ];
 
     for (let vuelta = 1; vuelta <= 3; vuelta += 1) {
@@ -859,7 +859,7 @@ describe('check-out — la misma comprobación, contra el acto que cierra la gua
 
   it('el código que muestra el Cliente cierra la guardia y queda anotado como comprobado', async () => {
     codigosEnPantalla = [
-      { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_huella: huellaDelCodigo('123456'), expira_en: enUnRato(1) },
+      { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_verificador: verificadorDelCodigo('123456'), expira_en: enUnRato(1) },
     ];
 
     const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkout`, {
@@ -891,7 +891,7 @@ describe('check-out — la misma comprobación, contra el acto que cierra la gua
   it('sigue sin poder cerrarse sin el Reporte Diario, aunque el código sea correcto', async () => {
     respuestas.set('GET /rest/v1/reportes', () => []);
     codigosEnPantalla = [
-      { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_huella: huellaDelCodigo('123456'), expira_en: enUnRato(1) },
+      { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_verificador: verificadorDelCodigo('123456'), expira_en: enUnRato(1) },
     ];
 
     const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkout`, {
@@ -908,7 +908,7 @@ describe('check-out — la misma comprobación, contra el acto que cierra la gua
   it('el protocolo de continuidad de guardia sigue vigente, aunque el código sea correcto', async () => {
     guardiaActual.checkout_bloqueado = true;
     codigosEnPantalla = [
-      { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_huella: huellaDelCodigo('123456'), expira_en: enUnRato(1) },
+      { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_verificador: verificadorDelCodigo('123456'), expira_en: enUnRato(1) },
     ];
 
     const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkout`, {

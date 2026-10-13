@@ -1,15 +1,15 @@
 import crypto from 'node:crypto';
 import { CATALOGO_PERSONAS_AUTORIZADAS } from './catalogoPersonasAutorizadas.js';
 
-// Arma la hoja que firma el titular, y su huella.
+// Arma la hoja que firma el titular, y su identificador de verificación.
 //
 // POR QUÉ EL DOCUMENTO SE GUARDA Y NO SE VUELVE A ARMAR. Si mañana se cambia una descripción del
 // catálogo, o se agrega un acceso, esta función devolvería otro texto. Lo que el titular firmó fue
 // el texto de aquel día: se guarda entero, tal cual, y lo que se muestra después es lo guardado.
 // Volver a armarlo sería mostrarle a alguien un documento que nunca vio.
 //
-// POR QUÉ LA HUELLA. Sin ella, el registro dice que el titular confirmó y no dice QUÉ confirmó:
-// cualquiera puede sostener después que el texto era otro. Con ella, si alguien le mueve una coma
+// POR QUÉ EL IDENTIFICADOR DE VERIFICACIÓN. Sin él, el registro dice que el titular confirmó y no dice QUÉ confirmó:
+// cualquiera puede sostener después que el texto era otro. Con él, si alguien le mueve una coma
 // al texto guardado, deja de coincidir y se nota. No es firma digital —eso se evaluó y se
 // descartó—: es la constancia de que el texto no cambió desde que se firmó.
 //
@@ -89,6 +89,6 @@ export function textoDeLaInstruccion({ prestadora, titular, personas, cargadaPor
   return renglones.join('\n');
 }
 
-export function huellaDelDocumento(texto) {
+export function verificadorDelDocumento(texto) {
   return crypto.createHash('sha256').update(texto, 'utf8').digest('hex');
 }

@@ -9,7 +9,8 @@ import { correoComparable } from '../config/correoDeAcceso.js';
 // la casilla de correo a una persona repitiendo el pedido, y cada mensaje lo paga la Prestadora.
 // El tope del backend (`middleware/topeDePedidos.js`) no sirve acá: cuenta por persona con sesión.
 //
-// SE CUENTA POR HUELLA DEL CORREO Y POR PRESTADORA. La huella, y no el correo, porque para contar
+// SE CUENTA POR IDENTIFICADOR DE VERIFICACIÓN DEL CORREO Y POR PRESTADORA. El identificador, y
+// no el correo, porque para contar
 // alcanza con reconocer que es el mismo, y así el renglón que queda no dice a quién se le mandó
 // nada. Por Prestadora, porque cada Prestadora donde esa persona trabaja es una cuenta distinta y
 // el tope de una no puede dejar sin recuperar la clave de la otra.
@@ -46,22 +47,22 @@ export function topeDePedidosDeClavePorHora() {
 }
 
 /**
- * La huella del correo.
+ * El identificador de verificación del correo.
  *
  * Se toma sobre el correo ya comparable —el mismo que usa la búsqueda de la cuenta—, para que
  * `Marta@Ejemplo.com` y `marta@ejemplo.com` cuenten como uno solo.
  */
-export function huellaDelCorreo(email) {
+export function verificadorDelCorreo(email) {
   return crypto.createHash('sha256').update(correoComparable(email) ?? '').digest('hex');
 }
 
-async function pedidosEnLaUltimaHora(prestadoraId, huella) {
+async function pedidosEnLaUltimaHora(prestadoraId, verificador) {
   const desde = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   const { count, error } = await supabase
     .from('pedidos_de_clave_nueva')
     .select('id', { count: 'exact', head: true })
     .eq('prestadora_id', prestadoraId)
-    .eq('correo_huella', huella)
+    .eq('correo_verificador', verificador)
     .gte('pedido_en', desde);
 
   if (error) {
@@ -79,7 +80,7 @@ async function pedidosEnLaUltimaHora(prestadoraId, huella) {
  */
 export async function seAgotaronLosPedidosDeClave(prestadoraId, email) {
   if (!prestadoraId) return true;
-  const cuantos = await pedidosEnLaUltimaHora(prestadoraId, huellaDelCorreo(email));
+  const cuantos = await pedidosEnLaUltimaHora(prestadoraId, verificadorDelCorreo(email));
   return cuantos >= topeDePedidosDeClavePorHora();
 }
 
@@ -93,7 +94,7 @@ export async function anotarPedidoDeClave(prestadoraId, email) {
   if (!prestadoraId) return;
   const { error } = await supabase
     .from('pedidos_de_clave_nueva')
-    .insert({ prestadora_id: prestadoraId, correo_huella: huellaDelCorreo(email) });
+    .insert({ prestadora_id: prestadoraId, correo_verificador: verificadorDelCorreo(email) });
   if (error) {
     console.error('topeDePedidosDeClave: no se pudo anotar el pedido:', error.message);
   }

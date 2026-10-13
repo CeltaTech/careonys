@@ -1,6 +1,6 @@
 import { supabase } from '../db/connection.js';
 import { IDIOMAS_SOPORTADOS, normalizarIdioma } from '../i18n/idiomas.js';
-import { huellaDelDocumento } from './documentoConsentimientoPagador.js';
+import { verificadorDelDocumento } from './documentoConsentimientoPagador.js';
 
 // El texto que acepta el Cliente cuando carga una medicación, y el interruptor que lo pide.
 //
@@ -9,7 +9,7 @@ import { huellaDelDocumento } from './documentoConsentimientoPagador.js';
 // acá rige mientras no cargue ninguno, en el idioma en que el Cliente usa la aplicación.
 //
 // LO FIRMADO SE GUARDA ENTERO. Si mañana la Prestadora cambia su texto, lo que el Cliente aceptó
-// fue el de aquel día: se guarda tal cual, con su huella y su idioma.
+// fue el de aquel día: se guarda tal cual, con su identificador de verificación y su idioma.
 //
 // SIN FILA DE CONFIGURACIÓN SE PIDE LA FIRMA. Es el valor que cierra, y la base decide igual: el
 // disparador que acepta la indicación pregunta lo mismo con `la_prestadora_pide_la_firma_de_la_medicacion`.
@@ -73,14 +73,14 @@ export function textoDelConsentimiento({ cuerpo, prestadora }) {
   return cuerpo.split('{{prestadora}}').join(prestadora || '—');
 }
 
-// El documento que acepta el Cliente, ya armado: texto, huella e idioma.
+// El documento que acepta el Cliente, ya armado: texto, identificador de verificación e idioma.
 export async function documentoParaFirmar({ prestadoraId, idioma }) {
   const [{ cuerpo, idioma: elIdioma }, { data: prestadora }] = await Promise.all([
     cuerpoVigente({ prestadoraId, idioma }),
     supabase.from('prestadoras').select('nombre_fantasia').eq('id', prestadoraId).maybeSingle(),
   ]);
   const texto = textoDelConsentimiento({ cuerpo, prestadora: prestadora?.nombre_fantasia });
-  return { texto, huella: huellaDelDocumento(texto), idioma: elIdioma };
+  return { texto, verificador: verificadorDelDocumento(texto), idioma: elIdioma };
 }
 
 export const IDIOMAS_DEL_TEXTO = IDIOMAS_SOPORTADOS;

@@ -28,8 +28,8 @@ import './seguimientoDeGuardias.css';
      nadie, el Asistente entró igual eligiendo un motivo de una lista corta. Eso ya pasó, no hay
      nada que apurar, y queda acá hasta que alguien lo mire y lo cierre.
 
-   EL CÓDIGO SE MUESTRA UNA SOLA VEZ, Y ES A PROPÓSITO. Del lado de la base queda su huella, no
-   él, así que ni esta pantalla ni ninguna otra lo puede volver a mostrar. Quien lo suelta se lo
+   EL CÓDIGO SE MUESTRA UNA SOLA VEZ, Y ES A PROPÓSITO. Del lado de la base queda su
+   identificador de verificación, no él, así que ni esta pantalla ni ninguna otra lo puede volver a mostrar. Quien lo suelta se lo
    dicta al Asistente en ese momento. Si se perdió, se suelta otro: el anterior deja de valer.
 
    CERRAR NO ES APROBAR NI RECHAZAR. Es decir que alguien la miró. Lo que se haya averiguado va

@@ -1,7 +1,7 @@
 import { supabase } from '../db/connection.js';
 import { accesosParaGuardar, mezclarAccesosConCatalogo } from './catalogoPersonasAutorizadas.js';
 import { visibilidadDeLaPrestadora } from './visibilidadPrestadora.js';
-import { textoDeLaInstruccion, huellaDelDocumento, IDIOMA_DEL_DOCUMENTO } from './documentoInstruccionPersonasAutorizadas.js';
+import { textoDeLaInstruccion, verificadorDelDocumento, IDIOMA_DEL_DOCUMENTO } from './documentoInstruccionPersonasAutorizadas.js';
 import { avisarPorWhatsapp } from './whatsapp.js';
 import { enviarEmail, configuracionEvento } from './email.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
@@ -32,7 +32,7 @@ import {
 // a la vez dejarían al titular firmando algo que ya no rige. La base lo exige además con un índice
 // único, así que esto no es la única defensa.
 //
-// EL CÓDIGO ES DE UN SOLO USO Y SE GUARDA SU HUELLA, NUNCA EL CÓDIGO. Cómo se arma, cómo se
+// EL CÓDIGO ES DE UN SOLO USO Y SE GUARDA SU IDENTIFICADOR DE VERIFICACIÓN, NUNCA EL CÓDIGO. Cómo se arma, cómo se
 // compara y cuántos intentos se toleran está una sola vez, en `codigoDeUnSoloUso.js`: es el mismo
 // mecanismo que usan la recuperación de acceso y el pase de guardia.
 const VIGENCIA_DEL_CODIGO_MINUTOS = 10;
@@ -147,10 +147,10 @@ export async function crearInstruccion({ clienteId, prestadoraId, cargadaPor, ac
       dada_por: clienteId,
       cargada_por: cargadaPor,
       documento_texto: texto,
-      documento_huella: huellaDelDocumento(texto),
+      documento_verificador: verificadorDelDocumento(texto),
       documento_idioma: IDIOMA_DEL_DOCUMENTO,
     })
-    .select('id, estado, documento_texto, documento_huella, created_at')
+    .select('id, estado, documento_texto, documento_verificador, created_at')
     .single();
   if (errorInstruccion) throw new Error(errorInstruccion.message);
 
@@ -301,7 +301,7 @@ export async function confirmarConCodigo({ instruccionId, clienteId, prestadoraI
 
   const { data: instruccion } = await supabase
     .from('instrucciones_acceso_personas_autorizadas')
-    .select('id, estado, codigo_huella, codigo_expira_en')
+    .select('id, estado, codigo_verificador, codigo_expira_en')
     .eq('prestadora_id', prestadoraId)
     .eq('id', instruccionId)
     .eq('cliente_id', clienteId)
@@ -309,7 +309,7 @@ export async function confirmarConCodigo({ instruccionId, clienteId, prestadoraI
 
   if (!instruccion) return { ok: false, motivo: 'no_encontrado' };
   if (instruccion.estado !== 'pendiente_firma') return { ok: false, motivo: 'ya_cerrada' };
-  if (!instruccion.codigo_huella) return { ok: false, motivo: 'sin_codigo' };
+  if (!instruccion.codigo_verificador) return { ok: false, motivo: 'sin_codigo' };
 
   // El vencimiento se mira ANTES de contar, y es lo que deja intacto el caso legítimo: a quien
   // se le venció el código no se le gasta ningún intento, así que llega al código nuevo con los
@@ -325,7 +325,7 @@ export async function confirmarConCodigo({ instruccionId, clienteId, prestadoraI
   });
   if (seAgotaronLosIntentos(intentos)) return { ok: false, motivo: 'demasiados_intentos' };
 
-  if (!codigoCoincide(codigo, instruccion.codigo_huella)) {
+  if (!codigoCoincide(codigo, instruccion.codigo_verificador)) {
     return { ok: false, motivo: 'codigo_incorrecto' };
   }
 
@@ -336,8 +336,8 @@ export async function confirmarConCodigo({ instruccionId, clienteId, prestadoraI
       cerrada_como: 'confirmada_en_la_app',
       cerrada_en: new Date().toISOString(),
       cerrada_desde: desde ?? null,
-      // El código ya cumplió: se borra para que no quede una huella viva de algo de un solo uso.
-      codigo_huella: null,
+      // El código ya cumplió: se borra para que no quede un identificador de verificación vivo de algo de un solo uso.
+      codigo_verificador: null,
       codigo_expira_en: null,
     })
     .eq('prestadora_id', prestadoraId)

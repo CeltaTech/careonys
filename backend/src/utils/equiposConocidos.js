@@ -5,7 +5,7 @@ import { cerrarTodasLasSesionesDe } from './claveActual.js';
 // QUÉ ES UN EQUIPO NUEVO. Un aparato que no tiene llave guardada y desde el que nunca se entró.
 // Nada más que eso: no se reconoce el navegador, no se mira desde dónde se conecta y no se guarda
 // ningún dato del aparato. Lo único que hay es una marca al azar que emite el backend, que el
-// navegador conserva, y de la que acá queda la huella.
+// navegador conserva, y de la que acá queda el identificador de verificación.
 //
 // POR QUÉ NO ALCANZA `llaves_de_dispositivo`. Ésa es la llave de huella o rostro de las dos
 // aplicaciones de teléfono, y el Panel no la tiene. Además prueba quién es; ésta sólo contesta si
@@ -19,7 +19,7 @@ export function marcaNueva() {
   return crypto.randomBytes(32).toString('base64url');
 }
 
-export function huellaDeLaMarca(marca) {
+export function verificadorDeLaMarca(marca) {
   const texto = String(marca ?? '').trim();
   if (!texto) return null;
   return crypto.createHash('sha256').update(texto).digest('hex');
@@ -28,15 +28,15 @@ export function huellaDeLaMarca(marca) {
 /** La fila de este aparato, si existe y no está revocada. Falla cerrado: ante cualquier duda, null.
  *  La Prestadora se nombra siempre, y sale de la sesión de quien está entrando. */
 export async function equipoConocido({ usuarioId, prestadoraId, marca }) {
-  const huella = huellaDeLaMarca(marca);
-  if (!usuarioId || !prestadoraId || !huella) return null;
+  const verificador = verificadorDeLaMarca(marca);
+  if (!usuarioId || !prestadoraId || !verificador) return null;
 
   const { data, error } = await supabase
     .from('equipos_conocidos')
     .select('id, usuario_id, revocado_en')
     .eq('prestadora_id', prestadoraId)
     .eq('usuario_id', usuarioId)
-    .eq('marca_huella', huella)
+    .eq('marca_verificador', verificador)
     .is('revocado_en', null)
     .maybeSingle();
 
@@ -55,7 +55,7 @@ export async function anotarEquipo({ usuario, marca = null }) {
   if (!usuario?.id || !usuario?.prestadora_id) return null;
 
   const laMarca = String(marca ?? '').trim() || marcaNueva();
-  const huella = huellaDeLaMarca(laMarca);
+  const verificador = verificadorDeLaMarca(laMarca);
   const ahora = new Date().toISOString();
 
   const { error } = await supabase
@@ -64,11 +64,11 @@ export async function anotarEquipo({ usuario, marca = null }) {
       {
         prestadora_id: usuario.prestadora_id,
         usuario_id: usuario.id,
-        marca_huella: huella,
+        marca_verificador: verificador,
         ultima_entrada_en: ahora,
         revocado_en: null,
       },
-      { onConflict: 'usuario_id,marca_huella' },
+      { onConflict: 'usuario_id,marca_verificador' },
     );
 
   if (error) {

@@ -82,9 +82,9 @@ for (const archivo of archivos) {
    el mismo mensaje aparece dos veces. Se queda la primera aparición de cada texto. */
 const vistos = new Set();
 const unicos = mensajes.filter((m) => {
-  const huella = m.fecha + '|' + m.texto;
-  if (vistos.has(huella)) return false;
-  vistos.add(huella);
+  const clave = m.fecha + '|' + m.texto;
+  if (vistos.has(clave)) return false;
+  vistos.add(clave);
   return true;
 });
 

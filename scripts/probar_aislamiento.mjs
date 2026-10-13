@@ -478,8 +478,8 @@ async function probarElBackend({ backend }, sesiones, piezas) {
   const problemas = [];
   const respuestasVacias = [];
 
-  for (const [quien, que, metodo, ruta, token, cuerpo, huella] of intentos) {
-    const antes = huella ? JSON.stringify(consultarBase(huella)) : null;
+  for (const [quien, que, metodo, ruta, token, cuerpo, consultaDeControl] of intentos) {
+    const antes = consultaDeControl ? JSON.stringify(consultarBase(consultaDeControl)) : null;
     const r = await fetch(`${backend}${ruta}`, {
       method: metodo,
       headers: {
@@ -489,14 +489,14 @@ async function probarElBackend({ backend }, sesiones, piezas) {
       ...(cuerpo ? { body: JSON.stringify(cuerpo) } : {}),
     });
     const contestoQueSi = r.status >= 200 && r.status < 300;
-    const despues = huella ? JSON.stringify(consultarBase(huella)) : null;
+    const despues = consultaDeControl ? JSON.stringify(consultarBase(consultaDeControl)) : null;
     const etiqueta = `${quien} intenta ${que}`.padEnd(52);
 
-    if (huella && antes !== despues) {
+    if (consultaDeControl && antes !== despues) {
       // Lo peor: la fila ajena cambió. Esto es una filtración de verdad.
       problemas.push(`${quien} pudo ${que}: la fila ajena cambió (${metodo} ${ruta})`);
       console.log(`  ${etiqueta} ${rojo(`${r.status}  ENTRÓ Y ESCRIBIÓ`)}`);
-    } else if (huella && contestoQueSi) {
+    } else if (consultaDeControl && contestoQueSi) {
       // El backend no tocó nada, pero contestó que sí. No es una filtración:
       // es una respuesta que miente, anotada como pendiente aparte.
       respuestasVacias.push(`${metodo} ${ruta.replace(/\/[0-9a-f-]{36}/g, '/…')} contestó ${r.status} sin modificar nada`);

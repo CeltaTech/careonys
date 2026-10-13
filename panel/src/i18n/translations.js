@@ -2245,7 +2245,7 @@ export const T = {
       pedido_desde: 'Pidió a las',
       pedido_sin_texto: 'No escribió nada.',
       codigo_vale_minutos: 'Vale {minutos} minutos, para esta guardia y este domicilio.',
-      // Se muestra una sola vez de verdad: de la base queda la huella, no el código.
+      // Se muestra una sola vez de verdad: de la base queda el identificador de verificación, no el código.
       codigo_una_sola_vez: 'Dígaselo ahora: esta pantalla no lo va a poder volver a mostrar.',
       codigo_ya_soltado: 'Ya se soltó un código a las {hora}. Si suelta otro, el anterior deja de valer.',
       soltando: 'Soltando…',

@@ -146,6 +146,7 @@ export function Layout() {
   const [avisosAbiertos, setAvisosAbiertos] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const [asistentesEncontrados, setAsistentesEncontrados] = useState([]);
+  const [estadoBusqueda, setEstadoBusqueda] = useState('listo');
   const [busquedaAbierta, setBusquedaAbierta] = useState(false);
   const perfilRef = useRef(null);
   const avisosRef = useRef(null);
@@ -322,9 +323,11 @@ export function Layout() {
   useEffect(() => {
     if (!hayPadron || texto.length < 2) {
       setAsistentesEncontrados([]);
+      setEstadoBusqueda('listo');
       return undefined;
     }
     let vigente = true;
+    setEstadoBusqueda('cargando');
     const espera = setTimeout(async () => {
       const limpio = texto.replace(/[%_,()]/g, '');
       const { data, error } = await supabase
@@ -337,9 +340,11 @@ export function Layout() {
       if (error) {
         console.error(error);
         setAsistentesEncontrados([]);
+        setEstadoBusqueda('error');
         return;
       }
       setAsistentesEncontrados(data ?? []);
+      setEstadoBusqueda('listo');
     }, 250);
     return () => {
       vigente = false;
@@ -494,18 +499,23 @@ export function Layout() {
             />
             {busquedaAbierta && texto.length >= 2 && (
               <ul className="panel-desplegable">
-                {resultados.length === 0 ? (
-                  <li className="panel-desplegable-nada">{t.nav.sin_resultados}</li>
-                ) : (
-                  resultados.map((resultado) => (
-                    <li key={resultado.a}>
-                      <NavLink to={resultado.a} onClick={() => setBusqueda('')}>
-                        {resultado.texto}
-                        <small>{resultado.detalle}</small>
-                      </NavLink>
-                    </li>
-                  ))
+                {estadoBusqueda === 'error' && (
+                  <li className="panel-desplegable-nada" role="alert">{t.comun.error_generico}</li>
                 )}
+                {estadoBusqueda === 'cargando' && resultados.length === 0 && (
+                  <li className="panel-desplegable-nada" role="status">{t.comun.cargando}</li>
+                )}
+                {estadoBusqueda === 'listo' && resultados.length === 0 && (
+                  <li className="panel-desplegable-nada">{t.nav.sin_resultados}</li>
+                )}
+                {resultados.map((resultado) => (
+                  <li key={resultado.a}>
+                    <NavLink to={resultado.a} onClick={() => setBusqueda('')}>
+                      {resultado.texto}
+                      <small>{resultado.detalle}</small>
+                    </NavLink>
+                  </li>
+                ))}
               </ul>
             )}
           </form>

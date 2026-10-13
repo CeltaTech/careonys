@@ -1728,26 +1728,6 @@ quedan mandando a un lugar que ya no se llama así.
 
 ---
 
-## 83. Qué son las modalidades
-
-**Ruta:** `configuracion.modalidades_explicacion`
-
-**Texto de hoy:**
-> De qué manera trabaja la Prestadora. Al activar una modalidad aparecen en el menú las
-> pantallas que le corresponden; al desactivarla, esas pantallas se van.
-
-**Dónde se ve:** Ajustes > Configuración > La Prestadora, bloque «Modalidades contratadas».
-
-**Qué lo dispara:** está siempre.
-
-**Quién lo lee:** la empresa.
-
-**Archivo:** `panel/src/pages/configuracion/LaPrestadora.jsx:154`
-
-**DECISIÓN:**
-
----
-
 ## 84. La credencial del software externo sólo la carga el Admin
 
 **Ruta:** `configuracion.software_externo_solo_admin`

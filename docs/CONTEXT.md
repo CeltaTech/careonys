@@ -142,7 +142,7 @@ Etapa 2 — Panel de administración
   - **Match** — vidriera, perfiles públicos, conversaciones con videollamada, formas de
     cobro que arma cada Prestadora, accesos, calificaciones y auditoría legal.
   - **Configuración y gobierno** — configuración por Prestadora y de plataforma, usuarios y
-    permisos, segundo factor con su recuperación, auditoría, importación, contenidos, mensajes en
+    permisos, segundo factor con su código de verificación por correo, auditoría, importación, contenidos, mensajes en
     vivo y los canales por los que salen (correo, WhatsApp, push).
 
   Sobre los precios, la regla de negocio central sigue vigente: ningún medio público habla de

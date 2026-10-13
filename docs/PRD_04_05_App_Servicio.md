@@ -32,7 +32,7 @@ PWA-first, monitorear en producción antes de considerar migrar a app nativa con
 
 ### Login
 **Decisión revisada 2026-07-15** (pendiente #30 ítem H, extendida acá por el Desarrollador):
-clave alfanumérica (Supabase Auth email/password), no magic link — con opción de
+contraseña (Supabase Auth email/password), no magic link — con opción de
 identificación biométrica (Face ID/Touch ID/Windows Hello vía WebAuthn, si el dispositivo lo
 permite) como método alternativo una vez que el usuario ya inició sesión con contraseña al
 menos una vez. El biométrico es opcional y corre para cualquier rol/login del sistema, no
@@ -204,7 +204,7 @@ Nueva guardia asignada, mensajes del coordinador, recordatorios.
 
 ### Login
 **Decisión revisada 2026-07-15** (pendiente #30 ítem H, extendida acá por el Desarrollador):
-clave alfanumérica (Supabase Auth email/password), no magic link — con opción de
+contraseña (Supabase Auth email/password), no magic link — con opción de
 identificación biométrica (Face ID/Touch ID/Windows Hello vía WebAuthn, si el dispositivo lo
 permite), igual que en la PWA de Asistentes de arriba. Diseño únicamente, sin código todavía
 (Etapa 4, depende de que la Etapa 3 esté funcionando primero). Sesión persistente.

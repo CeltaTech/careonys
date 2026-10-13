@@ -1468,7 +1468,7 @@ escrito más arriba en otro recuadro.
 
 # Lo que queda afuera de este documento
 
-**El cartel de Habilitar clave.** Se ve en Menú lateral → grupo **Ajustes** → **Habilitar cambio de
+**El cartel de Habilitar cambio de contraseña.** Se ve en Menú lateral → grupo **Ajustes** → **Habilitar cambio de
 contraseña**, que es la pantalla donde se atienden los pedidos de habilitación, y el enlace del menú
 lleva un contador al lado. Ese cartel **queda afuera por decisión del Desarrollador**, hasta que se
 analicen en detalle los procedimientos y la lógica de esa pantalla. Textual: *«en este caso en
@@ -1484,7 +1484,7 @@ revisión. Falta relevar, con la misma ficha de ocho apartados:
 2. Los avisos de «se guardó».
 3. Las ventanas de confirmar.
 4. Los carteles de las dos aplicaciones de teléfono, la de los Clientes y la de los Asistentes.
-5. El cartel de Habilitar clave, que está parado por la decisión de arriba.
+5. El cartel de Habilitar cambio de contraseña, que está parado por la decisión de arriba.
 
 **Y el punto 8 abre un trabajo aparte**, que no es de carteles: eliminar el tuteo y el voseo de todo
 el Panel y de las dos aplicaciones, sin excepción.

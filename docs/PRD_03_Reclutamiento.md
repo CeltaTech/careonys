@@ -323,9 +323,9 @@ cuándo fue, de si la persona vino ni de quién había quedado en llamarla.
   reprogramado dos veces y no se haya presentado es lo que se quiere ver antes de decidir, así que
   las anteriores se listan con su resultado y su observación en vez de desaparecer.
 - **Al postulante le llega su propio enlace, nunca la dirección de la sala**
-  (`backend/src/routes/entrevistaPublica.js`). Abre sin cuenta y sin clave: la llave que le llegó
-  por correo es toda su credencial, igual que en la activación de cuenta. Por eso reprogramar no
-  obliga a mandarle una llave nueva, y el Panel copia ese enlace y no la sala.
+  (`backend/src/routes/entrevistaPublica.js`). Abre sin cuenta y sin contraseña: el enlace que le llegó
+  por correo es todo lo que necesita, igual que el enlace para activar la cuenta. Por eso reprogramar no
+  obliga a mandarle un enlace nuevo, y el Panel copia ese enlace y no la sala.
 - **La sala aparece recién a la hora de la cita.** Llegar temprano no es equivocarse: la pantalla
   del postulante no muestra ningún error, dice en qué momento está —todavía no, entre ahora, ya
   pasó— y qué corresponde hacer. Del lado del backend eso viaja como un dato de la respuesta, no como

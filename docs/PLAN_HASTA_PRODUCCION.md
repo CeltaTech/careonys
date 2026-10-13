@@ -193,8 +193,8 @@ preguntando.**
 **Lo que no tiene persona detrás ya no usa la llave maestra**: las tareas automatizadas, la carga de
 los mensajes del sistema, las entradas que llaman otros programas y las 8 puertas públicas corren
 con la credencial del trabajo sin persona, de a una Prestadora por vez. Con la llave maestra
-quedan la entrada con la huella (`routes/llaveDelDispositivo.js:191`), la recuperación del código
-extra del personal técnico (`utils/mfaRecuperacionEmail.js:87-90`) y todo lo que pide una persona
+quedan la entrada con la huella (`routes/llaveDelDispositivo.js:191`), el código de verificación
+por correo del personal técnico (`utils/mfaRecuperacionEmail.js:87-90`) y todo lo que pide una persona
 desde las pantallas.
 
 **Casi nadie sabe quién leyó qué.** Las lecturas de información de salud se anotan encadenadas en
@@ -561,7 +561,7 @@ entrada para esa persona, y ese pedido va con la llave maestra
 (`routes/llaveDelDispositivo.js:191`). Supabase ofrece hacerlo por su cuenta, pero todavía como
 prueba: se evalúa cuando esté firme.
 
-**Queda para después recuperar el código extra que se le pide al personal técnico al entrar**
+**Queda para después el código de verificación por correo que se le pide al personal técnico al entrar**
 (`utils/mfaRecuperacionEmail.js:87-90`), porque esas personas no pertenecen a ninguna Prestadora.
 El rol técnico se queda: es la cuenta con la que entra la persona de CeltaTech cuando le abren un
 permiso de acceso, y el backend sólo busca ese permiso para ese rol
@@ -668,7 +668,7 @@ la sección de Reclutamiento está esperando justamente esto.
   esas notas quedan atrás.
 
 **21.** Una cuenta por Prestadora. **Un Asistente trabaja en varias Prestadoras y un Cliente
-contrata con varias.** Cada una de esas es **una cuenta distinta, con su propia clave**. El mismo
+contrata con varias.** Cada una de esas es **una cuenta distinta, con su propia contraseña**. El mismo
 correo puede estar en dos Prestadoras y son dos cuentas: usar el correo de siempre no lo obliga a
 nadie a tener una sola cuenta. Adentro de una Prestadora ese correo no se repite.
 
@@ -851,63 +851,63 @@ formas, por el mismo lote y la misma revisión.
 
 ---
 
-## La entrada y la recuperación de la clave
+## La entrada y el restablecimiento de la contraseña
 
 **Va acá y no antes porque se apoya en la cuenta por Prestadora, más arriba en esta lista.** Cada
-Prestadora donde la persona trabaja es una cuenta con su propia clave, así que la coordinadora que
-habilita un cambio de clave abre una puerta que da a su Prestadora y a ninguna otra. Con una sola
-clave para las tres, esa puerta daba también a las otras dos y esto no se podía hacer.
+Prestadora donde la persona trabaja es una cuenta con su propia contraseña, así que la coordinadora que
+habilita un cambio de contraseña abre una puerta que da a su Prestadora y a ninguna otra. Con una sola
+contraseña para las tres, esa puerta daba también a las otras dos y esto no se podía hacer.
 
 **Lo decidido, y no se vuelve a discutir:**
 
-- **Tres vías para recuperar la clave, iguales para todas.** Por correo, por código al teléfono
+- **Tres vías para restablecer la contraseña, iguales para todas.** Por correo, por código de verificación al teléfono
   verificado, y llamando a la coordinadora. La Prestadora no configura nada de esto: no se le
   ofrece la opción de apagarlo.
-- **El código se pide en dos momentos:** al recuperar la clave y al entrar desde un equipo nuevo.
+- **El código de verificación se pide en dos momentos:** al restablecer la contraseña y al entrar desde un equipo nuevo.
   Para todos — administración, coordinación, Asistentes y Clientes.
-- **Equipo nuevo quiere decir un aparato que no tiene llave guardada y desde el que nunca se
+- **Equipo nuevo quiere decir un aparato que no tiene una credencial guardada y desde el que nunca se
   entró.** Nada más que eso. No hace falta reconocer el navegador ni mirar desde dónde se conecta.
-- **La huella y el rostro quedan afuera de la recuperación.** Son para el día a día, en el teléfono, y
+- **La huella y el rostro quedan afuera del restablecimiento de la contraseña.** Son para el día a día, en el teléfono, y
   sólo donde el aparato las tiene — la aplicación ya pregunta si puede y ante la duda contesta que
   no. En el Panel no están construidas. No pueden ser requisito de nada.
 - **No hay aplicación de códigos para nadie más que el rol técnico**, que ya la tiene. Obliga a
   instalar algo aparte, y quien cambia de teléfono sin guardar el respaldo queda afuera.
 - **El número viaja con el chip; la llave se queda en el aparato.** Con el mismo número en un
   aparato nuevo no hay nada que habilitar, porque lo verificado es el número.
-- **Un número nuevo se cambia como en cualquier software corriente.** Se pide la clave actual, llega
-  un código al número nuevo, y al escribirlo el número queda verificado y sirve de llave. Al correo
+- **Un número nuevo se cambia como en cualquier software corriente.** Se pide la contraseña actual, llega
+  un código de verificación al número nuevo, y al escribirlo el número queda verificado y sirve de llave. Al correo
   le llega un aviso, por si el cambio no lo hizo su dueño. Nadie de la oficina tiene que llamar ni
   habilitar nada. Textual del Desarrollador: *«La industria del software ya encontro soluciones a
   este problema. Utilicemos la mas sencilla y eficiente»*.
 - **Nada de esto puede impedirle a nadie trabajar.** La habilitación es para que un número se vuelva
   llave, nunca para entrar.
 
-**30.** Sacar la habilitación del número por una persona. Hoy un número verificado con su código
-todavía no sirve para recuperar la clave hasta que alguien de la oficina lo habilite, y el Panel
+**30.** Sacar la habilitación del número por una persona. Hoy un número verificado con su código de verificación
+todavía no sirve para restablecer la contraseña hasta que alguien de la oficina lo habilite, y el Panel
 muestra una lista de cuentas esperando esa habilitación. Esa lista además está mal: muestra a todo
 el que tiene un número que nadie confirmó, aunque lo haya cargado el primer día. Con la regla de
 arriba, la lista, la confirmación por la oficina y el renglón del tablero salen. Qué se hace con
 los números ya confirmados guardados en la base lo decide usted antes de borrar nada. La página
-Habilitar clave queda para la tercera vía, la de quien llama porque no puede entrar.
+Habilitar cambio de contraseña queda para la tercera vía, la de quien llama porque no puede entrar.
 
 **31.** Lo mismo, en las dos aplicaciones de teléfono. Hoy un Asistente y un Cliente no tienen
-nada de esto: no pueden verificar ni cambiar su número con código, entrar desde un equipo nuevo no
-les pide código, y **no pueden cerrar la sesión de todos los equipos**, que es justo lo que
+nada de esto: no pueden verificar ni cambiar su número con código de verificación, entrar desde un equipo nuevo no
+les pide código de verificación, y **no pueden cerrar la sesión de todos los equipos**, que es justo lo que
 necesita alguien a quien le robaron el teléfono. La única puerta es el Panel, y ahí no entran.
 **Acá falta backend y no sólo pantalla**, al revés que en los pasos de arriba: las piezas de fondo
-—mandar el código, comprobarlo, reconocer el equipo, cerrar todas las sesiones— están escritas y
+—mandar el código de verificación, comprobarlo, reconocer el equipo, cerrar todas las sesiones— están escritas y
 no conocen ningún rol, pero las únicas puertas que las usan exigen ser del Panel y rechazan a un
 Asistente y a un Cliente. Hay que abrir las puertas equivalentes para ellos dos, y recién
 después las pantallas.
 
-**32.** Pedir el enlace de la clave nueva desde las dos aplicaciones de teléfono. Hoy no se puede:
-quien se olvidó la clave llama a su Prestadora y ella se lo manda desde el Panel. El backend ya
+**32.** Pedir el enlace para restablecer la contraseña desde las dos aplicaciones de teléfono. Hoy no se puede:
+quien se olvidó la contraseña llama a su Prestadora y ella se lo manda desde el Panel. El backend ya
 tiene la puerta, y el Panel ya la usa.
 
 **El trámite es de una Prestadora, y alcanza a una sola.** La Prestadora sale de la puerta por
 donde se entró, igual que al ingresar, y nunca de lo que venga adentro del pedido. **Nunca se
 busca el correo en las demás Organizaciones**, ni para juntar respuestas, ni para mandar un enlace
-por cada una, ni para avisar que esa persona existe en otra. Quien perdió la clave en dos
+por cada una, ni para avisar que esa persona existe en otra. Quien perdió la contraseña en dos
 Prestadoras hace el trámite dos veces, una en cada una.
 
 **Por eso va después del paso de la cuenta por Prestadora**, que es el que le da a la pantalla de
@@ -1050,8 +1050,8 @@ coordinación consulta a los Asistentes involucrados: si fue un olvido, cierra e
 fue otra cosa, busca la solución; si no puede resolverlo, lo pasa al escalón de arriba.
 
 **Lo que sale del tablero.** Turnos de hoy, Servicios en curso y Asistentes trabajando, porque no
-piden hacer nada. Y las cuentas esperando su clave, que desaparecen con la regla del número nuevo,
-en la sección «La entrada y la recuperación de la clave».
+piden hacer nada. Y las cuentas esperando su contraseña, que desaparecen con la regla del número nuevo,
+en la sección «La entrada y el restablecimiento de la contraseña».
 
 **Lo que va al Resumen del mes, en gráficos:**
 
@@ -1134,7 +1134,7 @@ delante.
 aclaración debajo de un casillero, los catorce que pasarían a formar parte de la etiqueta del
 casillero, y los nueve casilleros que están mal hechos y por eso necesitaban esa aclaración.
 
-**51. Usted** — Habilitar clave: qué carteles lleva se decide después de analizar el procedimiento
+**51. Usted** — Habilitar cambio de contraseña: qué carteles lleva se decide después de analizar el procedimiento
 y su lógica, no antes.
 
 **52. Usted** — El bloque del segundo factor en Configuración › Accesos, con dos frases que
@@ -1162,7 +1162,7 @@ idiomas.
 
 **56.** Relevar lo que todavía no está relevado y el propio relevamiento manda mirar: los textos al
 pie de los casilleros, los avisos de que algo se guardó, las ventanas de confirmar, los carteles de
-las dos aplicaciones y los de Habilitar clave.
+las dos aplicaciones y los de Habilitar cambio de contraseña.
 
 **57.** Que el Panel nombre la modalidad sólo cuando la Prestadora tiene las dos habilitadas, y
 con el nombre comercial que informa CeltaTech como dato. Hoy la nombra en tres lugares —el
@@ -1297,8 +1297,8 @@ Hoy sólo se guardan fechas.
 **87.** Rotar clave por clave lo que corresponda, decidiéndolo de a una. Si se rota la clave secreta de Supabase, se actualiza en Railway en el mismo acto. Entra acá la clave de servicio de Supabase que estuvo escrita en texto plano en la configuración de permisos de la máquina: los comandos que la llevaban adentro ya se borraron, pero la clave en sí se rota el día de la liberación, no antes.
 
 **Ya no queda ninguna contraseña escrita en el repositorio.** Todas salen del entorno, y las
-cuentas de la base local nacen sin clave: se la pone un programa aparte después de cada
-reconstrucción. Lo que queda por hacer acá es **rotar las cuentas que nacieron con las claves que
+cuentas de la base local nacen sin contraseña: se la pone un programa aparte después de cada
+reconstrucción. Lo que queda por hacer acá es **rotar las cuentas que nacieron con las contraseñas que
 estuvieron a la vista**: las de la Prestadora de demostración, las de la demostración de
 continuidad de guardia, las de la prueba de cierre de Servicio y las que quedaron sin borrar de la
 prueba del escaneo del Asistente.

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { supabase } from '../db/connection.js';
+import { supabase, clienteDelPedido } from '../db/connection.js';
 import { requierePermiso } from '../utils/permisos.js';
 import {
   crearAsistenteDirecto, crearClienteImportado,
@@ -29,7 +29,8 @@ export const panelImportacionRouter = Router();
 // pendientes de conformidad, que es justo lo que la base les esconde a todos en `asistentes`,
 // `clientes` y `pacientes`. Con la credencial de la persona, la revisión, la conformidad y el
 // rechazo no verían ninguna fila del lote. Por eso cada consulta sigue nombrando la Prestadora de
-// la sesión.
+// la sesión. La propuesta de configuración inicial es la excepción: sólo lee el catálogo de tipos
+// de Asistente, que la base ya le deja leer a quien tiene sesión, y lo lee con su credencial.
 
 // Capa 1 (formato conocido): toda extensión que `xlsx` sabe leer (spreadsheets comunes +
 // texto delimitado) más `.sql` (dump estándar, ver intentarParsearSQL). Cualquier otra
@@ -170,6 +171,7 @@ panelImportacionRouter.post(
       }
 
       const propuesta = await proponerConfiguracionInicial({
+        db: clienteDelPedido(req),
         tipo,
         filas: resultado.analisis.filas,
         mapeo: resultado.analisis.mapeoPropuesto,

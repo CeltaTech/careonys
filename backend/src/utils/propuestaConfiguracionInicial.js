@@ -1,4 +1,3 @@
-import { supabase } from '../db/connection.js';
 import { catalogoDeTiposAsistente, resolverTipoAsistenteEnCatalogo } from './cuentasPanel.js';
 import { CAMPOS_LISTA, valorDesdeFila } from './importacionIA.js';
 
@@ -61,15 +60,14 @@ function valoresDistintos(filas, mapeo, tipo, campo) {
  *   tiene. Para una planilla de Clientes va vacía: ese archivo no trae configuración, trae
  *   Clientes.
  */
-export async function proponerConfiguracionInicial({ tipo, filas, mapeo, prestadoraId }) {
+export async function proponerConfiguracionInicial({ db, tipo, filas, mapeo, prestadoraId }) {
   const filasTotales = filas.length;
   if (tipo !== 'asistente') return { filasTotales, tiposNuevos: [] };
 
   const tiposDeLaPlanilla = valoresDistintos(filas, mapeo, tipo, 'tipo_asistente');
 
-  // El backend entra a la base con la llave maestra: el filtro por Prestadora va adentro de
-  // `catalogoDeTiposAsistente` (celtatech/CLAUDE.md §5).
-  const catalogo = await catalogoDeTiposAsistente(supabase, prestadoraId);
+  // `db` es la conexión de quien pide: la base le contesta sólo el catálogo de su Prestadora.
+  const catalogo = await catalogoDeTiposAsistente(db, prestadoraId);
 
   return {
     filasTotales,

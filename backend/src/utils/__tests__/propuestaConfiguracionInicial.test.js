@@ -10,9 +10,9 @@
  * nadie se entere hasta revisar los Legajos de a uno.
  *
  * Entonces lo que se cuida acá es que la comparación no se despegue: que un tipo ambiguo se avise
- * en vez de darse por resuelto, y que la consulta lleve escrito el filtro por Prestadora, que es lo
- * único que separa una de otra cuando el backend entra con la llave maestra (celtatech/CLAUDE.md
- * §5). Las localidades no se proponen: la importación las reconoce sola.
+ * en vez de darse por resuelto, que la consulta vaya con la credencial de quien pide —así la base
+ * le contesta sólo lo de su Prestadora— y que lleve escrito igual el filtro por Prestadora
+ * (celtatech/CLAUDE.md §5). Las localidades no se proponen: la importación las reconoce sola.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
@@ -27,7 +27,7 @@ let pedidos = [];
 
 const baseFalsa = createServer((req, res) => {
   const ruta = new URL(req.url, 'http://interno').pathname;
-  pedidos.push({ clave: `${req.method} ${ruta}`, url: req.url });
+  pedidos.push({ clave: `${req.method} ${ruta}`, url: req.url, credencial: req.headers.authorization });
 
   const preparada = respuestas.get(`${req.method} ${ruta}`);
   const valor = typeof preparada === 'function' ? preparada() : preparada;
@@ -48,6 +48,13 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma
 // en el momento en que se importa, y con la dirección que haya en ese instante.
 const { proponerConfiguracionInicial } = await import('../propuestaConfiguracionInicial.js');
+const { createClient } = await import('@supabase/supabase-js');
+
+/** La conexión de quien pide, como la arma `clienteDelPedido`: con su propia credencial. */
+const CREDENCIAL_DE_LA_PERSONA = 'credencial-de-la-persona';
+const db = createClient(process.env.SUPABASE_URL, 'clave-publica', {
+  accessToken: async () => CREDENCIAL_DE_LA_PERSONA,
+});
 
 after(() => baseFalsa.close());
 
@@ -79,6 +86,7 @@ beforeEach(() => {
 describe('la planilla de Clientes no propone configuración', () => {
   it('contesta las filas y nada más, sin ir a la base', async () => {
     const propuesta = await proponerConfiguracionInicial({
+      db,
       tipo: 'cliente',
       filas: [{ Nombre: 'Contacto Uno' }, { Nombre: 'Contacto Dos' }],
       mapeo: { Nombre: 'nombreContacto' },
@@ -95,6 +103,7 @@ describe('los tipos de Asistente que la planilla nombra', () => {
     respuestas.set('GET /rest/v1/tipos_asistente', () => [tipoDeFabrica('cuidador', 'Cuidador/a')]);
 
     const propuesta = await proponerConfiguracionInicial({
+      db,
       tipo: 'asistente',
       filas: [fila('Una', '', 'cuidador'), fila('Otra', '', 'Enfermero'), fila('Tercera', '', 'Cuidador/a')],
       mapeo: MAPEO,
@@ -113,6 +122,7 @@ describe('los tipos de Asistente que la planilla nombra', () => {
     ]);
 
     const propuesta = await proponerConfiguracionInicial({
+      db,
       tipo: 'asistente',
       filas: [fila('Una', '', 'Cuidador')],
       mapeo: MAPEO,
@@ -126,6 +136,7 @@ describe('los tipos de Asistente que la planilla nombra', () => {
 describe('el aislamiento entre Prestadoras', () => {
   it('la consulta lleva escrito el filtro por Prestadora', async () => {
     await proponerConfiguracionInicial({
+      db,
       tipo: 'asistente',
       filas: [fila('Una', 'Zona Norte', 'Cuidador')],
       mapeo: MAPEO,
@@ -137,12 +148,26 @@ describe('el aislamiento entre Prestadoras', () => {
     assert.ok(tipos, 'no consultó el catálogo de tipos');
     assert.match(decodeURIComponent(tipos.url), new RegExp(`prestadora_id\\.eq\\.${PRESTADORA}`));
   });
+
+  it('pregunta con la credencial de quien pide, no con la llave maestra', async () => {
+    await proponerConfiguracionInicial({
+      db,
+      tipo: 'asistente',
+      filas: [fila('Una', '', 'Cuidador')],
+      mapeo: MAPEO,
+      prestadoraId: PRESTADORA,
+    });
+
+    const tipos = pedidos.find((p) => p.clave === 'GET /rest/v1/tipos_asistente');
+    assert.equal(tipos?.credencial, `Bearer ${CREDENCIAL_DE_LA_PERSONA}`);
+  });
 });
 
 describe('lo que la planilla no trae', () => {
   it('una columna sin mapear no propone nada', async () => {
     // Con el mapeo sin la columna de tipos, no hay de dónde sacarlos.
     const propuesta = await proponerConfiguracionInicial({
+      db,
       tipo: 'asistente',
       filas: [fila('Una', 'Zona Norte', 'Cuidador')],
       mapeo: { Nombre: 'nombre' },
@@ -154,6 +179,7 @@ describe('lo que la planilla no trae', () => {
 
   it('las celdas vacías no entran como un tipo sin nombre', async () => {
     const propuesta = await proponerConfiguracionInicial({
+      db,
       tipo: 'asistente',
       filas: [fila('Una', '', ''), fila('Otra', 'Zona Sur', null), fila('Tercera', '', 'Enfermero')],
       mapeo: MAPEO,

@@ -1533,8 +1533,7 @@ incorporación.
 **Ruta:** `errores.motivos.modalidad_no_activa`
 
 **Texto de hoy:**
-> Esta Prestadora no tiene activa esa modalidad, así que esa pantalla no le corresponde. Se
-> activa en Configuración > La Prestadora, en Modalidades contratadas.
+> Esta modalidad no está activa.
 
 **Dónde se ve:** en el lugar del contenido de una pantalla de Match —Clientes (Match), Formas de
 cobro, Calificaciones, Auditoría legal—.
@@ -1545,7 +1544,7 @@ cobro, Calificaciones, Auditoría legal—.
 
 **Archivo:** `panel/src/lib/errores.js:156`
 
-**DECISIÓN:**
+**DECISIÓN:** aprobado así.
 
 ---
 

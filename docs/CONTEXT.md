@@ -31,7 +31,7 @@
   **Estado real (verificado contra el código el 2026-07-24, no solo contra este documento):
   ya NO es mono-tenant, y los 4 Bloques del plan están cerrados.** Bloque 1 (aislamiento
   aditivo de datos: tabla `prestadoras` + `prestadora_id NOT NULL` en 15 tablas), Bloque 2
-  (RLS centralizada vía `current_tenant()`/`es_superadmin()`, ~28 policies reescritas, rol
+  (RLS centralizada vía `prestadora_actual()`/`es_superadmin()`, ~28 policies reescritas, rol
   `admin` renombrado a `admin_prestadora` en dato y código sin transición pendiente), Bloque 3
   (filtrado de tenant en rutas backend con Service Role Key) y Bloque 4 (`configuracion_prestadora`
   reemplazando la configuración singleton — confirmado en `backend/src/routes/panelConfiguracion.js:34-41`

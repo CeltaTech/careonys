@@ -53,7 +53,7 @@ const ultimaEntrada = new Map();
 // La Prestadora sale siempre de la sesion comprobada, nunca de lo que venga en el pedido.
 // `req.usuarioPanel` lo arma `requiereRolPanel`, que resuelve la precedencia —permiso de acceso
 // primero, Organizacion propia despues— con el mismo orden que la funcion SQL
-// `interno.current_tenant()`.
+// `interno.prestadora_actual()`.
 export async function registrarActividad(usuarioPanel, accion, {
   tablaAfectada = null,
   registroId = null,

@@ -38,7 +38,7 @@ describe('lo que sí está al alcance', () => {
 
   it('la Prestadora que un Superadmin está visitando con un permiso de acceso', () => {
     // `requiereRolPanel` ya dejó en `prestadoraId` la Prestadora de la sesión abierta, con la
-    // misma precedencia que `current_tenant()`. Acá no se reinventa: se usa ese valor.
+    // misma precedencia que `prestadora_actual()`. Acá no se reinventa: se usa ese valor.
     const alcance = alcanceDelPanel({ rol: 'superadmin', prestadoraId: PRESTADORA_AJENA });
     const cuenta = { rol: 'admin_prestadora', prestadora_id: PRESTADORA_AJENA };
     assert.equal(laCuentaDelPanelEstaAlAlcance(cuenta, alcance), true);

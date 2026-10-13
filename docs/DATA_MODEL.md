@@ -120,7 +120,7 @@ anterior de esta sección decía que `superadmin` "ve todas las prestadoras vía
 **Sandbox** exclusivamente (Regla dura de `CLAUDE.md` §5: "Superadmin tiene acceso de Panel
 únicamente a la Organización Sandbox"). `es_superadmin()` ya no es un bypass total de RLS:
 las policies que la usan siguen el patrón `(es_superadmin() AND prestadora_id =
-current_tenant()) OR (...)`, y `current_tenant()` para `superadmin` resuelve a su propio
+prestadora_actual()) OR (...)`, y `prestadora_actual()` para `superadmin` resuelve a su propio
 `prestadora_id` (Sandbox) salvo que haya abierto una **sesión de soporte técnico**
 (`backend/src/routes/panelSesionTenant.js`). Ver sección siguiente para el mecanismo completo.
 
@@ -166,7 +166,7 @@ CREATE TABLE auditoria_de_accesos (
 );
 ```
 
-`current_tenant()` (función Postgres) resuelve, en orden: (1) si hay un permiso vigente en
+`prestadora_actual()` (función Postgres) resuelve, en orden: (1) si hay un permiso vigente en
 `permisos_de_acceso` para el `superadmin` actual con `ultima_actividad_at > NOW() - 5
 min` (corte por inactividad), esa `prestadora_id`; (2) si no, el `usuarios.prestadora_id`
 propio (caso `admin_prestadora`/`superadmin` fuera de sesión/etc). **Ese orden de precedencia
@@ -197,7 +197,7 @@ advierte cuando hay un riesgo conocido en la jurisdicción de la Prestadora.
 - `auditoria_advertencias_legales` — snapshot (no referencia viva) de qué texto se le mostró
   a qué usuario, sobre qué Prestadora, para qué función, y cuándo. RLS: `admin_prestadora`
   ve solo la de su propia Prestadora, `superadmin` ve todo; inserción acotada a
-  `current_tenant()` y al propio `usuario_id`.
+  `prestadora_actual()` y al propio `usuario_id`.
 
 **Sin consumidor real todavía**: ninguna función de gestión de Asistentes (rankings,
 penalización de inasistencias, puntuaciones, niveles/categorías, horarios fijos) existe hoy

@@ -86,7 +86,7 @@ export async function requiereRolPanel(req, res, next) {
   // Sin permiso de acceso abierto, el rol técnico ve únicamente su propia Organización —Sandbox,
   // por su `prestadora_id`—. Con uno abierto, ve la Prestadora de ese permiso.
   //
-  // Es exactamente el mismo orden que aplica la función SQL `current_tenant()`, que es el punto
+  // Es exactamente el mismo orden que aplica la función SQL `prestadora_actual()`, que es el punto
   // único de verdad de la protección por fila: acá se repite para que el resto de las rutas use el
   // mismo `req.usuarioPanel.prestadoraId` sin preguntar por el rol. Si los dos no dijeran lo mismo,
   // una ruta armaría la consulta apuntando a una Prestadora y la base la contestaría apuntando a
@@ -116,7 +116,7 @@ export async function requiereRolPanel(req, res, next) {
     // ACÁ SE CIERRA EL PERMISO VENCIDO, Y NO EN NINGÚN OTRO LADO.
     //
     // No alcanza con dejar de contestar sobre esa Prestadora: mientras la fila siga sin `salida_at`,
-    // `current_tenant()` la sigue encontrando, así que la base seguiría abriéndole el cajón a una
+    // `prestadora_actual()` la sigue encontrando, así que la base seguiría abriéndole el cajón a una
     // consulta hecha con el pase de esa persona. Y este es el único lugar por el que pasan todos los
     // pedidos, así que es el único que puede enterarse de que el tiempo se cumplió. Antes lo cerraba
     // la pantalla que preguntaba cada 30 segundos, y eso hacía depender de una pantalla algo que

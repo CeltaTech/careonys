@@ -752,6 +752,25 @@ a {
   width: 320px;
 }
 
+/* Una emergencia sin atender pone Notificaciones en rojo en cualquier página, y encabeza la lista. */
+.panel-header-enlace.panel-notificaciones-critico,
+.panel-header-enlace.panel-notificaciones-critico:hover,
+.panel-header-enlace.panel-notificaciones-critico[aria-expanded='true'],
+.panel-header-enlace.panel-notificaciones-critico svg {
+  color: var(--rojo-peligro);
+  font-weight: 700;
+}
+
+.panel-notificaciones-critico .panel-header-contador {
+  background: var(--rojo-peligro);
+}
+
+.panel-desplegable .panel-desplegable-critico a {
+  background: var(--tono-critico-fondo);
+  color: var(--tono-critico-texto);
+  font-weight: 700;
+}
+
 /* Las pestañas de la sección abierta, arriba del contenido, con el estilo de `.tabs`. */
 .panel-subnav {
   display: flex;

@@ -216,7 +216,7 @@ export function Layout() {
       texto: t.nav.sec_guardias,
       enlaces: [
         { a: '/guardias', texto: t.nav.guardias, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
-        { a: '/emergencias', texto: t.nav.emergencias, ver: hayPadron, contador: emergenciasSinAtender.length },
+        { a: '/emergencias', texto: t.nav.emergencias, ver: hayPadron, contador: emergenciasSinAtender.length, critico: true },
         { a: '/pase-de-guardia', texto: t.nav.pase_de_guardia, ver: hayPadron, contador: pedidosDeCodigo.length },
         { a: '/continuidad', texto: t.nav.continuidad, ver: hayPadron },
         { a: '/verificacion-guardias', texto: t.nav.verificacion_guardias, ver: hayPadron },
@@ -292,8 +292,11 @@ export function Layout() {
 
   const avisos = secciones
     .flatMap((seccion) => seccion.visibles)
-    .filter((enlace) => enlace.contador > 0);
+    .filter((enlace) => enlace.contador > 0)
+    .sort((a, b) => Number(Boolean(b.critico)) - Number(Boolean(a.critico)));
   const totalAvisos = avisos.reduce((suma, enlace) => suma + enlace.contador, 0);
+  // Mientras haya una emergencia sin atender, Notificaciones se ve en rojo desde cualquier página.
+  const hayAvisoCritico = avisos.some((aviso) => aviso.critico);
 
   // Al cambiar de dirección se cierra todo lo desplegado.
   useEffect(() => {
@@ -510,7 +513,7 @@ export function Layout() {
             <div className="panel-notificaciones" ref={avisosRef}>
               <button
                 type="button"
-                className="panel-header-enlace"
+                className={`panel-header-enlace${hayAvisoCritico ? ' panel-notificaciones-critico' : ''}`}
                 aria-expanded={avisosAbiertos}
                 onClick={() => setAvisosAbiertos((abierto) => !abierto)}
               >
@@ -524,7 +527,7 @@ export function Layout() {
                     <li className="panel-desplegable-nada">{t.nav.sin_notificaciones}</li>
                   ) : (
                     avisos.map((aviso) => (
-                      <li key={aviso.a}>
+                      <li key={aviso.a} className={aviso.critico ? 'panel-desplegable-critico' : undefined}>
                         <NavLink to={aviso.a}>
                           {aviso.texto}
                           <Contador cantidad={aviso.contador} />

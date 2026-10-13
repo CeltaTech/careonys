@@ -22,8 +22,8 @@ import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
 //
 //   Plan A — el código lo muestra una persona en la pantalla de su teléfono: el Cliente, o el
 //   Asistente que se va cuando hay relevo. Se renueva solo cada pocos segundos, así que una foto
-//   de esa pantalla no sirve un minuto después. Al renovarse, el anterior sigue valiendo mientras
-//   valga el nuevo, para que quien lo lee justo en el cambio no lo mande vencido. Reemplaza al cartel impreso, que era un secreto
+//   de esa pantalla no sirve un minuto después. Cada código vale dos vueltas, para que quien lo
+//   lee justo en el cambio no lo mande vencido. Reemplaza al cartel impreso, que era un secreto
 //   permanente a la vista de cualquiera que pasara por la puerta.
 //
 //   Plan B — cuando no hay nadie que pueda mostrarlo, el Asistente avisa con sus palabras, eso
@@ -85,9 +85,11 @@ export async function configuracionDeComprobacion(prestadoraId) {
 
 /**
  * Devuelve el código que esta persona tiene que mostrar ahora. Cada vez que se pide, se genera
- * uno nuevo: eso es lo que quiere decir que se renueva solo. El anterior sigue valiendo mientras
- * valga el nuevo —lo guarda la base al renovarlo—, para que una lectura hecha justo en el cambio
- * no falle. La pantalla lo vuelve a pedir cada `segundos`.
+ * uno nuevo: eso es lo que quiere decir que se renueva solo. La pantalla lo vuelve a pedir cada
+ * `segundos`, y el código vale el doble, para que una lectura hecha justo en el cambio no falle.
+ *
+ * Se guarda uno por pedido, no uno por persona: varias personas autorizadas del mismo Cliente
+ * pueden estar mostrándolo a la vez en sus teléfonos, y ninguna le pisa el código a otra.
  *
  * `sujetoTipo` es 'cliente' (todas las personas autorizadas) o 'asistente' (el que se va).
  */
@@ -100,19 +102,24 @@ export async function codigoParaMostrar({ prestadoraId, sujetoTipo, sujetoId }) 
   const codigo = codigoNuevo();
   const expiraEn = vencimientoEnSegundos(segundosEnPantalla);
 
-  const { error } = await supabase
-    .from('codigos_de_presencia')
-    .upsert(
-      {
-        prestadora_id: prestadoraId,
-        sujeto_tipo: sujetoTipo,
-        sujeto_id: sujetoId,
-        codigo_verificador: verificadorDelCodigo(codigo),
-        expira_en: expiraEn,
-      },
-      { onConflict: 'sujeto_tipo,sujeto_id' },
-    );
+  const { error } = await supabase.from('codigos_de_presencia').insert({
+    prestadora_id: prestadoraId,
+    sujeto_tipo: sujetoTipo,
+    sujeto_id: sujetoId,
+    codigo_verificador: verificadorDelCodigo(codigo),
+    expira_en: vencimientoEnSegundos(segundosEnPantalla * 2),
+  });
   if (error) throw new Error(error.message);
+
+  // Los vencidos de esta persona no le sirven a nadie: se borran acá para que la tabla no crezca
+  // con cada vuelta. Si el borrado falla, el código nuevo ya quedó guardado y vale igual.
+  await supabase
+    .from('codigos_de_presencia')
+    .delete()
+    .eq('prestadora_id', prestadoraId)
+    .eq('sujeto_tipo', sujetoTipo)
+    .eq('sujeto_id', sujetoId)
+    .lt('expira_en', ahora());
 
   return { codigo, segundos: segundosEnPantalla, expiraEn };
 }
@@ -265,7 +272,7 @@ async function resolverCodigo({ guardia, momento, codigo }) {
   if (sujetos.length > 0) {
     const { data: vigentes } = await supabase
       .from('codigos_de_presencia')
-      .select('sujeto_tipo, sujeto_id, codigo_verificador, expira_en, codigo_verificador_anterior, anterior_expira_en')
+      .select('sujeto_tipo, sujeto_id, codigo_verificador, expira_en')
       .eq('prestadora_id', guardia.prestadora_id)
       .in('sujeto_id', sujetos.map((s) => s.id))
       .gt('expira_en', ahora());
@@ -273,11 +280,7 @@ async function resolverCodigo({ guardia, momento, codigo }) {
     for (const vigente of vigentes ?? []) {
       const esCandidato = sujetos.some((s) => s.tipo === vigente.sujeto_tipo && s.id === vigente.sujeto_id);
       if (!esCandidato) continue;
-      const anteriorVigente = vigente.codigo_verificador_anterior
-        && vigente.anterior_expira_en && new Date(vigente.anterior_expira_en) > new Date();
-      const coincide = codigoCoincide(texto, vigente.codigo_verificador)
-        || (anteriorVigente && codigoCoincide(texto, vigente.codigo_verificador_anterior));
-      if (!coincide) continue;
+      if (!codigoCoincide(texto, vigente.codigo_verificador)) continue;
       return {
         medio: vigente.sujeto_tipo === 'cliente' ? 'codigo_cliente' : 'codigo_asistente_saliente',
         sujetoTipo: vigente.sujeto_tipo,

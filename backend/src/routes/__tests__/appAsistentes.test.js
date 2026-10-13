@@ -266,6 +266,7 @@ beforeEach(() => {
   });
   respuestas.set('GET /rest/v1/codigos_de_presencia', codigosDePresenciaRespuesta);
   respuestas.set('POST /rest/v1/codigos_de_presencia', () => []);
+  respuestas.set('DELETE /rest/v1/codigos_de_presencia', () => []);
   // Por omisión, con el Reporte Diario ya cargado: así las pruebas de check-out que no hablan
   // de reportes no tropiezan con el guard de "falta_reporte", que se prueba aparte.
   respuestas.set('GET /rest/v1/reportes', () => [{ id: 'reporte-1', paciente_id: PACIENTE }]);
@@ -426,41 +427,19 @@ describe('check-in — Plan A: el código lo muestra una persona', () => {
     assert.equal(mensajeDeLlegadaArmado(), false);
   });
 
-  it('el código que se leyó justo antes de renovarse sigue marcando la llegada', async () => {
+  it('dos teléfonos del mismo Cliente mostrando a la vez: los dos códigos marcan la llegada', async () => {
     codigosEnPantalla = [
-      {
-        sujeto_tipo: 'cliente', sujeto_id: CLIENTE,
-        codigo_verificador: verificadorDelCodigo('222222'), expira_en: enUnRato(1),
-        codigo_verificador_anterior: verificadorDelCodigo('123456'), anterior_expira_en: enUnRato(1),
-      },
+      { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_verificador: verificadorDelCodigo('111111'), expira_en: enUnRato(1) },
+      { sujeto_tipo: 'cliente', sujeto_id: CLIENTE, codigo_verificador: verificadorDelCodigo('222222'), expira_en: enUnRato(1) },
     ];
 
     const { estado } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
       lat: LAT,
       lng: LNG,
-      comprobacion: { codigo: '123456' },
+      comprobacion: { codigo: '111111' },
     });
     assert.equal(estado, 200);
     assert.equal(guardiaMarcada(), true);
-  });
-
-  it('el código anterior ya vencido no marca nada, aunque el actual siga vigente', async () => {
-    codigosEnPantalla = [
-      {
-        sujeto_tipo: 'cliente', sujeto_id: CLIENTE,
-        codigo_verificador: verificadorDelCodigo('222222'), expira_en: enUnRato(1),
-        codigo_verificador_anterior: verificadorDelCodigo('123456'), anterior_expira_en: haceUnRato(1),
-      },
-    ];
-
-    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
-      lat: LAT,
-      lng: LNG,
-      comprobacion: { codigo: '123456' },
-    });
-    assert.equal(estado, 400);
-    assert.equal(cuerpo.motivo, 'codigo_incorrecto');
-    assert.equal(guardiaMarcada(), false);
   });
 
   it('un código vigente de otra casa no marca nada: se compara sólo contra quien podría estar en ésta', async () => {
@@ -521,6 +500,12 @@ describe('el código que se muestra en pantalla', () => {
     assert.equal(fila.prestadora_id, PRESTADORA);
     assert.equal(fila.codigo_verificador, verificadorDelCodigo(cuerpo.codigo));
     assert.equal(JSON.stringify(fila).includes(cuerpo.codigo), false, 'el código nunca se guarda en claro');
+
+    // Vale dos vueltas: quien lo lee justo cuando la pantalla lo cambia no lo manda vencido.
+    const segundosDeValidez = (new Date(fila.expira_en) - Date.now()) / 1000;
+    assert.ok(segundosDeValidez > 85 && segundosDeValidez <= 90, `vale ${segundosDeValidez} segundos`);
+    // Uno por pedido: si se pisara el de la misma persona, dos teléfonos se anularían entre sí.
+    assert.equal(guardado.url.includes('on_conflict'), false);
   });
 
   it('sin fila de configuración usa los segundos de fábrica', async () => {

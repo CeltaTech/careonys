@@ -90,7 +90,7 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 const {
   exigirQueElCelularSeaDeUnaSolaPersona,
   esUnCelularSegun,
-  huellaComparable,
+  verificadorComparable,
   digitosDelTelefono,
 } = await import('../celularDeUnaSolaPersona.js');
 const { ErrorConMotivo, responderError } = await import('../errorConMotivo.js');
@@ -180,17 +180,17 @@ describe('un celular es de una sola persona', () => {
   });
 
   it('el mismo número escrito de dos maneras es el mismo número', () => {
-    assert.equal(huellaComparable(CELULAR), huellaComparable(CELULAR_SIN_ADORNOS));
-    assert.equal(huellaComparable('+54 9 11 5555 1234'), huellaComparable('5491155551234'));
-    assert.notEqual(huellaComparable(CELULAR), huellaComparable('5491155551235'));
-    assert.equal(huellaComparable(''), null);
-    assert.equal(huellaComparable(null), null);
+    assert.equal(verificadorComparable(CELULAR), verificadorComparable(CELULAR_SIN_ADORNOS));
+    assert.equal(verificadorComparable('+54 9 11 5555 1234'), verificadorComparable('5491155551234'));
+    assert.notEqual(verificadorComparable(CELULAR), verificadorComparable('5491155551235'));
+    assert.equal(verificadorComparable(''), null);
+    assert.equal(verificadorComparable(null), null);
     assert.equal(digitosDelTelefono(CELULAR), CELULAR_SIN_ADORNOS);
   });
 });
 
 describe('el teléfono no sale por ningún lado', () => {
-  it('no viaja en la consulta a la base: lo que va es la huella', async () => {
+  it('no viaja en la consulta a la base: lo que va es el identificador de verificación', async () => {
     catalogoConArgentina();
     yaEstaEnOtraCuenta([{ id: OTRA_CUENTA }]);
 
@@ -206,7 +206,7 @@ describe('el teléfono no sale por ningún lado', () => {
     }
 
     const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/usuarios').url;
-    assert.ok(consulta.includes(huellaComparable(CELULAR)));
+    assert.ok(consulta.includes(verificadorComparable(CELULAR)));
   });
 
   it('no entra en el aviso ni en lo que queda anotado del lado del servidor', async () => {
@@ -305,13 +305,13 @@ describe('cómo se reconoce un celular sale de la base', () => {
 // La unicidad de verdad la impone la base, y sin base levantada no se la puede ejercitar desde acá.
 // Lo que sí se puede comprobar es que la foto de la base siga diciendo lo que dice: que el índice es
 // único y parcial —si dejara de ser parcial, dos personas no podrían compartir la línea fija de la
-// casa— y que la comparación es por la huella y no por el número.
+// casa— y que la comparación es por el identificador de verificación y no por el número.
 describe('la unicidad la impone la base', () => {
   const indice = laFoto()
     .split('\n')
     .find((renglon) => renglon.startsWith('CREATE UNIQUE INDEX un_celular_es_de_una_sola_persona '));
 
-  it('el índice es único, es parcial y compara la huella', () => {
+  it('el índice es único, es parcial y compara el identificador de verificación', () => {
     assert.ok(indice, 'la foto de la base no trae el índice');
     assert.match(indice, / ON public\.usuarios /);
     assert.match(indice, /telefono_comparable\) WHERE telefono_es_celular;$/);

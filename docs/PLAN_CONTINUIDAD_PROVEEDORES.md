@@ -74,9 +74,9 @@ falta, para no empezar de cero en el peor momento posible.
 
 - Lista de usuarios: email, `id` (UUID), rol (`usuarios.rol` en la tabla propia del
   proyecto, no en Supabase Auth), fecha de alta, estado (activo/deshabilitado).
-- **Los hashes de contraseña NO son exportables ni migrables tal cual** — Supabase Auth
+- **Los identificadores de verificación de las contraseñas NO son exportables ni migrables tal cual** — Supabase Auth
   usa bcrypt con su propia configuración interna, y ningún proveedor externo (Auth0,
-  Clerk) ni un esquema JWT propio puede re-verificar esos hashes sin acceso al mismo
+  Clerk) ni un esquema JWT propio puede re-verificar esos identificadores sin acceso al mismo
   algoritmo exacto. Esto no es una limitación técnica que se pueda evitar con más
   trabajo: es así en cualquier migración de un proveedor de auth a otro.
 - **Consecuencia obligatoria de cualquier migración real:** todos los usuarios del Panel
@@ -90,7 +90,7 @@ falta, para no empezar de cero en el peor momento posible.
 |---|---|---|
 | **Auth0** | Proveedor maduro, migración de usuarios asistida, soporta multi-tenant nativo (relevante para el modelo de CeltaTech, una Organización por Prestadora) | Costo por usuario activo, otro proveedor externo del cual depender |
 | **Clerk** | Más simple de integrar, buena UI de gestión lista para usar | Más joven que Auth0, menos historial en volumen alto |
-| **JWT propio (backend Node/Express)** | Cero dependencia externa nueva, control total | Hay que construir y mantener: hashing de contraseñas, rotación de tokens, rate limiting de intentos fallidos, restablecimiento de la contraseña — todo lo que hoy resuelve Supabase Auth gratis (ver `docs/SECURITY.md` líneas 16-21, que ya evaluó y descartó esto por redundante mientras Supabase funcione) |
+| **JWT propio (backend Node/Express)** | Cero dependencia externa nueva, control total | Hay que construir y mantener: cálculo del identificador de verificación de las contraseñas, rotación de tokens, rate limiting de intentos fallidos, restablecimiento de la contraseña — todo lo que hoy resuelve Supabase Auth gratis (ver `docs/SECURITY.md` líneas 16-21, que ya evaluó y descartó esto por redundante mientras Supabase funcione) |
 
 No se recomienda decidir esto ahora — la decisión correcta depende de por qué se está
 migrando (¿solo Auth, o toda la base también?) y de la escala del proyecto en ese momento

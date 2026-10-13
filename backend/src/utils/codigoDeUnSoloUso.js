@@ -9,14 +9,14 @@ import crypto from 'node:crypto';
 // patrón repetido sin punto único de verdad»).
 //
 // LAS TRES REGLAS QUE HACEN QUE SIRVA
-//   1. El código nunca se guarda. Se guarda su huella, hecha con un secreto del servidor, y se
-//      compara huella contra huella.
+//   1. El código nunca se guarda. Se guarda su identificador de verificación, hecho con un secreto
+//      del servidor, y se compara el guardado contra el del código tipeado.
 //   2. Vence. Sin vencimiento, seis dígitos son un secreto permanente de un millón de valores.
 //   3. Se cuentan los intentos. Sin tope, seis dígitos se prueban de a uno hasta acertar.
 //
 // La comparación es de tiempo constante. Comparar dos textos con `!==` termina apenas encuentra
 // el primer carácter distinto, y cuánto tardó en terminar es información sobre cuánto acertó
-// quien probó. Sobre una huella con secreto el riesgo es remoto, pero la forma correcta no cuesta
+// quien probó. Sobre un identificador de verificación con secreto el riesgo es remoto, pero la forma correcta no cuesta
 // nada y evita tener que discutirlo cada vez.
 
 export const INTENTOS_MAXIMOS = 5;
@@ -29,13 +29,14 @@ export function codigoNuevo() {
   return String(crypto.randomInt(100000, 1000000));
 }
 
-// LA HUELLA LLEVA UN SECRETO DEL SERVIDOR. Seis dígitos son 900.000 valores: con la huella sola,
+// EL IDENTIFICADOR DE VERIFICACIÓN LLEVA UN SECRETO DEL SERVIDOR. Seis dígitos son 900.000
+// valores: con el identificador solo,
 // quien se llevara la tabla los probaría todos en menos de un segundo y tendría cada código vigente.
 // Con el secreto mezclado adentro (HMAC-SHA256), la tabla sola no alcanza: hace falta además el
 // secreto, que vive en una variable de entorno y nunca en la base.
 //
 // Se lee al calcular, y no al cargar el archivo, para que las pruebas puedan importarlo antes de
-// ponerlo. Sin secreto no se calcula nada: una huella sin secreto sería justo lo que se quiere
+// ponerlo. Sin secreto no se calcula nada: un identificador de verificación sin secreto sería justo lo que se quiere
 // evitar, y falla cerrado. El backend además no arranca sin él (`server.js`).
 export const VARIABLE_DEL_SECRETO = 'SECRETO_DE_LOS_CODIGOS';
 
@@ -47,23 +48,23 @@ export function secretoDeLosCodigos() {
   return secreto;
 }
 
-export function huellaDelCodigo(codigo) {
+export function verificadorDelCodigo(codigo) {
   return crypto.createHmac('sha256', secretoDeLosCodigos()).update(String(codigo)).digest('hex');
 }
 
-// ¿El código que alguien tipeó corresponde a esta huella guardada? Devuelve false ante cualquier
-// cosa rara —sin huella guardada, código vacío, huella de largo distinto— porque todo control de
+// ¿El código que alguien tipeó corresponde a este identificador de verificación guardado? Devuelve false ante cualquier
+// cosa rara —sin identificador guardado, código vacío, identificador de largo distinto— porque todo control de
 // acceso falla cerrado.
-export function codigoCoincide(codigo, huellaGuardada) {
-  if (!huellaGuardada) return false;
+export function codigoCoincide(codigo, verificadorGuardado) {
+  if (!verificadorGuardado) return false;
   const texto = String(codigo ?? '').trim();
   if (!texto) return false;
 
-  const calculada = Buffer.from(huellaDelCodigo(texto), 'utf8');
-  const guardada = Buffer.from(String(huellaGuardada), 'utf8');
-  if (calculada.length !== guardada.length) return false;
+  const calculado = Buffer.from(verificadorDelCodigo(texto), 'utf8');
+  const guardado = Buffer.from(String(verificadorGuardado), 'utf8');
+  if (calculado.length !== guardado.length) return false;
 
-  return crypto.timingSafeEqual(calculada, guardada);
+  return crypto.timingSafeEqual(calculado, guardado);
 }
 
 export function vencimientoEnMinutos(minutos) {
@@ -84,7 +85,7 @@ export function estaVencido(expiraEn) {
 // ---------------------------------------------------------------------------------------
 //
 // El tope se contaba bien y se borraba solo: los dos lugares que emiten un código escribían
-// `codigo_intentos: 0` junto con la huella nueva. Con eso el tope no era un tope — alcanzaba con
+// `codigo_intentos: 0` junto con el identificador de verificación nuevo. Con eso el tope no era un tope — alcanzaba con
 // pedir otro código para tener cinco intentos más, y así hasta acertar los seis dígitos.
 //
 // LA CUENTA ES DEL ACTO, NO DEL CÓDIGO. Los intentos se cuentan contra la cosa que se está
@@ -108,7 +109,7 @@ export function codigoNuevoParaGuardar(expiraEn) {
   return {
     codigo,
     campos: {
-      codigo_huella: huellaDelCodigo(codigo),
+      codigo_verificador: verificadorDelCodigo(codigo),
       codigo_expira_en: expiraEn,
     },
   };

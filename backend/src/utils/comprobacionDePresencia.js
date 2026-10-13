@@ -5,7 +5,7 @@ import {
   codigoNuevo,
   codigoNuevoParaGuardar,
   estaVencido,
-  huellaDelCodigo,
+  verificadorDelCodigo,
   seAgotaronLosIntentos,
   sumarIntento,
   vencimientoEnMinutos,
@@ -105,7 +105,7 @@ export async function codigoParaMostrar({ prestadoraId, sujetoTipo, sujetoId }) 
         prestadora_id: prestadoraId,
         sujeto_tipo: sujetoTipo,
         sujeto_id: sujetoId,
-        codigo_huella: huellaDelCodigo(codigo),
+        codigo_verificador: verificadorDelCodigo(codigo),
         expira_en: expiraEn,
       },
       { onConflict: 'sujeto_tipo,sujeto_id' },
@@ -235,7 +235,7 @@ async function resolverCodigo({ guardia, momento, codigo }) {
 
   // Primero el de la Prestadora, si esta comprobación estaba esperando uno.
   const fila = await comprobacionDe({ prestadoraId: guardia.prestadora_id, guardiaId: guardia.id, momento });
-  if (fila?.codigo_huella) {
+  if (fila?.codigo_verificador) {
     // El vencimiento va primero, y es lo que deja andar el caso legítimo: un código vencido no
     // gasta intento, así que quien pide otro porque se le venció no pierde nada (pendiente #177).
     if (estaVencido(fila.codigo_expira_en)) {
@@ -253,7 +253,7 @@ async function resolverCodigo({ guardia, momento, codigo }) {
       throw new ErrorConMotivo('demasiados_intentos', 'Se agotaron los intentos con este código');
     }
 
-    if (codigoCoincide(texto, fila.codigo_huella)) {
+    if (codigoCoincide(texto, fila.codigo_verificador)) {
       return { medio: 'codigo_prestadora', sujetoTipo: null, sujetoId: null };
     }
   }
@@ -263,7 +263,7 @@ async function resolverCodigo({ guardia, momento, codigo }) {
   if (sujetos.length > 0) {
     const { data: vigentes } = await supabase
       .from('codigos_de_presencia')
-      .select('sujeto_tipo, sujeto_id, codigo_huella, expira_en')
+      .select('sujeto_tipo, sujeto_id, codigo_verificador, expira_en')
       .eq('prestadora_id', guardia.prestadora_id)
       .in('sujeto_id', sujetos.map((s) => s.id))
       .gt('expira_en', ahora());
@@ -271,7 +271,7 @@ async function resolverCodigo({ guardia, momento, codigo }) {
     for (const vigente of vigentes ?? []) {
       const esCandidato = sujetos.some((s) => s.tipo === vigente.sujeto_tipo && s.id === vigente.sujeto_id);
       if (!esCandidato) continue;
-      if (!codigoCoincide(texto, vigente.codigo_huella)) continue;
+      if (!codigoCoincide(texto, vigente.codigo_verificador)) continue;
       return {
         medio: vigente.sujeto_tipo === 'cliente' ? 'codigo_cliente' : 'codigo_asistente_saliente',
         sujetoTipo: vigente.sujeto_tipo,
@@ -314,8 +314,8 @@ export async function registrarComprobacion({ guardia, momento, lat, lng, compro
       comprobada_en: ahora(),
       motivo_sin_comprobar: null,
       motivo_detalle: null,
-      // El código ya cumplió: se borra la huella para que no quede viva la de algo de un solo uso.
-      codigo_huella: null,
+      // El código ya cumplió: se borra el identificador de verificación para que no quede vivo el de algo de un solo uso.
+      codigo_verificador: null,
       codigo_expira_en: null,
     });
     return { estado: 'comprobada', medio };
@@ -335,7 +335,7 @@ export async function registrarComprobacion({ guardia, momento, lat, lng, compro
     comprobada_en: null,
     motivo_sin_comprobar: motivo,
     motivo_detalle: String(comprobacion.detalle ?? '').trim().slice(0, LARGO_MAXIMO_DEL_PEDIDO) || null,
-    codigo_huella: null,
+    codigo_verificador: null,
     codigo_expira_en: null,
   });
 
@@ -370,7 +370,7 @@ export async function pedirCodigoALaPrestadora({ guardia, momento, texto }) {
     motivo_detalle: null,
     pedido_texto: String(texto ?? '').trim().slice(0, LARGO_MAXIMO_DEL_PEDIDO) || null,
     pedido_en: ahora(),
-    codigo_huella: null,
+    codigo_verificador: null,
     codigo_expira_en: null,
     // `codigo_intentos` NO se vuelve a cero acá, y no es un olvido: este pedido lo abre el mismo
     // Asistente que después prueba los códigos, así que devolver la cuenta desde acá era darle el
@@ -417,7 +417,7 @@ export async function pedidosEsperandoCodigo(prestadoraId) {
 /**
  * Quien está de turno en la Prestadora resolvió el pedido como esa Prestadora decida —llamada,
  * videollamada, lo que sea— y suelta el código. Vale para esa guardia, ese momento y los minutos
- * que la Prestadora configuró. El código se devuelve una sola vez, acá; después queda la huella.
+ * que la Prestadora configuró. El código se devuelve una sola vez, acá; después queda el identificador de verificación.
  */
 export async function emitirCodigoDeLaPrestadora({ comprobacionId, prestadoraId, emitidoPor }) {
   const { data: fila } = await supabase

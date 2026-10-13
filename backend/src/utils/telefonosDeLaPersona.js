@@ -1,4 +1,4 @@
-import { huellaComparable } from './celularDeUnaSolaPersona.js';
+import { verificadorComparable } from './celularDeUnaSolaPersona.js';
 
 // CUÁL DE LOS TELÉFONOS DE UNA PERSONA ES EL PREFERIDO PARA LLAMAR.
 //
@@ -16,8 +16,8 @@ import { huellaComparable } from './celularDeUnaSolaPersona.js';
 // tampoco. No se inventa ninguno: la lista sale entera y sin nada señalado, que es exactamente lo
 // que se sabe.
 //
-// EL NÚMERO NO VIAJA EN NINGUNA CONSULTA. Lo que se compara es la huella —dígitos y `md5`—, que la
-// base calcula con `interno.numero_comparable` y este lado con `huellaComparable`, escrita una sola
+// EL NÚMERO NO VIAJA EN NINGUNA CONSULTA. Lo que se compara es el identificador de verificación —dígitos y `md5`—, que la
+// base calcula con `interno.numero_comparable` y este lado con `verificadorComparable`, escrito una sola
 // vez en `celularDeUnaSolaPersona.js`. Un teléfono escrito en una dirección es un teléfono que se
 // filtra (`celtatech/docs/REGLAS_PRODUCTOS_CAREONYS.md` §4).
 //
@@ -29,13 +29,13 @@ import { huellaComparable } from './celularDeUnaSolaPersona.js';
 // puede pasar la llave maestra.
 
 /**
- * Las huellas de los teléfonos de cuentas de esa Prestadora que aparecen en esta lista.
+ * Los identificadores de verificación de los teléfonos de cuentas de esa Prestadora que aparecen en esta lista.
  *
- * Se pregunta por las huellas que hay, y no por todas las cuentas: así la consulta no crece con el
+ * Se pregunta por los identificadores que hay, y no por todas las cuentas: así la consulta no crece con el
  * tamaño de la Prestadora.
  */
-async function huellasQueSonDeUnaCuenta(db, huellas, prestadoraId) {
-  const buscadas = [...new Set((huellas ?? []).filter(Boolean))];
+async function verificadoresQueSonDeUnaCuenta(db, verificadores, prestadoraId) {
+  const buscadas = [...new Set((verificadores ?? []).filter(Boolean))];
   if (buscadas.length === 0 || !prestadoraId) return new Set();
 
   const { data, error } = await db
@@ -68,16 +68,16 @@ export async function conElPreferidoMarcado(db, telefonos, prestadoraId) {
   const filas = telefonos ?? [];
   if (filas.length === 0) return [];
 
-  const huellaDe = new Map(filas.map((fila) => [fila.id, huellaComparable(fila.telefono)]));
-  const deUnaCuenta = await huellasQueSonDeUnaCuenta(db, [...huellaDe.values()], prestadoraId);
+  const verificadorDe = new Map(filas.map((fila) => [fila.id, verificadorComparable(fila.telefono)]));
+  const deUnaCuenta = await verificadoresQueSonDeUnaCuenta(db, [...verificadorDe.values()], prestadoraId);
 
   // Uno por Persona, y el más antiguo cuando hay más de uno que coincide.
   const elegido = new Map();
   for (const fila of filas) {
     // Uno fuera de uso no es preferido aunque coincida con el de la cuenta.
     if (fila.fuera_de_uso_at) continue;
-    const huella = huellaDe.get(fila.id);
-    if (!huella || !deUnaCuenta.has(huella)) continue;
+    const verificador = verificadorDe.get(fila.id);
+    if (!verificador || !deUnaCuenta.has(verificador)) continue;
     const anterior = elegido.get(fila.persona_id);
     if (!anterior || String(fila.created_at) < String(anterior.created_at)) elegido.set(fila.persona_id, fila);
   }

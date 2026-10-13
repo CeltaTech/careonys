@@ -68,14 +68,14 @@ export async function esUnCelular(telefono) {
 }
 
 /**
- * La huella con la que la base compara dos números, calculada igual que del otro lado.
+ * El identificador de verificación con el que la base compara dos números, calculado igual que del otro lado.
  *
  * EL NÚMERO NO VIAJA. Lo que va en la consulta es esto, nunca el teléfono: una consulta lleva sus
  * filtros en la dirección, y un teléfono escrito en una dirección es un teléfono que se filtra. La
  * columna `usuarios.telefono_comparable` la calcula la base con la misma cuenta
  * (`interno.numero_comparable`), y por eso las dos tienen que dar lo mismo: dígitos, y `md5`.
  */
-export function huellaComparable(telefono) {
+export function verificadorComparable(telefono) {
   const digitos = digitosDelTelefono(telefono);
   if (!digitos) return null;
   return crypto.createHash('md5').update(digitos).digest('hex');
@@ -98,13 +98,13 @@ export async function exigirQueElCelularSeaDeUnaSolaPersona({ telefono, prestado
 
   if (!esUnCelularSegun(await prefijosDeCelular(), escrito)) return;
 
-  const huella = huellaComparable(escrito);
-  if (!huella) return;
+  const verificador = verificadorComparable(escrito);
+  if (!verificador) return;
 
   let consulta = supabase
     .from('usuarios')
     .select('id')
-    .eq('telefono_comparable', huella)
+    .eq('telefono_comparable', verificador)
     .eq('telefono_es_celular', true)
     .limit(1);
 

@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-// Arma la hoja que firma el Pagador, y su huella.
+// Arma la hoja que firma el Pagador, y su identificador de verificación.
 //
 // QUÉ ES ESTE TEXTO Y DE QUIÉN ES. Es un documento entre la Prestadora y un tercero de ella, así
 // que es de ella: el producto trae un modelo y ella lo adopta, lo cambia o lo reemplaza por el
@@ -12,8 +12,8 @@ import crypto from 'node:crypto';
 // esta función devolvería otro texto. Lo que el Pagador firmó fue el de aquel día: se guarda
 // entero, tal cual, y lo que se muestra después es lo guardado.
 //
-// POR QUÉ LA HUELLA. Sin ella el registro dice que firmó y no dice QUÉ firmó. Con ella, si alguien
-// le mueve una coma al texto guardado, deja de coincidir. No es firma digital —eso se evaluó y se
+// POR QUÉ EL IDENTIFICADOR DE VERIFICACIÓN. Sin él el registro dice que firmó y no dice QUÉ
+// firmó. Con él, si alguien le mueve una coma al texto guardado, deja de coincidir. No es firma digital —eso se evaluó y se
 // descartó para la instrucción de las personas autorizadas, y acá vale lo mismo—: es la constancia de que
 // el texto no cambió desde que se firmó.
 //
@@ -112,6 +112,6 @@ export function textoDelConsentimiento({ cuerpo, prestadora, pagador, cliente, a
   return texto;
 }
 
-export function huellaDelDocumento(texto) {
+export function verificadorDelDocumento(texto) {
   return crypto.createHash('sha256').update(texto, 'utf8').digest('hex');
 }

@@ -4,7 +4,7 @@
  * Es el documento que queda como constancia el día que alguien diga «yo nunca autoricé eso», así
  * que lo que se cuida acá no es la estética: que cada persona autorizada aparezca con nombre, que
  * cada acceso caiga del lado correcto —lo que puede y lo que no—, que el texto no se contradiga con
- * lo que rige, y que la huella cambie ante cualquier retoque del texto.
+ * lo que rige, y que el identificador de verificación cambie ante cualquier retoque del texto.
  *
  *   npm test --prefix backend
  */
@@ -14,7 +14,7 @@ import { describe, it } from 'node:test';
 import {
   IDIOMA_DEL_DOCUMENTO,
   textoDeLaInstruccion,
-  huellaDelDocumento,
+  verificadorDelDocumento,
 } from '../documentoInstruccionPersonasAutorizadas.js';
 import { CATALOGO_PERSONAS_AUTORIZADAS, accesosDeFabrica } from '../catalogoPersonasAutorizadas.js';
 
@@ -131,30 +131,30 @@ describe('textoDeLaInstruccion', () => {
   });
 });
 
-describe('huellaDelDocumento', () => {
-  it('el mismo texto da siempre la misma huella', () => {
+describe('verificadorDelDocumento', () => {
+  it('el mismo texto da siempre el mismo identificador de verificación', () => {
     const texto = unaHoja([{ nombre: 'Marcela Gómez', email: 'marcela@ejemplo.local', accesos: accesosDeFabrica() }]);
-    assert.equal(huellaDelDocumento(texto), huellaDelDocumento(texto));
+    assert.equal(verificadorDelDocumento(texto), verificadorDelDocumento(texto));
   });
 
-  it('mover una sola coma cambia la huella', () => {
-    // Es todo lo que la huella promete: no es firma digital, es la constancia de que el texto
+  it('mover una sola coma cambia el identificador de verificación', () => {
+    // Es todo lo que el identificador de verificación promete: no es firma digital, es la constancia de que el texto
     // guardado es el que se firmó.
     const texto = unaHoja([{ nombre: 'Marcela Gómez', email: 'marcela@ejemplo.local', accesos: accesosDeFabrica() }]);
-    assert.notEqual(huellaDelDocumento(texto), huellaDelDocumento(`${texto} `));
+    assert.notEqual(verificadorDelDocumento(texto), verificadorDelDocumento(`${texto} `));
   });
 
-  it('dos hojas que se diferencian en un solo acceso no comparten huella', () => {
+  it('dos hojas que se diferencian en un solo acceso no comparten identificador de verificación', () => {
     const conTodo = unaHoja([{ nombre: 'Marcela Gómez', email: 'marcela@ejemplo.local', accesos: accesosDeFabrica() }]);
     const sinDinero = unaHoja([{
       nombre: 'Marcela Gómez',
       email: 'marcela@ejemplo.local',
       accesos: { ...accesosDeFabrica(), persona_autorizada_dinero: false },
     }]);
-    assert.notEqual(huellaDelDocumento(conTodo), huellaDelDocumento(sinDinero));
+    assert.notEqual(verificadorDelDocumento(conTodo), verificadorDelDocumento(sinDinero));
   });
 
-  it('la huella es sha256 en hexadecimal', () => {
-    assert.match(huellaDelDocumento('lo que sea'), /^[0-9a-f]{64}$/);
+  it('el identificador de verificación es sha256 en hexadecimal', () => {
+    assert.match(verificadorDelDocumento('lo que sea'), /^[0-9a-f]{64}$/);
   });
 });

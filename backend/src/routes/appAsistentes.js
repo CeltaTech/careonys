@@ -1875,11 +1875,11 @@ appAsistentesRouter.get('/guardias/:id/comprobacion/:momento', requiereRolAsiste
   });
   if (!fila) return res.json({ estado: null, codigoDisponible: false });
 
-  // Nunca se devuelve la huella ni el código: sólo si ya hay uno esperando que lo tipeen.
+  // Nunca se devuelve el identificador de verificación ni el código: sólo si ya hay uno esperando que lo tipeen.
   res.json({
     estado: fila.estado,
-    codigoDisponible: Boolean(fila.codigo_huella) && new Date(fila.codigo_expira_en) > new Date(),
-    codigoExpiraEn: fila.codigo_huella ? fila.codigo_expira_en : null,
+    codigoDisponible: Boolean(fila.codigo_verificador) && new Date(fila.codigo_expira_en) > new Date(),
+    codigoExpiraEn: fila.codigo_verificador ? fila.codigo_expira_en : null,
   });
 });
 

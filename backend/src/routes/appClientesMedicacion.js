@@ -19,7 +19,7 @@ import { comprobarFirma } from './llaveDelDispositivo.js';
 // la Prestadora —o el modelo del producto, si ella no escribió ninguno—, con receta o sin ella.
 // Firma de dos formas: con la llave de su teléfono, que se comprueba acá antes de guardar nada, o
 // en papel, y entonces la indicación entra igual con la firma pendiente y el Panel no la puede
-// aceptar hasta subir el papel firmado. Lo firmado se guarda entero: texto, huella e idioma.
+// aceptar hasta subir el papel firmado. Lo firmado se guarda entero: texto, identificador de verificación e idioma.
 //
 // CON LA CREDENCIAL DE QUIEN PIDE. La lectura entra a la base con `clienteDelPedido(req)`, no con
 // la llave maestra: la base le contesta al Cliente sólo lo de su Prestadora y sólo si el permiso de sus personas autorizadas
@@ -266,7 +266,7 @@ appClientesMedicacionRouter.post(
           prestadora_id: paciente.prestadora_id,
           indicacion_id: data.id,
           documento_texto: documento.texto,
-          documento_huella: documento.huella,
+          documento_verificador: documento.verificador,
           documento_idioma: documento.idioma,
           estado: enLaApp ? 'cerrado' : 'pendiente_firma',
           cerrado_como: enLaApp ? 'confirmado_en_la_app' : null,

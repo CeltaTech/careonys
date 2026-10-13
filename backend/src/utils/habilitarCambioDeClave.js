@@ -1,12 +1,12 @@
 import { supabase } from '../db/connection.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
-import { huellaDelTelefono } from './codigoAlTelefono.js';
+import { verificadorDelTelefono } from './codigoAlTelefono.js';
 
 // LA PRESTADORA HABILITA, NO CAMBIA.
 //
 // Cuando alguien llama porque no puede entrar, quien atiende el llamado le abre una puerta: un
 // cambio de clave que dura poco y sirve una vez. **Nunca elige la clave de nadie ni la ve.** Acá no
-// se guarda ninguna clave, ni una huella de clave, ni nada con que deducir una: lo que queda
+// se guarda ninguna clave, ni un identificador de verificación de clave, ni nada con que deducir una: lo que queda
 // anotado es que se abrió la puerta, para quién, quién la abrió y hasta cuándo dura.
 //
 // SE HABILITA HACIA ABAJO, Y NUNCA A UNO MISMO. El rol técnico de la empresa habilita a la
@@ -142,9 +142,9 @@ export async function confirmarTelefonoDeLaCuenta({ quien, usuarioId }) {
         prestadora_id: quien.prestadoraId,
         usuario_id: usuarioId,
         confirmado_por: quien.id,
-        telefono_huella: huellaDelTelefono(cuenta.telefono),
+        telefono_verificador: verificadorDelTelefono(cuenta.telefono),
       },
-      { onConflict: 'usuario_id,telefono_huella' },
+      { onConflict: 'usuario_id,telefono_verificador' },
     );
   if (error) throw new Error(error.message);
 
@@ -196,21 +196,21 @@ export async function telefonosEsperandoHabilitacion(quien) {
   if (alcanzables.length === 0) return [];
 
   // Las que ya habilitó alguien salen de la lista. Se pregunta una sola vez por todas, y se compara
-  // contra la huella del número que la cuenta tiene hoy: habilitar un número viejo no habilita el
+  // contra el identificador de verificación del número que la cuenta tiene hoy: habilitar un número viejo no habilita el
   // que vino después.
   const { data: confirmados, error: errorConfirmados } = await supabase
     .from('telefonos_confirmados_por_la_prestadora')
-    .select('usuario_id, telefono_huella')
+    .select('usuario_id, telefono_verificador')
     .eq('prestadora_id', quien.prestadoraId)
     .in('usuario_id', alcanzables.map((cuenta) => cuenta.id));
   if (errorConfirmados) throw new Error(errorConfirmados.message);
 
   const yaHabilitados = new Set(
-    (confirmados ?? []).map((fila) => `${fila.usuario_id}:${fila.telefono_huella}`),
+    (confirmados ?? []).map((fila) => `${fila.usuario_id}:${fila.telefono_verificador}`),
   );
 
   return alcanzables
-    .filter((cuenta) => !yaHabilitados.has(`${cuenta.id}:${huellaDelTelefono(cuenta.telefono)}`))
+    .filter((cuenta) => !yaHabilitados.has(`${cuenta.id}:${verificadorDelTelefono(cuenta.telefono)}`))
     .map((cuenta) => ({
       id: cuenta.id,
       nombre: cuenta.nombre,
@@ -228,7 +228,7 @@ export async function telefonoConfirmadoPorLaPrestadora({ usuarioId, prestadoraI
     .select('id')
     .eq('prestadora_id', prestadoraId)
     .eq('usuario_id', usuarioId)
-    .eq('telefono_huella', huellaDelTelefono(telefono))
+    .eq('telefono_verificador', verificadorDelTelefono(telefono))
     .maybeSingle();
   return Boolean(data);
 }

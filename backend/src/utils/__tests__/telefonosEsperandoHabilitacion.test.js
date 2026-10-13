@@ -80,7 +80,7 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 
 // El import va después de las variables de entorno: la conexión se arma al importar.
 const { telefonosEsperandoHabilitacion } = await import('../habilitarCambioDeClave.js');
-const { huellaDelTelefono } = await import('../codigoAlTelefono.js');
+const { verificadorDelTelefono } = await import('../codigoAlTelefono.js');
 
 after(() => {
   baseFalsa.close();
@@ -222,7 +222,7 @@ describe('los números que esperan habilitación', () => {
 
   it('el número que alguien ya habilitó sale de la lista', async () => {
     cuentasConNumeroCargado([EL_ASISTENTE]);
-    yaHabilitados([{ usuario_id: UN_ASISTENTE, telefono_huella: huellaDelTelefono(CELULAR) }]);
+    yaHabilitados([{ usuario_id: UN_ASISTENTE, telefono_verificador: verificadorDelTelefono(CELULAR) }]);
 
     const lista = await telefonosEsperandoHabilitacion(laCoordinacion());
 
@@ -233,7 +233,7 @@ describe('los números que esperan habilitación', () => {
   // otro. Sigue esperando, porque habilitar un número no habilita al que vino después.
   it('habilitar el número viejo no habilita el que vino después', async () => {
     cuentasConNumeroCargado([EL_ASISTENTE]);
-    yaHabilitados([{ usuario_id: UN_ASISTENTE, telefono_huella: huellaDelTelefono(OTRO_CELULAR) }]);
+    yaHabilitados([{ usuario_id: UN_ASISTENTE, telefono_verificador: verificadorDelTelefono(OTRO_CELULAR) }]);
 
     const lista = await telefonosEsperandoHabilitacion(laCoordinacion());
 
@@ -292,7 +292,7 @@ describe('los números que esperan habilitación', () => {
   it('el número verificado y ya habilitado sí sale de la lista', async () => {
     const verificado = { ...EL_ASISTENTE, telefono_verificado_en: new Date().toISOString() };
     cuentasConNumeroCargado([verificado]);
-    yaHabilitados([{ usuario_id: UN_ASISTENTE, telefono_huella: huellaDelTelefono(CELULAR) }]);
+    yaHabilitados([{ usuario_id: UN_ASISTENTE, telefono_verificador: verificadorDelTelefono(CELULAR) }]);
 
     assert.deepEqual(await telefonosEsperandoHabilitacion(laCoordinacion()), []);
   });

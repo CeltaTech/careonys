@@ -18,7 +18,7 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 
-import { huellaDelCodigo } from '../codigoDeUnSoloUso.js';
+import { verificadorDelCodigo } from '../codigoDeUnSoloUso.js';
 
 const INSTRUCCION = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const CLIENTE = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
@@ -87,7 +87,7 @@ beforeEach(() => {
     id: INSTRUCCION,
     prestadora_id: PRESTADORA,
     estado: 'pendiente_firma',
-    codigo_huella: huellaDelCodigo('123456'),
+    codigo_verificador: verificadorDelCodigo('123456'),
     codigo_expira_en: enUnRato(10),
     codigo_intentos: 0,
   };
@@ -113,14 +113,14 @@ beforeEach(() => {
 });
 
 describe('confirmar la instrucción con el código', () => {
-  it('el código correcto la cierra, y la huella no queda viva', async () => {
+  it('el código correcto la cierra, y el identificador de verificación no queda vivo', async () => {
     const resultado = await confirmarConCodigo({ instruccionId: INSTRUCCION, clienteId: CLIENTE, prestadoraId: PRESTADORA, codigo: '123456' });
     assert.equal(resultado.ok, true);
 
     const [cierre] = actualizaciones();
     assert.equal(cierre.estado, 'cerrada');
     assert.equal(cierre.cerrada_como, 'confirmada_en_la_app');
-    assert.equal(cierre.codigo_huella, null);
+    assert.equal(cierre.codigo_verificador, null);
     assert.equal(cierre.codigo_expira_en, null);
   });
 
@@ -180,14 +180,14 @@ describe('pedir un código nuevo', () => {
     respuestas.set('GET /rest/v1/usuarios', () => [{ telefono: null }]);
   });
 
-  it('escribe la huella y el vencimiento, y NO vuelve a cero la cuenta de intentos', async () => {
+  it('escribe el identificador de verificación y el vencimiento, y NO vuelve a cero la cuenta de intentos', async () => {
     instruccion.codigo_intentos = 4;
 
     await pedirCodigo({ instruccionId: INSTRUCCION, clienteId: CLIENTE, prestadoraId: PRESTADORA }).catch(() => {});
 
     const [emision] = actualizaciones();
     assert.ok(emision, 'tiene que haberse escrito el código nuevo');
-    assert.match(emision.codigo_huella, /^[0-9a-f]{64}$/);
+    assert.match(emision.codigo_verificador, /^[0-9a-f]{64}$/);
     assert.ok(new Date(emision.codigo_expira_en) > new Date());
     // Ésta es la prueba del defecto: con `codigo_intentos: 0` acá, pedir otro código devolvía
     // cinco intentos más y el tope dejaba de ser un tope.
@@ -202,7 +202,7 @@ describe('pedir un código nuevo', () => {
   it('se escriben esas dos columnas y ninguna más: ni el código en claro ni la cuenta', async () => {
     await pedirCodigo({ instruccionId: INSTRUCCION, clienteId: CLIENTE, prestadoraId: PRESTADORA }).catch(() => {});
     const [emision] = actualizaciones();
-    assert.deepEqual(Object.keys(emision).sort(), ['codigo_expira_en', 'codigo_huella']);
+    assert.deepEqual(Object.keys(emision).sort(), ['codigo_expira_en', 'codigo_verificador']);
   });
 
   it('sobre una instrucción que ya no está pendiente no se emite ningún código', async () => {

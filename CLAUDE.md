@@ -29,8 +29,8 @@ tiene acceso y a que no lo tiene»*, y *«Careonys nada tiene que hacer metiendo
 llaman»*. Es la regla fundamental de la empresa —`..\..\CLAUDE.md` §2— aplicada al alta.
 
 **Y la cuenta con la que se entra al Panel tampoco es de Careonys.** Cada Prestadora ingresa con el
-usuario, la contraseña y los permisos que le genera CeltaTech. **Del cambio de contraseña, de la
-recuperación y de lo que siga por ese lado se ocupa CeltaTech**, no el producto. Textual del
+usuario, la contraseña y los permisos que le genera CeltaTech. **Del cambio de contraseña, de su
+restablecimiento y de lo que siga por ese lado se ocupa CeltaTech**, no el producto. Textual del
 Desarrollador: *«Cada prestadora ingresara con el usuario, contraseñas y permisos que le genere
 cletatech. De los cambios de contraseñas, recuperacion de las mismas, etc. tambien se ocupa
 celtatech»*.
@@ -94,7 +94,7 @@ producto.
 **Y la Prestadora no lo ve ni sabe que existe.** Textual: *«la prestadora no la ve, ni siquiera
 sabe que existe»*. Ninguna pantalla del Panel lo ofrece, lo nombra ni lo deja ver abierto. El
 cartel que exige la regla de la empresa es de la herramienta con la que opera CeltaTech.
-- Entrada propia; segundo factor por código temporal, activable desde Configuración.
+- Entrada propia; segundo factor por código de verificación, activable desde Configuración.
 - **Acá la Organización ficticia es Sandbox.** El permiso vive en `permisos_de_acceso` y lo que
   se hace con él, en `auditoria_de_accesos`. La forma del permiso es la de la empresa y no se toca.
 - La precedencia —permiso de acceso primero, Organización propia después— la define la función
@@ -107,7 +107,7 @@ otras Prestadoras ni a configuración global.
 
 **En cada Prestadora hay un solo Administrador, y es el que figura en el contrato.** Lo nombra
 CeltaTech, que es también quien se ocupa de su usuario, su contraseña y sus permisos, y de los
-cambios y la recuperación de esa clave. **No hay dos, y el producto no crea ninguno.** Las personas
+cambios y el restablecimiento de esa contraseña. **No hay dos, y el producto no crea ninguno.** Las personas
 en las que ese Administrador delegue funciones propias de él **llevan otro nombre, que todavía no
 está decidido**, nunca el de Administrador. **No es el Coordinador**, que es otra cosa: quien
 organiza el trabajo de un grupo determinado de Asistentes, y que depende de funciones del
@@ -118,7 +118,7 @@ distinto»*.
 
 **Del Administrador para abajo, las cuentas las hace la Prestadora.** El Administrador genera y
 administra los usuarios, las contraseñas y los permisos de su gente: coordinadores, Asistentes,
-Clientes, personas autorizadas. Ahí el ciclo de la clave del producto —pedirla, recuperarla, los
+Clientes, personas autorizadas. Ahí el ciclo de la contraseña del producto —pedirla, restablecerla, los
 topes— sí corre; para el Administrador no, porque esa cuenta es de CeltaTech.
 
 **Y reparte permisos adentro de lo que su Prestadora tiene.** Qué alcanza cada Prestadora lo

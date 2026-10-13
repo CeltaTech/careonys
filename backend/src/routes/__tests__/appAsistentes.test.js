@@ -426,6 +426,43 @@ describe('check-in — Plan A: el código lo muestra una persona', () => {
     assert.equal(mensajeDeLlegadaArmado(), false);
   });
 
+  it('el código que se leyó justo antes de renovarse sigue marcando la llegada', async () => {
+    codigosEnPantalla = [
+      {
+        sujeto_tipo: 'cliente', sujeto_id: CLIENTE,
+        codigo_verificador: verificadorDelCodigo('222222'), expira_en: enUnRato(1),
+        codigo_verificador_anterior: verificadorDelCodigo('123456'), anterior_expira_en: enUnRato(1),
+      },
+    ];
+
+    const { estado } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+      lat: LAT,
+      lng: LNG,
+      comprobacion: { codigo: '123456' },
+    });
+    assert.equal(estado, 200);
+    assert.equal(guardiaMarcada(), true);
+  });
+
+  it('el código anterior ya vencido no marca nada, aunque el actual siga vigente', async () => {
+    codigosEnPantalla = [
+      {
+        sujeto_tipo: 'cliente', sujeto_id: CLIENTE,
+        codigo_verificador: verificadorDelCodigo('222222'), expira_en: enUnRato(1),
+        codigo_verificador_anterior: verificadorDelCodigo('123456'), anterior_expira_en: haceUnRato(1),
+      },
+    ];
+
+    const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/checkin`, {
+      lat: LAT,
+      lng: LNG,
+      comprobacion: { codigo: '123456' },
+    });
+    assert.equal(estado, 400);
+    assert.equal(cuerpo.motivo, 'codigo_incorrecto');
+    assert.equal(guardiaMarcada(), false);
+  });
+
   it('un código vigente de otra casa no marca nada: se compara sólo contra quien podría estar en ésta', async () => {
     codigosEnPantalla = [
       { sujeto_tipo: 'cliente', sujeto_id: OTRO_CLIENTE, codigo_verificador: verificadorDelCodigo('999999'), expira_en: enUnRato(1) },

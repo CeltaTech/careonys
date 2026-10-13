@@ -22,7 +22,8 @@ import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
 //
 //   Plan A — el código lo muestra una persona en la pantalla de su teléfono: el Cliente, o el
 //   Asistente que se va cuando hay relevo. Se renueva solo cada pocos segundos, así que una foto
-//   de esa pantalla no sirve un minuto después. Reemplaza al cartel impreso, que era un secreto
+//   de esa pantalla no sirve un minuto después. Al renovarse, el anterior sigue valiendo mientras
+//   valga el nuevo, para que quien lo lee justo en el cambio no lo mande vencido. Reemplaza al cartel impreso, que era un secreto
 //   permanente a la vista de cualquiera que pasara por la puerta.
 //
 //   Plan B — cuando no hay nadie que pueda mostrarlo, el Asistente avisa con sus palabras, eso
@@ -84,8 +85,9 @@ export async function configuracionDeComprobacion(prestadoraId) {
 
 /**
  * Devuelve el código que esta persona tiene que mostrar ahora. Cada vez que se pide, se genera
- * uno nuevo y el anterior deja de valer: eso es lo que quiere decir que se renueva solo. La
- * pantalla lo vuelve a pedir cada `segundos`.
+ * uno nuevo: eso es lo que quiere decir que se renueva solo. El anterior sigue valiendo mientras
+ * valga el nuevo —lo guarda la base al renovarlo—, para que una lectura hecha justo en el cambio
+ * no falle. La pantalla lo vuelve a pedir cada `segundos`.
  *
  * `sujetoTipo` es 'cliente' (todas las personas autorizadas) o 'asistente' (el que se va).
  */
@@ -263,7 +265,7 @@ async function resolverCodigo({ guardia, momento, codigo }) {
   if (sujetos.length > 0) {
     const { data: vigentes } = await supabase
       .from('codigos_de_presencia')
-      .select('sujeto_tipo, sujeto_id, codigo_verificador, expira_en')
+      .select('sujeto_tipo, sujeto_id, codigo_verificador, expira_en, codigo_verificador_anterior, anterior_expira_en')
       .eq('prestadora_id', guardia.prestadora_id)
       .in('sujeto_id', sujetos.map((s) => s.id))
       .gt('expira_en', ahora());
@@ -271,7 +273,11 @@ async function resolverCodigo({ guardia, momento, codigo }) {
     for (const vigente of vigentes ?? []) {
       const esCandidato = sujetos.some((s) => s.tipo === vigente.sujeto_tipo && s.id === vigente.sujeto_id);
       if (!esCandidato) continue;
-      if (!codigoCoincide(texto, vigente.codigo_verificador)) continue;
+      const anteriorVigente = vigente.codigo_verificador_anterior
+        && vigente.anterior_expira_en && new Date(vigente.anterior_expira_en) > new Date();
+      const coincide = codigoCoincide(texto, vigente.codigo_verificador)
+        || (anteriorVigente && codigoCoincide(texto, vigente.codigo_verificador_anterior));
+      if (!coincide) continue;
       return {
         medio: vigente.sujeto_tipo === 'cliente' ? 'codigo_cliente' : 'codigo_asistente_saliente',
         sujetoTipo: vigente.sujeto_tipo,

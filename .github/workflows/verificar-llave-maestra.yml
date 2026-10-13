@@ -1,0 +1,28 @@
+name: Verificar la llave maestra
+
+# Que la llave maestra sólo pueda retroceder. La lista de los archivos que todavía la usan vive en
+# scripts/llave_maestra_pendiente.json: un archivo nuevo que la usa corta la publicación, y la lista
+# no puede crecer respecto del push anterior. Corre sobre todo el repositorio, sin filtrar rutas.
+# El script no tiene dependencias, así que no hay npm install.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Verificar la llave maestra
+        env:
+          BASE: ${{ github.event.before || github.event.pull_request.base.sha }}
+        run: node scripts/verificar_llave_maestra.mjs

@@ -9,13 +9,14 @@ import crypto from 'node:crypto';
 // patrón repetido sin punto único de verdad»).
 //
 // LAS TRES REGLAS QUE HACEN QUE SIRVA
-//   1. El código nunca se guarda. Se guarda su huella, y se compara huella contra huella.
+//   1. El código nunca se guarda. Se guarda su huella, hecha con un secreto del servidor, y se
+//      compara huella contra huella.
 //   2. Vence. Sin vencimiento, seis dígitos son un secreto permanente de un millón de valores.
 //   3. Se cuentan los intentos. Sin tope, seis dígitos se prueban de a uno hasta acertar.
 //
 // La comparación es de tiempo constante. Comparar dos textos con `!==` termina apenas encuentra
 // el primer carácter distinto, y cuánto tardó en terminar es información sobre cuánto acertó
-// quien probó. Sobre una huella de sha256 el riesgo es remoto, pero la forma correcta no cuesta
+// quien probó. Sobre una huella con secreto el riesgo es remoto, pero la forma correcta no cuesta
 // nada y evita tener que discutirlo cada vez.
 
 export const INTENTOS_MAXIMOS = 5;
@@ -28,8 +29,26 @@ export function codigoNuevo() {
   return String(crypto.randomInt(100000, 1000000));
 }
 
+// LA HUELLA LLEVA UN SECRETO DEL SERVIDOR. Seis dígitos son 900.000 valores: con la huella sola,
+// quien se llevara la tabla los probaría todos en menos de un segundo y tendría cada código vigente.
+// Con el secreto mezclado adentro (HMAC-SHA256), la tabla sola no alcanza: hace falta además el
+// secreto, que vive en una variable de entorno y nunca en la base.
+//
+// Se lee al calcular, y no al cargar el archivo, para que las pruebas puedan importarlo antes de
+// ponerlo. Sin secreto no se calcula nada: una huella sin secreto sería justo lo que se quiere
+// evitar, y falla cerrado. El backend además no arranca sin él (`server.js`).
+export const VARIABLE_DEL_SECRETO = 'SECRETO_DE_LOS_CODIGOS';
+
+export function secretoDeLosCodigos() {
+  const secreto = process.env[VARIABLE_DEL_SECRETO];
+  if (!secreto || secreto.length < 32) {
+    throw new Error(`Falta ${VARIABLE_DEL_SECRETO}: sin él no se puede guardar ni comprobar ningún código de verificación`);
+  }
+  return secreto;
+}
+
 export function huellaDelCodigo(codigo) {
-  return crypto.createHash('sha256').update(String(codigo)).digest('hex');
+  return crypto.createHmac('sha256', secretoDeLosCodigos()).update(String(codigo)).digest('hex');
 }
 
 // ¿El código que alguien tipeó corresponde a esta huella guardada? Devuelve false ante cualquier

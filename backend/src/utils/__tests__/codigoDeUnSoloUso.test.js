@@ -17,6 +17,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import crypto from 'node:crypto';
 
 // Se importa de arriba, y se puede: este archivo no arma ninguna conexión al cargarse. La pide
 // `sumarIntento` recién cuando corre, que es después de que acá abajo queden puestas las
@@ -27,10 +28,12 @@ import {
   codigoNuevo,
   codigoNuevoParaGuardar,
   estaVencido,
+  VARIABLE_DEL_SECRETO,
   huellaDelCodigo,
   seAgotaronLosIntentos,
   sumarIntento,
 } from '../codigoDeUnSoloUso.js';
+import { huellaDelEnlace } from '../huellaDelEnlace.js';
 
 const INSTRUCCION = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const PRESTADORA = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
@@ -208,5 +211,50 @@ describe('lo que ya hacía el código de un solo uso y no se tocó', () => {
     assert.equal(estaVencido(null), true);
     assert.equal(estaVencido(new Date(Date.now() - 1000).toISOString()), true);
     assert.equal(estaVencido(new Date(Date.now() + 60_000).toISOString()), false);
+  });
+});
+
+describe('la huella del código lleva el secreto del servidor', () => {
+  // Cada prueba deja el secreto como lo encontró: las demás de este archivo lo necesitan puesto.
+  function conSecreto(valor, prueba) {
+    const antes = process.env[VARIABLE_DEL_SECRETO];
+    if (valor === undefined) delete process.env[VARIABLE_DEL_SECRETO];
+    else process.env[VARIABLE_DEL_SECRETO] = valor;
+    try {
+      return prueba();
+    } finally {
+      process.env[VARIABLE_DEL_SECRETO] = antes;
+    }
+  }
+
+  it('sin secreto no se calcula ninguna huella', () => {
+    conSecreto(undefined, () => assert.throws(() => huellaDelCodigo('123456')));
+    conSecreto('', () => assert.throws(() => huellaDelCodigo('123456')));
+    conSecreto('corto', () => assert.throws(() => huellaDelCodigo('123456')));
+  });
+
+  it('sin secreto tampoco coincide nada: falla cerrado', () => {
+    const guardada = huellaDelCodigo('123456');
+    conSecreto(undefined, () => assert.throws(() => codigoCoincide('123456', guardada)));
+  });
+
+  it('la huella no es el sha256 del código solo', () => {
+    const sinSecreto = crypto.createHash('sha256').update('123456').digest('hex');
+    assert.notEqual(huellaDelCodigo('123456'), sinSecreto);
+  });
+
+  it('con otro secreto la misma huella deja de servir', () => {
+    const guardada = huellaDelCodigo('123456');
+    conSecreto('b'.repeat(64), () => assert.equal(codigoCoincide('123456', guardada), false));
+  });
+});
+
+describe('la huella del enlace', () => {
+  it('es sha256 en hexadecimal, que es la forma que la base exige y la cuenta que hace', () => {
+    const enlace = crypto.randomBytes(32).toString('hex');
+    const huella = huellaDelEnlace(enlace);
+    assert.match(huella, /^[0-9a-f]{64}$/);
+    assert.equal(huella, crypto.createHash('sha256').update(enlace, 'utf8').digest('hex'));
+    assert.notEqual(huella, enlace);
   });
 });

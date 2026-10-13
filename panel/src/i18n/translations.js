@@ -68,11 +68,7 @@ export const T = {
         ya_cerrada: 'Esa llegada ya está cerrada. Conviene recargar la lista.',
         no_corresponde: 'Esa llegada no quedó sin comprobar, así que no hay nada que cerrar.',
         demasiados_pedidos: 'Se hicieron demasiados pedidos en poco tiempo. Conviene esperar un minuto y volver a intentar.',
-        // Las modalidades de negocio, en sus dos direcciones. La primera es la puerta cerrada:
-        // la pantalla existe, pero no para una Prestadora que no tiene esa modalidad activa.
-        // Las otras tres son la vuelta: una modalidad no se apaga mientras todavía tenga gente
-        // adentro. Ninguna nombra una tabla ni una columna (CLAUDE.md §6).
-        modalidad_no_activa: 'Esta Prestadora no tiene activa esa modalidad, así que esa pantalla no le corresponde. Se activa en Configuración > La Prestadora, en Modalidades contratadas.',
+        modalidad_no_activa: 'Esta modalidad no está activa.',
         medio_de_pago_fuera_de_la_modalidad: 'Ese medio de pago no se usa en la modalidad de trabajo que paga esta liquidación. Hace falta elegir otro de la lista.',
         // Dos mensajes que antes llegaban como frase armada del lado del backend, en un solo idioma.
         persona_no_autorizada: 'Esa persona no figura entre las personas autorizadas de este Cliente, así que no hay nada que quitar. Conviene recargar la lista para ver cómo quedó.',
@@ -3128,7 +3124,7 @@ export const T = {
         ya_cerrada: 'That arrival is already closed. It is worth reloading the list.',
         no_corresponde: 'That arrival was not left unverified, so there is nothing to close.',
         demasiados_pedidos: 'Too many requests were made in a short time. It is worth waiting a minute and trying again.',
-        modalidad_no_activa: 'This Provider does not have that service model turned on, so that screen does not apply. It is turned on under Settings > The Provider, in Contracted service models.',
+        modalidad_no_activa: 'This service model is not active.',
         medio_de_pago_fuera_de_la_modalidad: 'That payment method is not used in the service model this payroll run pays for. Another one from the list needs to be chosen.',
         persona_no_autorizada: 'That person is not among this Client’s authorized people, so there is nothing to remove. It is worth reloading the list to see how it stands.',
         paciente_no_encontrado: 'That Patient could not be found. It is worth reloading the list.',
@@ -6126,7 +6122,7 @@ export const T = {
         ya_cerrada: 'Essa chegada já está fechada. Convém recarregar a lista.',
         no_corresponde: 'Essa chegada não ficou sem comprovação, portanto não há nada a fechar.',
         demasiados_pedidos: 'Foram feitos pedidos demais em pouco tempo. Convém esperar um minuto e tentar novamente.',
-        modalidad_no_activa: 'Esta Prestadora não tem essa modalidade ativa, portanto essa tela não lhe corresponde. Ela se ativa em Configuração > A Prestadora, em Modalidades contratadas.',
+        modalidad_no_activa: 'Esta modalidade não está ativa.',
         medio_de_pago_fuera_de_la_modalidad: 'Esse meio de pagamento não se usa na modalidade de trabalho que este acerto paga. É preciso escolher outro da lista.',
         persona_no_autorizada: 'Essa pessoa não consta entre as pessoas autorizadas deste Cliente, portanto não há nada a remover. É preciso recarregar a lista para ver como ficou.',
         paciente_no_encontrado: 'Esse Paciente não foi encontrado. É preciso recarregar a lista.',

@@ -828,8 +828,8 @@ Pagador firmado tampoco se habilita? ¿O el acto muestra cómo está esa firma y
 **28.** La explicación de la coordinación que acompañaba al equipo del Paciente ya salió. Queda la
 etiqueta «Trabaja en la zona de esta persona», en los tres idiomas
 (`panel/src/i18n/translations.js:2805`, `:5814`, `:8812`), que describe el modelo que este plan
-reemplaza. Se cambia junto con el paso del coordinador asignado, no antes, y la redacción nueva la
-aprueba el Desarrollador.
+reemplaza. Se cambia junto con el paso del coordinador asignado, no antes, y pasa a decir
+«Coordinador asignado».
 
 En la misma pasada, **lo que ve cada uno se recorta a lo que necesita para trabajar**, y se cumple
 en la base y en el backend, que hoy filtra sólo por Prestadora:
@@ -1414,10 +1414,6 @@ entera o una parte. **Por qué, Careonys no lo sabe ni lo pregunta**: recibe la 
   comprobación no existe, porque tampoco existe el apagado.
 - **La orden que llega no se puede bloquear.** Con esa misma comprobación, alcanzaría con tener un
   Asistente trabajando para que la orden nunca se cumpla.
-
-**Y hay textos colgados de un apagado que no existe:** el mensaje que le dice a la Prestadora que
-active la modalidad desde su Configuración, y el comentario que anuncia tres mensajes para cuando
-se apaga una modalidad con gente adentro, que no están.
 
 **102. Usted** — Qué hace Careonys de su lado cuando recibe esa orden y adentro quedan Asistentes
 trabajando y Clientes con acceso abierto. Cortar el acceso y dejarlo todo en su lugar no es lo

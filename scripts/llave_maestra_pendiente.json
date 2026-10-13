@@ -206,7 +206,6 @@
                                  "backend/src/utils/plazosDeCobroIntermediacion.js",
                                  "backend/src/utils/prestadorasDeLaIntermediacion.js",
                                  "backend/src/utils/proponerRespuestasIA.js",
-                                 "backend/src/utils/propuestaConfiguracionInicial.js",
                                  "backend/src/utils/push.js",
                                  "backend/src/utils/recuperacionDeClave.js",
                                  "backend/src/utils/reenvioDeLaCola.js",

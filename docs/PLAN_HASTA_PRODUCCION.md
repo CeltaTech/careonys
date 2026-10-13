@@ -630,9 +630,13 @@ nada**, así que queda señalado y se decide cuando la fusión llegue a esa etap
 
 ### Qué no hacen los cimientos
 
-No cambian ninguna pantalla, ningún texto visible ni ninguna regla de negocio, y no cambian qué ve
-cada rol. Nadie que use el producto nota nada, salvo que a partir de acá un error de programación no
-puede filtrar datos de otra Prestadora.
+No cambian ninguna pantalla, ningún texto visible ni ninguna regla de negocio. **Lo único que se
+nota es la zona del Coordinador** (paso 9): hoy el Panel le muestra todo lo de su Prestadora porque
+el backend saltea la regla de zona que la base ya tiene, y con su propia credencial pasa a ver
+sólo lo de su zona. El Administrador sigue viendo todo, y una emergencia que llega a todos los
+Coordinadores la ve cualquiera. Se les avisa a las Prestadoras antes de publicarlo. Fuera de eso,
+nadie que use el producto nota nada, salvo que a partir de acá un error de programación no puede
+filtrar datos de otra Prestadora.
 
 ---
 

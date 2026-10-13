@@ -4,14 +4,14 @@ export const T = {
     // entiendan. Ningún error técnico llega a la pantalla: lib/errores.js lo clasifica en
     // una de estas ocho y muestra la frase; el texto crudo queda en la consola.
     errores: {
-      sin_conexion: 'No hay conexión con el servidor. Hace falta revisar internet y volver a intentar.',
+      sin_conexion: 'Sin conexión con el servidor. Verifique su conexión a internet e intente nuevamente.',
       sesion_vencida: 'Pasó demasiado tiempo sin actividad. Hace falta volver a entrar.',
       sin_permiso: 'Este usuario no tiene permiso para hacer esto.',
       no_encontrado: 'No se encontró lo que se buscaba. Puede que ya no exista.',
       duplicado: 'Ya existe un registro con esos datos.',
       en_uso: 'No se puede borrar: hay otros registros que dependen de esto.',
       dato_invalido: 'Hay un dato mal cargado. Hace falta revisar lo que se escribió.',
-      falla_del_sistema: 'Algo falló de nuestro lado. Conviene volver a intentar en un rato.',
+      falla_del_sistema: 'Ocurrió un error en el servidor. Intente nuevamente en unos minutos.',
       // Los motivos: cuando el backend sabe exactamente qué pasó, lo dice con un código y la
       // frase se busca acá. Ganan siempre por sobre las ocho de arriba, que son lo genérico.
       // Están solo los que puede recibir esta aplicación —los que manda el backend en las
@@ -88,7 +88,7 @@ export const T = {
       vacio: 'No hay resultados.',
       // El botón que vuelve a pedir lo que no se pudo traer. Lo que ya está en pantalla se queda
       // donde está: un intento que falla no borra lo que se leyó.
-      reintentar: 'Volver a intentar',
+      reintentar: 'Reintentar',
       guardar: 'Guardar',
       guardando: 'Guardando…',
       cancelar: 'Cancelar',
@@ -437,7 +437,7 @@ export const T = {
       renovando: 'Renovando el código…',
       pedir_otro: 'Pedir otro código',
       pidiendo: 'Pidiendo…',
-      reintentar: 'Volver a intentar',
+      reintentar: 'Reintentar',
       sin_codigo: 'No hay ningún código para mostrar en este momento.',
     },
     medicacion: {
@@ -642,7 +642,7 @@ export const T = {
       notificaciones_activas: 'Notificaciones activadas en este dispositivo.',
       notificaciones_no_soportadas: 'Este navegador no admite notificaciones push.',
       notificaciones_permiso_denegado: 'El permiso de notificaciones está denegado. Se habilita desde la configuración del navegador.',
-      notificaciones_error: 'No se pudieron activar las notificaciones. Conviene volver a intentar.',
+      notificaciones_error: 'No se pudieron activar las notificaciones. Intente nuevamente.',
       // El enlace a las calificaciones vive en Mi Perfil y no en la barra de abajo: la barra es
       // para el trabajo del día —las guardias y las ofertas—, y esto se mira cada tanto.
       ver_calificaciones: 'Ver las calificaciones',
@@ -760,14 +760,14 @@ export const T = {
     // entiendan. Ningún error técnico llega a la pantalla: lib/errores.js lo clasifica en
     // una de estas ocho y muestra la frase; el texto crudo queda en la consola.
     errores: {
-      sin_conexion: 'No connection to the server. Check your internet and try again.',
+      sin_conexion: 'No server connection. Check your internet connection and try again.',
       sesion_vencida: 'You were inactive for too long. Please sign in again.',
       sin_permiso: 'Your account does not have permission to do this.',
       no_encontrado: 'We could not find what you were looking for. It may no longer exist.',
       duplicado: 'A record with that information already exists.',
       en_uso: 'This cannot be deleted: other records depend on it.',
       dato_invalido: 'Something was entered incorrectly. Please check what you typed.',
-      falla_del_sistema: 'Something failed on our side. Please try again shortly.',
+      falla_del_sistema: 'A server error occurred. Please try again in a few minutes.',
       motivos: {
         videollamada_no_configurada: 'This provider has not set up video calls yet, so for now the conversation continues in writing.',
         falta_checkin: 'This shift has no check-in yet, so it cannot be closed.',
@@ -809,7 +809,7 @@ export const T = {
       cargando: 'Loading…',
       error_generico: 'An error occurred. Please try again.',
       vacio: 'No results.',
-      reintentar: 'Try again',
+      reintentar: 'Retry',
       guardar: 'Save',
       guardando: 'Saving…',
       cancelar: 'Cancel',
@@ -1101,7 +1101,7 @@ export const T = {
       renovando: 'Renewing the code…',
       pedir_otro: 'Ask for another code',
       pidiendo: 'Asking…',
-      reintentar: 'Try again',
+      reintentar: 'Retry',
       sin_codigo: 'There is no code to show right now.',
     },
     medicacion: {
@@ -1401,14 +1401,14 @@ export const T = {
     // entiendan. Ningún error técnico llega a la pantalla: lib/errores.js lo clasifica en
     // una de estas ocho y muestra la frase; el texto crudo queda en la consola.
     errores: {
-      sin_conexion: 'Sem conexão com o servidor. É preciso verificar a internet e tentar de novo.',
+      sin_conexion: 'Sem conexão com o servidor. Verifique sua conexão com a internet e tente novamente.',
       sesion_vencida: 'Passou muito tempo sem atividade. É preciso entrar novamente.',
       sin_permiso: 'Este usuário não tem permissão para fazer isso.',
       no_encontrado: 'Não foi encontrado o que se procurava. Pode ser que não exista mais.',
       duplicado: 'Já existe um registro com esses dados.',
       en_uso: 'Não é possível apagar: outros registros dependem disto.',
       dato_invalido: 'Há um dado carregado errado. É preciso revisar o que foi escrito.',
-      falla_del_sistema: 'Algo falhou do nosso lado. É preciso tentar de novo daqui a pouco.',
+      falla_del_sistema: 'Ocorreu um erro no servidor. Tente novamente em alguns minutos.',
       motivos: {
         videollamada_no_configurada: 'Esta Prestadora ainda não configurou as videochamadas, então por enquanto a conversa segue por escrito.',
         falta_checkin: 'Este plantão ainda não tem o check-in marcado, então não é possível encerrá-lo.',
@@ -1941,7 +1941,7 @@ export const T = {
       notificaciones_activas: 'Notificações ativadas neste dispositivo.',
       notificaciones_no_soportadas: 'Este navegador não suporta notificações push.',
       notificaciones_permiso_denegado: 'A permissão de notificações está negada. Ela se habilita nas configurações do navegador.',
-      notificaciones_error: 'Não foi possível ativar as notificações. É preciso tentar novamente.',
+      notificaciones_error: 'Não foi possível ativar as notificações. Tente novamente.',
       ver_calificaciones: 'Ver as avaliações',
       disponibilidad_titulo: 'Disponibilidade',
       disponibilidad_disponible: 'Hoje está disponível para que lhe ofereçam plantões.',

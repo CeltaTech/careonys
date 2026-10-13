@@ -4,7 +4,7 @@ export const T = {
     // entiendan. Ningún error técnico llega a la pantalla: lib/errores.js lo clasifica en
     // una de estas ocho y muestra la frase; el texto crudo queda en la consola.
     errores: {
-      sin_conexion: 'No hay conexión con el servidor. Conviene revisar internet y volver a intentar.',
+      sin_conexion: 'Sin conexión con el servidor. Verifique su conexión a internet e intente nuevamente.',
       sesion_vencida: 'Pasó demasiado tiempo sin actividad. Hace falta volver a entrar.',
       sin_permiso: 'Este usuario no tiene permiso para hacer esto.',
       no_encontrado: 'No encontramos lo que se buscaba. Puede que ya no exista.',
@@ -22,7 +22,7 @@ export const T = {
         videollamada_no_configurada: 'Esta Prestadora todavía no configuró las videollamadas, así que por ahora la conversación sigue por escrito.',
         no_disponible: 'Esta función no está activada en esta Prestadora.',
         falta_la_firma: 'Falta la firma.',
-        firma_no_sirve: 'No se pudo realizar la confirmación biométrica. Vuelva a intentarlo.',
+        firma_no_sirve: 'No se pudo realizar la validación biométrica. Intente nuevamente.',
         // No es lo mismo que el de arriba y no se dicen igual. Arriba: la Prestadora no ofrece
         // esto. Acá: existe, pero el titular de la cuenta no se lo dio a esta persona. Quien lee
         // "no está activada" cuando en realidad no se lo dieron va a reclamarle a la Prestadora
@@ -40,7 +40,7 @@ export const T = {
         // la instrucción y no del código: pedir uno nuevo ya no los devuelve, así que esperar no
         // arregla nada y la salida es otra. El tope de pedidos por minuto sí se arregla esperando.
         demasiados_intentos: 'Se probó demasiadas veces con esta instrucción. Pedir un código nuevo ya no devuelve intentos: hace falta que la Prestadora la cargue de nuevo, o firmarla en papel.',
-        demasiados_pedidos: 'Se hicieron demasiados pedidos en poco tiempo. Conviene esperar un minuto y volver a intentar.',
+        demasiados_pedidos: 'Demasiadas solicitudes. Espere un minuto e intente nuevamente.',
         sin_codigo: 'Todavía no se pidió ningún código. Hace falta pedirlo primero.',
         ya_cerrada: 'Esa instrucción ya está firmada. No queda nada por confirmar.',
         no_encontrado: 'No se encontró esa instrucción. Conviene volver a abrir la pantalla.',
@@ -76,7 +76,7 @@ export const T = {
       vacio: 'No hay resultados.',
       // El botón que vuelve a pedir lo que no se pudo traer. Lo que ya está en pantalla se queda
       // donde está: un intento que falla no borra lo que se leyó.
-      reintentar: 'Volver a intentar',
+      reintentar: 'Reintentar',
       volver: 'Volver',
       cancelar: 'Cancelar',
       // El puntaje dicho en palabras. Las estrellas dibujadas no se leen: un lector de
@@ -493,7 +493,7 @@ export const T = {
       renovando: 'Renovando el código…',
       pedir_otro: 'Pedir otro código',
       pidiendo: 'Pidiendo…',
-      reintentar: 'Volver a intentar',
+      reintentar: 'Reintentar',
       sin_codigo: 'No hay ningún código para mostrar en este momento.',
     },
     // Esto es otra cosa y no se mezcla: acá el Cliente escanea la credencial del Asistente para
@@ -502,7 +502,7 @@ export const T = {
       titulo: 'Escanear Asistente',
       instrucciones: 'Apunte la cámara al código QR de la credencial del Asistente.',
       pidiendo_permiso: 'Solicitando acceso a la cámara…',
-      error_permiso: 'No se pudo acceder a la cámara. Conviene revisar los permisos del navegador y volver a intentar.',
+      error_permiso: 'No se pudo acceder a la cámara. Verifique los permisos del navegador e intente nuevamente.',
       error_qr_invalido: 'Ese código QR no corresponde a ningún Asistente registrado.',
       verificando: 'Verificando…',
       resultado_coincide: 'Coincide: este es el Asistente asignado a la guardia de hoy.',
@@ -596,7 +596,7 @@ export const T = {
       notificaciones_activas: 'Notificaciones activadas en este dispositivo.',
       notificaciones_no_soportadas: 'Este navegador no admite notificaciones push.',
       notificaciones_permiso_denegado: 'El permiso de notificaciones está denegado. Se habilita desde la configuración del navegador.',
-      notificaciones_error: 'No se pudieron activar las notificaciones. Conviene volver a intentar.',
+      notificaciones_error: 'No se pudieron activar las notificaciones. Intente nuevamente.',
     },
     medicacion: {
       titulo: 'Medicación',
@@ -689,7 +689,7 @@ export const T = {
     // entiendan. Ningún error técnico llega a la pantalla: lib/errores.js lo clasifica en
     // una de estas ocho y muestra la frase; el texto crudo queda en la consola.
     errores: {
-      sin_conexion: 'No connection to the server. Check your internet and try again.',
+      sin_conexion: 'No server connection. Check your internet connection and try again.',
       sesion_vencida: 'You were inactive for too long. Please sign in again.',
       sin_permiso: 'Your account does not have permission to do this.',
       no_encontrado: 'We could not find what you were looking for. It may no longer exist.',
@@ -701,12 +701,12 @@ export const T = {
         videollamada_no_configurada: 'This provider has not set up video calls yet, so for now the conversation continues in writing.',
         no_disponible: 'This feature is not switched on at this Provider.',
         falta_la_firma: 'Signature pending.',
-        firma_no_sirve: 'The biometric confirmation could not be completed. Please try again.',
+        firma_no_sirve: 'Biometric validation failed. Please try again.',
         sin_acceso: 'The account holder did not include this in what you can see. Any change is requested by them from the Provider.',
         codigo_incorrecto: 'That code is not correct. Please check it and type it again.',
         vencido: 'That code has expired. Please request a new one.',
         demasiados_intentos: 'This instruction has been tried too many times. Requesting a new code no longer restores attempts: the Provider has to load it again, or it can be signed on paper.',
-        demasiados_pedidos: 'Too many requests were made in a short time. Please wait a minute and try again.',
+        demasiados_pedidos: 'Too many requests. Wait a minute and try again.',
         sin_codigo: 'No code has been requested yet. Please request one first.',
         ya_cerrada: 'That instruction is already signed. There is nothing left to confirm.',
         no_encontrado: 'That instruction could not be found. Please open the screen again.',
@@ -727,7 +727,7 @@ export const T = {
       cargando: 'Loading…',
       error_generico: 'An error occurred. Please try again.',
       vacio: 'No results.',
-      reintentar: 'Try again',
+      reintentar: 'Retry',
       volver: 'Back',
       cancelar: 'Cancel',
       puntaje_estrellas: '{n} out of 5 stars',
@@ -1087,14 +1087,14 @@ export const T = {
       renovando: 'Renewing the code…',
       pedir_otro: 'Ask for another code',
       pidiendo: 'Asking…',
-      reintentar: 'Try again',
+      reintentar: 'Retry',
       sin_codigo: 'There is no code to show right now.',
     },
     escaneo: {
       titulo: 'Scan Assistant',
       instrucciones: 'Point the camera at the QR code on the Assistant\'s credential.',
       pidiendo_permiso: 'Requesting camera access…',
-      error_permiso: 'Could not access the camera. Check your browser permissions and try again.',
+      error_permiso: 'Could not access the camera. Check browser permissions and try again.',
       error_qr_invalido: 'That QR code does not match any registered Assistant.',
       verificando: 'Verifying…',
       resultado_coincide: 'Match: this is the Assistant assigned to today\'s shift.',
@@ -1266,7 +1266,7 @@ export const T = {
     // entiendan. Ningún error técnico llega a la pantalla: lib/errores.js lo clasifica en
     // una de estas ocho y muestra la frase; el texto crudo queda en la consola.
     errores: {
-      sin_conexion: 'Sem conexão com o servidor. Convém verificar a internet e tentar de novo.',
+      sin_conexion: 'Sem conexão com o servidor. Verifique sua conexão com a internet e tente novamente.',
       sesion_vencida: 'Passou muito tempo sem atividade. É preciso entrar novamente.',
       sin_permiso: 'Este usuário não tem permissão para fazer isso.',
       no_encontrado: 'Não encontramos o que foi procurado. Pode ser que não exista mais.',
@@ -1278,12 +1278,12 @@ export const T = {
         videollamada_no_configurada: 'Esta Prestadora ainda não configurou as videochamadas, então por enquanto a conversa segue por escrito.',
         no_disponible: 'Esta função não está ativada nesta Prestadora.',
         falta_la_firma: 'Falta a assinatura.',
-        firma_no_sirve: 'Não foi possível realizar a confirmação biométrica. Tente novamente.',
+        firma_no_sirve: 'Não foi possível realizar a validação biométrica. Tente novamente.',
         sin_acceso: 'O titular da conta não incluiu isto no que foi concedido. A mudança é ele quem pede à Prestadora.',
         codigo_incorrecto: 'Esse código não está correto. Convém revisá-lo e digitá-lo de novo.',
         vencido: 'Esse código venceu. É preciso pedir um novo.',
         demasiados_intentos: 'Houve tentativas demais nesta instrução. Pedir um código novo já não devolve tentativas: é preciso que a Prestadora a carregue de novo, ou assiná-la em papel.',
-        demasiados_pedidos: 'Foram feitos pedidos demais em pouco tempo. Convém esperar um minuto e tentar de novo.',
+        demasiados_pedidos: 'Muitas solicitações. Aguarde um minuto e tente novamente.',
         sin_codigo: 'Ainda não foi pedido nenhum código. É preciso pedi-lo primeiro.',
         ya_cerrada: 'Essa instrução já está assinada. Não resta nada a confirmar.',
         no_encontrado: 'Não foi encontrada essa instrução. Convém abrir a tela de novo.',
@@ -1671,7 +1671,7 @@ export const T = {
       titulo: 'Escanear Assistente',
       instrucciones: 'Aponte a câmera para o código QR da credencial do Assistente.',
       pidiendo_permiso: 'Solicitando acesso à câmera…',
-      error_permiso: 'Não foi possível acessar a câmera. Convém verificar as permissões do navegador e tentar novamente.',
+      error_permiso: 'Não foi possível acessar a câmera. Verifique as permissões do navegador e tente novamente.',
       error_qr_invalido: 'Esse código QR não corresponde a nenhum Assistente registrado.',
       verificando: 'Verificando…',
       resultado_coincide: 'Confere: este é o Assistente designado para o plantão de hoje.',
@@ -1760,7 +1760,7 @@ export const T = {
       notificaciones_activas: 'Notificações ativadas neste dispositivo.',
       notificaciones_no_soportadas: 'Este navegador não suporta notificações push.',
       notificaciones_permiso_denegado: 'A permissão de notificações está negada. Pode ser ativada nas configurações do navegador.',
-      notificaciones_error: 'Não foi possível ativar as notificações. Convém tentar novamente.',
+      notificaciones_error: 'Não foi possível ativar as notificações. Tente novamente.',
     },
     medicacion: {
       titulo: 'Medicação',

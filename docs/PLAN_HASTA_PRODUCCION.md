@@ -356,7 +356,7 @@ nombra qué habilita el alojamiento y con qué instrumento. Sin eso, el alta no 
 **6.** **Lo que queda del segundo nivel de aislamiento, el que Chile exige.** La regla ya está
 escrita en la base (la política `la_informacion_de_salud_la_ve_quien_atiende` y la función
 `interno.alcanza_la_informacion_de_salud`),
-y aplicada: la política es restrictiva, de lectura, y está en nueve tablas. Con la restricción de HCE encendida, la información de salud de un paciente la lee
+y aplicada: la política es restrictiva, de lectura, y está en ocho tablas. Con la restricción de HCE encendida, la información de salud de un paciente la lee
 sólo quien lo atiende y el Administrador de su Prestadora; donde la tabla de requerimientos legales de HCE por país la pide, como en
 Chile, la restricción queda fija y no se apaga. Lo que falta:
 
@@ -1309,14 +1309,6 @@ una copia de trabajo**, que no es un archivo del repositorio y por eso el barrid
 **88. Usted** — Correr `node scripts/probar_restauracion.mjs` desde `backend/`, con Docker encendido y las variables del respaldo diario más las de la base de producción cargadas en el entorno. Baja el último respaldo, lo restaura en una base efímera, compara las tablas, las filas y los archivos del espejo contra lo que hay hoy, y borra todo al terminar. Le toca a usted porque pide las llaves del bucket y de la base, que viven en la caja fuerte. La prueba anterior verificó 30 tablas de un esquema que hoy tiene 105 y no tocó ningún archivo, porque todavía no se respaldaban. **Si contesta `no_probado`, no salió mal: quiere decir que todo coincidió y no había nada cargado que comparar**, y entonces hay que repetirla con datos de prueba.
 
 **89. Usted** — Los dominios se renovaron en julio de 2026 y vencen en julio de 2027, y esa fecha hoy no está en ningún calendario: `celtatech.com` y `careonys.com` en Cloudflare, y `celtatech.com.ar` y `celtatech.net.ar` en NIC Argentina. Poner un recordatorio un mes antes de cada uno y, donde el registrador lo permita, dejar la renovación automática encendida — NIC Argentina no la tiene, así que ésos son los dos que de verdad dependen del recordatorio. Un dominio vencido no se cae despacio: deja de resolver, y con él se van las pantallas, el correo de la empresa y la entrada a las cuentas que se registraron con ese correo.
-
-**Dos tareas programadas no corren, ni en local ni en producción, por falta de permiso.** Con la
-credencial del trabajo sin persona, `utils/revisarNotificacionesCoordinador.js` no puede leer las
-emergencias de las guardias —le falta ejecutar `interno.alcanza_la_informacion_de_salud`— y
-`utils/ausenciaAutomatica.js` no puede marcar ausente a nadie —le falta el esquema `auth`—. Así,
-una emergencia que nadie tomó no le llega al Coordinador, y una guardia sin fichada no se marca
-sola. Se cierra cuando las dos tareas corren contra la base local sin esos dos errores, sin darle
-al trabajo sin persona más alcance que el que cada una necesita.
 
 ---
 

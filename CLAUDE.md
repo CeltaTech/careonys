@@ -346,6 +346,10 @@ DEFINER`**: sumaría código corriendo con privilegio de dueño y le sacaría la
 las consultas que hace por dentro. El Desarrollador la adoptó como propia, textual: *«no era mia,
 pero desde ahora en mas lo es»*.
 
+**Por lo mismo, un disparador no llama a `auth.uid()`**: el trabajo sin persona no tiene uso del
+esquema `auth`, que es de Supabase y no se reparte desde una migración. Pregunta quién inició
+sesión con `interno.usuario_de_la_sesion()`, que devuelve lo mismo.
+
 **Ninguna prueba del backend ve esto**: casi todo el backend entra todavía con la llave de
 servicio, que puede ejecutar todo, y las pruebas del backend contestan con una base de mentira. Lo prueba `scripts/probar_altas_con_sesion.mjs`, que da de alta con la credencial de una
 persona y además le pregunta a la base si algún disparador quedó pidiendo un permiso que no

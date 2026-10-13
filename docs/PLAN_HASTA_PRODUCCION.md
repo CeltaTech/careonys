@@ -559,24 +559,37 @@ Y sobre el registro: se lee un paciente desde dos Prestadoras con dos personas d
 las dos, por paciente, con los seis campos; se altera una entrada del medio y la cadena queda rota y
 el sistema lo dice.
 
-**10.** **Se cierra la puerta.** Sale `SUPABASE_SERVICE_ROLE_KEY` del backend y de sus variables de
-entorno. Se borra `acotarAPrestadora`. Las consultas que confían en un identificador de afuera
-dejan de ser un riesgo porque la base ya no les cree.
+**10.** **Se cierra la puerta, en todos lados.** Sale `SUPABASE_SERVICE_ROLE_KEY` del backend y de
+sus variables de entorno, y también de todo lo demás que la usa: la copia de respaldo diaria, los
+programas sueltos de `backend/scripts` y las pruebas. Se borra `acotarAPrestadora`. Las consultas
+que confían en un identificador de afuera dejan de ser un riesgo porque la base ya no les cree.
 
-**Entrar con la huella o con el rostro sigue usando la llave maestra, y queda así por ahora.** La
-huella la comprueba el propio teléfono; después el producto le pide a Supabase una credencial de
-entrada para esa persona, y ese pedido va con la llave maestra
-(`routes/llaveDelDispositivo.js:192`). Supabase ofrece hacerlo por su cuenta, pero todavía como
-prueba: se evalúa cuando esté firme.
+**Mientras tanto, la llave sólo puede retroceder.** La lista de los archivos que todavía la usan
+está en `scripts/llave_maestra_pendiente.json`, y `scripts/verificar_llave_maestra.mjs` corta la
+publicación si aparece uno nuevo o si la lista crece. Cada paso que le saca la llave a un archivo
+lo saca también de la lista.
 
-**Queda para después el código de verificación por correo que se le pide al personal técnico al entrar**
-(`utils/mfaRecuperacionEmail.js:87-90`), porque esas personas no pertenecen a ninguna Prestadora.
-El rol técnico se queda: es la cuenta con la que entra la persona de CeltaTech cuando le abren un
-permiso de acceso, y el backend sólo busca ese permiso para ese rol
-(`middleware/requiereRolPanel.js:100`).
+**La copia de respaldo pasa a una credencial que sólo lee los archivos**: no toca la base, no
+escribe ni borra, y vive sólo en el proceso nocturno. Alcanza a todas las Prestadoras porque su
+trabajo es copiar todo. Antes de escribirla se comprueba qué ofrece Supabase para eso.
 
-**Comprobación:** el producto funciona sin esa variable definida. Es la única prueba que no se puede
-falsear.
+**Dos entradas todavía la usan, y se resuelven antes de cerrar este paso.** Cómo, se decide al
+llegar a cada una:
+- **Entrar con la huella o con el rostro.** La huella la comprueba el propio teléfono; después el
+  producto le pide a Supabase una credencial de entrada para esa persona, y ese pedido va con la
+  llave maestra (`routes/llaveDelDispositivo.js:192`). Supabase ofrece hacerlo por su cuenta,
+  todavía como prueba.
+- **El código de verificación por correo que se le pide al personal técnico al entrar**
+  (`utils/mfaRecuperacionEmail.js:87-90`), porque esas personas no pertenecen a ninguna
+  Prestadora. El rol técnico se queda: es la cuenta con la que entra la persona de CeltaTech
+  cuando le abren un permiso de acceso, y el backend sólo busca ese permiso para ese rol
+  (`middleware/requiereRolPanel.js:100`).
+
+**Comprobación:** las dos listas de `scripts/llave_maestra_pendiente.json` están vacías, la llave
+está dada de baja en Supabase, y el producto y la copia de respaldo funcionan igual. Es la única
+prueba que no se puede falsear: una llave que no existe no abre nada.
+
+**Ninguna Prestadora real entra mientras la llave exista en Supabase.**
 
 **13.** **Cifrado y custodia de claves.** El cifrado en reposo y en tránsito es «Addressable» en
 Estados Unidos, lo que no quiere decir opcional: el 164.306(d)(3) da tres salidas y las dos últimas
@@ -607,8 +620,8 @@ base de hoy. Si no son idénticos, la fundición está mal.
 
 **15.** **Para que no vuelva.** Tres automatismos que cortan la publicación:
 
-- **La llave maestra no entra.** Si `SUPABASE_SERVICE_ROLE_KEY` aparece en `backend/src`, el push no
-  sale.
+- **La llave maestra no vuelve.** El control del paso 10 queda con las listas vacías: si
+  `SUPABASE_SERVICE_ROLE_KEY` aparece en cualquier archivo del repositorio, el push no sale.
 - **Ninguna tabla nace sin protección.** Una tabla en el esquema declarado sin protección por fila y
   sin al menos una política corta la publicación. Lo mismo un depósito de archivos sin política.
 - **La prueba que puede fallar.** La prueba de aislamiento corre con el filtro del código quitado a
@@ -1287,7 +1300,7 @@ Hoy sólo se guardan fechas.
 
 **86. Usted** — El alta del gestor de contraseñas, y completar las cinco filas en blanco de `celtatech/docs/CUENTAS.md`.
 
-**87.** Rotar clave por clave lo que corresponda, decidiéndolo de a una. Si se rota la clave secreta de Supabase, se actualiza en Railway en el mismo acto. Entra acá la clave de servicio de Supabase que estuvo escrita en texto plano en la configuración de permisos de la máquina: los comandos que la llevaban adentro ya se borraron, pero la clave en sí se rota el día de la liberación, no antes.
+**87.** Rotar clave por clave lo que corresponda, decidiéndolo de a una. Si se rota la clave secreta de Supabase, se actualiza en Railway en el mismo acto. La llave maestra no entra acá: se da de baja al cerrar los cimientos (paso 10).
 
 **Ya no queda ninguna contraseña escrita en el repositorio.** Todas salen del entorno, y las
 cuentas de la base local nacen sin contraseña: se la pone un programa aparte después de cada

@@ -92,7 +92,7 @@ destructivas vía Regla 4 de `CLAUDE.md`, log de auditoría de todo login/acció
 timeout de 5 min de inactividad + tope de 60 min con advertencia a los 50) es el que se
 implementó.
 
-**Nota (2026-07-15, cierra la anterior):** el mecanismo se implementó — `current_tenant()`
+**Nota (2026-07-15, cierra la anterior):** el mecanismo se implementó — `prestadora_actual()`
 dinámico por sesión incluido. La nota de arriba decía "todavía no está implementado"; eso
 dejó de ser cierto en el pendiente #30.
 
@@ -117,7 +117,7 @@ configuración de sistema (planes/módulos activables, si se construye esa idea 
 que se construya sobre logs/errores de la aplicación — no exponer esas herramientas a
 `admin_prestadora` ni a `coordinador`.
 
-## Multi-tenancy — `current_tenant()` y `es_superadmin()` (Bloque 2, aplicado y verificado)
+## Multi-tenancy — `prestadora_actual()` y `es_superadmin()` (Bloque 2, aplicado y verificado)
 
 **Nota (2026-07-28, corrige y reemplaza la nota anterior de esta sección):** la nota que
 estaba acá decía que `es_superadmin()` "sigue siendo hoy un bypass total sin acotar" y que la
@@ -125,14 +125,14 @@ sesión de tenant dinámica "todavía no está implementada en código". Las dos
 ser ciertas en el pendiente #30 (2026-07-15) y quedaron escritas casi un mes de más. Estado
 real, verificado contra la base el 2026-07-28:
 
-- `current_tenant()` resuelve el permiso de acceso primero y el `prestadora_id` propio
+- `prestadora_actual()` resuelve el permiso de acceso primero y el `prestadora_id` propio
   después (definición completa abajo, copiada de la base, no del diseño).
 - `es_superadmin()` no es un bypass: devuelve `TRUE` solo si el usuario es `superadmin` **y**,
   cuando `configuracion_plataforma.mfa_admin_obligatorio` está en ON, además viene con segundo
   factor verificado (`aal2`). Las policies la usan siempre junto al tenant
-  (`es_superadmin() AND prestadora_id = current_tenant()`), nunca sola.
+  (`es_superadmin() AND prestadora_id = prestadora_actual()`), nunca sola.
 
-La tabla que consulta `current_tenant()` se llama `permisos_de_acceso` y el rol habilitado es
+La tabla que consulta `prestadora_actual()` se llama `permisos_de_acceso` y el rol habilitado es
 `superadmin`.
 
 Toda policy de RLS escrita desde el Bloque 2 en adelante usa estas dos funciones SQL en vez
@@ -140,7 +140,7 @@ de repetir el `EXISTS (SELECT ... FROM usuarios WHERE id = auth.uid() ...)` a ma
 
 ```sql
 -- Copiado de la base el 2026-07-28 (pg_get_functiondef), no del diseño.
-CREATE OR REPLACE FUNCTION current_tenant() RETURNS UUID
+CREATE OR REPLACE FUNCTION prestadora_actual() RETURNS UUID
   LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT COALESCE(
     -- 1º: ¿hay un permiso de acceso abierto y vigente? Entonces manda esa Prestadora.
@@ -173,12 +173,12 @@ END;
 $$;
 ```
 
-Toda tabla con `prestadora_id` debe filtrar por `prestadora_id = current_tenant()` en sus
+Toda tabla con `prestadora_id` debe filtrar por `prestadora_id = prestadora_actual()` en sus
 policies — nunca solo por rol, sin el filtro de tenant, salvo que la tabla sea
 intencionalmente global (ej. `escalas_legales`, que no tiene `prestadora_id`).
 
 **Regla: en toda tabla que tenga `prestadora_id`, `es_superadmin()` va con `AND`, nunca sola.**
-El patrón correcto es `(es_superadmin() AND prestadora_id = current_tenant()) OR (...)`: ser
+El patrón correcto es `(es_superadmin() AND prestadora_id = prestadora_actual()) OR (...)`: ser
 superadmin da un permiso *dentro* del tenant en el que uno está parado, no permiso para
 salirse de él. Una policy que diga solamente `USING (es_superadmin())` sobre una tabla con
 `prestadora_id` es un bypass cross-tenant.
@@ -202,12 +202,12 @@ operación queda fuera, sin excepción.
 
 Cada tabla nueva necesita RLS antes de mergear el PR que la crea. Ejemplos oficiales
 (actualizados 2026-07-10 al patrón multi-tenant — toda policy nueva debe filtrar por
-`current_tenant()`, no solo por rol):
+`prestadora_actual()`, no solo por rol):
 
 ```sql
 -- Asistentes solo ven sus propias guardias (dentro de su tenant)
 CREATE POLICY "asistente_ve_sus_guardias" ON guardias
-  FOR SELECT USING (asistente_id = auth.uid() AND prestadora_id = current_tenant());
+  FOR SELECT USING (asistente_id = auth.uid() AND prestadora_id = prestadora_actual());
 
 -- Los Clientes solo ven los reportes de sus pacientes
 CREATE POLICY "cliente_ve_sus_reportes" ON reportes
@@ -222,7 +222,7 @@ CREATE POLICY "cliente_ve_sus_reportes" ON reportes
 -- Admin_prestadora y coordinadores ven todo en su ámbito, acotado a su propia prestadora
 CREATE POLICY "admin_prestadora_ve_todo" ON guardias
   FOR ALL USING (
-    prestadora_id = current_tenant()
+    prestadora_id = prestadora_actual()
     AND EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND rol IN ('admin_prestadora','coordinador'))
     OR es_superadmin()
   );
@@ -237,7 +237,7 @@ intentar una sola condición que cubra los dos:
 ```sql
 CREATE POLICY "coordinador_ve_incidentes_de_su_zona" ON incidentes_relevo
   FOR SELECT USING (
-    prestadora_id = current_tenant() AND (
+    prestadora_id = prestadora_actual() AND (
       -- Caso con relevo previo: derivar la zona desde la guardia saliente
       EXISTS (
         SELECT 1 FROM guardias g
@@ -270,7 +270,7 @@ Tablas que **nunca** deben tener policy de lectura para `asistente` ni `cliente`
 ```sql
 CREATE POLICY lee_remuneraciones_quien_tiene_el_permiso ON remuneraciones_asistente
   FOR SELECT USING (
-    prestadora_id = current_tenant()
+    prestadora_id = prestadora_actual()
     AND tiene_permiso('ver_pagos_asistente')
     AND EXISTS (SELECT 1 FROM asistentes a WHERE a.id = remuneraciones_asistente.asistente_id)
   );
@@ -317,7 +317,7 @@ con su propia sesión. Pasaron a `datos_reservados_asistente`, con su propia pol
 ```sql
 CREATE POLICY lee_datos_reservados_quien_tiene_el_permiso ON datos_reservados_asistente
   FOR SELECT USING (
-    prestadora_id = current_tenant()
+    prestadora_id = prestadora_actual()
     AND tiene_permiso('ver_datos_reservados_asistente')
     AND EXISTS (SELECT 1 FROM asistentes a WHERE a.id = datos_reservados_asistente.asistente_id)
   );
@@ -368,7 +368,7 @@ qué importe congelado, hasta qué fecha y con cuántos contactos. La primera la
 ```sql
 CREATE POLICY prestadora_administra_sus_formas_de_cobro ON formas_de_cobro_intermediacion
   FOR ALL USING (
-    prestadora_id = interno.current_tenant()
+    prestadora_id = interno.prestadora_actual()
     AND EXISTS (SELECT 1 FROM usuarios u WHERE u.id = auth.uid() AND u.rol = 'admin_prestadora')
   );
 
@@ -435,7 +435,7 @@ CREATE POLICY cliente_ve_los_contactos_que_abrio ON contactos_vistos_intermediac
 
 CREATE POLICY prestadora_ve_los_contactos_vistos ON contactos_vistos_intermediacion
   FOR SELECT USING (
-    prestadora_id = interno.current_tenant()
+    prestadora_id = interno.prestadora_actual()
     AND EXISTS (SELECT 1 FROM usuarios u WHERE u.id = auth.uid()
                 AND u.rol IN ('admin_prestadora', 'coordinador'))
   );
@@ -492,7 +492,7 @@ depósito `fotos-identidad`.
 
 - **Es privado y tiene una sola política**, `fotos_identidad_las_alcanza_quien_administra_o_coordina`,
   para quien tiene sesión y para todas las operaciones —leer, subir, reemplazar y borrar—. Exige
-  que la primera carpeta de la ruta sea la Prestadora de la sesión (`interno.current_tenant()`), y
+  que la primera carpeta de la ruta sea la Prestadora de la sesión (`interno.prestadora_actual()`), y
   adentro de ella alcanza al Administrador y al Superadmin con cualquier foto, y al Coordinador sólo
   con las de un Asistente a su alcance (`interno.coordinador_alcanza_asistente`, con la segunda
   carpeta de la ruta, que tiene que ser un identificador válido; si no lo es, niega). Hoy el backend

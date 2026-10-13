@@ -98,7 +98,7 @@ cartel que exige la regla de la empresa es de la herramienta con la que opera Ce
 - **Acá la Organización ficticia es Sandbox.** El permiso vive en `permisos_de_acceso` y lo que
   se hace con él, en `auditoria_de_accesos`. La forma del permiso es la de la empresa y no se toca.
 - La precedencia —permiso de acceso primero, Organización propia después— la define la función
-  SQL `current_tenant()`, y el middleware `requiereRolPanel.js` la refleja, no la reinventa. Ahí
+  SQL `prestadora_actual()`, y el middleware `requiereRolPanel.js` la refleja, no la reinventa. Ahí
   vive además el cierre por vencimiento, porque es el único lugar por el que pasan todos los
   pedidos.
 
@@ -326,8 +326,8 @@ de RLS están en el esquema `interno`, que queda afuera de la lista `schemas` de
 encontrando porque guardan el identificador interno de la función, no su nombre. **Una función se
 queda en `public` solamente si el navegador la llama a propósito, y entonces no puede recibir un
 identificador que la apunte a otra Prestadora** — hoy el Panel llama cuatro: `ausencias_que_tapan`,
-que recibe dos fechas y resuelve la Prestadora adentro con `current_tenant()`; `resolver`, que
-también la resuelve adentro con `current_tenant()`; y `domicilio_del_paciente_en` y
+que recibe dos fechas y resuelve la Prestadora adentro con `prestadora_actual()`; `resolver`, que
+también la resuelve adentro con `prestadora_actual()`; y `domicilio_del_paciente_en` y
 `domicilios_de_pacientes_en`, que reciben pacientes y una fecha y corren con los permisos de quien
 llama, así que la protección por fila de cada tabla decide qué ve. Toda función nueva de política
 nace en `interno`, y cualquiera que se quede en `public` y llame a una de ahí lleva `interno` en su

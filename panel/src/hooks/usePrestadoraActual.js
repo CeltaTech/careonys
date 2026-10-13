@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
  *
  * Es la Prestadora de la cuenta con la que se entró, y no hay segunda respuesta: una cuenta
  * pertenece a una sola Prestadora, y para trabajar en otra hay que salir y entrar con la cuenta de
- * allá. Es el mismo orden que aplica la base en `current_tenant()`, y esa coincidencia no es
+ * allá. Es el mismo orden que aplica la base en `prestadora_actual()`, y esa coincidencia no es
  * casual: si las dos no dicen lo mismo, el Panel arma una consulta apuntando a una Prestadora y la
  * base la contesta apuntando a otra.
  *

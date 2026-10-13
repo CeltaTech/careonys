@@ -17,7 +17,7 @@
 // Ya no hace falta ninguna rama por rol: requiereRolPanel.js deja en
 // req.usuarioPanel.prestadoraId la Prestadora correcta para cualquier rol —la de la sesión de
 // soporte si hay una abierta, la Organización propia si no—, con el mismo orden de precedencia
-// que la función SQL current_tenant(). Filtrar siempre por ese valor es a la vez más simple y
+// que la función SQL prestadora_actual(). Filtrar siempre por ese valor es a la vez más simple y
 // más seguro.
 
 // Error de programación, no de uso: significa que una ruta llamó a acotarAPrestadora() sin

@@ -188,7 +188,7 @@ del archivo** (`panelVitalesAutorizacion.js:88`, y `appAsistentesMatricula.js:20
 **La protección por fila está puesta y hoy no protege de nada.** Las 201 tablas la tienen encendida
 y 199 tienen política —las dos sin ninguna son `mfa_codigos_recuperacion` y
 `codigos_de_presencia`—, y ninguna depende de nada que aporte el backend: la Prestadora la resuelve
-`interno.current_tenant()` con la cuenta de quien entró. **La base ya sabe aislar y nadie le está
+`interno.prestadora_actual()` con la cuenta de quien entró. **La base ya sabe aislar y nadie le está
 preguntando.**
 
 **Lo que no tiene persona detrás ya no usa la llave maestra**: las tareas automatizadas, la carga de
@@ -456,7 +456,7 @@ escrito encima por qué. Lo que queda, agrupado por lo que hay que hacer:
   WhatsApp, de la conexión con software externo y de los avisos de cobranza y facturación,
   `intercambiar_orden_etapas_incorporacion` y `sembrar_configuracion_prestadora`. La de la conexión
   con software externo recibe además la Prestadora como dato: la versión que se le abra a
-  `authenticated` la resuelve adentro, con `current_tenant()`, como `ausencias_que_tapan`.
+  `authenticated` la resuelve adentro, con `prestadora_actual()`, como `ausencias_que_tapan`.
 - **El permiso de tabla de `authenticated` es entero en casi todas las tablas**, y lo que acota es
   la política. Donde una política le deja actualizar a una persona su propia fila, puede cambiarle
   cualquier columna si llama a la base directo con su sesión. En los avisos de demora ya está

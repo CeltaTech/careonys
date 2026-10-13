@@ -31,7 +31,7 @@ panelAuditoriaRouter.get('/', requiereRolPanel, async (req, res) => {
   // Hasta el 2026-09-08 esta ruta le entregaba al Superadmin el registro de todas las
   // Prestadoras, y la base decía otra cosa: la política
   // `superadmin_lee_auditoria_de_su_permiso_vigente` compara
-  // `prestadora_id` contra `interno.current_tenant()`, o sea que sólo deja leer el registro de
+  // `prestadora_id` contra `interno.prestadora_actual()`, o sea que sólo deja leer el registro de
   // la Prestadora donde haya un permiso de acceso abierto. Los dos lados decían cosas
   // distintas; era el pendiente #158. **Manda el alcance de la base** (Desarrollador,
   // 2026-09-08), y este filtro es el que lo hace cumplir de este lado.
@@ -52,7 +52,7 @@ panelAuditoriaRouter.get('/', requiereRolPanel, async (req, res) => {
   // Por eso el filtro es uno solo y vale para todo rol: la Prestadora sobre la que la persona
   // está parada, y ninguna otra. `prestadoraId` sale de `requiereRolPanel`, que resuelve la
   // precedencia —permiso de acceso primero, Organización propia después— con el mismo orden que
-  // la función SQL `current_tenant()`, que es el punto único de verdad. Para el
+  // la función SQL `prestadora_actual()`, que es el punto único de verdad. Para el
   // Admin_prestadora eso es siempre la suya, igual que la política
   // `admin_prestadora_lee_auditoria_de_su_prestadora`.
   //
@@ -79,7 +79,7 @@ panelAuditoriaRouter.get('/', requiereRolPanel, async (req, res) => {
 //
 // El alcance es el mismo de siempre y por el mismo motivo: la Prestadora sobre la que la persona
 // está parada, y ninguna otra. `prestadoraId` sale de `requiereRolPanel`, que resuelve la
-// precedencia con el mismo orden que `interno.current_tenant()`. Falla cerrado: sin Prestadora
+// precedencia con el mismo orden que `interno.prestadora_actual()`. Falla cerrado: sin Prestadora
 // resuelta no se entrega nada.
 //
 // Lo lee administración y nadie más. El registro dice qué hizo cada uno, y eso no es información

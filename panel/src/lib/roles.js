@@ -10,7 +10,7 @@
 // admin_plataforma, el rol comercial. Se fue entero a CeltaTech y ya no existe dentro de
 // Careonys. Lo que hacía de técnico —entrar a una Prestadora real, una por vez— lo hace ahora
 // superadmin con un permiso de acceso (permisos_de_acceso); RLS via
-// current_tenant() se encarga de que sin sesión abierta no vea más que su propia Organización.
+// prestadora_actual() se encarga de que sin sesión abierta no vea más que su propia Organización.
 // El backend usa este mismo archivo, copiado por máquina (scripts/copias_entre_apps.mjs). Hasta
 // el 2026-09-04 la lista estaba escrita a mano en cinco rutas del backend y no todas decían lo
 // mismo: tres funciones llamadas `requiereAdminOSuperior`, y la de Match dejaba pasar al

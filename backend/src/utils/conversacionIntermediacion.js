@@ -108,7 +108,7 @@ export function desdeCuando(valor) {
  *
  * El catálogo tiene dos clases de regla: las generales, sin Prestadora, y las de una sola. Se
  * nombra la Prestadora igual que la política de la tabla —`prestadora_id IS NULL OR
- * prestadora_id = interno.current_tenant()`—, para que ninguna vuelta traiga la regla de otra.
+ * prestadora_id = interno.prestadora_actual()`—, para que ninguna vuelta traiga la regla de otra.
  */
 async function motivosDelCatalogo(prestadoraId) {
   // Sin Prestadora no se consulta: preguntar sin nombrarla traería el catálogo de todas.

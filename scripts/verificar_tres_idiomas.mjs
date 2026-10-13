@@ -76,6 +76,9 @@ const IGUALES_A_PROPOSITO = new Map([
   ['Chile', 'nombre propio de país'],
   // Nombres de los números del organismo fiscal argentino: se llaman así en todo idioma.
   ['CUIT / CUIL', 'nombre propio de un documento argentino'],
+  ['DNI', 'nombre propio de un documento argentino'],
+  // La abreviatura de minutos, que es la misma en los tres idiomas.
+  ['min', 'se escribe igual en los tres idiomas'],
   // Palabras que se escriben igual en castellano, inglés y portugués.
   ['Email', 'se escribe igual en los tres idiomas'],
   ['Normal', 'se escribe igual en los tres idiomas'],
@@ -85,6 +88,11 @@ const IGUALES_A_PROPOSITO = new Map([
   ['Cheque', 'se escribe igual en los tres idiomas'],
   ['Admin', 'se escribe igual en los tres idiomas'],
   ['Superadmin', 'se escribe igual en los tres idiomas'],
+  // Vías de la medicación.
+  ['Oral', 'se escribe igual en los tres idiomas'],
+  ['Nasal', 'se escribe igual en los tres idiomas'],
+  ['Vaginal', 'se escribe igual en los tres idiomas'],
+  ['Intramuscular', 'se escribe igual en los tres idiomas'],
   // El glosario deja estas dos en inglés a propósito, en los tres idiomas:
   // son las que usa todo el mundo en este rubro y traducirlas confundiría más.
   ['Check-in', 'el glosario lo deja en inglés en los tres idiomas'],

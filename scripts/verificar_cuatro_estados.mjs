@@ -69,12 +69,13 @@ const APLICACIONES = ['panel', 'pwa-clientes', 'pwa-asistentes'];
 
 // El punto único de los cuatro estados, y las claves del catálogo que tiene que
 // nombrar. Si alguna deja de aparecer ahí adentro, ese estado se escribió a mano.
+// La lista vacía sin filtro no lleva clave: no muestra ningún cartel, salvo el que
+// le pase la pantalla.
 const PUNTO_UNICO = 'panel/src/components/layout/EstadoLista.jsx';
 const CLAVES_DEL_PUNTO_UNICO = [
   't.comun.cargando',
   't.comun.error_generico',
   't.comun.reintentar',
-  't.comun.sin_datos_titulo',
   't.comun.sin_resultados_titulo',
 ];
 

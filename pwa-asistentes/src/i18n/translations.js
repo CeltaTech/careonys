@@ -84,7 +84,7 @@ export const T = {
     },
     comun: {
       cargando: 'Cargando…',
-      error_generico: 'Ocurrió un error. Conviene volver a intentar.',
+      error_generico: 'Ocurrió un error. Intente nuevamente.',
       vacio: 'No hay resultados.',
       // El botón que vuelve a pedir lo que no se pudo traer. Lo que ya está en pantalla se queda
       // donde está: un intento que falla no borra lo que se leyó.
@@ -807,7 +807,7 @@ export const T = {
     },
     comun: {
       cargando: 'Loading…',
-      error_generico: 'Something went wrong. Please try again.',
+      error_generico: 'An error occurred. Please try again.',
       vacio: 'No results.',
       reintentar: 'Try again',
       guardar: 'Save',
@@ -1448,7 +1448,7 @@ export const T = {
     },
     comun: {
       cargando: 'Carregando…',
-      error_generico: 'Ocorreu um erro. É preciso tentar novamente.',
+      error_generico: 'Ocorreu um erro. Tente novamente.',
       vacio: 'Nenhum resultado.',
       reintentar: 'Tentar novamente',
       guardar: 'Salvar',

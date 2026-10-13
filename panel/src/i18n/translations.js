@@ -136,7 +136,7 @@ export const T = {
     },
     comun: {
       cargando: 'Cargando…',
-      error_generico: 'Ocurrió un error. Conviene volver a intentar.',
+      error_generico: 'Ocurrió un error. Intente nuevamente.',
       reintentar: 'Reintentar',
       vacio: 'No hay resultados.',
       // El vacío son dos situaciones distintas: que todavía no haya nada cargado, o que el
@@ -3177,7 +3177,7 @@ export const T = {
     },
     comun: {
       cargando: 'Loading…',
-      error_generico: 'Something went wrong. Try again.',
+      error_generico: 'An error occurred. Please try again.',
       reintentar: 'Retry',
       vacio: 'No results.',
       sin_resultados_titulo: 'No matches for this filter',
@@ -6175,7 +6175,7 @@ export const T = {
     },
     comun: {
       cargando: 'Carregando…',
-      error_generico: 'Ocorreu um erro. É preciso tentar novamente.',
+      error_generico: 'Ocorreu um erro. Tente novamente.',
       reintentar: 'Tentar novamente',
       vacio: 'Nenhum resultado.',
       sin_resultados_titulo: 'O filtro não encontrou nada',

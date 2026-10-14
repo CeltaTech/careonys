@@ -99,7 +99,7 @@ async function revisarPrestadora(prestadoraId, ahora) {
   let estimadas;
   try {
     yaAnotadas = await alertasYaAnotadas(prestadoraId, guardias.map((g) => g.id));
-    estimadas = await llegadaEstimadaDeGuardias(prestadoraId, guardias);
+    estimadas = await llegadaEstimadaDeGuardias(supabase, prestadoraId, guardias);
   } catch (e) {
     console.error(`Error preparando la revisión de llegadas demoradas (prestadora ${prestadoraId}):`, e.message);
     return;

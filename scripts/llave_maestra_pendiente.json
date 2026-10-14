@@ -200,7 +200,6 @@
                                  "backend/src/utils/mediosDePago.js",
                                  "backend/src/utils/mensajeDeTexto.js",
                                  "backend/src/utils/mfaRecuperacionEmail.js",
-                                 "backend/src/utils/pacientesDeGuardia.js",
                                  "backend/src/utils/periodoDeGracia.js",
                                  "backend/src/utils/permisos.js",
                                  "backend/src/utils/plazosDeCobroIntermediacion.js",

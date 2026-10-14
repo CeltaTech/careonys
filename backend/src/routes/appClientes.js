@@ -351,7 +351,8 @@ appClientesRouter.get('/pacientes/:id', requiereRolCliente, async (req, res) => 
       .eq('id', guardiaProxima.id)
       .eq('prestadora_id', paciente.prestadora_id)
       .maybeSingle();
-    const estimada = await llegadaEstimadaDeGuardia(paciente.prestadora_id, conSuPuntoDeSalida);
+    // Con la llave maestra, por el mismo motivo que las guardias de arriba.
+    const estimada = await llegadaEstimadaDeGuardia(supabase, paciente.prestadora_id, conSuPuntoDeSalida);
     llegadaEstimadaAt = estimada ? estimada.toISOString() : null;
   }
 

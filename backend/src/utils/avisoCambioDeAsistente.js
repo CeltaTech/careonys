@@ -93,7 +93,7 @@ export async function avisarCambioDeAsistente({ guardias, prestadoraId, asistent
 
   let pacientesPorGuardia = new Map();
   try {
-    pacientesPorGuardia = await pacientesDeGuardias(prestadoraId, guardias, `id, cliente_id, ${FICHA_NOMBRE}`);
+    pacientesPorGuardia = await pacientesDeGuardias(supabase, prestadoraId, guardias, `id, cliente_id, ${FICHA_NOMBRE}`);
   } catch (e) {
     console.error(`Error leyendo los Pacientes de las guardias que cambiaron de Asistente (prestadora ${prestadoraId}):`, e.message);
   }

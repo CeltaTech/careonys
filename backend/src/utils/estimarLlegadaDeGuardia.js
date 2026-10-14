@@ -26,15 +26,16 @@ import { FICHA_UBICACION } from './fichaDelPaciente.js';
 /**
  * La hora estimada de llegada de cada guardia, por id.
  *
- * `prestadoraId` es obligatorio y va primero: los Pacientes de estas guardias se leen acotados a
+ * `prestadoraId` es obligatorio: los Pacientes de estas guardias se leen acotados a
  * ella, y un filtro vacío no acota nada. Sin Prestadora no hay estimación.
  *
+ * @param {object} db la conexión con la que se leen los Pacientes de esas guardias
  * @param {string} prestadoraId
  * @param {Array<object>} guardias filas con `id`, `fecha`, `paciente_id`, `salida_checkin_at`,
  *   `salida_lat` y `salida_lng`
  * @returns {Promise<Map<string, Date|null>>}
  */
-export async function llegadaEstimadaDeGuardias(prestadoraId, guardias) {
+export async function llegadaEstimadaDeGuardias(db, prestadoraId, guardias) {
   const lista = (guardias ?? []).filter(Boolean);
   const estimadas = new Map();
   if (lista.length === 0 || !prestadoraId) return estimadas;
@@ -50,7 +51,7 @@ export async function llegadaEstimadaDeGuardias(prestadoraId, guardias) {
   // Acá no se pide `domicilio` a propósito, igual que en el check-in: esto mide una distancia,
   // no muestra una dirección.
   const conSuGente = await conDomicilioDelDia(
-    await conPacientes(prestadoraId, conSalida, `id, ${FICHA_UBICACION}`)
+    await conPacientes(db, prestadoraId, conSalida, `id, ${FICHA_UBICACION}`)
   );
 
   for (const guardia of conSuGente) {
@@ -69,8 +70,8 @@ export async function llegadaEstimadaDeGuardias(prestadoraId, guardias) {
 }
 
 /** Lo mismo para una sola guardia. */
-export async function llegadaEstimadaDeGuardia(prestadoraId, guardia) {
+export async function llegadaEstimadaDeGuardia(db, prestadoraId, guardia) {
   if (!guardia || !prestadoraId) return null;
-  const estimadas = await llegadaEstimadaDeGuardias(prestadoraId, [guardia]);
+  const estimadas = await llegadaEstimadaDeGuardias(db, prestadoraId, [guardia]);
   return estimadas.get(guardia.id) ?? null;
 }

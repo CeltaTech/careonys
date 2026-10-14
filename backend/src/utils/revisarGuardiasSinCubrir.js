@@ -103,7 +103,7 @@ async function revisarPrestadora(prestadoraId, ahora) {
   // sale a buscar quien lo tape.
   let pacientesPorGuardia;
   try {
-    pacientesPorGuardia = await pacientesDeGuardias(prestadoraId, guardias ?? [], `id, ${FICHA_NOMBRE}`);
+    pacientesPorGuardia = await pacientesDeGuardias(supabase, prestadoraId, guardias ?? [], `id, ${FICHA_NOMBRE}`);
   } catch (e) {
     console.error(`Error leyendo los Pacientes de las guardias sin cubrir (prestadora ${prestadoraId}):`, e.message);
     return;

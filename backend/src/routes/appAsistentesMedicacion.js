@@ -21,7 +21,7 @@ async function ordenesDelAsistente(req) {
   // El permiso se pregunta contra la lista de Pacientes de la guardia, no contra la columna
   // vieja: el segundo Paciente de una guardia compartida también es un Paciente que este Asistente
   // atiende, y sus órdenes de medicación tienen que estar a la vista.
-  if (!(await asistenteAtiendeAlPaciente(req.params.pacienteId, req.usuarioAsistente))) return null;
+  if (!(await asistenteAtiendeAlPaciente(clienteDelPedido(req), req.params.pacienteId, req.usuarioAsistente))) return null;
 
   // Con la llave maestra: con la restricción de la historia clínica activa, la base le muestra las
   // indicaciones sólo a quien atiende al Paciente con un Servicio vigente y una guardia no

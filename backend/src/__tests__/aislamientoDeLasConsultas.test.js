@@ -164,7 +164,7 @@ function consultasDe(texto) {
     // Sin leer hacia arriba, no sólo se pierde el nombre: el paréntesis que quedó abierto ahí es
     // el que mantiene viva la cadena hasta el argumento que está más abajo.
     let arranque = i;
-    while (arranque > 0 && /(?:\(|\bsupabase)\s*,?\s*$/.test(renglones[arranque - 1]) && i - arranque < 3) {
+    while (arranque > 0 && /(?:\(|\bsupabase|\bdb)\s*,?\s*$/.test(renglones[arranque - 1]) && i - arranque < 3) {
       arranque--;
     }
 

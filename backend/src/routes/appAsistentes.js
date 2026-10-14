@@ -215,9 +215,9 @@ async function reportesDeLaGuardia(guardiaId, prestadoraId) {
 
 // A quiénes del turno todavía les falta el reporte. Es lo que decide si la guardia se puede
 // cerrar, y lo que la pantalla del Asistente muestra como lo que le queda por hacer.
-async function pacientesSinReporte(guardia) {
+async function pacientesSinReporte(db, guardia) {
   const [pacientes, reportes] = await Promise.all([
-    pacientesDeGuardia(guardia.prestadora_id, guardia, `id, ${FICHA_NOMBRE}`),
+    pacientesDeGuardia(db, guardia.prestadora_id, guardia, `id, ${FICHA_NOMBRE}`),
     reportesDeLaGuardia(guardia.id, guardia.prestadora_id),
   ]);
   const conReporte = new Set(reportes.map((r) => r.paciente_id));
@@ -666,7 +666,7 @@ appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
 
   try {
     const visibilidad = await visibilidadDelPedido(req);
-    const guardias = await conPacientes(req.usuarioAsistente.prestadoraId, data ?? [], camposDePacienteParaElAsistente(visibilidad));
+    const guardias = await conPacientes(clienteDelPedido(req), req.usuarioAsistente.prestadoraId, data ?? [], camposDePacienteParaElAsistente(visibilidad));
     res.json({ guardias: await conDomicilioDelDia(guardias) });
   } catch (e) {
     responderError(res, e);
@@ -690,7 +690,7 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
 
   let guardia;
   try {
-    const [conSuGente] = await conPacientes(req.usuarioAsistente.prestadoraId, [data], camposDePacienteParaElAsistente(visibilidad, { conPatologias: true }));
+    const [conSuGente] = await conPacientes(db, req.usuarioAsistente.prestadoraId, [data], camposDePacienteParaElAsistente(visibilidad, { conPatologias: true }));
     // La dirección que se muestra es la del día de la guardia. Si es una temporal, cada
     // Paciente viaja además con `domicilio_es_temporal` y `domicilio_motivo`, que es lo que le
     // permite a la pantalla avisar que hoy no se lo atiende en su casa.
@@ -846,7 +846,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
   // ve el Asistente en el teléfono, no contra qué mide el backend de este lado.
   let pacientes;
   try {
-    pacientes = await pacientesDeGuardia(guardia.prestadora_id, guardia, `id, cliente_id, ${FICHA_UBICACION}`);
+    pacientes = await pacientesDeGuardia(db, guardia.prestadora_id, guardia, `id, cliente_id, ${FICHA_UBICACION}`);
     pacientes = await pacientesConDomicilioDelDia(guardia, pacientes);
   } catch (e) {
     return responderError(res, e);
@@ -1611,7 +1611,7 @@ appAsistentesRouter.post('/guardias/:id/reporte/confirmar', requiereRolAsistente
   // la hoja de la persona equivocada es un daño que después nadie encuentra.
   let pacientes;
   try {
-    pacientes = await pacientesDeGuardia(guardia.prestadora_id, guardia, `id, ${FICHA_NOMBRE}`);
+    pacientes = await pacientesDeGuardia(db, guardia.prestadora_id, guardia, `id, ${FICHA_NOMBRE}`);
   } catch (e) {
     return responderError(res, e);
   }
@@ -1758,7 +1758,7 @@ appAsistentesRouter.post('/guardias/:id/checkout', requiereRolAsistente, topeDeP
   }
   let faltan;
   try {
-    faltan = await pacientesSinReporte(guardia);
+    faltan = await pacientesSinReporte(db, guardia);
   } catch (e) {
     return responderError(res, e);
   }
@@ -1925,7 +1925,7 @@ appAsistentesRouter.patch('/guardias/:id/ubicacion', requiereRolAsistente, exige
 
 // Reportes anteriores del mismo Paciente (botón "Ver reportes anteriores" en Guardia Activa).
 appAsistentesRouter.get('/pacientes/:id/reportes', requiereRolAsistente, exigeVisible('asistente_reportes_anteriores'), async (req, res) => {
-  if (!(await asistenteAtiendeAlPaciente(req.params.id, req.usuarioAsistente))) {
+  if (!(await asistenteAtiendeAlPaciente(clienteDelPedido(req), req.params.id, req.usuarioAsistente))) {
     return res.status(403).json({ error: 'No tiene guardias asignadas a este Paciente' });
   }
 

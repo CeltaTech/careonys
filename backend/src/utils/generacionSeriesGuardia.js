@@ -65,7 +65,7 @@ export async function extenderSeriesGuardiaAbiertas() {
     // adelante saldrían con uno solo, sin que nadie se entere.
     let pacientesPorSerie;
     try {
-      pacientesPorSerie = await pacientesDeSeries(prestadoraId, series ?? []);
+      pacientesPorSerie = await pacientesDeSeries(supabase, prestadoraId, series ?? []);
     } catch (e) {
       console.error(`Error leyendo los Pacientes de las series de ${prestadoraId}:`, e.message);
       continue;
@@ -120,6 +120,7 @@ export async function extenderSeriesGuardiaAbiertas() {
       // atiende: no alcanza con que la lista esté cargada una vez en la serie.
       try {
         await anotarPacientesEnGuardias(
+          supabase,
           (creadas ?? []).map((g) => g.id),
           pacientesPorSerie.get(serie.id) ?? [],
           prestadoraId

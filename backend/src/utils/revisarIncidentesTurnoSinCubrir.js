@@ -294,7 +294,7 @@ async function abrirIncidente({ guardia, prestadoraId }) {
 async function armarElRecordatorio({ guardia, prestadoraId, idioma, horas, veces, ahora }) {
   let pacientes = [];
   try {
-    pacientes = (await pacientesDeGuardias(prestadoraId, [guardia], `id, ${FICHA_NOMBRE}`)).get(guardia.id) ?? [];
+    pacientes = (await pacientesDeGuardias(supabase, prestadoraId, [guardia], `id, ${FICHA_NOMBRE}`)).get(guardia.id) ?? [];
   } catch (e) {
     console.error(`Error leyendo los Pacientes del turno ${guardia.id}:`, e.message);
   }

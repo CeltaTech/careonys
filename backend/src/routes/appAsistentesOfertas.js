@@ -151,6 +151,7 @@ appAsistentesOfertasRouter.get('/', requiereRolAsistente, async (req, res) => {
     // (`utils/domicilioDelDia.js`).
     const guardias = await conDomicilioDelDia(
       await conPacientes(
+        supabase,
         req.usuarioAsistente.prestadoraId,
         vivas.map((o) => o.guardias),
         camposDePacienteEnLaOferta(visibilidad)

@@ -130,7 +130,7 @@ async function revisarUnTurno({ guardia, prestadoraId, extension, ahora }) {
 async function buscarElRelevo({ guardia, prestadoraId }) {
   let pacienteIds;
   try {
-    pacienteIds = (await pacientesDeGuardia(prestadoraId, guardia, 'id')).map((p) => p.id);
+    pacienteIds = (await pacientesDeGuardia(supabase, prestadoraId, guardia, 'id')).map((p) => p.id);
   } catch (e) {
     console.error(`Error leyendo los Pacientes del turno ${guardia.id}:`, e.message);
     return null;

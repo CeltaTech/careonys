@@ -136,7 +136,7 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
   // de ese tamaño depende con qué urgencia sale la Coordinadora a taparlo.
   let pacientesPorGuardia;
   try {
-    pacientesPorGuardia = await pacientesDeGuardias(prestadoraId, guardias ?? [], `id, ${FICHA_NOMBRE}`);
+    pacientesPorGuardia = await pacientesDeGuardias(supabase, prestadoraId, guardias ?? [], `id, ${FICHA_NOMBRE}`);
   } catch (e) {
     console.error(`Error leyendo los Pacientes de las guardias de los ausentes (prestadora ${prestadoraId}):`, e.message);
     return;

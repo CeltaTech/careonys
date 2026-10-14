@@ -13,7 +13,6 @@
 //
 // Ver el disparador `sincronizar_paciente_principal` de `guardias`.
 
-import { supabase } from '../db/connection.js';
 import { FICHA_DOMICILIO, conSuFicha } from './fichaDelPaciente.js';
 
 /** Lo mínimo que necesita una pantalla para nombrar y ubicar a un Paciente. */
@@ -28,16 +27,18 @@ export const CAMPOS_BASICOS = `id, ${FICHA_DOMICILIO}`;
  *
  * `campos` tiene que incluir siempre `id`: es con lo que se arma el respaldo.
  *
- * `prestadoraId` va primero y no tiene valor por defecto a propósito: el backend entra con la llave
- * de servicio, que se saltea la protección por fila, así que lo único que separa una Prestadora de
- * otra es este filtro. Un identificador de turno de otra Prestadora tiene que devolver nada.
+ * `db` es la conexión con la que se pregunta: la de quien pide en una ruta de persona, la de la
+ * tarea en una tarea programada. Así la base sólo contesta lo que esa conexión puede ver.
+ *
+ * `prestadoraId` no tiene valor por defecto a propósito: el filtro va escrito igual, aunque la base
+ * ya acote. Un identificador de turno de otra Prestadora tiene que devolver nada.
  */
-export async function pacientesDeGuardias(prestadoraId, guardias, campos = CAMPOS_BASICOS) {
+export async function pacientesDeGuardias(db, prestadoraId, guardias, campos = CAMPOS_BASICOS) {
   const lista = (guardias ?? []).filter(Boolean);
   const mapa = new Map();
   if (lista.length === 0) return mapa;
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('guardia_pacientes')
     .select(`guardia_id, pacientes(${campos})`)
     .eq('prestadora_id', prestadoraId)
@@ -58,7 +59,7 @@ export async function pacientesDeGuardias(prestadoraId, guardias, campos = CAMPO
   // en realidad sí tiene a quién atender.
   const sinLista = lista.filter((g) => !mapa.has(g.id) && g.paciente_id);
   if (sinLista.length > 0) {
-    const { data: sueltos, error: errorSueltos } = await supabase
+    const { data: sueltos, error: errorSueltos } = await db
       .from('pacientes')
       .select(campos)
       .eq('prestadora_id', prestadoraId)
@@ -79,8 +80,8 @@ export async function pacientesDeGuardias(prestadoraId, guardias, campos = CAMPO
 }
 
 /** Lo mismo para una sola guardia: devuelve la lista, nunca `null`. */
-export async function pacientesDeGuardia(prestadoraId, guardia, campos = CAMPOS_BASICOS) {
-  const mapa = await pacientesDeGuardias(prestadoraId, [guardia], campos);
+export async function pacientesDeGuardia(db, prestadoraId, guardia, campos = CAMPOS_BASICOS) {
+  const mapa = await pacientesDeGuardias(db, prestadoraId, [guardia], campos);
   return mapa.get(guardia?.id) ?? [];
 }
 
@@ -91,8 +92,8 @@ export async function pacientesDeGuardia(prestadoraId, guardia, campos = CAMPOS_
  * ahora trae la lista entera. El nombre se mantiene a propósito: es la misma pregunta, con
  * la respuesta completa.
  */
-export async function conPacientes(prestadoraId, guardias, campos = CAMPOS_BASICOS) {
-  const mapa = await pacientesDeGuardias(prestadoraId, guardias, campos);
+export async function conPacientes(db, prestadoraId, guardias, campos = CAMPOS_BASICOS) {
+  const mapa = await pacientesDeGuardias(db, prestadoraId, guardias, campos);
   return (guardias ?? []).map((g) => ({ ...g, pacientes: mapa.get(g.id) ?? [] }));
 }
 
@@ -103,8 +104,8 @@ export async function conPacientes(prestadoraId, guardias, campos = CAMPOS_BASIC
  * pregunta contra la lista de la guardia y no contra `guardias.paciente_id`: si no, un
  * Asistente que cubre a dos personas en la misma casa vería los datos de una sola.
  */
-export async function asistenteAtiendeAlPaciente(pacienteId, usuarioAsistente) {
-  const { data } = await supabase
+export async function asistenteAtiendeAlPaciente(db, pacienteId, usuarioAsistente) {
+  const { data } = await db
     .from('guardia_pacientes')
     .select('guardia_id, guardias!inner(asistente_id, prestadora_id)')
     .eq('prestadora_id', usuarioAsistente.prestadoraId)
@@ -125,12 +126,12 @@ export async function asistenteAtiendeAlPaciente(pacienteId, usuarioAsistente) {
  * Igual que arriba, si una serie no tiene ninguna fila se cae a la columna vieja: una serie
  * cargada antes de este diseño tiene que seguir generando guardias con su Paciente.
  */
-export async function pacientesDeSeries(prestadoraId, series) {
+export async function pacientesDeSeries(db, prestadoraId, series) {
   const lista = (series ?? []).filter(Boolean);
   const mapa = new Map();
   if (lista.length === 0) return mapa;
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('series_guardias_pacientes')
     .select('serie_id, paciente_id')
     .eq('prestadora_id', prestadoraId)
@@ -158,7 +159,7 @@ export async function pacientesDeSeries(prestadoraId, series) {
  * serie que se repite. No pisa lo que ya está: el disparador de la base ya anotó al Paciente
  * de la columna vieja en el momento del INSERT, y volver a escribirlo daría conflicto.
  */
-export async function anotarPacientesEnGuardias(guardiaIds, pacienteIds, prestadoraId) {
+export async function anotarPacientesEnGuardias(db, guardiaIds, pacienteIds, prestadoraId) {
   // Falla cerrado: la fila que se escribe lleva la Prestadora adentro, así que sin ella se estaría
   // anotando en un cajón que no es de nadie. No hay valor por omisión y no se supone ninguno.
   if (!prestadoraId) throw new Error('No se anotan Pacientes en una guardia sin saber de que Organizacion es');
@@ -176,7 +177,7 @@ export async function anotarPacientesEnGuardias(guardiaIds, pacienteIds, prestad
   // es el identificador de una guardia, único en toda la base: la fila en conflicto es siempre de
   // la misma guardia y por lo tanto de la misma Prestadora. La base lo sostiene además con la clave
   // foránea `(guardia_id, prestadora_id)` contra `guardias`, que rechaza cualquier otra pareja.
-  const { error } = await supabase
+  const { error } = await db
     .from('guardia_pacientes')
     .upsert(filas, { onConflict: 'guardia_id,paciente_id', ignoreDuplicates: true });
   if (error) throw new Error(error.message);

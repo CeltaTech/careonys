@@ -121,7 +121,7 @@ async function revisarGuardiasSinCerrar(config, ahora, idioma, reglaDeLasTomas) 
   // de lo que quedó sin confirmar.
   let pacientesPorGuardia;
   try {
-    pacientesPorGuardia = await pacientesDeGuardias(prestadoraId, guardias, `id, ${FICHA_NOMBRE}`);
+    pacientesPorGuardia = await pacientesDeGuardias(supabase, prestadoraId, guardias, `id, ${FICHA_NOMBRE}`);
   } catch (e) {
     console.error(`Error leyendo los Pacientes de las guardias sin cerrar (prestadora ${prestadoraId}):`, e.message);
     return;
@@ -314,7 +314,7 @@ async function datosDeLasGuardias(prestadoraId, guardiaIds) {
 
   let pacientesPorGuardia = new Map();
   try {
-    pacientesPorGuardia = await pacientesDeGuardias(prestadoraId, guardias ?? [], `id, ${FICHA_NOMBRE}`);
+    pacientesPorGuardia = await pacientesDeGuardias(supabase, prestadoraId, guardias ?? [], `id, ${FICHA_NOMBRE}`);
   } catch (err) {
     console.error('Error leyendo los Pacientes de las guardias de los avisos:', err.message);
   }
@@ -666,7 +666,7 @@ async function notificarClienteSiCorresponde({ evento, prestadoraId, guardiaId, 
   // primero, y no enterarse es exactamente lo que este mensaje existe para evitar.
   let clienteIds;
   try {
-    const pacientes = await pacientesDeGuardia(prestadoraId, guardia, 'id, cliente_id');
+    const pacientes = await pacientesDeGuardia(supabase, prestadoraId, guardia, 'id, cliente_id');
     clienteIds = [...new Set(pacientes.map((p) => p.cliente_id).filter(Boolean))];
   } catch (err) {
     console.error(`Error leyendo los Pacientes de la guardia ${guardiaId}:`, err.message);

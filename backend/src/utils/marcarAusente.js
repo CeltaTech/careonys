@@ -80,7 +80,7 @@ export async function marcarAusenteYCrearIncidente({ db, guardia, prestadoraId }
 async function buscarGuardiaSaliente({ db, guardia, prestadoraId }) {
   let pacienteIds;
   try {
-    pacienteIds = (await pacientesDeGuardia(prestadoraId, guardia, 'id')).map((p) => p.id);
+    pacienteIds = (await pacientesDeGuardia(db, prestadoraId, guardia, 'id')).map((p) => p.id);
   } catch (e) {
     console.error(`Error leyendo los Pacientes de la guardia ${guardia.id}:`, e.message);
     return null;

@@ -1293,13 +1293,21 @@ Hoy sólo se guardan fechas.
 
 **85.** Sembrar los textos reales y encender el seguimiento y el mensaje de demora en el trayecto.
 
+**86.** **Guardar sólo lo que hace falta.** Revisar tabla por tabla qué dato personal se guarda y
+para qué se usa, y sacar lo que no tenga un para qué. En la misma revisión: qué datos de personas
+salen hacia terceros —el modelo de IA que lee una planilla y cualquier otro servicio externo— y si
+los registros de actividad y de errores guardan datos personales. Nada de esto está revisado todavía.
+
+**Comprobación:** cada columna con dato personal tiene escrito para qué se usa, y ninguna queda sin
+uso.
+
 ---
 
 ## Respaldo, continuidad y secretos
 
-**86. Usted** — El alta del gestor de contraseñas, y completar las cinco filas en blanco de `celtatech/docs/CUENTAS.md`.
+**87. Usted** — El alta del gestor de contraseñas, y completar las cinco filas en blanco de `celtatech/docs/CUENTAS.md`.
 
-**87.** Rotar clave por clave lo que corresponda, decidiéndolo de a una. Si se rota la clave secreta de Supabase, se actualiza en Railway en el mismo acto. La llave maestra no entra acá: se da de baja al cerrar los cimientos (paso 10).
+**88.** Rotar clave por clave lo que corresponda, decidiéndolo de a una. Si se rota la clave secreta de Supabase, se actualiza en Railway en el mismo acto. La llave maestra no entra acá: se da de baja al cerrar los cimientos (paso 10).
 
 **Ya no queda ninguna contraseña escrita en el repositorio.** Todas salen del entorno, y las
 cuentas de la base local nacen sin contraseña: se la pone un programa aparte después de cada
@@ -1311,26 +1319,26 @@ prueba del escaneo del Asistente.
 Y queda además **una contraseña de prueba en texto plano dentro de la configuración de permisos de
 una copia de trabajo**, que no es un archivo del repositorio y por eso el barrido no la alcanzó.
 
-**88. Usted** — Correr `node scripts/probar_restauracion.mjs` desde `backend/`, con Docker encendido y las variables del respaldo diario más las de la base de producción cargadas en el entorno. Baja el último respaldo, lo restaura en una base efímera, compara las tablas, las filas y los archivos del espejo contra lo que hay hoy, y borra todo al terminar. Le toca a usted porque pide las llaves del bucket y de la base, que viven en la caja fuerte. La prueba anterior verificó 30 tablas de un esquema que hoy tiene 201 y no tocó ningún archivo, porque todavía no se respaldaban. **Si contesta `no_probado`, no salió mal: quiere decir que todo coincidió y no había nada cargado que comparar**, y entonces hay que repetirla con datos de prueba.
+**89. Usted** — Correr `node scripts/probar_restauracion.mjs` desde `backend/`, con Docker encendido y las variables del respaldo diario más las de la base de producción cargadas en el entorno. Baja el último respaldo, lo restaura en una base efímera, compara las tablas, las filas y los archivos del espejo contra lo que hay hoy, y borra todo al terminar. Le toca a usted porque pide las llaves del bucket y de la base, que viven en la caja fuerte. La prueba anterior verificó 30 tablas de un esquema que hoy tiene 201 y no tocó ningún archivo, porque todavía no se respaldaban. **Si contesta `no_probado`, no salió mal: quiere decir que todo coincidió y no había nada cargado que comparar**, y entonces hay que repetirla con datos de prueba.
 
-**89. Usted** — Los dominios se renovaron en julio de 2026 y vencen en julio de 2027, y esa fecha hoy no está en ningún calendario: `celtatech.com` y `careonys.com` en Cloudflare, y `celtatech.com.ar` y `celtatech.net.ar` en NIC Argentina. Poner un recordatorio un mes antes de cada uno y, donde el registrador lo permita, dejar la renovación automática encendida — NIC Argentina no la tiene, así que ésos son los dos que de verdad dependen del recordatorio. Un dominio vencido no se cae despacio: deja de resolver, y con él se van las pantallas, el correo de la empresa y la entrada a las cuentas que se registraron con ese correo.
+**90. Usted** — Los dominios se renovaron en julio de 2026 y vencen en julio de 2027, y esa fecha hoy no está en ningún calendario: `celtatech.com` y `careonys.com` en Cloudflare, y `celtatech.com.ar` y `celtatech.net.ar` en NIC Argentina. Poner un recordatorio un mes antes de cada uno y, donde el registrador lo permita, dejar la renovación automática encendida — NIC Argentina no la tiene, así que ésos son los dos que de verdad dependen del recordatorio. Un dominio vencido no se cae despacio: deja de resolver, y con él se van las pantallas, el correo de la empresa y la entrada a las cuentas que se registraron con ese correo.
 
 ---
 
 ## Marca y dominio por Prestadora
 
-**90.** Que la conversación quede guardada adentro del producto, según lo que se conteste sobre el botón de contacto de «Asistente Asignado», más arriba en esta misma lista. Hasta que el Panel no tenga un hilo de dos puntas, lo que se hablan el Cliente y el Asistente en prestación directa se va a WhatsApp y no queda adentro de ningún lado. El chat interno ya está construido entero —hilos, mensajes, tapado del contacto, pantallas en las dos aplicaciones, mensaje al celular y videollamada—, pero **sólo funciona donde la Prestadora pone Asistentes disponibles para que el Cliente elija**: exige un Cliente y un Asistente que se hayan encontrado ahí. En prestación directa no hay hilo, y hacia la Prestadora tampoco: el único canal con el Panel va en un solo sentido, del Panel al Asistente, y no hay dónde guardar lo que contesta.
+**91.** Que la conversación quede guardada adentro del producto, según lo que se conteste sobre el botón de contacto de «Asistente Asignado», más arriba en esta misma lista. Hasta que el Panel no tenga un hilo de dos puntas, lo que se hablan el Cliente y el Asistente en prestación directa se va a WhatsApp y no queda adentro de ningún lado. El chat interno ya está construido entero —hilos, mensajes, tapado del contacto, pantallas en las dos aplicaciones, mensaje al celular y videollamada—, pero **sólo funciona donde la Prestadora pone Asistentes disponibles para que el Cliente elija**: exige un Cliente y un Asistente que se hayan encontrado ahí. En prestación directa no hay hilo, y hacia la Prestadora tampoco: el único canal con el Panel va en un solo sentido, del Panel al Asistente, y no hay dónde guardar lo que contesta.
 
 ---
 
 ## Módulos
 
-**91.** Pasar a `careonys` los dos depósitos de respaldo, que son los únicos nombres de afuera que
+**92.** Pasar a `careonys` los dos depósitos de respaldo, que son los únicos nombres de afuera que
 todavía no lo llevan.
 
-**92. Usted** — ¿Dónde corre un módulo y contra qué base? Hoy `Modulos\` no tiene ningún módulo. **Facturación y créditos y cobranzas ya están decididas como software aparte del que Careonys se sirve**, así que esto no decide si salen, sino dónde corren el día que existan.
+**93. Usted** — ¿Dónde corre un módulo y contra qué base? Hoy `Modulos\` no tiene ningún módulo. **Facturación y créditos y cobranzas ya están decididas como software aparte del que Careonys se sirve**, así que esto no decide si salen, sino dónde corren el día que existan.
 
-**93.** Sacar la facturación y la cobranza a un módulo, cuando haya dónde correrlo. **Y que Match
+**94.** Sacar la facturación y la cobranza a un módulo, cuando haya dónde correrlo. **Y que Match
 cobre igual que la prestación directa**, sin que ninguna de las dos pierda nada. Hoy Match lleva
 la cuenta del Cliente por su cuenta —arma cada período, cuenta los días gratis y la gracia, y corta
 el acceso solo—, y eso es créditos y cobranzas, que no le toca a Careonys. Se separan tres
@@ -1355,15 +1363,15 @@ elegir qué pasa cuando vencen, y el corte que ordena el software conectado.
 
 ## Decisiones que no traban nada empezado
 
-**94. Usted** — Empresas subcontratadas o tercerizadas: son un recurso dentro de la prestación directa, como el Padrón propio, y no una modalidad. Todavía no hay dónde cargarlas ni cómo encargarles una prestación. La precondición era no construirlo hasta que una Prestadora real lo pida. ¿Sigue valiendo?
+**95. Usted** — Empresas subcontratadas o tercerizadas: son un recurso dentro de la prestación directa, como el Padrón propio, y no una modalidad. Todavía no hay dónde cargarlas ni cómo encargarles una prestación. La precondición era no construirlo hasta que una Prestadora real lo pida. ¿Sigue valiendo?
 
-**95. Usted** — Un tercero que sólo mira: ¿cómo entra un Pagador que sólo consulta? Un cuarto rol, un Coordinador de sólo lectura desde el catálogo de permisos, o no se hace.
+**96. Usted** — Un tercero que sólo mira: ¿cómo entra un Pagador que sólo consulta? Un cuarto rol, un Coordinador de sólo lectura desde el catálogo de permisos, o no se hace.
 
-**96. Usted** — ¿Careonys va a atender establecimientos donde conviven Pacientes de Clientes distintos — una residencia, un geriátrico? Si es más adelante, alcanza con dejarlo dicho.
+**97. Usted** — ¿Careonys va a atender establecimientos donde conviven Pacientes de Clientes distintos — una residencia, un geriátrico? Si es más adelante, alcanza con dejarlo dicho.
 
-**97. Usted** — ¿Diez pedidos por minuto y por persona es el número? El contador compartido hace falta el día que el backend se reparta en varios servicios; hoy corre en uno solo.
+**98. Usted** — ¿Diez pedidos por minuto y por persona es el número? El contador compartido hace falta el día que el backend se reparta en varios servicios; hoy corre en uno solo.
 
-**98. Usted** — ¿Los idiomas siguen en un archivo o pasan a la base? De esto depende si sumar un
+**99. Usted** — ¿Los idiomas siguen en un archivo o pasan a la base? De esto depende si sumar un
 idioma es una publicación o una carga de datos. **Y está contestado a medias sin que nadie lo
 anotara**, así que la pregunta es más chica de lo que parece:
 
@@ -1376,9 +1384,9 @@ Así que lo único que esto decide es ese último resto. **Y se contesta despué
 carteles**, más arriba: es justamente ese archivo el que se barre ahí, y no tiene sentido mudar
 texto que va a salir.
 
-**99. Usted** — El puntaje interno de calidad del Asistente, que sólo ve el Admin: ¿sigue en pie ahora que existen las estrellas que pone el Cliente? Si sigue, faltan dos respuestas: qué lo compone, y la garantía de que ninguna acción automática dependa de él. El lugar donde iría ya está hecho (`datos_reservados_asistente` y su permiso).
+**100. Usted** — El puntaje interno de calidad del Asistente, que sólo ve el Admin: ¿sigue en pie ahora que existen las estrellas que pone el Cliente? Si sigue, faltan dos respuestas: qué lo compone, y la garantía de que ninguna acción automática dependa de él. El lugar donde iría ya está hecho (`datos_reservados_asistente` y su permiso).
 
-**100. Usted** — El alta y la baja de Prestadoras: Match expone una puerta firmada para que CeltaTech dé de alta y de baja clientes; Careonys no tiene nada parecido. ¿Se construye la misma, o se siguen dando de alta a mano?
+**101. Usted** — El alta y la baja de Prestadoras: Match expone una puerta firmada para que CeltaTech dé de alta y de baja clientes; Careonys no tiene nada parecido. ¿Se construye la misma, o se siguen dando de alta a mano?
 
 **Usted — para analizar, no para resolver ahora.** Un registro de cambios general: qué dato
 cambió, de qué valor a qué valor, quién y cuándo, para cualquier tabla que lo necesite. Hoy no
@@ -1386,7 +1394,7 @@ existe: cada cambio que se registra tiene su tabla propia (`auditoria_*`, el his
 clínico). El primero que lo va a necesitar es el cambio de la fecha prevista de vuelta de una
 ausencia; si el general se decide antes de construirlo, ese cambio se anota ahí.
 
-**101.** **Por esa misma puerta tiene que entrar qué tiene habilitado cada Prestadora, y hoy no
+**102.** **Por esa misma puerta tiene que entrar qué tiene habilitado cada Prestadora, y hoy no
 entra nada.** CeltaTech le vende un plan, y ese plan dice qué puede usar. Eso se lo informa al
 producto. **Y ahí termina: CeltaTech no tiene injerencia, bajo ninguna circunstancia, en el
 negocio de ninguna Prestadora.** Le habilita funciones del software y nada más; qué cobra, a
@@ -1414,19 +1422,19 @@ entera o una parte. **Por qué, Careonys no lo sabe ni lo pregunta**: recibe la 
 - **La orden que llega no se puede bloquear.** Con esa misma comprobación, alcanzaría con tener un
   Asistente trabajando para que la orden nunca se cumpla.
 
-**102. Usted** — Qué hace Careonys de su lado cuando recibe esa orden y adentro quedan Asistentes
+**103. Usted** — Qué hace Careonys de su lado cuando recibe esa orden y adentro quedan Asistentes
 trabajando y Clientes con acceso abierto. Cortar el acceso y dejarlo todo en su lugar no es lo
 mismo que darlo de baja.
 
-**103.** Construirlo, todo de este lado: recibir qué tiene habilitado cada Prestadora y que su
+**104.** Construirlo, todo de este lado: recibir qué tiene habilitado cada Prestadora y que su
 Configuración ofrezca solamente eso; y recibir la orden de deshabilitar, sin la comprobación que
 lleva el apagado de ella, haciendo con lo que quede en curso lo que se conteste arriba. **La lista
 de capacidades la declara este producto**, que es el que sabe qué significan; del otro lado son
 texto opaco. Lo que cada Prestadora tenga hoy en uso se conserva.
 
-**104. Usted** — El acompañamiento online: ¿prestación más, o guardia sin domicilio? Si es guardia, hay que decidir qué reemplaza al check-in por ubicación. **Las dos palabras son ahora dos niveles distintos del glosario**, así que la pregunta elige entre uno y el otro: una Prestación con su precio y sus horarios, o una guardia que se reparte en turnos. Y lo que reemplaza al check-in por ubicación es del turno, no de la guardia.
+**105. Usted** — El acompañamiento online: ¿prestación más, o guardia sin domicilio? Si es guardia, hay que decidir qué reemplaza al check-in por ubicación. **Las dos palabras son ahora dos niveles distintos del glosario**, así que la pregunta elige entre uno y el otro: una Prestación con su precio y sus horarios, o una guardia que se reparte en turnos. Y lo que reemplaza al check-in por ubicación es del turno, no de la guardia.
 
-**105. Usted** — El «Gestor del cuidado»: ¿rol nuevo, variante de Coordinador, o entrada en el catálogo de permisos por Prestadora? La tercera no rompe la regla de los tres roles de Panel; las dos primeras sí.
+**106. Usted** — El «Gestor del cuidado»: ¿rol nuevo, variante de Coordinador, o entrada en el catálogo de permisos por Prestadora? La tercera no rompe la regla de los tres roles de Panel; las dos primeras sí.
 
 **Se contesta después del acto de armar el Servicio**, más arriba en esta lista, por dos motivos. El
 primero es que **la premisa con la que estaba escrita esta pregunta no es cierta**: decía que hoy el
@@ -1437,11 +1445,11 @@ segundo es que ese acto cambia el modelo: **una sola persona coordina todo el Se
 al acordarlo, y sin ella el Servicio no se habilita.** Con eso construido, la pregunta es si hace
 falta alguien más además de esa persona, que es otra pregunta.
 
-**106. Usted** — Cursos para Clientes: ¿va o no va?
+**107. Usted** — Cursos para Clientes: ¿va o no va?
 
-**107. Usted** — La regla de los archivos dice «nunca público» y hay un depósito público construido (`marca-prestadoras`); los otros once son privados. ¿La regla admite la excepción, o se cierra el depósito?
+**108. Usted** — La regla de los archivos dice «nunca público» y hay un depósito público construido (`marca-prestadoras`); los otros once son privados. ¿La regla admite la excepción, o se cierra el depósito?
 
-**108. Usted** — La categoría de convenio del Asistente se teclea a mano, y de ella depende su
+**109. Usted** — La categoría de convenio del Asistente se teclea a mano, y de ella depende su
 remuneración básica. El convenio tiene sus categorías definidas y no las inventa la Prestadora,
 así que tecleadas quedan escritas distinto en cada Legajo: no se puede saber cuántos Asistentes hay
 en cada una, ni aplicarle un cambio de escala a todos los de una categoría de una sola vez, y un
@@ -1456,9 +1464,9 @@ qué pasa con lo ya liquidado.
 
 ## El sitio web
 
-**109. Usted** — ¿Se autoriza construir `careonys.com` según `docs/PRD_01_Sitio_Web.md`? El PRD ya está entero. Hoy `sitio-web/` es una página que dice «En construcción». **El diseño se hace de cero**: del sitio público de Match no viaja nada visual.
+**110. Usted** — ¿Se autoriza construir `careonys.com` según `docs/PRD_01_Sitio_Web.md`? El PRD ya está entero. Hoy `sitio-web/` es una página que dice «En construcción». **El diseño se hace de cero**: del sitio público de Match no viaja nada visual.
 
-**110.** Construirlo.
+**111.** Construirlo.
 
 ---
 
@@ -1471,7 +1479,7 @@ hacerlas después cuesta lo mismo.
 **Lo que sí es condición:** antes de dar de alta una Prestadora real de un país, ese país tiene que
 tener cargado lo suyo. La lista por país, con artículo, está en `docs/CUMPLIMIENTO_NORMATIVO.md`.
 
-**111.** **La revisión del registro de accesos, que es lo que casi nadie hace.** El 45 CFR
+**112.** **La revisión del registro de accesos, que es lo que casi nadie hace.** El 45 CFR
 164.308(a)(1)(ii)(D) es «Required», no «Addressable»: hay que **revisar** los registros, con
 constancia fechada y revisor con nombre. Un registro que nadie mira incumple aunque sea perfecto.
 
@@ -1487,7 +1495,7 @@ requisito de arquitectura, y por eso su parte está en los cimientos y no acá.
 **Comprobación:** la constancia de revisión existe, tiene fecha y nombre, y se puede mostrar para
 cualquier mes.
 
-**112.** **El motor de conservación y borrado.** La tabla de reglas existe y está vacía; las
+**113.** **El motor de conservación y borrado.** La tabla de reglas existe y está vacía; las
 columnas de conservación y la fecha de fallecimiento no existen. Acá se agregan, se carga y se
 construye lo que decide.
 
@@ -1548,7 +1556,7 @@ los datos de un Servicio cerrado hace años.
 **Comprobación:** con dos Prestadoras de países distintos y las mismas fechas cargadas, el motor
 decide distinto en cada una y lo explica citando la regla que aplicó.
 
-**113.** **Los derechos de la persona.** Exportación de lo propio, en formato que se pueda leer en
+**114.** **Los derechos de la persona.** Exportación de lo propio, en formato que se pueda leer en
 otro lado: el Anexo II sección 2 del EHDS lo convierte en deber duro contra el encierro en el
 proveedor, y la portabilidad está en casi todas las leyes latinoamericanas.
 
@@ -1560,7 +1568,7 @@ el derecho al fallecer cambia por país: en Costa Rica pasa a sucesores o herede
 **Comprobación:** un pedido de acceso cargado en una Prestadora de Costa Rica vence a los cinco días
 hábiles y avisa antes; el mismo pedido en Panamá vence a los diez.
 
-**114.** **Las brechas, construidas para 24 horas.** Hay cinco relojes y manda el más corto. Europa:
+**115.** **Las brechas, construidas para 24 horas.** Hay cinco relojes y manda el más corto. Europa:
 NIS2 exige aviso temprano a las 24 horas, y el art. 33(2) del GDPR obliga al encargado a avisarle al
 responsable sin dilación indebida, sin umbral y sin derecho a filtrar. Estados Unidos: el 164.410 da
 60 días al proveedor, pero **la regla no le da al cliente 60 días nuevos**, así que un proveedor que
@@ -1585,7 +1593,7 @@ contenido mínimo de cada una —el 164.404(c) pide cinco elementos—.
 **Comprobación:** un incidente de prueba sobre una Prestadora produce la lista de pacientes
 alcanzados, el texto de aviso del país de esa Prestadora y la cuenta regresiva correcta.
 
-**115.** **Quién entra y cómo.**
+**116.** **Quién entra y cómo.**
 
 - **Segundo factor obligatorio.** Está construido y apagado: `requiereRolPanel.js:71-81`, gobernado
   por `configuracion_plataforma.mfa_admin_obligatorio`. Encenderlo es cambiar un dato. Ninguna norma
@@ -1606,7 +1614,7 @@ alcanzados, el texto de aviso del país de esa Prestadora y la cuenta regresiva 
 **Comprobación:** con el segundo factor obligatorio encendido, una cuenta sin él no entra a ninguna
 pantalla del Panel.
 
-**116.** **Respaldos que se probaron.** El 164.308(a)(7)(ii)(A), (B) y (C) son «Required»: copia
+**117.** **Respaldos que se probaron.** El 164.308(a)(7)(ii)(A), (B) y (C) son «Required»: copia
 exacta y recuperable, restauración y modo de emergencia. El Decreto 41/2012 chileno lo escribe como
 requisito de la historia clínica, y en Francia la copia de respaldo es una de las actividades
 certificables del référentiel HDS.
@@ -1622,7 +1630,7 @@ falta acá es que deje constancia, que se repita sola y que quede atada a la fre
 **Comprobación:** una restauración completa a un entorno aparte, con constancia de fecha y de qué
 se verificó.
 
-**117.** **La configuración por país, cargada.** La estructura existe y está vacía de esta materia.
+**118.** **La configuración por país, cargada.** La estructura existe y está vacía de esta materia.
 Se carga, por jurisdicción: plazos de conservación con su hecho de inicio, plazo de brecha con su
 destinatario y desde cuándo corre, plazo de respuesta a los derechos, mecanismo de transferencia
 internacional, contacto del delegado u oficial de protección de datos donde sea obligatorio, y el
@@ -1638,11 +1646,11 @@ en ninguno.
 
 **Comprobación:** ningún plazo de estos aparece escrito en el código.
 
-**118. Usted** — **Las designaciones que no son programación.** Representante legal en Perú y en
+**119. Usted** — **Las designaciones que no son programación.** Representante legal en Perú y en
 Ecuador, y delegado de protección de datos en Ecuador y en Uruguay. Son designaciones de CeltaTech
 y condición para vender en esos países.
 
-**119.** **Los documentos que pide la auditoría.** Son entregables, y sin ellos lo construido no
+**120.** **Los documentos que pide la auditoría.** Son entregables, y sin ellos lo construido no
 cuenta.
 
 - **Análisis de riesgos que nombre expresamente el acceso entre Prestadoras como amenaza**, citando
@@ -1667,7 +1675,7 @@ cuenta.
 
 **Comprobación:** cada documento existe y lo que afirma se puede verificar en el sistema.
 
-**120.** **Lo que no se hace nunca.**
+**121.** **Lo que no se hace nunca.**
 
 - **No se entrenan modelos con datos de las Prestadoras.** Prohibido por tres vías: el art. 28(10)
   del GDPR convierte al encargado en responsable, el EHDS haría del producto titular de datos
@@ -1762,7 +1770,7 @@ eso está ahí y no acá. El material para esa consulta —cuál es la cláusula
 vigentes y qué hay que definir antes de redactar— está en
 `celtatech/docs/CLAUSULA_TRANSFERENCIA_INTERNACIONAL.md`.
 
-**121. Usted** — Las escalas legales: la validación, y el valor que el código usa y no existe
+**122. Usted** — Las escalas legales: la validación, y el valor que el código usa y no existe
 (`piso_minimo_indemnizacion`). En el mismo viaje va el
 texto de la advertencia sobre el abandono de persona: ninguno de los veintiún documentos de `docs/legal/`
 lo menciona —lo único parecido es el abandono de *trabajo*, art. 244 LCT, en
@@ -1773,8 +1781,8 @@ documento no hay advertencia; la mecánica se construye igual, porque no depende
 
 ## Cierre
 
-**122. Usted** — El documento de roles generado desde la base: ¿para quién es, interno de CeltaTech o manual para la Prestadora?
+**123. Usted** — El documento de roles generado desde la base: ¿para quién es, interno de CeltaTech o manual para la Prestadora?
 
-**123.** Generarlo.
+**124.** Generarlo.
 
-**124.** Correr las pruebas y publicar.
+**125.** Correr las pruebas y publicar.

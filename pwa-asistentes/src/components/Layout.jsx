@@ -8,8 +8,8 @@ import { api } from '../lib/api';
 
 const claseDeLaPestana = ({ isActive }) => (isActive ? 'active' : '');
 
-// La pestaña Guardias queda encendida también en las guardias ofrecidas, que cuelgan de ella.
-const ES_GUARDIAS = /^\/(guardias|ofertas)(\/|$)/;
+// La pestaña Guardias queda encendida también en las asignaciones sin responder, que cuelgan de ella.
+const ES_GUARDIAS = /^\/(guardias|asignaciones)(\/|$)/;
 
 export default function Layout() {
   const { pathname } = useLocation();
@@ -17,13 +17,13 @@ export default function Layout() {
   const marca = useMarca();
   const ofreceIntermediacion = useOfreceIntermediacion();
 
-  // Cuántas guardias le ofrecieron y todavía no contestó. El número va en la pestaña de abajo
-  // porque una oferta con fecha límite que nadie mira es una oferta perdida: si hubiera que
-  // entrar a la pantalla para enterarse de que hay algo, la pantalla no serviría de nada.
+  // Cuántos turnos se le asignaron y todavía no respondió. El número va en la pestaña de abajo
+  // porque mientras no responde, el Coordinador no puede buscar a otro: si hubiera que entrar a
+  // la pantalla para enterarse de que hay algo, la pantalla no serviría de nada.
   //
   // Se pregunta una sola vez, cuando la aplicación arranca. Después lo mantiene al día la
-  // propia pantalla de ofertas, que es la única que lo puede cambiar.
-  const [ofertasAbiertas, setOfertasAbiertas] = useState(0);
+  // propia pantalla de asignaciones, que es la única que lo puede cambiar.
+  const [sinResponder, setSinResponder] = useState(0);
 
   // Reintento de check-in/reporte guardados sin señal — solo con sesión activa (Fase 9).
   useEffect(() => {
@@ -33,9 +33,9 @@ export default function Layout() {
   useEffect(() => {
     let activo = true;
     api
-      .ofertas()
-      .then(({ ofertas }) => {
-        if (activo) setOfertasAbiertas((ofertas ?? []).length);
+      .asignaciones()
+      .then(({ asignaciones }) => {
+        if (activo) setSinResponder((asignaciones ?? []).length);
       })
       .catch(() => {
         // Sin señal o con el backend caído no se muestra ningún número. Un cero inventado sería
@@ -68,7 +68,7 @@ export default function Layout() {
         </NavLink>
       </header>
       <main className="pwa-body">
-        <Outlet context={{ avisarOfertas: setOfertasAbiertas, ofertasAbiertas }} />
+        <Outlet context={{ avisarSinResponder: setSinResponder, sinResponder }} />
         {/* La única mención del producto en toda la aplicación, y al pie. Va siempre: es el
             crédito de quién hizo el software, no una función que se venda. */}
         <p className="marca-del-producto">{t.marca.con_tecnologia_de}</p>
@@ -79,18 +79,18 @@ export default function Layout() {
         <NavLink to="/inicio" className={claseDeLaPestana}>
           {t.nav.inicio}
         </NavLink>
-        {/* Las guardias ofrecidas cuelgan de Guardias, así que el número de las que esperan
-            respuesta va en esta pestaña. Dibujado se entiende por dónde está; dicho en voz alta,
-            un "3" suelto no dice de qué es, así que al lado va la frase entera, que no se ve. */}
+        {/* Las asignaciones sin responder cuelgan de Guardias, así que el número de las que
+            esperan respuesta va en esta pestaña. Dibujado se entiende por dónde está; dicho en voz
+            alta, un "3" suelto no dice de qué es, así que al lado va la frase entera, que no se ve. */}
         <NavLink to="/guardias" className={() => (ES_GUARDIAS.test(pathname) ? 'active' : '')}>
           {t.nav.guardias}
-          {ofertasAbiertas > 0 && (
+          {sinResponder > 0 && (
             <>
-              <span className="nav-cuenta" aria-hidden="true">{ofertasAbiertas}</span>
+              <span className="nav-cuenta" aria-hidden="true">{sinResponder}</span>
               <span className="solo-lectores-pantalla">
-                {ofertasAbiertas === 1
-                  ? t.nav.ofertas_sin_contestar_una
-                  : con(t.nav.ofertas_sin_contestar, { n: ofertasAbiertas })}
+                {sinResponder === 1
+                  ? t.nav.sin_responder_una
+                  : con(t.nav.sin_responder, { n: sinResponder })}
               </span>
             </>
           )}

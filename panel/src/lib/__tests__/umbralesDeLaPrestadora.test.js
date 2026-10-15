@@ -87,7 +87,6 @@ describe('el umbral configurado cambia lo que se ve', () => {
     const hueco = {
       estado: 'programada',
       asistente_id: null,
-      ofrecida_at: null,
       fecha: '2026-09-16',
       hora_inicio: '18:00',
       hora_fin: '22:00',

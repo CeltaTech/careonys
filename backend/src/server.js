@@ -65,7 +65,7 @@ import { appClientesMedicacionRouter } from './routes/appClientesMedicacion.js';
 import { appAsistentesMedicacionRouter } from './routes/appAsistentesMedicacion.js';
 import { appAsistentesConsentimientosRouter } from './routes/appAsistentesConsentimientos.js';
 import { appAsistentesMatriculaRouter } from './routes/appAsistentesMatricula.js';
-import { appAsistentesOfertasRouter } from './routes/appAsistentesOfertas.js';
+import { appAsistentesAsignacionesRouter } from './routes/appAsistentesAsignaciones.js';
 import { panelMedicacionRouter } from './routes/panelMedicacion.js';
 import { panelIntermediacionRouter } from './routes/panelIntermediacion.js';
 import { panelCalificacionesRouter } from './routes/panelCalificaciones.js';
@@ -178,7 +178,7 @@ app.use('/api/app-asistentes', appAsistentesRouter);
 app.use('/api/app-asistentes/medicacion', appAsistentesMedicacionRouter);
 app.use('/api/app-asistentes/consentimientos', appAsistentesConsentimientosRouter);
 app.use('/api/app-asistentes/matricula', appAsistentesMatriculaRouter);
-app.use('/api/app-asistentes/ofertas', appAsistentesOfertasRouter);
+app.use('/api/app-asistentes/asignaciones', appAsistentesAsignacionesRouter);
 // Agregar, ver y sacar las llaves propias sí pide sesión: son cosas de alguien que ya entró. El
 // mismo juego de rutas se monta dos veces, una por aplicación, cada una detrás del rol que le toca.
 app.use('/api/app-asistentes/llaves', requiereRolAsistente, routerDeLlavesConSesion('asistente'));

@@ -8,17 +8,15 @@
 //
 // Se decidió NO agregar un valor 'sin_cubrir' a `estado` justamente por eso: serían dos
 // datos que dicen lo mismo y que pueden contradecirse. La cobertura se deriva siempre de
-// `asistente_id` y `ofrecida_at`, que son los datos reales, y este archivo es el único
-// lugar donde esa derivación está escrita.
+// `asistente_id`, que es el dato real, y este archivo es el único lugar donde esa derivación
+// está escrita.
 //
-// Ver las restricciones CHECK `guardias_sin_cubrir_estado_check`,
-// `guardias_sin_cubrir_sin_marcas_check` y `guardias_ofrecida_solo_sin_cubrir_check`, que
-// sostienen la misma regla del lado de la base.
+// Ver las restricciones CHECK `guardias_sin_cubrir_estado_check` y
+// `guardias_sin_cubrir_sin_marcas_check`, que sostienen la misma regla del lado de la base.
 
-/** Los tres valores posibles. No hay un cuarto. */
+/** Los dos valores posibles. No hay un tercero. */
 export const COBERTURA = {
   CUBIERTA: 'cubierta',
-  OFRECIDA: 'ofrecida',
   SIN_CUBRIR: 'sin_cubrir',
 };
 
@@ -26,15 +24,13 @@ export const COBERTURA = {
  * Estado de cobertura de una guardia.
  *
  * - 'cubierta'   → hay un Asistente asignado.
- * - 'ofrecida'   → no hay nadie, y la Prestadora ya la publicó para que alguien la tome.
- * - 'sin_cubrir' → no hay nadie y todavía no se publicó: es un hueco de la agenda.
+ * - 'sin_cubrir' → no hay nadie: es un hueco de la agenda.
  */
 export function coberturaDeGuardia(guardia) {
-  if (guardia?.asistente_id) return COBERTURA.CUBIERTA;
-  return guardia?.ofrecida_at ? COBERTURA.OFRECIDA : COBERTURA.SIN_CUBRIR;
+  return guardia?.asistente_id ? COBERTURA.CUBIERTA : COBERTURA.SIN_CUBRIR;
 }
 
-/** ¿Es un hueco? Sirve tanto la que nadie miró como la que ya se publicó y nadie tomó. */
+/** ¿Es un hueco? */
 export function estaSinCubrir(guardia) {
   return coberturaDeGuardia(guardia) !== COBERTURA.CUBIERTA;
 }

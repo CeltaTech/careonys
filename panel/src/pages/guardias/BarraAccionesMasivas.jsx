@@ -22,8 +22,7 @@ import { con } from '../../lib/textos';
 // catálogo de motivos por el enganche de siempre, que es leer y no guardar—. Este
 // componente solo junta dos cosas —qué acción eligió el usuario y con qué parámetro— y se las
 // pasa a `onAplicar`. Quien guarda, quien decide el orden, quien limpia lo que haya que
-// limpiar de cada guardia (el incidente de relevo abierto, la publicación de la guardia
-// ofrecida) es la pantalla padre, que ya sabe hacerlo de a una en `handleReasignar`. Si la
+// limpiar de cada guardia (el incidente de relevo abierto) es la pantalla padre, que ya sabe hacerlo de a una en `handleReasignar`. Si la
 // barra guardara por su cuenta, esa lógica quedaría escrita dos veces y una de las dos
 // versiones se iba a quedar vieja (regla 12 de CLAUDE.md §7).
 

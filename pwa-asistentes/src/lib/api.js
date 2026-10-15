@@ -135,12 +135,14 @@ export const api = {
     return pedido('/matricula', { method: 'POST', body: formData });
   },
   archivoDeMatricula: (ruta) => pedido(`/matricula/archivo-url?ruta=${encodeURIComponent(ruta)}`),
-  // Las guardias que le ofrecieron y todavía puede tomar. El motivo del rechazo es opcional:
-  // se pregunta, no se exige — obligar a explicarse antes de poder decir que no es una forma
-  // de que nadie diga que no.
-  ofertas: () => pedido('/ofertas'),
-  responderOferta: (id, respuesta, motivo) =>
-    pedido(`/ofertas/${id}/responder`, { method: 'POST', body: JSON.stringify({ respuesta, motivo }) }),
+  // Los turnos que se le asignaron y todavía no respondió, con la lista de motivos de rechazo de
+  // su Prestadora. Rechazar pide uno de esos motivos, y el detalle cuando el motivo lo pide.
+  asignaciones: () => pedido('/asignaciones'),
+  responderAsignacion: (id, respuesta, { motivoId, detalle } = {}) =>
+    pedido(`/asignaciones/${id}/responder`, {
+      method: 'POST',
+      body: JSON.stringify({ respuesta, motivoId, detalle }),
+    }),
   // Las calificaciones que le pusieron, y el descargo que puede dejar ante cada una. El
   // descargo se carga una sola vez y no se edita nunca: la base lo sostiene con la policy
   // `asistente_carga_su_descargo`, que sólo deja escribir mientras el campo esté vacío.

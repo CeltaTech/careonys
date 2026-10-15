@@ -177,6 +177,11 @@ export const GRUPOS = [
     copias: ['backend/src/utils/motorDeFormularios.js'],
   },
   {
+    que: 'el nombre de un motivo de resolución en el idioma de la pantalla',
+    original: 'panel/src/lib/nombreDelMotivo.js',
+    copias: ['pwa-asistentes/src/lib/nombreDelMotivo.js'],
+  },
+  {
     que: 'cómo se muestra el tipo de un Asistente',
     original: 'panel/src/lib/tipoDeAsistente.js',
     copias: ['pwa-asistentes/src/lib/tipoDeAsistente.js', 'pwa-clientes/src/lib/tipoDeAsistente.js'],

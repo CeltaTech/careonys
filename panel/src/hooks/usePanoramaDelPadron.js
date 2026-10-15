@@ -32,7 +32,7 @@ import {
    muestra: si faltara alguna, una guardia en curso se leería como programada y el conteo saldría
    mal sin que nada avise. */
 const COLUMNAS_GUARDIA =
-  'asistente_id, fecha, hora_inicio, hora_fin, estado, ofrecida_at, oferta_limite_at, checkin_at, checkout_at';
+  'asistente_id, fecha, hora_inicio, hora_fin, estado, checkin_at, checkout_at';
 
 export function usePanoramaDelPadron() {
   const prestadoraId = usePrestadoraActual();

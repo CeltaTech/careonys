@@ -11,20 +11,9 @@ import { supabase } from './supabaseClient';
 // Vive en lib/ porque lo van a usar todas las pantallas que hoy escriben `update({ estado })`, y
 // la misma decisión no puede quedar escrita en cada una.
 
-// En qué columna está el nombre del motivo según el idioma en el que está la pantalla. Los tres
-// están siempre cargados: la base rechaza el motivo que llegue sin alguno.
-const COLUMNA_POR_IDIOMA = {
-  'es-AR': 'nombre_es_ar',
-  en: 'nombre_en',
-  'pt-BR': 'nombre_pt_br',
-};
-
-// El nombre del motivo en el idioma de la pantalla.
-export function nombreDelMotivo(motivo, locale) {
-  if (!motivo) return '';
-  const columna = COLUMNA_POR_IDIOMA[locale] ?? COLUMNA_POR_IDIOMA['es-AR'];
-  return motivo[columna] ?? motivo.nombre_es_ar ?? '';
-}
+// El nombre del motivo vive aparte porque la aplicación del Asistente también lo usa, y allá no
+// llega nada de este archivo.
+export { nombreDelMotivo } from './nombreDelMotivo';
 
 // Resuelve una fila. `tabla` es el nombre guardado de la tabla cuya fila se resuelve
 // —`postulaciones`, `guardias`—, y `filaId` su llave, que va como texto porque unas tablas la

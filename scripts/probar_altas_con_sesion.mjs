@@ -260,7 +260,7 @@ async function probarLasAltas({ base, llavePublica }, token, d) {
     },
   ];
 
-  // La oferta necesita la Guardia que crea el caso anterior, así que se arma
+  // La asignación necesita la Guardia que crea el caso anterior, así que se arma
   // recién cuando ésa entró.
   const creado = [];
   const problemas = [];
@@ -275,10 +275,10 @@ async function probarLasAltas({ base, llavePublica }, token, d) {
       const guardia = creado.find((c) => c.tabla === 'guardias');
       if (!guardia) continue;
       elCaso = {
-        tabla: 'ofertas_guardia',
+        tabla: 'asignaciones_de_turno',
         disparadores:
-          'exigir_matricula_en_oferta → interno.motivo_bloqueo_matricula, y '
-          + 'fn_modalidad_en_oferta → interno.asistente_trabaja_en_modalidad',
+          'exigir_matricula_en_asignacion → interno.motivo_bloqueo_matricula, y '
+          + 'fn_modalidad_en_asignacion → interno.asistente_trabaja_en_modalidad',
         fila: {
           prestadora_id: d.prestadora,
           guardia_id: guardia.id,

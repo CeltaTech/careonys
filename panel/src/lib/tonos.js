@@ -76,7 +76,6 @@ const TONO_POR_ESTADO = {
   en_revision: TONO.ATENCION,
   enviada_meta: TONO.ATENCION,
   nueva: TONO.ATENCION,
-  ofrecida: TONO.ATENCION,
   parcial: TONO.ATENCION,
   pausada: TONO.ATENCION,
   pendiente: TONO.ATENCION,

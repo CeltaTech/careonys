@@ -92,7 +92,7 @@ donde haya ocurrido.
 
 ---
 
-## 3. Matrícula sin comprobar, al aceptar una oferta
+## 3. Matrícula sin comprobar, al aceptar un turno asignado
 
 **Ruta:** `errores.motivos.matricula_sin_verificar`
 
@@ -100,14 +100,14 @@ donde haya ocurrido.
 > La matrícula está cargada, pero la Prestadora todavía no la comprobó. Hasta entonces no se
 > pueden tomar guardias.
 
-**Dónde se ve:** Ofertas de guardia.
+**Dónde se ve:** Asignaciones sin responder.
 
-**Qué lo dispara:** la persona acepta una oferta y el servidor la rechaza porque su matrícula
-está cargada pero nadie la comprobó.
+**Qué lo dispara:** la persona acepta un turno asignado y el servidor la rechaza porque su
+matrícula está cargada pero nadie la comprobó.
 
 **Quién lo lee:** el Asistente.
 
-**Archivo:** `pwa-asistentes/src/lib/errores.js:156`, mostrado desde `pages/OfertasDeGuardia.jsx:175`
+**Archivo:** `pwa-asistentes/src/lib/errores.js:154`, mostrado desde `pages/AsignacionesSinResponder.jsx:194`
 
 **DECISIÓN:**
 
@@ -121,14 +121,14 @@ está cargada pero nadie la comprobó.
 > Esta guardia es de una modalidad de trabajo que no está habilitada en este perfil. Hace falta
 > hablarlo con la Prestadora.
 
-**Dónde se ve:** Ofertas de guardia.
+**Dónde se ve:** Asignaciones sin responder.
 
-**Qué lo dispara:** la persona responde una oferta cuya modalidad de trabajo su perfil no tiene
-habilitada.
+**Qué lo dispara:** la persona acepta un turno asignado cuya modalidad de trabajo su perfil no
+tiene habilitada.
 
 **Quién lo lee:** el Asistente.
 
-**Archivo:** `pwa-asistentes/src/lib/errores.js:156`, mostrado desde `pages/OfertasDeGuardia.jsx:175`
+**Archivo:** `pwa-asistentes/src/lib/errores.js:154`, mostrado desde `pages/AsignacionesSinResponder.jsx:194`
 
 **DECISIÓN:**
 

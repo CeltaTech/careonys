@@ -97,7 +97,7 @@ const DATOS = {
   guardia_sin_cubrir: {
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
     yaEmpezo: false, horas: 5,
-    busqueda: { ofrecida: true, invitados: 3, sinContestar: 1, aceptaron: 0 },
+    busqueda: { sinResponder: false, rechazos: 2 },
     veces: 1,
   },
   incidente_turno_sin_cubrir: {

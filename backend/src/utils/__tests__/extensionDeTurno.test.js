@@ -155,28 +155,27 @@ describe('pasosDeLaBusqueda', () => {
 
   it('los pasos salen en orden', () => {
     const pasos = pasosDeLaBusqueda({
-      relevo: { ofrecida_at: '2026-09-05T06:10:00.000Z', asistente_id: 'alguien' },
+      relevo: { asistente_id: 'alguien' },
       coordinacionAvisada: true,
       escalado: true,
     });
     assert.deepEqual(pasos, [
       PASOS_DE_LA_BUSQUEDA.COORDINACION_AVISADA,
       PASOS_DE_LA_BUSQUEDA.ESCALADO,
-      PASOS_DE_LA_BUSQUEDA.TURNO_OFRECIDO,
       PASOS_DE_LA_BUSQUEDA.RELEVO_ASIGNADO,
     ]);
   });
 
-  it('un turno ofrecido y todavía sin nadie no dice que hay relevo asignado', () => {
-    const pasos = pasosDeLaBusqueda({ relevo: { ofrecida_at: '2026-09-05T06:10:00.000Z', asistente_id: null } });
-    assert.deepEqual(pasos, [PASOS_DE_LA_BUSQUEDA.TURNO_OFRECIDO]);
+  it('un turno todavía sin nadie no dice que hay relevo asignado', () => {
+    const pasos = pasosDeLaBusqueda({ relevo: { asistente_id: null } });
+    assert.deepEqual(pasos, [PASOS_DE_LA_BUSQUEDA.SIN_NOVEDADES]);
   });
 
   it('no sale ningún nombre por ninguna parte', () => {
     // La lista es de claves de traducción y nada más. Si alguna vez alguien devuelve acá el
     // nombre del relevo o de quien faltó, esta prueba se rompe.
     const pasos = pasosDeLaBusqueda({
-      relevo: { ofrecida_at: '2026-09-05T06:10:00.000Z', asistente_id: 'alguien', nombre: 'Inventada Pérez' },
+      relevo: { asistente_id: 'alguien', nombre: 'Inventada Pérez' },
       coordinacionAvisada: true,
       escalado: true,
     });

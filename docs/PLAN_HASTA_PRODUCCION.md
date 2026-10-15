@@ -434,11 +434,10 @@ escrito encima por qué. Lo que queda, agrupado por lo que hay que hacer:
   Superadmin (`indicaciones_medicacion`, `prestadoras`, varias de
   cobros y de Match), y `usuarios` sólo deja leer la fila propia, así que toda lista de
   cuentas sigue con la maestra. Donde el comportamiento cambiaba, esas rutas volvieron a la
-  maestra: primero se alinean las políticas y después se migran. Dos de esas políticas dicen algo
-  distinto de lo que hace el Panel, y antes de alinearlas se decide cuál de los dos tiene razón: los
+  maestra: primero se alinean las políticas y después se migran. Una de esas políticas dice algo
+  distinto de lo que hace el Panel, y antes de alinearla se decide cuál de los dos tiene razón: los
   Clientes y los Asistentes pendientes de conformidad, que la base oculta y el Panel factura y
-  liquida; y la invitación a una guardia, que la base sólo deja ver si la guardia está marcada como
-  ofrecida.
+  liquida.
 - **La zona del Coordinador, decidida.** Cada Coordinador ve lo de su trabajo diario, que es su
   zona; el Administrador ve todo. El padrón de Asistentes disponibles lo ven todos los
   Coordinadores. Una alarma que llega al escalón de todos los Coordinadores la puede ver y resolver
@@ -843,9 +842,9 @@ en la base y en el backend, que hoy filtra sólo por Prestadora:
   que la asignada retoma el problema. La que cubre una ausencia ve lo de la ausente mientras dure.
 - **El Pagador, la facturación y la lista de precios quedan fuera del rol de la Coordinadora**, y
   se habilitan con un permiso.
-- **El Asistente, en una oferta, ve barrio, distancia, horario, complejidad y las tareas
-  especiales que pide el Paciente.** El nombre del Paciente y el domicilio exacto, recién al
-  aceptar; hoy la oferta ya los muestra. **De las guardias pasadas ve sólo las que todavía no se le pagaron**, con fecha,
+- **El Asistente, en un turno asignado sin responder, ve barrio, distancia, horario, complejidad y
+  las tareas especiales que pide el Paciente.** El nombre del Paciente y el domicilio exacto, recién
+  al aceptar; hoy la asignación ya los muestra. **De las guardias pasadas ve sólo las que todavía no se le pagaron**, con fecha,
   horario, horas y estado, para poder reclamar, y ningún dato del Paciente. Hoy una guardia no
   guarda si se pagó: se deduce de que haya una liquidación pagada cuyo período la cubra. Los reportes de otros Asistentes, sólo del Servicio en curso, mientras tenga una
   guardia vigente ahí y en cantidad acotada. Deja de recibir la credencial interna de su perfil.
@@ -1049,7 +1048,7 @@ Los renglones, en este orden:
 - **Ausencias no programadas.** Asistentes que no llegaron a su turno.
 - **Ingreso/Egreso en espera.** Asistentes que están en el domicilio esperando el código para
   registrar la entrada o la salida.
-- **Turnos sin asignación.** Turnos sin Asistente, incluidos los que se ofrecieron y nadie aceptó.
+- **Turnos sin asignación.** Turnos sin Asistente, incluidos los que se asignaron y se rechazaron.
 - **Asistente ausente.** El relevo que no llegó.
 - **Salida sin registrar.** El nombre es provisorio: al Desarrollador no le gusta y no encontró uno
   mejor. Hoy el Panel lo muestra como «Sin cerrar la salida».
@@ -1182,14 +1181,9 @@ texto del documento de cese, que está escrito en castellano adentro de
 `panel/src/lib/generarDocumentoCese.js` —incluida la línea del DNI— y sale igual en los tres
 idiomas.
 
-**Y el turno vacante, en todos lados.** El glosario retiró «oferta» y «guardia ofrecida»: salen
-de las pantallas en los tres idiomas, de las claves de las traducciones, del código y de la base
-—la tabla de las invitaciones y las columnas que marcan la guardia como ofrecida—, porque una
-palabra retirada sale también de lo guardado. Las dos situaciones del Panel que la nombran
-(«Ofrecida» y «Ofrecida · sin respuesta») necesitan texto nuevo, y ése lo aprueba usted. En la
-misma pasada, «invitación» sale de las pantallas que activan una cuenta —«Reenviar invitación»,
-«pida que reenvíen la invitación»—, donde el glosario ya la prohíbe y donde ahora además nombraría
-otra cosa. Termina cuando buscar esas palabras en el código y en la base da cero.
+**Y «invitación» sale de las pantallas que activan una cuenta** —«Reenviar invitación», «pida que
+reenvíen la invitación»—, donde el glosario ya la prohíbe. Termina cuando buscar esa palabra en el
+código y en la base da cero.
 
 **56.** Relevar lo que todavía no está relevado y el propio relevamiento manda mirar: los textos al
 pie de los casilleros, los avisos de que algo se guardó, las ventanas de confirmar, los carteles de

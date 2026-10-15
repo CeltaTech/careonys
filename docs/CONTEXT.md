@@ -130,7 +130,7 @@ Etapa 2 — Panel de administración
     cobertura, liquidaciones y pagos a Asistentes.
   - **Clientes, Pacientes y Servicios** — Ficha del cliente, personas autorizadas con qué ve cada una,
     instrucciones que firma el titular, y el Servicio contratado con su continuidad.
-  - **Guardias** — series y guardias, ofertas, cobertura, grilla, acciones masivas, guardias sin
+  - **Guardias** — series y guardias, asignaciones de turno, cobertura, grilla, acciones masivas, guardias sin
     cerrar, pase de guardia con código de presencia, emergencias en guardia, domicilios
     temporales y seguimiento de ubicación. Tiene rutas (`panelGuardias.js`, `panelComprobaciones.js`,
     `panelEmergencias.js`) y pantallas (`panel/src/pages/Guardias.jsx`, `PaseDeGuardia.jsx`,

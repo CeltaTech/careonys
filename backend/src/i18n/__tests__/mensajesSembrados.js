@@ -15,7 +15,10 @@ import { filasDeFabrica } from '../../__tests__/laFotoDeLaBase.js';
 
 // Las migraciones posteriores a la foto que siembran una frase, en la forma
 // `values ('<clave>', '<json>'::jsonb)`.
-const MIGRACIONES_POSTERIORES = ['20261107000000_codigo_de_prestadora_en_la_activacion.sql'];
+const MIGRACIONES_POSTERIORES = [
+  '20261107000000_codigo_de_prestadora_en_la_activacion.sql',
+  '20261118000000_los_turnos_se_asignan.sql',
+];
 
 function filasPosteriores() {
   return MIGRACIONES_POSTERIORES.flatMap((archivo) => {

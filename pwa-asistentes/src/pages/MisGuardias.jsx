@@ -30,7 +30,7 @@ import { hayDomicilioTemporal } from '../components/DomicilioTemporal';
 
 export default function MisGuardias() {
   const { t } = useLocale();
-  const { ofertasAbiertas = 0 } = useOutletContext() ?? {};
+  const { sinResponder = 0 } = useOutletContext() ?? {};
 
   // Zona 1: los turnos.
   const [guardias, setGuardias] = useState(null);
@@ -86,19 +86,19 @@ export default function MisGuardias() {
           dónde está. */}
       <h1>{t.guardias.titulo}</h1>
 
-      {/* Las guardias ofrecidas cuelgan de acá: es la pestaña que lleva el número de las que
-          esperan respuesta. */}
+      {/* Las asignaciones sin responder cuelgan de acá: es la pestaña que lleva el número de las
+          que esperan respuesta. */}
       <section className="pwa-card">
-        <h2>{t.ofertas.titulo}</h2>
-        {ofertasAbiertas > 0 && (
+        <h2>{t.asignaciones.titulo}</h2>
+        {sinResponder > 0 && (
           <div className="mini">
-            {ofertasAbiertas === 1
-              ? t.nav.ofertas_sin_contestar_una
-              : con(t.nav.ofertas_sin_contestar, { n: ofertasAbiertas })}
+            {sinResponder === 1
+              ? t.nav.sin_responder_una
+              : con(t.nav.sin_responder, { n: sinResponder })}
           </div>
         )}
-        <Link to="/ofertas" className="btn btn-full pwa-card-pie">
-          {t.inicio.ver_ofertas}
+        <Link to="/asignaciones" className="btn btn-full pwa-card-pie">
+          {t.inicio.ver_asignaciones}
         </Link>
       </section>
 

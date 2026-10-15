@@ -99,8 +99,6 @@ export const PASOS_DE_LA_BUSQUEDA = {
   COORDINACION_AVISADA: 'coordinacion_avisada',
   /** La alerta ya subió de escalón: lo sabe más gente que quien coordina a ese Paciente. */
   ESCALADO: 'escalado',
-  /** El turno se ofreció y está esperando que alguien lo tome. */
-  TURNO_OFRECIDO: 'turno_ofrecido',
   /** Hay alguien asignado que todavía no marcó la llegada. */
   RELEVO_ASIGNADO: 'relevo_asignado',
   /** Todavía no pasó nada de lo anterior. Se muestra igual: no saber nada también es una noticia. */
@@ -117,7 +115,6 @@ export function pasosDeLaBusqueda({ relevo, coordinacionAvisada, escalado }) {
   const pasos = [];
   if (coordinacionAvisada) pasos.push(PASOS_DE_LA_BUSQUEDA.COORDINACION_AVISADA);
   if (escalado) pasos.push(PASOS_DE_LA_BUSQUEDA.ESCALADO);
-  if (relevo?.ofrecida_at) pasos.push(PASOS_DE_LA_BUSQUEDA.TURNO_OFRECIDO);
   if (relevo?.asistente_id) pasos.push(PASOS_DE_LA_BUSQUEDA.RELEVO_ASIGNADO);
   return pasos.length ? pasos : [PASOS_DE_LA_BUSQUEDA.SIN_NOVEDADES];
 }

@@ -85,7 +85,7 @@ async function revisarPrestadora(prestadoraId, ahora) {
   // decide después contra la hora de inicio, que la base guarda en otra columna.
   const { data: guardias, error } = await supabase
     .from('guardias')
-    .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, ofrecida_at, aviso_sin_cubrir_at, aviso_sin_cubrir_veces, ofertas_guardia(respuesta)')
+    .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, aviso_sin_cubrir_at, aviso_sin_cubrir_veces, asignaciones_de_turno(estado, asistentes(nombre))')
     .eq('prestadora_id', prestadoraId)
     .is('asistente_id', null)
     .eq('estado', 'programada')
@@ -124,7 +124,7 @@ async function revisarPrestadora(prestadoraId, ahora) {
     })) continue;
 
     const veces = (guardia.aviso_sin_cubrir_veces ?? 0) + 1;
-    const invitaciones = guardia.ofertas_guardia ?? [];
+    const asignaciones = guardia.asignaciones_de_turno ?? [];
     await notificarCoordinador({
       evento: EVENTO,
       prestadoraId,
@@ -136,10 +136,8 @@ async function revisarPrestadora(prestadoraId, ahora) {
         yaEmpezo: inicio.getTime() <= ahora.getTime(),
         horas: Math.round(Math.abs(inicio.getTime() - ahora.getTime()) / MS_POR_HORA),
         busqueda: {
-          ofrecida: !!guardia.ofrecida_at,
-          invitados: invitaciones.length,
-          sinContestar: invitaciones.filter((o) => !o.respuesta).length,
-          aceptaron: invitaciones.filter((o) => o.respuesta === 'acepta').length,
+          sinResponder: asignaciones.some((a) => a.estado === 'sin_responder'),
+          rechazos: asignaciones.filter((a) => a.estado === 'rechazada').length,
         },
         veces,
       }),

@@ -239,7 +239,7 @@ ALTER TABLE asistentes ADD COLUMN horas_semanales NUMERIC(5,2);
 -- Quién decide: la Prestadora pone el techo con las modalidades que tenga activas y, dentro
 -- de ese techo, decide el Legajo de cada Asistente. Lo hacen cumplir los disparadores
 -- `trg_modalidades_*` sobre esta tabla y `trg_modalidad_en_*` sobre guardias, series y
--- ofertas. Si una modalidad no está habilitada, el motivo de la exclusión vive en
+-- asignaciones de turno. Si una modalidad no está habilitada, el motivo de la exclusión vive en
 -- `datos_reservados_asistente`, no acá.
 ALTER TABLE asistentes ADD COLUMN canales TEXT[] NOT NULL DEFAULT ARRAY['directa','intermediacion'];
 ALTER TABLE asistentes ADD CONSTRAINT asistentes_canales_valido

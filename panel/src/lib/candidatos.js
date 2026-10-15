@@ -399,7 +399,6 @@ const MOTIVO_DE_BLOQUEO = {
  *                                     Prestadora es estricta. Si no vienen, nadie se bloquea
  *                                     por Matrícula.
  *                    documentos     → filas de `documentos_asistente`
- *                    ofertas        → filas de `ofertas_guardia` de este hueco
  *                    pacientes      → filas de `pacientes` con `id`, `lat` y `lng`, para poder
  *                                     medir la distancia. Si no vienen, no se dice nada de la
  *                                     cercanía; ningún otro criterio cambia.
@@ -408,8 +407,7 @@ const MOTIVO_DE_BLOQUEO = {
  *                  los valores de arriba sin tocar este archivo.
  *
  * @returns array ordenado de mejor a peor. Cada elemento:
- *   { asistente, puntaje, aFavor: [{clave, valores}], enContra: [...], bloqueado, desaconsejado,
- *     yaInvitado }
+ *   { asistente, puntaje, aFavor: [{clave, valores}], enContra: [...], bloqueado, desaconsejado }
  *
  * Los bloqueados y los desaconsejados **también vienen en la lista**, al final y con su motivo a
  * la vista. Sacarlos haría que quien mira se pregunte por qué falta fulano y no encuentre
@@ -448,7 +446,6 @@ export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
   const ausencias = lista(datos.ausencias);
   const matriculas = lista(datos.matriculas);
   const documentos = lista(datos.documentos);
-  const ofertas = lista(datos.ofertas);
   const estadosMatricula = lista(datos.estadoMatricula);
 
   // Los Pacientes de este hueco, una sola vez para toda la lista: la distancia se mide contra
@@ -456,14 +453,6 @@ export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
   // la lista entera de Pacientes tantas veces como Asistentes tenga el Padrón.
   const buscados = new Set(idsDePacientes(hueco).filter(Boolean));
   const pacientesDelHueco = lista(datos.pacientes).filter((p) => buscados.has(p?.id));
-
-  // Los ya invitados, en un conjunto: preguntarlo una vez por Asistente sobre un array sería
-  // recorrer la lista de ofertas otras tantas veces para nada.
-  const yaInvitados = new Set(
-    ofertas
-      .filter((o) => !hueco.id || !o.guardia_id || o.guardia_id === hueco.id)
-      .map((o) => o.asistente_id)
-  );
 
   const evaluados = asistentes.map((asistente) =>
     evaluarAsistente(asistente, {
@@ -477,7 +466,6 @@ export function candidatosParaGuardia(hueco, datos = {}, opciones = {}) {
       pesos,
       topes,
       estadoMatricula: estadoDe(asistente.id, estadosMatricula),
-      yaInvitado: yaInvitados.has(asistente.id),
     })
   );
 
@@ -710,6 +698,5 @@ function evaluarAsistente(asistente, ctx) {
     enContra,
     bloqueado,
     desaconsejado,
-    yaInvitado: ctx.yaInvitado,
   };
 }

@@ -20,7 +20,7 @@ import { mensajeDeError } from '../lib/errores';
 
 function Estrellas({ cantidad, t }) {
   // Las estrellas dibujadas no se leen en voz alta —cinco símbolos seguidos no dicen nada—, así
-  // que al lado va la frase entera, que no se ve. Es el mismo patrón que el número de ofertas.
+  // que al lado va la frase entera, que no se ve. Es el mismo patrón que el número de la pestaña Guardias.
   return (
     <span className="guardia-card-paciente">
       <span aria-hidden="true">{'★'.repeat(cantidad)}{'☆'.repeat(Math.max(0, 5 - cantidad))}</span>
@@ -96,7 +96,7 @@ function Descargo({ calificacion, onGuardado, t, locale }) {
       {confirmando ? (
         <>
           <p className="texto-ayuda" role="status">{t.calificaciones.confirmar_aviso}</p>
-          <div className="oferta-botones">
+          <div className="botones-en-fila">
             <button type="button" className="btn btn-primary" disabled={guardando} onClick={guardar}>
               {guardando ? t.calificaciones.guardando : t.calificaciones.confirmar}
             </button>
@@ -111,7 +111,7 @@ function Descargo({ calificacion, onGuardado, t, locale }) {
           </div>
         </>
       ) : (
-        <div className="oferta-botones">
+        <div className="botones-en-fila">
           <button
             type="button"
             className="btn btn-primary"

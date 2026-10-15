@@ -39,7 +39,7 @@ const TOPE = 50;
 /* Las columnas de `guardias` que hacen falta. Las cuatro últimas no se muestran como tales: las
    necesita `situacionDeGuardia` para decidir en qué situación quedó cada turno. */
 const COLUMNAS =
-  'id, fecha, hora_inicio, hora_fin, paciente_id, estado, asistente_id, ofrecida_at, oferta_limite_at, checkin_at, checkout_at';
+  'id, fecha, hora_inicio, hora_fin, paciente_id, estado, asistente_id, checkin_at, checkout_at';
 
 export function GuardiasTab({ asistente }) {
   const { t, locale } = useLocale();

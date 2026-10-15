@@ -108,8 +108,6 @@ export function umbralesDeLaPrestadora(config = {}) {
 export const SITUACION = {
   HUECO_URGENTE: 'hueco_urgente',
   HUECO: 'hueco',
-  OFRECIDA_VENCIDA: 'ofrecida_vencida',
-  OFRECIDA: 'ofrecida',
   AUSENTE: 'ausente',
   TARDE: 'tarde',
   SIN_CERRAR: 'sin_cerrar',
@@ -123,14 +121,12 @@ export const SITUACION = {
 const TONO_POR_SITUACION = {
   // Está roto y alguien tiene que actuar hoy.
   [SITUACION.HUECO_URGENTE]: TONO.CRITICO,
-  [SITUACION.OFRECIDA_VENCIDA]: TONO.CRITICO,
   [SITUACION.AUSENTE]: TONO.CRITICO,
   [SITUACION.TARDE]: TONO.CRITICO,
   [SITUACION.SIN_CERRAR]: TONO.CRITICO,
 
   // Falta cerrar algo, pero hay tiempo.
   [SITUACION.HUECO]: TONO.ATENCION,
-  [SITUACION.OFRECIDA]: TONO.ATENCION,
 
   // Va bien.
   [SITUACION.EN_CURSO]: TONO.EXITO,
@@ -169,14 +165,8 @@ export function situacionDeGuardia(guardia, ctx = {}) {
   if (guardia.estado === 'completada') return SITUACION.COMPLETADA;
   if (guardia.estado === 'ausente') return SITUACION.AUSENTE;
 
-  // 2. El hueco. Que esté publicado con plazo vencido es peor que que esté publicado a secas,
-  //    y las dos cosas son distintas de un hueco que nadie tocó todavía.
+  // 2. El hueco. Lo que lo vuelve urgente es lo poco que falta para que empiece.
   if (estaSinCubrir(guardia)) {
-    if (guardia.ofrecida_at) {
-      const vencido =
-        guardia.oferta_limite_at && new Date(guardia.oferta_limite_at) < ahora;
-      return vencido ? SITUACION.OFRECIDA_VENCIDA : SITUACION.OFRECIDA;
-    }
     const horasQueFaltan = (inicioDeGuardia(guardia) - ahora) / MS_POR_HORA;
     return horasQueFaltan <= u.horas_hueco_urgente
       ? SITUACION.HUECO_URGENTE

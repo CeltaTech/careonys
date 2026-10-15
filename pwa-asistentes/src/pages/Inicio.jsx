@@ -14,7 +14,7 @@ import AvisoConsentimientoPendiente from '../components/AvisoConsentimientoPendi
 // separado, cada una con sus cuatro estados, para que una que falla no se lleve a la otra.
 export default function Inicio() {
   const { t } = useLocale();
-  const { ofertasAbiertas = 0 } = useOutletContext() ?? {};
+  const { sinResponder = 0 } = useOutletContext() ?? {};
 
   const [perfil, setPerfil] = useState(null);
   const [errorPerfil, setErrorPerfil] = useState('');
@@ -107,16 +107,16 @@ export default function Inicio() {
         )}
       </section>
 
-      {ofertasAbiertas > 0 && (
+      {sinResponder > 0 && (
         <section className="pwa-card">
-          <h2>{t.ofertas.titulo}</h2>
+          <h2>{t.asignaciones.titulo}</h2>
           <div className="mini">
-            {ofertasAbiertas === 1
-              ? t.nav.ofertas_sin_contestar_una
-              : con(t.nav.ofertas_sin_contestar, { n: ofertasAbiertas })}
+            {sinResponder === 1
+              ? t.nav.sin_responder_una
+              : con(t.nav.sin_responder, { n: sinResponder })}
           </div>
-          <Link to="/ofertas" className="btn btn-full pwa-card-pie">
-            {t.inicio.ver_ofertas}
+          <Link to="/asignaciones" className="btn btn-full pwa-card-pie">
+            {t.inicio.ver_asignaciones}
           </Link>
         </section>
       )}

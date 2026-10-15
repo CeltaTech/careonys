@@ -9,7 +9,7 @@ import ClaveNueva from './pages/ClaveNueva';
 import Inicio from './pages/Inicio';
 import MisGuardias from './pages/MisGuardias';
 import Servicio from './pages/Servicio';
-import OfertasDeGuardia from './pages/OfertasDeGuardia';
+import AsignacionesSinResponder from './pages/AsignacionesSinResponder';
 import GuardiaActiva from './pages/GuardiaActiva';
 import ReporteDiario from './pages/ReporteDiario';
 import MiPerfil from './pages/MiPerfil';
@@ -72,9 +72,9 @@ function Rutas() {
         <Route path="guardias" element={<MisGuardias />} />
         {/* Los Pacientes que atiende, cada uno con su próxima guardia. */}
         <Route path="servicio" element={<Servicio />} />
-        {/* Las guardias que le ofrecieron y todavía no contestó. Es una pantalla aparte de
-            "Mis Guardias" a propósito: un turno que le ofrecieron no es un turno suyo. */}
-        <Route path="ofertas" element={<OfertasDeGuardia />} />
+        {/* Los turnos que se le asignaron y todavía no respondió. Es una pantalla aparte de
+            "Mis Guardias" a propósito: un turno sin aceptar todavía no es un turno suyo. */}
+        <Route path="asignaciones" element={<AsignacionesSinResponder />} />
         <Route path="guardias/:id" element={<GuardiaActiva />} />
         {/* El reporte lleva el Paciente en la dirección: un turno puede cubrir a varias
             personas y cada una tiene su propia hoja (tarea 93h). */}

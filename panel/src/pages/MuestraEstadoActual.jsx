@@ -15,9 +15,9 @@ import { SelectoresPreferencias } from '../components/layout/SelectoresPreferenc
    se ven abajo están inventadas en este mismo archivo.
 
    Por qué hace falta. Estas piezas cambian de aspecto según la hora: un hueco de mañana se
-   ve rojo y el mismo hueco dentro de tres semanas se ve naranja. Para comprobar que los once
+   ve rojo y el mismo hueco dentro de tres semanas se ve naranja. Para comprobar que los nueve
    casos se dibujan bien haría falta esperar semanas, o ensuciar la base con guardias falsas.
-   Acá las fechas se arman relativas al día de hoy, así los once casos aparecen siempre.
+   Acá las fechas se arman relativas al día de hoy, así los nueve casos aparecen siempre.
 
    Por qué no debilita la seguridad. Vale exactamente lo mismo que para `Muestra.jsx`: no
    consulta nada, y `App.jsx` la monta solo cuando `import.meta.env.DEV` es verdadero — es
@@ -43,7 +43,7 @@ const ASISTENTES = [
 const ahoraHora = new Date().getHours();
 const hh = (n) => `${String(((n % 24) + 24) % 24).padStart(2, '0')}:00`;
 
-/* Las once situaciones del semáforo, una por guardia, armadas para que se den de verdad y no
+/* Las nueve situaciones del semáforo, una por guardia, armadas para que se den de verdad y no
    por un estado escrito a mano. Las horas se calculan alrededor de la hora actual: así la
    guardia "en curso" está realmente en curso a cualquier hora en que se abra esta pantalla. */
 const GUARDIAS = [
@@ -52,16 +52,6 @@ const GUARDIAS = [
     fecha: dia(1), hora_inicio: '08:00', hora_fin: '16:00', estado: 'programada' },
   { id: 'g2', asistente_id: null, paciente_id: 'p2', paciente_nombre: 'Paciente Dos',
     fecha: dia(6), hora_inicio: '22:00', hora_fin: '06:00', estado: 'programada' },
-
-  // Ofrecida con plazo que todavía corre, y ofrecida con el plazo ya vencido.
-  { id: 'g3', asistente_id: null, paciente_id: 'p3', paciente_nombre: 'Paciente Tres',
-    fecha: dia(3), hora_inicio: '14:00', hora_fin: '22:00', estado: 'programada',
-    ofrecida_at: new Date().toISOString(),
-    oferta_limite_at: new Date(Date.now() + 36e5).toISOString() },
-  { id: 'g4', asistente_id: null, paciente_id: 'p1', paciente_nombre: 'Paciente Uno',
-    fecha: dia(2), hora_inicio: '06:00', hora_fin: '14:00', estado: 'programada',
-    ofrecida_at: new Date(Date.now() - 864e5).toISOString(),
-    oferta_limite_at: new Date(Date.now() - 36e5).toISOString() },
 
   // En curso de verdad: empezó hace dos horas y termina dentro de seis.
   { id: 'g5', asistente_id: 'a1', asistente_nombre: 'Ana Ficticia', paciente_id: 'p1',

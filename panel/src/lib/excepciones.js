@@ -84,19 +84,6 @@ export const EXCEPCIONES = [
       guardias.some((g) => situacionDeGuardia(g, ctx) === SITUACION.HUECO_URGENTE),
   },
   {
-    id: 'ofrecidas_sin_respuesta',
-    claveEtiqueta: 'exc_ofrecidas_sin_respuesta',
-    parametros: () => ({}),
-    aplica: (g, ctx) => {
-      const s = situacionDeGuardia(g, ctx);
-      return s === SITUACION.OFRECIDA || s === SITUACION.OFRECIDA_VENCIDA;
-    },
-    // Rojo cuando venció el plazo que la propia Prestadora se puso: esperar ya no es una
-    // opción, hay que salir a buscar a otro.
-    esCritica: (guardias, ctx) =>
-      guardias.some((g) => situacionDeGuardia(g, ctx) === SITUACION.OFRECIDA_VENCIDA),
-  },
-  {
     id: 'tarde',
     claveEtiqueta: 'exc_tarde',
     parametros: () => ({}),

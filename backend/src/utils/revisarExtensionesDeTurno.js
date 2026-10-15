@@ -142,7 +142,7 @@ async function buscarElRelevo({ guardia, prestadoraId }) {
 
   const { data, error } = await supabase
     .from('guardia_pacientes')
-    .select('guardias!inner(id, fecha, hora_inicio, asistente_id, checkin_at, ofrecida_at)')
+    .select('guardias!inner(id, fecha, hora_inicio, asistente_id, checkin_at)')
     .eq('prestadora_id', prestadoraId)
     .in('paciente_id', pacienteIds)
     .in('guardias.fecha', [diaDelFinal, sumarDias(diaDelFinal, 1)])

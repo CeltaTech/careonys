@@ -257,16 +257,6 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
     onClose();
   }
 
-  // Publicar la guardia como disponible para que un Asistente la tome, o dejar de ofrecerla.
-  // Solo tiene sentido mientras no haya nadie asignado.
-  function handlePublicar() {
-    actualizar({ ofrecida_at: new Date().toISOString(), ofrecida_por: usuario.id });
-  }
-
-  function handleDespublicar() {
-    actualizar({ ofrecida_at: null, ofrecida_por: null });
-  }
-
   // La cobertura es una pregunta aparte del estado de la guardia: "¿hay alguien que la
   // haga?", no "¿en qué momento de su vida está?". Sale del punto único de verdad
   // (lib/cobertura.js) para que ninguna pantalla la vuelva a deducir por su cuenta.
@@ -282,7 +272,6 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
   const puedeCancelar = guardia.estado === 'programada' || guardia.estado === 'activa';
   const puedeMarcarAusente = tieneAsistente && guardia.estado === 'programada';
   const puedeReasignar = guardia.estado === 'programada' || guardia.estado === 'ausente';
-  const puedeOfrecer = !tieneAsistente && guardia.estado === 'programada';
   // Se anotan mientras la guardia está en pie o ya terminó, y nunca en una cancelada: ahí no
   // hubo trabajo que pagar. Mientras la liquidación del mes no esté hecha se pueden corregir.
   const puedeAnotarHorasExtra = tieneAsistente && guardia.estado !== 'cancelada' && guardia.estado !== 'ausente';
@@ -346,25 +335,6 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
             </li>
           ))}
         </ul>
-
-        {puedeOfrecer && (
-          <div className="panel-resultado-calculo">
-            {cobertura === COBERTURA.OFRECIDA ? (
-              <>
-                <p className="panel-explicacion">
-                  {t.guardias.publicada_el.replace('{fecha}', new Date(guardia.ofrecida_at).toLocaleString(locale))}
-                </p>
-                <Button variant="secondary" onClick={handleDespublicar} disabled={procesando}>
-                  {t.guardias.despublicar}
-                </Button>
-              </>
-            ) : (
-              <Button variant="secondary" onClick={handlePublicar} disabled={procesando}>
-                {procesando ? t.guardias.publicando : t.guardias.publicar}
-              </Button>
-            )}
-          </div>
-        )}
 
         {puedeRegistrarSalida && (
           <div className="panel-resultado-calculo">

@@ -11,14 +11,11 @@ import { avisarCambioDeAsistente } from './avisarCambioDeAsistente';
    escribir una columna: son tres cosas que van juntas y ninguna se puede olvidar.
 
      1. Se guarda el Asistente nuevo y la fecha.
-     2. Si la guardia estaba publicada como disponible, deja de estarlo. No es prolijidad: la
-        base tiene una restricción que no permite que una guardia con Asistente siga ofrecida,
-        así que sin este paso la asignación entera falla.
-     3. Si la guardia estaba marcada como ausente, había un incidente de relevo abierto por
+     2. Si la guardia estaba marcada como ausente, había un incidente de relevo abierto por
         ella. Asignar a alguien la cubre de verdad, así que ese incidente se cierra acá. Si no,
         la alerta de "necesita relevo" sigue encendida aunque el Paciente ya tenga quien lo
         cuide, y alguien va a salir a resolver un problema que ya no existe.
-     4. Se avisa el cambio, porque a la casa del Paciente entra otra persona. El aviso sale
+     3. Se avisa el cambio, porque a la casa del Paciente entra otra persona. El aviso sale
         después de guardar y no antes, y no puede voltear la reasignación: la guardia ya cambió.
 
    Dos pantallas hacen esta misma operación —la de Guardias y el Estado actual—, así que las tres
@@ -27,7 +24,7 @@ import { avisarCambioDeAsistente } from './avisarCambioDeAsistente';
 
 /**
  * @param {object} guardia  La guardia entera, como está hoy — hace falta para saber si estaba
- *                          ofrecida y si estaba ausente. Con el id solo no alcanzaría.
+ *                          ausente. Con el id solo no alcanzaría.
  * @param {string} asistenteId  Quién pasa a hacerla.
  * @param {string} fecha  En qué fecha queda. Puede ser la misma que ya tenía.
  * @param {object} t  Los textos del idioma en que está el Panel. Se piden desde afuera porque
@@ -41,11 +38,6 @@ export async function reasignarGuardia(guardia, asistenteId, fecha, t = null) {
 
   const cambios = { asistente_id: asistenteId, fecha };
   if (estabaSinCobertura) cambios.estado = 'programada';
-  if (guardia?.ofrecida_at) {
-    cambios.ofrecida_at = null;
-    cambios.ofrecida_por = null;
-    cambios.oferta_limite_at = null;
-  }
 
   const { error: errorUpdate } = await supabase.from('guardias').update(cambios).eq('id', guardia.id);
   if (errorUpdate) {

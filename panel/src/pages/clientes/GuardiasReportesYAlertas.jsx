@@ -47,7 +47,7 @@ const TOPE_REPORTES = 30;
    la situación saldría mal sin que nada avise —una guardia en curso se leería como programada—,
    así que están todas juntas acá con este comentario al lado. */
 const COLUMNAS_GUARDIA =
-  'id, fecha, hora_inicio, hora_fin, paciente_id, asistentes(nombre), estado, asistente_id, ofrecida_at, oferta_limite_at, checkin_at, checkout_at';
+  'id, fecha, hora_inicio, hora_fin, paciente_id, asistentes(nombre), estado, asistente_id, checkin_at, checkout_at';
 
 /**
  * Los cuatro estados de una de estas secciones, en un solo lugar.

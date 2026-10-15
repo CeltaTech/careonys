@@ -338,11 +338,10 @@ variables de la paleta funcional, no colores nuevos:
 `completada`, `cancelada`, `ausente` y `pausada`. `ausente` es distinto de `cancelada`. `pausada`
 todavía no tiene regla de acento.
 
-**Falta cubrir dos estados nuevos.** La guardia sin cubrir (`guardias_sin_cubrir_estado_check`) y
-el marcador de guardia ofrecida (`guardias.ofrecida_at`) todavía no tienen regla de acento
-lateral. Se resuelven junto con la grilla nueva de guardias (tarea #61), no antes: el acento
+**Falta cubrir un estado nuevo.** La guardia sin cubrir (`guardias_sin_cubrir_estado_check`)
+todavía no tiene regla de acento lateral. Se resuelven junto con la grilla nueva de guardias (tarea #61), no antes: el acento
 lateral tiene sentido en la lista actual, y la grilla puede necesitar otra forma de marcarlos.
-Mientras tanto, en cualquier badge de esos dos estados se usa `claseBadge()` como en el resto
+Mientras tanto, en cualquier badge de ese estado se usa `claseBadge()` como en el resto
 del Panel, que sí los resuelve.
 
 ## Convenciones de UI (patrón adoptado de análisis de GlamourOS/ERP salones — no vinculante,

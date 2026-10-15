@@ -406,13 +406,12 @@ describe('la extensión que viaja con el turno', () => {
           prestadora_id: PRESTADORA,
           asistente_id: 'otra-persona',
           nombre: 'Inventada Pérez',
-          ofrecida_at: '2026-09-16T06:05:00.000Z',
           checkin_at: null,
         },
       ])
     );
     const { cuerpo } = await verElTurno();
-    assert.deepEqual(cuerpo.extension.pasos, ['turno_ofrecido', 'relevo_asignado']);
+    assert.deepEqual(cuerpo.extension.pasos, ['relevo_asignado']);
     assert.ok(!JSON.stringify(cuerpo.extension).includes('Inventada'));
     assert.ok(!JSON.stringify(cuerpo.extension).includes('otra-persona'));
   });

@@ -135,25 +135,18 @@ function lineaDeArranque(t, d) {
 }
 
 // El mensaje tiene que servir para actuar, no solo para enterarse. Por eso dice en qué punto
-// está la búsqueda: si todavía no se ofreció a nadie, si se ofreció y nadie contestó, o si
-// contestaron todos que no. Son tres situaciones con tres acciones distintas.
-function estadoDeLaBusqueda(t, { ofrecida, invitados, sinContestar, aceptaron }) {
-  if (!ofrecida) return t('guardia_sin_cubrir.sin_ofrecer');
-  if (invitados === 0) return t('guardia_sin_cubrir.publicada_sin_invitar');
-  if (sinContestar > 0) {
-    return t(sinContestar === 1 ? 'guardia_sin_cubrir.sin_contestar_uno' : 'guardia_sin_cubrir.sin_contestar_varios', {
-      invitados: cuantosAsistentes(t, invitados),
-      sinContestar,
-    });
+// está la búsqueda: si todavía no se le asignó a nadie, si se le asignó a alguien que no respondió,
+// o si los que la recibieron la rechazaron. Son tres situaciones con tres acciones distintas. El
+// turno se le asigna a uno por vez, así que nunca hay más de una asignación sin responder.
+function estadoDeLaBusqueda(t, { sinResponder, rechazos, rechazadaPor }) {
+  if (sinResponder) return t('guardia_sin_cubrir.sin_responder');
+  if (rechazos === 1) {
+    return t('guardia_sin_cubrir.rechazada_una_vez', { asistente: rechazadaPor ?? cuantosAsistentes(t, 1) });
   }
-  if (aceptaron > 0) {
-    return t(aceptaron === 1 ? 'guardia_sin_cubrir.aceptaron_uno' : 'guardia_sin_cubrir.aceptaron_varios', {
-      aceptaron: cuantosAsistentes(t, aceptaron),
-    });
+  if (rechazos > 1) {
+    return t('guardia_sin_cubrir.rechazada_varias_veces', { rechazos: cuantosAsistentes(t, rechazos) });
   }
-  return t(invitados === 1 ? 'guardia_sin_cubrir.rechazaron_uno' : 'guardia_sin_cubrir.rechazaron_varios', {
-    invitados: cuantosAsistentes(t, invitados),
-  });
+  return t('guardia_sin_cubrir.sin_asignar');
 }
 
 /** De dónde salió la alerta temprana. La clave sale de la fuente; el texto, de la tabla. */

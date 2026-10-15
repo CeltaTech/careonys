@@ -7,7 +7,7 @@ import { pasosDeLaBusqueda } from './extensionDeTurno.js';
    Tres cosas, y ninguna más: desde qué hora está de más, si ya avisó que no puede continuar, y en
    qué anda la búsqueda del relevo.
 
-   SIN NINGÚN NOMBRE. Quién faltó, quién viene, a quién se le ofreció el turno: nada de eso se le
+   SIN NINGÚN NOMBRE. Quién faltó, quién viene, a quién se le asignó el turno: nada de eso se le
    cuenta. No es información que le sirva —no puede llamar a nadie desde adentro de un turno— y
    decirle que faltó una compañera es hablar de una persona a sus espaldas, con el agravante de que
    quien lo escucha está enojada con razón. Lo que sí le sirve, y es lo único que se manda, son los
@@ -56,7 +56,7 @@ async function elRelevo(relevoId, prestadoraId) {
 
   const { data, error } = await supabase
     .from('guardias')
-    .select('id, asistente_id, ofrecida_at, checkin_at')
+    .select('id, asistente_id, checkin_at')
     .eq('id', relevoId)
     .eq('prestadora_id', prestadoraId)
     .maybeSingle();

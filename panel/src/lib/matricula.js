@@ -223,9 +223,9 @@ export function motivoDelError(error) {
  * cualquier otro. Cuando sí lo era, arma las dos partes que hacen falta: qué pasó y qué hacer
  * al respecto. Un cartel que dice "no se puede" y nada más obliga a preguntarle a otra persona.
  *
- * Está acá y no en cada pantalla porque son tres las que pueden chocarse con la misma pared
- * —cubrir una vacante, invitar a varios y reasignar— y el texto tiene que ser el mismo en las
- * tres (regla 12 de CLAUDE.md §7).
+ * Está acá y no en cada pantalla porque son varias las que pueden chocarse con la misma pared
+ * —asignar, reasignar, mover una guardia— y el texto tiene que ser el mismo en todas (regla del
+ * punto único de verdad, CeltaTech §8).
  *
  * @param error  lo que devolvió Supabase.
  * @param tm     el bloque de textos ya traducido: `t.matricula`.

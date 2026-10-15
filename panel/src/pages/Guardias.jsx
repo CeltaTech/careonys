@@ -31,7 +31,7 @@ const ESTADOS = ['programada', 'activa', 'completada', 'cancelada', 'ausente', '
 /*
  * Cómo se lee cada situación del semáforo (`lib/semaforoGuardia.js`) en las tres palabras de la
  * maqueta, y qué botón le toca. Los tres botones abren el mismo panel de acciones de la guardia:
- * ahí están publicarla, reasignarla, cancelarla y marcar llegada, salida o ausencia.
+ * ahí están asignarla, reasignarla, cancelarla y marcar llegada, salida o ausencia.
  */
 const SIN_COBERTURA = { estado: 'sin_cobertura', tono: TONO.CRITICO };
 const EN_RIESGO = { estado: 'en_riesgo', tono: TONO.ATENCION };
@@ -39,12 +39,10 @@ const CUBIERTA = { estado: 'cubierta', tono: TONO.EXITO };
 
 const LECTURA_DE_SITUACION = {
   [SITUACION.HUECO_URGENTE]: { ...SIN_COBERTURA, accion: 'resolver' },
-  [SITUACION.OFRECIDA_VENCIDA]: { ...SIN_COBERTURA, accion: 'resolver' },
   [SITUACION.AUSENTE]: { ...SIN_COBERTURA, accion: 'resolver' },
   [SITUACION.TARDE]: { ...EN_RIESGO, accion: 'resolver' },
   [SITUACION.SIN_CERRAR]: { ...EN_RIESGO, accion: 'resolver' },
   [SITUACION.HUECO]: { ...EN_RIESGO, accion: 'solicitar_cobertura' },
-  [SITUACION.OFRECIDA]: { ...EN_RIESGO, accion: 'ver' },
   [SITUACION.CANCELADA]: { estado: 'cancelada', tono: TONO.NEUTRO, accion: 'ver' },
 };
 

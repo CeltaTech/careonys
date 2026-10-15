@@ -242,8 +242,8 @@ p {
   font-weight: 700;
 }
 
-/* Cuántas guardias ofrecidas esperan respuesta. Va en la pestaña de Guardias porque una oferta
-   con fecha límite que nadie mira es una oferta perdida. */
+/* Cuántos turnos asignados esperan respuesta. Va en la pestaña de Guardias porque mientras el
+   Asistente no responde, el Coordinador no puede buscar a otro. */
 .nav-cuenta {
   display: inline-block;
   min-width: 16px;
@@ -628,24 +628,17 @@ p {
   line-height: 44px;
 }
 
-/* ---------- Ofertas de guardia ---------- */
+/* ---------- Botones en fila ---------- */
 
-/* El plazo se lee antes que cualquier otra cosa de la tarjeta. */
-.oferta-limite {
-  margin: 8px 0 4px;
-  font-size: 13px;
-  font-weight: 650;
-  color: var(--tinta);
-}
-
-/* Aceptar y rechazar, uno al lado del otro y del mismo tamaño. */
-.oferta-botones {
+/* Dos botones que se eligen uno u otro —aceptar y rechazar—, uno al lado del otro y del mismo
+   tamaño. */
+.botones-en-fila {
   display: flex;
   gap: 7px;
   margin-top: 10px;
 }
 
-.oferta-botones .btn {
+.botones-en-fila .btn {
   flex: 1;
 }
 

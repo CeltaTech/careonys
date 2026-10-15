@@ -36,9 +36,8 @@ import { avisarCambioDeAsistente } from './avisarCambioDeAsistente';
 const VISTAS = ['asistente', 'paciente'];
 
 /**
- * @param {object} guardia  La guardia entera, como está hoy — hacen falta `ofrecida_at` para
- *                          saber si estaba publicada, y `paciente_id` y `prestadora_id` para
- *                          rehacer la lista de Pacientes. Con el id solo no alcanzaría.
+ * @param {object} guardia  La guardia entera, como está hoy — hacen falta `paciente_id` y
+ *                          `prestadora_id` para rehacer la lista de Pacientes. Con el id solo no alcanzaría.
  * @param {object} movimiento  Lo que informa la grilla al soltar:
  *   - `fila`: a qué fila se la llevó (un Asistente o un Paciente, según la vista).
  *   - `filaOrigen`: de qué fila se la sacó. Solo se usa en la vista por Paciente.
@@ -72,11 +71,6 @@ export async function moverGuardia(guardia, { fila, filaOrigen, fecha, vista, ho
   if (horaInicio && horaFin) {
     cambios.hora_inicio = horaInicio;
     cambios.hora_fin = horaFin;
-  }
-  if (cambios.asistente_id && guardia.ofrecida_at) {
-    cambios.ofrecida_at = null;
-    cambios.ofrecida_por = null;
-    cambios.oferta_limite_at = null;
   }
 
   const { error } = await supabase.from('guardias').update(cambios).eq('id', guardia.id);

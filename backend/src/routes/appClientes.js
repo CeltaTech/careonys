@@ -115,7 +115,7 @@ async function pacienteDelCliente(db, pacienteId, req) {
   // La dirección que se muestra es la de hoy, no la de la Ficha del Paciente, y la decide la base. Va acá
   // adentro y no en cada pantalla para que ninguna se olvide: todas las pantallas del Cliente
   // que muestran un Paciente pasan por esta función.
-  const [conDomicilio] = await pacientesConDomicilioDeHoy([conSuFicha(data)]);
+  const [conDomicilio] = await pacientesConDomicilioDeHoy(db, [conSuFicha(data)]);
   return conDomicilio;
 }
 
@@ -262,7 +262,8 @@ appClientesRouter.post('/instruccion/:instruccionId/confirmar', requiereRolClien
 // ============================================================================
 
 appClientesRouter.get('/pacientes', requiereRolCliente, async (req, res) => {
-  const { data, error } = await clienteDelPedido(req)
+  const db = clienteDelPedido(req);
+  const { data, error } = await db
     .from('pacientes')
     .select(`id, ${fichaCon(['nombre_visible', ...PARTES_DEL_DOMICILIO])}`)
     .eq('cliente_id', req.usuarioCliente.clienteId);
@@ -270,11 +271,12 @@ appClientesRouter.get('/pacientes', requiereRolCliente, async (req, res) => {
     return responderError(res, error);
   }
   // Si al Paciente lo están atendiendo estos días en otro lado, el Cliente ve esa dirección y no
-  // la de su Ficha de Persona — es la misma respuesta que ve el Asistente en su teléfono, escrita una sola
-  // vez en la base (regla 12). Sin esto, el Cliente y quien cuida al Paciente leerían direcciones
-  // distintas para la misma persona el mismo día.
+  // la de su Ficha de Persona — es la misma respuesta que ve el Asistente en su teléfono, escrita
+  // una sola vez en la base («ningún patrón repetido sin punto único de verdad»). Sin esto, el
+  // Cliente y quien cuida al Paciente leerían direcciones distintas para la misma persona el
+  // mismo día.
   const pacientes = conSusFichas(data).sort((a, b) => (a.nombre ?? '').localeCompare(b.nombre ?? ''));
-  res.json({ pacientes: await pacientesConDomicilioDeHoy(pacientes) });
+  res.json({ pacientes: await pacientesConDomicilioDeHoy(db, pacientes) });
 });
 
 // ============================================================================

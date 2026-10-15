@@ -51,6 +51,7 @@ export async function llegadaEstimadaDeGuardias(db, prestadoraId, guardias) {
   // Acá no se pide `domicilio` a propósito, igual que en el check-in: esto mide una distancia,
   // no muestra una dirección.
   const conSuGente = await conDomicilioDelDia(
+    db,
     await conPacientes(db, prestadoraId, conSalida, `id, ${FICHA_UBICACION}`)
   );
 

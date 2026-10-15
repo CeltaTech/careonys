@@ -503,3 +503,10 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** cada factura se llevaba copiado a quién se le reclamaba —tipo y nombre del Pagador— el día que se generaba.
 - **Qué dice ahora:** la factura nombra al Cliente. A quién se le reclama vive en la Ficha del cliente y se lo consulta ahí; la factura no lo copia, y el archivo que sale hacia el software de facturación tampoco lo lleva.
 - **Motivo:** el Desarrollador fijó que «las facturas deben nombrar al cliente, no al pagador». Además, la copia era un nombre guardado dos veces, y conservar los datos del día de la emisión es asunto de quien emite el comprobante, no de Careonys.
+
+
+## «Guardia ofrecida» pasa a ser «Turno vacante»
+
+- **Qué decía antes:** lo que el Coordinador le propone a un Asistente se llamaba de cuatro maneras —oferta, invitación, guardia ofrecida, «Ofrecidas»— y ninguna estaba en el glosario.
+- **Qué dice ahora:** el turno sin Asistente es un **turno vacante**; el Coordinador **invita** a cubrirlo; el Asistente recibe una **invitación a cubrir un turno**, y las ve en **Turnos vacantes**.
+- **Motivo:** lo aprobó el Desarrollador. Lo que cubre una sola persona es un turno, no una guardia, y el rubro lo llama turno abierto (*open shift*); «vacante» es, según la RAE, lo que está sin proveer.

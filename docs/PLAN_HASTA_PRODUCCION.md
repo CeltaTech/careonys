@@ -1181,9 +1181,22 @@ texto del documento de cese, que está escrito en castellano adentro de
 `panel/src/lib/generarDocumentoCese.js` —incluida la línea del DNI— y sale igual en los tres
 idiomas.
 
+**Y el turno vacante, en todos lados.** El glosario retiró «oferta» y «guardia ofrecida»: salen
+de las pantallas en los tres idiomas, de las claves de las traducciones, del código y de la base
+—la tabla de las invitaciones y las columnas que marcan la guardia como ofrecida—, porque una
+palabra retirada sale también de lo guardado. Las dos situaciones del Panel que la nombran
+(«Ofrecida» y «Ofrecida · sin respuesta») necesitan texto nuevo, y ése lo aprueba usted. En la
+misma pasada, «invitación» sale de las pantallas que activan una cuenta —«Reenviar invitación»,
+«pida que reenvíen la invitación»—, donde el glosario ya la prohíbe y donde ahora además nombraría
+otra cosa. Termina cuando buscar esas palabras en el código y en la base da cero.
+
 **56.** Relevar lo que todavía no está relevado y el propio relevamiento manda mirar: los textos al
 pie de los casilleros, los avisos de que algo se guardó, las ventanas de confirmar, los carteles de
-las dos aplicaciones y los de Habilitar cambio de contraseña.
+las dos aplicaciones y los de Habilitar cambio de contraseña. **Y todo el texto visible, contra
+las cuatro fuentes** que fija `..\..\CLAUDE.md` §8: términos sin aprobar, giros locales,
+construcciones dubitativas como «Conviene…» —hoy está en los avisos de activación de las dos
+aplicaciones— e impersonalidades innecesarias. Cada cambio de redacción se le presenta para
+aprobar, uno por uno.
 
 **57.** Que el Panel nombre la modalidad sólo cuando la Prestadora tiene las dos habilitadas, y
 con el nombre comercial que informa CeltaTech como dato. Hoy la nombra en tres lugares —el

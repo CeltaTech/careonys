@@ -35,7 +35,10 @@ import {
 
 const URL = process.env.SUPABASE_URL;
 
-const maestra = createClient(URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+// Se arma recién la primera vez que alguien la usa. Así lo que ya no la necesita —una ruta que va
+// toda con la credencial de quien pide, y su prueba— carga este archivo sin tenerla.
+let maestra = null;
+const laMaestra = () => (maestra ??= createClient(URL, process.env.SUPABASE_SERVICE_ROLE_KEY));
 
 const DURACION_S = 10 * 60;
 const MARGEN_S = 60;
@@ -88,7 +91,7 @@ const contexto = new AsyncLocalStorage();
 /** La conexión que corresponde a lo que se está haciendo ahora. */
 export const supabase = new Proxy({}, {
   get(_, propiedad) {
-    const conexion = contexto.getStore() ?? maestra;
+    const conexion = contexto.getStore() ?? laMaestra();
     const valor = conexion[propiedad];
     return typeof valor === 'function' ? valor.bind(conexion) : valor;
   },

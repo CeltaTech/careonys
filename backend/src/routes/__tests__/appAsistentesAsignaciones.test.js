@@ -3,15 +3,15 @@
  *
  *   npm test --prefix backend
  *
- * POR QUÉ EXISTE ESTA PRUEBA. La lista, los motivos y el rechazo van con la credencial del
- * Asistente, y aceptar va con la llave maestra y el filtro escrito. Si la lista volviera a la
- * maestra, el aislamiento dependería otra vez de un filtro a mano; si el rechazo dejara de pasar por
- * `resolver`, el motivo dejaría de quedar firmado.
+ * POR QUÉ EXISTE ESTA PRUEBA. Todo va con la credencial del Asistente: la lista y la aceptación
+ * pasan por funciones de la base que resuelven la Prestadora y el Asistente con la sesión, y el
+ * rechazo por `resolver`. Si algo volviera a la llave maestra, el aislamiento dependería otra vez
+ * de un filtro escrito a mano.
  *
- * Qué daría con el sistema roto: si la lista o el rechazo fueran con la llave maestra, falla la
- * comprobación de la credencial; si aceptar perdiera el filtro de la Prestadora, falla la del
- * aislamiento. La base de mentira no aplica políticas, así que lo que se prueba es con qué
- * credencial y con qué filtros se pregunta, no qué filas devolvería la base real.
+ * Qué daría con el sistema roto: la prueba arranca sin la llave maestra, así que una ruta que la
+ * usara fallaría al pedirla; si la lista o la aceptación dejaran de pasar por su función, falla la
+ * comprobación de qué se llamó. La base de mentira no aplica políticas: qué ve cada Asistente lo
+ * prueba la base, no esta prueba.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
@@ -24,7 +24,6 @@ const USUARIO = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 const LEGAJO = 'bbbbbbbb-bbbb-bbbb-bbbb-b0000000000b';
 const GUARDIA = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 const MOTIVO = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
-const LLAVE_MAESTRA = 'Bearer clave-de-mentira';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Lo que no se preparó contesta vacío. */
 const respuestas = new Map();
@@ -41,6 +40,12 @@ const baseFalsa = createServer((req, res) => {
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada({ url: req.url }) : preparada ?? [];
+    // Lo que la base levanta con RAISE EXCEPTION llega así: un 400 con el texto en `message`.
+    if (valor?.falla) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ code: 'P0001', message: valor.falla }));
+      return;
+    }
     const unoSolo = (req.headers.accept || '').includes('vnd.pgrst.object+json');
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(unoSolo && Array.isArray(valor) ? valor[0] ?? null : valor));
@@ -49,7 +54,7 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+const SESION = sesionDePrueba(USUARIO);
 
 const { default: express } = await import('express');
 await import('express-async-errors');
@@ -70,15 +75,17 @@ after(() => {
 async function pedir(camino = '', cuerpo) {
   const respuesta = await fetch(DIRECCION + camino, {
     method: cuerpo ? 'POST' : 'GET',
-    headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
+    headers: { Authorization: SESION, 'Content-Type': 'application/json' },
     body: cuerpo ? JSON.stringify(cuerpo) : undefined,
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
 
+// Lo que devuelve `turnos_asignados_sin_responder`: datos inventados.
 const TURNO = {
-  id: GUARDIA, paciente_id: null, fecha: '2099-01-01', hora_inicio: '08:00', hora_fin: '16:00',
-  dias_hasta_el_fin: 0, modalidad: null, estado: 'programada', asistente_id: null,
+  asignacion_id: 'asignacion-1', asignado_at: '2026-09-01T10:00:00Z', guardia_id: GUARDIA,
+  fecha: '2099-01-01', hora_inicio: '08:00', hora_fin: '16:00', dias_hasta_el_fin: 0,
+  modalidad: null, barrios: ['Barrio Inventado'], niveles_de_complejidad: ['II'],
 };
 
 beforeEach(() => {
@@ -90,34 +97,43 @@ beforeEach(() => {
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'asistente', prestadora_id: PRESTADORA }]);
   respuestas.set('GET /rest/v1/asistentes', () => [{ id: LEGAJO, prestadora_id: PRESTADORA }]);
-  respuestas.set('GET /rest/v1/asignaciones_de_turno', () => [
-    { id: 'asignacion-1', estado: 'sin_responder', asignado_at: '2026-09-01T10:00:00Z', guardia_id: GUARDIA, guardias: TURNO },
-  ]);
+  respuestas.set('POST /rest/v1/rpc/turnos_asignados_sin_responder', () => [TURNO]);
+  respuestas.set('POST /rest/v1/rpc/aceptar_asignacion', () => GUARDIA);
+  respuestas.set('GET /rest/v1/asignaciones_de_turno', () => [{ id: 'asignacion-1', estado: 'sin_responder' }]);
   respuestas.set('GET /rest/v1/motivos_resolucion', () => [
     { id: MOTIVO, nombre_es_ar: 'Problema de salud', nombre_en: 'Health problem', nombre_pt_br: 'Problema de saúde', pide_detalle: false, orden: 10 },
   ]);
-  respuestas.set('PATCH /rest/v1/guardias', () => [{ id: GUARDIA }]);
-  respuestas.set('PATCH /rest/v1/asignaciones_de_turno', () => [{ id: 'asignacion-1' }]);
   respuestas.set('POST /rest/v1/rpc/resolver', () => ({ id: 'resolucion-1' }));
 });
 
 describe('la lista de asignaciones sin responder', () => {
-  it('se busca con la credencial del Asistente, y no con la llave maestra', async () => {
+  it('sale de la función de la base, con la credencial del Asistente', async () => {
     const { estado, cuerpo } = await pedir();
     assert.equal(estado, 200);
-    const lecturas = llamadas.filter((l) => l.clave === 'GET /rest/v1/asignaciones_de_turno');
+    const lecturas = llamadas.filter((l) => l.clave === 'POST /rest/v1/rpc/turnos_asignados_sin_responder');
     assert.equal(lecturas.length, 1);
-    assert.notEqual(lecturas[0].credencial, LLAVE_MAESTRA, 'la lista fue con la llave maestra');
-    assert.ok(lecturas[0].url.includes('estado=eq.sin_responder'), 'falta el filtro de las sin responder');
+    assert.equal(lecturas[0].credencial, SESION, 'la lista no fue con la sesión del Asistente');
+    assert.equal(llamadas.filter((l) => l.clave === 'GET /rest/v1/guardias').length, 0, 'leyó el turno entero');
     assert.equal(cuerpo.asignaciones.length, 1);
     assert.equal(cuerpo.asignaciones[0].id, 'asignacion-1');
+  });
+
+  it('del turno muestra día, horario, barrio y complejidad, y nada del Paciente', async () => {
+    const { cuerpo } = await pedir();
+    const { guardia } = cuerpo.asignaciones[0];
+    assert.equal(guardia.id, GUARDIA);
+    assert.equal(guardia.fecha, '2099-01-01');
+    assert.deepEqual(guardia.barrios, ['Barrio Inventado']);
+    assert.deepEqual(guardia.niveles_de_complejidad, ['II']);
+    assert.equal(guardia.pacientes, undefined);
+    assert.equal(guardia.paciente_id, undefined);
   });
 
   it('trae la lista de motivos de rechazo de la Prestadora, con la credencial del Asistente', async () => {
     const { cuerpo } = await pedir();
     const lecturas = llamadas.filter((l) => l.clave === 'GET /rest/v1/motivos_resolucion');
     assert.equal(lecturas.length, 1);
-    assert.notEqual(lecturas[0].credencial, LLAVE_MAESTRA);
+    assert.equal(lecturas[0].credencial, SESION);
     assert.ok(lecturas[0].url.includes('tabla=eq.asignaciones_de_turno'));
     assert.equal(cuerpo.motivos[0].id, MOTIVO);
   });
@@ -135,7 +151,7 @@ describe('rechazar', () => {
     assert.equal(estado, 200);
     const resoluciones = llamadas.filter((l) => l.clave === 'POST /rest/v1/rpc/resolver');
     assert.equal(resoluciones.length, 1);
-    assert.notEqual(resoluciones[0].credencial, LLAVE_MAESTRA, 'el rechazo fue con la llave maestra');
+    assert.equal(resoluciones[0].credencial, SESION, 'el rechazo no fue con la sesión del Asistente');
     const enviado = JSON.parse(resoluciones[0].cuerpo);
     assert.equal(enviado.p_tabla, 'asignaciones_de_turno');
     assert.equal(enviado.p_fila_id, 'asignacion-1');
@@ -150,9 +166,7 @@ describe('rechazar', () => {
   });
 
   it('una asignación ya respondida no se vuelve a responder', async () => {
-    respuestas.set('GET /rest/v1/asignaciones_de_turno', () => [
-      { id: 'asignacion-1', estado: 'rechazada', guardia_id: GUARDIA, guardias: TURNO },
-    ]);
+    respuestas.set('GET /rest/v1/asignaciones_de_turno', () => [{ id: 'asignacion-1', estado: 'rechazada' }]);
     const { estado, cuerpo } = await pedir('/asignacion-1/responder', { respuesta: 'rechaza', motivoId: MOTIVO });
     assert.equal(estado, 409);
     assert.equal(cuerpo.motivo, 'asignacion_ya_respondida');
@@ -160,23 +174,29 @@ describe('rechazar', () => {
 });
 
 describe('aceptar', () => {
-  it('toma el turno y marca la asignación, las dos con la Prestadora escrita', async () => {
+  it('pasa por `aceptar_asignacion` con la credencial del Asistente, en un solo paso', async () => {
     const { estado, cuerpo } = await pedir('/asignacion-1/responder', { respuesta: 'acepta' });
     assert.equal(estado, 200);
     assert.equal(cuerpo.guardiaId, GUARDIA);
-    for (const clave of ['PATCH /rest/v1/guardias', 'PATCH /rest/v1/asignaciones_de_turno']) {
-      const escrituras = llamadas.filter((l) => l.clave === clave);
-      assert.equal(escrituras.length, 1, `falta ${clave}`);
-      assert.ok(escrituras[0].url.includes(`prestadora_id=eq.${PRESTADORA}`), `${clave} sin la Prestadora`);
-    }
+    const aceptaciones = llamadas.filter((l) => l.clave === 'POST /rest/v1/rpc/aceptar_asignacion');
+    assert.equal(aceptaciones.length, 1);
+    assert.equal(aceptaciones[0].credencial, SESION, 'aceptar no fue con la sesión del Asistente');
+    assert.equal(JSON.parse(aceptaciones[0].cuerpo).p_asignacion_id, 'asignacion-1');
+    assert.equal(llamadas.filter((l) => l.clave.startsWith('PATCH ')).length, 0, 'escribió por fuera de la función');
   });
 
-  it('un turno que ya tiene Asistente no se acepta', async () => {
-    respuestas.set('GET /rest/v1/asignaciones_de_turno', () => [
-      { id: 'asignacion-1', estado: 'sin_responder', guardia_id: GUARDIA, guardias: { ...TURNO, asistente_id: 'otro' } },
-    ]);
-    const { estado, cuerpo } = await pedir('/asignacion-1/responder', { respuesta: 'acepta' });
-    assert.equal(estado, 409);
-    assert.equal(cuerpo.motivo, 'guardia_ya_cubierta');
-  });
+  for (const [falla, estadoEsperado, motivo] of [
+    ['asignacion_no_encontrada', 404, 'asignacion_no_encontrada'],
+    ['asignacion_ya_respondida', 409, 'asignacion_ya_respondida'],
+    ['guardia_ya_cubierta', 409, 'guardia_ya_cubierta'],
+    ['matricula_bloquea:vencida:', 409, 'matricula_vencida'],
+    ['modalidad_bloquea:directa:', 409, 'modalidad_no_habilitada'],
+  ]) {
+    it(`si la base dice «${falla}», contesta ${motivo} y no deja salir el texto de la base`, async () => {
+      respuestas.set('POST /rest/v1/rpc/aceptar_asignacion', () => ({ falla }));
+      const { estado, cuerpo } = await pedir('/asignacion-1/responder', { respuesta: 'acepta' });
+      assert.equal(estado, estadoEsperado);
+      assert.deepEqual(cuerpo, { error: motivo, motivo });
+    });
+  }
 });

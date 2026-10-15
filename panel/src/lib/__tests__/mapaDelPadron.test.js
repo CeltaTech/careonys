@@ -179,7 +179,7 @@ describe('mapaDelPadron', () => {
   it('respeta el interruptor que movió la propia persona', () => {
     const resultado = mapaDelPadron(
       [
-        asistente({ id: 'norte', nombre: 'Aaa', disponible_para_ofertas: false }),
+        asistente({ id: 'norte', nombre: 'Aaa', disponible: false }),
         asistente({ id: 'oeste', nombre: 'Bbb' }),
       ],
       { lugaresDe, zonas: ZONAS },

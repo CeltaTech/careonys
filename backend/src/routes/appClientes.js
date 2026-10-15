@@ -1368,7 +1368,7 @@ function poolDeLaPrestadora(prestadoraId) {
     .select(COLUMNAS_PERFIL_PUBLICO)
     .eq('prestadora_id', prestadoraId)
     .eq('estado', 'activo')
-    .eq('disponible_para_ofertas', true)
+    .eq('disponible', true)
     .is('deleted_at', null)
     .contains('canales', [MODALIDAD.INTERMEDIACION]);
 }

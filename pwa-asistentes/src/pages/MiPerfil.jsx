@@ -61,9 +61,9 @@ export default function MiPerfil() {
     setDispError('');
     setDispCargando(true);
     try {
-      const ahora = perfil?.disponible_para_ofertas !== false;
-      const { disponible_para_ofertas } = await api.cambiarDisponibilidad(!ahora);
-      setPerfil((previo) => ({ ...previo, disponible_para_ofertas }));
+      const ahora = perfil?.disponible !== false;
+      const { disponible } = await api.cambiarDisponibilidad(!ahora);
+      setPerfil((previo) => ({ ...previo, disponible }));
     } catch (e) {
       setDispError(mensajeDeError(e, t, 'cambiar disponibilidad'));
     } finally {
@@ -153,14 +153,14 @@ export default function MiPerfil() {
       <section className="pwa-card">
         <h2>{t.perfil.disponibilidad_titulo}</h2>
         <div className="mini">
-          {perfil.disponible_para_ofertas !== false
+          {perfil.disponible !== false
             ? t.perfil.disponibilidad_disponible
             : t.perfil.disponibilidad_no_disponible}
         </div>
         <button type="button" className="btn btn-full pwa-card-pie" disabled={dispCargando} onClick={alternarDisponibilidad}>
           {dispCargando
             ? t.comun.guardando
-            : perfil.disponible_para_ofertas !== false
+            : perfil.disponible !== false
             ? t.perfil.disponibilidad_ponerse_no_disponible
             : t.perfil.disponibilidad_ponerse_disponible}
         </button>

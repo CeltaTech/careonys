@@ -13,7 +13,7 @@
  * falla la primera.
  */
 import { describe, expect, it } from 'vitest';
-import { candidatosParaGuardia, estaDisponibleParaOfertas, MOTIVO } from '../candidatos';
+import { candidatosParaGuardia, estaDisponible, MOTIVO } from '../candidatos';
 
 const HUECO = {
   id: 'g-1',
@@ -29,7 +29,7 @@ const DISPONIBLE = {
   nombre: 'Ana Prueba',
   estado: 'activo',
   canales: ['directa'],
-  disponible_para_ofertas: true,
+  disponible: true,
 };
 
 const NO_DISPONIBLE = {
@@ -37,7 +37,7 @@ const NO_DISPONIBLE = {
   nombre: 'Bruno Prueba',
   estado: 'activo',
   canales: ['directa'],
-  disponible_para_ofertas: false,
+  disponible: false,
 };
 
 /** El que había antes de que la columna existiera: llega sin el dato. */
@@ -84,11 +84,11 @@ describe('el interruptor de disponibilidad en la lista de candidatos', () => {
   });
 });
 
-describe('estaDisponibleParaOfertas', () => {
+describe('estaDisponible', () => {
   it('sólo un false explícito lo apaga', () => {
-    expect(estaDisponibleParaOfertas({ disponible_para_ofertas: false })).toBe(false);
-    expect(estaDisponibleParaOfertas({ disponible_para_ofertas: true })).toBe(true);
-    expect(estaDisponibleParaOfertas({})).toBe(true);
-    expect(estaDisponibleParaOfertas(null)).toBe(true);
+    expect(estaDisponible({ disponible: false })).toBe(false);
+    expect(estaDisponible({ disponible: true })).toBe(true);
+    expect(estaDisponible({})).toBe(true);
+    expect(estaDisponible(null)).toBe(true);
   });
 });

@@ -232,7 +232,7 @@ appAsistentesRouter.get('/perfil', requiereRolAsistente, async (req, res) => {
   const db = clienteDelPedido(req);
   const { data: perfil, error } = await db
     .from('asistentes')
-    .select('id, nombre, telefono, email, foto_url, tipo_asistente_id, estado, tipo_vinculo, qr_token, canales, disponible_para_ofertas, disponibilidad_cambiada_en, tipos_asistente(id, clave, nombre, prestadora_id)')
+    .select('id, nombre, telefono, email, foto_url, tipo_asistente_id, estado, tipo_vinculo, qr_token, canales, disponible, disponibilidad_cambiada_en, tipos_asistente(id, clave, nombre, prestadora_id)')
     .eq('id', req.usuarioAsistente.asistenteId)
     .single();
   if (error || !perfil) {
@@ -581,7 +581,7 @@ appAsistentesRouter.delete('/perfil/datos-bancarios/:clase', requiereRolAsistent
 // El interruptor de disponibilidad, y lo mueve el Asistente.
 //
 // `asistentes.estado` lo decide la Prestadora; esto lo decide él, y son dos cosas distintas a
-// propósito (ver la columna `asistentes.disponible_para_ofertas`).
+// propósito (ver la columna `asistentes.disponible`).
 // Apagarlo lo saca de lo que sale a buscarlo solo —la fase automática de la escalada de relevo—
 // y no toca ninguna guardia ya asignada: lo que ya se comprometió sigue siendo suyo.
 //
@@ -600,17 +600,17 @@ appAsistentesRouter.patch('/perfil/disponibilidad', requiereRolAsistente, async 
   // corregir su propio Legajo, así que con su credencial la escritura no alcanzaría ninguna fila.
   const { data: guardada, error } = await supabase
     .from('asistentes')
-    .update({ disponible_para_ofertas: disponible, disponibilidad_cambiada_en: new Date().toISOString() })
+    .update({ disponible: disponible, disponibilidad_cambiada_en: new Date().toISOString() })
     .eq('id', req.usuarioAsistente.asistenteId)
     .eq('prestadora_id', req.usuarioAsistente.prestadoraId)
-    .select('disponible_para_ofertas, disponibilidad_cambiada_en');
+    .select('disponible, disponibilidad_cambiada_en');
   if (error) return responderError(res, error);
   if (!guardada?.length) {
     return res.status(404).json({ error: 'Perfil no encontrado', motivo: 'perfil_no_encontrado' });
   }
 
   res.json({
-    disponible_para_ofertas: guardada[0].disponible_para_ofertas,
+    disponible: guardada[0].disponible,
     disponibilidad_cambiada_en: guardada[0].disponibilidad_cambiada_en,
   });
 });

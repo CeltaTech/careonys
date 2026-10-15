@@ -476,8 +476,9 @@ escrito encima por qué. Lo que queda, agrupado por lo que hay que hacer:
   ausente y al cubrir, la medicación del Asistente y el aviso de matrícula. Pasan a la conexión de
   la ruta cuando se alineen las políticas del renglón de arriba. Las de WhatsApp,
   `registroDeActividad` y `auditoria_de_accesos` se quedan con la maestra.
-- **Quedan en `utils/` funciones con la maestra adentro que llaman rutas de persona**, entre ellas
-  `domicilioDelDia.js`: tienen que recibir `db` como las demás.
+- **Quedan en `utils/` funciones con la maestra adentro que llaman rutas de persona**: tienen que
+  recibir `db` como las demás. La lista de las que faltan está en
+  `scripts/llave_maestra_pendiente.json`.
 
 **Y la autorización de monitoreo de los signos vitales pasa a verla sólo quien la firmó.** Hoy el
 Cliente y el Asistente de ese Paciente leen el renglón entero —quién la firmó, en qué carácter,

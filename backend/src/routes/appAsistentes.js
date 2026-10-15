@@ -666,8 +666,9 @@ appAsistentesRouter.get('/guardias', requiereRolAsistente, async (req, res) => {
 
   try {
     const visibilidad = await visibilidadDelPedido(req);
-    const guardias = await conPacientes(clienteDelPedido(req), req.usuarioAsistente.prestadoraId, data ?? [], camposDePacienteParaElAsistente(visibilidad));
-    res.json({ guardias: await conDomicilioDelDia(guardias) });
+    const db = clienteDelPedido(req);
+    const guardias = await conPacientes(db, req.usuarioAsistente.prestadoraId, data ?? [], camposDePacienteParaElAsistente(visibilidad));
+    res.json({ guardias: await conDomicilioDelDia(db, guardias) });
   } catch (e) {
     responderError(res, e);
   }
@@ -694,7 +695,7 @@ appAsistentesRouter.get('/guardias/:id', requiereRolAsistente, async (req, res) 
     // La dirección que se muestra es la del día de la guardia. Si es una temporal, cada
     // Paciente viaja además con `domicilio_es_temporal` y `domicilio_motivo`, que es lo que le
     // permite a la pantalla avisar que hoy no se lo atiende en su casa.
-    [guardia] = await conDomicilioDelDia([conSuGente]);
+    [guardia] = await conDomicilioDelDia(db, [conSuGente]);
   } catch (e) {
     return responderError(res, e);
   }
@@ -847,7 +848,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
   let pacientes;
   try {
     pacientes = await pacientesDeGuardia(db, guardia.prestadora_id, guardia, `id, cliente_id, ${FICHA_UBICACION}`);
-    pacientes = await pacientesConDomicilioDelDia(guardia, pacientes);
+    pacientes = await pacientesConDomicilioDelDia(db, guardia, pacientes);
   } catch (e) {
     return responderError(res, e);
   }

@@ -8,9 +8,9 @@
 // distancia contra la casa de siempre, la daría por fuera de rango y le mandaría al Coordinador
 // una alerta automática que sería un falso positivo.
 //
-// LA REGLA NO VIVE ACÁ, Y ES A PROPÓSITO (regla 12 de CLAUDE.md §7). Cuál dirección gana un día
-// dado —la temporal vigente, o la de su Ficha de Persona si no hay ninguna— lo decide una sola vez la
-// función `public.domicilios_de_pacientes_en` de la base. Este archivo no vuelve a comparar
+// LA REGLA NO VIVE ACÁ, Y ES A PROPÓSITO («ningún patrón repetido sin punto único de verdad»).
+// Cuál dirección gana un día dado —la temporal vigente, o la de su Ficha de Persona si no hay
+// ninguna— lo decide una sola vez la función `public.domicilios_de_pacientes_en` de la base. Este archivo no vuelve a comparar
 // fechas ni a elegir: pregunta y aplica lo que le contestan. Si mañana el criterio cambia
 // —porque una internación deja de contar, por ejemplo—, cambia en la base y llega solo a las
 // dos aplicaciones y al Panel.
@@ -26,7 +26,6 @@
 // qué campos trae cada Paciente y se pisan solamente esos — a un Paciente que vino sin
 // dirección no se le inventa una, ni temporal ni de su Ficha.
 
-import { supabase } from '../db/connection.js';
 import { domicilioEscrito } from './domicilioEscrito.js';
 
 // Los tres campos del Paciente que contestan "¿dónde se lo atiende?". Cada consulta pide los que
@@ -90,9 +89,12 @@ function conSuDireccionDelDia(paciente, resuelto) {
  * lista `pacientes`— y devuelve la misma lista con las direcciones del día ya aplicadas. Una
  * guardia sin fecha, o sin nadie a quien atender, pasa igual y sin tocar.
  *
+ * Pregunta con `db`, la conexión de quien pide: la base contesta sólo por los Pacientes que
+ * esa conexión puede ver.
+ *
  * Devuelve copias: nada de lo que llegó se modifica en el lugar.
  */
-export async function conDomicilioDelDia(guardias) {
+export async function conDomicilioDelDia(db, guardias) {
   const lista = (guardias ?? []).filter(Boolean);
   if (lista.length === 0) return lista;
 
@@ -112,7 +114,7 @@ export async function conDomicilioDelDia(guardias) {
   const resueltos = new Map();
   await Promise.all(
     [...pacientesPorFecha].map(async ([fecha, ids]) => {
-      const { data, error } = await supabase.rpc('domicilios_de_pacientes_en', {
+      const { data, error } = await db.rpc('domicilios_de_pacientes_en', {
         p_pacientes: [...ids],
         p_fecha: fecha,
       });
@@ -139,8 +141,8 @@ export async function conDomicilioDelDia(guardias) {
  * del día puesta. Es la forma en que se lee mejor donde ya se tiene la guardia en la mano —el
  * check-in, sin ir más lejos—, y no repite nada: llama a la de arriba.
  */
-export async function pacientesConDomicilioDelDia(guardia, pacientes) {
-  const [conDia] = await conDomicilioDelDia([{ ...guardia, pacientes: pacientes ?? [] }]);
+export async function pacientesConDomicilioDelDia(db, guardia, pacientes) {
+  const [conDia] = await conDomicilioDelDia(db, [{ ...guardia, pacientes: pacientes ?? [] }]);
   return conDia?.pacientes ?? [];
 }
 
@@ -154,7 +156,7 @@ export async function pacientesConDomicilioDelDia(guardia, pacientes) {
  * hora por Prestadora en ningún lado del producto todavía, y resolverlo acá solo para esta
  * pantalla dejaría dos criterios de "hoy" conviviendo.
  */
-export async function pacientesConDomicilioDeHoy(pacientes) {
+export async function pacientesConDomicilioDeHoy(db, pacientes) {
   const hoy = new Date().toISOString().slice(0, 10);
-  return pacientesConDomicilioDelDia({ fecha: hoy }, pacientes);
+  return pacientesConDomicilioDelDia(db, { fecha: hoy }, pacientes);
 }

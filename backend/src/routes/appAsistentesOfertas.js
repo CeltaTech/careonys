@@ -150,6 +150,7 @@ appAsistentesOfertasRouter.get('/', requiereRolAsistente, async (req, res) => {
     // atiende en otro barrio es exactamente lo que hace que alguien no vuelva a aceptar
     // (`utils/domicilioDelDia.js`).
     const guardias = await conDomicilioDelDia(
+      supabase,
       await conPacientes(
         supabase,
         req.usuarioAsistente.prestadoraId,

@@ -1,11 +1,9 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { mensajeDeError } from '../lib/errores';
 import { nombreDelMotivo } from '../lib/nombreDelMotivo';
-import DomicilioTemporal, { domiciliosDeLaGuardia } from '../components/DomicilioTemporal';
-import EnlaceAlMapa from '../components/EnlaceAlMapa';
 
 // Los turnos que se le asignaron y todavía no respondió.
 //
@@ -23,11 +21,11 @@ function TarjetaDeAsignacion({ asignacion, motivos, onResponder, enCurso, t, loc
   const refMotivo = useRef(null);
   const refDetalle = useRef(null);
 
+  // Antes de responder se ve lo necesario para decidir: día, horario, barrio y nivel de
+  // complejidad. El nombre del Paciente y el domicilio exacto aparecen en el turno, al aceptarlo.
   const guardia = asignacion.guardia;
-  const nombres = (guardia.pacientes ?? []).map((p) => p.nombre).filter(Boolean);
-  // Antes de decidir si se toma el turno hay que saber adónde hay que ir de verdad: las
-  // direcciones distintas del turno, cada una sabiendo si es la de siempre o una temporal.
-  const domicilios = domiciliosDeLaGuardia(guardia.pacientes);
+  const barrios = guardia.barrios ?? [];
+  const niveles = guardia.niveles_de_complejidad ?? [];
   const ocupado = enCurso !== null;
   const motivoElegido = motivos.find((m) => m.id === motivoId);
   const pideDetalle = Boolean(motivoElegido?.pide_detalle);
@@ -53,19 +51,14 @@ function TarjetaDeAsignacion({ asignacion, motivos, onResponder, enCurso, t, loc
   return (
     <div className="guardia-card">
       <div className="guardia-card-paciente">
-        {nombres.length > 0 ? nombres.join(' · ') : t.guardias.sin_paciente}
-      </div>
-      <div className="guardia-card-detalle">
         {guardia.fecha} · {guardia.hora_inicio?.slice(0, 5)} - {guardia.hora_fin?.slice(0, 5)}
       </div>
-      {domicilios.map((domicilio) => (
-        <Fragment key={domicilio.domicilio}>
-          <div className="guardia-card-detalle">
-            <EnlaceAlMapa lugar={domicilio} t={t} />
-          </div>
-          <DomicilioTemporal paciente={domicilio} t={t} />
-        </Fragment>
-      ))}
+      {barrios.length > 0 && <div className="guardia-card-detalle">{barrios.join(' · ')}</div>}
+      {niveles.length > 0 && (
+        <div className="guardia-card-detalle">
+          {t.asignaciones.nivel_complejidad}: {niveles.join(' · ')}
+        </div>
+      )}
 
       {!rechazando && (
         <div className="botones-en-fila">

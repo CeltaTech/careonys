@@ -258,6 +258,7 @@ export const T = {
       falta_detalle: 'Ingrese un detalle.',
       aceptada: 'Turno aceptado.',
       ver_el_turno: 'Ver turno',
+      nivel_complejidad: 'Nivel de complejidad',
     },
     // La advertencia de que la dirección de esta guardia no es la de siempre. Lo dibuja
     // components/DomicilioTemporal.jsx, que es el mismo archivo en las dos aplicaciones, así
@@ -949,6 +950,7 @@ export const T = {
       falta_detalle: 'Enter a detail.',
       aceptada: 'Shift accepted.',
       ver_el_turno: 'View shift',
+      nivel_complejidad: 'Complexity level',
     },
     domicilio: {
       temporal: 'Temporary address',
@@ -1583,6 +1585,7 @@ export const T = {
       falta_detalle: 'Insira um detalhe.',
       aceptada: 'Plantão aceito.',
       ver_el_turno: 'Ver plantão',
+      nivel_complejidad: 'Nível de complexidade',
     },
     domicilio: {
       temporal: 'Endereço temporário',

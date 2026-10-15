@@ -39,7 +39,7 @@ const activo = (id, nombre, canales = ['directa']) => ({
   nombre,
   estado: 'activo',
   canales,
-  disponible_para_ofertas: true,
+  disponible: true,
 });
 
 const LIBRE = activo('a-libre', 'Ana Prueba');

@@ -121,12 +121,12 @@ beforeEach(() => {
   );
   padronActivo = [AUSENTE, SUPLENTE_LIBRE, SUPLENTE_OCUPADO, FRANQUERO];
   noDisponibles = new Set();
-  // La base falsa filtra de verdad por `disponible_para_ofertas`: si alguien sacara ese filtro
+  // La base falsa filtra de verdad por `disponible`: si alguien sacara ese filtro
   // de la consulta, acá volverían todos y la prueba lo vería.
   respuestas.set('GET /rest/v1/asistentes', (busqueda) =>
     busqueda.has('estado')
       ? padronActivo
-          .filter((id) => busqueda.get('disponible_para_ofertas') !== 'eq.true' || !noDisponibles.has(id))
+          .filter((id) => busqueda.get('disponible') !== 'eq.true' || !noDisponibles.has(id))
           .map((id) => ({ id }))
       : [{ telefono: TELEFONOS[valorDe(busqueda, 'id')] ?? null }],
   );
@@ -134,7 +134,7 @@ beforeEach(() => {
     {
       asistente_id: FRANQUERO,
       tipo: 'franquero',
-      asistentes: { estado: 'activo', disponible_para_ofertas: !noDisponibles.has(FRANQUERO) },
+      asistentes: { estado: 'activo', disponible: !noDisponibles.has(FRANQUERO) },
     },
   ]);
   respuestas.set('GET /rest/v1/configuracion_notificaciones', () => [
@@ -193,7 +193,7 @@ describe('a quiénes sale a buscar la fase automática', () => {
   });
 
   // El interruptor de disponibilidad lo mueve el propio Asistente
-  // (`asistentes.disponible_para_ofertas`). Acá se respeta sin preguntar, y esa es la diferencia
+  // (`asistentes.disponible`). Acá se respeta sin preguntar, y esa es la diferencia
   // con el panel de cobertura: allá la lista la lee una persona, que puede llamarlo igual porque
   // sabe algo que el sistema no sabe; acá no hay nadie leyendo, sale un mensaje solo.
   it('no le escribe a quien se puso como no disponible', async () => {

@@ -65,7 +65,7 @@ export const NUNCA_SALEN = [
   'deleted_at',
   'importacion_id',
   'pendiente_conformidad',
-  'disponible_para_ofertas',
+  'disponible',
 ];
 
 /** Cómo se ordena la lista. La segunda existe sólo si la Prestadora encendió `ranking_plataforma`. */

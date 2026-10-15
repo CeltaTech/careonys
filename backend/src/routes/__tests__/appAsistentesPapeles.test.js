@@ -219,7 +219,7 @@ describe('el Certificado que viaja con el perfil', () => {
       { id: LEGAJO, prestadora_id: PRESTADORA, nombre: 'Nombre Inventado', telefono: null, email: 'inventado@ejemplo.test',
         foto_url: null, tipo_asistente_id: null, estado: 'activo',
         tipo_vinculo: 'monotributo', qr_token: 'x', canales: [],
-        disponible_para_ofertas: true, disponibilidad_cambiada_en: null, tipos_asistente: null },
+        disponible: true, disponibilidad_cambiada_en: null, tipos_asistente: null },
     ]);
     // Dónde acepta trabajar sale de sus lugares y del catálogo, no de un renglón de su Legajo.
     respuestas.set('GET /rest/v1/asistente_lugares', () => []);

@@ -185,12 +185,12 @@ export function estaEnElPadron(asistente) {
  *
  * Es otra pregunta que la de arriba y la contesta otra persona: `estado` lo decide la
  * Prestadora, esto lo decide el Asistente desde su aplicación
- * (`asistentes.disponible_para_ofertas`). Se lee con `!== false` a propósito: un Asistente
+ * (`asistentes.disponible`). Se lee con `!== false` a propósito: un Asistente
  * cargado antes de que la columna existiera, o traído por una consulta que no la pidió, llega
  * sin el dato, y eso no significa que se haya puesto no disponible.
  */
-export function estaDisponibleParaOfertas(asistente) {
-  return asistente?.disponible_para_ofertas !== false;
+export function estaDisponible(asistente) {
+  return asistente?.disponible !== false;
 }
 
 /**
@@ -598,7 +598,7 @@ function evaluarAsistente(asistente, ctx) {
   //
   //        Donde no hay nadie mirando sí se respeta sin preguntar: la fase automática de la
   //        escalada de relevo no le escribe (`backend/src/utils/faseAutomaticaRelevo.js`).
-  if (!estaDisponibleParaOfertas(asistente)) {
+  if (!estaDisponible(asistente)) {
     suma(enContra, MOTIVO.NO_DISPONIBLE, null, pesos.no_disponible);
   }
 

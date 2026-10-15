@@ -22,7 +22,7 @@
 // Asistente pertenece a toda zona que contenga alguno de sus lugares, y puede pertenecer a
 // varias, o a ninguna. Agrupar para mostrar es distinto de guardar.
 
-import { estaEnElPadron, estaDisponibleParaOfertas } from './candidatos';
+import { estaEnElPadron, estaDisponible } from './candidatos';
 
 /**
  * El grupo de los que están en el Padrón y no caen en ninguna zona de cobertura.
@@ -150,7 +150,7 @@ export function mapaDelPadron(asistentes, opciones = {}) {
       nombre: asistente.nombre ?? '',
       lat: punto.lat,
       lng: punto.lng,
-      disponible: estaDisponibleParaOfertas(asistente),
+      disponible: estaDisponible(asistente),
       zonas: susZonas.map((zona) => zona.id),
       nombresDeZonas: susZonas.map((zona) => zona.nombre),
     });

@@ -77,7 +77,7 @@ export const PESOS = {
 
   /**
    * El Asistente puso su interruptor en "no disponible"
-   * (`asistentes.disponible_para_ofertas`). Resta como un bloqueo **pero no bloquea**, y esa
+   * (`asistentes.disponible`). Resta como un bloqueo **pero no bloquea**, y esa
    * diferencia es toda la regla: en esta lista decide una persona, que puede saber algo que el
    * sistema no sabe —que hablaron ayer, que lo apagó por una semana que ya terminó—. Queda al
    * fondo de los que sí se pueden proponer, con el motivo a la vista. Donde no hay nadie

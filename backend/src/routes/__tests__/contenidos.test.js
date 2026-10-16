@@ -81,7 +81,6 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma
 // en el momento en que se importa, y con la dirección que haya en ese instante.
@@ -153,7 +152,7 @@ const PIEZA_PUBLICADA = { id: CONTENIDO, titulo: 'Algo', cuerpo: 'Texto', enlace
 function sesionDelPanel() {
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: rolDelUsuario, prestadora_id: PRESTADORA }]);
-  respuestas.set('POST /rest/v1/rpc/tiene_permiso_de', () => permisoOtorgado);
+  respuestas.set('POST /rest/v1/rpc/tiene_permiso_la_sesion', () => permisoOtorgado);
 }
 
 /** La sesión de la titular de un Cliente. */
@@ -299,9 +298,12 @@ describe('quién toca la biblioteca', () => {
     rolDelUsuario = 'coordinador';
     await enElPanel('/', 'POST', { titulo: 'Algo', cuerpo: 'Texto' });
 
-    const consulta = llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/tiene_permiso_de');
+    const consulta = llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/tiene_permiso_la_sesion');
     assert.ok(consulta, 'la ruta tenía que preguntar el permiso');
     assert.equal(consulta.cuerpo.p_accion, 'publicar_contenidos');
+    // Se pregunta por quien inició sesión, con su credencial: la pregunta no nombra a nadie más.
+    assert.equal(consulta.credencial, credencialEnviada);
+    assert.equal('p_usuario' in consulta.cuerpo, false);
   });
 
   it('cuánto ve cada uno lo decide la base: la lectura no lleva filtros propios', async () => {

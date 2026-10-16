@@ -80,9 +80,7 @@ const soloAdministracion = exigirAdministracion('Solo Admin puede crear cuentas'
 // única fuente de verdad sigue siendo este chequeo del lado del servidor.
 panelCuentasRouter.get('/permisos-efectivos', requiereRolPanel, async (req, res) => {
   try {
-    // Con la maestra: la base no le da a una persona con sesión permiso para llamar a
-    // `permisos_efectivos_de`.
-    res.json({ permisos: await permisosEfectivos(supabase, req.usuarioPanel.id) });
+    res.json({ permisos: await permisosEfectivos(clienteDelPedido(req)) });
   } catch (e) {
     responderError(res, e);
   }

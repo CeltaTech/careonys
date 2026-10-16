@@ -329,7 +329,9 @@ identificador que la apunte a otra Prestadora** — hoy el Panel llama cuatro: `
 que recibe dos fechas y resuelve la Prestadora adentro con `prestadora_actual()`; `resolver`, que
 también la resuelve adentro con `prestadora_actual()`; y `domicilio_del_paciente_en` y
 `domicilios_de_pacientes_en`, que reciben pacientes y una fecha y corren con los permisos de quien
-llama, así que la protección por fila de cada tabla decide qué ve. Toda función nueva de política
+llama, así que la protección por fila de cada tabla decide qué ve. Y el backend, con la credencial
+de quien pide, llama dos más: `tiene_permiso_la_sesion` y `permisos_efectivos_de_la_sesion`, que
+no reciben a nadie y contestan los permisos de quien inició sesión. Toda función nueva de política
 nace en `interno`, y cualquiera que se quede en `public` y llame a una de ahí lleva `interno` en su
 `search_path`. El reparto de permisos —cuáles pierden el alcance anónimo y cuáles conservan
 `authenticated`— lo guarda la base en los permisos de cada función y en los permisos por defecto

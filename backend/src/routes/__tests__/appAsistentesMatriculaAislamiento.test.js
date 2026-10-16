@@ -14,9 +14,13 @@
  * De esta lectura cuelga si el Asistente puede trabajar, porque la base lo frena sin Matrícula
  * vigente. Una Matrícula leída de la Prestadora equivocada lo habilita donde no corresponde.
  *
+ * El depósito va igual: subir el archivo y abrirlo con un enlace temporal también van con la
+ * credencial de quien pide, y las políticas del depósito lo acotan a la carpeta de su Legajo.
+ *
  * La base de mentira imita la protección por fila en lo único que hace falta: con la credencial de
- * quien pide contesta sólo lo de su Prestadora, y con la llave de servicio contesta todo. Qué daría
- * con el sistema roto: cualquiera de las consultas con la llave de servicio hace fallar su
+ * quien pide contesta sólo lo de su Prestadora, y con cualquier otra contesta todo. La prueba
+ * arranca sin la llave maestra, así que un pedido que volviera a ella fallaría al pedirla. Qué
+ * daría con el sistema roto: cualquiera de las consultas con otra credencial hace fallar su
  * comprobación, y la Matrícula de la otra Prestadora aparece. La protección por fila en sí no se
  * ve acá: la prueba `scripts/probar_aislamiento.mjs` contra una base de verdad. Los datos son
  * inventados.
@@ -47,7 +51,7 @@ const baseFalsa = createServer((req, res) => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
     const credencial = req.headers.authorization;
-    llamadas.push({ clave, url: req.url, credencial });
+    llamadas.push({ clave, url: req.url, credencial, reemplazar: req.headers['x-upsert'] });
 
     const preparada = respuestas.get(clave);
     let valor = typeof preparada === 'function' ? preparada({ url: req.url }) : preparada ?? [];
@@ -64,7 +68,6 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma
 // en el momento en que se importa, y con la dirección que haya en ese instante.
@@ -145,10 +148,7 @@ describe('la Matrícula que el Asistente ve de sí mismo', () => {
     assert.equal(prestadora.credencial, credencialEnviada);
   });
 
-  // El enlace temporal sigue con la llave maestra: la política del depósito mira la cuenta y la carpeta es
-  // el Legajo del Asistente, así que con la credencial de la persona el Asistente no abriría su propio archivo.
-  // Lo que la acota es la comprobación de la ruta contra la sesión.
-  it('el enlace a su propio archivo sale, y va con la llave maestra', async () => {
+  it('el enlace a su propio archivo sale, y va con la credencial de quien pide', async () => {
     respuestas.set(
       `POST /storage/v1/object/sign/prescripciones-medicacion/${PRESTADORA}/matriculas/${LEGAJO}/m.pdf`,
       { signedURL: '/object/sign/x?token=y' },
@@ -159,7 +159,7 @@ describe('la Matrícula que el Asistente ve de sí mismo', () => {
 
     const pedidoDeEnlace = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/sign/'));
     assert.ok(pedidoDeEnlace, 'no se pidió el enlace');
-    assert.notEqual(pedidoDeEnlace.credencial, credencialEnviada, 'el enlace se pidió con la credencial de quien pide');
+    assert.equal(pedidoDeEnlace.credencial, credencialEnviada, 'el enlace no se pidió con la credencial de quien pide');
   });
 
   it('un archivo de otra Prestadora o de otro Asistente no recibe enlace', async () => {
@@ -173,5 +173,28 @@ describe('la Matrícula que el Asistente ve de sí mismo', () => {
       assert.equal(respuesta.status, 400, ruta);
       assert.ok(!llamadas.some((l) => l.clave.startsWith('POST /storage/')), `se pidió el enlace a ${ruta}`);
     }
+  });
+
+  it('el archivo que carga sube a la carpeta de su Legajo con la credencial de quien pide, sin reemplazar', async () => {
+    respuestas.set('GET /rest/v1/estado_matricula_asistente', [
+      { asistente_id: LEGAJO, prestadora_id: PRESTADORA, requiere_matricula: true, tipo_matricula: 'enfermeria' },
+    ]);
+
+    const cuerpo = new FormData();
+    cuerpo.append('vigenteDesde', '2026-10-01');
+    cuerpo.append('archivo', new Blob([new Uint8Array([0x25, 0x50, 0x44, 0x46])], { type: 'application/pdf' }), 'm.pdf');
+    credencialEnviada = sesionDePrueba(USUARIO);
+    const respuesta = await fetch(DIRECCION, { method: 'POST', headers: { Authorization: credencialEnviada }, body: cuerpo });
+    assert.equal(respuesta.status, 200);
+
+    const subida = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/'));
+    assert.ok(subida, 'no se subió el archivo');
+    assert.ok(subida.clave.startsWith(`POST /storage/v1/object/prescripciones-medicacion/${PRESTADORA}/matriculas/${LEGAJO}/`), subida.clave);
+    assert.equal(subida.credencial, credencialEnviada, 'el archivo no se subió con la credencial de quien pide');
+    assert.notEqual(subida.reemplazar, 'true', 'la subida pide reemplazar un archivo');
+
+    const [alta] = consultasA('matriculas_asistente', 'POST');
+    assert.ok(alta, 'no se dio de alta la Matrícula');
+    assert.equal(alta.credencial, credencialEnviada);
   });
 });

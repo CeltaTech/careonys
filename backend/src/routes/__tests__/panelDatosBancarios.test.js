@@ -134,7 +134,7 @@ beforeEach(() => {
   respuestas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: rolDelUsuario, prestadora_id: PRESTADORA }]);
-  respuestas.set('POST /rest/v1/rpc/tiene_permiso_de', () => permisoOtorgado);
+  respuestas.set('POST /rest/v1/rpc/tiene_permiso_la_sesion', () => permisoOtorgado);
   respuestas.set('GET /rest/v1/asistentes', () => [{ id: ASISTENTE, nombre: 'Nombre Inventado' }]);
   respuestas.set('GET /rest/v1/datos_bancarios_asistente', () => [CUENTA_EN_LA_BASE]);
   respuestas.set('GET /rest/v1/catalogo_identificadores_de_cuenta', () => [
@@ -162,7 +162,7 @@ describe('quién puede mirar dónde cobra un Asistente', () => {
 
   it('el permiso que se pregunta es el de los datos bancarios, y no otro', async () => {
     await pedir(`/${ASISTENTE}`);
-    const pregunta = llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/tiene_permiso_de');
+    const pregunta = llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/tiene_permiso_la_sesion');
     assert.equal(pregunta.cuerpo.p_accion, 'ver_datos_bancarios_asistente');
   });
 

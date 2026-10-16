@@ -147,7 +147,7 @@ beforeEach(() => {
   tienePermiso = true;
   respuestas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
-  respuestas.set('POST /rest/v1/rpc/tiene_permiso_de', () => tienePermiso);
+  respuestas.set('POST /rest/v1/rpc/tiene_permiso_la_sesion', () => tienePermiso);
   // Sin cuentas cargadas: entonces no hay ningún preferido, que es el caso más común al empezar.
   lasCuentasLlevan();
   laBaseLeDejaVerElDirectorio = true;

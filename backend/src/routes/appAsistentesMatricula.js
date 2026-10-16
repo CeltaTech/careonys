@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
-import { clienteDelPedido, supabase } from '../db/connection.js';
+import { clienteDelPedido } from '../db/connection.js';
 import { exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { esRutaDeMatriculaDe, extensionDeArchivo, rutaDeMatriculaNueva } from '../utils/archivosSubidos.js';
 import { responderError } from '../utils/errorConMotivo.js';
@@ -33,15 +33,14 @@ import { responderError } from '../utils/errorConMotivo.js';
 //     organismo emite una renovación.
 //
 // CON LA CREDENCIAL DE QUIEN PIDE
-// Las consultas a la base entran con `clienteDelPedido(req)`, no con la llave
-// maestra: la base le contesta al Asistente sólo lo suyo. Por eso ninguna de
-// ellas lleva el filtro de la Prestadora de la sesión.
+// Las consultas a la base y al depósito entran con `clienteDelPedido(req)`, no
+// con la llave maestra: la base le contesta al Asistente sólo lo suyo. Por eso
+// ninguna de ellas lleva el filtro de la Prestadora de la sesión.
 //
-// EL DEPÓSITO SIGUE CON LA LLAVE MAESTRA
-// Subir el archivo y generar el enlace temporal van con la llave maestra, y la ruta se
-// comprueba a mano con `utils/archivosSubidos.js`: las políticas del depósito
-// piden que la carpeta sea el usuario de la sesión, y la ruta la arma el Legajo
-// del Asistente (ver el comentario de cada llamada).
+// En el depósito, las políticas `prescripciones_asistente_sube_su_matricula` y
+// `prescripciones_asistente_lee_su_matricula` le dejan al Asistente subir y abrir
+// sólo lo que está en la carpeta de su Legajo en su Prestadora. La ruta además se
+// comprueba acá con `utils/archivosSubidos.js`, que es el mismo archivo que la arma.
 // ============================================================================
 
 export const appAsistentesMatriculaRouter = Router();
@@ -160,14 +159,12 @@ appAsistentesMatriculaRouter.post(
     let archivoUrl = null;
     if (req.file) {
       const ruta = rutaDeMatriculaNueva(asistente.prestadora_id, asistente.id, extensionDeArchivo(req.file.mimetype));
-      // Con la llave maestra: `prescripciones_asistente_sube_su_matricula` exige
-      // (storage.foldername(name))[3] = auth.uid(), y la ruta lleva el identificador de la
-      // Legajo del Asistente, que para todo Legajo nuevo es distinto del de su usuario; con la
-      // credencial de la persona la subida se rechaza. Si se cambia la ruta o la política se
-      // decide aparte. La ruta la arma `rutaDeMatriculaNueva` con la Prestadora del Legajo.
-      const { error: errorSubida } = await supabase.storage
+      // El nombre del archivo es siempre nuevo, así que se sube sin reemplazar: reemplazar
+      // pediría además permiso de cambiar un archivo, y el Asistente no lo tiene —una Matrícula
+      // cargada no se edita—.
+      const { error: errorSubida } = await db.storage
         .from(BUCKET)
-        .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
+        .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: false });
       if (errorSubida) return responderError(res, errorSubida);
       archivoUrl = ruta;
     }
@@ -208,11 +205,7 @@ appAsistentesMatriculaRouter.get('/archivo-url', requiereRolAsistente, async (re
     return res.status(400).json({ error: 'Ruta de archivo inválida' });
   }
 
-  // Con la llave maestra: `prescripciones_asistente_lee_su_matricula` exige
-  // (storage.foldername(name))[3] = auth.uid(), y la carpeta es el identificador del Legajo,
-  // no el del usuario; con la credencial de la persona el Asistente no podría abrir su propio
-  // archivo. Si se cambia la ruta o la política se decide aparte.
-  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(ruta, 60);
+  const { data, error } = await clienteDelPedido(req).storage.from(BUCKET).createSignedUrl(ruta, 60);
   if (error) return responderError(res, error);
 
   res.json({ url: data.signedUrl });

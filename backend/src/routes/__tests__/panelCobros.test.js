@@ -163,7 +163,7 @@ beforeEach(() => {
   respuestas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: rolDelUsuario, prestadora_id: PRESTADORA }]);
-  respuestas.set('POST /rest/v1/rpc/tiene_permiso_de', () => true);
+  respuestas.set('POST /rest/v1/rpc/tiene_permiso_la_sesion', () => true);
   // De fábrica la cobranza la sigue este sistema, que es lo que hace la mayoría. Las pruebas del
   // caso conectado pisan esta respuesta.
   respuestas.set('GET /rest/v1/configuracion_facturacion_clientes', () => [{ regla: {} }]);
@@ -188,13 +188,12 @@ function laCobranzaEsDeAfuera() {
 }
 
 /**
- * Lo que no hace esta ruta con la credencial de quien pide: la entrada de la persona y su permiso,
- * que resuelven el middleware y `utils/permisos.js`; el registro de actividad; y las lecturas que
+ * Lo que no hace esta ruta con la credencial de quien pide: la entrada de la persona, que resuelve
+ * el middleware; el registro de actividad; y las lecturas que
  * la ruta o `utils/` hacen todavía con la llave maestra, cada una con su motivo escrito al lado.
  */
 const CON_LA_MAESTRA = [
   '/usuarios',
-  '/rpc/tiene_permiso_de',
   '/registro_actividad',
   '/configuracion_facturacion_clientes',
   '/opciones_de_lista',
@@ -423,7 +422,7 @@ describe('el estado de cuenta que llegó de afuera', () => {
 
 /** Deja a quien mira sin la acción habilitada, que es como nace para quien coordina turnos. */
 function sinElPermisoDelEstadoDeCuenta() {
-  respuestas.set('POST /rest/v1/rpc/tiene_permiso_de', () => false);
+  respuestas.set('POST /rest/v1/rpc/tiene_permiso_la_sesion', () => false);
 }
 
 describe('el estado de cuenta lo ve solamente quien tiene la acción habilitada', () => {

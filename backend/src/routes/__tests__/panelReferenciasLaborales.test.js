@@ -88,7 +88,6 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma
 // en el momento en que se importa, y con la dirección que haya en ese instante.
@@ -151,7 +150,7 @@ beforeEach(() => {
   respuestas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: rolDelUsuario, prestadora_id: PRESTADORA }]);
-  respuestas.set('POST /rest/v1/rpc/tiene_permiso_de', () => true);
+  respuestas.set('POST /rest/v1/rpc/tiene_permiso_la_sesion', () => true);
   respuestas.set('GET /rest/v1/asistentes', () => [unAsistente()]);
   respuestas.set('GET /rest/v1/configuracion_referencias_laborales', () => [{ minimo_verificadas: 2 }]);
 });

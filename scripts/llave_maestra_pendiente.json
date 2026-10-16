@@ -144,7 +144,6 @@
                                  "backend/src/utils/instruccionesPersonasAutorizadas.js",
                                  "backend/src/utils/intermediacionDeLaPrestadora.js",
                                  "backend/src/utils/mfaRecuperacionEmail.js",
-                                 "backend/src/utils/plazosDeCobroIntermediacion.js",
                                  "backend/src/utils/prestadorasDeLaIntermediacion.js",
                                  "backend/src/utils/proponerRespuestasIA.js",
                                  "backend/src/utils/recuperacionDeClave.js",

@@ -21,8 +21,6 @@
    idioma: un plazo que se cambia desde el Panel tiene que regir a la vuelta siguiente, sin que
    nadie reinicie el backend. */
 
-import { supabase } from '../db/connection.js';
-
 const TABLA = 'configuracion_cobro_intermediacion';
 const COLUMNAS = 'dias_de_aviso_antes_del_cobro, dias_de_gracia_por_cobro_rechazado, dias_de_vida_del_cupon';
 
@@ -37,11 +35,12 @@ export function memoriaDePlazos() {
  *
  * @param {string|null|undefined} prestadoraId
  * @param {Map} [memoria]  Lo leído en esta misma vuelta.
- * @param {object} [db]    La conexión con la que trabaja quien pregunta.
+ * @param {object} db      La conexión con la que trabaja quien pregunta: la del trabajo de esa
+ *   Prestadora. Es obligatoria, porque sin ella no hay con qué preguntar.
  * @returns {Promise<{dias_de_aviso_antes_del_cobro: number, dias_de_gracia_por_cobro_rechazado: number, dias_de_vida_del_cupon: number}|null>}
  */
-export async function plazosDeLaPrestadora(prestadoraId, memoria, db = supabase) {
-  if (!prestadoraId) return null;
+export async function plazosDeLaPrestadora(prestadoraId, memoria, db) {
+  if (!prestadoraId || !db) return null;
   if (memoria?.has(prestadoraId)) return memoria.get(prestadoraId);
 
   const plazos = await leerlos(db, prestadoraId);

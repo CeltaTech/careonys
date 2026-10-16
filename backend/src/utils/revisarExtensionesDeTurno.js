@@ -1,5 +1,6 @@
 import { enLaPrestadora } from '../db/connection.js';
 import { prestadorasCertificadas } from './prestadorasDeLaIntermediacion.js';
+import { idsDePacientesDeGuardia } from './pacientesDeGuardia.js';
 import { finDeGuardia, sumarDias } from './horarios.js';
 import {
   cuandoTermino,
@@ -127,20 +128,13 @@ async function revisarUnTurno({ db, guardia, prestadoraId, extension, ahora }) {
  * por la Ficha: así cuentan todos los del turno, cualquiera sea el estado de su Ficha.
  */
 async function buscarElRelevo({ db, guardia, prestadoraId }) {
-  const { data: delTurno, error: errorDelTurno } = await db
-    .from('guardia_pacientes')
-    .select('paciente_id')
-    .eq('prestadora_id', prestadoraId)
-    .eq('guardia_id', guardia.id);
-  if (errorDelTurno) {
-    console.error(`Error leyendo los Pacientes del turno ${guardia.id}:`, errorDelTurno.message);
+  let pacienteIds;
+  try {
+    pacienteIds = await idsDePacientesDeGuardia(db, prestadoraId, guardia);
+  } catch (e) {
+    console.error(`Error leyendo los Pacientes del turno ${guardia.id}:`, e.message);
     return null;
   }
-  // Un turno sin ninguna fila en la lista se atiende con el Paciente de la columna vieja, igual que
-  // en `pacientesDeGuardia.js`.
-  const pacienteIds = (delTurno ?? []).length > 0
-    ? [...new Set(delTurno.map((fila) => fila.paciente_id))]
-    : guardia.paciente_id ? [guardia.paciente_id] : [];
   if (pacienteIds.length === 0) return null;
 
   // El relevo arranca el día en que éste termina, o al siguiente si hay un hueco entre los dos.

@@ -116,13 +116,13 @@ const GUARDIA_VACIA = {
  * Lo que devuelve `guardia_pacientes` según cuál de las dos consultas sea.
  *
  * Las dos caen en la misma tabla y se distinguen por lo que piden: una pregunta a quiénes cubre
- * el turno (`pacientes(...)`) y la otra busca las guardias candidatas (`guardias!inner(...)`).
+ * el turno (`paciente_id`) y la otra busca las guardias candidatas (`guardias!inner(...)`).
  */
 function guardiaPacientes({ pacientes = [ELLA], candidatas = [] }) {
   return ({ url }) => {
     const select = new URL(url, 'http://interno').searchParams.get('select') ?? '';
     if (select.startsWith('guardias')) return candidatas.map((g) => ({ guardias: g }));
-    return pacientes.map((id) => ({ guardia_id: GUARDIA, pacientes: { id } }));
+    return pacientes.map((id) => ({ paciente_id: id }));
   };
 }
 

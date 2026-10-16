@@ -110,7 +110,6 @@
                                  "backend/src/routes/panelCobros.js",
                                  "backend/src/routes/panelConfiguracion.js",
                                  "backend/src/routes/panelCuentas.js",
-                                 "backend/src/routes/panelCuentaSegura.js",
                                  "backend/src/routes/panelDatosBancarios.js",
                                  "backend/src/routes/panelEmergencias.js",
                                  "backend/src/routes/panelGuardias.js",

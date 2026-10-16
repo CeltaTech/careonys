@@ -13,7 +13,7 @@
  *   npm test --prefix backend
  */
 import { strict as assert } from 'node:assert';
-import { after, beforeEach, describe, it } from 'node:test';
+import { after, afterEach, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { createHmac } from 'node:crypto';
@@ -54,7 +54,7 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null });
+    llamadas.push({ clave, url: req.url, credencial: req.headers.authorization, cuerpo: crudo ? JSON.parse(crudo) : null });
 
     // A la respuesta preparada se le pasa también la dirección con sus filtros: hay dos consultas
     // distintas que caen en la misma tabla —la que busca el acceso por la referencia del
@@ -76,7 +76,6 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 prepararCredencialDePrueba();
 
 // Un Mercado Pago de mentira. Hace falta porque lo que manda no dice si la plata entró —solo trae
@@ -102,6 +101,14 @@ const { webhooksPasarelasRouter } = await import('../webhooksPasarelas.js');
 // Se monta igual que en `server.js`: el router solo, sin `express.json()` delante. El router
 // trae adentro su propio lector de cuerpo crudo.
 const app = express();
+// La Prestadora de la dirección del último aviso. Todo lo que la ruta le pidió a la base tiene que
+// haber ido con la credencial del trabajo de esa Prestadora, y de ninguna otra: ni la llave maestra
+// ni la de otra Prestadora. Se mira después de cada prueba, sobre todas sus llamadas.
+let prestadoraDeLaDireccion = null;
+app.use((req, _res, next) => {
+  prestadoraDeLaDireccion = req.path.split('/').find((parte) => /^[0-9a-f-]{36}$/i.test(parte)) ?? null;
+  next();
+});
 app.use('/api/webhooks/pasarelas', webhooksPasarelasRouter);
 const backend = app.listen(0, '127.0.0.1');
 await new Promise((listo) => backend.on('listening', listo));
@@ -180,6 +187,16 @@ beforeEach(() => {
   // cargó el suyo. La máquina donde corre esto puede tenerlo puesto, así que cada prueba
   // arranca sin ninguno y lo pone la que quiera probarlo.
   for (const variable of SECRETOS_DE_AMBIENTE) delete process.env[variable];
+});
+
+afterEach(() => {
+  for (const { clave, credencial } of llamadas) {
+    const reclamos = credencial
+      ? JSON.parse(Buffer.from(credencial.replace('Bearer ', '').split('.')[1], 'base64url').toString())
+      : {};
+    assert.equal(reclamos.role, 'trabajo_sin_persona', `${clave} no entró con la credencial del trabajo`);
+    assert.equal(reclamos.prestadora_id, prestadoraDeLaDireccion, `${clave} entró con la credencial de otra Prestadora`);
+  }
 });
 
 function escrituras() {

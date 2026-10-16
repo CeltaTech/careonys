@@ -45,7 +45,7 @@ const baseFalsa = createServer((req, res) => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
     const cuerpo = crudo ? JSON.parse(crudo) : null;
-    llamadas.push({ clave, url: req.url, cuerpo });
+    llamadas.push({ clave, url: req.url, credencial: req.headers.authorization, cuerpo });
 
     const preparada = respuestas.get(clave);
     // Al preparador se le pasa la dirección entera, no solo el cuerpo: hay dos consultas
@@ -66,7 +66,6 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 prepararCredencialDePrueba();
 
 // La respuesta automática no redacta nada: elige entre los textos que la Prestadora aprobó. Con
@@ -89,6 +88,14 @@ const { whatsappWebhookRouter } = await import('../whatsappWebhook.js');
 // Se monta igual que en `server.js`: el router solo, sin `express.json()` delante. El router
 // trae adentro su propio lector de cuerpo crudo.
 const app = express();
+// La Prestadora de la dirección del último aviso. Todo lo que la ruta le pidió a la base tiene que
+// haber ido con la credencial del trabajo de esa Prestadora, y de ninguna otra: ni la llave maestra
+// ni la de otra Prestadora. Se mira después de cada prueba, sobre todas sus llamadas.
+let prestadoraDeLaDireccion = null;
+app.use((req, _res, next) => {
+  prestadoraDeLaDireccion = req.path.split('/').find((parte) => /^[0-9a-f-]{36}$/i.test(parte)) ?? null;
+  next();
+});
 app.use('/api/whatsapp-webhook', whatsappWebhookRouter);
 const backend = app.listen(0, '127.0.0.1');
 await new Promise((listo) => backend.on('listening', listo));
@@ -206,6 +213,16 @@ beforeEach(() => {
 
 // Ninguna prueba le deja trabajo en el aire a la que sigue.
 afterEach(esperarQuietud);
+
+afterEach(() => {
+  for (const { clave, credencial } of llamadas) {
+    const reclamos = credencial
+      ? JSON.parse(Buffer.from(credencial.replace('Bearer ', '').split('.')[1], 'base64url').toString())
+      : {};
+    assert.equal(reclamos.role, 'trabajo_sin_persona', `${clave} no entró con la credencial del trabajo`);
+    assert.equal(reclamos.prestadora_id, prestadoraDeLaDireccion, `${clave} entró con la credencial de otra Prestadora`);
+  }
+});
 
 /** Lo que el backend escribió en la base. Las llamadas a funciones (`/rpc/`) quedan afuera: leer
  *  un secreto no es escribir. */

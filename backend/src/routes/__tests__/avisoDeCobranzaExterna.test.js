@@ -18,7 +18,7 @@
  * Se levanta el router de verdad contra una base de mentira y se mira qué contesta y qué escribe.
  */
 import { strict as assert } from 'node:assert';
-import { after, beforeEach, describe, it } from 'node:test';
+import { after, afterEach, beforeEach, describe, it } from 'node:test';
 import { createHmac } from 'node:crypto';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 import { createServer } from 'node:http';
@@ -43,6 +43,7 @@ const baseFalsa = createServer((req, res) => {
     const clave = `${req.method} ${direccion.pathname}`;
     llamadas.push({
       clave,
+      credencial: req.headers.authorization,
       filtros: direccion.searchParams,
       cuerpo: crudo ? JSON.parse(crudo) : null,
     });
@@ -71,7 +72,6 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 prepararCredencialDePrueba();
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma
@@ -83,6 +83,14 @@ const { cobranzaExternaRouter } = await import('../avisoDeCobranzaExterna.js');
 const app = express();
 // Montado como en `server.js`: antes de cualquier lector de JSON general, porque la firma se
 // calcula sobre los bytes exactos que llegaron.
+// La Prestadora de la dirección del último aviso. Todo lo que la ruta le pidió a la base tiene que
+// haber ido con la credencial del trabajo de esa Prestadora, y de ninguna otra: ni la llave maestra
+// ni la de otra Prestadora. Se mira después de cada prueba, sobre todas sus llamadas.
+let prestadoraDeLaDireccion = null;
+app.use((req, _res, next) => {
+  prestadoraDeLaDireccion = req.path.split('/').find((parte) => /^[0-9a-f-]{36}$/i.test(parte)) ?? null;
+  next();
+});
 app.use('/api/avisos-de-cobranza', cobranzaExternaRouter);
 const backend = app.listen(0, '127.0.0.1');
 await new Promise((listo) => backend.on('listening', listo));
@@ -144,6 +152,16 @@ beforeEach(() => {
   );
   respuestas.set('POST /rest/v1/restricciones_de_cobranza', () => []);
   respuestas.set('POST /rest/v1/estados_de_cuenta_externos', () => []);
+});
+
+afterEach(() => {
+  for (const { clave, credencial } of llamadas) {
+    const reclamos = credencial
+      ? JSON.parse(Buffer.from(credencial.replace('Bearer ', '').split('.')[1], 'base64url').toString())
+      : {};
+    assert.equal(reclamos.role, 'trabajo_sin_persona', `${clave} no entró con la credencial del trabajo`);
+    assert.equal(reclamos.prestadora_id, prestadoraDeLaDireccion, `${clave} entró con la credencial de otra Prestadora`);
+  }
 });
 
 // ---------------------------------------------------------------------------------------

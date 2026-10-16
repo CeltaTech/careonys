@@ -19,8 +19,7 @@
 //      firma guardado, falta la cabecera, la firma no da: se rechaza. Nunca "se sigue igual".
 
 import express, { Router } from 'express';
-import { supabase } from '../db/connection.js';
-import { enLaPrestadoraDeLaDireccion } from '../middleware/enLaPrestadoraDeLaDireccion.js';
+import { conexionDeLaDireccion, enLaPrestadoraDeLaDireccion } from '../middleware/enLaPrestadoraDeLaDireccion.js';
 import { obtenerAdaptador, confirmaConsultando } from '../pasarelas/index.js';
 import { esRechazoDeAutenticidad, MOTIVO } from '../pasarelas/firmaWebhook.js';
 import { registrarCobroExitoso } from '../utils/cobrosIntermediacion.js';
@@ -36,6 +35,7 @@ webhooksPasarelasRouter.use(express.raw({ type: 'application/json', limit: '1mb'
 
 webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', enLaPrestadoraDeLaDireccion('Aviso de pasarela'), async (req, res) => {
   const { proveedor, prestadoraId } = req.params;
+  const db = conexionDeLaDireccion(req);
 
   function rechazar(motivo) {
     // El motivo queda del lado del servidor. Al que golpeó la puerta se le contesta siempre
@@ -64,7 +64,7 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', enLaPrestadoraDeLaDire
     return res.status(400).json({ error: 'Cuerpo ilegible' });
   }
 
-  const { data: credencialFila } = await supabase
+  const { data: credencialFila } = await db
     .from('credenciales_pasarela_pago')
     .select('credencial_secret_id, secreto_firma_secret_id')
     .eq('prestadora_id', prestadoraId)
@@ -77,11 +77,11 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', enLaPrestadoraDeLaDire
   if (!credencialFila) return rechazar(MOTIVO.SECRETO_AUSENTE);
 
   const [{ data: credencial }, { data: secretoFirma }] = await Promise.all([
-    supabase.rpc('leer_credencial_pasarela_pago', {
+    db.rpc('leer_credencial_pasarela_pago', {
       p_prestadora_id: prestadoraId,
       p_proveedor: proveedor,
     }),
-    supabase.rpc('leer_secreto_firma_pasarela_pago', {
+    db.rpc('leer_secreto_firma_pasarela_pago', {
       p_prestadora_id: prestadoraId,
       p_proveedor: proveedor,
     }),
@@ -116,7 +116,7 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', enLaPrestadoraDeLaDire
   // Hasta acá se buscaba únicamente entre los cobros. Para el segundo grupo eso no encontraba
   // nunca nada: se contestaba 200 y se seguía de largo, así que el acceso cobraba todos los
   // períodos del lado del proveedor y en esta base no figuraba ninguno.
-  const { data: cobro } = await supabase
+  const { data: cobro } = await db
     .from('cobros_intermediacion')
     .select('id, acceso_id, periodo')
     .eq('prestadora_id', prestadoraId)
@@ -125,7 +125,7 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', enLaPrestadoraDeLaDire
 
   const { data: accesoDelCobro } = cobro
     ? { data: null }
-    : await supabase
+    : await db
         .from('accesos_intermediacion')
         .select('id, importe, proximo_cobro')
         .eq('prestadora_id', prestadoraId)
@@ -161,7 +161,7 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', enLaPrestadoraDeLaDire
     // La Prestadora se nombra también acá, aunque el cobro se haya buscado filtrando por ella:
     // la escritura dice por sí sola para qué Organización trabaja, sin colgar de la lectura de
     // más arriba.
-    await supabase
+    await db
       .from('cobros_intermediacion')
       .update({ estado_cobro: estadoFinal })
       .eq('prestadora_id', prestadoraId)
@@ -174,7 +174,7 @@ webhooksPasarelasRouter.post('/:proveedor/:prestadoraId', enLaPrestadoraDeLaDire
     // Sin `referencia_externa`, a propósito: la que trajo la pasarela es la del acceso, no la de
     // este período. Guardarla acá haría que el cobro del período siguiente encontrara esta misma
     // fila y pisara el cobro anterior en vez de anotar uno nuevo.
-    const { error: errorInsertar } = await supabase.from('cobros_intermediacion').insert({
+    const { error: errorInsertar } = await db.from('cobros_intermediacion').insert({
       acceso_id: accesoId,
       prestadora_id: prestadoraId,
       medio: proveedor,

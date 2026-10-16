@@ -45,8 +45,7 @@
 // `ts=<instante>,v1=<hmac-sha256 en hexadecimal>` calculado sobre `<instante>.<cuerpo crudo>`.
 import express, { Router } from 'express';
 import { comprobarFirmaSinEsquemaPublicado } from '../pasarelas/firmaWebhook.js';
-import { supabase } from '../db/connection.js';
-import { enLaPrestadoraDeLaDireccion } from '../middleware/enLaPrestadoraDeLaDireccion.js';
+import { conexionDeLaDireccion, enLaPrestadoraDeLaDireccion } from '../middleware/enLaPrestadoraDeLaDireccion.js';
 import { anotarLoFacturado, facturaParaAnotar } from '../utils/anotarLoFacturado.js';
 import { guardarComprobante, loQueEstaMalEnElComprobante } from '../utils/comprobanteDeLaFactura.js';
 import {
@@ -92,7 +91,7 @@ async function pedidoAutenticado({ prestadoraId, req, res }) {
   const cuerpoCrudo = Buffer.isBuffer(req.body) ? req.body : null;
   if (!cuerpoCrudo) return rechazar('cuerpo_crudo_ausente');
 
-  const { data: secreto } = await supabase.rpc('leer_secreto_del_aviso_de_facturacion', {
+  const { data: secreto } = await conexionDeLaDireccion(req).rpc('leer_secreto_del_aviso_de_facturacion', {
     p_prestadora_id: prestadoraId,
   });
 
@@ -209,7 +208,7 @@ facturacionExternaRouter.post('/:prestadoraId/:facturaId/comprobante', enLaPrest
   const problema = loQueEstaMalEnElComprobante(autenticacion.cuerpoCrudo);
   if (problema) return res.status(400).json({ error: problema });
 
-  const { data: factura, error: errorDeLectura } = await supabase
+  const { data: factura, error: errorDeLectura } = await conexionDeLaDireccion(req)
     .from('facturas_cliente')
     .select('id, cliente_id')
     .eq('id', facturaId)

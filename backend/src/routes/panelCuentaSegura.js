@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
-import { supabase, clienteDelPedido } from '../db/connection.js';
+import { clienteDelPedido, enLaPrestadora } from '../db/connection.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { exigirLaClaveActual, cambiarLaClave } from '../utils/claveActual.js';
 import { claveAceptable } from '../config/reglaDeClave.js';
@@ -73,7 +73,6 @@ function noParaLaAdministracion(req, res, next) {
 // cuenta, nunca la de un permiso de acceso abierto: acá se mira de quién es la cuenta, no dónde
 // está parada.
 async function miCuenta(db, usuarioPanel) {
-  // SIN PRESTADORA A PROPÓSITO
   // `db` es siempre `clienteDelPedido(req)`: todos los que llaman a esta función se la pasan así, y
   // con esa credencial la base sólo deja ver la fila de la propia cuenta.
   const { data } = await db.from('usuarios')
@@ -83,21 +82,23 @@ async function miCuenta(db, usuarioPanel) {
   return data ?? null;
 }
 
-// Las dos escrituras sobre la propia cuenta —marcar el número verificado y cambiarlo— siguen con la
-// llave maestra: la base no le da a nadie con sesión permiso de modificar su fila de `usuarios`.
+// Las dos escrituras sobre la propia cuenta —marcar el número verificado y cambiarlo— van con la
+// credencial del trabajo de la Prestadora de la cuenta, que la base acota a esa Prestadora: la base
+// no le da a nadie con sesión permiso de modificar su fila de `usuarios`.
 //
 // Toda escritura sobre la propia cuenta dice además para qué Organización trabaja, y no se apoya
 // sólo en el identificador que ya se leyó: así el renglón nombra la Prestadora, y una cuenta que
 // entretanto cambió de Organización no se toca con el dato viejo.
 //
-// La única cuenta del Panel sin Organización es la del soporte técnico de CeltaTech, que no
-// pertenece a ninguna Prestadora (`usuarios.prestadora_id` en nulo, lo exige la restricción
-// `usuarios_prestadora_id_solo_superadmin_null`). Ahí se compara contra nulo, que es exactamente
-// lo que esa cuenta tiene, y nunca se deja la escritura sin comparar nada.
-function deLaOrganizacionDeLaCuenta(query, cuenta) {
-  return cuenta.prestadora_id
-    ? query.eq('prestadora_id', cuenta.prestadora_id)
-    : query.is('prestadora_id', null);
+// La cuenta del soporte técnico de CeltaTech no tiene Prestadora, y no llega hasta acá:
+// `noParaLaAdministracion` le cierra las dos escrituras. Si llegara, `enLaPrestadora` falla sin
+// Prestadora y no se escribe nada.
+export function escribirMiCuenta(cuenta, cambios) {
+  return enLaPrestadora(cuenta.prestadora_id, 'seguridad de la propia cuenta', (db) =>
+    db.from('usuarios')
+      .update(cambios)
+      .eq('id', cuenta.id)
+      .eq('prestadora_id', cuenta.prestadora_id));
 }
 
 // Cómo está la cuenta. No devuelve el número: la pantalla no lo necesita para nada de lo que
@@ -173,13 +174,7 @@ panelCuentaSeguraRouter.post(
         throw new ErrorConMotivo('codigo_incorrecto');
       }
 
-      const { error } = await deLaOrganizacionDeLaCuenta(
-        supabase
-          .from('usuarios')
-          .update({ telefono_verificado_en: new Date().toISOString() })
-          .eq('id', cuenta.id),
-        cuenta,
-      );
+      const { error } = await escribirMiCuenta(cuenta, { telefono_verificado_en: new Date().toISOString() });
       if (error) throw new Error(error.message);
 
       await registrarActividad(req.usuarioPanel, ACCION_VERIFICACION_DE_TELEFONO, {
@@ -232,15 +227,9 @@ panelCuentaSeguraRouter.post(
 
       const numero = normalizarTelefono(telefono);
       // `telefono_verificado_en` se pone en nulo acá **y** lo pone en nulo un disparador de la base.
-      // No es una copia por descuido: el backend escribe con la llave maestra, y la red de abajo es la
-      // que sigue estando el día que otro camino toque esta columna sin acordarse.
-      const { error } = await deLaOrganizacionDeLaCuenta(
-        supabase
-          .from('usuarios')
-          .update({ telefono: numero, telefono_verificado_en: null })
-          .eq('id', cuenta.id),
-        cuenta,
-      );
+      // No es una copia por descuido: la red de abajo es la que sigue estando el día que otro camino
+      // toque esta columna sin acordarse.
+      const { error } = await escribirMiCuenta(cuenta, { telefono: numero, telefono_verificado_en: null });
       if (error) throw new Error(error.message);
 
       await registrarActividad(req.usuarioPanel, ACCION_CAMBIO_DE_TELEFONO, {

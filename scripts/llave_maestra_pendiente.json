@@ -125,7 +125,6 @@
                                  "backend/src/routes/llaveDelDispositivo.js",
                                  "backend/src/routes/panelAuditoria.js",
                                  "backend/src/routes/panelAusencias.js",
-                                 "backend/src/routes/panelCalificaciones.js",
                                  "backend/src/routes/panelCeses.js",
                                  "backend/src/routes/panelCobros.js",
                                  "backend/src/routes/panelConfiguracion.js",

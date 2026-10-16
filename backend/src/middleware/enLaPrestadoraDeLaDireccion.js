@@ -20,6 +20,6 @@ export function enLaPrestadoraDeLaDireccion(trabajo, rechazar = rechazarAviso) {
       console.warn(`${trabajo} rechazado:`, prestadoraId, 'prestadora_de_la_direccion_ilegible');
       return rechazar(res);
     }
-    return enLaPrestadora(prestadoraId, trabajo, next);
+    return enLaPrestadora(prestadoraId, trabajo, () => next());
   };
 }

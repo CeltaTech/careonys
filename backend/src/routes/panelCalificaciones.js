@@ -5,13 +5,12 @@
 // La visibilidad pública es el único campo que la Prestadora edita (schema_calificaciones_asistente.sql);
 // el contenido, incluido el descargo del Asistente, nunca se edita desde acá.
 //
-// CON LA CREDENCIAL DE QUIEN PIDE. Qué filas ve lo decide la RLS por la membresía de esa persona.
-// Donde queda la llave maestra, un comentario dice por qué, y ahí el filtro por Prestadora se
-// mantiene.
+// CON LA CREDENCIAL DE QUIEN PIDE. Qué filas ve y cuáles puede cambiar lo decide la RLS por la
+// membresía de esa persona, así que ninguna consulta lleva el filtro de la Prestadora de la sesión.
 
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { clienteDelPedido, supabase } from '../db/connection.js';
+import { clienteDelPedido, enLaPrestadora } from '../db/connection.js';
 import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
@@ -29,14 +28,12 @@ panelCalificacionesRouter.get('/', async (req, res) => {
   if (error) return responderError(res, error);
 
   const asistenteIds = [...new Set(data.map((c) => c.asistente_id).filter(Boolean))];
-  // Los nombres, con la llave maestra: el Coordinador sólo alcanza los Asistentes de su zona, y
-  // una calificación de un Asistente de otra zona quedaría sin nombre en la lista.
+  // Los nombres, con la credencial del trabajo de esta Prestadora: el Coordinador sólo alcanza los
+  // Asistentes de su zona, y una calificación de un Asistente de otra zona quedaría sin nombre en
+  // la lista. Esa credencial no sale de la Prestadora de la sesión.
   const { data: asistentes } = asistenteIds.length
-    ? await supabase
-        .from('asistentes')
-        .select('id, nombre')
-        .eq('prestadora_id', req.usuarioPanel.prestadoraId)
-        .in('id', asistenteIds)
+    ? await enLaPrestadora(req.usuarioPanel.prestadoraId, 'nombres de las calificaciones', (db) =>
+        db.from('asistentes').select('id, nombre').in('id', asistenteIds))
     : { data: [] };
   const nombreAsistente = new Map((asistentes || []).map((a) => [a.id, a.nombre]));
 
@@ -52,13 +49,10 @@ panelCalificacionesRouter.patch('/:id/visibilidad', async (req, res) => {
   }
   // La escritura devuelve la fila tocada: sin esto la base contesta que salió bien aunque no
   // haya encontrado ninguna, y la pantalla muestra un cambio de visibilidad que no ocurrió.
-  // Con la llave maestra: la política de modificación de `calificaciones_asistente` no incluye a
-  // Superadmin. Por eso el filtro por Prestadora sigue escrito acá.
-  const { data: modificada, error } = await supabase
+  const { data: modificada, error } = await clienteDelPedido(req)
     .from('calificaciones_asistente')
     .update({ visible_publica: visiblePublica })
     .eq('id', req.params.id)
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .select('id');
   if (error) return responderError(res, error);
   if (!modificada?.length) {

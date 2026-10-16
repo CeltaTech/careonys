@@ -15,19 +15,21 @@
 // en el código: sale de `configuracion_funciones_intermediacion`, donde **sin fila
 // guardada la función está apagada** — una Prestadora recién creada no necesita
 // que nadie le siembre cinco filas para estar en el estado en el que ya está.
+//
+// CON QUÉ CREDENCIAL. Las dos preguntas las hace el trabajo de esa Prestadora, que ve sólo
+// las filas de la suya. No van con la credencial de quien pide porque ni el Asistente ni el
+// Cliente alcanzan estas filas: son configuración de la Prestadora.
 // ---------------------------------------------------------------------------
 
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { MODALIDAD, modalidadesHabilitadas } from './modalidades.js';
 
 /** Las modalidades activas de una Prestadora. Sin ninguna configurada vale la directa. */
 export async function modalidadesDeLaPrestadora(prestadoraId) {
   if (!prestadoraId) return modalidadesHabilitadas([]);
-  const { data } = await supabase
-    .from('prestadora_modalidades')
-    .select('modalidad')
-    .eq('prestadora_id', prestadoraId)
-    .eq('activa', true);
+  const { data } = await enLaPrestadora(prestadoraId, 'leer las modalidades de la Prestadora', (db) =>
+    db.from('prestadora_modalidades').select('modalidad').eq('prestadora_id', prestadoraId).eq('activa', true),
+  );
   return modalidadesHabilitadas((data || []).map((f) => f.modalidad));
 }
 
@@ -59,12 +61,18 @@ export function elClienteEntraAMatch() {
  */
 export async function funcionDeRiesgoEncendida(prestadoraId, clave) {
   if (!prestadoraId || !clave) return false;
-  const { data, error } = await supabase
-    .from('configuracion_funciones_intermediacion')
-    .select('activa')
-    .eq('prestadora_id', prestadoraId)
-    .eq('funcion_clave', clave)
-    .maybeSingle();
-  if (error) return false;
-  return Boolean(data?.activa);
+  try {
+    const { data, error } = await enLaPrestadora(prestadoraId, 'leer las funciones de riesgo de la Prestadora', (db) =>
+      db
+        .from('configuracion_funciones_intermediacion')
+        .select('activa')
+        .eq('prestadora_id', prestadoraId)
+        .eq('funcion_clave', clave)
+        .maybeSingle(),
+    );
+    if (error) return false;
+    return Boolean(data?.activa);
+  } catch {
+    return false;
+  }
 }

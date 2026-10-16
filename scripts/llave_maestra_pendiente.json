@@ -139,7 +139,6 @@
                                  "backend/src/utils/revisarLlegadasDemoradas.js",
                                  "backend/src/utils/revisarNotificacionesCoordinador.js",
                                  "backend/src/utils/revisarRecordatoriosPush.js",
-                                 "backend/src/utils/telefonoAlActivar.js",
                                  "backend/src/utils/vencimientos.js",
                                  "backend/src/utils/whatsapp.js"
                              ]

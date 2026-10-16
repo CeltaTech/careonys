@@ -1,4 +1,4 @@
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 import { correoDe } from './correoDeUnaPersona.js';
 import { exigirLaClaveActual } from './claveActual.js';
@@ -33,19 +33,39 @@ import {
 // EL NÚMERO NO VUELVE HACIA LA PANTALLA NI ENTRA EN NINGÚN REGISTRO, y el código tampoco. Lo
 // único que viaja es si salió un código y cuándo vence.
 
-/** La cuenta, con lo justo para decidir. Nunca sale de acá hacia afuera. */
-async function cuentaDe(usuarioId) {
-  // SIN PRESTADORA A PROPÓSITO
-  // Corre adentro de la Prestadora de la dirección (`middleware/resolverPrestadoraPublica.js`), así
-  // que la base sólo deja ver cuentas de ella. De la fila salen la Prestadora y el corte que hacen
-  // las dos funciones de abajo antes de tocar nada: sin Prestadora no se sigue.
-  const { data, error } = await supabase
-    .from('usuarios')
-    .select('id, prestadora_id, telefono, telefono_verificado_en')
-    .eq('id', usuarioId)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return data ?? null;
+const TRABAJO = 'Verificar el teléfono al activar la cuenta';
+
+/**
+ * La cuenta, con lo justo para decidir. Nunca sale de acá hacia afuera.
+ *
+ * La Prestadora es la de la dirección (`middleware/resolverPrestadoraPublica.js`), y la cuenta se
+ * busca con el trabajo de ella y de ninguna otra. Sin Prestadora no hay cuenta, y las dos funciones
+ * de abajo cortan antes de tocar nada.
+ */
+async function cuentaDe(prestadoraId, usuarioId) {
+  if (!prestadoraId) return null;
+  return enLaPrestadora(prestadoraId, TRABAJO, async (db) => {
+    const { data, error } = await db
+      .from('usuarios')
+      .select('id, prestadora_id, telefono, telefono_verificado_en')
+      .eq('prestadora_id', prestadoraId)
+      .eq('id', usuarioId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ?? null;
+  });
+}
+
+/** Escribe en la cuenta con el trabajo de su Prestadora. */
+async function escribirEnLaCuenta(cuenta, cambios) {
+  await enLaPrestadora(cuenta.prestadora_id, TRABAJO, async (db) => {
+    const { error } = await db
+      .from('usuarios')
+      .update(cambios)
+      .eq('prestadora_id', cuenta.prestadora_id)
+      .eq('id', cuenta.id);
+    if (error) throw new Error(error.message);
+  });
 }
 
 /**
@@ -80,11 +100,11 @@ async function esUnCelularDeOtraPersona({ telefono, cuenta }) {
  *
  * @returns {Promise<{ codigoEnviado: boolean, vence?: string }>}
  */
-export async function ofrecerElCodigoAlActivar({ usuarioId, telefono }) {
+export async function ofrecerElCodigoAlActivar({ prestadoraId, usuarioId, telefono }) {
   const escrito = String(telefono ?? '').trim();
   if (!escrito || !telefonoAceptable(escrito)) return { codigoEnviado: false };
 
-  const cuenta = await cuentaDe(usuarioId);
+  const cuenta = await cuentaDe(prestadoraId, usuarioId);
   if (!cuenta?.prestadora_id) return { codigoEnviado: false };
 
   // UN CELULAR ES DE UNA SOLA PERSONA, y acá eso no puede viajar como error. La cuenta ya quedó
@@ -99,14 +119,9 @@ export async function ofrecerElCodigoAlActivar({ usuarioId, telefono }) {
   const numero = normalizarTelefono(escrito);
 
   // Si el número es otro, el que había deja de estar verificado. `telefono_verificado_en` lo pone
-  // en nulo un disparador de la base además de esto: el backend escribe con la llave maestra, y esa
-  // red de abajo es la que sigue estando el día que otro camino toque esta columna.
-  const { error } = await supabase
-    .from('usuarios')
-    .update({ telefono: numero, telefono_verificado_en: null })
-    .eq('prestadora_id', cuenta.prestadora_id)
-    .eq('id', cuenta.id);
-  if (error) throw new Error(error.message);
+  // en nulo un disparador de la base además de esto, y esa red de abajo es la que sigue estando el
+  // día que otro camino toque esta columna.
+  await escribirEnLaCuenta(cuenta, { telefono: numero, telefono_verificado_en: null });
 
   if (!(await hayViaDeTelefono(cuenta.prestadora_id))) return { codigoEnviado: false };
 
@@ -135,8 +150,8 @@ export async function ofrecerElCodigoAlActivar({ usuarioId, telefono }) {
  * el pedido y la respuesta pudo haber cambiado, y marcar entonces daría por verificado un número
  * que nadie comprobó. Es la misma comprobación que hace la pantalla de la cuenta.
  */
-export async function verificarElTelefonoAlActivar({ usuarioId, clave, codigo }) {
-  const cuenta = await cuentaDe(usuarioId);
+export async function verificarElTelefonoAlActivar({ prestadoraId, usuarioId, clave, codigo }) {
+  const cuenta = await cuentaDe(prestadoraId, usuarioId);
   if (!cuenta) throw new ErrorConMotivo('no_encontrado');
   // Sin Prestadora no se sigue: la escritura de más abajo se acota por ella, y un filtro vacío no
   // acota nada. Es el mismo corte que hace `ofrecerElCodigoAlActivar` antes de tocar la cuenta.
@@ -157,12 +172,7 @@ export async function verificarElTelefonoAlActivar({ usuarioId, clave, codigo })
     throw new ErrorConMotivo('codigo_incorrecto');
   }
 
-  const { error } = await supabase
-    .from('usuarios')
-    .update({ telefono_verificado_en: new Date().toISOString() })
-    .eq('prestadora_id', cuenta.prestadora_id)
-    .eq('id', cuenta.id);
-  if (error) throw new Error(error.message);
+  await escribirEnLaCuenta(cuenta, { telefono_verificado_en: new Date().toISOString() });
 
   await registrarActividad(
     { id: cuenta.id, prestadoraId: cuenta.prestadora_id },

@@ -358,7 +358,7 @@ describe('al activar la cuenta, el celular repetido no la deja sin activar', () 
         : [{ id: USUARIO, prestadora_id: PRESTADORA, telefono: null, telefono_verificado_en: null }]
     ));
 
-    const salida = await ofrecerElCodigoAlActivar({ usuarioId: USUARIO, telefono: CELULAR });
+    const salida = await ofrecerElCodigoAlActivar({ prestadoraId: PRESTADORA, usuarioId: USUARIO, telefono: CELULAR });
 
     assert.deepEqual(salida, { codigoEnviado: false, motivo: 'celular_de_otra_persona' });
     assert.equal(llamadas.filter((l) => l.clave.startsWith('PATCH')).length, 0);
@@ -378,10 +378,33 @@ describe('al activar la cuenta, el celular repetido no la deja sin activar', () 
     // Sin vía de teléfono en esa Prestadora no sale ningún código, y eso no deshace nada.
     respuestas.set('GET /rest/v1/plantillas_whatsapp', []);
 
-    const salida = await ofrecerElCodigoAlActivar({ usuarioId: USUARIO, telefono: CELULAR });
+    const salida = await ofrecerElCodigoAlActivar({ prestadoraId: PRESTADORA, usuarioId: USUARIO, telefono: CELULAR });
 
     assert.equal(salida.codigoEnviado, false);
     assert.equal(salida.motivo, undefined);
     assert.equal(llamadas.filter((l) => l.clave === 'PATCH /rest/v1/usuarios').length, 1);
+
+    // La cuenta se lee y se escribe con el trabajo de la Prestadora de la dirección, nombrándola, y
+    // nunca con la llave maestra.
+    const deLaCuenta = llamadas.filter((l) => (
+      l.clave === 'PATCH /rest/v1/usuarios'
+      || (l.clave === 'GET /rest/v1/usuarios' && !l.url.includes('telefono_comparable'))
+    ));
+    assert.equal(deLaCuenta.length, 2);
+    for (const llamada of deLaCuenta) {
+      assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', llamada.clave);
+      assert.equal(llamada.credencial?.prestadora_id, PRESTADORA, llamada.clave);
+      assert.ok(llamada.url.includes(`prestadora_id=eq.${PRESTADORA}`), llamada.clave);
+    }
+  });
+
+  it('sin Prestadora no busca la cuenta ni guarda nada', async () => {
+    const { ofrecerElCodigoAlActivar } = await import('../telefonoAlActivar.js');
+
+    catalogoConArgentina();
+    const salida = await ofrecerElCodigoAlActivar({ prestadoraId: null, usuarioId: USUARIO, telefono: CELULAR });
+
+    assert.deepEqual(salida, { codigoEnviado: false });
+    assert.equal(llamadas.filter((l) => l.clave.endsWith('/rest/v1/usuarios')).length, 0);
   });
 });

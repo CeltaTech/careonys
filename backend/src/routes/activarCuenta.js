@@ -43,7 +43,11 @@ activarCuentaRouter.post('/:prestadora', resolverPrestadoraPublica, async (req, 
     if (escrito && !telefonoAceptable(escrito)) throw new ErrorConMotivo('telefono_invalido');
 
     const { usuarioId } = await activarCuentaConToken(token, password);
-    const codigo = await ofrecerElCodigoAlActivar({ usuarioId, telefono: escrito });
+    const codigo = await ofrecerElCodigoAlActivar({
+      prestadoraId: req.prestadoraPublica.prestadora_id,
+      usuarioId,
+      telefono: escrito,
+    });
 
     res.json({ ok: true, ...codigo });
   } catch (err) {
@@ -67,7 +71,12 @@ activarCuentaRouter.post('/:prestadora/telefono/confirmar', resolverPrestadoraPu
     if (!token || !password || !codigo) throw new ErrorConMotivo('faltan_datos');
 
     const usuarioId = await cuentaQueActivoConEsteToken(token);
-    await verificarElTelefonoAlActivar({ usuarioId, clave: password, codigo });
+    await verificarElTelefonoAlActivar({
+      prestadoraId: req.prestadoraPublica.prestadora_id,
+      usuarioId,
+      clave: password,
+      codigo,
+    });
 
     res.json({ ok: true });
   } catch (err) {

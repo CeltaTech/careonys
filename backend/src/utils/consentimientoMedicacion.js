@@ -1,4 +1,4 @@
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { IDIOMAS_SOPORTADOS, normalizarIdioma } from '../i18n/idiomas.js';
 import { verificadorDelDocumento } from './documentoConsentimientoPagador.js';
 
@@ -40,15 +40,23 @@ export const MODELO_DE_FABRICA = {
   ].join('\n'),
 };
 
+// Con la conexión que trae quien llama, o, si no trae ninguna, con el trabajo de esa Prestadora, que
+// sólo alcanza lo suyo.
+function conLaPrestadora(prestadoraId, db, trabajo, hacer) {
+  return db ? hacer(db) : enLaPrestadora(prestadoraId, trabajo, hacer);
+}
+
 // El texto que rige para esta Prestadora en este idioma: el suyo si lo cargó, el modelo si no.
-export async function cuerpoVigente({ prestadoraId, idioma, db = supabase }) {
+export async function cuerpoVigente({ prestadoraId, idioma, db }) {
   const elIdioma = normalizarIdioma(idioma);
-  const { data } = await db
-    .from('textos_consentimiento_medicacion')
-    .select('cuerpo, updated_at')
-    .eq('prestadora_id', prestadoraId)
-    .eq('idioma', elIdioma)
-    .maybeSingle();
+  const { data } = await conLaPrestadora(prestadoraId, db, 'leer el texto de la medicación', (con) =>
+    con
+      .from('textos_consentimiento_medicacion')
+      .select('cuerpo, updated_at')
+      .eq('prestadora_id', prestadoraId)
+      .eq('idioma', elIdioma)
+      .maybeSingle(),
+  );
 
   return {
     cuerpo: data?.cuerpo ?? MODELO_DE_FABRICA[elIdioma],
@@ -59,12 +67,11 @@ export async function cuerpoVigente({ prestadoraId, idioma, db = supabase }) {
 }
 
 // ¿Esta Prestadora pide la firma? Sin fila, sí. Si no se pudo leer, también: falla cerrado.
-export async function pideLaFirma({ prestadoraId, db = supabase }) {
-  const { data, error } = await db
-    .from('configuracion_medicacion')
-    .select('pide_firma_del_cliente')
-    .eq('prestadora_id', prestadoraId)
-    .maybeSingle();
+export async function pideLaFirma({ prestadoraId, db }) {
+  if (!prestadoraId) return true;
+  const { data, error } = await conLaPrestadora(prestadoraId, db, 'leer si se pide la firma de la medicación', (con) =>
+    con.from('configuracion_medicacion').select('pide_firma_del_cliente').eq('prestadora_id', prestadoraId).maybeSingle(),
+  );
   if (error || !data) return true;
   return data.pide_firma_del_cliente !== false;
 }
@@ -75,10 +82,15 @@ export function textoDelConsentimiento({ cuerpo, prestadora }) {
 
 // El documento que acepta el Cliente, ya armado: texto, identificador de verificación e idioma.
 export async function documentoParaFirmar({ prestadoraId, idioma }) {
-  const [{ cuerpo, idioma: elIdioma }, { data: prestadora }] = await Promise.all([
-    cuerpoVigente({ prestadoraId, idioma }),
-    supabase.from('prestadoras').select('nombre_fantasia').eq('id', prestadoraId).maybeSingle(),
-  ]);
+  const [{ cuerpo, idioma: elIdioma }, { data: prestadora }] = await enLaPrestadora(
+    prestadoraId,
+    'armar el consentimiento de la medicación',
+    (db) =>
+      Promise.all([
+        cuerpoVigente({ prestadoraId, idioma, db }),
+        db.from('prestadoras').select('nombre_fantasia').eq('id', prestadoraId).maybeSingle(),
+      ]),
+  );
   const texto = textoDelConsentimiento({ cuerpo, prestadora: prestadora?.nombre_fantasia });
   return { texto, verificador: verificadorDelDocumento(texto), idioma: elIdioma };
 }

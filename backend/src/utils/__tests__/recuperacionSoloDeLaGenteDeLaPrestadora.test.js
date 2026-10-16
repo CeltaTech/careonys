@@ -13,6 +13,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const LOS_ROLES_DE_LA_PRESTADORA = 'in.(coordinador,asistente,cliente)';
@@ -48,6 +49,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 process.env.PANEL_URL = 'http://panel.invalido';
 process.env.PWA_ASISTENTES_URL = 'http://asistentes.invalido';
 process.env.PWA_CLIENTES_URL = 'http://clientes.invalido';

@@ -191,8 +191,9 @@ function laCobranzaEsDeAfuera() {
 
 /**
  * Lo que no hace esta ruta con la credencial de quien pide: la entrada de la persona, que resuelve
- * el middleware; el registro de actividad; y las lecturas que
- * la ruta o `utils/` hacen todavía con la llave maestra, cada una con su motivo escrito al lado.
+ * el middleware; el registro de actividad; quién lleva la cobranza, que lo lee el trabajo de la
+ * Prestadora; y las lecturas que la ruta o `utils/` hacen todavía con la llave maestra, cada una
+ * con su motivo escrito al lado.
  */
 const CON_LA_MAESTRA = [
   '/usuarios',

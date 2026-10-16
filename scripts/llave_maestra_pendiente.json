@@ -157,7 +157,6 @@
                                  "backend/src/utils/revisarLlegadasDemoradas.js",
                                  "backend/src/utils/revisarNotificacionesCoordinador.js",
                                  "backend/src/utils/revisarRecordatoriosPush.js",
-                                 "backend/src/utils/seguimientoDeLaCobranza.js",
                                  "backend/src/utils/suscripcionesPush.js",
                                  "backend/src/utils/tareasDelTipo.js",
                                  "backend/src/utils/telefonoAlActivar.js",

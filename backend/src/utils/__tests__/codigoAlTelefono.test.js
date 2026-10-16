@@ -18,11 +18,15 @@
  * vencimiento movido hacia adelante o con los intentos por debajo del tope, tiene que pasar. Sin
  * eso una prueba que dice «falló» no prueba nada, porque podría estar fallando por otra cosa.
  *
+ * Y TODO VA CON EL TRABAJO DE LA PRESTADORA DE LA CUENTA. Ni con la credencial de una persona, que
+ * no puede tocar los códigos, ni con una que alcance otra Prestadora.
+ *
  * Los datos son inventados.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const USUARIO = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
@@ -43,7 +47,7 @@ const baseFalsa = createServer((req, res) => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
     const cuerpo = crudo ? JSON.parse(crudo) : null;
-    llamadas.push({ clave, url: req.url, cuerpo });
+    llamadas.push({ clave, url: req.url, cuerpo, credencial: req.headers.authorization });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada({ cuerpo, url: req.url }) : preparada;
@@ -73,7 +77,7 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // El import va después de las variables de entorno: la conexión se arma al importar.
 const {
@@ -126,6 +130,25 @@ function prepararComprobacion({ fila, intentos }) {
 
 function seContoUnIntento() {
   return llamadas.some((l) => l.clave === 'POST /rest/v1/rpc/sumar_intento_de_codigo');
+}
+
+/** Lo que dice adentro una credencial, o `null` si no se puede leer. */
+function leerCredencial(autorizacion) {
+  try {
+    return JSON.parse(Buffer.from(String(autorizacion).replace('Bearer ', '').split('.')[1], 'base64url').toString());
+  } catch {
+    return null;
+  }
+}
+
+/** Que todo lo que se le pidió a la base haya ido con el trabajo de la Prestadora de la cuenta. */
+function todoConElTrabajoDeLaPrestadora() {
+  assert.ok(llamadas.length > 0, 'tenía que haber consultado la base');
+  for (const llamada of llamadas) {
+    const credencial = leerCredencial(llamada.credencial);
+    assert.equal(credencial?.role, 'trabajo_sin_persona', `${llamada.clave} fue con otra credencial`);
+    assert.equal(credencial.prestadora_id, PRESTADORA, `${llamada.clave} fue fuera de la Prestadora`);
+  }
 }
 
 async function motivoDe(promesa) {
@@ -235,6 +258,7 @@ describe('el tope de intentos', () => {
     });
 
     assert.equal(usado.id, CODIGO_ID);
+    todoConElTrabajoDeLaPrestadora();
   });
 
   it('si la base no pudo contar el intento, no pasa nadie', async () => {
@@ -322,6 +346,7 @@ describe('el tope de pedidos por hora', () => {
 
     assert.notEqual(motivo, 'demasiados_pedidos');
     assert.equal(llamadas.some((l) => l.clave === 'POST /rest/v1/codigos_al_telefono'), true);
+    todoConElTrabajoDeLaPrestadora();
   });
 
   it('si no se pudieron contar los pedidos, no sale ninguno', async () => {

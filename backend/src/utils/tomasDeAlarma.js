@@ -1,4 +1,4 @@
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { alarmasTomadas, reglaDeLaTomaDe } from './alarmasTomadas.js';
 
 /* DE QUÉ ALARMAS YA SE HIZO CARGO ALGUIEN, PARA NO INSISTIRLE
@@ -16,15 +16,21 @@ import { alarmasTomadas, reglaDeLaTomaDe } from './alarmasTomadas.js';
 
    UNA CONSULTA POR PRESTADORA Y POR CLASE DE ALARMA, no una por alarma. Las tomas en pie de una
    Prestadora son pocas —una por alarma que alguien esté atendiendo— y preguntarlas de a una
-   multiplicaría por cien las consultas para saber casi siempre que no hay ninguna. */
+   multiplicaría por cien las consultas para saber casi siempre que no hay ninguna.
+
+   Se lee con la credencial del trabajo de esa Prestadora, que la base acota a ella. Sin Prestadora
+   no se lee nada: la regla es la de siempre y no hay ninguna toma, que es insistir. */
 
 /** Los números de esta Prestadora para la duración de una toma. */
 export async function reglaDeLaToma(prestadoraId) {
-  const { data, error } = await supabase
-    .from('configuracion_alarmas_tomadas')
-    .select('regla')
-    .eq('prestadora_id', prestadoraId)
-    .maybeSingle();
+  if (!prestadoraId) return reglaDeLaTomaDe(null);
+
+  const { data, error } = await enLaPrestadora(prestadoraId, 'duración de la toma de una alarma', (db) =>
+    db
+      .from('configuracion_alarmas_tomadas')
+      .select('regla')
+      .eq('prestadora_id', prestadoraId)
+      .maybeSingle());
 
   if (error) {
     console.error(`Error leyendo la configuracion de tomas de alarma (prestadora ${prestadoraId}):`, error.message);
@@ -39,13 +45,16 @@ export async function reglaDeLaToma(prestadoraId) {
  * más molesta, una que se calla porque falló una consulta deja a alguien sin atender.
  */
 export async function tomadasAhora({ prestadoraId, tipo, ahora = new Date(), regla }) {
-  const { data, error } = await supabase
-    .from('alarmas_tomadas')
-    .select('referencia_id, tomada_at, vence_at, soltada_at')
-    .eq('prestadora_id', prestadoraId)
-    .eq('tipo', tipo)
-    .is('soltada_at', null)
-    .gt('vence_at', ahora.toISOString());
+  if (!prestadoraId) return new Set();
+
+  const { data, error } = await enLaPrestadora(prestadoraId, 'alarmas que alguien está atendiendo', (db) =>
+    db
+      .from('alarmas_tomadas')
+      .select('referencia_id, tomada_at, vence_at, soltada_at')
+      .eq('prestadora_id', prestadoraId)
+      .eq('tipo', tipo)
+      .is('soltada_at', null)
+      .gt('vence_at', ahora.toISOString()));
 
   if (error) {
     console.error(`Error consultando alarmas tomadas (prestadora ${prestadoraId}, ${tipo}):`, error.message);

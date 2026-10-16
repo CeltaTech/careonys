@@ -44,14 +44,15 @@ export const MOTIVO_CONTACTO = {
  * @param {object} argumentos
  * @param {string} argumentos.accesoId
  * @param {number} argumentos.cuantos  Cuántos contactos trae lo que se acaba de pagar.
+ * @param {object} [db]  La conexión con la que trabaja quien carga.
  * @returns {Promise<{ok: boolean, saldo_contactos?: number, motivo?: string, detalle?: string}>}
  */
-export async function cargarContactosEnElSaldo({ accesoId, cuantos }) {
+export async function cargarContactosEnElSaldo({ accesoId, cuantos }, db = supabase) {
   if (!Number.isInteger(cuantos) || cuantos <= 0) {
     return { ok: false, motivo: MOTIVO_CONTACTO.NO_SE_PUDO_GUARDAR, detalle: `cuantos: ${cuantos}` };
   }
 
-  const { data, error } = await supabase.rpc('sumar_contactos_al_saldo', {
+  const { data, error } = await db.rpc('sumar_contactos_al_saldo', {
     p_acceso_id: accesoId,
     p_cuantos: cuantos,
   });

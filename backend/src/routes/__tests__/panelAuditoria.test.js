@@ -16,11 +16,15 @@
  * qué termina recibiendo quien pregunta. La base de mentira aplica de verdad el filtro
  * `prestadora_id=eq.…` que le llegue: si alguien vuelve a sacar el filtro, la respuesta trae
  * las filas de las tres Organizaciones y estas pruebas fallan.
+ *
+ * Y se lee con la credencial del trabajo de esa misma Organización, y con ninguna otra. La prueba
+ * arranca sin la llave maestra, así que una lectura que volviera a ella fallaría al pedirla.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const SANDBOX = '00000000-0000-0000-0000-00000000000a';
 const PRESTADORA_A = '11111111-1111-1111-1111-111111111111';
@@ -65,7 +69,7 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const url = new URL(req.url, 'http://interno');
     const clave = `${req.method} ${url.pathname}`;
-    llamadas.push({ clave, url });
+    llamadas.push({ clave, url, credencial: req.headers.authorization });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada(url) : preparada;
@@ -83,7 +87,7 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma
 // en el momento en que se importa, y con la dirección que haya en ese instante.
@@ -115,6 +119,13 @@ function consultaAlRegistro() {
   return llamadas.find((l) => l.clave === 'GET /rest/v1/auditoria_de_accesos')?.url;
 }
 
+/** Con qué credencial se hizo una llamada: rol y Prestadora, leídos de adentro de la credencial. */
+function credencialDe(clave) {
+  const llamada = llamadas.find((l) => l.clave === clave);
+  const cuerpo64 = llamada.credencial.replace('Bearer ', '').split('.')[1];
+  return JSON.parse(Buffer.from(cuerpo64, 'base64url').toString());
+}
+
 beforeEach(() => {
   llamadas = [];
   rolDelUsuario = 'superadmin';
@@ -128,6 +139,7 @@ beforeEach(() => {
   respuestas.set('GET /rest/v1/configuracion_plataforma', () => [{ mfa_admin_obligatorio: false }]);
   respuestas.set('GET /rest/v1/permisos_de_acceso', () => (sesionDeSoporte ? [sesionDeSoporte] : []));
   respuestas.set('PATCH /rest/v1/permisos_de_acceso', () => []);
+  respuestas.set('POST /rest/v1/auditoria_de_accesos', () => []);
 
   /* La base de mentira aplica el filtro de verdad. Es lo que hace que estas pruebas puedan
      fallar: sin filtro, contesta las cuatro filas de las tres Organizaciones. */
@@ -137,6 +149,7 @@ beforeEach(() => {
     const prestadoraId = filtro.replace(/^eq\./, '');
     return REGISTRO.filter((fila) => fila.prestadora_id === prestadoraId);
   });
+  respuestas.set('GET /rest/v1/registro_actividad', () => [{ id: 'act-1', accion: 'editar', usuarios: { nombre: 'Persona inventada' } }]);
 });
 
 const organizacionesDe = (eventos) => [...new Set(eventos.map((e) => e.prestadora_id))].sort();
@@ -176,6 +189,39 @@ describe('el Superadmin ve la Prestadora de su permiso de acceso, y ninguna otra
       'la consulta salió sin acotar a una Organización: así se entrega el registro entero'
     );
   });
+
+  it('lo lee con la credencial del trabajo de esa Prestadora', async () => {
+    sesionDeSoporte = sesionVigenteSobre(PRESTADORA_A);
+    await pedirRegistro();
+
+    const credencial = credencialDe('GET /rest/v1/auditoria_de_accesos');
+    assert.equal(credencial.role, 'trabajo_sin_persona', 'el registro se leyó con otra credencial');
+    assert.equal(credencial.prestadora_id, PRESTADORA_A, 'el registro se leyó fuera de la Prestadora');
+  });
+});
+
+describe('el registro de actividad', () => {
+  it('lo lee la administración con la credencial del trabajo de su Prestadora', async () => {
+    rolDelUsuario = 'admin_prestadora';
+    prestadoraDelUsuario = PRESTADORA_A;
+    const respuesta = await fetch(`${DIRECCION}/actividad`, { headers: { Authorization: sesionDePrueba(SUPERADMIN) } });
+    assert.equal(respuesta.status, 200);
+    assert.equal((await respuesta.json()).actividad[0].usuarios.nombre, 'Persona inventada');
+
+    const credencial = credencialDe('GET /rest/v1/registro_actividad');
+    assert.equal(credencial.role, 'trabajo_sin_persona', 'la actividad se leyó con otra credencial');
+    assert.equal(credencial.prestadora_id, PRESTADORA_A, 'la actividad se leyó fuera de la Prestadora');
+    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/registro_actividad').url;
+    assert.equal(consulta.searchParams.get('prestadora_id'), `eq.${PRESTADORA_A}`);
+  });
+
+  it('el Coordinador no la lee', async () => {
+    rolDelUsuario = 'coordinador';
+    prestadoraDelUsuario = PRESTADORA_A;
+    const respuesta = await fetch(`${DIRECCION}/actividad`, { headers: { Authorization: sesionDePrueba(SUPERADMIN) } });
+    assert.equal(respuesta.status, 403);
+    assert.equal(llamadas.some((l) => l.clave === 'GET /rest/v1/registro_actividad'), false);
+  });
 });
 
 describe('sin permiso de acceso abierto no se alcanza ninguna Prestadora real', () => {
@@ -196,6 +242,11 @@ describe('sin permiso de acceso abierto no se alcanza ninguna Prestadora real', 
     const { cuerpo } = await pedirRegistro();
 
     assert.deepEqual(organizacionesDe(cuerpo.eventos), [SANDBOX]);
+
+    // El cierre queda anotado en la Prestadora del permiso, con la credencial del trabajo de ella.
+    const cierre = credencialDe('POST /rest/v1/auditoria_de_accesos');
+    assert.equal(cierre.role, 'trabajo_sin_persona', 'el cierre se anotó con otra credencial');
+    assert.equal(cierre.prestadora_id, PRESTADORA_A, 'el cierre se anotó fuera de la Prestadora del permiso');
   });
 
   it('una sesión sin actividad en los últimos 5 minutos tampoco', async () => {

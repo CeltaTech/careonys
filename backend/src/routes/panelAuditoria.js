@@ -1,22 +1,16 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { esAdminOSuperior } from '../utils/roles.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
 // Ítem G del pendiente #30 — lectura del registro de auditoría de los permisos de acceso
-// técnico (tabla auditoria_de_accesos). El backend entra a la base con la llave de servicio,
-// que no pasa por las reglas de la base (CLAUDE.md de Careonys §6), así que el alcance de lo que
-// se entrega se escribe acá a mano. Esas reglas siguen existiendo y siguen rigiendo cuando algo
-// consulta la tabla directo con el pase de la persona, no a través de esta ruta.
+// técnico (tabla auditoria_de_accesos) y del registro de actividad de la Prestadora.
 //
-// POR QUÉ SIGUE CON LA LLAVE MAESTRA. Las dos tablas sí las deja leer la base a la administración
-// con la credencial de la persona (`admin_prestadora_lee_auditoria_de_su_prestadora`,
-// `superadmin_lee_auditoria_de_su_permiso_vigente`, `administracion_lee_el_registro_de_actividad`).
-// Lo que no deja es el nombre de quien hizo cada cosa: cada renglón lo trae de `usuarios`, y ahí
-// cada persona lee sólo su propia fila (`usuario_ve_su_propia_fila`). Con la credencial de la
-// persona el registro saldría sin nombres. Hasta que la base deje leer el nombre de la gente de la
-// propia Prestadora, esta ruta sigue con la maestra y el filtro por Prestadora escrito acá.
+// Los dos se leen con la credencial del trabajo de la Prestadora sobre la que la persona está
+// parada, y la base los acota a ella. No con la credencial de la persona: cada renglón trae de
+// `usuarios` el nombre de quien hizo cada cosa, y ahí cada persona lee sólo su propia fila
+// (`usuario_ve_su_propia_fila`), así que el registro saldría sin nombres.
 export const panelAuditoriaRouter = Router();
 
 panelAuditoriaRouter.get('/', requiereRolPanel, async (req, res) => {
@@ -61,12 +55,12 @@ panelAuditoriaRouter.get('/', requiereRolPanel, async (req, res) => {
     return res.status(403).json({ error: 'Sin prestadora asociada' });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await enLaPrestadora(prestadoraId, 'registro de auditoría', (db) => db
     .from('auditoria_de_accesos')
     .select('id, admin_id, prestadora_id, tipo_evento, tabla_afectada, operacion, registro_id, detalle, created_at, usuarios(nombre), prestadoras(nombre_fantasia)')
     .eq('prestadora_id', prestadoraId)
     .order('created_at', { ascending: false })
-    .limit(500);
+    .limit(500));
 
   if (error) return responderError(res, error);
   res.json({ eventos: data });
@@ -95,12 +89,12 @@ panelAuditoriaRouter.get('/actividad', requiereRolPanel, async (req, res) => {
     return res.status(403).json({ error: 'Sin prestadora asociada' });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await enLaPrestadora(prestadoraId, 'registro de actividad', (db) => db
     .from('registro_actividad')
     .select('id, usuario_id, accion, tabla_afectada, registro_id, campos_cambiados, detalle, created_at, usuarios(nombre)')
     .eq('prestadora_id', prestadoraId)
     .order('created_at', { ascending: false })
-    .limit(500);
+    .limit(500));
 
   if (error) return responderError(res, error);
   res.json({ actividad: data });

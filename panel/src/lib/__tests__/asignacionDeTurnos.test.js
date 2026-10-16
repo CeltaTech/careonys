@@ -6,10 +6,31 @@ import { T } from '../../i18n/translations';
 const pedidosALaBase = [];
 const llamadasAlBackend = [];
 let respuestaDelBackend = null;
+// Las asignaciones sin responder que la base de mentira contesta, filtradas por la columna que
+// pida la consulta.
+let pendientesEnLaBase = [];
 
 vi.mock('../supabaseClient', () => ({
   supabase: {
     from: (tabla) => ({
+      select: () => {
+        let columna = null;
+        let valores = [];
+        const encadenable = {
+          in: (c, v) => {
+            columna = c;
+            valores = v;
+            return encadenable;
+          },
+          eq: () => encadenable,
+          then: (...a) =>
+            Promise.resolve({
+              data: pendientesEnLaBase.filter((f) => f[columna] && valores.includes(f[columna])),
+              error: null,
+            }).then(...a),
+        };
+        return encadenable;
+      },
       update: (cambios) => {
         const pedido = { tabla, cambios };
         pedidosALaBase.push(pedido);
@@ -35,7 +56,8 @@ vi.mock('../apiPanel', () => ({
 
 vi.mock('../avisarCambioDeAsistente', () => ({ avisarCambioDeAsistente: async () => {} }));
 
-const { asignarTurno, pedidoDeConfirmacion, pedidoDeConfirmacionDelMovimiento } = await import('../asignarTurno');
+const { asignarSerie, asignarTurno, cargarAsignacionesPendientes, pedidoDeConfirmacion, pedidoDeConfirmacionDelMovimiento } =
+  await import('../asignarTurno');
 const { moverGuardia } = await import('../moverGuardia');
 const { reasignarGuardia } = await import('../reasignarGuardia');
 
@@ -64,6 +86,42 @@ beforeEach(() => {
   pedidosALaBase.length = 0;
   llamadasAlBackend.length = 0;
   respuestaDelBackend = null;
+  pendientesEnLaBase = [];
+});
+
+describe('asignarSerie', () => {
+  it('pide la asignación del turno fijo al backend', async () => {
+    const { error } = await asignarSerie('s1', ANA, t);
+    expect(error).toBeNull();
+    expect(llamadasAlBackend).toEqual([{ ruta: '/guardias/series/s1/asignar', cuerpo: { asistente_id: ANA } }]);
+  });
+});
+
+describe('cargarAsignacionesPendientes', () => {
+  it('cada día de un turno fijo espera a quien se le asignó el turno fijo', async () => {
+    pendientesEnLaBase = [{ serie_id: 's1', asistente_id: ANA }];
+    const mapa = await cargarAsignacionesPendientes([
+      { id: 'g1', serie_id: 's1' },
+      { id: 'g2', serie_id: 's1' },
+      { id: 'g3', serie_id: null },
+    ]);
+    expect(mapa.get('g1')).toBe(ANA);
+    expect(mapa.get('g2')).toBe(ANA);
+    expect(mapa.has('g3')).toBe(false);
+  });
+
+  it('un día con asignación propia espera a ése, no al del turno fijo', async () => {
+    pendientesEnLaBase = [
+      { serie_id: 's1', asistente_id: ANA },
+      { guardia_id: 'g2', asistente_id: BRUNO },
+    ];
+    const mapa = await cargarAsignacionesPendientes([
+      { id: 'g1', serie_id: 's1' },
+      { id: 'g2', serie_id: 's1' },
+    ]);
+    expect(mapa.get('g1')).toBe(ANA);
+    expect(mapa.get('g2')).toBe(BRUNO);
+  });
 });
 
 describe('asignarTurno', () => {

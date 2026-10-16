@@ -171,6 +171,9 @@ const DATOS_MINIMOS = {
   },
   turno_para_responder: { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00' },
   turno_retirado: { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00' },
+  turno_fijo_para_responder: { dias: ['miercoles', 'lunes'], horaInicio: '08:00', horaFin: '14:00' },
+  turno_fijo_retirado: { dias: ['lunes', 'miercoles'], horaInicio: '08:00', horaFin: '14:00' },
+  reemplazo_para_responder: { desde: '2026-11-03', hasta: '2026-11-14' },
   ausencia_avisada_con_tiempo: {
     asistente: 'Rita Solano', fechaInicio: '2026-10-07', fechaFin: '2026-10-14',
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],

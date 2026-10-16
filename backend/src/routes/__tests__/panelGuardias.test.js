@@ -313,6 +313,72 @@ describe('asignar un turno', () => {
   });
 });
 
+describe('asignar un turno fijo', () => {
+  const SERIE = '66666666-6666-6666-6666-666666666666';
+  const OTRO = '77777777-7777-7777-7777-777777777777';
+
+  function asignacionPedida() {
+    return llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/asignar_serie');
+  }
+
+  beforeEach(() => {
+    respuestas.set('GET /rest/v1/series_guardias', () => ({
+      id: SERIE,
+      prestadora_id: PRESTADORA,
+      dias_semana: ['lunes', 'miercoles'],
+      hora_inicio: '08:00',
+      hora_fin: '14:00',
+    }));
+  });
+
+  it('la asignación la hace la base con la credencial de quien pide, no con la llave maestra', async () => {
+    respuestas.set('POST /rest/v1/rpc/asignar_serie', () => ({ sin_cambios: false, titular_retirado: null, pendiente_retirado: null }));
+    const { estado, cuerpo } = await pedir('POST', `/series/${SERIE}/asignar`, { asistente_id: OTRO });
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.sinCambios, false);
+    const llamada = asignacionPedida();
+    assert.deepEqual(llamada.cuerpo, { p_serie_id: SERIE, p_asistente_id: OTRO });
+    assert.notEqual(llamada.credencial, 'Bearer clave-de-mentira');
+    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/series_guardias');
+    assert.notEqual(lectura.credencial, 'Bearer clave-de-mentira');
+  });
+
+  it('si no cambió nada no se lee la serie ni se avisa', async () => {
+    respuestas.set('POST /rest/v1/rpc/asignar_serie', () => ({ sin_cambios: true }));
+    const { cuerpo } = await pedir('POST', `/series/${SERIE}/asignar`, { asistente_id: OTRO });
+    assert.equal(cuerpo.sinCambios, true);
+    assert.equal(llamadas.some((l) => l.clave === 'GET /rest/v1/series_guardias'), false);
+  });
+
+  it('un Asistente que no es un texto no llega a la base', async () => {
+    const { estado } = await pedir('POST', `/series/${SERIE}/asignar`, { asistente_id: 5 });
+    assert.equal(estado, 400);
+    assert.equal(asignacionPedida(), undefined);
+  });
+
+  it('una serie que la base no encuentra vuelve como 404, sin su texto', async () => {
+    respuestas.set('POST /rest/v1/rpc/asignar_serie', () => ({ rechazo: 'serie_no_encontrada' }));
+    const { estado, cuerpo } = await pedir('POST', `/series/${SERIE}/asignar`, { asistente_id: OTRO });
+    assert.equal(estado, 404);
+    assert.equal(cuerpo.motivo, 'serie_no_encontrada');
+  });
+
+  it('una serie terminada vuelve como 409', async () => {
+    respuestas.set('POST /rest/v1/rpc/asignar_serie', () => ({ rechazo: 'serie_no_se_asigna' }));
+    const { estado, cuerpo } = await pedir('POST', `/series/${SERIE}/asignar`, { asistente_id: OTRO });
+    assert.equal(estado, 409);
+    assert.equal(cuerpo.motivo, 'serie_no_se_asigna');
+  });
+
+  it('lo que la base rechaza vuelve como motivo, sin su texto', async () => {
+    respuestas.set('POST /rest/v1/rpc/asignar_serie', () => ({ rechazo: 'matricula_bloquea:vencida: tabla interna' }));
+    const { estado, cuerpo } = await pedir('POST', `/series/${SERIE}/asignar`, { asistente_id: OTRO });
+    assert.equal(estado, 409);
+    assert.equal(cuerpo.motivo, 'matricula_bloquea:vencida');
+    assert.doesNotMatch(JSON.stringify(cuerpo), /tabla interna/);
+  });
+});
+
 describe('llevar un turno a otro Paciente', () => {
   const DESTINO = '88888888-8888-8888-8888-888888888888';
   const NUEVA = '99999999-9999-9999-9999-999999999999';

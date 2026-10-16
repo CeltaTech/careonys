@@ -13,7 +13,6 @@ import { guardiasAfectadas, guardiasSinCubrir, sumarLasYaCubiertas } from '../..
 import { diasComputados } from '../../lib/diasDeAusencia';
 import { mensajeDeError } from '../../lib/errores';
 import { con } from '../../lib/textos';
-import { avisarCambioDeAsistente } from '../../lib/avisarCambioDeAsistente';
 import { llamadorDe } from '../../lib/apiPanel';
 import { useMotivosSustitucionGuardia } from '../../hooks/useMotivosSustitucionGuardia';
 import { nombreMotivoSustitucion, valorGuardado } from '../../lib/motivoDeSustitucion';
@@ -117,7 +116,7 @@ export function AusenciasCoberturaTab({ asistente }) {
         supabase.from('ausencias_cambios_de_fecha').select('id, ausencia_id, fecha_anterior, fecha_nueva, cambiado_at')
           .in('ausencia_id', ids).order('cambiado_at'),
         supabase.from('coberturas_de_ausencia')
-          .select('id, ausencia_id, objetada_at, asistentes(nombre), series_guardias(dias_semana, hora_inicio, hora_fin)')
+          .select('id, ausencia_id, aceptada_at, objetada_at, asistentes(nombre), series_guardias(dias_semana, hora_inicio, hora_fin)')
           .in('ausencia_id', ids).order('created_at'),
       ]);
       const errorLectura = errorCobertura ?? errorCambios ?? errorTurnos;
@@ -265,11 +264,20 @@ export function AusenciasCoberturaTab({ asistente }) {
     return moverElFin(ausencia, { fechaFin: sumarDias(vuelta, -1), fechaVuelta: vuelta });
   }
 
-  // Un turno fijo se describe por sus días y su horario: «Lunes, Miércoles 08:00–20:00».
+  // Un turno fijo se describe por sus días y su horario: «Lunes, Miércoles 08:00–20:00». Sin turno
+  // fijo, la cobertura es de los turnos sueltos del ausente.
   function nombreDelTurno(serie) {
-    if (!serie) return '';
+    if (!serie) return t.asistentes.ausencias.otros_turnos;
     const dias = (serie.dias_semana ?? []).map((d) => t.guardias.nueva_guardia.dias[d] ?? d).join(', ');
     return `${dias} ${serie.hora_inicio?.slice(0, 5) ?? ''}–${serie.hora_fin?.slice(0, 5) ?? ''}`;
+  }
+
+  // Objetada, esperando que el sustituto conteste, o aceptada.
+  function textoDeLaCobertura(cobertura) {
+    const ta = t.asistentes.ausencias;
+    if (cobertura.objetada_at) return ta.turno_objetado;
+    if (!cobertura.aceptada_at) return ta.turno_sin_responder;
+    return ta.turno_cubierto_por;
   }
 
   function fechaVisible(fecha) {
@@ -314,6 +322,9 @@ export function AusenciasCoberturaTab({ asistente }) {
   // ausente, y las guardias sueltas se cubren una por una. Un turno que ya tiene sustituto no se
   // vuelve a cubrir: apretar dos veces no duplica nada.
   //
+  // El reemplazo queda esperando que el sustituto lo acepte, una sola vez para todos sus días. Los
+  // turnos pasan a su nombre al aceptar, y ahí avisa el backend.
+  //
   // Una guardia sola, fuera de esto, se sigue cubriendo desde la guardia misma.
   async function asignarCobertura(ausencia) {
     const formulario = coberturaForm[ausencia.id] ?? {};
@@ -322,12 +333,11 @@ export function AusenciasCoberturaTab({ asistente }) {
     setGuardando(true);
     setError(null);
 
-    let cubiertas;
     try {
       // Las ausencias cargadas antes de que existiera la lista de turnos afectados la calculan
       // ahora, para que la tarjeta pueda decir cuántos faltan.
       await afectadasDe(ausencia);
-      const respuesta = await llamarApiAusencias(`/${ausencia.id}/cobertura`, {
+      await llamarApiAusencias(`/${ausencia.id}/cobertura`, {
         method: 'POST',
         body: JSON.stringify({
           asistente_sustituto_id: sustitutoId,
@@ -337,22 +347,12 @@ export function AusenciasCoberturaTab({ asistente }) {
           costo_adicional: formulario.costo_adicional || null,
         }),
       });
-      cubiertas = respuesta.guardia_ids ?? [];
     } catch (err) {
       setGuardando(false);
       setError(mensajeDeError(err, t));
       return;
     }
     setGuardando(false);
-
-    // Quien va a la casa del Paciente ya no es el de siempre, así que se avisa. Quién es viaja
-    // explícito, porque el mensaje nunca lo deduce de la guardia. Un mensaje para todos los turnos y no
-    // uno por turno.
-    if (cubiertas.length > 0) await avisarCambioDeAsistente({
-      guardiaIds: cubiertas,
-      asistenteNuevoId: sustitutoId,
-      asistenteAnteriorId: asistente?.id ?? null,
-    });
 
     setCoberturaForm((prev) => ({ ...prev, [ausencia.id]: {} }));
     recargar();
@@ -463,7 +463,7 @@ export function AusenciasCoberturaTab({ asistente }) {
                   <div className="panel-turnos-cubiertos">
                     {turnosCubiertos[a.id].map((c) => (
                       <span key={c.id} className="panel-mini">
-                        {con(c.objetada_at ? t.asistentes.ausencias.turno_objetado : t.asistentes.ausencias.turno_cubierto_por, {
+                        {con(textoDeLaCobertura(c), {
                           turno: nombreDelTurno(c.series_guardias),
                           nombre: c.asistentes?.nombre ?? '',
                         })}

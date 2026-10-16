@@ -5,7 +5,7 @@ import { supabase, clienteDelPedido } from '../db/connection.js';
 import { marcarAusenteYCrearIncidente } from '../utils/marcarAusente.js';
 import { cubrirGuardiaConSustituto } from '../utils/cubrirGuardia.js';
 import { avisarCambioDeAsistente } from '../utils/avisoCambioDeAsistente.js';
-import { avisarAsignacionDeTurno } from '../utils/avisoAsignacionDeTurno.js';
+import { avisarAsignacionDeTurno, avisarAsignacionDeSerie } from '../utils/avisoAsignacionDeTurno.js';
 import { sugerirMotivoDelAviso } from '../utils/motivoSugeridoDelAviso.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
@@ -194,6 +194,8 @@ const LO_QUE_RECHAZA_LA_BASE = [
   { patron: /guardia_no_se_asigna/, estado: 409, motivo: 'guardia_no_se_asigna' },
   { patron: /guardia_sin_asistente/, estado: 409, motivo: 'guardia_sin_asistente' },
   { patron: /paciente_no_encontrado/, estado: 404, motivo: 'paciente_no_encontrado' },
+  { patron: /serie_no_encontrada/, estado: 404, motivo: 'serie_no_encontrada' },
+  { patron: /serie_no_se_asigna/, estado: 409, motivo: 'serie_no_se_asigna' },
 ];
 
 export function motivoDeLaAsignacion(error) {
@@ -239,6 +241,50 @@ panelGuardiasRouter.post('/:id/asignar', requiereRolPanel, exigirOrganizacionAct
     await avisarAsignacionDeTurno(clienteDelPedido(req), {
       prestadoraId: guardia.prestadora_id,
       guardia,
+      asistenteNuevoId: asistenteId,
+      retirados: [resultado?.titular_retirado, resultado?.pendiente_retirado],
+    });
+  }
+
+  res.json({ sinCambios: false });
+});
+
+/* Asignar un turno fijo, o dejarlo sin asignar. Igual que el turno de un día, y lo hace
+   `asignar_serie`: el Asistente lo contesta una sola vez para todos sus días, y hasta que acepta
+   ninguno es suyo. La serie se lee con la credencial de quien asignó. */
+panelGuardiasRouter.post('/series/:id/asignar', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
+  const asistenteId = req.body?.asistente_id ?? null;
+  if (asistenteId !== null && typeof asistenteId !== 'string') {
+    return res.status(400).json({ error: 'Asistente no reconocido' });
+  }
+
+  const db = clienteDelPedido(req);
+  const { data: resultado, error } = await db.rpc('asignar_serie', {
+    p_serie_id: req.params.id,
+    p_asistente_id: asistenteId,
+  });
+
+  if (error) {
+    const previsto = motivoDeLaAsignacion(error);
+    if (previsto) {
+      console.error(`[${previsto.estado}] POST ${req.originalUrl} — ${previsto.motivo}:`, error.message);
+      return res.status(previsto.estado).json({ error: previsto.motivo, motivo: previsto.motivo });
+    }
+    return responderError(res, error);
+  }
+
+  if (resultado?.sin_cambios) return res.json({ sinCambios: true });
+
+  const { data: serie } = await db
+    .from('series_guardias')
+    .select('id, prestadora_id, dias_semana, hora_inicio, hora_fin')
+    .eq('id', req.params.id)
+    .maybeSingle();
+
+  if (serie) {
+    await avisarAsignacionDeSerie(db, {
+      prestadoraId: serie.prestadora_id,
+      serie,
       asistenteNuevoId: asistenteId,
       retirados: [resultado?.titular_retirado, resultado?.pendiente_retirado],
     });

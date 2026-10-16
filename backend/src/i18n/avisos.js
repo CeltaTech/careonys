@@ -90,6 +90,15 @@ function pie(t) {
   return `\n\n—\n${t('comun.marca', { producto: IDENTIDAD.nombre })}`;
 }
 
+// Los días de un turno fijo en el orden de la semana, empezando por el lunes.
+const ORDEN_DE_LA_SEMANA = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+
+/** «lunes y miércoles», con el nombre de cada día y la conjunción del idioma. */
+function diasDeLaSemana(t, dias) {
+  const nombres = ORDEN_DE_LA_SEMANA.filter((d) => (dias ?? []).includes(d)).map((d) => t(`comun.dia_${d}`));
+  return unirNombres(nombres, t('comun.conjuncion'), '');
+}
+
 /** La lista de Pacientes de una guardia, con la conjunción del idioma que corresponda. */
 function pacientesDe(t, pacientes) {
   return unirNombres(pacientes, t('comun.conjuncion'), t('comun.paciente_sin_nombre'));
@@ -609,6 +618,23 @@ const ARMADORES = {
   turno_retirado: (t, d) => ({
     titulo: t('turno_retirado.titulo'),
     cuerpo: t('turno_retirado.cuerpo', { fecha: d.fecha, horaInicio: d.horaInicio, horaFin: d.horaFin }),
+  }),
+
+  turno_fijo_para_responder: (t, d) => ({
+    titulo: t('turno_fijo_para_responder.titulo'),
+    cuerpo: t('turno_fijo_para_responder.cuerpo', { dias: diasDeLaSemana(t, d.dias), horaInicio: d.horaInicio, horaFin: d.horaFin }),
+  }),
+
+  turno_fijo_retirado: (t, d) => ({
+    titulo: t('turno_fijo_retirado.titulo'),
+    cuerpo: t('turno_fijo_retirado.cuerpo', { dias: diasDeLaSemana(t, d.dias), horaInicio: d.horaInicio, horaFin: d.horaFin }),
+  }),
+
+  reemplazo_para_responder: (t, d) => ({
+    titulo: t('reemplazo_para_responder.titulo'),
+    cuerpo: d.hasta
+      ? t('reemplazo_para_responder.cuerpo', { desde: d.desde, hasta: d.hasta })
+      : t('reemplazo_para_responder.cuerpo_sin_fin', { desde: d.desde }),
   }),
 
   recordatorio_de_guardia: (t, d) => ({

@@ -85,7 +85,7 @@ async function revisarPrestadora(prestadoraId, ahora) {
   // decide después contra la hora de inicio, que la base guarda en otra columna.
   const { data: guardias, error } = await supabase
     .from('guardias')
-    .select('id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, aviso_sin_cubrir_at, aviso_sin_cubrir_veces, asignaciones_de_turno(estado, asistentes(nombre))')
+    .select('id, serie_id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, aviso_sin_cubrir_at, aviso_sin_cubrir_veces, asignaciones_de_turno(estado, asistentes(nombre))')
     .eq('prestadora_id', prestadoraId)
     .is('asistente_id', null)
     .eq('estado', 'programada')
@@ -95,6 +95,25 @@ async function revisarPrestadora(prestadoraId, ahora) {
   if (error) {
     console.error(`Error consultando guardias sin cubrir (prestadora ${prestadoraId}):`, error.message);
     return;
+  }
+
+  // El turno fijo se asigna entero y no día por día: lo que se le preguntó a quién cuelga de la
+  // serie, y vale para cada uno de sus días.
+  const series = [...new Set((guardias ?? []).map((g) => g.serie_id).filter(Boolean))];
+  const asignacionesPorSerie = new Map();
+  if (series.length) {
+    const { data: deLasSeries, error: errorSeries } = await supabase
+      .from('asignaciones_de_turno')
+      .select('serie_id, estado')
+      .eq('prestadora_id', prestadoraId)
+      .in('serie_id', series);
+    if (errorSeries) {
+      console.error(`Error consultando las asignaciones de los turnos fijos (prestadora ${prestadoraId}):`, errorSeries.message);
+      return;
+    }
+    for (const a of deLasSeries ?? []) {
+      asignacionesPorSerie.set(a.serie_id, [...(asignacionesPorSerie.get(a.serie_id) ?? []), a]);
+    }
   }
 
   // A quiénes se queda sin atender cada hueco. Se piden los nombres de todos los Pacientes del
@@ -124,7 +143,7 @@ async function revisarPrestadora(prestadoraId, ahora) {
     })) continue;
 
     const veces = (guardia.aviso_sin_cubrir_veces ?? 0) + 1;
-    const asignaciones = guardia.asignaciones_de_turno ?? [];
+    const asignaciones = [...(guardia.asignaciones_de_turno ?? []), ...(asignacionesPorSerie.get(guardia.serie_id) ?? [])];
     await notificarCoordinador({
       evento: EVENTO,
       prestadoraId,

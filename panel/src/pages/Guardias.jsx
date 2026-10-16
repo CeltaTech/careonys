@@ -131,7 +131,7 @@ export function Guardias() {
       const ids = (guardiasData ?? []).map((g) => g.id);
       [pacientesPorGuardia, pendientes] = await Promise.all([
         cargarPacientesDeGuardias(ids),
-        cargarAsignacionesPendientes(ids),
+        cargarAsignacionesPendientes(guardiasData ?? []),
       ]);
     } catch (errorPacientes) {
       setError(mensajeDeError(errorPacientes, t));

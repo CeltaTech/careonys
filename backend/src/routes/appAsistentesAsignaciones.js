@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
-import { clienteDelPedido } from '../db/connection.js';
+import { clienteDelPedido, enLaPrestadora } from '../db/connection.js';
 import { responderError } from '../utils/errorConMotivo.js';
 import { avisarCambioDeAsistente } from '../utils/avisoCambioDeAsistente.js';
+import { aplicarReemplazoAceptado } from '../utils/coberturaDeAusencia.js';
+import { hoyISO } from '../utils/horarios.js';
 
 // ============================================================================
 // Los turnos de guardia que se le asignaron al Asistente y todavía no respondió.
@@ -10,6 +12,9 @@ import { avisarCambioDeAsistente } from '../utils/avisoCambioDeAsistente.js';
 // El Coordinador le asigna un turno vacante a un Asistente, y a uno solo por vez. Acá está el otro
 // lado: el Asistente ve lo que se le asignó y lo acepta, o lo rechaza con un motivo de la lista de
 // su Prestadora. Si lo rechaza, el Coordinador busca a otro.
+//
+// Lo asignado es de tres clases, y las tres se contestan una sola vez: el turno de un día, el
+// turno fijo —todos sus días— y el reemplazo durante la ausencia de otro —todos los días que dura—.
 //
 // ----------------------------------------------------------------------------
 // Qué credencial usa cada parte
@@ -126,6 +131,77 @@ async function avisarSiReemplaza(req, guardiaId) {
   }
 }
 
+// El turno fijo y el reemplazo: la base ya anotó la respuesta, y lo que sigue se hace acá.
+//
+// Del turno fijo, la base ya le puso a su nombre la serie y sus días libres; queda avisar, si lo
+// tenía otro, quién deja de ir. Del reemplazo, la base marcó aceptadas sus coberturas, y ahora se
+// le pasan los turnos del ausente. Eso escribe turnos que todavía no son suyos, así que va con el
+// trabajo de su Prestadora, que la base acota a ella. Nunca voltea la respuesta: ya quedó aceptada.
+async function aplicarLoAceptado(req) {
+  const { prestadoraId, asistenteId } = req.usuarioAsistente;
+  try {
+    const { data: asignacion } = await clienteDelPedido(req)
+      .from('asignaciones_de_turno')
+      .select('serie_id, ausencia_id, asistente_anterior_id')
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (!asignacion) return;
+
+    let guardiaIds = [];
+    let anterior = null;
+    if (asignacion.ausencia_id) {
+      const { cubiertas, titularId } = await enLaPrestadora(prestadoraId, 'aplicar el reemplazo aceptado', (db) =>
+        aplicarReemplazoAceptado({ db, prestadoraId, ausenciaId: asignacion.ausencia_id, sustitutoId: asistenteId }),
+      );
+      guardiaIds = cubiertas;
+      anterior = titularId;
+    } else if (asignacion.serie_id && asignacion.asistente_anterior_id) {
+      const { data } = await clienteDelPedido(req)
+        .from('guardias')
+        .select('id')
+        .eq('serie_id', asignacion.serie_id)
+        .eq('asistente_id', asistenteId)
+        .gte('fecha', hoyISO());
+      guardiaIds = (data ?? []).map((g) => g.id);
+      anterior = asignacion.asistente_anterior_id;
+    }
+    if (!anterior || anterior === asistenteId || guardiaIds.length === 0) return;
+
+    const { data: guardias } = await clienteDelPedido(req)
+      .from('guardias')
+      .select('id, prestadora_id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin')
+      .in('id', guardiaIds)
+      .order('fecha', { ascending: true });
+    if (!guardias?.length) return;
+
+    await avisarCambioDeAsistente({ guardias, prestadoraId, asistenteNuevoId: asistenteId, asistenteAnteriorId: anterior });
+  } catch (e) {
+    console.error(`Error aplicando lo aceptado en la asignación ${req.params.id}:`, e.message);
+  }
+}
+
+// Quien rechaza el reemplazo no lo hace: sus coberturas de esa ausencia quedan objetadas, y en el
+// Panel se ve que hay que buscar a otro. Con el trabajo de la Prestadora, porque el Asistente no
+// tiene permiso sobre las coberturas.
+async function dejarElReemplazo(req, ausenciaId) {
+  const { prestadoraId, asistenteId } = req.usuarioAsistente;
+  try {
+    await enLaPrestadora(prestadoraId, 'dejar el reemplazo rechazado', async (db) => {
+      const { error } = await db
+        .from('coberturas_de_ausencia')
+        .update({ objetada_at: new Date().toISOString() })
+        .eq('prestadora_id', prestadoraId)
+        .eq('ausencia_id', ausenciaId)
+        .eq('asistente_sustituto_id', asistenteId)
+        .is('aceptada_at', null)
+        .is('objetada_at', null);
+      if (error) throw error;
+    });
+  } catch (e) {
+    console.error(`Error dejando el reemplazo rechazado de la ausencia ${ausenciaId}:`, e.message);
+  }
+}
+
 // ============================================================================
 // Lo que hoy tiene para responder
 // ============================================================================
@@ -152,6 +228,13 @@ appAsistentesAsignacionesRouter.get('/', requiereRolAsistente, async (req, res) 
     asignaciones: (asignaciones.data ?? []).map((a) => ({
       id: a.asignacion_id,
       asignado_at: a.asignado_at,
+      tipo: a.tipo,
+      serie_id: a.serie_id ?? null,
+      ausencia_id: a.ausencia_id ?? null,
+      dias_semana: a.dias_semana ?? [],
+      desde: a.desde ?? null,
+      hasta: a.hasta ?? null,
+      cantidad: a.cantidad ?? null,
       guardia: {
         id: a.guardia_id,
         fecha: a.fecha,
@@ -198,8 +281,12 @@ appAsistentesAsignacionesRouter.post('/:id/responder', requiereRolAsistente, asy
       if (previsto) return noSePudo(res, previsto.estado, previsto.motivo, falla.message);
       return responderError(res, falla);
     }
-    await avisarSiReemplaza(req, guardiaId);
-    return res.json({ respuesta: 'acepta', guardiaId });
+    if (guardiaId) {
+      await avisarSiReemplaza(req, guardiaId);
+    } else {
+      await aplicarLoAceptado(req);
+    }
+    return res.json({ respuesta: 'acepta', guardiaId: guardiaId ?? null });
   }
 
   // --- Rechazar ---
@@ -208,7 +295,7 @@ appAsistentesAsignacionesRouter.post('/:id/responder', requiereRolAsistente, asy
   // Asistente no existe y se contesta lo mismo que si el número estuviera mal escrito.
   const { data: asignacion } = await clienteDelPedido(req)
     .from('asignaciones_de_turno')
-    .select('id, estado')
+    .select('id, estado, ausencia_id')
     .eq('id', req.params.id)
     .eq('asistente_id', req.usuarioAsistente.asistenteId)
     .maybeSingle();
@@ -240,5 +327,6 @@ appAsistentesAsignacionesRouter.post('/:id/responder', requiereRolAsistente, asy
     if (previsto) return noSePudo(res, previsto.estado, previsto.motivo, falla.message);
     return responderError(res, falla);
   }
+  if (asignacion.ausencia_id) await dejarElReemplazo(req, asignacion.ausencia_id);
   res.json({ respuesta: 'rechaza' });
 });

@@ -6,8 +6,8 @@ import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcan
 import { supabase } from '../db/connection.js';
 import { extensionDeArchivo } from '../utils/archivosSubidos.js';
 import { responderError } from '../utils/errorConMotivo.js';
-import { cubrirGuardiaConSustituto } from '../utils/cubrirGuardia.js';
-import { estrenarCobertura, hastaDondeCubrir } from '../utils/coberturaDeAusencia.js';
+import { hastaDondeCubrir } from '../utils/coberturaDeAusencia.js';
+import { avisarAsignacionDeAusencia } from '../utils/avisoAsignacionDeTurno.js';
 import { hoyISO } from '../utils/horarios.js';
 
 // CON LA LLAVE MAESTRA, TODAVÍA. La ausencia, el depósito y el enlace temporal van con la llave
@@ -151,23 +151,24 @@ panelAusenciasRouter.get('/:id/certificado-url', requiereRolPanel, exigirOrganiz
   res.json({ url: data.signedUrl });
 });
 
-/* Cubrir la ausencia de un Asistente por turno fijo.
-   --------------------------------------------------
+/* Cubrir la ausencia de un Asistente.
+   -----------------------------------
    Quien coordina elige un sustituto y, si quiere, uno solo de los turnos fijos del ausente. Por
-   cada turno fijo que tenga guardias en la ausencia queda anotada una cobertura, que se aplica
-   ahora y que el trabajo programado va corriendo si la ausencia se estira o se acorta
-   (`utils/coberturaDeAusencia.js`). Las guardias sueltas, que no son de ningún turno fijo, se
-   cubren una por una como siempre.
+   cada turno fijo que tenga guardias en la ausencia queda anotada una cobertura, y otra más, sin
+   turno fijo, para las guardias sueltas.
 
-   Un turno fijo que ya tiene sustituto vigente no se vuelve a cubrir: apretar dos veces no duplica
-   nada.
+   El reemplazo se le asigna al sustituto como un turno: le llega un aviso y lo acepta o lo rechaza
+   una sola vez, por todos los días. Hasta que responde, las guardias siguen del titular. Al
+   aceptar se aplican las coberturas, y el trabajo programado las va corriendo si la ausencia se
+   estira o se acorta (`utils/coberturaDeAusencia.js`).
 
-   Con la llave maestra, igual que el resto de esta ruta y que `POST /guardias/:id/cubrir`: la
-   ausencia se busca acotada a la Prestadora de quien pide, y el sustituto se comprueba contra esa
-   misma Prestadora antes de escribir nada.
+   Lo que ya tiene sustituto vigente no se vuelve a cubrir: apretar dos veces no duplica nada.
 
-   Contesta las guardias que quedaron cubiertas, para que el Panel avise el cambio a quien
-   corresponda. */
+   Con la llave maestra, igual que el resto de esta ruta: la ausencia se busca acotada a la
+   Prestadora de quien pide, y el sustituto se comprueba contra esa misma Prestadora antes de
+   escribir nada.
+
+   Contesta las guardias que quedaron cubiertas, que hasta que el sustituto acepte son ninguna. */
 panelAusenciasRouter.post('/:id/cobertura', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
   const {
     asistente_sustituto_id: asistenteSustitutoId,
@@ -205,7 +206,7 @@ panelAusenciasRouter.post('/:id/cobertura', requiereRolPanel, exigirOrganizacion
 
   let consultaGuardias = supabase
     .from('guardias')
-    .select('id, prestadora_id, asistente_id, serie_id')
+    .select('id, serie_id')
     .eq('prestadora_id', ausencia.prestadora_id)
     .eq('asistente_id', ausencia.asistente_id)
     .eq('estado', 'programada')
@@ -224,43 +225,52 @@ panelAusenciasRouter.post('/:id/cobertura', requiereRolPanel, exigirOrganizacion
   if (errorVigentes) return responderError(res, errorVigentes);
   const yaCubiertas = new Set((vigentes ?? []).map((c) => c.serie_id));
 
-  const series = [...new Set((guardias ?? []).map((g) => g.serie_id).filter((s) => s && !yaCubiertas.has(s)))];
-  const sueltas = (guardias ?? []).filter((g) => !g.serie_id);
-  const cubiertas = [];
+  // Una cobertura por turno fijo, y la de las sueltas con la serie vacía.
+  const aCubrir = [...new Set((guardias ?? []).map((g) => g.serie_id ?? null))].filter((s) => !yaCubiertas.has(s));
+  if (!aCubrir.length) return res.json({ guardia_ids: [] });
 
-  for (const serieId of series) {
-    const { data: cobertura, error: errorAlta } = await supabase
-      .from('coberturas_de_ausencia')
-      .insert({
-        prestadora_id: ausencia.prestadora_id,
-        ausencia_id: ausencia.id,
-        serie_id: serieId,
-        asistente_sustituto_id: asistenteSustitutoId,
-        motivo,
-        motivo_detalle: motivoDetalle,
-        costo_adicional: costoAdicional,
-        asignada_por: req.usuarioPanel.id,
-      })
-      .select('id, prestadora_id, serie_id, asistente_sustituto_id, motivo, motivo_detalle, costo_adicional')
-      .single();
-    if (errorAlta) return responderError(res, errorAlta);
-    const resultado = await estrenarCobertura({ db: supabase, cobertura, ausencia });
-    cubiertas.push(...resultado.cubiertas);
-  }
-
-  for (const guardia of sueltas) {
-    const resultado = await cubrirGuardiaConSustituto({
-      db: supabase,
-      guardia,
-      asistenteSustitutoId,
-      ausenciaId: ausencia.id,
+  const { error: errorAlta } = await supabase.from('coberturas_de_ausencia').insert(
+    aCubrir.map((serieId) => ({
+      prestadora_id: ausencia.prestadora_id,
+      ausencia_id: ausencia.id,
+      serie_id: serieId,
+      asistente_sustituto_id: asistenteSustitutoId,
       motivo,
-      motivoDetalle,
-      costoAdicional,
+      motivo_detalle: motivoDetalle,
+      costo_adicional: costoAdicional,
+      asignada_por: req.usuarioPanel.id,
+    })),
+  );
+  if (errorAlta) return responderError(res, errorAlta);
+
+  // Una sola asignación por sustituto y ausencia: si ya tenía una esperando respuesta, las
+  // coberturas nuevas entran en esa y no se le vuelve a avisar.
+  const { data: pendiente, error: errorPendiente } = await supabase
+    .from('asignaciones_de_turno')
+    .select('id')
+    .eq('prestadora_id', ausencia.prestadora_id)
+    .eq('ausencia_id', ausencia.id)
+    .eq('asistente_id', asistenteSustitutoId)
+    .eq('estado', 'sin_responder')
+    .maybeSingle();
+  if (errorPendiente) return responderError(res, errorPendiente);
+
+  if (!pendiente) {
+    const { error: errorAsignacion } = await supabase.from('asignaciones_de_turno').insert({
+      prestadora_id: ausencia.prestadora_id,
+      ausencia_id: ausencia.id,
+      asistente_id: asistenteSustitutoId,
+      asignado_por: req.usuarioPanel.id,
     });
-    if (!resultado.ok) return res.status(500).json({ error: resultado.motivo });
-    cubiertas.push(guardia.id);
+    if (errorAsignacion) return responderError(res, errorAsignacion);
+
+    await avisarAsignacionDeAusencia(supabase, {
+      prestadoraId: ausencia.prestadora_id,
+      asistenteId: asistenteSustitutoId,
+      desde,
+      hasta: ausencia.fecha_fin,
+    });
   }
 
-  res.json({ guardia_ids: cubiertas });
+  res.json({ guardia_ids: [] });
 });

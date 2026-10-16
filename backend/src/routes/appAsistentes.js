@@ -1340,7 +1340,7 @@ appAsistentesRouter.post('/guardias/:id/no-puedo-continuar', requiereRolAsistent
 /* Los turnos fijos que este Asistente cubre por la ausencia de otro.
    --------------------------------------------------------------------------
    Quien coordina le asigna a alguien el turno fijo de un ausente por toda la ausencia
-   (`utils/coberturaDeAusencia.js`). Acá lo ve, y si no puede hacerlo lo dice: esas guardias
+   (`utils/coberturaDeAusencia.js`), y una vez que la aceptó, acá lo ve, y si no puede hacerlo lo dice: esas guardias
    vuelven a quedar sin sustituto desde hoy y a quien coordina le llega el aviso. Lo que ya hizo o
    ya empezó no se toca.
 
@@ -1353,7 +1353,8 @@ appAsistentesRouter.get('/coberturas', requiereRolAsistente, async (req, res) =>
     .select('id, series_guardias(dias_semana, hora_inicio, hora_fin), ausencias(fecha_inicio, fecha_fin, fecha_vuelta_real)')
     .eq('prestadora_id', prestadoraId)
     .eq('asistente_sustituto_id', asistenteId)
-    .is('objetada_at', null);
+    .is('objetada_at', null)
+    .not('aceptada_at', 'is', null);
   if (error) return responderError(res, error);
 
   const hoy = hoyISO();

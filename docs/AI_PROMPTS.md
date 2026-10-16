@@ -7,7 +7,7 @@
 
 **Con qué modelo se habla no se decide en estos prompts.** El nombre del modelo vive en un solo
 lugar, `backend/src/config/modeloIA.js`, y se puede cambiar desde afuera con la variable de entorno
-`MODELO_IA` sin tocar código. Los cuatro archivos que llaman a la IA lo importan de ahí; ninguno lo
+`MODELO_IA` sin tocar código. Los archivos que llaman a la IA lo importan de ahí; ninguno lo
 escribe. El consumo de cada llamada queda medido en tokens, con el nombre del modelo al lado
 (`backend/src/utils/registrarUsoIA.js`), sin ninguna configuración previa.
 
@@ -128,14 +128,14 @@ Vale para todo texto en prosa que se devuelva, incluido el que va adentro de un 
 Debajo del bloque, cada prompt agrega **qué campos suyos lee una persona**, para que el
 modelo sepa a dónde apunta la regla.
 
-**Los cuatro archivos que lo llevan**, que son todos los que hablan con el modelo (todos en
+**Los archivos que lo llevan**, que son todos los que hablan con el modelo salvo la sugerencia del motivo de un aviso, que devuelve una opción de la lista y ningún texto (todos en
 `backend/src/utils/`):
 
 | Archivo | Qué campos lee una persona |
 | --- | --- |
 | `reporteIA.js` (Nivel 1) | `incidentes`, `observaciones`, `alimentacion.descripcion` |
 | `alertasIA.js` (Nivel 2) | `descripcion` (el Cliente), `detalle_coordinador` |
-| `proponerRespuestasIA.js` | `texto` de cada respuesta preparada, en los tres idiomas (lo lee y lo aprueba una persona de la Prestadora antes de que salga) |
+| `iaPlantillasWhatsapp.js` (dos prompts) | `cuerpo`, `huecos`, `nota` (lo lee y lo aprueba quien coordina antes de mandarlo a Meta) |
 | `importacionIA.js` (dos prompts) | `motivo`, `advertencias` (en pantalla del Panel) |
 
 **Los prompts tampoco se escriben tuteando al modelo.** Un prompt redactado con "marcá",

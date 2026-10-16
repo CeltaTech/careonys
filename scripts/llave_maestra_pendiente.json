@@ -136,7 +136,6 @@
                                  "backend/src/utils/contactoDelAsistente.js",
                                  "backend/src/utils/contactosIntermediacion.js",
                                  "backend/src/utils/conversacionIntermediacion.js",
-                                 "backend/src/utils/corteDelAcceso.js",
                                  "backend/src/utils/cuentaDeLaFila.js",
                                  "backend/src/utils/cuentasPanel.js",
                                  "backend/src/utils/declaracionDeFormulario.js",

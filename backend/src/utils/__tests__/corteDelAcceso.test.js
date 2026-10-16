@@ -18,6 +18,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const ACCESO = '33333333-3333-3333-3333-333333333333';
 const OTRO_ACCESO = '55555555-5555-5555-5555-555555555555';
@@ -30,6 +31,15 @@ let llamadas = [];
 /** Lo que quedó anotado del lado del servidor. Se junta para no ensuciar la salida. */
 let anotados = [];
 
+/** Lo que dice adentro una credencial, o `null` si no se puede leer. */
+function leerCredencial(autorizacion) {
+  try {
+    return JSON.parse(Buffer.from(autorizacion.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+  } catch {
+    return null;
+  }
+}
+
 const baseFalsa = createServer((req, res) => {
   let crudo = '';
   req.on('data', (parte) => {
@@ -38,7 +48,12 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null });
+    llamadas.push({
+      clave,
+      url: req.url,
+      cuerpo: crudo ? JSON.parse(crudo) : null,
+      credencial: leerCredencial(req.headers.authorization ?? ''),
+    });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada() : preparada;
@@ -65,6 +80,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma en
 // el momento en que se importa el archivo.
@@ -167,6 +183,21 @@ describe('el acceso que se corta', () => {
     assert.match(loGuardado().url, /estado=eq\.vigente/);
     assert.match(loGuardado().url, /cancelada_en=not\.is\.null/);
     assert.match(loGuardado().url, new RegExp(`prestadora_id=eq\\.${PRESTADORA}`));
+  });
+});
+
+describe('con qué credencial', () => {
+  it('la consulta y el corte van con la credencial del trabajo de la Prestadora', async () => {
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [accesoApagado()]);
+
+    await cortarLosAccesosDadosDeBaja();
+
+    const deLosAccesos = llamadas.filter((l) => l.clave.endsWith('/accesos_intermediacion'));
+    assert.equal(deLosAccesos.length, 2);
+    for (const llamada of deLosAccesos) {
+      assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', `${llamada.clave} fue con otra credencial`);
+      assert.equal(llamada.credencial.prestadora_id, PRESTADORA, `${llamada.clave} fue fuera de la Prestadora`);
+    }
   });
 });
 

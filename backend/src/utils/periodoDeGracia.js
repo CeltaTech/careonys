@@ -34,7 +34,7 @@
    Y UNA SUSPENSIÓN QUE FALLA NO SUSPENDE A LAS DEMÁS. Mismo criterio que el corte y que el
    preaviso: se anota y se sigue; lo que no se suspendió hoy se suspende mañana. */
 
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora, supabase } from '../db/connection.js';
 import { enviarPushCliente } from './push.js';
 import { sumarDias } from './fechas.js';
 import { enDia, importeConMoneda } from './comoSeDiceEnUnAviso.js';
@@ -120,7 +120,8 @@ export async function abrirElPeriodoDeGracia({ prestadoraId, accesoId, avisar = 
  * por día (`backend/src/server.js`): la gracia se mide en días, no en horas.
  *
  * Recorre las Prestadoras de a una, nombrando a cada una en su consulta. Una sola consulta para
- * todas alcanzaría dos cajones a la vez, que es lo que `celtatech\CLAUDE.md` §5 no admite.
+ * todas alcanzaría dos cajones a la vez, que es lo que `celtatech\CLAUDE.md` §5 no admite. Lo de
+ * cada una va con la credencial del trabajo de esa Prestadora, que la base acota a ella.
  *
  * @returns {Promise<{suspendidos: number}>}
  */
@@ -129,7 +130,13 @@ export async function suspenderLosQueAgotaronLaGracia() {
 
   let suspendidos = 0;
   for (const prestadoraId of await prestadorasDeLaIntermediacion()) {
-    suspendidos += await suspenderLosDeUnaPrestadora(prestadoraId, hoy);
+    try {
+      suspendidos += await enLaPrestadora(prestadoraId, 'suspender los accesos con la gracia terminada', (db) =>
+        suspenderLosDeUnaPrestadora(db, prestadoraId, hoy),
+      );
+    } catch (error) {
+      console.error(`No se pudieron suspender los accesos con la gracia terminada (prestadora ${prestadoraId}):`, error.message);
+    }
   }
 
   return { suspendidos };
@@ -137,8 +144,8 @@ export async function suspenderLosQueAgotaronLaGracia() {
 
 /** La suspensión de una sola Prestadora. Una falla suya se anota acá y no deja sin suspender a las
  *  demás. */
-async function suspenderLosDeUnaPrestadora(prestadoraId, hoy) {
-  const { data: accesos, error } = await supabase
+async function suspenderLosDeUnaPrestadora(db, prestadoraId, hoy) {
+  const { data: accesos, error } = await db
     .from('accesos_intermediacion')
     .select('id')
     .eq('prestadora_id', prestadoraId)
@@ -156,7 +163,7 @@ async function suspenderLosDeUnaPrestadora(prestadoraId, hoy) {
 
   let suspendidos = 0;
   for (const acceso of accesos ?? []) {
-    const { error: errorSuspender } = await supabase
+    const { error: errorSuspender } = await db
       .from('accesos_intermediacion')
       .update({ estado: 'vencida', updated_at: new Date().toISOString() })
       .eq('prestadora_id', prestadoraId)

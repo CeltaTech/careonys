@@ -1,4 +1,4 @@
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { pasosDeLaBusqueda } from './extensionDeTurno.js';
 
 /* Lo que se le muestra a la que quedó de más.
@@ -21,9 +21,24 @@ import { pasosDeLaBusqueda } from './extensionDeTurno.js';
  *
  * Cuesta hasta cuatro consultas, así que se llama sólo cuando hace falta: la enorme mayoría de los
  * turnos no tiene extensión, y la primera consulta corta ahí.
+ *
+ * Las cuatro van con la credencial del trabajo de esa Prestadora, que la base acota a ella. Si no
+ * se pudo leer, no hay nada que mostrar: lo mismo que cuando una consulta falla.
  */
 export async function estadoDeLaExtension({ guardiaId, prestadoraId }) {
-  const { data: extension, error } = await supabase
+  if (!prestadoraId) return null;
+  try {
+    return await enLaPrestadora(prestadoraId, 'leer la extension del turno', (db) =>
+      leerLaExtension(db, { guardiaId, prestadoraId }),
+    );
+  } catch (error) {
+    console.error(`No se pudo leer la extension del turno ${guardiaId}:`, error.message);
+    return null;
+  }
+}
+
+async function leerLaExtension(db, { guardiaId, prestadoraId }) {
+  const { data: extension, error } = await db
     .from('extensiones_de_turno')
     .select('id, desde_at, relevo_guardia_id, no_puede_continuar_at')
     .eq('guardia_id', guardiaId)
@@ -37,8 +52,8 @@ export async function estadoDeLaExtension({ guardiaId, prestadoraId }) {
   }
   if (!extension) return null;
 
-  const relevo = await elRelevo(extension.relevo_guardia_id, prestadoraId);
-  const { coordinacionAvisada, escalado } = await comoVaElMensaje({
+  const relevo = await elRelevo(db, extension.relevo_guardia_id, prestadoraId);
+  const { coordinacionAvisada, escalado } = await comoVaElMensaje(db, {
     guardiaId,
     relevoId: extension.relevo_guardia_id,
     prestadoraId,
@@ -51,10 +66,10 @@ export async function estadoDeLaExtension({ guardiaId, prestadoraId }) {
   };
 }
 
-async function elRelevo(relevoId, prestadoraId) {
+async function elRelevo(db, relevoId, prestadoraId) {
   if (!relevoId) return null;
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('guardias')
     .select('id, asistente_id, checkin_at')
     .eq('id', relevoId)
@@ -79,11 +94,11 @@ async function elRelevo(relevoId, prestadoraId) {
  * «Avisada» quiere decir que el mensaje salió, no que se abrió el expediente: un expediente abierto
  * del que todavía no salió ningún correo no enteró a nadie, y decirle que sí sería mentirle.
  */
-async function comoVaElMensaje({ guardiaId, relevoId, prestadoraId }) {
+async function comoVaElMensaje(db, { guardiaId, relevoId, prestadoraId }) {
   const referencias = [];
   let coordinacionAvisada = false;
 
-  const { data: relevoFallado, error: errorRelevo } = await supabase
+  const { data: relevoFallado, error: errorRelevo } = await db
     .from('incidentes_relevo')
     .select('id, ultima_notificacion_at')
     .eq('prestadora_id', prestadoraId)
@@ -99,7 +114,7 @@ async function comoVaElMensaje({ guardiaId, relevoId, prestadoraId }) {
   }
 
   if (relevoId) {
-    const { data: sinCubrir, error: errorSinCubrir } = await supabase
+    const { data: sinCubrir, error: errorSinCubrir } = await db
       .from('incidentes_turno_sin_cubrir')
       .select('id, ultimo_recordatorio_at')
       .eq('prestadora_id', prestadoraId)
@@ -117,7 +132,7 @@ async function comoVaElMensaje({ guardiaId, relevoId, prestadoraId }) {
 
   if (referencias.length === 0) return { coordinacionAvisada, escalado: false };
 
-  const { data: escalones, error: errorEscalones } = await supabase
+  const { data: escalones, error: errorEscalones } = await db
     .from('escalones_de_alarma_avisados')
     .select('referencia_id')
     .eq('prestadora_id', prestadoraId)

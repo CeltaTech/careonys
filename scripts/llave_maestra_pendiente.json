@@ -144,7 +144,6 @@
                                  "backend/src/utils/entrevistaDePostulacion.js",
                                  "backend/src/utils/equipoDeUnPaciente.js",
                                  "backend/src/utils/equiposConocidos.js",
-                                 "backend/src/utils/estadoDeLaExtension.js",
                                  "backend/src/utils/faseAutomaticaRelevo.js",
                                  "backend/src/utils/generacionSeriesGuardia.js",
                                  "backend/src/utils/habilitarCambioDeClave.js",

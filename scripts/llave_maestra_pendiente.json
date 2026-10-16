@@ -158,7 +158,6 @@
                                  "backend/src/utils/registroDeConsultas.js",
                                  "backend/src/utils/revisarAlertasIA.js",
                                  "backend/src/utils/revisarAusenciasAvisadas.js",
-                                 "backend/src/utils/revisarExtensionesDeTurno.js",
                                  "backend/src/utils/revisarGuardiasSinCubrir.js",
                                  "backend/src/utils/revisarIncidentesTurnoSinCubrir.js",
                                  "backend/src/utils/revisarLlegadasDemoradas.js",

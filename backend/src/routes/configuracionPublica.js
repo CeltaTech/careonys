@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { resolverPrestadoraPublica } from '../middleware/resolverPrestadoraPublica.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
@@ -12,14 +12,19 @@ export const configuracionPublicaRouter = Router({ mergeParams: true });
 // escalas_legales ni datos internos — solo lo que ya es público en el sitio.
 // De qué Prestadora se trata lo dice la propia dirección, y un pedido que no resuelve se
 // rechaza (ver backend/src/middleware/resolverPrestadoraPublica.js).
+//
+// Con la credencial del trabajo de esa Prestadora: la base no le deja leer zonas de ninguna otra.
 configuracionPublicaRouter.get('/', resolverPrestadoraPublica, async (req, res) => {
   const empresa = req.prestadoraPublica;
-  const { data: zonas, error: errorZonas } = await supabase
-    .from('zonas_cobertura')
-    .select('codigo, nombre, categoria')
-    .eq('activa', true)
-    .eq('prestadora_id', req.prestadoraPublica.prestadora_id)
-    .order('orden');
+  const { data: zonas, error: errorZonas } = await enLaPrestadora(
+    empresa.prestadora_id,
+    'datos del sitio público',
+    (db) => db
+      .from('zonas_cobertura')
+      .select('codigo, nombre, categoria')
+      .eq('activa', true)
+      .order('orden'),
+  );
 
   if (errorZonas) {
     return responderError(res, errorZonas);

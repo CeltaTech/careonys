@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 import {
   codigoNuevoParaGuardar,
@@ -131,6 +131,12 @@ export function verificadorDelTelefono(telefono) {
  * si su canal de WhatsApp ya tiene aprobada la plantilla con la que sale el código. Mientras no la
  * tenga, la vía del teléfono no se ofrece y todo el mundo sigue entrando y recuperando por correo.
  */
+// Todo lo de este archivo lo hace el trabajo de la Prestadora de la cuenta, nunca la persona: los
+// códigos, los pedidos y la plantilla no son tablas que alguien con sesión pueda tocar, y la
+// recuperación de la clave llega acá sin sesión ninguna. Lo que corre adentro —el envío por
+// WhatsApp, la suma del intento— recibe la misma conexión sin enterarse.
+const TRABAJO = 'Mandar y comprobar el código al teléfono';
+
 export async function hayViaDeTelefono(prestadoraId) {
   return (await plantillaDelCodigo(prestadoraId)) !== null;
 }
@@ -138,13 +144,13 @@ export async function hayViaDeTelefono(prestadoraId) {
 async function plantillaDelCodigo(prestadoraId) {
   if (!prestadoraId) return null;
 
-  const { data, error } = await supabase
+  const { data, error } = await enLaPrestadora(prestadoraId, TRABAJO, (db) => db
     .from('plantillas_whatsapp')
     .select('id, nombre_interno, idioma, cuerpo_texto, estado')
     .eq('prestadora_id', prestadoraId)
     .eq('nombre_interno', PLANTILLA_DEL_CODIGO)
     .eq('estado', 'aprobada')
-    .maybeSingle();
+    .maybeSingle());
 
   if (error) {
     console.error('codigoAlTelefono: no se pudo resolver la plantilla del código:', error.message);
@@ -153,9 +159,9 @@ async function plantillaDelCodigo(prestadoraId) {
   return data ?? null;
 }
 
-async function pedidosEnLaUltimaHora({ prestadoraId, verificador }) {
+async function pedidosEnLaUltimaHora({ prestadoraId, verificador, db }) {
   const desde = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const { count, error } = await supabase
+  const { count, error } = await db
     .from('pedidos_de_codigo_al_telefono')
     .select('id', { count: 'exact', head: true })
     .eq('prestadora_id', prestadoraId)
@@ -192,15 +198,19 @@ export async function mandarCodigoAlTelefono({ usuario, uso, telefono }) {
   const plantilla = await plantillaDelCodigo(usuario.prestadora_id);
   if (!plantilla) throw new ErrorConMotivo('via_de_telefono_no_disponible');
 
+  return enLaPrestadora(usuario.prestadora_id, TRABAJO, (db) => emitirYMandar({ db, usuario, uso, numero, plantilla }));
+}
+
+async function emitirYMandar({ db, usuario, uso, numero, plantilla }) {
   const verificador = verificadorDelTelefono(numero);
-  if ((await pedidosEnLaUltimaHora({ prestadoraId: usuario.prestadora_id, verificador })) >= topeDeCodigosPorHora()) {
+  if ((await pedidosEnLaUltimaHora({ prestadoraId: usuario.prestadora_id, verificador, db })) >= topeDeCodigosPorHora()) {
     throw new ErrorConMotivo('demasiados_pedidos', 'Se alcanzó el tope de códigos por hora para ese número');
   }
 
   // Los códigos anteriores del mismo acto se dan por anulados antes de emitir el nuevo: pedir dos
   // veces no deja dos códigos vivos, deja uno. Es lo mismo que hace la recuperación por correo con
   // sus enlaces.
-  await supabase
+  await db
     .from('codigos_al_telefono')
     .update({ anulado_en: new Date().toISOString() })
     .eq('prestadora_id', usuario.prestadora_id)
@@ -212,7 +222,7 @@ export async function mandarCodigoAlTelefono({ usuario, uso, telefono }) {
   const minutos = minutosDeVidaDelCodigo();
   const { codigo, campos } = codigoNuevoParaGuardar(vencimientoEnMinutos(minutos));
 
-  const { data: fila, error } = await supabase
+  const { data: fila, error } = await db
     .from('codigos_al_telefono')
     .insert({
       prestadora_id: usuario.prestadora_id,
@@ -227,7 +237,7 @@ export async function mandarCodigoAlTelefono({ usuario, uso, telefono }) {
 
   // El pedido se anota antes de mandar. Si el envío falla, el renglón queda igual: lo que el tope
   // cuenta son los pedidos, y un envío que falló ya costó el intento contra el proveedor.
-  await supabase
+  await db
     .from('pedidos_de_codigo_al_telefono')
     .insert({ prestadora_id: usuario.prestadora_id, telefono_verificador: verificador });
 
@@ -241,7 +251,7 @@ export async function mandarCodigoAlTelefono({ usuario, uso, telefono }) {
   } catch (e) {
     // El código emitido se anula: si no saliera y quedara vivo, sería un secreto de seis dígitos
     // abierto que nadie va a usar. Del error se anota el motivo, nunca el número ni el código.
-    await supabase
+    await db
       .from('codigos_al_telefono')
       .update({ anulado_en: new Date().toISOString() })
       .eq('prestadora_id', usuario.prestadora_id)
@@ -266,7 +276,11 @@ export async function mandarCodigoAlTelefono({ usuario, uso, telefono }) {
 export async function comprobarCodigoDelTelefono({ prestadoraId, usuarioId, uso, codigo }) {
   if (!prestadoraId || !usuarioId || !USOS_DEL_CODIGO.includes(uso)) throw new ErrorConMotivo('faltan_datos');
 
-  const { data: fila, error } = await supabase
+  return enLaPrestadora(prestadoraId, TRABAJO, (db) => tomarElCodigo({ db, prestadoraId, usuarioId, uso, codigo }));
+}
+
+async function tomarElCodigo({ db, prestadoraId, usuarioId, uso, codigo }) {
+  const { data: fila, error } = await db
     .from('codigos_al_telefono')
     .select('id, telefono, codigo_verificador, codigo_expira_en, verificado_en, anulado_en')
     .eq('prestadora_id', prestadoraId)
@@ -292,7 +306,7 @@ export async function comprobarCodigoDelTelefono({ prestadoraId, usuarioId, uso,
 
   // Se toma condicionado a que siga libre: dos pedidos simultáneos con el mismo código no pasan los
   // dos, y un código de un solo uso no queda sirviendo de nuevo.
-  const { data: tomado, error: errorTomar } = await supabase
+  const { data: tomado, error: errorTomar } = await db
     .from('codigos_al_telefono')
     .update({ verificado_en: new Date().toISOString() })
     .eq('prestadora_id', prestadoraId)

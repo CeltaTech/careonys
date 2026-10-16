@@ -1,5 +1,3 @@
-import { supabase } from '../db/connection.js';
-
 // EL PUNTO UNICO DE VERDAD PARA ANOTAR QUIEN LEYO UN DATO DE SALUD.
 //
 // Cada lectura de un dato de salud deja un renglon en `consultas_a_hce`: la Prestadora,
@@ -38,14 +36,14 @@ export function origenDelPedido(req) {
 // `req.usuarioAsistente`...—: trae `id` y `prestadoraId`, y la Prestadora sale de ahi, nunca de lo
 // que venga en el pedido.
 //
-// `cliente` es la conexion con la que se escribe. Mientras el backend entre con la llave maestra
-// es la de siempre; cuando cada pedido pase a la credencial de la persona (paso 9 del plan), se
-// le pasa la de ese pedido y la base empieza a comprobar la Prestadora y la persona por su cuenta.
-export async function anotarConsultaAHce(quien, { pacienteId, categorias, origen }, { cliente = supabase } = {}) {
+// `cliente` es la conexion con la que se escribe: la del pedido de esa persona, para que la base
+// compruebe por su cuenta la Prestadora y la persona. Es obligatoria: sin ella no se anota, y la
+// lectura no se entrega.
+export async function anotarConsultaAHce(quien, { pacienteId, categorias, origen }, { cliente } = {}) {
   const lista = Array.isArray(categorias) ? categorias.filter(Boolean) : [];
   const origenLimpio = String(origen ?? '').split('?')[0].trim();
 
-  if (!quien?.id || !quien?.prestadoraId || !pacienteId || lista.length === 0 || !origenLimpio) {
+  if (!cliente || !quien?.id || !quien?.prestadoraId || !pacienteId || lista.length === 0 || !origenLimpio) {
     throw new Error('No se pudo anotar el acceso a datos de salud: faltan datos para identificarlo');
   }
 

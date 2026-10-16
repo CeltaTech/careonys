@@ -53,7 +53,7 @@ recuperarClaveRouter.post('/:prestadora/segundo-factor', resolverPrestadoraPubli
 
   try {
     if (!token) throw new ErrorConMotivo('faltan_datos');
-    res.json(await segundoFactorDelEnlace(token));
+    res.json(await segundoFactorDelEnlace(token, req.prestadoraPublica.prestadora_id));
   } catch (err) {
     if (err instanceof ErrorConMotivo) return responderError(res, err);
     console.error('Error al pedir el código de la clave nueva:', err.message);
@@ -73,7 +73,7 @@ recuperarClaveRouter.post('/:prestadora/canjear', resolverPrestadoraPublica, asy
     if (!token || !password) throw new ErrorConMotivo('faltan_datos');
     if (!claveAceptable(password)) throw new ErrorConMotivo('password_debil');
 
-    await cambiarClaveConToken(token, password, codigo ?? null);
+    await cambiarClaveConToken(token, password, codigo ?? null, req.prestadoraPublica.prestadora_id);
     res.json({ ok: true });
   } catch (err) {
     if (err instanceof ErrorConMotivo) return responderError(res, err);

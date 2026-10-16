@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 import { correoComparable } from '../config/correoDeAcceso.js';
 import { enviarEmail } from './email.js';
@@ -29,6 +29,8 @@ import { verificadorDelEnlace } from './verificadorDelEnlace.js';
 // reemplaza la clave de una cuenta viva vale tanto como la clave, así que cuanto menos tiempo
 // esté vivo en una casilla de correo, mejor. Siete días serían siete días de puerta abierta.
 const HORAS_VALIDEZ = 2;
+
+const TRABAJO = 'recuperación de la clave';
 
 // Las cuentas que el producto da de alta, y por eso las únicas cuya clave recupera.
 const ROLES_QUE_RECUPERAN_LA_CLAVE = ['coordinador', 'asistente', 'cliente'];
@@ -78,13 +80,13 @@ export async function pedirRecuperacionDeClave(email, prestadoraId) {
   // correo no se repita adentro de una, así que acá hay una fila o ninguna. Y sólo entre la gente
   // de la Prestadora: la clave del Administrador y la del equipo técnico las maneja CeltaTech, y
   // para el producto ese correo es uno más sin cuenta.
-  const { data: usuario } = await supabase
+  const { data: usuario } = await enLaPrestadora(prestadoraId, TRABAJO, (db) => db
     .from('usuarios')
     .select('id, nombre, rol, prestadora_id')
     .eq('prestadora_id', prestadoraId)
     .eq('email', correoComparable(email))
     .in('rol', ROLES_QUE_RECUPERAN_LA_CLAVE)
-    .maybeSingle();
+    .maybeSingle());
 
   if (!usuario) {
     console.warn('recuperacionDeClave: se pidió una clave nueva para un correo sin cuenta');
@@ -104,11 +106,11 @@ async function emitirElEnlaceYAvisar(usuario, email) {
 
   // Los enlaces anteriores de esa cuenta se dan por usados antes de emitir el nuevo: pedir dos
   // veces no deja dos puertas abiertas, deja una.
-  await supabase
+  await enLaPrestadora(usuario.prestadora_id, TRABAJO, (db) => db
     .from('tokens_recuperacion_clave')
     .update({ usado_en: new Date().toISOString() })
     .eq('usuario_id', usuario.id)
-    .is('usado_en', null);
+    .is('usado_en', null));
 
   const token = crypto.randomBytes(32).toString('base64url');
   const expiraEn = new Date(Date.now() + HORAS_VALIDEZ * 60 * 60 * 1000).toISOString();
@@ -126,15 +128,15 @@ async function emitirElEnlaceYAvisar(usuario, email) {
     return;
   }
 
-  const { error } = await supabase
+  const { error } = await enLaPrestadora(usuario.prestadora_id, TRABAJO, (db) => db
     .from('tokens_recuperacion_clave')
-    .insert({ usuario_id: usuario.id, token: verificadorDelEnlace(token), expira_en: expiraEn });
+    .insert({ usuario_id: usuario.id, token: verificadorDelEnlace(token), expira_en: expiraEn }));
   if (error) throw new Error(error.message);
 
   const marca = await marcaDeLaPrestadora(usuario.prestadora_id);
   const textos = mensajeDelSistema(
     'recuperacion_clave',
-    idiomaDelDestinatario(null, await idiomaDeLaPrestadora(supabase, usuario.prestadora_id)),
+    idiomaDelDestinatario(null, await enLaPrestadora(usuario.prestadora_id, TRABAJO, (db) => idiomaDeLaPrestadora(db, usuario.prestadora_id))),
     {
       nombre: usuario.nombre,
       link,
@@ -150,8 +152,8 @@ async function emitirElEnlaceYAvisar(usuario, email) {
  * El enlace, comprobado. Los tres motivos viajan sin detalle, igual que en la activación: el código
  * ya dice todo lo que hay para decir, y los tres se resuelven distinto.
  */
-async function filaDelEnlace(token) {
-  const { data: fila, error } = await supabase
+async function filaDelEnlace(db, token) {
+  const { data: fila, error } = await db
     .from('tokens_recuperacion_clave')
     .select('id, usuario_id, expira_en, usado_en')
     .eq('token', verificadorDelEnlace(token))
@@ -163,12 +165,11 @@ async function filaDelEnlace(token) {
   return fila;
 }
 
-async function cuentaDelEnlace(usuarioId) {
-  // SIN PRESTADORA A PROPÓSITO
-  // Corre adentro de la Prestadora de la dirección (`middleware/resolverPrestadoraPublica.js`), así
-  // que la base sólo deja ver cuentas de ella: el enlace de otra no llega hasta acá. De la fila sale
-  // la Prestadora que acota lo que viene después.
-  const { data } = await supabase
+async function cuentaDelEnlace(db, usuarioId) {
+  // Corre con el trabajo de la Prestadora de la dirección (`middleware/resolverPrestadoraPublica.js`),
+  // así que la base sólo deja ver cuentas de ella: el enlace de otra no llega hasta acá. De la fila
+  // sale la Prestadora que acota lo que viene después.
+  const { data } = await db
     .from('usuarios')
     .select('id, nombre, email, telefono, telefono_verificado_en, prestadora_id')
     .eq('id', usuarioId)
@@ -204,12 +205,17 @@ async function puertaAbiertaParaLaCuenta(cuenta) {
  *
  * @returns {Promise<{ requiereCodigo: boolean, vence: string|null }>}
  */
-export async function segundoFactorDelEnlace(token) {
-  const fila = await filaDelEnlace(token);
+export async function segundoFactorDelEnlace(token, prestadoraId) {
+  if (!prestadoraId) throw new ErrorConMotivo('token_invalido');
+  return enLaPrestadora(prestadoraId, TRABAJO, (db) => segundoFactorAdentro(db, token));
+}
+
+async function segundoFactorAdentro(db, token) {
+  const fila = await filaDelEnlace(db, token);
 
   // La cuenta se lee primero porque de su fila sale la Prestadora, y sin ella no se puede preguntar
   // por la puerta abierta.
-  const cuenta = await cuentaDelEnlace(fila.usuario_id);
+  const cuenta = await cuentaDelEnlace(db, fila.usuario_id);
   if (!cuenta) return { requiereCodigo: false, vence: null };
 
   if (await puertaAbiertaParaLaCuenta(cuenta)) {
@@ -231,15 +237,20 @@ export async function segundoFactorDelEnlace(token) {
  * (`poner_clave_con_codigo`), igual que en la activación: o pasan las dos o ninguna, y dos pedidos
  * simultáneos con el mismo enlace no pasan los dos.
  */
-export async function cambiarClaveConToken(token, claveNueva, codigo = null) {
-  const fila = await filaDelEnlace(token);
+export async function cambiarClaveConToken(token, claveNueva, codigo, prestadoraId) {
+  if (!prestadoraId) throw new ErrorConMotivo('token_invalido');
+  return enLaPrestadora(prestadoraId, TRABAJO, (db) => cambiarAdentro(db, token, claveNueva, codigo ?? null));
+}
+
+async function cambiarAdentro(db, token, claveNueva, codigo) {
+  const fila = await filaDelEnlace(db, token);
 
   // EL SEGUNDO FACTOR SE COMPRUEBA ANTES DE TOMAR EL ENLACE. Al revés, escribir mal el código
   // quemaría el enlace y dejaría a la persona sin forma de entrar, que es justo lo contrario de lo
   // que esta pantalla viene a resolver.
   // LA CUENTA SE LEE UNA SOLA VEZ, y de su fila sale la Prestadora de todo lo que viene abajo. Sin
   // cuenta no se cambia ninguna clave: falla cerrado.
-  const cuenta = await cuentaDelEnlace(fila.usuario_id);
+  const cuenta = await cuentaDelEnlace(db, fila.usuario_id);
   if (!cuenta) throw new ErrorConMotivo('token_invalido');
 
   const puerta = await puertaAbiertaParaLaCuenta(cuenta);
@@ -253,7 +264,7 @@ export async function cambiarClaveConToken(token, claveNueva, codigo = null) {
     });
   }
 
-  const { data: usuarioId, error: errorClave } = await supabase.rpc('poner_clave_con_codigo', {
+  const { data: usuarioId, error: errorClave } = await db.rpc('poner_clave_con_codigo', {
     p_uso: 'recuperacion',
     p_codigo: token,
     p_clave: claveNueva,

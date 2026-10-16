@@ -12,6 +12,7 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const USUARIO = '22222222-2222-2222-2222-222222222222';
@@ -58,6 +59,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma
 // en el momento en que se importa.
@@ -114,8 +116,13 @@ describe('las calificaciones no dependen de la modalidad', () => {
     assert.equal(estado, 200);
     assert.equal(cuerpo.calificaciones[0].asistente_nombre, 'Asistente inventada');
 
+    // Los nombres van con la credencial del trabajo, y esa credencial es de la Prestadora de la
+    // sesión: con la llave maestra o con otra Prestadora, la prueba falla.
     const nombres = llamadas.find((l) => l.clave === 'GET /rest/v1/asistentes');
-    assert.match(nombres.busqueda, new RegExp(`prestadora_id=eq\\.${PRESTADORA}`), 'los nombres se leyeron sin la Prestadora');
+    const cuerpo64 = nombres.credencial.replace('Bearer ', '').split('.')[1];
+    const credencial = JSON.parse(Buffer.from(cuerpo64, 'base64url').toString());
+    assert.equal(credencial.role, 'trabajo_sin_persona');
+    assert.equal(credencial.prestadora_id, PRESTADORA, 'los nombres se leyeron fuera de la Prestadora');
     noPreguntoPorLaModalidad();
   });
 
@@ -124,8 +131,9 @@ describe('las calificaciones no dependen de la modalidad', () => {
     const { estado } = await pedir('PATCH', `/${CALIFICACION}/visibilidad`, { visible_publica: false });
     assert.equal(estado, 200);
 
+    // Con la credencial de quien pide: la base decide si la calificación es de su Prestadora.
     const escritura = llamadas.find((l) => l.clave === 'PATCH /rest/v1/calificaciones_asistente');
-    assert.match(escritura.busqueda, new RegExp(`prestadora_id=eq\\.${PRESTADORA}`), 'se escribió sin la Prestadora');
+    assert.equal(escritura.credencial, sesionDePrueba(USUARIO), 'se escribió con otra credencial');
     assert.deepEqual(escritura.cuerpo, { visible_publica: false });
     noPreguntoPorLaModalidad();
   });

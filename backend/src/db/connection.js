@@ -97,10 +97,14 @@ export const supabase = new Proxy({}, {
   },
 });
 
-/** Corre `hacer` adentro de una Prestadora, con la credencial de ese trabajo. */
+/**
+ * Corre `hacer` adentro de una Prestadora, con la credencial de ese trabajo. `hacer` recibe además
+ * esa conexión, para quien la quiera usar sin pasar por `supabase`.
+ */
 export function enLaPrestadora(prestadoraId, trabajo, hacer) {
   if (!prestadoraId) throw new Error(`enLaPrestadora: falta la Prestadora (${trabajo})`);
-  return contexto.run(conexionDelTrabajo({ prestadoraId, trabajo }), hacer);
+  const conexion = conexionDelTrabajo({ prestadoraId, trabajo });
+  return contexto.run(conexion, () => hacer(conexion));
 }
 
 /**

@@ -12,12 +12,17 @@
 // tener el dato: un cero, un guion o una resta hecha con lo poco que haya anotado de este lado se
 // leen como si fueran ciertos. La ausencia del dato es la respuesta.
 //
+// CON QUÉ CREDENCIAL. La pregunta la hace el trabajo de esa Prestadora, que sólo puede leer la
+// regla de la suya. Ni el Cliente ni quien trabaja en el Panel pueden leer esa configuración —es de
+// la administración—, y con su credencial la base contestaría «nada configurado»: el número que no
+// había que entregar.
+//
 // FALLA CERRADO. Un error de la base sube como error y la ruta lo contesta como cualquier otro:
 // no se decide «entonces lo lleva este sistema», porque esa suposición es la que termina
 // entregando el número que no había que entregar.
 // ---------------------------------------------------------------------------
 
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { sigueLaCobranza } from './facturacionDeClientes.js';
 
 /**
@@ -27,11 +32,11 @@ import { sigueLaCobranza } from './facturacionDeClientes.js';
  * una decisión que se toma.
  */
 export async function laCobranzaLaLlevaOtroSoftware(prestadoraId) {
-  const { data, error } = await supabase
+  const { data, error } = await enLaPrestadora(prestadoraId, 'ver quién lleva la cobranza', (db) => db
     .from('configuracion_facturacion_clientes')
     .select('regla')
     .eq('prestadora_id', prestadoraId)
-    .maybeSingle();
+    .maybeSingle());
   if (error) throw new Error(error.message);
   return !sigueLaCobranza(data?.regla);
 }

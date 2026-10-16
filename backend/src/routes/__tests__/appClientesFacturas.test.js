@@ -26,6 +26,7 @@ import { strict as assert } from 'node:assert';
 import { beforeEach, describe, it, after } from 'node:test';
 import { createServer } from 'node:http';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const USUARIO = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
@@ -65,6 +66,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 const { default: express } = await import('express');
 await import('express-async-errors');
@@ -309,6 +311,16 @@ describe('cuando la cobranza la lleva otro software', () => {
 
     const [url] = consultasA('configuracion_facturacion_clientes');
     assert.ok(url.includes(`prestadora_id=eq.${PRESTADORA}`), url);
+  });
+
+  it('la pregunta la hace el trabajo de esa Prestadora, no la llave maestra ni el Cliente', async () => {
+    respuestas.set('GET /rest/v1/saldos_cliente', []);
+    await pedir('/facturas');
+
+    const [autorizacion] = credencialesDe('configuracion_facturacion_clientes');
+    const adentro = JSON.parse(Buffer.from(autorizacion.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+    assert.equal(adentro.role, 'trabajo_sin_persona');
+    assert.equal(adentro.prestadora_id, PRESTADORA);
   });
 });
 

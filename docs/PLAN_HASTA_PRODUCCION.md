@@ -1394,16 +1394,16 @@ texto que va a salir.
 
 **101. Usted** — El puntaje interno de calidad del Asistente, que sólo ve el Admin: ¿sigue en pie ahora que existen las estrellas que pone el Cliente? Si sigue, faltan dos respuestas: qué lo compone, y la garantía de que ninguna acción automática dependa de él. El lugar donde iría ya está hecho (`datos_reservados_asistente` y su permiso).
 
-**102. Usted** — El alta y la baja de Prestadoras: Match expone una puerta firmada para que CeltaTech dé de alta y de baja clientes; Careonys no tiene nada parecido. ¿Se construye la misma, o se siguen dando de alta a mano?
-
 **Usted — para analizar, no para resolver ahora.** Un registro de cambios general: qué dato
 cambió, de qué valor a qué valor, quién y cuándo, para cualquier tabla que lo necesite. Hoy no
 existe: cada cambio que se registra tiene su tabla propia (`auditoria_*`, el historial del registro
 clínico). El primero que lo va a necesitar es el cambio de la fecha prevista de vuelta de una
 ausencia; si el general se decide antes de construirlo, ese cambio se anota ahí.
 
-**103.** **Por esa misma puerta tiene que entrar qué tiene habilitado cada Prestadora, y hoy no
-entra nada.** CeltaTech le vende un plan, y ese plan dice qué puede usar. Eso se lo informa al
+**103.** **El alta de una Prestadora entra por una puerta firmada, como la de Match**
+(`Careonys-Marketplace/supabase/functions/alta-y-baja/index.ts`), y hoy Careonys no tiene
+ninguna: nada en el backend crea una Prestadora. **Por esa misma puerta tiene que entrar qué tiene
+habilitado cada Prestadora, y hoy no entra nada.** CeltaTech le vende un plan, y ese plan dice qué puede usar. Eso se lo informa al
 producto. **Y ahí termina: CeltaTech no tiene injerencia, bajo ninguna circunstancia, en el
 negocio de ninguna Prestadora.** Le habilita funciones del software y nada más; qué cobra, a
 quién, cuánto y con qué condiciones lo decide ella sola.
@@ -1434,7 +1434,24 @@ entera o una parte. **Por qué, Careonys no lo sabe ni lo pregunta**: recibe la 
 trabajando y Clientes con acceso abierto. Cortar el acceso y dejarlo todo en su lugar no es lo
 mismo que darlo de baja.
 
-**105.** Construirlo, todo de este lado: recibir qué tiene habilitado cada Prestadora y que su
+**105.** Construirlo, todo de este lado. **Primero, la puerta y el alta**, con el contrato de
+`celtatech/docs/MODELO_COMERCIAL_CELTATECH.md` §6.1 y la firma de §6.2: con la firma mal o sin
+clave configurada no abre; la referencia de CeltaTech se guarda como texto opaco y el alta repetida
+con la misma referencia devuelve la misma Prestadora. Con lo que llega, el alta:
+
+- **Crea la Prestadora** con sus datos y la moneda de su país.
+- **Le elige la casilla de envío** —`utils/casillaDeEnvio.js`— y le abre el reenvío de las
+  respuestas a la casilla que ella declaró —`utils/reenvioDeRespuestas.js`—.
+- **Le elige el rótulo** con que la nombran los formularios públicos y los enlaces de activación
+  —`utils/direccionDeLaPrestadora.js`—.
+- **Crea la cuenta del Administrador** con los datos que manda CeltaTech
+  —`utils/cuentasPanel.js`—.
+- **Si cualquier parte falla, deshace todo**, reenvío incluido.
+- **Queda auditada**, y devuelve el identificador de la Organización.
+
+Las dos primeras piezas quedan en el código para esto, sin nadie que las llame hasta entonces.
+
+**Después,** recibir qué tiene habilitado cada Prestadora y que su
 Configuración ofrezca solamente eso; y recibir la orden de deshabilitar, sin la comprobación que
 lleva el apagado de ella, haciendo con lo que quede en curso lo que se conteste arriba. **La lista
 de capacidades la declara este producto**, que es el que sabe qué significan; del otro lado son

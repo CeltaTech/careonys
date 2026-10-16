@@ -177,7 +177,6 @@
                                  "backend/src/utils/reenvioDeLaCola.js",
                                  "backend/src/utils/reenvioDeRespuestas.js",
                                  "backend/src/utils/registrarUsoIA.js",
-                                 "backend/src/utils/registroDeActividad.js",
                                  "backend/src/utils/registroDeConsultas.js",
                                  "backend/src/utils/respuestaAutomaticaWhatsapp.js",
                                  "backend/src/utils/revisarAlertasIA.js",

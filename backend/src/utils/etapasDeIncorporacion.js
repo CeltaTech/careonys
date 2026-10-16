@@ -19,8 +19,10 @@
 // SIN ETAPAS NO SE EMPIEZA. Una Prestadora sin ninguna etapa activa no tiene proceso de
 // incorporación, y crear un Asistente sin una sola fila de verificación lo dejaría aprobado de
 // hecho. Se corta con un motivo que la pantalla sabe explicar, en vez de inventarle un proceso.
+//
+// CON QUÉ CONEXIÓN. Las etapas se leen con `db`, la misma conexión con la que quien llama da de
+// alta al Asistente: así la lista sale con los mismos permisos que la fila que se va a insertar.
 
-import { supabase } from '../db/connection.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 
 /** Cuánto de lo que se arma queda ya cumplido. */
@@ -41,8 +43,8 @@ export const APROBADAS = {
  *
  * @throws ErrorConMotivo `sin_etapas_incorporacion` si no tiene ninguna activa.
  */
-export async function etapasActivasDeLaPrestadora(prestadoraId) {
-  const { data, error } = await supabase
+export async function etapasActivasDeLaPrestadora(db, prestadoraId) {
+  const { data, error } = await db
     .from('etapas_incorporacion_asistente')
     .select('clave')
     .eq('prestadora_id', prestadoraId)
@@ -64,14 +66,15 @@ export async function etapasActivasDeLaPrestadora(prestadoraId) {
  * Devuelve las filas y no las inserta: quien llama ya está adentro de su propia secuencia de
  * altas y decide qué hacer si algo falla.
  *
+ * @param db           la conexión de quien da el alta
  * @param asistenteId  el Asistente recién creado
  * @param prestadoraId la Prestadora dueña del proceso
  * @param aprobadas    una de `APROBADAS`
  * @param revisadoPor  quién queda como responsable de lo que se da por cumplido. Hace falta
  *                     solamente cuando algo se aprueba.
  */
-export async function filasDeIncorporacion(asistenteId, prestadoraId, { aprobadas, revisadoPor = null } = {}) {
-  const claves = await etapasActivasDeLaPrestadora(prestadoraId);
+export async function filasDeIncorporacion(db, asistenteId, prestadoraId, { aprobadas, revisadoPor = null } = {}) {
+  const claves = await etapasActivasDeLaPrestadora(db, prestadoraId);
   const momento = new Date().toISOString();
 
   return claves.map((clave, indice) => {

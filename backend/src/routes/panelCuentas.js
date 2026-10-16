@@ -176,7 +176,7 @@ panelCuentasRouter.post('/asistente', requiereRolPanel, exigirOrganizacionActiva
     if (errorAsistente) throw errorDeLaIdentidad(errorAsistente, 'asistente');
     asistenteId = asistenteNuevo.id;
 
-    const filasVerificacion = await filasDeIncorporacion(asistenteId, prestadoraId, {
+    const filasVerificacion = await filasDeIncorporacion(db, asistenteId, prestadoraId, {
       aprobadas: APROBADAS.LA_PRIMERA,
       revisadoPor: req.usuarioPanel.id,
     });

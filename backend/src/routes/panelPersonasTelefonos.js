@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { requierePermiso } from '../utils/permisos.js';
-import { clienteDelPedido, supabase } from '../db/connection.js';
+import { clienteDelPedido, enLaPrestadora } from '../db/connection.js';
 import { responderError } from '../utils/errorConMotivo.js';
 import { conElPreferidoMarcado, telefonoLimpio } from '../utils/telefonosDeLaPersona.js';
 
@@ -28,11 +28,12 @@ import { conElPreferidoMarcado, telefonoLimpio } from '../utils/telefonosDeLaPer
 // su Prestadora, y sólo si tiene el permiso de ver el Directorio de Personas. Por eso esas
 // consultas no llevan el filtro de la Prestadora de la sesión.
 //
-// EL PREFERIDO SE RESUELVE CON LA LLAVE MAESTRA. Hay que mirar el teléfono de las cuentas de la
-// Prestadora, y la política de `usuarios` sólo le deja ver a cada persona su propia fila.
-//
-// ESCRIBIR SIGUE CON LA LLAVE MAESTRA, con la Prestadora de la sesión puesta por este código con
-// `acotarAPrestadora` y nunca un valor que venga en el pedido (ver el comentario de cada consulta).
+// EL PREFERIDO Y LAS ESCRITURAS VAN CON LA CREDENCIAL DEL TRABAJO DE LA PRESTADORA ACTIVA, que la
+// base acota a esa Prestadora. El preferido mira el teléfono de las cuentas, y la política de
+// `usuarios` le deja ver a cada persona sólo su propia fila. Y para escribir, la base pide
+// `editar_personas` y además `ver_personas` —para la Ficha y para el renglón que la escritura
+// devuelve—: son dos permisos que cada Prestadora configura por separado, y un Coordinador con el
+// primero y sin el segundo recibiría 404. El de editar lo comprueba esta ruta antes de entrar.
 //
 // La Ficha se comprueba primero: quien pide una de otra Prestadora recibe lo mismo que quien pide
 // una que no existe.
@@ -52,16 +53,10 @@ async function personaVisible(db, personaId) {
 }
 
 /** La Ficha, si es de la Organización de esta sesión. Si no, nada, y desde afuera se ve igual.
-    La usan las escrituras, que siguen con la llave maestra (ver el encabezado). */
-async function personaDeLaPrestadora(personaId, usuarioPanel) {
+    La usan las escrituras, con la credencial del trabajo (ver el encabezado). */
+async function personaDeLaPrestadora(db, personaId, usuarioPanel) {
   if (!personaId) return null;
-  // Con la llave maestra: las políticas de escritura (`los_telefonos_los_carga_quien_puede`,
-  // `los_telefonos_los_corrige_quien_puede`, `los_telefonos_los_saca_quien_puede`) piden
-  // `editar_personas`, pero la Ficha (`personas_las_lee_su_organizacion`) y el renglón que la
-  // escritura devuelve (`los_telefonos_los_lee_su_organizacion`) piden además `ver_personas`. Son
-  // dos permisos que cada Prestadora configura por separado, y un Coordinador con el primero y
-  // sin el segundo recibiría 404. Si escribir exige también ver se decide aparte.
-  let query = supabase.from('personas').select('id, prestadora_id').eq('id', personaId);
+  let query = db.from('personas').select('id, prestadora_id').eq('id', personaId);
   query = acotarAPrestadora(query, usuarioPanel);
   const { data } = await query.maybeSingle();
   return data ?? null;
@@ -83,7 +78,10 @@ panelPersonasTelefonosRouter.get(
     const { data, error } = await db.from('telefonos_de_la_persona').select(COLUMNAS).order('created_at');
     if (error) return responderError(res, error);
 
-    res.json({ telefonos: await conElPreferidoMarcado(supabase, data ?? [], req.usuarioPanel.prestadoraId) });
+    const prestadoraId = req.usuarioPanel.prestadoraId;
+    const telefonos = await enLaPrestadora(prestadoraId, 'teléfono preferido de las Fichas', (trabajo) =>
+      conElPreferidoMarcado(trabajo, data ?? [], prestadoraId));
+    res.json({ telefonos });
   },
 );
 
@@ -105,7 +103,9 @@ panelPersonasTelefonosRouter.get(
       .order('created_at');
     if (error) return responderError(res, error);
 
-    res.json({ telefonos: await conElPreferidoMarcado(supabase, data ?? [], persona.prestadora_id) });
+    const telefonos = await enLaPrestadora(persona.prestadora_id, 'teléfono preferido de las Fichas', (trabajo) =>
+      conElPreferidoMarcado(trabajo, data ?? [], persona.prestadora_id));
+    res.json({ telefonos });
   },
 );
 
@@ -119,26 +119,22 @@ panelPersonasTelefonosRouter.post(
     const telefono = telefonoLimpio(req.body?.telefono);
     if (!telefono) return res.status(400).json({ error: 'faltan_datos', motivo: 'faltan_datos' });
 
-    const persona = await personaDeLaPrestadora(req.params.personaId, req.usuarioPanel);
-    if (!persona) return noEncontrado(res);
+    await enLaPrestadora(req.usuarioPanel.prestadoraId, 'teléfonos de las Fichas', async (db) => {
+      const persona = await personaDeLaPrestadora(db, req.params.personaId, req.usuarioPanel);
+      if (!persona) return noEncontrado(res);
 
-    // Acá no se comprueba si el número ya está cargado en otra Ficha, y es a propósito: se puede
-    // repetir. Ver el encabezado.
-    // Con la llave maestra: las políticas de escritura (`los_telefonos_los_carga_quien_puede`,
-    // `los_telefonos_los_corrige_quien_puede`, `los_telefonos_los_saca_quien_puede`) piden
-    // `editar_personas`, pero la Ficha (`personas_las_lee_su_organizacion`) y el renglón que la
-    // escritura devuelve (`los_telefonos_los_lee_su_organizacion`) piden además `ver_personas`. Son
-    // dos permisos que cada Prestadora configura por separado, y un Coordinador con el primero y
-    // sin el segundo recibiría 404. Si escribir exige también ver se decide aparte.
-    const { data, error } = await supabase
-      .from('telefonos_de_la_persona')
-      .insert({ prestadora_id: persona.prestadora_id, persona_id: persona.id, telefono })
-      .select(COLUMNAS)
-      .single();
-    if (error) return responderError(res, error);
+      // Acá no se comprueba si el número ya está cargado en otra Ficha, y es a propósito: se puede
+      // repetir. Ver el encabezado.
+      const { data, error } = await db
+        .from('telefonos_de_la_persona')
+        .insert({ prestadora_id: persona.prestadora_id, persona_id: persona.id, telefono })
+        .select(COLUMNAS)
+        .single();
+      if (error) return responderError(res, error);
 
-    const [conPreferido] = await conElPreferidoMarcado(supabase, [data], persona.prestadora_id);
-    res.json({ ok: true, telefono: conPreferido });
+      const [conPreferido] = await conElPreferidoMarcado(db, [data], persona.prestadora_id);
+      res.json({ ok: true, telefono: conPreferido });
+    });
   },
 );
 
@@ -152,32 +148,28 @@ panelPersonasTelefonosRouter.patch(
     const telefono = telefonoLimpio(req.body?.telefono);
     if (!telefono) return res.status(400).json({ error: 'faltan_datos', motivo: 'faltan_datos' });
 
-    const persona = await personaDeLaPrestadora(req.params.personaId, req.usuarioPanel);
-    if (!persona) return noEncontrado(res);
+    await enLaPrestadora(req.usuarioPanel.prestadoraId, 'teléfonos de las Fichas', async (db) => {
+      const persona = await personaDeLaPrestadora(db, req.params.personaId, req.usuarioPanel);
+      if (!persona) return noEncontrado(res);
 
-    // Los tres filtros van juntos. El de la Organización es el que impide corregir el teléfono de
-    // una Ficha ajena aunque alguien conozca su identificador.
-    // Con la llave maestra: las políticas de escritura (`los_telefonos_los_carga_quien_puede`,
-    // `los_telefonos_los_corrige_quien_puede`, `los_telefonos_los_saca_quien_puede`) piden
-    // `editar_personas`, pero la Ficha (`personas_las_lee_su_organizacion`) y el renglón que la
-    // escritura devuelve (`los_telefonos_los_lee_su_organizacion`) piden además `ver_personas`. Son
-    // dos permisos que cada Prestadora configura por separado, y un Coordinador con el primero y
-    // sin el segundo recibiría 404. Si escribir exige también ver se decide aparte.
-    const { data, error } = await supabase
-      .from('telefonos_de_la_persona')
-      .update({ telefono, updated_at: new Date().toISOString() })
-      .eq('id', req.params.telefonoId)
-      .eq('prestadora_id', persona.prestadora_id)
-      .eq('persona_id', persona.id)
-      .select(COLUMNAS)
-      .maybeSingle();
-    if (error) return responderError(res, error);
-    if (!data) {
-      return res.status(404).json({ error: 'telefono_no_encontrado', motivo: 'telefono_no_encontrado' });
-    }
+      // Los tres filtros van juntos. El de la Organización es el que impide corregir el teléfono de
+      // una Ficha ajena aunque alguien conozca su identificador.
+      const { data, error } = await db
+        .from('telefonos_de_la_persona')
+        .update({ telefono, updated_at: new Date().toISOString() })
+        .eq('id', req.params.telefonoId)
+        .eq('prestadora_id', persona.prestadora_id)
+        .eq('persona_id', persona.id)
+        .select(COLUMNAS)
+        .maybeSingle();
+      if (error) return responderError(res, error);
+      if (!data) {
+        return res.status(404).json({ error: 'telefono_no_encontrado', motivo: 'telefono_no_encontrado' });
+      }
 
-    const [conPreferido] = await conElPreferidoMarcado(supabase, [data], persona.prestadora_id);
-    res.json({ ok: true, telefono: conPreferido });
+      const [conPreferido] = await conElPreferidoMarcado(db, [data], persona.prestadora_id);
+      res.json({ ok: true, telefono: conPreferido });
+    });
   },
 );
 
@@ -185,26 +177,27 @@ panelPersonasTelefonosRouter.patch(
 // Ficha, deja de ser el preferido y se lo puede restaurar.
 function marcarElUso(fueraDeUso) {
   return async (req, res) => {
-    const persona = await personaDeLaPrestadora(req.params.personaId, req.usuarioPanel);
-    if (!persona) return noEncontrado(res);
+    await enLaPrestadora(req.usuarioPanel.prestadoraId, 'teléfonos de las Fichas', async (db) => {
+      const persona = await personaDeLaPrestadora(db, req.params.personaId, req.usuarioPanel);
+      if (!persona) return noEncontrado(res);
 
-    // Con la llave maestra, por lo mismo que corregir (ver el comentario de esa consulta).
-    const ahora = new Date().toISOString();
-    const { data, error } = await supabase
-      .from('telefonos_de_la_persona')
-      .update({ fuera_de_uso_at: fueraDeUso ? ahora : null, updated_at: ahora })
-      .eq('id', req.params.telefonoId)
-      .eq('prestadora_id', persona.prestadora_id)
-      .eq('persona_id', persona.id)
-      .select(COLUMNAS)
-      .maybeSingle();
-    if (error) return responderError(res, error);
-    if (!data) {
-      return res.status(404).json({ error: 'telefono_no_encontrado', motivo: 'telefono_no_encontrado' });
-    }
+      const ahora = new Date().toISOString();
+      const { data, error } = await db
+        .from('telefonos_de_la_persona')
+        .update({ fuera_de_uso_at: fueraDeUso ? ahora : null, updated_at: ahora })
+        .eq('id', req.params.telefonoId)
+        .eq('prestadora_id', persona.prestadora_id)
+        .eq('persona_id', persona.id)
+        .select(COLUMNAS)
+        .maybeSingle();
+      if (error) return responderError(res, error);
+      if (!data) {
+        return res.status(404).json({ error: 'telefono_no_encontrado', motivo: 'telefono_no_encontrado' });
+      }
 
-    const [conPreferido] = await conElPreferidoMarcado(supabase, [data], persona.prestadora_id);
-    res.json({ ok: true, telefono: conPreferido });
+      const [conPreferido] = await conElPreferidoMarcado(db, [data], persona.prestadora_id);
+      res.json({ ok: true, telefono: conPreferido });
+    });
   };
 }
 
@@ -232,28 +225,24 @@ panelPersonasTelefonosRouter.delete(
   exigirOrganizacionActiva,
   escribeLasPersonas,
   async (req, res) => {
-    const persona = await personaDeLaPrestadora(req.params.personaId, req.usuarioPanel);
-    if (!persona) return noEncontrado(res);
+    await enLaPrestadora(req.usuarioPanel.prestadoraId, 'teléfonos de las Fichas', async (db) => {
+      const persona = await personaDeLaPrestadora(db, req.params.personaId, req.usuarioPanel);
+      if (!persona) return noEncontrado(res);
 
-    // Con la llave maestra: las políticas de escritura (`los_telefonos_los_carga_quien_puede`,
-    // `los_telefonos_los_corrige_quien_puede`, `los_telefonos_los_saca_quien_puede`) piden
-    // `editar_personas`, pero la Ficha (`personas_las_lee_su_organizacion`) y el renglón que la
-    // escritura devuelve (`los_telefonos_los_lee_su_organizacion`) piden además `ver_personas`. Son
-    // dos permisos que cada Prestadora configura por separado, y un Coordinador con el primero y
-    // sin el segundo recibiría 404. Si escribir exige también ver se decide aparte.
-    const { data, error } = await supabase
-      .from('telefonos_de_la_persona')
-      .delete()
-      .eq('id', req.params.telefonoId)
-      .eq('prestadora_id', persona.prestadora_id)
-      .eq('persona_id', persona.id)
-      .select('id')
-      .maybeSingle();
-    if (error) return responderError(res, error);
-    if (!data) {
-      return res.status(404).json({ error: 'telefono_no_encontrado', motivo: 'telefono_no_encontrado' });
-    }
+      const { data, error } = await db
+        .from('telefonos_de_la_persona')
+        .delete()
+        .eq('id', req.params.telefonoId)
+        .eq('prestadora_id', persona.prestadora_id)
+        .eq('persona_id', persona.id)
+        .select('id')
+        .maybeSingle();
+      if (error) return responderError(res, error);
+      if (!data) {
+        return res.status(404).json({ error: 'telefono_no_encontrado', motivo: 'telefono_no_encontrado' });
+      }
 
-    res.json({ ok: true });
+      res.json({ ok: true });
+    });
   },
 );

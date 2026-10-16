@@ -2,7 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { esDocumentoDeCese, rutaEnElDeposito } from '../utils/documentosDeCese.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
@@ -20,11 +20,11 @@ import { responderError } from '../utils/errorConMotivo.js';
 // ruta con los datos del cese, nunca con lo que venga en el pedido, y el tipo sale de una lista
 // cerrada.
 //
-// CON LA LLAVE MAESTRA, TODAVÍA. El cese, el depósito y el enlace temporal van con la llave
-// maestra, después de comprobar que el cese es de la Prestadora de quien pide. La política
-// `admin_gestiona_ceses` de la base deja ver y escribir los ceses sólo a Superadmin y a la
-// administración, y la del depósito (`documentos_cese_los_alcanza_quien_ve_el_cese`) pide un cese
-// que quien pide vea; esta ruta la usa también quien coordina. Si eso se estrecha se decide aparte.
+// CON LA CREDENCIAL DEL TRABAJO DE LA PRESTADORA ACTIVA. El cese, el depósito y el enlace temporal
+// van con esa credencial, que la base acota a los ceses de esa Prestadora y, en el depósito, a la
+// carpeta de un cese suyo. Con la de quien pide no alcanzaría: la política `admin_gestiona_ceses`
+// deja ver y escribir los ceses sólo a la administración, y esta ruta la usa también quien
+// coordina. Del cese, el trabajo sólo lee y anota: no da de alta ni borra ninguno.
 //
 // EL PDF LO SIGUE ARMANDO EL NAVEGADOR. Armarlo también acá sería tener el generador escrito dos
 // veces, y las dos versiones se separarían el día que alguien corrija una sola: entonces el
@@ -44,11 +44,8 @@ const upload = multer({
   },
 });
 
-async function ceseDeLaPrestadora(ceseId, usuarioPanel) {
-  // Con la llave maestra: la política `admin_gestiona_ceses` deja ver los ceses sólo a Superadmin
-  // y a la administración (`rol = 'admin_prestadora'`), y esta ruta la usa también quien coordina.
-  // Se decide aparte.
-  let query = supabase
+async function ceseDeLaPrestadora(db, ceseId, usuarioPanel) {
+  let query = db
     .from('ceses')
     .select('id, prestadora_id, documentos_generados')
     .eq('id', ceseId);
@@ -82,48 +79,44 @@ panelCesesRouter.post(
       return res.status(400).json({ error: 'documento_invalido', motivo: 'documento_invalido' });
     }
 
-    const cese = await ceseDeLaPrestadora(req.params.id, req.usuarioPanel);
-    if (!cese) {
-      return res.status(404).json({ error: 'cese_no_encontrado', motivo: 'cese_no_encontrado' });
-    }
+    await enLaPrestadora(req.usuarioPanel.prestadoraId, 'documentos del cese', async (db) => {
+      const cese = await ceseDeLaPrestadora(db, req.params.id, req.usuarioPanel);
+      if (!cese) {
+        return res.status(404).json({ error: 'cese_no_encontrado', motivo: 'cese_no_encontrado' });
+      }
 
-    // Con la llave maestra: la política del depósito `documentos_cese_los_alcanza_quien_ve_el_cese`
-    // pide un cese que quien pide vea, y por `admin_gestiona_ceses` quien coordina no ve ninguno.
-    // Se decide aparte. La ruta empieza por la Prestadora del cese, que ya se comprobó que es la
-    // de quien pide.
-    const ruta = rutaEnElDeposito(cese.prestadora_id, cese.id, tipo);
-    const { error: errorSubida } = await supabase.storage
-      .from(BUCKET)
-      .upload(ruta, req.file.buffer, { contentType: 'application/pdf', upsert: true });
-    if (errorSubida) {
-      return responderError(res, errorSubida);
-    }
+      // La ruta empieza por la Prestadora del cese, que ya se comprobó que es la de quien pide.
+      const ruta = rutaEnElDeposito(cese.prestadora_id, cese.id, tipo);
+      const { error: errorSubida } = await db.storage
+        .from(BUCKET)
+        .upload(ruta, req.file.buffer, { contentType: 'application/pdf', upsert: true });
+      if (errorSubida) {
+        return responderError(res, errorSubida);
+      }
 
-    // La columna guarda un documento por tipo, con el día en que se generó. Se lee y se vuelve a
-    // escribir entera porque la base no ofrece mezclar un pedazo de JSON desde acá; el riesgo de
-    // que dos subidas simultáneas se pisen existe, y es chico: los tres documentos de un cese los
-    // baja una persona de a uno, apretando un botón por vez.
-    const documentos = { ...cese.documentos_generados, [tipo]: { ruta, generado_en: new Date().toISOString() } };
+      // La columna guarda un documento por tipo, con el día en que se generó. Se lee y se vuelve a
+      // escribir entera porque la base no ofrece mezclar un pedazo de JSON desde acá; el riesgo de
+      // que dos subidas simultáneas se pisen existe, y es chico: los tres documentos de un cese los
+      // baja una persona de a uno, apretando un botón por vez.
+      const documentos = { ...cese.documentos_generados, [tipo]: { ruta, generado_en: new Date().toISOString() } };
 
-    // Con la llave maestra: la política `admin_gestiona_ceses` deja escribir los ceses sólo a
-    // Superadmin y a la administración, y quien coordina también guarda estos documentos. Se
-    // decide aparte.
-    let apuntar = supabase
-      .from('ceses')
-      .update({ documentos_generados: documentos })
-      .eq('id', cese.id);
-    apuntar = acotarAPrestadora(apuntar, req.usuarioPanel);
-    const { data: apuntado, error: errorUpdate } = await apuntar.select('id');
-    if (errorUpdate) {
-      return responderError(res, errorUpdate);
-    }
-    // El archivo ya está arriba: si la fila del cese ya no está, ese documento queda sin dueño y
-    // nadie lo va a encontrar. Eso se dice, no se contesta que salió todo bien.
-    if (!apuntado?.length) {
-      return res.status(404).json({ error: 'cese_no_encontrado', motivo: 'cese_no_encontrado' });
-    }
+      let apuntar = db
+        .from('ceses')
+        .update({ documentos_generados: documentos })
+        .eq('id', cese.id);
+      apuntar = acotarAPrestadora(apuntar, req.usuarioPanel);
+      const { data: apuntado, error: errorUpdate } = await apuntar.select('id');
+      if (errorUpdate) {
+        return responderError(res, errorUpdate);
+      }
+      // El archivo ya está arriba: si la fila del cese ya no está, ese documento queda sin dueño y
+      // nadie lo va a encontrar. Eso se dice, no se contesta que salió todo bien.
+      if (!apuntado?.length) {
+        return res.status(404).json({ error: 'cese_no_encontrado', motivo: 'cese_no_encontrado' });
+      }
 
-    res.json({ ok: true, documentos_generados: documentos });
+      return res.json({ ok: true, documentos_generados: documentos });
+    });
   },
 );
 
@@ -133,28 +126,27 @@ panelCesesRouter.get('/:id/documento-url', requiereRolPanel, exigirOrganizacionA
     return res.status(400).json({ error: 'documento_invalido', motivo: 'documento_invalido' });
   }
 
-  const cese = await ceseDeLaPrestadora(req.params.id, req.usuarioPanel);
-  if (!cese) {
-    return res.status(404).json({ error: 'cese_no_encontrado', motivo: 'cese_no_encontrado' });
-  }
+  await enLaPrestadora(req.usuarioPanel.prestadoraId, 'documentos del cese', async (db) => {
+    const cese = await ceseDeLaPrestadora(db, req.params.id, req.usuarioPanel);
+    if (!cese) {
+      return res.status(404).json({ error: 'cese_no_encontrado', motivo: 'cese_no_encontrado' });
+    }
 
-  // La ruta se arma acá con los datos del cese, no se lee la que vino en el pedido: así no hay
-  // forma de pedir un enlace temporal a un archivo de otra Prestadora. Lo guardado sólo dice si ese
-  // documento existe.
-  const guardado = cese.documentos_generados?.[tipo];
-  if (!guardado) {
-    return res.status(404).json({ error: 'documento_no_generado', motivo: 'documento_no_generado' });
-  }
+    // La ruta se arma acá con los datos del cese, no se lee la que vino en el pedido: así no hay
+    // forma de pedir un enlace temporal a un archivo de otra Prestadora. Lo guardado sólo dice si
+    // ese documento existe.
+    const guardado = cese.documentos_generados?.[tipo];
+    if (!guardado) {
+      return res.status(404).json({ error: 'documento_no_generado', motivo: 'documento_no_generado' });
+    }
 
-  // Con la llave maestra, por la misma política del depósito
-  // (`documentos_cese_los_alcanza_quien_ve_el_cese`), que a quien coordina le niega el enlace. Se
-  // decide aparte.
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUrl(rutaEnElDeposito(cese.prestadora_id, cese.id, tipo), 60);
-  if (error) {
-    return responderError(res, error);
-  }
+    const { data, error } = await db.storage
+      .from(BUCKET)
+      .createSignedUrl(rutaEnElDeposito(cese.prestadora_id, cese.id, tipo), 60);
+    if (error) {
+      return responderError(res, error);
+    }
 
-  res.json({ url: data.signedUrl });
+    return res.json({ url: data.signedUrl });
+  });
 });

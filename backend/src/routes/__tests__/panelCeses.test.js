@@ -6,23 +6,22 @@
  *
  * POR QUÉ EXISTE ESTA PRUEBA. Adentro del depósito `documentos-cese` hay documentos de baja con
  * nombre, documento y montos. La ruta (`../panelCeses.js`) entra a la base y al depósito con la
- * llave maestra, todavía: la política `admin_gestiona_ceses` de la base deja los ceses sólo a
- * Superadmin y a la administración, y esta ruta la usa también quien coordina. Entonces lo que
- * separa una Prestadora de otra es el filtro de la Prestadora escrito en cada consulta del cese, y
- * lo que hay que sostener acá es que ese filtro esté. Y dos decisiones más: que el tipo de
- * documento salga de una lista cerrada —si no, quien manda el pedido elige el nombre del archivo
- * adentro del depósito— y que la ruta del enlace temporal se arme con los datos del cese y no
- * con nada que venga de afuera.
+ * credencial del trabajo de la Prestadora activa: la política `admin_gestiona_ceses` de la base
+ * deja los ceses sólo a la administración, y esta ruta la usa también quien coordina. Lo que hay
+ * que sostener acá es que cada pedido vaya con esa credencial y con ninguna otra. Y dos decisiones
+ * más: que el tipo de documento salga de una lista cerrada —si no, quien manda el pedido elige el
+ * nombre del archivo adentro del depósito— y que la ruta del enlace temporal se arme con los datos
+ * del cese y no con nada que venga de afuera.
  *
  * Por eso la base es de mentira y contesta por HTTP como la de verdad: además del resultado se
- * mira **qué se le pidió y con qué credencial**. La base de mentira imita las dos cosas que hacen
- * falta: con la llave maestra contesta los ceses que pide el filtro de la dirección, y todos si no
- * hay filtro; con la credencial de quien pide imita `admin_gestiona_ceses`, que no le contesta
- * nada a quien coordina.
+ * mira **qué se le pidió y con qué credencial**. La base de mentira imita las dos políticas que
+ * importan: con la credencial del trabajo contesta los ceses de la Prestadora que lleva adentro;
+ * con la de quien pide imita `admin_gestiona_ceses`, que no le contesta nada a quien coordina. La
+ * prueba arranca sin la llave maestra, así que un pedido que volviera a ella fallaría al pedirla.
  *
- * Con el sistema roto —una consulta sin el filtro de la Prestadora, una que vuelva a la
- * credencial de quien pide, o el tipo tomado tal como viene— las pruebas del cese ajeno, las de
- * quien coordina y la del tipo inventado dan al revés.
+ * Con el sistema roto —un pedido con otra credencial, una consulta sin el filtro de la Prestadora,
+ * o el tipo tomado tal como viene— las pruebas de la credencial, las de quien coordina y la del
+ * tipo inventado dan al revés.
  *
  * Datos inventados, como manda CLAUDE.md §6.
  */
@@ -30,6 +29,7 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const OTRA_PRESTADORA = '99999999-9999-9999-9999-999999999999';
@@ -99,7 +99,7 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma
 // en el momento en que se importa, y con la dirección que haya en ese instante.
@@ -165,21 +165,34 @@ beforeEach(() => {
   respuestas.set('POST /rest/v1/rpc/tiene_permiso_de', () => true);
 });
 
-/** La llave maestra, tal como la manda la conexión del backend. */
-const LLAVE_MAESTRA = 'Bearer clave-de-mentira';
+/** Lo que dice adentro la credencial con la que llegó un pedido, o `null` si no se puede leer. */
+function credencialDe(llamada) {
+  try {
+    const cuerpo64 = llamada.credencial.replace('Bearer ', '').split('.')[1];
+    return JSON.parse(Buffer.from(cuerpo64, 'base64url').toString());
+  } catch {
+    return null;
+  }
+}
 
-/** Los ceses que hay en la base, para leerlos o escribirlos. Con la llave maestra la base contesta
- *  los que pide el filtro de la Prestadora de la dirección, y todos si no hay filtro: si la ruta
- *  perdiera el filtro, el cese ajeno aparecería. Con la credencial de quien pide imita
+/** Que el pedido haya ido con la credencial del trabajo de esta Prestadora, y no con otra. */
+function fueConElTrabajo(llamada) {
+  const credencial = credencialDe(llamada);
+  assert.equal(credencial?.role, 'trabajo_sin_persona', `${llamada.clave} fue con otra credencial`);
+  assert.equal(credencial.prestadora_id, PRESTADORA, `${llamada.clave} fue fuera de la Prestadora`);
+}
+
+/** Los ceses que hay en la base, para leerlos o escribirlos. Con la credencial del trabajo la base
+ *  contesta los de la Prestadora que lleva adentro. Con la de quien pide imita
  *  `admin_gestiona_ceses`: sólo los de su Prestadora, y a quien coordina ninguno. */
 function cesesEnLaBase(...filas) {
-  const contestar = (_cuerpo, credencial, url) => {
-    if (credencial !== LLAVE_MAESTRA) {
-      if (rolDelUsuario === 'coordinador') return [];
-      return filas.filter((fila) => fila.prestadora_id === PRESTADORA);
+  const contestar = (_cuerpo, autorizacion) => {
+    const credencial = credencialDe({ credencial: autorizacion });
+    if (credencial?.role === 'trabajo_sin_persona') {
+      return filas.filter((fila) => fila.prestadora_id === credencial.prestadora_id);
     }
-    const filtro = url.match(/prestadora_id=eq\.([^&]+)/);
-    return filtro ? filas.filter((fila) => fila.prestadora_id === decodeURIComponent(filtro[1])) : filas;
+    if (rolDelUsuario === 'coordinador') return [];
+    return filas.filter((fila) => fila.prestadora_id === PRESTADORA);
   };
   respuestas.set('GET /rest/v1/ceses', contestar);
   respuestas.set('PATCH /rest/v1/ceses', (cuerpo, credencial, url) =>
@@ -282,7 +295,7 @@ describe('guardar un documento de cese', () => {
     const consultas = consultasDeCeses();
     assert.ok(consultas.length >= 2);
     for (const consulta of consultas) {
-      assert.equal(consulta.credencial, LLAVE_MAESTRA, `${consulta.clave} no fue con la llave maestra`);
+      fueConElTrabajo(consulta);
       assert.ok(consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`), `${consulta.clave} sin la Prestadora: ${consulta.url}`);
     }
     // La escritura apunta al cese comprobado, y a ningún otro.
@@ -299,7 +312,7 @@ describe('guardar un documento de cese', () => {
     assert.equal(estado, 200);
     assert.ok(cuerpo.documentos_generados[TIPO_LIQUIDACION]);
     const subida = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/'));
-    assert.equal(subida.credencial, LLAVE_MAESTRA);
+    fueConElTrabajo(subida);
     assert.equal(subida.clave, `POST /storage/v1/object/documentos-cese/${PRESTADORA}/${CESE}/${TIPO_LIQUIDACION}.pdf`);
   });
 
@@ -396,7 +409,8 @@ describe('el enlace temporal del documento guardado', () => {
 
     assert.equal(estado, 200);
     const pedidoDeEnlace = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/sign/'));
-    assert.equal(pedidoDeEnlace.credencial, LLAVE_MAESTRA);
+    fueConElTrabajo(pedidoDeEnlace);
+    fueConElTrabajo(consultasDeCeses()[0]);
   });
 
   it('quien no es del Panel no pide enlaces temporales', async () => {

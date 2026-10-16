@@ -1061,6 +1061,7 @@ appClientesRouter.post('/acceso/:accesoId/baja', requiereRolCliente, exigeVisibl
   if (!elClienteEntraAMatch()) return responderError(res, new ErrorConMotivo('intermediacion_no_habilitado'));
   const resultado = await darDeBajaElAcceso({
     accesoId: req.params.accesoId,
+    prestadoraId: req.usuarioCliente.prestadoraId,
     clienteId: req.usuarioCliente.clienteId,
   });
 

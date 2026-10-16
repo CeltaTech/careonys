@@ -26,9 +26,13 @@
 
    NO SE DA DE BAJA DOS VECES. `cancelada_en` es la marca. Con esa fecha puesta se contesta lo
    guardado y no se llama al proveedor: un segundo clic sobre el mismo botón —o sobre el botón que
-   quedó en una pantalla vieja— no tiene que volver a salir hacia afuera. */
+   quedó en una pantalla vieja— no tiene que volver a salir hacia afuera.
 
-import { supabase } from '../db/connection.js';
+   CON QUÉ CREDENCIAL. Leer el acceso, pedir la credencial de la pasarela y anotar la baja van con
+   la credencial del trabajo de la Prestadora del acceso, que la base acota a ella. Por eso la
+   Prestadora es obligatoria: sin ella no se consulta nada. */
+
+import { enLaPrestadora } from '../db/connection.js';
 import { obtenerAdaptador } from '../pasarelas/index.js';
 
 /** Los motivos por los que una baja no se puede hacer. Son códigos, no frases: la frase que lee la
@@ -48,30 +52,36 @@ export const MOTIVO_BAJA = {
  *
  * @param {object} argumentos
  * @param {string} argumentos.accesoId      Cuál acceso.
+ * @param {string} argumentos.prestadoraId De qué Prestadora es el acceso. Sin ella no se sigue.
  * @param {string} [argumentos.clienteId]   Quién lo da de baja, cuando lo hace el Cliente desde su
  *                                          aplicación. Se comprueba contra la fila.
- * @param {string} [argumentos.prestadoraId] De qué Prestadora, cuando la baja entra por el Panel.
  * @returns {Promise<{ok: boolean, motivo?: string, detalle?: string, baja?: object,
  *                    yaEstaba?: boolean}>}
  */
 export async function darDeBajaElAcceso({ accesoId, clienteId = null, prestadoraId = null }) {
-  let consulta = supabase
+  // El alcance lo pone quien llama y no se resuelve acá: un Cliente sólo puede dar de baja lo
+  // suyo, y el Panel sólo lo de su Prestadora. Sin Prestadora no se sigue: una baja sin alcance
+  // daría de baja el acceso de cualquiera con sólo saber su identificador.
+  if (!prestadoraId) {
+    return { ok: false, motivo: MOTIVO_BAJA.ACCESO_INEXISTENTE };
+  }
+
+  return enLaPrestadora(prestadoraId, 'dar de baja un acceso', (db) =>
+    darDeBajaAdentro(db, { accesoId, clienteId, prestadoraId }),
+  );
+}
+
+async function darDeBajaAdentro(db, { accesoId, clienteId, prestadoraId }) {
+  let consulta = db
     .from('accesos_intermediacion')
     .select(
       'id, prestadora_id, cliente_id, estado, proveedor, referencia_externa, alta_en_pasarela, ' +
         'cancelada_en, vigente_hasta, proximo_cobro, gratis_hasta, ' +
         'formas_de_cobro_intermediacion(renueva_sola)'
     )
-    .eq('id', accesoId);
-
-  // El alcance lo pone quien llama y no se resuelve acá: un Cliente sólo puede dar de baja lo
-  // suyo, y el Panel sólo lo de su Prestadora. Sin ninguno de los dos no se sigue: una baja sin
-  // alcance daría de baja el acceso de cualquiera con sólo saber su identificador.
+    .eq('id', accesoId)
+    .eq('prestadora_id', prestadoraId);
   if (clienteId) consulta = consulta.eq('cliente_id', clienteId);
-  if (prestadoraId) consulta = consulta.eq('prestadora_id', prestadoraId);
-  if (!clienteId && !prestadoraId) {
-    return { ok: false, motivo: MOTIVO_BAJA.ACCESO_INEXISTENTE };
-  }
 
   const { data: acceso, error: errorAcceso } = await consulta.maybeSingle();
 
@@ -98,11 +108,11 @@ export async function darDeBajaElAcceso({ accesoId, clienteId = null, prestadora
     Boolean(acceso.alta_en_pasarela) && Boolean(acceso.proveedor) && Boolean(acceso.referencia_externa);
 
   if (hayQueAvisarleAlProveedor) {
-    const corte = await cancelarEnElRiel(acceso);
+    const corte = await cancelarEnElRiel(db, acceso);
     if (!corte.ok) return corte;
   }
 
-  const { error: errorGuardar } = await supabase
+  const { error: errorGuardar } = await db
     .from('accesos_intermediacion')
     .update({
       cancelada_en: new Date().toISOString(),
@@ -134,7 +144,7 @@ export async function darDeBajaElAcceso({ accesoId, clienteId = null, prestadora
 /** Le dice al proveedor que deje de cobrar. Ante cualquier falla no se escribe nada: mejor un
  *  acceso que sigue como estaba y una baja que se puede volver a intentar, que uno dado de baja de
  *  este lado y cobrándose del otro. */
-async function cancelarEnElRiel(acceso) {
+async function cancelarEnElRiel(db, acceso) {
   let adaptador;
   try {
     adaptador = obtenerAdaptador(acceso.proveedor);
@@ -146,7 +156,7 @@ async function cancelarEnElRiel(acceso) {
   // ninguna, y no la necesita.
   let credencial = null;
   if (acceso.proveedor !== 'efectivo_manual') {
-    const { data, error } = await supabase.rpc('leer_credencial_pasarela_pago', {
+    const { data, error } = await db.rpc('leer_credencial_pasarela_pago', {
       p_prestadora_id: acceso.prestadora_id,
       p_proveedor: acceso.proveedor,
     });

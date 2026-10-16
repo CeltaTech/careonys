@@ -16,6 +16,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const ACCESO = '33333333-3333-3333-3333-333333333333';
@@ -30,6 +31,15 @@ let llamadas = [];
 /** Lo que quedó anotado del lado del servidor. Se junta para no ensuciar la salida. */
 let anotados = [];
 
+/** Lo que dice adentro una credencial, o `null` si no se puede leer. */
+function leerCredencial(autorizacion) {
+  try {
+    return JSON.parse(Buffer.from(autorizacion.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+  } catch {
+    return null;
+  }
+}
+
 const baseFalsa = createServer((req, res) => {
   let crudo = '';
   req.on('data', (parte) => {
@@ -38,7 +48,12 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null });
+    llamadas.push({
+      clave,
+      url: req.url,
+      cuerpo: crudo ? JSON.parse(crudo) : null,
+      credencial: leerCredencial(req.headers.authorization ?? ''),
+    });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada() : preparada;
@@ -56,7 +71,7 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // Un Stripe de mentira. Alcanza para lo que se prueba: que se lo llame cuando corresponde, que no
 // se lo llame cuando no, y qué pasa cuando rechaza.
@@ -123,7 +138,8 @@ beforeEach(() => {
   respuestas.set('POST /rest/v1/rpc/leer_credencial_pasarela_pago', () => CREDENCIAL);
 });
 
-const darDeBaja = (extra = {}) => darDeBajaElAcceso({ accesoId: ACCESO, clienteId: CLIENTE, ...extra });
+const darDeBaja = (extra = {}) =>
+  darDeBajaElAcceso({ accesoId: ACCESO, prestadoraId: PRESTADORA, clienteId: CLIENTE, ...extra });
 
 function guardado() {
   return llamadas.find((l) => l.clave === 'PATCH /rest/v1/accesos_intermediacion');
@@ -227,6 +243,13 @@ describe('el acceso que no se da de baja', () => {
     assert.equal(llamadas.length, 0);
   });
 
+  it('sin Prestadora tampoco, aunque se diga el Cliente', async () => {
+    const resultado = await darDeBajaElAcceso({ accesoId: ACCESO, clienteId: CLIENTE });
+    assert.equal(resultado.ok, false);
+    assert.equal(resultado.motivo, MOTIVO_BAJA.ACCESO_INEXISTENTE);
+    assert.equal(llamadas.length, 0);
+  });
+
   it('una forma que no se renueva sola no tiene nada que apagar', async () => {
     respuestas.set('GET /rest/v1/accesos_intermediacion', () =>
       accesoVivo({ formas_de_cobro_intermediacion: { renueva_sola: false } })
@@ -271,5 +294,27 @@ describe('cuando la baja falla en el medio', () => {
     assert.equal(resultado.motivo, MOTIVO_BAJA.PROVEEDOR_DESCONOCIDO);
     assert.equal(llamadas.some((l) => l.clave.includes('leer_credencial_pasarela_pago')), false);
     assert.equal(guardado(), undefined);
+  });
+});
+
+describe('con qué credencial', () => {
+  it('leer, pedir la credencial de la pasarela y anotar van adentro de la Prestadora', async () => {
+    const resultado = await darDeBaja();
+
+    assert.equal(resultado.ok, true);
+    const claves = llamadas.map((l) => l.clave);
+    for (const clave of [
+      'GET /rest/v1/accesos_intermediacion',
+      'POST /rest/v1/rpc/leer_credencial_pasarela_pago',
+      'PATCH /rest/v1/accesos_intermediacion',
+    ]) {
+      assert.ok(claves.includes(clave), `tendría que haber pedido ${clave}`);
+    }
+    for (const llamada of llamadas) {
+      assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', `${llamada.clave} fue con otra credencial`);
+      assert.equal(llamada.credencial.prestadora_id, PRESTADORA, `${llamada.clave} fue fuera de la Prestadora`);
+    }
+    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_intermediacion');
+    assert.ok(lectura.url.includes(`prestadora_id=eq.${PRESTADORA}`), 'la lectura no filtró por la Prestadora');
   });
 });

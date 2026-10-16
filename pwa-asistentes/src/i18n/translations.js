@@ -259,6 +259,13 @@ export const T = {
       aceptada: 'Turno aceptado.',
       ver_el_turno: 'Ver turno',
       nivel_complejidad: 'Nivel de complejidad',
+      // La línea de arriba de la tarjeta de un turno fijo y la de un reemplazo.
+      turno_fijo: '{dias}, de {inicio} a {fin}',
+      reemplazo: 'Del {desde} al {hasta} · {n} turnos',
+      reemplazo_un_turno: 'Del {desde} al {hasta} · 1 turno',
+      reemplazo_sin_fin: 'A partir del {desde} · {n} turnos',
+      reemplazo_sin_fin_un_turno: 'A partir del {desde} · 1 turno',
+      dias: { lunes: 'lunes', martes: 'martes', miercoles: 'miércoles', jueves: 'jueves', viernes: 'viernes', sabado: 'sábado', domingo: 'domingo' },
     },
     // La advertencia de que la dirección de esta guardia no es la de siempre. Lo dibuja
     // components/DomicilioTemporal.jsx, que es el mismo archivo en las dos aplicaciones, así
@@ -951,6 +958,12 @@ export const T = {
       aceptada: 'Shift accepted.',
       ver_el_turno: 'View shift',
       nivel_complejidad: 'Complexity level',
+      turno_fijo: '{dias}, {inicio} to {fin}',
+      reemplazo: 'From {desde} to {hasta} · {n} shifts',
+      reemplazo_un_turno: 'From {desde} to {hasta} · 1 shift',
+      reemplazo_sin_fin: 'Starting {desde} · {n} shifts',
+      reemplazo_sin_fin_un_turno: 'Starting {desde} · 1 shift',
+      dias: { lunes: 'Monday', martes: 'Tuesday', miercoles: 'Wednesday', jueves: 'Thursday', viernes: 'Friday', sabado: 'Saturday', domingo: 'Sunday' },
     },
     domicilio: {
       temporal: 'Temporary address',
@@ -1586,6 +1599,12 @@ export const T = {
       aceptada: 'Plantão aceito.',
       ver_el_turno: 'Ver plantão',
       nivel_complejidad: 'Nível de complexidade',
+      turno_fijo: '{dias}, das {inicio} às {fin}',
+      reemplazo: 'De {desde} a {hasta} · {n} turnos',
+      reemplazo_un_turno: 'De {desde} a {hasta} · 1 turno',
+      reemplazo_sin_fin: 'A partir de {desde} · {n} turnos',
+      reemplazo_sin_fin_un_turno: 'A partir de {desde} · 1 turno',
+      dias: { lunes: 'segunda-feira', martes: 'terça-feira', miercoles: 'quarta-feira', jueves: 'quinta-feira', viernes: 'sexta-feira', sabado: 'sábado', domingo: 'domingo' },
     },
     domicilio: {
       temporal: 'Endereço temporário',

@@ -1035,18 +1035,6 @@ sale ningún dato; es un dato de una Organización viajando adentro del pedido d
 
 ---
 
-## La asignación de turnos
-
-**46.** Los turnos habituales —los que se repiten, como todos los lunes y miércoles de 8 a 14— se
-asignan como los de un solo día: el Asistente los acepta o los rechaza, pero **una sola vez y
-enteros**, no día por día. Lo mismo el reemplazo durante una ausencia: el que cubre acepta una
-sola vez todos los días que cubre. Hoy los dos quedan asignados en el momento, sin preguntarle
-(`backend/src/utils/cubrirGuardia.js:71`). **Espera su permiso** para cómo se ve en la aplicación
-del Asistente y en el Panel: sin eso no se puede aceptar, y la parte de la base sola dejaría el
-turno sin nadie que lo pueda tomar.
-
----
-
 ## El tablero de Situación operativa
 
 **Lo decidió el Desarrollador renglón por renglón.** Cada renglón es una tarjeta, una lista o un

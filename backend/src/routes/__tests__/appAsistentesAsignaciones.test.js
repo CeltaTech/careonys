@@ -18,6 +18,7 @@ import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { olvidarPedidos } from '../../middleware/topeDePedidos.js';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const USUARIO = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
@@ -55,6 +56,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 const SESION = sesionDePrueba(USUARIO);
+prepararCredencialDePrueba();
 
 const { default: express } = await import('express');
 await import('express-async-errors');
@@ -246,5 +248,96 @@ describe('al aceptar un turno que era de otro Asistente', () => {
     respuestas.set('GET /rest/v1/asignaciones_de_turno', conAnterior(LEGAJO));
     const { intentoAvisar } = await aceptarMirandoElRegistro();
     assert.equal(intentoAvisar, false);
+  });
+});
+
+/** De qué rol y de qué Prestadora es la credencial de una llamada a la base de mentira. */
+function quienLlamo(llamada) {
+  try {
+    return JSON.parse(Buffer.from(llamada.credencial.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+  } catch {
+    return null;
+  }
+}
+
+// El turno fijo y el reemplazo se contestan una sola vez. La base devuelve sin turno al aceptarlos,
+// porque no son de un día.
+describe('el reemplazo durante una ausencia', () => {
+  const AUSENCIA = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
+  const TITULAR = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
+
+  beforeEach(() => {
+    respuestas.set('POST /rest/v1/rpc/aceptar_asignacion', () => null);
+    respuestas.set('GET /rest/v1/asignaciones_de_turno', () => [
+      { id: 'asignacion-1', estado: 'sin_responder', serie_id: null, ausencia_id: AUSENCIA, asistente_anterior_id: null },
+    ]);
+  });
+
+  it('la lista lo trae con sus fechas y cuántos turnos son', async () => {
+    respuestas.set('POST /rest/v1/rpc/turnos_asignados_sin_responder', () => [{
+      ...TURNO, tipo: 'ausencia', guardia_id: null, ausencia_id: AUSENCIA, desde: '2099-11-03', hasta: '2099-11-14', cantidad: 8,
+    }]);
+    const { cuerpo } = await pedir();
+    const [asignacion] = cuerpo.asignaciones;
+    assert.equal(asignacion.tipo, 'ausencia');
+    assert.equal(asignacion.desde, '2099-11-03');
+    assert.equal(asignacion.hasta, '2099-11-14');
+    assert.equal(asignacion.cantidad, 8);
+  });
+
+  it('al aceptarlo, los turnos del ausente se pasan con el trabajo de su Prestadora', async () => {
+    respuestas.set('GET /rest/v1/coberturas_de_ausencia', () => [{
+      id: 'cobertura-1', prestadora_id: PRESTADORA, ausencia_id: AUSENCIA, serie_id: null, asistente_sustituto_id: LEGAJO,
+      ausencias: { id: AUSENCIA, asistente_id: TITULAR, fecha_inicio: '2099-11-03', fecha_fin: '2099-11-14', fecha_vuelta_real: null },
+    }]);
+    const { estado, cuerpo } = await pedir('/asignacion-1/responder', { respuesta: 'acepta' });
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.guardiaId, null);
+    const lecturas = llamadas.filter((l) => l.clave === 'GET /rest/v1/coberturas_de_ausencia');
+    assert.ok(lecturas.length > 0, 'no se leyeron las coberturas aceptadas');
+    for (const lectura of lecturas) {
+      assert.equal(quienLlamo(lectura)?.role, 'trabajo_sin_persona', 'las coberturas no se leyeron con el trabajo');
+      assert.equal(quienLlamo(lectura)?.prestadora_id, PRESTADORA, 'las coberturas se leyeron fuera de la Prestadora');
+      assert.ok(lectura.url.includes(`ausencia_id=eq.${AUSENCIA}`));
+      assert.ok(lectura.url.includes('aceptada_at=not.is.null'), 'se aplicaron coberturas sin aceptar');
+    }
+  });
+
+  it('al rechazarlo, sus coberturas sin aceptar quedan objetadas con el trabajo de su Prestadora', async () => {
+    const { estado } = await pedir('/asignacion-1/responder', { respuesta: 'rechaza', motivoId: MOTIVO });
+    assert.equal(estado, 200);
+    const marcas = llamadas.filter((l) => l.clave === 'PATCH /rest/v1/coberturas_de_ausencia');
+    assert.equal(marcas.length, 1, 'las coberturas no quedaron objetadas');
+    assert.equal(quienLlamo(marcas[0])?.role, 'trabajo_sin_persona');
+    assert.equal(quienLlamo(marcas[0])?.prestadora_id, PRESTADORA);
+    assert.ok(marcas[0].url.includes(`ausencia_id=eq.${AUSENCIA}`));
+    assert.ok(marcas[0].url.includes(`asistente_sustituto_id=eq.${LEGAJO}`));
+    assert.ok(marcas[0].url.includes('aceptada_at=is.null'), 'objetó coberturas ya aceptadas');
+    assert.ok(JSON.parse(marcas[0].cuerpo).objetada_at);
+  });
+
+  it('el rechazo de un turno de un día no toca ninguna cobertura', async () => {
+    respuestas.set('GET /rest/v1/asignaciones_de_turno', () => [{ id: 'asignacion-1', estado: 'sin_responder', ausencia_id: null }]);
+    await pedir('/asignacion-1/responder', { respuesta: 'rechaza', motivoId: MOTIVO });
+    assert.equal(llamadas.filter((l) => l.clave === 'PATCH /rest/v1/coberturas_de_ausencia').length, 0);
+  });
+});
+
+describe('el turno fijo', () => {
+  it('la lista lo trae con sus días de la semana', async () => {
+    respuestas.set('POST /rest/v1/rpc/turnos_asignados_sin_responder', () => [{
+      ...TURNO, tipo: 'serie', guardia_id: null, serie_id: 'serie-1', dias_semana: ['lunes', 'miercoles'],
+    }]);
+    const { cuerpo } = await pedir();
+    assert.equal(cuerpo.asignaciones[0].tipo, 'serie');
+    assert.deepEqual(cuerpo.asignaciones[0].dias_semana, ['lunes', 'miercoles']);
+  });
+
+  it('al aceptarlo no se escribe nada con el trabajo: la base ya lo puso a su nombre', async () => {
+    respuestas.set('POST /rest/v1/rpc/aceptar_asignacion', () => null);
+    respuestas.set('GET /rest/v1/asignaciones_de_turno', () => [{ serie_id: 'serie-1', ausencia_id: null, asistente_anterior_id: null }]);
+    const { estado } = await pedir('/asignacion-1/responder', { respuesta: 'acepta' });
+    assert.equal(estado, 200);
+    assert.equal(llamadas.filter((l) => quienLlamo(l)?.role === 'trabajo_sin_persona').length, 0);
   });
 });

@@ -19,6 +19,7 @@ const MIGRACIONES_POSTERIORES = [
   '20261107000000_codigo_de_prestadora_en_la_activacion.sql',
   '20261118000000_los_turnos_se_asignan.sql',
   '20261121000000_avisos_de_la_asignacion.sql',
+  '20261226000000_avisos_del_turno_fijo_y_del_reemplazo.sql',
 ];
 
 function filasPosteriores() {

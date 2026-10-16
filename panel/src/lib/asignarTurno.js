@@ -35,6 +35,27 @@ export async function asignarTurno(guardiaId, asistenteId, t = null) {
 }
 
 /**
+ * Asignar un turno fijo, o dejarlo sin asignar. Igual que un turno: queda esperando que el
+ * Asistente lo acepte, y lo contesta una sola vez para todos sus días.
+ *
+ * @param {string} serieId
+ * @param {string | null} asistenteId  A quién se le asigna, o `null` para dejarlo sin asignar.
+ * @param {object} t  Los textos del idioma en que está el Panel.
+ * @returns {Promise<{ error: string | null }>}
+ */
+export async function asignarSerie(serieId, asistenteId, t = null) {
+  try {
+    await llamarApiPanel(`/guardias/series/${serieId}/asignar`, {
+      method: 'POST',
+      body: JSON.stringify({ asistente_id: asistenteId ?? null }),
+    });
+    return { error: null };
+  } catch (e) {
+    return { error: mensajeDeLaAsignacion(e, t) };
+  }
+}
+
+/**
  * Llevar un turno con Asistente al de otro Paciente. El original queda sin nadie y con la alarma
  * abierta, y para el otro Paciente nace un turno nuevo que el mismo Asistente tiene que aceptar.
  * Lo hace la base, todo junto o nada; pasa por el backend por los avisos.
@@ -64,20 +85,40 @@ function mensajeDeLaAsignacion(e, t) {
 
 /**
  * A quién está esperando cada turno: el Asistente al que se le asignó y que todavía no respondió.
+ * Un turno de un turno fijo espera también a quien se le asignó el turno fijo entero; si ese día
+ * tiene una asignación propia, manda ésa.
  *
- * @param {string[]} guardiaIds
+ * @param {{ id: string, serie_id?: string | null }[]} guardias
  * @returns {Promise<Map<string, string>>} guardia → Asistente.
  */
-export async function cargarAsignacionesPendientes(guardiaIds) {
+export async function cargarAsignacionesPendientes(guardias) {
   const mapa = new Map();
-  if (!guardiaIds?.length) return mapa;
-  const { data, error } = await supabase
-    .from('asignaciones_de_turno')
-    .select('guardia_id, asistente_id')
-    .in('guardia_id', guardiaIds)
-    .eq('estado', 'sin_responder');
-  if (error) throw error;
-  for (const fila of data ?? []) mapa.set(fila.guardia_id, fila.asistente_id);
+  if (!guardias?.length) return mapa;
+  const guardiaIds = guardias.map((g) => g.id);
+  const serieIds = [...new Set(guardias.map((g) => g.serie_id).filter(Boolean))];
+
+  const [porTurno, porSerie] = await Promise.all([
+    supabase
+      .from('asignaciones_de_turno')
+      .select('guardia_id, asistente_id')
+      .in('guardia_id', guardiaIds)
+      .eq('estado', 'sin_responder'),
+    serieIds.length
+      ? supabase
+          .from('asignaciones_de_turno')
+          .select('serie_id, asistente_id')
+          .in('serie_id', serieIds)
+          .eq('estado', 'sin_responder')
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (porTurno.error) throw porTurno.error;
+  if (porSerie.error) throw porSerie.error;
+
+  const delTurnoFijo = new Map((porSerie.data ?? []).map((fila) => [fila.serie_id, fila.asistente_id]));
+  for (const g of guardias) {
+    if (g.serie_id && delTurnoFijo.has(g.serie_id)) mapa.set(g.id, delTurnoFijo.get(g.serie_id));
+  }
+  for (const fila of porTurno.data ?? []) mapa.set(fila.guardia_id, fila.asistente_id);
   return mapa;
 }
 

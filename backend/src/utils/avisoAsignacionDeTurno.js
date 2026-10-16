@@ -58,3 +58,45 @@ export async function avisarAsignacionDeTurno(db, { prestadoraId, guardia, asist
     .eq('id', guardia.id);
   if (error) console.error(`Error marcando avisada la asignación de la guardia ${guardia.id}:`, error.message);
 }
+
+// El turno fijo se asigna igual que el de un día, y se contesta una sola vez para todos sus días.
+// Los días de la serie que ya existen quedan sin avisar uno por uno: cuando acepta, la base los
+// pone a su nombre y los marca avisados.
+export async function avisarAsignacionDeSerie(db, { prestadoraId, serie, asistenteNuevoId, retirados }) {
+  if (!prestadoraId || !serie) return;
+
+  const idioma = await idiomaDeLaPrestadora(db, prestadoraId);
+  const datos = { dias: serie.dias_semana, horaInicio: serie.hora_inicio, horaFin: serie.hora_fin };
+
+  const salientes = [...new Set((retirados ?? []).filter(Boolean))].filter((id) => id !== asistenteNuevoId);
+
+  for (const asistenteId of salientes) {
+    await avisarAlAsistente({ prestadoraId, asistenteId, idioma, clave: 'turno_fijo_retirado', datos, url: '/guardias' });
+  }
+
+  if (!asistenteNuevoId) return;
+
+  await avisarAlAsistente({
+    prestadoraId,
+    asistenteId: asistenteNuevoId,
+    idioma,
+    clave: 'turno_fijo_para_responder',
+    datos,
+    url: '/asignaciones',
+  });
+}
+
+// El reemplazo durante una ausencia: el sustituto lo contesta una sola vez para todos sus días.
+export async function avisarAsignacionDeAusencia(db, { prestadoraId, asistenteId, desde, hasta }) {
+  if (!prestadoraId || !asistenteId) return;
+
+  const idioma = await idiomaDeLaPrestadora(db, prestadoraId);
+  await avisarAlAsistente({
+    prestadoraId,
+    asistenteId,
+    idioma,
+    clave: 'reemplazo_para_responder',
+    datos: { desde, hasta },
+    url: '/asignaciones',
+  });
+}

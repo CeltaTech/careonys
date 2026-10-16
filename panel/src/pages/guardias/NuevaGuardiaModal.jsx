@@ -7,7 +7,7 @@ import { Alert } from '../../components/ui/Alert';
 import { ESTADO_ACTIVO } from '../../lib/candidatos';
 import { serviciosParaClientes } from '../../lib/serviciosDelPaciente';
 import { mensajeDeError } from '../../lib/errores';
-import { asignarTurno } from '../../lib/asignarTurno';
+import { asignarSerie, asignarTurno } from '../../lib/asignarTurno';
 import { horasDeGuardia } from '../../lib/horarios';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
@@ -239,7 +239,6 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
       .from('series_guardias')
       .insert({
         prestadora_id: prestadoraId,
-        asistente_id: asistenteId || null,
         paciente_id: primero,
         servicio_id: servicioId,
         dias_semana: diasSemana,
@@ -281,7 +280,6 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
     const filasGuardias = fechas.map((f) => ({
       prestadora_id: prestadoraId,
       serie_id: serie.id,
-      asistente_id: asistenteId || null,
       paciente_id: primero,
       fecha: f,
       hora_inicio: horaInicio,
@@ -321,8 +319,14 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
       }
     }
 
+    // El turno fijo ya existe, sin nadie. Se le asigna igual que un turno: queda esperando que el
+    // Asistente lo acepte, una sola vez para todos sus días. Si no pasa, se dice por qué.
+    const { error: errorAsignarSerie } = asistenteId
+      ? await asignarSerie(serie.id, asistenteId, t)
+      : { error: null };
+
     setGuardando(false);
-    onCreada();
+    onCreada(errorAsignarSerie);
   }
 
   return (

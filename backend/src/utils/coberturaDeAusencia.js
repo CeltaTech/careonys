@@ -8,9 +8,13 @@ import { hoyISO, sumarDias } from './horarios.js';
    ==================================================
 
    QUÉ ES. Cuando un Asistente falta varios días, quien coordina no elige un sustituto guardia por
-   guardia: elige quién hace cada turno fijo del ausente —cada serie— por toda la ausencia. Eso
-   queda anotado en `coberturas_de_ausencia`, y este archivo es el que lo convierte en guardias
-   cubiertas.
+   guardia: elige quién hace cada turno fijo del ausente —cada serie— por toda la ausencia, y quién
+   hace sus turnos sueltos. Eso queda anotado en `coberturas_de_ausencia` —las sueltas, con la serie
+   vacía—, y este archivo es el que lo convierte en guardias cubiertas.
+
+   RECIÉN CUANDO EL SUSTITUTO ACEPTA. El reemplazo se le asigna como un turno: lo acepta o lo
+   rechaza una sola vez, por todos los días. Hasta que acepta, las guardias siguen del titular y el
+   trabajo programado no aplica esa cobertura.
 
    POR QUÉ SE VUELVE A APLICAR CADA TANTO. La ausencia se mueve: se le corre la fecha prevista, se
    anota la vuelta antes, o pasa la fecha y nadie dice nada. Aplicar de nuevo cubre lo que entró en
@@ -48,11 +52,13 @@ export async function aplicarCobertura({ db, cobertura, ausencia, hoy = hoyISO()
   const cubiertas = [];
   if (desde > hasta) return { cubiertas, devueltas };
 
-  const { data: guardias, error } = await db
+  let consulta = db
     .from('guardias')
     .select('id, prestadora_id, asistente_id, fecha')
-    .eq('prestadora_id', prestadoraId)
-    .eq('serie_id', cobertura.serie_id)
+    .eq('prestadora_id', prestadoraId);
+  // Sin serie, la cobertura es la de los turnos sueltos del titular.
+  consulta = cobertura.serie_id ? consulta.eq('serie_id', cobertura.serie_id) : consulta.is('serie_id', null);
+  const { data: guardias, error } = await consulta
     .eq('asistente_id', titularId)
     .eq('estado', 'programada')
     .gte('fecha', desde)
@@ -135,27 +141,39 @@ export async function devolverAlTitular({ db, cobertura, titularId, desde }) {
 }
 
 /**
- * La primera vez que una cobertura cubre guardias, al sustituto le llega el aviso de guardia
- * asignada por la primera de ellas: el resto lo ve en su aplicación. Las demás se dan por
- * avisadas, para que no le llegue un mensaje por cada día.
+ * El sustituto aceptó el reemplazo: se aplican sus coberturas de esa ausencia. Ya respondió que
+ * sí, así que las guardias que pasan a su nombre se dan por avisadas y no le llega un mensaje por
+ * cada día. Devuelve las guardias que quedaron cubiertas.
  */
-async function avisarAlSustituto({ db, prestadoraId, cubiertas }) {
-  const [primera, ...resto] = cubiertas;
-  await db.from('guardias').update({ push_asignacion_enviado_at: null })
-    .eq('prestadora_id', prestadoraId).eq('id', primera);
-  if (resto.length) {
-    await db.from('guardias').update({ push_asignacion_enviado_at: new Date().toISOString() })
-      .eq('prestadora_id', prestadoraId).in('id', resto);
+export async function aplicarReemplazoAceptado({ db, prestadoraId, ausenciaId, sustitutoId }) {
+  const { data: coberturas, error } = await db
+    .from('coberturas_de_ausencia')
+    .select('id, prestadora_id, ausencia_id, serie_id, asistente_sustituto_id, motivo, motivo_detalle, costo_adicional, ausencias(id, asistente_id, fecha_inicio, fecha_fin, fecha_vuelta_real)')
+    .eq('prestadora_id', prestadoraId)
+    .eq('ausencia_id', ausenciaId)
+    .eq('asistente_sustituto_id', sustitutoId)
+    .is('objetada_at', null)
+    .not('aceptada_at', 'is', null);
+  if (error) {
+    console.error(`[coberturaDeAusencia] no se pudieron leer las coberturas aceptadas (ausencia ${ausenciaId}):`, error.message);
+    return { cubiertas: [], titularId: null };
   }
-}
 
-/** Aplica una cobertura recién creada y le avisa al sustituto. */
-export async function estrenarCobertura({ db, cobertura, ausencia }) {
-  const resultado = await aplicarCobertura({ db, cobertura, ausencia });
-  if (resultado.cubiertas.length) {
-    await avisarAlSustituto({ db, prestadoraId: cobertura.prestadora_id, cubiertas: resultado.cubiertas });
+  const cubiertas = [];
+  let titularId = null;
+  for (const cobertura of coberturas ?? []) {
+    const ausencia = cobertura.ausencias;
+    if (!ausencia?.asistente_id) continue;
+    titularId = ausencia.asistente_id;
+    const resultado = await aplicarCobertura({ db, cobertura, ausencia });
+    cubiertas.push(...resultado.cubiertas);
   }
-  return resultado;
+
+  if (cubiertas.length) {
+    await db.from('guardias').update({ push_asignacion_enviado_at: new Date().toISOString() })
+      .eq('prestadora_id', prestadoraId).in('id', cubiertas);
+  }
+  return { cubiertas, titularId };
 }
 
 /**
@@ -180,7 +198,8 @@ async function extenderLasDeUnaPrestadora(db, prestadoraId, hoy) {
     .from('coberturas_de_ausencia')
     .select('id, prestadora_id, ausencia_id, serie_id, asistente_sustituto_id, motivo, motivo_detalle, costo_adicional, ausencias(id, asistente_id, fecha_inicio, fecha_fin, fecha_vuelta_real)')
     .eq('prestadora_id', prestadoraId)
-    .is('objetada_at', null);
+    .is('objetada_at', null)
+    .not('aceptada_at', 'is', null);
   if (error) {
     console.error(`[coberturaDeAusencia] no se pudieron leer las coberturas (prestadora ${prestadoraId}):`, error.message);
     return;

@@ -4,6 +4,7 @@ import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { mensajeDeError } from '../lib/errores';
 import { nombreDelMotivo } from '../lib/nombreDelMotivo';
+import { con } from '../lib/textos';
 
 // Los turnos que se le asignaron y todavía no respondió.
 //
@@ -12,6 +13,42 @@ import { nombreDelMotivo } from '../lib/nombreDelMotivo';
 //
 // Para decir que no hay que elegir un motivo de la lista de la Prestadora, y cuando el motivo lo
 // pide, escribirlo. Es lo que el Coordinador necesita para saber a quién asignarlo después.
+
+// La hora sin los ceros que no dicen nada: 08:00 es «8» y 08:30 es «8:30».
+function horaCorta(hora) {
+  if (!hora) return '';
+  const [h, m] = hora.slice(0, 5).split(':');
+  return m === '00' ? String(Number(h)) : `${Number(h)}:${m}`;
+}
+
+// Lo que se le asignó, en una línea. Un turno de un día dice el día y el horario; un turno fijo,
+// los días de la semana y el horario; un reemplazo, desde cuándo, hasta cuándo y cuántos turnos.
+function lineaDeArriba(asignacion, t, locale) {
+  const guardia = asignacion.guardia;
+  if (asignacion.tipo === 'serie') {
+    const nombres = (asignacion.dias_semana ?? []).map((d) => t.asignaciones.dias[d] ?? d);
+    const dias = new Intl.ListFormat(locale, { type: 'conjunction' }).format(nombres);
+    return con(t.asignaciones.turno_fijo, {
+      dias: dias.charAt(0).toLocaleUpperCase(locale) + dias.slice(1),
+      inicio: horaCorta(guardia.hora_inicio),
+      fin: horaCorta(guardia.hora_fin),
+    });
+  }
+  if (asignacion.tipo === 'ausencia') {
+    const fecha = (valor) =>
+      new Date(`${valor}T00:00:00`).toLocaleDateString(locale, { day: 'numeric', month: 'numeric' });
+    const uno = asignacion.cantidad === 1;
+    const plantilla = asignacion.hasta
+      ? uno ? t.asignaciones.reemplazo_un_turno : t.asignaciones.reemplazo
+      : uno ? t.asignaciones.reemplazo_sin_fin_un_turno : t.asignaciones.reemplazo_sin_fin;
+    return con(plantilla, {
+      desde: fecha(asignacion.desde),
+      hasta: asignacion.hasta ? fecha(asignacion.hasta) : '',
+      n: asignacion.cantidad ?? 0,
+    });
+  }
+  return `${guardia.fecha} · ${guardia.hora_inicio?.slice(0, 5)} - ${guardia.hora_fin?.slice(0, 5)}`;
+}
 
 function TarjetaDeAsignacion({ asignacion, motivos, onResponder, enCurso, t, locale }) {
   const [rechazando, setRechazando] = useState(false);
@@ -51,7 +88,7 @@ function TarjetaDeAsignacion({ asignacion, motivos, onResponder, enCurso, t, loc
   return (
     <div className="guardia-card">
       <div className="guardia-card-paciente">
-        {guardia.fecha} · {guardia.hora_inicio?.slice(0, 5)} - {guardia.hora_fin?.slice(0, 5)}
+        {lineaDeArriba(asignacion, t, locale)}
       </div>
       {barrios.length > 0 && <div className="guardia-card-detalle">{barrios.join(' · ')}</div>}
       {niveles.length > 0 && (
@@ -153,6 +190,8 @@ export default function AsignacionesSinResponder() {
   const [error, setError] = useState('');
   const [pidiendo, setPidiendo] = useState(false);
   const [enCurso, setEnCurso] = useState(null);
+  // Lo aceptado recién: `{ guardiaId }`. Un turno fijo o un reemplazo no tienen un único turno
+  // al que llevarlo, así que ahí el aviso va sin enlace.
   const [aceptada, setAceptada] = useState(null);
 
   function cargar() {
@@ -180,7 +219,7 @@ export default function AsignacionesSinResponder() {
     setAceptada(null);
     try {
       const resultado = await api.responderAsignacion(asignacion.id, respuesta, { motivoId, detalle });
-      if (resultado.respuesta === 'acepta') setAceptada(resultado.guardiaId);
+      if (resultado.respuesta === 'acepta') setAceptada({ guardiaId: resultado.guardiaId ?? null });
     } catch (e) {
       // Casi siempre es que el turno ya no está disponible. Se explica y se vuelve a cargar la
       // lista, que es lo que lo deja al día.
@@ -215,7 +254,13 @@ export default function AsignacionesSinResponder() {
 
       {aceptada && (
         <div className="alert alert-info" role="status">
-          {t.asignaciones.aceptada} <Link to={`/guardias/${aceptada}`}>{t.asignaciones.ver_el_turno}</Link>
+          {t.asignaciones.aceptada}
+          {aceptada.guardiaId && (
+            <>
+              {' '}
+              <Link to={`/guardias/${aceptada.guardiaId}`}>{t.asignaciones.ver_el_turno}</Link>
+            </>
+          )}
         </div>
       )}
 

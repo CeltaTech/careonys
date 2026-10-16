@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 
 // UN CELULAR ES DE UNA SOLA PERSONA; UNA LÍNEA FIJA SE COMPARTE.
@@ -23,14 +23,15 @@ import { ErrorConMotivo } from './errorConMotivo.js';
 // las dos lleva su celular. Lo que no puede pasar es que adentro de una Prestadora dos personas
 // distintas lleven el mismo.
 //
+// CON QUÉ CREDENCIAL. Las otras cuentas no son de quien pregunta, así que no las puede leer con la
+// suya: las lee el trabajo de esa Prestadora, que ve sólo las cuentas de la suya. Por eso la
+// Prestadora es obligatoria, y sin ella la comprobación falla cerrada.
+//
 // EL NÚMERO NO SALE POR NINGÚN LADO. Es dato sensible (`celtatech/docs/REGLAS_PRODUCTOS_CAREONYS.md`
 // §4): no se registra, no viaja en ninguna dirección, no entra en ningún mensaje de error y no se
 // escribe para depurar. Por eso lo que sale de acá es un motivo pelado, sin detalle: el
 // detalle se escribe en el registro del servidor (`errorConMotivo.js`), y ahí tampoco puede haber
 // un teléfono.
-
-// La Prestadora sin identificar —el Superadmin— se agrupa aparte, igual que en el índice de la base.
-const SIN_PRESTADORA = null;
 
 /** Sólo los dígitos, que es la forma en la que el catálogo guarda los prefijos. */
 export function digitosDelTelefono(telefono) {
@@ -44,8 +45,8 @@ export function digitosDelTelefono(telefono) {
  * error y el pedido termina en «falla del sistema». Suponer sería justamente dejar pasar el caso que
  * no se entendió.
  */
-export async function prefijosDeCelular() {
-  const { data, error } = await supabase
+export async function prefijosDeCelular(db) {
+  const { data, error } = await db
     .from('catalogo_prefijos_de_celular')
     .select('prefijo')
     .eq('activo', true);
@@ -60,11 +61,6 @@ export function esUnCelularSegun(prefijos, telefono) {
   const digitos = digitosDelTelefono(telefono);
   if (!digitos) return false;
   return (prefijos ?? []).some((prefijo) => prefijo && digitos.startsWith(prefijo));
-}
-
-/** Lo mismo, yendo a buscar el catálogo. */
-export async function esUnCelular(telefono) {
-  return esUnCelularSegun(await prefijosDeCelular(), telefono);
 }
 
 /**
@@ -88,29 +84,34 @@ export function verificadorComparable(telefono) {
  *
  * @param {object} p
  * @param {string} p.telefono        El número tal como lo escribieron.
- * @param {string} [p.prestadoraId]  La Prestadora de la cuenta. Sin ella se compara contra las que
- *                                   tampoco tienen (el Superadmin), igual que el índice de la base.
+ * @param {string} p.prestadoraId    La Prestadora de la cuenta.
  * @param {string} [p.usuarioId]     La cuenta que se está cambiando, para no chocar consigo misma.
  */
 export async function exigirQueElCelularSeaDeUnaSolaPersona({ telefono, prestadoraId, usuarioId }) {
   const escrito = String(telefono ?? '').trim();
   if (!escrito) return;
 
-  if (!esUnCelularSegun(await prefijosDeCelular(), escrito)) return;
+  // Falla cerrada: sin Prestadora no hay contra qué cuentas comparar.
+  if (!prestadoraId) throw new Error('No se pudo comprobar si el celular ya esta cargado: falta la Prestadora');
+
+  await enLaPrestadora(prestadoraId, 'comprobar que el celular sea de una sola persona', (db) =>
+    comprobarEnLaPrestadora(db, { escrito, prestadoraId, usuarioId })
+  );
+}
+
+async function comprobarEnLaPrestadora(db, { escrito, prestadoraId, usuarioId }) {
+  if (!esUnCelularSegun(await prefijosDeCelular(db), escrito)) return;
 
   const verificador = verificadorComparable(escrito);
   if (!verificador) return;
 
-  let consulta = supabase
+  let consulta = db
     .from('usuarios')
     .select('id')
     .eq('telefono_comparable', verificador)
     .eq('telefono_es_celular', true)
+    .eq('prestadora_id', prestadoraId)
     .limit(1);
-
-  consulta = prestadoraId
-    ? consulta.eq('prestadora_id', prestadoraId)
-    : consulta.is('prestadora_id', SIN_PRESTADORA);
 
   if (usuarioId) consulta = consulta.neq('id', usuarioId);
 

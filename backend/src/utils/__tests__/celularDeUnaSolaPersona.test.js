@@ -36,6 +36,7 @@ import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { laFoto } from '../../__tests__/laFotoDeLaBase.js';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const OTRA_PRESTADORA = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
@@ -45,6 +46,15 @@ const OTRA_CUENTA = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const CELULAR = '+54 9 11 5555-1234';
 const CELULAR_SIN_ADORNOS = '5491155551234';
 const LINEA_FIJA = '+54 11 5555-1234';
+
+/** Lo que lleva adentro la credencial con la que llegó un pedido: quién es y de qué Prestadora. */
+function leerCredencial(autorizacion) {
+  try {
+    return JSON.parse(Buffer.from(autorizacion.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+  } catch {
+    return null;
+  }
+}
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
@@ -60,7 +70,7 @@ const baseFalsa = createServer((req, res) => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
     const cuerpo = crudo ? JSON.parse(crudo) : null;
-    llamadas.push({ clave, url: req.url, cuerpo });
+    llamadas.push({ clave, url: req.url, cuerpo, credencial: leerCredencial(req.headers.authorization ?? '') });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada({ cuerpo, url: req.url }) : preparada;
@@ -85,6 +95,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // El import va después de las variables de entorno: la conexión se arma al importar.
 const {
@@ -169,14 +180,32 @@ describe('un celular es de una sola persona', () => {
     assert.ok(!consulta.includes(OTRA_PRESTADORA));
   });
 
-  it('con la cuenta sin Prestadora compara contra las que tampoco tienen', async () => {
+  it('sin Prestadora falla cerrado, y ni siquiera le pregunta a la base', async () => {
     catalogoConArgentina();
     yaEstaEnOtraCuenta([]);
 
-    await exigirQueElCelularSeaDeUnaSolaPersona({ telefono: CELULAR });
+    await assert.rejects(() => exigirQueElCelularSeaDeUnaSolaPersona({ telefono: CELULAR }));
+    assert.equal(llamadas.length, 0);
+  });
 
-    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/usuarios').url;
-    assert.ok(consulta.includes('prestadora_id=is.null'));
+  it('lo lee el trabajo de esa Prestadora, y no la llave maestra', async () => {
+    catalogoConArgentina();
+    yaEstaEnOtraCuenta([]);
+
+    await exigirQueElCelularSeaDeUnaSolaPersona({
+      telefono: CELULAR,
+      prestadoraId: PRESTADORA,
+      usuarioId: USUARIO,
+    });
+
+    assert.deepEqual(
+      llamadas.map((l) => l.clave),
+      ['GET /rest/v1/catalogo_prefijos_de_celular', 'GET /rest/v1/usuarios'],
+    );
+    for (const llamada of llamadas) {
+      assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', llamada.clave);
+      assert.equal(llamada.credencial?.prestadora_id, PRESTADORA, llamada.clave);
+    }
   });
 
   it('el mismo número escrito de dos maneras es el mismo número', () => {

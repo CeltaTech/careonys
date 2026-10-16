@@ -21,8 +21,9 @@ import { IDIOMA_POR_DEFECTO } from '../i18n/idiomas.js';
                         respuesta preparada que parezca servir.
      3. `derivar`     — quien escribe pide hablar con una persona. Se le da, aunque haya una
                         respuesta preparada que sirva.
-     4. `derivar`     — la conversación ya está esperando a una persona. El bot no se mete
-                        mientras tanto: ayuda, no se queda con la conversación.
+     4. `derivar`     — la conversación ya está esperando a una persona, o una persona la
+                        contestó y todavía no se dio por terminada. El bot no se mete mientras
+                        tanto: ayuda, no se queda con la conversación.
      5. `derivar`     — ninguna respuesta aprobada sirve para lo que entró. Ante la duda no
                         contesta.
      6. `responder`   — hay una respuesta aprobada que corresponde, y sale su texto tal cual.
@@ -165,6 +166,32 @@ export async function terminosParaPedirUnaPersona(prestadoraId) {
   if (!data?.length) return null;
 
   return data.map((fila) => fila.termino);
+}
+
+/**
+ * Si una conversación que contestó una persona desde el Panel sigue en sus manos.
+ *
+ * La conversación se da por terminada cuando pasan sin mensajes las horas que fijó la Prestadora,
+ * contadas desde lo último que pasó en ella: el último mensaje o la última respuesta de la persona.
+ * Terminada, el mensaje siguiente abre otra, y ésa la atiende el bot.
+ *
+ * FALLA CERRADO. Sin horas legibles —la fila de configuración no está o no se pudo leer— o con
+ * una fecha que no se entiende, la conversación sigue con la persona.
+ *
+ * @param atendidaAt              cuándo contestó la persona por última vez; sin valor, ninguna contestó
+ * @param ultimoMensajeAnterior   el último movimiento de la conversación antes del mensaje que entra
+ * @param horas                   las horas sin mensajes que la dan por terminada
+ */
+export function laConversacionSigueConUnaPersona({ atendidaAt, ultimoMensajeAnterior = null, horas, ahora = new Date() }) {
+  if (!atendidaAt) return false;
+  if (!Number.isFinite(horas) || horas <= 0) return true;
+
+  const atendida = new Date(atendidaAt).getTime();
+  const ultimo = ultimoMensajeAnterior ? new Date(ultimoMensajeAnterior).getTime() : atendida;
+  if (!Number.isFinite(atendida) || !Number.isFinite(ultimo)) return true;
+
+  const desde = Math.max(atendida, ultimo);
+  return new Date(ahora).getTime() - desde < horas * 60 * 60 * 1000;
 }
 
 /** Las respuestas que la Prestadora aprobó y tiene activas. Ninguna otra existe para acá. */

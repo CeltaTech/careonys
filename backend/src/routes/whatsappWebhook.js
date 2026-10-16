@@ -34,6 +34,7 @@ import { conexionDeLaDireccion, enLaPrestadoraDeLaDireccion } from '../middlewar
 import { enviarWhatsApp } from '../utils/whatsapp.js';
 import {
   resolverRespuestaAutomatica,
+  laConversacionSigueConUnaPersona,
   avisarAlServicioDeEmergencias,
   registrarRespuestaAutomatica,
   RESULTADO_RESPONDIDA,
@@ -243,10 +244,39 @@ async function procesarEventoEntrante(payload, { db, prestadoraId, phoneNumberId
     if (yaAnotado) return;
   }
 
+  // Lo que había antes de este mensaje: si una persona la contestó, y cuándo fue el último
+  // movimiento. Se lee antes de anotar el mensaje nuevo, que pisa esa fecha.
+  const { data: anterior } = await db
+    .from('conversaciones_whatsapp')
+    .select('ultimo_mensaje_at, atendida_por_una_persona_at')
+    .eq('prestadora_id', prestadoraId)
+    .eq('telefono', telefono)
+    .maybeSingle();
+
+  let sigueConUnaPersona = false;
+  if (anterior?.atendida_por_una_persona_at) {
+    const { data: configuracion } = await db
+      .from('configuracion_respuesta_automatica_whatsapp')
+      .select('horas_sin_mensajes_para_terminar')
+      .eq('prestadora_id', prestadoraId)
+      .maybeSingle();
+    sigueConUnaPersona = laConversacionSigueConUnaPersona({
+      atendidaAt: anterior.atendida_por_una_persona_at,
+      ultimoMensajeAnterior: anterior.ultimo_mensaje_at,
+      horas: configuracion?.horas_sin_mensajes_para_terminar,
+    });
+  }
+
   const { data: conversacion } = await db
     .from('conversaciones_whatsapp')
     .upsert(
-      { prestadora_id: prestadoraId, telefono, ultimo_mensaje_at: new Date().toISOString() },
+      {
+        prestadora_id: prestadoraId,
+        telefono,
+        ultimo_mensaje_at: new Date().toISOString(),
+        // La conversación que atendió una persona ya se dio por terminada: ésta es otra.
+        ...(anterior?.atendida_por_una_persona_at && !sigueConUnaPersona ? { atendida_por_una_persona_at: null } : {}),
+      },
       { onConflict: 'prestadora_id,telefono' },
     )
     .select('id, requiere_atencion_coordinador')
@@ -274,7 +304,7 @@ async function procesarEventoEntrante(payload, { db, prestadoraId, phoneNumberId
     prestadoraId,
     texto,
     // Sólo un `false` leído de la base deja contestar: una columna que no vino no es «nadie la atiende».
-    laAtiendeUnaPersona: conversacion.requiere_atencion_coordinador !== false,
+    laAtiendeUnaPersona: conversacion.requiere_atencion_coordinador !== false || sigueConUnaPersona,
   });
 
   const anotar = (resultado, motivo, extra = {}) =>

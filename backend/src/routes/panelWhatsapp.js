@@ -108,7 +108,8 @@ panelWhatsappRouter.post('/conversaciones/:id/responder', requiereRolPanel, asyn
 
   const { error: errorConversacion } = await db
     .from('conversaciones_whatsapp')
-    .update({ requiere_atencion_coordinador: false, ultimo_mensaje_at: ahora })
+    // Contestó una persona: el bot no se mete hasta que la conversación se dé por terminada.
+    .update({ requiere_atencion_coordinador: false, ultimo_mensaje_at: ahora, atendida_por_una_persona_at: ahora })
     .eq('id', conversacion.id);
   if (errorConversacion) fallo = errorConversacion;
 

@@ -67,6 +67,7 @@ const {
   avisarAlServicioDeEmergencias,
   registrarRespuestaAutomatica,
   textoComparable,
+  laConversacionSigueConUnaPersona,
   MOTIVO_RESPUESTA_APROBADA,
   MOTIVO_SIN_RESPUESTA_APROBADA,
   MOTIVO_TEMA_DE_SALUD,
@@ -277,6 +278,44 @@ describe('el bot ayuda, no se queda con la conversación', () => {
     });
 
     assert.equal(resultado.accion, 'responder');
+  });
+});
+
+describe('la conversación que contestó una persona', () => {
+  const AHORA = new Date('2026-10-16T12:00:00.000Z');
+  const hace = (horas) => new Date(AHORA.getTime() - horas * 60 * 60 * 1000).toISOString();
+
+  it('si ninguna persona la contestó, el bot no tiene nada que esperar', () => {
+    assert.equal(laConversacionSigueConUnaPersona({ atendidaAt: null, horas: 24, ahora: AHORA }), false);
+  });
+
+  it('sigue con la persona mientras no pasan las horas sin mensajes', () => {
+    assert.equal(
+      laConversacionSigueConUnaPersona({ atendidaAt: hace(30), ultimoMensajeAnterior: hace(2), horas: 24, ahora: AHORA }),
+      true,
+    );
+  });
+
+  it('pasadas las horas sin mensajes se da por terminada', () => {
+    assert.equal(
+      laConversacionSigueConUnaPersona({ atendidaAt: hace(30), ultimoMensajeAnterior: hace(25), horas: 24, ahora: AHORA }),
+      false,
+    );
+  });
+
+  it('cuenta desde la respuesta de la persona si fue lo último que pasó', () => {
+    assert.equal(
+      laConversacionSigueConUnaPersona({ atendidaAt: hace(1), ultimoMensajeAnterior: hace(30), horas: 24, ahora: AHORA }),
+      true,
+    );
+  });
+
+  it('sin horas configuradas sigue con la persona', () => {
+    assert.equal(laConversacionSigueConUnaPersona({ atendidaAt: hace(500), horas: undefined, ahora: AHORA }), true);
+  });
+
+  it('con una fecha que no se entiende sigue con la persona', () => {
+    assert.equal(laConversacionSigueConUnaPersona({ atendidaAt: 'no es fecha', horas: 24, ahora: AHORA }), true);
   });
 });
 

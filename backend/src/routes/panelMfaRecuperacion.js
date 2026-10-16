@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { supabase } from '../db/connection.js';
+import { abrirSesionDelPedido, clienteDelPedido } from '../db/connection.js';
 import { solicitarCodigoRecuperacion, confirmarCodigoRecuperacion } from '../utils/mfaRecuperacionEmail.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
@@ -11,25 +11,25 @@ import { responderError } from '../utils/errorConMotivo.js';
 export const panelMfaRecuperacionRouter = Router();
 
 async function requiereSesionBasica(req, res, next) {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (!token) return res.status(401).json({ error: 'No autorizado' });
+  // La credencial se comprueba con la clave pública de la región que la emitió
+  // (`db/connection.js`, «La credencial de la persona»).
+  const sesion = await abrirSesionDelPedido(req);
+  if (!sesion) return res.status(401).json({ error: 'No autorizado' });
 
-  const { data: userData, error } = await supabase.auth.getUser(token);
-  if (error || !userData?.user) return res.status(401).json({ error: 'No autorizado' });
-
-  // SIN PRESTADORA A PROPÓSITO
-  // Corre antes de que exista sesión del Panel, sobre una cuenta que no es de ninguna Prestadora.
-  // Acá no se nombra ninguna Organización, y no es un olvido: quien llega es soporte técnico de
-  // CeltaTech, que no pertenece a ninguna Prestadora —su `prestadora_id` es nulo—, y todavía no
-  // hay sesión del Panel de la cual sacarla. Lo único que se pregunta es el rol de la cuenta que
-  // el pase ya identificó, y lo que no sea soporte técnico se rechaza en el renglón siguiente.
-  const { data: perfil } = await supabase.from('usuarios').select('rol').eq('id', userData.user.id).single();
+  // SIN FILTRO DE PRESTADORA, Y NO LE HACE FALTA
+  // Quien llega es soporte técnico de CeltaTech, que no pertenece a ninguna Prestadora, y todavía
+  // no hay sesión del Panel de la cual sacarla. Con la credencial de la persona la base le
+  // devuelve su propia fila y ninguna otra, y lo que no sea soporte técnico se rechaza abajo.
+  const { data: perfil } = await clienteDelPedido(req)
+    .from('usuarios')
+    .select('rol')
+    .eq('id', sesion.id)
+    .single();
   if (!perfil || perfil.rol !== 'superadmin') {
     return res.status(403).json({ error: 'Rol sin permiso' });
   }
 
-  req.usuarioId = userData.user.id;
+  req.usuarioId = sesion.id;
   next();
 }
 

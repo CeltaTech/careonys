@@ -198,7 +198,7 @@ beforeEach(() => {
   respuestas.set('POST /rest/v1/rpc/leer_app_secret_whatsapp', () => APP_SECRET);
   respuestas.set('POST /rest/v1/rpc/leer_verify_token_whatsapp', () => TOKEN_DE_SALUDO);
   respuestas.set('GET /rest/v1/mensajes_whatsapp', () => []);
-  respuestas.set('POST /rest/v1/conversaciones_whatsapp', () => [{ id: CONVERSACION }]);
+  respuestas.set('POST /rest/v1/conversaciones_whatsapp', () => [{ id: CONVERSACION, requiere_atencion_coordinador: false }]);
   respuestas.set('POST /rest/v1/mensajes_whatsapp', () => [{ id: MENSAJE }]);
   respuestas.set('PATCH /rest/v1/conversaciones_whatsapp', () => []);
   // La lista de palabras cargada y el banco de respuestas vacío: ningún texto aprobado que
@@ -207,6 +207,7 @@ beforeEach(() => {
     { termino: 'dolor', motivo: 'salud' },
     { termino: 'no respira', motivo: 'emergencia' },
   ]);
+  respuestas.set('GET /rest/v1/terminos_para_pedir_una_persona', () => [{ termino: 'hablar con una persona' }]);
   respuestas.set('GET /rest/v1/respuestas_preparadas_whatsapp', () => []);
   respuestas.set('POST /rest/v1/auditoria_respuesta_automatica_whatsapp', () => []);
 });
@@ -270,6 +271,37 @@ describe('el pedido de WhatsApp auténtico', () => {
     );
     assert.equal(anotacion.cuerpo.resultado, 'derivada_a_una_persona');
     assert.equal(anotacion.cuerpo.motivo, 'sin_respuesta_aprobada');
+  });
+
+  it('con la conversación esperando a una persona, el bot no contesta aunque tenga con qué', async () => {
+    // Hay una respuesta aprobada que coincide con el mensaje, así que sin el corte saldría sola.
+    respuestas.set('POST /rest/v1/conversaciones_whatsapp', () => [{ id: CONVERSACION, requiere_atencion_coordinador: true }]);
+    respuestas.set('GET /rest/v1/respuestas_preparadas_whatsapp', () => [
+      {
+        id: '44444444-4444-4444-4444-444444444444',
+        nombre_interno: 'guardia',
+        terminos: ['guardia'],
+        i18n: { 'es-AR': 'Texto aprobado.', en: 'Approved text.', 'pt-BR': 'Texto aprovado.' },
+        toca_salud: false,
+        aprobada_at: '2026-09-01T10:00:00.000Z',
+        activa: true,
+      },
+    ]);
+    respuestas.set('GET /rest/v1/prestadoras', () => [{ idioma: 'es-AR', pais: 'AR' }]);
+
+    await avisar();
+    await esperarA(() =>
+      escrituras().some((l) => l.clave === 'POST /rest/v1/auditoria_respuesta_automatica_whatsapp'),
+    );
+    await dejarTerminar();
+
+    const saliente = escrituras().find(
+      (l) => l.clave === 'POST /rest/v1/mensajes_whatsapp' && l.cuerpo.direccion === 'saliente',
+    );
+    assert.equal(saliente, undefined);
+
+    const anotacion = escrituras().find((l) => l.clave === 'POST /rest/v1/auditoria_respuesta_automatica_whatsapp');
+    assert.equal(anotacion.cuerpo.motivo, 'la_atiende_una_persona');
   });
 
   it('la Prestadora sale de la dirección, no del cuerpo del pedido', async () => {

@@ -5,24 +5,32 @@ import { IDIOMA_POR_DEFECTO } from '../i18n/idiomas.js';
 /* Qué contesta sola la respuesta automática de WhatsApp, y qué no.
    ======================================================================================
 
-   LA REGLA, EN UNA LÍNEA: contesta todo menos salud y emergencias, y nunca improvisando.
+   LA REGLA, EN UNA LÍNEA: contesta todo menos salud y emergencias, nunca improvisando, y nunca
+   donde ya está una persona o quien escribe pide una.
 
    ACÁ SE DECIDE Y EN NINGÚN OTRO LADO. La pantalla del Panel muestra el banco de respuestas y
    deja aprobarlas; lo que puede salir hacia afuera lo decide esta función. Si la decisión
    viviera en la pantalla, cualquier otro camino hasta el envío —otra pantalla, una ruta escrita
    a mano, un proceso de fondo— la saltearía sin que nadie lo notara.
 
-   LOS CUATRO CAMINOS POSIBLES, y no hay un quinto:
+   LOS SEIS CAMINOS POSIBLES, y no hay un séptimo:
 
      1. `emergencia`  — el mensaje habla de una emergencia. Se avisa al servicio de emergencias
                         de esa jurisdicción y se deriva igual a una persona.
      2. `derivar`     — el mensaje toca la salud del Paciente. Siempre, aunque haya una
                         respuesta preparada que parezca servir.
-     3. `derivar`     — ninguna respuesta aprobada sirve para lo que entró. Ante la duda no
+     3. `derivar`     — quien escribe pide hablar con una persona. Se le da, aunque haya una
+                        respuesta preparada que sirva.
+     4. `derivar`     — la conversación ya está esperando a una persona. El bot no se mete
+                        mientras tanto: ayuda, no se queda con la conversación.
+     5. `derivar`     — ninguna respuesta aprobada sirve para lo que entró. Ante la duda no
                         contesta.
-     4. `responder`   — hay una respuesta aprobada que corresponde, y sale su texto tal cual.
+     6. `responder`   — hay una respuesta aprobada que corresponde, y sale su texto tal cual.
 
-   NUNCA SE REDACTA NADA EN EL CAMINO 4. El texto que sale es, letra por letra, el que la
+   La emergencia se sigue mirando aunque la conversación ya espere a una persona: es lo único
+   que cambia lo que hay que hacer con ella.
+
+   NUNCA SE REDACTA NADA EN EL CAMINO 6. El texto que sale es, letra por letra, el que la
    Prestadora aprobó. No se completa, no se adapta y no se le agrega un saludo: un texto que
    nadie leyó antes de mandarlo es exactamente lo que esta función viene a terminar.
 
@@ -48,6 +56,8 @@ export const MOTIVO_EMERGENCIA = 'emergencia';
 export const MOTIVO_SIN_TELEFONO_DE_EMERGENCIA = 'sin_telefono_de_emergencia';
 export const MOTIVO_NO_SE_PUDO_CLASIFICAR = 'no_se_pudo_clasificar';
 export const MOTIVO_ENVIO_FALLIDO = 'envio_fallido';
+export const MOTIVO_PIDIO_UNA_PERSONA = 'pidio_una_persona';
+export const MOTIVO_LA_ATIENDE_UNA_PERSONA = 'la_atiende_una_persona';
 
 /**
  * El texto en condiciones de compararse con una palabra de la lista.
@@ -135,6 +145,28 @@ export async function telefonoDeEmergencia(prestadoraId) {
   });
 }
 
+/**
+ * Las palabras con las que quien escribe pide hablar con una persona, de los tres idiomas juntos.
+ *
+ * @returns la lista, o `null` si no se pudo leer. Sin la lista no se puede afirmar que no la
+ *          pidió, así que quien llama deriva.
+ */
+export async function terminosParaPedirUnaPersona(prestadoraId) {
+  if (!prestadoraId) return null;
+
+  const { data, error } = await enLaPrestadora(prestadoraId, 'palabras para pedir una persona', (db) =>
+    db.from('terminos_para_pedir_una_persona').select('termino').eq('activo', true),
+  );
+
+  if (error) {
+    console.error('No se pudo leer la lista de palabras para pedir una persona:', error.message);
+    return null;
+  }
+  if (!data?.length) return null;
+
+  return data.map((fila) => fila.termino);
+}
+
 /** Las respuestas que la Prestadora aprobó y tiene activas. Ninguna otra existe para acá. */
 async function respuestasAprobadas(prestadoraId) {
   if (!prestadoraId) return null;
@@ -166,10 +198,12 @@ function cuantoCoincide(respuesta, textoLimpio) {
 /**
  * Qué hay que hacer con un mensaje que entró.
  *
+ * @param laAtiendeUnaPersona  si la conversación ya está esperando a una persona. Entonces no
+ *                             se contesta nada, salvo que haya que avisar una emergencia.
  * @returns `{ accion, motivo, respuesta, texto }`, donde `accion` es `responder`, `derivar` o
  *          `emergencia`. `texto` sólo viene con `responder`, y es el texto aprobado tal cual.
  */
-export async function resolverRespuestaAutomatica({ prestadoraId, texto, idioma = null }) {
+export async function resolverRespuestaAutomatica({ prestadoraId, texto, idioma = null, laAtiendeUnaPersona = false }) {
   const textoLimpio = textoComparable(texto);
 
   // Un mensaje sin palabras que comparar no se contesta solo: puede ser un audio transcripto a
@@ -194,6 +228,19 @@ export async function resolverRespuestaAutomatica({ prestadoraId, texto, idioma 
   // que pueda contestar un sistema.
   if (terminos.salud.some((termino) => contiene(textoLimpio, termino))) {
     return { accion: 'derivar', motivo: MOTIVO_TEMA_DE_SALUD, respuesta: null, texto: null };
+  }
+
+  const pedidoDeUnaPersona = await terminosParaPedirUnaPersona(prestadoraId);
+  if (!pedidoDeUnaPersona) {
+    return { accion: 'derivar', motivo: MOTIVO_NO_SE_PUDO_CLASIFICAR, respuesta: null, texto: null };
+  }
+  if (pedidoDeUnaPersona.some((termino) => contiene(textoLimpio, termino))) {
+    return { accion: 'derivar', motivo: MOTIVO_PIDIO_UNA_PERSONA, respuesta: null, texto: null };
+  }
+
+  // Falla cerrado también acá: sólo un `false` explícito deja contestar.
+  if (laAtiendeUnaPersona !== false) {
+    return { accion: 'derivar', motivo: MOTIVO_LA_ATIENDE_UNA_PERSONA, respuesta: null, texto: null };
   }
 
   const aprobadas = await respuestasAprobadas(prestadoraId);

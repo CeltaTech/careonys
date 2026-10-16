@@ -249,7 +249,7 @@ async function procesarEventoEntrante(payload, { db, prestadoraId, phoneNumberId
       { prestadora_id: prestadoraId, telefono, ultimo_mensaje_at: new Date().toISOString() },
       { onConflict: 'prestadora_id,telefono' },
     )
-    .select('id')
+    .select('id, requiere_atencion_coordinador')
     .single();
   if (!conversacion) return;
 
@@ -270,7 +270,12 @@ async function procesarEventoEntrante(payload, { db, prestadoraId, phoneNumberId
      La decisión entera vive en `utils/respuestaAutomaticaWhatsapp.js` y no en esta ruta: es la
      única forma de que ningún otro camino hasta el envío se la saltee. Acá sólo se ejecuta lo
      que esa función contestó, y no hay ninguna rama que redacte algo. */
-  const decision = await resolverRespuestaAutomatica({ prestadoraId, texto });
+  const decision = await resolverRespuestaAutomatica({
+    prestadoraId,
+    texto,
+    // Sólo un `false` leído de la base deja contestar: una columna que no vino no es «nadie la atiende».
+    laAtiendeUnaPersona: conversacion.requiere_atencion_coordinador !== false,
+  });
 
   const anotar = (resultado, motivo, extra = {}) =>
     registrarRespuestaAutomatica({

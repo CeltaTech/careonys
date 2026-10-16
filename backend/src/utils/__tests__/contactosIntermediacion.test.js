@@ -8,16 +8,32 @@
  * mismo saldo al mismo tiempo. Lo de acá es lo otro: que este archivo llame bien, que no invente un
  * saldo cuando la base no contestó nada, y que ante cualquier cosa rara falle cerrado. Abrir un
  * contacto es plata, así que contestar que sí ante una respuesta que no se entendió es regalarlo.
+ *
+ * Y con qué credencial: la carga va con la conexión que le pasa el cobro, y la apertura con el
+ * trabajo de la Prestadora del acceso. Con el sistema roto —otra credencial u otra Prestadora— las
+ * pruebas dan al revés. Datos inventados.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
+const PRESTADORA = '11111111-1111-4111-8111-111111111111';
 const ACCESO = '33333333-3333-3333-3333-333333333333';
 const ASISTENTE = '88888888-8888-8888-8888-888888888888';
 
+const DE_QUIEN_CARGA = 'Bearer credencial-de-quien-carga';
+
 const respuestas = new Map();
 let llamadas = [];
+
+function leerCredencial(autorizacion) {
+  try {
+    return JSON.parse(Buffer.from(autorizacion.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+  } catch {
+    return null;
+  }
+}
 
 const baseFalsa = createServer((req, res) => {
   let crudo = '';
@@ -27,7 +43,7 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, cuerpo: crudo ? JSON.parse(crudo) : null });
+    llamadas.push({ clave, cuerpo: crudo ? JSON.parse(crudo) : null, credencial: req.headers.authorization });
 
     const preparada = respuestas.get(clave);
     if (preparada === undefined) {
@@ -42,12 +58,18 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // Después de las variables de entorno: la conexión a la base se arma al importar.
-const { cargarContactosEnElSaldo, abrirElContacto, MOTIVO_CONTACTO } = await import(
+const { createClient } = await import('@supabase/supabase-js');
+const { cargarContactosEnElSaldo, abrirElContacto: abrir, MOTIVO_CONTACTO } = await import(
   '../contactosIntermediacion.js'
 );
+
+const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
+  accessToken: async () => DE_QUIEN_CARGA.replace('Bearer ', ''),
+});
+const abrirElContacto = (argumentos) => abrir({ prestadoraId: PRESTADORA, ...argumentos });
 
 after(() => baseFalsa.close());
 
@@ -61,17 +83,18 @@ const sumas = () => llamadas.filter((l) => l.clave === 'POST /rest/v1/rpc/sumar_
 describe('cargarle contactos al saldo', () => {
   it('le pide a la base que sume, y contesta el total que quedó', async () => {
     respuestas.set('POST /rest/v1/rpc/sumar_contactos_al_saldo', () => 8);
-    const resultado = await cargarContactosEnElSaldo({ accesoId: ACCESO, cuantos: 3 });
+    const resultado = await cargarContactosEnElSaldo({ accesoId: ACCESO, cuantos: 3 }, db);
 
     assert.deepEqual(resultado, { ok: true, saldo_contactos: 8 });
     assert.deepEqual(sumas()[0].cuerpo, { p_acceso_id: ACCESO, p_cuantos: 3 });
+    assert.equal(sumas()[0].credencial, DE_QUIEN_CARGA, 'la carga va con la conexión que le pasaron');
   });
 
   it('un acceso que no está no es un saldo en cero', async () => {
     // La base contesta vacío cuando no hay fila que cargar. Devolver «quedó en cero» taparía que
     // la plata entró contra un acceso que no existe.
     respuestas.set('POST /rest/v1/rpc/sumar_contactos_al_saldo', () => null);
-    const resultado = await cargarContactosEnElSaldo({ accesoId: ACCESO, cuantos: 3 });
+    const resultado = await cargarContactosEnElSaldo({ accesoId: ACCESO, cuantos: 3 }, db);
 
     assert.deepEqual(resultado, { ok: false, motivo: MOTIVO_CONTACTO.ACCESO_INEXISTENTE });
   });
@@ -80,7 +103,7 @@ describe('cargarle contactos al saldo', () => {
     // Un paquete sin contactos no es un paquete, y medio contacto no existe. Se corta acá para que
     // no quede una llamada de plata con un número que nadie entiende.
     for (const cuantos of [0, -2, 1.5, null, undefined, '3']) {
-      const resultado = await cargarContactosEnElSaldo({ accesoId: ACCESO, cuantos });
+      const resultado = await cargarContactosEnElSaldo({ accesoId: ACCESO, cuantos }, db);
       assert.equal(resultado.ok, false, `cuantos: ${cuantos}`);
       assert.equal(resultado.motivo, MOTIVO_CONTACTO.NO_SE_PUDO_GUARDAR);
     }
@@ -88,7 +111,7 @@ describe('cargarle contactos al saldo', () => {
   });
 
   it('si la base falla, no se da por cargado', async () => {
-    const resultado = await cargarContactosEnElSaldo({ accesoId: ACCESO, cuantos: 3 });
+    const resultado = await cargarContactosEnElSaldo({ accesoId: ACCESO, cuantos: 3 }, db);
     assert.equal(resultado.ok, false);
     assert.equal(resultado.motivo, MOTIVO_CONTACTO.NO_SE_PUDO_GUARDAR);
   });
@@ -105,6 +128,9 @@ describe('abrir el contacto de un Asistente', () => {
 
     assert.deepEqual(resultado, { ok: true, ya_estaba: false, saldo_contactos: 4 });
     assert.deepEqual(llamadas[0].cuerpo, { p_acceso_id: ACCESO, p_asistente_id: ASISTENTE });
+    const credencial = leerCredencial(llamadas[0].credencial ?? '');
+    assert.equal(credencial?.role, 'trabajo_sin_persona', 'fue con otra credencial');
+    assert.equal(credencial.prestadora_id, PRESTADORA, 'fue fuera de la Prestadora');
   });
 
   it('el que ya estaba abierto se abre otra vez sin descontar', async () => {
@@ -150,6 +176,13 @@ describe('abrir el contacto de un Asistente', () => {
       assert.equal(resultado.ok, false, `respuesta: ${JSON.stringify(respuesta)}`);
       assert.equal(resultado.motivo, MOTIVO_CONTACTO.NO_SE_PUDO_GUARDAR);
     }
+  });
+
+  it('sin Prestadora no consulta nada y no abre', async () => {
+    const resultado = await abrir({ accesoId: ACCESO, asistenteId: ASISTENTE });
+    assert.equal(resultado.ok, false);
+    assert.equal(resultado.motivo, MOTIVO_CONTACTO.NO_SE_PUDO_GUARDAR);
+    assert.equal(llamadas.length, 0);
   });
 
   it('si la base falla, tampoco', async () => {

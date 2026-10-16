@@ -21,7 +21,7 @@
    contacto al Cliente —el paso «La activación al intentar ver el contacto» del plan—, que
    todavía no existe: hasta entonces el Panel puede ver el saldo y nadie lo gasta. */
 
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 
 /** Por qué no se pudo abrir un contacto. Son códigos, no frases: la frase que lee la persona vive
  *  en las traducciones, en los tres idiomas (`celtatech\CLAUDE.md` §8, «un mensaje de error es
@@ -44,10 +44,10 @@ export const MOTIVO_CONTACTO = {
  * @param {object} argumentos
  * @param {string} argumentos.accesoId
  * @param {number} argumentos.cuantos  Cuántos contactos trae lo que se acaba de pagar.
- * @param {object} [db]  La conexión con la que trabaja quien carga.
+ * @param {object} db  La conexión con la que trabaja quien carga.
  * @returns {Promise<{ok: boolean, saldo_contactos?: number, motivo?: string, detalle?: string}>}
  */
-export async function cargarContactosEnElSaldo({ accesoId, cuantos }, db = supabase) {
+export async function cargarContactosEnElSaldo({ accesoId, cuantos }, db) {
   if (!Number.isInteger(cuantos) || cuantos <= 0) {
     return { ok: false, motivo: MOTIVO_CONTACTO.NO_SE_PUDO_GUARDAR, detalle: `cuantos: ${cuantos}` };
   }
@@ -76,16 +76,24 @@ export async function cargarContactosEnElSaldo({ accesoId, cuantos }, db = supab
  * una sola vez. `ya_estaba` dice cuál de los dos casos fue, para que quien llama pueda avisar que
  * se gastó un contacto sólo cuando se gastó de verdad.
  *
+ * Lo abre el trabajo de la Prestadora del acceso: un acceso de otra Prestadora no se alcanza, y
+ * contesta como si no existiera.
+ *
  * @param {object} argumentos
+ * @param {string} argumentos.prestadoraId
  * @param {string} argumentos.accesoId
  * @param {string} argumentos.asistenteId
  * @returns {Promise<{ok: boolean, ya_estaba?: boolean, saldo_contactos?: number, motivo?: string, detalle?: string}>}
  */
-export async function abrirElContacto({ accesoId, asistenteId }) {
-  const { data, error } = await supabase.rpc('consumir_contacto_intermediacion', {
-    p_acceso_id: accesoId,
-    p_asistente_id: asistenteId,
-  });
+export async function abrirElContacto({ prestadoraId, accesoId, asistenteId }) {
+  if (!prestadoraId) {
+    return { ok: false, motivo: MOTIVO_CONTACTO.NO_SE_PUDO_GUARDAR, detalle: 'sin Prestadora' };
+  }
+  const { data, error } = await enLaPrestadora(prestadoraId, 'Abrir un contacto del Match', (db) => db
+    .rpc('consumir_contacto_intermediacion', {
+      p_acceso_id: accesoId,
+      p_asistente_id: asistenteId,
+    }));
 
   if (error) {
     return { ok: false, motivo: MOTIVO_CONTACTO.NO_SE_PUDO_GUARDAR, detalle: error.message };

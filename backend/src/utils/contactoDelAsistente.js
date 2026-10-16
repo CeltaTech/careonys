@@ -217,7 +217,7 @@ export async function abrirElContactoDeUnAsistente({ prestadoraId, clienteId, as
 
   // Primero se cobra y recién después se muestra. Al revés, un descuento que falla dejaría el
   // dato ya visto, que es lo único que no se puede deshacer.
-  const abierto = await abrirElContacto({ accesoId: acceso.id, asistenteId });
+  const abierto = await abrirElContacto({ prestadoraId, accesoId: acceso.id, asistenteId });
   if (!abierto.ok) {
     return { ok: false, motivo: abierto.motivo, saldo_contactos: abierto.saldo_contactos };
   }

@@ -18,6 +18,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 // Las frases de los mensajes ya no están escritas adentro del código: viven en la tabla de mensajes
 // del sistema y se editan desde afuera. Acá se carga lo mismo que siembra la migración, porque las
@@ -50,6 +51,15 @@ function avisarDeMentira(clienteId, texto) {
 /** Lo que quedó anotado del lado del servidor. Se junta para no ensuciar la salida. */
 let anotados = [];
 
+/** Lo que dice adentro una credencial, o `null` si no se puede leer. */
+function leerCredencial(autorizacion) {
+  try {
+    return JSON.parse(Buffer.from(autorizacion.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+  } catch {
+    return null;
+  }
+}
+
 const baseFalsa = createServer((req, res) => {
   let crudo = '';
   req.on('data', (parte) => {
@@ -58,7 +68,7 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null });
+    llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null, credencial: leerCredencial(req.headers.authorization ?? '') });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada() : preparada;
@@ -82,11 +92,11 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma en
 // el momento en que se importa el archivo.
-const { avisarElPrimerCobroQueViene, textoDelMensaje } = await import('../avisoPrevioAlCobro.js');
+const { avisarElPrimerCobroDeUnaPrestadora, textoDelMensaje } = await import('../avisoPrevioAlCobro.js');
 
 const avisarDeVerdad = console.error;
 console.error = (...partes) => anotados.push(partes.join(' '));
@@ -131,19 +141,35 @@ beforeEach(() => {
   anotados = [];
   respuestas.clear();
   respuestas.set('PATCH /rest/v1/accesos_intermediacion', []);
-  // Con cuántos días de anticipación se avisa lo elige la Prestadora: la ventana de la consulta
-  // sale de la más larga que haya configurada, y después cada acceso se mide contra la suya.
+  // Con cuántos días de anticipación se avisa lo elige la Prestadora, y la ventana sale de ahí.
   respuestas.set('GET /rest/v1/configuracion_cobro_intermediacion', [
     { dias_de_aviso_antes_del_cobro: 3, dias_de_gracia_por_cobro_rechazado: 7, dias_de_vida_del_cupon: 10 },
   ]);
   respuestas.set('GET /rest/v1/prestadoras', [{ pais: 'AR' }]);
 });
 
+describe('con qué credencial', () => {
+  it('todo va con la credencial del trabajo de esa Prestadora, y nombrándola', async () => {
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [accesoPorCobrarse()]);
+
+    await avisarElPrimerCobroDeUnaPrestadora(PRESTADORA, HOY, { avisar: avisarDeMentira });
+
+    assert.ok(llamadas.length >= 3);
+    for (const llamada of llamadas) {
+      assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', `${llamada.clave} fue con otra credencial`);
+      assert.equal(llamada.credencial.prestadora_id, PRESTADORA, `${llamada.clave} fue fuera de la Prestadora`);
+    }
+    for (const clave of ['GET /rest/v1/accesos_intermediacion', 'PATCH /rest/v1/accesos_intermediacion']) {
+      assert.match(llamadas.find((l) => l.clave === clave).url, /prestadora_id=eq\.44444444/);
+    }
+  });
+});
+
 describe('a quién se le avisa', () => {
   it('le avisa al Cliente y anota cuándo', async () => {
     respuestas.set('GET /rest/v1/accesos_intermediacion', [accesoPorCobrarse()]);
 
-    const { avisados } = await avisarElPrimerCobroQueViene({ avisar: avisarDeMentira });
+    const { avisados } = await avisarElPrimerCobroDeUnaPrestadora(PRESTADORA, HOY, { avisar: avisarDeMentira });
 
     assert.equal(avisados, 1);
     assert.equal(empujados.length, 1);
@@ -156,7 +182,7 @@ describe('a quién se le avisa', () => {
     // backend estuvo caído, el Cliente no tenía dispositivo—, éste es el día que queda.
     respuestas.set('GET /rest/v1/accesos_intermediacion', [accesoPorCobrarse({ gratis_hasta: HOY })]);
 
-    assert.equal((await avisarElPrimerCobroQueViene({ avisar: avisarDeMentira })).avisados, 1);
+    assert.equal((await avisarElPrimerCobroDeUnaPrestadora(PRESTADORA, HOY, { avisar: avisarDeMentira })).avisados, 1);
     assert.equal(empujados.length, 1);
   });
 
@@ -166,7 +192,7 @@ describe('a quién se le avisa', () => {
     // que tiene la fecha lejos todavía no tiene nada que saber.
     respuestas.set('GET /rest/v1/accesos_intermediacion', []);
 
-    await avisarElPrimerCobroQueViene({ avisar: avisarDeMentira });
+    await avisarElPrimerCobroDeUnaPrestadora(PRESTADORA, HOY, { avisar: avisarDeMentira });
 
     const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_intermediacion').url;
     assert.match(consulta, /estado=eq\.vigente/);
@@ -180,7 +206,7 @@ describe('a quién se le avisa', () => {
   it('no avisa ni escribe nada si la consulta falla', async () => {
     respuestas.set('GET /rest/v1/accesos_intermediacion', { __falla: { message: 'la base no contesta' } });
 
-    const { avisados } = await avisarElPrimerCobroQueViene({ avisar: avisarDeMentira });
+    const { avisados } = await avisarElPrimerCobroDeUnaPrestadora(PRESTADORA, HOY, { avisar: avisarDeMentira });
 
     assert.equal(avisados, 0);
     assert.equal(empujados.length, 0);
@@ -214,7 +240,7 @@ describe('cuando el aviso no llega', () => {
     respuestas.set('GET /rest/v1/accesos_intermediacion', [accesoPorCobrarse()]);
     elEnvioSale = false;
 
-    const { avisados } = await avisarElPrimerCobroQueViene({ avisar: avisarDeMentira });
+    const { avisados } = await avisarElPrimerCobroDeUnaPrestadora(PRESTADORA, HOY, { avisar: avisarDeMentira });
 
     assert.equal(avisados, 0);
     assert.equal(loAnotado(), undefined);
@@ -231,7 +257,7 @@ describe('cuando el aviso no llega', () => {
       return vez === 1 ? { __falla: { message: 'la base no contesta' } } : [];
     });
 
-    const { avisados } = await avisarElPrimerCobroQueViene({ avisar: avisarDeMentira });
+    const { avisados } = await avisarElPrimerCobroDeUnaPrestadora(PRESTADORA, HOY, { avisar: avisarDeMentira });
 
     assert.equal(avisados, 1);
     assert.equal(empujados.length, 2);
@@ -241,7 +267,7 @@ describe('cuando el aviso no llega', () => {
   it('vuelve a exigir al anotar que nadie haya avisado en el medio', async () => {
     respuestas.set('GET /rest/v1/accesos_intermediacion', [accesoPorCobrarse()]);
 
-    await avisarElPrimerCobroQueViene({ avisar: avisarDeMentira });
+    await avisarElPrimerCobroDeUnaPrestadora(PRESTADORA, HOY, { avisar: avisarDeMentira });
 
     assert.match(loAnotado().url, /aviso_previo_en=is\.null/);
   });

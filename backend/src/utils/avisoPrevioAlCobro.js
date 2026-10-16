@@ -16,9 +16,9 @@
    entonces no se pudo. Después de esa fecha no avisa: el cobro ya salió, y decirle a alguien que
    «va a cobrarse» algo que ya se cobró no es un preaviso, es ruido.
 
-   LA ANTICIPACIÓN ES DE CADA PRESTADORA, y por eso la consulta se abre por la más larga que haya
-   configurada y después cada acceso se mide contra el plazo de la suya
-   (`plazosDeCobroIntermediacion.js`). Una sola consulta para todas, como antes.
+   LA ANTICIPACIÓN ES DE CADA PRESTADORA (`plazosDeCobroIntermediacion.js`). Se recorre de a una,
+   cada una con la credencial del trabajo de esa Prestadora, que la base acota a ella, y la ventana
+   de cada una sale de su propio plazo.
 
    A QUIÉN NO LE AVISA. A quien ya se dio de baja durante el período gratuito. Ahí no viene ningún
    cobro, que es justamente lo que la baja consigue, y avisarle uno lo asustaría sin motivo.
@@ -31,13 +31,14 @@
    UN MENSAJE QUE FALLA NO FRENA A LOS DEMÁS. Es el mismo criterio de `revisarVencimientos` y de
    `cortarLosAccesosDadosDeBaja`: lo de un Cliente no puede dejar sin avisar a los otros. */
 
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
+import { prestadorasDeLaIntermediacion } from './prestadorasDeLaIntermediacion.js';
 import { enviarPushCliente } from './push.js';
 import { sumarDias } from './fechas.js';
 import { enDia, importeConMoneda } from './comoSeDiceEnUnAviso.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
-import { memoriaDePlazos, plazosDeLaPrestadora, elPlazoDePreavisoMasLargo } from './plazosDeCobroIntermediacion.js';
+import { plazosDeLaPrestadora } from './plazosDeCobroIntermediacion.js';
 
 /**
  * Avisa a los Clientes cuyo período gratuito está por terminar. Corre una vez por día
@@ -53,69 +54,80 @@ import { memoriaDePlazos, plazosDeLaPrestadora, elPlazoDePreavisoMasLargo } from
  */
 export async function avisarElPrimerCobroQueViene({ avisar = enviarPushCliente } = {}) {
   const hoy = new Date().toISOString().slice(0, 10);
-  const plazoMasLargo = await elPlazoDePreavisoMasLargo();
-  // Sin ninguna Prestadora configurada no hay a quién avisarle, y sin plazo no se inventa uno.
-  if (!plazoMasLargo) return { avisados: 0 };
-  const hastaCuando = sumarDias(hoy, plazoMasLargo);
-
-  // SIN PRESTADORA A PROPÓSITO
-  // Es el barrido de la noche, y no lo pide nadie: busca en qué Prestadoras hay un primer cobro a
-  // la vista sin saber de antemano en cuáles. Acotarlo a una sola no encontraría los de las demás,
-  // y no hay ninguna sesión de la que sacar cuál. Lo que sí se hace es trabajar de a una: la fila
-  // trae su `prestadora_id`, y con ese dato se resuelven el plazo, el idioma y el aviso de cada
-  // una, una por vez.
-  const { data: accesos, error } = await supabase
-    .from('accesos_intermediacion')
-    .select('id, cliente_id, paciente_id, prestadora_id, importe, moneda, gratis_hasta')
-    .eq('estado', 'vigente')
-    .is('cancelada_en', null)
-    .is('aviso_previo_en', null)
-    .not('gratis_hasta', 'is', null)
-    .gte('gratis_hasta', hoy)
-    .lte('gratis_hasta', hastaCuando);
-
-  if (error) {
-    console.error('Error consultando los accesos por avisar del primer cobro:', error.message);
-    return { avisados: 0 };
-  }
-
-  const memoria = memoriaDePlazos();
   let avisados = 0;
-  for (const acceso of accesos ?? []) {
-    // La ventana de arriba es la más ancha de todas. Ésta es la de esta Prestadora.
-    const plazos = await plazosDeLaPrestadora(acceso.prestadora_id, memoria);
-    if (!plazos) continue;
-    if (acceso.gratis_hasta > sumarDias(hoy, plazos.dias_de_aviso_antes_del_cobro)) continue;
-
-    let salio = false;
+  for (const prestadoraId of await prestadorasDeLaIntermediacion()) {
     try {
-      salio = await avisar(acceso.prestadora_id, acceso.cliente_id, textoDelMensaje(acceso, await idiomaDeLaPrestadora(supabase, acceso.prestadora_id)));
+      avisados += (await avisarElPrimerCobroDeUnaPrestadora(prestadoraId, hoy, { avisar })).avisados;
     } catch (falla) {
-      console.error('No se pudo avisar del primer cobro a un Cliente:', falla.message);
-      continue;
+      console.error(`Error avisando el primer cobro (prestadora ${prestadoraId}):`, falla.message);
     }
-    // Sin dispositivo al que mandarlo no hay nada que anotar: mañana se vuelve a intentar.
-    if (!salio) continue;
-
-    const { error: errorAnotar } = await supabase
-      .from('accesos_intermediacion')
-      .update({ aviso_previo_en: new Date().toISOString(), updated_at: new Date().toISOString() })
-      .eq('id', acceso.id)
-      // La Prestadora se nombra igual, aunque el identificador ya sea único: es la fila leída
-      // arriba, y este barrido pasa por todas.
-      .eq('prestadora_id', acceso.prestadora_id)
-      .is('aviso_previo_en', null);
-
-    if (errorAnotar) {
-      // El mensaje salió y la marca no se guardó. Se anota fuerte porque el próximo día lo va a
-      // mandar de nuevo: es preferible a no avisar, pero no es lo que tiene que pasar.
-      console.error('Aviso del primer cobro enviado y no anotado:', acceso.id, errorAnotar.message);
-      continue;
-    }
-    avisados += 1;
   }
-
   return { avisados };
+}
+
+/**
+ * Lo de una sola Prestadora, con la credencial del trabajo de esa Prestadora.
+ *
+ * @param {string} prestadoraId
+ * @param {string} hoy  La fecha del día, `AAAA-MM-DD`.
+ * @param {object} [argumentos]
+ * @param {Function} [argumentos.avisar]  Igual que en `avisarElPrimerCobroQueViene`.
+ * @returns {Promise<{avisados: number}>}
+ */
+export function avisarElPrimerCobroDeUnaPrestadora(prestadoraId, hoy, { avisar = enviarPushCliente } = {}) {
+  return enLaPrestadora(prestadoraId, 'avisar el primer cobro', async (db) => {
+    const plazos = await plazosDeLaPrestadora(prestadoraId, undefined, db);
+    // Sin plazo no se inventa uno.
+    if (!plazos) return { avisados: 0 };
+    const hastaCuando = sumarDias(hoy, plazos.dias_de_aviso_antes_del_cobro);
+
+    const { data: accesos, error } = await db
+      .from('accesos_intermediacion')
+      .select('id, cliente_id, paciente_id, prestadora_id, importe, moneda, gratis_hasta')
+      .eq('prestadora_id', prestadoraId)
+      .eq('estado', 'vigente')
+      .is('cancelada_en', null)
+      .is('aviso_previo_en', null)
+      .not('gratis_hasta', 'is', null)
+      .gte('gratis_hasta', hoy)
+      .lte('gratis_hasta', hastaCuando);
+
+    if (error) {
+      console.error(`Error consultando los accesos por avisar del primer cobro (prestadora ${prestadoraId}):`, error.message);
+      return { avisados: 0 };
+    }
+    if ((accesos ?? []).length === 0) return { avisados: 0 };
+
+    const idioma = await idiomaDeLaPrestadora(db, prestadoraId);
+    let avisados = 0;
+    for (const acceso of accesos) {
+      let salio = false;
+      try {
+        salio = await avisar(prestadoraId, acceso.cliente_id, textoDelMensaje(acceso, idioma));
+      } catch (falla) {
+        console.error('No se pudo avisar del primer cobro a un Cliente:', falla.message);
+        continue;
+      }
+      // Sin dispositivo al que mandarlo no hay nada que anotar: mañana se vuelve a intentar.
+      if (!salio) continue;
+
+      const { error: errorAnotar } = await db
+        .from('accesos_intermediacion')
+        .update({ aviso_previo_en: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq('id', acceso.id)
+        .eq('prestadora_id', prestadoraId)
+        .is('aviso_previo_en', null);
+
+      if (errorAnotar) {
+        // El mensaje salió y la marca no se guardó. Se anota fuerte porque el próximo día lo va a
+        // mandar de nuevo: es preferible a no avisar, pero no es lo que tiene que pasar.
+        console.error('Aviso del primer cobro enviado y no anotado:', acceso.id, errorAnotar.message);
+        continue;
+      }
+      avisados += 1;
+    }
+    return { avisados };
+  });
 }
 
 /** Qué lee el Cliente. Corto y neutro: qué día empieza a cobrarse, cuánto, y que puede darse de

@@ -21,7 +21,8 @@
  *
  * Los datos son inventados.
  */
-import { strict as assert } from 'node:assert';
+import { strict as assert } from 'node:assert';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
@@ -69,6 +70,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 const { default: express } = await import('express');
 await import('express-async-errors');

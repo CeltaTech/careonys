@@ -11,7 +11,8 @@
  * Nadie recibe el push en esta prueba —no hay claves VAPID cargadas—, así que todos los mensajes
  * caen al canal de respaldo. Eso es a propósito: es el camino que deja ver el destinatario.
  */
-import { strict as assert } from 'node:assert';
+import { strict as assert } from 'node:assert';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 
@@ -72,6 +73,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 // Sin claves de push nadie recibe el mensaje al celular y todos caen al canal de respaldo, que es
 // el que deja ver a qué número salió cada mensaje.
 delete process.env.VAPID_PUBLIC_KEY;

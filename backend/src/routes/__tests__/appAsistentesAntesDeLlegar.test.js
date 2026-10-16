@@ -24,7 +24,8 @@
  * una persona, deja ver sólo su Prestadora: si la guardia se buscara con la llave maestra, o sin el
  * filtro por Asistente, la prueba del aislamiento deja de pasar.
  */
-import { strict as assert } from 'node:assert';
+import { strict as assert } from 'node:assert';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { MOTIVOS_DEMORA } from '../../utils/motivosDemora.js';
@@ -83,6 +84,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma
 // en el momento en que se importa, y con la dirección que haya en ese instante.

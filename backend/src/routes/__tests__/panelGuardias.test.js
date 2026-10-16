@@ -345,6 +345,7 @@ describe('llevar un turno a otro Paciente', () => {
     assert.equal(marcas.length, 1);
     assert.match(decodeURIComponent(marcas[0].url), new RegExp(`id=eq\.${NUEVA}`));
     assert.match(decodeURIComponent(marcas[0].url), new RegExp(`prestadora_id=eq\.${PRESTADORA}`));
+    assert.notEqual(marcas[0].credencial, 'Bearer clave-de-mentira');
   });
 
   it('un Paciente que no es un texto no llega a la base', async () => {

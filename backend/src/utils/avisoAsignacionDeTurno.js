@@ -1,4 +1,3 @@
-import { supabase } from '../db/connection.js';
 import { enviarPushAsistente } from './push.js';
 import { respaldoWhatsappSiFalla } from './revisarRecordatoriosPush.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
@@ -11,6 +10,9 @@ import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 //
 // Nunca tira: la asignación ya quedó hecha cuando se llega acá, y un aviso que no salió no la
 // vuelve fallida.
+//
+// Entra con la conexión que recibe —la de quien asignó—: la marca de avisado la escribe la misma
+// persona que pudo asignar el turno.
 
 async function avisarAlAsistente({ prestadoraId, asistenteId, idioma, clave, datos, url }) {
   try {
@@ -22,10 +24,10 @@ async function avisarAlAsistente({ prestadoraId, asistenteId, idioma, clave, dat
   }
 }
 
-export async function avisarAsignacionDeTurno({ prestadoraId, guardia, asistenteNuevoId, retirados }) {
+export async function avisarAsignacionDeTurno(db, { prestadoraId, guardia, asistenteNuevoId, retirados }) {
   if (!prestadoraId || !guardia) return;
 
-  const idioma = await idiomaDeLaPrestadora(supabase, prestadoraId);
+  const idioma = await idiomaDeLaPrestadora(db, prestadoraId);
   const datos = { fecha: guardia.fecha, horaInicio: guardia.hora_inicio, horaFin: guardia.hora_fin };
 
   // Quien vuelve a recibir el mismo turno —porque cambió de horario— no lo pierde: se lo vuelve a
@@ -49,7 +51,7 @@ export async function avisarAsignacionDeTurno({ prestadoraId, guardia, asistente
 
   // Ya avisado: cuando acepte, el turno pasa a su nombre y el aviso de guardia asignada
   // (`revisarRecordatoriosPush.js`) no tiene que volver a llegarle por algo que ya contestó.
-  const { error } = await supabase
+  const { error } = await db
     .from('guardias')
     .update({ push_asignacion_enviado_at: new Date().toISOString() })
     .eq('prestadora_id', prestadoraId)

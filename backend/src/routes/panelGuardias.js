@@ -236,7 +236,7 @@ panelGuardiasRouter.post('/:id/asignar', requiereRolPanel, exigirOrganizacionAct
   ).maybeSingle();
 
   if (guardia) {
-    await avisarAsignacionDeTurno({
+    await avisarAsignacionDeTurno(clienteDelPedido(req), {
       prestadoraId: guardia.prestadora_id,
       guardia,
       asistenteNuevoId: asistenteId,
@@ -288,7 +288,7 @@ panelGuardiasRouter.post('/:id/mover-a-paciente', requiereRolPanel, exigirOrgani
   const nueva = guardias?.find((g) => g.id === resultado?.guardia_nueva_id);
 
   if (original) {
-    await avisarAsignacionDeTurno({
+    await avisarAsignacionDeTurno(clienteDelPedido(req), {
       prestadoraId: original.prestadora_id,
       guardia: original,
       asistenteNuevoId: null,
@@ -296,7 +296,7 @@ panelGuardiasRouter.post('/:id/mover-a-paciente', requiereRolPanel, exigirOrgani
     });
   }
   if (nueva) {
-    await avisarAsignacionDeTurno({
+    await avisarAsignacionDeTurno(clienteDelPedido(req), {
       prestadoraId: nueva.prestadora_id,
       guardia: nueva,
       asistenteNuevoId: resultado?.asistente_id ?? null,

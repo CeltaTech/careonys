@@ -16,9 +16,14 @@
 
    LA FACTURA ANTERIOR NO SE PISA. Cada comprobante se guarda con un nombre nuevo, y la factura
    apunta al último. Un comprobante reemplazado queda en el depósito sin que nadie lo alcance:
-   borrarlo sería tirar el papel que estuvo vigente. */
+   borrarlo sería tirar el papel que estuvo vigente.
 
-import { supabase } from '../db/connection.js';
+   CON QUÉ CREDENCIAL. Con el trabajo de la Prestadora de la factura, nunca con la llave maestra.
+   Lo que entra del software de facturación no tiene sesión de nadie, y las dos puertas guardan
+   igual. La base deja al trabajo sólo en la carpeta de su Prestadora dentro del depósito y sólo en
+   sus facturas. */
+
+import { enLaPrestadora } from '../db/connection.js';
 import {
   DEPOSITO_DE_COMPROBANTES,
   TAMANO_MAXIMO_DEL_COMPROBANTE,
@@ -34,11 +39,10 @@ import {
  * llama lo trata como un error, nunca como un permiso.
  */
 export async function laPrestadoraEntregaLaFactura(prestadoraId) {
-  const { data, error } = await supabase
-    .from('configuracion_facturacion_clientes')
-    .select('regla')
-    .eq('prestadora_id', prestadoraId)
-    .maybeSingle();
+  if (!prestadoraId) throw new Error('falta la Prestadora');
+  const { data, error } = await enLaPrestadora(prestadoraId, 'saber si entrega la factura', (db) =>
+    db.from('configuracion_facturacion_clientes').select('regla').eq('prestadora_id', prestadoraId).maybeSingle(),
+  );
   if (error) throw new Error(error.message);
   return entregaLaFactura(data?.regla);
 }
@@ -64,25 +68,25 @@ export function loQueEstaMalEnElComprobante(bytes) {
 
 /**
  * Deja el comprobante en el depósito y lo anota en la factura. Devuelve `{ error }`.
- *
- * El filtro de Prestadora va acá y no en quien llama: el backend entra a la base con la llave de
- * servicio, así que si falta ese filtro no lo detiene nadie.
  */
 export async function guardarComprobante({ prestadoraId, facturaId, clienteId, bytes }) {
+  if (!prestadoraId) return { error: new Error('falta la Prestadora') };
   const ruta = rutaDelComprobante({ prestadoraId, clienteId });
 
-  const { error: errorAlSubir } = await supabase.storage
-    .from(DEPOSITO_DE_COMPROBANTES)
-    .upload(ruta, bytes, { contentType: TIPO_DEL_COMPROBANTE, upsert: false });
-  if (errorAlSubir) return { error: errorAlSubir };
+  return enLaPrestadora(prestadoraId, 'guardar el comprobante de la factura', async (db) => {
+    const { error: errorAlSubir } = await db.storage
+      .from(DEPOSITO_DE_COMPROBANTES)
+      .upload(ruta, bytes, { contentType: TIPO_DEL_COMPROBANTE, upsert: false });
+    if (errorAlSubir) return { error: errorAlSubir };
 
-  const ahora = new Date().toISOString();
-  const { error } = await supabase
-    .from('facturas_cliente')
-    .update({ comprobante_archivo: ruta, comprobante_subido_at: ahora, updated_at: ahora })
-    .eq('id', facturaId)
-    .eq('prestadora_id', prestadoraId);
-  return { error, ruta };
+    const ahora = new Date().toISOString();
+    const { error } = await db
+      .from('facturas_cliente')
+      .update({ comprobante_archivo: ruta, comprobante_subido_at: ahora, updated_at: ahora })
+      .eq('id', facturaId)
+      .eq('prestadora_id', prestadoraId);
+    return { error, ruta };
+  });
 }
 
 /**
@@ -91,10 +95,10 @@ export async function guardarComprobante({ prestadoraId, facturaId, clienteId, b
  * El depósito es privado: no hay dirección pública, y el enlace vence. Un enlace que no
  * venciera, reenviado una vez, sería el comprobante abierto para siempre.
  */
-export async function direccionParaBajarElComprobante(ruta) {
-  if (!ruta) return null;
-  const { data, error } = await supabase.storage
-    .from(DEPOSITO_DE_COMPROBANTES)
-    .createSignedUrl(ruta, SEGUNDOS_DEL_ENLACE_TEMPORAL, { download: true });
+export async function direccionParaBajarElComprobante(prestadoraId, ruta) {
+  if (!prestadoraId || !ruta) return null;
+  const { data, error } = await enLaPrestadora(prestadoraId, 'preparar la descarga del comprobante', (db) =>
+    db.storage.from(DEPOSITO_DE_COMPROBANTES).createSignedUrl(ruta, SEGUNDOS_DEL_ENLACE_TEMPORAL, { download: true }),
+  );
   return error ? null : data.signedUrl;
 }

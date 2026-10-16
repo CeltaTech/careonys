@@ -38,12 +38,17 @@
    solos: mientras el acceso siga `vigente` —que es lo que la gracia sostiene— el cobro de un
    período fallido se vuelve a armar todos los días.
 
+   CON QUÉ CREDENCIAL. Todo lo de acá corre con la del trabajo de esa Prestadora, de a una por vez:
+   la base le deja leer y anotar sólo los accesos y los cobros de la suya, y la credencial del riel
+   que le devuelve es sólo la suya. Lo mismo cuando el cobro entra desde una ruta: quien llama dice
+   de qué Prestadora es, y lo que se escribe no sale de ahí.
+
    Y NO SE ARMA DOS VECES EL MISMO PERÍODO. El candado de verdad está en la base: un índice único
    parcial deja un solo cobro `pendiente` por acceso y período
    (`uq_cobros_intermediacion_periodo_pendiente`). Acá igual se pregunta antes, para no pedirle al
    proveedor un QR que después habría que tirar. */
 
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { obtenerAdaptador, armaCobroPorPeriodo } from '../pasarelas/index.js';
 import { cargarContactosEnElSaldo } from './contactosIntermediacion.js';
 import { sumarDias } from './fechas.js';
@@ -69,13 +74,19 @@ export async function armarCobrosDelPeriodo() {
   const plazos = memoriaDePlazos();
 
   for (const prestadoraId of await prestadorasDeLaIntermediacion()) {
-    await armarLosCobrosDeUnaPrestadora(prestadoraId, hoy, credenciales, plazos);
+    try {
+      await enLaPrestadora(prestadoraId, 'armar los cobros del período', (db) =>
+        armarLosCobrosDeUnaPrestadora(db, prestadoraId, hoy, credenciales, plazos)
+      );
+    } catch (falla) {
+      console.error(`Error armando los cobros (prestadora ${prestadoraId}):`, falla.message);
+    }
   }
 }
 
 /** La vuelta de una sola Prestadora. Una falla suya se anota acá y no toca a las demás. */
-async function armarLosCobrosDeUnaPrestadora(prestadoraId, hoy, credenciales, plazos) {
-  const { data: accesos, error } = await supabase
+async function armarLosCobrosDeUnaPrestadora(db, prestadoraId, hoy, credenciales, plazos) {
+  const { data: accesos, error } = await db
     .from('accesos_intermediacion')
     .select(
       'id, prestadora_id, cliente_id, proveedor, importe, moneda, proximo_cobro, ' +
@@ -99,7 +110,7 @@ async function armarLosCobrosDeUnaPrestadora(prestadoraId, hoy, credenciales, pl
 
   for (const acceso of porArmar) {
     try {
-      await armarUnCobro(acceso, credenciales, plazos);
+      await armarUnCobro(db, acceso, credenciales, plazos);
     } catch (falla) {
       // Ni el identificador del Cliente ni el texto crudo del proveedor: lo primero es dato de
       // una persona y lo segundo puede nombrar la cuenta de cobro (`celtatech\CLAUDE.md` §6).
@@ -111,12 +122,12 @@ async function armarLosCobrosDeUnaPrestadora(prestadoraId, hoy, credenciales, pl
   }
 }
 
-async function armarUnCobro(acceso, credenciales, plazos) {
+async function armarUnCobro(db, acceso, credenciales, plazos) {
   const periodo = acceso.proximo_cobro;
 
   // ¿Ya tiene un cobro de este período que no está fallido? Entonces no hay nada que armar: o
   // está esperando que el Cliente pague, o ya se pagó y lo que quedó atrasado es la fecha.
-  const { data: existentes, error: errorExistentes } = await supabase
+  const { data: existentes, error: errorExistentes } = await db
     .from('cobros_intermediacion')
     .select('id, estado_cobro')
     .eq('prestadora_id', acceso.prestadora_id)
@@ -130,12 +141,12 @@ async function armarUnCobro(acceso, credenciales, plazos) {
     return;
   }
 
-  const credencial = await credencialDe(acceso.prestadora_id, acceso.proveedor, credenciales);
+  const credencial = await credencialDe(db, acceso.prestadora_id, acceso.proveedor, credenciales);
   if (!credencial) {
     throw new Error('sin credencial guardada para este riel');
   }
 
-  const plazosDeEsta = await plazosDeLaPrestadora(acceso.prestadora_id, plazos);
+  const plazosDeEsta = await plazosDeLaPrestadora(acceso.prestadora_id, plazos, db);
   if (!plazosDeEsta) {
     throw new Error('sin los plazos de cobro de esta Prestadora');
   }
@@ -150,7 +161,7 @@ async function armarUnCobro(acceso, credenciales, plazos) {
     vencimiento: sumarDias(periodo, plazosDeEsta.dias_de_vida_del_cupon),
   });
 
-  const { error: errorInsertar } = await supabase.from('cobros_intermediacion').insert({
+  const { error: errorInsertar } = await db.from('cobros_intermediacion').insert({
     acceso_id: acceso.id,
     prestadora_id: acceso.prestadora_id,
     medio: acceso.proveedor,
@@ -169,11 +180,11 @@ async function armarUnCobro(acceso, credenciales, plazos) {
   }
 }
 
-async function credencialDe(prestadoraId, proveedor, credenciales) {
+async function credencialDe(db, prestadoraId, proveedor, credenciales) {
   const clave = `${prestadoraId}:${proveedor}`;
   if (credenciales.has(clave)) return credenciales.get(clave);
 
-  const { data, error } = await supabase.rpc('leer_credencial_pasarela_pago', {
+  const { data, error } = await db.rpc('leer_credencial_pasarela_pago', {
     p_prestadora_id: prestadoraId,
     p_proveedor: proveedor,
   });
@@ -198,7 +209,18 @@ async function credencialDe(prestadoraId, proveedor, credenciales) {
  * @param {string} argumentos.periodo  El período que se cobró, en formato `AAAA-MM-DD`.
  */
 export async function registrarCobroExitoso({ prestadoraId, accesoId, periodo }) {
-  const { data: acceso, error } = await supabase
+  try {
+    return await enLaPrestadora(prestadoraId, 'registrar un cobro', (db) =>
+      registrarElCobro(db, { prestadoraId, accesoId, periodo })
+    );
+  } catch (falla) {
+    console.error('No se pudo mover el acceso tras un cobro:', falla.message);
+    return { ok: false };
+  }
+}
+
+async function registrarElCobro(db, { prestadoraId, accesoId, periodo }) {
+  const { data: acceso, error } = await db
     .from('accesos_intermediacion')
     .select(
       'id, proximo_cobro, ' +
@@ -224,7 +246,7 @@ export async function registrarCobroExitoso({ prestadoraId, accesoId, periodo })
   // cobrarse. Lo que la sostenga a partir de acá —una fecha o un saldo— ya está guardado.
   const proximoCobro = proximaFecha(base, acceso.formas_de_cobro_intermediacion);
 
-  const { error: errorActualizar } = await supabase
+  const { error: errorActualizar } = await db
     .from('accesos_intermediacion')
     .update({
       estado: 'vigente',
@@ -254,7 +276,7 @@ export async function registrarCobroExitoso({ prestadoraId, accesoId, periodo })
   const contactos = acceso.formas_de_cobro_intermediacion?.contactos_incluidos;
   let saldoContactos;
   if (contactos > 0) {
-    const carga = await cargarContactosEnElSaldo({ accesoId, cuantos: contactos });
+    const carga = await cargarContactosEnElSaldo({ accesoId, cuantos: contactos }, db);
     if (!carga.ok) {
       console.error('No se pudo cargar el saldo de contactos tras un cobro:', carga.motivo, carga.detalle ?? '');
     } else {

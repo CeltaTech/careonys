@@ -122,7 +122,6 @@
                                  "backend/src/utils/avisosDeEscalon.js",
                                  "backend/src/utils/casillaDeEnvio.js",
                                  "backend/src/utils/celularDeUnaSolaPersona.js",
-                                 "backend/src/utils/cobrosIntermediacion.js",
                                  "backend/src/utils/codigoAlTelefono.js",
                                  "backend/src/utils/comprobacionDePresencia.js",
                                  "backend/src/utils/comprobanteDeLaFactura.js",

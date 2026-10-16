@@ -23,6 +23,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const OTRA_PRESTADORA = '22222222-2222-2222-2222-222222222222';
@@ -34,6 +35,15 @@ const PERIODO = '2026-08-01';
 /** La forma de cobro más corriente: un importe por mes. Va en cada acceso de la prueba porque es
  *  de ahí, y no del código, de donde sale cada cuánto se vuelve a cobrar. */
 const CADA_MES = { periodo_cantidad: 1, periodo_unidad: 'mes' };
+
+/** Lo que lleva adentro la credencial con la que llegó un pedido: quién es y de qué Prestadora. */
+function leerCredencial(autorizacion) {
+  try {
+    return JSON.parse(Buffer.from(autorizacion.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+  } catch {
+    return null;
+  }
+}
 
 const respuestas = new Map();
 let llamadas = [];
@@ -48,7 +58,12 @@ const baseFalsa = createServer((req, res) => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
     const cuerpo = crudo ? JSON.parse(crudo) : null;
-    llamadas.push({ clave, url: req.url, cuerpo: Array.isArray(cuerpo) ? cuerpo[0] : cuerpo });
+    llamadas.push({
+      clave,
+      url: req.url,
+      cuerpo: Array.isArray(cuerpo) ? cuerpo[0] : cuerpo,
+      credencial: leerCredencial(req.headers.authorization ?? ''),
+    });
 
     const preparada = respuestas.get(clave);
     // A la respuesta preparada se le pasa la dirección con sus filtros: en esa tabla caen dos
@@ -70,6 +85,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // Los dos rieles que hay que llamar período a período. Cada uno contesta lo suyo con su propio nombre —un
 // QR y un cupón—, que es justo lo que el trabajo diario no tiene que saber.
@@ -279,6 +295,32 @@ describe('cuando un período se cobra', () => {
     assert.ok(guardado().url.includes(`prestadora_id=eq.${PRESTADORA}`));
   });
 
+  it('lo lee y lo anota el trabajo de esa Prestadora, y no la llave maestra', async () => {
+    respuestas.set('GET /rest/v1/accesos_intermediacion', () => [
+      {
+        id: ACCESO,
+        proximo_cobro: PERIODO,
+        formas_de_cobro_intermediacion: { ...CADA_MES, contactos_incluidos: 5 },
+      },
+    ]);
+    respuestas.set('POST /rest/v1/rpc/sumar_contactos_al_saldo', () => 5);
+    await registrarCobroExitoso({ prestadoraId: PRESTADORA, accesoId: ACCESO, periodo: PERIODO });
+
+    const tocadas = llamadas.filter((l) => l.clave !== 'GET /rest/v1/configuracion_cobro_intermediacion');
+    assert.deepEqual(
+      tocadas.map((l) => l.clave).sort(),
+      [
+        'GET /rest/v1/accesos_intermediacion',
+        'PATCH /rest/v1/accesos_intermediacion',
+        'POST /rest/v1/rpc/sumar_contactos_al_saldo',
+      ],
+    );
+    for (const llamada of tocadas) {
+      assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', llamada.clave);
+      assert.equal(llamada.credencial?.prestadora_id, PRESTADORA, llamada.clave);
+    }
+  });
+
   it('cierra la gracia que había abierto un cobro fallido', async () => {
     // Entró la plata. Si la fecha quedara puesta, el trabajo diario de `periodoDeGracia.js`
     // suspendería el acceso al llegar por una falla que ya se resolvió.
@@ -459,6 +501,22 @@ describe('el trabajo diario que arma los cobros del período', () => {
       consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`),
       'y de una sola Prestadora, nombrada en la consulta'
     );
+  });
+
+  it('cada Prestadora se arma con el trabajo de ella, y nada con la llave maestra', async () => {
+    base();
+    await armarCobrosDelPeriodo();
+
+    const deLaBase = llamadas.filter((l) => l.clave !== 'GET /rest/v1/configuracion_cobro_intermediacion' || l.credencial);
+    assert.ok(deLaBase.some((l) => l.clave === 'POST /rest/v1/cobros_intermediacion'), 'llegó a guardar el cobro');
+    for (const llamada of deLaBase) {
+      assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', llamada.clave);
+    }
+    const lista = llamadas.filter((l) => l.clave === 'GET /rest/v1/accesos_intermediacion');
+    for (const consulta of lista) {
+      const nombrada = new URL(consulta.url, 'http://interno').searchParams.get('prestadora_id').replace('eq.', '');
+      assert.equal(consulta.credencial.prestadora_id, nombrada, 'la consulta de una va con la credencial de esa misma');
+    }
   });
 
   it('trae también la forma de cobro, que es la que dice cada cuánto se cobra', async () => {

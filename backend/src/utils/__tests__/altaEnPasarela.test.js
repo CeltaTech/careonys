@@ -53,7 +53,7 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null });
+    llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null, autorizacion: req.headers.authorization });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada() : preparada;
@@ -110,6 +110,22 @@ process.env.STRIPE_API_BASE = `http://127.0.0.1:${stripeFalso.address().port}`;
 // El import va después de dejar puestas las variables de entorno: tanto la conexión a la base como
 // la dirección de cada proveedor se arman en el momento en que se importa el archivo.
 const { darDeAltaEnPasarela, MOTIVO_ALTA } = await import('../altaEnPasarela.js');
+const { createClient } = await import('@supabase/supabase-js');
+
+/** La conexión de quien pide, como la deja `clienteDelPedido(req)`. */
+const CREDENCIAL_DE_LA_PERSONA = 'credencial-de-quien-administra';
+const conexionDeLaPersona = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY, {
+  accessToken: async () => CREDENCIAL_DE_LA_PERSONA,
+});
+
+/** Lo que lleva adentro la credencial con la que llegó un pedido. */
+function leerCredencial(autorizacion) {
+  try {
+    return JSON.parse(Buffer.from(autorizacion.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+  } catch {
+    return null;
+  }
+}
 
 const avisarDeVerdad = console.error;
 console.error = (...partes) => anotados.push(partes.join(' '));
@@ -161,7 +177,7 @@ beforeEach(() => {
 });
 
 const darDeAlta = (extra = {}) =>
-  darDeAltaEnPasarela({ accesoId: ACCESO, prestadoraId: PRESTADORA, ...extra });
+  darDeAltaEnPasarela({ accesoId: ACCESO, prestadoraId: PRESTADORA, db: conexionDeLaPersona, ...extra });
 
 function guardado() {
   return llamadas.find((l) => l.clave === 'PATCH /rest/v1/accesos_intermediacion');
@@ -275,6 +291,32 @@ describe('el alta que sale bien', () => {
     await darDeAlta();
     const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/accesos_intermediacion');
     assert.ok(busqueda.url.includes('formas_de_cobro_intermediacion'));
+  });
+});
+
+describe('con qué credencial se hace cada cosa', () => {
+  it('el acceso y los rieles conectados se leen con la credencial de quien pide', async () => {
+    await darDeAlta();
+    for (const clave of ['GET /rest/v1/accesos_intermediacion', 'GET /rest/v1/prestadora_pasarela_pago']) {
+      const llamada = llamadas.find((l) => l.clave === clave);
+      assert.equal(llamada.autorizacion, `Bearer ${CREDENCIAL_DE_LA_PERSONA}`, clave);
+    }
+  });
+
+  it('la caja fuerte y la marca de alta las hace el trabajo de esa Prestadora', async () => {
+    // Quien administra no puede leer la credencial de cobro ni escribir la marca a mano: las dos
+    // las hace el trabajo sin persona, acotado a la Prestadora del acceso y a ninguna otra.
+    await darDeAlta();
+    for (const clave of ['POST /rest/v1/rpc/leer_credencial_pasarela_pago', 'PATCH /rest/v1/accesos_intermediacion']) {
+      const credencial = leerCredencial(llamadas.find((l) => l.clave === clave).autorizacion ?? '');
+      assert.equal(credencial?.role, 'trabajo_sin_persona', clave);
+      assert.equal(credencial?.prestadora_id, PRESTADORA, clave);
+    }
+  });
+
+  it('sin la conexión de quien pide no se lee nada', async () => {
+    await assert.rejects(darDeAltaEnPasarela({ accesoId: ACCESO, prestadoraId: PRESTADORA }));
+    assert.equal(llamadas.length, 0);
   });
 });
 

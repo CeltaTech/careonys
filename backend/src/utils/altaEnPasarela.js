@@ -48,9 +48,15 @@
    FALLA CERRADO. Sin riel conectado, sin credencial, sin período, sin correo del Cliente o con
    el proveedor rechazando el alta, no se guarda nada y se devuelve el motivo. Nunca queda un
    acceso con la marca de alta puesta y sin referencia del proveedor: eso sería un acceso que nadie
-   va a volver a intentar y que no cobra nunca. */
+   va a volver a intentar y que no cobra nunca.
 
-import { supabase } from '../db/connection.js';
+   CON DOS CREDENCIALES, CADA UNA PARA LO SUYO. El acceso, su forma de cobro y los rieles conectados
+   se leen con la conexión de quien pide, y la base le deja ver sólo los de su Prestadora. La
+   credencial de la caja fuerte y la marca de alta no son de ninguna persona —quien administra
+   no la puede leer ni puede escribir esa marca a mano—, así que esas dos las hace el trabajo de
+   esa Prestadora y de ninguna otra. */
+
+import { enLaPrestadora } from '../db/connection.js';
 import { obtenerAdaptador, proveedoresDisponibles } from '../pasarelas/index.js';
 import { sumarDias } from './fechas.js';
 import { cuentaDeLaFila } from './cuentaDeLaFila.js';
@@ -59,6 +65,8 @@ import { correoDe } from './correoDeUnaPersona.js';
 /** Los motivos por los que un alta no se puede hacer. Son códigos, no frases: la frase que lee la
  *  persona vive en las traducciones del Panel, en los tres idiomas
  *  (`celtatech\CLAUDE.md` §8, «un mensaje de error es texto visible»). */
+const TRABAJO = 'Dar de alta un acceso en la pasarela';
+
 export const MOTIVO_ALTA = {
   ACCESO_INEXISTENTE: 'acceso_inexistente',
   ACCESO_CANCELADO: 'acceso_cancelado',
@@ -84,10 +92,14 @@ export const MOTIVO_ALTA = {
  *                                           tiene más de uno conectado: con uno solo se resuelve
  *                                           solo, y elegir por ella cuál de varios sería decidir
  *                                           con qué cobra.
+ * @param {object} argumentos.db             La conexión de quien pide (`clienteDelPedido(req)`).
  * @returns {Promise<{ok: boolean, motivo?: string, detalle?: string, alta?: object}>}
  */
-export async function darDeAltaEnPasarela({ accesoId, prestadoraId, proveedor = null }) {
-  const { data: acceso, error: errorAcceso } = await supabase
+export async function darDeAltaEnPasarela({ accesoId, prestadoraId, proveedor = null, db }) {
+  if (!db) throw new Error('darDeAltaEnPasarela: falta la conexión de quien pide');
+  if (!prestadoraId) return { ok: false, motivo: MOTIVO_ALTA.ACCESO_INEXISTENTE };
+
+  const { data: acceso, error: errorAcceso } = await db
     .from('accesos_intermediacion')
     .select(
       'id, prestadora_id, cliente_id, estado, importe, moneda, proveedor, referencia_externa, ' +
@@ -122,7 +134,7 @@ export async function darDeAltaEnPasarela({ accesoId, prestadoraId, proveedor = 
     return { ok: false, motivo: MOTIVO_ALTA.FORMA_SIN_PERIODO };
   }
 
-  const riel = await resolverRiel({ prestadoraId, proveedor });
+  const riel = await resolverRiel({ prestadoraId, proveedor, db });
   if (!riel.ok) return riel;
 
   let adaptador;
@@ -136,10 +148,11 @@ export async function darDeAltaEnPasarela({ accesoId, prestadoraId, proveedor = 
   // función. `efectivo_manual` no tiene ninguna, y no la necesita.
   let credencial = null;
   if (riel.proveedor !== 'efectivo_manual') {
-    const { data, error } = await supabase.rpc('leer_credencial_pasarela_pago', {
-      p_prestadora_id: prestadoraId,
-      p_proveedor: riel.proveedor,
-    });
+    const { data, error } = await enLaPrestadora(prestadoraId, TRABAJO, (trabajo) =>
+      trabajo.rpc('leer_credencial_pasarela_pago', {
+        p_prestadora_id: prestadoraId,
+        p_proveedor: riel.proveedor,
+      }));
     if (error || !data) {
       return { ok: false, motivo: MOTIVO_ALTA.SIN_CREDENCIAL, detalle: error?.message };
     }
@@ -182,7 +195,7 @@ export async function darDeAltaEnPasarela({ accesoId, prestadoraId, proveedor = 
     return { ok: false, motivo: MOTIVO_ALTA.PROVEEDOR_RECHAZO };
   }
 
-  const { error: errorGuardar } = await supabase
+  const { error: errorGuardar } = await enLaPrestadora(prestadoraId, TRABAJO, (trabajo) => trabajo
     .from('accesos_intermediacion')
     .update({
       proveedor: riel.proveedor,
@@ -194,7 +207,7 @@ export async function darDeAltaEnPasarela({ accesoId, prestadoraId, proveedor = 
       updated_at: new Date().toISOString(),
     })
     .eq('id', acceso.id)
-    .eq('prestadora_id', prestadoraId);
+    .eq('prestadora_id', prestadoraId));
 
   if (errorGuardar) {
     // Acá el acceso quedó creado en el proveedor y sin guardar de este lado. No se puede
@@ -225,8 +238,8 @@ export async function darDeAltaEnPasarela({ accesoId, prestadoraId, proveedor = 
 /** Con qué riel se da de alta. Con uno solo conectado, ése; con varios, el que diga quien llama y
  *  siempre que esté conectado; con ninguno, no hay alta posible. Elegir por la Prestadora cuál de
  *  varios sería decidir con qué cobra, y eso no lo decide el producto. */
-async function resolverRiel({ prestadoraId, proveedor }) {
-  const { data, error } = await supabase
+async function resolverRiel({ prestadoraId, proveedor, db }) {
+  const { data, error } = await db
     .from('prestadora_pasarela_pago')
     .select('proveedor')
     .eq('prestadora_id', prestadoraId)

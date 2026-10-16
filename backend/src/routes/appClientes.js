@@ -1756,6 +1756,7 @@ appClientesRouter.post('/intermediacion/asistentes/:id/conversacion', requiereRo
       clienteId: req.usuarioCliente.clienteId,
       asistenteId: asistente.id,
       crear: true,
+      db: clienteDelPedido(req),
     });
     res.json({ conversacion_id: conversacion.id });
   } catch (e) {
@@ -1775,7 +1776,7 @@ appClientesRouter.get('/intermediacion/conversaciones/:id', requiereRolCliente, 
     // El nombre y la foto del Asistente, con la llave maestra: la base no le deja ver al Cliente
     // un Asistente que todavía no la atiende.
     const [mensajes, { data: asistente }, enCurso, base] = await Promise.all([
-      mensajesDeLaConversacion({ conversacion, desde }),
+      mensajesDeLaConversacion({ conversacion, desde, db: clienteDelPedido(req) }),
       supabase.from('asistentes').select('id, nombre, foto_url').eq('id', conversacion.asistente_id).eq('prestadora_id', conversacion.prestadora_id).maybeSingle(),
       videollamadaEnCurso(conversacion),
       direccionDeVideollamada(conversacion.prestadora_id),
@@ -1817,7 +1818,7 @@ appClientesRouter.post('/intermediacion/conversaciones/:id/mensajes', requiereRo
 
     // Se devuelve el hilo tal como quedó guardado: tapado si la base tapó algo, y con el motivo.
     // Devolverle a quien escribió su texto entero le haría creer que llegó completo.
-    res.json({ mensajes: await mensajesDeLaConversacion({ conversacion }) });
+    res.json({ mensajes: await mensajesDeLaConversacion({ conversacion, db: clienteDelPedido(req) }) });
   } catch (e) {
     responderError(res, e);
   }

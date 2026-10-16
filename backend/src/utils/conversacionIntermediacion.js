@@ -19,9 +19,16 @@
    LA VIDEOLLAMADA NO SE ARMA ACÁ. Cómo se hace una sala —de dónde sale la dirección, qué nombre
    lleva y cuánto vale— es lo mismo en el chat que en la entrevista de reclutamiento, así que vive
    una sola vez en `videollamada.js`. Acá queda nada más lo propio de un hilo: que la sala se
-   guarda en la conversación y que el mensaje de que empezó una se escribe adentro del hilo. */
+   guarda en la conversación y que el mensaje de que empezó una se escribe adentro del hilo.
 
-import { supabase, enLaPrestadora } from '../db/connection.js';
+   CON DOS CREDENCIALES. Lo que se lee del hilo va con la de quien pide, que la ruta pasa como
+   `db`: la base le muestra a cada punta sólo sus conversaciones. Lo que se escribe —abrir el hilo,
+   dejar un mensaje, darlo por leído, anotar la sala— va con el trabajo de la Prestadora del hilo,
+   porque antes de escribir el backend comprueba lo que la base no puede: que el Asistente esté en
+   la vidriera y de qué lado escribe quien escribe. Con la credencial de la persona, que la tiene
+   en el teléfono, esas comprobaciones se podrían saltear. */
+
+import { enLaPrestadora } from '../db/connection.js';
 import { mensajeHaciaAfuera } from './contactoTapado.js';
 import { enviarPushAsistente, enviarPushCliente } from './push.js';
 import {
@@ -43,48 +50,56 @@ export const MENSAJE_AUTOMATICO = { VIDEOLLAMADA: 'videollamada_empezo' };
  *  pasan antes de contratar a alguien, y pone un techo a lo que viaja en un pedido. */
 const TOPE_DE_MENSAJES = 200;
 
+const TRABAJO = 'Escribir en el hilo del Match';
+
+const COLUMNAS_DEL_HILO = 'id, prestadora_id, cliente_id, asistente_id, ultimo_mensaje_at, sala_videollamada, sala_abierta_at';
+
 /* SI ESE CLIENTE YA ABRIÓ EL CONTACTO DE ESE ASISTENTE NO SE PREGUNTA ACÁ, Y YA NO CAMBIA NADA
    DEL HILO. Lo tapado en un mensaje no se destapa nunca, porque no quedó guardado. El dato de
    contacto que ese Cliente paga sale por su propio circuito, y esa pregunta vive una sola vez, en
    `contactoDelAsistente.js`. */
 
-/**
- * La conversación de una pareja. Con `crear`, la abre si no existía.
- *
- * @returns {Promise<object|null>} La fila, o null si no existe y no se pidió crearla.
- */
-export async function conversacionDeLaPareja({ prestadoraId, clienteId, asistenteId, crear = false }) {
-  const { data } = await supabase
+function hiloDeLaPareja(db, { prestadoraId, clienteId, asistenteId }) {
+  return db
     .from('conversaciones_intermediacion')
-    .select('id, prestadora_id, cliente_id, asistente_id, ultimo_mensaje_at, sala_videollamada, sala_abierta_at')
+    .select(COLUMNAS_DEL_HILO)
     .eq('prestadora_id', prestadoraId)
     .eq('cliente_id', clienteId)
     .eq('asistente_id', asistenteId)
     .maybeSingle();
+}
 
+/**
+ * La conversación de una pareja. Con `crear`, la abre si no existía.
+ *
+ * Se busca con la credencial de quien pide (`db`) y se abre con el trabajo de la Prestadora.
+ *
+ * @returns {Promise<object|null>} La fila, o null si no existe y no se pidió crearla.
+ */
+export async function conversacionDeLaPareja({ prestadoraId, clienteId, asistenteId, crear = false, db }) {
+  if (!db) throw new Error('conversacionDeLaPareja necesita la conexión de quien pide');
+  const pareja = { prestadoraId, clienteId, asistenteId };
+
+  const { data } = await hiloDeLaPareja(db, pareja);
   if (data || !crear) return data || null;
 
-  const { data: creada, error } = await supabase
-    .from('conversaciones_intermediacion')
-    .insert({ prestadora_id: prestadoraId, cliente_id: clienteId, asistente_id: asistenteId })
-    .select('id, prestadora_id, cliente_id, asistente_id, ultimo_mensaje_at, sala_videollamada, sala_abierta_at')
-    .single();
-
-  // Dos pantallas abiertas a la vez intentan crear la misma conversación, y la llave única deja
-  // pasar una sola. La que perdió no falló: la conversación existe, y es la que buscaba.
-  if (error) {
-    const { data: ajena } = await supabase
+  return enLaPrestadora(prestadoraId, TRABAJO, async (trabajo) => {
+    const { data: creada, error } = await trabajo
       .from('conversaciones_intermediacion')
-      .select('id, prestadora_id, cliente_id, asistente_id, ultimo_mensaje_at, sala_videollamada, sala_abierta_at')
-      .eq('prestadora_id', prestadoraId)
-      .eq('cliente_id', clienteId)
-      .eq('asistente_id', asistenteId)
-      .maybeSingle();
-    if (ajena) return ajena;
-    throw error;
-  }
+      .insert({ prestadora_id: prestadoraId, cliente_id: clienteId, asistente_id: asistenteId })
+      .select(COLUMNAS_DEL_HILO)
+      .single();
 
-  return creada;
+    // Dos pantallas abiertas a la vez intentan crear la misma conversación, y la llave única deja
+    // pasar una sola. La que perdió no falló: la conversación existe, y es la que buscaba.
+    if (error) {
+      const { data: ajena } = await hiloDeLaPareja(trabajo, pareja);
+      if (ajena) return ajena;
+      throw error;
+    }
+
+    return creada;
+  });
 }
 
 /**
@@ -110,11 +125,11 @@ export function desdeCuando(valor) {
  * nombra la Prestadora igual que la política de la tabla —`prestadora_id IS NULL OR
  * prestadora_id = interno.prestadora_actual()`—, para que ninguna vuelta traiga la regla de otra.
  */
-async function motivosDelCatalogo(prestadoraId) {
+async function motivosDelCatalogo(prestadoraId, db) {
   // Sin Prestadora no se consulta: preguntar sin nombrarla traería el catálogo de todas.
   if (!prestadoraId) return {};
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('reglas_de_los_mensajes')
     .select('clave, motivo')
     .or(`prestadora_id.is.null,prestadora_id.eq.${prestadoraId}`);
@@ -134,9 +149,12 @@ async function motivosDelCatalogo(prestadoraId) {
  *
  * Con `desde` salen solamente los posteriores a ese momento. Es lo que usa el refresco del hilo
  * abierto: pide lo que le falta y no vuelve a bajar lo que ya tiene.
+ *
+ * Se lee con la credencial de quien pide (`db`).
  */
-export async function mensajesDeLaConversacion({ conversacion, desde = null }) {
-  let consulta = supabase
+export async function mensajesDeLaConversacion({ conversacion, desde = null, db }) {
+  if (!db) throw new Error('mensajesDeLaConversacion necesita la conexión de quien pide');
+  let consulta = db
     .from('mensajes_intermediacion')
     .select('id, lado, cuerpo, automatico, created_at, leido_at, regla_tapada')
     .eq('prestadora_id', conversacion.prestadora_id)
@@ -151,7 +169,7 @@ export async function mensajesDeLaConversacion({ conversacion, desde = null }) {
   if (error) throw error;
 
   const hayTapado = (data || []).some((m) => m.regla_tapada);
-  const motivos = hayTapado ? await motivosDelCatalogo(conversacion.prestadora_id) : {};
+  const motivos = hayTapado ? await motivosDelCatalogo(conversacion.prestadora_id, db) : {};
 
   return (data || []).map((m) => mensajeHaciaAfuera(m, motivos));
 }
@@ -160,13 +178,14 @@ export async function mensajesDeLaConversacion({ conversacion, desde = null }) {
  *  escribió. */
 export async function marcarLeido({ conversacion, lado }) {
   const delOtro = lado === LADO.CLIENTE ? LADO.ASISTENTE : LADO.CLIENTE;
-  await supabase
-    .from('mensajes_intermediacion')
-    .update({ leido_at: new Date().toISOString() })
-    .eq('prestadora_id', conversacion.prestadora_id)
-    .eq('conversacion_id', conversacion.id)
-    .eq('lado', delOtro)
-    .is('leido_at', null);
+  await enLaPrestadora(conversacion.prestadora_id, TRABAJO, (trabajo) =>
+    trabajo
+      .from('mensajes_intermediacion')
+      .update({ leido_at: new Date().toISOString() })
+      .eq('prestadora_id', conversacion.prestadora_id)
+      .eq('conversacion_id', conversacion.id)
+      .eq('lado', delOtro)
+      .is('leido_at', null));
 }
 
 /**
@@ -176,7 +195,15 @@ export async function marcarLeido({ conversacion, lado }) {
  * antes de escribirlo, así que lo que vuelve de la base ya viene tapado, y es lo que hay.
  */
 export async function escribirMensaje({ conversacion, lado, autorUsuarioId, cuerpo, automatico = false }) {
-  const { data, error } = await supabase
+  const data = await enLaPrestadora(conversacion.prestadora_id, TRABAJO, (trabajo) =>
+    guardarMensaje({ trabajo, conversacion, lado, autorUsuarioId, cuerpo, automatico }));
+
+  avisarAlOtroLado({ conversacion, lado });
+  return data;
+}
+
+async function guardarMensaje({ trabajo, conversacion, lado, autorUsuarioId, cuerpo, automatico }) {
+  const { data, error } = await trabajo
     .from('mensajes_intermediacion')
     .insert({
       prestadora_id: conversacion.prestadora_id,
@@ -191,13 +218,12 @@ export async function escribirMensaje({ conversacion, lado, autorUsuarioId, cuer
 
   if (error) throw error;
 
-  await supabase
+  await trabajo
     .from('conversaciones_intermediacion')
     .update({ ultimo_mensaje_at: data.created_at })
     .eq('prestadora_id', conversacion.prestadora_id)
     .eq('id', conversacion.id);
 
-  avisarAlOtroLado({ conversacion, lado });
   return data;
 }
 
@@ -258,11 +284,12 @@ export async function abrirVideollamada({ conversacion, lado, autorUsuarioId }) 
   const sala = nombreDeSalaNuevo();
   const abiertaAt = new Date().toISOString();
 
-  const { error } = await supabase
-    .from('conversaciones_intermediacion')
-    .update({ sala_videollamada: sala, sala_abierta_at: abiertaAt })
-    .eq('prestadora_id', conversacion.prestadora_id)
-    .eq('id', conversacion.id);
+  const { error } = await enLaPrestadora(conversacion.prestadora_id, TRABAJO, (trabajo) =>
+    trabajo
+      .from('conversaciones_intermediacion')
+      .update({ sala_videollamada: sala, sala_abierta_at: abiertaAt })
+      .eq('prestadora_id', conversacion.prestadora_id)
+      .eq('id', conversacion.id));
   if (error) throw error;
 
   conversacion.sala_videollamada = sala;

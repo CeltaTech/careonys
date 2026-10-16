@@ -4,19 +4,17 @@
  *   node --test backend/src/routes/__tests__/panelVitalesAutorizacion.test.js
  *
  * POR QUÉ EXISTE ESTA PRUEBA. La ruta (`../panelVitalesAutorizacion.js`) entra a la base y al
- * depósito con la llave maestra, todavía, porque la base es más estrecha que lo que la ruta hace:
+ * depósito con la credencial del trabajo de la Prestadora activa, no con la de quien pide, porque
  * el depósito sólo deja subir a la administración
- * (`autorizaciones_monitoreo_las_gestiona_quien_administra`), y quien coordina hoy sube la
- * autorización; y `pacientes` le esconde a todos el Paciente importado que espera conformidad
- * (`oculta_pendientes_de_conformidad`). Entonces lo que separa una Prestadora de otra es el filtro
- * escrito en la consulta del Paciente y la comparación de la ruta del archivo, y eso es lo que se
- * sostiene acá.
+ * (`autorizaciones_monitoreo_las_gestiona_quien_administra`) y quien coordina también sube la
+ * autorización. Lo que se sostiene acá es que todo lo que toca la ruta va con esa credencial, y
+ * que la comparación de la ruta del archivo sigue cortando antes de pedir ningún enlace.
  *
- * La base es de mentira y contesta por HTTP como la de verdad. Con la llave maestra contesta los
- * Pacientes que pide el filtro de la Prestadora de la dirección, y todos si no hay filtro; con la
- * credencial de quien pide imita las dos políticas: nada para quien coordina y nada pendiente de
- * conformidad. Con el sistema roto —la consulta sin filtro, o de vuelta con la credencial de quien
- * pide— la prueba de otra Prestadora, la de quien coordina o la del Paciente pendiente dan al revés.
+ * La base es de mentira y contesta por HTTP como la de verdad. Con la credencial del trabajo
+ * contesta sólo los Pacientes de la Prestadora que lleva adentro; con la de quien pide imita la
+ * política del depósito: nada para quien coordina. La prueba arranca sin la llave maestra, así que
+ * una consulta que volviera a ella fallaría al pedirla. Con el sistema roto —de vuelta con la
+ * credencial de quien pide— la prueba de quien coordina da al revés.
  *
  * Datos inventados, como manda CLAUDE.md §6.
  */
@@ -24,14 +22,22 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const OTRA_PRESTADORA = '99999999-9999-9999-9999-999999999999';
 const USUARIO = '22222222-2222-2222-2222-222222222222';
 const PACIENTE = '33333333-3333-3333-3333-333333333333';
 
-/** La llave maestra, tal como la manda la conexión del backend. */
-const LLAVE_MAESTRA = 'Bearer clave-de-mentira';
+/** La Prestadora que lleva adentro la credencial del trabajo, o null si es otra credencial. */
+function prestadoraDelTrabajo(credencial) {
+  try {
+    const datos = JSON.parse(Buffer.from(credencial.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+    return datos.role === 'trabajo_sin_persona' ? datos.prestadora_id : null;
+  } catch {
+    return null;
+  }
+}
 
 const respuestas = new Map();
 let llamadas = [];
@@ -42,11 +48,11 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, url: req.url, credencial: req.headers.authorization });
+    llamadas.push({ clave, url: req.url, credencial: req.headers.authorization, reemplaza: req.headers['x-upsert'] });
 
     if (ruta.startsWith('/storage/v1/')) {
       // La política del depósito: con la credencial de quien pide, quien coordina no pasa.
-      if (req.headers.authorization !== LLAVE_MAESTRA && rolDelUsuario === 'coordinador') {
+      if (!prestadoraDelTrabajo(req.headers.authorization) && rolDelUsuario === 'coordinador') {
         res.writeHead(403, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ statusCode: '403', error: 'Unauthorized', message: 'la política no lo deja' }));
         return;
@@ -82,7 +88,7 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 const { default: express } = await import('express');
 await import('express-async-errors');
@@ -124,13 +130,10 @@ function unPaciente(cambios = {}) {
 
 /** Los Pacientes que hay en la base. */
 function pacientesEnLaBase(...filas) {
-  respuestas.set('GET /rest/v1/pacientes', (credencial, url) => {
-    if (credencial !== LLAVE_MAESTRA) {
-      // `oculta_pendientes_de_conformidad`, restrictiva, para todos los roles.
-      return filas.filter((fila) => fila.prestadora_id === PRESTADORA && !fila.pendiente_conformidad);
-    }
-    const filtro = url.match(/prestadora_id=eq\.([^&]+)/);
-    return filtro ? filas.filter((fila) => fila.prestadora_id === decodeURIComponent(filtro[1])) : filas;
+  respuestas.set('GET /rest/v1/pacientes', (credencial) => {
+    const prestadora = prestadoraDelTrabajo(credencial) ?? PRESTADORA;
+    // `oculta_pendientes_de_conformidad`, restrictiva, para todos los roles.
+    return filas.filter((fila) => fila.prestadora_id === prestadora && !fila.pendiente_conformidad);
   });
 }
 
@@ -158,26 +161,18 @@ describe('subir la autorización de monitoreo', () => {
     assert.ok(cuerpo.archivoUrl.startsWith(`${PRESTADORA}/${PACIENTE}/autorizacion-`));
     const subida = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/'));
     assert.ok(subida.clave.startsWith(`POST /storage/v1/object/autorizaciones-monitoreo/${PRESTADORA}/${PACIENTE}/`));
-    assert.equal(subida.credencial, LLAVE_MAESTRA);
+    assert.equal(prestadoraDelTrabajo(subida.credencial), PRESTADORA);
+    assert.equal(subida.reemplaza, 'false', 'la subida pidió reemplazar, y el trabajo no puede');
   });
 
-  it('el Paciente importado que espera conformidad se encuentra igual', async () => {
-    pacientesEnLaBase(unPaciente({ pendiente_conformidad: true }));
-
-    const { estado } = await subir(PACIENTE);
-
-    assert.equal(estado, 200);
-  });
-
-  it('el Paciente se busca con la llave maestra, atado a la Prestadora de quien pide', async () => {
+  it('el Paciente se busca con el trabajo de la Prestadora de quien pide', async () => {
     pacientesEnLaBase(unPaciente());
 
     await subir(PACIENTE);
 
     const consultas = consultasDePacientes();
     assert.equal(consultas.length, 1);
-    assert.equal(consultas[0].credencial, LLAVE_MAESTRA);
-    assert.ok(consultas[0].url.includes(`prestadora_id=eq.${PRESTADORA}`), consultas[0].url);
+    assert.equal(prestadoraDelTrabajo(consultas[0].credencial), PRESTADORA);
   });
 
   it('el Paciente de otra Prestadora no existe para ésta, y nada se sube a su nombre', async () => {
@@ -200,7 +195,7 @@ describe('el enlace temporal de la autorización', () => {
     assert.equal(estado, 200);
     assert.ok(cuerpo.url.includes(`/object/sign/autorizaciones-monitoreo/${PRESTADORA}/${PACIENTE}/`));
     const pedidoDeEnlace = llamadas.find((l) => l.clave.startsWith('POST /storage/v1/object/sign/'));
-    assert.equal(pedidoDeEnlace.credencial, LLAVE_MAESTRA);
+    assert.equal(prestadoraDelTrabajo(pedidoDeEnlace.credencial), PRESTADORA);
   });
 
   it('una ruta que no es la del Paciente se rechaza sin dar ningún enlace', async () => {

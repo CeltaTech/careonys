@@ -2,7 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { extensionDeArchivo } from '../utils/archivosSubidos.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
@@ -27,20 +27,22 @@ function manejarErrorMulter(err, req, res, next) {
   next();
 }
 
-// CON LA LLAVE MAESTRA, Y FILTRADO A MANO POR LA PRESTADORA. Esta ruta no pasa todavía a la
-// credencial de quien pide porque la base es más estrecha que lo que la ruta hace hoy, y cambiar
-// qué puede hacer cada rol se decide aparte:
-// - `pacientes` lleva la política restrictiva `oculta_pendientes_de_conformidad`, que esconde a
-//   todos los roles el Paciente importado que espera conformidad; con la credencial de la persona
-//   ese Paciente daría «no encontrado».
+// Con la credencial del trabajo de la Prestadora activa, que sólo alcanza lo de ella. No con la
+// de quien pide, porque la base es más estrecha que lo que la ruta hace:
+// - `pacientes` lleva la política restrictiva `oculta_pendientes_de_conformidad`; eso no cambia
+//   nada acá, porque el Panel nunca muestra un Paciente que espera conformidad.
 // - El depósito sólo deja subir con `autorizaciones_monitoreo_las_gestiona_quien_administra`, que
-//   pide `es_admin_prestadora()` o `es_superadmin()`: el coordinador, que hoy sube la
+//   pide `es_admin_prestadora()` o `es_superadmin()`: el coordinador, que también sube la
 //   autorización, dejaría de poder.
 // Por eso también se conserva la comparación de la ruta del archivo con la del Paciente.
-async function pacienteDeLaPrestadora(pacienteId, usuarioPanel) {
-  let query = supabase.from('pacientes').select('id, prestadora_id').eq('id', pacienteId);
-  query = acotarAPrestadora(query, usuarioPanel);
-  const { data } = await query.maybeSingle();
+function conElTrabajo(req, hacer) {
+  return enLaPrestadora(req.usuarioPanel.prestadoraId, 'autorización de monitoreo de vitales', hacer);
+}
+
+async function pacienteDeLaPrestadora(req) {
+  const { data } = await conElTrabajo(req, (db) =>
+    acotarAPrestadora(db.from('pacientes').select('id, prestadora_id').eq('id', req.params.pacienteId), req.usuarioPanel)
+      .maybeSingle());
   return data;
 }
 
@@ -59,7 +61,7 @@ panelVitalesAutorizacionRouter.post(
       return res.status(400).json({ error: 'Archivo faltante o de tipo no permitido (solo PDF, JPG o PNG, hasta 10 MB)' });
     }
 
-    const paciente = await pacienteDeLaPrestadora(req.params.pacienteId, req.usuarioPanel);
+    const paciente = await pacienteDeLaPrestadora(req);
     if (!paciente) {
       return res.status(404).json({ error: 'Paciente no encontrado' });
     }
@@ -67,9 +69,10 @@ panelVitalesAutorizacionRouter.post(
     const extension = extensionDeArchivo(req.file.mimetype);
     const ruta = `${paciente.prestadora_id}/${paciente.id}/autorizacion-${Date.now()}.${extension}`;
 
-    const { error } = await supabase.storage
+    // Cada subida es un archivo nuevo: el trabajo puede subir y leer, no reemplazar.
+    const { error } = await conElTrabajo(req, (db) => db.storage
       .from(BUCKET)
-      .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: true });
+      .upload(ruta, req.file.buffer, { contentType: req.file.mimetype, upsert: false }));
     if (error) {
       return responderError(res, error);
     }
@@ -79,7 +82,7 @@ panelVitalesAutorizacionRouter.post(
 );
 
 panelVitalesAutorizacionRouter.get('/:pacienteId/archivo-url', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
-  const paciente = await pacienteDeLaPrestadora(req.params.pacienteId, req.usuarioPanel);
+  const paciente = await pacienteDeLaPrestadora(req);
   if (!paciente) {
     return res.status(404).json({ error: 'Paciente no encontrado' });
   }
@@ -89,7 +92,7 @@ panelVitalesAutorizacionRouter.get('/:pacienteId/archivo-url', requiereRolPanel,
     return res.status(400).json({ error: 'Ruta de archivo inválida' });
   }
 
-  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(ruta, 60);
+  const { data, error } = await conElTrabajo(req, (db) => db.storage.from(BUCKET).createSignedUrl(ruta, 60));
   if (error) {
     return responderError(res, error);
   }

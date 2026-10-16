@@ -1041,7 +1041,9 @@ sale ningún dato; es un dato de una Organización viajando adentro del pedido d
 asignan como los de un solo día: el Asistente los acepta o los rechaza, pero **una sola vez y
 enteros**, no día por día. Lo mismo el reemplazo durante una ausencia: el que cubre acepta una
 sola vez todos los días que cubre. Hoy los dos quedan asignados en el momento, sin preguntarle
-(`backend/src/utils/cubrirGuardia.js:71`).
+(`backend/src/utils/cubrirGuardia.js:71`). **Espera su permiso** para cómo se ve en la aplicación
+del Asistente y en el Panel: sin eso no se puede aceptar, y la parte de la base sola dejaría el
+turno sin nadie que lo pueda tomar.
 
 ---
 

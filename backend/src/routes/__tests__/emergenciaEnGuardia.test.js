@@ -13,7 +13,8 @@
  *   2. QUE EL DETALLE SALGA POR UN CANAL PÚBLICO. El texto que escribió el Asistente es
  *      información sensible (`celtatech/CLAUDE.md` §6): el mensaje dice de qué guardia se trata y
  *      nada más, y el texto se lee entrando al Panel.
- *   3. QUE UNA PRESTADORA ALCANCE LA EMERGENCIA DE OTRA. La bandeja del Panel, de quién es cada
+ *   3. QUE UNA PRESTADORA ALCANCE LA EMERGENCIA DE OTRA. El aviso desde el teléfono va entero con
+ *      la credencial de quien avisa. La bandeja del Panel, de quién es cada
  *      guardia y la anotación de quién vio el detalle van con la credencial de quien pide. Los
  *      nombres y marcarla atendida siguen con la llave de servicio, y ahí lo que separa una
  *      Prestadora de otra son los filtros escritos en la consulta.
@@ -565,6 +566,19 @@ describe('un reenvío de la cola no duplica la emergencia', () => {
     assert.equal(estado, 200);
     assert.equal(cuerpo.yaRegistrado, undefined);
     assert.equal(emergenciasAnotadas().length, 1);
+  });
+
+  it('todo el aviso va con la credencial de quien lo manda, y nada con la llave maestra', async () => {
+    emergenciasEnLaBase = [];
+    await desdeElTelefono(GUARDIA, { detalle: DETALLE, clienteUuid: IDENTIFICADOR_DEL_TELEFONO });
+    const deLaEmergencia = llamadas.filter((l) => l.clave.endsWith('/rest/v1/emergencias_guardia'));
+    assert.deepEqual(
+      [...new Set(deLaEmergencia.map((l) => l.clave))].sort(),
+      ['GET /rest/v1/emergencias_guardia', 'PATCH /rest/v1/emergencias_guardia', 'POST /rest/v1/emergencias_guardia'],
+    );
+    for (const llamada of deLaEmergencia) {
+      assert.equal(llamada.credencial, credencialEnviada, `${llamada.clave} no fue con la credencial de quien avisa`);
+    }
   });
 
   it('el reenvío no vuelve a avisarle al Coordinador', async () => {

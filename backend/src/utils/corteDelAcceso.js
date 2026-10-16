@@ -31,7 +31,7 @@
    `revisarVencimientos` y del armado de cobros. Lo que no se cortó hoy se corta mañana, porque la
    condición que lo elige no se apaga sola. */
 
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { prestadorasDeLaIntermediacion } from './prestadorasDeLaIntermediacion.js';
 
 /**
@@ -39,7 +39,8 @@ import { prestadorasDeLaIntermediacion } from './prestadorasDeLaIntermediacion.j
  * día (`backend/src/server.js`): la fecha se mide en días, no en horas.
  *
  * Recorre las Prestadoras de a una, nombrando a cada una en su consulta. Una sola consulta para
- * todas alcanzaría dos cajones a la vez, que es lo que `celtatech\CLAUDE.md` §5 no admite.
+ * todas alcanzaría dos cajones a la vez, que es lo que `celtatech\CLAUDE.md` §5 no admite. Lo de
+ * cada una va con la credencial del trabajo de esa Prestadora, que la base acota a ella.
  *
  * @returns {Promise<{ cortados: number }>} Cuántos se apagaron. Lo usa la prueba; el trabajo diario
  *   no mira el número.
@@ -49,15 +50,21 @@ export async function cortarLosAccesosDadosDeBaja() {
 
   let cortados = 0;
   for (const prestadoraId of await prestadorasDeLaIntermediacion()) {
-    cortados += await cortarLosDeUnaPrestadora(prestadoraId, hoy);
+    try {
+      cortados += await enLaPrestadora(prestadoraId, 'cortar los accesos dados de baja', (db) =>
+        cortarLosDeUnaPrestadora(db, prestadoraId, hoy),
+      );
+    } catch (error) {
+      console.error(`No se pudieron cortar los accesos dados de baja (prestadora ${prestadoraId}):`, error.message);
+    }
   }
 
   return { cortados };
 }
 
 /** El corte de una sola Prestadora. Una falla suya se anota acá y no deja sin cortar a las demás. */
-async function cortarLosDeUnaPrestadora(prestadoraId, hoy) {
-  const { data: accesos, error } = await supabase
+async function cortarLosDeUnaPrestadora(db, prestadoraId, hoy) {
+  const { data: accesos, error } = await db
     .from('accesos_intermediacion')
     .select('id, vigente_hasta, gratis_hasta')
     .eq('prestadora_id', prestadoraId)
@@ -79,7 +86,7 @@ async function cortarLosDeUnaPrestadora(prestadoraId, hoy) {
 
   let cortados = 0;
   for (const acceso of vencidos) {
-    const { error: errorCorte } = await supabase
+    const { error: errorCorte } = await db
       .from('accesos_intermediacion')
       .update({ estado: 'cancelada', updated_at: new Date().toISOString() })
       .eq('prestadora_id', prestadoraId)

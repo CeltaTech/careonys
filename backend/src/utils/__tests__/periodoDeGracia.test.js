@@ -21,6 +21,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 // Las frases ya no están escritas adentro del código: viven en la tabla de mensajes
 // del sistema y se editan desde afuera. Acá se carga lo mismo que siembra la migración, porque las
@@ -38,6 +39,15 @@ const PRESTADORA = '44444444-4444-4444-4444-444444444444';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba pisa lo que necesita cambiar. */
 const respuestas = new Map();
+
+/** Lo que dice adentro una credencial, o `null` si no se puede leer. */
+function leerCredencial(autorizacion) {
+  try {
+    return JSON.parse(Buffer.from(autorizacion.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+  } catch {
+    return null;
+  }
+}
 /** Todo lo que se le pidió a la base, para poder afirmar que NO se pidió algo. */
 let llamadas = [];
 /** Los mensajes que se le mandaron a cada Cliente. */
@@ -60,7 +70,12 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, url: req.url, cuerpo: crudo ? JSON.parse(crudo) : null });
+    llamadas.push({
+      clave,
+      url: req.url,
+      cuerpo: crudo ? JSON.parse(crudo) : null,
+      credencial: leerCredencial(req.headers.authorization ?? ''),
+    });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada() : preparada;
@@ -85,6 +100,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma en
 // el momento en que se importa el archivo.
@@ -272,6 +288,20 @@ describe('qué dice el aviso del cobro que no entró', () => {
 });
 
 describe('cuando se termina la gracia', () => {
+  it('la consulta y la suspensión van con la credencial del trabajo de la Prestadora', async () => {
+    respuestas.set('GET /rest/v1/accesos_intermediacion', [{ id: ACCESO }]);
+    respuestas.set('PATCH /rest/v1/accesos_intermediacion', []);
+
+    await suspenderLosQueAgotaronLaGracia();
+
+    const deLosAccesos = llamadas.filter((l) => l.clave.endsWith('/accesos_intermediacion'));
+    assert.equal(deLosAccesos.length, 2);
+    for (const llamada of deLosAccesos) {
+      assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', `${llamada.clave} fue con otra credencial`);
+      assert.equal(llamada.credencial.prestadora_id, PRESTADORA, `${llamada.clave} fue fuera de la Prestadora`);
+    }
+  });
+
   it('le pide a la base sólo los vigentes con la gracia cumplida', async () => {
     respuestas.set('GET /rest/v1/accesos_intermediacion', []);
 

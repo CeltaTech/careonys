@@ -119,7 +119,6 @@
                                  "backend/src/routes/panelDatosBancarios.js",
                                  "backend/src/routes/panelEmergencias.js",
                                  "backend/src/routes/panelGuardias.js",
-                                 "backend/src/routes/panelHabilitarClave.js",
                                  "backend/src/routes/panelImportacion.js",
                                  "backend/src/routes/panelInformesObraSocial.js",
                                  "backend/src/routes/panelIntermediacion.js",

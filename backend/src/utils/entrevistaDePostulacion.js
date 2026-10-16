@@ -29,7 +29,7 @@
    (`celtatech/CLAUDE.md` §7). */
 
 import crypto from 'crypto';
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 import { enviarEmail } from './email.js';
 import { marcaDeLaPrestadora } from './marcaPrestadora.js';
@@ -78,12 +78,12 @@ function cuandoEnPalabras(agendadaPara, idioma) {
 /** A quién se le escribe y en qué idioma. Todo eso ya está en la postulación: es lo que la
  *  persona dejó cuando se postuló. */
 async function datosDelPostulante(postulacionId, prestadoraId) {
-  const { data, error } = await supabase
+  const { data, error } = await enLaPrestadora(prestadoraId, 'Datos del postulante de una entrevista', (db) => db
     .from('postulaciones')
     .select('id, nombre, email, idioma, prestadora_id')
     .eq('id', postulacionId)
     .eq('prestadora_id', prestadoraId)
-    .maybeSingle();
+    .maybeSingle());
 
   if (error) throw new Error(error.message);
   if (!data) throw new ErrorConMotivo('no_encontrado', 'No existe esa postulación');
@@ -127,13 +127,13 @@ async function avisarAlPostulante({ clave, entrevista, postulante, prestadoraId 
 
 /** La entrevista viva de una postulación, o null. Es la única que se puede mover o cerrar. */
 export async function entrevistaViva({ prestadoraId, postulacionId }) {
-  const { data, error } = await supabase
+  const { data, error } = await enLaPrestadora(prestadoraId, 'Entrevista viva de una postulación', (db) => db
     .from('entrevistas_postulacion')
     .select(COLUMNAS)
     .eq('prestadora_id', prestadoraId)
     .eq('postulacion_id', postulacionId)
     .eq('estado', ESTADO_ENTREVISTA.AGENDADA)
-    .maybeSingle();
+    .maybeSingle());
 
   if (error) throw new Error(error.message);
   return data || null;
@@ -142,12 +142,12 @@ export async function entrevistaViva({ prestadoraId, postulacionId }) {
 /** Todas las entrevistas de una postulación, la última primero. Es la historia: quien la mira
  *  quiere ver que a esta persona se le reprogramó dos veces y no se presentó. */
 export async function entrevistasDeLaPostulacion({ prestadoraId, postulacionId }) {
-  const { data, error } = await supabase
+  const { data, error } = await enLaPrestadora(prestadoraId, 'Entrevistas de una postulación', (db) => db
     .from('entrevistas_postulacion')
     .select(COLUMNAS)
     .eq('prestadora_id', prestadoraId)
     .eq('postulacion_id', postulacionId)
-    .order('agendada_para', { ascending: false });
+    .order('agendada_para', { ascending: false }));
 
   if (error) throw new Error(error.message);
   return data || [];
@@ -185,7 +185,7 @@ export async function agendarEntrevista({ prestadoraId, postulacionId, agendadaP
   // pantalla avisa que no hay videollamada configurada.
   const base = await direccionDeVideollamada(prestadoraId);
 
-  const { data, error } = await supabase
+  const { data, error } = await enLaPrestadora(prestadoraId, 'Agendar una entrevista', (db) => db
     .from('entrevistas_postulacion')
     .insert({
       prestadora_id: prestadoraId,
@@ -196,7 +196,7 @@ export async function agendarEntrevista({ prestadoraId, postulacionId, agendadaP
       agendada_por: usuarioId,
     })
     .select(COLUMNAS)
-    .single();
+    .single());
 
   // Dos personas agendando a la vez: el índice único deja pasar una sola. La que perdió no falló
   // por una razón que haya que explicar con un número de restricción — ya hay una entrevista.
@@ -229,14 +229,14 @@ export async function reprogramarEntrevista({ prestadoraId, postulacionId, agend
 
   const postulante = await datosDelPostulante(postulacionId, prestadoraId);
 
-  const { data, error } = await supabase
+  const { data, error } = await enLaPrestadora(prestadoraId, 'Reprogramar una entrevista', (db) => db
     .from('entrevistas_postulacion')
     .update({ agendada_para: cuando })
     .eq('prestadora_id', prestadoraId)
     .eq('id', viva.id)
     .eq('estado', ESTADO_ENTREVISTA.AGENDADA)
     .select(COLUMNAS)
-    .single();
+    .single());
 
   if (error) throw new Error(error.message);
 
@@ -261,7 +261,7 @@ export async function cancelarEntrevista({ prestadoraId, postulacionId, usuarioI
 
   const postulante = await datosDelPostulante(postulacionId, prestadoraId);
 
-  const { data, error } = await supabase
+  const { data, error } = await enLaPrestadora(prestadoraId, 'Cancelar una entrevista', (db) => db
     .from('entrevistas_postulacion')
     .update({
       estado: ESTADO_ENTREVISTA.CANCELADA,
@@ -274,7 +274,7 @@ export async function cancelarEntrevista({ prestadoraId, postulacionId, usuarioI
     .eq('id', viva.id)
     .eq('estado', ESTADO_ENTREVISTA.AGENDADA)
     .select(COLUMNAS)
-    .single();
+    .single());
 
   if (error) throw new Error(error.message);
 
@@ -305,7 +305,7 @@ export async function cerrarEntrevista({ prestadoraId, postulacionId, estado, us
   const viva = await entrevistaViva({ prestadoraId, postulacionId });
   if (!viva) throw new ErrorConMotivo('entrevista_ya_cerrada', 'No hay ninguna entrevista agendada');
 
-  const { data, error } = await supabase
+  const { data, error } = await enLaPrestadora(prestadoraId, 'Cerrar una entrevista', (db) => db
     .from('entrevistas_postulacion')
     .update({
       estado,
@@ -318,7 +318,7 @@ export async function cerrarEntrevista({ prestadoraId, postulacionId, estado, us
     .eq('id', viva.id)
     .eq('estado', ESTADO_ENTREVISTA.AGENDADA)
     .select(COLUMNAS)
-    .single();
+    .single());
 
   if (error) throw new Error(error.message);
   return data;
@@ -345,12 +345,12 @@ export async function entrevistaPorLlave(llave, prestadoraId) {
   // La llave se busca sólo adentro de la Prestadora de la dirección
   // (`middleware/resolverPrestadoraPublica.js`). La base ya no deja ver las de otra, y la consulta
   // además la nombra: la llave de otra Prestadora no existe desde acá.
-  const { data, error } = await supabase
+  const { data, error } = await enLaPrestadora(prestadoraId, 'Entrevista por su llave', (db) => db
     .from('entrevistas_postulacion')
     .select(COLUMNAS)
     .eq('llave_publica', limpia)
     .eq('prestadora_id', prestadoraId)
-    .maybeSingle();
+    .maybeSingle());
 
   if (error) throw new Error(error.message);
   if (!data || data.estado !== ESTADO_ENTREVISTA.AGENDADA) throw noExiste;

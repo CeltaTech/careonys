@@ -34,7 +34,7 @@
    Y UNA SUSPENSIÓN QUE FALLA NO SUSPENDE A LAS DEMÁS. Mismo criterio que el corte y que el
    preaviso: se anota y se sigue; lo que no se suspendió hoy se suspende mañana. */
 
-import { enLaPrestadora, supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { enviarPushCliente } from './push.js';
 import { sumarDias } from './fechas.js';
 import { enDia, importeConMoneda } from './comoSeDiceEnUnAviso.js';
@@ -57,8 +57,15 @@ import { prestadorasDeLaIntermediacion } from './prestadorasDeLaIntermediacion.j
  *                                        una dirección segura y la prueba necesita poder mirarlo.
  * @returns {Promise<{abierta: boolean, gracia_hasta: string|null}>}
  */
-export async function abrirElPeriodoDeGracia({ prestadoraId, accesoId, avisar = enviarPushCliente }) {
-  const { data: acceso, error } = await supabase
+export function abrirElPeriodoDeGracia({ prestadoraId, accesoId, avisar = enviarPushCliente }) {
+  // Con la credencial del trabajo de esa Prestadora, que la base acota a ella.
+  return enLaPrestadora(prestadoraId, 'abrir el período de gracia', (db) =>
+    abrirLaGraciaDeUnAcceso({ db, prestadoraId, accesoId, avisar }),
+  );
+}
+
+async function abrirLaGraciaDeUnAcceso({ db, prestadoraId, accesoId, avisar }) {
+  const { data: acceso, error } = await db
     .from('accesos_intermediacion')
     .select('id, estado, cliente_id, paciente_id, prestadora_id, importe, moneda, gracia_hasta')
     .eq('prestadora_id', prestadoraId)
@@ -78,7 +85,7 @@ export async function abrirElPeriodoDeGracia({ prestadoraId, accesoId, avisar = 
 
   // Cuántos días dura la gracia lo eligió la Prestadora. Sin ese dato no se abre ninguna: una
   // gracia de largo inventado suspendería el acceso el día que no le toca.
-  const plazos = await plazosDeLaPrestadora(acceso.prestadora_id);
+  const plazos = await plazosDeLaPrestadora(prestadoraId, undefined, db);
   if (!plazos) return { abierta: false, gracia_hasta: null };
 
   const graciaHasta = sumarDias(
@@ -86,7 +93,7 @@ export async function abrirElPeriodoDeGracia({ prestadoraId, accesoId, avisar = 
     plazos.dias_de_gracia_por_cobro_rechazado
   );
 
-  const { data: guardados, error: errorGuardar } = await supabase
+  const { data: guardados, error: errorGuardar } = await db
     .from('accesos_intermediacion')
     .update({ gracia_hasta: graciaHasta, updated_at: new Date().toISOString() })
     .eq('prestadora_id', prestadoraId)
@@ -104,7 +111,7 @@ export async function abrirElPeriodoDeGracia({ prestadoraId, accesoId, avisar = 
   if (!guardados?.length) return { abierta: false, gracia_hasta: null };
 
   try {
-    const idioma = await idiomaDeLaPrestadora(supabase, acceso.prestadora_id);
+    const idioma = await idiomaDeLaPrestadora(db, prestadoraId);
     await avisar(acceso.prestadora_id, acceso.cliente_id, textoDelMensajeDeGracia({ ...acceso, gracia_hasta: graciaHasta }, idioma));
   } catch (falla) {
     // La gracia ya está abierta, que es lo que sostiene el acceso. Que el mensaje no haya salido se

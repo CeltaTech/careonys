@@ -183,6 +183,10 @@ describe('cuando un cobro no entra', () => {
     assert.equal(empujados.length, 1);
     assert.equal(empujados[0].prestadoraId, PRESTADORA);
     assert.equal(empujados[0].clienteId, CLIENTE);
+    for (const llamada of llamadas) {
+      assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', `${llamada.clave} fue con otra credencial`);
+      assert.equal(llamada.credencial.prestadora_id, PRESTADORA, `${llamada.clave} fue fuera de la Prestadora`);
+    }
   });
 
   it('exige al guardar que siga vigente y que nadie haya abierto una gracia en el medio', async () => {

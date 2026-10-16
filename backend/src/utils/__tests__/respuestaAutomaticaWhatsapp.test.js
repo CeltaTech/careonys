@@ -73,6 +73,8 @@ const {
   MOTIVO_EMERGENCIA,
   MOTIVO_SIN_TELEFONO_DE_EMERGENCIA,
   MOTIVO_NO_SE_PUDO_CLASIFICAR,
+  MOTIVO_PIDIO_UNA_PERSONA,
+  MOTIVO_LA_ATIENDE_UNA_PERSONA,
   RESULTADO_DERIVADA,
 } = await import('../respuestaAutomaticaWhatsapp.js');
 
@@ -119,6 +121,10 @@ beforeEach(() => {
     { termino: 'pain', motivo: 'salud' },
     { termino: 'no respira', motivo: 'emergencia' },
     { termino: 'se cayo', motivo: 'emergencia' },
+  ]);
+  respuestas.set('GET /rest/v1/terminos_para_pedir_una_persona', () => [
+    { termino: 'hablar con una persona' },
+    { termino: 'atendente' },
   ]);
   respuestas.set('GET /rest/v1/prestadoras', () => [{ pais: 'AR' }]);
   respuestas.set('GET /rest/v1/respuestas_preparadas_whatsapp', () => []);
@@ -188,6 +194,89 @@ describe('sin una respuesta aprobada que corresponda, no contesta', () => {
 
     assert.equal(resultado.accion, 'derivar');
     assert.equal(resultado.motivo, MOTIVO_NO_SE_PUDO_CLASIFICAR);
+  });
+});
+
+describe('el bot ayuda, no se queda con la conversación', () => {
+  it('quien pide hablar con una persona la tiene, aunque haya una respuesta aprobada que sirva', async () => {
+    respuestas.set('GET /rest/v1/respuestas_preparadas_whatsapp', () => [respuestaPreparada()]);
+
+    const resultado = await resolverRespuestaAutomatica({
+      prestadoraId: PRESTADORA,
+      texto: 'Consulto los horarios, pero quiero hablar con una persona.',
+    });
+
+    assert.equal(resultado.accion, 'derivar');
+    assert.equal(resultado.motivo, MOTIVO_PIDIO_UNA_PERSONA);
+    assert.equal(resultado.texto, null);
+  });
+
+  it('el pedido se reconoce en cualquiera de los tres idiomas', async () => {
+    const resultado = await resolverRespuestaAutomatica({
+      prestadoraId: PRESTADORA,
+      texto: 'Quero falar com um ATENDENTE.',
+    });
+
+    assert.equal(resultado.motivo, MOTIVO_PIDIO_UNA_PERSONA);
+  });
+
+  it('si esa lista no se puede leer, no se contesta nada', async () => {
+    respuestas.delete('GET /rest/v1/terminos_para_pedir_una_persona');
+    respuestas.set('GET /rest/v1/respuestas_preparadas_whatsapp', () => [respuestaPreparada()]);
+
+    const resultado = await resolverRespuestaAutomatica({ prestadoraId: PRESTADORA, texto: 'consulto horarios' });
+
+    assert.equal(resultado.accion, 'derivar');
+    assert.equal(resultado.motivo, MOTIVO_NO_SE_PUDO_CLASIFICAR);
+  });
+
+  it('con la conversación esperando a una persona no contesta, y el banco ni se consulta', async () => {
+    respuestas.set('GET /rest/v1/respuestas_preparadas_whatsapp', () => [respuestaPreparada()]);
+
+    const resultado = await resolverRespuestaAutomatica({
+      prestadoraId: PRESTADORA,
+      texto: 'consulto horarios',
+      laAtiendeUnaPersona: true,
+    });
+
+    assert.equal(resultado.accion, 'derivar');
+    assert.equal(resultado.motivo, MOTIVO_LA_ATIENDE_UNA_PERSONA);
+    assert.equal(llamadas.some((l) => l.clave === 'GET /rest/v1/respuestas_preparadas_whatsapp'), false);
+  });
+
+  it('sin saber si la atiende una persona, tampoco contesta', async () => {
+    respuestas.set('GET /rest/v1/respuestas_preparadas_whatsapp', () => [respuestaPreparada()]);
+
+    const resultado = await resolverRespuestaAutomatica({
+      prestadoraId: PRESTADORA,
+      texto: 'consulto horarios',
+      laAtiendeUnaPersona: null,
+    });
+
+    assert.equal(resultado.motivo, MOTIVO_LA_ATIENDE_UNA_PERSONA);
+  });
+
+  it('la emergencia se sigue avisando aunque la conversación ya espere a una persona', async () => {
+    const resultado = await resolverRespuestaAutomatica({
+      prestadoraId: PRESTADORA,
+      texto: 'se cayo y no respira',
+      laAtiendeUnaPersona: true,
+    });
+
+    assert.equal(resultado.accion, 'emergencia');
+  });
+
+  it('nadie la atiende y hay respuesta aprobada: contesta', async () => {
+    // La contracara: sin esta, las de arriba pasarían igual con un bot que no contesta nunca.
+    respuestas.set('GET /rest/v1/respuestas_preparadas_whatsapp', () => [respuestaPreparada()]);
+
+    const resultado = await resolverRespuestaAutomatica({
+      prestadoraId: PRESTADORA,
+      texto: 'consulto horarios',
+      laAtiendeUnaPersona: false,
+    });
+
+    assert.equal(resultado.accion, 'responder');
   });
 });
 

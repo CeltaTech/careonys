@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { correoDe } from './correoDeUnaPersona.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 import { enviarEmail } from './email.js';
@@ -34,6 +34,12 @@ function urlAppPorRol(rol) {
 // Las demás cuentas de Panel —las que una Prestadora crea para su propio equipo— siguen con el
 // camino de siempre, en el que quien la crea comunica la primera clave.
 export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, prestadoraId = null, idioma = null }) {
+  // Sin Prestadora no hay enlace que sirva ni cuenta a la cual colgarlo: se corta antes de escribir.
+  if (!prestadoraId) {
+    console.error('invitarActivacionCuenta: falta la Prestadora, no se envió el email de activación');
+    return;
+  }
+
   const appUrl = urlAppPorRol(rol);
   if (!appUrl) {
     // Sin URL configurada (ej. entorno local sin la variable seteada) no se puede armar un
@@ -54,9 +60,10 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, p
     return;
   }
 
-  const { error } = await supabase
+  // Con el trabajo de la Prestadora, que sólo alcanza las cuentas de ella.
+  const { error } = await enLaPrestadora(prestadoraId, 'enlace de activación', (db) => db
     .from('tokens_activacion_cuenta')
-    .insert({ usuario_id: usuarioId, token: verificadorDelEnlace(token), expira_en: expiraEn });
+    .insert({ usuario_id: usuarioId, token: verificadorDelEnlace(token), expira_en: expiraEn }));
   if (error) throw new Error(error.message);
 
   // Este correo lo recibe un Cliente o un Asistente, y para ellos la empresa es la Prestadora: es
@@ -68,7 +75,7 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, p
   // Careonys a uno que dice «Activación de la cuenta en undefined».
   const marca = await marcaDeLaPrestadora(prestadoraId);
   const codigo = ROLES_DE_PANEL.includes(rol) ? null : await rotuloDeLaPrestadora(prestadoraId);
-  const textos = mensajeDelSistema('activacion_cuenta', idiomaDelDestinatario(idioma, await idiomaDeLaPrestadora(supabase, prestadoraId)), {
+  const textos = mensajeDelSistema('activacion_cuenta', idiomaDelDestinatario(idioma, await enLaPrestadora(prestadoraId, 'enlace de activación', (db) => idiomaDeLaPrestadora(db, prestadoraId))), {
     nombre,
     link,
     codigo,
@@ -88,12 +95,12 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, p
 export async function reenviarActivacionCuenta(usuarioId, prestadoraId) {
   if (!prestadoraId) throw new Error('Cuenta no encontrada');
 
-  const { data: usuario, error: errorUsuario } = await supabase
+  const { data: usuario, error: errorUsuario } = await enLaPrestadora(prestadoraId, 'reenvío de la invitación', (db) => db
     .from('usuarios')
     .select('nombre, rol, prestadora_id')
     .eq('prestadora_id', prestadoraId)
     .eq('id', usuarioId)
-    .single();
+    .single());
   if (errorUsuario || !usuario) throw new Error('Cuenta no encontrada');
 
   // El correo real se lee con `correoDeUnaPersona.js`. Sin él no hay a dónde mandar la invitación,
@@ -114,8 +121,13 @@ export async function reenviarActivacionCuenta(usuarioId, prestadoraId) {
 // Prestadora de la dirección, así que el código sólo se encuentra si es de ella. Valida el token
 // (existe, no vencido, no usado), fija la contraseña elegida por la persona, y lo marca usado.
 // Nunca expone ningún dato del usuario.
-export async function activarCuentaConToken(token, passwordNueva) {
-  const { data: fila, error: errorFila } = await supabase
+export async function activarCuentaConToken(token, passwordNueva, prestadoraId) {
+  if (!prestadoraId) throw new ErrorConMotivo('token_invalido');
+  return enLaPrestadora(prestadoraId, 'activación de la cuenta', (db) => activarAdentro(db, token, passwordNueva));
+}
+
+async function activarAdentro(db, token, passwordNueva) {
+  const { data: fila, error: errorFila } = await db
     .from('tokens_activacion_cuenta')
     .select('id, usuario_id, expira_en, usado_en')
     .eq('token', verificadorDelEnlace(token))
@@ -136,7 +148,7 @@ export async function activarCuentaConToken(token, passwordNueva) {
   // al mismo tiempo no pasan los dos, porque el segundo ya no lo encuentra libre y se va por donde
   // se va un enlace ya usado. Y el código se busca sólo adentro de la Prestadora de la dirección:
   // el de otra no existe desde acá. Viaja el enlace tal como llegó: el identificador de verificación lo calcula la base.
-  const { data: usuarioId, error: errorClave } = await supabase.rpc('poner_clave_con_codigo', {
+  const { data: usuarioId, error: errorClave } = await db.rpc('poner_clave_con_codigo', {
     p_uso: 'activacion',
     p_codigo: token,
     p_clave: passwordNueva,
@@ -160,12 +172,13 @@ export async function activarCuentaConToken(token, passwordNueva) {
 // colgarle a una cuenta ajena un número propio, y un número verificado recupera la clave.
 //
 // Se exige `usado_en`: sin activar no hay contraseña contra la cual comprobar nada.
-export async function cuentaQueActivoConEsteToken(token) {
-  const { data: fila, error } = await supabase
+export async function cuentaQueActivoConEsteToken(token, prestadoraId) {
+  if (!prestadoraId) throw new ErrorConMotivo('token_invalido');
+  const { data: fila, error } = await enLaPrestadora(prestadoraId, 'activación de la cuenta', (db) => db
     .from('tokens_activacion_cuenta')
     .select('usuario_id, usado_en')
     .eq('token', verificadorDelEnlace(token))
-    .maybeSingle();
+    .maybeSingle());
 
   if (error || !fila || !fila.usado_en) throw new ErrorConMotivo('token_invalido');
   return fila.usuario_id;

@@ -70,7 +70,6 @@
                              "backend/src/utils/__tests__/elClienteNaceConSuLugar.test.js",
                              "backend/src/utils/__tests__/elTelefonoSirveDeSegundoFactor.test.js",
                              "backend/src/utils/__tests__/entrevistaDePostulacion.test.js",
-                             "backend/src/utils/__tests__/envioPorPlantilla.test.js",
                              "backend/src/utils/__tests__/extensionDeTurno.test.js",
                              "backend/src/utils/__tests__/faseAutomaticaRelevo.test.js",
                              "backend/src/utils/__tests__/iaPlantillasWhatsapp.test.js",
@@ -79,7 +78,6 @@
                              "backend/src/utils/__tests__/marcarAusente.test.js",
                              "backend/src/utils/__tests__/motivoSugeridoDelAviso.test.js",
                              "backend/src/utils/__tests__/periodoDeGracia.test.js",
-                             "backend/src/utils/__tests__/plantillasWhatsapp.test.js",
                              "backend/src/utils/__tests__/propuestaConfiguracionInicial.test.js",
                              "backend/src/utils/__tests__/recuperacionSoloDeLaGenteDeLaPrestadora.test.js",
                              "backend/src/utils/__tests__/revisarAusenciasAvisadas.test.js",
@@ -133,7 +131,6 @@
                                  "backend/src/utils/revisarLlegadasDemoradas.js",
                                  "backend/src/utils/revisarNotificacionesCoordinador.js",
                                  "backend/src/utils/revisarRecordatoriosPush.js",
-                                 "backend/src/utils/vencimientos.js",
-                                 "backend/src/utils/whatsapp.js"
+                                 "backend/src/utils/vencimientos.js"
                              ]
 }

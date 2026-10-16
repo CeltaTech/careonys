@@ -1,4 +1,4 @@
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { enviarEmailCoordinador, configuracionEvento } from './email.js';
 import { avisarPorMensajeDeTexto } from './mensajeDeTexto.js';
 import { idiomaParaMeta, nombreParaMeta, valoresDePlantilla } from './nombresDeMeta.js';
@@ -8,25 +8,28 @@ export const META_GRAPH_VERSION = 'v20.0';
 // Credenciales por prestadora — nunca en variables de entorno globales, cada prestadora
 // licenciataria tiene su propia cuenta de Meta Cloud API (docs/PRD_06_WhatsApp_IA.md punto C).
 // El token nunca vive en esta tabla en texto plano: se lee desde Supabase Vault a través de
-// la función leer_token_whatsapp (supabase/migrations/),
-// ejecutable solo con el service role que ya usa este backend.
+// la función leer_token_whatsapp (supabase/migrations/), que sólo lo entrega a quien trabaja
+// para esa misma Prestadora. Por eso se lee con el trabajo de la Prestadora, de a una por vez.
 //
 // Devuelve además `wabaId`, que es la cuenta de WhatsApp Business y no el número: los mensajes
 // salen por el número y las plantillas se dan de alta contra la cuenta. Son dos identificadores
 // distintos de Meta y no se pueden usar uno por otro.
 export async function credencialesWhatsapp(prestadoraId) {
-  const { data: config } = await supabase
-    .from('configuracion_whatsapp_prestadora')
-    .select('activo, phone_number_id, waba_id')
-    .eq('prestadora_id', prestadoraId)
-    .single();
+  if (!prestadoraId) return null;
+  return enLaPrestadora(prestadoraId, 'Credenciales de WhatsApp', async (db) => {
+    const { data: config } = await db
+      .from('configuracion_whatsapp_prestadora')
+      .select('activo, phone_number_id, waba_id')
+      .eq('prestadora_id', prestadoraId)
+      .single();
 
-  if (!config?.activo || !config.phone_number_id) return null;
+    if (!config?.activo || !config.phone_number_id) return null;
 
-  const { data: token, error } = await supabase.rpc('leer_token_whatsapp', { p_prestadora_id: prestadoraId });
-  if (error || !token) return null;
+    const { data: token, error } = await db.rpc('leer_token_whatsapp', { p_prestadora_id: prestadoraId });
+    if (error || !token) return null;
 
-  return { phoneNumberId: config.phone_number_id, wabaId: config.waba_id, token };
+    return { phoneNumberId: config.phone_number_id, wabaId: config.waba_id, token };
+  });
 }
 
 // Los dos mensajes de WhatsApp, y no son intercambiables.
@@ -118,14 +121,14 @@ export async function enviarWhatsAppPorPlantilla({ prestadoraId, telefono, plant
  * mandó.
  */
 export async function plantillaDelEvento(plantillaId, prestadoraId) {
-  if (!plantillaId) return null;
+  if (!plantillaId || !prestadoraId) return null;
 
-  const { data } = await supabase
+  const { data } = await enLaPrestadora(prestadoraId, 'Plantilla de WhatsApp de un aviso', (db) => db
     .from('plantillas_whatsapp')
     .select('id, nombre_interno, idioma, cuerpo_texto, estado')
     .eq('id', plantillaId)
     .eq('prestadora_id', prestadoraId)
-    .single();
+    .single());
 
   return data?.estado === 'aprobada' ? data : null;
 }
@@ -162,11 +165,12 @@ export async function avisarPorWhatsapp({ config, prestadoraId, telefono, valore
  * —una guardia sin cubrir, un documento por vencer— no tienen a quién preguntarle el número.
  */
 export async function telefonoDeMensajes(prestadoraId) {
-  const { data } = await supabase
+  if (!prestadoraId) return null;
+  const { data } = await enLaPrestadora(prestadoraId, 'Teléfono de mensajes de la Prestadora', (db) => db
     .from('configuracion_prestadora')
     .select('whatsapp_numero')
     .eq('prestadora_id', prestadoraId)
-    .single();
+    .single());
 
   return data?.whatsapp_numero || null;
 }

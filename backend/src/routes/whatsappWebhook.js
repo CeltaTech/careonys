@@ -30,8 +30,7 @@
 // sigue la estructura que Meta documenta, pero nunca vio tráfico real porque no hay cuenta de
 // Meta conectada. Eso se cierra el día que haya una.
 import express, { Router } from 'express';
-import { supabase } from '../db/connection.js';
-import { enLaPrestadoraDeLaDireccion } from '../middleware/enLaPrestadoraDeLaDireccion.js';
+import { conexionDeLaDireccion, enLaPrestadoraDeLaDireccion } from '../middleware/enLaPrestadoraDeLaDireccion.js';
 import { enviarWhatsApp } from '../utils/whatsapp.js';
 import {
   resolverRespuestaAutomatica,
@@ -80,6 +79,7 @@ whatsappWebhookRouter.use(express.raw({ type: 'application/json', limit: '1mb' }
 // sirva para conectarse a la de otra.
 whatsappWebhookRouter.get('/:prestadoraId', enLaPrestadoraDeLaDireccion('Saludo de WhatsApp', (res) => res.status(403).send('Verificación fallida')), async (req, res) => {
   const { prestadoraId } = req.params;
+  const db = conexionDeLaDireccion(req);
 
   function rechazar(motivo) {
     // El motivo queda del lado del servidor. Al que golpeó la puerta se le contesta siempre lo
@@ -96,7 +96,7 @@ whatsappWebhookRouter.get('/:prestadoraId', enLaPrestadoraDeLaDireccion('Saludo 
   const challenge = req.query['hub.challenge'];
   if (modo !== 'subscribe' || !token) return rechazar(MOTIVO_WHATSAPP.TOKEN_DE_SALUDO_NO_COINCIDE);
 
-  const { data: tokenGuardado } = await supabase.rpc('leer_verify_token_whatsapp', {
+  const { data: tokenGuardado } = await db.rpc('leer_verify_token_whatsapp', {
     p_prestadora_id: prestadoraId,
   });
   if (!tokenGuardado) return rechazar(MOTIVO_WHATSAPP.TOKEN_DE_SALUDO_AUSENTE);
@@ -107,6 +107,7 @@ whatsappWebhookRouter.get('/:prestadoraId', enLaPrestadoraDeLaDireccion('Saludo 
 
 whatsappWebhookRouter.post('/:prestadoraId', enLaPrestadoraDeLaDireccion('Aviso de WhatsApp'), async (req, res) => {
   const { prestadoraId } = req.params;
+  const db = conexionDeLaDireccion(req);
 
   function rechazar(motivo) {
     console.warn('Aviso de WhatsApp rechazado:', prestadoraId, motivo);
@@ -121,7 +122,7 @@ whatsappWebhookRouter.post('/:prestadoraId', enLaPrestadoraDeLaDireccion('Aviso 
   const cuerpoCrudo = Buffer.isBuffer(req.body) ? req.body : null;
   if (!cuerpoCrudo) return rechazar(MOTIVO.CUERPO_AUSENTE);
 
-  const { data: configuracion } = await supabase
+  const { data: configuracion } = await db
     .from('configuracion_whatsapp_prestadora')
     .select('phone_number_id, app_secret_secret_id')
     .eq('prestadora_id', prestadoraId)
@@ -131,7 +132,7 @@ whatsappWebhookRouter.post('/:prestadoraId', enLaPrestadoraDeLaDireccion('Aviso 
   // qué comprobar nada, y nada que atender. Corta acá, sin leer ningún secreto.
   if (!configuracion) return rechazar(MOTIVO_WHATSAPP.SIN_CONFIGURACION);
 
-  const { data: appSecret } = await supabase.rpc('leer_app_secret_whatsapp', {
+  const { data: appSecret } = await db.rpc('leer_app_secret_whatsapp', {
     p_prestadora_id: prestadoraId,
   });
   if (!appSecret) return rechazar(MOTIVO.SECRETO_AUSENTE);
@@ -166,6 +167,7 @@ whatsappWebhookRouter.post('/:prestadoraId', enLaPrestadoraDeLaDireccion('Aviso 
 
   try {
     await repartirEvento(cuerpo, {
+      db,
       prestadoraId,
       phoneNumberIdConfigurado: configuracion.phone_number_id,
     });
@@ -180,18 +182,18 @@ whatsappWebhookRouter.post('/:prestadoraId', enLaPrestadoraDeLaDireccion('Aviso 
 async function repartirEvento(payload, contexto) {
   const cambio = payload?.entry?.[0]?.changes?.[0];
   if (cambio?.field === 'message_template_status_update') {
-    return anotarResultadoDePlantilla(cambio.value, contexto.prestadoraId);
+    return anotarResultadoDePlantilla(contexto.db, cambio.value, contexto.prestadoraId);
   }
   return procesarEventoEntrante(payload, contexto);
 }
 
 /** El resultado de la revisión, guardado en la plantilla. La Prestadora es la de la dirección, y
  *  va en el filtro: el identificador que viene adentro del evento no elige fila de otra. */
-async function anotarResultadoDePlantilla(valor, prestadoraId) {
+async function anotarResultadoDePlantilla(db, valor, prestadoraId) {
   const metaTemplateId = valor?.message_template_id;
   if (!metaTemplateId) return;
 
-  await supabase
+  await db
     .from('plantillas_whatsapp')
     .update({
       estado: estadoSegunMeta(valor.event),
@@ -204,10 +206,11 @@ async function anotarResultadoDePlantilla(valor, prestadoraId) {
 
 /**
  * @param payload                    el evento ya comprobado auténtico
+ * @param db                         la conexión de la Prestadora de la dirección
  * @param prestadoraId               la Prestadora de la dirección, nunca una sacada del cuerpo
  * @param phoneNumberIdConfigurado   el número que esa Prestadora tiene configurado
  */
-async function procesarEventoEntrante(payload, { prestadoraId, phoneNumberIdConfigurado }) {
+async function procesarEventoEntrante(payload, { db, prestadoraId, phoneNumberIdConfigurado }) {
   const cambios = payload?.entry?.[0]?.changes?.[0]?.value;
   const mensaje = cambios?.messages?.[0];
   if (!mensaje || mensaje.type !== 'text') return;
@@ -231,7 +234,7 @@ async function procesarEventoEntrante(payload, { prestadoraId, phoneNumberIdConf
   // al modelo de lenguaje y haría salir otro WhatsApp. El identificador que Meta le pone a cada
   // mensaje es lo que lo corta, y se pregunta antes de escribir nada.
   if (mensaje.id) {
-    const { data: yaAnotado } = await supabase
+    const { data: yaAnotado } = await db
       .from('mensajes_whatsapp')
       .select('id')
       .eq('prestadora_id', prestadoraId)
@@ -240,7 +243,7 @@ async function procesarEventoEntrante(payload, { prestadoraId, phoneNumberIdConf
     if (yaAnotado) return;
   }
 
-  const { data: conversacion } = await supabase
+  const { data: conversacion } = await db
     .from('conversaciones_whatsapp')
     .upsert(
       { prestadora_id: prestadoraId, telefono, ultimo_mensaje_at: new Date().toISOString() },
@@ -250,7 +253,7 @@ async function procesarEventoEntrante(payload, { prestadoraId, phoneNumberIdConf
     .single();
   if (!conversacion) return;
 
-  const { data: mensajeEntrante } = await supabase
+  const { data: mensajeEntrante } = await db
     .from('mensajes_whatsapp')
     .insert({
       prestadora_id: prestadoraId,
@@ -284,7 +287,7 @@ async function procesarEventoEntrante(payload, { prestadoraId, phoneNumberIdConf
   // La Prestadora es la de la dirección que se firmó, y se nombra en la escritura: que la
   // conversación se haya creado recién acá no alcanza para dejarla sin decir.
   const derivarAUnaPersona = () =>
-    supabase
+    db
       .from('conversaciones_whatsapp')
       .update({ requiere_atencion_coordinador: true })
       .eq('prestadora_id', prestadoraId)
@@ -311,7 +314,7 @@ async function procesarEventoEntrante(payload, { prestadoraId, phoneNumberIdConf
 
   // Y acá, el único envío automático que existe. El texto es el aprobado, tal cual: se guarda en
   // el hilo con el mismo texto que sale, para que lo respondido y lo registrado sean lo mismo.
-  const { data: mensajeSaliente } = await supabase
+  const { data: mensajeSaliente } = await db
     .from('mensajes_whatsapp')
     .insert({
       prestadora_id: prestadoraId,
@@ -336,7 +339,7 @@ async function procesarEventoEntrante(payload, { prestadoraId, phoneNumberIdConf
     return;
   }
 
-  await supabase
+  await db
     .from('mensajes_whatsapp')
     .update({ enviado_automaticamente: true })
     .eq('prestadora_id', prestadoraId)

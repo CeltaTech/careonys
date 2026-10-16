@@ -33,8 +33,7 @@
 // caso, la de `pasarelas/firmaWebhook.js`: cabecera `x-signature`, con la forma
 // `ts=<instante>,v1=<hmac-sha256 en hexadecimal>` calculado sobre `<instante>.<cuerpo crudo>`.
 import express, { Router } from 'express';
-import { supabase } from '../db/connection.js';
-import { enLaPrestadoraDeLaDireccion } from '../middleware/enLaPrestadoraDeLaDireccion.js';
+import { conexionDeLaDireccion, enLaPrestadoraDeLaDireccion } from '../middleware/enLaPrestadoraDeLaDireccion.js';
 import { comprobarFirmaSinEsquemaPublicado } from '../pasarelas/firmaWebhook.js';
 import { aDosDecimales, loQueEstaMalEnElAviso } from '../utils/facturacionDeClientes.js';
 
@@ -60,6 +59,7 @@ cobranzaExternaRouter.use(express.raw({ type: 'application/json', limit: '256kb'
 
 cobranzaExternaRouter.post('/:prestadoraId', enLaPrestadoraDeLaDireccion('Aviso de cobranza'), async (req, res) => {
   const { prestadoraId } = req.params;
+  const db = conexionDeLaDireccion(req);
 
   function rechazar(motivo) {
     // El motivo queda del lado del servidor. Al que golpeó la puerta se le contesta siempre lo
@@ -76,7 +76,7 @@ cobranzaExternaRouter.post('/:prestadoraId', enLaPrestadoraDeLaDireccion('Aviso 
   const cuerpoCrudo = Buffer.isBuffer(req.body) ? req.body : null;
   if (!cuerpoCrudo) return rechazar('cuerpo_crudo_ausente');
 
-  const { data: secreto } = await supabase.rpc('leer_secreto_del_aviso_de_cobranza', {
+  const { data: secreto } = await db.rpc('leer_secreto_del_aviso_de_cobranza', {
     p_prestadora_id: prestadoraId,
   });
 
@@ -122,7 +122,7 @@ cobranzaExternaRouter.post('/:prestadoraId', enLaPrestadoraDeLaDireccion('Aviso 
   // El Cliente tiene que ser de esta Prestadora. El disparador de la base resuelve la Prestadora a
   // partir del Cliente, así que una entrada de un Cliente ajeno caería en la Prestadora de él:
   // sin este control, quien tiene el secreto de una podría escribir sobre cualquier otra.
-  const { data: cliente } = await supabase
+  const { data: cliente } = await db
     .from('clientes')
     .select('id')
     .eq('id', cuerpo.cliente_id)
@@ -138,7 +138,7 @@ cobranzaExternaRouter.post('/:prestadoraId', enLaPrestadoraDeLaDireccion('Aviso 
   // vez anterior. `23505` es la clave repetida.
   let todoEstabaAnotado = true;
   async function anotar(tabla, fila, queEs) {
-    const { error } = await supabase.from(tabla).insert(fila);
+    const { error } = await db.from(tabla).insert(fila);
     if (!error) {
       todoEstabaAnotado = false;
       return true;

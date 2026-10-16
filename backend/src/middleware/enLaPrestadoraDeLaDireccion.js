@@ -13,6 +13,9 @@ import { esIdentificador } from '../utils/intercambioDeFacturacion.js';
 // qué distinguir una Prestadora ilegible de una clave equivocada.
 const rechazarAviso = (res) => res.status(401).json({ error: 'Aviso no autenticado' });
 
+/** Dónde queda, en el pedido, la conexión de la Prestadora de la dirección. */
+const CONEXION = Symbol('conexion de la Prestadora de la direccion');
+
 export function enLaPrestadoraDeLaDireccion(trabajo, rechazar = rechazarAviso) {
   return (req, res, next) => {
     const { prestadoraId } = req.params;
@@ -20,6 +23,20 @@ export function enLaPrestadoraDeLaDireccion(trabajo, rechazar = rechazarAviso) {
       console.warn(`${trabajo} rechazado:`, prestadoraId, 'prestadora_de_la_direccion_ilegible');
       return rechazar(res);
     }
-    return enLaPrestadora(prestadoraId, trabajo, () => next());
+    return enLaPrestadora(prestadoraId, trabajo, (db) => {
+      req[CONEXION] = db;
+      next();
+    });
   };
+}
+
+/**
+ * La conexión con la que la ruta entra a la base: la del trabajo de la Prestadora de la dirección.
+ * Si el pedido no pasó por `enLaPrestadoraDeLaDireccion` no hay ninguna, y se corta: nunca se cae
+ * en otra.
+ */
+export function conexionDeLaDireccion(req) {
+  const db = req[CONEXION];
+  if (!db) throw new Error('conexionDeLaDireccion: el pedido no pasó por enLaPrestadoraDeLaDireccion');
+  return db;
 }

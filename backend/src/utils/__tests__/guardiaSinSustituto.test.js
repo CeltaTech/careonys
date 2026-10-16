@@ -23,6 +23,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const ASISTENTE = '22222222-2222-2222-2222-222222222222';
@@ -32,11 +33,24 @@ let ausencias = [];
 let coberturas = [];
 let pedidos = [];
 
+/** Lo que dice adentro una credencial, o `null` si no se puede leer. */
+function leerCredencial(autorizacion) {
+  try {
+    return JSON.parse(Buffer.from(autorizacion.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+  } catch {
+    return null;
+  }
+}
+
 const baseFalsa = createServer((req, res) => {
   req.on('data', () => {});
   req.on('end', () => {
     const url = new URL(req.url, 'http://interno');
-    pedidos.push({ ruta: url.pathname, parametros: url.searchParams });
+    pedidos.push({
+      ruta: url.pathname,
+      parametros: url.searchParams,
+      credencial: leerCredencial(req.headers.authorization ?? ''),
+    });
 
     const cuerpo =
       url.pathname === '/rest/v1/ausencias' ? ausencias
@@ -49,7 +63,7 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // El import va después de las variables de entorno: la conexión se arma al importar.
 const { faltaElSustituto } = await import('../guardiaSinSustituto.js');
@@ -130,8 +144,24 @@ describe('faltaElSustituto', () => {
     }
   });
 
+  it('las dos consultas van con la credencial del trabajo de la Prestadora', async () => {
+    ausencias = [licencia('2026-10-05', '2026-10-09')];
+    await faltaElSustituto(GUARDIA);
+
+    assert.equal(pedidos.length, 2);
+    for (const pedido of pedidos) {
+      assert.equal(pedido.credencial?.role, 'trabajo_sin_persona', `${pedido.ruta} fue con otra credencial`);
+      assert.equal(pedido.credencial.prestadora_id, PRESTADORA, `${pedido.ruta} fue fuera de la Prestadora`);
+    }
+  });
+
   it('una guardia sin Asistente cargado no frena a nadie', async () => {
     assert.equal(await faltaElSustituto({ ...GUARDIA, asistente_id: null }), false);
     assert.equal(await faltaElSustituto(null), false);
+  });
+
+  it('una guardia sin Prestadora no frena a nadie ni consulta nada', async () => {
+    assert.equal(await faltaElSustituto({ ...GUARDIA, prestadora_id: null }), false);
+    assert.equal(pedidos.length, 0);
   });
 });

@@ -1,4 +1,4 @@
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { ausenciaQueTapaLaGuardia, finPrevistoDeLaAusencia, ultimoDiaDeLaGuardia } from './ausenciaQueTapa.js';
 
 // Una guardia de cobertura no arranca hasta que tiene sustituto
@@ -23,6 +23,10 @@ import { ausenciaQueTapaLaGuardia, finPrevistoDeLaAusencia, ultimoDiaDeLaGuardia
 // la ausencia tapa el día, y ninguna más: por qué esa persona está de licencia es información de
 // salud y no sale del legajo (CLAUDE.md §6, y la razón larga está escrita en
 // `utils/ausenciaQueTapa.js`).
+//
+// CON QUÉ CREDENCIAL. Las dos lecturas van con la credencial del trabajo de la Prestadora de la
+// guardia, que la base acota a ella: el Asistente que marca la llegada no ve las licencias ni las
+// coberturas con la suya. Sin Prestadora no se consulta nada.
 
 /** El motivo que viaja hasta la pantalla del Asistente. La frase la busca ella, en su idioma. */
 export const MOTIVO_SIN_SUSTITUTO = 'guardia_de_cobertura_sin_sustituto';
@@ -38,9 +42,15 @@ export const MOTIVO_SIN_SUSTITUTO = 'guardia_de_cobertura_sin_sustituto';
  *                          para dejar a alguien afuera de su trabajo en la puerta de una casa.
  */
 export async function faltaElSustituto(guardia) {
-  if (!guardia?.id || !guardia?.asistente_id || !guardia?.fecha) return false;
+  if (!guardia?.id || !guardia?.asistente_id || !guardia?.fecha || !guardia?.prestadora_id) return false;
 
-  const { data: ausencias, error: errorAusencias } = await supabase
+  return enLaPrestadora(guardia.prestadora_id, 'ver si la guardia tiene sustituto', (db) =>
+    faltaElSustitutoAdentro(db, guardia),
+  );
+}
+
+async function faltaElSustitutoAdentro(db, guardia) {
+  const { data: ausencias, error: errorAusencias } = await db
     .from('ausencias')
     .select('asistente_id, fecha_inicio, fecha_fin')
     .eq('asistente_id', guardia.asistente_id)
@@ -53,7 +63,7 @@ export async function faltaElSustituto(guardia) {
   // Contra lo previsto: quien se presenta pasada la fecha prevista volvió (`finPrevistoDeLaAusencia`).
   if (!ausenciaQueTapaLaGuardia(guardia, ausencias, finPrevistoDeLaAusencia)) return false;
 
-  const { data: coberturas, error: errorCobertura } = await supabase
+  const { data: coberturas, error: errorCobertura } = await db
     .from('guardias_cobertura')
     .select('id')
     .eq('guardia_original_id', guardia.id)

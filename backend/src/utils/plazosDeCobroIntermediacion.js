@@ -37,19 +37,20 @@ export function memoriaDePlazos() {
  *
  * @param {string|null|undefined} prestadoraId
  * @param {Map} [memoria]  Lo leído en esta misma vuelta.
+ * @param {object} [db]    La conexión con la que trabaja quien pregunta.
  * @returns {Promise<{dias_de_aviso_antes_del_cobro: number, dias_de_gracia_por_cobro_rechazado: number, dias_de_vida_del_cupon: number}|null>}
  */
-export async function plazosDeLaPrestadora(prestadoraId, memoria) {
+export async function plazosDeLaPrestadora(prestadoraId, memoria, db = supabase) {
   if (!prestadoraId) return null;
   if (memoria?.has(prestadoraId)) return memoria.get(prestadoraId);
 
-  const plazos = await leerlos(prestadoraId);
+  const plazos = await leerlos(db, prestadoraId);
   memoria?.set(prestadoraId, plazos);
   return plazos;
 }
 
-async function leerlos(prestadoraId) {
-  const { data, error } = await supabase
+async function leerlos(db, prestadoraId) {
+  const { data, error } = await db
     .from(TABLA)
     .select(COLUMNAS)
     .eq('prestadora_id', prestadoraId)
@@ -63,7 +64,7 @@ async function leerlos(prestadoraId) {
 
   // La fila la crea el disparador del alta. Si falta, se le pide a la misma función que usa el
   // alta y se vuelve a leer: así el plazo que rige es el que la base guarda, no una copia.
-  const { error: errorSiembra } = await supabase.rpc('sembrar_configuracion_prestadora', {
+  const { error: errorSiembra } = await db.rpc('sembrar_configuracion_prestadora', {
     p_prestadora_id: prestadoraId,
   });
   if (errorSiembra) {
@@ -71,7 +72,7 @@ async function leerlos(prestadoraId) {
     return null;
   }
 
-  const { data: recien, error: errorRelectura } = await supabase
+  const { data: recien, error: errorRelectura } = await db
     .from(TABLA)
     .select(COLUMNAS)
     .eq('prestadora_id', prestadoraId)
@@ -82,31 +83,4 @@ async function leerlos(prestadoraId) {
     return null;
   }
   return recien ?? null;
-}
-
-/**
- * El plazo de preaviso más largo que hay configurado. Es lo que abre la ventana de la consulta del
- * preaviso, que recorre todas las Prestadoras de una vez: se traen los accesos que entran en
- * la ventana más ancha y después cada uno se mide contra el plazo de la suya.
- *
- * @returns {Promise<number|null>}
- */
-export async function elPlazoDePreavisoMasLargo() {
-  // SIN PRESTADORA A PROPÓSITO: lo que se busca acá es el plazo más largo de todas, que es
-  // justamente lo que ninguna Prestadora sola puede contestar. Se pregunta antes de saber qué
-  // Prestadoras entran en la vuelta, para abrir la ventana más ancha; después cada acceso se
-  // mide contra el plazo de la suya, que sí se lee nombrándola (`plazosDeLaPrestadora`). No sale
-  // de acá ningún dato de nadie: la respuesta es una cantidad de días.
-  const { data, error } = await supabase
-    .from(TABLA)
-    .select('dias_de_aviso_antes_del_cobro')
-    .order('dias_de_aviso_antes_del_cobro', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) {
-    console.error('Error leyendo el plazo de aviso más largo:', error.message);
-    return null;
-  }
-  return data?.dias_de_aviso_antes_del_cobro ?? null;
 }

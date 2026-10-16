@@ -361,11 +361,13 @@ describe('la puerta del postulante', () => {
       'prestadora',
       'url',
     ]);
-    // La marca de la Prestadora —su nombre y su logo— se lee con la credencial del trabajo de esa
-    // Prestadora, y con ninguna otra.
+    // La marca de la Prestadora —su nombre y su logo— y la dirección de sus salas se leen con la
+    // credencial del trabajo de esa Prestadora, y con ninguna otra.
     const marcas = llamadas.filter((l) => l.ruta === '/rest/v1/prestadoras' && l.select?.includes('logo_url'));
+    const salas = llamadas.filter((l) => l.ruta === '/rest/v1/prestadoras' && l.select?.includes('videollamada_base_url'));
     assert.ok(marcas.length > 0, 'la marca tendría que leerse');
-    for (const marca of marcas) {
+    assert.ok(salas.length > 0, 'la dirección de las salas tendría que leerse');
+    for (const marca of [...marcas, ...salas]) {
       const credencial = JSON.parse(Buffer.from(marca.credencial.replace('Bearer ', '').split('.')[1], 'base64url').toString());
       assert.equal(credencial.role, 'trabajo_sin_persona', 'la marca se leyó con otra credencial');
       assert.equal(credencial.prestadora_id, PRESTADORA, 'la marca se leyó fuera de la Prestadora');

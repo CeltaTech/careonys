@@ -3,9 +3,9 @@
  *
  *   npm test --prefix backend
  *
- * QUÉ SE PRUEBA ACÁ. Que se pregunte por la Prestadora de quien mira y por ninguna otra —el backend
- * entra con la llave de servicio y se saltea la protección por fila, así que ese filtro es lo
- * único que separa una Prestadora de otra—; que un canal cargado a medias no cuente como canal; y
+ * QUÉ SE PRUEBA ACÁ. Que se pregunte por la Prestadora de quien mira y por ninguna otra —con la
+ * credencial del trabajo de esa Prestadora, que la base acota a ella, y con el filtro escrito—; que
+ * un canal cargado a medias no cuente como canal; y
  * que una consulta que falla no rompa la pantalla ni invente un teléfono.
  *
  * CÓMO PUEDE FALLAR. La base falsa no contesta nada que la prueba no haya preparado, así que una
@@ -16,6 +16,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 
@@ -27,7 +28,7 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const direccion = new URL(req.url, 'http://interno');
     const clave = `${req.method} ${direccion.pathname}`;
-    llamadas.push({ clave, busqueda: direccion.search });
+    llamadas.push({ clave, busqueda: direccion.search, credencial: req.headers.authorization });
 
     const preparada = respuestas.get(clave);
     if (preparada === undefined) {
@@ -42,7 +43,7 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // Después de las variables de entorno: la conexión a la base se arma al importar.
 const { contactoDeLaPrestadora, hayPorDondeLlamar, telefonoParaEmergencias } = await import('../contactoDeLaPrestadora.js');
@@ -89,6 +90,9 @@ describe('el contacto de la Prestadora', () => {
       consulta.busqueda.includes(`prestadora_id=eq.${PRESTADORA}`),
       `la consulta salió sin el filtro por Prestadora: ${consulta.busqueda}`
     );
+    const credencial = JSON.parse(Buffer.from(consulta.credencial.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+    assert.equal(credencial.role, 'trabajo_sin_persona', 'la consulta fue con otra credencial');
+    assert.equal(credencial.prestadora_id, PRESTADORA, 'la consulta fue fuera de la Prestadora');
   });
 
   it('un canal cargado con espacios no es un canal', async () => {

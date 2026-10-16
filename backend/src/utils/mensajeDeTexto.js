@@ -20,23 +20,25 @@
 // Y SI FALLA, EL MENSAJE SALE IGUAL. Ninguna falla de esta vía puede dejar un mensaje sin mandar:
 // quien llama cae al correo, que es exactamente lo que ya hace con WhatsApp.
 
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 
 /**
  * Con qué proveedor manda mensajes de texto esta Prestadora, si es que tiene alguno.
  *
  * Devuelve `null` cuando no hay fila, cuando la fila está apagada o cuando no tiene proveedor
  * cargado. No se busca ninguno parecido ni se cae a un proveedor de la empresa: cada Prestadora
- * manda con lo suyo, y una credencial de una nunca alcanza los datos de otra.
+ * manda con lo suyo, y una credencial de una nunca alcanza los datos de otra. Se lee con la
+ * credencial del trabajo de esa Prestadora, que la base acota a ella.
  */
 export async function proveedorDeMensajeDeTexto(prestadoraId) {
   if (!prestadoraId) return null;
 
-  const { data } = await supabase
-    .from('configuracion_mensaje_de_texto_prestadora')
-    .select('proveedor, remitente, token_secret_id, activo')
-    .eq('prestadora_id', prestadoraId)
-    .maybeSingle();
+  const { data } = await enLaPrestadora(prestadoraId, 'proveedor de mensajes de texto', (db) =>
+    db
+      .from('configuracion_mensaje_de_texto_prestadora')
+      .select('proveedor, remitente, token_secret_id, activo')
+      .eq('prestadora_id', prestadoraId)
+      .maybeSingle());
 
   if (!data?.activo || !data.proveedor) return null;
   return data;

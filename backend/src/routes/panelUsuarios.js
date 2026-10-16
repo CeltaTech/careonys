@@ -5,7 +5,7 @@ import {
   alcanceDelPanel,
   laCuentaDelPanelEstaAlAlcance,
 } from '../middleware/alcancePrestadora.js';
-import { clienteDelPedido, supabase } from '../db/connection.js';
+import { clienteDelPedido, enLaPrestadora, supabase } from '../db/connection.js';
 import { crearCuentaConPerfil, borrarCuenta } from '../utils/cuentasPanel.js';
 import { guardarLugaresDe } from '../utils/lugaresDeCadaPersona.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
@@ -32,9 +32,12 @@ const soloAdministracion = exigirAdministracion('Solo Admin o Superadmin puede g
 // Los roles que se crean, se corrigen y se dan de baja desde acá.
 const ROLES_GESTIONABLES = ['coordinador'];
 
-// CON LA CREDENCIAL DE QUIEN PIDE va sólo el alcance de cada cuenta. Las cuentas en sí se leen,
-// se corrigen y se dan de baja con la llave maestra: en `usuarios` la base le deja a cada persona
-// ver su propia fila y nada más, y desde acá el Administrador trabaja sobre las de los demás.
+// CON LA CREDENCIAL DE QUIEN PIDE va sólo el alcance de cada cuenta: en `usuarios` la base le deja
+// a cada persona ver su propia fila y nada más, y desde acá el Administrador trabaja sobre las de
+// los demás. Las cuentas de coordinación se corrigen y se dan de baja con el trabajo de la
+// Prestadora activa, que alcanza las cuentas de esa Prestadora y ninguna otra. La lista todavía va
+// con la llave maestra, porque al soporte técnico le muestra además las cuentas de su equipo, que
+// no cuelgan de ninguna Prestadora.
 
 panelUsuariosRouter.get('/', requiereRolPanel, soloAdministracion, async (req, res) => {
   // Llave maestra: `usuarios` sólo deja ver la propia fila (ver arriba).
@@ -141,20 +144,24 @@ panelUsuariosRouter.patch('/:id', requiereRolPanel, soloAdministracion, async (r
     return responderError(res, error);
   }
 
-  // Llave maestra: la base no deja a nadie tocar la fila de `usuarios` de otra cuenta.
-  let query = supabase
-    .from('usuarios')
-    .update({ nombre, telefono })
-    .eq('id', req.params.id)
-    .in('rol', ROLES_GESTIONABLES);
-
-  query = acotarAUsuariosDelPanel(query, req.usuarioPanel);
-
+  // Con el trabajo de la Prestadora activa: la base no deja a nadie tocar la fila de `usuarios` de
+  // otra cuenta. Sin Prestadora activa no hay cuenta de coordinación que corregir.
+  //
   // Sin el .select('id') la base contesta que salió bien aunque no haya tocado ninguna fila, y
   // entonces se le avisa "guardado" a alguien que no guardó nada. Si no volvió ninguna fila, la
   // cuenta no existe o es de otra Prestadora: desde afuera es el mismo caso y se contesta igual,
   // para que la respuesta no permita averiguar qué cuentas tienen las demás Prestadoras.
-  const { data: modificada, error } = await query.select('id');
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+  const { data: modificada, error } = prestadoraId
+    ? await enLaPrestadora(prestadoraId, 'Corregir una cuenta del Panel', (db) => acotarAUsuariosDelPanel(
+      db
+        .from('usuarios')
+        .update({ nombre, telefono })
+        .eq('id', req.params.id)
+        .in('rol', ROLES_GESTIONABLES),
+      req.usuarioPanel,
+    ).select('id'))
+    : { data: [], error: null };
 
   if (error) return responderError(res, error);
   if (!modificada?.length) {
@@ -180,17 +187,20 @@ panelUsuariosRouter.delete('/:id', requiereRolPanel, soloAdministracion, async (
 
   const alcance = alcanceDelPanel(req.usuarioPanel);
 
-  // La consulta nombra la Organización, con la misma regla que la lista: la Organización activa
-  // más las cuentas del equipo técnico. La comprobación en memoria de abajo se queda igual —
-  // filtrar y preguntar son las dos formas de la misma regla, y las dos hacen falta. Va con la
-  // llave maestra porque la base sólo deja ver la propia fila de `usuarios`.
-  const { data: usuario } = await acotarAUsuariosDelPanel(
-    supabase
-      .from('usuarios')
-      .select('rol, prestadora_id')
-      .eq('id', req.params.id),
-    req.usuarioPanel,
-  ).maybeSingle();
+  // La consulta nombra la Organización, con la misma regla que la lista. La comprobación en
+  // memoria de abajo se queda igual — filtrar y preguntar son las dos formas de la misma regla, y
+  // las dos hacen falta. Va con el trabajo de la Prestadora activa porque la base sólo deja ver la
+  // propia fila de `usuarios`; las cuentas del equipo técnico no le quedan a la vista, y no hace
+  // falta: no se dan de baja desde acá.
+  const { data: usuario } = alcance.prestadoraId
+    ? await enLaPrestadora(alcance.prestadoraId, 'Cuenta del Panel a dar de baja', (db) => acotarAUsuariosDelPanel(
+      db
+        .from('usuarios')
+        .select('rol, prestadora_id')
+        .eq('id', req.params.id),
+      req.usuarioPanel,
+    ).maybeSingle())
+    : { data: null };
 
   // Cuenta que no existe, de otra Prestadora, o de un rol que este solicitante no gestiona:
   // desde afuera son el mismo caso y se contestan igual, para que la respuesta no permita

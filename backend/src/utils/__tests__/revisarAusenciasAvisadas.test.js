@@ -21,6 +21,7 @@
  *      recibir lo suyo y nada de la otra.
  */
 import { strict as assert } from 'node:assert';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 
@@ -60,6 +61,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // Después de las variables de entorno: la conexión se arma al importar.
 const { revisarAusenciasAvisadas } = await import('../revisarAusenciasAvisadas.js');

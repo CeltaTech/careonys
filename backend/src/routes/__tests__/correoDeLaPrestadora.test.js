@@ -21,7 +21,8 @@
  * Se levanta el backend de verdad contra una base de mentira y contra un servicio de reenvío de
  * mentira, y se mira qué pidió cada uno. Los datos son inventados.
  */
-import { strict as assert } from 'node:assert';
+import { strict as assert } from 'node:assert';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
@@ -99,6 +100,7 @@ await new Promise((listo) => reenvioFalso.listen(0, '127.0.0.1', listo));
 
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 process.env.REMITENTE_AVISOS = 'avisos@ejemplo.test';
 process.env.CLOUDFLARE_API_BASE = `http://127.0.0.1:${reenvioFalso.address().port}`;
 process.env.CLOUDFLARE_EMAIL_ROUTING_TOKEN = 'token-de-mentira';

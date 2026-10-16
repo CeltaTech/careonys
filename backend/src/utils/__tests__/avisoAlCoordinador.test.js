@@ -14,6 +14,7 @@
  * base, porque ese mensaje va por correo.
  */
 import { strict as assert } from 'node:assert';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 
@@ -27,6 +28,8 @@ const TELEFONO_PROPIO = '+5491199999999';
 /** Qué contesta la base a cada `MÉTODO /ruta`, y qué rutas se le preguntaron. */
 const respuestas = new Map();
 let consultas = [];
+/** Con qué credencial llegó cada `MÉTODO /ruta`, la última vez. */
+const credenciales = new Map();
 
 const baseFalsa = createServer((req, res) => {
   req.on('data', () => {});
@@ -34,6 +37,7 @@ const baseFalsa = createServer((req, res) => {
     const direccion = new URL(req.url, 'http://interno');
     const clave = `${req.method} ${direccion.pathname}`;
     consultas.push(clave);
+    credenciales.set(clave, req.headers.authorization ?? '');
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada(direccion.searchParams) : preparada;
@@ -52,6 +56,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 // Sin casilla de correo configurada el envío por correo se saltea solo, que es lo que acá hace
 // falta: lo que se prueba es el otro canal, y el correo tiene sus propias pruebas.
 delete process.env.SMTP_USER;
@@ -114,6 +119,12 @@ describe('a qué número le llega un aviso', () => {
     assert.equal(pedidosAMeta.length, 1);
     assert.equal(pedidosAMeta[0].to, WHATSAPP_DE_LA_PRESTADORA);
     assert.equal(pedidosAMeta[0].type, 'template');
+
+    // La configuración del aviso se lee con la credencial del trabajo de la Prestadora.
+    const autorizacion = credenciales.get('GET /rest/v1/configuracion_notificaciones') ?? '';
+    const credencial = JSON.parse(Buffer.from(autorizacion.replace('Bearer ', '').split('.')[1] ?? '', 'base64url').toString() || 'null');
+    assert.equal(credencial?.role, 'trabajo_sin_persona');
+    assert.equal(credencial.prestadora_id, PRESTADORA);
   });
 
   it('el número propio de quien avisa gana sobre el de contacto', async () => {

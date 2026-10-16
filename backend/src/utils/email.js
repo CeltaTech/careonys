@@ -1,6 +1,6 @@
 import dns from 'dns/promises';
 import nodemailer from 'nodemailer';
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora, supabase } from '../db/connection.js';
 import { marcaDeLaPrestadora } from './marcaPrestadora.js';
 
 /** Por qué servidor sale el correo cuando se usa el camino SMTP. Sale del entorno: escrito en el
@@ -148,11 +148,11 @@ export async function direccionDeEnvioDe(prestadoraId) {
   const dominio = dominioDeEnvio();
   if (!prestadoraId || !dominio) return null;
 
-  const { data } = await supabase
+  const { data } = await enLaPrestadora(prestadoraId, 'casilla de envío', (db) => db
     .from('prestadoras')
     .select('casilla_envio')
     .eq('id', prestadoraId)
-    .maybeSingle();
+    .maybeSingle());
 
   return data?.casilla_envio ? `${data.casilla_envio}@${dominio}` : null;
 }
@@ -185,12 +185,13 @@ async function crearTransporterPara(prestadoraId) {
 // (supabase/migrations/) — antes era una fila global por
 // evento, compartida sin darse cuenta por todas las prestadoras licenciatarias.
 async function configuracionEvento(evento, prestadoraId) {
-  const { data } = await supabase
+  if (!prestadoraId) return null;
+  const { data } = await enLaPrestadora(prestadoraId, 'configuración de un aviso', (db) => db
     .from('configuracion_notificaciones')
     .select('emails, activo, whatsapp_activo, mensaje_de_texto_activo, notificar_cliente, plantilla_whatsapp_id')
     .eq('evento', evento)
     .eq('prestadora_id', prestadoraId)
-    .single();
+    .single());
 
   return data;
 }
@@ -215,11 +216,11 @@ async function destinatariosEvento(evento, prestadoraId) {
 async function emailDeContactoDePrestadora(prestadoraId) {
   if (!prestadoraId) return null;
 
-  const { data } = await supabase
+  const { data } = await enLaPrestadora(prestadoraId, 'correo de contacto de la Prestadora', (db) => db
     .from('configuracion_prestadora')
     .select('email')
     .eq('prestadora_id', prestadoraId)
-    .maybeSingle();
+    .maybeSingle());
 
   return data?.email ?? null;
 }
@@ -243,6 +244,9 @@ async function remitenteVisible(direccion, prestadoraId) {
 // Se anota el hecho y nada más: cuándo, de qué Prestadora, y si el despachante lo tomó. Ni el
 // destinatario, ni el asunto, ni una línea del contenido (`celtatech/CLAUDE.md` §6).
 //
+// Con Prestadora se anota con la credencial del trabajo de ella. El correo que sale sin
+// Prestadora se anota sin ninguna, y ésa todavía no tiene credencial que la alcance.
+//
 // Y no anotar nunca rompe un envío. Un correo que salió y no se pudo contar sigue siendo un
 // correo que salió; hacer fallar el mensaje porque falló su registro sería cambiar un número por
 // una notificación que no llega.
@@ -253,7 +257,8 @@ async function despachar({ transporter, prestadoraId, mensaje }) {
     aceptado = true;
   } finally {
     try {
-      await supabase.from('envios_de_correo').insert({ prestadora_id: prestadoraId ?? null, aceptado });
+      const anotar = (db) => db.from('envios_de_correo').insert({ prestadora_id: prestadoraId ?? null, aceptado });
+      await (prestadoraId ? enLaPrestadora(prestadoraId, 'contar un correo enviado', anotar) : anotar(supabase));
     } catch (error) {
       console.error('Salió un correo que no se pudo contar:', error.message);
     }

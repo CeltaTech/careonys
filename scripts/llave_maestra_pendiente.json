@@ -123,7 +123,6 @@
                                  "backend/src/utils/direccionDeLaPrestadora.js",
                                  "backend/src/utils/entrevistaDePostulacion.js",
                                  "backend/src/utils/equipoDeUnPaciente.js",
-                                 "backend/src/utils/equiposConocidos.js",
                                  "backend/src/utils/faseAutomaticaRelevo.js",
                                  "backend/src/utils/habilitarCambioDeClave.js",
                                  "backend/src/utils/instruccionesPersonasAutorizadas.js",

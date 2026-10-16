@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { cerrarTodasLasSesionesDe } from './claveActual.js';
 
 // QUÉ ES UN EQUIPO NUEVO. Un aparato que no tiene llave guardada y desde el que nunca se entró.
@@ -14,6 +14,15 @@ import { cerrarTodasLasSesionesDe } from './claveActual.js';
 // LA MARCA NO ES UNA CREDENCIAL. Sola no deja entrar a nadie: se mira **después** de que la sesión
 // ya está hecha, y lo único que decide es si hace falta pedir el segundo factor. Robarla no abre
 // ninguna puerta; lo más que consigue es ahorrarse un código teniendo además la clave.
+//
+// CON DOS CREDENCIALES, CADA UNA PARA LO SUYO. Lo que se lee se lee con la credencial de quien
+// pide (`db`), que sólo alcanza sus propios equipos. Lo que se anota o se revoca en
+// `equipos_conocidos` lo escribe el trabajo de su Prestadora: si la persona pudiera escribir esa
+// tabla con su credencial, con la clave sola —que ya le da sesión— se anotaría un equipo y se
+// ahorraría el segundo factor. Las llaves de las aplicaciones de teléfono sí las revoca la propia
+// persona, que ya puede hacerlo con las suyas.
+
+const TRABAJO = 'Anotar los equipos conocidos';
 
 export function marcaNueva() {
   return crypto.randomBytes(32).toString('base64url');
@@ -27,11 +36,12 @@ export function verificadorDeLaMarca(marca) {
 
 /** La fila de este aparato, si existe y no está revocada. Falla cerrado: ante cualquier duda, null.
  *  La Prestadora se nombra siempre, y sale de la sesión de quien está entrando. */
-export async function equipoConocido({ usuarioId, prestadoraId, marca }) {
+export async function equipoConocido({ usuarioId, prestadoraId, marca, db }) {
+  if (!db) throw new Error('equipoConocido: falta la conexión de quien pide');
   const verificador = verificadorDeLaMarca(marca);
   if (!usuarioId || !prestadoraId || !verificador) return null;
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('equipos_conocidos')
     .select('id, usuario_id, revocado_en')
     .eq('prestadora_id', prestadoraId)
@@ -58,7 +68,7 @@ export async function anotarEquipo({ usuario, marca = null }) {
   const verificador = verificadorDeLaMarca(laMarca);
   const ahora = new Date().toISOString();
 
-  const { error } = await supabase
+  const { error } = await enLaPrestadora(usuario.prestadora_id, TRABAJO, (trabajo) => trabajo
     .from('equipos_conocidos')
     .upsert(
       {
@@ -69,7 +79,7 @@ export async function anotarEquipo({ usuario, marca = null }) {
         revocado_en: null,
       },
       { onConflict: 'usuario_id,marca_verificador' },
-    );
+    ));
 
   if (error) {
     console.error('equiposConocidos: no se pudo anotar el equipo:', error.message);
@@ -86,27 +96,30 @@ export async function anotarEquipo({ usuario, marca = null }) {
  * Cambiar la clave no alcanzaba: las sesiones ya abiertas seguían vivas.
  *
  * La Prestadora se nombra en las dos tablas, y la trae quien llama desde la sesión comprobada. Las
- * sesiones se cierran con la de la propia persona, que es la que pidió cerrarlas.
+ * llaves y las sesiones se cierran con la credencial de la propia persona, que es la que pidió
+ * cerrarlas.
  */
-export async function cerrarSesionEnTodosLosEquipos(usuarioId, prestadoraId, token) {
+export async function cerrarSesionEnTodosLosEquipos(usuarioId, prestadoraId, token, db) {
+  if (!db) throw new Error('cerrarSesionEnTodosLosEquipos: falta la conexión de quien pide');
   if (!usuarioId || !prestadoraId || !token) return;
 
   const ahora = new Date().toISOString();
 
-  await supabase
+  await enLaPrestadora(prestadoraId, TRABAJO, (trabajo) => trabajo
     .from('equipos_conocidos')
     .update({ revocado_en: ahora })
     .eq('prestadora_id', prestadoraId)
     .eq('usuario_id', usuarioId)
-    .is('revocado_en', null);
+    .is('revocado_en', null));
 
-  // Las llaves de las dos aplicaciones de teléfono. Se borran y no se marcan: la tabla no lleva
-  // columna de revocación, y una llave que no está es una llave que no sirve.
-  const { error: errorLlaves } = await supabase
+  // Las llaves de las dos aplicaciones de teléfono. Se marcan revocadas, igual que cuando la
+  // persona saca una sola: una llave revocada no abre, y la fila queda.
+  const { error: errorLlaves } = await db
     .from('llaves_de_dispositivo')
-    .delete()
+    .update({ revocada_en: ahora })
     .eq('prestadora_id', prestadoraId)
-    .eq('usuario_id', usuarioId);
+    .eq('usuario_id', usuarioId)
+    .is('revocada_en', null);
   if (errorLlaves) console.error('equiposConocidos: no se pudieron revocar las llaves:', errorLlaves.message);
 
   // Y las sesiones que ya estaban abiertas. Sin esto lo anterior no sirve: quien tiene el aparato
@@ -115,10 +128,11 @@ export async function cerrarSesionEnTodosLosEquipos(usuarioId, prestadoraId, tok
 }
 
 /** Los aparatos desde los que esta persona entró, para que pueda verlos antes de cerrarlos todos. */
-export async function equiposDe(usuarioId, prestadoraId) {
+export async function equiposDe(usuarioId, prestadoraId, db) {
+  if (!db) throw new Error('equiposDe: falta la conexión de quien pide');
   if (!usuarioId || !prestadoraId) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('equipos_conocidos')
     .select('id, primera_entrada_en, ultima_entrada_en')
     .eq('prestadora_id', prestadoraId)

@@ -24,6 +24,7 @@
  */
 import { strict as assert } from 'node:assert';
 import { afterEach, beforeEach, describe, it } from 'node:test';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 // El módulo de correo arrastra la conexión a la base, que se arma al importarla y no acepta una
 // dirección vacía. Acá nunca se la consulta —todos los envíos van sin Prestadora, así que no hay
@@ -32,6 +33,8 @@ import { afterEach, beforeEach, describe, it } from 'node:test';
 // esta prueba empieza a preguntarle algo a la base, se va a notar.
 process.env.SUPABASE_URL = 'http://127.0.0.1:1';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+// El correo que sale sin Prestadora se cuenta con el trabajo que no tiene ninguna.
+prepararCredencialDePrueba();
 
 const { enviarEmail, hayMedioDeEnvio } = await import('../email.js');
 
@@ -40,17 +43,29 @@ const VARIABLES = ['RESEND_API_KEY', 'REMITENTE_AVISOS', 'SMTP_USER', 'SMTP_PASS
 let originales;
 let fetchOriginal;
 let pedidos;
+let conteos;
 
-// Se anota lo que va al despachante y nada más. El backend además cuenta cada correo que sale, y
-// esa anotación es otro pedido: mezclarla acá haría que esta prueba hablara de dos cosas.
+// Lo que va al despachante se anota aparte de la anotación con la que el backend cuenta cada correo
+// que sale: mezclarlas haría que cada prueba hablara de dos cosas.
 function contestarComoElDespachante({ estado = 200, cuerpo = {} } = {}) {
   globalThis.fetch = async (url, opciones) => {
     if (!String(url).includes('api.resend.com')) {
+      const encabezados = new Headers(url instanceof Request ? url.headers : opciones?.headers);
+      conteos.push({ url: String(url instanceof Request ? url.url : url), credencial: leerCredencial(encabezados.get('authorization') ?? '') });
       return new Response('[]', { status: 201, headers: { 'Content-Type': 'application/json' } });
     }
     pedidos.push({ url: String(url), opciones });
     return { ok: estado < 400, status: estado, json: async () => cuerpo };
   };
+}
+
+/** Lo que lleva adentro la credencial con la que llegó un pedido: quién es y de qué Prestadora. */
+function leerCredencial(autorizacion) {
+  try {
+    return JSON.parse(Buffer.from(autorizacion.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+  } catch {
+    return null;
+  }
 }
 
 function loQueSeMando(pedido) {
@@ -67,6 +82,7 @@ beforeEach(() => {
   for (const nombre of VARIABLES) delete process.env[nombre];
   fetchOriginal = globalThis.fetch;
   pedidos = [];
+  conteos = [];
 });
 
 afterEach(() => {
@@ -158,6 +174,18 @@ describe('enviarEmail por el despachante', () => {
     await enviarEmail({ to: 'alguien@ejemplo.local', asunto: 'Uno', texto: 'Uno' });
 
     assert.equal('reply_to' in loQueSeMando(pedidos[0]), false);
+  });
+
+  it('el correo sin Prestadora se cuenta con el trabajo que no tiene ninguna, y no con la llave maestra', async () => {
+    cargarCredencialDelDespachante();
+    contestarComoElDespachante();
+
+    await enviarEmail({ to: 'alguien@ejemplo.local', asunto: 'Uno', texto: 'Uno' });
+
+    assert.equal(conteos.length, 1);
+    assert.match(conteos[0].url, /\/rest\/v1\/envios_de_correo/);
+    assert.equal(conteos[0].credencial?.role, 'trabajo_sin_persona');
+    assert.ok(!conteos[0].credencial?.prestadora_id, 'sin Prestadora');
   });
 
   it('si el despachante rechaza el envío, el error sale con el número y sin el mensaje', async () => {

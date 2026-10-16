@@ -123,7 +123,6 @@
                                  "backend/src/utils/cuentasPanel.js",
                                  "backend/src/utils/declaracionDeFormulario.js",
                                  "backend/src/utils/direccionDeLaPrestadora.js",
-                                 "backend/src/utils/email.js",
                                  "backend/src/utils/entrevistaDePostulacion.js",
                                  "backend/src/utils/equipoDeUnPaciente.js",
                                  "backend/src/utils/equiposConocidos.js",

@@ -29,6 +29,7 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const USUARIO = '22222222-2222-2222-2222-222222222222';
@@ -72,6 +73,8 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+// Lo que no es de quien pide —la advertencia y su registro— va con el trabajo de su Prestadora.
+prepararCredencialDePrueba();
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma
 // en el momento en que se importa, y con la dirección que haya en ese instante.
@@ -160,6 +163,11 @@ describe('encender una función de riesgo legal', () => {
       // sirve para saber exactamente qué se le mostró a esa persona ese día.
       texto_mostrado: TEXTO_ARGENTINO,
     });
+    // El registro va con el trabajo de esa Prestadora, no con la llave maestra.
+    const anotado = llamadas.find((l) => l.clave === 'POST /rest/v1/auditoria_advertencias_legales');
+    const contenido = JSON.parse(Buffer.from(anotado.credencial.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+    assert.equal(contenido.role, 'trabajo_sin_persona');
+    assert.equal(contenido.prestadora_id, PRESTADORA);
   });
 
   it('la Prestadora de la que se registra es la de la sesión, no una que venga en el pedido', async () => {

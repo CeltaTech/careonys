@@ -19,7 +19,7 @@
    queda guardada bajo el identificador de su Prestadora, y al pedirla se la busca por ese
    identificador exacto —ver `mensajesDelSistema.js`—. */
 
-import { supabase, paraCadaPrestadora } from '../db/connection.js';
+import { paraCadaPrestadora } from '../db/connection.js';
 import { sembrarMensajesDelSistema, clavesCargadas } from './mensajesDelSistema.js';
 
 const DE_A = 1000;
@@ -46,19 +46,19 @@ export async function cargarMensajesDelSistema() {
   let delProductoLeido = false;
   let fallo = null;
 
-  await paraCadaPrestadora(TRABAJO, async (prestadoraId) => {
+  await paraCadaPrestadora(TRABAJO, async (prestadoraId, db) => {
     try {
       if (!delProductoLeido) {
         // El texto del producto no es de ninguna Prestadora: es el que sale cuando la suya no
         // escribió uno propio. La base se lo deja leer a cada Prestadora, y se lee una sola vez.
-        filas.push(...await leerTodo(() => supabase
+        filas.push(...await leerTodo(() => db
           .from('mensajes_del_sistema')
           .select('clave, i18n, prestadora_id, activo')
           .is('prestadora_id', null)
           .eq('activo', true)));
         delProductoLeido = true;
       }
-      filas.push(...await leerTodo(() => supabase
+      filas.push(...await leerTodo(() => db
         .from('mensajes_del_sistema')
         .select('clave, i18n, prestadora_id, activo')
         .eq('prestadora_id', prestadoraId)

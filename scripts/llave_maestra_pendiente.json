@@ -91,7 +91,6 @@
                          ],
     "importan_la_conexion":  [
                                  "backend/src/geocodificacion/index.js",
-                                 "backend/src/i18n/cargarMensajesDelSistema.js",
                                  "backend/src/routes/appAsistentes.js",
                                  "backend/src/routes/appClientes.js",
                                  "backend/src/routes/appClientesMedicacion.js",
@@ -111,7 +110,6 @@
                                  "backend/src/routes/panelUsuarios.js",
                                  "backend/src/routes/panelVerificacionIdentidad.js",
                                  "backend/src/utils/activacionCuenta.js",
-                                 "backend/src/utils/advertenciaLegal.js",
                                  "backend/src/utils/altaEnPasarela.js",
                                  "backend/src/utils/avisoAutomaticoCese.js",
                                  "backend/src/utils/avisoCambioDeAsistente.js",

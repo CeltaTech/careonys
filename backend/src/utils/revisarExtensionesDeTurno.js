@@ -1,5 +1,5 @@
-import { supabase } from '../db/connection.js';
-import { pacientesDeGuardia } from './pacientesDeGuardia.js';
+import { enLaPrestadora } from '../db/connection.js';
+import { prestadorasCertificadas } from './prestadorasDeLaIntermediacion.js';
 import { finDeGuardia, sumarDias } from './horarios.js';
 import {
   cuandoTermino,
@@ -31,9 +31,8 @@ import {
    ordena. Lo que este proceso hace es que el rato que se quedó exista escrito, porque hasta ahora
    no existía en ningún lado y esas horas son suyas.
 
-   Entra con la llave de servicio, que se saltea la protección por fila, porque recorre todas las
-   Prestadoras y acá no hay ninguna sesión de Panel abierta. Mismo criterio que
-   `revisarIncidentesTurnoSinCubrir.js`. */
+   Recorre las Prestadoras de a una, y cada una con la credencial del trabajo de esa Prestadora,
+   que la base acota a ella. */
 
 const MS_POR_DIA = 24 * 60 * 60 * 1000;
 
@@ -41,29 +40,26 @@ const MS_POR_DIA = 24 * 60 * 60 * 1000;
 // días antes de terminar, y todavía uno más para el caso que quedó abierto de ayer.
 const DIAS_HACIA_ATRAS = 4;
 
-// Se recorre de a una Prestadora por vez, y ninguna consulta mezcla dos: el backend entra con la
-// llave de servicio, que se saltea la protección por fila, así que lo único que mantiene cerrado
-// cada cajón es que cada consulta diga para cuál trabaja.
 export async function revisarExtensionesDeTurno() {
   const ahora = new Date();
-
-  const { data: prestadoras, error } = await supabase
-    .from('prestadoras')
-    .select('id')
-    .eq('estado', 'certificada');
-
-  if (error) {
-    console.error('Error consultando prestadoras para las extensiones:', error.message);
-    return;
-  }
-
-  for (const { id: prestadoraId } of prestadoras ?? []) {
-    await revisarPrestadora({ prestadoraId, ahora });
+  for (const prestadoraId of await prestadorasCertificadas()) {
+    try {
+      await revisarLasExtensionesDeUnaPrestadora(prestadoraId, ahora);
+    } catch (error) {
+      console.error(`Error revisando las extensiones (prestadora ${prestadoraId}):`, error.message);
+    }
   }
 }
 
-async function revisarPrestadora({ prestadoraId, ahora }) {
-  const { data: guardias, error } = await supabase
+/** Lo de una sola Prestadora, con la credencial del trabajo de esa Prestadora. */
+export function revisarLasExtensionesDeUnaPrestadora(prestadoraId, ahora) {
+  return enLaPrestadora(prestadoraId, 'revisar las extensiones de turno', (db) =>
+    revisarPrestadora({ db, prestadoraId, ahora }),
+  );
+}
+
+async function revisarPrestadora({ db, prestadoraId, ahora }) {
+  const { data: guardias, error } = await db
     .from('guardias')
     .select(
       'id, prestadora_id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin, checkin_at, checkout_at'
@@ -81,11 +77,11 @@ async function revisarPrestadora({ prestadoraId, ahora }) {
   // Las que ya están anotadas. Se traen todas las de esta Prestadora de una vez y no una por turno:
   // en una vuelta normal no hay ninguna abierta, y una consulta por turno serían cientos para no
   // encontrar nada.
-  const abiertas = await extensionesAbiertas(prestadoraId);
+  const abiertas = await extensionesAbiertas(db, prestadoraId);
   if (abiertas === null) return;
 
   for (const guardia of guardias ?? []) {
-    await revisarUnTurno({ guardia, prestadoraId, extension: abiertas.get(guardia.id) ?? null, ahora });
+    await revisarUnTurno({ db, guardia, prestadoraId, extension: abiertas.get(guardia.id) ?? null, ahora });
   }
 
   // Las abiertas cuyo turno ya no aparece en la ventana de arriba: se cerraron solas cuando la
@@ -93,28 +89,28 @@ async function revisarPrestadora({ prestadoraId, ahora }) {
   // extensión abierta para siempre diría que alguien sigue adentro de una casa hace una semana.
   for (const [guardiaId, extension] of abiertas) {
     if ((guardias ?? []).some((g) => g.id === guardiaId)) continue;
-    await cerrar({ extension, prestadoraId, hasta: ahora });
+    await cerrar({ db, extension, prestadoraId, hasta: ahora });
   }
 }
 
-async function revisarUnTurno({ guardia, prestadoraId, extension, ahora }) {
-  const relevo = await buscarElRelevo({ guardia, prestadoraId });
+async function revisarUnTurno({ db, guardia, prestadoraId, extension, ahora }) {
+  const relevo = await buscarElRelevo({ db, guardia, prestadoraId });
 
   if (extension) {
     if (!laExtensionTermino({ guardia, relevo })) {
       // Sigue adentro. Si el relevo apareció recién ahora —antes no había ninguno cargado—, se lo
       // anota: es el dato que la pantalla usa para contarle cómo va la búsqueda.
       if (relevo?.id && relevo.id !== extension.relevo_guardia_id) {
-        await anotarElRelevo({ extension, prestadoraId, relevoId: relevo.id });
+        await anotarElRelevo({ db, extension, prestadoraId, relevoId: relevo.id });
       }
       return;
     }
-    await cerrar({ extension, prestadoraId, hasta: cuandoTermino({ guardia, relevo, ahora }) });
+    await cerrar({ db, extension, prestadoraId, hasta: cuandoTermino({ guardia, relevo, ahora }) });
     return;
   }
 
   if (!laExtensionCorresponde({ guardia, relevo, ahora })) return;
-  await abrir({ guardia, relevo });
+  await abrir({ db, guardia, relevo });
 }
 
 /**
@@ -126,21 +122,31 @@ async function revisarUnTurno({ guardia, prestadoraId, extension, ahora }) {
  *
  * Devuelve `null` cuando no hay ninguno cargado, y eso no es una falla: es la forma más cruda de
  * que no venga nadie.
+ *
+ * Sólo hacen falta los identificadores de los Pacientes, y salen de la lista del turno sin pasar
+ * por la Ficha: así cuentan todos los del turno, cualquiera sea el estado de su Ficha.
  */
-async function buscarElRelevo({ guardia, prestadoraId }) {
-  let pacienteIds;
-  try {
-    pacienteIds = (await pacientesDeGuardia(supabase, prestadoraId, guardia, 'id')).map((p) => p.id);
-  } catch (e) {
-    console.error(`Error leyendo los Pacientes del turno ${guardia.id}:`, e.message);
+async function buscarElRelevo({ db, guardia, prestadoraId }) {
+  const { data: delTurno, error: errorDelTurno } = await db
+    .from('guardia_pacientes')
+    .select('paciente_id')
+    .eq('prestadora_id', prestadoraId)
+    .eq('guardia_id', guardia.id);
+  if (errorDelTurno) {
+    console.error(`Error leyendo los Pacientes del turno ${guardia.id}:`, errorDelTurno.message);
     return null;
   }
+  // Un turno sin ninguna fila en la lista se atiende con el Paciente de la columna vieja, igual que
+  // en `pacientesDeGuardia.js`.
+  const pacienteIds = (delTurno ?? []).length > 0
+    ? [...new Set(delTurno.map((fila) => fila.paciente_id))]
+    : guardia.paciente_id ? [guardia.paciente_id] : [];
   if (pacienteIds.length === 0) return null;
 
   // El relevo arranca el día en que éste termina, o al siguiente si hay un hueco entre los dos.
   const diaDelFinal = sumarDias(guardia.fecha, Number(guardia.dias_hasta_el_fin) || 0);
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('guardia_pacientes')
     .select('guardias!inner(id, fecha, hora_inicio, asistente_id, checkin_at)')
     .eq('prestadora_id', prestadoraId)
@@ -158,10 +164,10 @@ async function buscarElRelevo({ guardia, prestadoraId }) {
   return laQueSigue(guardia, filas);
 }
 
-async function extensionesAbiertas(prestadoraId) {
+async function extensionesAbiertas(db, prestadoraId) {
   const porGuardia = new Map();
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('extensiones_de_turno')
     .select('id, guardia_id, relevo_guardia_id, desde_at')
     .eq('prestadora_id', prestadoraId)
@@ -178,8 +184,8 @@ async function extensionesAbiertas(prestadoraId) {
   return porGuardia;
 }
 
-async function abrir({ guardia, relevo }) {
-  const { error } = await supabase.from('extensiones_de_turno').insert({
+async function abrir({ db, guardia, relevo }) {
+  const { error } = await db.from('extensiones_de_turno').insert({
     prestadora_id: guardia.prestadora_id,
     guardia_id: guardia.id,
     relevo_guardia_id: relevo?.id ?? null,
@@ -197,13 +203,13 @@ async function abrir({ guardia, relevo }) {
   }
 }
 
-async function cerrar({ extension, prestadoraId, hasta }) {
+async function cerrar({ db, extension, prestadoraId, hasta }) {
   // Nunca antes de cuando empezó: si los relojes de dos actos vinieron cruzados, la extensión
   // queda en cero y no en negativo, que la base rechazaría y dejaría la fila abierta para siempre.
   const desde = Date.parse(extension.desde_at);
   const momento = Number.isNaN(desde) ? hasta : new Date(Math.max(desde, hasta.getTime()));
 
-  const { error } = await supabase
+  const { error } = await db
     .from('extensiones_de_turno')
     .update({ hasta_at: momento.toISOString() })
     .eq('prestadora_id', prestadoraId)
@@ -214,8 +220,8 @@ async function cerrar({ extension, prestadoraId, hasta }) {
   }
 }
 
-async function anotarElRelevo({ extension, prestadoraId, relevoId }) {
-  const { error } = await supabase
+async function anotarElRelevo({ db, extension, prestadoraId, relevoId }) {
+  const { error } = await db
     .from('extensiones_de_turno')
     .update({ relevo_guardia_id: relevoId })
     .eq('prestadora_id', prestadoraId)

@@ -132,7 +132,6 @@
                                  "backend/src/routes/panelInformesObraSocial.js",
                                  "backend/src/routes/panelIntermediacion.js",
                                  "backend/src/routes/panelLiquidaciones.js",
-                                 "backend/src/routes/panelLugaresDeTrabajo.js",
                                  "backend/src/routes/panelMedicacion.js",
                                  "backend/src/routes/panelPersonasTelefonos.js",
                                  "backend/src/routes/panelUsuarios.js",

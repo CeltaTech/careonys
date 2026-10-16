@@ -1,20 +1,21 @@
 /**
- * La lista de lugares de la Prestadora, y dónde trabaja cada persona.
+ * La lista de lugares de la Prestadora y qué lugares abarca cada zona. Dónde trabaja cada persona
+ * se prueba en `panelLugaresDeTrabajo.test.js`.
  *
  *   npm test --prefix backend
  *
  * POR QUÉ EXISTE ESTA PRUEBA. Esta lista reemplaza a las zonas escritas a mano, que decidían tres
  * cosas a la vez sin que se notara: a quién se le ofrece una guardia, qué Asistentes ve cada
- * coordinadora y qué zonas ve el Cliente. Cuatro agujeros que tapa:
+ * coordinadora y qué zonas ve el Cliente. Los agujeros que tapa acá:
  *
  *  1. Que un lugar entre marcado como oficial sin traer el identificador del organismo. Marcado
  *     así, el día que el organismo lo incorpore nadie puede reconocerlo y queda duplicado.
  *  2. Que se pueda editar a mano el nombre de un lugar oficial. Si se pudiera, el identificador
  *     diría una cosa y la pantalla otra.
- *  3. Que se guarden lugares de otra Organización, o que se borren los de una persona de otra.
- *  4. Que cualquiera pueda cambiar hasta dónde llega una coordinadora, que es cambiar qué ve.
+ *  3. Que una zona de otra Organización llegue a borrar algo.
+ *  4. Que quien coordina cargue la lista, que es de la administración.
  *
- * Se levantan los dos routers de verdad contra una base de mentira y se mira qué contestan y qué
+ * Se levanta el router de verdad contra una base de mentira y se mira qué contestan y qué
  * escriben.
  */
 import { strict as assert } from 'node:assert';
@@ -82,12 +83,10 @@ process.env.GEOREF_API_BASE = `http://127.0.0.1:${organismoFalso.address().port}
 const { default: express } = await import('express');
 await import('express-async-errors');
 const { panelConfiguracionRouter } = await import('../panelConfiguracion.js');
-const { panelLugaresDeTrabajoRouter } = await import('../panelLugaresDeTrabajo.js');
 
 const app = express();
 app.use(express.json());
 app.use('/api/panel/configuracion', panelConfiguracionRouter);
-app.use('/api/panel/lugares-de-trabajo', panelLugaresDeTrabajoRouter);
 const backend = app.listen(0, '127.0.0.1');
 await new Promise((listo) => backend.on('listening', listo));
 const RAIZ = `http://127.0.0.1:${backend.address().port}/api/panel`;
@@ -273,87 +272,10 @@ describe('qué lugares abarca una zona', () => {
   });
 });
 
-describe('dónde acepta trabajar una Asistente', () => {
-  it('se guardan lugares, no zonas', async () => {
-    const { estado } = await pedir('PUT', `/lugares-de-trabajo/asistente/${ASISTENTE}`, {
-      lugares: [LUGAR, OTRO_LUGAR],
-    });
-    assert.equal(estado, 200);
-    assert.deepEqual(loEscritoEn('asistente_lugares'), [
-      { asistente_id: ASISTENTE, lugar_id: LUGAR, prestadora_id: PRESTADORA },
-      { asistente_id: ASISTENTE, lugar_id: OTRO_LUGAR, prestadora_id: PRESTADORA },
-    ]);
-  });
-
-  it('una Asistente de otra Organización no llega a borrar nada', async () => {
-    respuestas.set('GET /rest/v1/asistentes', () => []);
-    const { estado } = await pedir('PUT', `/lugares-de-trabajo/asistente/${ASISTENTE}`, { lugares: [LUGAR] });
-    assert.equal(estado, 404);
-    assert.equal(llamadas.some((l) => l.clave === 'DELETE /rest/v1/asistente_lugares'), false);
-  });
-
-  it('sin lista de lugares no se toca nada', async () => {
-    const { estado } = await pedir('PUT', `/lugares-de-trabajo/asistente/${ASISTENTE}`, {});
-    assert.equal(estado, 400);
-    assert.equal(llamadas.some((l) => l.clave === 'DELETE /rest/v1/asistente_lugares'), false);
-  });
-
-  it('quien coordina puede cambiarlos', async () => {
+describe('la lista de lugares es de la administración', () => {
+  it('quien coordina no la carga', async () => {
     quienLlama = { rol: 'coordinador', prestadora_id: PRESTADORA };
-    const { estado } = await pedir('PUT', `/lugares-de-trabajo/asistente/${ASISTENTE}`, { lugares: [LUGAR] });
-    assert.equal(estado, 200);
-  });
-});
-
-describe('hasta dónde llega una coordinadora', () => {
-  it('la administración lo cambia', async () => {
-    const { estado } = await pedir('PUT', `/lugares-de-trabajo/usuario/${COORDINADORA}`, { lugares: [LUGAR] });
-    assert.equal(estado, 200);
-    assert.deepEqual(loEscritoEn('usuario_lugares'), [
-      { usuario_id: COORDINADORA, lugar_id: LUGAR, prestadora_id: PRESTADORA },
-    ]);
-  });
-
-  it('quien coordina no, porque eso es cambiar qué Asistentes ve', async () => {
-    quienLlama = { rol: 'coordinador', prestadora_id: PRESTADORA };
-    const { estado } = await pedir('PUT', `/lugares-de-trabajo/usuario/${COORDINADORA}`, { lugares: [LUGAR] });
+    const { estado } = await pedir('GET', '/configuracion/lugares');
     assert.equal(estado, 403);
-    assert.equal(llamadas.some((l) => l.clave === 'DELETE /rest/v1/usuario_lugares'), false);
-  });
-
-  it('y tampoco los puede mirar', async () => {
-    quienLlama = { rol: 'coordinador', prestadora_id: PRESTADORA };
-    const { estado } = await pedir('GET', `/lugares-de-trabajo/usuario/${COORDINADORA}`);
-    assert.equal(estado, 403);
-  });
-});
-
-describe('la lista para elegir', () => {
-  it('trae los lugares y las zonas con lo que abarca cada una', async () => {
-    respuestas.set('GET /rest/v1/lugares', () => [{ id: LUGAR, nombre: 'Villa Urquiza' }]);
-    respuestas.set('GET /rest/v1/zonas_cobertura', () => [{ id: ZONA, nombre: 'Norte' }]);
-    respuestas.set('GET /rest/v1/zona_lugares', () => [{ zona_id: ZONA, lugar_id: LUGAR }]);
-
-    const { estado, cuerpo } = await pedir('GET', '/lugares-de-trabajo/catalogo');
-    assert.equal(estado, 200);
-    assert.deepEqual(cuerpo.lugares.map((l) => l.id), [LUGAR]);
-    assert.deepEqual(cuerpo.zonas, [{ id: ZONA, nombre: 'Norte', lugares: [LUGAR] }]);
-  });
-
-  it('quien coordina la alcanza, porque elegir no es configurar', async () => {
-    quienLlama = { rol: 'coordinador', prestadora_id: PRESTADORA };
-    const { estado } = await pedir('GET', '/lugares-de-trabajo/catalogo');
-    assert.equal(estado, 200);
-    // Cargar la lista sigue siendo de la administración.
-    const { estado: estadoConfiguracion } = await pedir('GET', '/configuracion/lugares');
-    assert.equal(estadoConfiguracion, 403);
-  });
-
-  it('se lee solo la Organización de quien llama', async () => {
-    await pedir('GET', '/lugares-de-trabajo/catalogo');
-    for (const tabla of ['lugares', 'zonas_cobertura', 'zona_lugares']) {
-      const leido = llamadas.find((l) => l.clave === `GET /rest/v1/${tabla}`);
-      assert.equal(leido.filtros.get('prestadora_id'), `eq.${PRESTADORA}`);
-    }
   });
 });

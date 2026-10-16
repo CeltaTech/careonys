@@ -11,21 +11,22 @@
 // comparación sean la misma cosa. Mientras se comparaban dos textos escritos a mano, una zona
 // escrita distinta no encontraba a nadie y nadie se enteraba.
 //
-// SIGUE CON LA LLAVE MAESTRA, y por eso cada consulta lleva la Prestadora de la sesión. Con la
-// credencial de quien pide, la base no deja hacer lo que esta ruta hace: quien coordina alcanza a
-// una Asistente sólo por los lugares que comparten (`interno.coordinador_alcanza_asistente`), así
-// que a la que todavía no tiene ninguno no la ve y no le podría cargar el primero; y en `usuarios`
-// cada persona lee sólo su propia fila (`usuario_ve_su_propia_fila`), así que la administración no
-// encontraría a la coordinadora cuyo alcance cambia. Las lecturas y la escritura de los lugares
-// viven además en `utils/catalogoDeLugares.js` y `utils/lugaresDeCadaPersona.js`, y acá se les pasa
-// la maestra por lo mismo, y porque `zonas_cobertura` sólo la lee la administración: con la
-// credencial de quien coordina, el catálogo le llegaría sin el atajo de las zonas.
+// Todo se hace con la credencial del trabajo de la Prestadora sobre la que se está parado, y por eso
+// cada consulta lleva además su filtro. Con la credencial de quien pide, la base no deja hacer lo
+// que esta ruta hace: quien coordina alcanza a una Asistente sólo por los lugares que comparten
+// (`interno.coordinador_alcanza_asistente`), así que a la que todavía no tiene ninguno no la ve y
+// no le podría cargar el primero; y en `usuarios` cada persona lee sólo su propia fila
+// (`usuario_ve_su_propia_fila`), así que la administración no encontraría a la coordinadora cuyo
+// alcance cambia. Las lecturas y la escritura de los lugares viven en `utils/catalogoDeLugares.js`
+// y `utils/lugaresDeCadaPersona.js`, y acá se les pasa esa misma credencial, también porque
+// `zonas_cobertura` sólo la lee la administración: con la de quien coordina, el catálogo le
+// llegaría sin el atajo de las zonas.
 
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { catalogoDeLugares } from '../utils/catalogoDeLugares.js';
 import { lugaresDe, guardarLugaresDe } from '../utils/lugaresDeCadaPersona.js';
 import { responderError } from '../utils/errorConMotivo.js';
@@ -38,10 +39,14 @@ panelLugaresDeTrabajoRouter.use(requiereRolPanel, exigirOrganizacionActiva);
 // es de la administración, nunca de quien coordina (CLAUDE.md §5, mínimo privilegio).
 const soloAdministracion = exigirAdministracion('Solo Admin o Superadmin puede cambiar el alcance de una coordinadora');
 
+function conElTrabajo(req, hacer) {
+  return enLaPrestadora(req.usuarioPanel.prestadoraId, 'lugares de trabajo', hacer);
+}
+
 /** Que la persona exista adentro de esta Organización se comprueba antes de borrar nada: sin esto,
  *  un identificador de otra Prestadora entraría al borrado. */
-async function existeEnLaOrganizacion(tabla, id, prestadoraId) {
-  const { data, error } = await supabase
+async function existeEnLaOrganizacion(db, tabla, id, prestadoraId) {
+  const { data, error } = await db
     .from(tabla)
     .select('id')
     .eq('id', id)
@@ -59,7 +64,7 @@ async function existeEnLaOrganizacion(tabla, id, prestadoraId) {
 // punto único de verdad que usa Configuración.
 panelLugaresDeTrabajoRouter.get('/catalogo', async (req, res) => {
   try {
-    res.json(await catalogoDeLugares(supabase, req.usuarioPanel.prestadoraId));
+    res.json(await conElTrabajo(req, (db) => catalogoDeLugares(db, req.usuarioPanel.prestadoraId)));
   } catch (error) {
     responderError(res, error);
   }
@@ -69,7 +74,7 @@ panelLugaresDeTrabajoRouter.get('/catalogo', async (req, res) => {
 
 panelLugaresDeTrabajoRouter.get('/asistente/:id', async (req, res) => {
   try {
-    const lugares = await lugaresDe(supabase, 'asistente_lugares', 'asistente_id', req.params.id, req.usuarioPanel.prestadoraId);
+    const lugares = await conElTrabajo(req, (db) => lugaresDe(db, 'asistente_lugares', 'asistente_id', req.params.id, req.usuarioPanel.prestadoraId));
     res.json({ lugares });
   } catch (error) {
     responderError(res, error);
@@ -82,10 +87,12 @@ panelLugaresDeTrabajoRouter.put('/asistente/:id', async (req, res) => {
 
   const prestadoraId = req.usuarioPanel.prestadoraId;
   try {
-    if (!(await existeEnLaOrganizacion('asistentes', req.params.id, prestadoraId))) {
-      return res.status(404).json({ error: 'No se encontró esa Asistente' });
-    }
-    await guardarLugaresDe(supabase, 'asistente_lugares', 'asistente_id', req.params.id, prestadoraId, lugares);
+    const existe = await conElTrabajo(req, async (db) => {
+      if (!(await existeEnLaOrganizacion(db, 'asistentes', req.params.id, prestadoraId))) return false;
+      await guardarLugaresDe(db, 'asistente_lugares', 'asistente_id', req.params.id, prestadoraId, lugares);
+      return true;
+    });
+    if (!existe) return res.status(404).json({ error: 'No se encontró esa Asistente' });
     res.json({ ok: true });
   } catch (error) {
     responderError(res, error);
@@ -96,7 +103,7 @@ panelLugaresDeTrabajoRouter.put('/asistente/:id', async (req, res) => {
 
 panelLugaresDeTrabajoRouter.get('/usuario/:id', soloAdministracion, async (req, res) => {
   try {
-    const lugares = await lugaresDe(supabase, 'usuario_lugares', 'usuario_id', req.params.id, req.usuarioPanel.prestadoraId);
+    const lugares = await conElTrabajo(req, (db) => lugaresDe(db, 'usuario_lugares', 'usuario_id', req.params.id, req.usuarioPanel.prestadoraId));
     res.json({ lugares });
   } catch (error) {
     responderError(res, error);
@@ -109,10 +116,12 @@ panelLugaresDeTrabajoRouter.put('/usuario/:id', soloAdministracion, async (req, 
 
   const prestadoraId = req.usuarioPanel.prestadoraId;
   try {
-    if (!(await existeEnLaOrganizacion('usuarios', req.params.id, prestadoraId))) {
-      return res.status(404).json({ error: 'No se encontró esa persona' });
-    }
-    await guardarLugaresDe(supabase, 'usuario_lugares', 'usuario_id', req.params.id, prestadoraId, lugares);
+    const existe = await conElTrabajo(req, async (db) => {
+      if (!(await existeEnLaOrganizacion(db, 'usuarios', req.params.id, prestadoraId))) return false;
+      await guardarLugaresDe(db, 'usuario_lugares', 'usuario_id', req.params.id, prestadoraId, lugares);
+      return true;
+    });
+    if (!existe) return res.status(404).json({ error: 'No se encontró esa persona' });
     res.json({ ok: true });
   } catch (error) {
     responderError(res, error);

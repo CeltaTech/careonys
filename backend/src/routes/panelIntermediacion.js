@@ -715,6 +715,7 @@ panelIntermediacionRouter.post('/accesos/:id/alta-en-pasarela', soloAdministraci
     accesoId: req.params.id,
     prestadoraId: req.usuarioPanel.prestadoraId,
     proveedor: proveedor || null,
+    db: clienteDelPedido(req),
   });
 
   if (!resultado.ok) {

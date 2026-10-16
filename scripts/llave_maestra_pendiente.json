@@ -108,7 +108,6 @@
                                  "backend/src/routes/panelUsuarios.js",
                                  "backend/src/routes/panelVerificacionIdentidad.js",
                                  "backend/src/utils/activacionCuenta.js",
-                                 "backend/src/utils/altaEnPasarela.js",
                                  "backend/src/utils/avisoAutomaticoCese.js",
                                  "backend/src/utils/avisoCambioDeAsistente.js",
                                  "backend/src/utils/avisosDeEscalon.js",

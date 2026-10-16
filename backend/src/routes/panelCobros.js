@@ -814,7 +814,11 @@ panelCobrosRouter.post('/facturas/:facturaId/cobros', requiereRolPanel, veElEsta
 
   let mediosAdmitidos;
   try {
-    mediosAdmitidos = await mediosDePagoDeLaPrestadora(prestadoraId, LISTA_DE_MEDIOS_DE_PAGO_DEL_CLIENTE);
+    mediosAdmitidos = await mediosDePagoDeLaPrestadora(
+      clienteDelPedido(req),
+      prestadoraId,
+      LISTA_DE_MEDIOS_DE_PAGO_DEL_CLIENTE,
+    );
   } catch (e) {
     return responderError(res, e);
   }
@@ -979,7 +983,11 @@ panelCobrosRouter.post('/entrada', requiereRolPanel, veElEstadoDeCuenta, async (
   // que las referencias de arriba.
   let mediosAdmitidos;
   try {
-    mediosAdmitidos = await mediosDePagoDeLaPrestadora(prestadoraId, LISTA_DE_MEDIOS_DE_PAGO_DEL_CLIENTE);
+    mediosAdmitidos = await mediosDePagoDeLaPrestadora(
+      clienteDelPedido(req),
+      prestadoraId,
+      LISTA_DE_MEDIOS_DE_PAGO_DEL_CLIENTE,
+    );
   } catch (e) {
     return responderError(res, e);
   }

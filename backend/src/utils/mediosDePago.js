@@ -23,7 +23,6 @@
 // Este archivo no tiene copia: habla con la base, así que vive sólo en el backend.
 // ---------------------------------------------------------------------------
 
-import { supabase } from '../db/connection.js';
 import { laOpcionAlcanzaLasModalidades } from './modalidades.js';
 
 /** Las claves de las dos listas. Escritas una vez, porque las nombran el backend y el Panel. */
@@ -45,19 +44,20 @@ const LAS_LISTAS_QUE_EXISTEN = [
  * Una lista que no es ninguna de las dos devuelve vacío, y vacío no admite ningún medio: lo que no
  * supo contra qué comparar niega.
  *
- * El backend no pasa por las reglas de acceso de la base, así que el filtro por Prestadora se
- * escribe acá y a mano. Sin él, una Prestadora podría guardar una opción de otra.
+ * Se lee con `db`, la conexión de quien pide, así que la base ya le contesta sólo las opciones
+ * del producto y las de su Prestadora. El filtro por Prestadora se escribe igual: es el que pide
+ * los dos pisos, y no deja que la lista dependa sólo de la regla de la base.
  *
  * `modalidadesEnJuego` acota todavía más: un medio marcado con modalidades sólo sirve si ninguna
  * de las que están en juego le queda afuera. Sin ese dato no se filtra por modalidad y la lista
  * sale entera, que es lo que necesita una pantalla de configuración. La cuenta la hace
  * `laOpcionAlcanzaLasModalidades`, la misma que usa el Panel.
  */
-export async function mediosDePagoDeLaPrestadora(prestadoraId, claveDeLaLista, modalidadesEnJuego) {
+export async function mediosDePagoDeLaPrestadora(db, prestadoraId, claveDeLaLista, modalidadesEnJuego) {
   if (!prestadoraId) return [];
   if (!LAS_LISTAS_QUE_EXISTEN.includes(claveDeLaLista)) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('opciones_de_lista')
     .select('clave, prestadora_id, modalidades, listas_de_opciones!inner(clave, prestadora_id)')
     .eq('listas_de_opciones.clave', claveDeLaLista)

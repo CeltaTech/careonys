@@ -153,7 +153,6 @@
                                  "backend/src/utils/habilitarCambioDeClave.js",
                                  "backend/src/utils/instruccionesPersonasAutorizadas.js",
                                  "backend/src/utils/intermediacionDeLaPrestadora.js",
-                                 "backend/src/utils/mediosDePago.js",
                                  "backend/src/utils/mfaRecuperacionEmail.js",
                                  "backend/src/utils/periodoDeGracia.js",
                                  "backend/src/utils/plazosDeCobroIntermediacion.js",

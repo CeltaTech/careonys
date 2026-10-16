@@ -15,6 +15,7 @@ import { horasEntre } from './horasDeGuardia.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import { FICHA_NOMBRE } from './fichaDelPaciente.js';
+import { notificaClientePorDefecto } from './catalogoAvisos.js';
 
 // Insistencia al Coordinador según premura, con coordinador de respaldo si no hay
 // reacción, parametrizado por prestadora
@@ -650,7 +651,7 @@ async function revisarIncidentes(config, ahora, idioma, reglaDeLasTomas) {
 // avisa, por qué canales y con qué condición se decide una sola vez, acá.
 async function notificarClienteSiCorresponde({ evento, prestadoraId, guardiaId, textos, idioma }) {
   const config = await configuracionEvento(evento, prestadoraId);
-  if (!config?.notificar_cliente) return;
+  if (!(config?.notificar_cliente ?? notificaClientePorDefecto(evento))) return;
   if (!textos?.titulo || !textos?.cuerpo) return;
 
   const { data: guardia } = await supabase

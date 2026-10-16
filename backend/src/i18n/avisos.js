@@ -381,9 +381,20 @@ const ARMADORES = {
     };
   },
 
+  // Con el nombre de quien deja de ir, el Cliente sabe quién se va y quién llega. Sin ese nombre
+  // queda la frase de siempre, que dice sólo quién la hace.
   cambio_de_asistente_cliente: (t, d) => ({
     titulo: t('cambio_de_asistente_cliente.titulo'),
-    cuerpo: d.turnos.length === 1
+    cuerpo: d.asistenteAnterior
+      ? t(d.turnos.length === 1 ? 'cambio_de_asistente_cliente.reemplaza_uno' : 'cambio_de_asistente_cliente.reemplaza_varios', {
+        cuantas: d.turnos.length,
+        fecha: d.turnos[0].fecha,
+        horaInicio: d.turnos[0].horaInicio,
+        horaFin: d.turnos[0].horaFin,
+        anterior: d.asistenteAnterior,
+        nuevo: d.asistenteNuevo ?? t('cambio_de_asistente_cliente.otro_asistente'),
+      })
+      : d.turnos.length === 1
       ? t('cambio_de_asistente_cliente.cuerpo_uno', {
         fecha: d.turnos[0].fecha,
         horaInicio: d.turnos[0].horaInicio,
@@ -588,6 +599,16 @@ const ARMADORES = {
   guardia_asignada: (t, d) => ({
     titulo: t('guardia_asignada.titulo'),
     cuerpo: t('guardia_asignada.cuerpo', { fecha: d.fecha, horaInicio: d.horaInicio }),
+  }),
+
+  turno_para_responder: (t, d) => ({
+    titulo: t('turno_para_responder.titulo'),
+    cuerpo: t('turno_para_responder.cuerpo', { fecha: d.fecha, horaInicio: d.horaInicio, horaFin: d.horaFin }),
+  }),
+
+  turno_retirado: (t, d) => ({
+    titulo: t('turno_retirado.titulo'),
+    cuerpo: t('turno_retirado.cuerpo', { fecha: d.fecha, horaInicio: d.horaInicio, horaFin: d.horaFin }),
   }),
 
   recordatorio_de_guardia: (t, d) => ({

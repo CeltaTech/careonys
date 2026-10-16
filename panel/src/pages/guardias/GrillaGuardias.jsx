@@ -294,10 +294,7 @@ export function GrillaGuardias({
   function handleDrop(e, fila, columna) {
     e.preventDefault();
     setCeldaDestino(null);
-    // Las filas de huecos no son destinos: son la falta de un dato, no un lugar donde poner
-    // algo. Soltar ahí sería "sacarle el Asistente" o "sacarle el Paciente" a una guardia que
-    // ya lo tiene, que es otra operación y tiene su propia pantalla.
-    if (fila.hueco) return;
+    if (!admiteSoltar(fila)) return;
 
     const guardiaId = e.dataTransfer.getData('guardiaId');
     if (!guardiaId) return;
@@ -330,8 +327,15 @@ export function GrillaGuardias({
     onMover?.(movimiento);
   }
 
+  // La fila de las guardias sin cubrir recibe del lado de los Asistentes: soltar ahí deja el turno
+  // sin asignar. Del lado de los Pacientes no: un turno sin Paciente no cubre a nadie, y quitarle
+  // el Paciente es otra operación, con su propio lugar.
+  function admiteSoltar(fila) {
+    return !fila.hueco || vistaActiva === 'asistente';
+  }
+
   function marcarDestino(e, fila, clave) {
-    if (fila.hueco) return;
+    if (!admiteSoltar(fila)) return;
     e.preventDefault();
     setCeldaDestino(clave);
   }
@@ -364,7 +368,11 @@ export function GrillaGuardias({
    */
   function chipDeGuardia(guardia, estilo, filaOrigen) {
     const elegida = typeof elegidas.has === 'function' && elegidas.has(guardia.id);
-    const espejo = vistaActiva === 'paciente' ? guardia.asistente_nombre : guardia.paciente_nombre;
+    // Asignado y sin responder todavía: el turno sigue sin cubrir, pero se ve a quién se espera.
+    const pendiente = Boolean(guardia.pendiente_nombre);
+    const espejo = vistaActiva === 'paciente'
+      ? guardia.asistente_nombre ?? guardia.pendiente_nombre
+      : guardia.paciente_nombre;
     // Cuántas personas cubre la guardia. Se avisa solo cuando son más de una, y sobre todo en
     // la vista por Paciente: ahí la misma guardia está dibujada en varias filas y sin esta
     // advertencia parecen guardias distintas. Es una sola guardia, no dos.
@@ -374,7 +382,9 @@ export function GrillaGuardias({
     // llegada: leer "Programada" en las dos escondería justo lo que hay que ver. El color
     // solo no alcanza —hay quien no lo distingue, y en una captura en blanco y negro no
     // existe—, así que la palabra y el color dicen siempre lo mismo.
-    const textoEstado = t.guardias.situacion[situacionDeGuardia(guardia, contexto)];
+    const textoEstado = pendiente
+      ? t.guardias.pendiente_de_respuesta
+      : t.guardias.situacion[situacionDeGuardia(guardia, contexto)];
     const horario = `${guardia.hora_inicio}–${guardia.hora_fin}`;
     const cruza = zoomActivo === 'linea' && tramoDelDia(guardia, diaActivo).cruzaLaMedianoche;
 
@@ -402,6 +412,9 @@ export function GrillaGuardias({
           {textoEstado && <span className="grilla-chip-detalle">{textoEstado}</span>}
         </div>
         {espejo && <div className="grilla-chip-detalle">{espejo}</div>}
+        {pendiente && vistaActiva === 'asistente' && (
+          <div className="grilla-chip-detalle">{guardia.pendiente_nombre}</div>
+        )}
         {cuantos > 1 && (
           <div className="grilla-chip-nota">{con(t.guardias.cubre_a_varios, { n: cuantos })}</div>
         )}

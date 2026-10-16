@@ -7,6 +7,7 @@ import { Alert } from '../../components/ui/Alert';
 import { ESTADO_ACTIVO } from '../../lib/candidatos';
 import { serviciosParaClientes } from '../../lib/serviciosDelPaciente';
 import { mensajeDeError } from '../../lib/errores';
+import { asignarTurno } from '../../lib/asignarTurno';
 import { horasDeGuardia } from '../../lib/horarios';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
@@ -189,7 +190,8 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
         .from('guardias')
         .insert({
           prestadora_id: prestadoraId,
-          asistente_id: asistenteId || null,
+          // Nace sin nadie y se asigna después: queda esperando que el Asistente lo acepte.
+          asistente_id: null,
           paciente_id: primero,
           servicio_id: servicioId,
           fecha,
@@ -222,8 +224,14 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
         }
       }
 
+      // El turno ya existe. Si la asignación no pasa, queda sin asignar y se dice por qué: volver
+      // a guardar crearía otro igual.
+      const { error: errorAsignar } = asistenteId
+        ? await asignarTurno(guardia.id, asistenteId, t)
+        : { error: null };
+
       setGuardando(false);
-      onCreada();
+      onCreada(errorAsignar);
       return;
     }
 

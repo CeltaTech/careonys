@@ -52,6 +52,13 @@ const baseFalsa = createServer((req, res) => {
       return;
     }
 
+    // Un rechazo de la base: viaja como lo manda PostgREST, con su texto en `message`.
+    if (valor?.rechazo) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ message: valor.rechazo }));
+      return;
+    }
+
     // `.single()` y `.maybeSingle()` piden una fila sola con este encabezado.
     const unoSolo = (req.headers.accept || '').includes('vnd.pgrst.object+json');
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -67,7 +74,7 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 // en el momento en que se importa, y con la dirección que haya en ese instante.
 const { default: express } = await import('express');
 await import('express-async-errors');
-const { panelGuardiasRouter } = await import('../panelGuardias.js');
+const { panelGuardiasRouter, motivoDeLaAsignacion } = await import('../panelGuardias.js');
 
 const app = express();
 app.use(express.json());
@@ -84,11 +91,12 @@ after(() => {
 /** La credencial que mandó el último pedido. */
 let credencialEnviada = null;
 
-async function pedir(metodo, ruta) {
+async function pedir(metodo, ruta, cuerpo) {
   credencialEnviada = sesionDePrueba(USUARIO);
   const respuesta = await fetch(`${DIRECCION}${ruta}`, {
     method: metodo,
     headers: { Authorization: credencialEnviada, 'Content-Type': 'application/json' },
+    body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
   });
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
@@ -248,5 +256,120 @@ describe('quién se quedó esperando el relevo', () => {
   it('sin ninguna guardia anterior queda «ausente sin relevo previo»', async () => {
     await pedir('POST', `/${GUARDIA}/ausente`);
     assert.equal(incidenteInsertado().guardia_saliente_id, null);
+  });
+});
+
+describe('asignar un turno', () => {
+  const OTRO = '77777777-7777-7777-7777-777777777777';
+
+  function asignacionPedida() {
+    return llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/asignar_turno');
+  }
+
+  it('la asignación la hace la base con la credencial de quien pide, no con la llave maestra', async () => {
+    respuestas.set('POST /rest/v1/rpc/asignar_turno', () => ({ sin_cambios: false, titular_retirado: null, pendiente_retirado: null }));
+    const { estado, cuerpo } = await pedir('POST', `/${GUARDIA}/asignar`, { asistente_id: OTRO });
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.sinCambios, false);
+    const llamada = asignacionPedida();
+    assert.deepEqual(llamada.cuerpo, { p_guardia_id: GUARDIA, p_asistente_id: OTRO });
+    assert.notEqual(llamada.credencial, 'Bearer clave-de-mentira');
+  });
+
+  it('sin Asistente el turno queda sin asignar', async () => {
+    respuestas.set('POST /rest/v1/rpc/asignar_turno', () => ({ sin_cambios: false, titular_retirado: ASISTENTE }));
+    const { estado } = await pedir('POST', `/${GUARDIA}/asignar`, { asistente_id: null });
+    assert.equal(estado, 200);
+    assert.equal(asignacionPedida().cuerpo.p_asistente_id, null);
+  });
+
+  it('si no cambió nada no se avisa a nadie', async () => {
+    respuestas.set('POST /rest/v1/rpc/asignar_turno', () => ({ sin_cambios: true }));
+    const { cuerpo } = await pedir('POST', `/${GUARDIA}/asignar`, { asistente_id: OTRO });
+    assert.equal(cuerpo.sinCambios, true);
+    assert.equal(llamadas.some((l) => l.clave === 'GET /rest/v1/guardias'), false);
+  });
+
+  it('el aviso marca el turno como avisado, acotado a la Prestadora', async () => {
+    respuestas.set('POST /rest/v1/rpc/asignar_turno', () => ({ sin_cambios: false, titular_retirado: ASISTENTE }));
+    await pedir('POST', `/${GUARDIA}/asignar`, { asistente_id: OTRO });
+    const marca = llamadas.find((l) => l.clave === 'PATCH /rest/v1/guardias');
+    assert.ok(marca.cuerpo.push_asignacion_enviado_at);
+    assert.match(decodeURIComponent(marca.url), new RegExp(`prestadora_id=eq\.${PRESTADORA}`));
+  });
+
+  it('un Asistente que no es un texto no llega a la base', async () => {
+    const { estado } = await pedir('POST', `/${GUARDIA}/asignar`, { asistente_id: 5 });
+    assert.equal(estado, 400);
+    assert.equal(asignacionPedida(), undefined);
+  });
+
+  it('lo que la base rechaza vuelve como motivo, sin su texto', async () => {
+    respuestas.set('POST /rest/v1/rpc/asignar_turno', () => ({ rechazo: 'matricula_bloquea:vencida: tabla interna' }));
+    const { estado, cuerpo } = await pedir('POST', `/${GUARDIA}/asignar`, { asistente_id: OTRO });
+    assert.equal(estado, 409);
+    assert.equal(cuerpo.motivo, 'matricula_bloquea:vencida');
+    assert.doesNotMatch(JSON.stringify(cuerpo), /tabla interna/);
+  });
+});
+
+describe('llevar un turno a otro Paciente', () => {
+  const DESTINO = '88888888-8888-8888-8888-888888888888';
+  const NUEVA = '99999999-9999-9999-9999-999999999999';
+
+  function movimientoPedido() {
+    return llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/mover_turno_a_otro_paciente');
+  }
+
+  beforeEach(() => {
+    respuestas.set('POST /rest/v1/rpc/mover_turno_a_otro_paciente', () => ({
+      guardia_nueva_id: NUEVA, asistente_id: ASISTENTE, titular_retirado: ASISTENTE, pendiente_retirado: null,
+    }));
+    respuestas.set('GET /rest/v1/guardias', () => [GUARDIA_VACIA, { ...GUARDIA_VACIA, id: NUEVA, paciente_id: DESTINO }]);
+  });
+
+  it('lo hace la base con la credencial de quien pide', async () => {
+    const { estado, cuerpo } = await pedir('POST', `/${GUARDIA}/mover-a-paciente`, { paciente_id: DESTINO, fecha: '2026-09-06' });
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.ok, true);
+    const llamada = movimientoPedido();
+    assert.deepEqual(llamada.cuerpo, {
+      p_guardia_id: GUARDIA, p_paciente_id: DESTINO, p_fecha: '2026-09-06', p_hora_inicio: null, p_hora_fin: null,
+    });
+    assert.notEqual(llamada.credencial, 'Bearer clave-de-mentira');
+  });
+
+  it('el turno nuevo queda avisado, acotado a la Prestadora', async () => {
+    await pedir('POST', `/${GUARDIA}/mover-a-paciente`, { paciente_id: DESTINO });
+    const marcas = llamadas.filter((l) => l.clave === 'PATCH /rest/v1/guardias');
+    assert.equal(marcas.length, 1);
+    assert.match(decodeURIComponent(marcas[0].url), new RegExp(`id=eq\.${NUEVA}`));
+    assert.match(decodeURIComponent(marcas[0].url), new RegExp(`prestadora_id=eq\.${PRESTADORA}`));
+  });
+
+  it('un Paciente que no es un texto no llega a la base', async () => {
+    const { estado } = await pedir('POST', `/${GUARDIA}/mover-a-paciente`, { paciente_id: 5 });
+    assert.equal(estado, 400);
+    assert.equal(movimientoPedido(), undefined);
+  });
+
+  it('lo que la base rechaza vuelve como motivo, sin su texto', async () => {
+    respuestas.set('POST /rest/v1/rpc/mover_turno_a_otro_paciente', () => ({ rechazo: 'guardia_sin_asistente: tabla interna' }));
+    const { estado, cuerpo } = await pedir('POST', `/${GUARDIA}/mover-a-paciente`, { paciente_id: DESTINO });
+    assert.equal(estado, 409);
+    assert.equal(cuerpo.motivo, 'guardia_sin_asistente');
+    assert.doesNotMatch(JSON.stringify(cuerpo), /tabla interna/);
+  });
+});
+
+describe('motivoDeLaAsignacion', () => {
+  it('traduce cada rechazo previsto y deja pasar el resto', () => {
+    assert.equal(motivoDeLaAsignacion({ message: 'guardia_sin_asistente' }).estado, 409);
+    assert.equal(motivoDeLaAsignacion({ message: 'paciente_no_encontrado' }).estado, 404);
+    assert.deepEqual(motivoDeLaAsignacion({ message: 'modalidad_bloquea:intermediacion:' }), { estado: 409, motivo: 'modalidad_bloquea:intermediacion' });
+    assert.equal(motivoDeLaAsignacion({ message: 'guardia_no_encontrada' }).estado, 404);
+    assert.equal(motivoDeLaAsignacion({ message: 'asistente_no_encontrado' }).estado, 404);
+    assert.equal(motivoDeLaAsignacion({ message: 'guardia_no_se_asigna' }).motivo, 'guardia_no_se_asigna');
+    assert.equal(motivoDeLaAsignacion({ message: 'otra cosa' }), null);
   });
 });

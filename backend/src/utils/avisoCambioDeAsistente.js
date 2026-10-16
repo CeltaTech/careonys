@@ -6,6 +6,7 @@ import { pacientesDeGuardias } from './pacientesDeGuardia.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import { FICHA_NOMBRE } from './fichaDelPaciente.js';
+import { notificaClientePorDefecto } from './catalogoAvisos.js';
 
 // Mensaje del sistema que anuncia que una o varias guardias pasaron a manos de otro Asistente.
 //
@@ -115,15 +116,15 @@ export async function avisarCambioDeAsistente({ guardias, prestadoraId, asistent
     console.error(`Error avisando al Coordinador el cambio de Asistente (prestadora ${prestadoraId}):`, e.message);
   }
 
-  // Al Cliente le llega sólo si la Prestadora lo encendió. El valor de arranque es que no
-  // (`VALORES_POR_DEFECTO_MENSAJE`), y encenderlo desde acá sería decidir por ella cómo trabaja.
+  // Al Cliente le llega salvo que la Prestadora lo haya apagado: sin nada guardado vale lo que dice
+  // el catálogo, que lo trae encendido.
   const config = await configuracionEvento(EVENTO_CAMBIO_DE_ASISTENTE, prestadoraId);
-  if (!config?.notificar_cliente) return;
+  if (!(config?.notificar_cliente ?? notificaClientePorDefecto(EVENTO_CAMBIO_DE_ASISTENTE))) return;
 
   for (const [clienteId, turnos] of turnosPorCliente(guardias, pacientesPorGuardia)) {
     try {
       await enviarPushCliente(prestadoraId, clienteId, {
-        ...mensajeDelSistema(`${EVENTO_CAMBIO_DE_ASISTENTE}_cliente`, idioma, { asistenteNuevo, turnos }),
+        ...mensajeDelSistema(`${EVENTO_CAMBIO_DE_ASISTENTE}_cliente`, idioma, { asistenteNuevo, asistenteAnterior, turnos }),
         url: '/',
       });
     } catch (e) {

@@ -1,7 +1,9 @@
 import { supabase } from './supabaseClient';
 import { cambiarPacienteDeGuardia } from './cambiarPacienteDeGuardia';
 import { mensajeDeError } from './errores';
-import { avisarCambioDeAsistente } from './avisarCambioDeAsistente';
+import { FILA_SIN_CUBRIR, filaDeGuardia } from './cobertura';
+import { asignarConFecha, reasignarGuardia } from './reasignarGuardia';
+import { moverTurnoAOtroPaciente, quienTieneElTurno } from './asignarTurno';
 
 /* Arrastrar una guardia dentro de la grilla: un solo lugar para lo que eso significa.
    =========================================================================================
@@ -10,17 +12,17 @@ import { avisarCambioDeAsistente } from './avisarCambioDeAsistente';
    escribir una columna: son tres decisiones distintas, y cuál se toma depende de qué está
    mostrando la grilla en ese momento.
 
-     1. Si las filas son Asistentes, mover la guardia cambia quién la hace.
-     2. Si las filas son Pacientes, mover la guardia cambia a quién cubre — y eso no es una
-        columna, porque un turno puede cubrir a varias personas a la vez. Esa cuenta vive en
-        `lib/cambiarPacienteDeGuardia.js` y acá solo se la llama.
+     1. Si las filas son Asistentes, mover la guardia a otra fila se la asigna a ese Asistente, y
+        queda esperando que la acepte (`lib/reasignarGuardia.js`). Soltarla en la fila de las
+        guardias sin cubrir la deja sin nadie.
+     2. Si las filas son Pacientes y el turno tiene Asistente, el turno no se mueve: queda sin
+        nadie para sus Pacientes, y para el otro nace uno nuevo que el mismo Asistente tiene que
+        aceptar (`moverTurnoAOtroPaciente`). Sin Asistente, mover la guardia cambia a quién
+        cubre — y eso no es una columna, porque un turno puede cubrir a varias personas a la
+        vez. Esa cuenta vive en `lib/cambiarPacienteDeGuardia.js` y acá solo se la llama.
      3. En cualquiera de las dos, la columna nueva es la fecha; y en la vista de línea de
         tiempo, además, la posición horizontal ES la hora, así que vienen las dos horas ya
         calculadas por la grilla, que es la única que sabe cuánto duraba el turno.
-
-   Y una cosa más que es fácil olvidar: si la guardia estaba publicada como disponible y se le
-   asigna un Asistente, deja de estarlo. La base tiene una restricción que no permite las dos
-   cosas juntas, así que sin ese paso el movimiento entero falla.
 
    Dos pantallas usan la misma grilla —el Estado actual y la de Guardias—, así que todo esto se
    escribe una sola vez y las dos la llaman (regla del punto único de verdad, CeltaTech §8).
@@ -59,15 +61,45 @@ export async function moverGuardia(guardia, { fila, filaOrigen, fecha, vista, ho
     return { error: mensajeDeError(new Error(`Vista de grilla desconocida: ${String(vista)}`), t, 'moverGuardia') };
   }
 
-  const porPaciente = vista === 'paciente';
-
-  if (porPaciente) {
+  if (vista === 'paciente') {
+    // Con alguien que lo va a hacer, el turno no cambia de Paciente: queda donde estaba, sin
+    // nadie, y el Asistente tiene que aceptar uno nuevo para el otro Paciente.
+    if (fila !== filaOrigen && quienTieneElTurno(guardia)) {
+      return moverTurnoAOtroPaciente(guardia.id, { pacienteId: fila, fecha, horaInicio, horaFin }, t);
+    }
     const { error: falla } = await cambiarPacienteDeGuardia(guardia, filaOrigen, fila, t);
     if (falla) return { error: falla };
+    return moverEnElCalendario(guardia, { fecha, horaInicio, horaFin }, t);
   }
 
+  // Del lado de los Asistentes. Si se la soltó en su misma fila, sólo cambian el día o la hora.
+  if (fila === filaDeGuardia(guardia)) return moverEnElCalendario(guardia, { fecha, horaInicio, horaFin }, t);
+
+  // La hora se corre antes de asignar, y la fecha la corre la asignación: la Matrícula se mira
+  // contra el día nuevo.
+  if (horaInicio && horaFin) {
+    const { error } = await supabase
+      .from('guardias')
+      .update({ hora_inicio: horaInicio, hora_fin: horaFin })
+      .eq('id', guardia.id);
+    if (error) return { error: mensajeDeError(error, t) };
+  }
+
+  const asistenteId = fila === FILA_SIN_CUBRIR ? null : fila;
+
+  // Un turno ya empezado y sin quien lo haga se cubre en el momento, sin esperar respuesta. Y no
+  // se lo puede dejar sin nadie: ya está sin nadie.
+  if (guardia.estado === 'ausente') {
+    if (!asistenteId) return { error: null };
+    return reasignarGuardia(guardia, asistenteId, fecha, t);
+  }
+
+  return asignarConFecha(guardia, asistenteId, fecha, t);
+}
+
+/** Correr una guardia de día o de hora sin cambiarle quién la hace. */
+async function moverEnElCalendario(guardia, { fecha, horaInicio, horaFin }, t) {
   const cambios = { fecha };
-  if (!porPaciente) cambios.asistente_id = fila;
   if (horaInicio && horaFin) {
     cambios.hora_inicio = horaInicio;
     cambios.hora_fin = horaFin;
@@ -75,18 +107,5 @@ export async function moverGuardia(guardia, { fila, filaOrigen, fecha, vista, ho
 
   const { error } = await supabase.from('guardias').update(cambios).eq('id', guardia.id);
   if (error) return { error: mensajeDeError(error, t) };
-
-  // Arrastrarla a la fila de otro Asistente es cambiarle quién entra a la casa, así que se avisa,
-  // igual que cuando se la reasigna desde la pantalla. Moverla de día o de hora dentro de la misma
-  // fila no cambia de manos y no avisa nada. El mensaje va después de guardar y no voltea el
-  // movimiento: la guardia ya se movió.
-  if (!porPaciente && fila && fila !== guardia.asistente_id) {
-    await avisarCambioDeAsistente({
-      guardiaIds: [guardia.id],
-      asistenteNuevoId: fila,
-      asistenteAnteriorId: guardia.asistente_id ?? null,
-    });
-  }
-
   return { error: null };
 }

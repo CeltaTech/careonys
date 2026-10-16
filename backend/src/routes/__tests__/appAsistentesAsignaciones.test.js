@@ -200,3 +200,51 @@ describe('aceptar', () => {
     });
   }
 });
+
+// El aviso al Coordinador y al Cliente sale por el mismo camino que todos los avisos del backend,
+// que todavía usa la llave maestra, y esta prueba arranca sin ella. Así que lo que se mira es que el
+// aviso se intente —y que al no poder armarse lo diga en el registro— sin que la aceptación falle.
+describe('al aceptar un turno que era de otro Asistente', () => {
+  const ANTERIOR = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
+  const conAnterior = (anterior) => () => [{
+    asistente_id: LEGAJO,
+    asistente_anterior_id: anterior,
+    guardias: { id: GUARDIA, prestadora_id: PRESTADORA, paciente_id: null, fecha: '2099-01-01', hora_inicio: '08:00', hora_fin: '16:00', dias_hasta_el_fin: 0 },
+  }];
+
+  /** Acepta y devuelve lo que se anotó en el registro sobre el aviso del reemplazo. */
+  async function aceptarMirandoElRegistro() {
+    const anotado = [];
+    const original = console.error;
+    console.error = (...partes) => anotado.push(partes.join(' '));
+    try {
+      const respuesta = await pedir('/asignacion-1/responder', { respuesta: 'acepta' });
+      return { ...respuesta, intentoAvisar: anotado.some((linea) => linea.includes('avisando el reemplazo')) };
+    } finally {
+      console.error = original;
+    }
+  }
+
+  it('recién al aceptar se intenta avisar el reemplazo, y la aceptación queda hecha igual', async () => {
+    respuestas.set('GET /rest/v1/asignaciones_de_turno', conAnterior(ANTERIOR));
+    const { estado, cuerpo, intentoAvisar } = await aceptarMirandoElRegistro();
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.respuesta, 'acepta');
+    assert.ok(intentoAvisar, 'no se intentó avisar el reemplazo');
+    const lectura = llamadas.find((l) => l.clave === 'GET /rest/v1/asignaciones_de_turno');
+    assert.equal(lectura.credencial, SESION, 'la asignación no se leyó con la sesión del Asistente');
+  });
+
+  it('sin Asistente anterior no hay reemplazo que avisar', async () => {
+    respuestas.set('GET /rest/v1/asignaciones_de_turno', conAnterior(null));
+    const { estado, intentoAvisar } = await aceptarMirandoElRegistro();
+    assert.equal(estado, 200);
+    assert.equal(intentoAvisar, false);
+  });
+
+  it('si el turno vuelve al mismo Asistente no hay reemplazo que avisar', async () => {
+    respuestas.set('GET /rest/v1/asignaciones_de_turno', conAnterior(LEGAJO));
+    const { intentoAvisar } = await aceptarMirandoElRegistro();
+    assert.equal(intentoAvisar, false);
+  });
+});

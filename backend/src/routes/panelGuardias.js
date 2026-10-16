@@ -5,6 +5,7 @@ import { supabase, clienteDelPedido } from '../db/connection.js';
 import { marcarAusenteYCrearIncidente } from '../utils/marcarAusente.js';
 import { cubrirGuardiaConSustituto } from '../utils/cubrirGuardia.js';
 import { avisarCambioDeAsistente } from '../utils/avisoCambioDeAsistente.js';
+import { avisarAsignacionDeTurno } from '../utils/avisoAsignacionDeTurno.js';
 import { sugerirMotivoDelAviso } from '../utils/motivoSugeridoDelAviso.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
@@ -175,6 +176,133 @@ panelGuardiasRouter.post('/aviso-cambio-asistente', requiereRolPanel, exigirOrga
     asistenteNuevoId,
     asistenteAnteriorId: asistenteAnteriorId ?? null,
   });
+
+  res.json({ ok: true });
+});
+
+/* Asignar un turno, o dejarlo sin asignar. Lo hace `asignar_turno` en la base, con la credencial de
+   quien pide: el turno queda esperando la respuesta del Asistente, y quien lo tenía lo pierde. Pasa
+   por el backend sólo por los avisos —al Asistente nuevo y a quien deja de tenerlo—, que salen por
+   el celular y el Panel no los puede mandar. Al Cliente no se le avisa acá: el turno cambia de
+   manos cuando el nuevo acepta.
+
+   Lo que la base rechaza vuelve como motivo, nunca con su texto: la Matrícula y la modalidad
+   llevan el mismo código que el Panel ya sabe convertir en frase. */
+const LO_QUE_RECHAZA_LA_BASE = [
+  { patron: /guardia_no_encontrada/, estado: 404, motivo: 'guardia_no_encontrada' },
+  { patron: /asistente_no_encontrado/, estado: 404, motivo: 'asistente_no_encontrado' },
+  { patron: /guardia_no_se_asigna/, estado: 409, motivo: 'guardia_no_se_asigna' },
+  { patron: /guardia_sin_asistente/, estado: 409, motivo: 'guardia_sin_asistente' },
+  { patron: /paciente_no_encontrado/, estado: 404, motivo: 'paciente_no_encontrado' },
+];
+
+export function motivoDeLaAsignacion(error) {
+  const texto = String(error?.message ?? '');
+  const matricula = /matricula_bloquea:([a-z_]+)/.exec(texto);
+  if (matricula) return { estado: 409, motivo: `matricula_bloquea:${matricula[1]}` };
+  const modalidad = /modalidad_bloquea:([a-z_]+)/.exec(texto);
+  if (modalidad) return { estado: 409, motivo: `modalidad_bloquea:${modalidad[1]}` };
+  return LO_QUE_RECHAZA_LA_BASE.find((r) => r.patron.test(texto)) ?? null;
+}
+
+panelGuardiasRouter.post('/:id/asignar', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
+  const asistenteId = req.body?.asistente_id ?? null;
+  if (asistenteId !== null && typeof asistenteId !== 'string') {
+    return res.status(400).json({ error: 'Asistente no reconocido' });
+  }
+
+  const db = clienteDelPedido(req);
+  const { data: resultado, error } = await db.rpc('asignar_turno', {
+    p_guardia_id: req.params.id,
+    p_asistente_id: asistenteId,
+  });
+
+  if (error) {
+    const previsto = motivoDeLaAsignacion(error);
+    if (previsto) {
+      console.error(`[${previsto.estado}] POST ${req.originalUrl} — ${previsto.motivo}:`, error.message);
+      return res.status(previsto.estado).json({ error: previsto.motivo, motivo: previsto.motivo });
+    }
+    return responderError(res, error);
+  }
+
+  if (resultado?.sin_cambios) return res.json({ sinCambios: true });
+
+  // Con la llave maestra y acotada a mano, como el resto de esta ruta: el Coordinador alcanza el
+  // turno por su Asistente, y recién se lo dejó sin ninguno.
+  const { data: guardia } = await acotarAPrestadora(
+    supabase.from('guardias').select('id, prestadora_id, fecha, hora_inicio, hora_fin').eq('id', req.params.id),
+    req.usuarioPanel,
+  ).maybeSingle();
+
+  if (guardia) {
+    await avisarAsignacionDeTurno({
+      prestadoraId: guardia.prestadora_id,
+      guardia,
+      asistenteNuevoId: asistenteId,
+      retirados: [resultado?.titular_retirado, resultado?.pendiente_retirado],
+    });
+  }
+
+  res.json({ sinCambios: false });
+});
+
+/* Llevar un turno con Asistente al de otro Paciente, desde la vista por Paciente. Lo hace
+   `mover_turno_a_otro_paciente` en la base, todo junto o nada: el turno original queda sin nadie y
+   con la alarma abierta, y para el otro Paciente nace un turno nuevo que el mismo Asistente tiene
+   que aceptar. Pasa por el backend por los dos avisos a ese Asistente: que perdió uno y que tiene
+   otro para responder. */
+panelGuardiasRouter.post('/:id/mover-a-paciente', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
+  const { paciente_id: pacienteId, fecha = null, hora_inicio: horaInicio = null, hora_fin: horaFin = null } = req.body ?? {};
+  if (typeof pacienteId !== 'string' || !pacienteId) {
+    return res.status(400).json({ error: 'Paciente no reconocido' });
+  }
+
+  const db = clienteDelPedido(req);
+  const { data: resultado, error } = await db.rpc('mover_turno_a_otro_paciente', {
+    p_guardia_id: req.params.id,
+    p_paciente_id: pacienteId,
+    p_fecha: fecha,
+    p_hora_inicio: horaInicio,
+    p_hora_fin: horaFin,
+  });
+
+  if (error) {
+    const previsto = motivoDeLaAsignacion(error);
+    if (previsto) {
+      console.error(`[${previsto.estado}] POST ${req.originalUrl} — ${previsto.motivo}:`, error.message);
+      return res.status(previsto.estado).json({ error: previsto.motivo, motivo: previsto.motivo });
+    }
+    return responderError(res, error);
+  }
+
+  // Con la llave maestra y acotada a mano, como el resto de esta ruta.
+  const { data: guardias } = await acotarAPrestadora(
+    supabase
+      .from('guardias')
+      .select('id, prestadora_id, fecha, hora_inicio, hora_fin')
+      .in('id', [req.params.id, resultado?.guardia_nueva_id].filter(Boolean)),
+    req.usuarioPanel,
+  );
+  const original = guardias?.find((g) => g.id === req.params.id);
+  const nueva = guardias?.find((g) => g.id === resultado?.guardia_nueva_id);
+
+  if (original) {
+    await avisarAsignacionDeTurno({
+      prestadoraId: original.prestadora_id,
+      guardia: original,
+      asistenteNuevoId: null,
+      retirados: [resultado?.titular_retirado, resultado?.pendiente_retirado],
+    });
+  }
+  if (nueva) {
+    await avisarAsignacionDeTurno({
+      prestadoraId: nueva.prestadora_id,
+      guardia: nueva,
+      asistenteNuevoId: resultado?.asistente_id ?? null,
+      retirados: [],
+    });
+  }
 
   res.json({ ok: true });
 });

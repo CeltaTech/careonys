@@ -5,15 +5,23 @@ import { supabase } from '../lib/supabaseClient';
 import { useFiltros } from '../hooks/useFiltros';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Button } from '../components/ui/Button';
+import { Alert } from '../components/ui/Alert';
 import { NuevaGuardiaModal } from './guardias/NuevaGuardiaModal';
 import { GuardiaAcciones } from './guardias/GuardiaAcciones';
 import { GrillaGuardias } from './guardias/GrillaGuardias';
 import { GuardiasSinCerrar } from './guardias/GuardiasSinCerrar';
-import { COBERTURA, coberturaDeGuardia } from '../lib/cobertura';
+import { COBERTURA, FILA_SIN_CUBRIR, coberturaDeGuardia, filaDeGuardia } from '../lib/cobertura';
 import { cargarPacientesDeGuardias, conPacientes, textoDePacientes } from '../lib/pacientesDeGuardia';
 import { SITUACION, situacionDeGuardia } from '../lib/semaforoGuardia';
 import { claseBadgeTono, TONO } from '../lib/tonos';
 import { reasignarGuardia } from '../lib/reasignarGuardia';
+import {
+  cargarAsignacionesPendientes,
+  pedidoDeConfirmacion,
+  pedidoDeConfirmacionDelMovimiento,
+  quienTieneElTurno,
+} from '../lib/asignarTurno';
+import { useConfirmacion } from '../context/ConfirmacionContext';
 import { moverGuardia } from '../lib/moverGuardia';
 import { mensajeDeError } from '../lib/errores';
 import { useUmbrales } from '../context/UmbralesContext';
@@ -55,6 +63,9 @@ export function Guardias() {
   const [filas, setFilas] = useState([]);
   const [estadoCarga, setEstadoCarga] = useState('cargando');
   const [error, setError] = useState(null);
+  // Por qué no salió lo último que se hizo sobre una guardia. Va aparte del error de carga: la
+  // lista sigue a la vista, y el error de carga sólo se ve cuando la lista no se pudo traer.
+  const [aviso, setAviso] = useState(null);
   // El rango de fechas arranca en hoy: se calcula una sola vez, al abrir la pantalla.
   const filtrosIniciales = useMemo(
     () => ({ desde: hoyISO(), hasta: sumarDias(hoyISO(), 14), estado: '', sinCubrir: false, busqueda: '' }),
@@ -68,6 +79,8 @@ export function Guardias() {
   const [verGrilla, setVerGrilla] = useState(false);
   const [guardiaSeleccionada, setGuardiaSeleccionada] = useState(null);
   const [asistentes, setAsistentes] = useState([]);
+  const [nombreDelPaciente, setNombreDelPaciente] = useState({});
+  const { pedirConfirmacion } = useConfirmacion();
 
   const recargar = useCallback(async () => {
     setEstadoCarga('cargando');
@@ -106,13 +119,20 @@ export function Guardias() {
     setAsistentes(asistentesData ?? []);
     const asistentesPorId = Object.fromEntries((asistentesData ?? []).map((a) => [a.id, a.nombre]));
     const pacientesPorId = Object.fromEntries(conSusFichas(pacientesData).map((p) => [p.id, p.nombre]));
+    setNombreDelPaciente(pacientesPorId);
     const serviciosPorId = Object.fromEntries((serviciosData ?? []).map((s) => [s.id, s.etiqueta]));
 
     // A quiénes atiende cada guardia: un turno puede cubrir a más de una persona, y esa lista
     // no vive en la guardia sino en su propia tabla (ver `lib/pacientesDeGuardia.js`).
+    // Y a quién se espera en cada turno asignado que todavía no se aceptó.
     let pacientesPorGuardia;
+    let pendientes;
     try {
-      pacientesPorGuardia = await cargarPacientesDeGuardias((guardiasData ?? []).map((g) => g.id));
+      const ids = (guardiasData ?? []).map((g) => g.id);
+      [pacientesPorGuardia, pendientes] = await Promise.all([
+        cargarPacientesDeGuardias(ids),
+        cargarAsignacionesPendientes(ids),
+      ]);
     } catch (errorPacientes) {
       setError(mensajeDeError(errorPacientes, t));
       setEstadoCarga('error');
@@ -122,6 +142,8 @@ export function Guardias() {
     const filasConNombres = conPacientes(guardiasData ?? [], pacientesPorGuardia, pacientesPorId).map((g) => ({
       ...g,
       asistente_nombre: asistentesPorId[g.asistente_id] || '—',
+      pendiente_asistente_id: pendientes.get(g.id) ?? null,
+      pendiente_nombre: pendientes.has(g.id) ? asistentesPorId[pendientes.get(g.id)] || '—' : null,
       servicio_etiqueta: serviciosPorId[g.servicio_id] || '',
     }));
 
@@ -166,9 +188,20 @@ export function Guardias() {
   const umbrales = useUmbrales();
   const ctx = useMemo(() => ({ ahora: new Date(), umbrales }), [filas, umbrales]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function cerrarYRecargar() {
+  // El turno nuevo puede haberse creado y no haberse podido asignar: queda sin asignar, y se
+  // dice por qué.
+  function cerrarYRecargar(motivo = null) {
     setMostrarNueva(false);
+    setAviso(motivo);
     recargar();
+  }
+
+  // Si el turno ya tenía a alguien, aceptado o esperando respuesta, se avisa que lo pierde antes de
+  // cambiarlo. Qué se dice en cada caso lo decide `pedidoDeConfirmacion`.
+  async function confirmaElCambio(guardia, asistenteId) {
+    const nombreNuevo = asistentes.find((a) => a.id === asistenteId)?.nombre ?? null;
+    const pedido = pedidoDeConfirmacion(guardia, asistenteId, nombreNuevo, t);
+    return pedido ? pedirConfirmacion(pedido) : true;
   }
 
   // Los tres pasos de una reasignación viven en `lib/reasignarGuardia.js`, no acá: el
@@ -176,12 +209,10 @@ export function Guardias() {
   async function handleReasignar(guardiaId, asistenteId, fecha) {
     const guardiaActual = filas.find((g) => g.id === guardiaId);
     if (!guardiaActual) return;
+    if (!(await confirmaElCambio(guardiaActual, asistenteId))) return;
 
     const { error: falla } = await reasignarGuardia(guardiaActual, asistenteId, fecha, t);
-    if (falla) {
-      setError(falla);
-      return;
-    }
+    setAviso(falla);
     recargar();
   }
 
@@ -190,12 +221,24 @@ export function Guardias() {
   async function alMoverGuardia({ guardiaId, ...movimiento }) {
     const guardiaActual = filas.find((g) => g.id === guardiaId);
     if (!guardiaActual) return;
+    const cambiaDeAsistente = movimiento.vista === 'asistente' && movimiento.fila !== filaDeGuardia(guardiaActual);
+    if (cambiaDeAsistente) {
+      const asistenteId = movimiento.fila === FILA_SIN_CUBRIR ? null : movimiento.fila;
+      if (!(await confirmaElCambio(guardiaActual, asistenteId))) return;
+    }
+
+    // Llevarlo a otro Paciente se pregunta siempre. Con Asistente el turno entero queda sin
+    // cubrir, así que se nombran todos sus Pacientes; sin Asistente pasa sólo el que se arrastró.
+    if (movimiento.vista === 'paciente' && movimiento.fila !== movimiento.filaOrigen) {
+      const origen = quienTieneElTurno(guardiaActual)
+        ? new Intl.ListFormat(locale, { type: 'conjunction' }).format(guardiaActual.pacientes_nombres ?? [])
+        : nombreDelPaciente[movimiento.filaOrigen] ?? '—';
+      const destino = nombreDelPaciente[movimiento.fila] ?? '—';
+      if (!(await pedirConfirmacion(pedidoDeConfirmacionDelMovimiento(guardiaActual, origen, destino, t)))) return;
+    }
 
     const { error: falla } = await moverGuardia(guardiaActual, movimiento, t);
-    if (falla) {
-      setError(falla);
-      return;
-    }
+    setAviso(falla);
     recargar();
   }
 
@@ -265,6 +308,8 @@ export function Guardias() {
           </div>
         )}
 
+        {aviso && <Alert variant="error">{aviso}</Alert>}
+
         <EstadoLista
           estado={estadoCarga}
           error={error}
@@ -305,7 +350,13 @@ export function Guardias() {
                         <td>{textoDelHorario(g)}</td>
                         <td>{servicio}</td>
                         <td>{tl[`responsable_${g.canal_modalidad}`] ?? '—'}</td>
-                        <td>{g.asistente_id ? g.asistente_nombre : tl.sin_asignar}</td>
+                        <td>
+                          {g.asistente_id
+                            ? g.asistente_nombre
+                            : g.pendiente_nombre
+                              ? `${g.pendiente_nombre} · ${t.guardias.pendiente_de_respuesta}`
+                              : tl.sin_asignar}
+                        </td>
                         <td>
                           <span className={claseBadgeTono(lectura.tono)}>{textoDelEstado(lectura.estado)}</span>
                         </td>

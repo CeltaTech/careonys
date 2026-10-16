@@ -30,7 +30,7 @@ const EVENTO_AVISO_RUTINA = 'aviso_rutina_asistente';
 // para no generar costo de mensajería en cada mensaje de rutina — mismo criterio que
 // notificarCoordinador() en whatsapp.js, pero con el respaldo condicionado al fallo del
 // push en vez de ser el canal preferido.
-async function respaldoWhatsappSiFalla({ prestadoraId, asistenteId, enviadoPorPush, titulo, cuerpo }) {
+export async function respaldoWhatsappSiFalla({ prestadoraId, asistenteId, enviadoPorPush, titulo, cuerpo }) {
   if (enviadoPorPush) return;
 
   const config = await configuracionEvento(EVENTO_AVISO_RUTINA, prestadoraId);

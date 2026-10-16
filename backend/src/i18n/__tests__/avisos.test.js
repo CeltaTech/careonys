@@ -81,6 +81,8 @@ const DATOS = {
     asistenteNuevo: 'Rita Solano',
     turnos: [{ fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'] }],
   },
+  turno_para_responder: { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00' },
+  turno_retirado: { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00' },
   ausencia_avisada_con_tiempo: {
     asistente: 'Rita Solano', fechaInicio: '2026-10-07', fechaFin: '2026-10-14',
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],
@@ -201,6 +203,20 @@ test('los tres idiomas dicen cosas distintas', () => {
 
 test('una clave que no existe se avisa, no se devuelve vacía', () => {
   assert.throws(() => mensajeDelSistema('un_aviso_que_no_existe', 'es-AR'), /un_aviso_que_no_existe/);
+});
+
+test('cuando se sabe quién deja la guardia, el Cliente lee los dos nombres', () => {
+  const turno = { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'] };
+  for (const idioma of IDIOMAS_DEL_CATALOGO) {
+    for (const turnos of [[turno], [turno, { ...turno, fecha: '2026-10-08' }]]) {
+      const { cuerpo } = mensajeDelSistema('cambio_de_asistente_cliente', idioma, {
+        asistenteNuevo: 'Rita Solano', asistenteAnterior: 'Marcos Peña', turnos,
+      });
+      assert.ok(cuerpo.includes('Rita Solano'), `${idioma} no nombra al nuevo`);
+      assert.ok(cuerpo.includes('Marcos Peña'), `${idioma} no nombra a quien deja`);
+      assert.ok(!cuerpo.includes('{{'), `${idioma} deja un marcador sin reemplazar`);
+    }
+  }
 });
 
 // Los tres mensajes de guardia que le llegan al Cliente, probados rompiéndolos a propósito.

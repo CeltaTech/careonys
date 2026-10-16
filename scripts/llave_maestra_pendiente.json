@@ -81,7 +81,6 @@
                              "backend/src/utils/__tests__/recuperacionSoloDeLaGenteDeLaPrestadora.test.js",
                              "backend/src/utils/__tests__/revisarAusenciasAvisadas.test.js",
                              "backend/src/utils/__tests__/revisarLlegadasDemoradas.test.js",
-                             "backend/src/utils/__tests__/telefonosEsperandoHabilitacion.test.js",
                              "backend/src/utils/__tests__/videollamada.test.js"
                          ],
     "importan_la_conexion":  [
@@ -115,7 +114,6 @@
                                  "backend/src/utils/direccionDeLaPrestadora.js",
                                  "backend/src/utils/equipoDeUnPaciente.js",
                                  "backend/src/utils/faseAutomaticaRelevo.js",
-                                 "backend/src/utils/habilitarCambioDeClave.js",
                                  "backend/src/utils/instruccionesPersonasAutorizadas.js",
                                  "backend/src/utils/mfaRecuperacionEmail.js",
                                  "backend/src/utils/proponerRespuestasIA.js",

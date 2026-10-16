@@ -1,4 +1,4 @@
-import { supabase, sinPrestadora, enLaPrestadora } from '../db/connection.js';
+import { sinPrestadora, enLaPrestadora } from '../db/connection.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
 // De qué Prestadora es un pedido que llega sin sesión: los dos formularios del sitio público de
@@ -43,8 +43,8 @@ export async function resolverPrestadoraPublica(req, res, next) {
   if (error) return responderError(res, error);
   if (!prestadoraId) return res.status(404).json({ error: 'prestadora_no_reconocida' });
 
-  return enLaPrestadora(prestadoraId, TRABAJO, async () => {
-    const { data, error: errorConfiguracion } = await supabase
+  return enLaPrestadora(prestadoraId, TRABAJO, async (db) => {
+    const { data, error: errorConfiguracion } = await db
       .from('configuracion_prestadora')
       .select('*')
       .eq('prestadora_id', prestadoraId)

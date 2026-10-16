@@ -21,6 +21,7 @@ import { createServer } from 'node:http';
 
 import { REGLA_DE_AVISO_DE_AUSENCIA } from '../../utils/avisoDeAusencia.js';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const USUARIO = '22222222-2222-2222-2222-222222222222';
@@ -62,6 +63,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma
 // en el momento en que se importa, y con la dirección que haya en ese instante.

@@ -18,7 +18,7 @@
 // Prestadora se da de alta igual. Lo que pasa entonces es que las respuestas se pierden, y eso
 // se avisa en el Panel.
 
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 
 // La dirección del servicio. Se puede apuntar a otro servidor para probar, igual que la de
 // geocodificación: vacía significa la de verdad.
@@ -145,11 +145,20 @@ export async function apuntarReenvioDeRespuestas({
 
   // Sin regla nueva y sin regla vieja no hay nada que anotar: escribir `null` sobre `null` sería
   // un pedido a la base que no cambia nada.
+  //
+  // Lo anota el trabajo de esa Prestadora, con su credencial: la base le deja escribir esa sola
+  // columna y sólo en su propia fila. Quien administra no la puede escribir, porque con ella el
+  // backend corta reglas.
   if (prestadoraId && (regla || reglaAnterior)) {
-    const { error } = await supabase
-      .from('prestadoras')
-      .update({ regla_reenvio: regla ?? null })
-      .eq('id', prestadoraId);
+    let error;
+    try {
+      ({ error } = await enLaPrestadora(prestadoraId, 'anotar el reenvío de las respuestas', (db) => db
+        .from('prestadoras')
+        .update({ regla_reenvio: regla ?? null })
+        .eq('id', prestadoraId)));
+    } catch (e) {
+      error = e;
+    }
 
     // El reenvío quedó como tenía que quedar y el backend no sabe con qué cortarlo. Se avisa acá y
     // no se deshace nada: las respuestas están llegando, que es lo que la Prestadora necesita.

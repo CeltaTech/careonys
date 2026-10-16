@@ -224,6 +224,16 @@ describe('cambiar la casilla a la que vuelven las respuestas', () => {
     const anotada = llamadas.find((l) => l.clave === 'PATCH /rest/v1/prestadoras');
     assert.ok(anotada, 'la regla nueva no quedó anotada: el día que la Prestadora se vaya no hay con qué cortarla');
     assert.equal(anotada.cuerpo.regla_reenvio, REGLA_NUEVA);
+    assert.ok(anotada.url.includes(`id=eq.${PRESTADORA}`));
+  });
+
+  it('la anota el trabajo de esa Prestadora, y no la llave maestra ni quien administra', async () => {
+    await pedir('PATCH', '/correo', { email_respuestas: 'otra@ejemplo.test' });
+
+    const anotada = llamadas.find((l) => l.clave === 'PATCH /rest/v1/prestadoras');
+    const credencial = JSON.parse(Buffer.from(anotada.credencial.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+    assert.equal(credencial.role, 'trabajo_sin_persona');
+    assert.equal(credencial.prestadora_id, PRESTADORA);
   });
 
   it('una casilla mal escrita se rechaza con su motivo, y nada se toca', async () => {

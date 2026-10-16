@@ -19,7 +19,7 @@
 // aplicación del Asistente, desde el cartel de una emergencia que no salió. Tampoco se completa
 // con el teléfono general: si la Prestadora no lo cargó, no hay botón.
 
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 
 /** Un campo de texto cargado a medias —espacios, cadena vacía— no es un canal. */
 function limpio(valor) {
@@ -64,14 +64,15 @@ export async function telefonoParaEmergencias(prestadoraId) {
 }
 
 // Los canales viven en `configuracion_prestadora`, que es lo que carga Configuración › La
-// Prestadora. La consulta va con la llave maestra, así que el filtro por la Prestadora de quien
-// mira es lo único que separa una de otra.
+// Prestadora. La consulta va con la credencial del trabajo de esa Prestadora, que la base acota a
+// ella, y además la nombra.
 async function filaDeContacto(prestadoraId, columnas) {
-  const { data, error } = await supabase
-    .from('configuracion_prestadora')
-    .select(columnas)
-    .eq('prestadora_id', prestadoraId)
-    .maybeSingle();
+  const { data, error } = await enLaPrestadora(prestadoraId, 'contacto de la Prestadora', (db) =>
+    db
+      .from('configuracion_prestadora')
+      .select(columnas)
+      .eq('prestadora_id', prestadoraId)
+      .maybeSingle());
   return error ? null : data;
 }
 

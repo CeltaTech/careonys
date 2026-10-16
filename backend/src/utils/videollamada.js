@@ -25,7 +25,7 @@
      semana que viene nacería vencida. */
 
 import { randomUUID } from 'node:crypto';
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 
 /** Cuánto vale una sala que se abrió recién, en minutos. Alcanza para una conversación larga y le
  *  pone un final a la dirección. */
@@ -43,14 +43,18 @@ export const MINUTOS_DE_TOLERANCIA = 90;
  * La dirección base de las salas de esta Prestadora, sin barra final.
  *
  * @returns {Promise<string|null>} null donde no configuró ninguna: esa Prestadora no ofrece
- *   videollamada, y eso no es un error.
+ *   videollamada, y eso no es un error. Se lee con la credencial del trabajo de esa Prestadora, que
+ *   la base acota a ella; sin Prestadora no hay ninguna.
  */
 export async function direccionDeVideollamada(prestadoraId) {
-  const { data, error } = await supabase
-    .from('prestadoras')
-    .select('videollamada_base_url')
-    .eq('id', prestadoraId)
-    .maybeSingle();
+  if (!prestadoraId) return null;
+
+  const { data, error } = await enLaPrestadora(prestadoraId, 'dirección de videollamada', (db) =>
+    db
+      .from('prestadoras')
+      .select('videollamada_base_url')
+      .eq('id', prestadoraId)
+      .maybeSingle());
 
   if (error) {
     console.error('Error consultando la dirección de videollamada:', error.message);

@@ -65,7 +65,6 @@
                              "backend/src/utils/__tests__/cobrosIntermediacion.test.js",
                              "backend/src/utils/__tests__/codigoAlTelefono.test.js",
                              "backend/src/utils/__tests__/codigoDeUnSoloUso.test.js",
-                             "backend/src/utils/__tests__/contactoDeLaPrestadora.test.js",
                              "backend/src/utils/__tests__/contactoDelAsistente.test.js",
                              "backend/src/utils/__tests__/contactosIntermediacion.test.js",
                              "backend/src/utils/__tests__/correoPorElDespachante.test.js",
@@ -140,7 +139,6 @@
                                  "backend/src/utils/consentimientoMedicacion.js",
                                  "backend/src/utils/consentimientoPagador.js",
                                  "backend/src/utils/consentimientoUbicacion.js",
-                                 "backend/src/utils/contactoDeLaPrestadora.js",
                                  "backend/src/utils/contactoDelAsistente.js",
                                  "backend/src/utils/contactosIntermediacion.js",
                                  "backend/src/utils/conversacionIntermediacion.js",
@@ -163,7 +161,6 @@
                                  "backend/src/utils/instruccionesPersonasAutorizadas.js",
                                  "backend/src/utils/intermediacionDeLaPrestadora.js",
                                  "backend/src/utils/mediosDePago.js",
-                                 "backend/src/utils/mensajeDeTexto.js",
                                  "backend/src/utils/mfaRecuperacionEmail.js",
                                  "backend/src/utils/periodoDeGracia.js",
                                  "backend/src/utils/plazosDeCobroIntermediacion.js",
@@ -189,7 +186,6 @@
                                  "backend/src/utils/telefonoAlActivar.js",
                                  "backend/src/utils/topeDePedidosDeClave.js",
                                  "backend/src/utils/vencimientos.js",
-                                 "backend/src/utils/videollamada.js",
                                  "backend/src/utils/vitalesReferencia.js",
                                  "backend/src/utils/whatsapp.js"
                              ]

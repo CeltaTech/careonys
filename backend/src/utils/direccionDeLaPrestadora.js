@@ -1,4 +1,4 @@
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora, supabase } from '../db/connection.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
 import { nombreBase } from './casillaDeEnvio.js';
 
@@ -94,14 +94,13 @@ export async function enlaceConCodigo({ appUrl, pantalla, prestadoraId, codigo }
   return `${appUrl}/${pantalla}?${parametros}`;
 }
 
-// El rótulo guardado de la puerta de una Prestadora, o nulo si no tiene.
+// El rótulo guardado de la puerta de una Prestadora, o nulo si no tiene. Se lee con el trabajo de
+// esa Prestadora, que sólo alcanza su propia configuración.
 export async function rotuloDeLaPrestadora(prestadoraId) {
   if (!prestadoraId) return null;
-  const { data, error } = await supabase
-    .from('configuracion_prestadora')
-    .select('dominio')
-    .eq('prestadora_id', prestadoraId)
-    .maybeSingle();
+  const { data, error } = await enLaPrestadora(prestadoraId, 'leer la dirección de la Prestadora', (db) =>
+    db.from('configuracion_prestadora').select('dominio').eq('prestadora_id', prestadoraId).maybeSingle(),
+  );
   if (error) throw error;
   return data?.dominio || null;
 }

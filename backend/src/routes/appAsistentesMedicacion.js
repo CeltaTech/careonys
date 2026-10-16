@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
-import { clienteDelPedido, supabase } from '../db/connection.js';
+import { clienteDelPedido, enLaPrestadora } from '../db/connection.js';
 import { medicacionVigenteDelPaciente, asistentePuedeDarLaVia } from '../utils/medicacionIndicaciones.js';
 import { asistenteAtiendeAlPaciente } from '../utils/pacientesDeGuardia.js';
 import { exigeVisible } from '../utils/visibilidadPrestadora.js';
@@ -23,13 +23,14 @@ async function ordenesDelAsistente(req) {
   // atiende, y sus órdenes de medicación tienen que estar a la vista.
   if (!(await asistenteAtiendeAlPaciente(clienteDelPedido(req), req.params.pacienteId, req.usuarioAsistente))) return null;
 
-  // Con la llave maestra: con la restricción de la historia clínica activa, la base le muestra las
-  // indicaciones sólo a quien atiende al Paciente con un Servicio vigente y una guardia no
-  // cancelada, y la comprobación de arriba deja pasar cualquier guardia suya con ese Paciente.
-  const indicaciones = await medicacionVigenteDelPaciente(
-    supabase,
+  // Con la credencial del trabajo de su Prestadora: con la restricción de la historia clínica
+  // activa, la base le muestra las indicaciones sólo a quien atiende al Paciente con un Servicio
+  // vigente y una guardia no cancelada, y la comprobación de arriba deja pasar cualquier guardia
+  // suya con ese Paciente.
+  const indicaciones = await enLaPrestadora(
     req.usuarioAsistente.prestadoraId,
-    req.params.pacienteId,
+    'medicación que ve el Asistente',
+    (trabajo) => medicacionVigenteDelPaciente(trabajo, req.usuarioAsistente.prestadoraId, req.params.pacienteId),
   );
 
   // Las prohibiciones de su tipo las lee el Asistente con su credencial.
@@ -47,16 +48,15 @@ async function ordenesDelAsistente(req) {
   return ordenes;
 }
 
-// Dónde está guardada la receta de cada orden. La ruta se lee con la maestra, por lo mismo que la
-// lista.
+// Dónde está guardada la receta de cada orden. La ruta se lee con la credencial del trabajo, por lo
+// mismo que la lista.
 async function recetasDe(prestadoraId, ids) {
   if (!ids.length) return new Map();
-  const { data } = await supabase
+  const { data } = await enLaPrestadora(prestadoraId, 'recetas que ve el Asistente', (trabajo) => trabajo
     .from('indicaciones_medicacion')
     .select('id, prescripcion_archivo_url')
-    .eq('prestadora_id', prestadoraId)
     .in('id', ids)
-    .not('prescripcion_archivo_url', 'is', null);
+    .not('prescripcion_archivo_url', 'is', null));
   return new Map((data || []).map((r) => [r.id, r.prescripcion_archivo_url]));
 }
 
@@ -72,7 +72,7 @@ appAsistentesMedicacionRouter.get('/:pacienteId', requiereRolAsistente, exigeVis
       pacienteId: req.params.pacienteId,
       categorias: ['indicaciones_medicacion'],
       origen: origenDelPedido(req),
-    });
+    }, { cliente: clienteDelPedido(req) });
   } catch (error) {
     return responderError(res, error);
   }

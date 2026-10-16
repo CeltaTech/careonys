@@ -32,7 +32,7 @@ async function llamarApi(path, opciones = {}) {
   return resultado;
 }
 
-// Un mensaje saliente que la IA redactó pero nadie envió todavía.
+// Un mensaje saliente que todavía no salió.
 function esBorrador(mensaje) {
   return (
     mensaje.direccion === 'saliente' &&
@@ -67,7 +67,7 @@ export function HiloWhatsapp({ conversacionId, onCambio }) {
 
     const filas = data ?? [];
     setMensajes(filas);
-    // La respuesta que sugirió la IA arranca escrita en el cuadro de texto: el Coordinador
+    // La respuesta que quedó sin salir arranca escrita en el cuadro de texto: el Coordinador
     // la corrige si hace falta y la manda, en vez de escribir todo de cero.
     const borrador = [...filas].reverse().find(esBorrador);
     setTexto(borrador ? borrador.texto : '');
@@ -138,6 +138,7 @@ export function HiloWhatsapp({ conversacionId, onCambio }) {
               <div className="panel-chat-burbuja-autor">
                 {m.direccion === 'entrante' ? t.comunicacion.autor_contacto : t.comunicacion.autor_prestadora}
                 {m.generado_por_ia && ` · ${t.comunicacion.redactado_por_ia}`}
+                {m.enviado_automaticamente && ` · ${t.comunicacion.enviado_automaticamente}`}
                 {esBorrador(m) && ` · ${t.comunicacion.sin_enviar}`}
               </div>
               <div className="panel-chat-burbuja-texto">{m.texto}</div>

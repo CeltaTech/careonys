@@ -802,8 +802,81 @@ function TabWhatsapp() {
         </section>
       )}
       <TabWhatsappPlantillas />
+      <TabWhatsappRespuestaAutomatica />
       <TabWhatsappEscaladaCoordinador />
     </>
+  );
+}
+
+// Cuántas horas sin mensajes dan por terminada una conversación que contestó una persona; pasadas,
+// el bot vuelve a contestar. Mismo camino que TabMensajeGuardiaSinCubrir: el navegador escribe
+// directo en la tabla y RLS decide si puede. El valor de arranque lo pone la base, no esta pantalla.
+function TabWhatsappRespuestaAutomatica() {
+  const { t } = useLocale();
+  const prestadoraId = usePrestadoraActual();
+  const [horas, setHoras] = useState('');
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [guardando, setGuardando] = useState(false);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    const { data, error: errorConsulta } = await supabase
+      .from('configuracion_respuesta_automatica_whatsapp')
+      .select('horas_sin_mensajes_para_terminar')
+      .eq('prestadora_id', prestadoraId)
+      .maybeSingle();
+    if (errorConsulta) {
+      setError(mensajeDeError(errorConsulta, t));
+      setEstado('error');
+      return;
+    }
+    setHoras(data?.horas_sin_mensajes_para_terminar ?? '');
+    setEstado('listo');
+  }, [prestadoraId, t]);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  async function guardar() {
+    setGuardando(true);
+    setError(null);
+    const { error: errorUpsert } = await supabase.from('configuracion_respuesta_automatica_whatsapp').upsert({
+      prestadora_id: prestadoraId,
+      // Vacío no se manda: la base completa su valor de arranque.
+      ...(horas === '' ? {} : { horas_sin_mensajes_para_terminar: Number(horas) }),
+    });
+    setGuardando(false);
+    if (errorUpsert) {
+      setError(mensajeDeError(errorUpsert, t));
+      return;
+    }
+    recargar();
+  }
+
+  return (
+    <section className="panel-tarjeta">
+      <div className="panel-tarjeta-titulo">
+        <h2>{t.configuracion.whatsapp_respuesta_automatica_titulo}</h2>
+      </div>
+      <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
+        {error && <Alert variant="error">{error}</Alert>}
+        <div className="molde-formgrid">
+          <FormField
+            label={t.configuracion.whatsapp_respuesta_automatica_horas}
+            name="whatsapp_respuesta_automatica_horas"
+            type="number"
+            value={horas}
+            onChange={(e) => setHoras(e.target.value)}
+          />
+        </div>
+        <div className="molde-acciones">
+          <Button onClick={guardar} disabled={guardando}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
+        </div>
+      </EstadoLista>
+    </section>
   );
 }
 

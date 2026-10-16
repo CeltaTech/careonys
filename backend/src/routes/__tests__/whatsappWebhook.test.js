@@ -198,6 +198,8 @@ beforeEach(() => {
   respuestas.set('POST /rest/v1/rpc/leer_app_secret_whatsapp', () => APP_SECRET);
   respuestas.set('POST /rest/v1/rpc/leer_verify_token_whatsapp', () => TOKEN_DE_SALUDO);
   respuestas.set('GET /rest/v1/mensajes_whatsapp', () => []);
+  respuestas.set('GET /rest/v1/conversaciones_whatsapp', () => []);
+  respuestas.set('GET /rest/v1/configuracion_respuesta_automatica_whatsapp', () => [{ horas_sin_mensajes_para_terminar: 24 }]);
   respuestas.set('POST /rest/v1/conversaciones_whatsapp', () => [{ id: CONVERSACION, requiere_atencion_coordinador: false }]);
   respuestas.set('POST /rest/v1/mensajes_whatsapp', () => [{ id: MENSAJE }]);
   respuestas.set('PATCH /rest/v1/conversaciones_whatsapp', () => []);
@@ -302,6 +304,78 @@ describe('el pedido de WhatsApp auténtico', () => {
 
     const anotacion = escrituras().find((l) => l.clave === 'POST /rest/v1/auditoria_respuesta_automatica_whatsapp');
     assert.equal(anotacion.cuerpo.motivo, 'la_atiende_una_persona');
+  });
+
+  describe('después de que contestó una persona', () => {
+    const hace = (horas) => new Date(Date.now() - horas * 60 * 60 * 1000).toISOString();
+
+    // Hay una respuesta aprobada que coincide con el mensaje, así que sin el corte saldría sola.
+    beforeEach(() => {
+      respuestas.set('GET /rest/v1/respuestas_preparadas_whatsapp', () => [
+        {
+          id: '44444444-4444-4444-4444-444444444444',
+          nombre_interno: 'guardia',
+          terminos: ['guardia'],
+          i18n: { 'es-AR': 'Texto aprobado.', en: 'Approved text.', 'pt-BR': 'Texto aprovado.' },
+          toca_salud: false,
+          aprobada_at: '2026-09-01T10:00:00.000Z',
+          activa: true,
+        },
+      ]);
+      respuestas.set('GET /rest/v1/prestadoras', () => [{ idioma: 'es-AR', pais: 'AR' }]);
+    });
+
+    async function esperarLaAnotacion() {
+      await esperarA(() =>
+        escrituras().some((l) => l.clave === 'POST /rest/v1/auditoria_respuesta_automatica_whatsapp'),
+      );
+      await dejarTerminar();
+      return escrituras().find((l) => l.clave === 'POST /rest/v1/auditoria_respuesta_automatica_whatsapp');
+    }
+
+    const saliente = () =>
+      escrituras().find((l) => l.clave === 'POST /rest/v1/mensajes_whatsapp' && l.cuerpo.direccion === 'saliente');
+
+    it('el bot no contesta mientras no pasan las horas sin mensajes', async () => {
+      respuestas.set('GET /rest/v1/conversaciones_whatsapp', () => [
+        { ultimo_mensaje_at: hace(2), atendida_por_una_persona_at: hace(2) },
+      ]);
+
+      await avisar();
+      const anotacion = await esperarLaAnotacion();
+
+      assert.equal(saliente(), undefined);
+      assert.equal(anotacion.cuerpo.motivo, 'la_atiende_una_persona');
+      const conversacion = escrituras().find((l) => l.clave === 'POST /rest/v1/conversaciones_whatsapp');
+      assert.equal('atendida_por_una_persona_at' in conversacion.cuerpo, false);
+    });
+
+    it('pasadas las horas la conversación se da por terminada y el bot vuelve a contestar', async () => {
+      respuestas.set('GET /rest/v1/conversaciones_whatsapp', () => [
+        { ultimo_mensaje_at: hace(25), atendida_por_una_persona_at: hace(26) },
+      ]);
+
+      await avisar();
+      const anotacion = await esperarLaAnotacion();
+
+      assert.notEqual(anotacion.cuerpo.motivo, 'la_atiende_una_persona');
+      assert.equal(saliente().cuerpo.texto, 'Texto aprobado.');
+      const conversacion = escrituras().find((l) => l.clave === 'POST /rest/v1/conversaciones_whatsapp');
+      assert.equal(conversacion.cuerpo.atendida_por_una_persona_at, null);
+    });
+
+    it('sin la configuración de horas el bot no se mete', async () => {
+      respuestas.set('GET /rest/v1/conversaciones_whatsapp', () => [
+        { ultimo_mensaje_at: hace(500), atendida_por_una_persona_at: hace(500) },
+      ]);
+      respuestas.set('GET /rest/v1/configuracion_respuesta_automatica_whatsapp', () => []);
+
+      await avisar();
+      const anotacion = await esperarLaAnotacion();
+
+      assert.equal(saliente(), undefined);
+      assert.equal(anotacion.cuerpo.motivo, 'la_atiende_una_persona');
+    });
   });
 
   it('la Prestadora sale de la dirección, no del cuerpo del pedido', async () => {

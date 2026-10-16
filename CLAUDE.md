@@ -439,6 +439,8 @@ quedó alguna sin aplicar, nunca para saber cómo está la base.
 dice ahora y el motivo. Se revisa antes de proponer algo que suene a tema ya debatido.
 
 **Qué falta hacer:** `docs/PLAN_HASTA_PRODUCCION.md`, una sola lista numerada, en orden. **No se
-abren pendientes nuevos:** un problema que aparece se arregla en el momento; si no cabe en la tarea
-que se está haciendo, se agrega como paso en el lugar de la lista que le corresponde. Un paso
+abren pendientes nuevos:** un problema que aparece se resuelve en el momento, aunque no sea parte
+de la tarea que se está haciendo. Sólo se agrega como paso, en el lugar de la lista que le
+corresponde, cuando hay un motivo justificado para no poder hacerlo ahí —espera una decisión del
+Desarrollador o algo de afuera—, y el paso dice cuál es. Un paso
 terminado se borra: no se marca como hecho, se saca.

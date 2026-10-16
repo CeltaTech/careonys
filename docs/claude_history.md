@@ -510,3 +510,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** lo que el Coordinador le propone a un Asistente se llamaba de cuatro maneras —oferta, invitación, guardia ofrecida, «Ofrecidas»— y ninguna estaba en el glosario.
 - **Qué dice ahora:** el turno sin Asistente es un **turno vacante**; el Coordinador **invita** a cubrirlo; el Asistente recibe una **invitación a cubrir un turno**, y las ve en **Turnos vacantes**.
 - **Motivo:** lo aprobó el Desarrollador. Lo que cubre una sola persona es un turno, no una guardia, y el rubro lo llama turno abierto (*open shift*); «vacante» es, según la RAE, lo que está sin proveer.
+
+## Un problema que aparece se resuelve en el momento
+
+- **Qué decía antes:** si un problema no cabía en la tarea que se estaba haciendo, se agregaba como paso del plan.
+- **Qué dice ahora:** se resuelve en el momento aunque no sea parte de la tarea. Sólo se agrega como paso cuando hay un motivo justificado para no poder hacerlo ahí, y el paso dice cuál.
+- **Motivo:** el plan quedó semanas en unos 115 pasos porque cada uno cerrado traía otro. Lo pidió el Desarrollador.

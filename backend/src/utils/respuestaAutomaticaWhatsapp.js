@@ -34,8 +34,8 @@ import { IDIOMA_POR_DEFECTO } from '../i18n/idiomas.js';
    Prestadora del mensaje, que la base acota a ella. Sin Prestadora no se lee nada, y eso cae en
    el mismo lado que una lista que no se pudo leer: no se contesta.
 
-   QUÉ NO ESTÁ ACÁ. El modelo de IA no interviene en esta decisión. Su lugar es antes y aparte:
-   propone respuestas para el banco, que nacen sin aprobar (`utils/proponerRespuestasIA.js`). */
+   QUÉ NO ESTÁ ACÁ. El modelo de IA no interviene en esta decisión ni en el banco de respuestas,
+   que se escribe a mano desde el Panel. */
 
 export const RESULTADO_RESPONDIDA = 'respondida';
 export const RESULTADO_DERIVADA = 'derivada_a_una_persona';

@@ -116,7 +116,6 @@
                                  "backend/src/utils/faseAutomaticaRelevo.js",
                                  "backend/src/utils/instruccionesPersonasAutorizadas.js",
                                  "backend/src/utils/mfaRecuperacionEmail.js",
-                                 "backend/src/utils/proponerRespuestasIA.js",
                                  "backend/src/utils/revisarAlertasIA.js",
                                  "backend/src/utils/revisarAusenciasAvisadas.js",
                                  "backend/src/utils/revisarGuardiasSinCubrir.js",

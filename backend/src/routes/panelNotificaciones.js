@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { enviarEmail } from '../utils/email.js';
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 
 export const panelNotificacionesRouter = Router();
@@ -13,10 +13,10 @@ const ESTADOS = ['en_revision', 'aprobado', 'rechazado'];
 // el momento a partir de `configuracion_prestadora`, para que el mismo software sirva a cualquier
 // Prestadora licenciataria.
 //
-// SIGUE CON LA LLAVE MAESTRA, y por eso la consulta lleva la Prestadora de la sesión. A la ruta
-// entra cualquier rol del Panel, y `configuracion_prestadora` sólo la lee la administración
-// (`prestadora_lee_su_configuracion`): con la credencial de quien coordina, el correo saldría sin el
-// nombre de la Prestadora.
+// CON LA CREDENCIAL DEL TRABAJO DE ESTA PRESTADORA. A la ruta entra cualquier rol del Panel, y
+// `configuracion_prestadora` sólo la lee la administración (`prestadora_lee_su_configuracion`): con
+// la credencial de quien coordina, el correo saldría sin el nombre de la Prestadora. La del trabajo
+// no sale de la Prestadora de la sesión, y con ella sale también el correo.
 panelNotificacionesRouter.post('/postulante', requiereRolPanel, async (req, res) => {
   const { email, nombre, nuevoEstado, idioma } = req.body;
 
@@ -24,21 +24,22 @@ panelNotificacionesRouter.post('/postulante', requiereRolPanel, async (req, res)
     return res.status(400).json({ error: 'Datos inválidos' });
   }
 
-  const { data: configuracion } = await supabase
-    .from('configuracion_prestadora')
-    .select('nombre')
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
-    .single();
-
+  const prestadoraId = req.usuarioPanel.prestadoraId;
   try {
-    await enviarEmail({
-      to: email,
-      ...mensajeDelSistema('estado_postulacion', idioma, {
-        empresa: configuracion?.nombre ?? '',
-        nombre,
-        estado: nuevoEstado,
-      }),
-      prestadoraId: req.usuarioPanel.prestadoraId,
+    await enLaPrestadora(prestadoraId, 'aviso al postulante', async (db) => {
+      const { data: configuracion } = await db
+        .from('configuracion_prestadora')
+        .select('nombre')
+        .maybeSingle();
+      await enviarEmail({
+        to: email,
+        ...mensajeDelSistema('estado_postulacion', idioma, {
+          empresa: configuracion?.nombre ?? '',
+          nombre,
+          estado: nuevoEstado,
+        }),
+        prestadoraId,
+      });
     });
     res.json({ ok: true });
   } catch (error) {

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requiereRolAsistente } from '../middleware/requiereRolAsistente.js';
 import { clienteDelPedido } from '../db/connection.js';
 import { responderError } from '../utils/errorConMotivo.js';
+import { avisarCambioDeAsistente } from '../utils/avisoCambioDeAsistente.js';
 
 // ============================================================================
 // Los turnos de guardia que se le asignaron al Asistente y todavía no respondió.
@@ -98,6 +99,33 @@ function noSePudo(res, estado, motivo, detalle) {
   return res.status(estado).json({ error: motivo, motivo });
 }
 
+// Si el turno que acaba de aceptar era de otro Asistente, recién ahora cambió de manos: se le
+// avisa al Coordinador y al Cliente quién deja de ir y quién lo reemplaza. Se lee con la
+// credencial del Asistente, que ya es dueño del turno y de su asignación. Nunca voltea la
+// respuesta: el turno ya es suyo.
+async function avisarSiReemplaza(req, guardiaId) {
+  try {
+    const { data: asignacion } = await clienteDelPedido(req)
+      .from('asignaciones_de_turno')
+      .select('asistente_id, asistente_anterior_id, guardias(id, prestadora_id, paciente_id, fecha, hora_inicio, hora_fin, dias_hasta_el_fin)')
+      .eq('id', req.params.id)
+      .maybeSingle();
+
+    const anterior = asignacion?.asistente_anterior_id;
+    const guardia = asignacion?.guardias;
+    if (!anterior || anterior === asignacion.asistente_id || !guardia || guardia.id !== guardiaId) return;
+
+    await avisarCambioDeAsistente({
+      guardias: [guardia],
+      prestadoraId: guardia.prestadora_id,
+      asistenteNuevoId: asignacion.asistente_id,
+      asistenteAnteriorId: anterior,
+    });
+  } catch (e) {
+    console.error(`Error avisando el reemplazo del turno ${guardiaId}:`, e.message);
+  }
+}
+
 // ============================================================================
 // Lo que hoy tiene para responder
 // ============================================================================
@@ -170,6 +198,7 @@ appAsistentesAsignacionesRouter.post('/:id/responder', requiereRolAsistente, asy
       if (previsto) return noSePudo(res, previsto.estado, previsto.motivo, falla.message);
       return responderError(res, falla);
     }
+    await avisarSiReemplaza(req, guardiaId);
     return res.json({ respuesta: 'acepta', guardiaId });
   }
 

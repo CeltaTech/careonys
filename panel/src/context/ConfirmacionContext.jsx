@@ -10,19 +10,23 @@ import { useModalAccesible } from '../hooks/useModalAccesible';
    a una Prestadora. Esa maquinaria se fue —el permiso lo abre CeltaTech desde su lado—, y la
    ventana de confirmar se quedó, porque la usa medio Panel y nunca tuvo nada que ver con aquello.
 
-   Confirmar es una sola cosa y se escribe una sola vez: qué se va a hacer, y cancelar o seguir. */
+   Confirmar es una sola cosa y se escribe una sola vez: qué se va a hacer, y cancelar o seguir.
+   Se le pasa el texto solo, o `{ texto, confirmar }` cuando el botón tiene que decir qué hace. */
 const ConfirmacionContext = createContext(null);
 
 export function ConfirmacionProvider({ children }) {
   const modal = useModalAccesible(() => resolverConfirmacion(false));
   const { t } = useLocale();
   const [mensaje, setMensaje] = useState(null);
+  const [textoBoton, setTextoBoton] = useState(null);
   const resolverRef = useRef(null);
 
-  const pedirConfirmacion = useCallback((texto) => {
+  const pedirConfirmacion = useCallback((pedido) => {
+    const conBoton = pedido !== null && typeof pedido === 'object';
     return new Promise((resolve) => {
       resolverRef.current = resolve;
-      setMensaje(texto);
+      setTextoBoton(conBoton ? pedido.confirmar ?? null : null);
+      setMensaje(conBoton ? pedido.texto : pedido);
     });
   }, []);
 
@@ -43,7 +47,7 @@ export function ConfirmacionProvider({ children }) {
               <Button variant="secondary" onClick={() => resolverConfirmacion(false)}>
                 {t.comun.cancelar}
               </Button>
-              <Button onClick={() => resolverConfirmacion(true)}>{t.comun.confirmar}</Button>
+              <Button onClick={() => resolverConfirmacion(true)}>{textoBoton ?? t.comun.confirmar}</Button>
             </div>
           </div>
         </div>

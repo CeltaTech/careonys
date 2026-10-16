@@ -25,6 +25,9 @@ import { DescansosDeLaGuardia } from './DescansosDeLaGuardia';
 const TABLA = 'guardias';
 const ESTADO_CANCELADA = 'cancelada';
 
+// El valor del desplegable que deja el turno sin nadie. Viaja como `null`.
+const SIN_ASIGNAR = 'sin-asignar';
+
 export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose, onActualizada }) {
   const modal = useModalAccesible(onClose);
   const { t, locale } = useLocale();
@@ -81,7 +84,7 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
     setError(null);
     setProcesando(true);
     try {
-      await onReasignar(guardia.id, nuevoAsistenteId, nuevaFecha);
+      await onReasignar(guardia.id, nuevoAsistenteId === SIN_ASIGNAR ? null : nuevoAsistenteId, nuevaFecha);
     } finally {
       setProcesando(false);
     }
@@ -555,6 +558,10 @@ export function GuardiaAcciones({ guardia, asistentes = [], onReasignar, onClose
               onChange={(e) => setNuevoAsistenteId(e.target.value)}
             >
               <option value="">{t.guardias.nueva_guardia.elegir}</option>
+              {/* Un turno ausente ya está sin nadie: dejarlo sin asignar no cambia nada. */}
+              {guardia.estado !== 'ausente' && (
+                <option value={SIN_ASIGNAR}>{t.guardias.listado.sin_asignar}</option>
+              )}
               {asistentesAsignables.map((a) => (
                 <option key={a.id} value={a.id}>{a.nombre}</option>
               ))}

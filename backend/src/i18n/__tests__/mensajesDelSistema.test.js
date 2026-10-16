@@ -169,6 +169,8 @@ const DATOS_MINIMOS = {
     asistenteNuevo: 'Rita Solano',
     turnos: [{ fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'] }],
   },
+  turno_para_responder: { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00' },
+  turno_retirado: { fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00' },
   ausencia_avisada_con_tiempo: {
     asistente: 'Rita Solano', fechaInicio: '2026-10-07', fechaFin: '2026-10-14',
     fecha: '2026-10-07', horaInicio: '08:00', horaFin: '16:00', pacientes: ['Elena'],

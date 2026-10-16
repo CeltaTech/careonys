@@ -27,6 +27,8 @@
 //                     contacto de la Prestadora, salvo que quien avisa tenga uno propio —el del
 //                     Cliente, el del respaldo— (`utils/whatsapp.js`).
 //   admite_cliente  — si el mensaje, además de al Coordinador, le puede llegar al Cliente.
+//   cliente_por_defecto — si al Cliente le llega mientras la Prestadora no eligió nada. Ausente
+//                     vale como que no. La Prestadora lo apaga desde la pantalla de Avisos.
 //
 // La vía «mensaje de texto» no lleva campo propio acá: se deduce de `admite_whatsapp`, porque entra
 // como su respaldo y en el mismo punto de decisión. La regla y el porqué están en
@@ -180,10 +182,10 @@ export const CATALOGO_MENSAJES = [
     evento: 'cambio_de_asistente',
     descripcion: 'Una guardia pasó a manos de otro Asistente',
     admite_whatsapp: true,
-    // Al Cliente le cambia quién entra a su casa, así que este mensaje le puede llegar. Que le
-    // llegue o no lo decide la Prestadora en la pantalla de Avisos, como en todos los demás: acá
-    // se dice que el canal existe, nunca que está encendido.
+    // Al Cliente le cambia quién entra a su casa, así que este mensaje le llega de entrada, y la
+    // Prestadora lo apaga en la pantalla de Avisos si trabaja de otra manera.
     admite_cliente: true,
+    cliente_por_defecto: true,
   },
   {
     evento: 'emergencia_en_guardia',
@@ -241,6 +243,13 @@ export function mensajeDelCatalogo(evento) {
   return CATALOGO_MENSAJES.find((mensaje) => mensaje.evento === evento) ?? null;
 }
 
+// Si al Cliente le llega este mensaje mientras la Prestadora no guardó nada. Punto único: lo leen
+// la pantalla de Avisos y cada lugar que manda el mensaje.
+export function notificaClientePorDefecto(evento) {
+  const mensaje = typeof evento === 'string' ? mensajeDelCatalogo(evento) : evento;
+  return Boolean(mensaje?.admite_cliente && mensaje?.cliente_por_defecto);
+}
+
 // Punto único: la ausencia del campo significa que sí se puede apagar, y esa lectura no se
 // escribe dos veces.
 export function sePuedeApagar(mensaje) {
@@ -290,7 +299,7 @@ export function mezclarMensajesConCatalogo(filasGuardadas, { hayProveedorDeMensa
       mensaje_de_texto_activo: sePuedeElegirMensajeDeTexto({ mensaje, hayProveedor: hayProveedorDeMensajeDeTexto })
         ? (fila?.mensaje_de_texto_activo ?? VALORES_POR_DEFECTO_MENSAJE.mensaje_de_texto_activo)
         : false,
-      notificar_cliente: fila?.notificar_cliente ?? VALORES_POR_DEFECTO_MENSAJE.notificar_cliente,
+      notificar_cliente: fila?.notificar_cliente ?? notificaClientePorDefecto(mensaje),
       plantilla_whatsapp_id: fila?.plantilla_whatsapp_id ?? VALORES_POR_DEFECTO_MENSAJE.plantilla_whatsapp_id,
     };
   });

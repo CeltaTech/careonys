@@ -10,7 +10,13 @@
 import { strict as assert } from 'node:assert';
 import { describe, it } from 'node:test';
 
-import { CATALOGO_MENSAJES, mensajeDelCatalogo, mezclarMensajesConCatalogo, sePuedeApagar } from '../catalogoAvisos.js';
+import {
+  CATALOGO_MENSAJES,
+  mensajeDelCatalogo,
+  mezclarMensajesConCatalogo,
+  notificaClientePorDefecto,
+  sePuedeApagar,
+} from '../catalogoAvisos.js';
 
 describe('catálogo de avisos', () => {
   it('no hay dos avisos con la misma clave', () => {
@@ -87,5 +93,26 @@ describe('mezclarMensajesConCatalogo', () => {
     ]);
     assert.equal(mezclados.length, CATALOGO_MENSAJES.length);
     assert.ok(!mezclados.some((mensaje) => mensaje.evento === 'vencimiento_monotributo'));
+  });
+});
+
+describe('el aviso al Cliente sin nada guardado', () => {
+  it('el cambio de Asistente le llega al Cliente mientras la Prestadora no lo apague', () => {
+    assert.equal(notificaClientePorDefecto('cambio_de_asistente'), true);
+    const [cambio] = mezclarMensajesConCatalogo([]).filter((m) => m.evento === 'cambio_de_asistente');
+    assert.equal(cambio.notificar_cliente, true);
+  });
+
+  it('lo que la Prestadora guardó gana sobre el valor de fábrica', () => {
+    const [cambio] = mezclarMensajesConCatalogo([
+      { evento: 'cambio_de_asistente', emails: [], activo: true, notificar_cliente: false },
+    ]).filter((m) => m.evento === 'cambio_de_asistente');
+    assert.equal(cambio.notificar_cliente, false);
+  });
+
+  it('un aviso que no admite Cliente nunca le llega', () => {
+    for (const mensaje of CATALOGO_MENSAJES.filter((m) => !m.admite_cliente)) {
+      assert.equal(notificaClientePorDefecto(mensaje), false, mensaje.evento);
+    }
   });
 });

@@ -3,29 +3,30 @@ import { mensajeDeBloqueo } from './matricula';
 import { mensajeDeModalidad } from './modalidades';
 import { mensajeDeError } from './errores';
 import { avisarCambioDeAsistente } from './avisarCambioDeAsistente';
+import { asignarTurno } from './asignarTurno';
 
-/* Cambiarle el Asistente a una guardia: un solo lugar para las tres cosas que hay que hacer.
+/* Cambiarle el Asistente a una guardia desde su detalle.
    =========================================================================================
 
-   POR QUÉ ESTÁ ACÁ Y NO DENTRO DE UNA PANTALLA. Asignarle un Asistente a una guardia no es
-   escribir una columna: son tres cosas que van juntas y ninguna se puede olvidar.
+   Hay dos caminos, y los decide el estado de la guardia.
+
+   Si estaba programada, se le asigna al Asistente elegido y queda esperando que la acepte
+   (`lib/asignarTurno.js`). Quien la tenía la pierde en el mismo paso, y los avisos los manda el
+   backend. Elegir «sin asignar» la deja sin nadie.
+
+   Si estaba marcada como ausente, el turno ya empezó y nadie lo está haciendo: quien lo cubre
+   entra ahora, sin esperar respuesta. Ahí son tres cosas que van juntas:
 
      1. Se guarda el Asistente nuevo y la fecha.
-     2. Si la guardia estaba marcada como ausente, había un incidente de relevo abierto por
-        ella. Asignar a alguien la cubre de verdad, así que ese incidente se cierra acá. Si no,
-        la alerta de "necesita relevo" sigue encendida aunque el Paciente ya tenga quien lo
-        cuide, y alguien va a salir a resolver un problema que ya no existe.
+     2. Se cierra el incidente de relevo abierto por la ausencia. Si no, la alerta de "necesita
+        relevo" sigue encendida aunque el Paciente ya tenga quien lo cuide.
      3. Se avisa el cambio, porque a la casa del Paciente entra otra persona. El aviso sale
-        después de guardar y no antes, y no puede voltear la reasignación: la guardia ya cambió.
-
-   Dos pantallas hacen esta misma operación —la de Guardias y el Estado actual—, así que las tres
-   cosas se escriben una sola vez y las dos la llaman (regla 12 de CLAUDE.md §7). Si mañana
-   aparece un cuarto paso, se agrega acá y las dos pantallas lo tienen sin tocarlas. */
+        después de guardar y no puede voltear la reasignación: la guardia ya cambió. */
 
 /**
  * @param {object} guardia  La guardia entera, como está hoy — hace falta para saber si estaba
  *                          ausente. Con el id solo no alcanzaría.
- * @param {string} asistenteId  Quién pasa a hacerla.
+ * @param {string | null} asistenteId  Quién pasa a hacerla, o `null` para dejarla sin asignar.
  * @param {string} fecha  En qué fecha queda. Puede ser la misma que ya tenía.
  * @param {object} t  Los textos del idioma en que está el Panel. Se piden desde afuera porque
  *                          acá no se sabe en qué idioma está, y hacen falta para las dos cosas
@@ -36,8 +37,11 @@ import { avisarCambioDeAsistente } from './avisarCambioDeAsistente';
 export async function reasignarGuardia(guardia, asistenteId, fecha, t = null) {
   const estabaSinCobertura = guardia?.estado === 'ausente';
 
-  const cambios = { asistente_id: asistenteId, fecha };
-  if (estabaSinCobertura) cambios.estado = 'programada';
+  // Un turno que ya está en curso y se quedó sin quien lo haga no espera respuesta: quien lo
+  // cubre entra ahora. Todo lo demás se asigna y queda esperando que el Asistente acepte.
+  if (!estabaSinCobertura) return asignarConFecha(guardia, asistenteId, fecha, t);
+
+  const cambios = { asistente_id: asistenteId, fecha, estado: 'programada' };
 
   const { error: errorUpdate } = await supabase.from('guardias').update(cambios).eq('id', guardia.id);
   if (errorUpdate) {
@@ -52,21 +56,17 @@ export async function reasignarGuardia(guardia, asistenteId, fecha, t = null) {
     };
   }
 
-  if (estabaSinCobertura) {
-    const { error: errorIncidente } = await supabase
-      .from('incidentes_relevo')
-      .update({
-        resuelto_at: new Date().toISOString(),
-        resuelto_por_tipo: 'suplente',
-        resuelto_por_id: asistenteId,
-      })
-      .eq('guardia_entrante_id', guardia.id)
-      .is('resuelto_at', null);
-    if (errorIncidente) return { error: mensajeDeError(errorIncidente, t) };
-  }
+  const { error: errorIncidente } = await supabase
+    .from('incidentes_relevo')
+    .update({
+      resuelto_at: new Date().toISOString(),
+      resuelto_por_tipo: 'suplente',
+      resuelto_por_id: asistenteId,
+    })
+    .eq('guardia_entrante_id', guardia.id)
+    .is('resuelto_at', null);
+  if (errorIncidente) return { error: mensajeDeError(errorIncidente, t) };
 
-  // Sólo si de verdad cambió de manos. Reasignar a quien ya la tenía —se mueve la fecha, se la
-  // saca de la vidriera— no le cambia a nadie quién viene, y avisarlo sería ruido.
   if (guardia?.asistente_id !== asistenteId) {
     await avisarCambioDeAsistente({
       guardiaIds: [guardia.id],
@@ -76,4 +76,31 @@ export async function reasignarGuardia(guardia, asistenteId, fecha, t = null) {
   }
 
   return { error: null };
+}
+
+/**
+ * La fecha primero y la asignación después: la Matrícula se controla contra el día en que el
+ * turno termina, y tiene que ser el día nuevo. Si la asignación no pasa, la fecha vuelve a la que
+ * tenía, para que el turno no quede corrido sin que nadie lo haya pedido así.
+ *
+ * Elegir a quien ya lo tiene no lo vuelve a asignar: le quitaría el turno aceptado para
+ * preguntarle otra vez si lo quiere.
+ */
+export async function asignarConFecha(guardia, asistenteId, fecha, t = null) {
+  const cambiaFecha = Boolean(fecha) && fecha !== guardia.fecha;
+  const cambiaAsistente = asistenteId !== (guardia.asistente_id ?? null) || Boolean(guardia.pendiente_asistente_id);
+  const yaEsSuyo = asistenteId !== null && asistenteId === guardia.asistente_id;
+
+  if (cambiaFecha) {
+    const { error } = await supabase.from('guardias').update({ fecha }).eq('id', guardia.id);
+    if (error) return { error: mensajeDeError(error, t) };
+  }
+
+  if (!cambiaAsistente || yaEsSuyo) return { error: null };
+
+  const { error } = await asignarTurno(guardia.id, asistenteId, t);
+  if (error && cambiaFecha) {
+    await supabase.from('guardias').update({ fecha: guardia.fecha }).eq('id', guardia.id);
+  }
+  return { error };
 }

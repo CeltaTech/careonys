@@ -30,6 +30,9 @@ import { FICHA_NOMBRE } from './fichaDelPaciente.js';
 // configuró; el incidente se abre recién cuando el turno está cerca y ya es grave. Cuándo es eso
 // lo contesta `incidenteTurnoSinCubrir.js`, que es el mismo archivo que usa el Panel.
 //
+// SALVO QUE ALGUIEN LE HAYA QUITADO EL ASISTENTE. Ahí el incidente lo abre la base en el momento
+// (`asignar_turno`), falte lo que falte, y esta tarea lo recuerda y lo cierra igual que a los suyos.
+//
 // EL RECORDATORIO NO VA AL DESTINO GENERAL DE LA PRESTADORA, VA A QUIEN COORDINA A ESE PACIENTE.
 // Un mensaje que le llega a seis personas no le llega a ninguna, y acá hay alguien que puede tapar
 // el turno ahora mismo. Por eso sale por correo a esa persona, con el equipo del Paciente adentro
@@ -133,6 +136,25 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
   const porGuardia = new Map((abiertos ?? []).map((i) => [i.guardia_id, i]));
   const guardiaPorId = new Map((guardias ?? []).map((g) => [g.id, g]));
 
+  // Un incidente puede haberse abierto mucho antes de la ventana: el que abre la base cuando el
+  // Coordinador le quita el Asistente a un turno. Ése también se recuerda y se cierra, así que sus
+  // turnos se traen aparte.
+  const faltan = [...porGuardia.keys()].filter((id) => !guardiaPorId.has(id));
+  if (faltan.length) {
+    const { data: lejanas, error: errorLejanas } = await supabase
+      .from('guardias')
+      .select('id, asistente_id, paciente_id, fecha, hora_inicio, hora_fin, estado')
+      .eq('prestadora_id', prestadoraId)
+      .in('id', faltan);
+    if (errorLejanas) {
+      console.error(
+        `Error consultando los turnos de incidentes abiertos (prestadora ${prestadoraId}):`,
+        errorLejanas.message
+      );
+    }
+    for (const g of lejanas ?? []) guardiaPorId.set(g.id, g);
+  }
+
   await cerrarLosQueYaNoCorresponden({ abiertos: abiertos ?? [], guardiaPorId, prestadoraId, ahora });
 
   // Una sola vez por Prestadora: todos los recordatorios de esta vuelta los lee la misma gente.
@@ -157,8 +179,11 @@ async function revisarPrestadora({ prestadoraId, desde, hasta, ahora }) {
     tipo: TIPOS_DE_ALARMA.TURNO_SIN_CUBRIR,
   });
 
-  for (const guardia of guardias ?? []) {
-    if (!elTurnoYaEsGrave({ guardia, regla, ahora })) continue;
+  for (const guardia of guardiaPorId.values()) {
+    // El que ya tiene incidente se sigue recordando mientras siga sin nadie, aunque falte mucho:
+    // la alarma la abrió alguien que ya sabía que el turno tenía un problema.
+    const yaAbierto = porGuardia.has(guardia.id) && !guardia.asistente_id && guardia.estado === 'programada';
+    if (!yaAbierto && !elTurnoYaEsGrave({ guardia, regla, ahora })) continue;
 
     const horas = horasHastaElTurno(guardia, ahora);
     // Ya pasó el plazo en que taparlo servía de algo: no se abre uno nuevo.

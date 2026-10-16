@@ -12,6 +12,7 @@
 // acá. La pantalla que guarda llama a `validarContraLaDeclaracion` antes de escribir.
 
 import { Router } from 'express';
+import { clienteDelPedido } from '../db/connection.js';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { responderError } from '../utils/errorConMotivo.js';
@@ -29,7 +30,7 @@ panelFormulariosRouter.use(requiereRolPanel, exigirOrganizacionActiva);
 
 panelFormulariosRouter.get('/ambito/:ambito', async (req, res) => {
   try {
-    const formularios = await formulariosDelAmbito(req.params.ambito, req.usuarioPanel.prestadoraId);
+    const formularios = await formulariosDelAmbito(req.params.ambito, req.usuarioPanel.prestadoraId, clienteDelPedido(req));
     res.json({ formularios });
   } catch (error) {
     responderError(res, error);
@@ -40,7 +41,7 @@ panelFormulariosRouter.get('/ambito/:ambito', async (req, res) => {
 
 panelFormulariosRouter.get('/:clave', async (req, res) => {
   try {
-    const declaracion = await declaracionDeFormulario(req.params.clave, req.usuarioPanel.prestadoraId);
+    const declaracion = await declaracionDeFormulario(req.params.clave, req.usuarioPanel.prestadoraId, clienteDelPedido(req));
     res.json({ declaracion });
   } catch (error) {
     responderError(res, error);
@@ -72,7 +73,7 @@ panelFormulariosRouter.post('/:clave/controlar', async (req, res) => {
       req.params.clave,
       respuesta,
       req.usuarioPanel.prestadoraId,
-      { contexto },
+      { contexto, db: clienteDelPedido(req) },
     );
     res.json({ ok: true, respuesta: limpia, faltantes: [] });
   } catch (error) {

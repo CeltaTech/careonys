@@ -13,7 +13,6 @@
 // `utils/motorDeFormularios.js`, que es copia exacta del archivo del Panel, así que los dos lados
 // deciden igual.
 
-import { supabase } from '../db/connection.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 import { validarFormulario, limpiarRespuesta, MOTIVOS } from './motorDeFormularios.js';
 
@@ -48,16 +47,19 @@ function armarSeccion(seccion, campos) {
 /**
  * La declaración de un formulario, para esa Organización.
  *
- * Va acotada a mano porque del lado del servidor se usa la llave de servicio, que pasa por encima
- * de las reglas de acceso de la base: el aislamiento lo tiene que poner la consulta.
+ * Se lee con la conexión de quien pregunta, y la base le deja ver sólo los del producto y los de
+ * su Prestadora. La consulta la nombra igual, porque elegir entre la del producto y la propia
+ * depende de saber cuál es cuál.
  *
  * @param clave         el nombre guardado del formulario.
  * @param prestadoraId  la Organización de quien pregunta.
+ * @param db            la conexión de quien pregunta (`clienteDelPedido(req)`).
  */
-export async function declaracionDeFormulario(clave, prestadoraId) {
+export async function declaracionDeFormulario(clave, prestadoraId, db) {
   if (!prestadoraId) throw new ErrorConMotivo('faltan_datos', 'Sin Organización activa no se lee ninguna declaración');
+  if (!db) throw new Error('declaracionDeFormulario: falta la conexión de quien pregunta');
 
-  const { data: formularios, error } = await supabase
+  const { data: formularios, error } = await db
     .from('formularios_declarados')
     .select('*')
     .eq('clave', clave)
@@ -79,8 +81,8 @@ export async function declaracionDeFormulario(clave, prestadoraId) {
     : consulta.is('prestadora_id', null));
 
   const [{ data: secciones, error: errorSecciones }, { data: campos, error: errorCampos }] = await Promise.all([
-    acotarAPrestadora(supabase.from('formulario_secciones').select('*').eq('formulario_id', formulario.id).eq('activo', true)).order('orden'),
-    acotarAPrestadora(supabase.from('formulario_campos').select('*').eq('activo', true)),
+    acotarAPrestadora(db.from('formulario_secciones').select('*').eq('formulario_id', formulario.id).eq('activo', true)).order('orden'),
+    acotarAPrestadora(db.from('formulario_campos').select('*').eq('activo', true)),
   ]);
   if (errorSecciones) throw errorSecciones;
   if (errorCampos) throw errorCampos;
@@ -99,11 +101,12 @@ export async function declaracionDeFormulario(clave, prestadoraId) {
   };
 }
 
-/** Todos los formularios declarados de un ámbito, para esa Organización. */
-export async function formulariosDelAmbito(ambito, prestadoraId) {
+/** Todos los formularios declarados de un ámbito, para esa Organización, con la conexión de quien pregunta. */
+export async function formulariosDelAmbito(ambito, prestadoraId, db) {
   if (!prestadoraId) throw new ErrorConMotivo('faltan_datos', 'Sin Organización activa no se lee ninguna declaración');
+  if (!db) throw new Error('formulariosDelAmbito: falta la conexión de quien pregunta');
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('formularios_declarados')
     .select('clave, ambito, titulo, orden, prestadora_id')
     .eq('ambito', ambito)
@@ -129,9 +132,11 @@ export async function formulariosDelAmbito(ambito, prestadoraId) {
  *
  * Si algo falta, levanta un `ErrorConMotivo` con la lista adentro. La lista dice sección,
  * repetición y casillero, todo por su clave: son nombres de la declaración, no de la base.
+ *
+ * La declaración se lee con `db`, la conexión de quien pregunta.
  */
-export async function validarContraLaDeclaracion(clave, respuesta, prestadoraId, opciones = {}) {
-  const declaracion = await declaracionDeFormulario(clave, prestadoraId);
+export async function validarContraLaDeclaracion(clave, respuesta, prestadoraId, { db, ...opciones } = {}) {
+  const declaracion = await declaracionDeFormulario(clave, prestadoraId, db);
   const faltantes = validarFormulario(declaracion, respuesta, opciones);
 
   if (faltantes.length > 0) {

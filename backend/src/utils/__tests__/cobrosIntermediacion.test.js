@@ -138,7 +138,8 @@ beforeEach(() => {
   pedidosAlProveedor = [];
   rechazaElProveedor = false;
   respuestas.clear();
-  respuestas.set('GET /rest/v1/configuracion_cobro_intermediacion', configuracionDeCobro);
+  respuestas.set('GET /rest/v1/configuracion_cobro_intermediacion', () => [PLAZOS]);
+  respuestas.set('POST /rest/v1/rpc/prestadoras_a_recorrer', () => LAS_PRESTADORAS);
 });
 
 /** Los plazos con los que nace la configuración de una Prestadora. Diez días de cupón es el valor
@@ -151,16 +152,6 @@ const PLAZOS = {
 
 /** Las Prestadoras que el trabajo diario recorre, en este orden. */
 const LAS_PRESTADORAS = [PRESTADORA, OTRA_PRESTADORA];
-
-/**
- * `configuracion_cobro_intermediacion` contesta dos cosas distintas, y lo único que las separa es el
- * filtro: pedida entera es la lista de Prestadoras que hay que recorrer
- * (`prestadorasDeLaIntermediacion.js`); nombrando una, son sus plazos.
- */
-function configuracionDeCobro(url) {
-  if (url.includes('prestadora_id=eq.')) return [PLAZOS];
-  return LAS_PRESTADORAS.map((id) => ({ prestadora_id: id }));
-}
 
 /** Un acceso esperando cobrar el período de la prueba. */
 function accesoPorCobrar(cambios = {}) {

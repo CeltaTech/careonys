@@ -134,7 +134,6 @@
                                  "backend/src/utils/habilitarCambioDeClave.js",
                                  "backend/src/utils/instruccionesPersonasAutorizadas.js",
                                  "backend/src/utils/mfaRecuperacionEmail.js",
-                                 "backend/src/utils/prestadorasDeLaIntermediacion.js",
                                  "backend/src/utils/proponerRespuestasIA.js",
                                  "backend/src/utils/recuperacionDeClave.js",
                                  "backend/src/utils/revisarAlertasIA.js",

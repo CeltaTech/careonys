@@ -120,7 +120,8 @@ describe('devolver al titular', () => {
 
 describe('el trabajo programado', () => {
   it('lee las coberturas de a una Prestadora', async () => {
-    respuestas.set('GET /rest/v1/prestadoras', [{ id: PRESTADORA }, { id: '99999999-9999-9999-9999-999999999999' }]);
+    respuestas.set('POST /rest/v1/rpc/prestadoras_a_recorrer', [PRESTADORA, '99999999-9999-9999-9999-999999999999']);
+    respuestas.set('GET /rest/v1/prestadoras', [{ id: 'certificada' }]);
 
     await extenderCoberturasDeAusencia();
 
@@ -133,6 +134,7 @@ describe('el trabajo programado', () => {
   });
 
   it('cada Prestadora se trabaja con la credencial del trabajo de esa Prestadora', async () => {
+    respuestas.set('POST /rest/v1/rpc/prestadoras_a_recorrer', [PRESTADORA]);
     respuestas.set('GET /rest/v1/prestadoras', [{ id: PRESTADORA }]);
     respuestas.set('GET /rest/v1/coberturas_de_ausencia', [
       {
@@ -146,7 +148,8 @@ describe('el trabajo programado', () => {
 
     await extenderCoberturasDeAusencia();
 
-    const deLaPrestadora = llamadas.filter((l) => l.clave !== 'GET /rest/v1/prestadoras');
+    // La lista de a quiénes recorrer es lo único que sale sin Prestadora.
+    const deLaPrestadora = llamadas.filter((l) => l.clave !== 'POST /rest/v1/rpc/prestadoras_a_recorrer');
     assert.ok(deLaPrestadora.some((l) => l.clave === 'GET /rest/v1/guardias_cobertura'), 'no llegó a devolver al titular');
     for (const llamada of deLaPrestadora) {
       assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', `${llamada.clave} fue con otra credencial`);

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { requierePermiso } from '../utils/permisos.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import {
   habilitarCambioDeClave,
@@ -35,10 +35,10 @@ import { registrarActividad, yaQuedoRegistrado } from '../utils/registroDeActivi
 // NADA SENSIBLE VIAJA POR LA DIRECCIÓN WEB: ni el correo que se busca, ni el número, ni nada. Por
 // eso la búsqueda es `POST` y no `GET`.
 //
-// SIGUE CON LA LLAVE MAESTRA, con la Prestadora de la sesión escrita en cada consulta. Lo que se
-// lee acá son las cuentas de otras personas de la Prestadora, y la base le deja leer a cada
-// persona sólo su propia cuenta (`usuarios`, lectura). Con la credencial de quien pide, la búsqueda
-// volvería siempre vacía.
+// LA BÚSQUEDA VA CON LA CREDENCIAL DEL TRABAJO DE LA PRESTADORA ACTIVA, que la base acota a las
+// cuentas y los Legajos de esa Prestadora. Lo que se lee acá son las cuentas de otras personas, y la
+// base le deja leer a cada persona sólo su propia cuenta (`usuarios`, lectura): con la credencial de
+// quien pide, la búsqueda volvería siempre vacía.
 
 export const panelHabilitarClaveRouter = Router();
 
@@ -62,30 +62,30 @@ panelHabilitarClaveRouter.post(
   '/buscar',
   requiereRolPanel,
   requierePermiso(ACCION),
+  exigirOrganizacionActiva,
   async (req, res) => {
     try {
       const texto = String(req.body?.texto ?? '').trim();
       if (texto.length < 3) throw new ErrorConMotivo('faltan_datos');
 
       const patron = `%${texto.replace(/[%_]/g, '')}%`;
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select('id, nombre, email, rol, telefono, telefono_verificado_en')
-        .eq('prestadora_id', req.usuarioPanel.prestadoraId)
-        .or(`nombre.ilike.${patron},email.ilike.${patron}`)
-        .limit(TOPE_DE_LA_BUSQUEDA);
-      if (error) throw new Error(error.message);
+      const cuentas = await enLaPrestadora(req.usuarioPanel.prestadoraId, 'búsqueda de cuentas a habilitar', async (db) => {
+        const { data, error } = await db
+          .from('usuarios')
+          .select('id, nombre, email, rol, telefono, telefono_verificado_en')
+          .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+          .or(`nombre.ilike.${patron},email.ilike.${patron}`)
+          .limit(TOPE_DE_LA_BUSQUEDA);
+        if (error) throw new Error(error.message);
 
-      const alcanzables = (data ?? [])
-        .filter((cuenta) => cuenta.id !== req.usuarioPanel.id)
-        .filter((cuenta) => puedeHabilitar(req.usuarioPanel.rol, cuenta.rol));
+        const alcanzables = (data ?? [])
+          .filter((cuenta) => cuenta.id !== req.usuarioPanel.id)
+          .filter((cuenta) => puedeHabilitar(req.usuarioPanel.rol, cuenta.rol));
 
-      res.json({
-        cuentas: await Promise.all(
-          alcanzables.map((cuenta) => conFoto(cuenta, req.usuarioPanel.prestadoraId)),
-        ),
-        minutos: minutosDeLaHabilitacion(),
+        return Promise.all(alcanzables.map((cuenta) => conFoto(db, cuenta, req.usuarioPanel.prestadoraId)));
       });
+
+      res.json({ cuentas, minutos: minutosDeLaHabilitacion() });
     } catch (err) {
       responderError(res, err);
     }
@@ -96,8 +96,8 @@ panelHabilitarClaveRouter.post(
 // y sale del Legajo del Asistente, que es donde vive: la Ficha de Persona no guarda ninguna.
 // La Organización va escrita en la consulta y no se deduce de que la cuenta ya haya salido
 // filtrada: el Legajo del Asistente es de una Prestadora, y se lo pide nombrándola.
-async function conFoto(cuenta, prestadoraId) {
-  const { data } = await supabase
+async function conFoto(db, cuenta, prestadoraId) {
+  const { data } = await db
     .from('asistentes')
     .select('foto_url')
     .eq('prestadora_id', prestadoraId)

@@ -48,12 +48,13 @@ const baseFalsa = createServer((req, res) => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
     const cuerpo = crudo ? JSON.parse(crudo) : null;
-    llamadas.push({ clave, url: req.url, cuerpo });
+    llamadas.push({ clave, url: req.url, cuerpo, credencial: req.headers.authorization });
 
-    // La cuenta se pide sin traer las filas: PostgREST la contesta en el encabezado del rango.
-    if (req.method === 'HEAD' && ruta === '/rest/v1/envios_de_correo') {
-      res.writeHead(200, { 'Content-Range': `0-0/${cuantasFilas}` });
-      res.end();
+    // La cuenta la hace la base, que sólo le contesta a Superadmin. `null` es lo que contesta a
+    // cualquier otro.
+    if (req.method === 'POST' && ruta === '/rest/v1/rpc/correos_enviados_desde') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(cuantasFilas));
       return;
     }
 
@@ -250,14 +251,15 @@ describe('cuánto correo salió, desde el Panel', () => {
   it('el día y el mes se cuentan desde donde arranca cada uno', async () => {
     await pedir('GET', '/correos');
 
-    const cuentas = llamadas.filter((l) => l.clave === 'HEAD /rest/v1/envios_de_correo');
+    const cuentas = llamadas.filter((l) => l.clave === 'POST /rest/v1/rpc/correos_enviados_desde');
     assert.equal(cuentas.length, 2, 'las dos cuentas no se pidieron por separado');
+    for (const c of cuentas) {
+      assert.equal(c.credencial, sesionDePrueba(USUARIO), 'la cuenta no se pidió con la credencial de quien pide');
+    }
 
-    const desde = cuentas
-      .map((c) => decodeURIComponent(new URL(c.url, 'http://interno').searchParams.get('created_at')))
-      .sort();
-    const arranqueDelDia = desde[1].replace('gte.', '');
-    const arranqueDelMes = desde[0].replace('gte.', '');
+    const desde = cuentas.map((c) => c.cuerpo.p_desde).sort();
+    const arranqueDelDia = desde[1];
+    const arranqueDelMes = desde[0];
     assert.match(arranqueDelDia, /T00:00:00\.000Z$/, 'el día no arranca donde lo cuenta el despachante');
     assert.match(arranqueDelMes, /-01T00:00:00\.000Z$/, 'el mes no arranca el día primero');
   });
@@ -271,6 +273,14 @@ describe('cuánto correo salió, desde el Panel', () => {
     assert.equal(cuerpo.correos.del_dia, 7);
     assert.equal(cuerpo.correos.tope_diario, null);
     assert.equal(cuerpo.correos.tope_mensual, null);
+  });
+
+  it('si la base no cuenta para esta sesión, no se contesta cero', async () => {
+    // Cero haría creer que no salió ningún correo y que queda todo el margen.
+    cuantasFilas = null;
+
+    const { estado } = await pedir('GET', '/correos');
+    assert.notEqual(estado, 200);
   });
 
   it('quien administra una sola Prestadora no ve la cuenta de la plataforma', async () => {

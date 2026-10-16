@@ -28,6 +28,11 @@
  * reconoce por el nombre con que la consulta llama a esa conexión, y sólo si en ese archivo ese
  * nombre no recibe ningún otro valor.
  *
+ * TAMPOCO LA QUE VA CON LA CREDENCIAL DEL TRABAJO. La conexión que `enLaPrestadora` le pasa a lo
+ * que corre adentro lleva la credencial de una sola Prestadora, y la base no la deja salir de ella
+ * (`trabajo_sin_persona_de_esta_prestadora`). Se reconoce por ser el parámetro de esa función, con
+ * la misma condición: que en el archivo ese nombre no reciba ningún otro valor.
+ *
  * Qué daría con el sistema roto: sacarle a cualquier consulta su filtro de Prestadora la deja
  * suelta, y esta prueba la nombra con archivo y renglón.
  */
@@ -259,9 +264,11 @@ function esAlta(cadena) {
  * credencial va la consulta, y se le exige el filtro como a cualquiera.
  */
 function conexionesDeLaPersona(texto) {
-  const nombres = new Set(
-    [...texto.matchAll(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*clienteDelPedido\(/g)].map((m) => m[1]),
-  );
+  const nombres = new Set([
+    ...[...texto.matchAll(/(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*clienteDelPedido\(/g)].map((m) => m[1]),
+    // El parámetro de lo que corre adentro de `enLaPrestadora`: `(db) =>` o `async (db) =>`.
+    ...[...texto.matchAll(/enLaPrestadora\([^;]*?,\s*(?:async\s*)?\(\s*([A-Za-z_$][\w$]*)\s*\)\s*=>/g)].map((m) => m[1]),
+  ]);
   for (const nombre of [...nombres]) {
     const asignaciones = [...texto.matchAll(new RegExp(`\\b${nombre}\\s*=(?!=)\\s*([^;\\n]*)`, 'g'))];
     if (asignaciones.some((m) => !m[1].startsWith('clienteDelPedido('))) nombres.delete(nombre);

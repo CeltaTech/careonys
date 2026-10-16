@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
-import { clienteDelPedido, supabase } from '../db/connection.js';
+import { clienteDelPedido } from '../db/connection.js';
 import { responderError } from '../utils/errorConMotivo.js';
 
 // Interruptor de MFA obligatorio para superadmin.
@@ -55,20 +55,18 @@ function topeDeCorreo(variable) {
   return Number.isInteger(valor) && valor > 0 ? valor : null;
 }
 
-async function cuantosCorreosDesde(desde) {
-  // SIN PRESTADORA A PROPÓSITO
+async function cuantosCorreosDesde(db, desde) {
   // El tope es de la cuenta entera del despachante de correo, así que tiene que contar los envíos
   // de todas las Prestadoras y también los que no son de ninguna. Acotada daría un número que no se
   // puede comparar contra ese tope. Devuelve dos totales y ningún dato de nadie.
   //
-  // Por eso cuenta con la llave maestra: con la credencial de quien pide, la base sólo le deja
-  // ver los envíos de su Prestadora (`la_prestadora_ve_sus_envios_de_correo`).
-  const { count, error } = await supabase
-    .from('envios_de_correo')
-    .select('id', { count: 'exact', head: true })
-    .gte('created_at', desde.toISOString());
+  // Por eso no cuenta las filas: con la credencial de quien pide, la base sólo le deja ver los
+  // envíos de su Prestadora (`la_prestadora_ve_sus_envios_de_correo`). Cuenta la base, y sólo le
+  // contesta a Superadmin; a cualquier otro le devuelve vacío, y vacío es un error.
+  const { data, error } = await db.rpc('correos_enviados_desde', { p_desde: desde.toISOString() });
   if (error) throw error;
-  return count ?? 0;
+  if (data === null || data === undefined) throw new Error('La base no contó los correos para esta sesión');
+  return Number(data);
 }
 
 panelConfiguracionPlataformaRouter.get('/correos', requiereSuperadmin, async (req, res) => {
@@ -80,8 +78,8 @@ panelConfiguracionPlataformaRouter.get('/correos', requiereSuperadmin, async (re
 
   try {
     const [delDia, delMes] = await Promise.all([
-      cuantosCorreosDesde(arranqueDelDia),
-      cuantosCorreosDesde(arranqueDelMes),
+      cuantosCorreosDesde(clienteDelPedido(req), arranqueDelDia),
+      cuantosCorreosDesde(clienteDelPedido(req), arranqueDelMes),
     ]);
     res.json({
       correos: {

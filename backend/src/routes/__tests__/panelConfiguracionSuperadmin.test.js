@@ -7,20 +7,22 @@
  * políticas que sólo alcanzan a admin_prestadora (`admin_gestiona_configuracion_alertas_ia`,
  * `admin_gestiona_visibilidad_app`). Superadmin llega a estas rutas y siempre pudo leer y guardar;
  * con su propia credencial la base no le mostraría nada y la pantalla le mostraría los valores de
- * fábrica como si fueran los de la Prestadora. Las rutas consultan con la llave maestra y el filtro
- * de la Prestadora escrito en la consulta, y eso es lo que se comprueba acá.
+ * fábrica como si fueran los de la Prestadora. Las rutas consultan con el trabajo de la Prestadora
+ * de la sesión y el filtro de esa Prestadora escrito en la consulta, y eso es lo que se comprueba
+ * acá.
  *
- * Con el sistema roto —la consulta hecha con la credencial de quien pide— la base de mentira
- * recibe esa credencial en lugar de la maestra, o no recibe el filtro, y la prueba falla.
+ * Con el sistema roto —la consulta hecha con otra credencial o para otra Prestadora— la base de
+ * mentira recibe esa credencial en lugar de la del trabajo, o no recibe el filtro, y la prueba
+ * falla.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const USUARIO = '22222222-2222-2222-2222-222222222222';
-const MAESTRA = 'Bearer clave-de-mentira';
 
 const respuestas = new Map();
 let llamadas = [];
@@ -57,6 +59,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma
 // en el momento en que se importa, y con la dirección que haya en ese instante.
@@ -76,6 +79,18 @@ after(() => {
   backend.close();
   baseFalsa.close();
 });
+
+function conElTrabajoDeLaPrestadora(llamada) {
+  const credencial = (() => {
+    try {
+      return JSON.parse(Buffer.from((llamada.credencial ?? '').replace('Bearer ', '').split('.')[1], 'base64url').toString());
+    } catch {
+      return null;
+    }
+  })();
+  assert.equal(credencial?.role, 'trabajo_sin_persona', `${llamada.clave} fue con otra credencial`);
+  assert.equal(credencial.prestadora_id, PRESTADORA, `${llamada.clave} fue fuera de la Prestadora`);
+}
 
 async function pedir(metodo, ruta, cuerpo) {
   const respuesta = await fetch(`${DIRECCION}${ruta}`, {
@@ -115,7 +130,7 @@ describe('alertas de IA', () => {
     assert.equal(estado, 200);
     assert.deepEqual(cuerpo.configuracion, guardado);
     const consulta = laConsulta('GET /rest/v1/configuracion_alertas_ia');
-    assert.equal(consulta.credencial, MAESTRA);
+    conElTrabajoDeLaPrestadora(consulta);
     assert.equal(consulta.consulta.get('prestadora_id'), `eq.${PRESTADORA}`);
   });
 
@@ -130,7 +145,7 @@ describe('alertas de IA', () => {
     });
     assert.equal(estado, 200);
     const escritura = laConsulta('POST /rest/v1/configuracion_alertas_ia');
-    assert.equal(escritura.credencial, MAESTRA);
+    conElTrabajoDeLaPrestadora(escritura);
     assert.equal(escritura.cuerpo.prestadora_id, PRESTADORA);
     assert.deepEqual(escritura.cuerpo.palabras_clave, ['fiebre']);
   });
@@ -142,7 +157,7 @@ describe('visibilidad de las aplicaciones', () => {
     const { estado } = await pedir('GET', '/visibilidad-app');
     assert.equal(estado, 200);
     const consulta = laConsulta('GET /rest/v1/configuracion_visibilidad_app');
-    assert.equal(consulta.credencial, MAESTRA);
+    conElTrabajoDeLaPrestadora(consulta);
     assert.equal(consulta.consulta.get('prestadora_id'), `eq.${PRESTADORA}`);
   });
 
@@ -154,7 +169,7 @@ describe('visibilidad de las aplicaciones', () => {
     const { estado } = await pedir('PATCH', `/visibilidad-app/${clave}`, { visible: false });
     assert.equal(estado, 200);
     const escritura = laConsulta('POST /rest/v1/configuracion_visibilidad_app');
-    assert.equal(escritura.credencial, MAESTRA);
+    conElTrabajoDeLaPrestadora(escritura);
     assert.equal(escritura.cuerpo.prestadora_id, PRESTADORA);
     assert.equal(escritura.cuerpo.visible, false);
   });
@@ -166,7 +181,7 @@ describe('personal de emergencia', () => {
     const { estado } = await pedir('GET', '/personal-emergencia');
     assert.equal(estado, 200);
     const consulta = laConsulta('GET /rest/v1/personal_emergencia');
-    assert.equal(consulta.credencial, MAESTRA);
+    assert.equal(consulta.credencial, 'Bearer clave-de-mentira');
     assert.equal(consulta.consulta.get('prestadora_id'), `eq.${PRESTADORA}`);
   });
 });

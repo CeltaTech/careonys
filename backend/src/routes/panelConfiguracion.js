@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requiereRolPanel } from '../middleware/requiereRolPanel.js';
 import { acotarAPrestadora, exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
-import { clienteDelPedido, supabase } from '../db/connection.js';
+import { clienteDelPedido, enLaPrestadora, supabase } from '../db/connection.js';
 import { accionesDePermisos } from '../utils/permisos.js';
 import { exigirAdministracion, exigirAdminDePrestadora } from '../middleware/exigirAdministracion.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
@@ -112,11 +112,11 @@ panelConfiguracionRouter.use(requiereRolPanel, soloAdministracion, exigirOrganiz
 // fila nueva es la que la base ya dejó ver (`prestadoraVisible`), no un dato de la sesión ni del
 // pedido.
 //
-// LO QUE SIGUE CON LA MAESTRA lleva al lado un comentario que dice por qué. Son cuatro casos: lo
-// que la base todavía no le deja hacer a la Administración de la Prestadora (cambiar su fila de
+// Lo que la base no le deja hacer a la Administración de la Prestadora (cambiar su fila de
 // `prestadoras`, escribir la forma de pago de los Asistentes, las conexiones con software externo),
-// las funciones que guardan secretos o reordenan, que no se le dieron a quien inicia sesión, la
-// lista de Coordinadores, que sale de `usuarios`, y el registro de actividad.
+// las funciones que guardan secretos o reordenan, y la lista de Coordinadores, que sale de
+// `usuarios`, van con el trabajo de la Prestadora, que alcanza sólo esa. Queda con la llave maestra
+// la lista del personal de emergencia, que lleva al lado por qué.
 
 // --- Datos de la prestadora (configuracion_prestadora, ver schema_multitenant_04.sql —
 //     reemplaza el singleton configuracion_empresa: cada prestadora tiene su propia fila) ---
@@ -225,14 +225,12 @@ panelConfiguracionRouter.patch('/moneda', async (req, res) => {
       .maybeSingle();
     if (!antes) return responderError(res, new ErrorConMotivo('no_encontrado', 'la base no deja ver la Prestadora de quien pide'));
 
-    // CON LA MAESTRA: la base sólo le deja cambiar `prestadoras` al Superadmin, y la moneda la
-    // cambia la Administración de la Prestadora. La fila que se cambia es la que la base acaba de
-    // dejar ver con la credencial de quien pide.
-    const { data, error } = await supabase
-      .from('prestadoras')
-      .update({ moneda })
-      .eq('id', antes.id)
-      .select('moneda');
+    // Con el trabajo de la Prestadora: la base sólo le deja cambiar `prestadoras` al Superadmin, y
+    // la moneda la cambia la Administración de la Prestadora. La fila que se cambia es la que la
+    // base acaba de dejar ver con la credencial de quien pide.
+    const { data, error } = await enLaPrestadora(antes.id, 'cambio de moneda', (dbDelTrabajo) =>
+      dbDelTrabajo.from('prestadoras').update({ moneda }).eq('id', antes.id).select('moneda')
+    );
     if (error) throw error;
     if (!data?.length) return responderError(res, new ErrorConMotivo('no_encontrado', 'la Prestadora de la sesión no existe'));
 
@@ -548,11 +546,15 @@ panelConfiguracionRouter.patch('/etapas-incorporacion/:id/mover', async (req, re
 
   const actual = etapas[indice];
   const vecino = etapas[indiceVecino];
-  // CON LA MAESTRA: la función que intercambia el orden no se le dio a quien inicia sesión. Las
-  // dos etapas que recibe son las que la base acaba de dejar ver con la credencial de quien pide.
-  const { error: errorSwap } = await supabase.rpc('intercambiar_orden_etapas_incorporacion', {
-    p_id_a: actual.id, p_orden_a: vecino.orden, p_id_b: vecino.id, p_orden_b: actual.orden,
-  });
+  // Con el trabajo de la Prestadora: la función que intercambia el orden no se le dio a quien
+  // inicia sesión. Las dos etapas que recibe son las que la base acaba de dejar ver con la
+  // credencial de quien pide, y la función comprueba que sean de esa Prestadora.
+  if (!actual.prestadora_id) return res.status(404).json({ error: 'Etapa no encontrada' });
+  const { error: errorSwap } = await enLaPrestadora(actual.prestadora_id, 'orden de las etapas de incorporación', (dbDelTrabajo) =>
+    dbDelTrabajo.rpc('intercambiar_orden_etapas_incorporacion', {
+      p_id_a: actual.id, p_orden_a: vecino.orden, p_id_b: vecino.id, p_orden_b: actual.orden,
+    })
+  );
   if (errorSwap) return responderError(res, errorSwap);
   res.json({ ok: true });
 });
@@ -739,12 +741,11 @@ panelConfiguracionRouter.patch('/aviso-previo-guardia', async (req, res) => {
   }
   const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
   if (!prestadoraId) return;
-  // CON LA MAESTRA: la base sólo le deja cambiar `prestadoras` al Superadmin. La fila es la que la
-  // base acaba de dejar ver con la credencial de quien pide.
-  const { error } = await supabase
-    .from('prestadoras')
-    .update({ minutos_aviso_previo_guardia: minutos })
-    .eq('id', prestadoraId);
+  // Con el trabajo de la Prestadora: la base sólo le deja cambiar `prestadoras` al Superadmin. La
+  // fila es la que la base acaba de dejar ver con la credencial de quien pide.
+  const { error } = await enLaPrestadora(prestadoraId, 'aviso previo de guardia', (dbDelTrabajo) =>
+    dbDelTrabajo.from('prestadoras').update({ minutos_aviso_previo_guardia: minutos }).eq('id', prestadoraId)
+  );
   if (error) return responderError(res, error);
   res.json({ ok: true });
 });
@@ -756,15 +757,18 @@ panelConfiguracionRouter.patch('/aviso-previo-guardia', async (req, res) => {
 //     "Configuración sobre programación" (CLAUDE.md §2). Mismo patrón que /ausencia-automatica. ---
 panelConfiguracionRouter.get('/alertas-ia', async (req, res) => {
   const prestadoraId = req.usuarioPanel.prestadoraId;
-  // Queda con la llave maestra y el filtro de la Prestadora: en `configuracion_alertas_ia` la
-  // única política del Panel que alcanza al administrador, `admin_gestiona_configuracion_alertas_ia`,
-  // exige rol admin_prestadora, y no hay ninguna para superadmin; con su credencial no vería la
-  // fila y la pantalla le mostraría los valores de fábrica. Se decide aparte.
-  const { data, error } = await supabase
-    .from('configuracion_alertas_ia')
-    .select('palabras_clave, reportes_a_analizar, roja_avisa_cliente, amarilla_avisa_cliente, amarilla_avisa_coordinador')
-    .eq('prestadora_id', prestadoraId)
-    .maybeSingle();
+  if (!prestadoraId) return responderError(res, new ErrorConMotivo('no_encontrado', 'el pedido no tiene Prestadora'));
+  // Con el trabajo de la Prestadora y no con la credencial de quien pide: en
+  // `configuracion_alertas_ia` la única política del Panel que alcanza al administrador,
+  // `admin_gestiona_configuracion_alertas_ia`, exige rol admin_prestadora, y no hay ninguna para
+  // superadmin; con su credencial no vería la fila y la pantalla le mostraría los valores de fábrica.
+  const { data, error } = await enLaPrestadora(prestadoraId, 'revisión con IA de los reportes', (dbDelTrabajo) =>
+    dbDelTrabajo
+      .from('configuracion_alertas_ia')
+      .select('palabras_clave, reportes_a_analizar, roja_avisa_cliente, amarilla_avisa_cliente, amarilla_avisa_coordinador')
+      .eq('prestadora_id', prestadoraId)
+      .maybeSingle()
+  );
   if (error) return responderError(res, error);
   res.json({ configuracion: data || { ...VALORES_POR_DEFECTO_ALERTAS_IA } });
 });
@@ -798,18 +802,22 @@ panelConfiguracionRouter.patch('/alertas-ia', async (req, res) => {
     ),
   ];
 
-  // Queda con la llave maestra y el filtro de la Prestadora: la política de escritura de
-  // `configuracion_alertas_ia`, `admin_gestiona_configuracion_alertas_ia`, exige rol
-  // admin_prestadora, y superadmin, que llega a esta ruta, dejaría de poder guardar. Se decide aparte.
-  const { error } = await supabase.from('configuracion_alertas_ia').upsert({
-    prestadora_id: req.usuarioPanel.prestadoraId,
-    palabras_clave: palabrasNormalizadas,
-    reportes_a_analizar,
-    roja_avisa_cliente: Boolean(roja_avisa_cliente),
-    amarilla_avisa_cliente: Boolean(amarilla_avisa_cliente),
-    amarilla_avisa_coordinador: Boolean(amarilla_avisa_coordinador),
-    updated_at: new Date().toISOString(),
-  });
+  // Con el trabajo de la Prestadora y no con la credencial de quien pide: la política de escritura
+  // de `configuracion_alertas_ia`, `admin_gestiona_configuracion_alertas_ia`, exige rol
+  // admin_prestadora, y superadmin, que llega a esta ruta, dejaría de poder guardar.
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+  if (!prestadoraId) return responderError(res, new ErrorConMotivo('no_encontrado', 'el pedido no tiene Prestadora'));
+  const { error } = await enLaPrestadora(prestadoraId, 'revisión con IA de los reportes', (dbDelTrabajo) =>
+    dbDelTrabajo.from('configuracion_alertas_ia').upsert({
+      prestadora_id: prestadoraId,
+      palabras_clave: palabrasNormalizadas,
+      reportes_a_analizar,
+      roja_avisa_cliente: Boolean(roja_avisa_cliente),
+      amarilla_avisa_cliente: Boolean(amarilla_avisa_cliente),
+      amarilla_avisa_coordinador: Boolean(amarilla_avisa_coordinador),
+      updated_at: new Date().toISOString(),
+    })
+  );
   if (error) return responderError(res, error);
   res.json({ ok: true });
 });
@@ -819,14 +827,15 @@ panelConfiguracionRouter.patch('/alertas-ia', async (req, res) => {
 //     guardada cada interruptor; la tabla solo guarda lo que la Prestadora cambió. Mismo patrón
 //     que /notificaciones. ---
 panelConfiguracionRouter.get('/visibilidad-app', async (req, res) => {
-  // Queda con la llave maestra y el filtro de la Prestadora: en `configuracion_visibilidad_app`
-  // la única política del Panel que alcanza al administrador, `admin_gestiona_visibilidad_app`,
-  // exige rol admin_prestadora, y no hay ninguna para superadmin; con su credencial no vería lo
-  // guardado y la pantalla le mostraría el catálogo de fábrica. Se decide aparte.
-  const { data, error } = await supabase
-    .from('configuracion_visibilidad_app')
-    .select('clave, visible')
-    .eq('prestadora_id', req.usuarioPanel.prestadoraId);
+  // Con el trabajo de la Prestadora y no con la credencial de quien pide: en
+  // `configuracion_visibilidad_app` la única política del Panel que alcanza al administrador,
+  // `admin_gestiona_visibilidad_app`, exige rol admin_prestadora, y no hay ninguna para superadmin;
+  // con su credencial no vería lo guardado y la pantalla le mostraría el catálogo de fábrica.
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+  if (!prestadoraId) return responderError(res, new ErrorConMotivo('no_encontrado', 'el pedido no tiene Prestadora'));
+  const { data, error } = await enLaPrestadora(prestadoraId, 'qué muestran las aplicaciones', (dbDelTrabajo) =>
+    dbDelTrabajo.from('configuracion_visibilidad_app').select('clave, visible').eq('prestadora_id', prestadoraId)
+  );
   if (error) return responderError(res, error);
   res.json({ visibilidad: mezclarVisibilidadConCatalogo(data) });
 });
@@ -844,17 +853,21 @@ panelConfiguracionRouter.patch('/visibilidad-app/:clave', async (req, res) => {
     return res.status(400).json({ error: 'Falta decir si se muestra o no' });
   }
 
-  // Queda con la llave maestra y el filtro de la Prestadora: la política de escritura de
-  // `configuracion_visibilidad_app`, `admin_gestiona_visibilidad_app`, exige rol
-  // admin_prestadora, y superadmin, que llega a esta ruta, dejaría de poder guardar. Se decide aparte.
-  const { error } = await supabase.from('configuracion_visibilidad_app').upsert(
-    {
-      prestadora_id: req.usuarioPanel.prestadoraId,
-      clave: cosa.clave,
-      visible,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'prestadora_id,clave' }
+  // Con el trabajo de la Prestadora y no con la credencial de quien pide: la política de escritura
+  // de `configuracion_visibilidad_app`, `admin_gestiona_visibilidad_app`, exige rol
+  // admin_prestadora, y superadmin, que llega a esta ruta, dejaría de poder guardar.
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+  if (!prestadoraId) return responderError(res, new ErrorConMotivo('no_encontrado', 'el pedido no tiene Prestadora'));
+  const { error } = await enLaPrestadora(prestadoraId, 'qué muestran las aplicaciones', (dbDelTrabajo) =>
+    dbDelTrabajo.from('configuracion_visibilidad_app').upsert(
+      {
+        prestadora_id: prestadoraId,
+        clave: cosa.clave,
+        visible,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'prestadora_id,clave' }
+    )
   );
   if (error) return responderError(res, error);
   res.json({ ok: true });
@@ -1130,17 +1143,19 @@ panelConfiguracionRouter.put('/pago-asistentes', async (req, res) => {
 
   const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
   if (!prestadoraId) return;
-  // CON LA MAESTRA: la tabla tiene políticas para que la Administración escriba, pero a quien
-  // inicia sesión no se le dio permiso de escritura sobre ella, y con su credencial la base
-  // rechaza el guardado. La Prestadora es la que la base acaba de dejar ver.
-  const { error } = await supabase.from('configuracion_pago_asistentes').upsert(
-    {
-      prestadora_id: prestadoraId,
-      regla: corridos,
-      frecuencia_pago: corridosDeLaFrecuencia,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'prestadora_id' }
+  // Con el trabajo de la Prestadora: la tabla tiene políticas para que la Administración escriba,
+  // pero a quien inicia sesión no se le dio permiso de escritura sobre ella, y con su credencial
+  // la base rechaza el guardado. La Prestadora es la que la base acaba de dejar ver.
+  const { error } = await enLaPrestadora(prestadoraId, 'pago a los Asistentes', (dbDelTrabajo) =>
+    dbDelTrabajo.from('configuracion_pago_asistentes').upsert(
+      {
+        prestadora_id: prestadoraId,
+        regla: corridos,
+        frecuencia_pago: corridosDeLaFrecuencia,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'prestadora_id' }
+    )
   );
   if (error) return responderError(res, error);
   res.json({ ok: true });
@@ -1247,12 +1262,14 @@ panelConfiguracionRouter.put(
 
     const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
     if (!prestadoraId) return;
-    // CON LA MAESTRA: la función que guarda el secreto en la caja fuerte no se le dio a quien
-    // inicia sesión. La Prestadora es la que la base acaba de dejar ver.
-    const { error } = await supabase.rpc('guardar_secreto_del_aviso_de_cobranza', {
-      p_prestadora_id: prestadoraId,
-      p_secreto: secreto,
-    });
+    // Con el trabajo de la Prestadora: la función que guarda el secreto en la caja fuerte no se le
+    // dio a quien inicia sesión. La Prestadora es la que la base acaba de dejar ver.
+    const { error } = await enLaPrestadora(prestadoraId, 'secreto del aviso de cobranza', (dbDelTrabajo) =>
+      dbDelTrabajo.rpc('guardar_secreto_del_aviso_de_cobranza', {
+        p_prestadora_id: prestadoraId,
+        p_secreto: secreto,
+      })
+    );
     if (error) return responderError(res, error);
     res.json({ ok: true });
   }
@@ -1281,11 +1298,13 @@ panelConfiguracionRouter.put(
 
     const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
     if (!prestadoraId) return;
-    // CON LA MAESTRA, por lo mismo que el secreto de arriba.
-    const { error } = await supabase.rpc('guardar_secreto_del_aviso_de_facturacion', {
-      p_prestadora_id: prestadoraId,
-      p_secreto: secreto,
-    });
+    // Con el trabajo de la Prestadora, por lo mismo que el secreto de arriba.
+    const { error } = await enLaPrestadora(prestadoraId, 'secreto del aviso de facturación', (dbDelTrabajo) =>
+      dbDelTrabajo.rpc('guardar_secreto_del_aviso_de_facturacion', {
+        p_prestadora_id: prestadoraId,
+        p_secreto: secreto,
+      })
+    );
     if (error) return responderError(res, error);
     res.json({ ok: true });
   }
@@ -1318,13 +1337,17 @@ panelConfiguracionRouter.get('/software-externo', async (req, res) => {
     if (errorDelCatalogo) throw errorDelCatalogo;
 
     const prestadoraId = await prestadoraVisible(db);
-    // CON LA MAESTRA: a quien inicia sesión no se le dio ningún permiso sobre esta tabla, y con su
-    // credencial la base rechaza hasta la lectura. Se pide sólo lo de la Prestadora que la base
-    // acaba de dejar ver.
-    const { data: conexiones, error } = await supabase
-      .from('conexiones_con_software_externo')
-      .select('clase, software, credencial_secret_id')
-      .eq('prestadora_id', prestadoraId);
+    // Con el trabajo de la Prestadora: a quien inicia sesión no se le dio ningún permiso sobre esta
+    // tabla, y con su credencial la base rechaza hasta la lectura. Se pide sólo lo de la Prestadora
+    // que la base acaba de dejar ver; si no deja ver ninguna, no hay conexiones que mostrar.
+    const { data: conexiones, error } = prestadoraId
+      ? await enLaPrestadora(prestadoraId, 'conexiones con software externo', (dbDelTrabajo) =>
+        dbDelTrabajo
+          .from('conexiones_con_software_externo')
+          .select('clase, software, credencial_secret_id')
+          .eq('prestadora_id', prestadoraId)
+      )
+      : { data: [], error: null };
     if (error) throw error;
 
     res.json({
@@ -1383,16 +1406,21 @@ panelConfiguracionRouter.put(
 
       const credencial = String(req.body?.credencial ?? '').trim();
 
-      // CON LA MAESTRA, la lectura y el guardado: a quien inicia sesión no se le dio ningún
-      // permiso sobre las conexiones ni la función que las guarda. La Prestadora es la que la base
-      // deja ver con la credencial de quien pide.
+      // Con el trabajo de la Prestadora, la lectura y el guardado: a quien inicia sesión no se le
+      // dio ningún permiso sobre las conexiones ni la función que las guarda. La Prestadora es la
+      // que la base deja ver con la credencial de quien pide.
       const prestadoraId = await prestadoraVisible(db);
-      const { data: antes, error: errorDeLaLectura } = await supabase
-        .from('conexiones_con_software_externo')
-        .select('software, credencial_secret_id')
-        .eq('prestadora_id', prestadoraId)
-        .eq('clase', clase)
-        .maybeSingle();
+      if (!prestadoraId) {
+        return responderError(res, new ErrorConMotivo('no_encontrado', 'la base no deja ver la Prestadora de quien pide'));
+      }
+      const { data: antes, error: errorDeLaLectura } = await enLaPrestadora(prestadoraId, 'conexiones con software externo', (dbDelTrabajo) =>
+        dbDelTrabajo
+          .from('conexiones_con_software_externo')
+          .select('software, credencial_secret_id')
+          .eq('prestadora_id', prestadoraId)
+          .eq('clase', clase)
+          .maybeSingle()
+      );
       if (errorDeLaLectura) throw errorDeLaLectura;
 
       // Cambiar de software deja sin valor la credencial anterior, que es la llave de otra puerta:
@@ -1403,14 +1431,16 @@ panelConfiguracionRouter.put(
         return responderError(res, new ErrorConMotivo('credencial_requerida', 'conexión sin credencial'));
       }
 
-      const { error } = await supabase.rpc('guardar_conexion_con_software_externo', {
-        p_prestadora_id: prestadoraId,
-        p_clase: clase,
-        p_software: software,
-        // Vacío quiere decir «no se toca la que hay». Va como nulo para que la función de la base
-        // no tenga que adivinar si una cadena vacía es una credencial.
-        p_credencial: credencial || null,
-      });
+      const { error } = await enLaPrestadora(prestadoraId, 'conexiones con software externo', (dbDelTrabajo) =>
+        dbDelTrabajo.rpc('guardar_conexion_con_software_externo', {
+          p_prestadora_id: prestadoraId,
+          p_clase: clase,
+          p_software: software,
+          // Vacío quiere decir «no se toca la que hay». Va como nulo para que la función de la base
+          // no tenga que adivinar si una cadena vacía es una credencial.
+          p_credencial: credencial || null,
+        })
+      );
       if (error) throw error;
 
       // Qué se cambió, nunca con qué: en el registro no entra ninguna credencial.
@@ -1504,10 +1534,12 @@ panelConfiguracionRouter.patch('/whatsapp', soloAdminDePrestadora, async (req, r
     });
   if (error) return responderError(res, error);
 
-  // CON LA MAESTRA, las tres claves: las funciones que las guardan en la caja fuerte no se le
-  // dieron a quien inicia sesión. La Prestadora es la que la base acaba de dejar ver.
+  // Con el trabajo de la Prestadora, las tres claves: las funciones que las guardan en la caja
+  // fuerte no se le dieron a quien inicia sesión. La Prestadora es la que la base acaba de dejar ver.
+  const guardarEnLaCajaFuerte = (funcion, parametros) =>
+    enLaPrestadora(prestadoraId, 'claves de WhatsApp', (dbDelTrabajo) => dbDelTrabajo.rpc(funcion, parametros));
   if (token) {
-    const { error: errorToken } = await supabase.rpc('guardar_token_whatsapp', {
+    const { error: errorToken } = await guardarEnLaCajaFuerte('guardar_token_whatsapp', {
       p_prestadora_id: prestadoraId,
       p_token: token,
     });
@@ -1519,7 +1551,7 @@ panelConfiguracionRouter.patch('/whatsapp', soloAdminDePrestadora, async (req, r
   // saludo inicial, que ahora es de esta Prestadora y no uno solo para todo el producto. Los
   // dos van a la caja fuerte y no vuelven a mostrarse acá, igual que el token de acceso.
   if (app_secret) {
-    const { error: errorAppSecret } = await supabase.rpc('guardar_app_secret_whatsapp', {
+    const { error: errorAppSecret } = await guardarEnLaCajaFuerte('guardar_app_secret_whatsapp', {
       p_prestadora_id: prestadoraId,
       p_secreto: app_secret,
     });
@@ -1527,7 +1559,7 @@ panelConfiguracionRouter.patch('/whatsapp', soloAdminDePrestadora, async (req, r
   }
 
   if (verify_token) {
-    const { error: errorVerifyToken } = await supabase.rpc('guardar_verify_token_whatsapp', {
+    const { error: errorVerifyToken } = await guardarEnLaCajaFuerte('guardar_verify_token_whatsapp', {
       p_prestadora_id: prestadoraId,
       p_token: verify_token,
     });
@@ -1854,11 +1886,10 @@ panelConfiguracionRouter.patch('/documentos-tipo/plazo-aviso', async (req, res) 
   }
   const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
   if (!prestadoraId) return;
-  // CON LA MAESTRA: la fila de la Prestadora sólo la modifica superadmin por RLS.
-  const { error } = await supabase
-    .from('prestadoras')
-    .update({ dias_aviso_vencimiento_documentos: dias })
-    .eq('id', prestadoraId);
+  // Con el trabajo de la Prestadora: la fila de la Prestadora sólo la modifica superadmin por RLS.
+  const { error } = await enLaPrestadora(prestadoraId, 'configuración de la Prestadora', (dbDelTrabajo) =>
+    dbDelTrabajo.from('prestadoras').update({ dias_aviso_vencimiento_documentos: dias }).eq('id', prestadoraId)
+  );
   if (error) return responderError(res, error);
   res.json({ ok: true });
 });
@@ -1888,11 +1919,10 @@ panelConfiguracionRouter.patch('/modo-control-matricula', async (req, res) => {
   }
   const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
   if (!prestadoraId) return;
-  // CON LA MAESTRA: la fila de la Prestadora sólo la modifica superadmin por RLS.
-  const { error } = await supabase
-    .from('prestadoras')
-    .update({ modo_control_matricula: modo })
-    .eq('id', prestadoraId);
+  // Con el trabajo de la Prestadora: la fila de la Prestadora sólo la modifica superadmin por RLS.
+  const { error } = await enLaPrestadora(prestadoraId, 'configuración de la Prestadora', (dbDelTrabajo) =>
+    dbDelTrabajo.from('prestadoras').update({ modo_control_matricula: modo }).eq('id', prestadoraId)
+  );
   if (error) return responderError(res, error);
   res.json({ ok: true });
 });
@@ -2024,11 +2054,10 @@ panelConfiguracionRouter.patch('/guardias/horizonte-generacion', async (req, res
   }
   const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
   if (!prestadoraId) return;
-  // CON LA MAESTRA: la fila de la Prestadora sólo la modifica superadmin por RLS.
-  const { error } = await supabase
-    .from('prestadoras')
-    .update({ dias_generacion_series_guardia: dias })
-    .eq('id', prestadoraId);
+  // Con el trabajo de la Prestadora: la fila de la Prestadora sólo la modifica superadmin por RLS.
+  const { error } = await enLaPrestadora(prestadoraId, 'configuración de la Prestadora', (dbDelTrabajo) =>
+    dbDelTrabajo.from('prestadoras').update({ dias_generacion_series_guardia: dias }).eq('id', prestadoraId)
+  );
   if (error) return responderError(res, error);
   res.json({ ok: true });
 });
@@ -2136,18 +2165,21 @@ panelConfiguracionRouter.patch('/documentos-tipo/:id', async (req, res) => {
 // Los Coordinadores de una Prestadora, para las pantallas de Configuración que hacen elegir uno
 // de una lista. Sale del backend y no del navegador porque la tabla `usuarios` sólo deja que cada
 // persona lea su propia fila: pedida desde el Panel, la lista vuelve vacía y el desplegable
-// aparece sin nadie adentro. El backend entra con la llave maestra —decisión escrita en
-// `CLAUDE.md` §6— y acota a la Prestadora acá, en la única consulta que hace falta escribir.
-// Todo el router está reservado a Admin y Superadmin de la Organización activa (ver el
-// `use` de arriba), así que esta lista no llega a más gente de la que ya podía verla.
-// CON LA MAESTRA por eso mismo; la Prestadora que recibe es la que la base dejó ver a quien pide.
-function coordinadoresDeLaPrestadora(prestadoraId) {
-  return supabase
-    .from('usuarios')
-    .select('id, nombre')
-    .eq('prestadora_id', prestadoraId)
-    .eq('rol', 'coordinador')
-    .order('nombre');
+// aparece sin nadie adentro. El backend la pide con el trabajo de la Prestadora, que alcanza las
+// cuentas de esa Prestadora y ninguna otra. Todo el router está reservado a Admin y Superadmin de
+// la Organización activa (ver el `use` de arriba), así que esta lista no llega a más gente de la
+// que ya podía verla. La Prestadora que recibe es la que la base dejó ver a quien pide, y si no
+// dejó ver ninguna, no hay Coordinadores que listar.
+async function coordinadoresDeLaPrestadora(prestadoraId) {
+  if (!prestadoraId) return { data: [], error: null };
+  return enLaPrestadora(prestadoraId, 'Coordinadores de la Prestadora', (dbDelTrabajo) =>
+    dbDelTrabajo
+      .from('usuarios')
+      .select('id, nombre')
+      .eq('prestadora_id', prestadoraId)
+      .eq('rol', 'coordinador')
+      .order('nombre')
+  );
 }
 
 panelConfiguracionRouter.get('/permisos', async (req, res) => {
@@ -2249,11 +2281,10 @@ panelConfiguracionRouter.patch('/politica-verificacion', async (req, res) => {
   }
   const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
   if (!prestadoraId) return;
-  // CON LA MAESTRA: la fila de la Prestadora sólo la modifica superadmin por RLS.
-  const { error } = await supabase
-    .from('prestadoras')
-    .update({ politica_verificacion_alta_manual: politica })
-    .eq('id', prestadoraId);
+  // Con el trabajo de la Prestadora: la fila de la Prestadora sólo la modifica superadmin por RLS.
+  const { error } = await enLaPrestadora(prestadoraId, 'configuración de la Prestadora', (dbDelTrabajo) =>
+    dbDelTrabajo.from('prestadoras').update({ politica_verificacion_alta_manual: politica }).eq('id', prestadoraId)
+  );
   if (error) return responderError(res, error);
   res.json({ ok: true });
 });
@@ -2280,11 +2311,10 @@ panelConfiguracionRouter.patch('/cierre-por-inactividad', async (req, res) => {
   }
   const prestadoraId = await prestadoraVisibleOContestar(clienteDelPedido(req), res);
   if (!prestadoraId) return;
-  // CON LA MAESTRA: la fila de la Prestadora sólo la modifica superadmin por RLS.
-  const { error } = await supabase
-    .from('prestadoras')
-    .update({ cierre_por_inactividad_activo: activo, cierre_por_inactividad_minutos: minutos })
-    .eq('id', prestadoraId);
+  // Con el trabajo de la Prestadora: la fila de la Prestadora sólo la modifica superadmin por RLS.
+  const { error } = await enLaPrestadora(prestadoraId, 'configuración de la Prestadora', (dbDelTrabajo) =>
+    dbDelTrabajo.from('prestadoras').update({ cierre_por_inactividad_activo: activo, cierre_por_inactividad_minutos: minutos }).eq('id', prestadoraId)
+  );
   if (error) return responderError(res, error);
   // Cambia cuánto queda abierta una sesión sin nadie delante: es una modificación crítica.
   await registrarActividad(req.usuarioPanel, ACCION_MODIFICACION_CRITICA, {
@@ -2329,11 +2359,11 @@ panelConfiguracionRouter.get('/escalada-coordinador', async (req, res) => {
   // que el formulario muestra es lo que la base va a usar de verdad, y no una copia.
   let escalada = data;
   if (!escalada) {
-    // CON LA MAESTRA: la función que siembra la configuración no se le dio a quien inicia
-    // sesión. La Prestadora es la que la base acaba de dejar ver.
-    const { error: errorSiembra } = await supabase.rpc('sembrar_configuracion_prestadora', {
-      p_prestadora_id: prestadoraId,
-    });
+    // Con el trabajo de la Prestadora: la función que siembra la configuración no se le dio a
+    // quien inicia sesión. La Prestadora es la que la base acaba de dejar ver.
+    const { error: errorSiembra } = await enLaPrestadora(prestadoraId, 'siembra de la configuración', (dbDelTrabajo) =>
+      dbDelTrabajo.rpc('sembrar_configuracion_prestadora', { p_prestadora_id: prestadoraId })
+    );
     if (errorSiembra) return responderError(res, errorSiembra);
     const { data: recien, error: errorRelectura } = await db
       .from('configuracion_escalada_coordinador')

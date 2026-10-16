@@ -121,7 +121,6 @@
                                  "backend/src/routes/appClientesMedicacion.js",
                                  "backend/src/routes/avisoDeCobranzaExterna.js",
                                  "backend/src/routes/avisoDeFacturacionExterna.js",
-                                 "backend/src/routes/configuracionPublica.js",
                                  "backend/src/routes/llaveDelDispositivo.js",
                                  "backend/src/routes/panelAuditoria.js",
                                  "backend/src/routes/panelAusencias.js",

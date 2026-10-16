@@ -100,6 +100,16 @@ function conElTrabajoDeLaPrestadora(llamada) {
 }
 
 describe('las cuentas de coordinación del Panel', () => {
+  it('la lista se lee con la credencial de quien pide y sin las cuentas del soporte técnico', async () => {
+    const { estado } = await pedir('GET', '');
+    assert.equal(estado, 200);
+    const lista = llamadas.find((l) => l.clave === 'GET /rest/v1/usuarios' && l.url.searchParams.has('order'));
+    assert.ok(lista, 'no se leyó la lista');
+    assert.equal(leerCredencial(lista.credencial ?? '')?.sub, QUIEN_LLAMA, 'la lista fue con otra credencial');
+    assert.equal(lista.url.searchParams.get('prestadora_id'), `eq.${PRESTADORA}`);
+    assert.equal(lista.url.searchParams.get('rol'), 'in.(admin_prestadora,coordinador)');
+  });
+
   it('una cuenta se corrige con el trabajo de la Prestadora, y sólo si es de coordinación', async () => {
     const { estado } = await pedir('PATCH', `/${CUENTA}`, { nombre: 'Nombre inventado' });
     assert.equal(estado, 200);

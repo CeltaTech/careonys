@@ -13,9 +13,7 @@
  *
  * La base es de mentira y contesta por HTTP como la de verdad: con la credencial del trabajo
  * contesta las cuentas y los Legajos de la Prestadora que lleva adentro, y con la de quien pide,
- * sólo su propia cuenta. El portero de permisos todavía entra con la llave maestra
- * (`utils/permisos.js` sigue en la lista de pendientes), así que se le da una de mentira: con ella
- * la base sólo contesta esa pregunta.
+ * sólo su propia cuenta.
  *
  * Con el sistema roto —la búsqueda con otra credencial, con la de otra Prestadora, o sin los dos
  * filtros— las pruebas de la credencial y de la lista dan al revés.
@@ -70,7 +68,7 @@ function contestar(req, url) {
   const delTrabajo = credencial?.role === 'trabajo_sin_persona';
 
   if (ruta === '/auth/v1/user') return { id: USUARIO, aud: 'authenticated' };
-  if (ruta === '/rest/v1/rpc/tiene_permiso_de') return true;
+  if (ruta === '/rest/v1/rpc/tiene_permiso_la_sesion') return true;
 
   if (ruta === '/rest/v1/usuarios') {
     // Con la credencial de quien pide, la base le contesta sólo su propia cuenta: es lo que lee el
@@ -108,7 +106,6 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 prepararCredencialDePrueba();
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma

@@ -118,7 +118,7 @@ beforeEach(() => {
   respuestas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: rolDelUsuario, prestadora_id: PRESTADORA }]);
-  respuestas.set('POST /rest/v1/rpc/tiene_permiso_de', () => permisoOtorgado);
+  respuestas.set('POST /rest/v1/rpc/tiene_permiso_la_sesion', () => permisoOtorgado);
 });
 
 // ---------------------------------------------------------------------------------------

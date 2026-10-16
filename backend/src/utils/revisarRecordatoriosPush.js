@@ -1,4 +1,5 @@
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora, supabase } from '../db/connection.js';
+import { prestadorasCertificadas } from './prestadorasDeLaIntermediacion.js';
 import { enviarPushAsistente } from './push.js';
 import { avisarPorWhatsapp } from './whatsapp.js';
 import { configuracionEvento } from './email.js';
@@ -60,34 +61,40 @@ export async function respaldoWhatsappSiFalla({ prestadoraId, asistenteId, envia
   }
 }
 
-// Se recorre de a una Prestadora por vez, y ninguna consulta mezcla dos: el backend entra con la
-// llave de servicio, que se saltea la protección por fila, así que lo único que mantiene cerrado
-// cada cajón es que cada consulta diga para cuál trabaja. Con cuánta anticipación se avisa lo
-// elige cada Prestadora, y ese número viene en la misma fila que trae la lista.
+// Se recorre de a una Prestadora por vez, y cada una con la credencial del trabajo de esa
+// Prestadora, que la base acota a ella. Con cuánta anticipación se avisa lo elige cada Prestadora.
 export async function revisarRecordatoriosPush() {
-  const { data: prestadoras, error } = await supabase
-    .from('prestadoras')
-    .select('id, minutos_aviso_previo_guardia')
-    .eq('estado', 'certificada');
-
-  if (error) {
-    console.error('Error consultando prestadoras para los avisos al Asistente:', error.message);
-    return;
-  }
-
   const ahora = new Date();
-
-  for (const prestadora of prestadoras ?? []) {
-    const prestadoraId = prestadora.id;
-    const minutosAntes = prestadora.minutos_aviso_previo_guardia ?? MINUTOS_ANTES_RECORDATORIO;
-    await revisarGuardiasAsignadas(prestadoraId);
-    await revisarMensajesCoordinador(prestadoraId);
-    await revisarRecordatoriosGuardiaProxima(prestadoraId, minutosAntes, ahora);
+  for (const prestadoraId of await prestadorasCertificadas()) {
+    try {
+      await revisarLosRecordatoriosDeUnaPrestadora(prestadoraId, ahora);
+    } catch (error) {
+      console.error(`Error revisando los avisos al Asistente (prestadora ${prestadoraId}):`, error.message);
+    }
   }
 }
 
-async function revisarGuardiasAsignadas(prestadoraId) {
-  const { data: guardias, error } = await supabase
+/** Lo de una sola Prestadora, con la credencial del trabajo de esa Prestadora. */
+export function revisarLosRecordatoriosDeUnaPrestadora(prestadoraId, ahora) {
+  return enLaPrestadora(prestadoraId, 'revisar los avisos al Asistente', async (db) => {
+    const { data: prestadora, error } = await db
+      .from('prestadoras')
+      .select('minutos_aviso_previo_guardia')
+      .eq('id', prestadoraId)
+      .maybeSingle();
+    if (error) {
+      console.error(`Error consultando la anticipación de los avisos (prestadora ${prestadoraId}):`, error.message);
+      return;
+    }
+    const minutosAntes = prestadora?.minutos_aviso_previo_guardia ?? MINUTOS_ANTES_RECORDATORIO;
+    await revisarGuardiasAsignadas(db, prestadoraId);
+    await revisarMensajesCoordinador(db, prestadoraId);
+    await revisarRecordatoriosGuardiaProxima(db, prestadoraId, minutosAntes, ahora);
+  });
+}
+
+async function revisarGuardiasAsignadas(db, prestadoraId) {
+  const { data: guardias, error } = await db
     .from('guardias')
     .select('id, asistente_id, fecha, hora_inicio')
     .eq('prestadora_id', prestadoraId)
@@ -101,7 +108,7 @@ async function revisarGuardiasAsignadas(prestadoraId) {
   if (!guardias?.length) return;
 
   // Una sola vez por Prestadora: todos los mensajes de esta vuelta los lee la misma gente.
-  const idioma = await idiomaDeLaPrestadora(supabase, prestadoraId);
+  const idioma = await idiomaDeLaPrestadora(db, prestadoraId);
 
   for (const guardia of guardias) {
     const { titulo, cuerpo } = mensajeDelSistema('guardia_asignada', idioma, {
@@ -116,7 +123,7 @@ async function revisarGuardiasAsignadas(prestadoraId) {
     });
     await respaldoWhatsappSiFalla({ prestadoraId, asistenteId: guardia.asistente_id, enviadoPorPush, titulo, cuerpo });
 
-    await supabase
+    await db
       .from('guardias')
       .update({ push_asignacion_enviado_at: new Date().toISOString() })
       .eq('prestadora_id', prestadoraId)
@@ -124,8 +131,8 @@ async function revisarGuardiasAsignadas(prestadoraId) {
   }
 }
 
-async function revisarMensajesCoordinador(prestadoraId) {
-  const { data: mensajes, error } = await supabase
+async function revisarMensajesCoordinador(db, prestadoraId) {
+  const { data: mensajes, error } = await db
     .from('mensajes_asistente')
     .select('id, asistente_id, mensaje')
     .eq('prestadora_id', prestadoraId)
@@ -137,7 +144,7 @@ async function revisarMensajesCoordinador(prestadoraId) {
   }
   if (!mensajes?.length) return;
 
-  const idioma = await idiomaDeLaPrestadora(supabase, prestadoraId);
+  const idioma = await idiomaDeLaPrestadora(db, prestadoraId);
 
   for (const mensaje of mensajes) {
     const { titulo } = mensajeDelSistema('mensaje_del_coordinador', idioma);
@@ -149,7 +156,7 @@ async function revisarMensajesCoordinador(prestadoraId) {
     });
     await respaldoWhatsappSiFalla({ prestadoraId, asistenteId: mensaje.asistente_id, enviadoPorPush, titulo, cuerpo: mensaje.mensaje });
 
-    await supabase
+    await db
       .from('mensajes_asistente')
       .update({ push_enviado_at: new Date().toISOString() })
       .eq('prestadora_id', prestadoraId)
@@ -157,8 +164,8 @@ async function revisarMensajesCoordinador(prestadoraId) {
   }
 }
 
-async function revisarRecordatoriosGuardiaProxima(prestadoraId, minutosAntes, ahora) {
-  const { data: guardias, error } = await supabase
+async function revisarRecordatoriosGuardiaProxima(db, prestadoraId, minutosAntes, ahora) {
+  const { data: guardias, error } = await db
     .from('guardias')
     .select('id, asistente_id, fecha, hora_inicio')
     .eq('prestadora_id', prestadoraId)
@@ -174,7 +181,7 @@ async function revisarRecordatoriosGuardiaProxima(prestadoraId, minutosAntes, ah
   if (!guardias?.length) return;
 
   const limite = new Date(ahora.getTime() + minutosAntes * 60_000);
-  const idioma = await idiomaDeLaPrestadora(supabase, prestadoraId);
+  const idioma = await idiomaDeLaPrestadora(db, prestadoraId);
 
   for (const guardia of guardias) {
     const inicio = new Date(`${guardia.fecha}T${guardia.hora_inicio}`);
@@ -192,7 +199,7 @@ async function revisarRecordatoriosGuardiaProxima(prestadoraId, minutosAntes, ah
     });
     await respaldoWhatsappSiFalla({ prestadoraId, asistenteId: guardia.asistente_id, enviadoPorPush, titulo, cuerpo });
 
-    await supabase
+    await db
       .from('guardias')
       .update({ push_recordatorio_enviado_at: new Date().toISOString() })
       .eq('prestadora_id', prestadoraId)

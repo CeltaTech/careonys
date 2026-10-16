@@ -1,6 +1,6 @@
 import dns from 'dns/promises';
 import nodemailer from 'nodemailer';
-import { enLaPrestadora, supabase } from '../db/connection.js';
+import { enLaPrestadora, sinPrestadora } from '../db/connection.js';
 import { marcaDeLaPrestadora } from './marcaPrestadora.js';
 
 /** Por qué servidor sale el correo cuando se usa el camino SMTP. Sale del entorno: escrito en el
@@ -245,7 +245,7 @@ async function remitenteVisible(direccion, prestadoraId) {
 // destinatario, ni el asunto, ni una línea del contenido (`celtatech/CLAUDE.md` §6).
 //
 // Con Prestadora se anota con la credencial del trabajo de ella. El correo que sale sin
-// Prestadora se anota sin ninguna, y ésa todavía no tiene credencial que la alcance.
+// Prestadora se anota con la del trabajo que no tiene ninguna, que sólo puede agregar esa fila.
 //
 // Y no anotar nunca rompe un envío. Un correo que salió y no se pudo contar sigue siendo un
 // correo que salió; hacer fallar el mensaje porque falló su registro sería cambiar un número por
@@ -258,7 +258,7 @@ async function despachar({ transporter, prestadoraId, mensaje }) {
   } finally {
     try {
       const anotar = (db) => db.from('envios_de_correo').insert({ prestadora_id: prestadoraId ?? null, aceptado });
-      await (prestadoraId ? enLaPrestadora(prestadoraId, 'contar un correo enviado', anotar) : anotar(supabase));
+      await (prestadoraId ? enLaPrestadora(prestadoraId, 'contar un correo enviado', anotar) : anotar(sinPrestadora('contar un correo enviado')));
     } catch (error) {
       console.error('Salió un correo que no se pudo contar:', error.message);
     }

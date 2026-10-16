@@ -126,7 +126,6 @@
                                  "backend/src/utils/comprobanteDeLaFactura.js",
                                  "backend/src/utils/consentimientoMedicacion.js",
                                  "backend/src/utils/consentimientoPagador.js",
-                                 "backend/src/utils/consentimientoUbicacion.js",
                                  "backend/src/utils/contactoDelAsistente.js",
                                  "backend/src/utils/contactosIntermediacion.js",
                                  "backend/src/utils/conversacionIntermediacion.js",
@@ -158,7 +157,6 @@
                                  "backend/src/utils/tareasDelTipo.js",
                                  "backend/src/utils/telefonoAlActivar.js",
                                  "backend/src/utils/vencimientos.js",
-                                 "backend/src/utils/vitalesReferencia.js",
                                  "backend/src/utils/whatsapp.js"
                              ]
 }

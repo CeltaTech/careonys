@@ -1,4 +1,4 @@
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 
 // Mientras no exista una autorización de monitoreo vigente y firmada para el Paciente, la
 // sección de signos vitales no se muestra en absoluto en el Reporte Diario (decisión del
@@ -6,8 +6,25 @@ import { supabase } from '../db/connection.js';
 // al de la Prestadora cuando existe override; nunca hay un valor fijo en código (regla 1 y
 // 10 de CLAUDE.md). Usado tanto por la PWA de Asistentes (para mostrar el formulario) como
 // por la de Clientes (para el indicador de color al leer un reporte ya cargado).
+//
+// CON QUÉ CREDENCIAL. Con la del trabajo de la Prestadora del Paciente, que lee sólo las
+// autorizaciones y los rangos de la suya. No con la de quien pide: los rangos generales de la
+// Prestadora no son de ningún Paciente, y ni el Asistente ni el Cliente los alcanzan.
+//
+// Si no se pudo saber, la sección no se muestra: sin autorización comprobada no hay signos vitales.
 export async function resolverVitalesHabilitados(pacienteId, prestadoraId) {
-  const { data: autorizacion } = await supabase
+  try {
+    return await enLaPrestadora(prestadoraId, 'resolver los signos vitales habilitados', (db) =>
+      resolverConLaConexion(db, pacienteId, prestadoraId)
+    );
+  } catch (falla) {
+    console.error('Error resolviendo los signos vitales habilitados:', falla.message);
+    return { habilitados: false, rangos: {} };
+  }
+}
+
+async function resolverConLaConexion(db, pacienteId, prestadoraId) {
+  const { data: autorizacion } = await db
     .from('autorizaciones_monitoreo_paciente')
     .select('id')
     .eq('prestadora_id', prestadoraId)
@@ -19,7 +36,7 @@ export async function resolverVitalesHabilitados(pacienteId, prestadoraId) {
     return { habilitados: false, rangos: {} };
   }
 
-  const { data: filas } = await supabase
+  const { data: filas } = await db
     .from('rangos_referencia_vitales')
     .select('signo, valor_min, valor_max, unidad, paciente_id')
     .eq('prestadora_id', prestadoraId)

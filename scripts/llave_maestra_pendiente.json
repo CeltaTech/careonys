@@ -116,7 +116,6 @@
                                  "backend/src/middleware/resolverPrestadoraPublica.js",
                                  "backend/src/routes/appAsistentes.js",
                                  "backend/src/routes/appAsistentesMatricula.js",
-                                 "backend/src/routes/appAsistentesMedicacion.js",
                                  "backend/src/routes/appClientes.js",
                                  "backend/src/routes/appClientesMedicacion.js",
                                  "backend/src/routes/avisoDeCobranzaExterna.js",

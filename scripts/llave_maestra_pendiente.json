@@ -100,7 +100,6 @@
                                  "backend/src/routes/panelIntermediacion.js",
                                  "backend/src/routes/panelLiquidaciones.js",
                                  "backend/src/routes/panelMedicacion.js",
-                                 "backend/src/routes/panelUsuarios.js",
                                  "backend/src/routes/panelVerificacionIdentidad.js",
                                  "backend/src/utils/avisoAutomaticoCese.js",
                                  "backend/src/utils/avisoCambioDeAsistente.js",

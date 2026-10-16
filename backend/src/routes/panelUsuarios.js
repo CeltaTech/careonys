@@ -5,7 +5,7 @@ import {
   alcanceDelPanel,
   laCuentaDelPanelEstaAlAlcance,
 } from '../middleware/alcancePrestadora.js';
-import { clienteDelPedido, enLaPrestadora, supabase } from '../db/connection.js';
+import { clienteDelPedido, enLaPrestadora } from '../db/connection.js';
 import { crearCuentaConPerfil, borrarCuenta } from '../utils/cuentasPanel.js';
 import { guardarLugaresDe } from '../utils/lugaresDeCadaPersona.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
@@ -32,36 +32,35 @@ const soloAdministracion = exigirAdministracion('Solo Admin o Superadmin puede g
 // Los roles que se crean, se corrigen y se dan de baja desde acá.
 const ROLES_GESTIONABLES = ['coordinador'];
 
-// CON LA CREDENCIAL DE QUIEN PIDE va sólo el alcance de cada cuenta: en `usuarios` la base le deja
-// a cada persona ver su propia fila y nada más, y desde acá el Administrador trabaja sobre las de
-// los demás. Las cuentas de coordinación se corrigen y se dan de baja con el trabajo de la
-// Prestadora activa, que alcanza las cuentas de esa Prestadora y ninguna otra. La lista todavía va
-// con la llave maestra, porque al soporte técnico le muestra además las cuentas de su equipo, que
-// no cuelgan de ninguna Prestadora.
+// La lista y el alcance de cada cuenta van CON LA CREDENCIAL DE QUIEN PIDE: la base le deja a la
+// administración de la Prestadora activa ver las cuentas del Panel de esa Prestadora, y las del
+// soporte técnico de CeltaTech no se las muestra nunca. Las cuentas de coordinación se corrigen y
+// se dan de baja con el trabajo de la Prestadora activa, que alcanza las cuentas de esa Prestadora
+// y ninguna otra.
+
+// Las cuentas que muestra la lista. Las del soporte técnico son de CeltaTech y no aparecen.
+const ROLES_DE_LA_LISTA = ROLES_PANEL.filter((rol) => rol !== 'superadmin');
 
 panelUsuariosRouter.get('/', requiereRolPanel, soloAdministracion, async (req, res) => {
-  // Llave maestra: `usuarios` sólo deja ver la propia fila (ver arriba).
-  let query = supabase
+  // Sin Organización activa no hay cuentas de ninguna Prestadora que mostrar.
+  if (!req.usuarioPanel.prestadoraId) return res.json({ usuarios: [] });
+
+  const { data, error } = await clienteDelPedido(req)
     .from('usuarios')
     .select('id, rol, nombre, telefono, created_at')
-    .in('rol', ROLES_PANEL)
+    .in('rol', ROLES_DE_LA_LISTA)
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .order('created_at', { ascending: false });
-
-  query = acotarAUsuariosDelPanel(query, req.usuarioPanel);
-
-  const { data, error } = await query;
 
   if (error) return responderError(res, error);
 
   // Hasta dónde llega cada cuenta, en cuántos lugares. La lista muestra el número y no los
   // nombres: doscientas localidades no entran en una celda, y lo que se necesita de un vistazo es
   // si el alcance está puesto o quedó vacío. Los nombres se ven al abrir la cuenta.
-  // El alcance se lee con la credencial de quien pide, y la base devuelve sólo el de su
-  // Organización: un identificador de cuenta no dice de qué Prestadora es. Sin Organización activa
-  // no se pregunta nada, y está bien: ahí las únicas cuentas a la vista son las del soporte técnico
-  // de CeltaTech, que no cuelgan de ninguna Prestadora y por eso no tienen ningún lugar asignado.
+  // La base devuelve sólo el alcance de su Organización: un identificador de cuenta no dice de qué
+  // Prestadora es.
   const cuentas = data ?? [];
-  const { data: cruces, error: errorLugares } = cuentas.length && req.usuarioPanel.prestadoraId
+  const { data: cruces, error: errorLugares } = cuentas.length
     ? await clienteDelPedido(req)
       .from('usuario_lugares')
       .select('usuario_id')

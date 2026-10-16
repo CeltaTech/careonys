@@ -105,14 +105,15 @@ export function escribirMiCuenta(cuenta, cambios) {
 // ofrece, y un número que no viaja es un número que no se filtra.
 panelCuentaSeguraRouter.get('/', requiereRolPanel, async (req, res) => {
   try {
-    const cuenta = await miCuenta(clienteDelPedido(req), req.usuarioPanel);
+    const db = clienteDelPedido(req);
+    const cuenta = await miCuenta(db, req.usuarioPanel);
     if (!cuenta) throw new ErrorConMotivo('no_encontrado');
 
     res.json({
       telefonoCargado: Boolean(cuenta.telefono),
       telefonoVerificado: Boolean(cuenta.telefono_verificado_en),
       viaDeTelefono: await hayViaDeTelefono(cuenta.prestadora_id),
-      equipos: (await equiposDe(cuenta.id, cuenta.prestadora_id)).map((equipo) => ({
+      equipos: (await equiposDe(cuenta.id, cuenta.prestadora_id, db)).map((equipo) => ({
         id: equipo.id,
         desde: equipo.primera_entrada_en,
         ultima: equipo.ultima_entrada_en,
@@ -307,10 +308,11 @@ panelCuentaSeguraRouter.post('/clave', requiereRolPanel, noParaLaAdministracion,
 panelCuentaSeguraRouter.post('/equipo/reconocer', requiereRolPanel, async (req, res) => {
   try {
     const { marca } = req.body ?? {};
-    const cuenta = await miCuenta(clienteDelPedido(req), req.usuarioPanel);
+    const db = clienteDelPedido(req);
+    const cuenta = await miCuenta(db, req.usuarioPanel);
     if (!cuenta) throw new ErrorConMotivo('no_encontrado');
 
-    if (await equipoConocido({ usuarioId: cuenta.id, prestadoraId: cuenta.prestadora_id, marca })) {
+    if (await equipoConocido({ usuarioId: cuenta.id, prestadoraId: cuenta.prestadora_id, marca, db })) {
       await anotarEquipo({ usuario: cuenta, marca });
       return res.json({ equipoNuevo: false, requiereCodigo: false, marca });
     }
@@ -383,7 +385,8 @@ panelCuentaSeguraRouter.post('/cerrar-sesiones', requiereRolPanel, async (req, r
     const { claveActual } = req.body ?? {};
     if (!claveActual) throw new ErrorConMotivo('faltan_datos');
 
-    const cuenta = await miCuenta(clienteDelPedido(req), req.usuarioPanel);
+    const db = clienteDelPedido(req);
+    const cuenta = await miCuenta(db, req.usuarioPanel);
     if (!cuenta) throw new ErrorConMotivo('no_encontrado');
 
     await exigirLaClaveActual({ email: cuenta.email, prestadoraId: cuenta.prestadora_id, clave: claveActual });
@@ -398,7 +401,7 @@ panelCuentaSeguraRouter.post('/cerrar-sesiones', requiereRolPanel, async (req, r
 
     // Con la sesión que vino en el pedido, ya comprobada por `requiereRolPanel`.
     const token = String(req.headers.authorization || '').replace(/^Bearer /, '');
-    await cerrarSesionEnTodosLosEquipos(cuenta.id, cuenta.prestadora_id, token);
+    await cerrarSesionEnTodosLosEquipos(cuenta.id, cuenta.prestadora_id, token, db);
 
     res.json({ ok: true });
   } catch (err) {

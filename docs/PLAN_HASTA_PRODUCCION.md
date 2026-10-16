@@ -1035,6 +1035,16 @@ sale ningún dato; es un dato de una Organización viajando adentro del pedido d
 
 ---
 
+## La asignación de turnos
+
+**46.** Los turnos habituales —los que se repiten, como todos los lunes y miércoles de 8 a 14— se
+asignan como los de un solo día: el Asistente los acepta o los rechaza, pero **una sola vez y
+enteros**, no día por día. Lo mismo el reemplazo durante una ausencia: el que cubre acepta una
+sola vez todos los días que cubre. Hoy los dos quedan asignados en el momento, sin preguntarle
+(`backend/src/utils/cubrirGuardia.js:71`).
+
+---
+
 ## El tablero de Situación operativa
 
 **Lo decidió el Desarrollador renglón por renglón.** Cada renglón es una tarjeta, una lista o un
@@ -1080,7 +1090,7 @@ en la sección «La entrada y el restablecimiento de la contraseña».
 - **Prestaciones**, en una torta que las cuenta, y **Ventas**, en otra que las pondera por lo que
   se vende de cada una. Ventas la ve sólo la administración, igual que los pagos a los Asistentes.
 
-**46.** Las tres etapas comerciales:
+**47.** Las tres etapas comerciales:
 
 - **Contacto:** alguien de afuera de los clientes que mostró interés en los servicios de la
   Prestadora, porque se comunicó o porque la Prestadora lo contactó.
@@ -1142,38 +1152,38 @@ trabajo:
 **Y el texto de la sugerencia de Asistentes es el mismo trabajo que el acto**, no uno de carteles:
 la pantalla dice que ordena por zona y el cálculo no la mira. Se arregla arreglando el cálculo.
 
-**47. Usted** — Los siete carteles que esperan su texto. Tres de ellos ya tienen el texto o el
+**48. Usted** — Los siete carteles que esperan su texto. Tres de ellos ya tienen el texto o el
 molde escrito en el `.docx` y lo único que falta es confirmarlo.
 
-**48. Usted** — Las dos preguntas que usted dejó escritas en el `.docx` y que siguen sin
+**49. Usted** — Las dos preguntas que usted dejó escritas en el `.docx` y que siguen sin
 contestar: qué es un selector, y si alguna pantalla dice «La Prestadora».
 
-**49. Usted** — El cartel que quedó parado porque no ubicó la situación. Va con la pantalla
+**50. Usted** — El cartel que quedó parado porque no ubicó la situación. Va con la pantalla
 delante.
 
-**50. Usted** — Los tres grupos que quedaron sin autorizar: los once textos que salen por ser una
+**51. Usted** — Los tres grupos que quedaron sin autorizar: los once textos que salen por ser una
 aclaración debajo de un casillero, los catorce que pasarían a formar parte de la etiqueta del
 casillero, y los nueve casilleros que están mal hechos y por eso necesitaban esa aclaración.
 
-**51. Usted** — Habilitar cambio de contraseña: qué carteles lleva se decide después de analizar el procedimiento
+**52. Usted** — Habilitar cambio de contraseña: qué carteles lleva se decide después de analizar el procedimiento
 y su lógica, no antes.
 
-**52. Usted** — El bloque del segundo factor en Configuración › Accesos, con dos frases que
+**53. Usted** — El bloque del segundo factor en Configuración › Accesos, con dos frases que
 nombran un rol que no existe. **Y detrás hay una decisión que no está en ninguna parte de esta
 lista:** la regla del producto dice que hay un solo Administrador por Prestadora y que las personas
 en las que él delega funciones propias **llevan otro nombre, que todavía no está decidido**. Sin
 ese nombre, esas dos frases no se pueden reescribir.
 
-**53. Usted** — Tres cosas que son texto visible y no se pueden decidir de mi lado: la
+**54. Usted** — Tres cosas que son texto visible y no se pueden decidir de mi lado: la
 contradicción del certificado, donde dos textos dicen cosas distintas del mismo código; las cuatro
 frases que le nombran al usuario el permiso de acceso, que la regla del producto dice que la
 Prestadora no ve ni sabe que existe; y la advertencia legal escrita adentro del
 código de la aplicación del Asistente, que según la regla tiene que salir del documento legal de ese
 país.
 
-**54.** Aplicar todo lo contestado.
+**55.** Aplicar todo lo contestado.
 
-**55.** Lo que no espera ninguna respuesta porque ya es regla escrita: sacar el tuteo y el voseo de
+**56.** Lo que no espera ninguna respuesta porque ya es regla escrita: sacar el tuteo y el voseo de
 todo el Panel y de las dos aplicaciones, sin excepción;
 quitar los textos que no se alcanzan desde ninguna pantalla; escribir la regla de que cuando un
 texto sale sale el cartel entero, donde vive la regla del casillero; y pasar a las traducciones el
@@ -1185,7 +1195,7 @@ idiomas.
 reenvíen la invitación»—, donde el glosario ya la prohíbe. Termina cuando buscar esa palabra en el
 código y en la base da cero.
 
-**56.** Relevar lo que todavía no está relevado y el propio relevamiento manda mirar: los textos al
+**57.** Relevar lo que todavía no está relevado y el propio relevamiento manda mirar: los textos al
 pie de los casilleros, los avisos de que algo se guardó, las ventanas de confirmar, los carteles de
 las dos aplicaciones y los de Habilitar cambio de contraseña. **Y todo el texto visible, contra
 las cuatro fuentes** que fija `..\..\CLAUDE.md` §8: términos sin aprobar, giros locales,
@@ -1193,7 +1203,7 @@ construcciones dubitativas como «Conviene…» —hoy está en los avisos de ac
 aplicaciones— e impersonalidades innecesarias. Cada cambio de redacción se le presenta para
 aprobar, uno por uno.
 
-**57.** Que el Panel nombre la modalidad sólo cuando la Prestadora tiene las dos habilitadas, y
+**58.** Que el Panel nombre la modalidad sólo cuando la Prestadora tiene las dos habilitadas, y
 con el nombre comercial que informa CeltaTech como dato. Hoy la nombra en tres lugares —el
 recuadro de Servicios por modalidad de Estado actual, el Resumen del mes y el motivo por el que un
 Asistente no puede tomar una guardia—, con «Prestación directa» y «Match» escritos en los textos
@@ -1217,43 +1227,43 @@ Los tres arreglos, para que estén escritos:
 2. **Faltan las listas.** Género ya es un catálogo con tres opciones. Nacionalidad y los cinco subgrupos de experiencia clínica no existen como lista, y la situación fiscal tiene una sola opción. **La pantalla donde se cargan ya está construida** —`panel/src/pages/configuracion/LasListasDeOpciones.jsx`—, así que lo que queda es crear y sembrar las que faltan.
 3. **Al incorporar un aspirante se pierden quince datos.** Lo que cargó en la postulación no llega entero al Legajo del Asistente.
 
-**58. Usted** — ¿Dónde vive el formulario público de postulación? No va en `careonys.com`, que le vende software a las Prestadoras: quien busca trabajo de cuidador se postula en la empresa que lo va a contratar. ¿En el sitio de cada Prestadora, con dirección propia?
+**59. Usted** — ¿Dónde vive el formulario público de postulación? No va en `careonys.com`, que le vende software a las Prestadoras: quien busca trabajo de cuidador se postula en la empresa que lo va a contratar. ¿En el sitio de cada Prestadora, con dirección propia?
 
-**59.** El formulario: la pantalla y la entrada pública del backend que recibe la postulación y entrega las listas de opciones. La base ya tiene dónde guardarla. Se dibuja desde la declaración, no a mano. Esperaba el paso anterior.
+**60.** El formulario: la pantalla y la entrada pública del backend que recibe la postulación y entrega las listas de opciones. La base ya tiene dónde guardarla. Se dibuja desde la declaración, no a mano. Esperaba el paso anterior.
 
-**60. Usted** — ¿Se le bloquea la asignación de guardias a quien no está inscripto en monotributo, o se avisa y decide la Prestadora? La regla del producto dice avisar, no bloquear, así que el PRD y la regla no coinciden. **Lo que se asigna es un turno de guardia**, y asignarlo supone el Servicio armado, más arriba en esta lista.
+**61. Usted** — ¿Se le bloquea la asignación de guardias a quien no está inscripto en monotributo, o se avisa y decide la Prestadora? La regla del producto dice avisar, no bloquear, así que el PRD y la regla no coinciden. **Lo que se asigna es un turno de guardia**, y asignarlo supone el Servicio armado, más arriba en esta lista.
 
-**61.** Construirlo según lo contestado.
+**62.** Construirlo según lo contestado.
 
-**62. Usted** — Comparar automáticamente la foto del documento con la foto de la cara es tratamiento de dato biométrico, y hacen falta dos decisiones suyas: ¿cuál es el documento legal del que sale la advertencia al Asistente, que hoy no existe y sin la cual no hay advertencia? ¿Y qué proveedor compara las dos caras? Guardar las dos fotos y mostrarlas juntas ya está hecho: hoy las compara una persona.
+**63. Usted** — Comparar automáticamente la foto del documento con la foto de la cara es tratamiento de dato biométrico, y hacen falta dos decisiones suyas: ¿cuál es el documento legal del que sale la advertencia al Asistente, que hoy no existe y sin la cual no hay advertencia? ¿Y qué proveedor compara las dos caras? Guardar las dos fotos y mostrarlas juntas ya está hecho: hoy las compara una persona.
 
-**63.** Construirlo según lo contestado.
+**64.** Construirlo según lo contestado.
 
-**64. Usted** — El programa de capacitación: qué contenido lleva, cuántas preguntas y qué nota se necesita para aprobar. Hoy «capacitación» es sólo el nombre de una etapa.
+**65. Usted** — El programa de capacitación: qué contenido lleva, cuántas preguntas y qué nota se necesita para aprobar. Hoy «capacitación» es sólo el nombre de una etapa.
 
-**65.** Construirlo.
+**66.** Construirlo.
 
 ---
 
 ## Las dos aplicaciones
 
-**66. Usted** — Compartir el Certificado de Aptitud: ¿hacia dónde y por qué medio? Hoy se puede ver, con su estado y su fecha. Compartirlo hacia afuera exige decidir a quién se le manda, por qué canal y qué ve quien lo recibe, porque no existe ninguna verificación pública del certificado: sin eso, lo compartido sería una imagen que no prueba nada.
+**67. Usted** — Compartir el Certificado de Aptitud: ¿hacia dónde y por qué medio? Hoy se puede ver, con su estado y su fecha. Compartirlo hacia afuera exige decidir a quién se le manda, por qué canal y qué ve quien lo recibe, porque no existe ninguna verificación pública del certificado: sin eso, lo compartido sería una imagen que no prueba nada.
 
-**67. Usted** — La alerta por salida del domicilio, dos decisiones que no puedo tomar yo. Hoy la cuenta se hace con una velocidad media única y distancia en línea recta (`backend/src/utils/llegadaEstimada.js:39-45`), se dispara recién cuando alguien marcó la salida, y mide llegada tarde, no que el Asistente siga en su casa.
+**68. Usted** — La alerta por salida del domicilio, dos decisiones que no puedo tomar yo. Hoy la cuenta se hace con una velocidad media única y distancia en línea recta (`backend/src/utils/llegadaEstimada.js:39-45`), se dispara recién cuando alguien marcó la salida, y mide llegada tarde, no que el Asistente siga en su casa.
 
 - **El tiempo de viaje real sale de un servicio de mapas ajeno.** Cuál se contrata, con qué cuenta y qué se le manda en cada consulta —las coordenadas de la casa de una persona salen del producto— es decisión suya, y la credencial la pone usted.
 - **Dónde vive el Asistente ya se guarda**, con su dirección escrita y sus coordenadas, y anotado como dato sensible que no sale hacia el Cliente. Las coordenadas quedan vacías mientras nadie ubique la dirección en un mapa, y completarlas depende del servicio de mapas del punto anterior. Esto **no es una decisión suya**: está tomada y construida.
 - **Y exige mirar el teléfono antes de que la guardia empiece.** Hoy el GPS se lee cuando la persona aprieta un botón. Leerlo sola, mientras todavía no empezó a trabajar, es seguir a alguien fuera de su horario: hay que decidir si se hace, con qué advertencia y con qué permiso.
 
-**68.** Con eso contestado, construirlo — incluida la lista de medios de transporte, que hoy es texto libre escrito en cada salida y por eso no hay contra qué traducirlo a una velocidad.
+**69.** Con eso contestado, construirlo — incluida la lista de medios de transporte, que hoy es texto libre escrito en cada salida y por eso no hay contra qué traducirlo a una velocidad.
 
-**69. Usted** — El botón de contacto de «Asistente Asignado»: ¿a quién llama? El PRD lo dejó abierto —«WhatsApp o chat interno» (`docs/PRD_04_05_App_Servicio.md:224`)— y las dos salidas tienen consecuencias. Darle al Cliente el teléfono del Asistente es entregar el dato personal de quien trabaja, y es exactamente lo que Match cobra por abrir: ahí el contacto va tapado hasta que alguien paga. La otra salida es que el botón lleve a la Prestadora, que es con quien el Cliente tiene el trato en prestación directa, usando el contacto que ella misma configura. Hay una tercera: el hilo interno, que hoy existe sólo para Match y con el tapado puesto.
+**70. Usted** — El botón de contacto de «Asistente Asignado»: ¿a quién llama? El PRD lo dejó abierto —«WhatsApp o chat interno» (`docs/PRD_04_05_App_Servicio.md:224`)— y las dos salidas tienen consecuencias. Darle al Cliente el teléfono del Asistente es entregar el dato personal de quien trabaja, y es exactamente lo que Match cobra por abrir: ahí el contacto va tapado hasta que alguien paga. La otra salida es que el botón lleve a la Prestadora, que es con quien el Cliente tiene el trato en prestación directa, usando el contacto que ella misma configura. Hay una tercera: el hilo interno, que hoy existe sólo para Match y con el tapado puesto.
 
 De las especialidades de esta pantalla no queda nada por hacer: el texto libre ya no existe en la base. Las Especialidades son un catálogo de cada tipo de Asistente, y lo que se muestra es el tipo, con sus Tareas de lo que corresponde y lo que no.
 
-**70. Usted** — El PRD promete exportar el reporte a PDF en la aplicación del Cliente, y más adelante dice que el Cliente no accede al informe. ¿Cuál de las dos vale?
+**71. Usted** — El PRD promete exportar el reporte a PDF en la aplicación del Cliente, y más adelante dice que el Cliente no accede al informe. ¿Cuál de las dos vale?
 
-**71. Usted** — La lista de emergencias de cada Prestadora. Decidido por el Desarrollador, textual: *«cada prestadora podra armar su lista de emergencias dentro de la configuracion propia. Desde Careonys podemos proponer algunas, por ejemplo "Emergencia Medica", etc y un plan de accion sugerido y hasta acciones preconfiguradas que se pueden accionar automaticamente o no ante determinada emergencia. todo ello configurable por la prestadora»*. Queda así:
+**72. Usted** — La lista de emergencias de cada Prestadora. Decidido por el Desarrollador, textual: *«cada prestadora podra armar su lista de emergencias dentro de la configuracion propia. Desde Careonys podemos proponer algunas, por ejemplo "Emergencia Medica", etc y un plan de accion sugerido y hasta acciones preconfiguradas que se pueden accionar automaticamente o no ante determinada emergencia. todo ello configurable por la prestadora»*. Queda así:
 
 - Cada Prestadora arma su lista de emergencias en su configuración: agrega, cambia y quita.
 - Careonys trae una lista de fábrica como propuesta, y cada emergencia de esa lista con un plan de acción sugerido.
@@ -1265,27 +1275,27 @@ Falta que usted conteste dos cosas:
 - **Qué emergencias y qué plan de acción trae la lista de fábrica.** Los textos los aprueba usted, uno por uno.
 - **Qué acciones se pueden preparar**: avisar al Cliente, llamar al servicio de emergencias médicas, mandar a otro Asistente, u otras.
 
-**72.** Construirlo según lo contestado. El tablero del Panel cuenta como emergencia sólo lo que avisó una persona con el botón.
+**73.** Construirlo según lo contestado. El tablero del Panel cuenta como emergencia sólo lo que avisó una persona con el botón.
 
-**73.** El Panel se instala también en el teléfono, sin dejar de ser lo que es. En la computadora sigue igual. En el teléfono se instala desde el navegador, recibe avisos aunque no esté abierto y abre primero lo urgente del día —quién no llegó, qué guardia quedó sin cubrir, a quién mandar de reemplazo—, sin perder el resto. Es el mismo programa, con la misma dirección, la misma cuenta y los mismos permisos: no es una tercera aplicación. En el iPhone los avisos llegan sólo con el Panel instalado en la pantalla de inicio, igual que en las dos aplicaciones.
+**74.** El Panel se instala también en el teléfono, sin dejar de ser lo que es. En la computadora sigue igual. En el teléfono se instala desde el navegador, recibe avisos aunque no esté abierto y abre primero lo urgente del día —quién no llegó, qué guardia quedó sin cubrir, a quién mandar de reemplazo—, sin perder el resto. Es el mismo programa, con la misma dirección, la misma cuenta y los mismos permisos: no es una tercera aplicación. En el iPhone los avisos llegan sólo con el Panel instalado en la pantalla de inicio, igual que en las dos aplicaciones.
 
 ---
 
 ## Configuración que todavía está escrita en el código
 
-**75. Usted** — Nivel de complejidad: ¿qué significa cada uno de los tres? ¿Condiciona qué tipo de Asistente se admite? Hoy se carga y se edita, y el cálculo de candidatos no lo mira.
+**76. Usted** — Nivel de complejidad: ¿qué significa cada uno de los tres? ¿Condiciona qué tipo de Asistente se admite? Hoy se carga y se edita, y el cálculo de candidatos no lo mira.
 
-**76.** Que el cálculo de candidatos lo use.
+**77.** Que el cálculo de candidatos lo use.
 
-**77. Usted** — Verificar matrícula: ¿alcanza con mirar el archivo, o hay que comprobar contra el registro del colegio profesional? La mitad técnica está construida.
+**78. Usted** — Verificar matrícula: ¿alcanza con mirar el archivo, o hay que comprobar contra el registro del colegio profesional? La mitad técnica está construida.
 
-**78.** Construir la verificación según lo contestado.
+**79.** Construir la verificación según lo contestado.
 
-**79. Usted** — Accesibilidad: el código está hecho, falta la respuesta legal. `docs/legal/argentina.md` no la menciona.
+**80. Usted** — Accesibilidad: el código está hecho, falta la respuesta legal. `docs/legal/argentina.md` no la menciona.
 
-**80. Usted** — El Certificado de Aptitud impreso: ¿qué lleva? Hoy la pantalla genera el código de barras y ahí termina.
+**81. Usted** — El Certificado de Aptitud impreso: ¿qué lleva? Hoy la pantalla genera el código de barras y ahí termina.
 
-**81.** Armarlo. La subida del certificado a un depósito de archivos **ya está resuelta**: el
+**82.** Armarlo. La subida del certificado a un depósito de archivos **ya está resuelta**: el
 depósito de los papeles del legajo del Asistente está construido: es `documentos-asistente`.
 Hoy sólo se guardan fechas.
 
@@ -1293,15 +1303,15 @@ Hoy sólo se guardan fechas.
 
 ## Datos personales
 
-**82. Usted** — Protección de datos personales: el texto lo tiene que dar el Desarrollador. `docs/legal/argentina.md` tiene ocho secciones y ninguna es de esto. Sin documento no hay advertencia.
+**83. Usted** — Protección de datos personales: el texto lo tiene que dar el Desarrollador. `docs/legal/argentina.md` tiene ocho secciones y ninguna es de esto. Sin documento no hay advertencia.
 
-**83.** La advertencia. Qué se hace con los datos de un Servicio cerrado hace años, que hoy no se purgan nunca, no se contesta acá: es el tramo de conservación y borrado, más abajo en esta misma lista.
+**84.** La advertencia. Qué se hace con los datos de un Servicio cerrado hace años, que hoy no se purgan nunca, no se contesta acá: es el tramo de conservación y borrado, más abajo en esta misma lista.
 
-**84. Usted** — La ubicación de las personas: cuatro preguntas para el profesional legal. En los 21 archivos de `docs/legal/` no aparece ni una vez «ubicación», «GPS» ni la ley 25.326. El registro del consentimiento está construido; los textos sembrados son de relleno. **Mientras no haya respuesta, el seguimiento no se enciende con nadie real.**
+**85. Usted** — La ubicación de las personas: cuatro preguntas para el profesional legal. En los 21 archivos de `docs/legal/` no aparece ni una vez «ubicación», «GPS» ni la ley 25.326. El registro del consentimiento está construido; los textos sembrados son de relleno. **Mientras no haya respuesta, el seguimiento no se enciende con nadie real.**
 
-**85.** Sembrar los textos reales y encender el seguimiento y el mensaje de demora en el trayecto.
+**86.** Sembrar los textos reales y encender el seguimiento y el mensaje de demora en el trayecto.
 
-**86.** **Guardar sólo lo que hace falta.** Revisar tabla por tabla qué dato personal se guarda y
+**87.** **Guardar sólo lo que hace falta.** Revisar tabla por tabla qué dato personal se guarda y
 para qué se usa, y sacar lo que no tenga un para qué. En la misma revisión: qué datos de personas
 salen hacia terceros —el modelo de IA que lee una planilla y cualquier otro servicio externo— y si
 los registros de actividad y de errores guardan datos personales. Nada de esto está revisado todavía.
@@ -1313,9 +1323,9 @@ uso.
 
 ## Respaldo, continuidad y secretos
 
-**87. Usted** — El alta del gestor de contraseñas, y completar las cinco filas en blanco de `celtatech/docs/CUENTAS.md`.
+**88. Usted** — El alta del gestor de contraseñas, y completar las cinco filas en blanco de `celtatech/docs/CUENTAS.md`.
 
-**88.** Rotar clave por clave lo que corresponda, decidiéndolo de a una. Si se rota la clave secreta de Supabase, se actualiza en Railway en el mismo acto. La llave maestra no entra acá: se da de baja al cerrar los cimientos (paso 10).
+**89.** Rotar clave por clave lo que corresponda, decidiéndolo de a una. Si se rota la clave secreta de Supabase, se actualiza en Railway en el mismo acto. La llave maestra no entra acá: se da de baja al cerrar los cimientos (paso 10).
 
 **Ya no queda ninguna contraseña escrita en el repositorio.** Todas salen del entorno, y las
 cuentas de la base local nacen sin contraseña: se la pone un programa aparte después de cada
@@ -1327,26 +1337,26 @@ prueba del escaneo del Asistente.
 Y queda además **una contraseña de prueba en texto plano dentro de la configuración de permisos de
 una copia de trabajo**, que no es un archivo del repositorio y por eso el barrido no la alcanzó.
 
-**89. Usted** — Correr `node scripts/probar_restauracion.mjs` desde `backend/`, con Docker encendido y las variables del respaldo diario más las de la base de producción cargadas en el entorno. Baja el último respaldo, lo restaura en una base efímera, compara las tablas, las filas y los archivos del espejo contra lo que hay hoy, y borra todo al terminar. Le toca a usted porque pide las llaves del bucket y de la base, que viven en la caja fuerte. La prueba anterior verificó 30 tablas de un esquema que hoy tiene 201 y no tocó ningún archivo, porque todavía no se respaldaban. **Si contesta `no_probado`, no salió mal: quiere decir que todo coincidió y no había nada cargado que comparar**, y entonces hay que repetirla con datos de prueba.
+**90. Usted** — Correr `node scripts/probar_restauracion.mjs` desde `backend/`, con Docker encendido y las variables del respaldo diario más las de la base de producción cargadas en el entorno. Baja el último respaldo, lo restaura en una base efímera, compara las tablas, las filas y los archivos del espejo contra lo que hay hoy, y borra todo al terminar. Le toca a usted porque pide las llaves del bucket y de la base, que viven en la caja fuerte. La prueba anterior verificó 30 tablas de un esquema que hoy tiene 201 y no tocó ningún archivo, porque todavía no se respaldaban. **Si contesta `no_probado`, no salió mal: quiere decir que todo coincidió y no había nada cargado que comparar**, y entonces hay que repetirla con datos de prueba.
 
-**90. Usted** — Los dominios se renovaron en julio de 2026 y vencen en julio de 2027, y esa fecha hoy no está en ningún calendario: `celtatech.com` y `careonys.com` en Cloudflare, y `celtatech.com.ar` y `celtatech.net.ar` en NIC Argentina. Poner un recordatorio un mes antes de cada uno y, donde el registrador lo permita, dejar la renovación automática encendida — NIC Argentina no la tiene, así que ésos son los dos que de verdad dependen del recordatorio. Un dominio vencido no se cae despacio: deja de resolver, y con él se van las pantallas, el correo de la empresa y la entrada a las cuentas que se registraron con ese correo.
+**91. Usted** — Los dominios se renovaron en julio de 2026 y vencen en julio de 2027, y esa fecha hoy no está en ningún calendario: `celtatech.com` y `careonys.com` en Cloudflare, y `celtatech.com.ar` y `celtatech.net.ar` en NIC Argentina. Poner un recordatorio un mes antes de cada uno y, donde el registrador lo permita, dejar la renovación automática encendida — NIC Argentina no la tiene, así que ésos son los dos que de verdad dependen del recordatorio. Un dominio vencido no se cae despacio: deja de resolver, y con él se van las pantallas, el correo de la empresa y la entrada a las cuentas que se registraron con ese correo.
 
 ---
 
 ## Marca y dominio por Prestadora
 
-**91.** Que la conversación quede guardada adentro del producto, según lo que se conteste sobre el botón de contacto de «Asistente Asignado», más arriba en esta misma lista. Hasta que el Panel no tenga un hilo de dos puntas, lo que se hablan el Cliente y el Asistente en prestación directa se va a WhatsApp y no queda adentro de ningún lado. El chat interno ya está construido entero —hilos, mensajes, tapado del contacto, pantallas en las dos aplicaciones, mensaje al celular y videollamada—, pero **sólo funciona donde la Prestadora pone Asistentes disponibles para que el Cliente elija**: exige un Cliente y un Asistente que se hayan encontrado ahí. En prestación directa no hay hilo, y hacia la Prestadora tampoco: el único canal con el Panel va en un solo sentido, del Panel al Asistente, y no hay dónde guardar lo que contesta.
+**92.** Que la conversación quede guardada adentro del producto, según lo que se conteste sobre el botón de contacto de «Asistente Asignado», más arriba en esta misma lista. Hasta que el Panel no tenga un hilo de dos puntas, lo que se hablan el Cliente y el Asistente en prestación directa se va a WhatsApp y no queda adentro de ningún lado. El chat interno ya está construido entero —hilos, mensajes, tapado del contacto, pantallas en las dos aplicaciones, mensaje al celular y videollamada—, pero **sólo funciona donde la Prestadora pone Asistentes disponibles para que el Cliente elija**: exige un Cliente y un Asistente que se hayan encontrado ahí. En prestación directa no hay hilo, y hacia la Prestadora tampoco: el único canal con el Panel va en un solo sentido, del Panel al Asistente, y no hay dónde guardar lo que contesta.
 
 ---
 
 ## Módulos
 
-**92.** Pasar a `careonys` los dos depósitos de respaldo, que son los únicos nombres de afuera que
+**93.** Pasar a `careonys` los dos depósitos de respaldo, que son los únicos nombres de afuera que
 todavía no lo llevan.
 
-**93. Usted** — ¿Dónde corre un módulo y contra qué base? Hoy `Modulos\` no tiene ningún módulo. **Facturación y créditos y cobranzas ya están decididas como software aparte del que Careonys se sirve**, así que esto no decide si salen, sino dónde corren el día que existan.
+**94. Usted** — ¿Dónde corre un módulo y contra qué base? Hoy `Modulos\` no tiene ningún módulo. **Facturación y créditos y cobranzas ya están decididas como software aparte del que Careonys se sirve**, así que esto no decide si salen, sino dónde corren el día que existan.
 
-**94.** Sacar la facturación y la cobranza a un módulo, cuando haya dónde correrlo. **Y que Match
+**95.** Sacar la facturación y la cobranza a un módulo, cuando haya dónde correrlo. **Y que Match
 cobre igual que la prestación directa**, sin que ninguna de las dos pierda nada. Hoy Match lleva
 la cuenta del Cliente por su cuenta —arma cada período, cuenta los días gratis y la gracia, y corta
 el acceso solo—, y eso es créditos y cobranzas, que no le toca a Careonys. Se separan tres
@@ -1371,15 +1381,15 @@ elegir qué pasa cuando vencen, y el corte que ordena el software conectado.
 
 ## Decisiones que no traban nada empezado
 
-**95. Usted** — Empresas subcontratadas o tercerizadas: son un recurso dentro de la prestación directa, como el Padrón propio, y no una modalidad. Todavía no hay dónde cargarlas ni cómo encargarles una prestación. La precondición era no construirlo hasta que una Prestadora real lo pida. ¿Sigue valiendo?
+**96. Usted** — Empresas subcontratadas o tercerizadas: son un recurso dentro de la prestación directa, como el Padrón propio, y no una modalidad. Todavía no hay dónde cargarlas ni cómo encargarles una prestación. La precondición era no construirlo hasta que una Prestadora real lo pida. ¿Sigue valiendo?
 
-**96. Usted** — Un tercero que sólo mira: ¿cómo entra un Pagador que sólo consulta? Un cuarto rol, un Coordinador de sólo lectura desde el catálogo de permisos, o no se hace.
+**97. Usted** — Un tercero que sólo mira: ¿cómo entra un Pagador que sólo consulta? Un cuarto rol, un Coordinador de sólo lectura desde el catálogo de permisos, o no se hace.
 
-**97. Usted** — ¿Careonys va a atender establecimientos donde conviven Pacientes de Clientes distintos — una residencia, un geriátrico? Si es más adelante, alcanza con dejarlo dicho.
+**98. Usted** — ¿Careonys va a atender establecimientos donde conviven Pacientes de Clientes distintos — una residencia, un geriátrico? Si es más adelante, alcanza con dejarlo dicho.
 
-**98. Usted** — ¿Diez pedidos por minuto y por persona es el número? El contador compartido hace falta el día que el backend se reparta en varios servicios; hoy corre en uno solo.
+**99. Usted** — ¿Diez pedidos por minuto y por persona es el número? El contador compartido hace falta el día que el backend se reparta en varios servicios; hoy corre en uno solo.
 
-**99. Usted** — ¿Los idiomas siguen en un archivo o pasan a la base? De esto depende si sumar un
+**100. Usted** — ¿Los idiomas siguen en un archivo o pasan a la base? De esto depende si sumar un
 idioma es una publicación o una carga de datos. **Y está contestado a medias sin que nadie lo
 anotara**, así que la pregunta es más chica de lo que parece:
 
@@ -1392,9 +1402,9 @@ Así que lo único que esto decide es ese último resto. **Y se contesta despué
 carteles**, más arriba: es justamente ese archivo el que se barre ahí, y no tiene sentido mudar
 texto que va a salir.
 
-**100. Usted** — El puntaje interno de calidad del Asistente, que sólo ve el Admin: ¿sigue en pie ahora que existen las estrellas que pone el Cliente? Si sigue, faltan dos respuestas: qué lo compone, y la garantía de que ninguna acción automática dependa de él. El lugar donde iría ya está hecho (`datos_reservados_asistente` y su permiso).
+**101. Usted** — El puntaje interno de calidad del Asistente, que sólo ve el Admin: ¿sigue en pie ahora que existen las estrellas que pone el Cliente? Si sigue, faltan dos respuestas: qué lo compone, y la garantía de que ninguna acción automática dependa de él. El lugar donde iría ya está hecho (`datos_reservados_asistente` y su permiso).
 
-**101. Usted** — El alta y la baja de Prestadoras: Match expone una puerta firmada para que CeltaTech dé de alta y de baja clientes; Careonys no tiene nada parecido. ¿Se construye la misma, o se siguen dando de alta a mano?
+**102. Usted** — El alta y la baja de Prestadoras: Match expone una puerta firmada para que CeltaTech dé de alta y de baja clientes; Careonys no tiene nada parecido. ¿Se construye la misma, o se siguen dando de alta a mano?
 
 **Usted — para analizar, no para resolver ahora.** Un registro de cambios general: qué dato
 cambió, de qué valor a qué valor, quién y cuándo, para cualquier tabla que lo necesite. Hoy no
@@ -1402,7 +1412,7 @@ existe: cada cambio que se registra tiene su tabla propia (`auditoria_*`, el his
 clínico). El primero que lo va a necesitar es el cambio de la fecha prevista de vuelta de una
 ausencia; si el general se decide antes de construirlo, ese cambio se anota ahí.
 
-**102.** **Por esa misma puerta tiene que entrar qué tiene habilitado cada Prestadora, y hoy no
+**103.** **Por esa misma puerta tiene que entrar qué tiene habilitado cada Prestadora, y hoy no
 entra nada.** CeltaTech le vende un plan, y ese plan dice qué puede usar. Eso se lo informa al
 producto. **Y ahí termina: CeltaTech no tiene injerencia, bajo ninguna circunstancia, en el
 negocio de ninguna Prestadora.** Le habilita funciones del software y nada más; qué cobra, a
@@ -1430,19 +1440,19 @@ entera o una parte. **Por qué, Careonys no lo sabe ni lo pregunta**: recibe la 
 - **La orden que llega no se puede bloquear.** Con esa misma comprobación, alcanzaría con tener un
   Asistente trabajando para que la orden nunca se cumpla.
 
-**103. Usted** — Qué hace Careonys de su lado cuando recibe esa orden y adentro quedan Asistentes
+**104. Usted** — Qué hace Careonys de su lado cuando recibe esa orden y adentro quedan Asistentes
 trabajando y Clientes con acceso abierto. Cortar el acceso y dejarlo todo en su lugar no es lo
 mismo que darlo de baja.
 
-**104.** Construirlo, todo de este lado: recibir qué tiene habilitado cada Prestadora y que su
+**105.** Construirlo, todo de este lado: recibir qué tiene habilitado cada Prestadora y que su
 Configuración ofrezca solamente eso; y recibir la orden de deshabilitar, sin la comprobación que
 lleva el apagado de ella, haciendo con lo que quede en curso lo que se conteste arriba. **La lista
 de capacidades la declara este producto**, que es el que sabe qué significan; del otro lado son
 texto opaco. Lo que cada Prestadora tenga hoy en uso se conserva.
 
-**105. Usted** — El acompañamiento online: ¿prestación más, o guardia sin domicilio? Si es guardia, hay que decidir qué reemplaza al check-in por ubicación. **Las dos palabras son ahora dos niveles distintos del glosario**, así que la pregunta elige entre uno y el otro: una Prestación con su precio y sus horarios, o una guardia que se reparte en turnos. Y lo que reemplaza al check-in por ubicación es del turno, no de la guardia.
+**106. Usted** — El acompañamiento online: ¿prestación más, o guardia sin domicilio? Si es guardia, hay que decidir qué reemplaza al check-in por ubicación. **Las dos palabras son ahora dos niveles distintos del glosario**, así que la pregunta elige entre uno y el otro: una Prestación con su precio y sus horarios, o una guardia que se reparte en turnos. Y lo que reemplaza al check-in por ubicación es del turno, no de la guardia.
 
-**106. Usted** — El «Gestor del cuidado»: ¿rol nuevo, variante de Coordinador, o entrada en el catálogo de permisos por Prestadora? La tercera no rompe la regla de los tres roles de Panel; las dos primeras sí.
+**107. Usted** — El «Gestor del cuidado»: ¿rol nuevo, variante de Coordinador, o entrada en el catálogo de permisos por Prestadora? La tercera no rompe la regla de los tres roles de Panel; las dos primeras sí.
 
 **Se contesta después del acto de armar el Servicio**, más arriba en esta lista, por dos motivos. El
 primero es que **la premisa con la que estaba escrita esta pregunta no es cierta**: decía que hoy el
@@ -1453,11 +1463,11 @@ segundo es que ese acto cambia el modelo: **una sola persona coordina todo el Se
 al acordarlo, y sin ella el Servicio no se habilita.** Con eso construido, la pregunta es si hace
 falta alguien más además de esa persona, que es otra pregunta.
 
-**107. Usted** — Cursos para Clientes: ¿va o no va?
+**108. Usted** — Cursos para Clientes: ¿va o no va?
 
-**108. Usted** — La regla de los archivos dice «nunca público» y hay un depósito público construido (`marca-prestadoras`); los otros once son privados. ¿La regla admite la excepción, o se cierra el depósito?
+**109. Usted** — La regla de los archivos dice «nunca público» y hay un depósito público construido (`marca-prestadoras`); los otros once son privados. ¿La regla admite la excepción, o se cierra el depósito?
 
-**109. Usted** — La categoría de convenio del Asistente se teclea a mano, y de ella depende su
+**110. Usted** — La categoría de convenio del Asistente se teclea a mano, y de ella depende su
 remuneración básica. El convenio tiene sus categorías definidas y no las inventa la Prestadora,
 así que tecleadas quedan escritas distinto en cada Legajo: no se puede saber cuántos Asistentes hay
 en cada una, ni aplicarle un cambio de escala a todos los de una categoría de una sola vez, y un
@@ -1472,9 +1482,9 @@ qué pasa con lo ya liquidado.
 
 ## El sitio web
 
-**110. Usted** — ¿Se autoriza construir `careonys.com` según `docs/PRD_01_Sitio_Web.md`? El PRD ya está entero. Hoy `sitio-web/` es una página que dice «En construcción». **El diseño se hace de cero**: del sitio público de Match no viaja nada visual.
+**111. Usted** — ¿Se autoriza construir `careonys.com` según `docs/PRD_01_Sitio_Web.md`? El PRD ya está entero. Hoy `sitio-web/` es una página que dice «En construcción». **El diseño se hace de cero**: del sitio público de Match no viaja nada visual.
 
-**111.** Construirlo.
+**112.** Construirlo.
 
 ---
 
@@ -1487,7 +1497,7 @@ hacerlas después cuesta lo mismo.
 **Lo que sí es condición:** antes de dar de alta una Prestadora real de un país, ese país tiene que
 tener cargado lo suyo. La lista por país, con artículo, está en `docs/CUMPLIMIENTO_NORMATIVO.md`.
 
-**112.** **La revisión del registro de accesos, que es lo que casi nadie hace.** El 45 CFR
+**113.** **La revisión del registro de accesos, que es lo que casi nadie hace.** El 45 CFR
 164.308(a)(1)(ii)(D) es «Required», no «Addressable»: hay que **revisar** los registros, con
 constancia fechada y revisor con nombre. Un registro que nadie mira incumple aunque sea perfecto.
 
@@ -1503,7 +1513,7 @@ requisito de arquitectura, y por eso su parte está en los cimientos y no acá.
 **Comprobación:** la constancia de revisión existe, tiene fecha y nombre, y se puede mostrar para
 cualquier mes.
 
-**113.** **El motor de conservación y borrado.** La tabla de reglas existe y está vacía; las
+**114.** **El motor de conservación y borrado.** La tabla de reglas existe y está vacía; las
 columnas de conservación y la fecha de fallecimiento no existen. Acá se agregan, se carga y se
 construye lo que decide.
 
@@ -1564,7 +1574,7 @@ los datos de un Servicio cerrado hace años.
 **Comprobación:** con dos Prestadoras de países distintos y las mismas fechas cargadas, el motor
 decide distinto en cada una y lo explica citando la regla que aplicó.
 
-**114.** **Los derechos de la persona.** Exportación de lo propio, en formato que se pueda leer en
+**115.** **Los derechos de la persona.** Exportación de lo propio, en formato que se pueda leer en
 otro lado: el Anexo II sección 2 del EHDS lo convierte en deber duro contra el encierro en el
 proveedor, y la portabilidad está en casi todas las leyes latinoamericanas.
 
@@ -1576,7 +1586,7 @@ el derecho al fallecer cambia por país: en Costa Rica pasa a sucesores o herede
 **Comprobación:** un pedido de acceso cargado en una Prestadora de Costa Rica vence a los cinco días
 hábiles y avisa antes; el mismo pedido en Panamá vence a los diez.
 
-**115.** **Las brechas, construidas para 24 horas.** Hay cinco relojes y manda el más corto. Europa:
+**116.** **Las brechas, construidas para 24 horas.** Hay cinco relojes y manda el más corto. Europa:
 NIS2 exige aviso temprano a las 24 horas, y el art. 33(2) del GDPR obliga al encargado a avisarle al
 responsable sin dilación indebida, sin umbral y sin derecho a filtrar. Estados Unidos: el 164.410 da
 60 días al proveedor, pero **la regla no le da al cliente 60 días nuevos**, así que un proveedor que
@@ -1601,7 +1611,7 @@ contenido mínimo de cada una —el 164.404(c) pide cinco elementos—.
 **Comprobación:** un incidente de prueba sobre una Prestadora produce la lista de pacientes
 alcanzados, el texto de aviso del país de esa Prestadora y la cuenta regresiva correcta.
 
-**116.** **Quién entra y cómo.**
+**117.** **Quién entra y cómo.**
 
 - **Segundo factor obligatorio.** Está construido y apagado: `requiereRolPanel.js:71-81`, gobernado
   por `configuracion_plataforma.mfa_admin_obligatorio`. Encenderlo es cambiar un dato. Ninguna norma
@@ -1622,7 +1632,7 @@ alcanzados, el texto de aviso del país de esa Prestadora y la cuenta regresiva 
 **Comprobación:** con el segundo factor obligatorio encendido, una cuenta sin él no entra a ninguna
 pantalla del Panel.
 
-**117.** **Respaldos que se probaron.** El 164.308(a)(7)(ii)(A), (B) y (C) son «Required»: copia
+**118.** **Respaldos que se probaron.** El 164.308(a)(7)(ii)(A), (B) y (C) son «Required»: copia
 exacta y recuperable, restauración y modo de emergencia. El Decreto 41/2012 chileno lo escribe como
 requisito de la historia clínica, y en Francia la copia de respaldo es una de las actividades
 certificables del référentiel HDS.
@@ -1638,7 +1648,7 @@ falta acá es que deje constancia, que se repita sola y que quede atada a la fre
 **Comprobación:** una restauración completa a un entorno aparte, con constancia de fecha y de qué
 se verificó.
 
-**118.** **La configuración por país, cargada.** La estructura existe y está vacía de esta materia.
+**119.** **La configuración por país, cargada.** La estructura existe y está vacía de esta materia.
 Se carga, por jurisdicción: plazos de conservación con su hecho de inicio, plazo de brecha con su
 destinatario y desde cuándo corre, plazo de respuesta a los derechos, mecanismo de transferencia
 internacional, contacto del delegado u oficial de protección de datos donde sea obligatorio, y el
@@ -1654,11 +1664,11 @@ en ninguno.
 
 **Comprobación:** ningún plazo de estos aparece escrito en el código.
 
-**119. Usted** — **Las designaciones que no son programación.** Representante legal en Perú y en
+**120. Usted** — **Las designaciones que no son programación.** Representante legal en Perú y en
 Ecuador, y delegado de protección de datos en Ecuador y en Uruguay. Son designaciones de CeltaTech
 y condición para vender en esos países.
 
-**120.** **Los documentos que pide la auditoría.** Son entregables, y sin ellos lo construido no
+**121.** **Los documentos que pide la auditoría.** Son entregables, y sin ellos lo construido no
 cuenta.
 
 - **Análisis de riesgos que nombre expresamente el acceso entre Prestadoras como amenaza**, citando
@@ -1683,7 +1693,7 @@ cuenta.
 
 **Comprobación:** cada documento existe y lo que afirma se puede verificar en el sistema.
 
-**121.** **Lo que no se hace nunca.**
+**122.** **Lo que no se hace nunca.**
 
 - **No se entrenan modelos con datos de las Prestadoras.** Prohibido por tres vías: el art. 28(10)
   del GDPR convierte al encargado en responsable, el EHDS haría del producto titular de datos
@@ -1778,7 +1788,7 @@ eso está ahí y no acá. El material para esa consulta —cuál es la cláusula
 vigentes y qué hay que definir antes de redactar— está en
 `celtatech/docs/CLAUSULA_TRANSFERENCIA_INTERNACIONAL.md`.
 
-**122. Usted** — Las escalas legales: la validación, y el valor que el código usa y no existe
+**123. Usted** — Las escalas legales: la validación, y el valor que el código usa y no existe
 (`piso_minimo_indemnizacion`). En el mismo viaje va el
 texto de la advertencia sobre el abandono de persona: ninguno de los veintiún documentos de `docs/legal/`
 lo menciona —lo único parecido es el abandono de *trabajo*, art. 244 LCT, en
@@ -1789,8 +1799,8 @@ documento no hay advertencia; la mecánica se construye igual, porque no depende
 
 ## Cierre
 
-**123. Usted** — El documento de roles generado desde la base: ¿para quién es, interno de CeltaTech o manual para la Prestadora?
+**124. Usted** — El documento de roles generado desde la base: ¿para quién es, interno de CeltaTech o manual para la Prestadora?
 
-**124.** Generarlo.
+**125.** Generarlo.
 
-**125.** Correr las pruebas y publicar.
+**126.** Correr las pruebas y publicar.

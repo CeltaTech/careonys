@@ -9,13 +9,13 @@
  * prepara, y se mira la dirección entera de cada consulta y con qué credencial llegó. Eso es lo que
  * permite comprobar las dos cosas que importan acá: que cada consulta separe una Prestadora de
  * otra —leer va con la credencial de quien pide y lo separa la protección por fila de la base;
- * cargar, corregir y sacar siguen con la llave maestra y lo separa el filtro escrito en la
- * consulta—, y que el número no se escriba nunca en una dirección.
+ * cargar, corregir y sacar van con la credencial del trabajo de la Prestadora de la sesión, que la
+ * base acota a esa Prestadora—, y que el número no se escriba nunca en una dirección.
  *
  * La base de mentira imita esa protección en lo único que hace falta: con la credencial de quien
- * pide contesta sólo las Fichas de su Prestadora, y con la llave maestra contesta los que pida el
- * filtro de la dirección. Así, una lectura que volviera a la llave maestra, o una escritura que
- * perdiera el filtro, encontraría la Ficha ajena, y las pruebas de aislamiento darían al revés. La
+ * pide contesta sólo las Fichas de su Prestadora, y con la del trabajo, sólo las de la Prestadora que
+ * lleva adentro. Así, una escritura que fuera con la credencial de otra Prestadora encontraría la
+ * Ficha ajena, y las pruebas de aislamiento darían al revés. La
  * protección por fila en sí la prueba `scripts/probar_aislamiento.mjs` contra una base de verdad.
  *
  * Los números son inventados.
@@ -24,6 +24,7 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const OTRA_PRESTADORA = '99999999-9999-9999-9999-999999999999';
@@ -78,7 +79,7 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // Después de las variables de entorno: la conexión se arma al importar.
 const { default: express } = await import('express');
@@ -86,7 +87,27 @@ await import('express-async-errors');
 const { panelPersonasTelefonosRouter } = await import('../panelPersonasTelefonos.js');
 const { verificadorComparable } = await import('../../utils/celularDeUnaSolaPersona.js');
 const { conElPreferidoMarcado, telefonoLimpio } = await import('../../utils/telefonosDeLaPersona.js');
-const { supabase } = await import('../../db/connection.js');
+const { enLaPrestadora } = await import('../../db/connection.js');
+
+/** El preferido, resuelto como lo resuelve la ruta: con la credencial del trabajo. */
+function marcar(filas) {
+  return enLaPrestadora(PRESTADORA, 'prueba', (db) => conElPreferidoMarcado(db, filas, PRESTADORA));
+}
+
+/** Lo que dice adentro una credencial, o `null` si no se puede leer. */
+function leerCredencial(autorizacion) {
+  try {
+    return JSON.parse(Buffer.from((autorizacion ?? '').replace('Bearer ', '').split('.')[1], 'base64url').toString());
+  } catch {
+    return null;
+  }
+}
+
+/** Si la credencial es la del trabajo de la Prestadora de la sesión. */
+function esDelTrabajoDeLaPrestadora(autorizacion) {
+  const credencial = leerCredencial(autorizacion);
+  return credencial?.role === 'trabajo_sin_persona' && credencial.prestadora_id === PRESTADORA;
+}
 
 const app = express();
 app.use(express.json());
@@ -153,9 +174,10 @@ beforeEach(() => {
   laBaseLeDejaVerElDirectorio = true;
   // El Directorio de la base, con Fichas de dos Prestadoras. Con la credencial de quien pide, la
   // base contesta sólo las de su Prestadora, y ninguna si no tiene el permiso de ver el Directorio;
-  // con la llave maestra, las que pida el filtro de la dirección. Es la única forma de que esta
-  // prueba pueda fallar: si la lectura volviera a la llave maestra, o la escritura perdiera el
-  // filtro, la Ficha ajena aparecería. Una base de mentira que devuelve vacío por su cuenta aprobaría igual.
+  // con la del trabajo, sólo las de la Prestadora que lleva adentro; con cualquier otra, ninguna.
+  // Es la única forma de que esta prueba pueda fallar: si la escritura fuera con la credencial de
+  // otra Prestadora, la Ficha ajena aparecería. Una base de mentira que devuelve vacío por su cuenta
+  // aprobaría igual.
   respuestas.set('GET /rest/v1/personas', (_cuerpo, url, credencial) => {
     const pedido = new URL(url, 'http://interno').searchParams;
     const valorDe = (parametro) => (pedido.get(parametro) ?? '').replace(/^eq\./, '') || null;
@@ -163,9 +185,14 @@ beforeEach(() => {
     const prestadora = valorDe('prestadora_id');
     const conSesion = credencial === credencialEnviada;
     if (conSesion && !laBaseLeDejaVerElDirectorio) return [];
+    const delTrabajo = leerCredencial(credencial);
+    let alcance;
+    if (conSesion) alcance = PRESTADORA;
+    else if (delTrabajo?.role === 'trabajo_sin_persona') alcance = delTrabajo.prestadora_id;
+    else return [];
     return DIRECTORIO_EN_LA_BASE.filter(
       (persona) => (!id || persona.id === id)
-        && (!conSesion || persona.prestadora_id === PRESTADORA)
+        && persona.prestadora_id === alcance
         && (!prestadora || persona.prestadora_id === prestadora),
     );
   });
@@ -209,21 +236,21 @@ describe('cuál es el preferido para llamar', () => {
       filaTelefono('a', PERSONA, CASA, '2026-09-01T10:00:00Z'),
       filaTelefono('b', PERSONA, CELULAR, '2026-09-02T10:00:00Z'),
     ];
-    const marcados = await conElPreferidoMarcado(supabase, filas, PRESTADORA);
+    const marcados = await marcar(filas);
     assert.deepEqual(marcados.map((f) => f.preferido), [false, true]);
   });
 
   it('sin cuenta no hay preferido, y no se inventa ninguno', async () => {
     lasCuentasLlevan();
     const filas = [filaTelefono('a', PERSONA, CASA), filaTelefono('b', PERSONA, CELULAR)];
-    const marcados = await conElPreferidoMarcado(supabase, filas, PRESTADORA);
+    const marcados = await marcar(filas);
     assert.deepEqual(marcados.map((f) => f.preferido), [false, false]);
     assert.equal(marcados.length, 2, 'los demás siguen habilitados igual');
   });
 
   it('el número no viaja en la consulta que resuelve el preferido: viaja su identificador de verificación', async () => {
     lasCuentasLlevan(CELULAR);
-    await conElPreferidoMarcado(supabase, [filaTelefono('a', PERSONA, CELULAR)], PRESTADORA);
+    await marcar([filaTelefono('a', PERSONA, CELULAR)]);
     const consulta = llamadas.find((l) => l.url.includes('telefono_comparable'));
     assert.ok(consulta, 'se preguntó por las cuentas');
     assert.ok(!consulta.url.includes(digitos(CELULAR)), 'el número no está escrito en la dirección');
@@ -233,14 +260,14 @@ describe('cuál es el preferido para llamar', () => {
   it('uno fuera de uso no es el preferido aunque sea el de la cuenta', async () => {
     lasCuentasLlevan(CELULAR);
     const filas = [{ ...filaTelefono('a', PERSONA, CELULAR), fuera_de_uso_at: '2026-10-01T10:00:00Z' }];
-    const marcados = await conElPreferidoMarcado(supabase, filas, PRESTADORA);
+    const marcados = await marcar(filas);
     assert.equal(marcados[0].preferido, false);
     assert.equal(marcados.length, 1, 'sigue en la Ficha');
   });
 
   it('no poder comprobarlo deja la lista sin nada señalado, nunca con una señal inventada', async () => {
     respuestas.set('GET /rest/v1/usuarios', () => ({ __estado: 500, __cuerpo: { message: 'caída' } }));
-    const marcados = await conElPreferidoMarcado(supabase, [filaTelefono('a', PERSONA, CELULAR)], PRESTADORA);
+    const marcados = await marcar([filaTelefono('a', PERSONA, CELULAR)]);
     assert.equal(marcados[0].preferido, false);
   });
 });
@@ -374,9 +401,9 @@ describe('la credencial de quien pide', () => {
     }
   });
 
-  // Cargar, corregir y sacar siguen con la llave maestra: las políticas de escritura piden
-  // `editar_personas`, pero leer la Ficha y el renglón escrito piden además `ver_personas`.
-  it('cargar, corregir y sacar van con la llave maestra y el filtro de la Prestadora', async () => {
+  // Cargar, corregir y sacar van con la credencial del trabajo: las políticas de escritura de quien
+  // pide piden `editar_personas`, pero leer la Ficha y el renglón escrito piden además `ver_personas`.
+  it('cargar, corregir y sacar van con la credencial del trabajo y el filtro de la Prestadora', async () => {
     const pedidos = [
       ['POST', `/${PERSONA}`, { telefono: CASA }],
       ['PATCH', `/${PERSONA}/${TELEFONO_ID}`, { telefono: CELULAR }],
@@ -391,7 +418,7 @@ describe('la credencial de quien pide', () => {
       );
       assert.ok(aLaBase.length >= 2, `${metodo} ${ruta} tenía que leer la Ficha y escribir`);
       for (const llamada of aLaBase) {
-        assert.notEqual(llamada.credencial, credencialEnviada, `${llamada.clave} fue con la credencial de quien pide`);
+        assert.ok(esDelTrabajoDeLaPrestadora(llamada.credencial), `${llamada.clave} no fue con la credencial del trabajo de la Prestadora`);
         const filtrada = llamada.url.includes(`prestadora_id=eq.${PRESTADORA}`)
           || llamada.cuerpo?.prestadora_id === PRESTADORA;
         assert.ok(filtrada, `${llamada.clave} sin la Prestadora de la sesión: ${llamada.url}`);

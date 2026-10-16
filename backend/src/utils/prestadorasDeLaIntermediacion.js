@@ -1,5 +1,9 @@
-/* Las Prestadoras, de a una, para los trabajos de fondo del Match.
+/* Las Prestadoras, de a una, para los trabajos de fondo.
    =====================================================================
+
+   Son dos listas: la de las Prestadoras del Match, para sus tres trabajos diarios, y la de las
+   Prestadoras certificadas, para los demás trabajos de fondo. Las dos viven acá porque son la
+   única consulta que cada trabajo hace antes de conocer la Prestadora.
 
    QUÉ RESUELVE. Los tres trabajos diarios del Match —armar los cobros del período, cortar los
    accesos dados de baja y suspender los que agotaron la gracia— barrían `accesos_intermediacion` con
@@ -47,4 +51,26 @@ export async function prestadorasDeLaIntermediacion() {
   }
 
   return (data ?? []).map((fila) => fila.prestadora_id).filter(Boolean);
+}
+
+/**
+ * Los identificadores de las Prestadoras certificadas, para que los trabajos de fondo las
+ * recorran de a una.
+ *
+ * Igual que la de arriba: sólo identificadores, y la lista vacía ante cualquier error.
+ *
+ * @returns {Promise<string[]>}
+ */
+export async function prestadorasCertificadas() {
+  const { data, error } = await supabase
+    .from('prestadoras')
+    .select('id')
+    .eq('estado', 'certificada');
+
+  if (error) {
+    console.error('Error consultando las Prestadoras certificadas:', error.message);
+    return [];
+  }
+
+  return (data ?? []).map((fila) => fila.id).filter(Boolean);
 }

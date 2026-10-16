@@ -1,4 +1,5 @@
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
+import { prestadorasCertificadas } from './prestadorasDeLaIntermediacion.js';
 import { cubrirGuardiaConSustituto } from './cubrirGuardia.js';
 import { finEfectivoDeLaAusencia } from './ausenciaQueTapa.js';
 import { hoyISO, sumarDias } from './horarios.js';
@@ -157,24 +158,25 @@ export async function estrenarCobertura({ db, cobertura, ausencia }) {
   return resultado;
 }
 
-/** El trabajo programado: vuelve a aplicar cada cobertura vigente, de a una Prestadora por vez. */
+/**
+ * El trabajo programado: vuelve a aplicar cada cobertura vigente, de a una Prestadora por vez y con
+ * la credencial del trabajo de esa Prestadora, que la base acota a ella.
+ */
 export async function extenderCoberturasDeAusencia() {
   const hoy = hoyISO();
-  const { data: prestadoras, error } = await supabase
-    .from('prestadoras')
-    .select('id')
-    .eq('estado', 'certificada');
-  if (error) {
-    console.error('[coberturaDeAusencia] no se pudieron leer las Prestadoras:', error.message);
-    return;
-  }
-  for (const { id: prestadoraId } of prestadoras ?? []) {
-    await extenderLasDeUnaPrestadora(prestadoraId, hoy);
+  for (const prestadoraId of await prestadorasCertificadas()) {
+    try {
+      await enLaPrestadora(prestadoraId, 'extender las coberturas de ausencia', (db) =>
+        extenderLasDeUnaPrestadora(db, prestadoraId, hoy),
+      );
+    } catch (error) {
+      console.error(`[coberturaDeAusencia] no se pudieron extender las coberturas (prestadora ${prestadoraId}):`, error.message);
+    }
   }
 }
 
-async function extenderLasDeUnaPrestadora(prestadoraId, hoy) {
-  const { data: coberturas, error } = await supabase
+async function extenderLasDeUnaPrestadora(db, prestadoraId, hoy) {
+  const { data: coberturas, error } = await db
     .from('coberturas_de_ausencia')
     .select('id, prestadora_id, ausencia_id, serie_id, asistente_sustituto_id, motivo, motivo_detalle, costo_adicional, ausencias(id, asistente_id, fecha_inicio, fecha_fin, fecha_vuelta_real)')
     .eq('prestadora_id', prestadoraId)
@@ -189,9 +191,9 @@ async function extenderLasDeUnaPrestadora(prestadoraId, hoy) {
     if (!ausencia?.asistente_id) continue;
     // La que ya terminó y no tiene nada por delante no hace falta mirarla más.
     if (ausencia.fecha_vuelta_real && ausencia.fecha_vuelta_real <= hoy) {
-      await devolverAlTitular({ db: supabase, cobertura, titularId: ausencia.asistente_id, desde: ausencia.fecha_vuelta_real });
+      await devolverAlTitular({ db, cobertura, titularId: ausencia.asistente_id, desde: ausencia.fecha_vuelta_real });
       continue;
     }
-    await aplicarCobertura({ db: supabase, cobertura, ausencia, hoy });
+    await aplicarCobertura({ db, cobertura, ausencia, hoy });
   }
 }

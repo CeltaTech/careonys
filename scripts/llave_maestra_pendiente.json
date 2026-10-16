@@ -92,8 +92,6 @@
     "importan_la_conexion":  [
                                  "backend/src/geocodificacion/index.js",
                                  "backend/src/i18n/cargarMensajesDelSistema.js",
-                                 "backend/src/middleware/exigirModalidad.js",
-                                 "backend/src/middleware/resolverPrestadoraPublica.js",
                                  "backend/src/routes/appAsistentes.js",
                                  "backend/src/routes/appClientes.js",
                                  "backend/src/routes/appClientesMedicacion.js",

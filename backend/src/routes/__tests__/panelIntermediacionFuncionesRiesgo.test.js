@@ -118,7 +118,7 @@ beforeEach(() => {
   respuestas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: rolDelUsuario, prestadora_id: PRESTADORA }]);
-  respuestas.set('POST /rest/v1/rpc/prestadora_tiene_modalidad_activa', () => true);
+  respuestas.set('GET /rest/v1/prestadora_modalidades', () => [{ activa: true }]);
   // El catálogo de las cinco funciones sale de la base, no de una lista escrita en el backend.
   respuestas.set('GET /rest/v1/catalogo_funciones_intermediacion', () => [{ clave: FUNCION, orden: 1 }]);
   respuestas.set('GET /rest/v1/configuracion_funciones_intermediacion', () => []);

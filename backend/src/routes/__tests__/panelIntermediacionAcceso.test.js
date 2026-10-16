@@ -113,7 +113,9 @@ beforeEach(() => {
   respuestas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: rolDelUsuario, prestadora_id: prestadoraDelUsuario }]);
-  respuestas.set('POST /rest/v1/rpc/prestadora_tiene_modalidad_activa', () => modalidadIntermediacion);
+  respuestas.set('GET /rest/v1/prestadora_modalidades', () =>
+    modalidadIntermediacion === null ? null : modalidadIntermediacion ? [{ activa: true }] : [],
+  );
   // El segundo factor no es lo que se prueba acá: se lo deja apagado para que el camino llegue
   // hasta el candado del rol.
   respuestas.set('GET /rest/v1/configuracion_plataforma', () => [{ mfa_admin_obligatorio: false }]);
@@ -329,7 +331,7 @@ describe('sin la modalidad Match no se entra', () => {
   it('niega igual si la base no pudo contestar', async () => {
     // Falla cerrado (CLAUDE.md §5): ante un dato que no se pudo resolver, se deniega. La
     // respuesta sin preparar hace que la base de mentira conteste un error.
-    respuestas.delete('POST /rest/v1/rpc/prestadora_tiene_modalidad_activa');
+    respuestas.delete('GET /rest/v1/prestadora_modalidades');
     const { estado, cuerpo } = await pedir('GET', '/accesos');
     assert.equal(estado, 403);
     assert.equal(cuerpo.motivo, 'modalidad_no_activa');
@@ -351,9 +353,12 @@ describe('sin la modalidad Match no se entra', () => {
     // pedido— es lo que impide que alguien conteste por otra.
     modalidadIntermediacion = false;
     await pedir('GET', '/accesos');
-    const pregunta = llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/prestadora_tiene_modalidad_activa');
+    const pregunta = llamadas.find((l) => l.clave === 'GET /rest/v1/prestadora_modalidades');
     assert.ok(pregunta, 'el backend no le preguntó a la base si la modalidad está activa');
-    assert.deepEqual(pregunta.cuerpo, { p_prestadora_id: PRESTADORA, p_modalidad: 'intermediacion' });
+    assert.ok(pregunta.busqueda.includes(`prestadora_id=eq.${PRESTADORA}`), pregunta.busqueda);
+    assert.match(pregunta.busqueda, /modalidad=eq\.intermediacion/);
+    // Con la credencial de quien pide, nunca con la llave maestra.
+    assert.equal(pregunta.credencial, credencialEnviada);
   });
 });
 

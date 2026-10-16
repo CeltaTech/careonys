@@ -1,4 +1,4 @@
-import { supabase } from '../db/connection.js';
+import { clienteDelPedido } from '../db/connection.js';
 
 /* El candado de «esta modalidad de negocio está encendida en esta Prestadora».
    ==========================================================================
@@ -14,10 +14,11 @@ import { supabase } from '../db/connection.js';
    QUIÉN MANDA. Éste. Lo del Panel es para no mostrar lo que no corresponde; lo que de verdad
    niega es esto, porque cualquiera puede llamar a la dirección sin pasar por la pantalla.
 
-   DE DÓNDE SALE LA RESPUESTA. De la función `prestadora_tiene_modalidad_activa`, que ya
-   existía en la base y no llamaba nadie. Es la misma fila que lee la Configuración para
-   pintar el casillero y la misma que mira la base cuando frena una asignación de guardia por
-   modalidad, así que las tres respuestas no pueden discrepar.
+   DE DÓNDE SALE LA RESPUESTA. De la fila de `prestadora_modalidades`, leída con la credencial
+   de quien pide (`clienteDelPedido`): la base le deja ver sólo las modalidades de su propia
+   Prestadora. Es la misma fila que lee la Configuración para pintar el casillero y la misma que
+   mira la base cuando frena una asignación de guardia por modalidad, así que las tres respuestas
+   no pueden discrepar.
 
    FALLA CERRADO (CLAUDE.md §5). Sin Organización activa, con un error de la base o con
    cualquier respuesta que no sea exactamente `true`, se niega. No se compara contra un valor
@@ -42,10 +43,19 @@ export function exigirModalidad(modalidad) {
     const prestadoraId = req.usuarioPanel?.prestadoraId;
     if (!prestadoraId) return negar(res);
 
-    const { data, error } = await supabase.rpc('prestadora_tiene_modalidad_activa', {
-      p_prestadora_id: prestadoraId,
-      p_modalidad: modalidad,
-    });
+    let data;
+    let error;
+    try {
+      ({ data, error } = await clienteDelPedido(req)
+        .from('prestadora_modalidades')
+        .select('activa')
+        .eq('prestadora_id', prestadoraId)
+        .eq('modalidad', modalidad)
+        .eq('activa', true)
+        .limit(1));
+    } catch (e) {
+      error = e;
+    }
 
     if (error) {
       // Que la comprobación falle no puede quedar en silencio: sin este registro, un problema
@@ -55,7 +65,7 @@ export function exigirModalidad(modalidad) {
       return negar(res);
     }
 
-    if (data !== true) return negar(res);
+    if (!Array.isArray(data) || data[0]?.activa !== true) return negar(res);
 
     next();
   };

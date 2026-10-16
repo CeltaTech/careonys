@@ -1,4 +1,4 @@
-import { abrirSesionDelPedido, clienteDelPedido, supabase } from '../db/connection.js';
+import { abrirSesionDelPedido, clienteDelPedido, enLaPrestadora } from '../db/connection.js';
 import { elRolUsaSegundoFactor, elSegundoFactorEsObligatorio } from '../utils/reglaMfaObligatorio.js';
 import { ROLES_PANEL } from '../utils/roles.js';
 import {
@@ -28,16 +28,24 @@ const INACTIVIDAD_LIMITE_MS = 5 * 60 * 1000;
 // fila y por pedido. Se saca de acá cuando no quede ninguna ruta con la maestra.
 const METODOS_MUTACION = ['POST', 'PUT', 'PATCH', 'DELETE'];
 
-// Con la maestra a propósito: `auditoria_de_accesos` no tiene política que deje escribir a una
-// persona, y no debe tenerla —quien está siendo auditado no escribe su propia auditoría—.
+// Con la credencial del trabajo de la Prestadora donde se entró, y no con la de la persona:
+// `auditoria_de_accesos` no tiene política que deje escribir a una persona, y no debe tenerla
+// —quien está siendo auditado no escribe su propia auditoría—. La base acota la escritura a esa
+// Prestadora. Si falla, queda en el registro del servidor y el pedido sigue.
 async function registrarAuditoria({ adminId, prestadoraId, tipoEvento, detalle }) {
-  const { error } = await supabase.from('auditoria_de_accesos').insert({
-    admin_id: adminId,
-    prestadora_id: prestadoraId,
-    tipo_evento: tipoEvento,
-    detalle,
-  });
-  if (error) console.error('Error registrando la auditoría del acceso:', error.message);
+  try {
+    const { error } = await enLaPrestadora(prestadoraId, 'auditoría del permiso de acceso', (db) => db
+      .from('auditoria_de_accesos')
+      .insert({
+        admin_id: adminId,
+        prestadora_id: prestadoraId,
+        tipo_evento: tipoEvento,
+        detalle,
+      }));
+    if (error) console.error('Error registrando la auditoría del acceso:', error.message);
+  } catch (error) {
+    console.error('Error registrando la auditoría del acceso:', error.message);
+  }
 }
 
 export async function requiereRolPanel(req, res, next) {

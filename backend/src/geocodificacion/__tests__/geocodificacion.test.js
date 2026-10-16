@@ -16,6 +16,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const DIRECCION = 'Avenida Siempreviva 742';
@@ -25,9 +26,20 @@ const LOCALIDAD = 'Springfield';
 let paisDeLaPrestadora = 'AR';
 /** Todo lo que se le preguntó a la base. */
 let consultasALaBase = [];
+/** Lo que llevaba adentro la credencial de cada pregunta: quién es y de qué Prestadora. */
+let credencialesALaBase = [];
+
+function leerCredencial(autorizacion) {
+  try {
+    return JSON.parse(Buffer.from(autorizacion.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+  } catch {
+    return null;
+  }
+}
 
 const baseFalsa = createServer((req, res) => {
   consultasALaBase.push(req.url);
+  credencialesALaBase.push(leerCredencial(req.headers.authorization ?? ''));
   const filas = paisDeLaPrestadora === null ? [] : [{ pais: paisDeLaPrestadora }];
   const unoSolo = (req.headers.accept || '').includes('vnd.pgrst.object+json');
   res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -35,7 +47,7 @@ const baseFalsa = createServer((req, res) => {
 });
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 /** El servicio de direcciones de mentira: contesta lo que cada prueba le prepare. */
 let respuestaDelServicio = {};
@@ -88,10 +100,21 @@ function encontrada({ lat = -34.6037, lon = -58.3816, altura = 742 } = {}) {
 beforeEach(() => {
   paisDeLaPrestadora = 'AR';
   consultasALaBase = [];
+  credencialesALaBase = [];
   consultasAlServicio = [];
   respuestaDelServicio = encontrada();
   codigoDelServicio = 200;
   anotados = [];
+});
+
+describe('el país de la Prestadora', () => {
+  it('se lee con el trabajo de esa Prestadora, y no con la llave maestra', async () => {
+    await coordenadasDeDomicilio({ prestadoraId: PRESTADORA, direccion: DIRECCION, localidad: LOCALIDAD });
+    assert.equal(consultasALaBase.length, 1);
+    assert.equal(credencialesALaBase[0]?.role, 'trabajo_sin_persona');
+    assert.equal(credencialesALaBase[0]?.prestadora_id, PRESTADORA);
+    assert.ok(consultasALaBase[0].includes(`id=eq.${PRESTADORA}`), 'pide la fila de la misma Prestadora');
+  });
 });
 
 describe('la dirección que el servicio reconoce', () => {

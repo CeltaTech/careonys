@@ -119,9 +119,10 @@ beforeEach(() => {
   llamadas = [];
   anotados = [];
   respuestas.clear();
-  // El corte recorre las Prestadoras de a una, y la lista sale de la tabla de configuración de
-  // cobro, que tiene una fila por Prestadora (`prestadorasDeLaIntermediacion.js`). Sin esta respuesta
+  // El corte recorre las Prestadoras de a una: la base da la lista, y de ésas quedan las que tienen
+  // fila en la configuración de cobro (`prestadorasDeLaIntermediacion.js`). Sin estas respuestas
   // no hay a quién recorrer y el trabajo no consulta ningún acceso.
+  respuestas.set('POST /rest/v1/rpc/prestadoras_a_recorrer', [PRESTADORA]);
   respuestas.set('GET /rest/v1/configuracion_cobro_intermediacion', [{ prestadora_id: PRESTADORA }]);
   respuestas.set('PATCH /rest/v1/accesos_intermediacion', []);
 });

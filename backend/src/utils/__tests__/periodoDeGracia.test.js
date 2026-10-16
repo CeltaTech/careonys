@@ -150,9 +150,8 @@ beforeEach(() => {
   respuestas.clear();
   // Cuántos días dura la gracia lo elige la Prestadora, así que la base tiene que poder
   // contestarlo. Siete es el valor con el que nace su configuración.
-  // La misma tabla contesta dos cosas: los plazos de una Prestadora nombrada, y —cuando se la pide
-  // entera— la lista de Prestadoras que recorre la suspensión diaria
-  // (`prestadorasDeLaIntermediacion.js`). Por eso la fila lleva también su identificador.
+  // Que la Prestadora tenga esa fila es además lo que la pone en la lista que recorre la suspensión
+  // diaria (`prestadorasDeLaIntermediacion.js`).
   respuestas.set('GET /rest/v1/configuracion_cobro_intermediacion', [
     {
       prestadora_id: PRESTADORA,
@@ -162,6 +161,7 @@ beforeEach(() => {
     },
   ]);
   respuestas.set('GET /rest/v1/prestadoras', [{ pais: 'AR' }]);
+  respuestas.set('POST /rest/v1/rpc/prestadoras_a_recorrer', [PRESTADORA]);
 });
 
 describe('cuando un cobro no entra', () => {

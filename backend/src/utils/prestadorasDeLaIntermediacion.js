@@ -19,84 +19,87 @@
    la modalidad puede conservar accesos que todavía hay que cortar o suspender, y dejarlos afuera los
    dejaría vigentes para siempre.
 
-   ESTA CONSULTA ES LA ÚNICA ANTERIOR A CONOCER LA PRESTADORA, y lo es porque su resultado **es** la
-   lista de Prestadoras: no trae ningún dato de ninguna, sólo sus identificadores. Es el mismo lugar
-   que ocupa `configuracion_escalada_coordinador` en `revisarNotificacionesCoordinador.js`. */
+   CON QUÉ CREDENCIAL. Ninguna de las tres pregunta por todas las Prestadoras a la vez. La lista
+   de a quiénes recorrer la da la base al trabajo sin Prestadora (`prestadoras_a_recorrer`), y cada
+   una se mira después con el trabajo de esa Prestadora, que sólo ve su propia fila. */
 
-import { supabase } from '../db/connection.js';
+import { paraCadaPrestadora } from '../db/connection.js';
 
 /**
- * Los identificadores de las Prestadoras, para recorrerlas de a una.
+ * Las Prestadoras que cumplen `cumple`, preguntada de a una con la credencial de cada una.
  *
- * Devuelve la lista vacía ante cualquier error. Falla cerrado: sin saber a quiénes hay que
- * recorrer, no se recorre a nadie, que es preferible a una vuelta que trabaje sobre un cajón
- * equivocado. Lo que no se hizo hoy se hace mañana, porque ninguno de los tres trabajos apaga
- * la condición que elige lo que le toca.
+ * Falla cerrado: la que no se pudo mirar queda afuera, y sin la lista de a quiénes recorrer no se
+ * recorre a nadie. Lo que no se hizo hoy se hace mañana, porque ningún trabajo apaga la condición
+ * que elige lo que le toca.
  *
+ * @param {string} trabajo
+ * @param {(db: object) => Promise<boolean>} cumple
  * @returns {Promise<string[]>}
  */
-export async function prestadorasDeLaIntermediacion() {
-  // SIN PRESTADORA A PROPÓSITO
-  // Es el arranque de los trabajos de fondo del Match, que no tienen sesión de nadie. No trae
-  // dato de ninguna Prestadora: trae nada más que sus identificadores, y a partir de ahí cada
-  // trabajo recorre de a una, nombrándola en cada consulta de adentro. Pedirle el filtro a ésta
-  // sería pedirle que ya sepa la lista que viene a buscar.
-  const { data, error } = await supabase
-    .from('configuracion_cobro_intermediacion')
-    .select('prestadora_id');
+async function prestadorasQue(trabajo, cumple) {
+  const elegidas = [];
+  await paraCadaPrestadora(trabajo, async (prestadoraId, db) => {
+    if (await cumple(db, prestadoraId)) elegidas.push(prestadoraId);
+  });
+  return elegidas;
+}
 
-  if (error) {
-    console.error('Error consultando las Prestadoras del Match:', error.message);
-    return [];
-  }
-
-  return (data ?? []).map((fila) => fila.prestadora_id).filter(Boolean);
+/** Si la consulta trajo alguna fila, sin error. El error se anota y cuenta como que no. */
+function trajoFila(trabajo) {
+  return ({ data, error }) => {
+    if (error) {
+      console.error(`Error consultando ${trabajo}:`, error.message);
+      return false;
+    }
+    return (data ?? []).length > 0;
+  };
 }
 
 /**
- * Los identificadores de las Prestadoras que tienen encendida la ausencia automática, para que
- * ese trabajo las recorra de a una.
+ * Las Prestadoras del Match, para sus tres trabajos diarios.
  *
- * Igual que la de arriba: sólo identificadores, y la lista vacía ante cualquier error. Cuánta
- * tolerancia tiene cada una lo lee el trabajo adentro, con la credencial de esa Prestadora.
+ * Sale de `configuracion_cobro_intermediacion`, que tiene una fila por Prestadora. No de
+ * `prestadora_modalidades`: una que apagó la modalidad puede conservar accesos que todavía hay que
+ * cortar o suspender.
  *
  * @returns {Promise<string[]>}
  */
-export async function prestadorasConAusenciaAutomatica() {
-  // SIN PRESTADORA A PROPÓSITO
-  // Es el arranque de ese trabajo de fondo, que no tiene sesión de nadie. Trae nada más que los
-  // identificadores, y a partir de ahí el trabajo recorre de a una, con la credencial de cada una.
-  const { data, error } = await supabase
-    .from('configuracion_ausencia_automatica')
-    .select('prestadora_id')
-    .eq('activo', true);
-
-  if (error) {
-    console.error('Error consultando las Prestadoras con la ausencia automática:', error.message);
-    return [];
-  }
-
-  return (data ?? []).map((fila) => fila.prestadora_id).filter(Boolean);
+export function prestadorasDeLaIntermediacion() {
+  return prestadorasQue('las Prestadoras del Match', async (db, prestadoraId) =>
+    trajoFila('las Prestadoras del Match')(
+      await db.from('configuracion_cobro_intermediacion').select('prestadora_id').eq('prestadora_id', prestadoraId).limit(1),
+    ),
+  );
 }
 
 /**
- * Los identificadores de las Prestadoras certificadas, para que los trabajos de fondo las
- * recorran de a una.
- *
- * Igual que la de arriba: sólo identificadores, y la lista vacía ante cualquier error.
+ * Las Prestadoras que tienen encendida la ausencia automática. Cuánta tolerancia tiene cada una lo
+ * lee el trabajo adentro.
  *
  * @returns {Promise<string[]>}
  */
-export async function prestadorasCertificadas() {
-  const { data, error } = await supabase
-    .from('prestadoras')
-    .select('id')
-    .eq('estado', 'certificada');
+export function prestadorasConAusenciaAutomatica() {
+  return prestadorasQue('las Prestadoras con la ausencia automática', async (db, prestadoraId) =>
+    trajoFila('las Prestadoras con la ausencia automática')(
+      await db
+        .from('configuracion_ausencia_automatica')
+        .select('prestadora_id')
+        .eq('prestadora_id', prestadoraId)
+        .eq('activo', true)
+        .limit(1),
+    ),
+  );
+}
 
-  if (error) {
-    console.error('Error consultando las Prestadoras certificadas:', error.message);
-    return [];
-  }
-
-  return (data ?? []).map((fila) => fila.id).filter(Boolean);
+/**
+ * Las Prestadoras certificadas, para los demás trabajos de fondo.
+ *
+ * @returns {Promise<string[]>}
+ */
+export function prestadorasCertificadas() {
+  return prestadorasQue('las Prestadoras certificadas', async (db, prestadoraId) =>
+    trajoFila('las Prestadoras certificadas')(
+      await db.from('prestadoras').select('id').eq('id', prestadoraId).eq('estado', 'certificada').limit(1),
+    ),
+  );
 }

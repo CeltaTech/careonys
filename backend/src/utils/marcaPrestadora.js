@@ -11,7 +11,7 @@
 // mensajes que llegan al teléfono, y si cada uno la resolviera por su cuenta,
 // el día que cambie algo se cambiaría en tres lados y se olvidaría el cuarto.
 
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 
 // Devuelve el nombre visible y el logo de la Prestadora.
 //
@@ -24,15 +24,19 @@ import { supabase } from '../db/connection.js';
 // dato quedó a medio cargar— se devuelve la marca vacía. El encabezado se queda
 // sin nombre por un rato; lo que no puede pasar es que una pantalla se caiga por
 // esto.
+//
+// Se lee con la credencial del trabajo de esa Prestadora, que la base acota a ella: la marca se
+// pide también desde la puerta, antes de que haya nadie con sesión.
 export async function marcaDeLaPrestadora(prestadoraId) {
   if (!prestadoraId) {
     return { nombre: null, logoUrl: null, rotulo: null };
   }
 
-  const [{ data: prestadora }, { data: configuracion }] = await Promise.all([
-    supabase.from('prestadoras').select('nombre_fantasia, logo_url').eq('id', prestadoraId).maybeSingle(),
-    supabase.from('configuracion_prestadora').select('dominio').eq('prestadora_id', prestadoraId).maybeSingle(),
-  ]);
+  const [{ data: prestadora }, { data: configuracion }] = await enLaPrestadora(prestadoraId, 'marca de la Prestadora', (db) =>
+    Promise.all([
+      db.from('prestadoras').select('nombre_fantasia, logo_url').eq('id', prestadoraId).maybeSingle(),
+      db.from('configuracion_prestadora').select('dominio').eq('prestadora_id', prestadoraId).maybeSingle(),
+    ]));
 
   // El rótulo de la puerta viaja con la marca porque el teléfono la guarda hasta que la persona
   // cierra la sesión: es el código de Prestadora que la pantalla de ingreso ya no vuelve a pedir, y

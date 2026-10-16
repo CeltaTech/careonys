@@ -1,4 +1,4 @@
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 
 // El medidor de consumo de IA
 // ============================================================================
@@ -25,16 +25,20 @@ import { supabase } from '../db/connection.js';
 // Si el registro falla nunca corta el flujo principal — guardar el reporte, la alerta, el mapeo o
 // la respuesta de WhatsApp importa más que contar su consumo; el error queda en el registro del
 // backend.
+//
+// Se escribe con la credencial del trabajo de la Prestadora que consumió, que la base acota a esa
+// Prestadora: la mayoría de las llamadas a la IA no tienen detrás a nadie con sesión.
 export async function registrarUsoIA({ prestadoraId, modulo, modelo, proveedor = 'anthropic', respuestaAnthropic }) {
   try {
-    const { error } = await supabase.from('uso_ia').insert({
-      prestadora_id: prestadoraId,
-      modulo,
-      proveedor,
-      modelo,
-      tokens_entrada: respuestaAnthropic?.usage?.input_tokens ?? 0,
-      tokens_salida: respuestaAnthropic?.usage?.output_tokens ?? 0,
-    });
+    const { error } = await enLaPrestadora(prestadoraId, 'medidor de consumo de IA', (db) =>
+      db.from('uso_ia').insert({
+        prestadora_id: prestadoraId,
+        modulo,
+        proveedor,
+        modelo,
+        tokens_entrada: respuestaAnthropic?.usage?.input_tokens ?? 0,
+        tokens_salida: respuestaAnthropic?.usage?.output_tokens ?? 0,
+      }));
 
     if (error) {
       console.error('registrarUsoIA: error al insertar uso_ia:', error.message);

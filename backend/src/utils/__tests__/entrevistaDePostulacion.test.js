@@ -16,6 +16,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const PRESTADORA_AJENA = '22222222-2222-2222-2222-222222222222';
@@ -41,7 +42,7 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const url = new URL(req.url, 'http://interno');
     const cuerpo = crudo ? JSON.parse(crudo) : null;
-    llamadas.push({ metodo: req.method, ruta: url.pathname, cuerpo });
+    llamadas.push({ metodo: req.method, ruta: url.pathname, cuerpo, select: url.searchParams.get('select'), credencial: req.headers.authorization });
 
     const unoSolo = (req.headers.accept || '').includes('vnd.pgrst.object+json');
 
@@ -89,6 +90,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 process.env.PANEL_URL = 'https://panel.ejemplo';
 
 // El import va después de las variables de entorno: la conexión se arma al importarse, con la
@@ -359,6 +361,15 @@ describe('la puerta del postulante', () => {
       'prestadora',
       'url',
     ]);
+    // La marca de la Prestadora —su nombre y su logo— se lee con la credencial del trabajo de esa
+    // Prestadora, y con ninguna otra.
+    const marcas = llamadas.filter((l) => l.ruta === '/rest/v1/prestadoras' && l.select?.includes('logo_url'));
+    assert.ok(marcas.length > 0, 'la marca tendría que leerse');
+    for (const marca of marcas) {
+      const credencial = JSON.parse(Buffer.from(marca.credencial.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+      assert.equal(credencial.role, 'trabajo_sin_persona', 'la marca se leyó con otra credencial');
+      assert.equal(credencial.prestadora_id, PRESTADORA, 'la marca se leyó fuera de la Prestadora');
+    }
   });
 
   it('antes de tiempo dice cuándo volver, sin dar la sala', async () => {

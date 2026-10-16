@@ -15,7 +15,6 @@
                              "backend/scripts/verificacion/bloque3_verificacion.mjs",
                              "backend/src/db/__tests__/credencialDeLaPersona.test.js",
                              "backend/src/db/connection.js",
-                             "backend/src/geocodificacion/__tests__/geocodificacion.test.js",
                              "backend/src/i18n/__tests__/cargarMensajesDelSistema.test.js",
                              "backend/src/middleware/__tests__/credencialDeLaPersona.test.js",
                              "backend/src/routes/__tests__/appAsistentes.test.js",
@@ -90,7 +89,6 @@
                              "backend/src/utils/__tests__/videollamada.test.js"
                          ],
     "importan_la_conexion":  [
-                                 "backend/src/geocodificacion/index.js",
                                  "backend/src/routes/appAsistentes.js",
                                  "backend/src/routes/appClientes.js",
                                  "backend/src/routes/appClientesMedicacion.js",

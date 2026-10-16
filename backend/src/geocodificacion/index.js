@@ -31,7 +31,7 @@
 // La dirección es dato sensible: no se escribe en registros ni en mensajes de error, ni
 // siquiera para depurar.
 
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import * as georefAr from './georefAr.js';
 
 // País (código ISO de dos letras, como lo guarda `prestadoras.pais`) → adaptador.
@@ -56,13 +56,12 @@ export const SIN_COORDENADAS = Object.freeze({ lat: null, lng: null });
 /** El adaptador que le corresponde a esa Prestadora, resuelto por su país. El país es el de la
  *  Prestadora dueña de la fila, nunca uno por omisión escrito acá: cada Prestadora resuelve sus
  *  lugares y sus direcciones con el servicio de su propio país (CLAUDE.md §2). Devuelve `null`
- *  cuando ese país todavía no tiene adaptador. */
+ *  cuando ese país todavía no tiene adaptador. Se lee con el trabajo de esa Prestadora, que sólo
+ *  alcanza su propia fila. */
 async function geocodificadorDe(prestadoraId) {
-  const { data, error } = await supabase
-    .from('prestadoras')
-    .select('pais')
-    .eq('id', prestadoraId)
-    .maybeSingle();
+  const { data, error } = await enLaPrestadora(prestadoraId, 'leer el país de la Prestadora', (db) =>
+    db.from('prestadoras').select('pais').eq('id', prestadoraId).maybeSingle(),
+  );
   if (error) throw new Error(error.message);
   return obtenerGeocodificador(data?.pais);
 }

@@ -21,6 +21,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
@@ -67,6 +68,9 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+// El país de la Prestadora, que decide qué organismo se consulta, se lee con el trabajo de esa
+// Prestadora.
+prepararCredencialDePrueba();
 
 /** El servicio de direcciones de mentira, para las sugerencias del organismo oficial. */
 let respuestaDelOrganismo = { localidades: [] };

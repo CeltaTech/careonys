@@ -2182,7 +2182,7 @@ appAsistentesRouter.get('/intermediacion/conversaciones/:id', requiereRolAsisten
     const desde = desdeCuando(req.query?.desde);
 
     const [mensajes, nombre, enCurso, base] = await Promise.all([
-      mensajesDeLaConversacion({ conversacion, desde }),
+      mensajesDeLaConversacion({ conversacion, desde, db: clienteDelPedido(req) }),
       nombreDelCliente(conversacion.cliente_id, conversacion.prestadora_id),
       videollamadaEnCurso(conversacion),
       direccionDeVideollamada(conversacion.prestadora_id),
@@ -2221,7 +2221,7 @@ appAsistentesRouter.post('/intermediacion/conversaciones/:id/mensajes', requiere
 
     // Se devuelve el hilo tal como quedó guardado: tapado si la base tapó algo, y con el motivo.
     // Devolverle a quien escribió su texto entero le haría creer que llegó completo.
-    res.json({ mensajes: await mensajesDeLaConversacion({ conversacion }) });
+    res.json({ mensajes: await mensajesDeLaConversacion({ conversacion, db: clienteDelPedido(req) }) });
   } catch (e) {
     responderError(res, e);
   }

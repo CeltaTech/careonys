@@ -18,6 +18,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { createClient } from '@supabase/supabase-js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const OTRA_PRESTADORA = '22222222-2222-2222-2222-222222222222';
@@ -32,7 +33,7 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const direccion = new URL(req.url, 'http://interno');
     const clave = `${req.method} ${direccion.pathname}`;
-    llamadas.push({ clave, busqueda: direccion.search });
+    llamadas.push({ clave, busqueda: direccion.search, clavePublica: req.headers.apikey });
 
     const preparada = respuestas.get(clave);
     if (preparada === undefined) {
@@ -46,10 +47,13 @@ const baseFalsa = createServer((req, res) => {
 });
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
-process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 
-// Después de las variables de entorno: la conexión a la base se arma al importar.
+/** La conexión de quien da el alta. La clave la reconoce la base falsa en cada pedido. */
+const CLAVE_DE_QUIEN_PIDE = 'clave-de-quien-pide';
+const db = createClient(`http://127.0.0.1:${baseFalsa.address().port}`, CLAVE_DE_QUIEN_PIDE, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
+
 const { APROBADAS, etapasActivasDeLaPrestadora, filasDeIncorporacion } = await import(
   '../etapasDeIncorporacion.js'
 );
@@ -74,7 +78,7 @@ describe('las etapas activas de la Prestadora', () => {
   it('devuelve las claves en el orden en que ella las puso', async () => {
     respuestas.set(ETAPAS, PROCESO_PROPIO);
 
-    const claves = await etapasActivasDeLaPrestadora(PRESTADORA);
+    const claves = await etapasActivasDeLaPrestadora(db, PRESTADORA);
 
     assert.deepEqual(claves, ['postulacion', 'examen_preocupacional', 'firma_del_convenio']);
   });
@@ -82,7 +86,7 @@ describe('las etapas activas de la Prestadora', () => {
   it('pregunta por su Prestadora, sólo por las activas y pidiendo el orden', async () => {
     respuestas.set(ETAPAS, PROCESO_PROPIO);
 
-    await etapasActivasDeLaPrestadora(PRESTADORA);
+    await etapasActivasDeLaPrestadora(db, PRESTADORA);
 
     const consulta = llamadas.find((l) => l.clave === ETAPAS);
     assert.ok(consulta, 'no se consultó la tabla de etapas');
@@ -104,11 +108,20 @@ describe('las etapas activas de la Prestadora', () => {
     );
   });
 
+  it('lee con la conexión que se le pasa', async () => {
+    respuestas.set(ETAPAS, PROCESO_PROPIO);
+
+    await etapasActivasDeLaPrestadora(db, PRESTADORA);
+
+    assert.equal(llamadas.length, 1);
+    assert.equal(llamadas[0].clavePublica, CLAVE_DE_QUIEN_PIDE, 'la consulta salió por otra conexión');
+  });
+
   it('sin ninguna etapa activa, corta con un motivo que la pantalla sabe explicar', async () => {
     respuestas.set(ETAPAS, []);
 
     await assert.rejects(
-      () => etapasActivasDeLaPrestadora(PRESTADORA),
+      () => etapasActivasDeLaPrestadora(db, PRESTADORA),
       (error) => {
         assert.equal(error.motivo, 'sin_etapas_incorporacion');
         return true;
@@ -118,7 +131,7 @@ describe('las etapas activas de la Prestadora', () => {
 
   it('una consulta que falla no inventa un proceso', async () => {
     // Sin respuesta preparada la base falsa contesta 400: es el caso de la consulta rota.
-    await assert.rejects(() => etapasActivasDeLaPrestadora(PRESTADORA));
+    await assert.rejects(() => etapasActivasDeLaPrestadora(db, PRESTADORA));
   });
 });
 
@@ -126,7 +139,7 @@ describe('las filas con las que arranca un Asistente nuevo', () => {
   it('con la primera aprobada: la postulación ya pasó, el resto queda por delante', async () => {
     respuestas.set(ETAPAS, PROCESO_PROPIO);
 
-    const filas = await filasDeIncorporacion(ASISTENTE, PRESTADORA, {
+    const filas = await filasDeIncorporacion(db, ASISTENTE, PRESTADORA, {
       aprobadas: APROBADAS.LA_PRIMERA,
       revisadoPor: QUIEN_REVISA,
     });
@@ -149,7 +162,7 @@ describe('las filas con las que arranca un Asistente nuevo', () => {
   it('con ninguna aprobada: el proceso entero queda por delante', async () => {
     respuestas.set(ETAPAS, PROCESO_PROPIO);
 
-    const filas = await filasDeIncorporacion(ASISTENTE, PRESTADORA, {
+    const filas = await filasDeIncorporacion(db, ASISTENTE, PRESTADORA, {
       aprobadas: APROBADAS.NINGUNA,
       revisadoPor: QUIEN_REVISA,
     });
@@ -161,7 +174,7 @@ describe('las filas con las que arranca un Asistente nuevo', () => {
   it('con todas aprobadas: cada etapa queda a nombre de quien dio el alta', async () => {
     respuestas.set(ETAPAS, PROCESO_PROPIO);
 
-    const filas = await filasDeIncorporacion(ASISTENTE, PRESTADORA, {
+    const filas = await filasDeIncorporacion(db, ASISTENTE, PRESTADORA, {
       aprobadas: APROBADAS.TODAS,
       revisadoPor: QUIEN_REVISA,
     });
@@ -172,13 +185,13 @@ describe('las filas con las que arranca un Asistente nuevo', () => {
 
   it('la política decide cuáles nacen cumplidas, nunca cuáles son', async () => {
     respuestas.set(ETAPAS, PROCESO_PROPIO);
-    const porLaPuertaDeLaPostulacion = await filasDeIncorporacion(ASISTENTE, PRESTADORA, {
+    const porLaPuertaDeLaPostulacion = await filasDeIncorporacion(db, ASISTENTE, PRESTADORA, {
       aprobadas: APROBADAS.LA_PRIMERA,
       revisadoPor: QUIEN_REVISA,
     });
 
     respuestas.set(ETAPAS, PROCESO_PROPIO);
-    const porLaPuertaDelAltaDirecta = await filasDeIncorporacion(ASISTENTE, PRESTADORA, {
+    const porLaPuertaDelAltaDirecta = await filasDeIncorporacion(db, ASISTENTE, PRESTADORA, {
       aprobadas: APROBADAS.TODAS,
       revisadoPor: QUIEN_REVISA,
     });
@@ -193,7 +206,7 @@ describe('las filas con las que arranca un Asistente nuevo', () => {
   it('una Prestadora con un proceso de una sola etapa recibe una sola fila', async () => {
     respuestas.set(ETAPAS, [{ clave: 'entrevista' }]);
 
-    const filas = await filasDeIncorporacion(ASISTENTE, PRESTADORA, {
+    const filas = await filasDeIncorporacion(db, ASISTENTE, PRESTADORA, {
       aprobadas: APROBADAS.LA_PRIMERA,
       revisadoPor: QUIEN_REVISA,
     });
@@ -206,7 +219,7 @@ describe('las filas con las que arranca un Asistente nuevo', () => {
 
     await assert.rejects(
       () =>
-        filasDeIncorporacion(ASISTENTE, PRESTADORA, {
+        filasDeIncorporacion(db, ASISTENTE, PRESTADORA, {
           aprobadas: APROBADAS.NINGUNA,
           revisadoPor: QUIEN_REVISA,
         }),

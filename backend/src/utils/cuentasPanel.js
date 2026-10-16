@@ -425,7 +425,7 @@ export async function activarVerificacionAltaAsistente(db, asistenteId, prestado
     // Las etapas son las que esa Prestadora tiene configuradas, las mismas que arma una
     // postulación aprobada. La política decide si nacen cumplidas o por cumplir, no cuáles son:
     // un alta a mano y una postulación son dos puertas al mismo proceso.
-    const filasVerificacion = await filasDeIncorporacion(asistenteId, prestadoraId, {
+    const filasVerificacion = await filasDeIncorporacion(db, asistenteId, prestadoraId, {
       aprobadas: politica === 'aprobado' ? APROBADAS.TODAS : APROBADAS.NINGUNA,
       revisadoPor: usuarioPanelId,
     });

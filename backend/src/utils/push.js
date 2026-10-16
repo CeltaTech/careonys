@@ -1,5 +1,5 @@
 import webpush from 'web-push';
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
 import { marcaDeLaPrestadora } from './marcaPrestadora.js';
 
@@ -50,10 +50,12 @@ async function comoSeVeEnElCelular(prestadoraId, titulo, cuerpo) {
 // Devuelve true si al menos una suscripción recibió el push con éxito — lo necesita Fase 11
 // (revisarRecordatoriosPush.js) para decidir si cae a WhatsApp de respaldo.
 //
-// `prestadoraId` es obligatorio y no tiene valor por defecto: el backend entra con la llave de
-// servicio, que se saltea la protección por fila, así que lo único que impide mandarle la
-// notificación de una Prestadora al aparato de otra es este filtro. Colgar del identificador del Asistente o del
-// Cliente no alcanza, porque acá no se lee ninguna de esas dos tablas.
+// `prestadoraId` es obligatorio y no tiene valor por defecto. Las suscripciones se leen y se borran
+// con la credencial del trabajo de esa Prestadora, que la base acota a ella, así que el aparato de
+// otra Prestadora no aparece aunque el filtro faltara. El filtro queda igual.
+//
+// CON QUÉ CREDENCIAL. La del trabajo de la Prestadora, y no la de quien pidió el envío: la
+// suscripción es del aparato de otra persona, y quien la avisa no tiene por qué poder leerla.
 async function enviarPush(prestadoraId, columna, id, { titulo, cuerpo, url }) {
   // Sin destinatario no hay push. Pasa cuando la guardia está sin cubrir: no hay Asistente
   // a quien avisarle. Se corta acá y no en cada llamador, para no repetir la misma
@@ -66,11 +68,11 @@ async function enviarPush(prestadoraId, columna, id, { titulo, cuerpo, url }) {
     return false;
   }
 
-  const { data: suscripciones, error } = await supabase
+  const { data: suscripciones, error } = await enLaPrestadora(prestadoraId, 'suscripciones de avisos al celular', (db) => db
     .from('push_subscriptions')
     .select('id, endpoint, p256dh, auth')
     .eq('prestadora_id', prestadoraId)
-    .eq(columna, id);
+    .eq(columna, id));
 
   if (error || !suscripciones?.length) return false;
 
@@ -92,11 +94,11 @@ async function enviarPush(prestadoraId, columna, id, { titulo, cuerpo, url }) {
         return true;
       } catch (err) {
         if (err.statusCode === 404 || err.statusCode === 410) {
-          await supabase
+          await enLaPrestadora(prestadoraId, 'borrar una suscripción vencida', (db) => db
             .from('push_subscriptions')
             .delete()
             .eq('prestadora_id', prestadoraId)
-            .eq('id', suscripcion.id);
+            .eq('id', suscripcion.id));
         } else {
           console.error(`Error enviando push a suscripción ${suscripcion.id}:`, err.message);
         }

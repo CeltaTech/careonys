@@ -1,4 +1,4 @@
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 
 // EL PUNTO UNICO DE VERDAD PARA ESCRIBIR EL REGISTRO DE ACTIVIDAD.
 //
@@ -10,10 +10,9 @@ import { supabase } from '../db/connection.js';
 // estas funciones: si la misma decision se copiara ruta por ruta, el dia que cambie el nombre de
 // una accion habria que acordarse de todas.
 //
-// POR QUE LO ESCRIBE EL BACKEND Y NO UN DISPARADOR DE LA BASE. El backend entra con la llave de
-// servicio (decision escrita en el `CLAUDE.md` de Careonys), asi que adentro de un disparador
-// `auth.uid()` da vacio y no habria forma de saber quien hizo la accion. Es el mismo motivo por
-// el que la auditoria de los accesos tambien se escribe desde Express.
+// SE ESCRIBE CON LA CREDENCIAL DEL TRABAJO DE LA PRESTADORA de la sesion, que la base acota a esa
+// Prestadora: quien pide no tiene permiso de escribir el registro, y no tiene que tenerlo, porque
+// si lo tuviera podria escribirse a si mismo lo que quisiera.
 //
 // NUNCA SE LE PASA UN DATO SENSIBLE. Ninguna clave, ningun dato de contenido, ninguna
 // direccion, ningun importe y ninguna remuneracion. La base ademas lo hace cumplir: `detalle`
@@ -65,17 +64,21 @@ export async function registrarActividad(usuarioPanel, accion, {
   // pedido por esto: el registro acompaña al trabajo, no lo bloquea.
   if (!usuarioPanel?.id || !usuarioPanel?.prestadoraId) return;
 
-  const { error } = await supabase.from('registro_actividad').insert({
-    prestadora_id: usuarioPanel.prestadoraId,
-    usuario_id: usuarioPanel.id,
-    accion,
-    tabla_afectada: tablaAfectada,
-    registro_id: registroId,
-    campos_cambiados: camposCambiados,
-    detalle,
-  });
-
-  if (error) console.error('Error escribiendo el registro de actividad:', error.message);
+  try {
+    const { error } = await enLaPrestadora(usuarioPanel.prestadoraId, 'registro de actividad', (db) =>
+      db.from('registro_actividad').insert({
+        prestadora_id: usuarioPanel.prestadoraId,
+        usuario_id: usuarioPanel.id,
+        accion,
+        tabla_afectada: tablaAfectada,
+        registro_id: registroId,
+        campos_cambiados: camposCambiados,
+        detalle,
+      }));
+    if (error) console.error('Error escribiendo el registro de actividad:', error.message);
+  } catch (err) {
+    console.error('Error escribiendo el registro de actividad:', err?.message ?? err);
+  }
 }
 
 // La entrada administrativa. Se anota una vez por ventana y por cuenta.

@@ -27,6 +27,7 @@ import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { olvidarPedidos } from '../../middleware/topeDePedidos.js';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const USUARIO = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'; // la cuenta: usuarios.id === auth.uid()
@@ -69,6 +70,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 const { default: express } = await import('express');
 await import('express-async-errors');
@@ -362,6 +364,11 @@ describe('el Asistente informa adónde se le paga', () => {
 
     const renglones = escriturasA('registro_actividad', 'POST');
     assert.equal(renglones.length, 1, 'el cambio de la cuenta no dejó ningún renglón');
+    // El registro lo escribe la credencial del trabajo de la Prestadora: quien pide no puede
+    // escribirlo, y la llave maestra no se usa.
+    const credencial = JSON.parse(Buffer.from(renglones[0].credencial.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+    assert.equal(credencial.role, 'trabajo_sin_persona', 'el renglón no fue con la credencial del trabajo');
+    assert.equal(credencial.prestadora_id, PRESTADORA, 'el renglón fue con la credencial de otra Prestadora');
     const renglon = JSON.parse(renglones[0].cuerpo);
     assert.equal(renglon.accion, 'cambio_de_datos_bancarios_del_asistente');
     assert.equal(renglon.usuario_id, USUARIO);

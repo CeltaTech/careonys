@@ -136,7 +136,6 @@
                                  "backend/src/utils/faseAutomaticaRelevo.js",
                                  "backend/src/utils/habilitarCambioDeClave.js",
                                  "backend/src/utils/instruccionesPersonasAutorizadas.js",
-                                 "backend/src/utils/intermediacionDeLaPrestadora.js",
                                  "backend/src/utils/mfaRecuperacionEmail.js",
                                  "backend/src/utils/prestadorasDeLaIntermediacion.js",
                                  "backend/src/utils/proponerRespuestasIA.js",
@@ -149,7 +148,6 @@
                                  "backend/src/utils/revisarNotificacionesCoordinador.js",
                                  "backend/src/utils/revisarRecordatoriosPush.js",
                                  "backend/src/utils/suscripcionesPush.js",
-                                 "backend/src/utils/tareasDelTipo.js",
                                  "backend/src/utils/telefonoAlActivar.js",
                                  "backend/src/utils/vencimientos.js",
                                  "backend/src/utils/whatsapp.js"

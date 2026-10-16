@@ -14,6 +14,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { createClient } from '@supabase/supabase-js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const PERSONA = '22222222-2222-2222-2222-222222222222';
@@ -43,9 +44,13 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 
 const { anotarConsultaAHce, origenDelPedido } = await import('../registroDeConsultas.js');
+
+/** La conexión del pedido de la persona, que es con la que se anota. */
+const deLaPersona = createClient(process.env.SUPABASE_URL, 'credencial-de-la-persona', {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
 
 const avisarDeVerdad = console.error;
 console.error = (...partes) => anotados.push(partes.join(' '));
@@ -62,13 +67,13 @@ beforeEach(() => {
 });
 
 const quien = { id: PERSONA, asistenteId: 'otra-cosa', prestadoraId: PRESTADORA };
-const anotar = (cambios = {}, persona = quien) =>
+const anotar = (cambios = {}, persona = quien, conexion = { cliente: deLaPersona }) =>
   anotarConsultaAHce(persona, {
     pacienteId: PACIENTE,
     categorias: ['indicaciones_medicacion'],
     origen: 'GET /api/app-asistentes/medicacion/:pacienteId',
     ...cambios,
-  });
+  }, conexion);
 
 function renglon() {
   return llamadas.find((l) => l.clave === 'POST /rest/v1/consultas_a_hce')?.cuerpo;
@@ -116,7 +121,7 @@ describe('el origen del pedido', () => {
 });
 
 describe('falla cerrado', () => {
-  it('sin persona, sin Prestadora, sin paciente, sin categorías o sin origen, lanza y no escribe', async () => {
+  it('sin conexión, sin persona, sin Prestadora, sin paciente, sin categorías o sin origen, lanza y no escribe', async () => {
     const casos = [
       () => anotar({}, { prestadoraId: PRESTADORA }),
       () => anotar({}, { id: PERSONA }),
@@ -126,6 +131,8 @@ describe('falla cerrado', () => {
       () => anotar({ categorias: [null] }),
       () => anotar({ origen: '' }),
       () => anotar({ origen: '?solo=esto' }),
+      () => anotar({}, quien, {}),
+      () => anotarConsultaAHce(quien, { pacienteId: PACIENTE, categorias: ['pacientes'], origen: 'GET /x' }),
     ];
     for (const caso of casos) {
       await assert.rejects(caso());

@@ -1,8 +1,8 @@
 import { enviarEmail } from './email.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
-import { idiomaDelDestinatario } from '../i18n/idiomas.js';
+import { IDIOMA_POR_DEFECTO, idiomaDelDestinatario } from '../i18n/idiomas.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { marcaDeLaPrestadora } from './marcaPrestadora.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
 
@@ -17,6 +17,9 @@ import { IDENTIDAD } from '../config/identidadProducto.js';
 // mandarlos por el teléfono que acaba de cambiar sería avisarle al que se lo llevó.
 //
 // NUNCA LLEVA EL NÚMERO NI EL CÓDIGO. El mensaje dice que el número cambió, no a cuál.
+//
+// CON QUÉ CREDENCIAL. El idioma lo pregunta el trabajo de la Prestadora de esa cuenta, que lee
+// sólo la suya.
 
 export const MENSAJE_CLAVE_RECUPERADA = 'clave_recuperada';
 export const MENSAJE_TELEFONO_CAMBIADO = 'telefono_cambiado';
@@ -36,7 +39,7 @@ export async function avisarDeSeguridad(clave, cuenta) {
     const marca = await marcaDeLaPrestadora(cuenta.prestadora_id);
     const textos = mensajeDelSistema(
       clave,
-      idiomaDelDestinatario(null, await idiomaDeLaPrestadora(supabase, cuenta.prestadora_id)),
+      idiomaDelDestinatario(null, await idiomaDeEsaPrestadora(cuenta.prestadora_id)),
       {
         nombre: cuenta.nombre ?? '',
         prestadora: marca?.nombre || IDENTIDAD.nombre,
@@ -53,4 +56,10 @@ export async function avisarDeSeguridad(clave, cuenta) {
     // Se anota que no salió, nunca a quién ni con qué datos.
     console.error(`avisoDeSeguridad: no se pudo mandar «${clave}»:`, e.message);
   }
+}
+
+/** Sin Prestadora no hay a quién preguntarle: sale en el idioma de por defecto, como antes. */
+function idiomaDeEsaPrestadora(prestadoraId) {
+  if (!prestadoraId) return IDIOMA_POR_DEFECTO;
+  return enLaPrestadora(prestadoraId, 'leer el idioma de la Prestadora', (db) => idiomaDeLaPrestadora(db, prestadoraId));
 }

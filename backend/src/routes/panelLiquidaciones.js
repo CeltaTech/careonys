@@ -661,6 +661,7 @@ panelLiquidacionesRouter.post('/:id/pagar', requiereRolPanel, requierePermiso(PE
       // La lista del lado del Asistente, que no es la de la cobranza: acá no se le paga con
       // tarjeta ni con débito automático a nadie.
       mediosAdmitidos = await mediosDePagoDeLaPrestadora(
+        db,
         liquidacion.prestadora_id,
         LISTA_DE_MEDIOS_DE_PAGO_AL_ASISTENTE,
       );
@@ -670,6 +671,7 @@ panelLiquidacionesRouter.post('/:id/pagar', requiereRolPanel, requierePermiso(PE
         liquidacion,
       );
       mediosQueAlcanzan = await mediosDePagoDeLaPrestadora(
+        db,
         liquidacion.prestadora_id,
         LISTA_DE_MEDIOS_DE_PAGO_AL_ASISTENTE,
         modalidades,

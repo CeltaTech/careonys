@@ -1,4 +1,4 @@
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
 import { verificadorDelTelefono } from './codigoAlTelefono.js';
 
@@ -15,10 +15,11 @@ import { verificadorDelTelefono } from './codigoAlTelefono.js';
 // y por eso hay un escalón arriba.
 //
 // LA REGLA ESTÁ ESCRITA DOS VECES A PROPÓSITO: acá y en un disparador de la base
-// (`interno.se_habilita_hacia_abajo_y_nunca_a_uno_mismo`). No es una copia por descuido: el backend
-// entra con la llave maestra y se saltea la protección por fila, así que sin el control de este
-// lado la regla de la base nunca se evaluaría con lo que el backend sabe; y sin la de la base,
+// (`interno.se_habilita_hacia_abajo_y_nunca_a_uno_mismo`). No es una copia por descuido: el de acá
+// contesta con el motivo que entiende la pantalla antes de escribir nada; y sin el de la base,
 // cualquier camino nuevo que escriba en esa tabla nacería sin control.
+//
+// Todo va con el trabajo de la Prestadora de la cuenta, que alcanza sus cuentas y ninguna otra.
 
 const ESCALON = {
   superadmin: 4,
@@ -31,6 +32,8 @@ const ESCALON = {
 // Un rol que no se entiende no está por debajo de nadie: nadie lo habilita y él no habilita a
 // nadie. Todo control de acceso falla cerrado (CLAUDE.md de la empresa §5).
 const ESCALON_DESCONOCIDO = 9;
+
+const TRABAJO = 'habilitación del cambio de clave';
 
 export function escalonDelRol(rol) {
   return ESCALON[rol] ?? ESCALON_DESCONOCIDO;
@@ -67,12 +70,12 @@ export function minutosDeLaHabilitacion() {
 
 async function cuentaDeLaPrestadora(usuarioId, prestadoraId) {
   if (!usuarioId || !prestadoraId) return null;
-  const { data } = await supabase
+  const { data } = await enLaPrestadora(prestadoraId, TRABAJO, (db) => db
     .from('usuarios')
     .select('id, rol, nombre, email, telefono, telefono_verificado_en, prestadora_id')
     .eq('id', usuarioId)
     .eq('prestadora_id', prestadoraId)
-    .maybeSingle();
+    .maybeSingle());
   return data ?? null;
 }
 
@@ -100,19 +103,21 @@ export async function habilitarCambioDeClave({ quien, usuarioId }) {
 
   // Lo anterior se da por anulado antes de abrir de nuevo: llamar dos veces no deja dos puertas
   // abiertas, deja una.
-  await supabase
-    .from('cambios_de_clave_habilitados')
-    .update({ anulado_en: new Date().toISOString() })
-    .eq('prestadora_id', quien.prestadoraId)
-    .eq('usuario_id', usuarioId)
-    .is('usado_en', null)
-    .is('anulado_en', null);
+  const { error } = await enLaPrestadora(quien.prestadoraId, TRABAJO, async (db) => {
+    await db
+      .from('cambios_de_clave_habilitados')
+      .update({ anulado_en: new Date().toISOString() })
+      .eq('prestadora_id', quien.prestadoraId)
+      .eq('usuario_id', usuarioId)
+      .is('usado_en', null)
+      .is('anulado_en', null);
 
-  const { error } = await supabase.from('cambios_de_clave_habilitados').insert({
-    prestadora_id: quien.prestadoraId,
-    usuario_id: usuarioId,
-    habilitado_por: quien.id,
-    expira_en: expiraEn,
+    return db.from('cambios_de_clave_habilitados').insert({
+      prestadora_id: quien.prestadoraId,
+      usuario_id: usuarioId,
+      habilitado_por: quien.id,
+      expira_en: expiraEn,
+    });
   });
   if (error) throw new Error(error.message);
 
@@ -135,7 +140,7 @@ export async function confirmarTelefonoDeLaCuenta({ quien, usuarioId }) {
   if (!puedeHabilitar(quien.rol, cuenta.rol)) throw new ErrorConMotivo('no_puede_habilitar');
   if (!cuenta.telefono) throw new ErrorConMotivo('telefono_invalido');
 
-  const { error } = await supabase
+  const { error } = await enLaPrestadora(quien.prestadoraId, TRABAJO, (db) => db
     .from('telefonos_confirmados_por_la_prestadora')
     .upsert(
       {
@@ -145,7 +150,7 @@ export async function confirmarTelefonoDeLaCuenta({ quien, usuarioId }) {
         telefono_verificador: verificadorDelTelefono(cuenta.telefono),
       },
       { onConflict: 'usuario_id,telefono_verificador' },
-    );
+    ));
   if (error) throw new Error(error.message);
 
   return cuenta;
@@ -180,13 +185,13 @@ export async function telefonosEsperandoHabilitacion(quien) {
   // Falla cerrado: sin sesión entendible no hay nada que mostrar.
   if (!quien?.id || !quien?.prestadoraId || !quien?.rol) return [];
 
-  const { data, error } = await supabase
+  const { data, error } = await enLaPrestadora(quien.prestadoraId, TRABAJO, (db) => db
     .from('usuarios')
     .select('id, nombre, email, rol, telefono, telefono_verificado_en')
     .eq('prestadora_id', quien.prestadoraId)
     .not('telefono', 'is', null)
     .order('nombre', { ascending: true })
-    .limit(TOPE_DE_LOS_PENDIENTES);
+    .limit(TOPE_DE_LOS_PENDIENTES));
   if (error) throw new Error(error.message);
 
   const alcanzables = (data ?? [])
@@ -198,11 +203,11 @@ export async function telefonosEsperandoHabilitacion(quien) {
   // Las que ya habilitó alguien salen de la lista. Se pregunta una sola vez por todas, y se compara
   // contra el identificador de verificación del número que la cuenta tiene hoy: habilitar un número viejo no habilita el
   // que vino después.
-  const { data: confirmados, error: errorConfirmados } = await supabase
+  const { data: confirmados, error: errorConfirmados } = await enLaPrestadora(quien.prestadoraId, TRABAJO, (db) => db
     .from('telefonos_confirmados_por_la_prestadora')
     .select('usuario_id, telefono_verificador')
     .eq('prestadora_id', quien.prestadoraId)
-    .in('usuario_id', alcanzables.map((cuenta) => cuenta.id));
+    .in('usuario_id', alcanzables.map((cuenta) => cuenta.id)));
   if (errorConfirmados) throw new Error(errorConfirmados.message);
 
   const yaHabilitados = new Set(
@@ -223,20 +228,20 @@ export async function telefonosEsperandoHabilitacion(quien) {
  *  la trae quien llama: es la de la cuenta que se está mirando. */
 export async function telefonoConfirmadoPorLaPrestadora({ usuarioId, prestadoraId, telefono }) {
   if (!usuarioId || !prestadoraId || !telefono) return false;
-  const { data } = await supabase
+  const { data } = await enLaPrestadora(prestadoraId, TRABAJO, (db) => db
     .from('telefonos_confirmados_por_la_prestadora')
     .select('id')
     .eq('prestadora_id', prestadoraId)
     .eq('usuario_id', usuarioId)
     .eq('telefono_verificador', verificadorDelTelefono(telefono))
-    .maybeSingle();
+    .maybeSingle());
   return Boolean(data);
 }
 
 /** La puerta que sigue abierta para esta cuenta, si hay alguna. */
 export async function cambioDeClaveHabilitado(usuarioId, prestadoraId) {
   if (!usuarioId || !prestadoraId) return null;
-  const { data } = await supabase
+  const { data } = await enLaPrestadora(prestadoraId, TRABAJO, (db) => db
     .from('cambios_de_clave_habilitados')
     .select('id, expira_en')
     .eq('prestadora_id', prestadoraId)
@@ -246,20 +251,20 @@ export async function cambioDeClaveHabilitado(usuarioId, prestadoraId) {
     .gt('expira_en', new Date().toISOString())
     .order('created_at', { ascending: false })
     .limit(1)
-    .maybeSingle();
+    .maybeSingle());
   return data ?? null;
 }
 
 /** Se gasta la puerta. Devuelve false si otro pedido la gastó primero. */
 export async function usarCambioDeClaveHabilitado(id, prestadoraId) {
   if (!id || !prestadoraId) return false;
-  const { data } = await supabase
+  const { data } = await enLaPrestadora(prestadoraId, TRABAJO, (db) => db
     .from('cambios_de_clave_habilitados')
     .update({ usado_en: new Date().toISOString() })
     .eq('prestadora_id', prestadoraId)
     .eq('id', id)
     .is('usado_en', null)
     .select('id')
-    .maybeSingle();
+    .maybeSingle());
   return Boolean(data);
 }

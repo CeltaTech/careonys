@@ -34,6 +34,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const OTRA_PRESTADORA = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
@@ -48,6 +49,14 @@ const CELULAR = '+54 9 11 5555-1234';
 const OTRO_CELULAR = '+54 9 11 5555-9999';
 
 const respuestas = new Map();
+
+function leerCredencial(autorizacion) {
+  try {
+    return JSON.parse(Buffer.from(autorizacion.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+  } catch {
+    return null;
+  }
+}
 let llamadas = [];
 
 const baseFalsa = createServer((req, res) => {
@@ -58,10 +67,16 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
-    llamadas.push({ clave, url: req.url });
+    const credencial = leerCredencial(req.headers.authorization ?? '');
+    llamadas.push({ clave, url: req.url, credencial });
 
+    // La base sólo le contesta al trabajo de la Prestadora por la que pregunta.
+    const delTrabajo = credencial?.role === 'trabajo_sin_persona'
+      && req.url.includes(`prestadora_id=eq.${credencial.prestadora_id}`);
     const preparada = respuestas.get(clave);
-    const valor = typeof preparada === 'function' ? preparada({ url: req.url }) : preparada;
+    const valor = !delTrabajo && preparada !== undefined
+      ? []
+      : typeof preparada === 'function' ? preparada({ url: req.url }) : preparada;
     if (valor === undefined) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: `la prueba no preparó respuesta para ${clave}` }));
@@ -76,7 +91,7 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // El import va después de las variables de entorno: la conexión se arma al importar.
 const { telefonosEsperandoHabilitacion } = await import('../habilitarCambioDeClave.js');
@@ -180,6 +195,19 @@ describe('los números que esperan habilitación', () => {
     });
 
     assert.deepEqual(nombres(lista), ['Rosa Giménez']);
+  });
+
+  it('pregunta con el trabajo de la Prestadora de la sesión', async () => {
+    cuentasConNumeroCargado([EL_ASISTENTE]);
+    yaHabilitados([]);
+
+    await telefonosEsperandoHabilitacion(laCoordinacion());
+
+    assert.equal(llamadas.length, 2);
+    for (const llamada of llamadas) {
+      assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', `${llamada.clave} fue con otra credencial`);
+      assert.equal(llamada.credencial.prestadora_id, PRESTADORA, `${llamada.clave} fue fuera de la Prestadora`);
+    }
   });
 
   it('pregunta sólo por la Prestadora de la sesión', async () => {

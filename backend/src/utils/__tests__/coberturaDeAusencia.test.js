@@ -16,6 +16,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const TITULAR = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
@@ -23,6 +24,15 @@ const COBERTURA = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 
 const respuestas = new Map();
 let llamadas = [];
+
+/** Lo que dice adentro una credencial, o `null` si no se puede leer. */
+function leerCredencial(autorizacion) {
+  try {
+    return JSON.parse(Buffer.from(autorizacion.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+  } catch {
+    return null;
+  }
+}
 
 const baseFalsa = createServer((req, res) => {
   let crudo = '';
@@ -32,7 +42,12 @@ const baseFalsa = createServer((req, res) => {
   req.on('end', () => {
     const direccion = new URL(req.url, 'http://interno');
     const clave = `${req.method} ${direccion.pathname}`;
-    llamadas.push({ clave, filtros: direccion.searchParams, cuerpo: crudo ? JSON.parse(crudo) : null });
+    llamadas.push({
+      clave,
+      filtros: direccion.searchParams,
+      cuerpo: crudo ? JSON.parse(crudo) : null,
+      credencial: leerCredencial(req.headers.authorization ?? ''),
+    });
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada(direccion.searchParams) : (preparada ?? []);
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -43,6 +58,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 const { supabase } = await import('../../db/connection.js');
 const { hastaDondeCubrir, devolverAlTitular, extenderCoberturasDeAusencia } = await import('../coberturaDeAusencia.js');
@@ -114,5 +130,27 @@ describe('el trabajo programado', () => {
       lecturas.map((l) => l.filtros.get('prestadora_id')),
       [`eq.${PRESTADORA}`, 'eq.99999999-9999-9999-9999-999999999999'],
     );
+  });
+
+  it('cada Prestadora se trabaja con la credencial del trabajo de esa Prestadora', async () => {
+    respuestas.set('GET /rest/v1/prestadoras', [{ id: PRESTADORA }]);
+    respuestas.set('GET /rest/v1/coberturas_de_ausencia', [
+      {
+        id: COBERTURA,
+        prestadora_id: PRESTADORA,
+        serie_id: 'serie-1',
+        asistente_sustituto_id: 'sustituto-1',
+        ausencias: { id: 'ausencia-1', asistente_id: TITULAR, fecha_inicio: '2026-01-01', fecha_fin: null, fecha_vuelta_real: '2026-01-05' },
+      },
+    ]);
+
+    await extenderCoberturasDeAusencia();
+
+    const deLaPrestadora = llamadas.filter((l) => l.clave !== 'GET /rest/v1/prestadoras');
+    assert.ok(deLaPrestadora.some((l) => l.clave === 'GET /rest/v1/guardias_cobertura'), 'no llegó a devolver al titular');
+    for (const llamada of deLaPrestadora) {
+      assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', `${llamada.clave} fue con otra credencial`);
+      assert.equal(llamada.credencial.prestadora_id, PRESTADORA, `${llamada.clave} fue fuera de la Prestadora`);
+    }
   });
 });

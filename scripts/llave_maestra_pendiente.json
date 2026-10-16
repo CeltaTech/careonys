@@ -188,7 +188,6 @@
                                  "backend/src/utils/suscripcionesPush.js",
                                  "backend/src/utils/tareasDelTipo.js",
                                  "backend/src/utils/telefonoAlActivar.js",
-                                 "backend/src/utils/tomasDeAlarma.js",
                                  "backend/src/utils/topeDePedidosDeClave.js",
                                  "backend/src/utils/vencimientos.js",
                                  "backend/src/utils/videollamada.js",

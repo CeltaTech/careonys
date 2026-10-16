@@ -10,14 +10,23 @@
 //
 // Ante cualquier falla de la consulta se contesta que NO. Es un control de privacidad y falla
 // cerrado: si no se pudo saber si la persona dio permiso, no se la ubica.
-import { supabase } from '../db/connection.js';
+//
+// CON QUÉ CREDENCIAL. La pregunta la hace el trabajo de la Prestadora de la guardia, y la función
+// contesta sólo por los Asistentes de esa Prestadora: el consentimiento que alguien dio en otra
+// no habilita a ubicarlo en ésta. Sin Prestadora no se pregunta.
+import { enLaPrestadora } from '../db/connection.js';
 
-export async function puedeRegistrarUbicacion(asistenteId) {
-  if (!asistenteId) return false;
+export async function puedeRegistrarUbicacion(asistenteId, prestadoraId) {
+  if (!asistenteId || !prestadoraId) return false;
 
-  const { data, error } = await supabase.rpc('consentimiento_seguimiento_vigente', {
-    p_asistente_id: asistenteId,
-  });
+  let data, error;
+  try {
+    ({ data, error } = await enLaPrestadora(prestadoraId, 'consultar el consentimiento de ubicación', (db) =>
+      db.rpc('consentimiento_seguimiento_vigente', { p_asistente_id: asistenteId })
+    ));
+  } catch (falla) {
+    error = falla;
+  }
 
   if (error) {
     console.error('Error consultando el consentimiento de seguimiento de ubicación:', error.message);

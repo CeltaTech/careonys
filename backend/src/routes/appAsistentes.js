@@ -889,7 +889,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
   // La llegada se marca siempre; la coordenada, sólo si el consentimiento de seguimiento está
   // vigente. Quien lo retiró sigue pudiendo trabajar con normalidad — lo único que no queda
   // guardado es dónde estaba.
-  const registraUbicacion = await puedeRegistrarUbicacion(guardia.asistente_id);
+  const registraUbicacion = await puedeRegistrarUbicacion(guardia.asistente_id, guardia.prestadora_id);
 
   const { error } = await db
     .from('guardias')
@@ -1799,7 +1799,7 @@ appAsistentesRouter.post('/guardias/:id/checkout', requiereRolAsistente, topeDeP
   // superpuestas parezcan cerradas cuando solo se cerró una.
   // Misma regla que en el check-in: la salida se marca siempre, la coordenada solamente con el
   // consentimiento de seguimiento vigente.
-  const registraUbicacion = await puedeRegistrarUbicacion(guardia.asistente_id);
+  const registraUbicacion = await puedeRegistrarUbicacion(guardia.asistente_id, guardia.prestadora_id);
 
   const { data: cerrada, error } = await db
     .from('guardias')
@@ -1908,7 +1908,7 @@ appAsistentesRouter.patch('/guardias/:id/ubicacion', requiereRolAsistente, exige
   // El mapa en vivo es, literalmente, la ubicación de una persona: sin consentimiento vigente no
   // se guarda nada. No es un error —la guardia sigue su curso y la aplicación no se traba—, así
   // que se contesta que sí y se avisa que la posición no quedó registrada.
-  if (!(await puedeRegistrarUbicacion(guardia.asistente_id))) {
+  if (!(await puedeRegistrarUbicacion(guardia.asistente_id, guardia.prestadora_id))) {
     return res.json({ ok: true, ubicacion_registrada: false });
   }
 

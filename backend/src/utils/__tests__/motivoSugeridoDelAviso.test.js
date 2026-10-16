@@ -18,6 +18,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 
@@ -38,7 +39,7 @@ const baseFalsa = createServer((req, res) => {
     crudo += parte;
   });
   req.on('end', () => {
-    escritoEnLaBase.push({ ruta: new URL(req.url, 'http://interno').pathname, cuerpo: crudo });
+    escritoEnLaBase.push({ ruta: new URL(req.url, 'http://interno').pathname, cuerpo: crudo, credencial: req.headers.authorization });
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end('[]');
   });
@@ -47,6 +48,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 process.env.ANTHROPIC_API_KEY = 'clave-de-mentira-que-no-sale-de-acá';
 
 /** Todo lo que se le mandó al modelo, que es la otra mitad de lo que se prueba acá. */
@@ -228,6 +230,13 @@ describe('sugerir el motivo de un aviso', () => {
       assert.equal(cuerpo.includes('ACV'), false, `lo que se contó llegó a ${ruta}`);
       assert.equal(cuerpo.includes('hospital'), false, `lo que se contó llegó a ${ruta}`);
     }
+
+    // Y el conteo va con la credencial del trabajo de esa Prestadora, que la base acota a ella.
+    const conteo = escritoEnLaBase.find(({ ruta }) => ruta === '/rest/v1/uso_ia');
+    assert.ok(conteo, 'no se contó el consumo');
+    const credencial = JSON.parse(Buffer.from(conteo.credencial.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+    assert.equal(credencial.role, 'trabajo_sin_persona');
+    assert.equal(credencial.prestadora_id, PRESTADORA);
   });
 });
 

@@ -23,6 +23,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
@@ -87,6 +88,7 @@ await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 process.env.RESEND_API_KEY = 'clave-de-mentira';
 process.env.REMITENTE_AVISOS = 'avisos@ejemplo.test';
 delete process.env.SMTP_USER;

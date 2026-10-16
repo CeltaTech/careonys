@@ -1301,7 +1301,7 @@ appClientesRouter.get('/facturas/:facturaId/comprobante', requiereRolCliente, ex
   if (error) return responderError(res, error);
   if (!factura?.comprobante_archivo) return res.status(404).json({ error: 'Comprobante no encontrado' });
 
-  const direccion = await direccionParaBajarElComprobante(factura.comprobante_archivo);
+  const direccion = await direccionParaBajarElComprobante(req.usuarioCliente.prestadoraId, factura.comprobante_archivo);
   if (!direccion) return res.status(502).json({ error: 'El comprobante no se pudo preparar' });
 
   res.json({ direccion });

@@ -117,7 +117,6 @@
                                  "backend/src/utils/casillaDeEnvio.js",
                                  "backend/src/utils/codigoAlTelefono.js",
                                  "backend/src/utils/comprobacionDePresencia.js",
-                                 "backend/src/utils/comprobanteDeLaFactura.js",
                                  "backend/src/utils/consentimientoMedicacion.js",
                                  "backend/src/utils/consentimientoPagador.js",
                                  "backend/src/utils/contactoDelAsistente.js",

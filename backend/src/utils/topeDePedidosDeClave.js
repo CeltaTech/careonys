@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { correoComparable } from '../config/correoDeAcceso.js';
 
 // EL TOPE DE PEDIDOS DE CLAVE NUEVA.
@@ -18,6 +18,9 @@ import { correoComparable } from '../config/correoDeAcceso.js';
 // SE CUENTA ANTES DE BUSCAR LA CUENTA, y el pedido se anota exista el correo o no. Si sólo
 // contaran los correos con cuenta, quedarse sin pedidos sería la señal de que ese correo existe, y
 // esta puerta volvería a ser una forma de averiguar quién trabaja en qué Prestadora.
+//
+// CON QUÉ CREDENCIAL. Contar y anotar van con la credencial del trabajo de la Prestadora del
+// pedido, que la base acota a ella: el tope de una no puede leer ni escribir los pedidos de otra.
 //
 // Es el mismo molde que `codigoAlTelefono.js` usa para el código al teléfono, con la misma forma de
 // fallar: cerrado.
@@ -58,12 +61,14 @@ export function verificadorDelCorreo(email) {
 
 async function pedidosEnLaUltimaHora(prestadoraId, verificador) {
   const desde = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const { count, error } = await supabase
-    .from('pedidos_de_clave_nueva')
-    .select('id', { count: 'exact', head: true })
-    .eq('prestadora_id', prestadoraId)
-    .eq('correo_verificador', verificador)
-    .gte('pedido_en', desde);
+  const { count, error } = await enLaPrestadora(prestadoraId, 'contar pedidos de clave nueva', (db) =>
+    db
+      .from('pedidos_de_clave_nueva')
+      .select('id', { count: 'exact', head: true })
+      .eq('prestadora_id', prestadoraId)
+      .eq('correo_verificador', verificador)
+      .gte('pedido_en', desde),
+  );
 
   if (error) {
     // Falla cerrado: un tope que se saltea cuando la base no contesta no es un tope.
@@ -92,9 +97,11 @@ export async function seAgotaronLosPedidosDeClave(prestadoraId, email) {
  */
 export async function anotarPedidoDeClave(prestadoraId, email) {
   if (!prestadoraId) return;
-  const { error } = await supabase
-    .from('pedidos_de_clave_nueva')
-    .insert({ prestadora_id: prestadoraId, correo_verificador: verificadorDelCorreo(email) });
+  const { error } = await enLaPrestadora(prestadoraId, 'anotar un pedido de clave nueva', (db) =>
+    db
+      .from('pedidos_de_clave_nueva')
+      .insert({ prestadora_id: prestadoraId, correo_verificador: verificadorDelCorreo(email) }),
+  );
   if (error) {
     console.error('topeDePedidosDeClave: no se pudo anotar el pedido:', error.message);
   }

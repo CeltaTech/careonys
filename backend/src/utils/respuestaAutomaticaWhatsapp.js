@@ -1,4 +1,4 @@
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import { IDIOMA_POR_DEFECTO } from '../i18n/idiomas.js';
 
@@ -29,6 +29,10 @@ import { IDIOMA_POR_DEFECTO } from '../i18n/idiomas.js';
    FALLA CERRADO. Si la lista de palabras de salud no se puede leer, no se contesta nada: se
    deriva todo a una persona. Una clasificación que no se pudo hacer no es una clasificación
    que dio «no es de salud».
+
+   CON QUÉ CREDENCIAL. Todo lo que se lee y se anota acá va con la credencial del trabajo de la
+   Prestadora del mensaje, que la base acota a ella. Sin Prestadora no se lee nada, y eso cae en
+   el mismo lado que una lista que no se pudo leer: no se contesta.
 
    QUÉ NO ESTÁ ACÁ. El modelo de IA no interviene en esta decisión. Su lugar es antes y aparte:
    propone respuestas para el banco, que nacen sin aprobar (`utils/proponerRespuestasIA.js`). */
@@ -81,11 +85,12 @@ function contiene(textoLimpio, termino) {
  *          por WhatsApp no elige idioma en ningún lado, así que se miran todas—, o `null` si la
  *          lista no se pudo leer, que es el caso en el que no se contesta nada.
  */
-export async function terminosDeSaludYEmergencia() {
-  const { data, error } = await supabase
-    .from('terminos_de_salud_y_emergencia')
-    .select('termino, motivo')
-    .eq('activo', true);
+export async function terminosDeSaludYEmergencia(prestadoraId) {
+  if (!prestadoraId) return null;
+
+  const { data, error } = await enLaPrestadora(prestadoraId, 'palabras de salud y emergencia', (db) =>
+    db.from('terminos_de_salud_y_emergencia').select('termino, motivo').eq('activo', true),
+  );
 
   // El texto crudo de la base nombra tablas y columnas, así que no sale de acá (CLAUDE.md §6).
   if (error) {
@@ -110,32 +115,38 @@ export async function terminosDeSaludYEmergencia() {
 export async function telefonoDeEmergencia(prestadoraId) {
   if (!prestadoraId) return null;
 
-  const { data: prestadora, error: errorPrestadora } = await supabase
-    .from('prestadoras')
-    .select('pais')
-    .eq('id', prestadoraId)
-    .maybeSingle();
-  if (errorPrestadora || !prestadora?.pais) return null;
+  return enLaPrestadora(prestadoraId, 'teléfono de emergencias', async (db) => {
+    const { data: prestadora, error: errorPrestadora } = await db
+      .from('prestadoras')
+      .select('pais')
+      .eq('id', prestadoraId)
+      .maybeSingle();
+    if (errorPrestadora || !prestadora?.pais) return null;
 
-  const { data, error } = await supabase
-    .from('telefonos_de_emergencia')
-    .select('telefono')
-    .eq('jurisdiccion', prestadora.pais)
-    .eq('activo', true)
-    .maybeSingle();
-  if (error) return null;
+    const { data, error } = await db
+      .from('telefonos_de_emergencia')
+      .select('telefono')
+      .eq('jurisdiccion', prestadora.pais)
+      .eq('activo', true)
+      .maybeSingle();
+    if (error) return null;
 
-  return data?.telefono || null;
+    return data?.telefono || null;
+  });
 }
 
 /** Las respuestas que la Prestadora aprobó y tiene activas. Ninguna otra existe para acá. */
 async function respuestasAprobadas(prestadoraId) {
-  const { data, error } = await supabase
-    .from('respuestas_preparadas_whatsapp')
-    .select('id, nombre_interno, terminos, i18n, toca_salud, aprobada_at, activa')
-    .eq('prestadora_id', prestadoraId)
-    .eq('activa', true)
-    .not('aprobada_at', 'is', null);
+  if (!prestadoraId) return null;
+
+  const { data, error } = await enLaPrestadora(prestadoraId, 'respuestas aprobadas de WhatsApp', (db) =>
+    db
+      .from('respuestas_preparadas_whatsapp')
+      .select('id, nombre_interno, terminos, i18n, toca_salud, aprobada_at, activa')
+      .eq('prestadora_id', prestadoraId)
+      .eq('activa', true)
+      .not('aprobada_at', 'is', null),
+  );
 
   if (error) {
     console.error('No se pudo leer el banco de respuestas preparadas:', error.message);
@@ -167,7 +178,7 @@ export async function resolverRespuestaAutomatica({ prestadoraId, texto, idioma 
     return { accion: 'derivar', motivo: MOTIVO_SIN_RESPUESTA_APROBADA, respuesta: null, texto: null };
   }
 
-  const terminos = await terminosDeSaludYEmergencia();
+  const terminos = await terminosDeSaludYEmergencia(prestadoraId);
   // FALLA CERRADO: sin la lista no se puede afirmar que esto no sea de salud.
   if (!terminos) {
     return { accion: 'derivar', motivo: MOTIVO_NO_SE_PUDO_CLASIFICAR, respuesta: null, texto: null };
@@ -208,7 +219,9 @@ export async function resolverRespuestaAutomatica({ prestadoraId, texto, idioma 
     return { accion: 'derivar', motivo: MOTIVO_SIN_RESPUESTA_APROBADA, respuesta: null, texto: null };
   }
 
-  const idiomaDelTexto = idioma ?? (await idiomaDeLaPrestadora(supabase, prestadoraId));
+  const idiomaDelTexto =
+    idioma ??
+    (await enLaPrestadora(prestadoraId, 'idioma de la Prestadora', (db) => idiomaDeLaPrestadora(db, prestadoraId)));
   const textoAprobado = elegida.i18n?.[idiomaDelTexto] ?? elegida.i18n?.[IDIOMA_POR_DEFECTO];
 
   // Sin texto en ese idioma no hay nada que mandar, y no se traduce ni se arma uno parecido.
@@ -277,15 +290,17 @@ export async function registrarRespuestaAutomatica({
 }) {
   if (!prestadoraId || !resultado || !motivo) return;
 
-  const { error } = await supabase.from('auditoria_respuesta_automatica_whatsapp').insert({
-    prestadora_id: prestadoraId,
-    conversacion_id: conversacionId,
-    mensaje_entrante_id: mensajeEntranteId,
-    mensaje_saliente_id: mensajeSalienteId,
-    respuesta_preparada_id: respuestaPreparadaId,
-    resultado,
-    motivo,
-  });
+  const { error } = await enLaPrestadora(prestadoraId, 'registrar la respuesta automática', (db) =>
+    db.from('auditoria_respuesta_automatica_whatsapp').insert({
+      prestadora_id: prestadoraId,
+      conversacion_id: conversacionId,
+      mensaje_entrante_id: mensajeEntranteId,
+      mensaje_saliente_id: mensajeSalienteId,
+      respuesta_preparada_id: respuestaPreparadaId,
+      resultado,
+      motivo,
+    }),
+  );
 
   if (error) console.error('No se pudo registrar la respuesta automática de WhatsApp:', error.message);
 }

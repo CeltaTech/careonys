@@ -14,6 +14,7 @@
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 
@@ -21,6 +22,15 @@ const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const respuestas = new Map();
 /** Todo lo que el backend le pidió a la base. */
 let llamadas = [];
+
+/** Lo que dice adentro una credencial, o `null` si no se puede leer. */
+function leerCredencial(autorizacion) {
+  try {
+    return JSON.parse(Buffer.from(autorizacion.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+  } catch {
+    return null;
+  }
+}
 
 const baseFalsa = createServer((req, res) => {
   let crudo = '';
@@ -31,7 +41,7 @@ const baseFalsa = createServer((req, res) => {
     const ruta = new URL(req.url, 'http://interno').pathname;
     const clave = `${req.method} ${ruta}`;
     const cuerpo = crudo ? JSON.parse(crudo) : null;
-    llamadas.push({ clave, url: req.url, cuerpo });
+    llamadas.push({ clave, url: req.url, cuerpo, credencial: leerCredencial(req.headers.authorization ?? '') });
 
     const preparada = respuestas.get(clave);
     const valor = typeof preparada === 'function' ? preparada({ url: req.url, cuerpo }) : preparada;
@@ -49,7 +59,7 @@ const baseFalsa = createServer((req, res) => {
 
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
-process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // El import va después de las variables de entorno: la conexión se arma al importar.
 const {
@@ -388,5 +398,55 @@ describe('el texto que se compara', () => {
 
   it('las dos palabras de un término siguen separadas por un espacio', () => {
     assert.equal(textoComparable('No  Respira!'), ' no respira ');
+  });
+});
+
+describe('con qué credencial', () => {
+  /** Cada pedido a la base fue con la credencial del trabajo de la Prestadora del mensaje. */
+  function todasDentroDeLaPrestadora() {
+    assert.ok(llamadas.length > 0, 'tendría que haber consultado la base');
+    for (const llamada of llamadas) {
+      assert.equal(llamada.credencial?.role, 'trabajo_sin_persona', `${llamada.clave} fue con otra credencial`);
+      assert.equal(llamada.credencial.prestadora_id, PRESTADORA, `${llamada.clave} fue fuera de la Prestadora`);
+    }
+  }
+
+  it('contestar lee la lista, el banco y el idioma adentro de la Prestadora', async () => {
+    respuestas.set('GET /rest/v1/respuestas_preparadas_whatsapp', () => [respuestaPreparada()]);
+
+    const resultado = await resolverRespuestaAutomatica({ prestadoraId: PRESTADORA, texto: 'consulto horarios' });
+
+    assert.equal(resultado.motivo, MOTIVO_RESPUESTA_APROBADA);
+    const consultadas = llamadas.map((l) => l.clave);
+    for (const clave of [
+      'GET /rest/v1/terminos_de_salud_y_emergencia',
+      'GET /rest/v1/respuestas_preparadas_whatsapp',
+      'GET /rest/v1/prestadoras',
+    ]) {
+      assert.ok(consultadas.includes(clave), `tendría que haber pedido ${clave}`);
+    }
+    todasDentroDeLaPrestadora();
+  });
+
+  it('el teléfono de emergencias y el registro, también', async () => {
+    respuestas.set('GET /rest/v1/telefonos_de_emergencia', () => [{ telefono: '911' }]);
+
+    await avisarAlServicioDeEmergencias({ prestadoraId: PRESTADORA });
+    await registrarRespuestaAutomatica({
+      prestadoraId: PRESTADORA,
+      resultado: RESULTADO_DERIVADA,
+      motivo: MOTIVO_EMERGENCIA,
+    });
+
+    assert.ok(llamadas.some((l) => l.clave === 'POST /rest/v1/auditoria_respuesta_automatica_whatsapp'));
+    todasDentroDeLaPrestadora();
+  });
+
+  it('sin Prestadora no se lee nada y no se contesta', async () => {
+    const resultado = await resolverRespuestaAutomatica({ prestadoraId: null, texto: 'consulto horarios' });
+
+    assert.equal(resultado.accion, 'derivar');
+    assert.equal(resultado.motivo, MOTIVO_NO_SE_PUDO_CLASIFICAR);
+    assert.equal(llamadas.length, 0);
   });
 });

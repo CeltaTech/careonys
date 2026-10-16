@@ -89,11 +89,9 @@
                              "backend/src/utils/__tests__/propuestaConfiguracionInicial.test.js",
                              "backend/src/utils/__tests__/recuperacionSoloDeLaGenteDeLaPrestadora.test.js",
                              "backend/src/utils/__tests__/registroDeConsultas.test.js",
-                             "backend/src/utils/__tests__/respuestaAutomaticaWhatsapp.test.js",
                              "backend/src/utils/__tests__/revisarAusenciasAvisadas.test.js",
                              "backend/src/utils/__tests__/revisarLlegadasDemoradas.test.js",
                              "backend/src/utils/__tests__/telefonosEsperandoHabilitacion.test.js",
-                             "backend/src/utils/__tests__/topeDePedidosDeClave.test.js",
                              "backend/src/utils/__tests__/videollamada.test.js"
                          ],
     "importan_la_conexion":  [
@@ -169,7 +167,6 @@
                                  "backend/src/utils/reenvioDeLaCola.js",
                                  "backend/src/utils/reenvioDeRespuestas.js",
                                  "backend/src/utils/registroDeConsultas.js",
-                                 "backend/src/utils/respuestaAutomaticaWhatsapp.js",
                                  "backend/src/utils/revisarAlertasIA.js",
                                  "backend/src/utils/revisarAusenciasAvisadas.js",
                                  "backend/src/utils/revisarExtensionesDeTurno.js",
@@ -182,7 +179,6 @@
                                  "backend/src/utils/suscripcionesPush.js",
                                  "backend/src/utils/tareasDelTipo.js",
                                  "backend/src/utils/telefonoAlActivar.js",
-                                 "backend/src/utils/topeDePedidosDeClave.js",
                                  "backend/src/utils/vencimientos.js",
                                  "backend/src/utils/vitalesReferencia.js",
                                  "backend/src/utils/whatsapp.js"

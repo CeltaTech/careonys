@@ -417,3 +417,36 @@ describe('la puerta del postulante', () => {
     assert.equal((await entrevistaPorLlave(LLAVE, PRESTADORA)).momento, 'todavia_no');
   });
 });
+
+// Lo que se lee y se escribe de la postulación y de sus entrevistas va con el trabajo de la
+// Prestadora de la sesión o de la puerta, y con ninguna otra credencial.
+describe('con qué credencial', () => {
+  function conElTrabajoDeLaPrestadora() {
+    const propias = llamadas.filter((l) => l.ruta === '/rest/v1/postulaciones' || l.ruta === '/rest/v1/entrevistas_postulacion');
+    assert.ok(propias.length > 0, 'no se consultó nada');
+    for (const l of propias) {
+      const credencial = JSON.parse(Buffer.from(String(l.credencial).replace('Bearer ', '').split('.')[1] ?? '', 'base64url').toString() || 'null');
+      assert.equal(credencial?.role, 'trabajo_sin_persona', `${l.metodo} ${l.ruta} fue con otra credencial`);
+      assert.equal(credencial.prestadora_id, PRESTADORA, `${l.metodo} ${l.ruta} fue fuera de la Prestadora`);
+    }
+  }
+
+  it('agendar, mover y cerrar van con el trabajo de la Prestadora', async () => {
+    await agendarEntrevista({ prestadoraId: PRESTADORA, postulacionId: POSTULACION, agendadaPara: EN_UNA_HORA(), usuarioId: USUARIO });
+    await reprogramarEntrevista({ prestadoraId: PRESTADORA, postulacionId: POSTULACION, agendadaPara: EN_UNA_HORA() });
+    await cerrarEntrevista({ prestadoraId: PRESTADORA, postulacionId: POSTULACION, estado: 'realizada', usuarioId: USUARIO });
+    conElTrabajoDeLaPrestadora();
+  });
+
+  it('cancelar va con el trabajo de la Prestadora', async () => {
+    yaHayUnaAgendada();
+    await cancelarEntrevista({ prestadoraId: PRESTADORA, postulacionId: POSTULACION, usuarioId: USUARIO });
+    conElTrabajoDeLaPrestadora();
+  });
+
+  it('la llave se busca con el trabajo de la Prestadora de la puerta', async () => {
+    yaHayUnaAgendada();
+    await entrevistaPorLlave(LLAVE, PRESTADORA);
+    conElTrabajoDeLaPrestadora();
+  });
+});

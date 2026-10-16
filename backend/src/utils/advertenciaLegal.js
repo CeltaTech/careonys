@@ -1,4 +1,4 @@
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 
 // ---------------------------------------------------------------------------------------
 // La advertencia legal: un solo lugar que la resuelve y un solo lugar que la registra
@@ -20,6 +20,10 @@ import { supabase } from '../db/connection.js';
 // forma de hacer la cosa sin anotarlo. La pantalla sigue mostrando el cartel antes, que es
 // lo que le corresponde: que la persona decida sabiendo.
 //
+// CON QUÉ CREDENCIAL: con el trabajo de esa Prestadora. Lee las advertencias, que son del
+// producto, y anota el aviso sólo en la Prestadora de ese trabajo: la base no le deja anotarlo en
+// otra.
+//
 // ESTO NUNCA HACE FALLAR A QUIEN LO LLAMA. Una advertencia que no se pudo resolver no puede
 // convertirse en una acción que no se pudo hacer: sería el producto bloqueando por razón
 // legal, que es exactamente lo que la regla prohíbe. Los errores se registran en la consola
@@ -36,26 +40,28 @@ export async function advertenciasVigentes(prestadoraId, funcionClaves) {
   const claves = (funcionClaves || []).filter(Boolean);
   if (!prestadoraId || !claves.length) return new Map();
 
-  const { data: prestadora, error: errorPrestadora } = await supabase
-    .from('prestadoras')
-    .select('pais')
-    .eq('id', prestadoraId)
-    .maybeSingle();
-  if (errorPrestadora || !prestadora?.pais) return new Map();
+  return enLaPrestadora(prestadoraId, 'resolver las advertencias legales', async (db) => {
+    const { data: prestadora, error: errorPrestadora } = await db
+      .from('prestadoras')
+      .select('pais')
+      .eq('id', prestadoraId)
+      .maybeSingle();
+    if (errorPrestadora || !prestadora?.pais) return new Map();
 
-  const { data, error } = await supabase
-    .from('advertencias_legales')
-    .select('funcion_clave, texto_advertencia')
-    .eq('jurisdiccion', prestadora.pais)
-    .in('funcion_clave', claves);
-  if (error) return new Map();
+    const { data, error } = await db
+      .from('advertencias_legales')
+      .select('funcion_clave, texto_advertencia')
+      .eq('jurisdiccion', prestadora.pais)
+      .in('funcion_clave', claves);
+    if (error) return new Map();
 
-  return new Map(
-    (data || []).map((fila) => [
-      fila.funcion_clave,
-      { jurisdiccion: prestadora.pais, texto: fila.texto_advertencia },
-    ])
-  );
+    return new Map(
+      (data || []).map((fila) => [
+        fila.funcion_clave,
+        { jurisdiccion: prestadora.pais, texto: fila.texto_advertencia },
+      ])
+    );
+  });
 }
 
 /**
@@ -77,14 +83,20 @@ export async function advertenciaVigente(prestadoraId, funcionClave) {
  */
 export async function registrarAdvertencia({ prestadoraId, usuarioId, funcionClave, advertencia }) {
   if (!advertencia) return null;
+  if (!prestadoraId) {
+    console.error('No se pudo registrar el aviso legal: falta la Prestadora.', funcionClave);
+    return advertencia;
+  }
 
-  const { error } = await supabase.from('auditoria_advertencias_legales').insert({
-    prestadora_id: prestadoraId,
-    usuario_id: usuarioId,
-    funcion_clave: funcionClave,
-    jurisdiccion: advertencia.jurisdiccion,
-    texto_mostrado: advertencia.texto,
-  });
+  const { error } = await enLaPrestadora(prestadoraId, 'registrar el aviso legal', (db) =>
+    db.from('auditoria_advertencias_legales').insert({
+      prestadora_id: prestadoraId,
+      usuario_id: usuarioId,
+      funcion_clave: funcionClave,
+      jurisdiccion: advertencia.jurisdiccion,
+      texto_mostrado: advertencia.texto,
+    }),
+  );
   // El texto crudo de la base nombra tablas y columnas, así que no sale de acá (CLAUDE.md §6).
   if (error) console.error('No se pudo registrar el aviso legal:', funcionClave, error.message);
 

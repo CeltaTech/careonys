@@ -118,7 +118,8 @@ export function sinPrestadora(trabajo, region = regionDeLaPrestadora(null)) {
 /**
  * Corre `hacer` una vez por cada Prestadora, de a una, cada vez con su propia credencial. Lo que
  * falla en una se anota y no frena a las demás. Recorre todas las regiones: cada una contesta
- * por las Prestadoras que viven en ella.
+ * por las Prestadoras que viven en ella. `hacer` recibe la Prestadora y esa conexión, para quien
+ * la quiera usar sin pasar por `supabase`.
  */
 export async function paraCadaPrestadora(trabajo, hacer) {
   for (const region of lasRegiones()) {
@@ -129,10 +130,8 @@ export async function paraCadaPrestadora(trabajo, hacer) {
     }
     for (const prestadoraId of data ?? []) {
       try {
-        await contexto.run(
-          conexionDelTrabajo({ prestadoraId, trabajo, region }),
-          () => hacer(prestadoraId),
-        );
+        const conexion = conexionDelTrabajo({ prestadoraId, trabajo, region });
+        await contexto.run(conexion, () => hacer(prestadoraId, conexion));
       } catch (err) {
         console.error(`${trabajo}: falló en la Prestadora ${prestadoraId}:`, err?.message ?? err);
       }

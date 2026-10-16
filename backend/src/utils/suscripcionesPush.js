@@ -1,4 +1,4 @@
-import { supabase } from '../db/connection.js';
+import { enLaPrestadora } from '../db/connection.js';
 
 // Guarda la suscripción a las notificaciones de un aparato, y deja rastro si esa suscripción
 // cambia de dueño.
@@ -19,6 +19,10 @@ import { supabase } from '../db/connection.js';
 // suyo. Lo hace cumplir la restricción `push_subscriptions_prestadora_endpoint_key`, única
 // sobre `(prestadora_id, endpoint)`.
 //
+// **CON QUÉ CREDENCIAL.** Con el trabajo de esa Prestadora, no con la de la persona: hay que ver la
+// anotación que el aparato ya tenga, aunque sea de otra persona, para poder pisarla y dejar el
+// rastro. La base lo deja solamente adentro de esa Prestadora.
+//
 // `rol` es 'asistente' o 'cliente'. Devuelve `{ error }`: el llamador decide qué contestar.
 export async function guardarSuscripcionPush({ prestadoraId, rol, usuarioId, endpoint, keys, userAgent }) {
   const columna = rol === 'asistente' ? 'asistente_id' : 'cliente_id';
@@ -27,64 +31,66 @@ export async function guardarSuscripcionPush({ prestadoraId, rol, usuarioId, end
   // tenga en otra, que acá no existe.
   if (!prestadoraId) return { error: new Error('falta la Prestadora') };
 
-  const { data: anterior, error: errorAnterior } = await supabase
-    .from('push_subscriptions')
-    .select('id, asistente_id, cliente_id')
-    .eq('prestadora_id', prestadoraId)
-    .eq('endpoint', endpoint)
-    .maybeSingle();
-  if (errorAnterior) return { error: errorAnterior };
+  return enLaPrestadora(prestadoraId, 'guardar la suscripción a las notificaciones', async (db) => {
+    const { data: anterior, error: errorAnterior } = await db
+      .from('push_subscriptions')
+      .select('id, asistente_id, cliente_id')
+      .eq('prestadora_id', prestadoraId)
+      .eq('endpoint', endpoint)
+      .maybeSingle();
+    if (errorAnterior) return { error: errorAnterior };
 
-  // Se manda solamente la columna de la audiencia propia, nunca la otra en nulo. Es a propósito:
-  // dejando la otra como está, un intento de quedarse con la suscripción de la audiencia contraria
-  // choca contra el CHECK `push_subscriptions_una_audiencia` y no llega a escribirse. Mandarla en
-  // nulo "para dejar la fila prolija" abriría un camino que hoy la base cierra sola.
-  const fila = {
-    prestadora_id: prestadoraId,
-    endpoint,
-    p256dh: keys.p256dh,
-    auth: keys.auth,
-    user_agent: userAgent || null,
-  };
-  fila[columna] = usuarioId;
-
-  // El conflicto es por Prestadora y aparato, nunca por el aparato solo: la fila que se pisa es
-  // siempre de esta Prestadora, y la que ese mismo teléfono tenga en otra no se toca.
-  const { data: guardada, error } = await supabase
-    .from('push_subscriptions')
-    .upsert(fila, { onConflict: 'prestadora_id,endpoint' })
-    .select('id')
-    .single();
-  if (error) return { error };
-
-  const duenoAnterior = anterior?.asistente_id ?? anterior?.cliente_id ?? null;
-  if (duenoAnterior && duenoAnterior !== usuarioId) {
-    const { error: errorRastro } = await supabase.from('auditoria_cambio_dueno_push').insert({
-      suscripcion_id: guardada.id,
-      // Las dos son la misma: un cambio de dueño ocurre siempre adentro de una Prestadora. Las dos
-      // columnas quedan porque son las que tiene la tabla, y una anotación vieja puede traer dos
-      // distintas, de cuando el aparato se anotaba una sola vez en total.
-      prestadora_anterior: prestadoraId,
-      prestadora_nueva: prestadoraId,
-      usuario_anterior: duenoAnterior,
-      usuario_nuevo: usuarioId,
-      rol_anterior: anterior.asistente_id ? 'asistente' : 'cliente',
-      rol_nuevo: rol,
+    // Se manda solamente la columna de la audiencia propia, nunca la otra en nulo. Es a propósito:
+    // dejando la otra como está, un intento de quedarse con la suscripción de la audiencia contraria
+    // choca contra el CHECK `push_subscriptions_una_audiencia` y no llega a escribirse. Mandarla en
+    // nulo "para dejar la fila prolija" abriría un camino que hoy la base cierra sola.
+    const fila = {
+      prestadora_id: prestadoraId,
+      endpoint,
+      p256dh: keys.p256dh,
+      auth: keys.auth,
       user_agent: userAgent || null,
-    });
-    // Si falla la anotación, la suscripción ya quedó guardada y el aparato va a recibir sus
-    // notificaciones: no
-    // se le devuelve un error a quien acaba de suscribirse por algo que no puede resolver. Queda en
-    // el registro del servidor, que es donde alguien lo va a ir a buscar. Se anotan identificadores,
-    // nunca la dirección de entrega ni el correo de nadie (CLAUDE.md §6).
-    if (errorRastro) {
-      console.error(
-        'No se pudo anotar el cambio de dueño de una suscripción a las notificaciones',
-        guardada.id,
-        errorRastro.message,
-      );
-    }
-  }
+    };
+    fila[columna] = usuarioId;
 
-  return { error: null };
+    // El conflicto es por Prestadora y aparato, nunca por el aparato solo: la fila que se pisa es
+    // siempre de esta Prestadora, y la que ese mismo teléfono tenga en otra no se toca.
+    const { data: guardada, error } = await db
+      .from('push_subscriptions')
+      .upsert(fila, { onConflict: 'prestadora_id,endpoint' })
+      .select('id')
+      .single();
+    if (error) return { error };
+
+    const duenoAnterior = anterior?.asistente_id ?? anterior?.cliente_id ?? null;
+    if (duenoAnterior && duenoAnterior !== usuarioId) {
+      const { error: errorRastro } = await db.from('auditoria_cambio_dueno_push').insert({
+        suscripcion_id: guardada.id,
+        // Las dos son la misma: un cambio de dueño ocurre siempre adentro de una Prestadora. Las dos
+        // columnas quedan porque son las que tiene la tabla, y una anotación vieja puede traer dos
+        // distintas, de cuando el aparato se anotaba una sola vez en total.
+        prestadora_anterior: prestadoraId,
+        prestadora_nueva: prestadoraId,
+        usuario_anterior: duenoAnterior,
+        usuario_nuevo: usuarioId,
+        rol_anterior: anterior.asistente_id ? 'asistente' : 'cliente',
+        rol_nuevo: rol,
+        user_agent: userAgent || null,
+      });
+      // Si falla la anotación, la suscripción ya quedó guardada y el aparato va a recibir sus
+      // notificaciones: no
+      // se le devuelve un error a quien acaba de suscribirse por algo que no puede resolver. Queda en
+      // el registro del servidor, que es donde alguien lo va a ir a buscar. Se anotan identificadores,
+      // nunca la dirección de entrega ni el correo de nadie (CLAUDE.md §6).
+      if (errorRastro) {
+        console.error(
+          'No se pudo anotar el cambio de dueño de una suscripción a las notificaciones',
+          guardada.id,
+          errorRastro.message,
+        );
+      }
+    }
+
+    return { error: null };
+  });
 }

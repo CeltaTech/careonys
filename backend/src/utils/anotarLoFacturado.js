@@ -16,9 +16,12 @@
    fecha que nadie decidió cambiar.
 
    LO QUE NO HACE: decidir. Si ese renglón se anota, se saltea o se rechaza lo resuelve
-   `intercambioDeFacturacion.js`, que se puede probar sin base. Acá se escribe, nada más. */
+   `intercambioDeFacturacion.js`, que se puede probar sin base. Acá se escribe, nada más.
 
-import { supabase } from '../db/connection.js';
+   CON QUÉ CREDENCIAL. Las dos consultas van con la credencial del trabajo de la Prestadora, que la
+   base acota a ella, y además la nombran. Sin Prestadora no se consulta nada. */
+
+import { enLaPrestadora } from '../db/connection.js';
 import { aDosDecimales } from './facturacionDeClientes.js';
 
 /** Las columnas que quedan escritas en la factura con lo que informó quien emitió. */
@@ -37,18 +40,14 @@ export function cambiosDeLoFacturado(facturado) {
   return cambios;
 }
 
-/**
- * Escribir lo emitido en esa factura. Devuelve lo que contestó la base.
- *
- * El filtro de Prestadora va acá y no en quien llama: el backend entra a la base con la llave de
- * servicio, así que si falta ese filtro no lo detiene nadie.
- */
+/** Escribir lo emitido en esa factura. Devuelve lo que contestó la base. */
 export async function anotarLoFacturado(prestadoraId, facturaId, facturado) {
-  return supabase
-    .from('facturas_cliente')
-    .update(cambiosDeLoFacturado(facturado))
-    .eq('id', facturaId)
-    .eq('prestadora_id', prestadoraId);
+  return enLaPrestadora(prestadoraId, 'anotar lo facturado', (db) =>
+    db
+      .from('facturas_cliente')
+      .update(cambiosDeLoFacturado(facturado))
+      .eq('id', facturaId)
+      .eq('prestadora_id', prestadoraId));
 }
 
 /**
@@ -58,10 +57,11 @@ export async function anotarLoFacturado(prestadoraId, facturaId, facturado) {
  * lo resuelve esta consulta, y desde afuera las dos situaciones se ven iguales a propósito.
  */
 export async function facturaParaAnotar(prestadoraId, facturaId) {
-  return supabase
-    .from('facturas_cliente')
-    .select('id, facturado_at')
-    .eq('id', facturaId)
-    .eq('prestadora_id', prestadoraId)
-    .maybeSingle();
+  return enLaPrestadora(prestadoraId, 'factura para anotar lo facturado', (db) =>
+    db
+      .from('facturas_cliente')
+      .select('id, facturado_at')
+      .eq('id', facturaId)
+      .eq('prestadora_id', prestadoraId)
+      .maybeSingle());
 }

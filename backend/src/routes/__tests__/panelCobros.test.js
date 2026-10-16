@@ -22,6 +22,7 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
+import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 
 // ---------------------------------------------------------------------------------------
 // La base de mentira
@@ -81,6 +82,7 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
+prepararCredencialDePrueba();
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se
 // arma en el momento en que se importa, y con la dirección que haya en ese instante.
@@ -619,6 +621,11 @@ describe('anotar lo que se emitió por una factura', () => {
     assert.equal(anotado.cuerpo.comprobante_numero, '0001-00000123');
     assert.ok(anotado.cuerpo.facturado_at);
     assert.ok(anotado.url.includes(`prestadora_id=eq.${PRESTADORA}`));
+    // Lo emitido se escribe con la credencial del trabajo de la Prestadora de la sesión, y con
+    // ninguna otra.
+    const credencial = JSON.parse(Buffer.from(anotado.credencial.replace('Bearer ', '').split('.')[1], 'base64url').toString());
+    assert.equal(credencial.role, 'trabajo_sin_persona', 'lo emitido se escribió con otra credencial');
+    assert.equal(credencial.prestadora_id, PRESTADORA, 'lo emitido se escribió fuera de la Prestadora');
   });
 
   it('sin número de comprobante también se anota: hay formas de facturar que no lo devuelven', async () => {

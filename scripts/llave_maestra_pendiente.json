@@ -123,7 +123,6 @@
                                  "backend/src/utils/activacionCuenta.js",
                                  "backend/src/utils/advertenciaLegal.js",
                                  "backend/src/utils/altaEnPasarela.js",
-                                 "backend/src/utils/anotarLoFacturado.js",
                                  "backend/src/utils/ausenciaAutomatica.js",
                                  "backend/src/utils/avisoAutomaticoCese.js",
                                  "backend/src/utils/avisoCambioDeAsistente.js",

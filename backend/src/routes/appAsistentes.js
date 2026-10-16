@@ -1150,7 +1150,10 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
     return responderError(res, new ErrorConMotivo('faltan_datos', 'emergencia sin detalle'));
   }
 
-  const guardia = await guardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
+  // Todo el aviso va con la credencial de quien lo manda: la base le deja escribir, leer y marcar
+  // sólo las emergencias de sus propias guardias.
+  const db = clienteDelPedido(req);
+  const guardia = await guardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
   if (!guardia) {
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }
@@ -1179,6 +1182,7 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
      reenvío: lo reconoce el identificador que el teléfono puso antes del primer intento. */
   const clienteUuid = identificadorDelTelefono(req.body);
   const yaEstaba = await filaDeEsteMensaje({
+    db,
     tabla: 'emergencias_guardia',
     prestadoraId: guardia.prestadora_id,
     guardiaId: guardia.id,
@@ -1189,9 +1193,7 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
     return res.json({ ok: true, yaRegistrado: true, reportadoAt: yaEstaba.reportado_at });
   }
 
-  // SIGUE CON LA LLAVE MAESTRA, igual que la marca del aviso de más abajo: `emergencias_guardia`
-  // no tiene ninguna política que le deje escribir al Asistente.
-  const { data: emergencia, error } = await supabase
+  const { data: emergencia, error } = await db
     .from('emergencias_guardia')
     .insert({
       prestadora_id: guardia.prestadora_id,
@@ -1218,7 +1220,7 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
   // envío falla, la fila queda con `ultima_notificacion_at` en blanco y nunca se le devuelve un
   // error a quien avisó — su acto ya está guardado, que es lo que lo protege.
   try {
-    const idioma = await idiomaDeLaPrestadora(clienteDelPedido(req), guardia.prestadora_id);
+    const idioma = await idiomaDeLaPrestadora(db, guardia.prestadora_id);
     await notificarCoordinador({
       evento: 'emergencia_en_guardia',
       prestadoraId: guardia.prestadora_id,
@@ -1228,7 +1230,7 @@ appAsistentesRouter.post('/guardias/:id/emergencia', requiereRolAsistente, async
       }),
     });
     if (emergencia?.id) {
-      await supabase
+      await db
         .from('emergencias_guardia')
         .update({ ultima_notificacion_at: new Date().toISOString(), veces_notificado: 1 })
         .eq('id', emergencia.id)
@@ -1429,10 +1431,11 @@ appAsistentesRouter.post('/coberturas/:id/objecion', requiereRolAsistente, async
    NO HAY TOPE NI HORARIO PERMITIDO. Cuánto y cuándo sale de cómo viene el servicio ese día, no de
    un número fijado de antemano (decisión del Desarrollador).
 
-   SIGUEN CON LA LLAVE MAESTRA las lecturas y escrituras de `descansos_guardia`: la tabla no tiene
-   ninguna política para el Asistente. La guardia, en cambio, se busca con su credencial. */
+   Las dos van enteras con la credencial de quien pide: la base le deja empezar, ver y terminar
+   sólo los descansos de sus propias guardias. */
 appAsistentesRouter.post('/guardias/:id/descanso/empezar', requiereRolAsistente, async (req, res) => {
-  const guardia = await guardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
+  const db = clienteDelPedido(req);
+  const guardia = await guardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
   if (!guardia) {
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }
@@ -1445,6 +1448,7 @@ appAsistentesRouter.post('/guardias/:id/descanso/empezar', requiereRolAsistente,
   // el identificador que puso el teléfono.
   const clienteUuid = identificadorDelTelefono(req.body);
   const yaEstaba = await filaDeEsteMensaje({
+    db,
     tabla: 'descansos_guardia',
     prestadoraId: guardia.prestadora_id,
     guardiaId: guardia.id,
@@ -1455,7 +1459,7 @@ appAsistentesRouter.post('/guardias/:id/descanso/empezar', requiereRolAsistente,
     return res.json({ ok: true, yaRegistrado: true, descanso: yaEstaba });
   }
 
-  const { data: descanso, error } = await supabase
+  const { data: descanso, error } = await db
     .from('descansos_guardia')
     .insert({
       prestadora_id: guardia.prestadora_id,
@@ -1476,7 +1480,8 @@ appAsistentesRouter.post('/guardias/:id/descanso/empezar', requiereRolAsistente,
 });
 
 appAsistentesRouter.post('/guardias/:id/descanso/terminar', requiereRolAsistente, async (req, res) => {
-  const guardia = await guardiaDelAsistente(clienteDelPedido(req), req.params.id, req.usuarioAsistente);
+  const db = clienteDelPedido(req);
+  const guardia = await guardiaDelAsistente(db, req.params.id, req.usuarioAsistente);
   if (!guardia) {
     return res.status(404).json({ error: 'Guardia no encontrada' });
   }
@@ -1488,6 +1493,7 @@ appAsistentesRouter.post('/guardias/:id/descanso/terminar', requiereRolAsistente
      quien cerró su descanso que no había ninguno abierto. */
   const clienteUuid = identificadorDelTelefono(req.body);
   const yaCerrado = await filaDeEsteMensaje({
+    db,
     tabla: 'descansos_guardia',
     prestadoraId: guardia.prestadora_id,
     guardiaId: guardia.id,
@@ -1499,7 +1505,7 @@ appAsistentesRouter.post('/guardias/:id/descanso/terminar', requiereRolAsistente
     return res.json({ ok: true, yaRegistrado: true, finAt: yaCerrado.fin_at });
   }
 
-  const { data: abierto } = await supabase
+  const { data: abierto } = await db
     .from('descansos_guardia')
     .select('id, inicio_at')
     .eq('prestadora_id', guardia.prestadora_id)
@@ -1515,7 +1521,7 @@ appAsistentesRouter.post('/guardias/:id/descanso/terminar', requiereRolAsistente
   // y el error saldría como falla del sistema. Ante un reloj que no cierra, vale el de acá.
   const fin = finAt > abierto.inicio_at ? finAt : new Date().toISOString();
 
-  const { error } = await supabase
+  const { error } = await db
     .from('descansos_guardia')
     .update({ fin_at: fin, cliente_uuid_fin: clienteUuid })
     .eq('id', abierto.id)

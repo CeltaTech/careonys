@@ -1,5 +1,3 @@
-import { supabase } from '../db/connection.js';
-
 /**
  * UN REENVÍO DE LA COLA NO DUPLICA LO QUE YA LLEGÓ.
  *
@@ -24,12 +22,14 @@ export function identificadorDelTelefono(cuerpo, campo = 'clienteUuid') {
 /**
  * La fila que ese mismo aviso ya escribió, si está. Sin identificador no hay nada que buscar.
  *
+ * Entra con la conexión que le pasa quien llama, que es la de quien manda el aviso: la base le
+ * contesta sólo lo de sus propias guardias.
+ *
  * Se busca por Prestadora, por guardia y por identificador juntos. La Prestadora es obligatoria y
  * no tiene valor por omisión: quien llama la sabe siempre —sale de la sesión de quien manda el
- * aviso—, y sin ella la consulta alcanzaría la guardia de cualquier otra. Colgar de la guardia no
- * alcanza, aunque su identificador sea único.
+ * aviso—, y el filtro va escrito igual en la consulta.
  */
-export async function filaDeEsteMensaje({ tabla, prestadoraId, guardiaId, clienteUuid, campos = 'id', columna = 'cliente_uuid' }) {
+export async function filaDeEsteMensaje({ db, tabla, prestadoraId, guardiaId, clienteUuid, campos = 'id', columna = 'cliente_uuid' }) {
   // Falla cerrado: sin Prestadora no se lee nada. Y hacia escribir, como el error de más abajo:
   // no se afirma que el aviso ya estaba.
   if (!prestadoraId) {
@@ -38,7 +38,7 @@ export async function filaDeEsteMensaje({ tabla, prestadoraId, guardiaId, client
   }
   if (!clienteUuid) return null;
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from(tabla)
     .select(campos)
     .eq('prestadora_id', prestadoraId)

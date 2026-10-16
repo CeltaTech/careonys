@@ -16,7 +16,7 @@
  *      haber cerrado, dejaría una pantalla con dos botones y sin saber cuál es cuál.
  *   4. QUE UNA PRESTADORA ALCANCE LA GUARDIA DE OTRA. La guardia se busca con la credencial de
  *      quien pide, y la base le contesta sólo las de su Prestadora; esta base de mentira hace lo
- *      mismo. El descanso sigue con la llave maestra, y toma la Prestadora de esa guardia.
+ *      mismo. Y el descanso va con la misma credencial, de punta a punta.
  *   5. QUE SE PIERDA EL MOMENTO EN QUE PASÓ. El aviso puede quedar en la cola sin conexión, y ese
  *      rato es justamente el dato.
  *
@@ -88,10 +88,14 @@ after(() => {
   baseFalsa.close();
 });
 
+/** La credencial que mandó el último pedido: la base tiene que recibir esa, y no la llave de servicio. */
+let credencialEnviada = null;
+
 async function pedir(metodo, ruta, cuerpo) {
+  credencialEnviada = sesionDePrueba(USUARIO);
   const opciones = {
     method: metodo,
-    headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
+    headers: { Authorization: credencialEnviada, 'Content-Type': 'application/json' },
   };
   if (cuerpo !== undefined) opciones.body = JSON.stringify(cuerpo);
   const respuesta = await fetch(`${RAIZ}${ruta}`, opciones);
@@ -308,6 +312,25 @@ describe('terminar el descanso', () => {
 // identificador, y la segunda vez no puede escribir nada.
 
 const IDENTIFICADOR = '33333333-3333-4333-8333-333333333333';
+
+describe('el descanso va con la credencial de quien lo pide', () => {
+  it('empezar y terminar, con el reconocimiento del reenvío, no tocan la llave maestra', async () => {
+    const IDENTIFICADOR = '55555555-5555-4555-8555-555555555555';
+    await empezar(GUARDIA, { clienteUuid: IDENTIFICADOR });
+    descansosEnLaBase = [{ id: DESCANSO, prestadora_id: PRESTADORA, guardia_id: GUARDIA, inicio_at: '2026-09-12T23:00:00Z', fin_at: null, cliente_uuid: IDENTIFICADOR, cliente_uuid_fin: null }];
+    await terminar(GUARDIA, { clienteUuid: '44444444-4444-4444-8444-444444444444' });
+
+    const delDescanso = llamadas.filter((l) => l.clave.endsWith('/rest/v1/descansos_guardia'));
+    assert.deepEqual(
+      [...new Set(delDescanso.map((l) => l.clave))].sort(),
+      ['GET /rest/v1/descansos_guardia', 'PATCH /rest/v1/descansos_guardia', 'POST /rest/v1/descansos_guardia'],
+    );
+    for (const llamada of delDescanso) {
+      assert.notEqual(llamada.credencial, 'Bearer clave-de-mentira', `${llamada.clave} fue con la llave maestra`);
+      assert.ok(llamada.credencial?.startsWith('Bearer '), `${llamada.clave} fue sin credencial`);
+    }
+  });
+});
 
 describe('un reenvío de la cola no duplica el descanso', () => {
   it('el mismo aviso mandado dos veces escribe un solo descanso', async () => {

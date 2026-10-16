@@ -149,7 +149,6 @@
                                  "backend/src/utils/prestadorasDeLaIntermediacion.js",
                                  "backend/src/utils/proponerRespuestasIA.js",
                                  "backend/src/utils/recuperacionDeClave.js",
-                                 "backend/src/utils/reenvioDeLaCola.js",
                                  "backend/src/utils/reenvioDeRespuestas.js",
                                  "backend/src/utils/registroDeConsultas.js",
                                  "backend/src/utils/revisarAlertasIA.js",

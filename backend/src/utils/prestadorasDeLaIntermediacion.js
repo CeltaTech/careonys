@@ -1,9 +1,10 @@
 /* Las Prestadoras, de a una, para los trabajos de fondo.
    =====================================================================
 
-   Son dos listas: la de las Prestadoras del Match, para sus tres trabajos diarios, y la de las
-   Prestadoras certificadas, para los demás trabajos de fondo. Las dos viven acá porque son la
-   única consulta que cada trabajo hace antes de conocer la Prestadora.
+   Son tres listas: la de las Prestadoras del Match, para sus tres trabajos diarios; la de las que
+   tienen encendida la ausencia automática, para ese trabajo; y la de las Prestadoras certificadas,
+   para los demás trabajos de fondo. Viven acá porque son la única consulta que cada trabajo hace
+   antes de conocer la Prestadora.
 
    QUÉ RESUELVE. Los tres trabajos diarios del Match —armar los cobros del período, cortar los
    accesos dados de baja y suspender los que agotaron la gracia— barrían `accesos_intermediacion` con
@@ -20,8 +21,7 @@
 
    ESTA CONSULTA ES LA ÚNICA ANTERIOR A CONOCER LA PRESTADORA, y lo es porque su resultado **es** la
    lista de Prestadoras: no trae ningún dato de ninguna, sólo sus identificadores. Es el mismo lugar
-   que ocupan `configuracion_ausencia_automatica` en `ausenciaAutomatica.js` y
-   `configuracion_escalada_coordinador` en `revisarNotificacionesCoordinador.js`. */
+   que ocupa `configuracion_escalada_coordinador` en `revisarNotificacionesCoordinador.js`. */
 
 import { supabase } from '../db/connection.js';
 
@@ -47,6 +47,32 @@ export async function prestadorasDeLaIntermediacion() {
 
   if (error) {
     console.error('Error consultando las Prestadoras del Match:', error.message);
+    return [];
+  }
+
+  return (data ?? []).map((fila) => fila.prestadora_id).filter(Boolean);
+}
+
+/**
+ * Los identificadores de las Prestadoras que tienen encendida la ausencia automática, para que
+ * ese trabajo las recorra de a una.
+ *
+ * Igual que la de arriba: sólo identificadores, y la lista vacía ante cualquier error. Cuánta
+ * tolerancia tiene cada una lo lee el trabajo adentro, con la credencial de esa Prestadora.
+ *
+ * @returns {Promise<string[]>}
+ */
+export async function prestadorasConAusenciaAutomatica() {
+  // SIN PRESTADORA A PROPÓSITO
+  // Es el arranque de ese trabajo de fondo, que no tiene sesión de nadie. Trae nada más que los
+  // identificadores, y a partir de ahí el trabajo recorre de a una, con la credencial de cada una.
+  const { data, error } = await supabase
+    .from('configuracion_ausencia_automatica')
+    .select('prestadora_id')
+    .eq('activo', true);
+
+  if (error) {
+    console.error('Error consultando las Prestadoras con la ausencia automática:', error.message);
     return [];
   }
 

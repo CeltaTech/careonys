@@ -1,4 +1,4 @@
-import { pacientesDeGuardia } from './pacientesDeGuardia.js';
+import { idsDePacientesDeGuardia } from './pacientesDeGuardia.js';
 import { finDeGuardia, inicioDeGuardia, sumarDias } from './horarios.js';
 
 /* Marcar una guardia como ausente y abrir el incidente de relevo.
@@ -27,16 +27,16 @@ import { finDeGuardia, inicioDeGuardia, sumarDias } from './horarios.js';
    `panel/src/lib/horarios.js` y donde la regla de la medianoche está escrita una sola vez para
    todo el producto (CLAUDE.md §8, «ningún patrón repetido sin punto único de verdad»).
 
-   Entra con la conexión que le pasa quien llama. Los dos de hoy le pasan la llave maestra, que se
-   saltea la protección por fila, así que el aislamiento lo pone quien llama — la ruta del Panel
-   acota a la Prestadora activa antes de traer la guardia — y el filtro por Prestadora va escrito
-   igual en cada consulta. */
+   Entra con la conexión que le pasa quien llama: la detección automática, con la credencial del
+   trabajo de esa Prestadora; la ruta del Panel, todavía con la llave maestra, y por eso acota a la
+   Prestadora activa antes de traer la guardia. El filtro por Prestadora va escrito igual en cada
+   consulta. */
 
 /**
  * Deja la guardia en `ausente` y le abre el incidente de relevo.
  *
  * `guardia` tiene que traer al menos `id`, `fecha`, `hora_inicio` y `paciente_id` (esta última
- * es la red de seguridad de `pacientesDeGuardia`).
+ * es la red de seguridad de `idsDePacientesDeGuardia`).
  *
  * Devuelve `{ ok: true }`, o `{ ok: false, motivo }` con un texto para registrar. No levanta
  * excepciones: los dos caminos que la usan quieren seguir andando aunque una guardia falle.
@@ -80,7 +80,7 @@ export async function marcarAusenteYCrearIncidente({ db, guardia, prestadoraId }
 async function buscarGuardiaSaliente({ db, guardia, prestadoraId }) {
   let pacienteIds;
   try {
-    pacienteIds = (await pacientesDeGuardia(db, prestadoraId, guardia, 'id')).map((p) => p.id);
+    pacienteIds = await idsDePacientesDeGuardia(db, prestadoraId, guardia);
   } catch (e) {
     console.error(`Error leyendo los Pacientes de la guardia ${guardia.id}:`, e.message);
     return null;

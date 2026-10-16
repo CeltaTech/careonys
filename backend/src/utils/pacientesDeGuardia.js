@@ -86,6 +86,26 @@ export async function pacientesDeGuardia(db, prestadoraId, guardia, campos = CAM
 }
 
 /**
+ * Los identificadores de los Pacientes de una guardia, sin pasar por la Ficha.
+ *
+ * Es para quien sólo necesita saber cuáles son —para buscar otra guardia de la misma gente—, no
+ * cómo se llaman. Como no lee la Ficha, cuentan todos los del turno, cualquiera sea el estado de
+ * su Ficha. Misma red de seguridad que arriba: sin ninguna fila en la lista, el de la columna
+ * vieja. Una falla de la base sube como error.
+ */
+export async function idsDePacientesDeGuardia(db, prestadoraId, guardia) {
+  const { data, error } = await db
+    .from('guardia_pacientes')
+    .select('paciente_id')
+    .eq('prestadora_id', prestadoraId)
+    .eq('guardia_id', guardia.id);
+  if (error) throw new Error(error.message);
+
+  if ((data ?? []).length > 0) return [...new Set(data.map((fila) => fila.paciente_id))];
+  return guardia.paciente_id ? [guardia.paciente_id] : [];
+}
+
+/**
  * Le agrega a cada guardia su lista de Pacientes, en el campo `pacientes`.
  *
  * Antes ese campo traía **un** Paciente (el que enganchaba PostgREST por la columna vieja) y

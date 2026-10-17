@@ -8,8 +8,9 @@
  * textos de `t.llaves`, que están en las dos con las mismas claves.
  *
  * QUÉ SE HACE DESDE ACÁ. Ver qué aparatos quedaron habilitados, habilitar éste, y sacar el que ya
- * no se usa. Entrar con la huella no está acá: eso pasa antes de tener sesión, en la pantalla de
- * ingreso.
+ * no se usa. Habilitar éste es también lo que deja guardar la sesión bajo la huella
+ * (`lib/accesoGuardado.js`); si el aparato no sabe dar el secreto que la cierra, queda habilitado
+ * para firmar y nada más. Sacar el aparato de acá olvida ese acceso.
  *
  * LO QUE VUELVE SON FECHAS Y NADA MÁS. Ni la credencial ni la mitad pública de la llave salen del
  * backend. Para reconocer cuál aparato es cuál alcanza con cuándo se guardó y cuándo se usó por
@@ -23,6 +24,9 @@ import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { con } from '../lib/textos';
 import { esteAparatoGuardaLlaves, guardarLaLlaveEnEsteAparato, loCancelaronAMano } from '../lib/llaveDelDispositivo';
+import { llaveDelAccesoGuardado, olvidarAccesoGuardado, prepararAccesoGuardado, salNueva } from '../lib/accesoGuardado';
+import { leerMarcaGuardada } from '../lib/marcaGuardada';
+import { supabase } from '../lib/supabaseClient';
 
 export default function LlavesDeEsteAparato() {
   const { t, locale } = useLocale();
@@ -64,11 +68,18 @@ export default function LlavesDeEsteAparato() {
     setErrorDeAccion('');
     setGuardando(true);
     try {
-      const { llave } = await guardarLaLlaveEnEsteAparato({
-        desafio: api.desafioDeLlave,
-        guardar: api.guardarLlave,
-      });
+      const sal = salNueva();
+      const { llave, credencialId, parteConfiable, secreto } = await guardarLaLlaveEnEsteAparato(
+        { desafio: api.desafioDeLlave, guardar: api.guardarLlave },
+        sal
+      );
       setLlaves((anteriores) => [llave, ...(anteriores || [])]);
+      const rotulo = (await leerMarcaGuardada())?.rotulo;
+      const { data } = await supabase.auth.getSession();
+      const usuarioId = data?.session?.user?.id;
+      if (secreto && rotulo && usuarioId) {
+        await prepararAccesoGuardado({ usuarioId, rotulo, llaveId: llave.id, credencialId, parteConfiable, sal, secreto });
+      }
       setAviso(t.llaves.agregada);
     } catch (errorAlta) {
       // Cancelar no es fallar: quien cierra el pedido del aparato a propósito ya sabe lo que hizo.
@@ -86,6 +97,7 @@ export default function LlavesDeEsteAparato() {
     setSacando(id);
     try {
       await api.sacarLlave(id);
+      if (llaveDelAccesoGuardado() === id) olvidarAccesoGuardado();
       setLlaves((anteriores) => (anteriores || []).filter((llave) => llave.id !== id));
       setAviso(t.llaves.sacada);
     } catch {

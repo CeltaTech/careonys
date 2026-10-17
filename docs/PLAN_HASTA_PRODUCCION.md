@@ -572,17 +572,12 @@ lo saca también de la lista.
 escribe ni borra, y vive sólo en el proceso nocturno. Alcanza a todas las Prestadoras porque su
 trabajo es copiar todo. Antes de escribirla se comprueba qué ofrece Supabase para eso.
 
-**Dos entradas todavía la usan, y se resuelven antes de cerrar este paso.** Cómo, se decide al
-llegar a cada una:
-- **Entrar con la huella o con el rostro.** La huella la comprueba el propio teléfono; después el
-  producto le pide a Supabase una credencial de entrada para esa persona, y ese pedido va con la
-  llave maestra (`routes/llaveDelDispositivo.js:192`). Supabase ofrece hacerlo por su cuenta,
-  todavía como prueba.
-- **El código de verificación por correo que se le pide al personal técnico al entrar**
-  (`utils/mfaRecuperacionEmail.js:87-90`), porque esas personas no pertenecen a ninguna
-  Prestadora. El rol técnico se queda: es la cuenta con la que entra la persona de CeltaTech
-  cuando le abren un permiso de acceso, y el backend sólo busca ese permiso para ese rol
-  (`middleware/requiereRolPanel.js:100`).
+**Una entrada todavía la usa, y se resuelve antes de cerrar este paso:** el código de
+verificación por correo que se le pide al personal técnico al entrar
+(`utils/mfaRecuperacionEmail.js:87-90`), porque esas personas no pertenecen a ninguna Prestadora.
+El rol técnico se queda: es la cuenta con la que entra la persona de CeltaTech cuando le abren un
+permiso de acceso, y el backend sólo busca ese permiso para ese rol
+(`middleware/requiereRolPanel.js:100`).
 
 **Comprobación:** las dos listas de `scripts/llave_maestra_pendiente.json` están vacías, la llave
 está dada de baja en Supabase, y el producto y la copia de respaldo funcionan igual. Es la única

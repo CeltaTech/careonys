@@ -38,7 +38,7 @@ import { ingresoAlPanelRouter } from './routes/ingresoAlPanel.js';
 import { panelEntrevistasRouter } from './routes/panelEntrevistas.js';
 import { entrevistaPublicaRouter } from './routes/entrevistaPublica.js';
 import { panelEmergenciasRouter } from './routes/panelEmergencias.js';
-import { llaveDelDispositivoRouter, routerDeLlavesConSesion } from './routes/llaveDelDispositivo.js';
+import { routerDeLlavesConSesion } from './routes/llaveDelDispositivo.js';
 import { requiereRolAsistente } from './middleware/requiereRolAsistente.js';
 import { requiereRolCliente } from './middleware/requiereRolCliente.js';
 import { paraCadaPrestadora } from './db/connection.js';
@@ -170,10 +170,6 @@ app.use('/api/ingreso-al-panel', ingresoAlPanelRouter);
 // no tiene ninguna cuenta con la que entrar. La Prestadora sale de la dirección, y la llave se busca
 // sólo adentro de ella.
 app.use('/api/entrevista', entrevistaPublicaRouter);
-// Sin sesión también, y por la misma razón: quien entra con la huella todavía no tiene ninguna.
-// Lo que reemplaza a la sesión es un desafío de un solo uso que el backend emitió hace dos minutos
-// y una firma que sólo puede hacer una llave guardada adentro de un teléfono concreto.
-app.use('/api/llave-de-dispositivo', llaveDelDispositivoRouter);
 app.use('/api/app-asistentes', appAsistentesRouter);
 app.use('/api/app-asistentes/medicacion', appAsistentesMedicacionRouter);
 app.use('/api/app-asistentes/consentimientos', appAsistentesConsentimientosRouter);

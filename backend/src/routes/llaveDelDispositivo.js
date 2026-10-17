@@ -1,37 +1,17 @@
 /**
- * Entrar con huella o con el rostro, y administrar las llaves del propio teléfono.
- * ==========================================================================
+ * Las llaves del propio teléfono: darlas de alta, verlas, darlas de baja y firmar con ellas.
+ * ==========================================================================================
  *
  * Lo que decide está en `../utils/llaveDelDispositivo.js`, con sus pruebas. Acá está lo que
- * ejecuta: pedirle a la base, hablar con la librería que verifica firmas, y emitir la sesión.
+ * ejecuta: pedirle a la base y hablar con la librería que verifica firmas.
  *
- * SON DOS PUERTAS DISTINTAS, Y SE MONTAN DISTINTO:
+ * TODO PIDE SESIÓN. `routerDeLlavesConSesion(rol)` se monta adentro de cada aplicación, detrás del
+ * middleware de su rol, y corre con la credencial de la persona.
  *
- *   - `llaveDelDispositivoRouter` va sin sesión, porque quien está entrando todavía no tiene
- *     ninguna. Es la puerta de calle.
- *   - `routerDeLlavesConSesion(rol)` se monta adentro de cada aplicación, detrás del middleware de
- *     su rol: agregar una llave, ver las propias y darlas de baja son cosas de alguien que ya
- *     entró.
- *
- * LA PUERTA DE CALLE TRABAJA ADENTRO DE UNA PRESTADORA. La Prestadora sale de la dirección
- * (`/:prestadora/entrar…`), igual que en la activación y en la clave nueva
- * (`middleware/resolverPrestadoraPublica.js`), y todo lo que se le pide a la base corre con la
- * credencial del trabajo sin persona de esa Prestadora: el desafío nace con ella, y la llave y el
- * desafío se buscan sólo adentro de ella. Una llave de otra Prestadora no existe desde acá.
- *
- * LA ÚNICA EXCEPCIÓN ES EL PASE DE ENTRADA. Pedirle a Supabase la sesión de la persona
- * (`auth.admin.generateLink`) sigue haciéndose con la llave maestra, y es la única llamada que la
- * usa. Por eso esa llamada va afuera de la Prestadora: la conexión la elige sola
- * (`db/connection.js`), y afuera de un trabajo es la maestra.
- *
- * NO SE PREGUNTA EL CORREO PARA ENTRAR, Y ESO ES LA DIFERENCIA. La llave se crea «detectable»
- * (`residentKey: 'required'`), así que el teléfono sabe cuál ofrecer sin que nadie le diga de
- * quién es. Preguntar el correo antes convertiría a la pantalla de ingreso en una lista de quién
- * tiene cuenta y quién no, que es justo lo que `celtatech/CLAUDE.md` §6 prohíbe.
- *
- * Y POR ESO TAMPOCO SE EXPLICA QUÉ SALIÓ MAL. La llave que no existe, la que fue revocada y la que
- * apunta a otra persona salen las tres como el mismo mensaje, igual que la entrada con contraseña no
- * dice cuál de los dos campos estaba mal.
+ * INGRESAR CON BIOMETRÍA NO PASA POR ACÁ. El teléfono guarda la sesión cerrada con un secreto que
+ * sólo su llave sabe sacar, y al abrirla se la renueva directamente con el servicio de acceso
+ * (`pwa-asistentes/src/lib/accesoGuardado.js`). El backend no emite ninguna sesión y no necesita la
+ * llave maestra para nada de esto.
  */
 import { Router } from 'express';
 import {
@@ -42,13 +22,10 @@ import {
 } from '@simplewebauthn/server';
 import { isoBase64URL } from '@simplewebauthn/server/helpers';
 
-import { clienteDelPedido, supabase } from '../db/connection.js';
-import { correoDe } from '../utils/correoDeUnaPersona.js';
-import { correoDeAcceso } from '../config/correoDeAcceso.js';
+import { clienteDelPedido } from '../db/connection.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
-import { resolverPrestadoraPublica } from '../middleware/resolverPrestadoraPublica.js';
 import {
   MINUTOS_DE_VIDA_DEL_DESAFIO,
   comoSeVeLaLlave,
@@ -59,7 +36,7 @@ import {
   rolesConLlaveDeDispositivo,
 } from '../utils/llaveDelDispositivo.js';
 
-/** El mensaje único que ve la pantalla cuando no se pudo entrar. Nunca dice por qué. */
+/** El mensaje único cuando un desafío no sirve. Nunca dice por qué. */
 const NO_SE_PUDO_ENTRAR = 'llave_no_sirve';
 
 function rolValido(rol) {
@@ -86,8 +63,7 @@ async function guardarDesafio(db, desafio, { para, rol, usuarioId = null, presta
  * El `usado_en IS NULL` va adentro del `update` y no antes: así dos pedidos que llegan juntos con
  * la misma firma no pasan los dos. El que llega segundo no encuentra nada que actualizar.
  *
- * La Prestadora la trae quien llama —la de la dirección en la entrada, la de la sesión en el alta—
- * y se nombra en la lectura y en la escritura: un desafío emitido para otra no se encuentra.
+ * La Prestadora es la de la sesión, y se nombra en la lectura y en la escritura: un desafío emitido para otra no se encuentra.
  */
 async function gastarDesafio(db, desafio, { para, rol, prestadoraId }) {
   if (!prestadoraId) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
@@ -115,170 +91,6 @@ async function gastarDesafio(db, desafio, { para, rol, prestadoraId }) {
   if (!gastado) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
 
   return fila;
-}
-
-// ────────────────────────────────────────────────────────────────────────────────────────────
-// LA PUERTA DE CALLE: entrar sin haber entrado
-// ────────────────────────────────────────────────────────────────────────────────────────────
-
-export const llaveDelDispositivoRouter = Router();
-
-// `topeDePedidos` no se puede montar acá: exige una identidad ya resuelta y, sin sesión, no hay
-// ninguna. El freno de esta puerta es otro y es más duro: cada intento necesita un desafío que el
-// backend emitió hace menos de dos minutos, que sirve una sola vez, y una firma que sólo puede
-// producir una llave guardada en un aparato concreto.
-
-/** Paso 1 de la entrada: el backend inventa el número que el teléfono va a firmar. */
-llaveDelDispositivoRouter.post('/:prestadora/entrar/desafio', resolverPrestadoraPublica, async (req, res) => {
-  try {
-    const { rol } = req.body ?? {};
-    if (!rolValido(rol)) throw new ErrorConMotivo('faltan_datos');
-
-    const { parteConfiable } = dondeViveLaApp(rol);
-    const opciones = await generateAuthenticationOptions({
-      rpID: parteConfiable,
-      userVerification: 'required',
-      // Vacío a propósito: el teléfono ofrece las llaves que tiene para este sitio. Si acá fuera
-      // una lista, habría que preguntar el correo antes para armarla, y eso diría quién tiene
-      // cuenta y quién no.
-      allowCredentials: [],
-    });
-
-    // Todavía no se sabe quién está entrando, pero sí por qué Prestadora: el desafío nace con ella.
-    await guardarDesafio(supabase, opciones.challenge, {
-      para: 'entrada',
-      rol,
-      prestadoraId: req.prestadoraPublica.prestadora_id,
-    });
-    res.json(opciones);
-  } catch (err) {
-    if (err instanceof ErrorConMotivo) return responderError(res, err);
-    console.error('Error al preparar la entrada con llave:', err.message);
-    res.status(500).json({ error: 'error_interno' });
-  }
-});
-
-/**
- * Paso 2 de la entrada: llega la firma, y si cierra se emite la sesión.
- *
- * La sesión no la arma el backend a mano. Se le pide a Supabase un pase de un solo uso
- * (`generateLink`) y el navegador lo canjea con `verifyOtp`, que es el mismo camino que usa
- * cualquier enlace de entrada por correo. Así la sesión nace donde nacen todas y el backend no tiene
- * que firmar nada por su cuenta.
- *
- * EN DOS TRAMOS. Todo lo que decide si la llave abre corre adentro de la Prestadora de la
- * dirección (`quienAbreConEstaLlave`). El pase se pide después, ya afuera, porque es la única
- * llamada que sigue con la llave maestra. Por eso la puerta no va montada delante de la ruta como
- * en el paso 1: lo que corre detrás de ella queda entero adentro de la Prestadora.
- */
-llaveDelDispositivoRouter.post('/:prestadora/entrar', async (req, res) => {
-  try {
-    const { rol, respuesta } = req.body ?? {};
-    if (!rolValido(rol) || !respuesta?.id) throw new ErrorConMotivo('faltan_datos');
-
-    let email = null;
-    await resolverPrestadoraPublica(req, res, async () => {
-      email = await quienAbreConEstaLlave({
-        prestadoraId: req.prestadoraPublica.prestadora_id,
-        rol,
-        respuesta,
-      });
-    });
-    // Una dirección que no es de ninguna Prestadora ya tuvo su respuesta en la puerta.
-    if (res.headersSent) return;
-    if (!email) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
-
-    // Afuera de la Prestadora: la llave maestra, sólo para esto.
-    const { data: pase, error: errorPase } = await supabase.auth.admin.generateLink({
-      type: 'magiclink',
-      email,
-    });
-    if (errorPase || !pase?.properties?.hashed_token) {
-      throw new Error(errorPase?.message || 'no se pudo emitir el pase de entrada');
-    }
-
-    res.json({ email, pase: pase.properties.hashed_token });
-  } catch (err) {
-    if (res.headersSent) return;
-    if (err instanceof ErrorConMotivo) return responderError(res, err);
-    console.error('Error al entrar con llave:', err.message);
-    res.status(500).json({ error: 'error_interno' });
-  }
-});
-
-/**
- * ¿Abre esta llave, en esta Prestadora? Devuelve el correo de acceso de la persona, o falla con el
- * mensaje único. Corre adentro de la Prestadora: la llave, el desafío y la persona se buscan ahí.
- */
-async function quienAbreConEstaLlave({ prestadoraId, rol, respuesta }) {
-  const { origen, parteConfiable } = dondeViveLaApp(rol);
-
-  const { data: llave } = await supabase
-    .from('llaves_de_dispositivo')
-    .select('id, usuario_id, prestadora_id, rol, credencial_id, clave_publica, contador, transportes, revocada_en')
-    .eq('credencial_id', respuesta.id)
-    .eq('rol', rol)
-    .eq('prestadora_id', prestadoraId)
-    .maybeSingle();
-
-  const motivo = porQueNoAbre(llave);
-  if (motivo) {
-    // El motivo queda del lado de adentro. Hacia afuera va siempre el mismo mensaje.
-    console.warn(`Entrada con llave rechazada (${motivo})`);
-    throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
-  }
-
-  const desafio = leerDesafio(respuesta);
-  await gastarDesafio(supabase, desafio, { para: 'entrada', rol, prestadoraId });
-
-  const verificacion = await verifyAuthenticationResponse({
-    response: respuesta,
-    expectedChallenge: desafio,
-    expectedOrigin: origen,
-    expectedRPID: parteConfiable,
-    requireUserVerification: true,
-    credential: {
-      id: llave.credencial_id,
-      publicKey: isoBase64URL.toBuffer(llave.clave_publica),
-      counter: Number(llave.contador),
-      transports: llave.transportes ?? undefined,
-    },
-  });
-  if (!verificacion.verified) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
-
-  const contadorNuevo = verificacion.authenticationInfo?.newCounter ?? 0;
-  if (elContadorRetrocedio(Number(llave.contador), contadorNuevo)) {
-    // Dos aparatos con la misma llave. No se deja entrar, y la llave queda revocada: si es una
-    // copia, deja de servir; si es la original, quien la tenga la vuelve a dar de alta con su
-    // contraseña, que es una molestia mucho más chica que la alternativa.
-    console.warn('Entrada con llave rechazada (contador hacia atras): llave revocada');
-    await supabase
-      .from('llaves_de_dispositivo')
-      .update({ revocada_en: new Date().toISOString() })
-      .eq('id', llave.id)
-      .eq('prestadora_id', prestadoraId);
-    throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
-  }
-
-  await supabase
-    .from('llaves_de_dispositivo')
-    .update({ contador: contadorNuevo, ultimo_uso_en: new Date().toISOString() })
-    .eq('id', llave.id)
-    .eq('prestadora_id', prestadoraId);
-
-  // El rol y el correo de la persona salen de `usuarios` (ver `correoDeUnaPersona.js`).
-  const { data: persona } = await supabase
-    .from('usuarios')
-    .select('rol')
-    .eq('id', llave.usuario_id)
-    .eq('prestadora_id', prestadoraId)
-    .maybeSingle();
-  const email = await correoDe({ prestadoraId, usuarioId: llave.usuario_id });
-  if (!email || persona?.rol !== rol) throw new ErrorConMotivo(NO_SE_PUDO_ENTRAR);
-
-  // El pase se pide con el correo de acceso, que es el que conoce el servicio de acceso: con el
-  // correo de la persona no encuentra a nadie.
-  return correoDeAcceso(email, prestadoraId);
 }
 
 /** El desafío viaja adentro de lo que el navegador firmó, en base64url. */
@@ -351,8 +163,8 @@ export async function comprobarFirma({ db, rol, persona, respuesta }) {
 
   const contadorNuevo = verificacion.authenticationInfo?.newCounter ?? 0;
   if (elContadorRetrocedio(Number(llave.contador), contadorNuevo)) {
-    // Igual que en la entrada: dos aparatos con la misma llave. La baja la hace la persona, que es
-    // la única que puede marcar su propia llave.
+    // Dos aparatos con la misma llave. La baja la hace la persona, que es la única que puede marcar
+    // su propia llave.
     console.warn('Firma con llave rechazada (contador hacia atras): llave revocada');
     await db
       .from('llaves_de_dispositivo')
@@ -448,9 +260,9 @@ export function routerDeLlavesConSesion(rol) {
           transports: l.transportes ?? undefined,
         })),
         authenticatorSelection: {
-          // Detectable, para que después se pueda entrar sin escribir el correo. Y con
-          // verificación del dueño, que es lo que hace que la llave se abra con huella o con el rostro
-          // y no con sólo tener el aparato en la mano.
+          // Detectable, para que el teléfono la ofrezca sola. Y con verificación del dueño, que es
+          // lo que hace que la llave se abra con huella o con el rostro y no con sólo tener el
+          // aparato en la mano.
           residentKey: 'required',
           userVerification: 'required',
         },
@@ -528,8 +340,7 @@ export function routerDeLlavesConSesion(rol) {
   /**
    * Paso 1 de una firma: el número que el teléfono va a firmar con una llave ya guardada.
    *
-   * A diferencia de la entrada, acá sí se sabe quién es, así que la lista de llaves va llena: el
-   * teléfono sólo ofrece las de esta persona. Sin ninguna, la pantalla ofrece guardar una.
+   * La lista de llaves va llena: el teléfono sólo ofrece las de esta persona. Sin ninguna, la pantalla ofrece guardar una.
    */
   router.post('/firma/desafio', topeDePedidos({ nombre: 'firma_llave_dispositivo' }), async (req, res) => {
     try {
@@ -562,6 +373,33 @@ export function routerDeLlavesConSesion(rol) {
     } catch (err) {
       if (err instanceof ErrorConMotivo) return responderError(res, err);
       console.error('Error al preparar una firma con llave:', err.message);
+      res.status(500).json({ error: 'error_interno' });
+    }
+  });
+
+  /**
+   * El teléfono avisa que acaba de ingresar con biometría usando esta llave. Anota el uso y, de
+   * paso, contesta si la llave sigue viva: si fue revocada, el teléfono olvida el acceso guardado
+   * y cierra la sesión que acaba de abrir.
+   */
+  router.post('/:id/usada', topeDePedidos({ nombre: 'uso_llave_dispositivo' }), async (req, res) => {
+    try {
+      const persona = quienEs(req);
+      const { data, error } = await clienteDelPedido(req)
+        .from('llaves_de_dispositivo')
+        .update({ ultimo_uso_en: new Date().toISOString() })
+        .eq('id', req.params.id)
+        .eq('usuario_id', persona.id)
+        .eq('prestadora_id', persona.prestadoraId)
+        .is('revocada_en', null)
+        .select('id')
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!data) throw new ErrorConMotivo('no_encontrado');
+      res.json({ ok: true });
+    } catch (err) {
+      if (err instanceof ErrorConMotivo) return responderError(res, err);
+      console.error('Error al anotar el uso de una llave de dispositivo:', err.message);
       res.status(500).json({ error: 'error_interno' });
     }
   });

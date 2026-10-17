@@ -4,27 +4,19 @@
  *
  * ORIGINAL. La copia de `pwa-clientes/` se regenera con `scripts/sincronizar_copias.mjs` y nunca
  * se edita a mano (`CLAUDE.md` §6). Por eso acá no hay una sola palabra propia de ninguna de las
- * dos aplicaciones: el rol y la puerta los pone quien llama.
+ * dos aplicaciones: la puerta la pone quien llama.
  *
  * QUÉ HACE Y QUÉ NO. Pide el desafío, se lo da al navegador para que el teléfono lo firme con la
  * llave que guarda adentro, y devuelve la firma. La huella y el rostro no pasan por acá ni por
  * ningún otro lado del producto: las mira el propio aparato para destrabar su llave, y lo único
  * que sale es la firma.
  *
- * LA ENTRADA NO PREGUNTA EL CORREO. La llave se dio de alta como «detectable», así que el teléfono
- * sabe cuál ofrecer sin que nadie se lo diga. Pedir el correo antes convertiría esta pantalla en
- * una manera de averiguar quién tiene cuenta.
- *
- * Y LA SESIÓN NACE DONDE NACEN TODAS. El backend no arma ninguna sesión por su cuenta: devuelve un
- * pase de un solo uso y acá se canjea con `verifyOtp`, que es el mismo camino del enlace de
- * entrada por correo.
+ * INGRESAR CON BIOMETRÍA NO PASA POR ACÁ. Eso abre la sesión guardada en el teléfono
+ * (`accesoGuardado.js`). Acá se le pide al aparato, al darlo de alta, el secreto que después la
+ * abre; ese secreto se separa de la respuesta antes de mandarla y no llega nunca al backend.
  */
 import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
-import { supabase } from './supabaseClient';
-import { errorDeLaRespuesta } from './errores';
-import { leerMarcaGuardada } from './marcaGuardada';
-
-const API_URL = import.meta.env.VITE_API_URL;
+import { pedirSecretoDeLaHuella, secretoDeLaHuella } from './accesoGuardado';
 
 /**
  * Si este navegador y este aparato pueden guardar una llave.
@@ -48,51 +40,29 @@ export function loCancelaronAMano(error) {
 }
 
 /**
- * La Prestadora de este aparato, tal como quedó anotada con la marca la última vez que alguien
- * entró acá (`marcaGuardada.js`). La entrada con huella busca la llave adentro de ella; sin ese
- * dato no hay dónde buscar, y el botón no se ofrece.
- */
-export async function rotuloGuardado() {
-  return (await leerMarcaGuardada())?.rotulo || null;
-}
-
-async function puertaDeCalle(ruta, cuerpo) {
-  const respuesta = await fetch(`${API_URL}/api/llave-de-dispositivo${ruta}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(cuerpo),
-  });
-  const datos = await respuesta.json().catch(() => ({}));
-  if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, datos);
-  return datos;
-}
-
-/**
- * Entrar. Deja la sesión abierta igual que la entrada con contraseña, así que quien llama no tiene
- * que hacer nada más: `onAuthStateChange` se entera solo.
- */
-export async function entrarConLaLlaveDelAparato(rol) {
-  const rotulo = await rotuloGuardado();
-  if (!rotulo) throw new Error('sin Prestadora anotada en este aparato');
-  const puerta = `/${encodeURIComponent(rotulo)}/entrar`;
-  const opciones = await puertaDeCalle(`${puerta}/desafio`, { rol });
-  const firma = await startAuthentication({ optionsJSON: opciones });
-  const { email, pase } = await puertaDeCalle(puerta, { rol, respuesta: firma });
-
-  const { error } = await supabase.auth.verifyOtp({ email, token: pase, type: 'magiclink' });
-  if (error) throw error;
-}
-
-/**
  * Dar de alta una llave en este aparato. La puerta la pone quien llama, porque vive adentro de la
  * aplicación y cada una tiene la suya.
  *
  * `puerta.desafio()` pide el número a firmar y `puerta.guardar(firma)` manda la llave nueva.
+ * `sal` es lo que el aparato mezcla con su secreto; devuelve, además de lo que contesta el backend,
+ * el secreto —o nada, si el aparato no sabe darlo— y lo necesario para volver a pedirlo.
  */
-export async function guardarLaLlaveEnEsteAparato(puerta) {
+export async function guardarLaLlaveEnEsteAparato(puerta, sal) {
   const opciones = await puerta.desafio();
-  const firma = await startRegistration({ optionsJSON: opciones });
-  return puerta.guardar(firma);
+  const firma = await startRegistration({
+    optionsJSON: { ...opciones, extensions: { ...opciones.extensions, prf: { eval: { first: sal } } } },
+  });
+  let secreto = secretoDeLaHuella(firma);
+  const { prf: _secreto, ...resultados } = firma.clientExtensionResults || {};
+  const respuesta = await puerta.guardar({ ...firma, clientExtensionResults: resultados });
+
+  const credencialId = firma.id;
+  const parteConfiable = opciones.rp?.id || window.location.hostname;
+  // Algunos aparatos dan el secreto sólo al usar la llave, no al crearla.
+  if (!secreto && _secreto) {
+    secreto = await pedirSecretoDeLaHuella({ credencialId, parteConfiable, sal }).catch(() => null);
+  }
+  return { ...respuesta, credencialId, parteConfiable, secreto };
 }
 
 /**

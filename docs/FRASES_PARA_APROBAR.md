@@ -23,8 +23,8 @@ Decisión: ____
 
 ### 2. Dato mal cargado
 - **Texto actual:** Hay un dato mal cargado. **Conviene revisar lo que se escribió.**
-- **Texto propuesto:** Hay un dato incorrecto. Revise los datos ingresados e intente nuevamente.
-- **Qué cambió:** imperativo en lugar de «conviene». La misma propuesta vale para la versión «Hace falta revisar».
+- **Texto propuesto:** Datos no válidos. Revise la información e intente nuevamente.
+- **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** cualquier parte del Panel donde el sistema rechaza un dato sin un motivo propio. Por ejemplo: Panel → Asistentes → Pagos a Asistentes, ventana «Detalle de la liquidación», al registrar un pago que otra persona ya registró; Panel → Clientes → un Cliente, solapa «Personas autorizadas», al tocar «Registrar la firma» sin elegir el archivo.
 - **Qué estaba haciendo:** registraba un pago, un papel firmado o cargaba un dato.
@@ -36,7 +36,7 @@ Decisión: ____
 
 ### 3. El email ya tiene una cuenta en esta Prestadora
 - **Texto actual:** Ese correo ya tiene una cuenta en esta Prestadora. **Conviene buscarla en la lista antes de crear una nueva.**
-- **Texto propuesto:** Ese email ya tiene una cuenta en esta Prestadora. Búsquela en la lista.
+- **Texto propuesto:** El email ya está registrado en esta Prestadora. Búsquelo en la lista.
 - **Qué cambió:** imperativo en lugar de «conviene»; «email», como dice la etiqueta.
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Configuración → Usuarios del Panel → «Nuevo Coordinador». El sistema da el mismo motivo en el alta de un Asistente, al aprobar una postulación, al agregar una persona autorizada y al importar datos; no se pudo confirmar cómo se muestra en esos cuatro.
@@ -49,7 +49,7 @@ Decisión: ____
 
 ### 4. El email ya está en uso
 - **Texto actual:** Ese correo ya está en uso. **Hace falta indicar otro.**
-- **Texto propuesto:** Ese email ya está en uso. Ingrese otro.
+- **Texto propuesto:** El email ya está en uso. Ingrese otro.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** hoy no aparece en ninguna parte. Describiría un alta con un email que ya usa otra cuenta.
@@ -62,7 +62,7 @@ Decisión: ____
 
 ### 5. Nombre de Prestadora repetido
 - **Texto actual:** Ya hay una Prestadora con ese nombre. **Hace falta usar otro:** de ese nombre sale la dirección desde la que manda sus mensajes.
-- **Texto propuesto:** Ya existe una Prestadora con ese nombre. Ingrese otro nombre.
+- **Texto propuesto:** Ya existe una Prestadora con ese nombre. Ingrese otro.
 - **Qué cambió:** imperativo, y sin la explicación de cómo funciona el sistema por dentro.
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** hoy no aparece en ninguna parte: el Panel no da de alta Prestadoras. Describiría el alta de una Prestadora con un nombre que ya usa otra.
@@ -75,7 +75,7 @@ Decisión: ____
 
 ### 6. País sin moneda configurada
 - **Texto actual:** Todavía no está cargado en qué moneda trabaja ese país, así que no se puede dar de alta una Prestadora ahí. **Hace falta agregarlo antes.**
-- **Texto propuesto:** Ese país no tiene una moneda configurada. Configure la moneda del país e intente nuevamente.
+- **Texto propuesto:** El país no tiene una moneda configurada. Configure la moneda antes de continuar.
 - **Qué cambió:** más corto; dice qué pasó y qué hacer.
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** hoy no aparece en ninguna parte: el Panel no da de alta Prestadoras. Describiría el alta de una Prestadora en un país sin moneda configurada.
@@ -101,7 +101,7 @@ Decisión: ____
 
 ### 8. Moneda que ya no está en la lista
 - **Texto actual:** Esa moneda no está entre las que se pueden elegir. **Conviene recargar la pantalla y elegir una de la lista.**
-- **Texto propuesto:** Esa moneda ya no está disponible. Actualice la página y elija una moneda de la lista.
+- **Texto propuesto:** Moneda no disponible. Actualice la página y elija una de la lista.
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Configuración → La Prestadora, tarjeta «La moneda», botón «Guardar».
@@ -114,7 +114,7 @@ Decisión: ____
 
 ### 9. Software que ya no está en la lista
 - **Texto actual:** Ese software no está entre los que se pueden elegir. **Conviene recargar la pantalla y elegir uno de la lista.**
-- **Texto propuesto:** Ese software ya no está disponible. Actualice la página y elija uno de la lista.
+- **Texto propuesto:** Software no disponible. Actualice la página y elija uno de la lista.
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** la administración de la Prestadora.
 - **Dónde está:** Panel → Configuración → La Prestadora, tarjetas «El software de facturación» y «El software de créditos y cobranzas», botón «Guardar».
@@ -127,7 +127,7 @@ Decisión: ____
 
 ### 10. Domicilio temporal superpuesto
 - **Texto actual:** Ya hay un domicilio temporal cargado para este Paciente en esas fechas. Un Paciente no puede estar en dos lugares el mismo día: **conviene revisar el período ya cargado antes de agregar otro.**
-- **Texto propuesto:** Este Paciente ya tiene un domicilio temporal en esas fechas. Revise el período cargado y cambie las fechas.
+- **Texto propuesto:** El Paciente ya tiene un domicilio temporal en esas fechas. Revise el período cargado y modifique las fechas.
 - **Qué cambió:** más corto, imperativo, sin la explicación del medio.
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Clientes → un Cliente → solapa «Pacientes» → «Domicilios temporales» → «Cargar un domicilio temporal» → «Guardar». No se pudo confirmar si también sale al cambiar la fecha con «Terminar el período».
@@ -140,7 +140,7 @@ Decisión: ____
 
 ### 11. Pedido ya resuelto por otra persona
 - **Texto actual:** Ese pedido ya lo resolvió otra persona. **Conviene recargar la lista para ver cómo quedó.**
-- **Texto propuesto:** Otra persona ya resolvió este pedido. Actualice la lista.
+- **Texto propuesto:** Otro usuario ya resolvió este pedido. Actualice la lista.
 - **Qué cambió:** imperativo y sin «para ver cómo quedó».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Guardias → Emergencias, ventana «Emergencia», botón «Marcar atendida»; Panel → Guardias → Pase de guardia, tarjeta «Esperando un código», botón «Soltar el código».
@@ -153,7 +153,7 @@ Decisión: ____
 
 ### 12. Revisión ya cerrada
 - **Texto actual:** Esa llegada ya está cerrada. **Conviene recargar la lista.**
-- **Texto propuesto:** Otra persona ya resolvió este pedido. Actualice la lista.
+- **Texto propuesto:** Este registro ya está cerrado. Actualice la lista.
 - **Qué cambió:** imperativo; la frase sirve también para el caso de la firma, donde hoy habla de una «llegada».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Guardias → Pase de guardia, tarjeta «Llegadas y salidas sin comprobar», ventana «Cerrar la revisión»; Panel → Clientes → un Cliente → solapa «Personas autorizadas», ventana «Registrar la firma».
@@ -166,7 +166,7 @@ Decisión: ____
 
 ### 13. Forma de pago que no corresponde
 - **Texto actual:** Ese medio de pago no se usa en la modalidad de trabajo que paga esta liquidación. **Hace falta elegir otro de la lista.**
-- **Texto propuesto:** Esa forma de pago no corresponde a la modalidad de esta liquidación. Elija otra forma de pago.
+- **Texto propuesto:** La forma de pago no corresponde a la modalidad de esta liquidación. Elija otra.
 - **Qué cambió:** imperativo; «forma de pago», como dice la etiqueta.
 - **Quién lo lee:** la administración de la Prestadora.
 - **Dónde está:** Panel → Asistentes → Pagos a Asistentes → Liquidaciones, ventana «Detalle de la liquidación», botón «Registrar el pago».
@@ -192,7 +192,7 @@ Decisión: ____
 
 ### 15. No se encontró el Paciente
 - **Texto actual:** No se encontró ese Paciente. **Conviene recargar la lista.**
-- **Texto propuesto:** No se encontró el Paciente. Actualice la página.
+- **Texto propuesto:** Paciente no encontrado. Actualice la página.
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Guardias → Guardias, grilla vista por Paciente (también en Estado actual); Panel → Informes → Informes para Obra Social.
@@ -205,7 +205,7 @@ Decisión: ____
 
 ### 16. No se encontró el acceso
 - **Texto actual:** No se encontró ese acceso. **Conviene recargar la lista.**
-- **Texto propuesto:** No se encontró el acceso. Actualice la página.
+- **Texto propuesto:** Acceso no encontrado. Actualice la página.
 - **Qué cambió:** imperativo. Es la misma propuesta que la ficha 8 de la aplicación del Cliente.
 - **Quién lo lee:** la administración de la Prestadora.
 - **Dónde está:** Panel → Clientes → Clientes (Match) → «Ver cobros», recuadro «Alta en la pasarela de cobro».
@@ -231,7 +231,7 @@ Decisión: ____
 
 ### 18. Pasarela de cobro no disponible
 - **Texto actual:** Esa pasarela de cobro no está disponible. **Conviene recargar la pantalla y elegir una de la lista.**
-- **Texto propuesto:** Esa pasarela de cobro ya no está disponible. Actualice la página y elija otra de la lista.
+- **Texto propuesto:** Pasarela de cobro no disponible. Actualice la página y elija otra de la lista.
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** la administración de la Prestadora.
 - **Dónde está:** en teoría, Panel → Clientes → Clientes (Match) → «Ver cobros», recuadro «Alta en la pasarela de cobro». No se pudo confirmar ningún caso real en el Panel; sí puede salir en la aplicación del Cliente, al dar de baja un acceso.
@@ -257,7 +257,7 @@ Decisión: ____
 
 ### 20. Unidad de tiempo no disponible
 - **Texto actual:** Esa unidad de tiempo no está disponible. **Conviene recargar la pantalla y elegir una de la lista.**
-- **Texto propuesto:** Esa unidad de tiempo ya no está disponible. Actualice la página y elija otra de la lista.
+- **Texto propuesto:** Unidad de tiempo no disponible. Actualice la página y elija otra de la lista.
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** la administración de la Prestadora.
 - **Dónde está:** Panel → Facturación → Formas de cobro de Match, ventana de la forma de cobro, casillero «Unidad de tiempo».
@@ -270,8 +270,8 @@ Decisión: ____
 
 ### 21. Renovación sin período
 - **Texto actual:** Una forma que se cobra una sola vez no se puede renovar sola. **Hace falta cargarle un período, o dejarla sin renovación.**
-- **Texto propuesto:** Una forma de cobro sin período no se renueva sola. Ingrese un período o desmarque «Se renueva sola».
-- **Qué cambió:** imperativo, y nombra la casilla que hay que tocar.
+- **Texto propuesto:** Una forma de cobro sin período no se renueva sola. Ingrese un período o desmarque la renovación.
+- **Qué cambió:** imperativo.
 - **Quién lo lee:** la administración de la Prestadora.
 - **Dónde está:** Panel → Facturación → Formas de cobro de Match, ventana de la forma de cobro.
 - **Qué estaba haciendo:** marcó «Se renueva sola» sin período y tocó «Guardar».
@@ -309,7 +309,7 @@ Decisión: ____
 
 ### 24. No se encontró el cese
 - **Texto actual:** No se encontró ese cese. **Conviene recargar la lista.**
-- **Texto propuesto:** No se encontró el cese. Actualice la página.
+- **Texto propuesto:** Cese no encontrado. Actualice la página.
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** la administración de la Prestadora.
 - **Dónde está:** Panel → Asistentes → Padrón de Asistentes → Legajo, solapa «Vínculo y Cese», recuadro «Historial de ceses».
@@ -322,7 +322,7 @@ Decisión: ____
 
 ### 25. Fecha de entrevista no válida
 - **Texto actual:** Esa fecha no se entiende. **Conviene elegir el día y la hora de nuevo.**
-- **Texto propuesto:** La fecha no es válida. Elija nuevamente el día y la hora.
+- **Texto propuesto:** Fecha no válida. Seleccione nuevamente el día y la hora.
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Asistentes → Postulaciones → una postulación, recuadro «Entrevista».
@@ -335,7 +335,7 @@ Decisión: ____
 
 ### 26. Entrevista ya cerrada
 - **Texto actual:** Esa entrevista ya está cerrada. **Conviene recargar para ver cómo quedó.**
-- **Texto propuesto:** Esta entrevista ya está cerrada. Actualice la página.
+- **Texto propuesto:** La entrevista ya está cerrada. Actualice la página.
 - **Qué cambió:** imperativo y sin «para ver cómo quedó».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Asistentes → Postulaciones → una postulación, recuadro «Entrevista», botones «Se hizo» y «No se presentó».
@@ -400,7 +400,7 @@ Decisión: ____
 
 ### 31. Activar el segundo factor
 - **Texto actual:** **Hace falta escanear** este código con Google Authenticator, Authy u otra app similar, y escribir el código de 6 dígitos que muestra para confirmar.
-- **Texto propuesto:** Escanee este código con Google Authenticator, Authy u otra aplicación similar e ingrese el código de 6 dígitos que muestra.
+- **Texto propuesto:** Escanee este código con Google Authenticator, Authy u otra aplicación similar e ingrese el código de 6 dígitos.
 - **Qué cambió:** imperativo; «aplicación» en lugar de «app».
 - **Quién lo lee:** el soporte técnico de CeltaTech, no la coordinación de la Prestadora.
 - **Dónde está:** Panel → «Activación del segundo factor de seguridad», al ingresar.
@@ -413,8 +413,8 @@ Decisión: ____
 
 ### 32. Código de recuperación enviado
 - **Texto actual:** Enviamos un código al email registrado. **Hace falta revisar la bandeja de entrada** (vence en 10 minutos).
-- **Texto propuesto:** El sistema envió un código al email registrado. Revise la bandeja de entrada. El código vence en 10 minutos.
-- **Qué cambió:** imperativo; el plazo pasa a ser una frase propia.
+- **Texto propuesto:** Código enviado al email registrado. Revise su bandeja de entrada (validez: 10 minutos).
+- **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** el soporte técnico de CeltaTech, no la coordinación de la Prestadora.
 - **Dónde está:** Panel → «Recuperar acceso», a la que se llega desde «Verificación en dos pasos».
 - **Qué estaba haciendo:** perdió el teléfono con los códigos y tocó «Enviar un código por email».
@@ -426,7 +426,7 @@ Decisión: ____
 
 ### 33. Enlace de ingreso incompleto
 - **Texto actual:** Este enlace no sirve. **Conviene pedir uno nuevo a quien creó la cuenta.**
-- **Texto propuesto:** Este enlace no es válido. Solicite un enlace nuevo a quien creó la cuenta.
+- **Texto propuesto:** Enlace no válido. Solicite un enlace nuevo a quien creó la cuenta.
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** quien recibió un enlace por correo para entrar al Panel, sobre todo la administración de una Prestadora nueva.
 - **Dónde está:** Panel → «Activar la cuenta» y Panel → «Elegir una contraseña nueva».
@@ -439,7 +439,7 @@ Decisión: ____
 
 ### 34. Antes de activar la verificación en dos pasos
 - **Texto actual:** **Conviene asegurarse** de que cada persona con una de esas cuentas ya tenga instalada una app generadora de códigos (Google Authenticator, Authy u otra) antes de confirmar, para poder enrolarse en el próximo login.
-- **Texto propuesto:** Antes de confirmar, verifique que cada persona con una de esas cuentas tenga instalada una aplicación de códigos (Google Authenticator, Authy u otra). La va a necesitar en su próximo ingreso.
+- **Texto propuesto:** Antes de confirmar, verifique que cada usuario tenga instalada una aplicación de códigos (Google Authenticator, Authy u otra).
 - **Qué cambió:** imperativo; sin «app», «enrolarse» ni «login».
 - **Quién lo lee:** el soporte técnico de CeltaTech, no la coordinación de la Prestadora.
 - **Dónde está:** Panel → Configuración → Accesos, tarjeta «Verificación en dos pasos (MFA)», ventana «Antes de activar la verificación en dos pasos».
@@ -530,7 +530,7 @@ Decisión: ____
 
 ### 41. Todavía no es la hora de la entrevista
 - **Texto actual:** La sala se abre unos minutos antes. **Conviene volver a entrar** por este mismo enlace el día y la hora de la cita.
-- **Texto propuesto:** La sala se abre unos minutos antes de la hora. Vuelva a abrir este enlace el día y la hora de la cita.
+- **Texto propuesto:** La sala se abre minutos antes de la hora. Vuelva a abrir este enlace el día y la hora de la cita.
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** el postulante.
 - **Dónde está:** página de la entrevista, debajo de «Todavía no es la hora».

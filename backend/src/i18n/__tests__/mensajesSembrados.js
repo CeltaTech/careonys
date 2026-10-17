@@ -20,6 +20,7 @@ const MIGRACIONES_POSTERIORES = [
   '20261118000000_los_turnos_se_asignan.sql',
   '20261121000000_avisos_de_la_asignacion.sql',
   '20261226000000_avisos_del_turno_fijo_y_del_reemplazo.sql',
+  '20270101000000_frases_aprobadas_de_la_entrevista_y_la_guardia_sin_cerrar.sql',
 ];
 
 function filasPosteriores() {
@@ -37,7 +38,10 @@ function filasPosteriores() {
 
 /** Las filas sembradas de fábrica, en la forma en que las devuelve la base. */
 export function filasSembradas() {
-  return [
+  // Una migración posterior puede reescribir una frase que ya estaba: la última fila de cada
+  // clave es la que vale, igual que en la base.
+  const porClave = new Map();
+  for (const fila of [
     ...filasDeFabrica('mensajes_del_sistema')
       .filter((fila) => fila.prestadora_id === null)
       .map(({ clave, prestadora_id, activo, admite_texto_propio, i18n }) => ({
@@ -48,5 +52,6 @@ export function filasSembradas() {
         i18n,
       })),
     ...filasPosteriores(),
-  ];
+  ]) porClave.set(fila.clave, fila);
+  return [...porClave.values()];
 }

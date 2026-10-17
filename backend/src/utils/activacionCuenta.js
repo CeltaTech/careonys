@@ -86,7 +86,7 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, p
   await enviarEmail({ to: email, asunto: textos.asunto, texto: textos.texto, formato: textos.html });
 }
 
-// Usado tanto por el alta inicial como por "Reenviar invitación" (token vencido o extraviado).
+// Usado tanto por el alta inicial como por "Reenviar enlace" (token vencido o extraviado).
 //
 // La Prestadora se recibe y no se deduce de la cuenta: quien pide el reenvío está parado en una
 // Organización, y la cuenta a la que se le reenvía tiene que ser de ésa. Es obligatoria y no tiene

@@ -206,7 +206,7 @@ export function Muestra() {
 
       <Bloque titulo="Avisos">
         <div style={{ display: 'grid', gap: '0.75rem' }}>
-          <Alert variant="info">Un dato que conviene saber.</Alert>
+          <Alert variant="info">Información de ejemplo.</Alert>
           <Alert variant="warning">Algo que hay que mirar antes de seguir.</Alert>
           <Alert variant="error">Algo salió mal.</Alert>
         </div>

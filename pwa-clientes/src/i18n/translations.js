@@ -409,7 +409,7 @@ export const T = {
       tipo: 'Tipo de Asistente',
       tareas_vacio: 'La Prestadora todavía no cargó esta lista.',
       certificado_vigente: 'Certificado de Aptitud vigente',
-      certificado_vencido: 'Certificado de Aptitud vencido',
+      sin_certificado: 'Sin certificado',
       // El estado documental. Dos reglas gobiernan estos textos y las dos son legales, no de
       // estilo: de qué papel se trata cada uno no se nombra nunca —puede ser dato de salud—, y
       // lo que no se verificó se dice con todas las letras. Lo segundo sale de
@@ -1005,7 +1005,7 @@ export const T = {
       tipo: 'Assistant type',
       tareas_vacio: 'The Provider hasn\'t filled in this list yet.',
       certificado_vigente: 'Fitness Certificate valid',
-      certificado_vencido: 'Fitness Certificate expired',
+      sin_certificado: 'No certificate',
       documentacion_titulo: 'Paperwork',
       documentacion_cuenta: 'Up to date: {alDia} of {total}.',
       documentacion_sin_exigencias: 'This Provider has not recorded any paperwork requirements for its staff.',
@@ -1564,7 +1564,7 @@ export const T = {
       tipo: 'Tipo de Assistente',
       tareas_vacio: 'A Prestadora ainda não preencheu esta lista.',
       certificado_vigente: 'Certificado de Aptidão válido',
-      certificado_vencido: 'Certificado de Aptidão vencido',
+      sin_certificado: 'Sem certificado',
       documentacion_titulo: 'Documentação',
       documentacion_cuenta: 'Em dia: {alDia} de {total}.',
       documentacion_sin_exigencias: 'Esta Prestadora não registrou exigências documentais para o seu pessoal.',

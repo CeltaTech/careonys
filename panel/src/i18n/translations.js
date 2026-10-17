@@ -62,7 +62,7 @@ export const T = {
         guardia_sin_asistente: 'Este turno ya no tiene Asistente. Recargue la grilla.',
         asistente_no_encontrado: 'El Asistente no está disponible. Seleccione otro.',
         correo_invalido: 'Dirección de correo electrónico no válida. Verifique el formato e intente nuevamente.',
-        domicilio_temporal_pisado: 'El Paciente ya tiene un domicilio temporal en esas fechas. Revise el período cargado y modifique las fechas.',
+        domicilio_temporal_pisado: 'El Paciente ya tiene un domicilio temporal en ese período.',
         domicilio_temporal_fechas_al_reves: 'La fecha de fin no puede ser anterior a la de inicio.',
         // El pase de guardia (pendientes #113 y #177). Sin estas frases los tres primeros
         // caían en «ya existe otro igual» y el último en «algo falló de nuestro lado»: dos
@@ -3122,7 +3122,7 @@ export const T = {
         guardia_sin_asistente: 'This shift no longer has an Assistant. Reload the grid.',
         asistente_no_encontrado: 'The Assistant is not available. Select another one.',
         correo_invalido: 'Invalid email address. Check the format and try again.',
-        domicilio_temporal_pisado: 'The Patient already has a temporary address on those dates. Review the recorded period and change the dates.',
+        domicilio_temporal_pisado: 'The Patient already has a temporary address in that period.',
         domicilio_temporal_fechas_al_reves: 'The end date cannot be earlier than the start date.',
         ya_resuelta: 'Another user already resolved this request. Reload the list.',
         ya_cerrada: 'This record is already closed. Reload the list.',
@@ -6121,7 +6121,7 @@ export const T = {
         guardia_sin_asistente: 'Este plantão não tem mais Assistente. Recarregue a grade.',
         asistente_no_encontrado: 'O Assistente não está disponível. Selecione outro.',
         correo_invalido: 'Endereço de e-mail inválido. Verifique o formato e tente novamente.',
-        domicilio_temporal_pisado: 'O Paciente já tem um endereço temporário nessas datas. Revise o período registrado e altere as datas.',
+        domicilio_temporal_pisado: 'O Paciente já tem um endereço temporário nesse período.',
         domicilio_temporal_fechas_al_reves: 'A data de término não pode ser anterior à data de início.',
         ya_resuelta: 'Outro usuário já resolveu este pedido. Atualize a lista.',
         ya_cerrada: 'Este registro já está fechado. Atualize a lista.',

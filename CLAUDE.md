@@ -437,6 +437,12 @@ migraciones no son el estado: son instrucciones que ya se ejecutaron, y este pro
 tantas que se contradicen entre sí. `supabase migration list --linked` sólo sirve para saber si
 quedó alguna sin aplicar, nunca para saber cómo está la base.
 
+**Antes de preguntarle o explicarle algo al Desarrollador, se hacen esas dos consultas en ese
+momento: el código y la base en vivo.** Es obligación permanente. Se comprueba a quién alcanza la
+cosa, si está encendida, quién la usa y si ya se decidió. Nunca se responde desde la memoria, desde
+un resumen de conversación ni desde un pendiente anotado. Si el código o la base contestan, no
+había pregunta.
+
 **Por qué cambió una regla** va a `docs/claude_history.md`, en una línea: qué decía antes, qué
 dice ahora y el motivo. Se revisa antes de proponer algo que suene a tema ya debatido.
 

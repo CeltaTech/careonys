@@ -5,12 +5,12 @@ export const T = {
     // una de estas ocho y muestra la frase; el texto crudo queda en la consola.
     errores: {
       sin_conexion: 'Sin conexión con el servidor. Verifique su conexión a internet e intente nuevamente.',
-      sesion_vencida: 'Pasó demasiado tiempo sin actividad. Hace falta volver a entrar.',
+      sesion_vencida: 'El acceso venció por inactividad. Ingrese nuevamente.',
       sin_permiso: 'Este usuario no tiene permiso para hacer esto.',
       no_encontrado: 'No encontramos lo que se buscaba. Puede que ya no exista.',
       duplicado: 'Ya existe un registro con esos datos.',
       en_uso: 'No se puede borrar: hay otros registros que dependen de esto.',
-      dato_invalido: 'Hay un dato mal cargado. Conviene revisar lo que se escribió.',
+      dato_invalido: 'Hay un dato incorrecto. Revise los datos ingresados e intente nuevamente.',
       falla_del_sistema: 'Algo falló de nuestro lado. Se puede volver a probar en un rato.',
       // Los motivos: cuando el backend sabe exactamente qué pasó, lo dice con un código y la
       // frase se busca acá. Ganan siempre por sobre las ocho de arriba, que son lo genérico.
@@ -34,20 +34,20 @@ export const T = {
         // Estas claves son, letra por letra, los motivos que manda el backend al confirmar la firma
         // (`backend/src/utils/instruccionesPersonasAutorizadas.js`). Una que no coincida no se ve rota: cae en
         // el mensaje general y la persona lee «ocurrió un error» justo cuando se equivocó de dígito.
-        codigo_incorrecto: 'Ese código no es correcto. Conviene revisarlo y escribirlo de nuevo.',
-        vencido: 'Ese código venció. Hace falta pedir uno nuevo.',
+        codigo_incorrecto: 'El código no es correcto. Revíselo e ingréselo nuevamente.',
+        vencido: 'El código venció. Pida otro código.',
         // Dos frases que se parecen y dicen cosas distintas (pendiente #177). Los intentos son de
         // la instrucción y no del código: pedir uno nuevo ya no los devuelve, así que esperar no
         // arregla nada y la salida es otra. El tope de pedidos por minuto sí se arregla esperando.
-        demasiados_intentos: 'Se probó demasiadas veces con esta instrucción. Pedir un código nuevo ya no devuelve intentos: hace falta que la Prestadora la cargue de nuevo, o firmarla en papel.',
+        demasiados_intentos: 'Superó la cantidad de intentos para esta instrucción. Pida a la Prestadora que la cargue nuevamente o fírmela en papel.',
         demasiados_pedidos: 'Demasiadas solicitudes. Espere un minuto e intente nuevamente.',
-        sin_codigo: 'Todavía no se pidió ningún código. Hace falta pedirlo primero.',
+        sin_codigo: 'Todavía no pidió ningún código. Pídalo primero.',
         ya_cerrada: 'Esa instrucción ya está firmada. No queda nada por confirmar.',
-        no_encontrado: 'No se encontró esa instrucción. Conviene volver a abrir la pantalla.',
+        no_encontrado: 'No se encontró la información solicitada. Vuelva a abrir esta sección.',
         // Los dos de la baja del acceso. Ninguno es una falla: el primero pasa cuando la pantalla
         // quedó vieja, y el segundo cuando esa forma de cobro no se renueva sola y entonces no hay
         // nada que apagar.
-        acceso_inexistente: 'No se encontró ese acceso. Conviene volver a abrir la pantalla.',
+        acceso_inexistente: 'No se encontró el acceso. Actualice la página.',
         forma_que_no_se_renueva: 'Ese acceso no se renueva solo, así que no hay nada que dar de baja.',
         // La vidriera de Match pedida en una Prestadora que no trabaja de esa manera. No
         // es una función apagada: es que esa Prestadora asigna ella a su gente, y decirlo así
@@ -56,18 +56,18 @@ export const T = {
         // Los tres de ver cómo llegar a una persona. Ninguno es una falla, y cada uno se sale de
         // una manera distinta: el primero contratando, el segundo renovando y el tercero pidiendo
         // otro paquete. Los tres nombran a la Prestadora, que es con quien se resuelve.
-        sin_acceso_de_intermediacion: 'Para ver cómo llegar a esta persona hace falta tener contratado el servicio con la Prestadora.',
-        acceso_no_vigente: 'El servicio contratado no está vigente. Para ver estos datos hace falta renovarlo con la Prestadora.',
-        saldo_agotado: 'Ya se usaron todos los contactos incluidos. Para ver uno más hace falta pedirle otro paquete a la Prestadora.',
+        sin_acceso_de_intermediacion: 'Para ver los datos de contacto de esta persona, contrate el servicio con la Prestadora.',
+        acceso_no_vigente: 'El servicio contratado venció. Renuévelo con la Prestadora para ver estos datos.',
+        saldo_agotado: 'Usó todos los contactos incluidos. Solicite otro paquete a la Prestadora para ver más.',
         // Los de la activación de la cuenta. Son cinco frases distintas porque son cinco
         // problemas distintos y cada uno se sale de una manera: el enlace equivocado se abre
         // de nuevo desde el correo, el ya usado se saltea entrando derecho, y el vencido
         // obliga a pedir una invitación nueva.
-        faltan_datos: 'Faltan datos para activar la cuenta. Hace falta volver a abrir el enlace del correo y escribir la contraseña de nuevo.',
+        faltan_datos: 'Faltan datos obligatorios. Revise el formulario e intente nuevamente.',
         password_debil: 'La contraseña tiene que tener al menos 8 caracteres.',
-        token_invalido: 'Este enlace de activación no es válido. Conviene abrirlo de nuevo desde el correo, o pedir que reenvíen la invitación.',
+        token_invalido: 'Este enlace no es válido. Ábralo nuevamente desde el correo o solicite un enlace nuevo.',
         token_ya_usado: 'Esta cuenta ya fue activada con este enlace. Se entra desde la pantalla de ingreso, con la contraseña que se eligió.',
-        token_vencido: 'Este enlace de activación venció. Hace falta pedir que reenvíen la invitación.',
+        token_vencido: 'Este enlace venció. Solicite un enlace nuevo.',
       },
     },
     comun: {
@@ -84,7 +84,7 @@ export const T = {
       puntaje_estrellas: '{n} de 5 estrellas',
       // La advertencia que se cuelga del campo que quedó vacío. El cartel de arriba dice cuáles
       // faltan; este dice, parado en el campo, que ese es uno de ellos.
-      campo_obligatorio: 'Hace falta completar este campo.',
+      campo_obligatorio: 'Complete este campo.',
     },
     nav: {
       // El chat con la otra punta de Match. Sólo aparece donde la Prestadora ofrece esa
@@ -147,7 +147,7 @@ export const T = {
       activar_confirmar: 'Activar cuenta',
       activar_enviando: 'Activando…',
       activar_exito: 'La cuenta quedó activada. Ya se puede ingresar con la contraseña nueva.',
-      activar_token_invalido: 'Este enlace de activación no es válido o ya venció. Hace falta pedir que reenvíen la invitación.',
+      activar_token_invalido: 'Este enlace no es válido o venció. Solicite un enlace nuevo a la Prestadora.',
       // Donde se elige la contraseña nueva con el enlace que llegó por correo. Es la hermana de
       // la activación —el mismo formulario contra otra puerta— y se escribe aparte porque una
       // enciende una cuenta que nunca se usó y ésta reemplaza la clave de una que está en uso.
@@ -156,7 +156,7 @@ export const T = {
       clave_nueva_confirmar: 'Guardar la contraseña',
       clave_nueva_guardando: 'Guardando…',
       clave_nueva_exito: 'La contraseña quedó cambiada. Ya se puede entrar con la nueva.',
-      clave_nueva_token_invalido: 'Este enlace no sirve o ya venció. Hace falta pedir uno nuevo.',
+      clave_nueva_token_invalido: 'Este enlace no es válido o venció. Solicite un enlace nuevo.',
       mi_clave: 'Contraseña',
       mi_clave_titulo: 'Cambiar la contraseña',
       mi_clave_actual: 'Contraseña actual',
@@ -509,7 +509,7 @@ export const T = {
       qr_vence_en: 'Este código vence en {minutos} minutos.',
       qr_esperando_cobro: 'Esperando a que el cobrador lo escanee…',
       qr_cobrado: 'Cobro confirmado, ¡gracias!',
-      qr_vencido: 'Este código venció. Hace falta generar uno nuevo.',
+      qr_vencido: 'Este código venció. Genere otro código.',
       qr_generar_otro: 'Generar otro código',
       // La baja se hace en un clic y sin pedírsela a nadie. Lo que hay que leer antes está arriba
       // del botón: qué se apaga y qué se conserva.
@@ -593,7 +593,7 @@ export const T = {
       enviar: 'Enviar solicitud',
       enviando: 'Enviando…',
       enviada_exito: 'La solicitud fue enviada. La Prestadora la va a revisar antes de que se active.',
-      error_campos_obligatorios: 'Hace falta completar medicamento, dosis, frecuencia, vía y fecha desde.',
+      error_campos_obligatorios: 'Complete los campos marcados.',
       sin_acceso_pedir: 'Pedir un cambio de medicación no está entre lo que el titular de la cuenta le dio a usted. El cambio se lo pide él a la Prestadora.',
       estado_pendiente: 'Pendiente de revisión',
       estado_aceptada: 'Aceptada',
@@ -670,12 +670,12 @@ export const T = {
     // una de estas ocho y muestra la frase; el texto crudo queda en la consola.
     errores: {
       sin_conexion: 'No server connection. Check your internet connection and try again.',
-      sesion_vencida: 'You were inactive for too long. Please sign in again.',
+      sesion_vencida: 'Your access expired due to inactivity. Sign in again.',
       sin_permiso: 'Your account does not have permission to do this.',
       no_encontrado: 'We could not find what you were looking for. It may no longer exist.',
       duplicado: 'A record with that information already exists.',
       en_uso: 'This cannot be deleted: other records depend on it.',
-      dato_invalido: 'Something was entered incorrectly. Please check what you typed.',
+      dato_invalido: 'Some data is incorrect. Check the information entered and try again.',
       falla_del_sistema: 'Something failed on our side. Please try again shortly.',
       motivos: {
         videollamada_no_configurada: 'This provider has not set up video calls yet, so for now the conversation continues in writing.',
@@ -683,24 +683,24 @@ export const T = {
         falta_la_firma: 'Signature pending.',
         firma_no_sirve: 'Biometric validation failed. Please try again.',
         sin_acceso: 'The account holder did not include this in what you can see. Any change is requested by them from the Provider.',
-        codigo_incorrecto: 'That code is not correct. Please check it and type it again.',
-        vencido: 'That code has expired. Please request a new one.',
-        demasiados_intentos: 'This instruction has been tried too many times. Requesting a new code no longer restores attempts: the Provider has to load it again, or it can be signed on paper.',
+        codigo_incorrecto: 'The code is not correct. Check it and enter it again.',
+        vencido: 'The code has expired. Request another code.',
+        demasiados_intentos: 'You exceeded the number of attempts for this instruction. Ask the Provider to load it again, or sign it on paper.',
         demasiados_pedidos: 'Too many requests. Wait a minute and try again.',
-        sin_codigo: 'No code has been requested yet. Please request one first.',
+        sin_codigo: 'You have not requested a code yet. Request one first.',
         ya_cerrada: 'That instruction is already signed. There is nothing left to confirm.',
-        no_encontrado: 'That instruction could not be found. Please open the screen again.',
-        acceso_inexistente: 'That access could not be found. Please open the screen again.',
+        no_encontrado: 'The requested information was not found. Open this section again.',
+        acceso_inexistente: 'Access not found. Reload the page.',
         forma_que_no_se_renueva: 'That access does not renew on its own, so there is nothing to cancel.',
         intermediacion_no_habilitado: 'This Provider assigns its own Assistants, so there is no list to choose from.',
-        sin_acceso_de_intermediacion: 'To see how to reach this person, the service has to be arranged with the Provider first.',
-        acceso_no_vigente: 'The arranged service is not active. To see these details it has to be renewed with the Provider.',
-        saldo_agotado: 'All the included contacts have already been used. To see one more, another pack has to be requested from the Provider.',
-        faltan_datos: 'Some information is missing. Please open the link from the email again and enter the password once more.',
+        sin_acceso_de_intermediacion: 'To see the contact details of this person, arrange the service with the Provider.',
+        acceso_no_vigente: 'The arranged service has expired. Renew it with the Provider to see these details.',
+        saldo_agotado: 'You used all the included contacts. Request another pack from the Provider to see more.',
+        faltan_datos: 'Required data is missing. Check the form and try again.',
         password_debil: 'The password must be at least 8 characters long.',
-        token_invalido: 'This activation link is not valid. Try opening it again from the email, or ask for a new invitation.',
+        token_invalido: 'This link is not valid. Open it again from the email or request a new link.',
         token_ya_usado: 'This account has already been activated with this link. You can sign in with the password you chose.',
-        token_vencido: 'This activation link has expired. Please ask for a new invitation.',
+        token_vencido: 'This link has expired. Request a new link.',
       },
     },
     comun: {
@@ -711,7 +711,7 @@ export const T = {
       volver: 'Back',
       cancelar: 'Cancel',
       puntaje_estrellas: '{n} out of 5 stars',
-      campo_obligatorio: 'This field needs to be filled in.',
+      campo_obligatorio: 'Fill in this field.',
     },
     nav: {
       mensajes: 'Messages',
@@ -760,13 +760,13 @@ export const T = {
       activar_confirmar: 'Activate account',
       activar_enviando: 'Activating…',
       activar_exito: 'Your account is now active. You can sign in with your new password.',
-      activar_token_invalido: 'This activation link is invalid or has expired. Ask for a new invitation.',
+      activar_token_invalido: 'This link is not valid or has expired. Request a new link from the Provider.',
       clave_nueva_titulo: 'Choose a new password',
       clave_nueva_codigo: 'Code',
       clave_nueva_confirmar: 'Save the password',
       clave_nueva_guardando: 'Saving…',
       clave_nueva_exito: 'The password has been changed. You can now sign in with the new one.',
-      clave_nueva_token_invalido: 'This link is not valid or has expired. Ask for a new one.',
+      clave_nueva_token_invalido: 'This link is not valid or has expired. Request a new link.',
       mi_clave: 'Password',
       mi_clave_titulo: 'Change your password',
       mi_clave_actual: 'Current password',
@@ -1083,7 +1083,7 @@ export const T = {
       qr_vence_en: 'This code expires in {minutos} minutes.',
       qr_esperando_cobro: 'Waiting for the collector to scan it…',
       qr_cobrado: 'Payment confirmed, thank you!',
-      qr_vencido: 'This code expired. Generate a new one.',
+      qr_vencido: 'This code has expired. Generate another code.',
       qr_generar_otro: 'Generate another code',
       baja_titulo: 'Cancel',
       baja_boton: 'Cancel',
@@ -1162,7 +1162,7 @@ export const T = {
       enviar: 'Send request',
       enviando: 'Sending…',
       enviada_exito: 'Your request was sent. The Provider will review it before it becomes active.',
-      error_campos_obligatorios: 'Fill in medication, dose, frequency, route and start date.',
+      error_campos_obligatorios: 'Fill in the marked fields.',
       sin_acceso_pedir: 'Requesting a medication change is not part of what the account holder granted you. Any change is requested by them from the Provider.',
       estado_pendiente: 'Pending review',
       estado_aceptada: 'Accepted',
@@ -1229,12 +1229,12 @@ export const T = {
     // una de estas ocho y muestra la frase; el texto crudo queda en la consola.
     errores: {
       sin_conexion: 'Sem conexão com o servidor. Verifique sua conexão com a internet e tente novamente.',
-      sesion_vencida: 'Passou muito tempo sem atividade. É preciso entrar novamente.',
+      sesion_vencida: 'O acesso expirou por inatividade. Entre novamente.',
       sin_permiso: 'Este usuário não tem permissão para fazer isso.',
       no_encontrado: 'Não encontramos o que foi procurado. Pode ser que não exista mais.',
       duplicado: 'Já existe um registro com esses dados.',
       en_uso: 'Não é possível apagar: outros registros dependem disto.',
-      dato_invalido: 'Há um dado carregado errado. Convém revisar o que foi escrito.',
+      dato_invalido: 'Há um dado incorreto. Verifique os dados informados e tente novamente.',
       falla_del_sistema: 'Algo falhou do nosso lado. É possível tentar de novo daqui a pouco.',
       motivos: {
         videollamada_no_configurada: 'Esta Prestadora ainda não configurou as videochamadas, então por enquanto a conversa segue por escrito.',
@@ -1242,24 +1242,24 @@ export const T = {
         falta_la_firma: 'Falta a assinatura.',
         firma_no_sirve: 'Não foi possível realizar a validação biométrica. Tente novamente.',
         sin_acceso: 'O titular da conta não incluiu isto no que foi concedido. A mudança é ele quem pede à Prestadora.',
-        codigo_incorrecto: 'Esse código não está correto. Convém revisá-lo e digitá-lo de novo.',
-        vencido: 'Esse código venceu. É preciso pedir um novo.',
-        demasiados_intentos: 'Houve tentativas demais nesta instrução. Pedir um código novo já não devolve tentativas: é preciso que a Prestadora a carregue de novo, ou assiná-la em papel.',
+        codigo_incorrecto: 'O código não está correto. Verifique-o e informe-o novamente.',
+        vencido: 'O código expirou. Peça outro código.',
+        demasiados_intentos: 'Você excedeu o número de tentativas para esta instrução. Peça à Prestadora que a carregue novamente ou assine-a em papel.',
         demasiados_pedidos: 'Muitas solicitações. Aguarde um minuto e tente novamente.',
-        sin_codigo: 'Ainda não foi pedido nenhum código. É preciso pedi-lo primeiro.',
+        sin_codigo: 'Você ainda não pediu nenhum código. Peça-o primeiro.',
         ya_cerrada: 'Essa instrução já está assinada. Não resta nada a confirmar.',
-        no_encontrado: 'Não foi encontrada essa instrução. Convém abrir a tela de novo.',
-        acceso_inexistente: 'Não foi encontrado esse acesso. Convém abrir a tela de novo.',
+        no_encontrado: 'As informações solicitadas não foram encontradas. Abra esta seção novamente.',
+        acceso_inexistente: 'O acesso não foi encontrado. Atualize a página.',
         forma_que_no_se_renueva: 'Esse acesso não se renova sozinho, portanto não há nada a cancelar.',
         intermediacion_no_habilitado: 'Esta Prestadora designa ela mesma os seus Assistentes, portanto não há uma lista para escolher.',
-        sin_acceso_de_intermediacion: 'Para ver como chegar a esta pessoa é preciso ter o serviço contratado com a Prestadora.',
-        acceso_no_vigente: 'O serviço contratado não está vigente. Para ver estes dados é preciso renová-lo com a Prestadora.',
-        saldo_agotado: 'Todos os contatos incluídos já foram usados. Para ver mais um é preciso pedir outro pacote à Prestadora.',
-        faltan_datos: 'Faltam dados para ativar a conta. É preciso abrir novamente o link do email e digitar a senha de novo.',
+        sin_acceso_de_intermediacion: 'Para ver os dados de contato desta pessoa, contrate o serviço com a Prestadora.',
+        acceso_no_vigente: 'O serviço contratado expirou. Renove-o com a Prestadora para ver estes dados.',
+        saldo_agotado: 'Você usou todos os contatos incluídos. Solicite outro pacote à Prestadora para ver mais.',
+        faltan_datos: 'Faltam dados obrigatórios. Revise o formulário e tente novamente.',
         password_debil: 'A senha precisa ter pelo menos 8 caracteres.',
-        token_invalido: 'Este link de ativação não é válido. Convém abri-lo novamente a partir do email ou pedir que reenviem o convite.',
+        token_invalido: 'Este link não é válido. Abra-o novamente a partir do e-mail ou solicite um novo link.',
         token_ya_usado: 'Esta conta já foi ativada com este link. O acesso é feito na tela de entrada, com a senha escolhida.',
-        token_vencido: 'Este link de ativação venceu. É preciso pedir que reenviem o convite.',
+        token_vencido: 'Este link expirou. Solicite um novo link.',
       },
     },
     comun: {
@@ -1270,7 +1270,7 @@ export const T = {
       volver: 'Voltar',
       cancelar: 'Cancelar',
       puntaje_estrellas: '{n} de 5 estrelas',
-      campo_obligatorio: 'É necessário preencher este campo.',
+      campo_obligatorio: 'Preencha este campo.',
     },
     nav: {
       mensajes: 'Mensagens',
@@ -1319,13 +1319,13 @@ export const T = {
       activar_confirmar: 'Ativar conta',
       activar_enviando: 'Ativando…',
       activar_exito: 'A conta foi ativada. Já é possível entrar com a nova senha.',
-      activar_token_invalido: 'Este link de ativação não é válido ou já venceu. É preciso pedir que reenviem o convite.',
+      activar_token_invalido: 'Este link não é válido ou expirou. Solicite um novo link à Prestadora.',
       clave_nueva_titulo: 'Escolher uma senha nova',
       clave_nueva_codigo: 'Código',
       clave_nueva_confirmar: 'Guardar a senha',
       clave_nueva_guardando: 'Guardando…',
       clave_nueva_exito: 'A senha foi alterada. Já é possível entrar com a nova.',
-      clave_nueva_token_invalido: 'Este link não serve ou já venceu. É preciso pedir um novo.',
+      clave_nueva_token_invalido: 'Este link não é válido ou expirou. Solicite um novo link.',
       mi_clave: 'Senha',
       mi_clave_titulo: 'Alterar a senha',
       mi_clave_actual: 'Senha atual',
@@ -1642,7 +1642,7 @@ export const T = {
       qr_vence_en: 'Este código expira em {minutos} minutos.',
       qr_esperando_cobro: 'Aguardando o cobrador escanear…',
       qr_cobrado: 'Pagamento confirmado, obrigado!',
-      qr_vencido: 'Este código expirou. É preciso gerar um novo.',
+      qr_vencido: 'Este código expirou. Gere outro código.',
       qr_generar_otro: 'Gerar outro código',
       baja_titulo: 'Cancelar',
       baja_boton: 'Cancelar',
@@ -1721,7 +1721,7 @@ export const T = {
       enviar: 'Enviar solicitação',
       enviando: 'Enviando…',
       enviada_exito: 'A solicitação foi enviada. A Prestadora vai revisá-la antes de ativá-la.',
-      error_campos_obligatorios: 'É preciso preencher medicamento, dose, frequência, via e data de início.',
+      error_campos_obligatorios: 'Preencha os campos marcados.',
       sin_acceso_pedir: 'Pedir uma mudança de medicação não está entre o que o titular da conta concedeu. A mudança é ele quem pede à Prestadora.',
       estado_pendiente: 'Pendente de revisão',
       estado_aceptada: 'Aceita',

@@ -140,7 +140,7 @@ export async function crearCuentaConPerfil({
       await invitarActivacionCuenta({ usuarioId: userId, email, nombre, rol, prestadoraId });
     } catch (errorActivacion) {
       // La cuenta ya quedó creada correctamente — un fallo al mandar el email (ej. SMTP
-      // caído en ese momento) no debe deshacer el alta, se recupera con "Reenviar invitación".
+      // caído en ese momento) no debe deshacer el alta, se recupera con "Reenviar enlace".
       console.error('Error al enviar el email de activación:', errorActivacion.message);
     }
   }

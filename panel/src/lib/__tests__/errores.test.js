@@ -109,7 +109,7 @@ describe('del backend a la pantalla', () => {
     // en vez de enterarse de que ese correo ya está en uso.
     expect(texto).not.toBe(t.errores.duplicado);
     // Ni el texto crudo del backend, que está escrito para quien programa.
-    expect(texto).not.toMatch(/registered|email/i);
+    expect(texto).not.toMatch(/registered|address/i);
   });
 
   it('el mismo motivo se explica en los tres idiomas', () => {

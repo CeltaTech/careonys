@@ -1,28 +1,23 @@
 import { enLaPrestadora, supabase } from '../db/connection.js';
-import { IDENTIDAD } from '../config/identidadProducto.js';
 import { nombreBase } from './casillaDeEnvio.js';
 
-// La puerta por la que entra cada Prestadora.
+// El código de cada Prestadora.
 //
-// Cada Prestadora entra por su propia dirección —`cuidardelsur.careonys.com`—, y esa dirección es
-// la que dice a cuál se está entrando: nunca se elige la Prestadora antes de la clave
-// (`docs/MARCA.md`, sección 0). Acá se decide cómo se llama esa puerta.
+// Es un rótulo corto —`cuidardelsur`— que nombra a la Prestadora sin decir su número interno. Va al
+// final del nombre de usuario de su coordinación (`juana.perez_cuidardelsur`, ver
+// `nombreDeUsuario.js`) y adentro de los enlaces de los correos con un código de un solo uso. No es
+// una dirección web: no existe ninguna dirección propia por Prestadora.
 //
-// Se elige sola al dar de alta la Prestadora, nadie la teclea, y no cambia nunca: es la dirección
-// que quedó anotada en el navegador de toda la gente que trabaja en esa Prestadora.
+// Se elige solo al dar de alta la Prestadora, nadie lo teclea, y no cambia nunca: está escrito en
+// los nombres de usuario de toda su coordinación.
 //
-// El nombre sale con la misma regla que la casilla desde la que manda —del dominio propio que
-// declaró, si no de su nombre, y con un sufijo si el que salió ya está tomado—, y la regla está
-// escrita una sola vez, en `casillaDeEnvio.js`. Lo único distinto es contra qué se comprueba que
-// esté libre: las puertas ya repartidas, y los nombres que el producto se reserva para sí.
-//
-// Lo guardado es el rótulo solo —`cuidardelsur`—, que es lo que el Panel le manda al backend
-// cuando alguien abre la pantalla de ingreso. Una Prestadora con dominio propio puede tener
-// guardada la dirección entera, y por eso lo reservado se comprueba únicamente cuando el valor
-// no tiene ningún punto: `clientes.cuidardelsur.com.ar` es de ella y no choca con nada del
-// producto.
+// Sale con la misma regla que la casilla desde la que manda —del dominio propio que declaró, si no
+// de su nombre, y con un sufijo si el que salió ya está tomado—, y la regla está escrita una sola
+// vez, en `casillaDeEnvio.js`: letras, números y guiones, nunca «_». Lo único distinto es contra qué
+// se comprueba que esté libre: los códigos ya repartidos, y los nombres que el producto se reserva
+// para sí.
 
-// Las puertas ya repartidas que empiezan igual. Se consultan todas juntas y no de a una para no
+// Los códigos ya repartidos que empiezan igual. Se consultan todos juntos y no de a uno para no
 // hacerle una pregunta a la base por cada intento.
 async function direccionesTomadas(base) {
   // SIN PRESTADORA A PROPÓSITO
@@ -51,9 +46,8 @@ async function direccionesReservadas() {
   return new Set((data ?? []).map((fila) => String(fila.direccion).toLowerCase()));
 }
 
-// Devuelve el rótulo de la puerta, o `null` si no se pudo elegir ninguno. A diferencia de la
-// casilla de envío, `null` sí es una falla del alta: una Prestadora sin puerta no tiene por dónde
-// entrar nadie.
+// Devuelve el código, o `null` si no se pudo elegir ninguno. A diferencia de la casilla de envío,
+// `null` sí es una falla del alta: sin código, su coordinación no tiene nombre de usuario.
 export async function elegirDireccionDeLaPrestadora({ nombreFantasia, emailRespuestas }) {
   const base = await nombreBase({ nombreFantasia, emailRespuestas });
   if (!base) return null;
@@ -72,20 +66,10 @@ export async function elegirDireccionDeLaPrestadora({ nombreFantasia, emailRespu
   return null;
 }
 
-// La dirección entera, para mostrarla y para escribirla en el correo del alta. El dominio del
-// producto vive en un solo lugar y se lo pide ahí.
-export function direccionDeIngreso(rotulo) {
-  const nombre = String(rotulo ?? '').trim().toLowerCase();
-  if (!nombre) return null;
-  if (nombre.includes('.')) return nombre;
-  const dominio = String(IDENTIDAD.dominio ?? '').trim().toLowerCase();
-  return dominio ? `${nombre}.${dominio}` : nombre;
-}
-
 // El enlace que va en un correo con un código de un solo uso: activar la cuenta o elegir una clave
-// nueva. Lleva la dirección de la Prestadora, porque quien lo abre todavía no tiene sesión y es la
-// dirección la que dice en cuál se busca el código (`middleware/resolverPrestadoraPublica.js`).
-// Sin dirección no hay enlace que sirva, y devuelve nulo.
+// nueva. Lleva el código de la Prestadora, porque quien lo abre todavía no tiene sesión y es ese
+// código el que dice en cuál se busca (`middleware/resolverPrestadoraPublica.js`). Sin código no
+// hay enlace que sirva, y devuelve nulo.
 export async function enlaceConCodigo({ appUrl, pantalla, prestadoraId, codigo }) {
   if (!appUrl) return null;
   const rotulo = await rotuloDeLaPrestadora(prestadoraId);
@@ -94,7 +78,7 @@ export async function enlaceConCodigo({ appUrl, pantalla, prestadoraId, codigo }
   return `${appUrl}/${pantalla}?${parametros}`;
 }
 
-// El rótulo guardado de la puerta de una Prestadora, o nulo si no tiene. Se lee con el trabajo de
+// El código guardado de una Prestadora, o nulo si no tiene. Se lee con el trabajo de
 // esa Prestadora, que sólo alcanza su propia configuración.
 export async function rotuloDeLaPrestadora(prestadoraId) {
   if (!prestadoraId) return null;

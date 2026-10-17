@@ -79,16 +79,17 @@ solo dentro de la carpeta propia.
 **El logo es opcional.** Sin logo la pantalla no se rompe: muestra el nombre de la Prestadora
 escrito.
 
-**La pantalla de ingreso muestra la marca de la Prestadora.** Se la dice la dirección: cada
-Prestadora entra por la suya. `panel/src/lib/puertaDeIngreso.js` traduce esa dirección al segmento
-que el backend lee, y `backend/src/routes/marcaDeLaPuerta.js` devuelve el nombre y el logotipo sin
-pedir sesión. Si la dirección no corresponde a ninguna Prestadora, no se entra: no hay a cuál.
+**La pantalla de ingreso de las aplicaciones muestra la marca de la Prestadora.** La persona
+escribe el código de su Prestadora, y `backend/src/routes/marcaDeLaPuerta.js` devuelve el nombre y
+el logotipo sin pedir sesión. El código queda anotado en el teléfono y no se vuelve a pedir. **El
+Panel no mira la dirección de la página**: la coordinación entra con su nombre de usuario,
+`parte_código`, y el código dice de qué Prestadora es.
 
-**Esa dirección se le asigna sola al darla de alta**, nadie la teclea, y sale del nombre con la
-misma regla de tres pasos de arriba: del dominio propio que declaró, si no de su nombre, y con un
-sufijo si el que salió ya está tomado (`backend/src/utils/direccionDeLaPrestadora.js`). Se fija en
-el alta y no cambia nunca, porque es la dirección que quedó anotada en el navegador de toda la
-gente que trabaja ahí.
+**Ese código se le asigna solo al darla de alta**, nadie lo teclea, y sale del nombre con la misma
+regla de tres pasos de arriba: del dominio propio que declaró, si no de su nombre, y con un sufijo
+si el que salió ya está tomado (`backend/src/utils/direccionDeLaPrestadora.js`). Se fija en el alta
+y no cambia nunca, porque forma parte del nombre de usuario de toda su coordinación y está anotado
+en el teléfono de toda su gente.
 
 Los nombres que el producto usa para sus propias pantallas no se le pueden asignar a ninguna
 Prestadora: viven en la tabla `direcciones_reservadas` y no escritos en el código, así que publicar

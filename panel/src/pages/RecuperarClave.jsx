@@ -5,23 +5,21 @@ import { FormField } from '../components/ui/FormField';
 import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 import { errorDeLaRespuesta, mensajeDeError } from '../lib/errores';
-import { segmentoDeLaPuerta } from '../lib/puertaDeIngreso';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 // Donde alguien que perdió su clave pide el enlace para elegir una nueva.
 //
-// LA RESPUESTA ES LA MISMA EXISTA EL CORREO O NO, y eso no es un descuido de la pantalla: lo
-// decide el backend, que contesta igual en los dos casos. Si contestara distinto, esta pantalla
-// sería una forma de averiguar quién tiene cuenta, preguntando de a un correo por vez, sin
-// necesidad de tener sesión.
+// SE PIDE CON EL NOMBRE DE USUARIO, y el enlace va al correo que esa cuenta tiene declarado. La
+// dirección de la página no se mira.
 //
-// LA PRESTADORA SALE DE LA DIRECCIÓN POR DONDE SE ENTRÓ. Cada Prestadora donde la persona trabaja
-// es una cuenta distinta con su propia clave, así que el pedido tiene que decir de cuál se trata,
-// y lo dice la dirección del navegador, no un casillero que se pueda escribir.
+// LA RESPUESTA ES LA MISMA EXISTA EL USUARIO O NO, y eso no es un descuido de la pantalla: lo
+// decide el backend, que contesta igual en los dos casos. Si contestara distinto, esta pantalla
+// sería una forma de averiguar quién tiene cuenta, preguntando de a uno por vez, sin necesidad de
+// tener sesión.
 export function RecuperarClave() {
   const { t } = useLocale();
-  const [email, setEmail] = useState('');
+  const [usuario, setUsuario] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
   const [pedido, setPedido] = useState(false);
@@ -31,14 +29,10 @@ export function RecuperarClave() {
     setError(null);
     setEnviando(true);
     try {
-      // El mismo segmento que arma la pantalla de ingreso, de un solo lugar: si las dos lo
-      // dedujeran por su cuenta, una dirección con subdominio entraría por una puerta y recuperaría
-      // por otra (`lib/puertaDeIngreso.js`).
-      const puerta = encodeURIComponent(segmentoDeLaPuerta(window.location.hostname));
-      const respuesta = await fetch(`${API_URL}/api/recuperar-clave/pedir/${puerta}`, {
+      const respuesta = await fetch(`${API_URL}/api/recuperar-clave/pedir-del-panel`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ usuario: usuario.trim().toLowerCase() }),
       });
       const resultado = await respuesta.json().catch(() => ({}));
       if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
@@ -70,13 +64,13 @@ export function RecuperarClave() {
         {error && <Alert variant="error">{error}</Alert>}
 
         <FormField
-          label={t.auth.email}
-          name="email"
-          type="email"
-          autoComplete="email"
+          label={t.auth.usuario}
+          name="usuario"
+          type="text"
+          autoComplete="username"
           required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          value={usuario}
+          onChange={(e) => setUsuario(e.target.value)}
         />
 
         <Button type="submit" disabled={enviando}>

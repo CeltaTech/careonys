@@ -22,6 +22,7 @@ import {
 import { seAgotaronLosPedidosDeClave, anotarPedidoDeClave } from './topeDePedidosDeClave.js';
 import { enlaceConCodigo } from './direccionDeLaPrestadora.js';
 import { verificadorDelEnlace } from './verificadorDelEnlace.js';
+import { cuentaDelNombreDeUsuario, parteComparable } from './nombreDeUsuario.js';
 
 // EL ENLACE DURA POCO, y menos que el de activación.
 //
@@ -49,8 +50,8 @@ function urlAppPorRol(rol) {
  *
  * SE RECUPERA LA CLAVE DE UNA PRESTADORA, no la de un correo. El mismo correo tiene una cuenta
  * distinta en cada Prestadora donde la persona trabaja, con su propia clave, así que sin saber de
- * cuál se trata no hay ninguna clave que reemplazar. La Prestadora sale de la puerta por donde se
- * entró —la dirección propia de esa Prestadora—, nunca de lo que venga en el pedido.
+ * cuál se trata no hay ninguna clave que reemplazar. Quien llama ya sabe de qué Prestadora es la
+ * cuenta, y la pasa.
  *
  * NO CONTESTA SI EL CORREO EXISTE, y por eso no devuelve nada y no falla cuando no encuentra a
  * nadie. Quien pregunta acá no tiene sesión: si la respuesta cambiara según el correo, esta
@@ -76,7 +77,7 @@ export async function pedirRecuperacionDeClave(email, prestadoraId) {
   }
   await anotarPedidoDeClave(prestadoraId, email);
 
-  // La cuenta se busca en la Prestadora por donde se entró. Es la misma tabla que impone que ese
+  // La cuenta se busca en esa Prestadora. Es la misma tabla que impone que ese
   // correo no se repita adentro de una, así que acá hay una fila o ninguna. Y sólo entre la gente
   // de la Prestadora: la clave del Administrador y la del equipo técnico las maneja CeltaTech, y
   // para el producto ese correo es uno más sin cuenta.
@@ -94,6 +95,39 @@ export async function pedirRecuperacionDeClave(email, prestadoraId) {
   }
 
   await emitirElEnlaceYAvisar(usuario, email);
+}
+
+/**
+ * Manda el enlace para elegir una clave nueva a una cuenta de coordinación, si ese nombre de
+ * usuario existe.
+ *
+ * Es la recuperación de siempre: la persona escribe su nombre de usuario y el enlace llega al
+ * correo declarado de esa cuenta. El nombre dice de qué Prestadora es (`utils/nombreDeUsuario.js`).
+ *
+ * Igual que con el correo: no contesta si el nombre existe. El tope cuenta por el nombre escrito,
+ * en la Prestadora que nombra, y se anota antes de mandar nada.
+ */
+export async function pedirRecuperacionPorNombreDeUsuario(usuarioEscrito) {
+  const usuario = parteComparable(usuarioEscrito);
+  const encontrada = await cuentaDelNombreDeUsuario(usuario, TRABAJO);
+  if (!encontrada) {
+    console.warn('recuperacionDeClave: se pidió una clave nueva para un nombre de usuario sin cuenta');
+    return;
+  }
+
+  if (await seAgotaronLosPedidosDeClave(encontrada.prestadoraId, usuario)) {
+    console.warn('recuperacionDeClave: se alcanzó el tope de pedidos por hora para un nombre de usuario');
+    return;
+  }
+  await anotarPedidoDeClave(encontrada.prestadoraId, usuario);
+
+  const cuenta = encontrada.cuenta;
+  if (!cuenta?.email) {
+    console.warn('recuperacionDeClave: se pidió una clave nueva para una cuenta sin correo declarado');
+    return;
+  }
+
+  await emitirElEnlaceYAvisar(cuenta, cuenta.email);
 }
 
 /** Emite el enlace y manda el correo, para la cuenta que ya se encontró. */
@@ -115,8 +149,8 @@ async function emitirElEnlaceYAvisar(usuario, email) {
   const token = crypto.randomBytes(32).toString('base64url');
   const expiraEn = new Date(Date.now() + HORAS_VALIDEZ * 60 * 60 * 1000).toISOString();
 
-  // Sin la dirección de la Prestadora no hay enlace que sirva: quien lo abre todavía no tiene
-  // sesión, y es la dirección la que dice en cuál se busca el código.
+  // Sin el código de la Prestadora no hay enlace que sirva: quien lo abre todavía no tiene sesión,
+  // y es el código que viaja en el enlace el que dice en cuál se busca.
   const link = await enlaceConCodigo({
     appUrl,
     pantalla: 'clave-nueva',
@@ -124,7 +158,7 @@ async function emitirElEnlaceYAvisar(usuario, email) {
     codigo: token,
   });
   if (!link) {
-    console.error('recuperacionDeClave: la Prestadora no tiene dirección, no se envió el correo');
+    console.error('recuperacionDeClave: la Prestadora no tiene código, no se envió el correo');
     return;
   }
 
@@ -166,7 +200,7 @@ async function filaDelEnlace(db, token) {
 }
 
 async function cuentaDelEnlace(db, usuarioId) {
-  // Corre con el trabajo de la Prestadora de la dirección (`middleware/resolverPrestadoraPublica.js`),
+  // Corre con el trabajo de la Prestadora que nombra el enlace (`middleware/resolverPrestadoraPublica.js`),
   // así que la base sólo deja ver cuentas de ella: el enlace de otra no llega hasta acá. De la fila
   // sale la Prestadora que acota lo que viene después.
   const { data } = await db

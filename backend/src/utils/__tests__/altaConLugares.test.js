@@ -134,6 +134,8 @@ beforeEach(() => {
   respuestas.set('DELETE /rest/v1/referencias_laborales_asistente', () => []);
   respuestas.set('POST /rest/v1/verificaciones_asistente', () => []);
   // El país decide con qué servicio se ubica un domicilio; la política, si el alta nace verificada.
+  // El código de la Prestadora, que completa el nombre de usuario de la coordinación.
+  respuestas.set('GET /rest/v1/configuracion_prestadora', () => [{ dominio: 'prueba' }]);
   respuestas.set('GET /rest/v1/prestadoras', () => [{ pais: 'AR', politica_verificacion_alta_manual: 'ninguna' }]);
   // Qué documentos se piden en el país, y cuáles contienen el DNI.
   respuestas.set('GET /rest/v1/catalogo_documentos_de_identidad', () => [
@@ -186,6 +188,7 @@ describe('el alta de una cuenta del Panel', () => {
     const { estado } = await pedir('POST', '/usuarios', {
       email: 'coordinacion@ejemplo.invalido',
       nombre: 'Persona De Prueba',
+      usuario: 'persona.de.prueba',
       lugares: [LUGAR],
     });
     assert.equal(estado, 200);
@@ -200,6 +203,7 @@ describe('el alta de una cuenta del Panel', () => {
     const { estado } = await pedir('POST', '/usuarios', {
       email: 'coordinacion@ejemplo.invalido',
       nombre: 'Persona De Prueba',
+      usuario: 'persona.de.prueba',
       lugares: [LUGAR],
     });
 
@@ -211,6 +215,7 @@ describe('el alta de una cuenta del Panel', () => {
     const { estado } = await pedir('POST', '/usuarios', {
       email: 'coordinacion@ejemplo.invalido',
       nombre: 'Persona De Prueba',
+      usuario: 'persona.de.prueba',
     });
     assert.equal(estado, 200);
     assert.equal(hubo('DELETE /rest/v1/usuario_lugares'), false);

@@ -92,7 +92,7 @@ export function resolverTipoAsistenteEnCatalogo(texto, catalogo) {
 
 // Los motivos con que la base rechaza un alta o una baja, y que la pantalla sabe traducir. El
 // resto de los errores de la base no viaja: es texto crudo (CLAUDE.md §6).
-const MOTIVOS_DE_LA_BASE = ['correo_de_esta_prestadora', 'faltan_datos'];
+const MOTIVOS_DE_LA_BASE = ['correo_de_esta_prestadora', 'faltan_datos', 'usuario_de_esta_prestadora', 'usuario_mal_escrito'];
 
 // Da de alta una cuenta: su cuenta de ingreso y su fila en `usuarios`, juntas.
 //
@@ -103,10 +103,13 @@ const MOTIVOS_DE_LA_BASE = ['correo_de_esta_prestadora', 'faltan_datos'];
 // Sólo la gente de la Prestadora: coordinación, Asistentes, Clientes y sus personas autorizadas. La cuenta del
 // Administrador y la del equipo técnico son de CeltaTech, y la base se niega a crearlas.
 //
-// Para la coordinación, `passwordTemporal` vuelve al Panel para que se la comuniquen. Para
-// Cliente, Asistente y personas autorizadas la persona nunca la ve: con `enviarActivacion: true` sale el correo
+// Para la coordinación, `passwordTemporal` vuelve al Panel para que se la comuniquen, y
+// `nombreDeUsuario` es obligatorio: es la parte que escribe el Administrador (`nombreDeUsuario.js`).
+// Para Cliente, Asistente y personas autorizadas la persona nunca la ve: con `enviarActivacion: true` sale el correo
 // para elegir la primera clave (activacionCuenta.js).
-export async function crearCuentaConPerfil({ email, nombre, telefono, rol, prestadoraId, enviarActivacion = false }) {
+export async function crearCuentaConPerfil({
+  email, nombre, telefono, rol, prestadoraId, nombreDeUsuario, enviarActivacion = false,
+}) {
   if (!prestadoraId) throw new ErrorConMotivo('faltan_datos', 'crearCuentaConPerfil: falta la Prestadora');
 
   // UN CELULAR ES DE UNA SOLA PERSONA, y se comprueba acá porque acá pasan todas las altas: la del
@@ -124,6 +127,7 @@ export async function crearCuentaConPerfil({ email, nombre, telefono, rol, prest
       p_rol: rol,
       p_nombre: nombre,
       p_telefono: telefono ?? null,
+      p_nombre_de_usuario: nombreDeUsuario ?? null,
     }));
   if (error) {
     if (MOTIVOS_DE_LA_BASE.includes(error.message)) throw new ErrorConMotivo(error.message);

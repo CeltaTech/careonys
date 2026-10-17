@@ -188,6 +188,11 @@ a {
   font-size: 0.85rem;
 }
 
+.form-ayuda {
+  color: var(--texto-secundario);
+  font-size: 0.85rem;
+}
+
 /* ---------- Alertas ---------- */
 
 .alert {

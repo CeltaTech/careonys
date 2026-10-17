@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import {
-  pedirRecuperacionDeClave,
+  pedirRecuperacionPorNombreDeUsuario,
   cambiarClaveConToken,
   segundoFactorDelEnlace,
 } from '../utils/recuperacionDeClave.js';
@@ -12,26 +12,22 @@ export const recuperarClaveRouter = Router();
 
 // Sin auth a propósito: quien llega acá perdió justamente la forma de tener sesión.
 //
-// LA PRESTADORA VIAJA EN LA DIRECCIÓN, igual que en los formularios del sitio público. Cada
-// Prestadora donde la persona trabaja es una cuenta distinta, con su propia clave: sin saber de
-// cuál se trata no hay ninguna clave que reemplazar. Y sale de la puerta por donde se entró, nunca
-// de lo que venga adentro del pedido, que lo escribe quien llama.
+// LA COORDINACIÓN PIDE CON SU NOMBRE DE USUARIO, que dice de qué Prestadora es la cuenta
+// (`utils/nombreDeUsuario.js`). El enlace llega al correo declarado de esa cuenta. No se mira la
+// dirección de la página: no todas las Prestadoras tienen una.
 //
-// PEDIR CONTESTA SIEMPRE LO MISMO, exista el correo o no. Si la respuesta cambiara, esta puerta
-// sería una forma de averiguar quién tiene cuenta preguntando de a un correo por vez, y sin
-// sesión la puede abrir cualquiera. La pantalla dice que si ese correo tiene cuenta, va a llegar
-// un mensaje, y eso es verdad en los dos casos.
+// PEDIR CONTESTA SIEMPRE LO MISMO, exista el nombre o no. Si la respuesta cambiara, esta puerta
+// sería una forma de averiguar quién tiene cuenta preguntando de a un nombre por vez, y sin sesión
+// la puede abrir cualquiera.
 //
-// Lo que no tiene todavía es un tope de pedidos por minuto: el que hay en el backend se apoya en
-// una sesión ya verificada, y acá no hay ninguna. Pedir de nuevo no abre una puerta más —el
-// enlace anterior se da por usado al emitir el siguiente—, así que lo que queda expuesto es
-// llenarle la casilla de correo a alguien. Anotado, sin construir un contador nuevo.
-recuperarClaveRouter.post('/pedir/:prestadora', resolverPrestadoraPublica, async (req, res) => {
-  const { email } = req.body;
+// El tope de pedidos por hora vive en `utils/topeDePedidosDeClave.js`, y pedir de nuevo no abre una
+// puerta más: el enlace anterior se da por usado al emitir el siguiente.
+recuperarClaveRouter.post('/pedir-del-panel', async (req, res) => {
+  const { usuario } = req.body ?? {};
 
   try {
-    if (!email || typeof email !== 'string') throw new ErrorConMotivo('faltan_datos');
-    await pedirRecuperacionDeClave(email, req.prestadoraPublica.prestadora_id);
+    if (!usuario || typeof usuario !== 'string') throw new ErrorConMotivo('faltan_datos');
+    await pedirRecuperacionPorNombreDeUsuario(usuario);
     res.json({ ok: true });
   } catch (err) {
     if (err instanceof ErrorConMotivo) return responderError(res, err);
@@ -64,8 +60,8 @@ recuperarClaveRouter.post('/:prestadora/segundo-factor', resolverPrestadoraPubli
 // Canjear el enlace por la clave nueva. Los tres motivos que pueden salir son los mismos de la
 // activación, y la pantalla los traduce igual.
 //
-// Las dos puertas del enlace llevan la Prestadora en la dirección, que el enlace del correo trae:
-// el enlace se busca sólo adentro de ella.
+// Las dos puertas del enlace llevan el código de la Prestadora, que viaja adentro del enlace del
+// correo: el enlace se busca sólo adentro de ella.
 recuperarClaveRouter.post('/:prestadora/canjear', resolverPrestadoraPublica, async (req, res) => {
   const { token, password, codigo } = req.body;
 

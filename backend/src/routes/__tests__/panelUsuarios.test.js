@@ -1,5 +1,6 @@
 /**
- * Las cuentas de coordinación del Panel: con qué credencial se corrigen y se dan de baja.
+ * Las cuentas de coordinación del Panel: con qué credencial se dan de alta, se corrigen y se dan
+ * de baja, y que el alta lleve su nombre de usuario.
  *
  *   node --test src/routes/__tests__/panelUsuarios.test.js
  *
@@ -54,6 +55,10 @@ const baseFalsa = createServer((req, res) => {
     }
     if (clave === 'PATCH /rest/v1/usuarios') respuesta = cuentaExiste ? [{ id: CUENTA }] : [];
     if (clave === 'POST /rest/v1/rpc/dar_de_baja_la_cuenta') respuesta = true;
+    if (clave === 'POST /rest/v1/rpc/dar_de_alta_la_cuenta') respuesta = CUENTA;
+    if (clave === 'GET /rest/v1/configuracion_prestadora') {
+      respuesta = unoSolo ? { dominio: 'demo' } : [{ dominio: 'demo' }];
+    }
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(respuesta));
   });
@@ -133,6 +138,24 @@ describe('las cuentas de coordinación del Panel', () => {
     assert.ok(busqueda, 'no se buscó la cuenta');
     conElTrabajoDeLaPrestadora(busqueda);
     assert.ok(llamadas.some((l) => l.clave === 'POST /rest/v1/rpc/dar_de_baja_la_cuenta'));
+  });
+
+  it('el alta lleva el nombre de usuario a la base, con el trabajo de la Prestadora', async () => {
+    const { estado, cuerpo } = await pedir('POST', '', {
+      email: 'inventada@ejemplo.com', nombre: 'Nombre inventado', usuario: 'Juana.Inventada',
+    });
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.usuario, 'juana.inventada_demo');
+    const alta = llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/dar_de_alta_la_cuenta');
+    assert.ok(alta, 'no se dio de alta');
+    conElTrabajoDeLaPrestadora(alta);
+    assert.equal(JSON.parse(alta.cuerpo).p_nombre_de_usuario, 'juana.inventada');
+  });
+
+  it('un alta sin nombre de usuario no llega a la base', async () => {
+    const { estado } = await pedir('POST', '', { email: 'inventada@ejemplo.com', nombre: 'Nombre inventado' });
+    assert.equal(estado, 400);
+    assert.ok(!llamadas.some((l) => l.clave === 'POST /rest/v1/rpc/dar_de_alta_la_cuenta'));
   });
 
   it('una cuenta que la Prestadora no alcanza no se da de baja', async () => {

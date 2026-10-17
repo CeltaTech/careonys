@@ -1,13 +1,18 @@
 // Un casillero se explica solo: lleva su etiqueta y nada más. Debajo no va ninguna línea de
 // explicación — quien trabaja no necesita que le cuenten qué hace el sistema.
-export function FormField({ label, name, type = 'text', required, children, error, unidad, ...rest }) {
+//
+// `ayuda` es la excepción, y cada uso la aprueba el Desarrollador: hoy, sólo qué caracteres admite
+// el nombre de usuario de la coordinación.
+export function FormField({ label, name, type = 'text', required, children, error, unidad, ayuda, ...rest }) {
   const fieldId = `field-${name}`;
   // El error se cuelga del campo con `aria-describedby`, y el campo que falló se marca con
   // `aria-invalid`. Sin eso, quien no ve la pantalla escucha la caja y su etiqueta y nada más: el
   // motivo del rechazo queda un renglón más abajo, suelto, sin nada que lo ate a ese campo.
   const errorId = `${fieldId}-error`;
+  const ayudaId = `${fieldId}-ayuda`;
+  const describe = [ayuda && ayudaId, error && errorId].filter(Boolean).join(' ');
   const accesibilidad = {
-    'aria-describedby': error ? errorId : undefined,
+    'aria-describedby': describe || undefined,
     'aria-invalid': error ? 'true' : undefined,
   };
 
@@ -55,6 +60,7 @@ export function FormField({ label, name, type = 'text', required, children, erro
           <input id={fieldId} name={name} type={type} required={required} {...accesibilidad} {...rest} />
           <span>{unidad}</span>
         </div>
+        {ayuda && <span className="form-ayuda" id={ayudaId}>{ayuda}</span>}
         {error && <span className="form-error" id={errorId}>{error}</span>}
       </div>
     );
@@ -64,6 +70,7 @@ export function FormField({ label, name, type = 'text', required, children, erro
     <div className="form-field">
       <label htmlFor={fieldId}>{label}{required && <span className="required">*</span>}</label>
       <input id={fieldId} name={name} type={type} required={required} {...accesibilidad} {...rest} />
+      {ayuda && <span className="form-ayuda" id={ayudaId}>{ayuda}</span>}
       {error && <span className="form-error" id={errorId}>{error}</span>}
     </div>
   );

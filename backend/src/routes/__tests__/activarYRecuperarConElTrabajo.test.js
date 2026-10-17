@@ -3,7 +3,8 @@
  *
  *   node --test src/routes/__tests__/activarYRecuperarConElTrabajo.test.js
  *
- * Quien llega a estas puertas no tiene sesión, y la Prestadora sale de la dirección. Buscar el
+ * Quien llega a estas puertas no tiene sesión. La Prestadora sale del nombre de usuario al pedir, y
+ * del código que trae el enlace al activar y al canjear. Buscar el
  * enlace, poner la clave y emitir el enlace nuevo va con el trabajo de esa Prestadora, que alcanza
  * sus cuentas y ninguna otra; y es además la única credencial con la que la base acepta poner
  * una clave con un enlace.
@@ -124,9 +125,14 @@ describe('activar una cuenta', () => {
 });
 
 describe('recuperar la clave', () => {
-  it('el enlace nuevo se emite con el trabajo de la Prestadora', async () => {
-    const { estado } = await pedir('/recuperar-clave/pedir/inventada', { email: 'inventado@ejemplo.test' });
+  it('el enlace nuevo se emite con el trabajo de la Prestadora que nombra el usuario', async () => {
+    const { estado } = await pedir('/recuperar-clave/pedir-del-panel', { usuario: 'Inventado_Inventada' });
     assert.equal(estado, 200);
+    const codigo = llamadas.find((l) => l.clave === 'POST /rest/v1/rpc/prestadora_de_la_direccion');
+    assert.deepEqual(JSON.parse(codigo.cuerpo), { p_direccion: 'inventada' });
+    const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/usuarios');
+    assert.equal(busqueda.url.searchParams.get('nombre_de_usuario'), 'eq.inventado');
+    assert.equal(busqueda.url.searchParams.get('rol'), 'eq.coordinador');
     conElTrabajoDeLaPrestadora('GET /rest/v1/usuarios');
     conElTrabajoDeLaPrestadora('PATCH /rest/v1/tokens_recuperacion_clave');
     conElTrabajoDeLaPrestadora('POST /rest/v1/tokens_recuperacion_clave');

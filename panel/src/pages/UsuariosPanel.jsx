@@ -35,6 +35,7 @@ async function llamarApi(path, opciones = {}) {
 export function UsuariosPanel() {
   const { t } = useLocale();
   const [usuarios, setUsuarios] = useState([]);
+  const [sufijo, setSufijo] = useState('');
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [editando, setEditando] = useState(null);
@@ -44,8 +45,9 @@ export function UsuariosPanel() {
     setEstado('cargando');
     setError(null);
     try {
-      const { usuarios: filas } = await llamarApi('');
+      const { usuarios: filas, sufijo: sufijoDeLaPrestadora } = await llamarApi('');
       setUsuarios(filas);
+      setSufijo(sufijoDeLaPrestadora ?? '');
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -108,6 +110,7 @@ export function UsuariosPanel() {
 
       {creandoNuevo && (
         <NuevoUsuarioPanel
+          sufijo={sufijo}
           onClose={() => setCreandoNuevo(false)}
           onCreado={() => {
             recargar();
@@ -130,12 +133,15 @@ export function UsuariosPanel() {
   );
 }
 
-function NuevoUsuarioPanel({ onClose, onCreado }) {
+/* El nombre de usuario se escribe en dos partes: la primera la elige quien da el alta, y la segunda
+   es el código de la Prestadora, que va pegado al casillero y no se escribe. */
+function NuevoUsuarioPanel({ sufijo, onClose, onCreado }) {
   const modal = useModalAccesible(onClose);
   const modalCreada = useModalAccesible(onClose);
   const { t } = useLocale();
   const [email, setEmail] = useState('');
   const [nombre, setNombre] = useState('');
+  const [usuario, setUsuario] = useState('');
   const [telefono, setTelefono] = useState('');
   /* Hasta dónde llega esta cuenta. Se guardan lugares de la lista de la Prestadora, nunca nombres
      tecleados: mientras el alcance de la coordinadora y la zona de la Asistente eran dos textos
@@ -152,9 +158,9 @@ function NuevoUsuarioPanel({ onClose, onCreado }) {
     try {
       const resultado = await llamarApi('', {
         method: 'POST',
-        body: JSON.stringify({ email, nombre, telefono, lugares }),
+        body: JSON.stringify({ email, nombre, usuario, telefono, lugares }),
       });
-      setCreado({ email, passwordTemporal: resultado.passwordTemporal });
+      setCreado({ usuario: resultado.usuario, passwordTemporal: resultado.passwordTemporal });
       onCreado();
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -169,8 +175,8 @@ function NuevoUsuarioPanel({ onClose, onCreado }) {
         <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modalCreada.props}>
           <h2 id={modalCreada.idTitulo}>{t.usuarios_panel.cuenta_creada_titulo}</h2>
           <dl className="panel-detalle-lista">
-            <dt>{t.usuarios_panel.col_email}</dt>
-            <dd>{creado.email}</dd>
+            <dt>{t.usuarios_panel.col_usuario}</dt>
+            <dd><code>{creado.usuario}</code></dd>
             <dt>{t.usuarios_panel.password_temporal}</dt>
             <dd><code>{creado.passwordTemporal}</code></dd>
           </dl>
@@ -189,6 +195,7 @@ function NuevoUsuarioPanel({ onClose, onCreado }) {
         {error && <Alert variant="error">{error}</Alert>}
         <div className="molde-formgrid">
           <FormField label={t.usuarios_panel.col_nombre} name="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
+          <FormField label={t.usuarios_panel.col_usuario} name="usuario" autoComplete="off" unidad={sufijo} ayuda={t.usuarios_panel.usuario_formato} value={usuario} onChange={(e) => setUsuario(e.target.value)} required />
           <FormField label={t.usuarios_panel.col_email} name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           <FormField label={t.usuarios_panel.col_telefono} name="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
           <div className="molde-ancho">
@@ -198,7 +205,7 @@ function NuevoUsuarioPanel({ onClose, onCreado }) {
         </div>
         <div className="panel-modal-acciones">
           <Button variant="secondary" onClick={onClose} disabled={guardando}>{t.comun.cancelar}</Button>
-          <Button onClick={handleGuardar} disabled={guardando || !email || !nombre}>
+          <Button onClick={handleGuardar} disabled={guardando || !email || !nombre || !usuario}>
             {guardando ? t.comun.guardando : t.comun.guardar}
           </Button>
         </div>

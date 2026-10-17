@@ -15,6 +15,9 @@ import { correoComparable } from '../config/correoDeAcceso.js';
 // nada. Por Prestadora, porque cada Prestadora donde esa persona trabaja es una cuenta distinta y
 // el tope de una no puede dejar sin recuperar la clave de la otra.
 //
+// Lo mismo vale para el nombre de usuario con que pide la coordinación del Panel: se le pasa en lugar
+// del correo, y se cuenta de la misma forma.
+//
 // SE CUENTA ANTES DE BUSCAR LA CUENTA, y el pedido se anota exista el correo o no. Si sólo
 // contaran los correos con cuenta, quedarse sin pedidos sería la señal de que ese correo existe, y
 // esta puerta volvería a ser una forma de averiguar quién trabaja en qué Prestadora.

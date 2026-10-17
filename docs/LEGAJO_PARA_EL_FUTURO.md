@@ -54,3 +54,18 @@ Lo que hay que resolver antes:
 - **Cada versión pasa por la revisión de la tienda.** Hoy un cambio llega al teléfono apenas se
   publica; desde la tienda, recién cuando la tienda lo aprueba.
 - **Las cuentas de publicación en cada tienda**, y de quién son.
+
+## Una página por Prestadora
+
+Que cada Prestadora tenga su propia página dentro del dominio del producto, del tipo
+`cuidardelsur.careonys.com`.
+
+Lo que ya está y lo que no se toca:
+
+- **En Cloudflare ya existe el comodín** `*.careonys.com`, que hace que cualquier dirección dentro
+  del dominio llegue a Cloudflare. Se deja puesto para esto. Hoy esas direcciones contestan con un
+  error, porque nada las atiende.
+- **La página no tiene nada que ver con entrar al Panel.** La coordinación entra con su nombre de
+  usuario, `parte_código`, y la recuperación de la clave va por el nombre de usuario. Ni el
+  ingreso ni la recuperación miran la dirección de la página, porque no todas las Prestadoras van
+  a tener una.

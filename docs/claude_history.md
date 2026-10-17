@@ -516,3 +516,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** si un problema no cabía en la tarea que se estaba haciendo, se agregaba como paso del plan.
 - **Qué dice ahora:** se resuelve en el momento aunque no sea parte de la tarea. Sólo se agrega como paso cuando hay un motivo justificado para no poder hacerlo ahí, y el paso dice cuál.
 - **Motivo:** el plan quedó semanas en unos 115 pasos porque cada uno cerrado traía otro. Lo pidió el Desarrollador.
+
+## La coordinación entra con nombre de usuario
+
+- **Qué decía antes:** al Panel se entraba con el correo, y la Prestadora salía de la dirección de la página o se elegía antes de la clave.
+- **Qué dice ahora:** se entra con un nombre de usuario, `parte_código de la Prestadora`, y la recuperación de la clave también va por el nombre de usuario. El correo declarado sirve para el contacto y para recibir el enlace, y puede repetirse. Nada mira la dirección de la página.
+- **Motivo:** no todas las Prestadoras van a tener página propia, y el Desarrollador ya había descartado depender de ella. Es como lo resuelve el mercado.

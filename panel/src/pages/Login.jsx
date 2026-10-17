@@ -9,14 +9,14 @@ import { Alert } from '../components/ui/Alert';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-// LA PRESTADORA SALE DEL CORREO DE LA CUENTA.
+// SE ENTRA CON EL NOMBRE DE USUARIO.
 //
-// Una cuenta del Panel es de una sola Prestadora, así que el correo alcanza para saber de cuál es.
-// La dirección de la página no se mira: el Panel tiene una sola.
+// La coordinación entra con `parte_código` —`juana.perez_demo`—, que es único en todo el producto y
+// por eso alcanza para saber de qué Prestadora es. La dirección de la página no se mira.
 //
-// Primero se le pregunta al backend con qué correo se le habla al servicio de acceso
-// (`lib/correoDeAcceso.js`). Si con ése no entra, se prueba con el correo tal como se escribió,
-// que es como quedan las cuentas que crea CeltaTech.
+// Con el nombre de usuario se le pregunta al backend con qué correo se le habla al servicio de
+// acceso (`lib/correoDeAcceso.js`), y se entra con ése. Lo que lleva «@» se usa tal como se
+// escribió: así entran las cuentas que crea CeltaTech.
 //
 // AL ENTRAR NO SE INSINÚA NADA. Correo que no existe y clave equivocada fallan por el mismo camino
 // y con el mismo mensaje.
@@ -26,7 +26,7 @@ export function Login() {
   const { t } = useLocale();
   const { login, session, usuario } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [usuarioEscrito, setUsuarioEscrito] = useState('');
   const [password, setPassword] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
@@ -49,16 +49,19 @@ export function Login() {
     setError(null);
 
     try {
-      const respuesta = await fetch(`${API_URL}/api/ingreso-al-panel/correo-de-acceso`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      if (!respuesta.ok) throw new Error(`correo-de-acceso ${respuesta.status}`);
-      const { correo } = await respuesta.json();
+      const escrito = usuarioEscrito.trim().toLowerCase();
+      let correo = escrito;
+      if (!escrito.includes('@')) {
+        const respuesta = await fetch(`${API_URL}/api/ingreso-al-panel/correo-de-acceso`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario: escrito }),
+        });
+        if (!respuesta.ok) throw new Error(`correo-de-acceso ${respuesta.status}`);
+        ({ correo } = await respuesta.json());
+      }
 
-      let { error: errorLogin } = await login(correo, password);
-      if (errorLogin) ({ error: errorLogin } = await login(email.trim().toLowerCase(), password));
+      const { error: errorLogin } = await login(correo, password);
       if (!errorLogin) olvidarCierrePorInactividad();
       if (errorLogin) {
         setError(t.auth.error_credenciales);
@@ -83,12 +86,13 @@ export function Login() {
         {!error && cerradaPorInactividad && <Alert variant="info">{t.auth.cerrada_por_inactividad}</Alert>}
 
         <FormField
-          label={t.auth.email}
-          name="email"
-          type="email"
+          label={t.auth.usuario}
+          name="usuario"
+          type="text"
+          autoComplete="username"
           required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          value={usuarioEscrito}
+          onChange={(e) => setUsuarioEscrito(e.target.value)}
         />
         <FormField
           label={t.auth.password}

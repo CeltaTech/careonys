@@ -14,9 +14,10 @@ import { responderError } from '../utils/errorConMotivo.js';
 // (`/api/publico/:prestadora/…`), lo escribe el sitio de esa Prestadora, y un pedido que no
 // resuelve se rechaza en vez de asumir una.
 //
-// El identificador público es la dirección por la que se entra a esa Prestadora: vive en
-// `configuracion_prestadora.dominio`, se le asigna sola al darla de alta, es única y no cambia
-// nunca (`utils/direccionDeLaPrestadora.js`). Se guarda siempre en minúsculas, que es por lo que
+// El identificador público es el código de esa Prestadora: vive en
+// `configuracion_prestadora.dominio`, se le asigna solo al darla de alta, es único y no cambia
+// nunca (`utils/direccionDeLaPrestadora.js`). No es una dirección web: también viaja en los enlaces
+// de los correos con un código de un solo uso. Se guarda siempre en minúsculas, que es por lo que
 // alcanza con comparar contra lo que llegó en minúsculas.
 //
 // Lo que esto **no** hace: un formulario público sigue siendo abierto por definición, y cualquiera

@@ -10,7 +10,8 @@ import { crearCuentaConPerfil, borrarCuenta } from '../utils/cuentasPanel.js';
 import { guardarLugaresDe } from '../utils/lugaresDeCadaPersona.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 import { ROLES_PANEL } from '../utils/roles.js';
-import { responderError } from '../utils/errorConMotivo.js';
+import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
+import { parteBienEscrita, parteComparable, sufijoDeLaPrestadora } from '../utils/nombreDeUsuario.js';
 import { exigirQueElCelularSeaDeUnaSolaPersona } from '../utils/celularDeUnaSolaPersona.js';
 import {
   ACCION_ALTA_DE_CUENTA,
@@ -47,7 +48,7 @@ panelUsuariosRouter.get('/', requiereRolPanel, soloAdministracion, async (req, r
 
   const { data, error } = await clienteDelPedido(req)
     .from('usuarios')
-    .select('id, rol, nombre, telefono, created_at')
+    .select('id, rol, nombre, telefono, nombre_de_usuario, created_at')
     .in('rol', ROLES_DE_LA_LISTA)
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
     .order('created_at', { ascending: false });
@@ -73,13 +74,23 @@ panelUsuariosRouter.get('/', requiereRolPanel, soloAdministracion, async (req, r
     cuantos.set(cruce.usuario_id, (cuantos.get(cruce.usuario_id) ?? 0) + 1);
   }
 
-  res.json({ usuarios: cuentas.map((cuenta) => ({ ...cuenta, lugares: cuantos.get(cuenta.id) ?? 0 })) });
+  // El sufijo va aparte: es el mismo para todas las cuentas de la Prestadora, y el alta lo muestra
+  // al lado de la parte que escribe el Administrador.
+  const sufijo = await sufijoDeLaPrestadora(req.usuarioPanel.prestadoraId);
+  res.json({
+    sufijo,
+    usuarios: cuentas.map((cuenta) => ({ ...cuenta, lugares: cuantos.get(cuenta.id) ?? 0 })),
+  });
 });
 
 panelUsuariosRouter.post('/', requiereRolPanel, soloAdministracion, async (req, res) => {
-  const { email, nombre, telefono, lugares } = req.body;
-  if (!email || !nombre) {
-    return res.status(400).json({ error: 'Faltan email o nombre' });
+  const { email, nombre, telefono, lugares, usuario } = req.body;
+  const parte = parteComparable(usuario);
+  if (!email || !nombre || !parte) {
+    return responderError(res, new ErrorConMotivo('faltan_datos'));
+  }
+  if (!parteBienEscrita(parte)) {
+    return responderError(res, new ErrorConMotivo('usuario_mal_escrito'));
   }
 
   const rolNuevo = 'coordinador';
@@ -88,15 +99,20 @@ panelUsuariosRouter.post('/', requiereRolPanel, soloAdministracion, async (req, 
   // destino a mano: un destino que viniera en el pedido lo falsifica quien llama.
   const prestadoraDestino = req.usuarioPanel.prestadoraId;
   if (!prestadoraDestino) {
-    return res.status(400).json({ error: 'Hace falta entrar a una prestadora antes de dar de alta la cuenta' });
+    return responderError(res, new ErrorConMotivo('sin_permiso'), 403);
   }
 
   try {
+    // Sin código de la Prestadora la cuenta no tendría nombre completo con el que entrar.
+    const sufijo = await sufijoDeLaPrestadora(prestadoraDestino);
+    if (!sufijo) throw new Error('panelUsuarios: la Prestadora no tiene código');
+
     // Que el celular no esté ya en otra cuenta lo comprueba `crearCuentaConPerfil`, que es por
     // donde pasan todas las altas. Acá no se repite: el rechazo llega igual como motivo.
     const { userId, passwordTemporal } = await crearCuentaConPerfil({
       email, nombre, telefono, rol: rolNuevo,
       prestadoraId: prestadoraDestino,
+      nombreDeUsuario: parte,
     });
 
     // Hasta dónde llega esta cuenta, cuando el alta ya lo dice. Se guarda adentro del mismo pedido
@@ -122,7 +138,7 @@ panelUsuariosRouter.post('/', requiereRolPanel, soloAdministracion, async (req, 
       detalle: { rol_nuevo: rolNuevo },
     });
 
-    res.json({ ok: true, id: userId, passwordTemporal });
+    res.json({ ok: true, id: userId, passwordTemporal, usuario: `${parte}${sufijo}` });
   } catch (error) {
     responderError(res, error);
   }

@@ -77,9 +77,11 @@ export default function AsistenteAsignado() {
             {t.asistente.tipo}: {nombreTipo(tipo, t)}
           </p>
         )}
-        <p className="pwa-card-dato">
-          {certificado ? t.asistente.certificado_vigente : t.asistente.sin_certificado}
-        </p>
+        {certificado ? (
+          <p className="pwa-card-dato">{t.asistente.certificado_vigente}</p>
+        ) : (
+          seVe('cliente_asistente_sin_certificado') && <p className="pwa-card-dato">{t.asistente.sin_certificado}</p>
+        )}
       </section>
 
       {documentacion && (

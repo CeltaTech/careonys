@@ -137,12 +137,9 @@ const ESTADO_POR_MOTIVO = {
   // `celtatech/CLAUDE.md` §6 prohíbe cuando dice que el error de la entrada no debe permitir
   // distinguir "esa persona no existe" de "la clave está mal". El detalle queda en el registro.
   llave_no_sirve: 401,
-  // El alta de una Prestadora. El nombre repetido es 409 por lo mismo que el correo ya tomado
-  // —el pedido está bien armado y choca con algo que ya existe—, y el país sin moneda también:
-  // el pedido está bien, lo que falta es una fila en el catálogo de monedas. Los dos se
-  // arreglan de manera distinta y por eso no son el mismo motivo. La casilla mal escrita es un
-  // dato mal cargado, o sea 400. Ninguno nombra una columna ni una restricción.
-  nombre_de_prestadora_repetido: 409,
+  // El alta de una Prestadora. El país sin moneda es 409: el pedido está bien, lo que falta es
+  // una fila en el catálogo de monedas. La casilla mal escrita es un dato mal cargado, o sea 400.
+  // Ninguno nombra una columna ni una restricción.
   pais_sin_moneda: 409,
   // Y la dirección por la que entra esa Prestadora también es 409: el pedido está bien armado,
   // lo que pasa es que de ese nombre no queda ninguna dirección libre. Se arregla con otro

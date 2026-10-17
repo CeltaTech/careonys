@@ -78,7 +78,7 @@ export default function AsistenteAsignado() {
           </p>
         )}
         <p className="pwa-card-dato">
-          {certificado ? t.asistente.certificado_vigente : t.asistente.certificado_vencido}
+          {certificado ? t.asistente.certificado_vigente : t.asistente.sin_certificado}
         </p>
       </section>
 

@@ -123,7 +123,7 @@ export function EntrevistaPublica() {
         ) : (
           <>
             <h2>{tr.todavia_no_titulo}</h2>
-            <p>{tr.todavia_no_texto}</p>
+            <p>{tr.todavia_no_texto.replace('{{anticipo}}', entrevista.anticipo)}</p>
           </>
         )}
       </div>

@@ -370,6 +370,8 @@ export async function entrevistaPorLlave(llave, prestadoraId) {
     logo_url: marca?.logoUrl || null,
     agendada_para: data.agendada_para,
     momento,
+    // Cuántos minutos antes de la hora se puede entrar, para que la pantalla lo diga con el número.
+    anticipo: MINUTOS_DE_ANTICIPO,
     // Que esta entrevista no tenga sala es distinto de que todavía no sea la hora, y la pantalla
     // dice cosas distintas: una se arregla volviendo más tarde y la otra no se arregla sola.
     hay_videollamada: Boolean(data.sala_videollamada),

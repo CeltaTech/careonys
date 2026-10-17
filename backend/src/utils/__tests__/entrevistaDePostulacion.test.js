@@ -355,6 +355,7 @@ describe('la puerta del postulante', () => {
     // Nada del postulante, nada de quien entrevista, nada de lo anotado por dentro.
     assert.deepEqual(Object.keys(vista).sort(), [
       'agendada_para',
+      'anticipo',
       'hay_videollamada',
       'logo_url',
       'momento',

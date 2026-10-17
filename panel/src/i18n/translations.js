@@ -398,7 +398,6 @@ export const T = {
       visibilidad_cliente_patologias_del_paciente: 'Ver las patologías del Paciente',
       visibilidad_cliente_alertas_de_la_revision: 'Ver las alertas de la revisión automática',
       visibilidad_cliente_califica_al_asistente: 'Calificar al Asistente',
-      visibilidad_cliente_verifica_con_codigo: 'Verificar al Asistente con el código',
       visibilidad_cliente_pide_medicacion: 'Pedir una indicación de medicación',
       visibilidad_cliente_medicacion_del_paciente: 'Ver la medicación vigente del Paciente',
       visibilidad_cliente_pagos_y_suscripcion: 'Ver la cuota, los cobros y el código de pago',
@@ -1534,7 +1533,6 @@ export const T = {
         estado_inactivo: 'Inactivo',
         fecha_emision: 'Fecha de emisión',
         fecha_vencimiento: 'Fecha de vencimiento',
-        descargar_qr: 'Descargar QR',
       },
       matriculas: {
         titulo: 'Matrículas profesionales',
@@ -3435,7 +3433,6 @@ export const T = {
       visibilidad_cliente_patologias_del_paciente: 'See the Patient\'s conditions',
       visibilidad_cliente_alertas_de_la_revision: 'See the alerts from the automatic review',
       visibilidad_cliente_califica_al_asistente: 'Rate the Assistant',
-      visibilidad_cliente_verifica_con_codigo: 'Verify the Assistant with the code',
       visibilidad_cliente_pide_medicacion: 'Request a medication instruction',
       visibilidad_cliente_medicacion_del_paciente: 'See the Patient\'s current medication',
       visibilidad_cliente_pagos_y_suscripcion: 'See the fee, the charges and the payment code',
@@ -4557,7 +4554,6 @@ export const T = {
         estado_inactivo: 'Inactive',
         fecha_emision: 'Issue date',
         fecha_vencimiento: 'Expiry date',
-        descargar_qr: 'Download QR',
       },
       matriculas: {
         titulo: 'Professional licences',
@@ -6438,7 +6434,6 @@ export const T = {
       visibilidad_cliente_patologias_del_paciente: 'Ver as patologias do Paciente',
       visibilidad_cliente_alertas_de_la_revision: 'Ver os alertas da revisão automática',
       visibilidad_cliente_califica_al_asistente: 'Avaliar o Assistente',
-      visibilidad_cliente_verifica_con_codigo: 'Verificar o Assistente com o código',
       visibilidad_cliente_pide_medicacion: 'Pedir uma indicação de medicação',
       visibilidad_cliente_medicacion_del_paciente: 'Ver a medicação vigente do Paciente',
       visibilidad_cliente_pagos_y_suscripcion: 'Ver a mensalidade, as cobranças e o código de pagamento',
@@ -7560,7 +7555,6 @@ export const T = {
         estado_inactivo: 'Inativo',
         fecha_emision: 'Data de emissão',
         fecha_vencimiento: 'Data de vencimento',
-        descargar_qr: 'Baixar QR',
       },
       matriculas: {
         titulo: 'Registros profissionais',

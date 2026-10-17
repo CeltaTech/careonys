@@ -461,7 +461,7 @@ export async function revertirClienteImportada(db, clienteId, prestadoraId) {
 // `crearCuentaConPerfil` igual que cualquier otro rol de login propio, y en vez de una fila en
 // `clientes` (eso es solo para el titular) crea la fila en `personas_autorizadas` que la vincula.
 //
-// Y le deja escritos los once accesos en su valor de fábrica, que es lo mismo que veía el
+// Y le deja escritos los diez accesos en su valor de fábrica, que es lo mismo que veía el
 // personas autorizadas antes de que esto existiera: todo menos calificar al Asistente y pedir medicación.
 // No es un adorno — la función de la base niega cuando no encuentra fila, así que una persona
 // recién anotada y sin filas no vería absolutamente nada y nadie sabría por qué. Después, si el

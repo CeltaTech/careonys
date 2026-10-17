@@ -15,7 +15,6 @@ import Reportes from './pages/Reportes';
 import ReporteDetalle from './pages/ReporteDetalle';
 import Alertas from './pages/Alertas';
 import AsistenteAsignado from './pages/AsistenteAsignado';
-import EscanearAsistente from './pages/EscanearAsistente';
 import AccesoIntermediacion from './pages/AccesoIntermediacion';
 import Facturas from './pages/Facturas';
 import FacturaDetalle from './pages/FacturaDetalle';
@@ -138,14 +137,6 @@ function Rutas() {
           }
         />
         <Route path="pacientes/:id/asistente" element={<AsistenteAsignado />} />
-        <Route
-          path="pacientes/:id/escanear-asistente"
-          element={
-            <PantallaPermitida pantalla="escanearAsistente">
-              <EscanearAsistente />
-            </PantallaPermitida>
-          }
-        />
         <Route
           path="pacientes/:id/acceso"
           element={

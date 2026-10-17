@@ -1,6 +1,5 @@
 /**
- * El Certificado de Aptitud que el Cliente ve del Asistente, por las dos puertas que lo muestran:
- * la pantalla del Asistente asignado y el escaneo del código en la puerta.
+ * El Certificado de Aptitud que el Cliente ve del Asistente asignado.
  *
  *   npm test --prefix backend
  *
@@ -8,14 +7,12 @@
  * trabaja: si el identificador del Asistente se repitiera, el Cliente vería el Certificado de
  * otra Prestadora y la pantalla se vería igual de bien. No lo encuentra nadie mirando.
  *
- * Las dos puertas lo cuidan distinto. La del Asistente asignado consulta con la credencial de la
- * persona, y la que separa una Prestadora de otra es la protección por fila de la base: acá se
- * comprueba que la consulta salga con esa credencial y no con la llave maestra. El escaneo sigue
- * con la llave maestra —el Asistente escaneado puede no estar asignado, y la base no se lo deja
- * ver al Cliente—, así que ahí lo único que separa una Prestadora de otra es el filtro escrito.
+ * La consulta sale con la credencial de la persona, y la que separa una Prestadora de otra es la
+ * protección por fila de la base: acá se comprueba que la consulta salga con esa credencial y no
+ * con la llave maestra.
  *
- * Qué daría con el sistema roto: con la consulta de vuelta en la llave maestra, o sin el filtro
- * de Prestadora en el escaneo, las comprobaciones de abajo fallan. Los datos son inventados.
+ * Qué daría con el sistema roto: con la consulta de vuelta en la llave maestra, la comprobación de
+ * abajo falla. Los datos son inventados.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
@@ -85,11 +82,6 @@ async function pedir(ruta) {
   return { estado: respuesta.status, cuerpo: await respuesta.json() };
 }
 
-/** Las direcciones con las que se consultó una tabla. Los filtros están ahí. */
-function consultasA(tabla) {
-  return llamadas.filter((l) => l.clave === `GET /rest/v1/${tabla}`).map((l) => l.url);
-}
-
 beforeEach(() => {
   respuestas.clear();
   llamadas = [];
@@ -125,25 +117,5 @@ describe('el Certificado en la pantalla del Asistente asignado', () => {
       'la consulta del Certificado no salió con la credencial de la persona'
     );
     assert.ok(consultas[0].url.includes(`asistente_id=eq.${ASISTENTE}`), consultas[0].url);
-  });
-});
-
-describe('el Certificado al escanear el código en la puerta', () => {
-  it('se pide filtrado por la Prestadora del Paciente, no sólo por el Asistente', async () => {
-    const hoy = new Date().toISOString().slice(0, 10);
-    respuestas.set('GET /rest/v1/guardias', [
-      { id: 'g-1', estado: 'en_curso', hora_inicio: '08:00', hora_fin: '16:00', asistente_id: ASISTENTE },
-    ]);
-
-    const { estado } = await pedir(`/pacientes/${PACIENTE}/verificar-asistente/qr-de-mentira`);
-    assert.equal(estado, 200, `contestó ${estado} para la guardia del ${hoy}`);
-
-    const [url] = consultasA('certificados');
-    assert.ok(url, 'no se consultó el Certificado');
-    assert.ok(
-      url.includes(`prestadora_id=eq.${PRESTADORA}`),
-      'la consulta del Certificado no lleva el filtro de Prestadora'
-    );
-    assert.ok(url.includes(`asistente_id=eq.${ASISTENTE}`), url);
   });
 });

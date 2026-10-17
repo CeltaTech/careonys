@@ -377,7 +377,7 @@ export async function cerrarConPapelFirmado({ instruccionId, prestadoraId, archi
   if (error) throw new Error(error.message);
 }
 
-// Las once claves con lo decidido para cada persona autorizada, que es lo que dibuja la pantalla
+// Las diez claves con lo decidido para cada persona autorizada, que es lo que dibuja la pantalla
 // del Panel. Se devuelve siempre el catálogo entero, tenga o no fila guardada cada clave.
 export async function personasAutorizadasConSusAccesos({ clienteId, prestadoraId }) {
   const personas = await personasAutorizadasDelCliente(clienteId, prestadoraId);

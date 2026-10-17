@@ -57,7 +57,7 @@ export async function requiereRolCliente(req, res, next) {
 
   // Acá se deja solamente si es el titular o no, que es un hecho —tiene fila propia en
   // `clientes`— y no una decisión. Qué ve cada persona autorizada ya no es un rol con nombre:
-  // son once accesos que el titular pidió por escrito, y los resuelve `accesosDelPedido` en las
+  // son diez accesos que el titular pidió por escrito, y los resuelve `accesosDelPedido` en las
   // rutas que los necesitan, para no consultarlos en los pedidos que no los miran.
   req.usuarioCliente = {
     id: sesion.id,

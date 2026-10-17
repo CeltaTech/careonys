@@ -1278,11 +1278,10 @@ Falta que usted conteste dos cosas:
 
 **80. Usted** — Accesibilidad: el código está hecho, falta la respuesta legal. `docs/legal/argentina.md` no la menciona.
 
-**81. Usted** — El Certificado de Aptitud impreso: ¿qué lleva? Hoy la pantalla genera el código de barras y ahí termina.
+**81. Usted** — Un código QR fijo por Asistente, que lleve a su perfil público y a otros lugares todavía sin definir: ¿qué muestra esa página pública? No es el código con el que se entrega la guardia.
 
-**82.** Armarlo. La subida del certificado a un depósito de archivos **ya está resuelta**: el
-depósito de los papeles del legajo del Asistente está construido: es `documentos-asistente`.
-Hoy sólo se guardan fechas.
+**82.** Construirlo según lo contestado. El código fijo de cada Asistente ya está guardado y no se
+muestra en ningún lado.
 
 ---
 

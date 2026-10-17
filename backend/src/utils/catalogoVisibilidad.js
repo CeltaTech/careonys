@@ -76,13 +76,6 @@ export const CATALOGO_VISIBILIDAD = [
     de_fabrica: true,
   },
   {
-    clave: 'cliente_verifica_con_codigo',
-    app: 'clientes',
-    descripcion: 'Escanear el código del Asistente para confirmar que es quien tenía que venir',
-    ayuda: 'Sirve donde el Cliente no conoce de antes a quien se presenta. Donde va siempre la misma persona, sobra.',
-    de_fabrica: true,
-  },
-  {
     clave: 'cliente_pide_medicacion',
     app: 'clientes',
     descripcion: 'Cargar una indicación de medicación para que el Panel la acepte o la rechace',

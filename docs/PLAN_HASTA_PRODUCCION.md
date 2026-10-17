@@ -1804,4 +1804,6 @@ documento no hay advertencia; la mecánica se construye igual, porque no depende
 
 **125.** Generarlo.
 
-**126.** Correr las pruebas y publicar.
+**126. Usted** — Entrar con la huella en un Android real y en un iPhone real. En la computadora no se puede probar. Espera a que usted tenga un teléfono de cada uno a mano.
+
+**127.** Correr las pruebas y publicar.

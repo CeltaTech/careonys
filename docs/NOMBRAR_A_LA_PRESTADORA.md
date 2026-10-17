@@ -1707,26 +1707,6 @@ quedan mandando a un lugar que ya no se llama así.
 
 ---
 
-## 84. La credencial del software externo sólo la carga el Admin
-
-**Ruta:** `configuracion.software_externo_solo_admin`
-
-**Texto de hoy:**
-> La credencial es de la Prestadora: solo Admin puede cargarla.
-
-**Dónde se ve:** Ajustes > Configuración > La Prestadora, bloque del software de afuera
-(facturación y cobranzas).
-
-**Qué lo dispara:** quien mira no es Admin.
-
-**Quién lo lee:** alguien de la empresa que no es su Administrador.
-
-**Archivo:** `panel/src/pages/configuracion/ElSoftwareDeAfuera.jsx:105`
-
-**DECISIÓN:**
-
----
-
 ## 85. Qué son los tipos de Asistente
 
 **Ruta:** `configuracion.tipos_explicacion`

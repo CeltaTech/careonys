@@ -142,11 +142,6 @@ const ESTADO_POR_MOTIVO = {
   // dato vino mal cargado: se eligió una moneda que el catálogo no tiene. No nombra el catálogo
   // ni el dominio de la base.
   moneda_desconocida: 400,
-  // Con qué software de afuera se conecta la Prestadora. Los dos son 400 porque el dato vino mal
-  // cargado: se eligió un software que el catálogo no tiene, o se cambió de software sin traer la
-  // credencial con la que se entra al nuevo. Ninguno nombra el catálogo ni la caja fuerte.
-  software_desconocido: 400,
-  credencial_requerida: 400,
   // El consentimiento del Pagador. Los dos son 409 por lo mismo que el correo ya tomado: el pedido
   // está bien armado y choca con el estado de las cosas. Sin Pagador elegido no hay a quién hacerle
   // firmar nada, y lo que ya se firmó no se anula. Si cayeran en 500 la pantalla diría "algo falló

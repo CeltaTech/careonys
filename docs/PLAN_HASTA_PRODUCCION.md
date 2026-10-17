@@ -951,7 +951,9 @@ Argentina y se conectan todos parecido pero con datos distintos, así que escrib
 acertar con suerte. Lo investigado está en `docs/FACTURADORES_Y_COMO_SE_CONECTAN.md`. **Cada
 software es una pieza aparte** y agregar la segunda no puede obligar a tocar la primera. Las otras
 dos maneras ya están hechas y alcanzan para salir a producción: se anota factura por factura a
-mano, o se baja un archivo con todo lo que falta facturar y se sube el que el software devuelve.
+mano, o se baja un archivo con todo lo que falta facturar y se sube el que el software devuelve. **La sección de Configuración donde se elige el software y se cargan sus datos de acceso
+está en el estante**, en `Codigos-utiles/eleccion-del-software-de-facturacion-y-cobranzas/`, y vuelve
+con la primera conexión, con ese programa solo en la lista.
 
 **Esas dos maneras indirectas se revisan antes contra la norma de protección de datos.** El
 Desarrollador duda de que sean seguras: el archivo sale de Careonys, queda en la computadora de

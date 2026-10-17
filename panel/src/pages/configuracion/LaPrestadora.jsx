@@ -18,7 +18,6 @@ import { ConsentimientoPagadorTab } from './ConsentimientoPagadorTab';
 import { ConsentimientoMedicacionTab } from './ConsentimientoMedicacionTab';
 import { TabLugares } from './LosLugares';
 import { LaMoneda } from './LaMoneda';
-import { ElSoftwareDeAfuera } from './ElSoftwareDeAfuera';
 import '../../styles/molde-paginas.css';
 
 /* Quién es la Prestadora y cómo trabaja: su nombre y sus datos, en qué moneda
@@ -34,7 +33,6 @@ export function ConfiguracionPrestadora() {
       <TabZonas />
       <TabLugares />
       <FacturacionClientesTab />
-      <ElSoftwareDeAfuera />
       <ConsentimientoPagadorTab />
       <ConsentimientoMedicacionTab />
       {tieneModalidad('intermediacion') && <TabPasarela />}

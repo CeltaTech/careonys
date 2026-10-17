@@ -87,7 +87,6 @@
                                  "backend/src/routes/appAsistentes.js",
                                  "backend/src/routes/appClientes.js",
                                  "backend/src/routes/appClientesMedicacion.js",
-                                 "backend/src/routes/llaveDelDispositivo.js",
                                  "backend/src/routes/panelAusencias.js",
                                  "backend/src/routes/panelCobros.js",
                                  "backend/src/routes/panelConfiguracion.js",

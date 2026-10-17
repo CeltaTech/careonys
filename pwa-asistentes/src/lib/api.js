@@ -162,13 +162,13 @@ export const api = {
   escribirEnConversacion: (id, cuerpo) =>
     pedido(`/intermediacion/conversaciones/${id}/mensajes`, { method: 'POST', body: JSON.stringify({ cuerpo }) }),
   abrirVideollamada: (id) => pedido(`/intermediacion/conversaciones/${id}/videollamada`, { method: 'POST' }),
-  // LAS LLAVES QUE ESTA PERSONA GUARDA EN SUS APARATOS. Entrar con la huella no está acá: eso pasa
-  // antes de tener sesión y va por su propia puerta (`lib/llaveDelDispositivo.js`). Acá está lo que
-  // se hace desde adentro: ver cuáles tiene, agregar una en este aparato y sacar la de uno que ya
-  // no usa. Lo que vuelve son fechas: ni la credencial ni la mitad pública de la llave salen del
+  // LAS LLAVES QUE ESTA PERSONA GUARDA EN SUS APARATOS: ver cuáles tiene, agregar una en este
+  // aparato, sacar la de uno que ya no usa, y avisar que se ingresó con biometría, que es también
+  // cómo se entera el teléfono de que su aparato fue revocado (`lib/accesoGuardado.js`). Lo que vuelve son fechas: ni la credencial ni la mitad pública de la llave salen del
   // backend, porque para reconocer cuál es cuál no hacen falta.
   llaves: () => pedido('/llaves'),
   desafioDeLlave: () => pedido('/llaves/desafio', { method: 'POST' }),
   guardarLlave: (respuesta) => pedido('/llaves', { method: 'POST', body: JSON.stringify({ respuesta }) }),
   sacarLlave: (id) => pedido(`/llaves/${id}`, { method: 'DELETE' }),
+  llaveUsada: (id) => pedido(`/llaves/${id}/usada`, { method: 'POST' }),
 };

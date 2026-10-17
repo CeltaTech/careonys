@@ -92,6 +92,11 @@ export const GRUPOS = [
     copias: ['pwa-clientes/src/lib/llaveDelDispositivo.js'],
   },
   {
+    que: 'la sesión guardada en el teléfono bajo la huella',
+    original: 'pwa-asistentes/src/lib/accesoGuardado.js',
+    copias: ['pwa-clientes/src/lib/accesoGuardado.js'],
+  },
+  {
     que: 'la pantalla de las llaves guardadas en los aparatos',
     original: 'pwa-asistentes/src/components/LlavesDeEsteAparato.jsx',
     copias: ['pwa-clientes/src/components/LlavesDeEsteAparato.jsx'],

@@ -53,7 +53,7 @@ function Rutas() {
     <Routes>
       <Route
         path="/login"
-        element={cargando ? <div className="estado-cargando" role="status">{t.comun.cargando}</div> : session ? <Navigate to="/inicio" replace /> : <Login rol="asistente" />}
+        element={cargando ? <div className="estado-cargando" role="status">{t.comun.cargando}</div> : session ? <Navigate to="/inicio" replace /> : <Login />}
       />
       <Route path="/activar-cuenta" element={<ActivarCuenta />} />
       {/* Adonde apunta el enlace del correo de recuperación. Va afuera del guardián de sesión

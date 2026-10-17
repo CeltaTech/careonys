@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { correoDeAcceso } from '../lib/correoDeAcceso';
 import { olvidarMarca } from '../lib/marcaGuardada';
+import { descartarSesionGuardada, guardarSesionBajoLaHuella } from '../lib/accesoGuardado';
 
 // Este proveedor contesta tres cosas distintas, y nunca las confunde entre sí:
 //   'cargando' — todavía no se sabe quién entró;
@@ -100,7 +101,21 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // Con un acceso guardado de esta persona, cerrar sesión no la revoca: la deja cifrada en el
+  // teléfono y se vuelve a abrir con la huella (`lib/accesoGuardado.js`). Supabase no tiene una
+  // forma pública de soltar la sesión sin revocarla, así que se usa la interna; si una versión
+  // nueva la saca, se cierra como siempre.
   async function logout() {
+    const { data } = await supabase.auth.getSession();
+    let guardada = false;
+    if (typeof supabase.auth._removeSession === 'function') {
+      guardada = await guardarSesionBajoLaHuella(data?.session).catch(() => false);
+    }
+    if (guardada) {
+      await supabase.auth._removeSession();
+      return;
+    }
+    descartarSesionGuardada();
     await supabase.auth.signOut();
     await olvidarMarca();
   }

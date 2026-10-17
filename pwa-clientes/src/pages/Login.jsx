@@ -4,15 +4,26 @@ import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
 import { errorDeLaRespuesta, mensajeDeError } from '../lib/errores';
 import { guardarMarca, leerMarcaGuardada, olvidarMarca } from '../lib/marcaGuardada';
-import { entrarConLaLlaveDelAparato, esteAparatoGuardaLlaves, loCancelaronAMano } from '../lib/llaveDelDispositivo';
+import { esteAparatoGuardaLlaves, loCancelaronAMano } from '../lib/llaveDelDispositivo';
+import {
+  abrirSesionConLaHuella,
+  hayAccesoGuardado,
+  olvidarAccesoGuardado,
+  rotuloDelAccesoGuardado,
+} from '../lib/accesoGuardado';
+import { api } from '../lib/api';
+import { supabase } from '../lib/supabaseClient';
 
 // ORIGINAL. La copia de `pwa-asistentes/` se regenera con `scripts/sincronizar_copias.mjs` y nunca
-// se edita a mano. Lo único que cambia entre las dos aplicaciones es el rol, que lo pone quien la
-// monta.
+// se edita a mano. Lo único que cambia entre las dos aplicaciones es `lib/api.js`, que cada una
+// tiene con su propia dirección.
 //
 // PRIMERO LA PRESTADORA, DESPUÉS LA CUENTA. Con el mismo correo, cada Prestadora tiene su propia
 // cuenta (`lib/correoDeAcceso.js`), así que antes del correo hace falta saber de cuál se trata. El
 // código queda anotado en el teléfono junto con la marca, y mientras esté ahí no se vuelve a pedir.
+//
+// INGRESAR CON BIOMETRÍA abre la sesión que quedó guardada al cerrar (`lib/accesoGuardado.js`), y
+// se ofrece sólo para la Prestadora de esa sesión.
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -23,7 +34,7 @@ async function prestadoraDelCodigo(codigo) {
   return datos;
 }
 
-export default function Login({ rol }) {
+export default function Login() {
   const { login } = useAuth();
   const { t } = useLocale();
   const [searchParams] = useSearchParams();
@@ -39,25 +50,25 @@ export default function Login({ rol }) {
   const [entrandoConLlave, setEntrandoConLlave] = useState(false);
 
   // Si se llega desde el enlace de un correo, la Prestadora viene en la dirección. Si no, se usa la
-  // que el teléfono tenga anotada. En los dos casos se pasa directo al correo. La huella se ofrece
-  // sólo para la Prestadora anotada: es la de quien ya entró en este aparato.
+  // que el teléfono tenga anotada, o la del acceso guardado. En los dos casos se pasa directo al
+  // correo.
   useEffect(() => {
     let vigente = true;
     (async () => {
       const pedida = (searchParams.get('prestadora') || '').trim();
       const guardada = await leerMarcaGuardada();
-      const rotulo = pedida || guardada?.rotulo;
+      const rotulo = pedida || guardada?.rotulo || rotuloDelAccesoGuardado();
       if (!rotulo) {
         if (vigente) setEstado('listo');
         return;
       }
       try {
         const datos = await prestadoraDelCodigo(rotulo);
-        if (pedida) await guardarMarca({ nombre: datos.nombre, logoUrl: datos.logoUrl, rotulo: datos.rotulo });
+        if (pedida || !guardada) await guardarMarca({ nombre: datos.nombre, logoUrl: datos.logoUrl, rotulo: datos.rotulo });
         const puede = await esteAparatoGuardaLlaves();
         if (!vigente) return;
         setPrestadora(datos);
-        setHayLlave(puede && guardada?.rotulo === datos.rotulo);
+        setHayLlave(puede && hayAccesoGuardado(datos.rotulo));
       } catch (err) {
         // Un código anotado que ya no existe se olvida. Lo demás queda escrito en el casillero,
         // para no tener que tipearlo de nuevo.
@@ -81,6 +92,7 @@ export default function Login({ rol }) {
     try {
       const datos = await prestadoraDelCodigo(codigo.trim());
       await guardarMarca({ nombre: datos.nombre, logoUrl: datos.logoUrl, rotulo: datos.rotulo });
+      setHayLlave((await esteAparatoGuardaLlaves()) && hayAccesoGuardado(datos.rotulo));
       setPrestadora(datos);
     } catch (err) {
       setErrorCodigo(err?.status === 404 ? t.auth.codigo_desconocido : mensajeDeError(err, t, 'buscar la Prestadora'));
@@ -113,13 +125,27 @@ export default function Login({ rol }) {
     setError('');
     setEntrandoConLlave(true);
     try {
-      // Si sale bien no hay nada que hacer acá: la sesión queda abierta y quien escucha los
+      // Si sale bien no hay nada más que hacer acá: la sesión queda abierta y quien escucha los
       // cambios de sesión cambia de pantalla solo.
-      await entrarConLaLlaveDelAparato(rol);
+      const llaveId = await abrirSesionConLaHuella();
+      try {
+        await api.llaveUsada(llaveId);
+      } catch (errorAviso) {
+        // Un aparato revocado desde otro lado no abre: se olvida el acceso y se cierra la sesión.
+        if (errorAviso?.status !== 404) return;
+        olvidarAccesoGuardado();
+        setHayLlave(false);
+        await supabase.auth.signOut();
+        setError(t.auth.llave_error);
+      }
     } catch (errorLlave) {
       // Cancelar no es fallar. Quien cierra el pedido del aparato a propósito no necesita que le
-      // avisen nada: la contraseña sigue estando ahí abajo.
-      if (!loCancelaronAMano(errorLlave)) setError(t.auth.llave_error);
+      // avisen nada: la contraseña sigue estando ahí abajo. Lo demás deja de ofrecerse, porque la
+      // sesión guardada ya no sirve.
+      if (!loCancelaronAMano(errorLlave)) {
+        setHayLlave(hayAccesoGuardado(prestadora?.rotulo));
+        setError(t.auth.llave_error);
+      }
     } finally {
       setEntrandoConLlave(false);
     }

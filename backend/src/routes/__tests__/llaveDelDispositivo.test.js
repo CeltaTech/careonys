@@ -1,5 +1,5 @@
 /**
- * Entrar con la llave del teléfono: los caminos que no dependen de la criptografía.
+ * Las llaves del teléfono: los caminos que no dependen de la criptografía.
  *
  *   npm test --prefix backend
  *
@@ -7,20 +7,13 @@
  * probar es todo lo que la rodea, que es lo que deja pasar o no, y que está escrito acá adentro.
  * Los casos están por el error que evitan:
  *
- *   1. QUE LA PANTALLA DE INGRESO SIRVA PARA AVERIGUAR QUIÉN TIENE CUENTA. La llave que no existe
- *      y la que fue revocada tienen que contestar exactamente lo mismo —mismo código, mismo
- *      cuerpo— o alguien puede ir probando hasta saber quién es cliente de quién
- *      (`celtatech/CLAUDE.md` §6).
- *   2. QUE UNA LLAVE CRUCE DE APLICACIÓN. Una llave dada de alta en la aplicación del Asistente no
- *      puede servir para entrar a la del Cliente: son dos permisos distintos.
- *   3. QUE UNA PRESTADORA ALCANCE LA LLAVE DE OTRA. La puerta de calle trabaja adentro de la
- *      Prestadora de la dirección, con la credencial del trabajo sin persona: el desafío nace con
- *      ella, y la llave y el desafío se buscan sólo ahí. La llave maestra se usa para una sola
- *      cosa, pedir el pase de entrada, y la prueba lo afirma mirando con qué credencial llegó
- *      cada pedido.
- *   4. QUE SE PUEDA SACAR UNA LLAVE AJENA. La baja filtra por la persona de la sesión, así que
- *      tener el identificador de la llave de otro no alcanza.
- *   5. QUE LA PANTALLA VEA LA CREDENCIAL. Lo que se lista son fechas, nunca la mitad pública de la
+ *   1. QUE UNA PRESTADORA ALCANCE LA LLAVE DE OTRA. Todo se busca nombrando la Prestadora de la
+ *      sesión, con la credencial de la persona.
+ *   2. QUE SE PUEDA SACAR O USAR UNA LLAVE AJENA. La baja y el aviso de uso filtran por la persona
+ *      de la sesión, así que tener el identificador de la llave de otro no alcanza.
+ *   3. QUE UNA LLAVE REVOCADA SIGA ABRIENDO. El aviso de uso contesta que no existe, y el teléfono
+ *      olvida el acceso guardado.
+ *   4. QUE LA PANTALLA VEA LA CREDENCIAL. Lo que se lista son fechas, nunca la mitad pública de la
  *      llave ni su identificador.
  *
  * La base falsa honra los filtros de la dirección a propósito: si alguien saca el filtro por
@@ -129,9 +122,7 @@ process.env.PWA_CLIENTES_URL = 'https://clientes.ejemplo.com';
 // en el momento en que se importa, y con la dirección que haya en ese instante.
 const { default: express } = await import('express');
 await import('express-async-errors');
-const { llaveDelDispositivoRouter, routerDeLlavesConSesion, comprobarFirma } = await import(
-  '../llaveDelDispositivo.js'
-);
+const { routerDeLlavesConSesion, comprobarFirma } = await import('../llaveDelDispositivo.js');
 const { supabase } = await import('../../db/connection.js');
 const { requiereRolAsistente } = await import('../../middleware/requiereRolAsistente.js');
 const { requiereRolCliente } = await import('../../middleware/requiereRolCliente.js');
@@ -139,7 +130,6 @@ const { olvidarPedidos } = await import('../../middleware/topeDePedidos.js');
 
 const app = express();
 app.use(express.json());
-app.use('/api/llave-de-dispositivo', llaveDelDispositivoRouter);
 app.use('/api/app-asistentes/llaves', requiereRolAsistente, routerDeLlavesConSesion('asistente'));
 app.use('/api/app-clientes/llaves', requiereRolCliente, routerDeLlavesConSesion('cliente'));
 const backend = app.listen(0, '127.0.0.1');
@@ -245,34 +235,9 @@ beforeEach(() => {
   // El Legajo con el que entra la sesión: lo busca el middleware por la cuenta y la Prestadora.
   respuestas.set('GET /rest/v1/asistentes', [{ id: LEGAJO, prestadora_id: PRESTADORA }]);
   respuestas.set('POST /rest/v1/desafios_de_llave', []);
-
-  // La puerta: de qué Prestadora es cada dirección. Sólo una existe.
-  respuestas.set('POST /rest/v1/rpc/prestadora_de_la_direccion', ({ cuerpo }) =>
-    cuerpo?.p_direccion === PUERTA ? PRESTADORA : null
-  );
-  respuestas.set('GET /rest/v1/configuracion_prestadora', ({ url }) =>
-    filasQuePasanLosFiltros(url, [{ prestadora_id: PRESTADORA, dominio: PUERTA }])
-  );
 });
 
-const PUERTA = 'prestadora-de-prueba';
-const entrar = (cuerpo, puerta = PUERTA) =>
-  pedir('POST', `/api/llave-de-dispositivo/${puerta}/entrar`, cuerpo);
-const pedirDesafio = (cuerpo, puerta = PUERTA) =>
-  pedir('POST', `/api/llave-de-dispositivo/${puerta}/entrar/desafio`, cuerpo);
 const misLlaves = () => pedir('GET', '/api/app-asistentes/llaves');
-
-/** Una respuesta del navegador con el mínimo que la ruta lee antes de verificar nada. */
-function respuestaDelNavegador(credencialId, desafio = 'un-desafio') {
-  const clientData = Buffer.from(JSON.stringify({ challenge: desafio })).toString('base64url');
-  return {
-    id: credencialId,
-    rawId: credencialId,
-    type: 'public-key',
-    response: { clientDataJSON: clientData, authenticatorData: 'YQ', signature: 'YQ' },
-    clientExtensionResults: {},
-  };
-}
 
 /** Los desafíos que hay en la base falsa. Sólo los usa la prueba con firma de verdad. */
 let desafiosEnLaBase = [];
@@ -280,9 +245,9 @@ let desafiosEnLaBase = [];
 function desafioDePrueba(extra = {}) {
   return {
     id: crypto.randomUUID(),
-    para: 'entrada',
+    para: 'firma',
     rol: 'asistente',
-    usuario_id: null,
+    usuario_id: USUARIO,
     prestadora_id: PRESTADORA,
     vence_en: new Date(Date.now() + 60 * 1000).toISOString(),
     usado_en: null,
@@ -293,8 +258,7 @@ function desafioDePrueba(extra = {}) {
 /**
  * Un teléfono de mentira: una llave P-256 que firma lo mismo que firmaría un teléfono de verdad.
  *
- * Hace falta para llegar al final del camino —hasta el pase— y así poder afirmar con qué
- * credencial se pidió cada cosa. Lo que se firma es lo que define WebAuthn: los datos del
+ * Hace falta para llegar al final del camino, hasta el contador que se guarda. Lo que se firma es lo que define WebAuthn: los datos del
  * aparato (resumen de la parte confiable, marcas de presencia y verificación, contador) seguidos
  * del resumen de lo que armó el navegador.
  */
@@ -337,179 +301,6 @@ function llaveQueFirma({ contador = 4, origen = 'https://asistentes.ejemplo.com'
     },
   };
 }
-
-describe('la pantalla de ingreso no dice quién tiene cuenta', () => {
-  it('la credencial desconocida y la revocada contestan exactamente lo mismo', async () => {
-    const desconocida = await entrar({
-      rol: 'asistente',
-      respuesta: respuestaDelNavegador(CREDENCIAL_DESCONOCIDA),
-    });
-    const revocada = await entrar({
-      rol: 'asistente',
-      respuesta: respuestaDelNavegador(CREDENCIAL_REVOCADA),
-    });
-
-    assert.equal(desconocida.estado, 401);
-    assert.deepEqual(desconocida, revocada);
-    assert.equal(desconocida.cuerpo.motivo, 'llave_no_sirve');
-  });
-
-  it('el aviso no nombra ninguna tabla, columna ni identificador', async () => {
-    const { cuerpo } = await entrar({
-      rol: 'asistente',
-      respuesta: respuestaDelNavegador(CREDENCIAL_REVOCADA),
-    });
-    const texto = JSON.stringify(cuerpo);
-    assert.ok(!texto.includes('llaves_de_dispositivo'));
-    assert.ok(!texto.includes('revocada'));
-    assert.ok(!texto.includes(CREDENCIAL_REVOCADA));
-  });
-
-  it('no se pide el correo para entrar: el desafío se emite sin saber de quién es', async () => {
-    const { estado, cuerpo } = await pedirDesafio({ rol: 'asistente' });
-    assert.equal(estado, 200);
-    assert.ok(cuerpo.challenge);
-    assert.deepEqual(cuerpo.allowCredentials ?? [], []);
-  });
-
-  it('el desafío queda guardado con vencimiento y con la Prestadora de la puerta, sin persona', async () => {
-    await pedirDesafio({ rol: 'asistente' });
-    const guardado = llamadas.find((l) => l.clave === 'POST /rest/v1/desafios_de_llave');
-    assert.equal(guardado.cuerpo.para, 'entrada');
-    assert.equal(guardado.cuerpo.rol, 'asistente');
-    assert.equal(guardado.cuerpo.prestadora_id, PRESTADORA);
-    assert.equal(guardado.cuerpo.usuario_id, null);
-    assert.ok(new Date(guardado.cuerpo.vence_en) > new Date());
-  });
-
-  it('y se guarda con la credencial del trabajo sin persona de esa Prestadora, no con la maestra', async () => {
-    await pedirDesafio({ rol: 'asistente' });
-    const guardado = llamadas.find((l) => l.clave === 'POST /rest/v1/desafios_de_llave');
-    assert.deepEqual(guardado.credencial, {
-      maestra: false,
-      rol: 'trabajo_sin_persona',
-      prestadoraId: PRESTADORA,
-    });
-  });
-
-  it('una dirección que no es de ninguna Prestadora no emite ningún desafío', async () => {
-    const { estado } = await pedirDesafio({ rol: 'asistente' }, 'no-existe');
-    assert.equal(estado, 404);
-    assert.equal(llamadas.filter((l) => l.clave === 'POST /rest/v1/desafios_de_llave').length, 0);
-  });
-
-  it('un rol que no tiene aplicación no emite ningún desafío', async () => {
-    const { estado } = await pedirDesafio({ rol: 'coordinador' });
-    assert.equal(estado, 400);
-    assert.equal(llamadas.filter((l) => l.clave === 'POST /rest/v1/desafios_de_llave').length, 0);
-  });
-});
-
-describe('la entrada trabaja adentro de la Prestadora de la puerta', () => {
-  it('la llave de otra Prestadora contesta lo mismo que una que no existe', async () => {
-    const deOtra = await entrar({
-      rol: 'asistente',
-      respuesta: respuestaDelNavegador('Y3JlZGVuY2lhbC1kZS1vdHJh'),
-    });
-    const desconocida = await entrar({
-      rol: 'asistente',
-      respuesta: respuestaDelNavegador(CREDENCIAL_DESCONOCIDA),
-    });
-    assert.equal(deOtra.estado, 401);
-    assert.deepEqual(deOtra, desconocida);
-  });
-
-  it('la llave se busca nombrando la Prestadora, con la credencial de esa Prestadora', async () => {
-    await entrar({ rol: 'asistente', respuesta: respuestaDelNavegador(CREDENCIAL_VIVA) });
-    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/llaves_de_dispositivo');
-    assert.ok(consulta.url.includes(`prestadora_id=eq.${PRESTADORA}`));
-    assert.deepEqual(consulta.credencial, {
-      maestra: false,
-      rol: 'trabajo_sin_persona',
-      prestadoraId: PRESTADORA,
-    });
-  });
-
-  it('una dirección que no es de ninguna Prestadora no busca ninguna llave', async () => {
-    const { estado } = await entrar(
-      { rol: 'asistente', respuesta: respuestaDelNavegador(CREDENCIAL_VIVA) },
-      'no-existe'
-    );
-    assert.equal(estado, 404);
-    assert.equal(llamadas.filter((l) => l.clave === 'GET /rest/v1/llaves_de_dispositivo').length, 0);
-  });
-
-  describe('con una firma de verdad', () => {
-    let firmante;
-
-    beforeEach(() => {
-      firmante = llaveQueFirma();
-      llavesEnLaBase[0] = llaveDePrueba({ clave_publica: firmante.clavePublica });
-      desafiosEnLaBase = [
-        desafioDePrueba({ desafio: 'desafio-de-esta', prestadora_id: PRESTADORA }),
-        desafioDePrueba({ desafio: 'desafio-de-otra', prestadora_id: OTRA_PRESTADORA }),
-      ];
-      respuestas.set('GET /rest/v1/desafios_de_llave', ({ url }) =>
-        filasQuePasanLosFiltros(url, desafiosEnLaBase)
-      );
-      respuestas.set('PATCH /rest/v1/desafios_de_llave', ({ url }) =>
-        filasQuePasanLosFiltros(url, desafiosEnLaBase).map((fila) => ({ id: fila.id }))
-      );
-      respuestas.set('PATCH /rest/v1/llaves_de_dispositivo', ({ url }) =>
-        filasQuePasanLosFiltros(url, llavesEnLaBase).map((fila) => ({ id: fila.id }))
-      );
-      respuestas.set('POST /auth/v1/admin/generate_link', {
-        id: USUARIO,
-        email: 'ana@ejemplo.com',
-        action_link: 'https://ejemplo.com/pase',
-        email_otp: '000000',
-        hashed_token: 'pase-de-mentira',
-        redirect_to: 'https://ejemplo.com',
-        verification_type: 'magiclink',
-      });
-    });
-
-    it('entra, y el pase es lo único que se pide con la llave maestra', async () => {
-      const { estado, cuerpo } = await entrar({
-        rol: 'asistente',
-        respuesta: firmante.firmar('desafio-de-esta'),
-      });
-      assert.equal(estado, 200);
-      assert.equal(cuerpo.pase, 'pase-de-mentira');
-
-      const conLaMaestra = llamadas.filter((l) => l.credencial.maestra).map((l) => l.clave);
-      assert.deepEqual(conLaMaestra, ['POST /auth/v1/admin/generate_link']);
-
-      const gastado = llamadas.find((l) => l.clave === 'PATCH /rest/v1/desafios_de_llave');
-      assert.ok(gastado.url.includes(`prestadora_id=eq.${PRESTADORA}`));
-    });
-
-    it('un desafío emitido por la puerta de otra Prestadora no sirve', async () => {
-      const { estado } = await entrar({
-        rol: 'asistente',
-        respuesta: firmante.firmar('desafio-de-otra'),
-      });
-      assert.equal(estado, 401);
-      assert.equal(llamadas.filter((l) => l.clave === 'POST /auth/v1/admin/generate_link').length, 0);
-    });
-  });
-});
-
-describe('una llave no cruza de aplicación', () => {
-  it('la llave del Asistente no sirve para entrar a la del Cliente', async () => {
-    const { estado } = await entrar({
-      rol: 'cliente',
-      respuesta: respuestaDelNavegador(CREDENCIAL_VIVA),
-    });
-    assert.equal(estado, 401);
-  });
-
-  it('y la consulta filtra por rol, no lo comprueba después', async () => {
-    await entrar({ rol: 'cliente', respuesta: respuestaDelNavegador(CREDENCIAL_VIVA) });
-    const consulta = llamadas.find((l) => l.clave === 'GET /rest/v1/llaves_de_dispositivo');
-    assert.ok(consulta.url.includes('rol=eq.cliente'));
-  });
-});
 
 describe('las llaves propias', () => {
   it('se listan las propias y ninguna más', async () => {
@@ -570,6 +361,57 @@ describe('la baja', () => {
     const inventada = await pedir('DELETE', '/api/app-asistentes/llaves/00000000-0000-4000-8000-000000000000');
     assert.equal(deOtra.estado, 404);
     assert.deepEqual(deOtra, inventada);
+  });
+});
+
+describe('el aviso de que se ingresó con biometría', () => {
+  const usada = (id, ruta = '/api/app-asistentes/llaves') => pedir('POST', `${ruta}/${id}/usada`, {});
+
+  beforeEach(() => {
+    olvidarPedidos();
+    respuestas.set('PATCH /rest/v1/llaves_de_dispositivo', ({ url }) =>
+      filasQuePasanLosFiltros(url, llavesEnLaBase).map((fila) => ({ id: fila.id }))
+    );
+  });
+
+  it('anota el uso de la propia, y nada más que el uso', async () => {
+    const { estado, cuerpo } = await usada(LLAVE);
+    assert.equal(estado, 200);
+    assert.equal(cuerpo.ok, true);
+    const cambio = llamadas.find((l) => l.clave === 'PATCH /rest/v1/llaves_de_dispositivo');
+    assert.deepEqual(Object.keys(cambio.cuerpo), ['ultimo_uso_en']);
+    assert.equal(cambio.credencial.maestra, false);
+    assert.equal(cambio.autorizacion, sesionDePrueba(USUARIO));
+  });
+
+  it('una llave revocada contesta que no existe, para que el teléfono olvide el acceso', async () => {
+    const { estado, cuerpo } = await usada('77777777-7777-4777-8777-777777777777');
+    assert.equal(estado, 404);
+    assert.equal(cuerpo.motivo, 'no_encontrado');
+  });
+
+  it('la de otra persona y la de otra Prestadora contestan lo mismo que una que no existe', async () => {
+    const ajena = await usada(LLAVE_AJENA);
+    const deOtra = await usada(LLAVE_DE_OTRA_PRESTADORA);
+    const inventada = await usada('00000000-0000-4000-8000-000000000000');
+    assert.equal(ajena.estado, 404);
+    assert.deepEqual(ajena, inventada);
+    assert.deepEqual(deOtra, inventada);
+  });
+
+  it('filtra por la persona, la Prestadora y que siga viva', async () => {
+    await usada(LLAVE);
+    const cambio = llamadas.find((l) => l.clave === 'PATCH /rest/v1/llaves_de_dispositivo');
+    assert.ok(cambio.url.includes(`usuario_id=eq.${USUARIO}`));
+    assert.ok(cambio.url.includes(`prestadora_id=eq.${PRESTADORA}`));
+    assert.ok(cambio.url.includes('revocada_en=is.null'));
+  });
+
+  it('sin sesión no se anota nada', async () => {
+    respuestas.set('GET /auth/v1/user', { __estado: 401, __cuerpo: { message: 'sin token' } });
+    const { estado } = await usada(LLAVE);
+    assert.equal(estado, 401);
+    assert.equal(llamadas.filter((l) => l.clave === 'PATCH /rest/v1/llaves_de_dispositivo').length, 0);
   });
 });
 
@@ -700,7 +542,7 @@ describe('firmar con la llave del teléfono', () => {
       desafiosEnLaBase = [
         desafioDePrueba({ desafio: 'firma-propia', para: 'firma', usuario_id: USUARIO }),
         desafioDePrueba({ desafio: 'firma-ajena', para: 'firma', usuario_id: OTRA_PERSONA }),
-        desafioDePrueba({ desafio: 'de-entrada', para: 'entrada' }),
+        desafioDePrueba({ desafio: 'de-alta', para: 'alta' }),
       ];
       respuestas.set('GET /rest/v1/desafios_de_llave', ({ url }) =>
         filasQuePasanLosFiltros(url, desafiosEnLaBase)
@@ -743,8 +585,8 @@ describe('firmar con la llave del teléfono', () => {
       await rechaza(comprobar(firmante.firmar('firma-ajena')));
     });
 
-    it('un desafío de entrada no sirve para firmar', async () => {
-      await rechaza(comprobar(firmante.firmar('de-entrada')));
+    it('un desafío de alta no sirve para firmar', async () => {
+      await rechaza(comprobar(firmante.firmar('de-alta')));
     });
   });
 });

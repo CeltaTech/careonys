@@ -522,3 +522,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** al Panel se entraba con el correo, y la Prestadora salía de la dirección de la página o se elegía antes de la clave.
 - **Qué dice ahora:** se entra con un nombre de usuario, `parte_código de la Prestadora`, y la recuperación de la clave también va por el nombre de usuario. El correo declarado sirve para el contacto y para recibir el enlace, y puede repetirse. Nada mira la dirección de la página.
 - **Motivo:** no todas las Prestadoras van a tener página propia, y el Desarrollador ya había descartado depender de ella. Es como lo resuelve el mercado.
+
+## Ingresar con biometría abre la sesión guardada en el teléfono
+
+- **Qué decía antes:** la huella firmaba un desafío, y el backend le pedía a Supabase con la llave maestra un pase de entrada para esa persona.
+- **Qué dice ahora:** cerrar sesión, en un aparato habilitado, no revoca la sesión: la deja cifrada en el teléfono, y sólo la abre el secreto que el aparato entrega después de comprobar la huella o el rostro. El backend no emite ninguna sesión; sólo anota que se usó el aparato, y si fue revocado el teléfono olvida el acceso.
+- **Motivo:** la entrada no puede depender de una credencial que alcance a todas las Prestadoras. Es como lo resuelven los bancos.

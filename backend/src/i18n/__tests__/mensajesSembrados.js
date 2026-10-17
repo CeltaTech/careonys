@@ -21,6 +21,7 @@ const MIGRACIONES_POSTERIORES = [
   '20261121000000_avisos_de_la_asignacion.sql',
   '20261226000000_avisos_del_turno_fijo_y_del_reemplazo.sql',
   '20270101000000_frases_aprobadas_de_la_entrevista_y_la_guardia_sin_cerrar.sql',
+  '20270102000000_el_acceso_a_la_entrevista_se_habilita.sql',
 ];
 
 function filasPosteriores() {

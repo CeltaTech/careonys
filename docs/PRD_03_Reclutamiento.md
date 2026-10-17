@@ -346,8 +346,7 @@ cuándo fue, de si la persona vino ni de quién había quedado en llamarla.
 Seguridad y prevención, 4) El rol del Asistente (incluye uso de la app: check-in/out, reporte
 diario, registro de medicación, código de conducta). Evaluación: 20 preguntas de opción
 múltiple, aprobación mínima 80% (16 correctas). Emite Certificado de Aptitud digital (nombre,
-tipo de Asistente, fecha, QR verificable) — mismo `qr_token` que ya existe en `asistentes`
-(`DATA_MODEL.md`), no crear un segundo mecanismo de certificado.
+tipo de Asistente, fecha), que se ve entre los datos del perfil del Asistente.
 
 ## Fuera de alcance de este documento
 

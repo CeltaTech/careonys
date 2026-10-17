@@ -98,13 +98,6 @@ export const CATALOGO_PERSONAS_AUTORIZADAS = [
     interruptor: 'cliente_pagos_y_suscripcion',
   },
   {
-    clave: 'persona_autorizada_verifica_con_codigo',
-    descripcion: 'Escanear el código del Asistente al llegar',
-    ayuda: 'Sirve para confirmar que quien se presenta es quien tenía que venir. Lo usa quien está en la casa.',
-    de_fabrica: true,
-    interruptor: 'cliente_verifica_con_codigo',
-  },
-  {
     clave: 'persona_autorizada_califica_al_asistente',
     descripcion: 'Calificar al Asistente',
     ayuda: 'Poner estrellas y un comentario. Viene negada porque calificar al trabajador es un acto del titular, no de quien mira.',
@@ -209,7 +202,7 @@ export function mezclarAccesosConCatalogo({ filasGuardadas, visibilidad }) {
 }
 
 // Normaliza lo que llega del Panel antes de guardarlo. Devuelve una lista lista para escribir, con
-// las once claves siempre presentes: guardar sólo las que vinieron dejaría filas ausentes, y una
+// las diez claves siempre presentes: guardar sólo las que vinieron dejaría filas ausentes, y una
 // fila ausente para la base significa «no» —la función falla cerrado—, con lo cual un formulario
 // incompleto negaría accesos que nadie negó.
 //

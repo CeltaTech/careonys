@@ -437,7 +437,6 @@ export const T = {
       enviar_calificacion: 'Enviar calificación',
       enviando_calificacion: 'Enviando…',
       calificacion_enviada: '¡Gracias! La calificación fue enviada.',
-      escanear_boton: 'Escanear Asistente',
     },
     // La vidriera de Match: buscar Asistentes y ver su perfil público.
     //
@@ -495,24 +494,6 @@ export const T = {
       pidiendo: 'Pidiendo…',
       reintentar: 'Reintentar',
       sin_codigo: 'No hay ningún código para mostrar en este momento.',
-    },
-    // Esto es otra cosa y no se mezcla: acá el Cliente escanea la credencial del Asistente para
-    // comprobar que es quien dice ser (pendiente #73). El de arriba va en el sentido contrario.
-    escaneo: {
-      titulo: 'Escanear Asistente',
-      instrucciones: 'Apunte la cámara al código QR de la credencial del Asistente.',
-      pidiendo_permiso: 'Solicitando acceso a la cámara…',
-      error_permiso: 'No se pudo acceder a la cámara. Verifique los permisos del navegador e intente nuevamente.',
-      error_qr_invalido: 'Ese código QR no corresponde a ningún Asistente registrado.',
-      verificando: 'Verificando…',
-      resultado_coincide: 'Coincide: este es el Asistente asignado a la guardia de hoy.',
-      resultado_no_coincide: 'Atención: este Asistente no es el asignado a la guardia de hoy.',
-      resultado_sin_guardia: 'No hay una guardia programada para hoy con este Paciente.',
-      resultado_sin_cubrir: 'Hay una guardia programada para hoy, pero todavía no tiene un Asistente asignado.',
-      certificado_vigente: 'Certificado de Aptitud vigente',
-      certificado_vencido: 'Certificado de Aptitud vencido o sin registrar',
-      volver_a_escanear: 'Escanear de nuevo',
-      alcance: 'Esta verificación confirma la identidad y la asignación registradas por la Prestadora. No reemplaza la supervisión personal.',
     },
     acceso: {
       titulo: 'Acceso',
@@ -644,7 +625,7 @@ export const T = {
         endovenosa: 'Endovenosa',
       },
     },
-    // Los once accesos de las personas autorizadas, dichos como los lee cada una. En el
+    // Los diez accesos de las personas autorizadas, dichos como los lee cada una. En el
     // orden del catálogo del backend, que es el orden en el que llegan: dos personas autorizadas del
     // mismo Cliente comparan sus listas renglón por renglón.
     //
@@ -660,7 +641,6 @@ export const T = {
       persona_autorizada_alertas: 'Las alertas de la revisión de los reportes',
       persona_autorizada_internaciones: 'Las internaciones del Paciente',
       persona_autorizada_dinero: 'La cuota, las facturas, los cobros y el código para pagar',
-      persona_autorizada_verifica_con_codigo: 'Escanear el código del Asistente al llegar',
       persona_autorizada_califica_al_asistente: 'Calificar al Asistente',
       persona_autorizada_pide_medicacion: 'Pedir un cambio de medicación',
     },
@@ -1046,7 +1026,6 @@ export const T = {
       enviar_calificacion: 'Send rating',
       enviando_calificacion: 'Sending…',
       calificacion_enviada: 'Thanks! Your rating was sent.',
-      escanear_boton: 'Scan Assistant',
     },
     vidriera: {
       titulo: 'Search Assistants',
@@ -1089,22 +1068,6 @@ export const T = {
       pidiendo: 'Asking…',
       reintentar: 'Retry',
       sin_codigo: 'There is no code to show right now.',
-    },
-    escaneo: {
-      titulo: 'Scan Assistant',
-      instrucciones: 'Point the camera at the QR code on the Assistant\'s credential.',
-      pidiendo_permiso: 'Requesting camera access…',
-      error_permiso: 'Could not access the camera. Check browser permissions and try again.',
-      error_qr_invalido: 'That QR code does not match any registered Assistant.',
-      verificando: 'Verifying…',
-      resultado_coincide: 'Match: this is the Assistant assigned to today\'s shift.',
-      resultado_no_coincide: 'Warning: this Assistant is not the one assigned to today\'s shift.',
-      resultado_sin_guardia: 'There is no shift scheduled today for this Patient.',
-      resultado_sin_cubrir: 'There is a shift scheduled today, but no Assistant has been assigned to it yet.',
-      certificado_vigente: 'Fitness Certificate valid',
-      certificado_vencido: 'Fitness Certificate expired or not on file',
-      volver_a_escanear: 'Scan again',
-      alcance: 'This check confirms the identity and assignment on record with the Provider. It does not replace personal supervision.',
     },
     acceso: {
       titulo: 'Access',
@@ -1240,7 +1203,6 @@ export const T = {
       persona_autorizada_alertas: 'Alerts from the review of the reports',
       persona_autorizada_internaciones: 'The Patient\'s hospital stays',
       persona_autorizada_dinero: 'The fee, the invoices, the payments and the payment code',
-      persona_autorizada_verifica_con_codigo: 'Scanning the Assistant\'s code on arrival',
       persona_autorizada_califica_al_asistente: 'Rating the Assistant',
       persona_autorizada_pide_medicacion: 'Requesting a medication change',
     },
@@ -1623,7 +1585,6 @@ export const T = {
       enviar_calificacion: 'Enviar avaliação',
       enviando_calificacion: 'Enviando…',
       calificacion_enviada: 'Obrigado! A avaliação foi enviada.',
-      escanear_boton: 'Escanear Assistente',
     },
     vidriera: {
       titulo: 'Buscar Assistentes',
@@ -1666,22 +1627,6 @@ export const T = {
       pidiendo: 'Pedindo…',
       reintentar: 'Tentar novamente',
       sin_codigo: 'Não há nenhum código para mostrar neste momento.',
-    },
-    escaneo: {
-      titulo: 'Escanear Assistente',
-      instrucciones: 'Aponte a câmera para o código QR da credencial do Assistente.',
-      pidiendo_permiso: 'Solicitando acesso à câmera…',
-      error_permiso: 'Não foi possível acessar a câmera. Verifique as permissões do navegador e tente novamente.',
-      error_qr_invalido: 'Esse código QR não corresponde a nenhum Assistente registrado.',
-      verificando: 'Verificando…',
-      resultado_coincide: 'Confere: este é o Assistente designado para o plantão de hoje.',
-      resultado_no_coincide: 'Atenção: este Assistente não é o designado para o plantão de hoje.',
-      resultado_sin_guardia: 'Não há plantão programado para hoje com este Paciente.',
-      resultado_sin_cubrir: 'Há um plantão programado para hoje, mas ainda não tem um Assistente designado.',
-      certificado_vigente: 'Certificado de Aptidão válido',
-      certificado_vencido: 'Certificado de Aptidão vencido ou não registrado',
-      volver_a_escanear: 'Escanear novamente',
-      alcance: 'Esta verificação confirma a identidade e a atribuição registradas pela Prestadora. Não substitui a supervisão pessoal.',
     },
     acceso: {
       titulo: 'Acesso',
@@ -1817,7 +1762,6 @@ export const T = {
       persona_autorizada_alertas: 'Os alertas da revisão dos relatórios',
       persona_autorizada_internaciones: 'As internações do Paciente',
       persona_autorizada_dinero: 'A mensalidade, as faturas, as cobranças e o código para pagar',
-      persona_autorizada_verifica_con_codigo: 'Escanear o código do Assistente na chegada',
       persona_autorizada_califica_al_asistente: 'Avaliar o Assistente',
       persona_autorizada_pide_medicacion: 'Pedir uma mudança de medicação',
     },

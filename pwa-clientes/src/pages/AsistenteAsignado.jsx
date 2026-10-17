@@ -5,7 +5,6 @@ import { useLocale } from '../i18n/LocaleContext';
 import { nombreTipo } from '../lib/tipoDeAsistente';
 import { useSeVe } from '../context/PerfilContext';
 import { usePersonasAutorizadas } from '../context/PersonasAutorizadasContext';
-import { pantallaPermitida } from '../lib/interruptorDeCadaPantalla';
 import { mensajeDeError } from '../lib/errores';
 import EstadoDocumental from '../components/EstadoDocumental';
 import TareasDelTipo from '../components/TareasDelTipo';
@@ -96,16 +95,6 @@ export default function AsistenteAsignado() {
       {tipo && (
         <section className="pwa-card">
           <TareasDelTipo tareas={tareas} vacio={t.asistente.tareas_vacio} t={t} />
-        </section>
-      )}
-
-      {pantallaPermitida('escanearAsistente', seVe, puedeVer) && (
-        <section className="pwa-card">
-          <div className="pwa-acciones pwa-acciones-sola">
-            <Link to={`/pacientes/${id}/escanear-asistente`} className="btn btn-primary btn-full">
-              {t.asistente.escanear_boton}
-            </Link>
-          </div>
         </section>
       )}
 

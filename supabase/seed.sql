@@ -455,7 +455,6 @@ INSERT INTO public.permisos_personas_autorizadas (cliente_id, usuario_id, clave,
   ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_alertas',               true),
   ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_internaciones',         true),
   ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_dinero',                false),
-  ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_verifica_con_codigo',   true),
   ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_califica_al_asistente', false),
   ('40000000-0000-4000-8000-000000000001', '40000000-0000-4000-8000-000000000011', 'persona_autorizada_pide_medicacion',       false);
 

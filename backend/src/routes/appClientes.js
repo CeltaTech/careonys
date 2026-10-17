@@ -8,7 +8,7 @@ import { marcaDeLaPrestadora } from '../utils/marcaPrestadora.js';
 import { contactoDeLaPrestadora } from '../utils/contactoDeLaPrestadora.js';
 import { visibilidadDelPedido, exigeVisible } from '../utils/visibilidadPrestadora.js';
 import { columnasSegunVisibilidad } from '../utils/catalogoVisibilidad.js';
-import { tipoDelAsistente, tipoConSusTareas } from '../utils/tareasDelTipo.js';
+import { tipoConSusTareas } from '../utils/tareasDelTipo.js';
 import { esFechaISO, semanaQueContiene } from '../utils/fechas.js';
 import { pacientesConDomicilioDeHoy } from '../utils/domicilioDelDia.js';
 import { FICHA_NOMBRE, PARTES_DEL_DOMICILIO, fichaCon, conSuFicha, conSusFichas } from '../utils/fichaDelPaciente.js';
@@ -782,112 +782,6 @@ appClientesRouter.get('/pacientes/:id/asistente', requiereRolCliente, async (req
     documentacion,
     evaluaciones,
     guardiaId: guardia.id,
-  });
-});
-
-// ============================================================================
-// Escanear Asistente: verifica que el qr_token escaneado corresponda al Asistente
-// asignado a la guardia de HOY de ese Paciente.
-// ============================================================================
-
-appClientesRouter.get('/pacientes/:id/verificar-asistente/:qrToken', requiereRolCliente, exigeVisible('cliente_verifica_con_codigo'), exigeDePersonasAutorizadas('persona_autorizada_verifica_con_codigo'), async (req, res) => {
-  const paciente = await pacienteDelCliente(clienteDelPedido(req), req.params.id, req);
-  if (!paciente) {
-    return res.status(404).json({ error: 'Paciente no encontrado' });
-  }
-
-  // Desde acá sigue con la llave maestra, y el filtro de la Prestadora es lo que aísla. Quien se
-  // escanea puede no ser el Asistente asignado —es justamente lo que se quiere averiguar—, y la
-  // base sólo le deja ver al Cliente el que lo atiende: con la credencial de la persona, el QR
-  // de alguien que no corresponde contestaría «no reconocido» en vez de «no asignado». Y la
-  // guardia de hoy, porque esta ruta no pide `persona_autorizada_guardias` y la base sí.
-  const { data: asistenteEscaneado } = await supabase
-    .from('asistentes')
-    .select('id, nombre, foto_url, tipo_asistente_id')
-    .eq('qr_token', req.params.qrToken)
-    .eq('prestadora_id', paciente.prestadora_id)
-    .maybeSingle();
-
-  if (!asistenteEscaneado) {
-    return res.status(404).json({ error: 'qr_no_reconocido' });
-  }
-
-  // Qué es esta persona —cuidador/a, enfermero/a…—, para que la pantalla no muestre
-  // solo un nombre y una foto. Acá alcanza con el tipo: al escanear no se listan tareas.
-  const tipoEscaneado = await tipoDelAsistente(
-    asistenteEscaneado.tipo_asistente_id,
-    paciente.prestadora_id
-  );
-
-  const hoyISO = new Date().toISOString().slice(0, 10);
-
-  const { data: guardiaHoy } = await supabase
-    .from('guardias')
-    .select('id, estado, hora_inicio, hora_fin, asistente_id')
-    .eq('prestadora_id', paciente.prestadora_id)
-    .eq('paciente_id', paciente.id)
-    .eq('fecha', hoyISO)
-    .order('hora_inicio', { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (!guardiaHoy) {
-    return res.json({
-      coincide: false,
-      motivo: 'sin_guardia_hoy',
-      asistenteEscaneado,
-      tipoEscaneado,
-      guardia: null,
-      certificado: null,
-    });
-  }
-
-  // La guardia de hoy existe pero está sin cubrir. No es lo mismo que "no hay guardia":
-  // hay servicio previsto y nadie asignado, y el Cliente tiene que poder distinguirlo —
-  // si no, escanea el QR de alguien que se presentó y el sistema le contesta que hoy no
-  // había nada previsto.
-  if (!guardiaHoy.asistente_id) {
-    return res.json({
-      coincide: false,
-      motivo: 'guardia_sin_cubrir',
-      asistenteEscaneado,
-      tipoEscaneado,
-      guardia: {
-        id: guardiaHoy.id,
-        estado: guardiaHoy.estado,
-        horaInicio: guardiaHoy.hora_inicio,
-        horaFin: guardiaHoy.hora_fin,
-      },
-      certificado: null,
-    });
-  }
-
-  const coincide = guardiaHoy.asistente_id === asistenteEscaneado.id;
-
-  // Con la llave maestra, el filtro de Prestadora es lo que aísla, no el identificador del
-  // Asistente: una misma persona tiene un Legajo de Asistente por cada Prestadora donde trabaja.
-  const { data: certificado } = await supabase
-    .from('certificados')
-    .select('activo, fecha_vencimiento')
-    .eq('prestadora_id', paciente.prestadora_id)
-    .eq('asistente_id', asistenteEscaneado.id)
-    .eq('activo', true)
-    .order('fecha_vencimiento', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  res.json({
-    coincide,
-    motivo: coincide ? 'asignado' : 'no_asignado',
-    asistenteEscaneado,
-    tipoEscaneado,
-    guardia: {
-      id: guardiaHoy.id,
-      estado: guardiaHoy.estado,
-      horaInicio: guardiaHoy.hora_inicio,
-      horaFin: guardiaHoy.hora_fin,
-    },
-    certificado: certificado || null,
   });
 });
 

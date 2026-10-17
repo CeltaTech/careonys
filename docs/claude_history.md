@@ -528,3 +528,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** la huella firmaba un desafío, y el backend le pedía a Supabase con la llave maestra un pase de entrada para esa persona.
 - **Qué dice ahora:** cerrar sesión, en un aparato habilitado, no revoca la sesión: la deja cifrada en el teléfono, y sólo la abre el secreto que el aparato entrega después de comprobar la huella o el rostro. El backend no emite ninguna sesión; sólo anota que se usó el aparato, y si fue revocado el teléfono olvida el acceso.
 - **Motivo:** la entrada no puede depender de una credencial que alcance a todas las Prestadoras. Es como lo resuelven los bancos.
+
+## El Asistente ya no se verifica escaneando un código
+
+- **Qué decía antes:** el Panel mostraba en el Certificado de Aptitud un código QR para imprimir, y el Cliente o una persona autorizada lo escaneaba con la aplicación para confirmar que quien llegó era el Asistente de la guardia de hoy.
+- **Qué dice ahora:** el Certificado se ve entre los datos del perfil del Asistente, y eso alcanza. El escaneo, la página y los dos interruptores salieron; las piezas quedaron en el estante de `Codigos-utiles`.
+- **Motivo:** el Desarrollador: si se cargó en el perfil del Asistente, es prueba suficiente. Si el Asistente lo quiere imprimir, es cosa suya.

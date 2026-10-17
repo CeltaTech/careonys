@@ -989,11 +989,6 @@ a {
   margin-top: 10px;
 }
 
-/* El video de la cámara se recorta a las esquinas redondeadas. */
-.lector-de-codigo {
-  overflow: hidden;
-}
-
 /* La dirección de un enlace escrita entera: subrayada como cualquier enlace, y cortada donde
    haga falta para que una dirección larga no se salga de su tarjeta. */
 .enlace-del-contenido {

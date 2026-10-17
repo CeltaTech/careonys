@@ -142,7 +142,7 @@ describe('accesosEfectivos', () => {
 });
 
 describe('mezclarAccesosConCatalogo', () => {
-  it('sin ninguna fila guardada, igual devuelve los once accesos', () => {
+  it('sin ninguna fila guardada, igual devuelve los diez accesos', () => {
     const mezclados = mezclarAccesosConCatalogo({ filasGuardadas: [] });
     assert.equal(mezclados.length, CATALOGO_PERSONAS_AUTORIZADAS.length);
     assert.ok(mezclados.every((cosa) => cosa.configurado === false));

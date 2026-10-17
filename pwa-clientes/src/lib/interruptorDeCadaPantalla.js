@@ -11,7 +11,6 @@
 // único lugar donde se dibujan, así que no necesitan un nombre acá.
 export const INTERRUPTOR_DE_LA_PANTALLA = {
   alertas: 'cliente_alertas_de_la_revision',
-  escanearAsistente: 'cliente_verifica_con_codigo',
   acceso: 'cliente_pagos_y_suscripcion',
   facturas: 'cliente_pagos_y_suscripcion',
   medicacion: 'cliente_medicacion_del_paciente',
@@ -25,7 +24,7 @@ export const INTERRUPTOR_DE_LA_PANTALLA = {
 // titular de la cuenta le pidió a la Prestadora para cada una de sus personas autorizadas: si le
 // negó los reportes a un hermano, ese hermano no los ve, aunque la Prestadora los ofrezca.
 //
-// El titular ve todo, siempre: el backend le contesta las once claves en verdadero, así que no hay
+// El titular ve todo, siempre: el backend le contesta las diez claves en verdadero, así que no hay
 // ningún caso especial escrito acá.
 //
 // Hay más pantallas acá que arriba porque hay cosas que la Prestadora no puede apagar —los
@@ -36,7 +35,6 @@ export const INTERRUPTOR_DE_LA_PANTALLA = {
 // donde se dibuja.
 export const ACCESO_DE_PERSONAS_AUTORIZADAS_DE_LA_PANTALLA = {
   alertas: 'persona_autorizada_alertas',
-  escanearAsistente: 'persona_autorizada_verifica_con_codigo',
   acceso: 'persona_autorizada_dinero',
   facturas: 'persona_autorizada_dinero',
   medicacion: 'persona_autorizada_medicacion',

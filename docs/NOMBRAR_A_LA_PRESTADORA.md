@@ -1208,27 +1208,6 @@ que sale al tocar «ver el contacto».
 
 ---
 
-## 58. Qué confirma el escaneo
-
-**Ruta:** `escaneo.alcance`
-
-**Texto de hoy:**
-> Esta verificación confirma la identidad y la asignación registradas por la Prestadora. No
-> reemplaza la supervisión personal.
-
-**Dónde se ve:** Escanear Asistente (`/pacientes/:id/escanear-asistente`), en la pantalla de
-resultado, debajo de su ficha.
-
-**Qué lo dispara:** se escaneó el código del Asistente.
-
-**Quién lo lee:** el Cliente.
-
-**Archivo:** `pwa-clientes/src/pages/EscanearAsistente.jsx:147`
-
-**DECISIÓN:**
-
----
-
 ## 59. Qué es la biblioteca de contenidos
 
 **Ruta:** `contenidos.explicacion`

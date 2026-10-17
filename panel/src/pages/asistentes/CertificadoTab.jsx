@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react';
-import QRCode from 'qrcode';
 import { useLocale } from '../../i18n/LocaleContext';
 import { usePrestadoraActual } from '../../hooks/usePrestadoraActual';
 import { supabase } from '../../lib/supabaseClient';
@@ -15,7 +14,6 @@ export function CertificadoTab({ asistente }) {
   const { t, locale } = useLocale();
   const prestadoraId = usePrestadoraActual();
   const [certificado, setCertificado] = useState(null);
-  const [qrDataUrl, setQrDataUrl] = useState(null);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [emitiendo, setEmitiendo] = useState(false);
@@ -36,11 +34,8 @@ export function CertificadoTab({ asistente }) {
       return;
     }
     setCertificado(data);
-    if (data && asistente.qr_token) {
-      setQrDataUrl(await QRCode.toDataURL(asistente.qr_token, { width: 280, margin: 1 }));
-    }
     setEstado('listo');
-  }, [asistente.id, asistente.qr_token, t]);
+  }, [asistente.id, t]);
 
   useEffect(() => {
     recargar();
@@ -91,16 +86,6 @@ export function CertificadoTab({ asistente }) {
                 </div>
               )}
             </div>
-            {qrDataUrl && (
-              <>
-                <img src={qrDataUrl} alt={t.asistentes.certificado.titulo} width={280} height={280} />
-                <div className="molde-acciones">
-                  <a href={qrDataUrl} download={`certificado-${asistente.id}.png`}>
-                    <Button variant="secondary">{t.asistentes.certificado.descargar_qr}</Button>
-                  </a>
-                </div>
-              </>
-            )}
           </>
         ) : (
           <>

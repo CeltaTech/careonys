@@ -222,34 +222,10 @@ Lista por fecha (más reciente primero) — fecha, Asistente, resumen breve. Al 
 estructurados completos + foto si la hay. Botón "Exportar PDF" → Planilla 3 IOMA (Etapa 5).
 
 ### Asistente Asignado
-Foto, nombre, especialidades. Botón "Escanear Asistente" → pantalla de verificación (ver
-abajo). Evaluaciones anteriores con este Cliente. Botón de contacto (WhatsApp o chat
+Foto, nombre, especialidades y el Certificado de Aptitud con su estado y su fecha: que esté
+cargado en el perfil es prueba suficiente, sin certificado impreso ni código para escanear.
+Evaluaciones anteriores con este Cliente. Botón de contacto (WhatsApp o chat
 interno).
-
-### Escanear Asistente — verificación de identidad y asignación (Etapa 6, rediseñada
-2026-07-22, ver `docs/claude_history.md`)
-
-**Reemplaza el diseño original de "Perfil Público del Asistente con QR"** (página pública
-sin login en `[dominio-de-la-prestadora]/asistente/[qr_token]`) — decisión del Desarrollador
-2026-07-22: no tiene sentido exponer una página pública separada cuando el Cliente ya usa la
-PWA con sesión iniciada, y una verificación dentro de la app puede confirmar algo más útil
-que "está genéricamente certificado": que la persona que tiene enfrente **es efectivamente
-el Asistente asignado a la guardia de hoy de ese Paciente**, no solo que pasó el Proceso de
-Incorporación alguna vez.
-
-**Flujo:** dentro de la PWA (con sesión), el Cliente abre "Escanear Asistente" y usa la
-cámara del dispositivo para leer el QR de la credencial física del Asistente
-(`asistentes.qr_token`, ya existente). La app llama a un endpoint autenticado que:
-1. Resuelve el Asistente por `qr_token`.
-2. Busca la guardia de **hoy** de ese Paciente.
-3. Compara si el `asistente_id` de esa guardia coincide con el del QR escaneado.
-
-**Resultado mostrado:** si coincide, confirmación con foto, nombre, especialidades y
-horario de la guardia de hoy. Si no coincide (o el certificado no está activo), alerta
-explícita de que esa persona no es quien corresponde. **Nunca muestra** DNI, teléfono,
-email ni dirección — dato sensible, ver `SECURITY.md`. El caso de terceros sin la app
-(portero, otro familiar sin cuenta, el propio Paciente sin celular) queda deliberadamente
-fuera de este primer corte.
 
 ### Alertas
 Lista de alertas del paciente (activas + historial resuelto), descripción generada por IA,

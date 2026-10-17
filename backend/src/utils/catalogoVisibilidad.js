@@ -90,6 +90,13 @@ export const CATALOGO_VISIBILIDAD = [
     de_fabrica: true,
   },
   {
+    clave: 'cliente_asistente_sin_certificado',
+    app: 'clientes',
+    descripcion: 'Ver que el Asistente no tiene certificado',
+    ayuda: 'El Certificado de Aptitud vigente se ve siempre. Apagada, cuando no hay ninguno no se menciona.',
+    de_fabrica: false,
+  },
+  {
     clave: 'cliente_pagos_y_suscripcion',
     app: 'clientes',
     descripcion: 'Ver la cuota, los cobros y el código para pagar en efectivo',

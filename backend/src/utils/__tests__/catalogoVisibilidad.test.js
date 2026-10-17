@@ -46,11 +46,14 @@ describe('catálogo de visibilidad', () => {
     }
   });
 
-  it('todas arrancan encendidas: hoy las aplicaciones muestran todo', () => {
+  it('arrancan encendidas, salvo las que el Desarrollador decidió apagar', () => {
     // CLAUDE.md §3: ningún interruptor arranca apagado por decisión del sistema. Y el valor de
     // fábrica tiene que ser lo que el producto ya hacía, para que quien no entre a la
-    // pantalla no vea cambiar nada.
-    assert.ok(CATALOGO_VISIBILIDAD.every((cosa) => cosa.de_fabrica === true));
+    // pantalla no vea cambiar nada. Las de esta lista las apagó el Desarrollador.
+    const apagadasPorElDesarrollador = ['cliente_asistente_sin_certificado'];
+    for (const cosa of CATALOGO_VISIBILIDAD) {
+      assert.equal(cosa.de_fabrica, !apagadasPorElDesarrollador.includes(cosa.clave), cosa.clave);
+    }
   });
 
   it('busca un interruptor por su clave y devuelve null si no existe', () => {
@@ -91,7 +94,7 @@ describe('mezclarVisibilidadConCatalogo', () => {
     const mezcladas = mezclarVisibilidadConCatalogo([]);
     assert.equal(mezcladas.length, CATALOGO_VISIBILIDAD.length);
     assert.ok(mezcladas.every((cosa) => cosa.configurado === false));
-    assert.ok(mezcladas.every((cosa) => cosa.visible === true));
+    assert.ok(mezcladas.every((cosa) => cosa.visible === cosa.de_fabrica));
   });
 
   it('distingue lo que la Prestadora eligió de lo que rige mientras tanto', () => {

@@ -205,7 +205,7 @@ Decisión: ____
 
 ### 16. No se encontró el acceso
 - **Texto actual:** No se encontró ese acceso. **Conviene recargar la lista.**
-- **Texto propuesto:** Acceso no encontrado. Actualice la página.
+- **Texto aprobado:** Acceso no encontrado.
 - **Qué cambió:** imperativo. Es la misma propuesta que la ficha 8 de la aplicación del Cliente.
 - **Quién lo lee:** la administración de la Prestadora.
 - **Dónde está:** Panel → Clientes → Clientes (Match) → «Ver cobros», recuadro «Alta en la pasarela de cobro».
@@ -1405,7 +1405,7 @@ Decisión: ____
 
 ### 8. No se encontró el acceso
 - **Texto actual:** No se encontró ese acceso. **Conviene volver a abrir la pantalla.**
-- **Texto propuesto:** No se encontró el acceso. Actualice la página.
+- **Texto aprobado:** Acceso no encontrado.
 - **Qué cambió:** imperativo. Mismo caso que la ficha 16 del Panel, con la misma propuesta.
 - **Quién lo lee:** el Cliente o la persona autorizada.
 - **Dónde está:** hoy no aparece en ninguna parte: Pacientes → un Paciente → «Acceso» es de Match, que está cerrado para todos los Clientes. Describiría dar de baja un acceso que ya no existe.

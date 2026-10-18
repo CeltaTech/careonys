@@ -76,7 +76,7 @@ export const T = {
         // El alta de un acceso de Match en la pasarela de cobro. Cada frase dice qué
         // falta y dónde se resuelve, porque quien la lee es quien puede resolverlo. Ninguna
         // nombra la credencial ni al proveedor por lo que contestó (CLAUDE.md §6).
-        acceso_inexistente: 'Acceso no encontrado. Actualice la página.',
+        acceso_inexistente: 'Acceso no encontrado.',
         acceso_cancelado: 'Ese acceso está dado de baja, así que no se puede empezar a cobrarlo.',
         sin_pasarela_conectada: 'Esta Prestadora no tiene ninguna pasarela de cobro conectada. Se conecta en Match > Pasarela de pago.',
         varias_pasarelas_conectadas: 'Hay más de una pasarela de cobro conectada. Elija con cuál cobrar este acceso.',
@@ -3115,7 +3115,7 @@ export const T = {
         modalidad_no_activa: 'This service model is not active.',
         persona_no_autorizada: 'Not found in the records.',
         paciente_no_encontrado: 'Patient not found. Reload the page.',
-        acceso_inexistente: 'Access not found. Reload the page.',
+        acceso_inexistente: 'Access not found.',
         acceso_cancelado: 'That access has been ended, so charging for it cannot be started.',
         sin_pasarela_conectada: 'This Provider has no payment gateway connected. It is connected under Match > Payment gateway.',
         varias_pasarelas_conectadas: 'More than one payment gateway is connected. Choose which one charges this access.',
@@ -6100,7 +6100,7 @@ export const T = {
         modalidad_no_activa: 'Esta modalidade não está ativa.',
         persona_no_autorizada: 'Não consta no registro.',
         paciente_no_encontrado: 'Paciente não encontrado. Atualize a página.',
-        acceso_inexistente: 'Acesso não encontrado. Atualize a página.',
+        acceso_inexistente: 'Acesso não encontrado.',
         acceso_cancelado: 'Esse acesso está encerrado, portanto não é possível começar a cobrá-lo.',
         sin_pasarela_conectada: 'Esta Prestadora não tem nenhum meio de cobrança conectado. A conexão é feita em Match > Meio de cobrança.',
         varias_pasarelas_conectadas: 'Há mais de um meio de cobrança conectado. Escolha com qual cobrar este acesso.',

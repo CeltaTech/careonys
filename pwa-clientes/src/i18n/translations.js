@@ -47,7 +47,7 @@ export const T = {
         // Los dos de la baja del acceso. Ninguno es una falla: el primero pasa cuando la pantalla
         // quedó vieja, y el segundo cuando esa forma de cobro no se renueva sola y entonces no hay
         // nada que apagar.
-        acceso_inexistente: 'No se encontró el acceso. Actualice la página.',
+        acceso_inexistente: 'Acceso no encontrado.',
         forma_que_no_se_renueva: 'Ese acceso no se renueva solo, así que no hay nada que dar de baja.',
         // La vidriera de Match pedida en una Prestadora que no trabaja de esa manera. No
         // es una función apagada: es que esa Prestadora asigna ella a su gente, y decirlo así
@@ -690,7 +690,7 @@ export const T = {
         sin_codigo: 'You have not requested a code yet. Request one first.',
         ya_cerrada: 'That instruction is already signed. There is nothing left to confirm.',
         no_encontrado: 'The requested information was not found. Open this section again.',
-        acceso_inexistente: 'Access not found. Reload the page.',
+        acceso_inexistente: 'Access not found.',
         forma_que_no_se_renueva: 'That access does not renew on its own, so there is nothing to cancel.',
         intermediacion_no_habilitado: 'This Provider assigns its own Assistants, so there is no list to choose from.',
         sin_acceso_de_intermediacion: 'To see the contact details of this person, arrange the service with the Provider.',
@@ -1249,7 +1249,7 @@ export const T = {
         sin_codigo: 'Você ainda não pediu nenhum código. Peça-o primeiro.',
         ya_cerrada: 'Essa instrução já está assinada. Não resta nada a confirmar.',
         no_encontrado: 'As informações solicitadas não foram encontradas. Abra esta seção novamente.',
-        acceso_inexistente: 'O acesso não foi encontrado. Atualize a página.',
+        acceso_inexistente: 'Acesso não encontrado.',
         forma_que_no_se_renueva: 'Esse acesso não se renova sozinho, portanto não há nada a cancelar.',
         intermediacion_no_habilitado: 'Esta Prestadora designa ela mesma os seus Assistentes, portanto não há uma lista para escolher.',
         sin_acceso_de_intermediacion: 'Para ver os dados de contato desta pessoa, contrate o serviço com a Prestadora.',

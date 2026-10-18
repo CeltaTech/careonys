@@ -322,7 +322,7 @@ Decisión: ____
 
 ### 25. Fecha de entrevista no válida
 - **Texto actual:** Esa fecha no se entiende. **Conviene elegir el día y la hora de nuevo.**
-- **Texto propuesto:** Fecha no válida. Seleccione nuevamente el día y la hora.
+- **Texto aprobado:** Fecha no válida.
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Asistentes → Postulaciones → una postulación, recuadro «Entrevista».

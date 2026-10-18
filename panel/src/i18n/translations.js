@@ -118,7 +118,7 @@ export const T = {
         documento_no_generado: 'Ese documento todavía no se generó, así que no hay ninguna copia guardada.',
         // La entrevista de una postulación. Las lee quien agenda, nunca el postulante: a él la
         // puerta pública le contesta bien y la pantalla le dice en qué momento está.
-        fecha_invalida: 'Fecha no válida. Seleccione nuevamente el día y la hora.',
+        fecha_invalida: 'Fecha no válida.',
         entrevista_en_el_pasado: 'Esa fecha ya pasó. Una entrevista se agenda para más adelante.',
         entrevista_ya_agendada: 'Este postulante ya tiene una entrevista agendada. Para cambiarle el día se la reprograma, no se agenda otra.',
         entrevista_ya_cerrada: 'La entrevista ya está cerrada. Actualice la página.',
@@ -3147,7 +3147,7 @@ export const T = {
         documento_no_generado: 'That document has not been generated yet, so there is no saved copy.',
         // La entrevista de una postulación. Las lee quien agenda, nunca el postulante: a él la
         // puerta pública le contesta bien y la pantalla le dice en qué momento está.
-        fecha_invalida: 'Invalid date. Select the day and time again.',
+        fecha_invalida: 'Invalid date.',
         entrevista_en_el_pasado: 'That date has already passed. An interview is scheduled for a later time.',
         entrevista_ya_agendada: 'This applicant already has an interview scheduled. To change the day, reschedule it instead of booking another one.',
         entrevista_ya_cerrada: 'The interview is already closed. Reload the page.',
@@ -6131,7 +6131,7 @@ export const T = {
         documento_no_generado: 'Esse documento ainda não foi gerado, então não há nenhuma cópia guardada.',
         // La entrevista de una postulación. Las lee quien agenda, nunca el postulante: a él la
         // puerta pública le contesta bien y la pantalla le dice en qué momento está.
-        fecha_invalida: 'Data inválida. Selecione novamente o dia e a hora.',
+        fecha_invalida: 'Data inválida.',
         entrevista_en_el_pasado: 'Essa data já passou. Uma entrevista se agenda para mais adiante.',
         entrevista_ya_agendada: 'Este candidato já tem uma entrevista agendada. Para mudar o dia, ela se reagenda, não se agenda outra.',
         entrevista_ya_cerrada: 'A entrevista já está encerrada. Atualize a página.',

@@ -231,12 +231,18 @@ export function motivoDelError(error) {
  * @param tm     el bloque de textos ya traducido: `t.matricula`.
  */
 export function mensajeDeBloqueo(error, tm) {
-  const motivo = motivoDelError(error);
+  return fraseDeBloqueo(motivoDelError(error), tm);
+}
+
+/** Qué pasó y qué hacer, para un motivo de bloqueo ya conocido. La usan el aviso al asignar y
+ *  el cartel de la solapa Matrículas. La frase de qué pasó viene sin punto, y acá se le pone. */
+export function fraseDeBloqueo(motivo, tm) {
   if (!motivo || !tm) return null;
 
   const que = tm[`bloqueo_${motivo}`];
   const hacer = tm[`que_hacer_${motivo}`];
-  return [que, hacer].filter(Boolean).join(' ');
+  if (que && hacer) return `${que.replace(/[.!?]$/, '')}. ${hacer}`;
+  return que || hacer || null;
 }
 
 /** Las columnas de la vista que las pantallas piden. En un solo lugar para no repetirlas. */

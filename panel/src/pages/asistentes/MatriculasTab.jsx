@@ -9,7 +9,7 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError, errorDeLaRespuesta } from '../../lib/errores';
-import { COLUMNAS_ESTADO_MATRICULA } from '../../lib/matricula';
+import { COLUMNAS_ESTADO_MATRICULA, fraseDeBloqueo } from '../../lib/matricula';
 import { URGENCIA, diasParaVencer, urgenciaDeVencimiento } from '../../lib/reglaVencimientos';
 import { useModalAccesible } from '../../hooks/useModalAccesible';
 import '../hojaDeTarjetas.css';
@@ -172,7 +172,7 @@ export function MatriculasTab({ asistente }) {
       return {
         variant: 'error',
         titulo: tm.bloqueo_titulo,
-        detalle: [tm[`bloqueo_${motivo}`], tm[`que_hacer_${motivo}`]].filter(Boolean).join(' '),
+        detalle: fraseDeBloqueo(motivo, tm),
       };
     }
 

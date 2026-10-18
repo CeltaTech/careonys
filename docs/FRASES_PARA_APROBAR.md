@@ -2,6 +2,8 @@
 
 Textos que hoy ven las personas que usan Careonys y que tienen una redacción dudosa o hablan de «invitación». Cada ficha muestra el texto actual, una propuesta y dónde aparece, para decidir uno por uno.
 
+Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
+
 **Total: 121 fichas.** Panel 73, aplicación del Asistente 27, aplicación del Cliente 19, Base 2.
 
 En el texto actual, la parte en cuestión va en **negrita**.
@@ -11,6 +13,9 @@ En el texto actual, la parte en cuestión va en **negrita**.
 ### 1. Sesión vencida
 - **Texto actual:** Pasó demasiado tiempo sin actividad. **Hace falta volver a entrar.**
 - **Texto propuesto:** El acceso venció por inactividad. Ingrese nuevamente.
+- **Propuesta corta:** «Sesión vencida. Ingrese nuevamente.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** dice qué pasó sin afirmar una causa que no siempre es cierta. «Ingrese nuevamente» se queda porque es lo único que se puede hacer.
 - **Qué cambió:** dice qué pasó y qué hacer, en imperativo.
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** cualquier parte del Panel que le pide algo al sistema. Por ejemplo: Panel → Configuración → Usuarios del Panel; Panel → Configuración → La Prestadora, tarjeta «La moneda»; Panel → Guardias → Emergencias, ventana «Emergencia».
@@ -24,6 +29,9 @@ Decisión: ____
 ### 2. Dato mal cargado
 - **Texto actual:** Hay un dato mal cargado. **Conviene revisar lo que se escribió.**
 - **Texto propuesto:** Datos no válidos. Revise la información e intente nuevamente.
+- **Propuesta corta:** «Datos no válidos.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** «Revise la información e intente nuevamente» es la instrucción obvia que el criterio saca.
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** cualquier parte del Panel donde el sistema rechaza un dato sin un motivo propio. Por ejemplo: Panel → Asistentes → Pagos a Asistentes, ventana «Detalle de la liquidación», al registrar un pago que otra persona ya registró; Panel → Clientes → un Cliente, solapa «Personas autorizadas», al tocar «Registrar la firma» sin elegir el archivo.
@@ -37,6 +45,9 @@ Decisión: ____
 ### 3. El email ya tiene una cuenta en esta Prestadora
 - **Texto actual:** Ese correo ya tiene una cuenta en esta Prestadora. **Conviene buscarla en la lista antes de crear una nueva.**
 - **Texto propuesto:** El email ya está registrado en esta Prestadora. Búsquelo en la lista.
+- **Propuesta corta:** «Email en uso. Ingrese otro.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** es el mismo molde que «Título en uso. Ingrese otro.», ya aprobado.
 - **Qué cambió:** imperativo en lugar de «conviene»; «email», como dice la etiqueta.
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Configuración → Usuarios del Panel → «Nuevo Coordinador». El sistema da el mismo motivo en el alta de un Asistente, al aprobar una postulación, al agregar una persona autorizada y al importar datos; no se pudo confirmar cómo se muestra en esos cuatro.
@@ -50,6 +61,9 @@ Decisión: ____
 ### 4. El email ya está en uso
 - **Texto actual:** Ese correo ya está en uso. **Hace falta indicar otro.**
 - **Texto propuesto:** El email ya está en uso. Ingrese otro.
+- **Propuesta corta:** Sacar la frase
+- **¿Aparece hoy?:** no
+- **Por qué:** nadie la dispara. El caso real lo cubre la ficha 3.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** hoy no aparece en ninguna parte. Describiría un alta con un email que ya usa otra cuenta.
@@ -63,6 +77,9 @@ Decisión: ____
 ### 5. Nombre de Prestadora repetido
 - **Texto actual:** Ya hay una Prestadora con ese nombre. **Hace falta usar otro:** de ese nombre sale la dirección desde la que manda sus mensajes.
 - **Texto propuesto:** Ya existe una Prestadora con ese nombre. Ingrese otro.
+- **Propuesta corta:** ya sacada. Se cierra la ficha
+- **¿Aparece hoy?:** no
+- **Por qué:** el alta de Prestadora pasó a CeltaTech.
 - **Qué cambió:** imperativo, y sin la explicación de cómo funciona el sistema por dentro.
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** hoy no aparece en ninguna parte: el Panel no da de alta Prestadoras. Describiría el alta de una Prestadora con un nombre que ya usa otra.
@@ -76,6 +93,9 @@ Decisión: ____
 ### 6. País sin moneda configurada
 - **Texto actual:** Todavía no está cargado en qué moneda trabaja ese país, así que no se puede dar de alta una Prestadora ahí. **Hace falta agregarlo antes.**
 - **Texto propuesto:** El país no tiene una moneda configurada. Configure la moneda antes de continuar.
+- **Propuesta corta:** ya sacada. Se cierra la ficha
+- **¿Aparece hoy?:** no
+- **Por qué:** igual que la 5.
 - **Qué cambió:** más corto; dice qué pasó y qué hacer.
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** hoy no aparece en ninguna parte: el Panel no da de alta Prestadoras. Describiría el alta de una Prestadora en un país sin moneda configurada.
@@ -89,6 +109,9 @@ Decisión: ____
 ### 7. No se pudo crear la dirección de la Prestadora
 - **Texto actual:** No se pudo darle una dirección propia de ingreso a esa Prestadora. **Hace falta usar otro nombre.**
 - **Texto propuesto:** No se pudo crear la dirección de la Prestadora. Ingrese otro nombre.
+- **Propuesta corta:** ya sacada. Se cierra la ficha
+- **¿Aparece hoy?:** no
+- **Por qué:** igual que la 5.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** hoy no aparece en ninguna parte: el Panel no da de alta Prestadoras. Describiría el alta de una Prestadora cuando el sistema no logra crearle su dirección.
@@ -102,6 +125,9 @@ Decisión: ____
 ### 8. Moneda que ya no está en la lista
 - **Texto actual:** Esa moneda no está entre las que se pueden elegir. **Conviene recargar la pantalla y elegir una de la lista.**
 - **Texto propuesto:** Moneda no disponible. Actualice la página y elija una de la lista.
+- **Propuesta corta:** Sacar la frase. Ese caso cae en el aviso general («Datos no válidos.»), igual que la unidad de tiempo (ficha 20)
+- **¿Aparece hoy?:** no
+- **Por qué:** es un aviso para un caso que la propia lista impide.
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Configuración → La Prestadora, tarjeta «La moneda», botón «Guardar».
@@ -115,6 +141,9 @@ Decisión: ____
 ### 9. Software que ya no está en la lista
 - **Texto actual:** Ese software no está entre los que se pueden elegir. **Conviene recargar la pantalla y elegir uno de la lista.**
 - **Texto propuesto:** Software no disponible. Actualice la página y elija uno de la lista.
+- **Propuesta corta:** ya sacada. Se cierra la ficha
+- **¿Aparece hoy?:** no
+- **Por qué:** la pantalla que la usaba no existe.
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** la administración de la Prestadora.
 - **Dónde está:** Panel → Configuración → La Prestadora, tarjetas «El software de facturación» y «El software de créditos y cobranzas», botón «Guardar».
@@ -128,6 +157,9 @@ Decisión: ____
 ### 10. Domicilio temporal superpuesto
 - **Texto actual:** Ya hay un domicilio temporal cargado para este Paciente en esas fechas. Un Paciente no puede estar en dos lugares el mismo día: **conviene revisar el período ya cargado antes de agregar otro.**
 - **Texto propuesto:** El Paciente ya tiene un domicilio temporal en esas fechas. Revise el período cargado y modifique las fechas.
+- **Propuesta corta:** «Período superpuesto con otro domicilio temporal.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** sirve para los dos casos, el alta y el término.
 - **Qué cambió:** más corto, imperativo, sin la explicación del medio.
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Clientes → un Cliente → solapa «Pacientes» → «Domicilios temporales» → «Cargar un domicilio temporal» → «Guardar». No se pudo confirmar si también sale al cambiar la fecha con «Terminar el período».
@@ -141,6 +173,9 @@ Decisión: ____
 ### 11. Pedido ya resuelto por otra persona
 - **Texto actual:** Ese pedido ya lo resolvió otra persona. **Conviene recargar la lista para ver cómo quedó.**
 - **Texto propuesto:** Otro usuario ya resolvió este pedido. Actualice la lista.
+- **Propuesta corta:** «Ya resuelto.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** es el molde de «Ya enviada.». Quién lo resolvió no cambia nada.
 - **Qué cambió:** imperativo y sin «para ver cómo quedó».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Guardias → Emergencias, ventana «Emergencia», botón «Marcar atendida»; Panel → Guardias → Pase de guardia, tarjeta «Esperando un código», botón «Soltar el código».
@@ -154,6 +189,9 @@ Decisión: ____
 ### 12. Revisión ya cerrada
 - **Texto actual:** Esa llegada ya está cerrada. **Conviene recargar la lista.**
 - **Texto propuesto:** Este registro ya está cerrado. Actualice la lista.
+- **Propuesta corta:** «Ya cerrado.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** es telegráfico y sirve tanto para la revisión como para la instrucción.
 - **Qué cambió:** imperativo; la frase sirve también para el caso de la firma, donde hoy habla de una «llegada».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Guardias → Pase de guardia, tarjeta «Llegadas y salidas sin comprobar», ventana «Cerrar la revisión»; Panel → Clientes → un Cliente → solapa «Personas autorizadas», ventana «Registrar la firma».
@@ -167,6 +205,9 @@ Decisión: ____
 ### 13. Forma de pago que no corresponde
 - **Texto actual:** Ese medio de pago no se usa en la modalidad de trabajo que paga esta liquidación. **Hace falta elegir otro de la lista.**
 - **Texto propuesto:** La forma de pago no corresponde a la modalidad de esta liquidación. Elija otra.
+- **Propuesta corta:** ya sacada. Se cierra la ficha
+- **¿Aparece hoy?:** no
+- **Por qué:** salió el medio de pago atado a una modalidad.
 - **Qué cambió:** imperativo; «forma de pago», como dice la etiqueta.
 - **Quién lo lee:** la administración de la Prestadora.
 - **Dónde está:** Panel → Asistentes → Pagos a Asistentes → Liquidaciones, ventana «Detalle de la liquidación», botón «Registrar el pago».
@@ -180,6 +221,9 @@ Decisión: ____
 ### 14. Persona que ya no está autorizada
 - **Texto actual:** Esa persona no figura entre las personas autorizadas de este Cliente, así que no hay nada que quitar. **Conviene recargar la lista para ver cómo quedó.**
 - **Texto propuesto:** Esa persona ya no es una persona autorizada de este Cliente. Actualice la lista.
+- **Propuesta corta:** queda «No figura en el registro.» · en «Not found in the records.» · pt-BR «Não consta no registro.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** ya es corta y está aprobada.
 - **Qué cambió:** más corto, imperativo, sin «para ver cómo quedó».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** hoy no aparece en ninguna parte con este texto. El caso existe en Panel → Clientes → un Cliente → solapa «Personas autorizadas» → «Quitar acceso», cuando otra persona ya lo había quitado; hoy ahí se lee «Ya existe un registro con esos datos».
@@ -219,6 +263,9 @@ Decisión: ____
 ### 17. Más de una pasarela de cobro
 - **Texto actual:** Esta Prestadora tiene más de una pasarela de cobro conectada. **Hace falta elegir con cuál se va a cobrar este acceso.**
 - **Texto propuesto:** Hay más de una pasarela de cobro conectada. Elija con cuál cobrar este acceso.
+- **Propuesta corta:** «Elija una pasarela de cobro.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** el selector está a la vista. Alcanza con decir qué falta, como el texto al pie de un campo.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** la administración de la Prestadora.
 - **Dónde está:** Panel → Clientes → Clientes (Match) → «Ver cobros», recuadro «Alta en la pasarela de cobro».
@@ -232,6 +279,8 @@ Decisión: ____
 ### 18. Pasarela de cobro no disponible
 - **Texto actual:** Esa pasarela de cobro no está disponible. **Conviene recargar la pantalla y elegir una de la lista.**
 - **Texto propuesto:** Pasarela de cobro no disponible. Actualice la página y elija otra de la lista.
+- **Propuesta corta:** «Pasarela de cobro no disponible.»
+- **Por qué:** en el Panel no hay ningún camino que la dispare. En la aplicación del Cliente es un caso de borde, y la instrucción actual no corresponde a esa pantalla.
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** la administración de la Prestadora.
 - **Dónde está:** en teoría, Panel → Clientes → Clientes (Match) → «Ver cobros», recuadro «Alta en la pasarela de cobro». No se pudo confirmar ningún caso real en el Panel; sí puede salir en la aplicación del Cliente, al dar de baja un acceso.
@@ -245,6 +294,9 @@ Decisión: ____
 ### 19. Forma de cobro con nombre repetido
 - **Texto actual:** Ya hay otra forma de cobro con ese nombre. **Conviene ponerle uno que se distinga.**
 - **Texto propuesto:** Ya existe una forma de cobro con ese nombre. Ingrese otro nombre.
+- **Propuesta corta:** «Nombre en uso. Ingrese otro.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** es el mismo molde que «Título en uso. Ingrese otro.».
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** la administración de la Prestadora.
 - **Dónde está:** Panel → Facturación → Formas de cobro de Match, ventana de la forma de cobro, botón «Guardar».
@@ -271,6 +323,9 @@ Decisión: ____
 ### 21. Renovación sin período
 - **Texto actual:** Una forma que se cobra una sola vez no se puede renovar sola. **Hace falta cargarle un período, o dejarla sin renovación.**
 - **Texto propuesto:** Una forma de cobro sin período no se renueva sola. Ingrese un período o desmarque la renovación.
+- **Propuesta corta:** «Ingrese un período o desmarque la renovación.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** la primera mitad («una forma sin período no se renueva sola») explica una regla del sistema. Alcanza con decir qué hacer.
 - **Qué cambió:** imperativo.
 - **Quién lo lee:** la administración de la Prestadora.
 - **Dónde está:** Panel → Facturación → Formas de cobro de Match, ventana de la forma de cobro.
@@ -310,6 +365,9 @@ Decisión: ____
 ### 24. No se encontró el cese
 - **Texto actual:** No se encontró ese cese. **Conviene recargar la lista.**
 - **Texto propuesto:** Cese no encontrado. Actualice la página.
+- **Propuesta corta:** Sacar la frase. Ese caso cae en el aviso general de «no encontrado»
+- **¿Aparece hoy?:** no
+- **Por qué:** un cese no desaparece, así que el aviso no tiene caso real.
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** la administración de la Prestadora.
 - **Dónde está:** Panel → Asistentes → Padrón de Asistentes → Legajo, solapa «Vínculo y Cese», recuadro «Historial de ceses».
@@ -336,6 +394,9 @@ Decisión: ____
 ### 26. Entrevista ya cerrada
 - **Texto actual:** Esa entrevista ya está cerrada. **Conviene recargar para ver cómo quedó.**
 - **Texto propuesto:** La entrevista ya está cerrada. Actualice la página.
+- **Propuesta corta:** «Entrevista ya cerrada.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** sale «Actualice la página», que es la instrucción obvia.
 - **Qué cambió:** imperativo y sin «para ver cómo quedó».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Asistentes → Postulaciones → una postulación, recuadro «Entrevista», botones «Se hizo» y «No se presentó».
@@ -349,6 +410,9 @@ Decisión: ____
 ### 27. Consentimiento que ya no espera firma
 - **Texto actual:** Ese consentimiento ya no está esperando firma. **Conviene recargar para ver cómo quedó.**
 - **Texto propuesto:** Este consentimiento ya no está pendiente de firma. Actualice la página.
+- **Propuesta corta:** «Ya firmado o anulado.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** nombra los dos únicos estados posibles ( o ) sin la palabra interna «pendiente de firma».
 - **Qué cambió:** imperativo y sin «para ver cómo quedó».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Guardias → Medicación, indicación con «Falta la firma»; Panel → Clientes → un Cliente → solapa «Contacto», recuadro «Quién paga».
@@ -362,6 +426,9 @@ Decisión: ____
 ### 28. Botón para reenviar el enlace
 - **Texto actual:** **Reenviar invitación**
 - **Texto propuesto:** Reenviar enlace
+- **Propuesta corta:** queda la propuesta: «Reenviar enlace» · «Resend link» · «Reenviar link»
+- **¿Aparece hoy?:** sí
+- **Por qué:** es un botón y ya está bien.
 - **Qué cambió:** sale «invitación»; lo que se reenvía es el enlace para activar la cuenta.
 - **Quién lo lee:** la administración de la Prestadora (en el Cliente, también quien puede editar sus datos).
 - **Dónde está:** Panel → Padrón de Asistentes → Legajo, solapa «Perfil»; Panel → Clientes → un Cliente, en la cabecera y en cada renglón de «Personas autorizadas».
@@ -375,6 +442,9 @@ Decisión: ____
 ### 29. Enlace reenviado
 - **Texto actual:** **Invitación reenviada.**
 - **Texto propuesto:** Enlace de activación reenviado.
+- **Propuesta corta:** «Enlace reenviado.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** el botón ya dice qué enlace es. «de activación» sobra.
 - **Qué cambió:** sale «invitación».
 - **Quién lo lee:** la administración de la Prestadora.
 - **Dónde está:** Panel → Padrón de Asistentes → Legajo, solapa «Perfil»; Panel → Clientes → un Cliente, debajo de la cabecera.
@@ -388,6 +458,9 @@ Decisión: ____
 ### 30. No se pudo reenviar el enlace
 - **Texto actual:** No se pudo reenviar la **invitación**.
 - **Texto propuesto:** No se pudo reenviar el enlace de activación. Intente nuevamente.
+- **Propuesta corta:** «No se pudo reenviar el enlace.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** sale «Intente nuevamente», que es la instrucción obvia.
 - **Qué cambió:** sale «invitación» y se agrega qué hacer.
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** los mismos lugares que la ficha 29.
@@ -401,6 +474,9 @@ Decisión: ____
 ### 31. Activar el segundo factor
 - **Texto actual:** **Hace falta escanear** este código con Google Authenticator, Authy u otra app similar, y escribir el código de 6 dígitos que muestra para confirmar.
 - **Texto propuesto:** Escanee este código con Google Authenticator, Authy u otra aplicación similar e ingrese el código de 6 dígitos.
+- **Propuesta corta:** «Escanee el código con una aplicación de códigos e ingrese los 6 dígitos.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** es la única instrucción de un paso que no es obvio. Los nombres de marca de terceros sobran.
 - **Qué cambió:** imperativo; «aplicación» en lugar de «app».
 - **Quién lo lee:** el soporte técnico de CeltaTech, no la coordinación de la Prestadora.
 - **Dónde está:** Panel → «Activación del segundo factor de seguridad», al ingresar.
@@ -414,6 +490,9 @@ Decisión: ____
 ### 32. Código de recuperación enviado
 - **Texto actual:** Enviamos un código al email registrado. **Hace falta revisar la bandeja de entrada** (vence en 10 minutos).
 - **Texto propuesto:** Código enviado al email registrado. Revise su bandeja de entrada (validez: 10 minutos).
+- **Propuesta corta:** «Código enviado al email registrado. Vence en 10 minutos.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** «Revise su bandeja de entrada» es obvio. El vencimiento sí es dato útil. Ojo: el «10» está escrito en la frase; si cambia la vigencia, hay que cambiarla a mano.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** el soporte técnico de CeltaTech, no la coordinación de la Prestadora.
 - **Dónde está:** Panel → «Recuperar acceso», a la que se llega desde «Verificación en dos pasos».
@@ -427,6 +506,9 @@ Decisión: ____
 ### 33. Enlace de ingreso incompleto
 - **Texto actual:** Este enlace no sirve. **Conviene pedir uno nuevo a quien creó la cuenta.**
 - **Texto propuesto:** Enlace no válido. Solicite un enlace nuevo a quien creó la cuenta.
+- **Propuesta corta:** «Enlace no válido.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** sirve para las dos pantallas. Si se quiere la indicación para la activación, debería ser una frase aparte.
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** quien recibió un enlace por correo para entrar al Panel, sobre todo la administración de una Prestadora nueva.
 - **Dónde está:** Panel → «Activar la cuenta» y Panel → «Elegir una contraseña nueva».
@@ -440,6 +522,9 @@ Decisión: ____
 ### 34. Antes de activar la verificación en dos pasos
 - **Texto actual:** **Conviene asegurarse** de que cada persona con una de esas cuentas ya tenga instalada una app generadora de códigos (Google Authenticator, Authy u otra) antes de confirmar, para poder enrolarse en el próximo login.
 - **Texto propuesto:** Antes de confirmar, verifique que cada usuario tenga instalada una aplicación de códigos (Google Authenticator, Authy u otra).
+- **Propuesta corta:** «Cada usuario necesita una aplicación de códigos instalada.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** dice la consecuencia sin marcas de terceros ni «Antes de confirmar», que ya lo dice la ventana. Los renglones vecinos siguen largos, con «Admin_plataforma» y «celular con esa app». Son de otra ficha, pero desentonan.
 - **Qué cambió:** imperativo; sin «app», «enrolarse» ni «login».
 - **Quién lo lee:** el soporte técnico de CeltaTech, no la coordinación de la Prestadora.
 - **Dónde está:** Panel → Configuración → Accesos, tarjeta «Verificación en dos pasos (MFA)», ventana «Antes de activar la verificación en dos pasos».
@@ -453,6 +538,9 @@ Decisión: ____
 ### 35. Valor del tope semanal
 - **Texto actual:** Desde qué parte del tope semanal **ya conviene avisar** (0 a 1)
 - **Texto propuesto:** Umbral del tope semanal (0 a 1)
+- **Propuesta corta:** «Desde qué parte del tope se considera cerca (0,1 a 1)»
+- **¿Aparece hoy?:** sí
+- **Por qué:** va en paralelo a las etiquetas vecinas («Hasta cuántos kilómetros se considera cerca», y corrige el rango.
 - **Qué cambió:** la etiqueta nombra el valor; «avisar» no describía lo que hace.
 - **Quién lo lee:** la administración de la Prestadora.
 - **Dónde está:** Panel → Configuración → El cuidado, tarjeta «Cómo se ordena la lista de candidatos» → «Ver y cambiar cada número», tabla «Los topes».
@@ -466,6 +554,9 @@ Decisión: ____
 ### 36. Falta el archivo a importar
 - **Texto actual:** **Hace falta elegir** un archivo antes de analizar
 - **Texto propuesto:** Elija un archivo para analizar.
+- **Propuesta corta:** «Elija un archivo.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** «para analizar» repite el botón que se acaba de apretar.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** la administración, o quien tenga permiso para importar datos.
 - **Dónde está:** Panel → Importar datos, tarjeta «Archivo».
@@ -479,6 +570,9 @@ Decisión: ____
 ### 37. Paso de la guía: sumar a alguien del equipo
 - **Texto actual:** **Invitar** a otro usuario del equipo
 - **Texto propuesto:** Agregar un Coordinador
+- **Propuesta corta:** «Agregar un Coordinador»
+- **¿Aparece hoy?:** sí
+- **Por qué:** ya es corta y dice lo que completa el paso.
 - **Qué cambió:** sale «invitar»; el paso se completa sólo con un Coordinador, y el título lo dice.
 - **Quién lo lee:** la administración de la Prestadora.
 - **Dónde está:** Panel → Configuración → Puesta en marcha, tarjeta «Guía de primeros pasos», último paso.
@@ -492,6 +586,9 @@ Decisión: ____
 ### 38. Botón para sumar a alguien del equipo
 - **Texto actual:** **Invitar** usuario
 - **Texto propuesto:** Agregar usuario
+- **Propuesta corta:** «Agregar Coordinador»
+- **¿Aparece hoy?:** sí
+- **Por qué:** igual que los otros pasos («Cargar Asistente», «Cargar Cliente») y que lo que hace la página.
 - **Qué cambió:** sale «invitar».
 - **Quién lo lee:** la administración de la Prestadora.
 - **Dónde está:** Panel → Configuración → Puesta en marcha, «Guía de primeros pasos», al lado del paso de la ficha 37.
@@ -505,6 +602,9 @@ Decisión: ____
 ### 39. Falta la planilla
 - **Texto actual:** **Hace falta elegir** una planilla.
 - **Texto propuesto:** Elija una planilla.
+- **Propuesta corta:** «Falta la planilla.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** sustantivo + estado; la instrucción es obvia.
 - **Qué cambió:** imperativo. Mismo caso que la ficha 36, desde la guía.
 - **Quién lo lee:** la administración con permiso para importar datos.
 - **Dónde está:** Panel → Configuración → Puesta en marcha, tarjeta «Empezar desde una planilla».
@@ -518,6 +618,9 @@ Decisión: ____
 ### 40. Enlace de entrevista que ya no sirve
 - **Texto actual:** Puede que la entrevista se haya cancelado o que el enlace esté incompleto. Si le queda alguna duda, **conviene responder** el correo con el que se la citó.
 - **Texto propuesto:** La entrevista no está disponible. Si tiene dudas, responda el correo de la citación.
+- **Propuesta corta:** «Ante dudas, responda el email de la citación.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** «La entrevista no está disponible» repite el título «Este enlace ya no abre nada».
 - **Qué cambió:** afirma en lugar de suponer; imperativo.
 - **Quién lo lee:** el postulante.
 - **Dónde está:** página de la entrevista que abre el enlace del correo, debajo de «Este enlace ya no abre nada».
@@ -531,6 +634,9 @@ Decisión: ____
 ### 41. Todavía no es la hora de la entrevista
 - **Texto actual:** La sala se abre unos minutos antes. **Conviene volver a entrar** por este mismo enlace el día y la hora de la cita.
 - **Texto propuesto:** La sala se abre minutos antes de la hora. Vuelva a abrir este enlace el día y la hora de la cita.
+- **Propuesta corta:** «Acceso habilitado {{anticipo}} minutos antes.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** el título ya dice «Todavía no es la hora»; volver a abrir el enlace es obvio.
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** el postulante.
 - **Dónde está:** página de la entrevista, debajo de «Todavía no es la hora».
@@ -544,6 +650,9 @@ Decisión: ____
 ### 42. La entrevista ya pasó
 - **Texto actual:** Si **hace falta** una fecha nueva, la Prestadora va a avisar por correo.
 - **Texto propuesto:** Si la Prestadora fija una fecha nueva, le avisará por correo.
+- **Propuesta corta:** «Si hay fecha nueva, le llegará por email.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** más corta y sin nombrar a quién decide.
 - **Qué cambió:** voz activa, sin «hace falta».
 - **Quién lo lee:** el postulante.
 - **Dónde está:** página de la entrevista, debajo de «Esta entrevista ya pasó».
@@ -557,6 +666,9 @@ Decisión: ____
 ### 43. Falta cómo recibe el trabajo
 - **Texto actual:** **Hace falta marcar** al menos una forma de recibir el trabajo.
 - **Texto propuesto:** Marque al menos una forma de recibir el trabajo.
+- **Propuesta corta:** «Falta cómo recibe el trabajo.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** repite la etiqueta del grupo «Cómo recibe el trabajo».
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** la administración de la Prestadora.
 - **Dónde está:** Panel → Padrón de Asistentes, ventana «Nuevo Asistente»; Panel → Padrón de Asistentes → Legajo, solapa «Perfil».
@@ -570,6 +682,9 @@ Decisión: ____
 ### 44. Falta la matrícula
 - **Texto actual:** **Hace falta cargar** la matrícula en el Padrón de Asistentes, en la solapa Matrículas.
 - **Texto propuesto:** Cargue la matrícula en el Legajo, solapa Matrículas.
+- **Propuesta corta:** «Cargue la matrícula en el Legajo.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** en Guardias la instrucción no es obvia; la solapa se encuentra sola.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Padrón de Asistentes → Legajo, solapa «Matrículas»; Panel → Guardias, arriba de la página.
@@ -583,6 +698,9 @@ Decisión: ____
 ### 45. Falta la matrícula renovada
 - **Texto actual:** **Hace falta cargar** la matrícula renovada en el Padrón de Asistentes, en la solapa Matrículas.
 - **Texto propuesto:** Cargue la matrícula renovada en el Legajo, solapa Matrículas.
+- **Propuesta corta:** «Cargue la matrícula renovada en el Legajo.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** igual que la 44.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** los mismos lugares que la ficha 44.
@@ -596,6 +714,9 @@ Decisión: ____
 ### 46. Todavía no hay Asistentes
 - **Texto actual:** Todavía no hay ningún Asistente cargado. **Hace falta sumar el primero para empezar a armar guardias.**
 - **Texto propuesto:** Todavía no hay Asistentes.
+- **Propuesta corta:** «Todavía no hay Asistentes.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** ya es neutra y corta.
 - **Qué cambió:** frase neutra de lista vacía, sin invitar a hacer nada.
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Padrón de Asistentes, en lugar de la lista.
@@ -609,6 +730,9 @@ Decisión: ____
 ### 47. Asistente no Activo para el certificado
 - **Texto actual:** Este Asistente todavía no está en estado Activo. **Hace falta cambiarlo en la pestaña Perfil antes de emitir el certificado.**
 - **Texto propuesto:** El Asistente no está Activo. Cambie su estado en la solapa Perfil para emitir el certificado.
+- **Propuesta corta:** «Asistente no Activo. Cámbielo en la solapa Perfil.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** la instrucción no es obvia (el estado se cambia en otra solapa); «para emitir el certificado» sobra.
 - **Qué cambió:** imperativo; «solapa», como en el resto del Panel.
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Padrón de Asistentes → Legajo, solapa «Certificado de Aptitud».
@@ -622,6 +746,9 @@ Decisión: ____
 ### 48. Todavía no hay Clientes
 - **Texto actual:** Todavía no hay ningún Cliente cargado. **Hace falta sumar el primero para empezar a registrar Pacientes.**
 - **Texto propuesto:** Todavía no hay Clientes.
+- **Propuesta corta:** «Todavía no hay Clientes.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** la frase está bien; el defecto es el paso de la guía que manda a una página sin alta.
 - **Qué cambió:** frase neutra de lista vacía, sin invitar a hacer nada.
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Directorio de Clientes, en lugar de la lista.
@@ -635,6 +762,9 @@ Decisión: ____
 ### 49. Consentimiento firmado por otra persona
 - **Texto actual:** El consentimiento firmado que está guardado lo firmó otra persona, no quien figura hoy como Pagador. **Conviene revisarlo.**
 - **Texto propuesto:** El consentimiento guardado lo firmó una persona distinta del Pagador actual. Revise el consentimiento.
+- **Propuesta corta:** «Consentimiento firmado por otra persona.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** está en el recuadro «Quién paga» y al lado de «sin firma»; «Revise» es obvio.
 - **Qué cambió:** más corto, imperativo.
 - **Quién lo lee:** la coordinación de la Prestadora que puede editar los datos del Cliente.
 - **Dónde está:** Panel → Clientes → un Cliente → solapa «Contacto», recuadro «Quién paga».
@@ -648,6 +778,9 @@ Decisión: ____
 ### 50. Botón para agregar una persona autorizada
 - **Texto actual:** **Invitar** a alguien
 - **Texto propuesto:** Agregar persona
+- **Propuesta corta:** «Agregar persona»
+- **¿Aparece hoy?:** sí
+- **Por qué:** corta y bajo el título «Personas autorizadas».
 - **Qué cambió:** sale «invitar»; coincide con el título de la ventana que abre.
 - **Quién lo lee:** la coordinación de la Prestadora que puede editar los datos del Cliente.
 - **Dónde está:** Panel → Clientes → un Cliente → solapa «Personas autorizadas», al lado del título.
@@ -661,6 +794,9 @@ Decisión: ____
 ### 51. Mientras se guarda la persona autorizada
 - **Texto actual:** **Invitando…**
 - **Texto propuesto:** Guardando…
+- **Propuesta corta:** «Guardando…»
+- **¿Aparece hoy?:** sí
+- **Por qué:** texto duplicado sin punto único de verdad.
 - **Qué cambió:** sale «invitar»; el botón dice lo que está haciendo.
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Clientes → un Cliente → solapa «Personas autorizadas», ventana «Agregar una persona autorizada».
@@ -674,6 +810,9 @@ Decisión: ____
 ### 52. Ninguna conversación abierta
 - **Texto actual:** **Hace falta elegir** una conversación de la lista.
 - **Texto propuesto:** No hay ninguna conversación abierta.
+- **Propuesta corta:** «Ninguna conversación abierta.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** sustantivo + participio.
 - **Qué cambió:** frase neutra, sin pedirle nada.
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Comunicación, lado derecho.
@@ -687,6 +826,9 @@ Decisión: ____
 ### 53. Confirmar la cancelación de varias guardias
 - **Texto actual:** Se van a cancelar {n} guardias. Desde acá no se deshace: cada una **habría que** volver a crearla. ¿Confirma?
 - **Texto propuesto:** ¿Cancelar {n} guardias? No se puede deshacer.
+- **Propuesta corta:** «¿Cancelar {n} guardias? No se puede deshacer.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** con una sola dice «1 guardias»; ya usa para el singular en otro texto.
 - **Qué cambió:** pregunta breve con el verbo, sin «habría que». Con una sola guardia tiene que decir «1 guardia»: hoy dice «1 guardias».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Guardias, grilla con varias guardias marcadas → «Cancelar las guardias» → «Aplicar».
@@ -700,6 +842,9 @@ Decisión: ____
 ### 54. Título de los avisos antes de asignar
 - **Texto actual:** **Antes de asignar, conviene mirar esto**
 - **Texto propuesto:** Revise antes de asignar
+- **Propuesta corta:** Sacar la frase
+- **¿Aparece hoy?:** no
+- **Por qué:** no se muestra en ninguna parte.
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** hoy no aparece en ninguna parte. Sería el título de los avisos antes de asignar una guardia: superposición, ausencia, falta de descanso, horas extra o documentación por vencer.
@@ -713,6 +858,9 @@ Decisión: ____
 ### 55. Falta el Paciente de la guardia
 - **Texto actual:** **Hace falta marcar** al menos un Paciente.
 - **Texto propuesto:** Marque al menos un Paciente.
+- **Propuesta corta:** Sacar la frase
+- **¿Aparece hoy?:** no
+- **Por qué:** inalcanzable.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Guardias, ventana «Nueva guardia», casillero «A quiénes atiende».
@@ -726,6 +874,9 @@ Decisión: ____
 ### 56. Falta el Servicio de la guardia
 - **Texto actual:** **Hace falta elegir** el Servicio.
 - **Texto propuesto:** Elija el Servicio.
+- **Propuesta corta:** Sacar la frase
+- **¿Aparece hoy?:** no
+- **Por qué:** inalcanzable.
 - **Qué cambió:** imperativo. Es la misma propuesta que la ficha 63.
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Guardias, ventana «Nueva guardia», casillero «Servicio».
@@ -739,6 +890,9 @@ Decisión: ____
 ### 57. Faltan los días de una guardia recurrente
 - **Texto actual:** **Hace falta elegir** al menos un día de la semana.
 - **Texto propuesto:** Elija al menos un día de la semana.
+- **Propuesta corta:** «Faltan los días de la semana.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** sustantivo + estado; marcar es obvio.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Guardias, ventana «Nueva guardia», con «Es una guardia recurrente (serie)» marcada, casillero «Días de la semana».
@@ -752,6 +906,9 @@ Decisión: ____
 ### 58. Falta la fecha límite de pago de los saldos
 - **Texto actual:** **Hace falta indicar** hasta qué día tienen para pagar antes de generar los saldos.
 - **Texto propuesto:** Ingrese la fecha límite de pago para generar los saldos.
+- **Propuesta corta:** Sacar la frase
+- **¿Aparece hoy?:** no
+- **Por qué:** ninguna parte del Panel la usa.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** hoy no aparece en ninguna parte. Describiría generar los saldos en Saldos pendientes sin fecha límite de pago. Hoy, el resultado avisa qué Clientes quedaron sin saldo porque no tienen plazo acordado.
@@ -765,6 +922,9 @@ Decisión: ____
 ### 59. Falta el motivo para anular un cobro
 - **Texto actual:** **Hace falta decir** por qué se anula el cobro.
 - **Texto propuesto:** Ingrese el motivo de la anulación.
+- **Propuesta corta:** «Falta el motivo.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** va pegado al campo «Por qué se anula»; el resto sobra.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Saldos pendientes → un saldo → «Anular» en un cobro, casillero «Por qué se anula».
@@ -778,6 +938,9 @@ Decisión: ____
 ### 60. Falta el importe o el tipo de comprobante
 - **Texto actual:** **Hace falta** el importe del comprobante y cómo se llama.
 - **Texto propuesto:** Ingrese el importe y el tipo de comprobante.
+- **Propuesta corta:** Sacar la frase
+- **¿Aparece hoy?:** no
+- **Por qué:** ninguna parte del Panel la usa.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** hoy no aparece en ninguna parte. Describiría anotar lo emitido de un saldo sin el importe o el tipo de comprobante.
@@ -791,6 +954,9 @@ Decisión: ____
 ### 61. Faltan datos de la corrección
 - **Texto actual:** **Hace falta** el importe, cómo se llama el comprobante y por qué se corrige.
 - **Texto propuesto:** Ingrese el importe, el tipo de comprobante y el motivo de la corrección.
+- **Propuesta corta:** Sacar la frase
+- **¿Aparece hoy?:** no
+- **Por qué:** ninguna parte del Panel la usa.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** hoy no aparece en ninguna parte. Describiría Panel → Facturación → Saldos pendientes, «Anotar una corrección», sin alguno de esos datos; hoy el botón queda apagado mientras falte uno.
@@ -804,6 +970,9 @@ Decisión: ____
 ### 62. Sólo los reportes más recientes
 - **Texto actual:** Se muestran los reportes más recientes del período. Si **hace falta** ver más, **conviene achicar** el rango de fechas.
 - **Texto propuesto:** Se muestran sólo los reportes más recientes del período. Para ver otros, acorte el rango de fechas.
+- **Propuesta corta:** «Se muestran los {n} más recientes. Acorte las fechas para ver otros.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** dice el tope real sin escribirlo a mano; la instrucción no es obvia.
 - **Qué cambió:** imperativo, sin «hace falta» ni «conviene».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Guardias → Reportes diarios (sólo en prestación directa).
@@ -817,6 +986,9 @@ Decisión: ____
 ### 63. Falta el Servicio de la Prestación
 - **Texto actual:** **Hace falta elegir** el Servicio.
 - **Texto propuesto:** Elija el Servicio.
+- **Propuesta corta:** Sacar la frase
+- **¿Aparece hoy?:** no
+- **Por qué:** inalcanzable en los dos lugares.
 - **Qué cambió:** imperativo. Es la misma propuesta que la ficha 56.
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Clientes → un Cliente → solapa «Pacientes» → «Prestaciones», formulario «Nueva Prestación» y tarjeta «Cierre de servicio».
@@ -830,6 +1002,9 @@ Decisión: ____
 ### 64. Falta el servicio de la Lista de Precios
 - **Texto actual:** **Hace falta elegir** un servicio de la Lista de Precios.
 - **Texto propuesto:** Elija un servicio de la Lista de Precios.
+- **Propuesta corta:** «Falta el servicio de la Lista de Precios.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** sustantivo + estado.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Clientes → un Cliente → solapa «Pacientes» → «Prestaciones», formulario «Nueva Prestación».
@@ -843,6 +1018,9 @@ Decisión: ____
 ### 65. Faltan Prestaciones o el precio del paquete
 - **Texto actual:** **Hace falta elegir** al menos dos Prestaciones y cargar un precio para el paquete.
 - **Texto propuesto:** Elija al menos dos Prestaciones e ingrese el precio del paquete.
+- **Propuesta corta:** «Elija dos Prestaciones o más y el precio.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** el mínimo de dos no es obvio; se dice y se acorta.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Clientes → un Cliente → solapa «Pacientes» → «Prestaciones» → «Armar paquete con las seleccionadas».
@@ -856,6 +1034,9 @@ Decisión: ____
 ### 66. Motivo de cierre del Servicio
 - **Texto actual:** Ya no **hace falta** el cuidado
 - **Texto propuesto:** El Paciente ya no necesita cuidado
+- **Propuesta corta:** «El Paciente ya no necesita cuidado»
+- **¿Aparece hoy?:** sí
+- **Por qué:** es una etiqueta de opción y ya es clara. (No se verificó contra la base que el motivo de fábrica siga cargado.)
 - **Qué cambió:** sin «hace falta»; dice de quién se habla.
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Clientes → un Cliente → «Prestaciones», tarjeta «Cierre de servicio», casillero «Motivo del cierre»; Panel → Configuración → El cuidado, «Motivos de cierre del Servicio»; Panel → Guardias → Continuidad de guardia.
@@ -869,6 +1050,9 @@ Decisión: ____
 ### 67. Falta el motivo del cierre
 - **Texto actual:** **Hace falta elegir** el motivo del cierre.
 - **Texto propuesto:** Elija el motivo del cierre.
+- **Propuesta corta:** Sacar la frase
+- **¿Aparece hoy?:** no
+- **Por qué:** inalcanzable.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Clientes → un Cliente → «Prestaciones», tarjeta «Cierre de servicio».
@@ -882,6 +1066,9 @@ Decisión: ____
 ### 68. Conviviente hospitalizado
 - **Texto actual:** {paciente} convive con este Paciente y está hospitalizado — **conviene evaluar si hace falta** reforzar su cobertura.
 - **Texto propuesto:** {paciente} convive con este Paciente y está hospitalizado. Evalúe si corresponde reforzar la cobertura.
+- **Propuesta corta:** «{paciente} convive con este Paciente y está hospitalizado. Revise la cobertura.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** «Evalúe si corresponde reforzar» se acorta sin perder la acción.
 - **Qué cambió:** imperativo, sin «conviene» ni «hace falta».
 - **Quién lo lee:** el Administrador y el Coordinador.
 - **Dónde está:** Panel → Clientes → un Cliente → «Prestaciones», tarjeta «Hospitalización».
@@ -895,6 +1082,9 @@ Decisión: ____
 ### 69. Faltan datos de la autorización de signos vitales
 - **Texto actual:** **Hace falta completar** nombre, fecha y archivo antes de guardar.
 - **Texto propuesto:** Complete el nombre, la fecha y el archivo.
+- **Propuesta corta:** «Faltan nombre, fecha o archivo.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** sustantivo + estado.
 - **Qué cambió:** imperativo, sin «antes de guardar».
 - **Quién lo lee:** la coordinación de la Prestadora.
 - **Dónde está:** Panel → Clientes → un Cliente → solapa «Pacientes» → «Monitoreo de signos vitales» → «Cargar autorización».
@@ -908,6 +1098,9 @@ Decisión: ____
 ### 70. Faltan datos del domicilio temporal
 - **Texto actual:** **Hace falta completar** el domicilio, las coordenadas, el motivo y la fecha de inicio antes de guardar.
 - **Texto propuesto:** Complete el domicilio, las coordenadas, el motivo y la fecha de inicio.
+- **Propuesta corta:** «Faltan domicilio, coordenadas, motivo o fecha de inicio.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** sustantivo + estado.
 - **Qué cambió:** imperativo, sin «antes de guardar».
 - **Quién lo lee:** la coordinación de la Prestadora que puede editar los datos del Paciente.
 - **Dónde está:** Panel → Clientes → un Cliente → solapa «Pacientes» → «Domicilios temporales» → «Cargar un domicilio temporal».
@@ -921,6 +1114,9 @@ Decisión: ____
 ### 71. Confirmar el borrado de un domicilio temporal
 - **Texto actual:** Se va a borrar este domicilio temporal y no va a quedar constancia de que el Paciente estuvo ahí. Es para lo que se cargó por error: un período que ya pasó **conviene terminarlo**, no borrarlo. ¿Confirma el borrado?
 - **Texto propuesto:** ¿Borrar este domicilio temporal? No quedará constancia del período. Si el período ya terminó, use «Terminar el período».
+- **Propuesta corta:** «¿Borrar este domicilio temporal? No quedará constancia. Si ya terminó, use «Terminar el período»
+- **¿Aparece hoy?:** sí
+- **Por qué:** la salida alternativa no es obvia y la persona puede usarla; se acorta el resto.
 - **Qué cambió:** pregunta breve con el verbo; imperativo en lugar de «conviene».
 - **Quién lo lee:** la coordinación de la Prestadora que puede editar los datos del Paciente.
 - **Dónde está:** Panel → Clientes → un Cliente → solapa «Pacientes» → «Domicilios temporales», botón «Borrar» de un renglón.
@@ -934,6 +1130,9 @@ Decisión: ____
 ### 72. Confirmar el borrado de un contenido
 - **Texto actual:** Se va a borrar esta pieza de contenido, y no se puede deshacer. Sus destinatarios dejan de verla. Para dejarla como está, **conviene cancelar**.
 - **Texto propuesto:** ¿Borrar este contenido? Sus destinatarios dejarán de verlo. No se puede deshacer.
+- **Propuesta corta:** «¿Borrar este contenido? Sus destinatarios dejarán de verlo. No se puede deshacer.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** dice qué se borra y la consecuencia; no hay nada que quitar.
 - **Qué cambió:** pregunta breve con el verbo; sin «conviene cancelar».
 - **Quién lo lee:** la coordinación de la Prestadora con permiso para escribir contenidos.
 - **Dónde está:** Panel → Comunicación → Contenidos, ventana del contenido, botón «Borrar».
@@ -947,6 +1146,9 @@ Decisión: ____
 ### 73. Aviso de ejemplo
 - **Texto actual:** Un dato que **conviene** saber.
 - **Texto propuesto:** Información de ejemplo.
+- **Propuesta corta:** Sacar la frase (de la lista: ya está hecho y no es texto del producto)
+- **¿Aparece hoy?:** no
+- **Por qué:** página de desarrollo, no se publica.
 - **Qué cambió:** sin «conviene».
 - **Quién lo lee:** nadie de la coordinación; sólo quien programa, en su propia computadora.
 - **Dónde está:** página de muestra de botones y avisos, que no se publica.
@@ -962,6 +1164,9 @@ Decisión: ____
 ### 1. Sesión vencida
 - **Texto actual:** Pasó demasiado tiempo sin actividad. **Hace falta volver a entrar.**
 - **Texto propuesto:** El acceso venció por inactividad. Ingrese nuevamente.
+- **Propuesta corta:** «Sesión vencida. Ingrese nuevamente.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** decir «por inactividad» no le sirve al Asistente; lo único útil es que tiene que volver a entrar.
 - **Qué cambió:** mismo caso que la ficha 1 del Panel, con la misma propuesta.
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** cualquier parte de la aplicación que le pide algo al sistema. Por ejemplo: Inicio, tarjetas «Próxima guardia» o «Guardia en curso»; una guardia, al tocar «Marcar check-in» o «Cerrar la guardia»; Guardias → «Asignaciones sin responder».
@@ -975,6 +1180,9 @@ Decisión: ____
 ### 2. Dato mal cargado
 - **Texto actual:** Hay un dato mal cargado. **Hace falta revisar lo que se escribió.**
 - **Texto propuesto:** Hay un dato incorrecto. Revise los datos ingresados e intente nuevamente.
+- **Propuesta corta:** «Dato no válido.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** en lo aprobado la forma telegráfica es «Fecha no válida.». «Revise los datos e intente nuevamente» es la instrucción obvia.
 - **Qué cambió:** mismo caso que la ficha 2 del Panel, con la misma propuesta.
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** cualquier parte donde el sistema rechaza un dato sin motivo propio. Por ejemplo: «Reporte Diario», al agregar una foto de más de 8 MB; Perfil → Matrícula, con un archivo de más de 10 MB; una guardia, al marcar el check-in sin que el teléfono envíe la ubicación.
@@ -988,6 +1196,9 @@ Decisión: ____
 ### 3. Falta el Paciente del Reporte Diario
 - **Texto actual:** Falta saber de qué Paciente habla este Reporte Diario. **Conviene volver a la guardia y entrar por el Paciente que corresponde.**
 - **Texto propuesto:** No se identificó el Paciente de este Reporte Diario. Vuelva a la guardia y entre por el Paciente correspondiente.
+- **Propuesta corta:** «Paciente no encontrado en esta guardia.»
+- **¿Aparece hoy?:** dudoso
+- **Por qué:** dice qué pasó. «Vuelva a la guardia y entre por…» explica algo que el Asistente no puede corregir: al Paciente lo sacaron.
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** una guardia en curso → «Cargar Reporte Diario» → «Confirmar y guardar».
@@ -1001,6 +1212,9 @@ Decisión: ____
 ### 4. No se puede cerrar sin relevo
 - **Texto actual:** Todavía no se puede cerrar esta guardia: no está permitido retirarse sin que llegue el relevo. Si hay una urgencia, **hace falta avisarle al Coordinador** para que lo autorice.
 - **Texto propuesto:** No puede cerrar esta guardia hasta que llegue el relevo. Si es urgente, avise al Coordinador.
+- **Propuesta corta:** «Espere al relevo. Si es urgente, avise al Coordinador.»
+- **¿Aparece hoy?:** no
+- **Por qué:** es un aviso para un caso que hoy no existe.
 - **Qué cambió:** más corto, imperativo.
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** una guardia en curso, en lugar del botón «Cerrar la guardia».
@@ -1014,6 +1228,9 @@ Decisión: ____
 ### 5. Faltan datos
 - **Texto actual:** Faltan datos para activar la cuenta. **Hace falta volver a abrir el enlace del correo y escribir la contraseña de nuevo.**
 - **Texto propuesto:** Faltan datos obligatorios. Revise el formulario e intente nuevamente.
+- **Propuesta corta:** «Faltan datos.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** el formulario tiene dos casilleros a la vista. «Revise el formulario e intente nuevamente» sobra.
 - **Qué cambió:** imperativo; deja de hablar de activar la cuenta, porque sale también en otras partes. Es la misma propuesta que la ficha 12 de la aplicación del Cliente.
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** «Activar la cuenta», «Elegir una contraseña nueva», el aviso de emergencia de la guardia y «Avisar a la Prestadora» en el pase de guardia.
@@ -1027,6 +1244,9 @@ Decisión: ____
 ### 6. Enlace no válido
 - **Texto actual:** Este enlace de activación no es válido. **Conviene abrirlo de nuevo desde el correo, o pedir que reenvíen la invitación.**
 - **Texto propuesto:** Este enlace no es válido. Ábralo nuevamente desde el correo o solicite un enlace nuevo.
+- **Propuesta corta:** «Enlace no válido. Solicite uno nuevo.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** abrir de nuevo el mismo enlace da el mismo resultado; la única salida útil es pedir otro.
 - **Qué cambió:** imperativo; sale «invitación»; deja de decir «de activación», porque sale también al cambiar la contraseña. Mismo caso que la ficha 13 del Cliente.
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** «Activar la cuenta» y «Elegir una contraseña nueva».
@@ -1040,6 +1260,9 @@ Decisión: ____
 ### 7. Enlace vencido
 - **Texto actual:** Este enlace de activación venció. **Hace falta pedir que reenvíen la invitación.**
 - **Texto propuesto:** Este enlace venció. Solicite un enlace nuevo.
+- **Propuesta corta:** «Enlace vencido. Solicite uno nuevo.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** tiene el mismo corte que la ficha 6.
 - **Qué cambió:** imperativo; sale «invitación». Mismo caso que la ficha 14 del Cliente.
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** «Activar la cuenta» y «Elegir una contraseña nueva».
@@ -1053,6 +1276,9 @@ Decisión: ____
 ### 8. Falta la matrícula
 - **Texto actual:** Para tomar esta guardia **hace falta tener la matrícula cargada**. Se carga desde Perfil.
 - **Texto propuesto:** No tiene matrícula cargada. Cárguela desde Perfil para aceptar esta guardia.
+- **Propuesta corta:** «Sin matrícula cargada.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** qué hacer depende de la Prestadora, y Perfil → Matrícula ya lo dice con el texto que corresponde.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** Guardias → «Asignaciones sin responder», botón «Aceptar».
@@ -1066,6 +1292,9 @@ Decisión: ____
 ### 9. Matrícula no vigente
 - **Texto actual:** La matrícula no está vigente el día de esta guardia. **Hace falta cargar la renovación desde Perfil.**
 - **Texto propuesto:** La matrícula no está vigente el día de esta guardia. Cargue la renovación desde Perfil.
+- **Propuesta corta:** «Matrícula no vigente ese día.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** lo único propio de este caso es que se mide contra el día de la guardia; la salida está en Perfil.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** Guardias → «Asignaciones sin responder», botón «Aceptar».
@@ -1079,6 +1308,9 @@ Decisión: ____
 ### 10. Modalidad no habilitada
 - **Texto actual:** Esta guardia es de una modalidad de trabajo que no está habilitada en este perfil. **Hace falta hablarlo con la Prestadora.**
 - **Texto propuesto:** Esta guardia es de una modalidad no habilitada en su perfil. Consulte a la Prestadora.
+- **Propuesta corta:** Sacar la frase
+- **¿Aparece hoy?:** no
+- **Por qué:** el Asistente nunca la ve.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** Guardias → «Asignaciones sin responder», botón «Aceptar».
@@ -1092,6 +1324,9 @@ Decisión: ____
 ### 11. Código que no es de esta guardia
 - **Texto actual:** Ese código no es el de esta guardia. **Conviene pedir que lo muestren de nuevo**, porque se renueva solo cada pocos segundos.
 - **Texto propuesto:** El código no es válido para esta guardia. Pida que le muestren el código actual.
+- **Propuesta corta:** «Código incorrecto.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** el Asistente tiene el código delante; pedir que se lo muestren de nuevo es lo obvio.
 - **Qué cambió:** imperativo, sin la explicación de cómo funciona el código.
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** una guardia, recuadro «Pase de guardia» o «Pase de guardia para el cierre», botón «Confirmar».
@@ -1105,6 +1340,9 @@ Decisión: ____
 ### 12. Código vencido
 - **Texto actual:** Ese código ya venció. **Hace falta pedir que muestren el nuevo.**
 - **Texto propuesto:** El código venció. Solicite un código nuevo a la Prestadora.
+- **Propuesta corta:** «Código vencido. Pida otro a la Prestadora.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** decir a quién pedirlo sí aporta, porque ese código lo da la Prestadora y no el domicilio.
 - **Qué cambió:** imperativo; dice a quién pedirlo.
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** recuadro «Pase de guardia» o «Pase de guardia para el cierre», botón «Confirmar».
@@ -1118,6 +1356,9 @@ Decisión: ____
 ### 13. Demasiados intentos con el código
 - **Texto actual:** **Se probaron** demasiados códigos seguidos. Soltar uno nuevo ya no devuelve intentos: **hace falta entrar igual** eligiendo un motivo.
 - **Texto propuesto:** Superó la cantidad de intentos. Elija un motivo para continuar sin comprobar el código.
+- **Propuesta corta:** «Sin más intentos. Elija un motivo para continuar.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** aquí la salida no es obvia, porque no sirve pedir otro código. Por eso queda la instrucción.
 - **Qué cambió:** voz activa e imperativo.
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** recuadro «Pase de guardia» o «Pase de guardia para el cierre», botón «Confirmar».
@@ -1131,6 +1372,9 @@ Decisión: ____
 ### 14. Demasiados pedidos en poco tiempo
 - **Texto actual:** **Se hicieron** demasiados pedidos en poco tiempo. **Conviene esperar** un minuto y volver a probar, o entrar igual eligiendo un motivo.
 - **Texto propuesto:** Hizo demasiados intentos en poco tiempo. Espere un minuto e intente nuevamente, o elija un motivo para continuar sin comprobar.
+- **Propuesta corta:** «Demasiados intentos. Espere un minuto o elija un motivo.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** saca «intente nuevamente» y «sin comprobar», y deja las dos salidas.
 - **Qué cambió:** voz activa e imperativo.
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** recuadro «Pase de guardia» o «Pase de guardia para el cierre», botones «Confirmar» y «Avisar a la Prestadora».
@@ -1144,6 +1388,9 @@ Decisión: ____
 ### 15. Descargo vacío
 - **Texto actual:** El descargo está vacío. **Hace falta escribir algo antes de dejarlo.**
 - **Texto propuesto:** El descargo está vacío. Escriba el descargo antes de guardarlo.
+- **Propuesta corta:** Sacar la frase. Si llegara a pasar, se vería «Dato no válido.», porque es un 400
+- **¿Aparece hoy?:** no
+- **Por qué:** el Asistente nunca la ve.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** Perfil → «Ver las calificaciones» → una calificación → «Dejar un descargo».
@@ -1157,6 +1404,9 @@ Decisión: ____
 ### 16. Guardia sin sustituto
 - **Texto actual:** Esta guardia está anotada dentro de una licencia y todavía no tiene un Asistente sustituto asignado, así que no se puede empezar. **Conviene avisarle al Coordinador.**
 - **Texto propuesto:** No puede iniciar esta guardia: cae dentro de su licencia y todavía no tiene Asistente sustituto. Avise al Coordinador.
+- **Propuesta corta:** «Guardia en su licencia, sin sustituto. Avise al Coordinador.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** queda la instrucción porque no es obvia: la pantalla no ofrece ninguna salida.
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** Inicio → «Próxima guardia» → «Registrar inicio» → «Marcar check-in».
@@ -1170,6 +1420,9 @@ Decisión: ____
 ### 17. Enlace de activación incompleto
 - **Texto actual:** Este enlace de activación no es válido o ya venció. **Hace falta pedir que reenvíen la invitación.**
 - **Texto propuesto:** Este enlace no es válido o venció. Solicite un enlace nuevo a la Prestadora.
+- **Propuesta corta:** «Enlace no válido. Solicite uno nuevo a la Prestadora.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** un enlace cortado no «venció»; esa parte de la frase actual sobra.
 - **Qué cambió:** imperativo; sale «invitación». Mismo caso que la ficha 16 del Cliente.
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** «Activar la cuenta».
@@ -1183,6 +1436,9 @@ Decisión: ____
 ### 18. Enlace de contraseña incompleto
 - **Texto actual:** Este enlace no sirve o ya venció. **Hace falta pedir uno nuevo.**
 - **Texto propuesto:** Este enlace no es válido o venció. Solicite un enlace nuevo.
+- **Propuesta corta:** «Enlace no válido. Solicite uno nuevo.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** es el mismo texto que la ficha 6; conviene unificarlos.
 - **Qué cambió:** imperativo en lugar de «hace falta». Mismo caso que la ficha 17 del Cliente.
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** «Elegir una contraseña nueva».
@@ -1196,6 +1452,9 @@ Decisión: ____
 ### 19. Falta el Reporte Diario para cerrar
 - **Texto actual:** Antes de cerrar la guardia **hace falta cargar** el Reporte Diario.
 - **Texto propuesto:** Cargue el Reporte Diario para cerrar la guardia.
+- **Propuesta corta:** «Falta el Reporte Diario para cerrar.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** el botón «Cargar Reporte Diario» está justo arriba, así que la orden sobra.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** una guardia con un solo Paciente, debajo de «Cargar Reporte Diario».
@@ -1209,6 +1468,9 @@ Decisión: ____
 ### 20. Un Reporte Diario por Paciente
 - **Texto actual:** Cada persona lleva su propio Reporte Diario. **Hace falta cargar** uno por cada una antes de cerrar la guardia.
 - **Texto propuesto:** Cargue el Reporte Diario de cada Paciente para cerrar la guardia.
+- **Propuesta corta:** «Falta un Reporte Diario por Paciente para cerrar.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** tiene el mismo corte que la ficha 19.
 - **Qué cambió:** imperativo y en una sola frase.
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** una guardia con varios Pacientes, debajo de los botones de cada Reporte Diario.
@@ -1222,6 +1484,9 @@ Decisión: ____
 ### 21. Explicación del aviso de emergencia
 - **Texto actual:** Esto le llega a la Prestadora en el momento. Si **hace falta** atención médica o de seguridad, llame primero al número que corresponda: este aviso no reemplaza esa llamada.
 - **Texto propuesto:** La Prestadora recibe este aviso en el momento. Si necesita atención médica o de seguridad, llame primero al número de emergencias: este aviso no reemplaza esa llamada.
+- **Propuesta corta:** «Si hay riesgo, llame primero al número de emergencias.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** que le llega a la Prestadora ya lo dice el botón. Lo que no puede faltar es que el aviso no reemplaza la llamada.
 - **Qué cambió:** sin «hace falta».
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** una guardia en curso → «Avisar una emergencia», arriba del casillero «¿Qué está pasando?».
@@ -1235,6 +1500,9 @@ Decisión: ____
 ### 22. Cambió el texto de un permiso
 - **Texto actual:** El texto cambió desde la última vez. **Hace falta leerlo de nuevo y volver a decidir.**
 - **Texto propuesto:** El texto cambió desde su última respuesta. Léalo y responda nuevamente.
+- **Propuesta corta:** «Texto modificado. Responda nuevamente.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** los botones «Acepto» y «No acepto» están al lado; «Léalo» sobra.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** Perfil → «Permisos que dependen de usted».
@@ -1248,6 +1516,9 @@ Decisión: ____
 ### 23. Matrícula en revisión
 - **Texto actual:** No **hace falta** hacer nada más: la Prestadora la va a mirar.
 - **Texto propuesto:** La Prestadora revisará la matrícula.
+- **Propuesta corta:** Sacar la frase
+- **¿Aparece hoy?:** no
+- **Por qué:** no se usa en ninguna parte.
 - **Qué cambió:** afirma lo que pasa, sin «hace falta».
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** hoy no aparece en ninguna parte. Describiría una matrícula cargada que la Prestadora todavía no revisó; ese caso hoy muestra otro texto.
@@ -1261,6 +1532,9 @@ Decisión: ____
 ### 24. La matrícula la carga la Prestadora
 - **Texto actual:** En esta Prestadora las matrículas las carga la oficina: **hace falta acercarles** el papel o el archivo para que lo suban.
 - **Texto propuesto:** La Prestadora carga las matrículas. Entréguele el papel o el archivo.
+- **Propuesta corta:** «Entregue la matrícula a la Prestadora.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** el cartel ya dice que no puede tomar guardias. Falta una sola cosa: a quién dársela.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** Perfil → Matrícula.
@@ -1274,6 +1548,9 @@ Decisión: ____
 ### 25. Renovar la matrícula a través de la Prestadora
 - **Texto actual:** **Hace falta acercarle** la renovación a la Prestadora antes de esa fecha para no quedarse sin guardias.
 - **Texto propuesto:** Entregue la renovación a la Prestadora antes de esa fecha para seguir tomando guardias.
+- **Propuesta corta:** «Entregue la renovación a la Prestadora.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** el plazo ya está en la frase anterior.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** Perfil → Matrícula.
@@ -1287,6 +1564,9 @@ Decisión: ____
 ### 26. Renovar la matrícula a tiempo
 - **Texto actual:** **Hace falta cargar** la renovación antes de esa fecha para no quedarse sin guardias.
 - **Texto propuesto:** Cargue la renovación antes de esa fecha para seguir tomando guardias.
+- **Propuesta corta:** «Cargue la renovación.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** el plazo ya está en la frase anterior.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** Perfil → Matrícula.
@@ -1300,6 +1580,9 @@ Decisión: ____
 ### 27. Papel por vencer
 - **Texto actual:** Hay algún papel por vencer. **Conviene renovarlo** antes de la fecha.
 - **Texto propuesto:** Un papel está por vencer. Entregue la renovación a la Prestadora antes de la fecha.
+- **Propuesta corta:** «Papel por vencer. Entregue la renovación a la Prestadora.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** la fecha ya está en la lista. La instrucción queda porque no es obvia: el papel no se carga desde el teléfono.
 - **Qué cambió:** imperativo; dice a quién entregarlo, porque desde el teléfono no se carga.
 - **Quién lo lee:** el Asistente.
 - **Dónde está:** Perfil → Papeles.
@@ -1315,6 +1598,9 @@ Decisión: ____
 ### 1. Sesión vencida
 - **Texto actual:** Pasó demasiado tiempo sin actividad. **Hace falta volver a entrar.**
 - **Texto propuesto:** El acceso venció por inactividad. Ingrese nuevamente.
+- **Propuesta corta:** «Sesión vencida. Ingrese nuevamente.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** dice qué pasó sin atribuirle una causa que el código no comprueba.
 - **Qué cambió:** mismo caso que la ficha 1 del Panel, con la misma propuesta.
 - **Quién lo lee:** el Cliente y las personas autorizadas.
 - **Dónde está:** cualquier parte que pide datos al sistema. Por ejemplo: Pacientes → un Paciente → «Alertas», «Facturas» o «Medicación».
@@ -1328,6 +1614,9 @@ Decisión: ____
 ### 2. Dato mal cargado
 - **Texto actual:** Hay un dato mal cargado. **Conviene revisar lo que se escribió.**
 - **Texto propuesto:** Hay un dato incorrecto. Revise los datos ingresados e intente nuevamente.
+- **Propuesta corta:** «Datos no válidos.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** es la frase de reserva para un 400 sin motivo, así que no sabe cuál es el dato y no puede decir más.
 - **Qué cambió:** mismo caso que la ficha 2 del Panel, con la misma propuesta.
 - **Quién lo lee:** el Cliente y las personas autorizadas.
 - **Dónde está:** cualquier parte que envía datos. Por ejemplo: Pacientes → un Paciente → «Medicación» → «Solicitar nueva indicación», con una receta de más de 10 MB o de otro tipo de archivo; «Asistente Asignado», al calificar una guardia sin Asistente.
@@ -1341,6 +1630,9 @@ Decisión: ____
 ### 3. Código de firma incorrecto
 - **Texto actual:** Ese código no es correcto. **Conviene revisarlo y escribirlo de nuevo.**
 - **Texto propuesto:** El código no es correcto. Revíselo e ingréselo nuevamente.
+- **Propuesta corta:** «Código incorrecto.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** va al pie del campo del código, y ahí la instrucción de corregirlo sobra.
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** el Cliente.
 - **Dónde está:** «Instrucción sobre las personas autorizadas», tarjeta «Firmar», casillero «Código de seis dígitos».
@@ -1354,6 +1646,9 @@ Decisión: ____
 ### 4. Código de firma vencido
 - **Texto actual:** Ese código venció. **Hace falta pedir uno nuevo.**
 - **Texto propuesto:** El código venció. Pida otro código.
+- **Propuesta corta:** «Código vencido. Pida otro.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** coincide con el botón «Pedir otro código».
 - **Qué cambió:** imperativo; repite las palabras del botón.
 - **Quién lo lee:** el Cliente.
 - **Dónde está:** «Instrucción sobre las personas autorizadas», tarjeta «Firmar».
@@ -1367,6 +1662,9 @@ Decisión: ____
 ### 5. Demasiados intentos con la instrucción
 - **Texto actual:** **Se probó** demasiadas veces con esta instrucción. Pedir un código nuevo ya no devuelve intentos: **hace falta que la Prestadora la cargue de nuevo**, o firmarla en papel.
 - **Texto propuesto:** Superó la cantidad de intentos para esta instrucción. Pida a la Prestadora que la cargue nuevamente o fírmela en papel.
+- **Propuesta corta:** «Sin intentos. Pida a la Prestadora que la cargue nuevamente o fírmela en papel.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** con ese código ya no hay salida, así que la segunda frase es la única instrucción que no sobra.
 - **Qué cambió:** voz activa e imperativo.
 - **Quién lo lee:** el Cliente.
 - **Dónde está:** «Instrucción sobre las personas autorizadas», tarjeta «Firmar».
@@ -1380,6 +1678,9 @@ Decisión: ____
 ### 6. Todavía no pidió el código
 - **Texto actual:** Todavía no se pidió ningún código. **Hace falta pedirlo primero.**
 - **Texto propuesto:** Todavía no pidió ningún código. Pídalo primero.
+- **Propuesta corta:** Sacar la frase
+- **¿Aparece hoy?:** no
+- **Por qué:** ningún recorrido de la aplicación llega a ella.
 - **Qué cambió:** voz activa e imperativo.
 - **Quién lo lee:** el Cliente.
 - **Dónde está:** «Instrucción sobre las personas autorizadas», tarjeta «Firmar».
@@ -1393,6 +1694,9 @@ Decisión: ____
 ### 7. No se encontró lo pedido
 - **Texto actual:** No se encontró esa instrucción. **Conviene volver a abrir la pantalla.**
 - **Texto propuesto:** No se encontró la información solicitada. Vuelva a abrir esta sección.
+- **Propuesta corta:** «No encontrado.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** la misma frase sirve en los dos lugares, y «Vuelva a abrir esta sección» no resuelve nada si la instrucción fue reemplazada.
 - **Qué cambió:** imperativo; deja de nombrar la instrucción, porque sale cada vez que el sistema no encuentra algo.
 - **Quién lo lee:** el Cliente y, en Medicación, las personas autorizadas.
 - **Dónde está:** «Instrucción sobre las personas autorizadas», botones «Recibir el código» y «Confirmar la firma»; Pacientes → un Paciente → «Medicación», botón «Ver papel firmado».
@@ -1419,6 +1723,9 @@ Decisión: ____
 ### 9. Sin servicio contratado para ver el contacto
 - **Texto actual:** Para ver cómo llegar a esta persona **hace falta tener contratado** el servicio con la Prestadora.
 - **Texto propuesto:** Para ver los datos de contacto de esta persona, contrate el servicio con la Prestadora.
+- **Propuesta corta:** «Sin servicio contratado. Contrátelo con la Prestadora.»
+- **¿Aparece hoy?:** no
+- **Por qué:** Match está cerrado, no retirado. Por eso la frase queda corta en vez de salir, y el Desarrollador decide si se saca hasta que Match se reabra.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** el Cliente, o la persona autorizada con permiso para lo relativo a dinero.
 - **Dónde está:** hoy no aparece en ninguna parte: «Buscar Asistentes» es de Match, que está cerrado. Describiría querer ver el contacto de un Asistente sin el servicio contratado.
@@ -1432,6 +1739,9 @@ Decisión: ____
 ### 10. Servicio contratado vencido
 - **Texto actual:** El servicio contratado no está vigente. Para ver estos datos **hace falta renovarlo** con la Prestadora.
 - **Texto propuesto:** El servicio contratado venció. Renuévelo con la Prestadora para ver estos datos.
+- **Propuesta corta:** «Servicio vencido. Renuévelo con la Prestadora.»
+- **¿Aparece hoy?:** no
+- **Por qué:** es igual a la ficha 9.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** el Cliente, o la persona autorizada con permiso para lo relativo a dinero.
 - **Dónde está:** hoy no aparece en ninguna parte, porque Match está cerrado. Mismo caso que la ficha 9, con el servicio vencido.
@@ -1445,6 +1755,9 @@ Decisión: ____
 ### 11. Contactos incluidos agotados
 - **Texto actual:** Ya se usaron todos los contactos incluidos. Para ver uno más **hace falta pedirle** otro paquete a la Prestadora.
 - **Texto propuesto:** Usó todos los contactos incluidos. Solicite otro paquete a la Prestadora para ver más.
+- **Propuesta corta:** «Sin contactos disponibles. Solicite otro paquete a la Prestadora.»
+- **¿Aparece hoy?:** no
+- **Por qué:** es igual a la ficha 9.
 - **Qué cambió:** voz activa e imperativo.
 - **Quién lo lee:** el Cliente, o la persona autorizada con permiso para lo relativo a dinero.
 - **Dónde está:** hoy no aparece en ninguna parte, porque Match está cerrado. Mismo caso que la ficha 9, sin contactos disponibles.
@@ -1458,6 +1771,9 @@ Decisión: ____
 ### 12. Faltan datos
 - **Texto actual:** Faltan datos para activar la cuenta. **Hace falta volver a abrir el enlace del correo y escribir la contraseña de nuevo.**
 - **Texto propuesto:** Faltan datos obligatorios. Revise el formulario e intente nuevamente.
+- **Propuesta corta:** Sacar la frase. Sin ella, un 400 con este motivo cae en «Datos no válidos.» (ficha 2)
+- **¿Aparece hoy?:** no
+- **Por qué:** sólo llegaría con un pedido armado fuera de la aplicación.
 - **Qué cambió:** mismo caso que la ficha 5 del Asistente, con la misma propuesta.
 - **Quién lo lee:** el Cliente y las personas autorizadas.
 - **Dónde está:** «Activar la cuenta»; «Elegir una contraseña nueva»; Pacientes → un Paciente → «Medicación» → «Solicitar nueva indicación».
@@ -1471,6 +1787,9 @@ Decisión: ____
 ### 13. Enlace no válido
 - **Texto actual:** Este enlace de activación no es válido. **Conviene abrirlo de nuevo desde el correo, o pedir que reenvíen la invitación.**
 - **Texto propuesto:** Este enlace no es válido. Ábralo nuevamente desde el correo o solicite un enlace nuevo.
+- **Propuesta corta:** «Enlace no válido. Solicite uno nuevo.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** abrirlo de nuevo desde el email da el mismo enlace y el mismo error, así que esa salida sobra.
 - **Qué cambió:** mismo caso que la ficha 6 del Asistente, con la misma propuesta.
 - **Quién lo lee:** quien recibió el enlace: el Cliente o una persona autorizada.
 - **Dónde está:** «Activar la cuenta» y «Elegir una contraseña nueva».
@@ -1484,6 +1803,9 @@ Decisión: ____
 ### 14. Enlace vencido
 - **Texto actual:** Este enlace de activación venció. **Hace falta pedir que reenvíen la invitación.**
 - **Texto propuesto:** Este enlace venció. Solicite un enlace nuevo.
+- **Propuesta corta:** «Enlace vencido. Solicite uno nuevo.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** es la misma forma que la ficha 13.
 - **Qué cambió:** mismo caso que la ficha 7 del Asistente, con la misma propuesta.
 - **Quién lo lee:** quien recibió el enlace: el Cliente o una persona autorizada.
 - **Dónde está:** «Activar la cuenta» y «Elegir una contraseña nueva».
@@ -1497,6 +1819,9 @@ Decisión: ____
 ### 15. Campo vacío
 - **Texto actual:** **Hace falta completar** este campo.
 - **Texto propuesto:** Complete este campo.
+- **Propuesta corta:** «Campo obligatorio.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** está pegado al campo, así que basta con nombrar la falta.
 - **Qué cambió:** imperativo en lugar de «hace falta».
 - **Quién lo lee:** el Cliente, y la persona autorizada con permiso para pedir medicación.
 - **Dónde está:** Pacientes → un Paciente → «Medicación» → «Solicitar nueva indicación», debajo de cada casillero vacío.
@@ -1510,6 +1835,9 @@ Decisión: ____
 ### 16. Enlace de activación incompleto
 - **Texto actual:** Este enlace de activación no es válido o ya venció. **Hace falta pedir que reenvíen la invitación.**
 - **Texto propuesto:** Este enlace no es válido o venció. Solicite un enlace nuevo a la Prestadora.
+- **Propuesta corta:** «Enlace no válido. Solicite uno nuevo a la Prestadora.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** la invitación la manda la Prestadora, y es la única salida que hay.
 - **Qué cambió:** mismo caso que la ficha 17 del Asistente, con la misma propuesta.
 - **Quién lo lee:** quien recibió el enlace: el Cliente o una persona autorizada.
 - **Dónde está:** «Activar la cuenta».
@@ -1523,6 +1851,9 @@ Decisión: ____
 ### 17. Enlace de contraseña incompleto
 - **Texto actual:** Este enlace no sirve o ya venció. **Hace falta pedir uno nuevo.**
 - **Texto propuesto:** Este enlace no es válido o venció. Solicite un enlace nuevo.
+- **Propuesta corta:** «Enlace no válido. Solicite uno nuevo.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** es el mismo texto que la ficha 13, y el pedido del enlace nuevo sale de la pantalla de ingreso.
 - **Qué cambió:** mismo caso que la ficha 18 del Asistente, con la misma propuesta.
 - **Quién lo lee:** el Cliente o la persona autorizada.
 - **Dónde está:** «Elegir una contraseña nueva».
@@ -1536,6 +1867,9 @@ Decisión: ____
 ### 18. Código QR de pago vencido
 - **Texto actual:** Este código venció. **Hace falta generar uno nuevo.**
 - **Texto propuesto:** Este código venció. Genere otro código.
+- **Propuesta corta:** «Código vencido.»
+- **¿Aparece hoy?:** no
+- **Por qué:** el botón «Generar otro código» aparece justo debajo (:139-141), así que repetir la instrucción sobra.
 - **Qué cambió:** imperativo; repite las palabras del botón.
 - **Quién lo lee:** el Cliente o la persona autorizada.
 - **Dónde está:** hoy no aparece en ninguna parte: Pacientes → un Paciente → «Acceso», tarjeta «Pagar en efectivo con QR», es de Match, que está cerrado. Tampoco se pudo confirmar que aparezca solo al vencer.
@@ -1549,6 +1883,9 @@ Decisión: ____
 ### 19. Faltan datos de la nueva indicación
 - **Texto actual:** **Hace falta completar** medicamento, dosis, frecuencia, vía y fecha desde.
 - **Texto propuesto:** Complete los campos marcados.
+- **Propuesta corta:** «Faltan datos.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** cada campo ya dice lo suyo al pie (ficha 15), así que la franja sólo avisa que hay algo abajo.
 - **Qué cambió:** imperativo; cada casillero ya dice lo suyo al pie.
 - **Quién lo lee:** las mismas personas que la ficha 15.
 - **Dónde está:** Pacientes → un Paciente → «Medicación» → «Solicitar nueva indicación».
@@ -1564,6 +1901,9 @@ Decisión: ____
 ### 1. Correo de entrevista agendada
 - **Texto actual:** Su entrevista **quedó** agendada para el {{cuando}}. El día de la entrevista, entre por acá: {{enlace}}. La puerta se abre {{anticipo}} minutos antes de la hora. **No hace falta** instalar nada ni crear ninguna cuenta.
 - **Texto propuesto:** Su entrevista está agendada para el {{cuando}}. El día de la entrevista, ingrese por este enlace: {{enlace}}. La sala se abre {{anticipo}} minutos antes de la hora. No necesita instalar nada ni crear una cuenta.
+- **Propuesta corta:** «Su entrevista es el {{cuando}}. Ingrese por este enlace: {{enlace}}. El acceso se habilita {{anticipo}} minutos antes. No necesita instalar nada ni crear una cuenta.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** sale «El día de la entrevista», que repite {{cuando}}, y queda lo de no instalar nada, que a un postulante sin aplicación le sirve.
 - **Qué cambió:** sin «quedó» ni «hace falta»; «sala» en lugar de «puerta», como en la página de la entrevista.
 - **Quién lo lee:** el postulante.
 - **Dónde está:** correo a la dirección de su postulación.
@@ -1577,6 +1917,9 @@ Decisión: ____
 ### 2. Guardia sin cerrar, tercer aviso
 - **Texto actual:** Ya se avisó al Coordinador y la guardia sigue sin cerrarse. **Hace falta que intervenga alguien con autoridad para resolverlo.**
 - **Texto propuesto:** El sistema avisó al Coordinador y la guardia sigue sin cerrarse. Intervenga para resolverlo.
+- **Propuesta corta:** «El sistema avisó al Coordinador y la guardia sigue sin cerrarse. Intervenga.»
+- **¿Aparece hoy?:** sí
+- **Por qué:** «para resolverlo» sobra, porque el asunto ya dice «Urgente». La alternativa es que quede la propuesta, que ya está en la base.
 - **Qué cambió:** voz activa e imperativo.
 - **Quién lo lee:** la coordinación de la Prestadora que figura como destinataria del aviso grave de guardia sin cerrar.
 - **Dónde está:** dentro del tercer aviso por una guardia sin cerrar, junto con la guardia, quién estaba a cargo, el atraso y si el Asistente marcó la salida. No se pudo confirmar cómo se llama en el Panel la parte donde se eligen los destinatarios.

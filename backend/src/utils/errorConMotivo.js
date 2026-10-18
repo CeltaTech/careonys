@@ -57,7 +57,7 @@ const ESTADO_POR_MOTIVO = {
   // pedido está bien armado, lo que pasa es que esa persona no es de las personas autorizadas de ese Cliente—;
   // el del Paciente es 404, y contesta lo mismo cuando el Paciente no existe y cuando es de otra
   // Prestadora, que desde afuera se tienen que ver iguales.
-  persona_fuera_del_personas_autorizadas: 409,
+  persona_no_autorizada: 409,
   paciente_no_encontrado: 404,
   // Las formas de cobro que arma la Prestadora. Son todos 400 salvo el nombre repetido, que es
   // 409 por lo mismo que el correo ya tomado: el pedido está bien armado y choca con algo que ya

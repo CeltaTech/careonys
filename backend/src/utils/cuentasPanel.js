@@ -530,7 +530,7 @@ export async function revocarPersonaAutorizada(db, usuarioId, { prestadoraId, cl
     // la respuesta y era texto visible escrito a mano, en un solo idioma. El motivo es un
     // código, y la frase vive en las traducciones, en los tres.
     throw new ErrorConMotivo(
-      'persona_fuera_del_personas_autorizadas',
+      'persona_no_autorizada',
       `usuario ${usuarioId} no figura en las personas autorizadas del cliente ${clienteId}`,
     );
   }

@@ -72,7 +72,7 @@ export const T = {
         modalidad_no_activa: 'Esta modalidad no está activa.',
         medio_de_pago_fuera_de_la_modalidad: 'La forma de pago no corresponde a la modalidad de esta liquidación. Elija otra.',
         // Dos mensajes que antes llegaban como frase armada del lado del backend, en un solo idioma.
-        persona_no_autorizada: 'Esa persona ya no es una persona autorizada de este Cliente. Actualice la lista.',
+        persona_no_autorizada: 'No figura en el registro.',
         paciente_no_encontrado: 'Paciente no encontrado. Actualice la página.',
         // El alta de un acceso de Match en la pasarela de cobro. Cada frase dice qué
         // falta y dónde se resuelve, porque quien la lee es quien puede resolverlo. Ninguna
@@ -3115,7 +3115,7 @@ export const T = {
         demasiados_pedidos: 'Too many requests. Wait a minute and try again.',
         modalidad_no_activa: 'This service model is not active.',
         medio_de_pago_fuera_de_la_modalidad: 'The payment method does not match the service model of this payroll run. Choose another one.',
-        persona_no_autorizada: 'That person is no longer an authorized person for this Client. Reload the list.',
+        persona_no_autorizada: 'Not found in the records.',
         paciente_no_encontrado: 'Patient not found. Reload the page.',
         acceso_inexistente: 'Access not found. Reload the page.',
         acceso_cancelado: 'That access has been ended, so charging for it cannot be started.',
@@ -6101,7 +6101,7 @@ export const T = {
         demasiados_pedidos: 'Muitas solicitações. Aguarde um minuto e tente novamente.',
         modalidad_no_activa: 'Esta modalidade não está ativa.',
         medio_de_pago_fuera_de_la_modalidad: 'O meio de pagamento não corresponde à modalidade deste acerto. Escolha outro.',
-        persona_no_autorizada: 'Essa pessoa já não é uma pessoa autorizada deste Cliente. Atualize a lista.',
+        persona_no_autorizada: 'Não consta no registro.',
         paciente_no_encontrado: 'Paciente não encontrado. Atualize a página.',
         acceso_inexistente: 'Acesso não encontrado. Atualize a página.',
         acceso_cancelado: 'Esse acesso está encerrado, portanto não é possível começar a cobrá-lo.',

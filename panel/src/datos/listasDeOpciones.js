@@ -9,10 +9,7 @@
  * junta por la clave de la lista.
  *
  * Lo que dice este archivo es exactamente lo que la base trae sembrado sin Prestadora en
- * `listas_de_opciones` y `opciones_de_lista`. Si eso cambia, cambia este archivo.
- *
- * `modalidades` ausente quiere decir lo mismo que en la base: esta opción alcanza a todas las
- * modalidades de trabajo. */
+ * `listas_de_opciones` y `opciones_de_lista`. Si eso cambia, cambia este archivo. */
 export const LISTAS_DE_OPCIONES_DE_FABRICA = {
   disponibilidad: {
     i18n: { 'es-AR': 'Disponibilidad', en: 'Availability', 'pt-BR': 'Disponibilidade' },
@@ -81,10 +78,6 @@ export const LISTAS_DE_OPCIONES_DE_FABRICA = {
         orden: 10,
       },
       { clave: 'efectivo', i18n: { 'es-AR': 'Efectivo', en: 'Cash', 'pt-BR': 'Dinheiro' }, orden: 20 },
-      {
-        orden: 30,
-        modalidades: ['directa'],
-      },
     ],
   },
 };
@@ -101,6 +94,5 @@ export function opcionesDeFabrica(claveDeLaLista) {
     i18n: opcion.i18n,
     orden: opcion.orden,
     activa: true,
-    modalidades: opcion.modalidades ?? null,
   }));
 }

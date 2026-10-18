@@ -88,37 +88,6 @@ async function traerPaginado(armarConsulta) {
 // la misma respuesta: esta acción no está habilitada.
 const soloAdministracion = exigirAdministracion('La Prestadora no habilitó esta acción');
 
-/**
- * Las modalidades de trabajo que paga una liquidación.
- *
- * La liquidación no guarda ninguna: la modalidad está escrita en cada guardia, y guardarla otra
- * vez acá sería el mismo dato en dos lugares. Se miran las guardias completadas del período, que
- * son exactamente las que la liquidación cuenta.
- *
- * Es la misma cuenta que hace `interno.las_modalidades_de_la_liquidacion()` en la base, que es la
- * que no se puede saltear. Esto contesta antes.
- *
- * Recibe el cliente con el que se consulta: la credencial de quien pide al pagar, la llave
- * maestra al mirar (ver GET `/:id`). La Prestadora va igual en el filtro, porque con la llave
- * maestra es lo único que aísla.
- */
-async function modalidadesQuePagaLaLiquidacion(db, prestadoraId, liquidacion) {
-  if (!liquidacion?.asistente_id || !liquidacion?.periodo_desde || !liquidacion?.periodo_hasta) {
-    return [];
-  }
-  const guardias = await traerPaginado(() =>
-    db
-      .from('guardias')
-      .select('canal_modalidad')
-      .eq('prestadora_id', prestadoraId)
-      .eq('asistente_id', liquidacion.asistente_id)
-      .eq('estado', ESTADO_HECHA)
-      .gte('fecha', liquidacion.periodo_desde)
-      .lte('fecha', liquidacion.periodo_hasta),
-  );
-  return [...new Set(guardias.map((g) => g.canal_modalidad).filter(Boolean))];
-}
-
 // ---------------------------------------------------------------------------------------
 // Las cuentas, aparte de las rutas
 //
@@ -610,21 +579,10 @@ panelLiquidacionesRouter.get('/:id', requiereRolPanel, requierePermiso(PERMISO_L
     .maybeSingle();
   if (errorAsistente) return responderError(res, errorAsistente);
 
-  // Qué modalidades de trabajo paga esta liquidación. Va acá porque la pantalla de pago lo
-  // necesita para no ofrecer un medio que después va a volver rechazado: hay medios que existen
-  // en prestación directa y no en Match.
-  let modalidades;
-  try {
-    modalidades = await modalidadesQuePagaLaLiquidacion(supabase, req.usuarioPanel.prestadoraId, liquidacion);
-  } catch (e) {
-    return responderError(res, e);
-  }
-
   res.json({
     ...liquidacion,
     items: items || [],
     asistente: asistente ?? null,
-    modalidades_del_periodo: modalidades,
   });
 });
 
@@ -641,9 +599,6 @@ panelLiquidacionesRouter.post('/:id/pagar', requiereRolPanel, requierePermiso(PE
   // mismo; esto contesta antes y con una frase entendible.
   const medioAnotado = typeof formaPago === 'string' && formaPago.trim() !== '' ? formaPago.trim() : null;
 
-  // La liquidación se busca antes que el medio porque el medio ya no se puede juzgar solo: hay
-  // medios que existen en prestación directa y no en Match, y qué modalidades paga esta
-  // liquidación sale de las guardias de su período.
   const db = clienteDelPedido(req);
   const { data: liquidacion, error } = await db
     .from('liquidaciones_asistente')
@@ -656,7 +611,6 @@ panelLiquidacionesRouter.post('/:id/pagar', requiereRolPanel, requierePermiso(PE
 
   if (medioAnotado !== null) {
     let mediosAdmitidos;
-    let mediosQueAlcanzan;
     try {
       // La lista del lado del Asistente, que no es la de la cobranza: acá no se le paga con
       // tarjeta ni con débito automático a nadie.
@@ -665,30 +619,11 @@ panelLiquidacionesRouter.post('/:id/pagar', requiereRolPanel, requierePermiso(PE
         liquidacion.prestadora_id,
         LISTA_DE_MEDIOS_DE_PAGO_AL_ASISTENTE,
       );
-      const modalidades = await modalidadesQuePagaLaLiquidacion(
-        db,
-        liquidacion.prestadora_id,
-        liquidacion,
-      );
-      mediosQueAlcanzan = await mediosDePagoDeLaPrestadora(
-        db,
-        liquidacion.prestadora_id,
-        LISTA_DE_MEDIOS_DE_PAGO_AL_ASISTENTE,
-        modalidades,
-      );
     } catch (e) {
       return responderError(res, e);
     }
     if (!mediosAdmitidos.includes(medioAnotado)) {
       return res.status(400).json({ error: 'El medio de pago no es uno de los admitidos' });
-    }
-    // Existe, pero no en la modalidad que esta liquidación paga. Es otro rechazo y se dice
-    // distinto: el primero es un medio que no está, y éste es un medio que acá no va.
-    if (!mediosQueAlcanzan.includes(medioAnotado)) {
-      return res.status(400).json({
-        error: 'El medio de pago no se puede usar en esta modalidad de trabajo',
-        motivo: 'medio_de_pago_fuera_de_la_modalidad',
-      });
     }
   }
 

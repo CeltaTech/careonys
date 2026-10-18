@@ -70,7 +70,6 @@ export const T = {
         no_corresponde: 'Esa llegada no quedó sin comprobar, así que no hay nada que cerrar.',
         demasiados_pedidos: 'Demasiadas solicitudes. Espere un minuto e intente nuevamente.',
         modalidad_no_activa: 'Esta modalidad no está activa.',
-        medio_de_pago_fuera_de_la_modalidad: 'La forma de pago no corresponde a la modalidad de esta liquidación. Elija otra.',
         // Dos mensajes que antes llegaban como frase armada del lado del backend, en un solo idioma.
         persona_no_autorizada: 'No figura en el registro.',
         paciente_no_encontrado: 'Paciente no encontrado. Actualice la página.',
@@ -3114,7 +3113,6 @@ export const T = {
         no_corresponde: 'That arrival was not left unverified, so there is nothing to close.',
         demasiados_pedidos: 'Too many requests. Wait a minute and try again.',
         modalidad_no_activa: 'This service model is not active.',
-        medio_de_pago_fuera_de_la_modalidad: 'The payment method does not match the service model of this payroll run. Choose another one.',
         persona_no_autorizada: 'Not found in the records.',
         paciente_no_encontrado: 'Patient not found. Reload the page.',
         acceso_inexistente: 'Access not found. Reload the page.',
@@ -6100,7 +6098,6 @@ export const T = {
         no_corresponde: 'Essa chegada não ficou sem comprovação, portanto não há nada a fechar.',
         demasiados_pedidos: 'Muitas solicitações. Aguarde um minuto e tente novamente.',
         modalidad_no_activa: 'Esta modalidade não está ativa.',
-        medio_de_pago_fuera_de_la_modalidad: 'O meio de pagamento não corresponde à modalidade deste acerto. Escolha outro.',
         persona_no_autorizada: 'Não consta no registro.',
         paciente_no_encontrado: 'Paciente não encontrado. Atualize a página.',
         acceso_inexistente: 'Acesso não encontrado. Atualize a página.',

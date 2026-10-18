@@ -8,7 +8,7 @@
  * para cuando no hay con quién hablar diga exactamente lo mismo que siembra la base. Si una
  * de las dos cambia y la otra no, esta prueba lo dice.
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { loQueEstaMalEnElCobro, primerDiaDelPeriodo, aDosDecimales } from '../cobrosDeCliente';
@@ -63,8 +63,21 @@ describe('el catálogo guardado dice lo mismo que siembra la base', () => {
     if (desde === -1) return [];
     return JSON.parse(foto.slice(desde + inicio.length - 1, foto.indexOf(']$fila$', desde) + 1));
   };
+  /* Las migraciones posteriores a la foto pueden borrar filas de fábrica, con
+     `DELETE FROM public.opciones_de_lista WHERE ... clave = '<clave>'`. */
+  const carpeta = fileURLToPath(new URL('../../../../supabase/migrations/', import.meta.url));
+  const borradas = new Set(
+    readdirSync(carpeta)
+      .filter((archivo) => archivo > '20261016000000_foto_de_la_base.sql')
+      .flatMap((archivo) => [
+        ...readFileSync(`${carpeta}${archivo}`, 'utf8').matchAll(
+          /DELETE FROM public\.opciones_de_lista\s+WHERE[^;]*?clave = '([a-z_]+)'/g,
+        ),
+      ])
+      .map((m) => m[1]),
+  );
   const listas = filasDeFabrica('listas_de_opciones');
-  const opciones = filasDeFabrica('opciones_de_lista');
+  const opciones = filasDeFabrica('opciones_de_lista').filter((o) => !borradas.has(o.clave));
   const listaDeFabrica = (clave) => listas.find((l) => l.clave === clave && l.prestadora_id === null);
 
   /* Las opciones que siembra la base para una lista, en su orden. */
@@ -100,9 +113,8 @@ describe('el catálogo guardado dice lo mismo que siembra la base', () => {
   /* Los dos lados del dinero no eligen de la misma lista, y ésa es la razón de que sean dos. La
      Prestadora tiene habilitadas todas las posibilidades de cobranza; a una persona no se le paga
      con tarjeta, ni con débito automático, ni con cheque, ni con un «otro» que anota un pago sin
-     decir con qué se pagó. La tercera forma del lado del Asistente —la que se pacte— es la puerta
-     de las opciones propias, no una opción más. */
-  it('la cobranza ofrece las seis y el pago al Asistente tres', () => {
+     decir con qué se pagó. */
+  it('la cobranza ofrece las seis y el pago al Asistente dos', () => {
     expect(LISTAS_DE_OPCIONES_DE_FABRICA.medios_de_pago_del_cliente.opciones.map((o) => o.clave)).toEqual([
       'transferencia',
       'efectivo',
@@ -115,30 +127,6 @@ describe('el catálogo guardado dice lo mismo que siembra la base', () => {
       'transferencia',
       'efectivo',
     ]);
-  });
-
-     no existe. Quien centraliza esa plata queda pareciendo el que dirige el trabajo. Que sea
-     imposible elegirlo ahí lo impone la base; acá se comprueba que la marca esté puesta. */
-    );
-    // La marca tiene que estar en la opción que siembra la base, no sólo en el archivo guardado.
-    expect(sembrada.modalidades).toEqual(['directa']);
-    // Y lo hace cumplir un disparador sobre las liquidaciones.
-    expect(foto).toMatch(
-      /ON public\.liquidaciones_asistente FOR EACH ROW EXECUTE FUNCTION interno\.el_medio_de_pago_alcanza_la_modalidad\(\);/,
-    );
-    // Que además no puede saltearse las reglas de acceso.
-    const funcion = foto.slice(foto.indexOf('\nCREATE FUNCTION interno.el_medio_de_pago_alcanza_la_modalidad('));
-    expect(funcion.slice(0, funcion.indexOf('AS $$'))).not.toMatch(/SECURITY DEFINER/);
-  });
-
-  /* Lo que ya estaba no cambia de alcance: sin marca, una opción vale en todas las modalidades. */
-  it('los medios que ya estaban siguen valiendo en todas las modalidades', () => {
-    for (const clave of ['transferencia', 'efectivo']) {
-      const opcion = LISTAS_DE_OPCIONES_DE_FABRICA.medios_de_pago_al_asistente.opciones.find(
-        (o) => o.clave === clave,
-      );
-      expect(opcion.modalidades).toBe(undefined);
-    }
   });
 
   it('del lado del Asistente no hay tarjeta, ni débito automático, ni cheque, ni «otro»', () => {

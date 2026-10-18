@@ -4,7 +4,7 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 105 fichas.** Panel 58, aplicación del Asistente 27, aplicación del Cliente 18, Base 2.
+**Total: 101 fichas.** Panel 58, aplicación del Asistente 25, aplicación del Cliente 16, Base 2.
 
 En el texto actual, la parte en cuestión va en **negrita**.
 
@@ -1053,43 +1053,7 @@ En el texto actual, la parte en cuestión va en **negrita**.
 | **Cómo se muestra** | franja informativa. |
 | **Decisión** |  |
 
-## Aplicación del Asistente (27)
-
-### 1. Sesión vencida
-
-| | |
-|---|---|
-| **Texto actual** | Pasó demasiado tiempo sin actividad. **Hace falta volver a entrar.** |
-| **Texto propuesto** | El acceso venció por inactividad. Ingrese nuevamente. |
-| **Propuesta corta** | «Sesión vencida. Ingrese nuevamente.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | decir «por inactividad» no le sirve al Asistente; lo único útil es que tiene que volver a entrar. |
-| **Qué cambió** | mismo caso que la ficha 1 del Panel, con la misma propuesta. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | cualquier parte de la aplicación que le pide algo al sistema. Por ejemplo: Inicio, tarjetas «Próxima guardia» o «Guardia en curso»; una guardia, al tocar «Marcar check-in» o «Cerrar la guardia»; Guardias → «Asignaciones sin responder». |
-| **Qué estaba haciendo** | volvió a la aplicación después de un rato largo o intentó una acción. |
-| **Qué pasó** | el sistema no reconoció el acceso y rechazó el pedido. |
-| **Qué puede hacer después** | en Inicio y en las asignaciones, «Reintentar». Dentro de una guardia no queda ningún botón: sale por el menú de abajo. |
-| **Cómo se muestra** | franja; dentro de una guardia ocupa toda la pantalla. |
-| **Decisión** |  |
-
-### 2. Dato mal cargado
-
-| | |
-|---|---|
-| **Texto actual** | Hay un dato mal cargado. **Hace falta revisar lo que se escribió.** |
-| **Texto propuesto** | Hay un dato incorrecto. Revise los datos ingresados e intente nuevamente. |
-| **Propuesta corta** | «Dato no válido.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | en lo aprobado la forma telegráfica es «Fecha no válida.». «Revise los datos e intente nuevamente» es la instrucción obvia. |
-| **Qué cambió** | mismo caso que la ficha 2 del Panel, con la misma propuesta. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | cualquier parte donde el sistema rechaza un dato sin motivo propio. Por ejemplo: «Reporte Diario», al agregar una foto de más de 8 MB; Perfil → Matrícula, con un archivo de más de 10 MB; una guardia, al marcar el check-in sin que el teléfono envíe la ubicación. |
-| **Qué estaba haciendo** | subía una foto o un archivo, o registraba la llegada o el retiro. |
-| **Qué pasó** | el sistema rechazó lo enviado sin decir qué dato estaba mal. |
-| **Qué puede hacer después** | elegir otro archivo. Dentro de una guardia no queda ningún botón. |
-| **Cómo se muestra** | franja; dentro de una guardia ocupa toda la pantalla. |
-| **Decisión** |  |
+## Aplicación del Asistente (25)
 
 ### 3. Falta el Paciente del Reporte Diario
 
@@ -1541,43 +1505,7 @@ En el texto actual, la parte en cuestión va en **negrita**.
 | **Cómo se muestra** | franja amarilla. |
 | **Decisión** |  |
 
-## Aplicación del Cliente (18)
-
-### 1. Sesión vencida
-
-| | |
-|---|---|
-| **Texto actual** | Pasó demasiado tiempo sin actividad. **Hace falta volver a entrar.** |
-| **Texto propuesto** | El acceso venció por inactividad. Ingrese nuevamente. |
-| **Propuesta corta** | «Sesión vencida. Ingrese nuevamente.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | dice qué pasó sin atribuirle una causa que el código no comprueba. |
-| **Qué cambió** | mismo caso que la ficha 1 del Panel, con la misma propuesta. |
-| **Quién lo lee** | el Cliente y las personas autorizadas. |
-| **Dónde está** | cualquier parte que pide datos al sistema. Por ejemplo: Pacientes → un Paciente → «Alertas», «Facturas» o «Medicación». |
-| **Qué estaba haciendo** | abrió una de esas partes después de mucho tiempo sin usar la aplicación. |
-| **Qué pasó** | el sistema ya no reconoce el acceso. |
-| **Qué puede hacer después** | cerrar sesión desde el menú y volver a ingresar. |
-| **Cómo se muestra** | franja. |
-| **Decisión** |  |
-
-### 2. Dato mal cargado
-
-| | |
-|---|---|
-| **Texto actual** | Hay un dato mal cargado. **Conviene revisar lo que se escribió.** |
-| **Texto propuesto** | Hay un dato incorrecto. Revise los datos ingresados e intente nuevamente. |
-| **Propuesta corta** | «Datos no válidos.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | es la frase de reserva para un 400 sin motivo, así que no sabe cuál es el dato y no puede decir más. |
-| **Qué cambió** | mismo caso que la ficha 2 del Panel, con la misma propuesta. |
-| **Quién lo lee** | el Cliente y las personas autorizadas. |
-| **Dónde está** | cualquier parte que envía datos. Por ejemplo: Pacientes → un Paciente → «Medicación» → «Solicitar nueva indicación», con una receta de más de 10 MB o de otro tipo de archivo; «Asistente Asignado», al calificar una guardia sin Asistente. |
-| **Qué estaba haciendo** | enviaba un pedido o una calificación. |
-| **Qué pasó** | el sistema rechazó lo enviado sin decir qué dato estaba mal. |
-| **Qué puede hacer después** | cambiar el archivo y volver a enviar. |
-| **Cómo se muestra** | franja. |
-| **Decisión** |  |
+## Aplicación del Cliente (16)
 
 ### 3. Código de firma incorrecto
 

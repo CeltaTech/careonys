@@ -5,12 +5,12 @@ export const T = {
     // una de estas ocho y muestra la frase; el texto crudo queda en la consola.
     errores: {
       sin_conexion: 'Sin conexión con el servidor. Verifique su conexión a internet e intente nuevamente.',
-      sesion_vencida: 'El acceso venció por inactividad. Ingrese nuevamente.',
+      sesion_vencida: 'Sesión vencida. Ingrese nuevamente.',
       sin_permiso: 'Este usuario no tiene permiso para hacer esto.',
       no_encontrado: 'No se encontró lo que se buscaba. Puede que ya no exista.',
       duplicado: 'Ya existe un registro con esos datos.',
       en_uso: 'No se puede borrar: hay otros registros que dependen de esto.',
-      dato_invalido: 'Hay un dato incorrecto. Revise los datos ingresados e intente nuevamente.',
+      dato_invalido: 'Datos no válidos.',
       falla_del_sistema: 'Ocurrió un error en el servidor. Intente nuevamente en unos minutos.',
       // Los motivos: cuando el backend sabe exactamente qué pasó, lo dice con un código y la
       // frase se busca acá. Ganan siempre por sobre las ocho de arriba, que son lo genérico.
@@ -759,12 +759,12 @@ export const T = {
     // una de estas ocho y muestra la frase; el texto crudo queda en la consola.
     errores: {
       sin_conexion: 'No server connection. Check your internet connection and try again.',
-      sesion_vencida: 'Your access expired due to inactivity. Sign in again.',
+      sesion_vencida: 'Session expired. Sign in again.',
       sin_permiso: 'Your account does not have permission to do this.',
       no_encontrado: 'We could not find what you were looking for. It may no longer exist.',
       duplicado: 'A record with that information already exists.',
       en_uso: 'This cannot be deleted: other records depend on it.',
-      dato_invalido: 'Some data is incorrect. Check the information entered and try again.',
+      dato_invalido: 'Invalid data.',
       falla_del_sistema: 'A server error occurred. Please try again in a few minutes.',
       motivos: {
         videollamada_no_configurada: 'This provider has not set up video calls yet, so for now the conversation continues in writing.',
@@ -1400,12 +1400,12 @@ export const T = {
     // una de estas ocho y muestra la frase; el texto crudo queda en la consola.
     errores: {
       sin_conexion: 'Sem conexão com o servidor. Verifique sua conexão com a internet e tente novamente.',
-      sesion_vencida: 'O acesso expirou por inatividade. Entre novamente.',
+      sesion_vencida: 'Sessão expirada. Entre novamente.',
       sin_permiso: 'Este usuário não tem permissão para fazer isso.',
       no_encontrado: 'Não foi encontrado o que se procurava. Pode ser que não exista mais.',
       duplicado: 'Já existe um registro com esses dados.',
       en_uso: 'Não é possível apagar: outros registros dependem disto.',
-      dato_invalido: 'Há um dado incorreto. Verifique os dados informados e tente novamente.',
+      dato_invalido: 'Dados inválidos.',
       falla_del_sistema: 'Ocorreu um erro no servidor. Tente novamente em alguns minutos.',
       motivos: {
         videollamada_no_configurada: 'Esta Prestadora ainda não configurou as videochamadas, então por enquanto a conversa segue por escrito.',

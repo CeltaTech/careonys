@@ -20,12 +20,12 @@ export const T = {
     // una de estas ocho y muestra la frase; el texto crudo queda en la consola.
     errores: {
       sin_conexion: 'Sin conexión con el servidor. Verifique su conexión a internet e intente nuevamente.',
-      sesion_vencida: 'El acceso venció por inactividad. Ingrese nuevamente.',
+      sesion_vencida: 'Sesión vencida. Ingrese nuevamente.',
       sin_permiso: 'Este usuario no tiene permiso para hacer esto.',
       no_encontrado: 'No se encontró lo que se buscaba. Puede que ya no exista.',
       duplicado: 'Ya existe un registro con esos datos.',
       en_uso: 'No se puede borrar: hay otros registros que dependen de esto.',
-      dato_invalido: 'Datos no válidos. Revise la información e intente nuevamente.',
+      dato_invalido: 'Datos no válidos.',
       falla_del_sistema: 'Ocurrió un error en el servidor. Intente nuevamente en unos minutos.',
       // Los motivos: cuando el backend sabe exactamente qué pasó, lo dice con un código y la
       // frase se busca acá. Ganan siempre por sobre las ocho de arriba, que son lo genérico.
@@ -35,8 +35,8 @@ export const T = {
         localidad_ambigua: 'Localidad ambigua: puede ser {opciones}.',
         lugar_de_trabajo_no_reconocido: 'Lugar de trabajo no reconocido.',
         servicio_de_direcciones_caido: 'No se pudo consultar el servicio de direcciones.',
-        correo_de_esta_prestadora: 'Este email ya está en uso. Ingrese otro.',
-        correo_de_otra_cuenta: 'Este email ya está en uso. Ingrese otro.',
+        correo_de_esta_prestadora: 'Email en uso. Ingrese otro.',
+        correo_de_otra_cuenta: 'Email en uso. Ingrese otro.',
         sin_etapas_incorporacion: 'Esta Prestadora todavía no tiene etapas de incorporación configuradas. Se definen en Configuración > El cuidado.',
         faltan_datos: 'Faltan datos obligatorios. Revise los campos requeridos e intente nuevamente.',
         usuario_de_esta_prestadora: 'Ese usuario ya existe. Elija otro.',
@@ -3067,12 +3067,12 @@ export const T = {
     // una de estas ocho y muestra la frase; el texto crudo queda en la consola.
     errores: {
       sin_conexion: 'No server connection. Check your internet connection and try again.',
-      sesion_vencida: 'Your access expired due to inactivity. Sign in again.',
+      sesion_vencida: 'Session expired. Sign in again.',
       sin_permiso: 'Your account does not have permission to do this.',
       no_encontrado: 'We could not find what you were looking for. It may no longer exist.',
       duplicado: 'A record with that information already exists.',
       en_uso: 'This cannot be deleted: other records depend on it.',
-      dato_invalido: 'Invalid data. Check the information and try again.',
+      dato_invalido: 'Invalid data.',
       falla_del_sistema: 'A server error occurred. Please try again in a few minutes.',
       motivos: {
         falta_domicilio: 'The address is missing.',
@@ -3080,8 +3080,8 @@ export const T = {
         localidad_ambigua: 'Ambiguous locality: it could be {opciones}.',
         lugar_de_trabajo_no_reconocido: 'Work location not recognized.',
         servicio_de_direcciones_caido: 'The address service could not be reached.',
-        correo_de_esta_prestadora: 'This email is already in use. Enter a different one.',
-        correo_de_otra_cuenta: 'This email is already in use. Enter a different one.',
+        correo_de_esta_prestadora: 'Email in use. Enter a different one.',
+        correo_de_otra_cuenta: 'Email in use. Enter a different one.',
         sin_etapas_incorporacion: 'This Provider does not have onboarding stages set up yet. They are defined under Settings > Care.',
         faltan_datos: 'Required data missing. Check the required fields and try again.',
         usuario_de_esta_prestadora: 'That user name already exists. Choose another one.',
@@ -6051,12 +6051,12 @@ export const T = {
     // una de estas ocho y muestra la frase; el texto crudo queda en la consola.
     errores: {
       sin_conexion: 'Sem conexão com o servidor. Verifique sua conexão com a internet e tente novamente.',
-      sesion_vencida: 'O acesso expirou por inatividade. Entre novamente.',
+      sesion_vencida: 'Sessão expirada. Entre novamente.',
       sin_permiso: 'Este usuário não tem permissão para fazer isso.',
       no_encontrado: 'Não foi encontrado o que se procurava. Pode ser que não exista mais.',
       duplicado: 'Já existe um registro com esses dados.',
       en_uso: 'Não é possível apagar: outros registros dependem disto.',
-      dato_invalido: 'Dados inválidos. Verifique as informações e tente novamente.',
+      dato_invalido: 'Dados inválidos.',
       falla_del_sistema: 'Ocorreu um erro no servidor. Tente novamente em alguns minutos.',
       motivos: {
         falta_domicilio: 'Falta o endereço.',
@@ -6064,8 +6064,8 @@ export const T = {
         localidad_ambigua: 'Localidade ambígua: pode ser {opciones}.',
         lugar_de_trabajo_no_reconocido: 'Local de trabalho não reconhecido.',
         servicio_de_direcciones_caido: 'Não foi possível consultar o serviço de endereços.',
-        correo_de_esta_prestadora: 'Este e-mail já está em uso. Informe outro.',
-        correo_de_otra_cuenta: 'Este e-mail já está em uso. Informe outro.',
+        correo_de_esta_prestadora: 'E-mail em uso. Informe outro.',
+        correo_de_otra_cuenta: 'E-mail em uso. Informe outro.',
         sin_etapas_incorporacion: 'Esta Prestadora ainda não possui etapas de incorporação configuradas. Elas se definem em Configuração > O cuidado.',
         faltan_datos: 'Dados obrigatórios ausentes. Verifique os campos necessários e tente novamente.',
         usuario_de_esta_prestadora: 'Esse usuário já existe. Escolha outro.',

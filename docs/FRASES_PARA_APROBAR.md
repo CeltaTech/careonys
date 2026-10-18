@@ -4,83 +4,11 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 109 fichas.** Panel 62, aplicación del Asistente 27, aplicación del Cliente 18, Base 2.
+**Total: 105 fichas.** Panel 58, aplicación del Asistente 27, aplicación del Cliente 18, Base 2.
 
 En el texto actual, la parte en cuestión va en **negrita**.
 
-## Panel (62)
-
-### 1. Sesión vencida
-
-| | |
-|---|---|
-| **Texto actual** | Pasó demasiado tiempo sin actividad. **Hace falta volver a entrar.** |
-| **Texto propuesto** | El acceso venció por inactividad. Ingrese nuevamente. |
-| **Propuesta corta** | «Sesión vencida. Ingrese nuevamente.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | dice qué pasó sin afirmar una causa que no siempre es cierta. «Ingrese nuevamente» se queda porque es lo único que se puede hacer. |
-| **Qué cambió** | dice qué pasó y qué hacer, en imperativo. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | cualquier parte del Panel que le pide algo al sistema. Por ejemplo: Panel → Configuración → Usuarios del Panel; Panel → Configuración → La Prestadora, tarjeta «La moneda»; Panel → Guardias → Emergencias, ventana «Emergencia». |
-| **Qué estaba haciendo** | abría una lista o guardaba un cambio. |
-| **Qué pasó** | el sistema ya no la reconoce como alguien que ingresó y rechaza el pedido. No se pudo confirmar en qué casos exactos pasa sin que actúe antes el cierre por inactividad, que lleva directo a la entrada. |
-| **Qué puede hacer después** | volver a ingresar. Según dónde esté, le quedan «Reintentar», «Guardar» o «Marcar atendida». |
-| **Cómo se muestra** | franja. |
-| **Decisión** |  |
-
-### 2. Dato mal cargado
-
-| | |
-|---|---|
-| **Texto actual** | Hay un dato mal cargado. **Conviene revisar lo que se escribió.** |
-| **Texto propuesto** | Datos no válidos. Revise la información e intente nuevamente. |
-| **Propuesta corta** | «Datos no válidos.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | «Revise la información e intente nuevamente» es la instrucción obvia que el criterio saca. |
-| **Qué cambió** | imperativo en lugar de «conviene». |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | cualquier parte del Panel donde el sistema rechaza un dato sin un motivo propio. Por ejemplo: Panel → Asistentes → Pagos a Asistentes, ventana «Detalle de la liquidación», al registrar un pago que otra persona ya registró; Panel → Clientes → un Cliente, solapa «Personas autorizadas», al tocar «Registrar la firma» sin elegir el archivo. |
-| **Qué estaba haciendo** | registraba un pago, un papel firmado o cargaba un dato. |
-| **Qué pasó** | el sistema rechazó lo enviado sin decir por qué. En los dos ejemplos no hay ningún dato mal escrito: el pago ya estaba registrado o faltaba el archivo. No se pudo confirmar en qué caso exacto sale al cargar un domicilio temporal. |
-| **Qué puede hacer después** | corregir y volver a enviar, o cerrar la ventana. |
-| **Cómo se muestra** | franja. |
-| **Decisión** |  |
-
-### 3. El email ya tiene una cuenta en esta Prestadora
-
-| | |
-|---|---|
-| **Texto actual** | Ese correo ya tiene una cuenta en esta Prestadora. **Conviene buscarla en la lista antes de crear una nueva.** |
-| **Texto propuesto** | El email ya está registrado en esta Prestadora. Búsquelo en la lista. |
-| **Propuesta corta** | «Email en uso. Ingrese otro.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | es el mismo molde que «Título en uso. Ingrese otro.», ya aprobado. |
-| **Qué cambió** | imperativo en lugar de «conviene»; «email», como dice la etiqueta. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Configuración → Usuarios del Panel → «Nuevo Coordinador». El sistema da el mismo motivo en el alta de un Asistente, al aprobar una postulación, al agregar una persona autorizada y al importar datos; no se pudo confirmar cómo se muestra en esos cuatro. |
-| **Qué estaba haciendo** | daba de alta a una persona con su email. |
-| **Qué pasó** | ese email ya pertenece a una cuenta de la misma Prestadora y el sistema no crea otra. |
-| **Qué puede hacer después** | cambiar el email y guardar, o cancelar y buscar la cuenta en la lista. |
-| **Cómo se muestra** | franja dentro de la ventana «Nuevo Coordinador». |
-| **Decisión** |  |
-
-### 4. El email ya está en uso
-
-| | |
-|---|---|
-| **Texto actual** | Ese correo ya está en uso. **Hace falta indicar otro.** |
-| **Texto propuesto** | El email ya está en uso. Ingrese otro. |
-| **Propuesta corta** | Sacar la frase |
-| **¿Aparece hoy?** | no |
-| **Por qué** | nadie la dispara. El caso real lo cubre la ficha 3. |
-| **Qué cambió** | imperativo en lugar de «hace falta». |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | hoy no aparece en ninguna parte. Describiría un alta con un email que ya usa otra cuenta. |
-| **Qué estaba haciendo** | — |
-| **Qué pasó** | — |
-| **Qué puede hacer después** | — |
-| **Cómo se muestra** | — |
-| **Decisión** |  |
+## Panel (58)
 
 ### 8. Moneda que ya no está en la lista
 

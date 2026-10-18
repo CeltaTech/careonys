@@ -283,7 +283,7 @@ Decisión: ____
 
 ### 22. Plantilla ya enviada a Meta
 - **Texto actual:** Esa plantilla ya salió hacia Meta, así que no se manda de nuevo. **Conviene recargar la lista para ver cómo quedó.**
-- **Texto propuesto:** Esta plantilla ya se envió a Meta. Actualice la lista.
+- **Texto aprobado:** Ya enviada.
 - **Qué cambió:** más corto, imperativo, sin «para ver cómo quedó».
 - **Quién lo lee:** la administración de la Prestadora.
 - **Dónde está:** Panel → Configuración → Mensajes, parte de WhatsApp, recuadro «Plantillas de mensaje», botón «Enviar a Meta».

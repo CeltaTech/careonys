@@ -99,7 +99,7 @@ export const T = {
         // El alta de una plantilla de mensaje en Meta. Cada frase dice qué falta y dónde se
         // resuelve; ninguna repite lo que contestó Meta, que describe su propia API.
         whatsapp_sin_cuenta: 'Esta Prestadora no tiene cuenta de WhatsApp Business. Se carga en Configuración > Mensajes.',
-        plantilla_ya_enviada: 'Esta plantilla ya se envió a Meta. Actualice la lista.',
+        plantilla_ya_enviada: 'Ya enviada.',
         meta_no_acepto: 'Meta rechazó la plantilla. Revise el nombre y el texto e intente nuevamente.',
         // La IA escribiendo el texto de una plantilla. Cada frase dice qué hacer con lo que pasó:
         // la primera manda a quien puede resolverlo, la segunda avisa que no hay nada que corregir,
@@ -3133,7 +3133,7 @@ export const T = {
         contactos_incluidos_invalido: 'Included contacts must be a whole number greater than zero, or be left empty.',
         renovacion_sin_periodo: 'A billing arrangement without a period does not renew on its own. Enter a period or clear the renewal option.',
         whatsapp_sin_cuenta: 'This Provider has no WhatsApp Business account. It is set up under Settings > Messages.',
-        plantilla_ya_enviada: 'This template was already sent to Meta. Reload the list.',
+        plantilla_ya_enviada: 'Already sent.',
         meta_no_acepto: 'Meta rejected the template. Check the name and text, then try again.',
         ia_no_configurada: 'Drafting with artificial intelligence is not available yet. The text can be written by hand.',
         plantilla_sin_rechazo: 'Meta did not object to anything in this template, so there is nothing to correct.',
@@ -6117,7 +6117,7 @@ export const T = {
         contactos_incluidos_invalido: 'Os contatos incluídos precisam ser um número inteiro maior que zero, ou ficar vazios.',
         renovacion_sin_periodo: 'Uma forma de cobrança sem período não se renova sozinha. Informe um período ou desmarque a renovação.',
         whatsapp_sin_cuenta: 'Esta Prestadora não tem conta do WhatsApp Business. Cadastra-se em Configuração > Mensagens.',
-        plantilla_ya_enviada: 'Este modelo já foi enviado para a Meta. Atualize a lista.',
+        plantilla_ya_enviada: 'Já enviado.',
         meta_no_acepto: 'A Meta recusou o modelo. Verifique o nome e o texto e tente novamente.',
         ia_no_configurada: 'A redação com inteligência artificial ainda não está disponível. O texto pode ser escrito à mão.',
         plantilla_sin_rechazo: 'A Meta não objetou nada neste modelo, portanto não há o que corrigir.',

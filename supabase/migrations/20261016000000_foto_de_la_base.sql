@@ -859,65 +859,6 @@ COMMENT ON FUNCTION interno.el_legajo_no_se_borra() IS 'Impide borrar un Legajo.
 
 
 --
--- Name: el_medio_de_pago_alcanza_la_modalidad(); Type: FUNCTION; Schema: interno; Owner: -
---
-
-CREATE FUNCTION interno.el_medio_de_pago_alcanza_la_modalidad() RETURNS trigger
-    LANGUAGE plpgsql
-    SET search_path TO 'public', 'interno'
-    AS $$
-DECLARE
-  v_permitidas text[];
-  v_en_juego text[];
-  v_fuera text;
-BEGIN
-  IF NEW.forma_pago IS NULL THEN
-    RETURN NEW;
-  END IF;
-
-  SELECT o.modalidades INTO v_permitidas
-    FROM public.opciones_de_lista o
-    JOIN public.listas_de_opciones l ON l.id = o.lista_id
-   WHERE l.prestadora_id IS NULL
-     AND l.clave = 'medios_de_pago_al_asistente'
-     AND o.clave = NEW.forma_pago
-     AND o.activa
-     AND (o.prestadora_id IS NULL OR o.prestadora_id = NEW.prestadora_id)
-   ORDER BY o.prestadora_id NULLS FIRST
-   LIMIT 1;
-
-  -- Sin fila no hay nada que decir acá: que el medio exista lo comprueba el otro disparador, y
-  -- contestar dos cosas distintas por el mismo problema confunde a quien lo lee.
-  IF v_permitidas IS NULL THEN
-    RETURN NEW;
-  END IF;
-
-  v_en_juego := interno.las_modalidades_de_la_liquidacion(
-    NEW.prestadora_id, NEW.asistente_id, NEW.periodo_desde, NEW.periodo_hasta);
-
-  SELECT m INTO v_fuera
-    FROM unnest(v_en_juego) AS m
-   WHERE NOT (m = ANY (v_permitidas))
-   LIMIT 1;
-
-  IF v_fuera IS NOT NULL THEN
-    RAISE EXCEPTION 'medio_de_pago_fuera_de_la_modalidad:%', NEW.forma_pago
-      USING ERRCODE = 'P0001';
-  END IF;
-
-  RETURN NEW;
-END;
-$$;
-
-
---
--- Name: FUNCTION el_medio_de_pago_alcanza_la_modalidad(); Type: COMMENT; Schema: interno; Owner: -
---
-
-COMMENT ON FUNCTION interno.el_medio_de_pago_alcanza_la_modalidad() IS 'El medio anotado en una liquidacion tiene que alcanzar a todas las modalidades de trabajo que esa liquidacion paga.';
-
-
---
 -- Name: el_medio_de_pago_sale_del_catalogo(); Type: FUNCTION; Schema: interno; Owner: -
 --
 
@@ -2224,31 +2165,6 @@ BEGIN
   RETURN NEW;
 END;
 $$;
-
-
---
--- Name: las_modalidades_de_la_liquidacion(uuid, uuid, date, date); Type: FUNCTION; Schema: interno; Owner: -
---
-
-CREATE FUNCTION interno.las_modalidades_de_la_liquidacion(p_prestadora uuid, p_asistente uuid, p_desde date, p_hasta date) RETURNS text[]
-    LANGUAGE sql STABLE
-    SET search_path TO 'public', 'interno'
-    AS $$
-  SELECT coalesce(array_agg(DISTINCT g.canal_modalidad), ARRAY[]::text[])
-    FROM public.guardias g
-   WHERE g.prestadora_id = p_prestadora
-     AND g.asistente_id = p_asistente
-     AND g.fecha >= p_desde
-     AND g.fecha <= p_hasta
-     AND g.estado = 'completada';
-$$;
-
-
---
--- Name: FUNCTION las_modalidades_de_la_liquidacion(p_prestadora uuid, p_asistente uuid, p_desde date, p_hasta date); Type: COMMENT; Schema: interno; Owner: -
---
-
-COMMENT ON FUNCTION interno.las_modalidades_de_la_liquidacion(p_prestadora uuid, p_asistente uuid, p_desde date, p_hasta date) IS 'Las modalidades de trabajo de las guardias completadas que paga una liquidacion. Vacio quiere decir que no paga ninguna guardia.';
 
 
 --
@@ -10385,7 +10301,6 @@ CREATE TABLE public.opciones_de_lista (
     orden integer DEFAULT 0 NOT NULL,
     activa boolean DEFAULT true NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    modalidades text[],
     CONSTRAINT el_texto_de_la_opcion_esta_en_los_idiomas_que_le_tocan CHECK (
 CASE
     WHEN (prestadora_id IS NOT NULL) THEN interno.i18n_minimo(i18n)
@@ -10396,8 +10311,7 @@ END),
 CASE
     WHEN (prestadora_id IS NOT NULL) THEN (orden > interno.orden_desde_el_que_cuentan_las_opciones_propias())
     ELSE (orden <= interno.orden_desde_el_que_cuentan_las_opciones_propias())
-END),
-    CONSTRAINT opciones_de_lista_modalidades_check CHECK (((modalidades IS NULL) OR ((array_length(modalidades, 1) >= 1) AND (modalidades <@ ARRAY['directa'::text, 'match'::text, 'subcontratacion'::text]))))
+END)
 );
 
 
@@ -10427,13 +10341,6 @@ COMMENT ON COLUMN public.opciones_de_lista.orden IS 'En que orden se ofrecen. Lo
 --
 
 COMMENT ON COLUMN public.opciones_de_lista.activa IS 'Una opcion no se borra: se apaga. Apagada deja de ofrecerse y sigue nombrando lo que ya se eligio.';
-
-
---
--- Name: COLUMN opciones_de_lista.modalidades; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.opciones_de_lista.modalidades IS 'En que modalidades de trabajo se puede usar esta opcion. Nulo quiere decir que alcanza a todas.';
 
 
 --
@@ -16211,13 +16118,6 @@ CREATE TRIGGER el_legajo_no_se_borra BEFORE DELETE ON public.legajos FOR EACH RO
 --
 
 CREATE TRIGGER el_medio_del_cobro_sale_del_catalogo BEFORE INSERT OR UPDATE OF medio ON public.cobros_cliente FOR EACH ROW EXECUTE FUNCTION interno.el_medio_de_pago_sale_del_catalogo('medio', 'medios_de_pago_del_cliente');
-
-
---
--- Name: liquidaciones_asistente el_medio_del_pago_alcanza_la_modalidad; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER el_medio_del_pago_alcanza_la_modalidad BEFORE INSERT OR UPDATE OF forma_pago ON public.liquidaciones_asistente FOR EACH ROW EXECUTE FUNCTION interno.el_medio_de_pago_alcanza_la_modalidad();
 
 
 --
@@ -26122,16 +26022,6 @@ GRANT ALL ON FUNCTION interno.el_legajo_no_se_borra() TO trabajo_sin_persona;
 
 
 --
--- Name: FUNCTION el_medio_de_pago_alcanza_la_modalidad(); Type: ACL; Schema: interno; Owner: -
---
-
-REVOKE ALL ON FUNCTION interno.el_medio_de_pago_alcanza_la_modalidad() FROM PUBLIC;
-GRANT ALL ON FUNCTION interno.el_medio_de_pago_alcanza_la_modalidad() TO authenticated;
-GRANT ALL ON FUNCTION interno.el_medio_de_pago_alcanza_la_modalidad() TO service_role;
-GRANT ALL ON FUNCTION interno.el_medio_de_pago_alcanza_la_modalidad() TO trabajo_sin_persona;
-
-
---
 -- Name: FUNCTION el_medio_de_pago_sale_del_catalogo(); Type: ACL; Schema: interno; Owner: -
 --
 
@@ -26575,16 +26465,6 @@ REVOKE ALL ON FUNCTION interno.la_toma_la_suelta_quien_la_tomo() FROM PUBLIC;
 GRANT ALL ON FUNCTION interno.la_toma_la_suelta_quien_la_tomo() TO authenticated;
 GRANT ALL ON FUNCTION interno.la_toma_la_suelta_quien_la_tomo() TO service_role;
 GRANT ALL ON FUNCTION interno.la_toma_la_suelta_quien_la_tomo() TO trabajo_sin_persona;
-
-
---
--- Name: FUNCTION las_modalidades_de_la_liquidacion(p_prestadora uuid, p_asistente uuid, p_desde date, p_hasta date); Type: ACL; Schema: interno; Owner: -
---
-
-REVOKE ALL ON FUNCTION interno.las_modalidades_de_la_liquidacion(p_prestadora uuid, p_asistente uuid, p_desde date, p_hasta date) FROM PUBLIC;
-GRANT ALL ON FUNCTION interno.las_modalidades_de_la_liquidacion(p_prestadora uuid, p_asistente uuid, p_desde date, p_hasta date) TO authenticated;
-GRANT ALL ON FUNCTION interno.las_modalidades_de_la_liquidacion(p_prestadora uuid, p_asistente uuid, p_desde date, p_hasta date) TO service_role;
-GRANT ALL ON FUNCTION interno.las_modalidades_de_la_liquidacion(p_prestadora uuid, p_asistente uuid, p_desde date, p_hasta date) TO trabajo_sin_persona;
 
 
 --
@@ -29825,22 +29705,22 @@ SELECT pais, moneda, created_at
 {"created_at": "2026-08-20T05:48:39.475522+00:00", "moneda": "UYU", "pais": "UY"}
 ]$fila$::jsonb);
 
-INSERT INTO public.opciones_de_lista (id, prestadora_id, lista_id, clave, i18n, orden, activa, created_at, modalidades)
-SELECT id, prestadora_id, lista_id, clave, i18n, orden, activa, created_at, modalidades
+INSERT INTO public.opciones_de_lista (id, prestadora_id, lista_id, clave, i18n, orden, activa, created_at)
+SELECT id, prestadora_id, lista_id, clave, i18n, orden, activa, created_at
   FROM jsonb_populate_recordset(NULL::public.opciones_de_lista, $fila$[
-{"activa": true, "clave": "cheque", "created_at": "2026-09-19T18:55:45.708371+00:00", "i18n": {"en": "Cheque", "es-AR": "Cheque", "pt-BR": "Cheque"}, "id": "25cb94e1-a768-4f79-9a63-874bfcfc61c1", "lista_id": "c8139d2f-3218-4fbc-9c72-7f653f0e77d5", "modalidades": null, "orden": 50, "prestadora_id": null},
-{"activa": true, "clave": "debito_automatico", "created_at": "2026-09-19T18:55:45.708371+00:00", "i18n": {"en": "Direct debit", "es-AR": "Débito automático", "pt-BR": "Débito automático"}, "id": "0ba78ae8-56b6-43f9-ad2d-f116f736ea62", "lista_id": "c8139d2f-3218-4fbc-9c72-7f653f0e77d5", "modalidades": null, "orden": 40, "prestadora_id": null},
-{"activa": true, "clave": "efectivo", "created_at": "2026-09-19T18:55:45.708371+00:00", "i18n": {"en": "Cash", "es-AR": "Efectivo", "pt-BR": "Dinheiro"}, "id": "5abea370-98f5-4f6a-9c08-59de2abae36c", "lista_id": "c9503958-89ed-4e25-9f5f-bb2561912d02", "modalidades": null, "orden": 20, "prestadora_id": null},
-{"activa": true, "clave": "efectivo", "created_at": "2026-09-19T18:55:45.708371+00:00", "i18n": {"en": "Cash", "es-AR": "Efectivo", "pt-BR": "Dinheiro"}, "id": "d6980573-cc15-4a6f-b9b8-6c575fd4805a", "lista_id": "c8139d2f-3218-4fbc-9c72-7f653f0e77d5", "modalidades": null, "orden": 20, "prestadora_id": null},
-{"activa": true, "clave": "fines_semana", "created_at": "2026-09-19T13:49:12.342478+00:00", "i18n": {"en": "Weekends", "es-AR": "Fines de semana", "pt-BR": "Fins de semana"}, "id": "6231e64f-a9bd-4635-9531-be4930a5fbed", "lista_id": "d2ca46ff-a43b-4e92-8e36-8ec88acfe8bf", "modalidades": null, "orden": 40, "prestadora_id": null},
-{"activa": true, "clave": "manana", "created_at": "2026-09-19T13:49:12.342478+00:00", "i18n": {"en": "Morning", "es-AR": "Mañana", "pt-BR": "Manhã"}, "id": "a8b3e215-28f6-48d1-85ca-6aac8c4f1615", "lista_id": "d2ca46ff-a43b-4e92-8e36-8ec88acfe8bf", "modalidades": null, "orden": 10, "prestadora_id": null},
-{"activa": true, "clave": "monotributo", "created_at": "2026-09-19T13:49:12.342478+00:00", "i18n": {"en": "Monotributo (self-employed)", "es-AR": "Monotributo", "pt-BR": "Monotributo (autônomo)"}, "id": "9fc788f8-0ae9-4fd0-a7d5-458e33cc050a", "lista_id": "ba1e108e-8c44-489f-8469-669c3194815b", "modalidades": null, "orden": 10, "prestadora_id": null},
-{"activa": true, "clave": "noche", "created_at": "2026-09-19T13:49:12.342478+00:00", "i18n": {"en": "Night", "es-AR": "Noche", "pt-BR": "Noite"}, "id": "b1642c06-eabc-4fd3-8de4-027b4bda30bf", "lista_id": "d2ca46ff-a43b-4e92-8e36-8ec88acfe8bf", "modalidades": null, "orden": 30, "prestadora_id": null},
-{"activa": true, "clave": "otro", "created_at": "2026-09-19T18:55:45.708371+00:00", "i18n": {"en": "Other", "es-AR": "Otro", "pt-BR": "Outro"}, "id": "ff3f7220-32c0-4ff0-a2e7-2a3cc4b09e4a", "lista_id": "c8139d2f-3218-4fbc-9c72-7f653f0e77d5", "modalidades": null, "orden": 60, "prestadora_id": null},
-{"activa": true, "clave": "tarde", "created_at": "2026-09-19T13:49:12.342478+00:00", "i18n": {"en": "Afternoon", "es-AR": "Tarde", "pt-BR": "Tarde"}, "id": "e106f796-421d-4adf-b812-1e05018c0790", "lista_id": "d2ca46ff-a43b-4e92-8e36-8ec88acfe8bf", "modalidades": null, "orden": 20, "prestadora_id": null},
-{"activa": true, "clave": "tarjeta", "created_at": "2026-09-19T18:55:45.708371+00:00", "i18n": {"en": "Card", "es-AR": "Tarjeta", "pt-BR": "Cartão"}, "id": "53efb6d3-93c1-43a2-9dfa-d78d1e689c2f", "lista_id": "c8139d2f-3218-4fbc-9c72-7f653f0e77d5", "modalidades": null, "orden": 30, "prestadora_id": null},
-{"activa": true, "clave": "transferencia", "created_at": "2026-09-19T18:55:45.708371+00:00", "i18n": {"en": "Bank transfer", "es-AR": "Transferencia", "pt-BR": "Transferência"}, "id": "2209aca5-fc1e-45e6-9662-cc80dbf25683", "lista_id": "c8139d2f-3218-4fbc-9c72-7f653f0e77d5", "modalidades": null, "orden": 10, "prestadora_id": null},
-{"activa": true, "clave": "transferencia", "created_at": "2026-09-19T18:55:45.708371+00:00", "i18n": {"en": "Bank transfer", "es-AR": "Transferencia", "pt-BR": "Transferência"}, "id": "4738dea9-bf83-4bb8-b34e-c34cba691318", "lista_id": "c9503958-89ed-4e25-9f5f-bb2561912d02", "modalidades": null, "orden": 10, "prestadora_id": null}
+{"activa": true, "clave": "cheque", "created_at": "2026-09-19T18:55:45.708371+00:00", "i18n": {"en": "Cheque", "es-AR": "Cheque", "pt-BR": "Cheque"}, "id": "25cb94e1-a768-4f79-9a63-874bfcfc61c1", "lista_id": "c8139d2f-3218-4fbc-9c72-7f653f0e77d5", "orden": 50, "prestadora_id": null},
+{"activa": true, "clave": "debito_automatico", "created_at": "2026-09-19T18:55:45.708371+00:00", "i18n": {"en": "Direct debit", "es-AR": "Débito automático", "pt-BR": "Débito automático"}, "id": "0ba78ae8-56b6-43f9-ad2d-f116f736ea62", "lista_id": "c8139d2f-3218-4fbc-9c72-7f653f0e77d5", "orden": 40, "prestadora_id": null},
+{"activa": true, "clave": "efectivo", "created_at": "2026-09-19T18:55:45.708371+00:00", "i18n": {"en": "Cash", "es-AR": "Efectivo", "pt-BR": "Dinheiro"}, "id": "5abea370-98f5-4f6a-9c08-59de2abae36c", "lista_id": "c9503958-89ed-4e25-9f5f-bb2561912d02", "orden": 20, "prestadora_id": null},
+{"activa": true, "clave": "efectivo", "created_at": "2026-09-19T18:55:45.708371+00:00", "i18n": {"en": "Cash", "es-AR": "Efectivo", "pt-BR": "Dinheiro"}, "id": "d6980573-cc15-4a6f-b9b8-6c575fd4805a", "lista_id": "c8139d2f-3218-4fbc-9c72-7f653f0e77d5", "orden": 20, "prestadora_id": null},
+{"activa": true, "clave": "fines_semana", "created_at": "2026-09-19T13:49:12.342478+00:00", "i18n": {"en": "Weekends", "es-AR": "Fines de semana", "pt-BR": "Fins de semana"}, "id": "6231e64f-a9bd-4635-9531-be4930a5fbed", "lista_id": "d2ca46ff-a43b-4e92-8e36-8ec88acfe8bf", "orden": 40, "prestadora_id": null},
+{"activa": true, "clave": "manana", "created_at": "2026-09-19T13:49:12.342478+00:00", "i18n": {"en": "Morning", "es-AR": "Mañana", "pt-BR": "Manhã"}, "id": "a8b3e215-28f6-48d1-85ca-6aac8c4f1615", "lista_id": "d2ca46ff-a43b-4e92-8e36-8ec88acfe8bf", "orden": 10, "prestadora_id": null},
+{"activa": true, "clave": "monotributo", "created_at": "2026-09-19T13:49:12.342478+00:00", "i18n": {"en": "Monotributo (self-employed)", "es-AR": "Monotributo", "pt-BR": "Monotributo (autônomo)"}, "id": "9fc788f8-0ae9-4fd0-a7d5-458e33cc050a", "lista_id": "ba1e108e-8c44-489f-8469-669c3194815b", "orden": 10, "prestadora_id": null},
+{"activa": true, "clave": "noche", "created_at": "2026-09-19T13:49:12.342478+00:00", "i18n": {"en": "Night", "es-AR": "Noche", "pt-BR": "Noite"}, "id": "b1642c06-eabc-4fd3-8de4-027b4bda30bf", "lista_id": "d2ca46ff-a43b-4e92-8e36-8ec88acfe8bf", "orden": 30, "prestadora_id": null},
+{"activa": true, "clave": "otro", "created_at": "2026-09-19T18:55:45.708371+00:00", "i18n": {"en": "Other", "es-AR": "Otro", "pt-BR": "Outro"}, "id": "ff3f7220-32c0-4ff0-a2e7-2a3cc4b09e4a", "lista_id": "c8139d2f-3218-4fbc-9c72-7f653f0e77d5", "orden": 60, "prestadora_id": null},
+{"activa": true, "clave": "tarde", "created_at": "2026-09-19T13:49:12.342478+00:00", "i18n": {"en": "Afternoon", "es-AR": "Tarde", "pt-BR": "Tarde"}, "id": "e106f796-421d-4adf-b812-1e05018c0790", "lista_id": "d2ca46ff-a43b-4e92-8e36-8ec88acfe8bf", "orden": 20, "prestadora_id": null},
+{"activa": true, "clave": "tarjeta", "created_at": "2026-09-19T18:55:45.708371+00:00", "i18n": {"en": "Card", "es-AR": "Tarjeta", "pt-BR": "Cartão"}, "id": "53efb6d3-93c1-43a2-9dfa-d78d1e689c2f", "lista_id": "c8139d2f-3218-4fbc-9c72-7f653f0e77d5", "orden": 30, "prestadora_id": null},
+{"activa": true, "clave": "transferencia", "created_at": "2026-09-19T18:55:45.708371+00:00", "i18n": {"en": "Bank transfer", "es-AR": "Transferencia", "pt-BR": "Transferência"}, "id": "2209aca5-fc1e-45e6-9662-cc80dbf25683", "lista_id": "c8139d2f-3218-4fbc-9c72-7f653f0e77d5", "orden": 10, "prestadora_id": null},
+{"activa": true, "clave": "transferencia", "created_at": "2026-09-19T18:55:45.708371+00:00", "i18n": {"en": "Bank transfer", "es-AR": "Transferencia", "pt-BR": "Transferência"}, "id": "4738dea9-bf83-4bb8-b34e-c34cba691318", "lista_id": "c9503958-89ed-4e25-9f5f-bb2561912d02", "orden": 10, "prestadora_id": null}
 ]$fila$::jsonb);
 
 INSERT INTO public.reglas_de_los_mensajes (id, prestadora_id, clave, patron, banderas, motivo, orden, activo, created_at)

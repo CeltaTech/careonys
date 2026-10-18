@@ -8,7 +8,7 @@
  * para cuando no hay con quién hablar diga exactamente lo mismo que siembra la base. Si una
  * de las dos cambia y la otra no, esta prueba lo dice.
  */
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { loQueEstaMalEnElCobro, primerDiaDelPeriodo, aDosDecimales } from '../cobrosDeCliente';
@@ -63,21 +63,8 @@ describe('el catálogo guardado dice lo mismo que siembra la base', () => {
     if (desde === -1) return [];
     return JSON.parse(foto.slice(desde + inicio.length - 1, foto.indexOf(']$fila$', desde) + 1));
   };
-  /* Las migraciones posteriores a la foto pueden borrar filas de fábrica, con
-     `DELETE FROM public.opciones_de_lista WHERE ... clave = '<clave>'`. */
-  const carpeta = fileURLToPath(new URL('../../../../supabase/migrations/', import.meta.url));
-  const borradas = new Set(
-    readdirSync(carpeta)
-      .filter((archivo) => archivo > '20261016000000_foto_de_la_base.sql')
-      .flatMap((archivo) => [
-        ...readFileSync(`${carpeta}${archivo}`, 'utf8').matchAll(
-          /DELETE FROM public\.opciones_de_lista\s+WHERE[^;]*?clave = '([a-z_]+)'/g,
-        ),
-      ])
-      .map((m) => m[1]),
-  );
   const listas = filasDeFabrica('listas_de_opciones');
-  const opciones = filasDeFabrica('opciones_de_lista').filter((o) => !borradas.has(o.clave));
+  const opciones = filasDeFabrica('opciones_de_lista');
   const listaDeFabrica = (clave) => listas.find((l) => l.clave === clave && l.prestadora_id === null);
 
   /* Las opciones que siembra la base para una lista, en su orden. */

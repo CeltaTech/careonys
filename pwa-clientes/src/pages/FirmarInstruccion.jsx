@@ -149,7 +149,7 @@ export default function FirmarInstruccion() {
         <>
           {enviadoA && (
             <div className="alert alert-info" role="status">
-              {enviadoA === 'whatsapp' ? t.instruccion.codigo_enviado_whatsapp : t.instruccion.codigo_enviado_email}
+              {enviadoA === 'telefono' ? t.instruccion.codigo_enviado_whatsapp : t.instruccion.codigo_enviado_email}
             </div>
           )}
 

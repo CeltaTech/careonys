@@ -257,7 +257,7 @@ Decisión: ____
 
 ### 20. Unidad de tiempo no disponible
 - **Texto actual:** Esa unidad de tiempo no está disponible. **Conviene recargar la pantalla y elegir una de la lista.**
-- **Texto propuesto:** Unidad de tiempo no disponible. Actualice la página y elija otra de la lista.
+- **Decidido:** sin frase propia. Desde la pantalla no se puede producir; si llega igual, se muestra el aviso general de dato mal cargado.
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** la administración de la Prestadora.
 - **Dónde está:** Panel → Facturación → Formas de cobro de Match, ventana de la forma de cobro, casillero «Unidad de tiempo».

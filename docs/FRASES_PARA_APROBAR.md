@@ -4,11 +4,11 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 121 fichas.** Panel 73, aplicación del Asistente 27, aplicación del Cliente 19, Base 2.
+**Total: 109 fichas.** Panel 62, aplicación del Asistente 27, aplicación del Cliente 18, Base 2.
 
 En el texto actual, la parte en cuestión va en **negrita**.
 
-## Panel (73)
+## Panel (62)
 
 ### 1. Sesión vencida
 
@@ -82,67 +82,13 @@ En el texto actual, la parte en cuestión va en **negrita**.
 | **Cómo se muestra** | — |
 | **Decisión** |  |
 
-### 5. Nombre de Prestadora repetido
-
-| | |
-|---|---|
-| **Texto actual** | Ya hay una Prestadora con ese nombre. **Hace falta usar otro:** de ese nombre sale la dirección desde la que manda sus mensajes. |
-| **Texto propuesto** | Ya existe una Prestadora con ese nombre. Ingrese otro. |
-| **Propuesta corta** | ya sacada. Se cierra la ficha |
-| **¿Aparece hoy?** | no |
-| **Por qué** | el alta de Prestadora pasó a CeltaTech. |
-| **Qué cambió** | imperativo, y sin la explicación de cómo funciona el sistema por dentro. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | hoy no aparece en ninguna parte: el Panel no da de alta Prestadoras. Describiría el alta de una Prestadora con un nombre que ya usa otra. |
-| **Qué estaba haciendo** | — |
-| **Qué pasó** | — |
-| **Qué puede hacer después** | — |
-| **Cómo se muestra** | — |
-| **Decisión** |  |
-
-### 6. País sin moneda configurada
-
-| | |
-|---|---|
-| **Texto actual** | Todavía no está cargado en qué moneda trabaja ese país, así que no se puede dar de alta una Prestadora ahí. **Hace falta agregarlo antes.** |
-| **Texto propuesto** | El país no tiene una moneda configurada. Configure la moneda antes de continuar. |
-| **Propuesta corta** | ya sacada. Se cierra la ficha |
-| **¿Aparece hoy?** | no |
-| **Por qué** | igual que la 5. |
-| **Qué cambió** | más corto; dice qué pasó y qué hacer. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | hoy no aparece en ninguna parte: el Panel no da de alta Prestadoras. Describiría el alta de una Prestadora en un país sin moneda configurada. |
-| **Qué estaba haciendo** | — |
-| **Qué pasó** | — |
-| **Qué puede hacer después** | — |
-| **Cómo se muestra** | — |
-| **Decisión** |  |
-
-### 7. No se pudo crear la dirección de la Prestadora
-
-| | |
-|---|---|
-| **Texto actual** | No se pudo darle una dirección propia de ingreso a esa Prestadora. **Hace falta usar otro nombre.** |
-| **Texto propuesto** | No se pudo crear la dirección de la Prestadora. Ingrese otro nombre. |
-| **Propuesta corta** | ya sacada. Se cierra la ficha |
-| **¿Aparece hoy?** | no |
-| **Por qué** | igual que la 5. |
-| **Qué cambió** | imperativo en lugar de «hace falta». |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | hoy no aparece en ninguna parte: el Panel no da de alta Prestadoras. Describiría el alta de una Prestadora cuando el sistema no logra crearle su dirección. |
-| **Qué estaba haciendo** | — |
-| **Qué pasó** | — |
-| **Qué puede hacer después** | — |
-| **Cómo se muestra** | — |
-| **Decisión** |  |
-
 ### 8. Moneda que ya no está en la lista
 
 | | |
 |---|---|
 | **Texto actual** | Esa moneda no está entre las que se pueden elegir. **Conviene recargar la pantalla y elegir una de la lista.** |
 | **Texto propuesto** | Moneda no disponible. Actualice la página y elija una de la lista. |
-| **Propuesta corta** | Sacar la frase. Ese caso cae en el aviso general («Datos no válidos.»), igual que la unidad de tiempo (ficha 20) |
+| **Propuesta corta** | Sacar la frase. Ese caso cae en el aviso general («Datos no válidos.») |
 | **¿Aparece hoy?** | no |
 | **Por qué** | es un aviso para un caso que la propia lista impide. |
 | **Qué cambió** | imperativo en lugar de «conviene». |
@@ -152,24 +98,6 @@ En el texto actual, la parte en cuestión va en **negrita**.
 | **Qué pasó** | la moneda elegida ya no está habilitada: la lista cambió con la página abierta, o la casilla mostraba una moneda ya guardada que después salió de la lista. |
 | **Qué puede hacer después** | actualizar la página, elegir otra moneda y guardar. |
 | **Cómo se muestra** | franja dentro de la tarjeta. |
-| **Decisión** |  |
-
-### 9. Software que ya no está en la lista
-
-| | |
-|---|---|
-| **Texto actual** | Ese software no está entre los que se pueden elegir. **Conviene recargar la pantalla y elegir uno de la lista.** |
-| **Texto propuesto** | Software no disponible. Actualice la página y elija uno de la lista. |
-| **Propuesta corta** | ya sacada. Se cierra la ficha |
-| **¿Aparece hoy?** | no |
-| **Por qué** | la pantalla que la usaba no existe. |
-| **Qué cambió** | imperativo en lugar de «conviene». |
-| **Quién lo lee** | la administración de la Prestadora. |
-| **Dónde está** | Panel → Configuración → La Prestadora, tarjetas «El software de facturación» y «El software de créditos y cobranzas», botón «Guardar». |
-| **Qué estaba haciendo** | guardaba qué software de facturación o de cobranzas usa la Prestadora. |
-| **Qué pasó** | el software elegido dejó de estar habilitado con la página abierta. No se pudo confirmar si también pasa al volver a guardar un software que ya estaba elegido y después se retiró. |
-| **Qué puede hacer después** | actualizar la página, elegir otro software o «Sin elegir», y guardar. |
-| **Cómo se muestra** | franja arriba de las dos tarjetas. |
 | **Decisión** |  |
 
 ### 10. Domicilio temporal superpuesto
@@ -226,24 +154,6 @@ En el texto actual, la parte en cuestión va en **negrita**.
 | **Cómo se muestra** | franja dentro de la ventana. |
 | **Decisión** |  |
 
-### 13. Forma de pago que no corresponde
-
-| | |
-|---|---|
-| **Texto actual** | Ese medio de pago no se usa en la modalidad de trabajo que paga esta liquidación. **Hace falta elegir otro de la lista.** |
-| **Texto propuesto** | La forma de pago no corresponde a la modalidad de esta liquidación. Elija otra. |
-| **Propuesta corta** | ya sacada. Se cierra la ficha |
-| **¿Aparece hoy?** | no |
-| **Por qué** | salió el medio de pago atado a una modalidad. |
-| **Qué cambió** | imperativo; «forma de pago», como dice la etiqueta. |
-| **Quién lo lee** | la administración de la Prestadora. |
-| **Dónde está** | Panel → Asistentes → Pagos a Asistentes → Liquidaciones, ventana «Detalle de la liquidación», botón «Registrar el pago». |
-| **Qué estaba haciendo** | registraba el pago de una liquidación a un Asistente. |
-| **Qué pasó** | la forma de pago no corresponde a la modalidad de esa liquidación. La página sólo ofrece las que corresponden, así que pasaría si algo cambió con la ventana abierta. No se pudo confirmar. |
-| **Qué puede hacer después** | elegir otra forma de pago y registrar, o cerrar. |
-| **Cómo se muestra** | franja arriba de la ventana. |
-| **Decisión** |  |
-
 ### 14. Persona que ya no está autorizada
 
 | | |
@@ -260,36 +170,6 @@ En el texto actual, la parte en cuestión va en **negrita**.
 | **Qué pasó** | describiría el intento de quitar a alguien que ya no está entre las personas autorizadas. |
 | **Qué puede hacer después** | actualizar la lista. |
 | **Cómo se muestra** | hoy el otro texto sale como franja al pie de la tarjeta. |
-| **Decisión** |  |
-
-### 15. No se encontró el Paciente
-
-| | |
-|---|---|
-| **Texto actual** | No se encontró ese Paciente. **Conviene recargar la lista.** |
-| **Texto propuesto** | Paciente no encontrado. Actualice la página. |
-| **Qué cambió** | imperativo en lugar de «conviene». |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Guardias → Guardias, grilla vista por Paciente (también en Estado actual); Panel → Informes → Informes para Obra Social. |
-| **Qué estaba haciendo** | movía un turno a la fila de otro Paciente, o generaba o guardaba un informe. |
-| **Qué pasó** | el Paciente ya no existe para esta Prestadora; lo más probable es que alguien lo haya borrado con la página abierta. No se pudo confirmar si hay otra causa habitual. |
-| **Qué puede hacer después** | actualizar la página y elegir otro Paciente. |
-| **Cómo se muestra** | franja arriba de la página. |
-| **Decisión** |  |
-
-### 16. No se encontró el acceso
-
-| | |
-|---|---|
-| **Texto actual** | No se encontró ese acceso. **Conviene recargar la lista.** |
-| **Texto aprobado** | Acceso no encontrado. |
-| **Qué cambió** | imperativo. Es la misma propuesta que la ficha 8 de la aplicación del Cliente. |
-| **Quién lo lee** | la administración de la Prestadora. |
-| **Dónde está** | Panel → Clientes → Clientes (Match) → «Ver cobros», recuadro «Alta en la pasarela de cobro». |
-| **Qué estaba haciendo** | tocó «Dar de alta para cobrar». |
-| **Qué pasó** | el acceso de ese Cliente ya no existe; seguramente se dio de baja con la página abierta. |
-| **Qué puede hacer después** | actualizar la página. |
-| **Cómo se muestra** | franja arriba de la página. |
 | **Decisión** |  |
 
 ### 17. Más de una pasarela de cobro
@@ -345,21 +225,6 @@ En el texto actual, la parte en cuestión va en **negrita**.
 | **Cómo se muestra** | franja dentro de la ventana. |
 | **Decisión** |  |
 
-### 20. Unidad de tiempo no disponible
-
-| | |
-|---|---|
-| **Texto actual** | Esa unidad de tiempo no está disponible. **Conviene recargar la pantalla y elegir una de la lista.** |
-| **Decidido** | sin frase propia. Desde la pantalla no se puede producir; si llega igual, se muestra el aviso general de dato mal cargado. |
-| **Qué cambió** | imperativo en lugar de «conviene». |
-| **Quién lo lee** | la administración de la Prestadora. |
-| **Dónde está** | Panel → Facturación → Formas de cobro de Match, ventana de la forma de cobro, casillero «Unidad de tiempo». |
-| **Qué estaba haciendo** | guardaba una forma de cobro. |
-| **Qué pasó** | la unidad elegida dejó de estar en la lista con la ventana abierta. No se guardó. |
-| **Qué puede hacer después** | actualizar la página, elegir otra unidad y guardar, o cancelar. |
-| **Cómo se muestra** | franja dentro de la ventana. |
-| **Decisión** |  |
-
 ### 21. Renovación sin período
 
 | | |
@@ -378,36 +243,6 @@ En el texto actual, la parte en cuestión va en **negrita**.
 | **Cómo se muestra** | franja dentro de la ventana. |
 | **Decisión** |  |
 
-### 22. Plantilla ya enviada a Meta
-
-| | |
-|---|---|
-| **Texto actual** | Esa plantilla ya salió hacia Meta, así que no se manda de nuevo. **Conviene recargar la lista para ver cómo quedó.** |
-| **Texto aprobado** | Ya enviada. |
-| **Qué cambió** | más corto, imperativo, sin «para ver cómo quedó». |
-| **Quién lo lee** | la administración de la Prestadora. |
-| **Dónde está** | Panel → Configuración → Mensajes, parte de WhatsApp, recuadro «Plantillas de mensaje», botón «Enviar a Meta». |
-| **Qué estaba haciendo** | enviaba una plantilla en borrador a Meta. |
-| **Qué pasó** | otra persona u otra ventana ya la había enviado. No se mandó de nuevo. |
-| **Qué puede hacer después** | actualizar la lista o tocar «Consultar el resultado a Meta». |
-| **Cómo se muestra** | franja arriba del recuadro. |
-| **Decisión** |  |
-
-### 23. Contenido con título repetido
-
-| | |
-|---|---|
-| **Texto actual** | Ya hay otra pieza de contenido con ese título. **Conviene ponerle uno que se distinga.** |
-| **Texto aprobado** | Título en uso. Ingrese otro. |
-| **Qué cambió** | imperativo en lugar de «conviene». |
-| **Quién lo lee** | la coordinación de la Prestadora habilitada para publicar contenidos. |
-| **Dónde está** | Panel → Comunicación → Contenidos, ventana del contenido, botón «Guardar». |
-| **Qué estaba haciendo** | guardaba un contenido nuevo o cambiado. |
-| **Qué pasó** | ya existe otro contenido con el mismo título. No se guardó. |
-| **Qué puede hacer después** | cambiar el título y guardar, o cancelar. |
-| **Cómo se muestra** | franja dentro de la ventana. |
-| **Decisión** |  |
-
 ### 24. No se encontró el cese
 
 | | |
@@ -423,21 +258,6 @@ En el texto actual, la parte en cuestión va en **negrita**.
 | **Qué estaba haciendo** | tocó «Descargar liquidación», «Descargar telegrama», «Descargar notificación» o «Ver el guardado». |
 | **Qué pasó** | el sistema no encontró ese cese. En el Panel no hay forma de borrar un cese, y no se pudo confirmar en qué circunstancia real aparece. |
 | **Qué puede hacer después** | actualizar la página e intentar de nuevo. |
-| **Cómo se muestra** | franja arriba del recuadro. |
-| **Decisión** |  |
-
-### 25. Fecha de entrevista no válida
-
-| | |
-|---|---|
-| **Texto actual** | Esa fecha no se entiende. **Conviene elegir el día y la hora de nuevo.** |
-| **Texto aprobado** | Fecha no válida. |
-| **Qué cambió** | imperativo en lugar de «conviene». |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Asistentes → Postulaciones → una postulación, recuadro «Entrevista». |
-| **Qué estaba haciendo** | agendaba la entrevista o cambiaba el día y la hora. |
-| **Qué pasó** | el sistema no pudo leer la fecha. Desde el Panel prácticamente no puede ocurrir: si la fecha no se entiende, la página no envía nada. No se pudo confirmar ningún caso real. |
-| **Qué puede hacer después** | elegir de nuevo el día y la hora. |
 | **Cómo se muestra** | franja arriba del recuadro. |
 | **Decisión** |  |
 
@@ -1793,7 +1613,7 @@ En el texto actual, la parte en cuestión va en **negrita**.
 | **Cómo se muestra** | franja amarilla. |
 | **Decisión** |  |
 
-## Aplicación del Cliente (19)
+## Aplicación del Cliente (18)
 
 ### 1. Sesión vencida
 
@@ -1919,21 +1739,6 @@ En el texto actual, la parte en cuestión va en **negrita**.
 | **Qué pasó** | el sistema no encontró lo pedido. |
 | **Qué puede hacer después** | volver a abrir la sección. |
 | **Cómo se muestra** | texto al pie del campo, o franja. |
-| **Decisión** |  |
-
-### 8. No se encontró el acceso
-
-| | |
-|---|---|
-| **Texto actual** | No se encontró ese acceso. **Conviene volver a abrir la pantalla.** |
-| **Texto aprobado** | Acceso no encontrado. |
-| **Qué cambió** | imperativo. Mismo caso que la ficha 16 del Panel, con la misma propuesta. |
-| **Quién lo lee** | el Cliente o la persona autorizada. |
-| **Dónde está** | hoy no aparece en ninguna parte: Pacientes → un Paciente → «Acceso» es de Match, que está cerrado para todos los Clientes. Describiría dar de baja un acceso que ya no existe. |
-| **Qué estaba haciendo** | — |
-| **Qué pasó** | — |
-| **Qué puede hacer después** | — |
-| **Cómo se muestra** | — |
 | **Decisión** |  |
 
 ### 9. Sin servicio contratado para ver el contacto

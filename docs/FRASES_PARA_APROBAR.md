@@ -296,7 +296,7 @@ Decisión: ____
 
 ### 23. Contenido con título repetido
 - **Texto actual:** Ya hay otra pieza de contenido con ese título. **Conviene ponerle uno que se distinga.**
-- **Texto propuesto:** Ya existe un contenido con ese título. Ingrese otro título.
+- **Texto aprobado:** Título en uso. Ingrese otro.
 - **Qué cambió:** imperativo en lugar de «conviene».
 - **Quién lo lee:** la coordinación de la Prestadora habilitada para publicar contenidos.
 - **Dónde está:** Panel → Comunicación → Contenidos, ventana del contenido, botón «Guardar».

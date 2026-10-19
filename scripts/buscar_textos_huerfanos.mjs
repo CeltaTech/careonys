@@ -135,19 +135,23 @@ for (const app of APPS) {
   const grupoEnteroUsado = (grupo) => {
     if (grupo === '(raíz)') return false;
     const camino = grupo.split('.').map(escapar).join('\\??\\.');
-    const re = new RegExp(
-      `(.{0,16})\\bt\\??\\.${camino}\\s*(?:\\??\\.?\\[|(?![A-Za-z0-9_?.[(]))`,
-      'g',
-    );
-    for (const m of fuentes.matchAll(re)) if (!m[1].includes('traducirValor(')) return true;
+    const re = new RegExp(`\\bt\\??\\.${camino}\\s*(?:\\??\\.?\\[|(?![A-Za-z0-9_?.[(]))`, 'g');
+    for (const m of fuentes.matchAll(re)) {
+      // Los dieciséis caracteres de antes, sin pasar al renglón anterior.
+      const antes = fuentes.slice(Math.max(0, m.index - 16), m.index);
+      if (!antes.slice(antes.lastIndexOf('\n') + 1).includes('traducirValor(')) return true;
+    }
     return false;
   };
   const gruposEnteros = new Set();
   for (const { grupo } of claves) if (!gruposEnteros.has(grupo) && grupoEnteroUsado(grupo)) gruposEnteros.add(grupo);
 
+  // Cada palabra del programa, una sola vez. Buscar cada clave recorriendo todo el programa de
+  // nuevo hacía que la comprobación tardara más de un minuto.
+  const palabras = new Set(fuentes.match(/[A-Za-z0-9_]+/g));
+
   const huerfanas = claves.filter(({ hoja, grupo }) => {
-    const re = new RegExp(`(^|[^A-Za-z0-9_])${escapar(hoja)}([^A-Za-z0-9_]|$)`);
-    if (re.test(fuentes)) return false;
+    if (palabras.has(hoja)) return false;
     for (const c of comienzos) if (hoja.startsWith(c)) return false;
     if (gruposEnteros.has(grupo)) return false;
     return true;

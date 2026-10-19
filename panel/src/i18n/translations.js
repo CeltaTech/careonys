@@ -66,7 +66,7 @@ export const T = {
         // explicaciones que no son la que pasó y no dicen qué hacer.
         ya_resuelta: 'Otro usuario ya resolvió este pedido. Actualice la lista.',
         emergencia_ya_atendida: 'Emergencia atendida.',
-        ya_cerrada: 'Este registro ya está cerrado. Actualice la lista.',
+        ya_cerrada: 'Ya se encuentra autorizada.',
         demasiados_pedidos: 'Demasiadas solicitudes. Espere un minuto e intente nuevamente.',
         modalidad_no_activa: 'Esta modalidad no está activa.',
         // Dos mensajes que antes llegaban como frase armada del lado del backend, en un solo idioma.
@@ -3084,7 +3084,7 @@ export const T = {
         domicilio_temporal_fechas_al_reves: 'The end date cannot be earlier than the start date.',
         ya_resuelta: 'Another user already resolved this request. Reload the list.',
         emergencia_ya_atendida: 'Emergency already handled.',
-        ya_cerrada: 'This record is already closed. Reload the list.',
+        ya_cerrada: 'It is already authorized.',
         demasiados_pedidos: 'Too many requests. Wait a minute and try again.',
         modalidad_no_activa: 'This service model is not active.',
         persona_no_autorizada: 'Not found in the records.',
@@ -6047,7 +6047,7 @@ export const T = {
         domicilio_temporal_fechas_al_reves: 'A data de término não pode ser anterior à data de início.',
         ya_resuelta: 'Outro usuário já resolveu este pedido. Atualize a lista.',
         emergencia_ya_atendida: 'Emergência atendida.',
-        ya_cerrada: 'Este registro já está fechado. Atualize a lista.',
+        ya_cerrada: 'Já se encontra autorizada.',
         demasiados_pedidos: 'Muitas solicitações. Aguarde um minuto e tente novamente.',
         modalidad_no_activa: 'Esta modalidade não está ativa.',
         persona_no_autorizada: 'Não consta no registro.',

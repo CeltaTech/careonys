@@ -4,25 +4,9 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 97 fichas.** Panel 54, aplicación del Asistente 25, aplicación del Cliente 16, Base 2.
+**Total: 96 fichas.** Panel 53, aplicación del Asistente 25, aplicación del Cliente 16, Base 2.
 
-## Panel (54)
-
-### 12. Revisión ya cerrada
-
-| | |
-|---|---|
-| **Texto actual** | Este registro ya está cerrado. Actualice la lista. |
-| **Propuesta corta** | «Ya cerrado.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | es telegráfico. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Clientes → un Cliente → solapa «Personas autorizadas», ventana «Registrar la firma». |
-| **Qué estaba haciendo** | registraba el papel firmado de una instrucción. |
-| **Qué pasó** | la instrucción ya no esperaba firma. |
-| **Qué puede hacer después** | actualizar la lista. |
-| **Cómo se muestra** | franja dentro de la ventana. |
-| **Decisión** |  |
+## Panel (53)
 
 ### 14. Persona que ya no está autorizada
 

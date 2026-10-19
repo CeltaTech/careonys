@@ -9,9 +9,12 @@
 
 ## Autenticación por etapa
 
-- **Etapa 2 (Panel Admin):** Supabase Auth, email + password, **sin** magic link (decisión
-  oficial — el panel es de uso interno, no beneficia la fricción-cero del magic link).
-- **Etapas 3-4 (PWA Asistentes / Clientes):** Supabase Auth, magic link o email/password.
+- **Panel:** Supabase Auth, nombre de usuario `parte_código` y contraseña, **sin** magic link.
+- **Aplicaciones de Asistentes y Clientes:** Supabase Auth, nombre de usuario y contraseña. El
+  nombre es único en todo el sistema y lo elige la persona al activar la cuenta; la contraseña se
+  recupera con ese nombre. El email es un dato de contacto: el servicio de acceso conoce a la
+  cuenta por `<identificador de la cuenta>@acceso.careonys.invalid`
+  (`backend/src/config/direccionDeAcceso.js`), así que corregir el email no toca el acceso.
 
 Supabase Auth ya maneja la emisión, rotación y revocación de tokens JWT — **no construir
 un esquema propio de access/refresh tokens**. El detalle de "Access Token 15 min + Refresh

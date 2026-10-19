@@ -79,17 +79,17 @@ solo dentro de la carpeta propia.
 **El logo es opcional.** Sin logo la pantalla no se rompe: muestra el nombre de la Prestadora
 escrito.
 
-**La pantalla de ingreso de las aplicaciones muestra la marca de la Prestadora.** La persona
-escribe el código de su Prestadora, y `backend/src/routes/marcaDeLaPuerta.js` devuelve el nombre y
-el logotipo sin pedir sesión. El código queda anotado en el teléfono y no se vuelve a pedir. **El
-Panel no mira la dirección de la página**: la coordinación entra con su nombre de usuario,
-`parte_código`, y el código dice de qué Prestadora es.
+**La marca de la Prestadora aparece después de entrar.** Asistentes y Clientes entran a las
+aplicaciones con un nombre de usuario que es único en todo el sistema, así que la pantalla de
+ingreso no pregunta de qué Prestadora es la cuenta ni muestra ninguna marca: la trae
+`context/PerfilContext.jsx` al abrirse la sesión. **El Panel no mira la dirección de la página**:
+la coordinación entra con su nombre de usuario, `parte_código`, y el código dice de qué
+Prestadora es.
 
 **Ese código se le asigna solo al darla de alta**, nadie lo teclea, y sale del nombre con la misma
 regla de tres pasos de arriba: del dominio propio que declaró, si no de su nombre, y con un sufijo
 si el que salió ya está tomado (`backend/src/utils/direccionDeLaPrestadora.js`). Se fija en el alta
-y no cambia nunca, porque forma parte del nombre de usuario de toda su coordinación y está anotado
-en el teléfono de toda su gente.
+y no cambia nunca, porque forma parte del nombre de usuario de toda su coordinación.
 
 Los nombres que el producto usa para sus propias pantallas no se le pueden asignar a ninguna
 Prestadora: viven en la tabla `direcciones_reservadas` y no escritos en el código, así que publicar

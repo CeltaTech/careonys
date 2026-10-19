@@ -672,17 +672,18 @@ la sección de Reclutamiento está esperando justamente esto.
   esas notas quedan atrás.
 
 **21.** Una cuenta por Prestadora. **Un Asistente trabaja en varias Prestadoras y un Cliente
-contrata con varias.** Cada una de esas es **una cuenta distinta, con su propia contraseña**. El mismo
-correo puede estar en dos Prestadoras y son dos cuentas: usar el correo de siempre no lo obliga a
-nadie a tener una sola cuenta. Adentro de una Prestadora ese correo no se repite.
+contrata con varias.** Cada una de esas es **una cuenta distinta, con su propio nombre de usuario y su propia
+contraseña**. El mismo email puede estar en dos Prestadoras y son dos cuentas: usar el email de
+siempre no lo obliga a nadie a tener una sola cuenta. Adentro de una Prestadora ese email no se
+repite.
 
-**El modelo ya está y la base lo impone.** En las dos aplicaciones se entra nombrando primero la
-Prestadora; en el Panel, la Prestadora sale del correo de la cuenta. **Lo que falta es la prueba
+**El modelo ya está y la base lo impone.** Se entra con el nombre de usuario, que es único en todo
+el sistema, así que la cuenta ya dice de qué Prestadora es y nadie la nombra al entrar. **Lo que falta es la prueba
 de aislamiento de abajo**, con la misma persona en dos Prestadoras.
 
-**Y al entrar no se insinúa nada.** Un correo que existe en otra Prestadora se trata igual que uno
-que no existe: el mismo mensaje y la misma demora. Nadie averigua dónde más trabaja una persona
-probando su correo.
+**Y al entrar no se insinúa nada.** Un nombre de usuario que no existe se trata igual que una
+contraseña equivocada: el mismo mensaje. Y pedir la recuperación de la contraseña contesta lo mismo
+exista el nombre o no.
 
 **Nunca en dos a la vez.** Para hacer o ver algo en la segunda Prestadora hay que salir de la
 primera y entrar a la otra. No existe ninguna pantalla que muestre las dos juntas, ni una lista con
@@ -713,6 +714,16 @@ lo de acá es mejor salvo el motivo de la falla, que ya está resuelto. **Se ret
 `disponible_para_ofertas`—: no la lee ningún programa ni
 ninguna pantalla, de ninguno de los dos lados. Y los textos legales de allá no sirven: son de una
 sola Prestadora, sin versión y sin dónde queden guardados.
+
+**Y hoy una cuenta sí se borra, contra la regla.** La función de la base `dar_de_baja_la_cuenta`
+borra la fila de `usuarios` y la de `auth.users`. La llama `borrarCuenta`
+(`backend/src/utils/cuentasPanel.js:158`) desde la baja de una cuenta del Panel
+(`backend/src/routes/panelUsuarios.js:198`), desde quitar una persona autorizada
+(`backend/src/utils/cuentasPanel.js:515`) y al deshacer un alta que falló a mitad de camino
+(`backend/src/routes/panelUsuarios.js:127`, `backend/src/utils/cuentasPanel.js:244`). La regla dice
+que una cuenta se desactiva, se suspende o se bloquea, con una nota que diga por qué, y nunca se
+borra. **Espera al Desarrollador:** decidir qué pasa con la cuenta en cada uno de esos tres casos,
+sobre todo el último, donde la cuenta recién creada nunca llegó a usarse.
 
 **22. Usted** — Decidir qué secciones de Match quedan en el Panel. Match no tiene panel aparte:
 sus secciones están en el mismo Panel y aparecen sólo si la Prestadora tiene habilitada la

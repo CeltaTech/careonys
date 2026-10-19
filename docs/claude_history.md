@@ -2,6 +2,12 @@
 
 > Registra por qué cambió una regla vigente de `CLAUDE.md`. La regla vigente en sí vive solo en `CLAUDE.md` (§10) — este archivo guarda el "antes" y el motivo, no vuelve a describir el estado actual en detalle.
 
+## Asistentes y Clientes entran con nombre de usuario
+
+- **Decía antes:** el Asistente y el Cliente entraban con su email y el código de la Prestadora, que la aplicación pedía en un paso previo; la contraseña se recuperaba por email dentro de esa Prestadora.
+- **Dice ahora:** entran con un nombre de usuario único en todo el sistema, de 4 a 12 caracteres, y su contraseña; la cuenta ya dice de qué Prestadora es, así que nadie la nombra al entrar. La contraseña se recupera por nombre de usuario. El email queda como dato de contacto, y cuando cambia se le avisa a la dirección anterior. Las piezas retiradas quedaron en el estante de `Codigos-utiles`.
+- **Motivo:** plan aprobado por el Desarrollador. El email es de la persona y se repite en cada Prestadora donde tiene cuenta, así que no alcanza para saber a qué cuenta se entra; un nombre de usuario único sí, y con él sobra el paso del código de la Prestadora.
+
 ## La cuenta técnica de CeltaTech ya no entra por Careonys (2026-10-19)
 
 - **Decía antes:** el superadmin tenía entrada propia al Panel, con segundo factor por código de verificación activable desde Configuración, y sin permiso de acceso trabajaba en la Organización ficticia.

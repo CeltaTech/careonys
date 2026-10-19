@@ -25,6 +25,8 @@ import { useConfirmacion } from '../context/ConfirmacionContext';
 import { moverGuardia } from '../lib/moverGuardia';
 import { mensajeDeError } from '../lib/errores';
 import { useUmbrales } from '../context/UmbralesContext';
+import { usePedidosDeAutorizacion } from '../context/PedidosDeAutorizacionContext';
+import { llamarApiComprobaciones } from '../lib/apiComprobaciones';
 // Las dos vienen del punto único de verdad de las fechas. Esta pantalla tenía su propia copia de
 // `hoyISO`, escrita con `toISOString()` a secas, que devuelve el día en huso cero: quien mira
 // desde Buenos Aires después de las nueve de la noche abría la lista en el día siguiente, y las
@@ -78,6 +80,29 @@ export function Guardias() {
   // verlas por Paciente, por semana o en línea de tiempo.
   const [verGrilla, setVerGrilla] = useState(false);
   const [guardiaSeleccionada, setGuardiaSeleccionada] = useState(null);
+  // Quién está en la puerta esperando que lo dejen entrar. El Asistente que no pudo leer el
+  // código QR llama a quien coordina; quien coordina busca su guardia acá, verifica como
+  // acostumbre y aprieta «Autorizar ingreso». Eso vale lo mismo que leer el código QR: la llegada
+  // queda comprobada con quién la autorizó, y la salida del Asistente que se va, autorizada.
+  const { pedidos: pedidosDeAutorizacion, recargar: recargarPedidos } = usePedidosDeAutorizacion();
+  const pedidoPorGuardia = useMemo(
+    () => new Map(pedidosDeAutorizacion.map((p) => [p.guardiaId, p])),
+    [pedidosDeAutorizacion]
+  );
+  const [autorizandoId, setAutorizandoId] = useState(null);
+
+  async function autorizarIngreso(pedido) {
+    setAutorizandoId(pedido.id);
+    setAviso(null);
+    try {
+      await llamarApiComprobaciones(`/${pedido.id}/autorizar`, { method: 'POST' });
+      recargarPedidos();
+    } catch (err) {
+      setAviso(mensajeDeError(err, t));
+    } finally {
+      setAutorizandoId(null);
+    }
+  }
   const [asistentes, setAsistentes] = useState([]);
   const [nombreDelPaciente, setNombreDelPaciente] = useState({});
   const { pedirConfirmacion } = useConfirmacion();
@@ -361,6 +386,14 @@ export function Guardias() {
                           <span className={claseBadgeTono(lectura.tono)}>{textoDelEstado(lectura.estado)}</span>
                         </td>
                         <td>
+                          {pedidoPorGuardia.has(g.id) && (
+                            <Button
+                              onClick={() => autorizarIngreso(pedidoPorGuardia.get(g.id))}
+                              disabled={autorizandoId !== null}
+                            >
+                              {autorizandoId === pedidoPorGuardia.get(g.id).id ? tl.autorizando : tl.autorizar_ingreso}
+                            </Button>
+                          )}{' '}
                           <Button variant="secondary" onClick={() => setGuardiaSeleccionada(g)}>
                             {tl[`accion_${lectura.accion}`]}
                           </Button>

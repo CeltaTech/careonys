@@ -5,7 +5,6 @@ import { useAuth } from '../../context/AuthContext';
 import { useEmpresa } from '../../context/EmpresaContext';
 import { usePermisos } from '../../context/PermisosContext';
 import { useModalidades } from '../../context/ModalidadesContext';
-import { usePedidosDeAutorizacion } from '../../context/PedidosDeAutorizacionContext';
 import { useTelefonosEsperando } from '../../context/TelefonosEsperandoContext';
 import { useEmergenciasSinAtender } from '../../context/EmergenciasSinAtenderContext';
 import { esAdminOSuperior } from '../../lib/roles';
@@ -134,7 +133,6 @@ export function Layout() {
   const { tieneModalidad, ambas, vista, elegirVista, enVista } = useModalidades();
   // Los dos contadores se preguntan solos cada pocos segundos: del otro lado hay alguien
   // esperando, y no puede depender de que a alguien se le ocurra abrir esa sección.
-  const { pedidos: pedidosDeAutorizacion } = usePedidosDeAutorizacion();
   const { cuentas: telefonosEsperando } = useTelefonosEsperando();
   const { emergencias: emergenciasSinAtender } = useEmergenciasSinAtender();
   const ubicacion = useLocation();
@@ -218,7 +216,6 @@ export function Layout() {
       enlaces: [
         { a: '/guardias', texto: t.nav.guardias, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },
         { a: '/emergencias', texto: t.nav.emergencias, ver: hayPadron, contador: emergenciasSinAtender.length, critico: true },
-        { a: '/pase-de-guardia', texto: t.nav.pase_de_guardia, ver: hayPadron, contador: pedidosDeAutorizacion.length },
         { a: '/continuidad', texto: t.nav.continuidad, ver: hayPadron },
         { a: '/verificacion-guardias', texto: t.nav.verificacion_guardias, ver: hayPadron },
         { a: '/reportes', texto: t.nav.reportes, ver: verDirecta, modalidad: MODALIDAD.DIRECTA },

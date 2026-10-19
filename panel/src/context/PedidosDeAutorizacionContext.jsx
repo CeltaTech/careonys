@@ -11,9 +11,10 @@ import { mensajeDeError } from '../lib/errores';
 
    QUÉ RESUELVE. El diseño del pase de guardia (pendiente #113) pide que, cuando el Asistente
    está parado en la puerta y no puede leer el código QR, su pedido de autorización **aparezca en
-   el momento** en el Panel. Una lista que sólo se actualiza al entrar a su pantalla no
-   alcanza: quien está de turno pasa el día en Guardias o en Estado actual, y el pedido llegaría
-   cuando a alguien se le ocurriera ir a mirar.
+   el momento** en el Panel: el Asistente llama a quien coordina, y quien coordina busca su
+   guardia en Guardias, donde aparece el botón «Autorizar ingreso». Si la lista sólo se
+   actualizara al entrar a Guardias, el botón no estaría cuando atiende la llamada con la
+   página ya abierta.
 
    CÓMO SE ENTERA. Por el canal en vivo (`lib/avisosEnVivo.js`): el backend empuja el asunto en
    cuanto un pedido entra o se resuelve, y acá se vuelve a pedir la lista. El mensaje no trae
@@ -27,18 +28,16 @@ import { mensajeDeError } from '../lib/errores';
    siempre, que es peor que llegar tarde. Con el canal andando no cambia nada de lo que se ve; sin
    él, la pantalla se comporta como antes, sólo que más lenta.
 
-   POR QUÉ ES UN CONTEXTO Y NO ESTADO DE LA PANTALLA. Porque lo consumen dos: el menú, que muestra
-   cuántos hay esperando, y la pantalla del pase de guardia, que los muestra. Con estado propio en
-   cada uno habría dos consultas en curso preguntando lo mismo y pudiendo contestar distinto.
+   POR QUÉ ES UN CONTEXTO Y NO ESTADO DE LA PANTALLA. Porque la escucha del canal en vivo queda
+   abierta mientras dure la sesión, y no se arma y desarma cada vez que se entra y se sale de
+   Guardias.
 
    CUÁNDO NO PREGUNTA NADA. Sin sesión iniciada, y sin Organización activa —el Superadmin que
    todavía no abrió un permiso de acceso no está adentro de ninguna Prestadora, así que no hay
-   pedidos que traer—. En los dos casos el contador no se muestra.
+   pedidos que traer—. En los dos casos no aparece ningún botón.
 
    SI LA CONSULTA FALLA, LA LISTA ANTERIOR SE QUEDA. Un corte de red de dos segundos no tiene por
-   qué borrar de la pantalla un pedido que sigue esperando. El error se guarda aparte y lo muestra
-   la pantalla; el menú no muestra ninguno, porque un cartel de error en el menú no lleva a
-   ninguna parte. */
+   qué sacar de Guardias el botón de un pedido que sigue esperando. */
 
 const PedidosDeAutorizacionContext = createContext(null);
 

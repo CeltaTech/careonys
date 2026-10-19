@@ -9,7 +9,7 @@
  *
  *   1. EL PISO. La guardia nunca se traba. Si no hay quién muestre el código y en la Prestadora
  *      tampoco atiende nadie, el Asistente entra igual eligiendo un motivo, y esa llegada queda
- *      anotada como SIN COMPROBAR para que el Coordinador la mire después.
+ *      anotada como SIN COMPROBAR, con el motivo elegido.
  *   2. UN CÓDIGO EQUIVOCADO NO MARCA NADA. Es lo único que se rechaza, porque darlo por bueno
  *      sería no comprobar y decir que sí.
  *   3. Al CLIENTE SE LE AVISA QUE LLEGÓ, Y LO DISPARA FICHAR LA ENTRADA. Un solo mensaje, con el
@@ -278,7 +278,7 @@ describe('check-in — el piso, que no se negocia: la guardia nunca se traba', (
       assert.equal(fila.lng, LNG);
 
       // El Asistente fichó igual, así que al Cliente se le avisa: enterarse de que llegaron no
-      // depende de con qué se lo comprobó. Lo que quedó sin comprobar lo ve la coordinación.
+      // depende de con qué se lo comprobó.
       assert.equal(mensajeDeLlegadaArmado(), true);
     });
   }

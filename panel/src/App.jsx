@@ -43,7 +43,6 @@ import { EmergenciasEnGuardia } from './pages/EmergenciasEnGuardia';
 import { PaginaNoEncontrada } from './pages/PaginaNoEncontrada';
 import { Comunicacion } from './pages/Comunicacion';
 import { Evv } from './pages/Evv';
-import { PaseDeGuardia } from './pages/PaseDeGuardia';
 import { Facturacion } from './pages/Facturacion';
 import { PagosAsistentes } from './pages/PagosAsistentes';
 import { Documentacion } from './pages/Documentacion';
@@ -167,12 +166,6 @@ function App() {
                         turno cuando entra una es el Coordinador, y el backend pide lo mismo. */}
                     <Route path="emergencias" element={<EmergenciasEnGuardia />} />
                     <Route path="comunicacion" element={<Comunicacion />} />
-                    {/* El pase de guardia (pendiente #113) va al lado de la verificación de
-                        guardias y no adentro: aquélla audita hacia atrás con un rango de fechas,
-                        ésta se atiende ahora. Sin candado propio, igual que sus vecinas de
-                        Cumplimiento: quien está de turno cuando entra un pedido es el
-                        Coordinador, y el backend pide exactamente lo mismo. */}
-                    <Route path="pase-de-guardia" element={<PaseDeGuardia />} />
                     <Route path="verificacion-guardias" element={<Evv />} />
                     <Route path="facturacion" element={<Facturacion />} />
                     {/* Lo que se le paga al Asistente es dato sensible (CLAUDE.md §6), así que

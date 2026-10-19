@@ -138,7 +138,7 @@ async function guardiaDelAsistente(db, guardiaId, usuarioAsistente) {
 //      además de lat/lng, no en cambio de lat/lng.
 //   3. La guardia nunca se traba. Si nadie puede mostrar el código QR y quien coordina tampoco
 //      contesta, el Asistente elige un motivo de una lista corta, marca igual y esa llegada
-//      queda como SIN COMPROBAR en la lista que ve el Coordinador. Lo único que sí se rechaza es
+//      queda anotada como SIN COMPROBAR, con ese motivo. Lo único que sí se rechaza es
 //      un código equivocado —ahí la pantalla ofrece reintentar, pedir autorización, o entrar con
 //      un motivo—, porque aceptar un código que no es sería no comprobar nada y decir que sí.
 //   4. Un relevo son dos actos, no uno: el que se va ficha su salida y el que llega ficha su
@@ -146,8 +146,7 @@ async function guardiaDelAsistente(db, guardiaId, usuarioAsistente) {
 //      filas, una contra la que termina y otra contra la que empieza.
 //   5. Al Cliente se le avisa una sola vez, y lo dispara fichar la entrada. El mensaje lleva el
 //      nombre de quién llegó y nada más: con qué se comprobó es funcionamiento interno y no se le
-//      cuenta. Una llegada sin comprobar avisa igual, porque el Asistente fichó; lo que queda
-//      pendiente lo ve la coordinación en su lista.
+//      cuenta. Una llegada sin comprobar avisa igual, porque el Asistente fichó.
 // ============================================================================
 
 // Ordena lo que mandó el teléfono sobre la comprobación. Se acepta el pedido viejo —sin nada—
@@ -913,7 +912,7 @@ appAsistentesRouter.post('/guardias/:id/checkin', requiereRolAsistente, topeDePe
   // sin ninguna condición, y otro —«la guardia quedó cubierta»— sólo cuando el Cliente no había
   // participado de la comprobación. Con un relevo salían los dos juntos. El Asistente fichó: el
   // Cliente se entera, y con el nombre de quién llegó. Cómo se comprobó no se le cuenta, porque es
-  // funcionamiento interno; lo que quedó sin comprobar lo ve la coordinación en su lista.
+  // funcionamiento interno.
   //
   // Un mensaje por Paciente, no uno por turno: el Cliente de cada uno tiene que enterarse de que
   // llegaron a atender al suyo, y con el nombre del suyo. Dos hermanos que viven juntos pero

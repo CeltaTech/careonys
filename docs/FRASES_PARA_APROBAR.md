@@ -4,25 +4,9 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 98 fichas.** Panel 55, aplicación del Asistente 25, aplicación del Cliente 16, Base 2.
+**Total: 97 fichas.** Panel 54, aplicación del Asistente 25, aplicación del Cliente 16, Base 2.
 
-## Panel (55)
-
-### 11. Código que ya no se espera
-
-| | |
-|---|---|
-| **Texto actual** | Otro usuario ya resolvió este pedido. Actualice la lista. |
-| **Propuesta corta** | «Ya resuelto.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | es el molde de «Ya enviada.». Quién lo resolvió no cambia nada. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Guardias → Pase de guardia, tarjeta «Esperando un código», botón «Soltar el código». |
-| **Qué estaba haciendo** | soltaba un código. |
-| **Qué pasó** | el pedido ya no esperaba un código. No se pudo confirmar todas las formas en que un pedido deja de esperarlo. |
-| **Qué puede hacer después** | actualizar la lista. |
-| **Cómo se muestra** | franja. |
-| **Decisión** |  |
+## Panel (54)
 
 ### 12. Revisión ya cerrada
 
@@ -31,11 +15,11 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Texto actual** | Este registro ya está cerrado. Actualice la lista. |
 | **Propuesta corta** | «Ya cerrado.» |
 | **¿Aparece hoy?** | sí |
-| **Por qué** | es telegráfico y sirve tanto para la revisión como para la instrucción. |
+| **Por qué** | es telegráfico. |
 | **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Guardias → Pase de guardia, tarjeta «Llegadas y salidas sin comprobar», ventana «Cerrar la revisión»; Panel → Clientes → un Cliente → solapa «Personas autorizadas», ventana «Registrar la firma». |
-| **Qué estaba haciendo** | cerraba la revisión de una llegada o registraba el papel firmado de una instrucción. |
-| **Qué pasó** | otra persona ya había cerrado la revisión, o la instrucción ya no esperaba firma. |
+| **Dónde está** | Panel → Clientes → un Cliente → solapa «Personas autorizadas», ventana «Registrar la firma». |
+| **Qué estaba haciendo** | registraba el papel firmado de una instrucción. |
+| **Qué pasó** | la instrucción ya no esperaba firma. |
 | **Qué puede hacer después** | actualizar la lista. |
 | **Cómo se muestra** | franja dentro de la ventana. |
 | **Decisión** |  |

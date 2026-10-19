@@ -21,15 +21,16 @@ import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
 //   lee justo en el cambio no lo mande vencido. Reemplaza al cartel impreso, que era un secreto
 //   permanente a la vista de cualquiera que pasara por la puerta.
 //
-//   Plan B — cuando no lo puede leer, el Asistente pide autorización. El pedido aparece en el
-//   Panel con el lugar y la hora desde donde lo hizo, y quien coordina —después de las
-//   verificaciones que acostumbre— aprieta «Autorizar ingreso». Eso vale lo mismo que leer el
+//   Plan B — cuando no lo puede leer, el Asistente pide autorización y llama a quien coordina.
+//   Queda anotado el lugar y la hora desde donde la pidió. Quien coordina encuentra su guardia en
+//   Guardias y —después de las verificaciones que acostumbre— aprieta «Autorizar ingreso». Eso vale lo mismo que leer el
 //   código QR: la llegada queda comprobada, con quién la autorizó y a qué hora, y la salida del
 //   Asistente que se va queda autorizada también. El teléfono del que espera se entera solo y
 //   marca la llegada sin que tenga que escribir nada.
 //
 //   El piso — si en la Prestadora no atiende nadie, se entra igual eligiendo un motivo, y la
-//   llegada queda SIN COMPROBAR en la lista del Coordinador. La guardia nunca se traba.
+//   llegada queda anotada SIN COMPROBAR, con ese motivo. La guardia nunca se traba, y lo que
+//   siga lo deciden los protocolos que la Prestadora ya tenga para eso.
 //
 // EL PACIENTE NO ESTÁ EN ESTA LISTA, Y NO ES UN OLVIDO. El diseño aprobado dice que el código lo
 // puede mostrar «el Cliente, el Paciente, o el Asistente saliente». En este producto el Paciente
@@ -55,7 +56,6 @@ export const SEGUNDOS_EN_PANTALLA_MAXIMO = 300;
 export { MOTIVOS_SIN_COMPROBAR };
 
 const LARGO_MAXIMO_DEL_DETALLE = 500;
-const LARGO_MAXIMO_DE_LA_NOTA = 1000;
 
 export async function configuracionDeComprobacion(prestadoraId) {
   const { data } = await supabase
@@ -478,62 +478,4 @@ export async function autorizarIngreso({ comprobacionId, prestadoraId, autorizad
   empujar(prestadoraId, ASUNTOS.PEDIDOS_DE_AUTORIZACION);
 
   return { estado: 'comprobada', comprobadaEn: cuando };
-}
-
-// ---------------------------------------------------------------------------------------
-// El piso — la lista que el Coordinador cierra
-// ---------------------------------------------------------------------------------------
-
-export async function llegadasSinComprobar(prestadoraId) {
-  const { data, error } = await supabase
-    .from('guardia_comprobaciones')
-    .select(`
-      id, momento, motivo_sin_comprobar, motivo_detalle, created_at,
-      guardia_id, guardias!guardia_comprobaciones_guardia_tenant_fk(fecha, hora_inicio, hora_fin),
-      asistente_id, asistentes!guardia_comprobaciones_asistente_tenant_fk(nombre)
-    `)
-    .eq('prestadora_id', prestadoraId)
-    .eq('estado', 'sin_comprobar')
-    .is('cerrada_en', null)
-    .order('created_at', { ascending: true });
-  if (error) throw new Error(error.message);
-
-  return (data ?? []).map((fila) => ({
-    id: fila.id,
-    guardiaId: fila.guardia_id,
-    momento: fila.momento,
-    motivo: fila.motivo_sin_comprobar,
-    detalle: fila.motivo_detalle,
-    ocurridaEn: fila.created_at,
-    asistente: fila.asistentes?.nombre ?? null,
-    fecha: fila.guardias?.fecha ?? null,
-    horaInicio: fila.guardias?.hora_inicio ?? null,
-    horaFin: fila.guardias?.hora_fin ?? null,
-  }));
-}
-
-export async function cerrarSinComprobar({ comprobacionId, prestadoraId, cerradaPor, nota }) {
-  const { data: fila } = await supabase
-    .from('guardia_comprobaciones')
-    .select('id, estado, cerrada_en')
-    .eq('id', comprobacionId)
-    .eq('prestadora_id', prestadoraId)
-    .maybeSingle();
-
-  if (!fila) throw new ErrorConMotivo('no_encontrado', 'No se encontró esa llegada');
-  if (fila.estado !== 'sin_comprobar') throw new ErrorConMotivo('no_corresponde', 'Esa llegada no quedó sin comprobar');
-  if (fila.cerrada_en) throw new ErrorConMotivo('ya_cerrada', 'Esa llegada ya está cerrada');
-
-  const { error } = await supabase
-    .from('guardia_comprobaciones')
-    .update({
-      cerrada_en: ahora(),
-      cerrada_por: cerradaPor,
-      cerrada_nota: String(nota ?? '').trim().slice(0, LARGO_MAXIMO_DE_LA_NOTA) || null,
-      updated_at: ahora(),
-    })
-    .eq('prestadora_id', prestadoraId)
-    .eq('id', comprobacionId)
-    .is('cerrada_en', null);
-  if (error) throw new Error(error.message);
 }

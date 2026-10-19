@@ -61,13 +61,12 @@ export const T = {
         correo_invalido: 'Dirección de correo electrónico no válida. Verifique el formato e intente nuevamente.',
         domicilio_temporal_pisado: 'Ya existe un domicilio temporal en ese período.',
         domicilio_temporal_fechas_al_reves: 'La fecha de fin no puede ser anterior a la de inicio.',
-        // El pase de guardia (pendientes #113 y #177). Sin estas frases los tres primeros
+        // El pase de guardia (pendientes #113 y #177). Sin estas frases los primeros
         // caían en «ya existe otro igual» y el último en «algo falló de nuestro lado»: dos
         // explicaciones que no son la que pasó y no dicen qué hacer.
         ya_resuelta: 'Otro usuario ya resolvió este pedido. Actualice la lista.',
         emergencia_ya_atendida: 'Emergencia atendida.',
         ya_cerrada: 'Este registro ya está cerrado. Actualice la lista.',
-        no_corresponde: 'Esa llegada no quedó sin comprobar, así que no hay nada que cerrar.',
         demasiados_pedidos: 'Demasiadas solicitudes. Espere un minuto e intente nuevamente.',
         modalidad_no_activa: 'Esta modalidad no está activa.',
         // Dos mensajes que antes llegaban como frase armada del lado del backend, en un solo idioma.
@@ -3086,7 +3085,6 @@ export const T = {
         ya_resuelta: 'Another user already resolved this request. Reload the list.',
         emergencia_ya_atendida: 'Emergency already handled.',
         ya_cerrada: 'This record is already closed. Reload the list.',
-        no_corresponde: 'That arrival was not left unverified, so there is nothing to close.',
         demasiados_pedidos: 'Too many requests. Wait a minute and try again.',
         modalidad_no_activa: 'This service model is not active.',
         persona_no_autorizada: 'Not found in the records.',
@@ -6050,7 +6048,6 @@ export const T = {
         ya_resuelta: 'Outro usuário já resolveu este pedido. Atualize a lista.',
         emergencia_ya_atendida: 'Emergência atendida.',
         ya_cerrada: 'Este registro já está fechado. Atualize a lista.',
-        no_corresponde: 'Essa chegada não ficou sem comprovação, portanto não há nada a fechar.',
         demasiados_pedidos: 'Muitas solicitações. Aguarde um minuto e tente novamente.',
         modalidad_no_activa: 'Esta modalidade não está ativa.',
         persona_no_autorizada: 'Não consta no registro.',

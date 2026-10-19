@@ -163,7 +163,7 @@ panelEmergenciasRouter.post('/:id/atencion', requiereRolPanel, exigirOrganizacio
     return responderError(res, new ErrorConMotivo('no_encontrado'));
   }
   if (emergencia.atendida_at) {
-    return responderError(res, new ErrorConMotivo('ya_resuelta'));
+    return responderError(res, new ErrorConMotivo('emergencia_ya_atendida'));
   }
 
   const { error } = await acotarAPrestadora(

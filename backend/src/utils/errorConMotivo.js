@@ -46,6 +46,8 @@ const ESTADO_POR_MOTIVO = {
   no_encontrado: 404,
   ya_comprobada: 409,
   ya_resuelta: 409,
+  // Una emergencia que otra persona ya atendió.
+  emergencia_ya_atendida: 409,
   ya_cerrada: 409,
   no_corresponde: 409,
   codigo_incorrecto: 400,

@@ -153,7 +153,10 @@ export function errorDeLaRespuesta(respuesta, datos) {
  */
 export function mensajeDeError(error, t, donde = '') {
   const motivo = error && typeof error === 'object' ? String(error.motivo ?? '') : '';
-  const explicacion = motivo ? t?.errores?.motivos?.[motivo] : '';
+  // Se pregunta si la frase existe antes de leerla: leída a secas, una clave que falta devuelve
+  // la marca de faltante, que no está vacía, y tapaba la situación con un guion.
+  const motivos = t?.errores?.motivos;
+  const explicacion = motivo && motivos && typeof motivos === 'object' && motivo in motivos ? motivos[motivo] : '';
   const situacion = situacionDelError(error);
 
   if (import.meta.env?.DEV || (!explicacion && situacion === 'falla_del_sistema')) {

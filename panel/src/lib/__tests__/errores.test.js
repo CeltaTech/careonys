@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { situacionDelError, mensajeDeError, errorDeLaRespuesta, SITUACIONES } from '../errores';
 import { T } from '../../i18n/translations';
+import { avisandoLoQueFalta } from '../../i18n/faltaLaFrase';
 
 const t = T['es-AR'];
 
@@ -151,5 +152,15 @@ describe('del backend a la pantalla', () => {
     const texto = mensajeDeError(errorDeLaRespuesta(respuestaConNumero(409), { motivo: 'motivo_que_nadie_tradujo' }), t);
     expect(texto).toBe(t.errores.duplicado);
     expect(texto).not.toMatch(/motivo_que_nadie_tradujo/);
+  });
+
+  it('un motivo sin traducción tampoco muestra un guion con los textos envueltos', () => {
+    // Así llegan los textos a las pantallas: envueltos para que una frase que falta avise. Leída
+    // a secas, la clave que falta devolvía la marca de faltante y tapaba la situación.
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const envuelto = avisandoLoQueFalta(t);
+    const texto = mensajeDeError(errorDeLaRespuesta(respuestaConNumero(400), { motivo: 'motivo_que_nadie_tradujo' }), envuelto);
+    expect(texto).toBe(t.errores.dato_invalido);
   });
 });

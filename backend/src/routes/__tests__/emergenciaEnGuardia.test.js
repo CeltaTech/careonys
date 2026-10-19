@@ -504,7 +504,7 @@ describe('la bandeja del Panel', () => {
     ];
     const { estado, cuerpo } = await enElPanel(`/${EMERGENCIA}/atencion`, 'POST', { nota: 'otra vez' });
     assert.equal(estado, 409);
-    assert.equal(cuerpo.motivo, 'ya_resuelta');
+    assert.equal(cuerpo.motivo, 'emergencia_ya_atendida');
     assert.equal(llamadas.filter((l) => l.clave === 'PATCH /rest/v1/emergencias_guardia').length, 0);
   });
 

@@ -4,45 +4,11 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 100 fichas.** Panel 57, aplicación del Asistente 25, aplicación del Cliente 16, Base 2.
+**Total: 98 fichas.** Panel 55, aplicación del Asistente 25, aplicación del Cliente 16, Base 2.
 
-## Panel (57)
+## Panel (55)
 
-### 8. Moneda que ya no está en la lista
-
-| | |
-|---|---|
-| **Texto actual** | Moneda no disponible. Actualice la página y elija una de la lista. |
-| **Propuesta corta** | Sacar la frase. Ese caso cae en el aviso general («Datos no válidos.») |
-| **¿Aparece hoy?** | no |
-| **Por qué** | es un aviso para un caso que la propia lista impide. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Configuración → La Prestadora, tarjeta «La moneda», botón «Guardar». |
-| **Qué estaba haciendo** | guardaba la moneda de la Prestadora. |
-| **Qué pasó** | la moneda elegida ya no está habilitada: la lista cambió con la página abierta, o la casilla mostraba una moneda ya guardada que después salió de la lista. |
-| **Qué puede hacer después** | actualizar la página, elegir otra moneda y guardar. |
-| **Cómo se muestra** | franja dentro de la tarjeta. |
-| **Decisión** |  |
-
-### 10. Domicilio temporal superpuesto
-
-| | |
-|---|---|
-| **Texto actual** | El Paciente ya tiene un domicilio temporal en ese período. |
-| **Texto propuesto** | El Paciente ya tiene un domicilio temporal en esas fechas. Revise el período cargado y modifique las fechas. |
-| **Propuesta corta** | «Período superpuesto con otro domicilio temporal.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | sirve para los dos casos, el alta y el término. |
-| **Qué cambió** | más corto, imperativo, sin la explicación del medio. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Clientes → un Cliente → solapa «Pacientes» → «Domicilios temporales» → «Cargar un domicilio temporal» → «Guardar». No se pudo confirmar si también sale al cambiar la fecha con «Terminar el período». |
-| **Qué estaba haciendo** | cargaba un domicilio temporal para un Paciente. |
-| **Qué pasó** | las fechas se superponen con otro domicilio temporal del mismo Paciente y el sistema no lo guarda. |
-| **Qué puede hacer después** | revisar el período en la tabla, cambiar las fechas y guardar, o cancelar. |
-| **Cómo se muestra** | franja dentro de la tarjeta «Nuevo domicilio temporal». |
-| **Decisión** |  |
-
-### 11. Pedido ya resuelto por otra persona
+### 11. Código que ya no se espera
 
 | | |
 |---|---|
@@ -51,9 +17,9 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **¿Aparece hoy?** | sí |
 | **Por qué** | es el molde de «Ya enviada.». Quién lo resolvió no cambia nada. |
 | **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Guardias → Emergencias, ventana «Emergencia», botón «Marcar atendida»; Panel → Guardias → Pase de guardia, tarjeta «Esperando un código», botón «Soltar el código». |
-| **Qué estaba haciendo** | marcaba una emergencia como atendida o soltaba un código. |
-| **Qué pasó** | otra persona ya había atendido la emergencia, o el pedido ya no esperaba un código. No se pudo confirmar todas las formas en que un pedido deja de esperarlo. |
+| **Dónde está** | Panel → Guardias → Pase de guardia, tarjeta «Esperando un código», botón «Soltar el código». |
+| **Qué estaba haciendo** | soltaba un código. |
+| **Qué pasó** | el pedido ya no esperaba un código. No se pudo confirmar todas las formas en que un pedido deja de esperarlo. |
 | **Qué puede hacer después** | actualizar la lista. |
 | **Cómo se muestra** | franja. |
 | **Decisión** |  |

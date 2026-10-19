@@ -18,7 +18,7 @@ import { pideLaFirma } from '../utils/consentimientoMedicacion.js';
 // no cuenta.
 //
 // LA FIRMA. Si la Prestadora la pide, una indicación sin firma cerrada no se acepta. La que el
-// Cliente eligió firmar en papel se imprime desde acá, y al subir el papel firmado queda cerrada.
+// Cliente eligió firmar en papel se imprime desde acá, y al subir el documento firmado queda cerrada.
 // La base lo exige igual: el disparador que acepta la indicación se niega sin firma.
 //
 // matriculas_asistente no tiene rutas CRUD
@@ -37,7 +37,7 @@ import { pideLaFirma } from '../utils/consentimientoMedicacion.js';
 //   de la consulta).
 // - Aceptar y rechazar: la base deja modificar una indicación sólo a la administración, y acá
 //   también la revisa el Coordinador (`indicaciones_medicacion`, modificar).
-// - Subir el archivo de matrícula y el papel firmado: el depósito no le deja escribir al
+// - Subir el archivo de matrícula y el documento firmado: el depósito no le deja escribir al
 //   Coordinador (`prescripciones-medicacion`, alta y reemplazo).
 
 export const panelMedicacionRouter = Router();
@@ -257,7 +257,7 @@ panelMedicacionRouter.get('/:id/para-firmar', requiereRolPanel, async (req, res)
   });
 });
 
-// El papel firmado. Cierra la firma pendiente y queda en la historia clínica del Paciente. Lo ven
+// El documento firmado. Cierra la firma pendiente y queda en la historia clínica del Paciente. Lo ven
 // la Prestadora y el Cliente, el Asistente no: por eso no va en la carpeta del Paciente, que es la
 // que el depósito le abre al Asistente para leer la receta.
 panelMedicacionRouter.post(
@@ -320,7 +320,7 @@ panelMedicacionRouter.post(
   }
 );
 
-// Volver a ver el papel firmado, con un enlace temporal y la credencial de quien pide: la base
+// Volver a ver el documento firmado, con un enlace temporal y la credencial de quien pide: la base
 // tiene que dejarle leer el consentimiento y el depósito, el archivo.
 panelMedicacionRouter.get('/:id/papel-firmado', requiereRolPanel, async (req, res) => {
   const db = clienteDelPedido(req);

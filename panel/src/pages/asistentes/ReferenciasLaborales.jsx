@@ -106,7 +106,7 @@ export function ReferenciasLaborales({ asistente }) {
           ? <Alert variant="info">{tr.alcanza}</Alert>
           : (
             <Alert variant="warning">
-              {tr.faltan
+              {(datos.faltan === 1 ? tr.faltan_uno : tr.faltan)
                 .replace('{{faltan}}', datos.faltan)
                 .replace('{{exigidas}}', datos.exigidas)}
             </Alert>

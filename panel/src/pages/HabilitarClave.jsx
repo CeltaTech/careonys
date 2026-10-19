@@ -72,10 +72,11 @@ export function HabilitarClave() {
         method: 'POST',
         body: JSON.stringify({ usuarioId: cuenta.id }),
       });
+      const minutosHabilitados = respuesta.minutos ?? minutos ?? '';
       setMensaje(
-        t.habilitar_clave.habilitado
+        (Number(minutosHabilitados) === 1 ? t.habilitar_clave.habilitado_uno : t.habilitar_clave.habilitado)
           .replace('{{nombre}}', cuenta.nombre)
-          .replace('{{minutos}}', String(respuesta.minutos ?? minutos ?? '')),
+          .replace('{{minutos}}', String(minutosHabilitados)),
       );
     } catch (err) {
       setError(mensajeDeError(err, t, 'HabilitarClave'));

@@ -164,7 +164,7 @@ export function BarraAccionesMasivas({ seleccionadas = [], asistentes = [], onAp
     // `window.confirm`, porque esa es la que además avisa cuando se está trabajando dentro de
     // una Prestadora ajena en un permiso de acceso.
     if (accion === 'cancelar') {
-      const mensaje = con(textos.confirmar_cancelar, { n: cantidad });
+      const mensaje = cantidad === 1 ? textos.confirmar_cancelar_una : con(textos.confirmar_cancelar, { n: cantidad });
       if (!(await confirmarDestructivo(mensaje))) return;
     }
 
@@ -371,7 +371,7 @@ export function BarraAccionesMasivas({ seleccionadas = [], asistentes = [], onAp
               descubre igual: cuando alguien mira la grilla y las ve como estaban. */}
           {resultado && (
             resultado.ok === resultado.total ? (
-              <Alert variant="info">{con(textos.hecho, { n: resultado.ok })}</Alert>
+              <Alert variant="info">{resultado.ok === 1 ? textos.hecho_una : con(textos.hecho, { n: resultado.ok })}</Alert>
             ) : (
               <Alert variant="warning">
                 {con(textos.error_parcial, { ok: resultado.ok, total: resultado.total })}

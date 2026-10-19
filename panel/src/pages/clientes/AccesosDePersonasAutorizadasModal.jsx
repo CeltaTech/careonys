@@ -216,7 +216,7 @@ export function DocumentoDeLaInstruccion({ texto, fecha, recienGuardado = false,
   );
 }
 
-/* Registrar que llegó el papel firmado.
+/* Registrar que llegó el documento firmado.
    ==========================================================================
 
    El archivo es opcional a propósito: lo que cierra la instrucción es que la Prestadora declare

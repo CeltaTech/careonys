@@ -201,7 +201,7 @@ export default function PerfilPublicoAsistente() {
               <p>{t.vidriera.contacto_confirmar_termina_gratis}</p>
             )}
             {contacto.activacion.saldo_contactos !== null && (
-              <p>{t.vidriera.contacto_confirmar_saldo.replace('{n}', contacto.activacion.saldo_contactos)}</p>
+              <p>{contacto.activacion.saldo_contactos === 1 ? t.vidriera.contacto_confirmar_saldo_uno : t.vidriera.contacto_confirmar_saldo.replace('{n}', contacto.activacion.saldo_contactos)}</p>
             )}
             <div className="pwa-acciones">
               <button type="button" className="btn btn-primary btn-full" onClick={verElContacto} disabled={viendoContacto}>
@@ -240,7 +240,7 @@ export default function PerfilPublicoAsistente() {
               {'★'.repeat(Math.round(calificacion.promedio))}
               {'☆'.repeat(Math.max(0, 5 - Math.round(calificacion.promedio)))}
             </span>{' '}
-            {t.vidriera.calificacion_cuenta
+            {(calificacion.cuantas === 1 ? t.vidriera.calificacion_cuenta_uno : t.vidriera.calificacion_cuenta)
               .replace('{promedio}', calificacion.promedio)
               .replace('{cuantas}', calificacion.cuantas)}
           </p>

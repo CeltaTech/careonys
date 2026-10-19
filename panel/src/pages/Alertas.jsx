@@ -113,7 +113,7 @@ export function Alertas() {
             <h2>{t.alertas.titulo}</h2>
             {pendientesRojas > 0 && (
               <span className="badge badge-critico">
-                {t.alertas.resumen_rojas.replace('{cantidad}', pendientesRojas)}
+                {pendientesRojas === 1 ? t.alertas.resumen_rojas_uno : t.alertas.resumen_rojas.replace('{cantidad}', pendientesRojas)}
               </span>
             )}
           </div>
@@ -240,7 +240,7 @@ function DetalleAlerta({ alerta, resolviendo, onResolver, onCerrar }) {
 
         <div className="hoja-dato">
           <div className="panel-mini">{t.alertas.campo_reportes_analizados}</div>
-          <b>{t.alertas.reportes_analizados_texto.replace('{cantidad}', cantidadReportes)}</b>
+          <b>{cantidadReportes === 1 ? t.alertas.reportes_analizados_texto_uno : t.alertas.reportes_analizados_texto.replace('{cantidad}', cantidadReportes)}</b>
         </div>
       </div>
 

@@ -32,7 +32,7 @@ export function carpetaDeMatriculas(prestadoraId, asistenteId) {
 }
 
 /** El nombre completo con el que se guarda una Matrícula nueva. */
-// El papel firmado de una indicación de medicación. Afuera de la carpeta del Paciente, que es la
+// El documento firmado de una indicación de medicación. Afuera de la carpeta del Paciente, que es la
 // que el depósito le deja leer al Asistente.
 export function rutaDelPapelFirmado(prestadoraId, pacienteId, consentimientoId, extension) {
   return `${prestadoraId}/firmas-medicacion/${pacienteId}/firma-${consentimientoId}.${extension}`;

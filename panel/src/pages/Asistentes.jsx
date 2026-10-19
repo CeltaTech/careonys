@@ -103,7 +103,9 @@ export function Asistentes() {
 
       {puedeAltaManual && sinTipo.length > 0 && (
         <Alert variant="info">
-          {t.asistentes.pasar_al_catalogo.aviso.replace('{{cantidad}}', sinTipo.length)}{' '}
+          {sinTipo.length === 1
+            ? t.asistentes.pasar_al_catalogo.aviso_uno
+            : t.asistentes.pasar_al_catalogo.aviso.replace('{{cantidad}}', sinTipo.length)}{' '}
           <Button variant="secondary" onClick={() => setMostrarPasarAlCatalogo(true)}>
             {t.asistentes.pasar_al_catalogo.abrir}
           </Button>

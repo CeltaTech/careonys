@@ -70,7 +70,7 @@ export function SelectorDeLugares({ lugares, zonas, valor, onChange, deshabilita
           aria-label={t.configuracion.lugares_buscar}
         />
         <span className="panel-modulo-fila-origen">
-          {con(t.configuracion.lugares_elegidos, { cantidad: elegidos.size })}
+          {elegidos.size === 1 ? t.configuracion.lugares_elegidos_uno : con(t.configuracion.lugares_elegidos, { cantidad: elegidos.size })}
         </span>
       </div>
 

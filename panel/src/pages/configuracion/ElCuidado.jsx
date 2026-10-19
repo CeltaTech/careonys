@@ -218,7 +218,9 @@ function TabServicios() {
               que usa el backend, así que la pantalla no puede decir uno y el sistema usar otro. */}
           <div className="cuidado-titulo-derecha">
             <span className="panel-mini">
-              {con(t.configuracion.escalada_demora_en_uso, { minutos: minutosDeDemoraTolerados(niveles) })}
+              {minutosDeDemoraTolerados(niveles) === 1
+                ? t.configuracion.escalada_demora_en_uso_uno
+                : con(t.configuracion.escalada_demora_en_uso, { minutos: minutosDeDemoraTolerados(niveles) })}
             </span>
             <Button onClick={() => setCreandoNuevo(true)}>{t.configuracion.escalada_nuevo_nivel}</Button>
           </div>

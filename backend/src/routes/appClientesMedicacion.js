@@ -19,7 +19,7 @@ import { comprobarFirma } from './llaveDelDispositivo.js';
 // la Prestadora —o el modelo del producto, si ella no escribió ninguno—, con receta o sin ella.
 // Firma de dos formas: con la llave de su teléfono, que se comprueba acá antes de guardar nada, o
 // en papel, y entonces la indicación entra igual con la firma pendiente y el Panel no la puede
-// aceptar hasta subir el papel firmado. Lo firmado se guarda entero: texto, identificador de verificación e idioma.
+// aceptar hasta subir el documento firmado. Lo firmado se guarda entero: texto, identificador de verificación e idioma.
 //
 // CON LA CREDENCIAL DE QUIEN PIDE. La lectura entra a la base con `clienteDelPedido(req)`, no con
 // la llave maestra: la base le contesta al Cliente sólo lo de su Prestadora y sólo si el permiso de sus personas autorizadas
@@ -156,7 +156,7 @@ appClientesMedicacionRouter.get('/:pacienteId', requiereRolCliente, exigeVisible
   });
 });
 
-// El papel firmado, para quien firmó. Que lo pueda ver lo decide la base al dejarle leer el
+// El documento firmado, para quien firmó. Que lo pueda ver lo decide la base al dejarle leer el
 // consentimiento con su credencial; el enlace sale con la maestra porque el papel vive afuera de
 // la carpeta del Paciente, que es la única que el depósito le abre al Cliente.
 appClientesMedicacionRouter.get('/indicacion/:indicacionId/papel-firmado', requiereRolCliente, exigeVisible('cliente_medicacion_del_paciente'), exigeDePersonasAutorizadas('persona_autorizada_medicacion'), async (req, res) => {

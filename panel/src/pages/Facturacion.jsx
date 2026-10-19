@@ -238,7 +238,7 @@ export function Facturacion() {
         return;
       }
       bajarComoArchivo(`para-facturar-${mes}.csv`, armarArchivo(filas));
-      setMensajeIntercambio(t.facturacion.exportar_listo.replace('{cantidad}', filas.length));
+      setMensajeIntercambio(filas.length === 1 ? t.facturacion.exportar_listo_uno : t.facturacion.exportar_listo.replace('{cantidad}', filas.length));
     } catch (e) {
       setError(mensajeDeError(e, t, 'archivo para facturar'));
     } finally {

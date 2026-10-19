@@ -230,7 +230,7 @@ export function SimuladorVinculoTab({ asistente }) {
                 </tbody>
               </table>
               {cobertura?.enOtraMoneda > 0 && (
-                <Alert variant="info">{con(t.asistentes.simulador.cobertura_otra_moneda, { n: cobertura.enOtraMoneda })}</Alert>
+                <Alert variant="info">{cobertura.enOtraMoneda === 1 ? t.asistentes.simulador.cobertura_otra_moneda_uno : con(t.asistentes.simulador.cobertura_otra_moneda, { n: cobertura.enOtraMoneda })}</Alert>
               )}
               {conceptos.length === 0 && (
                 <Alert variant="info">{t.asistentes.simulador.sin_conceptos}</Alert>
@@ -260,7 +260,7 @@ export function SimuladorVinculoTab({ asistente }) {
               <tbody>
                 {ANTIGUEDADES_MESES.map((meses, i) => (
                   <tr key={meses}>
-                    <td>{t.asistentes.simulador.meses.replace('{n}', meses)}</td>
+                    <td>{meses === 1 ? t.asistentes.simulador.meses_uno : t.asistentes.simulador.meses.replace('{n}', meses)}</td>
                     <td>{proyecciones.monotributo[i].faltaDato ? t.asistentes.simulador.falta_dato_base : formatearImporte(proyecciones.monotributo[i].montoDespidoSinCausa, moneda, locale)}</td>
                     <td>{proyecciones.dependencia[i].faltaDato ? t.asistentes.simulador.falta_dato_base : formatearImporte(proyecciones.dependencia[i].montoDespidoSinCausa, moneda, locale)}</td>
                   </tr>

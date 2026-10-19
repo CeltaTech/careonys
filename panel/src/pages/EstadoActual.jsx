@@ -626,7 +626,7 @@ export function EstadoActual() {
                 <b>{pctCobertura}%</b>
               </div>
               <div className="panel-leyenda">
-                <div>{con(tx.cubiertas, { n: cobertura.cubiertas })}</div>
+                <div>{cobertura.cubiertas === 1 ? tx.cubiertas_uno : con(tx.cubiertas, { n: cobertura.cubiertas })}</div>
                 <div>{con(tx.sin_cobertura, { n: cobertura.sinCobertura })}</div>
                 <div>{con(tx.en_riesgo, { n: cobertura.enRiesgo })}</div>
               </div>

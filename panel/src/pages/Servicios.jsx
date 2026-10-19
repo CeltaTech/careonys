@@ -157,7 +157,7 @@ export function Servicios() {
       <section className="panel-tarjeta servicios-tarjeta">
         <div className="panel-tarjeta-titulo">
           <h2>{t.servicios.registrados}</h2>
-          {estado === 'listo' && <span className="panel-mini">{con(t.servicios.activos, { n: activos })}</span>}
+          {estado === 'listo' && <span className="panel-mini">{activos === 1 ? t.servicios.activos_uno : con(t.servicios.activos, { n: activos })}</span>}
         </div>
 
         <div className="panel-filtros">

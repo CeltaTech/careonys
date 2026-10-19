@@ -148,6 +148,7 @@ export default function Matricula() {
     let frase = con(tm.vence_en_dias, { dias });
     if (dias === 0) frase = tm.vence_hoy;
     else if (dias === 1) frase = tm.vence_manana;
+    else if (dias === -1) frase = tm.vencio_hace_dias_uno;
     else if (dias < 0) frase = con(tm.vencio_hace_dias, { dias: -dias });
     cartel = {
       clase: 'alert alert-alerta',

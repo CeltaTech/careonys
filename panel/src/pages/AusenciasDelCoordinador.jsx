@@ -153,7 +153,7 @@ export function AusenciasDelCoordinador({ usuario, otrosCoordinadores }) {
                     <span className="panel-mini">{con(t.usuarios_panel.lo_cubre, { nombre: nombreDe(a.coordinador_que_cubre_id) })}</span>
                   )}
                   {a.dias_computados !== null && a.dias_computados !== undefined && (
-                    <span className="panel-mini">{con(textos.dias_computados, { n: a.dias_computados })}</span>
+                    <span className="panel-mini">{a.dias_computados === 1 ? textos.dias_computados_uno : con(textos.dias_computados, { n: a.dias_computados })}</span>
                   )}
                 </div>
                 {!a.fecha_vuelta_real && (

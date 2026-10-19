@@ -78,6 +78,7 @@ import { PESOS, TOPES } from './perfilesDeCandidatos';
 /** Las claves de traducción que devuelve este archivo. Viven en `t.guardias.cobertura_panel`. */
 export const MOTIVO = {
   CONTINUIDAD: 'motivo_continuidad',
+  CONTINUIDAD_UNA_VEZ: 'motivo_continuidad_una',
   SIN_CONTINUIDAD: 'motivo_sin_continuidad',
   LIBRE: 'motivo_libre',
   OCUPADO: 'motivo_ocupado',
@@ -524,7 +525,7 @@ function evaluarAsistente(asistente, ctx) {
   const veces = vecesQueAtendio(asistente.id, idsDePacientes(hueco), guardias, ahora);
   if (veces > 0) {
     const puntos = Math.min(veces * pesos.continuidad_por_vez, pesos.continuidad_maxima);
-    suma(aFavor, MOTIVO.CONTINUIDAD, { n: veces }, puntos);
+    suma(aFavor, veces === 1 ? MOTIVO.CONTINUIDAD_UNA_VEZ : MOTIVO.CONTINUIDAD, { n: veces }, puntos);
   } else {
     suma(enContra, MOTIVO.SIN_CONTINUIDAD, null, pesos.sin_continuidad);
   }

@@ -231,7 +231,7 @@ export default function Medicacion() {
       const { url } = await api.papelFirmadoDeMedicacion(indicacionId);
       window.open(url, '_blank', 'noopener');
     } catch (fallo) {
-      setError(mensajeDeError(fallo, t, 'papel firmado'));
+      setError(mensajeDeError(fallo, t, 'documento firmado'));
     } finally {
       setAbriendo(null);
     }

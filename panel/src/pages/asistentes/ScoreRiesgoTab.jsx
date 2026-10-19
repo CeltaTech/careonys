@@ -22,9 +22,10 @@ function detalleDeducido(t, indicador, deducido) {
       ? t.asistentes.score.detalle_zona_una
       : con(t.asistentes.score.detalle_zona_varias, { n: deducido.dato });
   }
+  const uno = deducido.dato === 1;
   const plantilla = indicador === 'antiguedad_vinculo'
-    ? t.asistentes.score.detalle_antiguedad
-    : t.asistentes.score.detalle_horas;
+    ? (uno ? t.asistentes.score.detalle_antiguedad_uno : t.asistentes.score.detalle_antiguedad)
+    : (uno ? t.asistentes.score.detalle_horas_uno : t.asistentes.score.detalle_horas);
   return con(plantilla, { n: deducido.dato, umbral: deducido.umbral });
 }
 

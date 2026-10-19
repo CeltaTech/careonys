@@ -385,7 +385,7 @@ export function AusenciasCoberturaTab({ asistente }) {
                     : ` → ${fechaVisible(a.fecha_fin)} (${t.asistentes.ausencias.prevista})`}
                 </b>
                 {a.dias_computados !== null && a.dias_computados !== undefined && (
-                  <span className="panel-mini">{con(t.asistentes.ausencias.dias_computados, { n: a.dias_computados })}</span>
+                  <span className="panel-mini">{a.dias_computados === 1 ? t.asistentes.ausencias.dias_computados_uno : con(t.asistentes.ausencias.dias_computados, { n: a.dias_computados })}</span>
                 )}
                 {a.observaciones && <span className="panel-mini">{a.observaciones}</span>}
 
@@ -396,13 +396,17 @@ export function AusenciasCoberturaTab({ asistente }) {
                   <span className="panel-mini">
                     {afectadas.length === 0
                       ? t.asistentes.ausencias.sin_guardias_afectadas
-                      : con(t.asistentes.ausencias.guardias_afectadas, { n: afectadas.length })}
+                      : afectadas.length === 1
+                        ? t.asistentes.ausencias.guardias_afectadas_uno
+                        : con(t.asistentes.ausencias.guardias_afectadas, { n: afectadas.length })}
                     {afectadas.length > 0 && (
                       <>
                         {' — '}
                         {sinCubrir.length === 0
                           ? t.asistentes.ausencias.todas_cubiertas
-                          : con(t.asistentes.ausencias.guardias_sin_cubrir, { n: sinCubrir.length })}
+                          : sinCubrir.length === 1
+                            ? t.asistentes.ausencias.guardias_sin_cubrir_uno
+                            : con(t.asistentes.ausencias.guardias_sin_cubrir, { n: sinCubrir.length })}
                       </>
                     )}
                   </span>

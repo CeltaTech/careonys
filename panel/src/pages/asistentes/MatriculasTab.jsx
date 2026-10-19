@@ -183,7 +183,8 @@ export function MatriculasTab({ asistente }) {
     if (urgencia === URGENCIA.NINGUNA) return null;
 
     let detalle = con(tm.vence_en_dias, { dias });
-    if (dias < 0) detalle = con(tm.vencio_hace_dias, { dias: -dias });
+    if (dias === -1) detalle = tm.vencio_hace_dias_uno;
+    else if (dias < 0) detalle = con(tm.vencio_hace_dias, { dias: -dias });
     else if (dias === 0) detalle = tm.vence_hoy;
     else if (dias === 1) detalle = tm.vence_manana;
 

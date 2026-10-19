@@ -95,7 +95,7 @@ export function UsuariosPanel() {
                   <td>{u.telefono || '—'}</td>
                   {/* Quien administra alcanza a toda la Organización, así que el alcance por lugares
                       no le dice nada: es la coordinación la que se acota. */}
-                  <td>{u.rol === 'coordinador' ? con(t.configuracion.lugares_elegidos, { cantidad: u.lugares ?? 0 }) : '—'}</td>
+                  <td>{u.rol === 'coordinador' ? (u.lugares === 1 ? t.configuracion.lugares_elegidos_uno : con(t.configuracion.lugares_elegidos, { cantidad: u.lugares ?? 0 })) : '—'}</td>
                   <td>
                     {puedeEditar(u) && (
                       <button type="button" className="panel-enlace" onClick={() => setEditando(u)}>{t.comun.editar}</button>

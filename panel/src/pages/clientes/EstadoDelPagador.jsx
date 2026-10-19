@@ -220,9 +220,9 @@ export function EstadoDelPagador({ clienteId, puedeRegistrar }) {
             <>
               {(papelesFaltantes > 0 || papelesVencidos > 0) && (
                 <Alert variant="warning">
-                  {papelesFaltantes > 0 && textos.papeles_faltan.replace('{n}', papelesFaltantes)}
+                  {papelesFaltantes > 0 && (papelesFaltantes === 1 ? textos.papeles_faltan_uno : textos.papeles_faltan.replace('{n}', papelesFaltantes))}
                   {papelesFaltantes > 0 && papelesVencidos > 0 && ' '}
-                  {papelesVencidos > 0 && textos.papeles_vencidos.replace('{n}', papelesVencidos)}
+                  {papelesVencidos > 0 && (papelesVencidos === 1 ? textos.papeles_vencidos_uno : textos.papeles_vencidos.replace('{n}', papelesVencidos))}
                 </Alert>
               )}
               <table className="panel-tabla">

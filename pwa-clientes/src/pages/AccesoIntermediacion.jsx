@@ -129,7 +129,7 @@ export default function AccesoIntermediacion() {
               {!cobrado && qr && !qrVencido && qrDataUrl && (
                 <div className="centrado">
                   <img src={qrDataUrl} alt={t.acceso.generar_qr_titulo} />
-                  <p className="mapa-actualizado">{t.acceso.qr_vence_en.replace('{minutos}', minutosRestantes(qr.expira_en))}</p>
+                  <p className="mapa-actualizado">{minutosRestantes(qr.expira_en) === 1 ? t.acceso.qr_vence_en_uno : t.acceso.qr_vence_en.replace('{minutos}', minutosRestantes(qr.expira_en))}</p>
                   <p className="mapa-actualizado">{t.acceso.qr_esperando_cobro}</p>
                 </div>
               )}

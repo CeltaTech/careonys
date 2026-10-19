@@ -27,7 +27,7 @@ function Estrellas({ calificacion, t }) {
         {'★'.repeat(enteras)}
         {'☆'.repeat(Math.max(0, 5 - enteras))}
       </span>{' '}
-      {t.vidriera.calificacion_cuenta
+      {(calificacion.cuantas === 1 ? t.vidriera.calificacion_cuenta_uno : t.vidriera.calificacion_cuenta)
         .replace('{promedio}', calificacion.promedio)
         .replace('{cuantas}', calificacion.cuantas)}
     </p>

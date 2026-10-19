@@ -444,7 +444,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
               error de carga se ve antes de guardarlo. */}
           {duracionEnHoras !== null && (
             <p className="panel-explicacion">
-              {t.guardias.nueva_guardia.duracion.replace('{horas}', duracionEnHoras)}
+              {duracionEnHoras === 1 ? t.guardias.nueva_guardia.duracion_uno : t.guardias.nueva_guardia.duracion.replace('{horas}', duracionEnHoras)}
             </p>
           )}
 

@@ -13,6 +13,12 @@
  * Lo que se prueba acá: que pedir un código nuevo no toca la cuenta, que el intento lo suma la
  * base en un solo paso, que agotado el tope no se compara nada, y que un código vencido no gasta
  * intentos —que es lo que deja intacto el caso legítimo de quien pide otro porque se le venció—.
+ *
+ * Y al final, el consentimiento de quien paga cuando otra persona ya lo cerró o lo anuló: dos
+ * personas con la misma página abierta, una registra la firma o lo anula y la otra intenta lo
+ * mismo. No hay nada que hacer y no es un error: no se toca nada y se contesta bien. Esa parte de
+ * la base aplica los filtros de cada modificación: si no los aplicara, «ya estaba cerrado» no se
+ * distinguiría de «se cerró ahora», y la prueba no podría fallar.
  */
 import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
@@ -37,13 +43,14 @@ const baseFalsa = createServer((req, res) => {
     crudo += parte;
   });
   req.on('end', () => {
-    const ruta = new URL(req.url, 'http://interno').pathname;
+    const url = new URL(req.url, 'http://interno');
+    const ruta = url.pathname;
     const clave = `${req.method} ${ruta}`;
     const cuerpo = crudo ? JSON.parse(crudo) : null;
     llamadas.push({ clave, cuerpo });
 
     const preparada = respuestas.get(clave);
-    const valor = typeof preparada === 'function' ? preparada({ cuerpo }) : preparada;
+    const valor = typeof preparada === 'function' ? preparada({ cuerpo, url }) : preparada;
     if (valor === undefined) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ message: `la prueba no preparó respuesta para ${clave}` }));
@@ -62,6 +69,7 @@ process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
 
 // El import va después de las variables de entorno: este archivo sí arma la conexión al cargarse.
 const { confirmarConCodigo, pedirCodigo } = await import('../instruccionesPersonasAutorizadas.js');
+const { anularPendiente, cerrarConPapelFirmado } = await import('../consentimientoPagador.js');
 
 after(() => baseFalsa.close());
 
@@ -228,5 +236,88 @@ describe('pedir un código nuevo', () => {
     const despues = await confirmarConCodigo({ instruccionId: INSTRUCCION, clienteId: CLIENTE, prestadoraId: PRESTADORA, codigo: '123456' });
     assert.equal(despues.ok, false);
     assert.equal(despues.motivo, 'demasiados_intentos');
+  });
+});
+
+// ---------------------------------------------------------------------------------------
+// El consentimiento de quien paga cuando otra persona ya lo cerró o lo anuló
+
+const CONSENTIMIENTO = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+const PRESTADORA_AJENA = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
+
+describe('el consentimiento de quien paga que ya no espera firma', () => {
+  let consentimientos;
+  const cumple = (fila, url) =>
+    [...url.searchParams].every(([columna, condicion]) =>
+      !(columna in fila) || !String(condicion).startsWith('eq.') || String(fila[columna]) === String(condicion).slice(3));
+  const unConsentimiento = (estado) => ({
+    id: CONSENTIMIENTO,
+    prestadora_id: PRESTADORA,
+    estado,
+    archivo_firmado_url: estado === 'cerrado' ? 'otra/ruta.pdf' : null,
+  });
+  const modificaciones = () => llamadas.filter((l) => l.clave === 'PATCH /rest/v1/consentimientos_pagador');
+  const pedido = { consentimientoId: CONSENTIMIENTO, prestadoraId: PRESTADORA };
+
+  beforeEach(() => {
+    consentimientos = [];
+    respuestas.set('GET /rest/v1/consentimientos_pagador', ({ url }) => consentimientos.filter((fila) => cumple(fila, url)));
+    respuestas.set('PATCH /rest/v1/consentimientos_pagador', ({ cuerpo, url }) => {
+      const tocadas = [];
+      consentimientos = consentimientos.map((fila) => {
+        if (!cumple(fila, url)) return fila;
+        const nueva = { ...fila, ...cuerpo };
+        tocadas.push(nueva);
+        return nueva;
+      });
+      return tocadas;
+    });
+  });
+
+  it('registrar la firma de uno pendiente lo cierra con el archivo', async () => {
+    consentimientos = [unConsentimiento('pendiente_firma')];
+    assert.equal(await cerrarConPapelFirmado({ ...pedido, archivoUrl: 'ruta/nueva.pdf' }), true);
+    assert.equal(consentimientos[0].estado, 'cerrado');
+    assert.equal(consentimientos[0].archivo_firmado_url, 'ruta/nueva.pdf');
+  });
+
+  for (const estado of ['cerrado', 'anulado']) {
+    it(`registrar la firma de uno ya ${estado} contesta sin error y no toca nada`, async () => {
+      consentimientos = [unConsentimiento(estado)];
+      const antes = structuredClone(consentimientos);
+      assert.equal(await cerrarConPapelFirmado({ ...pedido, archivoUrl: 'ruta/nueva.pdf' }), false);
+      assert.deepEqual(consentimientos, antes);
+      assert.equal(modificaciones().length, 0, 'no se le pidió ninguna modificación a la base');
+    });
+  }
+
+  it('registrar la firma de uno de otra Prestadora no lo encuentra', async () => {
+    consentimientos = [{ ...unConsentimiento('pendiente_firma'), prestadora_id: PRESTADORA_AJENA }];
+    await assert.rejects(
+      cerrarConPapelFirmado({ ...pedido, archivoUrl: 'ruta/nueva.pdf' }),
+      (err) => err.motivo === 'no_encontrado',
+    );
+    assert.equal(consentimientos[0].estado, 'pendiente_firma');
+  });
+
+  it('anular uno pendiente lo anula', async () => {
+    consentimientos = [unConsentimiento('pendiente_firma')];
+    assert.equal(await anularPendiente(pedido), true);
+    assert.equal(consentimientos[0].estado, 'anulado');
+  });
+
+  for (const estado of ['cerrado', 'anulado']) {
+    it(`anular uno ya ${estado} contesta sin error y no toca nada`, async () => {
+      consentimientos = [unConsentimiento(estado)];
+      const antes = structuredClone(consentimientos);
+      assert.equal(await anularPendiente(pedido), false);
+      assert.deepEqual(consentimientos, antes);
+    });
+  }
+
+  it('anular uno de otra Prestadora no lo toca', async () => {
+    consentimientos = [{ ...unConsentimiento('pendiente_firma'), prestadora_id: PRESTADORA_AJENA }];
+    await anularPendiente(pedido);
+    assert.equal(consentimientos[0].estado, 'pendiente_firma');
   });
 });

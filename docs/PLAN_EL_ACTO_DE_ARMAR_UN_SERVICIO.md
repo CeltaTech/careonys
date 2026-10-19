@@ -461,8 +461,12 @@ los Servicios ya asignados. Las dos columnas donde eso podría anotarse ya exist
 escribe nadie**: `equipo_paciente.usuario_id` sólo se llena a mano, y `guardias.coordinador_id` no la
 escribe ninguna línea del Panel ni del backend. Cuál de las dos se usa es parte de este paso.
 
-**FALTA DEFINIR EL TEXTO** del tercer estado —el de la vacante, cuando quien coordinaba deja la
-función y el rol lo cubre la administración—. Es texto visible y lo aprueba el Desarrollador.
+**Si no hay coordinador asignado, el Servicio no comienza.** Y hasta que se asigne uno, **el
+Administrador es el Coordinador general**: quien distribuye los Servicios entre los coordinadores. Lo
+sigue siendo hasta que nombre a otra persona para ese rol. Textual del Desarrollador: «Si no hay
+coordinador asignado, el Servicio no comienza. Y hasta que se asigne un coordinador, el Administrador
+es el Coordinador general, que distribuye el trabajo entre los coordinadores, hasta que nombre a otra
+persona para ese rol de Coordinador general.»
 
 **El cartel #11 se cerró acá, y está ejecutado.** El Desarrollador indicó: «El cartel de "Nadie por
 ahora" se va.» Salió de los tres idiomas y con él la sección entera mientras la lista está vacía
@@ -490,8 +494,7 @@ cada uno necesita datos que hoy no se guardan.
 Nada de esto se resuelve por criterio propio. Cada punto traba lo que tiene al lado.
 
 1. **Qué dice el aviso del hueco** (paso 3). Texto visible.
-2. **Qué dice el tercer estado de la coordinación** (paso 7). Texto visible.
-3. **Si «suspender» es distinto de «pausar»** (paso 5). En el pedido aparecen las dos palabras:
+2. **Si «suspender» es distinto de «pausar»** (paso 5). En el pedido aparecen las dos palabras:
    «Se debe pausar, suspender, modificar, cancelar. etc». Si son dos cosas distintas, hacen falta dos
    acciones; si es la misma dicha de dos maneras, alcanza una. **No se decide por criterio propio.**
 

@@ -121,7 +121,6 @@ export const T = {
         // El consentimiento del Pagador. Ninguno de los dos es una falla: falta elegir quién paga,
         // o alguien ya firmó lo que se estaba por anular.
         sin_pagador: 'Todavía no está elegido quién paga esta contratación.',
-        ya_cerrado: 'Este consentimiento ya no está pendiente de firma. Actualice la página.',
         falta_la_firma: 'Falta la firma.',
         ningun_asignado_puede_dar_la_via: 'No hay un Asistente asignado habilitado para administrar medicación por esta vía.',
         // Un celular es de una sola persona; una línea fija se comparte. No nombra el número ni
@@ -3122,7 +3121,6 @@ export const T = {
         entrevista_en_el_pasado: 'That date has already passed. An interview is scheduled for a later time.',
         entrevista_ya_agendada: 'This applicant already has an interview scheduled. To change the day, reschedule it instead of booking another one.',
         sin_pagador: 'Nobody has been selected yet to pay for this contract.',
-        ya_cerrado: 'This consent is no longer awaiting signature. Reload the page.',
         falta_la_firma: 'Signature pending.',
         ningun_asignado_puede_dar_la_via: 'No assigned Assistant is authorized to administer medication via this route.',
         // Un celular es de una sola persona; una línea fija se comparte. No nombra el número ni
@@ -6083,7 +6081,6 @@ export const T = {
         entrevista_en_el_pasado: 'Essa data já passou. Uma entrevista se agenda para mais adiante.',
         entrevista_ya_agendada: 'Este candidato já tem uma entrevista agendada. Para mudar o dia, ela se reagenda, não se agenda outra.',
         sin_pagador: 'Ainda não foi escolhido quem paga esta contratação.',
-        ya_cerrado: 'Este consentimento já não está aguardando assinatura. Atualize a página.',
         falta_la_firma: 'Falta a assinatura.',
         ningun_asignado_puede_dar_la_via: 'Não há um Assistente designado habilitado para administrar medicação por esta via.',
         // Un celular es de una sola persona; una línea fija se comparte. No nombra el número ni

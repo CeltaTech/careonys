@@ -273,7 +273,10 @@ panelMedicacionRouter.post(
       if (!indicacion) throw new ErrorConMotivo('no_encontrado');
 
       const firma = (await firmasDe(prestadoraId, [indicacion.id])).get(indicacion.id);
-      if (firma?.estado !== 'pendiente_firma') throw new ErrorConMotivo('ya_cerrado');
+      // Si otra persona ya la cerró o la anuló, no queda nada por hacer: se contesta bien sin subir
+      // nada, y la pantalla vuelve a leer y muestra cómo quedó.
+      if (!firma) throw new ErrorConMotivo('no_encontrado');
+      if (firma.estado !== 'pendiente_firma') return res.json({ ok: true });
 
       const ruta = rutaDelPapelFirmado(prestadoraId, indicacion.paciente_id, firma.id, extensionDeArchivo(req.file.mimetype));
       const { error: errorSubida } = await supabase.storage
@@ -295,7 +298,20 @@ panelMedicacionRouter.post(
         .eq('estado', 'pendiente_firma')
         .select('id');
       if (error) throw error;
-      if (!cerrado?.length) throw new ErrorConMotivo('ya_cerrado');
+      // Otra persona la cerró mientras se subía el archivo. El archivo subido no quedó en ninguna
+      // firma y se borra, salvo que esté en la misma ruta que el que sí quedó guardado.
+      if (!cerrado?.length) {
+        const { data: actual } = await supabase
+          .from('consentimientos_medicacion')
+          .select('archivo_firmado_url')
+          .eq('id', firma.id)
+          .eq('prestadora_id', prestadoraId)
+          .maybeSingle();
+        if (actual?.archivo_firmado_url !== ruta) {
+          const { error: errorBorrado } = await supabase.storage.from(BUCKET).remove([ruta]);
+          if (errorBorrado) console.error('[medicacion] no se pudo borrar el archivo que quedó sin firma:', errorBorrado.message);
+        }
+      }
 
       res.json({ ok: true });
     } catch (err) {

@@ -144,7 +144,6 @@ const ESTADO_POR_MOTIVO = {
   // firmar nada, y lo que ya se firmó no se anula. Si cayeran en 500 la pantalla diría "algo falló
   // de nuestro lado" cuando no falló nada de este lado.
   sin_pagador: 409,
-  ya_cerrado: 409,
   // Los formularios declarados. El incompleto es 400 porque el dato vino mal cargado, y viaja con
   // la lista de lo que falta para que quien trabaja vea todo junto y no de a un renglón por vez.
   // El no declarado es 404 y contesta lo mismo cuando el formulario no existe y cuando es de otra

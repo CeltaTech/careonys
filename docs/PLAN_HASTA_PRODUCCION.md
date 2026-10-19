@@ -788,10 +788,9 @@ títulos:
 **23. Usted** — Aprobar ese plan, que todavía no está aprobado. Hasta que lo esté no se escribe
 código de producción de ninguno de sus ocho pasos.
 
-**24. Usted** — Las tres respuestas que ese plan espera, cada una con su situación delante en el
-documento: qué dice el aviso cuando queda un horario pactado sin nadie que lo cubra; qué dice el
-tercer estado de la coordinación, el de la vacante que cubre la administración mientras no haya
-nadie asignado; y si «suspender» es distinto de «pausar» —una sola acción con fecha de vuelta
+**24. Usted** — Las dos respuestas que ese plan espera, cada una con su situación delante en el
+documento: qué dice el aviso cuando queda un horario pactado sin nadie que lo cubra, y si
+«suspender» es distinto de «pausar» —una sola acción con fecha de vuelta
 opcional, o dos, una por tiempo conocido y otra indefinida—.
 
 **25. Usted** — Y dos que aparecieron al escribir la escala de cuatro niveles, las dos sobre lo

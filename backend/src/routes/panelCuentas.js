@@ -14,7 +14,7 @@ import {
   identidadDelAsistente,
   errorDeLaIdentidad,
 } from '../utils/cuentasPanel.js';
-import { responderError } from '../utils/errorConMotivo.js';
+import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { APROBADAS, filasDeIncorporacion } from '../utils/etapasDeIncorporacion.js';
 import { RESULTADO_PENDIENTE } from '../utils/referenciasLaborales.js';
 import { reenviarActivacionCuenta } from '../utils/activacionCuenta.js';
@@ -32,6 +32,7 @@ import {
   DEPOSITO_PAGADOR,
   anularPendiente,
   cerrarConPapelFirmado as cerrarConsentimientoPagador,
+  consentimientoDelPagador,
   crearConsentimiento,
   estadoDelPagador,
   guardarPapel,
@@ -461,6 +462,17 @@ panelCuentasRouter.post(
     const cliente = await clienteContratanteDelPedido(req);
     if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
 
+    // Si otra persona ya lo cerró o lo anuló, no queda nada por hacer: se contesta bien sin subir
+    // nada, y la pantalla vuelve a leer y muestra cómo quedó.
+    const consentimientoPedido = { consentimientoId: req.params.consentimientoId, prestadoraId: cliente.prestadora_id };
+    try {
+      const consentimiento = await consentimientoDelPagador(consentimientoPedido);
+      if (!consentimiento) throw new ErrorConMotivo('no_encontrado', 'Consentimiento no encontrado');
+      if (consentimiento.estado !== 'pendiente_firma') return res.json({ ok: true });
+    } catch (error) {
+      return responderError(res, error);
+    }
+
     // El archivo es opcional, igual que en la instrucción de las personas autorizadas: lo que cierra esto es que
     // la Prestadora declare que se firmó, y hay Prestadoras que archivan el papel afuera del
     // sistema. Exigirlo dejaría firmas reales sin poder registrarse, que es peor.
@@ -479,11 +491,16 @@ panelCuentasRouter.post(
     }
 
     try {
-      await cerrarConsentimientoPagador({
-        consentimientoId: req.params.consentimientoId,
-        prestadoraId: cliente.prestadora_id,
-        archivoUrl: ruta,
-      });
+      const cerrado = await cerrarConsentimientoPagador({ ...consentimientoPedido, archivoUrl: ruta });
+      // Otra persona lo cerró mientras se subía el archivo. El archivo subido no quedó en ningún
+      // consentimiento y se borra, salvo que esté en la misma ruta que el que sí quedó guardado.
+      if (!cerrado && ruta) {
+        const actual = await consentimientoDelPagador(consentimientoPedido);
+        if (actual?.archivo_firmado_url !== ruta) {
+          const { error: errorBorrado } = await db.storage.from(DEPOSITO_DEL_PAGADOR).remove([ruta]);
+          if (errorBorrado) console.error('[cuentas] no se pudo borrar el archivo que quedó sin consentimiento:', errorBorrado.message);
+        }
+      }
       res.json({ ok: true });
     } catch (error) {
       responderError(res, error);

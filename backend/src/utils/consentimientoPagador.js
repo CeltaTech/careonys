@@ -175,22 +175,28 @@ async function nombreDeLaContratacion({ clienteId, prestadoraId }) {
   return data?.persona?.nombre_visible ?? null;
 }
 
-// El camino de siempre: quien paga firmó la hoja y la Prestadora la guarda. La ruta que sube el
-// archivo se encarga del depósito; acá sólo se cierra.
-export async function cerrarConPapelFirmado({ consentimientoId, prestadoraId, archivoUrl }) {
-  const { data: consentimiento } = await supabase
+// El consentimiento de esta Prestadora, con su estado y su archivo, o null si no es de ella.
+export async function consentimientoDelPagador({ consentimientoId, prestadoraId }) {
+  const { data, error } = await supabase
     .from('consentimientos_pagador')
-    .select('id, estado')
+    .select('id, estado, archivo_firmado_url')
     .eq('id', consentimientoId)
     .eq('prestadora_id', prestadoraId)
     .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ?? null;
+}
 
+// El camino de siempre: quien paga firmó la hoja y la Prestadora la guarda. La ruta que sube el
+// archivo se encarga del depósito; acá sólo se cierra. Si otra persona ya lo cerró o lo anuló, no
+// queda nada por hacer: no se toca nada, no es un error, y devuelve false para que la ruta sepa
+// que el archivo que subió no quedó guardado en ningún consentimiento.
+export async function cerrarConPapelFirmado({ consentimientoId, prestadoraId, archivoUrl }) {
+  const consentimiento = await consentimientoDelPagador({ consentimientoId, prestadoraId });
   if (!consentimiento) throw new ErrorConMotivo('no_encontrado', 'Consentimiento no encontrado');
-  if (consentimiento.estado !== 'pendiente_firma') {
-    throw new ErrorConMotivo('ya_cerrado', 'Este consentimiento ya no está pendiente de firma');
-  }
+  if (consentimiento.estado !== 'pendiente_firma') return false;
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('consentimientos_pagador')
     .update({
       estado: 'cerrado',
@@ -200,12 +206,15 @@ export async function cerrarConPapelFirmado({ consentimientoId, prestadoraId, ar
     })
     .eq('prestadora_id', prestadoraId)
     .eq('id', consentimientoId)
-    .eq('estado', 'pendiente_firma');
+    .eq('estado', 'pendiente_firma')
+    .select('id');
   if (error) throw new Error(error.message);
+  return Boolean(data?.length);
 }
 
 // Se anula el pendiente sin reemplazarlo: se cargó por error, o cambió el Pagador y todavía no se
-// sabe cuál es el nuevo. Lo cerrado no se anula nunca: ya lo firmó alguien.
+// sabe cuál es el nuevo. Lo cerrado no se anula nunca: ya lo firmó alguien. Si otra persona ya lo
+// cerró o lo anuló, no queda nada por hacer y no es un error.
 export async function anularPendiente({ consentimientoId, prestadoraId }) {
   const { data, error } = await supabase
     .from('consentimientos_pagador')
@@ -215,10 +224,7 @@ export async function anularPendiente({ consentimientoId, prestadoraId }) {
     .eq('estado', 'pendiente_firma')
     .select('id');
   if (error) throw new Error(error.message);
-
-  if (!data?.length) {
-    throw new ErrorConMotivo('ya_cerrado', 'Este consentimiento ya no está pendiente de firma');
-  }
+  return Boolean(data?.length);
 }
 
 // ---------------------------------------------------------------------------------------

@@ -4,25 +4,9 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 84 fichas.** Panel 42, aplicación del Asistente 25, aplicación del Cliente 15, Base 2.
+**Total: 83 fichas.** Panel 41, aplicación del Asistente 25, aplicación del Cliente 15, Base 2.
 
-## Panel (42)
-
-### 27. Consentimiento que ya no espera firma
-
-| | |
-|---|---|
-| **Texto actual** | Este consentimiento ya no está pendiente de firma. Actualice la página. |
-| **Propuesta corta** | «Ya firmado o anulado.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | nombra los dos únicos estados posibles ( o ) sin la palabra interna «pendiente de firma». |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Guardias → Medicación, indicación con «Falta la firma»; Panel → Clientes → un Cliente → solapa «Contacto», recuadro «Quién paga». |
-| **Qué estaba haciendo** | subía el papel firmado, anulaba el consentimiento o registraba la firma. |
-| **Qué pasó** | otra persona ya lo había firmado, anulado o registrado con la página abierta. En Medicación no se pudo confirmar si hay otra causa. |
-| **Qué puede hacer después** | actualizar la página. |
-| **Cómo se muestra** | franja. |
-| **Decisión** |  |
+## Panel (41)
 
 ### 28. Botón para reenviar el enlace
 

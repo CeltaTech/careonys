@@ -1363,6 +1363,21 @@ cuántos días de gracia da y qué pasa después, y Careonys ejecuta lo que ella
 software conectado, el corte lo ordena ese software. Los días de gracia ya se configuran; falta
 elegir qué pasa cuando vencen, y el corte que ordena el software conectado.
 
+**Y lo de la relación de dependencia sale también, a un módulo de sueldos y jornales.** El
+Asistente es monotributista o trabajador independiente: se lo contrata para una tarea, y la
+contratación termina porque se completó, porque se canceló o porque él desistió. Ahí no hay
+liquidación final, telegrama, notificación ni cese. Hoy el Legajo ofrece el vínculo
+«Dependencia», la solapa «Vínculo y Cese» con esos documentos y los conceptos de liquidación con
+alcance por vínculo; todo eso es de sueldos y jornales, y lo usa la Prestadora que tenga
+empleados en relación de dependencia. Sus mensajes también se redactan acá: en el Panel, «No se
+encontró el cese».
+
+**Los mensajes de cobros y facturación se redactan acá, no antes.** Salieron de la revisión de
+frases porque se van con el módulo: en el Panel, más de una pasarela de cobro conectada, pasarela
+de cobro no disponible, forma de cobro con nombre repetido, renovación sin período, falta la fecha
+límite de pago de los saldos, falta el motivo para anular un cobro, falta el importe o el tipo de
+comprobante y faltan datos de la corrección; en la aplicación del Cliente, el QR de pago vencido.
+
 ---
 
 ## Decisiones que no traban nada empezado

@@ -4,25 +4,9 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 86 fichas.** Panel 44, aplicación del Asistente 25, aplicación del Cliente 15, Base 2.
+**Total: 85 fichas.** Panel 43, aplicación del Asistente 25, aplicación del Cliente 15, Base 2.
 
-## Panel (44)
-
-### 24. No se encontró el cese
-
-| | |
-|---|---|
-| **Texto actual** | Cese no encontrado. Actualice la página. |
-| **Propuesta corta** | Sacar la frase. Ese caso cae en el aviso general de «no encontrado» |
-| **¿Aparece hoy?** | no |
-| **Por qué** | un cese no desaparece, así que el aviso no tiene caso real. |
-| **Quién lo lee** | la administración de la Prestadora. |
-| **Dónde está** | Panel → Asistentes → Padrón de Asistentes → Legajo, solapa «Vínculo y Cese», recuadro «Historial de ceses». |
-| **Qué estaba haciendo** | tocó «Descargar liquidación», «Descargar telegrama», «Descargar notificación» o «Ver el guardado». |
-| **Qué pasó** | el sistema no encontró ese cese. En el Panel no hay forma de borrar un cese, y no se pudo confirmar en qué circunstancia real aparece. |
-| **Qué puede hacer después** | actualizar la página e intentar de nuevo. |
-| **Cómo se muestra** | franja arriba del recuadro. |
-| **Decisión** |  |
+## Panel (43)
 
 ### 26. Entrevista ya cerrada
 

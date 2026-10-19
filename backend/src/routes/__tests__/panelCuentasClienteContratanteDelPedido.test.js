@@ -90,7 +90,6 @@ beforeEach(() => {
   respuestas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: rolDelUsuario, prestadora_id: PRESTADORA }]);
-  respuestas.set('GET /rest/v1/configuracion_plataforma', () => [{ mfa_admin_obligatorio: false }]);
   respuestas.set('GET /rest/v1/permisos_de_acceso', () => []);
   respuestas.set('POST /rest/v1/rpc/tiene_permiso_la_sesion', () => true);
   // El Cliente no aparece: la ruta contesta 404 y lo que se mira es cómo se lo buscó.

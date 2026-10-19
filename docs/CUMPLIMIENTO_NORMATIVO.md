@@ -48,7 +48,7 @@ Latinoamérica— y CeltaTech es el encargado —*business associate*, *encargad
 | **164.306(a)(2)** | Protección frente a amenazas razonablemente anticipadas | **En obra** — plan de aislamiento completo |
 | **164.308(a)(7)(ii)(A)(B)(C)** «Required» | Copia exacta y recuperable, restauración, modo de emergencia | **En obra** — tramo 10 |
 | **164.308(a)(4)** y mínimo necesario **164.502(b)** | Acceso acotado a lo necesario | **En obra** — plan de aislamiento, tramos 1 a 4 |
-| **164.312(d)** | Verificación de identidad de quien accede | **Cumple parcialmente**: segundo factor construido. **En obra** encenderlo — tramo 8 |
+| **164.312(d)** | Verificación de identidad de quien accede | **Cumple parcialmente**: entrada con usuario y contraseña, sin segundo factor. La entrada con token está guardada en el estante de CeltaTech (`Codigos-utiles`) — tramo 8 |
 | **164.410** | El business associate notifica la brecha al covered entity | **En obra** — tramo 6, construido para 24 horas |
 | **164.402(2)** | Presunción de brecha salvo evaluación de cuatro factores, con carga de la prueba de la empresa | **En obra** — tramo 6 |
 | **164.404(c)** | Contenido mínimo del aviso, cinco elementos | **En obra** — tramo 6 |
@@ -644,7 +644,6 @@ todo lo de este documento.
 - El consentimiento se registra con texto versionado, con quién consintió, por qué medio, desde
   cuándo y hasta cuándo.
 - Existe la estructura de aviso legal por jurisdicción, con constancia de que se avisó.
-- El segundo factor está construido y el backend rechaza la credencial que no llegó a segundo factor.
 - No se entrenan modelos con datos de los Clientes, y no se monetiza ningún dato de salud.
 - El tráfico va cifrado.
 

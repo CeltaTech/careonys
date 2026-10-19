@@ -1,5 +1,4 @@
 import { abrirSesionDelPedido, clienteDelPedido, enLaPrestadora } from '../db/connection.js';
-import { elRolUsaSegundoFactor, elSegundoFactorEsObligatorio } from '../utils/reglaMfaObligatorio.js';
 import { ROLES_PANEL } from '../utils/roles.js';
 import {
   faltaRegistrar,
@@ -16,6 +15,10 @@ import {
 //
 // El corte por inactividad es a los 5 minutos y se hace en silencio. El tope absoluto está escrito
 // en cada fila, en `expira_at`, y es de 60 minutos.
+//
+// LA CUENTA TÉCNICA NO TIENE ENTRADA PROPIA. Sin un permiso vigente se la rechaza en cada pedido,
+// con el mismo rechazo que a cualquier rol sin acceso: no hay una Organización «propia» en la que
+// pueda trabajar mientras tanto.
 const INACTIVIDAD_LIMITE_MS = 5 * 60 * 1000;
 
 // Las escrituras de las rutas que todavía usan la llave maestra (`supabase`, en
@@ -48,6 +51,26 @@ async function registrarAuditoria({ adminId, prestadoraId, tipoEvento, detalle }
   }
 }
 
+// Cerrar un permiso vencido o anotar la actividad de uno vigente. Va con la credencial del trabajo
+// de esa Prestadora y no con la de la persona: la persona sólo puede leer sus permisos, no
+// cambiarlos. Devuelve si la escritura salió; si no, queda en el registro del servidor.
+async function escribirPermiso(permiso, trabajo, cambios) {
+  try {
+    const { error } = await enLaPrestadora(permiso.prestadora_id, trabajo, (db) => db
+      .from('permisos_de_acceso')
+      .update(cambios)
+      .eq('id', permiso.id)
+      // La Prestadora se nombra igual, aunque el identificador del permiso ya sea único: colgar
+      // de la fila padre es justamente el molde del defecto que se viene cerrando.
+      .eq('prestadora_id', permiso.prestadora_id));
+    if (error) throw new Error(error.message);
+    return true;
+  } catch (error) {
+    console.error(`Error en el ${trabajo}:`, error.message);
+    return false;
+  }
+}
+
 export async function requiereRolPanel(req, res, next) {
   // La credencial se comprueba con la clave pública de la región que la emitió, y de ahí en
   // más todo lo que este middleware lee de la persona lo lee con esa misma credencial
@@ -60,9 +83,8 @@ export async function requiereRolPanel(req, res, next) {
 
   // SIN FILTRO DE PRESTADORA, Y NO LE HACE FALTA
   // Es el paso anterior a todo lo demás: la Prestadora de la sesión sale de acá, y pedirle a esta
-  // consulta que ya la sepa es circular. Y en el Panel la cuenta puede no pertenecer a ninguna:
-  // la del soporte técnico la lleva vacía por restricción de la base. Con la credencial de la
-  // persona la base le devuelve su propia fila y ninguna otra.
+  // consulta que ya la sepa es circular. Con la credencial de la persona la base le devuelve su
+  // propia fila y ninguna otra.
   const { data: perfil, error: errorPerfil } = await db
     .from('usuarios')
     .select('rol, prestadora_id')
@@ -73,26 +95,11 @@ export async function requiereRolPanel(req, res, next) {
     return res.status(403).json({ error: 'Rol sin permiso' });
   }
 
-  // La lectura se pasa entera —con su error— a la regla compartida: si la fila única de
-  // configuración no se puede leer, se exige el segundo factor igual y queda registrado
-  // (panel/src/lib/reglaMfaObligatorio.js, copiado acá; CLAUDE.md §7 regla 12).
-  if (elRolUsaSegundoFactor(perfil.rol)) {
-    const lecturaConfig = await db
-      .from('configuracion_plataforma')
-      .select('mfa_admin_obligatorio')
-      .single();
-    // El nivel con que entró sale de la credencial ya verificada: Supabase no lo pone en ningún
-    // otro lado.
-    if (elSegundoFactorEsObligatorio(lecturaConfig) && sesion.aal !== 'aal2') {
-      return res.status(403).json({ error: 'MFA requerido', codigo: 'mfa_requerido' });
-    }
-  }
-
   let prestadoraId = perfil.prestadora_id;
   let conPermisoDeAcceso = false;
 
-  // Sin permiso de acceso abierto, el rol técnico ve únicamente su propia Organización —Sandbox,
-  // por su `prestadora_id`—. Con uno abierto, ve la Prestadora de ese permiso.
+  // Con un permiso de acceso vigente, el rol técnico trabaja en la Prestadora de ese permiso, y en
+  // ninguna otra. Sin uno, no pasa de acá.
   //
   // Es exactamente el mismo orden que aplica la función SQL `prestadora_actual()`, que es el punto
   // único de verdad de la protección por fila: acá se repite para que el resto de las rutas use el
@@ -101,10 +108,10 @@ export async function requiereRolPanel(req, res, next) {
   // otra.
   if (perfil.rol === 'superadmin') {
     // SIN FILTRO DE PRESTADORA, Y NO LE HACE FALTA
-    // Busca en qué Prestadora hay un permiso abierto, sin saber de antemano en cuál. Acotarlo a la
-    // Organización propia de quien entra —que es Sandbox— no encontraría nunca el que está abierto
-    // en otra. No devuelve dato de la Organización; el paso siguiente sí la nombra, sacada de la
-    // fila hallada. Con la credencial de la persona, la base le muestra sólo sus propios permisos.
+    // Busca en qué Prestadora hay un permiso abierto, sin saber de antemano en cuál. No devuelve
+    // dato de la Organización; el paso siguiente sí la nombra, sacada de la fila hallada. Con la
+    // credencial de la persona, la base le muestra sólo sus propios permisos, y sólo para leerlos:
+    // abrirlos es de CeltaTech.
     const { data: permiso } = await db
       .from('permisos_de_acceso')
       .select('id, prestadora_id, expira_at, ultima_actividad_at')
@@ -130,13 +137,7 @@ export async function requiereRolPanel(req, res, next) {
     // la pantalla que preguntaba cada 30 segundos, y eso hacía depender de una pantalla algo que
     // tiene que pasar igual con la pantalla cerrada.
     if (permiso && !vigente) {
-      await db
-        .from('permisos_de_acceso')
-        .update({ salida_at: ahora.toISOString() })
-        .eq('id', permiso.id)
-        // La Prestadora se nombra igual, aunque el identificador del permiso ya sea único: colgar
-        // de la fila padre es justamente el molde del defecto que se viene cerrando.
-        .eq('prestadora_id', permiso.prestadora_id);
+      await escribirPermiso(permiso, 'cierre del permiso de acceso', { salida_at: ahora.toISOString() });
 
       await registrarAuditoria({
         adminId: sesion.id,
@@ -147,27 +148,30 @@ export async function requiereRolPanel(req, res, next) {
     }
 
     if (permiso && vigente) {
-      await db
-        .from('permisos_de_acceso')
-        .update({ ultima_actividad_at: ahora.toISOString() })
-        .eq('id', permiso.id)
-        .eq('prestadora_id', permiso.prestadora_id);
+      // Sin la actividad anotada, la base daría el permiso por muerto con la persona trabajando:
+      // el pedido no pasa, y cae en el rechazo de abajo.
+      const anotada = await escribirPermiso(permiso, 'registro de actividad del permiso de acceso', {
+        ultima_actividad_at: ahora.toISOString(),
+      });
+      if (anotada) {
+        prestadoraId = permiso.prestadora_id;
+        conPermisoDeAcceso = true;
+      }
+    }
 
-      prestadoraId = permiso.prestadora_id;
-      conPermisoDeAcceso = true;
+    // SIN PERMISO VIGENTE, AFUERA. Falla cerrado: no encontrar el permiso, encontrarlo vencido o no
+    // poder leerlo terminan igual, con el mismo rechazo que cualquier rol sin acceso.
+    if (!conPermisoDeAcceso) {
+      return res.status(403).json({ error: 'Rol sin permiso' });
     }
   }
 
-  // `prestadoraId` es la Organización sobre la que se está trabajando ahora (la del permiso de
-  // acceso si hay uno abierto). `organizacionPropiaId` es la Organización a la que pertenece la
-  // cuenta en sí, que no cambia al entrar a una Prestadora. Casi todo el código quiere la
-  // primera; la segunda hace falta en el único lugar donde importa de quién es la cuenta y no
-  // dónde está parada: al dar de alta otra cuenta superadmin (panelUsuarios.js).
+  // `prestadoraId` es la Organización sobre la que se está trabajando ahora: la del permiso de
+  // acceso para el rol técnico, la propia para todos los demás.
   req.usuarioPanel = {
     id: sesion.id,
     rol: perfil.rol,
     prestadoraId,
-    organizacionPropiaId: perfil.prestadora_id,
     conPermisoDeAcceso,
   };
 
@@ -204,8 +208,8 @@ export async function requiereRolPanel(req, res, next) {
     });
   }
 
-  // Sólo se anota lo que se hace adentro de una Prestadora ajena: el trabajo del rol técnico en su
-  // propia Organización —Sandbox— no es un acceso a los datos de nadie.
+  // Todo lo que el rol técnico cambia adentro de una Prestadora queda anotado en la auditoría de
+  // los accesos.
   if (conPermisoDeAcceso && METODOS_MUTACION.includes(req.method)) {
     res.on('finish', () => {
       if (res.statusCode >= 200 && res.statusCode < 300) {

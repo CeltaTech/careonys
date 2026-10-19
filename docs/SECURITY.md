@@ -69,7 +69,7 @@ de este proyecto, con alcance distinto, no el que traía Money Suite):
 
 | Rol | Alcance |
 |---|---|
-| `superadmin` | Técnico (código/infra/base de datos), sin carácter administrativo de negocio. Su acceso ordinario de Panel es únicamente la prestadora de prueba fija (Sandbox). Para entrar a una prestadora real hace falta un **permiso de acceso**, que abre CeltaTech desde su lado: una prestadora por vez, acotado en el tiempo y auditado — ver abajo. Login propio, MFA obligatorio |
+| `superadmin` | Técnico (código/infra/base de datos), sin carácter administrativo de negocio. No tiene entrada propia en Careonys: sin un **permiso de acceso** vigente, el backend la rechaza en cada pedido, igual que a cualquier rol sin acceso. El permiso lo abre CeltaTech desde su lado: una prestadora por vez, acotado en el tiempo y auditado — ver abajo |
 | `admin_prestadora` | Todo el negocio de su propia prestadora (cero visibilidad de otras prestadoras) |
 | `coordinador` | Su zona asignada (Clientes, pacientes, guardias, Asistentes de esa zona), dentro de su propia prestadora |
 | `asistente` | Sus propias guardias, su perfil, su certificado |
@@ -127,9 +127,8 @@ real, verificado contra la base el 2026-07-28:
 
 - `prestadora_actual()` resuelve el permiso de acceso primero y el `prestadora_id` propio
   después (definición completa abajo, copiada de la base, no del diseño).
-- `es_superadmin()` no es un bypass: devuelve `TRUE` solo si el usuario es `superadmin` **y**,
-  cuando `configuracion_plataforma.mfa_admin_obligatorio` está en ON, además viene con segundo
-  factor verificado (`aal2`). Las policies la usan siempre junto al tenant
+- `es_superadmin()` no es un bypass: devuelve `TRUE` sólo si el usuario tiene el rol `superadmin`.
+  Las policies la usan siempre junto al tenant
   (`es_superadmin() AND prestadora_id = prestadora_actual()`), nunca sola.
 
 La tabla que consulta `prestadora_actual()` se llama `permisos_de_acceso` y el rol habilitado es
@@ -139,37 +138,28 @@ Toda policy de RLS escrita desde el Bloque 2 en adelante usa estas dos funciones
 de repetir el `EXISTS (SELECT ... FROM usuarios WHERE id = auth.uid() ...)` a mano:
 
 ```sql
--- Copiado de la base el 2026-07-28 (pg_get_functiondef), no del diseño.
-CREATE OR REPLACE FUNCTION prestadora_actual() RETURNS UUID
-  LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+-- Copiado de la base el 2026-10-19 (pg_get_functiondef), no del diseño.
+CREATE OR REPLACE FUNCTION interno.prestadora_actual() RETURNS uuid
+  LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public', 'interno' AS $$
   SELECT COALESCE(
-    -- 1º: ¿hay un permiso de acceso abierto y vigente? Entonces manda esa Prestadora.
+    -- 1. El permiso de acceso que CeltaTech abrió para esta cuenta, mientras está vigente.
     (SELECT s.prestadora_id FROM permisos_de_acceso s
       WHERE s.admin_id = auth.uid()
         AND s.salida_at IS NULL
         AND s.expira_at > NOW()
         AND s.ultima_actividad_at > NOW() - INTERVAL '5 minutes'
       ORDER BY s.entrada_at DESC LIMIT 1),
-    -- 2º: si no, la Organización propia del usuario.
-    (SELECT prestadora_id FROM usuarios WHERE id = auth.uid())
+    -- 2. La Prestadora de la cuenta con la que se entró.
+    (SELECT prestadora_id FROM usuarios WHERE id = auth.uid()),
+    -- 3. El trabajo sin persona: la Prestadora para la que el backend generó su credencial.
+    (SELECT NULLIF(auth.jwt() ->> 'prestadora_id', '')::uuid
+      WHERE auth.jwt() ->> 'role' = 'trabajo_sin_persona')
   )
 $$;
 
-CREATE OR REPLACE FUNCTION es_superadmin() RETURNS BOOLEAN
-  LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
-DECLARE
-  v_mfa_obligatorio BOOLEAN;
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND rol = 'superadmin') THEN
-    RETURN FALSE;
-  END IF;
-  SELECT mfa_admin_obligatorio INTO v_mfa_obligatorio FROM configuracion_plataforma LIMIT 1;
-  -- Con el segundo factor exigido, no alcanza con ser superadmin: hay que haberlo usado.
-  IF COALESCE(v_mfa_obligatorio, FALSE) THEN
-    RETURN (auth.jwt() ->> 'aal') = 'aal2';
-  END IF;
-  RETURN TRUE;
-END;
+CREATE OR REPLACE FUNCTION interno.es_superadmin() RETURNS boolean
+  LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public', 'interno' AS $$
+  SELECT EXISTS (SELECT 1 FROM usuarios WHERE id = auth.uid() AND rol = 'superadmin');
 $$;
 ```
 

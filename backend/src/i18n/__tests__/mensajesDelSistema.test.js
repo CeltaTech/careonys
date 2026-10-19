@@ -205,7 +205,6 @@ const DATOS_MINIMOS = {
     etiqueta: 'Carnet sanitario', dias: 30,
     documentos: [{ nombre: 'Marta', fechaVencimiento: '2026-11-01' }],
   },
-  mfa_codigo_recuperacion: { codigo: '123456', minutos: 10, producto: 'un producto' },
   codigo_instruccion_personas_autorizadas: { codigo: '123456', minutos: 10, remite: 'Cuidados del Sur' },
   activacion_cuenta: {
     nombre: 'Elena', link: 'https://ejemplo/activar', codigo: 'cuidados-del-sur', dias: 7,

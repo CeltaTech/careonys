@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { elRolUsaSegundoFactor, elSegundoFactorEsObligatorio } from '../lib/reglaMfaObligatorio';
 import { anotarActividad } from '../lib/ultimaActividad';
 
 const AuthContext = createContext(null);
@@ -50,36 +49,6 @@ export function AuthProvider({ children }) {
   // en vez de un error (`celtatech/CLAUDE.md` §5, todo control de acceso falla cerrado).
   const [estado, setEstado] = useState('cargando');
   const cargando = estado === 'cargando';
-  // Ítem H del pendiente #30: 'na' (no aplica o el toggle está apagado), 'requiere_enrolamiento'
-  // (primera vez, sin factor TOTP verificado), 'requiere_challenge' (factor verificado pero
-  // esta sesión sigue en aal1), 'ok' (aal2 alcanzado). null mientras se evalúa.
-  const [mfaEstado, setMfaEstado] = useState(null);
-
-  async function evaluarMfa(usuarioActual) {
-    if (!usuarioActual || !elRolUsaSegundoFactor(usuarioActual.rol)) {
-      setMfaEstado('na');
-      return;
-    }
-
-    // La lectura se pasa entera —con su error— a la regla compartida: si la fila única de
-    // configuración no se puede leer, se exige el segundo factor igual y queda registrado
-    // (lib/reglaMfaObligatorio.js; CLAUDE.md §7 regla 12).
-    const lecturaConfig = await supabase.from('configuracion_plataforma').select('mfa_admin_obligatorio').single();
-    if (!elSegundoFactorEsObligatorio(lecturaConfig)) {
-      setMfaEstado('na');
-      return;
-    }
-
-    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (aal?.currentLevel === 'aal2') {
-      setMfaEstado('ok');
-      return;
-    }
-
-    const { data: factores } = await supabase.auth.mfa.listFactors();
-    const factorVerificado = factores?.totp?.find((f) => f.status === 'verified');
-    setMfaEstado(factorVerificado ? 'requiere_challenge' : 'requiere_enrolamiento');
-  }
 
   useEffect(() => {
     let activo = true;
@@ -97,7 +66,6 @@ export function AuthProvider({ children }) {
       if (data.session) {
         await cargarUsuario(data.session.user.id);
       } else {
-        setMfaEstado('na');
         setEstado('listo');
       }
     }
@@ -119,8 +87,6 @@ export function AuthProvider({ children }) {
         return;
       }
       setUsuario(traido.usuario);
-      await evaluarMfa(traido.usuario);
-      if (!activo) return;
       setEstado('listo');
     }
 
@@ -132,7 +98,6 @@ export function AuthProvider({ children }) {
         cargarUsuario(nuevaSesion.user.id);
       } else {
         setUsuario(null);
-        setMfaEstado('na');
         setEstado('listo');
       }
     });
@@ -155,10 +120,6 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut();
   }
 
-  async function refrescarMfa() {
-    await evaluarMfa(usuario);
-  }
-
   // Volver a leer al usuario sin salir y entrar. Lo pide la pantalla que cambia la moneda de la
   // Prestadora: el dato viaja pegado al usuario, así que sin esto los importes que se muestran
   // antes de guardarse seguirían escritos en la moneda anterior hasta la próxima entrada.
@@ -178,7 +139,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, usuario, estado, cargando, mfaEstado, login, logout, refrescarMfa, refrescarUsuario }}
+      value={{ session, usuario, estado, cargando, login, logout, refrescarUsuario }}
     >
       {children}
     </AuthContext.Provider>

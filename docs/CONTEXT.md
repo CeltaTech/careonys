@@ -54,7 +54,7 @@
 
 | Rol | Dónde opera | Ve |
 |---|---|---|
-| Superadmin | Panel de administración (login propio, capa separada de Admin_prestadora) | Su propia Organización (Sandbox) y, abriendo una **sesión de soporte técnico**, una Prestadora real por vez con banner y auditoría. Además, acceso técnico: cambios profundos de configuración, alta/baja de cosas que no es prudente que un Admin_prestadora sin ese nivel opere, interacción con IA para diagnóstico/corrección de errores |
+| Superadmin | Sin entrada propia en Careonys: la herramienta de CeltaTech le abre un **permiso de acceso** | Sólo la Prestadora de un permiso de acceso vigente, una por vez, con auditoría. Sin permiso, ninguna |
 | Admin_prestadora | Panel de administración | Todo el negocio de su propia prestadora (sin el acceso técnico de Superadmin, cero visibilidad de otras prestadoras) |
 | Coordinador | Panel de administración | Su zona asignada |
 | Asistente | PWA de Asistentes | Sus propias guardias, su perfil, su certificado |
@@ -142,7 +142,7 @@ Etapa 2 — Panel de administración
   - **Match** — vidriera, perfiles públicos, conversaciones con videollamada, formas de
     cobro que arma cada Prestadora, accesos, calificaciones y auditoría legal.
   - **Configuración y gobierno** — configuración por Prestadora y de plataforma, usuarios y
-    permisos, segundo factor con su código de verificación por correo, auditoría, importación, contenidos, mensajes en
+    permisos, auditoría, importación, contenidos, mensajes en
     vivo y los canales por los que salen (correo, WhatsApp, push).
 
   Sobre los precios, la regla de negocio central sigue vigente: ningún medio público habla de

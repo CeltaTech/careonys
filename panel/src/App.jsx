@@ -17,7 +17,6 @@ import { ROLES_ADMINISTRACION, ROLES_PANEL } from './lib/roles';
 import { MODALIDAD } from './lib/modalidades';
 import { Layout } from './components/layout/Layout';
 import { Login } from './pages/Login';
-import { Mfa } from './pages/Mfa';
 import { EntrevistaPublica } from './pages/EntrevistaPublica';
 import { ActivarCuenta } from './pages/ActivarCuenta';
 import { RecuperarClave } from './pages/RecuperarClave';
@@ -106,7 +105,6 @@ function App() {
               <BrowserRouter>
                 <Routes>
                   <Route path="/login" element={<Login />} />
-                  <Route path="/mfa" element={<Mfa />} />
                   {/* La entrevista del postulante. Va acá afuera, con la entrada y el segundo
                       factor, porque quien la abre no tiene ninguna cuenta con la que entrar: trae
                       la llave que le llegó por correo, y esa llave es toda su credencial. */}

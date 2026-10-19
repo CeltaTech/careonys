@@ -1,7 +1,7 @@
 // Prueba puntual del pendiente #36 (2026-07-15, reescrita el 2026-07-28 para la Etapa 2) —
 // confirma que quien entra por una sesión de soporte técnico puede leer/editar Configuración
-// sin el 403 que tenía antes del fix en panelConfiguracion.js, y que sin sesión abierta y sin
-// Prestadora propia recibe un 400 entendible en vez de romper.
+// sin el 403 que tenía antes del fix en panelConfiguracion.js, y que sin permiso abierto no entra:
+// la cuenta técnica no tiene entrada propia, y el backend la rechaza como a cualquier rol sin acceso.
 // Corre contra el backend local. Borra todo lo que crea al terminar.
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
@@ -44,10 +44,10 @@ async function main() {
   const token = sesion.session.access_token;
   const headers = () => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' });
 
-  // 1. Sin permiso de acceso abierto: debe dar 400 explícito, no 403 ni crash
+  // 1. Sin permiso de acceso abierto: afuera, con el mismo rechazo que cualquier rol sin acceso
   const rSinTenant = await fetch(`${API}/configuracion/empresa`, { headers: headers() });
   console.log('1. GET /configuracion/empresa sin permiso de acceso:', rSinTenant.status);
-  if (rSinTenant.status !== 400) throw new Error('FALLO: esperaba 400 sin permiso de acceso, dio ' + rSinTenant.status);
+  if (rSinTenant.status !== 403) throw new Error('FALLO: esperaba 403 sin permiso de acceso, dio ' + rSinTenant.status);
 
   // 2. Abrir el permiso de acceso a Sandbox. Se escribe la fila, que es exactamente lo que hace
   //    CeltaTech desde su lado: el producto no tiene ninguna ruta para abrirlo
@@ -74,7 +74,7 @@ async function main() {
   console.log('4. GET /configuracion/zonas con el permiso abierto:', rZonas.status);
   if (rZonas.status !== 200) throw new Error('FALLO: esperaba 200 en /zonas, dio ' + rZonas.status);
 
-  console.log('Pendiente #36 verificado correctamente: 400 sin permiso de acceso, 200 en /empresa y /zonas con el permiso abierto.');
+  console.log('Pendiente #36 verificado correctamente: 403 sin permiso de acceso, 200 en /empresa y /zonas con el permiso abierto.');
 }
 
 async function limpiar() {

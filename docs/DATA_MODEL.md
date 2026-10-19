@@ -128,9 +128,8 @@ prestadora_actual()) OR (...)`, y `prestadora_actual()` para `superadmin` resuel
 ## re-apuntado a `superadmin` el 2026-07-28 en la Etapa 2 de la separación CeltaTech/Careonys)
 
 Modelo de 2 niveles: `admin_prestadora` (acotado a su propia `prestadora_id`, sin cambios) y
-`superadmin` (rol técnico de CeltaTech; su acceso ordinario es únicamente la Organización
-Sandbox, y para entrar a una Prestadora real hace falta un permiso de acceso abierto, uno por
-vez, auditado y con vencimiento).
+`superadmin` (rol técnico de CeltaTech; no tiene entrada propia: sólo pasa con un permiso de
+acceso abierto, uno por vez, auditado y con vencimiento, y sin él el backend lo rechaza).
 
 **El permiso lo abre CeltaTech desde su lado, y el producto no tiene ninguna ruta para abrirlo,
 renovarlo ni cerrarlo a pedido.** La cerradura está acá porque la base es la que decide qué filas

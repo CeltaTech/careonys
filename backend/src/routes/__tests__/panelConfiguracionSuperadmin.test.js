@@ -111,9 +111,16 @@ beforeEach(() => {
   llamadas = [];
   respuestas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
-  respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'superadmin', prestadora_id: PRESTADORA }]);
-  respuestas.set('GET /rest/v1/configuracion_plataforma', () => [{ mfa_admin_obligatorio: false }]);
-  respuestas.set('GET /rest/v1/permisos_de_acceso', () => []);
+  respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'superadmin', prestadora_id: null }]);
+  // La cuenta técnica sólo entra con un permiso de acceso vigente, que abre CeltaTech.
+  respuestas.set('GET /rest/v1/permisos_de_acceso', () => [{
+    id: 'permiso-1',
+    prestadora_id: PRESTADORA,
+    expira_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    ultima_actividad_at: new Date(Date.now() - 10 * 1000).toISOString(),
+  }]);
+  respuestas.set('PATCH /rest/v1/permisos_de_acceso', () => []);
+  respuestas.set('POST /rest/v1/auditoria_de_accesos', () => []);
 });
 
 describe('alertas de IA', () => {

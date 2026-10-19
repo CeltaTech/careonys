@@ -1,5 +1,5 @@
 /**
- * La cuenta de cuántos correos salieron, contra el límite del despachante.
+ * Cada correo que sale queda anotado, para poder contarlo contra el límite del despachante.
  *
  *   npm test --prefix backend
  *
@@ -9,7 +9,7 @@
  * Acá hay tres cosas que se rompen sin hacer ruido:
  *
  *   1. QUE UN ENVÍO NO SE CUENTE. Si el backend manda por un camino que no pasa por donde se anota,
- *      la cuenta queda corta y el Panel muestra margen que no existe. Por eso se comprueba sobre
+ *      la cuenta queda corta y muestra margen que no existe. Por eso se comprueba sobre
  *      las dos salidas de correo que tiene el backend, no sobre una.
  *   2. QUE UN RECHAZO SE CUENTE COMO ENVÍO. Un correo rechazado es justamente la señal de que se
  *      llegó al límite: si se anota como aceptado, la señal desaparece.
@@ -24,17 +24,13 @@ import { strict as assert } from 'node:assert';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
-import { sesionDePrueba } from '../../__tests__/sesionDePrueba.js';
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
-const USUARIO = '22222222-2222-2222-2222-222222222222';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
 /** Todo lo que el backend le pidió a la base, con la dirección entera. */
 let llamadas = [];
-/** Cuántas filas dice la base que hay, cuando le preguntan una cuenta. */
-let cuantasFilas = 0;
 /** Si la base deja anotar. En falso, el insert contesta un error. */
 let laBaseDejaAnotar = true;
 /** Si el despachante toma el correo. */
@@ -50,14 +46,6 @@ const baseFalsa = createServer((req, res) => {
     const clave = `${req.method} ${ruta}`;
     const cuerpo = crudo ? JSON.parse(crudo) : null;
     llamadas.push({ clave, url: req.url, cuerpo, credencial: req.headers.authorization });
-
-    // La cuenta la hace la base, que sólo le contesta a Superadmin. `null` es lo que contesta a
-    // cualquier otro.
-    if (req.method === 'POST' && ruta === '/rest/v1/rpc/correos_enviados_desde') {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify(cuantasFilas));
-      return;
-    }
 
     if (req.method === 'POST' && ruta === '/rest/v1/envios_de_correo') {
       if (!laBaseDejaAnotar) {
@@ -109,35 +97,14 @@ globalThis.fetch = async (direccion, opciones) => {
 
 // El import va después de dejar puestas las variables de entorno: la conexión a la base se arma
 // en el momento en que se importa, y con la dirección que haya en ese instante.
-const { default: express } = await import('express');
-await import('express-async-errors');
-const { panelConfiguracionPlataformaRouter } = await import('../panelConfiguracionPlataforma.js');
 const { enviarEmail, enviarEmailCoordinador } = await import('../../utils/email.js');
 
-const app = express();
-app.use(express.json());
-app.use('/api/panel/configuracion-plataforma', panelConfiguracionPlataformaRouter);
-const backend = app.listen(0, '127.0.0.1');
-await new Promise((listo) => backend.on('listening', listo));
-const DIRECCION = `http://127.0.0.1:${backend.address().port}/api/panel/configuracion-plataforma`;
-
 after(() => {
-  backend.close();
   baseFalsa.close();
   globalThis.fetch = fetchDeVerdad;
   delete process.env.RESEND_API_KEY;
   delete process.env.REMITENTE_AVISOS;
-  delete process.env.TOPE_CORREOS_DIARIO;
-  delete process.env.TOPE_CORREOS_MENSUAL;
 });
-
-async function pedir(metodo, ruta) {
-  const respuesta = await fetch(`${DIRECCION}${ruta}`, {
-    method: metodo,
-    headers: { Authorization: sesionDePrueba(USUARIO), 'Content-Type': 'application/json' },
-  });
-  return { estado: respuesta.status, cuerpo: await respuesta.json() };
-}
 
 function anotaciones() {
   return llamadas.filter((l) => l.clave === 'POST /rest/v1/envios_de_correo');
@@ -145,16 +112,9 @@ function anotaciones() {
 
 beforeEach(() => {
   llamadas = [];
-  cuantasFilas = 0;
   laBaseDejaAnotar = true;
   elDespachanteAcepta = true;
-  delete process.env.TOPE_CORREOS_DIARIO;
-  delete process.env.TOPE_CORREOS_MENSUAL;
   respuestas.clear();
-  respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
-  respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'superadmin', prestadora_id: null }]);
-  respuestas.set('GET /rest/v1/configuracion_plataforma', () => [{ mfa_admin_obligatorio: false }]);
-  respuestas.set('GET /rest/v1/permisos_de_acceso', () => []);
   respuestas.set('GET /rest/v1/prestadoras', () => [
     { casilla_envio: null, nombre_fantasia: null, logo_url: null },
   ]);
@@ -232,65 +192,5 @@ describe('cada correo que sale queda contado', () => {
       texto: 'Un texto inventado',
       prestadoraId: PRESTADORA,
     });
-  });
-});
-
-describe('cuánto correo salió, desde el Panel', () => {
-  it('contesta la cuenta del día y la del mes contra el límite cargado', async () => {
-    process.env.TOPE_CORREOS_DIARIO = '100';
-    process.env.TOPE_CORREOS_MENSUAL = '3000';
-    cuantasFilas = 12;
-
-    const { estado, cuerpo } = await pedir('GET', '/correos');
-
-    assert.equal(estado, 200);
-    assert.equal(cuerpo.correos.del_dia, 12);
-    assert.equal(cuerpo.correos.del_mes, 12);
-    assert.equal(cuerpo.correos.tope_diario, 100);
-    assert.equal(cuerpo.correos.tope_mensual, 3000);
-  });
-
-  it('el día y el mes se cuentan desde donde arranca cada uno', async () => {
-    await pedir('GET', '/correos');
-
-    const cuentas = llamadas.filter((l) => l.clave === 'POST /rest/v1/rpc/correos_enviados_desde');
-    assert.equal(cuentas.length, 2, 'las dos cuentas no se pidieron por separado');
-    for (const c of cuentas) {
-      assert.equal(c.credencial, sesionDePrueba(USUARIO), 'la cuenta no se pidió con la credencial de quien pide');
-    }
-
-    const desde = cuentas.map((c) => c.cuerpo.p_desde).sort();
-    const arranqueDelDia = desde[1];
-    const arranqueDelMes = desde[0];
-    assert.match(arranqueDelDia, /T00:00:00\.000Z$/, 'el día no arranca donde lo cuenta el despachante');
-    assert.match(arranqueDelMes, /-01T00:00:00\.000Z$/, 'el mes no arranca el día primero');
-  });
-
-  it('sin límite cargado contesta la cuenta y ningún límite, en vez de inventar uno', async () => {
-    // Un límite inventado haría creer que queda margen donde no se sabe cuánto queda.
-    cuantasFilas = 7;
-
-    const { cuerpo } = await pedir('GET', '/correos');
-
-    assert.equal(cuerpo.correos.del_dia, 7);
-    assert.equal(cuerpo.correos.tope_diario, null);
-    assert.equal(cuerpo.correos.tope_mensual, null);
-  });
-
-  it('si la base no cuenta para esta sesión, no se contesta cero', async () => {
-    // Cero haría creer que no salió ningún correo y que queda todo el margen.
-    cuantasFilas = null;
-
-    const { estado } = await pedir('GET', '/correos');
-    assert.notEqual(estado, 200);
-  });
-
-  it('quien administra una sola Prestadora no ve la cuenta de la plataforma', async () => {
-    // El límite es de la cuenta entera del despachante, no de una Prestadora: quien administra
-    // una sola no tiene por qué ver cuánto mandan las demás.
-    respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'admin_prestadora', prestadora_id: PRESTADORA }]);
-
-    const { estado } = await pedir('GET', '/correos');
-    assert.equal(estado, 403);
   });
 });

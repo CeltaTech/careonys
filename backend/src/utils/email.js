@@ -114,9 +114,9 @@ function transporteDelDespachante(clave) {
 // la red tiene salida IPv6 real — la opción `family` del transporter no se usa en
 // ningún punto del código de nodemailer, fijarla no tiene efecto. En Railway la salida
 // IPv6 da ENETUNREACH, así que una fracción aleatoria de los envíos fallaba (pendiente
-// #37, detectado al verificar la recuperación de MFA por email). Se resuelve acá mismo
-// a una IPv4 y se pasa como host literal, con `servername` explícito para que el TLS
-// siga validando el certificado contra el nombre del servidor y no contra la dirección.
+// #37). Se resuelve acá mismo a una IPv4 y se pasa como host literal, con `servername`
+// explícito para que el TLS siga validando el certificado contra el nombre del servidor y no
+// contra la dirección.
 async function crearTransporterCompartido() {
   let host = SMTP_HOST;
   try {

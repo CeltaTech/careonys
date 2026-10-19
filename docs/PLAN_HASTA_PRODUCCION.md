@@ -185,17 +185,15 @@ que no pasa por ella, y el aislamiento real sigue siendo **comparar a mano el co
 del archivo** (`panelVitalesAutorizacion.js:88`, y `appAsistentesMatricula.js:207` a través de
 `utils/archivosSubidos.js:68`).
 
-**La protección por fila está puesta y hoy no protege de nada.** Las 201 tablas la tienen encendida
-y 199 tienen política —las dos sin ninguna son `mfa_codigos_recuperacion` y
-`codigos_de_presencia`—, y ninguna depende de nada que aporte el backend: la Prestadora la resuelve
+**La protección por fila está puesta y hoy no protege de nada.** Las 202 tablas la tienen encendida
+y 201 tienen política —la única sin ninguna es `codigos_de_presencia`—, y ninguna depende de nada que aporte el backend: la Prestadora la resuelve
 `interno.prestadora_actual()` con la cuenta de quien entró. **La base ya sabe aislar y nadie le está
 preguntando.**
 
 **Lo que no tiene persona detrás ya no usa la llave maestra**: las tareas automatizadas, la carga de
 los mensajes del sistema, las entradas que llaman otros programas y las puertas públicas corren
 con la credencial del trabajo sin persona, de a una Prestadora por vez. Con la llave maestra
-quedan la entrada con la huella (`routes/llaveDelDispositivo.js:192`), el código de verificación
-por correo del personal técnico (`utils/mfaRecuperacionEmail.js:87-90`) y todo lo que pide una persona
+quedan la entrada con la huella (`routes/llaveDelDispositivo.js:192`) y todo lo que pide una persona
 desde las pantallas.
 
 **Casi nadie sabe quién leyó qué.** Las lecturas de información de salud se anotan encadenadas en
@@ -215,9 +213,8 @@ programadas de la base no está instalada. Lo que hay es borrado lógico: un dat
 **No hay exportación ni portabilidad.** El derecho de acceso se atiende a mano, contra la base.
 
 **El Panel cierra la sesión por inactividad**, encendido por defecto a los 15 minutos y ajustable
-por Prestadora. **Las dos aplicaciones no la cierran.** **El segundo factor está construido y apagado**:
-`requiereRolPanel.js:71-81` rechaza la credencial que no llegó a `aal2`, gobernado por
-`configuracion_plataforma.mfa_admin_obligatorio`, que hoy vale `false`.
+por Prestadora. **Las dos aplicaciones no la cierran.** **El Panel no tiene segundo factor**: la entrada con token
+salió de Careonys y quedó guardada en el estante de CeltaTech (`Codigos-utiles`).
 
 **La estructura de configuración por país está hecha y vacía.** `advertencias_legales` tiene 12
 filas, todas de jurisdicción `AR`, y las doce son de materia laboral o de Match: ninguna es
@@ -405,9 +402,8 @@ grupos**: en cada manejador `const db = clienteDelPedido(req)`, las funciones au
 insertar, la Prestadora se toma de una fila que la base ya le dejó ver a la persona. El paso
 termina cuando ninguna ruta de persona importa `supabase`. Ahí sale también la anotación por
 pedido de `requiereRolPanel.js` para el permiso de acceso, que mientras convivan las dos formas
-deja las escrituras de las rutas migradas anotadas dos veces. Quedan con la maestra, además,
-`panelMfaRecuperacion.js` —que valida la credencial con `getUser` de la maestra— y las escrituras
-de `utils/registroDeActividad.js` y de `auditoria_de_accesos`. El depósito `fotos-identidad` ya tiene
+deja las escrituras de las rutas migradas anotadas dos veces. Quedan con la maestra, además, las
+escrituras de `utils/registroDeActividad.js`. El depósito `fotos-identidad` ya tiene
 su política, así que `panelVerificacionIdentidad.js` pasa como las demás.
 
 **El registro de consultas a HCE entra ruta por ruta en la misma pasada.** Hoy lo anotan siete
@@ -451,14 +447,11 @@ escrito encima por qué. Lo que queda, agrupado por lo que hay que hacer:
   (la función `interno.guardias_a_la_vista_por_una_alarma`). La lista de
   emergencias del Panel ya lee con la credencial de quien pide (`backend/src/routes/panelEmergencias.js`);
   los nombres y marcarla atendida siguen con la maestra.
-- **Las dos tablas sin política se escriben acá, no antes.** `codigos_de_presencia` (el QR de la
-  llegada y del pase de guardia, `utils/comprobacionDePresencia.js`) y `mfa_codigos_recuperacion`
-  (el código por correo de quien perdió su segundo factor, `utils/mfaRecuperacionEmail.js`) sólo
-  tienen permiso para la maestra: hoy nadie más las alcanza, y el día que la maestra salga dejan
-  de andar. Llevan su política y su permiso en la misma migración que retira la maestra de esas
-  rutas, porque sólo ahí se pueden probar. `mfa_codigos_recuperacion` no tiene la columna de la
-  Prestadora: la usa también el soporte técnico, que no pertenece a ninguna, y cómo se la
-  acota se decide al escribir esa política.
+- **La tabla sin política se escribe acá, no antes.** `codigos_de_presencia` (el QR de la
+  llegada y del pase de guardia, `utils/comprobacionDePresencia.js`) sólo tiene permiso para la
+  maestra: hoy nadie más la alcanza, y el día que la maestra salga deja de andar. Lleva su política
+  y su permiso en la misma migración que retira la maestra de esa ruta, porque sólo ahí se puede
+  probar.
 - **Funciones de la base que `authenticated` no puede ejecutar**: las de guardar los secretos de
   WhatsApp, de la conexión con software externo y de los avisos de cobranza y facturación,
   `intercambiar_orden_etapas_incorporacion` y `sembrar_configuracion_prestadora`. La de la conexión
@@ -571,13 +564,6 @@ lo saca también de la lista.
 **La copia de respaldo pasa a una credencial que sólo lee los archivos**: no toca la base, no
 escribe ni borra, y vive sólo en el proceso nocturno. Alcanza a todas las Prestadoras porque su
 trabajo es copiar todo. Antes de escribirla se comprueba qué ofrece Supabase para eso.
-
-**Una entrada todavía la usa, y se resuelve antes de cerrar este paso:** el código de
-verificación por correo que se le pide al personal técnico al entrar
-(`utils/mfaRecuperacionEmail.js:87-90`), porque esas personas no pertenecen a ninguna Prestadora.
-El rol técnico se queda: es la cuenta con la que entra la persona de CeltaTech cuando le abren un
-permiso de acceso, y el backend sólo busca ese permiso para ese rol
-(`middleware/requiereRolPanel.js:100`).
 
 **Comprobación:** las dos listas de `scripts/llave_maestra_pendiente.json` están vacías, la llave
 está dada de baja en Supabase, y el producto y la copia de respaldo funcionan igual. Es la única
@@ -1154,12 +1140,6 @@ casillero, y los nueve casilleros que están mal hechos y por eso necesitaban es
 **52. Usted** — Habilitar cambio de contraseña: qué carteles lleva se decide después de analizar el procedimiento
 y su lógica, no antes.
 
-**53. Usted** — El bloque del segundo factor en Configuración › Accesos, con dos frases que
-nombran un rol que no existe. **Y detrás hay una decisión que no está en ninguna parte de esta
-lista:** la regla del producto dice que hay un solo Administrador por Prestadora y que las personas
-en las que él delega funciones propias **llevan otro nombre, que todavía no está decidido**. Sin
-ese nombre, esas dos frases no se pueden reescribir.
-
 **54. Usted** — Tres cosas que son texto visible y no se pueden decidir de mi lado: la
 contradicción del certificado, donde dos textos dicen cosas distintas del mismo código; las cuatro
 frases que le nombran al usuario el permiso de acceso, que la regla del producto dice que la
@@ -1630,8 +1610,8 @@ alcanzados, el texto de aviso del país de esa Prestadora y la cuenta regresiva 
 
 **117.** **Quién entra y cómo.**
 
-- **Segundo factor obligatorio.** Está construido y apagado: `requiereRolPanel.js:71-81`, gobernado
-  por `configuracion_plataforma.mfa_admin_obligatorio`. Encenderlo es cambiar un dato. Ninguna norma
+- **Segundo factor obligatorio.** El Panel no lo tiene: la entrada con token salió de Careonys y
+  quedó guardada en el estante de CeltaTech (`Codigos-utiles`), lista para volver. Ninguna norma
   vigente de Estados Unidos lo exige —el 164.312(d) es un estándar desnudo—, pero ningún comprador
   grande compra sin él.
 - **Ninguna cuenta compartida.** El 164.312(a)(2)(i) exige identificación única por persona y está

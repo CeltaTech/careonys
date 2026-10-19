@@ -95,7 +95,6 @@ beforeEach(() => {
   respuestas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: rolDelUsuario, prestadora_id: prestadoraDelUsuario }]);
-  respuestas.set('GET /rest/v1/configuracion_plataforma', () => [{ mfa_admin_obligatorio: false }]);
   respuestas.set('GET /rest/v1/permisos_de_acceso', () => []);
   respuestas.set('GET /rest/v1/prestadoras', () => [{ id: PRESTADORA }]);
 });

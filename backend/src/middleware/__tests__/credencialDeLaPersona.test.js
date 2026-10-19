@@ -29,7 +29,7 @@ let personaReconocida = true;
 
 const baseFalsa = createServer((req, res) => {
   const ruta = new URL(req.url, 'http://interno').pathname;
-  llamadas.push({ ruta, credencial: req.headers.authorization, apikey: req.headers.apikey });
+  llamadas.push({ ruta, metodo: req.method, credencial: req.headers.authorization, apikey: req.headers.apikey });
   res.setHeader('Content-Type', 'application/json');
   if (ruta === '/auth/v1/user') {
     if (!personaReconocida) {
@@ -54,7 +54,8 @@ const baseFalsa = createServer((req, res) => {
 await new Promise((listo) => baseFalsa.listen(0, '127.0.0.1', listo));
 process.env.SUPABASE_URL = `http://127.0.0.1:${baseFalsa.address().port}`;
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'clave-de-mentira';
-process.env.SUPABASE_ANON_KEY = 'clave-publica-de-mentira';
+const { prepararCredencialDePrueba } = await import('../../__tests__/credencialDePrueba.js');
+prepararCredencialDePrueba();
 
 const { sesionDePrueba } = await import('../../__tests__/sesionDePrueba.js');
 const { requiereRolPanel } = await import('../requiereRolPanel.js');
@@ -66,7 +67,7 @@ after(() => baseFalsa.close());
 beforeEach(() => {
   llamadas = [];
   usuarioDeLaBase = null;
-  filas = { configuracion_plataforma: { mfa_admin_obligatorio: false } };
+  filas = {};
   personaReconocida = true;
 });
 
@@ -84,13 +85,25 @@ async function pasarPor(middleware, autorizacion) {
   return { req, estado, siguio };
 }
 
-const lecturasDe = (tabla) => llamadas.filter((l) => l.ruta === `/rest/v1/${tabla}`);
+const lecturasDe = (tabla) => llamadas.filter((l) => l.ruta === `/rest/v1/${tabla}` && l.metodo === 'GET');
+const escriturasDe = (tabla) => llamadas.filter((l) => l.ruta === `/rest/v1/${tabla}` && l.metodo !== 'GET');
+
+/** Un permiso de acceso abierto por CeltaTech, con la actividad y el tope que se le pidan. */
+function permisoAbierto({ quietoHaceMin = 1, venceEnMin = 30 } = {}) {
+  const ahora = Date.now();
+  return {
+    id: 'permiso-1',
+    prestadora_id: PRESTADORA,
+    ultima_actividad_at: new Date(ahora - quietoHaceMin * 60_000).toISOString(),
+    expira_at: new Date(ahora + venceEnMin * 60_000).toISOString(),
+  };
+}
 
 describe('el Panel', () => {
   it('lee la cuenta con la credencial de la persona, y nunca con la llave maestra', async () => {
-    // El rol técnico es el que más lee: la cuenta, la configuración del segundo factor y los
-    // permisos de acceso abiertos.
-    usuarioDeLaBase = { rol: 'superadmin', prestadora_id: PRESTADORA };
+    // El rol técnico es el que más lee: la cuenta y los permisos de acceso abiertos.
+    usuarioDeLaBase = { rol: 'superadmin', prestadora_id: null };
+    filas.permisos_de_acceso = permisoAbierto();
     const credencial = sesionDePrueba(PERSONA);
 
     const { req, siguio } = await pasarPor(requiereRolPanel, credencial);
@@ -98,7 +111,7 @@ describe('el Panel', () => {
     assert.equal(siguio, true);
     assert.equal(req.usuarioPanel.id, PERSONA);
     assert.equal(req.usuarioPanel.prestadoraId, PRESTADORA);
-    for (const tabla of ['usuarios', 'configuracion_plataforma', 'permisos_de_acceso']) {
+    for (const tabla of ['usuarios', 'permisos_de_acceso']) {
       const lecturas = lecturasDe(tabla);
       assert.ok(lecturas.length > 0, `no se leyó ${tabla}`);
       for (const l of lecturas) {
@@ -106,6 +119,11 @@ describe('el Panel', () => {
         assert.equal(l.apikey, 'clave-publica-de-mentira');
       }
     }
+    // La actividad se anota con la credencial del trabajo de la Prestadora: la persona sólo lee
+    // sus permisos.
+    const anotaciones = escriturasDe('permisos_de_acceso');
+    assert.equal(anotaciones.length, 1);
+    assert.notEqual(anotaciones[0].credencial, credencial);
   });
 
   it('con una credencial que la base no reconoce, contesta 401 y no lee ninguna cuenta', async () => {
@@ -148,15 +166,31 @@ describe('el Panel', () => {
     }
   });
 
-  it('el segundo factor se mira en la credencial ya comprobada', async () => {
-    usuarioDeLaBase = { rol: 'superadmin', prestadora_id: PRESTADORA };
-    filas.configuracion_plataforma = { mfa_admin_obligatorio: true };
+  it('el rol técnico sin un permiso vigente no entra, con el mismo rechazo que cualquier rol sin acceso', async () => {
+    // Sin permiso, con uno vencido por el tope y con uno vencido por quietud: los tres afuera.
+    for (const permiso of [null, permisoAbierto({ venceEnMin: -1 }), permisoAbierto({ quietoHaceMin: 6 })]) {
+      for (const prestadoraPropia of [null, PRESTADORA]) {
+        usuarioDeLaBase = { rol: 'superadmin', prestadora_id: prestadoraPropia };
+        filas.permisos_de_acceso = permiso;
+        const { estado, siguio, req } = await pasarPor(requiereRolPanel, sesionDePrueba(PERSONA));
+        const caso = `permiso ${JSON.stringify(permiso)}, Prestadora propia ${prestadoraPropia}`;
+        assert.equal(estado, 403, caso);
+        assert.equal(siguio, false, caso);
+        assert.equal(req.usuarioPanel, undefined, caso);
+      }
+    }
+  });
 
-    const sinSegundo = await pasarPor(requiereRolPanel, sesionDePrueba(PERSONA, { aal: 'aal1' }));
-    const conSegundo = await pasarPor(requiereRolPanel, sesionDePrueba(PERSONA, { aal: 'aal2' }));
-
-    assert.equal(sinSegundo.estado, 403);
-    assert.equal(conSegundo.siguio, true);
+  it('Admin_prestadora y Coordinador entran a su Prestadora sin buscar ningún permiso', async () => {
+    for (const rol of ['admin_prestadora', 'coordinador']) {
+      llamadas = [];
+      usuarioDeLaBase = { rol, prestadora_id: PRESTADORA };
+      const { req, siguio } = await pasarPor(requiereRolPanel, sesionDePrueba(PERSONA));
+      assert.equal(siguio, true, rol);
+      assert.equal(req.usuarioPanel.prestadoraId, PRESTADORA, rol);
+      assert.equal(req.usuarioPanel.conPermisoDeAcceso, false, rol);
+      assert.equal(lecturasDe('permisos_de_acceso').length, 0, rol);
+    }
   });
 });
 

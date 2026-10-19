@@ -21,7 +21,7 @@
  * Se levanta el backend de verdad contra una base de mentira y contra un servicio de reenvío de
  * mentira, y se mira qué pidió cada uno. Los datos son inventados.
  */
-import { strict as assert } from 'node:assert';
+import { strict as assert } from 'node:assert';
 import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.js';
 import { after, beforeEach, describe, it } from 'node:test';
 import { createServer } from 'node:http';
@@ -142,7 +142,6 @@ beforeEach(() => {
   respuestas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: 'admin_prestadora', prestadora_id: PRESTADORA }]);
-  respuestas.set('GET /rest/v1/configuracion_plataforma', () => [{ mfa_admin_obligatorio: false }]);
   respuestas.set('GET /rest/v1/permisos_de_acceso', () => []);
   // Las dos columnas que se le preguntan a la Prestadora, juntas: la casilla desde la que manda y
   // el reenvío que tiene abierto hoy. Y su identificador, porque la Prestadora con la que se

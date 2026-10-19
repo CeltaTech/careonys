@@ -4,41 +4,9 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 86 fichas.** Panel 40, aplicación del Asistente 27, aplicación del Cliente 17, Base 2.
+**Total: 83 fichas.** Panel 37, aplicación del Asistente 27, aplicación del Cliente 17, Base 2.
 
-## Panel (40)
-
-### 31. Activar el segundo factor
-
-| | |
-|---|---|
-| **Texto actual** | Escanee este código con Google Authenticator, Authy u otra aplicación similar e ingrese el código de 6 dígitos. |
-| **Propuesta corta** | «Escanee el código con una aplicación de códigos e ingrese los 6 dígitos.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | es la única instrucción de un paso que no es obvio. Los nombres de marca de terceros sobran. |
-| **Quién lo lee** | el soporte técnico de CeltaTech, no la coordinación de la Prestadora. |
-| **Dónde está** | Panel → «Activación del segundo factor de seguridad», al ingresar. |
-| **Qué estaba haciendo** | ingresó con su usuario y su contraseña. |
-| **Qué pasó** | el segundo factor es obligatorio y su cuenta todavía no tiene un teléfono registrado para los códigos. |
-| **Qué puede hacer después** | escanear, escribir el código y tocar «Verificar», o «Cancelar y salir». |
-| **Cómo se muestra** | texto fijo. |
-| **Decisión** |  |
-
-### 32. Código de recuperación enviado
-
-| | |
-|---|---|
-| **Texto actual** | Código enviado al email registrado. Revise su bandeja de entrada (validez: 10 minutos). |
-| **Propuesta corta** | «Código enviado al email registrado. Vence en 10 minutos.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | «Revise su bandeja de entrada» es obvio. El vencimiento sí es dato útil. Ojo: el «10» está escrito en la frase; si cambia la vigencia, hay que cambiarla a mano. |
-| **Quién lo lee** | el soporte técnico de CeltaTech, no la coordinación de la Prestadora. |
-| **Dónde está** | Panel → «Recuperar acceso», a la que se llega desde «Verificación en dos pasos». |
-| **Qué estaba haciendo** | perdió el teléfono con los códigos y tocó «Enviar un código por email». |
-| **Qué pasó** | el sistema envió un código que vence a los 10 minutos. |
-| **Qué puede hacer después** | escribir el código y tocar «Verificar», volver a la verificación normal o salir. |
-| **Cómo se muestra** | franja. |
-| **Decisión** |  |
+## Panel (37)
 
 ### 33. Enlace de ingreso incompleto
 
@@ -54,22 +22,6 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Qué pasó** | el enlace llegó incompleto. Si está completo pero ya se usó o venció, aparece otra frase; no se verificó cuál. |
 | **Qué puede hacer después** | en «Activar la cuenta», nada; en «Elegir una contraseña nueva», el enlace «Recuperar la contraseña». |
 | **Cómo se muestra** | franja. |
-| **Decisión** |  |
-
-### 34. Antes de activar la verificación en dos pasos
-
-| | |
-|---|---|
-| **Texto actual** | Antes de confirmar, verifique que cada usuario tenga instalada una aplicación de códigos (Google Authenticator, Authy u otra). |
-| **Propuesta corta** | «Cada usuario necesita una aplicación de códigos instalada.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | dice la consecuencia sin marcas de terceros ni «Antes de confirmar», que ya lo dice la ventana. Los renglones vecinos siguen largos, con «Admin_plataforma» y «celular con esa app». Son de otra ficha, pero desentonan. |
-| **Quién lo lee** | el soporte técnico de CeltaTech, no la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Configuración → Accesos, tarjeta «Verificación en dos pasos (MFA)», ventana «Antes de activar la verificación en dos pasos». |
-| **Qué estaba haciendo** | marcó la casilla para encender la verificación en dos pasos. |
-| **Qué pasó** | antes de encenderla, el sistema advierte tres cosas; ésta es la segunda. |
-| **Qué puede hacer después** | «Cancelar» o «Entiendo el riesgo, activar». |
-| **Cómo se muestra** | ventana emergente. |
 | **Decisión** |  |
 
 ### 35. Valor del tope semanal

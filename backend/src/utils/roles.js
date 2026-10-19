@@ -9,8 +9,9 @@
 // Etapa 2 de la separación CeltaTech / Careonys (2026-07-28): acá también estaba
 // admin_plataforma, el rol comercial. Se fue entero a CeltaTech y ya no existe dentro de
 // Careonys. Lo que hacía de técnico —entrar a una Prestadora real, una por vez— lo hace ahora
-// superadmin con un permiso de acceso (permisos_de_acceso); RLS via
-// prestadora_actual() se encarga de que sin sesión abierta no vea más que su propia Organización.
+// superadmin con un permiso de acceso (permisos_de_acceso) que abre CeltaTech desde su lado. Sin
+// un permiso vigente el backend lo rechaza en cada pedido (middleware/requiereRolPanel.js), igual
+// que a cualquier rol sin acceso.
 // El backend usa este mismo archivo, copiado por máquina (scripts/copias_entre_apps.mjs). Hasta
 // el 2026-09-04 la lista estaba escrita a mano en cinco rutas del backend y no todas decían lo
 // mismo: tres funciones llamadas `requiereAdminOSuperior`, y la de Match dejaba pasar al

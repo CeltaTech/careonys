@@ -64,8 +64,6 @@ cual. La redacción final la aprueba el Desarrollador cuando se escriba el manua
 
 | Pantalla | Texto |
 |---|---|
-| Segundo factor, activación | Hace falta escanear este código con Google Authenticator, Authy u otra app similar, y escribir el código de 6 dígitos que muestra para confirmar. |
-| Segundo factor, recuperar acceso | Enviamos un código de un solo uso al email registrado. Al confirmarlo, se da de baja el dispositivo perdido y se puede configurar uno nuevo. |
 | Primeros pasos, Empezar desde una planilla | Si esta información ya está en una planilla, se puede leer acá y el sistema propone la configuración inicial a partir de ella. No se crea nada hasta confirmarlo. |
 | Postulaciones, Cerrar la entrevista | Cerrarla deja constancia de que ya pasó. No cambia el estado de la postulación: eso se decide aparte. |
 | Asistentes, Datos bancarios | Los informa el Asistente desde su aplicación. |

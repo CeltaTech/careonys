@@ -94,7 +94,6 @@ producto.
 **Y la Prestadora no lo ve ni sabe que existe.** Textual: *«la prestadora no la ve, ni siquiera
 sabe que existe»*. Ninguna pantalla del Panel lo ofrece, lo nombra ni lo deja ver abierto. El
 cartel que exige la regla de la empresa es de la herramienta con la que opera CeltaTech.
-- Entrada propia; segundo factor por código de verificación, activable desde Configuración.
 - **Acá la Organización ficticia es Sandbox.** El permiso vive en `permisos_de_acceso` y lo que
   se hace con él, en `auditoria_de_accesos`. La forma del permiso es la de la empresa y no se toca.
 - La precedencia —permiso de acceso primero, Organización propia después— la define la función

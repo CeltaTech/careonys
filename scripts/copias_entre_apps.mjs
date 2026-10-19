@@ -122,11 +122,6 @@ export const GRUPOS = [
     copias: ['backend/src/utils/modalidades.js'],
   },
   {
-    que: 'quién tiene que entrar con segundo factor',
-    original: 'panel/src/lib/reglaMfaObligatorio.js',
-    copias: ['backend/src/utils/reglaMfaObligatorio.js'],
-  },
-  {
     que: 'qué escala legal estaba vigente a la fecha del hecho',
     original: 'panel/src/lib/escalasLegales.js',
     copias: ['backend/src/utils/escalasLegales.js'],

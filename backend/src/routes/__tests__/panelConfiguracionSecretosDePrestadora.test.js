@@ -116,9 +116,6 @@ beforeEach(() => {
   respuestas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: USUARIO, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: rolDelUsuario, prestadora_id: prestadoraDelUsuario }]);
-  // El segundo factor no es lo que se está probando acá: se lo deja apagado para que el camino
-  // llegue hasta el candado del rol, que es lo que importa.
-  respuestas.set('GET /rest/v1/configuracion_plataforma', () => [{ mfa_admin_obligatorio: false }]);
   respuestas.set('GET /rest/v1/permisos_de_acceso', () =>
     sesionDeSoporteAbierta
       ? [

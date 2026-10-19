@@ -2,27 +2,21 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../../i18n/LocaleContext';
 import { useAuth } from '../../context/AuthContext';
 import { llamarApiConfiguracion as llamarApi } from '../../lib/apiConfiguracion';
-import { llamarApiPanel } from '../../lib/apiPanel';
 import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
-import { useModalAccesible } from '../../hooks/useModalAccesible';
 import { con } from '../../lib/textos';
 import { MINUTOS_DE_INACTIVIDAD } from '../../lib/cierrePorInactividad';
 import '../../styles/molde-paginas.css';
 
-/* Quién puede hacer qué: los permisos de cada rol y, para el rol técnico de
-   CeltaTech, el segundo factor de ingreso. */
+/* Quién puede hacer qué: los permisos de cada rol y el cierre por inactividad. */
 export function ConfiguracionAccesos() {
-  const { usuario } = useAuth();
-
   return (
     <div className="molde-pila">
       <TabPermisos />
       <CierrePorInactividad />
-      {usuario?.rol === 'superadmin' && <TabSeguridad />}
     </div>
   );
 }
@@ -290,102 +284,5 @@ function TabPermisos() {
       </div>
     </section>
     </>
-  );
-}
-
-function TabSeguridad() {
-  const modal = useModalAccesible(() => setConfirmandoActivacion(false));
-  const { t } = useLocale();
-  const [estado, setEstado] = useState('cargando');
-  const [error, setError] = useState(null);
-  const [mfaObligatorio, setMfaObligatorio] = useState(false);
-  const [guardando, setGuardando] = useState(false);
-  const [confirmandoActivacion, setConfirmandoActivacion] = useState(false);
-
-  const recargar = useCallback(async () => {
-    setEstado('cargando');
-    setError(null);
-    try {
-      // Esta pantalla llamaba a `fetch` con una constante `API_URL` que en este archivo nunca
-      // se declaró. La excepción caía en el `catch` de acá abajo y se mostraba como un error
-      // cualquiera, así que la solapa de Seguridad no cargaba ni guardaba nunca — y desde
-      // afuera parecía un problema del backend. Ahora va por el único camino del Panel hacia el
-      // backend (`lib/apiPanel.js`), que es también el que trae la dirección.
-      const resultado = await llamarApiPanel('/configuracion-plataforma/mfa');
-      setMfaObligatorio(resultado.configuracion.mfa_admin_obligatorio);
-      setEstado('listo');
-    } catch (err) {
-      setError(mensajeDeError(err, t));
-      setEstado('error');
-    }
-  }, [t]);
-
-  useEffect(() => {
-    recargar();
-  }, [recargar]);
-
-  async function aplicarCambio(nuevoValor) {
-    setGuardando(true);
-    try {
-      await llamarApiPanel('/configuracion-plataforma/mfa', {
-        method: 'PATCH',
-        body: JSON.stringify({ mfa_admin_obligatorio: nuevoValor }),
-      });
-      setMfaObligatorio(nuevoValor);
-    } catch (err) {
-      setError(mensajeDeError(err, t));
-    } finally {
-      setGuardando(false);
-    }
-  }
-
-  function handleToggle() {
-    // Apagar no deja a nadie afuera, así que no necesita advertencia previa — solo activar,
-    // que es la operación con riesgo de bloqueo si alguien pierde el celular sin recuperación.
-    if (!mfaObligatorio) {
-      setConfirmandoActivacion(true);
-      return;
-    }
-    aplicarCambio(false);
-  }
-
-  async function confirmarActivacion() {
-    setConfirmandoActivacion(false);
-    await aplicarCambio(true);
-  }
-
-  return (
-    <section className="panel-tarjeta">
-    <div className="panel-tarjeta-titulo">
-      <h2>{t.configuracion.seguridad_mfa_titulo}</h2>
-    </div>
-    <EstadoLista estado={estado} error={error} vacio={false} recargar={recargar}>
-      <label className="panel-checkbox">
-        <input type="checkbox" checked={mfaObligatorio} onChange={handleToggle} disabled={guardando} />
-        {mfaObligatorio ? t.configuracion.seguridad_mfa_activo : t.configuracion.seguridad_mfa_inactivo}
-      </label>
-
-      {confirmandoActivacion && (
-        <div className="panel-modal-fondo" onClick={() => setConfirmandoActivacion(false)}>
-          <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
-            <h2 id={modal.idTitulo}>{t.configuracion.seguridad_mfa_confirmar_titulo}</h2>
-            <ul>
-              <li>{t.configuracion.seguridad_mfa_confirmar_item_alcance}</li>
-              <li>{t.configuracion.seguridad_mfa_confirmar_item_preparacion}</li>
-              <li>{t.configuracion.seguridad_mfa_confirmar_item_sin_recuperacion}</li>
-            </ul>
-            <div className="panel-modal-acciones">
-              <Button variant="secondary" onClick={() => setConfirmandoActivacion(false)} disabled={guardando}>
-                {t.comun.cancelar}
-              </Button>
-              <Button onClick={confirmarActivacion} disabled={guardando}>
-                {guardando ? t.comun.guardando : t.configuracion.seguridad_mfa_confirmar_boton}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </EstadoLista>
-    </section>
   );
 }

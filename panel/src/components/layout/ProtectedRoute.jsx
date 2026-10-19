@@ -7,7 +7,7 @@ import { esAdminOSuperior, ROLES_PANEL } from '../../lib/roles';
 import { Alert } from '../ui/Alert';
 
 export function ProtectedRoute({ children, soloAdmin = false, roles = null, permiso = null, modalidad = null }) {
-  const { session, usuario, estado: estadoSesion, mfaEstado } = useAuth();
+  const { session, usuario, estado: estadoSesion } = useAuth();
   const { puede, estado: estadoPermisos } = usePermisos();
   const { tieneModalidad, estado: estadoModalidades } = useModalidades();
   const { t } = useLocale();
@@ -35,12 +35,6 @@ export function ProtectedRoute({ children, soloAdmin = false, roles = null, perm
   // no se repite la lista acá.
   if (!session || !usuario || !ROLES_PANEL.includes(usuario.rol)) {
     return <Navigate to="/login" replace />;
-  }
-
-  // Ítem H del pendiente #30 — con el toggle de MFA en ON, superadmin no pasa de acá hasta
-  // enrolar o verificar el segundo factor (AuthContext.evaluarMfa).
-  if (mfaEstado === 'requiere_enrolamiento' || mfaEstado === 'requiere_challenge') {
-    return <Navigate to="/mfa" replace />;
   }
 
   if (soloAdmin && !esAdminOSuperior(usuario.rol)) {

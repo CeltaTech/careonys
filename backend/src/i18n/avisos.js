@@ -518,11 +518,6 @@ const ARMADORES = {
     }`,
   }),
 
-  mfa_codigo_recuperacion: (t, d) => ({
-    asunto: t('mfa_codigo_recuperacion.asunto', { producto: d.producto }),
-    texto: t('mfa_codigo_recuperacion.texto', { codigo: d.codigo, minutos: d.minutos }),
-  }),
-
   codigo_instruccion_personas_autorizadas: (t, d) => ({
     asunto: t('codigo_instruccion_personas_autorizadas.asunto', { remite: d.remite }),
     texto: t('codigo_instruccion_personas_autorizadas.texto', {

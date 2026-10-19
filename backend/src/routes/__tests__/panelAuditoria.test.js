@@ -9,8 +9,7 @@
  * dejaba leer el de la Prestadora con el permiso de acceso abierto. Los dos lados decían cosas
  * distintas; era el pendiente #158. El Desarrollador resolvió que manda el alcance de la base:
  * una Prestadora por vez, la del permiso de acceso, y para mirar otra se abre uno sobre
- * esa otra. Fuera de un permiso de acceso no se alcanza ninguna Prestadora real, sólo la
- * Organización ficticia de pruebas.
+ * esa otra. Sin un permiso de acceso vigente, la cuenta técnica no entra a ninguna.
  *
  * Lo que se prueba no es que el código llame a `.eq()` —eso sería probar la biblioteca—, sino
  * qué termina recibiendo quien pregunta. La base de mentira aplica de verdad el filtro
@@ -134,9 +133,6 @@ beforeEach(() => {
   respuestas.clear();
   respuestas.set('GET /auth/v1/user', () => ({ id: SUPERADMIN, aud: 'authenticated' }));
   respuestas.set('GET /rest/v1/usuarios', () => [{ rol: rolDelUsuario, prestadora_id: prestadoraDelUsuario }]);
-  // El segundo factor no es lo que se prueba acá: se lo deja apagado para que el candado de
-  // `requiereRolPanel` no se meta en el medio.
-  respuestas.set('GET /rest/v1/configuracion_plataforma', () => [{ mfa_admin_obligatorio: false }]);
   respuestas.set('GET /rest/v1/permisos_de_acceso', () => (sesionDeSoporte ? [sesionDeSoporte] : []));
   respuestas.set('PATCH /rest/v1/permisos_de_acceso', () => []);
   respuestas.set('POST /rest/v1/auditoria_de_accesos', () => []);
@@ -224,14 +220,13 @@ describe('el registro de actividad', () => {
   });
 });
 
-describe('sin permiso de acceso abierto no se alcanza ninguna Prestadora real', () => {
-  it('el Superadmin sólo ve la Organización de pruebas', async () => {
+describe('sin permiso de acceso vigente el Superadmin no entra a ninguna Organización', () => {
+  it('sin permiso, ni siquiera a la Organización de pruebas', async () => {
     sesionDeSoporte = null;
-    const { estado, cuerpo } = await pedirRegistro();
+    const { estado } = await pedirRegistro();
 
-    assert.equal(estado, 200);
-    assert.deepEqual(organizacionesDe(cuerpo.eventos), [SANDBOX]);
-    assert.equal(consultaAlRegistro().searchParams.get('prestadora_id'), `eq.${SANDBOX}`);
+    assert.equal(estado, 403);
+    assert.equal(consultaAlRegistro(), undefined, 'el backend consultó el registro antes de negar');
   });
 
   it('una sesión vencida no cuenta como sesión abierta', async () => {
@@ -239,9 +234,10 @@ describe('sin permiso de acceso abierto no se alcanza ninguna Prestadora real', 
       ...sesionVigenteSobre(PRESTADORA_A),
       expira_at: new Date(Date.now() - 60 * 1000).toISOString(),
     };
-    const { cuerpo } = await pedirRegistro();
+    const { estado } = await pedirRegistro();
 
-    assert.deepEqual(organizacionesDe(cuerpo.eventos), [SANDBOX]);
+    assert.equal(estado, 403);
+    assert.equal(consultaAlRegistro(), undefined);
 
     // El cierre queda anotado en la Prestadora del permiso, con la credencial del trabajo de ella.
     const cierre = credencialDe('POST /rest/v1/auditoria_de_accesos');
@@ -254,9 +250,10 @@ describe('sin permiso de acceso abierto no se alcanza ninguna Prestadora real', 
       ...sesionVigenteSobre(PRESTADORA_A),
       ultima_actividad_at: new Date(Date.now() - 6 * 60 * 1000).toISOString(),
     };
-    const { cuerpo } = await pedirRegistro();
+    const { estado } = await pedirRegistro();
 
-    assert.deepEqual(organizacionesDe(cuerpo.eventos), [SANDBOX]);
+    assert.equal(estado, 403);
+    assert.equal(consultaAlRegistro(), undefined);
   });
 });
 

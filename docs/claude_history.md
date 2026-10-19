@@ -2,6 +2,12 @@
 
 > Registra por qué cambió una regla vigente de `CLAUDE.md`. La regla vigente en sí vive solo en `CLAUDE.md` (§10) — este archivo guarda el "antes" y el motivo, no vuelve a describir el estado actual en detalle.
 
+## La cuenta técnica de CeltaTech ya no entra por Careonys (2026-10-19)
+
+- **Decía antes:** el superadmin tenía entrada propia al Panel, con segundo factor por código de verificación activable desde Configuración, y sin permiso de acceso trabajaba en la Organización ficticia.
+- **Dice ahora:** Careonys guarda sólo la cerradura —`permisos_de_acceso`, `auditoria_de_accesos`, `prestadora_actual()` y su cumplimiento en `requiereRolPanel.js`—. Sin un permiso vigente, el superadmin queda rechazado en cada pedido. La entrada con token, su recuperación por correo y el interruptor quedaron en el estante de `Codigos-utiles`.
+- **Motivo:** el Desarrollador: la llave es de CeltaTech, y la entrada técnica sale de Careonys de raíz.
+
 ## La intermediación se guarda como `intermediacion` (2026-10-06)
 
 - **Decía antes:** la base y el código guardaban la intermediación con su nombre comercial, `match`: el valor de la modalidad, nueve tablas, sus índices, restricciones y políticas, una columna, funciones y dos claves del catálogo de funciones de riesgo.

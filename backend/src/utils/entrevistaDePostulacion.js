@@ -26,11 +26,22 @@
    LA SALA PUEDE NO EXISTIR, Y LA ENTREVISTA SE AGENDA IGUAL. Donde la Prestadora no configuró
    dónde se hacen sus videollamadas, agendar sirve lo mismo: deja acordado el día y la hora y deja
    la constancia. Lo que no hay es sala, y eso la pantalla lo dice. El producto no prohíbe: avisa
-   (`celtatech/CLAUDE.md` §7). */
+   (`celtatech/CLAUDE.md` §7).
+
+   QUIÉN HACE QUÉ. La agenda sólo el Responsable del reclutamiento
+   (`responsableDelReclutamiento.js`), que al agendar elige al Entrevistador; si no elige, el
+   Entrevistador es él. Mientras la entrevista está agendada, el Responsable puede cambiar al
+   Entrevistador, y nada más. Moverla, cancelarla y cargarle el informe lo hace sólo el
+   Entrevistador. A cualquier otra cuenta le contesta «sin permiso».
+
+   CÓMO TERMINA. Con el informe del Entrevistador, que es obligatorio y la deja `realizada`, o
+   cancelada, con el motivo si se escribe. Si la persona no se presenta, la entrevista se cancela y
+   el motivo lo dice. */
 
 import crypto from 'crypto';
 import { enLaPrestadora } from '../db/connection.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
+import { esLaMismaCuenta, personasDelPanel, responsableDelReclutamiento } from './responsableDelReclutamiento.js';
 import { enviarEmail } from './email.js';
 import { marcaDeLaPrestadora } from './marcaPrestadora.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
@@ -44,22 +55,46 @@ import {
   urlDeSala,
 } from './videollamada.js';
 
-/** Las cuatro situaciones de una entrevista. Sólo la primera está viva. */
+/** Las tres situaciones de una entrevista. Sólo la primera está viva: `realizada` es que se
+ *  cargó el informe, y `cancelada` es que no va a pasar. */
 export const ESTADO_ENTREVISTA = {
   AGENDADA: 'agendada',
   REALIZADA: 'realizada',
-  NO_ASISTIO: 'no_asistio',
   CANCELADA: 'cancelada',
 };
 
-/** Con qué se cierra una entrevista. Cancelarla es otra cosa y tiene su propia función: cancelar
- *  es que no va a pasar, y cerrar es que ya pasó. */
-export const CIERRES = [ESTADO_ENTREVISTA.REALIZADA, ESTADO_ENTREVISTA.NO_ASISTIO];
-
 const COLUMNAS = `
   id, prestadora_id, postulacion_id, agendada_para, llave_publica, sala_videollamada,
-  estado, agendada_por, cerrada_por, cerrada_at, observaciones, created_at
+  estado, agendada_por, entrevistador_id, cerrada_por, cerrada_at, observaciones, created_at
 `;
+
+const sinPermiso = (detalle) => new ErrorConMotivo('sin_permiso', detalle);
+
+/** Que quien pide sea el Responsable del reclutamiento. Si no se resuelve a nadie, no lo es
+ *  nadie. */
+async function exigirResponsable(prestadoraId, usuarioId, personas) {
+  const responsable = await responsableDelReclutamiento(prestadoraId, personas);
+  if (!esLaMismaCuenta(responsable, usuarioId)) {
+    throw sinPermiso('Sólo el Responsable del reclutamiento agenda y elige al Entrevistador');
+  }
+}
+
+/** La entrevista viva, y que quien pide sea su Entrevistador. */
+async function vivaDelEntrevistador({ prestadoraId, postulacionId, usuarioId }) {
+  const viva = await entrevistaViva({ prestadoraId, postulacionId });
+  if (!viva) throw new ErrorConMotivo('no_encontrado', 'No hay ninguna entrevista agendada');
+  if (!esLaMismaCuenta(viva.entrevistador_id, usuarioId)) {
+    throw sinPermiso('Sólo el Entrevistador actúa sobre la entrevista');
+  }
+  return viva;
+}
+
+/** Que la persona elegida como Entrevistador sea del Panel de esta Prestadora. */
+function exigirPersonaDelPanel(personas, id) {
+  if (!personas.some((p) => esLaMismaCuenta(p.id, id))) {
+    throw new ErrorConMotivo('faltan_datos', 'El Entrevistador no es una persona del Panel de la Prestadora');
+  }
+}
 
 /* El día y la hora tal como los va a leer la persona, en su idioma. Se arma acá y no adentro del
    catálogo de mensajes porque el catálogo recibe hechos ya resueltos y no los va a buscar.
@@ -125,7 +160,7 @@ async function avisarAlPostulante({ clave, entrevista, postulante, prestadoraId 
   }
 }
 
-/** La entrevista viva de una postulación, o null. Es la única que se puede mover o cerrar. */
+/** La entrevista viva de una postulación, o null. Es la única que se puede mover o terminar. */
 export async function entrevistaViva({ prestadoraId, postulacionId }) {
   const { data, error } = await enLaPrestadora(prestadoraId, 'Entrevista viva de una postulación', (db) => db
     .from('entrevistas_postulacion')
@@ -139,8 +174,8 @@ export async function entrevistaViva({ prestadoraId, postulacionId }) {
   return data || null;
 }
 
-/** Todas las entrevistas de una postulación, la última primero. Es la historia: quien la mira
- *  quiere ver que a esta persona se le reprogramó dos veces y no se presentó. */
+/** Todas las entrevistas de una postulación, la última primero. Es la historia: cada una con su
+ *  Entrevistador y su informe o su motivo de cancelación. */
 export async function entrevistasDeLaPostulacion({ prestadoraId, postulacionId }) {
   const { data, error } = await enLaPrestadora(prestadoraId, 'Entrevistas de una postulación', (db) => db
     .from('entrevistas_postulacion')
@@ -169,12 +204,22 @@ function comprobarFecha(agendadaPara) {
 /**
  * Agenda la entrevista de una postulación y le avisa al postulante.
  *
+ * Sólo la agenda el Responsable del reclutamiento. El Entrevistador es el que elija, que tiene
+ * que ser del Panel de la Prestadora; si no elige, es él.
+ *
  * Si ya hay una agendada, no crea una segunda: falla y dice que ya hay una. Moverla es
  * `reprogramar`, que es una acción distinta y manda otro correo.
  */
-export async function agendarEntrevista({ prestadoraId, postulacionId, agendadaPara, usuarioId }) {
-  const cuando = comprobarFecha(agendadaPara);
+export async function agendarEntrevista({ prestadoraId, postulacionId, agendadaPara, usuarioId, entrevistadorId = null }) {
+  // La postulación primero: una de otra Prestadora no existe para esta sesión, y eso se contesta
+  // igual a quien sea.
   const postulante = await datosDelPostulante(postulacionId, prestadoraId);
+  const personas = await personasDelPanel(prestadoraId);
+  await exigirResponsable(prestadoraId, usuarioId, personas);
+  const entrevistador = entrevistadorId || usuarioId;
+  exigirPersonaDelPanel(personas, entrevistador);
+
+  const cuando = comprobarFecha(agendadaPara);
 
   if (await entrevistaViva({ prestadoraId, postulacionId })) {
     throw new ErrorConMotivo('entrevista_ya_agendada', 'Esa postulación ya tiene una entrevista agendada');
@@ -194,6 +239,7 @@ export async function agendarEntrevista({ prestadoraId, postulacionId, agendadaP
       llave_publica: crypto.randomBytes(32).toString('base64url'),
       sala_videollamada: base ? nombreDeSalaNuevo() : null,
       agendada_por: usuarioId,
+      entrevistador_id: entrevistador,
     })
     .select(COLUMNAS)
     .single());
@@ -217,15 +263,14 @@ export async function agendarEntrevista({ prestadoraId, postulacionId, agendadaP
 }
 
 /**
- * Mueve la entrevista viva a otro día.
+ * Mueve la entrevista viva a otro día. Sólo lo hace su Entrevistador.
  *
  * La llave y la sala no cambian: es la misma entrevista en otro momento, y cambiarlas obligaría a
  * que el postulante fuera a buscar el correo nuevo en vez de usar el que ya tiene.
  */
-export async function reprogramarEntrevista({ prestadoraId, postulacionId, agendadaPara }) {
+export async function reprogramarEntrevista({ prestadoraId, postulacionId, agendadaPara, usuarioId }) {
+  const viva = await vivaDelEntrevistador({ prestadoraId, postulacionId, usuarioId });
   const cuando = comprobarFecha(agendadaPara);
-  const viva = await entrevistaViva({ prestadoraId, postulacionId });
-  if (!viva) throw new ErrorConMotivo('no_encontrado', 'No hay ninguna entrevista agendada');
 
   const postulante = await datosDelPostulante(postulacionId, prestadoraId);
 
@@ -250,14 +295,15 @@ export async function reprogramarEntrevista({ prestadoraId, postulacionId, agend
 }
 
 /**
- * Cancela la entrevista viva: no va a pasar.
+ * Cancela la entrevista viva: no va a pasar. Sólo lo hace su Entrevistador, y el motivo es
+ * optativo. Si la persona no se presentó, se cancela y el motivo lo dice.
  *
  * La sala se borra en el momento. Quien tenga la dirección de antes no entra a ningún lado, y eso
  * es lo que se espera de una cita cancelada.
  */
 export async function cancelarEntrevista({ prestadoraId, postulacionId, usuarioId, observaciones = null }) {
-  const viva = await entrevistaViva({ prestadoraId, postulacionId });
-  if (!viva) throw new ErrorConMotivo('no_encontrado', 'No hay ninguna entrevista agendada');
+  const viva = await vivaDelEntrevistador({ prestadoraId, postulacionId, usuarioId });
+  const motivo = typeof observaciones === 'string' && observaciones.trim() ? observaciones.trim() : null;
 
   const postulante = await datosDelPostulante(postulacionId, prestadoraId);
 
@@ -268,7 +314,7 @@ export async function cancelarEntrevista({ prestadoraId, postulacionId, usuarioI
       sala_videollamada: null,
       cerrada_por: usuarioId,
       cerrada_at: new Date().toISOString(),
-      observaciones,
+      observaciones: motivo,
     })
     .eq('prestadora_id', prestadoraId)
     .eq('id', viva.id)
@@ -288,32 +334,53 @@ export async function cancelarEntrevista({ prestadoraId, postulacionId, usuarioI
 }
 
 /**
- * Cierra la entrevista viva diciendo cómo salió: se hizo, o la persona no se presentó.
+ * Carga el informe de la entrevista viva, y con eso la deja `realizada`. Sólo lo hace su
+ * Entrevistador, y el informe es obligatorio.
  *
  * No toca la situación de la postulación. Haber entrevistado a alguien no es haberlo aprobado, y
  * decidir eso es de quien mira la postulación, en su propia pantalla.
  *
- * Al postulante no se le avisa: lo que pasa acá es la anotación interna de una entrevista en la
- * que él estuvo, y un correo diciéndole «quedó registrado que usted no se presentó» no le sirve
- * para nada.
+ * Al postulante no se le avisa: el informe es una anotación interna.
  */
-export async function cerrarEntrevista({ prestadoraId, postulacionId, estado, usuarioId, observaciones = null }) {
-  if (!CIERRES.includes(estado)) {
-    throw new ErrorConMotivo('faltan_datos', 'Ese no es un cierre de entrevista');
-  }
+export async function cargarInforme({ prestadoraId, postulacionId, usuarioId, informe }) {
+  const viva = await vivaDelEntrevistador({ prestadoraId, postulacionId, usuarioId });
+  const texto = typeof informe === 'string' ? informe.trim() : '';
+  if (!texto) throw new ErrorConMotivo('faltan_datos', 'El informe de la entrevista está vacío');
 
-  const viva = await entrevistaViva({ prestadoraId, postulacionId });
-  if (!viva) throw new ErrorConMotivo('entrevista_ya_cerrada', 'No hay ninguna entrevista agendada');
-
-  const { data, error } = await enLaPrestadora(prestadoraId, 'Cerrar una entrevista', (db) => db
+  const { data, error } = await enLaPrestadora(prestadoraId, 'Cargar el informe de una entrevista', (db) => db
     .from('entrevistas_postulacion')
     .update({
-      estado,
+      estado: ESTADO_ENTREVISTA.REALIZADA,
       sala_videollamada: null,
       cerrada_por: usuarioId,
       cerrada_at: new Date().toISOString(),
-      observaciones,
+      observaciones: texto,
     })
+    .eq('prestadora_id', prestadoraId)
+    .eq('id', viva.id)
+    .eq('estado', ESTADO_ENTREVISTA.AGENDADA)
+    .select(COLUMNAS)
+    .single());
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/**
+ * Cambia al Entrevistador de la entrevista viva. Sólo lo hace el Responsable del reclutamiento, y
+ * la persona nueva tiene que ser del Panel de la Prestadora. Al postulante no se le avisa: la cita
+ * es la misma.
+ */
+export async function cambiarEntrevistador({ prestadoraId, postulacionId, usuarioId, entrevistadorId }) {
+  const personas = await personasDelPanel(prestadoraId);
+  await exigirResponsable(prestadoraId, usuarioId, personas);
+  const viva = await entrevistaViva({ prestadoraId, postulacionId });
+  if (!viva) throw new ErrorConMotivo('no_encontrado', 'No hay ninguna entrevista agendada');
+  exigirPersonaDelPanel(personas, entrevistadorId);
+
+  const { data, error } = await enLaPrestadora(prestadoraId, 'Cambiar el Entrevistador', (db) => db
+    .from('entrevistas_postulacion')
+    .update({ entrevistador_id: entrevistadorId })
     .eq('prestadora_id', prestadoraId)
     .eq('id', viva.id)
     .eq('estado', ESTADO_ENTREVISTA.AGENDADA)

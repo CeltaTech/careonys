@@ -6,6 +6,7 @@ import { accionesDePermisos } from '../utils/permisos.js';
 import { exigirAdministracion, exigirAdminDePrestadora } from '../middleware/exigirAdministracion.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { prestadoraVisible, prestadoraVisibleOContestar } from '../utils/prestadoraVisible.js';
+import { personasDelPanel, responsableDelReclutamiento } from '../utils/responsableDelReclutamiento.js';
 import {
   ACCION_CAMBIO_DE_MONEDA,
   ACCION_CAMBIO_DE_PERMISOS,
@@ -243,6 +244,79 @@ panelConfiguracionRouter.patch('/moneda', async (req, res) => {
     });
 
     res.json({ moneda: data[0].moneda });
+  } catch (error) {
+    responderError(res, error);
+  }
+});
+
+// --- El Responsable del reclutamiento ---
+//
+// Quién agenda las entrevistas de los postulantes y elige quién las hace. La regla —la persona
+// elegida, y sin elección el Administrador— vive en `utils/responsableDelReclutamiento.js`, y acá
+// sólo se lee y se guarda. La lista sale con el trabajo de la Prestadora, porque `usuarios` sólo
+// le deja a cada persona leer su propia fila.
+//
+// El casillero muestra al Responsable que rige hoy, aunque nadie haya elegido. Al guardar, si la
+// persona elegida es el Administrador se guarda vacío: así sigue siendo «el Administrador» aunque
+// la cuenta cambie.
+
+panelConfiguracionRouter.get('/reclutamiento', async (req, res) => {
+  try {
+    const db = clienteDelPedido(req);
+    const prestadoraId = await prestadoraVisibleOContestar(db, res);
+    if (!prestadoraId) return;
+    const personas = await personasDelPanel(prestadoraId);
+    const responsable = await responsableDelReclutamiento(prestadoraId, personas);
+    res.json({
+      responsable_id: responsable,
+      personas: personas.map(({ id, nombre }) => ({ id, nombre })),
+    });
+  } catch (error) {
+    responderError(res, error);
+  }
+});
+
+panelConfiguracionRouter.put('/reclutamiento', async (req, res) => {
+  try {
+    const elegido = String(req.body?.responsable_id ?? '').trim();
+    if (!elegido) {
+      return responderError(res, new ErrorConMotivo('faltan_datos', 'Responsable del reclutamiento sin elegir'));
+    }
+
+    const db = clienteDelPedido(req);
+    const prestadoraId = await prestadoraVisibleOContestar(db, res);
+    if (!prestadoraId) return;
+
+    const personas = await personasDelPanel(prestadoraId);
+    const persona = personas.find((p) => p.id === elegido);
+    if (!persona) {
+      return responderError(res, new ErrorConMotivo('faltan_datos', 'El Responsable elegido no es del Panel de la Prestadora'));
+    }
+    const administradores = personas.filter((p) => p.rol === 'admin_prestadora');
+    const responsableId = administradores.length === 1 && administradores[0].id === elegido ? null : elegido;
+
+    const anterior = await responsableDelReclutamiento(prestadoraId, personas);
+
+    // La fila la escribe la credencial de quien pide: la base sólo se lo deja a la Administración
+    // de esa Prestadora.
+    const { error } = await db
+      .from('configuracion_reclutamiento')
+      .upsert(
+        { prestadora_id: prestadoraId, responsable_id: responsableId, updated_at: new Date().toISOString() },
+        { onConflict: 'prestadora_id' },
+      );
+    if (error) throw error;
+
+    // Quién agenda las entrevistas es un permiso: queda registrado quién lo cambió y de quién a
+    // quién.
+    await registrarActividad(req.usuarioPanel, ACCION_CAMBIO_DE_PERMISOS, {
+      tablaAfectada: 'configuracion_reclutamiento',
+      registroId: prestadoraId,
+      camposCambiados: ['responsable_id'],
+      detalle: { responsable_anterior: anterior, responsable_nuevo: elegido },
+    });
+
+    res.json({ responsable_id: elegido });
   } catch (error) {
     responderError(res, error);
   }

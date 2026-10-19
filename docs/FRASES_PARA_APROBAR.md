@@ -4,25 +4,9 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 85 fichas.** Panel 43, aplicación del Asistente 25, aplicación del Cliente 15, Base 2.
+**Total: 84 fichas.** Panel 42, aplicación del Asistente 25, aplicación del Cliente 15, Base 2.
 
-## Panel (43)
-
-### 26. Entrevista ya cerrada
-
-| | |
-|---|---|
-| **Texto actual** | La entrevista ya está cerrada. Actualice la página. |
-| **Propuesta corta** | «Entrevista ya cerrada.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | sale «Actualice la página», que es la instrucción obvia. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Asistentes → Postulaciones → una postulación, recuadro «Entrevista», botones «Se hizo» y «No se presentó». |
-| **Qué estaba haciendo** | cerraba la entrevista. |
-| **Qué pasó** | la postulación ya no tiene entrevista agendada; seguramente otra persona la cerró o la canceló con la página abierta. |
-| **Qué puede hacer después** | volver a abrir la postulación. |
-| **Cómo se muestra** | franja arriba del recuadro. |
-| **Decisión** |  |
+## Panel (42)
 
 ### 27. Consentimiento que ya no espera firma
 

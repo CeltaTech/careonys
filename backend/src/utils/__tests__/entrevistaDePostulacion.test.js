@@ -10,6 +10,9 @@
  * devolvió. Las tres cosas que no pueden pasar son que la dirección de la sala salga fuera de hora,
  * que una postulación de otra Prestadora se pueda agendar, y que agendar dos veces cree dos citas.
  *
+ * Y adentro del Panel, quién hace qué: agenda y elige al Entrevistador sólo el Responsable del
+ * reclutamiento; mueve, cancela y carga el informe sólo el Entrevistador.
+ *
  * La base es de mentira y contesta por HTTP igual que la de verdad, así que lo que se afirma no es
  * que la función haya pensado bien por dentro sino qué terminó pidiéndole a la base.
  */
@@ -20,7 +23,11 @@ import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.j
 
 const PRESTADORA = '11111111-1111-1111-1111-111111111111';
 const PRESTADORA_AJENA = '22222222-2222-2222-2222-222222222222';
+/** El único Administrador de la Prestadora: sin elección, es el Responsable del reclutamiento. */
 const USUARIO = '33333333-3333-3333-3333-333333333333';
+const COORDINADORA = '44444444-4444-4444-4444-444444444444';
+const OTRO_COORDINADOR = '55555555-5555-5555-5555-555555555555';
+const DE_OTRA_PRESTADORA = '66666666-6666-6666-6666-666666666666';
 const POSTULACION = 4100;
 const LLAVE = 'una-llave-larga-de-mentira-que-pasa-el-minimo-de-treinta-y-dos';
 const BASE_DE_SALAS = 'https://salas.ejemplo/aca';
@@ -31,6 +38,15 @@ const EN_UNA_HORA = () => new Date(Date.now() + 60 * 60 * 1000).toISOString();
 let postulacion = null;
 let entrevistas = [];
 let prestadora = null;
+/** La elección guardada en Configuración → Reclutamiento, o null si nadie eligió. */
+let configuracion = null;
+const USUARIOS = [
+  { id: USUARIO, nombre: 'Ana Admin', rol: 'admin_prestadora', prestadora_id: PRESTADORA },
+  { id: COORDINADORA, nombre: 'Clara Coord', rol: 'coordinador', prestadora_id: PRESTADORA },
+  { id: OTRO_COORDINADOR, nombre: 'Omar Coord', rol: 'coordinador', prestadora_id: PRESTADORA },
+  { id: DE_OTRA_PRESTADORA, nombre: 'Elena Externa', rol: 'coordinador', prestadora_id: PRESTADORA_AJENA },
+];
+let usuarios = USUARIOS;
 /** Todo lo que se le pidió a la base, para poder afirmar lo que NO salió. */
 let llamadas = [];
 
@@ -52,8 +68,13 @@ const baseFalsa = createServer((req, res) => {
     const contestar = (filas) => {
       const filtradas = filas.filter((fila) =>
         [...url.searchParams].every(([columna, condicion]) => {
-          if (!(columna in fila) || !String(condicion).startsWith('eq.')) return true;
-          return String(fila[columna]) === String(condicion).slice(3);
+          if (!(columna in fila)) return true;
+          const texto = String(condicion);
+          if (texto.startsWith('eq.')) return String(fila[columna]) === texto.slice(3);
+          if (texto.startsWith('in.(')) {
+            return texto.slice(4, -1).split(',').map((v) => v.replace(/"/g, '')).includes(String(fila[columna]));
+          }
+          return true;
         }),
       );
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -62,6 +83,8 @@ const baseFalsa = createServer((req, res) => {
 
     if (url.pathname === '/rest/v1/postulaciones') return contestar(postulacion ? [postulacion] : []);
     if (url.pathname === '/rest/v1/prestadoras') return contestar(prestadora ? [prestadora] : []);
+    if (url.pathname === '/rest/v1/usuarios') return contestar(usuarios);
+    if (url.pathname === '/rest/v1/configuracion_reclutamiento') return contestar(configuracion ? [configuracion] : []);
 
     if (url.pathname === '/rest/v1/entrevistas_postulacion') {
       if (req.method === 'POST') {
@@ -97,8 +120,9 @@ process.env.PANEL_URL = 'https://panel.ejemplo';
 // dirección que haya en ese instante.
 const {
   agendarEntrevista,
+  cambiarEntrevistador,
   cancelarEntrevista,
-  cerrarEntrevista,
+  cargarInforme,
   entrevistaPorLlave,
   reprogramarEntrevista,
 } = await import('../entrevistaDePostulacion.js');
@@ -111,6 +135,8 @@ after(() => {
 beforeEach(() => {
   llamadas = [];
   entrevistas = [];
+  configuracion = null;
+  usuarios = USUARIOS;
   postulacion = {
     id: POSTULACION,
     nombre: 'Marta Ledesma',
@@ -147,6 +173,7 @@ function yaHayUnaAgendada(campos = {}) {
       llave_publica: LLAVE,
       sala_videollamada: 'sala-de-mentira',
       estado: 'agendada',
+      entrevistador_id: USUARIO,
       ...campos,
     },
   ];
@@ -247,7 +274,7 @@ describe('agendar', () => {
   });
 });
 
-describe('mover, cancelar y cerrar', () => {
+describe('mover, cancelar y cargar el informe', () => {
   // La llave viajó por correo una sola vez. Si reprogramar la cambiara, el postulante tendría que
   // ir a buscar el correo nuevo y el viejo lo dejaría afuera.
   it('reprogramar no cambia la llave ni la sala', async () => {
@@ -258,6 +285,7 @@ describe('mover, cancelar y cerrar', () => {
       prestadoraId: PRESTADORA,
       postulacionId: POSTULACION,
       agendadaPara: nueva,
+      usuarioId: USUARIO,
     });
 
     assert.equal(entrevista.llave_publica, LLAVE);
@@ -266,69 +294,60 @@ describe('mover, cancelar y cerrar', () => {
     assert.deepEqual(Object.keys(patch.cuerpo), ['agendada_para']);
   });
 
-  it('cancelar apaga la sala en el momento', async () => {
+  it('cancelar apaga la sala en el momento y guarda el motivo si lo hay', async () => {
     yaHayUnaAgendada();
 
     const entrevista = await cancelarEntrevista({
       prestadoraId: PRESTADORA,
       postulacionId: POSTULACION,
       usuarioId: USUARIO,
+      observaciones: '  No se presentó  ',
     });
 
     assert.equal(entrevista.estado, 'cancelada');
     assert.equal(entrevista.sala_videollamada, null);
     assert.equal(entrevista.cerrada_por, USUARIO);
+    assert.equal(entrevista.observaciones, 'No se presentó');
   });
 
   // Haber entrevistado a alguien no es haberlo aprobado: esa decisión se toma en la pantalla de
   // Postulantes. Si esta función tocara la postulación, la estaría tomando sola.
-  it('cerrar no toca la situación de la postulación', async () => {
+  it('cargar el informe la deja realizada y no toca la postulación', async () => {
     yaHayUnaAgendada();
 
-    const entrevista = await cerrarEntrevista({
+    const entrevista = await cargarInforme({
       prestadoraId: PRESTADORA,
       postulacionId: POSTULACION,
-      estado: 'no_asistio',
       usuarioId: USUARIO,
-      observaciones: 'No se presentó ni avisó',
+      informe: '  Buena disposición y experiencia con personas mayores.  ',
     });
 
-    assert.equal(entrevista.estado, 'no_asistio');
+    assert.equal(entrevista.estado, 'realizada');
+    assert.equal(entrevista.sala_videollamada, null);
+    assert.equal(entrevista.observaciones, 'Buena disposición y experiencia con personas mayores.');
     const escrituras = llamadas.filter(
       (l) => l.ruta === '/rest/v1/postulaciones' && l.metodo !== 'GET',
     );
-    assert.deepEqual(escrituras, [], 'la postulación no se toca al cerrar una entrevista');
+    assert.deepEqual(escrituras, [], 'la postulación no se toca al cargar el informe');
   });
 
-  it('un cierre que no es un cierre no pasa', async () => {
+  it('un informe vacío no pasa', async () => {
     yaHayUnaAgendada();
-    assert.equal(
-      await elMotivo(
-        cerrarEntrevista({
-          prestadoraId: PRESTADORA,
-          postulacionId: POSTULACION,
-          estado: 'cancelada',
-          usuarioId: USUARIO,
-        }),
-      ),
-      'faltan_datos',
-    );
+    for (const informe of ['', '   ', null, undefined]) {
+      assert.equal(
+        await elMotivo(cargarInforme({ prestadoraId: PRESTADORA, postulacionId: POSTULACION, usuarioId: USUARIO, informe })),
+        'faltan_datos',
+      );
+    }
     assert.deepEqual(llamadas.filter((l) => l.metodo === 'PATCH'), []);
   });
 
-  it('no se cierra ni se mueve lo que ya está cerrado', async () => {
+  it('lo que ya no está agendado no existe para moverlo ni para cargarle el informe', async () => {
     yaHayUnaAgendada({ estado: 'realizada' });
 
     assert.equal(
-      await elMotivo(
-        cerrarEntrevista({
-          prestadoraId: PRESTADORA,
-          postulacionId: POSTULACION,
-          estado: 'realizada',
-          usuarioId: USUARIO,
-        }),
-      ),
-      'entrevista_ya_cerrada',
+      await elMotivo(cargarInforme({ prestadoraId: PRESTADORA, postulacionId: POSTULACION, usuarioId: USUARIO, informe: 'Otro' })),
+      'no_encontrado',
     );
     assert.equal(
       await elMotivo(
@@ -336,11 +355,109 @@ describe('mover, cancelar y cerrar', () => {
           prestadoraId: PRESTADORA,
           postulacionId: POSTULACION,
           agendadaPara: EN_UNA_HORA(),
+          usuarioId: USUARIO,
         }),
       ),
       'no_encontrado',
     );
     assert.deepEqual(llamadas.filter((l) => l.metodo === 'PATCH'), []);
+  });
+});
+
+describe('quién hace qué', () => {
+  const sobreLaViva = { prestadoraId: PRESTADORA, postulacionId: POSTULACION };
+
+  it('sólo el Entrevistador mueve, cancela y carga el informe', async () => {
+    yaHayUnaAgendada({ entrevistador_id: COORDINADORA });
+
+    // Ni el Responsable, que la delegó, ni otra persona del Panel.
+    for (const usuarioId of [USUARIO, OTRO_COORDINADOR, null]) {
+      assert.equal(await elMotivo(reprogramarEntrevista({ ...sobreLaViva, usuarioId, agendadaPara: EN_UNA_HORA() })), 'sin_permiso');
+      assert.equal(await elMotivo(cancelarEntrevista({ ...sobreLaViva, usuarioId })), 'sin_permiso');
+      assert.equal(await elMotivo(cargarInforme({ ...sobreLaViva, usuarioId, informe: 'Texto' })), 'sin_permiso');
+    }
+    assert.deepEqual(llamadas.filter((l) => l.metodo === 'PATCH'), []);
+
+    // Y el Entrevistador sí: la prueba de arriba no pasa porque no deje a nadie.
+    const entrevista = await cargarInforme({ ...sobreLaViva, usuarioId: COORDINADORA, informe: 'Texto' });
+    assert.equal(entrevista.estado, 'realizada');
+    assert.equal(entrevista.cerrada_por, COORDINADORA);
+  });
+
+  it('el Responsable cambia al Entrevistador, y nadie más', async () => {
+    yaHayUnaAgendada({ entrevistador_id: COORDINADORA });
+
+    assert.equal(
+      await elMotivo(cambiarEntrevistador({ ...sobreLaViva, usuarioId: COORDINADORA, entrevistadorId: OTRO_COORDINADOR })),
+      'sin_permiso',
+    );
+    assert.deepEqual(llamadas.filter((l) => l.metodo === 'PATCH'), []);
+
+    const entrevista = await cambiarEntrevistador({ ...sobreLaViva, usuarioId: USUARIO, entrevistadorId: OTRO_COORDINADOR });
+    assert.equal(entrevista.entrevistador_id, OTRO_COORDINADOR);
+    const [patch] = llamadas.filter((l) => l.metodo === 'PATCH');
+    assert.deepEqual(patch.cuerpo, { entrevistador_id: OTRO_COORDINADOR });
+  });
+
+  it('el Entrevistador tiene que ser del Panel de la Prestadora', async () => {
+    yaHayUnaAgendada();
+    assert.equal(
+      await elMotivo(cambiarEntrevistador({ ...sobreLaViva, usuarioId: USUARIO, entrevistadorId: DE_OTRA_PRESTADORA })),
+      'faltan_datos',
+    );
+    entrevistas = [];
+    assert.equal(
+      await elMotivo(agendarEntrevista({ ...sobreLaViva, usuarioId: USUARIO, agendadaPara: EN_UNA_HORA(), entrevistadorId: DE_OTRA_PRESTADORA })),
+      'faltan_datos',
+    );
+    assert.deepEqual(insertos(), []);
+    assert.deepEqual(llamadas.filter((l) => l.metodo === 'PATCH'), []);
+  });
+
+  it('sin designar a nadie, el Entrevistador es el Responsable que agenda', async () => {
+    await agendarEntrevista({ ...sobreLaViva, usuarioId: USUARIO, agendadaPara: EN_UNA_HORA() });
+    assert.equal(insertos()[0].cuerpo.entrevistador_id, USUARIO);
+  });
+
+  it('designado, el Entrevistador es el elegido', async () => {
+    await agendarEntrevista({ ...sobreLaViva, usuarioId: USUARIO, agendadaPara: EN_UNA_HORA(), entrevistadorId: COORDINADORA });
+    assert.equal(insertos()[0].cuerpo.entrevistador_id, COORDINADORA);
+  });
+
+  it('sólo el Responsable agenda', async () => {
+    assert.equal(
+      await elMotivo(agendarEntrevista({ ...sobreLaViva, usuarioId: COORDINADORA, agendadaPara: EN_UNA_HORA() })),
+      'sin_permiso',
+    );
+    assert.deepEqual(insertos(), []);
+  });
+
+  it('el Responsable elegido en Configuración agenda, y el Administrador ya no', async () => {
+    configuracion = { prestadora_id: PRESTADORA, responsable_id: COORDINADORA };
+    assert.equal(
+      await elMotivo(agendarEntrevista({ ...sobreLaViva, usuarioId: USUARIO, agendadaPara: EN_UNA_HORA() })),
+      'sin_permiso',
+    );
+    await agendarEntrevista({ ...sobreLaViva, usuarioId: COORDINADORA, agendadaPara: EN_UNA_HORA() });
+    assert.equal(insertos()[0].cuerpo.entrevistador_id, COORDINADORA);
+  });
+
+  it('sin Responsable configurado, lo es el Administrador; sin Administrador único, nadie', async () => {
+    configuracion = { prestadora_id: PRESTADORA, responsable_id: null };
+    await agendarEntrevista({ ...sobreLaViva, usuarioId: USUARIO, agendadaPara: EN_UNA_HORA() });
+    assert.equal(insertos().length, 1);
+
+    // Falla cerrado: sin un Administrador único y sin elección, nadie agenda.
+    entrevistas = [];
+    llamadas = [];
+    usuarios = USUARIOS.filter((u) => u.rol !== 'admin_prestadora');
+    for (const usuarioId of [USUARIO, COORDINADORA, null]) {
+      assert.equal(
+        await elMotivo(agendarEntrevista({ ...sobreLaViva, usuarioId, agendadaPara: EN_UNA_HORA() })),
+        'sin_permiso',
+      );
+    }
+    assert.deepEqual(insertos(), []);
   });
 });
 
@@ -432,10 +549,10 @@ describe('con qué credencial', () => {
     }
   }
 
-  it('agendar, mover y cerrar van con el trabajo de la Prestadora', async () => {
+  it('agendar, mover y cargar el informe van con el trabajo de la Prestadora', async () => {
     await agendarEntrevista({ prestadoraId: PRESTADORA, postulacionId: POSTULACION, agendadaPara: EN_UNA_HORA(), usuarioId: USUARIO });
-    await reprogramarEntrevista({ prestadoraId: PRESTADORA, postulacionId: POSTULACION, agendadaPara: EN_UNA_HORA() });
-    await cerrarEntrevista({ prestadoraId: PRESTADORA, postulacionId: POSTULACION, estado: 'realizada', usuarioId: USUARIO });
+    await reprogramarEntrevista({ prestadoraId: PRESTADORA, postulacionId: POSTULACION, agendadaPara: EN_UNA_HORA(), usuarioId: USUARIO });
+    await cargarInforme({ prestadoraId: PRESTADORA, postulacionId: POSTULACION, usuarioId: USUARIO, informe: 'Texto' });
     conElTrabajoDeLaPrestadora();
   });
 

@@ -49,7 +49,7 @@ anterior quedó retirado por completo, de cualquier contexto interno o público
 | 0 — Postulación | Formulario público, estado inicial `pendiente` | Sistema | Inmediato |
 | 1 — Verificación de identidad | Foto DNI + foto de perfil, comparación por IA | Sistema + Coordinador | < 24hs |
 | 2 — Antecedentes penales | Consulta Registro Nacional de Reincidencia, renovación anual | Coordinador | 1-2 días |
-| 3 — Entrevista estructurada | Videollamada 30 min, evalúa competencia técnica/emocional/valores | Admin_prestadora | 1 día |
+| 3 — Entrevista estructurada | Videollamada 30 min, evalúa competencia técnica/emocional/valores | Responsable del reclutamiento y Entrevistador | 1 día |
 | 4 — Referencias laborales | Mínimo 2 referencias verificadas por teléfono | Coordinador | 1-2 días |
 | 5 — Capacitación y certificación | 8hs online, aprobación mínima 80%, emite Certificado de Aptitud con QR | Sistema + aspirante | 1-2 días |
 
@@ -305,23 +305,34 @@ pendiente, en revisión, aprobada o rechazada.
 Mapa geolocalizado de los Asistentes activos del Padrón agrupado por municipio (mismo componente de mapa que
 `PRD_02_Panel_Admin.md` Módulo 2, no duplicar implementación).
 
-### La entrevista al postulante — cómo quedó construida
+### La entrevista al postulante — cómo está construida
 
-Desde la ficha de una postulación se agenda la entrevista, se la mueve de horario, se la cancela y
-se la cierra diciendo si la persona se presentó o no
-(`panel/src/components/EntrevistaDePostulacion.jsx`, `backend/src/routes/panelEntrevistas.js`,
-tabla `entrevistas_postulacion`). Antes se
-acordaba por fuera —un correo escrito a mano, un teléfono— y de vuelta no quedaba constancia de
-cuándo fue, de si la persona vino ni de quién había quedado en llamarla.
+Desde la ficha de una postulación se agenda la entrevista, se la mueve de horario, se la cancela o
+se le carga el informe (`panel/src/components/EntrevistaDePostulacion.jsx`,
+`backend/src/routes/panelEntrevistas.js`, `backend/src/utils/entrevistaDePostulacion.js`, tabla
+`entrevistas_postulacion`).
+
+- **La agenda el Responsable del reclutamiento, y la hace el Entrevistador.** El Responsable es
+  una persona del Panel que elige la Administración en Configuración → Reclutamiento
+  (`configuracion_reclutamiento`); sin elección, es el Administrador de la Prestadora. Lo resuelve
+  una sola función, `backend/src/utils/responsableDelReclutamiento.js`, que falla cerrado: si no
+  resuelve a nadie, nadie agenda.
+- **Al agendar, el Responsable elige al Entrevistador** entre las personas del Panel; si no
+  elige, es él. Mientras la entrevista está agendada puede cambiarlo, y nada más.
+- **Mover la entrevista, cancelarla y cargarle el informe lo hace sólo el Entrevistador.** El
+  backend contesta «sin permiso» a cualquier otra cuenta, y el Panel no le muestra los botones.
+- **La entrevista termina de dos maneras.** Con el informe del Entrevistador, que es obligatorio
+  y la deja realizada, o cancelada, con el motivo si se escribe. Si la persona no se presenta, se
+  cancela y el motivo lo dice. Al postulante no le llega nada por el informe.
 
 - **El bloque está siempre, sin depender de la situación de la postulación.** Se entrevista
   justamente para decidir, así que esperar a que la postulación esté aprobada llegaría tarde.
-- **Y cerrar una entrevista no cambia la situación de la postulación.** Haber entrevistado a
+- **Y terminar una entrevista no cambia la situación de la postulación.** Haber entrevistado a
   alguien no es haberlo aprobado: eso se decide arriba, en el selector de estado, y sigue siendo
   una decisión de una persona.
-- **Hay una sola entrevista viva por vez, y las demás son historia.** Que a alguien se le haya
-  reprogramado dos veces y no se haya presentado es lo que se quiere ver antes de decidir, así que
-  las anteriores se listan con su resultado y su observación en vez de desaparecer.
+- **Hay una sola entrevista viva por vez, y las demás son historia.** Las anteriores se listan
+  con su fecha, su resultado —con informe o cancelada—, su Entrevistador y el informe o el motivo
+  de la cancelación.
 - **Al postulante le llega su propio enlace, nunca la dirección de la sala**
   (`backend/src/routes/entrevistaPublica.js`). Abre sin cuenta y sin contraseña: el enlace que le llegó
   por correo es todo lo que necesita, igual que el enlace para activar la cuenta. Por eso reprogramar no

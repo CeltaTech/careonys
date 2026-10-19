@@ -53,6 +53,7 @@ import { RespuestasPreparadas } from './pages/RespuestasPreparadas';
 import { Configuracion } from './pages/Configuracion';
 import { ConfiguracionPrestadora } from './pages/configuracion/LaPrestadora';
 import { ConfiguracionAsistentes } from './pages/configuracion/Asistentes';
+import { ConfiguracionReclutamiento } from './pages/configuracion/Reclutamiento';
 import { ConfiguracionCuidado } from './pages/configuracion/ElCuidado';
 import { LasListasDeOpciones } from './pages/configuracion/LasListasDeOpciones';
 import { ConfiguracionAvisos } from './pages/configuracion/Avisos';
@@ -190,6 +191,7 @@ function App() {
                       <Route index element={<Navigate to="prestadora" replace />} />
                       <Route path="prestadora" element={<ConfiguracionPrestadora />} />
                       <Route path="asistentes" element={<ConfiguracionAsistentes />} />
+                      <Route path="reclutamiento" element={<ConfiguracionReclutamiento />} />
                       <Route path="cuidado" element={<ConfiguracionCuidado />} />
                       <Route path="listas" element={<LasListasDeOpciones />} />
                       <Route path="avisos" element={<ConfiguracionAvisos />} />

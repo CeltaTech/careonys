@@ -119,13 +119,14 @@ const ESTADO_POR_MOTIVO = {
   // Un archivo de otro tipo, más pesado que el tope, o un pedido sin archivo.
   archivo_de_contenido_invalido: 400,
   // La entrevista de una postulación. Los dos primeros son 400 porque el dato vino mal cargado, y
-  // los otros dos son 409 porque el pedido está bien armado y choca con el estado de las cosas: la
-  // entrevista ya se cerró, o ya hay una agendada y lo que corresponde es moverla y no agendar una
-  // segunda.
+  // el tercero es 409 porque el pedido está bien armado y choca con el estado de las cosas: ya hay
+  // una agendada, y lo que corresponde es moverla y no agendar una segunda.
   fecha_invalida: 400,
   entrevista_en_el_pasado: 400,
-  entrevista_ya_cerrada: 409,
   entrevista_ya_agendada: 409,
+  // Quien pide tiene sesión y la cosa existe, pero no le toca a él: agendar una entrevista sin ser
+  // el Responsable del reclutamiento, o actuar sobre una sin ser su Entrevistador.
+  sin_permiso: 403,
   // Entrar con la llave que guarda el teléfono. Es 401 —"no se pudo entrar"— y es un solo motivo
   // para todo: la llave que no existe, la que fue revocada, la que apunta a otra persona, el
   // desafío vencido y la firma que no cierra salen los cinco iguales. Distinguirlos convertiría a

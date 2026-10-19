@@ -106,8 +106,6 @@ export function ClienteDetalle() {
   const [documentoAVer, setDocumentoAVer] = useState(null);
   const [papelAConfirmar, setPapelAConfirmar] = useState(null);
   const [quitandoUsuarioId, setQuitandoUsuarioId] = useState(null);
-  const [reenviandoUsuarioId, setReenviandoUsuarioId] = useState(null);
-  const [mensajeReenvio, setMensajeReenvio] = useState(null);
   const [tab, setTab] = useState('contacto');
 
   const recargar = useCallback(async () => {
@@ -189,25 +187,6 @@ export function ClienteDetalle() {
     }
   }
 
-  async function reenviarInvitacion(usuarioId) {
-    setReenviandoUsuarioId(usuarioId);
-    setMensajeReenvio(null);
-    try {
-      const { data } = await supabase.auth.getSession();
-      const respuesta = await fetch(`${API_URL}/api/panel/cuentas/${usuarioId}/reenviar-activacion`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${data.session?.access_token}` },
-      });
-      const resultado = await respuesta.json().catch(() => ({}));
-      if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
-      setMensajeReenvio({ tipo: 'info', texto: t.comun.invitacion_reenviada });
-    } catch {
-      setMensajeReenvio({ tipo: 'error', texto: t.comun.reenviar_invitacion_error });
-    } finally {
-      setReenviandoUsuarioId(null);
-    }
-  }
-
   function setCampoContacto(campo, valor) {
     setFormContacto((f) => ({ ...f, [campo]: valor }));
     setContactoGuardado(false);
@@ -282,17 +261,8 @@ export function ClienteDetalle() {
         <Button variant="secondary" onClick={() => navigate('/clientes')}>
           <span aria-hidden="true">←</span> {t.clientes.volver_a_clientes}
         </Button>
-        {puedeEditarCliente && (
-          <Button variant="secondary" onClick={() => reenviarInvitacion(cliente.id)} disabled={reenviandoUsuarioId === cliente.id}>
-            {reenviandoUsuarioId === cliente.id ? t.comun.reenviando_invitacion : t.comun.reenviar_invitacion}
-          </Button>
-        )}
       </Cabecera>
       <div className="panel-mini hoja-ficha-datos">{datosDeLaFichaDelCliente.join(' · ')}</div>
-
-      {/* El aviso del reenvío queda afuera de las pestañas: se reenvía desde la cabecera y desde
-          las Personas autorizadas, y tiene que verse en las dos. */}
-      {mensajeReenvio && <Alert variant={mensajeReenvio.tipo}>{mensajeReenvio.texto}</Alert>}
 
       <div className="molde-pila">
         <section className="panel-tarjeta">
@@ -517,22 +487,13 @@ export function ClienteDetalle() {
                           {t.clientes.personas_autorizadas.accesos_boton}
                         </Button>{' '}
                         {puedeEditarCliente && (
-                          <>
-                            <Button
-                              variant="secondary"
-                              onClick={() => reenviarInvitacion(m.usuarioId)}
-                              disabled={reenviandoUsuarioId === m.usuarioId}
-                            >
-                              {reenviandoUsuarioId === m.usuarioId ? t.comun.reenviando_invitacion : t.comun.reenviar_invitacion}
-                            </Button>{' '}
-                            <Button
-                              variant="secondary"
-                              onClick={() => quitarPersonaAutorizada(m.usuarioId)}
-                              disabled={quitandoUsuarioId === m.usuarioId}
-                            >
-                              {t.clientes.personas_autorizadas.quitar}
-                            </Button>
-                          </>
+                          <Button
+                            variant="secondary"
+                            onClick={() => quitarPersonaAutorizada(m.usuarioId)}
+                            disabled={quitandoUsuarioId === m.usuarioId}
+                          >
+                            {t.clientes.personas_autorizadas.quitar}
+                          </Button>
                         )}
                       </td>
                     </tr>

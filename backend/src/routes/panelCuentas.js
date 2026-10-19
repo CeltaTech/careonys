@@ -17,7 +17,6 @@ import {
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { APROBADAS, filasDeIncorporacion } from '../utils/etapasDeIncorporacion.js';
 import { RESULTADO_PENDIENTE } from '../utils/referenciasLaborales.js';
-import { reenviarActivacionCuenta } from '../utils/activacionCuenta.js';
 import { requierePermiso, permisosEfectivos } from '../utils/permisos.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 import { extensionDeArchivo } from '../utils/archivosSubidos.js';
@@ -645,31 +644,5 @@ panelCuentasRouter.delete('/cliente/:clienteId/personas_autorizadas/:usuarioId',
     res.json({ ok: true });
   } catch (error) {
     responderError(res, error, 400);
-  }
-});
-
-// Reenviar el email de activación (pendiente #75) — cubre el token vencido (7 días) o
-// simplemente extraviado. Solo para Cliente/Asistente/Personas autorizadas (mismo alcance que el envío
-// automático de crearCuentaConPerfil); Coordinador/Admin/Superadmin siguen con el flujo
-// manual de panelUsuarios.js y no tienen esta ruta disponible.
-panelCuentasRouter.post('/:usuarioId/reenviar-activacion', requiereRolPanel, exigirOrganizacionActiva, soloAdministracion, async (req, res) => {
-  // Con la llave maestra y acotada a mano: en `usuarios` la base sólo le deja ver a cada persona su
-  // propia fila, y acá se busca la cuenta de otra.
-  let queryUsuario = supabase.from('usuarios').select('id, rol, prestadora_id').eq('id', req.params.usuarioId);
-  queryUsuario = acotarAPrestadora(queryUsuario, req.usuarioPanel);
-  const { data: usuario } = await queryUsuario.maybeSingle();
-
-  if (!usuario) {
-    return res.status(404).json({ error: 'Cuenta no encontrada' });
-  }
-  if (!['cliente', 'asistente'].includes(usuario.rol)) {
-    return res.status(400).json({ error: 'Esta cuenta no usa el flujo de activación por email' });
-  }
-
-  try {
-    await reenviarActivacionCuenta(usuario.id, req.usuarioPanel.prestadoraId);
-    res.json({ ok: true });
-  } catch (error) {
-    responderError(res, error);
   }
 });

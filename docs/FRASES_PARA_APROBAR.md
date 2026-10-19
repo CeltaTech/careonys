@@ -4,57 +4,9 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 83 fichas.** Panel 41, aplicación del Asistente 25, aplicación del Cliente 15, Base 2.
+**Total: 86 fichas.** Panel 40, aplicación del Asistente 27, aplicación del Cliente 17, Base 2.
 
-## Panel (41)
-
-### 28. Botón para reenviar el enlace
-
-| | |
-|---|---|
-| **Texto actual** | Reenviar enlace |
-| **Propuesta corta** | queda la propuesta: «Reenviar enlace» · «Resend link» · «Reenviar link» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | es un botón y ya está bien. |
-| **Quién lo lee** | la administración de la Prestadora (en el Cliente, también quien puede editar sus datos). |
-| **Dónde está** | Panel → Padrón de Asistentes → Legajo, solapa «Perfil»; Panel → Clientes → un Cliente, en la cabecera y en cada renglón de «Personas autorizadas». |
-| **Qué estaba haciendo** | miraba la ficha de una persona con cuenta en la aplicación. |
-| **Qué pasó** | es el botón que vuelve a enviar el correo para activar la cuenta. Aparece aunque la persona ya la haya activado. |
-| **Qué puede hacer después** | tocarlo. Mientras trabaja dice «Reenviando…». |
-| **Cómo se muestra** | botón. |
-| **Decisión** |  |
-
-### 29. Enlace reenviado
-
-| | |
-|---|---|
-| **Texto actual** | Enlace de activación reenviado. |
-| **Propuesta corta** | «Enlace reenviado.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | el botón ya dice qué enlace es. «de activación» sobra. |
-| **Quién lo lee** | la administración de la Prestadora. |
-| **Dónde está** | Panel → Padrón de Asistentes → Legajo, solapa «Perfil»; Panel → Clientes → un Cliente, debajo de la cabecera. |
-| **Qué estaba haciendo** | tocó el botón de la ficha 28. |
-| **Qué pasó** | el sistema volvió a enviar el correo para activar la cuenta. |
-| **Qué puede hacer después** | seguir trabajando. La franja queda hasta salir de la página. |
-| **Cómo se muestra** | franja. |
-| **Decisión** |  |
-
-### 30. No se pudo reenviar el enlace
-
-| | |
-|---|---|
-| **Texto actual** | No se pudo reenviar el enlace de activación. Intente nuevamente. |
-| **Propuesta corta** | «No se pudo reenviar el enlace.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | sale «Intente nuevamente», que es la instrucción obvia. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | los mismos lugares que la ficha 29. |
-| **Qué estaba haciendo** | tocó el botón de la ficha 28. |
-| **Qué pasó** | el sistema no envió el correo. Las causas posibles: quien lo pidió no es de la administración (un Coordinador ve el botón pero siempre recibe este mensaje), la cuenta no existe o no tiene email, o se cortó la conexión. No se pudo confirmar si desde la cabecera del Cliente y desde el Perfil del Asistente falla siempre. |
-| **Qué puede hacer después** | volver a tocar el botón. |
-| **Cómo se muestra** | franja. |
-| **Decisión** |  |
+## Panel (40)
 
 ### 31. Activar el segundo factor
 
@@ -666,7 +618,39 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Cómo se muestra** | franja de advertencia dentro de la ventana. |
 | **Decisión** |  |
 
-## Aplicación del Asistente (25)
+### 73. Botón para pedir un enlace nuevo
+
+| | |
+|---|---|
+| **Texto actual** | Enviarme un enlace nuevo |
+| **Propuesta corta** | queda la propuesta: «Enviarme un enlace nuevo» · «Send me a new link» · «Receber um novo link» |
+| **¿Aparece hoy?** | sí |
+| **Por qué** | es un botón nuevo y dice lo que hace. |
+| **Quién lo lee** | quien recibió el correo para activar su cuenta del Panel. |
+| **Dónde está** | Panel → «Activar la cuenta», debajo de la franja de error. |
+| **Qué estaba haciendo** | abrió un enlace de activación vencido y envió la contraseña. |
+| **Qué pasó** | el sistema rechazó el enlace por vencido. Si la cuenta nunca se activó, el botón le manda un enlace nuevo al email que tiene cargado. |
+| **Qué puede hacer después** | tocarlo. Mientras trabaja, el botón queda apagado. |
+| **Cómo se muestra** | botón. |
+| **Decisión** |  |
+
+### 74. Enlace nuevo enviado
+
+| | |
+|---|---|
+| **Texto actual** | Le enviamos un enlace nuevo a su email. |
+| **Propuesta corta** | queda la propuesta: «Le enviamos un enlace nuevo a su email.» · «We sent a new link to your email.» · «Enviamos um novo link para o seu e-mail.» |
+| **¿Aparece hoy?** | sí |
+| **Por qué** | dice qué pasó y dónde buscarlo. |
+| **Quién lo lee** | quien recibió el correo para activar su cuenta del Panel. |
+| **Dónde está** | Panel → «Activar la cuenta», en lugar de la franja de error. |
+| **Qué estaba haciendo** | tocó el botón de la ficha 73. |
+| **Qué pasó** | el pedido llegó. Sale siempre la misma frase, se haya mandado el enlace o no, para que la página no sirva para averiguar qué enlaces existen. Si falla la conexión, sale la frase general de falla de conexión. |
+| **Qué puede hacer después** | abrir el correo. |
+| **Cómo se muestra** | franja, en lugar del mensaje emergente: ninguna de las tres aplicaciones tiene mensaje emergente. |
+| **Decisión** |  |
+
+## Aplicación del Asistente (27)
 
 ### 3. Falta el Paciente del Reporte Diario
 
@@ -744,7 +728,7 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Dónde está** | «Activar la cuenta» y «Elegir una contraseña nueva». |
 | **Qué estaba haciendo** | abrió el enlace y eligió una contraseña. |
 | **Qué pasó** | el enlace pasó su plazo. |
-| **Qué puede hacer después** | en «Activar la cuenta», nada; en la contraseña nueva, «Ingresar». |
+| **Qué puede hacer después** | en «Activar la cuenta», «Enviarme un enlace nuevo» (ficha 28); en la contraseña nueva, «Ingresar». |
 | **Cómo se muestra** | franja, sola en la pantalla. |
 | **Decisión** |  |
 
@@ -1068,7 +1052,39 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Cómo se muestra** | franja amarilla. |
 | **Decisión** |  |
 
-## Aplicación del Cliente (15)
+### 28. Botón para pedir un enlace nuevo
+
+| | |
+|---|---|
+| **Texto actual** | Enviarme un enlace nuevo |
+| **Propuesta corta** | queda la propuesta: «Enviarme un enlace nuevo» · «Send me a new link» · «Receber um novo link» |
+| **¿Aparece hoy?** | sí |
+| **Por qué** | es un botón nuevo y dice lo que hace. |
+| **Quién lo lee** | el Asistente. |
+| **Dónde está** | «Activar la cuenta», debajo de el aviso de enlace vencido. |
+| **Qué estaba haciendo** | abrió un enlace de activación vencido y envió la contraseña. |
+| **Qué pasó** | el sistema rechazó el enlace por vencido. Si la cuenta nunca se activó, el botón le manda un enlace nuevo al email que tiene cargado. |
+| **Qué puede hacer después** | tocarlo. Mientras trabaja, el botón queda apagado. |
+| **Cómo se muestra** | botón. |
+| **Decisión** |  |
+
+### 29. Enlace nuevo enviado
+
+| | |
+|---|---|
+| **Texto actual** | Le enviamos un enlace nuevo a su email. |
+| **Propuesta corta** | queda la propuesta: «Le enviamos un enlace nuevo a su email.» · «We sent a new link to your email.» · «Enviamos um novo link para o seu e-mail.» |
+| **¿Aparece hoy?** | sí |
+| **Por qué** | dice qué pasó y dónde buscarlo. |
+| **Quién lo lee** | el Asistente. |
+| **Dónde está** | «Activar la cuenta», en lugar de el aviso de enlace vencido. |
+| **Qué estaba haciendo** | tocó el botón de la ficha 28. |
+| **Qué pasó** | el pedido llegó. Sale siempre la misma frase, se haya mandado el enlace o no, para que la página no sirva para averiguar qué enlaces existen. Si falla la conexión, sale la frase general de falla de conexión. |
+| **Qué puede hacer después** | abrir el correo. |
+| **Cómo se muestra** | franja, en lugar del mensaje emergente: ninguna de las tres aplicaciones tiene mensaje emergente. |
+| **Decisión** |  |
+
+## Aplicación del Cliente (17)
 
 ### 3. Código de firma incorrecto
 
@@ -1308,6 +1324,38 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Qué pasó** | la aplicación no envía el pedido y lleva al primer casillero vacío. |
 | **Qué puede hacer después** | completar y volver a enviar. |
 | **Cómo se muestra** | franja arriba. |
+| **Decisión** |  |
+
+### 20. Botón para pedir un enlace nuevo
+
+| | |
+|---|---|
+| **Texto actual** | Enviarme un enlace nuevo |
+| **Propuesta corta** | queda la propuesta: «Enviarme un enlace nuevo» · «Send me a new link» · «Receber um novo link» |
+| **¿Aparece hoy?** | sí |
+| **Por qué** | es un botón nuevo y dice lo que hace. |
+| **Quién lo lee** | quien recibió el enlace: el Cliente o una persona autorizada. |
+| **Dónde está** | «Activar la cuenta», debajo de el aviso de enlace vencido. |
+| **Qué estaba haciendo** | abrió un enlace de activación vencido y envió la contraseña. |
+| **Qué pasó** | el sistema rechazó el enlace por vencido. Si la cuenta nunca se activó, el botón le manda un enlace nuevo al email que tiene cargado. |
+| **Qué puede hacer después** | tocarlo. Mientras trabaja, el botón queda apagado. |
+| **Cómo se muestra** | botón. |
+| **Decisión** |  |
+
+### 21. Enlace nuevo enviado
+
+| | |
+|---|---|
+| **Texto actual** | Le enviamos un enlace nuevo a su email. |
+| **Propuesta corta** | queda la propuesta: «Le enviamos un enlace nuevo a su email.» · «We sent a new link to your email.» · «Enviamos um novo link para o seu e-mail.» |
+| **¿Aparece hoy?** | sí |
+| **Por qué** | dice qué pasó y dónde buscarlo. |
+| **Quién lo lee** | quien recibió el enlace: el Cliente o una persona autorizada. |
+| **Dónde está** | «Activar la cuenta», en lugar de el aviso de enlace vencido. |
+| **Qué estaba haciendo** | tocó el botón de la ficha 20. |
+| **Qué pasó** | el pedido llegó. Sale siempre la misma frase, se haya mandado el enlace o no, para que la página no sirva para averiguar qué enlaces existen. Si falla la conexión, sale la frase general de falla de conexión. |
+| **Qué puede hacer después** | abrir el correo. |
+| **Cómo se muestra** | franja, en lugar del mensaje emergente: ninguna de las tres aplicaciones tiene mensaje emergente. |
 | **Decisión** |  |
 
 ## Base (2)

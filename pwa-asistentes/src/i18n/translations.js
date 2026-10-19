@@ -176,6 +176,8 @@ export const T = {
       activar_enviando: 'Activando…',
       activar_exito: 'La cuenta quedó activada. Ya se puede ingresar con la contraseña nueva.',
       activar_token_invalido: 'Este enlace no es válido o venció. Solicite un enlace nuevo a la Prestadora.',
+      activar_enlace_nuevo: 'Enviarme un enlace nuevo',
+      activar_enlace_nuevo_enviado: 'Le enviamos un enlace nuevo a su email.',
       // Donde se elige la contraseña nueva con el enlace que llegó por correo. Es la hermana de
       // la activación —el mismo formulario contra otra puerta— y se escribe aparte porque una
       // enciende una cuenta que nunca se usó y ésta reemplaza la clave de una que está en uso.
@@ -878,6 +880,8 @@ export const T = {
       activar_enviando: 'Activating…',
       activar_exito: 'Your account is now active. You can sign in with your new password.',
       activar_token_invalido: 'This link is not valid or has expired. Request a new link from the Provider.',
+      activar_enlace_nuevo: 'Send me a new link',
+      activar_enlace_nuevo_enviado: 'We sent a new link to your email.',
       clave_nueva_titulo: 'Choose a new password',
       clave_nueva_codigo: 'Code',
       clave_nueva_confirmar: 'Save the password',
@@ -1516,6 +1520,8 @@ export const T = {
       activar_enviando: 'Ativando…',
       activar_exito: 'A conta foi ativada. Já é possível entrar com a nova senha.',
       activar_token_invalido: 'Este link não é válido ou expirou. Solicite um novo link à Prestadora.',
+      activar_enlace_nuevo: 'Receber um novo link',
+      activar_enlace_nuevo_enviado: 'Enviamos um novo link para o seu e-mail.',
       clave_nueva_titulo: 'Escolher uma senha nova',
       clave_nueva_codigo: 'Código',
       clave_nueva_confirmar: 'Guardar a senha',

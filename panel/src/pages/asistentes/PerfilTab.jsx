@@ -36,15 +36,13 @@ import { useCatalogoDeLugares } from '../../hooks/useCatalogoDeLugares';
 import { llamarApiLugaresDeTrabajo } from '../../lib/apiLugaresDeTrabajo';
 import { generarCertificadoTrabajo, generarCertificadoRemuneracionesServicios, descargarPDF } from '../../lib/generarDocumentoCese';
 import { con } from '../../lib/textos';
-import { errorDeLaRespuesta, mensajeDeError } from '../../lib/errores';
+import { mensajeDeError } from '../../lib/errores';
 import { avisosDelDocumento, nombreDelTipo, normalizarDni, normalizarNumero } from '../../lib/documentoDeIdentidad';
 import { useTiposDeDocumento } from '../../hooks/useTiposDeDocumento';
 import { useGeneros } from '../../hooks/useGeneros';
 import { usePaises } from '../../hooks/usePaises';
 import '../../styles/molde-paginas.css';
 import '../hojaDeTarjetas.css';
-
-const API_URL = import.meta.env.VITE_API_URL;
 
 // Lo que la base rechaza al guardar la identidad, y al pie de qué casillero va.
 // `23505` es el documento repetido, que sólo la base puede saber.
@@ -127,8 +125,6 @@ export function PerfilTab({ asistente, onActualizado }) {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
   const [guardado, setGuardado] = useState(false);
-  const [reenviando, setReenviando] = useState(false);
-  const [mensajeReenvio, setMensajeReenvio] = useState(null);
   // Hasta que se aprieta Guardar no se avisa nada; después los avisos se recalculan solos.
   const [intentado, setIntentado] = useState(false);
   // Lo que rechazó la base: [casillero, motivo]. Se olvida en cuanto se toca la identidad.
@@ -419,25 +415,6 @@ export function PerfilTab({ asistente, onActualizado }) {
     setGuardando(false);
     setGuardado(true);
     onActualizado();
-  }
-
-  async function reenviarInvitacion() {
-    setReenviando(true);
-    setMensajeReenvio(null);
-    try {
-      const { data } = await supabase.auth.getSession();
-      const respuesta = await fetch(`${API_URL}/api/panel/cuentas/${asistente.id}/reenviar-activacion`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${data.session?.access_token}` },
-      });
-      const resultado = await respuesta.json().catch(() => ({}));
-      if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
-      setMensajeReenvio({ tipo: 'info', texto: t.comun.invitacion_reenviada });
-    } catch {
-      setMensajeReenvio({ tipo: 'error', texto: t.comun.reenviar_invitacion_error });
-    } finally {
-      setReenviando(false);
-    }
   }
 
   function descargarCertificadoTrabajo() {
@@ -752,14 +729,8 @@ export function PerfilTab({ asistente, onActualizado }) {
         </section>
       )}
 
-      {esAdmin && mensajeReenvio && <Alert variant={mensajeReenvio.tipo}>{mensajeReenvio.texto}</Alert>}
       <div className="molde-acciones">
         <Button onClick={guardar} disabled={guardando || !puedeEditarIdentidad}>{guardando ? t.comun.guardando : t.comun.guardar}</Button>
-        {esAdmin && (
-          <Button variant="secondary" onClick={reenviarInvitacion} disabled={reenviando}>
-            {reenviando ? t.comun.reenviando_invitacion : t.comun.reenviar_invitacion}
-          </Button>
-        )}
       </div>
 
       {esAdmin && (

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { activarCuentaConToken, cuentaQueActivoConEsteToken } from '../utils/activacionCuenta.js';
+import { activarCuentaConToken, cuentaQueActivoConEsteToken, pedirEnlaceNuevo } from '../utils/activacionCuenta.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { claveAceptable } from '../config/reglaDeClave.js';
 import { telefonoAceptable } from '../utils/codigoAlTelefono.js';
@@ -55,6 +55,24 @@ activarCuentaRouter.post('/:prestadora', resolverPrestadoraPublica, async (req, 
     console.error('Error al activar cuenta:', err.message);
     res.status(500).json({ error: 'error_interno' });
   }
+});
+
+// Un enlace nuevo, pedido por la misma persona desde la página de activación cuando el suyo venció.
+//
+// CONTESTA SIEMPRE LO MISMO, exista el enlace o no, se haya usado o no, y aunque algo falle por
+// dentro: si la respuesta cambiara, esta puerta serviría para averiguar qué enlaces existen. Qué
+// se manda y a quién lo decide `pedirEnlaceNuevo`.
+//
+// EL ENLACE VIAJA EN EL CUERPO Y NO EN LA DIRECCIÓN: una dirección queda escrita en el registro del
+// servidor y en el historial del navegador.
+activarCuentaRouter.post('/:prestadora/enlace-nuevo', resolverPrestadoraPublica, async (req, res) => {
+  const { token } = req.body ?? {};
+  try {
+    await pedirEnlaceNuevo(token, req.prestadoraPublica.prestadora_id);
+  } catch (err) {
+    console.error('Error al pedir un enlace de activación nuevo:', err?.message ?? err);
+  }
+  res.json({ ok: true });
 });
 
 // El código del teléfono, escrito en la misma pantalla y todavía sin sesión.

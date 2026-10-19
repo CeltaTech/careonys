@@ -57,6 +57,7 @@ import { armarCobrosDelPeriodo } from './utils/cobrosIntermediacion.js';
 import { cortarLosAccesosDadosDeBaja } from './utils/corteDelAcceso.js';
 import { avisarElPrimerCobroQueViene } from './utils/avisoPrevioAlCobro.js';
 import { suspenderLosQueAgotaronLaGracia } from './utils/periodoDeGracia.js';
+import { recordarLosEnlacesDeActivacion } from './utils/activacionCuenta.js';
 import { whatsappWebhookRouter } from './routes/whatsappWebhook.js';
 import { secretoDeLosCodigos } from './utils/codigoDeUnSoloUso.js';
 import { appAsistentesRouter } from './routes/appAsistentes.js';
@@ -199,12 +200,15 @@ app.use('/api/panel/avisos-en-vivo', panelAvisosEnVivoRouter);
 //
 // Si una vuelta todavía no terminó cuando toca la siguiente, la siguiente no arranca: dos vueltas
 // encimadas leerían los mismos pendientes y mandarían el mismo aviso dos veces.
-function programar(tarea, cadaMs) {
+//
+// La tarea que necesita saber en qué Prestadora está la pide con `conLaPrestadora`, y la recibe
+// como único argumento. Las demás no reciben nada.
+function programar(tarea, cadaMs, { conLaPrestadora = false } = {}) {
   let corriendo = false;
   const correr = () => {
     if (corriendo) return;
     corriendo = true;
-    paraCadaPrestadora(tarea.name, () => tarea())
+    paraCadaPrestadora(tarea.name, (prestadoraId) => (conLaPrestadora ? tarea(prestadoraId) : tarea()))
       .catch((err) => console.error(`${tarea.name}:`, err?.message ?? err))
       .finally(() => { corriendo = false; });
   };
@@ -303,6 +307,11 @@ programar(avisarElPrimerCobroQueViene, UN_DIA_MS);
 // una gracia, y este trabajo es el que la cierra cuando llega la fecha. Se cuenta en días, así que
 // corre con la misma cadencia diaria que los tres de arriba.
 programar(suspenderLosQueAgotaronLaGracia, UN_DIA_MS);
+
+// El recordatorio del enlace de activación que sigue sin usarse. La espera se cuenta en días, pero
+// se mira cada hora para que el recordatorio no llegue casi un día tarde.
+const UNA_HORA_MS = 60 * 60 * 1000;
+programar(recordarLosEnlacesDeActivacion, UNA_HORA_MS, { conLaPrestadora: true });
 
 // Middleware de error único (pendiente #91) — punto único de verdad para toda excepción no
 // atrapada en cualquiera de las 129 rutas (Regla 12): nunca se expone el stack ni detalle

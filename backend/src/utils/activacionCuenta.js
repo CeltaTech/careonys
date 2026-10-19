@@ -10,8 +10,13 @@ import { idiomaDelDestinatario } from '../i18n/idiomas.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
 import { enlaceConCodigo, rotuloDeLaPrestadora } from './direccionDeLaPrestadora.js';
 import { verificadorDelEnlace } from './verificadorDelEnlace.js';
+import { seAgotaronLosPedidosDeClave, anotarPedidoDeClave } from './topeDePedidosDeClave.js';
+import {
+  diasDeValidezDelEnlaceDeActivacion,
+  diasHastaElRecordatorioDeActivacion,
+} from '../config/enlaceDeActivacion.js';
 
-const DIAS_VALIDEZ_TOKEN = 7;
+const UN_DIA_MS = 24 * 60 * 60 * 1000;
 
 // URL pública de la PWA correspondiente al rol de la cuenta nueva — nunca hardcodeada
 // (CLAUDE.md §7 regla 1), viene de variables de entorno propias por app (backend/.env.example).
@@ -49,8 +54,10 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, p
     return;
   }
 
+  const dias = diasDeValidezDelEnlaceDeActivacion();
   const token = crypto.randomBytes(32).toString('base64url');
-  const expiraEn = new Date(Date.now() + DIAS_VALIDEZ_TOKEN * 24 * 60 * 60 * 1000).toISOString();
+  const ahora = new Date().toISOString();
+  const expiraEn = new Date(Date.now() + dias * UN_DIA_MS).toISOString();
 
   // El enlace se arma antes de guardar el código: sin la dirección de la Prestadora no hay enlace
   // que sirva, y un código guardado que no viaja en ningún correo no le sirve a nadie.
@@ -61,10 +68,25 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, p
   }
 
   // Con el trabajo de la Prestadora, que sólo alcanza las cuentas de ella.
-  const { error } = await enLaPrestadora(prestadoraId, 'enlace de activación', (db) => db
+  const { data: nuevo, error } = await enLaPrestadora(prestadoraId, 'enlace de activación', (db) => db
     .from('tokens_activacion_cuenta')
-    .insert({ usuario_id: usuarioId, token: verificadorDelEnlace(token), expira_en: expiraEn }));
+    .insert({ usuario_id: usuarioId, token: verificadorDelEnlace(token), expira_en: expiraEn })
+    .select('id')
+    .single());
   if (error) throw new Error(error.message);
+
+  // SIRVE SÓLO EL ÚLTIMO. Los enlaces anteriores de esta cuenta que todavía servían quedan vencidos
+  // desde ahora: el que llega a una dirección corregida no puede convivir con el que salió a la
+  // equivocada. Se vencen y no se dan por usados, porque «usado» quiere decir que la cuenta se
+  // activó (`nuncaSeActivaron`).
+  const { error: errorAnteriores } = await enLaPrestadora(prestadoraId, 'enlace de activación', (db) => db
+    .from('tokens_activacion_cuenta')
+    .update({ expira_en: ahora })
+    .eq('usuario_id', usuarioId)
+    .is('usado_en', null)
+    .gt('expira_en', ahora)
+    .neq('id', nuevo.id));
+  if (errorAnteriores) throw new Error(errorAnteriores.message);
 
   // Este correo lo recibe un Cliente o un Asistente, y para ellos la empresa es la Prestadora: es
   // a quien llamaron, con quien firmaron y de quien esperan un correo. Por eso el nombre que va
@@ -79,19 +101,19 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, p
     nombre,
     link,
     codigo,
-    dias: DIAS_VALIDEZ_TOKEN,
+    dias,
     empresa: marca?.nombre || IDENTIDAD.nombre,
     producto: IDENTIDAD.nombre,
   });
   await enviarEmail({ to: email, asunto: textos.asunto, texto: textos.texto, formato: textos.html });
 }
 
-// Usado tanto por el alta inicial como por "Reenviar enlace" (token vencido o extraviado).
+// Un enlace nuevo a una cuenta que ya existe, al correo que tiene cargado. Lo usan el pedido de la
+// propia persona cuando se le venció el enlace y el recordatorio automático.
 //
-// La Prestadora se recibe y no se deduce de la cuenta: quien pide el reenvío está parado en una
-// Organización, y la cuenta a la que se le reenvía tiene que ser de ésa. Es obligatoria y no tiene
-// valor por omisión — sin ella se corta, porque un filtro vacío no acota nada (CLAUDE.md §5, todo
-// control de acceso falla cerrado).
+// La Prestadora se recibe y no se deduce de la cuenta: la cuenta a la que se le reenvía tiene que
+// ser de ésa. Es obligatoria y no tiene valor por omisión — sin ella se corta, porque un filtro
+// vacío no acota nada (CLAUDE.md §5, todo control de acceso falla cerrado).
 export async function reenviarActivacionCuenta(usuarioId, prestadoraId) {
   if (!prestadoraId) throw new Error('Cuenta no encontrada');
 
@@ -117,6 +139,119 @@ export async function reenviarActivacionCuenta(usuarioId, prestadoraId) {
   });
 }
 
+// QUÉ CUENTAS NUNCA SE ACTIVARON: ningún enlace usado y ningún ingreso. Es la única definición, y
+// vive en la base (`cuentas_nunca_activadas`) porque el registro de ingresos es de Supabase y el
+// trabajo de la Prestadora no lo alcanza. Contesta sólo por cuentas de esta Prestadora. Si la base
+// no contesta, se corta: ante la duda no sale ningún correo.
+export async function nuncaSeActivaron(prestadoraId, usuarioIds) {
+  if (!prestadoraId) throw new Error('nuncaSeActivaron: falta la Prestadora');
+  const ids = [...new Set((usuarioIds ?? []).filter(Boolean))];
+  if (!ids.length) return new Set();
+
+  const { data, error } = await enLaPrestadora(prestadoraId, 'cuentas que nunca se activaron', (db) =>
+    db.rpc('cuentas_nunca_activadas', { p_usuarios: ids }));
+  if (error) throw new Error(error.message);
+  return new Set((data ?? []).map((fila) => (typeof fila === 'string' ? fila : fila?.cuentas_nunca_activadas)));
+}
+
+export async function nuncaSeActivo(usuarioId, prestadoraId) {
+  return (await nuncaSeActivaron(prestadoraId, [usuarioId])).has(usuarioId);
+}
+
+// LA PERSONA PIDE UN ENLACE NUEVO desde la página de activación, con el enlace vencido en la mano.
+//
+// NO DEVUELVE NADA, PASE LO QUE PASE. La ruta contesta siempre lo mismo: si la respuesta cambiara,
+// la página serviría para averiguar qué enlaces existen. Sale un enlace nuevo, al correo que la
+// cuenta ya tiene, sólo si el enlace existe en esta Prestadora, no se usó y la cuenta nunca se
+// activó. El tope por hora es el mismo de los pedidos de clave (`topeDePedidosDeClave.js`) y se
+// cuenta por el correo de la cuenta, que es a quien se le llenaría la bandeja.
+export async function pedirEnlaceNuevo(token, prestadoraId) {
+  if (!prestadoraId || typeof token !== 'string' || !token) return;
+
+  const { data: fila, error } = await enLaPrestadora(prestadoraId, 'pedido de un enlace de activación nuevo', (db) => db
+    .from('tokens_activacion_cuenta')
+    .select('usuario_id, usado_en')
+    .eq('token', verificadorDelEnlace(token))
+    .maybeSingle());
+  if (error) throw new Error(error.message);
+  if (!fila) return;
+
+  const email = await correoDe({ prestadoraId, usuarioId: fila.usuario_id });
+  if (!email) return;
+
+  if (await seAgotaronLosPedidosDeClave(prestadoraId, email)) return;
+  await anotarPedidoDeClave(prestadoraId, email);
+
+  if (fila.usado_en) return;
+  if (!(await nuncaSeActivo(fila.usuario_id, prestadoraId))) return;
+
+  await reenviarActivacionCuenta(fila.usuario_id, prestadoraId);
+}
+
+// EL RECORDATORIO. A la cuenta que tiene un enlace vigente sin usar, emitido hace unos días, le sale
+// solo un enlace nuevo, una sola vez en la vida de esa cuenta. Cuántos días esperar y cuánto sirve
+// el enlace son configuración (`config/enlaceDeActivacion.js`).
+//
+// Corre de a una Prestadora por vez (`server.js`). La marca se pone antes de mandar y sólo si nadie
+// la puso antes: dos vueltas encimadas no mandan dos recordatorios.
+//
+// @returns {Promise<{ recordados: number }>} Lo usa la prueba; el trabajo diario no mira el número.
+export async function recordarLosEnlacesDeActivacion(prestadoraId) {
+  if (!prestadoraId) return { recordados: 0 };
+  const TRABAJO = 'recordatorio del enlace de activación';
+  const ahora = new Date();
+  const emitidoHasta = new Date(ahora.getTime() - diasHastaElRecordatorioDeActivacion() * UN_DIA_MS).toISOString();
+
+  const { data: enlaces, error } = await enLaPrestadora(prestadoraId, TRABAJO, (db) => db
+    .from('tokens_activacion_cuenta')
+    .select('id, usuario_id')
+    .is('usado_en', null)
+    .is('recordatorio_enviado_en', null)
+    .gt('expira_en', ahora.toISOString())
+    .lte('created_at', emitidoHasta));
+  if (error) throw new Error(error.message);
+
+  const enlacePorCuenta = new Map();
+  for (const enlace of enlaces ?? []) {
+    if (!enlacePorCuenta.has(enlace.usuario_id)) enlacePorCuenta.set(enlace.usuario_id, enlace.id);
+  }
+  if (!enlacePorCuenta.size) return { recordados: 0 };
+
+  // Una sola vez por cuenta: la que ya tuvo recordatorio en cualquiera de sus enlaces no recibe otro.
+  const { data: yaRecordadas, error: errorRecordadas } = await enLaPrestadora(prestadoraId, TRABAJO, (db) => db
+    .from('tokens_activacion_cuenta')
+    .select('usuario_id')
+    .in('usuario_id', [...enlacePorCuenta.keys()])
+    .not('recordatorio_enviado_en', 'is', null));
+  if (errorRecordadas) throw new Error(errorRecordadas.message);
+  for (const { usuario_id } of yaRecordadas ?? []) enlacePorCuenta.delete(usuario_id);
+
+  const nunca = await nuncaSeActivaron(prestadoraId, [...enlacePorCuenta.keys()]);
+
+  let recordados = 0;
+  for (const [usuarioId, enlaceId] of enlacePorCuenta) {
+    if (!nunca.has(usuarioId)) continue;
+    const { data: marcado, error: errorMarca } = await enLaPrestadora(prestadoraId, TRABAJO, (db) => db
+      .from('tokens_activacion_cuenta')
+      .update({ recordatorio_enviado_en: new Date().toISOString() })
+      .eq('id', enlaceId)
+      .is('recordatorio_enviado_en', null)
+      .select('id'));
+    if (errorMarca) {
+      console.error(`${TRABAJO}: no se pudo anotar el recordatorio:`, errorMarca.message);
+      continue;
+    }
+    if (!marcado?.length) continue;
+    try {
+      await reenviarActivacionCuenta(usuarioId, prestadoraId);
+      recordados += 1;
+    } catch (err) {
+      console.error(`${TRABAJO}: no se pudo mandar:`, err?.message ?? err);
+    }
+  }
+  return { recordados };
+}
+
 // Consumido por el endpoint público POST /api/activar-cuenta/:prestadora — corre adentro de la
 // Prestadora de la dirección, así que el código sólo se encuentra si es de ella. Valida el token
 // (existe, no vencido, no usado), fija la contraseña elegida por la persona, y lo marca usado.
@@ -136,7 +271,7 @@ async function activarAdentro(db, token, passwordNueva) {
   // Los tres motivos viajan tal cual hasta la pantalla, que los explica en el idioma de
   // quien mira: son tres problemas distintos y se resuelven distinto —el enlace equivocado se
   // vuelve a abrir desde el correo, el ya usado se saltea entrando por la pantalla de ingreso,
-  // y el vencido obliga a pedir una invitación nueva—. Van sin detalle a propósito: el código
+  // y el vencido se reemplaza pidiendo uno nuevo desde la misma página (`pedirEnlaceNuevo`)—. Van sin detalle a propósito: el código
   // ya dice todo lo que hay para decir, y un detalle acá solo reemplazaría el código en la
   // respuesta sin quedar registrado en ningún lado.
   if (errorFila || !fila) throw new ErrorConMotivo('token_invalido');

@@ -50,6 +50,8 @@ export function ActivarCuenta() {
   const [errorCodigo, setErrorCodigo] = useState(null);
   const [telefonoVerificado, setTelefonoVerificado] = useState(false);
   const [motivoSinReintento, setMotivoSinReintento] = useState('');
+  const [pidiendoEnlace, setPidiendoEnlace] = useState(false);
+  const [enlaceNuevoEnviado, setEnlaceNuevoEnviado] = useState(false);
   // Los dos problemas de acá son de un campo concreto —la contraseña corta, la repetida que no
   // coincide—, así que el mensaje se cuelga de ese campo y no de todo el formulario. Arriba queda
   // el cartel general sólo para lo que contesta el backend, que no es de ningún campo.
@@ -93,6 +95,26 @@ export function ActivarCuenta() {
       if (MOTIVOS_SIN_REINTENTO.includes(err?.motivo)) setMotivoSinReintento(err.motivo);
     } finally {
       setEnviando(false);
+    }
+  }
+
+  // Un enlace nuevo, pedido desde acá cuando el de esta persona venció. El backend contesta siempre
+  // lo mismo, haya mandado algo o no, así que la respuesta buena se muestra igual en todos los casos.
+  async function pedirEnlaceNuevo() {
+    setPidiendoEnlace(true);
+    try {
+      const respuesta = await fetch(`${API_URL}/api/activar-cuenta/${encodeURIComponent(prestadora)}/enlace-nuevo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+      const resultado = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
+      setEnlaceNuevoEnviado(true);
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+    } finally {
+      setPidiendoEnlace(false);
     }
   }
 
@@ -170,9 +192,14 @@ export function ActivarCuenta() {
       <div className="login-pantalla">
         <div className="login-card">
           <h1>{t.auth.activar_titulo}</h1>
-          <Alert variant="error">{error}</Alert>
+          {enlaceNuevoEnviado
+            ? <Alert variant="success">{t.auth.activar_enlace_nuevo_enviado}</Alert>
+            : <Alert variant="error">{error}</Alert>}
           {motivoSinReintento === 'token_ya_usado' && (
             <Link to="/login">{t.auth.activar_ingresar}</Link>
+          )}
+          {motivoSinReintento === 'token_vencido' && !enlaceNuevoEnviado && (
+            <Button onClick={pedirEnlaceNuevo} disabled={pidiendoEnlace}>{t.auth.activar_enlace_nuevo}</Button>
           )}
         </div>
       </div>

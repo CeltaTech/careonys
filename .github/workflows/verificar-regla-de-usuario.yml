@@ -1,0 +1,24 @@
+name: Verificar la regla del nombre de usuario
+
+# Que la regla del nombre de usuario sea una sola. Vive en backend/src/config/reglaDeUsuario.js y
+# la toman el backend y las dos aplicaciones, pero la base exige la suya en
+# interno.usuario_elegido_bien_escrito, escrita en SQL. Esto falla si se despegan. El script no
+# tiene dependencias, así que no hay npm install.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Verificar la regla del nombre de usuario
+        run: node scripts/verificar_regla_de_usuario.mjs

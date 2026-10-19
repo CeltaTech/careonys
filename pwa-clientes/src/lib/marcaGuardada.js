@@ -9,9 +9,8 @@
 // Se usa el depósito del navegador (Cache) y no `localStorage` porque es el
 // único de los dos que el service worker puede leer.
 //
-// Con la marca queda también el código de la Prestadora, y por eso la pantalla
-// de ingreso no lo vuelve a pedir. Al cerrar la sesión se olvida: el teléfono
-// puede pasar a otra persona, que trabaja para otra Prestadora.
+// Al cerrar la sesión se olvida: el teléfono puede pasar a otra persona, que
+// trabaja para otra Prestadora.
 
 const DEPOSITO = 'marca-de-la-prestadora';
 const CLAVE = '/marca-de-la-prestadora.json';
@@ -44,7 +43,7 @@ export async function olvidarMarca() {
   try {
     await caches.delete(DEPOSITO);
   } catch {
-    // Si el navegador no deja borrar, la pantalla de ingreso ofrece cambiar de
-    // Prestadora igual.
+    // Si el navegador no deja borrar, la marca anterior queda hasta que la
+    // próxima sesión guarde la suya.
   }
 }

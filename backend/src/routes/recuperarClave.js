@@ -12,9 +12,9 @@ export const recuperarClaveRouter = Router();
 
 // Sin auth a propósito: quien llega acá perdió justamente la forma de tener sesión.
 //
-// LA COORDINACIÓN PIDE CON SU NOMBRE DE USUARIO, que dice de qué Prestadora es la cuenta
-// (`utils/nombreDeUsuario.js`). El enlace llega al correo declarado de esa cuenta. No se mira la
-// dirección de la página: no todas las Prestadoras tienen una.
+// SE PIDE CON EL NOMBRE DE USUARIO, la coordinación, los Asistentes y los Clientes por igual. El
+// nombre es único en todo el sistema y dice de quién es la cuenta (`utils/nombreDeUsuario.js`). El
+// enlace llega al email declarado de esa cuenta.
 //
 // PEDIR CONTESTA SIEMPRE LO MISMO, exista el nombre o no. Si la respuesta cambiara, esta puerta
 // sería una forma de averiguar quién tiene cuenta preguntando de a un nombre por vez, y sin sesión
@@ -22,7 +22,7 @@ export const recuperarClaveRouter = Router();
 //
 // El tope de pedidos por hora vive en `utils/topeDePedidosDeClave.js`, y pedir de nuevo no abre una
 // puerta más: el enlace anterior se da por usado al emitir el siguiente.
-recuperarClaveRouter.post('/pedir-del-panel', async (req, res) => {
+recuperarClaveRouter.post('/pedir', async (req, res) => {
   const { usuario } = req.body ?? {};
 
   try {

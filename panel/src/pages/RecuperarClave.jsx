@@ -29,7 +29,7 @@ export function RecuperarClave() {
     setError(null);
     setEnviando(true);
     try {
-      const respuesta = await fetch(`${API_URL}/api/recuperar-clave/pedir-del-panel`, {
+      const respuesta = await fetch(`${API_URL}/api/recuperar-clave/pedir`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ usuario: usuario.trim().toLowerCase() }),

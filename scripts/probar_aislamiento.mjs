@@ -56,10 +56,9 @@ import { readFileSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-// Con qué correo se le habla al servicio de acceso. Se importa de donde eso se decide, y no se
-// copia acá: hay una cuenta por Prestadora, y el correo que ve el servicio de acceso lleva la
-// Prestadora adentro. Una copia despegada dejaría la prueba entrando a cuentas que no existen.
-import { correoDeAcceso } from '../backend/src/config/correoDeAcceso.js';
+// Con qué dirección se le habla al servicio de acceso. Se importa de donde eso se decide, y no se
+// copia acá: una copia despegada dejaría la prueba entrando a cuentas que no existen.
+import { direccionDeAcceso } from '../backend/src/config/direccionDeAcceso.js';
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -119,14 +118,22 @@ function consultarBase(sql) {
   return salida.trim().split('\n').filter(Boolean).map((l) => l.split('|'));
 }
 
-// Entra como esa persona en esa Prestadora. El correo que se escribe es el de siempre; el que
-// recibe el servicio de acceso lo arma `correoDeAcceso`, porque en cada Prestadora esa persona
-// tiene una cuenta distinta.
+// Entra como esa persona en esa Prestadora. La siembra la conoce por su email, que es dato de
+// contacto; el servicio de acceso la conoce por `direccionDeAcceso` de su cuenta, así que primero
+// se busca qué cuenta tiene ese email en esa Prestadora.
+function cuentaDe(email, prestadoraId) {
+  const filas = consultarBase(
+    `select id from public.usuarios where lower(email) = lower('${email.replace(/'/g, "''")}') and prestadora_id = '${prestadoraId}'`,
+  );
+  if (filas.length !== 1) throw new Error(`No hay una sola cuenta con ${email} en esa Prestadora.`);
+  return filas[0][0];
+}
+
 async function entrar(base, llavePublica, email, prestadoraId) {
   const r = await fetch(`${base}/auth/v1/token?grant_type=password`, {
     method: 'POST',
     headers: { apikey: llavePublica, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: await correoDeAcceso(email, prestadoraId), password: CONTRASENA }),
+    body: JSON.stringify({ email: direccionDeAcceso(cuentaDe(email, prestadoraId)), password: CONTRASENA }),
   });
   const cuerpo = await r.json().catch(() => ({}));
   if (!cuerpo.access_token) {

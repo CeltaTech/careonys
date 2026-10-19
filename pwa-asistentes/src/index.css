@@ -334,6 +334,11 @@ p {
   margin-bottom: 10px;
 }
 
+/* Un botón que va debajo de lo que lo precede adentro de la misma tarjeta. */
+.btn-abajo {
+  margin-top: 10px;
+}
+
 /* El micrófono, mientras está escuchando. Se marca con el color de aviso y no con una animación,
    y además se dice con todas las letras adentro del botón. */
 .btn.dictado-escuchando {
@@ -487,9 +492,11 @@ p {
   border-top: 1px solid var(--linea);
 }
 
-/* Volver a elegir la Prestadora queda al final, separado de las maneras de entrar. */
-.login-otra-prestadora {
+/* «¿Olvidó su contraseña?» queda al final, separado de las maneras de entrar. */
+.login-recuperar {
+  display: block;
   margin-top: 14px;
+  text-align: center;
 }
 
 /* ---------- Las llaves guardadas en los aparatos ---------- */

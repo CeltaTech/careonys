@@ -92,7 +92,7 @@ export function resolverTipoAsistenteEnCatalogo(texto, catalogo) {
 
 // Los motivos con que la base rechaza un alta o una baja, y que la pantalla sabe traducir. El
 // resto de los errores de la base no viaja: es texto crudo (CLAUDE.md §6).
-const MOTIVOS_DE_LA_BASE = ['correo_de_esta_prestadora', 'faltan_datos', 'usuario_de_esta_prestadora', 'usuario_mal_escrito'];
+const MOTIVOS_DE_LA_BASE = ['correo_de_esta_prestadora', 'faltan_datos', 'usuario_en_uso', 'usuario_mal_escrito'];
 
 // Da de alta una cuenta: su cuenta de ingreso y su fila en `usuarios`, juntas.
 //

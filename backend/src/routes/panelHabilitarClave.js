@@ -13,7 +13,7 @@ import {
 } from '../utils/habilitarCambioDeClave.js';
 import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
-import { pedirRecuperacionDeClave } from '../utils/recuperacionDeClave.js';
+import { emitirElEnlaceYAvisar } from '../utils/recuperacionDeClave.js';
 import { avisarDeSeguridad, MENSAJE_CAMBIO_HABILITADO } from '../utils/avisoDeSeguridad.js';
 import { registrarActividad, yaQuedoRegistrado } from '../utils/registroDeActividad.js';
 
@@ -169,7 +169,7 @@ panelHabilitarClaveRouter.post(
       // El mensaje sale igual que la puerta: al correo de esa persona. Es la única forma que tiene de
       // enterarse si nadie llamó en su nombre.
       await avisarDeSeguridad(MENSAJE_CAMBIO_HABILITADO, cuenta);
-      await pedirRecuperacionDeClave(cuenta.email, cuenta.prestadora_id);
+      if (cuenta.email) await emitirElEnlaceYAvisar(cuenta, cuenta.email);
 
       res.json({ ok: true, minutos: minutosDeLaHabilitacion() });
     } catch (err) {

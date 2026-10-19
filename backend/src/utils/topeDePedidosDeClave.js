@@ -1,6 +1,4 @@
-import crypto from 'node:crypto';
 import { enLaPrestadora } from '../db/connection.js';
-import { correoComparable } from '../config/correoDeAcceso.js';
 
 // EL TOPE DE PEDIDOS DE CLAVE NUEVA.
 //
@@ -9,21 +7,16 @@ import { correoComparable } from '../config/correoDeAcceso.js';
 // la casilla de correo a una persona repitiendo el pedido, y cada mensaje lo paga la Prestadora.
 // El tope del backend (`middleware/topeDePedidos.js`) no sirve acá: cuenta por persona con sesión.
 //
-// SE CUENTA POR IDENTIFICADOR DE VERIFICACIÓN DEL CORREO Y POR PRESTADORA. El identificador, y
-// no el correo, porque para contar
-// alcanza con reconocer que es el mismo, y así el renglón que queda no dice a quién se le mandó
-// nada. Por Prestadora, porque cada Prestadora donde esa persona trabaja es una cuenta distinta y
-// el tope de una no puede dejar sin recuperar la clave de la otra.
+// SE CUENTA POR CUENTA. La persona pide con su nombre de usuario, que es único en todo el sistema,
+// así que cada pedido apunta a una sola cuenta, de una sola Prestadora. El renglón que queda dice
+// qué cuenta pidió, nunca a qué email se mandó nada.
 //
-// Lo mismo vale para el nombre de usuario con que pide la coordinación del Panel: se le pasa en lugar
-// del correo, y se cuenta de la misma forma.
+// UN NOMBRE SIN CUENTA NO SE CUENTA, y no hace falta: no hay a quién mandarle nada, así que no hay
+// casilla que llenar. Lo que no se puede averiguar por acá es si el nombre existe, y eso lo cuida
+// la respuesta, que es siempre la misma (`routes/recuperarClave.js`).
 //
-// SE CUENTA ANTES DE BUSCAR LA CUENTA, y el pedido se anota exista el correo o no. Si sólo
-// contaran los correos con cuenta, quedarse sin pedidos sería la señal de que ese correo existe, y
-// esta puerta volvería a ser una forma de averiguar quién trabaja en qué Prestadora.
-//
-// CON QUÉ CREDENCIAL. Contar y anotar van con la credencial del trabajo de la Prestadora del
-// pedido, que la base acota a ella: el tope de una no puede leer ni escribir los pedidos de otra.
+// CON QUÉ CREDENCIAL. Contar y anotar van con la credencial del trabajo de la Prestadora de la
+// cuenta, que la base acota a ella: el tope de una no puede leer ni escribir los pedidos de otra.
 //
 // Es el mismo molde que `codigoAlTelefono.js` usa para el código al teléfono, con la misma forma de
 // fallar: cerrado.
@@ -31,8 +24,7 @@ import { correoComparable } from '../config/correoDeAcceso.js';
 const TOPE_POR_HORA_POR_OMISION = 5;
 
 /**
- * Cuántos pedidos de clave nueva se le aceptan como mucho a un mismo correo en una hora, dentro de
- * una misma Prestadora.
+ * Cuántos pedidos de clave nueva se le aceptan como mucho a una misma cuenta en una hora.
  *
  * Se lee en cada pedido y no una sola vez al arrancar, para que cambiarlo no obligue a reiniciar y
  * para que las pruebas puedan moverlo. Un valor vacío, no entero o menor que uno se trata como si
@@ -52,24 +44,14 @@ export function topeDePedidosDeClavePorHora() {
   return numero;
 }
 
-/**
- * El identificador de verificación del correo.
- *
- * Se toma sobre el correo ya comparable —el mismo que usa la búsqueda de la cuenta—, para que
- * `Marta@Ejemplo.com` y `marta@ejemplo.com` cuenten como uno solo.
- */
-export function verificadorDelCorreo(email) {
-  return crypto.createHash('sha256').update(correoComparable(email) ?? '').digest('hex');
-}
-
-async function pedidosEnLaUltimaHora(prestadoraId, verificador) {
+async function pedidosEnLaUltimaHora(prestadoraId, usuarioId) {
   const desde = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   const { count, error } = await enLaPrestadora(prestadoraId, 'contar pedidos de clave nueva', (db) =>
     db
       .from('pedidos_de_clave_nueva')
       .select('id', { count: 'exact', head: true })
       .eq('prestadora_id', prestadoraId)
-      .eq('correo_verificador', verificador)
+      .eq('usuario_id', usuarioId)
       .gte('pedido_en', desde),
   );
 
@@ -82,28 +64,28 @@ async function pedidosEnLaUltimaHora(prestadoraId, verificador) {
 }
 
 /**
- * ¿Este correo ya pidió de más en esta Prestadora, durante la última hora?
+ * ¿Esta cuenta ya pidió de más durante la última hora?
  *
  * @returns {Promise<boolean>} verdadero cuando no corresponde mandar nada.
  */
-export async function seAgotaronLosPedidosDeClave(prestadoraId, email) {
-  if (!prestadoraId) return true;
-  const cuantos = await pedidosEnLaUltimaHora(prestadoraId, verificadorDelCorreo(email));
+export async function seAgotaronLosPedidosDeClave(prestadoraId, usuarioId) {
+  // Falla cerrado: sin saber de qué cuenta se trata, no se manda nada.
+  if (!prestadoraId || !usuarioId) return true;
+  const cuantos = await pedidosEnLaUltimaHora(prestadoraId, usuarioId);
   return cuantos >= topeDePedidosDeClavePorHora();
 }
 
 /**
  * Anota el pedido, para que el próximo lo cuente.
  *
- * Se anota antes de mandar nada y exista o no la cuenta. Un envío que falló ya gastó el intento, y
- * un correo sin cuenta que no contara dejaría la puerta abierta para probar de a un correo por vez.
+ * Se anota antes de mandar nada: un envío que falló ya gastó el intento.
  */
-export async function anotarPedidoDeClave(prestadoraId, email) {
-  if (!prestadoraId) return;
+export async function anotarPedidoDeClave(prestadoraId, usuarioId) {
+  if (!prestadoraId || !usuarioId) return;
   const { error } = await enLaPrestadora(prestadoraId, 'anotar un pedido de clave nueva', (db) =>
     db
       .from('pedidos_de_clave_nueva')
-      .insert({ prestadora_id: prestadoraId, correo_verificador: verificadorDelCorreo(email) }),
+      .insert({ prestadora_id: prestadoraId, usuario_id: usuarioId }),
   );
   if (error) {
     console.error('topeDePedidosDeClave: no se pudo anotar el pedido:', error.message);

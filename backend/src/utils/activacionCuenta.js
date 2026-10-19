@@ -8,7 +8,7 @@ import { marcaDeLaPrestadora } from './marcaPrestadora.js';
 import { mensajeDelSistema } from '../i18n/avisos.js';
 import { idiomaDelDestinatario } from '../i18n/idiomas.js';
 import { idiomaDeLaPrestadora } from '../i18n/idiomaDeLaPrestadora.js';
-import { enlaceConCodigo, rotuloDeLaPrestadora } from './direccionDeLaPrestadora.js';
+import { enlaceConCodigo } from './direccionDeLaPrestadora.js';
 import { verificadorDelEnlace } from './verificadorDelEnlace.js';
 import { seAgotaronLosPedidosDeClave, anotarPedidoDeClave } from './topeDePedidosDeClave.js';
 import {
@@ -96,11 +96,9 @@ export async function invitarActivacionCuenta({ usuarioId, email, nombre, rol, p
   // Si la marca llegara vacía se usa el nombre del producto: es preferible un correo que dice
   // Careonys a uno que dice «Activación de la cuenta en undefined».
   const marca = await marcaDeLaPrestadora(prestadoraId);
-  const codigo = ROLES_DE_PANEL.includes(rol) ? null : await rotuloDeLaPrestadora(prestadoraId);
   const textos = mensajeDelSistema('activacion_cuenta', idiomaDelDestinatario(idioma, await enLaPrestadora(prestadoraId, 'enlace de activación', (db) => idiomaDeLaPrestadora(db, prestadoraId))), {
     nombre,
     link,
-    codigo,
     dias,
     empresa: marca?.nombre || IDENTIDAD.nombre,
     producto: IDENTIDAD.nombre,
@@ -179,8 +177,8 @@ export async function pedirEnlaceNuevo(token, prestadoraId) {
   const email = await correoDe({ prestadoraId, usuarioId: fila.usuario_id });
   if (!email) return;
 
-  if (await seAgotaronLosPedidosDeClave(prestadoraId, email)) return;
-  await anotarPedidoDeClave(prestadoraId, email);
+  if (await seAgotaronLosPedidosDeClave(prestadoraId, fila.usuario_id)) return;
+  await anotarPedidoDeClave(prestadoraId, fila.usuario_id);
 
   if (fila.usado_en) return;
   if (!(await nuncaSeActivo(fila.usuario_id, prestadoraId))) return;
@@ -254,14 +252,18 @@ export async function recordarLosEnlacesDeActivacion(prestadoraId) {
 
 // Consumido por el endpoint público POST /api/activar-cuenta/:prestadora — corre adentro de la
 // Prestadora de la dirección, así que el código sólo se encuentra si es de ella. Valida el token
-// (existe, no vencido, no usado), fija la contraseña elegida por la persona, y lo marca usado.
-// Nunca expone ningún dato del usuario.
-export async function activarCuentaConToken(token, passwordNueva, prestadoraId) {
+// (existe, no vencido, no usado), fija el nombre de usuario y la contraseña elegidos por la
+// persona, y lo marca usado. Nunca expone ningún dato del usuario.
+export async function activarCuentaConToken(token, passwordNueva, prestadoraId, usuario) {
   if (!prestadoraId) throw new ErrorConMotivo('token_invalido');
-  return enLaPrestadora(prestadoraId, 'activación de la cuenta', (db) => activarAdentro(db, token, passwordNueva));
+  return enLaPrestadora(prestadoraId, 'activación de la cuenta', (db) => activarAdentro(db, token, passwordNueva, usuario));
 }
 
-async function activarAdentro(db, token, passwordNueva) {
+// Los motivos con que la base rechaza el nombre de usuario elegido. Viajan tal cual hasta la
+// pantalla, que los muestra al pie del casillero.
+const MOTIVOS_DEL_USUARIO = ['faltan_datos', 'usuario_mal_escrito', 'usuario_en_uso'];
+
+async function activarAdentro(db, token, passwordNueva, usuario) {
   const { data: fila, error: errorFila } = await db
     .from('tokens_activacion_cuenta')
     .select('id, usuario_id, expira_en, usado_en')
@@ -278,17 +280,22 @@ async function activarAdentro(db, token, passwordNueva) {
   if (fila.usado_en) throw new ErrorConMotivo('token_ya_usado');
   if (new Date(fila.expira_en) < new Date()) throw new ErrorConMotivo('token_vencido');
 
-  // EL CÓDIGO SE GASTA Y LA CLAVE SE PONE EN UNA SOLA OPERACIÓN DE LA BASE
-  // (`poner_clave_con_codigo`): o pasan las dos o no pasa ninguna. Dos pedidos con el mismo código
-  // al mismo tiempo no pasan los dos, porque el segundo ya no lo encuentra libre y se va por donde
-  // se va un enlace ya usado. Y el código se busca sólo adentro de la Prestadora de la dirección:
-  // el de otra no existe desde acá. Viaja el enlace tal como llegó: el identificador de verificación lo calcula la base.
-  const { data: usuarioId, error: errorClave } = await db.rpc('poner_clave_con_codigo', {
-    p_uso: 'activacion',
+  // EL CÓDIGO SE GASTA, EL NOMBRE DE USUARIO SE GUARDA Y LA CLAVE SE PONE EN UNA SOLA OPERACIÓN DE
+  // LA BASE (`activar_la_cuenta`): o pasan las tres o no pasa ninguna. Un nombre ya tomado devuelve
+  // el motivo y deja el enlace sin gastar, para que la persona elija otro. Dos pedidos con el mismo
+  // código al mismo tiempo no pasan los dos, porque el segundo ya no lo encuentra libre y se va por
+  // donde se va un enlace ya usado. Y el código se busca sólo adentro de la Prestadora de la
+  // dirección: el de otra no existe desde acá. Viaja el enlace tal como llegó: el identificador de
+  // verificación lo calcula la base.
+  const { data: usuarioId, error: errorClave } = await db.rpc('activar_la_cuenta', {
     p_codigo: token,
     p_clave: passwordNueva,
+    p_usuario: usuario ?? null,
   });
-  if (errorClave) throw new Error(errorClave.message);
+  if (errorClave) {
+    if (MOTIVOS_DEL_USUARIO.includes(errorClave.message)) throw new ErrorConMotivo(errorClave.message);
+    throw new Error(errorClave.message);
+  }
   if (!usuarioId) throw new ErrorConMotivo('token_ya_usado');
 
   // De quién era el enlace. Lo devuelve para lo que sigue en la misma pantalla —ofrecerle

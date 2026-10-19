@@ -35,13 +35,9 @@ export const GRUPOS = [
     ],
   },
   {
-    que: 'con qué correo se le habla al servicio de acceso',
-    original: 'backend/src/config/correoDeAcceso.js',
-    copias: [
-      'panel/src/lib/correoDeAcceso.js',
-      'pwa-asistentes/src/lib/correoDeAcceso.js',
-      'pwa-clientes/src/lib/correoDeAcceso.js',
-    ],
+    que: 'cómo se escribe el nombre de usuario que elige la persona',
+    original: 'backend/src/config/reglaDeUsuario.js',
+    copias: ['pwa-asistentes/src/lib/reglaDeUsuario.js', 'pwa-clientes/src/lib/reglaDeUsuario.js'],
   },
   {
     que: 'qué clave se acepta',
@@ -368,9 +364,34 @@ export const GRUPOS = [
     copias: ['pwa-asistentes/src/context/AuthContext.jsx'],
   },
   {
-    que: 'la pantalla de ingreso: primero la Prestadora, después la cuenta',
+    que: 'la pantalla de ingreso, con el nombre de usuario y la contraseña',
     original: 'pwa-clientes/src/pages/Login.jsx',
     copias: ['pwa-asistentes/src/pages/Login.jsx'],
+  },
+  {
+    que: 'la activación de la cuenta, donde se eligen el nombre de usuario y la contraseña',
+    original: 'pwa-clientes/src/pages/ActivarCuenta.jsx',
+    copias: ['pwa-asistentes/src/pages/ActivarCuenta.jsx'],
+  },
+  {
+    que: 'el pedido del enlace para recuperar la contraseña',
+    original: 'pwa-clientes/src/pages/RecuperarClave.jsx',
+    copias: ['pwa-asistentes/src/pages/RecuperarClave.jsx'],
+  },
+  {
+    que: 'la contraseña nueva que se elige desde el enlace de recuperación',
+    original: 'pwa-clientes/src/pages/ClaveNueva.jsx',
+    copias: ['pwa-asistentes/src/pages/ClaveNueva.jsx'],
+  },
+  {
+    que: 'el cambio de contraseña con la sesión abierta',
+    original: 'pwa-clientes/src/pages/MiClave.jsx',
+    copias: ['pwa-asistentes/src/pages/MiClave.jsx'],
+  },
+  {
+    que: 'la «i» al lado de la etiqueta de un casillero',
+    original: 'pwa-clientes/src/components/InfoDelCampo.jsx',
+    copias: ['pwa-asistentes/src/components/InfoDelCampo.jsx'],
   },
   {
     que: 'el permiso y el alta para recibir avisos en el celular',

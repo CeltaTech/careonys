@@ -3,10 +3,10 @@ import { enLaPrestadora } from '../db/connection.js';
 // EL CORREO DE UNA PERSONA ESTÁ EN `usuarios`, Y NO DEL LADO DEL ACCESO.
 // ============================================================================
 //
-// Del lado del acceso lo que queda escrito no es el correo: es un resumen del correo junto con la
-// Prestadora, porque la misma persona tiene una cuenta por cada Prestadora donde trabaja y el
-// servicio de acceso exige que no se repita ninguno (ver `config/correoDeAcceso.js`). Pedirle el
-// correo a ese lado devuelve una dirección que no existe y a la que no llega nadie.
+// Del lado del acceso lo que queda escrito no es el correo: es una dirección armada con el
+// identificador de la cuenta, porque se entra con el nombre de usuario y el email es sólo un dato
+// de contacto (ver `config/direccionDeAcceso.js`). Pedirle el correo a ese lado devuelve una
+// dirección que no existe y a la que no llega nadie.
 //
 // POR QUÉ ESTE ARCHIVO EXISTE. Porque eso no se ve. Un mensaje mandado a la dirección equivocada no
 // falla: se manda, y no llega. Con el correo en un solo lugar, ninguna parte del backend tiene que

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { correoDeAcceso } from '../lib/correoDeAcceso';
+import { errorDeLaRespuesta } from '../lib/errores';
 import { olvidarMarca } from '../lib/marcaGuardada';
 import { descartarSesionGuardada, guardarSesionBajoLaHuella } from '../lib/accesoGuardado';
 
@@ -11,6 +11,21 @@ import { descartarSesionGuardada, guardarSesionBajoLaHuella } from '../lib/acces
 // Antes, una lectura fallida dejaba el usuario en nulo y quien lo recibía no podía distinguir
 // «todavía no llegó» de «falló», así que mostraba un vacío tranquilizador.
 const AuthContext = createContext(null);
+
+const API_URL = import.meta.env.VITE_API_URL;
+
+// El backend contesta con qué dirección conoce el servicio de acceso a esa cuenta. Contesta lo
+// mismo exista la cuenta o no, así que la que no existe falla después, al probar la contraseña.
+async function direccionDeAcceso(usuario) {
+  const respuesta = await fetch(`${API_URL}/api/ingreso/correo-de-acceso`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ usuario }),
+  });
+  const datos = await respuesta.json().catch(() => ({}));
+  if (!respuesta.ok || !datos.correo) throw errorDeLaRespuesta(respuesta, datos);
+  return datos.correo;
+}
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined);
@@ -89,11 +104,11 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  // La cuenta es de una Prestadora: con el mismo correo, cada una tiene la suya
-  // (`lib/correoDeAcceso.js`). Por eso se entra nombrando primero la Prestadora.
-  async function login(prestadoraId, email, password) {
+  // Se entra con el nombre de usuario, que es único en todo el sistema: no hace falta decir de qué
+  // Prestadora es la cuenta.
+  async function login(usuario, password) {
     try {
-      const acceso = await correoDeAcceso(email, prestadoraId);
+      const acceso = await direccionDeAcceso(usuario);
       const { error } = await supabase.auth.signInWithPassword({ email: acceso, password });
       return { error };
     } catch (error) {

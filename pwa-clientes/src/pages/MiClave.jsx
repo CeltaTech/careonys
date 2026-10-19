@@ -26,6 +26,8 @@ export default function MiClave() {
   const [cambiada, setCambiada] = useState(false);
 
   const advertenciaDe = (campo) => (errorCampo?.campo === campo ? errorCampo.texto : undefined);
+  // La advertencia se va apenas se corrige el campo, sin esperar a que se vuelva a apretar el botón.
+  const limpiarAdvertencia = (campo) => setErrorCampo((anterior) => (anterior?.campo === campo ? null : anterior));
 
   async function alEnviar(evento) {
     evento.preventDefault();
@@ -87,7 +89,10 @@ export default function MiClave() {
             type="password"
             autoComplete="current-password"
             value={actual}
-            onChange={(e) => setActual(e.target.value)}
+            onChange={(e) => {
+              setActual(e.target.value);
+              limpiarAdvertencia('actual');
+            }}
             required
             aria-invalid={advertenciaDe('actual') ? 'true' : undefined}
             aria-describedby={advertenciaDe('actual') ? 'actual-error' : undefined}
@@ -103,7 +108,10 @@ export default function MiClave() {
             type="password"
             autoComplete="new-password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              limpiarAdvertencia('password');
+            }}
             required
             aria-invalid={advertenciaDe('password') ? 'true' : undefined}
             aria-describedby={advertenciaDe('password') ? 'password-error' : undefined}
@@ -119,7 +127,10 @@ export default function MiClave() {
             type="password"
             autoComplete="new-password"
             value={confirmacion}
-            onChange={(e) => setConfirmacion(e.target.value)}
+            onChange={(e) => {
+              setConfirmacion(e.target.value);
+              limpiarAdvertencia('confirmacion');
+            }}
             required
             aria-invalid={advertenciaDe('confirmacion') ? 'true' : undefined}
             aria-describedby={advertenciaDe('confirmacion') ? 'confirmacion-error' : undefined}

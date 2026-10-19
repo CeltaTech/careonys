@@ -24,8 +24,6 @@ export default function ClaveNueva() {
   const [searchParams] = useSearchParams();
   // El enlace sirve sólo si trae las dos cosas: la Prestadora dice en cuál se busca el código.
   const prestadora = searchParams.get('prestadora');
-  // Al volver a la entrada, el código de la Prestadora ya va escrito.
-  const alIngreso = prestadora ? `/login?prestadora=${encodeURIComponent(prestadora)}` : '/login';
   const token = prestadora ? searchParams.get('token') : null;
   const [password, setPassword] = useState('');
   const [confirmacion, setConfirmacion] = useState('');
@@ -38,6 +36,8 @@ export default function ClaveNueva() {
   const [codigo, setCodigo] = useState('');
 
   const advertenciaDe = (campo) => (errorCampo?.campo === campo ? errorCampo.texto : undefined);
+  // La advertencia se va apenas se corrige el campo, sin esperar a que se vuelva a apretar el botón.
+  const limpiarAdvertencia = (campo) => setErrorCampo((anterior) => (anterior?.campo === campo ? null : anterior));
 
   /* EL SEGUNDO FACTOR SE PREGUNTA ACÁ Y NO AL PEDIR EL ENLACE. Preguntarlo antes contestaría si
      ese correo tiene cuenta y si tiene número verificado; acá el enlace ya probó que quien llegó
@@ -110,7 +110,7 @@ export default function ClaveNueva() {
         <div className="login-card">
           <h1>{t.auth.clave_nueva_titulo}</h1>
           <div className="alert alert-error" role="alert">{t.auth.clave_nueva_token_invalido}</div>
-          <Link to={alIngreso} className="btn btn-primary btn-full">{t.auth.ingresar}</Link>
+          <Link to="/login" className="btn btn-primary btn-full">{t.auth.ingresar}</Link>
         </div>
       </div>
     );
@@ -122,7 +122,7 @@ export default function ClaveNueva() {
         <div className="login-card">
           <h1>{t.auth.clave_nueva_titulo}</h1>
           <div className="alert alert-info" role="status">{t.auth.clave_nueva_exito}</div>
-          <Link to={alIngreso} className="btn btn-primary btn-full">{t.auth.ingresar}</Link>
+          <Link to="/login" className="btn btn-primary btn-full">{t.auth.ingresar}</Link>
         </div>
       </div>
     );
@@ -134,7 +134,7 @@ export default function ClaveNueva() {
         <div className="login-card">
           <h1>{t.auth.clave_nueva_titulo}</h1>
           <div className="alert alert-error" role="alert">{error}</div>
-          <Link to={alIngreso} className="btn btn-primary btn-full">{t.auth.ingresar}</Link>
+          <Link to="/login" className="btn btn-primary btn-full">{t.auth.ingresar}</Link>
         </div>
       </div>
     );
@@ -153,7 +153,10 @@ export default function ClaveNueva() {
               type="password"
               autoComplete="new-password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                limpiarAdvertencia('password');
+              }}
               required
               aria-invalid={advertenciaDe('password') ? 'true' : undefined}
               aria-describedby={advertenciaDe('password') ? 'password-error' : undefined}
@@ -169,7 +172,10 @@ export default function ClaveNueva() {
               type="password"
               autoComplete="new-password"
               value={confirmacion}
-              onChange={(e) => setConfirmacion(e.target.value)}
+              onChange={(e) => {
+                setConfirmacion(e.target.value);
+                limpiarAdvertencia('confirmacion');
+              }}
               required
               aria-invalid={advertenciaDe('confirmacion') ? 'true' : undefined}
               aria-describedby={advertenciaDe('confirmacion') ? 'confirmacion-error' : undefined}

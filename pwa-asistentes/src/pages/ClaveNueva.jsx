@@ -24,20 +24,20 @@ export default function ClaveNueva() {
   const [searchParams] = useSearchParams();
   // El enlace sirve sólo si trae las dos cosas: la Prestadora dice en cuál se busca el código.
   const prestadora = searchParams.get('prestadora');
-  // Al volver a la entrada, el código de la Prestadora ya va escrito.
-  const alIngreso = prestadora ? `/login?prestadora=${encodeURIComponent(prestadora)}` : '/login';
   const token = prestadora ? searchParams.get('token') : null;
   const [password, setPassword] = useState('');
   const [confirmacion, setConfirmacion] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState('');
   const [motivoSinReintento, setMotivoSinReintento] = useState('');
-  // Cuál de los dos campos es el que está mal, igual que en la activación: el motivo queda atado
-  // a ese campo y se escucha al pararse ahí, no solo arriba del todo.
-  const [campoConError, setCampoConError] = useState('');
+  const [errorCampo, setErrorCampo] = useState(null);
   const [cambiada, setCambiada] = useState(false);
   const [requiereCodigo, setRequiereCodigo] = useState(false);
   const [codigo, setCodigo] = useState('');
+
+  const advertenciaDe = (campo) => (errorCampo?.campo === campo ? errorCampo.texto : undefined);
+  // La advertencia se va apenas se corrige el campo, sin esperar a que se vuelva a apretar el botón.
+  const limpiarAdvertencia = (campo) => setErrorCampo((anterior) => (anterior?.campo === campo ? null : anterior));
 
   /* EL SEGUNDO FACTOR SE PREGUNTA ACÁ Y NO AL PEDIR EL ENLACE. Preguntarlo antes contestaría si
      ese correo tiene cuenta y si tiene número verificado; acá el enlace ya probó que quien llegó
@@ -72,16 +72,17 @@ export default function ClaveNueva() {
   async function alEnviar(evento) {
     evento.preventDefault();
     setError('');
-    setCampoConError('');
+    setErrorCampo(null);
 
     if (!claveAceptable(password)) {
-      setError(t.auth.activar_password_corta.replace('{{minimo}}', MINIMO_DE_CARACTERES));
-      setCampoConError('password');
+      setErrorCampo({
+        campo: 'password',
+        texto: t.auth.activar_password_corta.replace('{{minimo}}', MINIMO_DE_CARACTERES),
+      });
       return;
     }
     if (password !== confirmacion) {
-      setError(t.auth.activar_no_coincide);
-      setCampoConError('confirmacion');
+      setErrorCampo({ campo: 'confirmacion', texto: t.auth.activar_no_coincide });
       return;
     }
 
@@ -109,7 +110,7 @@ export default function ClaveNueva() {
         <div className="login-card">
           <h1>{t.auth.clave_nueva_titulo}</h1>
           <div className="alert alert-error" role="alert">{t.auth.clave_nueva_token_invalido}</div>
-          <Link to={alIngreso} className="btn btn-primary btn-full">{t.auth.ingresar}</Link>
+          <Link to="/login" className="btn btn-primary btn-full">{t.auth.ingresar}</Link>
         </div>
       </div>
     );
@@ -121,7 +122,7 @@ export default function ClaveNueva() {
         <div className="login-card">
           <h1>{t.auth.clave_nueva_titulo}</h1>
           <div className="alert alert-info" role="status">{t.auth.clave_nueva_exito}</div>
-          <Link to={alIngreso} className="btn btn-primary btn-full">{t.auth.ingresar}</Link>
+          <Link to="/login" className="btn btn-primary btn-full">{t.auth.ingresar}</Link>
         </div>
       </div>
     );
@@ -133,7 +134,7 @@ export default function ClaveNueva() {
         <div className="login-card">
           <h1>{t.auth.clave_nueva_titulo}</h1>
           <div className="alert alert-error" role="alert">{error}</div>
-          <Link to={alIngreso} className="btn btn-primary btn-full">{t.auth.ingresar}</Link>
+          <Link to="/login" className="btn btn-primary btn-full">{t.auth.ingresar}</Link>
         </div>
       </div>
     );
@@ -143,7 +144,7 @@ export default function ClaveNueva() {
     <div className="login-pantalla">
       <div className="login-card">
         <h1>{t.auth.clave_nueva_titulo}</h1>
-        {error && <div id="clave-nueva-error" className="alert alert-error" role="alert">{error}</div>}
+        {error && <div className="alert alert-error" role="alert">{error}</div>}
         <form onSubmit={alEnviar}>
           <div className="form-field">
             <label htmlFor="password">{t.auth.activar_password_nueva}</label>
@@ -154,12 +155,15 @@ export default function ClaveNueva() {
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
-                if (campoConError === 'password') setCampoConError('');
+                limpiarAdvertencia('password');
               }}
               required
-              aria-invalid={campoConError === 'password' ? true : undefined}
-              aria-describedby={campoConError === 'password' ? 'clave-nueva-error' : undefined}
+              aria-invalid={advertenciaDe('password') ? 'true' : undefined}
+              aria-describedby={advertenciaDe('password') ? 'password-error' : undefined}
             />
+            {advertenciaDe('password') && (
+              <span className="form-error" id="password-error" role="alert">{advertenciaDe('password')}</span>
+            )}
           </div>
           <div className="form-field">
             <label htmlFor="confirmacion">{t.auth.activar_password_confirmar}</label>
@@ -170,12 +174,15 @@ export default function ClaveNueva() {
               value={confirmacion}
               onChange={(e) => {
                 setConfirmacion(e.target.value);
-                if (campoConError === 'confirmacion') setCampoConError('');
+                limpiarAdvertencia('confirmacion');
               }}
               required
-              aria-invalid={campoConError === 'confirmacion' ? true : undefined}
-              aria-describedby={campoConError === 'confirmacion' ? 'clave-nueva-error' : undefined}
+              aria-invalid={advertenciaDe('confirmacion') ? 'true' : undefined}
+              aria-describedby={advertenciaDe('confirmacion') ? 'confirmacion-error' : undefined}
             />
+            {advertenciaDe('confirmacion') && (
+              <span className="form-error" id="confirmacion-error" role="alert">{advertenciaDe('confirmacion')}</span>
+            )}
           </div>
           {requiereCodigo && (
             <div className="form-field">

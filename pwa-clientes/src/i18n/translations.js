@@ -68,6 +68,9 @@ export const T = {
         token_invalido: 'Este enlace no es válido. Ábralo nuevamente desde el correo o solicite un enlace nuevo.',
         token_ya_usado: 'Esta cuenta ya fue activada con este enlace. Se entra desde la pantalla de ingreso, con la contraseña que se eligió.',
         token_vencido: 'Este enlace venció. Solicite un enlace nuevo.',
+        // Los dos del nombre de usuario que se elige al activar la cuenta.
+        usuario_en_uso: 'Ese usuario ya está en uso. Elija otro.',
+        usuario_mal_escrito: 'Entre 4 y 12 caracteres. Letras sin tilde, números, punto, guion y guion bajo. Sin espacios.',
       },
     },
     comun: {
@@ -134,11 +137,11 @@ export const T = {
     },
     auth: {
       titulo: '{{producto}} — Clientes',
-      email: 'Email',
+      usuario: 'Usuario',
       password: 'Contraseña',
       ingresar: 'Ingresar',
       ingresando: 'Ingresando…',
-      error_credenciales: 'Email o contraseña incorrectos.',
+      error_credenciales: 'Usuario o contraseña incorrectos.',
       activar_titulo: 'Activar la cuenta',
       activar_password_nueva: 'Contraseña nueva',
       activar_password_confirmar: 'Repita la contraseña',
@@ -172,11 +175,16 @@ export const T = {
       // el backend tampoco dice cuál de las cosas falló, y no hay nada que agregar acá.
       llave_error: 'No se pudo entrar con este aparato. Puede ingresar con su contraseña.',
       llave_o: 'o',
-      codigo_prestadora: 'Código de Prestadora',
-      continuar: 'Continuar',
-      buscando: 'Buscando…',
-      codigo_desconocido: 'No hay ninguna Prestadora con ese código.',
-      cambiar_prestadora: 'Cambiar de Prestadora',
+      // Qué caracteres admite el nombre de usuario: va en la «i» al lado de la etiqueta y, si se
+      // escribió mal, al pie del casillero.
+      usuario_regla: 'Entre 4 y 12 caracteres. Letras sin tilde, números, punto, guion y guion bajo. Sin espacios.',
+      usuario_info: 'Más información',
+      recuperar_link: '¿Olvidó su contraseña?',
+      recuperar_titulo: 'Recuperar la contraseña',
+      recuperar_enviar: 'Enviar el enlace',
+      recuperar_enviando: 'Enviando…',
+      recuperar_listo: 'Revise su correo y siga el enlace para restablecer la contraseña.',
+      recuperar_volver: 'Volver a la pantalla de ingreso',
     },
     llaves: {
       titulo: 'Entrar con huella o rostro',
@@ -703,6 +711,9 @@ export const T = {
         token_invalido: 'This link is not valid. Open it again from the email or request a new link.',
         token_ya_usado: 'This account has already been activated with this link. You can sign in with the password you chose.',
         token_vencido: 'This link has expired. Request a new link.',
+        // Los dos del nombre de usuario que se elige al activar la cuenta.
+        usuario_en_uso: 'That user name is already in use. Choose another one.',
+        usuario_mal_escrito: 'Between 4 and 12 characters. Letters without accents, numbers, period, hyphen and underscore. No spaces.',
       },
     },
     comun: {
@@ -749,11 +760,11 @@ export const T = {
     },
     auth: {
       titulo: '{{producto}} — Clients',
-      email: 'Email',
+      usuario: 'User name',
       password: 'Password',
       ingresar: 'Log in',
       ingresando: 'Logging in…',
-      error_credenciales: 'Incorrect email or password.',
+      error_credenciales: 'Incorrect user name or password.',
       activar_titulo: 'Activate your account',
       activar_password_nueva: 'New password',
       activar_password_confirmar: 'Repeat password',
@@ -782,11 +793,16 @@ export const T = {
       llave_esperando: 'Waiting for the device…',
       llave_error: 'This device could not sign you in. You can log in with your password.',
       llave_o: 'or',
-      codigo_prestadora: 'Provider Code',
-      continuar: 'Continue',
-      buscando: 'Searching…',
-      codigo_desconocido: 'No Provider found with that code.',
-      cambiar_prestadora: 'Change Provider',
+      // Qué caracteres admite el nombre de usuario: va en la «i» al lado de la etiqueta y, si se
+      // escribió mal, al pie del casillero.
+      usuario_regla: 'Between 4 and 12 characters. Letters without accents, numbers, period, hyphen and underscore. No spaces.',
+      usuario_info: 'More information',
+      recuperar_link: 'Forgot your password?',
+      recuperar_titulo: 'Recover your password',
+      recuperar_enviar: 'Send the link',
+      recuperar_enviando: 'Sending…',
+      recuperar_listo: 'Check your email and follow the link to reset your password.',
+      recuperar_volver: 'Back to the sign-in screen',
     },
     llaves: {
       titulo: 'Sign in with fingerprint or face',
@@ -1264,6 +1280,9 @@ export const T = {
         token_invalido: 'Este link não é válido. Abra-o novamente a partir do e-mail ou solicite um novo link.',
         token_ya_usado: 'Esta conta já foi ativada com este link. O acesso é feito na tela de entrada, com a senha escolhida.',
         token_vencido: 'Este link expirou. Solicite um novo link.',
+        // Los dos del nombre de usuario que se elige al activar la cuenta.
+        usuario_en_uso: 'Esse usuário já está em uso. Escolha outro.',
+        usuario_mal_escrito: 'Entre 4 e 12 caracteres. Letras sem acento, números, ponto, hífen e sublinhado. Sem espaços.',
       },
     },
     comun: {
@@ -1310,11 +1329,11 @@ export const T = {
     },
     auth: {
       titulo: '{{producto}} — Clientes',
-      email: 'Email',
+      usuario: 'Usuário',
       password: 'Senha',
       ingresar: 'Entrar',
       ingresando: 'Entrando…',
-      error_credenciales: 'Email ou senha incorretos.',
+      error_credenciales: 'Usuário ou senha incorretos.',
       activar_titulo: 'Ativar a conta',
       activar_password_nueva: 'Nova senha',
       activar_password_confirmar: 'Repita a senha',
@@ -1343,11 +1362,16 @@ export const T = {
       llave_esperando: 'Aguardando o aparelho…',
       llave_error: 'Não foi possível entrar com este aparelho. Pode entrar com a sua senha.',
       llave_o: 'ou',
-      codigo_prestadora: 'Código da Prestadora',
-      continuar: 'Continuar',
-      buscando: 'Buscando…',
-      codigo_desconocido: 'Nenhuma Prestadora tem esse código.',
-      cambiar_prestadora: 'Trocar de Prestadora',
+      // Qué caracteres admite el nombre de usuario: va en la «i» al lado de la etiqueta y, si se
+      // escribió mal, al pie del casillero.
+      usuario_regla: 'Entre 4 e 12 caracteres. Letras sem acento, números, ponto, hífen e sublinhado. Sem espaços.',
+      usuario_info: 'Mais informações',
+      recuperar_link: 'Esqueceu sua senha?',
+      recuperar_titulo: 'Recuperar a senha',
+      recuperar_enviar: 'Enviar o link',
+      recuperar_enviando: 'Enviando…',
+      recuperar_listo: 'Verifique seu e-mail e siga o link para redefinir a senha.',
+      recuperar_volver: 'Voltar para a tela de entrada',
     },
     llaves: {
       titulo: 'Entrar com digital ou rosto',

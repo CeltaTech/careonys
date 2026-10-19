@@ -214,7 +214,7 @@ panelCuentaSeguraRouter.post(
       const cuenta = await miCuenta(clienteDelPedido(req), req.usuarioPanel);
       if (!cuenta) throw new ErrorConMotivo('no_encontrado');
 
-      await exigirLaClaveActual({ email: cuenta.email, prestadoraId: cuenta.prestadora_id, clave: claveActual });
+      await exigirLaClaveActual({ usuarioId: cuenta.id, clave: claveActual });
 
       // Un celular es de una sola persona; una línea fija se comparte. La base lo impide con un
       // índice único y esto es la segunda red, para contestar con una frase entendible en vez de un
@@ -282,8 +282,7 @@ panelCuentaSeguraRouter.post('/clave', requiereRolPanel, noParaLaAdministracion,
     if (!cuenta) throw new ErrorConMotivo('no_encontrado');
 
     await cambiarLaClave({
-      email: cuenta.email,
-      prestadoraId: cuenta.prestadora_id,
+      usuarioId: cuenta.id,
       claveActual,
       claveNueva,
     });
@@ -389,7 +388,7 @@ panelCuentaSeguraRouter.post('/cerrar-sesiones', requiereRolPanel, async (req, r
     const cuenta = await miCuenta(db, req.usuarioPanel);
     if (!cuenta) throw new ErrorConMotivo('no_encontrado');
 
-    await exigirLaClaveActual({ email: cuenta.email, prestadoraId: cuenta.prestadora_id, clave: claveActual });
+    await exigirLaClaveActual({ usuarioId: cuenta.id, clave: claveActual });
 
     // El renglón se escribe antes de cerrar: después de cerrar, la sesión con la que se está
     // escribiendo ya no vale.

@@ -1,7 +1,6 @@
 import crypto from 'crypto';
 import { enLaPrestadora } from '../db/connection.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
-import { correoComparable } from '../config/correoDeAcceso.js';
 import { enviarEmail } from './email.js';
 import { IDENTIDAD } from '../config/identidadProducto.js';
 import { marcaDeLaPrestadora } from './marcaPrestadora.js';
@@ -22,7 +21,7 @@ import {
 import { seAgotaronLosPedidosDeClave, anotarPedidoDeClave } from './topeDePedidosDeClave.js';
 import { enlaceConCodigo } from './direccionDeLaPrestadora.js';
 import { verificadorDelEnlace } from './verificadorDelEnlace.js';
-import { cuentaDelNombreDeUsuario, parteComparable } from './nombreDeUsuario.js';
+import { cuentaDelUsuario } from './nombreDeUsuario.js';
 
 // EL ENLACE DURA POCO, y menos que el de activación.
 //
@@ -46,92 +45,49 @@ function urlAppPorRol(rol) {
 }
 
 /**
- * Manda el enlace para elegir una clave nueva, si ese correo tiene cuenta.
+ * Manda el enlace para elegir una clave nueva, si ese nombre de usuario tiene cuenta.
  *
- * SE RECUPERA LA CLAVE DE UNA PRESTADORA, no la de un correo. El mismo correo tiene una cuenta
- * distinta en cada Prestadora donde la persona trabaja, con su propia clave, así que sin saber de
- * cuál se trata no hay ninguna clave que reemplazar. Quien llama ya sabe de qué Prestadora es la
- * cuenta, y la pasa.
+ * Vale para la coordinación, los Asistentes y los Clientes. La persona escribe su nombre de usuario,
+ * que es único en todo el sistema y por eso dice de quién es la cuenta (`utils/nombreDeUsuario.js`),
+ * y el enlace llega al email declarado de esa cuenta.
  *
- * NO CONTESTA SI EL CORREO EXISTE, y por eso no devuelve nada y no falla cuando no encuentra a
- * nadie. Quien pregunta acá no tiene sesión: si la respuesta cambiara según el correo, esta
- * pantalla sería una forma de averiguar quién trabaja en qué Prestadora, preguntando de a un
- * correo por vez. La pantalla dice siempre lo mismo. Y un correo que existe en otra Prestadora se
- * trata igual que uno que no existe en ninguna.
+ * NO CONTESTA SI EL NOMBRE EXISTE, y por eso no devuelve nada y no falla cuando no encuentra a
+ * nadie: la pantalla dice siempre lo mismo. Sólo la gente de la Prestadora: la clave del
+ * Administrador y la del equipo técnico las maneja CeltaTech, y para el producto ese nombre es uno
+ * más sin cuenta.
  *
- * Lo que sí queda es constancia en el registro del servidor, sin el correo, porque es un dato
- * personal.
- */
-export async function pedirRecuperacionDeClave(email, prestadoraId) {
-  if (!prestadoraId) {
-    console.warn('recuperacionDeClave: se pidió una clave nueva sin saber de qué Prestadora');
-    return;
-  }
-
-  // EL TOPE SE MIRA ANTES DE BUSCAR LA CUENTA, y el pedido se anota exista el correo o no
-  // (`utils/topeDePedidosDeClave.js`). Si sólo contaran los correos con cuenta, quedarse sin
-  // pedidos sería la señal de que ese correo existe.
-  if (await seAgotaronLosPedidosDeClave(prestadoraId, email)) {
-    console.warn('recuperacionDeClave: se alcanzó el tope de pedidos por hora para un correo');
-    return;
-  }
-  await anotarPedidoDeClave(prestadoraId, email);
-
-  // La cuenta se busca en esa Prestadora. Es la misma tabla que impone que ese
-  // correo no se repita adentro de una, así que acá hay una fila o ninguna. Y sólo entre la gente
-  // de la Prestadora: la clave del Administrador y la del equipo técnico las maneja CeltaTech, y
-  // para el producto ese correo es uno más sin cuenta.
-  const { data: usuario } = await enLaPrestadora(prestadoraId, TRABAJO, (db) => db
-    .from('usuarios')
-    .select('id, nombre, rol, prestadora_id')
-    .eq('prestadora_id', prestadoraId)
-    .eq('email', correoComparable(email))
-    .in('rol', ROLES_QUE_RECUPERAN_LA_CLAVE)
-    .maybeSingle());
-
-  if (!usuario) {
-    console.warn('recuperacionDeClave: se pidió una clave nueva para un correo sin cuenta');
-    return;
-  }
-
-  await emitirElEnlaceYAvisar(usuario, email);
-}
-
-/**
- * Manda el enlace para elegir una clave nueva a una cuenta de coordinación, si ese nombre de
- * usuario existe.
- *
- * Es la recuperación de siempre: la persona escribe su nombre de usuario y el enlace llega al
- * correo declarado de esa cuenta. El nombre dice de qué Prestadora es (`utils/nombreDeUsuario.js`).
- *
- * Igual que con el correo: no contesta si el nombre existe. El tope cuenta por el nombre escrito,
- * en la Prestadora que nombra, y se anota antes de mandar nada.
+ * El tope cuenta por cuenta, y el pedido se anota antes de mandar nada
+ * (`utils/topeDePedidosDeClave.js`).
  */
 export async function pedirRecuperacionPorNombreDeUsuario(usuarioEscrito) {
-  const usuario = parteComparable(usuarioEscrito);
-  const encontrada = await cuentaDelNombreDeUsuario(usuario, TRABAJO);
-  if (!encontrada) {
+  const cuenta = await cuentaDelUsuario(usuarioEscrito, TRABAJO);
+  if (!cuenta || !ROLES_QUE_RECUPERAN_LA_CLAVE.includes(cuenta.rol)) {
     console.warn('recuperacionDeClave: se pidió una clave nueva para un nombre de usuario sin cuenta');
     return;
   }
 
-  if (await seAgotaronLosPedidosDeClave(encontrada.prestadoraId, usuario)) {
-    console.warn('recuperacionDeClave: se alcanzó el tope de pedidos por hora para un nombre de usuario');
+  if (await seAgotaronLosPedidosDeClave(cuenta.prestadora_id, cuenta.id)) {
+    console.warn('recuperacionDeClave: se alcanzó el tope de pedidos por hora para una cuenta');
     return;
   }
-  await anotarPedidoDeClave(encontrada.prestadoraId, usuario);
+  await anotarPedidoDeClave(cuenta.prestadora_id, cuenta.id);
 
-  const cuenta = encontrada.cuenta;
-  if (!cuenta?.email) {
-    console.warn('recuperacionDeClave: se pidió una clave nueva para una cuenta sin correo declarado');
+  if (!cuenta.email) {
+    console.warn('recuperacionDeClave: se pidió una clave nueva para una cuenta sin email declarado');
     return;
   }
 
   await emitirElEnlaceYAvisar(cuenta, cuenta.email);
 }
 
-/** Emite el enlace y manda el correo, para la cuenta que ya se encontró. */
-async function emitirElEnlaceYAvisar(usuario, email) {
+/**
+ * Emite el enlace y manda el correo, para la cuenta que ya se encontró.
+ *
+ * Lo usa también la Prestadora cuando le manda el enlace a una persona desde el Panel
+ * (`routes/panelHabilitarClave.js`): ahí la cuenta ya está identificada y no hay tope que contar.
+ * La cuenta tiene que traer `id`, `nombre`, `rol` y `prestadora_id`.
+ */
+export async function emitirElEnlaceYAvisar(usuario, email) {
   const appUrl = urlAppPorRol(usuario.rol);
   if (!appUrl) {
     console.error(`recuperacionDeClave: falta la variable de entorno para el rol "${usuario.rol}"`);

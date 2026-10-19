@@ -29,10 +29,9 @@ import { panelVitalesAutorizacionRouter } from './routes/panelVitalesAutorizacio
 import { panelCuentaSeguraRouter } from './routes/panelCuentaSegura.js';
 import { panelHabilitarClaveRouter } from './routes/panelHabilitarClave.js';
 import { configuracionPublicaRouter } from './routes/configuracionPublica.js';
-import { marcaDeLaPuertaRouter } from './routes/marcaDeLaPuerta.js';
 import { activarCuentaRouter } from './routes/activarCuenta.js';
 import { recuperarClaveRouter } from './routes/recuperarClave.js';
-import { ingresoAlPanelRouter } from './routes/ingresoAlPanel.js';
+import { ingresoRouter } from './routes/ingreso.js';
 import { panelEntrevistasRouter } from './routes/panelEntrevistas.js';
 import { entrevistaPublicaRouter } from './routes/entrevistaPublica.js';
 import { panelEmergenciasRouter } from './routes/panelEmergencias.js';
@@ -56,6 +55,7 @@ import { cortarLosAccesosDadosDeBaja } from './utils/corteDelAcceso.js';
 import { avisarElPrimerCobroQueViene } from './utils/avisoPrevioAlCobro.js';
 import { suspenderLosQueAgotaronLaGracia } from './utils/periodoDeGracia.js';
 import { recordarLosEnlacesDeActivacion } from './utils/activacionCuenta.js';
+import { avisarLosCambiosDeEmail } from './utils/avisosDeEmailCambiado.js';
 import { whatsappWebhookRouter } from './routes/whatsappWebhook.js';
 import { secretoDeLosCodigos } from './utils/codigoDeUnSoloUso.js';
 import { appAsistentesRouter } from './routes/appAsistentes.js';
@@ -133,9 +133,6 @@ app.get('/health', (req, res) => {
 // a mano. El porqué completo está en
 // backend/src/middleware/resolverPrestadoraPublica.js.
 app.use('/api/publico/:prestadora/configuracion', configuracionPublicaRouter);
-// Y el segundo: con qué marca se presenta la puerta por donde se está entrando, que es lo que la
-// pantalla de ingreso del Panel necesita saber antes de que nadie escriba una clave.
-app.use('/api/publico/:prestadora/marca', marcaDeLaPuertaRouter);
 app.use('/api/panel/notificar', panelNotificacionesRouter);
 app.use('/api/panel/cuentas', panelCuentasRouter);
 app.use('/api/panel/usuarios', panelUsuariosRouter);
@@ -162,7 +159,7 @@ app.use('/api/panel/habilitar-clave', panelHabilitarClaveRouter);
 app.use('/api/activar-cuenta', activarCuentaRouter);
 app.use('/api/recuperar-clave', recuperarClaveRouter);
 // Sin sesión: con qué correo se entra al Panel. La Prestadora sale del correo de la cuenta.
-app.use('/api/ingreso-al-panel', ingresoAlPanelRouter);
+app.use('/api/ingreso', ingresoRouter);
 // Sin sesión, como la activación de cuenta: quien llega trae la llave que le llegó por correo, y
 // no tiene ninguna cuenta con la que entrar. La Prestadora sale de la dirección, y la llave se busca
 // sólo adentro de ella.
@@ -308,6 +305,9 @@ programar(suspenderLosQueAgotaronLaGracia, UN_DIA_MS);
 // se mira cada hora para que el recordatorio no llegue casi un día tarde.
 const UNA_HORA_MS = 60 * 60 * 1000;
 programar(recordarLosEnlacesDeActivacion, UNA_HORA_MS, { conLaPrestadora: true });
+
+// El aviso al email anterior de una cuenta cuyo email cambió. Lo anota la base al hacer el cambio.
+programar(avisarLosCambiosDeEmail, CINCO_MINUTOS_MS, { conLaPrestadora: true });
 
 // Middleware de error único (pendiente #91) — punto único de verdad para toda excepción no
 // atrapada en cualquiera de las 129 rutas (Regla 12): nunca se expone el stack ni detalle

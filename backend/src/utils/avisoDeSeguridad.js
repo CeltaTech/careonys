@@ -25,9 +25,10 @@ export const MENSAJE_CLAVE_RECUPERADA = 'clave_recuperada';
 export const MENSAJE_TELEFONO_CAMBIADO = 'telefono_cambiado';
 export const MENSAJE_EQUIPO_NUEVO = 'entrada_desde_equipo_nuevo';
 export const MENSAJE_CAMBIO_HABILITADO = 'cambio_de_clave_habilitado';
+export const MENSAJE_EMAIL_CAMBIADO = 'email_cambiado';
 
 /**
- * Manda uno de los cuatro mensajes de seguridad.
+ * Manda uno de los mensajes de seguridad.
  *
  * No interrumpe nada si falla: el mensaje acompaña al trabajo, no lo bloquea. Sin correo cargado no
  * hay a dónde mandarlo y se sale en silencio, que es lo mismo que hace el resto del backend.
@@ -43,6 +44,7 @@ export async function avisarDeSeguridad(clave, cuenta) {
       {
         nombre: cuenta.nombre ?? '',
         prestadora: marca?.nombre || IDENTIDAD.nombre,
+        empresa: marca?.nombre || IDENTIDAD.nombre,
         producto: IDENTIDAD.nombre,
       },
     );

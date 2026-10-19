@@ -25,7 +25,6 @@ import { useLocale } from '../i18n/LocaleContext';
 import { con } from '../lib/textos';
 import { esteAparatoGuardaLlaves, guardarLaLlaveEnEsteAparato, loCancelaronAMano } from '../lib/llaveDelDispositivo';
 import { llaveDelAccesoGuardado, olvidarAccesoGuardado, prepararAccesoGuardado, salNueva } from '../lib/accesoGuardado';
-import { leerMarcaGuardada } from '../lib/marcaGuardada';
 import { supabase } from '../lib/supabaseClient';
 
 export default function LlavesDeEsteAparato() {
@@ -74,11 +73,10 @@ export default function LlavesDeEsteAparato() {
         sal
       );
       setLlaves((anteriores) => [llave, ...(anteriores || [])]);
-      const rotulo = (await leerMarcaGuardada())?.rotulo;
       const { data } = await supabase.auth.getSession();
       const usuarioId = data?.session?.user?.id;
-      if (secreto && rotulo && usuarioId) {
-        await prepararAccesoGuardado({ usuarioId, rotulo, llaveId: llave.id, credencialId, parteConfiable, sal, secreto });
+      if (secreto && usuarioId) {
+        await prepararAccesoGuardado({ usuarioId, llaveId: llave.id, credencialId, parteConfiable, sal, secreto });
       }
       setAviso(t.llaves.agregada);
     } catch (errorAlta) {

@@ -123,9 +123,10 @@ const DATOS = {
   },
   codigo_instruccion_personas_autorizadas: { codigo: '123456', minutos: 10, remite: 'Cuidados del Sur' },
   activacion_cuenta: {
-    nombre: 'Elena', link: 'https://ejemplo/activar', codigo: 'cuidados-del-sur', dias: 7,
+    nombre: 'Elena', link: 'https://ejemplo/activar', dias: 7,
     empresa: 'Cuidados del Sur', producto: IDENTIDAD.nombre,
   },
+  email_cambiado: { empresa: 'Cuidados del Sur' },
   recuperacion_clave: {
     nombre: 'Elena', link: 'https://ejemplo/clave-nueva', horas: 2,
     empresa: 'Cuidados del Sur', producto: IDENTIDAD.nombre,

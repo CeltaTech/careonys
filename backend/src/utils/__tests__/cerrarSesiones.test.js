@@ -82,8 +82,7 @@ describe('cerrar las sesiones de una persona', () => {
 
   it('comprobar la clave cierra sólo la sesión que se abrió para comprobarla', async () => {
     assert.equal(await esLaClaveActual({
-      email: 'persona@ejemplo.invalido',
-      prestadoraId: '11111111-1111-1111-1111-111111111111',
+      usuarioId: '11111111-1111-1111-1111-111111111111',
       clave: 'clave-inventada',
     }), true);
 

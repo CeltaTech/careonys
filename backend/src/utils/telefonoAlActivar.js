@@ -1,6 +1,5 @@
 import { enLaPrestadora } from '../db/connection.js';
 import { ErrorConMotivo } from './errorConMotivo.js';
-import { correoDe } from './correoDeUnaPersona.js';
 import { exigirLaClaveActual } from './claveActual.js';
 import { exigirQueElCelularSeaDeUnaSolaPersona } from './celularDeUnaSolaPersona.js';
 import {
@@ -157,9 +156,7 @@ export async function verificarElTelefonoAlActivar({ prestadoraId, usuarioId, cl
   // acota nada. Es el mismo corte que hace `ofrecerElCodigoAlActivar` antes de tocar la cuenta.
   if (!cuenta.prestadora_id) throw new ErrorConMotivo('no_encontrado');
 
-  const email = await correoDe({ prestadoraId: cuenta.prestadora_id, usuarioId: cuenta.id });
-  if (!email) throw new ErrorConMotivo('clave_actual_incorrecta');
-  await exigirLaClaveActual({ email, prestadoraId: cuenta.prestadora_id, clave });
+  await exigirLaClaveActual({ usuarioId: cuenta.id, clave });
 
   const usado = await comprobarCodigoDelTelefono({
     prestadoraId: cuenta.prestadora_id,

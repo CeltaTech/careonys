@@ -532,21 +532,16 @@ const ARMADORES = {
     const cuerpo = t('activacion_cuenta.cuerpo', { empresa: d.empresa });
     const pieDelMensaje = t('activacion_cuenta.pie_de_aviso', { dias: d.dias });
     const marca = t('comun.marca', { producto: d.producto });
-    // El código lo pide la pantalla de ingreso de las aplicaciones, no la del Panel: sólo viene
-    // cuando la cuenta es de Cliente o de Asistente.
-    const codigo = d.codigo ? t('activacion_cuenta.codigo_prestadora', { codigo: d.codigo }) : null;
     return {
       asunto: t('activacion_cuenta.asunto', { empresa: d.empresa }),
       texto: [
         saludo, '', cuerpo, '',
-        ...(codigo ? [codigo, ''] : []),
         t('activacion_cuenta.invitacion_al_enlace'), d.link, '',
         pieDelMensaje, '', '—', marca,
       ].join('\n'),
       html: correoConBoton({
         saludo,
         cuerpo,
-        dato: codigo,
         boton: t('activacion_cuenta.boton'),
         link: d.link,
         pieDelMensaje,
@@ -714,6 +709,13 @@ const ARMADORES = {
       nombre: d.nombre,
       prestadora: d.prestadora,
     }) + pie(t),
+  }),
+
+  // Le llega al email anterior cuando el de la cuenta cambia. Es el único que puede darse cuenta si
+  // no fue él quien lo cambió. No lleva el email nuevo.
+  email_cambiado: (t, d) => ({
+    asunto: t('email_cambiado.asunto'),
+    texto: t('email_cambiado.texto', { empresa: d.empresa }) + pie(t),
   }),
 };
 

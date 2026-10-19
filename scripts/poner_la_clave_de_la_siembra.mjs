@@ -4,7 +4,7 @@
 // Uso, desde la raíz del producto, con la base local levantada:
 //   SEED_LOCAL_PASSWORD=<la que quiera> node scripts/poner_la_clave_de_la_siembra.mjs
 //
-// POR QUÉ EXISTE. `supabase/seed.sql` crea las once cuentas de prueba con el
+// POR QUÉ EXISTE. `supabase/seed.sql` crea las cuentas de prueba con el
 // casillero de la contraseña vacío, a propósito: una contraseña escrita adentro
 // de ese archivo sería una credencial guardada en el repositorio, y eso no se
 // hace ni para la base local (§6 de `celtatech/CLAUDE.md`). Pero ese archivo lo
@@ -49,9 +49,9 @@ const CONTENEDOR = process.env.CONTENEDOR_BASE || (() => {
   return `supabase_db_${id[1]}`;
 })();
 
-// El dominio que el servicio de acceso ve, el mismo que escribe la siembra. Acota
-// la orden a las cuentas que nacieron de ahí y no a cualquier otra.
-const DOMINIO_DE_ACCESO = '@acceso.careonys.invalid';
+// Las dos Prestadoras que escribe la siembra. Acotan la orden a las cuentas que
+// nacieron de ahí y no a cualquier otra.
+const PRESTADORAS_DE_LA_SIEMBRA = `'11111111-1111-4111-8111-111111111111', '22222222-2222-4222-8222-222222222222'`;
 
 // La clave se mete en la orden entre marcas de dólar con una etiqueta sorteada,
 // para que ningún carácter que traiga pueda cerrar el texto antes de tiempo.
@@ -71,7 +71,7 @@ const ORDEN = `
 SELECT count(interno.autorizar_cambio_de_clave(u.id, 'poner_la_clave_de_la_siembra', 5))
   FROM auth.users u
   JOIN public.usuarios p ON p.id = u.id
- WHERE u.email LIKE '%${DOMINIO_DE_ACCESO}'
+ WHERE p.prestadora_id IN (${PRESTADORAS_DE_LA_SIEMBRA})
    AND interno.es_cuenta_de_administracion(u.id);
 
 WITH cambiadas AS (
@@ -80,7 +80,7 @@ WITH cambiadas AS (
          updated_at = now()
     FROM public.usuarios p
    WHERE p.id = u.id
-     AND u.email LIKE '%${DOMINIO_DE_ACCESO}'
+     AND p.prestadora_id IN (${PRESTADORAS_DE_LA_SIEMBRA})
   RETURNING 1
 )
 SELECT count(*) FROM cambiadas;

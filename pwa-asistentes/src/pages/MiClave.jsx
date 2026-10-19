@@ -22,25 +22,28 @@ export default function MiClave() {
   const [confirmacion, setConfirmacion] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
-  // Cuál de los tres campos es el que está mal: el motivo queda atado a ese campo y se escucha al
-  // pararse ahí, no solo arriba del todo.
-  const [campoConError, setCampoConError] = useState('');
+  const [errorCampo, setErrorCampo] = useState(null);
   const [cambiada, setCambiada] = useState(false);
+
+  const advertenciaDe = (campo) => (errorCampo?.campo === campo ? errorCampo.texto : undefined);
+  // La advertencia se va apenas se corrige el campo, sin esperar a que se vuelva a apretar el botón.
+  const limpiarAdvertencia = (campo) => setErrorCampo((anterior) => (anterior?.campo === campo ? null : anterior));
 
   async function alEnviar(evento) {
     evento.preventDefault();
     setError('');
-    setCampoConError('');
+    setErrorCampo(null);
     setCambiada(false);
 
     if (!claveAceptable(password)) {
-      setError(t.auth.activar_password_corta.replace('{{minimo}}', MINIMO_DE_CARACTERES));
-      setCampoConError('password');
+      setErrorCampo({
+        campo: 'password',
+        texto: t.auth.activar_password_corta.replace('{{minimo}}', MINIMO_DE_CARACTERES),
+      });
       return;
     }
     if (password !== confirmacion) {
-      setError(t.auth.activar_no_coincide);
-      setCampoConError('confirmacion');
+      setErrorCampo({ campo: 'confirmacion', texto: t.auth.activar_no_coincide });
       return;
     }
 
@@ -51,8 +54,7 @@ export default function MiClave() {
         password: actual,
       });
       if (errorActual) {
-        setError(t.auth.mi_clave_actual_mal);
-        setCampoConError('actual');
+        setErrorCampo({ campo: 'actual', texto: t.auth.mi_clave_actual_mal });
         return;
       }
 
@@ -73,10 +75,10 @@ export default function MiClave() {
   }
 
   return (
-    <div>
+    <>
       <h1>{t.auth.mi_clave_titulo}</h1>
 
-      {error && <div id="mi-clave-error" className="alert alert-error" role="alert">{error}</div>}
+      {error && <div className="alert alert-error" role="alert">{error}</div>}
       {cambiada && <div className="alert alert-info" role="status">{t.auth.mi_clave_exito}</div>}
 
       <form className="pwa-card" onSubmit={alEnviar}>
@@ -89,12 +91,15 @@ export default function MiClave() {
             value={actual}
             onChange={(e) => {
               setActual(e.target.value);
-              if (campoConError === 'actual') setCampoConError('');
+              limpiarAdvertencia('actual');
             }}
             required
-            aria-invalid={campoConError === 'actual' ? true : undefined}
-            aria-describedby={campoConError === 'actual' ? 'mi-clave-error' : undefined}
+            aria-invalid={advertenciaDe('actual') ? 'true' : undefined}
+            aria-describedby={advertenciaDe('actual') ? 'actual-error' : undefined}
           />
+          {advertenciaDe('actual') && (
+            <span className="form-error" id="actual-error" role="alert">{advertenciaDe('actual')}</span>
+          )}
         </div>
         <div className="form-field">
           <label htmlFor="password">{t.auth.activar_password_nueva}</label>
@@ -105,12 +110,15 @@ export default function MiClave() {
             value={password}
             onChange={(e) => {
               setPassword(e.target.value);
-              if (campoConError === 'password') setCampoConError('');
+              limpiarAdvertencia('password');
             }}
             required
-            aria-invalid={campoConError === 'password' ? true : undefined}
-            aria-describedby={campoConError === 'password' ? 'mi-clave-error' : undefined}
+            aria-invalid={advertenciaDe('password') ? 'true' : undefined}
+            aria-describedby={advertenciaDe('password') ? 'password-error' : undefined}
           />
+          {advertenciaDe('password') && (
+            <span className="form-error" id="password-error" role="alert">{advertenciaDe('password')}</span>
+          )}
         </div>
         <div className="form-field">
           <label htmlFor="confirmacion">{t.auth.activar_password_confirmar}</label>
@@ -121,17 +129,20 @@ export default function MiClave() {
             value={confirmacion}
             onChange={(e) => {
               setConfirmacion(e.target.value);
-              if (campoConError === 'confirmacion') setCampoConError('');
+              limpiarAdvertencia('confirmacion');
             }}
             required
-            aria-invalid={campoConError === 'confirmacion' ? true : undefined}
-            aria-describedby={campoConError === 'confirmacion' ? 'mi-clave-error' : undefined}
+            aria-invalid={advertenciaDe('confirmacion') ? 'true' : undefined}
+            aria-describedby={advertenciaDe('confirmacion') ? 'confirmacion-error' : undefined}
           />
+          {advertenciaDe('confirmacion') && (
+            <span className="form-error" id="confirmacion-error" role="alert">{advertenciaDe('confirmacion')}</span>
+          )}
         </div>
-        <button type="submit" className="btn btn-primary btn-full" disabled={guardando}>
+        <button type="submit" className="btn btn-primary btn-full btn-abajo" disabled={guardando}>
           {guardando ? t.auth.mi_clave_guardando : t.auth.mi_clave_guardar}
         </button>
       </form>
-    </div>
+    </>
   );
 }

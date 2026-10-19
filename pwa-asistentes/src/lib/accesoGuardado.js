@@ -19,12 +19,15 @@
  * Supabase renueva cualquier sesión abierta. No hay ninguna credencial que alcance a nadie más.
  *
  * QUÉ SE GUARDA. Un solo renglón en el almacenamiento del navegador, de una sola persona: la del
- * último aparato habilitado acá.
+ * último aparato habilitado acá. El renglón es de la cuenta y de nadie más: como el nombre de usuario
+ * es único en todo el sistema, no hace falta anotar de qué Prestadora es.
  */
 import { supabase } from './supabaseClient';
 
 const CLAVE = 'acceso-guardado';
-const VERSION = 1;
+// La versión 1 anotaba además la Prestadora. Un renglón de esa versión no se lee: el aparato se
+// vuelve a habilitar desde adentro de la aplicación.
+const VERSION = 2;
 const INFO = new TextEncoder().encode('acceso-guardado-v1');
 
 function aBase64(datos) {
@@ -94,7 +97,7 @@ export async function pedirSecretoDeLaHuella({ credencialId, parteConfiable, sal
  * Deja este aparato listo para guardar la sesión bajo la huella. Reemplaza lo que hubiera: en el
  * teléfono hay un solo acceso guardado.
  */
-export async function prepararAccesoGuardado({ usuarioId, rotulo, llaveId, credencialId, parteConfiable, sal, secreto }) {
+export async function prepararAccesoGuardado({ usuarioId, llaveId, credencialId, parteConfiable, sal, secreto }) {
   const par = await crypto.subtle.generateKey(
     { name: 'RSA-OAEP', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
     true,
@@ -107,7 +110,6 @@ export async function prepararAccesoGuardado({ usuarioId, rotulo, llaveId, crede
   escribir({
     v: VERSION,
     usuarioId,
-    rotulo,
     llaveId,
     credencialId,
     parteConfiable,
@@ -197,16 +199,9 @@ export async function abrirSesionConLaHuella() {
   return registro.llaveId;
 }
 
-/** Si hay una sesión guardada para esta Prestadora. */
-export function hayAccesoGuardado(rotulo) {
-  const registro = leer();
-  return Boolean(registro?.tokenCifrado && rotulo && registro.rotulo === rotulo);
-}
-
-/** La Prestadora del acceso guardado, para cuando el teléfono no tiene otra anotada. */
-export function rotuloDelAccesoGuardado() {
-  const registro = leer();
-  return registro?.tokenCifrado ? registro.rotulo : null;
+/** Si hay una sesión guardada en este teléfono. */
+export function hayAccesoGuardado() {
+  return Boolean(leer()?.tokenCifrado);
 }
 
 /** El aparato habilitado acá, para olvidarlo si se lo revoca. */

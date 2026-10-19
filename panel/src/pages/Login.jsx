@@ -14,8 +14,8 @@ const API_URL = import.meta.env.VITE_API_URL;
 // La coordinación entra con `parte_código` —`juana.perez_demo`—, que es único en todo el producto y
 // por eso alcanza para saber de qué Prestadora es. La dirección de la página no se mira.
 //
-// Con el nombre de usuario se le pregunta al backend con qué correo se le habla al servicio de
-// acceso (`lib/correoDeAcceso.js`), y se entra con ése. Lo que lleva «@» se usa tal como se
+// Con el nombre de usuario se le pregunta al backend con qué dirección conoce a esa cuenta el
+// servicio de acceso, y se entra con ésa. Lo que lleva «@» se usa tal como se
 // escribió: así entran las cuentas que crea CeltaTech.
 //
 // AL ENTRAR NO SE INSINÚA NADA. Correo que no existe y clave equivocada fallan por el mismo camino
@@ -52,7 +52,7 @@ export function Login() {
       const escrito = usuarioEscrito.trim().toLowerCase();
       let correo = escrito;
       if (!escrito.includes('@')) {
-        const respuesta = await fetch(`${API_URL}/api/ingreso-al-panel/correo-de-acceso`, {
+        const respuesta = await fetch(`${API_URL}/api/ingreso/correo-de-acceso`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ usuario: escrito }),

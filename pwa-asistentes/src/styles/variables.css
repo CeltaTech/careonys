@@ -45,3 +45,41 @@
   --font-display: Inter, 'Segoe UI', Arial, sans-serif;
   --font-body: Inter, 'Segoe UI', Arial, sans-serif;
 }
+
+/* La «i» al lado de una etiqueta (`components/InfoDelCampo.jsx`): un redondel chico, con el texto
+   flotando debajo mientras se la señala o se la toca. */
+.info-del-campo {
+  position: relative;
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 6px;
+}
+
+.info-del-campo-boton {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--info-texto);
+  background: var(--info-fondo);
+  color: var(--info-texto);
+  font: 600 11px/1 var(--font-body);
+  cursor: pointer;
+}
+
+.info-del-campo-texto {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 10;
+  width: max-content;
+  max-width: 240px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--info-fondo);
+  color: var(--info-texto);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.4;
+  box-shadow: 0 2px 8px rgba(17, 31, 53, 0.12);
+}

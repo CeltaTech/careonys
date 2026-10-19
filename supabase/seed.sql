@@ -170,16 +170,13 @@ JOIN public.zonas_cobertura z
 --    `auth.identities`, donde el sistema de ingreso anota "por qué medio entra
 --    esta persona"; sin ella, entrar con correo y contraseña no funciona.
 --
---    EL CORREO QUE VE EL SISTEMA DE INGRESO NO ES EL DE LA PERSONA. Hay una
---    cuenta por Prestadora, y el mismo correo en dos Prestadoras son dos
---    cuentas distintas; el sistema de ingreso, en cambio, exige que ningún
---    correo se repita en todo el sistema. Lo que se le entrega es entonces el
---    resumen de la Prestadora junto con el correo, sobre un dominio que no
---    existe. Se arma acá exactamente igual que en
---    `backend/src/config/correoDeAcceso.js`, que es donde esa forma se decide y
---    de donde no se despega: resumen SHA-256 de `<prestadora>:<correo>`, en
---    hexadecimal, sobre `acceso.careonys.invalid`. El correo de verdad queda en
---    `public.usuarios.email`, que es donde el aislamiento sí se impone.
+--    LA DIRECCIÓN QUE VE EL SISTEMA DE INGRESO NO ES EL EMAIL DE LA PERSONA.
+--    Coordinación, Asistentes y Clientes entran con su nombre de usuario, y el
+--    sistema de ingreso los conoce por `<cuenta>@acceso.careonys.invalid`, un
+--    dominio que no existe. Así el email queda como dato de contacto, se
+--    corrige sin tocar el acceso y puede repetirse en dos Prestadoras. Es la
+--    misma forma que arma `dar_de_alta_la_cuenta` en la base. Administración y
+--    CeltaTech entran al Panel con su email tal cual.
 --
 --    POR QUÉ ESTÁ TODO EN UNA SOLA ORDEN Y NO EN TRES. Porque la herramienta que
 --    aplica esta siembra manda el archivo entero de una vez y revisa todas las
@@ -195,35 +192,34 @@ JOIN public.zonas_cobertura z
 --    corresponde y nada más. Todos entran con la misma contraseña, la que les
 --    ponga después `scripts/poner_la_clave_de_la_siembra.mjs`.
 -- ----------------------------------------------------------------------------
-WITH escritas (id, email, nombre, rol, telefono) AS (
+WITH escritas (id, email, nombre, rol, telefono, nombre_de_usuario) AS (
   VALUES
     -- Los tres roles del Panel
-    ('20000000-0000-4000-8000-000000000001'::uuid, 'superadmin@sandbox.local'::text,   'Sofía Superadmin'::text,      'superadmin'::text,       NULL::text),
-    ('20000000-0000-4000-8000-000000000002',       'admin@sandbox.local',              'Andrea Administradora',       'admin_prestadora',       '+54 11 4000-0002'),
-    ('20000000-0000-4000-8000-000000000003',       'coordinadora@sandbox.local',       'Carla Coordinadora',          'coordinador',            '+54 11 4000-0003'),
+    ('20000000-0000-4000-8000-000000000001'::uuid, 'superadmin@sandbox.local'::text,   'Sofía Superadmin'::text,      'superadmin'::text,       NULL::text, NULL::text),
+    ('20000000-0000-4000-8000-000000000002',       'admin@sandbox.local',              'Andrea Administradora',       'admin_prestadora',       '+54 11 4000-0002', NULL),
+    ('20000000-0000-4000-8000-000000000003',       'coordinadora@sandbox.local',       'Carla Coordinadora',          'coordinador',            '+54 11 4000-0003', 'carla_localhost'),
     -- Las cuatro Asistentes
-    ('30000000-0000-4000-8000-000000000001',       'ana.asistente@sandbox.local',      'Ana Álvarez',                 'asistente',              '+54 11 4001-0001'),
-    ('30000000-0000-4000-8000-000000000002',       'bruno.asistente@sandbox.local',    'Bruno Bianchi',               'asistente',              '+54 11 4001-0002'),
-    ('30000000-0000-4000-8000-000000000003',       'clara.asistente@sandbox.local',    'Clara Cabrera',               'asistente',              '+54 11 4001-0003'),
-    ('30000000-0000-4000-8000-000000000004',       'delia.asistente@sandbox.local',    'Delia Duarte',                'asistente',              '+54 11 4001-0004'),
+    ('30000000-0000-4000-8000-000000000001',       'ana.asistente@sandbox.local',      'Ana Álvarez',                 'asistente',              '+54 11 4001-0001', 'ana.alvarez'),
+    ('30000000-0000-4000-8000-000000000002',       'bruno.asistente@sandbox.local',    'Bruno Bianchi',               'asistente',              '+54 11 4001-0002', 'bruno'),
+    ('30000000-0000-4000-8000-000000000003',       'clara.asistente@sandbox.local',    'Clara Cabrera',               'asistente',              '+54 11 4001-0003', 'clara'),
+    ('30000000-0000-4000-8000-000000000004',       'delia.asistente@sandbox.local',    'Delia Duarte',                'asistente',              '+54 11 4001-0004', 'delia'),
     -- Las tres Clientes
-    ('40000000-0000-4000-8000-000000000001',       'cliente.gomez@sandbox.local',      'Cliente Gómez',               'cliente',                '+54 11 4002-0001'),
-    ('40000000-0000-4000-8000-000000000002',       'cliente.lopez@sandbox.local',      'Cliente López',               'cliente',                '+54 11 4002-0002'),
-    ('40000000-0000-4000-8000-000000000003',       'cliente.morales@sandbox.local',    'Cliente Morales',             'cliente',                '+54 11 4002-0003'),
+    ('40000000-0000-4000-8000-000000000001',       'cliente.gomez@sandbox.local',      'Cliente Gómez',               'cliente',                '+54 11 4002-0001', 'gomez'),
+    ('40000000-0000-4000-8000-000000000002',       'cliente.lopez@sandbox.local',      'Cliente López',               'cliente',                '+54 11 4002-0002', 'lopez'),
+    ('40000000-0000-4000-8000-000000000003',       'cliente.morales@sandbox.local',    'Cliente Morales',             'cliente',                '+54 11 4002-0003', 'morales'),
     -- Una persona anotada en las personas autorizadas del Cliente Gómez, que no es la titular. Está para
     -- poder probar de verdad los accesos de las personas autorizadas: sin ella, las tres cuentas de Cliente son
     -- titulares y ven todo, con lo cual una instrucción que niegue algo no se puede comprobar.
-    ('40000000-0000-4000-8000-000000000011',       'marcela.gomez@sandbox.local',      'Marcela Gómez',               'cliente',                '+54 11 4002-0011')
+    ('40000000-0000-4000-8000-000000000011',       'marcela.gomez@sandbox.local',      'Marcela Gómez',               'cliente',                '+54 11 4002-0011', 'marcela')
 ),
 personas AS (
   SELECT
     e.id,
     lower(e.email) AS email,
-    encode(
-      extensions.digest('11111111-1111-4111-8111-111111111111:' || lower(e.email), 'sha256'),
-      'hex'
-    ) || '@acceso.careonys.invalid' AS correo_de_acceso,
-    e.nombre, e.rol, e.telefono
+    CASE WHEN e.rol IN ('coordinador', 'asistente', 'cliente')
+         THEN e.id::text || '@acceso.careonys.invalid'
+         ELSE lower(e.email) END AS correo_de_acceso,
+    e.nombre, e.rol, e.telefono, e.nombre_de_usuario
   FROM escritas e
 ),
 cuentas_de_ingreso AS (
@@ -254,8 +250,8 @@ medios_de_ingreso AS (
   FROM personas p
   RETURNING user_id
 )
-INSERT INTO public.usuarios (id, rol, nombre, telefono, email, prestadora_id)
-SELECT p.id, p.rol, p.nombre, p.telefono, p.email, '11111111-1111-4111-8111-111111111111'
+INSERT INTO public.usuarios (id, rol, nombre, telefono, email, prestadora_id, nombre_de_usuario)
+SELECT p.id, p.rol, p.nombre, p.telefono, p.email, '11111111-1111-4111-8111-111111111111', p.nombre_de_usuario
 FROM personas p;
 
 -- Hasta dónde llega quien coordina. Carla alcanza los dos lugares de la Ciudad y los dos de la
@@ -985,22 +981,21 @@ WHERE z.codigo = 'la_plata' AND z.prestadora_id = '22222222-2222-4222-8222-22222
 -- Las cuatro cuentas de la segunda Prestadora, con la misma mecánica de tres
 -- tablas que explica el punto 2. Nacen sin contraseña, igual que el resto, y la
 -- reciben con el mismo programa.
-WITH escritas (id, email, nombre, rol, telefono) AS (
+WITH escritas (id, email, nombre, rol, telefono, nombre_de_usuario) AS (
   VALUES
-    ('50000000-0000-4000-8000-000000000001'::uuid, 'admin@sur.local'::text,   'Alicia Administradora Sur'::text, 'admin_prestadora'::text, '+54 221 400-0001'::text),
-    ('50000000-0000-4000-8000-000000000002',       'coordinadora@sur.local',  'Cecilia Coordinadora Sur',        'coordinador',            '+54 221 400-0002'),
-    ('50000000-0000-4000-8000-000000000003',       'asistente.sur@sur.local', 'Elena Escobar',                   'asistente',              '+54 221 400-0003'),
-    ('50000000-0000-4000-8000-000000000004',       'cliente.rios@sur.local',  'Cliente Ríos',                    'cliente',                '+54 221 400-0004')
+    ('50000000-0000-4000-8000-000000000001'::uuid, 'admin@sur.local'::text,   'Alicia Administradora Sur'::text, 'admin_prestadora'::text, '+54 221 400-0001'::text, NULL::text),
+    ('50000000-0000-4000-8000-000000000002',       'coordinadora@sur.local',  'Cecilia Coordinadora Sur',        'coordinador',            '+54 221 400-0002', 'cecilia_cuidardelsur'),
+    ('50000000-0000-4000-8000-000000000003',       'asistente.sur@sur.local', 'Elena Escobar',                   'asistente',              '+54 221 400-0003', 'elena'),
+    ('50000000-0000-4000-8000-000000000004',       'cliente.rios@sur.local',  'Cliente Ríos',                    'cliente',                '+54 221 400-0004', 'rios')
 ),
 personas AS (
   SELECT
     e.id,
     lower(e.email) AS email,
-    encode(
-      extensions.digest('22222222-2222-4222-8222-222222222222:' || lower(e.email), 'sha256'),
-      'hex'
-    ) || '@acceso.careonys.invalid' AS correo_de_acceso,
-    e.nombre, e.rol, e.telefono
+    CASE WHEN e.rol IN ('coordinador', 'asistente', 'cliente')
+         THEN e.id::text || '@acceso.careonys.invalid'
+         ELSE lower(e.email) END AS correo_de_acceso,
+    e.nombre, e.rol, e.telefono, e.nombre_de_usuario
   FROM escritas e
 ),
 cuentas_de_ingreso AS (
@@ -1031,8 +1026,8 @@ medios_de_ingreso AS (
   FROM personas p
   RETURNING user_id
 )
-INSERT INTO public.usuarios (id, rol, nombre, telefono, email, prestadora_id)
-SELECT p.id, p.rol, p.nombre, p.telefono, p.email, '22222222-2222-4222-8222-222222222222'
+INSERT INTO public.usuarios (id, rol, nombre, telefono, email, prestadora_id, nombre_de_usuario)
+SELECT p.id, p.rol, p.nombre, p.telefono, p.email, '22222222-2222-4222-8222-222222222222', p.nombre_de_usuario
 FROM personas p;
 
 INSERT INTO public.asistentes (id, usuario_id, nombre, prestadora_id, dni, documento_tipo, documento_numero, genero)
@@ -1239,11 +1234,11 @@ BEGIN
   RAISE NOTICE 'Base local sembrada. Dos Prestadoras: Sandbox y Cuidar del Sur.';
   RAISE NOTICE 'Las cuentas nacieron sin contraseña y todavía no entra ninguna.';
   RAISE NOTICE 'Para ponérsela: SEED_LOCAL_PASSWORD=<la que quiera> node scripts/poner_la_clave_de_la_siembra.mjs';
-  RAISE NOTICE 'Los correos de abajo son los que se escriben en la pantalla de ingreso.';
-  RAISE NOTICE '  Sandbox, Panel  -> superadmin@sandbox.local / admin@sandbox.local / coordinadora@sandbox.local';
-  RAISE NOTICE '  Sandbox, Asistentes -> ana.asistente@sandbox.local (y bruno, clara, delia)';
-  RAISE NOTICE '  Sandbox, Clientes   -> cliente.gomez@sandbox.local (y lopez, morales)';
-  RAISE NOTICE '  Cuidar del Sur  -> admin@sur.local / coordinadora@sur.local / asistente.sur@sur.local / cliente.rios@sur.local';
+  RAISE NOTICE 'Lo de abajo es lo que se escribe en la pantalla de ingreso.';
+  RAISE NOTICE '  Sandbox, Panel  -> superadmin@sandbox.local / admin@sandbox.local / carla_localhost';
+  RAISE NOTICE '  Sandbox, Asistentes -> ana.alvarez, bruno, clara, delia';
+  RAISE NOTICE '  Sandbox, Clientes   -> gomez, lopez, morales, marcela';
+  RAISE NOTICE '  Cuidar del Sur  -> admin@sur.local / cecilia_cuidardelsur / elena / rios';
   RAISE NOTICE 'Los correos que manda el backend quedan en http://127.0.0.1:54424';
   RAISE NOTICE 'Para comprobar que ninguna ve datos de la otra: node scripts/probar_aislamiento.mjs';
   RAISE NOTICE 'Para comprobar que se puede dar de alta desde el Panel: node scripts/probar_altas_con_sesion.mjs';

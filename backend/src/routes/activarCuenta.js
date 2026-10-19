@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { activarCuentaConToken, cuentaQueActivoConEsteToken, pedirEnlaceNuevo } from '../utils/activacionCuenta.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { claveAceptable } from '../config/reglaDeClave.js';
+import { usuarioComparable } from '../config/reglaDeUsuario.js';
 import { telefonoAceptable } from '../utils/codigoAlTelefono.js';
 import { resolverPrestadoraPublica } from '../middleware/resolverPrestadoraPublica.js';
 import {
@@ -22,8 +23,10 @@ export const activarCuentaRouter = Router();
 // quien programa, y la pantalla ya tiene una frase propia para "se rompió algo de este lado".
 // Un motivo ahí sería una segunda frase diciendo exactamente lo mismo.
 //
-// EL TELÉFONO ES OPCIONAL Y NO CAMBIA NADA DE LO ANTERIOR. Sin él, esta puerta contesta lo mismo
-// que contestaba antes, que es lo que siguen mandando las dos aplicaciones de teléfono. Con él, el
+// EL NOMBRE DE USUARIO SE ELIGE ACÁ, junto con la contraseña. Asistentes y Clientes lo mandan
+// siempre; la coordinación ya tiene el suyo y no lo manda.
+//
+// EL TELÉFONO ES OPCIONAL. Sin él, esta puerta contesta sólo que la cuenta quedó activa. Con él, el
 // número queda cargado sin verificar y sale el código — y que el código no salga tampoco impide
 // entrar: verificar es una oferta, nunca un requisito (`utils/telefonoAlActivar.js`).
 //
@@ -31,7 +34,7 @@ export const activarCuentaRouter = Router();
 // correo la trae (`utils/direccionDeLaPrestadora.js`, `enlaceConCodigo`), y el código de otra
 // Prestadora no existe desde acá.
 activarCuentaRouter.post('/:prestadora', resolverPrestadoraPublica, async (req, res) => {
-  const { token, password, telefono } = req.body ?? {};
+  const { token, password, telefono, usuario } = req.body ?? {};
 
   try {
     if (!token || !password) throw new ErrorConMotivo('faltan_datos');
@@ -42,7 +45,14 @@ activarCuentaRouter.post('/:prestadora', resolverPrestadoraPublica, async (req, 
     const escrito = String(telefono ?? '').trim();
     if (escrito && !telefonoAceptable(escrito)) throw new ErrorConMotivo('telefono_invalido');
 
-    const { usuarioId } = await activarCuentaConToken(token, password, req.prestadoraPublica.prestadora_id);
+    // El nombre de usuario lo elige la persona acá mismo, y la regla la hace cumplir la base al
+    // activar (`activar_la_cuenta`), que es la única que sabe si ya lo tiene otra cuenta.
+    const { usuarioId } = await activarCuentaConToken(
+      token,
+      password,
+      req.prestadoraPublica.prestadora_id,
+      usuarioComparable(usuario) || null,
+    );
     const codigo = await ofrecerElCodigoAlActivar({
       prestadoraId: req.prestadoraPublica.prestadora_id,
       usuarioId,

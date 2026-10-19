@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { ErrorConMotivo } from './errorConMotivo.js';
-import { correoDeAcceso } from '../config/correoDeAcceso.js';
+import { direccionDeAcceso } from '../config/direccionDeAcceso.js';
 
 // COMPROBAR LA CLAVE ACTUAL, DEL LADO DEL BACKEND.
 //
@@ -42,15 +42,16 @@ export function olvidarClientePublico() {
 /**
  * ¿Esta es la clave actual de esta cuenta?
  *
- * Se entra con el correo de acceso, no con el de la persona: el servicio de acceso guarda el de la
- * cuenta en esa Prestadora (`config/correoDeAcceso.js`), y con el otro no encuentra a nadie.
+ * Se entra con la dirección de acceso de la cuenta, no con el email de la persona: el servicio de
+ * acceso la conoce por su identificador (`config/direccionDeAcceso.js`), y el email es sólo un dato
+ * de contacto.
  *
  * Falla cerrado: sin llave pública configurada no se puede comprobar nada, y lo que corresponde es
  * negar. Una comprobación que se saltea cuando falta una variable de entorno no es una
  * comprobación (CLAUDE.md de la empresa §5).
  */
-export async function esLaClaveActual({ email, prestadoraId, clave }) {
-  if (!email || !prestadoraId || !clave) return false;
+export async function esLaClaveActual({ usuarioId, clave }) {
+  if (!usuarioId || !clave) return false;
 
   const publico = clientePublico();
   if (!publico) {
@@ -59,7 +60,7 @@ export async function esLaClaveActual({ email, prestadoraId, clave }) {
   }
 
   const { data, error } = await publico.auth.signInWithPassword({
-    email: await correoDeAcceso(email, prestadoraId),
+    email: direccionDeAcceso(usuarioId),
     password: clave,
   });
   if (error || !data?.user) return false;
@@ -96,21 +97,21 @@ export async function cerrarTodasLasSesionesDe(token) {
  *
  * Lanza `clave_actual_incorrecta` si la actual no entra; cualquier otra falla sube como error.
  */
-export async function cambiarLaClave({ email, prestadoraId, claveActual, claveNueva }) {
+export async function cambiarLaClave({ usuarioId, claveActual, claveNueva }) {
   const url = process.env.SUPABASE_URL;
   const llave = process.env.SUPABASE_ANON_KEY;
   if (!url || !llave) {
     console.error('claveActual: falta SUPABASE_ANON_KEY; no se puede cambiar la clave');
     throw new Error('falta la llave pública');
   }
-  if (!email || !prestadoraId || !claveActual) throw new ErrorConMotivo('clave_actual_incorrecta');
+  if (!usuarioId || !claveActual) throw new ErrorConMotivo('clave_actual_incorrecta');
 
   const propio = createClient(url, llave, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
   const { data, error } = await propio.auth.signInWithPassword({
-    email: await correoDeAcceso(email, prestadoraId),
+    email: direccionDeAcceso(usuarioId),
     password: claveActual,
   });
   if (error || !data?.user) throw new ErrorConMotivo('clave_actual_incorrecta');
@@ -124,8 +125,8 @@ export async function cambiarLaClave({ email, prestadoraId, claveActual, claveNu
 }
 
 /** Lo mismo, pero lanzando el motivo que la pantalla traduce. */
-export async function exigirLaClaveActual({ email, prestadoraId, clave }) {
-  if (!(await esLaClaveActual({ email, prestadoraId, clave }))) {
+export async function exigirLaClaveActual({ usuarioId, clave }) {
+  if (!(await esLaClaveActual({ usuarioId, clave }))) {
     throw new ErrorConMotivo('clave_actual_incorrecta');
   }
 }

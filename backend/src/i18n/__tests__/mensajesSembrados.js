@@ -13,8 +13,10 @@
 import { readFileSync } from 'node:fs';
 import { filasDeFabrica } from '../../__tests__/laFotoDeLaBase.js';
 
-// Las migraciones posteriores a la foto que siembran una frase, en la forma
-// `values ('<clave>', '<json>'::jsonb)`.
+// Las migraciones posteriores a la foto que siembran o borran una frase. Siembran en la forma
+// `('<clave>', '<json>'::jsonb)` —con `admite_texto_propio` y `activo` detrás, si los dicen— y
+// borran en la forma `DELETE FROM public.mensajes_del_sistema WHERE prestadora_id IS NULL AND
+// clave = '<clave>'`. Se leen en orden, igual que las corre la base.
 const MIGRACIONES_POSTERIORES = [
   '20261107000000_codigo_de_prestadora_en_la_activacion.sql',
   '20261118000000_los_turnos_se_asignan.sql',
@@ -22,18 +24,31 @@ const MIGRACIONES_POSTERIORES = [
   '20261226000000_avisos_del_turno_fijo_y_del_reemplazo.sql',
   '20270101000000_frases_aprobadas_de_la_entrevista_y_la_guardia_sin_cerrar.sql',
   '20270102000000_el_acceso_a_la_entrevista_se_habilita.sql',
+  '20270109000000_el_acceso_es_por_nombre_de_usuario.sql',
 ];
 
-function filasPosteriores() {
+const SIEMBRA = /\('([^']+)',\s*'(\{.*?\})'::jsonb(?:,\s*(true|false),\s*(true|false))?\)/g;
+const BORRADO = /DELETE FROM public\.mensajes_del_sistema\s+WHERE prestadora_id IS NULL AND clave = '([^']+)'/g;
+
+/** Lo que hace cada migración posterior, en orden: `{ clave, fila }` siembra, `{ clave }` borra. */
+function cambiosPosteriores() {
   return MIGRACIONES_POSTERIORES.flatMap((archivo) => {
     const texto = readFileSync(new URL(`../../../../supabase/migrations/${archivo}`, import.meta.url), 'utf8');
-    return [...texto.matchAll(/\('([^']+)',\s*'(\{.*?\})'::jsonb\)/g)].map(([, clave, i18n]) => ({
-      clave,
-      prestadora_id: null,
-      activo: true,
-      admite_texto_propio: true,
-      i18n: JSON.parse(i18n),
-    }));
+    const cambios = [
+      ...[...texto.matchAll(BORRADO)].map((m) => ({ donde: m.index, clave: m[1] })),
+      ...[...texto.matchAll(SIEMBRA)].map(([, clave, i18n, admite, activo], i, todos) => ({
+        donde: todos[i].index,
+        clave,
+        fila: {
+          clave,
+          prestadora_id: null,
+          activo: activo !== 'false',
+          admite_texto_propio: admite !== 'false',
+          i18n: JSON.parse(i18n),
+        },
+      })),
+    ];
+    return cambios.sort((a, b) => a.donde - b.donde);
   });
 }
 
@@ -52,7 +67,10 @@ export function filasSembradas() {
         admite_texto_propio,
         i18n,
       })),
-    ...filasPosteriores(),
   ]) porClave.set(fila.clave, fila);
+  for (const cambio of cambiosPosteriores()) {
+    if (cambio.fila) porClave.set(cambio.clave, cambio.fila);
+    else porClave.delete(cambio.clave);
+  }
   return [...porClave.values()];
 }

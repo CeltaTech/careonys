@@ -164,9 +164,9 @@ const ESTADO_POR_MOTIVO = {
   // una sola persona; una línea fija se comparte y no cae nunca acá. El motivo no lleva el número
   // adentro ni nombra ninguna columna: el teléfono es dato sensible y no sale por ningún lado.
   celular_de_otra_persona: 409,
-  // El nombre de usuario de la coordinación. El repetido en la misma Prestadora es 409, por lo
-  // mismo que el correo ya tomado; el mal escrito es un dato mal cargado, o sea 400.
-  usuario_de_esta_prestadora: 409,
+  // El nombre de usuario, que es único en todo el sistema. El que ya tiene otra cuenta es 409, por
+  // lo mismo que el correo ya tomado; el mal escrito es un dato mal cargado, o sea 400.
+  usuario_en_uso: 409,
   usuario_mal_escrito: 400,
   via_de_telefono_no_disponible: 409,
   clave_actual_incorrecta: 400,

@@ -8,10 +8,8 @@
  *
  *   1. QUE SE PUEDA PEDIR SIN LÍMITE. Es llenarle la casilla de correo a una persona, y cada
  *      mensaje lo paga la Prestadora.
- *   2. QUE EL TOPE DE UNA PRESTADORA FRENE A LA OTRA. La misma persona tiene una cuenta en cada
- *      una, y son cuentas distintas.
+ *   2. QUE EL TOPE DE UNA CUENTA FRENE A OTRA. Se cuenta por cuenta, de su Prestadora.
  *   3. QUE EL TOPE SE SALTEE CUANDO LA BASE NO CONTESTA. Todo control falla cerrado.
- *   4. QUE LAS MAYÚSCULAS ARMEN OTRA CUENTA. Contar `Marta@…` aparte de `marta@…` es no contar.
  *
  * LA PRUEBA QUE IMPORTA ROMPE EL CONTROL A PROPÓSITO: la misma llamada, con un pedido menos, tiene
  * que pasar. Sin eso, una prueba que dice «frenó» no prueba nada, porque podría estar frenando por
@@ -26,7 +24,8 @@ import { prepararCredencialDePrueba } from '../../__tests__/credencialDePrueba.j
 
 const PRESTADORA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const OTRA_PRESTADORA = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
-const CORREO = 'marta.gimenez@ejemplo.test';
+const CUENTA = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+const OTRA_CUENTA = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
 
 /** Qué contesta la base a cada `MÉTODO /ruta`. Cada prueba prepara lo suyo. */
 const respuestas = new Map();
@@ -80,7 +79,6 @@ const {
   seAgotaronLosPedidosDeClave,
   anotarPedidoDeClave,
   topeDePedidosDeClavePorHora,
-  verificadorDelCorreo,
 } = await import('../topeDePedidosDeClave.js');
 
 after(() => baseFalsa.close());
@@ -104,21 +102,21 @@ function conPedidosEnLaHora(cuantos) {
 describe('el tope por hora', () => {
   it('justo en el tope, no se manda nada más', async () => {
     conPedidosEnLaHora(topeDePedidosDeClavePorHora());
-    assert.equal(await seAgotaronLosPedidosDeClave(PRESTADORA, CORREO), true);
+    assert.equal(await seAgotaronLosPedidosDeClave(PRESTADORA, CUENTA), true);
   });
 
   it('un pedido por debajo del tope todavía pasa', async () => {
     // La misma llamada con el control corrido: si esto también frenara, la prueba de arriba no
     // estaría probando el tope.
     conPedidosEnLaHora(topeDePedidosDeClavePorHora() - 1);
-    assert.equal(await seAgotaronLosPedidosDeClave(PRESTADORA, CORREO), false);
+    assert.equal(await seAgotaronLosPedidosDeClave(PRESTADORA, CUENTA), false);
   });
 
   it('el valor sale del entorno y se lee en cada pedido', async () => {
     process.env.TOPE_PEDIDOS_DE_CLAVE_POR_HORA = '2';
     assert.equal(topeDePedidosDeClavePorHora(), 2);
     conPedidosEnLaHora(2);
-    assert.equal(await seAgotaronLosPedidosDeClave(PRESTADORA, CORREO), true);
+    assert.equal(await seAgotaronLosPedidosDeClave(PRESTADORA, CUENTA), true);
   });
 
   it('un valor mal cargado no apaga el tope', () => {
@@ -128,19 +126,22 @@ describe('el tope por hora', () => {
     assert.equal(topeDePedidosDeClavePorHora(), 5);
   });
 
-  it('se cuenta por Prestadora y por correo, y sólo la última hora', async () => {
+  it('se cuenta por Prestadora y por cuenta, y sólo la última hora', async () => {
     conPedidosEnLaHora(0);
-    await seAgotaronLosPedidosDeClave(PRESTADORA, CORREO);
+    await seAgotaronLosPedidosDeClave(PRESTADORA, CUENTA);
     const pedido = llamadas.find((l) => l.clave === 'HEAD /rest/v1/pedidos_de_clave_nueva');
     assert.ok(pedido.url.includes(`prestadora_id=eq.${PRESTADORA}`));
-    assert.ok(pedido.url.includes(`correo_verificador=eq.${verificadorDelCorreo(CORREO)}`));
+    assert.ok(pedido.url.includes(`usuario_id=eq.${CUENTA}`));
     assert.ok(pedido.url.includes('pedido_en=gte.'));
-    // El correo, nunca. Lo que viaja es el identificador de verificación.
-    assert.ok(!pedido.url.includes('marta'));
   });
 
   it('sin Prestadora no se manda nada, y no se le pregunta a la base', async () => {
-    assert.equal(await seAgotaronLosPedidosDeClave(null, CORREO), true);
+    assert.equal(await seAgotaronLosPedidosDeClave(null, CUENTA), true);
+    assert.equal(llamadas.length, 0);
+  });
+
+  it('sin cuenta no se manda nada, y no se le pregunta a la base', async () => {
+    assert.equal(await seAgotaronLosPedidosDeClave(PRESTADORA, null), true);
     assert.equal(llamadas.length, 0);
   });
 
@@ -149,40 +150,24 @@ describe('el tope por hora', () => {
       __estado: 500,
       __cuerpo: { message: 'la base no contesta' },
     });
-    assert.equal(await seAgotaronLosPedidosDeClave(PRESTADORA, CORREO), true);
-  });
-});
-
-describe('el identificador de verificación del correo', () => {
-  it('el mismo correo escrito distinto cuenta como uno solo', () => {
-    assert.equal(verificadorDelCorreo(`  ${CORREO.toUpperCase()} `), verificadorDelCorreo(CORREO));
-  });
-
-  it('dos correos distintos no se cruzan', () => {
-    assert.notEqual(verificadorDelCorreo('otra@ejemplo.test'), verificadorDelCorreo(CORREO));
-  });
-
-  it('no contiene el correo', () => {
-    assert.ok(!verificadorDelCorreo(CORREO).includes('marta'));
+    assert.equal(await seAgotaronLosPedidosDeClave(PRESTADORA, CUENTA), true);
   });
 });
 
 describe('el pedido anotado', () => {
-  it('guarda la Prestadora y el identificador de verificación, y nunca el correo', async () => {
+  it('guarda la Prestadora y la cuenta, y nunca un email', async () => {
     respuestas.set('POST /rest/v1/pedidos_de_clave_nueva', { __estado: 201, __cuerpo: null });
-    await anotarPedidoDeClave(PRESTADORA, CORREO);
+    await anotarPedidoDeClave(PRESTADORA, CUENTA);
     const anotado = llamadas.find((l) => l.clave === 'POST /rest/v1/pedidos_de_clave_nueva');
-    assert.deepEqual(anotado.cuerpo, {
-      prestadora_id: PRESTADORA,
-      correo_verificador: verificadorDelCorreo(CORREO),
-    });
+    assert.deepEqual(anotado.cuerpo, { prestadora_id: PRESTADORA, usuario_id: CUENTA });
   });
 
-  it('el tope de una Prestadora no frena a la otra', async () => {
+  it('el tope de una cuenta no frena a otra', async () => {
     conPedidosEnLaHora(0);
-    await seAgotaronLosPedidosDeClave(OTRA_PRESTADORA, CORREO);
+    await seAgotaronLosPedidosDeClave(OTRA_PRESTADORA, OTRA_CUENTA);
     const pedido = llamadas.find((l) => l.clave === 'HEAD /rest/v1/pedidos_de_clave_nueva');
     assert.ok(pedido.url.includes(`prestadora_id=eq.${OTRA_PRESTADORA}`));
+    assert.ok(pedido.url.includes(`usuario_id=eq.${OTRA_CUENTA}`));
   });
 });
 
@@ -191,8 +176,8 @@ describe('con qué credencial', () => {
     conPedidosEnLaHora(0);
     respuestas.set('POST /rest/v1/pedidos_de_clave_nueva', { __estado: 201, __cuerpo: null });
 
-    await seAgotaronLosPedidosDeClave(PRESTADORA, CORREO);
-    await anotarPedidoDeClave(PRESTADORA, CORREO);
+    await seAgotaronLosPedidosDeClave(PRESTADORA, CUENTA);
+    await anotarPedidoDeClave(PRESTADORA, CUENTA);
 
     assert.equal(llamadas.length, 2);
     for (const llamada of llamadas) {

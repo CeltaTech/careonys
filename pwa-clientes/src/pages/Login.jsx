@@ -1,16 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
-import { errorDeLaRespuesta, mensajeDeError } from '../lib/errores';
-import { guardarMarca, leerMarcaGuardada, olvidarMarca } from '../lib/marcaGuardada';
 import { esteAparatoGuardaLlaves, loCancelaronAMano } from '../lib/llaveDelDispositivo';
-import {
-  abrirSesionConLaHuella,
-  hayAccesoGuardado,
-  olvidarAccesoGuardado,
-  rotuloDelAccesoGuardado,
-} from '../lib/accesoGuardado';
+import { abrirSesionConLaHuella, hayAccesoGuardado, olvidarAccesoGuardado } from '../lib/accesoGuardado';
 import { api } from '../lib/api';
 import { supabase } from '../lib/supabaseClient';
 
@@ -18,103 +11,39 @@ import { supabase } from '../lib/supabaseClient';
 // se edita a mano. Lo único que cambia entre las dos aplicaciones es `lib/api.js`, que cada una
 // tiene con su propia dirección.
 //
-// PRIMERO LA PRESTADORA, DESPUÉS LA CUENTA. Con el mismo correo, cada Prestadora tiene su propia
-// cuenta (`lib/correoDeAcceso.js`), así que antes del correo hace falta saber de cuál se trata. El
-// código queda anotado en el teléfono junto con la marca, y mientras esté ahí no se vuelve a pedir.
+// SE ENTRA CON EL NOMBRE DE USUARIO Y LA CONTRASEÑA. El nombre es único en todo el sistema, así que
+// no hace falta decir de qué Prestadora es la cuenta: la marca de la Prestadora aparece después de
+// entrar (`context/PerfilContext.jsx`).
 //
-// INGRESAR CON BIOMETRÍA abre la sesión que quedó guardada al cerrar (`lib/accesoGuardado.js`), y
-// se ofrece sólo para la Prestadora de esa sesión.
-
-const API_URL = import.meta.env.VITE_API_URL;
-
-async function prestadoraDelCodigo(codigo) {
-  const respuesta = await fetch(`${API_URL}/api/publico/${encodeURIComponent(codigo)}/marca`);
-  const datos = await respuesta.json().catch(() => ({}));
-  if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, datos);
-  return datos;
-}
+// INGRESAR CON BIOMETRÍA abre la sesión que quedó guardada al cerrar (`lib/accesoGuardado.js`).
 
 export default function Login() {
   const { login } = useAuth();
   const { t } = useLocale();
-  const [searchParams] = useSearchParams();
-  const [estado, setEstado] = useState('cargando');
-  const [prestadora, setPrestadora] = useState(null);
-  const [codigo, setCodigo] = useState('');
-  const [email, setEmail] = useState('');
+  const [usuario, setUsuario] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [errorCodigo, setErrorCodigo] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [hayLlave, setHayLlave] = useState(false);
   const [entrandoConLlave, setEntrandoConLlave] = useState(false);
 
-  // Si se llega desde el enlace de un correo, la Prestadora viene en la dirección. Si no, se usa la
-  // que el teléfono tenga anotada, o la del acceso guardado. En los dos casos se pasa directo al
-  // correo.
   useEffect(() => {
     let vigente = true;
-    (async () => {
-      const pedida = (searchParams.get('prestadora') || '').trim();
-      const guardada = await leerMarcaGuardada();
-      const rotulo = pedida || guardada?.rotulo || rotuloDelAccesoGuardado();
-      if (!rotulo) {
-        if (vigente) setEstado('listo');
-        return;
-      }
-      try {
-        const datos = await prestadoraDelCodigo(rotulo);
-        if (pedida || !guardada) await guardarMarca({ nombre: datos.nombre, logoUrl: datos.logoUrl, rotulo: datos.rotulo });
-        const puede = await esteAparatoGuardaLlaves();
-        if (!vigente) return;
-        setPrestadora(datos);
-        setHayLlave(puede && hayAccesoGuardado(datos.rotulo));
-      } catch (err) {
-        // Un código anotado que ya no existe se olvida. Lo demás queda escrito en el casillero,
-        // para no tener que tipearlo de nuevo.
-        if (err?.status === 404 && !pedida) await olvidarMarca();
-        else if (vigente) setCodigo(rotulo);
-      } finally {
-        if (vigente) setEstado('listo');
-      }
-    })();
+    esteAparatoGuardaLlaves()
+      .then((puede) => {
+        if (vigente) setHayLlave(puede && hayAccesoGuardado());
+      })
+      .catch(() => {});
     return () => {
       vigente = false;
     };
-    // Sólo al abrir la pantalla.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  async function alBuscarPrestadora(evento) {
-    evento.preventDefault();
-    setErrorCodigo('');
-    setEnviando(true);
-    try {
-      const datos = await prestadoraDelCodigo(codigo.trim());
-      await guardarMarca({ nombre: datos.nombre, logoUrl: datos.logoUrl, rotulo: datos.rotulo });
-      setHayLlave((await esteAparatoGuardaLlaves()) && hayAccesoGuardado(datos.rotulo));
-      setPrestadora(datos);
-    } catch (err) {
-      setErrorCodigo(err?.status === 404 ? t.auth.codigo_desconocido : mensajeDeError(err, t, 'buscar la Prestadora'));
-    } finally {
-      setEnviando(false);
-    }
-  }
-
-  async function alCambiarPrestadora() {
-    await olvidarMarca();
-    setPrestadora(null);
-    setHayLlave(false);
-    setCodigo('');
-    setPassword('');
-    setError('');
-  }
 
   async function alEnviar(evento) {
     evento.preventDefault();
     setError('');
     setEnviando(true);
-    const { error: errorLogin } = await login(prestadora.prestadoraId, email, password);
+    const { error: errorLogin } = await login(usuario, password);
     setEnviando(false);
     if (errorLogin) {
       setError(t.auth.error_credenciales);
@@ -143,7 +72,7 @@ export default function Login() {
       // avisen nada: la contraseña sigue estando ahí abajo. Lo demás deja de ofrecerse, porque la
       // sesión guardada ya no sirve.
       if (!loCancelaronAMano(errorLlave)) {
-        setHayLlave(hayAccesoGuardado(prestadora?.rotulo));
+        setHayLlave(hayAccesoGuardado());
         setError(t.auth.llave_error);
       }
     } finally {
@@ -151,56 +80,9 @@ export default function Login() {
     }
   }
 
-  if (estado === 'cargando') {
-    return <div className="estado-cargando" role="status">{t.comun.cargando}</div>;
-  }
-
-  if (!prestadora) {
-    return (
-      <div className="login-pantalla">
-        <div className="login-card">
-          <h1>{t.auth.titulo}</h1>
-          <form onSubmit={alBuscarPrestadora}>
-            <div className="form-field">
-              <label htmlFor="codigo">{t.auth.codigo_prestadora}</label>
-              <input
-                id="codigo"
-                type="text"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                value={codigo}
-                onChange={(e) => {
-                  setCodigo(e.target.value);
-                  if (errorCodigo) setErrorCodigo('');
-                }}
-                required
-                aria-invalid={errorCodigo ? true : undefined}
-                aria-describedby={errorCodigo ? 'codigo-error' : undefined}
-              />
-              {errorCodigo && (
-                <span className="form-error" id="codigo-error" role="alert">{errorCodigo}</span>
-              )}
-            </div>
-            <button type="submit" className="btn btn-primary btn-full" disabled={enviando}>
-              {enviando ? t.auth.buscando : t.auth.continuar}
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="login-pantalla">
       <div className="login-card">
-        {/* La Prestadora va arriba, igual que adentro de la aplicación: es con quien se está
-            entrando. */}
-        {prestadora.logoUrl ? (
-          <img className="logo-prestadora" src={prestadora.logoUrl} alt={prestadora.nombre || ''} />
-        ) : (
-          <p className="nombre-prestadora">{prestadora.nombre || ''}</p>
-        )}
         <h1>{t.auth.titulo}</h1>
         {/* El motivo queda atado a los dos campos y no a uno: no se dice cuál de los dos está
             mal, a propósito, porque decirlo le regalaría a cualquiera la mitad de la
@@ -208,14 +90,17 @@ export default function Login() {
         {error && <div id="login-error" className="alert alert-error" role="alert">{error}</div>}
         <form onSubmit={alEnviar}>
           <div className="form-field">
-            <label htmlFor="email">{t.auth.email}</label>
+            <label htmlFor="usuario">{t.auth.usuario}</label>
             <input
-              id="email"
-              type="email"
+              id="usuario"
+              type="text"
               autoComplete="username"
-              value={email}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              value={usuario}
               onChange={(e) => {
-                setEmail(e.target.value);
+                setUsuario(e.target.value);
                 if (error) setError('');
               }}
               required
@@ -256,14 +141,7 @@ export default function Login() {
             </button>
           </>
         )}
-        <button
-          type="button"
-          className="btn btn-secondary btn-full login-otra-prestadora"
-          onClick={alCambiarPrestadora}
-          disabled={enviando || entrandoConLlave}
-        >
-          {t.auth.cambiar_prestadora}
-        </button>
+        <Link to="/recuperar-clave" className="login-recuperar">{t.auth.recuperar_link}</Link>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
  * Una cuenta no se borra: se desactiva. Borrar queda sólo para deshacer un alta cortada.
  *
  *   npm test --prefix backend
- *   node --test backend/src/utils/__tests__/unaCuentaNoSeBorra.test.js
+ *   node --test backend/src/utils/__tests__/borrarCuenta.test.js
  *
  * QUÉ SE PRUEBA. `desactivarCuenta`, `borrarCuentaDeUnAltaCortada` y `revocarPersonaAutorizada`
  * llamadas derecho, sin ninguna ruta que las cuide antes. La base hace el trabajo adentro de una

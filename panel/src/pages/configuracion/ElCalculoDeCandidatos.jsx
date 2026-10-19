@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { con } from '../../lib/textos';
 import { mensajeDeError } from '../../lib/errores';
+import { avisar } from '../../lib/mensajeEmergente';
 import {
   NOMBRES_DE_PERFIL,
   PERFILES,
@@ -41,7 +42,6 @@ export function ElCalculoDeCandidatos() {
   const [topes, setTopes] = useState({});
   const [detalleAbierto, setDetalleAbierto] = useState(false);
   const [guardando, setGuardando] = useState(false);
-  const [guardado, setGuardado] = useState(false);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -70,19 +70,17 @@ export function ElCalculoDeCandidatos() {
     setPerfil(nombre);
     setPesos({ ...PESOS, ...armado.pesos });
     setTopes({ ...TOPES, ...armado.topes });
-    setGuardado(false);
   }
 
   async function guardar() {
     setGuardando(true);
     setError(null);
-    setGuardado(false);
     try {
       await llamarApi('/calculo-candidatos', {
         method: 'PUT',
         body: JSON.stringify({ perfil, pesos, topes }),
       });
-      setGuardado(true);
+      avisar(tc.calculo_guardado);
       await recargar();
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -112,7 +110,6 @@ export function ElCalculoDeCandidatos() {
         </div>
         <EstadoLista estado={estado} error={error} recargar={recargar}>
           {estado === 'listo' && error && <Alert variant="error">{error}</Alert>}
-          {guardado && <Alert variant="success">{tc.calculo_guardado}</Alert>}
 
           <fieldset>
             <legend>{tc.calculo_forma}</legend>
@@ -145,7 +142,6 @@ export function ElCalculoDeCandidatos() {
               nombreDe={(clave) => tc[`calculo_peso_${clave}`]}
               alCambiar={(clave, valor) => {
                 setPesos((previos) => ({ ...previos, [clave]: valor }));
-                setGuardado(false);
               }}
               t={t}
             />
@@ -156,7 +152,6 @@ export function ElCalculoDeCandidatos() {
               nombreDe={(clave) => tc[`calculo_tope_${clave}`]}
               alCambiar={(clave, valor) => {
                 setTopes((previos) => ({ ...previos, [clave]: valor }));
-                setGuardado(false);
               }}
               t={t}
             >

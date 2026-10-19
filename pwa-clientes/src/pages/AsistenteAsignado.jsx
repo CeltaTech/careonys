@@ -8,6 +8,7 @@ import { usePersonasAutorizadas } from '../context/PersonasAutorizadasContext';
 import { mensajeDeError } from '../lib/errores';
 import EstadoDocumental from '../components/EstadoDocumental';
 import TareasDelTipo from '../components/TareasDelTipo';
+import { avisar } from '../lib/mensajeEmergente';
 
 export default function AsistenteAsignado() {
   const { id } = useParams();
@@ -51,6 +52,7 @@ export default function AsistenteAsignado() {
     try {
       await api.calificar(datos.guardiaId, { estrellas, comentario: comentario || null });
       setEnviado(true);
+      avisar(t.asistente.calificacion_enviada);
     } catch (e) {
       setError(mensajeDeError(e, t, 'calificar al Asistente'));
     } finally {
@@ -126,11 +128,6 @@ export default function AsistenteAsignado() {
                 <div className="alert">
                   {t.asistente.calificar_sin_acceso}
                 </div>
-              </div>
-            )}
-            {enviado && (
-              <div className="pwa-card-pie">
-                <div className="alert alert-info" role="status">{t.asistente.calificacion_enviada}</div>
               </div>
             )}
           </section>

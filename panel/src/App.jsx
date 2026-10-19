@@ -69,6 +69,7 @@ import { FormasDeCobro } from './pages/intermediacion/FormasDeCobro';
 import { IntermediacionCalificaciones } from './pages/intermediacion/Calificaciones';
 import { IntermediacionAuditoriaLegal } from './pages/intermediacion/AuditoriaLegal';
 import { IntermediacionFuncionesConRiesgoLegal } from './pages/intermediacion/FuncionesConRiesgoLegal';
+import { MensajeEmergente } from './lib/mensajeEmergente';
 
 function App() {
   return (
@@ -273,6 +274,7 @@ function App() {
                     <Route path="*" element={<PaginaNoEncontrada />} />
                   </Route>
                 </Routes>
+                <MensajeEmergente />
               </BrowserRouter>
             </AdvertenciaLegalProvider>
             </PuestaEnMarchaProvider>

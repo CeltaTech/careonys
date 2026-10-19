@@ -12,6 +12,7 @@ import { traducirValor } from '../i18n/valores';
 import { claseBadge } from '../lib/tonos';
 import { con } from '../lib/textos';
 import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
+import { avisar } from '../lib/mensajeEmergente';
 import { useModalAccesible } from '../hooks/useModalAccesible';
 import '../styles/molde-paginas.css';
 import './informesObraSocial.css';
@@ -214,7 +215,6 @@ export function InformesObraSocial() {
   const [cargandoPreview, setCargandoPreview] = useState(false);
   const [validando, setValidando] = useState(false);
   const [error, setError] = useState(null);
-  const [mensajeValidacion, setMensajeValidacion] = useState(null);
 
   const [historial, setHistorial] = useState([]);
   const [estadoHistorial, setEstadoHistorial] = useState('cargando');
@@ -260,7 +260,6 @@ export function InformesObraSocial() {
   async function handlePreview(e) {
     e.preventDefault();
     setError(null);
-    setMensajeValidacion(null);
     setCargandoPreview(true);
     setPreview(null);
     try {
@@ -285,7 +284,7 @@ export function InformesObraSocial() {
         method: 'POST',
         body: JSON.stringify({ paciente_id: pacienteId, tipo, periodo_desde: periodoDesde, periodo_hasta: periodoHasta }),
       });
-      setMensajeValidacion(t.informesObraSocial.informe_validado_exito);
+      avisar(t.informesObraSocial.informe_validado_exito);
       setPreview(null);
       recargarHistorial();
     } catch (err) {
@@ -329,7 +328,6 @@ export function InformesObraSocial() {
     <div>
       <Cabecera titulo={t.informesObraSocial.titulo} />
       {error && <Alert variant="error">{error}</Alert>}
-      {mensajeValidacion && <Alert variant="success">{mensajeValidacion}</Alert>}
 
       <div className="molde-pila">
         <section className="panel-tarjeta">

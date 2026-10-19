@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Cabecera } from '../components/ui/Cabecera';
 import { llamarApiPanel } from '../lib/apiPanel';
 import { mensajeDeError } from '../lib/errores';
+import { avisar } from '../lib/mensajeEmergente';
 import { esAdminOSuperior } from '../lib/roles';
 import { MINIMO_DE_CARACTERES, claveAceptable } from '../lib/reglaDeClave';
 import { EstadoLista } from '../components/layout/EstadoLista';
@@ -59,7 +60,6 @@ function Contrasena() {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
   const [errorCampo, setErrorCampo] = useState(null);
-  const [cambiada, setCambiada] = useState(false);
 
   const mensajeDe = (campo) => (errorCampo?.campo === campo ? errorCampo.texto : undefined);
 
@@ -67,7 +67,6 @@ function Contrasena() {
     evento.preventDefault();
     setError(null);
     setErrorCampo(null);
-    setCambiada(false);
 
     if (!claveAceptable(password)) {
       setErrorCampo({
@@ -90,7 +89,7 @@ function Contrasena() {
       setActual('');
       setPassword('');
       setConfirmacion('');
-      setCambiada(true);
+      avisar(t.auth.mi_clave_exito);
     } catch (err) {
       if (err?.motivo === 'clave_actual_incorrecta') {
         setErrorCampo({ campo: 'actual', texto: t.auth.mi_clave_actual_mal });
@@ -109,7 +108,6 @@ function Contrasena() {
       </div>
       <form onSubmit={guardar}>
         {error && <Alert variant="error">{error}</Alert>}
-        {cambiada && <Alert variant="success">{t.auth.mi_clave_exito}</Alert>}
 
         <div className="molde-formgrid">
           <div className="molde-ancho">

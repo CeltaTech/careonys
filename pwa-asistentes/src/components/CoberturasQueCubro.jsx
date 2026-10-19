@@ -3,6 +3,7 @@ import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
+import { avisar } from '../lib/mensajeEmergente';
 
 // Los turnos fijos de un compañero ausente que esta persona cubre mientras dure la ausencia. Las
 // guardias ya aparecen en su lista como propias; esto dice de dónde salieron y le deja decir que
@@ -16,7 +17,6 @@ export default function CoberturasQueCubro() {
   const [error, setError] = useState('');
   const [pidiendo, setPidiendo] = useState(false);
   const [objetando, setObjetando] = useState(null);
-  const [enviada, setEnviada] = useState(false);
 
   const pedir = useCallback(() => {
     setError('');
@@ -36,7 +36,7 @@ export default function CoberturasQueCubro() {
     setError('');
     try {
       await api.objetarCobertura(id);
-      setEnviada(true);
+      avisar(t.guardias.objecion_enviada);
       await pedir();
     } catch (e) {
       setError(mensajeDeError(e, t, 'objetar una cobertura'));
@@ -61,7 +61,6 @@ export default function CoberturasQueCubro() {
           </button>
         </div>
       )}
-      {enviada && <div className="alert alert-success" role="status">{t.guardias.objecion_enviada}</div>}
       {coberturas?.length > 0 && (
         <section>
           <h2>{t.guardias.coberturas_titulo}</h2>

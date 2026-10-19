@@ -152,7 +152,7 @@ export const T = {
       activar_exito: 'La cuenta quedó activada. Ya se puede ingresar con la contraseña nueva.',
       activar_token_invalido: 'Este enlace no es válido o venció. Solicite un enlace nuevo a la Prestadora.',
       activar_enlace_nuevo: 'Enviarme un enlace nuevo',
-      activar_enlace_nuevo_enviado: 'Le enviamos un enlace nuevo a su email.',
+      activar_enlace_nuevo_enviado: 'Le enviamos un nuevo enlace a su email.',
       // Donde se elige la contraseña nueva con el enlace que llegó por correo. Es la hermana de
       // la activación —el mismo formulario contra otra puerta— y se escribe aparte porque una
       // enciende una cuenta que nunca se usó y ésta reemplaza la clave de una que está en uso.

@@ -984,3 +984,50 @@ p {
   margin: 0;
   overflow-wrap: anywhere;
 }
+
+/* ---------- Mensaje emergente ----------
+   Algo salió bien y no queda nada por hacer: abajo y al centro, por encima de la barra de
+   navegación, en una línea, y se va solo (`src/lib/mensajeEmergente.js`). Quien trabaja lo mira
+   de pasada, con el teléfono en una mano: va ancho, centrado y con letra firme. La zona no ataja
+   toques. */
+.mensaje-emergente-zona {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: center;
+  padding: 0 12px;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.mensaje-emergente {
+  width: 100%;
+  max-width: 480px;
+  padding: 14px 16px;
+  border-radius: 7px;
+  background: var(--tinta);
+  color: var(--blanco);
+  font: 600 14px/1.4 var(--font-body);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: mensaje-emergente-entrar 200ms ease-out;
+}
+
+@keyframes mensaje-emergente-entrar {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mensaje-emergente {
+    animation: none;
+  }
+}

@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Alert } from '../components/ui/Alert';
 import { errorDeLaRespuesta, mensajeDeError } from '../lib/errores';
 import { MINIMO_DE_CARACTERES, claveAceptable } from '../lib/reglaDeClave';
+import { avisar } from '../lib/mensajeEmergente';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -48,7 +49,6 @@ export function ActivarCuenta() {
   const [codigo, setCodigo] = useState('');
   const [confirmando, setConfirmando] = useState(false);
   const [errorCodigo, setErrorCodigo] = useState(null);
-  const [telefonoVerificado, setTelefonoVerificado] = useState(false);
   const [motivoSinReintento, setMotivoSinReintento] = useState('');
   const [pidiendoEnlace, setPidiendoEnlace] = useState(false);
   const [enlaceNuevoEnviado, setEnlaceNuevoEnviado] = useState(false);
@@ -111,6 +111,7 @@ export function ActivarCuenta() {
       const resultado = await respuesta.json().catch(() => ({}));
       if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
       setEnlaceNuevoEnviado(true);
+      avisar(t.auth.activar_enlace_nuevo_enviado);
     } catch (err) {
       setError(mensajeDeError(err, t));
     } finally {
@@ -134,7 +135,7 @@ export function ActivarCuenta() {
       if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
       setCodigo('');
       setHayCodigo(false);
-      setTelefonoVerificado(true);
+      avisar(t.auth.activar_telefono_verificado);
     } catch (err) {
       setErrorCodigo(mensajeDeError(err, t));
     } finally {
@@ -159,10 +160,6 @@ export function ActivarCuenta() {
         <div className="login-card">
           <h1>{t.auth.activar_titulo}</h1>
           <Alert variant="success">{t.auth.activar_exito}</Alert>
-
-          {telefonoVerificado && (
-            <Alert variant="success">{t.auth.activar_telefono_verificado}</Alert>
-          )}
 
           {hayCodigo && (
             <form onSubmit={handleCodigo}>
@@ -192,9 +189,9 @@ export function ActivarCuenta() {
       <div className="login-pantalla">
         <div className="login-card">
           <h1>{t.auth.activar_titulo}</h1>
-          {enlaceNuevoEnviado
-            ? <Alert variant="success">{t.auth.activar_enlace_nuevo_enviado}</Alert>
-            : <Alert variant="error">{error}</Alert>}
+          {/* Pedido el enlace nuevo, el cartel del enlace vencido ya no dice nada que sirva y sale
+              entero: lo que pasó lo cuenta el mensaje emergente. */}
+          {!enlaceNuevoEnviado && <Alert variant="error">{error}</Alert>}
           {motivoSinReintento === 'token_ya_usado' && (
             <Link to="/login">{t.auth.activar_ingresar}</Link>
           )}

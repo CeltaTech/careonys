@@ -590,8 +590,8 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 
 | | |
 |---|---|
-| **Texto actual** | Le enviamos un enlace nuevo a su email. |
-| **Propuesta corta** | queda la propuesta: «Le enviamos un enlace nuevo a su email.» · «We sent a new link to your email.» · «Enviamos um novo link para o seu e-mail.» |
+| **Texto actual** | Le enviamos un nuevo enlace a su email. |
+| **Propuesta corta** | queda la propuesta: «Le enviamos un nuevo enlace a su email.» · «We sent a new link to your email.» · «Enviamos um novo link para o seu e-mail.» |
 | **¿Aparece hoy?** | sí |
 | **Por qué** | dice qué pasó y dónde buscarlo. |
 | **Quién lo lee** | quien recibió el correo para activar su cuenta del Panel. |
@@ -1024,8 +1024,8 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 
 | | |
 |---|---|
-| **Texto actual** | Le enviamos un enlace nuevo a su email. |
-| **Propuesta corta** | queda la propuesta: «Le enviamos un enlace nuevo a su email.» · «We sent a new link to your email.» · «Enviamos um novo link para o seu e-mail.» |
+| **Texto actual** | Le enviamos un nuevo enlace a su email. |
+| **Propuesta corta** | queda la propuesta: «Le enviamos un nuevo enlace a su email.» · «We sent a new link to your email.» · «Enviamos um novo link para o seu e-mail.» |
 | **¿Aparece hoy?** | sí |
 | **Por qué** | dice qué pasó y dónde buscarlo. |
 | **Quién lo lee** | el Asistente. |
@@ -1298,8 +1298,8 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 
 | | |
 |---|---|
-| **Texto actual** | Le enviamos un enlace nuevo a su email. |
-| **Propuesta corta** | queda la propuesta: «Le enviamos un enlace nuevo a su email.» · «We sent a new link to your email.» · «Enviamos um novo link para o seu e-mail.» |
+| **Texto actual** | Le enviamos un nuevo enlace a su email. |
+| **Propuesta corta** | queda la propuesta: «Le enviamos un nuevo enlace a su email.» · «We sent a new link to your email.» · «Enviamos um novo link para o seu e-mail.» |
 | **¿Aparece hoy?** | sí |
 | **Por qué** | dice qué pasó y dónde buscarlo. |
 | **Quién lo lee** | quien recibió el enlace: el Cliente o una persona autorizada. |

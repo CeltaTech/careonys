@@ -3,6 +3,7 @@ import { api } from '../lib/api';
 import { useLocale } from '../i18n/LocaleContext';
 import { con } from '../lib/textos';
 import { mensajeDeError } from '../lib/errores';
+import { avisar } from '../lib/mensajeEmergente';
 
 // Las calificaciones que le pusieron a este Asistente, y el descargo que puede dejar ante cada
 // una.
@@ -141,7 +142,6 @@ export default function MisCalificaciones() {
   const { t, locale } = useLocale();
   const [calificaciones, setCalificaciones] = useState(null);
   const [error, setError] = useState('');
-  const [guardado, setGuardado] = useState(false);
 
   function cargar() {
     return api
@@ -165,7 +165,6 @@ export default function MisCalificaciones() {
       <h1>{t.calificaciones.titulo}</h1>
 
       {error && <div className="alert alert-error" role="alert">{error}</div>}
-      {guardado && <div className="alert alert-info" role="status">{t.calificaciones.guardado}</div>}
 
       {calificaciones.length === 0 ? (
         <div className="estado-vacio" role="status">{t.calificaciones.sin_calificaciones}</div>
@@ -191,7 +190,7 @@ export default function MisCalificaciones() {
               t={t}
               locale={locale}
               onGuardado={async () => {
-                setGuardado(true);
+                avisar(t.calificaciones.guardado);
                 await cargar();
               }}
             />

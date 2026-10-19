@@ -312,7 +312,7 @@ export const T = {
       activar_exito: 'La cuenta quedó activa. Ya se puede entrar con la contraseña nueva.',
       activar_token_invalido: 'Enlace no válido. Solicite un enlace nuevo a quien creó la cuenta.',
       activar_enlace_nuevo: 'Enviarme un enlace nuevo',
-      activar_enlace_nuevo_enviado: 'Le enviamos un enlace nuevo a su email.',
+      activar_enlace_nuevo_enviado: 'Le enviamos un nuevo enlace a su email.',
       activar_ingresar: 'Ir a la pantalla de ingreso',
       activar_telefono: 'Teléfono',
       activar_codigo: 'Código',

@@ -359,6 +359,11 @@ export const GRUPOS = [
     copias: ['pwa-asistentes/src/lib/textos.js', 'pwa-clientes/src/lib/textos.js'],
   },
   {
+    que: 'el mensaje emergente que avisa que algo salió bien y se va solo',
+    original: 'panel/src/lib/mensajeEmergente.js',
+    copias: ['pwa-asistentes/src/lib/mensajeEmergente.js', 'pwa-clientes/src/lib/mensajeEmergente.js'],
+  },
+  {
     que: 'la sesión de quien entró a la aplicación',
     original: 'pwa-clientes/src/context/AuthContext.jsx',
     copias: ['pwa-asistentes/src/context/AuthContext.jsx'],

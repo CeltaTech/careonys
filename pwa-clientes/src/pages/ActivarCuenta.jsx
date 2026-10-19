@@ -5,6 +5,7 @@ import { errorDeLaRespuesta, mensajeDeError } from '../lib/errores';
 import { MINIMO_DE_CARACTERES, claveAceptable } from '../lib/reglaDeClave';
 import { usuarioBienEscrito } from '../lib/reglaDeUsuario';
 import InfoDelCampo from '../components/InfoDelCampo';
+import { avisar } from '../lib/mensajeEmergente';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -108,6 +109,7 @@ export default function ActivarCuenta() {
       const resultado = await respuesta.json().catch(() => ({}));
       if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);
       setEnlaceNuevoEnviado(true);
+      avisar(t.auth.activar_enlace_nuevo_enviado);
     } catch (err) {
       setError(mensajeDeError(err, t, 'pedir un enlace nuevo'));
     } finally {
@@ -143,9 +145,9 @@ export default function ActivarCuenta() {
       <div className="login-pantalla">
         <div className="login-card">
           <h1>{t.auth.activar_titulo}</h1>
-          {enlaceNuevoEnviado
-            ? <div className="alert alert-success" role="status">{t.auth.activar_enlace_nuevo_enviado}</div>
-            : <div className="alert alert-error" role="alert">{error}</div>}
+          {/* Pedido el enlace nuevo, el cartel del enlace vencido ya no dice nada que sirva y sale
+              entero: lo que pasó lo cuenta el mensaje emergente. */}
+          {!enlaceNuevoEnviado && <div className="alert alert-error" role="alert">{error}</div>}
           {motivoSinReintento === 'token_ya_usado' && (
             <Link to="/login" className="btn btn-primary btn-full">{t.auth.ingresar}</Link>
           )}

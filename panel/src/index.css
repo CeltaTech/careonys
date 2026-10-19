@@ -2834,3 +2834,51 @@ button.panel-kpi-card[aria-pressed='true'] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* ---------- Mensaje emergente ----------
+   Algo salió bien y no queda nada por hacer: abajo y al centro, en una línea, y se va solo
+   (`src/lib/mensajeEmergente.js`). Va con el tono oscuro de la barra del Panel para que se
+   distinga de las tarjetas sin pedir un color nuevo. La zona no ataja clics: lo que queda debajo
+   se sigue pudiendo tocar. */
+.mensaje-emergente-zona {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 1.5rem;
+  display: flex;
+  justify-content: center;
+  padding: 0 1rem;
+  pointer-events: none;
+  z-index: 110;
+}
+
+.mensaje-emergente {
+  max-width: min(36rem, 100%);
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radio-control);
+  background: var(--barra-fondo);
+  color: var(--barra-texto-activo);
+  box-shadow: var(--sombra-card);
+  font: 500 0.875rem/1.4 var(--font-body);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: mensaje-emergente-entrar 180ms ease-out;
+}
+
+@keyframes mensaje-emergente-entrar {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mensaje-emergente {
+    animation: none;
+  }
+}

@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import { useLocale } from '../i18n/LocaleContext';
 import { MINIMO_DE_CARACTERES, claveAceptable } from '../lib/reglaDeClave';
+import { avisar } from '../lib/mensajeEmergente';
 
 // Donde alguien que ya entró cambia su propia clave.
 //
@@ -23,7 +24,6 @@ export default function MiClave() {
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
   const [errorCampo, setErrorCampo] = useState(null);
-  const [cambiada, setCambiada] = useState(false);
 
   const advertenciaDe = (campo) => (errorCampo?.campo === campo ? errorCampo.texto : undefined);
   // La advertencia se va apenas se corrige el campo, sin esperar a que se vuelva a apretar el botón.
@@ -33,7 +33,6 @@ export default function MiClave() {
     evento.preventDefault();
     setError('');
     setErrorCampo(null);
-    setCambiada(false);
 
     if (!claveAceptable(password)) {
       setErrorCampo({
@@ -64,7 +63,7 @@ export default function MiClave() {
       setActual('');
       setPassword('');
       setConfirmacion('');
-      setCambiada(true);
+      avisar(t.auth.mi_clave_exito);
     } catch (err) {
       // El texto crudo queda en la consola y a la pantalla va la frase del catálogo.
       console.error('MiClave:', err?.message);
@@ -79,7 +78,6 @@ export default function MiClave() {
       <h1>{t.auth.mi_clave_titulo}</h1>
 
       {error && <div className="alert alert-error" role="alert">{error}</div>}
-      {cambiada && <div className="alert alert-info" role="status">{t.auth.mi_clave_exito}</div>}
 
       <form className="pwa-card" onSubmit={alEnviar}>
         <div className="form-field">

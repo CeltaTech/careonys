@@ -29,6 +29,7 @@ import BuscarAsistentes from './pages/BuscarAsistentes';
 import PerfilPublicoAsistente from './pages/PerfilPublicoAsistente';
 import Mensajes from './pages/Mensajes';
 import Conversacion from './pages/Conversacion';
+import { MensajeEmergente } from './lib/mensajeEmergente';
 
 function RutaPrivada({ children }) {
   const { session, estado } = useAuth();
@@ -244,6 +245,7 @@ export default function App() {
           <PersonasAutorizadasProvider>
             <BrowserRouter>
               <Rutas />
+              <MensajeEmergente />
             </BrowserRouter>
           </PersonasAutorizadasProvider>
         </PerfilProvider>

@@ -19,6 +19,7 @@ import MisCalificaciones from './pages/MisCalificaciones';
 import Contenidos from './pages/Contenidos';
 import Mensajes from './pages/Mensajes';
 import Conversacion from './pages/Conversacion';
+import { MensajeEmergente } from './lib/mensajeEmergente';
 
 function RutaPrivada({ children }) {
   const { session, estado } = useAuth();
@@ -121,6 +122,7 @@ export default function App() {
         <PerfilProvider>
           <BrowserRouter>
             <Rutas />
+            <MensajeEmergente />
           </BrowserRouter>
         </PerfilProvider>
       </AuthProvider>

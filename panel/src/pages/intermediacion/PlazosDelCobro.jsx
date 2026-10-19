@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button';
 import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { mensajeDeError } from '../../lib/errores';
+import { avisar } from '../../lib/mensajeEmergente';
 import '../../styles/molde-paginas.css';
 
 /* Los plazos con los que cobra la Prestadora.
@@ -23,7 +24,6 @@ export function PlazosDelCobro({ soloLectura }) {
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
-  const [guardados, setGuardados] = useState(false);
 
   const recargar = useCallback(async () => {
     setEstado('cargando');
@@ -43,7 +43,6 @@ export function PlazosDelCobro({ soloLectura }) {
   }, [recargar]);
 
   function cambiar(campo, valor) {
-    setGuardados(false);
     setPlazos((anteriores) => ({ ...anteriores, [campo]: valor }));
   }
 
@@ -56,7 +55,7 @@ export function PlazosDelCobro({ soloLectura }) {
         body: JSON.stringify(plazos),
       });
       setPlazos(guardadosEnLaBase);
-      setGuardados(true);
+      avisar(t.intermediacion.plazos_guardados);
     } catch (err) {
       setError(mensajeDeError(err, t));
     }
@@ -83,7 +82,6 @@ export function PlazosDelCobro({ soloLectura }) {
       {estado !== 'cargando' && estado !== 'error' && (
         <>
           {error && <Alert variant="error">{error}</Alert>}
-          {guardados && <Alert variant="success">{t.intermediacion.plazos_guardados}</Alert>}
 
           <div className="molde-formgrid">
             <FormField

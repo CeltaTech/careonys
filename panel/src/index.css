@@ -2091,36 +2091,6 @@ button.panel-kpi-card[aria-pressed='true'] {
   font-size: 0.85rem;
 }
 
-/* ---------- El pase de guardia (pendiente #113) ---------- */
-
-/* El código que la Prestadora acaba de soltar, y que quien atiende le dicta al Asistente. Se
-   muestra una sola vez y no se puede recuperar, así que se lo separa del resto de la tarjeta
-   en lugar de dejarlo como un renglón más. */
-.panel-codigo-soltado {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin-top: 0.75rem;
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  background: var(--tono-info-fondo);
-  color: var(--tono-info-texto);
-}
-
-/* Seis dígitos que se leen en voz alta, así que van grandes y con las letras separadas: un
-   número que se dicta se dicta de a un dígito. */
-.panel-codigo-soltado-numero {
-  font-family: var(--font-display);
-  font-size: 2rem;
-  letter-spacing: 0.35rem;
-  font-weight: 700;
-}
-
-.panel-codigo-soltado-aviso {
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
 .panel-filtros-tarjeta {
   display: flex;
   flex-wrap: wrap;

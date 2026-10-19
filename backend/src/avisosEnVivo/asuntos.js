@@ -14,8 +14,8 @@
    Organización. */
 
 export const ASUNTOS = {
-  /** Cambió la lista de pedidos de código esperando que la Prestadora los resuelva. */
-  PEDIDOS_DE_CODIGO: 'pedidos_de_codigo',
+  /** Cambió la lista de pedidos de autorización esperando a quien coordina. */
+  PEDIDOS_DE_AUTORIZACION: 'pedidos_de_autorizacion',
 
   /** Cambió la lista de números cargados que esperan que alguien los habilite. */
   TELEFONOS_ESPERANDO_HABILITACION: 'telefonos_esperando_habilitacion',

@@ -6,12 +6,12 @@ import { llamarApiComprobaciones } from '../lib/apiComprobaciones';
 import { escucharEnVivo, ASUNTOS } from '../lib/avisosEnVivo';
 import { mensajeDeError } from '../lib/errores';
 
-/* Los pedidos de código que están esperando, mirados desde cualquier pantalla del Panel.
+/* Los pedidos de autorización que están esperando, mirados desde cualquier pantalla del Panel.
    ==========================================================================
 
    QUÉ RESUELVE. El diseño del pase de guardia (pendiente #113) pide que, cuando el Asistente
-   está parado en la puerta y no tiene a quién pedirle el código, eso **aparezca en el momento**
-   en la pantalla de la Prestadora. Una lista que sólo se actualiza al entrar a su pantalla no
+   está parado en la puerta y no puede leer el código QR, su pedido de autorización **aparezca en
+   el momento** en el Panel. Una lista que sólo se actualiza al entrar a su pantalla no
    alcanza: quien está de turno pasa el día en Guardias o en Estado actual, y el pedido llegaría
    cuando a alguien se le ocurriera ir a mirar.
 
@@ -40,7 +40,7 @@ import { mensajeDeError } from '../lib/errores';
    la pantalla; el menú no muestra ninguno, porque un cartel de error en el menú no lleva a
    ninguna parte. */
 
-const PedidosDeCodigoContext = createContext(null);
+const PedidosDeAutorizacionContext = createContext(null);
 
 /* Cada cuánto se vuelve a preguntar cuando el canal no avisó nada. Es la red de abajo, no el
    camino normal: lo que se está cubriendo es que el canal se haya caído sin avisar, y eso no pasa
@@ -49,7 +49,7 @@ const PedidosDeCodigoContext = createContext(null);
    enterarse quien está mirando el día que el canal falle. */
 const CADA_CUANTO_MS = 2 * 60 * 1000;
 
-export function PedidosDeCodigoProvider({ children }) {
+export function PedidosDeAutorizacionProvider({ children }) {
   const { session } = useAuth();
   const { t } = useLocale();
   const prestadoraId = usePrestadoraActual();
@@ -96,7 +96,7 @@ export function PedidosDeCodigoProvider({ children }) {
       if (document.visibilityState === 'visible') recargar();
     };
     document.addEventListener('visibilitychange', alVolverAMirar);
-    const dejarDeEscuchar = escucharEnVivo(ASUNTOS.PEDIDOS_DE_CODIGO, recargar);
+    const dejarDeEscuchar = escucharEnVivo(ASUNTOS.PEDIDOS_DE_AUTORIZACION, recargar);
     return () => {
       clearInterval(reloj);
       document.removeEventListener('visibilitychange', alVolverAMirar);
@@ -105,14 +105,14 @@ export function PedidosDeCodigoProvider({ children }) {
   }, [recargar, hayQuePreguntar]);
 
   return (
-    <PedidosDeCodigoContext.Provider value={{ pedidos, estado, error, recargar, hayQuePreguntar }}>
+    <PedidosDeAutorizacionContext.Provider value={{ pedidos, estado, error, recargar, hayQuePreguntar }}>
       {children}
-    </PedidosDeCodigoContext.Provider>
+    </PedidosDeAutorizacionContext.Provider>
   );
 }
 
-export function usePedidosDeCodigo() {
-  const ctx = useContext(PedidosDeCodigoContext);
-  if (!ctx) throw new Error('usePedidosDeCodigo debe usarse dentro de PedidosDeCodigoProvider');
+export function usePedidosDeAutorizacion() {
+  const ctx = useContext(PedidosDeAutorizacionContext);
+  if (!ctx) throw new Error('usePedidosDeAutorizacion debe usarse dentro de PedidosDeAutorizacionProvider');
   return ctx;
 }

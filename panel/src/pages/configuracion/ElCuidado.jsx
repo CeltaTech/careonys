@@ -57,7 +57,6 @@ function TabServicios() {
   // arriba y contestan la misma pregunta —cuándo cuenta que el Asistente llegó al domicilio—,
   // así que se guardan con el mismo botón.
   const [segundosCodigo, setSegundosCodigo] = useState('');
-  const [minutosCodigoPrestadora, setMinutosCodigoPrestadora] = useState('');
   const [guardandoAusencia, setGuardandoAusencia] = useState(false);
   const [ausenciaGuardada, setAusenciaGuardada] = useState(false);
 
@@ -76,7 +75,6 @@ function TabServicios() {
       setMinutosTolerancia(String(configuracion.minutos_tolerancia_checkin));
       setMetrosTolerancia(String(configuracion.metros_tolerancia_checkin));
       setSegundosCodigo(String(configuracion.segundos_codigo_en_pantalla));
-      setMinutosCodigoPrestadora(String(configuracion.minutos_codigo_de_la_prestadora));
       setEstado('listo');
     } catch (err) {
       setError(mensajeDeError(err, t));
@@ -117,7 +115,6 @@ function TabServicios() {
           minutos_tolerancia_checkin: Number(minutosTolerancia),
           metros_tolerancia_checkin: Number(metrosTolerancia),
           segundos_codigo_en_pantalla: Number(segundosCodigo),
-          minutos_codigo_de_la_prestadora: Number(minutosCodigoPrestadora),
         }),
       });
       setAusenciaGuardada(true);
@@ -202,18 +199,11 @@ function TabServicios() {
             value={segundosCodigo}
             onChange={(e) => { setSegundosCodigo(e.target.value); setAusenciaGuardada(false); }}
           />
-          <FormField
-            label={t.configuracion.servicios_pase_minutos}
-            name="minutos_codigo_de_la_prestadora"
-            type="number"
-            value={minutosCodigoPrestadora}
-            onChange={(e) => { setMinutosCodigoPrestadora(e.target.value); setAusenciaGuardada(false); }}
-          />
         </div>
         <div className="molde-acciones">
           <Button
             onClick={guardarAusencia}
-            disabled={guardandoAusencia || !minutosTolerancia || !metrosTolerancia || !segundosCodigo || !minutosCodigoPrestadora}
+            disabled={guardandoAusencia || !minutosTolerancia || !metrosTolerancia || !segundosCodigo}
           >
             {guardandoAusencia ? t.comun.guardando : t.comun.guardar}
           </Button>

@@ -94,14 +94,13 @@ export const api = {
   terminarDescanso: (id, datos) => pedido(`/guardias/${id}/descanso/terminar`, { method: 'POST', body: JSON.stringify(conElActo(datos)) }),
   // El pase de guardia (pendiente #113). Tres pedidos y ninguno más:
   //   - el código que este Asistente muestra cuando es él el que se va y llega el relevo;
-  //   - el aviso de que no hay nadie que pueda mostrarle el código, que aparece en la pantalla
-  //     de la Prestadora;
-  //   - en qué quedó ese aviso, que la pantalla pregunta sola mientras espera.
+  //   - el pedido de autorización, que aparece en el Panel con desde dónde y cuándo se pidió;
+  //   - en qué quedó ese pedido, que la pantalla pregunta sola mientras espera.
   // El código que se tipea no viaja por acá: va adentro del mismo checkin o checkout, junto con
   // la ubicación, porque comprobar la presencia y marcar la llegada son un solo acto.
   codigoDePresencia: () => pedido('/codigo-de-presencia'),
-  pedirCodigoALaPrestadora: (id, { momento, texto }) =>
-    pedido(`/guardias/${id}/comprobacion/pedido`, { method: 'POST', body: JSON.stringify({ momento, texto }) }),
+  pedirAutorizacion: (id, { momento, lat, lng }) =>
+    pedido(`/guardias/${id}/comprobacion/pedido`, { method: 'POST', body: JSON.stringify({ momento, lat, lng }) }),
   estadoDeComprobacion: (id, momento) => pedido(`/guardias/${id}/comprobacion/${momento}`),
   estructurarReporte: (id, textoLibre) =>
     pedido(`/guardias/${id}/reporte/estructurar`, { method: 'POST', body: JSON.stringify({ textoLibre }) }),

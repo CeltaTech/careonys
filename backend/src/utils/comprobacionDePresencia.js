@@ -3,12 +3,7 @@ import { ErrorConMotivo } from './errorConMotivo.js';
 import {
   codigoCoincide,
   codigoNuevo,
-  codigoNuevoParaGuardar,
-  estaVencido,
   verificadorDelCodigo,
-  seAgotaronLosIntentos,
-  sumarIntento,
-  vencimientoEnMinutos,
   vencimientoEnSegundos,
 } from './codigoDeUnSoloUso.js';
 import { MOTIVOS_SIN_COMPROBAR } from './motivosSinComprobar.js';
@@ -20,16 +15,18 @@ import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
 //
 // HAY DOS CAMINOS Y UN PISO
 //
-//   Plan A — el código lo muestra una persona en la pantalla de su teléfono: el Cliente, o el
+//   Plan A — el código QR lo muestra una persona en la pantalla de su teléfono: el Cliente, o el
 //   Asistente que se va cuando hay relevo. Se renueva solo cada pocos segundos, así que una foto
 //   de esa pantalla no sirve un minuto después. Cada código vale dos vueltas, para que quien lo
 //   lee justo en el cambio no lo mande vencido. Reemplaza al cartel impreso, que era un secreto
 //   permanente a la vista de cualquiera que pasara por la puerta.
 //
-//   Plan B — cuando no hay nadie que pueda mostrarlo, el Asistente avisa con sus palabras, eso
-//   aparece en la pantalla de la Prestadora, y quien está de turno —después de resolverlo como
-//   esa Prestadora decida— suelta un código de un solo uso que vale para esa guardia, ese momento
-//   y unos pocos minutos.
+//   Plan B — cuando no lo puede leer, el Asistente pide autorización. El pedido aparece en el
+//   Panel con el lugar y la hora desde donde lo hizo, y quien coordina —después de las
+//   verificaciones que acostumbre— aprieta «Autorizar ingreso». Eso vale lo mismo que leer el
+//   código QR: la llegada queda comprobada, con quién la autorizó y a qué hora, y la salida del
+//   Asistente que se va queda autorizada también. El teléfono del que espera se entera solo y
+//   marca la llegada sin que tenga que escribir nada.
 //
 //   El piso — si en la Prestadora no atiende nadie, se entra igual eligiendo un motivo, y la
 //   llegada queda SIN COMPROBAR en la lista del Coordinador. La guardia nunca se traba.
@@ -44,15 +41,12 @@ import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
 // caso en que la base no llega a aplicarlos, que es cuando esa Prestadora no tiene fila de
 // configuración (mismo criterio que `toleranciaCheckin.js`).
 export const SEGUNDOS_EN_PANTALLA_POR_OMISION = 30;
-export const MINUTOS_CODIGO_DE_LA_PRESTADORA_POR_OMISION = 10;
 
 // Los mismos topes que las restricciones `..._razonable` de la migración. Se repiten acá para que
 // la pantalla de Configuración pueda explicar por qué no acepta un valor, en vez de dejar que lo
 // rechace la base con el texto crudo de una restricción.
 export const SEGUNDOS_EN_PANTALLA_MINIMO = 10;
 export const SEGUNDOS_EN_PANTALLA_MAXIMO = 300;
-export const MINUTOS_CODIGO_DE_LA_PRESTADORA_MINIMO = 1;
-export const MINUTOS_CODIGO_DE_LA_PRESTADORA_MAXIMO = 120;
 
 // La lista corta que el Asistente elige cuando entra sin comprobar. Se re-exporta desde acá para
 // que el resto del backend la siga pidiendo en un solo lugar, pero la lista en sí vive en
@@ -60,22 +54,19 @@ export const MINUTOS_CODIGO_DE_LA_PRESTADORA_MAXIMO = 120;
 // motivos y el backend los valida, y las dos listas tienen que ser la misma.
 export { MOTIVOS_SIN_COMPROBAR };
 
-const LARGO_MAXIMO_DEL_PEDIDO = 500;
+const LARGO_MAXIMO_DEL_DETALLE = 500;
 const LARGO_MAXIMO_DE_LA_NOTA = 1000;
 
 export async function configuracionDeComprobacion(prestadoraId) {
   const { data } = await supabase
     .from('configuracion_ausencia_automatica')
-    .select('segundos_codigo_en_pantalla, minutos_codigo_de_la_prestadora')
+    .select('segundos_codigo_en_pantalla')
     .eq('prestadora_id', prestadoraId)
     .maybeSingle();
 
   const segundos = data?.segundos_codigo_en_pantalla;
-  const minutos = data?.minutos_codigo_de_la_prestadora;
   return {
     segundosEnPantalla: Number.isFinite(segundos) && segundos > 0 ? segundos : SEGUNDOS_EN_PANTALLA_POR_OMISION,
-    minutosCodigoDeLaPrestadora:
-      Number.isFinite(minutos) && minutos > 0 ? minutos : MINUTOS_CODIGO_DE_LA_PRESTADORA_POR_OMISION,
   };
 }
 
@@ -124,16 +115,7 @@ export async function codigoParaMostrar({ prestadoraId, sujetoTipo, sujetoId }) 
   return { codigo, segundos: segundosEnPantalla, expiraEn };
 }
 
-/**
- * Quiénes podrían estar mostrando un código válido para esta guardia. Se resuelve del lado del
- * backend y nunca con un dato que venga en el pedido: si el teléfono pudiera decir a quién
- * comparar, podría decir cualquiera.
- *
- * Son dos: las personas autorizadas de los Pacientes de esta guardia, y el Asistente que todavía
- * está adentro —el que tiene una guardia abierta sobre alguno de esos mismos Pacientes—, que es
- * la definición operativa de «hay relevo».
- */
-export async function sujetosQuePuedenMostrar(guardia) {
+async function pacientesDeLaGuardia(guardia) {
   const { data: filas } = await supabase
     .from('guardia_pacientes')
     .select('paciente_id')
@@ -142,6 +124,45 @@ export async function sujetosQuePuedenMostrar(guardia) {
 
   const pacienteIds = (filas ?? []).map((f) => f.paciente_id);
   if (pacienteIds.length === 0 && guardia.paciente_id) pacienteIds.push(guardia.paciente_id);
+  return pacienteIds;
+}
+
+/**
+ * Las guardias que todavía están abiertas sobre los mismos Pacientes que ésta: la del Asistente
+ * que se va cuando hay relevo. Se las busca por estado, no por horario: quien todavía no cerró es
+ * quien todavía está.
+ */
+async function guardiasSalientes(guardia, pacienteIds) {
+  if (pacienteIds.length === 0) return [];
+
+  const { data: otrasGuardias } = await supabase
+    .from('guardia_pacientes')
+    .select('guardia_id, guardias!inner(id, asistente_id, estado, checkout_at)')
+    .in('paciente_id', pacienteIds)
+    .eq('prestadora_id', guardia.prestadora_id)
+    .eq('guardias.estado', 'activa')
+    .is('guardias.checkout_at', null);
+
+  const salientes = [];
+  for (const fila of otrasGuardias ?? []) {
+    const otra = fila.guardias;
+    if (!otra || otra.id === guardia.id || !otra.asistente_id) continue;
+    if (!salientes.some((s) => s.id === otra.id)) salientes.push(otra);
+  }
+  return salientes;
+}
+
+/**
+ * Quiénes podrían estar mostrando un código QR válido para esta guardia. Se resuelve del lado del
+ * backend y nunca con un dato que venga en el pedido: si el teléfono pudiera decir a quién
+ * comparar, podría decir cualquiera.
+ *
+ * Son dos: las personas autorizadas de los Pacientes de esta guardia, y el Asistente que todavía
+ * está adentro —el que tiene una guardia abierta sobre alguno de esos mismos Pacientes—, que es
+ * la definición operativa de «hay relevo».
+ */
+export async function sujetosQuePuedenMostrar(guardia) {
+  const pacienteIds = await pacientesDeLaGuardia(guardia);
   if (pacienteIds.length === 0) return [];
 
   const sujetos = [];
@@ -158,19 +179,7 @@ export async function sujetosQuePuedenMostrar(guardia) {
     }
   }
 
-  // El Asistente saliente. Se lo busca por las guardias abiertas sobre los mismos Pacientes, no
-  // por horario: quien todavía no cerró es quien todavía está.
-  const { data: otrasGuardias } = await supabase
-    .from('guardia_pacientes')
-    .select('guardia_id, guardias!inner(id, asistente_id, estado, checkout_at)')
-    .in('paciente_id', pacienteIds)
-    .eq('prestadora_id', guardia.prestadora_id)
-    .eq('guardias.estado', 'activa')
-    .is('guardias.checkout_at', null);
-
-  for (const fila of otrasGuardias ?? []) {
-    const otra = fila.guardias;
-    if (!otra || otra.id === guardia.id || !otra.asistente_id) continue;
+  for (const otra of await guardiasSalientes(guardia, pacienteIds)) {
     if (!sujetos.some((s) => s.tipo === 'asistente' && s.id === otra.asistente_id)) {
       sujetos.push({ tipo: 'asistente', id: otra.asistente_id });
     }
@@ -220,54 +229,28 @@ async function guardarComprobacion(fila) {
   if (error) throw new Error(error.message);
 
   // La pantalla de la Prestadora se entera acá y no cuando le toque preguntar. Sale en toda
-  // escritura y no sólo en las que entran o salen de «esperando código»: por acá pasan dos
+  // escritura y no sólo en las que entran o salen de «esperando autorización»: por acá pasan dos
   // escrituras por guardia, el mensaje no lleva ningún dato y lo único que provoca del otro lado
   // es que la lista se vuelva a pedir. Averiguar antes el estado anterior costaría una consulta
   // por escritura —más de lo que ahorra— y dejaría la puerta abierta a olvidarse de un camino.
-  empujar(fila.prestadora_id, ASUNTOS.PEDIDOS_DE_CODIGO);
+  empujar(fila.prestadora_id, ASUNTOS.PEDIDOS_DE_AUTORIZACION);
 
   return data;
 }
 
 /**
- * ¿El código que tipeó o escaneó el Asistente es de alguien que está en esa casa, o lo soltó la
- * Prestadora para esta guardia?
+ * ¿El código QR que escaneó el Asistente, o los números que tipeó, son de alguien que está en esa
+ * casa?
  *
  * Devuelve `{ medio, sujetoTipo, sujetoId }`. Si no coincide con ninguno, lanza el motivo, y la
- * pantalla ofrece volver a intentar o pedirle un código a la Prestadora. Que un código
- * equivocado no marque la llegada no traba nada: el camino de «no hay quién me lo muestre» y el
- * de «entro igual con un motivo» están siempre a un botón de distancia.
+ * pantalla ofrece volver a intentar o pedir autorización. Que un código equivocado no marque la
+ * llegada no traba nada: el camino de «pido autorización» y el de «entro igual con un motivo»
+ * están siempre a un botón de distancia.
  */
-async function resolverCodigo({ guardia, momento, codigo }) {
+async function resolverCodigo({ guardia, codigo }) {
   const texto = String(codigo ?? '').trim();
   if (!texto) throw new ErrorConMotivo('faltan_datos', 'Falta el código');
 
-  // Primero el de la Prestadora, si esta comprobación estaba esperando uno.
-  const fila = await comprobacionDe({ prestadoraId: guardia.prestadora_id, guardiaId: guardia.id, momento });
-  if (fila?.codigo_verificador) {
-    // El vencimiento va primero, y es lo que deja andar el caso legítimo: un código vencido no
-    // gasta intento, así que quien pide otro porque se le venció no pierde nada (pendiente #177).
-    if (estaVencido(fila.codigo_expira_en)) {
-      throw new ErrorConMotivo('codigo_vencido', 'El código de la Prestadora venció');
-    }
-
-    // Se cuenta el intento antes de comparar, y la suma la hace la base en un solo paso. Antes se
-    // leía y se escribía por separado, y dos intentos a la vez contaban como uno.
-    const intentos = await sumarIntento({
-      tabla: 'guardia_comprobaciones',
-      id: fila.id,
-      prestadoraId: guardia.prestadora_id,
-    });
-    if (seAgotaronLosIntentos(intentos)) {
-      throw new ErrorConMotivo('demasiados_intentos', 'Se agotaron los intentos con este código');
-    }
-
-    if (codigoCoincide(texto, fila.codigo_verificador)) {
-      return { medio: 'codigo_prestadora', sujetoTipo: null, sujetoId: null };
-    }
-  }
-
-  // Después, los de las personas que podrían estar en la casa.
   const sujetos = await sujetosQuePuedenMostrar(guardia);
   if (sujetos.length > 0) {
     const { data: vigentes } = await supabase
@@ -294,15 +277,25 @@ async function resolverCodigo({ guardia, momento, codigo }) {
 
 /**
  * Deja anotado cómo se comprobó esta llegada o esta salida. Se llama desde /checkin y /checkout,
- * después de haber validado el código y antes de contestar.
+ * antes de marcar y antes de contestar.
  *
- * `comprobacion` viene del teléfono y tiene una de estas dos formas:
- *   { codigo: '123456' }                                  — alguien lo mostró, o lo soltó la Prestadora
+ * Si quien coordina ya la autorizó, queda como está, venga lo que venga del teléfono: la
+ * autorización vale lo mismo que el código QR, y un teléfono que reintenta desde la cola sin
+ * conexión no la puede convertir en «sin comprobar».
+ *
+ * `comprobacion` viene del teléfono y tiene una de estas formas:
+ *   { codigo: '123456' }                                  — alguien mostró el código QR
+ *   { autorizada: true }                                  — quien coordina autorizó el ingreso
  *   { motivoSinComprobar: 'nadie_para_mostrar', detalle }  — se entra igual, y queda en la lista
  *
  * Devuelve `{ estado, medio }`.
  */
 export async function registrarComprobacion({ guardia, momento, lat, lng, comprobacion }) {
+  const yaHay = await comprobacionDe({ prestadoraId: guardia.prestadora_id, guardiaId: guardia.id, momento });
+  if (yaHay?.estado === 'comprobada') {
+    return { estado: 'comprobada', medio: yaHay.medio };
+  }
+
   const base = {
     prestadora_id: guardia.prestadora_id,
     guardia_id: guardia.id,
@@ -310,10 +303,11 @@ export async function registrarComprobacion({ guardia, momento, lat, lng, compro
     momento,
     lat: Number.isFinite(lat) ? lat : null,
     lng: Number.isFinite(lng) ? lng : null,
+    autorizada_por: null,
   };
 
   if (comprobacion?.codigo) {
-    const { medio, sujetoTipo, sujetoId } = await resolverCodigo({ guardia, momento, codigo: comprobacion.codigo });
+    const { medio, sujetoTipo, sujetoId } = await resolverCodigo({ guardia, codigo: comprobacion.codigo });
     await guardarComprobacion({
       ...base,
       estado: 'comprobada',
@@ -323,11 +317,13 @@ export async function registrarComprobacion({ guardia, momento, lat, lng, compro
       comprobada_en: ahora(),
       motivo_sin_comprobar: null,
       motivo_detalle: null,
-      // El código ya cumplió: se borra el identificador de verificación para que no quede vivo el de algo de un solo uso.
-      codigo_verificador: null,
-      codigo_expira_en: null,
     });
     return { estado: 'comprobada', medio };
+  }
+
+  // El teléfono dice que lo autorizaron y la base no lo tiene: no se le cree al teléfono.
+  if (comprobacion?.autorizada) {
+    throw new ErrorConMotivo('faltan_datos', 'Esta llegada todavía no fue autorizada');
   }
 
   const motivo = comprobacion?.motivoSinComprobar;
@@ -343,26 +339,24 @@ export async function registrarComprobacion({ guardia, momento, lat, lng, compro
     sujeto_id: null,
     comprobada_en: null,
     motivo_sin_comprobar: motivo,
-    motivo_detalle: String(comprobacion.detalle ?? '').trim().slice(0, LARGO_MAXIMO_DEL_PEDIDO) || null,
-    codigo_verificador: null,
-    codigo_expira_en: null,
+    motivo_detalle: String(comprobacion.detalle ?? '').trim().slice(0, LARGO_MAXIMO_DEL_DETALLE) || null,
   });
 
   return { estado: 'sin_comprobar', medio: null };
 }
 
 // ---------------------------------------------------------------------------------------
-// Plan B — el Asistente pide, la Prestadora suelta
+// Plan B — el Asistente pide autorización, quien coordina la da
 // ---------------------------------------------------------------------------------------
 
 /**
- * El Asistente avisa, con sus palabras, que no tiene a quién pedirle el código. Queda esperando
- * en la pantalla de la Prestadora. No marca ni la llegada ni la salida: sólo abre el pedido.
+ * El Asistente no puede leer el código QR y pide autorización. Queda anotado desde dónde y a qué
+ * hora la pidió, y el pedido aparece en el Panel. No marca ni la llegada ni la salida.
  */
-export async function pedirCodigoALaPrestadora({ guardia, momento, texto }) {
+export async function pedirAutorizacion({ guardia, momento, lat, lng }) {
   const yaHay = await comprobacionDe({ prestadoraId: guardia.prestadora_id, guardiaId: guardia.id, momento });
   if (yaHay?.estado === 'comprobada') {
-    throw new ErrorConMotivo('ya_comprobada', 'Esta llegada ya quedó comprobada');
+    return { id: yaHay.id, estado: yaHay.estado, pedidoEn: yaHay.pedido_en };
   }
 
   const fila = await guardarComprobacion({
@@ -370,39 +364,33 @@ export async function pedirCodigoALaPrestadora({ guardia, momento, texto }) {
     guardia_id: guardia.id,
     asistente_id: guardia.asistente_id,
     momento,
-    estado: 'pendiente_de_codigo',
+    estado: 'pendiente_de_autorizacion',
     medio: null,
     sujeto_tipo: null,
     sujeto_id: null,
     comprobada_en: null,
+    autorizada_por: null,
     motivo_sin_comprobar: null,
     motivo_detalle: null,
-    pedido_texto: String(texto ?? '').trim().slice(0, LARGO_MAXIMO_DEL_PEDIDO) || null,
+    lat: Number.isFinite(lat) ? lat : null,
+    lng: Number.isFinite(lng) ? lng : null,
     pedido_en: ahora(),
-    codigo_verificador: null,
-    codigo_expira_en: null,
-    // `codigo_intentos` NO se vuelve a cero acá, y no es un olvido: este pedido lo abre el mismo
-    // Asistente que después prueba los códigos, así que devolver la cuenta desde acá era darle el
-    // botón de reiniciar su propio tope (pendiente #177). Al dar de alta la fila la base pone 0
-    // por omisión; al pisar una que ya existe, la cuenta queda como estaba.
-    codigo_emitido_por: null,
-    codigo_emitido_en: null,
   });
 
   return { id: fila.id, estado: fila.estado, pedidoEn: fila.pedido_en };
 }
 
-/** Los pedidos que están esperando que alguien de la Prestadora los resuelva. */
-export async function pedidosEsperandoCodigo(prestadoraId) {
+/** Los pedidos de autorización que están esperando a quien coordina. */
+export async function pedidosEsperandoAutorizacion(prestadoraId) {
   const { data, error } = await supabase
     .from('guardia_comprobaciones')
     .select(`
-      id, momento, pedido_texto, pedido_en, codigo_expira_en, codigo_emitido_en,
+      id, momento, pedido_en,
       guardia_id, guardias!guardia_comprobaciones_guardia_tenant_fk(fecha, hora_inicio, hora_fin),
       asistente_id, asistentes!guardia_comprobaciones_asistente_tenant_fk(nombre)
     `)
     .eq('prestadora_id', prestadoraId)
-    .eq('estado', 'pendiente_de_codigo')
+    .eq('estado', 'pendiente_de_autorizacion')
     .order('pedido_en', { ascending: true });
   if (error) throw new Error(error.message);
 
@@ -410,61 +398,86 @@ export async function pedidosEsperandoCodigo(prestadoraId) {
     id: fila.id,
     guardiaId: fila.guardia_id,
     momento: fila.momento,
-    texto: fila.pedido_texto,
     pedidoEn: fila.pedido_en,
     asistente: fila.asistentes?.nombre ?? null,
     fecha: fila.guardias?.fecha ?? null,
     horaInicio: fila.guardias?.hora_inicio ?? null,
     horaFin: fila.guardias?.hora_fin ?? null,
-    // Si ya se soltó un código y todavía está vigente, la pantalla lo dice en vez de ofrecer
-    // soltar otro sin querer.
-    codigoVigente: Boolean(fila.codigo_expira_en) && !estaVencido(fila.codigo_expira_en),
-    codigoEmitidoEn: fila.codigo_emitido_en,
   }));
 }
 
 /**
- * Quien está de turno en la Prestadora resolvió el pedido como esa Prestadora decida —llamada,
- * videollamada, lo que sea— y suelta el código. Vale para esa guardia, ese momento y los minutos
- * que la Prestadora configuró. El código se devuelve una sola vez, acá; después queda el identificador de verificación.
+ * Quien coordina hizo las verificaciones que acostumbre y autoriza. Vale lo mismo que leer el
+ * código QR: la comprobación queda hecha, con quién la autorizó y a qué hora. Si lo que se
+ * autoriza es una llegada, la salida del Asistente que se va queda autorizada en el mismo acto,
+ * así su teléfono cierra la guardia sin pedirle ningún código QR.
  */
-export async function emitirCodigoDeLaPrestadora({ comprobacionId, prestadoraId, emitidoPor }) {
+export async function autorizarIngreso({ comprobacionId, prestadoraId, autorizadaPor }) {
+  if (!autorizadaPor) throw new ErrorConMotivo('faltan_datos', 'Falta quién autoriza');
+
   const { data: fila } = await supabase
     .from('guardia_comprobaciones')
-    .select('id, estado')
+    .select('id, estado, momento, guardia_id')
     .eq('id', comprobacionId)
     .eq('prestadora_id', prestadoraId)
     .maybeSingle();
 
   if (!fila) throw new ErrorConMotivo('no_encontrado', 'No se encontró ese pedido');
-  if (fila.estado !== 'pendiente_de_codigo') {
-    throw new ErrorConMotivo('ya_resuelta', 'Ese pedido ya no está esperando un código');
+  if (fila.estado !== 'pendiente_de_autorizacion') {
+    throw new ErrorConMotivo('ya_resuelta', 'Ese pedido ya no está esperando autorización');
   }
 
-  const { minutosCodigoDeLaPrestadora } = await configuracionDeComprobacion(prestadoraId);
+  const cuando = ahora();
+  const autorizada = {
+    estado: 'comprobada',
+    medio: 'autorizacion_prestadora',
+    sujeto_tipo: null,
+    sujeto_id: null,
+    comprobada_en: cuando,
+    autorizada_por: autorizadaPor,
+    motivo_sin_comprobar: null,
+    motivo_detalle: null,
+  };
 
-  // El código nuevo no devuelve intentos: la cuenta es de esta llegada y no del código de turno
-  // (pendiente #177). El porqué está escrito una sola vez en `codigoDeUnSoloUso.js`.
-  const { codigo, campos } = codigoNuevoParaGuardar(vencimientoEnMinutos(minutosCodigoDeLaPrestadora));
-
-  const { error } = await supabase
+  const { data: cambiada, error } = await supabase
     .from('guardia_comprobaciones')
-    .update({
-      ...campos,
-      codigo_emitido_por: emitidoPor,
-      codigo_emitido_en: ahora(),
-      updated_at: ahora(),
-    })
+    .update({ ...autorizada, updated_at: cuando })
     .eq('prestadora_id', prestadoraId)
     .eq('id', comprobacionId)
-    .eq('estado', 'pendiente_de_codigo');
+    .eq('estado', 'pendiente_de_autorizacion')
+    .select('id');
   if (error) throw new Error(error.message);
+  if (!cambiada?.length) throw new ErrorConMotivo('ya_resuelta', 'Ese pedido ya no está esperando autorización');
+
+  if (fila.momento === 'checkin') {
+    const { data: guardia } = await supabase
+      .from('guardias')
+      .select('id, prestadora_id, asistente_id, paciente_id')
+      .eq('id', fila.guardia_id)
+      .eq('prestadora_id', prestadoraId)
+      .maybeSingle();
+
+    if (guardia) {
+      const salientes = await guardiasSalientes(guardia, await pacientesDeLaGuardia(guardia));
+      for (const saliente of salientes) {
+        const suya = await comprobacionDe({ prestadoraId, guardiaId: saliente.id, momento: 'checkout' });
+        if (suya?.estado === 'comprobada') continue;
+        await guardarComprobacion({
+          prestadora_id: prestadoraId,
+          guardia_id: saliente.id,
+          asistente_id: saliente.asistente_id,
+          momento: 'checkout',
+          ...autorizada,
+        });
+      }
+    }
+  }
 
   // Ese pedido dejó de estar esperando. Quien lo esté mirando desde otra pantalla lo ve
   // desaparecer solo, en vez de quedarse con un pedido que alguien ya resolvió.
-  empujar(prestadoraId, ASUNTOS.PEDIDOS_DE_CODIGO);
+  empujar(prestadoraId, ASUNTOS.PEDIDOS_DE_AUTORIZACION);
 
-  return { codigo, minutos: minutosCodigoDeLaPrestadora };
+  return { estado: 'comprobada', comprobadaEn: cuando };
 }
 
 // ---------------------------------------------------------------------------------------

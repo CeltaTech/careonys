@@ -8,7 +8,7 @@ import { PermisosProvider } from './context/PermisosContext';
 import { ModalidadesProvider } from './context/ModalidadesContext';
 import { ConfirmacionProvider } from './context/ConfirmacionContext';
 import { AdvertenciaLegalProvider } from './context/AdvertenciaLegalContext';
-import { PedidosDeCodigoProvider } from './context/PedidosDeCodigoContext';
+import { PedidosDeAutorizacionProvider } from './context/PedidosDeAutorizacionContext';
 import { TelefonosEsperandoProvider } from './context/TelefonosEsperandoContext';
 import { EmergenciasSinAtenderProvider } from './context/EmergenciasSinAtenderContext';
 import { PuestaEnMarchaProvider } from './context/PuestaEnMarchaContext';
@@ -86,7 +86,7 @@ function App() {
                 Va afuera del enrutador porque el menú lo consulta desde cualquier pantalla: un
                 Asistente parado en una puerta tiene que aparecer aunque nadie esté mirando la
                 lista. */}
-            <PedidosDeCodigoProvider>
+            <PedidosDeAutorizacionProvider>
             {/* Los números cargados que esperan que alguien los habilite. Va acá por el mismo
                 motivo: es una tarea pendiente de la Prestadora que se está mirando ahora, y el
                 contador del menú la consulta desde cualquier pantalla. */}
@@ -286,7 +286,7 @@ function App() {
             </UmbralesProvider>
             </EmergenciasSinAtenderProvider>
             </TelefonosEsperandoProvider>
-            </PedidosDeCodigoProvider>
+            </PedidosDeAutorizacionProvider>
           </ConfirmacionProvider>
           </ModalidadesProvider>
           </PermisosProvider>

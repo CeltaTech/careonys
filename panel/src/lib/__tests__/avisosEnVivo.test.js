@@ -35,8 +35,8 @@ describe('partir', () => {
 
 describe('asuntoDe', () => {
   it('saca el asunto del mensaje', () => {
-    expect(asuntoDe(`event: ${ASUNTOS.PEDIDOS_DE_CODIGO}\ndata: {}`)).toBe(
-      ASUNTOS.PEDIDOS_DE_CODIGO,
+    expect(asuntoDe(`event: ${ASUNTOS.PEDIDOS_DE_AUTORIZACION}\ndata: {}`)).toBe(
+      ASUNTOS.PEDIDOS_DE_AUTORIZACION,
     );
   });
 

@@ -526,8 +526,8 @@ export default function GuardiaActiva() {
       )}
 
       {/* El pase de guardia (pendiente #113): antes de marcar la llegada se lee el código que
-          muestra en su pantalla quien está en la casa. Si no hay nadie que pueda mostrarlo,
-          <PaseDeGuardia/> ofrece pedírselo a la Prestadora, y si tampoco así, entrar igual
+          muestra en su pantalla quien está en la casa. Si no se puede leer el código QR,
+          <PaseDeGuardia/> ofrece pedir autorización a quien coordina, y si tampoco así, entrar igual
           eligiendo un motivo — el pase nunca traba la guardia.
           Se queda dibujado mientras el pedido viaja: si el backend rechaza el código, la advertencia
           aparece adentro del mismo pase y se puede intentar de nuevo sin volver a empezar. */}

@@ -17,7 +17,7 @@ import { mensajeDeError } from '../lib/errores';
    apretó el botón es dato de salud, y leerlo deja constancia; eso pasa en la sección Emergencias y
    en ningún otro lado. Pedirlo acá lo dejaría anotado cada vez que alguien abre cualquier pantalla.
 
-   CÓMO SE ENTERA. Igual que los pedidos de código (`PedidosDeCodigoContext.jsx`): el canal en vivo
+   CÓMO SE ENTERA. Igual que los pedidos de autorización (`PedidosDeAutorizacionContext.jsx`): el canal en vivo
    avisa cuando entra una o se atiende una, y una vuelta espaciada cubre el día en que el canal se
    cae sin avisar. Las mismas reglas para cuándo no pregunta y para qué hacer si la consulta falla. */
 

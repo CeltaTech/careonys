@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
-import { usePedidosDeCodigo } from '../context/PedidosDeCodigoContext';
+import { usePedidosDeAutorizacion } from '../context/PedidosDeAutorizacionContext';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { Alert } from '../components/ui/Alert';
 import { Cabecera } from '../components/ui/Cabecera';
@@ -18,19 +18,16 @@ import './seguimientoDeGuardias.css';
 
    DOS LISTAS, Y UNA SOLA ES URGENTE.
 
-     Arriba, quién está esperando. El Asistente llegó al domicilio y no tiene a quién pedirle el
-     código: no hay nadie del Cliente, o nadie que pueda usar el teléfono. Escribió con sus
-     palabras qué pasa y está parado en la puerta. Quien está de turno lo resuelve como esa
-     Prestadora decida —llamando a la casa, por videollamada, como sea— y recién entonces suelta
-     el código. Esta lista se refresca sola: ver `context/PedidosDeCodigoContext.jsx`.
+     Arriba, quién está esperando. El Asistente llegó al domicilio y no pudo leer el código QR.
+     Pidió autorización sin escribir nada: quedó anotado desde dónde y a qué hora la pidió.
+     Quien coordina hace las verificaciones que acostumbre —llamando a la casa, por videollamada,
+     como sea— y aprieta «Autorizar ingreso». Eso vale lo mismo que leer el código QR: la llegada
+     queda comprobada con quién la autorizó y cuándo, y la salida del Asistente que se va queda
+     autorizada también. Esta lista se refresca sola: ver `context/PedidosDeAutorizacionContext.jsx`.
 
-     Abajo, qué quedó sin comprobar. La guardia nunca se traba: si en la Prestadora no atendió
-     nadie, el Asistente entró igual eligiendo un motivo de una lista corta. Eso ya pasó, no hay
-     nada que apurar, y queda acá hasta que alguien lo mire y lo cierre.
-
-   EL CÓDIGO SE MUESTRA UNA SOLA VEZ, Y ES A PROPÓSITO. Del lado de la base queda su
-   identificador de verificación, no él, así que ni esta pantalla ni ninguna otra lo puede volver a mostrar. Quien lo suelta se lo
-   dicta al Asistente en ese momento. Si se perdió, se suelta otro: el anterior deja de valer.
+     Abajo, qué quedó sin comprobar. La guardia nunca se traba: si la autorización no llegó, el
+     Asistente entró igual eligiendo un motivo de una lista corta. Eso ya pasó, no hay nada que
+     apurar, y queda acá hasta que alguien lo mire y lo cierre.
 
    CERRAR NO ES APROBAR NI RECHAZAR. Es decir que alguien la miró. Lo que se haya averiguado va
    en la nota, y la fila queda con quién la cerró y cuándo. No existe un botón de "rechazar"
@@ -96,14 +93,10 @@ function CerrarSinComprobar({ fila, onCerrado, onClose }) {
 
 export function PaseDeGuardia() {
   const { t, locale } = useLocale();
-  const { pedidos, estado: estadoPedidos, error: errorPedidos, recargar: recargarPedidos } = usePedidosDeCodigo();
+  const { pedidos, estado: estadoPedidos, error: errorPedidos, recargar: recargarPedidos } = usePedidosDeAutorizacion();
 
-  /* Los códigos que se soltaron desde esta pantalla, mientras siga abierta. No se guardan en
-     ningún lado y no vuelven del servidor: es la única ventana de tiempo en la que existen en
-     claro, y termina cuando quien atiende recarga la pantalla. */
-  const [codigosSoltados, setCodigosSoltados] = useState({});
-  const [soltandoId, setSoltandoId] = useState(null);
-  const [errorAlSoltar, setErrorAlSoltar] = useState(null);
+  const [autorizandoId, setAutorizandoId] = useState(null);
+  const [errorAlAutorizar, setErrorAlAutorizar] = useState(null);
 
   const [sinComprobar, setSinComprobar] = useState([]);
   const [estadoSinComprobar, setEstadoSinComprobar] = useState('cargando');
@@ -127,19 +120,18 @@ export function PaseDeGuardia() {
     recargarSinComprobar();
   }, [recargarSinComprobar]);
 
-  async function soltarCodigo(pedido) {
-    setSoltandoId(pedido.id);
-    setErrorAlSoltar(null);
+  async function autorizar(pedido) {
+    setAutorizandoId(pedido.id);
+    setErrorAlAutorizar(null);
     try {
-      const { codigo, minutos } = await llamarApiComprobaciones(`/${pedido.id}/codigo`, { method: 'POST' });
-      setCodigosSoltados((anteriores) => ({ ...anteriores, [pedido.id]: { codigo, minutos } }));
-      // Se vuelve a preguntar en el momento en vez de esperar el próximo refresco: así la fila
-      // queda marcada como que ya tiene código vigente para cualquier otro que esté mirando.
+      await llamarApiComprobaciones(`/${pedido.id}/autorizar`, { method: 'POST' });
+      // Se vuelve a preguntar en el momento: el pedido autorizado sale de la lista para
+      // cualquier otro que esté mirando.
       recargarPedidos();
     } catch (err) {
-      setErrorAlSoltar(mensajeDeError(err, t));
+      setErrorAlAutorizar(mensajeDeError(err, t));
     } finally {
-      setSoltandoId(null);
+      setAutorizandoId(null);
     }
   }
 
@@ -155,7 +147,7 @@ export function PaseDeGuardia() {
           donde está y el mensaje va al lado, porque borrarla escondería un pedido que sigue
           esperando. */}
       {estadoPedidos === 'listo' && errorPedidos && <Alert variant="error">{errorPedidos}</Alert>}
-      {errorAlSoltar && <Alert variant="error">{errorAlSoltar}</Alert>}
+      {errorAlAutorizar && <Alert variant="error">{errorAlAutorizar}</Alert>}
 
       <EstadoLista
         estado={estadoPedidos}
@@ -164,53 +156,25 @@ export function PaseDeGuardia() {
         recargar={recargarPedidos}
         mensajeVacio={t.pase_de_guardia.pedidos_vacio}
       >
-        {pedidos.map((pedido) => {
-          const soltado = codigosSoltados[pedido.id];
-          return (
-            <div key={pedido.id} className="panel-fila-alerta seguimiento-fila">
-              <div>
-                {/* Si es la llegada o la salida es un dato, no un estado: no hay nada mejor ni
-                    peor en ninguna de las dos, así que va con el tono que dice justamente eso. */}
-                <b>{pedido.asistente || '—'}</b>{' '}
-                <span className={claseBadgeTono(TONO.INFO)}>
-                  {t.pase_de_guardia[`momento_${pedido.momento}`] ?? pedido.momento}
-                </span>
-                <span className="panel-mini">{horario(pedido)}</span>
-                <span className="panel-mini">{t.pase_de_guardia.pedido_desde}: {aLaHora(pedido.pedidoEn, locale)}</span>
-                {pedido.texto ? (
-                  <p className="seguimiento-texto">{pedido.texto}</p>
-                ) : (
-                  <span className="panel-mini">{t.pase_de_guardia.pedido_sin_texto}</span>
-                )}
-                {soltado && (
-                  <div className="panel-codigo-soltado">
-                    <span className="panel-codigo-soltado-numero">{soltado.codigo}</span>
-                    <span>{t.pase_de_guardia.codigo_vale_minutos.replace('{minutos}', soltado.minutos)}</span>
-                    <span className="panel-codigo-soltado-aviso">{t.pase_de_guardia.codigo_una_sola_vez}</span>
-                  </div>
-                )}
-                {!soltado && pedido.codigoVigente && (
-                  <div className="panel-guardia-alerta">
-                    {t.pase_de_guardia.codigo_ya_soltado.replace('{hora}', aLaHora(pedido.codigoEmitidoEn, locale))}
-                  </div>
-                )}
-              </div>
-              <div className="seguimiento-acciones">
-                <Button
-                  variant={pedido.codigoVigente ? 'secondary' : 'primary'}
-                  onClick={() => soltarCodigo(pedido)}
-                  disabled={soltandoId === pedido.id}
-                >
-                  {soltandoId === pedido.id
-                    ? t.pase_de_guardia.soltando
-                    : pedido.codigoVigente
-                      ? t.pase_de_guardia.soltar_otro
-                      : t.pase_de_guardia.soltar}
-                </Button>
-              </div>
+        {pedidos.map((pedido) => (
+          <div key={pedido.id} className="panel-fila-alerta seguimiento-fila">
+            <div>
+              {/* Si es la llegada o la salida es un dato, no un estado: no hay nada mejor ni
+                  peor en ninguna de las dos, así que va con el tono que dice justamente eso. */}
+              <b>{pedido.asistente || '—'}</b>{' '}
+              <span className={claseBadgeTono(TONO.INFO)}>
+                {t.pase_de_guardia[`momento_${pedido.momento}`] ?? pedido.momento}
+              </span>
+              <span className="panel-mini">{horario(pedido)}</span>
+              <span className="panel-mini">{t.pase_de_guardia.pedido_desde}: {aLaHora(pedido.pedidoEn, locale)}</span>
             </div>
-          );
-        })}
+            <div className="seguimiento-acciones">
+              <Button onClick={() => autorizar(pedido)} disabled={autorizandoId !== null}>
+                {autorizandoId === pedido.id ? t.pase_de_guardia.autorizando : t.pase_de_guardia.autorizar}
+              </Button>
+            </div>
+          </div>
+        ))}
       </EstadoLista>
       </section>
 

@@ -27,7 +27,7 @@ import {
   MOTIVOS_SIN_COMPROBAR,
   codigoParaMostrar,
   comprobacionDe,
-  pedirCodigoALaPrestadora,
+  pedirAutorizacion,
   registrarComprobacion,
 } from '../utils/comprobacionDePresencia.js';
 import { responderError, ErrorConMotivo } from '../utils/errorConMotivo.js';
@@ -130,17 +130,17 @@ async function guardiaDelAsistente(db, guardiaId, usuarioAsistente) {
 // El pase de guardia (pendiente #113) — decisiones del Desarrollador que no se vuelven a
 // discutir:
 //   1. Nada de escanear carteles. Un cartel impreso pegado en la puerta es un secreto que no
-//      cambia nunca y que se fotografía de paso: el código lo muestra una PERSONA en la pantalla
-//      de su teléfono y se renueva solo cada pocos segundos, o lo suelta la Prestadora de un solo
-//      uso y con vencimiento de minutos. Toda la mecánica está en `utils/comprobacionDePresencia.js`.
-//   2. El código viaja siempre junto con el GPS, nunca en lugar de él: por eso esto se valida
+//      cambia nunca y que se fotografía de paso: el código QR lo muestra una PERSONA en la
+//      pantalla de su teléfono y se renueva solo cada pocos segundos. Si no lo puede leer, el
+//      Asistente pide autorización y quien coordina la da desde el Panel: vale lo mismo que el
+//      código QR. Toda la mecánica está en `utils/comprobacionDePresencia.js`.
+//   2. El código QR viaja siempre junto con el GPS, nunca en lugar de él: por eso esto se valida
 //      además de lat/lng, no en cambio de lat/lng.
-//   3. La guardia nunca se traba. Si nadie puede mostrar el código y en la Prestadora tampoco
-//      atiende nadie, el Asistente elige un motivo de una lista corta, marca igual y esa llegada
+//   3. La guardia nunca se traba. Si nadie puede mostrar el código QR y quien coordina tampoco
+//      contesta, el Asistente elige un motivo de una lista corta, marca igual y esa llegada
 //      queda como SIN COMPROBAR en la lista que ve el Coordinador. Lo único que sí se rechaza es
-//      un código equivocado —ahí la pantalla ofrece reintentar, pedirle uno a la Prestadora, o
-//      entrar con un motivo—, porque aceptar un código que no es sería no comprobar nada y decir
-//      que sí.
+//      un código equivocado —ahí la pantalla ofrece reintentar, pedir autorización, o entrar con
+//      un motivo—, porque aceptar un código que no es sería no comprobar nada y decir que sí.
 //   4. Un relevo son dos actos, no uno: el que se va ficha su salida y el que llega ficha su
 //      entrada. Cada guardia anota su propia comprobación por su cuenta, así que quedan dos
 //      filas, una contra la que termina y otra contra la que empieza.
@@ -164,6 +164,11 @@ function datosDeComprobacion(body) {
   if (comprobacion && typeof comprobacion === 'object') {
     if (typeof comprobacion.codigo === 'string' && comprobacion.codigo.trim()) {
       return { codigo: comprobacion.codigo.trim() };
+    }
+    // Quien coordina autorizó el ingreso. El teléfono sólo lo avisa: si de verdad está autorizado
+    // lo dice la base, no el pedido.
+    if (comprobacion.autorizada === true) {
+      return { autorizada: true };
     }
     if (typeof comprobacion.motivoSinComprobar === 'string') {
       const motivo = comprobacion.motivoSinComprobar.trim();
@@ -1846,10 +1851,10 @@ appAsistentesRouter.get('/codigo-de-presencia', requiereRolAsistente, async (req
   }
 });
 
-// «No hay nadie que me pueda mostrar el código.» Lo escribe el Asistente con sus palabras y
-// aparece en la pantalla de la Prestadora. No marca nada: sólo abre el pedido y queda esperando.
-appAsistentesRouter.post('/guardias/:id/comprobacion/pedido', requiereRolAsistente, topeDePedidos({ nombre: 'comprobacion_pedir_codigo' }), async (req, res) => {
-  const { momento, texto } = req.body || {};
+// «No puedo leer el código QR.» El Asistente pide autorización y el pedido aparece en el Panel,
+// con el lugar y la hora desde donde lo hizo. No marca nada: queda esperando a quien coordina.
+appAsistentesRouter.post('/guardias/:id/comprobacion/pedido', requiereRolAsistente, topeDePedidos({ nombre: 'comprobacion_pedir_autorizacion' }), async (req, res) => {
+  const { momento, lat, lng } = req.body || {};
   if (momento !== 'checkin' && momento !== 'checkout') {
     return res.status(400).json({ error: 'Momento inválido', motivo: 'faltan_datos' });
   }
@@ -1858,15 +1863,20 @@ appAsistentesRouter.post('/guardias/:id/comprobacion/pedido', requiereRolAsisten
   if (!guardia) return res.status(404).json({ error: 'Guardia no encontrada' });
 
   try {
-    const pedido = await pedirCodigoALaPrestadora({ guardia, momento, texto });
+    const pedido = await pedirAutorizacion({
+      guardia,
+      momento,
+      lat: typeof lat === 'number' ? lat : null,
+      lng: typeof lng === 'number' ? lng : null,
+    });
     res.json(pedido);
   } catch (e) {
     responderError(res, e);
   }
 });
 
-// En qué quedó ese pedido. La pantalla lo consulta mientras espera, para saber si ya hay un
-// código soltado y puede pedirle al Asistente que lo tipee.
+// En qué quedó ese pedido. La pantalla lo consulta mientras espera: cuando dice «comprobada», ya
+// lo autorizaron y el teléfono marca solo.
 appAsistentesRouter.get('/guardias/:id/comprobacion/:momento', requiereRolAsistente, async (req, res) => {
   const { momento } = req.params;
   if (momento !== 'checkin' && momento !== 'checkout') {
@@ -1881,14 +1891,7 @@ appAsistentesRouter.get('/guardias/:id/comprobacion/:momento', requiereRolAsiste
     guardiaId: guardia.id,
     momento,
   });
-  if (!fila) return res.json({ estado: null, codigoDisponible: false });
-
-  // Nunca se devuelve el identificador de verificación ni el código: sólo si ya hay uno esperando que lo tipeen.
-  res.json({
-    estado: fila.estado,
-    codigoDisponible: Boolean(fila.codigo_verificador) && new Date(fila.codigo_expira_en) > new Date(),
-    codigoExpiraEn: fila.codigo_verificador ? fila.codigo_expira_en : null,
-  });
+  res.json({ estado: fila?.estado ?? null });
 });
 
 // Ping de ubicación en vivo durante una guardia activa — el Cliente lo lee vía Supabase

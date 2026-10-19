@@ -3,10 +3,11 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { api } from '../lib/api';
 import { mensajeDeError } from '../lib/errores';
 import { MOTIVOS_SIN_COMPROBAR } from '../lib/motivosSinComprobar';
+import { obtenerUbicacion } from '../lib/ubicacionDelTelefono';
 
 const LECTOR_ID = 'lector-codigo-de-presencia';
 
-// Cada cuánto se le vuelve a preguntar al backend si en la Prestadora ya soltaron el código. No es
+// Cada cuánto se le vuelve a preguntar al backend si quien coordina ya autorizó. No es
 // una regla de negocio ni una decisión de ninguna Prestadora: es el pulso de una pantalla que
 // está esperando, y el Asistente está parado en la puerta mientras tanto. Mismo criterio que el
 // sondeo del cobro por QR en la aplicación de los Clientes.
@@ -25,24 +26,26 @@ const SONDEO_MS = 4000;
  *   Plan A — lo muestra quien está en la casa: el Cliente, o el Asistente que se va cuando hay
  *   relevo. Se lee con la cámara o se tipea; las dos cosas terminan en el mismo pedido.
  *
- *   Plan B — no hay nadie que pueda mostrarlo. El Asistente lo cuenta con sus palabras, eso
- *   aparece en la pantalla de la Prestadora, y quien está de turno suelta un código que vale para
- *   esta guardia, este momento y unos pocos minutos. Mientras espera, esta pantalla pregunta sola.
+ *   Plan B — no puede leer el código QR. El Asistente pide autorización y no escribe nada: queda
+ *   anotado desde dónde y a qué hora la pidió, y el pedido aparece en el Panel. Quien coordina hace
+ *   las verificaciones que acostumbre y autoriza. Mientras espera, esta pantalla pregunta sola, y
+ *   cuando la autorización llega, la llegada o el cierre se marca desde acá sin tocar nada más.
+ *   Si al abrir esta pantalla ya estaba autorizado —el cierre del Asistente que se va, que quedó
+ *   autorizado junto con la llegada del que entra—, se marca enseguida.
  *
- *   El piso — si en la Prestadora tampoco atiende nadie, se entra igual eligiendo un motivo. La
+ *   El piso — si la autorización tampoco llega, se entra igual eligiendo un motivo. La
  *   guardia NUNCA se traba: esto no es una puerta, y ninguna rama de acá adentro termina sin una
  *   salida hacia adelante.
  *
- * `onListo(comprobacion)` recibe { codigo } o { motivoSinComprobar, detalle } y devuelve
+ * `onListo(comprobacion)` recibe { codigo }, { autorizada: true } o { motivoSinComprobar, detalle } y devuelve
  * { ok: true } o { ok: false, mensaje }. Cuando el backend rechaza el código —equivocado, vencido,
  * o de otra casa— este componente se queda abierto con la advertencia: cerrarlo dejaría al Asistente
  * en la puerta sin nada que apretar.
  */
 export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancelar }) {
-  // codigo · pidiendo · esperando · sin_comprobar
+  // codigo · esperando · sin_comprobar
   const [paso, setPaso] = useState('codigo');
   const [codigo, setCodigo] = useState('');
-  const [texto, setTexto] = useState('');
   const [motivo, setMotivo] = useState('');
   const [detalle, setDetalle] = useState('');
   // Lo que salió mal en el último intento de comprobar. Es una advertencia y no un error: siempre queda
@@ -50,7 +53,6 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
   const [advertencia, setAdvertencia] = useState('');
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
-  const [codigoDisponible, setCodigoDisponible] = useState(false);
   // La cámara se prende desde un efecto y nunca desde un clic: el lector se engancha a un elemento
   // del documento por su identificador, y ese elemento sólo existe mientras se está pidiendo el
   // código. Este contador es lo que vuelve a disparar el efecto, ya con la pantalla dibujada.
@@ -58,6 +60,8 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
   const lectorRef = useRef(null);
   const leyendoRef = useRef(false);
   const vivoRef = useRef(true);
+  // La autorización se entrega una sola vez, aunque el sondeo la vea dos.
+  const autorizadaRef = useRef(false);
 
   useEffect(() => {
     vivoRef.current = true;
@@ -139,25 +143,56 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paso, intento]);
 
-  // ---- Plan B: el pedido a la Prestadora ---------------------------------------------------
+  // ---- Plan B: la autorización de quien coordina -------------------------------------------
 
-  async function pedirALaPrestadora() {
+  const entregarAutorizada = useCallback(() => {
+    if (autorizadaRef.current) return;
+    autorizadaRef.current = true;
+    entregar({ autorizada: true });
+  }, [entregar]);
+
+  async function pedirAutorizacion() {
     setEnviando(true);
     setError('');
     setAdvertencia('');
     await detenerCamara();
     try {
-      await api.pedirCodigoALaPrestadora(guardiaId, { momento, texto });
+      // Sin ubicación el pedido sale igual: quien coordina decide con lo que tiene, y la guardia
+      // no se traba por un GPS que no contesta.
+      let punto = { lat: null, lng: null };
+      try {
+        punto = await obtenerUbicacion();
+      } catch {
+        // se pide sin ubicación
+      }
+      await api.pedirAutorizacion(guardiaId, { momento, lat: punto.lat, lng: punto.lng });
       if (vivoRef.current) setPaso('esperando');
     } catch (e) {
-      if (vivoRef.current) setError(mensajeDeError(e, t, 'pedir el código a la Prestadora'));
+      if (vivoRef.current) setError(mensajeDeError(e, t, 'pedir autorización'));
     } finally {
       if (vivoRef.current) setEnviando(false);
     }
   }
 
-  // Mientras espera, la pantalla pregunta sola. El código nunca viaja hasta acá: lo único que se
-  // consulta es si ya hay uno esperando que lo tipeen.
+  // Al abrir, una sola pregunta: si ya estaba autorizado, no hay nada que leer.
+  useEffect(() => {
+    let cancelado = false;
+    api.estadoDeComprobacion(guardiaId, momento)
+      .then((estado) => {
+        if (cancelado) return;
+        if (estado?.estado === 'comprobada') entregarAutorizada();
+        else if (estado?.estado === 'pendiente_de_autorizacion') setPaso('esperando');
+      })
+      .catch(() => {
+        // Sin respuesta se sigue con el código QR, que es el camino de siempre.
+      });
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guardiaId, momento]);
+
+  // Mientras espera, la pantalla pregunta sola. Cuando dice «comprobada», ya lo autorizaron.
   useEffect(() => {
     if (paso !== 'esperando') return undefined;
     let cancelado = false;
@@ -165,7 +200,7 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
     async function mirar() {
       try {
         const estado = await api.estadoDeComprobacion(guardiaId, momento);
-        if (!cancelado) setCodigoDisponible(Boolean(estado.codigoDisponible));
+        if (!cancelado && estado?.estado === 'comprobada') entregarAutorizada();
       } catch {
         // Sin señal o con el backend caído, el próximo ciclo vuelve a preguntar. Y si nunca llega,
         // abajo está el botón de entrar igual.
@@ -178,7 +213,7 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
       cancelado = true;
       clearInterval(reloj);
     };
-  }, [paso, guardiaId, momento]);
+  }, [paso, guardiaId, momento, entregarAutorizada]);
 
   // ---- El piso -----------------------------------------------------------------------------
 
@@ -245,33 +280,10 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
           <button
             type="button"
             className="btn btn-secondary btn-full pwa-card-pie"
-            onClick={() => { setPaso('pidiendo'); setAdvertencia(''); setError(''); detenerCamara(); }}
+            onClick={pedirAutorizacion}
             disabled={enviando}
           >
-            {t.pase_de_guardia.nadie_para_mostrar}
-          </button>
-          {botonEntrarIgual}
-        </>
-      )}
-
-      {paso === 'pidiendo' && (
-        <>
-          <div className="form-field">
-            <label htmlFor="pase-texto">{t.pase_de_guardia.pedido_label}</label>
-            <textarea
-              id="pase-texto"
-              rows={3}
-              value={texto}
-              onChange={(e) => setTexto(e.target.value)}
-              placeholder={t.pase_de_guardia.pedido_ejemplo}
-              disabled={enviando}
-            />
-          </div>
-          <button type="button" className="btn btn-primary btn-full" onClick={pedirALaPrestadora} disabled={enviando}>
-            {enviando ? t.pase_de_guardia.avisando : t.pase_de_guardia.avisar_a_la_prestadora}
-          </button>
-          <button type="button" className="btn btn-secondary btn-full pwa-card-pie" onClick={volverAlCodigo} disabled={enviando}>
-            {t.pase_de_guardia.volver_al_codigo}
+            {enviando ? t.pase_de_guardia.pidiendo_autorizacion : t.pase_de_guardia.pedir_autorizacion}
           </button>
           {botonEntrarIgual}
         </>
@@ -279,16 +291,9 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
 
       {paso === 'esperando' && (
         <>
-          {codigoDisponible ? (
-            <>
-              <div className="alert alert-success" role="status">{t.pase_de_guardia.codigo_soltado}</div>
-              {campoDelCodigo}
-            </>
-          ) : (
-            <>
-              <div className="estado-cargando" role="status">{t.pase_de_guardia.esperando}</div>
-            </>
-          )}
+          <div className="estado-cargando" role="status">
+            {enviando ? t.pase_de_guardia.confirmando : t.pase_de_guardia.esperando}
+          </div>
           {botonEntrarIgual}
         </>
       )}

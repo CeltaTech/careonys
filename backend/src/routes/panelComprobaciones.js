@@ -4,8 +4,8 @@ import { exigirOrganizacionActiva } from '../middleware/alcancePrestadora.js';
 import { topeDePedidos } from '../middleware/topeDePedidos.js';
 import { responderError } from '../utils/errorConMotivo.js';
 import {
-  pedidosEsperandoCodigo,
-  emitirCodigoDeLaPrestadora,
+  pedidosEsperandoAutorizacion,
+  autorizarIngreso,
   llegadasSinComprobar,
   cerrarSinComprobar,
 } from '../utils/comprobacionDePresencia.js';
@@ -16,9 +16,9 @@ export const panelComprobacionesRouter = Router();
  *
  * DOS LISTAS Y NADA MÁS. Una es urgente y la otra no:
  *
- *   `/pedidos` — el Asistente está parado en la puerta y no tiene a quién pedirle el código.
- *   Espera. Quien está de turno lo resuelve como esa Prestadora decida —llamando al domicilio,
- *   por videollamada, como sea— y suelta un código que vale unos minutos.
+ *   `/pedidos` — el Asistente está parado en la puerta, no puede leer el código QR y pidió
+ *   autorización. Espera. Quien coordina hace las verificaciones que acostumbre y autoriza el
+ *   ingreso, que vale lo mismo que el código QR.
  *
  *   `/sin-comprobar` — la llegada ya ocurrió y el Asistente entró igual, porque la guardia nunca
  *   se traba. Queda anotada para que el Coordinador la mire después y la cierre.
@@ -28,7 +28,7 @@ export const panelComprobacionesRouter = Router();
  * identificador de otra Prestadora no se distingue de uno que no existe: las dos cosas contestan
  * `no_encontrado`.
  *
- * POR QUÉ ALCANZA `requiereRolPanel`. Soltar un código y cerrar una llegada sin comprobar son
+ * POR QUÉ ALCANZA `requiereRolPanel`. Autorizar un ingreso y cerrar una llegada sin comprobar son
  * trabajo operativo del turno, igual que marcar una ausencia (`panelGuardias.js`), y el
  * Coordinador es quien está mirando la pantalla cuando entra el pedido. Si alguna Prestadora
  * quisiera reservárselo a su administración, se agrega la acción al catálogo de permisos y se
@@ -36,31 +36,29 @@ export const panelComprobacionesRouter = Router();
  * dudas.
  */
 
-/** Los pedidos que están esperando que alguien de la Prestadora los resuelva. */
+/** Los pedidos de autorización que están esperando a quien coordina. */
 panelComprobacionesRouter.get('/pedidos', requiereRolPanel, exigirOrganizacionActiva, async (req, res) => {
   try {
-    res.json(await pedidosEsperandoCodigo(req.usuarioPanel.prestadoraId));
+    res.json(await pedidosEsperandoAutorizacion(req.usuarioPanel.prestadoraId));
   } catch (e) {
     responderError(res, e);
   }
 });
 
-/* Suelta el código para ese pedido. Es la única vez que el código viaja en claro: de acá en más
- * queda solamente su identificador de verificación, así que la pantalla lo tiene que mostrar en el momento y quien
- * atiende dictárselo al Asistente. Quién lo soltó y cuándo queda escrito en la misma fila.
+/* Autoriza el ingreso de ese pedido. La llegada queda comprobada, con quién la autorizó y a qué
+ * hora, y si hay un Asistente que se va, su salida queda autorizada en el mismo acto.
  *
- * LLEVA TOPE DE PEDIDOS POR MINUTO (pendiente #177). Acá el que suelta el código es alguien de la
- * Prestadora con sesión iniciada, así que el riesgo es menor que del otro lado del mostrador;
- * pero es la ruta que genera secretos, y una que genera secretos sin freno se puede usar para
- * llenar de códigos vivos la tabla, o para hacerle probar a la Prestadora sin darse cuenta. */
-panelComprobacionesRouter.post('/:id/codigo', requiereRolPanel, exigirOrganizacionActiva, topeDePedidos({ nombre: 'comprobacion_emitir_codigo' }), async (req, res) => {
+ * LLEVA TOPE DE PEDIDOS POR MINUTO, como toda ruta que cambia el estado de una guardia desde
+ * afuera del domicilio. */
+panelComprobacionesRouter.post('/:id/autorizar', requiereRolPanel, exigirOrganizacionActiva, topeDePedidos({ nombre: 'comprobacion_autorizar_ingreso' }), async (req, res) => {
   try {
-    const { codigo, minutos } = await emitirCodigoDeLaPrestadora({
-      comprobacionId: req.params.id,
-      prestadoraId: req.usuarioPanel.prestadoraId,
-      emitidoPor: req.usuarioPanel.id,
-    });
-    res.json({ codigo, minutos });
+    res.json(
+      await autorizarIngreso({
+        comprobacionId: req.params.id,
+        prestadoraId: req.usuarioPanel.prestadoraId,
+        autorizadaPor: req.usuarioPanel.id,
+      }),
+    );
   } catch (e) {
     responderError(res, e);
   }

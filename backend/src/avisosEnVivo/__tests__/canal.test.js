@@ -52,9 +52,9 @@ test('el aviso llega a quien escucha esa Organización', () => {
   assert.equal(res.encabezados['Content-Type'], 'text/event-stream');
   assert.equal(cuantosEscuchan(prestadora), 1);
 
-  empujar(prestadora, ASUNTOS.PEDIDOS_DE_CODIGO);
+  empujar(prestadora, ASUNTOS.PEDIDOS_DE_AUTORIZACION);
 
-  assert.deepEqual(avisosDe(res), [`event: ${ASUNTOS.PEDIDOS_DE_CODIGO}\ndata: {}\n\n`]);
+  assert.deepEqual(avisosDe(res), [`event: ${ASUNTOS.PEDIDOS_DE_AUTORIZACION}\ndata: {}\n\n`]);
 });
 
 // Es la prueba que sostiene el aislamiento de este canal: si empujara a todas las conexiones
@@ -68,7 +68,7 @@ test('el aviso de una Organización no llega a otra', () => {
   escuchar(deUna, unaPrestadora);
   escuchar(deLaOtra, otra);
 
-  empujar(unaPrestadora, ASUNTOS.PEDIDOS_DE_CODIGO);
+  empujar(unaPrestadora, ASUNTOS.PEDIDOS_DE_AUTORIZACION);
 
   assert.equal(avisosDe(deUna).length, 1);
   assert.deepEqual(avisosDe(deLaOtra), []);
@@ -83,7 +83,7 @@ test('dos pantallas de la misma Organización reciben las dos', () => {
   escuchar(otra, prestadora);
   assert.equal(cuantosEscuchan(prestadora), 2);
 
-  empujar(prestadora, ASUNTOS.PEDIDOS_DE_CODIGO);
+  empujar(prestadora, ASUNTOS.PEDIDOS_DE_AUTORIZACION);
 
   assert.equal(avisosDe(una).length, 1);
   assert.equal(avisosDe(otra).length, 1);
@@ -100,12 +100,12 @@ test('la conexión que se va deja de estar en la lista', () => {
 
   assert.equal(cuantosEscuchan(prestadora), 0);
 
-  empujar(prestadora, ASUNTOS.PEDIDOS_DE_CODIGO);
+  empujar(prestadora, ASUNTOS.PEDIDOS_DE_AUTORIZACION);
   assert.deepEqual(avisosDe(res), []);
 });
 
 test('empujar sin nadie escuchando no rompe nada', () => {
-  assert.doesNotThrow(() => empujar(otraPrestadora(), ASUNTOS.PEDIDOS_DE_CODIGO));
+  assert.doesNotThrow(() => empujar(otraPrestadora(), ASUNTOS.PEDIDOS_DE_AUTORIZACION));
 });
 
 // Una conexión que se cayó entre medio no puede cortar el aviso a las demás.
@@ -122,7 +122,7 @@ test('una conexión rota no deja sin aviso a las otras', () => {
     throw new Error('conexión cerrada');
   };
 
-  assert.doesNotThrow(() => empujar(prestadora, ASUNTOS.PEDIDOS_DE_CODIGO));
+  assert.doesNotThrow(() => empujar(prestadora, ASUNTOS.PEDIDOS_DE_AUTORIZACION));
   assert.equal(avisosDe(sana).length, 1);
 });
 

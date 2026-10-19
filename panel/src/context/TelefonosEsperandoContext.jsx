@@ -17,7 +17,7 @@ import { esAdminOSuperior } from '../lib/roles';
    pantalla nueva: es que la espera **aparezca sola** en las tareas pendientes de quien la tiene a
    cargo.
 
-   ES EL MISMO MOLDE QUE `PedidosDeCodigoContext.jsx`, y por las mismas razones: se entera por el
+   ES EL MISMO MOLDE QUE `PedidosDeAutorizacionContext.jsx`, y por las mismas razones: se entera por el
    canal en vivo, vuelve a preguntar cada tanto por si el canal se cayó en silencio, y es un
    contexto y no estado de la pantalla porque lo consumen dos —el contador del menú y la pantalla
    de habilitar—.
@@ -36,7 +36,7 @@ import { esAdminOSuperior } from '../lib/roles';
 
 const TelefonosEsperandoContext = createContext(null);
 
-/* La red de abajo, no el camino normal: ver `PedidosDeCodigoContext.jsx`. */
+/* La red de abajo, no el camino normal: ver `PedidosDeAutorizacionContext.jsx`. */
 const CADA_CUANTO_MS = 2 * 60 * 1000;
 
 export function TelefonosEsperandoProvider({ children }) {

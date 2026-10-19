@@ -127,14 +127,14 @@ describe('el intento lo suma la base, en un solo paso', () => {
   });
 
   it('sin Prestadora no se cuenta nada, y no se llega a la base', async () => {
-    const intentos = await sumarIntento({ tabla: 'guardia_comprobaciones', id: INSTRUCCION });
+    const intentos = await sumarIntento({ tabla: 'codigos_al_telefono', id: INSTRUCCION });
     assert.equal(intentos, null);
     assert.equal(llamadas.length, 0, 'una consulta sin la Prestadora no puede salir');
     assert.equal(seAgotaronLosIntentos(intentos), true);
   });
 
   it('no lee para escribir: es una sola ida a la base', async () => {
-    await sumarIntento({ tabla: 'guardia_comprobaciones', id: INSTRUCCION, prestadoraId: PRESTADORA });
+    await sumarIntento({ tabla: 'codigos_al_telefono', id: INSTRUCCION, prestadoraId: PRESTADORA });
     // Si volviera el «leer, sumar uno y escribir», acá habría un GET antes del POST, y entre esos
     // dos pasos entra cualquier otro intento.
     assert.equal(llamadas.length, 1);
@@ -150,7 +150,7 @@ describe('el intento lo suma la base, en un solo paso', () => {
 
   it('sin fila que contar tampoco se llama a la base', async () => {
     assert.equal(
-      await sumarIntento({ tabla: 'guardia_comprobaciones', id: null, prestadoraId: PRESTADORA }),
+      await sumarIntento({ tabla: 'codigos_al_telefono', id: null, prestadoraId: PRESTADORA }),
       null,
     );
     assert.equal(llamadas.length, 0);
@@ -159,7 +159,7 @@ describe('el intento lo suma la base, en un solo paso', () => {
   it('si la base no contesta, se cuenta como agotado', async () => {
     respuestaDeLaSuma = { estado: 400 };
     const intentos = await sumarIntento({
-      tabla: 'guardia_comprobaciones',
+      tabla: 'codigos_al_telefono',
       id: INSTRUCCION,
       prestadoraId: PRESTADORA,
     });
@@ -170,7 +170,7 @@ describe('el intento lo suma la base, en un solo paso', () => {
   it('si la base contesta vacío, también: cero no es una respuesta válida', async () => {
     respuestaDeLaSuma = { estado: 200, valor: null };
     const intentos = await sumarIntento({
-      tabla: 'guardia_comprobaciones',
+      tabla: 'codigos_al_telefono',
       id: INSTRUCCION,
       prestadoraId: PRESTADORA,
     });

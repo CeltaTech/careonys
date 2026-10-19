@@ -133,7 +133,6 @@ export function codigoNuevoParaGuardar(expiraEn) {
 // desde afuera. Ninguna de las dos puntas la arma con lo que venga en un pedido.
 const TABLAS_CON_INTENTOS = new Set([
   'instrucciones_acceso_personas_autorizadas',
-  'guardia_comprobaciones',
   'codigos_al_telefono',
 ]);
 

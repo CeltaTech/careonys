@@ -78,9 +78,6 @@ import {
   SEGUNDOS_EN_PANTALLA_POR_OMISION,
   SEGUNDOS_EN_PANTALLA_MINIMO,
   SEGUNDOS_EN_PANTALLA_MAXIMO,
-  MINUTOS_CODIGO_DE_LA_PRESTADORA_POR_OMISION,
-  MINUTOS_CODIGO_DE_LA_PRESTADORA_MINIMO,
-  MINUTOS_CODIGO_DE_LA_PRESTADORA_MAXIMO,
 } from '../utils/comprobacionDePresencia.js';
 import { cuerpoVigente } from '../utils/consentimientoPagador.js';
 import {
@@ -1920,7 +1917,7 @@ panelConfiguracionRouter.get('/ausencia-automatica', async (req, res) => {
     .from('configuracion_ausencia_automatica')
     .select(
       'activo, minutos_tolerancia_checkin, metros_tolerancia_checkin, ' +
-      'segundos_codigo_en_pantalla, minutos_codigo_de_la_prestadora',
+      'segundos_codigo_en_pantalla',
     )
     .maybeSingle();
   if (error) return responderError(res, error);
@@ -1930,15 +1927,13 @@ panelConfiguracionRouter.get('/ausencia-automatica', async (req, res) => {
       minutos_tolerancia_checkin: MINUTOS_TOLERANCIA_POR_OMISION,
       metros_tolerancia_checkin: METROS_TOLERANCIA_POR_OMISION,
       segundos_codigo_en_pantalla: SEGUNDOS_EN_PANTALLA_POR_OMISION,
-      minutos_codigo_de_la_prestadora: MINUTOS_CODIGO_DE_LA_PRESTADORA_POR_OMISION,
     },
   });
 });
 
-/* Las dos decisiones del pase de guardia (pendiente #113) viajan por acá y no por una ruta
-   propia porque viven en la misma fila y describen lo mismo: cada cuánto se renueva el código
-   que alguien muestra en su pantalla, y cuántos minutos vale el que suelta la Prestadora. Los
-   topes son los de las restricciones de la base; se comprueban también acá para que el rechazo
+/* La decisión del pase de guardia (pendiente #113) viaja por acá y no por una ruta propia porque
+   vive en la misma fila: cada cuánto se renueva el código QR que alguien muestra en su pantalla.
+   Los topes son los de las restricciones de la base; se comprueban también acá para que el rechazo
    llegue con un mensaje que la pantalla pueda explicar y no con el texto crudo de la base. */
 panelConfiguracionRouter.patch('/ausencia-automatica', async (req, res) => {
   const {
@@ -1946,7 +1941,6 @@ panelConfiguracionRouter.patch('/ausencia-automatica', async (req, res) => {
     minutos_tolerancia_checkin,
     metros_tolerancia_checkin,
     segundos_codigo_en_pantalla,
-    minutos_codigo_de_la_prestadora,
   } = req.body;
   if (!Number.isInteger(minutos_tolerancia_checkin) || minutos_tolerancia_checkin <= 0) {
     return res.status(400).json({ error: 'minutos_tolerancia_checkin debe ser un entero positivo' });
@@ -1963,15 +1957,6 @@ panelConfiguracionRouter.patch('/ausencia-automatica', async (req, res) => {
       error: `segundos_codigo_en_pantalla debe estar entre ${SEGUNDOS_EN_PANTALLA_MINIMO} y ${SEGUNDOS_EN_PANTALLA_MAXIMO}`,
     });
   }
-  if (
-    !Number.isInteger(minutos_codigo_de_la_prestadora) ||
-    minutos_codigo_de_la_prestadora < MINUTOS_CODIGO_DE_LA_PRESTADORA_MINIMO ||
-    minutos_codigo_de_la_prestadora > MINUTOS_CODIGO_DE_LA_PRESTADORA_MAXIMO
-  ) {
-    return res.status(400).json({
-      error: `minutos_codigo_de_la_prestadora debe estar entre ${MINUTOS_CODIGO_DE_LA_PRESTADORA_MINIMO} y ${MINUTOS_CODIGO_DE_LA_PRESTADORA_MAXIMO}`,
-    });
-  }
   const db = clienteDelPedido(req);
   const prestadoraId = await prestadoraVisibleOContestar(db, res);
   if (!prestadoraId) return;
@@ -1983,7 +1968,6 @@ panelConfiguracionRouter.patch('/ausencia-automatica', async (req, res) => {
       minutos_tolerancia_checkin,
       metros_tolerancia_checkin,
       segundos_codigo_en_pantalla,
-      minutos_codigo_de_la_prestadora,
     });
   if (error) return responderError(res, error);
   res.json({ ok: true });

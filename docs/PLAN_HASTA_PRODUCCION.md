@@ -380,9 +380,6 @@ Chile, la restricción queda fija y no se apaga. Lo que falta:
   `interno.encadenar_acceso_a_datos_de_salud`, los disparadores `…_interruptor_de_salud…` y el
   mensaje «No tiene permiso para verificar el registro de accesos». Cierre: una migración nueva los
   renombra y el mensaje sale del catálogo aprobado.
-- **Las dos cuentas «Prueba Inventada» de la Prestadora de pruebas** están bloqueadas para entrar
-  pero no desactivadas, así que siguen en la lista de cuentas del Panel. Cierre: el Administrador
-  las da de baja desde el Panel, con su motivo.
 
 **9.** **La credencial de la persona en el backend, y el registro de lecturas en la misma pasada.**
 

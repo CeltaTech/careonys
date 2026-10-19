@@ -125,6 +125,10 @@ export function errorDeLaRespuesta(respuesta, datos) {
   const error = new Error(datos?.error || `HTTP ${respuesta?.status ?? 0}`);
   error.status = respuesta?.status ?? 0;
   if (datos?.motivo) error.motivo = datos.motivo;
+  // Cuando el rechazo trae más de un motivo y los casos de cada uno —los turnos que traban una
+  // desactivación—, la pantalla los necesita para decir qué hacer con cada uno.
+  if (Array.isArray(datos?.motivos)) error.motivos = datos.motivos;
+  if (Array.isArray(datos?.turnos)) error.turnos = datos.turnos;
   return error;
 }
 

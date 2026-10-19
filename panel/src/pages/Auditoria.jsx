@@ -4,6 +4,7 @@ import { Cabecera } from '../components/ui/Cabecera';
 import { supabase } from '../lib/supabaseClient';
 import { EstadoLista } from '../components/layout/EstadoLista';
 import { mensajeDeError, errorDeLaRespuesta } from '../lib/errores';
+import { nombreDeLaAccion, queCambio } from '../lib/registroDeActividad';
 import '../styles/molde-paginas.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -81,42 +82,6 @@ export function Auditoria() {
     return t.auditoria.evento_mutacion;
   }
 
-  function nombreDeLaAccion(fila) {
-    // Sin frase para esa acción se dice que la acción no tiene nombre, y no se muestra la clave:
-    // un identificador interno no le dice nada a quien lee, y además delata cómo se llama algo
-    // por dentro.
-    return t.auditoria[`accion_${fila.accion}`] || t.auditoria.accion_desconocida;
-  }
-
-  // QUÉ CAMBIÓ, SIN MOSTRAR CONTENIDO NI IDENTIFICADORES INTERNOS.
-  //
-  // El registro guarda a propósito muy poco: los nombres de las columnas que se tocaron y unos
-  // pocos datos con nombre, todos opacos. Acá se traduce lo que tiene traducción —el permiso y
-  // su alcance salen de las mismas frases que usa la pantalla de Permisos, que es donde viven— y
-  // lo demás se calla. Una celda vacía es mejor que una celda con el nombre de una tabla adentro.
-  function queCambio(fila) {
-    const detalle = fila.detalle || {};
-
-    if (detalle.moneda_nueva) {
-      return detalle.moneda_anterior
-        ? `${detalle.moneda_anterior} → ${detalle.moneda_nueva}`
-        : detalle.moneda_nueva;
-    }
-
-    if (detalle.accion_permiso) {
-      const permiso = t.configuracion[`permisos_accion_${detalle.accion_permiso}`];
-      const alcance = t.configuracion[`permisos_alcance_${detalle.alcance_nuevo}`];
-      return [permiso, alcance].filter(Boolean).join(' — ') || '—';
-    }
-
-    const rol = detalle.rol_nuevo || detalle.rol_anterior;
-    if (rol) return t.usuarios_panel[`rol_${rol}`] || '—';
-
-    // Los nombres de las columnas que se tocaron quedan guardados, pero no se dibujan: son de la
-    // base, no del trabajo. Lo que la persona necesita leer ya lo dice la acción.
-    return '—';
-  }
-
   return (
     <div>
       <Cabecera titulo={t.auditoria.titulo} />
@@ -181,8 +146,8 @@ export function Auditoria() {
                   <tr key={fila.id}>
                     <td className="panel-mini">{new Date(fila.created_at).toLocaleString(locale)}</td>
                     <td><b>{fila.usuarios?.nombre || '—'}</b></td>
-                    <td>{nombreDeLaAccion(fila)}</td>
-                    <td>{queCambio(fila)}</td>
+                    <td>{nombreDeLaAccion(fila, t)}</td>
+                    <td>{queCambio(fila, t)}</td>
                   </tr>
                 ))}
               </tbody>

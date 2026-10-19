@@ -88,7 +88,7 @@ export function AusenciasCoberturaTab({ asistente }) {
       // el desplegable del sustituto. El valor sale de `ESTADO_ACTIVO`, la misma constante que
       // contesta `estaEnElPadron`, para que la regla quede escrita en un solo lugar
       // (regla 12 de CLAUDE.md §7).
-      supabase.from('asistentes').select('id, nombre').eq('estado', ESTADO_ACTIVO).neq('id', asistente.id),
+      supabase.from('asistentes').select('id, nombre').eq('estado', ESTADO_ACTIVO).eq('cuenta_desactivada', false).neq('id', asistente.id),
       // Los turnos fijos de esta persona, para elegir cuál se cubre.
       supabase.from('series_guardias').select('id, dias_semana, hora_inicio, hora_fin').eq('asistente_id', asistente.id),
     ]);

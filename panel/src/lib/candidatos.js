@@ -176,9 +176,12 @@ export const ESTADO_ACTIVO = 'activo';
 /**
  * ¿Sigue en el Padrón? Es lo único que este archivo le pregunta al estado del Asistente, y
  * está escrito una sola vez para que la respuesta no se bifurque (regla 12 de CLAUDE.md §7).
+ *
+ * Un Asistente con la cuenta desactivada tampoco: no se le ofrece trabajo. La consulta que lo
+ * trae tiene que pedir `cuenta_desactivada`; la vista del coordinador ya no lo incluye.
  */
 export function estaEnElPadron(asistente) {
-  return asistente?.estado === ESTADO_ACTIVO;
+  return asistente?.estado === ESTADO_ACTIVO && asistente?.cuenta_desactivada !== true;
 }
 
 /**

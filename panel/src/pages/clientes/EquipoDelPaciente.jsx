@@ -108,7 +108,7 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
           : Promise.resolve({ data: [], error: null }),
         // Para el desplegable de «sumar a alguien». La vista recorta lo que un Coordinador puede
         // ver de una Asistente; acá alcanza con el nombre.
-        supabase.from('asistentes').select('id, nombre, apellido').order('apellido'),
+        supabase.from('asistentes').select('id, nombre, apellido').eq('cuenta_desactivada', false).order('apellido'),
       ]);
       if (delEquipo.error) throw delEquipo.error;
       if (todas.error) throw todas.error;
@@ -133,6 +133,7 @@ export function EquipoDelPaciente({ paciente, puedeEditar, onClose }) {
             .from('usuarios')
             .select('id, nombre, apellido, rol')
             .eq('rol', 'coordinador')
+            .is('desactivada_en', null)
             .in('id', coordinanEsosLugares)
         : { data: [], error: null };
       if (alcanzan.error) throw alcanzan.error;

@@ -8,7 +8,8 @@ import {
 import { clienteDelPedido, enLaPrestadora } from '../db/connection.js';
 import { crearCuentaConPerfil, borrarCuentaDeUnAltaCortada, desactivarCuenta } from '../utils/cuentasPanel.js';
 import { guardarLugaresDe } from '../utils/lugaresDeCadaPersona.js';
-import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
+import { exigirAdministracion, exigirAdminDePrestadora } from '../middleware/exigirAdministracion.js';
+import { esIdentificador } from '../utils/intercambioDeFacturacion.js';
 import { ROLES_PANEL } from '../utils/roles.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
 import { parteBienEscrita, parteComparable, sufijoDeLaPrestadora } from '../utils/nombreDeUsuario.js';
@@ -82,6 +83,105 @@ panelUsuariosRouter.get('/', requiereRolPanel, soloAdministracion, async (req, r
     sufijo,
     usuarios: cuentas.map((cuenta) => ({ ...cuenta, lugares: cuantos.get(cuenta.id) ?? 0 })),
   });
+});
+
+// LAS CUENTAS DESACTIVADAS. Las ve, las abre y las reactiva el Administrador de la Prestadora y
+// nadie más. Este candado es el primero; el segundo es la base, que no le muestra una desactivada a
+// nadie más y cuya función de reactivar contesta falso a cualquier otro.
+const soloAdminDePrestadora = exigirAdminDePrestadora('Solo el Administrador de la Prestadora ve y reactiva las cuentas desactivadas');
+
+// Una cuenta desactivada se abre por su rol: coordinación o Asistente. La fila de un Asistente en
+// `usuarios` no la ve la administración con su sesión, así que esa se lee con el trabajo de la
+// Prestadora activa, que alcanza las de esa Prestadora y ninguna otra.
+const ROLES_DESACTIVABLES = ['coordinador', 'asistente'];
+
+function rolPedido(req) {
+  const rol = req.query?.rol ?? 'coordinador';
+  return ROLES_DESACTIVABLES.includes(rol) ? rol : null;
+}
+
+function lecturaDeCuentas(req, rol, trabajo, leer) {
+  return rol === 'asistente'
+    ? enLaPrestadora(req.usuarioPanel.prestadoraId, trabajo, leer)
+    : leer(clienteDelPedido(req));
+}
+
+// La lista de los Asistentes desactivados la lee el Padrón de la tabla de Asistentes; ésta es la de
+// coordinación.
+panelUsuariosRouter.get('/desactivadas', requiereRolPanel, soloAdminDePrestadora, async (req, res) => {
+  if (!req.usuarioPanel.prestadoraId) return res.json({ usuarios: [] });
+
+  const { data, error } = await clienteDelPedido(req)
+    .from('usuarios')
+    .select('id, rol, nombre, desactivada_en')
+    .in('rol', ROLES_GESTIONABLES)
+    .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .not('desactivada_en', 'is', null)
+    .order('desactivada_en', { ascending: false });
+
+  if (error) return responderError(res, error);
+  res.json({ usuarios: data ?? [] });
+});
+
+// Los datos y el historial de una cuenta desactivada, para leer. El historial son los renglones del
+// registro de actividad sobre esa cuenta y los que hizo ella.
+const RENGLONES_DEL_HISTORIAL = 200;
+
+panelUsuariosRouter.get('/desactivadas/:id', requiereRolPanel, soloAdminDePrestadora, async (req, res) => {
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+  const rol = rolPedido(req);
+  if (!prestadoraId || !rol || !esIdentificador(req.params.id)) {
+    return responderError(res, new ErrorConMotivo('no_encontrado'));
+  }
+
+  const db = clienteDelPedido(req);
+  const { data: cuenta, error } = await lecturaDeCuentas(req, rol, 'cuenta desactivada', (conexion) => conexion
+    .from('usuarios')
+    .select('id, rol, nombre, telefono, email, nombre_de_usuario, created_at, desactivada_en, motivo_de_la_desactivacion')
+    .eq('id', req.params.id)
+    .eq('prestadora_id', prestadoraId)
+    .eq('rol', rol)
+    .not('desactivada_en', 'is', null)
+    .maybeSingle());
+
+  if (error) return responderError(res, error);
+  // La que no existe, la activa y la de otra Prestadora se contestan igual.
+  if (!cuenta) return responderError(res, new ErrorConMotivo('no_encontrado'));
+
+  const { data: historial, error: errorHistorial } = await db
+    .from('registro_actividad')
+    .select('id, usuario_id, accion, detalle, created_at, usuarios(nombre)')
+    .eq('prestadora_id', prestadoraId)
+    .or(`registro_id.eq.${cuenta.id},usuario_id.eq.${cuenta.id}`)
+    .order('created_at', { ascending: false })
+    .limit(RENGLONES_DEL_HISTORIAL);
+
+  if (errorHistorial) return responderError(res, errorHistorial);
+  res.json({ cuenta, historial: historial ?? [] });
+});
+
+// Reactivar la hace la base con la sesión de quien la pide: limpia la desactivación, levanta el
+// bloqueo de la cuenta de ingreso y deja el renglón en el registro de actividad, todo junto.
+const MOTIVOS_DE_LA_REACTIVACION = ['reactivacion_usuario_en_uso', 'reactivacion_correo_en_uso'];
+
+panelUsuariosRouter.post('/:id/reactivar', requiereRolPanel, soloAdminDePrestadora, async (req, res) => {
+  if (!req.usuarioPanel.prestadoraId || !esIdentificador(req.params.id)) {
+    return responderError(res, new ErrorConMotivo('no_encontrado'));
+  }
+
+  const { data: reactivada, error } = await clienteDelPedido(req)
+    .rpc('reactivar_la_cuenta', { p_usuario: req.params.id });
+
+  if (error) {
+    if (MOTIVOS_DE_LA_REACTIVACION.includes(error.message)) {
+      return responderError(res, new ErrorConMotivo(error.message));
+    }
+    return responderError(res, error);
+  }
+  if (reactivada !== true) return responderError(res, new ErrorConMotivo('no_encontrado'));
+
+  yaQuedoRegistrado(res);
+  res.json({ ok: true });
 });
 
 panelUsuariosRouter.post('/', requiereRolPanel, soloAdministracion, async (req, res) => {
@@ -239,6 +339,41 @@ panelUsuariosRouter.delete('/:id', requiereRolPanel, soloAdministracion, async (
     tablaAfectada: 'usuarios',
     registroId: req.params.id,
     detalle: { rol_anterior: usuario.rol },
+  });
+  yaQuedoRegistrado(res);
+
+  res.json({ ok: true });
+});
+
+// DESACTIVAR LA CUENTA DE UN ASISTENTE, desde su Legajo. El Legajo no se borra: la cuenta deja de
+// entrar y el Asistente deja de aparecer para elegirlo. Se nombra al Asistente, y la cuenta se busca
+// adentro de la Prestadora activa: uno de otra Prestadora o sin cuenta se contesta igual que uno que
+// no existe. Con turnos sin terminar no se desactiva, y la respuesta dice cuáles son.
+panelUsuariosRouter.post('/asistentes/:asistenteId/desactivar', requiereRolPanel, soloAdministracion, async (req, res) => {
+  const prestadoraId = req.usuarioPanel.prestadoraId;
+  if (!prestadoraId || !esIdentificador(req.params.asistenteId)) {
+    return responderError(res, new ErrorConMotivo('no_encontrado'));
+  }
+
+  const { data: asistente, error } = await enLaPrestadora(prestadoraId, 'Asistente a desactivar', (db) => db
+    .from('asistentes')
+    .select('usuario_id')
+    .eq('id', req.params.asistenteId)
+    .eq('prestadora_id', prestadoraId)
+    .maybeSingle());
+  if (error) return responderError(res, error);
+  if (!asistente?.usuario_id) return responderError(res, new ErrorConMotivo('no_encontrado'));
+
+  try {
+    await desactivarCuenta(asistente.usuario_id, { prestadoraId, motivo: req.body?.motivo });
+  } catch (fallo) {
+    return responderError(res, fallo);
+  }
+
+  await registrarActividad(req.usuarioPanel, ACCION_DESACTIVACION_DE_CUENTA, {
+    tablaAfectada: 'usuarios',
+    registroId: asistente.usuario_id,
+    detalle: { rol_anterior: 'asistente' },
   });
   yaQuedoRegistrado(res);
 

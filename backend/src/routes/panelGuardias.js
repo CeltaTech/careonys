@@ -121,6 +121,8 @@ panelGuardiasRouter.post('/:id/cubrir', requiereRolPanel, exigirOrganizacionActi
     .select('id')
     .eq('id', asistenteSustitutoId)
     .eq('prestadora_id', guardia.prestadora_id)
+    // Uno con la cuenta desactivada se contesta como inexistente.
+    .eq('cuenta_desactivada', false)
     .maybeSingle();
   if (!sustituto) return res.status(404).json({ error: 'No se encontró ese Asistente' });
 

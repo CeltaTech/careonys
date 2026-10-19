@@ -239,4 +239,14 @@ describe('el Asistente', () => {
 
     assert.equal((await pasarPor(requiereRolAsistente, sesionDePrueba(PERSONA))).estado, 403);
   });
+
+  it('con la cuenta desactivada no entra, aunque su credencial todavía no haya vencido', async () => {
+    usuarioDeLaBase = { rol: 'asistente', prestadora_id: PRESTADORA, desactivada_en: '2027-03-10T12:00:00Z' };
+    filas.asistentes = { id: 'asistente-1' };
+
+    const { estado, siguio } = await pasarPor(requiereRolAsistente, sesionDePrueba(PERSONA));
+
+    assert.equal(siguio, false);
+    assert.equal(estado, 403);
+  });
 });

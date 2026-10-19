@@ -48,6 +48,8 @@ let consultas = [];
 let padronActivo = [];
 /** Quiénes movieron su interruptor a "no disponible" desde su aplicación. */
 let noDisponibles = new Set();
+/** Quiénes tienen la cuenta desactivada desde su Legajo. */
+let desactivados = new Set();
 
 const baseFalsa = createServer((req, res) => {
   req.on('data', () => {});
@@ -123,12 +125,14 @@ beforeEach(() => {
   );
   padronActivo = [AUSENTE, SUPLENTE_LIBRE, SUPLENTE_OCUPADO, FRANQUERO];
   noDisponibles = new Set();
+  desactivados = new Set();
   // La base falsa filtra de verdad por `disponible`: si alguien sacara ese filtro
   // de la consulta, acá volverían todos y la prueba lo vería.
   respuestas.set('GET /rest/v1/asistentes', (busqueda) =>
     busqueda.has('estado')
       ? padronActivo
           .filter((id) => busqueda.get('disponible') !== 'eq.true' || !noDisponibles.has(id))
+          .filter((id) => busqueda.get('cuenta_desactivada') !== 'eq.false' || !desactivados.has(id))
           .map((id) => ({ id }))
       : [{ telefono: TELEFONOS[valorDe(busqueda, 'id')] ?? null }],
   );
@@ -136,7 +140,11 @@ beforeEach(() => {
     {
       asistente_id: FRANQUERO,
       tipo: 'franquero',
-      asistentes: { estado: 'activo', disponible: !noDisponibles.has(FRANQUERO) },
+      asistentes: {
+        estado: 'activo',
+        disponible: !noDisponibles.has(FRANQUERO),
+        cuenta_desactivada: desactivados.has(FRANQUERO),
+      },
     },
   ]);
   respuestas.set('GET /rest/v1/configuracion_notificaciones', () => [
@@ -209,6 +217,24 @@ describe('a quiénes sale a buscar la fase automática', () => {
 
   it('y estar anotado en el roster de emergencia no lo hace una excepción', async () => {
     noDisponibles.add(FRANQUERO);
+
+    await correr();
+
+    assert.deepEqual(pedidosAMeta.map((p) => p.to), [TELEFONOS[SUPLENTE_LIBRE]]);
+  });
+
+  // Una cuenta desactivada no entra y no se le asigna nada: tampoco se la sale a buscar.
+  it('no le escribe al suplente con la cuenta desactivada', async () => {
+    desactivados.add(SUPLENTE_LIBRE);
+
+    await correr();
+
+    assert.deepEqual(pedidosAMeta.map((p) => p.to), [TELEFONOS[FRANQUERO]]);
+  });
+
+  it('ni al del roster de emergencia con la cuenta desactivada', async () => {
+    padronActivo = [AUSENTE, SUPLENTE_LIBRE, SUPLENTE_OCUPADO];
+    desactivados.add(FRANQUERO);
 
     await correr();
 

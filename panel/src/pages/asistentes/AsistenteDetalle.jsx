@@ -20,6 +20,7 @@ import { GuardiasTab } from './GuardiasTab';
 import { EvaluacionesTab } from './EvaluacionesTab';
 import { AusenciasCoberturaTab } from './AusenciasCoberturaTab';
 import { ComunicacionTab } from './ComunicacionTab';
+import { DesactivarAsistenteModal } from './DesactivarAsistenteModal';
 import { mensajeDeError } from '../../lib/errores';
 import { Cabecera } from '../../components/ui/Cabecera';
 import { Button } from '../../components/ui/Button';
@@ -38,6 +39,7 @@ export function AsistenteDetalle() {
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
   const [tab, setTab] = useState('perfil');
+  const [desactivando, setDesactivando] = useState(false);
 
   const esAdmin = esAdminOSuperior(usuario?.rol);
   const intermediacion = tieneModalidad(MODALIDAD.INTERMEDIACION);
@@ -51,7 +53,7 @@ export function AsistenteDetalle() {
     // acceso filtran filas y no columnas, así que separar la tabla es lo único que impide leer
     // el dato preguntando por fuera del Panel.
     const tabla = esAdmin ? 'asistentes' : 'asistentes_coordinador';
-    const columnas = esAdmin ? `*, ${CAMPOS_PAGO}, ${CAMPOS_RESERVADOS}` : '*';
+    const columnas = esAdmin ? `*, cuenta_desactivada, ${CAMPOS_PAGO}, ${CAMPOS_RESERVADOS}` : '*';
     const { data, error: errorConsulta } = await supabase.from(tabla).select(columnas).eq('id', id).single();
     if (errorConsulta) {
       setError(errorConsulta.code === 'PGRST116' ? null : mensajeDeError(errorConsulta, t));
@@ -83,7 +85,20 @@ export function AsistenteDetalle() {
         <Button variant="secondary" onClick={() => navigate('/asistentes')}>
           <span aria-hidden="true">←</span> {t.asistentes.volver_al_padron}
         </Button>
+        {/* Desactivar es de la administración, y sólo hay qué desactivar si el Asistente tiene cuenta. */}
+        {esAdmin && asistente.usuario_id && asistente.cuenta_desactivada === false && (
+          <Button variant="secondary" onClick={() => setDesactivando(true)}>
+            {t.asistentes.cuenta.desactivar}
+          </Button>
+        )}
       </Cabecera>
+      {desactivando && (
+        <DesactivarAsistenteModal
+          asistente={asistente}
+          onClose={() => setDesactivando(false)}
+          onDesactivado={() => navigate('/asistentes', { state: { aviso: t.asistentes.cuenta.desactivado } })}
+        />
+      )}
       {datosDelAsistente.length > 0 && (
         <div className="panel-mini hoja-ficha-datos">{datosDelAsistente.join(' · ')}</div>
       )}

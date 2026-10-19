@@ -134,7 +134,7 @@ export function Continuidad() {
         // nombre al Asistente que faltó en cada incidente y en cada alerta, y quien después se
         // fue de la Prestadora tiene que seguir teniendo nombre en un incidente de la semana
         // pasada. Quién puede tomar el reemplazo lo decide `ResolverIncidente`, más abajo.
-        supabase.from('asistentes').select('id, nombre, estado').order('nombre'),
+        supabase.from('asistentes').select('id, nombre, estado, cuenta_desactivada').order('nombre'),
         idsPersonasFamiliares.length
           ? supabase.from('personas').select('id, nombre_visible').in('id', idsPersonasFamiliares)
           : Promise.resolve({ data: [] }),

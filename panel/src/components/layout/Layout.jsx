@@ -330,6 +330,7 @@ export function Layout() {
       const { data, error } = await supabase
         .from('asistentes')
         .select('id, nombre')
+        .eq('cuenta_desactivada', false)
         .ilike('nombre', `%${limpio}%`)
         .order('nombre')
         .limit(6);

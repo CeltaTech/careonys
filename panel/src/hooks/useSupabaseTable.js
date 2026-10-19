@@ -6,10 +6,13 @@ import { useCatalogo } from './useCatalogo';
  *
  * `select` sirve para traer también una tabla adjunta —por ejemplo los datos que viven aparte
  * del Legajo del Asistente—. Por defecto trae las columnas de la tabla y nada más.
+ *
+ * `filtros` son comparaciones por igual, como en `useCatalogo`.
  */
-export function useSupabaseTable(tabla, { orderBy = 'creado_en', ascending = false, select = '*' } = {}) {
+export function useSupabaseTable(tabla, { orderBy = 'creado_en', ascending = false, select = '*', filtros = null } = {}) {
   return useCatalogo(tabla, {
     columnas: select,
+    filtros,
     orden: { columna: orderBy, ascendente: ascending },
   });
 }

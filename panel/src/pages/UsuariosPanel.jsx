@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '../i18n/LocaleContext';
 import { useConfirmarDestructivo } from '../context/ConfirmacionContext';
+import { useAuth } from '../context/AuthContext';
+import { esAdminDePrestadora } from '../lib/roles';
 import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/Button';
 import { FormField } from '../components/ui/FormField';
@@ -12,7 +14,9 @@ import { useModalAccesible } from '../hooks/useModalAccesible';
 import { ElegirLugares } from '../components/lugares/ElegirLugares';
 import { llamarApiLugaresDeTrabajo } from '../lib/apiLugaresDeTrabajo';
 import { con } from '../lib/textos';
+import { nombreDeLaAccion, queCambio } from '../lib/registroDeActividad';
 import { AusenciasDelCoordinador } from './AusenciasDelCoordinador';
+import { TurnosQueTraban } from '../components/cuenta/TurnosQueTraban';
 import '../styles/molde-paginas.css';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -32,7 +36,39 @@ async function llamarApi(path, opciones = {}) {
   return resultado;
 }
 
+/* Cuánto queda a la vista el aviso de que algo salió bien. */
+const DURACION_DEL_AVISO = 4000;
+
 export function UsuariosPanel() {
+  const { t } = useLocale();
+  const { usuario } = useAuth();
+  /* Las cuentas desactivadas las ve sólo el Administrador, y la elección no se recuerda: cada vez
+     que se abre la lista, se abre en las activas. */
+  const veDesactivadas = esAdminDePrestadora(usuario?.rol);
+  const [vista, setVista] = useState('activas');
+  const [aviso, setAviso] = useState(null);
+
+  useEffect(() => {
+    if (!aviso) return undefined;
+    const reloj = setTimeout(() => setAviso(null), DURACION_DEL_AVISO);
+    return () => clearTimeout(reloj);
+  }, [aviso]);
+
+  const filtro = veDesactivadas ? (
+    <div className="panel-filtros">
+      <select value={vista} onChange={(e) => setVista(e.target.value)} aria-label={t.usuarios_panel.filtro_cuentas}>
+        <option value="activas">{t.usuarios_panel.filtro_activas}</option>
+        <option value="desactivadas">{t.usuarios_panel.filtro_desactivadas}</option>
+      </select>
+    </div>
+  ) : null;
+
+  return veDesactivadas && vista === 'desactivadas'
+    ? <CuentasDesactivadas filtro={filtro} aviso={aviso} onReactivada={() => setAviso(t.usuarios_panel.reactivada)} />
+    : <CuentasActivas filtro={filtro} aviso={aviso} />;
+}
+
+function CuentasActivas({ filtro, aviso }) {
   const { t } = useLocale();
   const [usuarios, setUsuarios] = useState([]);
   const [sufijo, setSufijo] = useState('');
@@ -70,8 +106,10 @@ export function UsuariosPanel() {
           {t.usuarios_panel.nuevo_coordinador}
         </Button>
       </Cabecera>
+      {aviso && <Alert variant="success">{aviso}</Alert>}
 
       <section className="panel-tarjeta">
+        {filtro}
         <div className="panel-tarjeta-titulo">
           <h2>{t.usuarios_panel.titulo}</h2>
           {estado === 'listo' && <span className="panel-mini">{usuarios.length}</span>}
@@ -223,6 +261,8 @@ function EditarUsuarioPanel({ usuario, otrosCoordinadores, onClose, onActualizad
   const [guardando, setGuardando] = useState(false);
   const [borrando, setBorrando] = useState(false);
   const [error, setError] = useState(null);
+  // Los turnos que no dejaron desactivar la cuenta, con qué hacer con cada uno.
+  const [traban, setTraban] = useState(null);
 
   /* Hasta dónde llega esta cuenta. Vive en su propia tabla y se lee y se escribe por el backend, que
      deja guardados exactamente los lugares que quedaron tildados. Mientras no se pudo leer no se
@@ -279,11 +319,16 @@ function EditarUsuarioPanel({ usuario, otrosCoordinadores, onClose, onActualizad
 
     setBorrando(true);
     setError(null);
+    setTraban(null);
     try {
       await llamarApi(`/${usuario.id}`, { method: 'DELETE', body: JSON.stringify({ motivo }) });
       onActualizado();
     } catch (err) {
-      setError(mensajeDeError(err, t));
+      if (Array.isArray(err.motivos) && err.motivos.length > 0) {
+        setTraban({ motivos: err.motivos, turnos: err.turnos ?? [] });
+      } else {
+        setError(mensajeDeError(err, t));
+      }
       setBorrando(false);
     }
   }
@@ -293,6 +338,7 @@ function EditarUsuarioPanel({ usuario, otrosCoordinadores, onClose, onActualizad
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
         <h2 id={modal.idTitulo}>{usuario.nombre}</h2>
         {error && <Alert variant="error">{error}</Alert>}
+        {traban && <TurnosQueTraban motivos={traban.motivos} turnos={traban.turnos} />}
         <div className="molde-formgrid">
           <FormField label={t.usuarios_panel.col_nombre} name="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required />
           <FormField label={t.usuarios_panel.col_telefono} name="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
@@ -315,6 +361,200 @@ function EditarUsuarioPanel({ usuario, otrosCoordinadores, onClose, onActualizad
           <Button variant="secondary" onClick={onClose} disabled={guardando || borrando}>{t.comun.cancelar}</Button>
           <Button onClick={handleGuardar} disabled={guardando || borrando}>
             {guardando ? t.comun.guardando : t.comun.guardar}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* LAS CUENTAS DESACTIVADAS. Sólo para leer, y con una única acción: reactivar. Quién las ve lo
+   decide la base, no esta pantalla; el filtro que lleva hasta acá sólo se le muestra a quien la
+   base se las va a mostrar. */
+function CuentasDesactivadas({ filtro, aviso, onReactivada }) {
+  const { t, locale } = useLocale();
+  const [cuentas, setCuentas] = useState([]);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [abierta, setAbierta] = useState(null);
+
+  const recargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      const { usuarios: filas } = await llamarApi('/desactivadas');
+      setCuentas(filas ?? []);
+      setEstado('listo');
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+      setEstado('error');
+    }
+  }, [t]);
+
+  useEffect(() => {
+    recargar();
+  }, [recargar]);
+
+  return (
+    <div>
+      <Cabecera titulo={t.usuarios_panel.titulo} />
+      {aviso && <Alert variant="success">{aviso}</Alert>}
+
+      <section className="panel-tarjeta">
+        {filtro}
+        <div className="panel-tarjeta-titulo">
+          <h2>{t.usuarios_panel.filtro_desactivadas}</h2>
+          {estado === 'listo' && <span className="panel-mini">{cuentas.length}</span>}
+        </div>
+        <EstadoLista
+          estado={estado}
+          error={error}
+          vacio={estado === 'listo' && cuentas.length === 0}
+          mensajeVacio={t.usuarios_panel.sin_desactivadas}
+          recargar={recargar}
+        >
+          <table className="panel-tabla">
+            <thead>
+              <tr>
+                <th>{t.usuarios_panel.col_nombre}</th>
+                <th>{t.usuarios_panel.col_rol}</th>
+                <th>{t.usuarios_panel.col_desactivada_en}</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {cuentas.map((c) => (
+                <tr key={c.id}>
+                  <td><b>{c.nombre}</b></td>
+                  <td><span className="badge badge-neutro">{t.usuarios_panel[`rol_${c.rol}`]}</span></td>
+                  <td className="panel-mini">{new Date(c.desactivada_en).toLocaleString(locale)}</td>
+                  <td>
+                    <button type="button" className="panel-enlace" onClick={() => setAbierta(c)}>{t.usuarios_panel.ver}</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </EstadoLista>
+      </section>
+
+      {abierta && (
+        <VerCuentaDesactivada
+          cuenta={abierta}
+          onClose={() => setAbierta(null)}
+          onReactivada={() => {
+            setAbierta(null);
+            onReactivada();
+            recargar();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/* También la usa el Padrón para un Asistente desactivado: ahí `rol` es 'asistente' y `cuenta.id` es su
+   usuario. */
+export function VerCuentaDesactivada({ cuenta, rol = null, onClose, onReactivada }) {
+  const { t, locale } = useLocale();
+  const [reactivando, setReactivando] = useState(false);
+  const modal = useModalAccesible(reactivando ? () => {} : onClose);
+  const [datos, setDatos] = useState(null);
+  const [estado, setEstado] = useState('cargando');
+  const [error, setError] = useState(null);
+  const [errorAlReactivar, setErrorAlReactivar] = useState(null);
+
+  const cargar = useCallback(async () => {
+    setEstado('cargando');
+    setError(null);
+    try {
+      setDatos(await llamarApi(`/desactivadas/${cuenta.id}${rol ? `?rol=${rol}` : ''}`));
+      setEstado('listo');
+    } catch (err) {
+      setError(mensajeDeError(err, t));
+      setEstado('error');
+    }
+  }, [cuenta.id, rol, t]);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
+
+  async function handleReactivar() {
+    setReactivando(true);
+    setErrorAlReactivar(null);
+    try {
+      await llamarApi(`/${cuenta.id}/reactivar`, { method: 'POST' });
+      onReactivada();
+    } catch (err) {
+      setErrorAlReactivar(mensajeDeError(err, t));
+      setReactivando(false);
+    }
+  }
+
+  const fecha = (valor) => (valor ? new Date(valor).toLocaleString(locale) : '—');
+  const c = datos?.cuenta;
+  const historial = datos?.historial ?? [];
+
+  return (
+    <div className="panel-modal-fondo" onClick={reactivando ? undefined : onClose}>
+      <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
+        <h2 id={modal.idTitulo}>{cuenta.nombre}</h2>
+        {errorAlReactivar && <Alert variant="error">{errorAlReactivar}</Alert>}
+        <EstadoLista estado={estado} error={error} recargar={cargar}>
+          {c && (
+            <>
+              <dl className="panel-detalle-lista">
+                <dt>{t.usuarios_panel.col_usuario}</dt>
+                <dd>{c.nombre_de_usuario || '—'}</dd>
+                <dt>{t.usuarios_panel.col_email}</dt>
+                <dd>{c.email || '—'}</dd>
+                <dt>{t.usuarios_panel.col_telefono}</dt>
+                <dd>{c.telefono || '—'}</dd>
+                <dt>{t.usuarios_panel.col_rol}</dt>
+                <dd>{t.usuarios_panel[`rol_${c.rol}`] || '—'}</dd>
+                <dt>{t.usuarios_panel.col_alta}</dt>
+                <dd>{fecha(c.created_at)}</dd>
+                <dt>{t.usuarios_panel.col_desactivada_en}</dt>
+                <dd>{fecha(c.desactivada_en)}</dd>
+                <dt>{t.usuarios_panel.col_motivo}</dt>
+                <dd>{c.motivo_de_la_desactivacion || '—'}</dd>
+              </dl>
+
+              <h3>{t.usuarios_panel.historial}</h3>
+              <EstadoLista
+                estado="listo"
+                vacio={historial.length === 0}
+                mensajeVacio={t.usuarios_panel.sin_historial}
+              >
+                <table className="panel-tabla">
+                  <thead>
+                    <tr>
+                      <th>{t.auditoria.col_fecha}</th>
+                      <th>{t.auditoria.col_admin}</th>
+                      <th>{t.auditoria.col_accion}</th>
+                      <th>{t.auditoria.col_que_cambio}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historial.map((fila) => (
+                      <tr key={fila.id}>
+                        <td className="panel-mini">{fecha(fila.created_at)}</td>
+                        <td><b>{fila.usuarios?.nombre || '—'}</b></td>
+                        <td>{nombreDeLaAccion(fila, t)}</td>
+                        <td>{queCambio(fila, t)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </EstadoLista>
+            </>
+          )}
+        </EstadoLista>
+        <div className="panel-modal-acciones">
+          <Button variant="secondary" onClick={onClose} disabled={reactivando}>{t.comun.cerrar}</Button>
+          <Button onClick={handleReactivar} disabled={reactivando || estado !== 'listo'}>
+            {reactivando ? t.usuarios_panel.reactivando : t.usuarios_panel.reactivar}
           </Button>
         </div>
       </div>

@@ -1,9 +1,9 @@
-import { useCallback, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
 import { useAuth } from '../context/AuthContext';
 import { usePermisos } from '../context/PermisosContext';
-import { esAdminOSuperior } from '../lib/roles';
+import { esAdminDePrestadora, esAdminOSuperior } from '../lib/roles';
 import { claseBadge, claseBadgeTono, TONO } from '../lib/tonos';
 import { nombreTipo } from '../lib/tiposAsistente';
 import { conDatosAparte } from '../lib/datosAparteDelAsistente';
@@ -19,9 +19,13 @@ import { Button } from '../components/ui/Button';
 import { Cabecera } from '../components/ui/Cabecera';
 import { NuevoAsistenteModal } from './asistentes/NuevoAsistenteModal';
 import { PasarAlCatalogoModal } from './asistentes/PasarAlCatalogoModal';
+import { VerCuentaDesactivada } from './UsuariosPanel';
 import './listadosMaqueta.css';
 
 const ESTADOS = ['activo', 'inactivo', 'cesado'];
+
+/* Cuánto queda a la vista el aviso de que algo salió bien. */
+const DURACION_DEL_AVISO = 4000;
 
 // El cartel de cada modalidad: la directa en verde y la de Match en violeta, como en la maqueta.
 const CLASE_MODALIDAD = {
@@ -36,11 +40,25 @@ export function Asistentes() {
   const esAdmin = esAdminOSuperior(usuario?.rol);
   const { puede } = usePermisos();
   const puedeAltaManual = esAdmin || puede('alta_manual_asistente');
+  // Los Asistentes desactivados los ve sólo el Administrador, y la elección no se recuerda: cada
+  // vez que se abre el Padrón, se abre en los activos.
+  const veDesactivados = esAdminDePrestadora(usuario?.rol);
+  const [vista, setVista] = useState('activos');
+  const desactivados = veDesactivados && vista === 'desactivados';
+  const [abierto, setAbierto] = useState(null);
+  const location = useLocation();
+  const [aviso, setAviso] = useState(location.state?.aviso ?? null);
+  useEffect(() => {
+    if (!aviso) return undefined;
+    const reloj = setTimeout(() => setAviso(null), DURACION_DEL_AVISO);
+    return () => clearTimeout(reloj);
+  }, [aviso]);
   // Coordinador consulta la vista sin vínculo laboral — ver schema_etapa2i.sql. Esa vista no trae
-  // las modalidades del Asistente, así que para él la columna queda sin dato.
+  // las modalidades del Asistente, así que para él la columna queda sin dato, y tampoco trae a los
+  // desactivados. La tabla sí los trae, así que para la administración se filtra siempre.
   const { filas, estado, error, recargar } = useSupabaseTable(
     esAdmin ? 'asistentes' : 'asistentes_coordinador',
-    { orderBy: 'created_at', select: '*' },
+    { orderBy: 'created_at', select: '*', filtros: esAdmin ? { cuenta_desactivada: desactivados } : null },
   );
   const { f, set, limpiar, hayFiltros } = useFiltros({
     busqueda: '',
@@ -100,8 +118,22 @@ export function Asistentes() {
         </Button>
         {puedeAltaManual && <Button onClick={abrirAlta}>{tl.incorporar}</Button>}
       </Cabecera>
+      {aviso && <Alert variant="success">{aviso}</Alert>}
 
-      {puedeAltaManual && sinTipo.length > 0 && (
+      {abierto && (
+        <VerCuentaDesactivada
+          cuenta={{ id: abierto.usuario_id, nombre: abierto.nombre }}
+          rol="asistente"
+          onClose={() => setAbierto(null)}
+          onReactivada={() => {
+            setAbierto(null);
+            setAviso(t.usuarios_panel.reactivada);
+            recargar();
+          }}
+        />
+      )}
+
+      {puedeAltaManual && !desactivados && sinTipo.length > 0 && (
         <Alert variant="info">
           {sinTipo.length === 1
             ? t.asistentes.pasar_al_catalogo.aviso_uno
@@ -135,6 +167,12 @@ export function Asistentes() {
 
       <section className="panel-tarjeta">
         <div className="panel-filtros">
+          {veDesactivados && (
+            <select value={vista} onChange={(e) => setVista(e.target.value)} aria-label={t.usuarios_panel.filtro_cuentas}>
+              <option value="activos">{t.asistentes.cuenta.activos}</option>
+              <option value="desactivados">{t.asistentes.cuenta.desactivados}</option>
+            </select>
+          )}
           <input
             type="text"
             placeholder={t.asistentes.buscar}
@@ -182,9 +220,13 @@ export function Asistentes() {
           recargar={recargar}
           filtrado={hayFiltros}
           onLimpiarFiltros={limpiar}
-          mensajeVacio={filas.length === 0 ? t.asistentes.vacio_texto : undefined}
+          mensajeVacio={
+            filas.length === 0 ? (desactivados ? t.asistentes.cuenta.sin_desactivados : t.asistentes.vacio_texto) : undefined
+          }
           accionVacio={
-            filas.length === 0 && puedeAltaManual ? <Button onClick={abrirAlta}>{tl.incorporar}</Button> : undefined
+            filas.length === 0 && puedeAltaManual && !desactivados
+              ? <Button onClick={abrirAlta}>{tl.incorporar}</Button>
+              : undefined
           }
         >
           <div className="listado-maqueta-tabla">
@@ -231,9 +273,15 @@ export function Asistentes() {
                         )}
                       </td>
                       <td>
-                        <Button variant="secondary" onClick={() => navigate(`/asistentes/${a.id}`)}>
-                          {tl.ver_legajo}
-                        </Button>
+                        {desactivados ? (
+                          <Button variant="secondary" onClick={() => setAbierto(a)} disabled={!a.usuario_id}>
+                            {t.usuarios_panel.ver}
+                          </Button>
+                        ) : (
+                          <Button variant="secondary" onClick={() => navigate(`/asistentes/${a.id}`)}>
+                            {tl.ver_legajo}
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   );

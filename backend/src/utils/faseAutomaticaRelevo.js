@@ -68,7 +68,7 @@ export function aQuienesSeLesEscribe(ordenPrioridad, porRol) {
 async function personalDeEmergencia(prestadoraId) {
   const { data, error } = await supabase
     .from('personal_emergencia')
-    .select('asistente_id, tipo, asistentes(estado, disponible)')
+    .select('asistente_id, tipo, asistentes(estado, disponible, cuenta_desactivada)')
     .eq('prestadora_id', prestadoraId)
     .eq('activo', true);
 
@@ -79,6 +79,8 @@ async function personalDeEmergencia(prestadoraId) {
     // Quien se fue de la Prestadora sigue anotado en el roster y no es un candidato peor puesto:
     // no es un candidato. Mismo criterio que `estaEnElPadron` en el panel de cobertura.
     if (fila.asistentes?.estado !== 'activo') continue;
+    // Ni quien tiene la cuenta desactivada: no entra, y no se le asigna nada.
+    if (fila.asistentes?.cuenta_desactivada !== false) continue;
     // Y quien dijo que no está disponible tampoco. Estar anotado en el roster de emergencia no
     // convierte a nadie en alguien a quien se le escribe igual: el interruptor lo mueve el
     // Asistente y esto es exactamente lo que apaga (`asistentes.disponible`).
@@ -102,6 +104,8 @@ async function suplentesDisponibles(prestadoraId, guardia) {
     .select('id')
     .eq('prestadora_id', prestadoraId)
     .eq('estado', 'activo')
+    // Quien tiene la cuenta desactivada no es suplente de nadie.
+    .eq('cuenta_desactivada', false)
     // El interruptor que mueve el Asistente. Acá se respeta sin preguntar, y esa es la
     // diferencia con el panel de cobertura: allá la lista la lee una persona, que puede decidir
     // llamarlo igual; acá no hay nadie leyendo, sale un mensaje solo.

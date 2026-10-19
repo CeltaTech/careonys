@@ -12,6 +12,7 @@ import { nombreDelLugar } from './catalogoDeLugares.js';
 import { domicilioEscrito, partesDelDomicilio, partesDeUnRenglon } from './domicilioEscrito.js';
 import { cuentaDeLaFila } from './cuentaDeLaFila.js';
 import { generoEscrito } from './generoEscrito.js';
+import { inicioDeGuardia } from './horarios.js';
 
 // Comprueba que un tipo de Asistente exista y sea de los que esta Prestadora puede usar:
 // los generales de CeltaTech (`prestadora_id` vacío) o los que creó ella misma. Devuelve el
@@ -163,8 +164,51 @@ export async function desactivarCuenta(userId, { prestadoraId, motivo } = {}) {
 
   const { data: desactivada, error } = await enLaPrestadora(prestadoraId, 'desactivación de cuenta', () =>
     supabase.rpc('desactivar_la_cuenta', { p_usuario: userId, p_motivo: motivoEscrito }));
+  // Con turnos sin terminar la base no la desactiva: se contesta cuáles son y qué hacer con cada uno.
+  if (error?.message === 'desactivacion_con_turnos_por_delante') {
+    throw await errorPorTurnosSinTerminar(userId, prestadoraId);
+  }
   if (error) throw new Error(error.message);
   if (desactivada !== true) throw new Error('No hay permiso para desactivar esa cuenta');
+}
+
+// Los dos motivos por los que un turno sin terminar traba la desactivación. El que todavía no
+// empezó se reasigna; el que ya empezó o ya pasó, y no tiene ni el fin del turno ni el cierre desde
+// el Panel, se cierra.
+export const MOTIVO_TURNOS_POR_DELANTE = 'desactivacion_con_turnos_por_delante';
+export const MOTIVO_TURNOS_SIN_CERRAR = 'desactivacion_con_turnos_sin_cerrar';
+
+export function motivoDelTurnoQueTraba(turno, ahora = new Date()) {
+  if (turno.tipo === 'serie') return MOTIVO_TURNOS_POR_DELANTE;
+  const empezo = Boolean(turno.checkin_at) || !(inicioDeGuardia(turno) > ahora);
+  return empezo ? MOTIVO_TURNOS_SIN_CERRAR : MOTIVO_TURNOS_POR_DELANTE;
+}
+
+// Arma el error con los turnos que traban, de esa Prestadora y de ninguna otra: la base los busca
+// adentro de la Prestadora del trabajo. Si la lista no se pudo leer, el error sigue diciendo que hay
+// turnos por delante, sin la lista.
+export async function errorPorTurnosSinTerminar(userId, prestadoraId, ahora = new Date()) {
+  const { data, error } = await enLaPrestadora(prestadoraId, 'turnos que traban la desactivación', () =>
+    supabase.rpc('turnos_que_traban_la_desactivacion', { p_usuario: userId }));
+  if (error) console.error('No se pudieron leer los turnos que traban la desactivación:', error.message);
+
+  const turnos = (data ?? []).map((turno) => ({
+    tipo: turno.tipo,
+    id: turno.id,
+    fecha: turno.fecha,
+    hora_inicio: turno.hora_inicio,
+    hora_fin: turno.hora_fin,
+    cliente: turno.cliente,
+    motivo: motivoDelTurnoQueTraba(turno, ahora),
+  }));
+  const motivos = [MOTIVO_TURNOS_POR_DELANTE, MOTIVO_TURNOS_SIN_CERRAR]
+    .filter((motivo) => turnos.some((turno) => turno.motivo === motivo));
+  if (!motivos.length) motivos.push(MOTIVO_TURNOS_POR_DELANTE);
+
+  const fallo = new ErrorConMotivo(motivos[0]);
+  fallo.motivos = motivos;
+  fallo.turnos = turnos;
+  return fallo;
 }
 
 // Borra una cuenta recién creada, cuando el alta se cortó por la mitad. Es el único borrado de una

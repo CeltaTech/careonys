@@ -67,7 +67,10 @@ export function Dashboard() {
   // `components/estado-actual/GuiaPrimerosPasos.jsx` (pendiente #139).
   const postulaciones = useSupabaseTable('postulaciones');
   // Coordinador consulta la vista sin vínculo laboral/score de riesgo — ver schema_etapa2i.sql.
-  const asistentes = useSupabaseTable(esAdmin ? 'asistentes' : 'asistentes_coordinador', { orderBy: 'created_at' });
+  const asistentes = useSupabaseTable(esAdmin ? 'asistentes' : 'asistentes_coordinador', {
+    orderBy: 'created_at',
+    select: esAdmin ? '*, cuenta_desactivada' : '*',
+  });
   const clientes = useSupabaseTable('clientes', { orderBy: 'created_at' });
   const [guardiasEnCurso, setGuardiasEnCurso] = useState(null);
   const [guardiasPorModalidad, setGuardiasPorModalidad] = useState(null);
@@ -130,7 +133,8 @@ export function Dashboard() {
     const { data, error } = await supabase
       .from('asistentes')
       .select('canales')
-      .eq('estado', ESTADO_ACTIVO);
+      .eq('estado', ESTADO_ACTIVO)
+      .eq('cuenta_desactivada', false);
 
     if (error) {
       setErrorVinculos(t.comun.error_generico);

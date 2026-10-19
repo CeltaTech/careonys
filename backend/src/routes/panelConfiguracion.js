@@ -659,6 +659,8 @@ panelConfiguracionRouter.post('/personal-emergencia', async (req, res) => {
   const { error } = await db
     .from('personal_emergencia')
     .insert({ asistente_id, tipo, prestadora_id: prestadoraId });
+  // La base no anota a un Asistente con la cuenta desactivada.
+  if (error?.message === 'asistente_no_encontrado') return responderError(res, new ErrorConMotivo(error.message));
   if (error) return responderError(res, error);
   res.json({ ok: true });
 });

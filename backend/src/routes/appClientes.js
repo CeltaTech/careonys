@@ -1265,6 +1265,8 @@ function poolDeLaPrestadora(prestadoraId) {
     .eq('estado', 'activo')
     .eq('disponible', true)
     .is('deleted_at', null)
+    // Un Asistente con la cuenta desactivada no se ofrece.
+    .eq('cuenta_desactivada', false)
     .contains('canales', [MODALIDAD.INTERMEDIACION]);
 }
 

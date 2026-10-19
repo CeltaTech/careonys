@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useLocale } from '../i18n/LocaleContext';
 import { Cabecera } from '../components/ui/Cabecera';
 import { supabase } from '../lib/supabaseClient';
@@ -68,11 +69,15 @@ export function Guardias() {
   // Por qué no salió lo último que se hizo sobre una guardia. Va aparte del error de carga: la
   // lista sigue a la vista, y el error de carga sólo se ve cuando la lista no se pudo traer.
   const [aviso, setAviso] = useState(null);
-  // El rango de fechas arranca en hoy: se calcula una sola vez, al abrir la pantalla.
-  const filtrosIniciales = useMemo(
-    () => ({ desde: hoyISO(), hasta: sumarDias(hoyISO(), 14), estado: '', sinCubrir: false, busqueda: '' }),
-    []
-  );
+  // El rango de fechas arranca en hoy, o en el día que pide el enlace que trajo hasta acá —el de un
+  // turno que no deja desactivar una cuenta—. Se calcula una sola vez, al abrir la pantalla.
+  const [parametros] = useSearchParams();
+  const desdeDelEnlace = parametros.get('desde');
+  const filtrosIniciales = useMemo(() => {
+    const desde = /^\d{4}-\d{2}-\d{2}$/.test(desdeDelEnlace ?? '') ? desdeDelEnlace : hoyISO();
+    return { desde, hasta: sumarDias(desde, 14), estado: '', sinCubrir: false, busqueda: '' };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const { f, set, limpiar, hayFiltros } = useFiltros(filtrosIniciales);
   const [mostrarNueva, setMostrarNueva] = useState(false);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
@@ -118,7 +123,7 @@ export function Guardias() {
       // nombre, no un guión— y también para llenar el desplegable de reasignación, que sí tiene
       // que dejar afuera a quien ya no trabaja acá. Por eso el estado viaja: el filtro lo aplica
       // la puerta que reparte trabajo (`estaEnElPadron` en GuardiaAcciones.jsx), no la consulta.
-      supabase.from('asistentes').select('id, nombre, estado'),
+      supabase.from('asistentes').select('id, nombre, estado, cuenta_desactivada'),
       supabase.from('pacientes').select(`id, ${FICHA_NOMBRE}`),
       supabase.from('servicios').select('id, etiqueta'),
     ]);

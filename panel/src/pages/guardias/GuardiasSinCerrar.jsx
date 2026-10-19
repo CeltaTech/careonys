@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useLocale } from '../../i18n/LocaleContext';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
@@ -38,6 +39,8 @@ import { FICHA_NOMBRE, conSusFichas } from '../../lib/fichaDelPaciente';
 // Y no cierra nada por su cuenta: cada guardia se cierra de a una, con una persona apretando el
 // botón, escribiendo por qué y confirmando.
 
+const ID_DE_LA_SECCION = 'guardias-sin-cerrar';
+
 export function GuardiasSinCerrar({ onCerrada }) {
   const { t } = useLocale();
   const { usuario } = useAuth();
@@ -47,6 +50,7 @@ export function GuardiasSinCerrar({ onCerrada }) {
   const [error, setError] = useState(null);
   const [aCerrar, setACerrar] = useState(null);
   const tomas = useAlarmasTomadas();
+  const { hash } = useLocation();
 
   const cargar = useCallback(async () => {
     setEstadoCarga('cargando');
@@ -95,13 +99,21 @@ export function GuardiasSinCerrar({ onCerrada }) {
     cargar();
   }, [cargar]);
 
+  // El enlace de un turno que hay que cerrar llega con `#guardias-sin-cerrar`: con la lista ya
+  // cargada, se baja hasta acá.
+  useEffect(() => {
+    if (hash === `#${ID_DE_LA_SECCION}` && estadoCarga === 'listo') {
+      document.getElementById(ID_DE_LA_SECCION)?.scrollIntoView();
+    }
+  }, [hash, estadoCarga]);
+
   async function alCerrarUna() {
     await cargar();
     if (onCerrada) await onCerrada();
   }
 
   return (
-    <div className="dashboard-seccion">
+    <div className="dashboard-seccion" id={ID_DE_LA_SECCION}>
       <div className="dashboard-seccion-header">
         <h2 className="dashboard-seccion-titulo">{t.guardias_sin_cerrar.titulo}</h2>
       </div>

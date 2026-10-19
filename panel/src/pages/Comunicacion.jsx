@@ -54,7 +54,10 @@ export function Comunicacion() {
       { data: conversacionesData, error: errorConversaciones },
       { data: mensajesWhatsapp },
     ] = await Promise.all([
-      supabase.from(esAdmin ? 'asistentes' : 'asistentes_coordinador').select('id, nombre'),
+      // A un Asistente desactivado no se le escribe. La vista del coordinador ya no lo trae.
+      esAdmin
+        ? supabase.from('asistentes').select('id, nombre').eq('cuenta_desactivada', false)
+        : supabase.from('asistentes_coordinador').select('id, nombre'),
       supabase
         .from('mensajes_asistente')
         .select('asistente_id, mensaje, created_at')

@@ -44,6 +44,7 @@ const ESTADO_POR_MOTIVO = {
   // está bien pero alguien ya lo resolvió, y 429 cuando se agotaron los intentos, que es el
   // código que la web reserva para "probó demasiadas veces".
   no_encontrado: 404,
+  asistente_no_encontrado: 404,
   ya_comprobada: 409,
   ya_resuelta: 409,
   // Una emergencia que otra persona ya atendió.
@@ -168,6 +169,13 @@ const ESTADO_POR_MOTIVO = {
   // lo mismo que el correo ya tomado; el mal escrito es un dato mal cargado, o sea 400.
   usuario_en_uso: 409,
   usuario_mal_escrito: 400,
+  // Reactivar una cuenta cuyo nombre de usuario o email tomó, mientras estaba desactivada, otra
+  // cuenta activa. Es 409 por lo mismo: el pedido está bien armado y choca con algo que ya existe.
+  reactivacion_usuario_en_uso: 409,
+  reactivacion_correo_en_uso: 409,
+  // Desactivar una cuenta con turnos de guardia por delante: primero se le quitan los turnos.
+  desactivacion_con_turnos_por_delante: 409,
+  desactivacion_con_turnos_sin_cerrar: 409,
   via_de_telefono_no_disponible: 409,
   clave_actual_incorrecta: 400,
   no_puede_habilitar: 403,
@@ -212,5 +220,8 @@ export function responderError(res, error, estadoPorOmision = 500) {
   console.error(`[${estado}] ${donde} — ${motivo}:`, error?.message ?? error);
 
   const cuerpo = error?.motivo ? { error: motivo, motivo } : { error: motivo };
+  // Lo que la pantalla necesita para decir qué hacer: todos los motivos y los turnos de cada uno.
+  if (error?.motivo && Array.isArray(error.motivos)) cuerpo.motivos = error.motivos;
+  if (error?.motivo && Array.isArray(error.turnos)) cuerpo.turnos = error.turnos;
   return res.status(estado).json(cuerpo);
 }

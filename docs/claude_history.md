@@ -546,3 +546,9 @@ Las que siguen se tomaron al arrancar el proyecto y quedaron anotadas fuera de e
 - **Qué decía antes:** el Panel mostraba en el Certificado de Aptitud un código QR para imprimir, y el Cliente o una persona autorizada lo escaneaba con la aplicación para confirmar que quien llegó era el Asistente de la guardia de hoy.
 - **Qué dice ahora:** el Certificado se ve entre los datos del perfil del Asistente, y eso alcanza. El escaneo, la página y los dos interruptores salieron; las piezas quedaron en el estante de `Codigos-utiles`.
 - **Motivo:** el Desarrollador: si se cargó en el perfil del Asistente, es prueba suficiente. Si el Asistente lo quiere imprimir, es cosa suya.
+
+## Qué turno traba la desactivación de una cuenta
+
+- **Qué decía antes:** trababa todo turno con fecha de hoy en adelante.
+- **Qué dice ahora:** traba el turno que no tiene registrado el fin del turno ni un cierre hecho desde el Panel, sea de la fecha que sea, y la serie vigente. Los cancelados y los ausentes no traban. Vale también para los Asistentes, que ahora se desactivan desde su Legajo.
+- **Motivo:** lo decidió el Desarrollador: un turno cuenta como terminado si tiene registrado el fin del turno o un cierre hecho desde el Panel; la fecha no dice si quedó algo por resolver.

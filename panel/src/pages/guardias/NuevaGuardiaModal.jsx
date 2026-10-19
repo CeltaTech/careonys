@@ -79,7 +79,7 @@ export function NuevaGuardiaModal({ onClose, onCreada }) {
         // `estaEnElPadron`, y no escrito a mano acá: si mañana la Prestadora suma otra forma de
         // seguir en el Padrón, esta puerta no puede quedarse con la regla vieja
         // (regla 12 de CLAUDE.md §7).
-        supabase.from('asistentes').select('id, nombre').eq('estado', ESTADO_ACTIVO).order('nombre'),
+        supabase.from('asistentes').select('id, nombre').eq('estado', ESTADO_ACTIVO).eq('cuenta_desactivada', false).order('nombre'),
         // Se pide también el domicilio: cuando dos personas viven en la misma casa, verlo al
         // lado del nombre es lo que hace evidente que ese turno los cubre a los dos.
         // `cliente_id` viene porque es lo que decide qué Servicios se le pueden ofrecer al

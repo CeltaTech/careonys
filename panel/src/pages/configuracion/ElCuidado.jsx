@@ -744,7 +744,7 @@ function TabServiciosPersonalEmergencia() {
            nombre que se pueda quedar sin dueño. El valor sale de `ESTADO_ACTIVO` y no escrito a
            mano: es la misma regla que contesta `estaEnElPadron`, y una consulta a la base no
            puede llamar a una función de JavaScript (regla 12 de CLAUDE.md §7). */
-        supabase.from('asistentes').select('id, nombre').eq('estado', ESTADO_ACTIVO).order('nombre'),
+        supabase.from('asistentes').select('id, nombre').eq('estado', ESTADO_ACTIVO).eq('cuenta_desactivada', false).order('nombre'),
       ]);
       if (errorAsistentes) throw errorAsistentes;
       setPersonal(filas);

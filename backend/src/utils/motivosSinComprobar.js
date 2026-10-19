@@ -18,3 +18,8 @@ export const MOTIVOS_SIN_COMPROBAR = [
   'sin_conexion',
   'otro',
 ];
+
+// Los motivos con los que el Asistente pide autorización. Son los de arriba que cuentan por qué no
+// se pudo leer el código QR; los otros dos no tienen sentido acá, porque quien pide autorización
+// todavía no sabe si la autorización llega y tiene conexión para pedirla.
+export const MOTIVOS_DEL_PEDIDO = ['nadie_para_mostrar', 'sin_camara', 'otro'];

@@ -99,8 +99,8 @@ export const api = {
   // El código que se tipea no viaja por acá: va adentro del mismo checkin o checkout, junto con
   // la ubicación, porque comprobar la presencia y marcar la llegada son un solo acto.
   codigoDePresencia: () => pedido('/codigo-de-presencia'),
-  pedirAutorizacion: (id, { momento, lat, lng }) =>
-    pedido(`/guardias/${id}/comprobacion/pedido`, { method: 'POST', body: JSON.stringify({ momento, lat, lng }) }),
+  pedirAutorizacion: (id, { momento, lat, lng, motivo, detalle }) =>
+    pedido(`/guardias/${id}/comprobacion/pedido`, { method: 'POST', body: JSON.stringify({ momento, lat, lng, motivo, detalle }) }),
   estadoDeComprobacion: (id, momento) => pedido(`/guardias/${id}/comprobacion/${momento}`),
   estructurarReporte: (id, textoLibre) =>
     pedido(`/guardias/${id}/reporte/estructurar`, { method: 'POST', body: JSON.stringify({ textoLibre }) }),

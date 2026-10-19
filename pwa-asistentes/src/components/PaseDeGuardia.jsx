@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { api } from '../lib/api';
 import { mensajeDeError } from '../lib/errores';
-import { MOTIVOS_SIN_COMPROBAR } from '../lib/motivosSinComprobar';
+import { MOTIVOS_SIN_COMPROBAR, MOTIVOS_DEL_PEDIDO } from '../lib/motivosSinComprobar';
 import { obtenerUbicacion } from '../lib/ubicacionDelTelefono';
 
 const LECTOR_ID = 'lector-codigo-de-presencia';
@@ -26,8 +26,8 @@ const SONDEO_MS = 4000;
  *   Plan A — lo muestra quien está en la casa: el Cliente, o el Asistente que se va cuando hay
  *   relevo. Se lee con la cámara o se tipea; las dos cosas terminan en el mismo pedido.
  *
- *   Plan B — no puede leer el código QR. El Asistente pide autorización y no escribe nada: queda
- *   anotado desde dónde y a qué hora la pidió, y el pedido aparece en el Panel. Quien coordina hace
+ *   Plan B — no puede leer el código QR. El Asistente pide autorización eligiendo el motivo: queda
+ *   anotado desde dónde, a qué hora y por qué la pidió, y el pedido aparece en el Panel. Quien coordina hace
  *   las verificaciones que acostumbre y autoriza. Mientras espera, esta pantalla pregunta sola, y
  *   cuando la autorización llega, la llegada o el cierre se marca desde acá sin tocar nada más.
  *   Si al abrir esta pantalla ya estaba autorizado —el cierre del Asistente que se va, que quedó
@@ -43,7 +43,7 @@ const SONDEO_MS = 4000;
  * en la puerta sin nada que apretar.
  */
 export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancelar }) {
-  // codigo · esperando · sin_comprobar
+  // codigo · pedido · esperando · sin_comprobar
   const [paso, setPaso] = useState('codigo');
   const [codigo, setCodigo] = useState('');
   const [motivo, setMotivo] = useState('');
@@ -151,11 +151,19 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
     entregar({ autorizada: true });
   }, [entregar]);
 
+  async function irAlPedido() {
+    await detenerCamara();
+    setAdvertencia('');
+    setError('');
+    setMotivo('');
+    setDetalle('');
+    setPaso('pedido');
+  }
+
   async function pedirAutorizacion() {
     setEnviando(true);
     setError('');
     setAdvertencia('');
-    await detenerCamara();
     try {
       // Sin ubicación el pedido sale igual: quien coordina decide con lo que tiene, y la guardia
       // no se traba por un GPS que no contesta.
@@ -165,7 +173,7 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
       } catch {
         // se pide sin ubicación
       }
-      await api.pedirAutorizacion(guardiaId, { momento, lat: punto.lat, lng: punto.lng });
+      await api.pedirAutorizacion(guardiaId, { momento, lat: punto.lat, lng: punto.lng, motivo, detalle });
       if (vivoRef.current) setPaso('esperando');
     } catch (e) {
       if (vivoRef.current) setError(mensajeDeError(e, t, 'pedir autorización'));
@@ -280,12 +288,53 @@ export default function PaseDeGuardia({ t, guardiaId, momento, onListo, onCancel
           <button
             type="button"
             className="btn btn-secondary btn-full pwa-card-pie"
-            onClick={pedirAutorizacion}
+            onClick={irAlPedido}
             disabled={enviando}
+          >
+            {t.pase_de_guardia.pedir_autorizacion}
+          </button>
+          {botonEntrarIgual}
+        </>
+      )}
+
+      {paso === 'pedido' && (
+        <>
+          <p className="guardia-card-detalle">{t.pase_de_guardia.pedido_titulo}</p>
+          {MOTIVOS_DEL_PEDIDO.map((m) => (
+            <label key={m} htmlFor={`pase-pedido-${m}`} className="opcion-unica">
+              <input
+                id={`pase-pedido-${m}`}
+                type="radio"
+                name="pase-pedido"
+                value={m}
+                checked={motivo === m}
+                onChange={() => setMotivo(m)}
+                disabled={enviando}
+              />
+              {t.pase_de_guardia[`motivo_${m}`]}
+            </label>
+          ))}
+          <div className="form-field pwa-card-pie">
+            <label htmlFor="pase-pedido-detalle">{t.pase_de_guardia.detalle_label}</label>
+            <textarea
+              id="pase-pedido-detalle"
+              rows={2}
+              value={detalle}
+              onChange={(e) => setDetalle(e.target.value)}
+              disabled={enviando}
+            />
+          </div>
+          <button
+            type="button"
+            className="btn btn-primary btn-full"
+            onClick={pedirAutorizacion}
+            disabled={enviando || !motivo}
           >
             {enviando ? t.pase_de_guardia.pidiendo_autorizacion : t.pase_de_guardia.pedir_autorizacion}
           </button>
-          {botonEntrarIgual}
+          <button type="button" className="btn btn-secondary btn-full pwa-card-pie" onClick={volverAlCodigo} disabled={enviando}>
+            {t.pase_de_guardia.volver_al_codigo}
+          </button>
         </>
       )}
 

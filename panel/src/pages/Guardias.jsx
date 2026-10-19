@@ -26,7 +26,7 @@ import { moverGuardia } from '../lib/moverGuardia';
 import { mensajeDeError } from '../lib/errores';
 import { useUmbrales } from '../context/UmbralesContext';
 import { usePedidosDeAutorizacion } from '../context/PedidosDeAutorizacionContext';
-import { llamarApiComprobaciones } from '../lib/apiComprobaciones';
+import { SolicitudDeIngresoModal } from './guardias/SolicitudDeIngresoModal';
 // Las dos vienen del punto único de verdad de las fechas. Esta pantalla tenía su propia copia de
 // `hoyISO`, escrita con `toISOString()` a secas, que devuelve el día en huso cero: quien mira
 // desde Buenos Aires después de las nueve de la noche abría la lista en el día siguiente, y las
@@ -81,28 +81,16 @@ export function Guardias() {
   const [verGrilla, setVerGrilla] = useState(false);
   const [guardiaSeleccionada, setGuardiaSeleccionada] = useState(null);
   // Quién está en la puerta esperando que lo dejen entrar. El Asistente que no pudo leer el
-  // código QR llama a quien coordina; quien coordina busca su guardia acá, verifica como
-  // acostumbre y aprieta «Autorizar ingreso». Eso vale lo mismo que leer el código QR: la llegada
-  // queda comprobada con quién la autorizó, y la salida del Asistente que se va, autorizada.
+  // código QR llama a quien coordina; quien coordina busca su guardia acá, abre «Solicitud de
+  // ingreso», lee quién la pide y por qué, verifica como acostumbre y autoriza. Eso vale lo mismo
+  // que leer el código QR: la llegada queda comprobada con quién la autorizó, y la salida del
+  // Asistente que se va, autorizada.
   const { pedidos: pedidosDeAutorizacion, recargar: recargarPedidos } = usePedidosDeAutorizacion();
   const pedidoPorGuardia = useMemo(
     () => new Map(pedidosDeAutorizacion.map((p) => [p.guardiaId, p])),
     [pedidosDeAutorizacion]
   );
-  const [autorizandoId, setAutorizandoId] = useState(null);
-
-  async function autorizarIngreso(pedido) {
-    setAutorizandoId(pedido.id);
-    setAviso(null);
-    try {
-      await llamarApiComprobaciones(`/${pedido.id}/autorizar`, { method: 'POST' });
-      recargarPedidos();
-    } catch (err) {
-      setAviso(mensajeDeError(err, t));
-    } finally {
-      setAutorizandoId(null);
-    }
-  }
+  const [solicitudAbierta, setSolicitudAbierta] = useState(null);
   const [asistentes, setAsistentes] = useState([]);
   const [nombreDelPaciente, setNombreDelPaciente] = useState({});
   const { pedirConfirmacion } = useConfirmacion();
@@ -387,11 +375,8 @@ export function Guardias() {
                         </td>
                         <td>
                           {pedidoPorGuardia.has(g.id) && (
-                            <Button
-                              onClick={() => autorizarIngreso(pedidoPorGuardia.get(g.id))}
-                              disabled={autorizandoId !== null}
-                            >
-                              {autorizandoId === pedidoPorGuardia.get(g.id).id ? tl.autorizando : tl.autorizar_ingreso}
+                            <Button onClick={() => setSolicitudAbierta(pedidoPorGuardia.get(g.id))}>
+                              {tl.solicitud_de_ingreso}
                             </Button>
                           )}{' '}
                           <Button variant="secondary" onClick={() => setGuardiaSeleccionada(g)}>
@@ -409,6 +394,17 @@ export function Guardias() {
       </section>
 
       {mostrarNueva && <NuevaGuardiaModal onClose={() => setMostrarNueva(false)} onCreada={cerrarYRecargar} />}
+
+      {solicitudAbierta && (
+        <SolicitudDeIngresoModal
+          pedido={solicitudAbierta}
+          onClose={() => setSolicitudAbierta(null)}
+          onAutorizado={() => {
+            setSolicitudAbierta(null);
+            recargarPedidos();
+          }}
+        />
+      )}
 
       {guardiaSeleccionada && (
         <GuardiaAcciones

@@ -501,11 +501,13 @@ describe('el código que se muestra en pantalla', () => {
 // ============================================================================
 
 describe('Plan B — «no puedo leer el código QR»', () => {
-  it('el pedido queda esperando en el Panel, con desde dónde y cuándo se pidió, y no marca ninguna llegada', async () => {
+  it('el pedido queda esperando en el Panel, con desde dónde, cuándo y por qué se pidió, y no marca ninguna llegada', async () => {
     const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/comprobacion/pedido`, {
       momento: 'checkin',
       lat: LAT,
       lng: LNG,
+      motivo: 'otro',
+      detalle: '  El Cliente está dormido  ',
     });
     assert.equal(estado, 200);
     assert.equal(cuerpo.estado, 'pendiente_de_autorizacion');
@@ -516,8 +518,19 @@ describe('Plan B — «no puedo leer el código QR»', () => {
     assert.equal(fila.momento, 'checkin');
     assert.equal(fila.lat, LAT);
     assert.equal(fila.lng, LNG);
+    assert.equal(fila.motivo_del_pedido, 'otro');
+    assert.equal(fila.detalle_del_pedido, 'El Cliente está dormido');
     assert.equal(fila.autorizada_por, null);
     assert.equal(guardiaMarcada(), false);
+  });
+
+  it('un pedido sin motivo, o con uno que no es de la lista del pedido, se rechaza', async () => {
+    for (const motivo of [undefined, 'sin_conexion', 'cualquiera']) {
+      const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/comprobacion/pedido`, { momento: 'checkin', motivo });
+      assert.equal(estado, 400, `motivo ${motivo}`);
+      assert.equal(cuerpo.motivo, 'faltan_datos');
+    }
+    assert.equal(comprobacionesGuardadas().length, 0);
   });
 
   it('un momento que no es ni llegada ni salida se rechaza', async () => {
@@ -665,14 +678,14 @@ describe('el tope de pedidos por minuto en la llegada y la salida', () => {
     for (let vuelta = 1; vuelta <= 2; vuelta += 1) {
       const { estado } = await pedir('POST', `/guardias/${GUARDIA}/comprobacion/pedido`, {
         momento: 'checkin',
-        texto: 'No atiende nadie',
+        motivo: 'nadie_para_mostrar',
       });
       assert.equal(estado, 200, `el pedido ${vuelta} tenía que pasar`);
     }
 
     const { estado, cuerpo } = await pedir('POST', `/guardias/${GUARDIA}/comprobacion/pedido`, {
       momento: 'checkin',
-      texto: 'No atiende nadie',
+      motivo: 'nadie_para_mostrar',
     });
     assert.equal(estado, 429);
     assert.equal(cuerpo.motivo, 'demasiados_pedidos');

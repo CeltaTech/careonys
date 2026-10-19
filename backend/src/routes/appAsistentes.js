@@ -1851,9 +1851,9 @@ appAsistentesRouter.get('/codigo-de-presencia', requiereRolAsistente, async (req
 });
 
 // «No puedo leer el código QR.» El Asistente pide autorización y el pedido aparece en el Panel,
-// con el lugar y la hora desde donde lo hizo. No marca nada: queda esperando a quien coordina.
+// con el lugar, la hora y el motivo. No marca nada: queda esperando a quien coordina.
 appAsistentesRouter.post('/guardias/:id/comprobacion/pedido', requiereRolAsistente, topeDePedidos({ nombre: 'comprobacion_pedir_autorizacion' }), async (req, res) => {
-  const { momento, lat, lng } = req.body || {};
+  const { momento, lat, lng, motivo, detalle } = req.body || {};
   if (momento !== 'checkin' && momento !== 'checkout') {
     return res.status(400).json({ error: 'Momento inválido', motivo: 'faltan_datos' });
   }
@@ -1867,6 +1867,8 @@ appAsistentesRouter.post('/guardias/:id/comprobacion/pedido', requiereRolAsisten
       momento,
       lat: typeof lat === 'number' ? lat : null,
       lng: typeof lng === 'number' ? lng : null,
+      motivo: typeof motivo === 'string' ? motivo : null,
+      detalle: typeof detalle === 'string' ? detalle : null,
     });
     res.json(pedido);
   } catch (e) {

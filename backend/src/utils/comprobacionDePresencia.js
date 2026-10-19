@@ -6,7 +6,7 @@ import {
   verificadorDelCodigo,
   vencimientoEnSegundos,
 } from './codigoDeUnSoloUso.js';
-import { MOTIVOS_SIN_COMPROBAR } from './motivosSinComprobar.js';
+import { MOTIVOS_SIN_COMPROBAR, MOTIVOS_DEL_PEDIDO } from './motivosSinComprobar.js';
 import { empujar, ASUNTOS } from '../avisosEnVivo/canal.js';
 
 // Cómo se comprueba que el Asistente está realmente en el domicilio cuando marca la llegada y
@@ -53,7 +53,7 @@ export const SEGUNDOS_EN_PANTALLA_MAXIMO = 300;
 // que el resto del backend la siga pidiendo en un solo lugar, pero la lista en sí vive en
 // `motivosSinComprobar.js`, que es copia del archivo que usa la pantalla: el teléfono ofrece los
 // motivos y el backend los valida, y las dos listas tienen que ser la misma.
-export { MOTIVOS_SIN_COMPROBAR };
+export { MOTIVOS_SIN_COMPROBAR, MOTIVOS_DEL_PEDIDO };
 
 const LARGO_MAXIMO_DEL_DETALLE = 500;
 
@@ -350,13 +350,18 @@ export async function registrarComprobacion({ guardia, momento, lat, lng, compro
 // ---------------------------------------------------------------------------------------
 
 /**
- * El Asistente no puede leer el código QR y pide autorización. Queda anotado desde dónde y a qué
- * hora la pidió, y el pedido aparece en el Panel. No marca ni la llegada ni la salida.
+ * El Asistente no puede leer el código QR y pide autorización. Queda anotado desde dónde, a qué
+ * hora y por qué motivo la pidió, y el pedido aparece en el Panel. No marca ni la llegada ni la
+ * salida.
  */
-export async function pedirAutorizacion({ guardia, momento, lat, lng }) {
+export async function pedirAutorizacion({ guardia, momento, lat, lng, motivo, detalle }) {
   const yaHay = await comprobacionDe({ prestadoraId: guardia.prestadora_id, guardiaId: guardia.id, momento });
   if (yaHay?.estado === 'comprobada') {
     return { id: yaHay.id, estado: yaHay.estado, pedidoEn: yaHay.pedido_en };
+  }
+
+  if (!MOTIVOS_DEL_PEDIDO.includes(motivo)) {
+    throw new ErrorConMotivo('faltan_datos', 'Falta el motivo del pedido');
   }
 
   const fila = await guardarComprobacion({
@@ -372,6 +377,8 @@ export async function pedirAutorizacion({ guardia, momento, lat, lng }) {
     autorizada_por: null,
     motivo_sin_comprobar: null,
     motivo_detalle: null,
+    motivo_del_pedido: motivo,
+    detalle_del_pedido: String(detalle ?? '').trim().slice(0, LARGO_MAXIMO_DEL_DETALLE) || null,
     lat: Number.isFinite(lat) ? lat : null,
     lng: Number.isFinite(lng) ? lng : null,
     pedido_en: ahora(),
@@ -385,7 +392,7 @@ export async function pedidosEsperandoAutorizacion(prestadoraId) {
   const { data, error } = await supabase
     .from('guardia_comprobaciones')
     .select(`
-      id, momento, pedido_en,
+      id, momento, pedido_en, motivo_del_pedido, detalle_del_pedido,
       guardia_id, guardias!guardia_comprobaciones_guardia_tenant_fk(fecha, hora_inicio, hora_fin),
       asistente_id, asistentes!guardia_comprobaciones_asistente_tenant_fk(nombre)
     `)
@@ -399,6 +406,8 @@ export async function pedidosEsperandoAutorizacion(prestadoraId) {
     guardiaId: fila.guardia_id,
     momento: fila.momento,
     pedidoEn: fila.pedido_en,
+    motivo: fila.motivo_del_pedido ?? null,
+    detalle: fila.detalle_del_pedido ?? null,
     asistente: fila.asistentes?.nombre ?? null,
     fecha: fila.guardias?.fecha ?? null,
     horaInicio: fila.guardias?.hora_inicio ?? null,

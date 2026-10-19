@@ -94,7 +94,7 @@ export function acotarAUsuariosDelPanel(query, usuarioPanel) {
  * que ya se leyó. Contesta si esa cuenta del Panel está al alcance de quien pide.
  *
  * Por qué hace falta la segunda forma (pendiente #157): un filtro no protege a quien no consulta
- * filtrando. `borrarCuenta` (`utils/cuentasPanel.js`) recibe un identificador y borra, así que
+ * filtrando. `deshacerAlta` (`utils/cuentasPanel.js`) recibe un identificador y borra, así que
  * necesita preguntar, no filtrar — y hasta el 2026-09-09 tenía su propia copia de esta regla,
  * más floja: se salteaba entera cuando quien pedía era Superadmin. Ahora la ruta y la función
  * preguntan las dos acá, y las dos formas de la regla viven juntas a propósito, para que nadie

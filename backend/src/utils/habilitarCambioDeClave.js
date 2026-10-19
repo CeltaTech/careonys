@@ -75,6 +75,7 @@ async function cuentaDeLaPrestadora(usuarioId, prestadoraId) {
     .select('id, rol, nombre, email, telefono, telefono_verificado_en, prestadora_id')
     .eq('id', usuarioId)
     .eq('prestadora_id', prestadoraId)
+    .is('desactivada_en', null)
     .maybeSingle());
   return data ?? null;
 }
@@ -189,6 +190,7 @@ export async function telefonosEsperandoHabilitacion(quien) {
     .from('usuarios')
     .select('id, nombre, email, rol, telefono, telefono_verificado_en')
     .eq('prestadora_id', quien.prestadoraId)
+    .is('desactivada_en', null)
     .not('telefono', 'is', null)
     .order('nombre', { ascending: true })
     .limit(TOPE_DE_LOS_PENDIENTES));

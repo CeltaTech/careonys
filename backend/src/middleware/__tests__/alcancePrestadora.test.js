@@ -6,7 +6,7 @@
  *
  * POR QUÉ EXISTE ESTA PRUEBA. La regla del alcance sobre la tabla `usuarios` estaba escrita dos
  * veces y las dos copias no decían lo mismo (pendiente #157): la de las rutas filtraba la
- * consulta, y la de `borrarCuenta` se salteaba entera cuando quien pedía era Superadmin. Ahora
+ * consulta, y la de la baja de una cuenta se salteaba entera cuando quien pedía era Superadmin. Ahora
  * hay una sola regla y las dos preguntan acá, así que acá se prueba la regla sola, sin base y sin
  * rutas: cuáles son los dos casos que dan permiso y por qué todo lo demás se niega.
  *
@@ -110,9 +110,9 @@ describe('de quién pide sólo se leen dos cosas, y siempre las mismas', () => {
     assert.deepEqual(alcanceDelPanel({}), { prestadoraId: null, esSuperadmin: false });
   });
 
-  it('lo que sale de acá es exactamente lo que recibe `borrarCuenta`', () => {
+  it('lo que sale de acá es exactamente lo que recibe `deshacerAlta`', () => {
     // Las dos claves tienen que llamarse así: el resultado viaja tal cual desde la ruta hasta
-    // `borrarCuenta` (`utils/cuentasPanel.js`), sin que nadie lo vuelva a armar por su cuenta.
+    // `deshacerAlta` (`utils/cuentasPanel.js`), sin que nadie lo vuelva a armar por su cuenta.
     const alcance = alcanceDelPanel({ rol: 'superadmin', prestadoraId: PRESTADORA_AJENA });
     assert.deepEqual(alcance, { prestadoraId: PRESTADORA_AJENA, esSuperadmin: true });
   });

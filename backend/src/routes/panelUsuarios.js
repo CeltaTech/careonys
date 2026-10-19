@@ -6,7 +6,7 @@ import {
   laCuentaDelPanelEstaAlAlcance,
 } from '../middleware/alcancePrestadora.js';
 import { clienteDelPedido, enLaPrestadora } from '../db/connection.js';
-import { crearCuentaConPerfil, borrarCuenta } from '../utils/cuentasPanel.js';
+import { crearCuentaConPerfil, borrarCuentaDeUnAltaCortada, desactivarCuenta } from '../utils/cuentasPanel.js';
 import { guardarLugaresDe } from '../utils/lugaresDeCadaPersona.js';
 import { exigirAdministracion } from '../middleware/exigirAdministracion.js';
 import { ROLES_PANEL } from '../utils/roles.js';
@@ -15,7 +15,7 @@ import { parteBienEscrita, parteComparable, sufijoDeLaPrestadora } from '../util
 import { exigirQueElCelularSeaDeUnaSolaPersona } from '../utils/celularDeUnaSolaPersona.js';
 import {
   ACCION_ALTA_DE_CUENTA,
-  ACCION_BAJA_DE_CUENTA,
+  ACCION_DESACTIVACION_DE_CUENTA,
   ACCION_CAMBIO_DE_CUENTA,
   camposQueCambiaron,
   registrarActividad,
@@ -51,6 +51,7 @@ panelUsuariosRouter.get('/', requiereRolPanel, soloAdministracion, async (req, r
     .select('id, rol, nombre, telefono, nombre_de_usuario, created_at')
     .in('rol', ROLES_DE_LA_LISTA)
     .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+    .is('desactivada_en', null)
     .order('created_at', { ascending: false });
 
   if (error) return responderError(res, error);
@@ -118,13 +119,13 @@ panelUsuariosRouter.post('/', requiereRolPanel, soloAdministracion, async (req, 
     // Hasta dónde llega esta cuenta, cuando el alta ya lo dice. Se guarda adentro del mismo pedido
     // porque el alcance es parte de la cuenta: una cuenta creada y un alcance que no se llegó a
     // escribir dejarían a alguien con acceso a algo que nadie decidió. Si la escritura falla, se
-    // borra la cuenta recién creada y el alta no ocurrió.
+    // deshace el alta: la cuenta recién creada se borra y el alta no ocurrió.
     if (Array.isArray(lugares) && lugares.length > 0) {
       try {
         // Con la credencial de quien da el alta: la administración escribe los lugares de su gente.
         await guardarLugaresDe(clienteDelPedido(req), 'usuario_lugares', 'usuario_id', userId, prestadoraDestino, lugares);
       } catch (error) {
-        await borrarCuenta(userId, { prestadoraId: prestadoraDestino });
+        await borrarCuentaDeUnAltaCortada(userId, { prestadoraId: prestadoraDestino });
         throw error;
       }
     }
@@ -225,17 +226,16 @@ panelUsuariosRouter.delete('/:id', requiereRolPanel, soloAdministracion, async (
     return res.status(400).json({ error: 'No hay permiso para dar de baja esa cuenta' });
   }
 
-  // La baja la hace la base, adentro de la Prestadora de la cuenta que se acaba de comprobar.
+  // La baja desactiva la cuenta, que no se borra: queda con su historia y sin poder entrar. La hace
+  // la base, adentro de la Prestadora de la cuenta que se acaba de comprobar, y guarda el motivo.
   try {
-    await borrarCuenta(req.params.id, { prestadoraId: usuario.prestadora_id });
+    await desactivarCuenta(req.params.id, { prestadoraId: usuario.prestadora_id, motivo: req.body?.motivo });
   } catch (error) {
     return responderError(res, error);
   }
 
-  // Una baja de cuenta es a la vez cambio de membresía y borrado de datos, y se anota con el
-  // nombre que más dice de los dos. El renglón queda aunque la cuenta ya no exista: el registro
-  // tiene que sobrevivir a lo que registra.
-  await registrarActividad(req.usuarioPanel, ACCION_BAJA_DE_CUENTA, {
+  // Es un cambio de membresía. El motivo no entra en el registro: es contenido, y queda en la cuenta.
+  await registrarActividad(req.usuarioPanel, ACCION_DESACTIVACION_DE_CUENTA, {
     tablaAfectada: 'usuarios',
     registroId: req.params.id,
     detalle: { rol_anterior: usuario.rol },

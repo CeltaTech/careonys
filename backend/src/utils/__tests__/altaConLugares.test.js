@@ -122,7 +122,7 @@ beforeEach(() => {
   respuestas.set('POST /rest/v1/membresias', () => []);
   // El alta y la baja de la cuenta las hace la base, cada una en un solo procedimiento.
   respuestas.set('POST /rest/v1/rpc/dar_de_alta_la_cuenta', () => NUEVA_CUENTA);
-  respuestas.set('POST /rest/v1/rpc/dar_de_baja_la_cuenta', () => true);
+  respuestas.set('POST /rest/v1/rpc/deshacer_el_alta_de_la_cuenta', () => true);
   respuestas.set('GET /rest/v1/usuario_lugares', () => []);
   respuestas.set('DELETE /rest/v1/usuario_lugares', () => []);
   respuestas.set('POST /rest/v1/usuario_lugares', () => []);
@@ -179,7 +179,7 @@ describe('el alta de una Asistente', () => {
 
     // El Legajo del Asistente se borra y la cuenta de acceso también: no queda nadie a medias.
     assert.equal(hubo('DELETE /rest/v1/asistentes'), true);
-    assert.equal(hubo('POST /rest/v1/rpc/dar_de_baja_la_cuenta'), true);
+    assert.equal(hubo('POST /rest/v1/rpc/deshacer_el_alta_de_la_cuenta'), true);
   });
 });
 
@@ -208,7 +208,7 @@ describe('el alta de una cuenta del Panel', () => {
     });
 
     assert.notEqual(estado, 200);
-    assert.equal(hubo('POST /rest/v1/rpc/dar_de_baja_la_cuenta'), true);
+    assert.equal(hubo('POST /rest/v1/rpc/deshacer_el_alta_de_la_cuenta'), true);
   });
 
   it('sin lugares no se toca la lista, porque no hay alcance que decidir', async () => {

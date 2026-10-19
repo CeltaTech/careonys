@@ -30,6 +30,7 @@ export async function personasDelPanel(prestadoraId) {
     .select('id, nombre, rol')
     .eq('prestadora_id', prestadoraId)
     .in('rol', ROLES_DEL_PANEL)
+    .is('desactivada_en', null)
     .order('nombre'));
   if (error) throw new Error(error.message);
   return data ?? [];

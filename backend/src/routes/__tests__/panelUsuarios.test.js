@@ -54,7 +54,8 @@ const baseFalsa = createServer((req, res) => {
       respuesta = unoSolo ? fila : (fila ? [fila] : []);
     }
     if (clave === 'PATCH /rest/v1/usuarios') respuesta = cuentaExiste ? [{ id: CUENTA }] : [];
-    if (clave === 'POST /rest/v1/rpc/dar_de_baja_la_cuenta') respuesta = true;
+    if (clave === 'POST /rest/v1/rpc/desactivar_la_cuenta') respuesta = true;
+    if (clave === 'POST /rest/v1/rpc/deshacer_el_alta_de_la_cuenta') respuesta = true;
     if (clave === 'POST /rest/v1/rpc/dar_de_alta_la_cuenta') respuesta = CUENTA;
     if (clave === 'GET /rest/v1/configuracion_prestadora') {
       respuesta = unoSolo ? { dominio: 'demo' } : [{ dominio: 'demo' }];
@@ -113,6 +114,7 @@ describe('las cuentas de coordinación del Panel', () => {
     assert.equal(leerCredencial(lista.credencial ?? '')?.sub, QUIEN_LLAMA, 'la lista fue con otra credencial');
     assert.equal(lista.url.searchParams.get('prestadora_id'), `eq.${PRESTADORA}`);
     assert.equal(lista.url.searchParams.get('rol'), 'in.(admin_prestadora,coordinador)');
+    assert.equal(lista.url.searchParams.get('desactivada_en'), 'is.null', 'la lista muestra cuentas desactivadas');
   });
 
   it('una cuenta se corrige con el trabajo de la Prestadora, y sólo si es de coordinación', async () => {
@@ -132,12 +134,12 @@ describe('las cuentas de coordinación del Panel', () => {
   });
 
   it('la cuenta a dar de baja se busca con el trabajo de la Prestadora', async () => {
-    const { estado } = await pedir('DELETE', `/${CUENTA}`);
+    const { estado } = await pedir('DELETE', `/${CUENTA}`, { motivo: 'Motivo inventado' });
     assert.equal(estado, 200);
     const busqueda = llamadas.find((l) => l.clave === 'GET /rest/v1/usuarios' && l.url.searchParams.get('id') === `eq.${CUENTA}`);
     assert.ok(busqueda, 'no se buscó la cuenta');
     conElTrabajoDeLaPrestadora(busqueda);
-    assert.ok(llamadas.some((l) => l.clave === 'POST /rest/v1/rpc/dar_de_baja_la_cuenta'));
+    assert.ok(llamadas.some((l) => l.clave === 'POST /rest/v1/rpc/desactivar_la_cuenta'));
   });
 
   it('el alta lleva el nombre de usuario a la base, con el trabajo de la Prestadora', async () => {
@@ -160,8 +162,40 @@ describe('las cuentas de coordinación del Panel', () => {
 
   it('una cuenta que la Prestadora no alcanza no se da de baja', async () => {
     cuentaExiste = false;
-    const { estado } = await pedir('DELETE', `/${CUENTA}`);
+    const { estado } = await pedir('DELETE', `/${CUENTA}`, { motivo: 'Motivo inventado' });
     assert.equal(estado, 400);
-    assert.ok(!llamadas.some((l) => l.clave === 'POST /rest/v1/rpc/dar_de_baja_la_cuenta'));
+    assert.ok(!llamadas.some((l) => l.clave === 'POST /rest/v1/rpc/desactivar_la_cuenta'));
+  });
+
+  // UNA CUENTA NO SE BORRA. Si la baja vuelve a borrar, esta prueba falla.
+  it('la baja desactiva la cuenta con su motivo y no la borra', async () => {
+    const { estado } = await pedir('DELETE', `/${CUENTA}`, { motivo: '  Motivo inventado  ' });
+    assert.equal(estado, 200);
+
+    const desactivacion = llamadas.filter((l) => l.clave === 'POST /rest/v1/rpc/desactivar_la_cuenta');
+    assert.equal(desactivacion.length, 1);
+    conElTrabajoDeLaPrestadora(desactivacion[0]);
+    assert.deepEqual(JSON.parse(desactivacion[0].cuerpo), { p_usuario: CUENTA, p_motivo: 'Motivo inventado' });
+
+    const borrados = llamadas.filter((l) => l.clave === 'POST /rest/v1/rpc/deshacer_el_alta_de_la_cuenta'
+      || l.clave === 'POST /rest/v1/rpc/dar_de_baja_la_cuenta'
+      || l.clave.startsWith('DELETE ')
+      || l.clave.startsWith('POST /auth/') || l.clave.startsWith('DELETE /auth/'));
+    assert.deepEqual(borrados.map((l) => l.clave), []);
+
+    const registro = llamadas.find((l) => l.clave === 'POST /rest/v1/registro_actividad');
+    assert.ok(registro, 'la desactivación no quedó registrada');
+    const fila = [].concat(JSON.parse(registro.cuerpo))[0];
+    assert.equal(fila.accion, 'desactivacion_de_cuenta');
+    assert.ok(!JSON.stringify(fila).includes('Motivo inventado'), 'el motivo entró en el registro');
+  });
+
+  it('una baja sin motivo no llega a la base', async () => {
+    for (const cuerpo of [undefined, {}, { motivo: '   ' }]) {
+      llamadas = [];
+      const { estado } = await pedir('DELETE', `/${CUENTA}`, cuerpo);
+      assert.equal(estado, 400);
+      assert.ok(!llamadas.some((l) => l.clave.startsWith('POST /rest/v1/rpc/')));
+    }
   });
 });

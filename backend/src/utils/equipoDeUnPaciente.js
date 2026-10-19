@@ -267,6 +267,7 @@ async function coordinadoresDeLosLugares({ lugares, prestadoraId }) {
     .select('id, nombre')
     .eq('prestadora_id', prestadoraId)
     .eq('rol', 'coordinador')
+    .is('desactivada_en', null)
     .in('id', alcanzan);
   if (error) {
     console.error(`Error leyendo quien coordina cada lugar (prestadora ${prestadoraId}):`, error.message);

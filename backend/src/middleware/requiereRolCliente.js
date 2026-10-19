@@ -17,11 +17,12 @@ export async function requiereRolCliente(req, res, next) {
   // ninguna otra.
   const { data: perfil, error: errorPerfil } = await db
     .from('usuarios')
-    .select('rol, prestadora_id')
+    .select('rol, prestadora_id, desactivada_en')
     .eq('id', sesion.id)
     .single();
 
-  if (errorPerfil || !perfil || perfil.rol !== 'cliente') {
+  // Una cuenta desactivada no entra, aunque su credencial todavía no haya vencido.
+  if (errorPerfil || !perfil || perfil.desactivada_en || perfil.rol !== 'cliente') {
     return res.status(403).json({ error: 'Rol sin permiso' });
   }
 

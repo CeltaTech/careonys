@@ -15,6 +15,11 @@ import {
   errorDeLaIdentidad,
 } from '../utils/cuentasPanel.js';
 import { ErrorConMotivo, responderError } from '../utils/errorConMotivo.js';
+import {
+  ACCION_DESACTIVACION_DE_CUENTA,
+  registrarActividad,
+  yaQuedoRegistrado,
+} from '../utils/registroDeActividad.js';
 import { APROBADAS, filasDeIncorporacion } from '../utils/etapasDeIncorporacion.js';
 import { RESULTADO_PENDIENTE } from '../utils/referenciasLaborales.js';
 import { requierePermiso, permisosEfectivos } from '../utils/permisos.js';
@@ -639,8 +644,22 @@ panelCuentasRouter.delete('/cliente/:clienteId/personas_autorizadas/:usuarioId',
   }
 
   try {
-    // Con la llave maestra, por lo mismo que al invitar.
-    await revocarPersonaAutorizada(supabase, req.params.usuarioId, { prestadoraId: cliente.prestadora_id, clienteId: cliente.id });
+    // Con la llave maestra, por lo mismo que al invitar. La cuenta se desactiva, no se borra, y el
+    // motivo queda guardado en ella.
+    const desactivada = await revocarPersonaAutorizada(supabase, req.params.usuarioId, {
+      prestadoraId: cliente.prestadora_id,
+      clienteId: cliente.id,
+      motivo: req.body?.motivo,
+    });
+    // Es un cambio de membresía y se anota con su nombre. El motivo no entra: es contenido.
+    if (desactivada) {
+      await registrarActividad(req.usuarioPanel, ACCION_DESACTIVACION_DE_CUENTA, {
+        tablaAfectada: 'usuarios',
+        registroId: req.params.usuarioId,
+        detalle: { rol_anterior: 'cliente' },
+      });
+      yaQuedoRegistrado(res);
+    }
     res.json({ ok: true });
   } catch (error) {
     responderError(res, error, 400);

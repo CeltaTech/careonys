@@ -2084,6 +2084,7 @@ async function coordinadoresDeLaPrestadora(prestadoraId) {
       .select('id, nombre')
       .eq('prestadora_id', prestadoraId)
       .eq('rol', 'coordinador')
+      .is('desactivada_en', null)
       .order('nombre')
   );
 }

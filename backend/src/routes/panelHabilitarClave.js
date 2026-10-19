@@ -74,6 +74,7 @@ panelHabilitarClaveRouter.post(
           .from('usuarios')
           .select('id, nombre, email, rol, telefono, telefono_verificado_en')
           .eq('prestadora_id', req.usuarioPanel.prestadoraId)
+          .is('desactivada_en', null)
           .or(`nombre.ilike.${patron},email.ilike.${patron}`)
           .limit(TOPE_DE_LA_BUSQUEDA);
         if (error) throw new Error(error.message);

@@ -273,13 +273,14 @@ function EditarUsuarioPanel({ usuario, otrosCoordinadores, onClose, onActualizad
   }
 
   async function handleDarDeBaja() {
-    const confirmado = await confirmarDestructivo(t.usuarios_panel.confirmar_baja);
-    if (!confirmado) return;
+    // La cuenta no se borra: se desactiva, y guarda el motivo.
+    const motivo = await confirmarDestructivo({ texto: t.usuarios_panel.confirmar_baja, motivo: true });
+    if (!motivo) return;
 
     setBorrando(true);
     setError(null);
     try {
-      await llamarApi(`/${usuario.id}`, { method: 'DELETE' });
+      await llamarApi(`/${usuario.id}`, { method: 'DELETE', body: JSON.stringify({ motivo }) });
       onActualizado();
     } catch (err) {
       setError(mensajeDeError(err, t));

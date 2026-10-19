@@ -159,7 +159,8 @@ async function aQuienLeToca({ prestadoraId, escalon }) {
     .from('usuarios')
     .select('id')
     .eq('prestadora_id', prestadoraId)
-    .eq('rol', rol);
+    .eq('rol', rol)
+    .is('desactivada_en', null);
 
   if (error) {
     console.error(`Error buscando a quién le toca el escalón "${escalon}" (prestadora ${prestadoraId}):`, error.message);

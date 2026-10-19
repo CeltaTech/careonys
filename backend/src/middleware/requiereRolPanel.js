@@ -87,11 +87,12 @@ export async function requiereRolPanel(req, res, next) {
   // propia fila y ninguna otra.
   const { data: perfil, error: errorPerfil } = await db
     .from('usuarios')
-    .select('rol, prestadora_id')
+    .select('rol, prestadora_id, desactivada_en')
     .eq('id', sesion.id)
     .single();
 
-  if (errorPerfil || !perfil || !ROLES_PANEL.includes(perfil.rol)) {
+  // Una cuenta desactivada no entra, aunque su credencial todavía no haya vencido.
+  if (errorPerfil || !perfil || perfil.desactivada_en || !ROLES_PANEL.includes(perfil.rol)) {
     return res.status(403).json({ error: 'Rol sin permiso' });
   }
 

@@ -22,7 +22,7 @@ import { generoEscrito } from './generoEscrito.js';
 // acá a mano o no existe (CLAUDE.md §5, regla de aislamiento).
 //
 // Todas las funciones de este archivo que van a la base reciben la conexión de quien las llama,
-// salvo `crearCuentaConPerfil` y `borrarCuenta`, que entran con la credencial del trabajo sin
+// salvo `crearCuentaConPerfil`, `desactivarCuenta` y `borrarCuentaDeUnAltaCortada`, que entran con la credencial del trabajo sin
 // persona, adentro de la Prestadora que se les nombra.
 export async function validarTipoAsistente(db, tipoAsistenteId, prestadoraId) {
   if (!tipoAsistenteId) return null;
@@ -149,19 +149,33 @@ export async function crearCuentaConPerfil({
   return { userId, passwordTemporal };
 }
 
-// Da de baja una cuenta: su fila de `usuarios` y su cuenta de ingreso, juntas.
+// Desactiva una cuenta. LA CUENTA NO SE BORRA: queda con su fila y su historia, y no puede entrar.
 //
-// Lo hace la base con `dar_de_baja_la_cuenta`, adentro de la Prestadora que se nombra acá: una
-// cuenta de otra Prestadora, una que no existe y la del Administrador o del equipo técnico se
-// contestan igual, que no hay nada que dar de baja. Sin cuenta o sin Prestadora no se le pregunta
-// nada a la base (CLAUDE.md §5, todo control de acceso falla cerrado).
-export async function borrarCuenta(userId, { prestadoraId } = {}) {
-  if (!userId || !prestadoraId) throw new Error('No hay permiso para dar de baja esa cuenta');
+// Lo hace la base con `desactivar_la_cuenta`, adentro de la Prestadora que se nombra acá: bloquea la
+// cuenta de ingreso, cierra sus sesiones, anula lo que tenía pendiente para entrar y guarda cuándo y
+// por qué. Una cuenta de otra Prestadora, una que no existe, una ya desactivada y la del
+// Administrador o del equipo técnico se contestan igual: no hay nada que desactivar. Sin cuenta, sin
+// Prestadora o sin motivo no se le pregunta nada a la base (CLAUDE.md §5, falla cerrado).
+export async function desactivarCuenta(userId, { prestadoraId, motivo } = {}) {
+  const motivoEscrito = typeof motivo === 'string' ? motivo.trim() : '';
+  if (!motivoEscrito) throw new ErrorConMotivo('faltan_datos');
+  if (!userId || !prestadoraId) throw new Error('No hay permiso para desactivar esa cuenta');
 
-  const { data: borrada, error } = await enLaPrestadora(prestadoraId, 'baja de cuenta', () =>
-    supabase.rpc('dar_de_baja_la_cuenta', { p_usuario: userId }));
+  const { data: desactivada, error } = await enLaPrestadora(prestadoraId, 'desactivación de cuenta', () =>
+    supabase.rpc('desactivar_la_cuenta', { p_usuario: userId, p_motivo: motivoEscrito }));
   if (error) throw new Error(error.message);
-  if (borrada !== true) throw new Error('No hay permiso para dar de baja esa cuenta');
+  if (desactivada !== true) throw new Error('No hay permiso para desactivar esa cuenta');
+}
+
+// Borra una cuenta recién creada, cuando el alta se cortó por la mitad. Es el único borrado de una
+// cuenta, y la base sólo lo hace si la cuenta nunca entró (`deshacer_el_alta_de_la_cuenta`).
+export async function borrarCuentaDeUnAltaCortada(userId, { prestadoraId } = {}) {
+  if (!userId || !prestadoraId) throw new Error('No hay permiso para deshacer esa alta');
+
+  const { data: borrada, error } = await enLaPrestadora(prestadoraId, 'alta deshecha', () =>
+    supabase.rpc('deshacer_el_alta_de_la_cuenta', { p_usuario: userId }));
+  if (error) throw new Error(error.message);
+  if (borrada !== true) throw new Error('No hay permiso para deshacer esa alta');
 }
 
 // Deshace un alta que se cortó por la mitad. **Nunca falla**: pase lo que pase, termina.
@@ -188,7 +202,7 @@ export async function deshacerAlta(db, userId, { prestadoraId, filas = [] } = {}
 
   let limpioTodo = true;
 
-  // La red propia de esta función, por la misma razón que la de `borrarCuenta`: el borrado de
+  // La red propia de esta función, por la misma razón que la de `borrarCuentaDeUnAltaCortada`: el borrado de
   // abajo recibe el nombre de la tabla y la columna desde afuera y no puede defenderse solo, así
   // que la pertenencia se comprueba una vez acá, antes de tocar nada. Se comprueba sobre la
   // cuenta y no tabla por tabla porque dos de las tablas de la lista no tienen columna de
@@ -196,7 +210,7 @@ export async function deshacerAlta(db, userId, { prestadoraId, filas = [] } = {}
   // cuenta — filtrar solo las que sí la tienen dejaría a las otras sin red y, encima, se
   // borran primero. Si la cuenta no es de esta Prestadora, no se limpia nada.
   if (userId) {
-    // La lectura se acota con el mismo ayudante que la de `borrarCuenta`, y sin `esSuperadmin`: lo
+    // La lectura se acota con el mismo ayudante que la de `borrarCuentaDeUnAltaCortada`, y sin `esSuperadmin`: lo
     // que se deshace son altas de Cliente, Asistente o personas autorizadas, todas de una Prestadora.
     // Una cuenta de otra Organización no aparece, y no aparecer es lo mismo que no estar.
     const { data: duena, error: errorDuena } = await acotarAUsuariosDelPanel(
@@ -241,7 +255,7 @@ export async function deshacerAlta(db, userId, { prestadoraId, filas = [] } = {}
 
   if (userId) {
     try {
-      await borrarCuenta(userId, { prestadoraId });
+      await borrarCuentaDeUnAltaCortada(userId, { prestadoraId });
     } catch (error) {
       limpioTodo = false;
       // Se anota el id, nunca el correo (CLAUDE.md §6). Si esto aparece en el registro, quedó
@@ -508,13 +522,15 @@ export async function invitarPersonaAutorizada({ db, email, nombre, telefono, cl
   }
 }
 
-// Revoca el acceso de un miembro invitado de las personas autorizadas — borra su fila en
-// `personas_autorizadas` (RLS/`ON DELETE CASCADE` no alcanza porque el borrado real es la
-// cuenta completa, no la fila) y su cuenta, reutilizando `borrarCuenta` para no duplicar la
-// validación de tenant que ya hace esa función.
-export async function revocarPersonaAutorizada(db, usuarioId, { prestadoraId, clienteId }) {
-  // La misma comprobación que al invitar, y por un motivo más fuerte: acá se borra. Los dos
-  // borrados de abajo van por número de cuenta, sin Prestadora, y corren ANTES de `borrarCuenta`,
+// Quita a una persona autorizada de un Cliente: borra su vínculo con el Cliente
+// (`personas_autorizadas` y sus accesos) y desactiva su cuenta, que no se borra
+// (`desactivarCuenta`). El motivo es obligatorio y queda guardado en la cuenta. Devuelve si
+// desactivó una cuenta.
+export async function revocarPersonaAutorizada(db, usuarioId, { prestadoraId, clienteId, motivo }) {
+  if (typeof motivo !== 'string' || !motivo.trim()) throw new ErrorConMotivo('faltan_datos');
+
+  // La misma comprobación que al invitar, y por un motivo más fuerte: acá se quita un acceso. Los dos
+  // borrados de abajo van por número de cuenta, sin Prestadora, y corren ANTES de `desactivarCuenta`,
   // que es la que valida. Sin esto, un número de Cliente ajeno alcanza para dejar sin accesos a
   // una persona autorizada de otra Prestadora, y la validación llega tarde.
   if (!prestadoraId || !clienteId || !(await cuentaDeLaFila('clientes', clienteId, prestadoraId))) {
@@ -529,11 +545,12 @@ export async function revocarPersonaAutorizada(db, usuarioId, { prestadoraId, cl
   // Si ya no figura entre las personas autorizadas de este Cliente, no queda nada que quitar: se
   // termina sin tocar nada y sin avisar, porque lo que se pedía ya está hecho. Una persona de otro
   // Cliente cae acá también, y tampoco se la toca.
-  if (errorMiembro || !miembro || miembro.cliente_id !== clienteId) return;
+  if (errorMiembro || !miembro || miembro.cliente_id !== clienteId) return false;
 
   await db.from('permisos_personas_autorizadas').delete().eq('usuario_id', usuarioId);
   await db.from('personas_autorizadas').delete().eq('usuario_id', usuarioId);
-  await borrarCuenta(usuarioId, { prestadoraId });
+  await desactivarCuenta(usuarioId, { prestadoraId, motivo });
+  return true;
 }
 
 // Da de alta un Cliente que llega en una planilla importada: es la cartera que la Prestadora ya

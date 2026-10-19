@@ -9,7 +9,7 @@
 //      usuario/postulación, e intenta operar sobre ellas desde la sesión del
 //      admin de la prestadora real — debe fallar en los 2 puntos que en algún
 //      momento no tuvieron verificación de tenant propia: DELETE de usuarios
-//      (`cuentasPanel.js` `borrarCuenta`), y el alta de cuenta de asistente que
+//      (`cuentasPanel.js` `desactivarCuenta`), y el alta de cuenta de asistente que
 //      resuelve `postulacionId` (`panelCuentas.js`).
 //
 // Requiere el backend corriendo localmente (BACKEND_URL, default http://localhost:4502) y las
@@ -112,14 +112,15 @@ async function checkAislamientoCrossTenant(admin, headers) {
   let resultados = [];
 
   try {
-    // 1. DELETE cross-tenant de usuarios (cuentasPanel.js:borrarCuenta)
+    // 1. DELETE cross-tenant de usuarios (cuentasPanel.js:desactivarCuenta). Lleva motivo, para que
+    //    lo rechace el alcance y no la falta de motivo.
     const resDelete = await fetch(`${BACKEND_URL}/api/panel/usuarios/${authData.user.id}`, {
-      method: 'DELETE', headers,
+      method: 'DELETE', headers, body: JSON.stringify({ motivo: 'Motivo inventado' }),
     });
-    const sigueExistiendo = await admin.from('usuarios').select('id').eq('id', authData.user.id).maybeSingle();
-    const okDelete = resDelete.status !== 200 && !!sigueExistiendo.data;
+    const sigueActiva = await admin.from('usuarios').select('id').eq('id', authData.user.id).is('desactivada_en', null).maybeSingle();
+    const okDelete = resDelete.status !== 200 && !!sigueActiva.data;
     resultados.push(['DELETE /panel/usuarios/:id cross-tenant', okDelete]);
-    console.log(`DELETE /panel/usuarios/:id cross-tenant -> ${resDelete.status}`, okDelete ? '— OK, rechazado y no borrado' : '— ¡FALLA, borró o no rechazó!');
+    console.log(`DELETE /panel/usuarios/:id cross-tenant -> ${resDelete.status}`, okDelete ? '— OK, rechazado y sigue activa' : '— ¡FALLA, la desactivó o no rechazó!');
 
     // 2. Alta de asistente contra una postulación de otra prestadora (panelCuentas.js)
     const resAsistente = await fetch(`${BACKEND_URL}/api/panel/cuentas/asistente`, {

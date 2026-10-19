@@ -167,15 +167,16 @@ export function ClienteDetalle() {
   }, [recargar, recargarPersonasAutorizadas]);
 
   async function quitarPersonaAutorizada(usuarioId) {
-    if (!(await confirmarDestructivo(t.clientes.personas_autorizadas.quitar_confirmacion))) {
-      return;
-    }
+    // La cuenta de la persona no se borra: se desactiva, y guarda el motivo.
+    const motivo = await confirmarDestructivo({ texto: t.clientes.personas_autorizadas.quitar_confirmacion, motivo: true });
+    if (!motivo) return;
     setQuitandoUsuarioId(usuarioId);
     try {
       const { data } = await supabase.auth.getSession();
       const respuesta = await fetch(`${API_URL}/api/panel/cuentas/cliente/${id}/personas_autorizadas/${usuarioId}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${data.session?.access_token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session?.access_token}` },
+        body: JSON.stringify({ motivo }),
       });
       const resultado = await respuesta.json().catch(() => ({}));
       if (!respuesta.ok) throw errorDeLaRespuesta(respuesta, resultado);

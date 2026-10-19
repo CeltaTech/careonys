@@ -380,13 +380,9 @@ Chile, la restricción queda fija y no se apaga. Lo que falta:
   `interno.encadenar_acceso_a_datos_de_salud`, los disparadores `…_interruptor_de_salud…` y el
   mensaje «No tiene permiso para verificar el registro de accesos». Cierre: una migración nueva los
   renombra y el mensaje sale del catálogo aprobado.
-- **La baja de una cuenta desde el Panel la borra**, y una cuenta es de una persona con su Legajo o su Ficha de
-  Persona, que no se borran nunca (`CLAUDE.md:288`, `:294`). `panelUsuarios.js:205` llama a `borrarCuenta` (y `:109`, al deshacer un alta), y `dar_de_baja_la_cuenta`
-  borra la fila de `usuarios`; con actividad anotada, además, la base lo rechaza. Cierre: el
-  Administrador desactiva la cuenta con una nota obligatoria que diga por qué, la persona se queda
-  sin entrada y no se borra nada, y las dos cuentas «Prueba Inventada» de la
-  Prestadora de pruebas, hoy bloqueadas, se dan de baja así. Deshacer un alta cortada por la mitad
-  (`deshacerAlta`) no entra: ahí todavía no hay Legajo ni Ficha de Persona.
+- **Las dos cuentas «Prueba Inventada» de la Prestadora de pruebas** están bloqueadas para entrar
+  pero no desactivadas, así que siguen en la lista de cuentas del Panel. Cierre: el Administrador
+  las da de baja desde el Panel, con su motivo.
 
 **9.** **La credencial de la persona en el backend, y el registro de lecturas en la misma pasada.**
 
@@ -714,16 +710,6 @@ lo de acá es mejor salvo el motivo de la falla, que ya está resuelto. **Se ret
 `disponible_para_ofertas`—: no la lee ningún programa ni
 ninguna pantalla, de ninguno de los dos lados. Y los textos legales de allá no sirven: son de una
 sola Prestadora, sin versión y sin dónde queden guardados.
-
-**Y hoy una cuenta sí se borra, contra la regla.** La función de la base `dar_de_baja_la_cuenta`
-borra la fila de `usuarios` y la de `auth.users`. La llama `borrarCuenta`
-(`backend/src/utils/cuentasPanel.js:158`) desde la baja de una cuenta del Panel
-(`backend/src/routes/panelUsuarios.js:198`), desde quitar una persona autorizada
-(`backend/src/utils/cuentasPanel.js:515`) y al deshacer un alta que falló a mitad de camino
-(`backend/src/routes/panelUsuarios.js:127`, `backend/src/utils/cuentasPanel.js:244`). La regla dice
-que una cuenta se desactiva, se suspende o se bloquea, con una nota que diga por qué, y nunca se
-borra. **Espera al Desarrollador:** decidir qué pasa con la cuenta en cada uno de esos tres casos,
-sobre todo el último, donde la cuenta recién creada nunca llegó a usarse.
 
 **22. Usted** — Decidir qué secciones de Match quedan en el Panel. Match no tiene panel aparte:
 sus secciones están en el mismo Panel y aparecen sólo si la Prestadora tiene habilitada la

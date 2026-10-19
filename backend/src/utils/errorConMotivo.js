@@ -52,13 +52,8 @@ const ESTADO_POR_MOTIVO = {
   codigo_incorrecto: 400,
   codigo_vencido: 400,
   demasiados_intentos: 429,
-  // Dos motivos que antes viajaban como frase adentro del `Error` y que, al dejar de mandarse el
-  // texto crudo, se habrían perdido: quien mira leería "algo falló de nuestro lado" cuando en
-  // realidad no falló nada, sólo que lo que pidió no corresponde. El de la persona es 409 —el
-  // pedido está bien armado, lo que pasa es que esa persona no es de las personas autorizadas de ese Cliente—;
-  // el del Paciente es 404, y contesta lo mismo cuando el Paciente no existe y cuando es de otra
-  // Prestadora, que desde afuera se tienen que ver iguales.
-  persona_no_autorizada: 409,
+  // Contesta lo mismo cuando el Paciente no existe y cuando es de otra Prestadora, que desde
+  // afuera se tienen que ver iguales.
   paciente_no_encontrado: 404,
   // Las formas de cobro que arma la Prestadora. Son todos 400 salvo el nombre repetido, que es
   // 409 por lo mismo que el correo ya tomado: el pedido está bien armado y choca con algo que ya

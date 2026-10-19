@@ -4,90 +4,9 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 96 fichas.** Panel 53, aplicación del Asistente 25, aplicación del Cliente 16, Base 2.
+**Total: 86 fichas.** Panel 44, aplicación del Asistente 25, aplicación del Cliente 15, Base 2.
 
-## Panel (53)
-
-### 14. Persona que ya no está autorizada
-
-| | |
-|---|---|
-| **Texto actual** | No figura en el registro. |
-| **Texto propuesto** | Esa persona ya no es una persona autorizada de este Cliente. Actualice la lista. |
-| **Propuesta corta** | queda «No figura en el registro.» · en «Not found in the records.» · pt-BR «Não consta no registro.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | ya es corta y está aprobada. |
-| **Qué cambió** | más corto, imperativo, sin «para ver cómo quedó». |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | hoy no aparece en ninguna parte con este texto. El caso existe en Panel → Clientes → un Cliente → solapa «Personas autorizadas» → «Quitar acceso», cuando otra persona ya lo había quitado; hoy ahí se lee «Ya existe un registro con esos datos». |
-| **Qué estaba haciendo** | quitaba el acceso de una persona autorizada. |
-| **Qué pasó** | describiría el intento de quitar a alguien que ya no está entre las personas autorizadas. |
-| **Qué puede hacer después** | actualizar la lista. |
-| **Cómo se muestra** | hoy el otro texto sale como franja al pie de la tarjeta. |
-| **Decisión** |  |
-
-### 17. Más de una pasarela de cobro
-
-| | |
-|---|---|
-| **Texto actual** | Hay más de una pasarela de cobro conectada. Elija con cuál cobrar este acceso. |
-| **Propuesta corta** | «Elija una pasarela de cobro.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | el selector está a la vista. Alcanza con decir qué falta, como el texto al pie de un campo. |
-| **Quién lo lee** | la administración de la Prestadora. |
-| **Dónde está** | Panel → Clientes → Clientes (Match) → «Ver cobros», recuadro «Alta en la pasarela de cobro». |
-| **Qué estaba haciendo** | tocó «Dar de alta para cobrar». |
-| **Qué pasó** | alguien conectó otra pasarela con la página abierta. Si la página ya sabía que había varias, muestra el selector y no deja tocar el botón sin elegir. |
-| **Qué puede hacer después** | actualizar la página, elegir la pasarela y volver a tocar el botón. |
-| **Cómo se muestra** | franja arriba de la página. |
-| **Decisión** |  |
-
-### 18. Pasarela de cobro no disponible
-
-| | |
-|---|---|
-| **Texto actual** | Pasarela de cobro no disponible. Actualice la página y elija otra de la lista. |
-| **Propuesta corta** | «Pasarela de cobro no disponible.» |
-| **Por qué** | en el Panel no hay ningún camino que la dispare. En la aplicación del Cliente es un caso de borde, y la instrucción actual no corresponde a esa pantalla. |
-| **Quién lo lee** | la administración de la Prestadora. |
-| **Dónde está** | en teoría, Panel → Clientes → Clientes (Match) → «Ver cobros», recuadro «Alta en la pasarela de cobro». No se pudo confirmar ningún caso real en el Panel; sí puede salir en la aplicación del Cliente, al dar de baja un acceso. |
-| **Qué estaba haciendo** | tocó «Dar de alta para cobrar». |
-| **Qué pasó** | la pasarela elegida no está entre las que el sistema reconoce. |
-| **Qué puede hacer después** | actualizar la página y elegir otra pasarela. |
-| **Cómo se muestra** | franja arriba de la página. |
-| **Decisión** |  |
-
-### 19. Forma de cobro con nombre repetido
-
-| | |
-|---|---|
-| **Texto actual** | Ya existe una forma de cobro con ese nombre. Ingrese otro nombre. |
-| **Propuesta corta** | «Nombre en uso. Ingrese otro.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | es el mismo molde que «Título en uso. Ingrese otro.». |
-| **Quién lo lee** | la administración de la Prestadora. |
-| **Dónde está** | Panel → Facturación → Formas de cobro de Match, ventana de la forma de cobro, botón «Guardar». |
-| **Qué estaba haciendo** | guardaba una forma de cobro nueva o cambiada. |
-| **Qué pasó** | la Prestadora ya tiene otra forma de cobro con ese nombre. No se guardó. |
-| **Qué puede hacer después** | cambiar el nombre y guardar, o cancelar. |
-| **Cómo se muestra** | franja dentro de la ventana. |
-| **Decisión** |  |
-
-### 21. Renovación sin período
-
-| | |
-|---|---|
-| **Texto actual** | Una forma de cobro sin período no se renueva sola. Ingrese un período o desmarque la renovación. |
-| **Propuesta corta** | «Ingrese un período o desmarque la renovación.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | la primera mitad («una forma sin período no se renueva sola») explica una regla del sistema. Alcanza con decir qué hacer. |
-| **Quién lo lee** | la administración de la Prestadora. |
-| **Dónde está** | Panel → Facturación → Formas de cobro de Match, ventana de la forma de cobro. |
-| **Qué estaba haciendo** | marcó «Se renueva sola» sin período y tocó «Guardar». |
-| **Qué pasó** | una forma sin período no puede renovarse. No se guardó. |
-| **Qué puede hacer después** | cargar el período o desmarcar la casilla, y guardar. |
-| **Cómo se muestra** | franja dentro de la ventana. |
-| **Decisión** |  |
+## Panel (44)
 
 ### 24. No se encontró el cese
 
@@ -617,70 +536,6 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Qué pasó** | no marcó ningún día. |
 | **Qué puede hacer después** | marcar los días y crear, o cancelar. |
 | **Cómo se muestra** | franja dentro de la ventana. |
-| **Decisión** |  |
-
-### 58. Falta la fecha límite de pago de los saldos
-
-| | |
-|---|---|
-| **Texto actual** | Ingrese la fecha límite de pago para generar los saldos. |
-| **Propuesta corta** | Sacar la frase |
-| **¿Aparece hoy?** | no |
-| **Por qué** | ninguna parte del Panel la usa. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | hoy no aparece en ninguna parte. Describiría generar los saldos en Saldos pendientes sin fecha límite de pago. Hoy, el resultado avisa qué Clientes quedaron sin saldo porque no tienen plazo acordado. |
-| **Qué estaba haciendo** | — |
-| **Qué pasó** | — |
-| **Qué puede hacer después** | — |
-| **Cómo se muestra** | — |
-| **Decisión** |  |
-
-### 59. Falta el motivo para anular un cobro
-
-| | |
-|---|---|
-| **Texto actual** | Ingrese el motivo de la anulación. |
-| **Propuesta corta** | «Falta el motivo.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | va pegado al campo «Por qué se anula»; el resto sobra. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Saldos pendientes → un saldo → «Anular» en un cobro, casillero «Por qué se anula». |
-| **Qué estaba haciendo** | anulaba un cobro. |
-| **Qué pasó** | escribió el motivo y lo borró. Mientras esté vacío, «Anular» queda apagado. |
-| **Qué puede hacer después** | escribir el motivo, o cancelar. |
-| **Cómo se muestra** | texto al pie del campo. |
-| **Decisión** |  |
-
-### 60. Falta el importe o el tipo de comprobante
-
-| | |
-|---|---|
-| **Texto actual** | Ingrese el importe y el tipo de comprobante. |
-| **Propuesta corta** | Sacar la frase |
-| **¿Aparece hoy?** | no |
-| **Por qué** | ninguna parte del Panel la usa. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | hoy no aparece en ninguna parte. Describiría anotar lo emitido de un saldo sin el importe o el tipo de comprobante. |
-| **Qué estaba haciendo** | — |
-| **Qué pasó** | — |
-| **Qué puede hacer después** | — |
-| **Cómo se muestra** | — |
-| **Decisión** |  |
-
-### 61. Faltan datos de la corrección
-
-| | |
-|---|---|
-| **Texto actual** | Ingrese el importe, el tipo de comprobante y el motivo de la corrección. |
-| **Propuesta corta** | Sacar la frase |
-| **¿Aparece hoy?** | no |
-| **Por qué** | ninguna parte del Panel la usa. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | hoy no aparece en ninguna parte. Describiría Panel → Facturación → Saldos pendientes, «Anotar una corrección», sin alguno de esos datos; hoy el botón queda apagado mientras falte uno. |
-| **Qué estaba haciendo** | — |
-| **Qué pasó** | — |
-| **Qué puede hacer después** | — |
-| **Cómo se muestra** | — |
 | **Decisión** |  |
 
 ### 62. Sólo los reportes más recientes
@@ -1261,7 +1116,7 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Cómo se muestra** | franja amarilla. |
 | **Decisión** |  |
 
-## Aplicación del Cliente (16)
+## Aplicación del Cliente (15)
 
 ### 3. Código de firma incorrecto
 
@@ -1485,22 +1340,6 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Qué pasó** | el enlace llegó incompleto. |
 | **Qué puede hacer después** | tocar el botón para ingresar y pedir un enlace nuevo. |
 | **Cómo se muestra** | franja. |
-| **Decisión** |  |
-
-### 18. Código QR de pago vencido
-
-| | |
-|---|---|
-| **Texto actual** | Este código venció. Genere otro código. |
-| **Propuesta corta** | «Código vencido.» |
-| **¿Aparece hoy?** | no |
-| **Por qué** | el botón «Generar otro código» aparece justo debajo (:139-141), así que repetir la instrucción sobra. |
-| **Quién lo lee** | el Cliente o la persona autorizada. |
-| **Dónde está** | hoy no aparece en ninguna parte: Pacientes → un Paciente → «Acceso», tarjeta «Pagar en efectivo con QR», es de Match, que está cerrado. Tampoco se pudo confirmar que aparezca solo al vencer. |
-| **Qué estaba haciendo** | — |
-| **Qué pasó** | — |
-| **Qué puede hacer después** | — |
-| **Cómo se muestra** | — |
 | **Decisión** |  |
 
 ### 19. Faltan datos de la nueva indicación

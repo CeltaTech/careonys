@@ -525,15 +525,10 @@ export async function revocarPersonaAutorizada(db, usuarioId, { prestadoraId, cl
     .select('cliente_id')
     .eq('usuario_id', usuarioId)
     .single();
-  if (errorMiembro || !miembro || miembro.cliente_id !== clienteId) {
-    // Con motivo, y no con la frase suelta que estaba antes: la frase viajaba en el cuerpo de
-    // la respuesta y era texto visible escrito a mano, en un solo idioma. El motivo es un
-    // código, y la frase vive en las traducciones, en los tres.
-    throw new ErrorConMotivo(
-      'persona_no_autorizada',
-      `usuario ${usuarioId} no figura en las personas autorizadas del cliente ${clienteId}`,
-    );
-  }
+  // Si ya no figura entre las personas autorizadas de este Cliente, no queda nada que quitar: se
+  // termina sin tocar nada y sin avisar, porque lo que se pedía ya está hecho. Una persona de otro
+  // Cliente cae acá también, y tampoco se la toca.
+  if (errorMiembro || !miembro || miembro.cliente_id !== clienteId) return;
 
   await db.from('permisos_personas_autorizadas').delete().eq('usuario_id', usuarioId);
   await db.from('personas_autorizadas').delete().eq('usuario_id', usuarioId);

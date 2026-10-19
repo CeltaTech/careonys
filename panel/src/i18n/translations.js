@@ -69,8 +69,6 @@ export const T = {
         ya_cerrada: 'Ya se encuentra autorizada.',
         demasiados_pedidos: 'Demasiadas solicitudes. Espere un minuto e intente nuevamente.',
         modalidad_no_activa: 'Esta modalidad no está activa.',
-        // Dos mensajes que antes llegaban como frase armada del lado del backend, en un solo idioma.
-        persona_no_autorizada: 'No figura en el registro.',
         paciente_no_encontrado: 'Paciente no encontrado. Actualice la página.',
         // El alta de un acceso de Match en la pasarela de cobro. Cada frase dice qué
         // falta y dónde se resuelve, porque quien la lee es quien puede resolverlo. Ninguna
@@ -3087,7 +3085,6 @@ export const T = {
         ya_cerrada: 'It is already authorized.',
         demasiados_pedidos: 'Too many requests. Wait a minute and try again.',
         modalidad_no_activa: 'This service model is not active.',
-        persona_no_autorizada: 'Not found in the records.',
         paciente_no_encontrado: 'Patient not found. Reload the page.',
         acceso_inexistente: 'Access not found.',
         acceso_cancelado: 'That access has been ended, so charging for it cannot be started.',
@@ -6050,7 +6047,6 @@ export const T = {
         ya_cerrada: 'Já se encontra autorizada.',
         demasiados_pedidos: 'Muitas solicitações. Aguarde um minuto e tente novamente.',
         modalidad_no_activa: 'Esta modalidade não está ativa.',
-        persona_no_autorizada: 'Não consta no registro.',
         paciente_no_encontrado: 'Paciente não encontrado. Atualize a página.',
         acceso_inexistente: 'Acesso não encontrado.',
         acceso_cancelado: 'Esse acesso está encerrado, portanto não é possível começar a cobrá-lo.',

@@ -59,7 +59,7 @@ export function InvitarPersonaAutorizadaModal({ clienteId, onClose, onInvitado }
               {t.comun.cancelar}
             </Button>
             <Button type="submit" disabled={guardando}>
-              {guardando ? t.clientes.personas_autorizadas.invitando : t.comun.guardar}
+              {guardando ? t.comun.guardando : t.comun.guardar}
             </Button>
           </div>
         </form>

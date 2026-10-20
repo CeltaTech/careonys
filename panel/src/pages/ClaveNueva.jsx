@@ -109,7 +109,7 @@ export function ClaveNueva() {
       <div className="login-pantalla">
         <div className="login-card">
           <h1>{t.auth.clave_nueva_titulo}</h1>
-          <Alert variant="error">{t.auth.activar_token_invalido}</Alert>
+          <Alert variant="error">{t.errores.motivos.token_invalido}</Alert>
           <Link to="/recuperar-clave">{t.auth.recuperar_titulo}</Link>
         </div>
       </div>

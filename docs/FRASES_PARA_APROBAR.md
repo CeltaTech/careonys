@@ -4,25 +4,9 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 83 fichas.** Panel 37, aplicación del Asistente 27, aplicación del Cliente 17, Base 2.
+**Total: 41 fichas.** Panel 17, aplicación del Asistente 18, aplicación del Cliente 4, Base 2.
 
-## Panel (37)
-
-### 33. Enlace de ingreso incompleto
-
-| | |
-|---|---|
-| **Texto actual** | Enlace no válido. Solicite un enlace nuevo a quien creó la cuenta. |
-| **Propuesta corta** | «Enlace no válido.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | sirve para las dos pantallas. Si se quiere la indicación para la activación, debería ser una frase aparte. |
-| **Quién lo lee** | quien recibió un enlace por correo para entrar al Panel, sobre todo la administración de una Prestadora nueva. |
-| **Dónde está** | Panel → «Activar la cuenta» y Panel → «Elegir una contraseña nueva». |
-| **Qué estaba haciendo** | abrió el enlace del correo. |
-| **Qué pasó** | el enlace llegó incompleto. Si está completo pero ya se usó o venció, aparece otra frase; no se verificó cuál. |
-| **Qué puede hacer después** | en «Activar la cuenta», nada; en «Elegir una contraseña nueva», el enlace «Recuperar la contraseña». |
-| **Cómo se muestra** | franja. |
-| **Decisión** |  |
+## Panel (17)
 
 ### 35. Valor del tope semanal
 
@@ -38,22 +22,6 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Qué pasó** | es el nombre de un valor. Viene en 0,75: cuando las horas del Asistente en la semana llegan a esa parte de su tope, el sistema lo baja en la lista de candidatos. No le impide tomar la guardia. |
 | **Qué puede hacer después** | cambiar el número y guardar. |
 | **Cómo se muestra** | etiqueta. |
-| **Decisión** |  |
-
-### 36. Falta el archivo a importar
-
-| | |
-|---|---|
-| **Texto actual** | Elija un archivo para analizar. |
-| **Propuesta corta** | «Elija un archivo.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | «para analizar» repite el botón que se acaba de apretar. |
-| **Quién lo lee** | la administración, o quien tenga permiso para importar datos. |
-| **Dónde está** | Panel → Importar datos, tarjeta «Archivo». |
-| **Qué estaba haciendo** | tocó «Analizar archivo» sin elegir un archivo. |
-| **Qué pasó** | el sistema no analizó nada. |
-| **Qué puede hacer después** | elegir el archivo y volver a tocar el botón. |
-| **Cómo se muestra** | franja arriba de la página. |
 | **Decisión** |  |
 
 ### 37. Paso de la guía: sumar a alguien del equipo
@@ -86,22 +54,6 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Qué pasó** | el botón aparece mientras no haya ningún Coordinador. |
 | **Qué puede hacer después** | tocarlo; lleva a Usuarios del Panel. |
 | **Cómo se muestra** | botón. |
-| **Decisión** |  |
-
-### 39. Falta la planilla
-
-| | |
-|---|---|
-| **Texto actual** | Elija una planilla. |
-| **Propuesta corta** | «Falta la planilla.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | sustantivo + estado; la instrucción es obvia. |
-| **Quién lo lee** | la administración con permiso para importar datos. |
-| **Dónde está** | Panel → Configuración → Puesta en marcha, tarjeta «Empezar desde una planilla». |
-| **Qué estaba haciendo** | tocó «Leer la planilla» sin elegir un archivo. |
-| **Qué pasó** | el sistema no leyó nada. |
-| **Qué puede hacer después** | elegir la planilla y volver a tocar el botón. |
-| **Cómo se muestra** | franja dentro de la tarjeta. |
 | **Decisión** |  |
 
 ### 40. Enlace de entrevista que ya no sirve
@@ -202,22 +154,6 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Cómo se muestra** | franja. |
 | **Decisión** |  |
 
-### 46. Todavía no hay Asistentes
-
-| | |
-|---|---|
-| **Texto actual** | Todavía no hay Asistentes. |
-| **Propuesta corta** | «Todavía no hay Asistentes.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | ya es neutra y corta. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Padrón de Asistentes, en lugar de la lista. |
-| **Qué estaba haciendo** | entró sin filtros ni búsqueda. |
-| **Qué pasó** | la Prestadora no tiene ningún Asistente. |
-| **Qué puede hacer después** | tocar «+ Incorporar asistente», si tiene permiso. |
-| **Cómo se muestra** | texto fijo. |
-| **Decisión** |  |
-
 ### 47. Asistente no Activo para el certificado
 
 | | |
@@ -232,22 +168,6 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Qué pasó** | el Asistente está Inactivo o Cesado. El botón «Emitir Certificado» queda apagado. |
 | **Qué puede hacer después** | ir a «Perfil», pasarlo a Activo y volver. |
 | **Cómo se muestra** | franja. |
-| **Decisión** |  |
-
-### 48. Todavía no hay Clientes
-
-| | |
-|---|---|
-| **Texto actual** | Todavía no hay Clientes. |
-| **Propuesta corta** | «Todavía no hay Clientes.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | la frase está bien; el defecto es el paso de la guía que manda a una página sin alta. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Directorio de Clientes, en lugar de la lista. |
-| **Qué estaba haciendo** | entró sin búsqueda ni filtro. |
-| **Qué pasó** | la Prestadora no tiene ningún Cliente. |
-| **Qué puede hacer después** | la página no ofrece un botón para cargar un Cliente. No se pudo confirmar desde dónde se carga el primero. |
-| **Cómo se muestra** | texto fijo. |
 | **Decisión** |  |
 
 ### 49. Consentimiento firmado por otra persona
@@ -282,118 +202,6 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Cómo se muestra** | botón. |
 | **Decisión** |  |
 
-### 51. Mientras se guarda la persona autorizada
-
-| | |
-|---|---|
-| **Texto actual** | Guardando… |
-| **Propuesta corta** | «Guardando…» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | texto duplicado sin punto único de verdad. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Clientes → un Cliente → solapa «Personas autorizadas», ventana «Agregar una persona autorizada». |
-| **Qué estaba haciendo** | tocó «Guardar». |
-| **Qué pasó** | es el texto del botón mientras el sistema crea la cuenta y envía el correo. |
-| **Qué puede hacer después** | esperar. |
-| **Cómo se muestra** | botón. |
-| **Decisión** |  |
-
-### 52. Ninguna conversación abierta
-
-| | |
-|---|---|
-| **Texto actual** | No hay ninguna conversación abierta. |
-| **Propuesta corta** | «Ninguna conversación abierta.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | sustantivo + participio. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Comunicación, lado derecho. |
-| **Qué estaba haciendo** | entró a Comunicación. |
-| **Qué pasó** | todavía no abrió ninguna conversación. También se ve con la lista vacía. |
-| **Qué puede hacer después** | tocar una conversación de la lista o filtrar por canal. |
-| **Cómo se muestra** | texto fijo. |
-| **Decisión** |  |
-
-### 53. Confirmar la cancelación de varias guardias
-
-| | |
-|---|---|
-| **Texto actual** | ¿Cancelar {n} guardias? No se puede deshacer. |
-| **Propuesta corta** | «¿Cancelar {n} guardias? No se puede deshacer.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | con una sola dice «1 guardias»; ya usa para el singular en otro texto. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Guardias, grilla con varias guardias marcadas → «Cancelar las guardias» → «Aplicar». |
-| **Qué estaba haciendo** | cancelaba varias guardias a la vez. |
-| **Qué pasó** | el sistema pide confirmación. {n} es la cantidad marcada. |
-| **Qué puede hacer después** | confirmar o cancelar. |
-| **Cómo se muestra** | ventana emergente. |
-| **Decisión** |  |
-
-### 54. Título de los avisos antes de asignar
-
-| | |
-|---|---|
-| **Texto actual** | Revise antes de asignar |
-| **Propuesta corta** | Sacar la frase |
-| **¿Aparece hoy?** | no |
-| **Por qué** | no se muestra en ninguna parte. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | hoy no aparece en ninguna parte. Sería el título de los avisos antes de asignar una guardia: superposición, ausencia, falta de descanso, horas extra o documentación por vencer. |
-| **Qué estaba haciendo** | — |
-| **Qué pasó** | — |
-| **Qué puede hacer después** | — |
-| **Cómo se muestra** | — |
-| **Decisión** |  |
-
-### 55. Falta el Paciente de la guardia
-
-| | |
-|---|---|
-| **Texto actual** | Marque al menos un Paciente. |
-| **Propuesta corta** | Sacar la frase |
-| **¿Aparece hoy?** | no |
-| **Por qué** | inalcanzable. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Guardias, ventana «Nueva guardia», casillero «A quiénes atiende». |
-| **Qué estaba haciendo** | creaba una guardia. |
-| **Qué pasó** | no marcó ningún Paciente. En la práctica no se ve: «Crear» sigue apagado hasta que hay un Servicio, y no hay Servicio sin Paciente. |
-| **Qué puede hacer después** | marcar un Paciente y crear, o cancelar. |
-| **Cómo se muestra** | franja dentro de la ventana. |
-| **Decisión** |  |
-
-### 56. Falta el Servicio de la guardia
-
-| | |
-|---|---|
-| **Texto actual** | Elija el Servicio. |
-| **Propuesta corta** | Sacar la frase |
-| **¿Aparece hoy?** | no |
-| **Por qué** | inalcanzable. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Guardias, ventana «Nueva guardia», casillero «Servicio». |
-| **Qué estaba haciendo** | creaba una guardia. |
-| **Qué pasó** | no eligió el Servicio. En la práctica no se ve: «Crear» sigue apagado sin Servicio. No se pudo confirmar si el mismo texto se muestra en el alta de Prestaciones. |
-| **Qué puede hacer después** | elegir el Servicio y crear, o cancelar. |
-| **Cómo se muestra** | franja dentro de la ventana. |
-| **Decisión** |  |
-
-### 57. Faltan los días de una guardia recurrente
-
-| | |
-|---|---|
-| **Texto actual** | Elija al menos un día de la semana. |
-| **Propuesta corta** | «Faltan los días de la semana.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | sustantivo + estado; marcar es obvio. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Guardias, ventana «Nueva guardia», con «Es una guardia recurrente (serie)» marcada, casillero «Días de la semana». |
-| **Qué estaba haciendo** | creaba una guardia que se repite cada semana. |
-| **Qué pasó** | no marcó ningún día. |
-| **Qué puede hacer después** | marcar los días y crear, o cancelar. |
-| **Cómo se muestra** | franja dentro de la ventana. |
-| **Decisión** |  |
-
 ### 62. Sólo los reportes más recientes
 
 | | |
@@ -408,38 +216,6 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Qué pasó** | la búsqueda llegó al máximo de 300 reportes; puede haber más. |
 | **Qué puede hacer después** | acortar las fechas o cambiar el filtro. |
 | **Cómo se muestra** | texto fijo, en letra chica arriba de la tabla. |
-| **Decisión** |  |
-
-### 63. Falta el Servicio de la Prestación
-
-| | |
-|---|---|
-| **Texto actual** | Elija el Servicio. |
-| **Propuesta corta** | Sacar la frase |
-| **¿Aparece hoy?** | no |
-| **Por qué** | inalcanzable en los dos lugares. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Clientes → un Cliente → solapa «Pacientes» → «Prestaciones», formulario «Nueva Prestación» y tarjeta «Cierre de servicio». |
-| **Qué estaba haciendo** | cargaba una Prestación o cerraba un Servicio. |
-| **Qué pasó** | describiría guardar sin Servicio. En la práctica no se ve: los botones quedan apagados sin Servicio. |
-| **Qué puede hacer después** | elegir el Servicio, o cancelar. |
-| **Cómo se muestra** | franja dentro de la tarjeta, si llegara a aparecer. |
-| **Decisión** |  |
-
-### 64. Falta el servicio de la Lista de Precios
-
-| | |
-|---|---|
-| **Texto actual** | Elija un servicio de la Lista de Precios. |
-| **Propuesta corta** | «Falta el servicio de la Lista de Precios.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | sustantivo + estado. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Clientes → un Cliente → solapa «Pacientes» → «Prestaciones», formulario «Nueva Prestación». |
-| **Qué estaba haciendo** | cargaba una Prestación. |
-| **Qué pasó** | no eligió nada en el casillero que toma el precio de la Lista de Precios. |
-| **Qué puede hacer después** | elegirlo y guardar, o cancelar. |
-| **Cómo se muestra** | franja arriba del formulario. |
 | **Decisión** |  |
 
 ### 65. Faltan Prestaciones o el precio del paquete
@@ -474,22 +250,6 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Cómo se muestra** | etiqueta. |
 | **Decisión** |  |
 
-### 67. Falta el motivo del cierre
-
-| | |
-|---|---|
-| **Texto actual** | Elija el motivo del cierre. |
-| **Propuesta corta** | Sacar la frase |
-| **¿Aparece hoy?** | no |
-| **Por qué** | inalcanzable. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Clientes → un Cliente → «Prestaciones», tarjeta «Cierre de servicio». |
-| **Qué estaba haciendo** | cerraba un Servicio. |
-| **Qué pasó** | describiría cerrar sin motivo. En la práctica no se ve: el botón queda apagado sin motivo. |
-| **Qué puede hacer después** | elegir el motivo, o cancelar. |
-| **Cómo se muestra** | franja dentro de la tarjeta, si llegara a aparecer. |
-| **Decisión** |  |
-
 ### 68. Conviviente hospitalizado
 
 | | |
@@ -504,38 +264,6 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Qué pasó** | se registró la hospitalización de otro Paciente del mismo Cliente. {paciente} es su nombre. |
 | **Qué puede hacer después** | revisar la cobertura y tocar «Marcar como resuelta». El aviso se va solo al cerrar la hospitalización. |
 | **Cómo se muestra** | franja con el botón «Marcar como resuelta». |
-| **Decisión** |  |
-
-### 69. Faltan datos de la autorización de signos vitales
-
-| | |
-|---|---|
-| **Texto actual** | Complete el nombre, la fecha y el archivo. |
-| **Propuesta corta** | «Faltan nombre, fecha o archivo.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | sustantivo + estado. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Clientes → un Cliente → solapa «Pacientes» → «Monitoreo de signos vitales» → «Cargar autorización». |
-| **Qué estaba haciendo** | cargaba la autorización firmada. |
-| **Qué pasó** | faltaba el nombre de quien avala, la fecha o el archivo. |
-| **Qué puede hacer después** | completar y guardar, o cancelar. |
-| **Cómo se muestra** | franja arriba del formulario. |
-| **Decisión** |  |
-
-### 70. Faltan datos del domicilio temporal
-
-| | |
-|---|---|
-| **Texto actual** | Complete el domicilio, las coordenadas, el motivo y la fecha de inicio. |
-| **Propuesta corta** | «Faltan domicilio, coordenadas, motivo o fecha de inicio.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | sustantivo + estado. |
-| **Quién lo lee** | la coordinación de la Prestadora que puede editar los datos del Paciente. |
-| **Dónde está** | Panel → Clientes → un Cliente → solapa «Pacientes» → «Domicilios temporales» → «Cargar un domicilio temporal». |
-| **Qué estaba haciendo** | cargaba un domicilio temporal. |
-| **Qué pasó** | faltaba algún dato obligatorio. «Hasta» no lo es. |
-| **Qué puede hacer después** | completar y guardar, o cancelar. |
-| **Cómo se muestra** | franja arriba del formulario. |
 | **Decisión** |  |
 
 ### 71. Confirmar el borrado de un domicilio temporal
@@ -554,55 +282,7 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Cómo se muestra** | ventana emergente. |
 | **Decisión** |  |
 
-### 72. Confirmar el borrado de un contenido
-
-| | |
-|---|---|
-| **Texto actual** | ¿Borrar este contenido? Sus destinatarios dejarán de verlo. No se puede deshacer. |
-| **Propuesta corta** | «¿Borrar este contenido? Sus destinatarios dejarán de verlo. No se puede deshacer.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | dice qué se borra y la consecuencia; no hay nada que quitar. |
-| **Quién lo lee** | la coordinación de la Prestadora con permiso para escribir contenidos. |
-| **Dónde está** | Panel → Comunicación → Contenidos, ventana del contenido, botón «Borrar». |
-| **Qué estaba haciendo** | tocó «Borrar» en un contenido guardado. |
-| **Qué pasó** | el sistema pregunta antes de borrar. |
-| **Qué puede hacer después** | «Borrar de todos modos» o «Cancelar». |
-| **Cómo se muestra** | franja de advertencia dentro de la ventana. |
-| **Decisión** |  |
-
-### 73. Botón para pedir un enlace nuevo
-
-| | |
-|---|---|
-| **Texto actual** | Enviarme un enlace nuevo |
-| **Propuesta corta** | queda la propuesta: «Enviarme un enlace nuevo» · «Send me a new link» · «Receber um novo link» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | es un botón nuevo y dice lo que hace. |
-| **Quién lo lee** | quien recibió el correo para activar su cuenta del Panel. |
-| **Dónde está** | Panel → «Activar la cuenta», debajo de la franja de error. |
-| **Qué estaba haciendo** | abrió un enlace de activación vencido y envió la contraseña. |
-| **Qué pasó** | el sistema rechazó el enlace por vencido. Si la cuenta nunca se activó, el botón le manda un enlace nuevo al email que tiene cargado. |
-| **Qué puede hacer después** | tocarlo. Mientras trabaja, el botón queda apagado. |
-| **Cómo se muestra** | botón. |
-| **Decisión** |  |
-
-### 74. Enlace nuevo enviado
-
-| | |
-|---|---|
-| **Texto actual** | Le enviamos un nuevo enlace a su email. |
-| **Propuesta corta** | queda la propuesta: «Le enviamos un nuevo enlace a su email.» · «We sent a new link to your email.» · «Enviamos um novo link para o seu e-mail.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | dice qué pasó y dónde buscarlo. |
-| **Quién lo lee** | quien recibió el correo para activar su cuenta del Panel. |
-| **Dónde está** | Panel → «Activar la cuenta», en lugar de la franja de error. |
-| **Qué estaba haciendo** | tocó el botón de la ficha 73. |
-| **Qué pasó** | el pedido llegó. Sale siempre la misma frase, se haya mandado el enlace o no, para que la página no sirva para averiguar qué enlaces existen. Si falla la conexión, sale la frase general de falla de conexión. |
-| **Qué puede hacer después** | abrir el correo. |
-| **Cómo se muestra** | franja, en lugar del mensaje emergente: ninguna de las tres aplicaciones tiene mensaje emergente. |
-| **Decisión** |  |
-
-## Aplicación del Asistente (27)
+## Aplicación del Asistente (18)
 
 ### 3. Falta el Paciente del Reporte Diario
 
@@ -634,54 +314,6 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Qué pasó** | la guardia está marcada para no cerrarse hasta que llegue el relevo. No se pudo confirmar quién o qué pone esa marca. |
 | **Qué puede hacer después** | avisar al Coordinador por fuera de la aplicación. |
 | **Cómo se muestra** | franja fija en lugar del botón. |
-| **Decisión** |  |
-
-### 5. Faltan datos
-
-| | |
-|---|---|
-| **Texto actual** | Faltan datos obligatorios. Revise el formulario e intente nuevamente. |
-| **Propuesta corta** | «Faltan datos.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | el formulario tiene dos casilleros a la vista. «Revise el formulario e intente nuevamente» sobra. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | «Activar la cuenta», «Elegir una contraseña nueva», el aviso de emergencia de la guardia y «Avisar a la Prestadora» en el pase de guardia. |
-| **Qué estaba haciendo** | activaba la cuenta, elegía una contraseña o enviaba un aviso. |
-| **Qué pasó** | al sistema le llegó el pedido sin un dato obligatorio. Los botones se apagan mientras falta el dato, así que casi no se ve. No se pudo confirmar ningún caso concreto. |
-| **Qué puede hacer después** | intentar de nuevo. |
-| **Cómo se muestra** | franja arriba del formulario. |
-| **Decisión** |  |
-
-### 6. Enlace no válido
-
-| | |
-|---|---|
-| **Texto actual** | Este enlace no es válido. Ábralo nuevamente desde el correo o solicite un enlace nuevo. |
-| **Propuesta corta** | «Enlace no válido. Solicite uno nuevo.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | abrir de nuevo el mismo enlace da el mismo resultado; la única salida útil es pedir otro. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | «Activar la cuenta» y «Elegir una contraseña nueva». |
-| **Qué estaba haciendo** | eligió una contraseña y la envió. |
-| **Qué pasó** | el sistema no encontró el enlace o la cuenta. |
-| **Qué puede hacer después** | en «Activar la cuenta», nada; en la contraseña nueva, «Ingresar». |
-| **Cómo se muestra** | franja, sola en la pantalla. |
-| **Decisión** |  |
-
-### 7. Enlace vencido
-
-| | |
-|---|---|
-| **Texto actual** | Este enlace venció. Solicite un enlace nuevo. |
-| **Propuesta corta** | «Enlace vencido. Solicite uno nuevo.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | tiene el mismo corte que la ficha 6. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | «Activar la cuenta» y «Elegir una contraseña nueva». |
-| **Qué estaba haciendo** | abrió el enlace y eligió una contraseña. |
-| **Qué pasó** | el enlace pasó su plazo. |
-| **Qué puede hacer después** | en «Activar la cuenta», «Enviarme un enlace nuevo» (ficha 28); en la contraseña nueva, «Ingresar». |
-| **Cómo se muestra** | franja, sola en la pantalla. |
 | **Decisión** |  |
 
 ### 8. Falta la matrícula
@@ -796,22 +428,6 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Cómo se muestra** | franja dentro del recuadro. |
 | **Decisión** |  |
 
-### 15. Descargo vacío
-
-| | |
-|---|---|
-| **Texto actual** | El descargo está vacío. Escriba el descargo antes de guardarlo. |
-| **Propuesta corta** | Sacar la frase. Si llegara a pasar, se vería «Dato no válido.», porque es un 400 |
-| **¿Aparece hoy?** | no |
-| **Por qué** | el Asistente nunca la ve. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | Perfil → «Ver las calificaciones» → una calificación → «Dejar un descargo». |
-| **Qué estaba haciendo** | guardaba su descargo. |
-| **Qué pasó** | el sistema rechaza un descargo vacío. «Guardar» queda apagado con el casillero vacío; no se pudo confirmar ningún caso real en que se vea. |
-| **Qué puede hacer después** | escribir y guardar, o cancelar. |
-| **Cómo se muestra** | franja dentro del bloque del descargo. |
-| **Decisión** |  |
-
 ### 16. Guardia sin sustituto
 
 | | |
@@ -826,38 +442,6 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Qué pasó** | ese día cae en una licencia suya y no hay sustituto. |
 | **Qué puede hacer después** | salir por el menú de abajo y avisar al Coordinador. |
 | **Cómo se muestra** | franja que ocupa toda la pantalla de la guardia. |
-| **Decisión** |  |
-
-### 17. Enlace de activación incompleto
-
-| | |
-|---|---|
-| **Texto actual** | Este enlace no es válido o venció. Solicite un enlace nuevo a la Prestadora. |
-| **Propuesta corta** | «Enlace no válido. Solicite uno nuevo a la Prestadora.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | un enlace cortado no «venció»; esa parte de la frase actual sobra. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | «Activar la cuenta». |
-| **Qué estaba haciendo** | abrió el enlace para activar su cuenta. |
-| **Qué pasó** | el enlace llegó incompleto, por ejemplo cortado al copiarlo. |
-| **Qué puede hacer después** | pedir a la Prestadora un enlace nuevo. |
-| **Cómo se muestra** | franja, sola en la pantalla. |
-| **Decisión** |  |
-
-### 18. Enlace de contraseña incompleto
-
-| | |
-|---|---|
-| **Texto actual** | Este enlace no es válido o venció. Solicite un enlace nuevo. |
-| **Propuesta corta** | «Enlace no válido. Solicite uno nuevo.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | es el mismo texto que la ficha 6; conviene unificarlos. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | «Elegir una contraseña nueva». |
-| **Qué estaba haciendo** | abrió el enlace para elegir una contraseña nueva. |
-| **Qué pasó** | el enlace llegó incompleto. |
-| **Qué puede hacer después** | tocar «Ingresar» y pedir un enlace nuevo desde ahí. |
-| **Cómo se muestra** | franja con el botón «Ingresar». |
 | **Decisión** |  |
 
 ### 19. Falta el Reporte Diario para cerrar
@@ -924,22 +508,6 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Cómo se muestra** | franja en tono neutro. |
 | **Decisión** |  |
 
-### 23. Matrícula en revisión
-
-| | |
-|---|---|
-| **Texto actual** | La Prestadora revisará la matrícula. |
-| **Propuesta corta** | Sacar la frase |
-| **¿Aparece hoy?** | no |
-| **Por qué** | no se usa en ninguna parte. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | hoy no aparece en ninguna parte. Describiría una matrícula cargada que la Prestadora todavía no revisó; ese caso hoy muestra otro texto. |
-| **Qué estaba haciendo** | — |
-| **Qué pasó** | — |
-| **Qué puede hacer después** | — |
-| **Cómo se muestra** | — |
-| **Decisión** |  |
-
 ### 24. La matrícula la carga la Prestadora
 
 | | |
@@ -1004,71 +572,7 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Cómo se muestra** | franja amarilla. |
 | **Decisión** |  |
 
-### 28. Botón para pedir un enlace nuevo
-
-| | |
-|---|---|
-| **Texto actual** | Enviarme un enlace nuevo |
-| **Propuesta corta** | queda la propuesta: «Enviarme un enlace nuevo» · «Send me a new link» · «Receber um novo link» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | es un botón nuevo y dice lo que hace. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | «Activar la cuenta», debajo de el aviso de enlace vencido. |
-| **Qué estaba haciendo** | abrió un enlace de activación vencido y envió la contraseña. |
-| **Qué pasó** | el sistema rechazó el enlace por vencido. Si la cuenta nunca se activó, el botón le manda un enlace nuevo al email que tiene cargado. |
-| **Qué puede hacer después** | tocarlo. Mientras trabaja, el botón queda apagado. |
-| **Cómo se muestra** | botón. |
-| **Decisión** |  |
-
-### 29. Enlace nuevo enviado
-
-| | |
-|---|---|
-| **Texto actual** | Le enviamos un nuevo enlace a su email. |
-| **Propuesta corta** | queda la propuesta: «Le enviamos un nuevo enlace a su email.» · «We sent a new link to your email.» · «Enviamos um novo link para o seu e-mail.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | dice qué pasó y dónde buscarlo. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | «Activar la cuenta», en lugar de el aviso de enlace vencido. |
-| **Qué estaba haciendo** | tocó el botón de la ficha 28. |
-| **Qué pasó** | el pedido llegó. Sale siempre la misma frase, se haya mandado el enlace o no, para que la página no sirva para averiguar qué enlaces existen. Si falla la conexión, sale la frase general de falla de conexión. |
-| **Qué puede hacer después** | abrir el correo. |
-| **Cómo se muestra** | franja, en lugar del mensaje emergente: ninguna de las tres aplicaciones tiene mensaje emergente. |
-| **Decisión** |  |
-
-## Aplicación del Cliente (17)
-
-### 3. Código de firma incorrecto
-
-| | |
-|---|---|
-| **Texto actual** | El código no es correcto. Revíselo e ingréselo nuevamente. |
-| **Propuesta corta** | «Código incorrecto.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | va al pie del campo del código, y ahí la instrucción de corregirlo sobra. |
-| **Quién lo lee** | el Cliente. |
-| **Dónde está** | «Instrucción sobre las personas autorizadas», tarjeta «Firmar», casillero «Código de seis dígitos». |
-| **Qué estaba haciendo** | tocó «Confirmar la firma». |
-| **Qué pasó** | el código no coincide. Cada error gasta uno de los 5 intentos. |
-| **Qué puede hacer después** | corregir el código o tocar «Pedir otro código». |
-| **Cómo se muestra** | texto al pie del campo. |
-| **Decisión** |  |
-
-### 4. Código de firma vencido
-
-| | |
-|---|---|
-| **Texto actual** | El código venció. Pida otro código. |
-| **Propuesta corta** | «Código vencido. Pida otro.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | coincide con el botón «Pedir otro código». |
-| **Quién lo lee** | el Cliente. |
-| **Dónde está** | «Instrucción sobre las personas autorizadas», tarjeta «Firmar». |
-| **Qué estaba haciendo** | confirmó con un código pedido hace más de 10 minutos. |
-| **Qué pasó** | el código ya no vale. No gasta intento. |
-| **Qué puede hacer después** | tocar «Pedir otro código». |
-| **Cómo se muestra** | texto al pie del campo. |
-| **Decisión** |  |
+## Aplicación del Cliente (4)
 
 ### 5. Demasiados intentos con la instrucción
 
@@ -1083,38 +587,6 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Qué estaba haciendo** | confirmaba o pedía el código después de 5 intentos fallidos. |
 | **Qué pasó** | la instrucción quedó bloqueada. Pedir otro código no devuelve intentos. |
 | **Qué puede hacer después** | pedir a la Prestadora que la cargue nuevamente, o firmar en papel. |
-| **Cómo se muestra** | texto al pie del campo, o franja. |
-| **Decisión** |  |
-
-### 6. Todavía no pidió el código
-
-| | |
-|---|---|
-| **Texto actual** | Todavía no pidió ningún código. Pídalo primero. |
-| **Propuesta corta** | Sacar la frase |
-| **¿Aparece hoy?** | no |
-| **Por qué** | ningún recorrido de la aplicación llega a ella. |
-| **Quién lo lee** | el Cliente. |
-| **Dónde está** | «Instrucción sobre las personas autorizadas», tarjeta «Firmar». |
-| **Qué estaba haciendo** | confirmaba la firma sin haber pedido el código. |
-| **Qué pasó** | no hay código pendiente. El casillero y el botón aparecen recién después de pedir el código; no se pudo confirmar ningún camino real que muestre este texto. |
-| **Qué puede hacer después** | tocar «Recibir el código». |
-| **Cómo se muestra** | texto al pie del campo, o franja. |
-| **Decisión** |  |
-
-### 7. No se encontró lo pedido
-
-| | |
-|---|---|
-| **Texto actual** | No se encontró la información solicitada. Vuelva a abrir esta sección. |
-| **Propuesta corta** | «No encontrado.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | la misma frase sirve en los dos lugares, y «Vuelva a abrir esta sección» no resuelve nada si la instrucción fue reemplazada. |
-| **Quién lo lee** | el Cliente y, en Medicación, las personas autorizadas. |
-| **Dónde está** | «Instrucción sobre las personas autorizadas», botones «Recibir el código» y «Confirmar la firma»; Pacientes → un Paciente → «Medicación», botón «Ver papel firmado». |
-| **Qué estaba haciendo** | pedía el código, confirmaba la firma o abría un papel firmado. |
-| **Qué pasó** | el sistema no encontró lo pedido. |
-| **Qué puede hacer después** | volver a abrir la sección. |
 | **Cómo se muestra** | texto al pie del campo, o franja. |
 | **Decisión** |  |
 
@@ -1164,150 +636,6 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Qué pasó** | — |
 | **Qué puede hacer después** | — |
 | **Cómo se muestra** | — |
-| **Decisión** |  |
-
-### 12. Faltan datos
-
-| | |
-|---|---|
-| **Texto actual** | Faltan datos obligatorios. Revise el formulario e intente nuevamente. |
-| **Propuesta corta** | Sacar la frase. Sin ella, un 400 con este motivo cae en «Datos no válidos.» (ficha 2) |
-| **¿Aparece hoy?** | no |
-| **Por qué** | sólo llegaría con un pedido armado fuera de la aplicación. |
-| **Quién lo lee** | el Cliente y las personas autorizadas. |
-| **Dónde está** | «Activar la cuenta»; «Elegir una contraseña nueva»; Pacientes → un Paciente → «Medicación» → «Solicitar nueva indicación». |
-| **Qué estaba haciendo** | activaba la cuenta, elegía una contraseña o pedía una indicación. |
-| **Qué pasó** | faltaba un dato obligatorio. Fuera de la activación, la frase habla de activar la cuenta aunque no se trate de eso. |
-| **Qué puede hacer después** | revisar y volver a enviar. |
-| **Cómo se muestra** | franja arriba del formulario. |
-| **Decisión** |  |
-
-### 13. Enlace no válido
-
-| | |
-|---|---|
-| **Texto actual** | Este enlace no es válido. Ábralo nuevamente desde el correo o solicite un enlace nuevo. |
-| **Propuesta corta** | «Enlace no válido. Solicite uno nuevo.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | abrirlo de nuevo desde el email da el mismo enlace y el mismo error, así que esa salida sobra. |
-| **Quién lo lee** | quien recibió el enlace: el Cliente o una persona autorizada. |
-| **Dónde está** | «Activar la cuenta» y «Elegir una contraseña nueva». |
-| **Qué estaba haciendo** | abrió el enlace y envió la contraseña. |
-| **Qué pasó** | el sistema no reconoce el enlace. |
-| **Qué puede hacer después** | volver a abrir el correo o pedir un enlace nuevo. |
-| **Cómo se muestra** | franja. |
-| **Decisión** |  |
-
-### 14. Enlace vencido
-
-| | |
-|---|---|
-| **Texto actual** | Este enlace venció. Solicite un enlace nuevo. |
-| **Propuesta corta** | «Enlace vencido. Solicite uno nuevo.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | es la misma forma que la ficha 13. |
-| **Quién lo lee** | quien recibió el enlace: el Cliente o una persona autorizada. |
-| **Dónde está** | «Activar la cuenta» y «Elegir una contraseña nueva». |
-| **Qué estaba haciendo** | abrió un enlace viejo y envió la contraseña. |
-| **Qué pasó** | el enlace pasó su plazo. |
-| **Qué puede hacer después** | pedir un enlace nuevo. |
-| **Cómo se muestra** | franja. |
-| **Decisión** |  |
-
-### 15. Campo vacío
-
-| | |
-|---|---|
-| **Texto actual** | Complete este campo. |
-| **Propuesta corta** | «Campo obligatorio.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | está pegado al campo, así que basta con nombrar la falta. |
-| **Quién lo lee** | el Cliente, y la persona autorizada con permiso para pedir medicación. |
-| **Dónde está** | Pacientes → un Paciente → «Medicación» → «Solicitar nueva indicación», debajo de cada casillero vacío. |
-| **Qué estaba haciendo** | tocó «Enviar solicitud» con casilleros vacíos. |
-| **Qué pasó** | la aplicación no envía el pedido mientras falte un dato. |
-| **Qué puede hacer después** | completar; el texto desaparece al completar. |
-| **Cómo se muestra** | texto al pie del campo, junto con la ficha 19. |
-| **Decisión** |  |
-
-### 16. Enlace de activación incompleto
-
-| | |
-|---|---|
-| **Texto actual** | Este enlace no es válido o venció. Solicite un enlace nuevo a la Prestadora. |
-| **Propuesta corta** | «Enlace no válido. Solicite uno nuevo a la Prestadora.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | la invitación la manda la Prestadora, y es la única salida que hay. |
-| **Quién lo lee** | quien recibió el enlace: el Cliente o una persona autorizada. |
-| **Dónde está** | «Activar la cuenta». |
-| **Qué estaba haciendo** | abrió el enlace. |
-| **Qué pasó** | el enlace llegó incompleto. |
-| **Qué puede hacer después** | pedir a la Prestadora un enlace nuevo. |
-| **Cómo se muestra** | franja. |
-| **Decisión** |  |
-
-### 17. Enlace de contraseña incompleto
-
-| | |
-|---|---|
-| **Texto actual** | Este enlace no es válido o venció. Solicite un enlace nuevo. |
-| **Propuesta corta** | «Enlace no válido. Solicite uno nuevo.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | es el mismo texto que la ficha 13, y el pedido del enlace nuevo sale de la pantalla de ingreso. |
-| **Quién lo lee** | el Cliente o la persona autorizada. |
-| **Dónde está** | «Elegir una contraseña nueva». |
-| **Qué estaba haciendo** | abrió el enlace para cambiar la contraseña. |
-| **Qué pasó** | el enlace llegó incompleto. |
-| **Qué puede hacer después** | tocar el botón para ingresar y pedir un enlace nuevo. |
-| **Cómo se muestra** | franja. |
-| **Decisión** |  |
-
-### 19. Faltan datos de la nueva indicación
-
-| | |
-|---|---|
-| **Texto actual** | Complete los campos marcados. |
-| **Propuesta corta** | «Faltan datos.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | cada campo ya dice lo suyo al pie (ficha 15), así que la franja sólo avisa que hay algo abajo. |
-| **Quién lo lee** | las mismas personas que la ficha 15. |
-| **Dónde está** | Pacientes → un Paciente → «Medicación» → «Solicitar nueva indicación». |
-| **Qué estaba haciendo** | tocó «Enviar solicitud» con casilleros vacíos. |
-| **Qué pasó** | la aplicación no envía el pedido y lleva al primer casillero vacío. |
-| **Qué puede hacer después** | completar y volver a enviar. |
-| **Cómo se muestra** | franja arriba. |
-| **Decisión** |  |
-
-### 20. Botón para pedir un enlace nuevo
-
-| | |
-|---|---|
-| **Texto actual** | Enviarme un enlace nuevo |
-| **Propuesta corta** | queda la propuesta: «Enviarme un enlace nuevo» · «Send me a new link» · «Receber um novo link» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | es un botón nuevo y dice lo que hace. |
-| **Quién lo lee** | quien recibió el enlace: el Cliente o una persona autorizada. |
-| **Dónde está** | «Activar la cuenta», debajo de el aviso de enlace vencido. |
-| **Qué estaba haciendo** | abrió un enlace de activación vencido y envió la contraseña. |
-| **Qué pasó** | el sistema rechazó el enlace por vencido. Si la cuenta nunca se activó, el botón le manda un enlace nuevo al email que tiene cargado. |
-| **Qué puede hacer después** | tocarlo. Mientras trabaja, el botón queda apagado. |
-| **Cómo se muestra** | botón. |
-| **Decisión** |  |
-
-### 21. Enlace nuevo enviado
-
-| | |
-|---|---|
-| **Texto actual** | Le enviamos un nuevo enlace a su email. |
-| **Propuesta corta** | queda la propuesta: «Le enviamos un nuevo enlace a su email.» · «We sent a new link to your email.» · «Enviamos um novo link para o seu e-mail.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | dice qué pasó y dónde buscarlo. |
-| **Quién lo lee** | quien recibió el enlace: el Cliente o una persona autorizada. |
-| **Dónde está** | «Activar la cuenta», en lugar de el aviso de enlace vencido. |
-| **Qué estaba haciendo** | tocó el botón de la ficha 20. |
-| **Qué pasó** | el pedido llegó. Sale siempre la misma frase, se haya mandado el enlace o no, para que la página no sirva para averiguar qué enlaces existen. Si falla la conexión, sale la frase general de falla de conexión. |
-| **Qué puede hacer después** | abrir el correo. |
-| **Cómo se muestra** | franja, en lugar del mensaje emergente: ninguna de las tres aplicaciones tiene mensaje emergente. |
 | **Decisión** |  |
 
 ## Base (2)

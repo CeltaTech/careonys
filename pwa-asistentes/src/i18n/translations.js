@@ -31,12 +31,11 @@ export const T = {
         continuidad: 'No puede cerrar esta guardia hasta que llegue el relevo. Si es urgente, avise al Coordinador.',
         no_disponible: 'Esta función no está activada en esta Prestadora.',
         // Los de la activación de la cuenta. Son cinco frases distintas porque son cinco
-        // problemas distintos y cada uno se sale de una manera: el enlace equivocado se abre
-        // de nuevo desde el correo, el ya usado se saltea entrando derecho, y el vencido
-        // obliga a pedir una invitación nueva.
+        // problemas distintos y cada uno se sale de una manera: el enlace equivocado o
+        // vencido obliga a pedir uno nuevo, y el ya usado se saltea entrando derecho.
         faltan_datos: 'Faltan datos obligatorios. Revise el formulario e intente nuevamente.',
         password_debil: 'La contraseña tiene que tener al menos 8 caracteres.',
-        token_invalido: 'Este enlace no es válido. Ábralo nuevamente desde el correo o solicite un enlace nuevo.',
+        token_invalido: 'Este enlace no es válido. Solicite un enlace nuevo.',
         token_ya_usado: 'Esta cuenta ya fue activada con este enlace. Se entra desde la pantalla de ingreso, con la contraseña que se eligió.',
         token_vencido: 'Este enlace venció. Solicite un enlace nuevo.',
         // Los dos del nombre de usuario que se elige al activar la cuenta.
@@ -178,7 +177,7 @@ export const T = {
       activar_confirmar: 'Activar cuenta',
       activar_enviando: 'Activando…',
       activar_exito: 'La cuenta quedó activada. Ya se puede ingresar con la contraseña nueva.',
-      activar_token_invalido: 'Este enlace no es válido o venció. Solicite un enlace nuevo a la Prestadora.',
+      activar_token_invalido: 'Este enlace no es válido. Solicite un enlace nuevo a la Prestadora.',
       activar_enlace_nuevo: 'Enviarme un enlace nuevo',
       activar_enlace_nuevo_enviado: 'Le enviamos un nuevo enlace a su email.',
       // Donde se elige la contraseña nueva con el enlace que llegó por correo. Es la hermana de
@@ -189,7 +188,6 @@ export const T = {
       clave_nueva_confirmar: 'Guardar la contraseña',
       clave_nueva_guardando: 'Guardando…',
       clave_nueva_exito: 'La contraseña quedó cambiada. Ya se puede entrar con la nueva.',
-      clave_nueva_token_invalido: 'Este enlace no es válido o venció. Solicite un enlace nuevo.',
       mi_clave: 'Contraseña',
       mi_clave_titulo: 'Cambiar la contraseña',
       mi_clave_actual: 'Contraseña actual',
@@ -781,7 +779,7 @@ export const T = {
         no_disponible: 'This feature is not switched on at this provider.',
         faltan_datos: 'Required data is missing. Check the form and try again.',
         password_debil: 'The password must be at least 8 characters long.',
-        token_invalido: 'This link is not valid. Open it again from the email or request a new link.',
+        token_invalido: 'This link is not valid. Request a new link.',
         token_ya_usado: 'This account has already been activated with this link. You can sign in with the password you chose.',
         token_vencido: 'This link has expired. Request a new link.',
         // Los dos del nombre de usuario que se elige al activar la cuenta.
@@ -891,7 +889,7 @@ export const T = {
       activar_confirmar: 'Activate account',
       activar_enviando: 'Activating…',
       activar_exito: 'Your account is now active. You can sign in with your new password.',
-      activar_token_invalido: 'This link is not valid or has expired. Request a new link from the Provider.',
+      activar_token_invalido: 'This link is not valid. Request a new link from the Provider.',
       activar_enlace_nuevo: 'Send me a new link',
       activar_enlace_nuevo_enviado: 'We sent a new link to your email.',
       clave_nueva_titulo: 'Choose a new password',
@@ -899,7 +897,6 @@ export const T = {
       clave_nueva_confirmar: 'Save the password',
       clave_nueva_guardando: 'Saving…',
       clave_nueva_exito: 'The password has been changed. You can now sign in with the new one.',
-      clave_nueva_token_invalido: 'This link is not valid or has expired. Request a new link.',
       mi_clave: 'Password',
       mi_clave_titulo: 'Change your password',
       mi_clave_actual: 'Current password',
@@ -1430,7 +1427,7 @@ export const T = {
         no_disponible: 'Esta função não está ativada nesta Prestadora.',
         faltan_datos: 'Faltam dados obrigatórios. Revise o formulário e tente novamente.',
         password_debil: 'A senha precisa ter pelo menos 8 caracteres.',
-        token_invalido: 'Este link não é válido. Abra-o novamente a partir do e-mail ou solicite um novo link.',
+        token_invalido: 'Este link não é válido. Solicite um novo link.',
         token_ya_usado: 'Esta conta já foi ativada com este link. O acesso é feito na tela de entrada, com a senha escolhida.',
         token_vencido: 'Este link expirou. Solicite um novo link.',
         // Los dos del nombre de usuario que se elige al activar la cuenta.
@@ -1540,7 +1537,7 @@ export const T = {
       activar_confirmar: 'Ativar conta',
       activar_enviando: 'Ativando…',
       activar_exito: 'A conta foi ativada. Já é possível entrar com a nova senha.',
-      activar_token_invalido: 'Este link não é válido ou expirou. Solicite um novo link à Prestadora.',
+      activar_token_invalido: 'Este link não é válido. Solicite um novo link à Prestadora.',
       activar_enlace_nuevo: 'Receber um novo link',
       activar_enlace_nuevo_enviado: 'Enviamos um novo link para o seu e-mail.',
       clave_nueva_titulo: 'Escolher uma senha nova',
@@ -1548,7 +1545,6 @@ export const T = {
       clave_nueva_confirmar: 'Guardar a senha',
       clave_nueva_guardando: 'Guardando…',
       clave_nueva_exito: 'A senha foi alterada. Já é possível entrar com a nova.',
-      clave_nueva_token_invalido: 'Este link não é válido ou expirou. Solicite um novo link.',
       mi_clave: 'Senha',
       mi_clave_titulo: 'Alterar a senha',
       mi_clave_actual: 'Senha atual',

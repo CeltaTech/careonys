@@ -4,9 +4,9 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 31 fichas.** Panel 7, aplicación del Asistente 18, aplicación del Cliente 4, Base 2.
+**Total: 29 fichas.** Panel 5, aplicación del Asistente 18, aplicación del Cliente 4, Base 2.
 
-## Panel (7)
+## Panel (5)
 
 ### 43. Falta cómo recibe el trabajo
 
@@ -55,38 +55,6 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Qué puede hacer después** | ver el documento o el papel firmado, armar un consentimiento nuevo o cambiar el Pagador. |
 | **Cómo se muestra** | franja. |
 | **Decisión** | se resuelve junto con el cambio, el desistimiento y la pluralidad del Pagador. |
-
-### 65. Faltan Prestaciones o el precio del paquete
-
-| | |
-|---|---|
-| **Texto actual** | Elija al menos dos Prestaciones e ingrese el precio del paquete. |
-| **Propuesta corta** | «Elija dos Prestaciones o más y el precio.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | el mínimo de dos no es obvio; se dice y se acorta. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Clientes → un Cliente → solapa «Pacientes» → «Prestaciones» → «Armar paquete con las seleccionadas». |
-| **Qué estaba haciendo** | armaba un paquete. |
-| **Qué pasó** | no cargó el precio, o quedaron menos de dos Prestaciones. |
-| **Qué puede hacer después** | completar y guardar, o cancelar. |
-| **Cómo se muestra** | franja dentro de la tarjeta. |
-| **Decisión** |  |
-
-### 66. Motivo de cierre del Servicio
-
-| | |
-|---|---|
-| **Texto actual** | El Paciente ya no necesita cuidado |
-| **Propuesta corta** | «El Paciente ya no necesita cuidado» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | es una etiqueta de opción y ya es clara. (No se verificó contra la base que el motivo de fábrica siga cargado.) |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Clientes → un Cliente → «Prestaciones», tarjeta «Cierre de servicio», casillero «Motivo del cierre»; Panel → Configuración → El cuidado, «Motivos de cierre del Servicio»; Panel → Guardias → Continuidad de guardia. |
-| **Qué estaba haciendo** | cerraba un Servicio, revisaba los motivos o miraba los cierres. |
-| **Qué pasó** | es uno de los siete motivos de cierre que trae el producto. |
-| **Qué puede hacer después** | elegirlo al cerrar; en Configuración, apagarlo o borrarlo. |
-| **Cómo se muestra** | etiqueta. |
-| **Decisión** |  |
 
 ### 68. Conviviente hospitalizado
 

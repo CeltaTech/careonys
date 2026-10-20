@@ -70,16 +70,14 @@ tablas relacionadas; no se retrofitea salvo que se decida explícitamente.
 
 **Deuda técnica — cerrada:**
 `schema_multitenant_02.sql` había agregado un `DEFAULT '874f54d7-...'` (prestadora_id de
-la Prestadora Demo) en `prestadora_id` de las 14 tablas de los Bloques 1-3 (`usuarios`, `asistentes`,
+la Prestadora Demo) en `prestadora_id` de las 12 tablas de los Bloques 1-3 (`usuarios`, `asistentes`,
 `ausencias`, `guardias_cobertura`, `ceses`, `clientes`, `pacientes`, `lista_precios`,
-`prestaciones`, `paquetes_prestaciones`, `paquete_prestacion_items`, `certificados`,
-`zonas_cobertura`, `postulaciones`) como parche temporal, mientras el Bloque 3
-completaba el filtrado real de tenant. 6 de esas 14 (`usuarios`, `asistentes`, `clientes`,
+`prestaciones`, `certificados`, `zonas_cobertura`, `postulaciones`) como parche temporal, mientras el Bloque 3
+completaba el filtrado real de tenant. 6 de esas 12 (`usuarios`, `asistentes`, `clientes`,
 `pacientes`, `zonas_cobertura`, `postulaciones`) se cerraron el 2026-07-10
 directo contra Supabase (sin migración versionada en el repo — deuda de trazabilidad, no de
-funcionalidad). Las 8 restantes (`ausencias`, `guardias_cobertura`, `ceses`,
-`lista_precios`, `prestaciones`, `paquetes_prestaciones`, `paquete_prestacion_items`,
-`certificados`) se cerraron el 2026-07-11 con un archivo de esquema de aquella etapa
+funcionalidad). Las 6 restantes (`ausencias`, `guardias_cobertura`, `ceses`,
+`lista_precios`, `prestaciones`, `certificados`) se cerraron el 2026-07-11 con un archivo de esquema de aquella etapa
 —eliminado del repositorio el 2026-08-18 junto con todos los demás—,
 aplicado contra Supabase real vía MCP y verificado con un insert real sin `prestadora_id`
 contra `certificados` que falló como se esperaba (`ERROR 23502: null value in column
@@ -926,9 +924,8 @@ base de datos de por medio.
 ```
 prestadoras (tenant — hoy solo datos de prueba, Prestadora Demo, sin contrato firmado)
   └── prestadora_id NOT NULL en: usuarios, asistentes, ausencias, guardias_cobertura, ceses,
-      clientes, pacientes, lista_precios, prestaciones, paquetes_prestaciones,
-      paquete_prestacion_items, certificados, zonas_cobertura, postulaciones, legajos,
-      telefonos_del_legajo
+      clientes, pacientes, lista_precios, prestaciones, certificados, zonas_cobertura,
+      postulaciones, legajos, telefonos_del_legajo
 
 usuarios (superadmin, admin_prestadora, coordinador)
   ├── asistentes ── verificaciones_asistente, validaciones_faciales, certificados
@@ -942,7 +939,7 @@ usuarios (superadmin, admin_prestadora, coordinador)
   ├── ausencias ── guardias_cobertura
   ├── ceses
   ├── escalas_legales (independiente, versionado por fecha)
-  └── lista_precios ── prestaciones ── paquetes_prestaciones ── paquete_prestacion_items
+  └── lista_precios ── prestaciones
       (Módulo 8, ver `docs/CONTEXT.md`; zonas_cobertura independiente, sin RLS de zona
       derivada todavía — ver `SECURITY.md`)
 

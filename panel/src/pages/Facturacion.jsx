@@ -63,9 +63,8 @@ import './hojaDeTarjetas.css';
    sistema tiene que poder distinguirse de uno que cargó una persona.
 
    Y LA FACTURA TAMPOCO SE ARMA ACÁ. Qué renglones lleva la factura de un período —qué
-   prestaciones corren ese mes y qué paquete cobra su precio pactado en lugar de la suma de los
-   suyos— es un cálculo sobre plata, y vive en el backend, en `utils/facturaDelPeriodo.js`. La
-   pantalla pide el período y la fecha de vencimiento, y muestra cuántas facturas salieron.
+   prestaciones corren ese mes— es un cálculo sobre plata, y vive en el backend, en
+   `utils/facturaDelPeriodo.js`. La pantalla pide el período y la fecha de vencimiento, y muestra cuántas facturas salieron.
 
    QUIÉN EMITE EL COMPROBANTE Y QUÉ SE ANOTA ACÁ. El producto no emite comprobantes y no va a
    emitirlos: el comprobante lo emite el software de facturación de la Prestadora, con los

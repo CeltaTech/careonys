@@ -362,14 +362,12 @@ panelCobrosRouter.get('/facturas/:facturaId', requiereRolPanel, veElEstadoDeCuen
 /**
  * Generar las facturas de un período, una por Cliente que todavía no tenga la suya.
  *
- * ESTO SE HACÍA EN EL NAVEGADOR, y la cuenta salía mal de dos maneras: cobraba prestaciones cuya
- * vigencia ya había terminado o todavía no había empezado, y cobraba renglón por renglón las
- * prestaciones que estaban adentro de un paquete, o sea desconociendo el precio único que se
- * había pactado. Qué lleva cada factura es un cálculo económico y ahora vive en
- * `utils/facturaDelPeriodo.js`, del mismo lado que las facturas.
+ * ESTO SE HACÍA EN EL NAVEGADOR, y la cuenta salía mal: cobraba prestaciones cuya vigencia ya
+ * había terminado o todavía no había empezado. Qué lleva cada factura es un cálculo económico y
+ * ahora vive en `utils/facturaDelPeriodo.js`, del mismo lado que las facturas.
  *
  * SE COBRA EL PRECIO ACORDADO, ENTERO, por cualquier prestación que corra aunque sea un día del
- * período. Partirlo en proporción a los días obligaría a decidir sobre cuántos se parte, y eso lo
+ * período, y cada prestación por separado. Partirlo en proporción a los días obligaría a decidir sobre cuántos se parte, y eso lo
  * acuerda cada Prestadora con cada Cliente.
  *
  * UNA FACTURA SIN RENGLONES NO QUEDA. Si los renglones no entran, se borra la factura recién
@@ -418,8 +416,6 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
   const nombresDePacientes = new Map(pacientes.map((p) => [p.id, p.nombre]));
 
   let prestaciones = [];
-  let paquetes = [];
-  let itemsDePaquete = [];
 
   if (pacienteIds.length > 0) {
     const { data, error } = await db
@@ -429,22 +425,6 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
       .in('paciente_id', pacienteIds);
     if (error) return responderError(res, error);
     prestaciones = data || [];
-
-    const { data: datosPaquetes, error: errorPaquetes } = await db
-      .from('paquetes_prestaciones')
-      .select('id, paciente_id, nombre, precio_paquete, estado')
-      .in('paciente_id', pacienteIds);
-    if (errorPaquetes) return responderError(res, errorPaquetes);
-    paquetes = datosPaquetes || [];
-
-    if (paquetes.length > 0) {
-      const { data: datosItems, error: errorItems } = await db
-        .from('paquete_prestacion_items')
-        .select('paquete_id, prestacion_id')
-        .in('paquete_id', paquetes.map((pq) => pq.id));
-      if (errorItems) return responderError(res, errorItems);
-      itemsDePaquete = datosItems || [];
-    }
   }
 
   const { data: existentes, error: errorExistentes } = await db
@@ -458,11 +438,6 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
   for (const p of prestaciones) {
     if (!porPaciente.has(p.paciente_id)) porPaciente.set(p.paciente_id, []);
     porPaciente.get(p.paciente_id).push(p);
-  }
-  const paquetesPorPaciente = new Map();
-  for (const pq of paquetes) {
-    if (!paquetesPorPaciente.has(pq.paciente_id)) paquetesPorPaciente.set(pq.paciente_id, []);
-    paquetesPorPaciente.get(pq.paciente_id).push(pq);
   }
 
   let generadas = 0;
@@ -486,8 +461,6 @@ panelCobrosRouter.post('/facturas/generar', requiereRolPanel, async (req, res) =
       periodo,
       nombresDePacientes,
       prestaciones: suyos.flatMap((id) => porPaciente.get(id) || []),
-      paquetes: suyos.flatMap((id) => paquetesPorPaciente.get(id) || []),
-      itemsDePaquete,
     });
 
     if (renglones.length === 0) {

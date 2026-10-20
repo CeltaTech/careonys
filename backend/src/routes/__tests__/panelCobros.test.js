@@ -1078,8 +1078,6 @@ const PACIENTE = '55555555-5555-5555-5555-555555555555';
 /** La base contesta con un Cliente, un Paciente y lo que cada prueba le ponga encima. */
 function baseConUnCliente({
   prestaciones = [],
-  paquetes = [],
-  items = [],
   yaFacturadas = [],
   plazoDeLaPrestadora = null,
   plazoDelCliente = null,
@@ -1096,8 +1094,6 @@ function baseConUnCliente({
     },
   ]);
   respuestas.set('GET /rest/v1/prestaciones', () => prestaciones);
-  respuestas.set('GET /rest/v1/paquetes_prestaciones', () => paquetes);
-  respuestas.set('GET /rest/v1/paquete_prestacion_items', () => items);
   respuestas.set('GET /rest/v1/facturas_cliente', () => yaFacturadas);
   respuestas.set('POST /rest/v1/facturas_cliente', () => [{ id: FACTURA, prestadora_id: PRESTADORA }]);
   respuestas.set('POST /rest/v1/facturas_cliente_items', () => []);
@@ -1195,28 +1191,6 @@ describe('generar las facturas de un período', () => {
     assert.equal(renglones.cuerpo[0].descripcion, 'Acompañamiento — Juana Pérez');
   });
 
-  it('un paquete vigente se cobra a su precio pactado, no a la suma de los suyos', async () => {
-    baseConUnCliente({
-      prestaciones: [
-        unaPrestacion({ id: 1, precio_final: '10000.00' }),
-        unaPrestacion({ id: 2, tipo_servicio: 'Enfermería', precio_final: '8000.00' }),
-      ],
-      paquetes: [{ id: 9, paciente_id: PACIENTE, nombre: 'Plan tarde', precio_paquete: '15000.00', estado: 'vigente' }],
-      items: [
-        { paquete_id: 9, prestacion_id: 1 },
-        { paquete_id: 9, prestacion_id: 2 },
-      ],
-    });
-
-    await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
-
-    const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente');
-    assert.equal(factura.cuerpo.monto_total, 15000);
-    const renglones = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente_items');
-    assert.equal(renglones.cuerpo.length, 1);
-    assert.equal(renglones.cuerpo[0].descripcion, 'Plan tarde — Juana Pérez');
-  });
-
   it('el Cliente que ya tiene la factura del período no recibe otra', async () => {
     baseConUnCliente({ prestaciones: [unaPrestacion()], yaFacturadas: [{ cliente_id: CLIENTE }] });
 
@@ -1247,15 +1221,11 @@ describe('generar las facturas de un período', () => {
   });
 
   it('todo se pide con la credencial de quien llama, y la factura nace con la Prestadora de su Cliente', async () => {
-    baseConUnCliente({
-      prestaciones: [unaPrestacion()],
-      paquetes: [{ id: 9, paciente_id: PACIENTE, nombre: null, precio_paquete: '1.00', estado: 'de_baja' }],
-      items: [{ paquete_id: 9, prestacion_id: 1 }],
-    });
+    baseConUnCliente({ prestaciones: [unaPrestacion()] });
 
     await pedir('POST', '/facturas/generar', { periodo: '2026-08', fecha_vencimiento: '2026-08-31' });
 
-    todoConLaCredencialDeQuienPide(6);
+    todoConLaCredencialDeQuienPide(4);
     clientesConLaMaestraYLaPrestadora();
     const factura = llamadas.find((l) => l.clave === 'POST /rest/v1/facturas_cliente');
     assert.equal(factura.cuerpo.prestadora_id, PRESTADORA);

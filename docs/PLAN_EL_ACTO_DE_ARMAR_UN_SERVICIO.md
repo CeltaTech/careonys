@@ -73,7 +73,7 @@ certificadas. **Es lo único previsto específicamente para el tiempo indetermin
 
 **El fin del Servicio, entero, con motivo del catálogo de la Prestadora.** Está en
 `panel/src/pages/clientes/PrestacionesPaciente.jsx`: inserta en `cierres_servicio_paciente` y
-encadena las prestaciones a de baja, los paquetes a de baja, las series a cancelada y los turnos
+encadena las prestaciones a de baja, las series a cancelada y los turnos
 programados a cancelada con alcance total. Registra qué Asistentes quedaron involucrados y su
 estado de aviso. La fecha de fin la pone la base.
 
@@ -168,12 +168,11 @@ la constatación central de este plan: el acto no existe en ninguna parte del c�
 
 ### 5.2. Lo que sí se escribe, y desde dónde
 
-**Lo pactado** — `prestaciones`: se inserta en `PrestacionesPaciente.jsx:238`, se marca revisado en
-`:279`, y se da de baja en cascada al cerrar el Servicio en `:365-370`. `paquetes_prestaciones`: se
-inserta en `:564-572` y se da de baja en `:373` —por Paciente, no por Servicio—.
+**Lo pactado** — `prestaciones`: se inserta en `PrestacionesPaciente.jsx:228`, se marca revisado en
+`:269`, y se da de baja en cascada al cerrar el Servicio en `:354-359`.
 
 **Los turnos repetidos** — `series_guardias`: se crea en `NuevaGuardiaModal.jsx:231-246`; se cancela
-en cascada en `PrestacionesPaciente.jsx:374-379`; se pausa en `:470` y se reactiva en `:529`.
+en cascada en `PrestacionesPaciente.jsx:360-365`; se pausa en `:456` y se reactiva en `:515`.
 `series_guardias_pacientes`: se inserta en `NuevaGuardiaModal.jsx:255-261` —los Pacientes distintos
 del primero, que lo pone un disparador—.
 

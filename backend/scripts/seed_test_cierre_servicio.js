@@ -60,11 +60,6 @@ async function main() {
     .select().single();
   if (errorPrestacion) throw errorPrestacion;
 
-  const { data: paquete, error: errorPaquete } = await supabase.from('paquetes_prestaciones')
-    .insert({ prestadora_id: PRESTADORA_ID, paciente_id: paciente.id, nombre: 'PRUEBA temporal — Paquete', precio_paquete: 5000, estado: 'vigente' })
-    .select().single();
-  if (errorPaquete) throw errorPaquete;
-
   const { data: asistenteAuth, error: errorAsistenteAuth } = await supabase.auth.admin.createUser({
     email: 'alas.para.escribir.2026+asistente.test.cierre@gmail.com',
     password: PASSWORD,
@@ -127,7 +122,6 @@ async function main() {
     asistenteId: asistenteAuth.user.id,
     pacienteId: paciente.id,
     prestacionId: prestacion.id,
-    paqueteId: paquete.id,
     serieId: serie.id,
     guardiaId: guardia.id,
   }, null, 2));

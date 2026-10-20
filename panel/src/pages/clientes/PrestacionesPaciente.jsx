@@ -37,7 +37,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   const confirmarDestructivo = useConfirmarDestructivo();
   const [listaPrecios, setListaPrecios] = useState([]);
   const [prestaciones, setPrestaciones] = useState([]);
-  const [paquetes, setPaquetes] = useState([]);
   const [estado, setEstado] = useState('cargando');
   const [error, setError] = useState(null);
 
@@ -67,12 +66,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
   const [guardando, setGuardando] = useState(false);
   const [errorForm, setErrorForm] = useState(null);
 
-  const [seleccionadasParaPaquete, setSeleccionadasParaPaquete] = useState([]);
-  const [mostrandoPaquete, setMostrandoPaquete] = useState(false);
-  const [nombrePaquete, setNombrePaquete] = useState('');
-  const [precioPaquete, setPrecioPaquete] = useState('');
-  const [guardandoPaquete, setGuardandoPaquete] = useState(false);
-  const [errorPaquete, setErrorPaquete] = useState(null);
   const [marcandoRevisado, setMarcandoRevisado] = useState(null);
   const [errorRevision, setErrorRevision] = useState(null);
 
@@ -107,14 +100,9 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     setEstado('cargando');
     setError(null);
 
-    const [listaResp, prestacionesResp, paquetesResp, cierresResp, hospResp, alertasResp, serviciosResp] = await Promise.all([
+    const [listaResp, prestacionesResp, cierresResp, hospResp, alertasResp, serviciosResp] = await Promise.all([
       supabase.from('lista_precios').select('*').eq('activo', true).order('tipo_servicio'),
       supabase.from('prestaciones').select('*').eq('paciente_id', paciente.id).order('created_at', { ascending: false }),
-      supabase
-        .from('paquetes_prestaciones')
-        .select('*, paquete_prestacion_items(prestacion_id)')
-        .eq('paciente_id', paciente.id)
-        .order('created_at', { ascending: false }),
       supabase.from('cierres_servicio_paciente').select('id, servicio_id').eq('paciente_id', paciente.id),
       supabase.from('hospitalizaciones_paciente').select('*').eq('paciente_id', paciente.id).is('fecha_fin', null).maybeSingle(),
       supabase
@@ -133,7 +121,7 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     ]);
 
     const falla =
-      listaResp.error || prestacionesResp.error || paquetesResp.error || cierresResp.error ||
+      listaResp.error || prestacionesResp.error || cierresResp.error ||
       hospResp.error || alertasResp.error || serviciosResp.error;
     if (falla) {
       setError(mensajeDeError(falla, t));
@@ -143,7 +131,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
 
     setListaPrecios(listaResp.data ?? []);
     setPrestaciones(prestacionesResp.data ?? []);
-    setPaquetes(paquetesResp.data ?? []);
     setCierres(cierresResp.data ?? []);
     setServiciosDelCliente(serviciosResp.data ?? []);
     setHospitalizacionActiva(hospResp.data ?? null);
@@ -370,9 +357,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
         .eq('paciente_id', paciente.id)
         .eq('servicio_id', servicioCierreId)
         .eq('estado', 'vigente'),
-      // El paquete agrupa Prestaciones de este Paciente y no sabe de qué Servicio es ninguna.
-      // Queda por Paciente, como estaba, hasta que se lo mude también.
-      supabase.from('paquetes_prestaciones').update({ estado: 'de_baja' }).eq('paciente_id', paciente.id).eq('estado', 'vigente'),
       supabase
         .from('series_guardias')
         .update({ estado: 'cancelada', cancelacion_origen: 'prestadora', cancelado_at: ahora })
@@ -550,59 +534,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
     recargar();
   }
 
-  function toggleSeleccionParaPaquete(id) {
-    setSeleccionadasParaPaquete((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  }
-
-  async function handleGuardarPaquete() {
-    if (seleccionadasParaPaquete.length < 2 || !precioPaquete) {
-      setErrorPaquete(t.prestaciones.paquete_datos_incompletos);
-      return;
-    }
-
-    setGuardandoPaquete(true);
-    setErrorPaquete(null);
-
-    const { data: paqueteCreado, error: errorPaquete_ } = await supabase
-      .from('paquetes_prestaciones')
-      .insert({
-        prestadora_id: prestadoraId,
-        paciente_id: paciente.id,
-        nombre: nombrePaquete,
-        precio_paquete: Number(precioPaquete),
-        estado: 'vigente',
-      })
-      .select()
-      .single();
-
-    if (errorPaquete_) {
-      setErrorPaquete(t.comun.error_generico);
-      setGuardandoPaquete(false);
-      return;
-    }
-
-    const items = seleccionadasParaPaquete.map((prestacionId) => ({
-      prestadora_id: prestadoraId,
-      paquete_id: paqueteCreado.id,
-      prestacion_id: prestacionId,
-    }));
-
-    const { error: errorItems } = await supabase.from('paquete_prestacion_items').insert(items);
-
-    if (errorItems) {
-      setErrorPaquete(t.comun.error_generico);
-      setGuardandoPaquete(false);
-      return;
-    }
-
-    setGuardandoPaquete(false);
-    setMostrandoPaquete(false);
-    setSeleccionadasParaPaquete([]);
-    setNombrePaquete('');
-    setPrecioPaquete('');
-    recargar();
-  }
-
   return (
     <div className="panel-modal-fondo" onClick={onClose}>
       <div className="panel-modal" onClick={(e) => e.stopPropagation()} {...modal.props}>
@@ -613,34 +544,10 @@ export function PrestacionesPaciente({ paciente, onClose }) {
 
         {estado === 'listo' && (
           <div className="molde-pila">
-            {paquetes.length > 0 && (
-              <section className="panel-tarjeta">
-                <div className="panel-tarjeta-titulo">
-                  <h2>{t.prestaciones.paquetes_titulo}</h2>
-                </div>
-                {paquetes.map((pq) => (
-                  <div className="panel-fila-alerta" key={pq.id}>
-                    <div>
-                      <b>{pq.nombre || t.prestaciones.paquete_sin_nombre}</b>{' '}
-                      <span className="panel-mini">
-                        {pq.paquete_prestacion_items.length} {t.prestaciones.prestaciones_incluidas}
-                      </span>
-                    </div>
-                    <b>{pq.precio_paquete}</b>
-                  </div>
-                ))}
-              </section>
-            )}
-
             <section className="panel-tarjeta hoja-desplazable">
               <div className="panel-tarjeta-titulo">
                 <h2>{t.prestaciones.vigentes_titulo}</h2>
                 <div className="molde-acciones">
-                  {seleccionadasParaPaquete.length >= 2 && !mostrandoPaquete && (
-                    <Button variant="secondary" onClick={() => setMostrandoPaquete(true)}>
-                      {t.prestaciones.armar_paquete}
-                    </Button>
-                  )}
                   {!mostrandoForm && (
                     <Button variant="secondary" onClick={() => setMostrandoForm(true)}>{t.prestaciones.nueva_prestacion}</Button>
                   )}
@@ -653,7 +560,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                 <table className="panel-tabla">
                   <thead>
                     <tr>
-                      <th></th>
                       <th>{t.prestaciones.col_tipo_servicio}</th>
                       <th>{t.prestaciones.col_precio_final}</th>
                       <th>{t.prestaciones.col_vigencia}</th>
@@ -665,14 +571,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                   <tbody>
                     {prestaciones.map((p) => (
                       <tr key={p.id}>
-                        <td>
-                          <input
-                            type="checkbox"
-                            checked={seleccionadasParaPaquete.includes(p.id)}
-                            onChange={() => toggleSeleccionParaPaquete(p.id)}
-                            aria-label={con(t.comun.campo_de_fila, { campo: t.comun.seleccionar, nombre: p.tipo_servicio })}
-                          />
-                        </td>
                         <td><b>{p.tipo_servicio}</b></td>
                         <td>{p.precio_final}</td>
                         <td>
@@ -704,40 +602,6 @@ export function PrestacionesPaciente({ paciente, onClose }) {
                 </table>
               )}
             </section>
-
-            {mostrandoPaquete && (
-              <section className="panel-tarjeta">
-                <div className="panel-tarjeta-titulo">
-                  <h2>{t.prestaciones.armar_paquete}</h2>
-                </div>
-                {errorPaquete && <Alert variant="error">{errorPaquete}</Alert>}
-                <div className="molde-formgrid">
-                  <FormField
-                    label={t.prestaciones.nombre_paquete}
-                    name="nombre_paquete"
-                    value={nombrePaquete}
-                    onChange={(e) => setNombrePaquete(e.target.value)}
-                  />
-                  <FormField
-                    label={t.prestaciones.precio_paquete}
-                    name="precio_paquete"
-                    type="number"
-                    step="0.01"
-                    value={precioPaquete}
-                    onChange={(e) => setPrecioPaquete(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="molde-acciones">
-                  <Button variant="secondary" onClick={() => setMostrandoPaquete(false)} disabled={guardandoPaquete}>
-                    {t.comun.cancelar}
-                  </Button>
-                  <Button onClick={handleGuardarPaquete} disabled={guardandoPaquete}>
-                    {guardandoPaquete ? t.comun.guardando : t.comun.guardar}
-                  </Button>
-                </div>
-              </section>
-            )}
 
             {mostrandoForm && (
               <section className="panel-tarjeta">

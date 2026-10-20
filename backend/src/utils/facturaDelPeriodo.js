@@ -2,16 +2,10 @@
    ============================================================
 
    QUÉ RESUELVE. La factura se armaba sumando el precio de todas las prestaciones `vigente` del
-   Paciente, sin mirar ni una fecha y sin consultar nunca los paquetes. De ahí salían dos facturas
-   equivocadas, y las dos en contra de alguien:
-
-     * **Se cobraba lo que ya no corría, y lo que todavía no había empezado.** Una prestación que
-       terminó en marzo seguía apareciendo en la factura de agosto, porque `estado` dice si el
-       acuerdo sigue en pie y las fechas dicen cuándo corre. Son dos cosas distintas y hacían falta
-       las dos.
-     * **Un paquete se cobraba renglón por renglón.** Acordar tres prestaciones por un precio único
-       es justamente pactar menos que la suma: cobrando cada una por separado, el Cliente paga de
-       más todos los meses y el descuento que se le prometió no existe.
+   Paciente, sin mirar ni una fecha. Así se cobraba lo que ya no corría, y lo que todavía no había
+   empezado: una prestación que terminó en marzo seguía apareciendo en la factura de agosto, porque
+   `estado` dice si el acuerdo sigue en pie y las fechas dicen cuándo corre. Son dos cosas distintas
+   y hacen falta las dos.
 
    CÓMO SE MIRA LA VIGENCIA. Una prestación entra en el período si su vigencia se superpone con el
    mes, aunque sea un día: empezó antes de que el mes termine y no terminó antes de que el mes
@@ -21,12 +15,7 @@
    proporcional a los días: partirlo obligaría a decidir sobre cuántos días se parte, y eso lo
    acuerda cada Prestadora con cada Cliente, no este archivo.
 
-   CÓMO ENTRA UN PAQUETE. Las prestaciones que están adentro de un paquete vigente no ponen su
-   precio: lo pone el paquete, una vez, con el precio pactado. Alcanza con que una de ellas corra en
-   el período para que el paquete entre; si no corre ninguna, el paquete no entra.
-
-   Y UN PAQUETE DADO DE BAJA NO TAPA NADA. Sus prestaciones vuelven a cobrarse por separado, que es
-   lo que queda cuando el acuerdo del precio único se terminó. */
+   CADA PRESTACIÓN ES UN RENGLÓN. Se cobra cada una por separado, con su propio precio. */
 
 /** El último día del mes de un período `2026-08-01`. */
 export function ultimoDiaDelPeriodo(periodo) {
@@ -52,65 +41,15 @@ export function correEnElPeriodo(prestacion, periodo) {
  * @param {string} argumentos.periodo        El primer día del mes, `2026-08-01`.
  * @param {Map<string, string>} argumentos.nombresDePacientes
  * @param {Array} argumentos.prestaciones    Las del acuerdo, ya acotadas a este Cliente.
- * @param {Array} argumentos.paquetes        Los paquetes de esos Pacientes.
- * @param {Array} argumentos.itemsDePaquete  Qué prestación está en qué paquete.
  * @returns {Array<{paciente_id: string, servicio_id: string|null, descripcion: string, monto: number}>}
  */
-export function armarLosRenglonesDeLaFactura({
-  periodo,
-  nombresDePacientes,
-  prestaciones,
-  paquetes,
-  itemsDePaquete,
-}) {
-  const queCorren = (prestaciones ?? []).filter((p) => correEnElPeriodo(p, periodo));
-
-  const paquetesVigentes = new Map(
-    (paquetes ?? []).filter((pq) => pq.estado === 'vigente').map((pq) => [pq.id, pq])
-  );
-  const paqueteDeLaPrestacion = new Map();
-  for (const item of itemsDePaquete ?? []) {
-    if (paquetesVigentes.has(item.paquete_id)) paqueteDeLaPrestacion.set(item.prestacion_id, item.paquete_id);
-  }
-
-  const renglones = [];
-  /** Qué prestaciones que corren aporta cada paquete, para nombrarlo y para saber si entra. */
-  const loQueCubreCadaPaquete = new Map();
-
-  for (const prestacion of queCorren) {
-    const paqueteId = paqueteDeLaPrestacion.get(prestacion.id);
-    if (paqueteId !== undefined) {
-      if (!loQueCubreCadaPaquete.has(paqueteId)) loQueCubreCadaPaquete.set(paqueteId, []);
-      loQueCubreCadaPaquete.get(paqueteId).push(prestacion);
-      continue;
-    }
-    renglones.push({
+export function armarLosRenglonesDeLaFactura({ periodo, nombresDePacientes, prestaciones }) {
+  return (prestaciones ?? [])
+    .filter((p) => correEnElPeriodo(p, periodo))
+    .map((prestacion) => ({
       paciente_id: prestacion.paciente_id,
       servicio_id: prestacion.servicio_id ?? null,
       descripcion: `${prestacion.tipo_servicio} — ${nombresDePacientes.get(prestacion.paciente_id) ?? ''}`.trim(),
       monto: Number(prestacion.precio_final),
-    });
-  }
-
-  for (const [paqueteId, cubiertas] of loQueCubreCadaPaquete) {
-    const paquete = paquetesVigentes.get(paqueteId);
-    renglones.push({
-      paciente_id: paquete.paciente_id,
-      // Un paquete puede juntar prestaciones de Servicios distintos, así que el renglón no puede
-      // decir que es de uno solo.
-      servicio_id: null,
-      descripcion: `${nombreDelPaquete(paquete, cubiertas)} — ${nombresDePacientes.get(paquete.paciente_id) ?? ''}`.trim(),
-      monto: Number(paquete.precio_paquete),
-    });
-  }
-
-  return renglones;
-}
-
-/** Cómo se nombra un paquete en la factura. El nombre es opcional al armarlo, y el que no lo tiene
- *  se dice por lo que incluye, que es lo que el Cliente necesita reconocer. */
-function nombreDelPaquete(paquete, cubiertas) {
-  const propio = String(paquete.nombre ?? '').trim();
-  if (propio) return propio;
-  return [...new Set(cubiertas.map((p) => p.tipo_servicio))].join(', ');
+    }));
 }

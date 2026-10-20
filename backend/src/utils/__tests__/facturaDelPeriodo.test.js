@@ -6,10 +6,8 @@ import { armarLosRenglonesDeLaFactura, correEnElPeriodo, ultimoDiaDelPeriodo } f
    ==========================================================================
 
    ACÁ SE PRUEBA UNA CUENTA SOBRE PLATA, así que cada caso está escrito por el error que evita, y
-   son cuatro los que importan: cobrarle a alguien un acuerdo que ya terminó, cobrarle uno que
-   todavía no empezó, dejar de cobrar uno que corre, y cobrar un paquete renglón por renglón
-   —que es cobrar de más todos los meses, porque el precio único que se pactó era justamente menos
-   que la suma—.
+   son tres los que importan: cobrarle a alguien un acuerdo que ya terminó, cobrarle uno que
+   todavía no empezó, y dejar de cobrar uno que corre.
 
    Los datos son inventados. El período de todos los casos es agosto de 2026. */
 
@@ -35,13 +33,11 @@ function prestacion(cambios = {}) {
   };
 }
 
-function armar({ prestaciones = [], paquetes = [], itemsDePaquete = [] } = {}) {
+function armar({ prestaciones = [] } = {}) {
   return armarLosRenglonesDeLaFactura({
     periodo: PERIODO,
     nombresDePacientes: NOMBRES,
     prestaciones,
-    paquetes,
-    itemsDePaquete,
   });
 }
 
@@ -97,84 +93,5 @@ describe('los renglones de la factura', () => {
   it('se cobra el precio acordado entero aunque haya corrido un solo día', () => {
     const renglones = armar({ prestaciones: [prestacion({ vigente_desde: '2026-08-31' })] });
     assert.equal(renglones[0].monto, 10000);
-  });
-});
-
-describe('cuando las prestaciones están adentro de un paquete', () => {
-  const PAQUETE = 77;
-
-  function conPaquete(cambiosDelPaquete = {}) {
-    return {
-      prestaciones: [
-        prestacion({ id: 1, tipo_servicio: 'Acompañamiento', precio_final: '10000.00' }),
-        prestacion({ id: 2, tipo_servicio: 'Enfermería', precio_final: '8000.00' }),
-      ],
-      paquetes: [
-        {
-          id: PAQUETE,
-          paciente_id: PACIENTE,
-          nombre: 'Plan tarde',
-          precio_paquete: '15000.00',
-          estado: 'vigente',
-          ...cambiosDelPaquete,
-        },
-      ],
-      itemsDePaquete: [
-        { paquete_id: PAQUETE, prestacion_id: 1 },
-        { paquete_id: PAQUETE, prestacion_id: 2 },
-      ],
-    };
-  }
-
-  it('se cobra el precio pactado una vez, y no la suma de los suyos', () => {
-    const renglones = armar(conPaquete());
-    assert.equal(renglones.length, 1);
-    assert.equal(renglones[0].monto, 15000);
-    assert.equal(renglones[0].descripcion, 'Plan tarde — Juana Pérez');
-  });
-
-  it('el renglón del paquete no dice un Servicio, porque puede juntar varios', () => {
-    assert.equal(armar(conPaquete())[0].servicio_id, null);
-  });
-
-  it('el paquete sin nombre se dice por lo que incluye', () => {
-    assert.equal(
-      armar(conPaquete({ nombre: null }))[0].descripcion,
-      'Acompañamiento, Enfermería — Juana Pérez'
-    );
-  });
-
-  it('entra aunque una de las suyas haya dejado de correr, y sigue valiendo lo pactado', () => {
-    const datos = conPaquete();
-    datos.prestaciones[1] = { ...datos.prestaciones[1], vigente_hasta: '2026-07-01' };
-    const renglones = armar(datos);
-    assert.equal(renglones.length, 1);
-    assert.equal(renglones[0].monto, 15000);
-  });
-
-  it('no entra si no le corre ninguna', () => {
-    const datos = conPaquete();
-    datos.prestaciones = datos.prestaciones.map((p) => ({ ...p, vigente_hasta: '2026-07-01' }));
-    assert.deepEqual(armar(datos), []);
-  });
-
-  it('uno dado de baja no tapa nada: sus prestaciones vuelven a cobrarse por separado', () => {
-    const renglones = armar(conPaquete({ estado: 'de_baja' }));
-    assert.equal(renglones.length, 2);
-    assert.equal(
-      renglones.reduce((acc, r) => acc + r.monto, 0),
-      18000
-    );
-  });
-
-  it('lo que queda afuera del paquete se cobra igual, al lado', () => {
-    const datos = conPaquete();
-    datos.prestaciones.push(prestacion({ id: 3, tipo_servicio: 'Kinesiología', precio_final: '5000.00' }));
-    const renglones = armar(datos);
-    assert.equal(renglones.length, 2);
-    assert.deepEqual(
-      renglones.map((r) => r.monto).sort((a, b) => a - b),
-      [5000, 15000]
-    );
   });
 });

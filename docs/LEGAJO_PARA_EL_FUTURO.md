@@ -55,6 +55,19 @@ Lo que hay que resolver antes:
   publica; desde la tienda, recién cuando la tienda lo aprueba.
 - **Las cuentas de publicación en cada tienda**, y de quién son.
 
+## Cobrar varias Prestaciones juntas por un precio
+
+Que la Prestadora pueda cobrar varias Prestaciones de un mismo Paciente por un precio único, en
+vez de la suma de cada una. Queda para la siguiente versión del producto.
+
+Lo que hay que resolver antes:
+
+- **Es política comercial de cada Prestadora.** Si junta o no sus Prestaciones, y cómo, lo decide
+  ella. El producto le da formas de cobro para elegir, no le impone una.
+- **Hoy no hay elementos de juicio** para decidir con algún criterio sólido cómo se arma, qué pasa
+  si una de las Prestaciones termina antes que las otras, ni cómo se corrige o se da de baja.
+- **La pieza que lo hacía está en el estante**, en `Codigos-utiles\paquetes-de-prestaciones\`.
+
 ## Una página por Prestadora
 
 Que cada Prestadora tenga su propia página dentro del dominio del producto, del tipo

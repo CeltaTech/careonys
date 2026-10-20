@@ -4,39 +4,23 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 35 fichas.** Panel 11, aplicación del Asistente 18, aplicación del Cliente 4, Base 2.
+**Total: 34 fichas.** Panel 10, aplicación del Asistente 18, aplicación del Cliente 4, Base 2.
 
-## Panel (11)
+## Panel (10)
 
 ### 43. Falta cómo recibe el trabajo
 
 | | |
 |---|---|
 | **Texto actual** | Marque al menos una forma de recibir el trabajo. |
-| **Propuesta corta** | «Falta cómo recibe el trabajo.» |
+| **Propuesta corta** | «Marque al menos una modalidad.» |
 | **¿Aparece hoy?** | sí |
-| **Por qué** | repite la etiqueta del grupo «Cómo recibe el trabajo». |
-| **Quién lo lee** | la administración de la Prestadora. |
+| **Por qué** | «forma de recibir el trabajo» no dice de qué se trata. Las casillas son las modalidades —Prestación directa y Match—, y así las llama el resto del Panel. |
+| **Quién lo lee** | la administración de la Prestadora. El Asistente no lo ve. |
 | **Dónde está** | Panel → Padrón de Asistentes, ventana «Nuevo Asistente»; Panel → Padrón de Asistentes → Legajo, solapa «Perfil». |
-| **Qué estaba haciendo** | desmarcó todas las casillas de «Cómo recibe el trabajo» y guardó. |
-| **Qué pasó** | sin ninguna forma marcada no se le podría asignar ninguna guardia. No se guardó. |
-| **Qué puede hacer después** | marcar una casilla y guardar. |
-| **Cómo se muestra** | franja. |
-| **Decisión** |  |
-
-### 44. Falta la matrícula
-
-| | |
-|---|---|
-| **Texto actual** | Cargue la matrícula en el Legajo, solapa Matrículas. |
-| **Propuesta corta** | «Cargue la matrícula en el Legajo.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | en Guardias la instrucción no es obvia; la solapa se encuentra sola. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Padrón de Asistentes → Legajo, solapa «Matrículas»; Panel → Guardias, arriba de la página. |
-| **Qué estaba haciendo** | miraba las matrículas de un Asistente o le asignaba una guardia. |
-| **Qué pasó** | el Asistente necesita matrícula y no tiene ninguna. La guardia no se asigna. |
-| **Qué puede hacer después** | tocar «Agregar matrícula», o asignar la guardia a otro Asistente. |
+| **Qué estaba haciendo** | en el grupo «Cómo recibe el trabajo» desmarcó Prestación directa y Match, y guardó. |
+| **Qué pasó** | no se guardó: un Asistente sin ninguna modalidad no puede recibir guardias. |
+| **Qué puede hacer después** | marcar Prestación directa, Match o las dos, y guardar. |
 | **Cómo se muestra** | franja. |
 | **Decisión** |  |
 
@@ -45,11 +29,11 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | | |
 |---|---|
 | **Texto actual** | Cargue la matrícula renovada en el Legajo, solapa Matrículas. |
-| **Propuesta corta** | «Cargue la matrícula renovada en el Legajo.» |
+| **Propuesta corta** | «Cargue la matrícula renovada.» |
 | **¿Aparece hoy?** | sí |
-| **Por qué** | igual que la 44. |
+| **Por qué** | en la solapa Matrículas lo manda adonde ya está. Igual que «Cargue la matrícula.», ya aprobada. |
 | **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | los mismos lugares que la ficha 44. |
+| **Dónde está** | Panel → Padrón de Asistentes → Legajo, solapa «Matrículas»; Panel → Guardias, arriba de la página. |
 | **Qué estaba haciendo** | miraba las matrículas de un Asistente o le asignaba una guardia. |
 | **Qué pasó** | la matrícula venció o vence en 30 días o menos. Si venció, la guardia no se asigna. |
 | **Qué puede hacer después** | tocar «Agregar matrícula», o asignar la guardia a otro Asistente. |

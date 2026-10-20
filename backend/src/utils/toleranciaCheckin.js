@@ -10,7 +10,7 @@
 // a mano, más del doble. El mismo check-in podía estar bien para el backend y mal para la
 // pantalla que se usa justamente para auditar los check-in.
 //
-// El valor lo elige cada Prestadora en Configuración → El cuidado, y se guarda en
+// El valor lo elige cada Prestadora en Configuración → Servicios, y se guarda en
 // `configuracion_ausencia_automatica`. Lo que hay acá abajo es solo dos cosas: con qué se
 // compara, y qué se hace en el único caso en que la base no llega a contestar, que es cuando
 // esa Prestadora todavía no tiene fila de configuración.

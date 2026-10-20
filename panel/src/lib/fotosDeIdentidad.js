@@ -7,7 +7,7 @@
    —por correo, por mensaje— y marcaba la etapa a mano.
 
    POR QUÉ NO CUELGAN DE UNA ETAPA. Cada Prestadora define las etapas de su propio proceso y
-   elige sus claves (`etapas_incorporacion_asistente`, Configuración > El cuidado), así que
+   elige sus claves (`etapas_incorporacion_asistente`, Configuración > Reclutamiento), así que
    ninguna clave de etapa es la misma en dos Prestadoras y no hay ninguna que el código pueda
    nombrar. Las dos fotos son de la persona, no de una etapa: cuelgan del Asistente.
 

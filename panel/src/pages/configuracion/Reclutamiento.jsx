@@ -6,6 +6,7 @@ import { FormField } from '../../components/ui/FormField';
 import { Alert } from '../../components/ui/Alert';
 import { EstadoLista } from '../../components/layout/EstadoLista';
 import { mensajeDeError } from '../../lib/errores';
+import { EtapasDeIncorporacion } from './EtapasDeIncorporacion';
 import '../../styles/molde-paginas.css';
 
 /* Quién lleva el reclutamiento de esta Prestadora.
@@ -19,6 +20,15 @@ import '../../styles/molde-paginas.css';
    eligió, es el Administrador, y así aparece elegido. La regla vive una sola vez, en
    `backend/src/utils/responsableDelReclutamiento.js`. */
 export function ConfiguracionReclutamiento() {
+  return (
+    <div className="molde-pila">
+      <ResponsableDelReclutamiento />
+      <EtapasDeIncorporacion />
+    </div>
+  );
+}
+
+function ResponsableDelReclutamiento() {
   const { t } = useLocale();
   const [responsable, setResponsable] = useState('');
   const [personas, setPersonas] = useState([]);

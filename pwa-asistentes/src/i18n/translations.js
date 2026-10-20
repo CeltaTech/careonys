@@ -48,8 +48,8 @@ export const T = {
         detalle_requerido: 'Escriba el motivo.',
         // Los tres que devuelve la base cuando la matrícula no alcanza para tomar el turno.
         // Cada uno se arregla de una manera distinta, y por eso son tres frases y no una.
-        matricula_sin_matricula: 'No tiene matrícula cargada. Cárguela desde Perfil para aceptar esta guardia.',
-        matricula_vencida: 'La matrícula no está vigente el día de esta guardia. Cargue la renovación desde Perfil.',
+        matricula_sin_matricula: 'Sin matrícula cargada.',
+        matricula_vencida: 'Matrícula vencida.',
         matricula_sin_verificar: 'La matrícula está cargada, pero la Prestadora todavía no la comprobó. Hasta entonces no se pueden tomar guardias.',
         modalidad_no_habilitada: 'Esta guardia es de una modalidad no habilitada en su perfil. Consulte a la Prestadora.',
         // Los del pase de guardia (pendiente #113). Ninguno de los cuatro deja al Asistente
@@ -788,8 +788,8 @@ export const T = {
         guardia_ya_cubierta: 'This shift is no longer available.',
         motivo_requerido: 'Choose a reason.',
         detalle_requerido: 'Write the reason.',
-        matricula_sin_matricula: 'You have no licence uploaded. Upload it from Profile to accept this shift.',
-        matricula_vencida: 'The licence is not valid on the day of this shift. Upload the renewal from Profile.',
+        matricula_sin_matricula: 'No licence uploaded.',
+        matricula_vencida: 'Licence expired.',
         matricula_sin_verificar: 'The licence has been uploaded, but the Provider has not checked it yet. Until then, shifts cannot be taken.',
         modalidad_no_habilitada: 'This shift belongs to a service model not enabled on your profile. Contact the Provider.',
         codigo_incorrecto: 'The code is not valid for this shift. Ask to be shown the current code.',
@@ -1435,8 +1435,8 @@ export const T = {
         guardia_ya_cubierta: 'Este plantão não está mais disponível.',
         motivo_requerido: 'Escolha um motivo.',
         detalle_requerido: 'Escreva o motivo.',
-        matricula_sin_matricula: 'Você não tem registro enviado. Envie-o em Perfil para aceitar este plantão.',
-        matricula_vencida: 'O registro não está vigente no dia deste plantão. Envie a renovação em Perfil.',
+        matricula_sin_matricula: 'Sem registro profissional enviado.',
+        matricula_vencida: 'Registro profissional vencido.',
         matricula_sin_verificar: 'O registro foi enviado, mas a Prestadora ainda não o comprovou. Até então não é possível assumir plantões.',
         modalidad_no_habilitada: 'Este plantão é de uma modalidade não habilitada no seu perfil. Consulte a Prestadora.',
         codigo_incorrecto: 'O código não é válido para este plantão. Peça que mostrem o código atual.',

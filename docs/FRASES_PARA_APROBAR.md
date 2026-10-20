@@ -4,7 +4,7 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 25 fichas.** Panel 3, aplicación del Asistente 16, aplicación del Cliente 4, Base 2.
+**Total: 23 fichas.** Panel 3, aplicación del Asistente 14, aplicación del Cliente 4, Base 2.
 
 ## Panel (3)
 
@@ -56,39 +56,7 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Cómo se muestra** | franja. |
 | **Decisión** | se resuelve junto con el cambio, el desistimiento y la pluralidad del Pagador. |
 
-## Aplicación del Asistente (16)
-
-### 8. Falta la matrícula
-
-| | |
-|---|---|
-| **Texto actual** | No tiene matrícula cargada. Cárguela desde Perfil para aceptar esta guardia. |
-| **Propuesta corta** | «Sin matrícula cargada.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | qué hacer depende de la Prestadora, y Perfil → Matrícula ya lo dice con el texto que corresponde. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | Guardias → «Asignaciones sin responder», botón «Aceptar». |
-| **Qué estaba haciendo** | aceptaba un turno asignado. |
-| **Qué pasó** | su tipo de Asistente exige matrícula y no tiene ninguna. |
-| **Qué puede hacer después** | cargar la matrícula en Perfil o rechazar la asignación. |
-| **Cómo se muestra** | franja arriba de la lista. |
-| **Decisión** |  |
-
-### 9. Matrícula no vigente
-
-| | |
-|---|---|
-| **Texto actual** | La matrícula no está vigente el día de esta guardia. Cargue la renovación desde Perfil. |
-| **Propuesta corta** | «Matrícula no vigente ese día.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | lo único propio de este caso es que se mide contra el día de la guardia; la salida está en Perfil. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | Guardias → «Asignaciones sin responder», botón «Aceptar». |
-| **Qué estaba haciendo** | aceptaba un turno asignado. |
-| **Qué pasó** | ninguna matrícula vale el día de esa guardia. |
-| **Qué puede hacer después** | cargar la renovación o rechazar la asignación. |
-| **Cómo se muestra** | franja arriba de la lista. |
-| **Decisión** |  |
+## Aplicación del Asistente (14)
 
 ### 10. Modalidad no habilitada
 

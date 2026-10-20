@@ -4,7 +4,7 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 22 fichas.** Panel 3, aplicación del Asistente 13, aplicación del Cliente 4, Base 2.
+**Total: 21 fichas.** Panel 3, aplicación del Asistente 12, aplicación del Cliente 4, Base 2.
 
 ## Panel (3)
 
@@ -56,23 +56,7 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Cómo se muestra** | franja. |
 | **Decisión** | se resuelve junto con el cambio, el desistimiento y la pluralidad del Pagador. |
 
-## Aplicación del Asistente (13)
-
-### 11. Código que no es de esta guardia
-
-| | |
-|---|---|
-| **Texto actual** | El código no es válido para esta guardia. Pida que le muestren el código actual. |
-| **Propuesta corta** | «Código incorrecto.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | el Asistente tiene el código delante; pedir que se lo muestren de nuevo es lo obvio. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | una guardia, recuadro «Pase de guardia» o «Pase de guardia para el cierre», botón «Confirmar». |
-| **Qué estaba haciendo** | comprobaba con un código que está en el domicilio. |
-| **Qué pasó** | el código no coincide con ninguno vigente, o el del Cliente ya cambió. |
-| **Qué puede hacer después** | probar de nuevo, entrar o cerrar igual eligiendo un motivo, o cancelar. |
-| **Cómo se muestra** | franja dentro del recuadro. |
-| **Decisión** |  |
+## Aplicación del Asistente (12)
 
 ### 12. Código vencido
 

@@ -4,25 +4,9 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 36 fichas.** Panel 12, aplicación del Asistente 18, aplicación del Cliente 4, Base 2.
+**Total: 35 fichas.** Panel 11, aplicación del Asistente 18, aplicación del Cliente 4, Base 2.
 
-## Panel (12)
-
-### 42. La entrevista ya pasó
-
-| | |
-|---|---|
-| **Texto actual** | Si la Prestadora fija una fecha nueva, le avisará por correo. |
-| **Propuesta corta** | «Si hay fecha nueva, le llegará por email.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | más corta y sin nombrar a quién decide. |
-| **Quién lo lee** | el postulante. |
-| **Dónde está** | página de la entrevista, debajo de «Esta entrevista ya pasó». |
-| **Qué estaba haciendo** | abrió el enlace de su entrevista. |
-| **Qué pasó** | pasaron más de 90 minutos desde la hora de la cita. Si la Prestadora cambia la fecha, el mismo enlace vuelve a servir. |
-| **Qué puede hacer después** | esperar el correo. |
-| **Cómo se muestra** | texto fijo. |
-| **Decisión** |  |
+## Panel (11)
 
 ### 43. Falta cómo recibe el trabajo
 

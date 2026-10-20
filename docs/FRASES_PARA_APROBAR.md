@@ -4,9 +4,9 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 34 fichas.** Panel 10, aplicación del Asistente 18, aplicación del Cliente 4, Base 2.
+**Total: 33 fichas.** Panel 9, aplicación del Asistente 18, aplicación del Cliente 4, Base 2.
 
-## Panel (10)
+## Panel (9)
 
 ### 43. Falta cómo recibe el trabajo
 
@@ -21,22 +21,6 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Qué estaba haciendo** | en el grupo «Cómo recibe el trabajo» desmarcó Prestación directa y Match, y guardó. |
 | **Qué pasó** | no se guardó: un Asistente sin ninguna modalidad no puede recibir guardias. |
 | **Qué puede hacer después** | marcar Prestación directa, Match o las dos, y guardar. |
-| **Cómo se muestra** | franja. |
-| **Decisión** |  |
-
-### 45. Falta la matrícula renovada
-
-| | |
-|---|---|
-| **Texto actual** | Cargue la matrícula renovada en el Legajo, solapa Matrículas. |
-| **Propuesta corta** | «Cargue la matrícula renovada.» |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | en la solapa Matrículas lo manda adonde ya está. Igual que «Cargue la matrícula.», ya aprobada. |
-| **Quién lo lee** | la coordinación de la Prestadora. |
-| **Dónde está** | Panel → Padrón de Asistentes → Legajo, solapa «Matrículas»; Panel → Guardias, arriba de la página. |
-| **Qué estaba haciendo** | miraba las matrículas de un Asistente o le asignaba una guardia. |
-| **Qué pasó** | la matrícula venció o vence en 30 días o menos. Si venció, la guardia no se asigna. |
-| **Qué puede hacer después** | tocar «Agregar matrícula», o asignar la guardia a otro Asistente. |
 | **Cómo se muestra** | franja. |
 | **Decisión** |  |
 

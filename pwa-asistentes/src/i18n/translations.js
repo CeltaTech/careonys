@@ -51,7 +51,6 @@ export const T = {
         matricula_sin_matricula: 'Sin matrícula cargada.',
         matricula_vencida: 'Matrícula vencida.',
         matricula_sin_verificar: 'La matrícula está cargada, pero la Prestadora todavía no la comprobó. Hasta entonces no se pueden tomar guardias.',
-        modalidad_no_habilitada: 'Esta guardia es de una modalidad no habilitada en su perfil. Consulte a la Prestadora.',
         // Los del pase de guardia (pendiente #113). Ninguno de los cuatro deja al Asistente
         // afuera: los tres primeros se ven adentro del pase, que se queda abierto para volver a
         // intentar o para entrar igual eligiendo un motivo.
@@ -791,7 +790,6 @@ export const T = {
         matricula_sin_matricula: 'No licence uploaded.',
         matricula_vencida: 'Licence expired.',
         matricula_sin_verificar: 'The licence has been uploaded, but the Provider has not checked it yet. Until then, shifts cannot be taken.',
-        modalidad_no_habilitada: 'This shift belongs to a service model not enabled on your profile. Contact the Provider.',
         codigo_incorrecto: 'The code is not valid for this shift. Ask to be shown the current code.',
         codigo_vencido: 'The code has expired. Request a new code from the Provider.',
         demasiados_intentos: 'You exceeded the number of attempts. Choose a reason to continue without checking the code.',
@@ -1438,7 +1436,6 @@ export const T = {
         matricula_sin_matricula: 'Sem registro profissional enviado.',
         matricula_vencida: 'Registro profissional vencido.',
         matricula_sin_verificar: 'O registro foi enviado, mas a Prestadora ainda não o comprovou. Até então não é possível assumir plantões.',
-        modalidad_no_habilitada: 'Este plantão é de uma modalidade não habilitada no seu perfil. Consulte a Prestadora.',
         codigo_incorrecto: 'O código não é válido para este plantão. Peça que mostrem o código atual.',
         codigo_vencido: 'O código expirou. Solicite um novo código à Prestadora.',
         demasiados_intentos: 'Você excedeu o número de tentativas. Escolha um motivo para continuar sem verificar o código.',

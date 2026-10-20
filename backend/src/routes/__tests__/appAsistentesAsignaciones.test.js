@@ -192,7 +192,6 @@ describe('aceptar', () => {
     ['asignacion_ya_respondida', 409, 'asignacion_ya_respondida'],
     ['guardia_ya_cubierta', 409, 'guardia_ya_cubierta'],
     ['matricula_bloquea:vencida:', 409, 'matricula_vencida'],
-    ['modalidad_bloquea:directa:', 409, 'modalidad_no_habilitada'],
   ]) {
     it(`si la base dice «${falla}», contesta ${motivo} y no deja salir el texto de la base`, async () => {
       respuestas.set('POST /rest/v1/rpc/aceptar_asignacion', () => ({ falla }));

@@ -4,7 +4,7 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 23 fichas.** Panel 3, aplicación del Asistente 14, aplicación del Cliente 4, Base 2.
+**Total: 22 fichas.** Panel 3, aplicación del Asistente 13, aplicación del Cliente 4, Base 2.
 
 ## Panel (3)
 
@@ -56,23 +56,7 @@ Cada ficha pendiente lleva además una **propuesta corta**, escrita con el crite
 | **Cómo se muestra** | franja. |
 | **Decisión** | se resuelve junto con el cambio, el desistimiento y la pluralidad del Pagador. |
 
-## Aplicación del Asistente (14)
-
-### 10. Modalidad no habilitada
-
-| | |
-|---|---|
-| **Texto actual** | Esta guardia es de una modalidad no habilitada en su perfil. Consulte a la Prestadora. |
-| **Propuesta corta** | Sacar la frase |
-| **¿Aparece hoy?** | no |
-| **Por qué** | el Asistente nunca la ve. |
-| **Quién lo lee** | el Asistente. |
-| **Dónde está** | Guardias → «Asignaciones sin responder», botón «Aceptar». |
-| **Qué estaba haciendo** | aceptaba un turno asignado. |
-| **Qué pasó** | el turno es de prestación directa o de intermediación, y esa modalidad no está habilitada para él. |
-| **Qué puede hacer después** | rechazar la asignación o consultar a la Prestadora. |
-| **Cómo se muestra** | franja arriba de la lista. |
-| **Decisión** |  |
+## Aplicación del Asistente (13)
 
 ### 11. Código que no es de esta guardia
 

@@ -56,21 +56,19 @@ function motivoDelBloqueo(error) {
   const matricula = /matricula_bloquea:([a-z_]+)/.exec(texto);
   if (matricula) return `matricula_${matricula[1]}`;
 
-  if (/modalidad_bloquea:/.test(texto)) return 'modalidad_no_habilitada';
-
   return null;
 }
 
 /**
  * Traduce lo que levanta la base al aceptar. Las frases salen de `aceptar_asignacion` y de los
- * disparadores de la Matrícula y de la modalidad.
+ * disparadores de la Matrícula.
  */
 function motivoDeLaAceptacion(error) {
   const texto = String(error?.message ?? '');
   if (texto.includes('asignacion_no_encontrada')) return { estado: 404, motivo: 'asignacion_no_encontrada' };
   if (texto.includes('asignacion_ya_respondida')) return { estado: 409, motivo: 'asignacion_ya_respondida' };
   if (texto.includes('guardia_ya_cubierta')) return { estado: 409, motivo: 'guardia_ya_cubierta' };
-  // La Matrícula o la modalidad de trabajo pueden frenar la aceptación, y con razón: entre la
+  // La Matrícula puede frenar la aceptación, y con razón: entre la
   // asignación y esta respuesta pudo vencerse el papel que lo autoriza.
   const bloqueo = motivoDelBloqueo(error);
   if (bloqueo) return { estado: 409, motivo: bloqueo };

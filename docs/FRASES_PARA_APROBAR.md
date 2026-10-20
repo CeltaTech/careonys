@@ -4,25 +4,9 @@ Textos que hoy ven las personas que usan Careonys y que tienen una redacción du
 
 Cada ficha pendiente lleva además una **propuesta corta**, escrita con el criterio de las ya aprobadas: lo necesario y nada más, sin la instrucción obvia. **¿Aparece hoy?** dice si la frase puede salir en pantalla tal como está el código; las que no, se proponen para sacar.
 
-**Total: 37 fichas.** Panel 13, aplicación del Asistente 18, aplicación del Cliente 4, Base 2.
+**Total: 36 fichas.** Panel 12, aplicación del Asistente 18, aplicación del Cliente 4, Base 2.
 
-## Panel (13)
-
-### 72. Es la hora de la entrevista y no hay sala
-
-| | |
-|---|---|
-| **Texto actual** | Todavía no es la hora. El acceso se habilita {{anticipo}} minutos antes de la hora. |
-| **Propuesta corta** | Título «Acceso no disponible»; texto «Responda al email para coordinar una nueva fecha.» (el mismo de la ficha 40). |
-| **¿Aparece hoy?** | sí |
-| **Por qué** | le dice que espere, y esperar no lo arregla. Hoy les pasa a las dos Prestadoras: ninguna cargó la dirección de la videollamada. |
-| **Quién lo lee** | el postulante. |
-| **Dónde está** | página de la entrevista que abre el enlace del email. |
-| **Qué estaba haciendo** | abrió el enlace a la hora de la entrevista. |
-| **Qué pasó** | la entrevista tiene sala, pero la Prestadora no cargó la dirección de la videollamada. |
-| **Qué puede hacer después** | responder el email. |
-| **Cómo se muestra** | texto fijo. |
-| **Decisión** |  |
+## Panel (12)
 
 ### 42. La entrevista ya pasó
 
